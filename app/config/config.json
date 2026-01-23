@@ -1,0 +1,18 @@
+{
+    "system_prompt": {
+        "active": "default_ru",
+        "available": [
+            "default_en",
+            "default_ru",
+            "custom"
+        ]
+    },
+    "app_settings": {
+        "default_temperature": 0.3,
+        "default_model": "google/gemini-2.5-flash-lite-preview-09-2025",
+        "max_tokens": 3000,
+        "show_dice_results": true,
+        "show_code_execution": true,
+        "default_provider": "openrouter"
+    }
+}

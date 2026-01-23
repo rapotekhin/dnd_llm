@@ -1,0 +1,16 @@
+/venv
+.env
+/data
+/dnd_5e_data
+/dnd-5e-core
+/DnD-5th-Edition-API
+
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+
+.pytest_cache
