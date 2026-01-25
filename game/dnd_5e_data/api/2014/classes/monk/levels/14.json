@@ -1,0 +1,28 @@
+{
+  "level": 14,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 5,
+  "features": [
+    {
+      "index": "diamond-soul",
+      "name": "Diamond Soul",
+      "url": "/api/2014/features/diamond-soul"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 8
+    },
+    "ki_points": 14,
+    "unarmored_movement": 25
+  },
+  "index": "monk-14",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/14",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

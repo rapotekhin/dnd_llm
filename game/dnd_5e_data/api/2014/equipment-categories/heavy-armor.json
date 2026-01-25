@@ -1,0 +1,28 @@
+{
+  "index": "heavy-armor",
+  "name": "Heavy Armor",
+  "equipment": [
+    {
+      "index": "ring-mail",
+      "name": "Ring Mail",
+      "url": "/api/2014/equipment/ring-mail"
+    },
+    {
+      "index": "chain-mail",
+      "name": "Chain Mail",
+      "url": "/api/2014/equipment/chain-mail"
+    },
+    {
+      "index": "splint-armor",
+      "name": "Splint Armor",
+      "url": "/api/2014/equipment/splint-armor"
+    },
+    {
+      "index": "plate-armor",
+      "name": "Plate Armor",
+      "url": "/api/2014/equipment/plate-armor"
+    }
+  ],
+  "url": "/api/2014/equipment-categories/heavy-armor",
+  "updated_at": "2025-10-24T20:42:12.821Z"
+}

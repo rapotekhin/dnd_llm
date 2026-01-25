@@ -1,0 +1,31 @@
+{
+  "level": 3,
+  "features": [
+    {
+      "index": "bonus-proficiencies",
+      "name": "Bonus Proficiencies",
+      "url": "/api/2014/features/bonus-proficiencies"
+    },
+    {
+      "index": "cutting-words",
+      "name": "Cutting Words",
+      "url": "/api/2014/features/cutting-words"
+    }
+  ],
+  "subclass_specific": {
+    "additional_magical_secrets_max_lvl": 0
+  },
+  "class": {
+    "index": "bard",
+    "name": "Bard",
+    "url": "/api/2014/classes/bard"
+  },
+  "subclass": {
+    "index": "lore",
+    "name": "Lore",
+    "url": "/api/2014/subclasses/lore"
+  },
+  "url": "/api/2014/subclasses/lore/levels/3",
+  "index": "lore-3",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

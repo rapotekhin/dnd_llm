@@ -1,0 +1,16 @@
+{
+  "index": "patient-defense",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "name": "Patient Defense",
+  "level": 2,
+  "prerequisites": [],
+  "desc": [
+    "You can spend 1 ki point to take the Dodge action as a bonus action on your turn."
+  ],
+  "url": "/api/2014/features/patient-defense",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

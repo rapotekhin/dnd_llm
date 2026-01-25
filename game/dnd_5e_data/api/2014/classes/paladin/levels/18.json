@@ -1,0 +1,30 @@
+{
+  "level": 18,
+  "ability_score_bonuses": 4,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "aura-improvements",
+      "name": "Aura improvements",
+      "url": "/api/2014/features/aura-improvements"
+    }
+  ],
+  "spellcasting": {
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 3,
+    "spell_slots_level_5": 1
+  },
+  "class_specific": {
+    "aura_range": 30
+  },
+  "index": "paladin-18",
+  "class": {
+    "index": "paladin",
+    "name": "Paladin",
+    "url": "/api/2014/classes/paladin"
+  },
+  "url": "/api/2014/classes/paladin/levels/18",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

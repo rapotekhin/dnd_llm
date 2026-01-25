@@ -1,0 +1,26 @@
+{
+  "level": 13,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 5,
+  "features": [],
+  "spellcasting": {
+    "spells_known": 8,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 1,
+    "spell_slots_level_5": 0
+  },
+  "class_specific": {
+    "favored_enemies": 2,
+    "favored_terrain": 3
+  },
+  "index": "ranger-13",
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "url": "/api/2014/classes/ranger/levels/13",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

@@ -1,0 +1,35 @@
+{
+  "level": 20,
+  "ability_score_bonuses": 5,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "signature-spell",
+      "name": "Signature Spell",
+      "url": "/api/2014/features/signature-spell"
+    }
+  ],
+  "spellcasting": {
+    "cantrips_known": 5,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 3,
+    "spell_slots_level_5": 3,
+    "spell_slots_level_6": 2,
+    "spell_slots_level_7": 2,
+    "spell_slots_level_8": 1,
+    "spell_slots_level_9": 1
+  },
+  "class_specific": {
+    "arcane_recovery_levels": 10
+  },
+  "index": "wizard-20",
+  "class": {
+    "index": "wizard",
+    "name": "Wizard",
+    "url": "/api/2014/classes/wizard"
+  },
+  "url": "/api/2014/classes/wizard/levels/20",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

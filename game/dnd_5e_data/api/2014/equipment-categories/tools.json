@@ -1,0 +1,163 @@
+{
+  "index": "tools",
+  "name": "Tools",
+  "equipment": [
+    {
+      "index": "alchemists-supplies",
+      "name": "Alchemist's Supplies",
+      "url": "/api/2014/equipment/alchemists-supplies"
+    },
+    {
+      "index": "brewers-supplies",
+      "name": "Brewer's Supplies",
+      "url": "/api/2014/equipment/brewers-supplies"
+    },
+    {
+      "index": "calligraphers-supplies",
+      "name": "Calligrapher's Supplies",
+      "url": "/api/2014/equipment/calligraphers-supplies"
+    },
+    {
+      "index": "carpenters-tools",
+      "name": "Carpenter's Tools",
+      "url": "/api/2014/equipment/carpenters-tools"
+    },
+    {
+      "index": "cartographers-tools",
+      "name": "Cartographer's Tools",
+      "url": "/api/2014/equipment/cartographers-tools"
+    },
+    {
+      "index": "cobblers-tools",
+      "name": "Cobbler's Tools",
+      "url": "/api/2014/equipment/cobblers-tools"
+    },
+    {
+      "index": "cooks-utensils",
+      "name": "Cook's utensils",
+      "url": "/api/2014/equipment/cooks-utensils"
+    },
+    {
+      "index": "glassblowers-tools",
+      "name": "Glassblower's Tools",
+      "url": "/api/2014/equipment/glassblowers-tools"
+    },
+    {
+      "index": "jewelers-tools",
+      "name": "Jeweler's Tools",
+      "url": "/api/2014/equipment/jewelers-tools"
+    },
+    {
+      "index": "leatherworkers-tools",
+      "name": "Leatherworker's Tools",
+      "url": "/api/2014/equipment/leatherworkers-tools"
+    },
+    {
+      "index": "masons-tools",
+      "name": "Mason's Tools",
+      "url": "/api/2014/equipment/masons-tools"
+    },
+    {
+      "index": "painters-supplies",
+      "name": "Painter's Supplies",
+      "url": "/api/2014/equipment/painters-supplies"
+    },
+    {
+      "index": "potters-tools",
+      "name": "Potter's Tools",
+      "url": "/api/2014/equipment/potters-tools"
+    },
+    {
+      "index": "smiths-tools",
+      "name": "Smith's Tools",
+      "url": "/api/2014/equipment/smiths-tools"
+    },
+    {
+      "index": "tinkers-tools",
+      "name": "Tinker's Tools",
+      "url": "/api/2014/equipment/tinkers-tools"
+    },
+    {
+      "index": "weavers-tools",
+      "name": "Weaver's Tools",
+      "url": "/api/2014/equipment/weavers-tools"
+    },
+    {
+      "index": "woodcarvers-tools",
+      "name": "Woodcarver's Tools",
+      "url": "/api/2014/equipment/woodcarvers-tools"
+    },
+    {
+      "index": "dice-set",
+      "name": "Dice Set",
+      "url": "/api/2014/equipment/dice-set"
+    },
+    {
+      "index": "playing-card-set",
+      "name": "Playing Card Set",
+      "url": "/api/2014/equipment/playing-card-set"
+    },
+    {
+      "index": "bagpipes",
+      "name": "Bagpipes",
+      "url": "/api/2014/equipment/bagpipes"
+    },
+    {
+      "index": "drum",
+      "name": "Drum",
+      "url": "/api/2014/equipment/drum"
+    },
+    {
+      "index": "dulcimer",
+      "name": "Dulcimer",
+      "url": "/api/2014/equipment/dulcimer"
+    },
+    {
+      "index": "flute",
+      "name": "Flute",
+      "url": "/api/2014/equipment/flute"
+    },
+    {
+      "index": "lute",
+      "name": "Lute",
+      "url": "/api/2014/equipment/lute"
+    },
+    {
+      "index": "lyre",
+      "name": "Lyre",
+      "url": "/api/2014/equipment/lyre"
+    },
+    {
+      "index": "horn",
+      "name": "Horn",
+      "url": "/api/2014/equipment/horn"
+    },
+    {
+      "index": "pan-flute",
+      "name": "Pan flute",
+      "url": "/api/2014/equipment/pan-flute"
+    },
+    {
+      "index": "shawm",
+      "name": "Shawm",
+      "url": "/api/2014/equipment/shawm"
+    },
+    {
+      "index": "viol",
+      "name": "Viol",
+      "url": "/api/2014/equipment/viol"
+    },
+    {
+      "index": "navigators-tools",
+      "name": "Navigator's Tools",
+      "url": "/api/2014/equipment/navigators-tools"
+    },
+    {
+      "index": "thieves-tools",
+      "name": "Thieves' Tools",
+      "url": "/api/2014/equipment/thieves-tools"
+    }
+  ],
+  "url": "/api/2014/equipment-categories/tools",
+  "updated_at": "2025-10-24T20:42:12.821Z"
+}

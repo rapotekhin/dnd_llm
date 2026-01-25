@@ -1,0 +1,52 @@
+{
+  "index": "pact-boon",
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "name": "Pact Boon",
+  "level": 3,
+  "prerequisites": [],
+  "desc": [
+    "At 3rd level, your otherworldly patron bestows a gift upon you for your loyal service. You gain one of the following features of your choice."
+  ],
+  "feature_specific": {
+    "subfeature_options": {
+      "choose": 1,
+      "type": "feature",
+      "from": {
+        "option_set_type": "options_array",
+        "options": [
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "pact-of-the-chain",
+              "name": "Pact of the Chain",
+              "url": "/api/2014/features/pact-of-the-chain"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "pact-of-the-blade",
+              "name": "Pact of the Blade",
+              "url": "/api/2014/features/pact-of-the-blade"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "pact-of-the-tome",
+              "name": "Pact of the Tome",
+              "url": "/api/2014/features/pact-of-the-tome"
+            }
+          }
+        ]
+      }
+    },
+    "invocations": []
+  },
+  "url": "/api/2014/features/pact-boon",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

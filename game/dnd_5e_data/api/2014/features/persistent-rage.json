@@ -1,0 +1,16 @@
+{
+  "index": "persistent-rage",
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "name": "Persistent Rage",
+  "level": 15,
+  "prerequisites": [],
+  "desc": [
+    "Beginning at 15th level, your rage is so fierce that it ends early only if you fall unconscious or if you choose to end it."
+  ],
+  "url": "/api/2014/features/persistent-rage",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

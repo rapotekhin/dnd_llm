@@ -1,0 +1,14 @@
+{
+  "index": "cartographers-tools",
+  "type": "Artisan's Tools",
+  "name": "Cartographer's Tools",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/cartographers-tools",
+  "reference": {
+    "index": "cartographers-tools",
+    "name": "Cartographer's Tools",
+    "url": "/api/2014/equipment/cartographers-tools"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

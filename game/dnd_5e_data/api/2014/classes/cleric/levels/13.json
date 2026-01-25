@@ -1,0 +1,30 @@
+{
+  "level": 13,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 5,
+  "features": [],
+  "spellcasting": {
+    "cantrips_known": 5,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 3,
+    "spell_slots_level_5": 2,
+    "spell_slots_level_6": 1,
+    "spell_slots_level_7": 1,
+    "spell_slots_level_8": 0,
+    "spell_slots_level_9": 0
+  },
+  "class_specific": {
+    "channel_divinity_charges": 2,
+    "destroy_undead_cr": 2
+  },
+  "index": "cleric-13",
+  "class": {
+    "index": "cleric",
+    "name": "Cleric",
+    "url": "/api/2014/classes/cleric"
+  },
+  "url": "/api/2014/classes/cleric/levels/13",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

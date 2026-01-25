@@ -1,0 +1,14 @@
+{
+  "index": "ring-mail",
+  "type": "Armor",
+  "name": "Ring Mail",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/ring-mail",
+  "reference": {
+    "index": "ring-mail",
+    "name": "Ring Mail",
+    "url": "/api/2014/equipment/ring-mail"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

@@ -1,0 +1,35 @@
+{
+  "index": "martial-weapons",
+  "type": "Weapons",
+  "name": "Martial Weapons",
+  "classes": [
+    {
+      "index": "barbarian",
+      "name": "Barbarian",
+      "url": "/api/2014/classes/barbarian"
+    },
+    {
+      "index": "fighter",
+      "name": "Fighter",
+      "url": "/api/2014/classes/fighter"
+    },
+    {
+      "index": "paladin",
+      "name": "Paladin",
+      "url": "/api/2014/classes/paladin"
+    },
+    {
+      "index": "ranger",
+      "name": "Ranger",
+      "url": "/api/2014/classes/ranger"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/martial-weapons",
+  "reference": {
+    "index": "martial-weapons",
+    "name": "Martial Weapons",
+    "url": "/api/2014/equipment-categories/martial-weapons"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

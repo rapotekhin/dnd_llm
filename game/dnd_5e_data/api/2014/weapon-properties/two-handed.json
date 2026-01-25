@@ -1,0 +1,9 @@
+{
+  "index": "two-handed",
+  "name": "Two-Handed",
+  "desc": [
+    "This weapon requires two hands when you attack with it."
+  ],
+  "url": "/api/2014/weapon-properties/two-handed",
+  "updated_at": "2025-10-24T20:42:15.048Z"
+}

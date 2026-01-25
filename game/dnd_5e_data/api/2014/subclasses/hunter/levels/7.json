@@ -1,0 +1,23 @@
+{
+  "level": 7,
+  "features": [
+    {
+      "index": "defensive-tactics",
+      "name": "Defensive Tactics",
+      "url": "/api/2014/features/defensive-tactics"
+    }
+  ],
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "subclass": {
+    "index": "hunter",
+    "name": "Hunter",
+    "url": "/api/2014/subclasses/hunter"
+  },
+  "url": "/api/2014/subclasses/hunter/levels/7",
+  "index": "hunter-7",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

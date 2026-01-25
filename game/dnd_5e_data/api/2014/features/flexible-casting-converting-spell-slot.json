@@ -1,0 +1,16 @@
+{
+  "index": "flexible-casting-converting-spell-slot",
+  "class": {
+    "index": "sorcerer",
+    "name": "Sorcerer",
+    "url": "/api/2014/classes/sorcerer"
+  },
+  "name": "Flexible Casting: Converting Spell Slot",
+  "level": 2,
+  "prerequisites": [],
+  "desc": [
+    "As a bonus action on your turn, you can expend one spell slot and gain a number of sorcery points equal to the slot's level.."
+  ],
+  "url": "/api/2014/features/flexible-casting-converting-spell-slot",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

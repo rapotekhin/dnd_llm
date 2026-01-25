@@ -1,0 +1,16 @@
+{
+  "index": "primal-path-improvement-2",
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "name": "Path feature",
+  "level": 10,
+  "prerequisites": [],
+  "desc": [
+    "At 3rd level, you choose a path that shapes the nature of your rage. Choose the Path of the Berserker or the Path of the Totem Warrior, both detailed at the end of the class description. Your choice grants you features at 3rd level and again at 6th, 10th, and 14th levels."
+  ],
+  "url": "/api/2014/features/primal-path-improvement-2",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

@@ -1,0 +1,14 @@
+{
+  "index": "skill-insight",
+  "type": "Skills",
+  "name": "Skill: Insight",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/skill-insight",
+  "reference": {
+    "index": "insight",
+    "name": "Insight",
+    "url": "/api/2014/skills/insight"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

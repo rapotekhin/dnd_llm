@@ -1,0 +1,26 @@
+{
+  "level": 15,
+  "features": [
+    {
+      "index": "purity-of-spirit",
+      "name": "Purity of Spirit",
+      "url": "/api/2014/features/purity-of-spirit"
+    }
+  ],
+  "subclass_specific": {
+    "aura_range": 10
+  },
+  "class": {
+    "index": "paladin",
+    "name": "Paladin",
+    "url": "/api/2014/classes/paladin"
+  },
+  "subclass": {
+    "index": "devotion",
+    "name": "Devotion",
+    "url": "/api/2014/subclasses/devotion"
+  },
+  "url": "/api/2014/subclasses/devotion/levels/15",
+  "index": "devotion-15",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

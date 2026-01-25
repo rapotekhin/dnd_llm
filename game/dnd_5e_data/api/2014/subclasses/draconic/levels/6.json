@@ -1,0 +1,23 @@
+{
+  "level": 6,
+  "features": [
+    {
+      "index": "elemental-affinity",
+      "name": "Elemental Affinity",
+      "url": "/api/2014/features/elemental-affinity"
+    }
+  ],
+  "class": {
+    "index": "sorcerer",
+    "name": "Sorcerer",
+    "url": "/api/2014/classes/sorcerer"
+  },
+  "subclass": {
+    "index": "draconic",
+    "name": "Draconic",
+    "url": "/api/2014/subclasses/draconic"
+  },
+  "url": "/api/2014/subclasses/draconic/levels/6",
+  "index": "draconic-6",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

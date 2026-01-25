@@ -1,0 +1,20 @@
+{
+  "index": "clubs",
+  "type": "Weapons",
+  "name": "Clubs",
+  "classes": [
+    {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/clubs",
+  "reference": {
+    "index": "club",
+    "name": "Club",
+    "url": "/api/2014/equipment/club"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

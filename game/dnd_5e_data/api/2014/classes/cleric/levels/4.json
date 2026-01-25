@@ -1,0 +1,36 @@
+{
+  "level": 4,
+  "ability_score_bonuses": 1,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "cleric-ability-score-improvement-1",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/cleric-ability-score-improvement-1"
+    }
+  ],
+  "spellcasting": {
+    "cantrips_known": 4,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 0,
+    "spell_slots_level_4": 0,
+    "spell_slots_level_5": 0,
+    "spell_slots_level_6": 0,
+    "spell_slots_level_7": 0,
+    "spell_slots_level_8": 0,
+    "spell_slots_level_9": 0
+  },
+  "class_specific": {
+    "channel_divinity_charges": 1,
+    "destroy_undead_cr": 0
+  },
+  "index": "cleric-4",
+  "class": {
+    "index": "cleric",
+    "name": "Cleric",
+    "url": "/api/2014/classes/cleric"
+  },
+  "url": "/api/2014/classes/cleric/levels/4",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

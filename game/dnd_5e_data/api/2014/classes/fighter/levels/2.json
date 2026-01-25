@@ -1,0 +1,25 @@
+{
+  "level": 2,
+  "ability_score_bonuses": 0,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "action-surge-1-use",
+      "name": "Action Surge (1 use)",
+      "url": "/api/2014/features/action-surge-1-use"
+    }
+  ],
+  "class_specific": {
+    "action_surges": 1,
+    "indomitable_uses": 0,
+    "extra_attacks": 0
+  },
+  "index": "fighter-2",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "url": "/api/2014/classes/fighter/levels/2",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

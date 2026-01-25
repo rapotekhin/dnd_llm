@@ -1,0 +1,28 @@
+{
+  "level": 20,
+  "ability_score_bonuses": 5,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "perfect-self",
+      "name": "Perfect Self",
+      "url": "/api/2014/features/perfect-self"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 10
+    },
+    "ki_points": 20,
+    "unarmored_movement": 30
+  },
+  "index": "monk-20",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/20",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

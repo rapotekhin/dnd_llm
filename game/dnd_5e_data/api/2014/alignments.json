@@ -1,0 +1,50 @@
+{
+  "count": 9,
+  "results": [
+    {
+      "index": "chaotic-evil",
+      "name": "Chaotic Evil",
+      "url": "/api/2014/alignments/chaotic-evil"
+    },
+    {
+      "index": "chaotic-good",
+      "name": "Chaotic Good",
+      "url": "/api/2014/alignments/chaotic-good"
+    },
+    {
+      "index": "chaotic-neutral",
+      "name": "Chaotic Neutral",
+      "url": "/api/2014/alignments/chaotic-neutral"
+    },
+    {
+      "index": "lawful-evil",
+      "name": "Lawful Evil",
+      "url": "/api/2014/alignments/lawful-evil"
+    },
+    {
+      "index": "lawful-good",
+      "name": "Lawful Good",
+      "url": "/api/2014/alignments/lawful-good"
+    },
+    {
+      "index": "lawful-neutral",
+      "name": "Lawful Neutral",
+      "url": "/api/2014/alignments/lawful-neutral"
+    },
+    {
+      "index": "neutral",
+      "name": "Neutral",
+      "url": "/api/2014/alignments/neutral"
+    },
+    {
+      "index": "neutral-evil",
+      "name": "Neutral Evil",
+      "url": "/api/2014/alignments/neutral-evil"
+    },
+    {
+      "index": "neutral-good",
+      "name": "Neutral Good",
+      "url": "/api/2014/alignments/neutral-good"
+    }
+  ]
+}

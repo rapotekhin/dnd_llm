@@ -1,0 +1,389 @@
+{
+  "count": 64,
+  "results": [
+    {
+      "index": "chill-touch",
+      "name": "Chill Touch",
+      "level": 0,
+      "url": "/api/2014/spells/chill-touch"
+    },
+    {
+      "index": "eldritch-blast",
+      "name": "Eldritch Blast",
+      "level": 0,
+      "url": "/api/2014/spells/eldritch-blast"
+    },
+    {
+      "index": "mage-hand",
+      "name": "Mage Hand",
+      "level": 0,
+      "url": "/api/2014/spells/mage-hand"
+    },
+    {
+      "index": "minor-illusion",
+      "name": "Minor Illusion",
+      "level": 0,
+      "url": "/api/2014/spells/minor-illusion"
+    },
+    {
+      "index": "poison-spray",
+      "name": "Poison Spray",
+      "level": 0,
+      "url": "/api/2014/spells/poison-spray"
+    },
+    {
+      "index": "prestidigitation",
+      "name": "Prestidigitation",
+      "level": 0,
+      "url": "/api/2014/spells/prestidigitation"
+    },
+    {
+      "index": "true-strike",
+      "name": "True Strike",
+      "level": 0,
+      "url": "/api/2014/spells/true-strike"
+    },
+    {
+      "index": "charm-person",
+      "name": "Charm Person",
+      "level": 1,
+      "url": "/api/2014/spells/charm-person"
+    },
+    {
+      "index": "comprehend-languages",
+      "name": "Comprehend Languages",
+      "level": 1,
+      "url": "/api/2014/spells/comprehend-languages"
+    },
+    {
+      "index": "expeditious-retreat",
+      "name": "Expeditious Retreat",
+      "level": 1,
+      "url": "/api/2014/spells/expeditious-retreat"
+    },
+    {
+      "index": "hellish-rebuke",
+      "name": "Hellish Rebuke",
+      "level": 1,
+      "url": "/api/2014/spells/hellish-rebuke"
+    },
+    {
+      "index": "illusory-script",
+      "name": "Illusory Script",
+      "level": 1,
+      "url": "/api/2014/spells/illusory-script"
+    },
+    {
+      "index": "protection-from-evil-and-good",
+      "name": "Protection from Evil and Good",
+      "level": 1,
+      "url": "/api/2014/spells/protection-from-evil-and-good"
+    },
+    {
+      "index": "unseen-servant",
+      "name": "Unseen Servant",
+      "level": 1,
+      "url": "/api/2014/spells/unseen-servant"
+    },
+    {
+      "index": "darkness",
+      "name": "Darkness",
+      "level": 2,
+      "url": "/api/2014/spells/darkness"
+    },
+    {
+      "index": "enthrall",
+      "name": "Enthrall",
+      "level": 2,
+      "url": "/api/2014/spells/enthrall"
+    },
+    {
+      "index": "hold-person",
+      "name": "Hold Person",
+      "level": 2,
+      "url": "/api/2014/spells/hold-person"
+    },
+    {
+      "index": "invisibility",
+      "name": "Invisibility",
+      "level": 2,
+      "url": "/api/2014/spells/invisibility"
+    },
+    {
+      "index": "mirror-image",
+      "name": "Mirror Image",
+      "level": 2,
+      "url": "/api/2014/spells/mirror-image"
+    },
+    {
+      "index": "misty-step",
+      "name": "Misty Step",
+      "level": 2,
+      "url": "/api/2014/spells/misty-step"
+    },
+    {
+      "index": "ray-of-enfeeblement",
+      "name": "Ray of Enfeeblement",
+      "level": 2,
+      "url": "/api/2014/spells/ray-of-enfeeblement"
+    },
+    {
+      "index": "shatter",
+      "name": "Shatter",
+      "level": 2,
+      "url": "/api/2014/spells/shatter"
+    },
+    {
+      "index": "spider-climb",
+      "name": "Spider Climb",
+      "level": 2,
+      "url": "/api/2014/spells/spider-climb"
+    },
+    {
+      "index": "suggestion",
+      "name": "Suggestion",
+      "level": 2,
+      "url": "/api/2014/spells/suggestion"
+    },
+    {
+      "index": "counterspell",
+      "name": "Counterspell",
+      "level": 3,
+      "url": "/api/2014/spells/counterspell"
+    },
+    {
+      "index": "dispel-magic",
+      "name": "Dispel Magic",
+      "level": 3,
+      "url": "/api/2014/spells/dispel-magic"
+    },
+    {
+      "index": "fear",
+      "name": "Fear",
+      "level": 3,
+      "url": "/api/2014/spells/fear"
+    },
+    {
+      "index": "fly",
+      "name": "Fly",
+      "level": 3,
+      "url": "/api/2014/spells/fly"
+    },
+    {
+      "index": "gaseous-form",
+      "name": "Gaseous Form",
+      "level": 3,
+      "url": "/api/2014/spells/gaseous-form"
+    },
+    {
+      "index": "hypnotic-pattern",
+      "name": "Hypnotic Pattern",
+      "level": 3,
+      "url": "/api/2014/spells/hypnotic-pattern"
+    },
+    {
+      "index": "magic-circle",
+      "name": "Magic Circle",
+      "level": 3,
+      "url": "/api/2014/spells/magic-circle"
+    },
+    {
+      "index": "major-image",
+      "name": "Major Image",
+      "level": 3,
+      "url": "/api/2014/spells/major-image"
+    },
+    {
+      "index": "remove-curse",
+      "name": "Remove Curse",
+      "level": 3,
+      "url": "/api/2014/spells/remove-curse"
+    },
+    {
+      "index": "tongues",
+      "name": "Tongues",
+      "level": 3,
+      "url": "/api/2014/spells/tongues"
+    },
+    {
+      "index": "vampiric-touch",
+      "name": "Vampiric Touch",
+      "level": 3,
+      "url": "/api/2014/spells/vampiric-touch"
+    },
+    {
+      "index": "banishment",
+      "name": "Banishment",
+      "level": 4,
+      "url": "/api/2014/spells/banishment"
+    },
+    {
+      "index": "blight",
+      "name": "Blight",
+      "level": 4,
+      "url": "/api/2014/spells/blight"
+    },
+    {
+      "index": "dimension-door",
+      "name": "Dimension Door",
+      "level": 4,
+      "url": "/api/2014/spells/dimension-door"
+    },
+    {
+      "index": "hallucinatory-terrain",
+      "name": "Hallucinatory Terrain",
+      "level": 4,
+      "url": "/api/2014/spells/hallucinatory-terrain"
+    },
+    {
+      "index": "contact-other-plane",
+      "name": "Contact Other Plane",
+      "level": 5,
+      "url": "/api/2014/spells/contact-other-plane"
+    },
+    {
+      "index": "dream",
+      "name": "Dream",
+      "level": 5,
+      "url": "/api/2014/spells/dream"
+    },
+    {
+      "index": "hold-monster",
+      "name": "Hold Monster",
+      "level": 5,
+      "url": "/api/2014/spells/hold-monster"
+    },
+    {
+      "index": "scrying",
+      "name": "Scrying",
+      "level": 5,
+      "url": "/api/2014/spells/scrying"
+    },
+    {
+      "index": "circle-of-death",
+      "name": "Circle of Death",
+      "level": 6,
+      "url": "/api/2014/spells/circle-of-death"
+    },
+    {
+      "index": "conjure-fey",
+      "name": "Conjure Fey",
+      "level": 6,
+      "url": "/api/2014/spells/conjure-fey"
+    },
+    {
+      "index": "create-undead",
+      "name": "Create Undead",
+      "level": 6,
+      "url": "/api/2014/spells/create-undead"
+    },
+    {
+      "index": "eyebite",
+      "name": "Eyebite",
+      "level": 6,
+      "url": "/api/2014/spells/eyebite"
+    },
+    {
+      "index": "flesh-to-stone",
+      "name": "Flesh to Stone",
+      "level": 6,
+      "url": "/api/2014/spells/flesh-to-stone"
+    },
+    {
+      "index": "mass-suggestion",
+      "name": "Mass Suggestion",
+      "level": 6,
+      "url": "/api/2014/spells/mass-suggestion"
+    },
+    {
+      "index": "true-seeing",
+      "name": "True Seeing",
+      "level": 6,
+      "url": "/api/2014/spells/true-seeing"
+    },
+    {
+      "index": "etherealness",
+      "name": "Etherealness",
+      "level": 7,
+      "url": "/api/2014/spells/etherealness"
+    },
+    {
+      "index": "finger-of-death",
+      "name": "Finger of Death",
+      "level": 7,
+      "url": "/api/2014/spells/finger-of-death"
+    },
+    {
+      "index": "forcecage",
+      "name": "Forcecage",
+      "level": 7,
+      "url": "/api/2014/spells/forcecage"
+    },
+    {
+      "index": "plane-shift",
+      "name": "Plane Shift",
+      "level": 7,
+      "url": "/api/2014/spells/plane-shift"
+    },
+    {
+      "index": "demiplane",
+      "name": "Demiplane",
+      "level": 8,
+      "url": "/api/2014/spells/demiplane"
+    },
+    {
+      "index": "dominate-monster",
+      "name": "Dominate Monster",
+      "level": 8,
+      "url": "/api/2014/spells/dominate-monster"
+    },
+    {
+      "index": "feeblemind",
+      "name": "Feeblemind",
+      "level": 8,
+      "url": "/api/2014/spells/feeblemind"
+    },
+    {
+      "index": "glibness",
+      "name": "Glibness",
+      "level": 8,
+      "url": "/api/2014/spells/glibness"
+    },
+    {
+      "index": "power-word-stun",
+      "name": "Power Word Stun",
+      "level": 8,
+      "url": "/api/2014/spells/power-word-stun"
+    },
+    {
+      "index": "astral-projection",
+      "name": "Astral Projection",
+      "level": 9,
+      "url": "/api/2014/spells/astral-projection"
+    },
+    {
+      "index": "foresight",
+      "name": "Foresight",
+      "level": 9,
+      "url": "/api/2014/spells/foresight"
+    },
+    {
+      "index": "imprisonment",
+      "name": "Imprisonment",
+      "level": 9,
+      "url": "/api/2014/spells/imprisonment"
+    },
+    {
+      "index": "power-word-kill",
+      "name": "Power Word Kill",
+      "level": 9,
+      "url": "/api/2014/spells/power-word-kill"
+    },
+    {
+      "index": "true-polymorph",
+      "name": "True Polymorph",
+      "level": 9,
+      "url": "/api/2014/spells/true-polymorph"
+    }
+  ]
+}

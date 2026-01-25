@@ -1,0 +1,28 @@
+{
+  "level": 2,
+  "features": [
+    {
+      "index": "evocation-savant",
+      "name": "Evocation Savant",
+      "url": "/api/2014/features/evocation-savant"
+    },
+    {
+      "index": "sculpt-spells",
+      "name": "Sculpt Spells",
+      "url": "/api/2014/features/sculpt-spells"
+    }
+  ],
+  "class": {
+    "index": "wizard",
+    "name": "Wizard",
+    "url": "/api/2014/classes/wizard"
+  },
+  "subclass": {
+    "index": "evocation",
+    "name": "Evocation",
+    "url": "/api/2014/subclasses/evocation"
+  },
+  "url": "/api/2014/subclasses/evocation/levels/2",
+  "index": "evocation-2",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

@@ -1,0 +1,20 @@
+{
+  "index": "sickles",
+  "type": "Weapons",
+  "name": "Sickles",
+  "classes": [
+    {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/sickles",
+  "reference": {
+    "index": "sickle",
+    "name": "Sickle",
+    "url": "/api/2014/equipment/sickle"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

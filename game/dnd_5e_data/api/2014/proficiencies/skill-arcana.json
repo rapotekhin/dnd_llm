@@ -1,0 +1,14 @@
+{
+  "index": "skill-arcana",
+  "type": "Skills",
+  "name": "Skill: Arcana",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/skill-arcana",
+  "reference": {
+    "index": "arcana",
+    "name": "Arcana",
+    "url": "/api/2014/skills/arcana"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

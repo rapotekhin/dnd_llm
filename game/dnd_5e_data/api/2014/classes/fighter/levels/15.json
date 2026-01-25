@@ -1,0 +1,25 @@
+{
+  "level": 15,
+  "ability_score_bonuses": 5,
+  "prof_bonus": 5,
+  "features": [
+    {
+      "index": "martial-archetype-improvement-3",
+      "name": "Martial Archetype feature",
+      "url": "/api/2014/features/martial-archetype-improvement-3"
+    }
+  ],
+  "class_specific": {
+    "action_surges": 1,
+    "indomitable_uses": 2,
+    "extra_attacks": 2
+  },
+  "index": "fighter-15",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "url": "/api/2014/classes/fighter/levels/15",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

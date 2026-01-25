@@ -1,0 +1,25 @@
+{
+  "level": 7,
+  "ability_score_bonuses": 2,
+  "prof_bonus": 3,
+  "features": [
+    {
+      "index": "martial-archetype-improvement-1",
+      "name": "Martial Archetype feature",
+      "url": "/api/2014/features/martial-archetype-improvement-1"
+    }
+  ],
+  "class_specific": {
+    "action_surges": 1,
+    "indomitable_uses": 0,
+    "extra_attacks": 1
+  },
+  "index": "fighter-7",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "url": "/api/2014/classes/fighter/levels/7",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

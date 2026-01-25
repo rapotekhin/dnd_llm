@@ -1,0 +1,40 @@
+{
+  "level": 13,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 5,
+  "features": [
+    {
+      "index": "mystic-arcanum-7th-level",
+      "name": "Mystic Arcanum (7th level)",
+      "url": "/api/2014/features/mystic-arcanum-7th-level"
+    }
+  ],
+  "spellcasting": {
+    "cantrips_known": 4,
+    "spells_known": 12,
+    "spell_slots_level_1": 0,
+    "spell_slots_level_2": 0,
+    "spell_slots_level_3": 0,
+    "spell_slots_level_4": 0,
+    "spell_slots_level_5": 3,
+    "spell_slots_level_6": 0,
+    "spell_slots_level_7": 0,
+    "spell_slots_level_8": 0,
+    "spell_slots_level_9": 0
+  },
+  "class_specific": {
+    "invocations_known": 6,
+    "mystic_arcanum_level_6": 1,
+    "mystic_arcanum_level_7": 1,
+    "mystic_arcanum_level_8": 0,
+    "mystic_arcanum_level_9": 0
+  },
+  "index": "warlock-13",
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "url": "/api/2014/classes/warlock/levels/13",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

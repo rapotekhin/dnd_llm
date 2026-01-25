@@ -1,0 +1,23 @@
+{
+  "level": 11,
+  "features": [
+    {
+      "index": "multiattack",
+      "name": "Multiattack",
+      "url": "/api/2014/features/multiattack"
+    }
+  ],
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "subclass": {
+    "index": "hunter",
+    "name": "Hunter",
+    "url": "/api/2014/subclasses/hunter"
+  },
+  "url": "/api/2014/subclasses/hunter/levels/11",
+  "index": "hunter-11",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

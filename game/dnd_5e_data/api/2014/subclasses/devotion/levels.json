@@ -1,0 +1,128 @@
+[
+  {
+    "level": 3,
+    "features": [
+      {
+        "index": "channel-divinity-sacred-weapon",
+        "name": "Channel Divinity: Sacred Weapon",
+        "url": "/api/2014/features/channel-divinity-sacred-weapon"
+      },
+      {
+        "index": "channel-divinity-turn-the-unholy",
+        "name": "Channel Divinity: Turn the Unholy",
+        "url": "/api/2014/features/channel-divinity-turn-the-unholy"
+      }
+    ],
+    "class": {
+      "index": "paladin",
+      "name": "Paladin",
+      "url": "/api/2014/classes/paladin"
+    },
+    "subclass": {
+      "index": "devotion",
+      "name": "Devotion",
+      "url": "/api/2014/subclasses/devotion"
+    },
+    "url": "/api/2014/subclasses/devotion/levels/3",
+    "index": "devotion-3",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 7,
+    "features": [
+      {
+        "index": "aura-of-devotion",
+        "name": "Aura of Devotion",
+        "url": "/api/2014/features/aura-of-devotion"
+      }
+    ],
+    "subclass_specific": {
+      "aura_range": 10
+    },
+    "class": {
+      "index": "paladin",
+      "name": "Paladin",
+      "url": "/api/2014/classes/paladin"
+    },
+    "subclass": {
+      "index": "devotion",
+      "name": "Devotion",
+      "url": "/api/2014/subclasses/devotion"
+    },
+    "url": "/api/2014/subclasses/devotion/levels/7",
+    "index": "devotion-7",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 15,
+    "features": [
+      {
+        "index": "purity-of-spirit",
+        "name": "Purity of Spirit",
+        "url": "/api/2014/features/purity-of-spirit"
+      }
+    ],
+    "subclass_specific": {
+      "aura_range": 10
+    },
+    "class": {
+      "index": "paladin",
+      "name": "Paladin",
+      "url": "/api/2014/classes/paladin"
+    },
+    "subclass": {
+      "index": "devotion",
+      "name": "Devotion",
+      "url": "/api/2014/subclasses/devotion"
+    },
+    "url": "/api/2014/subclasses/devotion/levels/15",
+    "index": "devotion-15",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 18,
+    "features": [],
+    "subclass_specific": {
+      "aura_range": 30
+    },
+    "class": {
+      "index": "paladin",
+      "name": "Paladin",
+      "url": "/api/2014/classes/paladin"
+    },
+    "subclass": {
+      "index": "devotion",
+      "name": "Devotion",
+      "url": "/api/2014/subclasses/devotion"
+    },
+    "url": "/api/2014/subclasses/devotion/levels/18",
+    "index": "devotion-18",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 20,
+    "features": [
+      {
+        "index": "holy-nimbus",
+        "name": "Holy Nimbus",
+        "url": "/api/2014/features/holy-nimbus"
+      }
+    ],
+    "subclass_specific": {
+      "aura_range": 30
+    },
+    "class": {
+      "index": "paladin",
+      "name": "Paladin",
+      "url": "/api/2014/classes/paladin"
+    },
+    "subclass": {
+      "index": "devotion",
+      "name": "Devotion",
+      "url": "/api/2014/subclasses/devotion"
+    },
+    "url": "/api/2014/subclasses/devotion/levels/20",
+    "index": "devotion-20",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "level": 8,
+  "ability_score_bonuses": 2,
+  "prof_bonus": 3,
+  "features": [
+    {
+      "index": "monk-ability-score-improvement-2",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/monk-ability-score-improvement-2"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 6
+    },
+    "ki_points": 8,
+    "unarmored_movement": 15
+  },
+  "index": "monk-8",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/8",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

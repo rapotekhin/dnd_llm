@@ -1,0 +1,28 @@
+{
+  "level": 1,
+  "features": [
+    {
+      "index": "bonus-proficiency",
+      "name": "Bonus Proficiency",
+      "url": "/api/2014/features/bonus-proficiency"
+    },
+    {
+      "index": "disciple-of-life",
+      "name": "Disciple of Life",
+      "url": "/api/2014/features/disciple-of-life"
+    }
+  ],
+  "class": {
+    "index": "cleric",
+    "name": "Cleric",
+    "url": "/api/2014/classes/cleric"
+  },
+  "subclass": {
+    "index": "life",
+    "name": "Life",
+    "url": "/api/2014/subclasses/life"
+  },
+  "url": "/api/2014/subclasses/life/levels/1",
+  "index": "life-1",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

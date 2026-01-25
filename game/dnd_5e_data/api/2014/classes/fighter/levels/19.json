@@ -1,0 +1,25 @@
+{
+  "level": 19,
+  "ability_score_bonuses": 7,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "fighter-ability-score-improvement-7",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/fighter-ability-score-improvement-7"
+    }
+  ],
+  "class_specific": {
+    "action_surges": 2,
+    "indomitable_uses": 3,
+    "extra_attacks": 2
+  },
+  "index": "fighter-19",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "url": "/api/2014/classes/fighter/levels/19",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

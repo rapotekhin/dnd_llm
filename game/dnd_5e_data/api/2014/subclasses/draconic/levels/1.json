@@ -1,0 +1,28 @@
+{
+  "level": 1,
+  "features": [
+    {
+      "index": "dragon-ancestor",
+      "name": "Dragon Ancestor",
+      "url": "/api/2014/features/dragon-ancestor"
+    },
+    {
+      "index": "draconic-resilience",
+      "name": "Draconic Resilience",
+      "url": "/api/2014/features/draconic-resilience"
+    }
+  ],
+  "class": {
+    "index": "sorcerer",
+    "name": "Sorcerer",
+    "url": "/api/2014/classes/sorcerer"
+  },
+  "subclass": {
+    "index": "draconic",
+    "name": "Draconic",
+    "url": "/api/2014/subclasses/draconic"
+  },
+  "url": "/api/2014/subclasses/draconic/levels/1",
+  "index": "draconic-1",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

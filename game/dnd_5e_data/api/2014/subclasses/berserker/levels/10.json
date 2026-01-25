@@ -1,0 +1,23 @@
+{
+  "level": 10,
+  "features": [
+    {
+      "index": "intimidating-presence",
+      "name": "Intimidating Presence",
+      "url": "/api/2014/features/intimidating-presence"
+    }
+  ],
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "subclass": {
+    "index": "berserker",
+    "name": "Berserker",
+    "url": "/api/2014/subclasses/berserker"
+  },
+  "url": "/api/2014/subclasses/berserker/levels/10",
+  "index": "berserker-10",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

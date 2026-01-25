@@ -1,0 +1,26 @@
+{
+  "level": 7,
+  "features": [
+    {
+      "index": "aura-of-devotion",
+      "name": "Aura of Devotion",
+      "url": "/api/2014/features/aura-of-devotion"
+    }
+  ],
+  "subclass_specific": {
+    "aura_range": 10
+  },
+  "class": {
+    "index": "paladin",
+    "name": "Paladin",
+    "url": "/api/2014/classes/paladin"
+  },
+  "subclass": {
+    "index": "devotion",
+    "name": "Devotion",
+    "url": "/api/2014/subclasses/devotion"
+  },
+  "url": "/api/2014/subclasses/devotion/levels/7",
+  "index": "devotion-7",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

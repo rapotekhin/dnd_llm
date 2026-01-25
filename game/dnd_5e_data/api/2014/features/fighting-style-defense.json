@@ -1,0 +1,21 @@
+{
+  "index": "fighting-style-defense",
+  "class": {
+    "index": "paladin",
+    "name": "Paladin",
+    "url": "/api/2014/classes/paladin"
+  },
+  "name": "Fighting Style: Defense",
+  "level": 2,
+  "prerequisites": [],
+  "desc": [
+    "While you are wearing armor, you gain a +1 bonus to AC."
+  ],
+  "parent": {
+    "index": "paladin-fighting-style",
+    "name": "Fighting Style",
+    "url": "/api/2014/features/paladin-fighting-style"
+  },
+  "url": "/api/2014/features/fighting-style-defense",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

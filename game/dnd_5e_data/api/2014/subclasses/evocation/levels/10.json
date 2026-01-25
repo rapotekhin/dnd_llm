@@ -1,0 +1,23 @@
+{
+  "level": 10,
+  "features": [
+    {
+      "index": "empowered-evocation",
+      "name": "Empowered Evocation",
+      "url": "/api/2014/features/empowered-evocation"
+    }
+  ],
+  "class": {
+    "index": "wizard",
+    "name": "Wizard",
+    "url": "/api/2014/classes/wizard"
+  },
+  "subclass": {
+    "index": "evocation",
+    "name": "Evocation",
+    "url": "/api/2014/subclasses/evocation"
+  },
+  "url": "/api/2014/subclasses/evocation/levels/10",
+  "index": "evocation-10",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

@@ -1,0 +1,14 @@
+{
+    "index": "slept",
+    "name": "Slept",
+    "desc": [
+      "- A sleeping creature is unconscious, can't move or speak, and is unaware of its surroundings.",
+      "- The creature drops whatever it's holding and falls prone.",
+      "- The creature automatically fails Strength and Dexterity saving throws.",
+      "- Attack rolls against the creature have advantage.",
+      "- Any attack that hits the creature from within 5 feet is a critical hit.",
+      "- The creature wakes up if it takes damage or if another creature uses an action to wake it."
+    ],
+    "url": "/api/2014/conditions/slept",
+    "updated_at": "2025-10-24T20:42:12.637Z"
+  }

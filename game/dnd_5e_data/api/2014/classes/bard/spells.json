@@ -1,0 +1,671 @@
+{
+  "count": 111,
+  "results": [
+    {
+      "index": "dancing-lights",
+      "name": "Dancing Lights",
+      "level": 0,
+      "url": "/api/2014/spells/dancing-lights"
+    },
+    {
+      "index": "light",
+      "name": "Light",
+      "level": 0,
+      "url": "/api/2014/spells/light"
+    },
+    {
+      "index": "mage-hand",
+      "name": "Mage Hand",
+      "level": 0,
+      "url": "/api/2014/spells/mage-hand"
+    },
+    {
+      "index": "mending",
+      "name": "Mending",
+      "level": 0,
+      "url": "/api/2014/spells/mending"
+    },
+    {
+      "index": "message",
+      "name": "Message",
+      "level": 0,
+      "url": "/api/2014/spells/message"
+    },
+    {
+      "index": "minor-illusion",
+      "name": "Minor Illusion",
+      "level": 0,
+      "url": "/api/2014/spells/minor-illusion"
+    },
+    {
+      "index": "prestidigitation",
+      "name": "Prestidigitation",
+      "level": 0,
+      "url": "/api/2014/spells/prestidigitation"
+    },
+    {
+      "index": "true-strike",
+      "name": "True Strike",
+      "level": 0,
+      "url": "/api/2014/spells/true-strike"
+    },
+    {
+      "index": "vicious-mockery",
+      "name": "Vicious Mockery",
+      "level": 0,
+      "url": "/api/2014/spells/vicious-mockery"
+    },
+    {
+      "index": "animal-friendship",
+      "name": "Animal Friendship",
+      "level": 1,
+      "url": "/api/2014/spells/animal-friendship"
+    },
+    {
+      "index": "bane",
+      "name": "Bane",
+      "level": 1,
+      "url": "/api/2014/spells/bane"
+    },
+    {
+      "index": "charm-person",
+      "name": "Charm Person",
+      "level": 1,
+      "url": "/api/2014/spells/charm-person"
+    },
+    {
+      "index": "comprehend-languages",
+      "name": "Comprehend Languages",
+      "level": 1,
+      "url": "/api/2014/spells/comprehend-languages"
+    },
+    {
+      "index": "cure-wounds",
+      "name": "Cure Wounds",
+      "level": 1,
+      "url": "/api/2014/spells/cure-wounds"
+    },
+    {
+      "index": "detect-magic",
+      "name": "Detect Magic",
+      "level": 1,
+      "url": "/api/2014/spells/detect-magic"
+    },
+    {
+      "index": "disguise-self",
+      "name": "Disguise Self",
+      "level": 1,
+      "url": "/api/2014/spells/disguise-self"
+    },
+    {
+      "index": "feather-fall",
+      "name": "Feather Fall",
+      "level": 1,
+      "url": "/api/2014/spells/feather-fall"
+    },
+    {
+      "index": "healing-word",
+      "name": "Healing Word",
+      "level": 1,
+      "url": "/api/2014/spells/healing-word"
+    },
+    {
+      "index": "heroism",
+      "name": "Heroism",
+      "level": 1,
+      "url": "/api/2014/spells/heroism"
+    },
+    {
+      "index": "hideous-laughter",
+      "name": "Hideous Laughter",
+      "level": 1,
+      "url": "/api/2014/spells/hideous-laughter"
+    },
+    {
+      "index": "identify",
+      "name": "Identify",
+      "level": 1,
+      "url": "/api/2014/spells/identify"
+    },
+    {
+      "index": "illusory-script",
+      "name": "Illusory Script",
+      "level": 1,
+      "url": "/api/2014/spells/illusory-script"
+    },
+    {
+      "index": "longstrider",
+      "name": "Longstrider",
+      "level": 1,
+      "url": "/api/2014/spells/longstrider"
+    },
+    {
+      "index": "silent-image",
+      "name": "Silent Image",
+      "level": 1,
+      "url": "/api/2014/spells/silent-image"
+    },
+    {
+      "index": "sleep",
+      "name": "Sleep",
+      "level": 1,
+      "url": "/api/2014/spells/sleep"
+    },
+    {
+      "index": "speak-with-animals",
+      "name": "Speak with Animals",
+      "level": 1,
+      "url": "/api/2014/spells/speak-with-animals"
+    },
+    {
+      "index": "thunderwave",
+      "name": "Thunderwave",
+      "level": 1,
+      "url": "/api/2014/spells/thunderwave"
+    },
+    {
+      "index": "unseen-servant",
+      "name": "Unseen Servant",
+      "level": 1,
+      "url": "/api/2014/spells/unseen-servant"
+    },
+    {
+      "index": "animal-messenger",
+      "name": "Animal Messenger",
+      "level": 2,
+      "url": "/api/2014/spells/animal-messenger"
+    },
+    {
+      "index": "blindness-deafness",
+      "name": "Blindness/Deafness",
+      "level": 2,
+      "url": "/api/2014/spells/blindness-deafness"
+    },
+    {
+      "index": "calm-emotions",
+      "name": "Calm Emotions",
+      "level": 2,
+      "url": "/api/2014/spells/calm-emotions"
+    },
+    {
+      "index": "detect-thoughts",
+      "name": "Detect Thoughts",
+      "level": 2,
+      "url": "/api/2014/spells/detect-thoughts"
+    },
+    {
+      "index": "enhance-ability",
+      "name": "Enhance Ability",
+      "level": 2,
+      "url": "/api/2014/spells/enhance-ability"
+    },
+    {
+      "index": "enthrall",
+      "name": "Enthrall",
+      "level": 2,
+      "url": "/api/2014/spells/enthrall"
+    },
+    {
+      "index": "heat-metal",
+      "name": "Heat Metal",
+      "level": 2,
+      "url": "/api/2014/spells/heat-metal"
+    },
+    {
+      "index": "hold-person",
+      "name": "Hold Person",
+      "level": 2,
+      "url": "/api/2014/spells/hold-person"
+    },
+    {
+      "index": "invisibility",
+      "name": "Invisibility",
+      "level": 2,
+      "url": "/api/2014/spells/invisibility"
+    },
+    {
+      "index": "knock",
+      "name": "Knock",
+      "level": 2,
+      "url": "/api/2014/spells/knock"
+    },
+    {
+      "index": "lesser-restoration",
+      "name": "Lesser Restoration",
+      "level": 2,
+      "url": "/api/2014/spells/lesser-restoration"
+    },
+    {
+      "index": "locate-animals-or-plants",
+      "name": "Locate Animals or Plants",
+      "level": 2,
+      "url": "/api/2014/spells/locate-animals-or-plants"
+    },
+    {
+      "index": "locate-object",
+      "name": "Locate Object",
+      "level": 2,
+      "url": "/api/2014/spells/locate-object"
+    },
+    {
+      "index": "magic-mouth",
+      "name": "Magic Mouth",
+      "level": 2,
+      "url": "/api/2014/spells/magic-mouth"
+    },
+    {
+      "index": "see-invisibility",
+      "name": "See Invisibility",
+      "level": 2,
+      "url": "/api/2014/spells/see-invisibility"
+    },
+    {
+      "index": "shatter",
+      "name": "Shatter",
+      "level": 2,
+      "url": "/api/2014/spells/shatter"
+    },
+    {
+      "index": "silence",
+      "name": "Silence",
+      "level": 2,
+      "url": "/api/2014/spells/silence"
+    },
+    {
+      "index": "suggestion",
+      "name": "Suggestion",
+      "level": 2,
+      "url": "/api/2014/spells/suggestion"
+    },
+    {
+      "index": "zone-of-truth",
+      "name": "Zone of Truth",
+      "level": 2,
+      "url": "/api/2014/spells/zone-of-truth"
+    },
+    {
+      "index": "bestow-curse",
+      "name": "Bestow Curse",
+      "level": 3,
+      "url": "/api/2014/spells/bestow-curse"
+    },
+    {
+      "index": "clairvoyance",
+      "name": "Clairvoyance",
+      "level": 3,
+      "url": "/api/2014/spells/clairvoyance"
+    },
+    {
+      "index": "dispel-magic",
+      "name": "Dispel Magic",
+      "level": 3,
+      "url": "/api/2014/spells/dispel-magic"
+    },
+    {
+      "index": "fear",
+      "name": "Fear",
+      "level": 3,
+      "url": "/api/2014/spells/fear"
+    },
+    {
+      "index": "glyph-of-warding",
+      "name": "Glyph of Warding",
+      "level": 3,
+      "url": "/api/2014/spells/glyph-of-warding"
+    },
+    {
+      "index": "hypnotic-pattern",
+      "name": "Hypnotic Pattern",
+      "level": 3,
+      "url": "/api/2014/spells/hypnotic-pattern"
+    },
+    {
+      "index": "major-image",
+      "name": "Major Image",
+      "level": 3,
+      "url": "/api/2014/spells/major-image"
+    },
+    {
+      "index": "nondetection",
+      "name": "Nondetection",
+      "level": 3,
+      "url": "/api/2014/spells/nondetection"
+    },
+    {
+      "index": "plant-growth",
+      "name": "Plant Growth",
+      "level": 3,
+      "url": "/api/2014/spells/plant-growth"
+    },
+    {
+      "index": "sending",
+      "name": "Sending",
+      "level": 3,
+      "url": "/api/2014/spells/sending"
+    },
+    {
+      "index": "speak-with-dead",
+      "name": "Speak with Dead",
+      "level": 3,
+      "url": "/api/2014/spells/speak-with-dead"
+    },
+    {
+      "index": "speak-with-plants",
+      "name": "Speak with Plants",
+      "level": 3,
+      "url": "/api/2014/spells/speak-with-plants"
+    },
+    {
+      "index": "stinking-cloud",
+      "name": "Stinking Cloud",
+      "level": 3,
+      "url": "/api/2014/spells/stinking-cloud"
+    },
+    {
+      "index": "tiny-hut",
+      "name": "Tiny Hut",
+      "level": 3,
+      "url": "/api/2014/spells/tiny-hut"
+    },
+    {
+      "index": "tongues",
+      "name": "Tongues",
+      "level": 3,
+      "url": "/api/2014/spells/tongues"
+    },
+    {
+      "index": "compulsion",
+      "name": "Compulsion",
+      "level": 4,
+      "url": "/api/2014/spells/compulsion"
+    },
+    {
+      "index": "confusion",
+      "name": "Confusion",
+      "level": 4,
+      "url": "/api/2014/spells/confusion"
+    },
+    {
+      "index": "dimension-door",
+      "name": "Dimension Door",
+      "level": 4,
+      "url": "/api/2014/spells/dimension-door"
+    },
+    {
+      "index": "freedom-of-movement",
+      "name": "Freedom of Movement",
+      "level": 4,
+      "url": "/api/2014/spells/freedom-of-movement"
+    },
+    {
+      "index": "greater-invisibility",
+      "name": "Greater Invisibility",
+      "level": 4,
+      "url": "/api/2014/spells/greater-invisibility"
+    },
+    {
+      "index": "hallucinatory-terrain",
+      "name": "Hallucinatory Terrain",
+      "level": 4,
+      "url": "/api/2014/spells/hallucinatory-terrain"
+    },
+    {
+      "index": "locate-creature",
+      "name": "Locate Creature",
+      "level": 4,
+      "url": "/api/2014/spells/locate-creature"
+    },
+    {
+      "index": "polymorph",
+      "name": "Polymorph",
+      "level": 4,
+      "url": "/api/2014/spells/polymorph"
+    },
+    {
+      "index": "animate-objects",
+      "name": "Animate Objects",
+      "level": 5,
+      "url": "/api/2014/spells/animate-objects"
+    },
+    {
+      "index": "awaken",
+      "name": "Awaken",
+      "level": 5,
+      "url": "/api/2014/spells/awaken"
+    },
+    {
+      "index": "dominate-person",
+      "name": "Dominate Person",
+      "level": 5,
+      "url": "/api/2014/spells/dominate-person"
+    },
+    {
+      "index": "dream",
+      "name": "Dream",
+      "level": 5,
+      "url": "/api/2014/spells/dream"
+    },
+    {
+      "index": "geas",
+      "name": "Geas",
+      "level": 5,
+      "url": "/api/2014/spells/geas"
+    },
+    {
+      "index": "greater-restoration",
+      "name": "Greater Restoration",
+      "level": 5,
+      "url": "/api/2014/spells/greater-restoration"
+    },
+    {
+      "index": "hold-monster",
+      "name": "Hold Monster",
+      "level": 5,
+      "url": "/api/2014/spells/hold-monster"
+    },
+    {
+      "index": "legend-lore",
+      "name": "Legend Lore",
+      "level": 5,
+      "url": "/api/2014/spells/legend-lore"
+    },
+    {
+      "index": "mass-cure-wounds",
+      "name": "Mass Cure Wounds",
+      "level": 5,
+      "url": "/api/2014/spells/mass-cure-wounds"
+    },
+    {
+      "index": "mislead",
+      "name": "Mislead",
+      "level": 5,
+      "url": "/api/2014/spells/mislead"
+    },
+    {
+      "index": "modify-memory",
+      "name": "Modify Memory",
+      "level": 5,
+      "url": "/api/2014/spells/modify-memory"
+    },
+    {
+      "index": "planar-binding",
+      "name": "Planar Binding",
+      "level": 5,
+      "url": "/api/2014/spells/planar-binding"
+    },
+    {
+      "index": "raise-dead",
+      "name": "Raise Dead",
+      "level": 5,
+      "url": "/api/2014/spells/raise-dead"
+    },
+    {
+      "index": "scrying",
+      "name": "Scrying",
+      "level": 5,
+      "url": "/api/2014/spells/scrying"
+    },
+    {
+      "index": "seeming",
+      "name": "Seeming",
+      "level": 5,
+      "url": "/api/2014/spells/seeming"
+    },
+    {
+      "index": "teleportation-circle",
+      "name": "Teleportation Circle",
+      "level": 5,
+      "url": "/api/2014/spells/teleportation-circle"
+    },
+    {
+      "index": "eyebite",
+      "name": "Eyebite",
+      "level": 6,
+      "url": "/api/2014/spells/eyebite"
+    },
+    {
+      "index": "find-the-path",
+      "name": "Find the Path",
+      "level": 6,
+      "url": "/api/2014/spells/find-the-path"
+    },
+    {
+      "index": "guards-and-wards",
+      "name": "Guards and Wards",
+      "level": 6,
+      "url": "/api/2014/spells/guards-and-wards"
+    },
+    {
+      "index": "irresistible-dance",
+      "name": "Irresistible Dance",
+      "level": 6,
+      "url": "/api/2014/spells/irresistible-dance"
+    },
+    {
+      "index": "mass-suggestion",
+      "name": "Mass Suggestion",
+      "level": 6,
+      "url": "/api/2014/spells/mass-suggestion"
+    },
+    {
+      "index": "programmed-illusion",
+      "name": "Programmed Illusion",
+      "level": 6,
+      "url": "/api/2014/spells/programmed-illusion"
+    },
+    {
+      "index": "true-seeing",
+      "name": "True Seeing",
+      "level": 6,
+      "url": "/api/2014/spells/true-seeing"
+    },
+    {
+      "index": "arcane-sword",
+      "name": "Arcane Sword",
+      "level": 7,
+      "url": "/api/2014/spells/arcane-sword"
+    },
+    {
+      "index": "etherealness",
+      "name": "Etherealness",
+      "level": 7,
+      "url": "/api/2014/spells/etherealness"
+    },
+    {
+      "index": "forcecage",
+      "name": "Forcecage",
+      "level": 7,
+      "url": "/api/2014/spells/forcecage"
+    },
+    {
+      "index": "magnificent-mansion",
+      "name": "Magnificent Mansion",
+      "level": 7,
+      "url": "/api/2014/spells/magnificent-mansion"
+    },
+    {
+      "index": "mirage-arcane",
+      "name": "Mirage Arcane",
+      "level": 7,
+      "url": "/api/2014/spells/mirage-arcane"
+    },
+    {
+      "index": "project-image",
+      "name": "Project Image",
+      "level": 7,
+      "url": "/api/2014/spells/project-image"
+    },
+    {
+      "index": "regenerate",
+      "name": "Regenerate",
+      "level": 7,
+      "url": "/api/2014/spells/regenerate"
+    },
+    {
+      "index": "resurrection",
+      "name": "Resurrection",
+      "level": 7,
+      "url": "/api/2014/spells/resurrection"
+    },
+    {
+      "index": "symbol",
+      "name": "Symbol",
+      "level": 7,
+      "url": "/api/2014/spells/symbol"
+    },
+    {
+      "index": "teleport",
+      "name": "Teleport",
+      "level": 7,
+      "url": "/api/2014/spells/teleport"
+    },
+    {
+      "index": "dominate-monster",
+      "name": "Dominate Monster",
+      "level": 8,
+      "url": "/api/2014/spells/dominate-monster"
+    },
+    {
+      "index": "feeblemind",
+      "name": "Feeblemind",
+      "level": 8,
+      "url": "/api/2014/spells/feeblemind"
+    },
+    {
+      "index": "glibness",
+      "name": "Glibness",
+      "level": 8,
+      "url": "/api/2014/spells/glibness"
+    },
+    {
+      "index": "mind-blank",
+      "name": "Mind Blank",
+      "level": 8,
+      "url": "/api/2014/spells/mind-blank"
+    },
+    {
+      "index": "power-word-stun",
+      "name": "Power Word Stun",
+      "level": 8,
+      "url": "/api/2014/spells/power-word-stun"
+    },
+    {
+      "index": "foresight",
+      "name": "Foresight",
+      "level": 9,
+      "url": "/api/2014/spells/foresight"
+    },
+    {
+      "index": "power-word-kill",
+      "name": "Power Word Kill",
+      "level": 9,
+      "url": "/api/2014/spells/power-word-kill"
+    },
+    {
+      "index": "true-polymorph",
+      "name": "True Polymorph",
+      "level": 9,
+      "url": "/api/2014/spells/true-polymorph"
+    }
+  ]
+}

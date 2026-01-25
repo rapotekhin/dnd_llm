@@ -1,0 +1,32 @@
+{
+  "level": 4,
+  "ability_score_bonuses": 1,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "ranger-ability-score-improvement-1",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/ranger-ability-score-improvement-1"
+    }
+  ],
+  "spellcasting": {
+    "spells_known": 3,
+    "spell_slots_level_1": 3,
+    "spell_slots_level_2": 0,
+    "spell_slots_level_3": 0,
+    "spell_slots_level_4": 0,
+    "spell_slots_level_5": 0
+  },
+  "class_specific": {
+    "favored_enemies": 1,
+    "favored_terrain": 1
+  },
+  "index": "ranger-4",
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "url": "/api/2014/classes/ranger/levels/4",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

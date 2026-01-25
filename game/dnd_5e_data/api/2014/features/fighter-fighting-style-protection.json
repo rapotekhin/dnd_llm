@@ -1,0 +1,21 @@
+{
+  "index": "fighter-fighting-style-protection",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "name": "Fighting Style: Protection",
+  "level": 1,
+  "prerequisites": [],
+  "desc": [
+    "When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield."
+  ],
+  "parent": {
+    "index": "fighter-fighting-style",
+    "name": "Fighting Style",
+    "url": "/api/2014/features/fighter-fighting-style"
+  },
+  "url": "/api/2014/features/fighter-fighting-style-protection",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

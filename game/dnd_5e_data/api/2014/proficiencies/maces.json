@@ -1,0 +1,20 @@
+{
+  "index": "maces",
+  "type": "Weapons",
+  "name": "Maces",
+  "classes": [
+    {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/maces",
+  "reference": {
+    "index": "mace",
+    "name": "Mace",
+    "url": "/api/2014/equipment/mace"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

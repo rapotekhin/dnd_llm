@@ -1,0 +1,14 @@
+{
+  "index": "padded-armor",
+  "type": "Armor",
+  "name": "Padded Armor",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/padded-armor",
+  "reference": {
+    "index": "padded-armor",
+    "name": "Padded Armor",
+    "url": "/api/2014/equipment/padded-armor"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

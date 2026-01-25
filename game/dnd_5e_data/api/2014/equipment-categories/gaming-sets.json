@@ -1,0 +1,18 @@
+{
+  "index": "gaming-sets",
+  "name": "Gaming Sets",
+  "equipment": [
+    {
+      "index": "dice-set",
+      "name": "Dice Set",
+      "url": "/api/2014/equipment/dice-set"
+    },
+    {
+      "index": "playing-card-set",
+      "name": "Playing Card Set",
+      "url": "/api/2014/equipment/playing-card-set"
+    }
+  ],
+  "url": "/api/2014/equipment-categories/gaming-sets",
+  "updated_at": "2025-10-24T20:42:12.821Z"
+}

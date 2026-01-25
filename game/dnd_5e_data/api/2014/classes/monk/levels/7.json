@@ -1,0 +1,33 @@
+{
+  "level": 7,
+  "ability_score_bonuses": 1,
+  "prof_bonus": 3,
+  "features": [
+    {
+      "index": "monk-evasion",
+      "name": "Evasion",
+      "url": "/api/2014/features/monk-evasion"
+    },
+    {
+      "index": "stillness-of-mind",
+      "name": "Stillness of Mind",
+      "url": "/api/2014/features/stillness-of-mind"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 6
+    },
+    "ki_points": 7,
+    "unarmored_movement": 15
+  },
+  "index": "monk-7",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/7",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

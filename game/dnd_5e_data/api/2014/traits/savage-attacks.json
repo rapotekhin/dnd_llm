@@ -1,0 +1,18 @@
+{
+  "index": "savage-attacks",
+  "races": [
+    {
+      "index": "half-orc",
+      "name": "Half-Orc",
+      "url": "/api/2014/races/half-orc"
+    }
+  ],
+  "subraces": [],
+  "name": "Savage Attacks",
+  "desc": [
+    "When you score a critical hit with a melee weapon attack, you can roll one of the weapon's damage dice one additional time and add it to the extra damage of the critical hit."
+  ],
+  "proficiencies": [],
+  "url": "/api/2014/traits/savage-attacks",
+  "updated_at": "2025-10-24T20:42:14.945Z"
+}

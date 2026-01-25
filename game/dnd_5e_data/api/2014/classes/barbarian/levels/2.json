@@ -1,0 +1,30 @@
+{
+  "level": 2,
+  "ability_score_bonuses": 0,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "reckless-attack",
+      "name": "Reckless Attack",
+      "url": "/api/2014/features/reckless-attack"
+    },
+    {
+      "index": "danger-sense",
+      "name": "Danger Sense",
+      "url": "/api/2014/features/danger-sense"
+    }
+  ],
+  "class_specific": {
+    "rage_count": 2,
+    "rage_damage_bonus": 2,
+    "brutal_critical_dice": 0
+  },
+  "index": "barbarian-2",
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "url": "/api/2014/classes/barbarian/levels/2",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

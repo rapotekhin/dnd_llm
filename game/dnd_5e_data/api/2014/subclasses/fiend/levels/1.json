@@ -1,0 +1,23 @@
+{
+  "level": 1,
+  "features": [
+    {
+      "index": "dark-ones-blessing",
+      "name": "Dark One's Blessing",
+      "url": "/api/2014/features/dark-ones-blessing"
+    }
+  ],
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "subclass": {
+    "index": "fiend",
+    "name": "Fiend",
+    "url": "/api/2014/subclasses/fiend"
+  },
+  "url": "/api/2014/subclasses/fiend/levels/1",
+  "index": "fiend-1",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

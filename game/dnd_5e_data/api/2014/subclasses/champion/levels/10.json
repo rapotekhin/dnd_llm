@@ -1,0 +1,23 @@
+{
+  "level": 10,
+  "features": [
+    {
+      "index": "additional-fighting-style",
+      "name": "Additional Fighting Style",
+      "url": "/api/2014/features/additional-fighting-style"
+    }
+  ],
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "subclass": {
+    "index": "champion",
+    "name": "Champion",
+    "url": "/api/2014/subclasses/champion"
+  },
+  "url": "/api/2014/subclasses/champion/levels/10",
+  "index": "champion-10",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

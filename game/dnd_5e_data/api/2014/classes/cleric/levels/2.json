@@ -1,0 +1,46 @@
+{
+  "level": 2,
+  "ability_score_bonuses": 0,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "channel-divinity-1-rest",
+      "name": "Channel Divinity (1/rest)",
+      "url": "/api/2014/features/channel-divinity-1-rest"
+    },
+    {
+      "index": "channel-divinity-turn-undead",
+      "name": "Channel Divinity: Turn Undead",
+      "url": "/api/2014/features/channel-divinity-turn-undead"
+    },
+    {
+      "index": "divine-domain-improvement-1",
+      "name": "Divine Domain feature",
+      "url": "/api/2014/features/divine-domain-improvement-1"
+    }
+  ],
+  "spellcasting": {
+    "cantrips_known": 3,
+    "spell_slots_level_1": 3,
+    "spell_slots_level_2": 0,
+    "spell_slots_level_3": 0,
+    "spell_slots_level_4": 0,
+    "spell_slots_level_5": 0,
+    "spell_slots_level_6": 0,
+    "spell_slots_level_7": 0,
+    "spell_slots_level_8": 0,
+    "spell_slots_level_9": 0
+  },
+  "class_specific": {
+    "channel_divinity_charges": 1,
+    "destroy_undead_cr": 0
+  },
+  "index": "cleric-2",
+  "class": {
+    "index": "cleric",
+    "name": "Cleric",
+    "url": "/api/2014/classes/cleric"
+  },
+  "url": "/api/2014/classes/cleric/levels/2",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

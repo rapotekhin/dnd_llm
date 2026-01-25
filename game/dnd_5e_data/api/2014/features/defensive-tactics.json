@@ -1,0 +1,60 @@
+{
+  "index": "defensive-tactics",
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "subclass": {
+    "index": "hunter",
+    "name": "Hunter",
+    "url": "/api/2014/subclasses/hunter"
+  },
+  "name": "Defensive Tactics",
+  "level": 7,
+  "prerequisites": [],
+  "desc": [
+    "At 7th level, you gain one of the following features of your choice.",
+    "Escape the Horde",
+    "Multiattack Defense",
+    "Steel Will"
+  ],
+  "feature_specific": {
+    "subfeature_options": {
+      "choose": 1,
+      "type": "feature",
+      "from": {
+        "option_set_type": "options_array",
+        "options": [
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "defensive-tactics-escape-the-horde",
+              "name": "Defensive Tactics: Escape the Horde",
+              "url": "/api/2014/features/defensive-tactics-escape-the-horde"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "defensive-tactics-multiattack-defense",
+              "name": "Defensive Tactics: Multiattack Defense",
+              "url": "/api/2014/features/defensive-tactics-multiattack-defense"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "defensive-tactics-steel-will",
+              "name": "Defensive Tactics: Steel Will",
+              "url": "/api/2014/features/defensive-tactics-steel-will"
+            }
+          }
+        ]
+      }
+    },
+    "invocations": []
+  },
+  "url": "/api/2014/features/defensive-tactics",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

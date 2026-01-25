@@ -1,0 +1,20 @@
+{
+  "index": "spears",
+  "type": "Weapons",
+  "name": "Spears",
+  "classes": [
+    {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/spears",
+  "reference": {
+    "index": "spear",
+    "name": "Spear",
+    "url": "/api/2014/equipment/spear"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

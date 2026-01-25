@@ -1,0 +1,16 @@
+{
+  "index": "monastic-tradition-improvement-2",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "name": "Monastic Tradition feature",
+  "level": 11,
+  "prerequisites": [],
+  "desc": [
+    "When you reach 3rd level, you commit yourself to a monastic tradition, such as the Way of the Open Hand. Your tradition grants you features at 3rd level and again at 6th, 11th, and 17th level."
+  ],
+  "url": "/api/2014/features/monastic-tradition-improvement-2",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

@@ -1,0 +1,48 @@
+{
+  "level": 2,
+  "ability_score_bonuses": 0,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "ki",
+      "name": "Ki",
+      "url": "/api/2014/features/ki"
+    },
+    {
+      "index": "flurry-of-blows",
+      "name": "Flurry of Blows",
+      "url": "/api/2014/features/flurry-of-blows"
+    },
+    {
+      "index": "patient-defense",
+      "name": "Patient Defense",
+      "url": "/api/2014/features/patient-defense"
+    },
+    {
+      "index": "step-of-the-wind",
+      "name": "Step of the Wind",
+      "url": "/api/2014/features/step-of-the-wind"
+    },
+    {
+      "index": "unarmored-movement-1",
+      "name": "Unarmored Movement",
+      "url": "/api/2014/features/unarmored-movement-1"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 4
+    },
+    "ki_points": 2,
+    "unarmored_movement": 10
+  },
+  "index": "monk-2",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/2",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

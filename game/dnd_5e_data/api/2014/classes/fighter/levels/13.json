@@ -1,0 +1,25 @@
+{
+  "level": 13,
+  "ability_score_bonuses": 4,
+  "prof_bonus": 5,
+  "features": [
+    {
+      "index": "indomitable-2-uses",
+      "name": "Indomitable (2 uses)",
+      "url": "/api/2014/features/indomitable-2-uses"
+    }
+  ],
+  "class_specific": {
+    "action_surges": 1,
+    "indomitable_uses": 2,
+    "extra_attacks": 2
+  },
+  "index": "fighter-13",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "url": "/api/2014/classes/fighter/levels/13",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

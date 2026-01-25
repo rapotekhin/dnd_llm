@@ -1,0 +1,23 @@
+{
+  "level": 6,
+  "features": [
+    {
+      "index": "mindless-rage",
+      "name": "Mindless Rage",
+      "url": "/api/2014/features/mindless-rage"
+    }
+  ],
+  "index": "berserker-6",
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "subclass": {
+    "index": "berserker",
+    "name": "Berserker",
+    "url": "/api/2014/subclasses/berserker"
+  },
+  "url": "/api/2014/subclasses/berserker/levels/6",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

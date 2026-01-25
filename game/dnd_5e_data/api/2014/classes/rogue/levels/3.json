@@ -1,0 +1,26 @@
+{
+  "level": 3,
+  "ability_score_bonuses": 0,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "roguish-archetype",
+      "name": "Roguish Archetype",
+      "url": "/api/2014/features/roguish-archetype"
+    }
+  ],
+  "class_specific": {
+    "sneak_attack": {
+      "dice_count": 2,
+      "dice_value": 6
+    }
+  },
+  "index": "rogue-3",
+  "class": {
+    "index": "rogue",
+    "name": "Rogue",
+    "url": "/api/2014/classes/rogue"
+  },
+  "url": "/api/2014/classes/rogue/levels/3",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

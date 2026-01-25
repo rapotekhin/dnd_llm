@@ -1,0 +1,60 @@
+{
+  "index": "simple-weapons",
+  "type": "Weapons",
+  "name": "Simple Weapons",
+  "classes": [
+    {
+      "index": "barbarian",
+      "name": "Barbarian",
+      "url": "/api/2014/classes/barbarian"
+    },
+    {
+      "index": "bard",
+      "name": "Bard",
+      "url": "/api/2014/classes/bard"
+    },
+    {
+      "index": "cleric",
+      "name": "Cleric",
+      "url": "/api/2014/classes/cleric"
+    },
+    {
+      "index": "fighter",
+      "name": "Fighter",
+      "url": "/api/2014/classes/fighter"
+    },
+    {
+      "index": "monk",
+      "name": "Monk",
+      "url": "/api/2014/classes/monk"
+    },
+    {
+      "index": "paladin",
+      "name": "Paladin",
+      "url": "/api/2014/classes/paladin"
+    },
+    {
+      "index": "ranger",
+      "name": "Ranger",
+      "url": "/api/2014/classes/ranger"
+    },
+    {
+      "index": "rogue",
+      "name": "Rogue",
+      "url": "/api/2014/classes/rogue"
+    },
+    {
+      "index": "warlock",
+      "name": "Warlock",
+      "url": "/api/2014/classes/warlock"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/simple-weapons",
+  "reference": {
+    "index": "simple-weapons",
+    "name": "Simple Weapons",
+    "url": "/api/2014/equipment-categories/simple-weapons"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

@@ -1,0 +1,36 @@
+{
+  "index": "shortswords",
+  "type": "Weapons",
+  "name": "Shortswords",
+  "classes": [
+    {
+      "index": "bard",
+      "name": "Bard",
+      "url": "/api/2014/classes/bard"
+    },
+    {
+      "index": "monk",
+      "name": "Monk",
+      "url": "/api/2014/classes/monk"
+    },
+    {
+      "index": "rogue",
+      "name": "Rogue",
+      "url": "/api/2014/classes/rogue"
+    }
+  ],
+  "races": [
+    {
+      "index": "high-elf",
+      "name": "High Elf",
+      "url": "/api/2014/subraces/high-elf"
+    }
+  ],
+  "url": "/api/2014/proficiencies/shortswords",
+  "reference": {
+    "index": "shortsword",
+    "name": "Shortsword",
+    "url": "/api/2014/equipment/shortsword"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

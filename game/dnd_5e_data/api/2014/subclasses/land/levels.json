@@ -1,0 +1,99 @@
+[
+  {
+    "level": 2,
+    "features": [
+      {
+        "index": "bonus-cantrip",
+        "name": "Bonus Cantrip",
+        "url": "/api/2014/features/bonus-cantrip"
+      },
+      {
+        "index": "natural-recovery",
+        "name": "Natural Recovery",
+        "url": "/api/2014/features/natural-recovery"
+      }
+    ],
+    "class": {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    },
+    "subclass": {
+      "index": "land",
+      "name": "Land",
+      "url": "/api/2014/subclasses/land"
+    },
+    "url": "/api/2014/subclasses/land/levels/2",
+    "index": "land-2",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 6,
+    "features": [
+      {
+        "index": "druid-lands-stride",
+        "name": "Land's Stride",
+        "url": "/api/2014/features/druid-lands-stride"
+      }
+    ],
+    "class": {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    },
+    "subclass": {
+      "index": "land",
+      "name": "Land",
+      "url": "/api/2014/subclasses/land"
+    },
+    "url": "/api/2014/subclasses/land/levels/6",
+    "index": "land-6",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 10,
+    "features": [
+      {
+        "index": "natures-ward",
+        "name": "Nature's Ward",
+        "url": "/api/2014/features/natures-ward"
+      }
+    ],
+    "class": {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    },
+    "subclass": {
+      "index": "land",
+      "name": "Land",
+      "url": "/api/2014/subclasses/land"
+    },
+    "url": "/api/2014/subclasses/land/levels/10",
+    "index": "land-10",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 14,
+    "features": [
+      {
+        "index": "natures-sanctuary",
+        "name": "Nature's Sanctuary",
+        "url": "/api/2014/features/natures-sanctuary"
+      }
+    ],
+    "class": {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    },
+    "subclass": {
+      "index": "land",
+      "name": "Land",
+      "url": "/api/2014/subclasses/land"
+    },
+    "url": "/api/2014/subclasses/land/levels/14",
+    "index": "land-14",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  }
+]

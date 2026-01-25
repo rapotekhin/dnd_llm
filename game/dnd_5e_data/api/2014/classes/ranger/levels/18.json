@@ -1,0 +1,32 @@
+{
+  "level": 18,
+  "ability_score_bonuses": 4,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "feral-senses",
+      "name": "Feral Senses",
+      "url": "/api/2014/features/feral-senses"
+    }
+  ],
+  "spellcasting": {
+    "spells_known": 10,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 3,
+    "spell_slots_level_5": 1
+  },
+  "class_specific": {
+    "favored_enemies": 3,
+    "favored_terrain": 3
+  },
+  "index": "ranger-18",
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "url": "/api/2014/classes/ranger/levels/18",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

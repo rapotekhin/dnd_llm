@@ -1,0 +1,35 @@
+{
+  "index": "saving-throw-str",
+  "type": "Saving Throws",
+  "name": "Saving Throw: STR",
+  "classes": [
+    {
+      "index": "barbarian",
+      "name": "Barbarian",
+      "url": "/api/2014/classes/barbarian"
+    },
+    {
+      "index": "fighter",
+      "name": "Fighter",
+      "url": "/api/2014/classes/fighter"
+    },
+    {
+      "index": "monk",
+      "name": "Monk",
+      "url": "/api/2014/classes/monk"
+    },
+    {
+      "index": "ranger",
+      "name": "Ranger",
+      "url": "/api/2014/classes/ranger"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/saving-throw-str",
+  "reference": {
+    "index": "str",
+    "name": "STR",
+    "url": "/api/2014/ability-scores/str"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

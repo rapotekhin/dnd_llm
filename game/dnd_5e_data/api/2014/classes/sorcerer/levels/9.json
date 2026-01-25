@@ -1,0 +1,53 @@
+{
+  "level": 9,
+  "ability_score_bonuses": 2,
+  "prof_bonus": 4,
+  "features": [],
+  "spellcasting": {
+    "cantrips_known": 5,
+    "spells_known": 10,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 3,
+    "spell_slots_level_5": 1,
+    "spell_slots_level_6": 0,
+    "spell_slots_level_7": 0,
+    "spell_slots_level_8": 0,
+    "spell_slots_level_9": 0
+  },
+  "class_specific": {
+    "sorcery_points": 9,
+    "metamagic_known": 2,
+    "creating_spell_slots": [
+      {
+        "spell_slot_level": 1,
+        "sorcery_point_cost": 2
+      },
+      {
+        "spell_slot_level": 2,
+        "sorcery_point_cost": 3
+      },
+      {
+        "spell_slot_level": 3,
+        "sorcery_point_cost": 5
+      },
+      {
+        "spell_slot_level": 4,
+        "sorcery_point_cost": 6
+      },
+      {
+        "spell_slot_level": 5,
+        "sorcery_point_cost": 7
+      }
+    ]
+  },
+  "index": "sorcerer-9",
+  "class": {
+    "index": "sorcerer",
+    "name": "Sorcerer",
+    "url": "/api/2014/classes/sorcerer"
+  },
+  "url": "/api/2014/classes/sorcerer/levels/9",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

@@ -1,0 +1,21 @@
+{
+  "index": "eldritch-invocation-beguiling-influence",
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "name": "Eldritch Invocation: Beguiling Influence",
+  "level": 2,
+  "prerequisites": [],
+  "desc": [
+    "You gain proficiency in the Deception and Persuasion skills."
+  ],
+  "parent": {
+    "index": "eldritch-invocations",
+    "name": "Eldritch Invocations",
+    "url": "/api/2014/features/eldritch-invocations"
+  },
+  "url": "/api/2014/features/eldritch-invocation-beguiling-influence",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

@@ -1,0 +1,23 @@
+{
+  "level": 15,
+  "features": [
+    {
+      "index": "superior-critical",
+      "name": "Superior Critical",
+      "url": "/api/2014/features/superior-critical"
+    }
+  ],
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "subclass": {
+    "index": "champion",
+    "name": "Champion",
+    "url": "/api/2014/subclasses/champion"
+  },
+  "url": "/api/2014/subclasses/champion/levels/15",
+  "index": "champion-15",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

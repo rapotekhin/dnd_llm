@@ -1,0 +1,14 @@
+{
+  "index": "tridents",
+  "type": "Weapons",
+  "name": "Tridents",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/tridents",
+  "reference": {
+    "index": "trident",
+    "name": "Trident",
+    "url": "/api/2014/equipment/trident"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

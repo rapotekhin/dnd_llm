@@ -1,0 +1,14 @@
+{
+  "index": "skill-survival",
+  "type": "Skills",
+  "name": "Skill: Survival",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/skill-survival",
+  "reference": {
+    "index": "survival",
+    "name": "Survival",
+    "url": "/api/2014/skills/survival"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

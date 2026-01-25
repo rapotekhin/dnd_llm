@@ -1,0 +1,14 @@
+{
+  "index": "land-vehicles",
+  "type": "Vehicles",
+  "name": "Land Vehicles",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/land-vehicles",
+  "reference": {
+    "index": "land-vehicles",
+    "name": "Land Vehicles",
+    "url": "/api/2014/equipment-categories/land-vehicles"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

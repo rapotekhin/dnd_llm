@@ -1,0 +1,21 @@
+{
+  "index": "ranger-fighting-style-defense",
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "name": "Fighting Style: Defense",
+  "level": 2,
+  "prerequisites": [],
+  "desc": [
+    "While you are wearing armor, you gain a +1 bonus to AC."
+  ],
+  "parent": {
+    "index": "ranger-fighting-style",
+    "name": "Fighting Style",
+    "url": "/api/2014/features/ranger-fighting-style"
+  },
+  "url": "/api/2014/features/ranger-fighting-style-defense",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

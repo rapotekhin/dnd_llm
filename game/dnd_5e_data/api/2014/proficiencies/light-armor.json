@@ -1,0 +1,50 @@
+{
+  "index": "light-armor",
+  "type": "Armor",
+  "name": "Light Armor",
+  "classes": [
+    {
+      "index": "barbarian",
+      "name": "Barbarian",
+      "url": "/api/2014/classes/barbarian"
+    },
+    {
+      "index": "bard",
+      "name": "Bard",
+      "url": "/api/2014/classes/bard"
+    },
+    {
+      "index": "cleric",
+      "name": "Cleric",
+      "url": "/api/2014/classes/cleric"
+    },
+    {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    },
+    {
+      "index": "ranger",
+      "name": "Ranger",
+      "url": "/api/2014/classes/ranger"
+    },
+    {
+      "index": "rogue",
+      "name": "Rogue",
+      "url": "/api/2014/classes/rogue"
+    },
+    {
+      "index": "warlock",
+      "name": "Warlock",
+      "url": "/api/2014/classes/warlock"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/light-armor",
+  "reference": {
+    "index": "light-armor",
+    "name": "Light Armor",
+    "url": "/api/2014/equipment-categories/light-armor"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

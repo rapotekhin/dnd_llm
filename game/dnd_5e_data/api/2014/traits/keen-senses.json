@@ -1,0 +1,24 @@
+{
+  "index": "keen-senses",
+  "races": [
+    {
+      "index": "elf",
+      "name": "Elf",
+      "url": "/api/2014/races/elf"
+    }
+  ],
+  "subraces": [],
+  "name": "Keen Senses",
+  "desc": [
+    "You have proficiency in the Perception skill."
+  ],
+  "proficiencies": [
+    {
+      "index": "skill-perception",
+      "name": "Skill: Perception",
+      "url": "/api/2014/proficiencies/skill-perception"
+    }
+  ],
+  "url": "/api/2014/traits/keen-senses",
+  "updated_at": "2025-10-24T20:42:14.945Z"
+}

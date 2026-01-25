@@ -1,0 +1,30 @@
+{
+  "index": "saving-throw-int",
+  "type": "Saving Throws",
+  "name": "Saving Throw: INT",
+  "classes": [
+    {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    },
+    {
+      "index": "rogue",
+      "name": "Rogue",
+      "url": "/api/2014/classes/rogue"
+    },
+    {
+      "index": "wizard",
+      "name": "Wizard",
+      "url": "/api/2014/classes/wizard"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/saving-throw-int",
+  "reference": {
+    "index": "int",
+    "name": "INT",
+    "url": "/api/2014/ability-scores/int"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

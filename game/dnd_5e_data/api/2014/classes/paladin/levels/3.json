@@ -1,0 +1,45 @@
+{
+  "level": 3,
+  "ability_score_bonuses": 0,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "divine-health",
+      "name": "Divine Health",
+      "url": "/api/2014/features/divine-health"
+    },
+    {
+      "index": "sacred-oath",
+      "name": "Sacred Oath",
+      "url": "/api/2014/features/sacred-oath"
+    },
+    {
+      "index": "oath-spells",
+      "name": "Oath Spells",
+      "url": "/api/2014/features/oath-spells"
+    },
+    {
+      "index": "channel-divinity",
+      "name": "Channel Divinity",
+      "url": "/api/2014/features/channel-divinity"
+    }
+  ],
+  "spellcasting": {
+    "spell_slots_level_1": 3,
+    "spell_slots_level_2": 0,
+    "spell_slots_level_3": 0,
+    "spell_slots_level_4": 0,
+    "spell_slots_level_5": 0
+  },
+  "class_specific": {
+    "aura_range": 0
+  },
+  "index": "paladin-3",
+  "class": {
+    "index": "paladin",
+    "name": "Paladin",
+    "url": "/api/2014/classes/paladin"
+  },
+  "url": "/api/2014/classes/paladin/levels/3",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

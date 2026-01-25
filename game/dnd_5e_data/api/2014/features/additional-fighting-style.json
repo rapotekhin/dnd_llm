@@ -1,0 +1,81 @@
+{
+  "index": "additional-fighting-style",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "subclass": {
+    "index": "champion",
+    "name": "Champion",
+    "url": "/api/2014/subclasses/champion"
+  },
+  "name": "Additional Fighting Style",
+  "level": 10,
+  "prerequisites": [],
+  "desc": [
+    "At 10th level, you can choose a second option from the Fighting Style class feature."
+  ],
+  "feature_specific": {
+    "subfeature_options": {
+      "choose": 1,
+      "type": "feature",
+      "from": {
+        "option_set_type": "options_array",
+        "options": [
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "fighter-fighting-style-archery",
+              "name": "Fighting Style: Archery",
+              "url": "/api/2014/features/fighter-fighting-style-archery"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "fighter-fighting-style-defense",
+              "name": "Fighting Style: Defense",
+              "url": "/api/2014/features/fighter-fighting-style-defense"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "fighter-fighting-style-dueling",
+              "name": "Fighting Style: Dueling",
+              "url": "/api/2014/features/fighter-fighting-style-dueling"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "fighter-fighting-style-great-weapon-fighting",
+              "name": "Fighting Style: Great Weapon Fighting",
+              "url": "/api/2014/features/fighter-fighting-style-great-weapon-fighting"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "fighter-fighting-style-protection",
+              "name": "Fighting Style: Protection",
+              "url": "/api/2014/features/fighter-fighting-style-protection"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "fighter-fighting-style-two-weapon-fighting",
+              "name": "Fighting Style: Two-Weapon Fighting",
+              "url": "/api/2014/features/fighter-fighting-style-two-weapon-fighting"
+            }
+          }
+        ]
+      }
+    },
+    "invocations": []
+  },
+  "url": "/api/2014/features/additional-fighting-style",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

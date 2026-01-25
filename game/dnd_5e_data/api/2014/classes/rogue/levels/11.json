@@ -1,0 +1,26 @@
+{
+  "level": 11,
+  "ability_score_bonuses": 2,
+  "prof_bonus": 4,
+  "features": [
+    {
+      "index": "reliable-talent",
+      "name": "Reliable Talent",
+      "url": "/api/2014/features/reliable-talent"
+    }
+  ],
+  "class_specific": {
+    "sneak_attack": {
+      "dice_count": 6,
+      "dice_value": 6
+    }
+  },
+  "index": "rogue-11",
+  "class": {
+    "index": "rogue",
+    "name": "Rogue",
+    "url": "/api/2014/classes/rogue"
+  },
+  "url": "/api/2014/classes/rogue/levels/11",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

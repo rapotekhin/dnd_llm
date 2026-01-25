@@ -1,0 +1,23 @@
+{
+  "index": "holy-symbols",
+  "name": "Holy Symbols",
+  "equipment": [
+    {
+      "index": "amulet",
+      "name": "Amulet",
+      "url": "/api/2014/equipment/amulet"
+    },
+    {
+      "index": "emblem",
+      "name": "Emblem",
+      "url": "/api/2014/equipment/emblem"
+    },
+    {
+      "index": "reliquary",
+      "name": "Reliquary",
+      "url": "/api/2014/equipment/reliquary"
+    }
+  ],
+  "url": "/api/2014/equipment-categories/holy-symbols",
+  "updated_at": "2025-10-24T20:42:12.821Z"
+}

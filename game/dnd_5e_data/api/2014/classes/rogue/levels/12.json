@@ -1,0 +1,26 @@
+{
+  "level": 12,
+  "ability_score_bonuses": 4,
+  "prof_bonus": 4,
+  "features": [
+    {
+      "index": "rogue-ability-score-improvement-4",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/rogue-ability-score-improvement-4"
+    }
+  ],
+  "class_specific": {
+    "sneak_attack": {
+      "dice_count": 6,
+      "dice_value": 6
+    }
+  },
+  "index": "rogue-12",
+  "class": {
+    "index": "rogue",
+    "name": "Rogue",
+    "url": "/api/2014/classes/rogue"
+  },
+  "url": "/api/2014/classes/rogue/levels/12",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

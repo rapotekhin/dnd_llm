@@ -1,0 +1,14 @@
+{
+  "index": "skill-intimidation",
+  "type": "Skills",
+  "name": "Skill: Intimidation",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/skill-intimidation",
+  "reference": {
+    "index": "intimidation",
+    "name": "Intimidation",
+    "url": "/api/2014/skills/intimidation"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

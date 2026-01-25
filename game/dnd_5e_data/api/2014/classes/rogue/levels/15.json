@@ -1,0 +1,26 @@
+{
+  "level": 15,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 5,
+  "features": [
+    {
+      "index": "slippery-mind",
+      "name": "Slippery Mind",
+      "url": "/api/2014/features/slippery-mind"
+    }
+  ],
+  "class_specific": {
+    "sneak_attack": {
+      "dice_count": 8,
+      "dice_value": 6
+    }
+  },
+  "index": "rogue-15",
+  "class": {
+    "index": "rogue",
+    "name": "Rogue",
+    "url": "/api/2014/classes/rogue"
+  },
+  "url": "/api/2014/classes/rogue/levels/15",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

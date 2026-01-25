@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<localization lang="ru" name="Русский">
+    <!-- Common -->
+    <string id="back">Назад</string>
+    <string id="next">Далее</string>
+    <string id="cancel">Отмена</string>
+    <string id="confirm">Готово</string>
+    <string id="apply">Применить</string>
+    <string id="save">Сохранить</string>
+    <string id="load">Загрузить</string>
+    <string id="exit">Выход</string>
+    <string id="yes">Да</string>
+    <string id="no">Нет</string>
+    
+    <!-- Title Screen -->
+    <string id="game_title">DnD LLM</string>
+    <string id="game_subtitle">Текстовое приключение с искусственным интеллектом</string>
+    <string id="new_game">Новая игра</string>
+    <string id="continue">Продолжить</string>
+    <string id="save_game">Сохранить</string>
+    <string id="load_game">Загрузить</string>
+    <string id="save_slots_title">Выберите слот сохранения</string>
+    <string id="load_slots_title">Выберите слот загрузки</string>
+    <string id="slot_n">Слот {0}</string>
+    <string id="no_saves">Нет сохранений</string>
+    <string id="settings">Настройки</string>
+    <string id="llm_active">LLM Активен</string>
+    <string id="llm_enable">Включить LLM</string>
+    <string id="llm_not_implemented">Загрузить - пока не реализовано</string>
+    
+    <!-- API Modal -->
+    <string id="api_key_title">Введите OpenRouter API ключ</string>
+    <string id="api_key_placeholder">sk-or-v1-...</string>
+    <string id="api_checking">Проверяю API ключ...</string>
+    <string id="api_saved">API ключ сохранён и активирован!</string>
+    <string id="api_error">Ошибка</string>
+    <string id="api_key_empty">API ключ не указан</string>
+    <string id="api_key_invalid">Неверный API ключ</string>
+    <string id="api_access_denied">Доступ запрещён</string>
+    <string id="api_error_code">Ошибка API</string>
+    <string id="api_balance_empty">Баланс исчерпан</string>
+    <string id="api_timeout">Таймаут соединения</string>
+    <string id="api_no_connection">Нет соединения</string>
+    <string id="api_save_error">Ошибка сохранения</string>
+    <string id="api_status_active">LLM Активен</string>
+    <string id="api_status_inactive">LLM Неактивен</string>
+    <string id="api_key_not_found">Не найден</string>
+    <string id="api_balance">Баланс</string>
+    <string id="api_usage">Использовано</string>
+    <string id="api_remaining">Остаток</string>
+    <string id="api_status">Статус</string>
+    <string id="api_status_ok">АКТИВЕН</string>
+    <string id="api_status_fail">НЕАКТИВЕН</string>
+    
+    <!-- Settings Screen -->
+    <string id="settings_title">Настройки</string>
+    <string id="settings_display">Отображение</string>
+    <string id="settings_resolution">Разрешение</string>
+    <string id="settings_fullscreen">Полный экран</string>
+    <string id="settings_windowed">Оконный</string>
+    <string id="settings_audio">Звук</string>
+    <string id="settings_master_volume">Общая громкость</string>
+    <string id="settings_music_volume">Музыка</string>
+    <string id="settings_sfx_volume">Эффекты</string>
+    <string id="settings_language">Язык</string>
+    
+    <!-- Character Creation -->
+    <string id="char_creation_title">Создание персонажа</string>
+    <string id="char_create">Создать</string>
+    
+    <!-- Character Creation Steps -->
+    <string id="step_biography">Биография</string>
+    <string id="step_race">Раса</string>
+    <string id="step_subrace">Подраса</string>
+    <string id="step_class">Класс</string>
+    <string id="step_features">Классовые особенности</string>
+    <string id="step_subclass">Подкласс</string>
+    <string id="step_cantrips">Фокусы</string>
+    <string id="step_spells">Заклинания</string>
+    <string id="step_prepared">Подготовленные</string>
+    <string id="step_background">Происхождение</string>
+    <string id="step_abilities">Способности</string>
+    <string id="step_proficiency_choices">Выбор владений</string>
+    <string id="step_confirmation">Подтверждение</string>
+    <string id="finish">Завершить</string>
+    
+    <!-- Biography Step -->
+    <string id="char_name">Имя персонажа</string>
+    <string id="char_name_placeholder">Введите имя...</string>
+    <string id="random_name">Случайное имя</string>
+    <string id="gender">Пол</string>
+    <string id="gender_male">Мужской</string>
+    <string id="gender_female">Женский</string>
+    <string id="age">Возраст</string>
+    <string id="weight">Вес</string>
+    <string id="weight_unit">кг</string>
+    <string id="alignment">Мировоззрение</string>
+    
+    <!-- Race Step -->
+    <string id="race_stats">Характеристики</string>
+    <string id="race_speed">Скорость</string>
+    <string id="race_speed_unit">фт.</string>
+    <string id="race_size">Размер</string>
+    <string id="race_ability_bonuses">Бонусы характеристик</string>
+    <string id="race_languages">Языки</string>
+    <string id="race_traits">Особенности</string>
+    
+    <!-- Subrace Step -->
+    <string id="subrace_bonuses">Бонусы подрасы</string>
+    <string id="subrace_traits">Особенности подрасы</string>
+    
+    <!-- Class Step -->
+    <string id="class_stats">Характеристики класса</string>
+    <string id="class_hit_die">Кость хитов</string>
+    <string id="class_saving_throws">Спасброски</string>
+    <string id="class_proficiencies">Владения</string>
+    <string id="char_info">Информация о персонаже</string>
+    <string id="char_details">Детали</string>
+    <string id="proficiencies">Владения</string>
+    <string id="spells">Заклинания</string>
+    <string id="none">Нет</string>
+    <string id="class_armor">Доспехи</string>
+    <string id="class_weapons">Оружие</string>
+    <string id="class_tools">Инструменты</string>
+    <string id="class_skill_choices">Выбор навыков</string>
+    <string id="class_spellcasting">Магия</string>
+    <string id="class_spell_ability">Характеристика заклинаний</string>
+    
+    <!-- Spells Step -->
+    <string id="select_cantrips">Выберите фокусы</string>
+    <string id="select_spells">Выберите заклинания</string>
+    <string id="select_proficiencies">Выберите владения</string>
+    <string id="selected">Выбранные</string>
+    
+    <!-- Abilities Step -->
+    <string id="points">Очки</string>
+    <string id="racial_bonuses">Расовые бонусы</string>
+    
+    <!-- Ability Names -->
+    <string id="ability_str">Сила (STR)</string>
+    <string id="ability_dex">Ловкость (DEX)</string>
+    <string id="ability_con">Телосложение (CON)</string>
+    <string id="ability_int">Интеллект (INT)</string>
+    <string id="ability_wis">Мудрость (WIS)</string>
+    <string id="ability_cha">Харизма (CHA)</string>
+    
+    <!-- Character Created -->
+    <string id="char_created">Персонаж создан!</string>
+    
+    <!-- Main Screen -->
+    <string id="nav_inventory">Инвентарь</string>
+    <string id="nav_map">Карта</string>
+    <string id="nav_journal">Журнал</string>
+    <string id="journal_current">Текущие</string>
+    <string id="journal_completed">Завершённые</string>
+    <string id="journal_failed">Проваленные</string>
+    <string id="journal_objectives">Цели:</string>
+    <string id="nav_character">Персонаж</string>
+    <string id="nav_abilities">Способности</string>
+    <string id="abilities_tab_features">Классовые</string>
+    <string id="abilities_tab_cantrips">Фокусы</string>
+    <string id="abilities_tab_spells">Заклинания</string>
+    <string id="chat_input_placeholder">Введите сообщение...</string>
+    <string id="chat_send">Ввод</string>
+    <string id="quick_hide">Спрятаться</string>
+    <string id="quick_look">Осмотреться</string>
+    <string id="quick_rest">Привал</string>
+
+    <!-- Inventory Screen -->
+    <string id="inv_equipment">Экипировка</string>
+    <string id="inv_head">Голова</string>
+    <string id="inv_body">Тело</string>
+    <string id="inv_hands">Руки</string>
+    <string id="inv_feet">Ноги</string>
+    <string id="inv_cloak">Плащ</string>
+    <string id="inv_amulet">Амулет</string>
+    <string id="inv_ring_1">Кольцо 1</string>
+    <string id="inv_ring_2">Кольцо 2</string>
+    <string id="inv_left_hand">Левая рука</string>
+    <string id="inv_right_hand">Правая рука</string>
+    <string id="inv_hp_ac">HP | КД</string>
+    <string id="inv_sort_name">По имени</string>
+    <string id="inv_sort_price">По цене</string>
+    <string id="inv_sort_weight">По весу</string>
+    <string id="inv_coins">Монеты</string>
+    <string id="inv_description">Описание предмета</string>
+    <string id="inv_empty">—</string>
+    <string id="inv_no_player">Нет персонажа</string>
+    <string id="inv_unequip">Снять</string>
+
+    <!-- Character Screen -->
+    <string id="char_screen_hp">Здоровье</string>
+    <string id="char_screen_ac">Защита (КД)</string>
+    <string id="char_screen_damage">Урон</string>
+    <string id="char_screen_speed">Скорость</string>
+    <string id="char_screen_level">Уровень</string>
+    <string id="char_screen_xp">Опыт</string>
+    <string id="char_screen_abilities">Характеристики</string>
+    <string id="char_screen_effects">Эффекты</string>
+    <string id="char_screen_spell_dc">КД заклинаний</string>
+    <string id="char_screen_spell_slots">Слоты заклинаний</string>
+    <string id="char_screen_proficiency">Бонус мастерства</string>
+    <string id="char_screen_race">Раса</string>
+    <string id="char_screen_class">Класс</string>
+    <string id="char_screen_traits">Расовые черты</string>
+    <string id="char_screen_proficiencies">Владения</string>
+    <string id="char_screen_conditions">Состояния</string>
+    <string id="char_screen_damage_vulnerabilities">Уязвимости к урону</string>
+    <string id="char_screen_damage_resistances">Сопротивление урону</string>
+    <string id="char_screen_damage_immunities">Иммунитет к урону</string>
+    <string id="char_screen_condition_advantages">Преимущества к состояниям</string>
+    <string id="char_screen_condition_immunities">Иммунитет к состояниям</string>
+    <string id="char_screen_senses">Чувства</string>
+    <string id="char_screen_features">Классовые особенности</string>
+</localization>

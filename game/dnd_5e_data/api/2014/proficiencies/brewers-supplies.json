@@ -1,0 +1,14 @@
+{
+  "index": "brewers-supplies",
+  "type": "Artisan's Tools",
+  "name": "Brewer's Supplies",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/brewers-supplies",
+  "reference": {
+    "index": "brewers-supplies",
+    "name": "Brewer's Supplies",
+    "url": "/api/2014/equipment/brewers-supplies"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

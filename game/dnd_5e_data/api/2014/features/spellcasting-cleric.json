@@ -1,0 +1,17 @@
+{
+  "index": "spellcasting-cleric",
+  "class": {
+    "index": "cleric",
+    "name": "Cleric",
+    "url": "/api/2014/classes/cleric"
+  },
+  "name": "Spellcasting: Cleric",
+  "level": 1,
+  "prerequisites": [],
+  "desc": [
+    "As a conduit for divine power, you can cast cleric spells."
+  ],
+  "reference": "/api/2014/classes/cleric/spellcasting",
+  "url": "/api/2014/features/spellcasting-cleric",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

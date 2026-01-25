@@ -1,0 +1,18 @@
+{
+  "index": "dwarven-toughness",
+  "races": [],
+  "subraces": [
+    {
+      "index": "hill-dwarf",
+      "name": "Hill Dwarf",
+      "url": "/api/2014/subraces/hill-dwarf"
+    }
+  ],
+  "name": "Dwarven Toughness",
+  "desc": [
+    "Your hit point maximum increases by 1, and it increases by 1 every time you gain a level."
+  ],
+  "proficiencies": [],
+  "url": "/api/2014/traits/dwarven-toughness",
+  "updated_at": "2025-10-24T20:42:14.945Z"
+}

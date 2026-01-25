@@ -1,0 +1,14 @@
+{
+  "index": "weavers-tools",
+  "type": "Artisan's Tools",
+  "name": "Weaver's Tools",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/weavers-tools",
+  "reference": {
+    "index": "weavers-tools",
+    "name": "Weaver's Tools",
+    "url": "/api/2014/equipment/weavers-tools"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

@@ -1,0 +1,37 @@
+{
+  "level": 8,
+  "ability_score_bonuses": 2,
+  "prof_bonus": 3,
+  "features": [
+    {
+      "index": "ranger-ability-score-improvement-2",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/ranger-ability-score-improvement-2"
+    },
+    {
+      "index": "ranger-lands-stride",
+      "name": "Land's Stride",
+      "url": "/api/2014/features/ranger-lands-stride"
+    }
+  ],
+  "spellcasting": {
+    "spells_known": 5,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 0,
+    "spell_slots_level_4": 0,
+    "spell_slots_level_5": 0
+  },
+  "class_specific": {
+    "favored_enemies": 2,
+    "favored_terrain": 2
+  },
+  "index": "ranger-8",
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "url": "/api/2014/classes/ranger/levels/8",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

@@ -1,0 +1,14 @@
+{
+  "index": "potters-tools",
+  "type": "Artisan's Tools",
+  "name": "Potter's Tools",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/potters-tools",
+  "reference": {
+    "index": "potters-tools",
+    "name": "Potter's Tools",
+    "url": "/api/2014/equipment/potters-tools"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

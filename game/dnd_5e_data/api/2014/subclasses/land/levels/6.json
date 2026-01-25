@@ -1,0 +1,23 @@
+{
+  "level": 6,
+  "features": [
+    {
+      "index": "druid-lands-stride",
+      "name": "Land's Stride",
+      "url": "/api/2014/features/druid-lands-stride"
+    }
+  ],
+  "class": {
+    "index": "druid",
+    "name": "Druid",
+    "url": "/api/2014/classes/druid"
+  },
+  "subclass": {
+    "index": "land",
+    "name": "Land",
+    "url": "/api/2014/subclasses/land"
+  },
+  "url": "/api/2014/subclasses/land/levels/6",
+  "index": "land-6",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

@@ -1,0 +1,23 @@
+{
+  "level": 15,
+  "features": [
+    {
+      "index": "superior-hunters-defense",
+      "name": "Superior Hunter's Defense",
+      "url": "/api/2014/features/superior-hunters-defense"
+    }
+  ],
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "subclass": {
+    "index": "hunter",
+    "name": "Hunter",
+    "url": "/api/2014/subclasses/hunter"
+  },
+  "url": "/api/2014/subclasses/hunter/levels/15",
+  "index": "hunter-15",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

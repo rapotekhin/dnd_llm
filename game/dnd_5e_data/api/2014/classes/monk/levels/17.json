@@ -1,0 +1,28 @@
+{
+  "level": 17,
+  "ability_score_bonuses": 4,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "monastic-tradition-improvement-3",
+      "name": "Monastic Tradition feature",
+      "url": "/api/2014/features/monastic-tradition-improvement-3"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 10
+    },
+    "ki_points": 17,
+    "unarmored_movement": 25
+  },
+  "index": "monk-17",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/17",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

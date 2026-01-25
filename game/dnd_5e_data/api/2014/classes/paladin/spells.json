@@ -1,0 +1,191 @@
+{
+  "count": 31,
+  "results": [
+    {
+      "index": "bless",
+      "name": "Bless",
+      "level": 1,
+      "url": "/api/2014/spells/bless"
+    },
+    {
+      "index": "command",
+      "name": "Command",
+      "level": 1,
+      "url": "/api/2014/spells/command"
+    },
+    {
+      "index": "cure-wounds",
+      "name": "Cure Wounds",
+      "level": 1,
+      "url": "/api/2014/spells/cure-wounds"
+    },
+    {
+      "index": "detect-evil-and-good",
+      "name": "Detect Evil and Good",
+      "level": 1,
+      "url": "/api/2014/spells/detect-evil-and-good"
+    },
+    {
+      "index": "detect-magic",
+      "name": "Detect Magic",
+      "level": 1,
+      "url": "/api/2014/spells/detect-magic"
+    },
+    {
+      "index": "detect-poison-and-disease",
+      "name": "Detect Poison and Disease",
+      "level": 1,
+      "url": "/api/2014/spells/detect-poison-and-disease"
+    },
+    {
+      "index": "divine-favor",
+      "name": "Divine Favor",
+      "level": 1,
+      "url": "/api/2014/spells/divine-favor"
+    },
+    {
+      "index": "heroism",
+      "name": "Heroism",
+      "level": 1,
+      "url": "/api/2014/spells/heroism"
+    },
+    {
+      "index": "protection-from-evil-and-good",
+      "name": "Protection from Evil and Good",
+      "level": 1,
+      "url": "/api/2014/spells/protection-from-evil-and-good"
+    },
+    {
+      "index": "purify-food-and-drink",
+      "name": "Purify Food and Drink",
+      "level": 1,
+      "url": "/api/2014/spells/purify-food-and-drink"
+    },
+    {
+      "index": "shield-of-faith",
+      "name": "Shield of Faith",
+      "level": 1,
+      "url": "/api/2014/spells/shield-of-faith"
+    },
+    {
+      "index": "aid",
+      "name": "Aid",
+      "level": 2,
+      "url": "/api/2014/spells/aid"
+    },
+    {
+      "index": "branding-smite",
+      "name": "Branding Smite",
+      "level": 2,
+      "url": "/api/2014/spells/branding-smite"
+    },
+    {
+      "index": "find-steed",
+      "name": "Find Steed",
+      "level": 2,
+      "url": "/api/2014/spells/find-steed"
+    },
+    {
+      "index": "lesser-restoration",
+      "name": "Lesser Restoration",
+      "level": 2,
+      "url": "/api/2014/spells/lesser-restoration"
+    },
+    {
+      "index": "locate-object",
+      "name": "Locate Object",
+      "level": 2,
+      "url": "/api/2014/spells/locate-object"
+    },
+    {
+      "index": "magic-weapon",
+      "name": "Magic Weapon",
+      "level": 2,
+      "url": "/api/2014/spells/magic-weapon"
+    },
+    {
+      "index": "protection-from-poison",
+      "name": "Protection from Poison",
+      "level": 2,
+      "url": "/api/2014/spells/protection-from-poison"
+    },
+    {
+      "index": "zone-of-truth",
+      "name": "Zone of Truth",
+      "level": 2,
+      "url": "/api/2014/spells/zone-of-truth"
+    },
+    {
+      "index": "create-food-and-water",
+      "name": "Create Food and Water",
+      "level": 3,
+      "url": "/api/2014/spells/create-food-and-water"
+    },
+    {
+      "index": "daylight",
+      "name": "Daylight",
+      "level": 3,
+      "url": "/api/2014/spells/daylight"
+    },
+    {
+      "index": "dispel-magic",
+      "name": "Dispel Magic",
+      "level": 3,
+      "url": "/api/2014/spells/dispel-magic"
+    },
+    {
+      "index": "magic-circle",
+      "name": "Magic Circle",
+      "level": 3,
+      "url": "/api/2014/spells/magic-circle"
+    },
+    {
+      "index": "remove-curse",
+      "name": "Remove Curse",
+      "level": 3,
+      "url": "/api/2014/spells/remove-curse"
+    },
+    {
+      "index": "revivify",
+      "name": "Revivify",
+      "level": 3,
+      "url": "/api/2014/spells/revivify"
+    },
+    {
+      "index": "banishment",
+      "name": "Banishment",
+      "level": 4,
+      "url": "/api/2014/spells/banishment"
+    },
+    {
+      "index": "death-ward",
+      "name": "Death Ward",
+      "level": 4,
+      "url": "/api/2014/spells/death-ward"
+    },
+    {
+      "index": "locate-creature",
+      "name": "Locate Creature",
+      "level": 4,
+      "url": "/api/2014/spells/locate-creature"
+    },
+    {
+      "index": "dispel-evil-and-good",
+      "name": "Dispel Evil and Good",
+      "level": 5,
+      "url": "/api/2014/spells/dispel-evil-and-good"
+    },
+    {
+      "index": "geas",
+      "name": "Geas",
+      "level": 5,
+      "url": "/api/2014/spells/geas"
+    },
+    {
+      "index": "raise-dead",
+      "name": "Raise Dead",
+      "level": 5,
+      "url": "/api/2014/spells/raise-dead"
+    }
+  ]
+}

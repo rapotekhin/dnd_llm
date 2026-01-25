@@ -1,0 +1,9 @@
+{
+  "index": "poison",
+  "name": "Poison",
+  "desc": [
+    "Venomous stings and the toxic gas of a green dragon's breath deal poison damage."
+  ],
+  "url": "/api/2014/damage-types/poison",
+  "updated_at": "2025-10-24T20:42:12.729Z"
+}

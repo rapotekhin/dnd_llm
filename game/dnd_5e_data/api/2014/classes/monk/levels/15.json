@@ -1,0 +1,28 @@
+{
+  "level": 15,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 5,
+  "features": [
+    {
+      "index": "monk-timeless-body",
+      "name": "Timeless Body",
+      "url": "/api/2014/features/monk-timeless-body"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 8
+    },
+    "ki_points": 15,
+    "unarmored_movement": 25
+  },
+  "index": "monk-15",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/15",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

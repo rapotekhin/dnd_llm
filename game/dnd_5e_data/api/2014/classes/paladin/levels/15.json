@@ -1,0 +1,30 @@
+{
+  "level": 15,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 5,
+  "features": [
+    {
+      "index": "sacred-oath-improvement-2",
+      "name": "Sacred Oath feature",
+      "url": "/api/2014/features/sacred-oath-improvement-2"
+    }
+  ],
+  "spellcasting": {
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 2,
+    "spell_slots_level_5": 0
+  },
+  "class_specific": {
+    "aura_range": 10
+  },
+  "index": "paladin-15",
+  "class": {
+    "index": "paladin",
+    "name": "Paladin",
+    "url": "/api/2014/classes/paladin"
+  },
+  "url": "/api/2014/classes/paladin/levels/15",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

@@ -1,0 +1,18 @@
+{
+  "index": "naturally-stealthy",
+  "races": [],
+  "subraces": [
+    {
+      "index": "lightfoot-halfling",
+      "name": "Lightfoot Halfling",
+      "url": "/api/2014/subraces/lightfoot-halfling"
+    }
+  ],
+  "name": "Naturally Stealthy",
+  "desc": [
+    "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you."
+  ],
+  "proficiencies": [],
+  "url": "/api/2014/traits/naturally-stealthy",
+  "updated_at": "2025-10-24T20:42:14.945Z"
+}

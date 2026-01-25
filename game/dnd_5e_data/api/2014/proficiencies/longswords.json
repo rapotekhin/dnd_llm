@@ -1,0 +1,31 @@
+{
+  "index": "longswords",
+  "type": "Weapons",
+  "name": "Longswords",
+  "classes": [
+    {
+      "index": "bard",
+      "name": "Bard",
+      "url": "/api/2014/classes/bard"
+    },
+    {
+      "index": "rogue",
+      "name": "Rogue",
+      "url": "/api/2014/classes/rogue"
+    }
+  ],
+  "races": [
+    {
+      "index": "high-elf",
+      "name": "High Elf",
+      "url": "/api/2014/subraces/high-elf"
+    }
+  ],
+  "url": "/api/2014/proficiencies/longswords",
+  "reference": {
+    "index": "longsword",
+    "name": "Longsword",
+    "url": "/api/2014/equipment/longsword"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

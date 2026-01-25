@@ -1,0 +1,69 @@
+{
+  "level": 2,
+  "ability_score_bonuses": 0,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "font-of-magic",
+      "name": "Font of Magic",
+      "url": "/api/2014/features/font-of-magic"
+    },
+    {
+      "index": "flexible-casting-creating-spell-slots",
+      "name": "Flexible Casting: Creating Spell Slots",
+      "url": "/api/2014/features/flexible-casting-creating-spell-slots"
+    },
+    {
+      "index": "flexible-casting-converting-spell-slot",
+      "name": "Flexible Casting: Converting Spell Slot",
+      "url": "/api/2014/features/flexible-casting-converting-spell-slot"
+    }
+  ],
+  "spellcasting": {
+    "cantrips_known": 4,
+    "spells_known": 3,
+    "spell_slots_level_1": 3,
+    "spell_slots_level_2": 0,
+    "spell_slots_level_3": 0,
+    "spell_slots_level_4": 0,
+    "spell_slots_level_5": 0,
+    "spell_slots_level_6": 0,
+    "spell_slots_level_7": 0,
+    "spell_slots_level_8": 0,
+    "spell_slots_level_9": 0
+  },
+  "class_specific": {
+    "sorcery_points": 2,
+    "metamagic_known": 0,
+    "creating_spell_slots": [
+      {
+        "spell_slot_level": 1,
+        "sorcery_point_cost": 2
+      },
+      {
+        "spell_slot_level": 2,
+        "sorcery_point_cost": 3
+      },
+      {
+        "spell_slot_level": 3,
+        "sorcery_point_cost": 5
+      },
+      {
+        "spell_slot_level": 4,
+        "sorcery_point_cost": 6
+      },
+      {
+        "spell_slot_level": 5,
+        "sorcery_point_cost": 7
+      }
+    ]
+  },
+  "index": "sorcerer-2",
+  "class": {
+    "index": "sorcerer",
+    "name": "Sorcerer",
+    "url": "/api/2014/classes/sorcerer"
+  },
+  "url": "/api/2014/classes/sorcerer/levels/2",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

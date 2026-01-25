@@ -1,0 +1,37 @@
+{
+  "level": 10,
+  "ability_score_bonuses": 2,
+  "prof_bonus": 4,
+  "features": [
+    {
+      "index": "natural-explorer-3-terrain-types",
+      "name": "Natural Explorer (3 terrain types)",
+      "url": "/api/2014/features/natural-explorer-3-terrain-types"
+    },
+    {
+      "index": "hide-in-plain-sight",
+      "name": "Hide in Plain Sight",
+      "url": "/api/2014/features/hide-in-plain-sight"
+    }
+  ],
+  "spellcasting": {
+    "spells_known": 6,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 2,
+    "spell_slots_level_4": 0,
+    "spell_slots_level_5": 0
+  },
+  "class_specific": {
+    "favored_enemies": 2,
+    "favored_terrain": 3
+  },
+  "index": "ranger-10",
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "url": "/api/2014/classes/ranger/levels/10",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

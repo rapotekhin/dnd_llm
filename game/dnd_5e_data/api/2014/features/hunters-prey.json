@@ -1,0 +1,60 @@
+{
+  "index": "hunters-prey",
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "subclass": {
+    "index": "hunter",
+    "name": "Hunter",
+    "url": "/api/2014/subclasses/hunter"
+  },
+  "name": "Hunter's Prey",
+  "level": 3,
+  "prerequisites": [],
+  "desc": [
+    "At 3rd level, you gain one of the following features of your choice.",
+    "Colossus Slayer",
+    "Giant Killer",
+    "Horde Breaker"
+  ],
+  "feature_specific": {
+    "subfeature_options": {
+      "choose": 1,
+      "type": "feature",
+      "from": {
+        "option_set_type": "options_array",
+        "options": [
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "hunters-prey-colossus-slayer",
+              "name": "Hunter's Prey: Colossus Slayer",
+              "url": "/api/2014/features/hunters-prey-colossus-slayer"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "hunters-prey-giant-killer",
+              "name": "Hunter's Prey: Giant Killer",
+              "url": "/api/2014/features/hunters-prey-giant-killer"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "hunters-prey-horde-breaker",
+              "name": "Hunter's Prey: Horde Breaker",
+              "url": "/api/2014/features/hunters-prey-horde-breaker"
+            }
+          }
+        ]
+      }
+    },
+    "invocations": []
+  },
+  "url": "/api/2014/features/hunters-prey",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

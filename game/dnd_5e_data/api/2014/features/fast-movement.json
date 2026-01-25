@@ -1,0 +1,16 @@
+{
+  "index": "fast-movement",
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "name": "Fast Movement",
+  "level": 5,
+  "prerequisites": [],
+  "desc": [
+    "Starting at 5th level, your speed increases by 10 feet while you aren't wearing heavy armor."
+  ],
+  "url": "/api/2014/features/fast-movement",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

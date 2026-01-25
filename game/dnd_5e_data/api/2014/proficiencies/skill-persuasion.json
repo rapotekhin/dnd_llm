@@ -1,0 +1,14 @@
+{
+  "index": "skill-persuasion",
+  "type": "Skills",
+  "name": "Skill: Persuasion",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/skill-persuasion",
+  "reference": {
+    "index": "persuasion",
+    "name": "Persuasion",
+    "url": "/api/2014/skills/persuasion"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

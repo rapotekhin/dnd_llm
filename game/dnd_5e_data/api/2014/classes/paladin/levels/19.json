@@ -1,0 +1,30 @@
+{
+  "level": 19,
+  "ability_score_bonuses": 5,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "paladin-ability-score-improvement-5",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/paladin-ability-score-improvement-5"
+    }
+  ],
+  "spellcasting": {
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 3,
+    "spell_slots_level_5": 2
+  },
+  "class_specific": {
+    "aura_range": 30
+  },
+  "index": "paladin-19",
+  "class": {
+    "index": "paladin",
+    "name": "Paladin",
+    "url": "/api/2014/classes/paladin"
+  },
+  "url": "/api/2014/classes/paladin/levels/19",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

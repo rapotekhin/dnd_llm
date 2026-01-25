@@ -1,0 +1,16 @@
+{
+  "index": "barbarian-unarmored-defense",
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "name": "Unarmored Defense",
+  "level": 1,
+  "prerequisites": [],
+  "desc": [
+    "While you are not wearing any armor, your Armor Class equals 10 + your Dexterity modifier + your Constitution modifier. You can use a shield and still gain this benefit."
+  ],
+  "url": "/api/2014/features/barbarian-unarmored-defense",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

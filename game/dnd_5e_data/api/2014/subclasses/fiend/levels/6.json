@@ -1,0 +1,23 @@
+{
+  "level": 6,
+  "features": [
+    {
+      "index": "dark-ones-own-luck",
+      "name": "Dark One's Own Luck",
+      "url": "/api/2014/features/dark-ones-own-luck"
+    }
+  ],
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "subclass": {
+    "index": "fiend",
+    "name": "Fiend",
+    "url": "/api/2014/subclasses/fiend"
+  },
+  "url": "/api/2014/subclasses/fiend/levels/6",
+  "index": "fiend-6",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

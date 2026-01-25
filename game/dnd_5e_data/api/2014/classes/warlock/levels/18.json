@@ -1,0 +1,34 @@
+{
+  "level": 18,
+  "ability_score_bonuses": 4,
+  "prof_bonus": 6,
+  "features": [],
+  "spellcasting": {
+    "cantrips_known": 4,
+    "spells_known": 14,
+    "spell_slots_level_1": 0,
+    "spell_slots_level_2": 0,
+    "spell_slots_level_3": 0,
+    "spell_slots_level_4": 0,
+    "spell_slots_level_5": 4,
+    "spell_slots_level_6": 0,
+    "spell_slots_level_7": 0,
+    "spell_slots_level_8": 0,
+    "spell_slots_level_9": 0
+  },
+  "class_specific": {
+    "invocations_known": 8,
+    "mystic_arcanum_level_6": 1,
+    "mystic_arcanum_level_7": 1,
+    "mystic_arcanum_level_8": 1,
+    "mystic_arcanum_level_9": 1
+  },
+  "index": "warlock-18",
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "url": "/api/2014/classes/warlock/levels/18",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

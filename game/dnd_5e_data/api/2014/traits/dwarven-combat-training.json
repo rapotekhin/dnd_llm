@@ -1,0 +1,39 @@
+{
+  "index": "dwarven-combat-training",
+  "races": [
+    {
+      "index": "dwarf",
+      "name": "Dwarf",
+      "url": "/api/2014/races/dwarf"
+    }
+  ],
+  "subraces": [],
+  "name": "Dwarven Combat Training",
+  "desc": [
+    "You have proficiency with the battleaxe, handaxe, light hammer, and warhammer."
+  ],
+  "proficiencies": [
+    {
+      "index": "battleaxes",
+      "name": "Battleaxes",
+      "url": "/api/2014/proficiencies/battleaxes"
+    },
+    {
+      "index": "handaxes",
+      "name": "Handaxes",
+      "url": "/api/2014/proficiencies/handaxes"
+    },
+    {
+      "index": "light-hammers",
+      "name": "Light hammers",
+      "url": "/api/2014/proficiencies/light-hammers"
+    },
+    {
+      "index": "warhammers",
+      "name": "Warhammers",
+      "url": "/api/2014/proficiencies/warhammers"
+    }
+  ],
+  "url": "/api/2014/traits/dwarven-combat-training",
+  "updated_at": "2025-10-24T20:42:14.945Z"
+}

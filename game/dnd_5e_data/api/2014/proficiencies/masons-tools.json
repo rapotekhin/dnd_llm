@@ -1,0 +1,14 @@
+{
+  "index": "masons-tools",
+  "type": "Artisan's Tools",
+  "name": "Mason's Tools",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/masons-tools",
+  "reference": {
+    "index": "masons-tools",
+    "name": "Mason's Tools",
+    "url": "/api/2014/equipment/masons-tools"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

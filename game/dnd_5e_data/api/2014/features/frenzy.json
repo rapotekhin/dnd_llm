@@ -1,0 +1,21 @@
+{
+  "index": "frenzy",
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "subclass": {
+    "index": "berserker",
+    "name": "Berserker",
+    "url": "/api/2014/subclasses/berserker"
+  },
+  "name": "Frenzy",
+  "level": 3,
+  "prerequisites": [],
+  "desc": [
+    "Starting when you choose this path at 3rd level, you can go into a frenzy when you rage. If you do so, for the duration of your rage you can make a single melee weapon attack as a bonus action on each of your turns after this one. When your rage ends, you suffer one level of exhaustion (as described in appendix A)."
+  ],
+  "url": "/api/2014/features/frenzy",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

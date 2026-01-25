@@ -1,0 +1,60 @@
+{
+  "count": 11,
+  "results": [
+    {
+      "index": "ammunition",
+      "name": "Ammunition",
+      "url": "/api/2014/weapon-properties/ammunition"
+    },
+    {
+      "index": "finesse",
+      "name": "Finesse",
+      "url": "/api/2014/weapon-properties/finesse"
+    },
+    {
+      "index": "heavy",
+      "name": "Heavy",
+      "url": "/api/2014/weapon-properties/heavy"
+    },
+    {
+      "index": "light",
+      "name": "Light",
+      "url": "/api/2014/weapon-properties/light"
+    },
+    {
+      "index": "loading",
+      "name": "Loading",
+      "url": "/api/2014/weapon-properties/loading"
+    },
+    {
+      "index": "monk",
+      "name": "Monk",
+      "url": "/api/2014/weapon-properties/monk"
+    },
+    {
+      "index": "reach",
+      "name": "Reach",
+      "url": "/api/2014/weapon-properties/reach"
+    },
+    {
+      "index": "special",
+      "name": "Special",
+      "url": "/api/2014/weapon-properties/special"
+    },
+    {
+      "index": "thrown",
+      "name": "Thrown",
+      "url": "/api/2014/weapon-properties/thrown"
+    },
+    {
+      "index": "two-handed",
+      "name": "Two-Handed",
+      "url": "/api/2014/weapon-properties/two-handed"
+    },
+    {
+      "index": "versatile",
+      "name": "Versatile",
+      "url": "/api/2014/weapon-properties/versatile"
+    }
+  ]
+}

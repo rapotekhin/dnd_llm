@@ -1,0 +1,25 @@
+{
+  "level": 5,
+  "ability_score_bonuses": 1,
+  "prof_bonus": 3,
+  "features": [
+    {
+      "index": "extra-attack-1",
+      "name": "Extra Attack",
+      "url": "/api/2014/features/extra-attack-1"
+    }
+  ],
+  "class_specific": {
+    "action_surges": 1,
+    "indomitable_uses": 0,
+    "extra_attacks": 1
+  },
+  "index": "fighter-5",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "url": "/api/2014/classes/fighter/levels/5",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

@@ -1,0 +1,14 @@
+{
+  "index": "skill-medicine",
+  "type": "Skills",
+  "name": "Skill: Medicine",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/skill-medicine",
+  "reference": {
+    "index": "medicine",
+    "name": "Medicine",
+    "url": "/api/2014/skills/medicine"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

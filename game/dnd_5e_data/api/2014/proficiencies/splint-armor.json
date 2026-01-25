@@ -1,0 +1,14 @@
+{
+  "index": "splint-armor",
+  "type": "Armor",
+  "name": "Splint Armor",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/splint-armor",
+  "reference": {
+    "index": "splint-armor",
+    "name": "Splint Armor",
+    "url": "/api/2014/equipment/splint-armor"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

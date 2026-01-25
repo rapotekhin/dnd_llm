@@ -1,0 +1,28 @@
+{
+  "level": 13,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 5,
+  "features": [
+    {
+      "index": "tongue-of-the-sun-and-moon",
+      "name": "Tongue of the Sun and Moon",
+      "url": "/api/2014/features/tongue-of-the-sun-and-moon"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 8
+    },
+    "ki_points": 13,
+    "unarmored_movement": 20
+  },
+  "index": "monk-13",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/13",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

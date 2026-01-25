@@ -1,0 +1,25 @@
+{
+  "index": "crossbows-light",
+  "type": "Weapons",
+  "name": "Crossbows, light",
+  "classes": [
+    {
+      "index": "sorcerer",
+      "name": "Sorcerer",
+      "url": "/api/2014/classes/sorcerer"
+    },
+    {
+      "index": "wizard",
+      "name": "Wizard",
+      "url": "/api/2014/classes/wizard"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/crossbows-light",
+  "reference": {
+    "index": "crossbow-light",
+    "name": "Crossbow, light",
+    "url": "/api/2014/equipment/crossbow-light"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

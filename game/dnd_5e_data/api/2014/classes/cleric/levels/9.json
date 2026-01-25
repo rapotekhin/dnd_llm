@@ -1,0 +1,36 @@
+{
+  "level": 9,
+  "ability_score_bonuses": 2,
+  "prof_bonus": 4,
+  "features": [
+    {
+      "index": "domain-spells-5",
+      "name": "Domain Spells",
+      "url": "/api/2014/features/domain-spells-5"
+    }
+  ],
+  "spellcasting": {
+    "cantrips_known": 4,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 3,
+    "spell_slots_level_5": 1,
+    "spell_slots_level_6": 0,
+    "spell_slots_level_7": 0,
+    "spell_slots_level_8": 0,
+    "spell_slots_level_9": 0
+  },
+  "class_specific": {
+    "channel_divinity_charges": 2,
+    "destroy_undead_cr": 1
+  },
+  "index": "cleric-9",
+  "class": {
+    "index": "cleric",
+    "name": "Cleric",
+    "url": "/api/2014/classes/cleric"
+  },
+  "url": "/api/2014/classes/cleric/levels/9",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

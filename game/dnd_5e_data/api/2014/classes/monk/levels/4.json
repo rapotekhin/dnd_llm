@@ -1,0 +1,33 @@
+{
+  "level": 4,
+  "ability_score_bonuses": 1,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "monk-ability-score-improvement-1",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/monk-ability-score-improvement-1"
+    },
+    {
+      "index": "slow-fall",
+      "name": "Slow Fall",
+      "url": "/api/2014/features/slow-fall"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 4
+    },
+    "ki_points": 4,
+    "unarmored_movement": 10
+  },
+  "index": "monk-4",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/4",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

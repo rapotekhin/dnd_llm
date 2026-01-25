@@ -1,0 +1,26 @@
+{
+  "index": "eldritch-invocation-sign-of-ill-omen",
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "name": "Eldritch Invocation: Sign of Ill Omen",
+  "level": 5,
+  "prerequisites": [
+    {
+      "type": "level",
+      "level": 5
+    }
+  ],
+  "desc": [
+    "You can cast bestow curse once using a warlock spell slot. You can't do so again until you finish a long rest."
+  ],
+  "parent": {
+    "index": "eldritch-invocations",
+    "name": "Eldritch Invocations",
+    "url": "/api/2014/features/eldritch-invocations"
+  },
+  "url": "/api/2014/features/eldritch-invocation-sign-of-ill-omen",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

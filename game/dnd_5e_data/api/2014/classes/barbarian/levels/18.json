@@ -1,0 +1,25 @@
+{
+  "level": 18,
+  "ability_score_bonuses": 4,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "indomitable-might",
+      "name": "Indomitable Might",
+      "url": "/api/2014/features/indomitable-might"
+    }
+  ],
+  "class_specific": {
+    "rage_count": 6,
+    "rage_damage_bonus": 4,
+    "brutal_critical_dice": 3
+  },
+  "index": "barbarian-18",
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "url": "/api/2014/classes/barbarian/levels/18",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

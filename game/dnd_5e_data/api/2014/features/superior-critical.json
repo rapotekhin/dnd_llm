@@ -1,0 +1,21 @@
+{
+  "index": "superior-critical",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "subclass": {
+    "index": "champion",
+    "name": "Champion",
+    "url": "/api/2014/subclasses/champion"
+  },
+  "name": "Superior Critical",
+  "level": 15,
+  "prerequisites": [],
+  "desc": [
+    "Starting at 15th level, your weapon attacks score a critical hit on a roll of 18-20."
+  ],
+  "url": "/api/2014/features/superior-critical",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

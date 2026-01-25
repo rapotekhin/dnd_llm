@@ -1,0 +1,23 @@
+{
+  "level": 3,
+  "features": [
+    {
+      "index": "hunters-prey",
+      "name": "Hunter's Prey",
+      "url": "/api/2014/features/hunters-prey"
+    }
+  ],
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "subclass": {
+    "index": "hunter",
+    "name": "Hunter",
+    "url": "/api/2014/subclasses/hunter"
+  },
+  "url": "/api/2014/subclasses/hunter/levels/3",
+  "index": "hunter-3",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

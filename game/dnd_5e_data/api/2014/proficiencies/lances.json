@@ -1,0 +1,14 @@
+{
+  "index": "lances",
+  "type": "Weapons",
+  "name": "Lances",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/lances",
+  "reference": {
+    "index": "lance",
+    "name": "Lance",
+    "url": "/api/2014/equipment/lance"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

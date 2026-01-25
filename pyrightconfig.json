@@ -1,0 +1,9 @@
+{
+  "include": ["game"],
+  "extraPaths": [
+    "./dnd-5e-core",
+    "./game"
+  ],
+  "pythonVersion": "3.10",
+  "typeCheckingMode": "basic"
+}

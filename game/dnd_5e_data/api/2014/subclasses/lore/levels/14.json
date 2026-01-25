@@ -1,0 +1,26 @@
+{
+  "level": 14,
+  "features": [
+    {
+      "index": "peerless-skill",
+      "name": "Peerless Skill",
+      "url": "/api/2014/features/peerless-skill"
+    }
+  ],
+  "subclass_specific": {
+    "additional_magical_secrets_max_lvl": 3
+  },
+  "class": {
+    "index": "bard",
+    "name": "Bard",
+    "url": "/api/2014/classes/bard"
+  },
+  "subclass": {
+    "index": "lore",
+    "name": "Lore",
+    "url": "/api/2014/subclasses/lore"
+  },
+  "url": "/api/2014/subclasses/lore/levels/14",
+  "index": "lore-14",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

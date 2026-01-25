@@ -1,0 +1,17 @@
+{
+  "index": "sorcerous-origin-improvement-1",
+  "class": {
+    "index": "sorcerer",
+    "name": "Sorcerer",
+    "url": "/api/2014/classes/sorcerer"
+  },
+  "name": "Sorcerous Origin feature",
+  "level": 6,
+  "prerequisites": [],
+  "desc": [
+    "Choose a sorcerous origin, which describes the source of your innate magical power, such as Draconic Bloodline.",
+    "Your choice grants you features when you choose it at 1st level and again at 6th, 14th, and 18th level."
+  ],
+  "url": "/api/2014/features/sorcerous-origin-improvement-1",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

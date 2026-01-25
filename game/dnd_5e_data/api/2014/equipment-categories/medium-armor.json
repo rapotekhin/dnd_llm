@@ -1,0 +1,33 @@
+{
+  "index": "medium-armor",
+  "name": "Medium Armor",
+  "equipment": [
+    {
+      "index": "hide-armor",
+      "name": "Hide Armor",
+      "url": "/api/2014/equipment/hide-armor"
+    },
+    {
+      "index": "chain-shirt",
+      "name": "Chain Shirt",
+      "url": "/api/2014/equipment/chain-shirt"
+    },
+    {
+      "index": "scale-mail",
+      "name": "Scale Mail",
+      "url": "/api/2014/equipment/scale-mail"
+    },
+    {
+      "index": "breastplate",
+      "name": "Breastplate",
+      "url": "/api/2014/equipment/breastplate"
+    },
+    {
+      "index": "half-plate-armor",
+      "name": "Half Plate Armor",
+      "url": "/api/2014/equipment/half-plate-armor"
+    }
+  ],
+  "url": "/api/2014/equipment-categories/medium-armor",
+  "updated_at": "2025-10-24T20:42:12.821Z"
+}

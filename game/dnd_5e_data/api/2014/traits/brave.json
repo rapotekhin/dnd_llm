@@ -1,0 +1,18 @@
+{
+  "index": "brave",
+  "races": [
+    {
+      "index": "halfling",
+      "name": "Halfling",
+      "url": "/api/2014/races/halfling"
+    }
+  ],
+  "subraces": [],
+  "name": "Brave",
+  "desc": [
+    "You have advantage on saving throw against being frightened."
+  ],
+  "proficiencies": [],
+  "url": "/api/2014/traits/brave",
+  "updated_at": "2025-10-24T20:42:14.945Z"
+}

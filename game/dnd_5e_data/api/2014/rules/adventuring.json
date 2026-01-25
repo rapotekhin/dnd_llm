@@ -1,0 +1,49 @@
+{
+  "name": "Adventuring",
+  "index": "adventuring",
+  "desc": "# Adventuring\n",
+  "subsections": [
+    {
+      "name": "Time",
+      "index": "time",
+      "url": "/api/2014/rule-sections/time"
+    },
+    {
+      "name": "Movement",
+      "index": "movement",
+      "url": "/api/2014/rule-sections/movement"
+    },
+    {
+      "name": "The Environment",
+      "index": "the-environment",
+      "url": "/api/2014/rule-sections/the-environment"
+    },
+    {
+      "name": "Traps",
+      "index": "traps",
+      "url": "/api/2014/rule-sections/traps"
+    },
+    {
+      "name": "Diseases",
+      "index": "diseases",
+      "url": "/api/2014/rule-sections/diseases"
+    },
+    {
+      "name": "Madness",
+      "index": "madness",
+      "url": "/api/2014/rule-sections/madness"
+    },
+    {
+      "name": "Resting",
+      "index": "resting",
+      "url": "/api/2014/rule-sections/resting"
+    },
+    {
+      "name": "Between Adventures",
+      "index": "between-adventures",
+      "url": "/api/2014/rule-sections/between-adventures"
+    }
+  ],
+  "url": "/api/2014/rules/adventuring",
+  "updated_at": "2025-10-24T20:42:14.409Z"
+}

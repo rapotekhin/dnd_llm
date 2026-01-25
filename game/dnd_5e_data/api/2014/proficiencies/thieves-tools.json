@@ -1,0 +1,20 @@
+{
+  "index": "thieves-tools",
+  "type": "Other",
+  "name": "Thieves' Tools",
+  "classes": [
+    {
+      "index": "rogue",
+      "name": "Rogue",
+      "url": "/api/2014/classes/rogue"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/thieves-tools",
+  "reference": {
+    "index": "thieves-tools",
+    "name": "Thieves' Tools",
+    "url": "/api/2014/equipment/thieves-tools"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

@@ -1,0 +1,26 @@
+{
+  "index": "superior-hunters-defense-evasion",
+  "class": {
+    "index": "ranger",
+    "name": "Ranger",
+    "url": "/api/2014/classes/ranger"
+  },
+  "subclass": {
+    "index": "hunter",
+    "name": "Hunter",
+    "url": "/api/2014/subclasses/hunter"
+  },
+  "name": "Superior Hunter's Defense: Evasion",
+  "level": 15,
+  "prerequisites": [],
+  "desc": [
+    "When you are subjected to an effect, such as a red dragon's fiery breath or a lightning bolt spell, that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw, and only half damage if you fail."
+  ],
+  "parent": {
+    "index": "superior-hunters-defense",
+    "name": "Superior Hunter's Defense",
+    "url": "/api/2014/features/superior-hunters-defense"
+  },
+  "url": "/api/2014/features/superior-hunters-defense-evasion",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

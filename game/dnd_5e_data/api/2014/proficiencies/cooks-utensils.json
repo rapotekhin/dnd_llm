@@ -1,0 +1,14 @@
+{
+  "index": "cooks-utensils",
+  "type": "Artisan's Tools",
+  "name": "Cook's utensils",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/cooks-utensils",
+  "reference": {
+    "index": "cooks-utensils",
+    "name": "Cook's utensils",
+    "url": "/api/2014/equipment/cooks-utensils"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

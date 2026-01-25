@@ -1,0 +1,14 @@
+{
+  "index": "jewelers-tools",
+  "type": "Artisan's Tools",
+  "name": "Jeweler's Tools",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/jewelers-tools",
+  "reference": {
+    "index": "jewelers-tools",
+    "name": "Jeweler's Tools",
+    "url": "/api/2014/equipment/jewelers-tools"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

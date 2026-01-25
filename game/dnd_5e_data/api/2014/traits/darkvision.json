@@ -1,0 +1,43 @@
+{
+  "index": "darkvision",
+  "races": [
+    {
+      "index": "dwarf",
+      "name": "Dwarf",
+      "url": "/api/2014/races/dwarf"
+    },
+    {
+      "index": "elf",
+      "name": "Elf",
+      "url": "/api/2014/races/elf"
+    },
+    {
+      "index": "gnome",
+      "name": "Gnome",
+      "url": "/api/2014/races/gnome"
+    },
+    {
+      "index": "half-elf",
+      "name": "Half-Elf",
+      "url": "/api/2014/races/half-elf"
+    },
+    {
+      "index": "half-orc",
+      "name": "Half-Orc",
+      "url": "/api/2014/races/half-orc"
+    },
+    {
+      "index": "tiefling",
+      "name": "Tiefling",
+      "url": "/api/2014/races/tiefling"
+    }
+  ],
+  "subraces": [],
+  "name": "Darkvision",
+  "desc": [
+    "You have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You cannot discern color in darkness, only shades of gray."
+  ],
+  "proficiencies": [],
+  "url": "/api/2014/traits/darkvision",
+  "updated_at": "2025-10-24T20:42:14.945Z"
+}

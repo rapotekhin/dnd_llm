@@ -1,0 +1,23 @@
+{
+  "level": 14,
+  "features": [
+    {
+      "index": "hurl-through-hell",
+      "name": "Hurl Through Hell",
+      "url": "/api/2014/features/hurl-through-hell"
+    }
+  ],
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "subclass": {
+    "index": "fiend",
+    "name": "Fiend",
+    "url": "/api/2014/subclasses/fiend"
+  },
+  "url": "/api/2014/subclasses/fiend/levels/14",
+  "index": "fiend-14",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

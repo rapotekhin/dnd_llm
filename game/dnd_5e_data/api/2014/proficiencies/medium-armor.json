@@ -1,0 +1,35 @@
+{
+  "index": "medium-armor",
+  "type": "Armor",
+  "name": "Medium Armor",
+  "classes": [
+    {
+      "index": "barbarian",
+      "name": "Barbarian",
+      "url": "/api/2014/classes/barbarian"
+    },
+    {
+      "index": "cleric",
+      "name": "Cleric",
+      "url": "/api/2014/classes/cleric"
+    },
+    {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    },
+    {
+      "index": "ranger",
+      "name": "Ranger",
+      "url": "/api/2014/classes/ranger"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/medium-armor",
+  "reference": {
+    "index": "medium-armor",
+    "name": "Medium Armor",
+    "url": "/api/2014/equipment-categories/medium-armor"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

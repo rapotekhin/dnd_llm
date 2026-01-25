@@ -1,0 +1,26 @@
+{
+  "level": 20,
+  "ability_score_bonuses": 5,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "stroke-of-luck",
+      "name": "Stroke of Luck",
+      "url": "/api/2014/features/stroke-of-luck"
+    }
+  ],
+  "class_specific": {
+    "sneak_attack": {
+      "dice_count": 10,
+      "dice_value": 6
+    }
+  },
+  "index": "rogue-20",
+  "class": {
+    "index": "rogue",
+    "name": "Rogue",
+    "url": "/api/2014/classes/rogue"
+  },
+  "url": "/api/2014/classes/rogue/levels/20",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

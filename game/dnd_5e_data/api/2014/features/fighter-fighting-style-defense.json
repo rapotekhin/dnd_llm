@@ -1,0 +1,21 @@
+{
+  "index": "fighter-fighting-style-defense",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "name": "Fighting Style: Defense",
+  "level": 1,
+  "prerequisites": [],
+  "desc": [
+    "While you are wearing armor, you gain a +1 bonus to AC."
+  ],
+  "parent": {
+    "index": "fighter-fighting-style",
+    "name": "Fighting Style",
+    "url": "/api/2014/features/fighter-fighting-style"
+  },
+  "url": "/api/2014/features/fighter-fighting-style-defense",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

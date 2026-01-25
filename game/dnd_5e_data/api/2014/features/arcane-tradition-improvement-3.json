@@ -1,0 +1,17 @@
+{
+  "index": "arcane-tradition-improvement-3",
+  "class": {
+    "index": "wizard",
+    "name": "Wizard",
+    "url": "/api/2014/classes/wizard"
+  },
+  "name": "Arcane Tradition feature",
+  "level": 14,
+  "prerequisites": [],
+  "desc": [
+    "When you reach 2nd level, you choose an arcane tradition, shaping your practice of magic through one of eight schools, such as Evocation.",
+    "Your choice grants you features at 2nd level and again at 6th, 10th, and 14th level."
+  ],
+  "url": "/api/2014/features/arcane-tradition-improvement-3",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

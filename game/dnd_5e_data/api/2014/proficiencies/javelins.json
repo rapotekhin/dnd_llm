@@ -1,0 +1,20 @@
+{
+  "index": "javelins",
+  "type": "Weapons",
+  "name": "Javelins",
+  "classes": [
+    {
+      "index": "druid",
+      "name": "Druid",
+      "url": "/api/2014/classes/druid"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/javelins",
+  "reference": {
+    "index": "javelin",
+    "name": "Javelin",
+    "url": "/api/2014/equipment/javelin"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

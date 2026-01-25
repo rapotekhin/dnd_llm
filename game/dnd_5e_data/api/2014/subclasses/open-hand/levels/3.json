@@ -1,0 +1,23 @@
+{
+  "level": 3,
+  "features": [
+    {
+      "index": "open-hand-technique",
+      "name": "Open Hand Technique",
+      "url": "/api/2014/features/open-hand-technique"
+    }
+  ],
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "subclass": {
+    "index": "open-hand",
+    "name": "Open Hand",
+    "url": "/api/2014/subclasses/open-hand"
+  },
+  "url": "/api/2014/subclasses/open-hand/levels/3",
+  "index": "open-hand-3",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

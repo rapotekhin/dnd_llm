@@ -1,0 +1,123 @@
+{
+  "index": "martial-weapons",
+  "name": "Martial Weapons",
+  "equipment": [
+    {
+      "index": "battleaxe",
+      "name": "Battleaxe",
+      "url": "/api/2014/equipment/battleaxe"
+    },
+    {
+      "index": "flail",
+      "name": "Flail",
+      "url": "/api/2014/equipment/flail"
+    },
+    {
+      "index": "glaive",
+      "name": "Glaive",
+      "url": "/api/2014/equipment/glaive"
+    },
+    {
+      "index": "greataxe",
+      "name": "Greataxe",
+      "url": "/api/2014/equipment/greataxe"
+    },
+    {
+      "index": "greatsword",
+      "name": "Greatsword",
+      "url": "/api/2014/equipment/greatsword"
+    },
+    {
+      "index": "halberd",
+      "name": "Halberd",
+      "url": "/api/2014/equipment/halberd"
+    },
+    {
+      "index": "lance",
+      "name": "Lance",
+      "url": "/api/2014/equipment/lance"
+    },
+    {
+      "index": "longsword",
+      "name": "Longsword",
+      "url": "/api/2014/equipment/longsword"
+    },
+    {
+      "index": "maul",
+      "name": "Maul",
+      "url": "/api/2014/equipment/maul"
+    },
+    {
+      "index": "morningstar",
+      "name": "Morningstar",
+      "url": "/api/2014/equipment/morningstar"
+    },
+    {
+      "index": "pike",
+      "name": "Pike",
+      "url": "/api/2014/equipment/pike"
+    },
+    {
+      "index": "rapier",
+      "name": "Rapier",
+      "url": "/api/2014/equipment/rapier"
+    },
+    {
+      "index": "scimitar",
+      "name": "Scimitar",
+      "url": "/api/2014/equipment/scimitar"
+    },
+    {
+      "index": "shortsword",
+      "name": "Shortsword",
+      "url": "/api/2014/equipment/shortsword"
+    },
+    {
+      "index": "trident",
+      "name": "Trident",
+      "url": "/api/2014/equipment/trident"
+    },
+    {
+      "index": "war-pick",
+      "name": "War pick",
+      "url": "/api/2014/equipment/war-pick"
+    },
+    {
+      "index": "warhammer",
+      "name": "Warhammer",
+      "url": "/api/2014/equipment/warhammer"
+    },
+    {
+      "index": "whip",
+      "name": "Whip",
+      "url": "/api/2014/equipment/whip"
+    },
+    {
+      "index": "blowgun",
+      "name": "Blowgun",
+      "url": "/api/2014/equipment/blowgun"
+    },
+    {
+      "index": "crossbow-hand",
+      "name": "Crossbow, hand",
+      "url": "/api/2014/equipment/crossbow-hand"
+    },
+    {
+      "index": "crossbow-heavy",
+      "name": "Crossbow, heavy",
+      "url": "/api/2014/equipment/crossbow-heavy"
+    },
+    {
+      "index": "longbow",
+      "name": "Longbow",
+      "url": "/api/2014/equipment/longbow"
+    },
+    {
+      "index": "net",
+      "name": "Net",
+      "url": "/api/2014/equipment/net"
+    }
+  ],
+  "url": "/api/2014/equipment-categories/martial-weapons",
+  "updated_at": "2025-10-24T20:42:12.821Z"
+}

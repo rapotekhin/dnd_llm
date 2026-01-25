@@ -1,0 +1,35 @@
+{
+  "index": "saving-throw-dex",
+  "type": "Saving Throws",
+  "name": "Saving Throw: DEX",
+  "classes": [
+    {
+      "index": "bard",
+      "name": "Bard",
+      "url": "/api/2014/classes/bard"
+    },
+    {
+      "index": "monk",
+      "name": "Monk",
+      "url": "/api/2014/classes/monk"
+    },
+    {
+      "index": "ranger",
+      "name": "Ranger",
+      "url": "/api/2014/classes/ranger"
+    },
+    {
+      "index": "rogue",
+      "name": "Rogue",
+      "url": "/api/2014/classes/rogue"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/saving-throw-dex",
+  "reference": {
+    "index": "dex",
+    "name": "DEX",
+    "url": "/api/2014/ability-scores/dex"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

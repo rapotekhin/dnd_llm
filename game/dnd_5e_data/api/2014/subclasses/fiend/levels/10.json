@@ -1,0 +1,23 @@
+{
+  "level": 10,
+  "features": [
+    {
+      "index": "fiendish-resilience",
+      "name": "Fiendish Resilience",
+      "url": "/api/2014/features/fiendish-resilience"
+    }
+  ],
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "subclass": {
+    "index": "fiend",
+    "name": "Fiend",
+    "url": "/api/2014/subclasses/fiend"
+  },
+  "url": "/api/2014/subclasses/fiend/levels/10",
+  "index": "fiend-10",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

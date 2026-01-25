@@ -1,0 +1,14 @@
+{
+  "index": "greatswords",
+  "type": "Weapons",
+  "name": "Greatswords",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/greatswords",
+  "reference": {
+    "index": "greatsword",
+    "name": "Greatsword",
+    "url": "/api/2014/equipment/greatsword"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

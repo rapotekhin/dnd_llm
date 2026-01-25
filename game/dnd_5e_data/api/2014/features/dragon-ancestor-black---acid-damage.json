@@ -1,0 +1,27 @@
+{
+  "index": "dragon-ancestor-black---acid-damage",
+  "class": {
+    "index": "sorcerer",
+    "name": "Sorcerer",
+    "url": "/api/2014/classes/sorcerer"
+  },
+  "subclass": {
+    "index": "draconic",
+    "name": "Draconic",
+    "url": "/api/2014/subclasses/draconic"
+  },
+  "name": "Dragon Ancestor: Black - Acid Damage",
+  "level": 1,
+  "prerequisites": [],
+  "desc": [
+    "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+    "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check."
+  ],
+  "parent": {
+    "index": "dragon-ancestor",
+    "name": "Dragon Ancestor",
+    "url": "/api/2014/features/dragon-ancestor"
+  },
+  "url": "/api/2014/features/dragon-ancestor-black---acid-damage",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

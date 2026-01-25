@@ -1,0 +1,23 @@
+{
+  "level": 6,
+  "features": [
+    {
+      "index": "wholeness-of-body",
+      "name": "Wholeness of Body",
+      "url": "/api/2014/features/wholeness-of-body"
+    }
+  ],
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "subclass": {
+    "index": "open-hand",
+    "name": "Open Hand",
+    "url": "/api/2014/subclasses/open-hand"
+  },
+  "url": "/api/2014/subclasses/open-hand/levels/6",
+  "index": "open-hand-6",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

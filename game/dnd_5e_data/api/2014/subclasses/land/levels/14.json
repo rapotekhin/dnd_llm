@@ -1,0 +1,23 @@
+{
+  "level": 14,
+  "features": [
+    {
+      "index": "natures-sanctuary",
+      "name": "Nature's Sanctuary",
+      "url": "/api/2014/features/natures-sanctuary"
+    }
+  ],
+  "class": {
+    "index": "druid",
+    "name": "Druid",
+    "url": "/api/2014/classes/druid"
+  },
+  "subclass": {
+    "index": "land",
+    "name": "Land",
+    "url": "/api/2014/subclasses/land"
+  },
+  "url": "/api/2014/subclasses/land/levels/14",
+  "index": "land-14",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

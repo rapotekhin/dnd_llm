@@ -1,0 +1,26 @@
+{
+  "level": 20,
+  "features": [
+    {
+      "index": "holy-nimbus",
+      "name": "Holy Nimbus",
+      "url": "/api/2014/features/holy-nimbus"
+    }
+  ],
+  "subclass_specific": {
+    "aura_range": 30
+  },
+  "class": {
+    "index": "paladin",
+    "name": "Paladin",
+    "url": "/api/2014/classes/paladin"
+  },
+  "subclass": {
+    "index": "devotion",
+    "name": "Devotion",
+    "url": "/api/2014/subclasses/devotion"
+  },
+  "url": "/api/2014/subclasses/devotion/levels/20",
+  "index": "devotion-20",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

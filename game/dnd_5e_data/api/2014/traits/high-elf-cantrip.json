@@ -1,0 +1,141 @@
+{
+  "index": "high-elf-cantrip",
+  "races": [],
+  "subraces": [
+    {
+      "index": "high-elf",
+      "name": "High Elf",
+      "url": "/api/2014/subraces/high-elf"
+    }
+  ],
+  "name": "High Elf Cantrip",
+  "desc": [
+    "You know one cantrip of your choice form the wizard spell list. Intelligence is your spellcasting ability for it."
+  ],
+  "proficiencies": [],
+  "trait_specific": {
+    "spell_options": {
+      "choose": 1,
+      "from": {
+        "option_set_type": "options_array",
+        "options": [
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "light",
+              "name": "Light",
+              "url": "/api/2014/spells/light"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "mage-hand",
+              "name": "Mage Hand",
+              "url": "/api/2014/spells/mage-hand"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "mending",
+              "name": "Mending",
+              "url": "/api/2014/spells/mending"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "message",
+              "name": "Message",
+              "url": "/api/2014/spells/message"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "minor-illusion",
+              "name": "Minor Illusion",
+              "url": "/api/2014/spells/minor-illusion"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "acid-splash",
+              "name": "Acid Splash",
+              "url": "/api/2014/spells/acid-splash"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "prestidigitation",
+              "name": "Prestidigitation",
+              "url": "/api/2014/spells/prestidigitation"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "ray-of-frost",
+              "name": "Ray of Frost",
+              "url": "/api/2014/spells/ray-of-frost"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "shocking-grasp",
+              "name": "Shocking Grasp",
+              "url": "/api/2014/spells/shocking-grasp"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "true-strike",
+              "name": "True Strike",
+              "url": "/api/2014/spells/true-strike"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "chill-touch",
+              "name": "Chill Touch",
+              "url": "/api/2014/spells/chill-touch"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "dancing-lights",
+              "name": "Dancing Lights",
+              "url": "/api/2014/spells/dancing-lights"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "fire-bolt",
+              "name": "Fire Bolt",
+              "url": "/api/2014/spells/fire-bolt"
+            }
+          },
+          {
+            "option_type": "reference",
+            "item": {
+              "index": "poison-spray",
+              "name": "Poison Spray",
+              "url": "/api/2014/spells/poison-spray"
+            }
+          }
+        ]
+      },
+      "type": "spell"
+    }
+  },
+  "url": "/api/2014/traits/high-elf-cantrip",
+  "updated_at": "2025-10-24T20:42:14.945Z"
+}

@@ -1,0 +1,23 @@
+{
+  "level": 2,
+  "features": [
+    {
+      "index": "channel-divinity-preserve-life",
+      "name": "Channel Divinity: Preserve Life",
+      "url": "/api/2014/features/channel-divinity-preserve-life"
+    }
+  ],
+  "class": {
+    "index": "cleric",
+    "name": "Cleric",
+    "url": "/api/2014/classes/cleric"
+  },
+  "subclass": {
+    "index": "life",
+    "name": "Life",
+    "url": "/api/2014/subclasses/life"
+  },
+  "url": "/api/2014/subclasses/life/levels/2",
+  "index": "life-2",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

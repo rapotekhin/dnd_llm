@@ -1,0 +1,9 @@
+{
+  "index": "incapacitated",
+  "name": "Incapacitated",
+  "desc": [
+    "- An incapacitated creature can't take actions or reactions."
+  ],
+  "url": "/api/2014/conditions/incapacitated",
+  "updated_at": "2025-10-24T20:42:12.637Z"
+}

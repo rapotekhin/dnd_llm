@@ -1,0 +1,30 @@
+{
+  "level": 17,
+  "ability_score_bonuses": 6,
+  "prof_bonus": 6,
+  "features": [
+    {
+      "index": "action-surge-2-uses",
+      "name": "Action Surge (2 uses)",
+      "url": "/api/2014/features/action-surge-2-uses"
+    },
+    {
+      "index": "indomitable-3-uses",
+      "name": "Indomitable (3 uses)",
+      "url": "/api/2014/features/indomitable-3-uses"
+    }
+  ],
+  "class_specific": {
+    "action_surges": 2,
+    "indomitable_uses": 3,
+    "extra_attacks": 2
+  },
+  "index": "fighter-17",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "url": "/api/2014/classes/fighter/levels/17",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

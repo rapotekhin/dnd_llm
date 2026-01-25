@@ -1,0 +1,26 @@
+{
+  "index": "eldritch-invocation-repelling-blast",
+  "class": {
+    "index": "warlock",
+    "name": "Warlock",
+    "url": "/api/2014/classes/warlock"
+  },
+  "name": "Eldritch Invocation: Repelling Blast",
+  "level": 2,
+  "prerequisites": [
+    {
+      "type": "spell",
+      "spell": "/api/2014/spells/eldritch-blast"
+    }
+  ],
+  "desc": [
+    "When you hit a creature with eldritch blast, you can push the creature up to 10 feet away from you in a straight line."
+  ],
+  "parent": {
+    "index": "eldritch-invocations",
+    "name": "Eldritch Invocations",
+    "url": "/api/2014/features/eldritch-invocations"
+  },
+  "url": "/api/2014/features/eldritch-invocation-repelling-blast",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

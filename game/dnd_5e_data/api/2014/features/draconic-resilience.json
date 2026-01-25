@@ -1,0 +1,22 @@
+{
+  "index": "draconic-resilience",
+  "class": {
+    "index": "sorcerer",
+    "name": "Sorcerer",
+    "url": "/api/2014/classes/sorcerer"
+  },
+  "subclass": {
+    "index": "draconic",
+    "name": "Draconic",
+    "url": "/api/2014/subclasses/draconic"
+  },
+  "name": "Draconic Resilience",
+  "level": 1,
+  "prerequisites": [],
+  "desc": [
+    "As magic flows through your body, it causes physical traits of your dragon ancestors to emerge. At 1st level, your hit point maximum increases by 1 and increases by 1 again whenever you gain a level in this class.",
+    "Additionally, parts of your skin are covered by a thin sheen of dragon-like scales. When you aren't wearing armor, your AC equals 13 + your Dexterity modifier."
+  ],
+  "url": "/api/2014/features/draconic-resilience",
+  "updated_at": "2025-10-24T20:42:13.151Z"
+}

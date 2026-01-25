@@ -1,0 +1,227 @@
+{
+  "count": 37,
+  "results": [
+    {
+      "index": "alarm",
+      "name": "Alarm",
+      "level": 1,
+      "url": "/api/2014/spells/alarm"
+    },
+    {
+      "index": "animal-friendship",
+      "name": "Animal Friendship",
+      "level": 1,
+      "url": "/api/2014/spells/animal-friendship"
+    },
+    {
+      "index": "cure-wounds",
+      "name": "Cure Wounds",
+      "level": 1,
+      "url": "/api/2014/spells/cure-wounds"
+    },
+    {
+      "index": "detect-magic",
+      "name": "Detect Magic",
+      "level": 1,
+      "url": "/api/2014/spells/detect-magic"
+    },
+    {
+      "index": "detect-poison-and-disease",
+      "name": "Detect Poison and Disease",
+      "level": 1,
+      "url": "/api/2014/spells/detect-poison-and-disease"
+    },
+    {
+      "index": "fog-cloud",
+      "name": "Fog Cloud",
+      "level": 1,
+      "url": "/api/2014/spells/fog-cloud"
+    },
+    {
+      "index": "goodberry",
+      "name": "Goodberry",
+      "level": 1,
+      "url": "/api/2014/spells/goodberry"
+    },
+    {
+      "index": "hunters-mark",
+      "name": "Hunter's Mark",
+      "level": 1,
+      "url": "/api/2014/spells/hunters-mark"
+    },
+    {
+      "index": "jump",
+      "name": "Jump",
+      "level": 1,
+      "url": "/api/2014/spells/jump"
+    },
+    {
+      "index": "longstrider",
+      "name": "Longstrider",
+      "level": 1,
+      "url": "/api/2014/spells/longstrider"
+    },
+    {
+      "index": "speak-with-animals",
+      "name": "Speak with Animals",
+      "level": 1,
+      "url": "/api/2014/spells/speak-with-animals"
+    },
+    {
+      "index": "animal-messenger",
+      "name": "Animal Messenger",
+      "level": 2,
+      "url": "/api/2014/spells/animal-messenger"
+    },
+    {
+      "index": "barkskin",
+      "name": "Barkskin",
+      "level": 2,
+      "url": "/api/2014/spells/barkskin"
+    },
+    {
+      "index": "darkvision",
+      "name": "Darkvision",
+      "level": 2,
+      "url": "/api/2014/spells/darkvision"
+    },
+    {
+      "index": "find-traps",
+      "name": "Find Traps",
+      "level": 2,
+      "url": "/api/2014/spells/find-traps"
+    },
+    {
+      "index": "lesser-restoration",
+      "name": "Lesser Restoration",
+      "level": 2,
+      "url": "/api/2014/spells/lesser-restoration"
+    },
+    {
+      "index": "locate-animals-or-plants",
+      "name": "Locate Animals or Plants",
+      "level": 2,
+      "url": "/api/2014/spells/locate-animals-or-plants"
+    },
+    {
+      "index": "locate-object",
+      "name": "Locate Object",
+      "level": 2,
+      "url": "/api/2014/spells/locate-object"
+    },
+    {
+      "index": "pass-without-trace",
+      "name": "Pass Without Trace",
+      "level": 2,
+      "url": "/api/2014/spells/pass-without-trace"
+    },
+    {
+      "index": "protection-from-poison",
+      "name": "Protection from Poison",
+      "level": 2,
+      "url": "/api/2014/spells/protection-from-poison"
+    },
+    {
+      "index": "silence",
+      "name": "Silence",
+      "level": 2,
+      "url": "/api/2014/spells/silence"
+    },
+    {
+      "index": "spike-growth",
+      "name": "Spike Growth",
+      "level": 2,
+      "url": "/api/2014/spells/spike-growth"
+    },
+    {
+      "index": "conjure-animals",
+      "name": "Conjure Animals",
+      "level": 3,
+      "url": "/api/2014/spells/conjure-animals"
+    },
+    {
+      "index": "daylight",
+      "name": "Daylight",
+      "level": 3,
+      "url": "/api/2014/spells/daylight"
+    },
+    {
+      "index": "nondetection",
+      "name": "Nondetection",
+      "level": 3,
+      "url": "/api/2014/spells/nondetection"
+    },
+    {
+      "index": "plant-growth",
+      "name": "Plant Growth",
+      "level": 3,
+      "url": "/api/2014/spells/plant-growth"
+    },
+    {
+      "index": "protection-from-energy",
+      "name": "Protection From Energy",
+      "level": 3,
+      "url": "/api/2014/spells/protection-from-energy"
+    },
+    {
+      "index": "speak-with-plants",
+      "name": "Speak with Plants",
+      "level": 3,
+      "url": "/api/2014/spells/speak-with-plants"
+    },
+    {
+      "index": "water-breathing",
+      "name": "Water Breathing",
+      "level": 3,
+      "url": "/api/2014/spells/water-breathing"
+    },
+    {
+      "index": "water-walk",
+      "name": "Water Walk",
+      "level": 3,
+      "url": "/api/2014/spells/water-walk"
+    },
+    {
+      "index": "wind-wall",
+      "name": "Wind Wall",
+      "level": 3,
+      "url": "/api/2014/spells/wind-wall"
+    },
+    {
+      "index": "conjure-woodland-beings",
+      "name": "Conjure Woodland Beings",
+      "level": 4,
+      "url": "/api/2014/spells/conjure-woodland-beings"
+    },
+    {
+      "index": "freedom-of-movement",
+      "name": "Freedom of Movement",
+      "level": 4,
+      "url": "/api/2014/spells/freedom-of-movement"
+    },
+    {
+      "index": "locate-creature",
+      "name": "Locate Creature",
+      "level": 4,
+      "url": "/api/2014/spells/locate-creature"
+    },
+    {
+      "index": "stoneskin",
+      "name": "Stoneskin",
+      "level": 4,
+      "url": "/api/2014/spells/stoneskin"
+    },
+    {
+      "index": "commune-with-nature",
+      "name": "Commune With Nature",
+      "level": 5,
+      "url": "/api/2014/spells/commune-with-nature"
+    },
+    {
+      "index": "tree-stride",
+      "name": "Tree Stride",
+      "level": 5,
+      "url": "/api/2014/spells/tree-stride"
+    }
+  ]
+}

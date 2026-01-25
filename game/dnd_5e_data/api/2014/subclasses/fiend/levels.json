@@ -1,0 +1,94 @@
+[
+  {
+    "level": 1,
+    "features": [
+      {
+        "index": "dark-ones-blessing",
+        "name": "Dark One's Blessing",
+        "url": "/api/2014/features/dark-ones-blessing"
+      }
+    ],
+    "class": {
+      "index": "warlock",
+      "name": "Warlock",
+      "url": "/api/2014/classes/warlock"
+    },
+    "subclass": {
+      "index": "fiend",
+      "name": "Fiend",
+      "url": "/api/2014/subclasses/fiend"
+    },
+    "url": "/api/2014/subclasses/fiend/levels/1",
+    "index": "fiend-1",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 6,
+    "features": [
+      {
+        "index": "dark-ones-own-luck",
+        "name": "Dark One's Own Luck",
+        "url": "/api/2014/features/dark-ones-own-luck"
+      }
+    ],
+    "class": {
+      "index": "warlock",
+      "name": "Warlock",
+      "url": "/api/2014/classes/warlock"
+    },
+    "subclass": {
+      "index": "fiend",
+      "name": "Fiend",
+      "url": "/api/2014/subclasses/fiend"
+    },
+    "url": "/api/2014/subclasses/fiend/levels/6",
+    "index": "fiend-6",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 10,
+    "features": [
+      {
+        "index": "fiendish-resilience",
+        "name": "Fiendish Resilience",
+        "url": "/api/2014/features/fiendish-resilience"
+      }
+    ],
+    "class": {
+      "index": "warlock",
+      "name": "Warlock",
+      "url": "/api/2014/classes/warlock"
+    },
+    "subclass": {
+      "index": "fiend",
+      "name": "Fiend",
+      "url": "/api/2014/subclasses/fiend"
+    },
+    "url": "/api/2014/subclasses/fiend/levels/10",
+    "index": "fiend-10",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 14,
+    "features": [
+      {
+        "index": "hurl-through-hell",
+        "name": "Hurl Through Hell",
+        "url": "/api/2014/features/hurl-through-hell"
+      }
+    ],
+    "class": {
+      "index": "warlock",
+      "name": "Warlock",
+      "url": "/api/2014/classes/warlock"
+    },
+    "subclass": {
+      "index": "fiend",
+      "name": "Fiend",
+      "url": "/api/2014/subclasses/fiend"
+    },
+    "url": "/api/2014/subclasses/fiend/levels/14",
+    "index": "fiend-14",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  }
+]

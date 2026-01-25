@@ -1,0 +1,323 @@
+{
+  "index": "mounts-and-vehicles",
+  "name": "Mounts and Vehicles",
+  "equipment": [
+    {
+      "index": "mule",
+      "name": "Mule",
+      "url": "/api/2014/equipment/mule"
+    },
+    {
+      "index": "elephant",
+      "name": "Elephant",
+      "url": "/api/2014/equipment/elephant"
+    },
+    {
+      "index": "horse-draft",
+      "name": "Horse, draft",
+      "url": "/api/2014/equipment/horse-draft"
+    },
+    {
+      "index": "horse-riding",
+      "name": "Horse, riding",
+      "url": "/api/2014/equipment/horse-riding"
+    },
+    {
+      "index": "mastiff",
+      "name": "Mastiff",
+      "url": "/api/2014/equipment/mastiff"
+    },
+    {
+      "index": "pony",
+      "name": "Pony",
+      "url": "/api/2014/equipment/pony"
+    },
+    {
+      "index": "warhorse",
+      "name": "Warhorse",
+      "url": "/api/2014/equipment/warhorse"
+    },
+    {
+      "index": "barding-padded",
+      "name": "Barding: Padded",
+      "url": "/api/2014/equipment/barding-padded"
+    },
+    {
+      "index": "barding-leather",
+      "name": "Barding: Leather",
+      "url": "/api/2014/equipment/barding-leather"
+    },
+    {
+      "index": "barding-studded-leather",
+      "name": "Barding: Studded Leather",
+      "url": "/api/2014/equipment/barding-studded-leather"
+    },
+    {
+      "index": "barding-hide",
+      "name": "Barding: Hide",
+      "url": "/api/2014/equipment/barding-hide"
+    },
+    {
+      "index": "barding-chain-shirt",
+      "name": "Barding: Chain shirt",
+      "url": "/api/2014/equipment/barding-chain-shirt"
+    },
+    {
+      "index": "barding-scale-mail",
+      "name": "Barding: Scale mail",
+      "url": "/api/2014/equipment/barding-scale-mail"
+    },
+    {
+      "index": "barding-breastplate",
+      "name": "Barding: Breastplate",
+      "url": "/api/2014/equipment/barding-breastplate"
+    },
+    {
+      "index": "barding-half-plate",
+      "name": "Barding: Half plate",
+      "url": "/api/2014/equipment/barding-half-plate"
+    },
+    {
+      "index": "barding-ring-mail",
+      "name": "Barding: Ring mail",
+      "url": "/api/2014/equipment/barding-ring-mail"
+    },
+    {
+      "index": "barding-chain-mail",
+      "name": "Barding: Chain mail",
+      "url": "/api/2014/equipment/barding-chain-mail"
+    },
+    {
+      "index": "barding-splint",
+      "name": "Barding: Splint",
+      "url": "/api/2014/equipment/barding-splint"
+    },
+    {
+      "index": "barding-plate",
+      "name": "Barding: Plate",
+      "url": "/api/2014/equipment/barding-plate"
+    },
+    {
+      "index": "bit-and-bridle",
+      "name": "Bit and bridle",
+      "url": "/api/2014/equipment/bit-and-bridle"
+    },
+    {
+      "index": "carriage",
+      "name": "Carriage",
+      "url": "/api/2014/equipment/carriage"
+    },
+    {
+      "index": "cart",
+      "name": "Cart",
+      "url": "/api/2014/equipment/cart"
+    },
+    {
+      "index": "chariot",
+      "name": "Chariot",
+      "url": "/api/2014/equipment/chariot"
+    },
+    {
+      "index": "animal-feed-1-day",
+      "name": "Animal Feed (1 day)",
+      "url": "/api/2014/equipment/animal-feed-1-day"
+    },
+    {
+      "index": "saddle-exotic",
+      "name": "Saddle, Exotic",
+      "url": "/api/2014/equipment/saddle-exotic"
+    },
+    {
+      "index": "saddle-military",
+      "name": "Saddle, Military",
+      "url": "/api/2014/equipment/saddle-military"
+    },
+    {
+      "index": "saddle-pack",
+      "name": "Saddle, Pack",
+      "url": "/api/2014/equipment/saddle-pack"
+    },
+    {
+      "index": "saddle-riding",
+      "name": "Saddle, Riding",
+      "url": "/api/2014/equipment/saddle-riding"
+    },
+    {
+      "index": "saddlebags",
+      "name": "Saddlebags",
+      "url": "/api/2014/equipment/saddlebags"
+    },
+    {
+      "index": "sled",
+      "name": "Sled",
+      "url": "/api/2014/equipment/sled"
+    },
+    {
+      "index": "stabling-1-day",
+      "name": "Stabling (1 day)",
+      "url": "/api/2014/equipment/stabling-1-day"
+    },
+    {
+      "index": "wagon",
+      "name": "Wagon",
+      "url": "/api/2014/equipment/wagon"
+    },
+    {
+      "index": "barding-padded",
+      "name": "Barding: Padded",
+      "url": "/api/2014/equipment/barding-padded"
+    },
+    {
+      "index": "barding-leather",
+      "name": "Barding: Leather",
+      "url": "/api/2014/equipment/barding-leather"
+    },
+    {
+      "index": "barding-studded-leather",
+      "name": "Barding: Studded Leather",
+      "url": "/api/2014/equipment/barding-studded-leather"
+    },
+    {
+      "index": "barding-hide",
+      "name": "Barding: Hide",
+      "url": "/api/2014/equipment/barding-hide"
+    },
+    {
+      "index": "barding-chain-shirt",
+      "name": "Barding: Chain shirt",
+      "url": "/api/2014/equipment/barding-chain-shirt"
+    },
+    {
+      "index": "barding-scale-mail",
+      "name": "Barding: Scale mail",
+      "url": "/api/2014/equipment/barding-scale-mail"
+    },
+    {
+      "index": "barding-breastplate",
+      "name": "Barding: Breastplate",
+      "url": "/api/2014/equipment/barding-breastplate"
+    },
+    {
+      "index": "barding-half-plate",
+      "name": "Barding: Half plate",
+      "url": "/api/2014/equipment/barding-half-plate"
+    },
+    {
+      "index": "barding-ring-mail",
+      "name": "Barding: Ring mail",
+      "url": "/api/2014/equipment/barding-ring-mail"
+    },
+    {
+      "index": "barding-chain-mail",
+      "name": "Barding: Chain mail",
+      "url": "/api/2014/equipment/barding-chain-mail"
+    },
+    {
+      "index": "barding-splint",
+      "name": "Barding: Splint",
+      "url": "/api/2014/equipment/barding-splint"
+    },
+    {
+      "index": "barding-plate",
+      "name": "Barding: Plate",
+      "url": "/api/2014/equipment/barding-plate"
+    },
+    {
+      "index": "bit-and-bridle",
+      "name": "Bit and bridle",
+      "url": "/api/2014/equipment/bit-and-bridle"
+    },
+    {
+      "index": "carriage",
+      "name": "Carriage",
+      "url": "/api/2014/equipment/carriage"
+    },
+    {
+      "index": "cart",
+      "name": "Cart",
+      "url": "/api/2014/equipment/cart"
+    },
+    {
+      "index": "chariot",
+      "name": "Chariot",
+      "url": "/api/2014/equipment/chariot"
+    },
+    {
+      "index": "animal-feed-1-day",
+      "name": "Animal Feed (1 day)",
+      "url": "/api/2014/equipment/animal-feed-1-day"
+    },
+    {
+      "index": "saddle-exotic",
+      "name": "Saddle, Exotic",
+      "url": "/api/2014/equipment/saddle-exotic"
+    },
+    {
+      "index": "saddle-military",
+      "name": "Saddle, Military",
+      "url": "/api/2014/equipment/saddle-military"
+    },
+    {
+      "index": "saddle-pack",
+      "name": "Saddle, Pack",
+      "url": "/api/2014/equipment/saddle-pack"
+    },
+    {
+      "index": "saddle-riding",
+      "name": "Saddle, Riding",
+      "url": "/api/2014/equipment/saddle-riding"
+    },
+    {
+      "index": "saddlebags",
+      "name": "Saddlebags",
+      "url": "/api/2014/equipment/saddlebags"
+    },
+    {
+      "index": "sled",
+      "name": "Sled",
+      "url": "/api/2014/equipment/sled"
+    },
+    {
+      "index": "stabling-1-day",
+      "name": "Stabling (1 day)",
+      "url": "/api/2014/equipment/stabling-1-day"
+    },
+    {
+      "index": "wagon",
+      "name": "Wagon",
+      "url": "/api/2014/equipment/wagon"
+    },
+    {
+      "index": "galley",
+      "name": "Galley",
+      "url": "/api/2014/equipment/galley"
+    },
+    {
+      "index": "keelboat",
+      "name": "Keelboat",
+      "url": "/api/2014/equipment/keelboat"
+    },
+    {
+      "index": "longship",
+      "name": "Longship",
+      "url": "/api/2014/equipment/longship"
+    },
+    {
+      "index": "rowboat",
+      "name": "Rowboat",
+      "url": "/api/2014/equipment/rowboat"
+    },
+    {
+      "index": "sailing-ship",
+      "name": "Sailing ship",
+      "url": "/api/2014/equipment/sailing-ship"
+    },
+    {
+      "index": "warship",
+      "name": "Warship",
+      "url": "/api/2014/equipment/warship"
+    }
+  ],
+  "url": "/api/2014/equipment-categories/mounts-and-vehicles",
+  "updated_at": "2025-10-24T20:42:12.821Z"
+}

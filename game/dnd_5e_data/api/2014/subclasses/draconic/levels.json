@@ -1,0 +1,99 @@
+[
+  {
+    "level": 1,
+    "features": [
+      {
+        "index": "dragon-ancestor",
+        "name": "Dragon Ancestor",
+        "url": "/api/2014/features/dragon-ancestor"
+      },
+      {
+        "index": "draconic-resilience",
+        "name": "Draconic Resilience",
+        "url": "/api/2014/features/draconic-resilience"
+      }
+    ],
+    "class": {
+      "index": "sorcerer",
+      "name": "Sorcerer",
+      "url": "/api/2014/classes/sorcerer"
+    },
+    "subclass": {
+      "index": "draconic",
+      "name": "Draconic",
+      "url": "/api/2014/subclasses/draconic"
+    },
+    "url": "/api/2014/subclasses/draconic/levels/1",
+    "index": "draconic-1",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 6,
+    "features": [
+      {
+        "index": "elemental-affinity",
+        "name": "Elemental Affinity",
+        "url": "/api/2014/features/elemental-affinity"
+      }
+    ],
+    "class": {
+      "index": "sorcerer",
+      "name": "Sorcerer",
+      "url": "/api/2014/classes/sorcerer"
+    },
+    "subclass": {
+      "index": "draconic",
+      "name": "Draconic",
+      "url": "/api/2014/subclasses/draconic"
+    },
+    "url": "/api/2014/subclasses/draconic/levels/6",
+    "index": "draconic-6",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 14,
+    "features": [
+      {
+        "index": "dragon-wings",
+        "name": "Dragon Wings",
+        "url": "/api/2014/features/dragon-wings"
+      }
+    ],
+    "class": {
+      "index": "sorcerer",
+      "name": "Sorcerer",
+      "url": "/api/2014/classes/sorcerer"
+    },
+    "subclass": {
+      "index": "draconic",
+      "name": "Draconic",
+      "url": "/api/2014/subclasses/draconic"
+    },
+    "url": "/api/2014/subclasses/draconic/levels/14",
+    "index": "draconic-14",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 18,
+    "features": [
+      {
+        "index": "draconic-presence",
+        "name": "Draconic Presence",
+        "url": "/api/2014/features/draconic-presence"
+      }
+    ],
+    "class": {
+      "index": "sorcerer",
+      "name": "Sorcerer",
+      "url": "/api/2014/classes/sorcerer"
+    },
+    "subclass": {
+      "index": "draconic",
+      "name": "Draconic",
+      "url": "/api/2014/subclasses/draconic"
+    },
+    "url": "/api/2014/subclasses/draconic/levels/18",
+    "index": "draconic-18",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  }
+]

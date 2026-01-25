@@ -1,0 +1,14 @@
+{
+  "index": "crossbows-heavy",
+  "type": "Weapons",
+  "name": "Crossbows, heavy",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/crossbows-heavy",
+  "reference": {
+    "index": "crossbow-heavy",
+    "name": "Crossbow, heavy",
+    "url": "/api/2014/equipment/crossbow-heavy"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

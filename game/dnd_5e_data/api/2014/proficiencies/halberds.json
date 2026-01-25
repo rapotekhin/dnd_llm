@@ -1,0 +1,14 @@
+{
+  "index": "halberds",
+  "type": "Weapons",
+  "name": "Halberds",
+  "classes": [],
+  "races": [],
+  "url": "/api/2014/proficiencies/halberds",
+  "reference": {
+    "index": "halberd",
+    "name": "Halberd",
+    "url": "/api/2014/equipment/halberd"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

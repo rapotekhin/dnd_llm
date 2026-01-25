@@ -1,0 +1,16 @@
+{
+  "index": "jack-of-all-trades",
+  "class": {
+    "index": "bard",
+    "name": "Bard",
+    "url": "/api/2014/classes/bard"
+  },
+  "name": "Jack of All Trades",
+  "level": 2,
+  "prerequisites": [],
+  "desc": [
+    "Starting at 2nd level, you can add half your proficiency bonus, rounded down, to any ability check you make that doesn't already include your proficiency bonus."
+  ],
+  "url": "/api/2014/features/jack-of-all-trades",
+  "updated_at": "2025-10-24T20:42:13.150Z"
+}

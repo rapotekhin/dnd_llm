@@ -1,0 +1,25 @@
+{
+  "level": 12,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 4,
+  "features": [
+    {
+      "index": "barbarian-ability-score-improvement-3",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/barbarian-ability-score-improvement-3"
+    }
+  ],
+  "class_specific": {
+    "rage_count": 5,
+    "rage_damage_bonus": 3,
+    "brutal_critical_dice": 1
+  },
+  "index": "barbarian-12",
+  "class": {
+    "index": "barbarian",
+    "name": "Barbarian",
+    "url": "/api/2014/classes/barbarian"
+  },
+  "url": "/api/2014/classes/barbarian/levels/12",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

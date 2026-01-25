@@ -1,0 +1,23 @@
+{
+  "level": 10,
+  "features": [
+    {
+      "index": "natures-ward",
+      "name": "Nature's Ward",
+      "url": "/api/2014/features/natures-ward"
+    }
+  ],
+  "class": {
+    "index": "druid",
+    "name": "Druid",
+    "url": "/api/2014/classes/druid"
+  },
+  "subclass": {
+    "index": "land",
+    "name": "Land",
+    "url": "/api/2014/subclasses/land"
+  },
+  "url": "/api/2014/subclasses/land/levels/10",
+  "index": "land-10",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

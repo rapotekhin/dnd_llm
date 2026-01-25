@@ -1,15 +1,17 @@
-streamlit>=1.32.0
+# Game
+pygame>=2.6.1
+
+# DnD 5e Core (local package)
+git+https://github.com/rapotekhin/dnd-5e-core.git
+
+# LLM
 openai>=1.12.0
-langchain>=0.1.0
-langchain-openai>=0.0.5
-langchain-community>=0.0.13
-faiss-cpu>=1.7.4
-chromadb>=0.4.22
-sqlalchemy>=2.0.27
-pydantic>=2.5.3
 python-dotenv>=1.0.0
-tiktoken>=0.5.2
-pandas>=2.1.4
-numpy>=1.26.3
-langfuse>=2.0.0
+
+# Data
+pydantic>=2.5.3
 requests>=2.31.0
+
+FantasyNameGenerator==0.1.2
+
+langgraph==1.0.7

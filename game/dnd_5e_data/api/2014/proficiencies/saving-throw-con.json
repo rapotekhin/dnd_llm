@@ -1,0 +1,30 @@
+{
+  "index": "saving-throw-con",
+  "type": "Saving Throws",
+  "name": "Saving Throw: CON",
+  "classes": [
+    {
+      "index": "barbarian",
+      "name": "Barbarian",
+      "url": "/api/2014/classes/barbarian"
+    },
+    {
+      "index": "fighter",
+      "name": "Fighter",
+      "url": "/api/2014/classes/fighter"
+    },
+    {
+      "index": "sorcerer",
+      "name": "Sorcerer",
+      "url": "/api/2014/classes/sorcerer"
+    }
+  ],
+  "races": [],
+  "url": "/api/2014/proficiencies/saving-throw-con",
+  "reference": {
+    "index": "con",
+    "name": "CON",
+    "url": "/api/2014/ability-scores/con"
+  },
+  "updated_at": "2025-10-24T20:42:14.116Z"
+}

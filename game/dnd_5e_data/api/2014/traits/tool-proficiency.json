@@ -1,0 +1,51 @@
+{
+  "index": "tool-proficiency",
+  "races": [
+    {
+      "index": "dwarf",
+      "name": "Dwarf",
+      "url": "/api/2014/races/dwarf"
+    }
+  ],
+  "subraces": [],
+  "name": "Tool Proficiency",
+  "desc": [
+    "You gain proficiency with the artisan's tools of your choice: smith's tools, brewer's supplies, or mason's tools."
+  ],
+  "proficiencies": [],
+  "proficiency_choices": {
+    "choose": 1,
+    "type": "proficiencies",
+    "from": {
+      "option_set_type": "options_array",
+      "options": [
+        {
+          "option_type": "reference",
+          "item": {
+            "index": "smiths-tools",
+            "name": "Smith's Tools",
+            "url": "/api/2014/proficiencies/smiths-tools"
+          }
+        },
+        {
+          "option_type": "reference",
+          "item": {
+            "index": "brewers-supplies",
+            "name": "Brewer's Supplies",
+            "url": "/api/2014/proficiencies/brewers-supplies"
+          }
+        },
+        {
+          "option_type": "reference",
+          "item": {
+            "index": "masons-tools",
+            "name": "Mason's Tools",
+            "url": "/api/2014/proficiencies/masons-tools"
+          }
+        }
+      ]
+    }
+  },
+  "url": "/api/2014/traits/tool-proficiency",
+  "updated_at": "2025-10-24T20:42:14.945Z"
+}

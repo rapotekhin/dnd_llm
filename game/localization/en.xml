@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<localization lang="en" name="English">
+    <!-- Common -->
+    <string id="back">Back</string>
+    <string id="next">Next</string>
+    <string id="cancel">Cancel</string>
+    <string id="confirm">Done</string>
+    <string id="apply">Apply</string>
+    <string id="save">Save</string>
+    <string id="load">Load</string>
+    <string id="exit">Exit</string>
+    <string id="yes">Yes</string>
+    <string id="no">No</string>
+    
+    <!-- Title Screen -->
+    <string id="game_title">DnD LLM</string>
+    <string id="game_subtitle">Text adventure with artificial intelligence</string>
+    <string id="new_game">New Game</string>
+    <string id="continue">Continue</string>
+    <string id="save_game">Save Game</string>
+    <string id="load_game">Load Game</string>
+    <string id="save_slots_title">Choose save slot</string>
+    <string id="load_slots_title">Choose load slot</string>
+    <string id="slot_n">Slot {0}</string>
+    <string id="no_saves">No saves</string>
+    <string id="settings">Settings</string>
+    <string id="llm_active">LLM Active</string>
+    <string id="llm_enable">Enable LLM</string>
+    <string id="llm_not_implemented">Load - not implemented yet</string>
+    
+    <!-- API Modal -->
+    <string id="api_key_title">Enter OpenRouter API Key</string>
+    <string id="api_key_placeholder">sk-or-v1-...</string>
+    <string id="api_checking">Checking API key...</string>
+    <string id="api_saved">API key saved and activated!</string>
+    <string id="api_error">Error</string>
+    <string id="api_key_empty">API key not provided</string>
+    <string id="api_key_invalid">Invalid API key</string>
+    <string id="api_access_denied">Access denied</string>
+    <string id="api_error_code">API Error</string>
+    <string id="api_balance_empty">Balance exhausted</string>
+    <string id="api_timeout">Connection timeout</string>
+    <string id="api_no_connection">No connection</string>
+    <string id="api_save_error">Save error</string>
+    <string id="api_status_active">LLM Active</string>
+    <string id="api_status_inactive">LLM Inactive</string>
+    <string id="api_key_not_found">Not found</string>
+    <string id="api_balance">Balance</string>
+    <string id="api_usage">Used</string>
+    <string id="api_remaining">Remaining</string>
+    <string id="api_status">Status</string>
+    <string id="api_status_ok">ACTIVE</string>
+    <string id="api_status_fail">INACTIVE</string>
+    
+    <!-- Settings Screen -->
+    <string id="settings_title">Settings</string>
+    <string id="settings_display">Display</string>
+    <string id="settings_resolution">Resolution</string>
+    <string id="settings_fullscreen">Fullscreen</string>
+    <string id="settings_windowed">Windowed</string>
+    <string id="settings_audio">Audio</string>
+    <string id="settings_master_volume">Master Volume</string>
+    <string id="settings_music_volume">Music</string>
+    <string id="settings_sfx_volume">Effects</string>
+    <string id="settings_language">Language</string>
+    
+    <!-- Character Creation -->
+    <string id="char_creation_title">Character Creation</string>
+    <string id="char_create">Create</string>
+    
+    <!-- Character Creation Steps -->
+    <string id="step_biography">Biography</string>
+    <string id="step_race">Race</string>
+    <string id="step_subrace">Subrace</string>
+    <string id="step_class">Class</string>
+    <string id="step_features">Class Features</string>
+    <string id="step_subclass">Subclass</string>
+    <string id="step_cantrips">Cantrips</string>
+    <string id="step_spells">Spells</string>
+    <string id="step_prepared">Prepared</string>
+    <string id="step_background">Background</string>
+    <string id="step_abilities">Abilities</string>
+    <string id="step_proficiency_choices">Proficiency Choices</string>
+    <string id="step_confirmation">Confirmation</string>
+    <string id="finish">Finish</string>
+    
+    <!-- Biography Step -->
+    <string id="char_name">Character Name</string>
+    <string id="char_name_placeholder">Enter name...</string>
+    <string id="random_name">Random name</string>
+    <string id="gender">Gender</string>
+    <string id="gender_male">Male</string>
+    <string id="gender_female">Female</string>
+    <string id="age">Age</string>
+    <string id="weight">Weight</string>
+    <string id="weight_unit">lb</string>
+    <string id="alignment">Alignment</string>
+    
+    <!-- Race Step -->
+    <string id="race_stats">Statistics</string>
+    <string id="race_speed">Speed</string>
+    <string id="race_speed_unit">ft.</string>
+    <string id="race_size">Size</string>
+    <string id="race_ability_bonuses">Ability Bonuses</string>
+    <string id="race_languages">Languages</string>
+    <string id="race_traits">Traits</string>
+    
+    <!-- Subrace Step -->
+    <string id="subrace_bonuses">Subrace Bonuses</string>
+    <string id="subrace_traits">Subrace Traits</string>
+    
+    <!-- Class Step -->
+    <string id="class_stats">Class Features</string>
+    <string id="class_hit_die">Hit Die</string>
+    <string id="class_saving_throws">Saving Throws</string>
+    <string id="class_proficiencies">Proficiencies</string>
+    <string id="char_info">Character Info</string>
+    <string id="char_details">Details</string>
+    <string id="proficiencies">Proficiencies</string>
+    <string id="spells">Spells</string>
+    <string id="none">None</string>
+    <string id="class_armor">Armor</string>
+    <string id="class_weapons">Weapons</string>
+    <string id="class_tools">Tools</string>
+    <string id="class_skill_choices">Skill Choices</string>
+    <string id="class_spellcasting">Spellcasting</string>
+    <string id="class_spell_ability">Spellcasting Ability</string>
+    
+    <!-- Spells Step -->
+    <string id="select_cantrips">Select Cantrips</string>
+    <string id="select_spells">Select Spells</string>
+    <string id="select_proficiencies">Select Proficiencies</string>
+    <string id="selected">Selected</string>
+    
+    <!-- Abilities Step -->
+    <string id="points">Points</string>
+    <string id="racial_bonuses">Racial Bonuses</string>
+    
+    <!-- Ability Names -->
+    <string id="ability_str">Strength (STR)</string>
+    <string id="ability_dex">Dexterity (DEX)</string>
+    <string id="ability_con">Constitution (CON)</string>
+    <string id="ability_int">Intelligence (INT)</string>
+    <string id="ability_wis">Wisdom (WIS)</string>
+    <string id="ability_cha">Charisma (CHA)</string>
+    
+    <!-- Character Created -->
+    <string id="char_created">Character Created!</string>
+    
+    <!-- Main Screen -->
+    <string id="nav_inventory">Inventory</string>
+    <string id="nav_map">Map</string>
+    <string id="nav_journal">Journal</string>
+    <string id="journal_current">Current</string>
+    <string id="journal_completed">Completed</string>
+    <string id="journal_failed">Failed</string>
+    <string id="journal_objectives">Objectives:</string>
+    <string id="nav_character">Character</string>
+    <string id="nav_abilities">Abilities</string>
+    <string id="abilities_tab_features">Class</string>
+    <string id="abilities_tab_cantrips">Cantrips</string>
+    <string id="abilities_tab_spells">Spells</string>
+    <string id="chat_input_placeholder">Enter message...</string>
+    <string id="chat_send">Send</string>
+    <string id="quick_hide">Hide</string>
+    <string id="quick_look">Look around</string>
+    <string id="quick_rest">Rest</string>
+
+    <!-- Inventory Screen -->
+    <string id="inv_equipment">Equipment</string>
+    <string id="inv_head">Head</string>
+    <string id="inv_body">Body</string>
+    <string id="inv_hands">Hands</string>
+    <string id="inv_feet">Feet</string>
+    <string id="inv_cloak">Cloak</string>
+    <string id="inv_amulet">Amulet</string>
+    <string id="inv_ring_1">Ring 1</string>
+    <string id="inv_ring_2">Ring 2</string>
+    <string id="inv_left_hand">Left hand</string>
+    <string id="inv_right_hand">Right hand</string>
+    <string id="inv_hp_ac">HP | AC</string>
+    <string id="inv_sort_name">By name</string>
+    <string id="inv_sort_price">By price</string>
+    <string id="inv_sort_weight">By weight</string>
+    <string id="inv_coins">Coins</string>
+    <string id="inv_description">Item description</string>
+    <string id="inv_empty">—</string>
+    <string id="inv_no_player">No character</string>
+    <string id="inv_unequip">Unequip</string>
+
+    <!-- Character Screen -->
+    <string id="char_screen_hp">Health</string>
+    <string id="char_screen_ac">Armor Class</string>
+    <string id="char_screen_damage">Damage</string>
+    <string id="char_screen_speed">Speed</string>
+    <string id="char_screen_level">Level</string>
+    <string id="char_screen_xp">XP</string>
+    <string id="char_screen_abilities">Abilities</string>
+    <string id="char_screen_effects">Effects</string>
+    <string id="char_screen_spell_dc">Spell Save DC</string>
+    <string id="char_screen_spell_slots">Spell Slots</string>
+    <string id="char_screen_proficiency">Proficiency Bonus</string>
+    <string id="char_screen_race">Race</string>
+    <string id="char_screen_class">Class</string>
+    <string id="char_screen_traits">Racial Traits</string>
+    <string id="char_screen_proficiencies">Proficiencies</string>
+    <string id="char_screen_conditions">Conditions</string>
+    <string id="char_screen_damage_vulnerabilities">Damage Vulnerabilities</string>
+    <string id="char_screen_damage_resistances">Damage Resistances</string>
+    <string id="char_screen_damage_immunities">Damage Immunities</string>
+    <string id="char_screen_condition_advantages">Condition Advantages</string>
+    <string id="char_screen_condition_immunities">Condition Immunities</string>
+    <string id="char_screen_senses">Senses</string>
+    <string id="char_screen_features">Class Features</string>
+</localization>

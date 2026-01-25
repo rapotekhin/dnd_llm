@@ -1,0 +1,33 @@
+{
+  "index": "land-vehicles",
+  "name": "Land Vehicles",
+  "equipment": [
+    {
+      "index": "carriage",
+      "name": "Carriage",
+      "url": "/api/2014/equipment/carriage"
+    },
+    {
+      "index": "cart",
+      "name": "Cart",
+      "url": "/api/2014/equipment/cart"
+    },
+    {
+      "index": "chariot",
+      "name": "Chariot",
+      "url": "/api/2014/equipment/chariot"
+    },
+    {
+      "index": "sled",
+      "name": "Sled",
+      "url": "/api/2014/equipment/sled"
+    },
+    {
+      "index": "wagon",
+      "name": "Wagon",
+      "url": "/api/2014/equipment/wagon"
+    }
+  ],
+  "url": "/api/2014/equipment-categories/land-vehicles",
+  "updated_at": "2025-10-24T20:42:12.821Z"
+}

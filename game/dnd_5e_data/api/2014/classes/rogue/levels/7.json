@@ -1,0 +1,26 @@
+{
+  "level": 7,
+  "ability_score_bonuses": 1,
+  "prof_bonus": 3,
+  "features": [
+    {
+      "index": "rogue-evasion",
+      "name": "Evasion",
+      "url": "/api/2014/features/rogue-evasion"
+    }
+  ],
+  "class_specific": {
+    "sneak_attack": {
+      "dice_count": 4,
+      "dice_value": 6
+    }
+  },
+  "index": "rogue-7",
+  "class": {
+    "index": "rogue",
+    "name": "Rogue",
+    "url": "/api/2014/classes/rogue"
+  },
+  "url": "/api/2014/classes/rogue/levels/7",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

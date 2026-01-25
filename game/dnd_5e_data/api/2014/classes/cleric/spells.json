@@ -1,0 +1,635 @@
+{
+  "count": 105,
+  "results": [
+    {
+      "index": "guidance",
+      "name": "Guidance",
+      "level": 0,
+      "url": "/api/2014/spells/guidance"
+    },
+    {
+      "index": "light",
+      "name": "Light",
+      "level": 0,
+      "url": "/api/2014/spells/light"
+    },
+    {
+      "index": "mending",
+      "name": "Mending",
+      "level": 0,
+      "url": "/api/2014/spells/mending"
+    },
+    {
+      "index": "resistance",
+      "name": "Resistance",
+      "level": 0,
+      "url": "/api/2014/spells/resistance"
+    },
+    {
+      "index": "sacred-flame",
+      "name": "Sacred Flame",
+      "level": 0,
+      "url": "/api/2014/spells/sacred-flame"
+    },
+    {
+      "index": "spare-the-dying",
+      "name": "Spare the Dying",
+      "level": 0,
+      "url": "/api/2014/spells/spare-the-dying"
+    },
+    {
+      "index": "thaumaturgy",
+      "name": "Thaumaturgy",
+      "level": 0,
+      "url": "/api/2014/spells/thaumaturgy"
+    },
+    {
+      "index": "bane",
+      "name": "Bane",
+      "level": 1,
+      "url": "/api/2014/spells/bane"
+    },
+    {
+      "index": "bless",
+      "name": "Bless",
+      "level": 1,
+      "url": "/api/2014/spells/bless"
+    },
+    {
+      "index": "command",
+      "name": "Command",
+      "level": 1,
+      "url": "/api/2014/spells/command"
+    },
+    {
+      "index": "create-or-destroy-water",
+      "name": "Create or Destroy Water",
+      "level": 1,
+      "url": "/api/2014/spells/create-or-destroy-water"
+    },
+    {
+      "index": "cure-wounds",
+      "name": "Cure Wounds",
+      "level": 1,
+      "url": "/api/2014/spells/cure-wounds"
+    },
+    {
+      "index": "detect-evil-and-good",
+      "name": "Detect Evil and Good",
+      "level": 1,
+      "url": "/api/2014/spells/detect-evil-and-good"
+    },
+    {
+      "index": "detect-magic",
+      "name": "Detect Magic",
+      "level": 1,
+      "url": "/api/2014/spells/detect-magic"
+    },
+    {
+      "index": "detect-poison-and-disease",
+      "name": "Detect Poison and Disease",
+      "level": 1,
+      "url": "/api/2014/spells/detect-poison-and-disease"
+    },
+    {
+      "index": "guiding-bolt",
+      "name": "Guiding Bolt",
+      "level": 1,
+      "url": "/api/2014/spells/guiding-bolt"
+    },
+    {
+      "index": "healing-word",
+      "name": "Healing Word",
+      "level": 1,
+      "url": "/api/2014/spells/healing-word"
+    },
+    {
+      "index": "inflict-wounds",
+      "name": "Inflict Wounds",
+      "level": 1,
+      "url": "/api/2014/spells/inflict-wounds"
+    },
+    {
+      "index": "protection-from-evil-and-good",
+      "name": "Protection from Evil and Good",
+      "level": 1,
+      "url": "/api/2014/spells/protection-from-evil-and-good"
+    },
+    {
+      "index": "purify-food-and-drink",
+      "name": "Purify Food and Drink",
+      "level": 1,
+      "url": "/api/2014/spells/purify-food-and-drink"
+    },
+    {
+      "index": "sanctuary",
+      "name": "Sanctuary",
+      "level": 1,
+      "url": "/api/2014/spells/sanctuary"
+    },
+    {
+      "index": "shield-of-faith",
+      "name": "Shield of Faith",
+      "level": 1,
+      "url": "/api/2014/spells/shield-of-faith"
+    },
+    {
+      "index": "aid",
+      "name": "Aid",
+      "level": 2,
+      "url": "/api/2014/spells/aid"
+    },
+    {
+      "index": "augury",
+      "name": "Augury",
+      "level": 2,
+      "url": "/api/2014/spells/augury"
+    },
+    {
+      "index": "blindness-deafness",
+      "name": "Blindness/Deafness",
+      "level": 2,
+      "url": "/api/2014/spells/blindness-deafness"
+    },
+    {
+      "index": "calm-emotions",
+      "name": "Calm Emotions",
+      "level": 2,
+      "url": "/api/2014/spells/calm-emotions"
+    },
+    {
+      "index": "continual-flame",
+      "name": "Continual Flame",
+      "level": 2,
+      "url": "/api/2014/spells/continual-flame"
+    },
+    {
+      "index": "enhance-ability",
+      "name": "Enhance Ability",
+      "level": 2,
+      "url": "/api/2014/spells/enhance-ability"
+    },
+    {
+      "index": "find-traps",
+      "name": "Find Traps",
+      "level": 2,
+      "url": "/api/2014/spells/find-traps"
+    },
+    {
+      "index": "gentle-repose",
+      "name": "Gentle Repose",
+      "level": 2,
+      "url": "/api/2014/spells/gentle-repose"
+    },
+    {
+      "index": "hold-person",
+      "name": "Hold Person",
+      "level": 2,
+      "url": "/api/2014/spells/hold-person"
+    },
+    {
+      "index": "lesser-restoration",
+      "name": "Lesser Restoration",
+      "level": 2,
+      "url": "/api/2014/spells/lesser-restoration"
+    },
+    {
+      "index": "locate-object",
+      "name": "Locate Object",
+      "level": 2,
+      "url": "/api/2014/spells/locate-object"
+    },
+    {
+      "index": "prayer-of-healing",
+      "name": "Prayer of Healing",
+      "level": 2,
+      "url": "/api/2014/spells/prayer-of-healing"
+    },
+    {
+      "index": "protection-from-poison",
+      "name": "Protection from Poison",
+      "level": 2,
+      "url": "/api/2014/spells/protection-from-poison"
+    },
+    {
+      "index": "silence",
+      "name": "Silence",
+      "level": 2,
+      "url": "/api/2014/spells/silence"
+    },
+    {
+      "index": "spiritual-weapon",
+      "name": "Spiritual Weapon",
+      "level": 2,
+      "url": "/api/2014/spells/spiritual-weapon"
+    },
+    {
+      "index": "warding-bond",
+      "name": "Warding Bond",
+      "level": 2,
+      "url": "/api/2014/spells/warding-bond"
+    },
+    {
+      "index": "zone-of-truth",
+      "name": "Zone of Truth",
+      "level": 2,
+      "url": "/api/2014/spells/zone-of-truth"
+    },
+    {
+      "index": "animate-dead",
+      "name": "Animate Dead",
+      "level": 3,
+      "url": "/api/2014/spells/animate-dead"
+    },
+    {
+      "index": "beacon-of-hope",
+      "name": "Beacon of Hope",
+      "level": 3,
+      "url": "/api/2014/spells/beacon-of-hope"
+    },
+    {
+      "index": "bestow-curse",
+      "name": "Bestow Curse",
+      "level": 3,
+      "url": "/api/2014/spells/bestow-curse"
+    },
+    {
+      "index": "clairvoyance",
+      "name": "Clairvoyance",
+      "level": 3,
+      "url": "/api/2014/spells/clairvoyance"
+    },
+    {
+      "index": "create-food-and-water",
+      "name": "Create Food and Water",
+      "level": 3,
+      "url": "/api/2014/spells/create-food-and-water"
+    },
+    {
+      "index": "daylight",
+      "name": "Daylight",
+      "level": 3,
+      "url": "/api/2014/spells/daylight"
+    },
+    {
+      "index": "dispel-magic",
+      "name": "Dispel Magic",
+      "level": 3,
+      "url": "/api/2014/spells/dispel-magic"
+    },
+    {
+      "index": "glyph-of-warding",
+      "name": "Glyph of Warding",
+      "level": 3,
+      "url": "/api/2014/spells/glyph-of-warding"
+    },
+    {
+      "index": "magic-circle",
+      "name": "Magic Circle",
+      "level": 3,
+      "url": "/api/2014/spells/magic-circle"
+    },
+    {
+      "index": "mass-healing-word",
+      "name": "Mass Healing Word",
+      "level": 3,
+      "url": "/api/2014/spells/mass-healing-word"
+    },
+    {
+      "index": "meld-into-stone",
+      "name": "Meld Into Stone",
+      "level": 3,
+      "url": "/api/2014/spells/meld-into-stone"
+    },
+    {
+      "index": "protection-from-energy",
+      "name": "Protection From Energy",
+      "level": 3,
+      "url": "/api/2014/spells/protection-from-energy"
+    },
+    {
+      "index": "remove-curse",
+      "name": "Remove Curse",
+      "level": 3,
+      "url": "/api/2014/spells/remove-curse"
+    },
+    {
+      "index": "revivify",
+      "name": "Revivify",
+      "level": 3,
+      "url": "/api/2014/spells/revivify"
+    },
+    {
+      "index": "sending",
+      "name": "Sending",
+      "level": 3,
+      "url": "/api/2014/spells/sending"
+    },
+    {
+      "index": "speak-with-dead",
+      "name": "Speak with Dead",
+      "level": 3,
+      "url": "/api/2014/spells/speak-with-dead"
+    },
+    {
+      "index": "spirit-guardians",
+      "name": "Spirit Guardians",
+      "level": 3,
+      "url": "/api/2014/spells/spirit-guardians"
+    },
+    {
+      "index": "tongues",
+      "name": "Tongues",
+      "level": 3,
+      "url": "/api/2014/spells/tongues"
+    },
+    {
+      "index": "water-walk",
+      "name": "Water Walk",
+      "level": 3,
+      "url": "/api/2014/spells/water-walk"
+    },
+    {
+      "index": "arcane-eye",
+      "name": "Arcane Eye",
+      "level": 4,
+      "url": "/api/2014/spells/arcane-eye"
+    },
+    {
+      "index": "banishment",
+      "name": "Banishment",
+      "level": 4,
+      "url": "/api/2014/spells/banishment"
+    },
+    {
+      "index": "control-water",
+      "name": "Control Water",
+      "level": 4,
+      "url": "/api/2014/spells/control-water"
+    },
+    {
+      "index": "death-ward",
+      "name": "Death Ward",
+      "level": 4,
+      "url": "/api/2014/spells/death-ward"
+    },
+    {
+      "index": "freedom-of-movement",
+      "name": "Freedom of Movement",
+      "level": 4,
+      "url": "/api/2014/spells/freedom-of-movement"
+    },
+    {
+      "index": "guardian-of-faith",
+      "name": "Guardian of Faith",
+      "level": 4,
+      "url": "/api/2014/spells/guardian-of-faith"
+    },
+    {
+      "index": "locate-creature",
+      "name": "Locate Creature",
+      "level": 4,
+      "url": "/api/2014/spells/locate-creature"
+    },
+    {
+      "index": "stone-shape",
+      "name": "Stone Shape",
+      "level": 4,
+      "url": "/api/2014/spells/stone-shape"
+    },
+    {
+      "index": "commune",
+      "name": "Commune",
+      "level": 5,
+      "url": "/api/2014/spells/commune"
+    },
+    {
+      "index": "contagion",
+      "name": "Contagion",
+      "level": 5,
+      "url": "/api/2014/spells/contagion"
+    },
+    {
+      "index": "dispel-evil-and-good",
+      "name": "Dispel Evil and Good",
+      "level": 5,
+      "url": "/api/2014/spells/dispel-evil-and-good"
+    },
+    {
+      "index": "flame-strike",
+      "name": "Flame Strike",
+      "level": 5,
+      "url": "/api/2014/spells/flame-strike"
+    },
+    {
+      "index": "geas",
+      "name": "Geas",
+      "level": 5,
+      "url": "/api/2014/spells/geas"
+    },
+    {
+      "index": "greater-restoration",
+      "name": "Greater Restoration",
+      "level": 5,
+      "url": "/api/2014/spells/greater-restoration"
+    },
+    {
+      "index": "hallow",
+      "name": "Hallow",
+      "level": 5,
+      "url": "/api/2014/spells/hallow"
+    },
+    {
+      "index": "insect-plague",
+      "name": "Insect Plague",
+      "level": 5,
+      "url": "/api/2014/spells/insect-plague"
+    },
+    {
+      "index": "legend-lore",
+      "name": "Legend Lore",
+      "level": 5,
+      "url": "/api/2014/spells/legend-lore"
+    },
+    {
+      "index": "mass-cure-wounds",
+      "name": "Mass Cure Wounds",
+      "level": 5,
+      "url": "/api/2014/spells/mass-cure-wounds"
+    },
+    {
+      "index": "planar-binding",
+      "name": "Planar Binding",
+      "level": 5,
+      "url": "/api/2014/spells/planar-binding"
+    },
+    {
+      "index": "raise-dead",
+      "name": "Raise Dead",
+      "level": 5,
+      "url": "/api/2014/spells/raise-dead"
+    },
+    {
+      "index": "scrying",
+      "name": "Scrying",
+      "level": 5,
+      "url": "/api/2014/spells/scrying"
+    },
+    {
+      "index": "blade-barrier",
+      "name": "Blade Barrier",
+      "level": 6,
+      "url": "/api/2014/spells/blade-barrier"
+    },
+    {
+      "index": "create-undead",
+      "name": "Create Undead",
+      "level": 6,
+      "url": "/api/2014/spells/create-undead"
+    },
+    {
+      "index": "find-the-path",
+      "name": "Find the Path",
+      "level": 6,
+      "url": "/api/2014/spells/find-the-path"
+    },
+    {
+      "index": "forbiddance",
+      "name": "Forbiddance",
+      "level": 6,
+      "url": "/api/2014/spells/forbiddance"
+    },
+    {
+      "index": "harm",
+      "name": "Harm",
+      "level": 6,
+      "url": "/api/2014/spells/harm"
+    },
+    {
+      "index": "heal",
+      "name": "Heal",
+      "level": 6,
+      "url": "/api/2014/spells/heal"
+    },
+    {
+      "index": "heroes-feast",
+      "name": "Heroes' Feast",
+      "level": 6,
+      "url": "/api/2014/spells/heroes-feast"
+    },
+    {
+      "index": "planar-ally",
+      "name": "Planar Ally",
+      "level": 6,
+      "url": "/api/2014/spells/planar-ally"
+    },
+    {
+      "index": "true-seeing",
+      "name": "True Seeing",
+      "level": 6,
+      "url": "/api/2014/spells/true-seeing"
+    },
+    {
+      "index": "word-of-recall",
+      "name": "Word of Recall",
+      "level": 6,
+      "url": "/api/2014/spells/word-of-recall"
+    },
+    {
+      "index": "conjure-celestial",
+      "name": "Conjure Celestial",
+      "level": 7,
+      "url": "/api/2014/spells/conjure-celestial"
+    },
+    {
+      "index": "divine-word",
+      "name": "Divine Word",
+      "level": 7,
+      "url": "/api/2014/spells/divine-word"
+    },
+    {
+      "index": "etherealness",
+      "name": "Etherealness",
+      "level": 7,
+      "url": "/api/2014/spells/etherealness"
+    },
+    {
+      "index": "fire-storm",
+      "name": "Fire Storm",
+      "level": 7,
+      "url": "/api/2014/spells/fire-storm"
+    },
+    {
+      "index": "plane-shift",
+      "name": "Plane Shift",
+      "level": 7,
+      "url": "/api/2014/spells/plane-shift"
+    },
+    {
+      "index": "regenerate",
+      "name": "Regenerate",
+      "level": 7,
+      "url": "/api/2014/spells/regenerate"
+    },
+    {
+      "index": "resurrection",
+      "name": "Resurrection",
+      "level": 7,
+      "url": "/api/2014/spells/resurrection"
+    },
+    {
+      "index": "symbol",
+      "name": "Symbol",
+      "level": 7,
+      "url": "/api/2014/spells/symbol"
+    },
+    {
+      "index": "antimagic-field",
+      "name": "Antimagic Field",
+      "level": 8,
+      "url": "/api/2014/spells/antimagic-field"
+    },
+    {
+      "index": "control-weather",
+      "name": "Control Weather",
+      "level": 8,
+      "url": "/api/2014/spells/control-weather"
+    },
+    {
+      "index": "earthquake",
+      "name": "Earthquake",
+      "level": 8,
+      "url": "/api/2014/spells/earthquake"
+    },
+    {
+      "index": "holy-aura",
+      "name": "Holy Aura",
+      "level": 8,
+      "url": "/api/2014/spells/holy-aura"
+    },
+    {
+      "index": "astral-projection",
+      "name": "Astral Projection",
+      "level": 9,
+      "url": "/api/2014/spells/astral-projection"
+    },
+    {
+      "index": "gate",
+      "name": "Gate",
+      "level": 9,
+      "url": "/api/2014/spells/gate"
+    },
+    {
+      "index": "mass-heal",
+      "name": "Mass Heal",
+      "level": 9,
+      "url": "/api/2014/spells/mass-heal"
+    },
+    {
+      "index": "true-resurrection",
+      "name": "True Resurrection",
+      "level": 9,
+      "url": "/api/2014/spells/true-resurrection"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "level": 12,
+  "ability_score_bonuses": 3,
+  "prof_bonus": 4,
+  "features": [
+    {
+      "index": "druid-ability-score-improvement-3",
+      "name": "Ability Score Improvement",
+      "url": "/api/2014/features/druid-ability-score-improvement-3"
+    }
+  ],
+  "spellcasting": {
+    "cantrips_known": 4,
+    "spell_slots_level_1": 4,
+    "spell_slots_level_2": 3,
+    "spell_slots_level_3": 3,
+    "spell_slots_level_4": 3,
+    "spell_slots_level_5": 2,
+    "spell_slots_level_6": 1,
+    "spell_slots_level_7": 0,
+    "spell_slots_level_8": 0,
+    "spell_slots_level_9": 0
+  },
+  "class_specific": {
+    "wild_shape_max_cr": 1,
+    "wild_shape_swim": true,
+    "wild_shape_fly": true
+  },
+  "index": "druid-12",
+  "class": {
+    "index": "druid",
+    "name": "Druid",
+    "url": "/api/2014/classes/druid"
+  },
+  "url": "/api/2014/classes/druid/levels/12",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

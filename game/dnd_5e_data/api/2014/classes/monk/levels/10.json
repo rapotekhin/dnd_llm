@@ -1,0 +1,28 @@
+{
+  "level": 10,
+  "ability_score_bonuses": 2,
+  "prof_bonus": 4,
+  "features": [
+    {
+      "index": "purity-of-body",
+      "name": "Purity of Body",
+      "url": "/api/2014/features/purity-of-body"
+    }
+  ],
+  "class_specific": {
+    "martial_arts": {
+      "dice_count": 1,
+      "dice_value": 6
+    },
+    "ki_points": 10,
+    "unarmored_movement": 20
+  },
+  "index": "monk-10",
+  "class": {
+    "index": "monk",
+    "name": "Monk",
+    "url": "/api/2014/classes/monk"
+  },
+  "url": "/api/2014/classes/monk/levels/10",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

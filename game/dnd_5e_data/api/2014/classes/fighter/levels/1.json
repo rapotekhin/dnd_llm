@@ -1,0 +1,30 @@
+{
+  "level": 1,
+  "ability_score_bonuses": 0,
+  "prof_bonus": 2,
+  "features": [
+    {
+      "index": "fighter-fighting-style",
+      "name": "Fighting Style",
+      "url": "/api/2014/features/fighter-fighting-style"
+    },
+    {
+      "index": "second-wind",
+      "name": "Second Wind",
+      "url": "/api/2014/features/second-wind"
+    }
+  ],
+  "class_specific": {
+    "action_surges": 0,
+    "indomitable_uses": 0,
+    "extra_attacks": 0
+  },
+  "index": "fighter-1",
+  "class": {
+    "index": "fighter",
+    "name": "Fighter",
+    "url": "/api/2014/classes/fighter"
+  },
+  "url": "/api/2014/classes/fighter/levels/1",
+  "updated_at": "2025-10-24T20:42:13.397Z"
+}

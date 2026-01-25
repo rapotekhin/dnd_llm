@@ -1,0 +1,117 @@
+[
+  {
+    "level": 3,
+    "features": [
+      {
+        "index": "improved-critical",
+        "name": "Improved Critical",
+        "url": "/api/2014/features/improved-critical"
+      }
+    ],
+    "class": {
+      "index": "fighter",
+      "name": "Fighter",
+      "url": "/api/2014/classes/fighter"
+    },
+    "subclass": {
+      "index": "champion",
+      "name": "Champion",
+      "url": "/api/2014/subclasses/champion"
+    },
+    "url": "/api/2014/subclasses/champion/levels/3",
+    "index": "champion-3",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 7,
+    "features": [
+      {
+        "index": "remarkable-athlete",
+        "name": "Remarkable Athlete",
+        "url": "/api/2014/features/remarkable-athlete"
+      }
+    ],
+    "class": {
+      "index": "fighter",
+      "name": "Fighter",
+      "url": "/api/2014/classes/fighter"
+    },
+    "subclass": {
+      "index": "champion",
+      "name": "Champion",
+      "url": "/api/2014/subclasses/champion"
+    },
+    "url": "/api/2014/subclasses/champion/levels/7",
+    "index": "champion-7",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 10,
+    "features": [
+      {
+        "index": "additional-fighting-style",
+        "name": "Additional Fighting Style",
+        "url": "/api/2014/features/additional-fighting-style"
+      }
+    ],
+    "class": {
+      "index": "fighter",
+      "name": "Fighter",
+      "url": "/api/2014/classes/fighter"
+    },
+    "subclass": {
+      "index": "champion",
+      "name": "Champion",
+      "url": "/api/2014/subclasses/champion"
+    },
+    "url": "/api/2014/subclasses/champion/levels/10",
+    "index": "champion-10",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 15,
+    "features": [
+      {
+        "index": "superior-critical",
+        "name": "Superior Critical",
+        "url": "/api/2014/features/superior-critical"
+      }
+    ],
+    "class": {
+      "index": "fighter",
+      "name": "Fighter",
+      "url": "/api/2014/classes/fighter"
+    },
+    "subclass": {
+      "index": "champion",
+      "name": "Champion",
+      "url": "/api/2014/subclasses/champion"
+    },
+    "url": "/api/2014/subclasses/champion/levels/15",
+    "index": "champion-15",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  },
+  {
+    "level": 18,
+    "features": [
+      {
+        "index": "survivor",
+        "name": "Survivor",
+        "url": "/api/2014/features/survivor"
+      }
+    ],
+    "class": {
+      "index": "fighter",
+      "name": "Fighter",
+      "url": "/api/2014/classes/fighter"
+    },
+    "subclass": {
+      "index": "champion",
+      "name": "Champion",
+      "url": "/api/2014/subclasses/champion"
+    },
+    "url": "/api/2014/subclasses/champion/levels/18",
+    "index": "champion-18",
+    "updated_at": "2025-10-24T20:42:13.397Z"
+  }
+]
