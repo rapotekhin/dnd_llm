@@ -5,13 +5,20 @@ Character screen - stats, HP, AC, damage, abilities, effects, spell DC.
 from __future__ import annotations
 
 import pygame
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict, Any
 from .base_screen import BaseScreen
 from ..colors import *
 from ..components import Button, Tooltip
+
+# Import BRIGHT_GOLD explicitly for level up indicator
+try:
+    from ..colors import BRIGHT_GOLD
+except ImportError:
+    BRIGHT_GOLD = (255, 215, 0)  # Fallback if not defined
 from core import data as game_data
-from core.data.equipment import GameEquipment
+from core.entities.equipment import GameEquipment
 from core.database.json_database import JsonDatabase
+from core.utils.level_up_utils import can_level_up
 from localization import loc
 
 SB_W = 12
@@ -58,6 +65,13 @@ class CharacterScreen(BaseScreen):
             self.nav_buttons.append(Button(x, _sc(6, s), nw, self.nav_h - _sc(12, s), loc[key], self.font))
 
         self.back_btn = Button(margin, h - _sc(56, s), _sc(120, s), _sc(44, s), loc["back"], self.font)
+        # Level up button (shown when level up is available)
+        self.level_up_btn = Button(
+            margin + _sc(130, s), h - _sc(56, s), 
+            _sc(180, s), _sc(44, s), 
+            loc.get("level_up_button", "Новый Уровень"), 
+            self.font
+        )
         content_top = self.nav_h + _sc(12, s)
         content_h = h - content_top - _sc(64, s)
         self.content_rect = pygame.Rect(margin, content_top, w - 2 * margin, content_h)
@@ -355,11 +369,17 @@ class CharacterScreen(BaseScreen):
             pos = event.pos
             if self.back_btn.is_clicked(pos):
                 return "main"
+            # Check level up button
+            player = self._player()
+            if can_level_up(player) and self.level_up_btn.is_clicked(pos):
+                return "level_up"
             for i, key in enumerate(self.nav_keys):
                 if not self.nav_buttons[i].is_clicked(pos):
                     continue
                 if key == "nav_character":
                     return None
+                if key == "nav_map":
+                    return "map"
                 if key == "nav_inventory":
                     return "inventory"
                 if key == "nav_journal":
@@ -381,25 +401,60 @@ class CharacterScreen(BaseScreen):
 
     def update(self):
         pos = pygame.mouse.get_pos()
+        # Update button hover states
         for b in self.nav_buttons:
             b.update(pos)
         self.back_btn.update(pos)
+        player = self._player()
+        if can_level_up(player):
+            self.level_up_btn.update(pos)
+        
+        # Ensure custom_color is set for character button if level up is available
+        player = self._player()
+        can_level = can_level_up(player) if player else False
+        if len(self.nav_buttons) > 3:
+            if can_level:
+                self.nav_buttons[3].custom_color = BRIGHT_GOLD  # type: ignore
+            else:
+                self.nav_buttons[3].custom_color = DARK_GREEN  # type: ignore
 
     def draw(self):
+        """
+        Draw the screen.
+        
+        Z-order (drawing order) to prevent overlapping:
+        1. Background (screen.fill)
+        2. Static UI elements (nav bar)
+        3. Content (text, scrollbars)
+        4. Navigation buttons
+        5. Tooltips (always last, always on top)
+        """
         self.screen.fill(BLACK)
         s = self._scale
         w, h = self._w, self._h
         margin = _sc(16, s)
 
-        # Nav bar
+        # 1. Background is already filled with BLACK
+
+        # 2. Static UI elements (nav bar)
         nav_rect = pygame.Rect(0, 0, w, self.nav_h)
         pygame.draw.rect(self.screen, DARK_GRAY, nav_rect)
         pygame.draw.line(self.screen, GOLD, (0, self.nav_h), (w, self.nav_h), 2)
+        player = self._player()
+        can_level = can_level_up(player) if player else False
+        
+        # Set button colors before drawing
         for i, b in enumerate(self.nav_buttons):
-            if i == 3:
-                b.custom_color = DARK_GREEN
+            if i == 3:  # Character button (index 3 = "nav_character")
+                if can_level:
+                    b.custom_color = BRIGHT_GOLD  # type: ignore
+                else:
+                    b.custom_color = DARK_GREEN
             else:
                 b.custom_color = None  # type: ignore
+        
+        # Draw nav buttons
+        for b in self.nav_buttons:
             b.draw(self.screen)
 
         player = self._player()
@@ -411,7 +466,7 @@ class CharacterScreen(BaseScreen):
             self.tooltip.draw(self.screen)
             return
 
-        # Content
+        # 3. Content (draw before buttons)
         pygame.draw.rect(self.screen, MODAL_BG, self.content_rect, border_radius=8)
         pygame.draw.rect(self.screen, GOLD, self.content_rect, width=2, border_radius=8)
         lines = self._build_lines()
@@ -427,6 +482,7 @@ class CharacterScreen(BaseScreen):
             y += self.line_h
         self.screen.set_clip(clip)
 
+        # Scrollbar (part of content)
         total_h = self._total_height()
         mx = max(0, total_h - self.content_rect.height)
         if mx > 0:
@@ -440,5 +496,11 @@ class CharacterScreen(BaseScreen):
             pygame.draw.rect(self.screen, DARK_GRAY, track, border_radius=4)
             pygame.draw.rect(self.screen, GOLD, thumb, border_radius=4)
 
+        # 4. Navigation buttons (draw after content)
         self.back_btn.draw(self.screen)
+        player = self._player()
+        if can_level_up(player):
+            self.level_up_btn.draw(self.screen)
+        
+        # 5. Tooltip (draw last, always on top)
         self.tooltip.draw(self.screen)

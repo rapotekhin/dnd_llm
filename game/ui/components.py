@@ -131,6 +131,7 @@ class Button:
         
     def draw(self, surface: pygame.Surface):
         """Draw the button"""
+        # Priority: custom_color > hover > default
         if self.custom_color:
             bg_color = self.custom_color
         elif self.hovered and self.enabled:
@@ -139,7 +140,12 @@ class Button:
             bg_color = DARK_GRAY
             
         pygame.draw.rect(surface, bg_color, self.rect, border_radius=8)
-        pygame.draw.rect(surface, GOLD, self.rect, width=2, border_radius=8)
+        # Use brighter/thicker border if custom_color is set (for level up indicator)
+        if self.custom_color:
+            # Bright yellow border with thicker width for level up indicator
+            pygame.draw.rect(surface, (255, 255, 0), self.rect, width=3, border_radius=8)
+        else:
+            pygame.draw.rect(surface, GOLD, self.rect, width=2, border_radius=8)
         
         text_color = WHITE if self.enabled else LIGHT_GRAY
         text_surface = self.font.render(self.text, True, text_color)

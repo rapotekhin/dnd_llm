@@ -6,7 +6,7 @@ Game settings and constants
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
-GAME_TITLE = "DnD LLM"
+GAME_TITLE = "Between the Rolls"
 
 # UI settings
 BUTTON_WIDTH = 300

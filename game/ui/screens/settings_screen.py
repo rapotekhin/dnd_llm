@@ -8,7 +8,7 @@ from .base_screen import BaseScreen
 from ..colors import *
 from ..components import Button
 from ..controls import Slider, Dropdown
-from core.settings_manager import SettingsManager, RESOLUTION_NAMES
+from core.settings.settings_manager import SettingsManager, RESOLUTION_NAMES
 from localization import loc
 
 

@@ -7,7 +7,7 @@ from typing import Union
 from .base_screen import BaseScreen
 from ..colors import *
 from ..components import Button, InputModal, SaveSlotsModal
-from core.api_manager import APIManager
+from core.llm_engine.api_manager import APIManager
 from core import data as game_data
 from localization import loc
 

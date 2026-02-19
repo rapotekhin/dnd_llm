@@ -1,4 +1,4 @@
-# D&D LLM Game Assistant
+# Between the Rolls
 
 Приложение для игры в Dungeons & Dragons с использованием языковых моделей (LLM) как ChatGPT.
 

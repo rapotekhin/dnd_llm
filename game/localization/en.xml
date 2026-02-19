@@ -13,7 +13,7 @@
     <string id="no">No</string>
     
     <!-- Title Screen -->
-    <string id="game_title">DnD LLM</string>
+    <string id="game_title">Between the Rolls</string>
     <string id="game_subtitle">Text adventure with artificial intelligence</string>
     <string id="new_game">New Game</string>
     <string id="continue">Continue</string>
@@ -147,6 +147,10 @@
     <!-- Character Created -->
     <string id="char_created">Character Created!</string>
     
+    <!-- Level Up -->
+    <string id="level_up_title">Level Up</string>
+    <string id="level_up_button">New Level</string>
+    
     <!-- Main Screen -->
     <string id="nav_inventory">Inventory</string>
     <string id="nav_map">Map</string>
@@ -157,6 +161,10 @@
     <string id="journal_objectives">Objectives:</string>
     <string id="nav_character">Character</string>
     <string id="nav_abilities">Abilities</string>
+    <string id="map_level_locations">Locations</string>
+    <string id="map_level_rooms">Rooms</string>
+    <string id="map_level_prev">↑ Level</string>
+    <string id="map_level_next">↓ Level</string>
     <string id="abilities_tab_features">Class</string>
     <string id="abilities_tab_cantrips">Cantrips</string>
     <string id="abilities_tab_spells">Spells</string>

@@ -4,25 +4,26 @@ Game Character - wrapper around dnd_5e_core Character
 
 from dnd_5e_core.entities.character import Character as CoreCharacter
 from dnd_5e_core.data.loaders import simple_character_generator
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from dataclasses import field
 from core.utils import coin_converter
+from core.entities.base import BaseEntity, ID
 
 if TYPE_CHECKING:
     from dnd_5e_core.spells.spell import Spell
 
 
-class Character(CoreCharacter):
+class Character(BaseEntity, CoreCharacter):
     """Game character with simplified creation"""
     role: str | None = None
-    
+
     # Additional fields for game-specific features
     prepared_spells: List['Spell'] = field(default_factory=list)
     alignment: Optional[str] = None
     background: Optional[str] = None
 
     coins: int = 0  # copper pieces
-    
+
     # Racial features from JSON
     damage_vulnerabilities: List[str] = field(default_factory=list)
     damage_resistances: List[str] = field(default_factory=list)
@@ -30,10 +31,45 @@ class Character(CoreCharacter):
     condition_advantages: List[str] = field(default_factory=list)
     condition_immunities: List[str] = field(default_factory=list)
     senses: Dict[str, str] = field(default_factory=dict)
-    
+
     # Class features
     features: List[str] = field(default_factory=list)  # List of feature indices (including chosen subfeatures)
-    
+
+    # Class-specific features (action_surges, indomitable_uses, extra_attacks, etc.)
+    class_specific: Dict[str, Any] = field(default_factory=dict)
+    id: Optional[ID] = field(default=None)
+    _id_prefix: str = "character"
+
+    def __init__(self, **kwargs):
+        # Initialize CoreCharacter (dnd_5e_core) so we get race, class_type, abilities, etc.
+        core_fields = {k: v for k, v in kwargs.items() if k in CoreCharacter.__dataclass_fields__}
+        CoreCharacter.__init__(self, **core_fields)
+        BaseEntity.__init__(self, **kwargs)
+        # Game Character fields
+        self.role = kwargs.get("role")
+        self.prepared_spells = kwargs.get("prepared_spells", [])
+        self.alignment = kwargs.get("alignment")
+        self.background = kwargs.get("background")
+        self.coins = kwargs.get("coins", 0)
+        self.damage_vulnerabilities = kwargs.get("damage_vulnerabilities", [])
+        self.damage_resistances = kwargs.get("damage_resistances", [])
+        self.damage_immunities = kwargs.get("damage_immunities", [])
+        self.condition_advantages = kwargs.get("condition_advantages", [])
+        self.condition_immunities = kwargs.get("condition_immunities", [])
+        self.senses = kwargs.get("senses", {})
+        self.features = kwargs.get("features", [])
+        self.class_specific = kwargs.get("class_specific", {})
+        self.id = kwargs.get("id")
+        if self.id is None:
+            self.__post_init__()
+
+    def __post_init__(self):
+        super().__post_init__()
+
+    def __repr__(self):
+        race_display = self.subrace.name if self.subrace else self.race.name
+        return f"{self.name} (Level {self.level} {race_display} {self.class_type.name}, AC {self.armor_class}, HP {self.hit_points}/{self.max_hit_points})"
+
     @classmethod
     def create_random_character(
         cls,
@@ -104,6 +140,9 @@ class Character(CoreCharacter):
         char.condition_advantages = []
         char.condition_immunities = []
         char.senses = {}
+        
+        # Initialize class_specific (will be set from class data in character_builder)
+        char.class_specific = {}
 
         delattr(core_char, "gold")
 

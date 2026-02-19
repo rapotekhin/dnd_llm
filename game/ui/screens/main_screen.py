@@ -95,6 +95,8 @@ class MainScreen(BaseScreen):
             pos = event.pos
             if self.nav_buttons[0].is_clicked(pos):
                 return "inventory"
+            if self.nav_buttons[1].is_clicked(pos):
+                return "map"
             if self.nav_buttons[2].is_clicked(pos):
                 return "journal"
             if self.nav_buttons[3].is_clicked(pos):
@@ -165,9 +167,20 @@ class MainScreen(BaseScreen):
             b.update(pos)
 
     def draw(self):
+        """
+        Draw the screen.
+        
+        Z-order (drawing order) to prevent overlapping:
+        1. Background (screen.fill)
+        2. Static UI elements (nav bar)
+        3. Content (chat, input, quick actions)
+        4. Tooltips (always last, always on top)
+        """
         self.screen.fill(BLACK)
 
-        # Nav bar
+        # 1. Background is already filled with BLACK
+        
+        # 2. Static UI elements (nav bar)
         nav_rect = pygame.Rect(0, 0, self._w, self.nav_h)
         pygame.draw.rect(self.screen, DARK_GRAY, nav_rect)
         pygame.draw.line(self.screen, GOLD, (0, self.nav_h), (self._w, self.nav_h), 2)

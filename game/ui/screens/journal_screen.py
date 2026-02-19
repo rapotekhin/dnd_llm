@@ -8,7 +8,7 @@ import pygame
 from typing import List, Optional, Union, Dict, Set
 from .base_screen import BaseScreen
 from ..colors import *
-from ..components import Button
+from ..components import Button, Tooltip
 from core import data as game_data
 from core.data.quest import Quest, QuestStatus, ObjectiveStatus
 from localization import loc
@@ -49,6 +49,7 @@ class JournalScreen(BaseScreen):
         self._scroll = 0
         self.line_h = _sc(24, s)
         self.pad = _sc(12, s)
+        self.tooltip = Tooltip()
         
         # Collapsible sections state
         self._sections_expanded: Dict[str, bool] = {
@@ -137,6 +138,8 @@ class JournalScreen(BaseScreen):
                     continue
                 if key == "nav_journal":
                     return None
+                if key == "nav_map":
+                    return "map"
                 if key == "nav_inventory":
                     return "inventory"
                 if key == "nav_character":
@@ -219,12 +222,24 @@ class JournalScreen(BaseScreen):
         self.back_btn.update(pos)
 
     def draw(self):
+        """
+        Draw the screen.
+        
+        Z-order (drawing order) to prevent overlapping:
+        1. Background (screen.fill)
+        2. Static UI elements (nav bar)
+        3. Content (text, scrollbars)
+        4. Navigation buttons
+        5. Tooltips (always last, always on top)
+        """
         self.screen.fill(BLACK)
         s = self._scale
         w, h = self._w, self._h
         margin = _sc(16, s)
 
-        # Nav bar
+        # 1. Background is already filled with BLACK
+        
+        # 2. Static UI elements (nav bar)
         nav_rect = pygame.Rect(0, 0, w, self.nav_h)
         pygame.draw.rect(self.screen, DARK_GRAY, nav_rect)
         pygame.draw.line(self.screen, GOLD, (0, self.nav_h), (w, self.nav_h), 2)
@@ -347,3 +362,4 @@ class JournalScreen(BaseScreen):
             pygame.draw.rect(self.screen, GOLD, thumb, border_radius=4)
 
         self.back_btn.draw(self.screen)
+        self.tooltip.draw(self.screen)

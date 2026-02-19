@@ -1,0 +1,47 @@
+{
+    "index": "drow",
+    "name": "Drow (Dark Elf)",
+    "race": {
+      "index": "elf",
+      "name": "Elf",
+      "url": "/api/2014/races/elf"
+    },
+    "desc": "Drow are elves of the Underdark, known for their innate magic, stealth, and harsh subterranean culture. They possess superior darkvision but are sensitive to sunlight.",
+    "ability_bonuses": [
+      {
+        "ability_score": {
+          "index": "cha",
+          "name": "CHA",
+          "url": "/api/2014/ability-scores/cha"
+        },
+        "bonus": 1
+      }
+    ],
+    "racial_traits": [
+      {
+        "index": "elf-weapon-training",
+        "name": "Elf Weapon Training",
+        "url": "/api/2014/traits/elf-weapon-training"
+      },
+      {
+        "index": "high-elf-cantrip",
+        "name": "High Elf Cantrip",
+        "url": "/api/2014/traits/high-elf-cantrip"
+      },
+      {
+        "index": "extra-language",
+        "name": "Extra Language",
+        "url": "/api/2014/traits/extra-language"
+      }
+    ],
+    "languages": [
+      {
+        "index": "undercommon",
+        "name": "Undercommon",
+        "url": "/api/2014/languages/undercommon"
+      }
+    ],
+    "url": "/api/2014/subraces/drow",
+    "updated_at": "2025-10-24T20:42:14.999Z"
+  }
+  

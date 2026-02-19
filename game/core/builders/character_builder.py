@@ -466,6 +466,21 @@ class CharacterBuild:
         # Set background
         char.background = self.background
         
+        # Initialize class_specific from level 1 data
+        if self.class_type:
+            try:
+                level_data = db.get(f"/classes/{self.class_type}/levels/1.json")
+                class_specific = level_data.get("class_specific", {})
+                if class_specific:
+                    char.class_specific = class_specific.copy()
+                else:
+                    char.class_specific = {}
+            except Exception as e:
+                print(f"Error loading class_specific: {e}")
+                char.class_specific = {}
+
+        char.xp = 5000
+        
         return char
     
     def _create_spell_from_json(self, spell_data: Dict[str, Any], db: JsonDatabase) -> Optional[Any]:
@@ -566,7 +581,7 @@ class CharacterBuild:
         """Create GameEquipment from JSON data"""
         try:
             from dnd_5e_core.equipment.equipment import Cost, EquipmentCategory
-            from core.data.equipment import GameEquipment
+            from core.entities.equipment import GameEquipment
             
             # Get equipment category
             eq_category = equipment_data.get("equipment_category", {})

@@ -1,8 +1,8 @@
 {
   "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
   "python.analysis.extraPaths": [
-    "./dnd-5e-core",
-    "./game"
+    "${workspaceFolder}/dnd-5e-core",
+    "${workspaceFolder}/game"
   ],
   "python.analysis.typeCheckingMode": "basic"
 }

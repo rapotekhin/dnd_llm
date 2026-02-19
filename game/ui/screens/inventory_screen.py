@@ -10,7 +10,7 @@ from .base_screen import BaseScreen
 from ..colors import *
 from ..components import Button
 from core import data as game_data
-from core.data.equipment import GameEquipment
+from core.entities.equipment import GameEquipment
 from core.database.json_database import JsonDatabase
 from localization import loc
 
@@ -267,6 +267,8 @@ class InventoryScreen(BaseScreen):
                     continue
                 if key == "nav_inventory":
                     return None
+                if key == "nav_map":
+                    return "map"
                 if key == "nav_journal":
                     return "journal"
                 if key == "nav_character":
@@ -345,6 +347,17 @@ class InventoryScreen(BaseScreen):
         self.back_btn.update(pos)
 
     def draw(self):
+        """
+        Draw the screen.
+        
+        Z-order (drawing order) to prevent overlapping:
+        1. Background (screen.fill)
+        2. Static UI elements (nav bar, panels)
+        3. Content (lists, descriptions)
+        4. Navigation buttons
+        5. Modals (with overlay - draws after everything else)
+        6. Tooltips (always last, always on top)
+        """
         self.screen.fill(BLACK)
         s = self._scale
         w, h = self._w, self._h
@@ -353,7 +366,9 @@ class InventoryScreen(BaseScreen):
         self._layout_inv()
         player = self._player()
 
-        # Nav bar
+        # 1. Background is already filled with BLACK
+        
+        # 2. Static UI elements (nav bar)
         nav_rect = pygame.Rect(0, 0, w, self.nav_h)
         pygame.draw.rect(self.screen, DARK_GRAY, nav_rect)
         pygame.draw.line(self.screen, GOLD, (0, self.nav_h), (w, self.nav_h), 2)
@@ -453,10 +468,11 @@ class InventoryScreen(BaseScreen):
         co = self.font.render(f"{loc['inv_coins']}: {coins} cp", True, GOLD)
         self.screen.blit(co, co.get_rect(center=self.coins_rect.center))
 
-        # Equip modal
+        # 5. Modals (draw after everything else, with overlay that darkens background)
         if self._equip_modal_slot:
             mw, mh = _sc(400, s), _sc(300, s)
             mr = pygame.Rect(w // 2 - mw // 2, h // 2 - mh // 2, mw, mh)
+            # Overlay must be drawn first to darken everything underneath
             overlay = pygame.Surface((w, h))
             overlay.set_alpha(180)
             overlay.fill(BLACK)

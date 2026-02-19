@@ -136,8 +136,8 @@ if obj1.status == ObjectiveStatus.COMPLETED:
 import dataclasses
 from enum import Enum
 from typing import Optional
-    
 from datetime import datetime
+from core.entities.base import ID
 from typing import List
 
 class ObjectiveStatus(Enum):
@@ -181,10 +181,10 @@ class Objective:
 
 
 class QuestStatus(Enum):
-    NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+    HIDDEN = "hidden"
 
 
 @dataclasses.dataclass
@@ -194,7 +194,7 @@ class Quest:
     description: str
 
     giver: QuestGiver
-    location_id: str              # где выдали
+    location_id: ID  # где выдали (str или UUID)
     difficulty: Difficulty
 
     objectives: List[Objective]
@@ -204,4 +204,17 @@ class Quest:
     created_at: datetime
     expires_at: Optional[datetime] = None  # дедлайн
 
-    status: QuestStatus = QuestStatus.NOT_STARTED
+    status: QuestStatus = QuestStatus.HIDDEN
+    ways_to_unhidden: List[str] = dataclasses.field(default_factory=list)
+
+    def is_open(self) -> bool:
+        return self.status == QuestStatus.IN_PROGRESS
+
+    def is_completed(self) -> bool:
+        return self.status == QuestStatus.COMPLETED
+
+    def is_failed(self) -> bool:
+        return self.status == QuestStatus.FAILED
+
+    def is_hidden(self) -> bool:
+        return self.status == QuestStatus.HIDDEN

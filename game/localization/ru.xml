@@ -13,7 +13,7 @@
     <string id="no">Нет</string>
     
     <!-- Title Screen -->
-    <string id="game_title">DnD LLM</string>
+    <string id="game_title">Between the Rolls</string>
     <string id="game_subtitle">Текстовое приключение с искусственным интеллектом</string>
     <string id="new_game">Новая игра</string>
     <string id="continue">Продолжить</string>
@@ -147,6 +147,10 @@
     <!-- Character Created -->
     <string id="char_created">Персонаж создан!</string>
     
+    <!-- Level Up -->
+    <string id="level_up_title">Поднятие уровня</string>
+    <string id="level_up_button">Новый Уровень</string>
+    
     <!-- Main Screen -->
     <string id="nav_inventory">Инвентарь</string>
     <string id="nav_map">Карта</string>
@@ -157,6 +161,10 @@
     <string id="journal_objectives">Цели:</string>
     <string id="nav_character">Персонаж</string>
     <string id="nav_abilities">Способности</string>
+    <string id="map_level_locations">Локации</string>
+    <string id="map_level_rooms">Комнаты</string>
+    <string id="map_level_prev">↑ Уровень</string>
+    <string id="map_level_next">↓ Уровень</string>
     <string id="abilities_tab_features">Классовые</string>
     <string id="abilities_tab_cantrips">Фокусы</string>
     <string id="abilities_tab_spells">Заклинания</string>

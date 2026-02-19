@@ -7,3 +7,5 @@ from .inventory_screen import InventoryScreen
 from .character_screen import CharacterScreen
 from .abilities_screen import AbilitiesScreen
 from .journal_screen import JournalScreen
+from .map_screen import MapScreen
+from .level_up_screen import LevelUpScreen

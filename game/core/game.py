@@ -9,10 +9,10 @@ from .settings import FPS, GAME_TITLE
 
 if TYPE_CHECKING:
     from core.entities.character import Character
-from .api_manager import APIManager
-from .settings_manager import SettingsManager
+from .llm_engine.api_manager import APIManager
+from .settings.settings_manager import SettingsManager
 from . import data as game_data
-from ui.screens import TitleScreen, SettingsScreen, CharacterCreationScreen, MainScreen, InventoryScreen, CharacterScreen, AbilitiesScreen, JournalScreen
+from ui.screens import TitleScreen, SettingsScreen, CharacterCreationScreen, MainScreen, InventoryScreen, CharacterScreen, AbilitiesScreen, JournalScreen, MapScreen, LevelUpScreen
 from localization import loc
 
 
@@ -45,6 +45,7 @@ class Game:
         # Global game state (session + world). Created at startup; use game_data.game_state elsewhere.
         from .data import MainGameState
         game_data.game_state = MainGameState()
+        game_data.game_state.load_start_data()
 
         # Screen management
         self.screens = {}
@@ -75,6 +76,9 @@ class Game:
         self.screens["character"] = CharacterScreen(self.screen)
         self.screens["abilities"] = AbilitiesScreen(self.screen)
         self.screens["journal"] = JournalScreen(self.screen)
+        self.screens["map"] = MapScreen(self.screen)
+        # Level up screen is created on demand (needs player)
+        self.screens["level_up"] = None
         
     def _on_settings_applied(self):
         """Called when settings are applied - recreate display/screens if needed"""
@@ -167,6 +171,14 @@ class Game:
             pass  # Handled by TitleScreen save modal
         elif result == "load_game":
             self.switch_screen("main")  # Load done in TitleScreen modal
+        elif result == "level_up":
+            # Create level up screen on demand (needs player)
+            try:
+                self.screens["level_up"] = LevelUpScreen(self.screen)
+                self.switch_screen("level_up")
+            except Exception as e:
+                print(f"Error creating level up screen: {e}")
+                self.switch_screen("character")
         elif result in self.screens:
             self.switch_screen(result)
 

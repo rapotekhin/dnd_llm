@@ -10,7 +10,7 @@ from ..components import Button, InputModal, Tooltip
 from ..controls import Dropdown, Toggle
 from core.entities.character import Character
 from core.database.json_database import JsonDatabase
-from core.character_builder import CharacterBuild
+from core.builders.character_builder import CharacterBuild
 from localization import loc
 from generators.fantasy_name_generator_base import fantasy_name_generator
 
@@ -30,19 +30,26 @@ class AbilityCounter:
         self.font = font
         self.small_font = pygame.font.Font(None, 24)
         
-        # Buttons
-        btn_size = 30
-        self.minus_rect = pygame.Rect(x + 100, y, btn_size, btn_size)
-        self.plus_rect = pygame.Rect(x + 180, y, btn_size, btn_size)
-        self.value_rect = pygame.Rect(x + 135, y, 40, btn_size)
+        # Buttons will be positioned dynamically in draw() based on label width
+        self.minus_rect = pygame.Rect(0, 0, 0, 0)  # Will be set in draw()
+        self.plus_rect = pygame.Rect(0, 0, 0, 0)  # Will be set in draw()
+        self.value_rect = pygame.Rect(0, 0, 0, 0)  # Will be set in draw()
         
     def draw(self, surface: pygame.Surface, value: int, modifier: int, can_increase: bool, can_decrease: bool):
-        """Draw the counter"""
-        # Label
+        """Draw the counter with adaptive positioning"""
+        btn_size = 30
+        gap = 10  # Gap between label and buttons
+        
+        # Label - compute width to position buttons after it
         label_surface = self.font.render(self.label, True, WHITE)
+        label_width = label_surface.get_width()
         surface.blit(label_surface, (self.x, self.y + 5))
         
+        # Position buttons after label with gap
+        buttons_start_x = self.x + label_width + gap
+        
         # Minus button
+        self.minus_rect = pygame.Rect(buttons_start_x, self.y, btn_size, btn_size)
         minus_color = GOLD if can_decrease else DARK_GRAY
         pygame.draw.rect(surface, DARK_GRAY, self.minus_rect, border_radius=4)
         pygame.draw.rect(surface, minus_color, self.minus_rect, width=2, border_radius=4)
@@ -50,12 +57,14 @@ class AbilityCounter:
         surface.blit(minus_text, (self.minus_rect.centerx - 5, self.minus_rect.centery - 10))
         
         # Value
+        self.value_rect = pygame.Rect(buttons_start_x + btn_size + 5, self.y, 40, btn_size)
         pygame.draw.rect(surface, INPUT_BG, self.value_rect, border_radius=4)
         value_text = self.font.render(str(value), True, WHITE)
         value_rect = value_text.get_rect(center=self.value_rect.center)
         surface.blit(value_text, value_rect)
         
         # Plus button
+        self.plus_rect = pygame.Rect(buttons_start_x + btn_size + 5 + 40 + 5, self.y, btn_size, btn_size)
         plus_color = GOLD if can_increase else DARK_GRAY
         pygame.draw.rect(surface, DARK_GRAY, self.plus_rect, border_radius=4)
         pygame.draw.rect(surface, plus_color, self.plus_rect, width=2, border_radius=4)
@@ -535,6 +544,7 @@ class CharacterCreationScreen(BaseScreen):
             self._subfeature_modal_options: List[Dict[str, Any]] = []
             self._subfeature_modal_choose = 1
             self._subfeature_modal_selected: List[str] = []
+            self._subfeature_modal_scroll = 0  # Scroll position for options list
             
             # Load level 1 features
             try:
@@ -1142,34 +1152,33 @@ class CharacterCreationScreen(BaseScreen):
         print("=" * 50)
         
         # Create Character from CharacterBuild
-        from core.entities.character import Character
-        character = self.build.create_character()
+        player = self.build.create_character()
         print("=" * 50)
         print("Character Created!")
-        print(f"Name: {character.name}")
-        print(f"Alignment: {character.alignment}")
-        print(f"Race: {character.race.name if character.race else 'None'}")
-        print(f"Subrace: {character.subrace.name if character.subrace else 'None'}")
-        print(f"Class: {character.class_type.name if character.class_type else 'None'}")
-        print(f"Background: {character.background or 'None'}")
-        print(f"Abilities: STR={character.abilities.str}, DEX={character.abilities.dex}, CON={character.abilities.con}, INT={character.abilities.int}, WIS={character.abilities.wis}, CHA={character.abilities.cha}")
-        if character.sc:
-            cantrips = [s.name for s in character.sc.cantrips]
-            spells = [s.name for s in character.sc.leveled_spells]
+        print(f"Name: {player.name}")
+        print(f"Alignment: {player.alignment}")
+        print(f"Race: {player.race.name if player.race else 'None'}")
+        print(f"Subrace: {player.subrace.name if player.subrace else 'None'}")
+        print(f"Class: {player.class_type.name if player.class_type else 'None'}")
+        print(f"Background: {player.background or 'None'}")
+        print(f"Abilities: STR={player.abilities.str}, DEX={player.abilities.dex}, CON={player.abilities.con}, INT={player.abilities.int}, WIS={player.abilities.wis}, CHA={player.abilities.cha}")
+        if player.sc:
+            cantrips = [s.name for s in player.sc.cantrips]
+            spells = [s.name for s in player.sc.leveled_spells]
             print(f"Cantrips ({len(cantrips)}): {', '.join(cantrips) if cantrips else 'None'}")
             print(f"Spells ({len(spells)}): {', '.join(spells) if spells else 'None'}")
-            print(f"Prepared spells ({len(character.prepared_spells)}): {', '.join([s.name for s in character.prepared_spells]) if character.prepared_spells else 'None'}")
+            print(f"Prepared spells ({len(player.prepared_spells)}): {', '.join([s.name for s in player.prepared_spells]) if player.prepared_spells else 'None'}")
         else:
             print("Cantrips: None (not a spellcaster)")
             print("Spells: None (not a spellcaster)")
-        print(f"Proficiencies ({len(character.proficiencies)}): {', '.join([p.name for p in character.proficiencies[:10]])}{'...' if len(character.proficiencies) > 10 else ''}")
-        print(f"Features ({len(character.features)}): {', '.join(character.features)}")
-        print(f"Inventory items: {len([item for item in character.inventory if item is not None])}")
-        for item in character.inventory:
+        print(f"Proficiencies ({len(player.proficiencies)}): {', '.join([p.name for p in player.proficiencies[:10]])}{'...' if len(player.proficiencies) > 10 else ''}")
+        print(f"Features ({len(player.features)}): {', '.join(player.features)}")
+        print(f"Inventory items: {len([item for item in player.inventory if item is not None])}")
+        for item in player.inventory:
             if item:
                 print(f"Item: {item.name}, category: {item.category}, cost: {item.cost}, weight: {item.weight}, equipped: {item.equipped}")
         print("=" * 50)
-        return character
+        return player
         
     def update(self):
         """Update screen"""
@@ -1184,22 +1193,33 @@ class CharacterCreationScreen(BaseScreen):
             self.gender_female_btn.update(mouse_pos)
         
     def draw(self):
-        """Draw the screen"""
+        """
+        Draw the screen.
+        
+        Z-order (drawing order) to prevent overlapping:
+        1. Background (screen.fill)
+        2. Static UI elements (title, indicators)
+        3. Step content (lists, forms, etc.)
+        4. Navigation buttons
+        5. Modals (with overlay - draws after everything else)
+        6. Tooltips (always last, always on top)
+        """
         self.screen.fill(BLACK)
         
         visible_steps = self._get_visible_steps()
         current_step_name = visible_steps[self.current_step] if self.current_step < len(visible_steps) else "abilities"
         
-        # Title
+        # 1. Background is already filled with BLACK
+        
+        # 2. Static UI elements (title, indicators)
         step_names = self._get_step_names()
         title = f"{loc['char_creation_title']} - {step_names.get(current_step_name, '')}"
         title_surface = self.title_font.render(title, True, GOLD)
         self.screen.blit(title_surface, (50, 30))
         
-        # Step indicators
         self._draw_step_indicators(visible_steps)
         
-        # Step content
+        # 3. Step content (draw before navigation buttons)
         if current_step_name == "biography":
             self._draw_biography()
         elif current_step_name == "race":
@@ -1210,8 +1230,6 @@ class CharacterCreationScreen(BaseScreen):
             self._draw_class()
         elif current_step_name == "features":
             self._draw_features()
-            if self._subfeature_modal_active:
-                self._draw_subfeature_modal()
         elif current_step_name == "cantrips":
             self._draw_cantrips()
         elif current_step_name == "spells":
@@ -1225,19 +1243,20 @@ class CharacterCreationScreen(BaseScreen):
         elif current_step_name == "confirmation":
             self._draw_confirmation()
             
-        # Navigation
+        # 4. Navigation buttons (draw after content, before modals)
         if self.current_step > 0:
             self.prev_btn.draw(self.screen)
             
-        # Show Next or Finish button based on step
         if self.current_step == len(visible_steps) - 1:
-            # Last step (confirmation) - show Finish
             self.finish_btn.draw(self.screen)
         else:
-            # Not last step - show Next
             self.next_btn.draw(self.screen)
+        
+        # 5. Modals (draw after everything else, with overlay that darkens background)
+        if current_step_name == "features" and self._subfeature_modal_active:
+            self._draw_subfeature_modal()
             
-        # Tooltip (draw last, on top of everything, including modals)
+        # 6. Tooltip (draw last, always on top of everything)
         self.tooltip.draw(self.screen)
             
     def _draw_step_indicators(self, visible_steps: List[str]):
@@ -1258,6 +1277,13 @@ class CharacterCreationScreen(BaseScreen):
             
     def _draw_biography(self):
         """Draw biography step"""
+        s = self._scale
+        w, h = self._w, self._h
+        
+        # Limit area to avoid overlapping with navigation buttons
+        btn_y = h - _sc(70, s)
+        content_area_bottom = btn_y - _sc(20, s)  # Leave gap before buttons
+        
         # Name input
         name_label = self.font.render(f"{loc['char_name']}:", True, WHITE)
         self.screen.blit(name_label, (100, 148))
@@ -1272,9 +1298,10 @@ class CharacterCreationScreen(BaseScreen):
         
         self.random_name_btn.draw(self.screen)
         
-        # Gender
+        # Gender - position label above buttons to avoid overlap
         gender_label = self.font.render(f"{loc['gender']}:", True, WHITE)
-        self.screen.blit(gender_label, (100, 228))
+        gender_label_y = self.gender_male_btn.rect.y - _sc(25, s)  # Above buttons
+        self.screen.blit(gender_label, (100, gender_label_y))
         for btn in (self.gender_male_btn, self.gender_female_btn):
             btn.draw(self.screen)
         male_sel = (self.build.gender or "").lower() == "male"
@@ -1284,9 +1311,10 @@ class CharacterCreationScreen(BaseScreen):
         if female_sel:
             pygame.draw.rect(self.screen, GOLD, self.gender_female_btn.rect, width=3, border_radius=8)
         
-        # Age
+        # Age - position label above input to avoid overlap
         age_label = self.font.render(f"{loc['age']}:", True, WHITE)
-        self.screen.blit(age_label, (100, 282))
+        age_label_y = self.age_input_rect.y - _sc(25, s)  # Above input
+        self.screen.blit(age_label, (100, age_label_y))
         pygame.draw.rect(self.screen, INPUT_BG, self.age_input_rect, border_radius=6)
         bc = GOLD if self.age_input_active else LIGHT_GRAY
         pygame.draw.rect(self.screen, bc, self.age_input_rect, width=2, border_radius=6)
@@ -1294,9 +1322,10 @@ class CharacterCreationScreen(BaseScreen):
         age_text = self.font.render(age_val or "—", True, WHITE if age_val else LIGHT_GRAY)
         self.screen.blit(age_text, (self.age_input_rect.x + 10, self.age_input_rect.centery - 10))
         
-        # Weight
+        # Weight - position label above input to avoid overlap
         weight_label = self.font.render(f"{loc['weight']} ({loc['weight_unit']}):", True, WHITE)
-        self.screen.blit(weight_label, (200, 282))
+        weight_label_y = self.weight_input_rect.y - _sc(25, s)  # Above input
+        self.screen.blit(weight_label, (200, weight_label_y))
         pygame.draw.rect(self.screen, INPUT_BG, self.weight_input_rect, border_radius=6)
         bc = GOLD if self.weight_input_active else LIGHT_GRAY
         pygame.draw.rect(self.screen, bc, self.weight_input_rect, width=2, border_radius=6)
@@ -1304,14 +1333,35 @@ class CharacterCreationScreen(BaseScreen):
         weight_text = self.font.render(weight_val or "—", True, WHITE if weight_val else LIGHT_GRAY)
         self.screen.blit(weight_text, (self.weight_input_rect.x + 10, self.weight_input_rect.centery - 10))
         
-        # Alignment
+        # Alignment - position label above list
         align_label = self.font.render(f"{loc['alignment']}:", True, WHITE)
-        self.screen.blit(align_label, (100, 330))
+        # Calculate safe area for alignment list
+        alignment_list_y = _sc(360, s)  # Start below age/weight inputs
+        alignment_label_y = alignment_list_y - _sc(25, s)  # Label above list
+        self.screen.blit(align_label, (100, alignment_label_y))
+        
+        # Limit alignment list height to avoid overlapping with buttons and stay within screen
+        alignment_list_max_height = content_area_bottom - alignment_list_y
+        alignment_list_height = max(_sc(100, s), min(320, alignment_list_max_height))  # At least 100px, max 320px
+        
+        # Update alignment list rect if needed
+        if hasattr(self.alignment_list, 'rect'):
+            self.alignment_list.rect.y = alignment_list_y
+            self.alignment_list.rect.height = alignment_list_height
+        
+        # Draw alignment list with clipping
+        clip_save = self.screen.get_clip()
+        alignment_list_rect = pygame.Rect(100, alignment_list_y, 350, alignment_list_height)
+        self.screen.set_clip(alignment_list_rect)
         self.alignment_list.draw(self.screen)
+        self.screen.set_clip(clip_save)
         
         # Alignment description panel (right side, same vertical as alignment list)
         if self.alignment_data:
-            self._draw_info_panel(500, 348, self.alignment_data, height=320)
+            # Limit panel height to avoid overlapping with buttons
+            panel_max_height = content_area_bottom - alignment_list_y
+            panel_height = min(320, panel_max_height)
+            self._draw_info_panel(500, alignment_list_y, self.alignment_data, height=panel_height)
         
     def _draw_race(self):
         """Draw race step"""
@@ -1341,14 +1391,26 @@ class CharacterCreationScreen(BaseScreen):
     def _draw_features(self):
         """Draw features step - list of level 1 features with tooltip support"""
         s = self._scale
+        w, h = self._w, self._h
         label = self.font.render("Классовые особенности (уровень 1):", True, WHITE)
         self.screen.blit(label, (_sc(100, s), _sc(130, s)))
+        
+        # Limit features list area to avoid overlapping with navigation buttons
+        btn_y = h - _sc(70, s)
+        btn_h = _sc(50, s)
+        features_area_bottom = btn_y - _sc(20, s)  # Leave gap before buttons
         
         self.feature_rects = []
         y = _sc(180, s)
         item_h = _sc(40, s)
         x = _sc(100, s)
-        w = _sc(600, s)
+        w_list = _sc(600, s)
+        item_spacing = _sc(8, s)
+        
+        # Clip area for features list
+        features_area = pygame.Rect(x, y, w_list, features_area_bottom - y)
+        clip_save = self.screen.get_clip()
+        self.screen.set_clip(features_area)
         
         # Show all features from level 1, mark which need choice
         for feat in self.features_list:
@@ -1377,24 +1439,33 @@ class CharacterCreationScreen(BaseScreen):
                 if feature_specific.get("subfeature_options"):
                     feat_name = f"{feat_name} [выберите]"
             
-            rect = pygame.Rect(x, y, w, item_h)
-            self.feature_rects.append((rect, feat_index))
+            rect = pygame.Rect(x, y, w_list, item_h)
             
-            # Draw feature item
-            bg = HOVER_COLOR if rect.collidepoint(pygame.mouse.get_pos()) else DARK_GRAY
-            pygame.draw.rect(self.screen, bg, rect, border_radius=6)
-            pygame.draw.rect(self.screen, GOLD, rect, width=1, border_radius=6)
+            # Only draw if visible and not overlapping buttons
+            if rect.bottom <= features_area_bottom:
+                self.feature_rects.append((rect, feat_index))
+                
+                # Draw feature item
+                bg = HOVER_COLOR if rect.collidepoint(pygame.mouse.get_pos()) else DARK_GRAY
+                pygame.draw.rect(self.screen, bg, rect, border_radius=6)
+                pygame.draw.rect(self.screen, GOLD, rect, width=1, border_radius=6)
+                
+                txt = self.small_font.render(feat_name[:60], True, WHITE)
+                self.screen.blit(txt, (rect.x + 10, rect.centery - txt.get_height() // 2))
             
-            txt = self.small_font.render(feat_name[:60], True, WHITE)
-            self.screen.blit(txt, (rect.x + 10, rect.centery - txt.get_height() // 2))
+            y += item_h + item_spacing
             
-            y += item_h + _sc(8, s)
+            # Stop if we've reached the button area
+            if y >= features_area_bottom:
+                break
+        
+        self.screen.set_clip(clip_save)
             
     def _draw_subfeature_modal(self):
         """Draw modal for choosing subfeature"""
         s = self._scale
         w, h = self._w, self._h
-        mw, mh = _sc(500, s), _sc(400, s)
+        mw, mh = _sc(500, s), _sc(450, s)  # Increased height to accommodate button
         mr = pygame.Rect(w // 2 - mw // 2, h // 2 - mh // 2, mw, mh)
         
         # Overlay
@@ -1418,27 +1489,70 @@ class CharacterCreationScreen(BaseScreen):
         title = self.header_font.render(feat_name, True, GOLD)
         self.screen.blit(title, (mr.centerx - title.get_width() // 2, mr.y + _sc(20, s)))
         
-        # Options list
-        y = mr.y + _sc(70, s)
+        # Selection info
+        info_text = f"Выберите {self._subfeature_modal_choose} ({len(self._subfeature_modal_selected)}/{self._subfeature_modal_choose}):"
+        info_surf = self.small_font.render(info_text, True, LIGHT_GRAY)
+        self.screen.blit(info_surf, (mr.x + _sc(20, s), mr.y + _sc(50, s)))
+        
+        # Confirm button area (reserve space at bottom)
+        btn_h = _sc(40, s)
+        btn_padding = _sc(20, s)
+        btn_y = mr.bottom - btn_h - btn_padding
+        
+        # Options list area (between info and button)
+        list_top = mr.y + _sc(80, s)
+        list_bottom = btn_y - _sc(10, s)  # Leave gap before button
+        list_area = pygame.Rect(mr.x + _sc(20, s), list_top, mr.w - _sc(40, s), list_bottom - list_top)
+        
+        # Options list with clipping
         item_h = _sc(36, s)
+        item_spacing = _sc(6, s)
+        total_item_h = item_h + item_spacing
+        
+        # Calculate scroll limits
+        total_height = len(self._subfeature_modal_options) * total_item_h
+        max_scroll = max(0, total_height - list_area.height)
+        self._subfeature_modal_scroll = max(0, min(self._subfeature_modal_scroll, max_scroll))
+        
+        # Draw options with clipping
+        clip_save = self.screen.get_clip()
+        self.screen.set_clip(list_area)
+        
+        y = list_area.y - self._subfeature_modal_scroll
         for opt in self._subfeature_modal_options:
             opt_index = opt.get("index", "")
             opt_name = opt.get("name", opt_index)
             selected = opt_index in self._subfeature_modal_selected
             
-            rr = pygame.Rect(mr.x + _sc(20, s), y, mr.w - _sc(40, s), item_h)
-            bg = DARK_GREEN if selected else (HOVER_COLOR if rr.collidepoint(pygame.mouse.get_pos()) else DARK_GRAY)
-            pygame.draw.rect(self.screen, bg, rr, border_radius=6)
-            pygame.draw.rect(self.screen, GOLD, rr, width=1, border_radius=6)
+            rr = pygame.Rect(list_area.x, y, list_area.w, item_h)
             
-            txt = self.small_font.render(opt_name[:50], True, WHITE)
-            self.screen.blit(txt, (rr.x + 10, rr.centery - txt.get_height() // 2))
+            # Only draw if visible
+            if rr.bottom >= list_area.y and rr.y <= list_area.bottom:
+                bg = DARK_GREEN if selected else (HOVER_COLOR if rr.collidepoint(pygame.mouse.get_pos()) else DARK_GRAY)
+                pygame.draw.rect(self.screen, bg, rr, border_radius=6)
+                pygame.draw.rect(self.screen, GOLD, rr, width=1, border_radius=6)
+                
+                txt = self.small_font.render(opt_name[:50], True, WHITE)
+                self.screen.blit(txt, (rr.x + 10, rr.centery - txt.get_height() // 2))
             
-            y += item_h + _sc(6, s)
+            y += total_item_h
         
-        # Confirm button
-        btn_w, btn_h = _sc(120, s), _sc(40, s)
-        btn_y = mr.bottom - _sc(60, s)
+        self.screen.set_clip(clip_save)
+        
+        # Scrollbar if needed
+        if max_scroll > 0:
+            scrollbar_w = _sc(8, s)
+            scrollbar_x = list_area.right + _sc(4, s)
+            scrollbar_track = pygame.Rect(scrollbar_x, list_area.y, scrollbar_w, list_area.height)
+            scrollbar_thumb_h = max(_sc(20, s), int(list_area.height * (list_area.height / total_height)))
+            scrollbar_thumb_y = list_area.y + int((self._subfeature_modal_scroll / max_scroll) * (list_area.height - scrollbar_thumb_h))
+            scrollbar_thumb = pygame.Rect(scrollbar_x, scrollbar_thumb_y, scrollbar_w, scrollbar_thumb_h)
+            
+            pygame.draw.rect(self.screen, DARK_GRAY, scrollbar_track, border_radius=4)
+            pygame.draw.rect(self.screen, GOLD, scrollbar_thumb, border_radius=4)
+        
+        # Confirm button (draw after list, outside clipping)
+        btn_w = _sc(120, s)
         confirm_rect = pygame.Rect(mr.centerx - btn_w // 2, btn_y, btn_w, btn_h)
         can_confirm = len(self._subfeature_modal_selected) == self._subfeature_modal_choose
         bg = GOLD if can_confirm else DARK_GRAY
@@ -1455,22 +1569,47 @@ class CharacterCreationScreen(BaseScreen):
             self.tooltip.hide()
             return
         
+        s = self._scale
+        w, h = self._w, self._h
+        mw, mh = _sc(500, s), _sc(450, s)
+        mr = pygame.Rect(w // 2 - mw // 2, h // 2 - mh // 2, mw, mh)
+        
+        # Calculate list area (same as in draw)
+        btn_h = _sc(40, s)
+        btn_padding = _sc(20, s)
+        btn_y = mr.bottom - btn_h - btn_padding
+        list_top = mr.y + _sc(80, s)
+        list_bottom = btn_y - _sc(10, s)
+        list_area = pygame.Rect(mr.x + _sc(20, s), list_top, mr.w - _sc(40, s), list_bottom - list_top)
+        
+        item_h = _sc(36, s)
+        item_spacing = _sc(6, s)
+        total_item_h = item_h + item_spacing
+        
+        # Handle scroll wheel
+        if event.type == pygame.MOUSEWHEEL:
+            if list_area.collidepoint(pygame.mouse.get_pos()):
+                total_height = len(self._subfeature_modal_options) * total_item_h
+                max_scroll = max(0, total_height - list_area.height)
+                self._subfeature_modal_scroll = max(0, min(
+                    self._subfeature_modal_scroll - event.y * _sc(20, s),
+                    max_scroll
+                ))
+                return
+        
         # Tooltip on hover for options
         if event.type == pygame.MOUSEMOTION:
             pos = event.pos
-            s = self._scale
-            w, h = self._w, self._h
-            mw, mh = _sc(500, s), _sc(400, s)
-            mr = pygame.Rect(w // 2 - mw // 2, h // 2 - mh // 2, mw, mh)
-            
             tooltip_shown = False
-            # Check if hovering over an option
-            y = mr.y + _sc(70, s)
-            item_h = _sc(36, s)
+            
+            # Check if hovering over an option (with scroll offset)
+            y = list_area.y - self._subfeature_modal_scroll
             for opt in self._subfeature_modal_options:
                 opt_index = opt.get("index", "")
-                rr = pygame.Rect(mr.x + _sc(20, s), y, mr.w - _sc(40, s), item_h)
-                if rr.collidepoint(pos):
+                rr = pygame.Rect(list_area.x, y, list_area.w, item_h)
+                
+                # Only check if visible and in list area
+                if rr.collidepoint(pos) and list_area.collidepoint(pos):
                     # Load subfeature data
                     if opt_index not in self.features_cache:
                         try:
@@ -1485,38 +1624,34 @@ class CharacterCreationScreen(BaseScreen):
                     self.tooltip.show(subfeat_data.get("name", opt_index), desc, pos)
                     tooltip_shown = True
                     break
-                y += item_h + _sc(6, s)
+                y += total_item_h
             
             if not tooltip_shown:
                 self.tooltip.hide()
         
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos
-            s = self._scale
-            w, h = self._w, self._h
-            mw, mh = _sc(500, s), _sc(400, s)
-            mr = pygame.Rect(w // 2 - mw // 2, h // 2 - mh // 2, mw, mh)
             
-            # Check option clicks
-            y = mr.y + _sc(70, s)
-            item_h = _sc(36, s)
+            # Check option clicks (with scroll offset)
+            y = list_area.y - self._subfeature_modal_scroll
             option_clicked = False
             for opt in self._subfeature_modal_options:
                 opt_index = opt.get("index", "")
-                rr = pygame.Rect(mr.x + _sc(20, s), y, mr.w - _sc(40, s), item_h)
-                if rr.collidepoint(pos):
+                rr = pygame.Rect(list_area.x, y, list_area.w, item_h)
+                
+                # Only check if visible and in list area
+                if rr.collidepoint(pos) and list_area.collidepoint(pos):
                     option_clicked = True
                     if opt_index in self._subfeature_modal_selected:
                         self._subfeature_modal_selected.remove(opt_index)
                     elif len(self._subfeature_modal_selected) < self._subfeature_modal_choose:
                         self._subfeature_modal_selected.append(opt_index)
                     break
-                y += item_h + _sc(6, s)
+                y += total_item_h
             
             # Check confirm button (only if option wasn't clicked)
             if not option_clicked:
-                btn_w, btn_h = _sc(120, s), _sc(40, s)
-                btn_y = mr.bottom - _sc(60, s)
+                btn_w = _sc(120, s)
                 confirm_rect = pygame.Rect(mr.centerx - btn_w // 2, btn_y, btn_w, btn_h)
                 if confirm_rect.collidepoint(pos) and len(self._subfeature_modal_selected) == self._subfeature_modal_choose:
                     # Save choice
@@ -1535,6 +1670,8 @@ class CharacterCreationScreen(BaseScreen):
             
     def _draw_cantrips(self):
         """Draw cantrips selection"""
+        s = self._scale
+        w, h = self._w, self._h
         label = self.font.render(f"{loc['select_cantrips']} ({len(self.build.cantrips)}/{self.build.cantrips_known}):", True, WHITE)
         self.screen.blit(label, (100, 130))
         
@@ -1542,18 +1679,36 @@ class CharacterCreationScreen(BaseScreen):
         self.spell_list.selected_indices = set(self.build.cantrips)
         self.spell_list.draw(self.screen)
         
-        # Selected cantrips
-        y = 500
+        # Selected cantrips - start below the available list
+        list_bottom = self.spell_list.rect.bottom
+        selected_start_y = list_bottom + _sc(20, s)  # Gap after list
+        
+        # Limit selected list area to avoid overlapping with navigation buttons
+        btn_y = h - _sc(70, s)
+        selected_area_bottom = btn_y - _sc(20, s)  # Leave gap before buttons
+        
         selected_label = self.font.render(f"{loc['selected']}:", True, GOLD)
-        self.screen.blit(selected_label, (100, y))
-        y += 30
+        self.screen.blit(selected_label, (100, selected_start_y))
+        
+        # Clip area for selected list
+        selected_area = pygame.Rect(100, selected_start_y + _sc(30, s), _sc(600, s), selected_area_bottom - (selected_start_y + _sc(30, s)))
+        clip_save = self.screen.get_clip()
+        self.screen.set_clip(selected_area)
+        
+        y = selected_start_y + _sc(30, s)
         for cantrip in self.build.cantrips:
+            if y >= selected_area_bottom:
+                break
             text = self.small_font.render(f"• {cantrip}", True, WHITE)
             self.screen.blit(text, (110, y))
-            y += 25
+            y += _sc(25, s)
+        
+        self.screen.set_clip(clip_save)
             
     def _draw_spells(self):
         """Draw spells selection"""
+        s = self._scale
+        w, h = self._w, self._h
         label = self.font.render(f"{loc['select_spells']} ({len(self.build.spells)}/{self.build.spells_known}):", True, WHITE)
         self.screen.blit(label, (100, 130))
         
@@ -1561,18 +1716,36 @@ class CharacterCreationScreen(BaseScreen):
         self.spell_list.selected_indices = set(self.build.spells)
         self.spell_list.draw(self.screen)
         
-        # Selected spells
-        y = 500
+        # Selected spells - start below the available list
+        list_bottom = self.spell_list.rect.bottom
+        selected_start_y = list_bottom + _sc(20, s)  # Gap after list
+        
+        # Limit selected list area to avoid overlapping with navigation buttons
+        btn_y = h - _sc(70, s)
+        selected_area_bottom = btn_y - _sc(20, s)  # Leave gap before buttons
+        
         selected_label = self.font.render(f"{loc['selected']}:", True, GOLD)
-        self.screen.blit(selected_label, (100, y))
-        y += 30
+        self.screen.blit(selected_label, (100, selected_start_y))
+        
+        # Clip area for selected list
+        selected_area = pygame.Rect(100, selected_start_y + _sc(30, s), _sc(600, s), selected_area_bottom - (selected_start_y + _sc(30, s)))
+        clip_save = self.screen.get_clip()
+        self.screen.set_clip(selected_area)
+        
+        y = selected_start_y + _sc(30, s)
         for spell in self.build.spells:
+            if y >= selected_area_bottom:
+                break
             text = self.small_font.render(f"• {spell}", True, WHITE)
             self.screen.blit(text, (110, y))
-            y += 25
+            y += _sc(25, s)
+        
+        self.screen.set_clip(clip_save)
             
     def _draw_proficiency_choices(self):
         """Draw proficiency choices (class skills, etc.)."""
+        s = self._scale
+        w, h = self._w, self._h
         opts = getattr(self, "proficiency_options", [])
         n = self.build.proficiency_choose
         label = self.font.render(
@@ -1583,16 +1756,34 @@ class CharacterCreationScreen(BaseScreen):
         self.spell_list.set_items(opts)
         self.spell_list.selected_indices = set(self.build.proficiency_choices_selected)
         self.spell_list.draw(self.screen)
-        y = 500
+        
+        # Selected proficiencies - start below the available list
+        list_bottom = self.spell_list.rect.bottom
+        selected_start_y = list_bottom + _sc(20, s)  # Gap after list
+        
+        # Limit selected list area to avoid overlapping with navigation buttons
+        btn_y = h - _sc(70, s)
+        selected_area_bottom = btn_y - _sc(20, s)  # Leave gap before buttons
+        
         selected_label = self.font.render(f"{loc['selected']}:", True, GOLD)
-        self.screen.blit(selected_label, (100, y))
-        y += 30
+        self.screen.blit(selected_label, (100, selected_start_y))
+        
+        # Clip area for selected list
+        selected_area = pygame.Rect(100, selected_start_y + _sc(30, s), _sc(600, s), selected_area_bottom - (selected_start_y + _sc(30, s)))
+        clip_save = self.screen.get_clip()
+        self.screen.set_clip(selected_area)
+        
+        y = selected_start_y + _sc(30, s)
         idx_to_name = {it.get("index"): it.get("name", "") for it in opts}
         for pid in self.build.proficiency_choices_selected:
+            if y >= selected_area_bottom:
+                break
             name = idx_to_name.get(pid, pid)
             text = self.small_font.render(f"• {name}", True, WHITE)
             self.screen.blit(text, (110, y))
-            y += 25
+            y += _sc(25, s)
+        
+        self.screen.set_clip(clip_save)
             
     def _draw_background(self):
         """Draw background step"""
@@ -1603,12 +1794,31 @@ class CharacterCreationScreen(BaseScreen):
             
     def _draw_abilities(self):
         """Draw abilities step"""
-        # Points remaining
+        s = self._scale
+        w, h = self._w, self._h
+        
+        # Limit area to avoid overlapping with navigation buttons
+        btn_y = h - _sc(70, s)
+        content_area_bottom = btn_y - _sc(20, s)
+        
+        # Points remaining - position below step indicators if any, or at safe position
         points_text = self.font.render(f"{loc['points']}: {self.build.points_remaining}/27", True, GOLD)
-        self.screen.blit(points_text, (150, 140))
+        points_y = _sc(160, s)  # Below step indicators area
+        self.screen.blit(points_text, (150, points_y))
+        
+        # Ability counters - start below points text
+        ability_start_y = points_y + _sc(40, s)
+        ability_spacing = _sc(50, s)
         
         # Ability counters
-        for ability, counter in self.ability_counters.items():
+        for i, (ability, counter) in enumerate(self.ability_counters.items()):
+            # Update counter y position
+            counter.y = ability_start_y + i * ability_spacing
+            
+            # Check if counter would go beyond safe area
+            if counter.y + _sc(40, s) > content_area_bottom:
+                break
+                
             value = self.build.abilities[ability]
             modifier = self.build.get_ability_modifier(ability)
             can_inc = self.build.can_increase_ability(ability)
@@ -1658,13 +1868,22 @@ class CharacterCreationScreen(BaseScreen):
                 current_line = word
         if current_line:
             lines.append(current_line)
+        
+        # Clip text area to prevent overflow
+        text_area = pygame.Rect(x + 15, y + 60, width - 30, height - 60)
+        clip_save = self.screen.get_clip()
+        self.screen.set_clip(text_area)
             
         text_y = y + 60
         max_lines = max(1, (height - 60) // 22)
         for line in lines[:max_lines]:
+            if text_y + 22 > panel_rect.bottom:
+                break
             line_surface = self.small_font.render(line, True, LIGHT_GRAY)
             self.screen.blit(line_surface, (x + 15, text_y))
             text_y += 22
+        
+        self.screen.set_clip(clip_save)
             
     def _draw_race_stats_panel(self, x: int, y: int, data: Dict[str, Any]):
         """Draw race statistics panel"""
