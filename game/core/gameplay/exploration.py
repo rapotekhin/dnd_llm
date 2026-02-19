@@ -1,62 +1,82 @@
+"""
+Exploration mode: Pydantic AI + Logfire.
+Replaces LangGraph + Langfuse with Pydantic AI agents and Logfire tracing.
+"""
+
 import json
 import os
 import re
 import uuid
-from functools import partial
-from typing import Dict, Any, Optional, cast
+from contextlib import nullcontext
+from pathlib import Path
+from typing import cast
 
-from langgraph.graph import StateGraph, END
-from langchain_core.runnables import RunnableConfig
-from langchain.agents import create_openai_tools_agent, AgentExecutor
-from langchain_core.prompts import ChatPromptTemplate
-
-from core.llm_engine.api_manager import APIManager, LANGFUSE_AVAILABLE
+from dotenv import load_dotenv
+from pydantic_ai import Agent
 from core.gameplay.schemas.exploration import (
     SceneDescription,
     ActionList,
     AgentResolutionOutput,
     AgentActionType,
 )
-from core.tools.roll import roll_dice
-from core.tools.db_lookup import rule_db_lookup
+from core.tools.roll import RollDiceTool
+from core.tools.db_lookup import RuleDbLookupTool
 from core.prompts.exploration_prompts import (
     AGENT_SYSTEM_PROMPT,
     prompt_describe_scene_user,
     prompt_generate_actions,
+    AGENT_RESOLUTION_INSTRUCTIONS,
     prompt_agent_resolution,
 )
-from core.data import MainGameState
+from core.data.game_state_base import MainGameState
+from core.llm_engine.api_manager import APIManager
 
-if LANGFUSE_AVAILABLE:
-    from core.llm_engine.langfuse_callbacks import get_openrouter_cost_callback_handler
-    CallbackHandler = get_openrouter_cost_callback_handler()
+# Load .env before Logfire
+_ENV_FILE = Path(__file__).resolve().parent.parent.parent.parent / ".env"
+load_dotenv(_ENV_FILE)
+
+import logfire
+
+_LOGFIRE_ENABLED = False
+try:
+    if os.getenv("LOGFIRE_TOKEN") or os.getenv("LOGFIRE_AI_API_KEY"):
+        logfire.configure()
+        logfire.instrument_pydantic_ai()
+        _LOGFIRE_ENABLED = True
+except Exception:
+    pass
+
+
+def _span(name: str, **kwargs):
+    """Context manager: logfire.span if enabled, else no-op."""
+    return logfire.span(name, **kwargs) if _LOGFIRE_ENABLED else nullcontext()
 
 
 # =======================
-# MERGE (КЛЮЧЕВОЙ ФИКС)
+# TOOLS (from core.tools, OOP)
 # =======================
 
-def merge(state: Dict[str, Any], updates: Dict[str, Any]):
-    new_state = dict(state)
-    new_state.update(updates)
-    return new_state
+_roll_dice_tool = RollDiceTool()
+_rule_db_lookup_tool = RuleDbLookupTool()
 
 
 # =======================
-# AGENT
+# MODEL & AGENTS (via api_manager)
 # =======================
+
 
 def get_exploration_system_prompt(game_state: MainGameState) -> str:
-    """Единственное место задания первого/системного промпта для exploration (агент и описание сцены)."""
+    """Единственное место задания первого/системного промпта для exploration."""
 
-    connected_rooms_and_locations="\n".join([
+    connected_rooms_and_locations = "\n".join([
         "{} - {} / {}".format(
-            game_state.rooms[room_id].name, 
+            game_state.rooms[room_id].name,
             game_state.locations[game_state.rooms[room_id].location_id].name,
-            game_state.locations[game_state.rooms[room_id].location_id].subtype
-        ) for room_id in game_state.rooms[game_state.current_room_id].connections
+            game_state.locations[game_state.rooms[room_id].location_id].subtype,
+        )
+        for room_id in game_state.rooms[game_state.current_room_id].connections
     ])
-    
+
     abilities = ", ".join([
         f"STR: {game_state.player.abilities.str} ({game_state.player.abilities.get_modifier('str')})",
         f"DEX: {game_state.player.abilities.dex} ({game_state.player.abilities.get_modifier('dex')})",
@@ -65,6 +85,7 @@ def get_exploration_system_prompt(game_state: MainGameState) -> str:
         f"WIS: {game_state.player.abilities.wis} ({game_state.player.abilities.get_modifier('wis')})",
         f"CHA: {game_state.player.abilities.cha} ({game_state.player.abilities.get_modifier('cha')})",
     ])
+
     return AGENT_SYSTEM_PROMPT.format(
         character_description=repr(game_state.player),
         abilities=abilities,
@@ -89,114 +110,83 @@ def get_exploration_system_prompt(game_state: MainGameState) -> str:
     )
 
 
-def build_agent(api_manager: APIManager, game_state: MainGameState):
-    llm = api_manager.llm
-    tools = [roll_dice, rule_db_lookup]
+def _build_resolution_agent(
+    api_manager: APIManager,
+    game_state: MainGameState,
+) -> Agent[MainGameState, AgentResolutionOutput]:
+    """Build Pydantic AI agent for action resolution (with tools). Model from api_manager."""
+    model = api_manager.get_pydantic_ai_model()
 
-    system_prompt = get_exploration_system_prompt(game_state)
+    agent = Agent(
+        model,
+        deps_type=MainGameState,
+        output_type=AgentResolutionOutput,
+        instructions=(
+            get_exploration_system_prompt(game_state)
+            + "\n\n"
+            + AGENT_RESOLUTION_INSTRUCTIONS
+        ),
+    )
 
-    print(f"------------- <SYSTEM PROMPT START> ------------------")
-    print(system_prompt)
-    print(f"------------- <SYSTEM PROMPT END> ------------------")
+    @agent.tool_plain
+    def roll_dice(
+        expression: str,
+        has_advantage: bool = False,
+        has_disadvantage: bool = False,
+        difficulty_class: int | None = None,
+    ) -> dict:
+        """Roll dice using D&D 5e advantage/disadvantage rules and optionally
+        evaluate the result against a Difficulty Class (DC).
+        Use for skill checks, saves, attacks (expression like 1d20+5) or damage (e.g. 2d6+3)."""
+        return _roll_dice_tool.run(
+            expression=expression,
+            has_advantage=has_advantage,
+            has_disadvantage=has_disadvantage,
+            difficulty_class=difficulty_class,
+        )
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human", "{input}"),
-        ("placeholder", "{agent_scratchpad}")
-    ])
+    @agent.tool_plain
+    def rule_db_lookup(rule_name: str, rule_section: str) -> str:
+        """Lookup D&D rules in database."""
+        return _rule_db_lookup_tool.run(rule_name, rule_section)
 
-    agent = create_openai_tools_agent(llm, tools, prompt)
-    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+    return agent
+
+
+def _build_describe_agent(
+    api_manager: APIManager,
+    game_state: MainGameState,
+) -> Agent[MainGameState, SceneDescription]:
+    """Build agent for scene description. Model from api_manager."""
+    model = api_manager.get_pydantic_ai_model()
+    return Agent(
+        model,
+        deps_type=MainGameState,
+        output_type=SceneDescription,
+        instructions=get_exploration_system_prompt(game_state),
+    )
+
+
+def _build_generate_actions_agent(
+    api_manager,
+    game_state: MainGameState,
+) -> Agent[MainGameState, ActionList]:
+    """Build agent for action list generation. Model from api_manager."""
+    model = api_manager.get_pydantic_ai_model()
+    return Agent(
+        model,
+        deps_type=MainGameState,
+        output_type=ActionList,
+        instructions=get_exploration_system_prompt(game_state),
+    )
 
 
 # =======================
-# SAFE STATE
+# PARSING
 # =======================
-
-def ensure(state: Dict[str, Any]):
-    state.setdefault("history", [])
-    state.setdefault("scene", None)
-    state.setdefault("actions", [])
-    state.setdefault("choice", None)
-    state.setdefault("next_activity", None)
-    state.setdefault("continue_loop", True)
-    return state
-
-
-# =======================
-# NODES
-# =======================
-
-def describe_scene(state, config: Optional[RunnableConfig] = None, *, api_manager=None, game_state=None):
-    state = ensure(state)
-
-    if state["scene"] is None:
-        scene = api_manager.generate_with_format(
-            prompt_describe_scene_user(),
-            SceneDescription,
-            config=config,
-            system_prompt=get_exploration_system_prompt(game_state),
-        ).environment_description
-        history = state["history"]
-        state["history"] = history + [scene]
-        return merge(state, {
-            "scene": scene,
-            "history": history
-        })
-    return state
-
-
-def generate_actions(state, config: Optional[RunnableConfig] = None, *, api_manager=None, game_state=None):
-    state = ensure(state)
-    if not state["scene"]:
-        return state
-
-    prompt = prompt_generate_actions(state["history"], state["scene"])
-    actions = api_manager.generate_with_format(
-        prompt,
-        ActionList,
-        config=config,
-        system_prompt=get_exploration_system_prompt(game_state),
-    ).actions
-    return merge(state, {"actions": actions})
-
-def player_answer_node(state, config: Optional[RunnableConfig] = None, *, game_state=None):
-    state = ensure(state)
-    if not state.get("awaiting_player_input"):
-        return state
-
-    print("---- PLAYER ANSWER NODE <START> ----")
-    answer = input("\nYour answer: ")
-    print("---- PLAYER ANSWER NODE <END> ----")
-
-    return merge(state, {
-        "choice": answer,
-        "awaiting_player_input": False
-    })
-
-def player_choice(state, config: Optional[RunnableConfig] = None):
-    state = ensure(state)
-    if not state["actions"]:
-        return state
-
-    print("---- PLAYER CHOICE NODE <START> ----")
-    print("\n📍 Environment:", state["scene"])
-    for a in state["actions"]:
-        print(f"{a.id}: {a.description}")
-    print("---- PLAYER CHOICE NODE <END> ----")
-
-    choice = input("Choose action: ")
-    if choice.isdigit():
-        choice = int(choice)
-        selected = next(a.description for a in state["actions"] if a.id == choice)
-    else:
-        selected = choice
-
-    return merge(state, {"choice": selected})
-
 
 def _parse_agent_resolution_output(text: str) -> AgentResolutionOutput:
-    """Парсит ответ агента: сначала JSON + Pydantic, при ошибке — fallback на старый текстовый формат."""
+    """Парсит ответ агента: JSON -> Pydantic, fallback на старый текстовый формат."""
     allowed_actions = {"exploration", "combat", "social", "trade", "change_current_room"}
 
     def _extract_block(src: str, key: str) -> str:
@@ -209,7 +199,6 @@ def _parse_agent_resolution_output(text: str) -> AgentResolutionOutput:
                 tail = tail.split(nxt, 1)[0]
         return tail.strip()
 
-    # Попытка 1: JSON (возможно внутри ```json ... ```)
     stripped = text.strip()
     json_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", stripped)
     if json_match:
@@ -231,7 +220,6 @@ def _parse_agent_resolution_output(text: str) -> AgentResolutionOutput:
     except (json.JSONDecodeError, Exception):
         pass
 
-    # Fallback: старый текстовый формат
     narration = _extract_block(text, "НАРРАЦИЯ") or text.strip()
     activity = (_extract_block(text, "ДЕЙСТВИЕ") or "exploration").strip().split()[0].lower()
     question = _extract_block(text, "ВОПРОС_ИГРОКУ")
@@ -244,159 +232,159 @@ def _parse_agent_resolution_output(text: str) -> AgentResolutionOutput:
     )
 
 
-def agent_resolution_node(state, config: Optional[RunnableConfig] = None, *, agent=None, game_state=None):
-    state = ensure(state)
-    if not state.get("choice"):
-        return state
-
-    prompt = prompt_agent_resolution(
-        state.get("history", []),
-        state.get("scene", ""),
-        state["choice"],
-    )
-
-    print(" ----- AGENT INVOCATION <START> -----")
-    try:
-        result = agent.invoke({"input": prompt}, config=config or {})
-        text = result.get("output") or result.get("final_output") or ""
-    except Exception as e:
-        text = json.dumps({
-            "narration": f"[Agent error: {e}]",
-            "action": "exploration",
-            "question_to_player": None,
-        })
-    print(" ----- AGENT INVOCATION <END> -----")
-
-    # --- structured output: JSON -> Pydantic, fallback на старый текстовый разбор ---
-    parsed = _parse_agent_resolution_output(text)
-    narration = parsed.narration or text.strip()
-    activity = parsed.action
-    question = (parsed.question_to_player or "").strip() if parsed.question_to_player else ""
-    awaiting = parsed.has_question
-
-    # если вопрос — НЕ меняем сцену, просто ждём ответ
-    new_scene = state.get("scene") if awaiting else narration
-
-    print("---- AGENT RESOLUTION NODE <START> ----")
-    print("activity:", activity)
-    print("narration:", narration)
-    print("awaiting:", awaiting)
-    print("question:", question)
-    print("new_scene:", new_scene)
-    print("history:", state.get("history", []))
-    print("next_activity:", state.get("next_activity"))
-    print("choice:", state.get("choice"))
-    print("---- AGENT RESOLUTION NODE <END> ----")
-
-    return merge(state, {
-        "outcome_text": (question if awaiting else narration),
-        "awaiting_player_input": awaiting,
-        "pending_question": question if awaiting else None,
-        "scene": new_scene,
-        "history": state.get("history", []) + [
-            f"PLAYER: {state['choice']}",
-            f"DM: {(question if awaiting else narration)}"
-        ],
-        "next_activity": activity if not awaiting else "exploration",  # пока вопрос — не переключаем режим
-        "choice": None
-    })
-
-
-def update_agent_state(state, config: Optional[RunnableConfig] = None):
-    state = ensure(state)
-
-    # если сцена не изменилась (агент просто продолжил механику) — пропускаем
-    if state.get("awaiting_player_input"):
-        return state
-
-    print("\n--- RESULT ---")
-    print(state["outcome_text"])
-    print("continue_loop:", state.get("next_activity") and state["next_activity"] != "exploration")
-
-    # 🔥 если агент инициировал смену режима игры — выходим
-    if state.get("next_activity") and state["next_activity"] != "exploration":
-        return merge(state, {"continue_loop": False})
-
-    cont = "y" # input("\nContinue adventure? (y/n): ").strip().lower()
-    return merge(state, {"continue_loop": cont == "y"})
-
-
 # =======================
-# GRAPH
-# =======================
-
-def generate_graph(api_manager, game_state: MainGameState):
-    agent = build_agent(api_manager, game_state)
-    builder = StateGraph(dict)
-
-    builder.add_node("describe_scene", partial(describe_scene, api_manager=api_manager, game_state=game_state))
-    builder.add_node("generate_actions", partial(generate_actions, api_manager=api_manager, game_state=game_state))
-    builder.add_node("player_choice", player_choice)
-    builder.add_node("agent_resolution", partial(agent_resolution_node, agent=agent, game_state=game_state))
-    builder.add_node("update_state", update_agent_state)
-
-    builder.set_entry_point("describe_scene")
-
-    builder.add_edge("describe_scene", "generate_actions")
-    builder.add_edge("generate_actions", "player_choice")
-    builder.add_edge("player_choice", "agent_resolution")
-    builder.add_conditional_edges(
-        "agent_resolution",
-        lambda s: "player_answer" if s.get("awaiting_player_input") else "update_state"
-    )
-    builder.add_node("player_answer", partial(player_answer_node, game_state=game_state))
-    builder.add_edge("player_answer", "agent_resolution")
-
-    builder.add_conditional_edges(
-        "update_state",
-        lambda s: "generate_actions" if s.get("continue_loop") else END
-    )
-
-    return builder.compile()
-
-
-# =======================
-# RUN
+# RUN LOOP
 # =======================
 
 def run_exploration(api_manager: APIManager, game_state: MainGameState):
     """
-    Запуск exploration-сессии. Первый/системный промпт задаётся только
-    в get_exploration_system_prompt(game_state). Каждая сессия создаёт
-    свой trace в Langfuse с тегом "exploration" и уникальным session_id.
+    Запуск exploration-сессии на Pydantic AI + Logfire.
+    Все настройки LLM (модель, провайдер) берутся из api_manager.
     """
-    graph = generate_graph(api_manager, game_state)
+    session_id = str(uuid.uuid4())
+    user_id = os.getenv("USER_NAME") or os.getenv("LOGFIRE_USER_ID", "")
 
-    handler = None
-    config: RunnableConfig = {}
-    if LANGFUSE_AVAILABLE:
-        session_id = str(uuid.uuid4())
-        # user_id для Langfuse Users (USER_NAME или LANGFUSE_USER_ID в .env)
-        user_id = os.getenv("USER_NAME") or os.getenv("LANGFUSE_USER_ID")
-        handler = CallbackHandler()
-        metadata = {
-            "langfuse_tags": ["exploration"],
-            "langfuse_session_id": session_id,
-            "model": getattr(api_manager.llm, "model_name", None) or getattr(api_manager.llm, "model", None) or "unknown",
-        }
-        if user_id:
-            metadata["langfuse_user_id"] = str(user_id)
-        config = {
-            "callbacks": [handler],
-            "metadata": metadata,
+    span_ctx = (
+        logfire.span(
+            "exploration",
+            session_id=session_id,
+            user_id=user_id or None,
+            model=api_manager.model_name,
+        )
+        if _LOGFIRE_ENABLED
+        else nullcontext()
+    )
+
+    with span_ctx:
+        describe_agent = _build_describe_agent(api_manager, game_state)
+        generate_agent = _build_generate_actions_agent(api_manager, game_state)
+        resolution_agent = _build_resolution_agent(api_manager, game_state)
+
+        state: dict = {
+            "history": [],
+            "scene": None,
+            "actions": [],
+            "choice": None,
+            "next_activity": None,
+            "continue_loop": True,
+            "awaiting_player_input": False,
+            "outcome_text": "",
         }
 
-    try:
-        graph.invoke({}, config=config)
-    finally:
-        if handler is not None:
-            handler.client.flush()
+        # describe_scene
+        if state["scene"] is None:
+            with _span("describe_scene"):
+                result = describe_agent.run_sync(
+                    prompt_describe_scene_user(),
+                    deps=game_state,
+                )
+                scene = result.output.environment_description
+                state["history"] = state["history"] + [scene]
+                state["scene"] = scene
+
+        while True:
+            # generate_actions
+            if not state["scene"]:
+                break
+            with _span("generate_actions"):
+                prompt = prompt_generate_actions(state["history"], state["scene"])
+                result = generate_agent.run_sync(prompt, deps=game_state)
+                state["actions"] = result.output.actions
+
+            # player_choice
+            print("---- PLAYER CHOICE NODE <START> ----")
+            print("\n📍 Environment:", state["scene"])
+            for a in state["actions"]:
+                print(f"{a.id}: {a.description}")
+            print("---- PLAYER CHOICE NODE <END> ----")
+            choice = input("Choose action: ")
+            if choice.isdigit():
+                selected = next(
+                    (a.description for a in state["actions"] if a.id == int(choice)),
+                    choice,
+                )
+            else:
+                selected = choice
+            state["choice"] = selected
+
+            # agent_resolution (may loop on question)
+            while True:
+                with _span("agent_resolution"):
+                    prompt = prompt_agent_resolution(
+                        state["history"],
+                        state["scene"],
+                        state["choice"],
+                    )
+                    print(" ----- AGENT INVOCATION <START> -----")
+                    try:
+                        run_result = resolution_agent.run_sync(prompt, deps=game_state)
+                        parsed = run_result.output
+                    except Exception as e:
+                        parsed = AgentResolutionOutput(
+                            narration=f"[Agent error: {e}]",
+                            action="exploration",
+                            question_to_player=None,
+                        )
+                    print(" ----- AGENT INVOCATION <END> -----")
+
+                narration = parsed.narration or ""
+                activity = parsed.action
+                question = (parsed.question_to_player or "").strip()
+                # При смене сцены/режима (combat, social, trade, change_current_room) — агент закрыт, не ждём
+                awaiting = parsed.has_question and activity == "exploration"
+
+                new_scene = state["scene"] if awaiting else narration
+
+                print("---- AGENT RESOLUTION NODE <START> ----")
+                print("activity:", activity)
+                print("narration:", narration)
+                print("awaiting:", awaiting)
+                print("question:", question)
+                print("---- AGENT RESOLUTION NODE <END> ----")
+
+                state["outcome_text"] = question if awaiting else narration
+                state["awaiting_player_input"] = awaiting
+                state["scene"] = new_scene
+                state["history"] = state["history"] + [
+                    f"PLAYER: {state['choice']}",
+                    f"DM: {(question if awaiting else narration)}",
+                ]
+                state["next_activity"] = activity if not awaiting else "exploration"
+                state["choice"] = None
+
+                if not awaiting:
+                    break
+
+                # player_answer
+                print("---- PLAYER ANSWER NODE <START> ----")
+                answer = input("\nYour answer: ")
+                print("---- PLAYER ANSWER NODE <END> ----")
+                state["choice"] = answer
+
+            # update_state
+            print("\n--- RESULT ---")
+            print(state["outcome_text"])
+            print(
+                "continue_loop:",
+                state.get("next_activity") and state["next_activity"] != "exploration",
+            )
+
+            if state.get("next_activity") and state["next_activity"] != "exploration":
+                break
+
+            cont = "y"
+            if cont != "y":
+                break
 
 
 if __name__ == "__main__":
     import core.data as data_module
+    from core.data.game_state_base import MainGameState
+
     gs = MainGameState()
-    data_module.game_state = gs  # loaders import from core.data — must set the module attribute
+    data_module.game_state = gs
     gs = gs.load(1)
+    from core.llm_engine.api_manager import APIManager
+
     api_manager = APIManager()
     run_exploration(api_manager, gs)

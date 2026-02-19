@@ -49,14 +49,14 @@ class APIManager:
 
         # 🔥 Главный клиент LLM
         self.llm = ChatOpenAI(
-            # model="google/gemini-2.5-flash-lite-preview-09-2025",  # меняй при желании
+            model="google/gemini-2.5-flash-lite-preview-09-2025",  # меняй при желании
             # model="z-ai/glm-4.7-flash",
             # model="openai/gpt-oss-120b",
             # model="stepfun/step-3.5-flash:free",
             # model="nvidia/nemotron-3-nano-30b-a3b",
             # model="qwen/qwen3-30b-a3b-thinking-2507",
             # model="qwen/qwen3-235b-a22b-2507",
-            model="x-ai/grok-4.1-fast",
+            # model="x-ai/grok-4.1-fast",
             api_key=self.api_key,
             base_url="https://openrouter.ai/api/v1",
             temperature=0.35
@@ -116,6 +116,31 @@ class APIManager:
 
     def get_remaining_balance(self) -> float:
         return max(0, self.balance - self.usage)
+
+    # --------------------------------------------------
+    # MODEL CONFIG (for exploration, Pydantic AI, etc.)
+    # --------------------------------------------------
+
+    @property
+    def model_name(self) -> str:
+        """Model ID used by LLM (e.g. x-ai/grok-4.1-fast). Single source of truth."""
+        return getattr(self.llm, "model", None) or getattr(self.llm, "model_name", None) or "x-ai/grok-4.1-fast"
+
+    def get_pydantic_ai_model(self):
+        """
+        Pydantic AI model configured like self.llm (OpenRouter, same api_key, model).
+        Use this so all LLM settings come from APIManager.
+        """
+        try:
+            from pydantic_ai.models.openrouter import OpenRouterModel
+            from pydantic_ai.providers.openrouter import OpenRouterProvider
+        except ImportError:
+            raise ImportError(
+                "pydantic-ai[openrouter] required for exploration: pip install 'pydantic-ai[openrouter]'"
+            )
+
+        provider = OpenRouterProvider(api_key=self.api_key)
+        return OpenRouterModel(self.model_name, provider=provider)
 
     # --------------------------------------------------
     # 🔥 LLM GENERATION (STRUCTURED)

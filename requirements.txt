@@ -7,6 +7,8 @@ git+https://github.com/rapotekhin/dnd-5e-core.git
 # LLM
 openai>=1.12.0
 python-dotenv>=1.0.0
+pydantic-ai[openrouter]>=1.0.0
+logfire>=0.1.0
 
 # Data
 pydantic>=2.5.3
