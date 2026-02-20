@@ -43,6 +43,8 @@ class SocialScreen(BaseScreen):
         self._chat_lines: List[str] = []
         self._chat_scroll: int = 0
         self._chat_scroll_dragging: bool = False
+        self._input_buffer: str = ""
+        self._input_active: bool = True
         self._build_layout()
 
     # --------------------------------------------------
@@ -100,9 +102,25 @@ class SocialScreen(BaseScreen):
         # --- Chat area (center) ---
         chat_x = margin + portrait_w + gap
         chat_w = w - margin - portrait_w - gap - portrait_w - gap - margin
-        self._chat_rect = pygame.Rect(chat_x, content_top, chat_w, content_h)
         self._line_h = _sc(22, s)
         self._chat_pad = _sc(10, s)
+
+        input_h = _sc(44, s)
+        send_w = _sc(100, s)
+        send_gap = _sc(8, s)
+
+        # Chat area shrunk to leave room for input below
+        chat_h = content_h - input_h - send_gap
+        self._chat_rect = pygame.Rect(chat_x, content_top, chat_w, chat_h)
+
+        # Input field + Send button below chat
+        input_y = content_top + chat_h + send_gap
+        input_w = chat_w - send_w - send_gap
+        self._input_rect = pygame.Rect(chat_x, input_y, input_w, input_h)
+        self._send_btn = Button(
+            chat_x + input_w + send_gap, input_y,
+            send_w, input_h, "Сказать", self.font
+        )
 
         # --- NPC name plate ---
         self._npc_name_rect = pygame.Rect(
@@ -207,6 +225,16 @@ class SocialScreen(BaseScreen):
         thumb = pygame.Rect(rx, ty, SB_W, th)
         return track, thumb
 
+    def _on_send(self) -> None:
+        text = self._input_buffer.strip()
+        if not text:
+            return
+        player = self._get_player()
+        player_name = getattr(player, "name", "Вы") if player else "Вы"
+        self._chat_lines.append(f"[{player_name}]: {text}")
+        self._input_buffer = ""
+        self._chat_scroll = self._chat_max_scroll()
+
     def _wrap_line(self, text: str, max_w: int) -> List[str]:
         words = text.split()
         lines, cur = [], ""
@@ -227,11 +255,28 @@ class SocialScreen(BaseScreen):
     # --------------------------------------------------
 
     def handle_event(self, event: pygame.event.Event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            return "main"
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                return "main"
+            if self._input_active:
+                if event.key == pygame.K_RETURN:
+                    self._on_send()
+                elif event.key == pygame.K_BACKSPACE:
+                    self._input_buffer = self._input_buffer[:-1]
+                elif event.unicode and len(self._input_buffer) < 500:
+                    self._input_buffer += event.unicode
+            return None
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos
+
+            # Input field focus
+            self._input_active = self._input_rect.collidepoint(pos)
+
+            # Send button
+            if self._send_btn.is_clicked(pos):
+                self._on_send()
+                return None
 
             # Scrollbar drag start
             mx = self._chat_max_scroll()
@@ -280,6 +325,7 @@ class SocialScreen(BaseScreen):
         pos = pygame.mouse.get_pos()
         for b in self._action_buttons:
             b.update(pos)
+        self._send_btn.update(pos)
 
     def draw(self):
         self.screen.fill(BLACK)
@@ -335,6 +381,20 @@ class SocialScreen(BaseScreen):
             if track and thumb:
                 pygame.draw.rect(self.screen, DARK_GRAY, track, border_radius=4)
                 pygame.draw.rect(self.screen, GOLD, thumb, border_radius=4)
+
+        # --- Input field ---
+        pygame.draw.rect(self.screen, INPUT_BG, self._input_rect, border_radius=6)
+        border_col = GOLD if self._input_active else LIGHT_GRAY
+        pygame.draw.rect(self.screen, border_col, self._input_rect, width=2, border_radius=6)
+        placeholder = "Сказать что-нибудь..."
+        input_text = self._input_buffer or placeholder
+        input_col = WHITE if self._input_buffer else LIGHT_GRAY
+        input_surf = self.font.render(input_text[:80], True, input_col)
+        self.screen.blit(
+            input_surf,
+            (self._input_rect.x + 10, self._input_rect.centery - input_surf.get_height() // 2)
+        )
+        self._send_btn.draw(self.screen)
 
         # --- Divider line above buttons ---
         div_y = self._btn_y - _sc(6, s)
