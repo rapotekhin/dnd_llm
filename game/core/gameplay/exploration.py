@@ -39,8 +39,10 @@ import logfire
 
 _LOGFIRE_ENABLED = False
 try:
-    if os.getenv("LOGFIRE_TOKEN") or os.getenv("LOGFIRE_AI_API_KEY"):
-        logfire.configure()
+    # Logfire expects LOGFIRE_TOKEN; LOGFIRE_AI_API_KEY supported as fallback
+    _token = os.getenv("LOGFIRE_TOKEN") or os.getenv("LOGFIRE_AI_API_KEY")
+    if _token:
+        logfire.configure(token=_token)
         logfire.instrument_pydantic_ai()
         _LOGFIRE_ENABLED = True
 except Exception:
