@@ -74,6 +74,9 @@ class MapScreen(BaseScreen):
         self._desc_line_h = _sc(20, s)
         self._desc_pad = _sc(8, s)
 
+        # NPC link rects for rooms view: list of (screen Rect, npc_id)
+        self._npc_link_rects: List[Tuple[pygame.Rect, ID]] = []
+
         self.graph_margin = margin
         self._content_top = content_top
         self._content_h = content_h
@@ -140,7 +143,7 @@ class MapScreen(BaseScreen):
         return "\n".join(lines)
 
     def _get_current_room_description_text(self) -> str:
-        """Text for the right panel on rooms view: location desc (if entrance room), room desc, NPC names."""
+        """Text for the right panel on rooms view (without NPC names — they are rendered as links)."""
         gs = self._game_state()
         if not gs or not gs.current_room_id:
             return ""
@@ -158,16 +161,22 @@ class MapScreen(BaseScreen):
         lines.append(room.name)
         if room.description:
             lines.append(room.description)
-        if room.npcs:
-            npc_names = []
-            for npc_id in room.npcs:
-                name = self._npc_name(npc_id)
-                if name:
-                    npc_names.append(name)
-            if npc_names:
-                lines.append("")
-                lines.append("NPC: " + ", ".join(npc_names))
         return "\n".join(lines)
+
+    def _get_current_room_npcs(self) -> List[Tuple[ID, str]]:
+        """Return list of (npc_id, npc_name) for NPCs in current room."""
+        gs = self._game_state()
+        if not gs or not gs.current_room_id:
+            return []
+        room = gs.rooms.get(gs.current_room_id)
+        if not room or not room.npcs:
+            return []
+        result: List[Tuple[ID, str]] = []
+        for npc_id in room.npcs:
+            name = self._npc_name(npc_id)
+            if name:
+                result.append((npc_id, name))
+        return result
 
     def _wrap_description(self, text: str, max_width: int) -> List[str]:
         """Split text into lines that fit max_width (pixels). Preserves paragraph breaks."""
@@ -399,6 +408,12 @@ class MapScreen(BaseScreen):
                     return "abilities"
                 return "main"
 
+        # NPC link clicks in rooms view right panel
+        if self._view_mode == self.VIEW_ROOMS:
+            for rect, npc_id in self._npc_link_rects:
+                if rect.collidepoint(pos):
+                    return f"social:{npc_id}"
+
         # Graph click: fast travel if clicked node is direct neighbor of current; double-click current room = switch level to that room's floor
         if self.graph_rect.collidepoint(pos):
             current_id = self._get_current_node_id()
@@ -528,22 +543,62 @@ class MapScreen(BaseScreen):
         # Right panel text area (below buttons) — locations: current location; rooms: current room
         pygame.draw.rect(self.screen, MODAL_BG, self._text_area_rect, border_radius=8)
         pygame.draw.rect(self.screen, GOLD, self._text_area_rect, width=2, border_radius=8)
+        self._npc_link_rects = []  # reset every frame
+
         if self._view_mode == self.VIEW_LOCATIONS:
             desc_text = self._get_current_location_description_text()
+            room_npcs: List[Tuple[ID, str]] = []
         else:
             desc_text = self._get_current_room_description_text()
-        if desc_text:
-            wrap_w = max(1, self._text_area_rect.w - 2 * self._desc_pad)
-            lines = self._wrap_description(desc_text, wrap_w)
-            total_h = len(lines) * self._desc_line_h
-            max_scroll = max(0, total_h - (self._text_area_rect.h - 2 * self._desc_pad))
-            self._desc_scroll = min(max_scroll, self._desc_scroll)
-            clip_save = self.screen.get_clip()
-            self.screen.set_clip(self._text_area_rect)
-            y = self._text_area_rect.y + self._desc_pad - self._desc_scroll
-            for line in lines:
-                if y + self._desc_line_h > self._text_area_rect.y and y < self._text_area_rect.bottom:
+            room_npcs = self._get_current_room_npcs()
+
+        # Build all lines: desc lines + empty line + "NPC:" header + one line per NPC
+        wrap_w = max(1, self._text_area_rect.w - 2 * self._desc_pad)
+        desc_lines = self._wrap_description(desc_text, wrap_w) if desc_text else []
+        npc_line_start = len(desc_lines)
+        if room_npcs:
+            desc_lines.append("")
+            desc_lines.append("NPC:")
+            npc_line_start = len(desc_lines)
+            for _, name in room_npcs:
+                desc_lines.append(f"  {name}")
+
+        total_h = len(desc_lines) * self._desc_line_h
+        max_scroll = max(0, total_h - (self._text_area_rect.h - 2 * self._desc_pad))
+        self._desc_scroll = min(max_scroll, self._desc_scroll)
+
+        clip_save = self.screen.get_clip()
+        self.screen.set_clip(self._text_area_rect)
+        y = self._text_area_rect.y + self._desc_pad - self._desc_scroll
+        npc_render_idx = 0
+        for i, line in enumerate(desc_lines):
+            if y + self._desc_line_h > self._text_area_rect.y and y < self._text_area_rect.bottom:
+                is_npc_name = room_npcs and i >= npc_line_start and npc_render_idx < len(room_npcs)
+                if is_npc_name:
+                    color = BRIGHT_GOLD
+                    surf = self.small_font.render(line, True, color)
+                    self.screen.blit(surf, (self._text_area_rect.x + self._desc_pad, y))
+                    # Underline (hyperlink style)
+                    uy = y + surf.get_height() - 1
+                    pygame.draw.line(
+                        self.screen, BRIGHT_GOLD,
+                        (self._text_area_rect.x + self._desc_pad, uy),
+                        (self._text_area_rect.x + self._desc_pad + surf.get_width(), uy),
+                        1,
+                    )
+                    # Store clickable rect
+                    npc_id, _ = room_npcs[npc_render_idx]
+                    link_rect = pygame.Rect(
+                        self._text_area_rect.x + self._desc_pad, y,
+                        surf.get_width(), surf.get_height()
+                    )
+                    self._npc_link_rects.append((link_rect, npc_id))
+                    npc_render_idx += 1
+                else:
                     surf = self.small_font.render(line, True, LIGHT_GRAY)
                     self.screen.blit(surf, (self._text_area_rect.x + self._desc_pad, y))
-                y += self._desc_line_h
-            self.screen.set_clip(clip_save)
+            elif room_npcs and i >= npc_line_start and npc_render_idx < len(room_npcs):
+                # Line is scrolled out of view — still advance index to keep npc_id mapping correct
+                npc_render_idx += 1
+            y += self._desc_line_h
+        self.screen.set_clip(clip_save)

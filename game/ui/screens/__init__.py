@@ -9,3 +9,4 @@ from .abilities_screen import AbilitiesScreen
 from .journal_screen import JournalScreen
 from .map_screen import MapScreen
 from .level_up_screen import LevelUpScreen
+from .social_screen import SocialScreen

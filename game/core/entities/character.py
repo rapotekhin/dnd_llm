@@ -40,6 +40,8 @@ class Character(BaseEntity, CoreCharacter):
     id: Optional[ID] = field(default=None)
     _id_prefix: str = "character"
 
+    icon_image_path: str = r"game/assets/images/character_placeholder_icon.jpg"
+
     def __init__(self, **kwargs):
         # Initialize CoreCharacter (dnd_5e_core) so we get race, class_type, abilities, etc.
         core_fields = {k: v for k, v in kwargs.items() if k in CoreCharacter.__dataclass_fields__}
