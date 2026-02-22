@@ -1,18 +1,17 @@
 """
-Trade screen - BG3-style barter between player and NPC.
+Trade screen – BG3-style barter between player and NPC.
+
+All barter business logic lives in core.gameplay.trade.TradeState.
+This file contains only pygame layout, rendering, and event routing.
 
 Layout (left → right):
-  [Equipment slots] [Player inventory] [Player offer | NPC offer] [NPC inventory]
+  [Equipment slots] [Player inventory] [Player offer | NPC offer] [NPC inventory] [Description]
 
-Top strip: portraits + name/coins row + barter value indicators.
-Bottom strip: coin inputs + Balance button + Barter / Leave buttons.
+Top strip:    portraits + name/coins + barter value indicators.
+Bottom strip: coin inputs + Balance + Barter / Leave buttons.
 
-Drag-and-drop rules:
-  player_inv / player_equip  →  player barter list  (allowed)
-  npc_inv                    →  npc barter list      (allowed)
-  player_barter              →  player_inv/equip     (remove from barter)
-  npc_barter                 →  npc_inv              (remove from barter)
-  Any cross-side drag        →  blocked
+Drag-and-drop rules are enforced by TradeState.handle_drop(); the screen
+only translates pixel coordinates into panel-label strings.
 """
 
 from __future__ import annotations
@@ -24,9 +23,13 @@ from typing import List, Optional, Dict, Tuple, Set, TYPE_CHECKING
 from .base_screen import BaseScreen
 from ..colors import *
 from ..components import Button
-from core import data as game_data
 from core.entities.base import ID
 from core.entities.equipment import GameEquipment
+from core.gameplay.trade import (
+    TradeState,
+    PANEL_EQUIP, PANEL_PLAYER_INV, PANEL_PLAYER_EQUIP,
+    PANEL_PLAYER_BARTER, PANEL_NPC_INV, PANEL_NPC_BARTER,
+)
 from localization import loc
 
 if TYPE_CHECKING:
@@ -47,10 +50,6 @@ SLOTS = [
     ("left_hand",  "inv_left_hand",  ["weapon", "armor"]),
     ("right_hand", "inv_right_hand", ["weapon"]),
 ]
-
-# Panels that belong to each "side" for drop-zone highlighting
-_PLAYER_PANELS = {"equip", "player_inv", "player_barter"}
-_NPC_PANELS    = {"npc_inv", "npc_barter"}
 
 
 def _sc(v: float, s: float) -> int:
@@ -76,23 +75,21 @@ class TradeScreen(BaseScreen):
 
     def __init__(self, screen: pygame.Surface):
         super().__init__(screen)
-        self._npc_id: Optional[ID] = None
+        self._trade = TradeState()
         self._portrait_cache: dict = {}
-
-        # ---- Barter state ----
-        self._player_barter: List[GameEquipment] = []
-        self._npc_barter:    List[GameEquipment] = []
-        self._player_coins_offer: int = 0
-        self._npc_coins_offer:    int = 0
-        self._coin_buf_player: str = ""
-        self._coin_buf_npc:    str = ""
-        self._coin_active: str = ""   # "player" | "npc" | ""
 
         # ---- Scroll ----
         self._player_inv_scroll:    int = 0
         self._npc_inv_scroll:       int = 0
         self._player_barter_scroll: int = 0
         self._npc_barter_scroll:    int = 0
+
+        # ---- Description panel ----
+        # _selected_item is pinned by a click; _hovered_item is a live preview.
+        self._selected_item:   Optional[GameEquipment] = None
+        self._hovered_item:    Optional[GameEquipment] = None
+        self._desc_scroll:     int = 0
+        self._desc_max_scroll: int = 0
 
         # ---- Drag-and-drop ----
         self._drag_item:         Optional[GameEquipment] = None
@@ -114,16 +111,18 @@ class TradeScreen(BaseScreen):
         self._npc_barter_rect     = pygame.Rect(0, 0, 0, 0)
         self._npc_inv_panel       = pygame.Rect(0, 0, 0, 0)
         self._npc_inv_rect        = pygame.Rect(0, 0, 0, 0)
+        self._desc_panel          = pygame.Rect(0, 0, 0, 0)
+        self._desc_content_rect   = pygame.Rect(0, 0, 0, 0)
 
-        self._player_portrait_rect    = pygame.Rect(0, 0, 0, 0)
-        self._npc_portrait_rect       = pygame.Rect(0, 0, 0, 0)
-        self._player_info_rect        = pygame.Rect(0, 0, 0, 0)
-        self._npc_info_rect           = pygame.Rect(0, 0, 0, 0)
-        self._barter_val_player_rect  = pygame.Rect(0, 0, 0, 0)
-        self._barter_val_npc_rect     = pygame.Rect(0, 0, 0, 0)
+        self._player_portrait_rect   = pygame.Rect(0, 0, 0, 0)
+        self._npc_portrait_rect      = pygame.Rect(0, 0, 0, 0)
+        self._player_info_rect       = pygame.Rect(0, 0, 0, 0)
+        self._npc_info_rect          = pygame.Rect(0, 0, 0, 0)
+        self._barter_val_player_rect = pygame.Rect(0, 0, 0, 0)
+        self._barter_val_npc_rect    = pygame.Rect(0, 0, 0, 0)
 
-        self._player_coin_input_rect  = pygame.Rect(0, 0, 0, 0)
-        self._npc_coin_input_rect     = pygame.Rect(0, 0, 0, 0)
+        self._player_coin_input_rect = pygame.Rect(0, 0, 0, 0)
+        self._npc_coin_input_rect    = pygame.Rect(0, 0, 0, 0)
 
         self._balance_btn: Optional[Button] = None
         self._barter_btn:  Optional[Button] = None
@@ -136,18 +135,16 @@ class TradeScreen(BaseScreen):
     # ------------------------------------------------------------------
 
     def set_npc(self, npc_id: ID) -> None:
-        """Initialise screen for a given NPC and reset barter state."""
-        self._npc_id = npc_id
-        self._player_barter.clear()
-        self._npc_barter.clear()
-        self._player_coins_offer = 0
-        self._npc_coins_offer    = 0
-        self._coin_buf_player    = ""
-        self._coin_buf_npc       = ""
-        self._player_inv_scroll  = 0
-        self._npc_inv_scroll     = 0
+        """Initialise screen for a given NPC and reset all state."""
+        self._trade.reset(npc_id)
+        self._player_inv_scroll    = 0
+        self._npc_inv_scroll       = 0
         self._player_barter_scroll = 0
         self._npc_barter_scroll    = 0
+        self._selected_item   = None
+        self._hovered_item    = None
+        self._desc_scroll     = 0
+        self._desc_max_scroll = 0
 
     # ------------------------------------------------------------------
     # LAYOUT
@@ -164,33 +161,32 @@ class TradeScreen(BaseScreen):
         m   = _sc(10, s)
         gap = _sc(8, s)
 
-        # ---- Row heights ----
-        icon_h   = _sc(60, s)
-        info_h   = _sc(26, s)
-        top_h    = icon_h + _sc(4, s) + info_h
+        icon_h = _sc(60, s)
+        info_h = _sc(26, s)
+        top_h  = icon_h + _sc(4, s) + info_h
 
-        btn_h    = _sc(38, s)
-        coin_h   = _sc(34, s)
-        # bottom: coin inputs + balance btn + barter/leave row
-        btm_h    = coin_h + _sc(6, s) + btn_h + _sc(6, s) + btn_h + _sc(4, s)
+        btn_h  = _sc(38, s)
+        coin_h = _sc(34, s)
+        btm_h  = coin_h + _sc(6, s) + btn_h + _sc(6, s) + btn_h + _sc(4, s)
 
         content_top    = m + top_h + _sc(6, s)
         content_bottom = h - m - btm_h
         content_h      = max(40, content_bottom - content_top)
 
-        # ---- Column widths ----
+        # Column widths (desc_w taken from what was previously barter space)
         eq_w     = max(90,  int(w * 0.14))
         inv_w    = max(110, int(w * 0.21))
-        barter_w = max(70,  (w - 2 * m - eq_w - 2 * inv_w - 4 * gap) // 2)
+        desc_w   = max(130, int(w * 0.13))
+        barter_w = max(70,  (w - 2 * m - eq_w - 2 * inv_w - desc_w - 5 * gap) // 2)
 
-        # ---- Column X positions ----
         eq_x      = m
         pl_inv_x  = eq_x     + eq_w     + gap
         brt_pl_x  = pl_inv_x + inv_w    + gap
         brt_npc_x = brt_pl_x + barter_w + gap
         npc_inv_x = brt_npc_x + barter_w + gap
+        desc_x    = npc_inv_x + inv_w    + gap
 
-        # ---- Top strip: portraits ----
+        # Top strip: portraits
         player_sec_w = eq_w + gap + inv_w
         icon_y = m
         self._player_portrait_rect = pygame.Rect(
@@ -200,15 +196,13 @@ class TradeScreen(BaseScreen):
             npc_inv_x + (inv_w - icon_h) // 2, icon_y, icon_h, icon_h
         )
 
-        # ---- Top strip: name/coins + barter value indicators ----
         info_y = icon_y + icon_h + _sc(4, s)
         self._player_info_rect       = pygame.Rect(eq_x,      info_y, player_sec_w, info_h)
         self._npc_info_rect          = pygame.Rect(npc_inv_x, info_y, inv_w,        info_h)
         self._barter_val_player_rect = pygame.Rect(brt_pl_x,  info_y, barter_w,     info_h)
         self._barter_val_npc_rect    = pygame.Rect(brt_npc_x, info_y, barter_w,     info_h)
 
-        # ---- Main content panels ----
-        title_h = _sc(18, s)
+        title_h  = _sc(18, s)
         list_pad = 4
 
         self._equip_panel = pygame.Rect(eq_x, content_top, eq_w, content_h)
@@ -237,17 +231,20 @@ class TradeScreen(BaseScreen):
             inv_w - list_pad * 2 - SB_W - SB_PAD, content_h - title_h - list_pad
         )
 
-        # ---- Bottom: coin inputs ----
+        self._desc_panel = pygame.Rect(desc_x, content_top, desc_w, content_h)
+        self._desc_content_rect = pygame.Rect(
+            desc_x + list_pad, content_top + title_h,
+            desc_w - list_pad * 2 - SB_W - SB_PAD, content_h - title_h - list_pad
+        )
+
         ci_y = content_bottom + _sc(6, s)
         self._player_coin_input_rect = pygame.Rect(brt_pl_x,  ci_y, barter_w, coin_h)
         self._npc_coin_input_rect    = pygame.Rect(brt_npc_x, ci_y, barter_w, coin_h)
 
-        # ---- Bottom: buttons ----
-        bal_y  = ci_y + coin_h + _sc(6, s)
-        act_y  = bal_y + btn_h + _sc(6, s)
+        bal_y = ci_y + coin_h + _sc(6, s)
+        act_y = bal_y + btn_h + _sc(6, s)
 
-        barter_center_x = brt_pl_x + barter_w  # midpoint between the two barter columns
-        barter_zone_w   = barter_w * 2 + gap
+        barter_center_x = brt_pl_x + barter_w
 
         bal_w = _sc(150, s)
         self._balance_btn = Button(
@@ -261,179 +258,44 @@ class TradeScreen(BaseScreen):
         total_act_w  = act_barter_w + act_gap + act_leave_w
         act_x        = barter_center_x - total_act_w // 2
 
-        self._barter_btn = Button(act_x,                        act_y, act_barter_w, btn_h, "Бартер", self.small_font)
-        self._leave_btn  = Button(act_x + act_barter_w + act_gap, act_y, act_leave_w,  btn_h, "Уйти",   self.small_font)
+        self._barter_btn = Button(
+            act_x, act_y, act_barter_w, btn_h, "Бартер", self.small_font
+        )
+        self._leave_btn = Button(
+            act_x + act_barter_w + act_gap, act_y, act_leave_w, btn_h, "Уйти", self.small_font
+        )
 
         self._layout_equip_slots()
 
     def _layout_equip_slots(self) -> None:
         r  = self._equip_panel
         s  = self._scale
-        pad    = _sc(5, s)
-        slot_w = r.w - 2 * pad
-        slot_h = _sc(26, s)
-        row_h  = slot_h + _sc(3, s)
+        pad     = _sc(5, s)
+        slot_w  = r.w - 2 * pad
+        slot_h  = _sc(26, s)
+        row_h   = slot_h + _sc(3, s)
         title_h = _sc(18, s)
         y = r.y + pad + title_h
         for i, (key, _, _) in enumerate(SLOTS):
             self._slot_rects[key] = pygame.Rect(r.x + pad, y + i * row_h, slot_w, slot_h)
 
     # ------------------------------------------------------------------
-    # DATA HELPERS
+    # HIT-TEST HELPERS  (coordinate → panel label)
     # ------------------------------------------------------------------
 
-    def _get_player(self):
-        gs = game_data.game_state
-        return gs.player if gs else None
-
-    def _get_npc(self) -> Optional["NPC"]:
-        gs = game_data.game_state
-        if not gs or not gs.npcs or self._npc_id is None:
-            return None
-        return gs.npcs.get(self._npc_id) or gs.npcs.get(str(self._npc_id))
-
-    def _item_in_slot(self, slot_key: str) -> Optional[GameEquipment]:
-        player = self._get_player()
-        if not player or not getattr(player, "inventory", None):
-            return None
-        for it in player.inventory:
-            if it is None or not isinstance(it, GameEquipment):
-                continue
-            if slot_key == "left_hand"  and it.equipped_left_hand:
-                return it
-            if slot_key == "right_hand" and it.equipped_right_hand:
-                return it
-            if slot_key not in ("left_hand", "right_hand") and it.equipped_slot == slot_key:
-                return it
-        return None
-
-    def _player_inv_items(self) -> List[GameEquipment]:
-        player = self._get_player()
-        if not player or not getattr(player, "inventory", None):
-            return []
-        return [it for it in player.inventory if it is not None and isinstance(it, GameEquipment)]
-
-    def _npc_inv_items(self) -> List[GameEquipment]:
-        npc = self._get_npc()
-        if not npc or not getattr(npc, "inventory", None):
-            return []
-        return [it for it in npc.inventory if it is not None and isinstance(it, GameEquipment)]
-
-    def _player_barter_value(self) -> int:
-        return sum((it.price or 0) for it in self._player_barter) + self._player_coins_offer
-
-    def _npc_barter_value(self) -> int:
-        return sum((it.price or 0) for it in self._npc_barter) + self._npc_coins_offer
-
-    def _is_balanced(self) -> bool:
-        """True when both sides have a non-zero equal value OR at least one item in a list."""
-        pv = self._player_barter_value()
-        nv = self._npc_barter_value()
-        has_items = bool(self._player_barter) or bool(self._npc_barter)
-        return has_items and pv == nv
-
-    # ------------------------------------------------------------------
-    # BARTER LOGIC
-    # ------------------------------------------------------------------
-
-    def _do_balance(self) -> None:
-        """Auto-fill coin fields so total values become equal."""
-        p_items = sum((it.price or 0) for it in self._player_barter)
-        n_items = sum((it.price or 0) for it in self._npc_barter)
-        diff = p_items - n_items
-        if diff > 0:
-            # player offers more goods → NPC compensates with coins
-            self._npc_coins_offer    = diff
-            self._player_coins_offer = 0
-        elif diff < 0:
-            # NPC offers more goods → player pays coins
-            self._player_coins_offer = -diff
-            self._npc_coins_offer    = 0
-        else:
-            self._player_coins_offer = 0
-            self._npc_coins_offer    = 0
-        self._coin_buf_player = str(self._player_coins_offer) if self._player_coins_offer else ""
-        self._coin_buf_npc    = str(self._npc_coins_offer)    if self._npc_coins_offer    else ""
-
-    def _do_barter(self) -> None:
-        """Execute the trade: swap items and transfer coins."""
-        player = self._get_player()
-        npc    = self._get_npc()
-        if not player:
-            return
-
-        player_inv = getattr(player, "inventory", None)
-        npc_inv    = getattr(npc,    "inventory", None) if npc else None
-
-        # Transfer player's offered items → NPC
-        for item in list(self._player_barter):
-            if player_inv:
-                self._inv_remove(player_inv, item)
-            item.equipped            = False
-            item.equipped_left_hand  = False
-            item.equipped_right_hand = False
-            item.equipped_slot       = None
-            if npc_inv is not None:
-                npc_inv.append(item)
-
-        # Transfer NPC's offered items → player
-        for item in list(self._npc_barter):
-            if npc_inv is not None:
-                self._inv_remove(npc_inv, item)
-            if player_inv is not None:
-                player_inv.append(item)
-
-        # Coin transfer
-        player.coins = (getattr(player, "coins", 0) or 0) \
-                       - self._player_coins_offer \
-                       + self._npc_coins_offer
-        if npc is not None:
-            npc.coins = (getattr(npc, "coins", 0) or 0) \
-                        + self._player_coins_offer \
-                        - self._npc_coins_offer
-
-        self._player_barter.clear()
-        self._npc_barter.clear()
-        self._player_coins_offer = 0
-        self._npc_coins_offer    = 0
-        self._coin_buf_player    = ""
-        self._coin_buf_npc       = ""
-
-    # ------------------------------------------------------------------
-    # BARTER LIST IDENTITY HELPERS
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _barter_contains(lst: List[GameEquipment], item: GameEquipment) -> bool:
-        """Check membership by object identity (not __eq__), so duplicates of the
-        same item type can each be added independently."""
-        return any(it is item for it in lst)
-
-    @staticmethod
-    def _barter_remove(lst: List[GameEquipment], item: GameEquipment) -> None:
-        """Remove the first entry that *is* (identity) the given item."""
-        for i, it in enumerate(lst):
-            if it is item:
-                del lst[i]
-                return
-
-    @staticmethod
-    def _inv_remove(inv: list, item: GameEquipment) -> None:
-        """Remove item from inventory by identity, not __eq__."""
-        for i, it in enumerate(inv):
-            if it is item:
-                del inv[i]
-                return
-
-    # ------------------------------------------------------------------
-    # DRAG-AND-DROP HELPERS
-    # ------------------------------------------------------------------
-
-    def _cancel_drag(self) -> None:
-        self._drag_item         = None
-        self._drag_source       = ""
-        self._pending_drag_item = None
-        self._drag_start_pos    = (0, 0)
+    def _panel_at(self, pos: Tuple[int, int]) -> str:
+        """Return the PANEL_* label for the panel under *pos*, or ''."""
+        if self._player_barter_panel.collidepoint(pos):
+            return PANEL_PLAYER_BARTER
+        if self._npc_barter_panel.collidepoint(pos):
+            return PANEL_NPC_BARTER
+        if self._player_inv_panel.collidepoint(pos):
+            return PANEL_PLAYER_INV
+        if self._equip_panel.collidepoint(pos):
+            return PANEL_EQUIP
+        if self._npc_inv_panel.collidepoint(pos):
+            return PANEL_NPC_INV
+        return ""
 
     def _item_at_list(self, pos: Tuple[int, int], rect: pygame.Rect,
                       items: list, scroll: int) -> Optional[GameEquipment]:
@@ -446,46 +308,91 @@ class TradeScreen(BaseScreen):
                 return it
         return None
 
+    def _item_under_mouse(self, pos: Tuple[int, int]) -> Optional[GameEquipment]:
+        """Return the item (if any) under the mouse across all panels."""
+        s      = self._scale
+        line_h = _sc(24, s)
+
+        def _at(rect: pygame.Rect, items: list, scroll: int) -> Optional[GameEquipment]:
+            if not rect.collidepoint(pos):
+                return None
+            for i, it in enumerate(items):
+                ry = rect.y + i * line_h - scroll
+                if ry <= pos[1] < ry + line_h:
+                    return it
+            return None
+
+        t = _at(self._player_inv_rect, self._trade.player_inv_items(), self._player_inv_scroll)
+        if t:
+            return t
+        t = _at(self._npc_inv_rect, self._trade.npc_inv_items(), self._npc_inv_scroll)
+        if t:
+            return t
+        t = _at(self._player_barter_rect, self._trade.player_barter, self._player_barter_scroll)
+        if t:
+            return t
+        t = _at(self._npc_barter_rect, self._trade.npc_barter, self._npc_barter_scroll)
+        if t:
+            return t
+        for slot_key, rect in self._slot_rects.items():
+            if rect.collidepoint(pos):
+                return self._trade.item_in_slot(slot_key)
+        return None
+
+    # ------------------------------------------------------------------
+    # DESCRIPTION HELPERS
+    # ------------------------------------------------------------------
+
+    def _pin_item(self, item: GameEquipment) -> None:
+        if item is not self._selected_item:
+            self._selected_item = item
+            self._desc_scroll   = 0
+
+    def _wrap_desc(self, raw_lines: list, max_w: int) -> List[str]:
+        out: List[str] = []
+        for raw in (raw_lines if isinstance(raw_lines, list) else [str(raw_lines)]):
+            words = str(raw or "").split()
+            if not words:
+                out.append("")
+                continue
+            cur = ""
+            for word in words:
+                trial = (cur + " " + word).strip() if cur else word
+                if self.tiny_font.size(trial)[0] <= max_w:
+                    cur = trial
+                else:
+                    if cur:
+                        out.append(cur)
+                    cur = word
+            if cur:
+                out.append(cur)
+        return out or ["—"]
+
+    # ------------------------------------------------------------------
+    # DRAG-AND-DROP HELPERS
+    # ------------------------------------------------------------------
+
+    def _cancel_drag(self) -> None:
+        self._drag_item         = None
+        self._drag_source       = ""
+        self._pending_drag_item = None
+        self._drag_start_pos    = (0, 0)
+
     def _handle_drop(self, pos: Tuple[int, int]) -> None:
         item = self._drag_item
-        src  = self._drag_source
         if not item:
             return
-
-        # ── Drop onto player barter list ──────────────────────────────
-        if self._player_barter_panel.collidepoint(pos):
-            if src in ("player_inv", "player_equip") and not self._barter_contains(self._player_barter, item):
-                if src == "player_equip":
-                    item.equipped            = False
-                    item.equipped_left_hand  = False
-                    item.equipped_right_hand = False
-                    item.equipped_slot       = None
-                self._player_barter.append(item)
-            return
-
-        # ── Drop onto NPC barter list ─────────────────────────────────
-        if self._npc_barter_panel.collidepoint(pos):
-            if src == "npc_inv" and not self._barter_contains(self._npc_barter, item):
-                self._npc_barter.append(item)
-            return
-
-        # ── Drop player barter item back to player area ───────────────
-        if self._player_inv_panel.collidepoint(pos) or self._equip_panel.collidepoint(pos):
-            if src == "player_barter" and self._barter_contains(self._player_barter, item):
-                self._barter_remove(self._player_barter, item)
-            return
-
-        # ── Drop NPC barter item back to NPC inventory ────────────────
-        if self._npc_inv_panel.collidepoint(pos):
-            if src == "npc_barter" and self._barter_contains(self._npc_barter, item):
-                self._barter_remove(self._npc_barter, item)
-            return
+        target = self._panel_at(pos)
+        if target:
+            self._trade.handle_drop(item, self._drag_source, target)
 
     # ------------------------------------------------------------------
     # HANDLE EVENTS
     # ------------------------------------------------------------------
 
     def handle_event(self, event: pygame.event.Event):
+        trade = self._trade
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 if self._drag_item:
@@ -494,19 +401,19 @@ class TradeScreen(BaseScreen):
                 return "social"
 
             # Coin field keyboard input
-            if self._coin_active == "player":
+            if trade.coin_active == "player":
                 if event.key == pygame.K_BACKSPACE:
-                    self._coin_buf_player = self._coin_buf_player[:-1]
-                elif event.unicode.isdigit() and len(self._coin_buf_player) < 9:
-                    self._coin_buf_player += event.unicode
-                self._player_coins_offer = int(self._coin_buf_player) if self._coin_buf_player else 0
+                    trade.coin_buf_player = trade.coin_buf_player[:-1]
+                elif event.unicode.isdigit() and len(trade.coin_buf_player) < 9:
+                    trade.coin_buf_player += event.unicode
+                trade.player_coins_offer = int(trade.coin_buf_player) if trade.coin_buf_player else 0
                 return None
-            if self._coin_active == "npc":
+            if trade.coin_active == "npc":
                 if event.key == pygame.K_BACKSPACE:
-                    self._coin_buf_npc = self._coin_buf_npc[:-1]
-                elif event.unicode.isdigit() and len(self._coin_buf_npc) < 9:
-                    self._coin_buf_npc += event.unicode
-                self._npc_coins_offer = int(self._coin_buf_npc) if self._coin_buf_npc else 0
+                    trade.coin_buf_npc = trade.coin_buf_npc[:-1]
+                elif event.unicode.isdigit() and len(trade.coin_buf_npc) < 9:
+                    trade.coin_buf_npc += event.unicode
+                trade.npc_coins_offer = int(trade.coin_buf_npc) if trade.coin_buf_npc else 0
                 return None
             return None
 
@@ -516,59 +423,63 @@ class TradeScreen(BaseScreen):
 
             # Coin input focus
             if self._player_coin_input_rect.collidepoint(pos):
-                self._coin_active = "player"
+                trade.coin_active = "player"
                 return None
             if self._npc_coin_input_rect.collidepoint(pos):
-                self._coin_active = "npc"
+                trade.coin_active = "npc"
                 return None
-            self._coin_active = ""
+            trade.coin_active = ""
 
             # Buttons
             if self._leave_btn and self._leave_btn.is_clicked(pos):
                 return "social"
             if self._balance_btn and self._balance_btn.is_clicked(pos):
-                self._do_balance()
+                trade.balance()
                 return None
-            if self._barter_btn and self._barter_btn.is_clicked(pos) and self._is_balanced():
-                self._do_barter()
+            if self._barter_btn and self._barter_btn.is_clicked(pos) and trade.is_balanced():
+                trade.execute_barter()
                 return None
 
             # ── Start drag from player inventory ──────────────────────
-            pl_items = self._player_inv_items()
+            pl_items = trade.player_inv_items()
             it = self._item_at_list(pos, self._player_inv_rect, pl_items, self._player_inv_scroll)
             if it:
+                self._pin_item(it)
                 self._pending_drag_item = it
-                self._drag_source       = "player_inv"
+                self._drag_source       = PANEL_PLAYER_INV
                 self._drag_start_pos    = pos
                 self._drag_item         = None
                 return None
 
             # ── Start drag from NPC inventory ─────────────────────────
-            npc_items = self._npc_inv_items()
+            npc_items = trade.npc_inv_items()
             it = self._item_at_list(pos, self._npc_inv_rect, npc_items, self._npc_inv_scroll)
             if it:
+                self._pin_item(it)
                 self._pending_drag_item = it
-                self._drag_source       = "npc_inv"
+                self._drag_source       = PANEL_NPC_INV
                 self._drag_start_pos    = pos
                 self._drag_item         = None
                 return None
 
             # ── Start drag from player barter list ────────────────────
             it = self._item_at_list(pos, self._player_barter_rect,
-                                    self._player_barter, self._player_barter_scroll)
+                                    trade.player_barter, self._player_barter_scroll)
             if it:
+                self._pin_item(it)
                 self._pending_drag_item = it
-                self._drag_source       = "player_barter"
+                self._drag_source       = PANEL_PLAYER_BARTER
                 self._drag_start_pos    = pos
                 self._drag_item         = None
                 return None
 
             # ── Start drag from NPC barter list ───────────────────────
             it = self._item_at_list(pos, self._npc_barter_rect,
-                                    self._npc_barter, self._npc_barter_scroll)
+                                    trade.npc_barter, self._npc_barter_scroll)
             if it:
+                self._pin_item(it)
                 self._pending_drag_item = it
-                self._drag_source       = "npc_barter"
+                self._drag_source       = PANEL_NPC_BARTER
                 self._drag_start_pos    = pos
                 self._drag_item         = None
                 return None
@@ -576,10 +487,11 @@ class TradeScreen(BaseScreen):
             # ── Start drag from equipment slot ────────────────────────
             for slot_key, rect in self._slot_rects.items():
                 if rect.collidepoint(pos):
-                    item = self._item_in_slot(slot_key)
+                    item = self._trade.item_in_slot(slot_key)
                     if item:
+                        self._pin_item(item)
                         self._pending_drag_item = item
-                        self._drag_source       = "player_equip"
+                        self._drag_source       = PANEL_PLAYER_EQUIP
                         self._drag_start_pos    = pos
                         self._drag_item         = None
                     return None
@@ -595,6 +507,11 @@ class TradeScreen(BaseScreen):
                         self._drag_item = self._pending_drag_item
             if self._drag_item:
                 self._drag_pos = event.pos
+            new_hover = self._item_under_mouse(event.pos)
+            if new_hover is not self._hovered_item:
+                self._hovered_item = new_hover
+                if self._selected_item is None:
+                    self._desc_scroll = 0
             return None
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -609,26 +526,30 @@ class TradeScreen(BaseScreen):
             line_h = _sc(24, s)
             step   = line_h * 3
 
-            def _clamp_scroll(cur: int, count: int, rect_h: int, dy: int) -> int:
+            def _clamp(cur: int, count: int, rect_h: int, dy: int) -> int:
                 max_s = max(0, count * line_h - rect_h)
                 return max(0, min(max_s, cur + (-step if dy > 0 else step)))
 
             if self._player_inv_rect.collidepoint(mpos):
-                self._player_inv_scroll = _clamp_scroll(
-                    self._player_inv_scroll, len(self._player_inv_items()),
+                self._player_inv_scroll = _clamp(
+                    self._player_inv_scroll, len(trade.player_inv_items()),
                     self._player_inv_rect.height, event.y)
             elif self._npc_inv_rect.collidepoint(mpos):
-                self._npc_inv_scroll = _clamp_scroll(
-                    self._npc_inv_scroll, len(self._npc_inv_items()),
+                self._npc_inv_scroll = _clamp(
+                    self._npc_inv_scroll, len(trade.npc_inv_items()),
                     self._npc_inv_rect.height, event.y)
             elif self._player_barter_rect.collidepoint(mpos):
-                self._player_barter_scroll = _clamp_scroll(
-                    self._player_barter_scroll, len(self._player_barter),
+                self._player_barter_scroll = _clamp(
+                    self._player_barter_scroll, len(trade.player_barter),
                     self._player_barter_rect.height, event.y)
             elif self._npc_barter_rect.collidepoint(mpos):
-                self._npc_barter_scroll = _clamp_scroll(
-                    self._npc_barter_scroll, len(self._npc_barter),
+                self._npc_barter_scroll = _clamp(
+                    self._npc_barter_scroll, len(trade.npc_barter),
                     self._npc_barter_rect.height, event.y)
+            elif self._desc_panel.collidepoint(mpos) and self._desc_max_scroll > 0:
+                delta = -step if event.y > 0 else step
+                self._desc_scroll = max(0, min(self._desc_max_scroll,
+                                               self._desc_scroll + delta))
             return None
 
         return None
@@ -684,8 +605,6 @@ class TradeScreen(BaseScreen):
     def _draw_item_list(self, panel: pygame.Rect, list_rect: pygame.Rect,
                         title: str, items: List[GameEquipment],
                         scroll: int, in_barter: Set[int]) -> None:
-        """Inventory list with title; items in barter highlighted gold.
-        in_barter is a set of id()s for identity-safe membership check."""
         s      = self._scale
         line_h = _sc(24, s)
         pygame.draw.rect(self.screen, MODAL_BG, panel, border_radius=6)
@@ -712,7 +631,6 @@ class TradeScreen(BaseScreen):
 
     def _draw_barter_panel(self, panel: pygame.Rect, list_rect: pygame.Rect,
                            title: str, items: List[GameEquipment], scroll: int) -> None:
-        """Barter offer list with slightly darker background."""
         s      = self._scale
         line_h = _sc(24, s)
         pygame.draw.rect(self.screen, (22, 20, 10), panel, border_radius=6)
@@ -737,7 +655,7 @@ class TradeScreen(BaseScreen):
 
     def _draw_equip_panel(self) -> None:
         s = self._scale
-        pl_barter_ids = {id(it) for it in self._player_barter}
+        pl_barter_ids = {id(it) for it in self._trade.player_barter}
         pygame.draw.rect(self.screen, MODAL_BG, self._equip_panel, border_radius=6)
         pygame.draw.rect(self.screen, GOLD,     self._equip_panel, width=1, border_radius=6)
         t = self.tiny_font.render("Экипировка", True, GOLD)
@@ -747,7 +665,7 @@ class TradeScreen(BaseScreen):
             r = self._slot_rects.get(slot_key)
             if not r:
                 continue
-            item      = self._item_in_slot(slot_key)
+            item      = self._trade.item_in_slot(slot_key)
             in_barter = item is not None and id(item) in pl_barter_ids
             bg         = (55, 44, 8) if in_barter else DARK_GRAY
             border_col = BRIGHT_GOLD if in_barter else (GOLD if item else LIGHT_GRAY)
@@ -761,6 +679,83 @@ class TradeScreen(BaseScreen):
                 col   = (50, 50, 50)
             ls = self.tiny_font.render(label, True, col)
             self.screen.blit(ls, ls.get_rect(midleft=(r.x + 4, r.centery)))
+
+    def _draw_desc_panel(self) -> None:
+        s       = self._scale
+        panel   = self._desc_panel
+        content = self._desc_content_rect
+
+        pinned     = self._selected_item is not None
+        item       = self._selected_item if pinned else self._hovered_item
+        border_col = BRIGHT_GOLD if pinned else GOLD
+
+        pygame.draw.rect(self.screen, MODAL_BG,   panel, border_radius=6)
+        pygame.draw.rect(self.screen, border_col, panel, width=1, border_radius=6)
+        title_surf = self.tiny_font.render("Описание", True, border_col)
+        self.screen.blit(title_surf, (panel.x + 4, panel.y + 2))
+
+        if not item:
+            for i, txt in enumerate(("Кликни или наведи", "на предмет")):
+                h = self.tiny_font.render(txt, True, (80, 80, 80))
+                self.screen.blit(h, h.get_rect(
+                    center=(panel.centerx, panel.centery - _sc(10, s) + i * _sc(18, s))
+                ))
+            return
+
+        # Item name
+        name_surf = self.small_font.render(
+            (item.name or item.index or "?")[:22], True, BRIGHT_GOLD
+        )
+        self.screen.blit(name_surf, (content.x, content.y))
+        name_h = name_surf.get_height() + _sc(4, s)
+
+        # Cost line
+        cost_y   = content.y + name_h
+        cost_obj = getattr(item, "cost", None)
+        cost_str = ""
+        if cost_obj is not None:
+            qty  = getattr(cost_obj, "quantity", None)
+            unit = getattr(cost_obj, "unit", "gp") or "gp"
+            cost_str = f"{qty} {unit}" if qty is not None else ""
+        if cost_str:
+            cost_surf = self.tiny_font.render(cost_str, True, GOLD)
+            self.screen.blit(cost_surf, (content.x, cost_y))
+            cost_h = cost_surf.get_height() + _sc(3, s)
+        else:
+            cost_h = 0
+
+        # Description text with scroll
+        desc_line_h = _sc(17, s)
+        text_top    = cost_y + cost_h
+        text_h      = panel.bottom - text_top - _sc(4, s)
+
+        raw     = item.desc or ["—"]
+        wrapped = self._wrap_desc(raw, content.w)
+        total_h = len(wrapped) * desc_line_h
+        max_s   = max(0, total_h - text_h)
+        self._desc_max_scroll = max_s
+        self._desc_scroll     = min(self._desc_scroll, max_s)
+
+        clip_rect  = pygame.Rect(panel.x, text_top, panel.w, text_h)
+        saved_clip = self.screen.get_clip()
+        self.screen.set_clip(clip_rect)
+        for i, line in enumerate(wrapped):
+            yy = text_top + i * desc_line_h - self._desc_scroll
+            if yy + desc_line_h < text_top or yy > panel.bottom:
+                continue
+            ls = self.tiny_font.render(line, True, LIGHT_GRAY)
+            self.screen.blit(ls, (content.x, yy))
+        self.screen.set_clip(saved_clip)
+
+        if max_s > 0:
+            sb_x    = panel.right - SB_W - SB_PAD
+            track   = pygame.Rect(sb_x, text_top + 2, SB_W, text_h - 4)
+            vis_r   = text_h / max(1, total_h)
+            thumb_h = max(16, int(track.h * vis_r))
+            thumb_y = track.y + int((self._desc_scroll / max_s) * (track.h - thumb_h))
+            pygame.draw.rect(self.screen, DARK_GRAY, track, border_radius=3)
+            pygame.draw.rect(self.screen, GOLD,
+                             pygame.Rect(sb_x, thumb_y, SB_W, thumb_h), border_radius=3)
 
     def _draw_coin_input(self, rect: pygame.Rect, buf: str,
                          value: int, active: bool) -> None:
@@ -783,8 +778,9 @@ class TradeScreen(BaseScreen):
         self.screen.fill(BLACK)
         self._layout_equip_slots()
 
-        player = self._get_player()
-        npc    = self._get_npc()
+        trade  = self._trade
+        player = trade.get_player()
+        npc    = trade.get_npc()
 
         player_name  = getattr(player, "name",            "Игрок") if player else "Игрок"
         npc_name     = getattr(npc,    "name",            "???")   if npc    else "???"
@@ -793,24 +789,24 @@ class TradeScreen(BaseScreen):
         player_icon  = getattr(player, "icon_image_path", "")     if player else ""
         npc_icon     = getattr(npc,    "icon_image_path", "")     if npc    else ""
 
-        # ── Portraits ────────────────────────────────────────────────
-        pl_icon_sz  = (self._player_portrait_rect.w, self._player_portrait_rect.h)
-        npc_icon_sz = (self._npc_portrait_rect.w,    self._npc_portrait_rect.h)
+        # Portraits
+        pl_sz  = (self._player_portrait_rect.w, self._player_portrait_rect.h)
+        npc_sz = (self._npc_portrait_rect.w,    self._npc_portrait_rect.h)
         self._draw_portrait(self._player_portrait_rect,
-                            self._load_portrait(player_icon, pl_icon_sz) if player_icon else None)
+                            self._load_portrait(player_icon, pl_sz) if player_icon else None)
         self._draw_portrait(self._npc_portrait_rect,
-                            self._load_portrait(npc_icon, npc_icon_sz) if npc_icon else None)
+                            self._load_portrait(npc_icon, npc_sz) if npc_icon else None)
 
-        # ── Name + coins info ─────────────────────────────────────────
+        # Name + coins
         pi = self.small_font.render(f"{player_name}  ·  {player_coins} cp", True, GOLD)
         self.screen.blit(pi, pi.get_rect(center=self._player_info_rect.center))
         ni = self.small_font.render(f"{npc_name}  ·  {npc_coins} cp", True, GOLD)
         self.screen.blit(ni, ni.get_rect(center=self._npc_info_rect.center))
 
-        # ── Barter value indicators ───────────────────────────────────
-        balanced = self._is_balanced()
-        pv = self._player_barter_value()
-        nv = self._npc_barter_value()
+        # Barter value indicators
+        balanced  = trade.is_balanced()
+        pv        = trade.player_barter_value()
+        nv        = trade.npc_barter_value()
         val_col_p = BRIGHT_GOLD if balanced else (WHITE if pv > 0 else LIGHT_GRAY)
         val_col_n = BRIGHT_GOLD if balanced else (WHITE if nv > 0 else LIGHT_GRAY)
         pvs = self.small_font.render(f"↓ {pv} cp", True, val_col_p)
@@ -818,49 +814,51 @@ class TradeScreen(BaseScreen):
         self.screen.blit(pvs, pvs.get_rect(center=self._barter_val_player_rect.center))
         self.screen.blit(nvs, nvs.get_rect(center=self._barter_val_npc_rect.center))
 
-        # ── Equipment panel ───────────────────────────────────────────
+        # Equipment panel
         self._draw_equip_panel()
 
-        # ── Player inventory ──────────────────────────────────────────
-        pl_items   = self._player_inv_items()
-        pl_offered = {id(it) for it in self._player_barter}
+        # Player inventory
+        pl_items   = trade.player_inv_items()
+        pl_offered = {id(it) for it in trade.player_barter}
         self._draw_item_list(
             self._player_inv_panel, self._player_inv_rect,
             "Инвентарь", pl_items, self._player_inv_scroll, pl_offered
         )
 
-        # ── NPC inventory ─────────────────────────────────────────────
-        npc_items   = self._npc_inv_items()
-        npc_offered = {id(it) for it in self._npc_barter}
+        # NPC inventory
+        npc_items   = trade.npc_inv_items()
+        npc_offered = {id(it) for it in trade.npc_barter}
         self._draw_item_list(
             self._npc_inv_panel, self._npc_inv_rect,
             f"Инвентарь {npc_name[:14]}", npc_items, self._npc_inv_scroll, npc_offered
         )
 
-        # ── Barter lists ──────────────────────────────────────────────
+        # Barter lists
         self._draw_barter_panel(
             self._player_barter_panel, self._player_barter_rect,
-            "← Ваше предложение", self._player_barter, self._player_barter_scroll
+            "← Ваше предложение", trade.player_barter, self._player_barter_scroll
         )
         self._draw_barter_panel(
             self._npc_barter_panel, self._npc_barter_rect,
-            f"{npc_name[:12]} →", self._npc_barter, self._npc_barter_scroll
+            f"{npc_name[:12]} →", trade.npc_barter, self._npc_barter_scroll
         )
 
-        # ── Coin inputs ───────────────────────────────────────────────
-        self._draw_coin_input(self._player_coin_input_rect,
-                              self._coin_buf_player, self._player_coins_offer,
-                              self._coin_active == "player")
-        self._draw_coin_input(self._npc_coin_input_rect,
-                              self._coin_buf_npc, self._npc_coins_offer,
-                              self._coin_active == "npc")
+        # Description panel
+        self._draw_desc_panel()
 
-        # ── Buttons ───────────────────────────────────────────────────
+        # Coin inputs
+        self._draw_coin_input(self._player_coin_input_rect,
+                              trade.coin_buf_player, trade.player_coins_offer,
+                              trade.coin_active == "player")
+        self._draw_coin_input(self._npc_coin_input_rect,
+                              trade.coin_buf_npc, trade.npc_coins_offer,
+                              trade.coin_active == "npc")
+
+        # Buttons
         if self._balance_btn:
             self._balance_btn.draw(self.screen)
         if self._barter_btn:
             self._barter_btn.draw(self.screen)
-            # Dim overlay when barter not yet balanced
             if not balanced:
                 dim = pygame.Surface(
                     (self._barter_btn.rect.w, self._barter_btn.rect.h), pygame.SRCALPHA)
@@ -869,21 +867,21 @@ class TradeScreen(BaseScreen):
         if self._leave_btn:
             self._leave_btn.draw(self.screen)
 
-        # ── Drag ghost + drop-zone highlights ────────────────────────
+        # Drag ghost + drop-zone highlights
         if self._drag_item:
-            # Which panels are valid drop targets for this source?
             valid_ids: Set[int] = set()
-            if self._drag_source in ("player_inv", "player_equip"):
+            if self._drag_source in (PANEL_PLAYER_INV, PANEL_PLAYER_EQUIP):
                 valid_ids = {id(self._player_barter_panel)}
-            elif self._drag_source == "player_barter":
+            elif self._drag_source == PANEL_PLAYER_BARTER:
                 valid_ids = {id(self._player_inv_panel), id(self._equip_panel)}
-            elif self._drag_source == "npc_inv":
+            elif self._drag_source == PANEL_NPC_INV:
                 valid_ids = {id(self._npc_barter_panel)}
-            elif self._drag_source == "npc_barter":
+            elif self._drag_source == PANEL_NPC_BARTER:
                 valid_ids = {id(self._npc_inv_panel)}
 
             for panel in (self._equip_panel, self._player_inv_panel,
-                          self._player_barter_panel, self._npc_barter_panel, self._npc_inv_panel):
+                          self._player_barter_panel, self._npc_barter_panel,
+                          self._npc_inv_panel):
                 is_valid = id(panel) in valid_ids
                 color    = (60, 200, 80) if is_valid else (200, 60, 60)
                 surf     = pygame.Surface((panel.w, panel.h), pygame.SRCALPHA)
@@ -891,7 +889,6 @@ class TradeScreen(BaseScreen):
                 self.screen.blit(surf, panel.topleft)
                 pygame.draw.rect(self.screen, color, panel, width=2, border_radius=6)
 
-            # Ghost label follows cursor
             label = (self._drag_item.name or self._drag_item.index or "?")[:26]
             gs    = self.small_font.render(label, True, WHITE)
             gb    = pygame.Surface((gs.get_width() + 14, gs.get_height() + 6), pygame.SRCALPHA)
