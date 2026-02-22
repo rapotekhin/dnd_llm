@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 from .llm_engine.api_manager import APIManager
 from .settings.settings_manager import SettingsManager
 from . import data as game_data
-from ui.screens import TitleScreen, SettingsScreen, CharacterCreationScreen, MainScreen, InventoryScreen, CharacterScreen, AbilitiesScreen, JournalScreen, MapScreen, LevelUpScreen, SocialScreen
+from ui.screens import TitleScreen, SettingsScreen, CharacterCreationScreen, MainScreen, InventoryScreen, CharacterScreen, AbilitiesScreen, JournalScreen, MapScreen, LevelUpScreen, SocialScreen, TradeScreen
 from localization import loc
 
 
@@ -78,6 +78,7 @@ class Game:
         self.screens["journal"] = JournalScreen(self.screen)
         self.screens["map"] = MapScreen(self.screen)
         self.screens["social"] = SocialScreen(self.screen)
+        self.screens["trade"] = TradeScreen(self.screen)
         # Level up screen is created on demand (needs player)
         self.screens["level_up"] = None
         
@@ -186,6 +187,12 @@ class Game:
             if social is not None:
                 social.set_npc(npc_id)
             self.switch_screen("social")
+        elif isinstance(result, str) and result.startswith("trade:"):
+            npc_id = result[len("trade:"):]
+            trade = self.screens.get("trade")
+            if trade is not None:
+                trade.set_npc(npc_id)
+            self.switch_screen("trade")
         elif result in self.screens:
             self.switch_screen(result)
 

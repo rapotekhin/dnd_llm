@@ -9,6 +9,10 @@
   "rarity": {
     "name": "Common"
   },
+  "cost": {
+    "quantity": 50,
+    "unit": "gp"
+  },
   "variants": [],
   "variant": true,
   "desc": [

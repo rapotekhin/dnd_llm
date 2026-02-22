@@ -101,6 +101,15 @@ class InventoryScreen(BaseScreen):
         self._desc_rect = pygame.Rect(0, 0, 0, 0)
         self._sort_rects: Dict[str, pygame.Rect] = {}
 
+        # Description scroll
+        self._desc_scroll: int = 0
+
+        # Drag-and-drop state
+        self._drag_item: Optional[GameEquipment] = None
+        self._drag_pos: Tuple[int, int] = (0, 0)
+        self._drag_start_pos: Tuple[int, int] = (0, 0)
+        self._drag_threshold: int = 6  # px before drag is considered started
+
     def _player(self):
         gs = game_data.game_state
         return gs.player if gs else None
@@ -206,6 +215,27 @@ class InventoryScreen(BaseScreen):
                 cand.append(it)
         return cand
 
+    def _wrap_desc(self, raw_lines: list, max_w: int) -> List[str]:
+        """Word-wrap description lines to fit *max_w* pixels."""
+        out: List[str] = []
+        for raw in (raw_lines if isinstance(raw_lines, list) else [str(raw_lines)]):
+            words = str(raw or "").split()
+            if not words:
+                out.append("")
+                continue
+            cur = ""
+            for w in words:
+                trial = (cur + " " + w).strip() if cur else w
+                if self.small_font.size(trial)[0] <= max_w:
+                    cur = trial
+                else:
+                    if cur:
+                        out.append(cur)
+                    cur = w
+            if cur:
+                out.append(cur)
+        return out or ["—"]
+
     def _compute_ac(self) -> int:
         player = self._player()
         if not player:
@@ -249,8 +279,27 @@ class InventoryScreen(BaseScreen):
             item.equipped_slot = slot_key
         self._equip_modal_slot = None
 
+    def _cancel_drag(self) -> None:
+        self._drag_item = None
+
+    def _item_at_inv_pos(self, pos: Tuple[int, int]) -> Optional[GameEquipment]:
+        """Return the inventory item under screen position, or None."""
+        s = self._scale
+        if not self._inv_list_rect.collidepoint(pos):
+            return None
+        items = self._sorted_inventory()
+        line_h = _sc(24, s)
+        for i, (eq, _) in enumerate(items):
+            ry = self._inv_list_rect.y + i * line_h - self._inv_list_scroll
+            if ry <= pos[1] < ry + line_h:
+                return eq
+        return None
+
     def handle_event(self, event: pygame.event.Event) -> Union[str, None]:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            if self._drag_item:
+                self._cancel_drag()
+                return None
             if self._equip_modal_slot:
                 self._equip_modal_slot = None
                 return None
@@ -302,6 +351,8 @@ class InventoryScreen(BaseScreen):
             self._layout_inv()
             if not self._player():
                 return None
+
+            # Click on slot — open modal (only when not dragging)
             for slot_key, rect in self._slot_rects.items():
                 if rect.collidepoint(pos):
                     cand = self._equippable_for_slot(slot_key)
@@ -313,29 +364,67 @@ class InventoryScreen(BaseScreen):
                 if rect.collidepoint(pos):
                     self._sort_by = sort_key
                     return None
-            # Inventory list click: which row contains click Y?
+            # Inventory list: record drag start position; select item
             if self._inv_list_rect.collidepoint(pos):
-                items = self._sorted_inventory()
-                line_h = _sc(24, s)
-                my = pos[1]
-                for i, (eq, qty) in enumerate(items):
-                    ry = self._inv_list_rect.y + i * line_h - self._inv_list_scroll
-                    if ry <= my < ry + line_h:
-                        self._selected_item = eq
-                        return None
+                eq = self._item_at_inv_pos(pos)
+                if eq:
+                    self._selected_item = eq
+                    self._desc_scroll = 0
+                    self._drag_start_pos = pos
+                    self._drag_item = None  # actual drag starts after threshold in MOUSEMOTION
+                return None
+
+        if event.type == pygame.MOUSEMOTION:
+            if event.buttons[0] and self._drag_start_pos != (0, 0):
+                dx = event.pos[0] - self._drag_start_pos[0]
+                dy = event.pos[1] - self._drag_start_pos[1]
+                if (dx * dx + dy * dy) >= self._drag_threshold ** 2:
+                    # Threshold crossed — start drag with the item that was under the initial click
+                    if self._drag_item is None and self._selected_item is not None:
+                        self._drag_item = self._selected_item
+            if self._drag_item:
+                self._drag_pos = event.pos
+            return None
+
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self._drag_start_pos = (0, 0)
+            if self._drag_item:
+                # Attempt drop onto a slot
+                self._layout_slots()
+                for slot_key, rect in self._slot_rects.items():
+                    if rect.collidepoint(event.pos):
+                        _, _, cats = next((x for x in SLOTS if x[0] == slot_key), (None, None, []))
+                        if cats and _can_equip_in_slot(self._drag_item, slot_key, cats):
+                            self._equip_to_slot(slot_key, self._drag_item)
+                        # If not compatible — silently cancel (no equip)
+                        break
+                self._cancel_drag()
+            return None
 
         if event.type == pygame.MOUSEWHEEL:
             self._layout_inv()
-            if self._inv_list_rect.collidepoint(pygame.mouse.get_pos()):
+            mpos = pygame.mouse.get_pos()
+            step = 48
+            if self._inv_list_rect.collidepoint(mpos):
                 line_h = _sc(24, s)
                 items = self._sorted_inventory()
                 total_h = len(items) * line_h
                 max_scroll = max(0, total_h - self._inv_list_rect.height)
-                step = 48
                 if event.y > 0:
                     self._inv_list_scroll = max(0, self._inv_list_scroll - step)
                 else:
                     self._inv_list_scroll = min(max_scroll, self._inv_list_scroll + step)
+            elif self._desc_rect.collidepoint(mpos) and self._selected_item:
+                desc_line_h = _sc(20, s)
+                raw = self._selected_item.desc or ["—"]
+                wrapped = self._wrap_desc(raw, self._desc_rect.w - 12 - SB_W - SB_PAD)
+                total_desc_h = len(wrapped) * desc_line_h
+                content_h = self._desc_rect.h - _sc(26, s)  # subtract title row
+                max_desc_scroll = max(0, total_desc_h - content_h)
+                if event.y > 0:
+                    self._desc_scroll = max(0, self._desc_scroll - step)
+                else:
+                    self._desc_scroll = min(max_desc_scroll, self._desc_scroll + step)
             return None
 
         return None
@@ -453,12 +542,41 @@ class InventoryScreen(BaseScreen):
         desc_title = self.small_font.render(loc["inv_description"], True, GOLD)
         self.screen.blit(desc_title, (self._desc_rect.x + 6, self._desc_rect.y + 4))
         if self._selected_item:
-            lines = self._selected_item.desc or ["—"]
-            yy = self._desc_rect.y + 26
-            for line in (lines if isinstance(lines, list) else [str(lines)])[:8]:
-                ls = self.small_font.render((line or "")[:60], True, LIGHT_GRAY)
-                self.screen.blit(ls, (self._desc_rect.x + 6, yy))
-                yy += 20
+            title_h   = _sc(26, s)
+            desc_line_h = _sc(20, s)
+            text_x    = self._desc_rect.x + 6
+            text_max_w = self._desc_rect.w - 12 - SB_W - SB_PAD
+            content_top = self._desc_rect.y + title_h
+            content_h   = self._desc_rect.h - title_h
+
+            raw     = self._selected_item.desc or ["—"]
+            wrapped = self._wrap_desc(raw, text_max_w)
+            total_h = len(wrapped) * desc_line_h
+            max_desc_scroll = max(0, total_h - content_h)
+            self._desc_scroll = min(self._desc_scroll, max_desc_scroll)
+
+            desc_clip = pygame.Rect(self._desc_rect.x, content_top,
+                                    self._desc_rect.w, content_h)
+            saved_clip = self.screen.get_clip()
+            self.screen.set_clip(desc_clip)
+            for i, line in enumerate(wrapped):
+                yy = content_top + i * desc_line_h - self._desc_scroll
+                if yy + desc_line_h < content_top or yy > self._desc_rect.bottom:
+                    continue
+                ls = self.small_font.render(line, True, LIGHT_GRAY)
+                self.screen.blit(ls, (text_x, yy))
+            self.screen.set_clip(saved_clip)
+
+            # Scrollbar (only when content overflows)
+            if max_desc_scroll > 0:
+                sb_x    = self._desc_rect.right - SB_W - SB_PAD
+                track   = pygame.Rect(sb_x, content_top + 2, SB_W, content_h - 4)
+                vis_ratio = content_h / max(1, total_h)
+                thumb_h = max(20, int(track.h * vis_ratio))
+                thumb_y = track.y + int((self._desc_scroll / max_desc_scroll) * (track.h - thumb_h))
+                pygame.draw.rect(self.screen, DARK_GRAY, track, border_radius=3)
+                pygame.draw.rect(self.screen, GOLD,
+                                 pygame.Rect(sb_x, thumb_y, SB_W, thumb_h), border_radius=3)
 
         # Back, coins
         self.back_btn.draw(self.screen)
@@ -468,7 +586,28 @@ class InventoryScreen(BaseScreen):
         co = self.font.render(f"{loc['inv_coins']}: {coins} cp", True, GOLD)
         self.screen.blit(co, co.get_rect(center=self.coins_rect.center))
 
-        # 5. Modals (draw after everything else, with overlay that darkens background)
+        # 5. Drag-and-drop: slot highlights + ghost item (before modal overlay)
+        if self._drag_item:
+            for slot_key, r in self._slot_rects.items():
+                _, _, cats = next((x for x in SLOTS if x[0] == slot_key), (None, None, []))
+                compatible = bool(cats) and _can_equip_in_slot(self._drag_item, slot_key, cats)
+                highlight_color = (60, 180, 80) if compatible else (180, 60, 60)
+                surf = pygame.Surface((r.w, r.h), pygame.SRCALPHA)
+                surf.fill((*highlight_color, 80))
+                self.screen.blit(surf, r.topleft)
+                pygame.draw.rect(self.screen, highlight_color, r, width=2, border_radius=4)
+
+            # Ghost label following cursor
+            ghost_label = (self._drag_item.name or self._drag_item.index or "?")[:24]
+            ghost_surf = self.small_font.render(ghost_label, True, WHITE)
+            ghost_bg = pygame.Surface((ghost_surf.get_width() + 12, ghost_surf.get_height() + 6), pygame.SRCALPHA)
+            ghost_bg.fill((30, 30, 30, 200))
+            gx = self._drag_pos[0] + 14
+            gy = self._drag_pos[1] - ghost_bg.get_height() // 2
+            self.screen.blit(ghost_bg, (gx, gy))
+            self.screen.blit(ghost_surf, (gx + 6, gy + 3))
+
+        # 6. Modals (draw after everything else, with overlay that darkens background)
         if self._equip_modal_slot:
             mw, mh = _sc(400, s), _sc(300, s)
             mr = pygame.Rect(w // 2 - mw // 2, h // 2 - mh // 2, mw, mh)

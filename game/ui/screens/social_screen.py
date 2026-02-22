@@ -287,8 +287,10 @@ class SocialScreen(BaseScreen):
 
             # Action buttons
             if self._action_buttons[0].is_clicked(pos):
-                # Trade — placeholder
-                self._chat_lines.append("[Система]: Торговля пока не реализована.")
+                # Trade — open trade screen for current NPC
+                if self._npc_id is not None:
+                    return f"trade:{self._npc_id}"
+                self._chat_lines.append("[Система]: Не выбран NPC для торговли.")
                 self._chat_scroll = self._chat_max_scroll()
                 return None
             if self._action_buttons[1].is_clicked(pos):
