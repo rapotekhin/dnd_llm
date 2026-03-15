@@ -128,11 +128,18 @@ class TradeScreen(BaseScreen):
         self._barter_btn:  Optional[Button] = None
         self._leave_btn:   Optional[Button] = None
 
+        # Where to go when the player clicks "Уйти"
+        self._return_to: str = "main"
+
         self._build_layout()
 
     # ------------------------------------------------------------------
     # PUBLIC API
     # ------------------------------------------------------------------
+
+    def set_return_to(self, screen_name: str) -> None:
+        """Set the destination when the player clicks 'Уйти' (e.g. 'social' or 'main')."""
+        self._return_to = screen_name
 
     def set_npc(self, npc_id: ID) -> None:
         """Initialise screen for a given NPC and reset all state."""
@@ -432,7 +439,7 @@ class TradeScreen(BaseScreen):
 
             # Buttons
             if self._leave_btn and self._leave_btn.is_clicked(pos):
-                return "social"
+                return self._return_to
             if self._balance_btn and self._balance_btn.is_clicked(pos):
                 trade.balance()
                 return None

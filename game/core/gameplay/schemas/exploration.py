@@ -1,4 +1,3 @@
-from functools import partial
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional, TypedDict
 
@@ -24,8 +23,23 @@ class ActionList(BaseModel):
 AgentActionType = Literal["exploration", "combat", "social", "trade", "change_current_room"]
 
 
+class ActionMetadata(BaseModel):
+    """
+    Supplemental data required for screen transitions.
+    The LLM must populate the relevant field when action != "exploration".
+    """
+    npc_id: Optional[str] = Field(
+        default=None,
+        description="ID of the NPC to open (required when action is 'social' or 'trade').",
+    )
+    room_id: Optional[str] = Field(
+        default=None,
+        description="ID of the destination room (required when action is 'change_current_room').",
+    )
+
+
 class AgentResolutionOutput(BaseModel):
-    """Структурированный ответ агента: наррация, следующее действие, опциональный вопрос игроку."""
+    """Структурированный ответ агента: наррация, следующее действие, опциональный вопрос и метаданные перехода."""
 
     narration: str = Field(description="Текст наррации / итоговая сцена для игрока.")
     action: AgentActionType = Field(
@@ -35,10 +49,19 @@ class AgentResolutionOutput(BaseModel):
         default=None,
         description="Вопрос игроку, если нужны уточнения. Пустая строка или null — вопроса нет.",
     )
+    metadata: ActionMetadata = Field(
+        default_factory=ActionMetadata,
+        description="Метаданные для перехода: npc_id (social/trade) или room_id (change_current_room).",
+    )
 
     @property
     def has_question(self) -> bool:
         return bool(self.question_to_player and self.question_to_player.strip())
+
+
+class LocationSummary(BaseModel):
+    """Краткое саммари взаимодействий игрока в локации (используется для обновления location_history_summary)."""
+    summary: str = Field(description="Краткое (2-4 предложения) описание произошедшего в локации.")
 
 
 class RollOptions(BaseModel):

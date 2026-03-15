@@ -49,14 +49,17 @@ class APIManager:
 
         # 🔥 Главный клиент LLM
         self.llm = ChatOpenAI(
-            model="google/gemini-2.5-flash-lite-preview-09-2025",  # меняй при желании
+            # model="google/gemini-2.5-flash-lite-preview-09-2025",  # меняй при желании
+            model="google/gemini-3.1-flash-lite-preview",
             # model="z-ai/glm-4.7-flash",
             # model="openai/gpt-oss-120b",
-            # model="stepfun/step-3.5-flash:free",
+            # model="stepfun/step-3.5-flash",
             # model="nvidia/nemotron-3-nano-30b-a3b",
             # model="qwen/qwen3-30b-a3b-thinking-2507",
             # model="qwen/qwen3-235b-a22b-2507",
             # model="x-ai/grok-4.1-fast",
+            # model="openrouter/free",
+            # model="qwen/qwen3.5-flash-02-23",
             api_key=self.api_key,
             base_url="https://openrouter.ai/api/v1",
             temperature=0.35
@@ -130,16 +133,25 @@ class APIManager:
         """
         Pydantic AI model configured like self.llm (OpenRouter, same api_key, model).
         Use this so all LLM settings come from APIManager.
+
+        IMPORTANT: We create a fresh httpx.AsyncClient each time instead of using
+        pydantic-ai's global cached_async_http_client. The cached client binds itself
+        to the asyncio event loop of the first thread that uses it (exploration thread).
+        If a second thread (social, trade, etc.) then calls run_sync, its event loop is
+        different, causing a permanent hang on the HTTP request.  A fresh client per
+        model instance avoids this cross-thread event-loop conflict.
         """
         try:
             from pydantic_ai.models.openrouter import OpenRouterModel
             from pydantic_ai.providers.openrouter import OpenRouterProvider
+            import httpx
         except ImportError:
             raise ImportError(
                 "pydantic-ai[openrouter] required for exploration: pip install 'pydantic-ai[openrouter]'"
             )
 
-        provider = OpenRouterProvider(api_key=self.api_key)
+        http_client = httpx.AsyncClient(timeout=httpx.Timeout(120.0))
+        provider = OpenRouterProvider(api_key=self.api_key, http_client=http_client)
         return OpenRouterModel(self.model_name, provider=provider)
 
     # --------------------------------------------------

@@ -133,11 +133,13 @@ class Game:
                 if self.current_screen:
                     result = self.current_screen.handle_event(event)
                     self._handle_screen_result(result)
-                    
-            # Update
+
+            # Update (may return transition from background threads)
             if self.current_screen:
-                self.current_screen.update()
-            
+                update_result = self.current_screen.update()
+                if update_result:
+                    self._handle_screen_result(update_result)
+
             # Draw
             if self.current_screen:
                 self.current_screen.draw()
@@ -149,6 +151,33 @@ class Game:
         pygame.quit()
         sys.exit()
         
+    def _enter_main(self) -> None:
+        """Switch to main screen and (re)start the exploration background thread."""
+        self.switch_screen("main")
+        main = self.screens.get("main")
+        if main is not None and hasattr(main, "start_exploration"):
+            main.start_exploration(self.api_manager)
+
+    def _enter_social(self, npc_id: str) -> None:
+        """Switch to social screen and start/resume the social background thread."""
+        social = self.screens.get("social")
+        if social is not None:
+            if hasattr(social, "set_npc"):
+                social.set_npc(npc_id)
+            if hasattr(social, "start_social"):
+                social.start_social(self.api_manager)
+        self.switch_screen("social")
+
+    def _enter_trade(self, npc_id: str, return_to: str = "main") -> None:
+        """Switch to trade screen, setting the NPC and the return destination."""
+        trade = self.screens.get("trade")
+        if trade is not None:
+            if hasattr(trade, "set_npc"):
+                trade.set_npc(npc_id)
+            if hasattr(trade, "set_return_to"):
+                trade.set_return_to(return_to)
+        self.switch_screen("trade")
+
     def _handle_screen_result(self, result: Union[str, None, "Character"]):
         """Handle commands returned from screens"""
         if result is None:
@@ -160,39 +189,57 @@ class Game:
             if gs is not None:
                 gs.player = result
             print(f"Character '{result.name}' created and ready to play!")
-            self.switch_screen("main")
+            self._enter_main()
             return
             
         if result == "exit":
             self.running = False
-        elif result == "new_game":
+
+        elif result in ("new_game",):
             self.switch_screen("character_creation")
-        elif result == "continue":
-            self.switch_screen("main")
+
+        elif result in ("continue", "main"):
+            self._enter_main()
+
         elif result == "save_game":
             pass  # Handled by TitleScreen save modal
+
         elif result == "load_game":
-            self.switch_screen("main")  # Load done in TitleScreen modal
+            self._enter_main()
+
+        elif result == "restart_exploration":
+            # Room already updated by exploration.py; restart exploration in main
+            self._enter_main()
+
         elif result == "level_up":
-            # Create level up screen on demand (needs player)
             try:
                 self.screens["level_up"] = LevelUpScreen(self.screen)
                 self.switch_screen("level_up")
             except Exception as e:
                 print(f"Error creating level up screen: {e}")
                 self.switch_screen("character")
+
+        elif result == "social":
+            # Return to social screen after trade (thread is paused, resume it)
+            social = self.screens.get("social")
+            if social is not None and hasattr(social, "start_social"):
+                social.start_social(self.api_manager)
+            self.switch_screen("social")
+
         elif isinstance(result, str) and result.startswith("social:"):
             npc_id = result[len("social:"):]
-            social = self.screens.get("social")
-            if social is not None:
-                social.set_npc(npc_id)
-            self.switch_screen("social")
+            self._enter_social(npc_id)
+
+        elif result == "exploration":
+            # Returned from social to exploration
+            self._enter_main()
+
         elif isinstance(result, str) and result.startswith("trade:"):
             npc_id = result[len("trade:"):]
-            trade = self.screens.get("trade")
-            if trade is not None:
-                trade.set_npc(npc_id)
-            self.switch_screen("trade")
+            # Determine return destination based on where trade was triggered from
+            return_to = "social" if self.current_screen_name == "social" else "main"
+            self._enter_trade(npc_id, return_to)
+
         elif result in self.screens:
             self.switch_screen(result)
 

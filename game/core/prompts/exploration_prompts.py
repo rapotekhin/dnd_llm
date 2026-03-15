@@ -21,6 +21,14 @@ AGENT_SYSTEM_PROMPT = """
 Используй инструменты когда это необходимо.
 Если действие требует броска на проверку характеристик или успешности — ОБЯЗАТЕЛЬНО вызывай roll_dice с difficulty_class.
 
+ВАЖНО — формат параметра expression для roll_dice:
+- expression ВСЕГДА должен быть нотацией кубиков: "1d20", "1d20+3", "2d6+2" и т.д.
+- НИКОГДА не передавай название проверки ("wisdom check", "Perception" и т.п.)
+- Для проверок характеристик/навыков: используй "1d20+<модификатор>" где модификатор —
+  числовое значение из раздела "Характеристики" выше (например WIS +1 → "1d20+1").
+- Для спасбросков: аналогично, возьми модификатор нужной характеристики.
+- Для урона: используй кубики оружия/заклинания, например "1d8+2".
+
 ======================
 ПЕРСОНАЖ ИГРОКА
 Описание игрока: {character_description}
@@ -43,19 +51,19 @@ AGENT_SYSTEM_PROMPT = """
 ТЕКУЩАЯ ЛОКАЦИЯ
 Название локации: {location_name}
 Тип места: {location_type}/{location_subtype}
-Общее описание локации: {location_description} 
+Общее описание локации: {location_description}
 
 Название текущей комнаты: {room_name}
 Описание текущей комнаты (места, где непосредственно находится игрок): {room_description}
 
-Связанные комнаты и их локации (если игрок в них пойдёт, то это действие change_current_room):
-{connected_rooms_and_locations}
+Связанные комнаты (если игрок идёт туда — это действие change_current_room):
+{connected_rooms_with_ids}
 
 Расположение:
 Область/Название: {location_region}/{location_city}
 
 НПС в комнате (если пусто, то их нет):
-{npcs_in_room}
+{npcs_in_room_with_ids}
 
 Сокровища в комнате (если пусто, то их нет):
 {treasures_in_room}
@@ -78,9 +86,9 @@ AGENT_SYSTEM_PROMPT = """
 1. Мир живой — НПС имеют мотивации.
 2. Локация не меняется без причины.
 3. Игрок не знает скрытые квесты и скрытые сокровища.
-4. Если игрок ищет — назначай проверку Внимательности.
-5. Если игрок действует социально — назначай проверки Харизмы.
-6. Если игрок делает что-то опасное — назначай проверки или спасброски.
+4. Если игрок ищет — назначай проверку Внимательности: roll_dice(expression="1d20+<WIS_mod>", difficulty_class=...).
+5. Если игрок действует социально — назначай проверки Харизмы: roll_dice(expression="1d20+<CHA_mod>", difficulty_class=...).
+6. Если игрок делает что-то опасное — назначай проверки или спасброски: roll_dice(expression="1d20+<mod>", difficulty_class=...).
 7. Если информации нет в контексте — НЕ выдумывай, а логически развивай сцену.
 
 Ты — арбитр правил и мира, но не противник игрока.
@@ -136,12 +144,22 @@ AGENT_RESOLUTION_INSTRUCTIONS = """
 - торговля / покупка / продажа → trade
 - Если игрок остаётся в текущей комнате и продолжает взаимодействие в ней → exploration
 
+Правила заполнения metadata (ОБЯЗАТЕЛЬНО для переходов):
+- action = "social"  → metadata.npc_id = id НПС из списка НПС в комнате
+- action = "trade"   → metadata.npc_id = id НПС из списка НПС в комнате
+- action = "change_current_room" → metadata.room_id = id комнаты из списка связанных комнат
+- action = "exploration" или "combat" → metadata может быть пустым
+
 Ответь СТРОГО одним валидным JSON-объектом с полями:
 - "narration" (string): текст наррации / итоговая сцена для игрока.
 - "action" (string): одно из "exploration" | "combat" | "social" | "trade" | "change_current_room".
 - "question_to_player" (string | null): вопрос игроку при необходимости уточнений; null — вопроса нет.
+- "metadata" (object): {"npc_id": "..." | null, "room_id": "..." | null}
 
-Пример: {"narration": "...", "action": "exploration", "question_to_player": null}
+Примеры:
+{"narration": "Ты исследуешь комнату.", "action": "exploration", "question_to_player": null, "metadata": {"npc_id": null, "room_id": null}}
+{"narration": "Таверна встречает тебя шумом.", "action": "social", "question_to_player": null, "metadata": {"npc_id": "npc_001", "room_id": null}}
+{"narration": "Ты идёшь к выходу.", "action": "change_current_room", "question_to_player": null, "metadata": {"npc_id": null, "room_id": "room_002"}}
 """.strip()
 
 
@@ -165,3 +183,29 @@ def prompt_agent_resolution(
 """.strip()
 
 
+# =======================
+# Саммари локации
+# =======================
+
+def prompt_generate_location_summary(
+    past_summary: str,
+    session_history: List[str],
+    location_name: str,
+) -> str:
+    """Промпт для генерации/обновления краткого саммари взаимодействий в локации."""
+    history_text = "\n".join(session_history) if session_history else "(нет данных)"
+    return f"""
+Ты — архивариус, составляющий краткие записи о событиях в локации.
+
+Локация: {location_name}
+
+Прошлое саммари (из предыдущих посещений):
+{past_summary or "(пусто — первое посещение)"}
+
+Новые события этого посещения:
+{history_text}
+
+Составь НОВОЕ краткое саммари (2-4 предложения), которое объединяет прошлые события и новые.
+Включи только важные факты: кого встретил игрок, что произошло, что изменилось.
+Не упоминай механику игры (броски, проверки и т.п.).
+""".strip()
