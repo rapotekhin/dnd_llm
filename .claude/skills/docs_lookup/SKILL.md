@@ -58,7 +58,8 @@ docs/
 │       ├── 0001-llm-as-gm-not-engine.md      — главный принцип
 │       ├── 0002-pickle-saves.md              — почему Pickle
 │       ├── 0003-pydantic-ai-over-langchain.md
-│       └── 0004-pygame-prototype.md
+│       ├── 0004-pygame-prototype.md
+│       └── 0005-langchain-and-streamlit-removal.md
 │
 └── production/                               ← When
     ├── roadmap.md                            — этапы M1–M6

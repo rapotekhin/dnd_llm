@@ -121,8 +121,7 @@ from core.data import game_state
 
 - **Pygame** ≥ 2.6 — UI
 - **Pydantic AI** ≥ 1.0 — LLM-агенты с инструментами
-- **LangChain** — пока используется в `APIManager` для format-вывода. **Легаси, выпиливается** ([adr/0003](adr/0003-pydantic-ai-over-langchain.md))
-- **OpenAI SDK** — клиент для OpenRouter
+- **OpenAI SDK** — клиент для OpenRouter (косвенно через Pydantic AI)
 - **Logfire** — трейсинг (рассматривается возврат на Langfuse)
 - **dnd-5e-core** — правила и данные D&D (внешний git-pip-пакет)
 - **DnD-5th-Edition-API** — расширенные данные D&D (внешний sibling-репозиторий)

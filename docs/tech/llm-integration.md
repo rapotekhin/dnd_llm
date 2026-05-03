@@ -17,7 +17,6 @@
 | **OpenRouter** | Провайдер моделей (дефолт: `google/gemini-3.1-flash-lite-preview`) |
 | **Pydantic** | Схемы структурированного вывода |
 | **Logfire** | Трейсинг (опционально, по `LOGFIRE_TOKEN`) |
-| **LangChain** | Легаси, остался в `APIManager.generate_with_format`. Выпиливается. |
 
 ## APIManager
 
@@ -26,9 +25,8 @@
 Главные методы:
 - `get_pydantic_ai_model()` — даёт модель для Pydantic AI агентов
 - `validate_key()` — проверяет ключ OpenRouter, читает баланс
-- `generate_with_format(prompt, schema)` — **легаси через LangChain**, используется кое-где, постепенно мигрируется
 
-Дефолтная модель — в коде (хардкод). См. список закомментированных альтернатив в файле.
+Идентификатор модели OpenRouter — константа `APIManager.DEFAULT_MODEL_ID` (можно заменить при необходимости в коде).
 
 ## Pydantic AI агенты
 
@@ -107,11 +105,9 @@ roll_dice(
 
 Все системные промпты — в `game/core/prompts/`:
 
-- `exploration_prompts.py` — самый большой
+- `exploration_prompts.py`
 - `social_prompts.py`
-- `npc_creation_prompts.py` — для будущей автогенерации
-- `location_creation_prompts.py` — то же
-- `qwest_creation_prompts.py` — для квестов (опечатка в имени → техдолг)
+- в планах при автогенерации контента — отдельные модули (например `quest_creation_prompts.py` для квестов)
 
 ### Структура системного промпта (exploration)
 

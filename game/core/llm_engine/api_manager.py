@@ -1,29 +1,23 @@
 """
-API Manager for OpenRouter (Gemini via LangChain)
+API Manager for OpenRouter — ключ, баланс, общая конфигурация модели для Pydantic AI.
 """
 
 import os
 import requests
 from pathlib import Path
-from typing import Optional, Type, Any, Dict
+from typing import Optional
 
 from dotenv import load_dotenv, set_key
-from langchain_core.runnables import RunnableConfig
 from localization import loc
-from pydantic import BaseModel
-
-from langchain_openai import ChatOpenAI
-from langchain.output_parsers import PydanticOutputParser
-from langchain.prompts import ChatPromptTemplate
 
 # Загружаем .env до чтения LANGFUSE_* — иначе при импорте модуля ключи ещё пустые
 _ENV_FILE = Path(__file__).resolve().parent.parent.parent.parent / ".env"
 load_dotenv(_ENV_FILE)
 
-# Инициализация Langfuse для трейсинга
-# Langfuse использует env: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST
+# Инициализация Langfuse для трейсинга (опционально)
 try:
     from langfuse import Langfuse
+
     _pk = os.getenv("LANGFUSE_PUBLIC_KEY")
     _sk = os.getenv("LANGFUSE_SECRET_KEY")
     _host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
@@ -33,9 +27,12 @@ try:
 except ImportError:
     LANGFUSE_AVAILABLE = False
 
+
 class APIManager:
     OPENROUTER_CREDITS_URL = "https://openrouter.ai/api/v1/credits"
     ENV_FILE = Path(__file__).parent.parent.parent.parent / ".env"
+
+    DEFAULT_MODEL_ID = "google/gemini-3.1-flash-lite-preview"
 
     def __init__(self):
         self.api_key: Optional[str] = None
@@ -43,27 +40,10 @@ class APIManager:
         self.usage: float = 0.0
         self.is_valid: bool = False
         self.error_message: str = ""
+        self._model_id: str = self.DEFAULT_MODEL_ID
 
         load_dotenv(self.ENV_FILE)
         self._load_key_from_env()
-
-        # 🔥 Главный клиент LLM
-        self.llm = ChatOpenAI(
-            # model="google/gemini-2.5-flash-lite-preview-09-2025",  # меняй при желании
-            model="google/gemini-3.1-flash-lite-preview",
-            # model="z-ai/glm-4.7-flash",
-            # model="openai/gpt-oss-120b",
-            # model="stepfun/step-3.5-flash",
-            # model="nvidia/nemotron-3-nano-30b-a3b",
-            # model="qwen/qwen3-30b-a3b-thinking-2507",
-            # model="qwen/qwen3-235b-a22b-2507",
-            # model="x-ai/grok-4.1-fast",
-            # model="openrouter/free",
-            # model="qwen/qwen3.5-flash-02-23",
-            api_key=self.api_key,
-            base_url="https://openrouter.ai/api/v1",
-            temperature=0.35
-        )
 
     # --------------------------------------------------
     # API KEY MANAGEMENT
@@ -126,13 +106,12 @@ class APIManager:
 
     @property
     def model_name(self) -> str:
-        """Model ID used by LLM (e.g. x-ai/grok-4.1-fast). Single source of truth."""
-        return getattr(self.llm, "model", None) or getattr(self.llm, "model_name", None) or "x-ai/grok-4.1-fast"
+        """Model ID used by LLM (e.g. google/gemini-...). Single source of truth."""
+        return self._model_id
 
     def get_pydantic_ai_model(self):
         """
-        Pydantic AI model configured like self.llm (OpenRouter, same api_key, model).
-        Use this so all LLM settings come from APIManager.
+        Pydantic AI model configured for OpenRouter (same api_key, model as APIManager).
 
         IMPORTANT: We create a fresh httpx.AsyncClient each time instead of using
         pydantic-ai's global cached_async_http_client. The cached client binds itself
@@ -153,50 +132,6 @@ class APIManager:
         http_client = httpx.AsyncClient(timeout=httpx.Timeout(120.0))
         provider = OpenRouterProvider(api_key=self.api_key, http_client=http_client)
         return OpenRouterModel(self.model_name, provider=provider)
-
-    # --------------------------------------------------
-    # 🔥 LLM GENERATION (STRUCTURED)
-    # --------------------------------------------------
-
-    def generate_with_format(
-        self,
-        prompt: str,
-        schema: Type[BaseModel],
-        config: Optional[RunnableConfig] = None,
-        system_prompt: Optional[str] = None,
-    ) -> BaseModel:
-        """
-        Генерация ответа с Pydantic структурой.
-        config: RunnableConfig (callbacks, metadata) для Langfuse и др.
-        system_prompt: если задан — уходит отдельным system-сообщением в начале запроса.
-          Так OpenRouter/Gemini могут закэшировать этот блок (KV cache) и считать меньше за повторы.
-        """
-
-        parser = PydanticOutputParser(pydantic_object=schema)
-        format_instructions = parser.get_format_instructions()
-
-        if system_prompt:
-            # System отдельно → бэкенд может кэшировать (prompt caching), платим меньше за повторы
-            prompt_template = ChatPromptTemplate.from_messages([
-                ("system", system_prompt),
-                ("human", "{prompt}\n\n{format_instructions}"),
-            ])
-        else:
-            prompt_template = ChatPromptTemplate.from_template(
-                "{prompt}\n\n{format_instructions}"
-            )
-
-        chain = prompt_template | self.llm | parser
-
-        result = chain.invoke(
-            {
-                "prompt": prompt,
-                "format_instructions": format_instructions,
-            },
-            config=config or {},
-        )
-
-        return result
 
     # --------------------------------------------------
     # STATUS OUTPUT
