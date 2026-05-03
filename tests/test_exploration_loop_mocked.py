@@ -26,6 +26,8 @@ class _FakeRun:
 
 
 class _FakeAgent:
+    model = "stub-model"
+
     def __init__(self, outputs: list):
         self._outputs = list(outputs)
 

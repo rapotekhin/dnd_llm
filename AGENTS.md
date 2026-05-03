@@ -41,6 +41,9 @@ game/
   ui/screens/                      12 screens, all extend BaseScreen
   assets/ru/*.jsonl                start locations and NPCs
   localization/                    loc.t("key") for translated strings
+tests/
+  conftest.py                      pytest path setup + patched_game_state fixture
+  helpers.py                       GameEquipment factory for trade/inventory tests
 ```
 
 ## Conventions
