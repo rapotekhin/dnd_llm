@@ -1,5 +1,12 @@
 # Release Notes
 
+## Version 0.2.6
+
+### Исправления
+
+- **Зависимости**
+  - В `requirements.txt` для `FantasyNameGenerator` указана версия с PyPI — `0.0.5`; ранее зафиксированная `0.1.2` на PyPI не существует, из‑за чего падали `pip install` и CI
+
 ## Version 0.2.5
 
 ### Технические улучшения
