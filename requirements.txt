@@ -14,4 +14,4 @@ logfire>=0.1.0
 pydantic>=2.5.3
 requests>=2.31.0
 
-FantasyNameGenerator==0.1.2
+FantasyNameGenerator==0.0.5

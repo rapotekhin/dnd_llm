@@ -132,6 +132,8 @@ from core.data import game_state
 
 Установка зависимостей разработчика и команды запуска: раздел **«Тесты»** в [README.md](../../README.md). Файлы: `requirements-dev.txt`, `pytest.ini`.
 
+На **GitHub** при pull request в `main` или `master` запускается workflow **CI** ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)): сборка окружения на Ubuntu (Python 3.11), `pytest`, и отдельная проверка ([`.github/scripts/check_pr.py`](../../.github/scripts/check_pr.py)), что в диффе PR обновлены `__version__` в `game/__init__.py` и корневой `RELEASE_NOTES.md`.
+
 Парсинг запасного текстового/JSON-ответа режима исследования (без импорта клиента ЛЛМ) сосредоточен в `game/core/gameplay/agent_resolution_parse.py` и покрыт отдельными тестами.
 
 ## Точки расширения
