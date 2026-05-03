@@ -1,0 +1,37 @@
+---
+description: Use this rule after making meaningful code changes that affect documented behavior — adding/removing a screen, gameplay system, LLM tool, prompt, entity class, save format, dependency, or architectural decision. Also use when the user explicitly asks to update the docs ("обнови доку", "update docs", "синхронизируй документацию", "запиши решение в ADR"). Trigger when adding a new system to /game/core/gameplay/, when adding a new screen to /game/ui/screens/, when changing the LLM model or provider, when changing the save format, or when removing legacy code (e.g. /app, LangChain).
+globs:
+  - "game/core/gameplay/**"
+  - "game/core/tools/**"
+  - "game/core/prompts/**"
+  - "game/core/entities/**"
+  - "game/ui/screens/**"
+  - "game/core/llm_engine/**"
+  - "game/core/data/game_state_base.py"
+alwaysApply: false
+---
+
+# docs_updater
+
+After meaningful code changes affecting documented behavior, update `/docs/` and (if relevant) the root README.
+
+The full procedure (code → document mapping, when to write a new ADR, what to update vs. leave alone, anti-patterns) is in [.claude/skills/docs_updater/SKILL.md](mdc:.claude/skills/docs_updater/SKILL.md).
+
+Read that file when this rule triggers, then follow it.
+
+**Code → docs cheat sheet:**
+
+| Code change | Doc to update |
+|---|---|
+| New/removed screen | `docs/design/ux/screens-flow.md`, `docs/tech/architecture.md` |
+| New/removed gameplay mode | new file in `docs/design/systems/`, update `docs/design/overview.md` |
+| New LLM tool (`tools/`) | `docs/tech/llm-integration.md` |
+| Changed system prompt | `docs/tech/llm-integration.md` + relevant `docs/design/systems/<mode>.md` |
+| New/changed entity class | `docs/tech/data-models.md` |
+| LLM model/provider change | `docs/tech/llm-integration.md` + `README.md` |
+| Save format change | `docs/tech/data-models.md` + new ADR superseding `0002` |
+| Removing legacy | scrub mentions everywhere + mark in `docs/production/backlog.md` |
+| New architectural decision | new ADR in `docs/tech/adr/NNNN-<topic>.md` |
+| Roadmap pillar closed | mark `[x]` in `docs/production/roadmap.md`, move item in `backlog.md` |
+
+**Do NOT** update `RELEASE_NOTES.md` here — that's a separate flow (see `release_notes_updater` rule).
