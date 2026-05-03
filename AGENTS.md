@@ -4,7 +4,7 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 
 ## Project
 
-**Between the Rolls** — single-player D&D 5e RPG with an LLM Dungeon Master. Pygame UI, Python, Russian-first localization. Active code in `game/`. `app/` is legacy Streamlit (slated for deletion).
+**Between the Rolls** — single-player D&D 5e RPG with an LLM Dungeon Master. Pygame UI, Python, Russian-first localization. Active code in `game/`.
 
 ## Documentation
 
@@ -31,7 +31,7 @@ game/
     entities/                      Character, NPC, Location, Room, Item, Treasure
     gameplay/                      exploration, social_interaction, trade, combat (empty)
     gameplay/schemas/              Pydantic output schemas for LLM
-    llm_engine/api_manager.py      OpenRouter client, default model hardcoded here
+    llm_engine/api_manager.py      OpenRouter key/balance, Pydantic AI model factory
     prompts/                       system prompts for each mode
     tools/                         LLM tools (RollDiceTool, RuleDbLookupTool)
     builders/                      Character/Location/NPC/LevelUp builders
@@ -47,7 +47,7 @@ game/
 - Access global state with `from core.data import game_state`.
 - LLM output is always Pydantic-typed (schemas in `game/core/gameplay/schemas/`). Don't parse free text.
 - Game text, prompts, lore — Russian. Code identifiers — English.
-- For new LLM agents use **Pydantic AI** (`pydantic_ai.Agent`). LangChain in `APIManager.generate_with_format` is legacy — don't extend it.
+- For new LLM agents use **Pydantic AI** (`pydantic_ai.Agent`). OpenRouter и модель настраиваются через `APIManager.get_pydantic_ai_model()`.
 
 ## Where to add things
 

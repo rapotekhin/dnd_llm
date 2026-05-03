@@ -7,28 +7,7 @@
 
 ## 🔥 Критический техдолг
 
-### Удалить legacy `app/` (Streamlit)
-
-**Что:** папка `app/` — старый Streamlit-прототип до перехода на Pygame.  
-**Действие:** удалить целиком + почистить упоминания в `README.md`.  
-**Зачем:** не путает новых разработчиков.
-
-### Выпилить LangChain
-
-**Что:** LangChain используется в `APIManager.generate_with_format()`. Везде остальном — Pydantic AI.  
-**Действие:** перевести оставшиеся вызовы на Pydantic AI, удалить LangChain из requirements.  
-**См.:** [tech/adr/0003-pydantic-ai-over-langchain.md](../tech/adr/0003-pydantic-ai-over-langchain.md)
-
-### Синхронизация локализаций RU ↔ EN
-
-**Что:** в `game/localization/` есть ключи, которые есть в RU, но отсутствуют или устарели в EN.  
-**Действие:** написать скрипт для проверки + ручная синхронизация.  
-**Зачем:** EN-режим частично сломан.
-
-### Опечатка в `qwest_creation_prompts.py`
-
-**Что:** должно быть `quest_creation_prompts.py`.  
-**Действие:** переименовать файл + обновить импорты.
+Сейчас **нет открытых блокирующих пунктов** в этой категории.
 
 ---
 
@@ -159,6 +138,10 @@
 
 ## ✅ Закрытые
 
+- ~~Legacy `app/` (Streamlit)~~ → удалена из репозитория
+- ~~LangChain в `APIManager`~~ → выпилен; см. [adr/0005](../tech/adr/0005-langchain-and-streamlit-removal.md) (исходное решение о Pydantic AI — [adr/0003](../tech/adr/0003-pydantic-ai-over-langchain.md))
+- ~~Проверка паритета ключей RU ↔ EN~~ → скрипт `scripts/check_localization.py`; текущие `ru.xml` / `en.xml` совпадают по наборам id
+- ~~Имя `qwest_creation_prompts.py`~~ → файла в кодовой базе не было; при добавлении промптов квестов использовать **`quest_creation_prompts.py`**
 - ~~Перенос UI с Streamlit на Pygame~~ → done
 - ~~Z-order и перекрытия в UI~~ → done в v0.2.0
 - ~~Поднятие уровня (level up)~~ → done в v0.2.0

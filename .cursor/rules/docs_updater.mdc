@@ -15,7 +15,7 @@ alwaysApply: false
 
 After meaningful code changes affecting documented behavior, update `/docs/` and (if relevant) the root README.
 
-The full procedure (code → document mapping, when to write a new ADR, what to update vs. leave alone, anti-patterns) is in [.claude/skills/docs_updater/SKILL.md](mdc:.claude/skills/docs_updater/SKILL.md).
+The full procedure (code → document mapping, **when to add a new ADR vs edit docs**, immutability of accepted ADRs, what to update vs. leave alone, anti-patterns) is in [.claude/skills/docs_updater/SKILL.md](mdc:.claude/skills/docs_updater/SKILL.md).
 
 Read that file when this rule triggers, then follow it.
 

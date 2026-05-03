@@ -1,9 +1,8 @@
 """
-D&D 5e dice rolling tool. OOP pattern for reuse in LangChain and Pydantic AI.
+D&D 5e dice rolling tool. OOP pattern for reuse in Pydantic AI agents.
 """
 
 import dice
-from core.gameplay.schemas.exploration import RollOptions
 
 
 def _to_int(r) -> int:
@@ -74,35 +73,13 @@ def roll_dice(
     has_disadvantage: bool = False,
     difficulty_class: int | None = None,
 ) -> dict[str, int | bool | None]:
-    """Standalone function for LangChain @tool or direct calls."""
+    """Standalone function for direct calls and agent tools."""
     return _roll_dice_tool.run(
         expression=expression,
         has_advantage=has_advantage or False,
         has_disadvantage=has_disadvantage or False,
         difficulty_class=difficulty_class,
     )
-
-
-# LangChain tool (for backward compatibility if needed)
-try:
-    from langchain_core.tools import tool
-
-    @tool(args_schema=RollOptions)
-    def roll_dice_langchain(
-        expression: str,
-        has_advantage: bool | None = None,
-        has_disadvantage: bool | None = None,
-        difficulty_class: int | None = None,
-    ) -> dict[str, int | bool | None]:
-        """Roll dice using D&D 5e advantage/disadvantage rules."""
-        return roll_dice(
-            expression=expression,
-            has_advantage=has_advantage or False,
-            has_disadvantage=has_disadvantage or False,
-            difficulty_class=difficulty_class,
-        )
-except ImportError:
-    roll_dice_langchain = None
 
 
 if __name__ == "__main__":

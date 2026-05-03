@@ -15,5 +15,3 @@ pydantic>=2.5.3
 requests>=2.31.0
 
 FantasyNameGenerator==0.1.2
-
-langgraph==1.0.7

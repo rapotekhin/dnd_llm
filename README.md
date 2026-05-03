@@ -90,7 +90,7 @@ dnd_llm/
 │   ├── assets/       ← стартовые локации и NPC (JSONL)
 │   └── localization/ ← переводы RU/EN
 ├── docs/             ← документация (см. ниже)
-├── scripts/          ← вспомогательные скрипты
+├── scripts/          ← вспомогательные скрипты (например `check_localization.py` — паритет ключей RU/EN)
 ├── notebooks/        ← Jupyter ноутбуки для отладки
 ├── requirements.txt
 └── settings.json     ← пользовательские настройки игры
