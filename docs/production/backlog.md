@@ -110,6 +110,9 @@
 - Unit тесты для `coin_converter`, `level_up_utils`
 - Integration тест exploration-loop с моком LLM
 - Pre-commit с pyright + black/ruff
+- Тесты для UI элементов (если возможно)
+- Тесты на ENG\RU тесты, что вся локализация везде на одном языке
+- Максимально увеличить покрытие тестами
 
 ---
 
