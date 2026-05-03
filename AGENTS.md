@@ -14,11 +14,13 @@ Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate 
 
 ```bash
 python game/main.py                  # run the game
+pip install -r requirements-dev.txt # pytest + deps for exploration import tests
+python -m pytest                     # run tests (needs game/dnd_5e_data JSON on disk)
 ```
 
 `game/main.py` adds `game/`, `../dnd-5e-core/`, `../DnD-5th-Edition-API/` to `sys.path`. Inside `game/`, imports are relative: `from core.game import Game`.
 
-There are no tests yet. There is no linter wired up.
+Pytest configuration: `pytest.ini`, tests under `tests/` (see `requirements-dev.txt`). There is no linter wired up.
 
 ## Structure
 

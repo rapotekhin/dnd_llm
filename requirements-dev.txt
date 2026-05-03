@@ -1,0 +1,5 @@
+# Dev / CI test dependencies (game deps still via requirements.txt when possible).
+pytest>=8.0
+pydantic-ai>=1.0.0
+python-dotenv>=1.0.0
+dice

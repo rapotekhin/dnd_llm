@@ -144,7 +144,7 @@ Pydantic-схемы — в `game/core/gameplay/schemas/`. Главные:
 - `AgentResolutionOutput` — главный вывод exploration с `narration`, `action`, `question_to_player`, `metadata`
 - `ActionMetadata` — `npc_id` или `room_id` для переходов
 
-**Fallback:** `_parse_agent_resolution_output()` в `exploration.py` — парсер на случай, если Pydantic AI вернул невалидный JSON. Поддерживает текстовый формат с маркерами `НАРРАЦИЯ:`, `ДЕЙСТВИЕ:`, `ВОПРОС_ИГРОКУ:`.
+**Fallback:** `parse_agent_resolution_output()` в `game/core/gameplay/agent_resolution_parse.py` — парсер на случай, если Pydantic AI вернул невалидный JSON. Поддерживает текстовый формат с маркерами `НАРРАЦИЯ:`, `ДЕЙСТВИЕ:`, `ВОПРОС_ИГРОКУ:`.
 
 ## Экономия токенов (важно)
 
