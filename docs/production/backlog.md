@@ -19,16 +19,6 @@
 **Когда:** перед расшариванием сейвов или после стабилизации классов.  
 **См.:** [tech/adr/0002-pickle-saves.md](../tech/adr/0002-pickle-saves.md)
 
-### Декомпозиция мегаэкранов
-
-**Что:**
-- `character_creation_screen.py` — 2369 строк
-- `level_up_screen.py` — 1222 строки
-- `trade_screen.py` — 906 строк
-
-**Действие:** разбить на компоненты (по этапам wizard'а / по панелям).  
-**Зачем:** поддерживать тяжело, IDE тормозит.
-
 ### Возврат на Langfuse?
 
 **Что:** сейчас Logfire, раньше был Langfuse. Не уверены, что Logfire лучше.  
@@ -144,5 +134,5 @@
 - ~~Имя `qwest_creation_prompts.py`~~ → файла в кодовой базе не было; при добавлении промптов квестов использовать **`quest_creation_prompts.py`**
 - ~~Перенос UI с Streamlit на Pygame~~ → done
 - ~~Z-order и перекрытия в UI~~ → done в v0.2.0
-- ~~Поднятие уровня (level up)~~ → done в v0.2.0
+- ~~Декомпозиция мегаэкранов (character creation / level up / trade)~~ → первый этап: подпакеты и реэкспорт из `*_screen.py`; см. [architecture](../tech/architecture.md)
 - ~~Перевод архитектуры с «ЛЛМ-движок» на «ЛЛМ-ГМ»~~ → done, см. [adr/0001](../tech/adr/0001-llm-as-gm-not-engine.md)

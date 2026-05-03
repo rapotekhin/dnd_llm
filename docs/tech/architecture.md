@@ -63,7 +63,7 @@
 | **Tools** | `game/core/tools/` | Инструменты для ЛЛМ (`RollDiceTool`, `RuleDbLookupTool`) |
 | **Builders** | `game/core/builders/` | Сборка сложных сущностей (Character, Location, NPC, LevelUp) |
 | **Schemas** | `game/core/gameplay/schemas/` | Pydantic-схемы LLM-вывода |
-| **UI** | `game/ui/screens/` | Pygame-экраны |
+| **UI** | `game/ui/screens/` | Pygame-экраны; крупные потоки вынесены в подпакеты (`character_creation/`, `level_up/`, `trade/`), точки входа `*_screen.py` реэкспортируют классы для стабильных импортов |
 | **Localization** | `game/localization/` | Переводы (RU/EN) |
 | **Assets** | `game/assets/` | JSONL-данные стартовых локаций и NPC |
 | **External** | `dnd-5e-core/`, `DnD-5th-Edition-API/` | Правила и данные D&D 5e (отдельные репозитории) |

@@ -24,7 +24,7 @@
 ## Технически
 
 - `core/builders/level_up_builder.py` — содержит класс `LevelUpBuild`, который аккумулирует выбор
-- `LevelUpScreen` (`level_up_screen.py`, 1222 строки) — UI с подэкранами для каждого этапа
+- `LevelUpScreen` — UI с подэкранами для каждого этапа; код в подпакете [`game/ui/screens/level_up/`](../../../game/ui/screens/level_up/) (импорт через `level_up_screen` сохранён)
 - Финальный шаг — экран **подтверждения**, после которого `Character` обновляется
 
 ## Источник правил
