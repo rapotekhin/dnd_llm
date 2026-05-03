@@ -163,13 +163,23 @@ Pydantic-схемы — в `game/core/gameplay/schemas/`. Главные:
 
 ## Тестирование без UI
 
+### pytest
+
+Основной способ регресс-проверок ЛЛМ-связанного кода и смежной логики — **`python -m pytest`** из корня репозитория (см. [README.md](../../README.md), раздел «Тесты»). Нужны sibling-репозитории `dnd-5e-core` и `DnD-5th-Edition-API`, каталог `game/dnd_5e_data/` с JSON правил.
+
+Фоновые циклы exploration и social в тестах подменяют агентов Pydantic AI заглушками; ключ OpenRouter для прогона не требуется.
+
+Парсер запасного формата ответа агента разрешения действий (JSON и текст с маркерами `НАРРАЦИЯ:` / `ДЕЙСТВИЕ:`) вынесен в `game/core/gameplay/agent_resolution_parse.py`, чтобы его можно было тестировать без зависимости от клиента ЛЛМ.
+
+### Консольный exploration
+
 В конце `exploration.py` есть консольный режим (`if __name__ == "__main__"`):
 
 ```bash
 python game/core/gameplay/exploration.py
 ```
 
-Это запустит exploration с консольным «UI», читая save_1.pkl. Полезно для отладки промптов.
+Это запустит exploration с консольным «UI», читая save_1.pkl. Полезно для отладки промптов и ручной проверки модели.
 
 ## Известные проблемы
 

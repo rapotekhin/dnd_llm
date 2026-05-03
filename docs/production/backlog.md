@@ -106,13 +106,14 @@
 
 ### CI / тесты
 
-Сейчас тестов нет. Хотя бы:
-- Unit тесты для `coin_converter`, `level_up_utils`
-- Integration тест exploration-loop с моком LLM
-- Pre-commit с pyright + black/ruff
-- Тесты для UI элементов (если возможно)
-- Тесты на ENG\RU тесты, что вся локализация везде на одном языке
-- Максимально увеличить покрытие тестами
+**Уже есть:** pytest в `tests/` (`requirements-dev.txt`, `pytest.ini`) — утилиты и билдеры, загрузка стартовых JSONL, торговля, сохранения/загрузка состояния, моки циклов exploration и social без ключей API; парсер ответа DM вынесен в `agent_resolution_parse.py` и покрыт отдельно.
+
+**Хотелось бы дальше:**
+- CI (например GitHub Actions): прогон `pytest` на push/PR
+- Pre-commit: pyright + black/ruff
+- Тесты UI (если получится без хрупкости)
+- Автопроверка паритета ключей локализации RU/EN (отдельно от скрипта `scripts/check_localization.py`)
+- Порог покрытия (`pytest-cov --cov-fail-under=…`) по договорённости
 
 ---
 
@@ -138,4 +139,5 @@
 - ~~Перенос UI с Streamlit на Pygame~~ → done
 - ~~Z-order и перекрытия в UI~~ → done в v0.2.0
 - ~~Декомпозиция мегаэкранов (character creation / level up / trade)~~ → первый этап: подпакеты и реэкспорт из `*_screen.py`; см. [architecture](../tech/architecture.md)
+- ~~Базовый набор автотестов (pytest) для ядра игры~~ → каталог `tests/`; см. [README](../../README.md) («Тесты»), [architecture](../tech/architecture.md)
 - ~~Перевод архитектуры с «ЛЛМ-движок» на «ЛЛМ-ГМ»~~ → done, см. [adr/0001](../tech/adr/0001-llm-as-gm-not-engine.md)
