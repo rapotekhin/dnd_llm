@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Optional
 from generators.fantasy_name_generator_base import fantasy_name_generator
 from localization import loc
 
+from ..widgets import SelectionList
+
 
 class CharacterCreationEventsMixin:
     def _handle_biography_event(self, event: pygame.event.Event):
