@@ -19,7 +19,7 @@ NPC может **отказаться** от сделки (плохая цена
 
 В отличие от exploration/social, trade — **более механический режим**. Большая часть логики — Python, ЛЛМ только реагирует репликами и иногда запрашивает Харизму.
 
-См. `game/core/gameplay/trade.py` (254 строки) и `game/ui/screens/trade_screen.py` (906 строк).
+См. `game/core/gameplay/trade.py` (логика бартера) и UI-подпакет [`game/ui/screens/trade/`](../../../game/ui/screens/trade/) (точка входа по-прежнему `trade_screen.py` для импортов).
 
 ## Деньги
 
