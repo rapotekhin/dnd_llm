@@ -26,6 +26,27 @@ def test_parse_invalid_action_defaults_to_exploration() -> None:
     assert out.action == "exploration"
 
 
+def test_parse_bare_json_without_fence() -> None:
+    raw = '{"narration": "Wind howls.", "action": "social", "question_to_player": null}'
+    out = parse_agent_resolution_output(raw)
+    assert out.narration == "Wind howls."
+    assert out.action == "social"
+
+
+def test_parse_question_to_player_coerced_from_number() -> None:
+    raw = '{"narration": "n", "action": "exploration", "question_to_player": 42}'
+    out = parse_agent_resolution_output(raw)
+    assert out.question_to_player == "42"
+    assert out.has_question is True
+
+
+def test_parse_russian_labels_activity_only_falls_back_full_text_as_narration() -> None:
+    text = "ДЕЙСТВИЕ: combat\n"
+    out = parse_agent_resolution_output(text)
+    assert out.action == "combat"
+    assert "ДЕЙСТВИЕ" in out.narration
+
+
 def test_parse_russian_labels() -> None:
     text = """НАРРАЦИЯ: Ты делаешь шаг.
 ДЕЙСТВИЕ: combat

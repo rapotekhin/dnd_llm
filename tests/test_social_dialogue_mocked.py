@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import queue
 import threading
-import time
 from unittest.mock import MagicMock
 
 import pytest
 
+from _fakes import FakeAgent, collect_until, join_thread_or_stop
 from core.data.game_state_base import MainGameState
 from core.entities.npc import NPC
 from core.entities.player import Player
@@ -19,37 +19,6 @@ from core.gameplay.schemas.social import (
     ResponseOptionList,
     SocialResolutionOutput,
 )
-
-
-class _FakeRun:
-    def __init__(self, output):
-        self.output = output
-
-
-class _FakeAgent:
-    model = "stub-model"
-
-    def __init__(self, outputs: list):
-        self._outputs = list(outputs)
-
-    def run_sync(self, *_args, **_kwargs):
-        if not self._outputs:
-            raise RuntimeError("fake social agent ran out of outputs")
-        return _FakeRun(self._outputs.pop(0))
-
-
-def _collect_until(q: queue.Queue, predicate, timeout: float = 5.0):
-    deadline = time.monotonic() + timeout
-    found = []
-    while time.monotonic() < deadline:
-        try:
-            msg = q.get(timeout=0.1)
-        except queue.Empty:
-            continue
-        found.append(msg)
-        if predicate(msg):
-            return found
-    raise AssertionError(f"timeout waiting for message; got {found!r}")
 
 
 def _minimal_social_state(npc_id: str) -> MainGameState:
@@ -65,17 +34,17 @@ def test_social_loop_exploration_transition(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(social, "_LOGFIRE_ENABLED", False)
     monkeypatch.setattr(social, "_generate_social_summary", lambda *a, **k: "")
 
-    greeting = _FakeAgent(
+    greeting = FakeAgent(
         [
             NpcGreeting(greeting_scene="The inn is quiet.", npc_first_words="Evening."),
         ]
     )
-    options = _FakeAgent(
+    options = FakeAgent(
         [
             ResponseOptionList(options=[ResponseOption(id=1, text="Leave politely.")]),
         ]
     )
-    resolution = _FakeAgent(
+    resolution = FakeAgent(
         [
             SocialResolutionOutput(
                 npc_reply="Till next time.",
@@ -95,21 +64,23 @@ def test_social_loop_exploration_transition(monkeypatch: pytest.MonkeyPatch) -> 
     npc_id = "social-test-npc"
     gs = _minimal_social_state(npc_id)
 
-    def target():
-        social.run_social(MagicMock(), gs, npc_id, ui_q, in_q, stop)
+    thr = threading.Thread(
+        target=lambda: social.run_social(MagicMock(model_name="stub"), gs, npc_id, ui_q, in_q, stop),
+        daemon=True,
+        name="social-explore",
+    )
+    thr.start()
 
-    threading.Thread(target=target, daemon=True).start()
-
-    _collect_until(ui_q, lambda m: m.get("type") == "greeting")
-    _collect_until(ui_q, lambda m: m.get("type") == "npc_reply")
-    _collect_until(ui_q, lambda m: m.get("type") == "options")
+    collect_until(ui_q, lambda m: m.get("type") == "greeting")
+    collect_until(ui_q, lambda m: m.get("type") == "npc_reply")
+    collect_until(ui_q, lambda m: m.get("type") == "options")
     in_q.put({"type": "input", "text": "1"})
-    msgs = _collect_until(ui_q, lambda m: m.get("type") == "transition")
+    msgs = collect_until(ui_q, lambda m: m.get("type") == "transition")
 
     transition = next(m for m in msgs if m.get("type") == "transition")
     assert transition["action"] == "exploration"
 
-    stop.set()
+    join_thread_or_stop(thr, stop)
 
 
 def test_chat_message_llm_turn() -> None:

@@ -35,6 +35,16 @@ def test_string_amount_with_unit(cc: CoinConverter) -> None:
     assert cc("1 pp") == 1000
 
 
+def test_string_without_space_between_amount_and_unit_raises(cc: CoinConverter) -> None:
+    with pytest.raises(ValueError, match="Invalid amount"):
+        cc("10gp")
+
+
+def test_float_amount_truncates_like_int(cc: CoinConverter) -> None:
+    """Current contract: ``int(amount)`` — document truncation (1.5 gp → 1 gp in copper)."""
+    assert cc(1.9, "gp") == 100
+
+
 def test_invalid_string_raises(cc: CoinConverter) -> None:
     with pytest.raises(ValueError, match="Invalid amount"):
         cc("not-a-number")

@@ -31,6 +31,19 @@ def test_can_level_up_against_rules(level: int, xp: int, expected: bool) -> None
     assert lu.can_level_up(player) is expected
 
 
+def test_can_level_up_negative_xp_below_threshold() -> None:
+    assert lu.can_level_up(SimpleNamespace(level=1, xp=-1)) is False
+
+
+def test_can_level_up_db_failure_returns_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    class BrokenDb:
+        def get(self, *_a, **_k):
+            raise RuntimeError("db down")
+
+    monkeypatch.setattr(lu, "JsonDatabase", BrokenDb)
+    assert lu.can_level_up(SimpleNamespace(level=1, xp=300)) is False
+
+
 @pytest.mark.parametrize(
     ("level", "xp", "expected_next_threshold"),
     [

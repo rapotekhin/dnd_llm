@@ -53,6 +53,49 @@ def test_create_character_fighter_human_sets_stats_and_inventory() -> None:
     assert len(gear) >= 1
 
 
+def test_human_race_data_applies_plus_one_to_all_abilities() -> None:
+    db = JsonDatabase()
+    fighter_doc = db.get("/classes/fighter.json")
+    human_doc = db.get("/races/human.json")
+
+    b = CharacterBuild(
+        name="Human bonuses",
+        race="human",
+        race_data=human_doc,
+        class_type="fighter",
+        class_data=fighter_doc,
+        alignment="neutral",
+        abilities={"str": 15, "dex": 14, "con": 13, "int": 12, "wis": 10, "cha": 8},
+        points_remaining=0,
+    )
+    p = b.create_character()
+    assert p.abilities.str == 16
+    assert p.abilities.dex == 15
+    assert p.abilities.con == 14
+    assert p.abilities.int == 13
+    assert p.abilities.wis == 11
+    assert p.abilities.cha == 9
+
+
+def test_create_wizard_has_spellcaster() -> None:
+    db = JsonDatabase()
+    wizard_doc = db.get("/classes/wizard.json")
+    # Valid 27-point buy focused on INT
+    b = CharacterBuild(
+        name="Pytest Wizard",
+        race="human",
+        class_type="wizard",
+        class_data=wizard_doc,
+        alignment="true-neutral",
+        abilities={"str": 8, "dex": 13, "con": 14, "int": 15, "wis": 12, "cha": 10},
+        points_remaining=0,
+    )
+    p = b.create_character()
+    assert p.class_type.index == "wizard"
+    assert p.sc is not None
+    assert hasattr(p.sc, "spell_slots")
+
+
 def test_add_dagger_to_inventory_via_builder() -> None:
     db = JsonDatabase()
     build = CharacterBuild()
