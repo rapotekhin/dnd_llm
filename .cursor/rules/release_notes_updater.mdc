@@ -1,0 +1,24 @@
+---
+description: Use this rule to update RELEASE_NOTES.md in the project root after user-visible changes — new features, gameplay systems, UI screens, bug fixes, or technical improvements that affect the player experience. Trigger when the user explicitly asks ("обнови релиз нотс", "update release notes", "запиши в changelog", "добавь в RELEASE_NOTES"), when preparing a version bump, when finishing a feature branch, or after a series of player-facing changes have been merged. Do NOT use for internal refactoring with no player impact, dependency bumps without behavior changes, or pure documentation changes.
+globs:
+  - "RELEASE_NOTES.md"
+alwaysApply: false
+---
+
+# release_notes_updater
+
+Update `RELEASE_NOTES.md` in the project root with player-facing changes — new features, UI improvements, fixes, or technical improvements the player will notice.
+
+The full procedure (format, categorization rules, version bump rules, examples of good vs. bad entries) is in [.claude/skills/release_notes_updater/SKILL.md](mdc:.claude/skills/release_notes_updater/SKILL.md).
+
+Read that file when this rule triggers, then follow it.
+
+**Quick rules:**
+
+- Russian only (target audience: player)
+- Categories in order: Новые функции → Улучшения UI → Исправления → Технические улучшения
+- New version on top, old versions stay below untouched
+- Phrasing from the player's perspective, not the code's
+- No class names, file paths, or commit hashes
+- No dates (version + position is enough)
+- Do NOT use this rule for internal refactoring, dependency bumps, or doc-only changes

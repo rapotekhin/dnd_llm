@@ -1,0 +1,28 @@
+---
+description: Use this rule when the user asks to create, add, or scaffold a new skill in the Between the Rolls repository — phrases like "создай скилл", "добавь скилл", "сделай скилл для X", "нужен скилл который...", "create skill", "add a skill", "scaffold skill". This project requires a dual-format convention (both .claude/skills/ for Claude Code and .cursor/rules/ for Cursor) — never create only one side.
+globs:
+  - ".claude/skills/**"
+  - ".cursor/rules/**"
+alwaysApply: false
+---
+
+# skill_creator (project-local)
+
+When creating a new skill in this repo, always produce **two files**:
+
+1. `.claude/skills/<name>/SKILL.md` — canonical full version
+2. `.cursor/rules/<name>.mdc` — thin pointer with frontmatter
+
+The full procedure (naming conventions, frontmatter rules, when to add `globs`, templates, anti-patterns) is in [.claude/skills/skill_creator/SKILL.md](mdc:.claude/skills/skill_creator/SKILL.md).
+
+Read that file when this rule triggers, then follow it.
+
+**Quick rules:**
+
+- Names: `snake_case`, English, lowercase, no spaces or hyphens
+- `description:` in frontmatter must start with «Use this skill when...» and list concrete triggers
+- `description` is identical between SKILL.md and .mdc
+- `.mdc` references SKILL.md via `[link](mdc:.claude/skills/<name>/SKILL.md)` — never duplicate full content
+- Add `globs:` to `.mdc` only when the skill reacts to file edits in a known location
+- `alwaysApply: false` unless there's a strong reason
+- Reference existing skills as style guides: `docs_lookup`, `docs_updater`, `release_notes_updater`

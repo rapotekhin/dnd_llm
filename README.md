@@ -1,147 +1,123 @@
 # Between the Rolls
 
-Приложение для игры в Dungeons & Dragons с использованием языковых моделей (LLM) как ChatGPT.
+Одиночная D&D 5e RPG в открытом мире, где Мастером Подземелий выступает ЛЛМ.
 
-## Функциональность
+Игрок создаёт персонажа по правилам D&D 5e и попадает в мир, который ЛЛМ ведёт как настольный мастер: описывает сцены, играет за NPC, назначает броски и реагирует на любые действия. Мир, NPC и квесты генерируются на ходу — это бесконечная песочница с роглайк-логикой.
 
-- Интерфейс на Streamlit для удобного взаимодействия  
-- Поддержка множества LLM провайдеров:
-  - **OpenAI** (GPT-4, GPT-4o-mini)
-  - **OpenRouter** (бесплатные модели: Mistral, Qwen3, DeepSeek V3, Gemma 3 и др.)
-  - **Grok** (X.AI API)
-  - **LM Studio** (локальные модели)
-  - **VLLM** (локальный сервер)
-  - **Ollama** (локальные модели)
-- Векторная база данных для RAG (Retrieval Augmented Generation)
-- SQL база данных для хранения:
-  - Карточек персонажей
-  - Инвентаря
-  - Информации о союзниках и врагах
-- Возможность выполнения Python кода для бросков кубиков и других игровых механик
+> 🎯 **Главный принцип:** ЛЛМ исполняет роль ГМ, но **не является движком**. Все изменения мира — через Python-функции (tools): броски, инвентарь, создание сущностей. Это даёт воспроизводимость и экономит токены.
+
+## Возможности
+
+- ✅ Полное создание персонажа D&D 5e (расы, классы, заклинания, предыстория)
+- ✅ Поднятие уровня (features, ASI, новые заклинания, subfeatures)
+- ✅ Exploration с ЛЛМ-ГМ — описание сцен, броски, проверки навыков
+- ✅ Социальные взаимодействия с NPC
+- ✅ Торговля
+- ✅ Перемещение по комнатам и локациям
+- ✅ Сохранение/загрузка (10 слотов)
+- ✅ Локализация на русском (английский — частично)
+- 🚧 Combat (в разработке)
+- 🚧 Автогенерация мира при выходе за известные локации (в разработке)
+
+## Стек
+
+- **UI:** Pygame
+- **LLM-агенты:** Pydantic AI с typed-выводом и инструментами
+- **Провайдер:** OpenRouter (по умолчанию `google/gemini-3.1-flash-lite-preview`)
+- **D&D правила:** внешние пакеты [`dnd-5e-core`](https://github.com/rapotekhin/dnd-5e-core) и [`DnD-5th-Edition-API`](https://github.com/rapotekhin/DnD-5th-Edition-API)
+- **Трейсинг:** Logfire (опционально)
 
 ## Установка
 
-1. Клонируйте репозиторий:
-```
-git clone https://github.com/yourusername/dnd_llm.git
+### 1. Клонировать проект и зависимости
+
+```bash
+git clone https://github.com/rapotekhin/dnd_llm.git
 cd dnd_llm
+
+# Внешние пакеты — рядом с этим репозиторием
+git clone https://github.com/rapotekhin/dnd-5e-core ../dnd-5e-core
+git clone https://github.com/rapotekhin/DnD-5th-Edition-API ../DnD-5th-Edition-API
 ```
 
-2. Установите зависимости:
-```
+### 2. Установить Python-зависимости
+
+```bash
 pip install -r requirements.txt
-git clone https://github.com/rapotekhin/dnd-5e-core
-git clone https://github.com/rapotekhin/DnD-5th-Edition-API.git
 
-cd dnd-5e-core
-pip install -e .
-
-cd ../DnD-5th-Edition-API
-./install.bat
+cd ../dnd-5e-core && pip install -e .
+cd ../DnD-5th-Edition-API && ./install.bat   # на Windows
+# на Linux/macOS — следуйте инструкциям в репозитории
+cd ../dnd_llm
 ```
 
-3. Создайте файл .env на основе .env.example:
-```
+### 3. Настроить API-ключ
+
+```bash
 cp .env.example .env
 ```
 
-4. Отредактируйте файл .env, добавив API ключи для нужных провайдеров:
+Откройте `.env` и добавьте ключ OpenRouter:
 
-5. Можно запустить примеры из репы
 ```
-cd ./DnD-5th-Edition-API
-python main.py                    # Console version
-python main_ncurses.py            # Ncurses version
-python dungeon_menu_pygame.py     # Pygame version
-python dungeon_tk.py              # Tkinter version
-python pyQTApp/wizardry.py        # PyQt5 version
+OPENROUTER_API_KEY=ваш_ключ
 ```
 
-### Переменные окружения
+Получить ключ: https://openrouter.ai/
+
+### 4. Запустить игру
 
 ```bash
-# OpenAI (обязательно для использования OpenAI API)
-OPENAI_API_KEY=your_openai_api_key
-
-# OpenRouter (для бесплатных моделей)
-OPENROUTER_API_KEY=your_openrouter_api_key
-OPENROUTER_API_BASE=https://openrouter.ai/api/v1
-
-# Grok/X.AI
-GROK_API_KEY=your_grok_api_key
-GROK_API_BASE=https://api.x.ai/v1
-
-# Локальные серверы (по умолчанию)
-LMSTUDIO_API_BASE=http://localhost:1234/api/v0
-VLLM_API_BASE=http://localhost:8999/v1
-OLLAMA_API_BASE=http://localhost:11434
-
-# Langfuse (опционально, для логирования)
-LANGFUSE_PUBLIC_KEY=your_langfuse_public_key
-LANGFUSE_SECRET_KEY=your_langfuse_secret_key
-LANGFUSE_HOST=https://cloud.langfuse.com
+python game/main.py
 ```
 
-**Примечание:** Вам нужен API ключ только для тех провайдеров, которые планируете использовать.
+## Переменные окружения
 
-5. Создайте необходимые директории для данных:
-```
-mkdir -p data
-```
-
-## Запуск приложения
-
-```
-streamlit run app/main.py
-```
-
-## Рекомендации по выбору моделей
-
-### Для новичков (бесплатные варианты)
-- **OpenRouter + Mistral Small 3.2 24B** - отличный баланс качества и функциональности
-- **OpenRouter + Gemma 3 27B** - поддержка многих языков, включая русский
-- **OpenRouter + DeepSeek V3** - высокое качество генерации текста
-
-### Для продвинутых пользователей  
-- **OpenAI GPT-4o** - наивысшее качество, но платная
-- **Grok** - хорошая альтернатива GPT-4 с уникальным стилем
-- **OpenRouter + Qwen3 235B** - мощная модель с режимом размышлений
-
-### Для ролевых игр
-- **OpenRouter + QwQ 32B RpR** - специально оптимизирована для ролевых игр
-- **OpenRouter + Dolphin Mistral** - нецензурированная для творческих сценариев
-
-### Локальные варианты (для приватности)
-- **LM Studio** - простая настройка локальных моделей
-- **Ollama** - быстрый доступ к open-source моделям
-- **VLLM** - высокая производительность для больших моделей
-
-## Особенности Function Calling
-
-Некоторые провайдеры и модели поддерживают **function calling** (вызов функций) для:
-- 🎲 Автоматических бросков кубиков  
-- 🐍 Выполнения Python кода
-- 🗄️ Запросов к базе данных персонажей 
-- 🔍 Поиска в загруженных документах
-
-### Поддержка по провайдерам:
-- ✅ **OpenAI** - полная поддержка всех моделей
-- ⚠️ **OpenRouter** - зависит от конкретной модели (есть fallback)
-- ✅ **Grok** - полная поддержка
-- ⚠️ **LM Studio/VLLM/Ollama** - ограниченная поддержка
-
-Если модель не поддерживает function calling, приложение автоматически переключается в текстовый режим, где ИИ описывает действия словами вместо их выполнения.
+| Переменная | Обязательно | Назначение |
+|---|---|---|
+| `OPENROUTER_API_KEY` | ✅ | LLM-провайдер |
+| `LOGFIRE_TOKEN` | ❌ | Трейсинг ЛЛМ-вызовов через Logfire |
+| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` | ❌ | Альтернативный трейсинг через Langfuse |
 
 ## Структура проекта
 
-- `app/` - основной код приложения
-  - `api/` - интеграции с различными LLM API
-  - `database/` - код для работы с SQL и векторными базами данных
-  - `components/` - компоненты Streamlit UI
-  - `utils/` - вспомогательные функции
-  - `static/` - статические файлы (изображения, CSS и т.д.)
-- `data/` - директория для хранения баз данных и файлов
+```
+dnd_llm/
+├── game/             ← основной код игры
+│   ├── main.py       ← entry point
+│   ├── core/         ← gameplay, ЛЛМ, состояние, сущности
+│   ├── ui/           ← Pygame экраны
+│   ├── assets/       ← стартовые локации и NPC (JSONL)
+│   └── localization/ ← переводы RU/EN
+├── docs/             ← документация (см. ниже)
+├── scripts/          ← вспомогательные скрипты
+├── notebooks/        ← Jupyter ноутбуки для отладки
+├── requirements.txt
+└── settings.json     ← пользовательские настройки игры
+```
+
+Подробнее об архитектуре — в [docs/tech/architecture.md](docs/tech/architecture.md).
+
+## Документация
+
+В папке [`docs/`](docs/) собрана полная техническая и геймдизайн-документация:
+
+| Раздел | Что внутри |
+|---|---|
+| [vision/](docs/vision/) | Концепция, столпы проекта |
+| [design/](docs/design/) | Геймдизайн, описание систем (exploration, social, trade, combat), UX |
+| [narrative/](docs/narrative/) | Мир, NPC, квесты, стиль ГМ |
+| [tech/](docs/tech/) | Архитектура, LLM-интеграция, ADR (архитектурные решения) |
+| [production/](docs/production/) | Роадмап, техдолг |
+
+Старт — с [docs/README.md](docs/README.md).
+
+## Сохранения
+
+Сохраняются в:
+- **Windows:** `%LOCALAPPDATA%\DnD_LLM_Game\saves\save_{1..10}.pkl`
+- **Linux/macOS:** `~/.local/share/DnD_LLM_Game/saves/save_{1..10}.pkl`
 
 ## Лицензия
 
-MIT 
+MIT

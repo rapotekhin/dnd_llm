@@ -1,0 +1,23 @@
+---
+description: Use this rule when the user asks conceptual questions about the Between the Rolls project — architecture, design decisions, how a system works, why something is built a certain way, where to find information about a feature, what's planned vs. done. Trigger phrases include "как устроено", "почему так", "где описано", "что про", "как работает", "архитектура", "дизайн", "столпы", "роадмап", "техдолг", "ADR". Also trigger before answering questions about gameplay systems (exploration, social, trade, combat, character creation, leveling), narrative content, or LLM integration.
+alwaysApply: false
+---
+
+# docs_lookup
+
+Before answering conceptual questions about this project, check `/docs` instead of guessing from code.
+
+The full procedure (which docs to read for which question, how to navigate the doc map, what to do when topic isn't documented) is in [.claude/skills/docs_lookup/SKILL.md](mdc:.claude/skills/docs_lookup/SKILL.md).
+
+Read that file when this rule triggers, then follow it.
+
+**Quick reference:** documentation map
+
+```
+docs/
+├── vision/         pitch, pillars (the 5 non-negotiable principles)
+├── design/         systems/ (exploration, social, trade, combat, character-creation, leveling), ux/
+├── narrative/      world, npcs, quests, dm-style
+├── tech/           architecture, llm-integration, data-models, adr/
+└── production/     roadmap, backlog
+```
