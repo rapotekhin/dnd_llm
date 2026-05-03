@@ -4,7 +4,7 @@ from __future__ import annotations
 import pygame
 from typing import List, Optional, Set, Tuple
 
-from ..colors import *
+from ...colors import *
 from core.entities.equipment import GameEquipment
 from core.gameplay.trade import (
     PANEL_EQUIP, PANEL_PLAYER_INV, PANEL_PLAYER_EQUIP,

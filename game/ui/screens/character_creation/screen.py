@@ -5,8 +5,8 @@ import pygame
 from typing import Dict, List, Optional, Union
 
 from ..base_screen import BaseScreen
-from ..colors import *
-from ..components import Button, Tooltip
+from ...colors import *
+from ...components import Button, Tooltip
 from core.entities.character import Character
 from core.database.json_database import JsonDatabase
 from core.builders.character_builder import CharacterBuild

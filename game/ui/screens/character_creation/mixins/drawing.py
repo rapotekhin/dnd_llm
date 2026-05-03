@@ -2,10 +2,10 @@
 import pygame
 from typing import Any, Dict, List
 
-from ..colors import *
+from ....colors import *
 from localization import loc
 
-from .widgets import AbilityCounter, SelectionList, _sc
+from ..widgets import AbilityCounter, SelectionList, _sc
 
 
 class CharacterCreationDrawingMixin:

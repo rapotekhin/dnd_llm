@@ -2,7 +2,7 @@
 import pygame
 from typing import List, Dict, Any, Optional
 
-from ..colors import *
+from ...colors import *
 
 def _sc(v: float, s: float) -> int:
     return max(1, int(v * s))

@@ -2,13 +2,13 @@
 import pygame
 from typing import Any, Dict, List
 
-from ..colors import *
-from ..components import Button, Tooltip
+from ....colors import *
+from ....components import Button, Tooltip
 from core.database.json_database import JsonDatabase
 from core.utils.level_up_utils import get_level_data
 from localization import loc
 
-from ..character_creation.widgets import AbilityCounter, SelectionList, _sc
+from ...character_creation.widgets import AbilityCounter, SelectionList, _sc
 
 
 class LevelUpSetupMixin:

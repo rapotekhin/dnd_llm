@@ -2,10 +2,10 @@
 import pygame
 from typing import List
 
-from ..colors import *
+from ....colors import *
 from localization import loc
 
-from ..character_creation.widgets import SelectionList, _sc
+from ...character_creation.widgets import SelectionList, _sc
 
 
 class LevelUpDrawingMixin:

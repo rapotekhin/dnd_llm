@@ -5,8 +5,8 @@ import os
 import pygame
 from typing import List, Optional, Set, Tuple
 
-from ..colors import *
-from ..components import Button
+from ...colors import *
+from ...components import Button
 from core.entities.equipment import GameEquipment
 from core.gameplay.trade import (
     PANEL_PLAYER_INV, PANEL_PLAYER_EQUIP,

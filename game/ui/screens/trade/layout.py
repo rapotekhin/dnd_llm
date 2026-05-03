@@ -1,8 +1,8 @@
 """Trade screen: panel geometry."""
 import pygame
 
-from ..colors import *
-from ..components import Button
+from ...colors import *
+from ...components import Button
 
 from .constants import SB_W, SB_PAD, SLOTS, _sc
 

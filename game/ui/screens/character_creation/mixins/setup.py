@@ -2,11 +2,11 @@
 import pygame
 from typing import Any, Dict, List, Optional
 
-from ..colors import *
-from ..components import Button, Tooltip
+from ....colors import *
+from ....components import Button, Tooltip
 from localization import loc
 
-from .widgets import AbilityCounter, SelectionList, _sc
+from ..widgets import AbilityCounter, SelectionList, _sc
 
 
 class CharacterCreationSetupMixin:
