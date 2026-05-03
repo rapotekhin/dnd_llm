@@ -33,7 +33,7 @@
 ### Pyright на чистый прогон
 
 **Что:** `pyrightconfig.json` существует, но текущий код может давать ошибки типов.  
-**Действие:** прогнать pyright, починить, добавить в CI (когда будет).
+**Действие:** прогнать pyright, починить, добавить отдельный job в [.github/workflows/ci.yml](../../.github/workflows/ci.yml) (или второй workflow).
 
 ---
 
@@ -106,10 +106,13 @@
 
 ### CI / тесты
 
-**Уже есть:** pytest в `tests/` (`requirements-dev.txt`, `pytest.ini`) — утилиты и билдеры, загрузка стартовых JSONL, торговля, сохранения/загрузка состояния, моки циклов exploration и social без ключей API; парсер ответа DM вынесен в `agent_resolution_parse.py` и покрыт отдельно.
+**Уже есть:**
+
+- pytest в `tests/` (`requirements-dev.txt`, `pytest.ini`) — утилиты и билдеры, загрузка стартовых JSONL, торговля, сохранения/загрузка состояния, моки циклов exploration и social без ключей API; парсер ответа DM вынесен в `agent_resolution_parse.py` и покрыт отдельно.
+- **GitHub Actions:** [.github/workflows/ci.yml](../../.github/workflows/ci.yml) — на pull request в `main` или `master` на Ubuntu (Python 3.11) ставятся `requirements.txt` + `requirements-dev.txt`, запускается `pytest`; отдельный job вызывает [.github/scripts/check_pr.py](../../.github/scripts/check_pr.py) и требует, чтобы в диффе PR были изменения `__version__` в `game/__init__.py` и файла `RELEASE_NOTES.md` в корне.
 
 **Хотелось бы дальше:**
-- CI (например GitHub Actions): прогон `pytest` на push/PR
+
 - Pre-commit: pyright + black/ruff
 - Тесты UI (если получится без хрупкости)
 - Автопроверка паритета ключей локализации RU/EN (отдельно от скрипта `scripts/check_localization.py`)
@@ -140,4 +143,5 @@
 - ~~Z-order и перекрытия в UI~~ → done в v0.2.0
 - ~~Декомпозиция мегаэкранов (character creation / level up / trade)~~ → первый этап: подпакеты и реэкспорт из `*_screen.py`; см. [architecture](../tech/architecture.md)
 - ~~Базовый набор автотестов (pytest) для ядра игры~~ → каталог `tests/`; см. [README](../../README.md) («Тесты»), [architecture](../tech/architecture.md)
+- ~~CI на GitHub: pytest на PR~~ → [.github/workflows/ci.yml](../../.github/workflows/ci.yml); см. [README](../../README.md) («Тесты»), [architecture](../tech/architecture.md)
 - ~~Перевод архитектуры с «ЛЛМ-движок» на «ЛЛМ-ГМ»~~ → done, см. [adr/0001](../tech/adr/0001-llm-as-gm-not-engine.md)

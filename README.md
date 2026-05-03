@@ -90,6 +90,8 @@ python -m pytest --cov=game/core --cov-report=term-missing
 
 Конфигурация: `pytest.ini`. Для агентов без реальных вызовов ЛЛМ тесты подставляют фейковые агенты; ключ OpenRouter для прогона тестов не обязателен.
 
+**CI на GitHub:** при открытии pull request в `main` или `master` автоматически запускается workflow `.github/workflows/ci.yml`: установка зависимостей и `pytest`, плюс проверка скриптом `.github/scripts/check_pr.py`, что в PR изменены `__version__` в `game/__init__.py` и корневой `RELEASE_NOTES.md`.
+
 ## Переменные окружения
 
 | Переменная | Обязательно | Назначение |
@@ -109,6 +111,7 @@ dnd_llm/
 │   ├── assets/       ← стартовые локации и NPC (JSONL)
 │   └── localization/ ← переводы RU/EN
 ├── docs/             ← документация (см. ниже)
+├── .github/          ← GitHub Actions (CI при PR в `main`/`master`)
 ├── scripts/          ← вспомогательные скрипты (например `check_localization.py` — паритет ключей RU/EN)
 ├── notebooks/        ← Jupyter ноутбуки для отладки
 ├── tests/            ← pytest: утилиты, загрузчики, торговля, сохранения, моки LLM-циклов
