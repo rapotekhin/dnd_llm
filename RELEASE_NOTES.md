@@ -1,5 +1,13 @@
 # Release Notes
 
+## Version 0.2.5
+
+### Технические улучшения
+
+- **CI на GitHub**
+  - При каждом pull request в `main` автоматически запускаются юнит-тесты (`pytest`)
+  - В PR должны изменяться `__version__` в `game/__init__.py` и файл `RELEASE_NOTES.md`, иначе проверка CI не проходит
+
 ## Version 0.2.4
 
 ### Технические улучшения
