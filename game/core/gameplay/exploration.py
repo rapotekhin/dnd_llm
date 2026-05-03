@@ -22,15 +22,13 @@ It communicates with the UI via two thread-safe queues:
 stop_event (threading.Event) — set by the caller to abort the thread.
 """
 
-import json
 import os
 import queue
-import re
 import threading
 import uuid
 from contextlib import nullcontext
 from pathlib import Path
-from typing import cast, Optional
+from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic_ai import Agent
@@ -40,7 +38,6 @@ from core.gameplay.schemas.exploration import (
     AgentResolutionOutput,
     ActionMetadata,
     LocationSummary,
-    AgentActionType,
 )
 from core.tools.roll import RollDiceTool
 from core.tools.db_lookup import RuleDbLookupTool
@@ -250,64 +247,6 @@ def _build_summary_agent(api_manager: APIManager) -> Agent[None, LocationSummary
             "Только важные факты: кого встретил игрок, что произошло, что изменилось. "
             "Не упоминай механику игры."
         ),
-    )
-
-
-# =======================
-# PARSING
-# =======================
-
-def _parse_agent_resolution_output(text: str) -> AgentResolutionOutput:
-    """Parse agent output: JSON → Pydantic, with text-format fallback."""
-    allowed_actions = {"exploration", "combat", "social", "trade", "change_current_room"}
-
-    def _extract_block(src: str, key: str) -> str:
-        marker = f"{key}:"
-        if marker not in src:
-            return ""
-        tail = src.split(marker, 1)[1]
-        for nxt in ["НАРРАЦИЯ:", "ДЕЙСТВИЕ:", "ВОПРОС_ИГРОКУ:"]:
-            if nxt != marker and nxt in tail:
-                tail = tail.split(nxt, 1)[0]
-        return tail.strip()
-
-    stripped = text.strip()
-    json_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", stripped)
-    if json_match:
-        stripped = json_match.group(1).strip()
-    try:
-        data = json.loads(stripped)
-        if isinstance(data, dict):
-            action = (data.get("action") or "exploration").strip().lower()
-            if action not in allowed_actions:
-                action = "exploration"
-            q = data.get("question_to_player")
-            if q is not None and not isinstance(q, str):
-                q = str(q)
-            meta_raw = data.get("metadata") or {}
-            meta = ActionMetadata(
-                npc_id=meta_raw.get("npc_id"),
-                room_id=meta_raw.get("room_id"),
-            )
-            return AgentResolutionOutput(
-                narration=data.get("narration") or "",
-                action=cast(AgentActionType, action),
-                question_to_player=q if (q and q.strip()) else None,
-                metadata=meta,
-            )
-    except (json.JSONDecodeError, Exception):
-        pass
-
-    narration = _extract_block(text, "НАРРАЦИЯ") or text.strip()
-    activity = (_extract_block(text, "ДЕЙСТВИЕ") or "exploration").strip().split()[0].lower()
-    question = _extract_block(text, "ВОПРОС_ИГРОКУ")
-    if activity not in allowed_actions:
-        activity = "exploration"
-    return AgentResolutionOutput(
-        narration=narration,
-        action=cast(AgentActionType, activity),
-        question_to_player=question.strip() or None,
-        metadata=ActionMetadata(),
     )
 
 

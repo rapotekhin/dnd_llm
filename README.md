@@ -71,6 +71,25 @@ OPENROUTER_API_KEY=ваш_ключ
 python game/main.py
 ```
 
+## Тесты
+
+Юнит- и интеграционные тесты на [pytest](https://pytest.org/) находятся в каталоге `tests/`. Для импортов нужны репозитории **`dnd-5e-core`** и **`DnD-5th-Edition-API`** рядом с проектом (как в разделе установки), каталог **`game/dnd_5e_data/`** с JSON правил; часть тестов загрузчиков опирается на **`game/assets/ru/*.jsonl`**.
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+Покрытие по `game/core` (плагин **`pytest-cov`** ставится вместе с `requirements-dev.txt`):
+
+```bash
+python -m pytest --cov=game/core --cov-report=term-missing
+```
+
+Если pytest пишет **`unrecognized arguments: --cov=...`**, в активированном venv выполните **`pip install -r requirements-dev.txt`** (или отдельно **`pip install pytest-cov`**).
+
+Конфигурация: `pytest.ini`. Для агентов без реальных вызовов ЛЛМ тесты подставляют фейковые агенты; ключ OpenRouter для прогона тестов не обязателен.
+
 ## Переменные окружения
 
 | Переменная | Обязательно | Назначение |
@@ -92,7 +111,10 @@ dnd_llm/
 ├── docs/             ← документация (см. ниже)
 ├── scripts/          ← вспомогательные скрипты (например `check_localization.py` — паритет ключей RU/EN)
 ├── notebooks/        ← Jupyter ноутбуки для отладки
+├── tests/            ← pytest: утилиты, загрузчики, торговля, сохранения, моки LLM-циклов
+├── pytest.ini
 ├── requirements.txt
+├── requirements-dev.txt  ← pytest, pydantic-ai для импорта агентов в тестах, pytest-cov
 └── settings.json     ← пользовательские настройки игры
 ```
 

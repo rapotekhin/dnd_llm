@@ -23,6 +23,7 @@
 | **Работаешь с ЛЛМ-частью** | [tech/llm-integration.md](tech/llm-integration.md) |
 | **Хочешь добавить контент (NPC/локацию)** | [narrative/world.md](narrative/world.md) |
 | **Планируешь, что делать дальше** | [production/roadmap.md](production/roadmap.md) |
+| **Запускаешь автотесты разработчика** | [README.md](../README.md) («Тесты»), [tech/architecture.md](tech/architecture.md) §«Автотесты» |
 | **Видишь странное архитектурное решение** | [tech/adr/](tech/adr/) |
 
 ## Принципы документации

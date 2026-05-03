@@ -14,11 +14,14 @@ Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate 
 
 ```bash
 python game/main.py                  # run the game
+pip install -r requirements-dev.txt # pytest + deps for exploration import tests
+python -m pytest                     # run tests (needs game/dnd_5e_data JSON on disk)
+python -m pytest --cov=game/core --cov-report=term-missing  # optional coverage (requires pytest-cov)
 ```
 
 `game/main.py` adds `game/`, `../dnd-5e-core/`, `../DnD-5th-Edition-API/` to `sys.path`. Inside `game/`, imports are relative: `from core.game import Game`.
 
-There are no tests yet. There is no linter wired up.
+Pytest configuration: `pytest.ini`, tests under `tests/` (see `requirements-dev.txt`). There is no linter wired up.
 
 ## Structure
 
@@ -39,6 +42,10 @@ game/
   ui/screens/                      12 screens, all extend BaseScreen
   assets/ru/*.jsonl                start locations and NPCs
   localization/                    loc.t("key") for translated strings
+tests/
+  conftest.py                      pytest path setup + patched_game_state fixture
+  helpers.py                       GameEquipment factory for trade/inventory tests
+  _fakes.py                        FakeAgent / queue helpers for threaded loop tests
 ```
 
 ## Conventions
