@@ -7,7 +7,31 @@
 
 ## 🔥 Критический техдолг
 
-Сейчас **нет открытых блокирующих пунктов** в этой категории.
+### Сломанная механика перехода exploration → social → exploration (и через trade)
+
+**Симптом:** при возврате в exploration после side-сессии (social или social → trade → social) ЛЛМ-агент ведёт себя так, словно диалог не закончился: продолжает отвечать на последнюю реплику игрока, либо предлагает действия без учёта произошедшего, либо «не помнит» исхода диалога/торговли.
+
+**Когда воспроизводится:**
+- `exploration → social → exploration` (выход из social — что через действие LLM, что по кнопке «Уйти»)
+- `exploration → social → trade → social → exploration` — особенно ярко, потому что у trade нет своего summary
+
+**Корневые причины (по результатам разбора кода):**
+
+1. **`exploration` thread не завершается на side-transition, а паузится** ([`game/core/gameplay/exploration.py`](../../game/core/gameplay/exploration.py) `_exploration_loop`, ветка `next_act in ("social", "trade")`). На возврате он будится сигналом `resume` и сразу идёт к `generate_actions`. При этом:
+   - `state["scene"]` **остаётся той, что была до ухода** в social/trade — никто её не пересобирает; LLM получает в промпте `prompt_generate_actions(history, scene)` старое описание мира.
+   - `state["history"]` обнуляется в `[]`, но **в него не добавляется отчёт** о том, что случилось в side-сессии. Контекст возврата для LLM пуст.
+
+2. **Канал передачи итога side-сессии в exploration отсутствует.** Сейчас единственный «мост» — поле `location.location_history_summary`, которое читается заново только при пересборке агентов exploration через системный промпт. Этого недостаточно: в самом промпте действий и резолюции его нет, и LLM не получает сигнала «диалог закончился».
+
+3. **Race condition при выходе из social кнопкой «Уйти»** ([`game/ui/screens/social_screen.py`](../../game/ui/screens/social_screen.py) `_trigger_summary_on_leave` → `generate_social_summary_async`). Summary стартует в **отдельном фоновом потоке**, exploration же в этот момент уже получает `resume` и пересобирает агентов. LLM-вызов саммари занимает секунды — к моменту пересборки `location_history_summary` обычно ещё **не обновлён**, и системный промпт exploration агентов не содержит свежей информации о только что закончившемся диалоге.
+
+4. **Trade не пишет собственного summary вообще.** Цепочка `social → trade → social` теряет информацию о торговле: в `state["history"]` social-loop про trade не появляется ничего, а `_generate_social_summary` суммирует только реплики диалога. На возврат в exploration факт торговли может «пропасть» либо просочиться искажённо.
+
+5. **Несовпадение жизненных циклов social-thread и UI чата.** При возврате `exploration → social → trade → social` `MainScreen._enter_social → set_npc()` чистит `_chat_entries` в UI, тогда как `state["history"]` social-loop сохраняется. Это рассинхронизирует то, что видит игрок, и то, что видит LLM.
+
+**Ожидаемое поведение:** перед возвратом в exploration формируется явная **суммаризация side-сессии** (social + всё, что было внутри: trade, в будущем — combat и др.). Эта суммаризация попадает в контекст exploration-агента **синхронно и гарантированно**, и стартовый шаг exploration на возврате (новый scene + actions) строится с её учётом. ЛЛМ exploration видит, что произошёл диалог/торговля, и предлагает игроку выбор действий с учётом нового положения.
+
+**Архитектурное решение:** оформляется отдельным ADR — см. [adr/0006-exploration-side-session-summary.md](../tech/adr/0006-exploration-side-session-summary.md).
 
 ---
 
