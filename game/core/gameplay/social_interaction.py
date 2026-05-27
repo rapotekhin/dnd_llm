@@ -9,17 +9,18 @@ It communicates with the UI via two thread-safe queues:
                 {"type": "greeting",   "text": str}      DM narration of the scene
                 {"type": "npc_reply",  "text": str}      NPC in-character line
                 {"type": "options",    "options": [{"id": int, "text": str}]}
-                {"type": "question",   "text": str}      GM clarification
                 {"type": "thinking"}
                 {"type": "resume"}                        returned from trade
                 {"type": "transition", "action": str,
-                 "npc_id": str|None, "room_id": str|None}
+                 "npc_id": str|None, "room_id": str|None,
+                 "summary": str}                          side-session report for exploration
                 {"type": "error",      "text": str}
 
   input_queue – UI → social
               message types:
                 {"type": "input",  "text": str}   player typed something
                 {"type": "resume"}                 returned from trade
+                {"type": "leave"}                  player clicked "Уйти" / pressed ESC
 
 stop_event (threading.Event) — set by the caller to abort the thread.
 """
@@ -59,6 +60,9 @@ from core.data.game_state_base import MainGameState
 from core.llm_engine.api_manager import APIManager
 from core import data as game_data
 from core.entities.base import ID
+from core.logging_config import get_logger
+
+log = get_logger(__name__)
 
 if TYPE_CHECKING:
     from core.entities.npc import NPC
@@ -229,35 +233,43 @@ def _generate_social_summary(
         result = agent.run_sync(prompt, deps=game_state)
         new_summary = result.output.summary
         location.location_history_summary = new_summary
+        log.info("social summary saved (%d chars) for npc=%r", len(new_summary), npc_id)
         return new_summary
     except Exception:
+        log.exception("social summary generation failed; keeping previous summary")
         return past
 
 
 # =======================
-# PUBLIC SUMMARY HELPER
+# LEAVE TRANSITION HELPER
 # =======================
 
-def generate_social_summary_async(
+def _emit_leave_transition(
     api_manager: APIManager,
     game_state: MainGameState,
     npc_id: str,
     history: List[str],
+    ui_queue: queue.Queue,
 ) -> None:
-    """
-    Spawn a daemon thread that generates a conversation summary and persists it
-    to location.location_history_summary.  Safe to call while the social thread
-    is being stopped — uses its own fresh LLM model instance.
-    """
-    def _run() -> None:
-        try:
-            _generate_social_summary(api_manager, game_state, npc_id, history)
-            print(f"[social] summary saved (async) for npc={npc_id!r}", flush=True)
-        except Exception as e:
-            print(f"[social] summary async error: {e}", flush=True)
+    """Synchronously generate the social summary and emit a clean transition to exploration.
 
-    t = threading.Thread(target=_run, daemon=True, name="social-summary")
-    t.start()
+    Used when the player exits via the "Уйти" button / ESC rather than via an LLM
+    action="exploration" decision. Keeping summary generation on this same thread
+    (instead of a daemon-spawned one) guarantees that location_history_summary is
+    written before the exploration thread rebuilds its agents.
+    """
+    log.info("leave signal received; generating summary synchronously (npc=%r, history=%d entries)",
+             npc_id, len(history))
+    ui_queue.put({"type": "thinking"})
+    new_summary = _generate_social_summary(api_manager, game_state, npc_id, history)
+    log.info("transition: social -> exploration (leave path), summary=%d chars", len(new_summary))
+    ui_queue.put({
+        "type":    "transition",
+        "action":  "exploration",
+        "npc_id":  None,
+        "room_id": None,
+        "summary": new_summary,
+    })
 
 
 # =======================
@@ -285,20 +297,22 @@ def run_social(
         else nullcontext()
     )
 
+    log.info("social start session=%s npc=%r", session_id[:8], npc_id)
     try:
         with span_ctx:
             try:
                 _social_loop(api_manager, game_state, npc_id, ui_queue, input_queue, stop_event)
             except Exception as e:
-                print(f"[social] loop Exception: {type(e).__name__}: {e}", flush=True)
+                log.exception("social loop crashed")
                 ui_queue.put({"type": "error", "text": f"[Ошибка движка: {e}]"})
     except BaseException as e:
         # Catches BaseException (asyncio.CancelledError etc.) that slips past span_ctx
-        print(f"[social] loop BaseException: {type(e).__name__}: {e}", flush=True)
+        log.critical("social loop BaseException: %s", type(e).__name__, exc_info=True)
         try:
             ui_queue.put({"type": "error", "text": f"[Критическая ошибка: {e}]"})
         except Exception:
-            pass
+            log.exception("could not enqueue critical-error message")
+    log.info("social stop session=%s npc=%r", session_id[:8], npc_id)
 
 
 def _social_loop(
@@ -311,7 +325,7 @@ def _social_loop(
 ) -> None:
     npc      = game_state.npcs.get(npc_id) if game_state.npcs else None
     npc_name = getattr(npc, "name", "НПС") if npc else "НПС"
-    print(f"[social] starting for npc_id={npc_id!r} npc_name={npc_name!r}", flush=True)
+    log.info("social loop starting npc_id=%r npc_name=%r", npc_id, npc_name)
 
     state: dict = {
         "history":        [],
@@ -324,28 +338,26 @@ def _social_loop(
         return
 
     ui_queue.put({"type": "thinking"})
-    print("[social] greeting agent: building…", flush=True)
+    log.debug("greeting: building agent")
     try:
         user_prompt = prompt_initial_greeting(npc_name)
         greeting_agent = _build_greeting_agent(api_manager, game_state, npc_id)
-        print(f"[social] model={greeting_agent.model!r}", flush=True)
-    except Exception as e:
-        print(f"[social] greeting agent build failed: {type(e).__name__}: {e}", flush=True)
+        log.debug("greeting: model=%r", greeting_agent.model)
+    except Exception:
+        log.exception("greeting agent build failed")
         raise
 
-    print("[social] greeting agent: calling run_sync…", flush=True)
     try:
         with _span("greeting"):
             greeting_result = greeting_agent.run_sync(user_prompt, deps=game_state)
-        print("[social] greeting agent: run_sync OK", flush=True)
-    except Exception as e:
-        print(f"[social] greeting run_sync failed: {type(e).__name__}: {e}", flush=True)
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        log.exception("greeting run_sync failed")
         raise
 
     scene       = greeting_result.output.greeting_scene
     first_words = greeting_result.output.npc_first_words
+    log.info("greeting ok: scene=%d chars, first_words=%d chars",
+             len(scene), len(first_words))
 
     state["history"].append(f"НПС: {first_words}")
     state["last_npc_reply"] = first_words
@@ -354,10 +366,10 @@ def _social_loop(
     ui_queue.put({"type": "npc_reply", "text": first_words})
 
     # Build remaining agents only after greeting succeeded
-    print("[social] building options + resolution agents…", flush=True)
+    log.debug("building options + resolution agents")
     options_agent    = _build_options_agent(api_manager, game_state, npc_id)
     resolution_agent = _build_resolution_agent(api_manager, game_state, npc_id)
-    print("[social] agents ready", flush=True)
+    log.debug("social agents ready")
 
     # ── Main dialogue loop ────────────────────────────────────────────────────
     while not stop_event.is_set():
@@ -383,6 +395,11 @@ def _social_loop(
         if msg is None:
             return
 
+        # Player clicked "Уйти" / pressed ESC — exit cleanly with a synchronous summary
+        if msg.get("type") == "leave":
+            _emit_leave_transition(api_manager, game_state, npc_id, state["history"], ui_queue)
+            return
+
         # Handle a stray "resume" in the input queue (e.g. double-signal)
         if msg.get("type") == "resume":
             ui_queue.put({"type": "resume"})
@@ -402,51 +419,38 @@ def _social_loop(
 
         state["history"].append(f"ИГРОК: {matched}")
 
-        # ── Resolution (may loop on follow-up questions) ───────────────────
-        parsed: Optional[SocialResolutionOutput] = None
-        while not stop_event.is_set():
-            ui_queue.put({"type": "thinking"})
-            with _span("resolution"):
-                try:
-                    run_result = resolution_agent.run_sync(
-                        prompt_social_resolution(
-                            state["history"],
-                            state["last_npc_reply"],
-                            matched,
-                        ),
-                        deps=game_state,
-                    )
-                    parsed = run_result.output
-                except Exception as e:
-                    print(f"[social] resolution error: {e}", flush=True)
-                    parsed = SocialResolutionOutput(
-                        npc_reply=f"[Ошибка агента: {e}]",
-                        action="social",
-                        question_to_player=None,
-                    )
+        # ── Resolution: a single LLM round produces the NPC reply and next action ──
+        ui_queue.put({"type": "thinking"})
+        with _span("resolution"):
+            try:
+                run_result = resolution_agent.run_sync(
+                    prompt_social_resolution(
+                        state["history"],
+                        state["last_npc_reply"],
+                        matched,
+                    ),
+                    deps=game_state,
+                )
+                parsed = run_result.output
+            except Exception as e:
+                log.exception("social resolution agent crashed")
+                parsed = SocialResolutionOutput(
+                    npc_reply=f"[Ошибка агента: {e}]",
+                    action="social",
+                )
 
-            npc_reply = parsed.npc_reply or ""
-            action    = parsed.action
-            awaiting  = parsed.has_question and action == "social"
+        npc_reply = (parsed.npc_reply or "").strip()
+        if not npc_reply:
+            # Defensive: the prompt forbids empty replies, but if the model still
+            # returns one we keep the conversation going with a neutral in-character line.
+            log.warning("social resolution returned empty npc_reply; substituting placeholder")
+            npc_reply = "…"
 
-            state["history"].append(f"НПС: {npc_reply}")
-            state["last_npc_reply"] = npc_reply
-            state["next_action"]    = action if not awaiting else "social"
+        state["history"].append(f"НПС: {npc_reply}")
+        state["last_npc_reply"] = npc_reply
+        state["next_action"]    = parsed.action
 
-            if awaiting:
-                ui_queue.put({"type": "question", "text": parsed.question_to_player})
-            else:
-                ui_queue.put({"type": "npc_reply", "text": npc_reply})
-
-            if not awaiting:
-                break
-
-            # Follow-up answer
-            msg2 = _wait_for_input(input_queue, stop_event)
-            if msg2 is None:
-                return
-            matched = msg2["text"].strip()
-            state["history"].append(f"ИГРОК: {matched}")
+        ui_queue.put({"type": "npc_reply", "text": npc_reply})
 
         # ── Transition check ──────────────────────────────────────────────
         if stop_event.is_set():
@@ -460,6 +464,7 @@ def _social_loop(
 
         if next_action == "trade":
             # Pause: player goes to trade screen, may return to conversation
+            log.info("transition: social -> trade (npc=%s) [pause]", meta.npc_id or npc_id)
             ui_queue.put({
                 "type":   "transition",
                 "action": "trade",
@@ -469,6 +474,10 @@ def _social_loop(
             resume = _wait_for_input(input_queue, stop_event)
             if resume is None:
                 return  # stop_event was set
+            # If the player chose to leave entirely instead of returning to chat
+            if resume.get("type") == "leave":
+                _emit_leave_transition(api_manager, game_state, npc_id, state["history"], ui_queue)
+                return
             # Rebuild agents in case inventory changed after trade
             options_agent    = _build_options_agent(api_manager, game_state, npc_id)
             resolution_agent = _build_resolution_agent(api_manager, game_state, npc_id)
@@ -485,13 +494,19 @@ def _social_loop(
 
         # Generate and persist conversation summary before leaving
         ui_queue.put({"type": "thinking"})
-        _generate_social_summary(api_manager, game_state, npc_id, state["history"])
+        new_summary = _generate_social_summary(api_manager, game_state, npc_id, state["history"])
 
+        log.info("transition: social -> %s (npc=%s room=%s) [exit], summary=%d chars",
+                 next_action,
+                 meta.npc_id if meta else None,
+                 meta.room_id if meta else None,
+                 len(new_summary))
         ui_queue.put({
             "type":    "transition",
             "action":  next_action,
             "npc_id":  meta.npc_id  if meta else None,
             "room_id": meta.room_id if meta else None,
+            "summary": new_summary,
         })
         return
 

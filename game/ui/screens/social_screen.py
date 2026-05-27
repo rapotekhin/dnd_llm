@@ -30,7 +30,10 @@ from .base_screen import BaseScreen
 from ..colors import *
 from ..components import Button
 from core.entities.base import ID
-from core.gameplay.social_interaction import SocialState, generate_social_summary_async
+from core.gameplay.social_interaction import SocialState
+from core.logging_config import get_logger
+
+log = get_logger(__name__)
 
 if TYPE_CHECKING:
     from core.entities.npc import NPC
@@ -53,7 +56,6 @@ class ChatRole(Enum):
     NPC      = "npc"        # NPC in-character line
     PLAYER   = "player"     # player's own words
     OPTION   = "option"     # suggested player response
-    QUESTION = "question"   # GM clarification
     SYSTEM   = "system"     # engine notices
     THINKING = "thinking"   # loading indicator
 
@@ -63,7 +65,6 @@ _ROLE_COLORS = {
     ChatRole.NPC:      (255, 210, 80),    # bright gold — NPC speech
     ChatRole.PLAYER:   (220, 220, 220),   # near-white
     ChatRole.OPTION:   (130, 210, 130),   # soft green — options
-    ChatRole.QUESTION: (130, 190, 220),   # light blue — GM question
     ChatRole.SYSTEM:   (150, 150, 150),   # gray
     ChatRole.THINKING: (80,  80,  80),    # dim
 }
@@ -106,6 +107,11 @@ class SocialScreen(BaseScreen):
         self._stop_event:  threading.Event = threading.Event()
         self._social_thread: Optional[threading.Thread] = None
 
+        # Summary produced by the social loop on exit to exploration.
+        # Read once by Game._enter_main via pop_summary() and passed to the
+        # exploration thread in its resume message.
+        self._pending_summary: Optional[str] = None
+
         self._build_layout()
 
     # --------------------------------------------------
@@ -117,6 +123,13 @@ class SocialScreen(BaseScreen):
         self._state.reset(npc_id)
         self._chat_entries.clear()
         self._chat_scroll = 0
+        self._pending_summary = None
+
+    def pop_summary(self) -> Optional[str]:
+        """Return (and clear) the side-session summary produced on exit to exploration."""
+        s = self._pending_summary
+        self._pending_summary = None
+        return s
 
     def start_social(self, api_manager) -> None:
         """Start or resume the social background thread.
@@ -128,6 +141,7 @@ class SocialScreen(BaseScreen):
 
         # Thread alive → paused after trade transition; resume it
         if self._social_thread and self._social_thread.is_alive():
+            log.info("resume social thread (npc=%r)", self._state.npc_id)
             self._input_queue.put({"type": "resume"})
             return
 
@@ -154,9 +168,12 @@ class SocialScreen(BaseScreen):
         gs = game_data.game_state
         npc_id = self._state.npc_id
         if gs is None or npc_id is None:
+            log.error("start_social called without state/npc (gs=%s, npc_id=%r)",
+                      gs is not None, npc_id)
             self._add_entry("[Система]: не задан NPC или игровое состояние.", ChatRole.SYSTEM)
             return
 
+        log.info("starting social thread (npc=%r)", npc_id)
         self._social_thread = threading.Thread(
             target=run_social,
             args=(api_manager, gs, str(npc_id), self._ui_queue, self._input_queue, self._stop_event),
@@ -298,7 +315,7 @@ class SocialScreen(BaseScreen):
             t = msg.get("type")
 
             # Any real content clears the thinking indicator
-            if t in ("greeting", "npc_reply", "options", "question", "error", "resume"):
+            if t in ("greeting", "npc_reply", "options", "error", "resume"):
                 self._chat_entries = [e for e in self._chat_entries
                                       if e.role != ChatRole.THINKING]
 
@@ -306,8 +323,6 @@ class SocialScreen(BaseScreen):
                 self._add_entry(msg["text"], ChatRole.GREETING)
             elif t == "npc_reply":
                 self._add_entry(msg["text"], ChatRole.NPC)
-            elif t == "question":
-                self._add_entry(msg["text"], ChatRole.QUESTION)
             elif t == "options":
                 for o in msg.get("options", []):
                     self._add_entry(f"{o['id']}. {o['text']}", ChatRole.OPTION)
@@ -318,6 +333,7 @@ class SocialScreen(BaseScreen):
             elif t == "resume":
                 pass  # thinking already cleared; actions follow shortly
             elif t == "error":
+                log.error("social thread reported error: %s", msg["text"])
                 self._add_entry(msg["text"], ChatRole.SYSTEM)
             elif t == "transition":
                 self._chat_entries = [e for e in self._chat_entries
@@ -328,43 +344,30 @@ class SocialScreen(BaseScreen):
                 if action == "trade" and npc_id:
                     transition = f"trade:{npc_id}"
                 elif action in ("exploration", "change_current_room"):
+                    self._pending_summary = (msg.get("summary") or "").strip() or None
                     transition = "exploration"
                 elif action == "combat":
                     transition = "combat"
         return transition
 
     # --------------------------------------------------
-    # SUMMARY ON MANUAL LEAVE
+    # LEAVE
     # --------------------------------------------------
 
-    def _trigger_summary_on_leave(self) -> None:
-        """Reconstruct dialogue history from chat entries and generate summary async."""
-        import core.data as _gd
-        gs = _gd.game_state
-        npc_id = self._state.npc_id
-        if gs is None or npc_id is None or self._api_manager is None:
-            return
+    def _request_leave(self) -> Optional[str]:
+        """Ask the social loop to exit cleanly.
 
-        # Reconstruct history list from visible chat entries (skip options/thinking/system)
-        history: List[str] = []
-        for entry in self._chat_entries:
-            if entry.role == ChatRole.GREETING:
-                history.append(f"СЦЕНА: {entry.text}")
-            elif entry.role == ChatRole.NPC:
-                history.append(f"НПС: {entry.text}")
-            elif entry.role == ChatRole.PLAYER:
-                # strip the "[Вы]: " prefix added in _on_send
-                text = entry.text
-                if text.startswith("[Вы]: "):
-                    text = text[len("[Вы]: "):]
-                history.append(f"ИГРОК: {text}")
-            elif entry.role == ChatRole.QUESTION:
-                history.append(f"GM: {entry.text}")
-
-        if not history:
-            return  # nothing happened, no need to summarise
-
-        generate_social_summary_async(self._api_manager, gs, str(npc_id), history)
+        Returns "main" only if the thread is already dead (nothing to wait for);
+        otherwise returns None and stays on this screen until the loop emits its
+        transition with the synchronously-generated summary.
+        """
+        if self._social_thread and self._social_thread.is_alive():
+            log.info("leave requested (npc=%r) — waiting for synchronous summary",
+                     self._state.npc_id)
+            self._input_queue.put({"type": "leave"})
+            return None
+        log.info("leave requested but social thread already dead — going to main")
+        return "main"
 
     # --------------------------------------------------
     # INPUT
@@ -429,9 +432,7 @@ class SocialScreen(BaseScreen):
     def handle_event(self, event: pygame.event.Event) -> Union[str, None]:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self._stop_event.set()
-                self._trigger_summary_on_leave()
-                return "main"
+                return self._request_leave()
             if self._input_active:
                 if event.key == pygame.K_RETURN:
                     self._on_send()
@@ -468,11 +469,9 @@ class SocialScreen(BaseScreen):
                 self._add_entry("[Система]: бой пока не реализован.", ChatRole.SYSTEM)
                 return None
 
-            # Leave button — stop thread, save summary, return to main
+            # Leave button — signal the loop to exit cleanly (sync summary + transition)
             if self._action_buttons[2].is_clicked(pos):
-                self._stop_event.set()
-                self._trigger_summary_on_leave()
-                return "main"
+                return self._request_leave()
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self._chat_scroll_dragging = False

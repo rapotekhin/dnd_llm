@@ -6,6 +6,7 @@ import pygame
 import sys
 from typing import TYPE_CHECKING, Union
 from .settings import FPS, GAME_TITLE
+from .logging_config import get_logger
 
 if TYPE_CHECKING:
     from core.entities.character import Character
@@ -14,6 +15,8 @@ from .settings.settings_manager import SettingsManager
 from . import data as game_data
 from ui.screens import TitleScreen, SettingsScreen, CharacterCreationScreen, MainScreen, InventoryScreen, CharacterScreen, AbilitiesScreen, JournalScreen, MapScreen, LevelUpScreen, SocialScreen, TradeScreen
 from localization import loc
+
+log = get_logger(__name__)
 
 
 class Game:
@@ -112,9 +115,11 @@ class Game:
     def switch_screen(self, screen_name: str):
         """Switch to a different screen"""
         if screen_name in self.screens:
+            if self.current_screen_name != screen_name:
+                log.info("screen %s -> %s", self.current_screen_name, screen_name)
             self.current_screen_name = screen_name
         else:
-            print(f"Screen not found: {screen_name}")
+            log.warning("screen not found: %s", screen_name)
         
     def run(self):
         """Main game loop"""
@@ -151,12 +156,17 @@ class Game:
         pygame.quit()
         sys.exit()
         
-    def _enter_main(self) -> None:
-        """Switch to main screen and (re)start the exploration background thread."""
+    def _enter_main(self, side_summary: Union[str, None] = None) -> None:
+        """Switch to main screen and (re)start the exploration background thread.
+
+        ``side_summary`` is the report from the side-session (social/trade) that the
+        exploration thread will splice into its history on resume. None for fresh
+        starts (new character, room change, combat return).
+        """
         self.switch_screen("main")
         main = self.screens.get("main")
         if main is not None and hasattr(main, "start_exploration"):
-            main.start_exploration(self.api_manager)
+            main.start_exploration(self.api_manager, side_summary=side_summary)
 
     def _enter_social(self, npc_id: str) -> None:
         """Switch to social screen and start/resume the social background thread."""
@@ -188,7 +198,9 @@ class Game:
             gs = game_data.game_state
             if gs is not None:
                 gs.player = result
-            print(f"Character '{result.name}' created and ready to play!")
+            log.info("character created: name=%r class=%r level=%r",
+                     result.name, getattr(result, "class_type", "?"),
+                     getattr(result, "level", "?"))
             self._enter_main()
             return
             
@@ -215,8 +227,8 @@ class Game:
             try:
                 self.screens["level_up"] = LevelUpScreen(self.screen)
                 self.switch_screen("level_up")
-            except Exception as e:
-                print(f"Error creating level up screen: {e}")
+            except Exception:
+                log.exception("failed to create level-up screen")
                 self.switch_screen("character")
 
         elif result == "social":
@@ -231,8 +243,13 @@ class Game:
             self._enter_social(npc_id)
 
         elif result == "exploration":
-            # Returned from social to exploration
-            self._enter_main()
+            # Returned from social to exploration — pull the side-session summary
+            # generated synchronously by the social loop and hand it to exploration.
+            side_summary: Union[str, None] = None
+            social = self.screens.get("social")
+            if social is not None and hasattr(social, "pop_summary"):
+                side_summary = social.pop_summary()
+            self._enter_main(side_summary=side_summary)
 
         elif isinstance(result, str) and result.startswith("trade:"):
             npc_id = result[len("trade:"):]

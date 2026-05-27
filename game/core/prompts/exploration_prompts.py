@@ -104,6 +104,25 @@ def prompt_describe_scene_user() -> str:
     return "Описание сцены."
 
 
+def prompt_describe_scene_resume(side_summary: str) -> str:
+    """User-prompt for describe_scene right after the player returns from a side-session.
+
+    Differs from the initial-scene prompt: hints to the LLM that the player just
+    finished an interaction (social/trade), so the scene should read as a
+    natural continuation, not as a first encounter with the room.
+    """
+    bridge = (side_summary or "").strip()
+    return (
+        "Игрок только что вернулся к исследованию после побочного эпизода. "
+        f"Кратко (1–2 предложения, тон ГМ) опиши, что он видит и слышит ВОКРУГ "
+        f"СЕБЯ ПРЯМО СЕЙЧАС, учитывая прошедшие события. "
+        f"Не пересказывай эти события (их уже знают и игрок, и ты). "
+        f"Не обращайся к игроку с вопросами. Описывай НАСТОЯЩЕЕ состояние комнаты "
+        f"и людей в ней.\n\n"
+        f"Что произошло только что:\n{bridge or '(нет данных)'}"
+    )
+
+
 # =======================
 # Генерация действий
 # =======================

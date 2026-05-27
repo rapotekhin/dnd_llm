@@ -62,7 +62,9 @@
 
 ## Особые потоки
 
-- **Exploration** — main screen запускает фоновый thread `run_exploration()` через `start_exploration()`. Поток слушает очередь команд от UI и шлёт в обратную очередь сообщения типа `scene/actions/narration/transition`.
+- **Exploration** — main screen запускает фоновый thread `run_exploration()` через `start_exploration()`. Поток слушает очередь команд от UI и шлёт в обратную очередь сообщения типа `scene/actions/narration/system_marker/transition`.
 - **Social/Trade** — аналогично. Trade ставит social-поток на паузу, не убивает.
+- **Возврат из side-сессии в exploration** — UI передаёт собранный side-loop'ом `summary` в сигнале `resume`. Exploration перед тем как пускать игрока в новый ход показывает маркер «Возвращение к исследованию» + summary как DM-реплику, заново описывает сцену, и только тогда генерирует действия. Контракт — [adr/0006](../../tech/adr/0006-exploration-side-session-summary.md).
+- **Выход из social кнопкой «Уйти» / ESC** — `SocialScreen` не убивает поток через `stop_event`; вместо этого шлёт `{"type": "leave"}` в `input_queue` и остаётся на экране (с индикатором «думает…»), пока social-loop синхронно не сформирует summary и не пришлёт штатный `transition`. Это убрало race condition с async-summary.
 
 См. [tech/architecture.md](../../tech/architecture.md) для деталей.

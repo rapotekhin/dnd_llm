@@ -3,7 +3,7 @@ Pydantic schemas for the social interaction (NPC dialogue) LLM agents.
 """
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from typing import List, Literal
 
 from pydantic import BaseModel, Field
 
@@ -50,7 +50,12 @@ class ResponseOptionList(BaseModel):
 # ── Agent 3: Resolution ──────────────────────────────────────────────────────
 
 class SocialResolutionOutput(BaseModel):
-    """NPC reply + next game action after the player speaks."""
+    """NPC reply + next game action after the player speaks.
+
+    In dialogue the NPC's reply IS the prompt for the next player turn.
+    There is no GM-level clarification channel — if the player's input is
+    ambiguous, the NPC asks IN CHARACTER inside ``npc_reply``.
+    """
 
     npc_reply: str = Field(
         description="The NPC's full in-character response to the player."
@@ -60,13 +65,6 @@ class SocialResolutionOutput(BaseModel):
             "Next game mode: social | trade | exploration | combat | change_current_room"
         )
     )
-    question_to_player: Optional[str] = Field(
-        default=None,
-        description=(
-            "GM clarification question for the player if more info is needed; "
-            "null if no question."
-        ),
-    )
     metadata: ActionMetadata = Field(
         default_factory=ActionMetadata,
         description=(
@@ -74,10 +72,6 @@ class SocialResolutionOutput(BaseModel):
             "room_id when action is 'change_current_room'."
         ),
     )
-
-    @property
-    def has_question(self) -> bool:
-        return bool(self.question_to_player and self.question_to_player.strip())
 
 
 # ── Agent 4: Summary ─────────────────────────────────────────────────────────
