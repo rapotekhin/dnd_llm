@@ -24,6 +24,9 @@ from .base_screen import BaseScreen
 from ..colors import *
 from ..components import Button
 from localization import loc
+from core.logging_config import get_logger
+
+log = get_logger(__name__)
 
 SB_W = 12
 SB_PAD = 4
@@ -133,18 +136,21 @@ class MainScreen(BaseScreen):
     # EXPLORATION LIFECYCLE
     # ------------------------------------------------------------------
 
-    def start_exploration(self, api_manager) -> None:
+    def start_exploration(self, api_manager, side_summary: Optional[str] = None) -> None:
         """Start or resume the exploration background thread.
 
         If the thread is alive (paused at a social/trade transition), send a
-        ``resume`` signal so it continues without re-running describe_scene.
+        ``resume`` signal — carrying the side-session ``side_summary`` so the
+        loop can splice it into history and refresh the scene before continuing.
         Otherwise perform a fresh start (new character, room change, combat).
         """
         self._api_manager = api_manager
 
         # Thread is alive → it paused waiting for resume (social/trade transition)
         if self._exploration_thread and self._exploration_thread.is_alive():
-            self._input_queue.put({"type": "resume"})
+            log.info("resume exploration thread (summary=%d chars)",
+                     len(side_summary or ""))
+            self._input_queue.put({"type": "resume", "summary": side_summary or ""})
             return
 
         # Fresh start: cancel any lingering old thread and clear stale data
@@ -170,9 +176,12 @@ class MainScreen(BaseScreen):
 
         gs = game_data.game_state
         if gs is None:
+            log.error("start_exploration called with no game_state loaded")
             self._add_entry("[Система]: игровое состояние не загружено.", ChatRole.SYSTEM)
             return
 
+        log.info("starting exploration thread (room=%s, location=%s)",
+                 gs.current_room_id, gs.current_location_id)
         self._exploration_thread = threading.Thread(
             target=run_exploration,
             args=(api_manager, gs, self._ui_queue, self._input_queue, self._stop_event),
@@ -263,7 +272,7 @@ class MainScreen(BaseScreen):
             t = msg.get("type")
 
             # Any real content clears the thinking indicator
-            if t in ("scene", "narration", "question", "actions", "error", "resume"):
+            if t in ("scene", "narration", "question", "system_marker", "actions", "error", "resume"):
                 self.chat_entries = [e for e in self.chat_entries
                                      if e.role != ChatRole.THINKING]
 
@@ -273,6 +282,8 @@ class MainScreen(BaseScreen):
                 self._add_entry(msg["text"], ChatRole.DM)
             elif t == "question":
                 self._add_entry(msg["text"], ChatRole.QUESTION)
+            elif t == "system_marker":
+                self._add_entry(msg["text"], ChatRole.SYSTEM)
             elif t == "actions":
                 for a in msg.get("actions", []):
                     self._add_entry(f"{a['id']}. {a['description']}", ChatRole.ACTION)
@@ -285,6 +296,7 @@ class MainScreen(BaseScreen):
                 # Thread resumed after social/trade — no visible message needed
                 pass
             elif t == "error":
+                log.error("exploration thread reported error: %s", msg["text"])
                 self._add_entry(msg["text"], ChatRole.SYSTEM)
             elif t == "transition":
                 self.chat_entries = [e for e in self.chat_entries

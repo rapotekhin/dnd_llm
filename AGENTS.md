@@ -11,6 +11,11 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes.
 
 ## Commands
+Always activate `venv` as a python interpreter before launche any command.
+
+```bash
+source .\venv\Scripts\activate
+```
 
 ```bash
 python game/main.py                  # run the game

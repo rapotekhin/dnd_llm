@@ -59,6 +59,7 @@
 | **Entities** | `game/core/entities/` | `Character`, `NPC`, `Location`, `Room`, `Item`, `Treasure` |
 | **Gameplay** | `game/core/gameplay/` | Режимы игры (exploration, social, trade, combat) — фоновые потоки |
 | **LLM** | `game/core/llm_engine/` | `APIManager` — обёртка над OpenRouter |
+| **Logging** | `game/core/logging_config.py` | Центральный `configure_logging()` + `sys.excepthook` / `threading.excepthook`; подключается из `main.py` до прочих импортов. Подробнее — [llm-integration.md](llm-integration.md) §«Локальное логгирование» |
 | **Prompts** | `game/core/prompts/` | Все системные промпты |
 | **Tools** | `game/core/tools/` | Инструменты для ЛЛМ (`RollDiceTool`, `RuleDbLookupTool`) |
 | **Builders** | `game/core/builders/` | Сборка сложных сущностей (Character, Location, NPC, LevelUp) |
@@ -94,13 +95,13 @@ LLM-вызовы — медленные (1-10 сек). Чтобы UI не зам
 
 **Контракт UI ↔ Thread:**
 
-- **`ui_queue`** (thread → UI) — структурированные сообщения: `scene`, `actions`, `narration`, `question`, `thinking`, `transition`, `error`
-- **`input_queue`** (UI → thread) — выбор/ввод игрока
+- **`ui_queue`** (thread → UI) — структурированные сообщения: `scene`, `actions`, `narration`, `question`, `system_marker` (in-chat разделитель, серая строка), `thinking`, `transition` (с обязательным полем `summary` при выходе из side-сессии в exploration), `error`. `question` сейчас приходит только из exploration; social-loop его больше не отправляет — см. [design/systems/social.md](../design/systems/social.md).
+- **`input_queue`** (UI → thread) — выбор/ввод игрока. Кроме `{"type": "input"}` поддерживаются служебные сигналы: `{"type": "resume", "summary": str}` (UI будит exploration-поток после возврата из side-сессии и передаёт ему отчёт side-сессии) и `{"type": "leave"}` (UI просит social-loop корректно завершиться — синхронно сформировать summary и отправить `transition`).
 - **`stop_event`** — `threading.Event` для прерывания
 
 Примеры контрактов — в docstring каждого `run_*` функции.
 
-**Особенность:** social/trade-потоки умеют **ставить себя на паузу** (через ожидание сообщения `resume`) вместо завершения. Это экономит на пересборке агентов и повторном `describe_scene` при возврате.
+**Особенность:** social/trade-потоки умеют **ставить себя на паузу** (через ожидание сообщения `resume`) вместо завершения. Это экономит на повторном `describe_scene` при возврате. Контракт возврата из side-сессии — см. [adr/0006](adr/0006-exploration-side-session-summary.md).
 
 ## Состояние
 

@@ -219,8 +219,12 @@ def get_social_resolution_instructions(npc_name: str, npc_id: str) -> str:
     return f"""
 Инструкция разрешения хода:
 1) При необходимости харизматической проверки — вызови roll_dice до формирования ответа.
-2) Сгенерируй реплику {npc_name} согласно его характеру и контексту сцены.
-3) Укажи следующее игровое действие.
+2) ВСЕГДА генерируй непустую реплику {npc_name} в его характере. Реплика — это и есть ответ
+   игроку. Если игрок написал что-то неоднозначное или общее («распросить», «как дела»),
+   {npc_name} САМ переспрашивает в характере («О чём именно интересно, путник?»), а не молчит.
+3) Никогда не возвращай пустой npc_reply. Никаких уточняющих вопросов «от ГМ» —
+   все уточнения идут устами {npc_name}.
+4) Укажи следующее игровое действие (action) для перехода режима.
 
 Правила выбора action:
 - Диалог продолжается → "social"
@@ -230,15 +234,15 @@ def get_social_resolution_instructions(npc_name: str, npc_id: str) -> str:
 - Игрок переходит в другую комнату → "change_current_room" + metadata.room_id
 
 Ответь одним валидным JSON-объектом:
-- "npc_reply" (string): реплика {npc_name}, соответствующая его характеру.
+- "npc_reply" (string, НЕ ПУСТАЯ): реплика {npc_name}, соответствующая его характеру.
 - "action" (string): "social" | "trade" | "exploration" | "combat" | "change_current_room"
-- "question_to_player" (string | null): уточняющий вопрос если нужны детали; null — не нужно.
 - "metadata" (object): {{"npc_id": "..." | null, "room_id": "..." | null}}
 
 Примеры:
-{{"npc_reply": "Приветствую! Чем могу помочь?", "action": "social", "question_to_player": null, "metadata": {{"npc_id": null, "room_id": null}}}}
-{{"npc_reply": "Хорошо, посмотрим мой товар.", "action": "trade", "question_to_player": null, "metadata": {{"npc_id": "{npc_id}", "room_id": null}}}}
-{{"npc_reply": "Удачи в пути, путник.", "action": "exploration", "question_to_player": null, "metadata": {{"npc_id": null, "room_id": null}}}}
+{{"npc_reply": "Приветствую! Чем могу помочь?", "action": "social", "metadata": {{"npc_id": null, "room_id": null}}}}
+{{"npc_reply": "Хм, о чём именно расспросить-то хочешь, путник? О слухах? О гостях?", "action": "social", "metadata": {{"npc_id": null, "room_id": null}}}}
+{{"npc_reply": "Хорошо, посмотрим мой товар.", "action": "trade", "metadata": {{"npc_id": "{npc_id}", "room_id": null}}}}
+{{"npc_reply": "Удачи в пути, путник.", "action": "exploration", "metadata": {{"npc_id": null, "room_id": null}}}}
 """.strip()
 
 

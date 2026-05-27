@@ -32,7 +32,7 @@ class APIManager:
     OPENROUTER_CREDITS_URL = "https://openrouter.ai/api/v1/credits"
     ENV_FILE = Path(__file__).parent.parent.parent.parent / ".env"
 
-    DEFAULT_MODEL_ID = "google/gemini-3.1-flash-lite-preview"
+    DEFAULT_MODEL_ID = "google/gemini-3.1-flash-lite"
 
     def __init__(self):
         self.api_key: Optional[str] = None

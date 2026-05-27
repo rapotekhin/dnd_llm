@@ -23,7 +23,7 @@
 
 - **UI:** Pygame
 - **LLM-агенты:** Pydantic AI с typed-выводом и инструментами
-- **Провайдер:** OpenRouter (по умолчанию `google/gemini-3.1-flash-lite-preview`)
+- **Провайдер:** OpenRouter (по умолчанию `google/gemini-3.1-flash-lite`)
 - **D&D правила:** внешние пакеты [`dnd-5e-core`](https://github.com/rapotekhin/dnd-5e-core) и [`DnD-5th-Edition-API`](https://github.com/rapotekhin/DnD-5th-Edition-API)
 - **Трейсинг:** Logfire (опционально)
 

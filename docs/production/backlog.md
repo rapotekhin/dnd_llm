@@ -5,13 +5,13 @@
 
 ---
 
-## 🔥 Критический техдолг
-
-Сейчас **нет открытых блокирующих пунктов** в этой категории.
-
----
-
 ## 🛠️ Технический долг (плановый)
+
+### Side-session summary для trade
+
+**Контекст:** [adr/0006](../tech/adr/0006-exploration-side-session-summary.md) закрыл цепочку `exploration → social → exploration`, но trade-loop пока не формирует собственный отчёт. В сценарии `social → trade → social → exploration` факты торговли не попадают в summary, который потом видит exploration.
+
+**Действие:** на выходе из trade класть в transition детерминированный (без LLM) summary вида «куплено X за Y, продано Z», который social-loop агрегирует в свою историю до своего собственного выхода. Контракт уже учитывает `summary` в transition-сообщении — добавить только генерацию на стороне trade.
 
 ### Миграция сейвов с Pickle
 
@@ -135,6 +135,8 @@
 
 ## ✅ Закрытые
 
+- ~~Сломанная механика перехода `exploration → social → exploration` (и через trade)~~ → реализован [adr/0006](../tech/adr/0006-exploration-side-session-summary.md): синхронный `summary` в transition, передача его в exploration через `resume`-сообщение, повторный `describe_scene` на resume по отдельному промпту, видимый игроку маркер «Возвращение к исследованию» + DM-нарратив. Async-путь `generate_social_summary_async` удалён, кнопка «Уйти» в social шлёт `{"type": "leave"}` в очередь loop'а. Trade пока не пишет своего summary — оставлено в техдолге.
+- ~~Зацикливание `question_to_player` в social~~ → поле удалено из `SocialResolutionOutput`; loop теперь один проход на ход; NPC сам переспрашивает в характере, если ввод неоднозначный.
 - ~~Legacy `app/` (Streamlit)~~ → удалена из репозитория
 - ~~LangChain в `APIManager`~~ → выпилен; см. [adr/0005](../tech/adr/0005-langchain-and-streamlit-removal.md) (исходное решение о Pydantic AI — [adr/0003](../tech/adr/0003-pydantic-ai-over-langchain.md))
 - ~~Проверка паритета ключей RU ↔ EN~~ → скрипт `scripts/check_localization.py`; текущие `ru.xml` / `en.xml` совпадают по наборам id

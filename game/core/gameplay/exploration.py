@@ -6,18 +6,20 @@ It communicates with the UI via two thread-safe queues:
 
   ui_queue   – exploration → UI
               message types:
-                {"type": "scene",    "text": str}
-                {"type": "actions",  "actions": [{"id": int, "description": str}]}
-                {"type": "narration","text": str}
-                {"type": "question", "text": str}
+                {"type": "scene",        "text": str}
+                {"type": "actions",      "actions": [{"id": int, "description": str}]}
+                {"type": "narration",    "text": str}
+                {"type": "question",     "text": str}
+                {"type": "system_marker","text": str}   subtle in-chat divider
                 {"type": "thinking"}
-                {"type": "transition", "action": str,
+                {"type": "transition",   "action": str,
                  "npc_id": str|None, "room_id": str|None}
-                {"type": "error",    "text": str}
+                {"type": "error",        "text": str}
 
   input_queue – UI → exploration
               message types:
-                {"type": "input", "text": str}
+                {"type": "input",  "text": str}
+                {"type": "resume", "summary": str}   side-session report on return
 
 stop_event (threading.Event) — set by the caller to abort the thread.
 """
@@ -44,6 +46,7 @@ from core.tools.db_lookup import RuleDbLookupTool
 from core.prompts.exploration_prompts import (
     AGENT_SYSTEM_PROMPT,
     prompt_describe_scene_user,
+    prompt_describe_scene_resume,
     prompt_generate_actions,
     AGENT_RESOLUTION_INSTRUCTIONS,
     prompt_agent_resolution,
@@ -51,6 +54,9 @@ from core.prompts.exploration_prompts import (
 )
 from core.data.game_state_base import MainGameState
 from core.llm_engine.api_manager import APIManager
+from core.logging_config import get_logger
+
+log = get_logger(__name__)
 
 # Load .env before Logfire
 _ENV_FILE = Path(__file__).resolve().parent.parent.parent.parent / ".env"
@@ -287,8 +293,9 @@ def _generate_location_summary(
         new_summary = result.output.summary
         location.location_history_summary = new_summary
         return new_summary
-    except Exception as e:
-        # Non-fatal: keep existing summary
+    except Exception:
+        # Non-fatal: keep existing summary, but log the cause.
+        log.exception("location summary generation failed; keeping previous summary")
         return past
 
 
@@ -323,11 +330,15 @@ def run_exploration(
         else nullcontext()
     )
 
+    log.info("exploration start session=%s room=%s location=%s",
+             session_id[:8], game_state.current_room_id, game_state.current_location_id)
     with span_ctx:
         try:
             _exploration_loop(api_manager, game_state, ui_queue, input_queue, stop_event)
         except Exception as e:
+            log.exception("exploration loop crashed")
             ui_queue.put({"type": "error", "text": f"[Ошибка движка: {e}]"})
+    log.info("exploration stop session=%s", session_id[:8])
 
 
 def _exploration_loop(
@@ -355,11 +366,13 @@ def _exploration_loop(
     if stop_event.is_set():
         return
     ui_queue.put({"type": "thinking"})
+    log.debug("describe_scene: starting")
     with _span("describe_scene"):
         result = describe_agent.run_sync(prompt_describe_scene_user(), deps=game_state)
         scene = result.output.environment_description
         state["history"].append(scene)
         state["scene"] = scene
+    log.info("describe_scene: %d chars", len(scene))
     ui_queue.put({"type": "scene", "text": scene})
 
     # ── Main action loop ─────────────────────────────────────────────
@@ -396,6 +409,7 @@ def _exploration_loop(
         # ── Resolution loop (may include follow-up question) ─────────
         while not stop_event.is_set():
             ui_queue.put({"type": "thinking"})
+            log.info("resolution: choice=%r", state["choice"])
             with _span("agent_resolution"):
                 prompt = prompt_agent_resolution(
                     state["history"],
@@ -406,6 +420,7 @@ def _exploration_loop(
                     run_result = resolution_agent.run_sync(prompt, deps=game_state)
                     parsed = run_result.output
                 except Exception as e:
+                    log.exception("resolution agent crashed")
                     parsed = AgentResolutionOutput(
                         narration=f"[Ошибка агента: {e}]",
                         action="exploration",
@@ -453,7 +468,9 @@ def _exploration_loop(
 
             if next_act in ("social", "trade"):
                 # Pause the thread instead of exiting so we can resume
-                # seamlessly without a slow describe_scene on return.
+                # without a fresh run_exploration spin-up.
+                log.info("transition: exploration -> %s (npc=%s) [pause]",
+                         next_act, meta.npc_id if meta else None)
                 ui_queue.put({
                     "type": "transition",
                     "action": next_act,
@@ -463,17 +480,50 @@ def _exploration_loop(
                 resume = _wait_for_input(input_queue, stop_event)
                 if resume is None:
                     return  # stop_event was set while waiting
-                # Rebuild agents so their system prompt includes any updated
-                # location_history_summary written by the social/trade session.
+
+                # Side-session summary (synchronous report from social/trade).
+                side_summary = ""
+                if isinstance(resume, dict):
+                    side_summary = (resume.get("summary") or "").strip()
+                log.info("resume: side_summary=%d chars", len(side_summary))
+
+                # Rebuild all agents so their system prompt reflects the updated
+                # location_history_summary written by the side-session.
+                describe_agent   = _build_describe_agent(api_manager, game_state)
                 generate_agent   = _build_generate_actions_agent(api_manager, game_state)
                 resolution_agent = _build_resolution_agent(api_manager, game_state)
-                # Clear in-session history: events before the side-session are now
-                # stale — they contradict the updated location_history_summary in
-                # the system prompt.  The rebuilt system prompt already carries the
-                # full location context, so starting with an empty history is correct.
+
+                # Fresh history; seed with the side-session report (DM voice) so the
+                # LLM knows what happened off-screen and does not "continue" the
+                # dialogue in exploration.
                 state["history"] = []
+                if side_summary:
+                    state["history"].append(f"DM: {side_summary}")
+
+                # Make the return visible to the player: subtle marker + the
+                # summary as DM narration. Without this the chat jumps from old
+                # entries straight to a fresh scene, with no closure on the
+                # side-session.
+                ui_queue.put({"type": "system_marker", "text": "— Возвращение к исследованию —"})
+                if side_summary:
+                    ui_queue.put({"type": "narration", "text": side_summary})
+
+                # Re-describe the scene so state["scene"] reflects post-dialogue
+                # ground truth (NPC may have left, inventory changed, etc.). The
+                # resume-specific prompt tells the LLM this is a continuation —
+                # otherwise it writes a "first impression" of the room.
+                ui_queue.put({"type": "thinking"})
+                with _span("describe_scene_resume"):
+                    result = describe_agent.run_sync(
+                        prompt_describe_scene_resume(side_summary), deps=game_state
+                    )
+                    new_scene = result.output.environment_description
+                state["history"].append(new_scene)
+                state["scene"] = new_scene
+                ui_queue.put({"type": "scene", "text": new_scene})
+
                 ui_queue.put({"type": "resume"})
-                # Continue the while-loop → go straight to generate_actions
+                # Continue the while-loop → go to generate_actions with fresh context
                 continue
 
             # For room/combat: update state then exit (full restart required)
@@ -488,6 +538,10 @@ def _exploration_loop(
             ui_queue.put({"type": "thinking"})
             _generate_location_summary(api_manager, game_state, state["history"])
 
+            log.info("transition: exploration -> %s (npc=%s room=%s) [exit]",
+                     next_act,
+                     meta.npc_id if meta else None,
+                     meta.room_id if meta else None)
             ui_queue.put({
                 "type": "transition",
                 "action": next_act,

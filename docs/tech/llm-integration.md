@@ -14,7 +14,7 @@
 | Компонент | Что делает |
 |---|---|
 | **Pydantic AI** | Основной фреймворк для LLM-агентов с typed-выводом и tools |
-| **OpenRouter** | Провайдер моделей (дефолт: `google/gemini-3.1-flash-lite-preview`) |
+| **OpenRouter** | Провайдер моделей (дефолт: `google/gemini-3.1-flash-lite` — стабильная ветка; `-preview` варианты периодически теряют провайдера и валятся в 404, поэтому в дефолт не ставим) |
 | **Pydantic** | Схемы структурированного вывода |
 | **Logfire** | Трейсинг (опционально, по `LOGFIRE_TOKEN`) |
 
@@ -141,7 +141,8 @@ roll_dice(
 Pydantic-схемы — в `game/core/gameplay/schemas/`. Главные:
 
 - `SceneDescription`, `ActionList`, `ActionOption` — простые
-- `AgentResolutionOutput` — главный вывод exploration с `narration`, `action`, `question_to_player`, `metadata`
+- `AgentResolutionOutput` — главный вывод exploration с `narration`, `action`, `question_to_player`, `metadata` (в exploration уточняющий вопрос ГМ к игроку допустим — например, «куда именно ты смотришь?»)
+- `SocialResolutionOutput` — вывод social с `npc_reply`, `action`, `metadata`. Поле `question_to_player` здесь намеренно **отсутствует**: в диалоге NPC сам переспрашивает в реплике, см. [design/systems/social.md](../design/systems/social.md)
 - `ActionMetadata` — `npc_id` или `room_id` для переходов
 
 **Fallback:** `parse_agent_resolution_output()` в `game/core/gameplay/agent_resolution_parse.py` — парсер на случай, если Pydantic AI вернул невалидный JSON. Поддерживает текстовый формат с маркерами `НАРРАЦИЯ:`, `ДЕЙСТВИЕ:`, `ВОПРОС_ИГРОКУ:`.
@@ -160,6 +161,18 @@ Pydantic-схемы — в `game/core/gameplay/schemas/`. Главные:
 
 - **Logfire** — текущая система. Включается при наличии `LOGFIRE_TOKEN` в `.env`. Используется через `logfire.span()` для exploration / social / trade.
 - **Langfuse** — был раньше, частично остался в `APIManager`. Возможно вернуться (см. [production/backlog.md](../production/backlog.md)).
+
+## Локальное логгирование
+
+Помимо Logfire-спанов есть централизованный поток stdlib-`logging` в терминал — он работает всегда и не зависит от внешнего сервиса. Конфигурация: `game/core/logging_config.py` (`configure_logging()`), подключается в `game/main.py` **до** остальных импортов.
+
+- Формат: `HH:MM:SS.mmm LEVEL name | message`, поток — `stderr`.
+- `game.*` / `core.*` / `ui.*` логгеры — на `INFO`; шумные библиотеки (`httpx`, `httpcore`, `openai`, `anthropic`, `pydantic_ai`, `logfire`, `opentelemetry`) — задавлены до `WARNING`.
+- Уровень переопределяется через `DND_LOG_LEVEL=DEBUG` (или `WARNING`) без правок кода.
+- Установлены `sys.excepthook` и `threading.excepthook` — uncaught-исключения в главном потоке и в любых daemon-потоках (`exploration`, `social`, `social-summary`) попадают в лог с полным traceback. До этого ошибки фоновых потоков молча терялись.
+- `logging.captureWarnings(True)` — `DeprecationWarning` и прочие тоже стекаются туда.
+
+Flow-логи проставлены на ключевых точках: смена экрана в `Game.switch_screen`, старт/стоп фоновых потоков, transition / resume в exploration- и social-loop, синхронная генерация summary, ошибки агентов.
 
 ## Тестирование без UI
 
