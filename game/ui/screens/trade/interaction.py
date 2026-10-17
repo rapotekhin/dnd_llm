@@ -168,7 +168,7 @@ class TradeInteractionMixin:
             if self._balance_btn and self._balance_btn.is_clicked(pos):
                 trade.balance()
                 return None
-            if self._barter_btn and self._barter_btn.is_clicked(pos) and trade.is_balanced():
+            if self._barter_btn and self._barter_btn.is_clicked(pos) and trade.can_execute():
                 trade.execute_barter()
                 return None
 

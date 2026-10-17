@@ -260,6 +260,14 @@ def _build_summary_agent(api_manager: APIManager) -> Agent[None, LocationSummary
 # HELPERS
 # =======================
 
+# Combat mode is not implemented yet: a "combat" decision keeps the player in
+# exploration instead of transitioning to a screen that does not exist.
+COMBAT_UNAVAILABLE_MARKER = "— Бой пока не реализован: сцена продолжается —"
+COMBAT_UNAVAILABLE_HISTORY = (
+    "СИСТЕМА: боевой режим пока недоступен. Продолжай сцену без боя: "
+    "противники медлят, отступают или конфликт решается иначе."
+)
+
 def _wait_for_input(
     input_queue: queue.Queue,
     stop_event: threading.Event,
@@ -273,6 +281,24 @@ def _wait_for_input(
         except queue.Empty:
             continue
     return None
+
+
+def _wait_for_player_text(
+    input_queue: queue.Queue,
+    stop_event: threading.Event,
+) -> Optional[str]:
+    """Block until the player sends text input. Returns None if aborted.
+
+    Control messages (e.g. a stray ``resume`` after the player came back from the
+    inventory) are not player actions, so they are skipped instead of crashing.
+    """
+    while True:
+        msg = _wait_for_input(input_queue, stop_event)
+        if msg is None:
+            return None
+        if isinstance(msg, dict) and msg.get("type") == "input":
+            return str(msg.get("text") or "").strip()
+        log.warning("ignoring non-input message while waiting for player: %r", msg)
 
 
 def _generate_location_summary(
@@ -390,10 +416,9 @@ def _exploration_loop(
         })
 
         # Wait for player choice
-        msg = _wait_for_input(input_queue, stop_event)
-        if msg is None:
+        raw_choice = _wait_for_player_text(input_queue, stop_event)
+        if raw_choice is None:
             return
-        raw_choice = msg["text"].strip()
 
         # Allow selecting action by number
         if raw_choice.isdigit():
@@ -453,16 +478,22 @@ def _exploration_loop(
                 break
 
             # Follow-up question → wait for player answer
-            msg = _wait_for_input(input_queue, stop_event)
-            if msg is None:
+            answer = _wait_for_player_text(input_queue, stop_event)
+            if answer is None:
                 return
-            state["choice"] = msg["text"].strip()
+            state["choice"] = answer
 
         # ── Non-exploration transition ───────────────────────────────
         if stop_event.is_set():
             return
 
         next_act = state.get("next_activity")
+        if next_act == "combat":
+            log.info("combat requested but not implemented; staying in exploration")
+            ui_queue.put({"type": "system_marker", "text": COMBAT_UNAVAILABLE_MARKER})
+            state["history"].append(COMBAT_UNAVAILABLE_HISTORY)
+            continue
+
         if next_act and next_act != "exploration":
             meta = parsed.metadata  # type: ignore[possibly-undefined]
 

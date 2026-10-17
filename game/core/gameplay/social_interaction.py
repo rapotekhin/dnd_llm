@@ -484,7 +484,13 @@ def _social_loop(
             ui_queue.put({"type": "resume"})
             continue  # continue dialogue after trade
 
-        # For exploration / combat / change_current_room → exit
+        # Combat mode does not exist yet: end the conversation and hand the scene
+        # back to exploration (with the usual summary) instead of a dead end.
+        if next_action == "combat":
+            log.info("social: combat requested but not implemented; leaving to exploration")
+            next_action = "exploration"
+
+        # For exploration / change_current_room → exit
         if next_action == "change_current_room" and meta.room_id:
             new_room = game_state.rooms.get(meta.room_id)
             if new_room:

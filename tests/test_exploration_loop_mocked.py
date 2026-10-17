@@ -45,21 +45,20 @@ def _minimal_game_state_two_rooms() -> MainGameState:
     return gs
 
 
-def test_exploration_loop_combat_transition(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_exploration_loop_combat_stays_in_exploration(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Combat is not implemented: a "combat" decision must not transition to a
+    non-existent screen (B3); the scene continues with a system marker."""
     monkeypatch.setattr(exp, "_LOGFIRE_ENABLED", False)
     monkeypatch.setattr(exp, "_generate_location_summary", lambda *a, **k: "")
 
     describe = FakeAgent([SceneDescription(environment_description="You are here.")])
-    generate = FakeAgent(
-        [
-            ActionList(
-                actions=[
-                    ActionOption(id=1, description="Fight"),
-                    ActionOption(id=2, description="Run"),
-                ]
-            ),
+    actions = ActionList(
+        actions=[
+            ActionOption(id=1, description="Fight"),
+            ActionOption(id=2, description="Run"),
         ]
     )
+    generate = FakeAgent([actions, actions])
     resolution = FakeAgent(
         [
             AgentResolutionOutput(
@@ -86,11 +85,15 @@ def test_exploration_loop_combat_transition(monkeypatch: pytest.MonkeyPatch) -> 
     collect_until(ui_q, lambda m: m.get("type") == "scene")
     collect_until(ui_q, lambda m: m.get("type") == "actions")
     in_q.put({"type": "input", "text": "1"})
-    msgs = collect_until(ui_q, lambda m: m.get("type") == "transition")
+    msgs = collect_until(ui_q, lambda m: m.get("type") == "actions")
 
-    transition = next(m for m in msgs if m.get("type") == "transition")
-    assert transition["action"] == "combat"
+    types = [m.get("type") for m in msgs]
+    assert "transition" not in types
+    assert any(m.get("type") == "system_marker" and m["text"] == exp.COMBAT_UNAVAILABLE_MARKER
+               for m in msgs)
+    assert thr.is_alive()
 
+    stop.set()  # thread is waiting for the next choice
     join_thread_or_stop(thr, stop)
 
 

@@ -65,8 +65,13 @@ class Game:
         self.screen = pygame.display.set_mode(resolution, flags)
         self.screen_width, self.screen_height = self.screen.get_size()
         
+    # Screens whose session state (chat, background thread, staged barter) must
+    # survive a rebuild of all screens on resize / settings apply.
+    _STATEFUL_SCREENS = ("main", "social", "trade")
+
     def _init_screens(self):
-        """Initialize all game screens"""
+        """Initialize all game screens (also on resize / settings apply)."""
+        old_screens, self.screens = self.screens, {}
         self.screens["title"] = TitleScreen(self.screen, self.api_manager)
         self.screens["settings"] = SettingsScreen(
             self.screen, 
@@ -84,6 +89,19 @@ class Game:
         self.screens["trade"] = TradeScreen(self.screen)
         # Level up screen is created on demand (needs player)
         self.screens["level_up"] = None
+        if old_screens.get("level_up") is not None:
+            # Rebuilt for the new size; in-progress choices are reset.
+            try:
+                self.screens["level_up"] = LevelUpScreen(self.screen)
+            except Exception:
+                log.exception("failed to rebuild level-up screen")
+                if self.current_screen_name == "level_up":
+                    self.current_screen_name = "character"
+
+        for name in self._STATEFUL_SCREENS:
+            old, new = old_screens.get(name), self.screens.get(name)
+            if old is not None and new is not None and hasattr(new, "adopt_state_from"):
+                new.adopt_state_from(old)
         
     def _on_settings_applied(self):
         """Called when settings are applied - recreate display/screens if needed"""
@@ -156,17 +174,18 @@ class Game:
         pygame.quit()
         sys.exit()
         
-    def _enter_main(self, side_summary: Union[str, None] = None) -> None:
+    def _enter_main(self, side_summary: Union[str, None] = None, fresh: bool = False) -> None:
         """Switch to main screen and (re)start the exploration background thread.
 
         ``side_summary`` is the report from the side-session (social/trade) that the
         exploration thread will splice into its history on resume. None for fresh
-        starts (new character, room change, combat return).
+        starts (new character, room change, combat return). ``fresh`` forces a
+        thread restart (new game / loaded save).
         """
         self.switch_screen("main")
         main = self.screens.get("main")
         if main is not None and hasattr(main, "start_exploration"):
-            main.start_exploration(self.api_manager, side_summary=side_summary)
+            main.start_exploration(self.api_manager, side_summary=side_summary, fresh=fresh)
 
     def _enter_social(self, npc_id: str) -> None:
         """Switch to social screen and start/resume the social background thread."""
@@ -201,7 +220,7 @@ class Game:
             log.info("character created: name=%r class=%r level=%r",
                      result.name, getattr(result, "class_type", "?"),
                      getattr(result, "level", "?"))
-            self._enter_main()
+            self._enter_main(fresh=True)
             return
             
         if result == "exit":
@@ -217,7 +236,7 @@ class Game:
             pass  # Handled by TitleScreen save modal
 
         elif result == "load_game":
-            self._enter_main()
+            self._enter_main(fresh=True)
 
         elif result == "restart_exploration":
             # Room already updated by exploration.py; restart exploration in main

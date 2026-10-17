@@ -264,10 +264,16 @@ class TradeRenderMixin:
 
         # Barter value indicators
         balanced  = trade.is_balanced()
+        funds_problem = trade.funds_problem()
         pv        = trade.player_barter_value()
         nv        = trade.npc_barter_value()
         val_col_p = BRIGHT_GOLD if balanced else (WHITE if pv > 0 else LIGHT_GRAY)
         val_col_n = BRIGHT_GOLD if balanced else (WHITE if nv > 0 else LIGHT_GRAY)
+        # A side offering more coins than it has is highlighted in red.
+        if funds_problem == "player":
+            val_col_p = (220, 80, 80)
+        elif funds_problem == "npc":
+            val_col_n = (220, 80, 80)
         pvs = self.small_font.render(f"↓ {pv} cp", True, val_col_p)
         nvs = self.small_font.render(f"↓ {nv} cp", True, val_col_n)
         self.screen.blit(pvs, pvs.get_rect(center=self._barter_val_player_rect.center))
@@ -318,7 +324,7 @@ class TradeRenderMixin:
             self._balance_btn.draw(self.screen)
         if self._barter_btn:
             self._barter_btn.draw(self.screen)
-            if not balanced:
+            if not trade.can_execute():
                 dim = pygame.Surface(
                     (self._barter_btn.rect.w, self._barter_btn.rect.h), pygame.SRCALPHA)
                 dim.fill((0, 0, 0, 150))

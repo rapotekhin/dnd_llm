@@ -118,6 +118,20 @@ class SocialScreen(BaseScreen):
     # PUBLIC API
     # --------------------------------------------------
 
+    def adopt_state_from(self, old: "SocialScreen") -> None:
+        """Take over the dialogue and the running social thread from a screen
+        instance that is being replaced (window resize, settings applied)."""
+        self._state = old._state
+        self._chat_entries = old._chat_entries
+        self._input_buffer = old._input_buffer
+        self._api_manager = old._api_manager
+        self._ui_queue = old._ui_queue
+        self._input_queue = old._input_queue
+        self._stop_event = old._stop_event
+        self._social_thread = old._social_thread
+        self._pending_summary = old._pending_summary
+        self._chat_scroll = self._chat_max_scroll()
+
     def set_npc(self, npc_id: ID) -> None:
         """Set the NPC for the upcoming conversation (does NOT start the thread)."""
         self._state.reset(npc_id)
@@ -347,7 +361,9 @@ class SocialScreen(BaseScreen):
                     self._pending_summary = (msg.get("summary") or "").strip() or None
                     transition = "exploration"
                 elif action == "combat":
-                    transition = "combat"
+                    # Defensive: combat is not implemented — return to exploration.
+                    self._pending_summary = (msg.get("summary") or "").strip() or None
+                    transition = "exploration"
         return transition
 
     # --------------------------------------------------

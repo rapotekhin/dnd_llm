@@ -132,6 +132,22 @@ class TradeState:
         has_items = bool(self.player_barter) or bool(self.npc_barter)
         return has_items and self.player_barter_value() == self.npc_barter_value()
 
+    def funds_problem(self) -> Optional[str]:
+        """Who cannot pay the coins they offer: "player", "npc", or None."""
+        player = self.get_player()
+        npc = self.get_npc()
+        player_coins = (getattr(player, "coins", 0) or 0) if player else 0
+        npc_coins = (getattr(npc, "coins", 0) or 0) if npc else 0
+        if self.player_coins_offer > player_coins:
+            return "player"
+        if self.npc_coins_offer > npc_coins:
+            return "npc"
+        return None
+
+    def can_execute(self) -> bool:
+        """Balanced and both sides can actually pay their coin offers."""
+        return self.is_balanced() and self.funds_problem() is None
+
     # ------------------------------------------------------------------
     # BARTER OPERATIONS
     # ------------------------------------------------------------------
@@ -155,12 +171,16 @@ class TradeState:
         self.coin_buf_player = str(self.player_coins_offer) if self.player_coins_offer else ""
         self.coin_buf_npc    = str(self.npc_coins_offer)    if self.npc_coins_offer    else ""
 
-    def execute_barter(self) -> None:
-        """Commit the trade: swap items and transfer coins between player and NPC."""
+    def execute_barter(self) -> bool:
+        """Commit the trade: swap items and transfer coins between player and NPC.
+
+        Returns False (and changes nothing) if a side cannot pay the coins it
+        offers. Balance is the caller's check (``can_execute``).
+        """
         player = self.get_player()
         npc    = self.get_npc()
-        if not player:
-            return
+        if not player or self.funds_problem() is not None:
+            return False
 
         player_inv = getattr(player, "inventory", None)
         npc_inv    = getattr(npc,    "inventory", None) if npc else None
@@ -198,6 +218,7 @@ class TradeState:
         self.npc_coins_offer    = 0
         self.coin_buf_player    = ""
         self.coin_buf_npc       = ""
+        return True
 
     def handle_drop(self, item: GameEquipment, source: str, target: str) -> None:
         """
