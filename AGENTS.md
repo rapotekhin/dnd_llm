@@ -41,7 +41,7 @@ game/
     gameplay/schemas/              Pydantic output schemas for LLM
     llm_engine/api_manager.py      OpenRouter key/balance, Pydantic AI model factory
     prompts/                       system prompts for each mode
-    tools/                         LLM tools (RollDiceTool, RuleDbLookupTool)
+    tools/                         LLM tools (RollDiceTool)
     builders/                      Character/Location/NPC/LevelUp builders
     settings/                      SettingsManager
   ui/screens/                      12 screens, all extend BaseScreen

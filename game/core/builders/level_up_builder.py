@@ -8,6 +8,11 @@ from core.entities.player import Player
 from core.database.json_database import JsonDatabase
 
 
+def hp_gain_per_level(hit_die: int, con_modifier: int) -> int:
+    """HP gained on levels 2+ (PHB fixed value): hit die average rounded up + CON, at least 1."""
+    return max(1, hit_die // 2 + 1 + con_modifier)
+
+
 @dataclass
 class LevelUpBuild:
     """Stores all choices during level up"""
@@ -122,30 +127,12 @@ class LevelUpBuild:
                         player.sc.learned_spells.append(spell)
                 except Exception as e:
                     print(f"Error loading spell {spell_index}: {e}")
-            
-            # Update spell slots from new level
-            try:
-                class_index = player.class_type.index if hasattr(player.class_type, 'index') else str(player.class_type)
-                level_data = db.get(f"/classes/{class_index}/levels/{self.new_level}.json")
-                spellcasting_info = level_data.get("spellcasting", {})
-                if spellcasting_info:
-                    spell_slots = []
-                    for level in range(1, 10):
-                        slot_key = f"spell_slots_level_{level}"
-                        slots = spellcasting_info.get(slot_key, 0)
-                        spell_slots.append(slots)
-                    player.sc.spell_slots = spell_slots
-                    
-                    # Update spell DC
-                    if player.class_type.is_spellcaster and player.class_type.spellcasting_ability:
-                        dc_type = player.class_type.spellcasting_ability  # "int", "wis", or "cha"
-                        ability_mod = getattr(player.ability_modifiers, dc_type, 0)
-                        prof_bonus = player.class_type.get_proficiency_bonus(self.new_level)
-                        player.sc.dc_value = 8 + prof_bonus + ability_mod
-                        player.sc.ability_modifier = ability_mod
-            except Exception as e:
-                print(f"Error updating spell slots: {e}")
-        
+
+        # Slots and DC follow the class table even when no spell was learned
+        # this level (prepared casters such as clerics never "learn" spells).
+        if player.sc:
+            self._update_spell_slots(player)
+
         # Add new proficiencies
         if self.proficiency_choices_selected:
             from dnd_5e_core.classes.proficiency import Proficiency, ProfType
@@ -196,9 +183,7 @@ class LevelUpBuild:
         
         # Increase HP for new level (with new CON modifier after ability improvements)
         if player.class_type:
-            # Use the updated CON modifier after ability improvements
-            con_modifier = player.ability_modifiers.con
-            hp_increase = player.class_type.hit_die + con_modifier
+            hp_increase = hp_gain_per_level(player.class_type.hit_die, player.ability_modifiers.con)
             player.max_hit_points += hp_increase
             player.hit_points += hp_increase
         
@@ -217,6 +202,26 @@ class LevelUpBuild:
         
         return player
     
+    def _update_spell_slots(self, player: Player) -> None:
+        """Set spell slots and save DC from the class table for ``new_level``."""
+        db = JsonDatabase()
+        try:
+            class_index = player.class_type.index if hasattr(player.class_type, 'index') else str(player.class_type)
+            level_data = db.get(f"/classes/{class_index}/levels/{self.new_level}.json")
+            spellcasting_info = level_data.get("spellcasting", {})
+            if spellcasting_info:
+                player.sc.spell_slots = [
+                    spellcasting_info.get(f"spell_slots_level_{level}", 0) for level in range(1, 10)
+                ]
+                if player.class_type.is_spellcaster and player.class_type.spellcasting_ability:
+                    dc_type = player.class_type.spellcasting_ability  # "int", "wis", or "cha"
+                    ability_mod = getattr(player.ability_modifiers, dc_type, 0)
+                    prof_bonus = player.class_type.get_proficiency_bonus(self.new_level)
+                    player.sc.dc_value = 8 + prof_bonus + ability_mod
+                    player.sc.ability_modifier = ability_mod
+        except Exception as e:
+            print(f"Error updating spell slots: {e}")
+
     def _create_spell_from_json(self, spell_data: Dict[str, Any], db: JsonDatabase) -> Optional[Any]:
         """Create Spell object from JSON data"""
         try:

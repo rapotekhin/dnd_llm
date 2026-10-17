@@ -46,9 +46,7 @@ class Game:
         self.api_manager.print_status()
         
         # Global game state (session + world). Created at startup; use game_data.game_state elsewhere.
-        from .data import MainGameState
-        game_data.game_state = MainGameState()
-        game_data.game_state.load_start_data()
+        self._reset_world()
 
         # Screen management
         self.screens = {}
@@ -207,6 +205,13 @@ class Game:
                 trade.set_return_to(return_to)
         self.switch_screen("trade")
 
+    def _reset_world(self) -> None:
+        """Replace the global game state with a freshly loaded start world."""
+        from .data import MainGameState
+        game_data.game_state = MainGameState()
+        # Loaders fill ``core.data.game_state``, so it must be replaced first.
+        game_data.game_state.load_start_data()
+
     def _handle_screen_result(self, result: Union[str, None, "Character"]):
         """Handle commands returned from screens"""
         if result is None:
@@ -214,9 +219,11 @@ class Game:
         
         from core.entities.character import Character
         if isinstance(result, Character):
-            gs = game_data.game_state
-            if gs is not None:
-                gs.player = result
+            # A new character gets a fresh world: the previous session's
+            # location summaries, NPC purses and position must not leak in.
+            # Done here (not on "new_game") so cancelling creation keeps the game.
+            self._reset_world()
+            game_data.game_state.player = result
             log.info("character created: name=%r class=%r level=%r",
                      result.name, getattr(result, "class_type", "?"),
                      getattr(result, "level", "?"))

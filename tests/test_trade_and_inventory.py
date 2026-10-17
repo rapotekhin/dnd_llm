@@ -36,8 +36,9 @@ def test_trade_balance_matches_item_difference(patched_game_state) -> None:
     npc.inventory = [cheap]
 
     ts.balance()
+    # The player's item is bought at half price (250 cp), the NPC's sold at full (100 cp).
     assert ts.player_coins_offer == 0
-    assert ts.npc_coins_offer == 4 * 100
+    assert ts.npc_coins_offer == 250 - 100
 
 
 def test_trade_balance_player_compensates_when_npc_offers_more_value(patched_game_state) -> None:
@@ -58,8 +59,9 @@ def test_trade_balance_player_compensates_when_npc_offers_more_value(patched_gam
     npc.inventory = [pricey]
 
     ts.balance()
+    # The player's item counts at half price (50 cp) against the NPC's full price (500 cp).
     assert ts.npc_coins_offer == 0
-    assert ts.player_coins_offer == 4 * 100
+    assert ts.player_coins_offer == 500 - 50
 
 
 def test_trade_execute_swaps_items_and_coins(patched_game_state) -> None:
@@ -108,8 +110,11 @@ def test_trade_is_balanced_requires_items() -> None:
     b = make_game_equipment(index="b", name="B", gp=1)
     ts.player_barter.append(a)
     ts.npc_barter.append(b)
-    ts.player_coins_offer = 0
     ts.npc_coins_offer = 0
+    # Equal items: the player's sells for half (50 cp), so 50 cp more balances the swap.
+    ts.player_coins_offer = 0
+    assert ts.is_balanced() is False
+    ts.player_coins_offer = 50
     assert ts.is_balanced() is True
     assert ts.player_barter_value() == ts.npc_barter_value()
 

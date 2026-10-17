@@ -47,10 +47,7 @@ def _build_resolution_agent(api_manager, game_state):
     )
     @agent.tool_plain
     def roll_dice(...) -> dict: ...
-    
-    @agent.tool_plain
-    def rule_db_lookup(...) -> str: ...
-    
+
     return agent
 ```
 
@@ -69,7 +66,7 @@ def _build_resolution_agent(api_manager, game_state):
 
 ## Инструменты (Tools)
 
-Сейчас два:
+Сейчас один:
 
 ### `RollDiceTool` (`game/core/tools/roll.py`)
 
@@ -84,9 +81,7 @@ roll_dice(
 
 **Важно:** ЛЛМ обязан передавать `expression` в нотации кубиков, не «wisdom check». Это явно прописано в промпте — ЛЛМы путаются регулярно.
 
-### `RuleDbLookupTool` (`game/core/tools/db_lookup.py`)
-
-Обращение к базе правил D&D 5e (через `dnd-5e-core`).
+Инструмент `rule_db_lookup` удалён в v0.3.1: это была заглушка, возвращавшая строку `"res"`, и модель получала мусор. Справка по правилам вернётся как инструмент с реальными данными SRD (см. [roadmap](../production/roadmap.md)).
 
 ### Что нужно (план)
 

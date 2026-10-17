@@ -11,6 +11,7 @@ import pytest
 from _fakes import FakeAgent, collect_until, join_thread_or_stop
 from core.data.game_state_base import MainGameState
 from core.entities.location import Location, Room
+from core.entities.npc import NPC
 from core.entities.player import Player
 from core.gameplay import exploration as exp
 from core.gameplay.schemas.exploration import (
@@ -42,6 +43,14 @@ def _minimal_game_state_two_rooms() -> MainGameState:
         ),
     }
     gs.player = Player.create_random_character(name="Explorer", race="human", class_type="fighter")
+    # Transitions are validated against the scene: r1 <-> r2 are adjacent and
+    # "npc1" stands in r1.
+    gs.rooms["r1"].connections = ["r2"]
+    gs.rooms["r2"].connections = ["r1"]
+    npc = NPC.create_random_character(name="Innkeeper", race="human", class_type="fighter", level=1)
+    npc.id = "npc1"
+    gs.npcs["npc1"] = npc
+    gs.rooms["r1"].npcs = ["npc1"]
     return gs
 
 

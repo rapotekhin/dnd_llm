@@ -40,6 +40,7 @@ from dotenv import load_dotenv
 from pydantic_ai import Agent
 
 from core.gameplay.schemas.exploration import ActionMetadata
+from core.gameplay.exploration import room_reachable
 from core.gameplay.schemas.social import (
     NpcGreeting,
     ResponseOptionList,
@@ -47,7 +48,6 @@ from core.gameplay.schemas.social import (
     SocialSummary,
 )
 from core.tools.roll import RollDiceTool
-from core.tools.db_lookup import RuleDbLookupTool
 from core.prompts.social_prompts import (
     get_npc_system_prompt,
     get_social_resolution_instructions,
@@ -100,7 +100,6 @@ def _span(name: str, **kwargs):
 # =======================
 
 _roll_dice_tool    = RollDiceTool()
-_rule_db_lookup    = RuleDbLookupTool()
 
 
 # =======================
@@ -179,11 +178,6 @@ def _build_resolution_agent(
             has_disadvantage=has_disadvantage,
             difficulty_class=difficulty_class,
         )
-
-    @agent.tool_plain
-    def rule_db_lookup(rule_name: str, rule_section: str) -> str:
-        """Lookup D&D 5e rules in the database."""
-        return _rule_db_lookup.run(rule_name, rule_section)
 
     return agent
 
@@ -457,18 +451,20 @@ def _social_loop(
             return
 
         next_action = state.get("next_action", "social")
-        meta        = parsed.metadata if parsed else ActionMetadata()  # type: ignore[possibly-undefined]
+        meta        = parsed.metadata or ActionMetadata()
 
         if next_action == "social":
             continue  # keep chatting
 
         if next_action == "trade":
             # Pause: player goes to trade screen, may return to conversation
-            log.info("transition: social -> trade (npc=%s) [pause]", meta.npc_id or npc_id)
+            # Trade with someone the LLM made up → trade with the current speaker.
+            trade_npc = meta.npc_id if meta.npc_id in game_state.npcs else npc_id
+            log.info("transition: social -> trade (npc=%s) [pause]", trade_npc)
             ui_queue.put({
                 "type":   "transition",
                 "action": "trade",
-                "npc_id": meta.npc_id or npc_id,
+                "npc_id": trade_npc,
                 "room_id": None,
             })
             resume = _wait_for_input(input_queue, stop_event)
@@ -490,13 +486,17 @@ def _social_loop(
             log.info("social: combat requested but not implemented; leaving to exploration")
             next_action = "exploration"
 
-        # For exploration / change_current_room → exit
-        if next_action == "change_current_room" and meta.room_id:
-            new_room = game_state.rooms.get(meta.room_id)
-            if new_room:
+        # For exploration / change_current_room → exit. A room that is not
+        # adjacent ends the conversation without moving the player.
+        if next_action == "change_current_room":
+            if room_reachable(game_state, meta.room_id):
+                new_room = game_state.rooms[meta.room_id]
                 game_state.current_room_id = meta.room_id
                 if getattr(new_room, "location_id", None):
                     game_state.current_location_id = new_room.location_id
+            else:
+                log.warning("social: unreachable room %r; leaving to exploration", meta.room_id)
+                next_action = "exploration"
 
         # Generate and persist conversation summary before leaving
         ui_queue.put({"type": "thinking"})

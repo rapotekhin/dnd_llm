@@ -121,11 +121,21 @@ class TradeState:
     # BARTER VALUE CALCULATIONS
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def player_item_value(item: GameEquipment) -> int:
+        """What a merchant pays for the player's item: half price (PHB, selling treasure)."""
+        return item.sell_price or 0
+
+    @staticmethod
+    def npc_item_value(item: GameEquipment) -> int:
+        """What the player pays for a merchant's item: full price."""
+        return item.price or 0
+
     def player_barter_value(self) -> int:
-        return sum((it.price or 0) for it in self.player_barter) + self.player_coins_offer
+        return sum(self.player_item_value(it) for it in self.player_barter) + self.player_coins_offer
 
     def npc_barter_value(self) -> int:
-        return sum((it.price or 0) for it in self.npc_barter) + self.npc_coins_offer
+        return sum(self.npc_item_value(it) for it in self.npc_barter) + self.npc_coins_offer
 
     def is_balanced(self) -> bool:
         """True when at least one item is offered and both sides' totals match."""
@@ -154,8 +164,8 @@ class TradeState:
 
     def balance(self) -> None:
         """Auto-fill coin offers so both sides' totals become equal."""
-        p_items = sum((it.price or 0) for it in self.player_barter)
-        n_items = sum((it.price or 0) for it in self.npc_barter)
+        p_items = sum(self.player_item_value(it) for it in self.player_barter)
+        n_items = sum(self.npc_item_value(it) for it in self.npc_barter)
         diff = p_items - n_items
         if diff > 0:
             # player offers more goods → NPC compensates with coins

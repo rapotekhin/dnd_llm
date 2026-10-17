@@ -267,3 +267,185 @@ def test_b4_affordable_trade_still_executes(patched_game_state) -> None:
     assert gem in player.inventory
     assert player.coins == 10_000 - price
     assert npc.coins == price
+
+
+# ════════════════════════════ P1 (B5–B13) ════════════════════════════════════
+
+# ── B5: no debug XP on new characters ───────────────────────────────────────
+
+def _fighter_build():
+    from core.builders.character_builder import CharacterBuild
+    from core.database.json_database import JsonDatabase
+
+    return CharacterBuild(
+        name="B5", race="human", class_type="fighter",
+        class_data=JsonDatabase().get("/classes/fighter.json"),
+        alignment="neutral",
+        abilities={"str": 15, "dex": 14, "con": 13, "int": 12, "wis": 10, "cha": 8},
+        points_remaining=0,
+    )
+
+
+def test_b5_new_character_starts_with_zero_xp(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("DND_DEV_START_XP", raising=False)
+    assert _fighter_build().create_character().xp == 0
+
+
+def test_b5_dev_start_xp_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DND_DEV_START_XP", "900")
+    assert _fighter_build().create_character().xp == 900
+
+
+# ── B6: HP per level is the fixed average, not the maximum ──────────────────
+
+def test_b6_hp_gain_is_average_plus_con() -> None:
+    from core.builders.level_up_builder import hp_gain_per_level
+
+    assert hp_gain_per_level(10, 2) == 8   # d10: 6 + 2
+    assert hp_gain_per_level(6, 0) == 4    # d6: 4
+    assert hp_gain_per_level(12, 1) == 8   # d12: 7 + 1
+    assert hp_gain_per_level(6, -5) == 1   # never below 1
+
+
+def test_b6_level_up_adds_average_hp() -> None:
+    from core.builders.level_up_builder import LevelUpBuild
+
+    p = Player.create_random_character(name="B6", race="human", class_type="fighter")
+    before = p.max_hit_points
+    LevelUpBuild(new_level=2).apply_level_up(p)
+    assert p.max_hit_points - before == max(1, 6 + p.ability_modifiers.con)
+
+
+# ── B7: prepared casters get new slots without learning spells ──────────────
+
+def test_b7_cleric_slots_update_without_new_spells() -> None:
+    from core.builders.level_up_builder import LevelUpBuild
+    from core.database.json_database import JsonDatabase
+
+    from core.builders.character_builder import CharacterBuild
+
+    p = CharacterBuild(
+        name="B7", race="human", class_type="cleric",
+        class_data=JsonDatabase().get("/classes/cleric.json"),
+        alignment="neutral",
+        abilities={"str": 10, "dex": 12, "con": 14, "int": 8, "wis": 15, "cha": 13},
+        points_remaining=0,
+    ).create_character()
+    assert p.sc is not None
+    table = JsonDatabase().get("/classes/cleric/levels/3.json")["spellcasting"]
+    expected = [table.get(f"spell_slots_level_{lvl}", 0) for lvl in range(1, 10)]
+
+    LevelUpBuild(new_level=3).apply_level_up(p)  # no new_cantrips / new_spells
+
+    assert list(p.sc.spell_slots) == expected
+    assert expected[1] > 0  # level 3 cleric has 2nd-level slots
+
+
+# ── B8 / B9: transitions only to adjacent rooms and NPCs in the room ────────
+
+def _run_one_resolution(monkeypatch, gs, resolution_output):
+    monkeypatch.setattr(exp, "_LOGFIRE_ENABLED", False)
+    monkeypatch.setattr(exp, "_generate_location_summary", lambda *a, **k: "")
+    monkeypatch.setattr(exp, "_build_describe_agent",
+                        lambda *_a: FakeAgent([SceneDescription(environment_description="A hall.")]))
+    monkeypatch.setattr(exp, "_build_generate_actions_agent",
+                        lambda *_a: FakeAgent([_actions(), _actions()]))
+    monkeypatch.setattr(exp, "_build_resolution_agent", lambda *_a: FakeAgent([resolution_output]))
+
+    ui_q: queue.Queue = queue.Queue()
+    in_q: queue.Queue = queue.Queue()
+    stop = threading.Event()
+    thr = threading.Thread(
+        target=lambda: exp.run_exploration(MagicMock(model_name="stub"), gs, ui_q, in_q, stop),
+        daemon=True, name="exploration-p1",
+    )
+    thr.start()
+    collect_until(ui_q, lambda m: m.get("type") == "actions")
+    in_q.put({"type": "input", "text": "1"})
+    msgs = collect_until(ui_q, lambda m: m.get("type") in ("actions", "transition", "error"))
+    stop.set()
+    join_thread_or_stop(thr, stop)
+    return msgs
+
+
+def test_b8_non_adjacent_room_keeps_player_in_place(monkeypatch: pytest.MonkeyPatch) -> None:
+    from core.entities.location import Room
+
+    gs = _minimal_game_state_two_rooms()
+    gs.rooms["far"] = Room(name="Far", level=0, description="Far away.", id="far", location_id="loc1")
+    msgs = _run_one_resolution(monkeypatch, gs, AgentResolutionOutput(
+        narration="You walk off.", action="change_current_room",
+        question_to_player=None, metadata=exp.ActionMetadata(room_id="far"),
+    ))
+    assert msgs[-1]["type"] == "actions"
+    assert any(m.get("text") == exp.ROOM_UNREACHABLE_MARKER for m in msgs)
+    assert gs.current_room_id == "r1"
+
+
+def test_b8_room_change_without_metadata_does_not_crash(monkeypatch: pytest.MonkeyPatch) -> None:
+    gs = _minimal_game_state_two_rooms()
+    msgs = _run_one_resolution(monkeypatch, gs, AgentResolutionOutput(
+        narration="You walk off.", action="change_current_room", question_to_player=None,
+    ))
+    assert msgs[-1]["type"] == "actions"
+    assert gs.current_room_id == "r1"
+
+
+@pytest.mark.parametrize("npc_id", [None, "ghost-npc"])
+def test_b9_social_with_unknown_npc_stays_in_exploration(monkeypatch: pytest.MonkeyPatch, npc_id) -> None:
+    gs = _minimal_game_state_two_rooms()
+    msgs = _run_one_resolution(monkeypatch, gs, AgentResolutionOutput(
+        narration="You approach someone.", action="social",
+        question_to_player=None, metadata=exp.ActionMetadata(npc_id=npc_id),
+    ))
+    assert msgs[-1]["type"] == "actions"
+    assert any(m.get("text") == exp.NPC_NOT_HERE_MARKER for m in msgs)
+
+
+def test_b9_social_with_npc_in_room_transitions(monkeypatch: pytest.MonkeyPatch) -> None:
+    gs = _minimal_game_state_two_rooms()
+    msgs = _run_one_resolution(monkeypatch, gs, AgentResolutionOutput(
+        narration="You approach the innkeeper.", action="social",
+        question_to_player=None, metadata=exp.ActionMetadata(npc_id="npc1"),
+    ))
+    assert msgs[-1] == {"type": "transition", "action": "social", "npc_id": "npc1", "room_id": None}
+
+
+# ── B10: a new character gets a fresh world ─────────────────────────────────
+
+def test_b10_new_character_resets_world(monkeypatch: pytest.MonkeyPatch) -> None:
+    import core.data as game_data
+    from core.game import Game
+
+    game = Game.__new__(Game)
+    game.screens = {"main": MagicMock()}
+    game.current_screen_name = "character_creation"
+    game.api_manager = MagicMock()
+    game._reset_world()
+
+    old_state = game_data.game_state
+    old_state.locations[old_state.current_location_id].location_history_summary = "Old run."
+    old_state.current_room_id = "somewhere-else"
+
+    hero = Player.create_random_character(name="New hero", race="human", class_type="fighter")
+    game._handle_screen_result(hero)
+
+    gs = game_data.game_state
+    assert gs is not old_state
+    assert gs.player is hero
+    assert gs.current_room_id == "tavern-room-001"
+    assert gs.locations[gs.current_location_id].location_history_summary in ("", None)
+    game.screens["main"].start_exploration.assert_called_once()
+    assert game.screens["main"].start_exploration.call_args.kwargs["fresh"] is True
+
+
+# ── B13: merchants buy at half price ────────────────────────────────────────
+
+def test_b13_player_items_sell_for_half_price() -> None:
+    sword = make_game_equipment(index="sword13", name="Sword", gp=10)
+    ts = TradeState()
+    ts.player_barter.append(sword)
+    assert ts.player_barter_value() == 500   # 10 gp = 1000 cp, half
+    ts.player_barter.clear()
+    ts.npc_barter.append(sword)
+    assert ts.npc_barter_value() == 1000     # buying is full price

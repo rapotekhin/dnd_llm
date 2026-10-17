@@ -42,7 +42,6 @@ from core.gameplay.schemas.exploration import (
     LocationSummary,
 )
 from core.tools.roll import RollDiceTool
-from core.tools.db_lookup import RuleDbLookupTool
 from core.prompts.exploration_prompts import (
     AGENT_SYSTEM_PROMPT,
     prompt_describe_scene_user,
@@ -84,7 +83,6 @@ def _span(name: str, **kwargs):
 # =======================
 
 _roll_dice_tool = RollDiceTool()
-_rule_db_lookup_tool = RuleDbLookupTool()
 
 
 # =======================
@@ -208,11 +206,6 @@ def _build_resolution_agent(
             difficulty_class=difficulty_class,
         )
 
-    @agent.tool_plain
-    def rule_db_lookup(rule_name: str, rule_section: str) -> str:
-        """Lookup D&D rules in database."""
-        return _rule_db_lookup_tool.run(rule_name, rule_section)
-
     return agent
 
 
@@ -259,6 +252,24 @@ def _build_summary_agent(api_manager: APIManager) -> Agent[None, LocationSummary
 # =======================
 # HELPERS
 # =======================
+
+# The LLM picks transition targets by id; anything it names that is not in the
+# scene (hallucinated NPC, non-adjacent room) keeps the player in exploration.
+NPC_NOT_HERE_MARKER = "— Этого собеседника здесь нет: сцена продолжается —"
+ROOM_UNREACHABLE_MARKER = "— Туда отсюда не пройти: сцена продолжается —"
+
+
+def npc_in_current_room(game_state: MainGameState, npc_id: Optional[str]) -> bool:
+    """True if ``npc_id`` is a known NPC standing in the player's current room."""
+    room = game_state.rooms.get(game_state.current_room_id) if game_state.current_room_id else None
+    return bool(npc_id) and room is not None and npc_id in room.npcs and npc_id in game_state.npcs
+
+
+def room_reachable(game_state: MainGameState, room_id: Optional[str]) -> bool:
+    """True if ``room_id`` exists and is connected to the player's current room."""
+    room = game_state.rooms.get(game_state.current_room_id) if game_state.current_room_id else None
+    return bool(room_id) and room is not None and room_id in room.connections and room_id in game_state.rooms
+
 
 # Combat mode is not implemented yet: a "combat" decision keeps the player in
 # exploration instead of transitioning to a screen that does not exist.
@@ -494,8 +505,29 @@ def _exploration_loop(
             state["history"].append(COMBAT_UNAVAILABLE_HISTORY)
             continue
 
+        meta = parsed.metadata  # type: ignore[possibly-undefined]
+        if next_act in ("social", "trade") and not npc_in_current_room(
+                game_state, meta.npc_id if meta else None):
+            log.warning("transition %s to unknown npc %r; staying in exploration",
+                        next_act, meta.npc_id if meta else None)
+            ui_queue.put({"type": "system_marker", "text": NPC_NOT_HERE_MARKER})
+            state["history"].append(
+                "СИСТЕМА: такого НПС нет в комнате. Переходи в диалог или торговлю "
+                "только с НПС из списка «НПС в комнате», указывая его id."
+            )
+            continue
+        if next_act == "change_current_room" and not room_reachable(
+                game_state, meta.room_id if meta else None):
+            log.warning("transition to unreachable room %r; staying in exploration",
+                        meta.room_id if meta else None)
+            ui_queue.put({"type": "system_marker", "text": ROOM_UNREACHABLE_MARKER})
+            state["history"].append(
+                "СИСТЕМА: в эту комнату отсюда не пройти. Переход возможен только "
+                "в комнаты из списка «Связанные комнаты», указывая их id."
+            )
+            continue
+
         if next_act and next_act != "exploration":
-            meta = parsed.metadata  # type: ignore[possibly-undefined]
 
             if next_act in ("social", "trade"):
                 # Pause the thread instead of exiting so we can resume
@@ -558,12 +590,11 @@ def _exploration_loop(
                 continue
 
             # For room/combat: update state then exit (full restart required)
-            if next_act == "change_current_room" and meta.room_id:
-                new_room = game_state.rooms.get(meta.room_id)
-                if new_room:
-                    game_state.current_room_id = meta.room_id
-                    if new_room.location_id:
-                        game_state.current_location_id = new_room.location_id
+            if next_act == "change_current_room":
+                new_room = game_state.rooms[meta.room_id]
+                game_state.current_room_id = meta.room_id
+                if new_room.location_id:
+                    game_state.current_location_id = new_room.location_id
 
             # Generate and persist location summary before leaving
             ui_queue.put({"type": "thinking"})
