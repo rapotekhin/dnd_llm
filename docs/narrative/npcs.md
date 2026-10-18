@@ -1,5 +1,7 @@
 # NPC
 
+> Исторический документ: описывает pygame-прототип v0.3.x, удалённый в v0.5.4. Текущее устройство — NPC пакета мира — `game/data/worlds/frontier/world.json`, [формат](../tech/godot-client.md#пакеты-миров).
+
 ## Источник данных
 
 Стартовые NPC — `game/assets/ru/start_npcs.jsonl`.  

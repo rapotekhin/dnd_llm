@@ -1,5 +1,7 @@
 # LLM Integration
 
+> Исторический документ: описывает pygame-прототип v0.3.x, удалённый в v0.5.4. Текущее устройство — [llm_server/README.md](../../llm_server/README.md), [ADR-0009](adr/0009-godot-backend-protocol.md), [ADR-0011](adr/0011-default-master-model.md).
+
 Самая важная техническая часть проекта. Здесь описано, как ЛЛМ встроен в игру.
 
 ## Главный принцип
