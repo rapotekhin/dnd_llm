@@ -1,6 +1,6 @@
 # contract/ — протокол Godot ↔ LLM-бэкенд
 
-**Статус:** `schema/` — `session.hello`, `turn.request`, `turn.cancel`, `engine.check`, `error_data`, `protocol_version` (спайк, v0.3.4). Остальные методы добавляются в v0.4.1 ([roadmap](../docs/production/roadmap.md)).
+**Статус:** `schema/` — все методы протокола 0.2.0: `session.*`, `turn.*`, `summary.*`, `engine.*` (v0.4.1).
 
 Источник истины для полей сообщений обеих сторон ([ADR-0009](../docs/tech/adr/0009-godot-backend-protocol.md)):
 

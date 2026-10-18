@@ -1,0 +1,39 @@
+{
+	"properties": {
+		"finesse": 0, "light": 0, "heavy": 0, "two_handed": 0, "versatile": 0, "thrown": 0, "reach": 0, "ammunition": 0,
+		"silvered": 1, "magic_plus1": 2, "magic_plus2": 4, "magic_plus3": 6,
+		"fire_damage": 2, "cold_damage": 2, "lightning_damage": 2, "radiant_damage": 3, "necrotic_damage": 3, "poison_damage": 2,
+		"resist_fire": 3, "resist_cold": 3, "resist_poison": 3, "ac_plus1": 2, "ac_plus2": 4,
+		"light_source": 0, "healing": 1, "cursed": -1
+	},
+	"rarity_by_points": [[0, "common"], [2, "uncommon"], [4, "rare"], [6, "very_rare"], [8, "legendary"]],
+	"rarity_min_level": {"common": 1, "uncommon": 1, "rare": 5, "very_rare": 11, "legendary": 17},
+	"rarity_max_value_cp": {"common": 10000, "uncommon": 50000, "rare": 500000, "very_rare": 5000000, "legendary": 50000000},
+	"catalog": {
+		"dagger": {"name": "Кинжал", "item_type": "weapon", "value_cp": 200, "properties": ["finesse", "light", "thrown"]},
+		"shortsword": {"name": "Короткий меч", "item_type": "weapon", "value_cp": 1000, "properties": ["finesse", "light"]},
+		"longsword": {"name": "Длинный меч", "item_type": "weapon", "value_cp": 1500, "properties": ["versatile"]},
+		"handaxe": {"name": "Ручной топор", "item_type": "weapon", "value_cp": 500, "properties": ["light", "thrown"]},
+		"shortbow": {"name": "Короткий лук", "item_type": "weapon", "value_cp": 2500, "properties": ["ammunition", "two_handed"]},
+		"arrows": {"name": "Стрелы", "item_type": "gear", "value_cp": 5, "properties": [], "stack": true},
+		"leather_armor": {"name": "Кожаный доспех", "item_type": "armor", "value_cp": 1000, "properties": []},
+		"chain_shirt": {"name": "Кольчужная рубаха", "item_type": "armor", "value_cp": 5000, "properties": []},
+		"chain_mail": {"name": "Кольчуга", "item_type": "armor", "value_cp": 7500, "properties": ["heavy"]},
+		"shield": {"name": "Щит", "item_type": "armor", "value_cp": 1000, "properties": []},
+		"torch": {"name": "Факел", "item_type": "gear", "value_cp": 1, "properties": ["light_source"], "stack": true},
+		"lantern": {"name": "Фонарь", "item_type": "gear", "value_cp": 500, "properties": ["light_source"]},
+		"rope": {"name": "Верёвка (15 м)", "item_type": "gear", "value_cp": 100, "properties": []},
+		"rations": {"name": "Паёк (1 день)", "item_type": "consumable", "value_cp": 50, "properties": [], "stack": true},
+		"waterskin": {"name": "Бурдюк", "item_type": "gear", "value_cp": 20, "properties": []},
+		"bedroll": {"name": "Спальник", "item_type": "gear", "value_cp": 100, "properties": []},
+		"tinderbox": {"name": "Трутница", "item_type": "gear", "value_cp": 50, "properties": []},
+		"backpack": {"name": "Рюкзак", "item_type": "gear", "value_cp": 200, "properties": []},
+		"crowbar": {"name": "Ломик", "item_type": "gear", "value_cp": 200, "properties": []},
+		"healing_potion": {"name": "Зелье лечения", "item_type": "consumable", "value_cp": 5000, "properties": ["healing"], "stack": true},
+		"antitoxin": {"name": "Противоядие", "item_type": "consumable", "value_cp": 5000, "properties": ["resist_poison"], "stack": true},
+		"holy_water": {"name": "Святая вода", "item_type": "consumable", "value_cp": 2500, "properties": ["radiant_damage"], "stack": true},
+		"ale": {"name": "Кружка эля", "item_type": "consumable", "value_cp": 4, "properties": [], "stack": true},
+		"bread": {"name": "Краюха хлеба", "item_type": "consumable", "value_cp": 2, "properties": [], "stack": true},
+		"silver_ring": {"name": "Серебряное кольцо", "item_type": "treasure", "value_cp": 2500, "properties": []}
+	}
+}

@@ -3,21 +3,21 @@ extends GdUnitTestSuite
 
 
 func test_ids_are_sequential() -> void:
-	var s := GameSession.create(1, "")
+	var s := TestUtils.new_session(1)
 	assert_str(s.next_turn_id()).is_equal("t-1")
 	assert_str(s.next_turn_id()).is_equal("t-2")
 	assert_str(s.next_check_id()).is_equal("c-1")
 
 
 func test_history_keeps_only_player_and_master_lines() -> void:
-	var h := TestUtils.session_with_chat().history(10)
+	var h := TestUtils.session_with_chat().history(4000)
 	assert_int(h.size()).is_equal(3)
 	assert_dict(h[0]).is_equal({"role": "dm", "text": "Таверна «Пьяный гусь»."})
 	assert_dict(h[1]).is_equal({"role": "player", "text": "осматриваюсь"})
 
 
 func test_history_limit_takes_the_latest() -> void:
-	var h := TestUtils.session_with_chat().history(1)
+	var h := TestUtils.session_with_chat().history(5)
 	assert_int(h.size()).is_equal(1)
 	assert_str(h[0]["text"]).is_equal("Ничего необычного.")
 
@@ -38,6 +38,8 @@ func test_round_trip_keeps_everything_and_the_rng_continues() -> void:
 	assert_int(back.check_counter).is_equal(s.check_counter)
 	assert_array(back.chat).is_equal(s.chat)
 	assert_array(back.options).is_equal(["Подойти к стойке"])
+	assert_str(back.room_id).is_equal("tavern-room-001")
+	assert_dict(back.character).is_equal(s.character)
 	assert_int(back.rng.randi()).is_equal(s.rng.randi())
 
 

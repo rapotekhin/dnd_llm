@@ -6,26 +6,32 @@ import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ValidationError
 
 from . import __version__
-from .config import Settings
 from .protocol import (
     PROTOCOL_VERSION,
     RETRYABLE,
+    Budget,
     ErrorCode,
     HelloParams,
     HelloResult,
     Limits,
     OkResult,
+    StatusResult,
+    SummaryParams,
+    SummaryResult,
     TurnCancelParams,
     TurnRequestParams,
     TurnResult,
     protocol_compatible,
 )
+
+if TYPE_CHECKING:
+    from .services import Services
 
 log = logging.getLogger("llm_server.session")
 
@@ -60,6 +66,7 @@ class EngineCallError(Exception):
 
 
 TurnHandler = Callable[["Session", TurnRequestParams], Awaitable[TurnResult]]
+SummaryHandler = Callable[["Session", SummaryParams], Awaitable[SummaryResult]]
 
 
 class TurnSlots:
@@ -80,11 +87,14 @@ class TurnSlots:
 
 
 class Session:
-    def __init__(self, ws: WebSocket, settings: Settings, slots: TurnSlots, turn_handler: TurnHandler):
+    def __init__(self, ws: WebSocket, services: "Services", slots: TurnSlots, turn_handler: TurnHandler,
+                 summary_handler: SummaryHandler):
         self.ws = ws
-        self.settings = settings
+        self.services = services
+        self.settings = services.settings
         self.slots = slots
         self.turn_handler = turn_handler
+        self.summary_handler = summary_handler
         self.initialized = False
         self.closed = False
         self._send_lock = asyncio.Lock()
@@ -183,6 +193,11 @@ class Session:
             return await self._turn(_parse(TurnRequestParams, params))
         if method == "turn.cancel":
             return self._cancel(_parse(TurnCancelParams, params))
+        if method == "session.status":
+            return self._status()
+        if method == "summary.request":
+            # Runs alongside a turn (ADR-0009 §2); it does not take a turn slot.
+            return await self.summary_handler(self, _parse(SummaryParams, params))
         raise RpcError(ErrorCode.METHOD_NOT_FOUND)
 
     def _on_response(self, msg: dict[str, Any]) -> None:
@@ -208,12 +223,22 @@ class Session:
             protocol_version=PROTOCOL_VERSION,
             server_version=__version__,
             model=s.model,
+            models=self.services.models.infos(),
             limits=Limits(
                 max_message_bytes=s.max_message_bytes,
                 turn_timeout_s=s.turn_timeout,
                 engine_timeout_s=s.engine_timeout,
                 hello_timeout_s=s.hello_timeout,
             ),
+        )
+
+    def _status(self) -> StatusResult:
+        budget = self.services.budget
+        return StatusResult(
+            server_version=__version__,
+            model=self.settings.model,
+            models=self.services.models.infos(),
+            budget=Budget(daily_usd=budget.limit_usd, spent_today_usd=round(budget.spent_today(), 6)),
         )
 
     async def _turn(self, params: TurnRequestParams) -> TurnResult:

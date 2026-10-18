@@ -2,6 +2,7 @@
 
     python tools/godot_playtest.py              # game/tools/playtest/smoke.gd
     python tools/godot_playtest.py --scenario offline   # runs without llm_server
+    python tools/godot_playtest.py --scenario live --real   # the real OpenRouter model (cents), key from .env
 
 Screenshots and report.txt land in build/playtest/<scenario>/. The game runs with --profile=agent, so the
 author's saves and settings stay untouched. The token is generated here and never printed.
@@ -23,6 +24,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", default="smoke")
     parser.add_argument("--no-server", action="store_true", help="do not start llm_server (implied by «offline»)")
+    parser.add_argument("--real", action="store_true", help="llm_server with the real model instead of the stub turn")
     opts = parser.parse_args()
     with_server = not opts.no_server and opts.scenario != "offline"
 
@@ -39,15 +41,15 @@ def main() -> int:
     subprocess.run([godot, "--headless", "--path", str(ROOT / "game"), "--import"], capture_output=True, timeout=300)
 
     token = secrets.token_urlsafe(32)
-    server = start_server(token) if with_server else None
+    server = start_server(token, "agent" if opts.real else "stub") if with_server else None
     try:
-        if server and not wait_http(f"http://127.0.0.1:{PORT}/healthz", 30):
+        if server and not wait_http(f"http://127.0.0.1:{PORT}/healthz", 60):
             print("llm_server did not start, see build/connectivity/llm_server.log")
             return 2
         args = [godot, "--path", str(ROOT / "game"), "--script", f"res://tools/playtest/{opts.scenario}.gd", "--",
                 "--profile=agent", f"--out={out_dir.as_posix()}", f"--backend-url=ws://127.0.0.1:{PORT}/ws", "--seed=42"]
         env = {**os.environ, "BTR_BACKEND_TOKEN": token}
-        proc = subprocess.run(args, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+        proc = subprocess.run(args, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
         (out_dir / "godot.log").write_text(proc.stdout + proc.stderr, encoding="utf-8")
     finally:
         if server:

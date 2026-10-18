@@ -12,6 +12,8 @@ var settings_path: String = "user://settings.cfg"
 var fullscreen: bool = false
 ## Window size in windowed mode; the viewport stays 1920×1080 and stretches.
 var resolution: Vector2i = Vector2i(1600, 900)
+## The player's model pick from the server list; "" = the server default.
+var master_model: String = ""
 
 
 func _ready() -> void:
@@ -77,7 +79,7 @@ func read_slot(slot: String) -> Variant:
 	var problem := SaveFormat.check(data)
 	if not problem.is_empty():
 		return problem
-	SaveFormat.migrate(data)
+	SaveFormat.migrate(data, {"start_room": WorldView.new(Catalog.data["world"]).start_room(), "character": Catalog.data["character"]})
 	return GameSession.from_dict(data["session"])
 
 
@@ -116,12 +118,14 @@ func load_settings() -> void:
 	if cfg.load(settings_path) == OK:
 		fullscreen = cfg.get_value("display", "fullscreen", false)
 		resolution = cfg.get_value("display", "resolution", resolution)
+		master_model = str(cfg.get_value("master", "model", ""))
 
 
 func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("display", "fullscreen", fullscreen)
 	cfg.set_value("display", "resolution", resolution)
+	cfg.set_value("master", "model", master_model)
 	cfg.save(settings_path)
 
 

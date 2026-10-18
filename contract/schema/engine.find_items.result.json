@@ -1,0 +1,60 @@
+{
+  "$defs": {
+    "FoundItem": {
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "item_type": {
+          "default": "",
+          "title": "Item Type",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "properties": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Properties",
+          "type": "array"
+        },
+        "rarity": {
+          "default": "common",
+          "title": "Rarity",
+          "type": "string"
+        },
+        "source": {
+          "default": "catalog",
+          "title": "Source",
+          "type": "string"
+        },
+        "value_cp": {
+          "default": 0,
+          "title": "Value Cp",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "item_id",
+        "name"
+      ],
+      "title": "FoundItem",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "items": {
+      "items": {
+        "$ref": "#/$defs/FoundItem"
+      },
+      "title": "Items",
+      "type": "array"
+    }
+  },
+  "title": "EngineFindItemsResult",
+  "type": "object"
+}

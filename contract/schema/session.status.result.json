@@ -1,0 +1,88 @@
+{
+  "$defs": {
+    "Budget": {
+      "additionalProperties": false,
+      "properties": {
+        "daily_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Daily Usd"
+        },
+        "spent_today_usd": {
+          "title": "Spent Today Usd",
+          "type": "number"
+        }
+      },
+      "required": [
+        "daily_usd",
+        "spent_today_usd"
+      ],
+      "title": "Budget",
+      "type": "object"
+    },
+    "ModelInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "input_usd_per_mtok": {
+          "default": 0.0,
+          "title": "Input Usd Per Mtok",
+          "type": "number"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "output_usd_per_mtok": {
+          "default": 0.0,
+          "title": "Output Usd Per Mtok",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "ModelInfo",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "budget": {
+      "$ref": "#/$defs/Budget"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "models": {
+      "items": {
+        "$ref": "#/$defs/ModelInfo"
+      },
+      "title": "Models",
+      "type": "array"
+    },
+    "server_version": {
+      "title": "Server Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "server_version",
+    "model",
+    "models",
+    "budget"
+  ],
+  "title": "StatusResult",
+  "type": "object"
+}

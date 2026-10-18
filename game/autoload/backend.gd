@@ -44,7 +44,10 @@ func connect_with(cfg: BackendConfig) -> void:
 	config = cfg
 	client = BackendClient.new(cfg)
 	client.peer.traffic.connect(protocol_log.record)
-	client.peer.register_handler("engine.check", _on_engine_check)
+	client.peer.register_handler("engine.check", GameState.handle_engine_check)
+	client.peer.register_handler("engine.validate", GameState.handle_engine_validate)
+	client.peer.register_handler("engine.lookup", GameState.handle_engine_lookup)
+	client.peer.register_handler("engine.find_items", GameState.handle_engine_find_items)
 	client.state_changed.connect(_on_state_changed)
 	client.start()
 
@@ -72,6 +75,15 @@ func state() -> int:
 	return client.state if client != null else BackendClient.State.OFFLINE
 
 
+## Models the server offers (session.hello): [{id, name, input_usd_per_mtok, output_usd_per_mtok}].
+func models() -> Array:
+	return client.server_info.get("models", []) if client != null else []
+
+
+func default_model() -> String:
+	return str(client.server_info.get("model", "")) if client != null else ""
+
+
 func request(method: String, params: Dictionary, timeout_s: float) -> RpcCall:
 	var started := Time.get_ticks_msec()
 	var call := await client.request(method, params, timeout_s).wait()
@@ -82,10 +94,6 @@ func request(method: String, params: Dictionary, timeout_s: float) -> RpcCall:
 func _on_state_changed(new_state: BackendClient.State, detail: String) -> void:
 	print("Backend: %s %s" % [BackendClient.State.keys()[new_state], detail])
 	EventBus.backend_state_changed.emit(new_state, detail)
-
-
-func _on_engine_check(params: Dictionary) -> Dictionary:
-	return GameState.handle_engine_check(params)
 
 
 ## Why the socket does not open (ADR-0009 §9): Godot cannot tell no server / HTTP 401 / TLS apart,

@@ -1,0 +1,49 @@
+{
+  "properties": {
+    "events": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Events",
+      "type": "array"
+    },
+    "kind": {
+      "enum": [
+        "location",
+        "dialogue",
+        "npc_memory"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model"
+    },
+    "previous": {
+      "default": "",
+      "title": "Previous",
+      "type": "string"
+    },
+    "subject_id": {
+      "title": "Subject Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "subject_id",
+    "events"
+  ],
+  "title": "SummaryParams",
+  "type": "object"
+}

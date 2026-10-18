@@ -29,3 +29,6 @@ __pycache__
 
 # Live playtest output (screenshots, reports)
 /legacy/scripts/playtest/out/
+
+# Backend runtime data: budget counter, generated item library
+/llm_server/var/

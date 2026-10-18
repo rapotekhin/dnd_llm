@@ -4,12 +4,12 @@ Incoming models ignore unknown fields: a newer minor client may send optional fi
 """
 
 from enum import IntEnum
-from typing import Any, Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.1.0"
+PROTOCOL_VERSION = "0.2.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -83,17 +83,112 @@ class Limits(_Out):
     max_effects_per_turn: int = 3
 
 
+class ModelInfo(_Out):
+    id: str
+    name: str
+    input_usd_per_mtok: float = 0.0
+    output_usd_per_mtok: float = 0.0
+
+
+class Budget(_Out):
+    daily_usd: float | None  # None = no limit
+    spent_today_usd: float
+
+
 class HelloResult(_Out):
     protocol_version: str
     server_version: str
-    model: str
+    model: str  # the server default
+    models: list[ModelInfo] = Field(default_factory=list)  # what the player may pick (server whitelist)
     limits: Limits
 
 
-# --- turn.* -----------------------------------------------------------------
+class StatusResult(_Out):
+    server_version: str
+    model: str
+    models: list[ModelInfo]
+    budget: Budget
+
+
+# --- snapshot (ADR-0009 §4) ------------------------------------------------------
 
 Mode = Literal["exploration", "social", "trade"]
 TurnKind = Literal["enter", "resume", "action"]
+Gender = Literal["male", "female", "other"]
+
+
+class Exit(_In):
+    room_id: str
+    name: str
+
+
+class SceneNpc(_In):
+    npc_id: str
+    name: str
+    role: str = ""
+    race: str = ""
+    gender: Gender = "other"
+    description: str = ""
+    attitude: int = 0  # -3 hostile … 0 neutral … +3 friendly
+    personality: str = ""
+
+
+class Scene(_In):
+    location_id: str
+    location_name: str
+    location_description: str = ""
+    room_id: str
+    room_name: str
+    room_description: str = ""
+    exits: list[Exit] = Field(default_factory=list)
+    npcs: list[SceneNpc] = Field(default_factory=list)
+    hooks: list[str] = Field(default_factory=list)  # hints of hidden things, never the hidden things themselves
+    flags: list[str] = Field(default_factory=list)
+    time_of_day: str = ""
+
+
+class InventoryLine(_In):
+    item_id: str
+    name: str
+    qty: int = 1
+
+
+class CharacterSheet(_In):
+    name: str
+    gender: Gender = "other"
+    race: str = ""
+    class_name: str = ""
+    level: int = 1
+    hp: int
+    max_hp: int
+    ac: int
+    conditions: list[str] = Field(default_factory=list)
+    skills: dict[str, int] = Field(default_factory=dict)  # total bonuses
+    saves: dict[str, int] = Field(default_factory=dict)
+    gold_cp: int = 0
+    inventory: list[InventoryLine] = Field(default_factory=list)
+    features: list[str] = Field(default_factory=list)
+
+
+class HistoryLine(_In):
+    role: Literal["player", "dm", "npc"]
+    text: str
+
+
+class TurnLimits(_In):
+    max_checks: int = 1
+    max_effects: int = 3
+
+
+class Snapshot(_In):
+    scene: Scene | None = None
+    character: CharacterSheet | None = None
+    history: list[HistoryLine] = Field(default_factory=list)
+    summaries: dict[str, str] = Field(default_factory=dict)  # "location", "dialogue:<npc_id>"
+    limits: TurnLimits = Field(default_factory=TurnLimits)
+
+
+# --- turn.* -----------------------------------------------------------------
 
 
 class TurnRequestParams(_In):
@@ -101,7 +196,9 @@ class TurnRequestParams(_In):
     mode: Mode
     kind: TurnKind
     input: str = ""
-    snapshot: dict[str, Any] = Field(default_factory=dict)  # typed snapshot comes with v0.4.1
+    npc_id: str | None = None  # the conversation partner in social / trade
+    model: str | None = None  # the player's pick from HelloResult.models; None = server default
+    snapshot: Snapshot = Field(default_factory=Snapshot)
 
 
 class TurnCancelParams(_In):
@@ -135,6 +232,105 @@ class OkResult(_Out):
     ok: bool = True
 
 
+# --- summary.* ------------------------------------------------------------------
+
+
+class SummaryParams(_In):
+    kind: Literal["location", "dialogue", "npc_memory"]
+    subject_id: str
+    previous: str = ""
+    events: list[str] = Field(min_length=1)
+    model: str | None = None
+
+
+class SummaryResult(_Out):
+    summary: str
+    usage: Usage
+
+
+# --- effects (ADR-0008 §3) ------------------------------------------------------
+
+DamageSeverity = Literal["unpleasant", "dangerous", "deadly"]
+HealTier = Literal["minor", "moderate", "major"]
+Rarity = Literal["common", "uncommon", "rare", "very_rare", "legendary"]
+ItemType = Literal["weapon", "armor", "gear", "consumable", "treasure"]
+# Mechanical properties the engine understands (ADR-0008 §6); free text never carries mechanics.
+# Keep in sync with game/data/items.json "properties" (a test checks it).
+ItemProperty = Literal[
+    "finesse", "light", "heavy", "two_handed", "versatile", "thrown", "reach", "ammunition",
+    "silvered", "magic_plus1", "magic_plus2", "magic_plus3",
+    "fire_damage", "cold_damage", "lightning_damage", "radiant_damage", "necrotic_damage", "poison_damage",
+    "resist_fire", "resist_cold", "resist_poison", "ac_plus1", "ac_plus2",
+    "light_source", "healing", "cursed",
+]
+
+
+class GeneratedItem(_Out):
+    name: str
+    item_type: ItemType
+    base: str | None = None  # catalog item_id it is based on
+    rarity: Rarity
+    value_cp: int = Field(ge=0)
+    properties: list[ItemProperty] = Field(default_factory=list)
+    description: str = ""
+
+
+class MoveEffect(_Out):
+    kind: Literal["move"] = "move"
+    room_id: str
+
+
+class DamageEffect(_Out):
+    kind: Literal["damage"] = "damage"
+    severity: DamageSeverity
+    damage_type: str
+    reason: str
+
+
+class HealEffect(_Out):
+    kind: Literal["heal"] = "heal"
+    tier: HealTier
+    reason: str
+
+
+class CoinsEffect(_Out):
+    kind: Literal["coins"] = "coins"
+    delta_cp: int  # + reward, - payment
+    reason: str
+
+
+class GiveItemEffect(_Out):
+    kind: Literal["give_item"] = "give_item"
+    item_id: str | None = None  # an existing catalog/library item
+    item: GeneratedItem | None = None  # or a new one (only after engine.find_items in the same turn)
+    qty: int = Field(default=1, ge=1, le=20)
+
+
+class TakeItemEffect(_Out):
+    kind: Literal["take_item"] = "take_item"
+    item_id: str
+    qty: int = Field(default=1, ge=1, le=20)
+
+
+class NpcAttitudeEffect(_Out):
+    kind: Literal["npc_attitude"] = "npc_attitude"
+    npc_id: str
+    delta: int = Field(ge=-2, le=2)
+    reason: str
+
+
+class FlagEffect(_Out):
+    kind: Literal["flag"] = "flag"
+    flag: str = Field(pattern=r"^[a-z][a-z0-9_]{1,40}$")
+    value: bool = True
+
+
+Effect = Annotated[
+    MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect,
+    Field(discriminator="kind"),
+]
+
+
 # --- engine.* (backend -> Godot) ---------------------------------------------
 
 DcTier = Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"]
@@ -160,15 +356,72 @@ class EngineCheckResult(_In):
     blocked: bool = False
 
 
+class EngineValidateParams(_Out):
+    turn_id: str
+    effect: Effect
+
+
+class EngineValidateResult(_In):
+    accepted: bool
+    effect_id: str | None = None
+    reason: str = ""  # why rejected, for the model
+    summary: str = ""  # what was reserved, e.g. "−7 HP (2d10 колющий)"
+    item_id: str | None = None  # id the engine gave a newly created item
+
+
+LookupKind = Literal["rule", "spell", "condition", "item", "npc"]
+
+
+class EngineLookupParams(_Out):
+    turn_id: str
+    kind: LookupKind
+    id: str
+
+
+class EngineLookupResult(_In):
+    found: bool
+    data: dict[str, object] = Field(default_factory=dict)
+
+
+class EngineFindItemsParams(_Out):
+    turn_id: str
+    query: str
+    base: str | None = None
+    properties: list[ItemProperty] = Field(default_factory=list)
+
+
+class FoundItem(_In):
+    item_id: str
+    name: str
+    item_type: str = ""
+    rarity: str = "common"
+    value_cp: int = 0
+    properties: list[str] = Field(default_factory=list)
+    source: str = "catalog"  # catalog | library
+
+
+class EngineFindItemsResult(_In):
+    items: list[FoundItem] = Field(default_factory=list)
+
+
 # Schemas exported to contract/ (name -> model).
 CONTRACT_MODELS: dict[str, type[BaseModel]] = {
     "error_data": ErrorData,
     "session.hello.params": HelloParams,
     "session.hello.result": HelloResult,
+    "session.status.result": StatusResult,
     "turn.request.params": TurnRequestParams,
     "turn.request.result": TurnResult,
     "turn.cancel.params": TurnCancelParams,
     "turn.cancel.result": OkResult,
+    "summary.request.params": SummaryParams,
+    "summary.request.result": SummaryResult,
     "engine.check.params": EngineCheckParams,
     "engine.check.result": EngineCheckResult,
+    "engine.validate.params": EngineValidateParams,
+    "engine.validate.result": EngineValidateResult,
+    "engine.lookup.params": EngineLookupParams,
+    "engine.lookup.result": EngineLookupResult,
+    "engine.find_items.params": EngineFindItemsParams,
+    "engine.find_items.result": EngineFindItemsResult,
 }

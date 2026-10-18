@@ -14,6 +14,8 @@ var _url: LineEdit
 var _token: LineEdit
 var _ca: LineEdit
 var _check_status: Label
+var _model: OptionButton
+var _model_ids: Array[String] = []
 
 
 func _init(back_to: String, tab: int) -> void:
@@ -125,7 +127,40 @@ func _master_tab() -> Control:
 	box.add_child(row)
 	var status := BackendStatus.new()
 	box.add_child(status)
+	var model_label := Label.new()
+	model_label.text = "OPT_MODEL"
+	model_label.theme_type_variation = UiTheme.MUTED_LABEL
+	box.add_child(model_label)
+	_model = OptionButton.new()
+	_model.name = "ModelOption"
+	_model.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_model.item_selected.connect(_on_model_selected)
+	box.add_child(_model)
+	_fill_models()
 	return box
+
+
+## Models come from the server (session.hello); "" = the server's default. Price per million tokens in/out.
+func _fill_models() -> void:
+	_model.clear()
+	_model_ids = [""]
+	var default_name := Backend.default_model()
+	_model.add_item(tr("OPT_MODEL_DEFAULT").format({"model": default_name if not default_name.is_empty() else "—"}))
+	for m: Variant in Backend.models():
+		if m is Dictionary:
+			_model_ids.append(str(m.get("id", "")))
+			_model.add_item("%s  ($%.2f / $%.2f)" % [m.get("name", m.get("id", "")), float(m.get("input_usd_per_mtok", 0)),
+				float(m.get("output_usd_per_mtok", 0))])
+	if not _model_ids.has(SaveManager.master_model):
+		_model_ids.append(SaveManager.master_model)
+		_model.add_item(SaveManager.master_model)
+	_model.selected = _model_ids.find(SaveManager.master_model)
+	_model.disabled = Backend.models().is_empty()
+
+
+func _on_model_selected(i: int) -> void:
+	SaveManager.master_model = _model_ids[i]
+	SaveManager.save_settings()
 
 
 func _field(parent: Control, key: String, value: String, secret: bool) -> LineEdit:
@@ -148,6 +183,8 @@ func _save_and_check() -> void:
 
 
 func _on_backend_state(state: int, _detail: String) -> void:
+	if state == BackendClient.State.READY:
+		_fill_models()
 	if _check_status == null or _check_status.text.is_empty():
 		return
 	if state == BackendClient.State.READY:

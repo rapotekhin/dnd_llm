@@ -17,6 +17,12 @@
 
 ## 🛠️ Технический долг (плановый)
 
+### Перенос созданных предметов в каталог
+
+**Контекст:** с v0.4.1 бэкенд пишет принятые движком предметы в `llm_server/var/items/library.jsonl` ([ADR-0008 §6](../tech/adr/0008-engine-decides-llm-narrates.md)).
+
+**Действие:** `tools/promote_items.py` — проверить предметы библиотеки той же логикой, что `ItemRules.check_generated`, показать автору и перенести выбранные в `game/data/items.json`.
+
 ### Side-session summary для trade
 
 **Контекст:** [adr/0006](../tech/adr/0006-exploration-side-session-summary.md) закрыл цепочку `exploration → social → exploration`, но trade-loop пока не формирует собственный отчёт. В сценарии `social → trade → social → exploration` факты торговли не попадают в summary, который потом видит exploration.

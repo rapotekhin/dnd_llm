@@ -1,0 +1,393 @@
+{
+  "$defs": {
+    "CoinsEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "delta_cp": {
+          "title": "Delta Cp",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "coins",
+          "default": "coins",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delta_cp",
+        "reason"
+      ],
+      "title": "CoinsEffect",
+      "type": "object"
+    },
+    "DamageEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "damage_type": {
+          "title": "Damage Type",
+          "type": "string"
+        },
+        "kind": {
+          "const": "damage",
+          "default": "damage",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "unpleasant",
+            "dangerous",
+            "deadly"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity",
+        "damage_type",
+        "reason"
+      ],
+      "title": "DamageEffect",
+      "type": "object"
+    },
+    "FlagEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "flag": {
+          "pattern": "^[a-z][a-z0-9_]{1,40}$",
+          "title": "Flag",
+          "type": "string"
+        },
+        "kind": {
+          "const": "flag",
+          "default": "flag",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "default": true,
+          "title": "Value",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "flag"
+      ],
+      "title": "FlagEffect",
+      "type": "object"
+    },
+    "GeneratedItem": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "item_type": {
+          "enum": [
+            "weapon",
+            "armor",
+            "gear",
+            "consumable",
+            "treasure"
+          ],
+          "title": "Item Type",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "properties": {
+          "items": {
+            "enum": [
+              "finesse",
+              "light",
+              "heavy",
+              "two_handed",
+              "versatile",
+              "thrown",
+              "reach",
+              "ammunition",
+              "silvered",
+              "magic_plus1",
+              "magic_plus2",
+              "magic_plus3",
+              "fire_damage",
+              "cold_damage",
+              "lightning_damage",
+              "radiant_damage",
+              "necrotic_damage",
+              "poison_damage",
+              "resist_fire",
+              "resist_cold",
+              "resist_poison",
+              "ac_plus1",
+              "ac_plus2",
+              "light_source",
+              "healing",
+              "cursed"
+            ],
+            "type": "string"
+          },
+          "title": "Properties",
+          "type": "array"
+        },
+        "rarity": {
+          "enum": [
+            "common",
+            "uncommon",
+            "rare",
+            "very_rare",
+            "legendary"
+          ],
+          "title": "Rarity",
+          "type": "string"
+        },
+        "value_cp": {
+          "minimum": 0,
+          "title": "Value Cp",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "item_type",
+        "rarity",
+        "value_cp"
+      ],
+      "title": "GeneratedItem",
+      "type": "object"
+    },
+    "GiveItemEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "kind": {
+          "const": "give_item",
+          "default": "give_item",
+          "title": "Kind",
+          "type": "string"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "title": "GiveItemEffect",
+      "type": "object"
+    },
+    "HealEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "heal",
+          "default": "heal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "tier": {
+          "enum": [
+            "minor",
+            "moderate",
+            "major"
+          ],
+          "title": "Tier",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tier",
+        "reason"
+      ],
+      "title": "HealEffect",
+      "type": "object"
+    },
+    "MoveEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "move",
+          "default": "move",
+          "title": "Kind",
+          "type": "string"
+        },
+        "room_id": {
+          "title": "Room Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "room_id"
+      ],
+      "title": "MoveEffect",
+      "type": "object"
+    },
+    "NpcAttitudeEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "delta": {
+          "maximum": 2,
+          "minimum": -2,
+          "title": "Delta",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "npc_attitude",
+          "default": "npc_attitude",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "delta",
+        "reason"
+      ],
+      "title": "NpcAttitudeEffect",
+      "type": "object"
+    },
+    "TakeItemEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "take_item",
+          "default": "take_item",
+          "title": "Kind",
+          "type": "string"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "item_id"
+      ],
+      "title": "TakeItemEffect",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "effect": {
+      "discriminator": {
+        "mapping": {
+          "coins": "#/$defs/CoinsEffect",
+          "damage": "#/$defs/DamageEffect",
+          "flag": "#/$defs/FlagEffect",
+          "give_item": "#/$defs/GiveItemEffect",
+          "heal": "#/$defs/HealEffect",
+          "move": "#/$defs/MoveEffect",
+          "npc_attitude": "#/$defs/NpcAttitudeEffect",
+          "take_item": "#/$defs/TakeItemEffect"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/MoveEffect"
+        },
+        {
+          "$ref": "#/$defs/DamageEffect"
+        },
+        {
+          "$ref": "#/$defs/HealEffect"
+        },
+        {
+          "$ref": "#/$defs/CoinsEffect"
+        },
+        {
+          "$ref": "#/$defs/GiveItemEffect"
+        },
+        {
+          "$ref": "#/$defs/TakeItemEffect"
+        },
+        {
+          "$ref": "#/$defs/NpcAttitudeEffect"
+        },
+        {
+          "$ref": "#/$defs/FlagEffect"
+        }
+      ],
+      "title": "Effect"
+    },
+    "turn_id": {
+      "title": "Turn Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "turn_id",
+    "effect"
+  ],
+  "title": "EngineValidateParams",
+  "type": "object"
+}

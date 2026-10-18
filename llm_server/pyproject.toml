@@ -9,12 +9,18 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "python-dotenv>=1.0",
+    "pydantic-ai-slim[openrouter]>=1.0",
+    "jinja2>=3.1",
+    "httpx>=0.27",
 ]
 
 [project.scripts]
 llm_server = "llm_server.__main__:main"
 
 [dependency-groups]
+observability = [
+    "langfuse>=3.0",
+]
 dev = [
     "pytest>=8.3",
     "httpx2",

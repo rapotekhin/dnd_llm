@@ -1,0 +1,66 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "base": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Base"
+    },
+    "properties": {
+      "items": {
+        "enum": [
+          "finesse",
+          "light",
+          "heavy",
+          "two_handed",
+          "versatile",
+          "thrown",
+          "reach",
+          "ammunition",
+          "silvered",
+          "magic_plus1",
+          "magic_plus2",
+          "magic_plus3",
+          "fire_damage",
+          "cold_damage",
+          "lightning_damage",
+          "radiant_damage",
+          "necrotic_damage",
+          "poison_damage",
+          "resist_fire",
+          "resist_cold",
+          "resist_poison",
+          "ac_plus1",
+          "ac_plus2",
+          "light_source",
+          "healing",
+          "cursed"
+        ],
+        "type": "string"
+      },
+      "title": "Properties",
+      "type": "array"
+    },
+    "query": {
+      "title": "Query",
+      "type": "string"
+    },
+    "turn_id": {
+      "title": "Turn Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "turn_id",
+    "query"
+  ],
+  "title": "EngineFindItemsParams",
+  "type": "object"
+}

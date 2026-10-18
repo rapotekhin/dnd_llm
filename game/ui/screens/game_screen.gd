@@ -1,6 +1,7 @@
 class_name GameScreen
 extends Control
-## The game: chat on the left (narration, checks, options, input), side panel on the right.
+## The game: chat on the left (narration, NPC lines, checks, effects, options, input), side panel on the right.
+## In social / trade mode a bar above the chat names the partner and offers to end the conversation.
 ## Input is locked while the master thinks or the connection is down; Esc opens the pause menu.
 
 var chat: ChatView
@@ -11,6 +12,9 @@ var _thinking: Label
 var _cancel: Button
 var _offline_banner: Label
 var _pause: PauseMenu
+var _mode_bar: HBoxContainer
+var _mode_label: Label
+var leave_button: Button
 
 
 func _ready() -> void:
@@ -33,6 +37,19 @@ func _ready() -> void:
 	_offline_banner.add_theme_color_override("font_color", UiTheme.WARN)
 	_offline_banner.visible = false
 	left.add_child(_offline_banner)
+	_mode_bar = HBoxContainer.new()
+	_mode_bar.add_theme_constant_override("separation", 16)
+	left.add_child(_mode_bar)
+	_mode_label = Label.new()
+	_mode_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_mode_label.theme_type_variation = UiTheme.HEADING
+	_mode_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mode_bar.add_child(_mode_label)
+	leave_button = Button.new()
+	leave_button.name = "LeaveButton"
+	leave_button.text = "BTN_LEAVE_CONVERSATION"
+	leave_button.pressed.connect(GameState.leave_conversation)
+	_mode_bar.add_child(leave_button)
 	chat = ChatView.new()
 	chat.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(chat)
@@ -71,7 +88,11 @@ func _ready() -> void:
 	send_button.pressed.connect(_send)
 	input_row.add_child(send_button)
 
-	row.add_child(_side_panel())
+	var side := SidePanel.new()
+	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side.size_flags_stretch_ratio = 1.0
+	side.menu_requested.connect(func() -> void: _pause.open())
+	row.add_child(side)
 
 	_pause = PauseMenu.new()
 	_pause.visible = false
@@ -82,37 +103,9 @@ func _ready() -> void:
 	EventBus.turn_finished.connect(_on_turn_finished)
 	EventBus.options_changed.connect(_on_options_changed)
 	EventBus.backend_state_changed.connect(_on_backend_state_changed)
+	EventBus.state_changed.connect(_refresh)
 	_refresh()
 	input.grab_focus.call_deferred()
-
-
-func _side_panel() -> Control:
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_stretch_ratio = 1.0
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 16)
-	panel.add_child(col)
-	var heading := Label.new()
-	heading.text = "SIDE_CHARACTER"
-	heading.theme_type_variation = UiTheme.HEADING
-	col.add_child(heading)
-	var placeholder := Label.new()
-	placeholder.text = "SIDE_CHARACTER_SOON"
-	placeholder.theme_type_variation = UiTheme.MUTED_LABEL
-	placeholder.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(placeholder)
-	var filler := Control.new()
-	filler.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(filler)
-	col.add_child(BackendStatus.new())
-	var menu := Button.new()
-	menu.text = "BTN_MENU"
-	menu.custom_minimum_size = Vector2(0, 56)
-	menu.pressed.connect(func() -> void: _pause.open())
-	col.add_child(menu)
-	return panel
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
@@ -153,7 +146,17 @@ func _refresh() -> void:
 	_offline_banner.visible = not online
 	input.editable = online and not busy
 	send_button.disabled = not online or busy
+	var s := GameState.session if GameState.has_session() else null
+	_mode_bar.visible = s != null and s.in_conversation()
+	if _mode_bar.visible:
+		var npc_name := str(GameState.world().npc(s.npc_id).get("name", s.npc_id))
+		_mode_label.text = tr("MODE_TRADE" if s.mode == GameSession.MODE_TRADE else "MODE_SOCIAL").format({"name": npc_name})
+		leave_button.disabled = busy or not online
+		input.placeholder_text = tr("PLACEHOLDER_SAY").format({"name": npc_name.get_slice(" ", 0)})
+	else:
+		input.placeholder_text = tr("PLACEHOLDER_ACTION")
 	for c in _options.get_children():
+		_options.remove_child(c)
 		c.queue_free()
 	if busy or not GameState.has_session():
 		return

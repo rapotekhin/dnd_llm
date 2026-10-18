@@ -1,0 +1,360 @@
+{
+	"start_room": "tavern-room-001",
+	"locations": {
+		"tawern-001": {
+			"name": "Серебряная Кружка",
+			"description": "Живая таверна в Невервинтере, наполненная разговорами, светом камина и запахом жареного мяса."
+		},
+		"market-001": {
+			"name": "Рынок Невервинтера",
+			"description": "Оживлённая рыночная площадь под открытым небом, наполненная криками торговцев, запахами специй и звоном металла."
+		},
+		"caves-001": {
+			"name": "Пещеры под таверной",
+			"description": "Сырой и тёмный комплекс пещер, скрытый под таверной. Воздух тяжёлый, стены покрыты влагой."
+		}
+	},
+	"rooms": {
+		"tavern-room-000": {
+			"name": "Склад в подвале",
+			"description": "Пыльное хранилище с бочками эля и мешками зерна.",
+			"location_id": "tawern-001",
+			"exits": [
+				"tavern-room-002"
+			],
+			"npcs": [],
+			"hooks": [
+				"одна из бочек стоит чуть в стороне от остальных"
+			]
+		},
+		"tavern-room-001": {
+			"name": "Главный зал",
+			"description": "Длинные деревянные столы, камин и занятая барная стойка.",
+			"location_id": "tawern-001",
+			"exits": [
+				"tavern-room-002",
+				"tavern-room-003",
+				"tavern-room-004",
+				"market-room-000",
+				"caves-room-001"
+			],
+			"npcs": [
+				"a1f3c7c2-6b1e-4e92-9e2a-111111111111",
+				"b2e4d8d3-7c2f-4fa3-8f3b-222222222222",
+				"d4a6f0f5-9e4b-4bc5-ad5d-444444444444",
+				"e5b7a1a6-af5c-4cd6-be6e-555555555555",
+				"f6c8b2b7-b06d-4de7-cf7f-666666666666"
+			],
+			"hooks": []
+		},
+		"tavern-room-002": {
+			"name": "Кухня",
+			"description": "Горячие печи, связки трав и запах тушёного мяса.",
+			"location_id": "tawern-001",
+			"exits": [
+				"tavern-room-001",
+				"tavern-room-000"
+			],
+			"npcs": [
+				"c3f5e9e4-8d3a-4ab4-9c4c-333333333333"
+			],
+			"hooks": []
+		},
+		"tavern-room-003": {
+			"name": "Туалет",
+			"description": "Маленькая и плохо проветриваемая уборная.",
+			"location_id": "tawern-001",
+			"exits": [
+				"tavern-room-001"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"tavern-room-004": {
+			"name": "Коридор",
+			"description": "Узкий проход с деревянными дверями по обе стороны.",
+			"location_id": "tawern-001",
+			"exits": [
+				"tavern-room-001",
+				"tavern-room-005",
+				"tavern-room-006",
+				"tavern-room-007"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"tavern-room-005": {
+			"name": "Комната гостя 1",
+			"description": "Скромная комната с небольшой кроватью.",
+			"location_id": "tawern-001",
+			"exits": [
+				"tavern-room-004"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"tavern-room-006": {
+			"name": "Комната гостя 2",
+			"description": "Чуть более просторная комната для состоятельных постояльцев.",
+			"location_id": "tawern-001",
+			"exits": [
+				"tavern-room-004"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"tavern-room-007": {
+			"name": "Комната гостя 3",
+			"description": "Пыльная комната, которую редко используют.",
+			"location_id": "tawern-001",
+			"exits": [
+				"tavern-room-004"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"market-room-000": {
+			"name": "Площадь на рынке",
+			"description": "Площадь на рынке, вокруг стоят лавки торговцев и в отдалении кузница.",
+			"location_id": "market-001",
+			"exits": [
+				"market-room-001",
+				"market-room-002",
+				"market-room-003",
+				"tavern-room-001"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"market-room-001": {
+			"name": "Лавка общих товаров",
+			"description": "Прилавок с верёвками, факелами, сухими пайками, мешками и прочей полезной мелочью.",
+			"location_id": "market-001",
+			"exits": [
+				"market-room-000",
+				"market-room-002",
+				"market-room-003"
+			],
+			"npcs": [
+				"mkt-npc-001"
+			],
+			"hooks": []
+		},
+		"market-room-002": {
+			"name": "Алхимическая лавка",
+			"description": "Стол, заставленный флаконами, порошками и странно пахнущими ингредиентами.",
+			"location_id": "market-001",
+			"exits": [
+				"market-room-000",
+				"market-room-001",
+				"market-room-003"
+			],
+			"npcs": [
+				"mkt-npc-002"
+			],
+			"hooks": []
+		},
+		"market-room-003": {
+			"name": "Кузница",
+			"description": "Раскалённый горн, наковальня и стойки с оружием и доспехами.",
+			"location_id": "market-001",
+			"exits": [
+				"market-room-000",
+				"market-room-001",
+				"market-room-002"
+			],
+			"npcs": [
+				"mkt-npc-003"
+			],
+			"hooks": []
+		},
+		"caves-room-001": {
+			"name": "Входная пещера",
+			"description": "Небольшая пещера с обвалившимися камнями и следами недавнего использования.",
+			"location_id": "caves-001",
+			"exits": [
+				"caves-room-002",
+				"tavern-room-001"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"caves-room-002": {
+			"name": "Узкий проход",
+			"description": "Тесный коридор, где стены почти смыкаются.",
+			"location_id": "caves-001",
+			"exits": [
+				"caves-room-001",
+				"caves-room-003"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"caves-room-003": {
+			"name": "Обрыв вниз",
+			"description": "Край обрыва с грубо выдолбленной лестницей, ведущей вниз.",
+			"location_id": "caves-001",
+			"exits": [
+				"caves-room-002",
+				"caves-room-004"
+			],
+			"npcs": [],
+			"hooks": [
+				"у воды видны свежие следы"
+			]
+		},
+		"caves-room-004": {
+			"name": "Нижняя пещера",
+			"description": "Сырая камера с капающей с потолка водой.",
+			"location_id": "caves-001",
+			"exits": [
+				"caves-room-003",
+				"caves-room-005"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"caves-room-005": {
+			"name": "Глухой тоннель",
+			"description": "Длинный каменный тоннель без ответвлений.",
+			"location_id": "caves-001",
+			"exits": [
+				"caves-room-004",
+				"caves-room-006"
+			],
+			"npcs": [],
+			"hooks": []
+		},
+		"caves-room-006": {
+			"name": "Конечная камера",
+			"description": "Тихая камера, где слышно лишь эхо собственных шагов.",
+			"location_id": "caves-001",
+			"exits": [
+				"caves-room-005"
+			],
+			"npcs": [],
+			"hooks": [
+				"из глубины тянет холодом и чем-то металлическим"
+			]
+		}
+	},
+	"npcs": {
+		"a1f3c7c2-6b1e-4e92-9e2a-111111111111": {
+			"name": "Борик Каменный Бокал",
+			"role": "хозяин таверны",
+			"race": "дварф",
+			"gender": "male",
+			"description": "Коренастый и громогласный хозяин таверны с вечно засученными рукавами и добродушной улыбкой.",
+			"personality": "радушный, любит сплетни, не терпит драк в зале",
+			"trader": true,
+			"stock": [
+				"ale",
+				"bread",
+				"rations"
+			]
+		},
+		"b2e4d8d3-7c2f-4fa3-8f3b-222222222222": {
+			"name": "Лира Быстрые Руки",
+			"role": "подавальщица",
+			"race": "полурослик",
+			"gender": "female",
+			"description": "Ловкая официантка с живыми глазами, которая успевает быть везде одновременно.",
+			"personality": "весёлая и наблюдательная, знает всех гостей",
+			"trader": false,
+			"stock": []
+		},
+		"c3f5e9e4-8d3a-4ab4-9c4c-333333333333": {
+			"name": "Грам Железная Ложка",
+			"role": "повар",
+			"race": "полуорк",
+			"gender": "male",
+			"description": "Массивный повар с ожогами на руках и суровым видом, но мягким сердцем.",
+			"personality": "ворчливый, но добрый, гордится своей похлёбкой",
+			"trader": false,
+			"stock": []
+		},
+		"d4a6f0f5-9e4b-4bc5-ad5d-444444444444": {
+			"name": "Старик Мелвин",
+			"role": "завсегдатай",
+			"race": "человек",
+			"gender": "male",
+			"description": "Пожилой посетитель, который проводит вечера у камина, рассказывая сомнительные истории о прошлом.",
+			"personality": "болтливый, любит приукрасить, иногда говорит правду",
+			"trader": false,
+			"stock": []
+		},
+		"e5b7a1a6-af5c-4cd6-be6e-555555555555": {
+			"name": "Рина Тонкий Шаг",
+			"role": "охотница",
+			"race": "полуэльфийка",
+			"gender": "female",
+			"description": "Молчаливая девушка в дорожном плаще, внимательно слушающая разговоры вокруг.",
+			"personality": "немногословная, осторожная, что-то ищет",
+			"trader": false,
+			"stock": []
+		},
+		"f6c8b2b7-b06d-4de7-cf7f-666666666666": {
+			"name": "Том Весёлый Кулак",
+			"role": "шахтёр",
+			"race": "человек",
+			"gender": "male",
+			"description": "Шумный молодой парень, который явно выпил больше, чем собирался.",
+			"personality": "задиристый и шумный, быстро обижается",
+			"trader": false,
+			"stock": []
+		},
+		"mkt-npc-001": {
+			"name": "Харвин Медный Вес",
+			"role": "торговец всякой всячиной",
+			"race": "человек",
+			"gender": "male",
+			"description": "Полноватый торговец с вечной улыбкой, продающий всё — от верёвок до котелков.",
+			"personality": "деловитый, торгуется до последнего медяка",
+			"trader": true,
+			"stock": [
+				"torch",
+				"rope",
+				"rations",
+				"waterskin",
+				"bedroll",
+				"tinderbox",
+				"backpack",
+				"lantern",
+				"crowbar"
+			]
+		},
+		"mkt-npc-002": {
+			"name": "Элисса Тонкий Флакон",
+			"role": "алхимик",
+			"race": "гномка",
+			"gender": "female",
+			"description": "Алхимик с острым взглядом и вечно запачканными реагентами руками.",
+			"personality": "рассеянная, увлечена опытами, честна в ценах",
+			"trader": true,
+			"stock": [
+				"healing_potion",
+				"antitoxin",
+				"holy_water"
+			]
+		},
+		"mkt-npc-003": {
+			"name": "Бранн Железный Кулак",
+			"role": "кузнец",
+			"race": "дварф",
+			"gender": "male",
+			"description": "Кузнец с обожжённым фартуком, предпочитающий металл словам.",
+			"personality": "суровый, уважает силу и хорошую сталь",
+			"trader": true,
+			"stock": [
+				"dagger",
+				"shortsword",
+				"longsword",
+				"handaxe",
+				"shield",
+				"leather_armor",
+				"chain_shirt",
+				"arrows"
+			]
+		}
+	}
+}

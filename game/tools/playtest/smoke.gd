@@ -24,7 +24,8 @@ func run() -> void:
 
 	var game: Control = screen()
 	game.get("input").text = "осматриваю комнату"
-	await press(game.get("send_button"))
+	game.get("send_button").pressed.emit()
+	# Checked in the same frame: the stub master may answer within a couple of frames.
 	step("input locked while the master thinks", gs.is_busy() and not game.get("input").editable)
 	var acted := await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 	step("action turn finished", acted)

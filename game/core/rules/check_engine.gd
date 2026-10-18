@@ -11,8 +11,8 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 	var tier := str(params.get("dc_tier", ""))
 	if not tiers.has(tier):
 		return {"error": "unknown dc_tier: %s" % tier}
-	var skill := str(params.get("skill", ""))
-	var save := str(params.get("save", ""))
+	var skill := str(params.get("skill", "")) if params.get("skill") != null else ""
+	var save := str(params.get("save", "")) if params.get("save") != null else ""
 	if skill.is_empty() == save.is_empty():
 		return {"error": "exactly one of skill or save is required"}
 	if not skill.is_empty() and not (rules["skills"] as Dictionary).has(skill):
@@ -39,3 +39,12 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 		"nat": nat,
 		"blocked": false,
 	}
+
+
+## The character's total bonus for engine.check params: skill bonus or save bonus from the sheet.
+static func bonus_for(character: Dictionary, params: Dictionary) -> int:
+	var skill := str(params.get("skill", "")) if params.get("skill") != null else ""
+	if not skill.is_empty():
+		return int(character.get("skills", {}).get(skill, 0))
+	var save := str(params.get("save", "")) if params.get("save") != null else ""
+	return int(character.get("saves", {}).get(save, 0))

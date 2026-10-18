@@ -1,0 +1,196 @@
+"""The turn agent (one LLM call per turn, ADR-0009) and the summary agent.
+
+The model never changes the world: its tools go to Godot as engine.* calls (ADR-0008) and the turn result
+lists only effect ids the engine reserved this turn.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Literal
+
+from pydantic import BaseModel, Field
+from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai.models import Model
+from pydantic_ai.settings import ModelSettings
+
+from . import prompts
+from .protocol import (
+    DcTier,
+    Effect,
+    EngineCheckParams,
+    EngineCheckResult,
+    EngineFindItemsParams,
+    EngineFindItemsResult,
+    EngineLookupParams,
+    EngineLookupResult,
+    EngineValidateParams,
+    EngineValidateResult,
+    GiveItemEffect,
+    ItemProperty,
+    LookupKind,
+    SceneNpc,
+    TurnRequestParams,
+)
+
+if TYPE_CHECKING:
+    from .llm.library import ItemLibrary
+    from .session import Session
+
+MODEL_SETTINGS: ModelSettings = {"temperature": 0.8, "max_tokens": 1500}
+
+
+class TurnOutput(BaseModel):
+    """What the master returns at the end of a turn."""
+
+    narration: str = Field(description="Текст для игрока: описание мастера или реплика NPC. Не пустой.")
+    options: list[str] = Field(default_factory=list, max_length=3, description="1–3 коротких варианта действий игрока от первого лица.")
+    effect_ids: list[str] = Field(default_factory=list, description="effect_id принятых движком эффектов, которые надо применить.")
+    next_mode: Literal["exploration", "social", "trade"] | None = Field(
+        default=None, description="Смена режима: social/trade — разговор/торговля с NPC (нужен npc_id), exploration — вернуться в общую сцену.")
+    npc_id: str | None = Field(default=None, description="NPC для social/trade, из списка NPC сцены.")
+
+
+class SummaryOutput(BaseModel):
+    summary: str = Field(description="2–4 предложения.")
+
+
+@dataclass
+class TurnContext:
+    session: Session
+    params: TurnRequestParams
+    library: ItemLibrary | None = None
+    check_ids: list[str] = field(default_factory=list)
+    accepted: dict[str, str] = field(default_factory=dict)  # effect_id -> summary
+    searched_items: bool = False
+
+    @property
+    def limits(self):
+        return self.params.snapshot.limits
+
+
+def scene_npc(params: TurnRequestParams, npc_id: str | None) -> SceneNpc | None:
+    scene = params.snapshot.scene
+    if scene is None or not npc_id:
+        return None
+    return next((n for n in scene.npcs if n.npc_id == npc_id), None)
+
+
+# --- tools --------------------------------------------------------------------
+
+
+async def request_check(
+    ctx: RunContext[TurnContext],
+    dc_tier: DcTier,
+    reason: str,
+    skill: str | None = None,
+    save: str | None = None,
+    target_id: str | None = None,
+    advantage_reason: str | None = None,
+) -> str:
+    """Попросить движок о проверке навыка (skill: perception, persuasion, stealth, …) или спасброске
+    (save: str, dex, con, int, wis, cha). dc_tier — ступень сложности. reason — что проверяем, одной фразой.
+    advantage_reason — только если в ситуации есть явная причина для преимущества."""
+    t = ctx.deps
+    if len(t.check_ids) >= t.limits.max_checks:
+        return "Отказ: лимит проверок на этот ход исчерпан. Опиши исход без новой проверки."
+    if (skill is None) == (save is None):
+        raise ModelRetry("Укажи ровно одно: skill или save.")
+    raw = await t.session.call_engine("engine.check", EngineCheckParams(
+        turn_id=t.params.turn_id, skill=skill, save=save, dc_tier=dc_tier, target_id=target_id,
+        advantage_reason=advantage_reason))
+    r = EngineCheckResult.model_validate(raw)
+    t.check_ids.append(r.check_id)
+    if r.blocked:
+        return f"Повтор той же проверки без изменений: прежний итог — {'успех' if r.success else 'провал'}."
+    nat = " (натуральная 20)" if r.nat == 20 else " (натуральная 1)" if r.nat == 1 else ""
+    return f"{'Успех' if r.success else 'Провал'}: {r.total} против DC {r.dc}{nat}. Опиши исход по этому итогу."
+
+
+async def propose_effect(ctx: RunContext[TurnContext], effect: Effect) -> str:
+    """Предложить движку последствие: move, damage, heal, coins, give_item, take_item, npc_attitude, flag.
+    Движок проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы он применился."""
+    t = ctx.deps
+    if len(t.accepted) >= t.limits.max_effects:
+        return "Отказ: лимит эффектов на этот ход исчерпан."
+    if isinstance(effect, GiveItemEffect):
+        if (effect.item_id is None) == (effect.item is None):
+            raise ModelRetry("give_item: укажи либо item_id существующего предмета, либо item для нового.")
+        if effect.item is not None and not t.searched_items:
+            return "Отказ: перед созданием нового предмета найди похожие через find_items."
+    raw = await t.session.call_engine("engine.validate", EngineValidateParams(turn_id=t.params.turn_id, effect=effect))
+    r = EngineValidateResult.model_validate(raw)
+    if not r.accepted or not r.effect_id:
+        return f"Отклонено движком: {r.reason or 'без причины'}. Перепиши описание с учётом отказа."
+    t.accepted[r.effect_id] = r.summary
+    if isinstance(effect, GiveItemEffect) and effect.item is not None and t.library is not None and r.item_id:
+        t.library.add(r.item_id, effect.item)
+    return f"Принято: effect_id={r.effect_id}. {r.summary}"
+
+
+async def lookup(ctx: RunContext[TurnContext], kind: LookupKind, id: str) -> str:
+    """Справка движка: kind = rule | spell | condition | item | npc, id — идентификатор. Только сцена и SRD."""
+    t = ctx.deps
+    raw = await t.session.call_engine("engine.lookup", EngineLookupParams(turn_id=t.params.turn_id, kind=kind, id=id))
+    r = EngineLookupResult.model_validate(raw)
+    return json.dumps(r.data, ensure_ascii=False) if r.found else "Не найдено."
+
+
+async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None = None,
+                     properties: list[ItemProperty] | None = None) -> str:
+    """Найти предметы в каталоге игры и библиотеке созданных: query — название или тип по-русски или id,
+    base — id базового предмета, properties — нужные свойства."""
+    t = ctx.deps
+    t.searched_items = True
+    raw = await t.session.call_engine("engine.find_items", EngineFindItemsParams(
+        turn_id=t.params.turn_id, query=query, base=base, properties=properties or []))
+    found = EngineFindItemsResult.model_validate(raw).items
+    if t.library is not None:
+        found += t.library.search(query, base, list(properties or []))
+    if not found:
+        return "Ничего похожего. Можно создать новый предмет через give_item.item."
+    return "\n".join(f"[{i.item_id}] {i.name} — {i.item_type}, {i.rarity}, {i.value_cp} мм, свойства: {', '.join(i.properties) or 'нет'} ({i.source})"
+                     for i in found[:8])
+
+
+# --- agents ---------------------------------------------------------------------
+
+
+def build_turn_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput]:
+    agent: Agent[TurnContext, TurnOutput] = Agent(
+        model,
+        output_type=TurnOutput,
+        deps_type=TurnContext,
+        instructions=system,
+        tools=[request_check, propose_effect, lookup, find_items],
+        retries=2,
+        model_settings=MODEL_SETTINGS,
+    )
+
+    @agent.output_validator
+    def _validate(ctx: RunContext[TurnContext], out: TurnOutput) -> TurnOutput:
+        t = ctx.deps
+        if not out.narration.strip():
+            raise ModelRetry("narration не может быть пустым.")
+        unknown = [e for e in out.effect_ids if e not in t.accepted]
+        if unknown:
+            raise ModelRetry(f"effect_ids {unknown} не принимались движком в этом ходе. Используй только id из ответов propose_effect.")
+        if out.next_mode in ("social", "trade") and scene_npc(t.params, out.npc_id) is None:
+            raise ModelRetry("Для social/trade укажи npc_id из списка NPC сцены.")
+        return out
+
+    return agent
+
+
+def build_summary_agent(model: Model, kind: str) -> Agent[None, SummaryOutput]:
+    return Agent(model, output_type=SummaryOutput, retries=2, model_settings={"temperature": 0.3, "max_tokens": 400},
+                 instructions="Ты пишешь краткие записи по-русски для памяти мастера игры.", name=f"summary_{kind}")
+
+
+def system_prompt_for(params: TurnRequestParams) -> str:
+    return prompts.system_prompt(params.mode, params.snapshot, scene_npc(params, params.npc_id))
+
+
+def turn_user_prompt(params: TurnRequestParams) -> str:
+    return prompts.turn_prompt(params.mode, params.kind, params.input, params.snapshot, scene_npc(params, params.npc_id))

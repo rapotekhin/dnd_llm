@@ -1,0 +1,19 @@
+{
+	"name": "Айра",
+	"gender": "female",
+	"race": "человек",
+	"class_name": "воин",
+	"level": 1,
+	"max_hp": 12,
+	"ac": 16,
+	"skills": {
+		"athletics": 5, "acrobatics": 1, "sleight_of_hand": 1, "stealth": 1,
+		"arcana": 0, "history": 0, "investigation": 0, "nature": 0, "religion": 0,
+		"animal_handling": 1, "insight": 1, "medicine": 1, "perception": 3, "survival": 3,
+		"deception": -1, "intimidation": 1, "performance": -1, "persuasion": -1
+	},
+	"saves": {"str": 5, "dex": 1, "con": 4, "int": 0, "wis": 1, "cha": -1},
+	"features": ["Боевой стиль: защита", "Второе дыхание"],
+	"gold_cp": 1500,
+	"inventory": {"chain_shirt": 1, "shield": 1, "longsword": 1, "handaxe": 2, "backpack": 1, "torch": 5, "rations": 3, "waterskin": 1, "tinderbox": 1}
+}

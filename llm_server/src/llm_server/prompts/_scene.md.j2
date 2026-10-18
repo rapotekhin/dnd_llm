@@ -1,0 +1,35 @@
+{% if character %}
+## Персонаж игрока
+
+{{ character.name }} — {{ character.race }} {{ character.class_name }}, {{ character.level }} уровень. HP {{ character.hp }}/{{ character.max_hp }}, КД {{ character.ac }}, монеты: {{ coins }}.
+{% if character.conditions %}Состояния: {{ character.conditions | join(", ") }}.
+{% endif %}{% if character.skills %}Бонусы навыков: {% for k, v in character.skills.items() %}{{ k }} {{ "%+d" | format(v) }}{% if not loop.last %}, {% endif %}{% endfor %}.
+{% endif %}{% if character.features %}Умения: {{ character.features | join(", ") }}.
+{% endif %}{% if character.inventory %}Снаряжение: {% for i in character.inventory %}{{ i.name }}{% if i.qty > 1 %} ×{{ i.qty }}{% endif %} [{{ i.item_id }}]{% if not loop.last %}, {% endif %}{% endfor %}.
+{% endif %}
+{% endif %}
+{% if scene %}
+## Где игрок
+
+Локация: {{ scene.location_name }}. {{ scene.location_description }}
+Комната: {{ scene.room_name }} [{{ scene.room_id }}]. {{ scene.room_description }}
+{% if scene.time_of_day %}Время суток: {{ scene.time_of_day }}.
+{% endif %}
+Выходы (для эффекта `move`):
+{% for e in scene.exits %}- {{ e.name }} [{{ e.room_id }}]
+{% else %}- нет
+{% endfor %}
+NPC здесь:
+{% for n in scene.npcs %}- {{ n.name }} [{{ n.npc_id }}] — {{ n.role }}{% if n.race %}, {{ n.race }}{% endif %}; отношение к игроку: {{ attitude_word(n.attitude) }}.{% if n.description %} {{ n.description }}{% endif %}
+{% else %}- никого
+{% endfor %}
+{% if scene.hooks %}Зацепки: {{ scene.hooks | join("; ") }}.
+{% endif %}{% if scene.flags %}Уже произошло: {{ scene.flags | join(", ") }}.
+{% endif %}
+{% endif %}
+{% if summaries %}
+## Что было раньше
+
+{% for key, text in summaries.items() %}- {{ summary_title(key) }}: {{ text }}
+{% endfor %}
+{% endif %}

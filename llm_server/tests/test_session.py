@@ -11,6 +11,7 @@ from llm_server.protocol import PROTOCOL_VERSION, protocol_compatible
 from conftest import AUTH, hello, make_settings, request
 
 
+
 def reason(msg: dict) -> str:
     return msg["error"]["data"]["reason"]
 
@@ -43,10 +44,12 @@ def test_method_before_hello_is_not_initialized(client):
         assert reason(ws.receive_json()) == "not_initialized"
 
 
-def test_hello_returns_versions_and_limits(client):
+def test_hello_returns_versions_limits_and_models(client):
     with client.websocket_connect("/ws", headers=AUTH) as ws:
         result = hello(ws)["result"]
     assert result["protocol_version"] == PROTOCOL_VERSION
+    assert result["model"] == "anthropic/claude-haiku-5.5"
+    assert [m["id"] for m in result["models"]][0] == "anthropic/claude-haiku-5.5"
     assert result["server_version"]
     assert result["limits"]["max_message_bytes"] == 1024 * 1024
     assert result["limits"]["turn_timeout_s"] == 90

@@ -1,13 +1,23 @@
 """Server configuration from environment variables (and the root .env, which never overrides real env)."""
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 from . import REPO_ROOT
 
 MAX_MESSAGE_BYTES = 1024 * 1024  # ADR-0009 §2
+
+DEFAULT_MODEL = "anthropic/claude-haiku-5.5"
+# The whitelist the player can pick from in the game settings; the server owner pays, so the server decides.
+DEFAULT_MODELS = (
+    "anthropic/claude-haiku-5.5",
+    "qwen/qwen3.8-omni-flash",
+    "qwen/qwen3.8-27b",
+    "google/gemini-3.8-flash",
+)
 
 
 class ConfigError(RuntimeError):
@@ -26,7 +36,15 @@ class Settings:
     max_message_bytes: int = MAX_MESSAGE_BYTES
     ws_ping_interval: float = 20.0
     ws_ping_timeout: float = 20.0
-    model: str = "stub"
+    # "agent" = Pydantic AI over OpenRouter; "stub" = no LLM (protocol tests, UI work without money).
+    turn_handler: str = "agent"
+    model: str = DEFAULT_MODEL
+    models: tuple[str, ...] = DEFAULT_MODELS
+    openrouter_api_key: str = field(default="", repr=False)
+    llm_retries: int = 2  # ADR-0009 §6
+    daily_budget_usd: float | None = 1.0
+    data_dir: Path = REPO_ROOT / "llm_server" / "var"  # budget counter, generated item library
+    langfuse: bool = False
 
     @classmethod
     def from_env(cls, load_env_file: bool = True) -> "Settings":
@@ -40,6 +58,19 @@ class Settings:
             raw = os.environ.get(name)
             return float(raw) if raw else default
 
+        handler = os.environ.get("LLM_SERVER_TURN_HANDLER", cls.turn_handler)
+        if handler not in ("agent", "stub"):
+            raise ConfigError("LLM_SERVER_TURN_HANDLER must be 'agent' or 'stub'")
+        key = os.environ.get("OPENROUTER_API_KEY", "")
+        if handler == "agent" and not key:
+            raise ConfigError("OPENROUTER_API_KEY is required for LLM_SERVER_TURN_HANDLER=agent (or use 'stub')")
+        models = tuple(m.strip() for m in os.environ.get("LLM_SERVER_MODELS", ",".join(DEFAULT_MODELS)).split(",") if m.strip())
+        model = os.environ.get("LLM_SERVER_MODEL", DEFAULT_MODEL)
+        if model not in models:
+            models = (model, *models)
+        budget_raw = os.environ.get("LLM_SERVER_DAILY_BUDGET_USD", "1.0").strip().lower()
+        budget = None if budget_raw in ("", "0", "none", "off") else float(budget_raw)
+
         return cls(
             token=token,
             host=os.environ.get("LLM_SERVER_HOST", cls.host),
@@ -48,8 +79,15 @@ class Settings:
             turn_timeout=num("LLM_SERVER_TURN_TIMEOUT", cls.turn_timeout),
             engine_timeout=num("LLM_SERVER_ENGINE_TIMEOUT", cls.engine_timeout),
             max_concurrent_turns=int(num("LLM_SERVER_MAX_TURNS", cls.max_concurrent_turns)),
+            turn_handler=handler,
+            model=model,
+            models=models,
+            openrouter_api_key=key,
+            daily_budget_usd=budget,
+            data_dir=Path(os.environ.get("LLM_SERVER_DATA_DIR", str(cls.data_dir))),
+            langfuse=os.environ.get("LANGFUSE_ENABLED") == "1",
         )
 
     def __repr__(self) -> str:
-        # Never let the token reach logs or tracebacks.
-        return f"Settings(host={self.host!r}, port={self.port}, model={self.model!r}, token=***)"
+        # Never let the token or the OpenRouter key reach logs or tracebacks.
+        return f"Settings(host={self.host!r}, port={self.port}, handler={self.turn_handler!r}, model={self.model!r}, token=***)"

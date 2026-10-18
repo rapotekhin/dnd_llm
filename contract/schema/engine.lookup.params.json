@@ -1,0 +1,31 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "rule",
+        "spell",
+        "condition",
+        "item",
+        "npc"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "turn_id": {
+      "title": "Turn Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "turn_id",
+    "kind",
+    "id"
+  ],
+  "title": "EngineLookupParams",
+  "type": "object"
+}

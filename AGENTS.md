@@ -10,8 +10,8 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 |---|---|---|
 | `legacy/` | Pygame prototype (v0.3.x): game, tests, scripts | frozen — only bug fixes until parity, then removed |
 | `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | skeleton (v0.4.0): menu, saves, backend link, chat screen; rules port — v0.5.x |
-| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env | transport + protocol, stub turn; agents — v0.4.1 |
-| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | first methods; rest — v0.4.1 |
+| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.2.0 (v0.4.1) |
+| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.2.0 |
 | `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
 | `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | scenarios ready, runner in v0.4.2 |
 | `docs/` | design + tech docs, ADRs | live |
@@ -46,7 +46,10 @@ uv run --project llm_server python -m llm_server.contract            # regenerat
 python tools/connectivity_e2e.py                                      # Godot <-> Caddy wss:// <-> llm_server end to end (Docker; --no-proxy without it)
 python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/
 python tools/godot_playtest.py --scenario offline                     # live Godot playtest without the server
+python tools/godot_playtest.py --scenario live --real                 # live Godot playtest with the real OpenRouter model (cents)
 ```
+
+`llm_server` reads the root `.env`: `LLM_SERVER_TOKEN`, `OPENROUTER_API_KEY`; `LLM_SERVER_TURN_HANDLER=stub` runs it without an LLM. The playtest and connectivity scripts start it themselves (stub unless `--real`). Deploying to a server: [docs/tech/deploy.md](docs/tech/deploy.md).
 
 Godot binary: `C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe` (or env `GODOT`). In Git Bash: `GODOT="/c/Program Files (x86)/Steam/steamapps/common/Godot Engine/godot.windows.opt.tools.64.exe"`.
 

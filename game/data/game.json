@@ -3,11 +3,16 @@
 		"manual_slots": 10
 	},
 	"chat": {
-		"history_in_snapshot": 12,
+		"history_chars": 4000,
 		"kept_in_save": 500
 	},
+	"summaries": {
+		"location_every_turns": 12,
+		"events_max": 40
+	},
 	"turn": {
-		"client_timeout_s": 95.0
+		"client_timeout_s": 95.0,
+		"summary_timeout_s": 60.0
 	},
 	"ui": {
 		"default_resolution": [1600, 900],

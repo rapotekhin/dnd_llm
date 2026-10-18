@@ -1,0 +1,18 @@
+{
+  "properties": {
+    "data": {
+      "additionalProperties": true,
+      "title": "Data",
+      "type": "object"
+    },
+    "found": {
+      "title": "Found",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "found"
+  ],
+  "title": "EngineLookupResult",
+  "type": "object"
+}

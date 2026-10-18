@@ -2,21 +2,49 @@
 
 import hmac
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import PlainTextResponse
 
 from . import __version__
 from .config import Settings
-from .session import Session, TurnHandler, TurnSlots
-from .turns import stub_turn
+from .services import Services
+from .session import Session, SummaryHandler, TurnHandler, TurnSlots
 
 log = logging.getLogger("llm_server")
 
 
-def create_app(settings: Settings, turn_handler: TurnHandler = stub_turn) -> FastAPI:
-    app = FastAPI(title="Between the Rolls LLM backend", version=__version__, docs_url=None, redoc_url=None)
+def create_app(
+    settings: Settings,
+    services: Services | None = None,
+    turn_handler: TurnHandler | None = None,
+    summary_handler: SummaryHandler | None = None,
+    load_prices: bool = False,
+) -> FastAPI:
+    from .turns import agent_summary, agent_turn, stub_summary, stub_turn
+
+    if services is None:
+        factory = None
+        if settings.turn_handler == "agent":
+            from .llm.catalog import openrouter_factory
+
+            factory = openrouter_factory(settings.openrouter_api_key)
+        services = Services.create(settings, factory)
+    use_agent = services.model_factory is not None
+    turn_handler = turn_handler or (agent_turn if use_agent else stub_turn)
+    summary_handler = summary_handler or (agent_summary if use_agent else stub_summary)
     slots = TurnSlots(settings.max_concurrent_turns)
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        if load_prices:
+            await services.models.load_prices()
+        yield
+
+    app = FastAPI(title="Between the Rolls LLM backend", version=__version__, docs_url=None, redoc_url=None,
+                  lifespan=lifespan)
+    app.state.services = services
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
@@ -30,7 +58,7 @@ def create_app(settings: Settings, turn_handler: TurnHandler = stub_turn) -> Fas
             return
         await ws.accept()
         log.info("connected %s", ws.client.host if ws.client else "?")
-        await Session(ws, settings, slots, turn_handler).run()
+        await Session(ws, services, slots, turn_handler, summary_handler).run()
         log.info("disconnected")
 
     return app

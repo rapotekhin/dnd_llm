@@ -2,17 +2,34 @@ class_name TestUtils
 extends RefCounted
 ## Shared helpers for gdUnit4 suites: game data without autoloads.
 
+const INNKEEPER := "a1f3c7c2-6b1e-4e92-9e2a-111111111111"
+const COOK := "c3f5e9e4-8d3a-4ab4-9c4c-333333333333"
+
 
 static func rules() -> Dictionary:
 	return _json("res://data/rules.json")
+
+
+static func data() -> Dictionary:
+	return {
+		"rules": rules(),
+		"items": _json("res://data/items.json"),
+		"world": _json("res://data/start/world.json"),
+		"character": _json("res://data/start/character.json"),
+	}
 
 
 static func _json(path: String) -> Dictionary:
 	return JSON.parse_string(FileAccess.get_file_as_string(path))
 
 
+static func new_session(seed_value: int = 42) -> GameSession:
+	var d := data()
+	return GameSession.create(seed_value, "2026-10-18T12:00:00", str(d["world"]["start_room"]), d["character"])
+
+
 static func session_with_chat() -> GameSession:
-	var s := GameSession.create(42, "2026-10-18T12:00:00")
+	var s := new_session()
 	s.append(GameSession.dm_entry("Таверна «Пьяный гусь».", s.next_turn_id()))
 	s.append(GameSession.player_entry("осматриваюсь"))
 	s.append(GameSession.check_entry({"skill": "perception"}, {"check_id": s.next_check_id(), "rolls": [12], "bonus": 0,

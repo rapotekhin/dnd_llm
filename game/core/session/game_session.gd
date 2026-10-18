@@ -1,30 +1,75 @@
 class_name GameSession
 extends RefCounted
-## One playthrough: seeded RNG, turn counters and the chat log. Character and world join in v0.5.x
-## (new sections + a save migration). Pure data: no nodes, no autoloads, no tr().
+## One playthrough: seeded RNG, counters, chat, and (since save v2) the world state of the start scene —
+## room, conversation mode, character, generated items, NPC attitudes, flags, summaries.
+## Pure data: no nodes, no autoloads, no tr().
 
 const KIND_PLAYER := "player"
 const KIND_DM := "dm"
+## An NPC line in social / trade mode: `npc_id`, `name`, `text`.
+const KIND_NPC := "npc"
 const KIND_CHECK := "check"
+## Applied effects of a turn: `lines` (already human-readable summaries from the engine).
+const KIND_EFFECT := "effect"
 ## Engine/system notice; `key` is a localization key, `args` its format arguments.
 const KIND_SYSTEM := "system"
+
+const MODE_EXPLORATION := "exploration"
+const MODE_SOCIAL := "social"
+const MODE_TRADE := "trade"
 
 var game_seed: int = 0
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var turn_counter: int = 0
 var check_counter: int = 0
+var effect_counter: int = 0
 var chat: Array[Dictionary] = []
 ## The master's last «interesting» options (turn.result.options), shown as buttons.
 var options: Array[String] = []
 var created_at: String = ""
 
+var room_id: String = ""
+var mode: String = MODE_EXPLORATION
+## The conversation partner in social / trade.
+var npc_id: String = ""
+## name, gender, race, class_name, level, hp, max_hp, ac, skills, saves, features, gold_cp, conditions,
+## inventory {item_id: qty}.
+var character: Dictionary = {}
+## Items created by the master and accepted by the engine: {item_id: definition}. Kept so saves work alone.
+var items: Dictionary = {}
+var attitudes: Dictionary = {}
+var flags: Array[String] = []
+## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
+var summaries: Dictionary = {}
+## Lines of the current conversation, the events for its summary.
+var dialogue_log: Array[String] = []
+## Events since the last location summary.
+var location_log: Array[String] = []
 
-static func create(new_seed: int, now: String) -> GameSession:
+
+static func create(new_seed: int, now: String, start_room: String, character_template: Dictionary) -> GameSession:
 	var s := GameSession.new()
 	s.game_seed = new_seed
 	s.rng.seed = new_seed
 	s.created_at = now
+	s.room_id = start_room
+	s.character = character_from_template(character_template)
 	return s
+
+
+static func character_from_template(t: Dictionary) -> Dictionary:
+	var c := t.duplicate(true)
+	c["level"] = int(c.get("level", 1))
+	c["max_hp"] = int(c.get("max_hp", 10))
+	c["hp"] = int(c.get("hp", c["max_hp"]))
+	c["ac"] = int(c.get("ac", 10))
+	c["gold_cp"] = int(c.get("gold_cp", 0))
+	c["conditions"] = c.get("conditions", [])
+	var inv: Dictionary = {}
+	for id: String in c.get("inventory", {}):
+		inv[id] = int(c["inventory"][id])
+	c["inventory"] = inv
+	return c
 
 
 func next_turn_id() -> String:
@@ -37,9 +82,22 @@ func next_check_id() -> String:
 	return "c-%d" % check_counter
 
 
+func next_effect_id() -> String:
+	effect_counter += 1
+	return "e-%d" % effect_counter
+
+
 func append(entry: Dictionary) -> Dictionary:
 	chat.append(entry)
 	return entry
+
+
+func attitude(id: String) -> int:
+	return int(attitudes.get(id, 0))
+
+
+func in_conversation() -> bool:
+	return mode != MODE_EXPLORATION
 
 
 static func player_entry(text: String) -> Dictionary:
@@ -48,6 +106,14 @@ static func player_entry(text: String) -> Dictionary:
 
 static func dm_entry(text: String, turn_id: String) -> Dictionary:
 	return {"kind": KIND_DM, "text": text, "turn_id": turn_id}
+
+
+static func npc_entry(id: String, npc_name: String, text: String, turn_id: String) -> Dictionary:
+	return {"kind": KIND_NPC, "npc_id": id, "name": npc_name, "text": text, "turn_id": turn_id}
+
+
+static func effect_entry(lines: Array[String]) -> Dictionary:
+	return {"kind": KIND_EFFECT, "lines": lines}
 
 
 static func system_entry(key: String, args: Dictionary = {}) -> Dictionary:
@@ -64,26 +130,39 @@ static func check_entry(params: Dictionary, result: Dictionary) -> Dictionary:
 	return e
 
 
-## The last `limit` player/master lines for the turn snapshot (ADR-0009 §4, history part).
-func history(limit: int) -> Array[Dictionary]:
+## Player / master / NPC lines for the turn snapshot, newest last, within `max_chars` (ADR-0009 §4).
+func history(max_chars: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for e: Dictionary in chat:
+	var used := 0
+	for i in range(chat.size() - 1, -1, -1):
+		var e := chat[i]
+		var role := ""
 		match str(e["kind"]):
 			KIND_PLAYER:
-				out.append({"role": "player", "text": e["text"]})
+				role = "player"
 			KIND_DM:
-				out.append({"role": "dm", "text": e["text"]})
-	return out.slice(maxi(0, out.size() - limit))
+				role = "dm"
+			KIND_NPC:
+				role = "npc"
+		if role.is_empty():
+			continue
+		var text := str(e["text"]) if role != "npc" else "%s: %s" % [e.get("name", ""), e["text"]]
+		used += text.length()
+		if used > max_chars and not out.is_empty():
+			break
+		out.push_front({"role": role, "text": text})
+	return out
 
 
 ## Short info for the slot list.
 func meta() -> Dictionary:
 	var preview := ""
 	for i in range(chat.size() - 1, -1, -1):
-		if str(chat[i]["kind"]) == KIND_DM:
+		if str(chat[i]["kind"]) in [KIND_DM, KIND_NPC]:
 			preview = str(chat[i]["text"]).left(80)
 			break
-	return {"turns": turn_counter, "preview": preview, "created_at": created_at}
+	return {"turns": turn_counter, "preview": preview, "created_at": created_at,
+		"character": str(character.get("name", "")), "room_id": room_id}
 
 
 func to_dict(kept_chat: int) -> Dictionary:
@@ -92,9 +171,20 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"rng_state": str(rng.state),  # 64-bit: a JSON number would lose precision
 		"turn_counter": turn_counter,
 		"check_counter": check_counter,
+		"effect_counter": effect_counter,
 		"chat": chat.slice(maxi(0, chat.size() - kept_chat)),
 		"options": options,
 		"created_at": created_at,
+		"room_id": room_id,
+		"mode": mode,
+		"npc_id": npc_id,
+		"character": character,
+		"items": items,
+		"attitudes": attitudes,
+		"flags": flags,
+		"summaries": summaries,
+		"dialogue_log": dialogue_log,
+		"location_log": location_log,
 	}
 
 
@@ -105,12 +195,27 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.rng.state = str(d.get("rng_state", "0")).to_int()
 	s.turn_counter = int(d.get("turn_counter", 0))
 	s.check_counter = int(d.get("check_counter", 0))
+	s.effect_counter = int(d.get("effect_counter", 0))
 	for e: Variant in d.get("chat", []):
 		if e is Dictionary:
 			s.chat.append(_normalized(e))
 	for o: Variant in d.get("options", []):
 		s.options.append(str(o))
 	s.created_at = str(d.get("created_at", ""))
+	s.room_id = str(d.get("room_id", ""))
+	s.mode = str(d.get("mode", MODE_EXPLORATION))
+	s.npc_id = str(d.get("npc_id", ""))
+	s.character = character_from_template(d.get("character", {}))
+	s.items = d.get("items", {})
+	for id: String in d.get("attitudes", {}):
+		s.attitudes[id] = int(d["attitudes"][id])
+	for f: Variant in d.get("flags", []):
+		s.flags.append(str(f))
+	s.summaries = d.get("summaries", {})
+	for line: Variant in d.get("dialogue_log", []):
+		s.dialogue_log.append(str(line))
+	for line: Variant in d.get("location_log", []):
+		s.location_log.append(str(line))
 	return s
 
 

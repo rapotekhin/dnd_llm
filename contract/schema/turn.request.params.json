@@ -1,4 +1,348 @@
 {
+  "$defs": {
+    "CharacterSheet": {
+      "properties": {
+        "ac": {
+          "title": "Ac",
+          "type": "integer"
+        },
+        "class_name": {
+          "default": "",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conditions",
+          "type": "array"
+        },
+        "features": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Features",
+          "type": "array"
+        },
+        "gender": {
+          "default": "other",
+          "enum": [
+            "male",
+            "female",
+            "other"
+          ],
+          "title": "Gender",
+          "type": "string"
+        },
+        "gold_cp": {
+          "default": 0,
+          "title": "Gold Cp",
+          "type": "integer"
+        },
+        "hp": {
+          "title": "Hp",
+          "type": "integer"
+        },
+        "inventory": {
+          "items": {
+            "$ref": "#/$defs/InventoryLine"
+          },
+          "title": "Inventory",
+          "type": "array"
+        },
+        "level": {
+          "default": 1,
+          "title": "Level",
+          "type": "integer"
+        },
+        "max_hp": {
+          "title": "Max Hp",
+          "type": "integer"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "race": {
+          "default": "",
+          "title": "Race",
+          "type": "string"
+        },
+        "saves": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Saves",
+          "type": "object"
+        },
+        "skills": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Skills",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "hp",
+        "max_hp",
+        "ac"
+      ],
+      "title": "CharacterSheet",
+      "type": "object"
+    },
+    "Exit": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "room_id": {
+          "title": "Room Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "room_id",
+        "name"
+      ],
+      "title": "Exit",
+      "type": "object"
+    },
+    "HistoryLine": {
+      "properties": {
+        "role": {
+          "enum": [
+            "player",
+            "dm",
+            "npc"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "text"
+      ],
+      "title": "HistoryLine",
+      "type": "object"
+    },
+    "InventoryLine": {
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "qty": {
+          "default": 1,
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "item_id",
+        "name"
+      ],
+      "title": "InventoryLine",
+      "type": "object"
+    },
+    "Scene": {
+      "properties": {
+        "exits": {
+          "items": {
+            "$ref": "#/$defs/Exit"
+          },
+          "title": "Exits",
+          "type": "array"
+        },
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "hooks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hooks",
+          "type": "array"
+        },
+        "location_description": {
+          "default": "",
+          "title": "Location Description",
+          "type": "string"
+        },
+        "location_id": {
+          "title": "Location Id",
+          "type": "string"
+        },
+        "location_name": {
+          "title": "Location Name",
+          "type": "string"
+        },
+        "npcs": {
+          "items": {
+            "$ref": "#/$defs/SceneNpc"
+          },
+          "title": "Npcs",
+          "type": "array"
+        },
+        "room_description": {
+          "default": "",
+          "title": "Room Description",
+          "type": "string"
+        },
+        "room_id": {
+          "title": "Room Id",
+          "type": "string"
+        },
+        "room_name": {
+          "title": "Room Name",
+          "type": "string"
+        },
+        "time_of_day": {
+          "default": "",
+          "title": "Time Of Day",
+          "type": "string"
+        }
+      },
+      "required": [
+        "location_id",
+        "location_name",
+        "room_id",
+        "room_name"
+      ],
+      "title": "Scene",
+      "type": "object"
+    },
+    "SceneNpc": {
+      "properties": {
+        "attitude": {
+          "default": 0,
+          "title": "Attitude",
+          "type": "integer"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "gender": {
+          "default": "other",
+          "enum": [
+            "male",
+            "female",
+            "other"
+          ],
+          "title": "Gender",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "personality": {
+          "default": "",
+          "title": "Personality",
+          "type": "string"
+        },
+        "race": {
+          "default": "",
+          "title": "Race",
+          "type": "string"
+        },
+        "role": {
+          "default": "",
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "name"
+      ],
+      "title": "SceneNpc",
+      "type": "object"
+    },
+    "Snapshot": {
+      "properties": {
+        "character": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CharacterSheet"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "history": {
+          "items": {
+            "$ref": "#/$defs/HistoryLine"
+          },
+          "title": "History",
+          "type": "array"
+        },
+        "limits": {
+          "$ref": "#/$defs/TurnLimits"
+        },
+        "scene": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Scene"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "summaries": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Summaries",
+          "type": "object"
+        }
+      },
+      "title": "Snapshot",
+      "type": "object"
+    },
+    "TurnLimits": {
+      "properties": {
+        "max_checks": {
+          "default": 1,
+          "title": "Max Checks",
+          "type": "integer"
+        },
+        "max_effects": {
+          "default": 3,
+          "title": "Max Effects",
+          "type": "integer"
+        }
+      },
+      "title": "TurnLimits",
+      "type": "object"
+    }
+  },
   "properties": {
     "input": {
       "default": "",
@@ -23,10 +367,32 @@
       "title": "Mode",
       "type": "string"
     },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model"
+    },
+    "npc_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Npc Id"
+    },
     "snapshot": {
-      "additionalProperties": true,
-      "title": "Snapshot",
-      "type": "object"
+      "$ref": "#/$defs/Snapshot"
     },
     "turn_id": {
       "pattern": "^t-\\d+$",

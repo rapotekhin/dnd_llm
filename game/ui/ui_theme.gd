@@ -29,6 +29,8 @@ const SIZE_HEADING := 36
 const DM_TEXT := "DmText"  # Label: the master's narration
 const PLAYER_TEXT := "PlayerText"  # Label: the player's lines
 const SYSTEM_TEXT := "SystemText"  # Label: engine notices
+const NPC_TEXT := "NpcText"  # Label: an NPC's line in conversation
+const EFFECT_TEXT := "EffectText"  # Label: applied effects of a turn
 const MUTED_LABEL := "MutedLabel"
 const TITLE := "TitleLabel"
 const HEADING := "HeadingLabel"
@@ -54,6 +56,8 @@ static func build() -> Theme:
 		[DM_TEXT, font(FONT_SERIF, 400), SIZE_BODY, TEXT],
 		[PLAYER_TEXT, font(FONT_SERIF_ITALIC, 400), SIZE_BODY, ACCENT],
 		[SYSTEM_TEXT, font(FONT_UI, 400), SIZE_SMALL, MUTED],
+		[NPC_TEXT, font(FONT_SERIF, 400), SIZE_BODY, Color("#d9c9a8")],
+		[EFFECT_TEXT, font(FONT_UI, 600), SIZE_SMALL, OK],
 		[MUTED_LABEL, font(FONT_UI, 400), SIZE_SMALL, MUTED],
 		[TITLE, font(FONT_SERIF, 600), SIZE_TITLE, ACCENT_BRIGHT],
 		[HEADING, font(FONT_SERIF, 600), SIZE_HEADING, ACCENT],

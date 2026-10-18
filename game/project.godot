@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Between the Rolls"
-config/version="0.4.0"
+config/version="0.4.1"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
@@ -20,8 +20,8 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 EventBus="*res://autoload/event_bus.gd"
 Catalog="*res://autoload/catalog.gd"
 SaveManager="*res://autoload/save_manager.gd"
-Backend="*res://autoload/backend.gd"
 GameState="*res://autoload/game_state.gd"
+Backend="*res://autoload/backend.gd"
 Dev="*res://autoload/dev.gd"
 
 [debug]

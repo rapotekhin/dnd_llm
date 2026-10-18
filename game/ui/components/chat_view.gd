@@ -39,6 +39,11 @@ func _add(e: Dictionary) -> void:
 			_list.add_child(_text(str(e.get("text", "")), UiTheme.DM_TEXT))
 		GameSession.KIND_PLAYER:
 			_list.add_child(_text("— " + str(e.get("text", "")), UiTheme.PLAYER_TEXT))
+		GameSession.KIND_NPC:
+			# The master writes the line with its own remarks and quotes; only the speaker is added.
+			_list.add_child(_text("%s — %s" % [e.get("name", ""), e.get("text", "")], UiTheme.NPC_TEXT))
+		GameSession.KIND_EFFECT:
+			_list.add_child(_text(" · ".join(e.get("lines", [])), UiTheme.EFFECT_TEXT))
 		GameSession.KIND_CHECK:
 			_list.add_child(CheckCard.new(e))
 		GameSession.KIND_SYSTEM:

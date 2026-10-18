@@ -1,14 +1,20 @@
 extends Node
-## Game data from res://data/*.json, loaded and checked once at start. Fails loudly on a broken file.
+## Game data from res://data/*.json, loaded once at start. Fails loudly on a broken file.
 
-const FILES: Array[String] = ["rules", "game"]
+const FILES: Dictionary[String, String] = {
+	"rules": "res://data/rules.json",
+	"game": "res://data/game.json",
+	"items": "res://data/items.json",
+	"world": "res://data/start/world.json",
+	"character": "res://data/start/character.json",
+}
 
 var data: Dictionary = {}
 
 
 func _ready() -> void:
-	for name in FILES:
-		data[name] = load_json("res://data/%s.json" % name)
+	for key: String in FILES:
+		data[key] = load_json(FILES[key])
 
 
 static func load_json(path: String) -> Dictionary:
