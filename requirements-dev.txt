@@ -4,3 +4,4 @@ pytest-cov>=5.0
 pydantic-ai>=1.0.0
 python-dotenv>=1.0.0
 dice
+pyyaml>=6.0

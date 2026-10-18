@@ -131,26 +131,64 @@ class MainScreen(BaseScreen):
         self._stop_event:  threading.Event = threading.Event()
         self._exploration_thread: Optional[threading.Thread] = None
         self._pending_transition: Optional[str] = None
+        # True only while the thread is paused at a social/trade transition and
+        # waits for a ``resume`` message (returning from inventory etc. is not one).
+        self._awaiting_resume: bool = False
+        # True once the thread asks for a choice (actions / question / error);
+        # input typed while the DM is thinking stays in the box instead of being
+        # queued as an answer to a later step.
+        self._awaiting_input: bool = False
+
+    # Player actions sent by the quick buttons (hide / look / rest).
+    QUICK_ACTIONS = (
+        "Пытаюсь незаметно спрятаться.",
+        "Внимательно осматриваюсь вокруг.",
+        "Хочу немного передохнуть.",
+    )
 
     # ------------------------------------------------------------------
     # EXPLORATION LIFECYCLE
     # ------------------------------------------------------------------
 
-    def start_exploration(self, api_manager, side_summary: Optional[str] = None) -> None:
+    def adopt_state_from(self, old: "MainScreen") -> None:
+        """Take over chat and the running exploration thread from a screen
+        instance that is being replaced (window resize, settings applied)."""
+        self.chat_entries = old.chat_entries
+        self.input_buffer = old.input_buffer
+        self._api_manager = old._api_manager
+        self._ui_queue = old._ui_queue
+        self._input_queue = old._input_queue
+        self._stop_event = old._stop_event
+        self._exploration_thread = old._exploration_thread
+        self._pending_transition = old._pending_transition
+        self._awaiting_resume = old._awaiting_resume
+        self._awaiting_input = old._awaiting_input
+        self.chat_scroll = self._chat_max_scroll()
+
+    def start_exploration(self, api_manager, side_summary: Optional[str] = None,
+                          fresh: bool = False) -> None:
         """Start or resume the exploration background thread.
 
         If the thread is alive (paused at a social/trade transition), send a
         ``resume`` signal — carrying the side-session ``side_summary`` so the
         loop can splice it into history and refresh the scene before continuing.
         Otherwise perform a fresh start (new character, room change, combat).
+        ``fresh=True`` (new game, loaded save) always restarts the thread and
+        clears the chat, because the old thread holds a stale world.
         """
         self._api_manager = api_manager
 
-        # Thread is alive → it paused waiting for resume (social/trade transition)
-        if self._exploration_thread and self._exploration_thread.is_alive():
-            log.info("resume exploration thread (summary=%d chars)",
-                     len(side_summary or ""))
-            self._input_queue.put({"type": "resume", "summary": side_summary or ""})
+        if fresh:
+            self.chat_entries = []
+            self.chat_scroll = 0
+        elif self._exploration_thread and self._exploration_thread.is_alive():
+            if self._awaiting_resume:
+                log.info("resume exploration thread (summary=%d chars)",
+                         len(side_summary or ""))
+                self._awaiting_resume = False
+                self._input_queue.put({"type": "resume", "summary": side_summary or ""})
+            # Otherwise the thread is mid-turn or waiting for player input
+            # (e.g. back from inventory/map) — nothing to signal.
             return
 
         # Fresh start: cancel any lingering old thread and clear stale data
@@ -170,6 +208,8 @@ class MainScreen(BaseScreen):
         self._ui_queue     = queue.Queue()
         self._input_queue  = queue.Queue()
         self._pending_transition = None
+        self._awaiting_resume = False
+        self._awaiting_input = False
 
         import core.data as game_data
         from core.gameplay.exploration import run_exploration
@@ -276,6 +316,9 @@ class MainScreen(BaseScreen):
                 self.chat_entries = [e for e in self.chat_entries
                                      if e.role != ChatRole.THINKING]
 
+            if t in ("actions", "question", "error"):
+                self._awaiting_input = True
+
             if t == "scene":
                 self._add_entry(msg["text"], ChatRole.DM)
             elif t == "narration":
@@ -305,12 +348,15 @@ class MainScreen(BaseScreen):
                 npc_id  = msg.get("npc_id")
                 room_id = msg.get("room_id")
                 if action in ("social", "trade") and npc_id:
+                    self._awaiting_resume = True
                     transition = f"{action}:{npc_id}"
                 elif action == "change_current_room":
                     # room_id already updated in exploration.py; just restart
                     transition = "restart_exploration"
                 elif action == "combat":
-                    transition = "combat"
+                    # Defensive: the loop no longer emits this (combat is not
+                    # implemented); never navigate to a non-existent screen.
+                    log.warning("ignoring combat transition: combat mode not implemented")
         return transition
 
     # ------------------------------------------------------------------
@@ -318,14 +364,19 @@ class MainScreen(BaseScreen):
     # ------------------------------------------------------------------
 
     def _on_send(self) -> None:
-        text = self.input_buffer.strip()
-        if not text:
-            return
+        if self._send_text(self.input_buffer.strip()):
+            self.input_buffer = ""
+
+    def _send_text(self, text: str) -> bool:
+        """Send a player action if the DM is waiting for one; returns True if sent."""
+        if not text or not self._awaiting_input:
+            return False
+        if not (self._exploration_thread and self._exploration_thread.is_alive()):
+            return False
         self._add_entry(f"[Вы]: {text}", ChatRole.PLAYER)
-        self.input_buffer = ""
-        # Forward to exploration thread if running
-        if self._exploration_thread and self._exploration_thread.is_alive():
-            self._input_queue.put({"type": "input", "text": text})
+        self._awaiting_input = False
+        self._input_queue.put({"type": "input", "text": text})
+        return True
 
     # ------------------------------------------------------------------
     # HANDLE EVENTS
@@ -345,6 +396,10 @@ class MainScreen(BaseScreen):
             if self.send_btn.is_clicked(pos):
                 self._on_send()
                 return None
+            for button, action in zip(self.quick_buttons, self.QUICK_ACTIONS):
+                if button.is_clicked(pos):
+                    self._send_text(action)
+                    return None
             if self.input_rect.collidepoint(pos):
                 self.input_active = True
                 return None

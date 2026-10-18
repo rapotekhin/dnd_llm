@@ -38,8 +38,8 @@
 │                ┌────────────────────┐                    │
 │                │   Pydantic AI      │                    │
 │                │   Agents + Tools   │                    │
-│                │   (roll_dice,      │                    │
-│                │    rule_db_lookup) │                    │
+│                │   (roll_dice)      │                    │
+│                │                    │                    │
 │                └─────────┬──────────┘                    │
 └──────────────────────────┼───────────────────────────────┘
                            ▼
@@ -61,7 +61,7 @@
 | **LLM** | `game/core/llm_engine/` | `APIManager` — обёртка над OpenRouter |
 | **Logging** | `game/core/logging_config.py` | Центральный `configure_logging()` + `sys.excepthook` / `threading.excepthook`; подключается из `main.py` до прочих импортов. Подробнее — [llm-integration.md](llm-integration.md) §«Локальное логгирование» |
 | **Prompts** | `game/core/prompts/` | Все системные промпты |
-| **Tools** | `game/core/tools/` | Инструменты для ЛЛМ (`RollDiceTool`, `RuleDbLookupTool`) |
+| **Tools** | `game/core/tools/` | Инструменты для ЛЛМ (`RollDiceTool`) |
 | **Builders** | `game/core/builders/` | Сборка сложных сущностей (Character, Location, NPC, LevelUp) |
 | **Schemas** | `game/core/gameplay/schemas/` | Pydantic-схемы LLM-вывода |
 | **UI** | `game/ui/screens/` | Pygame-экраны; крупные потоки вынесены в подпакеты (`character_creation/`, `level_up/`, `trade/`), точки входа `*_screen.py` реэкспортируют классы для стабильных импортов |

@@ -46,9 +46,7 @@ class Game:
         self.api_manager.print_status()
         
         # Global game state (session + world). Created at startup; use game_data.game_state elsewhere.
-        from .data import MainGameState
-        game_data.game_state = MainGameState()
-        game_data.game_state.load_start_data()
+        self._reset_world()
 
         # Screen management
         self.screens = {}
@@ -65,8 +63,13 @@ class Game:
         self.screen = pygame.display.set_mode(resolution, flags)
         self.screen_width, self.screen_height = self.screen.get_size()
         
+    # Screens whose session state (chat, background thread, staged barter) must
+    # survive a rebuild of all screens on resize / settings apply.
+    _STATEFUL_SCREENS = ("main", "social", "trade")
+
     def _init_screens(self):
-        """Initialize all game screens"""
+        """Initialize all game screens (also on resize / settings apply)."""
+        old_screens, self.screens = self.screens, {}
         self.screens["title"] = TitleScreen(self.screen, self.api_manager)
         self.screens["settings"] = SettingsScreen(
             self.screen, 
@@ -84,6 +87,19 @@ class Game:
         self.screens["trade"] = TradeScreen(self.screen)
         # Level up screen is created on demand (needs player)
         self.screens["level_up"] = None
+        if old_screens.get("level_up") is not None:
+            # Rebuilt for the new size; in-progress choices are reset.
+            try:
+                self.screens["level_up"] = LevelUpScreen(self.screen)
+            except Exception:
+                log.exception("failed to rebuild level-up screen")
+                if self.current_screen_name == "level_up":
+                    self.current_screen_name = "character"
+
+        for name in self._STATEFUL_SCREENS:
+            old, new = old_screens.get(name), self.screens.get(name)
+            if old is not None and new is not None and hasattr(new, "adopt_state_from"):
+                new.adopt_state_from(old)
         
     def _on_settings_applied(self):
         """Called when settings are applied - recreate display/screens if needed"""
@@ -156,17 +172,18 @@ class Game:
         pygame.quit()
         sys.exit()
         
-    def _enter_main(self, side_summary: Union[str, None] = None) -> None:
+    def _enter_main(self, side_summary: Union[str, None] = None, fresh: bool = False) -> None:
         """Switch to main screen and (re)start the exploration background thread.
 
         ``side_summary`` is the report from the side-session (social/trade) that the
         exploration thread will splice into its history on resume. None for fresh
-        starts (new character, room change, combat return).
+        starts (new character, room change, combat return). ``fresh`` forces a
+        thread restart (new game / loaded save).
         """
         self.switch_screen("main")
         main = self.screens.get("main")
         if main is not None and hasattr(main, "start_exploration"):
-            main.start_exploration(self.api_manager, side_summary=side_summary)
+            main.start_exploration(self.api_manager, side_summary=side_summary, fresh=fresh)
 
     def _enter_social(self, npc_id: str) -> None:
         """Switch to social screen and start/resume the social background thread."""
@@ -188,6 +205,13 @@ class Game:
                 trade.set_return_to(return_to)
         self.switch_screen("trade")
 
+    def _reset_world(self) -> None:
+        """Replace the global game state with a freshly loaded start world."""
+        from .data import MainGameState
+        game_data.game_state = MainGameState()
+        # Loaders fill ``core.data.game_state``, so it must be replaced first.
+        game_data.game_state.load_start_data()
+
     def _handle_screen_result(self, result: Union[str, None, "Character"]):
         """Handle commands returned from screens"""
         if result is None:
@@ -195,13 +219,15 @@ class Game:
         
         from core.entities.character import Character
         if isinstance(result, Character):
-            gs = game_data.game_state
-            if gs is not None:
-                gs.player = result
+            # A new character gets a fresh world: the previous session's
+            # location summaries, NPC purses and position must not leak in.
+            # Done here (not on "new_game") so cancelling creation keeps the game.
+            self._reset_world()
+            game_data.game_state.player = result
             log.info("character created: name=%r class=%r level=%r",
                      result.name, getattr(result, "class_type", "?"),
                      getattr(result, "level", "?"))
-            self._enter_main()
+            self._enter_main(fresh=True)
             return
             
         if result == "exit":
@@ -217,7 +243,7 @@ class Game:
             pass  # Handled by TitleScreen save modal
 
         elif result == "load_game":
-            self._enter_main()
+            self._enter_main(fresh=True)
 
         elif result == "restart_exploration":
             # Room already updated by exploration.py; restart exploration in main

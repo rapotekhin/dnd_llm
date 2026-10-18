@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import pygame
-from typing import List, Optional, Set, Tuple
+from typing import Callable, List, Optional, Set, Tuple
 
 from ...colors import *
 from ...components import Button
@@ -63,7 +63,8 @@ class TradeRenderMixin:
 
     def _draw_item_list(self, panel: pygame.Rect, list_rect: pygame.Rect,
                         title: str, items: List[GameEquipment],
-                        scroll: int, in_barter: Set[int]) -> None:
+                        scroll: int, in_barter: Set[int],
+                        value_of: Callable[[GameEquipment], int]) -> None:
         s      = self._scale
         line_h = _sc(24, s)
         pygame.draw.rect(self.screen, MODAL_BG, panel, border_radius=6)
@@ -83,13 +84,14 @@ class TradeRenderMixin:
             pygame.draw.rect(self.screen, bg, (list_rect.x, y, list_rect.w, line_h))
             ns = self.tiny_font.render((it.name or it.index or "?")[:22], True, col)
             self.screen.blit(ns, (list_rect.x + 4, y + (line_h - ns.get_height()) // 2))
-            ps = self.tiny_font.render(f"{it.price or 0}cp", True, LIGHT_GRAY)
+            ps = self.tiny_font.render(f"{value_of(it)}cp", True, LIGHT_GRAY)
             self.screen.blit(ps, (list_rect.right - ps.get_width() - 4,
                                   y + (line_h - ps.get_height()) // 2))
         self.screen.set_clip(clip)
 
     def _draw_barter_panel(self, panel: pygame.Rect, list_rect: pygame.Rect,
-                           title: str, items: List[GameEquipment], scroll: int) -> None:
+                           title: str, items: List[GameEquipment], scroll: int,
+                           value_of: Callable[[GameEquipment], int]) -> None:
         s      = self._scale
         line_h = _sc(24, s)
         pygame.draw.rect(self.screen, (22, 20, 10), panel, border_radius=6)
@@ -107,7 +109,7 @@ class TradeRenderMixin:
             pygame.draw.rect(self.screen, bg, (list_rect.x, y, list_rect.w, line_h))
             ns = self.tiny_font.render((it.name or it.index or "?")[:20], True, WHITE)
             self.screen.blit(ns, (list_rect.x + 4, y + (line_h - ns.get_height()) // 2))
-            ps = self.tiny_font.render(f"{it.price or 0}cp", True, LIGHT_GRAY)
+            ps = self.tiny_font.render(f"{value_of(it)}cp", True, LIGHT_GRAY)
             self.screen.blit(ps, (list_rect.right - ps.get_width() - 4,
                                   y + (line_h - ps.get_height()) // 2))
         self.screen.set_clip(clip)
@@ -264,10 +266,16 @@ class TradeRenderMixin:
 
         # Barter value indicators
         balanced  = trade.is_balanced()
+        funds_problem = trade.funds_problem()
         pv        = trade.player_barter_value()
         nv        = trade.npc_barter_value()
         val_col_p = BRIGHT_GOLD if balanced else (WHITE if pv > 0 else LIGHT_GRAY)
         val_col_n = BRIGHT_GOLD if balanced else (WHITE if nv > 0 else LIGHT_GRAY)
+        # A side offering more coins than it has is highlighted in red.
+        if funds_problem == "player":
+            val_col_p = (220, 80, 80)
+        elif funds_problem == "npc":
+            val_col_n = (220, 80, 80)
         pvs = self.small_font.render(f"↓ {pv} cp", True, val_col_p)
         nvs = self.small_font.render(f"↓ {nv} cp", True, val_col_n)
         self.screen.blit(pvs, pvs.get_rect(center=self._barter_val_player_rect.center))
@@ -281,7 +289,8 @@ class TradeRenderMixin:
         pl_offered = {id(it) for it in trade.player_barter}
         self._draw_item_list(
             self._player_inv_panel, self._player_inv_rect,
-            "Инвентарь", pl_items, self._player_inv_scroll, pl_offered
+            "Инвентарь", pl_items, self._player_inv_scroll, pl_offered,
+            trade.player_item_value,
         )
 
         # NPC inventory
@@ -289,17 +298,20 @@ class TradeRenderMixin:
         npc_offered = {id(it) for it in trade.npc_barter}
         self._draw_item_list(
             self._npc_inv_panel, self._npc_inv_rect,
-            f"Инвентарь {npc_name[:14]}", npc_items, self._npc_inv_scroll, npc_offered
+            f"Инвентарь {npc_name[:14]}", npc_items, self._npc_inv_scroll, npc_offered,
+            trade.npc_item_value,
         )
 
         # Barter lists
         self._draw_barter_panel(
             self._player_barter_panel, self._player_barter_rect,
-            "← Ваше предложение", trade.player_barter, self._player_barter_scroll
+            "← Ваше предложение", trade.player_barter, self._player_barter_scroll,
+            trade.player_item_value,
         )
         self._draw_barter_panel(
             self._npc_barter_panel, self._npc_barter_rect,
-            f"{npc_name[:12]} →", trade.npc_barter, self._npc_barter_scroll
+            f"{npc_name[:12]} →", trade.npc_barter, self._npc_barter_scroll,
+            trade.npc_item_value,
         )
 
         # Description panel
@@ -318,7 +330,7 @@ class TradeRenderMixin:
             self._balance_btn.draw(self.screen)
         if self._barter_btn:
             self._barter_btn.draw(self.screen)
-            if not balanced:
+            if not trade.can_execute():
                 dim = pygame.Surface(
                     (self._barter_btn.rect.w, self._barter_btn.rect.h), pygame.SRCALPHA)
                 dim.fill((0, 0, 0, 150))

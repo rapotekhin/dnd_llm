@@ -2,11 +2,20 @@
 Character Builder - stores character creation choices
 """
 
+import os
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 from core.entities.player import Player
 from core.database.json_database import JsonDatabase
 import random
+
+
+def _dev_start_xp() -> int:
+    """Starting XP: 0, or the DND_DEV_START_XP env override (dev only)."""
+    try:
+        return max(0, int(os.getenv("DND_DEV_START_XP", "0")))
+    except ValueError:
+        return 0
 
 
 @dataclass
@@ -479,7 +488,9 @@ class CharacterBuild:
                 print(f"Error loading class_specific: {e}")
                 char.class_specific = {}
 
-        char.xp = 5000
+        # New characters start with 0 XP. DND_DEV_START_XP lets the author test
+        # level-ups while the game has no XP sources yet.
+        char.xp = _dev_start_xp()
         
         return char
     

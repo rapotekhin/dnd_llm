@@ -130,7 +130,9 @@ class TradeInteractionMixin:
                 if self._drag_item:
                     self._cancel_drag()
                     return None
-                return "social"
+                # Same as "Уйти": back to where trade was opened from.
+                trade.cancel()
+                return self._return_to
 
             # Coin field keyboard input
             if trade.coin_active == "player":
@@ -164,11 +166,12 @@ class TradeInteractionMixin:
 
             # Buttons
             if self._leave_btn and self._leave_btn.is_clicked(pos):
+                trade.cancel()
                 return self._return_to
             if self._balance_btn and self._balance_btn.is_clicked(pos):
                 trade.balance()
                 return None
-            if self._barter_btn and self._barter_btn.is_clicked(pos) and trade.is_balanced():
+            if self._barter_btn and self._barter_btn.is_clicked(pos) and trade.can_execute():
                 trade.execute_barter()
                 return None
 

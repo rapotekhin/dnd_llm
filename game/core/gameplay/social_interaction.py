@@ -40,6 +40,11 @@ from dotenv import load_dotenv
 from pydantic_ai import Agent
 
 from core.gameplay.schemas.exploration import ActionMetadata
+from core.gameplay.exploration import (
+    agent_unavailable_text,
+    room_reachable,
+    run_agent_with_retry,
+)
 from core.gameplay.schemas.social import (
     NpcGreeting,
     ResponseOptionList,
@@ -47,7 +52,6 @@ from core.gameplay.schemas.social import (
     SocialSummary,
 )
 from core.tools.roll import RollDiceTool
-from core.tools.db_lookup import RuleDbLookupTool
 from core.prompts.social_prompts import (
     get_npc_system_prompt,
     get_social_resolution_instructions,
@@ -100,7 +104,6 @@ def _span(name: str, **kwargs):
 # =======================
 
 _roll_dice_tool    = RollDiceTool()
-_rule_db_lookup    = RuleDbLookupTool()
 
 
 # =======================
@@ -179,11 +182,6 @@ def _build_resolution_agent(
             has_disadvantage=has_disadvantage,
             difficulty_class=difficulty_class,
         )
-
-    @agent.tool_plain
-    def rule_db_lookup(rule_name: str, rule_section: str) -> str:
-        """Lookup D&D 5e rules in the database."""
-        return _rule_db_lookup.run(rule_name, rule_section)
 
     return agent
 
@@ -349,13 +347,16 @@ def _social_loop(
 
     try:
         with _span("greeting"):
-            greeting_result = greeting_agent.run_sync(user_prompt, deps=game_state)
-    except Exception:
-        log.exception("greeting run_sync failed")
-        raise
-
-    scene       = greeting_result.output.greeting_scene
-    first_words = greeting_result.output.npc_first_words
+            greeting_result = run_agent_with_retry(greeting_agent, user_prompt,
+                                                   what="greeting", deps=game_state)
+        scene       = greeting_result.output.greeting_scene
+        first_words = greeting_result.output.npc_first_words
+    except Exception as e:
+        # Keep the conversation usable: a neutral opening instead of a dead screen.
+        log.exception("greeting failed; using a neutral opening")
+        ui_queue.put({"type": "error", "text": agent_unavailable_text(e)})
+        scene       = f"{npc_name} поворачивается к тебе."
+        first_words = "Слушаю."
     log.info("greeting ok: scene=%d chars, first_words=%d chars",
              len(scene), len(first_words))
 
@@ -377,13 +378,18 @@ def _social_loop(
         # Generate response options
         ui_queue.put({"type": "thinking"})
         with _span("generate_options"):
-            opts_result = options_agent.run_sync(
-                prompt_generate_response_options(
-                    state["history"], state["last_npc_reply"]
-                ),
-                deps=game_state,
-            )
-            options = opts_result.output.options
+            try:
+                opts_result = run_agent_with_retry(
+                    options_agent,
+                    prompt_generate_response_options(state["history"], state["last_npc_reply"]),
+                    what="generate_options", deps=game_state,
+                )
+                options = opts_result.output.options
+            except Exception as e:
+                log.exception("generate_options failed")
+                ui_queue.put({"type": "error", "text": agent_unavailable_text(e)
+                              + " Ответь своими словами."})
+                options = []
 
         ui_queue.put({
             "type": "options",
@@ -423,12 +429,14 @@ def _social_loop(
         ui_queue.put({"type": "thinking"})
         with _span("resolution"):
             try:
-                run_result = resolution_agent.run_sync(
+                run_result = run_agent_with_retry(
+                    resolution_agent,
                     prompt_social_resolution(
                         state["history"],
                         state["last_npc_reply"],
                         matched,
                     ),
+                    what="social_resolution",
                     deps=game_state,
                 )
                 parsed = run_result.output
@@ -457,18 +465,20 @@ def _social_loop(
             return
 
         next_action = state.get("next_action", "social")
-        meta        = parsed.metadata if parsed else ActionMetadata()  # type: ignore[possibly-undefined]
+        meta        = parsed.metadata or ActionMetadata()
 
         if next_action == "social":
             continue  # keep chatting
 
         if next_action == "trade":
             # Pause: player goes to trade screen, may return to conversation
-            log.info("transition: social -> trade (npc=%s) [pause]", meta.npc_id or npc_id)
+            # Trade with someone the LLM made up → trade with the current speaker.
+            trade_npc = meta.npc_id if meta.npc_id in game_state.npcs else npc_id
+            log.info("transition: social -> trade (npc=%s) [pause]", trade_npc)
             ui_queue.put({
                 "type":   "transition",
                 "action": "trade",
-                "npc_id": meta.npc_id or npc_id,
+                "npc_id": trade_npc,
                 "room_id": None,
             })
             resume = _wait_for_input(input_queue, stop_event)
@@ -484,13 +494,23 @@ def _social_loop(
             ui_queue.put({"type": "resume"})
             continue  # continue dialogue after trade
 
-        # For exploration / combat / change_current_room → exit
-        if next_action == "change_current_room" and meta.room_id:
-            new_room = game_state.rooms.get(meta.room_id)
-            if new_room:
+        # Combat mode does not exist yet: end the conversation and hand the scene
+        # back to exploration (with the usual summary) instead of a dead end.
+        if next_action == "combat":
+            log.info("social: combat requested but not implemented; leaving to exploration")
+            next_action = "exploration"
+
+        # For exploration / change_current_room → exit. A room that is not
+        # adjacent ends the conversation without moving the player.
+        if next_action == "change_current_room":
+            if room_reachable(game_state, meta.room_id):
+                new_room = game_state.rooms[meta.room_id]
                 game_state.current_room_id = meta.room_id
                 if getattr(new_room, "location_id", None):
                     game_state.current_location_id = new_room.location_id
+            else:
+                log.warning("social: unreachable room %r; leaving to exploration", meta.room_id)
+                next_action = "exploration"
 
         # Generate and persist conversation summary before leaving
         ui_queue.put({"type": "thinking"})

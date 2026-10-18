@@ -42,7 +42,6 @@ from core.gameplay.schemas.exploration import (
     LocationSummary,
 )
 from core.tools.roll import RollDiceTool
-from core.tools.db_lookup import RuleDbLookupTool
 from core.prompts.exploration_prompts import (
     AGENT_SYSTEM_PROMPT,
     prompt_describe_scene_user,
@@ -84,7 +83,6 @@ def _span(name: str, **kwargs):
 # =======================
 
 _roll_dice_tool = RollDiceTool()
-_rule_db_lookup_tool = RuleDbLookupTool()
 
 
 # =======================
@@ -208,11 +206,6 @@ def _build_resolution_agent(
             difficulty_class=difficulty_class,
         )
 
-    @agent.tool_plain
-    def rule_db_lookup(rule_name: str, rule_section: str) -> str:
-        """Lookup D&D rules in database."""
-        return _rule_db_lookup_tool.run(rule_name, rule_section)
-
     return agent
 
 
@@ -260,6 +253,32 @@ def _build_summary_agent(api_manager: APIManager) -> Agent[None, LocationSummary
 # HELPERS
 # =======================
 
+# The LLM picks transition targets by id; anything it names that is not in the
+# scene (hallucinated NPC, non-adjacent room) keeps the player in exploration.
+NPC_NOT_HERE_MARKER = "— Этого собеседника здесь нет: сцена продолжается —"
+ROOM_UNREACHABLE_MARKER = "— Туда отсюда не пройти: сцена продолжается —"
+
+
+def npc_in_current_room(game_state: MainGameState, npc_id: Optional[str]) -> bool:
+    """True if ``npc_id`` is a known NPC standing in the player's current room."""
+    room = game_state.rooms.get(game_state.current_room_id) if game_state.current_room_id else None
+    return bool(npc_id) and room is not None and npc_id in room.npcs and npc_id in game_state.npcs
+
+
+def room_reachable(game_state: MainGameState, room_id: Optional[str]) -> bool:
+    """True if ``room_id`` exists and is connected to the player's current room."""
+    room = game_state.rooms.get(game_state.current_room_id) if game_state.current_room_id else None
+    return bool(room_id) and room is not None and room_id in room.connections and room_id in game_state.rooms
+
+
+# Combat mode is not implemented yet: a "combat" decision keeps the player in
+# exploration instead of transitioning to a screen that does not exist.
+COMBAT_UNAVAILABLE_MARKER = "— Бой пока не реализован: сцена продолжается —"
+COMBAT_UNAVAILABLE_HISTORY = (
+    "СИСТЕМА: боевой режим пока недоступен. Продолжай сцену без боя: "
+    "противники медлят, отступают или конфликт решается иначе."
+)
+
 def _wait_for_input(
     input_queue: queue.Queue,
     stop_event: threading.Event,
@@ -273,6 +292,50 @@ def _wait_for_input(
         except queue.Empty:
             continue
     return None
+
+
+AGENT_ATTEMPTS = 2  # one retry for transient OpenRouter / validation failures
+
+
+def run_agent_with_retry(agent, prompt: str, *, what: str, **kwargs):
+    """``agent.run_sync`` with a retry; re-raises the last error."""
+    last_error: Optional[Exception] = None
+    for attempt in range(1, AGENT_ATTEMPTS + 1):
+        try:
+            return agent.run_sync(prompt, **kwargs)
+        except Exception as e:  # noqa: BLE001 — any provider / validation error
+            last_error = e
+            log.warning("%s failed (attempt %d/%d): %s", what, attempt, AGENT_ATTEMPTS, e)
+    assert last_error is not None
+    raise last_error
+
+
+def agent_unavailable_text(error: Exception) -> str:
+    return f"[Мастер не ответил: {error}]"
+
+
+def _fallback_scene(game_state: MainGameState) -> str:
+    """Static room description when the LLM cannot describe the scene."""
+    room = game_state.rooms.get(game_state.current_room_id) if game_state.current_room_id else None
+    return (room.description or room.name) if room else ""
+
+
+def _wait_for_player_text(
+    input_queue: queue.Queue,
+    stop_event: threading.Event,
+) -> Optional[str]:
+    """Block until the player sends text input. Returns None if aborted.
+
+    Control messages (e.g. a stray ``resume`` after the player came back from the
+    inventory) are not player actions, so they are skipped instead of crashing.
+    """
+    while True:
+        msg = _wait_for_input(input_queue, stop_event)
+        if msg is None:
+            return None
+        if isinstance(msg, dict) and msg.get("type") == "input":
+            return str(msg.get("text") or "").strip()
+        log.warning("ignoring non-input message while waiting for player: %r", msg)
 
 
 def _generate_location_summary(
@@ -368,8 +431,14 @@ def _exploration_loop(
     ui_queue.put({"type": "thinking"})
     log.debug("describe_scene: starting")
     with _span("describe_scene"):
-        result = describe_agent.run_sync(prompt_describe_scene_user(), deps=game_state)
-        scene = result.output.environment_description
+        try:
+            result = run_agent_with_retry(describe_agent, prompt_describe_scene_user(),
+                                          what="describe_scene", deps=game_state)
+            scene = result.output.environment_description
+        except Exception as e:
+            log.exception("describe_scene failed; using static room description")
+            ui_queue.put({"type": "error", "text": agent_unavailable_text(e)})
+            scene = _fallback_scene(game_state)
         state["history"].append(scene)
         state["scene"] = scene
     log.info("describe_scene: %d chars", len(scene))
@@ -382,18 +451,25 @@ def _exploration_loop(
         ui_queue.put({"type": "thinking"})
         with _span("generate_actions"):
             prompt = prompt_generate_actions(state["history"], state["scene"])
-            result = generate_agent.run_sync(prompt, deps=game_state)
-            state["actions"] = result.output.actions
+            try:
+                result = run_agent_with_retry(generate_agent, prompt,
+                                              what="generate_actions", deps=game_state)
+                state["actions"] = result.output.actions
+            except Exception as e:
+                # No suggestions this turn; the player can still type an action.
+                log.exception("generate_actions failed")
+                ui_queue.put({"type": "error", "text": agent_unavailable_text(e)
+                              + " Опиши действие сам."})
+                state["actions"] = []
         ui_queue.put({
             "type": "actions",
             "actions": [{"id": a.id, "description": a.description} for a in state["actions"]],
         })
 
         # Wait for player choice
-        msg = _wait_for_input(input_queue, stop_event)
-        if msg is None:
+        raw_choice = _wait_for_player_text(input_queue, stop_event)
+        if raw_choice is None:
             return
-        raw_choice = msg["text"].strip()
 
         # Allow selecting action by number
         if raw_choice.isdigit():
@@ -417,7 +493,8 @@ def _exploration_loop(
                     state["choice"],
                 )
                 try:
-                    run_result = resolution_agent.run_sync(prompt, deps=game_state)
+                    run_result = run_agent_with_retry(resolution_agent, prompt,
+                                                      what="agent_resolution", deps=game_state)
                     parsed = run_result.output
                 except Exception as e:
                     log.exception("resolution agent crashed")
@@ -453,18 +530,45 @@ def _exploration_loop(
                 break
 
             # Follow-up question → wait for player answer
-            msg = _wait_for_input(input_queue, stop_event)
-            if msg is None:
+            answer = _wait_for_player_text(input_queue, stop_event)
+            if answer is None:
                 return
-            state["choice"] = msg["text"].strip()
+            state["choice"] = answer
 
         # ── Non-exploration transition ───────────────────────────────
         if stop_event.is_set():
             return
 
         next_act = state.get("next_activity")
+        if next_act == "combat":
+            log.info("combat requested but not implemented; staying in exploration")
+            ui_queue.put({"type": "system_marker", "text": COMBAT_UNAVAILABLE_MARKER})
+            state["history"].append(COMBAT_UNAVAILABLE_HISTORY)
+            continue
+
+        meta = parsed.metadata  # type: ignore[possibly-undefined]
+        if next_act in ("social", "trade") and not npc_in_current_room(
+                game_state, meta.npc_id if meta else None):
+            log.warning("transition %s to unknown npc %r; staying in exploration",
+                        next_act, meta.npc_id if meta else None)
+            ui_queue.put({"type": "system_marker", "text": NPC_NOT_HERE_MARKER})
+            state["history"].append(
+                "СИСТЕМА: такого НПС нет в комнате. Переходи в диалог или торговлю "
+                "только с НПС из списка «НПС в комнате», указывая его id."
+            )
+            continue
+        if next_act == "change_current_room" and not room_reachable(
+                game_state, meta.room_id if meta else None):
+            log.warning("transition to unreachable room %r; staying in exploration",
+                        meta.room_id if meta else None)
+            ui_queue.put({"type": "system_marker", "text": ROOM_UNREACHABLE_MARKER})
+            state["history"].append(
+                "СИСТЕМА: в эту комнату отсюда не пройти. Переход возможен только "
+                "в комнаты из списка «Связанные комнаты», указывая их id."
+            )
+            continue
+
         if next_act and next_act != "exploration":
-            meta = parsed.metadata  # type: ignore[possibly-undefined]
 
             if next_act in ("social", "trade"):
                 # Pause the thread instead of exiting so we can resume
@@ -514,10 +618,16 @@ def _exploration_loop(
                 # otherwise it writes a "first impression" of the room.
                 ui_queue.put({"type": "thinking"})
                 with _span("describe_scene_resume"):
-                    result = describe_agent.run_sync(
-                        prompt_describe_scene_resume(side_summary), deps=game_state
-                    )
-                    new_scene = result.output.environment_description
+                    try:
+                        result = run_agent_with_retry(
+                            describe_agent, prompt_describe_scene_resume(side_summary),
+                            what="describe_scene_resume", deps=game_state,
+                        )
+                        new_scene = result.output.environment_description
+                    except Exception as e:
+                        log.exception("describe_scene_resume failed; using static room description")
+                        ui_queue.put({"type": "error", "text": agent_unavailable_text(e)})
+                        new_scene = _fallback_scene(game_state)
                 state["history"].append(new_scene)
                 state["scene"] = new_scene
                 ui_queue.put({"type": "scene", "text": new_scene})
@@ -527,12 +637,11 @@ def _exploration_loop(
                 continue
 
             # For room/combat: update state then exit (full restart required)
-            if next_act == "change_current_room" and meta.room_id:
-                new_room = game_state.rooms.get(meta.room_id)
-                if new_room:
-                    game_state.current_room_id = meta.room_id
-                    if new_room.location_id:
-                        game_state.current_location_id = new_room.location_id
+            if next_act == "change_current_room":
+                new_room = game_state.rooms[meta.room_id]
+                game_state.current_room_id = meta.room_id
+                if new_room.location_id:
+                    game_state.current_location_id = new_room.location_id
 
             # Generate and persist location summary before leaving
             ui_queue.put({"type": "thinking"})

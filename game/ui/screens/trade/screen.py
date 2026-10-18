@@ -82,6 +82,12 @@ class TradeScreen(TradeRenderMixin, TradeInteractionMixin, TradeLayoutMixin, Bas
     # PUBLIC API
     # ------------------------------------------------------------------
 
+    def adopt_state_from(self, old: "TradeScreen") -> None:
+        """Keep the staged barter and return target when the screen is rebuilt
+        (window resize, settings applied)."""
+        self._trade = old._trade
+        self._return_to = old._return_to
+
     def set_return_to(self, screen_name: str) -> None:
         """Set the destination when the player clicks 'Уйти' (e.g. 'social' or 'main')."""
         self._return_to = screen_name

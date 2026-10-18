@@ -10,6 +10,9 @@ from ..components import Button, InputModal, SaveSlotsModal
 from core.llm_engine.api_manager import APIManager
 from core import data as game_data
 from localization import loc
+from core.logging_config import get_logger
+
+log = get_logger(__name__)
 
 
 def _sc(v: float, s: float) -> int:
@@ -47,6 +50,8 @@ class TitleScreen(BaseScreen):
             loc["api_key_placeholder"]
         )
         self.save_slots_modal = SaveSlotsModal(screen)
+        # Short-lived notice for save/load results: (text, is_error, expires_at_ms).
+        self._notice: tuple[str, bool, int] | None = None
         
         self._update_llm_button()
         
@@ -59,6 +64,9 @@ class TitleScreen(BaseScreen):
         else:
             btn.text = loc["llm_enable"]
             btn.custom_color = DARK_RED
+
+    def _show_notice(self, text: str, error: bool = False, ms: int = 4000) -> None:
+        self._notice = (text, error, pygame.time.get_ticks() + ms)
 
     def _has_player(self) -> bool:
         gs = game_data.game_state
@@ -125,17 +133,19 @@ class TitleScreen(BaseScreen):
                 if kind == "save" and gs is not None and gs.player is not None:
                     try:
                         gs.save(slot_i)
-                        print(loc.get("save", "Save") + f" → slot {slot_i}: OK")
+                        self._show_notice(f"Игра сохранена в слот {slot_i}")
                     except Exception as e:
-                        print(f"{loc.get('api_save_error', 'Save error')}: {e}")
+                        log.exception("save to slot %s failed", slot_i)
+                        self._show_notice(f"Не удалось сохранить: {e}", error=True)
                 elif kind == "load" and gs is not None:
                     try:
                         loaded = gs.load(slot_i)
                         game_data.game_state = loaded
-                        print(loc.get("load", "Load") + f" → slot {slot_i}: OK")
+                        self._show_notice(f"Загружен слот {slot_i}")
                         return "load_game"
                     except Exception as e:
-                        print(f"{loc.get('api_save_error', 'Load error')}: {e}")
+                        log.exception("load from slot %s failed", slot_i)
+                        self._show_notice(f"Не удалось загрузить: {e}", error=True)
             return None
 
         self._layout_buttons()
@@ -188,5 +198,10 @@ class TitleScreen(BaseScreen):
         status_surface = self.subtitle_font.render(status_text, True, status_color)
         status_rect = status_surface.get_rect(bottomright=(self._w - _sc(20, self._scale), self._h - _sc(20, self._scale)))
         self.screen.blit(status_surface, status_rect)
+        if self._notice and pygame.time.get_ticks() < self._notice[2]:
+            text, error, _ = self._notice
+            notice = self.subtitle_font.render(text, True, DARK_RED if error else DARK_GREEN)
+            self.screen.blit(notice, notice.get_rect(
+                bottomleft=(_sc(20, self._scale), self._h - _sc(20, self._scale))))
         self.api_key_modal.draw()
         self.save_slots_modal.draw()

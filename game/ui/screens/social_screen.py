@@ -99,6 +99,8 @@ class SocialScreen(BaseScreen):
         # Input
         self._input_buffer: str = ""
         self._input_active: bool = True
+        # True once the loop offers options (or reports an error); see MainScreen.
+        self._awaiting_input: bool = False
 
         # Threading
         self._api_manager    = None
@@ -118,12 +120,28 @@ class SocialScreen(BaseScreen):
     # PUBLIC API
     # --------------------------------------------------
 
+    def adopt_state_from(self, old: "SocialScreen") -> None:
+        """Take over the dialogue and the running social thread from a screen
+        instance that is being replaced (window resize, settings applied)."""
+        self._state = old._state
+        self._chat_entries = old._chat_entries
+        self._input_buffer = old._input_buffer
+        self._api_manager = old._api_manager
+        self._ui_queue = old._ui_queue
+        self._input_queue = old._input_queue
+        self._stop_event = old._stop_event
+        self._social_thread = old._social_thread
+        self._pending_summary = old._pending_summary
+        self._awaiting_input = old._awaiting_input
+        self._chat_scroll = self._chat_max_scroll()
+
     def set_npc(self, npc_id: ID) -> None:
         """Set the NPC for the upcoming conversation (does NOT start the thread)."""
         self._state.reset(npc_id)
         self._chat_entries.clear()
         self._chat_scroll = 0
         self._pending_summary = None
+        self._awaiting_input = False
 
     def pop_summary(self) -> Optional[str]:
         """Return (and clear) the side-session summary produced on exit to exploration."""
@@ -319,6 +337,9 @@ class SocialScreen(BaseScreen):
                 self._chat_entries = [e for e in self._chat_entries
                                       if e.role != ChatRole.THINKING]
 
+            if t in ("options", "error"):
+                self._awaiting_input = True
+
             if t == "greeting":
                 self._add_entry(msg["text"], ChatRole.GREETING)
             elif t == "npc_reply":
@@ -347,7 +368,9 @@ class SocialScreen(BaseScreen):
                     self._pending_summary = (msg.get("summary") or "").strip() or None
                     transition = "exploration"
                 elif action == "combat":
-                    transition = "combat"
+                    # Defensive: combat is not implemented — return to exploration.
+                    self._pending_summary = (msg.get("summary") or "").strip() or None
+                    transition = "exploration"
         return transition
 
     # --------------------------------------------------
@@ -375,12 +398,14 @@ class SocialScreen(BaseScreen):
 
     def _on_send(self) -> None:
         text = self._input_buffer.strip()
-        if not text:
+        if not text or not self._awaiting_input:
+            return  # typed while the NPC is thinking: keep it in the box
+        if not (self._social_thread and self._social_thread.is_alive()):
             return
         self._add_entry(f"[Вы]: {text}", ChatRole.PLAYER)
         self._input_buffer = ""
-        if self._social_thread and self._social_thread.is_alive():
-            self._input_queue.put({"type": "input", "text": text})
+        self._awaiting_input = False
+        self._input_queue.put({"type": "input", "text": text})
 
     # --------------------------------------------------
     # PORTRAIT HELPER

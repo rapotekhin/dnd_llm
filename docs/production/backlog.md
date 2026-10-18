@@ -19,12 +19,6 @@
 **Когда:** перед расшариванием сейвов или после стабилизации классов.  
 **См.:** [tech/adr/0002-pickle-saves.md](../tech/adr/0002-pickle-saves.md)
 
-### Возврат на Langfuse?
-
-**Что:** сейчас Logfire, раньше был Langfuse. Не уверены, что Logfire лучше.  
-**Действие:** обсудить и решить — оставить Logfire или вернуться на Langfuse.  
-**См.:** [tech/llm-integration.md](../tech/llm-integration.md) → раздел Трейсинг
-
 ### Стандартизация формата ID
 
 **Что:** ID-шники сейчас разные — `tawern-001`, UUID, `mkt-npc-001`.  
@@ -59,7 +53,7 @@
 
 ### Стиль ГМ как настройка
 
-См. [narrative/dm-style.md](../narrative/dm-style.md). Выбор стиля при старте/в настройках.
+Решено в [ADR-0010](../tech/adr/0010-game-decisions-worlds-tone-combat-death.md): выбор в новой игре + настройки. Делается в v0.5.0 (экран новой игры).
 
 ### Динамические цены в trade
 
@@ -67,7 +61,11 @@
 
 ### Экран смерти и рестарт
 
-Часть рогалик-цикла (M4).
+Часть M4: режимы «Одна жизнь» / «История» ([ADR-0010](../tech/adr/0010-game-decisions-worlds-tone-combat-death.md)).
+
+### Спутники в партии
+
+После 1.0: нанимаемые NPC со статблоками в бою ([ADR-0010](../tech/adr/0010-game-decisions-worlds-tone-combat-death.md) §4).
 
 ---
 
@@ -88,17 +86,21 @@
 - Добавить квестов в стартовые локации
 - Расширить рекрутёр-NPC (есть ли пати-система?)
 
-### Сеттинг — закрепить Forgotten Realms?
+### Стартовая вселенная
 
-См. [narrative/world.md](../narrative/world.md). Сейчас Невервинтер заглушка. Оставить FR или переехать на свой сеттинг — открытый вопрос.
+Написать свой регион пакетом вселенной (городок + 3–4 места, тёмное фэнтези с надеждой) вместо Невервинтера — [ADR-0010](../tech/adr/0010-game-decisions-worlds-tone-combat-death.md), v0.5.0.
 
 ---
 
 ## 🚀 Платформа и инфра
 
-### Локальная модель (vllm)
+### Локальная модель (vLLM)
 
-Сейчас только OpenRouter. Запуск vllm локально или на своём сервере — для приватности и независимости от провайдера.
+Сейчас только OpenRouter. Поддержка vLLM в Python-бэкенде (OpenAI-совместимый `base_url`, structured output через guided decoding) — для приватности и независимости от провайдера. **Не в M1**, сильно позже ([ADR-0007](../tech/adr/0007-godot-client-python-llm-backend.md) §6).
+
+### Раздача бэкенда игрокам без Python
+
+В M1 бэкенд запускается вручную через `uv run`. Для раздачи на машины игроков — встроенный (embeddable) Python с зависимостями в папке; отдельное решение, когда понадобится ([ADR-0007](../tech/adr/0007-godot-client-python-llm-backend.md) §4).
 
 ### EN-локализация (полная)
 
@@ -126,15 +128,14 @@
 |---|---|
 | Цены в trade — статика или динамика? | [systems/trade.md](../design/systems/trade.md) |
 | Память NPC — нужна и как реализовать? | [systems/social.md](../design/systems/social.md) |
-| Multiclassing — поддерживаем? | [systems/leveling.md](../design/systems/leveling.md) |
-| Сетка в combat — нужна? | [systems/combat.md](../design/systems/combat.md) |
-| Меняем ли Невервинтер на своё? | [narrative/world.md](../narrative/world.md) |
-| Logfire или Langfuse? | [tech/llm-integration.md](../tech/llm-integration.md) |
 
 ---
 
 ## ✅ Закрытые
 
+- ~~Сеттинг, тон ГМ, сетка в бою, мультикласс, мета-прогресс~~ → [ADR-0010](../tech/adr/0010-game-decisions-worlds-tone-combat-death.md): вселенные-пакеты и свой регион, выбор стиля, зоны, мультикласс после боя, без мета-прогресса
+- ~~Logfire или Langfuse?~~ → Langfuse в Python-бэкенде, Logfire убирается ([ADR-0007](../tech/adr/0007-godot-client-python-llm-backend.md) §6)
+- ~~Переезд с Pygame~~ → Godot-клиент + Python LLM-бэкенд ([ADR-0007](../tech/adr/0007-godot-client-python-llm-backend.md))
 - ~~Сломанная механика перехода `exploration → social → exploration` (и через trade)~~ → реализован [adr/0006](../tech/adr/0006-exploration-side-session-summary.md): синхронный `summary` в transition, передача его в exploration через `resume`-сообщение, повторный `describe_scene` на resume по отдельному промпту, видимый игроку маркер «Возвращение к исследованию» + DM-нарратив. Async-путь `generate_social_summary_async` удалён, кнопка «Уйти» в social шлёт `{"type": "leave"}` в очередь loop'а. Trade пока не пишет своего summary — оставлено в техдолге.
 - ~~Зацикливание `question_to_player` в social~~ → поле удалено из `SocialResolutionOutput`; loop теперь один проход на ход; NPC сам переспрашивает в характере, если ввод неоднозначный.
 - ~~Legacy `app/` (Streamlit)~~ → удалена из репозитория

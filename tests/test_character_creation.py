@@ -48,7 +48,7 @@ def test_create_character_fighter_human_sets_stats_and_inventory() -> None:
     assert player.class_type.index == "fighter"
     assert player.abilities.str == 15
     assert player.hit_points > 0
-    assert player.xp == 5000
+    assert player.xp == 0
     gear = [x for x in player.inventory if x is not None]
     assert len(gear) >= 1
 

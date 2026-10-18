@@ -62,8 +62,13 @@ class TradeState:
         # Which coin field is currently focused ("player" | "npc" | "")
         self.coin_active: str = ""
 
+        # Equip state of items staged from equipment slots, keyed by id(item),
+        # so a cancelled or withdrawn offer puts them back on.
+        self._staged_equip: dict[int, tuple] = {}
+
     def reset(self, npc_id: ID) -> None:
         """Start a fresh session with the given NPC."""
+        self.cancel()
         self.npc_id = npc_id
         self.player_barter.clear()
         self.npc_barter.clear()
@@ -121,16 +126,42 @@ class TradeState:
     # BARTER VALUE CALCULATIONS
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def player_item_value(item: GameEquipment) -> int:
+        """What a merchant pays for the player's item: half price (PHB, selling treasure)."""
+        return item.sell_price or 0
+
+    @staticmethod
+    def npc_item_value(item: GameEquipment) -> int:
+        """What the player pays for a merchant's item: full price."""
+        return item.price or 0
+
     def player_barter_value(self) -> int:
-        return sum((it.price or 0) for it in self.player_barter) + self.player_coins_offer
+        return sum(self.player_item_value(it) for it in self.player_barter) + self.player_coins_offer
 
     def npc_barter_value(self) -> int:
-        return sum((it.price or 0) for it in self.npc_barter) + self.npc_coins_offer
+        return sum(self.npc_item_value(it) for it in self.npc_barter) + self.npc_coins_offer
 
     def is_balanced(self) -> bool:
         """True when at least one item is offered and both sides' totals match."""
         has_items = bool(self.player_barter) or bool(self.npc_barter)
         return has_items and self.player_barter_value() == self.npc_barter_value()
+
+    def funds_problem(self) -> Optional[str]:
+        """Who cannot pay the coins they offer: "player", "npc", or None."""
+        player = self.get_player()
+        npc = self.get_npc()
+        player_coins = (getattr(player, "coins", 0) or 0) if player else 0
+        npc_coins = (getattr(npc, "coins", 0) or 0) if npc else 0
+        if self.player_coins_offer > player_coins:
+            return "player"
+        if self.npc_coins_offer > npc_coins:
+            return "npc"
+        return None
+
+    def can_execute(self) -> bool:
+        """Balanced and both sides can actually pay their coin offers."""
+        return self.is_balanced() and self.funds_problem() is None
 
     # ------------------------------------------------------------------
     # BARTER OPERATIONS
@@ -138,8 +169,8 @@ class TradeState:
 
     def balance(self) -> None:
         """Auto-fill coin offers so both sides' totals become equal."""
-        p_items = sum((it.price or 0) for it in self.player_barter)
-        n_items = sum((it.price or 0) for it in self.npc_barter)
+        p_items = sum(self.player_item_value(it) for it in self.player_barter)
+        n_items = sum(self.npc_item_value(it) for it in self.npc_barter)
         diff = p_items - n_items
         if diff > 0:
             # player offers more goods → NPC compensates with coins
@@ -155,12 +186,16 @@ class TradeState:
         self.coin_buf_player = str(self.player_coins_offer) if self.player_coins_offer else ""
         self.coin_buf_npc    = str(self.npc_coins_offer)    if self.npc_coins_offer    else ""
 
-    def execute_barter(self) -> None:
-        """Commit the trade: swap items and transfer coins between player and NPC."""
+    def execute_barter(self) -> bool:
+        """Commit the trade: swap items and transfer coins between player and NPC.
+
+        Returns False (and changes nothing) if a side cannot pay the coins it
+        offers. Balance is the caller's check (``can_execute``).
+        """
         player = self.get_player()
         npc    = self.get_npc()
-        if not player:
-            return
+        if not player or self.funds_problem() is not None:
+            return False
 
         player_inv = getattr(player, "inventory", None)
         npc_inv    = getattr(npc,    "inventory", None) if npc else None
@@ -198,6 +233,30 @@ class TradeState:
         self.npc_coins_offer    = 0
         self.coin_buf_player    = ""
         self.coin_buf_npc       = ""
+        self._staged_equip.clear()  # traded items stay unequipped
+        return True
+
+    def cancel(self) -> None:
+        """Drop the current offer: staged items return to their equipment slots."""
+        for item in self.player_barter:
+            self._restore_equip(item)
+        self.player_barter.clear()
+        self.npc_barter.clear()
+        self.player_coins_offer = 0
+        self.npc_coins_offer    = 0
+        self.coin_buf_player    = ""
+        self.coin_buf_npc       = ""
+        self._staged_equip.clear()
+
+    @staticmethod
+    def _equip_state(item: GameEquipment) -> tuple:
+        return (item.equipped, item.equipped_left_hand, item.equipped_right_hand, item.equipped_slot)
+
+    def _restore_equip(self, item: GameEquipment) -> None:
+        state = self._staged_equip.pop(id(item), None)
+        if state is not None:
+            (item.equipped, item.equipped_left_hand,
+             item.equipped_right_hand, item.equipped_slot) = state
 
     def handle_drop(self, item: GameEquipment, source: str, target: str) -> None:
         """
@@ -209,6 +268,7 @@ class TradeState:
             if source in (PANEL_PLAYER_INV, PANEL_PLAYER_EQUIP) \
                     and not self.barter_contains(self.player_barter, item):
                 if source == PANEL_PLAYER_EQUIP:
+                    self._staged_equip[id(item)] = self._equip_state(item)
                     item.equipped            = False
                     item.equipped_left_hand  = False
                     item.equipped_right_hand = False
@@ -219,6 +279,7 @@ class TradeState:
             if source == PANEL_PLAYER_BARTER \
                     and self.barter_contains(self.player_barter, item):
                 self.barter_remove(self.player_barter, item)
+                self._restore_equip(item)
 
         elif target == PANEL_NPC_BARTER:
             if source == PANEL_NPC_INV \
