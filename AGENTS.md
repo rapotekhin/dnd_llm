@@ -9,7 +9,7 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 | Folder | What | Status |
 |---|---|---|
 | `legacy/` | Pygame prototype (v0.3.x): game, tests, scripts | frozen — only bug fixes until parity, then removed |
-| `game/` | Godot 4.7 client (GDScript) | network layer from the connectivity spike; game skeleton — v0.4.0 |
+| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | skeleton (v0.4.0): menu, saves, backend link, chat screen; rules port — v0.5.x |
 | `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env | transport + protocol, stub turn; agents — v0.4.1 |
 | `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | first methods; rest — v0.4.1 |
 | `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
@@ -20,7 +20,7 @@ Decisions to follow in new code: [ADR-0007](docs/tech/adr/0007-godot-client-pyth
 
 ## Documentation
 
-Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes; **`playtest`** to test the game live (see «Testing»).
+Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes; **`playtest`** to test the game live (see «Testing»); **`godot_conventions`** when writing GDScript in `game/`.
 
 ## Commands
 
@@ -44,9 +44,17 @@ Backend and Godot (details in [connectivity-spike.md](docs/tech/connectivity-spi
 uv sync --project llm_server && uv run --project llm_server pytest   # backend protocol + contract tests (own .venv)
 uv run --project llm_server python -m llm_server.contract            # regenerate contract/schema/ after changing protocol models
 python tools/connectivity_e2e.py                                      # Godot <-> Caddy wss:// <-> llm_server end to end (Docker; --no-proxy without it)
+python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/
+python tools/godot_playtest.py --scenario offline                     # live Godot playtest without the server
 ```
 
-Godot binary: `C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe` (or env `GODOT`).
+Godot binary: `C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe` (or env `GODOT`). In Git Bash: `GODOT="/c/Program Files (x86)/Steam/steamapps/common/Godot Engine/godot.windows.opt.tools.64.exe"`.
+
+```bash
+"$GODOT" --headless --path game --import     # after adding scripts or editing strings.csv (registers class_name, builds translations)
+"$GODOT" --path game --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test --ignoreHeadlessMode   # gdUnit4 (exit 0 = pass)
+"$GODOT" --path game                         # run the game; saves in %APPDATA%/Godot/app_userdata/Between the Rolls/
+```
 
 `legacy/game/main.py` adds `legacy/game/`, `dnd-5e-core/` and `DnD-5th-Edition-API/` (repository root) to `sys.path`. Inside `legacy/game/`, imports are relative: `from core.game import Game`. `.env` stays at the repository root.
 
@@ -54,7 +62,7 @@ Pytest configuration: `pytest.ini` (`testpaths = legacy/tests evals`). There is 
 
 ## Testing
 
-Green `pytest` is **necessary but not enough**: the trade screen crash (B22) lived with all tests green. Before calling a gameplay/UI/prompt change done or opening a PR that touches `legacy/game/**`, run a **live playtest** following the **`playtest`** skill ([.claude/skills/playtest/SKILL.md](.claude/skills/playtest/SKILL.md)):
+Green `pytest` is **necessary but not enough**: the trade screen crash (B22) lived with all tests green. Before calling a gameplay/UI/prompt change done or opening a PR that touches `legacy/game/**` or `game/**`, run a **live playtest** following the **`playtest`** skill ([.claude/skills/playtest/SKILL.md](.claude/skills/playtest/SKILL.md)). For `game/**`: gdUnit4 green, then `python tools/godot_playtest.py` (and `--scenario offline` when connection handling changed), then read `build/playtest/*/report.txt` and the screenshots. For `legacy/game/**`:
 
 1. `python -m pytest` — green.
 2. `python legacy/scripts/playtest/smoke.py` — the real game on a dummy display, scripted player input, the real OpenRouter model.
@@ -108,6 +116,9 @@ legacy/
 | Task | Location |
 |---|---|
 | New feature | not in `legacy/` — in the Godot client or the backend per the roadmap |
+| Godot rule / state | `game/core/<domain>/` + gdUnit4 test in `game/test/` (skill `godot_conventions`) |
+| Godot screen | `game/ui/screens/` (built in code), navigation via `EventBus.navigate` |
+| Godot live scenario | `game/tools/playtest/<name>.gd` (base `playtest_base.gd`) |
 | Bug fix in the prototype | `legacy/game/` + regression test in `legacy/tests/` |
 | Protocol message / schema | Pydantic model in `llm_server/` → export to `contract/` (from v0.4.1) |
 | Golden LLM scenario | `evals/golden/scenarios.yaml` + [format doc](docs/tech/golden-scenarios.md) |

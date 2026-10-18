@@ -11,6 +11,7 @@ description: Use this skill to test the game for real — launch it, drive it li
 
 - Пользователь просит протестировать / запустить / проверить игру «вживую»
 - Перед PR с изменениями в `legacy/game/**` (экраны, gameplay, промпты, билдеры, сейвы)
+- Перед PR с изменениями в `game/**` (Godot-клиент) — раздел «Godot-клиент» ниже
 - После серии багфиксов — подтвердить, что они работают в игре, а не только в тестах
 
 **НЕ срабатывает на:**
@@ -63,9 +64,31 @@ description: Use this skill to test the game for real — launch it, drive it li
 - ❌ Не коммитить `legacy/scripts/playtest/out/` (в `.gitignore`)
 - ❌ Не гонять плейтест в цикле без нужды — каждый прогон тратит деньги ключа
 
-## После переезда на Godot
+## Godot-клиент (`game/`)
 
-Тот же подход: Godot-сценарии `--write-movie` с `--profile agent` (как в hive_world_shop) и mock- или реальный `llm_server`. Скилл обновить, когда появится `game/` (v0.4.0).
+Тот же подход: настоящая игра с рендерингом, настоящий `llm_server` (пока с заглушкой хода, без денег), сценарий ведёт игру как игрок и снимает скриншот на шаг.
+
+1. gdUnit4 зелёный (команда — в [godot-client.md](../../../docs/tech/godot-client.md#тесты-и-живая-проверка)).
+2. `python tools/godot_playtest.py` — сценарий `smoke`: меню → новая игра → действие с `engine.check` → вариант → пауза → сохранение в слот → меню → «Продолжить». Около 15 секунд, на экране мелькнёт окно игры.
+3. `python tools/godot_playtest.py --scenario offline` — без сервера: экран «Мастер недоступен» и диагноз.
+4. Прочитай `build/playtest/<сценарий>/report.txt` (строки `OK` / `FAIL`, `RESULT`) и посмотри скриншоты `NN_*.png`; ошибки Godot скрипт печатает отдельно (`godot.log` рядом).
+
+| Вызов в сценарии | Что делает |
+|---|---|
+| `node("GameState")` | autoload по имени |
+| `screen()`, `screen_is("GameScreen")` | текущий экран и проверка его класса |
+| `find(screen(), "NewGameButton")`, `find_button_by_text(n, "Сохранить")`, `find_all(n, "CheckCard")` | поиск контролов |
+| `press(button)`, `key(KEY_ESCAPE)` | ввод |
+| `wait_until(func() -> bool: ..., 30.0)` | ждать условия (ход мастера) |
+| `step("что", ok, "детали")`, `shot("имя")` | проверка в отчёт и скриншот |
+
+**Новый сценарий** — `game/tools/playtest/<имя>.gd` с `extends "res://tools/playtest/playtest_base.gd"` и `func run() -> void`, запуск `python tools/godot_playtest.py --scenario <имя>`. Ключевым контролам экранов давай `name`, чтобы сценарий находил их без пикселей.
+
+**Подводные камни Godot:**
+- Классы UI в сценарии по имени не упоминать: они ссылаются на autoload-ы, которых ещё нет при компиляции `--script`. Только `screen_is()` / `find_all()`.
+- Сценарии требуют `--profile=agent` и чистят его сейвы — сейвы автора не трогаются. Скрипт сам передаёт профиль.
+- Esc и горячие клавиши, которые должны работать при фокусе в поле ввода, обрабатывай в `_input`, не в `_unhandled_input` (так нашёлся баг с паузой).
+- Порт 8765 занят — останови свой `llm_server`, скрипт сам поднимает сервер с одноразовым токеном.
 
 ## Связанные
 

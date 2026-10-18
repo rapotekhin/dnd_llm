@@ -1,0 +1,93 @@
+keys,ru
+BACKEND_CONNECTING,Подключаюсь к мастеру…
+BACKEND_OFFLINE,Мастер недоступен
+BACKEND_READY,Мастер на связи
+BACKEND_TOOLTIP_READY,"{url}
+Модель: {model}
+Сервер: {version}"
+BANNER_NO_MASTER,"Нет связи с мастером — переподключаюсь. Игра сохранена, ходы недоступны."
+BTN_BACK,Назад
+BTN_CANCEL_TURN,Отменить ход
+BTN_CONNECTION_SETTINGS,Настройки связи
+BTN_CONTINUE,Продолжить
+BTN_EXIT_TO_MENU,Выйти в главное меню
+BTN_LOAD,Загрузить
+BTN_MENU,Меню
+BTN_NEW_GAME,Новая игра
+BTN_QUIT,Выход
+BTN_RESUME,Продолжить
+BTN_RETRY,Повторить
+BTN_RETRY_TURN,↻ Повторить ход
+BTN_SAVE,Сохранить
+BTN_SAVE_AND_CHECK,Сохранить и проверить
+BTN_SEND,Действовать
+BTN_SETTINGS,Настройки
+BTN_TO_MENU,В меню
+CHECK_ADVANTAGE,Преимущество: {reason}
+CHECK_LINE,{what}: {roll} {bonus} = {total} против DC {dc} {mark}
+DEV_SNAPSHOT,Снимок бага: {path}
+GAME_SUBTITLE,D&D 5e с мастером-ИИ
+GAME_TITLE,Between the Rolls
+HINT_BACKEND,"Мастер — отдельная программа llm_server: на этом компьютере или на сервере. Токен задаёт тот, кто её запустил (переменная LLM_SERVER_TOKEN). Токен хранится только в настройках на этом компьютере."
+MSG_BUDGET_EXCEEDED,Дневной лимит расходов мастера исчерпан. Ходы снова будут доступны завтра.
+MSG_CHECKING,Проверяю…
+MSG_CHECK_OK,Мастер на связи.
+MSG_LOAD_FAILED,Не удалось прочитать сохранение
+MSG_MASTER_THINKING,Мастер думает…
+MSG_NO_MASTER,Нет связи с мастером. Мир не изменился — можно повторить ход.
+MSG_NO_SAVES,Сохранений пока нет
+MSG_SAVED,Игра сохранена
+MSG_SAVE_FAILED,Не удалось сохранить игру
+MSG_SAVE_TOO_NEW,Сохранение сделано в более новой версии игры
+MSG_SERVER_BUSY,Мастер занят другим ходом. Попробуйте ещё раз через несколько секунд.
+MSG_TURN_CANCELLED,Ход отменён. Мир не изменился.
+MSG_TURN_TIMEOUT,Мастер не успел ответить. Мир не изменился — можно повторить ход.
+OFFLINE_CERTIFICATE,Не удалось проверить сертификат сервера. Укажите корневой сертификат в настройках связи или используйте сертификат от Let's Encrypt.
+OFFLINE_CHECKING,Проверяю связь…
+OFFLINE_SERVER_DOWN,"Сервер мастера не отвечает. Проверьте, что llm_server запущен и адрес указан верно."
+OFFLINE_TITLE,Мастер недоступен
+OFFLINE_TOKEN,"Сервер мастера отвечает, но не пускает. Скорее всего, неверный или пустой токен доступа."
+OFFLINE_UNKNOWN,"Не удалось подключиться к мастеру. Причины: сервер не запущен, неверный токен или сертификат."
+OPT_BACKEND_CA,"Корневой сертификат (необязательно, для своего сервера с wss://)"
+OPT_BACKEND_TOKEN,Токен доступа
+OPT_BACKEND_URL,"Адрес мастера (ws:// только для этого компьютера, иначе wss://)"
+OPT_FULLSCREEN,Полный экран
+OPT_RESOLUTION,Размер окна
+PLACEHOLDER_ACTION,Что вы делаете?
+SAVE_CHA,Спасбросок Харизмы
+SAVE_CON,Спасбросок Телосложения
+SAVE_DEX,Спасбросок Ловкости
+SAVE_INT,Спасбросок Интеллекта
+SAVE_STR,Спасбросок Силы
+SAVE_WIS,Спасбросок Мудрости
+SIDE_CHARACTER,Персонаж
+SIDE_CHARACTER_SOON,"Лист персонажа, инвентарь и карта появятся с переносом правил (v0.5.0)."
+SKILL_ACROBATICS,Акробатика
+SKILL_ANIMAL_HANDLING,Уход за животными
+SKILL_ARCANA,Магия
+SKILL_ATHLETICS,Атлетика
+SKILL_DECEPTION,Обман
+SKILL_HISTORY,История
+SKILL_INSIGHT,Проницательность
+SKILL_INTIMIDATION,Запугивание
+SKILL_INVESTIGATION,Анализ
+SKILL_MEDICINE,Медицина
+SKILL_NATURE,Природа
+SKILL_PERCEPTION,Внимательность
+SKILL_PERFORMANCE,Выступление
+SKILL_PERSUASION,Убеждение
+SKILL_RELIGION,Религия
+SKILL_SLEIGHT_OF_HAND,Ловкость рук
+SKILL_STEALTH,Скрытность
+SKILL_SURVIVAL,Выживание
+SLOT_AUTOSAVE,Автосохранение
+SLOT_EMPTY,пусто
+SLOT_HINT,Ходов: {turns} · {date}
+SLOT_N,Слот {n}
+SLOT_TURNS,ходов: {n}
+TAB_DISPLAY,Экран
+TAB_MASTER,Мастер
+TITLE_LOAD,Загрузка
+TITLE_PAUSE,Пауза
+TITLE_SAVE,Сохранение
+TITLE_SETTINGS,Настройки

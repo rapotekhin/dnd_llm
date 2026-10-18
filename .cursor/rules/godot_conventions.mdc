@@ -1,0 +1,24 @@
+---
+description: Use this skill when writing or modifying GDScript (.gd), scenes (.tscn), autoloads, game/data/*.json or game/localization/strings.csv in the Between the Rolls Godot client (game/). Trigger on tasks like "добавь экран", "сделай окно", "реализуй механику в Godot", "перенеси систему из прототипа", "напиши тест gdUnit", "add a screen", "implement X in Godot", or any edit under game/. Ensures pure core/ without nodes, data-driven JSON, tr() keys for player text, EventBus navigation, static typing, save migrations and tests. Do NOT use for legacy/ (pygame), llm_server/ (Python) or docs-only changes.
+globs:
+  - "game/**/*.gd"
+  - "game/**/*.tscn"
+  - "game/project.godot"
+  - "game/data/**"
+  - "game/localization/**"
+alwaysApply: false
+---
+
+# godot_conventions
+
+Conventions for the Godot client in `game/`.
+
+The full procedure is in [.claude/skills/godot_conventions/SKILL.md](mdc:.claude/skills/godot_conventions/SKILL.md).
+
+Read that file when this rule triggers, then follow it.
+
+**Quick reference:**
+
+- Layers: `core/` pure `RefCounted` (no nodes, autoloads, `tr()`), `ui/` built in code, `autoload/` global; numbers in `data/*.json`
+- Save layout change → `SaveFormat.SAVE_VERSION` + migration step + fixture; static typing everywhere; player text via `strings.csv` keys
+- Check: `--import`, gdUnit4 green, `python tools/godot_playtest.py` (see [docs/tech/godot-client.md](mdc:docs/tech/godot-client.md))
