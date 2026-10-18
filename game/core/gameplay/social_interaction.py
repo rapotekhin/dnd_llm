@@ -40,7 +40,11 @@ from dotenv import load_dotenv
 from pydantic_ai import Agent
 
 from core.gameplay.schemas.exploration import ActionMetadata
-from core.gameplay.exploration import room_reachable
+from core.gameplay.exploration import (
+    agent_unavailable_text,
+    room_reachable,
+    run_agent_with_retry,
+)
 from core.gameplay.schemas.social import (
     NpcGreeting,
     ResponseOptionList,
@@ -343,13 +347,16 @@ def _social_loop(
 
     try:
         with _span("greeting"):
-            greeting_result = greeting_agent.run_sync(user_prompt, deps=game_state)
-    except Exception:
-        log.exception("greeting run_sync failed")
-        raise
-
-    scene       = greeting_result.output.greeting_scene
-    first_words = greeting_result.output.npc_first_words
+            greeting_result = run_agent_with_retry(greeting_agent, user_prompt,
+                                                   what="greeting", deps=game_state)
+        scene       = greeting_result.output.greeting_scene
+        first_words = greeting_result.output.npc_first_words
+    except Exception as e:
+        # Keep the conversation usable: a neutral opening instead of a dead screen.
+        log.exception("greeting failed; using a neutral opening")
+        ui_queue.put({"type": "error", "text": agent_unavailable_text(e)})
+        scene       = f"{npc_name} поворачивается к тебе."
+        first_words = "Слушаю."
     log.info("greeting ok: scene=%d chars, first_words=%d chars",
              len(scene), len(first_words))
 
@@ -371,13 +378,18 @@ def _social_loop(
         # Generate response options
         ui_queue.put({"type": "thinking"})
         with _span("generate_options"):
-            opts_result = options_agent.run_sync(
-                prompt_generate_response_options(
-                    state["history"], state["last_npc_reply"]
-                ),
-                deps=game_state,
-            )
-            options = opts_result.output.options
+            try:
+                opts_result = run_agent_with_retry(
+                    options_agent,
+                    prompt_generate_response_options(state["history"], state["last_npc_reply"]),
+                    what="generate_options", deps=game_state,
+                )
+                options = opts_result.output.options
+            except Exception as e:
+                log.exception("generate_options failed")
+                ui_queue.put({"type": "error", "text": agent_unavailable_text(e)
+                              + " Ответь своими словами."})
+                options = []
 
         ui_queue.put({
             "type": "options",
@@ -417,12 +429,14 @@ def _social_loop(
         ui_queue.put({"type": "thinking"})
         with _span("resolution"):
             try:
-                run_result = resolution_agent.run_sync(
+                run_result = run_agent_with_retry(
+                    resolution_agent,
                     prompt_social_resolution(
                         state["history"],
                         state["last_npc_reply"],
                         matched,
                     ),
+                    what="social_resolution",
                     deps=game_state,
                 )
                 parsed = run_result.output

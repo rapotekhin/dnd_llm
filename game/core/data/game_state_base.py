@@ -32,6 +32,14 @@ else:
 if not os.path.exists(SAVE_DIR):
     os.makedirs(SAVE_DIR)
 
+SAVE_SLOTS = range(1, 11)
+
+
+def _slot_path(i: int) -> str:
+    if i not in SAVE_SLOTS:
+        raise ValueError(f"save slot must be {SAVE_SLOTS.start}..{SAVE_SLOTS.stop - 1}, got {i}")
+    return os.path.join(SAVE_DIR, f"save_{i}.pkl")
+
 @dataclasses.dataclass
 class MainGameState:
     """Game session and world state. Created at startup, player set after creation."""
@@ -73,26 +81,39 @@ class MainGameState:
     def list_saves() -> "list[tuple[int, datetime.datetime]]":
         """Return [(slot_index, save_datetime), ...] for slots 1..10 that have a save file."""
         out = []
-        for i in range(1, 11):
-            path = os.path.join(SAVE_DIR, f"save_{i}.pkl")
+        for i in SAVE_SLOTS:
+            path = _slot_path(i)
             if os.path.isfile(path):
                 mtime = os.path.getmtime(path)
                 out.append((i, datetime.datetime.fromtimestamp(mtime)))
         return out
 
-    def _get_number_of_saves(self):
-        return len([f for f in os.listdir(SAVE_DIR) if f.startswith("save_")])
+    @staticmethod
+    def first_free_slot() -> int | None:
+        """Lowest slot without a save file, or None if all slots are taken."""
+        for i in SAVE_SLOTS:
+            if not os.path.isfile(_slot_path(i)):
+                return i
+        return None
 
-    def save(self, i: int | None = None):
+    def save(self, i: int | None = None) -> int:
+        """Save to slot ``i`` (or the first free one) atomically; returns the slot."""
         if i is None:
-            i = self._get_number_of_saves() + 1
+            i = self.first_free_slot()
+            if i is None:
+                raise ValueError("all save slots are taken; pick a slot to overwrite")
+        path = _slot_path(i)
 
         self.save_datetime = datetime.datetime.now()
-        with open(os.path.join(SAVE_DIR, f"save_{i}.pkl"), "wb") as f:
+        # Write a temp file first so a crash mid-write never corrupts the slot.
+        tmp_path = path + ".tmp"
+        with open(tmp_path, "wb") as f:
             pickle.dump(self, f)
+        os.replace(tmp_path, path)
+        return i
 
     def load(self, i: int):
-        with open(os.path.join(SAVE_DIR, f"save_{i}.pkl"), "rb") as f:
+        with open(_slot_path(i), "rb") as f:
             return pickle.load(f)
 
 

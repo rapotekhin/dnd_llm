@@ -449,3 +449,198 @@ def test_b13_player_items_sell_for_half_price() -> None:
     ts.player_barter.clear()
     ts.npc_barter.append(sword)
     assert ts.npc_barter_value() == 1000     # buying is full price
+
+
+# ════════════════════════════ P2 (B14–B19) ═══════════════════════════════════
+
+# ── B14 / B15: dice — natural d20, DC 0, house rule, limits ─────────────────
+
+class _ScriptedRng:
+    """random.Random stand-in returning scripted randint values."""
+
+    def __init__(self, values):
+        self._values = list(values)
+
+    def randint(self, _a, _b):
+        return self._values.pop(0)
+
+
+def _roll(values, *args, **kwargs):
+    from core.tools.roll import RollDiceTool
+
+    return RollDiceTool(rng=_ScriptedRng(values)).run(*args, **kwargs)
+
+
+def test_b14_dc_zero_is_a_real_dc() -> None:
+    assert _roll([1], "1d4", difficulty_class=0)["roll_success"] is True
+
+
+def test_b14_natural_20_and_1_house_rule() -> None:
+    nat20 = _roll([20], "1d20-5", difficulty_class=30)
+    assert nat20["natural"] == 20 and nat20["roll_success"] is True
+    nat1 = _roll([1], "1d20+30", difficulty_class=10)
+    assert nat1["natural"] == 1 and nat1["roll_success"] is False
+
+
+def test_b14_advantage_keeps_higher_d20_only() -> None:
+    r = _roll([4, 17], "1d20+3", has_advantage=True, difficulty_class=15)
+    assert r == {"roll_result": 20, "roll_success": True, "natural": 17, "rolls": [4, 17]}
+    # Advantage does not apply to damage dice.
+    dmg = _roll([3, 5], "2d6+1", has_advantage=True)
+    assert dmg["roll_result"] == 9 and dmg["natural"] is None
+
+
+@pytest.mark.parametrize("expr", [
+    "99999999d99999", "21d6", "1d7", "1d20*2", "wisdom check", "", "1d20+100",
+    "(2d4)*2+1", "1d20" + "+1" * 30,
+])
+def test_b15_rejects_unsafe_or_invalid_expressions(expr: str) -> None:
+    from core.tools.roll import RollDiceTool
+
+    result = RollDiceTool().run(expr, difficulty_class=10)
+    assert "error" in result and "roll_result" not in result
+
+
+def test_b15_accepts_plain_notation() -> None:
+    r = _roll([2, 6, 3], "2d6+1d4-1")
+    assert r["roll_result"] == 10 and r["rolls"] == [2, 6, 3]
+
+
+# ── B16: cancelling a barter re-equips staged items ─────────────────────────
+
+def _equipped_helm_setup(patched_game_state):
+    from core.gameplay.trade import PANEL_PLAYER_EQUIP, PANEL_PLAYER_BARTER
+
+    player = Player.create_random_character(name="P16", race="human", class_type="fighter")
+    helm = make_game_equipment(index="helm16", name="Helm", gp=2)
+    helm.equipped = True
+    helm.equipped_slot = "head"
+    player.inventory = [helm]
+    npc = NPC.create_random_character(name="N16", race="human", class_type="rogue")
+    npc.id = "npc-b16"
+    npc.inventory = []
+    npc.coins = 1000
+    patched_game_state.player = player
+    patched_game_state.npcs[npc.id] = npc
+    ts = TradeState()
+    ts.reset(npc.id)
+    ts.handle_drop(helm, PANEL_PLAYER_EQUIP, PANEL_PLAYER_BARTER)
+    assert helm.equipped is False
+    return ts, helm
+
+
+def test_b16_cancel_restores_equipment(patched_game_state) -> None:
+    ts, helm = _equipped_helm_setup(patched_game_state)
+    ts.cancel()
+    assert helm.equipped is True and helm.equipped_slot == "head"
+    assert ts.player_barter == []
+
+
+def test_b16_withdrawing_item_restores_equipment(patched_game_state) -> None:
+    from core.gameplay.trade import PANEL_PLAYER_BARTER, PANEL_PLAYER_INV
+
+    ts, helm = _equipped_helm_setup(patched_game_state)
+    ts.handle_drop(helm, PANEL_PLAYER_BARTER, PANEL_PLAYER_INV)
+    assert helm.equipped is True and helm.equipped_slot == "head"
+
+
+def test_b16_traded_item_stays_unequipped(patched_game_state) -> None:
+    ts, helm = _equipped_helm_setup(patched_game_state)
+    ts.balance()
+    assert ts.execute_barter() is True
+    ts.cancel()  # nothing left to restore
+    assert helm.equipped is False
+
+
+# ── B17: save slots are bounded and written atomically ──────────────────────
+
+def test_b17_save_uses_first_free_slot_and_bounds(tmp_path, monkeypatch, patched_game_state) -> None:
+    from core.data import game_state_base as gsb
+
+    monkeypatch.setattr(gsb, "SAVE_DIR", str(tmp_path))
+    patched_game_state.player = Player.create_random_character(name="S", race="human", class_type="fighter")
+
+    for i in gsb.SAVE_SLOTS:
+        if i != 3:
+            (tmp_path / f"save_{i}.pkl").write_bytes(b"x")
+    assert patched_game_state.save() == 3
+    assert not list(tmp_path.glob("*.tmp")), "temp file left behind"
+
+    with pytest.raises(ValueError):
+        patched_game_state.save()  # all ten slots taken now
+    with pytest.raises(ValueError):
+        patched_game_state.save(11)
+
+
+# ── B18: a failing agent call does not kill the session ─────────────────────
+
+class _FailingAgent:
+    model = "stub-model"
+
+    def __init__(self):
+        self.calls = 0
+
+    def run_sync(self, *_a, **_k):
+        self.calls += 1
+        raise RuntimeError("provider down")
+
+
+def test_b18_describe_and_actions_failures_fall_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(exp, "_LOGFIRE_ENABLED", False)
+    describe, generate = _FailingAgent(), _FailingAgent()
+    monkeypatch.setattr(exp, "_build_describe_agent", lambda *_a: describe)
+    monkeypatch.setattr(exp, "_build_generate_actions_agent", lambda *_a: generate)
+    monkeypatch.setattr(exp, "_build_resolution_agent", lambda *_a: FakeAgent([
+        AgentResolutionOutput(narration="Ты оглядываешься.", action="exploration", question_to_player=None),
+    ]))
+
+    ui_q: queue.Queue = queue.Queue()
+    in_q: queue.Queue = queue.Queue()
+    stop = threading.Event()
+    gs = _minimal_game_state_two_rooms()
+    thr = threading.Thread(
+        target=lambda: exp.run_exploration(MagicMock(model_name="stub"), gs, ui_q, in_q, stop),
+        daemon=True, name="exploration-b18",
+    )
+    thr.start()
+    msgs = collect_until(ui_q, lambda m: m.get("type") == "actions")
+
+    scene = next(m for m in msgs if m.get("type") == "scene")
+    assert scene["text"] == "A hall."  # static room description
+    assert sum(m.get("type") == "error" for m in msgs) == 2
+    assert msgs[-1]["actions"] == []
+    assert describe.calls == exp.AGENT_ATTEMPTS and generate.calls == exp.AGENT_ATTEMPTS
+
+    in_q.put({"type": "input", "text": "Осматриваюсь"})  # free input still works
+    msgs = collect_until(ui_q, lambda m: m.get("type") == "narration")
+    assert msgs[-1]["text"] == "Ты оглядываешься."
+    stop.set()
+    join_thread_or_stop(thr, stop)
+
+
+# ── B19: input is sent only when the DM waits for it ────────────────────────
+
+def test_b19_main_screen_sends_only_when_awaiting_input() -> None:
+    ms = _bare_main_screen()
+    ms._awaiting_input = False
+    ms.input_buffer = "Иду к стойке"
+    ms._add_entry = lambda *_a: None
+
+    ms._on_send()  # DM is still thinking
+    assert ms._input_queue.empty()
+    assert ms.input_buffer == "Иду к стойке"  # kept for later
+
+    ms._awaiting_input = True
+    ms._on_send()
+    assert ms._input_queue.get_nowait() == {"type": "input", "text": "Иду к стойке"}
+    assert ms.input_buffer == "" and ms._awaiting_input is False
+
+
+def test_quick_buttons_send_player_actions() -> None:
+    from ui.screens.main_screen import MainScreen
+
+    ms = _bare_main_screen()
+    ms._awaiting_input = True
+    ms._add_entry = lambda *_a: None
+    assert ms._send_text(MainScreen.QUICK_ACTIONS[1]) is True
+    assert ms._input_queue.get_nowait()["text"] == MainScreen.QUICK_ACTIONS[1]

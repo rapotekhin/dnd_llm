@@ -294,6 +294,32 @@ def _wait_for_input(
     return None
 
 
+AGENT_ATTEMPTS = 2  # one retry for transient OpenRouter / validation failures
+
+
+def run_agent_with_retry(agent, prompt: str, *, what: str, **kwargs):
+    """``agent.run_sync`` with a retry; re-raises the last error."""
+    last_error: Optional[Exception] = None
+    for attempt in range(1, AGENT_ATTEMPTS + 1):
+        try:
+            return agent.run_sync(prompt, **kwargs)
+        except Exception as e:  # noqa: BLE001 — any provider / validation error
+            last_error = e
+            log.warning("%s failed (attempt %d/%d): %s", what, attempt, AGENT_ATTEMPTS, e)
+    assert last_error is not None
+    raise last_error
+
+
+def agent_unavailable_text(error: Exception) -> str:
+    return f"[Мастер не ответил: {error}]"
+
+
+def _fallback_scene(game_state: MainGameState) -> str:
+    """Static room description when the LLM cannot describe the scene."""
+    room = game_state.rooms.get(game_state.current_room_id) if game_state.current_room_id else None
+    return (room.description or room.name) if room else ""
+
+
 def _wait_for_player_text(
     input_queue: queue.Queue,
     stop_event: threading.Event,
@@ -405,8 +431,14 @@ def _exploration_loop(
     ui_queue.put({"type": "thinking"})
     log.debug("describe_scene: starting")
     with _span("describe_scene"):
-        result = describe_agent.run_sync(prompt_describe_scene_user(), deps=game_state)
-        scene = result.output.environment_description
+        try:
+            result = run_agent_with_retry(describe_agent, prompt_describe_scene_user(),
+                                          what="describe_scene", deps=game_state)
+            scene = result.output.environment_description
+        except Exception as e:
+            log.exception("describe_scene failed; using static room description")
+            ui_queue.put({"type": "error", "text": agent_unavailable_text(e)})
+            scene = _fallback_scene(game_state)
         state["history"].append(scene)
         state["scene"] = scene
     log.info("describe_scene: %d chars", len(scene))
@@ -419,8 +451,16 @@ def _exploration_loop(
         ui_queue.put({"type": "thinking"})
         with _span("generate_actions"):
             prompt = prompt_generate_actions(state["history"], state["scene"])
-            result = generate_agent.run_sync(prompt, deps=game_state)
-            state["actions"] = result.output.actions
+            try:
+                result = run_agent_with_retry(generate_agent, prompt,
+                                              what="generate_actions", deps=game_state)
+                state["actions"] = result.output.actions
+            except Exception as e:
+                # No suggestions this turn; the player can still type an action.
+                log.exception("generate_actions failed")
+                ui_queue.put({"type": "error", "text": agent_unavailable_text(e)
+                              + " Опиши действие сам."})
+                state["actions"] = []
         ui_queue.put({
             "type": "actions",
             "actions": [{"id": a.id, "description": a.description} for a in state["actions"]],
@@ -453,7 +493,8 @@ def _exploration_loop(
                     state["choice"],
                 )
                 try:
-                    run_result = resolution_agent.run_sync(prompt, deps=game_state)
+                    run_result = run_agent_with_retry(resolution_agent, prompt,
+                                                      what="agent_resolution", deps=game_state)
                     parsed = run_result.output
                 except Exception as e:
                     log.exception("resolution agent crashed")
@@ -577,10 +618,16 @@ def _exploration_loop(
                 # otherwise it writes a "first impression" of the room.
                 ui_queue.put({"type": "thinking"})
                 with _span("describe_scene_resume"):
-                    result = describe_agent.run_sync(
-                        prompt_describe_scene_resume(side_summary), deps=game_state
-                    )
-                    new_scene = result.output.environment_description
+                    try:
+                        result = run_agent_with_retry(
+                            describe_agent, prompt_describe_scene_resume(side_summary),
+                            what="describe_scene_resume", deps=game_state,
+                        )
+                        new_scene = result.output.environment_description
+                    except Exception as e:
+                        log.exception("describe_scene_resume failed; using static room description")
+                        ui_queue.put({"type": "error", "text": agent_unavailable_text(e)})
+                        new_scene = _fallback_scene(game_state)
                 state["history"].append(new_scene)
                 state["scene"] = new_scene
                 ui_queue.put({"type": "scene", "text": new_scene})

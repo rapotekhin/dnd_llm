@@ -134,6 +134,17 @@ class MainScreen(BaseScreen):
         # True only while the thread is paused at a social/trade transition and
         # waits for a ``resume`` message (returning from inventory etc. is not one).
         self._awaiting_resume: bool = False
+        # True once the thread asks for a choice (actions / question / error);
+        # input typed while the DM is thinking stays in the box instead of being
+        # queued as an answer to a later step.
+        self._awaiting_input: bool = False
+
+    # Player actions sent by the quick buttons (hide / look / rest).
+    QUICK_ACTIONS = (
+        "Пытаюсь незаметно спрятаться.",
+        "Внимательно осматриваюсь вокруг.",
+        "Хочу немного передохнуть.",
+    )
 
     # ------------------------------------------------------------------
     # EXPLORATION LIFECYCLE
@@ -151,6 +162,7 @@ class MainScreen(BaseScreen):
         self._exploration_thread = old._exploration_thread
         self._pending_transition = old._pending_transition
         self._awaiting_resume = old._awaiting_resume
+        self._awaiting_input = old._awaiting_input
         self.chat_scroll = self._chat_max_scroll()
 
     def start_exploration(self, api_manager, side_summary: Optional[str] = None,
@@ -197,6 +209,7 @@ class MainScreen(BaseScreen):
         self._input_queue  = queue.Queue()
         self._pending_transition = None
         self._awaiting_resume = False
+        self._awaiting_input = False
 
         import core.data as game_data
         from core.gameplay.exploration import run_exploration
@@ -303,6 +316,9 @@ class MainScreen(BaseScreen):
                 self.chat_entries = [e for e in self.chat_entries
                                      if e.role != ChatRole.THINKING]
 
+            if t in ("actions", "question", "error"):
+                self._awaiting_input = True
+
             if t == "scene":
                 self._add_entry(msg["text"], ChatRole.DM)
             elif t == "narration":
@@ -348,14 +364,19 @@ class MainScreen(BaseScreen):
     # ------------------------------------------------------------------
 
     def _on_send(self) -> None:
-        text = self.input_buffer.strip()
-        if not text:
-            return
+        if self._send_text(self.input_buffer.strip()):
+            self.input_buffer = ""
+
+    def _send_text(self, text: str) -> bool:
+        """Send a player action if the DM is waiting for one; returns True if sent."""
+        if not text or not self._awaiting_input:
+            return False
+        if not (self._exploration_thread and self._exploration_thread.is_alive()):
+            return False
         self._add_entry(f"[Вы]: {text}", ChatRole.PLAYER)
-        self.input_buffer = ""
-        # Forward to exploration thread if running
-        if self._exploration_thread and self._exploration_thread.is_alive():
-            self._input_queue.put({"type": "input", "text": text})
+        self._awaiting_input = False
+        self._input_queue.put({"type": "input", "text": text})
+        return True
 
     # ------------------------------------------------------------------
     # HANDLE EVENTS
@@ -375,6 +396,10 @@ class MainScreen(BaseScreen):
             if self.send_btn.is_clicked(pos):
                 self._on_send()
                 return None
+            for button, action in zip(self.quick_buttons, self.QUICK_ACTIONS):
+                if button.is_clicked(pos):
+                    self._send_text(action)
+                    return None
             if self.input_rect.collidepoint(pos):
                 self.input_active = True
                 return None

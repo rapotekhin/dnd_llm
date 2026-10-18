@@ -62,8 +62,13 @@ class TradeState:
         # Which coin field is currently focused ("player" | "npc" | "")
         self.coin_active: str = ""
 
+        # Equip state of items staged from equipment slots, keyed by id(item),
+        # so a cancelled or withdrawn offer puts them back on.
+        self._staged_equip: dict[int, tuple] = {}
+
     def reset(self, npc_id: ID) -> None:
         """Start a fresh session with the given NPC."""
+        self.cancel()
         self.npc_id = npc_id
         self.player_barter.clear()
         self.npc_barter.clear()
@@ -228,7 +233,30 @@ class TradeState:
         self.npc_coins_offer    = 0
         self.coin_buf_player    = ""
         self.coin_buf_npc       = ""
+        self._staged_equip.clear()  # traded items stay unequipped
         return True
+
+    def cancel(self) -> None:
+        """Drop the current offer: staged items return to their equipment slots."""
+        for item in self.player_barter:
+            self._restore_equip(item)
+        self.player_barter.clear()
+        self.npc_barter.clear()
+        self.player_coins_offer = 0
+        self.npc_coins_offer    = 0
+        self.coin_buf_player    = ""
+        self.coin_buf_npc       = ""
+        self._staged_equip.clear()
+
+    @staticmethod
+    def _equip_state(item: GameEquipment) -> tuple:
+        return (item.equipped, item.equipped_left_hand, item.equipped_right_hand, item.equipped_slot)
+
+    def _restore_equip(self, item: GameEquipment) -> None:
+        state = self._staged_equip.pop(id(item), None)
+        if state is not None:
+            (item.equipped, item.equipped_left_hand,
+             item.equipped_right_hand, item.equipped_slot) = state
 
     def handle_drop(self, item: GameEquipment, source: str, target: str) -> None:
         """
@@ -240,6 +268,7 @@ class TradeState:
             if source in (PANEL_PLAYER_INV, PANEL_PLAYER_EQUIP) \
                     and not self.barter_contains(self.player_barter, item):
                 if source == PANEL_PLAYER_EQUIP:
+                    self._staged_equip[id(item)] = self._equip_state(item)
                     item.equipped            = False
                     item.equipped_left_hand  = False
                     item.equipped_right_hand = False
@@ -250,6 +279,7 @@ class TradeState:
             if source == PANEL_PLAYER_BARTER \
                     and self.barter_contains(self.player_barter, item):
                 self.barter_remove(self.player_barter, item)
+                self._restore_equip(item)
 
         elif target == PANEL_NPC_BARTER:
             if source == PANEL_NPC_INV \
