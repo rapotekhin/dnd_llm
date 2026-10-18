@@ -137,16 +137,23 @@ func history(max_chars: int) -> Array[Dictionary]:
 	for i in range(chat.size() - 1, -1, -1):
 		var e := chat[i]
 		var role := ""
+		var text := ""
 		match str(e["kind"]):
 			KIND_PLAYER:
 				role = "player"
+				text = str(e["text"])
 			KIND_DM:
 				role = "dm"
+				text = str(e["text"])
 			KIND_NPC:
 				role = "npc"
+				text = "%s: %s" % [e.get("name", ""), e["text"]]
+			KIND_EFFECT:
+				# Applied effects stay in the history so the master does not charge or give the same thing twice.
+				role = "dm"
+				text = "[Движок уже применил: %s]" % " · ".join(e.get("lines", []))
 		if role.is_empty():
 			continue
-		var text := str(e["text"]) if role != "npc" else "%s: %s" % [e.get("name", ""), e["text"]]
 		used += text.length()
 		if used > max_chars and not out.is_empty():
 			break

@@ -292,3 +292,14 @@ def test_summary_request(data_dir):
     assert msg["result"]["summary"] == "Игрок выпил эля с Бориком."
     assert status["budget"]["daily_usd"] == 1.0
     assert status["models"][0]["id"] == "anthropic/claude-haiku-5.5"
+
+
+def test_effect_sent_as_a_json_string_is_accepted(data_dir):
+    # Qwen 3.x sends nested tool arguments as JSON strings.
+    fn = scripted(
+        ("propose_effect", {"effect": '{"kind": "flag", "flag": "door_open"}'}),
+        ("final", lambda m: {"narration": "Дверь открыта.", "effect_ids": [effect_id(m)]}),
+    )
+    msg, calls, _ = play(data_dir, fn)
+    assert calls[0]["params"]["effect"] == {"kind": "flag", "flag": "door_open", "value": True}
+    assert msg["result"]["effect_ids"] == ["e-1"]

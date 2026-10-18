@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.models import Model
 from pydantic_ai.settings import ModelSettings
@@ -41,6 +41,28 @@ if TYPE_CHECKING:
 MODEL_SETTINGS: ModelSettings = {"temperature": 0.8, "max_tokens": 1500}
 
 
+def _json_object(value: Any) -> Any:
+    # Some models (Qwen 3.x) send a nested object argument as a JSON string.
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except ValueError:
+            return value
+    return value
+
+
+EffectArg = Annotated[Effect, BeforeValidator(_json_object)]
+
+
+def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSettings:
+    """Per-model tweaks. Qwen 3.x answers in thinking mode by default, and thinking mode rejects the forced
+    tool choice that structured output needs (HTTP 400), so reasoning is switched off for it."""
+    settings: dict = dict(base)
+    if "qwen/" in model.model_name:
+        settings["openrouter_reasoning"] = {"enabled": False}
+    return settings  # type: ignore[return-value]
+
+
 class TurnOutput(BaseModel):
     """What the master returns at the end of a turn."""
 
@@ -50,6 +72,9 @@ class TurnOutput(BaseModel):
     next_mode: Literal["exploration", "social", "trade"] | None = Field(
         default=None, description="Смена режима: social/trade — разговор/торговля с NPC (нужен npc_id), exploration — вернуться в общую сцену.")
     npc_id: str | None = Field(default=None, description="NPC для social/trade, из списка NPC сцены.")
+    changes: list[str] = Field(default_factory=list, description=(
+        "Что по твоему тексту изменилось у игрока или в мире: получено, потеряно, заплачено, ранен, вылечен, перешёл. "
+        "Пусто — ничего не изменилось. Каждое изменение должно быть принятым эффектом из effect_ids."))
 
 
 class SummaryOutput(BaseModel):
@@ -103,12 +128,18 @@ async def request_check(
     r = EngineCheckResult.model_validate(raw)
     t.check_ids.append(r.check_id)
     if r.blocked:
-        return f"Повтор той же проверки без изменений: прежний итог — {'успех' if r.success else 'провал'}."
+        if r.success:
+            return "Повтор той же проверки: итог прежний — успех."
+        return ("Повтор той же проверки без изменений заблокирован: итог прежний — ПРОВАЛ. Не описывай находку или удачу; "
+                "подскажи, что изменит ситуацию: инструмент, другой навык, помощь, долгий отдых.")
     nat = " (натуральная 20)" if r.nat == 20 else " (натуральная 1)" if r.nat == 1 else ""
-    return f"{'Успех' if r.success else 'Провал'}: {r.total} против DC {r.dc}{nat}. Опиши исход по этому итогу."
+    if r.success:
+        return (f"Успех: {r.total} против DC {r.dc}{nat}. Игрок добился своего — опиши это как удачу, а не отказ: "
+                "если просьба невозможна целиком, он получает лучшее возможное (расположение, услугу, наводку, аудиенцию).")
+    return f"Провал: {r.total} против DC {r.dc}{nat}. Опиши неудачу и её последствия."
 
 
-async def propose_effect(ctx: RunContext[TurnContext], effect: Effect) -> str:
+async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str:
     """Предложить движку последствие: move, damage, heal, coins, give_item, take_item, npc_attitude, flag.
     Движок проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы он применился."""
     t = ctx.deps
@@ -165,7 +196,7 @@ def build_turn_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput
         instructions=system,
         tools=[request_check, propose_effect, lookup, find_items],
         retries=2,
-        model_settings=MODEL_SETTINGS,
+        model_settings=settings_for(model),
     )
 
     @agent.output_validator
@@ -173,6 +204,9 @@ def build_turn_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput
         t = ctx.deps
         if not out.narration.strip():
             raise ModelRetry("narration не может быть пустым.")
+        if out.changes and not out.effect_ids:
+            raise ModelRetry(f"В тексте есть изменения {out.changes}, но нет эффектов. Предложи их через propose_effect "
+                             "и верни effect_ids, или перепиши текст так, чтобы ничего не менялось.")
         unknown = [e for e in out.effect_ids if e not in t.accepted]
         if unknown:
             raise ModelRetry(f"effect_ids {unknown} не принимались движком в этом ходе. Используй только id из ответов propose_effect.")
@@ -184,7 +218,7 @@ def build_turn_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput
 
 
 def build_summary_agent(model: Model, kind: str) -> Agent[None, SummaryOutput]:
-    return Agent(model, output_type=SummaryOutput, retries=2, model_settings={"temperature": 0.3, "max_tokens": 400},
+    return Agent(model, output_type=SummaryOutput, retries=2, model_settings=settings_for(model, {"temperature": 0.3, "max_tokens": 400}),
                  instructions="Ты пишешь краткие записи по-русски для памяти мастера игры.", name=f"summary_{kind}")
 
 

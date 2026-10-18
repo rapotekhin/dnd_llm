@@ -105,6 +105,8 @@ python tools/godot_playtest.py --scenario offline   # без сервера: э�
 python tools/godot_playtest.py --scenario live --real   # настоящая модель OpenRouter (центы): разговор, покупка, переход
 ```
 
+Тесты gdUnit4: `test/core/` (правила, эффекты, снимок, сессия, регрессии B1–B19), `test/saves/` (формат и фикстуры `save_v1.json`, `save_v2.json`), `test/net/` (`Backend` и `GameState` против `MockBackend` — WebSocket-сервера на GDScript: ход с эффектом, обрыв, отмена, переподключение). Тесты, трогающие `GameState`, пишут сейвы в `user://test_saves`.
+
 Сценарии лежат в `game/tools/playtest/`, база — `playtest_base.gd`. Скриншоты и `report.txt` пишутся в `build/playtest/<сценарий>/`. В сценарии нельзя упоминать классы UI по имени: они ссылаются на autoload-ы, которых ещё нет, когда компилируется скрипт `--script`. Экраны сравниваются через `screen_is("GameScreen")`.
 
 CI Godot не гоняет (решение v0.4.0): тесты и сценарии запускаются локально перед PR. Экспорт `.exe` — позже.

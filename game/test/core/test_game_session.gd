@@ -47,3 +47,10 @@ func test_saved_chat_is_trimmed_to_the_latest() -> void:
 	var d := TestUtils.session_with_chat().to_dict(2)
 	assert_int(d["chat"].size()).is_equal(2)
 	assert_str(d["chat"][1]["text"]).is_equal("Ничего необычного.")
+
+
+func test_history_keeps_applied_effects() -> void:
+	var s := TestUtils.session_with_chat()
+	s.append(GameSession.effect_entry(["−4 мм", "Получено: Кружка эля"]))
+	var h := s.history(4000)
+	assert_dict(h[-1]).is_equal({"role": "dm", "text": "[Движок уже применил: −4 мм · Получено: Кружка эля]"})

@@ -13,7 +13,7 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 | `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.2.0 (v0.4.1) |
 | `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.2.0 |
 | `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
-| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | scenarios ready, runner in v0.4.2 |
+| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 20 scenarios; runner `llm_server.golden` (v0.4.2) |
 | `docs/` | design + tech docs, ADRs | live |
 
 Decisions to follow in new code: [ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md) (who owns what), [ADR-0008](docs/tech/adr/0008-engine-decides-llm-narrates.md) (engine decides, LLM narrates), [ADR-0009](docs/tech/adr/0009-godot-backend-protocol.md) (protocol), [ADR-0010](docs/tech/adr/0010-game-decisions-worlds-tone-combat-death.md) (game decisions). Godot conventions follow the sibling project `C:\Code\hive_world_shop` (pure `core/`, seeded RNG, JSON saves with migrations, gdUnit4).
@@ -43,6 +43,7 @@ Backend and Godot (details in [connectivity-spike.md](docs/tech/connectivity-spi
 ```bash
 uv sync --project llm_server && uv run --project llm_server pytest   # backend protocol + contract tests (own .venv)
 uv run --project llm_server python -m llm_server.contract            # regenerate contract/schema/ after changing protocol models
+uv run --project llm_server python -m llm_server.golden              # golden LLM scenarios on the real model + judge → build/evals/ (cents; --model, --only)
 python tools/connectivity_e2e.py                                      # Godot <-> Caddy wss:// <-> llm_server end to end (Docker; --no-proxy without it)
 python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/
 python tools/godot_playtest.py --scenario offline                     # live Godot playtest without the server
@@ -124,6 +125,6 @@ legacy/
 | Godot live scenario | `game/tools/playtest/<name>.gd` (base `playtest_base.gd`) |
 | Bug fix in the prototype | `legacy/game/` + regression test in `legacy/tests/` |
 | Protocol message / schema | Pydantic model in `llm_server/` → export to `contract/` (from v0.4.1) |
-| Golden LLM scenario | `evals/golden/scenarios.yaml` + [format doc](docs/tech/golden-scenarios.md) |
+| Golden LLM scenario | `evals/golden/scenarios.yaml` + [format doc](docs/tech/golden-scenarios.md); run `python -m llm_server.golden` after prompt changes |
 | Architectural decision | new ADR in `docs/tech/adr/` |
 | D&D rules content (races, classes, spells) | SRD JSON data; never hard-coded |
