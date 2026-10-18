@@ -1,6 +1,6 @@
 ---
 name: godot_conventions
-description: Use this skill when writing or modifying GDScript (.gd), scenes (.tscn), autoloads, game/data/*.json or game/localization/strings.csv in the Between the Rolls Godot client (game/). Trigger on tasks like "добавь экран", "сделай окно", "реализуй механику в Godot", "перенеси систему из прототипа", "напиши тест gdUnit", "add a screen", "implement X in Godot", or any edit under game/. Ensures pure core/ without nodes, data-driven JSON, tr() keys for player text, EventBus navigation, static typing, save migrations and tests. Do NOT use for legacy/ (pygame), llm_server/ (Python) or docs-only changes.
+description: Use this skill when writing or modifying GDScript (.gd), scenes (.tscn), autoloads, game/data/*.json or game/localization/strings.csv in the Between the Rolls Godot client (game/). Trigger on tasks like "добавь экран", "сделай окно", "реализуй механику в Godot", "напиши тест gdUnit", "add a screen", "implement X in Godot", or any edit under game/. Ensures pure core/ without nodes, data-driven JSON, tr() keys for player text, EventBus navigation, static typing, save migrations and tests. Do NOT use for llm_server/ (Python) or docs-only changes.
 ---
 
 # Godot Conventions — Between the Rolls
@@ -11,9 +11,8 @@ description: Use this skill when writing or modifying GDScript (.gd), scenes (.t
 
 - Любая правка `game/**/*.gd`, `*.tscn`, `project.godot`
 - Новые данные в `game/data/*.json`, строки в `game/localization/strings.csv`
-- Перенос системы из `legacy/` в Godot (v0.5.x)
 
-**НЕ срабатывает на:** `legacy/`, `llm_server/`, `contract/`, только `docs/`.
+**НЕ срабатывает на:** `llm_server/`, `contract/`, только `docs/`.
 
 ## Алгоритм работы
 

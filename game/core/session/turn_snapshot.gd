@@ -38,6 +38,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		"limits": {"max_checks": int(data["rules"]["turn_limits"]["max_checks"]),
 			"max_effects": int(data["rules"]["turn_limits"]["max_effects"])},
 	}
+	out["quests"] = XpRules.quest_list(s, data["world"])
 	if s.mode == GameSession.MODE_TRADE and not s.npc_id.is_empty():
 		out["trade"] = TradeRules.info(s, data, s.npc_id)
 	return out

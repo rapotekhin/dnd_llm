@@ -111,6 +111,17 @@ def test_turn_prompt_kinds():
     assert "Движок уже бросил проверку: Торг удался" in prompts.turn_prompt("trade", "haggle", "Торг удался", s, npc)
 
 
+def test_quests_in_the_prompt_and_the_quest_turn():
+    raw = tavern_snapshot()
+    raw["quests"] = [{"id": "letter_to_ilva", "title": "Письмо для Илвы", "description": "Отнести письмо жрице.", "done": False}]
+    s = Snapshot.model_validate(raw)
+    text = prompts.system_prompt("exploration", s, None)
+    assert "## Задания игрока" in text and "Письмо для Илвы: Отнести письмо жрице." in text
+    assert "не даёшь за него опыт" in text
+    turn = prompts.turn_prompt("exploration", "quest", "Игрок отдал письмо. Награда: +300 опыта (задание).", s, None)
+    assert "выполнил задание" in turn and "+300 опыта" in turn
+
+
 def test_coins_format():
     assert prompts.coins(1537) == "15 зм 3 см 7 мм"
     assert prompts.coins(0) == "0 зм"

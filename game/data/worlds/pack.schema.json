@@ -74,6 +74,23 @@
 			"required": ["start_room", "locations", "rooms", "npcs"],
 			"properties": {
 				"start_room": {"type": "string"},
+				"quests": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"required": ["title", "description", "room", "action", "xp", "done_text"],
+						"properties": {
+							"title": {"$ref": "#/$defs/nonempty"},
+							"description": {"$ref": "#/$defs/nonempty"},
+							"room": {"type": "string"},
+							"action": {"$ref": "#/$defs/nonempty"},
+							"xp": {"type": "integer", "minimum": 0},
+							"reward_cp": {"type": "integer", "minimum": 0},
+							"done_text": {"$ref": "#/$defs/nonempty"}
+						},
+						"additionalProperties": false
+					}
+				},
 				"locations": {
 					"type": "object",
 					"additionalProperties": {"type": "object", "required": ["name", "description"]}

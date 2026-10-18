@@ -7,6 +7,7 @@ signal menu_requested
 signal sheet_requested
 signal map_requested
 signal journal_requested
+signal level_up_requested
 
 var _content: VBoxContainer
 
@@ -84,6 +85,14 @@ func _rebuild() -> void:
 	if not conditions.is_empty():
 		var cond := _line(tr("SIDE_CONDITIONS").format({"list": ", ".join(conditions.map(func(x: Variant) -> String: return tr("COND_" + str(x).to_upper())))}), false)
 		cond.add_theme_color_override("font_color", UiTheme.WARN)
+	var next_xp := LevelUp.xp_for(Catalog.data, int(c.get("level", 1)) + 1)
+	if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data):
+		_line(tr("SIDE_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}), true)
+	if LevelUp.can_level_up(c, Catalog.data):
+		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
+		lv.name = "LevelUpButton"
+		lv.theme_type_variation = UiTheme.ACCENT_BUTTON
+		lv.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_line(tr("SIDE_DAY").format({"day": s.day}), true)
 	var room := world.room(s.room_id)
 	_subheading("SIDE_PLACE")
@@ -100,6 +109,14 @@ func _rebuild() -> void:
 				if bool(n.get("trader", false)):
 					var t := _button(tr("BTN_TRADE_WITH").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, true), can_act)
 					t.name = "Trade_" + id
+		for qid: String in XpRules.quests_here(s, Catalog.data["world"]):
+			var q: Dictionary = XpRules.quests(Catalog.data["world"])[qid]
+			var qb := _button(tr("BTN_QUEST").format({"action": q["action"]}), func() -> void:
+				var err := GameState.complete_quest(qid)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)), can_act)
+			qb.name = "Quest_" + qid
+			qb.tooltip_text = str(q["title"])
 		_subheading("SIDE_EXITS")
 		for e: String in world.exits(s.room_id):
 			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act)

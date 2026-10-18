@@ -1,5 +1,5 @@
 ---
-description: Use this skill when writing or modifying GDScript (.gd), scenes (.tscn), autoloads, game/data/*.json or game/localization/strings.csv in the Between the Rolls Godot client (game/). Trigger on tasks like "добавь экран", "сделай окно", "реализуй механику в Godot", "перенеси систему из прототипа", "напиши тест gdUnit", "add a screen", "implement X in Godot", or any edit under game/. Ensures pure core/ without nodes, data-driven JSON, tr() keys for player text, EventBus navigation, static typing, save migrations and tests. Do NOT use for legacy/ (pygame), llm_server/ (Python) or docs-only changes.
+description: Use this skill when writing or modifying GDScript (.gd), scenes (.tscn), autoloads, game/data/*.json or game/localization/strings.csv in the Between the Rolls Godot client (game/). Trigger on tasks like "добавь экран", "сделай окно", "реализуй механику в Godot", "напиши тест gdUnit", "add a screen", "implement X in Godot", or any edit under game/. Ensures pure core/ without nodes, data-driven JSON, tr() keys for player text, EventBus navigation, static typing, save migrations and tests. Do NOT use for llm_server/ (Python) or docs-only changes.
 globs:
   - "game/**/*.gd"
   - "game/**/*.tscn"

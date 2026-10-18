@@ -146,6 +146,14 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 	var rooms: Dictionary = w["rooms"]
 	if not rooms.has(str(w.get("start_room", ""))):
 		e.append("world.start_room: нет комнаты %s" % w.get("start_room"))
+	var quests: Variant = w.get("quests", {})
+	if not (quests is Dictionary):
+		e.append("world.quests: объект")
+	else:
+		for qid: String in quests:
+			var q: Variant = quests[qid]
+			if not (q is Dictionary) or str(q.get("title", "")).is_empty() or str(q.get("action", "")).is_empty() 					or str(q.get("done_text", "")).is_empty() or not rooms.has(str(q.get("room", ""))):
+				e.append("задание %s: title, action, done_text и room из комнат пакета" % qid)
 	var placed := {}
 	for id: String in rooms:
 		var r: Dictionary = rooms[id]

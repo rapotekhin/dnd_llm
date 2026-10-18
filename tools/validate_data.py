@@ -81,6 +81,10 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         if npc.get("stock") and not npc.get("trader"):
             errors.append(f"NPC {nid}: есть stock, но нет trader: true")
 
+    for qid, q in world.get("quests", {}).items():
+        if q["room"] not in rooms:
+            errors.append(f"задание {qid}: нет комнаты {q['room']}")
+
     seen: set[str] = set()
     for p in chars["presets"]:
         ch, pid = p["choices"], p["id"]

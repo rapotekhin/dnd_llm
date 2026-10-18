@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.4.0"
+PROTOCOL_VERSION = "0.5.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -114,7 +114,8 @@ class StatusResult(_Out):
 
 Mode = Literal["exploration", "social", "trade"]
 # deal / haggle (0.4.0): the engine already made the deal or rolled the haggle; `input` holds its fact lines.
-TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle"]
+# quest (0.5.0): the engine completed a pack quest and gave the reward; `input` is what happened and the reward.
+TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -237,6 +238,15 @@ class TradeInfo(_In):
     buys: list[TradeLine] = Field(default_factory=list)  # the player's things and what the merchant pays
 
 
+class QuestInfo(_In):
+    """A quest of the world pack (0.5.0). Experience comes only from quests and combat, never from the master."""
+
+    id: str
+    title: str
+    description: str = ""
+    done: bool = False
+
+
 class Snapshot(_In):
     world: WorldInfo | None = None
     scene: Scene | None = None
@@ -245,6 +255,7 @@ class Snapshot(_In):
     summaries: dict[str, str] = Field(default_factory=dict)  # "location", "dialogue:<npc_id>"
     limits: TurnLimits = Field(default_factory=TurnLimits)
     trade: TradeInfo | None = None  # only in trade mode (0.4.0)
+    quests: list[QuestInfo] = Field(default_factory=list)  # (0.5.0)
 
 
 # --- turn.* -----------------------------------------------------------------

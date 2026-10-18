@@ -108,6 +108,40 @@ func set_trade(on: bool) -> bool:
 	return true
 
 
+## Quest button (XpRules): the engine completes a pack quest in its room — reward and experience — then the
+## master narrates it (kind=quest, the quest's done_text and the reward as input). "" or a localization key.
+func complete_quest(quest_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "QUEST_BUSY"
+	var why := XpRules.can_complete(session, Catalog.data["world"], quest_id)
+	if not why.is_empty():
+		return why
+	var lines := XpRules.complete(session, Catalog.data, quest_id)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	var q: Dictionary = XpRules.quests(Catalog.data["world"])[quest_id]
+	var reward := lines.slice(1).filter(func(l: String) -> bool: return not l.begins_with("можно"))
+	_request("quest", "%s Награда: %s." % [q["done_text"], ", ".join(reward)])
+	return ""
+
+
+## Level-up screen (LevelUp): applies the next level with the player's picks. Not while the master thinks:
+## the snapshot of the turn in flight would no longer match. "" or a localization key.
+func level_up(picks: Dictionary) -> String:
+	if session == null or is_busy():
+		return "LVL_ERR_BUSY"
+	var errs := LevelUp.errors(session.character, Catalog.data, picks)
+	if not errs.is_empty():
+		return errs[0]
+	var lines := LevelUp.apply(session.character, Catalog.data, picks, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	return ""
+
+
 ## Changes the master style of the running game (settings screen); kept in the save.
 func set_dm_style(style: String) -> void:
 	if session != null and WorldPack.DM_STYLES.has(style):

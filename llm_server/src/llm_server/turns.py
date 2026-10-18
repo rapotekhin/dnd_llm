@@ -39,8 +39,8 @@ _sleep = asyncio.sleep  # tests replace it to skip the pauses
 
 async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     usage = Usage(model="stub")
-    if params.kind in ("deal", "haggle"):
-        return TurnResult(turn_id=params.turn_id, narration=f"Торговец кивает. ({params.input})", usage=usage)
+    if params.kind in ("deal", "haggle", "quest"):
+        return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
     if params.kind != "action":
         return TurnResult(turn_id=params.turn_id, narration="Вы осматриваетесь.", usage=usage)
 

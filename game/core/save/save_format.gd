@@ -10,8 +10,9 @@ extends RefCounted
 ## v4 (0.5.1): world pack id and version, master settings. A v3 game moves to the start of the default pack.
 ## v5 (0.5.2): check locks, found secrets, visited rooms, the day.
 ## v6 (0.5.3): merchants — purses, stock left, haggling.
+## v7 (0.5.4): completed quests.
 
-const SAVE_VERSION := 6
+const SAVE_VERSION := 7
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -25,6 +26,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	3: _v3_to_v4,
 	4: _v4_to_v5,
 	5: _v5_to_v6,
+	6: _v6_to_v7,
 }
 
 
@@ -89,3 +91,8 @@ static func _v4_to_v5(data: Dictionary, _ctx: Dictionary) -> void:
 ## A 0.5.2 game traded only through the master: every merchant starts from the pack.
 static func _v5_to_v6(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["merchants"] = {}
+
+
+## A 0.5.3 game had no quests: none done.
+static func _v6_to_v7(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["quests_done"] = []

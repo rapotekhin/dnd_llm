@@ -1,6 +1,6 @@
 # Архитектура
 
-> Описывает **pygame-прототип** в `legacy/` (v0.3.x). Целевая архитектура Godot-клиент + Python-бэкенд — [ADR-0007](adr/0007-godot-client-python-llm-backend.md), [ADR-0009](adr/0009-godot-backend-protocol.md).
+> Исторический документ: описывает **pygame-прототип** v0.3.x, удалённый в v0.5.4 (код — в истории git до v0.5.3). Текущая архитектура — [godot-client.md](godot-client.md), [ADR-0007](adr/0007-godot-client-python-llm-backend.md), [ADR-0009](adr/0009-godot-backend-protocol.md).
 
 ## Общая схема
 

@@ -28,7 +28,6 @@ __pycache__
 /infra/dev/caddy-data/
 
 # Live playtest output (screenshots, reports)
-/legacy/scripts/playtest/out/
 
 # Backend runtime data: budget counter, generated item library
 /llm_server/var/

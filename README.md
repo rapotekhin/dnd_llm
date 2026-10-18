@@ -1,163 +1,79 @@
 # Between the Rolls
 
-Одиночная D&D 5e RPG в открытом мире, где Мастером Подземелий выступает ЛЛМ.
+Одиночная D&D 5e RPG, где Мастером Подземелий выступает ЛЛМ.
 
-Игрок создаёт персонажа по правилам D&D 5e и попадает в мир, который ЛЛМ ведёт как настольный мастер: описывает сцены, играет за NPC, назначает броски и реагирует на любые действия. Мир, NPC и квесты генерируются на ходу — это бесконечная песочница с роглайк-логикой.
+Игрок создаёт персонажа по правилам D&D 5e и попадает в мир, который ЛЛМ ведёт как настольный мастер: описывает сцены, играет за NPC, назначает броски и реагирует на любые действия.
 
-> 🎯 **Главный принцип:** ЛЛМ исполняет роль ГМ, но **не является движком**. Все изменения мира — через Python-функции (tools): броски, инвентарь, создание сущностей. Это даёт воспроизводимость и экономит токены.
+> 🎯 **Главный принцип:** ЛЛМ исполняет роль мастера, но **не является движком**. Броски, предметы, деньги, опыт и переходы решает игровой движок; мастер просит проверку или предлагает эффект, а движок проверяет и применяет ([ADR-0008](docs/tech/adr/0008-engine-decides-llm-narrates.md)).
 
 ## Возможности
 
-- ✅ Полное создание персонажа D&D 5e (расы, классы, заклинания, предыстория)
-- ✅ Поднятие уровня (features, ASI, новые заклинания, subfeatures)
-- ✅ Exploration с ЛЛМ-ГМ — описание сцен, броски, проверки навыков
-- ✅ Социальные взаимодействия с NPC
-- ✅ Торговля
-- ✅ Перемещение по комнатам и локациям
-- ✅ Сохранение/загрузка (10 слотов)
-- ✅ Локализация на русском (английский — частично)
-- 🚧 Combat (в разработке)
-- 🚧 Автогенерация мира при выходе за известные локации (в разработке)
+- ✅ Создание персонажа D&D 5e по SRD: расы, классы, подклассы, point buy, навыки, заклинания, снаряжение; готовые герои мира
+- ✅ Пакеты миров (моды) и стартовый мир «Сумеречная Марка»; стиль мастера и границы контента
+- ✅ Исследование: проверки навыков с картой броска, скрытое в комнатах, долгий отдых, карта и журнал
+- ✅ Разговоры с NPC и торговля через панель сделки, с торгом и запасами торговцев
+- ✅ Опыт за задания (и бой — с его появлением), повышение уровня 1–5
+- ✅ Сохранения в JSON со слотами и автосейвом
+- 🚧 Бой (M3), меняющийся мир и генерация мира (M2+) — [роадмап](docs/production/roadmap.md)
 
 ## Структура репозитория
 
-Проект переезжает с Pygame на **Godot-клиент + Python LLM-бэкенд** ([ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md), [roadmap](docs/production/roadmap.md)).
-
 | Папка | Что |
 |---|---|
-| `legacy/` | Pygame-прототип v0.3.x — играбелен, заморожен до паритета Godot-версии |
-| `game/` | Godot-клиент (каркас — v0.4.0) |
-| `llm_server/` | Python LLM-бэкенд (каркас — v0.4.1) |
+| `game/` | Godot-клиент (GDScript): UI, состояние, правила, сейвы — [godot-client.md](docs/tech/godot-client.md) |
+| `llm_server/` | Python LLM-бэкенд: FastAPI + WebSocket, Pydantic AI, OpenRouter — [README](llm_server/README.md) |
 | `contract/` | JSON Schema протокола Godot ↔ бэкенд |
+| `tools/` | импорт SRD, проверка пакетов миров, живые плейтесты |
 | `evals/` | «золотые» ЛЛМ-сценарии |
+| `infra/` | локальный `wss://` через Caddy |
 | `docs/` | документация и ADR |
 
-Версия проекта — в файле `VERSION`.
+Версия проекта — в файле `VERSION`. Pygame-прототип (v0.3.x) удалён в v0.5.4 после [проверки паритета](docs/production/parity-v031.md); он остался в истории git.
 
-## Стек прототипа
+## Запуск
 
-- **UI:** Pygame
-- **LLM-агенты:** Pydantic AI с typed-выводом и инструментами
-- **Провайдер:** OpenRouter (по умолчанию `google/gemini-3.1-flash-lite`)
-- **D&D правила:** внешние пакеты [`dnd-5e-core`](https://github.com/rapotekhin/dnd-5e-core) и [`DnD-5th-Edition-API`](https://github.com/rapotekhin/DnD-5th-Edition-API)
-- **Трейсинг:** Logfire (опционально)
+1. Ключ OpenRouter и токен сервера — в корневой `.env`:
 
-## Установка
+   ```
+   OPENROUTER_API_KEY=ваш_ключ
+   LLM_SERVER_TOKEN=любая_строка
+   ```
 
-### 1. Клонировать проект и зависимости
+2. Бэкенд (нужен [uv](https://docs.astral.sh/uv/)):
 
-```bash
-git clone https://github.com/rapotekhin/dnd_llm.git
-cd dnd_llm
+   ```bash
+   uv run --project llm_server python -m llm_server
+   ```
 
-# Внешние пакеты — рядом с этим репозиторием
-git clone https://github.com/rapotekhin/dnd-5e-core ../dnd-5e-core
-git clone https://github.com/rapotekhin/DnD-5th-Edition-API ../DnD-5th-Edition-API
-```
+3. Игра — Godot 4.7: открыть папку `game/` в редакторе или
 
-### 2. Установить Python-зависимости
+   ```bash
+   godot --path game
+   ```
 
-```bash
-pip install -r legacy/requirements.txt
-
-cd ../dnd-5e-core && pip install -e .
-cd ../DnD-5th-Edition-API && ./install.bat   # на Windows
-# на Linux/macOS — следуйте инструкциям в репозитории
-cd ../dnd_llm
-```
-
-### 3. Настроить API-ключ
-
-```bash
-cp .env.example .env
-```
-
-Откройте `.env` и добавьте ключ OpenRouter:
-
-```
-OPENROUTER_API_KEY=ваш_ключ
-```
-
-Получить ключ: https://openrouter.ai/
-
-### 4. Запустить игру
-
-```bash
-python legacy/game/main.py
-```
+   Адрес и токен сервера — в «Настройки → Мастер». Развёртывание на сервер — [deploy.md](docs/tech/deploy.md).
 
 ## Тесты
 
-Тесты прототипа на [pytest](https://pytest.org/) лежат в `legacy/tests/`, проверка формата ЛЛМ-сценариев — в `evals/`. Для импортов нужны репозитории **`dnd-5e-core`** и **`DnD-5th-Edition-API`** (как в разделе установки), каталог **`legacy/game/dnd_5e_data/`** с JSON правил; часть тестов загрузчиков опирается на **`legacy/game/assets/ru/*.jsonl`**.
+- Godot: gdUnit4 (`game/test/`), команда — в [AGENTS.md](AGENTS.md#commands).
+- Бэкенд: `cd llm_server && uv run pytest` (протокол, контракт, промпты, проверка пакетов миров).
+- Формат «золотых» сценариев: `pip install -r requirements-dev.txt && python -m pytest`.
+- Живой плейтест: `python tools/godot_playtest.py` (сценарии и правила — скилл [playtest](.claude/skills/playtest/SKILL.md)).
 
-```bash
-pip install -r legacy/requirements-dev.txt
-python -m pytest
-```
-
-Покрытие по `legacy/game/core` (плагин **`pytest-cov`** ставится вместе с `legacy/requirements-dev.txt`):
-
-```bash
-python -m pytest --cov=legacy/game/core --cov-report=term-missing
-```
-
-Если pytest пишет **`unrecognized arguments: --cov=...`**, в активированном venv выполните **`pip install -r legacy/requirements-dev.txt`** (или отдельно **`pip install pytest-cov`**).
-
-Конфигурация: `pytest.ini`. Для агентов без реальных вызовов ЛЛМ тесты подставляют фейковые агенты; ключ OpenRouter для прогона тестов не обязателен.
-
-**CI на GitHub:** при открытии pull request в `main` или `master` автоматически запускается workflow `.github/workflows/ci.yml`: установка зависимостей и `pytest`, плюс проверка скриптом `.github/scripts/check_pr.py`, что в PR изменены корневые `VERSION` и `RELEASE_NOTES.md`.
-
-## Переменные окружения
-
-| Переменная | Обязательно | Назначение |
-|---|---|---|
-| `OPENROUTER_API_KEY` | ✅ | LLM-провайдер |
-| `LOGFIRE_TOKEN` | ❌ | Трейсинг ЛЛМ-вызовов через Logfire |
-| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` | ❌ | Альтернативный трейсинг через Langfuse |
-
-## Структура проекта
-
-```
-dnd_llm/
-├── game/             ← основной код игры
-│   ├── main.py       ← entry point
-│   ├── core/         ← gameplay, ЛЛМ, состояние, сущности
-│   ├── ui/           ← Pygame экраны
-│   ├── assets/       ← стартовые локации и NPC (JSONL)
-│   └── localization/ ← переводы RU/EN
-├── docs/             ← документация (см. ниже)
-├── .github/          ← GitHub Actions (CI при PR в `main`/`master`)
-├── scripts/          ← вспомогательные скрипты (например `check_localization.py` — паритет ключей RU/EN)
-├── notebooks/        ← Jupyter ноутбуки для отладки
-├── tests/            ← pytest: утилиты, загрузчики, торговля, сохранения, моки LLM-циклов
-├── pytest.ini
-├── requirements.txt
-├── requirements-dev.txt  ← pytest, pydantic-ai для импорта агентов в тестах, pytest-cov
-└── settings.json     ← пользовательские настройки игры
-```
-
-Подробнее об архитектуре — в [docs/tech/architecture.md](docs/tech/architecture.md).
+**CI на GitHub:** на pull request в `main` запускаются тесты бэкенда, формат сценариев и проверка, что изменены `VERSION` и `RELEASE_NOTES.md`.
 
 ## Документация
-
-В папке [`docs/`](docs/) собрана полная техническая и геймдизайн-документация:
 
 | Раздел | Что внутри |
 |---|---|
 | [vision/](docs/vision/) | Концепция, столпы проекта |
-| [design/](docs/design/) | Геймдизайн, описание систем (exploration, social, trade, combat), UX |
-| [narrative/](docs/narrative/) | Мир, NPC, квесты, стиль ГМ |
-| [tech/](docs/tech/) | Архитектура, LLM-интеграция, ADR (архитектурные решения) |
-| [production/](docs/production/) | Роадмап, техдолг |
+| [design/](docs/design/) | Геймдизайн, системы, UX |
+| [narrative/](docs/narrative/) | Мир, NPC, квесты, стиль мастера |
+| [tech/](docs/tech/) | Godot-клиент, протокол, бэкенд, ADR |
+| [production/](docs/production/) | Роадмап, бэклог |
 
 Старт — с [docs/README.md](docs/README.md).
 
-## Сохранения
-
-Сохраняются в:
-- **Windows:** `%LOCALAPPDATA%\DnD_LLM_Game\saves\save_{1..10}.pkl`
-- **Linux/macOS:** `~/.local/share/DnD_LLM_Game/saves/save_{1..10}.pkl`
-
 ## Лицензия
 
-MIT
+MIT. Данные правил — SRD 5.1 (CC BY 4.0), см. [tools/srd/source](tools/srd/source/README.md).

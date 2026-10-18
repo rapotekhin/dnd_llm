@@ -54,6 +54,8 @@ var day: int = 1
 ## npc_id → merchant state (TradeRules): purse_cp, stock {item_id: qty}, day of the last restock, haggle_pct of
 ## the current visit, haggle_failed_day, haggle_result. Created from the pack on the first trade.
 var merchants: Dictionary = {}
+## Ids of the pack quests the player completed (XpRules).
+var quests_done: Array[String] = []
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
 var summaries: Dictionary = {}
 ## Lines of the current conversation, the events for its summary.
@@ -217,6 +219,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"visited": visited,
 		"day": day,
 		"merchants": merchants,
+		"quests_done": quests_done,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -256,6 +259,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for v: Variant in d.get("visited", []):
 		s.visited.append(str(v))
 	s.day = int(d.get("day", 1))
+	for q: Variant in d.get("quests_done", []):
+		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):
 		s.merchants[id] = _normalized_merchant(d["merchants"][id])
 	for line: Variant in d.get("dialogue_log", []):

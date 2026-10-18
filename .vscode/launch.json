@@ -2,21 +2,23 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run Game",
+            "name": "LLM server (stub turn)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/legacy/game/main.py",
+            "module": "llm_server",
+            "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
-            "python": "${workspaceFolder}/venv/Scripts/python.exe"
+            "python": "${workspaceFolder}/llm_server/.venv/Scripts/python.exe",
+            "env": {"LLM_SERVER_TURN_HANDLER": "stub"}
         },
         {
-            "name": "Run Game (no debug)",
+            "name": "LLM server (OpenRouter)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/legacy/game/main.py",
+            "module": "llm_server",
+            "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
-            "python": "${workspaceFolder}/venv/Scripts/python.exe",
-            "justMyCode": true
+            "python": "${workspaceFolder}/llm_server/.venv/Scripts/python.exe"
         }
     ]
 }

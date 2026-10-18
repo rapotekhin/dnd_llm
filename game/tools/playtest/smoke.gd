@@ -1,7 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Smoke playtest: menu → new game (creation: random character) → enter turn → action with engine.check →
 ## option → character sheet (tabs, unequip / equip) → trade with the innkeeper (deal panel, buy, haggle, switch
-## to talk and back without a turn, leave) → map, journal, long rest → save to slot 1 → exit to menu → continue → the chat is
+## to talk and back without a turn, leave) → map, journal, long rest → the temple quest → level-up → save to slot 1 → exit to menu → continue → the chat is
 ## restored. Needs a running llm_server (stub turn is enough).
 
 
@@ -58,6 +58,7 @@ func run() -> void:
 	await _sheet(gs, game)
 	await _trade(gs, game)
 	await _map_journal_rest(gs, game)
+	await _quest_level_up(gs, game)
 
 	await key(KEY_ESCAPE)
 	var pause: Control = find_all(game, "PauseMenu")[0]
@@ -175,6 +176,40 @@ func _map_journal_rest(gs: Node, game: Control) -> void:
 	step("a new day, paid for the room", gs.session.day == 2 and gs.session.character["gold_cp"] == gold - 50,
 		"day %d, %d → %d cp" % [gs.session.day, gold, gs.session.character["gold_cp"]])
 	await shot("after_rest")
+
+
+func _quest_level_up(gs: Node, game: Control) -> void:
+	for room: String in ["brod-tavern-hall", "brod-square", "brod-temple"]:
+		var exit: Button = find(game, "Exit_" + room)
+		if not step("walk to " + room, exit != null and not exit.disabled):
+			return
+		await press(exit)
+		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+	var quest: Button = find(game, "Quest_letter_to_ilva")
+	if not step("quest button in the temple", quest != null and not quest.disabled):
+		return
+	await press(quest)
+	step("quest turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
+	step("quest done, experience", gs.session.quests_done.has("letter_to_ilva") and int(gs.session.character["xp"]) == 300)
+	await shot("quest_done")
+	var lv: Button = find(game, "LevelUpButton")
+	if not step("level-up button", lv != null and not lv.disabled):
+		return
+	await press(lv)
+	var view: Control = find(game, "LevelUpView")
+	step("level-up screen", view.visible)
+	await shot("level_up")
+	var confirm: Button = find(view, "LevelUpConfirm")
+	if confirm.disabled:  # a class with picks at level 2: take the first offers
+		view.set("picks", LevelUp.default_picks(gs.session.character, node("Catalog").data))
+		view.call("_rebuild")
+		await frames(2)
+		await shot("level_up_picked")
+	var hp: int = gs.session.character["max_hp"]
+	await press(confirm)
+	step("level 2", int(gs.session.character["level"]) == 2 and int(gs.session.character["max_hp"]) > hp and not view.visible,
+		"%s, HP %d → %d" % [gs.session.character["class"], hp, gs.session.character["max_hp"]])
+	await shot("level_2")
 
 
 func _count(gs: Node, kind: String) -> int:

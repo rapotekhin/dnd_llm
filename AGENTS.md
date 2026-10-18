@@ -4,16 +4,16 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 
 ## Project
 
-**Between the Rolls** — single-player D&D 5e RPG with an LLM Dungeon Master, Russian-first. The project is **migrating** from a Pygame prototype to a Godot client + Python LLM backend ([ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md), roadmap M1 in [docs/production/roadmap.md](docs/production/roadmap.md)).
+**Between the Rolls** — single-player D&D 5e RPG with an LLM Dungeon Master, Russian-first: a Godot client + a Python LLM backend ([ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md), [roadmap](docs/production/roadmap.md)). The pygame prototype reached parity and was removed in v0.5.4 ([parity checklist](docs/production/parity-v031.md); it stays in git history up to v0.5.3).
 
 | Folder | What | Status |
 |---|---|---|
-| `legacy/` | Pygame prototype (v0.3.x): game, tests, scripts | frozen — only bug fixes until parity, then removed |
-| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + new game screen, start world «Сумеречная Марка» (v0.5.1), check locks, hidden things, long rest, map and journal (v0.5.2), dialogues and trade with a deal panel, haggling, merchant stock (v0.5.3); levels — v0.5.4 |
-| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.4.0 (v0.5.3) |
-| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.4.0 |
+| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + start world «Сумеречная Марка» (v0.5.1), exploration: check locks, hidden things, long rest, map and journal (v0.5.2), dialogues and trade (v0.5.3), experience from quests and combat, level-up 1–5 (v0.5.4) |
+| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.5.0 (v0.5.4) |
+| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.5.0 |
+| `tools/` | SRD import (`srd_import.py`, source in `tools/srd/source/`), pack validator, playtest and connectivity runners | |
 | `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
-| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 24 scenarios (22 runnable); runner `llm_server.golden` (v0.4.2) |
+| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 25 scenarios (23 runnable); runner `llm_server.golden` |
 | `docs/` | design + tech docs, ADRs | live |
 
 Decisions to follow in new code: [ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md) (who owns what), [ADR-0008](docs/tech/adr/0008-engine-decides-llm-narrates.md) (engine decides, LLM narrates), [ADR-0009](docs/tech/adr/0009-godot-backend-protocol.md) (protocol), [ADR-0010](docs/tech/adr/0010-game-decisions-worlds-tone-combat-death.md) (game decisions), [ADR-0011](docs/tech/adr/0011-default-master-model.md) (default model: change it only after golden scenarios with `--repeat 3` and a live playtest). Godot conventions follow the sibling project `C:\Code\hive_world_shop` (pure `core/`, seeded RNG, JSON saves with migrations, gdUnit4).
@@ -31,25 +31,23 @@ source .\venv\Scripts\activate
 ```
 
 ```bash
-python legacy/game/main.py                     # run the pygame prototype
-pip install -r legacy/requirements-dev.txt     # pytest + deps for the legacy tests and evals format check
-python -m pytest                               # legacy tests + evals format (needs legacy/game/dnd_5e_data on disk)
-python -m pytest --cov=legacy/game/core --cov-report=term-missing  # optional coverage (requires pytest-cov)
-python legacy/scripts/playtest/smoke.py         # live playtest: real game + real LLM, screenshots in legacy/scripts/playtest/out/
+pip install -r requirements-dev.txt           # pytest, pyyaml, jsonschema and uv for the root tests and the tools
+python -m pytest                               # golden scenario format check (evals/)
 ```
 
-Backend and Godot (details in [connectivity-spike.md](docs/tech/connectivity-spike.md)); `uv` is installed by `legacy/requirements-dev.txt`:
+Backend and Godot (details in [connectivity-spike.md](docs/tech/connectivity-spike.md)):
 
 ```bash
-uv sync --project llm_server && cd llm_server && uv run pytest && cd ..   # backend protocol + contract tests (own .venv; from llm_server/, the root pytest.ini is for legacy)
+uv sync --project llm_server && cd llm_server && uv run pytest && cd ..   # backend protocol + contract tests (own .venv; run from llm_server/)
 uv run --project llm_server python -m llm_server.contract            # regenerate contract/schema/ after changing protocol models
-uv run --project llm_server python -m llm_server.golden              # golden LLM scenarios on the real model + judge → build/evals/ (cents; --model, --only)
+uv run --project llm_server python -m llm_server.golden              # golden LLM scenarios on the real model + judge → build/evals/ (cents; --model, --only, --repeat)
 python tools/connectivity_e2e.py                                      # Godot <-> Caddy wss:// <-> llm_server end to end (Docker; --no-proxy without it)
 python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/
 python tools/godot_playtest.py --scenario offline                     # live Godot playtest without the server
 python tools/godot_playtest.py --scenario live --real                 # live Godot playtest with the real OpenRouter model (cents)
 python tools/godot_playtest.py --scenario creation --no-server        # character creation step by step, screenshots of every step
-python tools/srd_import.py build                                      # SRD + tools/srd/ru.json → game/data/srd/ and the item catalog
+python tools/godot_playtest.py --scenario level_up                    # a wizard levels 1 → 3 by clicks
+python tools/srd_import.py build                                      # tools/srd/source + tools/srd/ru.json → game/data/srd/ and the item catalog
 uv run --project llm_server python tools/srd_import.py translate      # translate new SRD entries into tools/srd/ru.json (cents)
 uv run --project llm_server python tools/validate_data.py            # check world packs (also runs in backend pytest / CI)
 ```
@@ -64,73 +62,33 @@ Godot binary: `C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.
 "$GODOT" --path game                         # run the game; saves in %APPDATA%/Godot/app_userdata/Between the Rolls/
 ```
 
-`legacy/game/main.py` adds `legacy/game/`, `dnd-5e-core/` and `DnD-5th-Edition-API/` (repository root) to `sys.path`. Inside `legacy/game/`, imports are relative: `from core.game import Game`. `.env` stays at the repository root.
-
-Pytest configuration: `pytest.ini` (`testpaths = legacy/tests evals`). There is no linter wired up.
+Pytest configuration: `pytest.ini` (`testpaths = evals`); the backend has its own in `llm_server/`. There is no linter wired up.
 
 ## Testing
 
-Green `pytest` is **necessary but not enough**: the trade screen crash (B22) lived with all tests green. Before calling a gameplay/UI/prompt change done or opening a PR that touches `legacy/game/**` or `game/**`, run a **live playtest** following the **`playtest`** skill ([.claude/skills/playtest/SKILL.md](.claude/skills/playtest/SKILL.md)). For `game/**`: gdUnit4 green, then `python tools/godot_playtest.py` (and `--scenario offline` when connection handling changed), then read `build/playtest/*/report.txt` and the screenshots. For `legacy/game/**`:
-
-1. `python -m pytest` — green.
-2. `python legacy/scripts/playtest/smoke.py` — the real game on a dummy display, scripted player input, the real OpenRouter model.
-3. Read `legacy/scripts/playtest/out/report.txt` and look at the screenshots; fix crashes with a regression test, record other findings in [review §1](docs/production/review-2026-10.md) and the [roadmap](docs/production/roadmap.md).
+Green unit tests are **necessary but not enough**: the prototype's trade screen crash (B22) lived with all tests green. Before calling a gameplay/UI/prompt change done, run a **live playtest** following the **`playtest`** skill ([.claude/skills/playtest/SKILL.md](.claude/skills/playtest/SKILL.md)): gdUnit4 green, backend pytest green, then `python tools/godot_playtest.py` (and `--scenario offline` when connection handling changed, `--scenario live --real` after prompt or agent changes), then read `build/playtest/*/report.txt` and the screenshots. Prompt changes also get the golden scenarios (`--repeat 3` before conclusions: the model varies ±2 per run).
 
 Never print or log keys from `.env`.
 
-**Version:** the project version lives in the root `VERSION` file. CI requires every PR to bump it and to update `RELEASE_NOTES.md`.
+**Version:** the project version lives in the root `VERSION` file (and `config/version` in `game/project.godot`). CI requires every PR to bump it and to update `RELEASE_NOTES.md`.
 
-## Legacy structure (pygame)
+## Conventions
 
-```
-legacy/
-  game/
-    main.py                          entry point
-    core/
-      game.py                        main loop, screen dispatch
-      data/                          MainGameState (pickle saves)
-      entities/                      Character, NPC, Location, Room, Item, Treasure
-      gameplay/                      exploration, social_interaction, trade, combat (empty)
-      gameplay/schemas/              Pydantic output schemas for LLM
-      llm_engine/api_manager.py      OpenRouter key/balance, Pydantic AI model factory
-      prompts/                       system prompts for each mode
-      tools/                         LLM tools (RollDiceTool)
-      builders/                      Character/Location/NPC/LevelUp builders
-      settings/                      SettingsManager
-    ui/screens/                      12 screens, all extend BaseScreen
-    assets/ru/*.jsonl                start locations and NPCs
-    dnd_5e_data/                     SRD JSON (source for the future Godot catalog)
-    localization/                    loc.t("key") for translated strings
-  tests/
-    conftest.py                      pytest path setup + patched_game_state fixture
-    helpers.py                       GameEquipment factory for trade/inventory tests
-    _fakes.py                        FakeAgent / queue helpers for threaded loop tests
-    test_regressions_v031.py         regressions for bugs B1–B19 (spec for the Godot port)
-  scripts/                           localization check, SRD data update, Langfuse test
-    playtest/                        live playtest driver + scenarios (see the `playtest` skill)
-  notebooks/                         scratch notebooks
-```
-
-## Legacy conventions
-
-- Screens extend `BaseScreen` and implement `handle_event() / update() / draw()`. Navigation is via return values handled in `Game._handle_screen_result()` — never wire screens directly to each other.
-- Access global state as `core.data.game_state` (module attribute: it is replaced on new game and load, so do not bind it with `from core.data import game_state` at import time).
-- LLM output is always Pydantic-typed (schemas in `legacy/game/core/gameplay/schemas/`). Don't parse free text.
-- Game text, prompts, lore — Russian. Code identifiers — English.
-- For new LLM agents use **Pydantic AI** (`pydantic_ai.Agent`) via `APIManager.get_pydantic_ai_model()`.
+- Game text, prompts, lore — Russian. Code identifiers and code comments — English.
+- LLM output is always Pydantic-typed (`llm_server/src/llm_server/protocol.py`); don't parse free text. New agents use **Pydantic AI**.
+- The engine decides, the LLM narrates (ADR-0008): any change of the world goes through an engine call (`engine.check`, `engine.validate` of an effect) or a deterministic button of the client. Experience is never an LLM effect: only combat and pack quests (`XpRules`).
 
 ## Where to add things
 
 | Task | Location |
 |---|---|
-| New feature | not in `legacy/` — in the Godot client or the backend per the roadmap |
 | Godot rule / state | `game/core/<domain>/` + gdUnit4 test in `game/test/` (skill `godot_conventions`) |
-| Godot screen | `game/ui/screens/` (built in code), navigation via `EventBus.navigate` |
+| Godot screen or overlay | `game/ui/screens/` or `game/ui/components/` (built in code), navigation via `EventBus.navigate` |
 | Godot live scenario | `game/tools/playtest/<name>.gd` (base `playtest_base.gd`) |
-| Bug fix in the prototype | `legacy/game/` + regression test in `legacy/tests/` |
-| Protocol message / schema | Pydantic model in `llm_server/` → export to `contract/` (from v0.4.1) |
+| Protocol message / schema | Pydantic model in `llm_server/` → export to `contract/`, bump `PROTOCOL_VERSION` on both sides, ADR-0009 «Протокол X.Y» |
 | Golden LLM scenario | `evals/golden/scenarios.yaml` + [format doc](docs/tech/golden-scenarios.md); run `python -m llm_server.golden` after prompt changes |
 | Architectural decision | new ADR in `docs/tech/adr/` |
-| World content (lore, places, NPCs, ready-made characters) | a pack in `game/data/worlds/<id>/` ([format](docs/tech/godot-client.md#пакеты-миров)); never in code |
+| World content (lore, places, NPCs, merchants, quests, ready-made characters) | a pack in `game/data/worlds/<id>/` ([format](docs/tech/godot-client.md#пакеты-миров)); never in code |
 | D&D rules content (races, classes, spells) | `game/data/srd/` via `tools/srd_import.py` (Russian names in `tools/srd/ru.json`); never hard-coded |
-| Character rule (bonus, AC, HP, creation step) | `game/core/character/` (`CharacterRules`, `CharacterBuilder`) + test in `game/test/core/` |
+| Character rule (bonus, AC, HP, creation step, level-up) | `game/core/character/` (`CharacterRules`, `CharacterBuilder`, `LevelUp`) + test in `game/test/core/` |
+| Numbers of the engine (DC, prices, haggling, XP, rewards) | `game/data/rules.json` |

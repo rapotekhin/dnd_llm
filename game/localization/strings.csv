@@ -35,13 +35,17 @@ BTN_EQUIP_SHIELD,Взять щит
 BTN_EXIT_TO_MENU,Выйти в главное меню
 BTN_HAGGLE,Торговаться ({skill})
 BTN_JOURNAL,Журнал
+BTN_LATER,Позже
 BTN_LEAVE_CONVERSATION,Закончить разговор
+BTN_LEVEL_UP,Новый уровень!
+BTN_LEVEL_UP_CONFIRM,Подтвердить
 BTN_LOAD,Загрузить
 BTN_LONG_REST,Долгий отдых
 BTN_LONG_REST_COST,Долгий отдых ({cost})
 BTN_MAP,Карта
 BTN_MENU,Меню
 BTN_NEW_GAME,Новая игра
+BTN_QUEST,Задание: {action}
 BTN_QUIT,Выход
 BTN_RESUME,Продолжить
 BTN_RETRY,Повторить
@@ -163,7 +167,30 @@ JOURNAL_EMPTY,"Пока пусто: записи появятся, когда в
 JOURNAL_FOUND,Находки
 JOURNAL_PEOPLE,Разговоры
 JOURNAL_PLACES,Места
+JOURNAL_QUESTS,Задания
 JOURNAL_TITLE,Журнал
+LVL_ASI,Увеличение характеристик: +2 к одной или +1 к двум (не выше 20)
+LVL_CANTRIP,заговор
+LVL_CANTRIPS,Новые заговоры: выберите {n}
+LVL_ERR_ASI,Распределите +2 к характеристикам
+LVL_ERR_BUSY,Сейчас нельзя: мастер думает
+LVL_ERR_CANTRIPS,Выберите заговоры
+LVL_ERR_EXPERTISE,Выберите навыки для компетентности
+LVL_ERR_NOT_READY,Опыта для нового уровня пока не хватает
+LVL_ERR_OPTIONS,Выберите варианты умений
+LVL_ERR_PREPARED,Выберите заклинания для подготовки
+LVL_ERR_SPELLS,Выберите заклинания
+LVL_ERR_SUBCLASS,Выберите подкласс
+LVL_EXPERTISE,Компетентность: выберите {n} навыка
+LVL_FEATURES,Новые умения: {list}
+LVL_HP,Хиты: +{gain} (среднее по кости хитов)
+LVL_OPTION,{name}: выберите {n}
+LVL_PREPARED,Подготовить ещё: выберите {n}
+LVL_SLOTS,Ячейки заклинаний: {list}
+LVL_SPELLS,Новые заклинания: выберите {n}
+LVL_SPELLS_SPELLBOOK,В книгу заклинаний: выберите {n}
+LVL_SUBCLASS,Выберите подкласс
+LVL_TITLE,{class}: {level} уровень
 MAP_EXITS,Отсюда: {list}
 MAP_HERE,вы здесь
 MAP_TITLE,Карта
@@ -211,6 +238,11 @@ OPT_RESOLUTION,Размер окна
 PARTNER_LINE,{role} · {race} · отношение: {attitude}
 PLACEHOLDER_ACTION,Что вы делаете?
 PLACEHOLDER_SAY,Что вы говорите или делаете? ({name} слушает)
+QUEST_BUSY,Сейчас нельзя: мастер думает или нет связи
+QUEST_DONE,Задание уже выполнено
+QUEST_IN_CONVERSATION,Сначала закончите разговор
+QUEST_UNKNOWN,Такого задания нет
+QUEST_WRONG_PLACE,Задание выполняется в другом месте
 REST_BUSY,Сейчас нельзя отдыхать
 REST_IN_CONVERSATION,Сначала закончите разговор
 REST_NOT_SAFE,Здесь небезопасно отдыхать
@@ -248,6 +280,7 @@ SIDE_MORE_ITEMS,…и ещё предметов: {n} (в листе персон
 SIDE_PEOPLE,Здесь
 SIDE_PLACE,Где вы
 SIDE_RACE_CLASS,"{race}, {class}, {level} ур."
+SIDE_XP,Опыт: {xp} / {next}
 SKILL_ACROBATICS,Акробатика
 SKILL_ANIMAL_HANDLING,Уход за животными
 SKILL_ARCANA,Магия

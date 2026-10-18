@@ -1,6 +1,6 @@
 """SRD 5e (2014) JSON → game/data/srd/*.json and the item catalog of game/data/items.json (roadmap v0.5.0).
 
-The source is the prototype's copy of the 5e SRD API (legacy/game/dnd_5e_data/api/2014). Only what levels 1–5
+The source is a copy of the 5e SRD API, dnd5eapi.co /api/2014 (tools/srd/source/2014). Only what levels 1–5
 need: races and subraces with traits, classes with levels 1–5 and SRD subclasses, features up to level 5,
 spells of circles 0–3, mundane equipment, languages. Russian names and short descriptions are data in
 tools/srd/ru.json: core terms come from the glossary below, the rest is translated once by an LLM and reviewed
@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-SRD = ROOT / "legacy" / "game" / "dnd_5e_data" / "api" / "2014"
+SRD = ROOT / "tools" / "srd" / "source" / "2014"
 OUT = ROOT / "game" / "data" / "srd"
 ITEMS = ROOT / "game" / "data" / "items.json"
 RU = ROOT / "tools" / "srd" / "ru.json"

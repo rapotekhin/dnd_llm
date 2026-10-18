@@ -120,7 +120,7 @@ Read that file when this rule triggers, then follow it.
 
 Примеры:
 - `docs_lookup` — без globs (триггер по вопросу пользователя)
-- `docs_updater` — с globs на `legacy/game/core/gameplay/**`, `legacy/game/ui/screens/**` и т.п.
+- `docs_updater` — с globs на `game/core/**`, `game/ui/**` и т.п.
 - `release_notes_updater` — с globs на `RELEASE_NOTES.md`
 
 ## Конвенции этого репозитория

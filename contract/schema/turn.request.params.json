@@ -232,6 +232,35 @@
       "title": "InventoryLine",
       "type": "object"
     },
+    "QuestInfo": {
+      "description": "A quest of the world pack (0.5.0). Experience comes only from quests and combat, never from the master.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "done": {
+          "default": false,
+          "title": "Done",
+          "type": "boolean"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "title": "QuestInfo",
+      "type": "object"
+    },
     "Scene": {
       "properties": {
         "exits": {
@@ -385,6 +414,13 @@
         },
         "limits": {
           "$ref": "#/$defs/TurnLimits"
+        },
+        "quests": {
+          "items": {
+            "$ref": "#/$defs/QuestInfo"
+          },
+          "title": "Quests",
+          "type": "array"
         },
         "scene": {
           "anyOf": [
@@ -616,7 +652,8 @@
         "action",
         "rest",
         "deal",
-        "haggle"
+        "haggle",
+        "quest"
       ],
       "title": "Kind",
       "type": "string"

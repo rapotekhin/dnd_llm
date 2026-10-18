@@ -19,7 +19,7 @@ NPC может **отказаться** от сделки (плохая цена
 
 В отличие от exploration/social, trade — **более механический режим**. Большая часть логики — Python, ЛЛМ только реагирует репликами и иногда запрашивает Харизму.
 
-См. `game/core/gameplay/trade.py` (логика бартера) и UI-подпакет [`game/ui/screens/trade/`](../../../legacy/game/ui/screens/trade/) (точка входа по-прежнему `trade_screen.py` для импортов).
+В Godot-клиенте (v0.5.3): правила — `game/core/rules/trade_rules.gd` (кошельки и запасы торговцев, цены по отношению, продажа за ½, торг), панель сделки — `game/ui/components/trade_panel.gd`; подробности — [godot-client.md](../../tech/godot-client.md#разговор-и-торговля).
 
 ## Деньги
 

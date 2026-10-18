@@ -39,7 +39,7 @@ def main() -> int:
     out_dir = ROOT / "build" / "playtest" / opts.scenario
     out_dir.mkdir(parents=True, exist_ok=True)
     for stale in [out_dir / "report.txt", *out_dir.glob("*.png")]:  # a scenario that fails to compile must not show the old report
-        stale.unlink()
+        stale.unlink(missing_ok=True)
     OUT.mkdir(parents=True, exist_ok=True)
     subprocess.run([godot, "--headless", "--path", str(ROOT / "game"), "--import"], capture_output=True, timeout=300)
 

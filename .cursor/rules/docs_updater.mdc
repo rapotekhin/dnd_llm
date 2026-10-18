@@ -1,13 +1,10 @@
 ---
-description: Use this rule after making meaningful code changes that affect documented behavior — adding/removing a screen, gameplay system, LLM tool, prompt, entity class, save format, dependency, or architectural decision. Also use when the user explicitly asks to update the docs ("обнови доку", "update docs", "синхронизируй документацию", "запиши решение в ADR"). Trigger when adding a new system to /legacy/game/core/gameplay/, when adding a new screen to /legacy/game/ui/screens/, when changing the LLM model or provider, when changing the save format, or when removing legacy code (e.g. /app, LangChain).
+description: Use this rule after making meaningful code changes to the Between the Rolls project that affect documented behavior — adding/removing a screen, gameplay system, LLM tool, prompt, entity class, save format, dependency, or architectural decision. Also use when the user explicitly asks to update the docs ("обнови доку", "update docs", "синхронизируй документацию", "запиши решение в ADR"). Trigger after merging feature branches, after refactoring that changes structure, when adding a rule or system to game/core/, a screen to game/ui/screens/, a protocol message or prompt to llm_server/, when changing the LLM model or provider, when changing the save format, or when removing code. The skill identifies which docs are affected and updates them while keeping tone, structure, and cross-references consistent.
 globs:
-  - "legacy/legacy/game/core/gameplay/**"
-  - "legacy/game/core/tools/**"
-  - "legacy/game/core/prompts/**"
-  - "legacy/game/core/entities/**"
-  - "legacy/legacy/game/ui/screens/**"
-  - "legacy/game/core/llm_engine/**"
-  - "legacy/game/core/data/game_state_base.py"
+  - "game/core/**"
+  - "game/ui/**"
+  - "game/data/**"
+  - "llm_server/src/**"
 alwaysApply: false
 ---
 
@@ -23,13 +20,14 @@ Read that file when this rule triggers, then follow it.
 
 | Code change | Doc to update |
 |---|---|
-| New/removed screen | `docs/design/ux/screens-flow.md`, `docs/tech/architecture.md` |
+| New/removed screen | `docs/tech/godot-client.md` (structure, screen flow) |
 | New/removed gameplay mode | new file in `docs/design/systems/`, update `docs/design/overview.md` |
-| New LLM tool (`tools/`) | `docs/tech/llm-integration.md` |
+| New rule / system in `game/core/` | `docs/tech/godot-client.md` + `docs/design/systems/` |
+| New agent tool / protocol message | ADR-0009 «Протокол X.Y», `contract/` |
 | Changed system prompt | `docs/tech/llm-integration.md` + relevant `docs/design/systems/<mode>.md` |
 | New/changed entity class | `docs/tech/data-models.md` |
 | LLM model/provider change | `docs/tech/llm-integration.md` + `README.md` |
-| Save format change | `docs/tech/data-models.md` + new ADR superseding `0002` |
+| Save format change | `docs/tech/godot-client.md` §«Сейвы» |
 | Removing legacy | scrub mentions everywhere + mark in `docs/production/backlog.md` |
 | New architectural decision | new ADR in `docs/tech/adr/NNNN-<topic>.md` |
 | Roadmap pillar closed | mark `[x]` in `docs/production/roadmap.md`, move item in `backlog.md` |

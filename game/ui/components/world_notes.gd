@@ -1,7 +1,7 @@
 class_name WorldNotes
 extends Control
 ## Map and journal over the game screen (roadmap v0.5.2). Map: visited places by location, the current room
-## marked, where one can go from here. Journal: location and conversation summaries, found secrets.
+## marked, where one can go from here. Journal: quests, location and conversation summaries, found secrets.
 ## Read-only; built from the session (visited, summaries, revealed) on every open.
 
 const MAP := "map"
@@ -118,10 +118,13 @@ func _draw_journal() -> void:
 	for room_id: String in s.visited:
 		for t: String in ExplorationRules.found_texts(s, Catalog.data["world"], room_id):
 			found.append("%s: %s" % [w.room(room_id).get("name", room_id), t])
-	if places.is_empty() and people.is_empty() and found.is_empty():
+	var quests: Array[String] = []
+	for q: Dictionary in XpRules.quest_list(s, Catalog.data["world"]):
+		quests.append(("✓ " if q["done"] else "") + "%s — %s" % [q["title"], q["description"]])
+	if quests.is_empty() and places.is_empty() and people.is_empty() and found.is_empty():
 		_text(tr("JOURNAL_EMPTY"), UiTheme.MUTED_LABEL)
 		return
-	for section: Array in [["JOURNAL_PLACES", places], ["JOURNAL_PEOPLE", people], ["JOURNAL_FOUND", found]]:
+	for section: Array in [["JOURNAL_QUESTS", quests], ["JOURNAL_PLACES", places], ["JOURNAL_PEOPLE", people], ["JOURNAL_FOUND", found]]:
 		if (section[1] as Array).is_empty():
 			continue
 		_text(tr(section[0])).add_theme_color_override("font_color", UiTheme.ACCENT)

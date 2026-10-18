@@ -1,14 +1,14 @@
 ---
-description: Use this skill to test the game for real — launch it, drive it like a player with the live LLM and check screenshots — not just run pytest. Trigger on "протестируй игру", "запусти игру и проверь", "плейтест", "проверь в реальном режиме", "playtest", "test the game", and always before opening a PR that changes gameplay, UI screens, prompts, LLM loops or character rules (legacy/game/**). Do NOT use for pure docs changes or when the user only asks to run unit tests.
+description: Use this skill to test the game for real — launch it, drive it like a player with the live LLM and check screenshots — not just run unit tests. Trigger on "протестируй игру", "запусти игру и проверь", "плейтест", "проверь в реальном режиме", "playtest", "test the game", and always before calling done a change to gameplay, UI screens, prompts, agents or character rules (game/**, llm_server/src/**). Do NOT use for pure docs changes or when the user only asks to run unit tests.
 globs:
-  - "legacy/game/**"
-  - "legacy/scripts/playtest/**"
+  - "game/**"
+  - "game/tools/playtest/**"
 alwaysApply: false
 ---
 
 # playtest
 
-Live playtest: the real game on a dummy display, scripted player input, real OpenRouter model, a screenshot per step.
+Live playtest of the Godot client: the real game with rendering, llm_server (stub turn or the real model), a scripted player, a screenshot per step.
 
 The full procedure is in [.claude/skills/playtest/SKILL.md](mdc:.claude/skills/playtest/SKILL.md).
 
@@ -16,6 +16,6 @@ Read that file when this rule triggers, then follow it.
 
 **Quick reference:**
 
-- `python -m pytest` green first, then `python legacy/scripts/playtest/smoke.py` (exit 0 = pass, 1 = crash, 2 = step timeout)
-- Read `legacy/scripts/playtest/out/report.txt` and look at every `out/NN_*.png`
-- Crashes: fix + regression test; other findings: review §1 table + roadmap. Never print `.env` keys
+- gdUnit4 green first, then `python tools/godot_playtest.py` (smoke, stub turn), `--scenario offline`, `--scenario live --real` after prompt changes
+- Read `build/playtest/<scenario>/report.txt` and look at every `NN_*.png`
+- Crashes: fix + regression test in `game/test/`; other findings: `docs/production/backlog.md`. Never print `.env` keys
