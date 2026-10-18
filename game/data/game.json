@@ -1,0 +1,17 @@
+{
+	"saves": {
+		"manual_slots": 10
+	},
+	"chat": {
+		"history_in_snapshot": 12,
+		"kept_in_save": 500
+	},
+	"turn": {
+		"client_timeout_s": 95.0
+	},
+	"ui": {
+		"default_resolution": [1600, 900],
+		"min_resolution": [1280, 720],
+		"resolutions": [[1280, 720], [1600, 900], [1920, 1080], [2560, 1440]]
+	}
+}

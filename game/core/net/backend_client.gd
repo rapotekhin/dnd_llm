@@ -13,12 +13,21 @@ const RETRY_DELAYS_S: Array[float] = [1.0, 2.0, 4.0, 8.0, 16.0, 30.0]
 ## WebSocketPeer may sit in CONNECTING forever (e.g. a refused IPv6 address), so the client gives up itself.
 const CONNECT_TIMEOUT_S := 10.0
 
+const REASON_CONFIG := "config"  # no token or a bad URL (BackendConfig.validate)
+const REASON_UNREACHABLE := "unreachable"  # closed before opening: server down, HTTP 401 or TLS
+const REASON_TIMEOUT := "timeout"
+const REASON_CLOSED := "closed"
+const REASON_VERSION := "version"
+const REASON_STOPPED := "stopped"
+
 var config: BackendConfig
 var peer: JsonRpcPeer = JsonRpcPeer.new()
 var state: State = State.OFFLINE
 var auto_reconnect: bool = true
 ## session.hello result: protocol_version, server_version, model, limits.
 var server_info: Dictionary = {}
+## Why the client is not READY, for the UI: one of the REASON_* constants, "" when READY.
+var reason: String = ""
 
 var _attempt: int = 0
 var _retry_at_ms: int = 0
@@ -43,6 +52,7 @@ static func protocol_compatible(a: String, b: String) -> bool:
 func start() -> void:
 	var problem := config.validate()
 	if not problem.is_empty():
+		reason = REASON_CONFIG
 		_set_state(State.FAILED, problem)
 		return
 	_connect()
@@ -51,6 +61,7 @@ func start() -> void:
 func stop() -> void:
 	auto_reconnect = false
 	peer.close()
+	reason = REASON_STOPPED
 	_set_state(State.OFFLINE, "stopped")
 
 
@@ -61,6 +72,7 @@ func poll() -> void:
 		_connect()
 	elif state == State.CONNECTING and now >= _connect_deadline_ms:
 		peer.abort()
+		reason = REASON_TIMEOUT
 		_schedule_retry("connect timeout after %.0f s" % CONNECT_TIMEOUT_S)
 
 
@@ -95,26 +107,30 @@ func _on_opened() -> void:
 	if call.is_error():
 		if call.reason() == "version_mismatch":
 			auto_reconnect = false
+			reason = REASON_VERSION
 			_set_state(State.FAILED, str(call.error.get("message", "version_mismatch")))
 		peer.close()
 		return
 	var info: Dictionary = call.result
 	if not protocol_compatible(PROTOCOL_VERSION, str(info.get("protocol_version", ""))):
 		auto_reconnect = false
+		reason = REASON_VERSION
 		_set_state(State.FAILED, "server protocol %s" % info.get("protocol_version"))
 		peer.close()
 		return
 	server_info = info
 	_attempt = 0
+	reason = ""
 	_set_state(State.READY, "%s, model %s" % [info.get("server_version"), info.get("model")])
 
 
-func _on_closed(code: int, reason: String) -> void:
+func _on_closed(code: int, close_reason: String) -> void:
 	server_info = {}
 	if state == State.FAILED:
 		return
 	# Godot cannot tell "no server" from "HTTP 401" or a TLS failure: all of them close before opening.
-	var detail := "could not connect (server down, bad token or TLS)" if code == -1 else "closed %d %s" % [code, reason]
+	reason = REASON_UNREACHABLE if code == -1 else REASON_CLOSED
+	var detail := "could not connect (server down, bad token or TLS)" if code == -1 else "closed %d %s" % [code, close_reason]
 	if auto_reconnect:
 		_schedule_retry(detail)
 	else:

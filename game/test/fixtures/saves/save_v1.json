@@ -1,0 +1,75 @@
+{
+	"game_version": "0.4.0",
+	"meta": {
+		"created_at": "2026-10-18T11:48:21",
+		"preview": "Вы не замечаете что-то необычное (9 против 15).",
+		"turns": 3
+	},
+	"save_version": 1,
+	"saved_at": "2026-10-18T11:48:22",
+	"session": {
+		"chat": [
+			{
+				"kind": "dm",
+				"text": "Вы осматриваетесь.",
+				"turn_id": "t-1"
+			},
+			{
+				"kind": "player",
+				"text": "осматриваю комнату"
+			},
+			{
+				"blocked": false,
+				"bonus": 0,
+				"check_id": "c-1",
+				"dc": 15,
+				"kind": "check",
+				"nat": 18,
+				"rolls": [
+					18
+				],
+				"save": "",
+				"skill": "perception",
+				"success": true,
+				"total": 18
+			},
+			{
+				"kind": "dm",
+				"text": "Вы замечаете что-то необычное (18 против 15).",
+				"turn_id": "t-2"
+			},
+			{
+				"kind": "player",
+				"text": "Осмотреться ещё раз"
+			},
+			{
+				"blocked": false,
+				"bonus": 0,
+				"check_id": "c-2",
+				"dc": 15,
+				"kind": "check",
+				"nat": 9,
+				"rolls": [
+					9
+				],
+				"save": "",
+				"skill": "perception",
+				"success": false,
+				"total": 9
+			},
+			{
+				"kind": "dm",
+				"text": "Вы не замечаете что-то необычное (9 против 15).",
+				"turn_id": "t-3"
+			}
+		],
+		"check_counter": 2,
+		"created_at": "2026-10-18T11:48:21",
+		"options": [
+			"Осмотреться ещё раз"
+		],
+		"rng_state": "7483708920899584422",
+		"seed": 42,
+		"turn_counter": 3
+	}
+}

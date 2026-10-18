@@ -6,6 +6,8 @@ extends RefCounted
 signal opened
 ## code -1 = the connection never opened (no server, TLS failure, HTTP 401).
 signal closed(code: int, reason: String)
+## Every raw message on the wire: direction ">" sent, "<" received (for ProtocolLog).
+signal traffic(direction: String, text: String)
 
 const MAX_MESSAGE_BYTES := 1024 * 1024
 const ERR_METHOD_NOT_FOUND := -32601
@@ -95,6 +97,7 @@ func request(method: String, params: Dictionary, timeout_s: float) -> RpcCall:
 
 
 func _on_text(text: String) -> void:
+	traffic.emit("<", text)
 	var msg: Variant = JSON.parse_string(text)
 	if not (msg is Dictionary) or msg.get("jsonrpc") != "2.0":
 		push_warning("JsonRpcPeer: dropped malformed message")
@@ -141,6 +144,7 @@ func _send(msg: Dictionary) -> Error:
 		return ERR_OUT_OF_MEMORY
 	if not is_open():
 		return ERR_CONNECTION_ERROR
+	traffic.emit(">", text)
 	return _ws.send_text(text)
 
 
