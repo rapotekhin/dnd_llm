@@ -1,0 +1,69 @@
+{
+  "$defs": {
+    "Limits": {
+      "additionalProperties": false,
+      "properties": {
+        "engine_timeout_s": {
+          "title": "Engine Timeout S",
+          "type": "number"
+        },
+        "hello_timeout_s": {
+          "title": "Hello Timeout S",
+          "type": "number"
+        },
+        "max_checks_per_turn": {
+          "default": 1,
+          "title": "Max Checks Per Turn",
+          "type": "integer"
+        },
+        "max_effects_per_turn": {
+          "default": 3,
+          "title": "Max Effects Per Turn",
+          "type": "integer"
+        },
+        "max_message_bytes": {
+          "title": "Max Message Bytes",
+          "type": "integer"
+        },
+        "turn_timeout_s": {
+          "title": "Turn Timeout S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "max_message_bytes",
+        "turn_timeout_s",
+        "engine_timeout_s",
+        "hello_timeout_s"
+      ],
+      "title": "Limits",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "limits": {
+      "$ref": "#/$defs/Limits"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "protocol_version": {
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "server_version": {
+      "title": "Server Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "server_version",
+    "model",
+    "limits"
+  ],
+  "title": "HelloResult",
+  "type": "object"
+}

@@ -4,7 +4,7 @@
 
 ## Текущий статус (октябрь 2026)
 
-**Версия:** `0.3.3` — pygame-прототип в `legacy/`, каркас монорепо, баги плейтеста P1 закрыты, живой плейтест — скилл `playtest`.
+**Версия:** `0.3.4` — M0 закрыт: спайк связи Godot ↔ Caddy `wss://` ↔ FastAPI пройден, основа `llm_server/`, `contract/` и сетевого слоя Godot.
 
 **Что работает:**
 - Создание персонажа (расы, классы, заклинания, предыстория) и поднятие уровня
@@ -43,7 +43,7 @@
 - [x] [ADR-0008](../tech/adr/0008-engine-decides-llm-narrates.md) «Движок решает, ЛЛМ описывает»: проверки, эффекты, бюджеты, генерация предметов
 - [x] [ADR-0009](../tech/adr/0009-godot-backend-protocol.md) «Протокол Godot ↔ LLM-бэкенд»: подключение, методы, снимок, транзакция хода, ошибки, таймауты, кассеты
 - [x] Структура монорепо: `legacy/` (pygame-прототип, тесты, скрипты), `game/` (Godot), `llm_server/` (Python, `uv`), `contract/`, `evals/`, `docs/`; версия проекта — корневой `VERSION`
-- [ ] Спайк связи: Godot `WebSocketPeer` ↔ FastAPI через Caddy (`wss://`), рукопожатие с токеном и версией, обратный RPC-вызов из бэкенда в Godot
+- [x] [Спайк связи](../tech/connectivity-spike.md): Godot `WebSocketPeer` ↔ FastAPI через Caddy (`wss://`), рукопожатие с токеном и версией, обратный RPC-вызов из бэкенда в Godot (v0.3.4)
 - [x] [«Золотые» ЛЛМ-сценарии](../tech/golden-scenarios.md): 20 ситуаций в `evals/golden/scenarios.yaml` с жёсткими проверками и рубрикой, тест формата
 - [x] Открытые игровые вопросы → [ADR-0010](../tech/adr/0010-game-decisions-worlds-tone-combat-death.md): вселенные-пакеты, свой стартовый регион, выбор стиля ГМ, зоны в бою, режимы смерти, без мета-прогресса
 
@@ -103,26 +103,26 @@ B27 (наррация vs состояние) решается в v0.6.0 эффе
 - [ ] Локализация `strings.csv` ru/en, Input Map, настройки (разрешение, полный экран, язык)
 - [ ] JSON-сейвы: `SAVE_VERSION`, атомарная запись, слоты + автосейв, мета для списка слотов
 - [ ] Dev-инструменты: консоль, F3/F12, флаги запуска (`--profile`, `--new-game`, `--backend`), журнал команд
-- [ ] Autoload `Backend`: подключение по адресу из настроек / `--backend`, токен в заголовке, `session.hello`, переподключение с паузой, статус в меню (пока против заглушки бэкенда)
+- [ ] Autoload `Backend`: подключение по адресу из настроек / `--backend`, токен в заголовке, `session.hello`, переподключение с паузой, статус в меню (пока против заглушки бэкенда). Основа есть со спайка: `core/net/` (`BackendClient`, `JsonRpcPeer`, `BackendConfig`)
 - [ ] AGENTS.md, скиллы `godot_conventions` / `docs_updater`, экспорт Windows
-- [ ] Главное меню, пустая игра, экран «бэкенд недоступен»
+- [ ] Главное меню, пустая игра, экран «бэкенд недоступен» (с подсказкой: сервер не отвечает / токен / сертификат; `GET /healthz` перед сокетом — [находка 3 спайка](../tech/connectivity-spike.md#находки))
 
 ### v0.4.1 — Python-бэкенд
 
-- [ ] `llm_server/` на Python 3.12 + `uv`: FastAPI + uvicorn, WebSocket JSON-RPC, рукопожатие с `PROTOCOL_VERSION` и общим токеном, бинд на `127.0.0.1`, `/health` и `/version`
+- [x] `llm_server/` на Python 3.13 + `uv`: FastAPI + uvicorn, WebSocket JSON-RPC, рукопожатие с `PROTOCOL_VERSION` и общим токеном, бинд на `127.0.0.1`, `/healthz` (спайк, v0.3.4)
 - [ ] OpenRouter: ключ и модель в конфиге/env сервера, проверка ключа и баланса (из `APIManager`)
 - [ ] Перенос промптов (файлы-шаблоны) и Pydantic-схем; один агент на ход вместо трёх
 - [ ] Протокол по [ADR-0009](../tech/adr/0009-godot-backend-protocol.md): `session.hello` / `session.status`, `turn.request` (`mode`, `kind`) → обратные `engine.check` / `engine.validate` / `engine.lookup` / `engine.find_items` → `turn.result`; `turn.cancel` через отмену asyncio-задачи; коды ошибок; повторы OpenRouter до 2 раз; таймаут хода 90 с
 - [ ] `summary.request` (`location` / `dialogue` / `npc_memory`) по журналу событий
 - [ ] Учёт токенов и денег в каждом ответе, дневной лимит на токен; структурные логи, Langfuse opt-in
-- [ ] Выгрузка схем в `contract/` (`model_json_schema()`) + `PROTOCOL_VERSION`
+- [x] Выгрузка схем в `contract/` (`model_json_schema()`) + `PROTOCOL_VERSION` (спайк; дополняется с каждым методом)
 - [ ] Несколько изолированных соединений, лимит одновременных ходов в конфиге
-- [ ] Инструкция развёртывания: сервер + Caddy (`wss://`), запуск вручную через `uv run`
+- [ ] Инструкция развёртывания: сервер + Caddy (`wss://`), запуск вручную через `uv run`. Dev-вариант есть (`infra/dev/`); на Linux Caddy нативно или `network_mode: host` ([находка 7](../tech/connectivity-spike.md#находки))
 
 ### v0.4.2 — Тесты обеих сторон
 
 **Бэкенд (pytest):**
-- [ ] Протокол: рукопожатие (401, `version_mismatch`, `not_initialized`), `turn_in_progress`, отмена хода, обрыв сокета, лимит 1 МБ, таймауты
+- [ ] Протокол: рукопожатие (401, `version_mismatch`, `not_initialized`), `turn_in_progress`, отмена хода, обрыв сокета, лимит 1 МБ, таймауты — большая часть есть со спайка (`llm_server/tests/test_session.py`), не хватает лимита 1 МБ
 - [ ] Агенты на `TestModel` / `FunctionModel` Pydantic AI: формат хода, проксирование инструментов, повтор при невалидном выводе
 - [ ] Контракт: каждое сообщение проходит схему из `contract/`, схемы в репо совпадают с моделями
 - [ ] Перенос тестов циклов из `tests/test_*_mocked.py` как спецификации

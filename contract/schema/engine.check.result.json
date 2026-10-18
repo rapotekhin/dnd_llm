@@ -1,0 +1,51 @@
+{
+  "properties": {
+    "blocked": {
+      "default": false,
+      "title": "Blocked",
+      "type": "boolean"
+    },
+    "bonus": {
+      "title": "Bonus",
+      "type": "integer"
+    },
+    "check_id": {
+      "title": "Check Id",
+      "type": "string"
+    },
+    "dc": {
+      "title": "Dc",
+      "type": "integer"
+    },
+    "nat": {
+      "title": "Nat",
+      "type": "integer"
+    },
+    "rolls": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Rolls",
+      "type": "array"
+    },
+    "success": {
+      "title": "Success",
+      "type": "boolean"
+    },
+    "total": {
+      "title": "Total",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "check_id",
+    "rolls",
+    "bonus",
+    "total",
+    "dc",
+    "success",
+    "nat"
+  ],
+  "title": "EngineCheckResult",
+  "type": "object"
+}

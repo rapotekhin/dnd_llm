@@ -6,3 +6,4 @@ python-dotenv>=1.0.0
 dice
 pyyaml>=6.0
 pyflakes>=3.0
+uv

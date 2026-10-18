@@ -83,7 +83,7 @@ Godot                               llm_server                       OpenRouter
 
 ### 8. Репозиторий и стек
 
-- **Монорепо:** `game/` (Godot 4.7, GDScript со статической типизацией, gdUnit4), `llm_server/` (Python 3.12, `uv`, FastAPI + uvicorn, pytest, ruff, pyright), `contract/`, `docs/`, `tools/`.
+- **Монорепо:** `game/` (Godot 4.7, GDScript со статической типизацией, gdUnit4), `llm_server/` (Python 3.13, `uv`, FastAPI + uvicorn, pytest, ruff, pyright), `contract/`, `docs/`, `tools/`.
 - Pygame-код уходит в `legacy/` до конца M1 ([roadmap](../../production/roadmap.md)).
 - Соглашения Godot — по образцу hive: `core/` без нод, seeded RNG, данные в JSON, текст через `tr()`, команды UI → `GameState` → сигналы `EventBus`.
 
@@ -109,7 +109,7 @@ Godot                               llm_server                       OpenRouter
 | 16 | Игроков на бэкенд | Пока один; логику на несколько закладываем |
 | 17 | Фреймворк агентов | Pydantic AI |
 | 18 | Сервер | FastAPI + uvicorn |
-| 19 | Python | 3.12 + uv |
+| 19 | Python | 3.12 + uv → 3.13 + uv (решение автора на спайке связи) |
 | 20 | Наблюдаемость | Логи + Langfuse |
 | 21 | Репозиторий | Монорепо |
 | 22 | Godot | 4.7 + GDScript |

@@ -30,6 +30,23 @@ jobs:
       - name: Run tests
         run: pytest
 
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: llm_server/uv.lock
+
+      - name: Run backend tests (protocol + contract)
+        working-directory: llm_server
+        run: uv run --locked pytest
+
   version-and-release-notes:
     name: Version & release notes
     runs-on: ubuntu-latest

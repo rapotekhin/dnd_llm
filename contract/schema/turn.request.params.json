@@ -1,0 +1,44 @@
+{
+  "properties": {
+    "input": {
+      "default": "",
+      "title": "Input",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "enter",
+        "resume",
+        "action"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "exploration",
+        "social",
+        "trade"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "snapshot": {
+      "additionalProperties": true,
+      "title": "Snapshot",
+      "type": "object"
+    },
+    "turn_id": {
+      "pattern": "^t-\\d+$",
+      "title": "Turn Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "turn_id",
+    "mode",
+    "kind"
+  ],
+  "title": "TurnRequestParams",
+  "type": "object"
+}

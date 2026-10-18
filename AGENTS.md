@@ -9,9 +9,10 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 | Folder | What | Status |
 |---|---|---|
 | `legacy/` | Pygame prototype (v0.3.x): game, tests, scripts | frozen — only bug fixes until parity, then removed |
-| `game/` | Godot 4.7 client (GDScript) | skeleton — v0.4.0 |
-| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter) | skeleton — v0.4.1 |
-| `contract/` | JSON Schema of the Godot ↔ backend protocol | skeleton — v0.4.1 |
+| `game/` | Godot 4.7 client (GDScript) | network layer from the connectivity spike; game skeleton — v0.4.0 |
+| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env | transport + protocol, stub turn; agents — v0.4.1 |
+| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | first methods; rest — v0.4.1 |
+| `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
 | `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | scenarios ready, runner in v0.4.2 |
 | `docs/` | design + tech docs, ADRs | live |
 
@@ -36,6 +37,16 @@ python -m pytest                               # legacy tests + evals format (ne
 python -m pytest --cov=legacy/game/core --cov-report=term-missing  # optional coverage (requires pytest-cov)
 python legacy/scripts/playtest/smoke.py         # live playtest: real game + real LLM, screenshots in legacy/scripts/playtest/out/
 ```
+
+Backend and Godot (details in [connectivity-spike.md](docs/tech/connectivity-spike.md)); `uv` is installed by `legacy/requirements-dev.txt`:
+
+```bash
+uv sync --project llm_server && uv run --project llm_server pytest   # backend protocol + contract tests (own .venv)
+uv run --project llm_server python -m llm_server.contract            # regenerate contract/schema/ after changing protocol models
+python tools/connectivity_e2e.py                                      # Godot <-> Caddy wss:// <-> llm_server end to end (Docker; --no-proxy without it)
+```
+
+Godot binary: `C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe` (or env `GODOT`).
 
 `legacy/game/main.py` adds `legacy/game/`, `dnd-5e-core/` and `DnD-5th-Edition-API/` (repository root) to `sys.path`. Inside `legacy/game/`, imports are relative: `from core.game import Game`. `.env` stays at the repository root.
 
