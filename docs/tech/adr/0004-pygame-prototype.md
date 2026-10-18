@@ -1,7 +1,7 @@
 # ADR-0004: Pygame для прототипа, Godot — потенциально позже
 
 **Дата:** 2026-05-03 (зафиксировано задним числом)  
-**Статус:** Accepted
+**Статус:** Superseded by [ADR-0007](0007-godot-client-python-llm-backend.md)
 
 ## Контекст
 
