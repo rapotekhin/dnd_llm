@@ -1,0 +1,21 @@
+---
+description: Use this skill to test the game for real — launch it, drive it like a player with the live LLM and check screenshots — not just run pytest. Trigger on "протестируй игру", "запусти игру и проверь", "плейтест", "проверь в реальном режиме", "playtest", "test the game", and always before opening a PR that changes gameplay, UI screens, prompts, LLM loops or character rules (legacy/game/**). Do NOT use for pure docs changes or when the user only asks to run unit tests.
+globs:
+  - "legacy/game/**"
+  - "legacy/scripts/playtest/**"
+alwaysApply: false
+---
+
+# playtest
+
+Live playtest: the real game on a dummy display, scripted player input, real OpenRouter model, a screenshot per step.
+
+The full procedure is in [.claude/skills/playtest/SKILL.md](mdc:.claude/skills/playtest/SKILL.md).
+
+Read that file when this rule triggers, then follow it.
+
+**Quick reference:**
+
+- `python -m pytest` green first, then `python legacy/scripts/playtest/smoke.py` (exit 0 = pass, 1 = crash, 2 = step timeout)
+- Read `legacy/scripts/playtest/out/report.txt` and look at every `out/NN_*.png`
+- Crashes: fix + regression test; other findings: review §1 table + roadmap. Never print `.env` keys

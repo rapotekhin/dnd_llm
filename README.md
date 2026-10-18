@@ -19,7 +19,22 @@
 - 🚧 Combat (в разработке)
 - 🚧 Автогенерация мира при выходе за известные локации (в разработке)
 
-## Стек
+## Структура репозитория
+
+Проект переезжает с Pygame на **Godot-клиент + Python LLM-бэкенд** ([ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md), [roadmap](docs/production/roadmap.md)).
+
+| Папка | Что |
+|---|---|
+| `legacy/` | Pygame-прототип v0.3.x — играбелен, заморожен до паритета Godot-версии |
+| `game/` | Godot-клиент (каркас — v0.4.0) |
+| `llm_server/` | Python LLM-бэкенд (каркас — v0.4.1) |
+| `contract/` | JSON Schema протокола Godot ↔ бэкенд |
+| `evals/` | «золотые» ЛЛМ-сценарии |
+| `docs/` | документация и ADR |
+
+Версия проекта — в файле `VERSION`.
+
+## Стек прототипа
 
 - **UI:** Pygame
 - **LLM-агенты:** Pydantic AI с typed-выводом и инструментами
@@ -43,7 +58,7 @@ git clone https://github.com/rapotekhin/DnD-5th-Edition-API ../DnD-5th-Edition-A
 ### 2. Установить Python-зависимости
 
 ```bash
-pip install -r requirements.txt
+pip install -r legacy/requirements.txt
 
 cd ../dnd-5e-core && pip install -e .
 cd ../DnD-5th-Edition-API && ./install.bat   # на Windows
@@ -68,29 +83,29 @@ OPENROUTER_API_KEY=ваш_ключ
 ### 4. Запустить игру
 
 ```bash
-python game/main.py
+python legacy/game/main.py
 ```
 
 ## Тесты
 
-Юнит- и интеграционные тесты на [pytest](https://pytest.org/) находятся в каталоге `tests/`. Для импортов нужны репозитории **`dnd-5e-core`** и **`DnD-5th-Edition-API`** рядом с проектом (как в разделе установки), каталог **`game/dnd_5e_data/`** с JSON правил; часть тестов загрузчиков опирается на **`game/assets/ru/*.jsonl`**.
+Тесты прототипа на [pytest](https://pytest.org/) лежат в `legacy/tests/`, проверка формата ЛЛМ-сценариев — в `evals/`. Для импортов нужны репозитории **`dnd-5e-core`** и **`DnD-5th-Edition-API`** (как в разделе установки), каталог **`legacy/game/dnd_5e_data/`** с JSON правил; часть тестов загрузчиков опирается на **`legacy/game/assets/ru/*.jsonl`**.
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r legacy/requirements-dev.txt
 python -m pytest
 ```
 
-Покрытие по `game/core` (плагин **`pytest-cov`** ставится вместе с `requirements-dev.txt`):
+Покрытие по `legacy/game/core` (плагин **`pytest-cov`** ставится вместе с `legacy/requirements-dev.txt`):
 
 ```bash
-python -m pytest --cov=game/core --cov-report=term-missing
+python -m pytest --cov=legacy/game/core --cov-report=term-missing
 ```
 
-Если pytest пишет **`unrecognized arguments: --cov=...`**, в активированном venv выполните **`pip install -r requirements-dev.txt`** (или отдельно **`pip install pytest-cov`**).
+Если pytest пишет **`unrecognized arguments: --cov=...`**, в активированном venv выполните **`pip install -r legacy/requirements-dev.txt`** (или отдельно **`pip install pytest-cov`**).
 
 Конфигурация: `pytest.ini`. Для агентов без реальных вызовов ЛЛМ тесты подставляют фейковые агенты; ключ OpenRouter для прогона тестов не обязателен.
 
-**CI на GitHub:** при открытии pull request в `main` или `master` автоматически запускается workflow `.github/workflows/ci.yml`: установка зависимостей и `pytest`, плюс проверка скриптом `.github/scripts/check_pr.py`, что в PR изменены `__version__` в `game/__init__.py` и корневой `RELEASE_NOTES.md`.
+**CI на GitHub:** при открытии pull request в `main` или `master` автоматически запускается workflow `.github/workflows/ci.yml`: установка зависимостей и `pytest`, плюс проверка скриптом `.github/scripts/check_pr.py`, что в PR изменены корневые `VERSION` и `RELEASE_NOTES.md`.
 
 ## Переменные окружения
 

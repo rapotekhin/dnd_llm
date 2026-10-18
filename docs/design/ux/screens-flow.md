@@ -48,7 +48,7 @@
 
 Никаких прямых ссылок между экранами. Логика навигации **сосредоточена в `Game._handle_screen_result()`**.
 
-Код экранов — в [`game/ui/screens/`](../../../game/ui/screens/): общие модули лежат прямо в папке, а создание персонажа, поднятие уровня и торговля оформлены как подпакеты; для совместимости `character_creation_screen.py`, `level_up_screen.py` и `trade_screen.py` по-прежнему импортируются из [`screens/__init__.py`](../../../game/ui/screens/__init__.py).
+Код экранов — в [`game/ui/screens/`](../../../legacy/game/ui/screens/): общие модули лежат прямо в папке, а создание персонажа, поднятие уровня и торговля оформлены как подпакеты; для совместимости `character_creation_screen.py`, `level_up_screen.py` и `trade_screen.py` по-прежнему импортируются из [`screens/__init__.py`](../../../legacy/game/ui/screens/__init__.py).
 
 ## Жизненные циклы экранов
 

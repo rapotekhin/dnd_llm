@@ -1,8 +1,8 @@
 {
-  "include": ["game"],
+  "include": ["legacy/game"],
   "extraPaths": [
     "./dnd-5e-core",
-    "./game"
+    "./legacy/game"
   ],
   "pythonVersion": "3.10",
   "typeCheckingMode": "basic"

@@ -1,6 +1,6 @@
 # Character Creation
 
-Создание персонажа D&D 5e — самый объёмный сценарий в UI: класс `CharacterCreationScreen` и связанные виджеты живут в подпакете [`game/ui/screens/character_creation/`](../../../game/ui/screens/character_creation/); для стабильных импортов класс по-прежнему доступен как `game.ui.screens.character_creation_screen`.
+Создание персонажа D&D 5e — самый объёмный сценарий в UI: класс `CharacterCreationScreen` и связанные виджеты живут в подпакете [`game/ui/screens/character_creation/`](../../../legacy/game/ui/screens/character_creation/); для стабильных импортов класс по-прежнему доступен как `game.ui.screens.character_creation_screen`.
 
 ## Этапы
 
