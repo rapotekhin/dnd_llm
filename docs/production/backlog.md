@@ -124,6 +124,21 @@
 
 Сейчас только OpenRouter. Поддержка vLLM в Python-бэкенде (OpenAI-совместимый `base_url`, structured output через guided decoding) — для приватности и независимости от провайдера. **Не в M1**, сильно позже ([ADR-0007](../tech/adr/0007-godot-client-python-llm-backend.md) §6).
 
+### Модель на RunPod (llama.cpp)
+
+**Идея:** добавить в выбор модели в настройках игры свою модель на RunPod Serverless — [Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NEO-CODER-MAX-MTP-GGUF](https://huggingface.co/DavidAU/Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NEO-CODER-MAX-MTP-GGUF) в llama.cpp. Endpoint `piq0u10aenlizk`, ключ `RUNPOD_LLAMACPP_KEY` в корневом `.env`. Запрос: `POST https://api.runpod.ai/v2/<endpoint>/runsync` (или `/run` + `/status/<id>`) с телом `{"input": {"prompt": "…"}}`.
+
+**Что пробовали (2026-10-18):** четыре пробных запроса с коротким промптом («Привет, русский знаешь?»).
+- `runsync` с таймаутом клиента 150 с — ответа нет: холодный старт, задачи остались в очереди.
+- `/run` + опрос статуса: одна задача простояла в очереди и стала `CANCELLED`; вторая взята через 134 с, но за 9 минут `IN_PROGRESS` ответа не дала (отменили вручную); третья взята через 52 мс и упала с `executionTimeout exceeded` через 612 с.
+- `health` всё время показывал `running: 1` — воркер жив, но генерация на коротком промпте не завершается. Ни одного ответа не получили, поэтому формат вывода воркера и поддержка OpenAI-маршрута (`/openai/v1`) неизвестны.
+
+**Вероятные причины:** нет лимита длины ответа и модель уходит в бесконечные размышления (Qwen 3.x в режиме thinking); проблемы MTP-сборки GGUF в llama.cpp; слишком медленный GPU для 27B.
+
+**Что нужно, чтобы продолжить:** логи воркера в консоли RunPod; шаблон или образ воркера (схема `input`: передаются ли `max_tokens`, `messages`, отключение thinking); хотя бы один успешный ответ `runsync`.
+
+**Как подключать:** провайдер `runpod/<имя>` в `ModelCatalog` бэкенда рядом с OpenRouter. Если воркер отдаёт OpenAI-совместимый chat API с инструментами — обычная `OpenAIChatModel` с `base_url` endpoint-а. Если только `prompt` — обёртка `FunctionModel`: промпт по шаблону чата Qwen, вызовы инструментов разбирать из `<tool_call>`. Обязательно: лимит токенов, выключенный thinking, таймаут хода ≤ 90 с (ADR-0009 §6). Перед выбором по умолчанию — «золотые» сценарии с `--repeat 3` и живой плейтест ([ADR-0011](../tech/adr/0011-default-master-model.md)).
+
 ### Раздача бэкенда игрокам без Python
 
 В M1 бэкенд запускается вручную через `uv run`. Для раздачи на машины игроков — встроенный (embeddable) Python с зависимостями в папке; отдельное решение, когда понадобится ([ADR-0007](../tech/adr/0007-godot-client-python-llm-backend.md) §4).
