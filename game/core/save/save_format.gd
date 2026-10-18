@@ -8,8 +8,9 @@ extends RefCounted
 ## v3 (0.5.0): the full 5e character (CharacterRules). Saves before v3 do not load: the game is not released
 ##   and their character had no sheet to rebuild from (decision of v0.5.0).
 ## v4 (0.5.1): world pack id and version, master settings. A v3 game moves to the start of the default pack.
+## v5 (0.5.2): check locks, found secrets, visited rooms, the day.
 
-const SAVE_VERSION := 4
+const SAVE_VERSION := 5
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -21,6 +22,7 @@ const ERR_TOO_OLD := "MSG_SAVE_TOO_OLD"
 ## `ctx` = {"world": pack bundle of the default world} for values an old save never had.
 static var MIGRATIONS: Dictionary[int, Callable] = {
 	3: _v3_to_v4,
+	4: _v4_to_v5,
 }
 
 
@@ -71,3 +73,12 @@ static func _v3_to_v4(data: Dictionary, ctx: Dictionary) -> void:
 		s[key] = {}
 	for key: String in ["flags", "dialogue_log", "location_log", "options"]:
 		s[key] = []
+
+
+## A 0.5.1 game had no locks, secrets or map: the current room is the only one visited.
+static func _v4_to_v5(data: Dictionary, _ctx: Dictionary) -> void:
+	var s: Dictionary = data["session"]
+	s["locks"] = {}
+	s["revealed"] = {}
+	s["visited"] = [str(s.get("room_id", ""))]
+	s["day"] = 1

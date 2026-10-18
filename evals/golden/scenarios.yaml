@@ -70,6 +70,23 @@ scenarios:
       - "Наррация описывает безрезультатный поиск и не раскрывает, что под половицей"
       - "Мастер не пишет число броска сам — его покажет карточка движка"
 
+  - id: inspect_hook_needs_check
+    title: "Осмотр зацепки — проверка, без выдуманных улик"
+    category: hidden
+    extends: tavern
+    input: "Внимательно осматриваю люк в погреб и новый засов на нём."
+    snapshot:
+      scene:
+        hooks:
+          - {id: hook_new_bolt, text: "люк в погреб заперт на новый засов, хотя старый был исправен", dc: 13}
+    expect:
+      check: {required: true, skill_in: [perception, investigation]}
+      effects: {forbidden_kinds: [give_item, coins]}
+      narration:
+        must_not_match: ["царапин", "следы (когтей|взлома|инструмента)", "кровь"]
+    rubric:
+      - "Мастер просит проверку и описывает только то, что дала зацепка и итог проверки, без новых улик"
+
   - id: hidden_hook_no_leak
     title: "Вход в комнату со скрытым люком"
     category: hidden

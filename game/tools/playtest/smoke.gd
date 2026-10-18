@@ -55,6 +55,7 @@ func run() -> void:
 			await shot("game_option")
 
 	await _sheet(gs, game)
+	await _map_journal_rest(gs, game)
 
 	await key(KEY_ESCAPE)
 	var pause: Control = find_all(game, "PauseMenu")[0]
@@ -100,6 +101,34 @@ func _sheet(gs: Node, game: Control) -> void:
 			step("weapon back in hand", str(gs.session.character["equipped"]["main_hand"]) == weapon)
 	await key(KEY_ESCAPE)
 	step("Esc closes the sheet", not sheet.visible and not find_all(game, "PauseMenu")[0].visible)
+
+
+func _map_journal_rest(gs: Node, game: Control) -> void:
+	await press(find(game, "MapButton"))
+	var map: Control = find(game, "MapView")
+	step("map opens", map.visible)
+	await shot("map")
+	await key(KEY_ESCAPE)
+	await press(find(game, "JournalButton"))
+	var journal: Control = find(game, "JournalView")
+	step("journal opens", journal.visible)
+	await shot("journal")
+	await key(KEY_ESCAPE)
+	step("Esc closes map and journal", not map.visible and not journal.visible)
+	var up: Button = find(game, "Exit_brod-tavern-upstairs")
+	if not step("exit upstairs", up != null and not up.disabled):
+		return
+	await press(up)
+	step("upstairs enter turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
+	var rest: Button = find(game, "RestButton")
+	if not step("rest button in a safe room", rest != null and not rest.disabled):
+		return
+	var gold: int = gs.session.character["gold_cp"]
+	await press(rest)
+	step("rest turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
+	step("a new day, paid for the room", gs.session.day == 2 and gs.session.character["gold_cp"] == gold - 50,
+		"day %d, %d → %d cp" % [gs.session.day, gold, gs.session.character["gold_cp"]])
+	await shot("after_rest")
 
 
 func _count(gs: Node, kind: String) -> int:

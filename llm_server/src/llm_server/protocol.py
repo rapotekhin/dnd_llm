@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.2.2"
+PROTOCOL_VERSION = "0.3.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -113,7 +113,7 @@ class StatusResult(_Out):
 # --- snapshot (ADR-0009 §4) ------------------------------------------------------
 
 Mode = Literal["exploration", "social", "trade"]
-TurnKind = Literal["enter", "resume", "action"]
+TurnKind = Literal["enter", "resume", "action", "rest"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -144,6 +144,7 @@ class Scene(_In):
     npcs: list[SceneNpc] = Field(default_factory=list)
     hooks: list[str] = Field(default_factory=list)  # hints of hidden things, never the hidden things themselves
     flags: list[str] = Field(default_factory=list)
+    found: list[str] = Field(default_factory=list)  # hidden things the player noticed or found here (0.3.0)
     time_of_day: str = ""
 
 
@@ -392,6 +393,7 @@ class EngineCheckResult(_In):
     success: bool
     nat: int
     blocked: bool = False
+    revealed: list[str] = Field(default_factory=list)  # hidden things this successful search found (0.3.0)
 
 
 class EngineValidateParams(_Out):

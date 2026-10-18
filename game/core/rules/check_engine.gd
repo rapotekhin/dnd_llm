@@ -1,7 +1,7 @@
 class_name CheckEngine
 extends RefCounted
 ## Ability checks and saves for engine.check (ADR-0008 §2): the engine owns the DC number, the roll and
-## the result; the LLM only names the skill and a DC tier. Failed-check locks come with v0.6.0.
+## the result; the LLM only names the skill and a DC tier. Locks of failed checks — ExplorationRules.
 
 
 ## `params` = engine.check params; `bonus` = the character's total bonus (0 until characters, v0.5.0).

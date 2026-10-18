@@ -53,6 +53,13 @@ def test_style_and_content_limits_in_the_prompt():
     assert "тёмное фэнтези с надеждой: серая мораль" in text  # the pack's tone replaces the default
 
 
+def test_found_secrets_are_facts_in_the_scene():
+    raw = tavern_snapshot()
+    raw["scene"]["found"] = ["следы босых ног ведут к стене"]
+    text = prompts.system_prompt("exploration", Snapshot.model_validate(raw), None)
+    assert "Игрок уже заметил или нашёл" in text and "следы босых ног" in text
+
+
 def test_npc_prompts():
     s = snap()
     npc = next(n for n in s.scene.npcs if n.npc_id == INNKEEPER)

@@ -11,6 +11,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from llm_server import contract
 from llm_server.app import create_app
+from llm_server.protocol import PROTOCOL_VERSION
 
 from conftest import AUTH, hello, make_services, make_settings, request, tavern_snapshot
 from test_agent import INNKEEPER, default_engine, effect_id, scripted
@@ -36,7 +37,7 @@ def test_a_full_turn_matches_the_contract(data_dir):
     seen: set[str] = set()
     turn = {"turn_id": "t-1", "mode": "exploration", "kind": "action", "input": "эля!", "snapshot": tavern_snapshot()}
     with TestClient(create_app(services.settings, services=services)) as c, c.websocket_connect("/ws", headers=AUTH) as ws:
-        hello_params = {"protocol_version": "0.2.0", "client_version": "test"}
+        hello_params = {"protocol_version": PROTOCOL_VERSION, "client_version": "test"}
         validate("session.hello.params", hello_params)
         validate("session.hello.result", hello(ws)["result"])
         validate("turn.request.params", turn)

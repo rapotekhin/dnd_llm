@@ -7,6 +7,7 @@ from llm_server import REPO_ROOT
 from llm_server.app import create_app
 from llm_server.config import Settings
 from llm_server.services import Services
+from llm_server.protocol import PROTOCOL_VERSION
 
 TOKEN = "test-token-0123456789abcdef"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
@@ -33,7 +34,7 @@ def client(data_dir):
         yield c
 
 
-def hello(ws, protocol_version: str = "0.2.0", req_id: str = "g-1") -> dict:
+def hello(ws, protocol_version: str = PROTOCOL_VERSION, req_id: str = "g-1") -> dict:
     ws.send_json(
         {
             "jsonrpc": "2.0",

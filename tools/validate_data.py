@@ -67,6 +67,9 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         if room["location_id"] not in world["locations"]:
             errors.append(f"комната {rid}: нет локации {room['location_id']}")
         errors += [f"комната {rid}: выход в несуществующую {x}" for x in room["exits"] if x not in rooms]
+        secret_ids = [sec["id"] for sec in room.get("secrets", [])]
+        if len(secret_ids) != len(set(secret_ids)):
+            errors.append(f"комната {rid}: id секретов повторяются")
         for n in room["npcs"]:
             if n not in npcs:
                 errors.append(f"комната {rid}: нет NPC {n}")

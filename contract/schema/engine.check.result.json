@@ -21,6 +21,13 @@
       "title": "Nat",
       "type": "integer"
     },
+    "revealed": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Revealed",
+      "type": "array"
+    },
     "rolls": {
       "items": {
         "type": "integer"

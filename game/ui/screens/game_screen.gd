@@ -13,6 +13,8 @@ var _cancel: Button
 var _offline_banner: Label
 var _pause: PauseMenu
 var _sheet: CharacterSheet
+var _map: WorldNotes
+var _journal: WorldNotes
 var _mode_bar: HBoxContainer
 var _mode_label: Label
 var leave_button: Button
@@ -94,6 +96,8 @@ func _ready() -> void:
 	side.size_flags_stretch_ratio = 1.0
 	side.menu_requested.connect(func() -> void: _pause.open())
 	side.sheet_requested.connect(func() -> void: _sheet.open())
+	side.map_requested.connect(func() -> void: _map.open())
+	side.journal_requested.connect(func() -> void: _journal.open())
 	row.add_child(side)
 
 	_sheet = CharacterSheet.new()
@@ -101,6 +105,14 @@ func _ready() -> void:
 	_sheet.visible = false
 	add_child(_sheet)
 	_sheet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_map = WorldNotes.new(WorldNotes.MAP)
+	_map.name = "MapView"
+	_journal = WorldNotes.new(WorldNotes.JOURNAL)
+	_journal.name = "JournalView"
+	for v: WorldNotes in [_map, _journal]:
+		v.visible = false
+		add_child(v)
+		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	_pause = PauseMenu.new()
 	_pause.visible = false
@@ -119,8 +131,11 @@ func _ready() -> void:
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause_menu"):
-		if _sheet.visible:
-			_sheet.visible = false
+		var overlays: Array[Control] = [_sheet, _map, _journal]
+		var open := overlays.filter(func(o: Control) -> bool: return o.visible)
+		if not open.is_empty():
+			for o: Control in open:
+				o.visible = false
 		else:
 			_pause.toggle()
 		get_viewport().set_input_as_handled()

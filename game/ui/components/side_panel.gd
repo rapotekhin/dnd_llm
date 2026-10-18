@@ -5,6 +5,8 @@ extends PanelContainer
 
 signal menu_requested
 signal sheet_requested
+signal map_requested
+signal journal_requested
 
 var _content: VBoxContainer
 
@@ -23,12 +25,18 @@ func _ready() -> void:
 	_content.add_theme_constant_override("separation", 10)
 	scroll.add_child(_content)
 	col.add_child(BackendStatus.new())
-	var sheet := Button.new()
-	sheet.name = "SheetButton"
-	sheet.text = "BTN_CHARACTER_SHEET"
-	sheet.custom_minimum_size = Vector2(0, 56)
-	sheet.pressed.connect(sheet_requested.emit)
-	col.add_child(sheet)
+	var tools := HBoxContainer.new()
+	tools.add_theme_constant_override("separation", 8)
+	col.add_child(tools)
+	for spec: Array in [["SheetButton", "BTN_CHARACTER_SHEET", sheet_requested], ["MapButton", "BTN_MAP", map_requested],
+			["JournalButton", "BTN_JOURNAL", journal_requested]]:
+		var b := Button.new()
+		b.name = spec[0]
+		b.text = spec[1]
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, 56)
+		b.pressed.connect((spec[2] as Signal).emit)
+		tools.add_child(b)
 	var menu := Button.new()
 	menu.text = "BTN_MENU"
 	menu.custom_minimum_size = Vector2(0, 56)
@@ -72,6 +80,11 @@ func _rebuild() -> void:
 	if int(c["hp"]) * 2 <= int(c["max_hp"]):
 		hp.add_theme_color_override("font_color", UiTheme.BAD)
 	_line(tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}), false)
+	var conditions: Array = c.get("conditions", [])
+	if not conditions.is_empty():
+		var cond := _line(tr("SIDE_CONDITIONS").format({"list": ", ".join(conditions.map(func(x: Variant) -> String: return tr("COND_" + str(x).to_upper())))}), false)
+		cond.add_theme_color_override("font_color", UiTheme.WARN)
+	_line(tr("SIDE_DAY").format({"day": s.day}), true)
 	var room := world.room(s.room_id)
 	_subheading("SIDE_PLACE")
 	_line("%s — %s" % [world.location(world.location_id(s.room_id)).get("name", ""), room.get("name", s.room_id)], false)
@@ -90,6 +103,16 @@ func _rebuild() -> void:
 		for e: String in world.exits(s.room_id):
 			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act)
 			b.name = "Exit_" + e
+		var place := ExplorationRules.rest_place(Catalog.data["world"], s.room_id)
+		if not place.is_empty():
+			var cost := int(place["cost_cp"])
+			var rest := _button(tr("BTN_LONG_REST_COST").format({"cost": Money.format(cost)}) if cost > 0 else tr("BTN_LONG_REST"),
+				func() -> void:
+					var err := GameState.long_rest()
+					if not err.is_empty():
+						EventBus.message.emit(tr(err)), can_act)
+			rest.name = "RestButton"
+			rest.disabled = not can_act or not ExplorationRules.can_rest(s, Catalog.data["world"]).is_empty()
 
 	# Only what is worn and wielded; the full inventory is on the character sheet.
 	_subheading("SIDE_INVENTORY")

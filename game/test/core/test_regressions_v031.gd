@@ -102,3 +102,18 @@ func test_b18_failed_turns_tell_the_player_and_can_be_retried() -> void:
 		assert_str(GameState._error_key(reason)).starts_with("MSG_")
 	assert_str(GameState._error_key("budget_exceeded")).is_equal("MSG_BUDGET_EXCEEDED")
 	assert_str(GameState._error_key("llm_invalid_output")).is_equal("MSG_MASTER_FAILED")
+
+
+## ADR-0008 §2 through GameState: a repeat of a failed check returns the old result without a roll.
+func test_repeat_of_a_failed_check_is_blocked_without_a_roll() -> void:
+	GameState.busy_turn = "t-1"
+	var params := {"turn_id": "t-1", "skill": "arcana", "dc_tier": "nearly_impossible"}
+	var first: Dictionary = GameState.handle_engine_check(params)
+	if bool(first["success"]):
+		return  # a natural 20 (seeded, but keep the test honest)
+	var state_before := GameState.session.rng.state
+	var second: Dictionary = GameState.handle_engine_check(params)
+	assert_bool(second["blocked"]).is_true()
+	assert_int(int(second["total"])).is_equal(int(first["total"]))
+	assert_int(GameState.session.rng.state).is_equal(state_before)  # no dice rolled
+	assert_str(second["check_id"]).is_not_equal(first["check_id"])

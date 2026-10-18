@@ -89,7 +89,27 @@
 							"description": {"type": "string"},
 							"exits": {"$ref": "#/$defs/strings"},
 							"npcs": {"$ref": "#/$defs/strings"},
-							"hooks": {"$ref": "#/$defs/strings"}
+							"hooks": {"$ref": "#/$defs/strings"},
+							"secrets": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"required": ["id", "dc", "text"],
+									"properties": {
+										"id": {"$ref": "#/$defs/nonempty"},
+										"dc": {"type": "integer", "minimum": 1},
+										"text": {"$ref": "#/$defs/nonempty"},
+										"skill": {"enum": ["perception", "investigation"]}
+									},
+									"additionalProperties": false
+								}
+							},
+							"safe": {
+								"type": "object",
+								"required": ["rest_cost_cp"],
+								"properties": {"rest_cost_cp": {"type": "integer", "minimum": 0}},
+								"additionalProperties": false
+							}
 						}
 					}
 				},

@@ -19,6 +19,19 @@ func _ready() -> void:
 	line.text = text_for(entry)
 	line.add_theme_color_override("font_color", UiTheme.OK if bool(entry.get("success", false)) else UiTheme.BAD)
 	col.add_child(line)
+	if bool(entry.get("blocked", false)):
+		var rep := Label.new()
+		rep.text = "CHECK_REPEAT"
+		rep.theme_type_variation = UiTheme.MUTED_LABEL
+		col.add_child(rep)
+	for found: Variant in entry.get("revealed", []):
+		var f := Label.new()
+		f.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		f.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		f.custom_minimum_size = Vector2(520, 0)
+		f.text = tr("CHECK_FOUND").format({"what": found})
+		f.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
+		col.add_child(f)
 	var reason := str(entry.get("advantage_reason", ""))
 	if not reason.is_empty():
 		var adv := Label.new()

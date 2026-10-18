@@ -114,3 +114,18 @@ func test_engine_calls_for_another_turn_are_refused() -> void:
 	assert_bool(await _wait(func() -> bool: return not answers.is_empty(), 5.0)).is_true()
 	assert_int(int(answers[0]["error"]["code"])).is_equal(-32041)
 	GameState.busy_turn = ""
+
+
+func test_long_rest_asks_the_master_for_the_morning() -> void:
+	server.on_message = func(m: MockBackend, msg: Dictionary) -> void:
+		if str(msg.get("method", "")) == "turn.request":
+			m.reply(msg, {"turn_id": msg["params"]["turn_id"], "narration": "Утро.", "options": [], "effect_ids": [],
+				"check_ids": [], "usage": {"model": "mock/model"}})
+	assert_str(GameState.long_rest()).is_equal("REST_NOT_SAFE")
+	ExplorationRules.enter_room(GameState.session, Catalog.data["world"], "brod-tavern-upstairs")
+	GameState.session.character["hp"] = 1
+	assert_str(GameState.long_rest()).is_empty()
+	assert_bool(await _wait(func() -> bool: return not GameState.is_busy(), 5.0)).is_true()
+	var turn: Dictionary = server.received.filter(func(m: Dictionary) -> bool: return m.get("method") == "turn.request")[-1]
+	assert_str(turn["params"]["kind"]).is_equal("rest")
+	assert_int(GameState.session.character["hp"]).is_equal(int(GameState.session.character["max_hp"]))

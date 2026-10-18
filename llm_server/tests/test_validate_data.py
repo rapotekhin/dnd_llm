@@ -35,10 +35,11 @@ def test_broken_packs_are_reported(tmp_path):
         elif name == "world":
             doc["rooms"]["brod-square"]["exits"].append("nowhere")
             doc["npcs"]["npc_smith"]["stock"].append("lightsaber")
+            doc["rooms"]["brod-gate"]["secrets"].append(dict(doc["rooms"]["brod-gate"]["secrets"][0]))
         else:
             doc["presets"][1]["choices"]["class"] = "jedi"
     errors = " | ".join(_broken(tmp_path, edit))
-    for needle in ("ent", "nowhere", "lightsaber", "jedi"):
+    for needle in ("ent", "nowhere", "lightsaber", "jedi", "id секретов"):
         assert needle in errors, needle
 
 

@@ -9,11 +9,11 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 | Folder | What | Status |
 |---|---|---|
 | `legacy/` | Pygame prototype (v0.3.x): game, tests, scripts | frozen — only bug fixes until parity, then removed |
-| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + new game screen, start world «Сумеречная Марка» (v0.5.1); the rest of the port — v0.5.2+ |
-| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.2.2 (v0.5.1) |
-| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.2.2 |
+| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + new game screen, start world «Сумеречная Марка» (v0.5.1), check locks, hidden things, long rest, map and journal (v0.5.2); dialogues, trade, levels — v0.5.3+ |
+| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.3.0 (v0.5.2) |
+| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.3.0 |
 | `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
-| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 20 scenarios; runner `llm_server.golden` (v0.4.2) |
+| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 21 scenarios (19 runnable); runner `llm_server.golden` (v0.4.2) |
 | `docs/` | design + tech docs, ADRs | live |
 
 Decisions to follow in new code: [ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md) (who owns what), [ADR-0008](docs/tech/adr/0008-engine-decides-llm-narrates.md) (engine decides, LLM narrates), [ADR-0009](docs/tech/adr/0009-godot-backend-protocol.md) (protocol), [ADR-0010](docs/tech/adr/0010-game-decisions-worlds-tone-combat-death.md) (game decisions), [ADR-0011](docs/tech/adr/0011-default-master-model.md) (default model: change it only after golden scenarios with `--repeat 3` and a live playtest). Godot conventions follow the sibling project `C:\Code\hive_world_shop` (pure `core/`, seeded RNG, JSON saves with migrations, gdUnit4).

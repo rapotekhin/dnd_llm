@@ -303,3 +303,22 @@ def test_effect_sent_as_a_json_string_is_accepted(data_dir):
     msg, calls, _ = play(data_dir, fn)
     assert calls[0]["params"]["effect"] == {"kind": "flag", "flag": "door_open", "value": True}
     assert msg["result"]["effect_ids"] == ["e-1"]
+
+
+def test_a_search_check_passes_what_the_engine_revealed(data_dir):
+    def engine(method, params):
+        if method == "engine.check":
+            return {**CHECK_OK, "revealed": ["за бочками — старый лаз в стене"]}
+        return default_engine(method, params)
+    fn = scripted(("request_check", {"skill": "investigation", "dc_tier": "medium", "reason": "обыск"}),
+                  ("final", {"narration": "Ты находишь лаз."}))
+    play(data_dir, fn, engine=engine)
+    text = last_tool_text(fn.state["prompts"][1])
+    assert "Движок открыл скрытое" in text and "старый лаз" in text
+
+
+def test_rest_turn_describes_the_morning(data_dir):
+    fn = scripted(("final", {"narration": "Утро в Броде."}))
+    msg, _, _ = play(data_dir, fn, kind="rest", input="")
+    assert msg["result"]["narration"] == "Утро в Броде."
+    assert "провёл ночь здесь" in str(fn.state["prompts"][0][-1].parts[-1].content)

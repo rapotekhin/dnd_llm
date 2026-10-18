@@ -24,8 +24,12 @@ BTN_EQUIP_MAIN_HAND,В основную руку
 BTN_EQUIP_OFF_HAND,Во вторую руку
 BTN_EQUIP_SHIELD,Взять щит
 BTN_EXIT_TO_MENU,Выйти в главное меню
+BTN_JOURNAL,Журнал
 BTN_LEAVE_CONVERSATION,Закончить разговор
 BTN_LOAD,Загрузить
+BTN_LONG_REST,Долгий отдых
+BTN_LONG_REST_COST,Долгий отдых ({cost})
+BTN_MAP,Карта
 BTN_MENU,Меню
 BTN_NEW_GAME,Новая игра
 BTN_QUIT,Выход
@@ -99,7 +103,21 @@ CC_STORY_PLACEHOLDER,"Кто вы, откуда и зачем пришли"
 CC_TITLE,Создание персонажа
 CC_UNNAMED,Без имени
 CHECK_ADVANTAGE,Преимущество: {reason}
+CHECK_FOUND,Найдено: {what}
 CHECK_LINE,{what}: {roll} {bonus} = {total} против DC {dc} {mark}
+CHECK_REPEAT,Повтор без изменений — прежний итог
+COND_BLINDED,ослеплён
+COND_CHARMED,очарован
+COND_FRIGHTENED,испуган
+COND_GRAPPLED,схвачен
+COND_INCAPACITATED,недееспособен
+COND_INVISIBLE,невидим
+COND_PARALYZED,парализован
+COND_POISONED,отравлен
+COND_PRONE,лежит
+COND_RESTRAINED,опутан
+COND_STUNNED,ошеломлён
+COND_UNCONSCIOUS,без сознания
 DEATH_ONE_LIFE,Одна жизнь
 DEATH_ONE_LIFE_HINT,"Смерть окончательна: один слот и автосохранение, воскрешения для героя нет. Режим вступит в силу вместе с боем и смертью (M4), выбор сохраняется уже сейчас."
 DEATH_STORY,История
@@ -127,6 +145,14 @@ ITEM_ARMOR_AC, — КД {n}{dex}
 ITEM_DEX, + Лов
 ITEM_DEX_MAX, + Лов (макс. {n})
 ITEM_SHIELD_AC, — КД +{n}
+JOURNAL_EMPTY,"Пока пусто: записи появятся, когда вы осмотритесь и поговорите с людьми."
+JOURNAL_FOUND,Находки
+JOURNAL_PEOPLE,Разговоры
+JOURNAL_PLACES,Места
+JOURNAL_TITLE,Журнал
+MAP_EXITS,Отсюда: {list}
+MAP_HERE,вы здесь
+MAP_TITLE,Карта
 MODE_SOCIAL,Разговор: {name}
 MODE_TRADE,Торговля: {name}
 MSG_BUDGET_EXCEEDED,Дневной лимит расходов мастера исчерпан. Ходы снова будут доступны завтра.
@@ -172,6 +198,10 @@ OPT_MODEL_DEFAULT,По умолчанию сервера ({model})
 OPT_RESOLUTION,Размер окна
 PLACEHOLDER_ACTION,Что вы делаете?
 PLACEHOLDER_SAY,Что вы говорите или делаете? ({name} слушает)
+REST_BUSY,Сейчас нельзя отдыхать
+REST_IN_CONVERSATION,Сначала закончите разговор
+REST_NOT_SAFE,Здесь небезопасно отдыхать
+REST_NO_MONEY,Не хватает денег на ночлег
 SAVE_CHA,Спасбросок Харизмы
 SAVE_CON,Спасбросок Телосложения
 SAVE_DEX,Спасбросок Ловкости
@@ -196,6 +226,8 @@ SHEET_TAB_FEATURES,Умения и заклинания
 SHEET_TAB_GEAR,Снаряжение
 SHEET_TAB_STATS,Характеристики
 SIDE_COINS,Монеты: {coins}
+SIDE_CONDITIONS,Состояния: {list}
+SIDE_DAY,День {day}
 SIDE_EXITS,Выходы
 SIDE_HP_AC,HP {hp}/{max} · КД {ac}
 SIDE_INVENTORY,Снаряжение

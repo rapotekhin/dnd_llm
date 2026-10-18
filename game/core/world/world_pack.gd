@@ -164,6 +164,17 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			placed[n] = true
 		if not _strings(r.get("hooks", [])):
 			e.append("комната %s: hooks — список строк" % id)
+		var ids := {}
+		for sec: Variant in r.get("secrets", []):
+			if not (sec is Dictionary) or str(sec.get("id", "")).is_empty() or str(sec.get("text", "")).is_empty() \
+					or not (sec.get("dc") is float or sec.get("dc") is int) or ids.has(sec.get("id")) \
+					or not str(sec.get("skill", "perception")) in ExplorationRules.SEARCH_SKILLS:
+				e.append("комната %s: секрет — уникальный id, dc (число), text, skill perception | investigation" % id)
+			else:
+				ids[sec["id"]] = true
+		var safe: Variant = r.get("safe")
+		if safe != null and (not (safe is Dictionary) or int(safe.get("rest_cost_cp", -1)) < 0):
+			e.append("комната %s: safe — {rest_cost_cp: число ≥ 0}" % id)
 	var catalog: Dictionary = data["items"]["catalog"]
 	for id: String in w["npcs"]:
 		var n: Dictionary = w["npcs"][id]

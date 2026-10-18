@@ -45,6 +45,22 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	_request("enter", "")
 
 
+## Long rest button (ADR-0010 §6): only in a safe room, outside a conversation, with the price paid. The engine
+## restores the character and clears the check locks, then the master describes the morning (kind=rest).
+func long_rest() -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "REST_BUSY"
+	var why := ExplorationRules.can_rest(session, Catalog.data["world"])
+	if not why.is_empty():
+		return why
+	var lines := ExplorationRules.long_rest(session, Catalog.data["world"])
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("rest", "")
+	return ""
+
+
 ## Changes the master style of the running game (settings screen); kept in the save.
 func set_dm_style(style: String) -> void:
 	if session != null and WorldPack.DM_STYLES.has(style):
@@ -53,6 +69,7 @@ func set_dm_style(style: String) -> void:
 
 func start(s: GameSession) -> void:
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
+	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 	session = s
 	busy_turn = ""
 	_last_kind = ""
@@ -83,7 +100,7 @@ func go(room_id: String) -> bool:
 	if session == null or is_busy() or not Backend.is_ready() or not world().exits(session.room_id).has(room_id):
 		return false
 	_end_conversation()
-	session.room_id = room_id
+	ExplorationRules.enter_room(session, Catalog.data["world"], room_id)
 	_add(GameSession.effect_entry(["Переход: %s" % world().room(room_id).get("name", room_id)]))
 	EventBus.state_changed.emit()
 	_request("enter", "")
@@ -243,6 +260,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 	_set_options(options)
 
 	if s.room_id != room_before:
+		ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 		_end_conversation()
 		return "enter"
 	var next: Variant = result.get("next_mode")
@@ -331,10 +349,22 @@ func _active(params: Dictionary) -> bool:
 func handle_engine_check(params: Dictionary) -> Dictionary:
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")
-	var bonus := CheckEngine.bonus_for(session.character, params)
-	var result := CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
-	if result.has("error"):
-		return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
+	var room := session.room_id
+	var result: Dictionary
+	var lock := ExplorationRules.locked(session, params, room)
+	if not lock.is_empty():
+		# A repeat without a change: the old result, no roll (ADR-0008 §2).
+		result = (lock["result"] as Dictionary).duplicate()
+		result["check_id"] = session.next_check_id()
+		result["blocked"] = true
+	else:
+		var bonus := CheckEngine.bonus_for(session.character, params)
+		result = CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
+		if result.has("error"):
+			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
+		ExplorationRules.lock(session, params, room, result)
+		if bool(result["success"]) and params.get("skill") != null:
+			result["revealed"] = ExplorationRules.active_reveal(session, Catalog.data["world"], str(params["skill"]), int(result["total"]))
 	_add(GameSession.check_entry(params, result))
 	return result
 

@@ -43,6 +43,14 @@ var character: Dictionary = {}
 var items: Dictionary = {}
 var attitudes: Dictionary = {}
 var flags: Array[String] = []
+## Failed skill checks: "skill|target" → {"result", "advantages"} (ExplorationRules); cleared by a long rest.
+var locks: Dictionary = {}
+## room_id → ids of secrets noticed or found there.
+var revealed: Dictionary = {}
+## Rooms the player has been to, in order (the map).
+var visited: Array[String] = []
+## Days since the start; a long rest starts the next one.
+var day: int = 1
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
 var summaries: Dictionary = {}
 ## Lines of the current conversation, the events for its summary.
@@ -201,6 +209,10 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"attitudes": attitudes,
 		"flags": flags,
 		"summaries": summaries,
+		"locks": locks,
+		"revealed": revealed,
+		"visited": visited,
+		"day": day,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -233,6 +245,13 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for f: Variant in d.get("flags", []):
 		s.flags.append(str(f))
 	s.summaries = d.get("summaries", {})
+	s.locks = d.get("locks", {})
+	for key: String in s.locks:
+		_normalized(s.locks[key]["result"])
+	s.revealed = d.get("revealed", {})
+	for v: Variant in d.get("visited", []):
+		s.visited.append(str(v))
+	s.day = int(d.get("day", 1))
 	for line: Variant in d.get("dialogue_log", []):
 		s.dialogue_log.append(str(line))
 	for line: Variant in d.get("location_log", []):
@@ -242,7 +261,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 
 ## JSON brings every number back as float; check cards keep ints so a loaded session equals the saved one.
 static func _normalized(e: Dictionary) -> Dictionary:
-	if str(e.get("kind", "")) != KIND_CHECK:
+	if str(e.get("kind", KIND_CHECK)) != KIND_CHECK:
 		return e
 	for k: String in ["bonus", "total", "dc", "nat"]:
 		if e.has(k):

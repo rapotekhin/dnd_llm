@@ -53,6 +53,11 @@ func run() -> void:
 		step("in the kitchen", gs.session.room_id == KITCHEN)
 		step("kitchen enter turn", await _turn_done(gs))
 		await shot("kitchen")
+		await _say(gs, "Внимательно осматриваю люк в погреб и новый засов")
+		var checks: Array = gs.session.chat.filter(func(e: Dictionary) -> bool: return e["kind"] == GameSession.KIND_CHECK)
+		step("info: search check", true, str(checks[-1]) if not checks.is_empty() else "без проверки")
+		step("info: found here", true, str(ExplorationRules.found_texts(gs.session, node("Catalog").data["world"], gs.session.room_id)))
+		await shot("kitchen_search")
 
 	step("no failed turns", not gs.session.chat.any(func(e: Dictionary) -> bool: return e["kind"] == GameSession.KIND_SYSTEM),
 		_systems(gs))

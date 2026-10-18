@@ -248,6 +248,13 @@
           "title": "Flags",
           "type": "array"
         },
+        "found": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Found",
+          "type": "array"
+        },
         "hooks": {
           "items": {
             "type": "string"
@@ -524,7 +531,8 @@
       "enum": [
         "enter",
         "resume",
-        "action"
+        "action",
+        "rest"
       ],
       "title": "Kind",
       "type": "string"

@@ -30,6 +30,7 @@ NPC здесь:
 {% else %}- никого
 {% endfor %}
 {% if scene.hooks %}Зацепки: {{ scene.hooks | join("; ") }}.
+{% endif %}{% if scene.found %}Игрок уже заметил или нашёл (это факты, их можно описывать): {{ scene.found | join("; ") }}.
 {% endif %}{% if scene.flags %}Уже произошло: {{ scene.flags | join(", ") }}.
 {% endif %}
 {% endif %}
