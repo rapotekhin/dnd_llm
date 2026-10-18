@@ -128,6 +128,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
             "history": history,
             "summaries": summaries,
             "limits": {k: v for k, v in snap.get("limits", {}).items() if k in ("max_checks", "max_effects")},
+            "trade": snap.get("trade"),  # already in the protocol shape (TradeInfo)
         },
     }
     return TurnRequestParams.model_validate(params)
@@ -154,7 +155,8 @@ class MockEngine:
             nat = c.get("nat") or (d20[0] if d20 else 0)
             return {"check_id": f"c-{self._n}", "rolls": d20 or [max(1, int(c.get("total", 10)) - int(c.get("bonus", 0)))],
                     "bonus": c.get("bonus", 0), "total": c.get("total", 10), "dc": c.get("dc", 15),
-                    "success": bool(c.get("success")), "nat": nat or 0, "blocked": bool(c.get("blocked"))}
+                    "success": bool(c.get("success")), "nat": nat or 0, "blocked": bool(c.get("blocked")),
+                    "note": c.get("note", "")}
         if method == "engine.validate":
             rule = self.engine.get("validate", "accept")
             kind = p["effect"]["kind"]

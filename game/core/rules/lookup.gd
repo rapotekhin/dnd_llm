@@ -45,11 +45,9 @@ static func find(s: GameSession, data: Dictionary, kind: String, id: String) -> 
 					"description": n.get("description", ""), "personality": n.get("personality", ""),
 					"attitude": s.attitude(id), "trader": bool(n.get("trader", false))}
 				if bool(n.get("trader", false)):
-					var stock: Array[Dictionary] = []
-					for item_id: Variant in n.get("stock", []):
-						var d := ItemRules.def_of(data["items"], s.items, str(item_id))
-						stock.append({"item_id": item_id, "name": d.get("name", item_id), "value_cp": int(d.get("value_cp", 0))})
-					out["stock"] = stock
+					var trade := TradeRules.info(s, data, id)
+					out["stock"] = trade["stock"]
+					out["purse_cp"] = trade["purse_cp"]
 				return _found(out)
 	return {"found": false, "data": {}}
 

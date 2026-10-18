@@ -9,8 +9,9 @@ extends RefCounted
 ##   and their character had no sheet to rebuild from (decision of v0.5.0).
 ## v4 (0.5.1): world pack id and version, master settings. A v3 game moves to the start of the default pack.
 ## v5 (0.5.2): check locks, found secrets, visited rooms, the day.
+## v6 (0.5.3): merchants — purses, stock left, haggling.
 
-const SAVE_VERSION := 5
+const SAVE_VERSION := 6
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -23,6 +24,7 @@ const ERR_TOO_OLD := "MSG_SAVE_TOO_OLD"
 static var MIGRATIONS: Dictionary[int, Callable] = {
 	3: _v3_to_v4,
 	4: _v4_to_v5,
+	5: _v5_to_v6,
 }
 
 
@@ -82,3 +84,8 @@ static func _v4_to_v5(data: Dictionary, _ctx: Dictionary) -> void:
 	s["revealed"] = {}
 	s["visited"] = [str(s.get("room_id", ""))]
 	s["day"] = 1
+
+
+## A 0.5.2 game traded only through the master: every merchant starts from the pack.
+static func _v5_to_v6(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["merchants"] = {}

@@ -67,9 +67,26 @@ def test_npc_prompts():
     trade = prompts.system_prompt("trade", s, npc)
     assert social.startswith("# Ты — Бруно Хмель")
     assert "target_id = \"" + INNKEEPER in social
-    assert "Сделка — только эффектами" in trade
+    assert "Покупка и оплата — всегда эффектами" in social
+    assert "Сделки — только через панель сделки" in trade and "Покупка и оплата" not in trade
     with pytest.raises(ValueError):
         prompts.system_prompt("social", s, None)
+
+
+def test_trade_prompt_lists_engine_prices_and_haggle_state():
+    raw = tavern_snapshot()
+    raw["trade"] = {"npc_id": INNKEEPER, "purse_cp": 3000, "haggle_pct": 10,
+                    "stock": [{"item_id": "ale", "name": "Кружка эля", "qty": 40, "price_cp": 4}],
+                    "buys": [{"item_id": "handaxe", "name": "Ручной топор", "qty": 2, "price_cp": 250}]}
+    s = Snapshot.model_validate(raw)
+    npc = next(n for n in s.scene.npcs if n.npc_id == INNKEEPER)
+    text = prompts.system_prompt("trade", s, npc)
+    assert "Кошелёк Бруно Хмель: 30 зм" in text
+    assert "Кружка эля — 4 мм, 40 шт." in text and "Ручной топор — 2 зм 5 см" in text
+    assert "скидкой 10%" in text
+    raw["trade"].update({"haggle_pct": 0, "haggle_locked": True, "stock": []})
+    text = prompts.system_prompt("trade", Snapshot.model_validate(raw), npc)
+    assert "до завтра ты не уступаешь" in text and "ничего не осталось" in text
 
 
 def test_prompt_without_character_or_scene_still_renders():
@@ -88,6 +105,10 @@ def test_turn_prompt_kinds():
     assert "вернулся в общую сцену" in prompts.turn_prompt("exploration", "resume", "", s, None)
     assert "Действие игрока: прыгаю" in prompts.turn_prompt("exploration", "action", "прыгаю", s, None)
     assert "Мастер: Таверна шумит." in prompts.turn_prompt("exploration", "action", "x", s, None)
+    npc = next(n for n in s.scene.npcs if n.npc_id == INNKEEPER)
+    deal = prompts.turn_prompt("trade", "deal", "Куплено: Кружка эля — 4 мм; итог: игрок платит торговцу 4 мм", s, npc)
+    assert "заключил сделку" in deal and "игрок платит торговцу 4 мм" in deal
+    assert "Движок уже бросил проверку: Торг удался" in prompts.turn_prompt("trade", "haggle", "Торг удался", s, npc)
 
 
 def test_coins_format():

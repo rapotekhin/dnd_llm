@@ -127,6 +127,8 @@ async def request_check(
         advantage_reason=advantage_reason))
     r = EngineCheckResult.model_validate(raw)
     t.check_ids.append(r.check_id)
+    if r.note:
+        return f"{'Повтор' if r.blocked else 'Проверка'}: {r.note} Отыграй это и ничего не меняй эффектами."
     if r.blocked:
         if r.success:
             return "Повтор той же проверки: итог прежний — успех."

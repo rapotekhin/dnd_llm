@@ -24,7 +24,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 	for id: String in world.npcs_in(s.room_id):
 		if s.summaries.has("dialogue:" + id):
 			summaries["dialogue:" + id] = s.summaries["dialogue:" + id]
-	return {
+	var out := {
 		"scene": {
 			"location_id": loc_id, "location_name": loc.get("name", loc_id), "location_description": loc.get("description", ""),
 			"room_id": s.room_id, "room_name": room.get("name", s.room_id), "room_description": room.get("description", ""),
@@ -38,6 +38,9 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		"limits": {"max_checks": int(data["rules"]["turn_limits"]["max_checks"]),
 			"max_effects": int(data["rules"]["turn_limits"]["max_effects"])},
 	}
+	if s.mode == GameSession.MODE_TRADE and not s.npc_id.is_empty():
+		out["trade"] = TradeRules.info(s, data, s.npc_id)
+	return out
 
 
 ## The world pack and the master settings of this game (ADR-0010 §1, §3).

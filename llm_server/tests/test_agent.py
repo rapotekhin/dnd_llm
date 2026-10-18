@@ -322,3 +322,15 @@ def test_rest_turn_describes_the_morning(data_dir):
     msg, _, _ = play(data_dir, fn, kind="rest", input="")
     assert msg["result"]["narration"] == "Утро в Броде."
     assert "провёл ночь здесь" in str(fn.state["prompts"][0][-1].parts[-1].content)
+
+
+def test_a_haggle_check_passes_the_engine_note(data_dir):
+    def engine(method, params):
+        if method == "engine.check":
+            return {**CHECK_OK, "note": "Торг удался (Убеждение 17 против DC 13): скидка 10%."}
+        return default_engine(method, params)
+    fn = scripted(("request_check", {"skill": "persuasion", "dc_tier": "medium", "reason": "торг", "target_id": "npc_innkeeper"}),
+                  ("final", {"narration": "Ладно, уступлю."}))
+    play(data_dir, fn, engine=engine)
+    text = last_tool_text(fn.state["prompts"][1])
+    assert "Торг удался" in text and "ничего не меняй эффектами" in text

@@ -4,7 +4,8 @@ extends RefCounted
 ## the result; the LLM only names the skill and a DC tier. Locks of failed checks — ExplorationRules.
 
 
-## `params` = engine.check params; `bonus` = the character's total bonus (0 until characters, v0.5.0).
+## `params` = engine.check params; `bonus` = the character's total bonus. An engine-set `dc` (haggling: DC by the
+## merchant's attitude, TradeRules) replaces the tier number; the master never sends one.
 ## Returns the engine.check result, or {"error": text} for bad params.
 static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictionary, bonus: int, check_id: String) -> Dictionary:
 	var tiers: Dictionary = rules["dc_tiers"]
@@ -25,7 +26,7 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 	if not str(params.get("advantage_reason", "")).is_empty():
 		rolls.append(rng.randi_range(1, 20))
 	var nat: int = rolls.max()
-	var dc := int(tiers[tier])
+	var dc := int(params["dc"]) if params.has("dc") else int(tiers[tier])
 	var total := nat + bonus
 	# House rule (ADR-0008 §2): natural 20 / 1 always succeed / fail, skill checks included.
 	var success := nat == 20 or (nat != 1 and total >= dc)

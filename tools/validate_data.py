@@ -78,6 +78,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             placed.add(n)
     for nid, npc in npcs.items():
         errors += [f"NPC {nid}: в каталоге нет предмета {x}" for x in npc.get("stock", []) if x not in items]
+        if npc.get("stock") and not npc.get("trader"):
+            errors.append(f"NPC {nid}: есть stock, но нет trader: true")
 
     seen: set[str] = set()
     for p in chars["presets"]:

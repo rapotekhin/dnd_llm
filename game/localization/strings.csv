@@ -5,6 +5,13 @@ ABILITY_DEX,Ловкость
 ABILITY_INT,Интеллект
 ABILITY_STR,Сила
 ABILITY_WIS,Мудрость
+ATTITUDE_0,нейтральное
+ATTITUDE_M1,настороженное
+ATTITUDE_M2,неприязненное
+ATTITUDE_M3,враждебное
+ATTITUDE_P1,приветливое
+ATTITUDE_P2,дружеское
+ATTITUDE_P3,тёплое
 BACKEND_CONNECTING,Подключаюсь к мастеру…
 BACKEND_OFFLINE,Мастер недоступен
 BACKEND_READY,Мастер на связи
@@ -16,14 +23,17 @@ BTN_BACK,Назад
 BTN_BACK_TO_WORLD,К выбору мира
 BTN_CANCEL_TURN,Отменить ход
 BTN_CHARACTER_SHEET,Лист персонажа
+BTN_CLEAR_CART,Очистить
 BTN_CLOSE,Закрыть
 BTN_CONNECTION_SETTINGS,Настройки связи
 BTN_CONTINUE,Продолжить
+BTN_DEAL,Заключить сделку
 BTN_EQUIP_ARMOR,Надеть
 BTN_EQUIP_MAIN_HAND,В основную руку
 BTN_EQUIP_OFF_HAND,Во вторую руку
 BTN_EQUIP_SHIELD,Взять щит
 BTN_EXIT_TO_MENU,Выйти в главное меню
+BTN_HAGGLE,Торговаться ({skill})
 BTN_JOURNAL,Журнал
 BTN_LEAVE_CONVERSATION,Закончить разговор
 BTN_LOAD,Загрузить
@@ -42,6 +52,8 @@ BTN_SEND,Действовать
 BTN_SETTINGS,Настройки
 BTN_TALK_TO,Поговорить: {name}
 BTN_TO_MENU,В меню
+BTN_TO_TALK,К разговору
+BTN_TO_TRADE,Торговать
 BTN_TRADE_WITH,Торговать: {name}
 BTN_UNEQUIP,Снять
 CC_BACKGROUND_SKILLS,Навыки: {skills}.
@@ -104,6 +116,8 @@ CC_TITLE,Создание персонажа
 CC_UNNAMED,Без имени
 CHECK_ADVANTAGE,Преимущество: {reason}
 CHECK_FOUND,Найдено: {what}
+CHECK_HAGGLE_LOST,Торг не удался — до завтра цены не сбить
+CHECK_HAGGLE_WON,"Торг: −{pct}% к покупкам, +{pct}% к продаже"
 CHECK_LINE,{what}: {roll} {bonus} = {total} против DC {dc} {mark}
 CHECK_REPEAT,Повтор без изменений — прежний итог
 COND_BLINDED,ослеплён
@@ -153,8 +167,6 @@ JOURNAL_TITLE,Журнал
 MAP_EXITS,Отсюда: {list}
 MAP_HERE,вы здесь
 MAP_TITLE,Карта
-MODE_SOCIAL,Разговор: {name}
-MODE_TRADE,Торговля: {name}
 MSG_BUDGET_EXCEEDED,Дневной лимит расходов мастера исчерпан. Ходы снова будут доступны завтра.
 MSG_CHECKING,Проверяю…
 MSG_CHECK_OK,Мастер на связи.
@@ -196,6 +208,7 @@ OPT_FULLSCREEN,Полный экран
 OPT_MODEL,Модель мастера (список и цены задаёт сервер; цена за миллион токенов: ввод / вывод)
 OPT_MODEL_DEFAULT,По умолчанию сервера ({model})
 OPT_RESOLUTION,Размер окна
+PARTNER_LINE,{role} · {race} · отношение: {attitude}
 PLACEHOLDER_ACTION,Что вы делаете?
 PLACEHOLDER_SAY,Что вы говорите или делаете? ({name} слушает)
 REST_BUSY,Сейчас нельзя отдыхать
@@ -268,6 +281,30 @@ TITLE_LOAD,Загрузка
 TITLE_PAUSE,Пауза
 TITLE_SAVE,Сохранение
 TITLE_SETTINGS,Настройки
+TRADE_CART,Сделка
+TRADE_CART_BUY,Купить: {item} — {coins}
+TRADE_CART_EMPTY,"Нажмите «+» у товара или своей вещи, чтобы положить её в сделку"
+TRADE_CART_SELL,Продать: {item} — {coins}
+TRADE_COINS,У вас: {coins}
+TRADE_ERR_BUSY,Сейчас нельзя: мастер думает или нет связи
+TRADE_ERR_EMPTY,Сделка пуста
+TRADE_ERR_MERCHANT_NO_MONEY,У торговца не хватит денег: у него {have}
+TRADE_ERR_NO_ITEM,У вас столько нет: {item} (надетое не продаётся)
+TRADE_ERR_NO_MONEY,Не хватает денег: нужно {need}
+TRADE_ERR_NO_STOCK,У торговца столько нет: {item}
+TRADE_ERR_WORTHLESS,Торговец не возьмёт: {item} ничего не стоит
+TRADE_EVEN,Обмен без доплаты
+TRADE_GET,Вы получаете: {coins}
+TRADE_HAGGLE_ACTIVE,"Сторговались: −{pct}% к покупкам, +{pct}% к продаже"
+TRADE_HAGGLE_DONE,Вы уже сторговались в этот визит
+TRADE_HAGGLE_LOCKED,Сегодня торговец уже не уступит — попробуйте завтра
+TRADE_NOTHING_TO_SELL,Продать нечего (надетое не продаётся)
+TRADE_PAY,Вы платите: {coins}
+TRADE_PRICE_EACH,{coins} за шт.
+TRADE_PURSE,У торговца: {coins}
+TRADE_SOLD_OUT,Товары закончились
+TRADE_STOCK,Товары торговца
+TRADE_YOURS,Ваши вещи — он купит за
 VIOLENCE_GRAPHIC,Жёстко
 VIOLENCE_MEDIUM,Умеренно
 VIOLENCE_MILD,Мягко

@@ -98,7 +98,8 @@ func _rebuild() -> void:
 				b.tooltip_text = "%s — %s" % [n.get("name", id), n.get("role", "")]
 				b.name = "Talk_" + id
 				if bool(n.get("trader", false)):
-					_button(tr("BTN_TRADE_WITH").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, true), can_act)
+					var t := _button(tr("BTN_TRADE_WITH").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, true), can_act)
+					t.name = "Trade_" + id
 		_subheading("SIDE_EXITS")
 		for e: String in world.exits(s.room_id):
 			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act)

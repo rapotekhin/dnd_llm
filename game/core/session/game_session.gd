@@ -51,6 +51,9 @@ var revealed: Dictionary = {}
 var visited: Array[String] = []
 ## Days since the start; a long rest starts the next one.
 var day: int = 1
+## npc_id → merchant state (TradeRules): purse_cp, stock {item_id: qty}, day of the last restock, haggle_pct of
+## the current visit, haggle_failed_day, haggle_result. Created from the pack on the first trade.
+var merchants: Dictionary = {}
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
 var summaries: Dictionary = {}
 ## Lines of the current conversation, the events for its summary.
@@ -213,6 +216,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"revealed": revealed,
 		"visited": visited,
 		"day": day,
+		"merchants": merchants,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -252,6 +256,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for v: Variant in d.get("visited", []):
 		s.visited.append(str(v))
 	s.day = int(d.get("day", 1))
+	for id: String in d.get("merchants", {}):
+		s.merchants[id] = _normalized_merchant(d["merchants"][id])
 	for line: Variant in d.get("dialogue_log", []):
 		s.dialogue_log.append(str(line))
 	for line: Variant in d.get("location_log", []):
@@ -259,11 +265,26 @@ static func from_dict(d: Dictionary) -> GameSession:
 	return s
 
 
+static func _normalized_merchant(m: Dictionary) -> Dictionary:
+	var out := m.duplicate(true)
+	for k: String in ["purse_cp", "day", "haggle_pct", "haggle_failed_day"]:
+		out[k] = int(out.get(k, 0))
+	var stock := {}
+	for id: String in out.get("stock", {}):
+		stock[id] = int(out["stock"][id])
+	out["stock"] = stock
+	if out.get("haggle_result") is Dictionary and not (out["haggle_result"] as Dictionary).is_empty():
+		_normalized(out["haggle_result"])
+	else:
+		out["haggle_result"] = {}
+	return out
+
+
 ## JSON brings every number back as float; check cards keep ints so a loaded session equals the saved one.
 static func _normalized(e: Dictionary) -> Dictionary:
 	if str(e.get("kind", KIND_CHECK)) != KIND_CHECK:
 		return e
-	for k: String in ["bonus", "total", "dc", "nat"]:
+	for k: String in ["bonus", "total", "dc", "nat", "haggle_pct"]:
 		if e.has(k):
 			e[k] = int(e[k])
 	if e.get("rolls") is Array:

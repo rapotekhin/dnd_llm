@@ -199,5 +199,55 @@
 				"heavy"
 			]
 		}
+	},
+	"trade": {
+		"_doc": "Trade (v0.5.3): buy = value × attitude % × (1 − haggle %), rounded up; sell = value × sell_ratio × attitude sell % × (1 + haggle %), rounded down. Haggle: Persuasion or Deception vs DC by attitude; the margin picks the tier; a failure locks haggling with this merchant until the next day.",
+		"sell_ratio": 0.5,
+		"default_stock_qty": 5,
+		"buy_pct_by_attitude": {
+			"-3": 150,
+			"-2": 125,
+			"-1": 110,
+			"0": 100,
+			"1": 95,
+			"2": 90,
+			"3": 85
+		},
+		"sell_pct_by_attitude": {
+			"-3": 70,
+			"-2": 80,
+			"-1": 90,
+			"0": 100,
+			"1": 100,
+			"2": 105,
+			"3": 110
+		},
+		"haggle_dc_by_attitude": {
+			"-3": 20,
+			"-2": 18,
+			"-1": 15,
+			"0": 13,
+			"1": 12,
+			"2": 10,
+			"3": 10
+		},
+		"haggle_tiers": [
+			[
+				0,
+				10
+			],
+			[
+				5,
+				15
+			],
+			[
+				10,
+				20
+			]
+		],
+		"haggle_skills": [
+			"persuasion",
+			"deception"
+		]
 	}
 }

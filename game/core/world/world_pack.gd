@@ -182,9 +182,16 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			e.append("NPC %s: нужны name и role" % id)
 		if not GENDERS.has(str(n.get("gender", ""))):
 			e.append("NPC %s: gender — одно из %s" % [id, ", ".join(GENDERS)])
-		for item: Variant in n.get("stock", []):
+		var stock: Variant = n.get("stock", [])
+		if not (stock is Array or stock is Dictionary):
+			e.append("NPC %s: stock — список id или {id: количество}" % id)
+			continue
+		for item: Variant in stock:
 			if not catalog.has(str(item)):
 				e.append("NPC %s: в каталоге нет предмета %s" % [id, item])
+		var has_stock: bool = (stock as Array).size() > 0 if stock is Array else (stock as Dictionary).size() > 0
+		if has_stock and not bool(n.get("trader", false)):
+			e.append("NPC %s: есть stock, но нет trader: true" % id)
 	return e
 
 

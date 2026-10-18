@@ -1,7 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Live playtest with the real model (python tools/godot_playtest.py --scenario live --real): enter the
-## tavern, act, talk to the innkeeper through the side panel, order an ale, leave the conversation, walk to
-## the kitchen. Hard checks are on the engine side (modes, rooms, protocol); what the master writes is dumped
+## tavern, act, talk to the innkeeper through the side panel, order an ale, leave the conversation, trade with
+## him (ask a price in words, buy through the deal panel, haggle in words), walk to the kitchen and search. Hard checks are on the engine side (modes, rooms, protocol); what the master writes is dumped
 ## into the report for a human (or agent) to judge.
 
 const INNKEEPER := "npc_innkeeper"
@@ -47,6 +47,8 @@ func run() -> void:
 		step("resume turn", await _turn_done(gs))
 		await shot("resume")
 
+	await _trade(gs)
+
 	var exit: Button = find(screen(), "Exit_" + KITCHEN)
 	if step("exit to the kitchen", exit != null):
 		await press(exit)
@@ -62,6 +64,31 @@ func run() -> void:
 	step("no failed turns", not gs.session.chat.any(func(e: Dictionary) -> bool: return e["kind"] == GameSession.KIND_SYSTEM),
 		_systems(gs))
 	_dump(gs)
+
+
+func _trade(gs: Node) -> void:
+	var trade: Button = find(screen(), "Trade_" + INNKEEPER)
+	if not step("trade button", trade != null and not trade.disabled):
+		return
+	await press(trade)
+	step("trade greeting", await _turn_done(gs) and gs.session.mode == GameSession.MODE_TRADE)
+	await shot("trade_greeting")
+	var gold: int = gs.session.character["gold_cp"]
+	await _say(gs, "Почём у тебя хлеб? Беру две краюхи")
+	step("words alone do not buy", gs.session.character["gold_cp"] == gold, "%d → %d" % [gold, gs.session.character["gold_cp"]])
+	await shot("trade_words")
+	var panel: Control = find(screen(), "TradePanel")
+	await press(find(panel, "Buy_bread"))
+	await press(find(panel, "Buy_bread"))
+	await press(find(panel, "DealButton"))
+	step("deal narration", await _turn_done(gs) and gs.session.character["gold_cp"] < gold)
+	await shot("trade_deal")
+	await _say(gs, "Слушай, я ведь у тебя каждый вечер. Сбавь цену на пайки, а?")
+	var m: Dictionary = gs.session.merchants[INNKEEPER]
+	step("info: haggle in words", true, "pct %d, failed day %d, result %s" % [m["haggle_pct"], m["haggle_failed_day"], m["haggle_result"]])
+	await shot("trade_haggle")
+	await press(find(screen(), "LeaveButton"))
+	step("left the merchant", gs.session.mode == GameSession.MODE_EXPLORATION and await _turn_done(gs))
 
 
 func _turn_done(gs: Node) -> bool:

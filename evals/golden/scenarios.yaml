@@ -292,6 +292,85 @@ scenarios:
     rubric:
       - "Реплика NPC в характере; сделка — на экране торговли, не в тексте"
 
+  - id: trade_words_no_effects
+    title: "Покупка словами в торговле — цена из списка, сделка в панели"
+    category: trade
+    extends: tavern
+    mode: trade
+    input: "Беру две краюхи хлеба, держи монеты."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", template: commoner, attitude: indifferent}
+      trade:
+        npc_id: npc_innkeeper
+        purse_cp: 3000
+        stock:
+          - {item_id: bread, name: "Краюха хлеба", qty: 20, price_cp: 2}
+          - {item_id: ale, name: "Кружка эля", qty: 40, price_cp: 4}
+        buys:
+          - {item_id: torch, name: "Факел", qty: 10, price_cp: 0}
+    expect:
+      check: {required: false}
+      effects: {forbidden_kinds: [coins, give_item, take_item]}
+      narration:
+        must_not_match: ["панел", "кнопк", "интерфейс"]
+    rubric:
+      - "Горм называет цену из списка движка (2 мм за краюху, 4 мм за две) и не придумывает других цен"
+      - "Не пишет, что хлеб уже отдан или монеты уже взяты: сделку проводит игрок"
+      - "Не упоминает панель, кнопки и интерфейс"
+
+  - id: trade_haggle_words
+    title: "Торг словами — проверка Убеждения или Обмана у торговца"
+    category: trade
+    extends: tavern
+    mode: trade
+    input: "Сбавь цену на эль, я ведь у тебя каждый вечер сижу."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", template: commoner, attitude: indifferent}
+      trade:
+        npc_id: npc_innkeeper
+        purse_cp: 3000
+        stock:
+          - {item_id: ale, name: "Кружка эля", qty: 40, price_cp: 4}
+    engine:
+      check: {d20: [16], bonus: 2, total: 18, dc: 13, success: true, nat: 16, blocked: false,
+              note: "Торг удался (Убеждение 18 против DC 13): до конца визита торговец уступает 15% на покупки и платит на 15% больше за вещи игрока. Цены уже пересчитаны движком."}
+    expect:
+      check: {required: true, skill_in: [persuasion, deception]}
+      effects: {forbidden_kinds: [coins, give_item, take_item]}
+    rubric:
+      - "Горм нехотя уступает в характере; скидку не называет больше той, что дал движок (15%)"
+      - "Ничего не продаёт и не берёт монеты в тексте"
+
+  - id: trade_deal_narration
+    title: "Итог сделки из панели — реакция торговца без новых эффектов"
+    category: trade
+    extends: tavern
+    mode: trade
+    kind: deal
+    input: "Куплено: Кружка эля ×2 — 8 мм; Продано: Ручной топор — 2 зм 5 см; итог: торговец доплачивает игроку 2 зм 4 см 2 мм"
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", template: commoner, attitude: indifferent}
+      trade:
+        npc_id: npc_innkeeper
+        purse_cp: 2758
+        stock:
+          - {item_id: ale, name: "Кружка эля", qty: 38, price_cp: 4}
+          - {item_id: handaxe, name: "Ручной топор", qty: 1, price_cp: 500}
+    expect:
+      check: {required: false}
+      effects: {max_count: 0}
+      narration:
+        must_not_match: ["панел", "кнопк"]
+    rubric:
+      - "Описывает именно эту сделку: две кружки эля и проданный топор, монеты отходят игроку"
+      - "Не называет других сумм и не предлагает новую сделку как уже состоявшуюся"
+
   - id: rules_question_ac
     title: "Вопрос о собственном классе доспеха"
     category: rules

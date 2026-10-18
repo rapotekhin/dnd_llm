@@ -61,6 +61,53 @@ func long_rest() -> String:
 	return ""
 
 
+## Trade panel (roadmap v0.5.3): the engine checks both purses and stocks and makes the deal at once, then the
+## master narrates it (kind=deal, the deal lines as input). Returns the quote; its `error` is "" on success.
+func deal(cart: Dictionary) -> Dictionary:
+	if session == null or is_busy() or not Backend.is_ready() or session.mode != GameSession.MODE_TRADE:
+		return {"error": "TRADE_ERR_BUSY", "args": {}}
+	var q := TradeRules.quote(session, Catalog.data, session.npc_id, cart)
+	if not str(q["error"]).is_empty():
+		return q
+	var lines := TradeRules.execute(session, Catalog.data, session.npc_id, cart)
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("Сделка: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("deal", TradeRules.deal_note(lines, int(q["net_cp"])))
+	return q
+
+
+## Haggle button: a Persuasion or Deception check (the better one) against the DC of the merchant's attitude;
+## the master plays the merchant's reaction (kind=haggle). "" on success or a localization key.
+func haggle() -> String:
+	if session == null or is_busy() or not Backend.is_ready() or session.mode != GameSession.MODE_TRADE:
+		return "TRADE_ERR_BUSY"
+	var why := TradeRules.can_haggle(session, Catalog.data, session.npc_id)
+	if not why.is_empty():
+		return why
+	var params := {"skill": TradeRules.best_skill(session, Catalog.data), "dc_tier": "medium", "target_id": session.npc_id}
+	var result := _haggle_check(params)
+	EventBus.state_changed.emit()
+	_request("haggle", str(result["note"]))
+	return ""
+
+
+## Switches a conversation with a trader between talk and the deal panel without a turn: the master's options
+## stay as they are (B33), the next turn's snapshot carries the new mode.
+func set_trade(on: bool) -> bool:
+	if session == null or is_busy() or not session.in_conversation():
+		return false
+	if on and not world().is_trader(session.npc_id):
+		return false
+	var mode := GameSession.MODE_TRADE if on else GameSession.MODE_SOCIAL
+	if session.mode == mode:
+		return false
+	session.mode = mode
+	EventBus.state_changed.emit()
+	return true
+
+
 ## Changes the master style of the running game (settings screen); kept in the save.
 func set_dm_style(style: String) -> void:
 	if session != null and WorldPack.DM_STYLES.has(style):
@@ -274,7 +321,11 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and world().npcs_in(s.room_id).has(npc_id):
 		if mode == GameSession.MODE_TRADE and not world().is_trader(npc_id):
 			mode = GameSession.MODE_SOCIAL
-		if s.mode == mode and s.npc_id == npc_id:
+		if s.in_conversation() and s.npc_id == npc_id:
+			# The same partner: the master already answered, no new greeting (B33). Leaving the deal panel is the
+			# player's button: talk goes on in trade mode too, so the master never closes the panel.
+			if mode == GameSession.MODE_TRADE:
+				s.mode = mode
 			return ""
 		_begin_conversation(npc_id, mode)
 		return "enter"
@@ -295,6 +346,7 @@ func _end_conversation() -> void:
 		return
 	var npc_id := session.npc_id
 	var events := session.dialogue_log.duplicate()
+	TradeRules.end_visit(session, npc_id)
 	session.mode = GameSession.MODE_EXPLORATION
 	session.npc_id = ""
 	session.dialogue_log.clear()
@@ -349,6 +401,9 @@ func _active(params: Dictionary) -> bool:
 func handle_engine_check(params: Dictionary) -> Dictionary:
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")
+	if TradeRules.is_haggle(session, Catalog.data, params):
+		return _haggle_check(params)
+	params.erase("dc")  # the DC number is the engine's
 	var room := session.room_id
 	var result: Dictionary
 	var lock := ExplorationRules.locked(session, params, room)
@@ -365,6 +420,30 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 		ExplorationRules.lock(session, params, room, result)
 		if bool(result["success"]) and params.get("skill") != null:
 			result["revealed"] = ExplorationRules.active_reveal(session, Catalog.data["world"], str(params["skill"]), int(result["total"]))
+	_add(GameSession.check_entry(params, result))
+	return result
+
+
+## A haggling check (the button or the master's request_check in trade mode): DC by attitude, the haggle percent or
+## the day lock (TradeRules). A repeat returns the old result without a roll. Adds the check card.
+func _haggle_check(params: Dictionary) -> Dictionary:
+	var npc_id := session.npc_id
+	var m := TradeRules.merchant(session, Catalog.data, npc_id)
+	var skill := str(params["skill"])
+	var result: Dictionary
+	var pct := 0
+	if not TradeRules.can_haggle(session, Catalog.data, npc_id).is_empty() and not (m["haggle_result"] as Dictionary).is_empty():
+		result = (m["haggle_result"] as Dictionary).duplicate()
+		result["check_id"] = session.next_check_id()
+		result["blocked"] = true
+	else:
+		var p := params.duplicate()
+		p["dc"] = TradeRules.haggle_dc(session, Catalog.data, npc_id)
+		p["dc_tier"] = "medium"
+		result = CheckEngine.roll(Catalog.rules(), session.rng, p, CheckEngine.bonus_for(session.character, p), session.next_check_id())
+		pct = TradeRules.apply_haggle(session, Catalog.data, npc_id, result)
+		result["haggle_pct"] = pct
+	result["note"] = TradeRules.haggle_note(tr("SKILL_" + skill.to_upper()), result, pct)
 	_add(GameSession.check_entry(params, result))
 	return result
 

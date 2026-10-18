@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.3.0"
+PROTOCOL_VERSION = "0.4.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -113,7 +113,8 @@ class StatusResult(_Out):
 # --- snapshot (ADR-0009 §4) ------------------------------------------------------
 
 Mode = Literal["exploration", "social", "trade"]
-TurnKind = Literal["enter", "resume", "action", "rest"]
+# deal / haggle (0.4.0): the engine already made the deal or rolled the haggle; `input` holds its fact lines.
+TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -218,6 +219,24 @@ class WorldInfo(_In):
     veils: list[str] = Field(default_factory=list)  # may happen, off screen
 
 
+class TradeLine(_In):
+    item_id: str
+    name: str
+    qty: int
+    price_cp: int  # per item, already with attitude and haggling
+
+
+class TradeInfo(_In):
+    """Trade mode (0.4.0): the merchant's state as the engine keeps it. Deals go through the player's deal panel."""
+
+    npc_id: str
+    purse_cp: int = 0
+    haggle_pct: int = 0  # won for this visit: −pct on buying, +pct on selling
+    haggle_locked: bool = False  # a haggle failed today
+    stock: list[TradeLine] = Field(default_factory=list)  # what the merchant sells
+    buys: list[TradeLine] = Field(default_factory=list)  # the player's things and what the merchant pays
+
+
 class Snapshot(_In):
     world: WorldInfo | None = None
     scene: Scene | None = None
@@ -225,6 +244,7 @@ class Snapshot(_In):
     history: list[HistoryLine] = Field(default_factory=list)
     summaries: dict[str, str] = Field(default_factory=dict)  # "location", "dialogue:<npc_id>"
     limits: TurnLimits = Field(default_factory=TurnLimits)
+    trade: TradeInfo | None = None  # only in trade mode (0.4.0)
 
 
 # --- turn.* -----------------------------------------------------------------
@@ -394,6 +414,7 @@ class EngineCheckResult(_In):
     nat: int
     blocked: bool = False
     revealed: list[str] = Field(default_factory=list)  # hidden things this successful search found (0.3.0)
+    note: str = ""  # engine facts for the master, e.g. the outcome of a haggle (0.4.0)
 
 
 class EngineValidateParams(_Out):

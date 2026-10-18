@@ -404,6 +404,17 @@
           "title": "Summaries",
           "type": "object"
         },
+        "trade": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TradeInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "world": {
           "anyOf": [
             {
@@ -440,6 +451,77 @@
         "max"
       ],
       "title": "SpellSlots",
+      "type": "object"
+    },
+    "TradeInfo": {
+      "description": "Trade mode (0.4.0): the merchant's state as the engine keeps it. Deals go through the player's deal panel.",
+      "properties": {
+        "buys": {
+          "items": {
+            "$ref": "#/$defs/TradeLine"
+          },
+          "title": "Buys",
+          "type": "array"
+        },
+        "haggle_locked": {
+          "default": false,
+          "title": "Haggle Locked",
+          "type": "boolean"
+        },
+        "haggle_pct": {
+          "default": 0,
+          "title": "Haggle Pct",
+          "type": "integer"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "purse_cp": {
+          "default": 0,
+          "title": "Purse Cp",
+          "type": "integer"
+        },
+        "stock": {
+          "items": {
+            "$ref": "#/$defs/TradeLine"
+          },
+          "title": "Stock",
+          "type": "array"
+        }
+      },
+      "required": [
+        "npc_id"
+      ],
+      "title": "TradeInfo",
+      "type": "object"
+    },
+    "TradeLine": {
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "price_cp": {
+          "title": "Price Cp",
+          "type": "integer"
+        },
+        "qty": {
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "item_id",
+        "name",
+        "qty",
+        "price_cp"
+      ],
+      "title": "TradeLine",
       "type": "object"
     },
     "TurnLimits": {
@@ -532,7 +614,9 @@
         "enter",
         "resume",
         "action",
-        "rest"
+        "rest",
+        "deal",
+        "haggle"
       ],
       "title": "Kind",
       "type": "string"

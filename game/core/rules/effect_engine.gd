@@ -72,6 +72,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 	var world := WorldView.new(data["world"])
 	var c := s.character
 	var level := int(c.get("level", 1))
+	if s.mode == GameSession.MODE_TRADE and str(e.get("kind", "")) in ["coins", "give_item", "take_item"]:
+		return {"reason": "в торговле сделки проводит панель сделки: назови цену и предложи игроку положить товар в сделку"}
 	match str(e.get("kind", "")):
 		"move":
 			var to := str(e.get("room_id", ""))

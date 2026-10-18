@@ -497,12 +497,13 @@
 			"description": "Грузный седеющий мужчина с перебитым носом и фартуком в пятнах эля.",
 			"personality": "добродушный, но осторожный; знает все слухи и делится ими за монету; терпеть не может драк",
 			"trader": true,
-			"stock": [
-				"ale",
-				"bread",
-				"rations",
-				"candle"
-			]
+			"stock": {
+				"ale": 40,
+				"bread": 20,
+				"rations": 10,
+				"candle": 20
+			},
+			"purse_cp": 3000
 		},
 		"npc_serving": {
 			"name": "Мира",
@@ -544,17 +545,18 @@
 			"description": "Худой торговец с кривой усмешкой и лотком, заваленным всем подряд.",
 			"personality": "торгуется до последнего медяка, но держит слово; возит товар из-за реки",
 			"trader": true,
-			"stock": [
-				"torch",
-				"rope",
-				"rations",
-				"waterskin",
-				"bedroll",
-				"tinderbox",
-				"backpack",
-				"lantern",
-				"crowbar"
-			]
+			"stock": {
+				"torch": 10,
+				"rope": 3,
+				"rations": 10,
+				"waterskin": 4,
+				"bedroll": 3,
+				"tinderbox": 4,
+				"backpack": 2,
+				"lantern": 2,
+				"crowbar": 2
+			},
+			"purse_cp": 15000
 		},
 		"npc_smith": {
 			"name": "Гуннар Тяжёлая Рука",
@@ -564,18 +566,19 @@
 			"description": "Широкоплечий дварф с опалённой бородой, бывший оружейник заставы.",
 			"personality": "суровый, уважает силу и хорошую сталь; не любит говорить о войне",
 			"trader": true,
-			"stock": [
-				"dagger",
-				"shortsword",
-				"longsword",
-				"handaxe",
-				"spear",
-				"shield",
-				"leather_armor",
-				"chain_shirt",
-				"arrows",
-				"crossbow_bolt"
-			]
+			"stock": {
+				"dagger": 4,
+				"shortsword": 2,
+				"longsword": 1,
+				"handaxe": 3,
+				"spear": 3,
+				"shield": 2,
+				"leather_armor": 2,
+				"chain_shirt": 1,
+				"arrows": 60,
+				"crossbow_bolt": 40
+			},
+			"purse_cp": 25000
 		},
 		"npc_herbalist": {
 			"name": "Ведана",
@@ -585,11 +588,12 @@
 			"description": "Маленькая гномка в очках с толстыми стёклами, пальцы зелёные от трав.",
 			"personality": "рассеянная, увлечённая, честна в ценах; что-то знает о лощине, но боится говорить",
 			"trader": true,
-			"stock": [
-				"healing_potion",
-				"antitoxin",
-				"healers_kit"
-			]
+			"stock": {
+				"healing_potion": 3,
+				"antitoxin": 2,
+				"healers_kit": 2
+			},
+			"purse_cp": 12000
 		},
 		"npc_priestess": {
 			"name": "Сестра Илва",
@@ -599,10 +603,11 @@
 			"description": "Высокая женщина в сером, со шрамом от ожога на щеке.",
 			"personality": "спокойная и твёрдая; лечит всех, но не терпит лжи; ведёт список пропавших",
 			"trader": true,
-			"stock": [
-				"holy_water",
-				"candle"
-			]
+			"stock": {
+				"holy_water": 2,
+				"candle": 30
+			},
+			"purse_cp": 4000
 		},
 		"npc_captain": {
 			"name": "Капитан Ратмир",

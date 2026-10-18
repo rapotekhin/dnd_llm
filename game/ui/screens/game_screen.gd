@@ -1,7 +1,9 @@
 class_name GameScreen
 extends Control
 ## The game: chat on the left (narration, NPC lines, checks, effects, options, input), side panel on the right.
-## In social / trade mode a bar above the chat names the partner and offers to end the conversation.
+## In social / trade mode a bar above the chat shows the partner card (name, role, race, attitude — no portraits),
+## switches a trader between talk and the deal panel, and ends the conversation. In trade mode the deal panel
+## stands next to the chat.
 ## Input is locked while the master thinks or the connection is down; Esc opens the pause menu.
 
 var chat: ChatView
@@ -17,7 +19,10 @@ var _map: WorldNotes
 var _journal: WorldNotes
 var _mode_bar: HBoxContainer
 var _mode_label: Label
+var _partner_line: Label
+var trade_toggle: Button
 var leave_button: Button
+var trade_panel: TradePanel
 
 
 func _ready() -> void:
@@ -43,19 +48,41 @@ func _ready() -> void:
 	_mode_bar = HBoxContainer.new()
 	_mode_bar.add_theme_constant_override("separation", 16)
 	left.add_child(_mode_bar)
+	var card := VBoxContainer.new()
+	card.name = "PartnerCard"
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_theme_constant_override("separation", 2)
+	_mode_bar.add_child(card)
 	_mode_label = Label.new()
 	_mode_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_mode_label.theme_type_variation = UiTheme.HEADING
-	_mode_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_mode_bar.add_child(_mode_label)
+	card.add_child(_mode_label)
+	_partner_line = Label.new()
+	_partner_line.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_partner_line.theme_type_variation = UiTheme.MUTED_LABEL
+	card.add_child(_partner_line)
+	trade_toggle = Button.new()
+	trade_toggle.name = "TradeToggle"
+	trade_toggle.pressed.connect(func() -> void: GameState.set_trade(GameState.session.mode != GameSession.MODE_TRADE))
+	_mode_bar.add_child(trade_toggle)
 	leave_button = Button.new()
 	leave_button.name = "LeaveButton"
 	leave_button.text = "BTN_LEAVE_CONVERSATION"
 	leave_button.pressed.connect(GameState.leave_conversation)
 	_mode_bar.add_child(leave_button)
+	var body := HBoxContainer.new()
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 20)
+	left.add_child(body)
 	chat = ChatView.new()
-	chat.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	left.add_child(chat)
+	chat.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_child(chat)
+	trade_panel = TradePanel.new()
+	trade_panel.name = "TradePanel"
+	trade_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	trade_panel.size_flags_stretch_ratio = 1.2
+	trade_panel.visible = false
+	body.add_child(trade_panel)
 
 	var status_row := HBoxContainer.new()
 	status_row.add_theme_constant_override("separation", 16)
@@ -177,9 +204,17 @@ func _refresh() -> void:
 	send_button.disabled = not online or busy
 	var s := GameState.session if GameState.has_session() else null
 	_mode_bar.visible = s != null and s.in_conversation()
+	trade_panel.visible = s != null and s.mode == GameSession.MODE_TRADE
 	if _mode_bar.visible:
-		var npc_name := str(GameState.world().npc(s.npc_id).get("name", s.npc_id))
-		_mode_label.text = tr("MODE_TRADE" if s.mode == GameSession.MODE_TRADE else "MODE_SOCIAL").format({"name": npc_name})
+		var npc := GameState.world().npc(s.npc_id)
+		var npc_name := str(npc.get("name", s.npc_id))
+		_mode_label.text = npc_name
+		var att := clampi(s.attitude(s.npc_id), -3, 3)
+		_partner_line.text = tr("PARTNER_LINE").format({"role": npc.get("role", ""), "race": npc.get("race", ""),
+			"attitude": tr("ATTITUDE_" + ("M%d" % -att if att < 0 else "P%d" % att if att > 0 else "0"))})
+		trade_toggle.visible = GameState.world().is_trader(s.npc_id)
+		trade_toggle.text = tr("BTN_TO_TALK" if s.mode == GameSession.MODE_TRADE else "BTN_TO_TRADE")
+		trade_toggle.disabled = busy
 		leave_button.disabled = busy or not online
 		input.placeholder_text = tr("PLACEHOLDER_SAY").format({"name": npc_name.get_slice(" ", 0)})
 	else:

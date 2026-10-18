@@ -1,6 +1,7 @@
 class_name CheckCard
 extends PanelContainer
-## Roll card after an engine check (ADR-0008 §2): «Внимательность: 12 + 3 = 15 против DC 15 ✓».
+## Roll card after an engine check (ADR-0008 §2): «Внимательность: 12 + 3 = 15 против DC 15 ✓», with what it
+## found, the repeat mark and the haggle outcome.
 
 var entry: Dictionary
 
@@ -24,6 +25,13 @@ func _ready() -> void:
 		rep.text = "CHECK_REPEAT"
 		rep.theme_type_variation = UiTheme.MUTED_LABEL
 		col.add_child(rep)
+	if entry.has("haggle_pct"):
+		var h := Label.new()
+		h.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		var pct := int(entry["haggle_pct"])
+		h.text = tr("CHECK_HAGGLE_WON").format({"pct": pct}) if pct > 0 else tr("CHECK_HAGGLE_LOST")
+		h.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT if pct > 0 else UiTheme.MUTED)
+		col.add_child(h)
 	for found: Variant in entry.get("revealed", []):
 		var f := Label.new()
 		f.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED

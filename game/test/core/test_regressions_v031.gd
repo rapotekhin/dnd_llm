@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## Bugs B1–B19 of the pygame prototype (legacy/tests/test_regressions_v031.py, review-2026-10 §1) that apply
 ## to the Godot client today. The rest move with their systems in v0.5.x:
 ## B2 (screen state on resize) — gone by design: views rebuild from GameState; B5–B7 (XP, HP per level, spell
-## slots) — level-up; B13 (sell for half) and B16 (equip during trade) — trade screen; B15 (dice expressions)
+## slots) — level-up; B13 (sell for half) and B16 (equip during trade) — test_trade_rules.gd; B15 (dice expressions)
 ## — the engine rolls by table, the model never sends dice; B3 (combat dead end) — combat mode (M3).
 
 var _saved_save_dir: String

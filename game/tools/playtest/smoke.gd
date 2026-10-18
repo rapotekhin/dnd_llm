@@ -1,6 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Smoke playtest: menu → new game (creation: random character) → enter turn → action with engine.check →
-## option → character sheet (tabs, unequip / equip) → save to slot 1 → exit to menu → continue → the chat is
+## option → character sheet (tabs, unequip / equip) → trade with the innkeeper (deal panel, buy, haggle, switch
+## to talk and back without a turn, leave) → map, journal, long rest → save to slot 1 → exit to menu → continue → the chat is
 ## restored. Needs a running llm_server (stub turn is enough).
 
 
@@ -55,6 +56,7 @@ func run() -> void:
 			await shot("game_option")
 
 	await _sheet(gs, game)
+	await _trade(gs, game)
 	await _map_journal_rest(gs, game)
 
 	await key(KEY_ESCAPE)
@@ -101,6 +103,50 @@ func _sheet(gs: Node, game: Control) -> void:
 			step("weapon back in hand", str(gs.session.character["equipped"]["main_hand"]) == weapon)
 	await key(KEY_ESCAPE)
 	step("Esc closes the sheet", not sheet.visible and not find_all(game, "PauseMenu")[0].visible)
+
+
+func _trade(gs: Node, game: Control) -> void:
+	var npc := "npc_innkeeper"
+	var trade: Button = find(game, "Trade_" + npc)
+	if not step("trade button for the innkeeper", trade != null and not trade.disabled):
+		return
+	await press(trade)
+	step("trade greeting turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
+	var panel: Control = find(game, "TradePanel")
+	step("deal panel in trade mode", gs.session.mode == GameSession.MODE_TRADE and panel.visible)
+	step("partner card", find(game, "PartnerCard").visible)
+	await shot("trade_open")
+	var gold: int = gs.session.character["gold_cp"]
+	var had: int = gs.session.character["inventory"].get("ale", 0)
+	await press(find(panel, "Buy_ale"))
+	await press(find(panel, "Buy_ale"))
+	var total: Label = find(panel, "TradeTotal")
+	step("cart total", total.text.contains("8 мм"), total.text)
+	await shot("trade_cart")
+	await press(find(panel, "DealButton"))
+	step("deal turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
+	var m: Dictionary = gs.session.merchants[npc]
+	step("deal made by the engine", gs.session.character["gold_cp"] == gold - 8 and gs.session.character["inventory"].get("ale", 0) == had + 2
+		and int(m["stock"]["ale"]) == 38, "%d → %d cp, stock %d" % [gold, gs.session.character["gold_cp"], m["stock"]["ale"]])
+	await shot("trade_deal")
+	var haggle: Button = find(panel, "HaggleButton")
+	if step("haggle button", haggle != null and not haggle.disabled, haggle.text if haggle else ""):
+		var checks := _count(gs, GameSession.KIND_CHECK)
+		await press(haggle)
+		step("haggle turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
+		step("haggle check card", _count(gs, GameSession.KIND_CHECK) == checks + 1 and haggle.disabled,
+			"haggle %d%%, failed day %d" % [m["haggle_pct"], m["haggle_failed_day"]])
+		await shot("trade_haggle")
+	var turns: int = gs.session.turn_counter
+	var options: Array = gs.session.options.duplicate()
+	await press(find(game, "TradeToggle"))
+	step("to talk without a turn (B33)", gs.session.mode == GameSession.MODE_SOCIAL and not panel.visible
+		and gs.session.turn_counter == turns and gs.session.options == options)
+	await press(find(game, "TradeToggle"))
+	step("back to the deal panel", gs.session.mode == GameSession.MODE_TRADE and panel.visible and gs.session.turn_counter == turns)
+	await press(find(game, "LeaveButton"))
+	step("left the merchant", gs.session.mode == GameSession.MODE_EXPLORATION and await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
+	step("haggle ends with the visit", int(m["haggle_pct"]) == 0)
 
 
 func _map_journal_rest(gs: Node, game: Control) -> void:

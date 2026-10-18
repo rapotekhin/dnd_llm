@@ -21,6 +21,11 @@
       "title": "Nat",
       "type": "integer"
     },
+    "note": {
+      "default": "",
+      "title": "Note",
+      "type": "string"
+    },
     "revealed": {
       "items": {
         "type": "string"

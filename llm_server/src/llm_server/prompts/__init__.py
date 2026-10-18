@@ -72,7 +72,7 @@ _env = Environment(
     lstrip_blocks=True,
     keep_trailing_newline=False,
 )
-_env.globals.update(attitude_word=attitude_word, summary_title=summary_title, ability_name=ability_name,
+_env.globals.update(attitude_word=attitude_word, money=coins, summary_title=summary_title, ability_name=ability_name,
                     style_rule=lambda s: STYLE_RULES.get(s, STYLE_RULES["classic"]),
                     violence_rule=lambda v: VIOLENCE_RULES.get(v, VIOLENCE_RULES["medium"]), role_name=lambda r: _ROLES.get(r, r))
 
@@ -92,6 +92,8 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
     if snap.world is not None and snap.world.tone:
         tone = snap.world.tone
     context: dict[str, object] = {
+        "mode": mode,
+        "trade": snap.trade,
         "world": snap.world,
         "character": character,
         "coins": coins(character.gold_cp) if character else "",

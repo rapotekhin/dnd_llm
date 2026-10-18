@@ -34,7 +34,7 @@ def test_broken_packs_are_reported(tmp_path):
             doc["rules"]["races"] = ["human", "ent"]
         elif name == "world":
             doc["rooms"]["brod-square"]["exits"].append("nowhere")
-            doc["npcs"]["npc_smith"]["stock"].append("lightsaber")
+            doc["npcs"]["npc_smith"]["stock"]["lightsaber"] = 1
             doc["rooms"]["brod-gate"]["secrets"].append(dict(doc["rooms"]["brod-gate"]["secrets"][0]))
         else:
             doc["presets"][1]["choices"]["class"] = "jedi"

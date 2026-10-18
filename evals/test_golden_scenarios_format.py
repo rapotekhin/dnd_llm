@@ -16,7 +16,8 @@ yaml = pytest.importorskip("yaml")
 SCENARIOS_FILE = Path(__file__).resolve().parent / "golden" / "scenarios.yaml"
 
 MODES = {"exploration", "social", "trade", "combat"}
-KINDS = {"enter", "resume", "action"}
+KINDS = {"enter", "resume", "action", "rest", "deal", "haggle"}
+NO_INPUT_KINDS = {"enter", "resume", "rest"}  # deal / haggle carry the engine facts in input
 DC_TIERS = {"very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"}
 EFFECT_KINDS = {"give_item", "take_item", "coins", "damage", "heal", "condition",
                 "quest_update", "flag", "xp", "npc_attitude", "advance_time", "move"}
@@ -59,7 +60,7 @@ def test_scenarios_are_well_formed(data: dict) -> None:
         assert s["title"] and s["category"], sid
         assert s["mode"] in MODES, sid
         assert s["kind"] in KINDS, sid
-        assert (s["input"] is None) == (s["kind"] != "action"), f"{sid}: input only for kind=action"
+        assert (s["input"] is None) == (s["kind"] in NO_INPUT_KINDS), f"{sid}: input for action, deal, haggle only"
         assert raw.get("expect") or raw.get("rubric"), f"{sid}: nothing to evaluate"
 
         expect = raw.get("expect", {})
