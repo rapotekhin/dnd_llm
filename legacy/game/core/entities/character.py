@@ -15,6 +15,12 @@ if TYPE_CHECKING:
 
 class Character(BaseEntity, CoreCharacter):
     """Game character with simplified creation"""
+
+    @property
+    def armor_class(self) -> int:
+        """AC by 5e rules (armor + DEX, shield); replaces dnd_5e_core's DEX-less version."""
+        from core.utils.armor_class import compute_armor_class
+        return compute_armor_class(self)
     role: str | None = None
 
     # Additional fields for game-specific features

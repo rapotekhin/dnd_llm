@@ -114,13 +114,14 @@ def _build_greeting_agent(
     api_manager: APIManager,
     game_state: MainGameState,
     npc_id: str,
+    recent_events: str = "",
 ) -> Agent[MainGameState, NpcGreeting]:
     model = api_manager.get_pydantic_ai_model()
     return Agent(
         model,
         deps_type=MainGameState,
         output_type=NpcGreeting,
-        instructions=get_npc_system_prompt(game_state, npc_id),
+        instructions=get_npc_system_prompt(game_state, npc_id, recent_events),
     )
 
 
@@ -128,13 +129,14 @@ def _build_options_agent(
     api_manager: APIManager,
     game_state: MainGameState,
     npc_id: str,
+    recent_events: str = "",
 ) -> Agent[MainGameState, ResponseOptionList]:
     model = api_manager.get_pydantic_ai_model()
     return Agent(
         model,
         deps_type=MainGameState,
         output_type=ResponseOptionList,
-        instructions=get_npc_system_prompt(game_state, npc_id),
+        instructions=get_npc_system_prompt(game_state, npc_id, recent_events),
     )
 
 
@@ -142,6 +144,7 @@ def _build_resolution_agent(
     api_manager: APIManager,
     game_state: MainGameState,
     npc_id: str,
+    recent_events: str = "",
 ) -> Agent[MainGameState, SocialResolutionOutput]:
     npc = game_state.npcs.get(npc_id) if game_state.npcs else None
     npc_name = getattr(npc, "name", "НПС") if npc else "НПС"
@@ -152,7 +155,7 @@ def _build_resolution_agent(
         deps_type=MainGameState,
         output_type=SocialResolutionOutput,
         instructions=(
-            get_npc_system_prompt(game_state, npc_id)
+            get_npc_system_prompt(game_state, npc_id, recent_events)
             + "\n\n"
             + get_social_resolution_instructions(npc_name, npc_id)
         ),
@@ -281,9 +284,11 @@ def run_social(
     ui_queue: queue.Queue,
     input_queue: queue.Queue,
     stop_event: threading.Event,
+    recent_events: str = "",
 ) -> None:
     """
     Main social loop. Runs in a background thread.
+    ``recent_events`` — what happened in exploration right before the dialogue.
 
     Sends structured messages to ui_queue and reads player input from input_queue.
     Pauses on 'trade' transitions (waits for resume), exits on others.
@@ -299,7 +304,8 @@ def run_social(
     try:
         with span_ctx:
             try:
-                _social_loop(api_manager, game_state, npc_id, ui_queue, input_queue, stop_event)
+                _social_loop(api_manager, game_state, npc_id, ui_queue, input_queue, stop_event,
+                             recent_events)
             except Exception as e:
                 log.exception("social loop crashed")
                 ui_queue.put({"type": "error", "text": f"[Ошибка движка: {e}]"})
@@ -320,6 +326,7 @@ def _social_loop(
     ui_queue: queue.Queue,
     input_queue: queue.Queue,
     stop_event: threading.Event,
+    recent_events: str = "",
 ) -> None:
     npc      = game_state.npcs.get(npc_id) if game_state.npcs else None
     npc_name = getattr(npc, "name", "НПС") if npc else "НПС"
@@ -339,7 +346,7 @@ def _social_loop(
     log.debug("greeting: building agent")
     try:
         user_prompt = prompt_initial_greeting(npc_name)
-        greeting_agent = _build_greeting_agent(api_manager, game_state, npc_id)
+        greeting_agent = _build_greeting_agent(api_manager, game_state, npc_id, recent_events)
         log.debug("greeting: model=%r", greeting_agent.model)
     except Exception:
         log.exception("greeting agent build failed")
@@ -368,8 +375,8 @@ def _social_loop(
 
     # Build remaining agents only after greeting succeeded
     log.debug("building options + resolution agents")
-    options_agent    = _build_options_agent(api_manager, game_state, npc_id)
-    resolution_agent = _build_resolution_agent(api_manager, game_state, npc_id)
+    options_agent    = _build_options_agent(api_manager, game_state, npc_id, recent_events)
+    resolution_agent = _build_resolution_agent(api_manager, game_state, npc_id, recent_events)
     log.debug("social agents ready")
 
     # ── Main dialogue loop ────────────────────────────────────────────────────
@@ -489,8 +496,8 @@ def _social_loop(
                 _emit_leave_transition(api_manager, game_state, npc_id, state["history"], ui_queue)
                 return
             # Rebuild agents in case inventory changed after trade
-            options_agent    = _build_options_agent(api_manager, game_state, npc_id)
-            resolution_agent = _build_resolution_agent(api_manager, game_state, npc_id)
+            options_agent    = _build_options_agent(api_manager, game_state, npc_id, recent_events)
+            resolution_agent = _build_resolution_agent(api_manager, game_state, npc_id, recent_events)
             ui_queue.put({"type": "resume"})
             continue  # continue dialogue after trade
 

@@ -19,7 +19,7 @@ Decisions to follow in new code: [ADR-0007](docs/tech/adr/0007-godot-client-pyth
 
 ## Documentation
 
-Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes.
+Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes; **`playtest`** to test the game live (see «Testing»).
 
 ## Commands
 
@@ -34,11 +34,22 @@ python legacy/game/main.py                     # run the pygame prototype
 pip install -r legacy/requirements-dev.txt     # pytest + deps for the legacy tests and evals format check
 python -m pytest                               # legacy tests + evals format (needs legacy/game/dnd_5e_data on disk)
 python -m pytest --cov=legacy/game/core --cov-report=term-missing  # optional coverage (requires pytest-cov)
+python legacy/scripts/playtest/smoke.py         # live playtest: real game + real LLM, screenshots in legacy/scripts/playtest/out/
 ```
 
 `legacy/game/main.py` adds `legacy/game/`, `dnd-5e-core/` and `DnD-5th-Edition-API/` (repository root) to `sys.path`. Inside `legacy/game/`, imports are relative: `from core.game import Game`. `.env` stays at the repository root.
 
 Pytest configuration: `pytest.ini` (`testpaths = legacy/tests evals`). There is no linter wired up.
+
+## Testing
+
+Green `pytest` is **necessary but not enough**: the trade screen crash (B22) lived with all tests green. Before calling a gameplay/UI/prompt change done or opening a PR that touches `legacy/game/**`, run a **live playtest** following the **`playtest`** skill ([.claude/skills/playtest/SKILL.md](.claude/skills/playtest/SKILL.md)):
+
+1. `python -m pytest` — green.
+2. `python legacy/scripts/playtest/smoke.py` — the real game on a dummy display, scripted player input, the real OpenRouter model.
+3. Read `legacy/scripts/playtest/out/report.txt` and look at the screenshots; fix crashes with a regression test, record other findings in [review §1](docs/production/review-2026-10.md) and the [roadmap](docs/production/roadmap.md).
+
+Never print or log keys from `.env`.
 
 **Version:** the project version lives in the root `VERSION` file. CI requires every PR to bump it and to update `RELEASE_NOTES.md`.
 
@@ -69,6 +80,7 @@ legacy/
     _fakes.py                        FakeAgent / queue helpers for threaded loop tests
     test_regressions_v031.py         regressions for bugs B1–B19 (spec for the Godot port)
   scripts/                           localization check, SRD data update, Langfuse test
+    playtest/                        live playtest driver + scenarios (see the `playtest` skill)
   notebooks/                         scratch notebooks
 ```
 

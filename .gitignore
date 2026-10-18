@@ -23,3 +23,6 @@ __pycache__
 
 # Python backend (llm_server/)
 /llm_server/.venv/
+
+# Live playtest output (screenshots, reports)
+/legacy/scripts/playtest/out/

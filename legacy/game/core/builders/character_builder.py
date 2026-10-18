@@ -10,6 +10,10 @@ from core.database.json_database import JsonDatabase
 import random
 
 
+# Pocket money from the background when the class kit is taken (most PHB backgrounds: 10–15 gp).
+STARTING_COINS_WITH_KIT_CP = 1000
+
+
 def _dev_start_xp() -> int:
     """Starting XP: 0, or the DND_DEV_START_XP env override (dev only)."""
     try:
@@ -468,9 +472,12 @@ class CharacterBuild:
                     except Exception as e:
                         print(f"Error loading prepared spell {prepared_spell_index}: {e}")
         
-        # Generate starting equipment
+        # Generate starting equipment. PHB: the class kit replaces starting gold;
+        # only the background's pocket money remains.
         if self.class_data:
             self._add_starting_equipment(char, db)
+            self._equip_starting_gear(char)
+            char.coins = STARTING_COINS_WITH_KIT_CP
         
         # Set background
         char.background = self.background
@@ -494,6 +501,28 @@ class CharacterBuild:
         
         return char
     
+    @staticmethod
+    def _equip_starting_gear(char: Player) -> None:
+        """Wear the best body armor, take a shield in the left hand and a weapon in the right."""
+        from core.entities.equipment import GameEquipment
+        from core.utils.armor_class import armor_ac, is_body_armor, is_shield
+
+        gear = [it for it in char.inventory if isinstance(it, GameEquipment)]
+        dex = char.abilities.get_modifier("dex")
+        armors = [it for it in gear if is_body_armor(it)]
+        if armors:
+            best = max(armors, key=lambda it: armor_ac(it, dex))
+            best.equipped = True
+            best.equipped_slot = "body"
+        shield = next((it for it in gear if is_shield(it)), None)
+        if shield:
+            shield.equipped = True
+            shield.equipped_left_hand = True
+        weapon = next((it for it in gear if it.category and it.category.index == "weapon"), None)
+        if weapon:
+            weapon.equipped = True
+            weapon.equipped_right_hand = True
+
     def _create_spell_from_json(self, spell_data: Dict[str, Any], db: JsonDatabase) -> Optional[Any]:
         """Create Spell object from JSON data"""
         try:
@@ -617,11 +646,15 @@ class CharacterBuild:
             weight = equipment_data.get("weight", 0)
             
             armor_class_base = None
+            armor_dex_bonus = False
+            armor_max_dex = None
             damage_dice_str = None
             if category_index == "armor":
                 ac_data = equipment_data.get("armor_class", {})
                 if isinstance(ac_data, dict):
                     armor_class_base = ac_data.get("base", 10)
+                    armor_dex_bonus = bool(ac_data.get("dex_bonus", False))
+                    armor_max_dex = ac_data.get("max_bonus")
                 elif isinstance(ac_data, int):
                     armor_class_base = ac_data
             elif category_index == "weapon":
@@ -646,6 +679,8 @@ class CharacterBuild:
                 equipped_right_hand=False,
                 equipped_slot=None,
                 armor_class_base=armor_class_base,
+                armor_dex_bonus=armor_dex_bonus,
+                armor_max_dex=armor_max_dex,
                 damage_dice_str=damage_dice_str,
             )
         except Exception as e:

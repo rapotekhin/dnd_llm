@@ -53,6 +53,7 @@ from core.prompts.exploration_prompts import (
 )
 from core.data.game_state_base import MainGameState
 from core.llm_engine.api_manager import APIManager
+from core.prompts.common import player_gender_line
 from core.logging_config import get_logger
 
 log = get_logger(__name__)
@@ -135,6 +136,7 @@ def get_exploration_system_prompt(game_state: MainGameState) -> str:
     return AGENT_SYSTEM_PROMPT.format(
         character_description=repr(player),
         abilities=abilities,
+        character_gender=player_gender_line(player),
         character_features=repr(player.features),
         character_cantrips=repr(player.sc.cantrips if player.sc else []),
         character_spells=repr(player.sc.leveled_spells if player.sc else []),
@@ -318,6 +320,14 @@ def _fallback_scene(game_state: MainGameState) -> str:
     """Static room description when the LLM cannot describe the scene."""
     room = game_state.rooms.get(game_state.current_room_id) if game_state.current_room_id else None
     return (room.description or room.name) if room else ""
+
+
+SIDE_CONTEXT_ENTRIES = 6  # last history entries handed to social/trade
+
+
+def recent_scene_context(history: list) -> str:
+    """The last few exploration entries (player actions + DM narration)."""
+    return "\n".join(str(h) for h in history[-SIDE_CONTEXT_ENTRIES:])
 
 
 def _wait_for_player_text(
@@ -580,6 +590,8 @@ def _exploration_loop(
                     "action": next_act,
                     "npc_id":  meta.npc_id  if meta else None,
                     "room_id": None,
+                    # What just happened, so the NPC does not greet as if nothing did.
+                    "context": recent_scene_context(state["history"]),
                 })
                 resume = _wait_for_input(input_queue, stop_event)
                 if resume is None:

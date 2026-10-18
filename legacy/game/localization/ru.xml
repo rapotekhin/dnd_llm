@@ -200,6 +200,7 @@
     <string id="char_screen_hp">Здоровье</string>
     <string id="char_screen_ac">Защита (КД)</string>
     <string id="char_screen_damage">Урон</string>
+    <string id="char_screen_unarmed">безоружный удар</string>
     <string id="char_screen_speed">Скорость</string>
     <string id="char_screen_level">Уровень</string>
     <string id="char_screen_xp">Опыт</string>

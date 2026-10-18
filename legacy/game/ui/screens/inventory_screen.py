@@ -237,18 +237,9 @@ class InventoryScreen(BaseScreen):
         return out or ["—"]
 
     def _compute_ac(self) -> int:
+        from core.utils.armor_class import compute_armor_class
         player = self._player()
-        if not player:
-            return 10
-        total = 0
-        for it in (player.inventory or []):
-            if it is None or not isinstance(it, GameEquipment) or not it.equipped:
-                continue
-            if it.armor_class_base is not None:
-                total += it.armor_class_base
-        base = total if total > 0 else 10
-        ac_bonus = getattr(player, "ac_bonus", 0) or 0
-        return base + ac_bonus
+        return compute_armor_class(player) if player else 10
 
     def _unequip_from_slot(self, slot_key: str) -> None:
         item = self._item_in_slot(slot_key)

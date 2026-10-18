@@ -19,6 +19,8 @@ class GameEquipment(BaseEntity, Equipment):
     equipped_right_hand: bool = False
     equipped_slot: Optional[str] = None  # head, body, hands, feet, cloak, amulet, ring_1, ring_2
     armor_class_base: Optional[int] = None  # from armor JSON; used for AC display
+    armor_dex_bonus: bool = False  # armor JSON armor_class.dex_bonus (light / medium armor)
+    armor_max_dex: Optional[int] = None  # armor JSON armor_class.max_bonus (medium armor: 2)
     damage_dice_str: Optional[str] = None  # from weapon JSON; e.g. "1d4", "1d6+1"
 
     def __hash__(self):

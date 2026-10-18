@@ -34,7 +34,12 @@ NPC_SYSTEM_PROMPT_TEMPLATE = """
 Раса: {player_race}
 Класс: {player_class}
 Уровень: {player_level}
+Пол: {player_gender}
 Характеристики: {abilities}
+
+══════════════════════════════
+ЧТО ПРОИЗОШЛО ПРЯМО ПЕРЕД РАЗГОВОРОМ (учитывай в первой же реплике)
+{recent_events}
 
 ══════════════════════════════
 ТЕКУЩЕЕ МЕСТО
@@ -74,7 +79,7 @@ NPC_SYSTEM_PROMPT_TEMPLATE = """
 """.strip()
 
 
-def get_npc_system_prompt(game_state: "MainGameState", npc_id: str) -> str:
+def get_npc_system_prompt(game_state: "MainGameState", npc_id: str, recent_events: str = "") -> str:
     """Build the full NPC system prompt from live game state."""
     npc = game_state.npcs.get(npc_id) if game_state.npcs else None
 
@@ -154,8 +159,12 @@ def get_npc_system_prompt(game_state: "MainGameState", npc_id: str) -> str:
 
     cha_mod_signed = f"{cha_mod:+d}" if cha_mod != 0 else ""
 
+    from core.prompts.common import player_gender_line
+
     return NPC_SYSTEM_PROMPT_TEMPLATE.format(
         npc_id=npc_id,
+        player_gender=player_gender_line(player),
+        recent_events=(recent_events or "").strip() or "  (ничего особенного)",
         npc_name=npc_name,
         npc_race=npc_race,
         npc_role=npc_role,

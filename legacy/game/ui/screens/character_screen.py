@@ -30,18 +30,9 @@ def _sc(v: float, s: float) -> int:
 
 
 def _compute_ac(player) -> int:
-    """AC from equipped GameEquipment + ac_bonus."""
-    if not player or not getattr(player, "inventory", None):
-        return 10
-    total = 0
-    for it in (player.inventory or []):
-        if it is None or not isinstance(it, GameEquipment) or not it.equipped:
-            continue
-        if it.armor_class_base is not None:
-            total += it.armor_class_base
-    base = total if total > 0 else 10
-    ac_bonus = getattr(player, "ac_bonus", 0) or 0
-    return base + ac_bonus
+    """AC by 5e rules (see core.utils.armor_class)."""
+    from core.utils.armor_class import compute_armor_class
+    return compute_armor_class(player) if player else 10
 
 
 class CharacterScreen(BaseScreen):
@@ -118,14 +109,8 @@ class CharacterScreen(BaseScreen):
                                 damage_str = it.damage_dice_str
                             break
         if damage_str == "—":
-            # Fallback to character.damage_dice (might be unarmed 1d2)
-            try:
-                dd = p.damage_dice
-                bonus = getattr(dd, "bonus", 0) or 0
-                dice_str = getattr(dd, "dice", str(dd))
-                damage_str = dice_str + (f" +{bonus}" if bonus else "")
-            except Exception:
-                pass
+            from core.utils.armor_class import unarmed_damage
+            damage_str = f"{unarmed_damage(p)} ({loc['char_screen_unarmed']})"
         add(f"{loc['char_screen_damage']}: {damage_str}")
         add(f"{loc['char_screen_speed']}: {getattr(p, 'speed', 0)} ft.")
         add(f"{loc['char_screen_level']}: {p.level}")

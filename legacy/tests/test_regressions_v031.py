@@ -408,7 +408,10 @@ def test_b9_social_with_npc_in_room_transitions(monkeypatch: pytest.MonkeyPatch)
         narration="You approach the innkeeper.", action="social",
         question_to_player=None, metadata=exp.ActionMetadata(npc_id="npc1"),
     ))
-    assert msgs[-1] == {"type": "transition", "action": "social", "npc_id": "npc1", "room_id": None}
+    transition = msgs[-1]
+    assert (transition["type"], transition["action"], transition["npc_id"]) == ("transition", "social", "npc1")
+    # B26: the recent scene travels with the transition into the dialogue.
+    assert "You approach the innkeeper." in transition["context"]
 
 
 # ── B10: a new character gets a fresh world ─────────────────────────────────

@@ -188,9 +188,12 @@ class Game:
     def _enter_social(self, npc_id: str) -> None:
         """Switch to social screen and start/resume the social background thread."""
         social = self.screens.get("social")
+        main = self.screens.get("main")
         if social is not None:
             if hasattr(social, "set_npc"):
                 social.set_npc(npc_id)
+            if main is not None and hasattr(social, "set_recent_events"):
+                social.set_recent_events(main.pop_side_context())
             if hasattr(social, "start_social"):
                 social.start_social(self.api_manager)
         self.switch_screen("social")

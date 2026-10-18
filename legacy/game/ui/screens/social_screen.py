@@ -113,6 +113,8 @@ class SocialScreen(BaseScreen):
         # Read once by Game._enter_main via pop_summary() and passed to the
         # exploration thread in its resume message.
         self._pending_summary: Optional[str] = None
+        # What happened in exploration right before this dialogue (B26).
+        self._recent_events: str = ""
 
         self._build_layout()
 
@@ -133,6 +135,7 @@ class SocialScreen(BaseScreen):
         self._social_thread = old._social_thread
         self._pending_summary = old._pending_summary
         self._awaiting_input = old._awaiting_input
+        self._recent_events = old._recent_events
         self._chat_scroll = self._chat_max_scroll()
 
     def set_npc(self, npc_id: ID) -> None:
@@ -142,6 +145,11 @@ class SocialScreen(BaseScreen):
         self._chat_scroll = 0
         self._pending_summary = None
         self._awaiting_input = False
+        self._recent_events = ""
+
+    def set_recent_events(self, text: str) -> None:
+        """Context from exploration for the upcoming conversation."""
+        self._recent_events = text or ""
 
     def pop_summary(self) -> Optional[str]:
         """Return (and clear) the side-session summary produced on exit to exploration."""
@@ -194,7 +202,8 @@ class SocialScreen(BaseScreen):
         log.info("starting social thread (npc=%r)", npc_id)
         self._social_thread = threading.Thread(
             target=run_social,
-            args=(api_manager, gs, str(npc_id), self._ui_queue, self._input_queue, self._stop_event),
+            args=(api_manager, gs, str(npc_id), self._ui_queue, self._input_queue, self._stop_event,
+                  self._recent_events),
             daemon=True,
             name="social",
         )

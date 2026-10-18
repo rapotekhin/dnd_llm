@@ -138,6 +138,8 @@ class MainScreen(BaseScreen):
         # input typed while the DM is thinking stays in the box instead of being
         # queued as an answer to a later step.
         self._awaiting_input: bool = False
+        # Recent exploration entries sent with a social/trade transition (B26).
+        self._side_context: str = ""
 
     # Player actions sent by the quick buttons (hide / look / rest).
     QUICK_ACTIONS = (
@@ -149,6 +151,11 @@ class MainScreen(BaseScreen):
     # ------------------------------------------------------------------
     # EXPLORATION LIFECYCLE
     # ------------------------------------------------------------------
+
+    def pop_side_context(self) -> str:
+        """Return (and clear) what happened right before the side-session."""
+        text, self._side_context = self._side_context, ""
+        return text
 
     def adopt_state_from(self, old: "MainScreen") -> None:
         """Take over chat and the running exploration thread from a screen
@@ -163,6 +170,7 @@ class MainScreen(BaseScreen):
         self._pending_transition = old._pending_transition
         self._awaiting_resume = old._awaiting_resume
         self._awaiting_input = old._awaiting_input
+        self._side_context = old._side_context
         self.chat_scroll = self._chat_max_scroll()
 
     def start_exploration(self, api_manager, side_summary: Optional[str] = None,
@@ -349,6 +357,7 @@ class MainScreen(BaseScreen):
                 room_id = msg.get("room_id")
                 if action in ("social", "trade") and npc_id:
                     self._awaiting_resume = True
+                    self._side_context = msg.get("context") or ""
                     transition = f"{action}:{npc_id}"
                 elif action == "change_current_room":
                     # room_id already updated in exploration.py; just restart

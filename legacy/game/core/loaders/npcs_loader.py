@@ -234,7 +234,9 @@ def load_npcs_from_jsonl(file_path: str):
     for npc_data in npcs:
         npc = NPC.create_random_character(
             name=npc_data.get("name"),
-            race=npc_data.get("race"),
+            # A missing race used to be rolled anew every game, contradicting the
+            # description ("коренастый хозяин" became an elf).
+            race=npc_data.get("race") or "human",
             class_type=npc_data.get("class_type"),
             level=npc_data.get("level", 1),
         )
@@ -242,5 +244,9 @@ def load_npcs_from_jsonl(file_path: str):
             npc.id = npc_data["id"]
         if npc_data.get("role") is not None:
             npc.role = npc_data["role"]
+        # Keep the authored description and placement for the LLM prompts.
+        npc.description = npc_data.get("description", "") or ""
+        npc.location = npc_data.get("location")
+        npc.quests = list(npc_data.get("quests", []) or [])
         fill_npc_inventory(npc)
         game_state.npcs[npc.id] = npc

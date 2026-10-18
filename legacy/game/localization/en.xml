@@ -200,6 +200,7 @@
     <string id="char_screen_hp">Health</string>
     <string id="char_screen_ac">Armor Class</string>
     <string id="char_screen_damage">Damage</string>
+    <string id="char_screen_unarmed">unarmed strike</string>
     <string id="char_screen_speed">Speed</string>
     <string id="char_screen_level">Level</string>
     <string id="char_screen_xp">XP</string>
