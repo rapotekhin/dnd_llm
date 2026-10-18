@@ -41,7 +41,7 @@
 
 - [x] [ADR-0007](../tech/adr/0007-godot-client-python-llm-backend.md) «Godot-клиент и Python LLM-бэкенд»; ADR-0004 → Superseded
 - [x] [ADR-0008](../tech/adr/0008-engine-decides-llm-narrates.md) «Движок решает, ЛЛМ описывает»: проверки, эффекты, бюджеты, генерация предметов
-- [ ] ADR «Протокол Godot↔бэкенд»: WebSocket + JSON-RPC, проксирование инструментов, транзакция хода
+- [x] [ADR-0009](../tech/adr/0009-godot-backend-protocol.md) «Протокол Godot ↔ LLM-бэкенд»: подключение, методы, снимок, транзакция хода, ошибки, таймауты, кассеты
 - [ ] Структура монорепо: `game/` (Godot), `llm_server/` (Python, `uv`), `contract/`, `docs/`, `tools/`; pygame-код → `legacy/` до конца M1
 - [ ] Спайк связи: Godot `WebSocketPeer` ↔ FastAPI через Caddy (`wss://`), рукопожатие с токеном и версией, обратный RPC-вызов из бэкенда в Godot
 - [ ] Набор ЛЛМ-сценариев (10–20 «золотых» ситуаций: поиск, ложь стражнику, телепорт-инъекция, атака в таверне)
@@ -87,7 +87,7 @@
 - [ ] Локализация `strings.csv` ru/en, Input Map, настройки (разрешение, полный экран, язык)
 - [ ] JSON-сейвы: `SAVE_VERSION`, атомарная запись, слоты + автосейв, мета для списка слотов
 - [ ] Dev-инструменты: консоль, F3/F12, флаги запуска (`--profile`, `--new-game`, `--backend`), журнал команд
-- [ ] Autoload `Backend`: подключение по адресу из настроек / `--backend`, токен, рукопожатие, переподключение, статус в меню (пока против заглушки `ping`)
+- [ ] Autoload `Backend`: подключение по адресу из настроек / `--backend`, токен в заголовке, `session.hello`, переподключение с паузой, статус в меню (пока против заглушки бэкенда)
 - [ ] AGENTS.md, скиллы `godot_conventions` / `docs_updater`, экспорт Windows
 - [ ] Главное меню, пустая игра, экран «бэкенд недоступен»
 
@@ -96,8 +96,8 @@
 - [ ] `llm_server/` на Python 3.12 + `uv`: FastAPI + uvicorn, WebSocket JSON-RPC, рукопожатие с `PROTOCOL_VERSION` и общим токеном, бинд на `127.0.0.1`, `/health` и `/version`
 - [ ] OpenRouter: ключ и модель в конфиге/env сервера, проверка ключа и баланса (из `APIManager`)
 - [ ] Перенос промптов (файлы-шаблоны) и Pydantic-схем; один агент на ход вместо трёх
-- [ ] Протокол хода: `turn.request` → обратные `engine.check` / `engine.validate` → `turn.result`; `turn.cancel` через отмену asyncio-задачи
-- [ ] Методы саммари: `summary.location`, `summary.side_session`
+- [ ] Протокол по [ADR-0009](../tech/adr/0009-godot-backend-protocol.md): `session.hello` / `session.status`, `turn.request` (`mode`, `kind`) → обратные `engine.check` / `engine.validate` / `engine.lookup` / `engine.find_items` → `turn.result`; `turn.cancel` через отмену asyncio-задачи; коды ошибок; повторы OpenRouter до 2 раз; таймаут хода 90 с
+- [ ] `summary.request` (`location` / `dialogue` / `npc_memory`) по журналу событий
 - [ ] Учёт токенов и денег в каждом ответе, дневной лимит на токен; структурные логи, Langfuse opt-in
 - [ ] Выгрузка схем в `contract/` (`model_json_schema()`) + `PROTOCOL_VERSION`
 - [ ] Несколько изолированных соединений, лимит одновременных ходов в конфиге
@@ -106,7 +106,7 @@
 ### v0.4.2 — Тесты обеих сторон
 
 **Бэкенд (pytest):**
-- [ ] Протокол: рукопожатие, неверный токен, неверная версия, отмена хода, обрыв сокета
+- [ ] Протокол: рукопожатие (401, `version_mismatch`, `not_initialized`), `turn_in_progress`, отмена хода, обрыв сокета, лимит 1 МБ, таймауты
 - [ ] Агенты на `TestModel` / `FunctionModel` Pydantic AI: формат хода, проксирование инструментов, повтор при невалидном выводе
 - [ ] Контракт: каждое сообщение проходит схему из `contract/`, схемы в репо совпадают с моделями
 - [ ] Перенос тестов циклов из `tests/test_*_mocked.py` как спецификации
@@ -114,7 +114,7 @@
 
 **Godot (gdUnit4):**
 - [ ] `core/`: сейвы (round-trip, фикстура версии), кубики (лимиты, seed, детерминизм), проверки
-- [ ] `Backend` против mock-бэкенда (скрипт-сервер с кассетами): ход, отмена, обрыв, повторное подключение
+- [ ] `Backend` против mock-бэкенда (скрипт-сервер с кассетами): ход, отмена, обрыв, повторное подключение; резервы эффектов сгорают при отмене и обрыве
 - [ ] Регрессии из v0.3.1 (`tests/test_regressions_v031.py`) переписаны на GDScript
 - [ ] UI-сценарии `--write-movie` с `--profile agent`
 
