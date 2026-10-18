@@ -1,6 +1,6 @@
 """Level-up: load data and build widgets."""
 import pygame
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ....colors import *
 from ....components import Button, Tooltip

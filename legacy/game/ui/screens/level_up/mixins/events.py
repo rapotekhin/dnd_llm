@@ -3,6 +3,7 @@ import pygame
 from typing import Any, Dict, List
 
 from localization import loc
+from ...character_creation.widgets import _sc
 
 
 class LevelUpEventsMixin:

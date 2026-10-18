@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import pygame
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
 from ..base_screen import BaseScreen
+from ...components import Button
 from core.entities.base import ID
 from core.entities.equipment import GameEquipment
 from core.gameplay.trade import TradeState

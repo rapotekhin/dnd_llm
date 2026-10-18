@@ -13,7 +13,7 @@ from core.gameplay.trade import (
     PANEL_PLAYER_BARTER, PANEL_NPC_INV, PANEL_NPC_BARTER,
 )
 
-from .constants import SB_W, SB_PAD, _sc
+from .constants import SB_W, SB_PAD, SLOTS, _sc, _slot_label
 
 
 class TradeRenderMixin:
