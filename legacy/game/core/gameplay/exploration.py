@@ -58,7 +58,7 @@ from core.logging_config import get_logger
 log = get_logger(__name__)
 
 # Load .env before Logfire
-_ENV_FILE = Path(__file__).resolve().parent.parent.parent.parent / ".env"
+_ENV_FILE = Path(__file__).resolve().parents[4] / ".env"  # repository root
 load_dotenv(_ENV_FILE)
 
 import logfire

@@ -11,7 +11,7 @@ from dotenv import load_dotenv, set_key
 from localization import loc
 
 # Загружаем .env до чтения LANGFUSE_* — иначе при импорте модуля ключи ещё пустые
-_ENV_FILE = Path(__file__).resolve().parent.parent.parent.parent / ".env"
+_ENV_FILE = Path(__file__).resolve().parents[4] / ".env"  # repository root
 load_dotenv(_ENV_FILE)
 
 # Инициализация Langfuse для трейсинга (опционально)
@@ -30,7 +30,7 @@ except ImportError:
 
 class APIManager:
     OPENROUTER_CREDITS_URL = "https://openrouter.ai/api/v1/credits"
-    ENV_FILE = Path(__file__).parent.parent.parent.parent / ".env"
+    ENV_FILE = _ENV_FILE
 
     DEFAULT_MODEL_ID = "google/gemini-3.1-flash-lite"
 

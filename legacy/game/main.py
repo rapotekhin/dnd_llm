@@ -5,9 +5,10 @@ DnD LLM Game - Entry Point
 import sys
 from pathlib import Path
 
-# Add paths for imports (runtime)
-project_root = Path(__file__).parent.parent
-game_dir = Path(__file__).parent
+# Add paths for imports (runtime). The game lives in legacy/game; sibling
+# checkouts (dnd-5e-core, DnD-5th-Edition-API) stay at the repository root.
+project_root = Path(__file__).resolve().parents[2]
+game_dir = Path(__file__).resolve().parent
 dnd_core_dir = project_root / "dnd-5e-core"
 dnd_api_dir = project_root / "DnD-5th-Edition-API"
 

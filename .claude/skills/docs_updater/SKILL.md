@@ -1,6 +1,6 @@
 ---
 name: docs_updater
-description: Use this skill after making meaningful code changes to the Between the Rolls project that affect documented behavior — adding/removing a screen, gameplay system, LLM tool, prompt, entity class, save format, dependency, or architectural decision. Also use when the user explicitly asks to update the docs ("обнови доку", "update docs", "синхронизируй документацию", "запиши решение в ADR"). Trigger after merging feature branches, after refactoring that changes structure, when adding a new system to /game/core/gameplay/, when adding a new screen to /game/ui/screens/, when changing the LLM model or provider, when changing the save format, or when removing legacy code (e.g. /app, LangChain). The skill identifies which docs are affected and updates them while keeping tone, structure, and cross-references consistent.
+description: Use this skill after making meaningful code changes to the Between the Rolls project that affect documented behavior — adding/removing a screen, gameplay system, LLM tool, prompt, entity class, save format, dependency, or architectural decision. Also use when the user explicitly asks to update the docs ("обнови доку", "update docs", "синхронизируй документацию", "запиши решение в ADR"). Trigger after merging feature branches, after refactoring that changes structure, when adding a new system to /legacy/game/core/gameplay/, when adding a new screen to /legacy/game/ui/screens/, when changing the LLM model or provider, when changing the save format, or when removing legacy code (e.g. /app, LangChain). The skill identifies which docs are affected and updates them while keeping tone, structure, and cross-references consistent.
 ---
 
 # Documentation Updater — Between the Rolls
@@ -11,11 +11,11 @@ description: Use this skill after making meaningful code changes to the Between 
 
 Срабатывай **после** изменений, которые:
 
-- Добавляют/удаляют **экран** (`game/ui/screens/`)
-- Добавляют/удаляют **gameplay-режим** (`game/core/gameplay/`)
-- Добавляют/удаляют **инструмент для ЛЛМ** (`game/core/tools/`)
-- Меняют **системный промпт** или схему вывода (`game/core/prompts/`, `schemas/`)
-- Добавляют/меняют **класс сущности** (`game/core/entities/`)
+- Добавляют/удаляют **экран** (`legacy/game/ui/screens/`)
+- Добавляют/удаляют **gameplay-режим** (`legacy/game/core/gameplay/`)
+- Добавляют/удаляют **инструмент для ЛЛМ** (`legacy/game/core/tools/`)
+- Меняют **системный промпт** или схему вывода (`legacy/game/core/prompts/`, `schemas/`)
+- Добавляют/меняют **класс сущности** (`legacy/game/core/entities/`)
 - Меняют **дефолтную модель** или провайдера ЛЛМ
 - Меняют **формат сейвов**
 - Удаляют **легаси** (например, `app/`, LangChain)

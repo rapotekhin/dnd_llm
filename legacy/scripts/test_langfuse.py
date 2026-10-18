@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 # корень проекта
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]  # repository root
 sys.path.insert(0, str(ROOT))
 
 # загружаем .env до любых импортов из game

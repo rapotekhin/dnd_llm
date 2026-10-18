@@ -13,7 +13,7 @@ import pytest
 
 yaml = pytest.importorskip("yaml")
 
-SCENARIOS_FILE = Path(__file__).resolve().parents[1] / "evals" / "golden" / "scenarios.yaml"
+SCENARIOS_FILE = Path(__file__).resolve().parent / "golden" / "scenarios.yaml"
 
 MODES = {"exploration", "social", "trade", "combat"}
 KINDS = {"enter", "resume", "action"}

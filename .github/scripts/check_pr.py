@@ -1,4 +1,4 @@
-"""Verify PR touches game version and release notes (runs in GitHub Actions)."""
+"""Verify PR bumps /VERSION and touches release notes (runs in GitHub Actions)."""
 
 from __future__ import annotations
 
@@ -31,21 +31,22 @@ def _triple_dot_range() -> str:
     return f"{base}...{head}"
 
 
+VERSION_FILE = "VERSION"
+_SEMVER = re.compile(r"^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$")
+
+
 def check_version_changed(rng: str) -> bool:
-    diff = _run_git(["diff", rng, "--", "game/__init__.py"])
+    diff = _run_git(["diff", rng, "--", VERSION_FILE])
     if not diff.strip():
-        print("ERROR: game/__init__.py was not changed — bump __version__ for this PR.")
-        return False
-    if "__version__" not in diff:
-        print("ERROR: __version__ in game/__init__.py was not modified.")
+        print(f"ERROR: {VERSION_FILE} was not changed — bump the project version for this PR.")
         return False
     for line in diff.splitlines():
         if line.startswith("+") and not line.startswith("+++"):
-            m = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', line)
-            if m:
-                print(f"OK: __version__ set to {m.group(1)} in diff.")
+            version = line[1:].strip()
+            if _SEMVER.match(version):
+                print(f"OK: version set to {version} in {VERSION_FILE}.")
                 return True
-    print("ERROR: no added __version__ = \"...\" line found in diff.")
+    print(f"ERROR: no added semver line (e.g. 0.3.2) found in {VERSION_FILE}.")
     return False
 
 

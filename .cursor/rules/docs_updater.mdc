@@ -1,13 +1,13 @@
 ---
-description: Use this rule after making meaningful code changes that affect documented behavior — adding/removing a screen, gameplay system, LLM tool, prompt, entity class, save format, dependency, or architectural decision. Also use when the user explicitly asks to update the docs ("обнови доку", "update docs", "синхронизируй документацию", "запиши решение в ADR"). Trigger when adding a new system to /game/core/gameplay/, when adding a new screen to /game/ui/screens/, when changing the LLM model or provider, when changing the save format, or when removing legacy code (e.g. /app, LangChain).
+description: Use this rule after making meaningful code changes that affect documented behavior — adding/removing a screen, gameplay system, LLM tool, prompt, entity class, save format, dependency, or architectural decision. Also use when the user explicitly asks to update the docs ("обнови доку", "update docs", "синхронизируй документацию", "запиши решение в ADR"). Trigger when adding a new system to /legacy/game/core/gameplay/, when adding a new screen to /legacy/game/ui/screens/, when changing the LLM model or provider, when changing the save format, or when removing legacy code (e.g. /app, LangChain).
 globs:
-  - "game/core/gameplay/**"
-  - "game/core/tools/**"
-  - "game/core/prompts/**"
-  - "game/core/entities/**"
-  - "game/ui/screens/**"
-  - "game/core/llm_engine/**"
-  - "game/core/data/game_state_base.py"
+  - "legacy/legacy/game/core/gameplay/**"
+  - "legacy/game/core/tools/**"
+  - "legacy/game/core/prompts/**"
+  - "legacy/game/core/entities/**"
+  - "legacy/legacy/game/ui/screens/**"
+  - "legacy/game/core/llm_engine/**"
+  - "legacy/game/core/data/game_state_base.py"
 alwaysApply: false
 ---
 

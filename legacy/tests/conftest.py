@@ -7,14 +7,15 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parents[1]
-PROJECT_ROOT = _ROOT
+_LEGACY = Path(__file__).resolve().parents[1]
+_ROOT = _LEGACY.parent  # repository root (sibling checkouts live here)
+PROJECT_ROOT = _LEGACY
 
 _tests_dir = Path(__file__).resolve().parent
 if str(_tests_dir) not in sys.path:
     sys.path.insert(0, str(_tests_dir))
 
-for _path in (_ROOT / "game", _ROOT / "dnd-5e-core", _ROOT / "DnD-5th-Edition-API"):
+for _path in (_LEGACY / "game", _ROOT / "dnd-5e-core", _ROOT / "DnD-5th-Edition-API"):
     _s = str(_path)
     if _path.is_dir() and _s not in sys.path:
         sys.path.insert(0, _s)

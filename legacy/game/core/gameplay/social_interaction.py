@@ -73,7 +73,7 @@ if TYPE_CHECKING:
     from core.entities.player import Player
 
 # Load .env before Logfire
-_ENV_FILE = Path(__file__).resolve().parent.parent.parent.parent / ".env"
+_ENV_FILE = Path(__file__).resolve().parents[4] / ".env"  # repository root
 load_dotenv(_ENV_FILE)
 
 import logfire

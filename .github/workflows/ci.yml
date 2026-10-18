@@ -18,14 +18,14 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
+            legacy/requirements.txt
+            legacy/requirements-dev.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+          pip install -r legacy/requirements.txt
+          pip install -r legacy/requirements-dev.txt
 
       - name: Run tests
         run: pytest

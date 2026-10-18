@@ -111,7 +111,7 @@
 **Уже есть:**
 
 - pytest в `tests/` (`requirements-dev.txt`, `pytest.ini`) — утилиты и билдеры, загрузка стартовых JSONL, торговля, сохранения/загрузка состояния, моки циклов exploration и social без ключей API; парсер ответа DM вынесен в `agent_resolution_parse.py` и покрыт отдельно.
-- **GitHub Actions:** [.github/workflows/ci.yml](../../.github/workflows/ci.yml) — на pull request в `main` или `master` на Ubuntu (Python 3.11) ставятся `requirements.txt` + `requirements-dev.txt`, запускается `pytest`; отдельный job вызывает [.github/scripts/check_pr.py](../../.github/scripts/check_pr.py) и требует, чтобы в диффе PR были изменения `__version__` в `game/__init__.py` и файла `RELEASE_NOTES.md` в корне.
+- **GitHub Actions:** [.github/workflows/ci.yml](../../.github/workflows/ci.yml) — на pull request в `main` или `master` на Ubuntu (Python 3.11) ставятся `legacy/requirements.txt` + `legacy/requirements-dev.txt`, запускается `pytest` (`legacy/tests` и `evals`); отдельный job вызывает [.github/scripts/check_pr.py](../../.github/scripts/check_pr.py) и требует, чтобы в диффе PR были изменения корневых `VERSION` и `RELEASE_NOTES.md`.
 
 **Хотелось бы дальше:**
 

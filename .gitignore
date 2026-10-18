@@ -16,3 +16,10 @@ __pycache__
 .pytest_cache
 /.claude/settings.local.json
 /.claude/worktrees/
+# Godot client (game/)
+/game/.godot/
+/game/reports/
+/build/
+
+# Python backend (llm_server/)
+/llm_server/.venv/

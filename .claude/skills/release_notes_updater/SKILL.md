@@ -110,7 +110,7 @@ description: Use this skill to update RELEASE_NOTES.md in the project root after
 
 6. **Добавь сверху, под `# Release Notes`** — старые версии не трогай.
 
-7. **Обнови версию** в `game/__init__.py`.
+7. **Обнови версию** в корневом файле `VERSION` (его проверяет CI).
 
 8. **Покажи диф пользователю** до сохранения, если изменение крупное.
 

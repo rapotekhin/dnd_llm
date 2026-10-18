@@ -1,4 +1,4 @@
-"""Tests for level-up helpers (real ``JsonDatabase`` JSON under ``game/dnd_5e_data``)."""
+"""Tests for level-up helpers (real ``JsonDatabase`` JSON under ``legacy/game/dnd_5e_data``)."""
 
 from __future__ import annotations
 
