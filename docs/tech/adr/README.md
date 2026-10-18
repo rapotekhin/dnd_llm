@@ -38,3 +38,4 @@ ADR — это короткая запись о **значимом архите�
 - [0007-godot-client-python-llm-backend.md](0007-godot-client-python-llm-backend.md) — игра на Godot, ЛЛМ-логика в Python-бэкенде (WebSocket + JSON-RPC, правила 5e только в движке)
 - [0008-engine-decides-llm-narrates.md](0008-engine-decides-llm-narrates.md) — движок решает, ЛЛМ описывает: проверки, эффекты, бюджеты, генерация предметов
 - [0009-godot-backend-protocol.md](0009-godot-backend-protocol.md) — протокол Godot ↔ бэкенд: подключение, методы, транзакция хода, ошибки, кассеты
+- [0010-game-decisions-worlds-tone-combat-death.md](0010-game-decisions-worlds-tone-combat-death.md) — игровые решения: вселенные-пакеты, свой регион, стиль ГМ, зоны в бою, режимы смерти
