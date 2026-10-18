@@ -1,203 +1,85 @@
-# LLM Integration
+# Мастер: интеграция ЛЛМ
 
-> Исторический документ: описывает pygame-прототип v0.3.x, удалённый в v0.5.4. Текущее устройство — [llm_server/README.md](../../llm_server/README.md), [ADR-0009](adr/0009-godot-backend-protocol.md), [ADR-0011](adr/0011-default-master-model.md).
-
-Самая важная техническая часть проекта. Здесь описано, как ЛЛМ встроен в игру.
+Как устроен ЛЛМ-мастер в v0.5.4. Запуск и конфиг — [llm_server/README.md](../../llm_server/README.md), сообщения — [ADR-0009](adr/0009-godot-backend-protocol.md), сторона Godot — [godot-client.md → «Ход»](godot-client.md#ход).
 
 ## Главный принцип
 
-> **ЛЛМ — Мастер Подземелий, не движок.**  
-> См. [vision/pillars.md](../vision/pillars.md) принцип №1 и [adr/0001-llm-as-gm-not-engine.md](adr/0001-llm-as-gm-not-engine.md).
+> **Движок решает, ЛЛМ рассказывает** ([ADR-0008](adr/0008-engine-decides-llm-narrates.md), столп №1 в [vision/pillars.md](../vision/pillars.md)).
 
-ЛЛМ не хранит состояние мира. Все изменения — через **инструменты (tools)** — Python-функции, которые ЛЛМ вызывает.
+У мастера нет состояния игры и правил 5e. Он получает от Godot снимок хода, а всё, что меняет мир или требует броска, просит у движка обратными вызовами `engine.*`. Применяются только эффекты, которые движок принял и зарезервировал в этом ходе.
 
-## Стек
+## Кто где
 
-| Компонент | Что делает |
+| Где | Что |
 |---|---|
-| **Pydantic AI** | Основной фреймворк для LLM-агентов с typed-выводом и tools |
-| **OpenRouter** | Провайдер моделей (дефолт: `google/gemini-3.1-flash-lite` — стабильная ветка; `-preview` варианты периодически теряют провайдера и валятся в 404, поэтому в дефолт не ставим) |
-| **Pydantic** | Схемы структурированного вывода |
-| **Logfire** | Трейсинг (опционально, по `LOGFIRE_TOKEN`) |
+| Godot (`game/`) | состояние, сейвы, правила: `CheckEngine`, `EffectEngine`, `Lookup`, `ItemRules`, `TradeRules`, `XpRules` ([ADR-0007](adr/0007-godot-client-python-llm-backend.md)) |
+| `llm_server/` | агенты Pydantic AI, промпты, выбор модели, бюджет, библиотека созданных предметов |
+| `contract/` | JSON Schema протокола, генерируется из `protocol.py` (`PROTOCOL_VERSION = 0.5.0`) |
 
-## APIManager
+Связь — WebSocket + JSON-RPC 2.0 в обе стороны: Godot шлёт `turn.request` и `summary.request`, бэкенд во время хода вызывает `engine.*` у Godot.
 
-`game/core/llm_engine/api_manager.py` — единая точка входа к ЛЛМ.
+## Ход
 
-Главные методы:
-- `get_pydantic_ai_model()` — даёт модель для Pydantic AI агентов
-- `validate_key()` — проверяет ключ OpenRouter, читает баланс
+Один ход — один запуск агента (`agents.build_turn_agent`) с `output_type=TurnOutput`:
 
-Идентификатор модели OpenRouter — константа `APIManager.DEFAULT_MODEL_ID` (можно заменить при необходимости в коде).
+1. Godot присылает `turn.request`: `mode` (`exploration` / `social` / `trade`), `kind` (`enter`, `resume`, `action`, `rest`, `deal`, `haggle`, `quest`), ввод игрока, `npc_id`, `model` и снимок (`Snapshot`: мир и настройки мастера, сцена, лист персонажа, последние реплики, сводки, лимиты, торговец, задания).
+2. Агент зовёт инструменты (ниже), каждый превращается в `engine.*`.
+3. Итог `TurnOutput`: `narration`, `options` (1–3), `effect_ids`, `next_mode` + `npc_id`, `changes`. Валидатор вывода (`ModelRetry`) не пускает пустой текст, `changes` без эффектов, чужие `effect_ids` и `social` / `trade` без NPC сцены.
+4. Godot применяет эффекты из `effect_ids`, остальные резервы сгорают; `next_mode` переключает режим.
 
-## Pydantic AI агенты
+Лимиты: `max_checks` = 1 и `max_effects` = 3 за ход (из снимка), не больше 10 запросов к модели (`TURN_USAGE_LIMITS`). Повторы OpenRouter при 408/429/5xx — только пока агент не обратился к движку, чтобы повтор не перебрасывал проверку.
 
-Каждый режим игры строит **несколько агентов**, каждый с своей output-схемой. Пример из `exploration.py`:
+## Инструменты
 
-```python
-def _build_resolution_agent(api_manager, game_state):
-    model = api_manager.get_pydantic_ai_model()
-    agent = Agent(
-        model,
-        deps_type=MainGameState,
-        output_type=AgentResolutionOutput,
-        instructions=(
-            get_exploration_system_prompt(game_state)
-            + "\n\n"
-            + AGENT_RESOLUTION_INSTRUCTIONS
-        ),
-    )
-    @agent.tool_plain
-    def roll_dice(...) -> dict: ...
+| Инструмент | Вызов движка | Что |
+|---|---|---|
+| `request_check(dc_tier, reason, skill \| save, target_id, advantage_reason)` | `engine.check` | проверка навыка или спасбросок. Мастер выбирает ступень сложности (`very_easy` … `nearly_impossible`), DC, бросок и nat 20/1 — у движка. Ответ: успех / провал, найденное скрытое (`revealed`), повтор проваленной проверки без броска (`blocked`), итог торга (`note`) |
+| `propose_effect(effect)` | `engine.validate` | последствие: `move`, `damage`, `heal`, `coins`, `give_item`, `take_item`, `npc_attitude`, `flag`. Урон и лечение — ступенями тяжести, числа считает движок. Принятый эффект возвращает `effect_id`, отклонённый — причину, и мастер переписывает текст под отказ |
+| `lookup(kind, id)` | `engine.lookup` | справка: `rule`, `spell`, `feature`, `condition`, `item`, `npc` — по id или русскому названию |
+| `find_items(query, base, properties)` | `engine.find_items` | поиск в каталоге игры + библиотеке созданных предметов бэкенда. Без него `give_item` с новым предметом отклоняется |
 
-    return agent
-```
-
-### Агенты по режимам
-
-**Exploration** (3 агента):
-- `describe_agent` → `SceneDescription` — описание сцены при входе
-- `generate_actions_agent` → `ActionList` — варианты действий
-- `resolution_agent` → `AgentResolutionOutput` — разрешение выбора
-
-Дополнительно: `summary_agent` → `LocationSummary` — обновление `location_history_summary` при выходе из локации.
-
-**Social** — аналогично, агенты для greeting / response options / resolution / summary.
-
-**Trade** — преимущественно механический режим, ЛЛМ только для реплик NPC.
-
-## Инструменты (Tools)
-
-Сейчас один:
-
-### `RollDiceTool` (`game/core/tools/roll.py`)
-
-```python
-roll_dice(
-    expression: str,             # "1d20+3", "2d6+2"
-    has_advantage: bool = False,
-    has_disadvantage: bool = False,
-    difficulty_class: Optional[int] = None,
-)
-```
-
-**Важно:** ЛЛМ обязан передавать `expression` в нотации кубиков, не «wisdom check». Это явно прописано в промпте — ЛЛМы путаются регулярно.
-
-С v0.3.1 инструмент принимает только простую нотацию (`1d20+3`, `2d6+1d4-1`): до 20 костей, кости d4–d100, модификатор ±30. Неверное выражение возвращает `{"error": ...}`, чтобы модель исправилась, а не роняло ход. Результат: `roll_result`, `roll_success`, `natural` (оставленный d20) и `rolls`. Преимущество и помеха действуют только на одиночный d20. Натуральные 20/1 на проверке с DC — авто-успех и авто-провал ([ADR-0008](adr/0008-engine-decides-llm-narrates.md)).
-
-Инструмент `rule_db_lookup` удалён в v0.3.1: это была заглушка, возвращавшая строку `"res"`, и модель получала мусор. Справка по правилам вернётся как инструмент с реальными данными SRD (см. [roadmap](../production/roadmap.md)).
-
-### Что нужно (план)
-
-Для столпа №1 (ЛЛМ как ГМ) нужно расширить набор инструментов:
-
-- `create_npc(...)` — для автогенерации NPC при встрече нового персонажа
-- `create_location(...)` — для расширения мира
-- `create_quest(...)` — для динамических квестов
-- `apply_damage(target_id, amount, damage_type)` — для боя
-- `add_item_to_inventory(actor_id, item_id, count)`
-- `set_condition(actor_id, condition, duration)` — отравлен, оглушён и т.п.
-
-Сейчас ничего из этого нет. Главный пункт техдолга.
+Опыта среди эффектов нет: опыт дают только бой и задания пакета (`XpRules`). В торговле `coins` / `give_item` / `take_item` движок отклоняет — сделки идут панелью игрока, мастер их только отыгрывает (`kind=deal`, `haggle`).
 
 ## Промпты
 
-Все системные промпты — в `game/core/prompts/`:
+Jinja2 со `StrictUndefined` в `llm_server/src/llm_server/prompts/`:
 
-- `exploration_prompts.py`
-- `social_prompts.py`
-- в планах при автогенерации контента — отдельные модули (например `quest_creation_prompts.py` для квестов)
+| Шаблон | Что |
+|---|---|
+| `_rules.md.j2` | как устроена игра: проверки до описания, последствия только эффектами, предметы через `find_items`, скрытое не выдумывать, бой пока не исходом; как писать: длина, род, без переспрашивания |
+| `_world.md.j2` | мир пакета: лор, тон, магия, стиль мастера (`classic` / `literary` / `dry` / `ironic`), жестокость, линии и вуали |
+| `_scene.md.j2` | лист персонажа, комната, выходы, NPC с отношением, зацепки, найденное, флаги, задания, сводки, последние реплики |
+| `exploration` / `social` / `trade.md.j2` | системный промпт режима; в торговле — запас, цены и кошелёк торговца |
+| `turn.md.j2` | пользовательское сообщение хода по `kind` |
+| `summary.md.j2` | сводка |
 
-### Структура системного промпта (exploration)
+Системный промпт собирает `prompts.system_prompt(mode, snapshot, npc)`, ход — `prompts.turn_prompt(...)`. Скрытое (секреты комнат) в промпт не попадает: мастер видит только зацепки и то, что движок уже открыл.
 
-```
-[Роль и задача]
-[Правила использования tools]
-[Контекст персонажа]      ← из game_state.player
-[Контекст локации]         ← из current_location
-[Контекст комнаты]         ← из current_room
-[Связанные комнаты с ID]   ← важно для переходов
-[NPC в комнате с ID]       ← важно для social/trade
-[Сокровища]
-[Открытые/скрытые квесты]
-[location_history_summary] ← главный механизм экономии токенов
-[Правила поведения]
-```
+## Сводки
 
-### Контекст-пейлоад
+Вместо полной истории в снимок идут последние реплики (в пределах бюджета символов) и сводки. `summary.request` (`kind` = `location` / `dialogue`) делает отдельный агент `build_summary_agent` → `SummaryOutput` (2–4 предложения, `temperature` 0.3). Godot просит сводку разговора при его конце и сводку локации каждые 12 событий; в снимок попадают сводка текущей локации и сводки прошлых разговоров с NPC комнаты — так NPC помнят игрока между встречами.
 
-ЛЛМ всегда получает **полный** профиль персонажа и локации в системном промпте. Это много токенов, но необходимо: ЛЛМ должен знать, на что игрок способен.
+## Модели
 
-**Что НЕ передаём:**
-- Полную историю всех действий — заменена `location_history_summary`
-- Содержимое других локаций — только текущая
-- Детали других NPC — только из текущей комнаты
+- OpenRouter через Pydantic AI, по умолчанию `anthropic/claude-haiku-5.5` ([ADR-0011](adr/0011-default-master-model.md)). Белый список (`LLM_SERVER_MODELS`) с ценами уходит в игру, игрок выбирает модель в «Настройки → Мастер».
+- `MODEL_SETTINGS`: `temperature` 0.8, `max_tokens` 1500. Особенности моделей — в коде, не в промптах: `settings_for()` выключает размышления у Qwen, аргумент `propose_effect` принимает строку JSON.
+- Дневной бюджет (`LLM_SERVER_DAILY_BUDGET_USD`), расход и остаток — в `usage` каждого ответа.
+- Сменить модель по умолчанию — только после «золотых» сценариев с `--repeat 3` и живого плейтеста.
 
-## Структурированный вывод
+## Трейсинг и логи
 
-**Все LLM-ответы строго типизированы.** Свободного текста с парсингом стараемся избегать.
+- Langfuse по желанию (`LANGFUSE_ENABLED=1` + ключи) — трейсы всех запусков агента.
+- Godot пишет журнал протокола в `<профиль>/logs/protocol.jsonl`; F12 сохраняет снимок бага с хвостом журнала.
 
-Pydantic-схемы — в `game/core/gameplay/schemas/`. Главные:
+## Тесты
 
-- `SceneDescription`, `ActionList`, `ActionOption` — простые
-- `AgentResolutionOutput` — главный вывод exploration с `narration`, `action`, `question_to_player`, `metadata` (в exploration уточняющий вопрос ГМ к игроку допустим — например, «куда именно ты смотришь?»)
-- `SocialResolutionOutput` — вывод social с `npc_reply`, `action`, `metadata`. Поле `question_to_player` здесь намеренно **отсутствует**: в диалоге NPC сам переспрашивает в реплике, см. [design/systems/social.md](../design/systems/social.md)
-- `ActionMetadata` — `npc_id` или `room_id` для переходов
-
-**Fallback:** `parse_agent_resolution_output()` в `game/core/gameplay/agent_resolution_parse.py` — парсер на случай, если Pydantic AI вернул невалидный JSON. Поддерживает текстовый формат с маркерами `НАРРАЦИЯ:`, `ДЕЙСТВИЕ:`, `ВОПРОС_ИГРОКУ:`.
-
-## Экономия токенов (важно)
-
-Способы снизить расход:
-
-1. **`location_history_summary`** — вместо накопления полной истории
-2. **Очистка `state["history"]`** при возврате из social/trade — события до side-session уже в саммари
-3. **Дешёвая модель по умолчанию** (Gemini Flash Lite)
-4. **`temperature=0.35`** — детерминистичнее, меньше «ретраев»
-5. **Структурированный вывод** — нет токенов на свободный текст-обёртку
-
-## Трейсинг
-
-- **Logfire** — текущая система. Включается при наличии `LOGFIRE_TOKEN` в `.env`. Используется через `logfire.span()` для exploration / social / trade.
-- **Langfuse** — был раньше, частично остался в `APIManager`. Возможно вернуться (см. [production/backlog.md](../production/backlog.md)).
-
-## Локальное логгирование
-
-Помимо Logfire-спанов есть централизованный поток stdlib-`logging` в терминал — он работает всегда и не зависит от внешнего сервиса. Конфигурация: `game/core/logging_config.py` (`configure_logging()`), подключается в `game/main.py` **до** остальных импортов.
-
-- Формат: `HH:MM:SS.mmm LEVEL name | message`, поток — `stderr`.
-- `game.*` / `core.*` / `ui.*` логгеры — на `INFO`; шумные библиотеки (`httpx`, `httpcore`, `openai`, `anthropic`, `pydantic_ai`, `logfire`, `opentelemetry`) — задавлены до `WARNING`.
-- Уровень переопределяется через `DND_LOG_LEVEL=DEBUG` (или `WARNING`) без правок кода.
-- Установлены `sys.excepthook` и `threading.excepthook` — uncaught-исключения в главном потоке и в любых daemon-потоках (`exploration`, `social`, `social-summary`) попадают в лог с полным traceback. До этого ошибки фоновых потоков молча терялись.
-- `logging.captureWarnings(True)` — `DeprecationWarning` и прочие тоже стекаются туда.
-
-Flow-логи проставлены на ключевых точках: смена экрана в `Game.switch_screen`, старт/стоп фоновых потоков, transition / resume в exploration- и social-loop, синхронная генерация summary, ошибки агентов.
-
-## Тестирование без UI
-
-### pytest
-
-Основной способ регресс-проверок ЛЛМ-связанного кода и смежной логики — **`python -m pytest`** из корня репозитория (см. [README.md](../../README.md), раздел «Тесты»). Нужны sibling-репозитории `dnd-5e-core` и `DnD-5th-Edition-API`, каталог `game/dnd_5e_data/` с JSON правил.
-
-На GitHub те же тесты и политика версии/релиз-нотов поднимаются в CI при открытии PR в `main` или `master` (см. [architecture.md](architecture.md) §«Автотесты»).
-
-Фоновые циклы exploration и social в тестах подменяют агентов Pydantic AI заглушками; ключ OpenRouter для прогона не требуется.
-
-Парсер запасного формата ответа агента разрешения действий (JSON и текст с маркерами `НАРРАЦИЯ:` / `ДЕЙСТВИЕ:`) вынесен в `game/core/gameplay/agent_resolution_parse.py`, чтобы его можно было тестировать без зависимости от клиента ЛЛМ.
-
-### Консольный exploration
-
-В конце `exploration.py` есть консольный режим (`if __name__ == "__main__"`):
-
-```bash
-python game/core/gameplay/exploration.py
-```
-
-Это запустит exploration с консольным «UI», читая save_1.pkl. Полезно для отладки промптов и ручной проверки модели.
+- `llm_server/tests/` — агент через настоящий WebSocket, модель играет `FunctionModel`, тест играет Godot. Без сети и денег.
+- `LLM_SERVER_TURN_HANDLER=stub` — ход без ЛЛМ для UI и протокольных тестов.
+- «Золотые» сценарии — `python -m llm_server.golden` ([golden-scenarios.md](golden-scenarios.md)): настоящая модель против mock-движка, жёсткие проверки + судья.
+- Живой плейтест — `python tools/godot_playtest.py --scenario live --real` (скилл `playtest`).
 
 ## Известные проблемы
 
-- **Галлюцинации NPC** — ЛЛМ может упомянуть NPC, которого нет в комнате, как будто он есть
-- **Игнорирование metadata** — иногда ЛЛМ возвращает `action: "social"` без `npc_id` или с выдуманным; с v0.3.1 такой переход отклоняется, сцена продолжается
-- **Длина наррации** — ЛЛМ склонен к многословию; правила в промпте не всегда срабатывают
-- **Несоблюдение нотации кубиков** — ЛЛМ изредка передаёт «Perception check» вместо `1d20+X`; с v0.3.1 инструмент возвращает ошибку, и модель повторяет вызов
+- **Модели недетерминированы:** разброс «золотых» сценариев ±2 за прогон, выводы — только по `--repeat 3`.
+- **Бой не реализован:** атаку мастер описывает только началом, сцена продолжается без исхода — до v0.6.1 ([roadmap](../production/roadmap.md)).
+- **Заклинания бесплатны:** движок пока не тратит ячейки и не накладывает состояния — v0.6.0.

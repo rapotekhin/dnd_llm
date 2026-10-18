@@ -1,167 +1,58 @@
 # Модели данных
 
-> Исторический документ: описывает pygame-прототип v0.3.x, удалённый в v0.5.4. Текущее устройство — [godot-client.md](godot-client.md) (сессия, персонаж, сейвы) и `protocol.py` бэкенда.
+Главные структуры Godot-клиента v0.5.4. Состояние игры — словари и массивы в чистом слое `game/core/` (без нод), в сейв они идут как есть. Подробности по системам — [godot-client.md](godot-client.md), сообщения мастеру — `llm_server/src/llm_server/protocol.py` ([ADR-0009](adr/0009-godot-backend-protocol.md)).
 
-Описание главных классов и их взаимоотношений.
+## Что где
 
-## Иерархия сущностей
+| Данные | Где | Меняется |
+|---|---|---|
+| Правила 5e | `game/data/srd/*.json` (генерирует `tools/srd_import.py`), `rules.json`, `items.json` | при сборке |
+| Мир | пакет `game/data/worlds/<id>/`: `pack.json`, `world.json`, `characters.json` ([формат](godot-client.md#пакеты-миров)) | только автором пакета |
+| Игра | `GameSession` | ходом и кнопками движка |
 
-```
-BaseEntity (game/core/entities/base.py)
-   │
-   ├─ Character ─── extends ─── dnd_5e_core.Character
-   │   └─ Player
-   │
-   ├─ NPC
-   ├─ Location
-   │   └─ IndoorLevel
-   │       └─ Room
-   ├─ Item
-   │   └─ Equipment
-   └─ Treasure
-```
+Пакет мира в игре только читается (`WorldView`). Всё, что в мире поменялось, лежит в сессии поверх пакета: отношения NPC, флаги, найденное, запасы торговцев, выполненные задания.
 
-## Character (`game/core/entities/character.py`)
+## GameSession (`core/session/game_session.gd`)
 
-Игрок и потенциально NPC, которые ведут себя как полноценные D&D-существа.
+Одно прохождение.
 
-Наследуется от `dnd_5e_core.Character` (внешний пакет) и добавляет game-специфичные поля:
+| Поле | Что |
+|---|---|
+| `game_seed`, `rng`, `turn_counter`, `check_counter`, `effect_counter` | детерминизм: все броски — из RNG сессии, id ходов `t-N` |
+| `chat`, `options` | лента (`player`, `dm`, `npc`, `check`, `effect`, `system`) и варианты мастера |
+| `world_id`, `world_version`, `settings` | мир и настройки новой игры: стиль мастера, режим смерти, жестокость, линии и вуали |
+| `room_id`, `mode`, `npc_id` | где игрок и в каком режиме (`exploration` / `social` / `trade`), собеседник |
+| `character` | персонаж (ниже) |
+| `items` | предметы, созданные мастером и принятые движком: `{item_id: описание}` — сейв не зависит от библиотеки бэкенда |
+| `attitudes`, `flags` | отношение NPC (−3…+3) и сюжетные флаги из эффектов |
+| `locks`, `revealed`, `visited`, `day` | исследование: блоки проваленных проверок, найденные секреты по комнатам, карта, день |
+| `merchants` | торговцы: кошелёк, запас, день пополнения, торг визита (`TradeRules`) |
+| `quests_done` | выполненные задания пакета (`XpRules`) |
+| `summaries`, `dialogue_log`, `location_log` | сводки `location:<id>` / `dialogue:<npc_id>` и события для следующих сводок |
 
-```python
-class Character(BaseEntity, CoreCharacter):
-    role: str | None
-    prepared_spells: List[Spell]
-    alignment: Optional[str]
-    background: Optional[str]
-    coins: int  # внутренне в copper pieces
-    
-    damage_vulnerabilities: List[str]
-    damage_resistances: List[str]
-    damage_immunities: List[str]
-    condition_advantages: List[str]
-    condition_immunities: List[str]
-    senses: Dict[str, str]  # darkvision, blindsight и т.д.
-    
-    features: List[str]               # выбранные feature/subfeature индексы
-    class_specific: Dict[str, Any]    # action_surges, sorcery_points и т.п.
-    icon_image_path: str
-```
+`TurnSnapshot` собирает из сессии снимок хода — только то, что можно видеть мастеру: зацепки и уже найденное, но не секреты.
 
-От `dnd_5e_core.Character` приходит: `name, race, subrace, class_type, abilities, proficiencies, hit_points, max_hit_points, speed, xp, level, inventory, gold, sc (spellcasting), conditions, st_advantages` и др.
+## Персонаж (`CharacterRules`)
 
-## NPC (`game/core/entities/npc.py`)
+Словарь в `session.character`, раскладка — в шапке `core/character/character_rules.gd`:
 
-Простые персонажи без полной D&D-механики (но могут быть расширены до `Character`-подобных, если нужны для боя).
+- **выборы** — имя, пол, раса и подраса, класс и подкласс, предыстория, `level`, `xp`, характеристики, владения (навыки, компетентность, спасброски, языки, инструменты, доспехи, оружие), черты, умения, заклинания (`cantrips`, `known`, `prepared`), экипировка (`armor`, `shield`, `main_hand`, `off_hand`), инвентарь, `gold_cp`;
+- **состояние** — `hp`, `conditions`, `slots_used`, `hit_dice_used`;
+- **кэш производных** — `max_hp`, `ac`, `prof_bonus`, `skills`, `saves`, `speed`, `passive_perception`, `slots_max`, `spell_dc`, `spell_attack` и названия.
 
-Загружаются из `game/assets/ru/start_npcs.jsonl`.
+Кэш пересчитывает `CharacterRules.refresh()` после любой смены выборов (старт, загрузка, экипировка, эффекты, уровень), поэтому `CheckEngine`, `EffectEngine` и снимок читают готовые числа. Создание — `CharacterBuilder` (шаги и проверка шага), рост — `LevelUp` (уровни 1–5). Монеты везде в медяках.
 
-## Location / IndoorLevel / Room (`game/core/entities/location.py`)
+## Id
 
-Иерархия мест:
+Строки из пакета и данных SRD: комнаты `brod-tavern-hall`, локации `brod`, NPC `npc_innkeeper`, задания `letter_to_ilva`, предметы и правила — id SRD (`longsword`, `perception`). Id созданных мастером предметов выдаёт движок. Ход — `t-N`, проверки и эффекты — от счётчиков сессии.
 
-```
-Location
-  ├─ name, description, type (town/dungeon/...), subtype
-  ├─ region, city
-  ├─ entrance_room_id
-  ├─ is_indoors, can_leave
-  ├─ connected_locations: List[LocationID]
-  ├─ npcs: List[NPCID]               ← глобальные NPC локации
-  ├─ quests_in_location: List[Quest] ← открытые/скрытые квесты
-  ├─ levels: List[IndoorLevel]
-  ├─ location_history_summary: str   ← обновляется ЛЛМ
-  └─ ...
-  
-IndoorLevel
-  ├─ id, level_number, level_description, level_type (basement/ground/upper)
-  └─ rooms: List[Room]
-  
-Room
-  ├─ id, name, description, level
-  ├─ can_leave
-  ├─ npcs: List[NPCID]               ← NPC в этой комнате
-  ├─ connections: List[RoomID]       ← с какими комнатами связана
-  └─ treasures: List[TreasureID]
-```
+## Сейвы
 
-## Quest (`game/core/data/quest.py`)
+- JSON в `<профиль>/saves/slot_1..10.json` и `autosave.json`, запись атомарная.
+- Формат: `{save_version, game_version, saved_at, meta, session}`; `session` — `GameSession.to_dict()`, `meta` — для списка слотов.
+- `SaveFormat.SAVE_VERSION = 7`, миграции по шагам в `SaveFormat.MIGRATIONS`, фикстура на каждую версию в `game/test/fixtures/saves/`. Сейвы старше v3 и новее игры не грузятся. История версий и порядок смены формата — [godot-client.md → «Сейвы»](godot-client.md#сейвы).
+- Почему JSON, а не pickle прототипа: читается человеком, переживает рефакторинг, безопасен при загрузке чужих файлов ([ADR-0007](adr/0007-godot-client-python-llm-backend.md); старое решение — [ADR-0002](adr/0002-pickle-saves.md)).
 
-```python
-@dataclass
-class Quest:
-    id: ID
-    name: str
-    description: str
-    status: QuestStatus       # hidden / open / completed / failed
-    objectives: List[Objective]
-    
-class Objective:
-    description: str
-    status: ObjectiveStatus   # ...
-```
+## Протокол
 
-## MainGameState (`game/core/data/game_state_base.py`)
-
-Корневой объект — синглтон.
-
-```python
-@dataclass
-class MainGameState:
-    player: Optional[Player]
-    quests: Dict[ID, Quest]
-    npcs: Dict[ID, NPC]
-    locations: Dict[ID, Location]
-    levels: Dict[ID, IndoorLevel]
-    rooms: Dict[ID, Room]
-    treasures: Dict[ID, Treasure]
-    current_location_id: Optional[ID]
-    current_room_id: Optional[ID]
-    save_datetime: Optional[datetime]
-```
-
-Методы:
-- `load_start_data()` — загружает `start_locations.jsonl` и `start_npcs.jsonl`, ставит игрока в таверну
-- `save(slot)` / `load(slot)` — pickle в `~/AppData/Local/DnD_LLM_Game/saves/save_{slot}.pkl`
-- `list_saves()` — статический, возвращает список доступных слотов
-
-## ID
-
-Тип `ID = str`. Префиксы — для отладки:
-- `tawern-001`, `market-001`, `caves-001` — локации
-- `tavern-room-001` — комнаты
-- `tavern-level-000` — уровни
-- UUID-ы — NPC
-
-Сейчас формат «свободный». Стандартизация — в техдолге.
-
-## LLM-схемы (`game/core/gameplay/schemas/`)
-
-Pydantic-модели для **структурированного вывода ЛЛМ**:
-
-- `SceneDescription`, `ActionList`, `ActionOption` — exploration
-- `AgentResolutionOutput`, `ActionMetadata` — главный вывод resolution agent
-- `LocationSummary` — для архивариуса
-- Аналогичные для social: `NpcGreeting`, `ResponseOptionList`, `SocialResolutionOutput`, `SocialSummary`
-
-См. [llm-integration.md](llm-integration.md).
-
-## Сериализация
-
-Сейчас — **pickle** (`.pkl`). Это:
-- ✅ Работает «из коробки» с любыми Python-классами
-- ❌ **Хрупко к рефакторингу** — переименование класса ломает старые сейвы
-- ❌ Не читаемо человеком
-- ❌ Потенциальный security-риск (никогда не загружать чужой pkl)
-
-См. [adr/0002-pickle-saves.md](adr/0002-pickle-saves.md).
-
-## Builders (`game/core/builders/`)
-
-Сложные сущности собираются через builder-классы:
-
-- `CharacterBuilder` — пошаговое создание персонажа (используется в character creation screen)
-- `LevelUpBuilder` (`LevelUpBuild`) — аккумулятор выбора при level up
-- `LocationBuilder` — задел для автогенерации локаций (не подключён к ЛЛМ)
-- `NpcBuilder` — задел для генерации NPC
-
-В будущем builder'ы должны стать **инструментами для ЛЛМ** — это центральный пункт роадмапа.
+Типы мастера — Pydantic-модели в `protocol.py`: `Snapshot` (`WorldInfo`, `Scene`, `CharacterSheet`, `HistoryLine`, `TradeInfo`, `QuestInfo`, `TurnLimits`), `TurnResult`, эффекты (`MoveEffect` … `FlagEffect`), параметры и ответы `engine.*`. JSON Schema для Godot — `contract/schema/` (`python -m llm_server.contract`). Устройство хода — [llm-integration.md](llm-integration.md).

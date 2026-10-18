@@ -30,7 +30,7 @@
 
 ## Исторические документы
 
-Описывают pygame-прототип (удалён в v0.5.4, [паритет](production/parity-v031.md)) и помечены в шапке: [tech/architecture.md](tech/architecture.md), [tech/llm-integration.md](tech/llm-integration.md), [tech/data-models.md](tech/data-models.md), [narrative/quests.md](narrative/quests.md), [narrative/npcs.md](narrative/npcs.md), разделы про прототип в [narrative/world.md](narrative/world.md), [production/review-2026-10.md](production/review-2026-10.md). Решения в них по-прежнему объясняют, откуда пришли нынешние правила.
+Описывают pygame-прототип (удалён в v0.5.4, [паритет](production/parity-v031.md)): [tech/architecture.md](tech/architecture.md), [production/review-2026-10.md](production/review-2026-10.md). Решения в них и в ADR-0001…0006 по-прежнему объясняют, откуда пришли нынешние правила. Остальные страницы переписаны под Godot-версию: мастер — [tech/llm-integration.md](tech/llm-integration.md), данные и сейвы — [tech/data-models.md](tech/data-models.md), мир Марки — [narrative/world.md](narrative/world.md), [narrative/npcs.md](narrative/npcs.md), [narrative/quests.md](narrative/quests.md).
 
 ## Принципы документации
 
