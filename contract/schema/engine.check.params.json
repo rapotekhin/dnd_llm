@@ -1,0 +1,75 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "advantage_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Advantage Reason"
+    },
+    "dc_tier": {
+      "enum": [
+        "very_easy",
+        "easy",
+        "medium",
+        "hard",
+        "very_hard",
+        "nearly_impossible"
+      ],
+      "title": "Dc Tier",
+      "type": "string"
+    },
+    "save": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Save"
+    },
+    "skill": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Skill"
+    },
+    "target_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Id"
+    },
+    "turn_id": {
+      "title": "Turn Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "turn_id",
+    "dc_tier"
+  ],
+  "title": "EngineCheckParams",
+  "type": "object"
+}

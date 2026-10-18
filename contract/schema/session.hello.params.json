@@ -1,0 +1,18 @@
+{
+  "properties": {
+    "client_version": {
+      "title": "Client Version",
+      "type": "string"
+    },
+    "protocol_version": {
+      "title": "Protocol Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "client_version"
+  ],
+  "title": "HelloParams",
+  "type": "object"
+}

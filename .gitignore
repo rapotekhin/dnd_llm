@@ -24,5 +24,8 @@ __pycache__
 # Python backend (llm_server/)
 /llm_server/.venv/
 
+# Dev Caddy state: local CA keys and certificates
+/infra/dev/caddy-data/
+
 # Live playtest output (screenshots, reports)
 /legacy/scripts/playtest/out/

@@ -1,0 +1,13 @@
+# Dev TLS proxy for llm_server (ADR-0007 §4): wss://localhost:8443/ws -> ws://host:8765/ws.
+# `tls internal` signs with Caddy's local CA; Godot trusts its root via --backend-ca
+# (infra/dev/caddy-data/caddy/pki/authorities/local/root.crt). On a real server use a domain and Let's Encrypt.
+{
+	skip_install_trust
+	admin off
+}
+
+localhost:8443 {
+	tls internal
+	# WebSocket upgrade and the Authorization header pass through as is; no access log, so the token is never written.
+	reverse_proxy {$LLM_SERVER_UPSTREAM:host.docker.internal:8765}
+}

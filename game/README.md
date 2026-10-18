@@ -1,6 +1,6 @@
 # game/ — Godot-клиент
 
-**Статус:** каркас появится в v0.4.0 ([roadmap](../docs/production/roadmap.md)).
+**Статус:** есть сетевой слой из [спайка связи](../docs/tech/connectivity-spike.md) (`core/net/`, `tools/connectivity_check.gd`); каркас игры — v0.4.0 ([roadmap](../docs/production/roadmap.md)).
 
 Игра целиком: UI, состояние мира, сейвы и **все правила D&D 5e** ([ADR-0007](../docs/tech/adr/0007-godot-client-python-llm-backend.md) §1, [ADR-0008](../docs/tech/adr/0008-engine-decides-llm-narrates.md)). С ЛЛМ общается только через `llm_server/` по протоколу [ADR-0009](../docs/tech/adr/0009-godot-backend-protocol.md).
 

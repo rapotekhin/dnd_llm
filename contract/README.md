@@ -1,6 +1,6 @@
 # contract/ — протокол Godot ↔ LLM-бэкенд
 
-**Статус:** схемы появятся в v0.4.1 ([roadmap](../docs/production/roadmap.md)).
+**Статус:** `schema/` — `session.hello`, `turn.request`, `turn.cancel`, `engine.check`, `error_data`, `protocol_version` (спайк, v0.3.4). Остальные методы добавляются в v0.4.1 ([roadmap](../docs/production/roadmap.md)).
 
 Источник истины для полей сообщений обеих сторон ([ADR-0009](../docs/tech/adr/0009-godot-backend-protocol.md)):
 
@@ -9,6 +9,6 @@
 
 ## Правила
 
-- **Схемы не пишутся руками.** Их выгружает скрипт из Pydantic-моделей `llm_server/` (`model_json_schema()`). CI проверяет, что файлы здесь совпадают с моделями.
+- **Схемы не пишутся руками.** Их выгружает `uv run python -m llm_server.contract` из Pydantic-моделей `llm_server/` (`model_json_schema()`). Тест в CI проверяет, что файлы здесь совпадают с моделями.
 - Godot проверяет входящие сообщения по этим схемам в отладке и тестах.
 - Несовместимое изменение — новый major `PROTOCOL_VERSION`; добавление необязательного поля — minor.
