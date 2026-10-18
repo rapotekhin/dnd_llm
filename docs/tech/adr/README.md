@@ -36,3 +36,4 @@ ADR — это короткая запись о **значимом архите�
 - [0005-langchain-and-streamlit-removal.md](0005-langchain-and-streamlit-removal.md) — удаление LangChain из APIManager, каталога `app/`, зависимости LangGraph
 - [0006-exploration-side-session-summary.md](0006-exploration-side-session-summary.md) — возврат из side-сессии (social/trade/combat) в exploration через явную синхронную суммаризацию
 - [0007-godot-client-python-llm-backend.md](0007-godot-client-python-llm-backend.md) — игра на Godot, ЛЛМ-логика в Python-бэкенде (WebSocket + JSON-RPC, правила 5e только в движке)
+- [0008-engine-decides-llm-narrates.md](0008-engine-decides-llm-narrates.md) — движок решает, ЛЛМ описывает: проверки, эффекты, бюджеты, генерация предметов
