@@ -9,9 +9,9 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 | Folder | What | Status |
 |---|---|---|
 | `legacy/` | Pygame prototype (v0.3.x): game, tests, scripts | frozen — only bug fixes until parity, then removed |
-| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character: SRD catalog, creation, sheet (v0.5.0); worlds and the rest of the port — v0.5.1+ |
-| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.2.1 (v0.5.0) |
-| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.2.1 |
+| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + new game screen, start world «Сумеречная Марка» (v0.5.1); the rest of the port — v0.5.2+ |
+| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.2.2 (v0.5.1) |
+| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.2.2 |
 | `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
 | `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 20 scenarios; runner `llm_server.golden` (v0.4.2) |
 | `docs/` | design + tech docs, ADRs | live |
@@ -51,6 +51,7 @@ python tools/godot_playtest.py --scenario live --real                 # live God
 python tools/godot_playtest.py --scenario creation --no-server        # character creation step by step, screenshots of every step
 python tools/srd_import.py build                                      # SRD + tools/srd/ru.json → game/data/srd/ and the item catalog
 uv run --project llm_server python tools/srd_import.py translate      # translate new SRD entries into tools/srd/ru.json (cents)
+uv run --project llm_server python tools/validate_data.py            # check world packs (also runs in backend pytest / CI)
 ```
 
 `llm_server` reads the root `.env`: `LLM_SERVER_TOKEN`, `OPENROUTER_API_KEY`; `LLM_SERVER_TURN_HANDLER=stub` runs it without an LLM. The playtest and connectivity scripts start it themselves (stub unless `--real`). Deploying to a server: [docs/tech/deploy.md](docs/tech/deploy.md).
@@ -130,5 +131,6 @@ legacy/
 | Protocol message / schema | Pydantic model in `llm_server/` → export to `contract/` (from v0.4.1) |
 | Golden LLM scenario | `evals/golden/scenarios.yaml` + [format doc](docs/tech/golden-scenarios.md); run `python -m llm_server.golden` after prompt changes |
 | Architectural decision | new ADR in `docs/tech/adr/` |
+| World content (lore, places, NPCs, ready-made characters) | a pack in `game/data/worlds/<id>/` ([format](docs/tech/godot-client.md#пакеты-миров)); never in code |
 | D&D rules content (races, classes, spells) | `game/data/srd/` via `tools/srd_import.py` (Russian names in `tools/srd/ru.json`); never hard-coded |
 | Character rule (bonus, AC, HP, creation step) | `game/core/character/` (`CharacterRules`, `CharacterBuilder`) + test in `game/test/core/` |

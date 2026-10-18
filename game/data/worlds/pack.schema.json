@@ -1,0 +1,135 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "between-the-rolls/world-pack/1",
+	"title": "World pack, format 1 (ADR-0010 §1): pack.json, world.json, characters.json",
+	"$defs": {
+		"strings": {"type": "array", "items": {"type": "string"}},
+		"nonempty": {"type": "string", "minLength": 1},
+		"rename": {
+			"type": "object",
+			"additionalProperties": {
+				"type": "object",
+				"properties": {"name": {"type": "string"}, "desc": {"type": "string"}},
+				"additionalProperties": false
+			}
+		},
+		"pack": {
+			"type": "object",
+			"required": ["format_version", "id", "version", "name", "description", "lore", "tone", "dm_style", "content", "names"],
+			"properties": {
+				"format_version": {"const": 1},
+				"id": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+				"version": {"$ref": "#/$defs/nonempty"},
+				"name": {"$ref": "#/$defs/nonempty"},
+				"author": {"type": "string"},
+				"description": {"$ref": "#/$defs/nonempty"},
+				"lore": {"$ref": "#/$defs/nonempty"},
+				"tone": {"$ref": "#/$defs/nonempty"},
+				"magic": {"type": "string"},
+				"dm_style": {"enum": ["classic", "literary", "dry", "ironic"]},
+				"content": {
+					"type": "object",
+					"required": ["violence"],
+					"properties": {
+						"violence": {"enum": ["mild", "medium", "graphic"]},
+						"lines": {"$ref": "#/$defs/strings"},
+						"veils": {"$ref": "#/$defs/strings"}
+					},
+					"additionalProperties": false
+				},
+				"rules": {
+					"type": "object",
+					"properties": {
+						"races": {"$ref": "#/$defs/strings"},
+						"classes": {"$ref": "#/$defs/strings"},
+						"backgrounds": {"$ref": "#/$defs/strings"},
+						"items_exclude": {"$ref": "#/$defs/strings"},
+						"rename": {
+							"type": "object",
+							"properties": {
+								"races": {"$ref": "#/$defs/rename"},
+								"classes": {"$ref": "#/$defs/rename"},
+								"backgrounds": {"$ref": "#/$defs/rename"},
+								"items": {"$ref": "#/$defs/rename"}
+							},
+							"additionalProperties": false
+						}
+					},
+					"additionalProperties": false
+				},
+				"names": {
+					"type": "object",
+					"required": ["male", "female"],
+					"properties": {
+						"male": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+						"female": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+					}
+				},
+				"world": {"type": "string"},
+				"characters": {"type": "string"}
+			}
+		},
+		"world": {
+			"type": "object",
+			"required": ["start_room", "locations", "rooms", "npcs"],
+			"properties": {
+				"start_room": {"type": "string"},
+				"locations": {
+					"type": "object",
+					"additionalProperties": {"type": "object", "required": ["name", "description"]}
+				},
+				"rooms": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"required": ["name", "location_id", "description", "exits", "npcs"],
+						"properties": {
+							"name": {"$ref": "#/$defs/nonempty"},
+							"location_id": {"type": "string"},
+							"description": {"type": "string"},
+							"exits": {"$ref": "#/$defs/strings"},
+							"npcs": {"$ref": "#/$defs/strings"},
+							"hooks": {"$ref": "#/$defs/strings"}
+						}
+					}
+				},
+				"npcs": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"required": ["name", "role", "gender"],
+						"properties": {
+							"name": {"$ref": "#/$defs/nonempty"},
+							"role": {"$ref": "#/$defs/nonempty"},
+							"gender": {"enum": ["male", "female", "other"]},
+							"trader": {"type": "boolean"},
+							"stock": {"$ref": "#/$defs/strings"}
+						}
+					}
+				}
+			}
+		},
+		"characters": {
+			"type": "object",
+			"required": ["presets"],
+			"properties": {
+				"presets": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["id", "summary", "story", "choices"],
+						"properties": {
+							"id": {"$ref": "#/$defs/nonempty"},
+							"summary": {"$ref": "#/$defs/nonempty"},
+							"story": {"$ref": "#/$defs/nonempty"},
+							"choices": {
+								"type": "object",
+								"required": ["name", "gender", "race", "class", "background", "base_abilities", "equipment"]
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

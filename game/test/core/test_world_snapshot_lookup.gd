@@ -16,9 +16,9 @@ func test_snapshot_scene_and_character() -> void:
 	s.summaries["dialogue:" + TestUtils.COOK] = "Не в этой комнате."
 	var snap := TurnSnapshot.build(s, data, 4000)
 	var scene: Dictionary = snap["scene"]
-	assert_str(scene["room_id"]).is_equal("tavern-room-001")
-	assert_str(scene["location_name"]).is_equal("Серебряная Кружка")
-	assert_int(scene["exits"].size()).is_equal(5)
+	assert_str(scene["room_id"]).is_equal(TestUtils.START_ROOM)
+	assert_str(scene["location_name"]).is_equal("Ольховый Брод")
+	assert_int(scene["exits"].size()).is_equal(3)
 	var boric: Dictionary = scene["npcs"].filter(func(n: Dictionary) -> bool: return n["npc_id"] == TestUtils.INNKEEPER)[0]
 	assert_int(boric["attitude"]).is_equal(2)
 	assert_str(boric["gender"]).is_equal("male")
@@ -31,7 +31,7 @@ func test_snapshot_scene_and_character() -> void:
 	assert_int(c["ac"]).is_equal(19)  # chain mail 16 + shield 2 + Defense style 1
 	assert_int(c["skills"]["athletics"]).is_equal(5)
 	assert_int(c["proficiency_bonus"]).is_equal(2)
-	assert_str(c["background"]).is_equal("Солдат")
+	assert_str(c["background"]).is_equal("Ветеран войны")  # renamed by the pack
 	assert_array(c["features"]).contains(["Второе дыхание", "Боевой стиль: защита"])
 	assert_array(c["equipped"]).contains(["Кольчуга", "Щит", "Длинный меч"])
 	assert_bool(c.has("spells")).is_false()

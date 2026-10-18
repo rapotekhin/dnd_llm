@@ -53,11 +53,11 @@ func test_effect_limit_per_turn() -> void:
 
 
 func test_move_only_to_an_exit_and_once() -> void:
-	assert_str(_no({"kind": "move", "room_id": "caves-room-006"})).contains("нет выхода")
-	var id := _ok({"kind": "move", "room_id": "tavern-room-002"})
-	assert_str(_no({"kind": "move", "room_id": "tavern-room-003"})).contains("уже")
+	assert_str(_no({"kind": "move", "room_id": TestUtils.FAR_ROOM})).contains("нет выхода")
+	var id := _ok({"kind": "move", "room_id": TestUtils.KITCHEN})
+	assert_str(_no({"kind": "move", "room_id": "brod-square"})).contains("уже")
 	fx.apply(s, "t-1", [id])
-	assert_str(s.room_id).is_equal("tavern-room-002")
+	assert_str(s.room_id).is_equal(TestUtils.KITCHEN)
 
 
 func test_coins_respect_the_purse_including_pending_and_the_reward_cap() -> void:

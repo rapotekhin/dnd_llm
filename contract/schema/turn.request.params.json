@@ -19,6 +19,11 @@
           "title": "Background",
           "type": "string"
         },
+        "backstory": {
+          "default": "",
+          "title": "Backstory",
+          "type": "string"
+        },
         "cantrips": {
           "items": {
             "type": "string"
@@ -391,6 +396,17 @@
           },
           "title": "Summaries",
           "type": "object"
+        },
+        "world": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WorldInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "title": "Snapshot",
@@ -433,6 +449,68 @@
         }
       },
       "title": "TurnLimits",
+      "type": "object"
+    },
+    "WorldInfo": {
+      "description": "The world pack and the master settings of the game (0.2.2, ADR-0010 §1, §3).",
+      "properties": {
+        "dm_style": {
+          "default": "classic",
+          "enum": [
+            "classic",
+            "literary",
+            "dry",
+            "ironic"
+          ],
+          "title": "Dm Style",
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Lines",
+          "type": "array"
+        },
+        "lore": {
+          "default": "",
+          "title": "Lore",
+          "type": "string"
+        },
+        "magic": {
+          "default": "",
+          "title": "Magic",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "tone": {
+          "default": "",
+          "title": "Tone",
+          "type": "string"
+        },
+        "veils": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Veils",
+          "type": "array"
+        },
+        "violence": {
+          "default": "medium",
+          "enum": [
+            "mild",
+            "medium",
+            "graphic"
+          ],
+          "title": "Violence",
+          "type": "string"
+        }
+      },
+      "title": "WorldInfo",
       "type": "object"
     }
   },

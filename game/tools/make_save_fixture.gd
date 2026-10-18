@@ -5,7 +5,7 @@ extends SceneTree
 
 
 func _init() -> void:
-	var data := SaveFormat.build(TestUtils.session_with_chat(), "0.5.0", "2026-10-18T12:00:00", 500)
+	var data := SaveFormat.build(TestUtils.session_with_chat(), ProjectSettings.get_setting("application/config/version"), "2026-10-18T12:00:00", 500)
 	var path := "res://test/fixtures/saves/save_v%d.json" % SaveFormat.SAVE_VERSION
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(data, "\t"))

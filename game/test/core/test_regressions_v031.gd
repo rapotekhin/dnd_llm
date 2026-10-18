@@ -25,7 +25,7 @@ func test_b1_b19_input_is_ignored_while_the_master_thinks() -> void:
 	GameState.busy_turn = "t-1"
 	var before := GameState.session.chat.size()
 	assert_bool(GameState.submit("ещё действие")).is_false()
-	assert_bool(GameState.go("tavern-room-002")).is_false()
+	assert_bool(GameState.go(TestUtils.KITCHEN)).is_false()
 	assert_bool(GameState.talk_to(TestUtils.INNKEEPER)).is_false()
 	assert_int(GameState.session.chat.size()).is_equal(before)
 
@@ -38,9 +38,9 @@ func test_b4_cannot_pay_more_than_the_purse() -> void:
 
 
 func test_b8_move_only_to_an_adjacent_room() -> void:
-	assert_bool(GameState.world().exits(GameState.session.room_id).has("caves-room-006")).is_false()
-	assert_bool(GameState.go("caves-room-006")).is_false()
-	assert_str(GameState.session.room_id).is_equal("tavern-room-001")
+	assert_bool(GameState.world().exits(GameState.session.room_id).has(TestUtils.FAR_ROOM)).is_false()
+	assert_bool(GameState.go(TestUtils.FAR_ROOM)).is_false()
+	assert_str(GameState.session.room_id).is_equal(TestUtils.START_ROOM)
 
 
 func test_b9_conversation_only_with_an_npc_in_the_room() -> void:
@@ -55,18 +55,18 @@ func test_b9_conversation_only_with_an_npc_in_the_room() -> void:
 
 func test_b9_trade_with_a_non_trader_becomes_a_conversation() -> void:
 	var s := GameState.session
-	var lira := "b2e4d8d3-7c2f-4fa3-8f3b-222222222222"
+	var lira := TestUtils.SERVING
 	GameState._apply_result(s, "t-1", {"narration": "x", "next_mode": {"mode": "trade", "npc_id": lira}})
 	assert_str(s.mode).is_equal(GameSession.MODE_SOCIAL)
 
 
 func test_b10_a_new_game_starts_a_fresh_world() -> void:
 	var s := GameState.session
-	s.room_id = "caves-room-003"
+	s.room_id = TestUtils.FAR_ROOM
 	s.character["gold_cp"] = 1
 	GameState.effects.reserves["e-1"] = {"turn_id": "t-1", "kind": "flag", "plan": {}, "summary": ""}
 	GameState.start(TestUtils.new_session(7))
-	assert_str(GameState.session.room_id).is_equal("tavern-room-001")
+	assert_str(GameState.session.room_id).is_equal(TestUtils.START_ROOM)
 	assert_int(GameState.session.character["gold_cp"]).is_equal(int(TestUtils.character()["gold_cp"]))
 	assert_dict(GameState.effects.reserves).is_empty()
 

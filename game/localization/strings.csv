@@ -13,6 +13,7 @@ BACKEND_TOOLTIP_READY,"{url}
 Сервер: {version}"
 BANNER_NO_MASTER,"Нет связи с мастером — переподключаюсь. Игра сохранена, ходы недоступны."
 BTN_BACK,Назад
+BTN_BACK_TO_WORLD,К выбору мира
 BTN_CANCEL_TURN,Отменить ход
 BTN_CHARACTER_SHEET,Лист персонажа
 BTN_CLOSE,Закрыть
@@ -43,6 +44,7 @@ CC_BACKGROUND_SKILLS,Навыки: {skills}.
 CC_CANTRIPS,Заговоры — выберите {n}:
 CC_CLASS_CASTER,"Заклинатель, базовая характеристика — {ability}."
 CC_CLASS_LINE,Кость хитов к{die}. Спасброски: {saves}. Навыков на выбор: {skills}.
+CC_CREATE_OWN,Создать своего персонажа
 CC_EQUIPMENT_BACKGROUND,От предыстории: {items}.
 CC_ERR_ABILITY_CHOICE,Выберите характеристики для бонуса расы
 CC_ERR_ABILITY_RANGE,Значения должны быть от 8 до 15
@@ -79,6 +81,7 @@ CC_SPELLS_KNOWN,Известные заклинания 1 круга — выб�
 CC_SPELLS_PREPARED,Подготовленные заклинания — выберите {n} (позже их можно менять после долгого отдыха):
 CC_SPELLS_SPELLBOOK,Заклинания в книге — выберите {n}:
 CC_START,Начать игру
+CC_START_HINT,Готовые герои этого мира — со своей историей. Или соберите своего с нуля.
 CC_STEP_ABILITIES,Характеристики
 CC_STEP_BACKGROUND,Предыстория
 CC_STEP_CLASS,Класс
@@ -88,14 +91,29 @@ CC_STEP_FEATURES,Умения
 CC_STEP_RACE,Раса
 CC_STEP_SKILLS,Навыки
 CC_STEP_SPELLS,Заклинания
+CC_STEP_START,Кем играть
 CC_STEP_SUBCLASS,Подкласс
 CC_STEP_SUBRACE,Подраса
+CC_STORY,"История персонажа (её знает мастер, можно оставить пустой):"
+CC_STORY_PLACEHOLDER,"Кто вы, откуда и зачем пришли"
 CC_TITLE,Создание персонажа
 CC_UNNAMED,Без имени
 CHECK_ADVANTAGE,Преимущество: {reason}
 CHECK_LINE,{what}: {roll} {bonus} = {total} против DC {dc} {mark}
+DEATH_ONE_LIFE,Одна жизнь
+DEATH_ONE_LIFE_HINT,"Смерть окончательна: один слот и автосохранение, воскрешения для героя нет. Режим вступит в силу вместе с боем и смертью (M4), выбор сохраняется уже сейчас."
+DEATH_STORY,История
+DEATH_STORY_HINT,Обычные сохранения: после гибели можно загрузиться.
 DEV_SNAPSHOT,Снимок бага: {path}
 DICE_D,к
+DM_STYLE_CLASSIC,Классический
+DM_STYLE_CLASSIC_HINT,"Ровный серьёзный рассказчик: сцена в двух-четырёх предложениях, без лишних красот."
+DM_STYLE_DRY,Сухой
+DM_STYLE_DRY_HINT,"Коротко и по делу: что есть, кто есть, куда можно пойти."
+DM_STYLE_IRONIC,Ироничный
+DM_STYLE_IRONIC_HINT,"С усмешкой: лёгкая ирония над штампами, но мир остаётся опасным."
+DM_STYLE_LITERARY,Литературный
+DM_STYLE_LITERARY_HINT,"Образно и атмосферно: метафоры, запахи и звуки, чуть медленнее темп."
 EQUIP_BUSY,"Нельзя, пока мастер думает"
 EQUIP_HANDS_BUSY,Руки заняты
 EQUIP_NOT_LIGHT,Во вторую руку — только лёгкое оружие
@@ -126,6 +144,18 @@ MSG_SAVE_TOO_OLD,Сохранение из старой версии игры (�
 MSG_SERVER_BUSY,Мастер занят другим ходом. Попробуйте ещё раз через несколько секунд.
 MSG_TURN_CANCELLED,Ход отменён. Мир не изменился.
 MSG_TURN_TIMEOUT,Мастер не успел ответить. Мир не изменился — можно повторить ход.
+MSG_WORLD_MISSING,Мир этого сохранения не найден: пакет удалён или содержит ошибки
+NG_DEATH,Смерть персонажа
+NG_DM_STYLE,Стиль мастера
+NG_LINES,Линии — этого в игре не будет вовсе (через запятую):
+NG_LIST_PLACEHOLDER,"например: пауки, пытки"
+NG_MOD,(мод)
+NG_PACK_BROKEN,Пакет с ошибками: {errors}
+NG_TITLE,Новая игра
+NG_TONE,Тон: {tone}. Магия: {magic}.
+NG_VEILS,"Вуали — это остаётся за кадром, без подробностей (через запятую):"
+NG_VIOLENCE,Жестокость
+NG_WORLD,Мир
 OFFLINE_CERTIFICATE,Не удалось проверить сертификат сервера. Укажите корневой сертификат в настройках связи или используйте сертификат от Let's Encrypt.
 OFFLINE_CHECKING,Проверяю связь…
 OFFLINE_SERVER_DOWN,"Сервер мастера не отвечает. Проверьте, что llm_server запущен и адрес указан верно."
@@ -135,6 +165,7 @@ OFFLINE_UNKNOWN,"Не удалось подключиться к мастеру.
 OPT_BACKEND_CA,"Корневой сертификат (необязательно, для своего сервера с wss://)"
 OPT_BACKEND_TOKEN,Токен доступа
 OPT_BACKEND_URL,"Адрес мастера (ws:// только для этого компьютера, иначе wss://)"
+OPT_DM_STYLE,Стиль мастера в этой игре
 OPT_FULLSCREEN,Полный экран
 OPT_MODEL,Модель мастера (список и цены задаёт сервер; цена за миллион токенов: ввод / вывод)
 OPT_MODEL_DEFAULT,По умолчанию сервера ({model})
@@ -205,3 +236,6 @@ TITLE_LOAD,Загрузка
 TITLE_PAUSE,Пауза
 TITLE_SAVE,Сохранение
 TITLE_SETTINGS,Настройки
+VIOLENCE_GRAPHIC,Жёстко
+VIOLENCE_MEDIUM,Умеренно
+VIOLENCE_MILD,Мягко

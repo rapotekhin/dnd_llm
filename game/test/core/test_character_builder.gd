@@ -104,7 +104,7 @@ func test_dragonborn_and_fighting_style_options() -> void:
 
 
 func test_equipment_step_needs_every_choice_and_valid_picks() -> void:
-	var ch := (data["character"] as Dictionary).duplicate(true)
+	var ch := TestUtils.preset_choices()
 	assert_array(CharacterBuilder.errors(ch, data, "equipment")).is_empty()
 	ch["equipment"][1]["picks"] = ["dagger"]  # a simple weapon where a martial one is asked
 	assert_array(CharacterBuilder.errors(ch, data, "equipment")).contains(["CC_ERR_EQUIPMENT"])
@@ -113,7 +113,7 @@ func test_equipment_step_needs_every_choice_and_valid_picks() -> void:
 
 
 func test_the_start_preset_is_complete() -> void:
-	assert_bool(CharacterBuilder.complete(data["character"], data)).is_true()
+	assert_bool(CharacterBuilder.complete(TestUtils.preset_choices(), data)).is_true()
 	var c := TestUtils.character()
 	assert_str(c["name"]).is_equal("Айра")
 	assert_array(c["features"]).contains(["fighter_fighting_style", "fighter_fighting_style_defense", "second_wind"])

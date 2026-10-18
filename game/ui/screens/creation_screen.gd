@@ -1,11 +1,15 @@
 class_name CreationScreen
 extends Control
-## Character creation (roadmap v0.5.0): steps on the left, the current step in the middle, a live summary on
-## the right. All rules live in CharacterBuilder; this screen only edits `choices` and redraws.
-## «Случайный» fills every step (seeded by --seed when given), «Начать игру» builds the character.
+## Character creation (roadmap v0.5.0–v0.5.1): the world's ready-made characters first, then the steps on the
+## left, the current step in the middle, a live summary on the right. All rules live in CharacterBuilder; this
+## screen only edits `choices` and redraws. «Случайный» fills every step (seeded by --seed when given),
+## «Начать игру» builds the character and starts the game with the new game screen's `settings`.
+
+const STEP_START := "start"
 
 var choices: Dictionary = CharacterBuilder.empty_choices()
-var step: String = CharacterBuilder.STEP_RACE
+var step: String = STEP_START
+var settings: Dictionary = {}
 
 var _steps_box: VBoxContainer
 var _body: VBoxContainer
@@ -14,6 +18,10 @@ var _errors: Label
 var _back: Button
 var _next: Button
 var _start: Button
+
+
+func _init(new_game_settings: Dictionary = {}) -> void:
+	settings = new_game_settings
 
 
 func _ready() -> void:
@@ -66,7 +74,7 @@ func _ready() -> void:
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 16)
 	col.add_child(bottom)
-	_button(bottom, "BTN_TO_MENU", func() -> void: EventBus.navigate.emit("menu", {}))
+	_button(bottom, "BTN_BACK_TO_WORLD", func() -> void: EventBus.navigate.emit("new_game", {}))
 	var rnd := _button(bottom, "CC_RANDOM", _randomize)
 	rnd.name = "RandomButton"
 	_errors = Label.new()
@@ -108,8 +116,14 @@ func _randomize() -> void:
 	_redraw()
 
 
+func _steps() -> Array[String]:
+	var list: Array[String] = [STEP_START]
+	list.append_array(CharacterBuilder.steps(choices, data()))
+	return list
+
+
 func _move(delta: int) -> void:
-	var list := CharacterBuilder.steps(choices, data())
+	var list := _steps()
 	var i := clampi(list.find(step) + delta, 0, list.size() - 1)
 	step = list[i]
 	_redraw()
@@ -118,7 +132,7 @@ func _move(delta: int) -> void:
 func _finish() -> void:
 	if not CharacterBuilder.complete(choices, data()):
 		return
-	GameEntry.enter({"kind": "new", "character": CharacterBuilder.build(choices, data())})
+	GameEntry.enter({"kind": "new", "character": CharacterBuilder.build(choices, data()), "settings": settings})
 
 
 ## A callback that stores a multi-pick (Array) into choices[key].
@@ -155,12 +169,12 @@ func _changed(key: String, value: Variant) -> void:
 
 
 func _redraw() -> void:
-	var list := CharacterBuilder.steps(choices, data())
+	var list := _steps()
 	if not list.has(step):
 		step = list[0]
 	_clear(_steps_box)
 	for s: String in list:
-		var ok := CharacterBuilder.errors(choices, data(), s).is_empty()
+		var ok := s == STEP_START or CharacterBuilder.errors(choices, data(), s).is_empty()
 		var b := Button.new()
 		b.text = ("✓ " if ok else "• ") + tr("CC_STEP_" + s.to_upper())
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -172,7 +186,7 @@ func _redraw() -> void:
 		_steps_box.add_child(b)
 	_clear(_body)
 	call("_draw_" + step)
-	var errs := CharacterBuilder.errors(choices, data(), step)
+	var errs := [] if step == STEP_START else CharacterBuilder.errors(choices, data(), step)
 	_errors.text = " · ".join(errs.map(func(e: String) -> String: return tr(e)))
 	var i := list.find(step)
 	_back.disabled = i <= 0
@@ -291,6 +305,47 @@ func _features_block(parent: Control, ids: Array) -> void:
 		var d: Dictionary = feats.get(str(f), {})
 		if not d.is_empty():
 			_text(parent, "%s. %s" % [d["name"], d.get("desc", "")], true)
+
+
+func _draw_start() -> void:
+	_heading(_body, "CC_STEP_START")
+	_text(_body, tr("CC_START_HINT"), true)
+	var own := Button.new()
+	own.name = "OwnButton"
+	own.text = "CC_CREATE_OWN"
+	own.custom_minimum_size = Vector2(0, 52)
+	own.pressed.connect(func() -> void:
+		choices = CharacterBuilder.empty_choices()
+		step = CharacterBuilder.STEP_RACE
+		_redraw())
+	_body.add_child(own)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	_body.add_child(grid)
+	var d := data()
+	for p: Dictionary in d.get("presets", []):
+		var ch := CharacterBuilder.preset_choices(p)
+		var card := PanelContainer.new()
+		card.theme_type_variation = UiTheme.CARD
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(card)
+		var box := VBoxContainer.new()
+		card.add_child(box)
+		var race := str(CharacterBuilder.subrace(ch, d).get("name", CharacterBuilder.race(ch, d).get("name", "")))
+		var b := Button.new()
+		b.name = "Preset_" + str(p["id"])
+		b.text = "%s — %s, %s" % [ch["name"], race, CharacterBuilder.klass(ch, d).get("name", "")]
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.tooltip_text = str(p.get("story", ""))
+		b.pressed.connect(func() -> void:
+			choices = ch.duplicate(true)
+			step = CharacterBuilder.STEP_DETAILS
+			_redraw())
+		box.add_child(b)
+		_text(box, str(p.get("summary", "")), true)
 
 
 func _draw_race() -> void:
@@ -559,6 +614,15 @@ func _draw_details() -> void:
 	name_edit.text_submitted.connect(func(_t: String) -> void: _redraw())
 	_body.add_child(name_edit)
 	_radio(_body, "gender", [{"id": "male", "label": tr("CC_GENDER_MALE")}, {"id": "female", "label": tr("CC_GENDER_FEMALE")}], 2)
+	_text(_body, tr("CC_STORY"), true)
+	var story := TextEdit.new()
+	story.name = "StoryEdit"
+	story.text = str(choices.get("story", ""))
+	story.placeholder_text = "CC_STORY_PLACEHOLDER"
+	story.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	story.custom_minimum_size = Vector2(0, 140)
+	story.text_changed.connect(func() -> void: choices["story"] = story.text)
+	_body.add_child(story)
 	var n := CharacterBuilder.language_count(choices, data())
 	if n > 0:
 		_text(_body, tr("CC_LANGUAGES").format({"n": n}))
@@ -595,3 +659,6 @@ func _draw_summary() -> void:
 		skills.append("%s %+d" % [_skill_label(str(s)), int(c["skills"][str(s)])])
 	_text(_summary, ", ".join(skills), true)
 	_text(_summary, tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}), true)
+	if not str(c.get("story", "")).is_empty():
+		_summary.add_child(HSeparator.new())
+		_text(_summary, str(c["story"]), true)

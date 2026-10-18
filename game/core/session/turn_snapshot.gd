@@ -30,12 +30,22 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"room_id": s.room_id, "room_name": room.get("name", s.room_id), "room_description": room.get("description", ""),
 			"exits": exits, "npcs": npcs, "hooks": room.get("hooks", []), "flags": s.flags,
 		},
+		"world": world_info(s, data),
 		"character": character_sheet(s, data),
 		"history": s.history(history_chars),
 		"summaries": summaries,
 		"limits": {"max_checks": int(data["rules"]["turn_limits"]["max_checks"]),
 			"max_effects": int(data["rules"]["turn_limits"]["max_effects"])},
 	}
+
+
+## The world pack and the master settings of this game (ADR-0010 §1, §3).
+static func world_info(s: GameSession, data: Dictionary) -> Dictionary:
+	var p: Dictionary = data.get("pack", {})
+	var st := s.settings if not s.settings.is_empty() else WorldPack.default_settings(p)
+	return {"name": str(p.get("name", "")), "lore": str(p.get("lore", "")), "tone": str(p.get("tone", "")),
+		"magic": str(p.get("magic", "")), "dm_style": str(st.get("dm_style", "classic")),
+		"violence": str(st.get("violence", "medium")), "lines": st.get("lines", []), "veils": st.get("veils", [])}
 
 
 ## The sheet in final numbers (ADR-0009 §4): the master never computes bonuses. Features and spells go by name;
@@ -64,6 +74,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"background": str(data["backgrounds"].get(str(c.get("background", "")), {}).get("name", "")),
 		"abilities": c.get("abilities", {}), "proficiency_bonus": int(c.get("prof_bonus", 2)),
 		"skill_proficiencies": c.get("skill_profs", []), "speed": int(c.get("speed", 30)), "equipped": equipped,
+		"backstory": str(c.get("story", "")),
 	}
 	if not str(c.get("spell_ability", "")).is_empty():
 		var prepared := CharacterRules.spell_names(c, data, "prepared")

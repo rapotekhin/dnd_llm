@@ -50,12 +50,16 @@ def request(ws, req_id: str, method: str, params: dict | None = None) -> None:
 
 
 def tavern_snapshot() -> dict:
-    """A snapshot as Godot builds it for the start room (game/data/start/*.json)."""
-    world = json.loads((REPO_ROOT / "game" / "data" / "start" / "world.json").read_text(encoding="utf-8"))
+    """A snapshot as Godot builds it for the start room of the start pack (game/data/worlds/frontier)."""
+    pack_dir = REPO_ROOT / "game" / "data" / "worlds" / "frontier"
+    pack = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8"))
+    world = json.loads((pack_dir / "world.json").read_text(encoding="utf-8"))
     room_id = world["start_room"]
     room = world["rooms"][room_id]
     loc = world["locations"][room["location_id"]]
     return {
+        "world": {"name": pack["name"], "lore": pack["lore"], "tone": pack["tone"], "magic": pack["magic"],
+                  "dm_style": pack["dm_style"], **pack["content"]},
         "scene": {
             "location_id": room["location_id"], "location_name": loc["name"], "location_description": loc["description"],
             "room_id": room_id, "room_name": room["name"], "room_description": room["description"],
@@ -63,7 +67,7 @@ def tavern_snapshot() -> dict:
             "npcs": [{"npc_id": n, **{k: world["npcs"][n][k] for k in ("name", "role", "race", "gender", "description", "personality")}}
                      for n in room["npcs"]],
         },
-        "character": {  # Айра, fighter 1 (game/data/start/character.json as CharacterBuilder builds it)
+        "character": {  # Айра, fighter 1 (the start pack's first ready-made character as CharacterBuilder builds it)
             "name": "Айра", "gender": "female", "race": "Человек", "class_name": "Воин", "level": 1,
             "hp": 12, "max_hp": 12, "ac": 19, "background": "Солдат", "proficiency_bonus": 2, "speed": 30,
             "abilities": {"str": 16, "dex": 14, "con": 15, "int": 9, "wis": 13, "cha": 11},
@@ -72,6 +76,7 @@ def tavern_snapshot() -> dict:
             "skill_proficiencies": ["athletics", "intimidation", "perception", "survival"],
             "saves": {"str": 5, "dex": 2, "con": 4, "int": -1, "wis": 1, "cha": 0},
             "gold_cp": 1000, "features": ["Боевой стиль: защита", "Второе дыхание"],
+            "backstory": "Айра стояла на стене Серой заставы в ту ночь, когда пришёл огонь Пепельного Князя.",
             "equipped": ["Кольчуга", "Щит", "Длинный меч"],
             "inventory": [{"item_id": k, "name": k, "qty": v} for k, v in
                           {"chain_mail": 1, "shield": 1, "longsword": 1, "handaxe": 2, "torch": 10, "rations": 10}.items()],

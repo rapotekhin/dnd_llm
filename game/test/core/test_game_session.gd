@@ -38,7 +38,7 @@ func test_round_trip_keeps_everything_and_the_rng_continues() -> void:
 	assert_int(back.check_counter).is_equal(s.check_counter)
 	assert_array(back.chat).is_equal(s.chat)
 	assert_array(back.options).is_equal(["Подойти к стойке"])
-	assert_str(back.room_id).is_equal("tavern-room-001")
+	assert_str(back.room_id).is_equal(TestUtils.START_ROOM)
 	assert_dict(back.character).is_equal(s.character)
 	assert_int(back.rng.randi()).is_equal(s.rng.randi())
 

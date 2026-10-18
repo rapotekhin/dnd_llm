@@ -10,7 +10,7 @@ from llm_server.protocol import ItemProperty, Snapshot
 
 from conftest import tavern_snapshot
 
-INNKEEPER = "a1f3c7c2-6b1e-4e92-9e2a-111111111111"
+INNKEEPER = "npc_innkeeper"
 
 
 def snap() -> Snapshot:
@@ -19,13 +19,17 @@ def snap() -> Snapshot:
 
 def test_exploration_prompt():
     text = prompts.system_prompt("exploration", snap(), None)
-    assert "Главный зал [tavern-room-001]" in text
-    assert "Кухня [tavern-room-002]" in text  # exits with ids for `move`
+    assert "Таверна «Хромой олень» — общий зал [brod-tavern-hall]" in text
+    assert "Кухня таверны [brod-tavern-kitchen]" in text  # exits with ids for `move`
     assert "10 зм" in text
     assert "женском роде" in text
     assert "Сил 16" in text and "athletics +5*" in text and "(* — владеет)" in text
     assert "Кольчуга, Щит, Длинный меч" in text
     assert "Заклинатель" not in text
+    assert "## Мир: Сумеречная Марка" in text and "Пепельный Князь" in text
+    assert "Забытые Королевства" in text  # the rule against other settings
+    assert "Классический" in text and "Вуали" in text and "пытки" in text
+    assert "История персонажа: Айра стояла" in text
     assert "\n\n\n" not in text
 
 
@@ -39,12 +43,22 @@ def test_caster_sheet_in_the_prompt():
     assert "Заклинания: Волшебная стрела, Щит." in text
 
 
+def test_style_and_content_limits_in_the_prompt():
+    raw = tavern_snapshot()
+    raw["world"].update({"dm_style": "dry", "violence": "mild", "lines": ["пауки"], "veils": []})
+    text = prompts.system_prompt("exploration", Snapshot.model_validate(raw), None)
+    assert "Сухой: коротко и по делу" in text
+    assert "мягко:" in text
+    assert "Линии" in text and "пауки" in text and "Вуали" not in text
+    assert "тёмное фэнтези с надеждой: серая мораль" in text  # the pack's tone replaces the default
+
+
 def test_npc_prompts():
     s = snap()
     npc = next(n for n in s.scene.npcs if n.npc_id == INNKEEPER)
     social = prompts.system_prompt("social", s, npc)
     trade = prompts.system_prompt("trade", s, npc)
-    assert social.startswith("# Ты — Борик Каменный Бокал")
+    assert social.startswith("# Ты — Бруно Хмель")
     assert "target_id = \"" + INNKEEPER in social
     assert "Сделка — только эффектами" in trade
     with pytest.raises(ValueError):

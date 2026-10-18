@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.2.1"
+PROTOCOL_VERSION = "0.2.2"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -187,6 +187,7 @@ class CharacterSheet(_In):
     spells: list[str] = Field(default_factory=list)  # prepared (or known) spells of circle 1+, by name
     spell_slots: list[SpellSlots] = Field(default_factory=list)
     spell_save_dc: int | None = None
+    backstory: str = ""  # the player's or the ready-made character's story (0.2.2)
 
 
 class HistoryLine(_In):
@@ -199,7 +200,25 @@ class TurnLimits(_In):
     max_effects: int = 3
 
 
+DmStyle = Literal["classic", "literary", "dry", "ironic"]
+Violence = Literal["mild", "medium", "graphic"]
+
+
+class WorldInfo(_In):
+    """The world pack and the master settings of the game (0.2.2, ADR-0010 §1, §3)."""
+
+    name: str = ""
+    lore: str = ""
+    tone: str = ""
+    magic: str = ""
+    dm_style: DmStyle = "classic"
+    violence: Violence = "medium"
+    lines: list[str] = Field(default_factory=list)  # never in the game
+    veils: list[str] = Field(default_factory=list)  # may happen, off screen
+
+
 class Snapshot(_In):
+    world: WorldInfo | None = None
     scene: Scene | None = None
     character: CharacterSheet | None = None
     history: list[HistoryLine] = Field(default_factory=list)

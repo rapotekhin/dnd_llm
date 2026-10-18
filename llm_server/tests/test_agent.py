@@ -13,7 +13,7 @@ from llm_server.protocol import GeneratedItem, ModelInfo
 
 from conftest import AUTH, hello, make_services, request, tavern_snapshot
 
-INNKEEPER = "a1f3c7c2-6b1e-4e92-9e2a-111111111111"
+INNKEEPER = "npc_innkeeper"
 CHECK_OK = {"check_id": "c-1", "rolls": [15], "bonus": 3, "total": 18, "dc": 15, "success": True, "nat": 15}
 
 
@@ -112,7 +112,7 @@ def test_system_prompt_has_scene_character_and_rules(data_dir):
     text = "\n".join(str(getattr(p, "content", "")) for msg in first for p in msg.parts)
     instructions = "\n".join(str(getattr(msg, "instructions", "") or "") for msg in first)
     full = text + instructions
-    for needle in ("Главный зал", "Борик Каменный Бокал", INNKEEPER, "Айра", "женском роде", "request_check", "Не переспрашивай",
+    for needle in ("общий зал", "Бруно Хмель", INNKEEPER, "Айра", "женском роде", "request_check", "Не переспрашивай",
                    "Действие игрока: осматриваю зал"):
         assert needle in full, needle
 
@@ -122,7 +122,7 @@ def test_social_turn_and_mode_switch(data_dir):
     msg, _, _ = play(data_dir, fn, mode="social", npc_id=INNKEEPER, kind="enter", input="")
     assert msg["result"]["next_mode"] == {"mode": "trade", "npc_id": INNKEEPER}
     instructions = "\n".join(str(getattr(m, "instructions", "") or "") for m in fn.state["prompts"][0])
-    assert "Ты — Борик Каменный Бокал" in instructions
+    assert "Ты — Бруно Хмель" in instructions
     assert "О себе NPC говорит в мужском роде" in instructions
 
 

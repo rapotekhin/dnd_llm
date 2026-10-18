@@ -7,8 +7,9 @@ extends RefCounted
 ## v2 (0.4.1): world state — room, mode, character, items, attitudes, flags, summaries.
 ## v3 (0.5.0): the full 5e character (CharacterRules). Saves before v3 do not load: the game is not released
 ##   and their character had no sheet to rebuild from (decision of v0.5.0).
+## v4 (0.5.1): world pack id and version, master settings. A v3 game moves to the start of the default pack.
 
-const SAVE_VERSION := 3
+const SAVE_VERSION := 4
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -16,8 +17,11 @@ const ERR_UNREADABLE := "MSG_LOAD_FAILED"
 const ERR_TOO_NEW := "MSG_SAVE_TOO_NEW"
 const ERR_TOO_OLD := "MSG_SAVE_TOO_OLD"
 
-## from_version -> Callable(data: Dictionary) -> void that upgrades `data` to from_version + 1.
-static var MIGRATIONS: Dictionary[int, Callable] = {}
+## from_version -> Callable(data: Dictionary, ctx: Dictionary) -> void that upgrades `data` to from_version + 1.
+## `ctx` = {"world": pack bundle of the default world} for values an old save never had.
+static var MIGRATIONS: Dictionary[int, Callable] = {
+	3: _v3_to_v4,
+}
 
 
 static func build(session: GameSession, game_version: String, saved_at: String, kept_chat: int) -> Dictionary:
@@ -44,9 +48,26 @@ static func check(data: Variant) -> String:
 
 
 ## Upgrades `data` in place step by step up to SAVE_VERSION.
-static func migrate(data: Dictionary) -> void:
+static func migrate(data: Dictionary, ctx: Dictionary = {}) -> void:
 	var v := int(data.get("save_version", MIN_VERSION))
 	while v < SAVE_VERSION:
-		(MIGRATIONS[v] as Callable).call(data)
+		(MIGRATIONS[v] as Callable).call(data, ctx)
 		v += 1
 		data["save_version"] = v
+
+
+## A 0.5.0 game played the prototype tavern (no packs yet): the character and chat stay, the player starts
+## over in the default world's start room, in exploration, with no world memory.
+static func _v3_to_v4(data: Dictionary, ctx: Dictionary) -> void:
+	var s: Dictionary = data["session"]
+	var w: Dictionary = ctx.get("world", {})
+	s["world_id"] = str(w.get("id", ""))
+	s["world_version"] = str(w.get("pack", {}).get("version", ""))
+	s["settings"] = WorldPack.default_settings(w.get("pack", {}))
+	s["room_id"] = str(w.get("world", {}).get("start_room", ""))
+	s["mode"] = GameSession.MODE_EXPLORATION
+	s["npc_id"] = ""
+	for key: String in ["attitudes", "summaries"]:
+		s[key] = {}
+	for key: String in ["flags", "dialogue_log", "location_log", "options"]:
+		s[key] = []

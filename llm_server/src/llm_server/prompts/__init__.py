@@ -23,6 +23,19 @@ def ability_name(key: str) -> str:
     return _ABILITIES.get(key, key)
 
 
+STYLE_RULES = {
+    "classic": "Классический: ровный серьёзный рассказчик. Сцена — 2–4 предложения, ответ на действие — 1–3, без лишних метафор.",
+    "literary": "Литературный: образно и атмосферно — запахи, звуки, свет, точные метафоры. До 4 предложений, ритм неспешный, но без воды.",
+    "dry": "Сухой: коротко и по делу — не больше 3 коротких предложений (строже общего лимита): что есть, кто есть, куда можно пойти. Без эпитетов и атмосферы.",
+    "ironic": "Ироничный: лёгкая усмешка над штампами и ситуацией, но мир остаётся опасным, а NPC — живыми людьми. Не глумись над игроком.",
+}
+VIOLENCE_RULES = {
+    "mild": "мягко: насилие и раны — без натурализма, одной фразой; смерть — за кадром",
+    "medium": "умеренно: бой и раны описываются честно, но без смакования крови и увечий",
+    "graphic": "жёстко: можно описывать раны и смерть натуралистично, если это служит сцене",
+}
+
+
 def summary_title(key: str) -> str:
     if key == "location":
         return "В этой локации"
@@ -59,7 +72,9 @@ _env = Environment(
     lstrip_blocks=True,
     keep_trailing_newline=False,
 )
-_env.globals.update(attitude_word=attitude_word, summary_title=summary_title, ability_name=ability_name, role_name=lambda r: _ROLES.get(r, r))
+_env.globals.update(attitude_word=attitude_word, summary_title=summary_title, ability_name=ability_name,
+                    style_rule=lambda s: STYLE_RULES.get(s, STYLE_RULES["classic"]),
+                    violence_rule=lambda v: VIOLENCE_RULES.get(v, VIOLENCE_RULES["medium"]), role_name=lambda r: _ROLES.get(r, r))
 
 
 def render(name: str, **context: object) -> str:
@@ -74,7 +89,10 @@ def render(name: str, **context: object) -> str:
 
 def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE) -> str:
     character: CharacterSheet | None = snap.character
+    if snap.world is not None and snap.world.tone:
+        tone = snap.world.tone
     context: dict[str, object] = {
+        "world": snap.world,
         "character": character,
         "coins": coins(character.gold_cp) if character else "",
         "scene": snap.scene,

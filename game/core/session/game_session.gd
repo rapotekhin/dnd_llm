@@ -28,6 +28,11 @@ var chat: Array[Dictionary] = []
 var options: Array[String] = []
 var created_at: String = ""
 
+## The world pack of this game and its version when the game started.
+var world_id: String = ""
+var world_version: String = ""
+## Master settings of the new game screen: dm_style, death_mode, violence, lines, veils (WorldPack.default_settings).
+var settings: Dictionary = {}
 var room_id: String = ""
 var mode: String = MODE_EXPLORATION
 ## The conversation partner in social / trade.
@@ -172,7 +177,7 @@ func meta() -> Dictionary:
 			preview = str(chat[i]["text"]).left(80)
 			break
 	return {"turns": turn_counter, "preview": preview, "created_at": created_at,
-		"character": str(character.get("name", "")), "room_id": room_id}
+		"character": str(character.get("name", "")), "room_id": room_id, "world_id": world_id}
 
 
 func to_dict(kept_chat: int) -> Dictionary:
@@ -185,6 +190,9 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"chat": chat.slice(maxi(0, chat.size() - kept_chat)),
 		"options": options,
 		"created_at": created_at,
+		"world_id": world_id,
+		"world_version": world_version,
+		"settings": settings,
 		"room_id": room_id,
 		"mode": mode,
 		"npc_id": npc_id,
@@ -212,6 +220,9 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for o: Variant in d.get("options", []):
 		s.options.append(str(o))
 	s.created_at = str(d.get("created_at", ""))
+	s.world_id = str(d.get("world_id", ""))
+	s.world_version = str(d.get("world_version", ""))
+	s.settings = d.get("settings", {})
 	s.room_id = str(d.get("room_id", ""))
 	s.mode = str(d.get("mode", MODE_EXPLORATION))
 	s.npc_id = str(d.get("npc_id", ""))

@@ -15,7 +15,7 @@ static func enter(action: Dictionary) -> void:
 static func perform(action: Dictionary) -> void:
 	match str(action.get("kind", "")):
 		"new":
-			GameState.new_game(action.get("character", {}))
+			GameState.new_game(action.get("character", {}), action.get("settings", {}))
 		"load":
 			var err := GameState.load_from(str(action.get("slot", "")))
 			if not err.is_empty():

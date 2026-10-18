@@ -1,4 +1,5 @@
 {
+	"default_world": "frontier",
 	"saves": {
 		"manual_slots": 10
 	},

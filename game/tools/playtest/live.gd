@@ -4,8 +4,8 @@ extends "res://tools/playtest/playtest_base.gd"
 ## the kitchen. Hard checks are on the engine side (modes, rooms, protocol); what the master writes is dumped
 ## into the report for a human (or agent) to judge.
 
-const INNKEEPER := "a1f3c7c2-6b1e-4e92-9e2a-111111111111"
-const KITCHEN := "tavern-room-002"
+const INNKEEPER := "npc_innkeeper"
+const KITCHEN := "brod-tavern-kitchen"
 const TURN_TIMEOUT := 120.0
 
 

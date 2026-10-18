@@ -1,7 +1,6 @@
 class_name WorldView
 extends RefCounted
-## Read-only queries over the start world data (data/start/world.json) and a session's place in it.
-## Temporary until world packs (ADR-0010, v0.5+).
+## Read-only queries over the active world pack's world.json (WorldPack) and a session's place in it.
 
 var world: Dictionary
 

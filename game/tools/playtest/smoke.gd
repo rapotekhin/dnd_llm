@@ -15,6 +15,10 @@ func run() -> void:
 	if not step("menu has «Новая игра»", new_game != null):
 		return
 	await press(new_game)
+	step("new game screen", screen_is("NewGameScreen"))
+	await tap("dm_style_literary")
+	await shot("new_game")
+	await tap("NextButton")
 	step("creation screen", screen_is("CreationScreen"))
 	await shot("creation_start")
 	await tap("RandomButton")
@@ -28,6 +32,8 @@ func run() -> void:
 		await shot("enter_failed")
 		return
 	step("narration in chat", _count(gs, GameSession.KIND_DM) == 1, "chat %d entries" % gs.session.chat.size())
+	step("world and style in the game", gs.session.world_id == "frontier" and gs.session.settings["dm_style"] == "literary",
+		"%s / %s" % [gs.session.world_id, gs.session.settings.get("dm_style")])
 	await shot("game_enter")
 
 	var game: Control = screen()

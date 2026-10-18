@@ -1,0 +1,166 @@
+{
+	"presets": [
+		{
+			"id": "fighter_aira",
+			"summary": "Ветеранка Серой заставы, вернулась туда, где погибли её товарищи",
+			"story": "Айра стояла на стене Серой заставы в ту ночь, когда пришёл огонь Пепельного Князя, и была среди немногих, кто ушёл живым. Десять лет она нанималась охранять караваны за рекой, но слухи об огнях на руинах заставы привели её обратно в Ольховый Брод.",
+			"choices": {
+				"name": "Айра", "gender": "female", "race": "human", "subrace": "", "class": "fighter", "subclass": "", "background": "soldier",
+				"base_abilities": {"str": 15, "dex": 13, "con": 14, "int": 8, "wis": 12, "cha": 10},
+				"ability_choice": [], "skills": ["perception", "survival"], "extra_skills": [], "expertise": [],
+				"options": {"fighter_fighting_style": ["fighter_fighting_style_defense"]},
+				"cantrips": [], "spells": [], "race_cantrips": [],
+				"equipment": [{"alt": 0, "picks": []}, {"alt": 0, "picks": ["longsword"]}, {"alt": 1, "picks": []}, {"alt": 1, "picks": []}],
+				"languages": ["dwarvish"]
+			}
+		},
+		{
+			"id": "barbarian_urga",
+			"summary": "Лесорубка из сожжённой деревни, не боится Пущи",
+			"story": "Урга выросла в лесной деревне, которую сожгли в Войне Пепла. С тех пор она живёт на опушке, валит лес и продаёт дрова в Броде. Когда в Пуще стали пропадать лесорубы, её позвали первой — она единственная ходит туда одна.",
+			"choices": {
+				"name": "Урга", "gender": "female", "race": "half_orc", "subrace": "", "class": "barbarian", "subclass": "", "background": "outlander",
+				"base_abilities": {"str": 15, "dex": 13, "con": 14, "int": 8, "wis": 12, "cha": 10},
+				"ability_choice": [], "skills": ["perception", "nature"], "extra_skills": [], "expertise": [], "options": {},
+				"cantrips": [], "spells": [], "race_cantrips": [],
+				"equipment": [{"alt": 0, "picks": []}, {"alt": 0, "picks": []}],
+				"languages": ["giant"]
+			}
+		},
+		{
+			"id": "bard_yas",
+			"summary": "Бродячий певец, собирает правду о падении заставы для своей баллады",
+			"story": "Ясь поёт по трактирам «Балладу о Серой заставе», но никто из слушателей не знает, чем она кончается. Он пришёл в Марку, чтобы узнать, что на самом деле случилось в ту ночь, и сложить последний куплет.",
+			"choices": {
+				"name": "Ясь", "gender": "male", "race": "half_elf", "subrace": "", "class": "bard", "subclass": "", "background": "entertainer",
+				"base_abilities": {"str": 8, "dex": 14, "con": 13, "int": 10, "wis": 12, "cha": 15},
+				"ability_choice": ["dex", "con"], "skills": ["persuasion", "deception", "insight"], "extra_skills": ["perception", "history"],
+				"expertise": [], "options": {},
+				"cantrips": ["vicious_mockery", "minor_illusion"], "spells": ["healing_word", "charm_person", "sleep", "thunderwave"], "race_cantrips": [],
+				"equipment": [{"alt": 0, "picks": []}, {"alt": 1, "picks": []}, {"alt": 0, "picks": []}],
+				"languages": ["halfling"]
+			}
+		},
+		{
+			"id": "cleric_branko",
+			"summary": "Дварф-жрец Светлой Матери, лечил шахтёров до обвала",
+			"story": "Бранко служил при храме Светлой Матери и спускался в «Глубокую жилу» лечить шахтёров. В день обвала он вытащил троих, но двоих не нашли. Он уверен, что они живы где-то за завалом, и ищет способ туда пройти.",
+			"choices": {
+				"name": "Бранко", "gender": "male", "race": "dwarf", "subrace": "hill_dwarf", "class": "cleric", "subclass": "life", "background": "acolyte",
+				"base_abilities": {"str": 13, "dex": 12, "con": 14, "int": 8, "wis": 15, "cha": 10},
+				"ability_choice": [], "skills": ["medicine", "history"], "extra_skills": [], "expertise": [], "options": {},
+				"cantrips": ["sacred_flame", "guidance", "spare_the_dying"], "spells": ["shield_of_faith", "guiding_bolt", "sanctuary", "command"], "race_cantrips": [],
+				"equipment": [{"alt": 0, "picks": []}, {"alt": 2, "picks": []}, {"alt": 1, "picks": ["light_hammer"]}, {"alt": 0, "picks": []}, {"alt": 0, "picks": ["amulet"]}],
+				"languages": ["elvish", "giant"]
+			}
+		},
+		{
+			"id": "druid_olha",
+			"summary": "Ученица лесного отшельника: лес болен, и она хочет знать почему",
+			"story": "Ольху, сироту войны, приютил отшельник Мох и научил слушать лес. Этой весной деревья в лощине начали сохнуть и сереть, звери ушли, а Мох перестал спать. Ольха пришла в Брод за помощью, хотя горожан понимает хуже, чем зверей.",
+			"choices": {
+				"name": "Ольха", "gender": "female", "race": "halfling", "subrace": "lightfoot_halfling", "class": "druid", "subclass": "", "background": "outlander",
+				"base_abilities": {"str": 8, "dex": 13, "con": 14, "int": 12, "wis": 15, "cha": 10},
+				"ability_choice": [], "skills": ["nature", "animal_handling"], "extra_skills": [], "expertise": [], "options": {},
+				"cantrips": ["druidcraft", "shillelagh"], "spells": ["goodberry", "entangle", "cure_wounds"], "race_cantrips": [],
+				"equipment": [{"alt": 0, "picks": []}, {"alt": 0, "picks": []}, {"alt": 0, "picks": ["sprig_of_mistletoe"]}],
+				"languages": ["sylvan"]
+			}
+		},
+		{
+			"id": "monk_taras",
+			"summary": "Последний из монастыря, сгоревшего в войне",
+			"story": "Монастырь Тихого Ручья стоял за Пущей, пока его не сожгли войска Пепельного Князя. Тарас был тогда послушником и выжил, спрятавшись в колодце. Он вернулся, чтобы найти уцелевшие свитки настоятеля — говорят, их унесли на Серую заставу.",
+			"choices": {
+				"name": "Тарас", "gender": "male", "race": "human", "subrace": "", "class": "monk", "subclass": "", "background": "acolyte",
+				"base_abilities": {"str": 12, "dex": 15, "con": 13, "int": 10, "wis": 14, "cha": 8},
+				"ability_choice": [], "skills": ["acrobatics", "stealth"], "extra_skills": [], "expertise": [], "options": {},
+				"cantrips": [], "spells": [], "race_cantrips": [],
+				"equipment": [{"alt": 0, "picks": []}, {"alt": 1, "picks": []}],
+				"languages": ["elvish", "dwarvish", "celestial"]
+			}
+		},
+		{
+			"id": "paladin_gordey",
+			"summary": "Драконорождённый наёмник, давший клятву у стен павшей заставы",
+			"story": "Гордей пришёл в Марку наёмником в последний год войны и опоздал к Серой заставе на одну ночь. Над пепелищем он поклялся Светлой Матери защищать тех, кого оставили, и с тех пор не уезжает из Брода, хотя многие косятся на его чешую.",
+			"choices": {
+				"name": "Гордей", "gender": "male", "race": "dragonborn", "subrace": "", "class": "paladin", "subclass": "", "background": "soldier",
+				"base_abilities": {"str": 15, "dex": 10, "con": 13, "int": 8, "wis": 12, "cha": 14},
+				"ability_choice": [], "skills": ["persuasion", "religion"], "extra_skills": [], "expertise": [],
+				"options": {"draconic_ancestry": ["draconic_ancestry_gold"]},
+				"cantrips": [], "spells": [], "race_cantrips": [],
+				"equipment": [{"alt": 0, "picks": ["longsword"]}, {"alt": 0, "picks": []}, {"alt": 0, "picks": []}, {"alt": 0, "picks": ["emblem"]}],
+				"languages": []
+			}
+		},
+		{
+			"id": "ranger_velena",
+			"summary": "Охотница, идущая по следу того, что забирает людей",
+			"story": "Велена — дочь лесника из Брода. Её отец пропал в Пуще одним из первых, и с тех пор она каждую неделю уходит в лес по его следу. Капитан Ратмир считает её безрассудной, но других следопытов у Марки нет.",
+			"choices": {
+				"name": "Велена", "gender": "female", "race": "human", "subrace": "", "class": "ranger", "subclass": "", "background": "folk_hero",
+				"base_abilities": {"str": 12, "dex": 15, "con": 13, "int": 10, "wis": 14, "cha": 8},
+				"ability_choice": [], "skills": ["perception", "stealth", "nature"], "extra_skills": [], "expertise": [], "options": {},
+				"cantrips": [], "spells": [], "race_cantrips": [],
+				"equipment": [{"alt": 1, "picks": []}, {"alt": 0, "picks": []}, {"alt": 1, "picks": []}],
+				"languages": ["elvish"]
+			}
+		},
+		{
+			"id": "rogue_damir",
+			"summary": "Тифлинг-вор, бежавший из-за реки от долгов",
+			"story": "Дамир задолжал не тем людям за рекой и сбежал в Марку, где его никто не знает. Ферн Кривой иногда даёт ему работу «без вопросов», а недавно предложил хорошие деньги за то, чтобы забрать что-то из склепа Серой заставы.",
+			"choices": {
+				"name": "Дамир", "gender": "male", "race": "tiefling", "subrace": "", "class": "rogue", "subclass": "", "background": "criminal",
+				"base_abilities": {"str": 8, "dex": 15, "con": 14, "int": 10, "wis": 12, "cha": 13},
+				"ability_choice": [], "skills": ["sleight_of_hand", "perception", "acrobatics", "investigation"], "extra_skills": [],
+				"expertise": ["stealth", "sleight_of_hand"], "options": {},
+				"cantrips": [], "spells": [], "race_cantrips": [],
+				"equipment": [{"alt": 0, "picks": []}, {"alt": 0, "picks": []}, {"alt": 0, "picks": []}],
+				"languages": []
+			}
+		},
+		{
+			"id": "sorcerer_zlata",
+			"summary": "Дочь мельника, в которой проснулся драконий огонь",
+			"story": "В ночь падения заставы маленькую Злату нашли в горящей мельнице без единого ожога. Через десять лет огонь проснулся в ней самой. Сестра Илва говорит, что это дар, старый Орвин — что это знак Пепельного Князя, и Злата хочет узнать, кто прав.",
+			"choices": {
+				"name": "Злата", "gender": "female", "race": "human", "subrace": "", "class": "sorcerer", "subclass": "draconic", "background": "sage",
+				"base_abilities": {"str": 8, "dex": 13, "con": 14, "int": 10, "wis": 12, "cha": 15},
+				"ability_choice": [], "skills": ["persuasion", "insight"], "extra_skills": [], "expertise": [],
+				"options": {"dragon_ancestor": ["dragon_ancestor_red___fire_damage"]},
+				"cantrips": ["fire_bolt", "light", "mage_hand", "prestidigitation"], "spells": ["magic_missile", "shield"], "race_cantrips": [],
+				"equipment": [{"alt": 1, "picks": ["dagger"]}, {"alt": 1, "picks": ["crystal"]}, {"alt": 1, "picks": []}],
+				"languages": ["draconic", "elvish", "dwarvish"]
+			}
+		},
+		{
+			"id": "warlock_fiber",
+			"summary": "Гном, заключивший сделку с голосом из шахты",
+			"story": "Фибер копался в отвалах «Глубокой жилы» в поисках самоцветов, когда после обвала из темноты с ним заговорил голос. Голос дал ему силу и попросил одного: вернуться вниз. Фибер не уверен, чего хочет его покровитель, и боится это узнать.",
+			"choices": {
+				"name": "Фибер", "gender": "male", "race": "gnome", "subrace": "rock_gnome", "class": "warlock", "subclass": "fiend", "background": "criminal",
+				"base_abilities": {"str": 8, "dex": 13, "con": 14, "int": 10, "wis": 12, "cha": 15},
+				"ability_choice": [], "skills": ["arcana", "investigation"], "extra_skills": [], "expertise": [], "options": {},
+				"cantrips": ["eldritch_blast", "minor_illusion"], "spells": ["hellish_rebuke", "charm_person"], "race_cantrips": [],
+				"equipment": [{"alt": 0, "picks": []}, {"alt": 0, "picks": []}, {"alt": 0, "picks": []}, {"alt": 0, "picks": ["dagger"]}],
+				"languages": []
+			}
+		},
+		{
+			"id": "wizard_yalika",
+			"summary": "Эльфийка-волшебница, изучающая магию Пепельного Князя",
+			"story": "Ялика приехала из далёкой академии изучать следы магии Пепельного Князя — её учителя считают Войну Пепла ключом к забытому колдовству. В Броде ей не доверяют: слишком много вопросов о том, что лучше забыть.",
+			"choices": {
+				"name": "Ялика", "gender": "female", "race": "elf", "subrace": "high_elf", "class": "wizard", "subclass": "", "background": "sage",
+				"base_abilities": {"str": 8, "dex": 13, "con": 14, "int": 15, "wis": 12, "cha": 10},
+				"ability_choice": [], "skills": ["investigation", "medicine"], "extra_skills": [], "expertise": [], "options": {},
+				"cantrips": ["fire_bolt", "mage_hand", "light"], "spells": ["magic_missile", "shield", "sleep", "detect_magic", "mage_armor", "burning_hands"],
+				"race_cantrips": ["prestidigitation"],
+				"equipment": [{"alt": 0, "picks": []}, {"alt": 0, "picks": []}, {"alt": 0, "picks": []}],
+				"languages": ["dwarvish", "draconic", "giant"]
+			}
+		}
+	]
+}

@@ -70,9 +70,6 @@ def unsupported(sc: dict[str, Any]) -> str:
         return "боевой режим — M3"
     if expect.get("check", {}).get("contest_npc"):
         return "состязания с NPC — engine.check без contest до v0.5"
-    settings = sc.get("settings", {})
-    if settings.get("dm_style", "classic") != "classic" or settings.get("content", {}).get("veils"):
-        return "стиль мастера и границы контента не передаются в протоколе 0.2 (ADR-0010, v0.5)"
     return ""
 
 
@@ -101,6 +98,12 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
     for npc_id, text in snap.get("summaries", {}).get("npcs", {}).items():
         summaries[f"dialogue:{npc_id}"] = text
     mode = sc.get("mode", "exploration")
+    settings = sc.get("settings", {})
+    world = None
+    if settings:
+        content = settings.get("content", {})
+        world = {"dm_style": settings.get("dm_style", "classic"), "violence": content.get("violence", "medium"),
+                 "lines": content.get("lines", []), "veils": content.get("veils", [])}
     params = {
         "turn_id": "t-1",
         "mode": mode,
@@ -108,6 +111,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         "input": sc.get("input") or "",
         "npc_id": npcs[0]["npc_id"] if mode != "exploration" and npcs else None,
         "snapshot": {
+            "world": world,
             "scene": {
                 "location_id": loc.get("id", ""), "location_name": loc.get("name", ""),
                 "room_id": room.get("id", ""), "room_name": room.get("name", ""), "room_description": description,

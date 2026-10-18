@@ -8,7 +8,7 @@ extends RefCounted
 ##   base_abilities {str..cha} (point buy), ability_choice [abilities for a racial +1 choice],
 ##   skills [class skills], extra_skills [race skill choice], expertise [skills],
 ##   options {feature/trait id: [chosen option ids]}, cantrips, spells, race_cantrips,
-##   equipment [{"alt": int, "picks": [item ids]} per class choice], languages.
+##   equipment [{"alt": int, "picks": [item ids]} per class choice], languages, story (optional backstory text).
 
 const STEP_RACE := "race"
 const STEP_SUBRACE := "subrace"
@@ -379,6 +379,7 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 		"subclass": str(ch.get("subclass", "")), "background": str(ch["background"]), "level": 1, "xp": 0,
 		"abilities": final_abilities(ch, data), "save_profs": (k["saves"] as Array).duplicate(),
 		"conditions": [], "slots_used": [0, 0, 0, 0, 0], "hit_dice_used": 0,
+		"story": str(ch.get("story", "")).strip_edges(),
 	}
 	var skills := fixed_skills(ch, data)
 	for s: String in all_skills(ch):
@@ -462,6 +463,18 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 	return c
 
 
+## Choices of a world's ready-made character (characters.json), with its story.
+static func preset_choices(preset: Dictionary) -> Dictionary:
+	var ch := empty_choices()
+	ch.merge((preset.get("choices", {}) as Dictionary).duplicate(true), true)
+	ch["story"] = str(preset.get("story", ""))
+	return ch
+
+
+static func build_preset(preset: Dictionary, data: Dictionary) -> Dictionary:
+	return build(preset_choices(preset), data)
+
+
 static func _merge(into: Array, more: Variant) -> void:
 	if more is Array:
 		for x: Variant in more:
@@ -516,7 +529,7 @@ static func random_choices(data: Dictionary, rng: RandomNumberGenerator) -> Dict
 	ch["equipment"] = eq
 	ch["languages"] = _sample(rng, language_options(ch, data), language_count(ch, data))
 	ch["gender"] = _pick(rng, ["male", "female"])
-	ch["name"] = _pick(rng, data["game"]["creation"]["names"][ch["gender"]])
+	ch["name"] = _pick(rng, data.get("names", data["game"]["creation"]["names"])[ch["gender"]])
 	return ch
 
 

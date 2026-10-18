@@ -6,9 +6,22 @@ extends "res://tools/playtest/playtest_base.gd"
 
 func run() -> void:
 	await tap("NewGameButton")
+	if not step("new game screen", screen_is("NewGameScreen")):
+		return
+	await tap("death_mode_one_life")
+	await shot("new_game_one_life")
+	await tap("NextButton")
 	if not step("creation screen", screen_is("CreationScreen")):
 		return
 	var cs: Control = screen()
+	step("ready-made characters offered", find(cs, "Preset_fighter_aira") != null and find(cs, "Preset_wizard_yalika") != null)
+	await shot("presets")
+	await tap("Preset_wizard_yalika")
+	step("a preset is complete at once", not (find(cs, "StartButton") as Button).disabled and cs.get("step") == "details")
+	await shot("preset_details")
+	cs.set("step", "start")
+	cs.call("_redraw")
+	await tap("OwnButton")
 	step("«Далее» locked until a race is picked", (find(cs, "NextButton") as Button).disabled)
 	await tap("Pick_human")
 	await shot("race")

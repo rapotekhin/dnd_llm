@@ -25,15 +25,30 @@ func world() -> WorldView:
 	return WorldView.new(Catalog.data["world"])
 
 
-## A new game with a created character (CharacterBuilder.build); {} = the ready-made start character.
-func new_game(character: Dictionary = {}, game_seed: int = -1) -> void:
+## A new game: `settings` from the new game screen (world pack and master settings; {} = the active world's
+## defaults) and a built character ({} = the world's first ready-made character).
+func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: int = -1) -> void:
 	if game_seed < 0:
 		game_seed = int(LaunchArgs.value("--seed", str(randi())))
+	if settings.has("world"):
+		Catalog.activate(str(settings["world"]))
+	if settings.is_empty():
+		settings = WorldPack.default_settings(Catalog.data["pack"])
 	if character.is_empty():
-		character = CharacterBuilder.build(Catalog.data["character"], Catalog.data)
-	var w := world()
-	start(GameSession.create(game_seed, Time.get_datetime_string_from_system(), w.start_room(), character))
+		character = CharacterBuilder.build_preset(Catalog.data["presets"][0], Catalog.data)
+	var s := GameSession.create(game_seed, Time.get_datetime_string_from_system(), world().start_room(), character)
+	s.world_id = Catalog.active_world
+	s.world_version = str(Catalog.data["pack"].get("version", ""))
+	s.settings = settings.duplicate(true)
+	s.settings["world"] = Catalog.active_world
+	start(s)
 	_request("enter", "")
+
+
+## Changes the master style of the running game (settings screen); kept in the save.
+func set_dm_style(style: String) -> void:
+	if session != null and WorldPack.DM_STYLES.has(style):
+		session.settings["dm_style"] = style
 
 
 func start(s: GameSession) -> void:

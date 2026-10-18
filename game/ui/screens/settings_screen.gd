@@ -137,6 +137,18 @@ func _master_tab() -> Control:
 	_model.item_selected.connect(_on_model_selected)
 	box.add_child(_model)
 	_fill_models()
+	if GameState.has_session():
+		var style_label := Label.new()
+		style_label.text = "OPT_DM_STYLE"
+		style_label.theme_type_variation = UiTheme.MUTED_LABEL
+		box.add_child(style_label)
+		var style := OptionButton.new()
+		style.name = "DmStyleOption"
+		for s: String in WorldPack.DM_STYLES:
+			style.add_item(tr("DM_STYLE_" + s.to_upper()))
+		style.selected = WorldPack.DM_STYLES.find(str(GameState.session.settings.get("dm_style", "classic")))
+		style.item_selected.connect(func(i: int) -> void: GameState.set_dm_style(WorldPack.DM_STYLES[i]))
+		box.add_child(style)
 	return box
 
 

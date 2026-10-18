@@ -151,9 +151,12 @@ func tick(node_name: String) -> bool:
 	return true
 
 
-## Menu → «Новая игра» → creation screen → «Случайный персонаж» (seeded by --seed) → «Начать игру».
+## Menu → «Новая игра» (default world and settings) → creation → «Случайный персонаж» (seeded by --seed)
+## → «Начать игру».
 func quick_character() -> bool:
-	if not await tap("NewGameButton") or not screen_is("CreationScreen"):
+	if not await tap("NewGameButton") or not screen_is("NewGameScreen"):
+		return false
+	if not await tap("NextButton") or not screen_is("CreationScreen"):
 		return false
 	if not await tap("RandomButton"):
 		return false

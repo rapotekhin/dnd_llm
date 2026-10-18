@@ -27,7 +27,10 @@ def test_unsupported_ones_say_why():
     by_id = scenarios()
     assert "боевой" in golden.unsupported(by_id["attack_innkeeper"])
     assert "состязан" in golden.unsupported(by_id["lie_to_guard_contest"])
-    assert "стиль" in golden.unsupported(by_id["dm_style_dry"])
+    assert golden.unsupported(by_id["dm_style_dry"]) == ""  # style and content limits travel in 0.2.2
+    veil = golden.to_turn_params(by_id["content_veil_respected"]).snapshot.world
+    assert veil is not None and veil.veils == ["пытки"]
+    assert golden.to_turn_params(by_id["dm_style_dry"]).snapshot.world.dm_style == "dry"
     assert golden.unsupported(by_id["search_room_fail"]) == ""
 
 

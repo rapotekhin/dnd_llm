@@ -2,8 +2,13 @@ class_name TestUtils
 extends RefCounted
 ## Shared helpers for gdUnit4 suites: game data without autoloads.
 
-const INNKEEPER := "a1f3c7c2-6b1e-4e92-9e2a-111111111111"
-const COOK := "c3f5e9e4-8d3a-4ab4-9c4c-333333333333"
+## Ids of the start pack (data/worlds/frontier) that the tests rely on.
+const INNKEEPER := "npc_innkeeper"
+const SERVING := "npc_serving"
+const COOK := "npc_cook"
+const START_ROOM := "brod-tavern-hall"
+const KITCHEN := "brod-tavern-kitchen"
+const FAR_ROOM := "mine-deep"
 
 
 static func rules() -> Dictionary:
@@ -13,17 +18,26 @@ static func rules() -> Dictionary:
 static var _data: Dictionary = {}
 
 
-## All game data (a fresh deep copy: tests may change it).
+## All game data with the start pack applied (a fresh deep copy: tests may change it).
 static func data() -> Dictionary:
 	if _data.is_empty():
-		_data = preload("res://autoload/catalog.gd").load_all()
+		var base: Dictionary = preload("res://autoload/catalog.gd").load_all()
+		_data = WorldPack.apply_rules(base, WorldPack.load_bundle("res://data/worlds/frontier", "builtin"))
 	return _data.duplicate(true)
 
 
-## The start character (Айра, fighter 1) built from data/start/character.json.
+static func base() -> Dictionary:
+	return preload("res://autoload/catalog.gd").load_all()
+
+
+## The start pack's first ready-made character (Айра, fighter 1).
+static func preset_choices() -> Dictionary:
+	return CharacterBuilder.preset_choices(data()["presets"][0])
+
+
 static func character() -> Dictionary:
 	var d := data()
-	return CharacterBuilder.build(d["character"], d)
+	return CharacterBuilder.build_preset(d["presets"][0], d)
 
 
 static func _json(path: String) -> Dictionary:
@@ -32,7 +46,10 @@ static func _json(path: String) -> Dictionary:
 
 static func new_session(seed_value: int = 42) -> GameSession:
 	var d := data()
-	return GameSession.create(seed_value, "2026-10-18T12:00:00", str(d["world"]["start_room"]), CharacterBuilder.build(d["character"], d))
+	var s := GameSession.create(seed_value, "2026-10-18T12:00:00", str(d["world"]["start_room"]), CharacterBuilder.build_preset(d["presets"][0], d))
+	s.world_id = "frontier"
+	s.settings = WorldPack.default_settings(d["pack"])
+	return s
 
 
 static func session_with_chat() -> GameSession:

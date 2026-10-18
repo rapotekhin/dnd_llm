@@ -73,7 +73,7 @@ func test_turn_applies_the_reserved_effect() -> void:
 	var kinds: Array = s.chat.map(func(e: Dictionary) -> String: return e["kind"])
 	assert_array(kinds).contains([GameSession.KIND_PLAYER, GameSession.KIND_DM, GameSession.KIND_EFFECT])
 	var turn: Dictionary = server.received.filter(func(m: Dictionary) -> bool: return m.get("method") == "turn.request")[0]
-	assert_str(turn["params"]["snapshot"]["scene"]["room_id"]).is_equal("tavern-room-001")
+	assert_str(turn["params"]["snapshot"]["scene"]["room_id"]).is_equal(TestUtils.START_ROOM)
 	assert_array(GameState.session.options).is_equal(["Зажечь"])
 
 
