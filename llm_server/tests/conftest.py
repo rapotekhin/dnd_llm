@@ -52,7 +52,6 @@ def request(ws, req_id: str, method: str, params: dict | None = None) -> None:
 def tavern_snapshot() -> dict:
     """A snapshot as Godot builds it for the start room (game/data/start/*.json)."""
     world = json.loads((REPO_ROOT / "game" / "data" / "start" / "world.json").read_text(encoding="utf-8"))
-    char = json.loads((REPO_ROOT / "game" / "data" / "start" / "character.json").read_text(encoding="utf-8"))
     room_id = world["start_room"]
     room = world["rooms"][room_id]
     loc = world["locations"][room["location_id"]]
@@ -64,10 +63,18 @@ def tavern_snapshot() -> dict:
             "npcs": [{"npc_id": n, **{k: world["npcs"][n][k] for k in ("name", "role", "race", "gender", "description", "personality")}}
                      for n in room["npcs"]],
         },
-        "character": {
-            "name": char["name"], "gender": char["gender"], "race": char["race"], "class_name": char["class_name"],
-            "level": 1, "hp": 12, "max_hp": 12, "ac": 16, "skills": char["skills"], "saves": char["saves"],
-            "gold_cp": char["gold_cp"], "inventory": [{"item_id": k, "name": k, "qty": v} for k, v in char["inventory"].items()],
+        "character": {  # Айра, fighter 1 (game/data/start/character.json as CharacterBuilder builds it)
+            "name": "Айра", "gender": "female", "race": "Человек", "class_name": "Воин", "level": 1,
+            "hp": 12, "max_hp": 12, "ac": 19, "background": "Солдат", "proficiency_bonus": 2, "speed": 30,
+            "abilities": {"str": 16, "dex": 14, "con": 15, "int": 9, "wis": 13, "cha": 11},
+            "skills": {"athletics": 5, "acrobatics": 2, "perception": 3, "survival": 3, "intimidation": 2, "stealth": 2,
+                       "arcana": -1, "persuasion": 0, "insight": 1},
+            "skill_proficiencies": ["athletics", "intimidation", "perception", "survival"],
+            "saves": {"str": 5, "dex": 2, "con": 4, "int": -1, "wis": 1, "cha": 0},
+            "gold_cp": 1000, "features": ["Боевой стиль: защита", "Второе дыхание"],
+            "equipped": ["Кольчуга", "Щит", "Длинный меч"],
+            "inventory": [{"item_id": k, "name": k, "qty": v} for k, v in
+                          {"chain_mail": 1, "shield": 1, "longsword": 1, "handaxe": 2, "torch": 10, "rations": 10}.items()],
         },
         "history": [{"role": "dm", "text": "Таверна шумит."}],
     }

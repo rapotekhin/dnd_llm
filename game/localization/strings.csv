@@ -1,4 +1,10 @@
 keys,ru
+ABILITY_CHA,Харизма
+ABILITY_CON,Телосложение
+ABILITY_DEX,Ловкость
+ABILITY_INT,Интеллект
+ABILITY_STR,Сила
+ABILITY_WIS,Мудрость
 BACKEND_CONNECTING,Подключаюсь к мастеру…
 BACKEND_OFFLINE,Мастер недоступен
 BACKEND_READY,Мастер на связи
@@ -8,8 +14,14 @@ BACKEND_TOOLTIP_READY,"{url}
 BANNER_NO_MASTER,"Нет связи с мастером — переподключаюсь. Игра сохранена, ходы недоступны."
 BTN_BACK,Назад
 BTN_CANCEL_TURN,Отменить ход
+BTN_CHARACTER_SHEET,Лист персонажа
+BTN_CLOSE,Закрыть
 BTN_CONNECTION_SETTINGS,Настройки связи
 BTN_CONTINUE,Продолжить
+BTN_EQUIP_ARMOR,Надеть
+BTN_EQUIP_MAIN_HAND,В основную руку
+BTN_EQUIP_OFF_HAND,Во вторую руку
+BTN_EQUIP_SHIELD,Взять щит
 BTN_EXIT_TO_MENU,Выйти в главное меню
 BTN_LEAVE_CONVERSATION,Закончить разговор
 BTN_LOAD,Загрузить
@@ -26,12 +38,77 @@ BTN_SETTINGS,Настройки
 BTN_TALK_TO,Поговорить: {name}
 BTN_TO_MENU,В меню
 BTN_TRADE_WITH,Торговать: {name}
+BTN_UNEQUIP,Снять
+CC_BACKGROUND_SKILLS,Навыки: {skills}.
+CC_CANTRIPS,Заговоры — выберите {n}:
+CC_CLASS_CASTER,"Заклинатель, базовая характеристика — {ability}."
+CC_CLASS_LINE,Кость хитов к{die}. Спасброски: {saves}. Навыков на выбор: {skills}.
+CC_EQUIPMENT_BACKGROUND,От предыстории: {items}.
+CC_ERR_ABILITY_CHOICE,Выберите характеристики для бонуса расы
+CC_ERR_ABILITY_RANGE,Значения должны быть от 8 до 15
+CC_ERR_EQUIPMENT,Выберите снаряжение
+CC_ERR_EXPERTISE,Выберите навыки для компетентности
+CC_ERR_FEATURES,Выберите умения
+CC_ERR_LANGUAGES,Выберите языки
+CC_ERR_NAME,Введите имя
+CC_ERR_PICK_BACKGROUND,Выберите предысторию
+CC_ERR_PICK_CLASS,Выберите класс
+CC_ERR_PICK_RACE,Выберите расу
+CC_ERR_PICK_SUBCLASS,Выберите подкласс
+CC_ERR_PICK_SUBRACE,Выберите подрасу
+CC_ERR_POINTS_LEFT,Потратьте все 27 очков
+CC_ERR_POINTS_OVER,Потрачено больше 27 очков
+CC_ERR_SKILLS,Выберите навыки
+CC_ERR_SPELLS,Выберите заклинания
+CC_EXPERTISE,"Компетентность — двойной бонус мастерства, выберите {n}:"
+CC_GENDER_FEMALE,Женский
+CC_GENDER_MALE,Мужской
+CC_ITEM_OF_CHOICE,предмет на выбор
+CC_LANGUAGES,Языки — выберите {n}:
+CC_NAME,Имя персонажа
+CC_NEXT,Далее
+CC_POINTS_LEFT,Осталось очков: {n} из 27. Значения от 8 до 15 до бонусов расы.
+CC_RACE_ABILITY_CHOICE,Ещё +1 к {n} характеристикам на выбор (на шаге «Характеристики»).
+CC_RACE_CANTRIP,Заговор расы — выберите 1:
+CC_RACE_LINE,Бонусы: {bonuses}. Скорость {speed} футов.
+CC_RANDOM,Случайный персонаж
+CC_SKILLS_CLASS,Навыки класса — выберите {n}:
+CC_SKILLS_FIXED,Уже есть от расы и предыстории: {skills}.
+CC_SKILLS_RACE,Навыки расы — выберите {n}:
+CC_SPELLS_KNOWN,Известные заклинания 1 круга — выберите {n}:
+CC_SPELLS_PREPARED,Подготовленные заклинания — выберите {n} (позже их можно менять после долгого отдыха):
+CC_SPELLS_SPELLBOOK,Заклинания в книге — выберите {n}:
+CC_START,Начать игру
+CC_STEP_ABILITIES,Характеристики
+CC_STEP_BACKGROUND,Предыстория
+CC_STEP_CLASS,Класс
+CC_STEP_DETAILS,Имя и языки
+CC_STEP_EQUIPMENT,Снаряжение
+CC_STEP_FEATURES,Умения
+CC_STEP_RACE,Раса
+CC_STEP_SKILLS,Навыки
+CC_STEP_SPELLS,Заклинания
+CC_STEP_SUBCLASS,Подкласс
+CC_STEP_SUBRACE,Подраса
+CC_TITLE,Создание персонажа
+CC_UNNAMED,Без имени
 CHECK_ADVANTAGE,Преимущество: {reason}
 CHECK_LINE,{what}: {roll} {bonus} = {total} против DC {dc} {mark}
 DEV_SNAPSHOT,Снимок бага: {path}
+DICE_D,к
+EQUIP_BUSY,"Нельзя, пока мастер думает"
+EQUIP_HANDS_BUSY,Руки заняты
+EQUIP_NOT_LIGHT,Во вторую руку — только лёгкое оружие
+EQUIP_NOT_OWNED,Этого предмета нет
+EQUIP_NO_PROFICIENCY,Нет владения этим видом доспеха
+EQUIP_WRONG_SLOT,Сюда это не надеть
 GAME_SUBTITLE,D&D 5e с мастером-ИИ
 GAME_TITLE,Between the Rolls
 HINT_BACKEND,"Мастер — отдельная программа llm_server: на этом компьютере или на сервере. Токен задаёт тот, кто её запустил (переменная LLM_SERVER_TOKEN). Токен хранится только в настройках на этом компьютере."
+ITEM_ARMOR_AC, — КД {n}{dex}
+ITEM_DEX, + Лов
+ITEM_DEX_MAX, + Лов (макс. {n})
+ITEM_SHIELD_AC, — КД +{n}
 MODE_SOCIAL,Разговор: {name}
 MODE_TRADE,Торговля: {name}
 MSG_BUDGET_EXCEEDED,Дневной лимит расходов мастера исчерпан. Ходы снова будут доступны завтра.
@@ -45,6 +122,7 @@ MSG_NO_SAVES,Сохранений пока нет
 MSG_SAVED,Игра сохранена
 MSG_SAVE_FAILED,Не удалось сохранить игру
 MSG_SAVE_TOO_NEW,Сохранение сделано в более новой версии игры
+MSG_SAVE_TOO_OLD,Сохранение из старой версии игры (до 0.5.0) больше не загружается
 MSG_SERVER_BUSY,Мастер занят другим ходом. Попробуйте ещё раз через несколько секунд.
 MSG_TURN_CANCELLED,Ход отменён. Мир не изменился.
 MSG_TURN_TIMEOUT,Мастер не успел ответить. Мир не изменился — можно повторить ход.
@@ -69,12 +147,31 @@ SAVE_DEX,Спасбросок Ловкости
 SAVE_INT,Спасбросок Интеллекта
 SAVE_STR,Спасбросок Силы
 SAVE_WIS,Спасбросок Мудрости
+SHEET_ABILITIES,Характеристика · модификатор · спасбросок (● — владение)
+SHEET_ABILITY_ROW,{name} {score} ({mod}) · спасбросок {save}
+SHEET_EQUIPPED,Надето и в руках
+SHEET_LANGUAGES,Языки: {list}
+SHEET_LINE,"{race}, {class}, {level} уровень · {background}"
+SHEET_PASSIVE,пассивная Внимательность {n}
+SHEET_PROF_SPEED,Бонус мастерства +{prof} · скорость {speed} футов
+SHEET_SKILLS,"Навыки (● — владение, ●● — компетентность)"
+SHEET_SLOT,{level} круг: {left}/{max}
+SHEET_SPELLCASTING,"Заклинания: {ability}, Сл спасброска {dc}, бонус атаки {attack}"
+SHEET_SPELLS_ALWAYS,Всегда подготовлены (подкласс)
+SHEET_SPELLS_CANTRIPS,Заговоры
+SHEET_SPELLS_KNOWN,В книге заклинаний
+SHEET_SPELLS_PREPARED,Подготовлены
+SHEET_TAB_FEATURES,Умения и заклинания
+SHEET_TAB_GEAR,Снаряжение
+SHEET_TAB_STATS,Характеристики
 SIDE_COINS,Монеты: {coins}
 SIDE_EXITS,Выходы
 SIDE_HP_AC,HP {hp}/{max} · КД {ac}
 SIDE_INVENTORY,Снаряжение
+SIDE_MORE_ITEMS,…и ещё предметов: {n} (в листе персонажа)
 SIDE_PEOPLE,Здесь
 SIDE_PLACE,Где вы
+SIDE_RACE_CLASS,"{race}, {class}, {level} ур."
 SKILL_ACROBATICS,Акробатика
 SKILL_ANIMAL_HANDLING,Уход за животными
 SKILL_ARCANA,Магия
@@ -93,10 +190,14 @@ SKILL_RELIGION,Религия
 SKILL_SLEIGHT_OF_HAND,Ловкость рук
 SKILL_STEALTH,Скрытность
 SKILL_SURVIVAL,Выживание
+SLOT_ARMOR,Доспех
 SLOT_AUTOSAVE,Автосохранение
 SLOT_EMPTY,пусто
 SLOT_HINT,Ходов: {turns} · {date}
+SLOT_MAIN_HAND,Основная рука
 SLOT_N,Слот {n}
+SLOT_OFF_HAND,Вторая рука
+SLOT_SHIELD,Щит
 SLOT_TURNS,ходов: {n}
 TAB_DISPLAY,Экран
 TAB_MASTER,Мастер

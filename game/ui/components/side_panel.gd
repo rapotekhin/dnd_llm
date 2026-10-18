@@ -4,6 +4,7 @@ extends PanelContainer
 ## and the deterministic buttons the engine builds itself (ADR-0009 §4): exits and the NPCs of the room.
 
 signal menu_requested
+signal sheet_requested
 
 var _content: VBoxContainer
 
@@ -22,6 +23,12 @@ func _ready() -> void:
 	_content.add_theme_constant_override("separation", 10)
 	scroll.add_child(_content)
 	col.add_child(BackendStatus.new())
+	var sheet := Button.new()
+	sheet.name = "SheetButton"
+	sheet.text = "BTN_CHARACTER_SHEET"
+	sheet.custom_minimum_size = Vector2(0, 56)
+	sheet.pressed.connect(sheet_requested.emit)
+	col.add_child(sheet)
 	var menu := Button.new()
 	menu.text = "BTN_MENU"
 	menu.custom_minimum_size = Vector2(0, 56)
@@ -60,17 +67,11 @@ func _rebuild() -> void:
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 
 	_heading(str(c.get("name", "")))
-	_line("%s, %s, %d ур." % [c.get("race", ""), c.get("class_name", ""), int(c.get("level", 1))], true)
+	_line(tr("SIDE_RACE_CLASS").format({"race": c.get("race_name", ""), "class": c.get("class_name", ""), "level": int(c.get("level", 1))}), true)
 	var hp := _line(tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}), false)
 	if int(c["hp"]) * 2 <= int(c["max_hp"]):
 		hp.add_theme_color_override("font_color", UiTheme.BAD)
 	_line(tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}), false)
-	_subheading("SIDE_INVENTORY")
-	var inv: Dictionary = c.get("inventory", {})
-	for id: String in inv:
-		var qty := int(inv[id])
-		_line("• %s%s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else ""], true)
-
 	var room := world.room(s.room_id)
 	_subheading("SIDE_PLACE")
 	_line("%s — %s" % [world.location(world.location_id(s.room_id)).get("name", ""), room.get("name", s.room_id)], false)
@@ -89,6 +90,18 @@ func _rebuild() -> void:
 		for e: String in world.exits(s.room_id):
 			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act)
 			b.name = "Exit_" + e
+
+	# Only what is worn and wielded; the full inventory is on the character sheet.
+	_subheading("SIDE_INVENTORY")
+	var inv: Dictionary = c.get("inventory", {})
+	var shown := 0
+	for slot: String in CharacterRules.SLOTS:
+		var id := str(c.get("equipped", {}).get(slot, ""))
+		if not id.is_empty():
+			_line("◆ " + ItemRules.display_name(items, s.items, id), true)
+			shown += 1
+	if inv.size() > shown:
+		_line(tr("SIDE_MORE_ITEMS").format({"n": inv.size() - shown}), true)
 
 
 func _heading(text: String) -> void:

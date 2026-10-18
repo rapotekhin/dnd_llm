@@ -1,21 +1,23 @@
 class_name SaveFormat
 extends RefCounted
 ## Save file layout and migrations (docs/tech/godot-client.md §«Сейвы»). Bump SAVE_VERSION on any change
-## of the `session` layout and add a step to MIGRATIONS; never delete old steps or their fixtures.
+## of the `session` layout and add a step to MIGRATIONS with a fixture of the old version.
 ##
 ## v1 (0.4.0): seed, RNG, counters, chat, options.
 ## v2 (0.4.1): world state — room, mode, character, items, attitudes, flags, summaries.
+## v3 (0.5.0): the full 5e character (CharacterRules). Saves before v3 do not load: the game is not released
+##   and their character had no sheet to rebuild from (decision of v0.5.0).
 
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
+## The oldest version that still loads (through MIGRATIONS).
+const MIN_VERSION := 3
 
 const ERR_UNREADABLE := "MSG_LOAD_FAILED"
 const ERR_TOO_NEW := "MSG_SAVE_TOO_NEW"
+const ERR_TOO_OLD := "MSG_SAVE_TOO_OLD"
 
-## from_version -> Callable(data: Dictionary, start: Dictionary) -> void that upgrades `data` to from_version + 1.
-## `start` = {"start_room": String, "character": Dictionary} for values an old save never had.
-static var MIGRATIONS: Dictionary[int, Callable] = {
-	1: _v1_to_v2,
-}
+## from_version -> Callable(data: Dictionary) -> void that upgrades `data` to from_version + 1.
+static var MIGRATIONS: Dictionary[int, Callable] = {}
 
 
 static func build(session: GameSession, game_version: String, saved_at: String, kept_chat: int) -> Dictionary:
@@ -36,27 +38,15 @@ static func check(data: Variant) -> String:
 		return ERR_TOO_NEW
 	if int(data.get("save_version", 0)) < 1:
 		return ERR_UNREADABLE
+	if int(data.get("save_version", 0)) < MIN_VERSION:
+		return ERR_TOO_OLD
 	return ""
 
 
 ## Upgrades `data` in place step by step up to SAVE_VERSION.
-static func migrate(data: Dictionary, start: Dictionary = {}) -> void:
-	var v := int(data.get("save_version", 1))
+static func migrate(data: Dictionary) -> void:
+	var v := int(data.get("save_version", MIN_VERSION))
 	while v < SAVE_VERSION:
-		(MIGRATIONS[v] as Callable).call(data, start)
+		(MIGRATIONS[v] as Callable).call(data)
 		v += 1
 		data["save_version"] = v
-
-
-## A 0.4.0 game had no world: put the player in the start room with the start character, in exploration.
-static func _v1_to_v2(data: Dictionary, start: Dictionary) -> void:
-	var s: Dictionary = data["session"]
-	s["room_id"] = str(start.get("start_room", ""))
-	s["mode"] = GameSession.MODE_EXPLORATION
-	s["npc_id"] = ""
-	s["character"] = GameSession.character_from_template(start.get("character", {}))
-	s["effect_counter"] = 0
-	for key: String in ["items", "attitudes", "summaries"]:
-		s[key] = {}
-	for key: String in ["flags", "dialogue_log", "location_log"]:
-		s[key] = []

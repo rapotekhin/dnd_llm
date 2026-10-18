@@ -131,6 +131,35 @@ func press(button: BaseButton) -> void:
 	await frames(2)
 
 
+## Presses the control named `node_name` on the current screen; false if there is none or it is disabled.
+## Screens that redraw on every change (creation) rebuild their controls, so look them up each time.
+func tap(node_name: String) -> bool:
+	var b := find(screen(), node_name) as BaseButton
+	if b == null or b.disabled:
+		return false
+	await press(b)
+	return true
+
+
+## Ticks the check box named `node_name` on the current screen.
+func tick(node_name: String) -> bool:
+	var cb := find(screen(), node_name) as BaseButton
+	if cb == null or cb.disabled:
+		return false
+	cb.button_pressed = not cb.button_pressed
+	await frames(2)
+	return true
+
+
+## Menu → «Новая игра» → creation screen → «Случайный персонаж» (seeded by --seed) → «Начать игру».
+func quick_character() -> bool:
+	if not await tap("NewGameButton") or not screen_is("CreationScreen"):
+		return false
+	if not await tap("RandomButton"):
+		return false
+	return await tap("StartButton")
+
+
 func key(keycode: Key) -> void:
 	var ev := InputEventKey.new()
 	ev.keycode = keycode

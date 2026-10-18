@@ -30,7 +30,7 @@ func _ready() -> void:
 		cont.theme_type_variation = UiTheme.ACCENT_BUTTON
 		cont.name = "ContinueButton"
 		cont.tooltip_text = _slot_hint(latest)
-	_button(col, "BTN_NEW_GAME", func() -> void: GameEntry.enter({"kind": "new"})).name = "NewGameButton"
+	_button(col, "BTN_NEW_GAME", func() -> void: EventBus.navigate.emit("creation", {})).name = "NewGameButton"
 	_button(col, "BTN_LOAD", func() -> void: EventBus.navigate.emit("slots", {"mode": SlotsScreen.MODE_LOAD, "back": "menu"}))
 	_button(col, "BTN_SETTINGS", func() -> void: EventBus.navigate.emit("settings", {"back": "menu"}))
 	_button(col, "BTN_QUIT", func() -> void: get_tree().quit())

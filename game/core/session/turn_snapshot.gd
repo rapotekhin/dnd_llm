@@ -30,7 +30,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"room_id": s.room_id, "room_name": room.get("name", s.room_id), "room_description": room.get("description", ""),
 			"exits": exits, "npcs": npcs, "hooks": room.get("hooks", []), "flags": s.flags,
 		},
-		"character": character_sheet(s, data["items"]),
+		"character": character_sheet(s, data),
 		"history": s.history(history_chars),
 		"summaries": summaries,
 		"limits": {"max_checks": int(data["rules"]["turn_limits"]["max_checks"]),
@@ -38,15 +38,46 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 	}
 
 
-static func character_sheet(s: GameSession, items: Dictionary) -> Dictionary:
+## The sheet in final numbers (ADR-0009 §4): the master never computes bonuses. Features and spells go by name;
+## their text is behind engine.lookup (kind feature / spell).
+static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 	var c := s.character
+	var items: Dictionary = data["items"]
 	var inventory: Array[Dictionary] = []
 	for id: String in c.get("inventory", {}):
 		inventory.append({"item_id": id, "name": ItemRules.display_name(items, s.items, id), "qty": int(c["inventory"][id])})
-	return {
-		"name": c.get("name", ""), "gender": c.get("gender", "other"), "race": c.get("race", ""),
-		"class_name": c.get("class_name", ""), "level": int(c.get("level", 1)), "hp": int(c.get("hp", 0)),
+	var equipped: Array[String] = []
+	for slot: String in CharacterRules.SLOTS:
+		var id := str(c.get("equipped", {}).get(slot, ""))
+		if not id.is_empty():
+			equipped.append(ItemRules.display_name(items, s.items, id))
+	var sub: Dictionary = data["classes"]["subclasses"].get(str(c.get("subclass", "")), {})
+	var class_text := str(c.get("class_name", ""))
+	if not sub.is_empty():
+		class_text += " (%s)" % sub["name"]
+	var sheet := {
+		"name": c.get("name", ""), "gender": c.get("gender", "other"), "race": c.get("race_name", ""),
+		"class_name": class_text, "level": int(c.get("level", 1)), "hp": int(c.get("hp", 0)),
 		"max_hp": int(c.get("max_hp", 0)), "ac": int(c.get("ac", 10)), "conditions": c.get("conditions", []),
 		"skills": c.get("skills", {}), "saves": c.get("saves", {}), "gold_cp": int(c.get("gold_cp", 0)),
-		"inventory": inventory, "features": c.get("features", []),
+		"inventory": inventory, "features": CharacterRules.feature_names(c, data),
+		"background": str(data["backgrounds"].get(str(c.get("background", "")), {}).get("name", "")),
+		"abilities": c.get("abilities", {}), "proficiency_bonus": int(c.get("prof_bonus", 2)),
+		"skill_proficiencies": c.get("skill_profs", []), "speed": int(c.get("speed", 30)), "equipped": equipped,
 	}
+	if not str(c.get("spell_ability", "")).is_empty():
+		var prepared := CharacterRules.spell_names(c, data, "prepared")
+		for n: String in CharacterRules.spell_names(c, data, "always"):
+			if not prepared.has(n):
+				prepared.append(n)
+		var slots: Array[Dictionary] = []
+		var used: Array = c.get("slots_used", [])
+		var maxes: Array = c.get("slots_max", [])
+		for i in maxes.size():
+			if int(maxes[i]) > 0:
+				slots.append({"level": i + 1, "left": int(maxes[i]) - int(used[i] if i < used.size() else 0), "max": int(maxes[i])})
+		sheet["cantrips"] = CharacterRules.spell_names(c, data, "cantrips")
+		sheet["spells"] = prepared
+		sheet["spell_slots"] = slots
+		sheet["spell_save_dc"] = int(c.get("spell_dc", 0))
+	return sheet

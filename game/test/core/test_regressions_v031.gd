@@ -67,7 +67,7 @@ func test_b10_a_new_game_starts_a_fresh_world() -> void:
 	GameState.effects.reserves["e-1"] = {"turn_id": "t-1", "kind": "flag", "plan": {}, "summary": ""}
 	GameState.start(TestUtils.new_session(7))
 	assert_str(GameState.session.room_id).is_equal("tavern-room-001")
-	assert_int(GameState.session.character["gold_cp"]).is_equal(1500)
+	assert_int(GameState.session.character["gold_cp"]).is_equal(int(TestUtils.character()["gold_cp"]))
 	assert_dict(GameState.effects.reserves).is_empty()
 
 

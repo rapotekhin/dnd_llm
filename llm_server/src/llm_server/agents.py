@@ -161,7 +161,8 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
 
 
 async def lookup(ctx: RunContext[TurnContext], kind: LookupKind, id: str) -> str:
-    """Справка движка: kind = rule | spell | condition | item | npc, id — идентификатор. Только сцена и SRD."""
+    """Справка движка: kind = rule | spell | feature | condition | item | npc; id — идентификатор или русское
+    название (заклинания и умения — как в листе персонажа). Только сцена и SRD."""
     t = ctx.deps
     raw = await t.session.call_engine("engine.lookup", EngineLookupParams(turn_id=t.params.turn_id, kind=kind, id=id))
     r = EngineLookupResult.model_validate(raw)

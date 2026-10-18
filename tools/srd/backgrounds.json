@@ -1,0 +1,72 @@
+{
+	"acolyte": {
+		"name": "Прислужник",
+		"desc": "Вы провели годы при храме: знаете обряды, молитвы и людей веры.",
+		"skills": ["insight", "religion"],
+		"tools": [],
+		"language_choice": 2,
+		"equipment": [{"id": "amulet", "qty": 1}, {"id": "book", "qty": 1}, {"id": "block_of_incense", "qty": 5}, {"id": "clothes_common", "qty": 1}, {"id": "pouch", "qty": 1}],
+		"gold_cp": 1500,
+		"feature": {"name": "Приют верующих", "desc": "В храмах вашей веры вам и спутникам дадут кров, лечение и скромную поддержку."}
+	},
+	"criminal": {
+		"name": "Преступник",
+		"desc": "Вы жили по ту сторону закона: воровство, контрабанда, тёмные сделки.",
+		"skills": ["deception", "stealth"],
+		"tools": ["thieves_tools"],
+		"language_choice": 0,
+		"equipment": [{"id": "crowbar", "qty": 1}, {"id": "clothes_common", "qty": 1}, {"id": "pouch", "qty": 1}],
+		"gold_cp": 1500,
+		"feature": {"name": "Связи в преступном мире", "desc": "Вы знаете, как передать весть через сеть скупщиков, контрабандистов и осведомителей."}
+	},
+	"folk_hero": {
+		"name": "Народный герой",
+		"desc": "Простой человек, однажды заступившийся за своих. О вас рассказывают в деревнях.",
+		"skills": ["animal_handling", "survival"],
+		"tools": ["carpenters_tools"],
+		"language_choice": 0,
+		"equipment": [{"id": "carpenters_tools", "qty": 1}, {"id": "shovel", "qty": 1}, {"id": "pot_iron", "qty": 1}, {"id": "clothes_common", "qty": 1}, {"id": "pouch", "qty": 1}],
+		"gold_cp": 1000,
+		"feature": {"name": "Гостеприимство простых людей", "desc": "Крестьяне и ремесленники укроют вас от погони и накормят, если вы не подвергаете их опасности."}
+	},
+	"soldier": {
+		"name": "Солдат",
+		"desc": "Вы служили в войске или страже: строй, приказы, бой плечом к плечу.",
+		"skills": ["athletics", "intimidation"],
+		"tools": ["dice_set"],
+		"language_choice": 0,
+		"equipment": [{"id": "dice_set", "qty": 1}, {"id": "clothes_common", "qty": 1}, {"id": "pouch", "qty": 1}],
+		"gold_cp": 1000,
+		"feature": {"name": "Воинское звание", "desc": "Солдаты бывших союзных отрядов признают ваше звание и могут помочь снаряжением или проводом."}
+	},
+	"sage": {
+		"name": "Мудрец",
+		"desc": "Годы над книгами и свитками: вы знаете, где искать ответ.",
+		"skills": ["arcana", "history"],
+		"tools": [],
+		"language_choice": 2,
+		"equipment": [{"id": "ink_1_ounce_bottle", "qty": 1}, {"id": "ink_pen", "qty": 1}, {"id": "parchment_one_sheet", "qty": 5}, {"id": "clothes_common", "qty": 1}, {"id": "pouch", "qty": 1}],
+		"gold_cp": 1000,
+		"feature": {"name": "Исследователь", "desc": "Если вы чего-то не знаете, то обычно знаете, где или у кого это выяснить."}
+	},
+	"outlander": {
+		"name": "Странник",
+		"desc": "Вы выросли вдали от городов: леса, горы и дороги — ваш дом.",
+		"skills": ["athletics", "survival"],
+		"tools": ["flute"],
+		"language_choice": 1,
+		"equipment": [{"id": "quarterstaff", "qty": 1}, {"id": "hunting_trap", "qty": 1}, {"id": "clothes_travelers", "qty": 1}, {"id": "pouch", "qty": 1}],
+		"gold_cp": 1000,
+		"feature": {"name": "Чутьё дороги", "desc": "Вы помните местность, находите воду и пищу для себя и спутников в дикой земле."}
+	},
+	"entertainer": {
+		"name": "Артист",
+		"desc": "Музыкант, акробат или рассказчик: публика — ваша стихия.",
+		"skills": ["acrobatics", "performance"],
+		"tools": ["lute", "disguise_kit"],
+		"language_choice": 0,
+		"equipment": [{"id": "lute", "qty": 1}, {"id": "clothes_costume", "qty": 1}, {"id": "pouch", "qty": 1}],
+		"gold_cp": 1500,
+		"feature": {"name": "На публику", "desc": "В тавернах и на площадях за выступление вам дадут ночлег и еду."}
+	}
+}

@@ -1,10 +1,30 @@
 {
   "$defs": {
     "CharacterSheet": {
+      "description": "The sheet in final numbers (ADR-0009 §4). Fields after `features` came in 0.2.1 (the 5e character, v0.5.0);\na feature's or spell's text is behind engine.lookup.",
       "properties": {
+        "abilities": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Abilities",
+          "type": "object"
+        },
         "ac": {
           "title": "Ac",
           "type": "integer"
+        },
+        "background": {
+          "default": "",
+          "title": "Background",
+          "type": "string"
+        },
+        "cantrips": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cantrips",
+          "type": "array"
         },
         "class_name": {
           "default": "",
@@ -16,6 +36,13 @@
             "type": "string"
           },
           "title": "Conditions",
+          "type": "array"
+        },
+        "equipped": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Equipped",
           "type": "array"
         },
         "features": {
@@ -64,6 +91,11 @@
           "title": "Name",
           "type": "string"
         },
+        "proficiency_bonus": {
+          "default": 2,
+          "title": "Proficiency Bonus",
+          "type": "integer"
+        },
         "race": {
           "default": "",
           "title": "Race",
@@ -76,12 +108,50 @@
           "title": "Saves",
           "type": "object"
         },
+        "skill_proficiencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Skill Proficiencies",
+          "type": "array"
+        },
         "skills": {
           "additionalProperties": {
             "type": "integer"
           },
           "title": "Skills",
           "type": "object"
+        },
+        "speed": {
+          "default": 30,
+          "title": "Speed",
+          "type": "integer"
+        },
+        "spell_save_dc": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spell Save Dc"
+        },
+        "spell_slots": {
+          "items": {
+            "$ref": "#/$defs/SpellSlots"
+          },
+          "title": "Spell Slots",
+          "type": "array"
+        },
+        "spells": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Spells",
+          "type": "array"
         }
       },
       "required": [
@@ -324,6 +394,29 @@
         }
       },
       "title": "Snapshot",
+      "type": "object"
+    },
+    "SpellSlots": {
+      "properties": {
+        "left": {
+          "title": "Left",
+          "type": "integer"
+        },
+        "level": {
+          "title": "Level",
+          "type": "integer"
+        },
+        "max": {
+          "title": "Max",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "level",
+        "left",
+        "max"
+      ],
+      "title": "SpellSlots",
       "type": "object"
     },
     "TurnLimits": {

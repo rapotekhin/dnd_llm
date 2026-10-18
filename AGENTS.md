@@ -9,9 +9,9 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 | Folder | What | Status |
 |---|---|---|
 | `legacy/` | Pygame prototype (v0.3.x): game, tests, scripts | frozen — only bug fixes until parity, then removed |
-| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | skeleton (v0.4.0): menu, saves, backend link, chat screen; rules port — v0.5.x |
-| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.2.0 (v0.4.1) |
-| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.2.0 |
+| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character: SRD catalog, creation, sheet (v0.5.0); worlds and the rest of the port — v0.5.1+ |
+| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.2.1 (v0.5.0) |
+| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.2.1 |
 | `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
 | `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 20 scenarios; runner `llm_server.golden` (v0.4.2) |
 | `docs/` | design + tech docs, ADRs | live |
@@ -41,13 +41,16 @@ python legacy/scripts/playtest/smoke.py         # live playtest: real game + rea
 Backend and Godot (details in [connectivity-spike.md](docs/tech/connectivity-spike.md)); `uv` is installed by `legacy/requirements-dev.txt`:
 
 ```bash
-uv sync --project llm_server && uv run --project llm_server pytest   # backend protocol + contract tests (own .venv)
+uv sync --project llm_server && cd llm_server && uv run pytest && cd ..   # backend protocol + contract tests (own .venv; from llm_server/, the root pytest.ini is for legacy)
 uv run --project llm_server python -m llm_server.contract            # regenerate contract/schema/ after changing protocol models
 uv run --project llm_server python -m llm_server.golden              # golden LLM scenarios on the real model + judge → build/evals/ (cents; --model, --only)
 python tools/connectivity_e2e.py                                      # Godot <-> Caddy wss:// <-> llm_server end to end (Docker; --no-proxy without it)
 python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/
 python tools/godot_playtest.py --scenario offline                     # live Godot playtest without the server
 python tools/godot_playtest.py --scenario live --real                 # live Godot playtest with the real OpenRouter model (cents)
+python tools/godot_playtest.py --scenario creation --no-server        # character creation step by step, screenshots of every step
+python tools/srd_import.py build                                      # SRD + tools/srd/ru.json → game/data/srd/ and the item catalog
+uv run --project llm_server python tools/srd_import.py translate      # translate new SRD entries into tools/srd/ru.json (cents)
 ```
 
 `llm_server` reads the root `.env`: `LLM_SERVER_TOKEN`, `OPENROUTER_API_KEY`; `LLM_SERVER_TURN_HANDLER=stub` runs it without an LLM. The playtest and connectivity scripts start it themselves (stub unless `--real`). Deploying to a server: [docs/tech/deploy.md](docs/tech/deploy.md).
@@ -127,4 +130,5 @@ legacy/
 | Protocol message / schema | Pydantic model in `llm_server/` → export to `contract/` (from v0.4.1) |
 | Golden LLM scenario | `evals/golden/scenarios.yaml` + [format doc](docs/tech/golden-scenarios.md); run `python -m llm_server.golden` after prompt changes |
 | Architectural decision | new ADR in `docs/tech/adr/` |
-| D&D rules content (races, classes, spells) | SRD JSON data; never hard-coded |
+| D&D rules content (races, classes, spells) | `game/data/srd/` via `tools/srd_import.py` (Russian names in `tools/srd/ru.json`); never hard-coded |
+| Character rule (bonus, AC, HP, creation step) | `game/core/character/` (`CharacterRules`, `CharacterBuilder`) + test in `game/test/core/` |

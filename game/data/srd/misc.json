@@ -1,0 +1,260 @@
+{
+	"languages": {
+		"abyssal": {
+			"name": "Язык Бездны",
+			"type": "exotic"
+		},
+		"celestial": {
+			"name": "Небесный",
+			"type": "exotic"
+		},
+		"common": {
+			"name": "Общий",
+			"type": "standard"
+		},
+		"deep_speech": {
+			"name": "Глубинная речь",
+			"type": "exotic"
+		},
+		"draconic": {
+			"name": "Драконий",
+			"type": "exotic"
+		},
+		"dwarvish": {
+			"name": "Дварфийский",
+			"type": "standard"
+		},
+		"elvish": {
+			"name": "Эльфийский",
+			"type": "standard"
+		},
+		"giant": {
+			"name": "Великаний",
+			"type": "standard"
+		},
+		"gnomish": {
+			"name": "Гномий",
+			"type": "standard"
+		},
+		"goblin": {
+			"name": "Гоблинский",
+			"type": "standard"
+		},
+		"halfling": {
+			"name": "Язык полуросликов",
+			"type": "standard"
+		},
+		"infernal": {
+			"name": "Инфернальный",
+			"type": "exotic"
+		},
+		"orc": {
+			"name": "Орочий",
+			"type": "standard"
+		},
+		"primordial": {
+			"name": "Первичный",
+			"type": "exotic"
+		},
+		"sylvan": {
+			"name": "Сильван",
+			"type": "exotic"
+		},
+		"undercommon": {
+			"name": "Подземный общий",
+			"type": "exotic"
+		}
+	},
+	"categories": {
+		"simple_weapons": {
+			"name": "простое оружие",
+			"items": [
+				"club",
+				"dagger",
+				"greatclub",
+				"handaxe",
+				"javelin",
+				"light_hammer",
+				"mace",
+				"quarterstaff",
+				"sickle",
+				"spear",
+				"crossbow_light",
+				"dart",
+				"shortbow",
+				"sling"
+			]
+		},
+		"martial_weapons": {
+			"name": "воинское оружие",
+			"items": [
+				"battleaxe",
+				"flail",
+				"glaive",
+				"greataxe",
+				"greatsword",
+				"halberd",
+				"lance",
+				"longsword",
+				"maul",
+				"morningstar",
+				"pike",
+				"rapier",
+				"scimitar",
+				"shortsword",
+				"trident",
+				"war_pick",
+				"warhammer",
+				"whip",
+				"blowgun",
+				"crossbow_hand",
+				"crossbow_heavy",
+				"longbow",
+				"net"
+			]
+		},
+		"simple_melee_weapons": {
+			"name": "простое рукопашное оружие",
+			"items": [
+				"club",
+				"dagger",
+				"greatclub",
+				"handaxe",
+				"javelin",
+				"light_hammer",
+				"mace",
+				"quarterstaff",
+				"sickle",
+				"spear"
+			]
+		},
+		"martial_melee_weapons": {
+			"name": "воинское рукопашное оружие",
+			"items": [
+				"battleaxe",
+				"flail",
+				"glaive",
+				"greataxe",
+				"greatsword",
+				"halberd",
+				"lance",
+				"longsword",
+				"maul",
+				"morningstar",
+				"pike",
+				"rapier",
+				"scimitar",
+				"shortsword",
+				"trident",
+				"war_pick",
+				"warhammer",
+				"whip"
+			]
+		},
+		"simple_ranged_weapons": {
+			"name": "простое дальнобойное оружие",
+			"items": [
+				"crossbow_light",
+				"dart",
+				"shortbow",
+				"sling"
+			]
+		},
+		"martial_ranged_weapons": {
+			"name": "воинское дальнобойное оружие",
+			"items": [
+				"blowgun",
+				"crossbow_hand",
+				"crossbow_heavy",
+				"longbow",
+				"net"
+			]
+		},
+		"arcane_foci": {
+			"name": "магическая фокусировка",
+			"items": [
+				"crystal",
+				"orb",
+				"rod",
+				"staff",
+				"wand"
+			]
+		},
+		"druidic_foci": {
+			"name": "друидическая фокусировка",
+			"items": [
+				"sprig_of_mistletoe",
+				"totem",
+				"wooden_staff",
+				"yew_wand"
+			]
+		},
+		"holy_symbols": {
+			"name": "священный символ",
+			"items": [
+				"amulet",
+				"emblem",
+				"reliquary"
+			]
+		},
+		"musical_instruments": {
+			"name": "музыкальный инструмент",
+			"items": [
+				"bagpipes",
+				"drum",
+				"dulcimer",
+				"flute",
+				"lute",
+				"lyre",
+				"horn",
+				"pan_flute",
+				"shawm",
+				"viol"
+			]
+		},
+		"artisans_tools": {
+			"name": "инструменты ремесленника",
+			"items": [
+				"alchemists_supplies",
+				"brewers_supplies",
+				"calligraphers_supplies",
+				"carpenters_tools",
+				"cartographers_tools",
+				"cobblers_tools",
+				"cooks_utensils",
+				"glassblowers_tools",
+				"jewelers_tools",
+				"leatherworkers_tools",
+				"masons_tools",
+				"painters_supplies",
+				"potters_tools",
+				"smiths_tools",
+				"tinkers_tools",
+				"weavers_tools",
+				"woodcarvers_tools"
+			]
+		},
+		"gaming_sets": {
+			"name": "игровой набор",
+			"items": [
+				"dice_set",
+				"playing_card_set"
+			]
+		}
+	},
+	"damage_types": {
+		"acid": "кислота",
+		"bludgeoning": "дробящий",
+		"cold": "холод",
+		"fire": "огонь",
+		"force": "силовое поле",
+		"lightning": "электричество",
+		"necrotic": "некротическая энергия",
+		"piercing": "колющий",
+		"poison": "яд",
+		"psychic": "психическая энергия",
+		"radiant": "излучение",
+		"slashing": "рубящий",
+		"thunder": "звук"
+	}
+}

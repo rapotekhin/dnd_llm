@@ -1,6 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
-## Smoke playtest: menu → new game (enter turn) → action with engine.check → option → save to slot 1 →
-## exit to menu → continue → the chat is restored. Needs a running llm_server (stub turn is enough).
+## Smoke playtest: menu → new game (creation: random character) → enter turn → action with engine.check →
+## option → character sheet (tabs, unequip / equip) → save to slot 1 → exit to menu → continue → the chat is
+## restored. Needs a running llm_server (stub turn is enough).
 
 
 func run() -> void:
@@ -14,6 +15,13 @@ func run() -> void:
 	if not step("menu has «Новая игра»", new_game != null):
 		return
 	await press(new_game)
+	step("creation screen", screen_is("CreationScreen"))
+	await shot("creation_start")
+	await tap("RandomButton")
+	var start: Button = find(screen(), "StartButton")
+	step("random character is complete", start != null and start.visible and not start.disabled)
+	await shot("creation_random")
+	await press(start)
 
 	var entered := await wait_until(func() -> bool: return screen_is("GameScreen") and gs.has_session() and not gs.is_busy(), 30.0)
 	if not step("enter turn finished", entered):
@@ -40,6 +48,8 @@ func run() -> void:
 			step("option turn finished", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
 			await shot("game_option")
 
+	await _sheet(gs, game)
+
 	await key(KEY_ESCAPE)
 	var pause: Control = find_all(game, "PauseMenu")[0]
 	step("Esc opens the pause menu", pause.visible)
@@ -62,6 +72,28 @@ func run() -> void:
 	step("continue restores the chat", screen_is("GameScreen") and gs.has_session() and gs.session.chat.size() == chat_size,
 		"%d / %d entries" % [gs.session.chat.size() if gs.has_session() else -1, chat_size])
 	await shot("game_restored")
+
+
+func _sheet(gs: Node, game: Control) -> void:
+	await press(find(game, "SheetButton"))
+	var sheet: Control = find(game, "CharacterSheet")
+	step("sheet opens", sheet.visible)
+	var tabs: TabContainer = sheet.find_children("*", "TabContainer", true, false)[0]
+	for i in tabs.get_tab_count():
+		tabs.current_tab = i
+		await shot("sheet_tab_%d" % i)
+	var c: Dictionary = gs.session.character
+	var weapon := str(c["equipped"]["main_hand"])
+	if not weapon.is_empty():
+		var ac_before := int(c["ac"])
+		await press(find(sheet, "Unequip_main_hand"))
+		step("unequip the weapon", str(gs.session.character["equipped"]["main_hand"]).is_empty() and int(gs.session.character["ac"]) == ac_before)
+		var again: Button = find(sheet, "Equip_main_hand_" + weapon)
+		if step("equip button for the weapon", again != null and not again.disabled):
+			await press(again)
+			step("weapon back in hand", str(gs.session.character["equipped"]["main_hand"]) == weapon)
+	await key(KEY_ESCAPE)
+	step("Esc closes the sheet", not sheet.visible and not find_all(game, "PauseMenu")[0].visible)
 
 
 func _count(gs: Node, kind: String) -> int:

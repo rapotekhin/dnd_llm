@@ -21,9 +21,22 @@ def test_exploration_prompt():
     text = prompts.system_prompt("exploration", snap(), None)
     assert "Главный зал [tavern-room-001]" in text
     assert "Кухня [tavern-room-002]" in text  # exits with ids for `move`
-    assert "15 зм" in text
+    assert "10 зм" in text
     assert "женском роде" in text
+    assert "Сил 16" in text and "athletics +5*" in text and "(* — владеет)" in text
+    assert "Кольчуга, Щит, Длинный меч" in text
+    assert "Заклинатель" not in text
     assert "\n\n\n" not in text
+
+
+def test_caster_sheet_in_the_prompt():
+    raw = tavern_snapshot()
+    raw["character"].update({"class_name": "Волшебник", "spell_save_dc": 13, "cantrips": ["Огненный снаряд"],
+                             "spells": ["Волшебная стрела", "Щит"], "spell_slots": [{"level": 1, "left": 1, "max": 2}]})
+    text = prompts.system_prompt("exploration", Snapshot.model_validate(raw), None)
+    assert "Заклинатель: Сл спасброска 13; ячейки: 1 круг 1/2." in text
+    assert "Заговоры: Огненный снаряд." in text
+    assert "Заклинания: Волшебная стрела, Щит." in text
 
 
 def test_npc_prompts():

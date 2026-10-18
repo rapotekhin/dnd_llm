@@ -94,6 +94,11 @@ static func build() -> Theme:
 
 	t.set_color("font_color", "CheckBox", TEXT)
 	t.set_color("font_hover_color", "CheckBox", ACCENT_BRIGHT)
+	t.set_color("font_pressed_color", "CheckBox", ACCENT_BRIGHT)
+	t.set_color("font_hover_pressed_color", "CheckBox", ACCENT_BRIGHT)
+	t.set_color("font_disabled_color", "CheckBox", MUTED.darkened(0.2))
+	t.set_stylebox("pressed", "CheckBox", box(ACCENT.darkened(0.6), ACCENT.darkened(0.2), 1, 6, 4))
+	t.set_stylebox("hover_pressed", "CheckBox", box(ACCENT.darkened(0.55), ACCENT, 1, 6, 4))
 	t.set_stylebox("panel", "TabContainer", box(PANEL, BORDER, 1, 20))
 	t.set_stylebox("tab_selected", "TabContainer", box(PANEL, ACCENT, 1, 12, 4))
 	t.set_stylebox("tab_unselected", "TabContainer", box(BG, BORDER, 1, 12, 4))

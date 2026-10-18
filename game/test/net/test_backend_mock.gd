@@ -68,7 +68,7 @@ func test_turn_applies_the_reserved_effect() -> void:
 	assert_bool(GameState.submit("беру факел со стены")).is_true()
 	assert_bool(await _wait(func() -> bool: return not GameState.is_busy(), 5.0)).is_true()
 	var s := GameState.session
-	assert_int(s.character["inventory"]["torch"]).is_equal(6)
+	assert_int(s.character["inventory"]["torch"]).is_equal(11)  # 10 from the pack + 1
 	assert_dict(GameState.effects.reserves).is_empty()
 	var kinds: Array = s.chat.map(func(e: Dictionary) -> String: return e["kind"])
 	assert_array(kinds).contains([GameSession.KIND_PLAYER, GameSession.KIND_DM, GameSession.KIND_EFFECT])

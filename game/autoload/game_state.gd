@@ -25,15 +25,19 @@ func world() -> WorldView:
 	return WorldView.new(Catalog.data["world"])
 
 
-func new_game(game_seed: int = -1) -> void:
+## A new game with a created character (CharacterBuilder.build); {} = the ready-made start character.
+func new_game(character: Dictionary = {}, game_seed: int = -1) -> void:
 	if game_seed < 0:
 		game_seed = int(LaunchArgs.value("--seed", str(randi())))
+	if character.is_empty():
+		character = CharacterBuilder.build(Catalog.data["character"], Catalog.data)
 	var w := world()
-	start(GameSession.create(game_seed, Time.get_datetime_string_from_system(), w.start_room(), Catalog.data["character"]))
+	start(GameSession.create(game_seed, Time.get_datetime_string_from_system(), w.start_room(), character))
 	_request("enter", "")
 
 
 func start(s: GameSession) -> void:
+	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	session = s
 	busy_turn = ""
 	_last_kind = ""
@@ -104,6 +108,31 @@ func can_retry() -> bool:
 func cancel_turn() -> void:
 	if is_busy() and Backend.is_ready():
 		Backend.request("turn.cancel", {"turn_id": busy_turn}, 5.0)
+
+
+## Puts an owned item into an equipment slot (CharacterRules.SLOTS). "" on success, else a localization key.
+## Not while the master thinks: the snapshot of the turn in flight would no longer match.
+func equip(item_id: String, slot: String) -> String:
+	if session == null or is_busy():
+		return "EQUIP_BUSY"
+	var c := session.character
+	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot)
+	if not why.is_empty():
+		return why
+	c["equipped"][slot] = item_id
+	if slot == "main_hand" and str(c["equipped"].get("off_hand", "")) == item_id and int(c["inventory"][item_id]) < 2:
+		c["equipped"]["off_hand"] = ""
+	CharacterRules.refresh(c, Catalog.data, session.items)
+	EventBus.state_changed.emit()
+	return ""
+
+
+func unequip(slot: String) -> void:
+	if session == null or is_busy():
+		return
+	session.character["equipped"][slot] = ""
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	EventBus.state_changed.emit()
 
 
 func save_to(slot: String) -> bool:
@@ -189,6 +218,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 	_log(("%s: " % world().npc(s.npc_id).get("name", "")) + text if s.in_conversation() else "Мастер: " + text)
 	var room_before := s.room_id
 	var lines := effects.apply(s, turn_id, result.get("effect_ids", []))
+	CharacterRules.refresh(s.character, Catalog.data, s.items)  # an item given away is unequipped
 	if not lines.is_empty():
 		_add(GameSession.effect_entry(lines))
 		_log("События: " + ", ".join(lines))

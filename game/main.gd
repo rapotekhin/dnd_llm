@@ -36,6 +36,8 @@ func _go(screen: String, args: Dictionary) -> void:
 			next = MainMenu.new()
 		"game":
 			next = GameScreen.new()
+		"creation":
+			next = CreationScreen.new()
 		"slots":
 			next = SlotsScreen.new(str(args.get("mode", SlotsScreen.MODE_LOAD)), str(args.get("back", "menu")))
 		"settings":

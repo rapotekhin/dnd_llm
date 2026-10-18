@@ -88,7 +88,7 @@ func test_give_and_take_catalog_items() -> void:
 	assert_str(_no({"kind": "give_item", "item_id": "longsword", "qty": 2})).contains("стопку")
 	assert_str(_no({"kind": "give_item", "item_id": "excalibur"})).contains("нет")
 	fx.apply(s, "t-1", [give])
-	assert_int(s.character["inventory"]["torch"]).is_equal(8)
+	assert_int(s.character["inventory"]["torch"]).is_equal(13)  # 10 from the explorer's pack + 3
 	var take := _ok({"kind": "take_item", "item_id": "handaxe", "qty": 2}, "t-2")
 	assert_str(_no({"kind": "take_item", "item_id": "handaxe", "qty": 1}, "t-2")).contains("нет")
 	fx.apply(s, "t-2", [take])

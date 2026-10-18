@@ -15,7 +15,10 @@ func run() -> void:
 	if not step("master connected", await wait_until(func() -> bool: return backend.is_ready(), 60.0), backend.config.describe()):
 		return
 	step("server model", true, str(backend.client.server_info.get("model", "?")))
-	await press(find(screen(), "NewGameButton"))
+	if not step("random character created", await quick_character()):
+		return
+	var c: Dictionary = gs.session.character
+	step("info: character", true, "%s — %s %s, HP %d, КД %d" % [c["name"], c["race_name"], c["class_name"], c["max_hp"], c["ac"]])
 	if not step("enter turn", await _turn_done(gs)):
 		return
 	await shot("enter")

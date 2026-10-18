@@ -1,0 +1,5141 @@
+{
+	"classes": {
+		"barbarian": {
+			"name": "Варвар",
+			"name_en": "Barbarian",
+			"hit_die": 12,
+			"saves": [
+				"str",
+				"con"
+			],
+			"armor": [
+				"light",
+				"medium",
+				"shield"
+			],
+			"weapons": [
+				"simple",
+				"martial"
+			],
+			"tools": [],
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"animal_handling",
+					"athletics",
+					"intimidation",
+					"nature",
+					"perception",
+					"survival"
+				]
+			},
+			"equipment": [
+				{
+					"id": "backpack",
+					"qty": 1
+				},
+				{
+					"id": "bedroll",
+					"qty": 1
+				},
+				{
+					"id": "mess_kit",
+					"qty": 1
+				},
+				{
+					"id": "tinderbox",
+					"qty": 1
+				},
+				{
+					"id": "torch",
+					"qty": 10
+				},
+				{
+					"id": "rations",
+					"qty": 10
+				},
+				{
+					"id": "waterskin",
+					"qty": 1
+				},
+				{
+					"id": "rope",
+					"qty": 1
+				},
+				{
+					"id": "javelin",
+					"qty": 4
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "greataxe",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "martial_melee_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "handaxe",
+									"qty": 2
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"rage",
+						"barbarian_unarmored_defense"
+					],
+					"asi": 0,
+					"class_specific": {
+						"rage_count": 2,
+						"rage_damage_bonus": 2,
+						"brutal_critical_dice": 0
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"reckless_attack",
+						"danger_sense"
+					],
+					"asi": 0,
+					"class_specific": {
+						"rage_count": 2,
+						"rage_damage_bonus": 2,
+						"brutal_critical_dice": 0
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"primal_path"
+					],
+					"asi": 0,
+					"class_specific": {
+						"rage_count": 3,
+						"rage_damage_bonus": 2,
+						"brutal_critical_dice": 0
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"barbarian_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"class_specific": {
+						"rage_count": 3,
+						"rage_damage_bonus": 2,
+						"brutal_critical_dice": 0
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [
+						"barbarian_extra_attack",
+						"fast_movement"
+					],
+					"asi": 1,
+					"class_specific": {
+						"rage_count": 3,
+						"rage_damage_bonus": 2,
+						"brutal_critical_dice": 0
+					}
+				}
+			},
+			"subclasses": [
+				"berserker"
+			],
+			"subclass_level": 3,
+			"subclass_flavor": "Путь дикости"
+		},
+		"bard": {
+			"name": "Бард",
+			"name_en": "Bard",
+			"hit_die": 8,
+			"saves": [
+				"dex",
+				"cha"
+			],
+			"armor": [
+				"light"
+			],
+			"weapons": [
+				"simple",
+				"longsword",
+				"rapier",
+				"shortsword",
+				"crossbow_hand"
+			],
+			"tools": [],
+			"skill_choice": {
+				"choose": 3,
+				"from": [
+					"acrobatics",
+					"animal_handling",
+					"arcana",
+					"athletics",
+					"deception",
+					"history",
+					"insight",
+					"intimidation",
+					"investigation",
+					"medicine",
+					"nature",
+					"perception",
+					"performance",
+					"persuasion",
+					"religion",
+					"sleight_of_hand",
+					"stealth",
+					"survival"
+				]
+			},
+			"equipment": [
+				{
+					"id": "leather_armor",
+					"qty": 1
+				},
+				{
+					"id": "dagger",
+					"qty": 1
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "rapier",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "longsword",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "chest",
+									"qty": 1
+								},
+								{
+									"id": "case_map_or_scroll",
+									"qty": 2
+								},
+								{
+									"id": "clothes_fine",
+									"qty": 1
+								},
+								{
+									"id": "ink_1_ounce_bottle",
+									"qty": 1
+								},
+								{
+									"id": "ink_pen",
+									"qty": 1
+								},
+								{
+									"id": "lamp",
+									"qty": 1
+								},
+								{
+									"id": "oil_flask",
+									"qty": 2
+								},
+								{
+									"id": "paper_one_sheet",
+									"qty": 5
+								},
+								{
+									"id": "perfume_vial",
+									"qty": 1
+								},
+								{
+									"id": "sealing_wax",
+									"qty": 1
+								},
+								{
+									"id": "soap",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "bedroll",
+									"qty": 1
+								},
+								{
+									"id": "clothes_costume",
+									"qty": 2
+								},
+								{
+									"id": "candle",
+									"qty": 5
+								},
+								{
+									"id": "rations",
+									"qty": 5
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "disguise_kit",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "lute",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "musical_instruments",
+									"count": 1
+								}
+							]
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"spellcasting_bard",
+						"bardic_inspiration_d6"
+					],
+					"asi": 0,
+					"cantrips_known": 2,
+					"spells_known": 4,
+					"slots": [
+						2,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"bardic_inspiration_die": 6,
+						"song_of_rest_die": 0,
+						"magical_secrets_max_5": 0,
+						"magical_secrets_max_7": 0,
+						"magical_secrets_max_9": 0
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"jack_of_all_trades",
+						"song_of_rest_d6"
+					],
+					"asi": 0,
+					"cantrips_known": 2,
+					"spells_known": 5,
+					"slots": [
+						3,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"bardic_inspiration_die": 6,
+						"song_of_rest_die": 6,
+						"magical_secrets_max_5": 0,
+						"magical_secrets_max_7": 0,
+						"magical_secrets_max_9": 0
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"bard_expertise_1",
+						"bard_college"
+					],
+					"asi": 0,
+					"cantrips_known": 2,
+					"spells_known": 6,
+					"slots": [
+						4,
+						2,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"bardic_inspiration_die": 6,
+						"song_of_rest_die": 6,
+						"magical_secrets_max_5": 0,
+						"magical_secrets_max_7": 0,
+						"magical_secrets_max_9": 0
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"bard_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"cantrips_known": 3,
+					"spells_known": 7,
+					"slots": [
+						4,
+						3,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"bardic_inspiration_die": 6,
+						"song_of_rest_die": 6,
+						"magical_secrets_max_5": 0,
+						"magical_secrets_max_7": 0,
+						"magical_secrets_max_9": 0
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [
+						"bardic_inspiration_d8",
+						"font_of_inspiration"
+					],
+					"asi": 1,
+					"cantrips_known": 3,
+					"spells_known": 8,
+					"slots": [
+						4,
+						3,
+						2,
+						0,
+						0
+					],
+					"class_specific": {
+						"bardic_inspiration_die": 8,
+						"song_of_rest_die": 6,
+						"magical_secrets_max_5": 0,
+						"magical_secrets_max_7": 0,
+						"magical_secrets_max_9": 0
+					}
+				}
+			},
+			"subclasses": [
+				"lore"
+			],
+			"spellcasting": {
+				"ability": "cha",
+				"prepared": false,
+				"spellbook": false,
+				"from_level": 1
+			},
+			"subclass_level": 3,
+			"subclass_flavor": "Коллегия бардов"
+		},
+		"cleric": {
+			"name": "Жрец",
+			"name_en": "Cleric",
+			"hit_die": 8,
+			"saves": [
+				"wis",
+				"cha"
+			],
+			"armor": [
+				"light",
+				"medium",
+				"shield"
+			],
+			"weapons": [
+				"simple"
+			],
+			"tools": [],
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"history",
+					"insight",
+					"medicine",
+					"persuasion",
+					"religion"
+				]
+			},
+			"equipment": [
+				{
+					"id": "shield",
+					"qty": 1
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "mace",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "warhammer",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "scale_mail",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "leather_armor",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "chain_mail",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "crossbow_light",
+									"qty": 1
+								},
+								{
+									"id": "crossbow_bolt",
+									"qty": 20
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "blanket",
+									"qty": 1
+								},
+								{
+									"id": "candle",
+									"qty": 10
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "rations",
+									"qty": 2
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "alms_box",
+									"qty": 1
+								},
+								{
+									"id": "block_of_incense",
+									"qty": 2
+								},
+								{
+									"id": "censer",
+									"qty": 1
+								},
+								{
+									"id": "vestments",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "bedroll",
+									"qty": 1
+								},
+								{
+									"id": "mess_kit",
+									"qty": 1
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "holy_symbols",
+									"count": 1
+								}
+							]
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"spellcasting_cleric",
+						"divine_domain",
+						"domain_spells_1"
+					],
+					"asi": 0,
+					"cantrips_known": 3,
+					"slots": [
+						2,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"channel_divinity_charges": 0,
+						"destroy_undead_cr": 0
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"channel_divinity_1_rest",
+						"channel_divinity_turn_undead",
+						"divine_domain_improvement_1"
+					],
+					"asi": 0,
+					"cantrips_known": 3,
+					"slots": [
+						3,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"channel_divinity_charges": 1,
+						"destroy_undead_cr": 0
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"domain_spells_2"
+					],
+					"asi": 0,
+					"cantrips_known": 3,
+					"slots": [
+						4,
+						2,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"channel_divinity_charges": 1,
+						"destroy_undead_cr": 0
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"cleric_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"cantrips_known": 4,
+					"slots": [
+						4,
+						3,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"channel_divinity_charges": 1,
+						"destroy_undead_cr": 0
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [
+						"domain_spells_3",
+						"destroy_undead_cr_1_2_or_below"
+					],
+					"asi": 1,
+					"cantrips_known": 4,
+					"slots": [
+						4,
+						3,
+						2,
+						0,
+						0
+					],
+					"class_specific": {
+						"channel_divinity_charges": 1,
+						"destroy_undead_cr": 0.5
+					}
+				}
+			},
+			"subclasses": [
+				"life"
+			],
+			"spellcasting": {
+				"ability": "wis",
+				"prepared": true,
+				"spellbook": false,
+				"from_level": 1
+			},
+			"subclass_level": 1,
+			"subclass_flavor": "Божественный домен"
+		},
+		"druid": {
+			"name": "Друид",
+			"name_en": "Druid",
+			"hit_die": 8,
+			"saves": [
+				"int",
+				"wis"
+			],
+			"armor": [
+				"light",
+				"medium",
+				"shield"
+			],
+			"weapons": [
+				"club",
+				"dagger",
+				"javelin",
+				"mace",
+				"quarterstaff",
+				"sickle",
+				"spear",
+				"dart",
+				"sling",
+				"scimitar"
+			],
+			"tools": [
+				"herbalism_kit"
+			],
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"arcana",
+					"animal_handling",
+					"insight",
+					"medicine",
+					"nature",
+					"perception",
+					"religion",
+					"survival"
+				]
+			},
+			"equipment": [
+				{
+					"id": "leather_armor",
+					"qty": 1
+				},
+				{
+					"id": "backpack",
+					"qty": 1
+				},
+				{
+					"id": "bedroll",
+					"qty": 1
+				},
+				{
+					"id": "mess_kit",
+					"qty": 1
+				},
+				{
+					"id": "tinderbox",
+					"qty": 1
+				},
+				{
+					"id": "torch",
+					"qty": 10
+				},
+				{
+					"id": "rations",
+					"qty": 10
+				},
+				{
+					"id": "waterskin",
+					"qty": 1
+				},
+				{
+					"id": "rope",
+					"qty": 1
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "shield",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "scimitar",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_melee_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "druidic_foci",
+									"count": 1
+								}
+							]
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"spellcasting_druid",
+						"druidic"
+					],
+					"asi": 0,
+					"cantrips_known": 2,
+					"slots": [
+						2,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"wild_shape_max_cr": 0,
+						"wild_shape_swim": false,
+						"wild_shape_fly": false
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"wild_shape_cr_1_4_or_below_no_flying_or_swim_speed",
+						"druid_circle"
+					],
+					"asi": 0,
+					"cantrips_known": 2,
+					"slots": [
+						3,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"wild_shape_max_cr": 0.25,
+						"wild_shape_swim": false,
+						"wild_shape_fly": false
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [],
+					"asi": 0,
+					"cantrips_known": 2,
+					"slots": [
+						4,
+						2,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"wild_shape_max_cr": 0.25,
+						"wild_shape_swim": false,
+						"wild_shape_fly": false
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"wild_shape_cr_1_2_or_below_no_flying_speed",
+						"druid_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"cantrips_known": 3,
+					"slots": [
+						4,
+						3,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"wild_shape_max_cr": 0.5,
+						"wild_shape_swim": true,
+						"wild_shape_fly": false
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [],
+					"asi": 1,
+					"cantrips_known": 3,
+					"slots": [
+						4,
+						3,
+						2,
+						0,
+						0
+					],
+					"class_specific": {
+						"wild_shape_max_cr": 0.5,
+						"wild_shape_swim": true,
+						"wild_shape_fly": false
+					}
+				}
+			},
+			"subclasses": [
+				"land"
+			],
+			"spellcasting": {
+				"ability": "wis",
+				"prepared": true,
+				"spellbook": false,
+				"from_level": 1
+			},
+			"subclass_level": 2,
+			"subclass_flavor": "Круг друидов"
+		},
+		"fighter": {
+			"name": "Воин",
+			"name_en": "Fighter",
+			"hit_die": 10,
+			"saves": [
+				"str",
+				"con"
+			],
+			"armor": [
+				"light",
+				"medium",
+				"heavy",
+				"shield"
+			],
+			"weapons": [
+				"simple",
+				"martial"
+			],
+			"tools": [],
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"acrobatics",
+					"animal_handling",
+					"athletics",
+					"history",
+					"insight",
+					"intimidation",
+					"perception",
+					"survival"
+				]
+			},
+			"equipment": [],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "chain_mail",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "leather_armor",
+									"qty": 1
+								},
+								{
+									"id": "longbow",
+									"qty": 1
+								},
+								{
+									"id": "arrows",
+									"qty": 20
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "shield",
+									"qty": 1
+								}
+							],
+							"picks": [
+								{
+									"category": "martial_weapons",
+									"count": 1
+								}
+							]
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "martial_weapons",
+									"count": 2
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "crossbow_light",
+									"qty": 1
+								},
+								{
+									"id": "crossbow_bolt",
+									"qty": 20
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "handaxe",
+									"qty": 2
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "crowbar",
+									"qty": 1
+								},
+								{
+									"id": "hammer",
+									"qty": 1
+								},
+								{
+									"id": "piton",
+									"qty": 10
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "bedroll",
+									"qty": 1
+								},
+								{
+									"id": "mess_kit",
+									"qty": 1
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"fighter_fighting_style",
+						"second_wind"
+					],
+					"asi": 0,
+					"class_specific": {
+						"action_surges": 0,
+						"indomitable_uses": 0,
+						"extra_attacks": 0
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"action_surge_1_use"
+					],
+					"asi": 0,
+					"class_specific": {
+						"action_surges": 1,
+						"indomitable_uses": 0,
+						"extra_attacks": 0
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"martial_archetype"
+					],
+					"asi": 0,
+					"class_specific": {
+						"action_surges": 1,
+						"indomitable_uses": 0,
+						"extra_attacks": 0
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"fighter_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"class_specific": {
+						"action_surges": 1,
+						"indomitable_uses": 0,
+						"extra_attacks": 0
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [
+						"extra_attack_1"
+					],
+					"asi": 1,
+					"class_specific": {
+						"action_surges": 1,
+						"indomitable_uses": 0,
+						"extra_attacks": 1
+					}
+				}
+			},
+			"subclasses": [
+				"champion"
+			],
+			"subclass_level": 3,
+			"subclass_flavor": "Воинский архетип"
+		},
+		"monk": {
+			"name": "Монах",
+			"name_en": "Monk",
+			"hit_die": 8,
+			"saves": [
+				"str",
+				"dex"
+			],
+			"armor": [],
+			"weapons": [
+				"simple",
+				"shortsword"
+			],
+			"tools": [],
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"acrobatics",
+					"athletics",
+					"history",
+					"insight",
+					"religion",
+					"stealth"
+				]
+			},
+			"equipment": [
+				{
+					"id": "dart",
+					"qty": 10
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "shortsword",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "crowbar",
+									"qty": 1
+								},
+								{
+									"id": "hammer",
+									"qty": 1
+								},
+								{
+									"id": "piton",
+									"qty": 10
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "bedroll",
+									"qty": 1
+								},
+								{
+									"id": "mess_kit",
+									"qty": 1
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"monk_unarmored_defense",
+						"martial_arts"
+					],
+					"asi": 0,
+					"class_specific": {
+						"martial_arts": {
+							"dice_count": 1,
+							"dice_value": 4
+						},
+						"ki_points": 0,
+						"unarmored_movement": 0
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"ki",
+						"flurry_of_blows",
+						"patient_defense",
+						"step_of_the_wind",
+						"unarmored_movement_1"
+					],
+					"asi": 0,
+					"class_specific": {
+						"martial_arts": {
+							"dice_count": 1,
+							"dice_value": 4
+						},
+						"ki_points": 2,
+						"unarmored_movement": 10
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"monastic_tradition",
+						"deflect_missiles"
+					],
+					"asi": 0,
+					"class_specific": {
+						"martial_arts": {
+							"dice_count": 1,
+							"dice_value": 4
+						},
+						"ki_points": 3,
+						"unarmored_movement": 10
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"monk_ability_score_improvement_1",
+						"slow_fall"
+					],
+					"asi": 1,
+					"class_specific": {
+						"martial_arts": {
+							"dice_count": 1,
+							"dice_value": 4
+						},
+						"ki_points": 4,
+						"unarmored_movement": 10
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [
+						"monk_extra_attack",
+						"stunning_strike"
+					],
+					"asi": 1,
+					"class_specific": {
+						"martial_arts": {
+							"dice_count": 1,
+							"dice_value": 6
+						},
+						"ki_points": 5,
+						"unarmored_movement": 10
+					}
+				}
+			},
+			"subclasses": [
+				"open_hand"
+			],
+			"subclass_level": 3,
+			"subclass_flavor": "Монастырская традиция"
+		},
+		"paladin": {
+			"name": "Паладин",
+			"name_en": "Paladin",
+			"hit_die": 10,
+			"saves": [
+				"wis",
+				"cha"
+			],
+			"armor": [
+				"light",
+				"medium",
+				"heavy",
+				"shield"
+			],
+			"weapons": [
+				"simple",
+				"martial"
+			],
+			"tools": [],
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"athletics",
+					"insight",
+					"intimidation",
+					"medicine",
+					"persuasion",
+					"religion"
+				]
+			},
+			"equipment": [
+				{
+					"id": "chain_mail",
+					"qty": 1
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "shield",
+									"qty": 1
+								}
+							],
+							"picks": [
+								{
+									"category": "martial_weapons",
+									"count": 1
+								}
+							]
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "martial_weapons",
+									"count": 2
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "javelin",
+									"qty": 5
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "blanket",
+									"qty": 1
+								},
+								{
+									"id": "candle",
+									"qty": 10
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "rations",
+									"qty": 2
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "alms_box",
+									"qty": 1
+								},
+								{
+									"id": "block_of_incense",
+									"qty": 2
+								},
+								{
+									"id": "censer",
+									"qty": 1
+								},
+								{
+									"id": "vestments",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "bedroll",
+									"qty": 1
+								},
+								{
+									"id": "mess_kit",
+									"qty": 1
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "holy_symbols",
+									"count": 1
+								}
+							]
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"divine_sense",
+						"lay_on_hands"
+					],
+					"asi": 0,
+					"cantrips_known": 0,
+					"slots": [
+						0,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"aura_range": 0
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"paladin_fighting_style",
+						"spellcasting_paladin",
+						"divine_smite"
+					],
+					"asi": 0,
+					"cantrips_known": 0,
+					"slots": [
+						2,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"aura_range": 0
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"divine_health",
+						"sacred_oath",
+						"oath_spells",
+						"channel_divinity"
+					],
+					"asi": 0,
+					"cantrips_known": 0,
+					"slots": [
+						3,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"aura_range": 0
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"paladin_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"cantrips_known": 0,
+					"slots": [
+						3,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"aura_range": 0
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [
+						"paladin_extra_attack"
+					],
+					"asi": 1,
+					"cantrips_known": 0,
+					"slots": [
+						4,
+						2,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"aura_range": 0
+					}
+				}
+			},
+			"subclasses": [
+				"devotion"
+			],
+			"spellcasting": {
+				"ability": "cha",
+				"prepared": true,
+				"spellbook": false,
+				"from_level": 2
+			},
+			"subclass_level": 3,
+			"subclass_flavor": "Священная клятва"
+		},
+		"ranger": {
+			"name": "Следопыт",
+			"name_en": "Ranger",
+			"hit_die": 10,
+			"saves": [
+				"str",
+				"dex"
+			],
+			"armor": [
+				"light",
+				"medium",
+				"shield"
+			],
+			"weapons": [
+				"simple",
+				"martial"
+			],
+			"tools": [],
+			"skill_choice": {
+				"choose": 3,
+				"from": [
+					"animal_handling",
+					"athletics",
+					"insight",
+					"investigation",
+					"nature",
+					"perception",
+					"stealth",
+					"survival"
+				]
+			},
+			"equipment": [
+				{
+					"id": "longbow",
+					"qty": 1
+				},
+				{
+					"id": "arrows",
+					"qty": 20
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "scale_mail",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "leather_armor",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "shortsword",
+									"qty": 2
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_melee_weapons",
+									"count": 2
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "crowbar",
+									"qty": 1
+								},
+								{
+									"id": "hammer",
+									"qty": 1
+								},
+								{
+									"id": "piton",
+									"qty": 10
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "bedroll",
+									"qty": 1
+								},
+								{
+									"id": "mess_kit",
+									"qty": 1
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"favored_enemy_1_type",
+						"natural_explorer_1_terrain_type"
+					],
+					"asi": 0,
+					"cantrips_known": 0,
+					"spells_known": 0,
+					"slots": [
+						0,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"favored_enemies": 1,
+						"favored_terrain": 1
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"ranger_fighting_style",
+						"spellcasting_ranger"
+					],
+					"asi": 0,
+					"cantrips_known": 0,
+					"spells_known": 2,
+					"slots": [
+						2,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"favored_enemies": 1,
+						"favored_terrain": 1
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"ranger_archetype",
+						"primeval_awareness"
+					],
+					"asi": 0,
+					"cantrips_known": 0,
+					"spells_known": 3,
+					"slots": [
+						3,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"favored_enemies": 1,
+						"favored_terrain": 1
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"ranger_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"cantrips_known": 0,
+					"spells_known": 3,
+					"slots": [
+						3,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"favored_enemies": 1,
+						"favored_terrain": 1
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [
+						"ranger_extra_attack"
+					],
+					"asi": 1,
+					"cantrips_known": 0,
+					"spells_known": 4,
+					"slots": [
+						4,
+						2,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"favored_enemies": 1,
+						"favored_terrain": 1
+					}
+				}
+			},
+			"subclasses": [
+				"hunter"
+			],
+			"spellcasting": {
+				"ability": "wis",
+				"prepared": false,
+				"spellbook": false,
+				"from_level": 2
+			},
+			"subclass_level": 3,
+			"subclass_flavor": "Архетип следопыта"
+		},
+		"rogue": {
+			"name": "Плут",
+			"name_en": "Rogue",
+			"hit_die": 8,
+			"saves": [
+				"dex",
+				"int"
+			],
+			"armor": [
+				"light"
+			],
+			"weapons": [
+				"simple",
+				"longsword",
+				"rapier",
+				"shortsword",
+				"crossbow_hand"
+			],
+			"tools": [
+				"thieves_tools"
+			],
+			"skill_choice": {
+				"choose": 4,
+				"from": [
+					"acrobatics",
+					"athletics",
+					"deception",
+					"insight",
+					"intimidation",
+					"investigation",
+					"perception",
+					"performance",
+					"persuasion",
+					"sleight_of_hand",
+					"stealth"
+				]
+			},
+			"equipment": [
+				{
+					"id": "leather_armor",
+					"qty": 1
+				},
+				{
+					"id": "dagger",
+					"qty": 2
+				},
+				{
+					"id": "thieves_tools",
+					"qty": 1
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "rapier",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "shortsword",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "shortbow",
+									"qty": 1
+								},
+								{
+									"id": "arrows",
+									"qty": 20
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "shortsword",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "ball_bearings_bag_of_1000",
+									"qty": 1
+								},
+								{
+									"id": "string_10_feet",
+									"qty": 1
+								},
+								{
+									"id": "bell",
+									"qty": 1
+								},
+								{
+									"id": "candle",
+									"qty": 5
+								},
+								{
+									"id": "crowbar",
+									"qty": 1
+								},
+								{
+									"id": "hammer",
+									"qty": 1
+								},
+								{
+									"id": "piton",
+									"qty": 10
+								},
+								{
+									"id": "lantern",
+									"qty": 1
+								},
+								{
+									"id": "oil_flask",
+									"qty": 2
+								},
+								{
+									"id": "rations",
+									"qty": 5
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "crowbar",
+									"qty": 1
+								},
+								{
+									"id": "hammer",
+									"qty": 1
+								},
+								{
+									"id": "piton",
+									"qty": 10
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "bedroll",
+									"qty": 1
+								},
+								{
+									"id": "mess_kit",
+									"qty": 1
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"rogue_expertise_1",
+						"sneak_attack",
+						"thieves_cant"
+					],
+					"asi": 0,
+					"class_specific": {
+						"sneak_attack": {
+							"dice_count": 1,
+							"dice_value": 6
+						}
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"cunning_action"
+					],
+					"asi": 0,
+					"class_specific": {
+						"sneak_attack": {
+							"dice_count": 1,
+							"dice_value": 6
+						}
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"roguish_archetype"
+					],
+					"asi": 0,
+					"class_specific": {
+						"sneak_attack": {
+							"dice_count": 2,
+							"dice_value": 6
+						}
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"rogue_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"class_specific": {
+						"sneak_attack": {
+							"dice_count": 2,
+							"dice_value": 6
+						}
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [
+						"uncanny_dodge"
+					],
+					"asi": 1,
+					"class_specific": {
+						"sneak_attack": {
+							"dice_count": 3,
+							"dice_value": 6
+						}
+					}
+				}
+			},
+			"subclasses": [
+				"thief"
+			],
+			"subclass_level": 3,
+			"subclass_flavor": "Архетип плута"
+		},
+		"sorcerer": {
+			"name": "Чародей",
+			"name_en": "Sorcerer",
+			"hit_die": 6,
+			"saves": [
+				"con",
+				"cha"
+			],
+			"armor": [],
+			"weapons": [
+				"dagger",
+				"dart",
+				"sling",
+				"quarterstaff"
+			],
+			"tools": [
+				"crossbows_light"
+			],
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"arcana",
+					"deception",
+					"insight",
+					"intimidation",
+					"persuasion",
+					"religion"
+				]
+			},
+			"equipment": [
+				{
+					"id": "dagger",
+					"qty": 2
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "crossbow_light",
+									"qty": 1
+								},
+								{
+									"id": "crossbow_bolt",
+									"qty": 20
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "component_pouch",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "arcane_foci",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "crowbar",
+									"qty": 1
+								},
+								{
+									"id": "hammer",
+									"qty": 1
+								},
+								{
+									"id": "piton",
+									"qty": 10
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "bedroll",
+									"qty": 1
+								},
+								{
+									"id": "mess_kit",
+									"qty": 1
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"spellcasting_sorcerer",
+						"sorcerous_origin"
+					],
+					"asi": 0,
+					"cantrips_known": 4,
+					"spells_known": 2,
+					"slots": [
+						2,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"sorcery_points": 0,
+						"metamagic_known": 0,
+						"creating_spell_slots": []
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"font_of_magic",
+						"flexible_casting_creating_spell_slots",
+						"flexible_casting_converting_spell_slot"
+					],
+					"asi": 0,
+					"cantrips_known": 4,
+					"spells_known": 3,
+					"slots": [
+						3,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"sorcery_points": 2,
+						"metamagic_known": 0,
+						"creating_spell_slots": [
+							{
+								"spell_slot_level": 1,
+								"sorcery_point_cost": 2
+							},
+							{
+								"spell_slot_level": 2,
+								"sorcery_point_cost": 3
+							},
+							{
+								"spell_slot_level": 3,
+								"sorcery_point_cost": 5
+							},
+							{
+								"spell_slot_level": 4,
+								"sorcery_point_cost": 6
+							},
+							{
+								"spell_slot_level": 5,
+								"sorcery_point_cost": 7
+							}
+						]
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"metamagic_1"
+					],
+					"asi": 0,
+					"cantrips_known": 4,
+					"spells_known": 4,
+					"slots": [
+						4,
+						2,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"sorcery_points": 3,
+						"metamagic_known": 2,
+						"creating_spell_slots": [
+							{
+								"spell_slot_level": 1,
+								"sorcery_point_cost": 2
+							},
+							{
+								"spell_slot_level": 2,
+								"sorcery_point_cost": 3
+							},
+							{
+								"spell_slot_level": 3,
+								"sorcery_point_cost": 5
+							},
+							{
+								"spell_slot_level": 4,
+								"sorcery_point_cost": 6
+							},
+							{
+								"spell_slot_level": 5,
+								"sorcery_point_cost": 7
+							}
+						]
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"sorcerer_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"cantrips_known": 5,
+					"spells_known": 5,
+					"slots": [
+						4,
+						3,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"sorcery_points": 4,
+						"metamagic_known": 2,
+						"creating_spell_slots": [
+							{
+								"spell_slot_level": 1,
+								"sorcery_point_cost": 2
+							},
+							{
+								"spell_slot_level": 2,
+								"sorcery_point_cost": 3
+							},
+							{
+								"spell_slot_level": 3,
+								"sorcery_point_cost": 5
+							},
+							{
+								"spell_slot_level": 4,
+								"sorcery_point_cost": 6
+							},
+							{
+								"spell_slot_level": 5,
+								"sorcery_point_cost": 7
+							}
+						]
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [],
+					"asi": 1,
+					"cantrips_known": 5,
+					"spells_known": 6,
+					"slots": [
+						4,
+						3,
+						2,
+						0,
+						0
+					],
+					"class_specific": {
+						"sorcery_points": 5,
+						"metamagic_known": 2,
+						"creating_spell_slots": [
+							{
+								"spell_slot_level": 1,
+								"sorcery_point_cost": 2
+							},
+							{
+								"spell_slot_level": 2,
+								"sorcery_point_cost": 3
+							},
+							{
+								"spell_slot_level": 3,
+								"sorcery_point_cost": 5
+							},
+							{
+								"spell_slot_level": 4,
+								"sorcery_point_cost": 6
+							},
+							{
+								"spell_slot_level": 5,
+								"sorcery_point_cost": 7
+							}
+						]
+					}
+				}
+			},
+			"subclasses": [
+				"draconic"
+			],
+			"spellcasting": {
+				"ability": "cha",
+				"prepared": false,
+				"spellbook": false,
+				"from_level": 1
+			},
+			"subclass_level": 1,
+			"subclass_flavor": "Происхождение чародея"
+		},
+		"warlock": {
+			"name": "Колдун",
+			"name_en": "Warlock",
+			"hit_die": 8,
+			"saves": [
+				"wis",
+				"cha"
+			],
+			"armor": [
+				"light"
+			],
+			"weapons": [
+				"simple"
+			],
+			"tools": [],
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"arcana",
+					"deception",
+					"history",
+					"intimidation",
+					"investigation",
+					"nature",
+					"religion"
+				]
+			},
+			"equipment": [
+				{
+					"id": "dagger",
+					"qty": 2
+				},
+				{
+					"id": "leather_armor",
+					"qty": 1
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "crossbow_light",
+									"qty": 1
+								},
+								{
+									"id": "crossbow_bolt",
+									"qty": 20
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "component_pouch",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "arcane_foci",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "book",
+									"qty": 1
+								},
+								{
+									"id": "ink_1_ounce_bottle",
+									"qty": 1
+								},
+								{
+									"id": "ink_pen",
+									"qty": 1
+								},
+								{
+									"id": "parchment_one_sheet",
+									"qty": 10
+								},
+								{
+									"id": "little_bag_of_sand",
+									"qty": 1
+								},
+								{
+									"id": "small_knife",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "crowbar",
+									"qty": 1
+								},
+								{
+									"id": "hammer",
+									"qty": 1
+								},
+								{
+									"id": "piton",
+									"qty": 10
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "simple_weapons",
+									"count": 1
+								}
+							]
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"otherworldly_patron",
+						"pact_magic"
+					],
+					"asi": 0,
+					"cantrips_known": 2,
+					"spells_known": 2,
+					"slots": [
+						1,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"invocations_known": 0,
+						"mystic_arcanum_level_6": 0,
+						"mystic_arcanum_level_7": 0,
+						"mystic_arcanum_level_8": 0,
+						"mystic_arcanum_level_9": 0
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"eldritch_invocations"
+					],
+					"asi": 0,
+					"cantrips_known": 2,
+					"spells_known": 3,
+					"slots": [
+						2,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"invocations_known": 2,
+						"mystic_arcanum_level_6": 0,
+						"mystic_arcanum_level_7": 0,
+						"mystic_arcanum_level_8": 0,
+						"mystic_arcanum_level_9": 0
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [
+						"pact_boon"
+					],
+					"asi": 0,
+					"cantrips_known": 2,
+					"spells_known": 4,
+					"slots": [
+						0,
+						2,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"invocations_known": 2,
+						"mystic_arcanum_level_6": 0,
+						"mystic_arcanum_level_7": 0,
+						"mystic_arcanum_level_8": 0,
+						"mystic_arcanum_level_9": 0
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"warlock_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"cantrips_known": 3,
+					"spells_known": 5,
+					"slots": [
+						0,
+						2,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"invocations_known": 3,
+						"mystic_arcanum_level_6": 0,
+						"mystic_arcanum_level_7": 0,
+						"mystic_arcanum_level_8": 0,
+						"mystic_arcanum_level_9": 0
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [],
+					"asi": 1,
+					"cantrips_known": 3,
+					"spells_known": 6,
+					"slots": [
+						0,
+						0,
+						2,
+						0,
+						0
+					],
+					"class_specific": {
+						"invocations_known": 3,
+						"mystic_arcanum_level_6": 0,
+						"mystic_arcanum_level_7": 0,
+						"mystic_arcanum_level_8": 0,
+						"mystic_arcanum_level_9": 0
+					}
+				}
+			},
+			"subclasses": [
+				"fiend"
+			],
+			"spellcasting": {
+				"ability": "cha",
+				"prepared": false,
+				"spellbook": false,
+				"from_level": 1
+			},
+			"subclass_level": 1,
+			"subclass_flavor": "Потусторонний покровитель"
+		},
+		"wizard": {
+			"name": "Волшебник",
+			"name_en": "Wizard",
+			"hit_die": 6,
+			"saves": [
+				"int",
+				"wis"
+			],
+			"armor": [],
+			"weapons": [
+				"dagger",
+				"dart",
+				"sling",
+				"quarterstaff"
+			],
+			"tools": [
+				"crossbows_light"
+			],
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"arcana",
+					"history",
+					"insight",
+					"investigation",
+					"medicine",
+					"religion"
+				]
+			},
+			"equipment": [
+				{
+					"id": "spellbook",
+					"qty": 1
+				}
+			],
+			"equipment_choices": [
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "quarterstaff",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "dagger",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "component_pouch",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [],
+							"picks": [
+								{
+									"category": "arcane_foci",
+									"count": 1
+								}
+							]
+						}
+					]
+				},
+				{
+					"alternatives": [
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "book",
+									"qty": 1
+								},
+								{
+									"id": "ink_1_ounce_bottle",
+									"qty": 1
+								},
+								{
+									"id": "ink_pen",
+									"qty": 1
+								},
+								{
+									"id": "parchment_one_sheet",
+									"qty": 10
+								},
+								{
+									"id": "little_bag_of_sand",
+									"qty": 1
+								},
+								{
+									"id": "small_knife",
+									"qty": 1
+								}
+							],
+							"picks": []
+						},
+						{
+							"items": [
+								{
+									"id": "backpack",
+									"qty": 1
+								},
+								{
+									"id": "bedroll",
+									"qty": 1
+								},
+								{
+									"id": "mess_kit",
+									"qty": 1
+								},
+								{
+									"id": "tinderbox",
+									"qty": 1
+								},
+								{
+									"id": "torch",
+									"qty": 10
+								},
+								{
+									"id": "rations",
+									"qty": 10
+								},
+								{
+									"id": "waterskin",
+									"qty": 1
+								},
+								{
+									"id": "rope",
+									"qty": 1
+								}
+							],
+							"picks": []
+						}
+					]
+				}
+			],
+			"levels": {
+				"1": {
+					"prof_bonus": 2,
+					"features": [
+						"spellcasting_wizard",
+						"arcane_recovery"
+					],
+					"asi": 0,
+					"cantrips_known": 3,
+					"slots": [
+						2,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"arcane_recovery_levels": 1
+					}
+				},
+				"2": {
+					"prof_bonus": 2,
+					"features": [
+						"arcane_tradition"
+					],
+					"asi": 0,
+					"cantrips_known": 3,
+					"slots": [
+						3,
+						0,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"arcane_recovery_levels": 1
+					}
+				},
+				"3": {
+					"prof_bonus": 2,
+					"features": [],
+					"asi": 0,
+					"cantrips_known": 3,
+					"slots": [
+						4,
+						2,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"arcane_recovery_levels": 2
+					}
+				},
+				"4": {
+					"prof_bonus": 2,
+					"features": [
+						"wizard_ability_score_improvement_1"
+					],
+					"asi": 1,
+					"cantrips_known": 4,
+					"slots": [
+						4,
+						3,
+						0,
+						0,
+						0
+					],
+					"class_specific": {
+						"arcane_recovery_levels": 2
+					}
+				},
+				"5": {
+					"prof_bonus": 3,
+					"features": [],
+					"asi": 1,
+					"cantrips_known": 4,
+					"slots": [
+						4,
+						3,
+						2,
+						0,
+						0
+					],
+					"class_specific": {
+						"arcane_recovery_levels": 3
+					}
+				}
+			},
+			"subclasses": [
+				"evocation"
+			],
+			"spellcasting": {
+				"ability": "int",
+				"prepared": true,
+				"spellbook": true,
+				"from_level": 1
+			},
+			"subclass_level": 2,
+			"subclass_flavor": "Магическая традиция"
+		}
+	},
+	"subclasses": {
+		"berserker": {
+			"name": "Путь берсерка",
+			"name_en": "Berserker",
+			"class": "barbarian",
+			"desc": "",
+			"flavor": "Путь дикости",
+			"features": {
+				"3": [
+					"frenzy"
+				]
+			},
+			"spells": {},
+			"level": 3
+		},
+		"champion": {
+			"name": "Чемпион",
+			"name_en": "Champion",
+			"class": "fighter",
+			"desc": "",
+			"flavor": "Воинский архетип",
+			"features": {
+				"3": [
+					"improved_critical"
+				]
+			},
+			"spells": {},
+			"level": 3
+		},
+		"devotion": {
+			"name": "Клятва преданности",
+			"name_en": "Devotion",
+			"class": "paladin",
+			"desc": "",
+			"flavor": "Священная клятва",
+			"features": {
+				"3": [
+					"channel_divinity_sacred_weapon",
+					"channel_divinity_turn_the_unholy"
+				]
+			},
+			"spells": {
+				"3": [
+					"protection_from_evil_and_good",
+					"sanctuary"
+				],
+				"5": [
+					"lesser_restoration",
+					"zone_of_truth"
+				]
+			},
+			"level": 3
+		},
+		"draconic": {
+			"name": "Наследие драконьей крови",
+			"name_en": "Draconic",
+			"class": "sorcerer",
+			"desc": "",
+			"flavor": "Происхождение чародея",
+			"features": {
+				"1": [
+					"dragon_ancestor",
+					"draconic_resilience"
+				]
+			},
+			"spells": {},
+			"level": 1
+		},
+		"evocation": {
+			"name": "Школа Воплощения",
+			"name_en": "Evocation",
+			"class": "wizard",
+			"desc": "",
+			"flavor": "Магическая традиция",
+			"features": {
+				"2": [
+					"evocation_savant",
+					"sculpt_spells"
+				]
+			},
+			"spells": {},
+			"level": 2
+		},
+		"fiend": {
+			"name": "Исчадие",
+			"name_en": "Fiend",
+			"class": "warlock",
+			"desc": "",
+			"flavor": "Потусторонний покровитель",
+			"features": {
+				"1": [
+					"dark_ones_blessing"
+				]
+			},
+			"spells": {
+				"1": [
+					"burning_hands",
+					"command"
+				],
+				"3": [
+					"blindness_deafness",
+					"scorching_ray"
+				],
+				"5": [
+					"fireball",
+					"stinking_cloud"
+				]
+			},
+			"level": 1
+		},
+		"hunter": {
+			"name": "Охотник",
+			"name_en": "Hunter",
+			"class": "ranger",
+			"desc": "",
+			"flavor": "Архетип следопыта",
+			"features": {
+				"3": [
+					"hunters_prey"
+				]
+			},
+			"spells": {},
+			"level": 3
+		},
+		"land": {
+			"name": "Круг земли",
+			"name_en": "Land",
+			"class": "druid",
+			"desc": "",
+			"flavor": "Круг друидов",
+			"features": {
+				"2": [
+					"bonus_cantrip",
+					"natural_recovery"
+				]
+			},
+			"spells": {
+				"3": [
+					"hold_person",
+					"spike_growth",
+					"mirror_image",
+					"misty_step",
+					"blur",
+					"silence",
+					"barkskin",
+					"spider_climb",
+					"invisibility",
+					"pass_without_trace",
+					"spider_climb",
+					"spike_growth",
+					"acid_arrow",
+					"darkness"
+				],
+				"5": [
+					"sleet_storm",
+					"slow",
+					"water_breathing",
+					"water_walk",
+					"create_food_and_water",
+					"protection_from_energy",
+					"call_lightning",
+					"plant_growth",
+					"daylight",
+					"haste",
+					"lightning_bolt",
+					"meld_into_stone",
+					"water_walk",
+					"stinking_cloud"
+				]
+			},
+			"level": 2
+		},
+		"life": {
+			"name": "Домен Жизни",
+			"name_en": "Life",
+			"class": "cleric",
+			"desc": "",
+			"flavor": "Божественный домен",
+			"features": {
+				"1": [
+					"bonus_proficiency",
+					"disciple_of_life"
+				],
+				"2": [
+					"channel_divinity_preserve_life"
+				]
+			},
+			"spells": {
+				"1": [
+					"bless",
+					"cure_wounds"
+				],
+				"3": [
+					"lesser_restoration",
+					"spiritual_weapon"
+				],
+				"5": [
+					"beacon_of_hope",
+					"revivify"
+				]
+			},
+			"level": 1
+		},
+		"lore": {
+			"name": "Коллегия знаний",
+			"name_en": "Lore",
+			"class": "bard",
+			"desc": "",
+			"flavor": "Коллегия бардов",
+			"features": {
+				"3": [
+					"bonus_proficiencies",
+					"cutting_words"
+				]
+			},
+			"spells": {},
+			"level": 3
+		},
+		"open_hand": {
+			"name": "Путь открытой ладони",
+			"name_en": "Open Hand",
+			"class": "monk",
+			"desc": "",
+			"flavor": "Монастырская традиция",
+			"features": {
+				"3": [
+					"open_hand_technique"
+				]
+			},
+			"spells": {},
+			"level": 3
+		},
+		"thief": {
+			"name": "Вор",
+			"name_en": "Thief",
+			"class": "rogue",
+			"desc": "",
+			"flavor": "Архетип плута",
+			"features": {
+				"3": [
+					"fast_hands",
+					"second_story_work"
+				]
+			},
+			"spells": {},
+			"level": 3
+		}
+	},
+	"features": {
+		"action_surge_1_use": {
+			"name": "Всплеск действий (1 использование)",
+			"name_en": "Action Surge (1 use)",
+			"desc": "Начиная со 2 уровня, вы можете на мгновение превзойти свои пределы. В свой ход вы можете совершить одно дополнительное действие помимо обычного действия и возможного бонусного действия. После использования нужно завершить короткий или долгий отдых. Начиная с 17 уровня, можно использовать дважды между отдыхами, но не более одного раза за ход.",
+			"level": 2,
+			"class": "fighter"
+		},
+		"arcane_recovery": {
+			"name": "Восстановление магии",
+			"name_en": "Arcane Recovery",
+			"desc": "Вы научились восстанавливать часть магической энергии, изучая свою книгу заклинаний. Один раз в день по завершении короткого отдыха вы можете восстановить израсходованные ячейки заклинаний суммарным уровнем не выше половины вашего уровня волшебника (округляя вверх); ни одна ячейка не может быть 6 уровня или выше. Например, волшебник 4 уровня может восстановить ячейки общим уровнем до 2: одну ячейку 2 уровня или две ячейки 1 уровня.",
+			"level": 1,
+			"class": "wizard"
+		},
+		"arcane_tradition": {
+			"name": "Магическая традиция",
+			"name_en": "Arcane Tradition",
+			"desc": "Достигнув 2 уровня, вы выбираете магическую традицию, определяющую ваш подход к магии в одной из восьми школ, например, Воплощение. Выбор даёт особенности на 2, 6, 10 и 14 уровнях.",
+			"level": 2,
+			"class": "wizard"
+		},
+		"barbarian_ability_score_improvement_1": {
+			"name": "Увеличение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4-м уровне и затем на 8-м, 12-м, 16-м и 19-м уровнях вы можете увеличить одну характеристику на 2 или две характеристики на 1. Как обычно, с помощью этой способности нельзя повысить характеристику выше 20.",
+			"level": 4,
+			"class": "barbarian"
+		},
+		"barbarian_extra_attack": {
+			"name": "Дополнительная атака",
+			"name_en": "Extra Attack",
+			"desc": "Начиная с 5-го уровня, когда вы используете действие Атака в свой ход, вы можете атаковать дважды вместо одного раза.",
+			"level": 5,
+			"class": "barbarian"
+		},
+		"barbarian_unarmored_defense": {
+			"name": "Защита без доспехов",
+			"name_en": "Unarmored Defense",
+			"desc": "Пока на вас нет доспехов, ваш КД равен 10 + модификатор Ловкости + модификатор Телосложения. Вы можете использовать щит и при этом сохранять это преимущество.",
+			"level": 1,
+			"class": "barbarian"
+		},
+		"bard_ability_score_improvement_1": {
+			"name": "Увеличение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4-м уровне и затем на 8-м, 12-м, 16-м и 19-м уровнях вы можете увеличить одну характеристику на 2 или две характеристики на 1. Как обычно, с помощью этой способности нельзя повысить характеристику выше 20.",
+			"level": 4,
+			"class": "bard"
+		},
+		"bard_college": {
+			"name": "Коллегия бардов",
+			"name_en": "Bard College",
+			"desc": "На 3-м уровне вы осваиваете продвинутые техники выбранной коллегии бардов, например Коллегии знаний. Выбор даёт способности на 3-м уровне, а также на 6-м и 14-м уровнях.",
+			"level": 3,
+			"class": "bard"
+		},
+		"bard_expertise_1": {
+			"name": "Экспертиза",
+			"name_en": "Expertise",
+			"desc": "На 3-м уровне выберите два своих навыка, в которых вы владеете мастерством. Бонус мастерства удваивается для любых проверок характеристик, использующих выбранные навыки. На 10-м уровне вы можете выбрать ещё два навыка с этим преимуществом.",
+			"level": 3,
+			"class": "bard",
+			"expertise": 2
+		},
+		"bardic_inspiration_d6": {
+			"name": "Вдохновение барда (к6)",
+			"name_en": "Bardic Inspiration (d6)",
+			"desc": "Бонусным действием в свой ход вы выбираете одно существо, кроме себя, в пределах 60 футов, которое может вас слышать, и даёте ему кость вдохновения барда (к6). В течение 10 минут существо может добавить результат этой кости к одной проверке характеристики, броску атаки или спасброску, решив это после броска d20, но до объявления Мастером успеха или провала. Применений в день равно модификатору Харизмы (минимум 1), восстанавливаются после долгого отдыха; кость растёт до к8 на 5 уровне, к10 на 10 и к12 на 15.",
+			"level": 1,
+			"class": "bard"
+		},
+		"bardic_inspiration_d8": {
+			"name": "Вдохновение барда (к8)",
+			"name_en": "Bardic Inspiration (d8)",
+			"desc": "Бонусным действием в свой ход вы выбираете одно существо, кроме себя, в пределах 60 футов, которое может вас слышать, и даёте ему кость вдохновения барда (к6). В течение 10 минут существо может добавить результат этой кости к одной проверке характеристики, броску атаки или спасброску, решив это после броска d20, но до объявления Мастером успеха или провала. Применений в день равно модификатору Харизмы (минимум 1), восстанавливаются после долгого отдыха; кость растёт до к8 на 5 уровне, к10 на 10 и к12 на 15.",
+			"level": 5,
+			"class": "bard"
+		},
+		"bonus_cantrip": {
+			"name": "Бонусный заговор",
+			"name_en": "Bonus Cantrip",
+			"desc": "На 2 уровне при выборе этого круга вы изучаете один дополнительный заговор друида по своему выбору.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land"
+		},
+		"bonus_proficiencies": {
+			"name": "Бонусные владения",
+			"name_en": "Bonus Proficiencies",
+			"desc": "На 3 уровне при вступлении в Коллегию знаний вы получаете владение тремя навыками по своему выбору.",
+			"level": 3,
+			"class": "bard",
+			"subclass": "lore"
+		},
+		"bonus_proficiency": {
+			"name": "Бонусное владение",
+			"name_en": "Bonus Proficiency",
+			"desc": "На 1 уровне при выборе этого домена вы получаете владение тяжёлыми доспехами.",
+			"level": 1,
+			"class": "cleric",
+			"subclass": "life"
+		},
+		"channel_divinity_1_rest": {
+			"name": "Божественный канал (1/отдых)",
+			"name_en": "Channel Divinity (1/rest)",
+			"desc": "На 2 уровне вы получаете возможность направлять божественную энергию, которая питает магические эффекты; изначально доступны Изгнание нежити и эффект домена. Использовав Божественный канал, вы выбираете эффект, а для повторного использования нужен короткий или долгий отдых. Сл спасбросков таких эффектов равна Сл спасброска ваших заклинаний жреца; с 6 уровня канал доступен дважды между отдыхами, с 18 — трижды.",
+			"level": 2,
+			"class": "cleric"
+		},
+		"channel_divinity_preserve_life": {
+			"name": "Направление божественности: Сохранение жизни",
+			"name_en": "Channel Divinity: Preserve Life",
+			"desc": "Начиная со 2 уровня, вы можете использовать Направление божественности, чтобы исцелять тяжело раненых. Действием вы показываете священный символ и высвобождаете целительную энергию, восстанавливающую суммарно хиты, равные пятикратному уровню клирика, которые распределяете между существами в пределах 30 футов. Существо не может быть исцелено выше половины своего максимума хитов, и эффект нельзя применять к нежити и конструктам.",
+			"level": 2,
+			"class": "cleric",
+			"subclass": "life"
+		},
+		"channel_divinity_sacred_weapon": {
+			"name": "Направление божественности: Священное оружие",
+			"name_en": "Channel Divinity: Sacred Weapon",
+			"desc": "Действием вы наполняете удерживаемое оружие позитивной энергией на 1 минуту, добавляя модификатор Харизмы к броскам атаки этим оружием (минимум +1). Оружие излучает яркий свет в радиусе 20 футов и тусклый свет ещё на 20 футов; если оно не магическое, становится магическим на время действия. Эффект завершается, если вы больше не держите оружие или теряете сознание, а также его можно завершить в свой ход как часть любого другого действия.",
+			"level": 3,
+			"class": "paladin",
+			"subclass": "devotion"
+		},
+		"channel_divinity_turn_the_unholy": {
+			"name": "Направление божественности: Изгнание нечестивых",
+			"name_en": "Channel Divinity: Turn the Unholy",
+			"desc": "Действием вы показываете священный символ и произносите молитву, обличающую исчадий и нежить. Каждое исчадие или нежить в пределах 30 футов, которые видят или слышат вас, должны совершить спасбросок Мудрости; при провале они изгнаны на 1 минуту или до получения урона. Изгнанное существо тратит ходы на отдаление от вас, не может добровольно войти в пространство в 30 футах от вас и не может использовать реакции; в действии оно может лишь Рывок или пытаться выбраться из эффекта, мешающего движению, а если отступать некуда, может использовать Уклонение.",
+			"level": 3,
+			"class": "paladin",
+			"subclass": "devotion"
+		},
+		"channel_divinity_turn_undead": {
+			"name": "Направление божественности: Изгнание нежити",
+			"name_en": "Channel Divinity: Turn Undead",
+			"desc": "Действием вы показываете священный символ и произносите молитву, обличающую нежить. Каждая нежить в пределах 30 футов, которая видит или слышит вас, должна совершить спасбросок Мудрости; при провале она изгнана на 1 минуту или до получения любого урона. Изгнанное существо тратит ходы на отдаление от вас, не может добровольно войти в пространство в 30 футах от вас и не может использовать реакции; в действии оно может лишь Рывок или пытаться выбраться из эффекта, мешающего движению, а если отступать некуда, может использовать Уклонение.",
+			"level": 2,
+			"class": "cleric"
+		},
+		"channel_divinity": {
+			"name": "Направление божественности",
+			"name_en": "Channel Divinity",
+			"desc": "Ваша клятва позволяет направлять божественную энергию для питания магических эффектов, и каждый вариант, предоставляемый клятвой, описывает своё применение. Использовав Направление божественности, вы выбираете вариант, а для повторного применения нужен короткий или долгий отдых. Некоторые эффекты требуют спасбросков; при их использовании Сл равна Сл спасброска заклинаний паладина.",
+			"level": 3,
+			"class": "paladin"
+		},
+		"circle_of_the_land_arctic": {
+			"name": "Круг Земли: Арктика",
+			"name_en": "Circle of the Land: Arctic",
+			"desc": "Круг Земли объединяет мистиков и мудрецов, которые хранят древние знания и обряды через обширную устную традицию; друиды собираются в священных кругах из деревьев или менгиров. Ваша магия зависит от земли, где вы прошли посвящение в тайные обряды этого круга.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land",
+			"parent": "circle_of_the_land"
+		},
+		"circle_of_the_land_coast": {
+			"name": "Круг Земли: Побережье",
+			"name_en": "Circle of the Land: Coast",
+			"desc": "Круг Земли объединяет мистиков и мудрецов, которые хранят древние знания и обряды через устную традицию. Ваша магия подвластна местности, где вас посвятили в тайные обряды круга.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land",
+			"parent": "circle_of_the_land"
+		},
+		"circle_of_the_land_desert": {
+			"name": "Круг Земли: Пустыня",
+			"name_en": "Circle of the Land: Desert",
+			"desc": "Круг Земли объединяет мистиков и мудрецов, которые хранят древние знания и обряды через устную традицию. Ваша магия подвластна местности, где вас посвятили в тайные обряды круга.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land",
+			"parent": "circle_of_the_land"
+		},
+		"circle_of_the_land_forest": {
+			"name": "Круг Земли: Лес",
+			"name_en": "Circle of the Land: Forest",
+			"desc": "Круг Земли объединяет мистиков и мудрецов, которые хранят древние знания и обряды через устную традицию. Ваша магия подвластна местности, где вас посвятили в тайные обряды круга.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land",
+			"parent": "circle_of_the_land"
+		},
+		"circle_of_the_land_grassland": {
+			"name": "Круг Земли: Луга",
+			"name_en": "Circle of the Land: Grassland",
+			"desc": "Круг Земли объединяет мистиков и мудрецов, которые хранят древние знания и обряды через устную традицию. Ваша магия подвластна местности, где вас посвятили в тайные обряды круга.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land",
+			"parent": "circle_of_the_land"
+		},
+		"circle_of_the_land_mountain": {
+			"name": "Круг Земли: Горы",
+			"name_en": "Circle of the Land: Mountain",
+			"desc": "Круг Земли объединяет мистиков и мудрецов, которые хранят древние знания и обряды через устную традицию. Ваша магия подвластна местности, где вас посвятили в тайные обряды круга.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land",
+			"parent": "circle_of_the_land"
+		},
+		"circle_of_the_land_swamp": {
+			"name": "Круг Земли: Болото",
+			"name_en": "Circle of the Land: Swamp",
+			"desc": "Круг Земли объединяет мистиков и мудрецов, которые хранят древние знания и обряды через устную традицию. Ваша магия подвластна местности, где вас посвятили в тайные обряды круга.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land",
+			"parent": "circle_of_the_land"
+		},
+		"circle_of_the_land": {
+			"name": "Круг Земли",
+			"name_en": "Circle of the Land",
+			"desc": "Круг Земли объединяет мистиков и мудрецов, которые хранят древние знания и обряды устной традиции и собираются в священных кругах из деревьев или менгиров. Старшие члены круга становятся главными жрецами общин Старой веры и советниками их правителей. Ваша магия зависит от земли, где вас посвятили в обряды круга.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land",
+			"options": {
+				"choose": 1,
+				"from": [
+					"circle_of_the_land_arctic",
+					"circle_of_the_land_coast",
+					"circle_of_the_land_desert",
+					"circle_of_the_land_forest",
+					"circle_of_the_land_grassland",
+					"circle_of_the_land_mountain",
+					"circle_of_the_land_swamp"
+				]
+			}
+		},
+		"circle_spells_1": {
+			"name": "Круговые заклинания",
+			"name_en": "Circle Spells",
+			"desc": "На 3, 5, 7 и 9 уровнях вы получаете доступ к круговым заклинаниям, связанным с землёй, где вы стали друидом: арктика, побережье, пустыня, лес, равнина, горы или болото. Освоенные круговые заклинания всегда подготовлены и не учитываются в числе заклинаний, которые вы можете подготовить каждый день. Заклинание, которого нет в списке друида, всё равно считается для вас друидическим.",
+			"level": 3,
+			"class": "druid",
+			"subclass": "land"
+		},
+		"circle_spells_2": {
+			"name": "Круговые заклинания",
+			"name_en": "Circle Spells",
+			"desc": "На 3, 5, 7 и 9 уровнях вы получаете доступ к круговым заклинаниям, связанным с землёй, где вы стали друидом: арктика, побережье, пустыня, лес, равнина, горы или болото. Освоенные круговые заклинания всегда подготовлены и не учитываются в числе заклинаний, которые вы можете подготовить каждый день. Заклинание, которого нет в списке друида, всё равно считается для вас друидическим.",
+			"level": 5,
+			"class": "druid",
+			"subclass": "land"
+		},
+		"cleric_ability_score_improvement_1": {
+			"name": "Увеличение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4 уровне и далее на 8, 12, 16 и 19 уровнях вы можете увеличить одну характеристику на 2 или две характеристики на 1. Значение характеристики не может быть повышено выше 20 таким образом.",
+			"level": 4,
+			"class": "cleric"
+		},
+		"cunning_action": {
+			"name": "Хитрое действие",
+			"name_en": "Cunning Action",
+			"desc": "Начиная со 2 уровня, в каждом своём ходу в бою вы можете совершать бонусное действие: Рывок, Отход или Спрятаться.",
+			"level": 2,
+			"class": "rogue"
+		},
+		"cutting_words": {
+			"name": "Язвительные слова",
+			"name_en": "Cutting Words",
+			"desc": "На 3 уровне вы учитесь сбивать с толку других. Когда видимое вами существо в пределах 60 футов совершает бросок атаки, проверку характеристики или бросок урона, вы можете потратить реакцию и одно использование Вдохновения барда, вычтя результат броска кости Вдохновения из броска существа. Использовать можно после броска, но до определения результата или урона. Не действует на существо, которое не слышит вас или иммунно к очарованию.",
+			"level": 3,
+			"class": "bard",
+			"subclass": "lore"
+		},
+		"danger_sense": {
+			"name": "Чутьё опасности",
+			"name_en": "Danger Sense",
+			"desc": "Начиная со 2 уровня, вы получаете преимущество на спасброски Ловкости против эффектов, которые видите, например ловушек и заклинаний. Чтобы получить это свойство, вы не должны быть ослеплены, оглушены или недееспособны.",
+			"level": 2,
+			"class": "barbarian"
+		},
+		"dark_ones_blessing": {
+			"name": "Благословение Тёмного",
+			"name_en": "Dark One's Blessing",
+			"desc": "Начиная с 1 уровня, когда вы снижаете враждебное существо до 0 хитов, вы получаете временные хиты, равные модификатору Харизмы + уровню колдуна (минимум 1).",
+			"level": 1,
+			"class": "warlock",
+			"subclass": "fiend"
+		},
+		"deflect_missiles": {
+			"name": "Отражение снарядов",
+			"name_en": "Deflect Missiles",
+			"desc": "Начиная с 3 уровня, когда в вас попадает атака дистанционным оружием, вы можете потратить реакцию, чтобы отразить или поймать снаряд, уменьшив урон на 1к10 + модификатор Ловкости + уровень монаха. Если урон снижен до 0, а снаряд достаточно мал, чтобы удержать его одной рукой, вы можете поймать его и потратить 1 очко ки, чтобы в рамках той же реакции атаковать им. Эта атака считается владением, а снаряд — монашеским оружием с дальностью 20/60 футов.",
+			"level": 3,
+			"class": "monk"
+		},
+		"destroy_undead_cr_1_2_or_below": {
+			"name": "Уничтожение нежити (ПО 1/2 или ниже)",
+			"name_en": "Destroy Undead (CR 1/2 or below)",
+			"desc": "Начиная с 5 уровня, если нежить проваливает спасбросок против вашей особенности Изгнание нежити, она мгновенно уничтожается, если её показатель опасности не превышает определённого порога.",
+			"level": 5,
+			"class": "cleric"
+		},
+		"disciple_of_life": {
+			"name": "Последователь жизни",
+			"name_en": "Disciple of Life",
+			"desc": "Также начиная с 1 уровня ваши заклинания исцеления становятся эффективнее. Когда вы восстанавливаете существу хиты заклинанием 1 уровня или выше, оно получает дополнительно 2 + уровень заклинания хитов.",
+			"level": 1,
+			"class": "cleric",
+			"subclass": "life"
+		},
+		"divine_domain_improvement_1": {
+			"name": "Особенность божественного домена",
+			"name_en": "Divine Domain feature",
+			"desc": "Выберите один домен, связанный с вашим божеством, например Знание, Жизнь, Свет, Природа, Буря, Обман или Война. Ваш домен даёт домен-заклинания и другие особенности с 1 уровня, дополнительные способы использовать Божественный канал с 2 уровня, а также новые преимущества на 6, 8 и 17 уровнях. В SRD подробно описан только домен Жизни.",
+			"level": 2,
+			"class": "cleric"
+		},
+		"divine_domain": {
+			"name": "Божественный домен",
+			"name_en": "Divine Domain",
+			"desc": "Выберите один домен, связанный с вашим божеством, например Знание, Жизнь, Свет, Природа, Буря, Обман или Война. В SRD подробно описан только домен Жизни. Домен даёт заклинания домена и другие умения на 1 уровне, дополнительные способы использовать Божественное воздействие на 2 уровне и дополнительные преимущества на 6, 8 и 17 уровнях.",
+			"level": 1,
+			"class": "cleric"
+		},
+		"divine_health": {
+			"name": "Божественное здоровье",
+			"name_en": "Divine Health",
+			"desc": "С 3 уровня божественная магия, текущая через вас, делает вас иммунным к болезням.",
+			"level": 3,
+			"class": "paladin"
+		},
+		"divine_sense": {
+			"name": "Божественное чутьё",
+			"name_en": "Divine Sense",
+			"desc": "Действием вы открываете чувства до конца своего следующего хода и узнаёте местонахождение небожителей, исчадий и нежити в пределах 60 футов, не укрытых полным укрытием. Вы знаете тип существа (небожитель, исчадие или нежить), но не его личность. В том же радиусе вы также чувствуете освящённые или осквернённые места и предметы, как от заклинания освящение. Использований: 1 + модификатор Харизмы; все восстанавливаются после долгого отдыха.",
+			"level": 1,
+			"class": "paladin"
+		},
+		"divine_smite": {
+			"name": "Божественная кара",
+			"name_en": "Divine Smite",
+			"desc": "Начиная со 2 уровня, при попадании по существу ближней оружейной атакой вы можете потратить ячейку заклинаний, чтобы нанести цели излучающий урон сверх урона оружия: 2к8 за ячейку 1 уровня, +1к8 за каждый уровень ячейки выше 1-го, максимум 5к8. Если цель — нежить или исчадие, урон увеличивается на 1к8.",
+			"level": 2,
+			"class": "paladin"
+		},
+		"domain_spells_1": {
+			"name": "Заклинания домена",
+			"name_en": "Domain Spells",
+			"desc": "Каждый домен имеет список заклинаний домена, которые вы получаете на уровнях жреца, указанных в описании домена. Заклинания домена всегда подготовлены и не учитываются в лимите подготовленных заклинаний. Если заклинание домена не входит в список заклинаний жреца, оно всё равно считается заклинанием жреца.",
+			"level": 1,
+			"class": "cleric"
+		},
+		"domain_spells_2": {
+			"name": "Заклинания домена",
+			"name_en": "Domain Spells",
+			"desc": "Каждый домен имеет список заклинаний домена, которые вы получаете на уровнях жреца, указанных в описании домена. Заклинания домена всегда подготовлены и не учитываются в лимите подготовленных заклинаний. Если заклинание домена не входит в список заклинаний жреца, оно всё равно считается заклинанием жреца.",
+			"level": 3,
+			"class": "cleric"
+		},
+		"domain_spells_3": {
+			"name": "Заклинания домена",
+			"name_en": "Domain Spells",
+			"desc": "Каждый домен имеет список заклинаний домена, которые вы получаете на уровнях жреца, указанных в описании домена. Однажды получив заклинание домена, вы всегда его подготовлены, и оно не учитывается в числе заклинаний, которые можно подготовить за день. Если заклинание домена отсутствует в списке заклинаний жреца, для вас оно всё равно считается заклинанием жреца.",
+			"level": 5,
+			"class": "cleric"
+		},
+		"draconic_resilience": {
+			"name": "Драконья стойкость",
+			"name_en": "Draconic Resilience",
+			"desc": "На 1 уровне максимум хитов увеличивается на 1 и увеличивается на 1 снова при каждом получении уровня в этом классе. Кожа покрыта тонкими драконьими чешуйками: когда вы не носите доспех, ваш КД равен 13 + модификатор Ловкости.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic"
+		},
+		"dragon_ancestor_black___acid_damage": {
+			"name": "Наследие дракона: чёрный (урон кислотой)",
+			"name_en": "Dragon Ancestor: Black - Acid Damage",
+			"desc": "На 1 уровне выберите один тип драконов в качестве предка. Тип урона, связанный с драконом, используется способностями, которые вы получите позже. Вы знаете Драконий язык и умеете на нём говорить, читать и писать. При проверках Харизмы во взаимодействии с драконами бонус мастерства удваивается, если применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor_blue___lightning_damage": {
+			"name": "Наследие дракона: синий (урон молнией)",
+			"name_en": "Dragon Ancestor: Blue - Lightning Damage",
+			"desc": "На 1 уровне выберите один тип драконов в качестве предка. Тип урона, связанный с драконом, используется способностями, которые вы получите позже. Вы знаете Драконий язык и умеете на нём говорить, читать и писать. При проверках Харизмы во взаимодействии с драконами бонус мастерства удваивается, если применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor_brass___fire_damage": {
+			"name": "Наследие дракона: латунный (урон огнём)",
+			"name_en": "Dragon Ancestor: Brass - Fire Damage",
+			"desc": "На 1 уровне выберите один тип драконов в качестве предка. Тип урона, связанный с драконом, используется способностями, которые вы получите позже. Вы знаете Драконий язык и умеете на нём говорить, читать и писать. При проверках Харизмы во взаимодействии с драконами бонус мастерства удваивается, если применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor_bronze___lightning_damage": {
+			"name": "Наследие дракона: бронзовый (урон молнией)",
+			"name_en": "Dragon Ancestor: Bronze - Lightning Damage",
+			"desc": "На 1 уровне выберите один тип драконов в качестве предка. Тип урона, связанный с драконом, используется способностями, которые вы получите позже. Вы знаете Драконий язык и умеете на нём говорить, читать и писать. При проверках Харизмы во взаимодействии с драконами бонус мастерства удваивается, если применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor_copper___acid_damage": {
+			"name": "Предок-дракон: медный (урон кислотой)",
+			"name_en": "Dragon Ancestor: Copper - Acid Damage",
+			"desc": "На 1-м уровне вы выбираете один вид драконов своим предком. Тип урона, связанный с каждым драконом, используется способностями, которые вы получите позже. Вы умеете говорить, читать и писать на драконьем языке. Кроме того, при проверке Харизмы в общении с драконами бонус мастерства удваивается, если он применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor_gold___fire_damage": {
+			"name": "Предок-дракон: золотой (урон огнём)",
+			"name_en": "Dragon Ancestor: Gold - Fire Damage",
+			"desc": "На 1-м уровне вы выбираете один вид драконов своим предком. Тип урона, связанный с каждым драконом, используется способностями, которые вы получите позже. Вы умеете говорить, читать и писать на драконьем языке. Кроме того, при проверке Харизмы в общении с драконами бонус мастерства удваивается, если он применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor_green___poison_damage": {
+			"name": "Предок-дракон: зелёный (урон ядом)",
+			"name_en": "Dragon Ancestor: Green - Poison Damage",
+			"desc": "На 1-м уровне вы выбираете один вид драконов своим предком. Тип урона, связанный с каждым драконом, используется способностями, которые вы получите позже. Вы умеете говорить, читать и писать на драконьем языке. Кроме того, при проверке Харизмы в общении с драконами бонус мастерства удваивается, если он применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor_red___fire_damage": {
+			"name": "Предок-дракон: красный (урон огнём)",
+			"name_en": "Dragon Ancestor: Red - Fire Damage",
+			"desc": "На 1-м уровне вы выбираете один вид драконов своим предком. Тип урона, связанный с каждым драконом, используется способностями, которые вы получите позже. Вы умеете говорить, читать и писать на драконьем языке. Кроме того, при проверке Харизмы в общении с драконами бонус мастерства удваивается, если он применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor_silver___cold_damage": {
+			"name": "Предок-дракон: серебряный (урон холодом)",
+			"name_en": "Dragon Ancestor: Silver - Cold Damage",
+			"desc": "На 1-м уровне вы выбираете один вид драконов своим предком. Тип урона, связанный с каждым драконом, используется способностями, которые вы получите позже. Вы умеете говорить, читать и писать на драконьем языке. Кроме того, при проверке Харизмы в общении с драконами бонус мастерства удваивается, если он применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor_white___cold_damage": {
+			"name": "Предок-дракон: белый (урон холодом)",
+			"name_en": "Dragon Ancestor: White - Cold Damage",
+			"desc": "На 1-м уровне вы выбираете один вид драконов своим предком. Тип урона, связанный с каждым драконом, используется способностями, которые вы получите позже. Вы умеете говорить, читать и писать на драконьем языке. Кроме того, при проверке Харизмы в общении с драконами бонус мастерства удваивается, если он применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"parent": "dragon_ancestor"
+		},
+		"dragon_ancestor": {
+			"name": "Предок-дракон",
+			"name_en": "Dragon Ancestor",
+			"desc": "На 1 уровне вы выбираете один вид драконов в качестве предка. Тип урона, связанный с этим драконом, используют умения, которые вы получите позже. Вы знаете драконий язык и умеете на нём говорить, читать и писать. Кроме того, при проверке Харизмы во взаимодействии с драконами бонус мастерства удваивается, если он применяется к проверке.",
+			"level": 1,
+			"class": "sorcerer",
+			"subclass": "draconic",
+			"options": {
+				"choose": 1,
+				"from": [
+					"dragon_ancestor_black___acid_damage",
+					"dragon_ancestor_blue___lightning_damage",
+					"dragon_ancestor_brass___fire_damage",
+					"dragon_ancestor_bronze___lightning_damage",
+					"dragon_ancestor_copper___acid_damage",
+					"dragon_ancestor_gold___fire_damage",
+					"dragon_ancestor_green___poison_damage",
+					"dragon_ancestor_red___fire_damage",
+					"dragon_ancestor_silver___cold_damage",
+					"dragon_ancestor_white___cold_damage"
+				]
+			}
+		},
+		"druid_ability_score_improvement_1": {
+			"name": "Повышение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4 уровне, а затем на 8, 12, 16 и 19 уровнях вы можете повысить одну характеристику на выбор на 2 или две характеристики на выбор на 1. Как обычно, с помощью этого умения характеристику нельзя повысить выше 20.",
+			"level": 4,
+			"class": "druid"
+		},
+		"druid_circle": {
+			"name": "Круг друидов",
+			"name_en": "Druid Circle",
+			"desc": "На 2 уровне вы выбираете круг друидов, например Круг Земли. Выбор даёт умения на 2 уровне, а также на 6, 10 и 14 уровнях.",
+			"level": 2,
+			"class": "druid"
+		},
+		"druidic": {
+			"name": "Друидический",
+			"name_en": "Druidic",
+			"desc": "Вы знаете друидический язык, тайный язык друидов, и можете использовать его для скрытых посланий. Вы и те, кто знает этот язык, автоматически замечаете такие послания. Остальные замечают их наличие при успешной проверке Мудрости (Внимательность) Сл 15, но без магии не могут их расшифровать.",
+			"level": 1,
+			"class": "druid"
+		},
+		"eldritch_invocation_agonizing_blast": {
+			"name": "Мучительный взрыв",
+			"name_en": "Eldritch Invocation: Agonizing Blast",
+			"desc": "Когда вы колдуете мистический заряд, добавляйте модификатор Харизмы к урону, который он наносит при попадании.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_armor_of_shadows": {
+			"name": "Доспех теней",
+			"name_en": "Eldritch Invocation: Armor of Shadows",
+			"desc": "Вы можете по желанию накладывать на себя доспех мага без траты ячейки заклинаний и без материальных компонентов.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_beast_speech": {
+			"name": "Мистическое воззвание: Речь зверей",
+			"name_en": "Eldritch Invocation: Beast Speech",
+			"desc": "Вы можете без траты ячейки заклинаний в любое время колдовать «говорить с животными».",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_beguiling_influence": {
+			"name": "Мистическое воззвание: Обольстительное влияние",
+			"name_en": "Eldritch Invocation: Beguiling Influence",
+			"desc": "Вы получаете владение навыками Обман и Убеждение.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_book_of_ancient_secrets": {
+			"name": "Мистическое воззвание: Книга древних тайн",
+			"name_en": "Eldritch Invocation: Book of Ancient Secrets",
+			"desc": "Вы можете вписывать в свою Книгу теней ритуалы: выберите два заклинания 1-го уровня с тегом ритуала из списков любого класса. Эти заклинания не учитываются в числе известных вам, и колдовать их можно только как ритуалы, пока у вас есть Книга. Также можно колдовать как ритуал любое известное заклинание колдуна с тегом ритуала. В приключениях можно добавлять ритуалы уровнем не выше половины вашего уровня колдуна (округляя вверх), на что уходит 2 часа и 50 зм на каждый уровень заклинания.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_devils_sight": {
+			"name": "Мистическое воззвание: Зрение дьявола",
+			"name_en": "Eldritch Invocation: Devil's Sight",
+			"desc": "Вы видите нормально в темноте, как магической, так и немагической, на расстоянии 120 футов.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_eldritch_sight": {
+			"name": "Мистическое воззвание: Потустороннее зрение",
+			"name_en": "Eldritch Invocation: Eldritch Sight",
+			"desc": "Вы можете без траты ячейки заклинаний в любое время колдовать «обнаружение магии».",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_eldritch_spear": {
+			"name": "Мистическое воззвание: Потустороннее копьё",
+			"name_en": "Eldritch Invocation: Eldritch Spear",
+			"desc": "Дистанция заклинания «мистический заряд» увеличивается до 300 футов.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_eyes_of_the_rune_keeper": {
+			"name": "Мистическое воззвание: Глаза хранителя рун",
+			"name_en": "Eldritch Invocation: Eyes of the Rune Keeper",
+			"desc": "Вы можете читать любые письмена.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_fiendish_vigor": {
+			"name": "Мистическое воззвание: Адская жизнестойкость",
+			"name_en": "Eldritch Invocation: Fiendish Vigor",
+			"desc": "Вы можете в любое время колдовать на себя «ложную жизнь» как заклинание 1-го уровня без траты ячейки заклинаний и материальных компонентов.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_gaze_of_two_minds": {
+			"name": "Мистическое воззвание: Взгляд двух разумов",
+			"name_en": "Eldritch Invocation: Gaze of Two Minds",
+			"desc": "Действием коснитесь согласного гуманоида и воспринимайте его чувства до конца вашего следующего хода. Пока он на том же плане, вы можете продлевать связь действием на следующих ходах. Вы получаете его особые чувства, но сами ослеплены и оглушены на собственном окружении.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_mask_of_many_faces": {
+			"name": "Мистическое воззвание: Маска многих лиц",
+			"name_en": "Eldritch Invocation: Mask of Many Faces",
+			"desc": "Вы можете в любое время колдовать «маскировку» без траты ячейки заклинаний.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_mire_the_mind": {
+			"name": "Мистическое воззвание: Вязкость разума",
+			"name_en": "Eldritch Invocation: Mire the Mind",
+			"desc": "Вы можете один раз колдовать «замедление» с помощью ячейки заклинаний колдуна. Повторно сделать это можно только после долгого отдыха.",
+			"level": 5,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_misty_visions": {
+			"name": "Мистическое воззвание: Туманные видения",
+			"name_en": "Eldritch Invocation: Misty Visions",
+			"desc": "Вы можете в любое время колдовать «беззвучный образ» без траты ячейки заклинаний и материальных компонентов.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_one_with_shadows": {
+			"name": "Жуткое воззвание: Единство с тенями",
+			"name_en": "Eldritch Invocation: One with Shadows",
+			"desc": "Находясь в области тусклого света или темноты, можно действием стать невидимым до тех пор, пока не переместитесь или не совершите действие или реакцию.",
+			"level": 5,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_repelling_blast": {
+			"name": "Жуткое воззвание: Отталкивающий взрыв",
+			"name_en": "Eldritch Invocation: Repelling Blast",
+			"desc": "Попав по существу заклинанием «Мистический взрыв», можно отбросить его по прямой на 10 футов от себя.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_sign_of_ill_omen": {
+			"name": "Жуткое воззвание: Знак дурного предзнаменования",
+			"name_en": "Eldritch Invocation: Sign of Ill Omen",
+			"desc": "Можно один раз наложить «Наложение проклятия», используя ячейку заклинаний колдуна. Повторно — только после долгого отдыха.",
+			"level": 5,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_thief_of_five_fates": {
+			"name": "Жуткое воззвание: Похититель пяти судеб",
+			"name_en": "Eldritch Invocation: Thief of Five Fates",
+			"desc": "Можно один раз наложить «Порчу», используя ячейку заклинаний колдуна. Повторно — только после долгого отдыха.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_thirsting_blade": {
+			"name": "Жуткое воззвание: Жаждущий клинок",
+			"name_en": "Eldritch Invocation: Thirsting Blade",
+			"desc": "При действии Атака в свой ход можно атаковать оружием пакта дважды вместо одного раза.",
+			"level": 5,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocation_voice_of_the_chain_master": {
+			"name": "Жуткое воззвание: Голос повелителя цепей",
+			"name_en": "Eldritch Invocation: Voice of the Chain Master",
+			"desc": "Можно telepathically общаться с фамильяром и воспринимать его чувства, пока вы находитесь на одном плане существования. Также, воспринимая чувства фамильяра, можно говорить через него своим голосом, даже если он обычно не способен говорить.",
+			"level": 2,
+			"class": "warlock",
+			"parent": "eldritch_invocations"
+		},
+		"eldritch_invocations": {
+			"name": "Жуткие воззвания",
+			"name_en": "Eldritch Invocations",
+			"desc": "Изучая тайные знания, вы открываете жуткие воззвания, которые наделяют вас постоянной магической способностью. На 2 уровне вы получаете два воззвания на выбор, а при получении определённых уровней колдуна — дополнительные по таблице. При повышении уровня в классе можно заменить одно известное воззвание другим, доступным на этом уровне.",
+			"level": 2,
+			"class": "warlock"
+		},
+		"evocation_savant": {
+			"name": "Мастер воплощения",
+			"name_en": "Evocation Savant",
+			"desc": "Начиная со 2 уровня, золото и время, необходимые для переписывания заклинания школы Воплощения в книгу заклинаний, уменьшаются вдвое.",
+			"level": 2,
+			"class": "wizard",
+			"subclass": "evocation"
+		},
+		"extra_attack_1": {
+			"name": "Дополнительная атака",
+			"name_en": "Extra Attack",
+			"desc": "С 5 уровня можно атаковать дважды вместо одного раза при действии Атака. Число атак возрастает до трёх на 11 уровне и до четырёх на 20 уровне.",
+			"level": 5,
+			"class": "fighter"
+		},
+		"fast_hands": {
+			"name": "Быстрые руки",
+			"name_en": "Fast Hands",
+			"desc": "С 3 уровня бонусным действием от Хитрого действия можно совершить проверку Ловкости (Ловкость рук), обезвредить ловушку или открыть замок воровскими инструментами, либо совершить действие Использование предмета.",
+			"level": 3,
+			"class": "rogue",
+			"subclass": "thief"
+		},
+		"fast_movement": {
+			"name": "Быстрое передвижение",
+			"name_en": "Fast Movement",
+			"desc": "С 5 уровня скорость увеличивается на 10 футов, пока вы не носите тяжёлые доспехи.",
+			"level": 5,
+			"class": "barbarian"
+		},
+		"favored_enemy_1_type": {
+			"name": "Любимый враг (1 тип)",
+			"name_en": "Favored Enemy (1 type)",
+			"desc": "С 1 уровня вы изучаете определённый тип врагов: аберрации, звери, небожители, конструкты, драконы, элементали, феи, исчадия, великаны, чудовища, слизи, растения или нежить, либо два народа гуманоидов. Вы имеете преимущество на проверки Мудрости (Выживание) для выслеживания и Интеллекта для вспоминания сведений о них. При получении умения вы также изучаете один язык, на котором говорят ваши враги. Дополнительного врага и язык выбираете на 6 и 14 уровнях.",
+			"level": 1,
+			"class": "ranger"
+		},
+		"fighter_ability_score_improvement_1": {
+			"name": "Увеличение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4-м уровне и далее на 6, 8, 12, 14, 16 и 19 уровнях можно повысить одну характеристику на 2 или две характеристики на 1. Как обычно, с помощью этой способности характеристику нельзя повысить выше 20.",
+			"level": 4,
+			"class": "fighter"
+		},
+		"fighter_fighting_style_archery": {
+			"name": "Боевой стиль: стрельба из лука",
+			"name_en": "Fighting Style: Archery",
+			"desc": "Вы получаете бонус +2 к броскам атаки дальнобойным оружием.",
+			"level": 1,
+			"class": "fighter",
+			"parent": "fighter_fighting_style"
+		},
+		"fighter_fighting_style_defense": {
+			"name": "Боевой стиль: защита",
+			"name_en": "Fighting Style: Defense",
+			"desc": "Пока вы носите доспехи, вы получаете бонус +1 к КД.",
+			"level": 1,
+			"class": "fighter",
+			"parent": "fighter_fighting_style"
+		},
+		"fighter_fighting_style_dueling": {
+			"name": "Боевой стиль: дуэлянт",
+			"name_en": "Fighting Style: Dueling",
+			"desc": "Когда вы держите одноручное рукопашное оружие и больше никакого оружия, вы получаете бонус +2 к броскам урона этим оружием.",
+			"level": 1,
+			"class": "fighter",
+			"parent": "fighter_fighting_style"
+		},
+		"fighter_fighting_style_great_weapon_fighting": {
+			"name": "Боевой стиль: бой тяжёлым оружием",
+			"name_en": "Fighting Style: Great Weapon Fighting",
+			"desc": "Когда вы выбрасываете 1 или 2 на кости урона при атаке рукопашным оружием, которое держите двумя руками, можно перебросить кость, и новый результат обязателен, даже если он равен 1 или 2. Оружие должно обладать свойством «двуручное» или «универсальное».",
+			"level": 1,
+			"class": "fighter",
+			"parent": "fighter_fighting_style"
+		},
+		"fighter_fighting_style_protection": {
+			"name": "Боевой стиль: защита союзников",
+			"name_en": "Fighting Style: Protection",
+			"desc": "Когда видимое вам существо атакует цель, отличную от вас, находящуюся в 5 футах от вас, вы можете реакцией ввести помеху на бросок атаки. Вы должны держать щит.",
+			"level": 1,
+			"class": "fighter",
+			"parent": "fighter_fighting_style"
+		},
+		"fighter_fighting_style_two_weapon_fighting": {
+			"name": "Боевой стиль: бой двумя оружиями",
+			"name_en": "Fighting Style: Two-Weapon Fighting",
+			"desc": "Когда вы сражаетесь двумя оружиями, вы можете добавить модификатор характеристики к урону второй атаки.",
+			"level": 1,
+			"class": "fighter",
+			"parent": "fighter_fighting_style"
+		},
+		"fighter_fighting_style": {
+			"name": "Боевой стиль",
+			"name_en": "Fighting Style",
+			"desc": "Вы выбираете определённый стиль боя своей специализацией. Выберите один из перечисленных вариантов. Один и тот же вариант боевого стиля нельзя взять дважды, даже если вы позже получите право выбора снова.",
+			"level": 1,
+			"class": "fighter",
+			"options": {
+				"choose": 1,
+				"from": [
+					"fighter_fighting_style_archery",
+					"fighter_fighting_style_defense",
+					"fighter_fighting_style_dueling",
+					"fighter_fighting_style_great_weapon_fighting",
+					"fighter_fighting_style_protection",
+					"fighter_fighting_style_two_weapon_fighting"
+				]
+			}
+		},
+		"fighting_style_defense": {
+			"name": "Боевой стиль: защита",
+			"name_en": "Fighting Style: Defense",
+			"desc": "Пока вы носите доспехи, вы получаете бонус +1 к КД.",
+			"level": 2,
+			"class": "paladin",
+			"parent": "paladin_fighting_style"
+		},
+		"fighting_style_dueling": {
+			"name": "Боевой стиль: дуэлянт",
+			"name_en": "Fighting Style: Dueling",
+			"desc": "Когда вы держите одноручное рукопашное оружие и больше никакого оружия, вы получаете бонус +2 к броскам урона этим оружием.",
+			"level": 2,
+			"class": "paladin",
+			"parent": "paladin_fighting_style"
+		},
+		"fighting_style_great_weapon_fighting": {
+			"name": "Боевой стиль: бой тяжёлым оружием",
+			"name_en": "Fighting Style: Great Weapon Fighting",
+			"desc": "Когда вы выбрасываете 1 или 2 на кости урона при атаке рукопашным оружием, которое держите двумя руками, можно перебросить кость, и новый результат обязателен. Оружие должно обладать свойством «двуручное» или «универсальное».",
+			"level": 2,
+			"class": "paladin",
+			"parent": "paladin_fighting_style"
+		},
+		"fighting_style_protection": {
+			"name": "Боевой стиль: защита союзников",
+			"name_en": "Fighting Style: Protection",
+			"desc": "Когда видимое вам существо атакует цель, отличную от вас, находящуюся в 5 футах от вас, вы можете реакцией ввести помеху на бросок атаки. Вы должны держать щит.",
+			"level": 2,
+			"class": "paladin",
+			"parent": "paladin_fighting_style"
+		},
+		"flexible_casting_converting_spell_slot": {
+			"name": "Гибкое колдовство: преобразование ячейки заклинаний",
+			"name_en": "Flexible Casting: Converting Spell Slot",
+			"desc": "Бонусным действием в свой ход можно потратить одну ячейку заклинаний и получить очки чародейства, равные уровню ячейки.",
+			"level": 2,
+			"class": "sorcerer"
+		},
+		"flexible_casting_creating_spell_slots": {
+			"name": "Гибкое колдовство: создание ячеек заклинаний",
+			"name_en": "Flexible Casting: Creating Spell Slots",
+			"desc": "Бонусным действием в свой ход можно преобразовать неиспользованные очки чародейства в одну ячейку заклинаний по таблице «Создание ячеек заклинаний»; создать можно ячейку не выше 5-го уровня. Созданная ячейка исчезает после долгого отдыха.",
+			"level": 2,
+			"class": "sorcerer"
+		},
+		"flurry_of_blows": {
+			"name": "Шквал ударов",
+			"name_en": "Flurry of Blows",
+			"desc": "Сразу после действия «Атака» в свой ход можно потратить 1 очко ци и совершить бонусным действием две безоружные атаки.",
+			"level": 2,
+			"class": "monk"
+		},
+		"font_of_inspiration": {
+			"name": "Источник вдохновения",
+			"name_en": "Font of Inspiration",
+			"desc": "Начиная с 5-го уровня, все использованные применения Вдохновения барда восстанавливаются после короткого или долгого отдыха.",
+			"level": 5,
+			"class": "bard"
+		},
+		"font_of_magic": {
+			"name": "Источник магии",
+			"name_en": "Font of Magic",
+			"desc": "Со 2-го уровня вы получаете очки чародейства, которыми создаёте магические эффекты; их количество растёт по таблице чародея и не может превышать указанное в ней. Все потраченные очки восстанавливаются после долгого отдыха.",
+			"level": 2,
+			"class": "sorcerer"
+		},
+		"frenzy": {
+			"name": "Неистовство",
+			"name_en": "Frenzy",
+			"desc": "Начиная с 3-го уровня, в ярости можно войти в неистовство: на время ярости в каждый ваш последующий ход можно бонусным действием совершить одну рукопашную атаку оружием. По окончании ярости вы получаете одну степень истощения.",
+			"level": 3,
+			"class": "barbarian",
+			"subclass": "berserker"
+		},
+		"hunters_prey_colossus_slayer": {
+			"name": "Добыча охотника: Убийца исполинов",
+			"name_en": "Hunter's Prey: Colossus Slayer",
+			"desc": "Когда вы попадаете по существу атакой оружием, оно получает дополнительно 1к8 урона, если его хиты ниже максимума. Этот урон можно наносить только раз в ход.",
+			"level": 3,
+			"class": "ranger",
+			"subclass": "hunter",
+			"parent": "hunters_prey"
+		},
+		"hunters_prey_giant_killer": {
+			"name": "Добыча охотника: Истребитель великанов",
+			"name_en": "Hunter's Prey: Giant Killer",
+			"desc": "Когда Крупное или большее существо в пределах 5 футов атакует вас и попадает или промахивается, вы можете реакцией атаковать его сразу после его атаки, если видите его.",
+			"level": 3,
+			"class": "ranger",
+			"subclass": "hunter",
+			"parent": "hunters_prey"
+		},
+		"hunters_prey_horde_breaker": {
+			"name": "Добыча охотника: Разрушитель орд",
+			"name_en": "Hunter's Prey: Horde Breaker",
+			"desc": "Один раз в ход при атаке оружием можно совершить ещё одну атаку тем же оружием по другому существу в пределах 5 футов от первоначальной цели и в пределах дальности оружия.",
+			"level": 3,
+			"class": "ranger",
+			"subclass": "hunter",
+			"parent": "hunters_prey"
+		},
+		"hunters_prey": {
+			"name": "Добыча охотника",
+			"name_en": "Hunter's Prey",
+			"desc": "На 3-м уровне выберите одну из особенностей: Убийца исполинов, Истребитель великанов или Разрушитель орд.",
+			"level": 3,
+			"class": "ranger",
+			"subclass": "hunter",
+			"options": {
+				"choose": 1,
+				"from": [
+					"hunters_prey_colossus_slayer",
+					"hunters_prey_giant_killer",
+					"hunters_prey_horde_breaker"
+				]
+			}
+		},
+		"improved_critical": {
+			"name": "Улучшенный крит",
+			"name_en": "Improved Critical",
+			"desc": "Начиная с 3-го уровня, ваши атаки оружием дают критическое попадание при броске 19 или 20.",
+			"level": 3,
+			"class": "fighter",
+			"subclass": "champion"
+		},
+		"jack_of_all_trades": {
+			"name": "Мастер на все руки",
+			"name_en": "Jack of All Trades",
+			"desc": "Начиная со 2-го уровня, к любой проверке характеристики, в которую не входит бонус мастерства, можно добавлять половину бонуса мастерства, округлённую вниз.",
+			"level": 2,
+			"class": "bard"
+		},
+		"ki": {
+			"name": "Ки",
+			"name_en": "Ki",
+			"desc": "Со 2 уровня вы тратите очки ки (их число зависит от уровня монаха) на особые умения: Порыв ударов, Терпеливую защиту, Шаг ветра и другие, которые открываются с ростом уровня. Потраченные очки восстанавливаются после короткого или долгого отдыха, для этого нужно медитировать не менее 30 минут. СЛ спасбросков умений ки равна 8 + бонус мастерства + модификатор Мудрости.",
+			"level": 2,
+			"class": "monk"
+		},
+		"lay_on_hands": {
+			"name": "Возложение рук",
+			"name_en": "Lay on Hands",
+			"desc": "Запас исцеления равен уровню паладина × 5 хитов и восстанавливается после долгого отдыха. Действием вы касаетесь существа и восстанавливаете ему хиты из запаса, но не больше остатка. Либо потратьте 5 хитов из запаса, чтобы излечить одну болезнь или нейтрализовать один яд. Не действует на нежить и конструктов.",
+			"level": 1,
+			"class": "paladin"
+		},
+		"martial_archetype": {
+			"name": "Боевой архетип",
+			"name_en": "Martial Archetype",
+			"desc": "На 3 уровне вы выбираете боевой архетип (например, Чемпион), который дает особенности на 3, 7, 10, 15 и 18 уровнях.",
+			"level": 3,
+			"class": "fighter"
+		},
+		"martial_arts": {
+			"name": "Боевые искусства",
+			"name_en": "Martial Arts",
+			"desc": "С 1 уровня, если вы безоружны или используете только монашье оружие и не носите доспех и не используете щит, вы можете применять Ловкость вместо Силы для бросков атаки и урона безоружными ударами и монашьим оружием. Урон безоружного удара или монашьего оружия можно определять броском к4 вместо обычного урона; кость меняется с уровнем. Когда вы совершаете действие Атака безоружным ударом или монашьим оружием, можно совершить один безоружный удар как бонусное действие.",
+			"level": 1,
+			"class": "monk"
+		},
+		"metamagic_1": {
+			"name": "Метамагия",
+			"name_en": "Metamagic",
+			"desc": "На 3 уровне вы получаете два варианта метамагии на выбор, ещё один на 10 и 17 уровнях. К одному заклинанию при сотворении можно применить только один вариант, если не указано иное.",
+			"level": 3,
+			"class": "sorcerer",
+			"options": {
+				"choose": 2,
+				"from": [
+					"metamagic_careful_spell",
+					"metamagic_distant_spell",
+					"metamagic_empowered_spell",
+					"metamagic_extended_spell",
+					"metamagic_heightened_spell",
+					"metamagic_quickened_spell",
+					"metamagic_subtle_spell",
+					"metamagic_twinned_spell"
+				]
+			}
+		},
+		"metamagic_careful_spell": {
+			"name": "Осторожное заклинание",
+			"name_en": "Metamagic: Careful Spell",
+			"desc": "Потратив 1 очко чародейства при сотворении заклинания, требующего спасбросок, вы выбираете существ числом до модификатора Харизмы (минимум одно), которые автоматически преуспевают в спасброске против него.",
+			"level": 3,
+			"class": "sorcerer",
+			"parent": "metamagic_1"
+		},
+		"metamagic_distant_spell": {
+			"name": "Дальнее заклинание",
+			"name_en": "Metamagic: Distant Spell",
+			"desc": "Потратив 1 очко чародейства, вы удваиваете дистанцию заклинания, если она составляет 5 футов или больше. Для заклинания с дистанцией «касание» можно потратить 1 очко, чтобы сделать дистанцию 30 футов.",
+			"level": 3,
+			"class": "sorcerer",
+			"parent": "metamagic_1"
+		},
+		"metamagic_empowered_spell": {
+			"name": "Усиленное заклинание",
+			"name_en": "Metamagic: Empowered Spell",
+			"desc": "Потратив 1 очко чародейства, вы можете перебросить до модификатора Харизмы костей урона заклинания (минимум одну); новые броски обязательны. Можно применять вместе с другой метамагией при сотворении того же заклинания.",
+			"level": 3,
+			"class": "sorcerer",
+			"parent": "metamagic_1"
+		},
+		"metamagic_extended_spell": {
+			"name": "Продлённое заклинание",
+			"name_en": "Metamagic: Extended Spell",
+			"desc": "Потратив 1 очко чародейства при сотворении заклинания с длительностью 1 минута или больше, вы удваиваете его длительность, но не более 24 часов.",
+			"level": 3,
+			"class": "sorcerer",
+			"parent": "metamagic_1"
+		},
+		"metamagic_heightened_spell": {
+			"name": "Увеличенное заклинание",
+			"name_en": "Metamagic: Heightened Spell",
+			"desc": "Потратив 3 очка чародейства при сотворении заклинания, требующего спасбросок, вы даете одной его цели помеху на первый спасбросок против заклинания.",
+			"level": 3,
+			"class": "sorcerer",
+			"parent": "metamagic_1"
+		},
+		"metamagic_quickened_spell": {
+			"name": "Ускоренное заклинание",
+			"name_en": "Metamagic: Quickened Spell",
+			"desc": "Потратив 2 очка чародейства, вы меняете время сотворения заклинания с 1 действия на 1 бонусное действие для этого сотворения.",
+			"level": 3,
+			"class": "sorcerer",
+			"parent": "metamagic_1"
+		},
+		"metamagic_subtle_spell": {
+			"name": "Скрытное заклинание",
+			"name_en": "Metamagic: Subtle Spell",
+			"desc": "Потратив 1 очко чародейства, вы сотворяете заклинание без соматических и вербальных компонентов.",
+			"level": 3,
+			"class": "sorcerer",
+			"parent": "metamagic_1"
+		},
+		"metamagic_twinned_spell": {
+			"name": "Метамагия: Удвоенное заклинание",
+			"name_en": "Metamagic: Twinned Spell",
+			"desc": "Когда вы сотворяете заклинание, нацеленное только на одно существо и без дистанции «На себя», можно потратить очки чародейства, равные уровню заклинания (1 очко для заговора), чтобы нацелить то же заклинание на второе существо в пределах дистанции. Заклинание должно не может нацеливаться более чем на одно существо на своём текущем уровне: например, волшебная стрела и испепеляющий луч не подходят, а луч холода подходит.",
+			"level": 3,
+			"class": "sorcerer"
+		},
+		"monastic_tradition": {
+			"name": "Монашеская традиция",
+			"name_en": "Monastic Tradition",
+			"desc": "На 3-м уровне вы выбираете монашескую традицию, например Путь открытой ладони. Традиция даёт вам умения на 3-м уровне, а также на 6-м, 11-м и 17-м уровнях.",
+			"level": 3,
+			"class": "monk"
+		},
+		"monk_ability_score_improvement_1": {
+			"name": "Повышение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4-м уровне, а также на 8-м, 12-м, 16-м и 19-м уровнях вы можете увеличить одну характеристику на 2 или две характеристики на 1. Как обычно, с помощью этого умения характеристику нельзя повысить выше 20.",
+			"level": 4,
+			"class": "monk"
+		},
+		"monk_extra_attack": {
+			"name": "Дополнительная атака",
+			"name_en": "Extra Attack",
+			"desc": "Начиная с 5-го уровня, when вы в свой ход используете действие «Атака», вы можете атаковать дважды вместо одного раза.",
+			"level": 5,
+			"class": "monk"
+		},
+		"monk_unarmored_defense": {
+			"name": "Защита без доспехов",
+			"name_en": "Unarmored Defense",
+			"desc": "Начиная с 1-го уровня, пока вы не носите доспехов и не держите щит, ваш КД равен 10 + модификатор Ловкости + модификатор Мудрости.",
+			"level": 1,
+			"class": "monk"
+		},
+		"natural_explorer_1_terrain_type": {
+			"name": "Природный исследователь (1 тип местности)",
+			"name_en": "Natural Explorer (1 terrain type)",
+			"desc": "Вы особенно хорошо знаете один тип природной среды и умеете путешествовать и выживать в ней. Выберите один излюбленный тип местности: арктическая, побережье, пустыня, лес, равнина, горы или болото. При проверках Интеллекта или Мудрости, связанных с излюбленной местностью, ваш бонус мастерства удваивается для навыков, в которых вы владеете мастерством. Во время путешествия по излюбленной местности в течение часа и более вы получаете следующие преимущества: трудная местность не замедляет группу; группа не может заблудиться, кроме как с помощью магии; вы остаётесь настороже к опасности, даже занимаясь другим делом в пути; если вы путешествуете в одиночку, можете двигаться скрытно с обычной скоростью; при добыче пищи находите вдвое больше; выслеживая существ, также узнаёте их точное количество, размеры и давность их прохода. Дополнительные излюбленные типы местности выбираются на 6-м и 10-м уровнях.",
+			"level": 1,
+			"class": "ranger"
+		},
+		"natural_recovery": {
+			"name": "Естественное восстановление",
+			"name_en": "Natural Recovery",
+			"desc": "Начиная со 2 уровня, во время короткого отдыха вы можете медитировать и восстановить израсходованные ячейки заклинаний суммарным уровнем не выше половины уровня друида (округляя вверх); ячейки 6 уровня и выше восстановить нельзя. Повторно использовать способность можно только после долгого отдыха.",
+			"level": 2,
+			"class": "druid",
+			"subclass": "land"
+		},
+		"oath_spells": {
+			"name": "Клятвенные заклинания",
+			"name_en": "Oath Spells",
+			"desc": "Каждая клятва даёт список связанных заклинаний, которые становятся доступны с указанных в описании клятвы уровней. Клятвенные заклинания всегда подготовлены и не учитываются в лимите подготовленных заклинаний. Если клятвенное заклинание не входит в список заклинаний паладина, оно всё равно считается заклинанием паладина.",
+			"level": 3,
+			"class": "paladin"
+		},
+		"open_hand_technique": {
+			"name": "Техника открытой ладони",
+			"name_en": "Open Hand Technique",
+			"desc": "Начиная с 3 уровня, при попадании атакой Шквала ударов вы можете наложить на цель один из эффектов: она совершает спасбросок Ловкости или сбивается с ног; либо совершает спасбросок Силы, и при провале вы отталкиваете её на 15 футов; либо она не может использовать реакции до конца вашего следующего хода.",
+			"level": 3,
+			"class": "monk",
+			"subclass": "open-hand"
+		},
+		"otherworldly_patron": {
+			"name": "Потусторонний покровитель",
+			"name_en": "Otherworldly Patron",
+			"desc": "На 1 уровне вы заключаете сделку с потусторонним существом по своему выбору, например с Исчадием. Ваш выбор даёт особенности на 1, 6, 10 и 14 уровнях.",
+			"level": 1,
+			"class": "warlock"
+		},
+		"pact_boon": {
+			"name": "Дар пакта",
+			"name_en": "Pact Boon",
+			"desc": "На 3 уровне ваш потусторонний покровитель дарует вам дар за верную службу. Вы получаете одну из следующих особенностей на ваш выбор.",
+			"level": 3,
+			"class": "warlock",
+			"options": {
+				"choose": 1,
+				"from": [
+					"pact_of_the_chain",
+					"pact_of_the_blade",
+					"pact_of_the_tome"
+				]
+			}
+		},
+		"pact_magic": {
+			"name": "Магия пакта",
+			"name_en": "Pact Magic",
+			"desc": "Ваши арканные исследования и магия, дарованная покровителем, дали вам умение обращаться с заклинаниями.",
+			"level": 1,
+			"class": "warlock"
+		},
+		"pact_of_the_blade": {
+			"name": "Пакт клинка",
+			"name_en": "Pact of the Blade",
+			"desc": "Действием вы создаёте пактовое оружие в свободной руке, форму которого выбираете при каждом создании. Пока вы владеете им, вы владеете и этим оружием, и оно считается магическим для преодоления сопротивления и иммунитета к немагическим атакам. Оружие исчезает, если оно дальше 5 футов от вас в течение 1 минуты или более, если вы используете эту способность снова, отпускаете его (без действия) или умираете.",
+			"level": 3,
+			"class": "warlock",
+			"parent": "pact_boon"
+		},
+		"pact_of_the_chain": {
+			"name": "Пакт цепи",
+			"name_en": "Pact of the Chain",
+			"desc": "Вы знаете заклинание «Поиск фамильяра» и можете произносить его как ритуал; оно не учитывается в числе известных заклинаний. Фамильяр может иметь обычную форму или одну из особых: импа, псевдодракона, квазита или спрайта. Когда вы совершаете действие «Атака», можете пожертвовать одной своей атакой, чтобы фамильяр атаковал реакцией.",
+			"level": 3,
+			"class": "warlock",
+			"parent": "pact_boon"
+		},
+		"pact_of_the_tome": {
+			"name": "Пакт книги",
+			"name_en": "Pact of the Tome",
+			"desc": "Вы получаете гримуар «Книга теней» и выбираете три заговора из списка любого класса; пока книга при вас, вы можете произносить их без ограничений, и они не учитываются в числе известных заговоров. Если книгу потеряли, ритуал 1 час во время отдыха даёт замену, а старая уничтожается. Книга превращается в пепел при вашей смерти.",
+			"level": 3,
+			"class": "warlock",
+			"parent": "pact_boon"
+		},
+		"paladin_ability_score_improvement_1": {
+			"name": "Повышение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4, 8, 12, 16 и 19 уровнях вы можете повысить одну характеристику на 2 или две характеристики на 1 каждую. Характеристика не может быть повышена выше 20.",
+			"level": 4,
+			"class": "paladin"
+		},
+		"paladin_extra_attack": {
+			"name": "Дополнительная атака",
+			"name_en": "Extra Attack",
+			"desc": "С 5 уровня при действии «Атака» вы совершаете две атаки вместо одной.",
+			"level": 5,
+			"class": "paladin"
+		},
+		"paladin_fighting_style": {
+			"name": "Боевой стиль",
+			"name_en": "Fighting Style",
+			"desc": "На 2 уровне вы выбираете один боевой стиль из доступных вариантов. Один и тот же боевой стиль нельзя выбрать дважды, даже при последующем выборе.",
+			"level": 2,
+			"class": "paladin",
+			"options": {
+				"choose": 1,
+				"from": [
+					"fighting_style_defense",
+					"fighting_style_dueling",
+					"fighting_style_great_weapon_fighting",
+					"fighting_style_protection"
+				]
+			}
+		},
+		"patient_defense": {
+			"name": "Терпеливая защита",
+			"name_en": "Patient Defense",
+			"desc": "Вы можете потратить 1 очко ци, чтобы в свой ход совершить действие Уклонение как бонусное действие.",
+			"level": 2,
+			"class": "monk"
+		},
+		"primal_path": {
+			"name": "Первобытный путь",
+			"name_en": "Primal Path",
+			"desc": "На 3-м уровне вы выбираете путь, определяющий природу вашей ярости: Путь Берсерка или Путь Тотемного воина (описаны в конце описания класса). Выбор даёт умения на 3-м, 6-м, 10-м и 14-м уровнях.",
+			"level": 3,
+			"class": "barbarian"
+		},
+		"primeval_awareness": {
+			"name": "Первобытное чутьё",
+			"name_en": "Primeval Awareness",
+			"desc": "Начиная с 3-го уровня, вы можете действием потратить ячейку заклинаний следопыта, чтобы в течение 1 минуты за уровень ячейки определять, есть ли в радиусе 1 мили (или 6 миль в избранной местности) аберрации, небожители, драконы, элементали, феи, исчадия и нежить. Способность не показывает местоположение или количество существ.",
+			"level": 3,
+			"class": "ranger"
+		},
+		"rage": {
+			"name": "Ярость",
+			"name_en": "Rage",
+			"desc": "В свой ход вы можете войти в ярость бонусным действием. Пока вы в ярости и не носите тяжёлую броню, вы получаете преимущество на проверки и спасброски Силы, бонус +2 к урону ближними рукопашными атаками Силой (растёт с уровнем) и сопротивление дробящему, колющему и рубящему урону. Ярость длится 1 минуту, не даёт колдовать и концентрироваться на заклинаниях и заканчивается досрочно, если вы теряете сознание или за ход не атаковали врага и не получали урон; завершить её можно бонусным действием. Число использований ярости ограничено по уровню варвара и восстанавливается после долгого отдыха (2 раза на 1-м уровне, 3 — на 3-м, 4 — на 6-м, 5 — на 12-м, 6 — на 17-м).",
+			"level": 1,
+			"class": "barbarian"
+		},
+		"ranger_ability_score_improvement_1": {
+			"name": "Увеличение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4-м уровне и затем на 8-м, 12-м, 16-м и 19-м уровнях вы можете увеличить одну характеристику на 2 или две характеристики на 1. Этой способностью нельзя повысить характеристику выше 20.",
+			"level": 4,
+			"class": "ranger"
+		},
+		"ranger_archetype": {
+			"name": "Архетип следопыта",
+			"name_en": "Ranger Archetype",
+			"desc": "На 3-м уровне вы выбираете архетип, которому стремитесь подражать, например Охотника. Выбор даёт умения на 3-м, 7-м, 11-м и 15-м уровнях.",
+			"level": 3,
+			"class": "ranger"
+		},
+		"ranger_extra_attack": {
+			"name": "Дополнительная атака",
+			"name_en": "Extra Attack",
+			"desc": "Начиная с 5 уровня, when you take the Attack action...",
+			"level": 5,
+			"class": "ranger"
+		},
+		"ranger_fighting_style_archery": {
+			"name": "Стиль боя: стрельба из лука",
+			"name_en": "Fighting Style: Archery",
+			"desc": "Вы получаете бонус +2 к броскам атаки дальнобойным оружием.",
+			"level": 2,
+			"class": "ranger",
+			"parent": "ranger_fighting_style"
+		},
+		"ranger_fighting_style_defense": {
+			"name": "Стиль боя: защита",
+			"name_en": "Fighting Style: Defense",
+			"desc": "Пока вы носите доспехи, вы получаете бонус +1 к КД.",
+			"level": 2,
+			"class": "ranger",
+			"parent": "ranger_fighting_style"
+		},
+		"ranger_fighting_style_dueling": {
+			"name": "Стиль боя: дуэлянт",
+			"name_en": "Fighting Style: Dueling",
+			"desc": "Когда вы сражаетесь одноручным оружием ближнего боя и без другого оружия, вы получаете бонус +2 к броскам урона этим оружием.",
+			"level": 2,
+			"class": "ranger",
+			"parent": "ranger_fighting_style"
+		},
+		"ranger_fighting_style_two_weapon_fighting": {
+			"name": "Стиль боя: бой двумя оружиями",
+			"name_en": "Fighting Style: Two-Weapon Fighting",
+			"desc": "При бое двумя оружиями вы можете добавлять модификатор характеристики к урону второй атаки.",
+			"level": 2,
+			"class": "ranger",
+			"parent": "ranger_fighting_style"
+		},
+		"ranger_fighting_style": {
+			"name": "Стиль боя",
+			"name_en": "Fighting Style",
+			"desc": "Со 2 уровня вы выбираете определённый стиль боя своей специализацией. Выберите один из перечисленных вариантов. Один и тот же вариант стиля боя нельзя выбрать дважды, даже если вы получите возможность выбирать снова.",
+			"level": 2,
+			"class": "ranger",
+			"options": {
+				"choose": 1,
+				"from": [
+					"ranger_fighting_style_archery",
+					"ranger_fighting_style_defense",
+					"ranger_fighting_style_dueling",
+					"ranger_fighting_style_two_weapon_fighting"
+				]
+			}
+		},
+		"reckless_attack": {
+			"name": "Безрассудная атака",
+			"name_en": "Reckless Attack",
+			"desc": "Начиная со 2 уровня, вы можете отбросить заботу о защите и атаковать с отчаянной яростью. Совершая первую атаку в свой ход, вы можете решить атаковать безрассудно. В этом случае вы получаете преимущество на броски атаки оружием ближнего боя с использованием Силы до конца этого хода, но броски атаки против вас имеют преимущество до вашего следующего хода.",
+			"level": 2,
+			"class": "barbarian"
+		},
+		"rogue_ability_score_improvement_1": {
+			"name": "Повышение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4-м уровне и затем на 8-м, 10-м, 12-м, 16-м и 19-м уровнях вы можете увеличить одну характеристику на 2 или две характеристики на 1. Как обычно, с помощью этой особенности нельзя повысить характеристику выше 20.",
+			"level": 4,
+			"class": "rogue"
+		},
+		"rogue_expertise_1": {
+			"name": "Экспертиза",
+			"name_en": "Expertise",
+			"desc": "На 1-м уровне выберите два навыка, в которых вы владеете, или один навык и владение инструментами воров. Бонус мастерства удваивается для проверок характеристик, использующих выбранные владения. На 6-м уровне можно выбрать ещё два владения (навыки или инструменты воров) для получения этого преимущества.",
+			"level": 1,
+			"class": "rogue",
+			"expertise": 2
+		},
+		"roguish_archetype": {
+			"name": "Разбойничий архетип",
+			"name_en": "Roguish Archetype",
+			"desc": "На 3-м уровне вы выбираете архетип, которому следуете в использовании способностей разбойника, например Вор. Дополнительные архетипы есть в оригинальных источниках. Выбор архетипа даёт особенности на 3-м уровне, а затем на 9-м, 13-м и 17-м уровнях.",
+			"level": 3,
+			"class": "rogue"
+		},
+		"sacred_oath": {
+			"name": "Священная клятва",
+			"name_en": "Sacred Oath",
+			"desc": "На 3-м уровне вы приносите клятву, навсегда связывающую вас с путём паладина. Выберите клятву, например Клятву преданности. Выбор даёт особенности на 3-м, 7-м, 15-м и 20-м уровнях, включая заклинания клятвы и особенность Божественного канала.",
+			"level": 3,
+			"class": "paladin"
+		},
+		"sculpt_spells": {
+			"name": "Формирование заклинаний",
+			"name_en": "Sculpt Spells",
+			"desc": "Начиная со 2-го уровня, при создании заклинания школы воплощения, влияющего на видимых вам существ, вы можете выбрать их число, равное 1 + уровень заклинания. Выбранные существа автоматически успешно проходят спасбросок от заклинания и не получают урона, если при успехе обычно получили бы половину урона.",
+			"level": 2,
+			"class": "wizard",
+			"subclass": "evocation"
+		},
+		"second_story_work": {
+			"name": "Работа на крышах",
+			"name_en": "Second-Story Work",
+			"desc": "При выборе этого архетипа на 3 уровне вы лазаете быстрее обычного: лазание больше не тратит дополнительное перемещение. Кроме того, при разбеге прыжок в длину увеличивается на число футов, равное модификатору Ловкости.",
+			"level": 3,
+			"class": "rogue",
+			"subclass": "thief"
+		},
+		"second_wind": {
+			"name": "Второе дыхание",
+			"name_en": "Second Wind",
+			"desc": "В свой ход можно бонусным действием восстановить хиты, равные 1к10 + уровень воина. После использования нужно завершить короткий или долгий отдых, прежде чем использовать это снова.",
+			"level": 1,
+			"class": "fighter"
+		},
+		"slow_fall": {
+			"name": "Медленное падение",
+			"name_en": "Slow Fall",
+			"desc": "Начиная с 4 уровня, при падении можно реакцией уменьшить получаемый урон от падения на величину, равную пятикратному уровню монаха.",
+			"level": 4,
+			"class": "monk"
+		},
+		"sneak_attack": {
+			"name": "Скрытая атака",
+			"name_en": "Sneak Attack",
+			"desc": "Начиная с 1 уровня, раз в ход можно нанести дополнительно 1к6 урона одному существу, которое вы поразили атакой, если у вас есть преимущество на бросок атаки. Атака должна быть фехтовальным или дальнобойным оружием. Преимущество не нужно, если рядом с целью (в пределах 5 футов) есть её враг, который не недееспособен, и у вас нет помехи на бросок атаки. Размер урона растёт с уровнем плута по таблице Скрытой атаки.",
+			"level": 1,
+			"class": "rogue"
+		},
+		"song_of_rest_d6": {
+			"name": "Песнь отдыха (1к6)",
+			"name_en": "Song of Rest (d6)",
+			"desc": "Начиная со 2 уровня, во время короткого отдыха можно исполнять успокаивающую музыку или речь, чтобы восстановить раненым союзникам дополнительно 1к6 хитов. Каждое существо, которое тратит Кости хитов в конце короткого отдыха и слышит ваше исполнение, получает эти дополнительные хиты. Кость увеличивается до 1к8 на 9 уровне, до 1к10 на 13 уровне и до 1к12 на 17 уровне.",
+			"level": 2,
+			"class": "bard"
+		},
+		"sorcerer_ability_score_improvement_1": {
+			"name": "Повышение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4 уровне, а также на 8, 12, 16 и 19 уровнях можно повысить одну характеристику на 2 или две характеристики на 1. Как обычно, с помощью этой способности характеристика не может стать выше 20.",
+			"level": 4,
+			"class": "sorcerer"
+		},
+		"sorcerous_origin": {
+			"name": "Чародейское происхождение",
+			"name_en": "Sorcerous Origin",
+			"desc": "Выберите чародейское происхождение, описывающее источник врождённой магической силы, например Драконью кровь. Выбор даёт особенности на 1 уровне, а также на 6, 14 и 18 уровнях.",
+			"level": 1,
+			"class": "sorcerer"
+		},
+		"spellcasting_bard": {
+			"name": "Использование заклинаний: бард",
+			"name_en": "Spellcasting: Bard",
+			"desc": "Вы научились распутывать и переплетать ткань реальности в согласии с вашими желаниями и музыкой. Ваши заклинания входят в обширный репертуар, магию, которую можно настраивать под разные ситуации.",
+			"level": 1,
+			"class": "bard"
+		},
+		"spellcasting_cleric": {
+			"name": "Использование заклинаний: жрец",
+			"name_en": "Spellcasting: Cleric",
+			"desc": "Как проводник божественной силы, вы можете сотворять заклинания жреца.",
+			"level": 1,
+			"class": "cleric"
+		},
+		"spellcasting_druid": {
+			"name": "Использование заклинаний: друид",
+			"name_en": "Spellcasting: Druid",
+			"desc": "Черпая из божественной сущности самой природы, вы можете сотворять заклинания, формируя эту сущность по своей воле.",
+			"level": 1,
+			"class": "druid"
+		},
+		"spellcasting_paladin": {
+			"name": "Использование заклинаний: паладин",
+			"name_en": "Spellcasting: Paladin",
+			"desc": "Начиная со 2 уровня, вы научились черпать божественную магию через медитацию и молитву, сотворяя заклинания так же, как жрец.",
+			"level": 2,
+			"class": "paladin"
+		},
+		"spellcasting_ranger": {
+			"name": "Использование заклинаний: следопыт",
+			"name_en": "Spellcasting: Ranger",
+			"desc": "К 2 уровню вы научились использовать магическую сущность природы для сотворения заклинаний, подобно друиду.",
+			"level": 2,
+			"class": "ranger"
+		},
+		"spellcasting_sorcerer": {
+			"name": "Колдовство: чародей",
+			"name_en": "Spellcasting: Sorcerer",
+			"desc": "Событие в вашем прошлом или в жизни родителя либо предка глубоко повлияло на вас, наполнив тайной магией. Этот источник магии, каким бы ни было его происхождение, питает ваши заклинания.",
+			"level": 1,
+			"class": "sorcerer"
+		},
+		"spellcasting_wizard": {
+			"name": "Заклинания: волшебник",
+			"name_en": "Spellcasting: Wizard",
+			"desc": "Как ученик тайной магии, вы владеете книгой заклинаний, которые лишь намекают на вашу истинную силу.",
+			"level": 1,
+			"class": "wizard"
+		},
+		"step_of_the_wind": {
+			"name": "Поступь ветра",
+			"name_en": "Step of the Wind",
+			"desc": "Вы можете потратить 1 очко ки, чтобы в свой ход совершить действие Отход или Рывок как бонусное действие. В этот ход дистанция ваших прыжков удваивается.",
+			"level": 2,
+			"class": "monk"
+		},
+		"stunning_strike": {
+			"name": "Оглушающий удар",
+			"name_en": "Stunning Strike",
+			"desc": "С 5 уровня вы можете нарушать течение ки в теле противника. Попав по существу рукопашной атакой оружием, вы можете потратить 1 очко ки, чтобы попытаться оглушить цель. Цель должна преуспеть в спасброске Телосложения, иначе будет оглушена до конца вашего следующего хода.",
+			"level": 5,
+			"class": "monk"
+		},
+		"thieves_cant": {
+			"name": "Воровской жаргон",
+			"name_en": "Thieves' Cant",
+			"desc": "Благодаря обучению разбойника вы знаете воровской жаргон, тайную смесь диалекта, арго и шифра, позволяющую прятать послания в обычном разговоре. Понять такое послание может только существо, знающее воровской жаргон, а передача занимает в четыре раза больше времени, чем простое изложение мысли. Также вы понимаете тайные знаки и символы для коротких сообщений: опасен ли район, является ли он территорией гильдии воров, есть ли поблизости добыча, или готовы ли местные жители укрыть беглых воров.",
+			"level": 1,
+			"class": "rogue"
+		},
+		"unarmored_movement_1": {
+			"name": "Движение без доспехов",
+			"name_en": "Unarmored Movement",
+			"desc": "Со 2 уровня ваша скорость увеличивается на 10 футов, пока вы не носите доспехи и не держите щит. Бонус растёт при достижении определённых уровней монаха (см. таблицу «Монах»). На 9 уровне вы получаете возможность двигаться по вертикальным поверхностям и по жидкостям в свой ход, не падая во время движения.",
+			"level": 2,
+			"class": "monk"
+		},
+		"uncanny_dodge": {
+			"name": "Сверхъестественное уклонение",
+			"name_en": "Uncanny Dodge",
+			"desc": "С 5 уровня, когда атакующий, которого вы видите, попадает по вам атакой, вы можете использовать реакцию, чтобы уменьшить урон от этой атаки вдвое.",
+			"level": 5,
+			"class": "rogue"
+		},
+		"warlock_ability_score_improvement_1": {
+			"name": "Увеличение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4-м уровне и затем на 8-м, 12-м, 16-м и 19-м уровнях вы можете увеличить одну характеристику на 2 или две характеристики на 1. Характеристика не может быть повышена выше 20 таким способом.",
+			"level": 4,
+			"class": "warlock"
+		},
+		"wild_shape_cr_1_2_or_below_no_flying_speed": {
+			"name": "Дикий облик (ПО 1/2 или ниже, без скорости полёта)",
+			"name_en": "Wild Shape (CR 1/2 or below, no flying speed)",
+			"desc": "Начиная со 2-го уровня, вы можете действием магически принять облик зверя, которого видели раньше, дважды между отдыхами. Уровень друида определяет допустимый ПО зверя по таблице, а у зверя не должно быть скорости полёта. Облик длится половину уровня друида (округлённо вниз) часов, вернуться в обычную форму можно бонусным действием, а заклинания в этом облике колдовать нельзя.",
+			"level": 4,
+			"class": "druid"
+		},
+		"wild_shape_cr_1_4_or_below_no_flying_or_swim_speed": {
+			"name": "Дикий облик (ПО 1/4 или ниже, без скорости полёта и плавания)",
+			"name_en": "Wild Shape (CR 1/4 or below, no flying or swim speed)",
+			"desc": "Начиная со 2-го уровня, вы можете действием магически принять облик зверя, которого видели раньше, дважды между отдыхами. На 2-м уровне можно принимать облик зверя с ПО 1/4 или ниже, без скорости полёта и плавания. Облик длится половину уровня друида (округлённо вниз) часов, вернуться в обычную форму можно бонусным действием, а заклинания в этом облике колдовать нельзя.",
+			"level": 2,
+			"class": "druid"
+		},
+		"wizard_ability_score_improvement_1": {
+			"name": "Увеличение характеристик",
+			"name_en": "Ability Score Improvement",
+			"desc": "На 4-м уровне и затем на 8-м, 12-м, 16-м и 19-м уровнях вы можете увеличить одну характеристику на 2 или две характеристики на 1. Характеристика не может быть повышена выше 20 таким способом.",
+			"level": 4,
+			"class": "wizard"
+		}
+	}
+}

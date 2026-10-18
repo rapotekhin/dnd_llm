@@ -16,6 +16,13 @@ def attitude_word(value: int) -> str:
     return _ATTITUDE[max(-3, min(3, value))]
 
 
+_ABILITIES = {"str": "Сил", "dex": "Лов", "con": "Тел", "int": "Инт", "wis": "Мдр", "cha": "Хар"}
+
+
+def ability_name(key: str) -> str:
+    return _ABILITIES.get(key, key)
+
+
 def summary_title(key: str) -> str:
     if key == "location":
         return "В этой локации"
@@ -52,7 +59,7 @@ _env = Environment(
     lstrip_blocks=True,
     keep_trailing_newline=False,
 )
-_env.globals.update(attitude_word=attitude_word, summary_title=summary_title, role_name=lambda r: _ROLES.get(r, r))
+_env.globals.update(attitude_word=attitude_word, summary_title=summary_title, ability_name=ability_name, role_name=lambda r: _ROLES.get(r, r))
 
 
 def render(name: str, **context: object) -> str:

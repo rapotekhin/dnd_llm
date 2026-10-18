@@ -58,7 +58,7 @@ Godot                                     llm_server
 |---|---|---|
 | `engine.check` | `turn_id`, `skill` или `save`, `dc_tier`, `target_id?`, `advantage_reason?`, `contest?` {`npc_id`, `skill`} | `check_id`, броски d20, `bonus`, `total`, `dc`, `success`, `nat`, `blocked` (повтор заблокирован — прежний итог) |
 | `engine.validate` | `turn_id`, `effect` {`kind`, …} | `accepted` + `effect_id` или `rejected` + `reason` |
-| `engine.lookup` | `kind` (`rule` / `spell` / `condition` / `item` / `npc`), `id` | данные SRD или NPC текущей сцены |
+| `engine.lookup` | `kind` (`rule` / `spell` / `feature` / `condition` / `item` / `npc`), `id` | данные SRD или NPC текущей сцены |
 | `engine.find_items` | `query`, `base?`, `properties?` | похожие предметы каталога (бэкенд добавляет свою библиотеку, [ADR-0008](0008-engine-decides-llm-narrates.md) §6) |
 
 - `engine.lookup` не отдаёт скрытое и другие локации. Это только справка по белому списку.
@@ -155,6 +155,13 @@ Godot                                     llm_server
 - **`engine.lookup`** отвечает `{found, data}`, `engine.find_items` — `{items}` с полем `source` (`catalog` / `session`; бэкенд добавляет `library`).
 - **Детерминированные действия без модели:** выход в соседнюю комнату и начало разговора с NPC — кнопки Godot. Движок меняет состояние сам и просит у мастера только описание (`kind=enter`). Конец разговора — `kind=resume`.
 - **Повторы OpenRouter** только пока ход не обращался к движку: повтор после броска перебросил бы проверку.
+
+### 11. Протокол 0.2.1 (v0.5.0)
+
+Персонаж 5e. Совместим с 0.2.0 (сравнение по major.minor): новые поля необязательны.
+
+- **`character`** дополнительно несёт `background`, `abilities` (значения Сил…Хар), `proficiency_bonus`, `skill_proficiencies`, `speed`, `equipped` (названия надетого и взятого в руки), у заклинателей — `cantrips`, `spells` (подготовленные и всегда подготовленные, по названию), `spell_slots` (`level`, `left`, `max`), `spell_save_dc`. `class_name` включает подкласс: «Жрец (Домен Жизни)». Умения — названиями, без текста.
+- **`engine.lookup`**: новый `kind = feature` (умения классов и черты рас); `spell` и `feature` принимают id SRD или русское название, как в листе. Ответ о заклинании — с полем `known`, об умении — `has`.
 
 ### Ответы автора
 

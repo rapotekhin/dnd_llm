@@ -1,0 +1,567 @@
+{
+	"races": {
+		"dragonborn": {
+			"name": "Драконорождённый",
+			"name_en": "Dragonborn",
+			"speed": 30,
+			"size": "medium",
+			"ability_bonuses": {
+				"str": 2,
+				"cha": 1
+			},
+			"languages": [
+				"common",
+				"draconic"
+			],
+			"language_choice": 0,
+			"traits": [
+				"draconic_ancestry",
+				"breath_weapon",
+				"damage_resistance"
+			],
+			"subraces": []
+		},
+		"dwarf": {
+			"name": "Дварф",
+			"name_en": "Dwarf",
+			"speed": 25,
+			"size": "medium",
+			"ability_bonuses": {
+				"con": 2
+			},
+			"languages": [
+				"common",
+				"dwarvish"
+			],
+			"language_choice": 0,
+			"traits": [
+				"darkvision",
+				"dwarven_resilience",
+				"stonecunning",
+				"dwarven_combat_training",
+				"tool_proficiency"
+			],
+			"subraces": [
+				"hill_dwarf"
+			]
+		},
+		"elf": {
+			"name": "Эльф",
+			"name_en": "Elf",
+			"speed": 30,
+			"size": "medium",
+			"ability_bonuses": {
+				"dex": 2
+			},
+			"languages": [
+				"common",
+				"elvish"
+			],
+			"language_choice": 0,
+			"traits": [
+				"darkvision",
+				"fey_ancestry",
+				"trance",
+				"keen_senses"
+			],
+			"subraces": [
+				"high_elf",
+				"drow"
+			]
+		},
+		"gnome": {
+			"name": "Гном",
+			"name_en": "Gnome",
+			"speed": 25,
+			"size": "small",
+			"ability_bonuses": {
+				"int": 2
+			},
+			"languages": [
+				"common",
+				"gnomish"
+			],
+			"language_choice": 0,
+			"traits": [
+				"darkvision",
+				"gnome_cunning"
+			],
+			"subraces": [
+				"rock_gnome"
+			]
+		},
+		"half_elf": {
+			"name": "Полуэльф",
+			"name_en": "Half-Elf",
+			"speed": 30,
+			"size": "medium",
+			"ability_bonuses": {
+				"cha": 2
+			},
+			"languages": [
+				"common",
+				"elvish"
+			],
+			"language_choice": 1,
+			"traits": [
+				"darkvision",
+				"fey_ancestry",
+				"skill_versatility"
+			],
+			"subraces": [],
+			"ability_choice": {
+				"choose": 2,
+				"bonus": 1,
+				"from": [
+					"str",
+					"dex",
+					"con",
+					"int",
+					"wis"
+				]
+			}
+		},
+		"half_orc": {
+			"name": "Полуорк",
+			"name_en": "Half-Orc",
+			"speed": 30,
+			"size": "medium",
+			"ability_bonuses": {
+				"str": 2,
+				"con": 1
+			},
+			"languages": [
+				"common",
+				"orc"
+			],
+			"language_choice": 0,
+			"traits": [
+				"darkvision",
+				"savage_attacks",
+				"relentless_endurance",
+				"menacing"
+			],
+			"subraces": []
+		},
+		"halfling": {
+			"name": "Полурослик",
+			"name_en": "Halfling",
+			"speed": 25,
+			"size": "small",
+			"ability_bonuses": {
+				"dex": 2
+			},
+			"languages": [
+				"common",
+				"halfling"
+			],
+			"language_choice": 0,
+			"traits": [
+				"brave",
+				"halfling_nimbleness",
+				"lucky"
+			],
+			"subraces": [
+				"lightfoot_halfling"
+			]
+		},
+		"human": {
+			"name": "Человек",
+			"name_en": "Human",
+			"speed": 30,
+			"size": "medium",
+			"ability_bonuses": {
+				"str": 1,
+				"dex": 1,
+				"con": 1,
+				"int": 1,
+				"wis": 1,
+				"cha": 1
+			},
+			"languages": [
+				"common"
+			],
+			"language_choice": 1,
+			"traits": [],
+			"subraces": []
+		},
+		"tiefling": {
+			"name": "Тифлинг",
+			"name_en": "Tiefling",
+			"speed": 30,
+			"size": "medium",
+			"ability_bonuses": {
+				"int": 1,
+				"cha": 2
+			},
+			"languages": [
+				"common",
+				"infernal"
+			],
+			"language_choice": 0,
+			"traits": [
+				"darkvision",
+				"hellish_resistance",
+				"infernal_legacy"
+			],
+			"subraces": []
+		}
+	},
+	"subraces": {
+		"drow": {
+			"name": "Тёмный эльф (дроу)",
+			"name_en": "Drow (Dark Elf)",
+			"race": "elf",
+			"desc": "",
+			"ability_bonuses": {
+				"cha": 1
+			},
+			"traits": [
+				"elf_weapon_training",
+				"high_elf_cantrip",
+				"extra_language"
+			]
+		},
+		"high_elf": {
+			"name": "Высший эльф",
+			"name_en": "High Elf",
+			"race": "elf",
+			"desc": "",
+			"ability_bonuses": {
+				"int": 1
+			},
+			"traits": [
+				"elf_weapon_training",
+				"high_elf_cantrip",
+				"extra_language"
+			]
+		},
+		"hill_dwarf": {
+			"name": "Холмовой дварф",
+			"name_en": "Hill Dwarf",
+			"race": "dwarf",
+			"desc": "",
+			"ability_bonuses": {
+				"wis": 1
+			},
+			"traits": [
+				"dwarven_toughness"
+			]
+		},
+		"lightfoot_halfling": {
+			"name": "Легконогий полурослик",
+			"name_en": "Lightfoot Halfling",
+			"race": "halfling",
+			"desc": "",
+			"ability_bonuses": {
+				"cha": 1
+			},
+			"traits": [
+				"naturally_stealthy"
+			]
+		},
+		"rock_gnome": {
+			"name": "Скальный гном",
+			"name_en": "Rock Gnome",
+			"race": "gnome",
+			"desc": "",
+			"ability_bonuses": {
+				"con": 1
+			},
+			"traits": [
+				"artificers_lore",
+				"tinker"
+			]
+		}
+	},
+	"traits": {
+		"tinker": {
+			"name": "Умелец",
+			"name_en": "Tinker",
+			"desc": "Вы владеете инструментами механика. За 1 час и материалы стоимостью 10 зм создаёте крошечное механическое устройство (КД 5, 1 хит), работающее 24 часа; можно иметь до трёх таких устройств одновременно. Устройство может быть игрушкой, огнивом или музыкальной шкатулкой.",
+			"tools": [
+				"tinkers_tools"
+			]
+		},
+		"trance": {
+			"name": "Транс",
+			"name_en": "Trance",
+			"desc": "Эльфам не нужен сон: они медитируют 4 часа в сутки, оставаясь полубодрствующими. После такого отдыха они получают ту же пользу, что человек от 8 часов сна."
+		},
+		"menacing": {
+			"name": "Устрашающий",
+			"name_en": "Menacing",
+			"desc": "Вы владеете навыком Запугивание.",
+			"skills": [
+				"intimidation"
+			]
+		},
+		"brave": {
+			"name": "Храбрость",
+			"name_en": "Brave",
+			"desc": "Вы совершаете спасброски от страха с преимуществом."
+		},
+		"extra_language": {
+			"name": "Дополнительный язык",
+			"name_en": "Extra Language",
+			"desc": "Вы можете говорить, читать и писать на одном дополнительном языке по своему выбору.",
+			"language_choice": 1
+		},
+		"fey_ancestry": {
+			"name": "Наследие фей",
+			"name_en": "Fey Ancestry",
+			"desc": "Вы совершаете спасброски от очарования с преимуществом, и магия не может усыпить вас."
+		},
+		"damage_resistance": {
+			"name": "Сопротивление урону",
+			"name_en": "Damage Resistance",
+			"desc": "Вы имеете сопротивление типу урона, связанному с вашим драконьим происхождением."
+		},
+		"dwarven_combat_training": {
+			"name": "Боевая подготовка дворфов",
+			"name_en": "Dwarven Combat Training",
+			"desc": "Вы владеете боевым топором, ручным топором, лёгким молотом и боевым молотом.",
+			"weapons": [
+				"battleaxe",
+				"handaxe",
+				"light_hammer",
+				"warhammer"
+			]
+		},
+		"halfling_nimbleness": {
+			"name": "Проворство полурослика",
+			"name_en": "Halfling Nimbleness",
+			"desc": "Вы можете перемещаться через пространство любого существа на размер больше вашего."
+		},
+		"dwarven_toughness": {
+			"name": "Крепость дварфа",
+			"name_en": "Dwarven Toughness",
+			"desc": "Максимум ваших хитов увеличивается на 1 и на 1 при каждом повышении уровня."
+		},
+		"breath_weapon": {
+			"name": "Оружие дыхания",
+			"name_en": "Breath Weapon",
+			"desc": "Вы можете действием выдохнуть разрушительную энергию; тип и форма выдоха определяются вашим драконьим происхождением. Каждое существо в области выдоха совершает спасбросок (Сл = 8 + модификатор Телосложения + бонус мастерства): при провале получает 2к6 урона, при успехе — половину. Урон растёт до 3к6 на 6 уровне, 4к6 на 11 и 5к6 на 16. После использования оружие дыхания восстанавливается только после короткого или долгого отдыха."
+		},
+		"draconic_ancestry": {
+			"name": "Драконье происхождение",
+			"name_en": "Draconic Ancestry",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"options": {
+				"choose": 1,
+				"from": [
+					"draconic_ancestry_black",
+					"draconic_ancestry_blue",
+					"draconic_ancestry_brass",
+					"draconic_ancestry_bronze",
+					"draconic_ancestry_copper",
+					"draconic_ancestry_gold",
+					"draconic_ancestry_green",
+					"draconic_ancestry_red",
+					"draconic_ancestry_silver",
+					"draconic_ancestry_white"
+				]
+			}
+		},
+		"draconic_ancestry_white": {
+			"name": "Драконье происхождение (белый)",
+			"name_en": "Draconic Ancestry (White)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"damage_type": "cold"
+		},
+		"draconic_ancestry_silver": {
+			"name": "Драконье происхождение (серебряный)",
+			"name_en": "Draconic Ancestry (Silver)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"damage_type": "cold"
+		},
+		"draconic_ancestry_red": {
+			"name": "Драконье происхождение (красный)",
+			"name_en": "Draconic Ancestry (Red)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"damage_type": "fire"
+		},
+		"draconic_ancestry_green": {
+			"name": "Драконье происхождение (зелёный)",
+			"name_en": "Draconic Ancestry (Green)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"damage_type": "poison"
+		},
+		"draconic_ancestry_gold": {
+			"name": "Драконье происхождение (золотой)",
+			"name_en": "Draconic Ancestry (Gold)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"damage_type": "fire"
+		},
+		"draconic_ancestry_copper": {
+			"name": "Драконье происхождение (медный)",
+			"name_en": "Draconic Ancestry (Copper)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"damage_type": "acid"
+		},
+		"draconic_ancestry_bronze": {
+			"name": "Драконье происхождение (бронзовый)",
+			"name_en": "Draconic Ancestry (Bronze)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"damage_type": "lightning"
+		},
+		"draconic_ancestry_brass": {
+			"name": "Драконье происхождение (латунный)",
+			"name_en": "Draconic Ancestry (Brass)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"damage_type": "fire"
+		},
+		"draconic_ancestry_blue": {
+			"name": "Драконье происхождение (синий)",
+			"name_en": "Draconic Ancestry (Blue)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы: он определяет оружие дыхания и сопротивление урону.",
+			"damage_type": "lightning"
+		},
+		"draconic_ancestry_black": {
+			"name": "Драконье наследие (чёрный)",
+			"name_en": "Draconic Ancestry (Black)",
+			"desc": "У вас есть драконье происхождение. Выберите один тип дракона из таблицы Драконьего наследия. Ваше дыхательное оружие и сопротивление урону определяются типом дракона, как показано в таблице.",
+			"damage_type": "acid"
+		},
+		"tool_proficiency": {
+			"name": "Владение инструментами",
+			"name_en": "Tool Proficiency",
+			"desc": "Вы получаете владение ремесленными инструментами на выбор: кузнечными инструментами, пивоваренными принадлежностями или инструментами каменщика.",
+			"tool_choice": {
+				"choose": 1,
+				"from": [
+					"smiths_tools",
+					"brewers_supplies",
+					"masons_tools"
+				]
+			}
+		},
+		"savage_attacks": {
+			"name": "Свирепые атаки",
+			"name_en": "Savage Attacks",
+			"desc": "При критическом попадании ближней атакой оружием вы можете бросить одну из костей урона оружия ещё раз и добавить результат к дополнительному урону от критического попадания."
+		},
+		"gnome_cunning": {
+			"name": "Хитрость гнома",
+			"name_en": "Gnome Cunning",
+			"desc": "Вы совершаете спасброски Интеллекта, Мудрости и Харизмы от магии с преимуществом."
+		},
+		"lucky": {
+			"name": "Везение",
+			"name_en": "Lucky",
+			"desc": "Если в броске атаки, проверке характеристики или спасброске выпала единица на d20, вы можете перебросить кость и обязаны использовать новый результат."
+		},
+		"stonecunning": {
+			"name": "Знание камня",
+			"name_en": "Stonecunning",
+			"desc": "Когда вы делаете проверку Интеллекта (История) о происхождении каменных сооружений, вы считаетесь владеющим навыком История и добавляете удвоенный бонус мастерства."
+		},
+		"hellish_resistance": {
+			"name": "Адское сопротивление",
+			"name_en": "Hellish Resistance",
+			"desc": "Вы имеете сопротивление урону огнём."
+		},
+		"naturally_stealthy": {
+			"name": "Прирождённая скрытность",
+			"name_en": "Naturally Stealthy",
+			"desc": "Вы можете пытаться спрятаться, даже если вас закрывает только существо как минимум на один размер больше вас."
+		},
+		"skill_versatility": {
+			"name": "Универсальность навыков",
+			"name_en": "Skill Versatility",
+			"desc": "Вы получаете владение двумя навыками на выбор.",
+			"skill_choice": {
+				"choose": 2,
+				"from": [
+					"acrobatics",
+					"animal_handling",
+					"arcana",
+					"athletics",
+					"deception",
+					"history",
+					"insight",
+					"intimidation",
+					"investigation",
+					"medicine",
+					"nature",
+					"perception",
+					"performance",
+					"persuasion",
+					"religion",
+					"sleight_of_hand",
+					"stealth",
+					"survival"
+				]
+			}
+		},
+		"elf_weapon_training": {
+			"name": "Владение оружием эльфов",
+			"name_en": "Elf Weapon Training",
+			"desc": "Вы владеете длинным мечом, коротким мечом, коротким луком и длинным луком.",
+			"weapons": [
+				"longsword",
+				"shortsword",
+				"shortbow",
+				"longbow"
+			]
+		},
+		"infernal_legacy": {
+			"name": "Инфернальное наследие",
+			"name_en": "Infernal Legacy",
+			"desc": "Вы знаете заговор чудотворство. Достигнув 3 уровня, вы можете один раз сотворить адское порицание как заклинание 2 уровня, не тратя ячейку; восстанавливается после долгого отдыха. Достигнув 5 уровня, вы можете один раз сотворить тьму тем же способом. Харизма — ваша характеристика заклинаний для них."
+		},
+		"relentless_endurance": {
+			"name": "Неослабная выносливость",
+			"name_en": "Relentless Endurance",
+			"desc": "Когда ваши хиты падают до 0, но вы не погибаете сразу, вы можете вместо этого опуститься до 1 хита. Повторно использовать эту способность можно только после долгого отдыха."
+		},
+		"high_elf_cantrip": {
+			"name": "Заговор высокого эльфа",
+			"name_en": "High Elf Cantrip",
+			"desc": "Вы знаете один заговор на выбор из списка заклинаний волшебника. Интеллект — ваша характеристика для его сотворения.",
+			"spell_choice": {
+				"choose": 1,
+				"from": [
+					"light",
+					"mage_hand",
+					"mending",
+					"message",
+					"minor_illusion",
+					"acid_splash",
+					"prestidigitation",
+					"ray_of_frost",
+					"shocking_grasp",
+					"true_strike",
+					"chill_touch",
+					"dancing_lights",
+					"fire_bolt",
+					"poison_spray"
+				],
+				"ability": "int"
+			}
+		},
+		"darkvision": {
+			"name": "Тёмное зрение",
+			"name_en": "Darkvision",
+			"desc": "Вы видите в темноте и при тусклом свете на расстоянии 60 футов так, будто свет яркий, а темнота тусклая. В темноте различаете только оттенки серого."
+		},
+		"dwarven_resilience": {
+			"name": "Стойкость дварфа",
+			"name_en": "Dwarven Resilience",
+			"desc": "Вы совершаете спасброски от яда с преимуществом и имеете сопротивление урону ядом."
+		},
+		"artificers_lore": {
+			"name": "Знания артифисера",
+			"name_en": "Artificer's Lore",
+			"desc": "Когда вы делаете проверку Интеллекта (История) в связи с магическими предметами, алхимическими объектами или техническими устройствами, вы можете прибавить удвоенный бонус мастерства вместо обычного бонуса мастерства."
+		},
+		"keen_senses": {
+			"name": "Острые чувства",
+			"name_en": "Keen Senses",
+			"desc": "Вы владеете навыком Внимательность.",
+			"skills": [
+				"perception"
+			]
+		}
+	}
+}

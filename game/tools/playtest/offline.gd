@@ -1,6 +1,6 @@
 extends "res://tools/playtest/playtest_base.gd"
-## Offline playtest (no llm_server running): the menu works, «Новая игра» leads to the «Мастер недоступен»
-## screen with the «server does not answer» diagnosis, and «В меню» returns.
+## Offline playtest (no llm_server running): the menu works, character creation works without the master,
+## «Начать игру» leads to the «Мастер недоступен» screen with the «server does not answer» diagnosis, «В меню» returns.
 
 
 func run() -> void:
@@ -8,7 +8,7 @@ func run() -> void:
 	step("master not connected", not backend.is_ready())
 	step("menu shown", screen_is("MainMenu"))
 	await shot("menu_offline")
-	await press(find(screen(), "NewGameButton"))
+	step("random character created", await quick_character())
 	if not step("offline screen instead of the game", screen_is("OfflineScreen") and not node("GameState").has_session()):
 		return
 	var reason: Label = find(screen(), "Reason")

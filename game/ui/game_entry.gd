@@ -1,7 +1,8 @@
 class_name GameEntry
 extends RefCounted
 ## Entering a game needs the master: without a connection the player gets the offline screen, which
-## performs the same action once the backend is READY. Actions: {"kind": "new"} or {"kind": "load", "slot": s}.
+## performs the same action once the backend is READY. Actions: {"kind": "new", "character": built character}
+## or {"kind": "load", "slot": s}.
 
 
 static func enter(action: Dictionary) -> void:
@@ -14,7 +15,7 @@ static func enter(action: Dictionary) -> void:
 static func perform(action: Dictionary) -> void:
 	match str(action.get("kind", "")):
 		"new":
-			GameState.new_game()
+			GameState.new_game(action.get("character", {}))
 		"load":
 			var err := GameState.load_from(str(action.get("slot", "")))
 			if not err.is_empty():

@@ -1,39 +1,2231 @@
 {
 	"properties": {
-		"finesse": 0, "light": 0, "heavy": 0, "two_handed": 0, "versatile": 0, "thrown": 0, "reach": 0, "ammunition": 0,
-		"silvered": 1, "magic_plus1": 2, "magic_plus2": 4, "magic_plus3": 6,
-		"fire_damage": 2, "cold_damage": 2, "lightning_damage": 2, "radiant_damage": 3, "necrotic_damage": 3, "poison_damage": 2,
-		"resist_fire": 3, "resist_cold": 3, "resist_poison": 3, "ac_plus1": 2, "ac_plus2": 4,
-		"light_source": 0, "healing": 1, "cursed": -1
+		"finesse": 0,
+		"light": 0,
+		"heavy": 0,
+		"two_handed": 0,
+		"versatile": 0,
+		"thrown": 0,
+		"reach": 0,
+		"ammunition": 0,
+		"silvered": 1,
+		"magic_plus1": 2,
+		"magic_plus2": 4,
+		"magic_plus3": 6,
+		"fire_damage": 2,
+		"cold_damage": 2,
+		"lightning_damage": 2,
+		"radiant_damage": 3,
+		"necrotic_damage": 3,
+		"poison_damage": 2,
+		"resist_fire": 3,
+		"resist_cold": 3,
+		"resist_poison": 3,
+		"ac_plus1": 2,
+		"ac_plus2": 4,
+		"light_source": 0,
+		"healing": 1,
+		"cursed": -1
 	},
-	"rarity_by_points": [[0, "common"], [2, "uncommon"], [4, "rare"], [6, "very_rare"], [8, "legendary"]],
-	"rarity_min_level": {"common": 1, "uncommon": 1, "rare": 5, "very_rare": 11, "legendary": 17},
-	"rarity_max_value_cp": {"common": 10000, "uncommon": 50000, "rare": 500000, "very_rare": 5000000, "legendary": 50000000},
+	"rarity_by_points": [
+		[
+			0,
+			"common"
+		],
+		[
+			2,
+			"uncommon"
+		],
+		[
+			4,
+			"rare"
+		],
+		[
+			6,
+			"very_rare"
+		],
+		[
+			8,
+			"legendary"
+		]
+	],
+	"rarity_min_level": {
+		"common": 1,
+		"uncommon": 1,
+		"rare": 5,
+		"very_rare": 11,
+		"legendary": 17
+	},
+	"rarity_max_value_cp": {
+		"common": 10000,
+		"uncommon": 50000,
+		"rare": 500000,
+		"very_rare": 5000000,
+		"legendary": 50000000
+	},
 	"catalog": {
-		"dagger": {"name": "Кинжал", "item_type": "weapon", "value_cp": 200, "properties": ["finesse", "light", "thrown"]},
-		"shortsword": {"name": "Короткий меч", "item_type": "weapon", "value_cp": 1000, "properties": ["finesse", "light"]},
-		"longsword": {"name": "Длинный меч", "item_type": "weapon", "value_cp": 1500, "properties": ["versatile"]},
-		"handaxe": {"name": "Ручной топор", "item_type": "weapon", "value_cp": 500, "properties": ["light", "thrown"]},
-		"shortbow": {"name": "Короткий лук", "item_type": "weapon", "value_cp": 2500, "properties": ["ammunition", "two_handed"]},
-		"arrows": {"name": "Стрелы", "item_type": "gear", "value_cp": 5, "properties": [], "stack": true},
-		"leather_armor": {"name": "Кожаный доспех", "item_type": "armor", "value_cp": 1000, "properties": []},
-		"chain_shirt": {"name": "Кольчужная рубаха", "item_type": "armor", "value_cp": 5000, "properties": []},
-		"chain_mail": {"name": "Кольчуга", "item_type": "armor", "value_cp": 7500, "properties": ["heavy"]},
-		"shield": {"name": "Щит", "item_type": "armor", "value_cp": 1000, "properties": []},
-		"torch": {"name": "Факел", "item_type": "gear", "value_cp": 1, "properties": ["light_source"], "stack": true},
-		"lantern": {"name": "Фонарь", "item_type": "gear", "value_cp": 500, "properties": ["light_source"]},
-		"rope": {"name": "Верёвка (15 м)", "item_type": "gear", "value_cp": 100, "properties": []},
-		"rations": {"name": "Паёк (1 день)", "item_type": "consumable", "value_cp": 50, "properties": [], "stack": true},
-		"waterskin": {"name": "Бурдюк", "item_type": "gear", "value_cp": 20, "properties": []},
-		"bedroll": {"name": "Спальник", "item_type": "gear", "value_cp": 100, "properties": []},
-		"tinderbox": {"name": "Трутница", "item_type": "gear", "value_cp": 50, "properties": []},
-		"backpack": {"name": "Рюкзак", "item_type": "gear", "value_cp": 200, "properties": []},
-		"crowbar": {"name": "Ломик", "item_type": "gear", "value_cp": 200, "properties": []},
-		"healing_potion": {"name": "Зелье лечения", "item_type": "consumable", "value_cp": 5000, "properties": ["healing"], "stack": true},
-		"antitoxin": {"name": "Противоядие", "item_type": "consumable", "value_cp": 5000, "properties": ["resist_poison"], "stack": true},
-		"holy_water": {"name": "Святая вода", "item_type": "consumable", "value_cp": 2500, "properties": ["radiant_damage"], "stack": true},
-		"ale": {"name": "Кружка эля", "item_type": "consumable", "value_cp": 4, "properties": [], "stack": true},
-		"bread": {"name": "Краюха хлеба", "item_type": "consumable", "value_cp": 2, "properties": [], "stack": true},
-		"silver_ring": {"name": "Серебряное кольцо", "item_type": "treasure", "value_cp": 2500, "properties": []}
+		"abacus": {
+			"name": "Счёты",
+			"name_en": "Abacus",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"acid_vial": {
+			"name": "Кислота (флакон)",
+			"name_en": "Acid (vial)",
+			"weight": 1,
+			"item_type": "consumable",
+			"properties": [],
+			"value_cp": 2500,
+			"stack": true
+		},
+		"alchemists_fire_flask": {
+			"name": "Алхимический огонь (флакон)",
+			"name_en": "Alchemist's fire (flask)",
+			"weight": 1,
+			"item_type": "consumable",
+			"properties": [
+				"fire_damage"
+			],
+			"value_cp": 5000,
+			"stack": true
+		},
+		"alchemists_supplies": {
+			"name": "Алхимические принадлежности",
+			"name_en": "Alchemist's Supplies",
+			"weight": 8,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5000,
+			"tool": true
+		},
+		"ale": {
+			"name": "Кружка эля",
+			"item_type": "consumable",
+			"value_cp": 4,
+			"properties": [],
+			"stack": true
+		},
+		"alms_box": {
+			"name": "Ящик для подаяний",
+			"name_en": "Alms box",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"amulet": {
+			"name": "Амулет",
+			"name_en": "Amulet",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"antitoxin": {
+			"name": "Противоядие",
+			"name_en": "Antitoxin (vial)",
+			"weight": 0,
+			"item_type": "consumable",
+			"properties": [
+				"resist_poison"
+			],
+			"value_cp": 5000,
+			"stack": true
+		},
+		"arrows": {
+			"name": "Стрелы",
+			"name_en": "Arrow",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5,
+			"stack": true
+		},
+		"backpack": {
+			"name": "Рюкзак",
+			"name_en": "Backpack",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"bagpipes": {
+			"name": "Волынка",
+			"name_en": "Bagpipes",
+			"weight": 6,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 3000,
+			"tool": true
+		},
+		"ball_bearings_bag_of_1000": {
+			"name": "Шарикоподшипники (мешок из 1000 шт.)",
+			"name_en": "Ball bearings (bag of 1,000)",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"barrel": {
+			"name": "Бочка",
+			"name_en": "Barrel",
+			"weight": 70,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"basket": {
+			"name": "Корзина",
+			"name_en": "Basket",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 40,
+			"stack": true
+		},
+		"battleaxe": {
+			"name": "Боевой топор",
+			"name_en": "Battleaxe",
+			"weight": 4,
+			"item_type": "weapon",
+			"properties": [
+				"versatile"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d8",
+				"damage_type": "slashing",
+				"versatile": "1d10"
+			},
+			"value_cp": 1000
+		},
+		"bedroll": {
+			"name": "Спальник",
+			"name_en": "Bedroll",
+			"weight": 7,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"bell": {
+			"name": "Колокольчик",
+			"name_en": "Bell",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"blanket": {
+			"name": "Одеяло",
+			"name_en": "Blanket",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 50,
+			"stack": true
+		},
+		"block_and_tackle": {
+			"name": "Блок с талью",
+			"name_en": "Block and tackle",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"block_of_incense": {
+			"name": "Брусок благовоний",
+			"name_en": "Block of incense",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"blowgun": {
+			"name": "Духовая трубка",
+			"name_en": "Blowgun",
+			"weight": 1,
+			"item_type": "weapon",
+			"properties": [
+				"ammunition"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "ranged",
+				"damage": "1",
+				"damage_type": "piercing",
+				"reach_ft": [
+					25,
+					100
+				]
+			},
+			"value_cp": 1000
+		},
+		"blowgun_needle": {
+			"name": "Игла для духовой трубки",
+			"name_en": "Blowgun needle",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2,
+			"stack": true
+		},
+		"book": {
+			"name": "Книга",
+			"name_en": "Book",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2500,
+			"stack": true
+		},
+		"bottle_glass": {
+			"name": "Стеклянная бутылка",
+			"name_en": "Bottle, glass",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"bread": {
+			"name": "Краюха хлеба",
+			"item_type": "consumable",
+			"value_cp": 2,
+			"properties": [],
+			"stack": true
+		},
+		"breastplate": {
+			"name": "Нагрудник",
+			"name_en": "Breastplate",
+			"weight": 20,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "medium",
+				"base": 14,
+				"dex": true,
+				"max_dex": 2,
+				"str_min": 0,
+				"stealth_disadvantage": false
+			},
+			"value_cp": 40000
+		},
+		"brewers_supplies": {
+			"name": "Пивоваренные принадлежности",
+			"name_en": "Brewer's Supplies",
+			"weight": 9,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2000,
+			"tool": true
+		},
+		"bucket": {
+			"name": "Ведро",
+			"name_en": "Bucket",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5,
+			"stack": true
+		},
+		"calligraphers_supplies": {
+			"name": "Принадлежности каллиграфа",
+			"name_en": "Calligrapher's Supplies",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"tool": true
+		},
+		"caltrops": {
+			"name": "Рассыпные шипы",
+			"name_en": "Caltrops",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5,
+			"stack": true
+		},
+		"candle": {
+			"name": "Свеча",
+			"name_en": "Candle",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [
+				"light_source"
+			],
+			"value_cp": 1,
+			"stack": true
+		},
+		"carpenters_tools": {
+			"name": "Инструменты плотника",
+			"name_en": "Carpenter's Tools",
+			"weight": 6,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 800,
+			"tool": true
+		},
+		"cartographers_tools": {
+			"name": "Инструменты картографа",
+			"name_en": "Cartographer's Tools",
+			"weight": 6,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1500,
+			"tool": true
+		},
+		"case_crossbow_bolt": {
+			"name": "Футляр для арбалетных болтов",
+			"name_en": "Case, crossbow bolt",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"case_map_or_scroll": {
+			"name": "Футляр для карт и свитков",
+			"name_en": "Case, map or scroll",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"censer": {
+			"name": "Кадило",
+			"name_en": "Censer",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"chain_10_feet": {
+			"name": "Цепь (10 футов)",
+			"name_en": "Chain (10 feet)",
+			"weight": 10,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"chain_mail": {
+			"name": "Кольчуга",
+			"name_en": "Chain Mail",
+			"weight": 55,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "heavy",
+				"base": 16,
+				"dex": false,
+				"max_dex": null,
+				"str_min": 13,
+				"stealth_disadvantage": true
+			},
+			"value_cp": 7500
+		},
+		"chain_shirt": {
+			"name": "Кольчужная рубаха",
+			"name_en": "Chain Shirt",
+			"weight": 20,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "medium",
+				"base": 13,
+				"dex": true,
+				"max_dex": 2,
+				"str_min": 0,
+				"stealth_disadvantage": false
+			},
+			"value_cp": 5000
+		},
+		"chalk_1_piece": {
+			"name": "Мел (1 кусок)",
+			"name_en": "Chalk (1 piece)",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"chest": {
+			"name": "Сундук",
+			"name_en": "Chest",
+			"weight": 25,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"climbers_kit": {
+			"name": "Набор альпиниста",
+			"name_en": "Climber's Kit",
+			"weight": 12,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2500,
+			"stack": true
+		},
+		"clothes_common": {
+			"name": "Одежда простая",
+			"name_en": "Clothes, common",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 50,
+			"stack": true
+		},
+		"clothes_costume": {
+			"name": "Одежда карнавальная",
+			"name_en": "Clothes, costume",
+			"weight": 4,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"clothes_fine": {
+			"name": "Одежда роскошная",
+			"name_en": "Clothes, fine",
+			"weight": 6,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1500,
+			"stack": true
+		},
+		"clothes_travelers": {
+			"name": "Одежда путешественника",
+			"name_en": "Clothes, traveler's",
+			"weight": 4,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"club": {
+			"name": "Дубинка",
+			"name_en": "Club",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"light"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d4",
+				"damage_type": "bludgeoning"
+			},
+			"value_cp": 10
+		},
+		"cobblers_tools": {
+			"name": "Инструменты сапожника",
+			"name_en": "Cobbler's Tools",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"tool": true
+		},
+		"component_pouch": {
+			"name": "Мешочек с компонентами",
+			"name_en": "Component pouch",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2500,
+			"stack": true
+		},
+		"cooks_utensils": {
+			"name": "Кухонные принадлежности",
+			"name_en": "Cook's utensils",
+			"weight": 8,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"tool": true
+		},
+		"crossbow_bolt": {
+			"name": "Арбалетный болт",
+			"name_en": "Crossbow bolt",
+			"weight": 1.5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5,
+			"stack": true
+		},
+		"crossbow_hand": {
+			"name": "Ручной арбалет",
+			"name_en": "Crossbow, hand",
+			"weight": 3,
+			"item_type": "weapon",
+			"properties": [
+				"ammunition",
+				"light"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "ranged",
+				"damage": "1d6",
+				"damage_type": "piercing",
+				"reach_ft": [
+					30,
+					120
+				]
+			},
+			"value_cp": 7500
+		},
+		"crossbow_heavy": {
+			"name": "Тяжёлый арбалет",
+			"name_en": "Crossbow, heavy",
+			"weight": 18,
+			"item_type": "weapon",
+			"properties": [
+				"ammunition",
+				"heavy",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "ranged",
+				"damage": "1d10",
+				"damage_type": "piercing",
+				"reach_ft": [
+					100,
+					400
+				]
+			},
+			"value_cp": 5000
+		},
+		"crossbow_light": {
+			"name": "Лёгкий арбалет",
+			"name_en": "Crossbow, light",
+			"weight": 5,
+			"item_type": "weapon",
+			"properties": [
+				"ammunition",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "ranged",
+				"damage": "1d8",
+				"damage_type": "piercing",
+				"reach_ft": [
+					80,
+					320
+				]
+			},
+			"value_cp": 2500
+		},
+		"crowbar": {
+			"name": "Ломик",
+			"name_en": "Crowbar",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"crystal": {
+			"name": "Кристалл",
+			"name_en": "Crystal",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"stack": true
+		},
+		"dagger": {
+			"name": "Кинжал",
+			"name_en": "Dagger",
+			"weight": 1,
+			"item_type": "weapon",
+			"properties": [
+				"finesse",
+				"light",
+				"thrown"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d4",
+				"damage_type": "piercing"
+			},
+			"value_cp": 200
+		},
+		"dart": {
+			"name": "Дротик",
+			"name_en": "Dart",
+			"weight": 0.25,
+			"item_type": "weapon",
+			"properties": [
+				"finesse",
+				"thrown"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "ranged",
+				"damage": "1d4",
+				"damage_type": "piercing",
+				"reach_ft": [
+					20,
+					60
+				]
+			},
+			"value_cp": 5
+		},
+		"dice_set": {
+			"name": "Игральные кости",
+			"name_en": "Dice Set",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 10,
+			"tool": true
+		},
+		"disguise_kit": {
+			"name": "Набор для грима",
+			"name_en": "Disguise Kit",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2500,
+			"stack": true
+		},
+		"drum": {
+			"name": "Барабан",
+			"name_en": "Drum",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 600,
+			"tool": true
+		},
+		"dulcimer": {
+			"name": "Дульцимер",
+			"name_en": "Dulcimer",
+			"weight": 10,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2500,
+			"tool": true
+		},
+		"emblem": {
+			"name": "Эмблема",
+			"name_en": "Emblem",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"fishing_tackle": {
+			"name": "Рыболовные снасти",
+			"name_en": "Fishing tackle",
+			"weight": 4,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"flail": {
+			"name": "Цеп",
+			"name_en": "Flail",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d8",
+				"damage_type": "bludgeoning"
+			},
+			"value_cp": 1000
+		},
+		"flask_or_tankard": {
+			"name": "Фляга или кружка",
+			"name_en": "Flask or tankard",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2,
+			"stack": true
+		},
+		"flute": {
+			"name": "Флейта",
+			"name_en": "Flute",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"tool": true
+		},
+		"forgery_kit": {
+			"name": "Набор для подделки документов",
+			"name_en": "Forgery Kit",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1500,
+			"stack": true
+		},
+		"glaive": {
+			"name": "Глефа",
+			"name_en": "Glaive",
+			"weight": 6,
+			"item_type": "weapon",
+			"properties": [
+				"heavy",
+				"reach",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d10",
+				"damage_type": "slashing"
+			},
+			"value_cp": 2000
+		},
+		"glassblowers_tools": {
+			"name": "Инструменты стеклодува",
+			"name_en": "Glassblower's Tools",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 3000,
+			"tool": true
+		},
+		"grappling_hook": {
+			"name": "Крюк-кошка",
+			"name_en": "Grappling hook",
+			"weight": 4,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"greataxe": {
+			"name": "Секира",
+			"name_en": "Greataxe",
+			"weight": 7,
+			"item_type": "weapon",
+			"properties": [
+				"heavy",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d12",
+				"damage_type": "slashing"
+			},
+			"value_cp": 3000
+		},
+		"greatclub": {
+			"name": "Большая дубина",
+			"name_en": "Greatclub",
+			"weight": 10,
+			"item_type": "weapon",
+			"properties": [
+				"two_handed"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d8",
+				"damage_type": "bludgeoning"
+			},
+			"value_cp": 20
+		},
+		"greatsword": {
+			"name": "Двуручный меч",
+			"name_en": "Greatsword",
+			"weight": 6,
+			"item_type": "weapon",
+			"properties": [
+				"heavy",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "2d6",
+				"damage_type": "slashing"
+			},
+			"value_cp": 5000
+		},
+		"halberd": {
+			"name": "Алебарда",
+			"name_en": "Halberd",
+			"weight": 6,
+			"item_type": "weapon",
+			"properties": [
+				"heavy",
+				"reach",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d10",
+				"damage_type": "slashing"
+			},
+			"value_cp": 2000
+		},
+		"half_plate_armor": {
+			"name": "Полулаты",
+			"name_en": "Half Plate Armor",
+			"weight": 40,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "medium",
+				"base": 15,
+				"dex": true,
+				"max_dex": 2,
+				"str_min": 0,
+				"stealth_disadvantage": true
+			},
+			"value_cp": 75000
+		},
+		"hammer": {
+			"name": "Молот",
+			"name_en": "Hammer",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"hammer_sledge": {
+			"name": "Кувалда",
+			"name_en": "Hammer, sledge",
+			"weight": 10,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"handaxe": {
+			"name": "Ручной топор",
+			"name_en": "Handaxe",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"light",
+				"thrown"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d6",
+				"damage_type": "slashing"
+			},
+			"value_cp": 500
+		},
+		"healers_kit": {
+			"name": "Набор целителя",
+			"name_en": "Healer's Kit",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"healing_potion": {
+			"name": "Зелье лечения",
+			"item_type": "consumable",
+			"value_cp": 5000,
+			"properties": [
+				"healing"
+			],
+			"stack": true
+		},
+		"herbalism_kit": {
+			"name": "Набор травника",
+			"name_en": "Herbalism Kit",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"hide_armor": {
+			"name": "Шкурная броня",
+			"name_en": "Hide Armor",
+			"weight": 12,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "medium",
+				"base": 12,
+				"dex": true,
+				"max_dex": 2,
+				"str_min": 0,
+				"stealth_disadvantage": false
+			},
+			"value_cp": 1000
+		},
+		"holy_water": {
+			"name": "Святая вода",
+			"name_en": "Holy water (flask)",
+			"weight": 1,
+			"item_type": "consumable",
+			"properties": [
+				"radiant_damage"
+			],
+			"value_cp": 2500,
+			"stack": true
+		},
+		"horn": {
+			"name": "Рог",
+			"name_en": "Horn",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 300,
+			"tool": true
+		},
+		"hourglass": {
+			"name": "Песочные часы",
+			"name_en": "Hourglass",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2500,
+			"stack": true
+		},
+		"hunting_trap": {
+			"name": "Охотничий капкан",
+			"name_en": "Hunting trap",
+			"weight": 25,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"ink_1_ounce_bottle": {
+			"name": "Чернила (флакон 1 унция)",
+			"name_en": "Ink (1 ounce bottle)",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"stack": true
+		},
+		"ink_pen": {
+			"name": "Перо для чернил",
+			"name_en": "Ink pen",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2,
+			"stack": true
+		},
+		"javelin": {
+			"name": "Метательное копьё",
+			"name_en": "Javelin",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"thrown"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d6",
+				"damage_type": "piercing"
+			},
+			"value_cp": 50
+		},
+		"jewelers_tools": {
+			"name": "Инструменты ювелира",
+			"name_en": "Jeweler's Tools",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2500,
+			"tool": true
+		},
+		"jug_or_pitcher": {
+			"name": "Кувшин",
+			"name_en": "Jug or pitcher",
+			"weight": 4,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2,
+			"stack": true
+		},
+		"ladder_10_foot": {
+			"name": "Лестница (10 футов)",
+			"name_en": "Ladder (10-foot)",
+			"weight": 25,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 10,
+			"stack": true
+		},
+		"lamp": {
+			"name": "Лампа",
+			"name_en": "Lamp",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [
+				"light_source"
+			],
+			"value_cp": 50,
+			"stack": true
+		},
+		"lance": {
+			"name": "Копьё для кавалерии",
+			"name_en": "Lance",
+			"weight": 6,
+			"item_type": "weapon",
+			"properties": [
+				"reach"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d12",
+				"damage_type": "piercing"
+			},
+			"value_cp": 1000
+		},
+		"lantern": {
+			"name": "Фонарь",
+			"name_en": "Lantern, hooded",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [
+				"light_source"
+			],
+			"value_cp": 500,
+			"stack": true
+		},
+		"lantern_bullseye": {
+			"name": "Фонарь с направленным светом",
+			"name_en": "Lantern, bullseye",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [
+				"light_source"
+			],
+			"value_cp": 1000,
+			"stack": true
+		},
+		"leather_armor": {
+			"name": "Кожаный доспех",
+			"name_en": "Leather Armor",
+			"weight": 10,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "light",
+				"base": 11,
+				"dex": true,
+				"max_dex": null,
+				"str_min": 0,
+				"stealth_disadvantage": false
+			},
+			"value_cp": 1000
+		},
+		"leatherworkers_tools": {
+			"name": "Инструменты кожевника",
+			"name_en": "Leatherworker's Tools",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"tool": true
+		},
+		"light_hammer": {
+			"name": "Лёгкий молот",
+			"name_en": "Light hammer",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"light",
+				"thrown"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d4",
+				"damage_type": "bludgeoning"
+			},
+			"value_cp": 200
+		},
+		"little_bag_of_sand": {
+			"name": "Мешочек песка",
+			"name_en": "Little bag of sand",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"lock": {
+			"name": "Замок",
+			"name_en": "Lock",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"stack": true
+		},
+		"longbow": {
+			"name": "Длинный лук",
+			"name_en": "Longbow",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"ammunition",
+				"heavy",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "ranged",
+				"damage": "1d8",
+				"damage_type": "piercing",
+				"reach_ft": [
+					150,
+					600
+				]
+			},
+			"value_cp": 5000
+		},
+		"longsword": {
+			"name": "Длинный меч",
+			"name_en": "Longsword",
+			"weight": 3,
+			"item_type": "weapon",
+			"properties": [
+				"versatile"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d8",
+				"damage_type": "slashing",
+				"versatile": "1d10"
+			},
+			"value_cp": 1500
+		},
+		"lute": {
+			"name": "Лютня",
+			"name_en": "Lute",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 3500,
+			"tool": true
+		},
+		"lyre": {
+			"name": "Лира",
+			"name_en": "Lyre",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 3000,
+			"tool": true
+		},
+		"mace": {
+			"name": "Булава",
+			"name_en": "Mace",
+			"weight": 4,
+			"item_type": "weapon",
+			"properties": [],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d6",
+				"damage_type": "bludgeoning"
+			},
+			"value_cp": 500
+		},
+		"magnifying_glass": {
+			"name": "Увеличительное стекло",
+			"name_en": "Magnifying glass",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 10000,
+			"stack": true
+		},
+		"manacles": {
+			"name": "Кандалы",
+			"name_en": "Manacles",
+			"weight": 6,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"masons_tools": {
+			"name": "Инструменты каменщика",
+			"name_en": "Mason's Tools",
+			"weight": 8,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"tool": true
+		},
+		"maul": {
+			"name": "Кувалда",
+			"name_en": "Maul",
+			"weight": 10,
+			"item_type": "weapon",
+			"properties": [
+				"heavy",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "2d6",
+				"damage_type": "bludgeoning"
+			},
+			"value_cp": 1000
+		},
+		"mess_kit": {
+			"name": "Набор походной посуды",
+			"name_en": "Mess Kit",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 20,
+			"stack": true
+		},
+		"mirror_steel": {
+			"name": "Зеркало стальное",
+			"name_en": "Mirror, steel",
+			"weight": 0.5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"morningstar": {
+			"name": "Моргенштерн",
+			"name_en": "Morningstar",
+			"weight": 4,
+			"item_type": "weapon",
+			"properties": [],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d8",
+				"damage_type": "piercing"
+			},
+			"value_cp": 1500
+		},
+		"navigators_tools": {
+			"name": "Инструменты навигатора",
+			"name_en": "Navigator's Tools",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2500,
+			"tool": true
+		},
+		"net": {
+			"name": "Сеть",
+			"name_en": "Net",
+			"weight": 3,
+			"item_type": "weapon",
+			"properties": [
+				"thrown"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "ranged",
+				"reach_ft": [
+					5,
+					15
+				]
+			},
+			"value_cp": 100
+		},
+		"oil_flask": {
+			"name": "Масло (фляга)",
+			"name_en": "Oil (flask)",
+			"weight": 1,
+			"item_type": "consumable",
+			"properties": [],
+			"value_cp": 10,
+			"stack": true
+		},
+		"orb": {
+			"name": "Сфера",
+			"name_en": "Orb",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2000,
+			"stack": true
+		},
+		"padded_armor": {
+			"name": "Стёганый доспех",
+			"name_en": "Padded Armor",
+			"weight": 8,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "light",
+				"base": 11,
+				"dex": true,
+				"max_dex": null,
+				"str_min": 0,
+				"stealth_disadvantage": true
+			},
+			"value_cp": 500
+		},
+		"painters_supplies": {
+			"name": "Набор художника",
+			"name_en": "Painter's Supplies",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"tool": true
+		},
+		"pan_flute": {
+			"name": "Флейта Пана",
+			"name_en": "Pan flute",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1200,
+			"tool": true
+		},
+		"paper_one_sheet": {
+			"name": "Бумага (лист)",
+			"name_en": "Paper (one sheet)",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 20,
+			"stack": true
+		},
+		"parchment_one_sheet": {
+			"name": "Пергамент (лист)",
+			"name_en": "Parchment (one sheet)",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 10,
+			"stack": true
+		},
+		"perfume_vial": {
+			"name": "Духи (флакон)",
+			"name_en": "Perfume (vial)",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"pick_miners": {
+			"name": "Кирка горняка",
+			"name_en": "Pick, miner's",
+			"weight": 10,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"pike": {
+			"name": "Пика",
+			"name_en": "Pike",
+			"weight": 18,
+			"item_type": "weapon",
+			"properties": [
+				"heavy",
+				"reach",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d10",
+				"damage_type": "piercing"
+			},
+			"value_cp": 500
+		},
+		"piton": {
+			"name": "Крюк",
+			"name_en": "Piton",
+			"weight": 0.25,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5,
+			"stack": true
+		},
+		"plate_armor": {
+			"name": "Латы",
+			"name_en": "Plate Armor",
+			"weight": 65,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "heavy",
+				"base": 18,
+				"dex": false,
+				"max_dex": null,
+				"str_min": 15,
+				"stealth_disadvantage": true
+			},
+			"value_cp": 150000
+		},
+		"playing_card_set": {
+			"name": "Игральные карты",
+			"name_en": "Playing Card Set",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 50,
+			"tool": true
+		},
+		"poison_basic_vial": {
+			"name": "Яд базовый (флакон)",
+			"name_en": "Poison, basic (vial)",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 10000,
+			"stack": true
+		},
+		"poisoners_kit": {
+			"name": "Набор отравителя",
+			"name_en": "Poisoner's Kit",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5000,
+			"stack": true
+		},
+		"pole_10_foot": {
+			"name": "Шест (10 футов)",
+			"name_en": "Pole (10-foot)",
+			"weight": 7,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5,
+			"stack": true
+		},
+		"pot_iron": {
+			"name": "Железный горшок",
+			"name_en": "Pot, iron",
+			"weight": 10,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"potters_tools": {
+			"name": "Инструменты гончара",
+			"name_en": "Potter's Tools",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"tool": true
+		},
+		"pouch": {
+			"name": "Мешочек",
+			"name_en": "Pouch",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 50,
+			"stack": true
+		},
+		"quarterstaff": {
+			"name": "Боевой посох",
+			"name_en": "Quarterstaff",
+			"weight": 4,
+			"item_type": "weapon",
+			"properties": [
+				"versatile"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d6",
+				"damage_type": "bludgeoning",
+				"versatile": "1d8"
+			},
+			"value_cp": 20
+		},
+		"quiver": {
+			"name": "Колчан",
+			"name_en": "Quiver",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"ram_portable": {
+			"name": "Таран переносной",
+			"name_en": "Ram, portable",
+			"weight": 35,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 400,
+			"stack": true
+		},
+		"rapier": {
+			"name": "Рапира",
+			"name_en": "Rapier",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"finesse"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d8",
+				"damage_type": "piercing"
+			},
+			"value_cp": 2500
+		},
+		"rations": {
+			"name": "Паёк (1 день)",
+			"name_en": "Rations (1 day)",
+			"weight": 2,
+			"item_type": "consumable",
+			"properties": [],
+			"value_cp": 50,
+			"stack": true
+		},
+		"reliquary": {
+			"name": "Реликварий",
+			"name_en": "Reliquary",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"ring_mail": {
+			"name": "Кольчужная броня",
+			"name_en": "Ring Mail",
+			"weight": 40,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "heavy",
+				"base": 14,
+				"dex": false,
+				"max_dex": null,
+				"str_min": 0,
+				"stealth_disadvantage": true
+			},
+			"value_cp": 3000
+		},
+		"robes": {
+			"name": "Мантия",
+			"name_en": "Robes",
+			"weight": 4,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"rod": {
+			"name": "Жезл",
+			"name_en": "Rod",
+			"weight": 2,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"stack": true
+		},
+		"rope": {
+			"name": "Верёвка (15 м)",
+			"name_en": "Rope, hempen (50 feet)",
+			"weight": 10,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"rope_silk_50_feet": {
+			"name": "Верёвка шёлковая (50 футов)",
+			"name_en": "Rope, silk (50 feet)",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"stack": true
+		},
+		"sack": {
+			"name": "Мешок",
+			"name_en": "Sack",
+			"weight": 0.5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"scale_mail": {
+			"name": "Чешуйчатый доспех",
+			"name_en": "Scale Mail",
+			"weight": 45,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "medium",
+				"base": 14,
+				"dex": true,
+				"max_dex": 2,
+				"str_min": 0,
+				"stealth_disadvantage": true
+			},
+			"value_cp": 5000
+		},
+		"scale_merchants": {
+			"name": "Весы торговца",
+			"name_en": "Scale, merchant's",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"scimitar": {
+			"name": "Ятаган",
+			"name_en": "Scimitar",
+			"weight": 3,
+			"item_type": "weapon",
+			"properties": [
+				"finesse",
+				"light"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d6",
+				"damage_type": "slashing"
+			},
+			"value_cp": 2500
+		},
+		"sealing_wax": {
+			"name": "Сургуч",
+			"name_en": "Sealing wax",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 50,
+			"stack": true
+		},
+		"shawm": {
+			"name": "Шалмей",
+			"name_en": "Shawm",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"tool": true
+		},
+		"shield": {
+			"name": "Щит",
+			"name_en": "Shield",
+			"weight": 6,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "shield",
+				"base": 2,
+				"dex": false,
+				"max_dex": null,
+				"str_min": 0,
+				"stealth_disadvantage": false
+			},
+			"value_cp": 1000
+		},
+		"shortbow": {
+			"name": "Короткий лук",
+			"name_en": "Shortbow",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"ammunition",
+				"two_handed"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "ranged",
+				"damage": "1d6",
+				"damage_type": "piercing",
+				"reach_ft": [
+					80,
+					320
+				]
+			},
+			"value_cp": 2500
+		},
+		"shortsword": {
+			"name": "Короткий меч",
+			"name_en": "Shortsword",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"finesse",
+				"light"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d6",
+				"damage_type": "piercing"
+			},
+			"value_cp": 1000
+		},
+		"shovel": {
+			"name": "Лопата",
+			"name_en": "Shovel",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"sickle": {
+			"name": "Серп",
+			"name_en": "Sickle",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"light"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d4",
+				"damage_type": "slashing"
+			},
+			"value_cp": 100
+		},
+		"signal_whistle": {
+			"name": "Свисток",
+			"name_en": "Signal whistle",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5,
+			"stack": true
+		},
+		"signet_ring": {
+			"name": "Печатка",
+			"name_en": "Signet ring",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"silver_ring": {
+			"name": "Серебряное кольцо",
+			"item_type": "treasure",
+			"value_cp": 2500,
+			"properties": []
+		},
+		"sling": {
+			"name": "Праща",
+			"name_en": "Sling",
+			"weight": 0,
+			"item_type": "weapon",
+			"properties": [
+				"ammunition"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "ranged",
+				"damage": "1d4",
+				"damage_type": "bludgeoning",
+				"reach_ft": [
+					30,
+					120
+				]
+			},
+			"value_cp": 10
+		},
+		"sling_bullet": {
+			"name": "Пулька для пращи",
+			"name_en": "Sling bullet",
+			"weight": 1.5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"small_knife": {
+			"name": "Небольшой нож",
+			"name_en": "Small knife",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"smiths_tools": {
+			"name": "Инструменты кузнеца",
+			"name_en": "Smith's Tools",
+			"weight": 8,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2000,
+			"tool": true
+		},
+		"soap": {
+			"name": "Мыло",
+			"name_en": "Soap",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2,
+			"stack": true
+		},
+		"spear": {
+			"name": "Копьё",
+			"name_en": "Spear",
+			"weight": 3,
+			"item_type": "weapon",
+			"properties": [
+				"thrown",
+				"versatile"
+			],
+			"weapon": {
+				"category": "simple",
+				"range": "melee",
+				"damage": "1d6",
+				"damage_type": "piercing",
+				"versatile": "1d8"
+			},
+			"value_cp": 100
+		},
+		"spellbook": {
+			"name": "Книга заклинаний",
+			"name_en": "Spellbook",
+			"weight": 3,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5000,
+			"stack": true
+		},
+		"spike_iron": {
+			"name": "Железный костыль",
+			"name_en": "Spike, iron",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 10,
+			"stack": true
+		},
+		"splint_armor": {
+			"name": "Наборный доспех",
+			"name_en": "Splint Armor",
+			"weight": 60,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "heavy",
+				"base": 17,
+				"dex": false,
+				"max_dex": null,
+				"str_min": 15,
+				"stealth_disadvantage": true
+			},
+			"value_cp": 20000
+		},
+		"sprig_of_mistletoe": {
+			"name": "Веточка омелы",
+			"name_en": "Sprig of mistletoe",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"spyglass": {
+			"name": "Подзорная труба",
+			"name_en": "Spyglass",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100000,
+			"stack": true
+		},
+		"staff": {
+			"name": "Посох",
+			"name_en": "Staff",
+			"weight": 4,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"string_10_feet": {
+			"name": "Бечёвка (10 футов)",
+			"name_en": "String (10 feet)",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"studded_leather_armor": {
+			"name": "Клёпаный кожаный доспех",
+			"name_en": "Studded Leather Armor",
+			"weight": 13,
+			"item_type": "armor",
+			"properties": [],
+			"armor": {
+				"category": "light",
+				"base": 12,
+				"dex": true,
+				"max_dex": null,
+				"str_min": 0,
+				"stealth_disadvantage": false
+			},
+			"value_cp": 4500
+		},
+		"tent_two_person": {
+			"name": "Палатка на двоих",
+			"name_en": "Tent, two-person",
+			"weight": 20,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 200,
+			"stack": true
+		},
+		"thieves_tools": {
+			"name": "Воровские инструменты",
+			"name_en": "Thieves' Tools",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 2500,
+			"tool": true
+		},
+		"tinderbox": {
+			"name": "Трутница",
+			"name_en": "Tinderbox",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 50,
+			"stack": true
+		},
+		"tinkers_tools": {
+			"name": "Инструменты жестянщика",
+			"name_en": "Tinker's Tools",
+			"weight": 10,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 5000,
+			"tool": true
+		},
+		"torch": {
+			"name": "Факел",
+			"name_en": "Torch",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [
+				"light_source"
+			],
+			"value_cp": 1,
+			"stack": true
+		},
+		"totem": {
+			"name": "Тотем",
+			"name_en": "Totem",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"trident": {
+			"name": "Трезубец",
+			"name_en": "Trident",
+			"weight": 4,
+			"item_type": "weapon",
+			"properties": [
+				"thrown",
+				"versatile"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d6",
+				"damage_type": "piercing",
+				"versatile": "1d8"
+			},
+			"value_cp": 500
+		},
+		"vestments": {
+			"name": "Облачение",
+			"name_en": "Vestments",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"vial": {
+			"name": "Флакон",
+			"name_en": "Vial",
+			"weight": 0,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"stack": true
+		},
+		"viol": {
+			"name": "Виола",
+			"name_en": "Viol",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 3000,
+			"tool": true
+		},
+		"wand": {
+			"name": "Палочка",
+			"name_en": "Wand",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"stack": true
+		},
+		"war_pick": {
+			"name": "Боевая кирка",
+			"name_en": "War pick",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d8",
+				"damage_type": "piercing"
+			},
+			"value_cp": 500
+		},
+		"warhammer": {
+			"name": "Боевой молот",
+			"name_en": "Warhammer",
+			"weight": 2,
+			"item_type": "weapon",
+			"properties": [
+				"versatile"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d8",
+				"damage_type": "bludgeoning",
+				"versatile": "1d10"
+			},
+			"value_cp": 1500
+		},
+		"waterskin": {
+			"name": "Бурдюк",
+			"name_en": "Waterskin",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 20,
+			"stack": true
+		},
+		"weavers_tools": {
+			"name": "Инструменты ткача",
+			"name_en": "Weaver's Tools",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"tool": true
+		},
+		"whetstone": {
+			"name": "Точильный камень",
+			"name_en": "Whetstone",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1,
+			"stack": true
+		},
+		"whip": {
+			"name": "Кнут",
+			"name_en": "Whip",
+			"weight": 3,
+			"item_type": "weapon",
+			"properties": [
+				"finesse",
+				"reach"
+			],
+			"weapon": {
+				"category": "martial",
+				"range": "melee",
+				"damage": "1d4",
+				"damage_type": "slashing"
+			},
+			"value_cp": 200
+		},
+		"woodcarvers_tools": {
+			"name": "Инструменты резчика по дереву",
+			"name_en": "Woodcarver's Tools",
+			"weight": 5,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 100,
+			"tool": true
+		},
+		"wooden_staff": {
+			"name": "Деревянный посох",
+			"name_en": "Wooden staff",
+			"weight": 4,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 500,
+			"stack": true
+		},
+		"yew_wand": {
+			"name": "Волшебная палочка из тиса",
+			"name_en": "Yew wand",
+			"weight": 1,
+			"item_type": "gear",
+			"properties": [],
+			"value_cp": 1000,
+			"stack": true
+		}
 	}
 }

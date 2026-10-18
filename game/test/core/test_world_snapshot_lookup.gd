@@ -25,7 +25,16 @@ func test_snapshot_scene_and_character() -> void:
 	assert_dict(snap["summaries"]).is_equal({"dialogue:" + TestUtils.INNKEEPER: "Борик налил эля."})
 	var c: Dictionary = snap["character"]
 	assert_str(c["name"]).is_equal("Айра")
+	assert_str(c["race"]).is_equal("Человек")
+	assert_str(c["class_name"]).is_equal("Воин")
 	assert_int(c["hp"]).is_equal(12)
+	assert_int(c["ac"]).is_equal(19)  # chain mail 16 + shield 2 + Defense style 1
+	assert_int(c["skills"]["athletics"]).is_equal(5)
+	assert_int(c["proficiency_bonus"]).is_equal(2)
+	assert_str(c["background"]).is_equal("Солдат")
+	assert_array(c["features"]).contains(["Второе дыхание", "Боевой стиль: защита"])
+	assert_array(c["equipped"]).contains(["Кольчуга", "Щит", "Длинный меч"])
+	assert_bool(c.has("spells")).is_false()
 	var names: Array = c["inventory"].map(func(i: Dictionary) -> String: return i["name"])
 	assert_array(names).contains(["Длинный меч", "Факел"])
 	assert_dict(snap["limits"]).is_equal({"max_checks": 1, "max_effects": 3})
@@ -44,9 +53,21 @@ func test_lookup_whitelist() -> void:
 	assert_bool(Lookup.find(s, data, "npc", TestUtils.INNKEEPER)["found"]).is_true()
 	assert_bool(Lookup.find(s, data, "npc", TestUtils.COOK)["found"]).is_false()  # not in this room
 	var torch := Lookup.find(s, data, "item", "torch")
-	assert_int(torch["data"]["owned"]).is_equal(5)
+	assert_int(torch["data"]["owned"]).is_equal(10)
 	assert_bool(Lookup.find(s, data, "condition", "poisoned")["found"]).is_true()
-	assert_bool(Lookup.find(s, data, "spell", "fireball")["found"]).is_false()
+	assert_bool(Lookup.find(s, data, "spell", "wish")["found"]).is_false()  # only circles 0–3 are in the catalog
+
+
+func test_lookup_spells_and_features_by_id_or_russian_name() -> void:
+	var fireball := Lookup.find(s, data, "spell", "Огненный шар")
+	assert_bool(fireball["found"]).is_true()
+	assert_str(fireball["data"]["id"]).is_equal("fireball")
+	assert_int(int(fireball["data"]["level"])).is_equal(3)
+	assert_bool(fireball["data"]["known"]).is_false()
+	var wind := Lookup.find(s, data, "feature", "Второе дыхание")
+	assert_bool(wind["found"]).is_true()
+	assert_bool(wind["data"]["has"]).is_true()
+	assert_bool(Lookup.find(s, data, "feature", "darkvision")["data"]["has"]).is_false()  # Айра — человек
 
 
 func test_trader_lookup_lists_stock_with_prices() -> void:
@@ -59,7 +80,7 @@ func test_find_items() -> void:
 	var swords := ItemRules.find(data["items"], {}, "меч", "", [])
 	assert_array(swords.map(func(i: Dictionary) -> String: return i["item_id"])).contains(["shortsword", "longsword"])
 	var light := ItemRules.find(data["items"], {}, "", "", ["light_source"])
-	assert_array(light.map(func(i: Dictionary) -> String: return i["item_id"])).contains_exactly_in_any_order(["torch", "lantern"])
+	assert_array(light.map(func(i: Dictionary) -> String: return i["item_id"])).contains(["torch", "lantern", "candle"])
 	assert_array(ItemRules.find(data["items"], {}, "", "dagger", [])).is_not_empty()
 
 

@@ -79,8 +79,10 @@ func read_slot(slot: String) -> Variant:
 	var problem := SaveFormat.check(data)
 	if not problem.is_empty():
 		return problem
-	SaveFormat.migrate(data, {"start_room": WorldView.new(Catalog.data["world"]).start_room(), "character": Catalog.data["character"]})
-	return GameSession.from_dict(data["session"])
+	SaveFormat.migrate(data)
+	var s := GameSession.from_dict(data["session"])
+	CharacterRules.refresh(s.character, Catalog.data, s.items)
+	return s
 
 
 func slot_meta(slot: String) -> Dictionary:

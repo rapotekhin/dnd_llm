@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.2.0"
+PROTOCOL_VERSION = "0.2.1"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -153,7 +153,16 @@ class InventoryLine(_In):
     qty: int = 1
 
 
+class SpellSlots(_In):
+    level: int
+    left: int
+    max: int
+
+
 class CharacterSheet(_In):
+    """The sheet in final numbers (ADR-0009 §4). Fields after `features` came in 0.2.1 (the 5e character, v0.5.0);
+    a feature's or spell's text is behind engine.lookup."""
+
     name: str
     gender: Gender = "other"
     race: str = ""
@@ -168,6 +177,16 @@ class CharacterSheet(_In):
     gold_cp: int = 0
     inventory: list[InventoryLine] = Field(default_factory=list)
     features: list[str] = Field(default_factory=list)
+    background: str = ""
+    abilities: dict[str, int] = Field(default_factory=dict)  # scores, str..cha
+    proficiency_bonus: int = 2
+    skill_proficiencies: list[str] = Field(default_factory=list)
+    speed: int = 30
+    equipped: list[str] = Field(default_factory=list)  # names of worn armor and wielded items
+    cantrips: list[str] = Field(default_factory=list)
+    spells: list[str] = Field(default_factory=list)  # prepared (or known) spells of circle 1+, by name
+    spell_slots: list[SpellSlots] = Field(default_factory=list)
+    spell_save_dc: int | None = None
 
 
 class HistoryLine(_In):
@@ -369,7 +388,7 @@ class EngineValidateResult(_In):
     item_id: str | None = None  # id the engine gave a newly created item
 
 
-LookupKind = Literal["rule", "spell", "condition", "item", "npc"]
+LookupKind = Literal["rule", "spell", "feature", "condition", "item", "npc"]
 
 
 class EngineLookupParams(_Out):

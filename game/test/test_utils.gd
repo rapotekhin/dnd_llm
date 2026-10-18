@@ -10,13 +10,20 @@ static func rules() -> Dictionary:
 	return _json("res://data/rules.json")
 
 
+static var _data: Dictionary = {}
+
+
+## All game data (a fresh deep copy: tests may change it).
 static func data() -> Dictionary:
-	return {
-		"rules": rules(),
-		"items": _json("res://data/items.json"),
-		"world": _json("res://data/start/world.json"),
-		"character": _json("res://data/start/character.json"),
-	}
+	if _data.is_empty():
+		_data = preload("res://autoload/catalog.gd").load_all()
+	return _data.duplicate(true)
+
+
+## The start character (Айра, fighter 1) built from data/start/character.json.
+static func character() -> Dictionary:
+	var d := data()
+	return CharacterBuilder.build(d["character"], d)
 
 
 static func _json(path: String) -> Dictionary:
@@ -25,7 +32,7 @@ static func _json(path: String) -> Dictionary:
 
 static func new_session(seed_value: int = 42) -> GameSession:
 	var d := data()
-	return GameSession.create(seed_value, "2026-10-18T12:00:00", str(d["world"]["start_room"]), d["character"])
+	return GameSession.create(seed_value, "2026-10-18T12:00:00", str(d["world"]["start_room"]), CharacterBuilder.build(d["character"], d))
 
 
 static func session_with_chat() -> GameSession:

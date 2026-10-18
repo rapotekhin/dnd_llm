@@ -20,14 +20,13 @@ func test_check_rejects_garbage_and_newer_saves() -> void:
 
 
 func test_migrate_runs_each_step_in_order() -> void:
-	# Pretend the current version is 1 and an old save is 1: nothing to do.
 	var data := {"save_version": SaveFormat.SAVE_VERSION, "session": {}}
 	SaveFormat.migrate(data)
 	assert_int(data["save_version"]).is_equal(SaveFormat.SAVE_VERSION)
 	# A save one version behind gets exactly the one step.
 	var steps: Array[int] = []
 	var saved := SaveFormat.MIGRATIONS.duplicate()
-	SaveFormat.MIGRATIONS[SaveFormat.SAVE_VERSION - 1] = func(d: Dictionary, _start: Dictionary) -> void:
+	SaveFormat.MIGRATIONS[SaveFormat.SAVE_VERSION - 1] = func(d: Dictionary) -> void:
 		steps.append(SaveFormat.SAVE_VERSION - 1)
 		d["session"]["migrated"] = true
 	var old := {"save_version": SaveFormat.SAVE_VERSION - 1, "session": {}}
@@ -41,28 +40,29 @@ func test_migrate_runs_each_step_in_order() -> void:
 func test_every_fixture_loads() -> void:
 	var files := Array(DirAccess.get_files_at(FIXTURES)).filter(func(f: String) -> bool: return f.ends_with(".json"))
 	assert_array(files).is_not_empty()
+	var d := TestUtils.data()
 	for f: String in files:
 		var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(FIXTURES + f))
 		assert_str(SaveFormat.check(data)).override_failure_message(f).is_empty()
-		SaveFormat.migrate(data, _start())
+		SaveFormat.migrate(data)
 		var s := GameSession.from_dict(data["session"])
+		CharacterRules.refresh(s.character, d, s.items)
 		assert_int(s.chat.size()).override_failure_message(f).is_greater(0)
 		assert_str(s.room_id).override_failure_message(f).is_not_empty()
 		assert_int(s.character["max_hp"]).override_failure_message(f).is_greater(0)
+		assert_str(s.character["class"]).override_failure_message(f).is_not_empty()
 
 
-func _start() -> Dictionary:
-	var d := TestUtils.data()
-	return {"start_room": d["world"]["start_room"], "character": d["character"]}
+## Saves before v3 had no character sheet: they are refused with a clear message (decision of v0.5.0).
+func test_saves_before_v3_are_refused() -> void:
+	for f: String in ["save_v1.json", "save_v2.json"]:
+		var data: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves_old/" + f))
+		assert_str(SaveFormat.check(data)).override_failure_message(f).is_equal(SaveFormat.ERR_TOO_OLD)
 
 
-func test_v1_save_moves_into_the_start_room() -> void:
-	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(FIXTURES + "save_v1.json"))
-	var chat_before: int = data["session"]["chat"].size()
-	SaveFormat.migrate(data, _start())
-	assert_int(data["save_version"]).is_equal(SaveFormat.SAVE_VERSION)
-	var s := GameSession.from_dict(data["session"])
-	assert_str(s.room_id).is_equal("tavern-room-001")
-	assert_str(s.mode).is_equal(GameSession.MODE_EXPLORATION)
-	assert_str(s.character["name"]).is_equal("Айра")
-	assert_int(s.chat.size()).is_equal(chat_before)
+## The v3 fixture is the save of a fresh start session with a short chat; regenerate it only on purpose.
+func test_v3_fixture_matches_the_current_layout() -> void:
+	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(FIXTURES + "save_v3.json"))
+	var fresh := SaveFormat.build(TestUtils.session_with_chat(), "0.5.0", "2026-10-18T12:00:00", 500)
+	assert_array(data["session"].keys()).contains_exactly_in_any_order(fresh["session"].keys())
+	assert_array(data["session"]["character"].keys()).contains_exactly_in_any_order(fresh["session"]["character"].keys())

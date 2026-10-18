@@ -32,8 +32,7 @@ var room_id: String = ""
 var mode: String = MODE_EXPLORATION
 ## The conversation partner in social / trade.
 var npc_id: String = ""
-## name, gender, race, class_name, level, hp, max_hp, ac, skills, saves, features, gold_cp, conditions,
-## inventory {item_id: qty}.
+## The character in the CharacterRules layout: choices, state (hp, conditions, slots) and the derived cache.
 var character: Dictionary = {}
 ## Items created by the master and accepted by the engine: {item_id: definition}. Kept so saves work alone.
 var items: Dictionary = {}
@@ -47,28 +46,32 @@ var dialogue_log: Array[String] = []
 var location_log: Array[String] = []
 
 
-static func create(new_seed: int, now: String, start_room: String, character_template: Dictionary) -> GameSession:
+static func create(new_seed: int, now: String, start_room: String, new_character: Dictionary) -> GameSession:
 	var s := GameSession.new()
 	s.game_seed = new_seed
 	s.rng.seed = new_seed
 	s.created_at = now
 	s.room_id = start_room
-	s.character = character_from_template(character_template)
+	s.character = normalized_character(new_character)
 	return s
 
 
-static func character_from_template(t: Dictionary) -> Dictionary:
+## JSON brings numbers back as floats: the counters, scores and quantities of a character become ints again.
+static func normalized_character(t: Dictionary) -> Dictionary:
 	var c := t.duplicate(true)
-	c["level"] = int(c.get("level", 1))
-	c["max_hp"] = int(c.get("max_hp", 10))
-	c["hp"] = int(c.get("hp", c["max_hp"]))
-	c["ac"] = int(c.get("ac", 10))
-	c["gold_cp"] = int(c.get("gold_cp", 0))
+	for k: String in ["level", "xp", "hp", "max_hp", "ac", "gold_cp", "hit_dice_used", "prof_bonus", "speed",
+			"passive_perception", "spell_dc", "spell_attack"]:
+		if c.has(k):
+			c[k] = int(c[k])
+	for k: String in ["abilities", "skills", "saves", "inventory"]:
+		var m := {}
+		for id: String in c.get(k, {}):
+			m[id] = int(c[k][id])
+		c[k] = m
+	for k: String in ["slots_used", "slots_max"]:
+		if c.get(k) is Array:
+			c[k] = (c[k] as Array).map(func(v: Variant) -> int: return int(v))
 	c["conditions"] = c.get("conditions", [])
-	var inv: Dictionary = {}
-	for id: String in c.get("inventory", {}):
-		inv[id] = int(c["inventory"][id])
-	c["inventory"] = inv
 	return c
 
 
@@ -212,7 +215,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.room_id = str(d.get("room_id", ""))
 	s.mode = str(d.get("mode", MODE_EXPLORATION))
 	s.npc_id = str(d.get("npc_id", ""))
-	s.character = character_from_template(d.get("character", {}))
+	s.character = normalized_character(d.get("character", {}))
 	s.items = d.get("items", {})
 	for id: String in d.get("attitudes", {}):
 		s.attitudes[id] = int(d["attitudes"][id])

@@ -12,6 +12,7 @@ var _thinking: Label
 var _cancel: Button
 var _offline_banner: Label
 var _pause: PauseMenu
+var _sheet: CharacterSheet
 var _mode_bar: HBoxContainer
 var _mode_label: Label
 var leave_button: Button
@@ -92,7 +93,14 @@ func _ready() -> void:
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	side.size_flags_stretch_ratio = 1.0
 	side.menu_requested.connect(func() -> void: _pause.open())
+	side.sheet_requested.connect(func() -> void: _sheet.open())
 	row.add_child(side)
+
+	_sheet = CharacterSheet.new()
+	_sheet.name = "CharacterSheet"
+	_sheet.visible = false
+	add_child(_sheet)
+	_sheet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	_pause = PauseMenu.new()
 	_pause.visible = false
@@ -111,7 +119,13 @@ func _ready() -> void:
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause_menu"):
-		_pause.toggle()
+		if _sheet.visible:
+			_sheet.visible = false
+		else:
+			_pause.toggle()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("character_sheet") and not input.has_focus():
+		_sheet.visible = not _sheet.visible
 		get_viewport().set_input_as_handled()
 
 

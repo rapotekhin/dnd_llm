@@ -21,6 +21,7 @@ from connectivity_e2e import DEFAULT_GODOT, OUT, PORT, ROOT, port_busy, start_se
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # reports hold Russian text and arrows; Windows consoles default to cp1251
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", default="smoke")
     parser.add_argument("--no-server", action="store_true", help="do not start llm_server (implied by «offline»)")
