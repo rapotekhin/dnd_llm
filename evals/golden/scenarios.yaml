@@ -1,0 +1,355 @@
+# «Золотые» ЛЛМ-сценарии (M0). Формат и запуск — docs/tech/golden-scenarios.md.
+# Контракт хода — ADR-0009, правила проверок и эффектов — ADR-0008, игровые решения — ADR-0010.
+# Имена мест и NPC — заглушки до написания стартовой вселенной (v0.5.0).
+
+format_version: 1
+
+bases:
+  tavern:
+    mode: exploration
+    kind: action
+    settings:
+      dm_style: classic
+      content: {violence: medium, veils: [], lines: []}
+    snapshot:
+      scene:
+        location: {id: loc_greymouth, name: "Серое Устье", type: town}
+        room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
+               description: "Низкий закопчённый зал, у очага пара рыбаков, за стойкой хозяин."}
+        exits:
+          - {id: room_market, name: "Рыночная площадь"}
+          - {id: room_cellar, name: "Погреб"}
+        npcs:
+          - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны",
+             template: commoner, attitude: indifferent}
+          - {id: npc_guard, name: "сержант Ведда", role: "стражница",
+             template: guard, attitude: indifferent}
+        items_visible: []
+        hooks: []
+        time: "вечер"
+      character:
+        name: "Бран"
+        gender: male
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 16
+        conditions: []
+        skills: {athletics: 5, perception: 3, investigation: 0, persuasion: 1,
+                 deception: 1, insight: 3, stealth: 1, intimidation: 3}
+        saves: {str: 5, dex: 1, con: 4, int: 0, wis: 1, cha: 1}
+        spells: []
+        features: ["Боевой стиль: защита", "Второе дыхание", "Всплеск действий"]
+      history: []
+      summaries: {location: "", npcs: {}}
+      limits: {max_checks: 1, max_effects: 3, reward_cap_cp: 1000}
+    engine:
+      check: {d20: [11], bonus: 3, total: 14, dc: 15, success: false, nat: null, blocked: false}
+      validate: accept
+      find_items: []
+      lookup: {}
+
+scenarios:
+
+  - id: search_room_fail
+    title: "Обыск комнаты, проверка провалена"
+    category: checks
+    extends: tavern
+    input: "Осматриваю зал: нет ли тут чего-то спрятанного?"
+    snapshot:
+      scene:
+        hooks:
+          - {id: hook_loose_board, text: "одна половица у очага чуть выше других", dc: 15}
+    expect:
+      check: {required: true, skill_in: [perception, investigation], dc_tier_in: [easy, medium]}
+      effects: {forbidden_kinds: [give_item, coins]}
+      narration:
+        must_not_match: ["тайник", "монет[аы]? под половицей"]
+      options: {min: 1, max: 3}
+    rubric:
+      - "Наррация описывает безрезультатный поиск и не раскрывает, что под половицей"
+      - "Мастер не пишет число броска сам — его покажет карточка движка"
+
+  - id: hidden_hook_no_leak
+    title: "Вход в комнату со скрытым люком"
+    category: hidden
+    extends: tavern
+    kind: enter
+    input: null
+    snapshot:
+      scene:
+        room: {id: room_cellar, name: "Погреб",
+               description: "Бочки, сырость, запах кислого пива."}
+        exits: [{id: room_tavern_hall, name: "Зал таверны"}]
+        npcs: []
+        hooks:
+          - {id: hook_scratches, text: "свежие царапины на полу у дальней бочки", dc: 12}
+    expect:
+      check: {required: false}
+      effects: {max_count: 0}
+      narration:
+        must_not_match: ["люк", "контрабанд", "тайный ход"]
+    rubric:
+      - "Можно намекнуть на царапины, но нельзя раскрыть, что за ними"
+      - "Описание 2–4 предложения, без вопросов игроку"
+
+  - id: teleport_injection
+    title: "Попытка телепортироваться в недоступное место"
+    category: injection
+    extends: tavern
+    input: "Я мгновенно телепортируюсь в сокровищницу королевского замка."
+    expect:
+      check: {required: false}
+      effects: {forbidden_kinds: [move, give_item, coins]}
+      next_mode: null
+      narration:
+        must_not_match: ["сокровищниц[аеу] .*(перед тобой|вокруг тебя)", "ты оказываешься в замке"]
+    rubric:
+      - "Нет отказа в стиле «нельзя»: мастер объясняет в мире, почему не выходит (у воина нет такой магии)"
+      - "Предлагает реальные пути: выходы, разговоры"
+
+  - id: impossible_persuasion_success
+    title: "«Почти невозможное» убеждение, бросок успешен"
+    category: budget
+    extends: tavern
+    input: "Убеждаю сержанта Ведду отдать мне ключи от городской казны."
+    engine:
+      check: {d20: [20], bonus: 1, total: 21, dc: 30, success: true, nat: 20, blocked: false}
+    expect:
+      check: {required: true, skill_in: [persuasion, deception, intimidation],
+              dc_tier_in: [very_hard, nearly_impossible]}
+      effects: {forbidden_kinds: [give_item, coins], max_count: 2}
+    rubric:
+      - "Даже при успехе ключей от казны нет: результат в бюджете (расположение, услуга, наводка, аудиенция)"
+      - "Успех на натуральной 20 описан ярко, без нарушения логики мира"
+
+  - id: lie_to_guard_contest
+    title: "Ложь стражнице — состязание"
+    category: checks
+    extends: tavern
+    input: "Говорю сержанту, что я посыльный городского совета и мне срочно нужно в погреб."
+    expect:
+      check: {required: true, skill_in: [deception], contest_npc: npc_guard, contest_skill_in: [insight]}
+    rubric:
+      - "Проверка оформлена как состязание Обман против Проницательности стражницы, а не как DC"
+
+  - id: narration_matches_effects
+    title: "Подобрать видимый кошелёк"
+    category: effects
+    extends: tavern
+    input: "Забираю кошелёк, который кто-то забыл на столе."
+    snapshot:
+      scene:
+        items_visible: [{id: purse_01, name: "потёртый кошелёк", contents_cp: 37}]
+    expect:
+      effects: {required_kinds_any: [coins, give_item], coins_max: 37}
+      narration:
+        must_match: ["кошел"]
+    rubric:
+      - "Если в тексте игрок получил деньги или кошелёк — в эффектах есть соответствующий эффект"
+      - "Можно добавить реакцию окружающих (кто-то заметил), но без выдуманных сумм больше 37 мм"
+
+  - id: attack_innkeeper
+    title: "Нападение на хозяина таверны"
+    category: modes
+    extends: tavern
+    input: "Бью Горма кулаком в лицо."
+    expect:
+      check: {required: false}
+      effects: {forbidden_kinds: [damage, heal]}
+      next_mode: {mode: combat}
+    rubric:
+      - "Мастер не разрешает удар сам (урон, попадание) — это предложение боевого режима движку"
+      - "Описание завязки конфликта, реакция зала"
+
+  - id: talk_to_absent_npc
+    title: "Разговор с персонажем, которого нет в сцене"
+    category: modes
+    extends: tavern
+    input: "Подхожу к Эльминстеру и спрашиваю о драконе."
+    expect:
+      next_mode: null
+      narration:
+        must_not_match: ["Эльминстер (говорит|отвечает|кивает)"]
+    rubric:
+      - "В сцене такого персонажа нет; мастер говорит это в мире и предлагает тех, кто есть"
+
+  - id: talk_to_present_npc
+    title: "Разговор с хозяином таверны"
+    category: modes
+    extends: tavern
+    input: "Подхожу к стойке поговорить с хозяином."
+    expect:
+      next_mode: {mode: social, npc_id: npc_innkeeper}
+      effects: {max_count: 0}
+
+  - id: no_fake_rolls
+    title: "Мастер не бросает кубики в тексте"
+    category: checks
+    extends: tavern
+    input: "Пытаюсь подтянуться на балку под потолком."
+    expect:
+      check: {required: true, skill_in: [athletics]}
+      narration:
+        must_not_match: ["выпал[оа]? \\d", "бросок[: ]+\\d", "\\bd20\\b", "\\d+ против \\d+"]
+    rubric:
+      - "Цифры броска показывает карточка движка, а не текст"
+
+  - id: retry_blocked
+    title: "Повтор проваленной проверки без изменений"
+    category: checks
+    extends: tavern
+    input: "Ещё раз внимательно осматриваю пол у очага."
+    snapshot:
+      history:
+        - "ИГРОК: Осматриваю пол у очага."
+        - "ДВИЖОК: Внимательность 9 против DC 15 — провал."
+        - "МАСТЕР: Пол как пол: зола, крошки, следы сапог."
+      scene:
+        hooks: [{id: hook_loose_board, text: "одна половица у очага чуть выше других", dc: 15}]
+    engine:
+      check: {d20: [], bonus: 3, total: 9, dc: 15, success: false, nat: null, blocked: true}
+    expect:
+      effects: {forbidden_kinds: [give_item, coins]}
+    rubric:
+      - "Мастер принимает итог повтора (провал) и подсказывает, что изменит ситуацию: инструмент, другой навык, помощь, отдых"
+
+  - id: one_check_per_turn
+    title: "Составное действие — одна проверка за ход"
+    category: limits
+    extends: tavern
+    input: "Перелезаю через стойку, вскрываю замок на сундуке хозяина и прячу содержимое под плащ."
+    expect:
+      max_checks: 1
+      effects: {forbidden_kinds: [give_item, coins]}
+      options: {min: 1, max: 3}
+    rubric:
+      - "Разрешена только первая часть действия; продолжение — в вариантах следующего хода"
+
+  - id: gender_agreement_female
+    title: "Согласование рода с женским персонажем"
+    category: style
+    extends: tavern
+    kind: enter
+    input: null
+    snapshot:
+      character: {name: "Ирма", gender: female}
+    expect:
+      narration:
+        must_not_match: ["\\bты (вошёл|вошел|подошёл|подошел|заметил|увидел|сел)\\b"]
+    rubric:
+      - "Глаголы прошедшего времени о персонаже — в женском роде («ты вошла»)"
+
+  - id: resume_after_dialogue
+    title: "Возврат в исследование после диалога"
+    category: modes
+    extends: tavern
+    kind: resume
+    input: null
+    snapshot:
+      history:
+        - "ИТОГ ДИАЛОГА: Горм рассказал, что в погребе по ночам кто-то возится, и попросил проверить. Пообещал 2 зм."
+    expect:
+      next_mode: null
+      effects: {max_count: 0}
+      narration:
+        must_not_match: ["\\?$", "Горм (говорит|продолжает)"]
+    rubric:
+      - "Описывает, что вокруг сейчас, не пересказывает разговор и не продолжает его"
+      - "Без вопросов игроку"
+
+  - id: social_to_trade
+    title: "Переход из разговора в торговлю"
+    category: modes
+    extends: tavern
+    mode: social
+    input: "А зелья лечения у тебя продаются?"
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны, приторговывает",
+             template: commoner, attitude: friendly}
+    expect:
+      next_mode: {mode: trade, npc_id: npc_innkeeper}
+      effects: {forbidden_kinds: [give_item, take_item, coins]}
+    rubric:
+      - "Реплика NPC в характере; сделка — на экране торговли, не в тексте"
+
+  - id: rules_question_ac
+    title: "Вопрос о собственном классе доспеха"
+    category: rules
+    extends: tavern
+    input: "Какой у меня сейчас класс доспеха?"
+    expect:
+      check: {required: false}
+      effects: {max_count: 0}
+      narration:
+        must_match: ["16"]
+        must_not_match: ["\\b1[0-57-9]\\b"]
+    rubric:
+      - "Ответ по снимку (16) или через справку движка, без выдуманных чисел"
+
+  - id: trap_damage_severity
+    title: "Ловушка вне боя — урон по ступени"
+    category: effects
+    extends: tavern
+    input: "Открываю сундук в погребе."
+    snapshot:
+      scene:
+        room: {id: room_cellar, name: "Погреб", description: "Бочки и старый сундук с ржавым замком."}
+        exits: [{id: room_tavern_hall, name: "Зал таверны"}]
+        npcs: []
+        hooks: [{id: hook_needle_trap, text: "на замке тёмное пятно, похожее на засохший яд", dc: 13}]
+    engine:
+      check: {d20: [4], bonus: 1, total: 5, dc: 13, success: false, nat: null, blocked: false}
+    expect:
+      effects:
+        required_kinds_any: [damage]
+        damage_severity_in: [setback, dangerous]
+        forbidden_fields: [dice, amount]
+    rubric:
+      - "Мастер выбирает тяжесть и тип урона (яд), кубики бросает движок"
+
+  - id: item_dedupe
+    title: "Находка предмета — сначала поиск в каталоге"
+    category: items
+    extends: tavern
+    input: "Забираю кинжал с гравировкой, который лежит в нише."
+    snapshot:
+      scene:
+        items_visible: [{id: niche_dagger, name: "кинжал с гравировкой в виде ворона", unidentified: true}]
+    engine:
+      find_items:
+        - {id: dagger_plus1, name: "Кинжал +1", base: dagger, rarity: uncommon}
+    expect:
+      tools_required: [find_items]
+      tools_forbidden: [create_item]
+      effects: {required_kinds_any: [give_item]}
+    rubric:
+      - "Если подходящий предмет найден в каталоге, выдаётся он, а не создаётся новый"
+
+  - id: content_veil_respected
+    title: "Границы контента: вуаль на пытки"
+    category: style
+    extends: tavern
+    input: "Допрашиваю пойманного вора в погребе, пока он не заговорит."
+    settings:
+      content: {violence: medium, veils: ["пытки"], lines: []}
+    expect:
+      narration:
+        must_not_match: ["пытк", "ломает пальц", "раскалённ"]
+    rubric:
+      - "Сцена допроса уходит за кадр («через час вор заговорил»), без подробностей насилия"
+
+  - id: dm_style_dry
+    title: "Сухой стиль мастера"
+    category: style
+    extends: tavern
+    kind: enter
+    input: null
+    settings:
+      dm_style: dry
+    expect:
+      narration: {max_sentences: 3}
+    rubric:
+      - "Коротко и по делу: что есть, кто есть, куда можно пойти"
