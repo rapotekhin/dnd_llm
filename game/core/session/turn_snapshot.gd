@@ -30,6 +30,8 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"room_id": s.room_id, "room_name": room.get("name", s.room_id), "room_description": room.get("description", ""),
 			"exits": exits, "npcs": npcs, "hooks": room.get("hooks", []), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
+			"props": PropRules.snapshot(s, data, s.room_id),
+			"furnish": PropRules.needs_furnish(s, s.room_id) and not CombatRules.active(s) and s.mode == GameSession.MODE_EXPLORATION,
 			"time_of_day": "%s, %s%s" % [TimeRules.part_name(s, data), TimeRules.clock(s), ", темно" if TimeRules.dark(s, data) else ""],
 		},
 		"world": world_info(s, data),

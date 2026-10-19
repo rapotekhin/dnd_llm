@@ -106,7 +106,7 @@ func haggle() -> String:
 func set_trade(on: bool) -> bool:
 	if session == null or is_busy() or not session.in_conversation():
 		return false
-	if on and (not world().is_trader(session.npc_id) or TimeRules.shops_closed(session, Catalog.data)):
+	if on and (not world().is_trader(session.npc_id) or TimeRules.shops_closed(session, Catalog.data) or TheftRules.shop_closed_for(session, session.npc_id)):
 		return false
 	var mode := GameSession.MODE_TRADE if on else GameSession.MODE_SOCIAL
 	if session.mode == mode:
@@ -447,6 +447,36 @@ func search_room(skill: String) -> String:
 	_log("Игрок: " + text)
 	EventBus.state_changed.emit()
 	_request("action", text + " " + note)
+	return ""
+
+
+## The theft window (v0.7.0): a Sleight of Hand against the entry's DC; success — it is taken; failure — the NPC
+## reacts by its kind. The master narrates it (kind=theft); a fight it causes starts after. "" or a localization key.
+func steal(npc_id: String, entry_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	var why := TheftRules.can_steal(session, Catalog.data, npc_id)
+	if not why.is_empty():
+		return why
+	var entry := {}
+	for e: Dictionary in TheftRules.pockets(session, Catalog.data, npc_id):
+		if str(e["id"]) == entry_id:
+			entry = e
+	if entry.is_empty():
+		return "THEFT_NOBODY"
+	var params := {"skill": "sleight_of_hand", "dc_tier": "medium", "dc": int(entry["dc"]), "target_id": npc_id}
+	var mods := ConditionRules.check_mods(session.character, Catalog.data, params)
+	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
+	params["disadvantage_reason"] = ", ".join((mods["disadvantage"] as Array).map(cond_name))
+	params["advantage_reason"] = tr("THEFT_HIDDEN") if session.sneaking else ""
+	var result := CheckEngine.roll(Catalog.rules(), session.rng, params, CheckEngine.bonus_for(session.character, params), session.next_check_id())
+	_add(GameSession.check_entry(params, result))
+	var lines := TheftRules.steal(session, Catalog.data, npc_id, entry_id, bool(result["success"]))
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("theft", "карманы %s — %s (%s): %s" % [world().npc(npc_id).get("name", npc_id), entry["name"],
+		"успех" if bool(result["success"]) else "провал", "; ".join(lines)])
 	return ""
 
 
@@ -851,7 +881,7 @@ func _quest_progress() -> void:
 func talk_to(npc_id: String, trade: bool = false) -> bool:
 	if session == null or is_busy() or not Backend.is_ready() or not session.npcs_alive(world().npcs_in(session.room_id)).has(npc_id):
 		return false
-	if trade and (not world().is_trader(npc_id) or TimeRules.shops_closed(session, Catalog.data)):
+	if trade and (not world().is_trader(npc_id) or TimeRules.shops_closed(session, Catalog.data) or TheftRules.shop_closed_for(session, npc_id)):
 		return false
 	_begin_conversation(npc_id, GameSession.MODE_TRADE if trade else GameSession.MODE_SOCIAL)
 	_request("enter", "")
@@ -1050,7 +1080,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 			"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0}]
 		return "combat"
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and s.npcs_alive(world().npcs_in(s.room_id)).has(npc_id):
-		if mode == GameSession.MODE_TRADE and (not world().is_trader(npc_id) or TimeRules.shops_closed(s, Catalog.data)):
+		if mode == GameSession.MODE_TRADE and (not world().is_trader(npc_id) or TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, npc_id)):
 			mode = GameSession.MODE_SOCIAL
 		if s.in_conversation() and s.npc_id == npc_id:
 			# The same partner: the master already answered, no new greeting (B33). Leaving the deal panel is the
@@ -1195,22 +1225,20 @@ func _theft_target(params: Dictionary) -> String:
 
 ## Theft by words: the engine gives the loot (rules.theft) or the NPC notices; the master narrates the note.
 func _theft(npc_id: String, ok: bool) -> String:
-	var t: Dictionary = Catalog.data["rules"]["theft"]
 	var who := str(world().npc(npc_id).get("name", npc_id))
 	var lines: Array[String] = []
 	var note := ""
-	if ok and int(session.pickpocketed.get(npc_id, 0)) == session.day:
-		note = "Кража: у %s сегодня больше нечего взять — карманы уже пусты" % who
+	var cp := TheftRules.take_purse(session, Catalog.data, npc_id) if ok else 0
+	if ok and cp <= 0:
+		note = "Кража: у %s в кошеле больше ничего нет" % who
 	elif ok:
-		var cp := CombatRules.roll_dice(session.rng, str(t["coins_dice"])) * int(t["unit_cp"])
-		session.character["gold_cp"] = int(session.character["gold_cp"]) + cp
-		session.pickpocketed[npc_id] = session.day
-		lines.append("Украдено у %s: %s" % [who, Money.format(cp)])
+		lines.append("%s — украдено: %s" % [who, Money.format(cp)])
 		note = "Кража удалась, %s ничего не заметил(а): движок уже выдал %s (зм — золотые, см — серебряные, мм — медные) — опиши добычу ровно так" % [who, Money.format(cp)]
 	else:
-		session.attitudes[npc_id] = clampi(session.attitude(npc_id) + int(t["failure_attitude"]), -3, 3)
-		lines.append("%s замечает руку в кармане: отношение хуже" % who)
-		note = "Кража провалилась: %s заметил(а) — отношение хуже; добычи нет" % who
+		session.caught_by[npc_id] = session.day
+		lines.append("%s замечает руку в кармане" % who)
+		lines.append_array(TheftRules.react(session, Catalog.data, npc_id))
+		note = "Кража провалилась: " + "; ".join(lines) + " — движок уже всё применил"
 	if not lines.is_empty():
 		_add(GameSession.effect_entry(lines))
 		_log("События: " + ", ".join(lines))

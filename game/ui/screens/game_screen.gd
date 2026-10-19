@@ -19,6 +19,7 @@ var _map: WorldNotes
 var _journal: WorldNotes
 var _level_up: LevelUpView
 var _short_rest: SmallDialog
+var _theft: TheftPanel
 var _prepare: SmallDialog
 var _mode_bar: HBoxContainer
 var _mode_label: Label
@@ -130,6 +131,7 @@ func _ready() -> void:
 	side.journal_requested.connect(func() -> void: _journal.open())
 	side.level_up_requested.connect(func() -> void: _level_up.open())
 	side.short_rest_requested.connect(func() -> void: _short_rest.open())
+	side.pockets_requested.connect(func(npc: String) -> void: _theft.open(npc))
 	row.add_child(side)
 
 	_sheet = CharacterSheet.new()
@@ -154,6 +156,11 @@ func _ready() -> void:
 		v.visible = false
 		add_child(v)
 		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_theft = TheftPanel.new()
+	_theft.name = "TheftView"
+	_theft.visible = false
+	add_child(_theft)
+	_theft.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_sheet.prepare_requested.connect(func() -> void:
 		_sheet.visible = false
 		_prepare.open())
@@ -181,7 +188,7 @@ func _ready() -> void:
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause_menu"):
-		var overlays: Array[Control] = [_sheet, _map, _journal, _level_up, _short_rest, _prepare]
+		var overlays: Array[Control] = [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _theft]
 		var open := overlays.filter(func(o: Control) -> bool: return o.visible)
 		if not open.is_empty():
 			for o: Control in open:

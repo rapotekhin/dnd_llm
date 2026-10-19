@@ -126,6 +126,12 @@ func _act() -> String:
 					return "quest_step"
 			return "",
 		func() -> String:
+			var mark: Variant = _pick(s.npcs_alive(w.npcs_in(s.room_id)))
+			if mark == null or rng.randf() > 0.15 or not TheftRules.can_steal(s, data, mark).is_empty():
+				return ""
+			var entry: Variant = _pick(TheftRules.pockets(s, data, mark))
+			return "steal" if entry != null and gs.steal(mark, str(entry["id"])).is_empty() else "",
+		func() -> String:
 			var ft: Variant = _pick(ExplorationRules.found_traps(s, data["world"], s.room_id))
 			if ft == null:
 				return ""

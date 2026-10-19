@@ -14,6 +14,9 @@ var searched: Dictionary = {}
 var _data: Dictionary = {}
 
 
+## Lines an applied effect adds after its summary (the owner of a taken thing reacts, v0.7.0).
+var _extra_lines: Array[String] = []
+
 func mark_searched(turn_id: String) -> void:
 	searched[turn_id] = true
 
@@ -59,8 +62,10 @@ func apply(s: GameSession, turn_id: String, ids: Array) -> Array[String]:
 		var r: Dictionary = reserves.get(str(id), {})
 		if r.is_empty() or r["turn_id"] != turn_id:
 			continue
+		_extra_lines.clear()
 		_apply_one(s, r["kind"], r["plan"])
 		lines.append(str(r["summary"]))
+		lines.append_array(_extra_lines)  # an owner's reaction to a taken thing (v0.7.0)
 	discard(turn_id)
 	return lines
 
@@ -76,7 +81,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 	var c := s.character
 	var level := int(c.get("level", 1))
 	if s.mode == GameSession.MODE_COMBAT:
-		if str(e.get("kind", "")) in ["move", "coins", "give_item", "take_item", "npc_attitude", "advance_time"]:
+		if str(e.get("kind", "")) in ["move", "coins", "give_item", "take_item", "npc_attitude", "advance_time", "furnish", "take_prop"]:
 			return {"reason": "в бою это нельзя: исход боя, переходы и добычу ведёт движок; здесь — проверки, урон и состояния врагам (target_id), подкрепление (start_combat)"}
 		var tid := str(e.get("target_id", "")) if e.get("target_id") != null else ""
 		if not tid.is_empty():
@@ -178,6 +183,14 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if not why.is_empty():
 				return {"reason": why}
 			return {"plan": {"item_id": iid}, "summary": "Использовано: %s" % ItemRules.display_name(items, s.items, iid)}
+		"furnish":
+			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "furnish"):
+				return {"reason": "комната уже обставляется в этом ходе"}
+			return PropRules.plan_furnish(s, data, e)
+		"take_prop":
+			return PropRules.plan_take(s, data, e)
+		"prop_state":
+			return PropRules.plan_state(s, e)
 		"advance_time":
 			var mins := int(e.get("minutes", 0))
 			var cap := int(TimeRules.cfg(data)["max_master_minutes"])
@@ -326,6 +339,12 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			ItemRules.use(c, _data, s.items, plan["item_id"], s.rng)
 		"advance_time":
 			TimeRules.advance(s, _data, int(plan["minutes"]))
+		"furnish":
+			PropRules.apply_furnish(s, plan)
+		"take_prop":
+			_extra_lines.append_array(PropRules.apply_take(s, _data, plan))
+		"prop_state":
+			PropRules.apply_state(s, plan)
 		"flag":
 			if bool(plan["value"]) and not s.flags.has(plan["flag"]):
 				s.flags.append(plan["flag"])

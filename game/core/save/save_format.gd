@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 14
+const SAVE_VERSION := 15
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -36,6 +36,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	11: _v11_to_v12,
 	12: _v12_to_v13,
 	13: _v13_to_v14,
+	14: _v14_to_v15,
 }
 
 
@@ -159,4 +160,11 @@ static func _v12_to_v13(data: Dictionary, _ctx: Dictionary) -> void:
 ## A 0.6.5 game knew no kinds of foes.
 static func _v13_to_v14(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["known_monsters"] = []
+
+
+## A 0.6.6 game had no things in the rooms and no pockets: the rooms are furnished on the next visit.
+static func _v14_to_v15(data: Dictionary, _ctx: Dictionary) -> void:
+	var s: Dictionary = data["session"]
+	for k: String in ["props", "pockets", "shop_closed", "caught_by"]:
+		s[k] = {}
 

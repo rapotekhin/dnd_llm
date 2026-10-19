@@ -506,10 +506,121 @@
 		]
 	},
 	"theft": {
-		"_doc": "Pickpocketing by words (v0.6.5, until the pockets of v0.7.0): a Sleight of Hand check at an NPC of the scene. Success — coins_dice × unit_cp, once per NPC a day; failure — the NPC notices, attitude failure_attitude.",
-		"coins_dice": "2d6",
-		"unit_cp": 10,
-		"failure_attitude": -1
+		"_doc": "Theft (v0.7.0): the pockets of an NPC — the pack's `pockets` list or by its monster template (pockets: coins_dice × unit_cp in a purse, item_count things of `items`, worn weapons of the SRD statblock). DC of an entry = max(10, passive Perception) + dc modifiers. Caught (or a thing of the owner taken before its eyes) — caught_attitude, then the reaction by template (reactions; traders close the shop for the day): fight, call_guard (fine_cp, or a fight with guard_monster when the player cannot pay). Words without the window take only the purse.",
+		"pockets": {
+			"_default": {
+				"coins_dice": "2d6",
+				"unit_cp": 10,
+				"item_count": 1,
+				"items": [
+					"candle",
+					"soap",
+					"string_10_feet"
+				]
+			},
+			"commoner": {
+				"coins_dice": "3d6",
+				"unit_cp": 1,
+				"item_count": 1,
+				"items": [
+					"candle",
+					"soap",
+					"string_10_feet",
+					"rations"
+				]
+			},
+			"acolyte": {
+				"coins_dice": "2d6",
+				"unit_cp": 10,
+				"item_count": 1,
+				"items": [
+					"holy_water",
+					"candle",
+					"amulet"
+				]
+			},
+			"guard": {
+				"coins_dice": "2d6",
+				"unit_cp": 10,
+				"item_count": 1,
+				"items": [
+					"dagger",
+					"rations",
+					"signal_whistle"
+				]
+			},
+			"veteran": {
+				"coins_dice": "3d6",
+				"unit_cp": 10,
+				"item_count": 1,
+				"items": [
+					"healing_potion",
+					"dagger",
+					"signal_whistle"
+				]
+			},
+			"scout": {
+				"coins_dice": "2d6",
+				"unit_cp": 10,
+				"item_count": 2,
+				"items": [
+					"arrows",
+					"rations",
+					"dagger",
+					"rope"
+				]
+			},
+			"thug": {
+				"coins_dice": "2d6",
+				"unit_cp": 10,
+				"item_count": 1,
+				"items": [
+					"dagger",
+					"dice_set"
+				]
+			},
+			"druid": {
+				"coins_dice": "1d4",
+				"unit_cp": 1,
+				"item_count": 1,
+				"items": [
+					"herbalism_kit",
+					"rations"
+				]
+			}
+		},
+		"dc": {
+			"coins": 0,
+			"item": 2,
+			"heavy": 5,
+			"heavy_weight": 3,
+			"valuable": 3,
+			"valuable_cp": 1000,
+			"worn": 5
+		},
+		"reactions": {
+			"_default": "call_guard",
+			"guard": "fight",
+			"veteran": "fight",
+			"scout": "fight",
+			"thug": "fight",
+			"bandit": "fight"
+		},
+		"caught_attitude": -2,
+		"fine_cp": 200,
+		"guard_monster": "guard"
+	},
+	"props": {
+		"_doc": "Things of the rooms (v0.7.0): the master furnishes a room on its first visit — up to max_per_room things; portable ones are catalog items, each worth at most item_value_cap_cp, together at most room_value_cap_cp of the character's level.",
+		"max_per_room": 10,
+		"item_value_cap_cp": 1000,
+		"room_value_cap_cp": {
+			"1": 1500,
+			"2": 2500,
+			"3": 4000,
+			"4": 6000,
+			"5": 9000
+		}
 	},
 	"time": {
 		"_doc": "Time of day (v0.6.3): minutes since midnight. A step between rooms of one location — move_minutes, into another location — travel_minutes; a short rest — short_rest_minutes; a long rest ends at wake_minute. Parts start at `from`; night — traders closed (night_shops_closed), darkness outside lit locations.",

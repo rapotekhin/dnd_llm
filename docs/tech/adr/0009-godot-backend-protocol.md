@@ -205,6 +205,12 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 21. Протокол 0.11.0 (v0.7.0)
+
+- **`scene.props`** [{`prop_id`, `name`, `description`, `state`, `owner`, `portable`, `text`}] — вещи комнаты, единственные, что мастер описывает; **`scene.furnish`** — комната ещё не обставлена.
+- **Эффекты** `furnish` (`props` [{`name`, `description`, `item_id`, `owner`, `text`}]), `take_prop` (`prop_id`), `prop_state` (`prop_id`, `state`).
+- **Вид хода `theft`** — игрок обчистил карманы в окне, `input` — строки движка (что взято или как попался и реакция).
+
 ### 20. Протокол 0.10.0 (v0.6.5)
 
 - **`turn.result.option_costs`** — цена каждого варианта в медных (0 — бесплатно); списывает движок при выборе, мастер получает «[движок уже списал …]» в `input`.

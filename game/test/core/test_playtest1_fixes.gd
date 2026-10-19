@@ -113,7 +113,7 @@ func test_a_short_rest_is_an_hour() -> void:
 # --- theft by words -------------------------------------------------------------------------------------
 
 
-func test_theft_gives_coins_once_a_day_or_the_npc_notices() -> void:
+func test_theft_by_words_takes_the_purse_or_the_npc_notices() -> void:
 	var s := _session()
 	s.room_id = "brod-tavern-hall"
 	GameState.session = s
@@ -124,11 +124,11 @@ func test_theft_gives_coins_once_a_day_or_the_npc_notices() -> void:
 	assert_str(str(r["note"])).contains("движок уже выдал")
 	assert_int(int(s.character["gold_cp"])).is_greater(gold)
 	var again := GameState.handle_engine_check({"turn_id": "t-1", "skill": "sleight_of_hand", "dc_tier": "medium", "target_id": "npc_innkeeper"})
-	assert_str(str(again["note"])).contains("нечего взять")
+	assert_str(str(again["note"])).contains("больше ничего нет")
 	s.character["skills"]["sleight_of_hand"] = -40
 	var miss := GameState.handle_engine_check({"turn_id": "t-1", "skill": "sleight_of_hand", "dc_tier": "medium", "target_id": "npc_serving"})
-	assert_str(str(miss["note"])).contains("заметил")
-	assert_int(s.attitude("npc_serving")).is_equal(-1)
+	assert_str(str(miss["note"])).contains("провалилась")
+	assert_int(s.attitude("npc_serving")).is_equal(-2)
 
 
 # --- foes that cannot act, condition spells -------------------------------------------------------------

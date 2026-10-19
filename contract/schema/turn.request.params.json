@@ -477,6 +477,11 @@
           "title": "Found",
           "type": "array"
         },
+        "furnish": {
+          "default": false,
+          "title": "Furnish",
+          "type": "boolean"
+        },
         "hooks": {
           "items": {
             "type": "string"
@@ -502,6 +507,13 @@
             "$ref": "#/$defs/SceneNpc"
           },
           "title": "Npcs",
+          "type": "array"
+        },
+        "props": {
+          "items": {
+            "$ref": "#/$defs/SceneProp"
+          },
+          "title": "Props",
           "type": "array"
         },
         "room_description": {
@@ -593,6 +605,57 @@
         "name"
       ],
       "title": "SceneNpc",
+      "type": "object"
+    },
+    "SceneProp": {
+      "description": "A thing of the room (0.11.0): what the master may describe and the player may act on.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner"
+        },
+        "portable": {
+          "default": false,
+          "title": "Portable",
+          "type": "boolean"
+        },
+        "prop_id": {
+          "title": "Prop Id",
+          "type": "string"
+        },
+        "state": {
+          "default": "",
+          "title": "State",
+          "type": "string"
+        },
+        "text": {
+          "default": "",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prop_id",
+        "name"
+      ],
+      "title": "SceneProp",
       "type": "object"
     },
     "Snapshot": {
@@ -874,7 +937,8 @@
         "combat_round",
         "death",
         "trap",
-        "wait"
+        "wait",
+        "theft"
       ],
       "title": "Kind",
       "type": "string"

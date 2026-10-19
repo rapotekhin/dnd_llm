@@ -9,6 +9,7 @@ signal map_requested
 signal journal_requested
 signal level_up_requested
 signal short_rest_requested
+signal pockets_requested(npc_id: String)
 
 var _content: VBoxContainer
 
@@ -111,12 +112,15 @@ func _rebuild() -> void:
 				var b := _button(tr("BTN_TALK_TO").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, false), can_act)
 				b.tooltip_text = "%s — %s" % [n.get("name", id), n.get("role", "")]
 				b.name = "Talk_" + id
+				var pk := _button(tr("BTN_POCKETS").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), pockets_requested.emit.bind(id),
+					can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
+				pk.name = "Pockets_" + id
 				if bool(n.get("trader", false)):
-					var closed := TimeRules.shops_closed(s, Catalog.data)
+					var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id)
 					var t := _button(tr("BTN_TRADE_WITH").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, true), can_act and not closed)
 					t.name = "Trade_" + id
 					if closed:
-						t.tooltip_text = tr("SHOP_CLOSED")
+						t.tooltip_text = tr("SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED")
 		for qid: String in XpRules.quests_here(s, Catalog.data["world"]):
 			var q: Dictionary = XpRules.quests(Catalog.data["world"])[qid]
 			var qb := _button(tr("BTN_QUEST").format({"action": q["action"]}), func() -> void:

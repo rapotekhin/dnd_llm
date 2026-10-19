@@ -79,6 +79,12 @@ var pickpocketed: Dictionary = {}
 var sneak_noticed: String = ""
 ## Kinds of foes the player knows (inspected in a fight, v0.6.6): their numbers show on the cards.
 var known_monsters: Array[String] = []
+## Things of the rooms {room_id: [prop]} (PropRules), NPCs' pockets {npc_id: [entry]} (TheftRules), shops closed
+## for the player {npc_id: day} and thefts caught {npc_id: day} (v0.7.0).
+var props: Dictionary = {}
+var pockets: Dictionary = {}
+var shop_closed: Dictionary = {}
+var caught_by: Dictionary = {}
 ## Short rests taken today (ExplorationRules); a long rest resets it.
 var short_rests: int = 0
 ## Ids of the pack quests the player completed (XpRules).
@@ -268,6 +274,10 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"pickpocketed": pickpocketed,
 		"sneak_noticed": sneak_noticed,
 		"known_monsters": known_monsters,
+		"props": props,
+		"pockets": pockets,
+		"shop_closed": shop_closed,
+		"caught_by": caught_by,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -329,6 +339,16 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.sneak_noticed = str(d.get("sneak_noticed", ""))
 	for m: Variant in d.get("known_monsters", []):
 		s.known_monsters.append(str(m))
+	s.props = d.get("props", {})
+	s.pockets = d.get("pockets", {})
+	for n: String in s.pockets:
+		for e: Dictionary in s.pockets[n]:
+			for k: String in ["cp", "qty", "dc"]:
+				e[k] = int(e.get(k, 0))
+	for n: String in d.get("shop_closed", {}):
+		s.shop_closed[n] = int(d["shop_closed"][n])
+	for n: String in d.get("caught_by", {}):
+		s.caught_by[n] = int(d["caught_by"][n])
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):

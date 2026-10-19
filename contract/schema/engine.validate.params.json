@@ -259,6 +259,32 @@
       "title": "FlagEffect",
       "type": "object"
     },
+    "FurnishEffect": {
+      "additionalProperties": false,
+      "description": "The first visit of a room (0.11.0): its things and furniture, fixed for good; the engine checks the count and\nthe value of the portable ones.",
+      "properties": {
+        "kind": {
+          "const": "furnish",
+          "default": "furnish",
+          "title": "Kind",
+          "type": "string"
+        },
+        "props": {
+          "items": {
+            "$ref": "#/$defs/PropSpec"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Props",
+          "type": "array"
+        }
+      },
+      "required": [
+        "props"
+      ],
+      "title": "FurnishEffect",
+      "type": "object"
+    },
     "GeneratedItem": {
       "additionalProperties": false,
       "properties": {
@@ -482,6 +508,92 @@
       "title": "NpcAttitudeEffect",
       "type": "object"
     },
+    "PropSpec": {
+      "additionalProperties": false,
+      "description": "A thing to put in the room when it is furnished (0.11.0).",
+      "properties": {
+        "description": {
+          "default": "",
+          "maxLength": 240,
+          "title": "Description",
+          "type": "string"
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "name": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 800,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "PropSpec",
+      "type": "object"
+    },
+    "PropStateEffect": {
+      "additionalProperties": false,
+      "description": "A thing of the room changes (0.11.0): opened, closed, broken, burned, moved.",
+      "properties": {
+        "kind": {
+          "const": "prop_state",
+          "default": "prop_state",
+          "title": "Kind",
+          "type": "string"
+        },
+        "prop_id": {
+          "title": "Prop Id",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "open",
+            "closed",
+            "broken",
+            "burned",
+            "moved"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prop_id",
+        "state"
+      ],
+      "title": "PropStateEffect",
+      "type": "object"
+    },
     "StartCombatEffect": {
       "additionalProperties": false,
       "description": "The master starts a fight (0.7.0): the engine checks the XP budget of the character's level. In a fight it is a\nreinforcement (0.8.0): the newcomers come at the edge of the field (`side`) next round, within the same budget.",
@@ -554,6 +666,27 @@
       "title": "TakeItemEffect",
       "type": "object"
     },
+    "TakePropEffect": {
+      "additionalProperties": false,
+      "description": "The player takes a portable thing of the room (0.11.0); an owner who sees it reacts by the engine's rules.",
+      "properties": {
+        "kind": {
+          "const": "take_prop",
+          "default": "take_prop",
+          "title": "Kind",
+          "type": "string"
+        },
+        "prop_id": {
+          "title": "Prop Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prop_id"
+      ],
+      "title": "TakePropEffect",
+      "type": "object"
+    },
     "UseFeatureEffect": {
       "additionalProperties": false,
       "properties": {
@@ -613,12 +746,15 @@
           "condition": "#/$defs/ConditionEffect",
           "damage": "#/$defs/DamageEffect",
           "flag": "#/$defs/FlagEffect",
+          "furnish": "#/$defs/FurnishEffect",
           "give_item": "#/$defs/GiveItemEffect",
           "heal": "#/$defs/HealEffect",
           "move": "#/$defs/MoveEffect",
           "npc_attitude": "#/$defs/NpcAttitudeEffect",
+          "prop_state": "#/$defs/PropStateEffect",
           "start_combat": "#/$defs/StartCombatEffect",
           "take_item": "#/$defs/TakeItemEffect",
+          "take_prop": "#/$defs/TakePropEffect",
           "use_feature": "#/$defs/UseFeatureEffect",
           "use_item": "#/$defs/UseItemEffect"
         },
@@ -666,6 +802,15 @@
         },
         {
           "$ref": "#/$defs/AdvanceTimeEffect"
+        },
+        {
+          "$ref": "#/$defs/FurnishEffect"
+        },
+        {
+          "$ref": "#/$defs/TakePropEffect"
+        },
+        {
+          "$ref": "#/$defs/PropStateEffect"
         }
       ],
       "title": "Effect"

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.10.0"
+PROTOCOL_VERSION = "0.11.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -120,8 +120,9 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # combat_start / combat_round / death (0.7.0): the engine started the fight, played a round (or ended it), the hero died;
 # `input` holds the engine lines. trap (0.9.0): the player disarmed a found trap (or it went off); the engine lines.
 # wait (0.10.0): the player waited by the button — the engine moved the time; `input` holds the lines.
+# theft (0.11.0): the player picked a pocket in the theft window — the engine rolled and applied it; `input` holds the lines.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
-                   "combat_start", "combat_round", "death", "trap", "wait"]
+                   "combat_start", "combat_round", "death", "trap", "wait", "theft"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -142,6 +143,18 @@ class SceneNpc(_In):
     trader: bool = False  # sells goods: buying them goes through trade mode (0.6.0)
 
 
+class SceneProp(_In):
+    """A thing of the room (0.11.0): what the master may describe and the player may act on."""
+
+    prop_id: str
+    name: str
+    description: str = ""
+    state: str = ""  # "" | open | closed | broken | burned | moved
+    owner: str | None = None  # npc_id of whoever owns it
+    portable: bool = False  # can be taken (it is an item of the catalog)
+    text: str = ""  # what is written in or on it
+
+
 class Scene(_In):
     location_id: str
     location_name: str
@@ -156,6 +169,8 @@ class Scene(_In):
     found: list[str] = Field(default_factory=list)  # hidden things the player noticed or found here (0.3.0)
     time_of_day: str = ""
     sneaking: bool = False  # the player moves stealthily (0.8.0)
+    props: list[SceneProp] = Field(default_factory=list)  # the things of the room — the only ones to describe (0.11.0)
+    furnish: bool = False  # the room was never furnished: propose `furnish` before describing it (0.11.0)
 
 
 class InventoryLine(_In):
@@ -431,6 +446,39 @@ class GiveItemEffect(_Out):
     qty: int = Field(default=1, ge=1, le=20)
 
 
+class PropSpec(_Out):
+    """A thing to put in the room when it is furnished (0.11.0)."""
+
+    name: str = Field(min_length=1, max_length=60)
+    description: str = Field(default="", max_length=240)
+    item_id: str | None = None  # portable: an item of the catalog (find it with find_items first)
+    owner: str | None = None  # npc_id of the scene who owns it
+    text: str = Field(default="", max_length=800)  # what is written in it (a book, a note, a sign)
+
+
+class FurnishEffect(_Out):
+    """The first visit of a room (0.11.0): its things and furniture, fixed for good; the engine checks the count and
+    the value of the portable ones."""
+
+    kind: Literal["furnish"] = "furnish"
+    props: list[PropSpec] = Field(min_length=1, max_length=10)
+
+
+class TakePropEffect(_Out):
+    """The player takes a portable thing of the room (0.11.0); an owner who sees it reacts by the engine's rules."""
+
+    kind: Literal["take_prop"] = "take_prop"
+    prop_id: str
+
+
+class PropStateEffect(_Out):
+    """A thing of the room changes (0.11.0): opened, closed, broken, burned, moved."""
+
+    kind: Literal["prop_state"] = "prop_state"
+    prop_id: str
+    state: Literal["open", "closed", "broken", "burned", "moved"]
+
+
 class TakeItemEffect(_Out):
     kind: Literal["take_item"] = "take_item"
     item_id: str
@@ -509,7 +557,8 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect,
+    | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | FurnishEffect | TakePropEffect | PropStateEffect,
     Field(discriminator="kind"),
 ]
 

@@ -115,6 +115,8 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "exits": [{"room_id": e["id"], "name": e["name"]} for e in scene.get("exits", [])],
                 "npcs": npcs, "hooks": [h["text"] if isinstance(h, dict) else str(h) for h in scene.get("hooks", [])],
                 "time_of_day": scene.get("time", ""),
+                "props": scene.get("props", []),  # already in the protocol shape (SceneProp, 0.11.0)
+                "furnish": bool(scene.get("furnish", False)),
             },
             "character": {
                 "name": ch.get("name", ""), "gender": ch.get("gender", "other"), "class_name": ch.get("class", ""),

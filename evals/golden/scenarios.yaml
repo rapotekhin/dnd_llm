@@ -460,6 +460,71 @@ scenarios:
     rubric:
       - "Мастер сдвигает время эффектом advance_time (несколько часов) и описывает наступающий вечер"
 
+  - id: furnish_on_first_visit
+    title: "Первый вход — мастер обставляет комнату эффектом furnish"
+    category: world
+    extends: tavern
+    kind: enter
+    input: null
+    snapshot:
+      scene:
+        furnish: true
+    expect:
+      effects: {required_kinds_any: [furnish]}
+    rubric:
+      - "Мастер предлагает furnish с несколькими уместными для таверны вещами и описывает зал по ним"
+
+  - id: describe_only_props
+    title: "Мастер описывает только вещи из «Вокруг»"
+    category: world
+    extends: tavern
+    input: "Что тут вообще есть интересного? Оглядываю столы и стены."
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p1, name: "Доска объявлений", description: "Листки на ржавых гвоздях у двери", text: "Пропал лесоруб Влас. Видевших — к капитану стражи."}
+          - {prop_id: p2, name: "Оловянная кружка", description: "Стоит на стойке рядом с Гормом", owner: npc_innkeeper, portable: true}
+          - {prop_id: p3, name: "Сальная свеча", description: "Оплывает на пустом столе у окна", portable: true}
+          - {prop_id: p4, name: "Очаг", description: "Большой, с закопчённой решёткой"}
+    expect:
+      effects: {forbidden_kinds: [give_item, furnish]}
+    rubric:
+      - "В описании только вещи из списка (доска объявлений, кружка, свеча, очаг) и NPC; новых предметов на столах и стенах мастер не выдумывает"
+
+  - id: read_prop_text
+    title: "Прочесть вещь — ровно её текст"
+    category: world
+    extends: tavern
+    input: "Подхожу к доске объявлений и читаю, что там."
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p1, name: "Доска объявлений", description: "Листки на ржавых гвоздях у двери", text: "Пропал лесоруб Влас. Видевших — к капитану стражи."}
+          - {prop_id: p2, name: "Оловянная кружка", description: "Стоит на стойке рядом с Гормом", owner: npc_innkeeper, portable: true}
+          - {prop_id: p3, name: "Сальная свеча", description: "Оплывает на пустом столе у окна", portable: true}
+          - {prop_id: p4, name: "Очаг", description: "Большой, с закопчённой решёткой"}
+    expect:
+      effects: {max_count: 0}
+    rubric:
+      - "Мастер передаёт текст доски (пропал лесоруб Влас, видевших — к капитану), не добавляя других объявлений"
+
+  - id: take_prop_words
+    title: "Взять вещь комнаты — эффект take_prop"
+    category: world
+    extends: tavern
+    input: "Забираю сальную свечу со стола у окна."
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p1, name: "Доска объявлений", description: "Листки на ржавых гвоздях у двери", text: "Пропал лесоруб Влас. Видевших — к капитану стражи."}
+          - {prop_id: p2, name: "Оловянная кружка", description: "Стоит на стойке рядом с Гормом", owner: npc_innkeeper, portable: true}
+          - {prop_id: p3, name: "Сальная свеча", description: "Оплывает на пустом столе у окна", portable: true}
+          - {prop_id: p4, name: "Очаг", description: "Большой, с закопчённой решёткой"}
+    expect:
+      effects: {required_kinds_any: [take_prop], forbidden_kinds: [give_item]}
+    rubric:
+      - "Мастер проводит take_prop для p3 и описывает, как свеча оказывается у игрока"
+
   - id: cast_spell_words
     title: "Колдовство словами — эффект cast, а не бесплатная магия"
     category: magic

@@ -52,6 +52,7 @@ BTN_LOOK_TIP,"Проверка Внимательности по этой ком
 BTN_MAP,Карта
 BTN_MENU,Меню
 BTN_NEW_GAME,Новая игра
+BTN_POCKETS,Карманы: {name}
 BTN_PREPARE,Подготовить заклинания
 BTN_PREP_CONFIRM,Подготовить
 BTN_QUEST,Задание: {action}
@@ -70,6 +71,7 @@ BTN_SETTINGS,Настройки
 BTN_SHORT_REST,Короткий отдых
 BTN_SNEAK,Красться
 BTN_SNEAK_TIP,"Входя туда, где ждут враги, вы проверяете Скрытность: кто не заметит — застигнут врасплох. Пока крадётесь, пассивная Внимательность ниже на 5"
+BTN_STEAL,Стащить
 BTN_STEP_LEFT,← Шаг
 BTN_STEP_RIGHT,Шаг →
 BTN_TALK_TO,Поговорить: {name}
@@ -362,6 +364,11 @@ PREP_ERR_COUNT,"Нужно ровно столько заклинаний, ск�
 PREP_ERR_PICKS,Выберите заклинания из списка
 PREP_NOT_PREPARER,Этот класс не готовит заклинания
 PREP_TITLE,Подготовленные заклинания на сегодня: выберите {n}
+PROP_STATE_BROKEN,сломано
+PROP_STATE_BURNED,сожжено
+PROP_STATE_CLOSED,закрыто
+PROP_STATE_MOVED,сдвинуто
+PROP_STATE_OPEN,открыто
 QUEST_BUSY,Сейчас нельзя: мастер думает или нет связи
 QUEST_DONE,Задание уже выполнено
 QUEST_IN_CONVERSATION,Сначала закончите разговор
@@ -406,6 +413,7 @@ SHEET_TAB_FEATURES,Умения и заклинания
 SHEET_TAB_GEAR,Снаряжение
 SHEET_TAB_STATS,Характеристики
 SHOP_CLOSED,Ночью лавки закрыты — приходите утром
+SHOP_CLOSED_FOR_YOU,Лавка закрыта для вас до завтра
 SHORT_REST_DICE,Потратить кости хитов (к{die} + Телосложение): осталось {left}
 SHORT_REST_HINT,Восстановятся умения «до короткого отдыха»; сегодня осталось отдыхов: {left}
 SHORT_REST_TITLE,Короткий отдых — час
@@ -457,6 +465,13 @@ SNEAK_BUSY,Сейчас нельзя
 SNEAK_NOTICED,"Здесь вас уже заметили — красться не выйдет, пока не уйдёте"
 TAB_DISPLAY,Экран
 TAB_MASTER,Мастер
+THEFT_CAUGHT,Вас уже поймали на этом сегодня — ни шагу к его карманам
+THEFT_EMPTY,Карманы пусты
+THEFT_HIDDEN,вы крадётесь
+THEFT_HINT,Ловкость рук против Сл каждой вещи; крадучись — с преимуществом. Провал — хозяин замечает и реагирует
+THEFT_NOBODY,Здесь некого обчищать
+THEFT_ROW,"{name} — Сл {dc}, шанс {p}%"
+THEFT_TITLE,Карманы — {name}
 TITLE_LOAD,Загрузка
 TITLE_PAUSE,Пауза
 TITLE_SAVE,Сохранение
