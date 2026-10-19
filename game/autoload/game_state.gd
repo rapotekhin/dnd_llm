@@ -564,7 +564,7 @@ func submit(text: String) -> bool:
 
 ## Exit button: the engine moves the player (no model decision), then the master describes the new room.
 func go(room_id: String) -> bool:
-	if session == null or is_busy() or not Backend.is_ready() or not world().exits(session.room_id).has(room_id):
+	if session == null or is_busy() or not Backend.is_ready() or not ExplorationRules.open_exits(session, Catalog.data["world"], session.room_id).has(room_id):
 		return false
 	_end_conversation()
 	var from := session.room_id
@@ -691,6 +691,24 @@ func quest_talk(quest_id: String) -> String:
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
 	_request("quest", "%s Итог: %s." % [str(step.get("done_text", step["text"])), ", ".join(lines)])
+	return ""
+
+
+## A choice step of a quest (v0.6.4): the button in its room makes the choice — its rewards and world flag — and the
+## master narrates it with the choice's done_text. "" or a localization key.
+func quest_choose(quest_id: String, choice_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "QUEST_BUSY"
+	var why := QuestRules.can_choose(session, Catalog.data["world"], quest_id, choice_id)
+	if not why.is_empty():
+		return why
+	var c := QuestRules.choice(session, Catalog.data["world"], quest_id, choice_id)
+	var lines := QuestRules.choose(session, Catalog.data, quest_id, choice_id)
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("quest", "%s Итог: %s." % [str(c.get("done_text", c["action"])), ", ".join(lines)])
 	return ""
 
 

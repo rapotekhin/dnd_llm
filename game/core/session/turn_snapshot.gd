@@ -10,7 +10,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 	var loc_id := world.location_id(s.room_id)
 	var loc := world.location(loc_id)
 	var exits: Array[Dictionary] = []
-	for e: String in world.exits(s.room_id):
+	for e: String in ExplorationRules.open_exits(s, data["world"], s.room_id):
 		exits.append({"room_id": e, "name": world.room(e).get("name", e)})
 	var npcs: Array[Dictionary] = []
 	for id: String in s.npcs_alive(world.npcs_in(s.room_id)):

@@ -66,6 +66,8 @@ var sneaking: bool = false
 var minute: int = 480
 ## Quests with steps taken: {quest_id: step index} (QuestRules, v0.6.3).
 var quests_active: Dictionary = {}
+## Parts of "all" steps already announced: {quest_id: [index]} (QuestRules, v0.6.4).
+var quest_parts: Dictionary = {}
 ## Spent traps {"room:secret": "sprung" | "disarmed"} and emptied caches ["room:secret"] (v0.6.3).
 var traps: Dictionary = {}
 var caches_taken: Array[String] = []
@@ -251,6 +253,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"sneaking": sneaking,
 		"minute": minute,
 		"quests_active": quests_active,
+		"quest_parts": quest_parts,
 		"traps": traps,
 		"caches_taken": caches_taken,
 		"dialogue_log": dialogue_log,
@@ -302,6 +305,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.minute = int(d.get("minute", 480))
 	for q: String in d.get("quests_active", {}):
 		s.quests_active[q] = int(d["quests_active"][q])
+	for q: String in d.get("quest_parts", {}):
+		s.quest_parts[q] = (d["quest_parts"][q] as Array).map(func(x: Variant) -> int: return int(x))
 	s.traps = d.get("traps", {})
 	for k: Variant in d.get("caches_taken", []):
 		s.caches_taken.append(str(k))

@@ -4,9 +4,12 @@ extends RefCounted
 ## giver's button; a step is closed only by a fact of the engine named in its `when`:
 ##   {"encounter": id} — the encounter is fought, {"secret": "room:secret"} — found, {"room": id} — visited,
 ##   {"flag": id} — set in the world, {"talk": npc_id, "item"?: id} — a button at that NPC (`action`), the item is
-##   handed over.
+##   handed over; {"all": [...]} / {"any": [...]} of facts (v0.6.4) — `parts` names the facts of "all", each part
+##   is announced when done, in any order; {"choice": room_id} — buttons in that room, one per `choices` entry
+##   (`id`, `action`, `done_text`, its own rewards and `flag`).
 ## The master only narrates and cannot close a step. A step rewards (`reward_cp`, `xp`, `items` {id: qty},
-## `attitude` {npc_id: delta}). State: s.quests_active {quest_id: step index}, s.quests_done.
+## `attitude` {npc_id: delta}) and may set a world `flag`. State: s.quests_active {quest_id: step index},
+## s.quest_parts {quest_id: [announced part indexes]}, s.quests_done.
 ## One-button quests without steps (v0.5.4) stay in XpRules.
 
 
@@ -71,7 +74,16 @@ static func met(s: GameSession, when: Dictionary) -> bool:
 		return s.visited.has(str(when["room"]))
 	if when.has("flag"):
 		return s.flags.has(str(when["flag"]))
+	if when.has("all"):
+		return (when["all"] as Array).all(func(w: Dictionary) -> bool: return met(s, w))
+	if when.has("any"):
+		return (when["any"] as Array).any(func(w: Dictionary) -> bool: return met(s, w))
 	return false
+
+
+## A button step (talk or choice): never closed by facts.
+static func _by_button(when: Dictionary) -> bool:
+	return when.has("talk") or when.has("choice")
 
 
 ## Closes every step whose fact is true now (several in a row too). Call after anything that changes the facts:
@@ -83,9 +95,80 @@ static func advance(s: GameSession, data: Dictionary) -> Array[String]:
 		while s.quests_active.has(id) and guard < 20:
 			guard += 1
 			var step := current(s, data["world"], id)
-			if step.is_empty() or (step["when"] as Dictionary).has("talk") or not met(s, step["when"]):
+			if step.is_empty() or _by_button(step["when"]):
+				break
+			lines.append_array(_announce_parts(s, data["world"], id, step))
+			if not met(s, step["when"]):
 				break
 			lines.append_array(_complete_step(s, data, id))
+	return lines
+
+
+## Parts of an "all" step done just now (in any order): one line each, once.
+static func _announce_parts(s: GameSession, world: Dictionary, quest_id: String, step: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var when: Dictionary = step["when"]
+	if not when.has("all") or not step.has("parts"):
+		return lines
+	var done: Array = s.quest_parts.get(quest_id, [])
+	for i in (when["all"] as Array).size():
+		if not done.has(i) and met(s, when["all"][i]):
+			done.append(i)
+			lines.append("«%s»: %s — сделано" % [quest(world, quest_id)["title"], step["parts"][i]])
+	s.quest_parts[quest_id] = done
+	return lines
+
+
+## The step text with its parts: «Разузнать… (✓ застава; шахта)».
+static func step_text(s: GameSession, world: Dictionary, quest_id: String) -> String:
+	var step := current(s, world, quest_id)
+	if step.is_empty():
+		return ""
+	var text := str(step["text"])
+	if step.has("parts"):
+		var done: Array = s.quest_parts.get(quest_id, [])
+		var bits: Array[String] = []
+		for i in (step["parts"] as Array).size():
+			bits.append(("✓ " if done.has(i) else "") + str(step["parts"][i]))
+		text += " (" + "; ".join(bits) + ")"
+	return text
+
+
+## Choice buttons of the current steps in this room: [{quest_id, choice_id, action}].
+static func choices_here(s: GameSession, world: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if s.in_conversation():
+		return out
+	for id: String in s.quests_active:
+		var step := current(s, world, id)
+		if str(step.get("when", {}).get("choice", "")) == s.room_id:
+			for c: Dictionary in step.get("choices", []):
+				out.append({"quest_id": id, "choice_id": str(c["id"]), "action": str(c["action"])})
+	return out
+
+
+static func choice(s: GameSession, world: Dictionary, quest_id: String, choice_id: String) -> Dictionary:
+	for c: Dictionary in current(s, world, quest_id).get("choices", []):
+		if str(c["id"]) == choice_id:
+			return c
+	return {}
+
+
+## "" when this choice can be made here now.
+static func can_choose(s: GameSession, world: Dictionary, quest_id: String, choice_id: String) -> String:
+	for c: Dictionary in choices_here(s, world):
+		if c["quest_id"] == quest_id and c["choice_id"] == choice_id:
+			return ""
+	return "QUEST_WRONG_PLACE"
+
+
+## Makes the choice (can_choose first): its rewards and flag, then the step closes. Lines.
+static func choose(s: GameSession, data: Dictionary, quest_id: String, choice_id: String) -> Array[String]:
+	var c := choice(s, data["world"], quest_id, choice_id)
+	var lines: Array[String] = ["Выбор: %s" % c["action"]]
+	_reward(s, data, c, lines)
+	lines.append_array(_complete_step(s, data, quest_id))
+	lines.append_array(advance(s, data))
 	return lines
 
 
@@ -134,6 +217,7 @@ static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -
 	var step: Dictionary = q["steps"][i]
 	var lines: Array[String] = ["«%s»: %s — сделано" % [q["title"], step["text"]]]
 	_reward(s, data, step, lines)
+	s.quest_parts.erase(quest_id)
 	if i + 1 >= (q["steps"] as Array).size():
 		s.quests_active.erase(quest_id)
 		s.quests_done.append(quest_id)
@@ -146,6 +230,9 @@ static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -
 
 static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Array[String]) -> void:
 	var c := s.character
+	var flag := str(r.get("flag", ""))
+	if not flag.is_empty() and not s.flags.has(flag):
+		s.flags.append(flag)
 	var cp := int(r.get("reward_cp", 0))
 	if cp > 0:
 		c["gold_cp"] = int(c.get("gold_cp", 0)) + cp
@@ -169,7 +256,6 @@ static func info(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 	for id: String in all:
 		if not s.quests_active.has(id) and not s.quests_done.has(id):
 			continue
-		var step := current(s, world, id)
 		out.append({"id": id, "title": str(all[id]["title"]), "description": str(all[id].get("description", "")),
-			"done": s.quests_done.has(id), "step": str(step.get("text", ""))})
+			"done": s.quests_done.has(id), "step": step_text(s, world, id)})
 	return out

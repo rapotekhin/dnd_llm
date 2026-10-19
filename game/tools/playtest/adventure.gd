@@ -86,6 +86,11 @@ func run() -> void:
 
 
 func _go(gs: Node, room: String) -> bool:
+	if gs.session.in_conversation():  # the master may open a talk on entering (next_mode social)
+		var leave: Button = find(screen(), "LeaveButton")
+		if leave != null:
+			await press(leave)
+			await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	var exit: Button = find(screen(), "Exit_" + room)
 	if not step("walk to " + room, exit != null and not exit.disabled):
 		await shot("no_exit_" + room)

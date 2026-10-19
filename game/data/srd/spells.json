@@ -3382,7 +3382,7 @@
 			"11": "3d8",
 			"17": "4d8"
 		},
-		"range_ft": 0
+		"range_ft": 30
 	},
 	"protection_from_energy": {
 		"name": "Защита от стихий",
@@ -3739,7 +3739,8 @@
 		"damage_at_slot": {
 			"2": "2d6"
 		},
-		"range_ft": 120
+		"range_ft": 120,
+		"attack": "ranged"
 	},
 	"see_invisibility": {
 		"name": "Видение невидимого",

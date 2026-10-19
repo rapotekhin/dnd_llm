@@ -97,7 +97,7 @@ func _draw_map() -> void:
 				"" if here else UiTheme.MUTED_LABEL)
 			if here:
 				line.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
-	var exits: Array = w.exits(s.room_id).map(func(e: String) -> String: return str(w.room(e).get("name", e)))
+	var exits: Array = ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id).map(func(e: String) -> String: return str(w.room(e).get("name", e)))
 	_box.add_child(HSeparator.new())
 	_text(tr("MAP_EXITS").format({"list": ", ".join(exits)}), UiTheme.MUTED_LABEL)
 

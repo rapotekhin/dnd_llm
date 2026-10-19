@@ -8,7 +8,7 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 
 | Folder | What | Status |
 |---|---|---|
-| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + start world «Сумеречная Марка» (v0.5.1), exploration: check locks, hidden things, long rest, map and journal (v0.5.2), dialogues and trade (v0.5.3), experience from quests and combat, level-up 1–5 (v0.5.4), 5e rules to the end: casting with slots, conditions, feature uses, short rest, consumables, 0 HP without death (v0.6.0), combat: SRD monsters, 7-column field, engine AI, death saves, combat screen (v0.6.1), combat details: surprise and sneaking, Hide, reinforcements, parley, hit hint, encounters in every Mark dungeon (v0.6.2), adventure systems: time of day, quests with steps, traps and caches, SRD magic items (v0.6.3) |
+| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + start world «Сумеречная Марка» (v0.5.1), exploration: check locks, hidden things, long rest, map and journal (v0.5.2), dialogues and trade (v0.5.3), experience from quests and combat, level-up 1–5 (v0.5.4), 5e rules to the end: casting with slots, conditions, feature uses, short rest, consumables, 0 HP without death (v0.6.0), combat: SRD monsters, 7-column field, engine AI, death saves, combat screen (v0.6.1), combat details: surprise and sneaking, Hide, reinforcements, parley, hit hint, encounters in every Mark dungeon (v0.6.2), adventure systems: time of day, quests with steps, traps and caches, SRD magic items (v0.6.3), the captain's chain «Пепел над Маркой» with the finale and the menhir choice (v0.6.4) |
 | `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.9.0 (v0.6.3) |
 | `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.9.0 |
 | `tools/` | SRD import (`srd_import.py`, source in `tools/srd/source/`), pack validator, playtest and connectivity runners | |
@@ -49,9 +49,11 @@ python tools/godot_playtest.py --scenario creation --no-server        # characte
 python tools/godot_playtest.py --scenario level_up                    # a wizard levels 1 → 3 by clicks
 python tools/godot_playtest.py --scenario combat                      # the wolves on the woodcutters' trail, fought by the buttons (--real; GODOT_COMBAT_HP=1 to see death; GODOT_COMBAT_ROAD=1 — sneak, hit hint, parley on the outpost road)
 python tools/godot_playtest.py --scenario adventure                   # Drogin's quest, the deadfall trap, the cache, night closes the trader (v0.6.3)
+python tools/godot_playtest.py --scenario chain                      # the captain's chain by the buttons: parts, the burrow, the menhir choice (v0.6.4)
 python tools/godot_playtest.py --scenario bot                         # bot player: 120 random steps on the stub master, session invariants (GODOT_BOT_STEPS, GODOT_BOT_SEED)
 python tools/srd_import.py build                                      # tools/srd/source + tools/srd/ru.json → game/data/srd/ and the item catalog
 uv run --project llm_server python tools/srd_import.py translate      # translate new SRD entries into tools/srd/ru.json (cents)
+"$GODOT" --headless --path game -s res://tools/balance_sim.gd -- burrow_priest 3 60   # encounter balance on the engine: win rate per ready-made hero
 uv run --project llm_server python tools/validate_data.py            # check world packs (also runs in backend pytest / CI)
 ```
 

@@ -336,3 +336,13 @@ func test_sneaking_and_reinforcements_survive_the_save() -> void:
 	var v9: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves/save_v9.json"))
 	SaveFormat.migrate(v9, {})
 	assert_bool(v9["session"]["sneaking"]).is_false()
+
+
+func test_scorching_ray_makes_three_attack_rolls() -> void:
+	assert_str(str(data["spells"]["scorching_ray"].get("attack", ""))).is_equal("ranged")  # missing in the SRD JSON
+	var s := _session("wizard_yalika")
+	_fight(s, [{"monster": "ogre", "col": 2}])
+	var pv := CombatRules.cast_preview(s, data, "scorching_ray", 2, "e1")
+	assert_int(pv["count"]).is_equal(3)
+	assert_int(pv["chance"]).is_less(100)
+	assert_int(int(data["spells"]["produce_flame"]["range_ft"])).is_equal(30)

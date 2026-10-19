@@ -108,7 +108,7 @@ func _act() -> String:
 	# The commands of exploration in a random order; the first that goes through is the step.
 	var tries: Array[Callable] = [
 		func() -> String: return "action" if gs.submit(_pick(["Осматриваюсь", "Обыскиваю углы", "Прислушиваюсь", "Иду к двери"])) else "",
-		func() -> String: return "go" if gs.go(str(_pick(w.exits(s.room_id)))) else "",
+		func() -> String: return "go" if gs.go(str(_pick(ExplorationRules.open_exits(s, data["world"], s.room_id)))) else "",
 		func() -> String:
 			var npc: Variant = _pick(w.npcs_in(s.room_id))
 			return "talk" if npc != null and gs.talk_to(npc, w.is_trader(npc) and rng.randf() < 0.5) else "",

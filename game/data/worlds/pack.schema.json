@@ -22,6 +22,23 @@
 			}
 		},
 		"side": {"enum": ["left", "right"]},
+		"when": {
+			"type": "object",
+			"minProperties": 1,
+			"properties": {
+				"encounter": {"type": "string"},
+				"secret": {"type": "string", "pattern": "^[^:]+:[^:]+$"},
+				"room": {"type": "string"},
+				"flag": {"type": "string"},
+				"talk": {"type": "string"},
+				"item": {"type": "string"},
+				"choice": {"type": "string"},
+				"all": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/when"}},
+				"any": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/when"}}
+			},
+			"additionalProperties": false
+		},
+
 		"rename": {
 			"type": "object",
 			"additionalProperties": {
@@ -114,18 +131,27 @@
 									"required": ["text", "when"],
 									"properties": {
 										"text": {"$ref": "#/$defs/nonempty"},
-										"when": {
-											"type": "object",
-											"minProperties": 1,
-											"properties": {
-												"encounter": {"type": "string"},
-												"secret": {"type": "string", "pattern": "^[^:]+:[^:]+$"},
-												"room": {"type": "string"},
-												"flag": {"type": "string"},
-												"talk": {"type": "string"},
-												"item": {"type": "string"}
-											},
-											"additionalProperties": false
+										"when": {"$ref": "#/$defs/when"},
+										"parts": {"type": "array", "items": {"$ref": "#/$defs/nonempty"}},
+										"flag": {"type": "string"},
+										"choices": {
+											"type": "array",
+											"minItems": 2,
+											"items": {
+												"type": "object",
+												"required": ["id", "action"],
+												"properties": {
+													"id": {"$ref": "#/$defs/nonempty"},
+													"action": {"$ref": "#/$defs/nonempty"},
+													"done_text": {"type": "string"},
+													"flag": {"type": "string"},
+													"xp": {"type": "integer", "minimum": 0},
+													"reward_cp": {"type": "integer", "minimum": 0},
+													"items": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}},
+													"attitude": {"type": "object", "additionalProperties": {"type": "integer", "minimum": -3, "maximum": 3}}
+												},
+												"additionalProperties": false
+											}
 										},
 										"action": {"type": "string"},
 										"done_text": {"type": "string"},
@@ -194,6 +220,15 @@
 											"additionalProperties": false
 										}
 									},
+									"additionalProperties": false
+								}
+							},
+							"closed_exits": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "object",
+									"required": ["when"],
+									"properties": {"when": {"$ref": "#/$defs/when"}, "text": {"type": "string"}},
 									"additionalProperties": false
 								}
 							},

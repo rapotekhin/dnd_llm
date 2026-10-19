@@ -162,9 +162,10 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			else:
 				for st: Variant in q["steps"]:
 					var when: Variant = st.get("when") if st is Dictionary else null
-					if not (when is Dictionary) or str(st.get("text", "")).is_empty() \
-							or (when as Dictionary).keys().filter(func(k: String) -> bool: return k != "item").size() != 1:
-						e.append("задание %s: шаг — text и when с одним условием (encounter | secret | room | flag | talk)" % qid)
+					if not (when is Dictionary) or str(st.get("text", "")).is_empty() or not _when_ok(when, true):
+						e.append("задание %s: шаг — text и when с одним условием (encounter | secret | room | flag | talk | choice | all | any)" % qid)
+					elif (when as Dictionary).has("choice") != (st as Dictionary).has("choices"):
+						e.append("задание %s: when.choice и choices — только вместе" % qid)
 	var placed := {}
 	for id: String in rooms:
 		var r: Dictionary = rooms[id]
@@ -183,6 +184,11 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			placed[n] = true
 		if not _strings(r.get("hooks", [])):
 			e.append("комната %s: hooks — список строк" % id)
+		var closed: Variant = r.get("closed_exits", {})
+		if closed is Dictionary:
+			for to: String in closed:
+				if not (r.get("exits", []) as Array).has(to) or not (closed[to] is Dictionary) or not _when_ok(closed[to].get("when"), false):
+					e.append("комната %s: closed_exits %s — выход комнаты и {when}" % [id, to])
 		var ids := {}
 		for sec: Variant in r.get("secrets", []):
 			if sec is Dictionary and sec.get("trap") is Dictionary and not (r.get("exits", []) as Array).has(str(sec["trap"].get("guards", ""))):
@@ -300,3 +306,19 @@ static func default_settings(p: Dictionary) -> Dictionary:
 	return {"world": str(p.get("id", "")), "dm_style": str(p.get("dm_style", "classic")), "death_mode": "story",
 		"violence": str(content.get("violence", "medium")), "lines": (content.get("lines", []) as Array).duplicate(),
 		"veils": (content.get("veils", []) as Array).duplicate()}
+
+
+## A quest or exit condition has one fact (a button — talk / choice — only on a quest step), all / any recursively.
+static func _when_ok(when: Variant, top: bool) -> bool:
+	if not (when is Dictionary):
+		return false
+	var keys: Array = (when as Dictionary).keys().filter(func(k: String) -> bool: return k != "item")
+	if keys.size() != 1:
+		return false
+	var k := str(keys[0])
+	if k in ["talk", "choice"]:
+		return top
+	if k in ["all", "any"]:
+		return when[k] is Array and not (when[k] as Array).is_empty() and (when[k] as Array).all(func(w: Variant) -> bool: return _when_ok(w, false))
+	return k in ["encounter", "secret", "room", "flag"]
+

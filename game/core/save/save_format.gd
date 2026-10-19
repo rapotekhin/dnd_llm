@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 11
+const SAVE_VERSION := 12
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -33,6 +33,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	8: _v8_to_v9,
 	9: _v9_to_v10,
 	10: _v10_to_v11,
+	11: _v11_to_v12,
 }
 
 
@@ -138,3 +139,8 @@ static func _v10_to_v11(data: Dictionary, _ctx: Dictionary) -> void:
 	s["quests_active"] = {}
 	s["traps"] = {}
 	s["caches_taken"] = []
+
+
+## A 0.6.3 game had no quest steps with parts.
+static func _v11_to_v12(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["quest_parts"] = {}

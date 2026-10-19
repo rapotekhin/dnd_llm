@@ -624,7 +624,13 @@ def spell_combat(s: dict[str, Any]) -> dict[str, Any]:
     out["range_ft"] = 0 if rng in ("Self", "Touch") else ft(rng)
     if rng == "Touch":
         out["range_ft"] = 5
+    out.update(SPELL_FIXES.get(s["index"], {}))
     return out
+
+
+# Where the SRD JSON lacks what its text says (v0.6.4): Scorching Ray makes ranged spell attacks; Produce Flame is
+# thrown up to 30 feet.
+SPELL_FIXES = {"scorching-ray": {"attack": "ranged"}, "produce-flame": {"range_ft": 30}}
 
 
 def monster_action(a: dict[str, Any]) -> dict[str, Any] | None:

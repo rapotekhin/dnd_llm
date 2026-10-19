@@ -142,6 +142,15 @@ func _rebuild() -> void:
 					EventBus.message.emit(tr(err)), can_act and why.is_empty())
 			tb.name = "QuestStep_" + tid
 			tb.tooltip_text = tr(why) if not why.is_empty() else str(QuestRules.quest(Catalog.data["world"], tid)["title"])
+		for ch: Dictionary in QuestRules.choices_here(s, Catalog.data["world"]):
+			var qid2 := str(ch["quest_id"])
+			var cid := str(ch["choice_id"])
+			var cb := _button(tr("BTN_QUEST").format({"action": ch["action"]}), func() -> void:
+				var err := GameState.quest_choose(qid2, cid)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)), can_act)
+			cb.name = "QuestChoice_%s_%s" % [qid2, cid]
+			cb.theme_type_variation = UiTheme.ACCENT_BUTTON
 		_subheading("SIDE_EXITS")
 		var sneak := CheckButton.new()
 		sneak.name = "SneakToggle"
@@ -154,7 +163,7 @@ func _rebuild() -> void:
 		var trapped := {}
 		for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
 			trapped[ft["to"]] = ft["secret"]
-		for e: String in world.exits(s.room_id):
+		for e: String in ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id):
 			if trapped.has(e):
 				var to := e
 				var by := _button(tr("BTN_TRAP_BYPASS").format({"room": world.room(e).get("name", e)}), func() -> void: _trap(to, false), can_act)

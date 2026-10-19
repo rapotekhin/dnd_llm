@@ -92,7 +92,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var to := str(e.get("room_id", ""))
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "move"):
 				return {"reason": "переход уже предложен в этом ходе"}
-			if not world.exits(s.room_id).has(to):
+			if not ExplorationRules.open_exits(s, data["world"], s.room_id).has(to):
 				return {"reason": "из этой комнаты нет выхода в %s" % to}
 			return {"plan": {"room_id": to}, "summary": "Переход: %s" % world.room(to).get("name", to)}
 		"damage":
