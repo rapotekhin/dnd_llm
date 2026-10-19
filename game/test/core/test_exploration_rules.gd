@@ -92,7 +92,7 @@ func test_long_rest_restores_and_clears_locks() -> void:
 	s.character["slots_used"] = [1, 0, 0, 0, 0]
 	ExplorationRules.lock(s, {"skill": "perception", "dc_tier": "hard"}, s.room_id, _fail_result())
 	var gold := int(s.character["gold_cp"])
-	var lines := ExplorationRules.long_rest(s, world)
+	var lines := ExplorationRules.long_rest(s, data)
 	assert_int(s.character["hp"]).is_equal(int(s.character["max_hp"]))
 	assert_array(s.character["slots_used"]).is_equal([0, 0, 0, 0, 0])
 	assert_dict(s.locks).is_empty()

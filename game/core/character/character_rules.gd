@@ -146,6 +146,7 @@ static func class_name_of(c: Dictionary, data: Dictionary) -> String:
 ## Recomputes the derived cache in place. Call after creation, load, equip, level-up.
 static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> void:
 	sanitize_equipped(c)
+	_grant_trait_cantrips(c, data)
 	c["race_name"] = race_name(c, data)
 	c["class_name"] = class_name_of(c, data)
 	c["prof_bonus"] = prof_bonus(c, data)
@@ -284,3 +285,18 @@ static func spell_names(c: Dictionary, data: Dictionary, list: String) -> Array[
 	for id: Variant in c.get("spells", {}).get(list, []):
 		out.append(str(data["spells"].get(str(id), {}).get("name", id)))
 	return out
+
+
+## Cantrips of race traits (rules.json `trait_cantrips`, e.g. Infernal Legacy → Thaumaturgy) belong to the
+## character's cantrips: casting checks them like any other.
+static func _grant_trait_cantrips(c: Dictionary, data: Dictionary) -> void:
+	var table: Dictionary = data["rules"].get("trait_cantrips", {})
+	for t: Variant in c.get("traits", []):
+		for id: Variant in table.get(str(t), []):
+			var sp: Dictionary = c.get("spells", {})
+			if sp.is_empty():
+				continue
+			var list: Array = sp.get("cantrips", [])
+			if not list.has(id):
+				list.append(id)
+			sp["cantrips"] = list

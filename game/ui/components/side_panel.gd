@@ -8,6 +8,7 @@ signal sheet_requested
 signal map_requested
 signal journal_requested
 signal level_up_requested
+signal short_rest_requested
 
 var _content: VBoxContainer
 
@@ -85,6 +86,8 @@ func _rebuild() -> void:
 	if not conditions.is_empty():
 		var cond := _line(tr("SIDE_CONDITIONS").format({"list": ", ".join(conditions.map(func(x: Variant) -> String: return tr("COND_" + str(x).to_upper())))}), false)
 		cond.add_theme_color_override("font_color", UiTheme.WARN)
+	if not str(c.get("concentration", "")).is_empty():
+		_line(tr("SIDE_CONCENTRATION").format({"spell": Catalog.data["spells"].get(str(c["concentration"]), {}).get("name", "")}), true)
 	var next_xp := LevelUp.xp_for(Catalog.data, int(c.get("level", 1)) + 1)
 	if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data):
 		_line(tr("SIDE_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}), true)
@@ -131,6 +134,11 @@ func _rebuild() -> void:
 						EventBus.message.emit(tr(err)), can_act)
 			rest.name = "RestButton"
 			rest.disabled = not can_act or not ExplorationRules.can_rest(s, Catalog.data["world"]).is_empty()
+		var short := _button(tr("BTN_SHORT_REST"), short_rest_requested.emit, not GameState.is_busy())
+		short.name = "ShortRestButton"
+		var why := ExplorationRules.can_short_rest(s, Catalog.data)
+		short.disabled = GameState.is_busy() or not why.is_empty()
+		short.tooltip_text = tr(why) if not why.is_empty() else ""
 
 	# Only what is worn and wielded; the full inventory is on the character sheet.
 	_subheading("SIDE_INVENTORY")

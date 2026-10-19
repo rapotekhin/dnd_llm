@@ -18,6 +18,8 @@ var _sheet: CharacterSheet
 var _map: WorldNotes
 var _journal: WorldNotes
 var _level_up: LevelUpView
+var _short_rest: SmallDialog
+var _prepare: SmallDialog
 var _mode_bar: HBoxContainer
 var _mode_label: Label
 var _partner_line: Label
@@ -127,6 +129,7 @@ func _ready() -> void:
 	side.map_requested.connect(func() -> void: _map.open())
 	side.journal_requested.connect(func() -> void: _journal.open())
 	side.level_up_requested.connect(func() -> void: _level_up.open())
+	side.short_rest_requested.connect(func() -> void: _short_rest.open())
 	row.add_child(side)
 
 	_sheet = CharacterSheet.new()
@@ -142,6 +145,18 @@ func _ready() -> void:
 		v.visible = false
 		add_child(v)
 		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	_short_rest = SmallDialog.new(SmallDialog.SHORT_REST)
+	_short_rest.name = "ShortRestView"
+	_prepare = SmallDialog.new(SmallDialog.PREPARE)
+	_prepare.name = "PrepareView"
+	for v: SmallDialog in [_short_rest, _prepare]:
+		v.visible = false
+		add_child(v)
+		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_sheet.prepare_requested.connect(func() -> void:
+		_sheet.visible = false
+		_prepare.open())
 
 	_level_up = LevelUpView.new()
 	_level_up.name = "LevelUpView"
@@ -166,7 +181,7 @@ func _ready() -> void:
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause_menu"):
-		var overlays: Array[Control] = [_sheet, _map, _journal, _level_up]
+		var overlays: Array[Control] = [_sheet, _map, _journal, _level_up, _short_rest, _prepare]
 		var open := overlays.filter(func(o: Control) -> bool: return o.visible)
 		if not open.is_empty():
 			for o: Control in open:

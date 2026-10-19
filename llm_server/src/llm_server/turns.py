@@ -16,6 +16,13 @@ from pydantic_ai.usage import RunUsage, UsageLimits
 from . import prompts
 from .agents import TurnContext, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
 from .protocol import (
+    CoinsEffect,
+    ConditionEffect,
+    DamageEffect,
+    Effect,
+    EngineValidateParams,
+    EngineValidateResult,
+    HealEffect,
     EngineCheckParams,
     EngineCheckResult,
     ErrorCode,
@@ -39,7 +46,7 @@ _sleep = asyncio.sleep  # tests replace it to skip the pauses
 
 async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     usage = Usage(model="stub")
-    if params.kind in ("deal", "haggle", "quest"):
+    if params.kind in ("deal", "haggle", "quest", "ability", "downed"):
         return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
     if params.kind != "action":
         return TurnResult(turn_id=params.turn_id, narration="Вы осматриваетесь.", usage=usage)
@@ -50,13 +57,34 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     )
     check = EngineCheckResult.model_validate(raw)
     outcome = "замечаете" if check.success else "не замечаете"
+    # Every few turns the stub proposes an effect too, so a bot player exercises the engine without a model.
+    effect_ids: list[str] = []
+    n = int(params.turn_id.split("-")[1])
+    effect = STUB_EFFECTS[n % len(STUB_EFFECTS)]
+    if effect is not None:
+        v = EngineValidateResult.model_validate(await session.call_engine(
+            "engine.validate", EngineValidateParams(turn_id=params.turn_id, effect=effect)))
+        if v.accepted and v.effect_id:
+            effect_ids.append(v.effect_id)
     return TurnResult(
         turn_id=params.turn_id,
         narration=f"Вы {outcome} что-то необычное ({check.total} против {check.dc}).",
         options=["Осмотреться ещё раз"],
         check_ids=[check.check_id],
+        effect_ids=effect_ids,
         usage=usage,
     )
+
+
+STUB_EFFECTS: list[Effect | None] = [  # by turn number; the first turns stay plain (protocol tests rely on that)
+    HealEffect(tier="minor", reason="заглушка"),
+    None,
+    None,
+    DamageEffect(severity="dangerous", damage_type="колющий", reason="заглушка"),
+    CoinsEffect(delta_cp=5, reason="заглушка"),
+    ConditionEffect(condition="poisoned", until="short_rest", reason="заглушка"),
+    DamageEffect(severity="deadly", damage_type="дробящий", reason="заглушка"),
+]
 
 
 def _model_id(session: Session, requested: str | None) -> str:

@@ -122,6 +122,20 @@ def test_quests_in_the_prompt_and_the_quest_turn():
     assert "выполнил задание" in turn and "+300 опыта" in turn
 
 
+def test_resources_concentration_and_v060_turns():
+    raw = tavern_snapshot()
+    raw["character"].update({"resources": [{"name": "Второе дыхание", "left": 0, "max": 1}], "concentration": "Обнаружение магии",
+                             "conditions": ["poisoned"]})
+    s = Snapshot.model_validate(raw)
+    text = prompts.system_prompt("exploration", s, None)
+    assert "Второе дыхание 0/1" in text and "Концентрация: Обнаружение магии" in text
+    assert "`cast`" in text and "0 HP вне боя — не смерть" in text
+    social = prompts.system_prompt("social", s, next(n for n in s.scene.npcs if n.npc_id == INNKEEPER))
+    assert "Товары торговца покупаются в торговле" in social
+    assert "Игрок колдует" in prompts.turn_prompt("exploration", "ability", "Игрок колдует «Свет»", s, None)
+    assert "очнулся с 1 HP" in prompts.turn_prompt("exploration", "downed", "", s, None)
+
+
 def test_coins_format():
     assert prompts.coins(1537) == "15 зм 3 см 7 мм"
     assert prompts.coins(0) == "0 зм"

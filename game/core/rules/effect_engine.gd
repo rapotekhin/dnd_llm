@@ -10,6 +10,8 @@ extends RefCounted
 var reserves: Dictionary = {}
 ## turn_id -> true once the master searched items this turn (required before creating one).
 var searched: Dictionary = {}
+## Catalog.data of the last validate: apply() needs the rules of casts, feature uses and items.
+var _data: Dictionary = {}
 
 
 func mark_searched(turn_id: String) -> void:
@@ -34,6 +36,7 @@ func _of_turn(turn_id: String) -> Array[Dictionary]:
 
 ## Returns the engine.validate result: {accepted, effect_id, summary, item_id} or {accepted: false, reason}.
 func validate(s: GameSession, data: Dictionary, turn_id: String, effect: Dictionary) -> Dictionary:
+	_data = data
 	var rules: Dictionary = data["rules"]
 	var pending := _of_turn(turn_id)
 	if pending.size() >= int(rules["turn_limits"]["max_effects"]):
@@ -74,6 +77,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 	var level := int(c.get("level", 1))
 	if s.mode == GameSession.MODE_TRADE and str(e.get("kind", "")) in ["coins", "give_item", "take_item"]:
 		return {"reason": "в торговле сделки проводит панель сделки: назови цену и предложи игроку положить товар в сделку"}
+	if s.mode == GameSession.MODE_SOCIAL and str(e.get("kind", "")) == "give_item" and world.is_trader(s.npc_id) 			and TradeRules.pack_stock(world.npc(s.npc_id), rules).has(str(e.get("item_id", ""))):
+		return {"reason": "это товар торговца — покупка идёт через торговлю: назови цену и открой её (next_mode trade); монеты не списывай"}
 	match str(e.get("kind", "")):
 		"move":
 			var to := str(e.get("room_id", ""))
@@ -125,6 +130,46 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": "пустое изменение отношения"}
 			return {"plan": {"npc_id": npc_id, "delta": delta},
 				"summary": "%s: отношение %+d" % [world.npc(npc_id).get("name", npc_id), delta]}
+		"cast":
+			var slots := {}
+			for p: Dictionary in pending:
+				if p["kind"] == "cast" and int(p["plan"]["slot"]) > 0:
+					slots[int(p["plan"]["slot"])] = int(slots.get(int(p["plan"]["slot"]), 0)) + 1
+			var chk := SpellRules.check(c, data, str(e.get("spell", "")), int(e.get("slot_level", 0)) if e.get("slot_level") != null else 0, slots)
+			if chk.has("reason"):
+				return {"reason": chk["reason"]}
+			return {"plan": {"spell_id": chk["spell_id"], "slot": chk["slot"]},
+				"summary": "Заклинание: " + SpellRules.describe(data, chk["spell_id"], chk["slot"])}
+		"condition":
+			var cond := str(e.get("condition", ""))
+			if not ConditionRules.known(data, cond):
+				return {"reason": "неизвестное состояние %s; есть: %s" % [cond, ", ".join((rules["conditions"] as Dictionary).keys())]}
+			var on := bool(e.get("on", true))
+			if not on and not ConditionRules.has(c, cond):
+				return {"reason": "у персонажа нет состояния %s" % cond}
+			var until := str(e.get("until", "long_rest"))
+			return {"plan": {"condition": cond, "on": on, "until": until},
+				"summary": ("Состояние: %s" if on else "Снято: %s") % str(rules["conditions"][cond]).get_slice(":", 0)}
+		"use_feature":
+			var rid := FeatureUses.resolve(c, data, str(e.get("feature", "")))
+			var amount := int(e.get("amount", 1))
+			var spent := 0
+			for p: Dictionary in pending:
+				if p["kind"] == "use_feature" and p["plan"]["id"] == rid:
+					spent += int(p["plan"]["amount"])
+			var why := FeatureUses.can_use(c, data, rid, amount, spent)
+			if not why.is_empty():
+				return {"reason": why}
+			var heals: bool = not (FeatureUses.table(data)[rid].get("on_use", {}) as Dictionary).is_empty()
+			return {"plan": {"id": rid, "amount": amount}, "summary": "Умение: %s%s" % [FeatureUses.display_name(c, data, rid),
+				" (лечение движок посчитает сам, heal не нужен)" if heals else ""]}
+		"use_item":
+			var iid := str(e.get("item_id", ""))
+			var in_use := pending.filter(func(p: Dictionary) -> bool: return p["kind"] == "use_item" and p["plan"]["item_id"] == iid).size()
+			var why := ItemRules.can_use(c, data, s.items, iid, _pending_taken(pending, iid) + in_use)
+			if not why.is_empty():
+				return {"reason": why}
+			return {"plan": {"item_id": iid}, "summary": "Использовано: %s" % ItemRules.display_name(items, s.items, iid)}
 		"flag":
 			var flag := str(e.get("flag", ""))
 			if flag.is_empty():
@@ -184,6 +229,17 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 				c["inventory"].erase(plan["item_id"])
 		"npc_attitude":
 			s.attitudes[plan["npc_id"]] = clampi(s.attitude(plan["npc_id"]) + int(plan["delta"]), -3, 3)
+		"cast":
+			SpellRules.cast(c, _data, plan["spell_id"], int(plan["slot"]))
+		"condition":
+			if bool(plan["on"]):
+				ConditionRules.add(c, plan["condition"], plan["until"])
+			else:
+				ConditionRules.remove(c, plan["condition"])
+		"use_feature":
+			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
+		"use_item":
+			ItemRules.use(c, _data, s.items, plan["item_id"], s.rng)
 		"flag":
 			if bool(plan["value"]) and not s.flags.has(plan["flag"]):
 				s.flags.append(plan["flag"])

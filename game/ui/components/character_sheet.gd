@@ -2,6 +2,10 @@ class_name CharacterSheet
 extends Control
 ## The character sheet over the game screen (roadmap v0.5.0): abilities, saves and skills; features, traits
 ## and spells; equipment with equip / unequip. Numbers come from the derived cache (CharacterRules.refresh).
+## v0.6.0: «Использовать» for features with limited uses and consumables, «Колдовать» with a slot choice,
+## «Подготовить заклинания» after a long rest. A cast or use closes the sheet: the master answers in the chat.
+
+signal prepare_requested
 
 var _tabs: TabContainer
 
@@ -126,6 +130,19 @@ func _abilities_tab(c: Dictionary) -> Control:
 	var bg: Dictionary = d["backgrounds"].get(str(c.get("background", "")), {})
 	if not bg.is_empty():
 		_entry(box, str(bg["feature"]["name"]), str(bg["feature"]["desc"]))
+	var can_act := Backend.is_ready() and not GameState.is_busy()
+	box.add_child(HSeparator.new())
+	_text(box, tr("SHEET_HIT_DICE").format({"left": ExplorationRules.hit_dice_left(c), "max": int(c.get("level", 1))}), UiTheme.MUTED_LABEL)
+	var res := FeatureUses.lines(c, d)
+	if not res.is_empty():
+		_text(box, tr("SHEET_RESOURCES"), UiTheme.MUTED_LABEL)
+		for r: Dictionary in res:
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 12)
+			box.add_child(row)
+			_text(row, tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"],
+				"rest": tr("REST_KIND_" + str(r["recharge"]).to_upper())}))
+			_action(row, "Use_" + str(r["id"]), "BTN_USE", can_act and int(r["left"]) > 0, GameState.use_feature.bind(str(r["id"])))
 	if str(c.get("spell_ability", "")).is_empty():
 		return box.get_parent()
 	box.add_child(HSeparator.new())
@@ -138,6 +155,19 @@ func _abilities_tab(c: Dictionary) -> Control:
 			slots.append(tr("SHEET_SLOT").format({"level": i + 1, "left": m - int(c["slots_used"][i]), "max": m}))
 	if not slots.is_empty():
 		_text(box, " · ".join(slots), UiTheme.MUTED_LABEL)
+	if not str(c.get("concentration", "")).is_empty():
+		_text(box, tr("SHEET_CONCENTRATION").format({"spell": d["spells"].get(str(c["concentration"]), {}).get("name", "")}))
+	if SpellRules.prepares(c, d):
+		var why := SpellRules.can_prepare(c, d, GameState.session.day)
+		var prep := Button.new()
+		prep.name = "PrepareButton"
+		prep.text = "BTN_PREPARE"
+		prep.disabled = not why.is_empty() or GameState.is_busy()
+		prep.tooltip_text = tr(why) if not why.is_empty() else ""
+		prep.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		prep.pressed.connect(prepare_requested.emit)
+		box.add_child(prep)
+	var ready_ids := SpellRules.ready(c)
 	var sp: Dictionary = c.get("spells", {})
 	for list: String in ["cantrips", "prepared", "always", "known"]:
 		var ids: Array = sp.get(list, [])
@@ -149,7 +179,44 @@ func _abilities_tab(c: Dictionary) -> Control:
 		for id: Variant in ids:
 			var s: Dictionary = d["spells"].get(str(id), {})
 			_entry(box, "%s — %s, %s, %s" % [s.get("name", id), s.get("casting_time", ""), s.get("range", ""), s.get("duration", "")], str(s.get("desc", "")))
+			if list != "known" and ready_ids.has(str(id)):
+				_cast_row(box, c, str(id), int(s.get("level", 0)), can_act)
 	return box.get_parent()
+
+
+## «Колдовать» with the slot circle to spend (the lowest fitting one first).
+func _cast_row(parent: Control, c: Dictionary, id: String, level: int, can_act: bool) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	parent.add_child(row)
+	var pick := OptionButton.new()
+	pick.name = "Slot_" + id
+	pick.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	if level == 0:
+		pick.add_item(tr("SLOT_CANTRIP"), 0)
+	else:
+		for lv in range(level, 6):
+			var left := SpellRules.slots_left(c, lv)
+			if left > 0:
+				pick.add_item(tr("SLOT_CIRCLE").format({"n": lv, "left": left}), lv)
+	row.add_child(pick)
+	_action(row, "Cast_" + id, "BTN_CAST", can_act and pick.item_count > 0,
+		func() -> String: return GameState.cast(id, pick.get_selected_id() if pick.item_count > 0 else 0))
+
+
+## A button that calls `action` (returns "" or a reason): on success the sheet closes, otherwise a toast.
+func _action(parent: Control, node_name: String, text: String, enabled: bool, action: Callable) -> void:
+	var b := Button.new()
+	b.name = node_name
+	b.text = text
+	b.disabled = not enabled
+	b.pressed.connect(func() -> void:
+		var err: String = action.call()
+		if err.is_empty():
+			visible = false
+		else:
+			EventBus.message.emit(tr(err)))
+	parent.add_child(b)
 
 
 func _entry(parent: Control, title: String, body: String) -> void:
@@ -186,6 +253,8 @@ func _gear_tab(c: Dictionary) -> Control:
 		box.add_child(row)
 		var qty := int(c["inventory"][id])
 		_text(row, "%s%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else "", _item_stats(def)])
+		if not ItemRules.consumable(Catalog.data, id).is_empty():
+			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
 		var slot := CharacterRules.slot_for(def)
 		var targets: Array[String] = []
 		if not slot.is_empty():

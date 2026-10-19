@@ -38,7 +38,7 @@ func run() -> void:
 
 	var gold_before: int = gs.session.character["gold_cp"]
 	await _say(gs, "Налей мне кружку эля. Сколько с меня?")
-	step("info: coins after ordering", true, "%d → %d cp" % [gold_before, gs.session.character["gold_cp"]])
+	step("info: coins after ordering", true, "%d → %d cp, mode %s" % [gold_before, gs.session.character["gold_cp"], gs.session.mode])
 	await shot("social_ale")
 
 	if gs.session.in_conversation():
@@ -60,6 +60,10 @@ func run() -> void:
 		step("info: search check", true, str(checks[-1]) if not checks.is_empty() else "без проверки")
 		step("info: found here", true, str(ExplorationRules.found_texts(gs.session, node("Catalog").data["world"], gs.session.room_id)))
 		await shot("kitchen_search")
+
+	await _say(gs, "Перевожу дух и пользуюсь Вторым дыханием")
+	step("info: feature uses", true, str(gs.session.character.get("resources_used", {})))
+	await shot("feature")
 
 	step("no failed turns", not gs.session.chat.any(func(e: Dictionary) -> bool: return e["kind"] == GameSession.KIND_SYSTEM),
 		_systems(gs))

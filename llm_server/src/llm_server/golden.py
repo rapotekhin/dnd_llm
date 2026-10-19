@@ -83,7 +83,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
     if visible:
         names = [f"{i['name']}" + (f" ({i['contents_cp']} мм внутри)" if "contents_cp" in i else "") for i in visible]
         description += " На виду: " + "; ".join(names) + "."
-    npcs = [{"npc_id": n["id"], "name": n["name"], "role": n.get("role", ""),
+    npcs = [{"npc_id": n["id"], "name": n["name"], "role": n.get("role", ""), "trader": bool(n.get("trader", False)),
              "attitude": ATTITUDE.get(str(n.get("attitude", "indifferent")), 0)} for n in scene.get("npcs", [])]
     ch = snap.get("character", {})
     hp = ch.get("hp", {})
@@ -124,6 +124,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "level": ch.get("level", 1), "hp": hp.get("current", 10), "max_hp": hp.get("max", 10),
                 "ac": ch.get("ac", 10), "conditions": ch.get("conditions", []), "skills": ch.get("skills", {}),
                 "saves": ch.get("saves", {}), "features": ch.get("features", []), "gold_cp": ch.get("gold_cp", 1000),
+                **{k: ch[k] for k in ("cantrips", "spells", "spell_slots", "spell_save_dc", "resources") if k in ch},
             },
             "history": history,
             "summaries": summaries,

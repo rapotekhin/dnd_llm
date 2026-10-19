@@ -334,3 +334,14 @@ def test_a_haggle_check_passes_the_engine_note(data_dir):
     play(data_dir, fn, engine=engine)
     text = last_tool_text(fn.state["prompts"][1])
     assert "Торг удался" in text and "ничего не меняй эффектами" in text
+
+
+def test_cast_and_condition_effects_reach_the_engine(data_dir):
+    fn = scripted(
+        ("propose_effect", {"effect": {"kind": "cast", "spell": "Волшебная стрела"}}),
+        ("propose_effect", {"effect": {"kind": "condition", "condition": "poisoned", "until": "short_rest"}}),
+        ("final", lambda m: {"narration": "Стрелы срываются с пальцев.", "effect_ids": ["e-1", "e-2"]}),
+    )
+    msg, calls, _ = play(data_dir, fn)
+    kinds = [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"]
+    assert kinds == ["cast", "condition"]

@@ -54,6 +54,8 @@ var day: int = 1
 ## npc_id → merchant state (TradeRules): purse_cp, stock {item_id: qty}, day of the last restock, haggle_pct of
 ## the current visit, haggle_failed_day, haggle_result. Created from the pack on the first trade.
 var merchants: Dictionary = {}
+## Short rests taken today (ExplorationRules); a long rest resets it.
+var short_rests: int = 0
 ## Ids of the pack quests the player completed (XpRules).
 var quests_done: Array[String] = []
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
@@ -81,7 +83,7 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 			"passive_perception", "spell_dc", "spell_attack"]:
 		if c.has(k):
 			c[k] = int(c[k])
-	for k: String in ["abilities", "skills", "saves", "inventory"]:
+	for k: String in ["abilities", "skills", "saves", "inventory", "resources_used"]:
 		var m := {}
 		for id: String in c.get(k, {}):
 			m[id] = int(c[k][id])
@@ -90,6 +92,9 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		if c.get(k) is Array:
 			c[k] = (c[k] as Array).map(func(v: Variant) -> int: return int(v))
 	c["conditions"] = c.get("conditions", [])
+	c["condition_ends"] = c.get("condition_ends", {})
+	c["concentration"] = str(c.get("concentration", ""))
+	c["prepared_day"] = int(c.get("prepared_day", 1))
 	return c
 
 
@@ -146,7 +151,7 @@ static func check_entry(params: Dictionary, result: Dictionary) -> Dictionary:
 	e["kind"] = KIND_CHECK
 	e["skill"] = str(params.get("skill", ""))
 	e["save"] = str(params.get("save", ""))
-	if params.has("advantage_reason"):
+	if params.get("advantage_reason") != null and not str(params["advantage_reason"]).is_empty():
 		e["advantage_reason"] = str(params["advantage_reason"])
 	return e
 
@@ -220,6 +225,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"day": day,
 		"merchants": merchants,
 		"quests_done": quests_done,
+		"short_rests": short_rests,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -259,6 +265,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for v: Variant in d.get("visited", []):
 		s.visited.append(str(v))
 	s.day = int(d.get("day", 1))
+	s.short_rests = int(d.get("short_rests", 0))
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):

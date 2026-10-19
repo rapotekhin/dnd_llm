@@ -7,8 +7,12 @@ extends RefCounted
 ##   by passive Perception on entering, or found by a successful search check with total ≥ DC (Investigation
 ##   finds any secret, Perception only the perception ones);
 ##   the master sees only what was noticed or found;
-## - a long rest in a safe room (`safe.rest_cost_cp`) restores HP, spell slots and half the hit dice, clears
-##   the locks and starts a new day.
+## - a long rest in a safe room (`safe.rest_cost_cp`) restores HP, spell slots, half the hit dice and feature
+##   uses, ends conditions and concentration, clears the locks and starts a new day;
+## - a short rest (v0.6.0) anywhere outside a conversation, rules.rest.short_rests_per_day a day: hit dice the
+##   player chooses, short-rest feature uses, Pact Magic slots;
+## - 0 HP outside combat (decision of v0.6.0): no death — the character comes to with 1 HP and the master tells
+##   what it cost (kind downed). Death saves come with combat.
 
 const SEARCH_SKILLS: Array[String] = ["perception", "investigation"]
 
@@ -115,10 +119,10 @@ static func can_rest(s: GameSession, world: Dictionary) -> String:
 	return ""
 
 
-## Applies a long rest; returns the effect lines for the chat. Call can_rest first.
-static func long_rest(s: GameSession, world: Dictionary) -> Array[String]:
+## Applies a long rest; returns the effect lines for the chat. Call can_rest first. `data` = Catalog.data.
+static func long_rest(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
-	var cost := int(rest_place(world, s.room_id).get("cost_cp", 0))
+	var cost := int(rest_place(data["world"], s.room_id).get("cost_cp", 0))
 	var lines: Array[String] = ["Долгий отдых"]
 	if cost > 0:
 		c["gold_cp"] = int(c["gold_cp"]) - cost
@@ -131,5 +135,68 @@ static func long_rest(s: GameSession, world: Dictionary) -> Array[String]:
 	if not s.locks.is_empty():
 		lines.append("можно снова пробовать проваленное")
 	s.locks.clear()
+	FeatureUses.recharge_all(c, data, "long")
+	lines.append_array(_rest_ends(c, data, "long"))
+	s.short_rests = 0
 	s.day += 1
 	return lines
+
+
+## Hit dice the character can spend now.
+static func hit_dice_left(c: Dictionary) -> int:
+	return maxi(0, int(c.get("level", 1)) - int(c.get("hit_dice_used", 0)))
+
+
+## "" when a short rest is possible now, otherwise a localization key.
+static func can_short_rest(s: GameSession, data: Dictionary) -> String:
+	if s.in_conversation():
+		return "REST_IN_CONVERSATION"
+	if s.short_rests >= int(data["rules"]["rest"]["short_rests_per_day"]):
+		return "REST_SHORT_LIMIT"
+	return ""
+
+
+## A short rest (an hour): spends up to `dice` hit dice (each die + CON, at least 0), gives back short-rest feature
+## uses and Pact Magic slots, ends short-rest conditions. Returns the chat lines.
+static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomNumberGenerator) -> Array[String]:
+	var c := s.character
+	var lines: Array[String] = ["Короткий отдых"]
+	var n := clampi(dice, 0, hit_dice_left(c))
+	if n > 0:
+		var die := int(CharacterRules.class_def(c, data).get("hit_die", 8))
+		var con := CharacterRules.mod(int(c["abilities"].get("con", 10)))
+		var healed := 0
+		for i in n:
+			healed += maxi(0, rng.randi_range(1, die) + con)
+		var before := int(c["hp"])
+		c["hp"] = mini(int(c["max_hp"]), before + healed)
+		c["hit_dice_used"] = int(c.get("hit_dice_used", 0)) + n
+		lines.append("кости хитов: %d (к%d) — +%d HP" % [n, die, int(c["hp"]) - before])
+	FeatureUses.recharge_all(c, data, "short")
+	for f: Variant in data["rules"]["rest"]["short_rest_slot_features"]:
+		if CharacterRules.has_feature(c, str(f)):
+			c["slots_used"] = [0, 0, 0, 0, 0]
+			lines.append("ячейки договора восстановлены")
+	lines.append_array(_rest_ends(c, data, "short"))
+	s.short_rests += 1
+	return lines
+
+
+## Conditions and concentration a rest ends; returns the lines.
+static func _rest_ends(c: Dictionary, data: Dictionary, rest: String) -> Array[String]:
+	var lines: Array[String] = []
+	var gone := ConditionRules.clear_on_rest(c, rest)
+	if not gone.is_empty():
+		lines.append("прошло: " + ", ".join(gone.map(func(id: String) -> String: return str(data["rules"]["conditions"].get(id, id)).get_slice(":", 0))))
+	if not str(c.get("concentration", "")).is_empty():
+		c["concentration"] = ""
+	return lines
+
+
+## 0 HP outside combat (decision of v0.6.0): no death. The character comes to with 1 HP, the conversation ends,
+## concentration breaks. Returns the chat lines; the master tells what it cost (kind downed).
+static func knock_out(s: GameSession) -> Array[String]:
+	var c := s.character
+	c["hp"] = 1
+	c["concentration"] = ""
+	return ["Без сознания", "очнулся с 1 HP"]

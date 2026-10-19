@@ -300,5 +300,201 @@
 			"7": 2900,
 			"8": 3900
 		}
+	},
+	"resources": {
+		"_doc": "Feature uses (v0.6.0): who has them (features), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent).",
+		"second_wind": {
+			"features": [
+				"second_wind"
+			],
+			"max": {
+				"fixed": 1
+			},
+			"recharge": "short",
+			"on_use": {
+				"heal": [
+					1,
+					10,
+					"level"
+				]
+			}
+		},
+		"action_surge": {
+			"features": [
+				"action_surge_1_use"
+			],
+			"max": {
+				"class_specific": "action_surges",
+				"default": 1
+			},
+			"recharge": "short"
+		},
+		"rage": {
+			"features": [
+				"rage"
+			],
+			"max": {
+				"class_specific": "rage_count",
+				"default": 2
+			},
+			"recharge": "long"
+		},
+		"bardic_inspiration": {
+			"features": [
+				"bardic_inspiration_d6",
+				"bardic_inspiration_d8"
+			],
+			"max": {
+				"ability_mod": "cha",
+				"min": 1
+			},
+			"recharge": "long",
+			"short_with": "font_of_inspiration"
+		},
+		"channel_divinity": {
+			"features": [
+				"channel_divinity_1_rest",
+				"channel_divinity"
+			],
+			"max": {
+				"class_specific": "channel_divinity_charges",
+				"default": 1
+			},
+			"recharge": "short"
+		},
+		"wild_shape": {
+			"features": [
+				"wild_shape_cr_1_4_or_below_no_flying_or_swim_speed",
+				"wild_shape_cr_1_2_or_below_no_flying_speed"
+			],
+			"max": {
+				"fixed": 2
+			},
+			"recharge": "short"
+		},
+		"ki": {
+			"features": [
+				"ki"
+			],
+			"max": {
+				"class_specific": "ki_points",
+				"default": 0
+			},
+			"recharge": "short"
+		},
+		"lay_on_hands": {
+			"features": [
+				"lay_on_hands"
+			],
+			"max": {
+				"per_level": 5
+			},
+			"recharge": "long",
+			"on_use": {
+				"heal_amount": true
+			}
+		},
+		"divine_sense": {
+			"features": [
+				"divine_sense"
+			],
+			"max": {
+				"ability_mod": "cha",
+				"min": 1,
+				"plus": 1
+			},
+			"recharge": "long"
+		},
+		"sorcery_points": {
+			"features": [
+				"font_of_magic"
+			],
+			"max": {
+				"class_specific": "sorcery_points",
+				"default": 0
+			},
+			"recharge": "long"
+		},
+		"arcane_recovery": {
+			"features": [
+				"arcane_recovery"
+			],
+			"max": {
+				"fixed": 1
+			},
+			"recharge": "long"
+		}
+	},
+	"rest": {
+		"short_rests_per_day": 2,
+		"short_rest_slot_features": [
+			"pact_magic"
+		],
+		"_doc": "short_rest_slot_features: who gets spell slots back on a short rest (warlock's Pact Magic)."
+	},
+	"consumables": {
+		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions].",
+		"healing_potion": {
+			"heal": [
+				2,
+				4,
+				2
+			]
+		},
+		"antitoxin": {
+			"remove": [
+				"poisoned"
+			]
+		}
+	},
+	"condition_effects": {
+		"_doc": "What a condition does to engine checks (SRD, simplified outside combat): checks | skills {id} | saves {ability}: disadvantage | auto_fail.",
+		"poisoned": {
+			"checks": "disadvantage"
+		},
+		"frightened": {
+			"checks": "disadvantage"
+		},
+		"blinded": {
+			"skills": {
+				"perception": "disadvantage",
+				"investigation": "disadvantage"
+			}
+		},
+		"restrained": {
+			"saves": {
+				"dex": "disadvantage"
+			}
+		},
+		"incapacitated": {
+			"checks": "auto_fail"
+		},
+		"paralyzed": {
+			"checks": "auto_fail",
+			"saves": {
+				"str": "auto_fail",
+				"dex": "auto_fail"
+			}
+		},
+		"stunned": {
+			"checks": "auto_fail",
+			"saves": {
+				"str": "auto_fail",
+				"dex": "auto_fail"
+			}
+		},
+		"unconscious": {
+			"checks": "auto_fail",
+			"saves": {
+				"str": "auto_fail",
+				"dex": "auto_fail"
+			}
+		}
+	},
+	"trait_cantrips": {
+		"_doc": "Cantrips a race trait grants (the SRD import has no spell list in traits, v0.6.0).",
+		"infernal_legacy": [
+			"thaumaturgy"
+		]
 	}
 }

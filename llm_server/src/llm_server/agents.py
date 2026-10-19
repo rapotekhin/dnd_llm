@@ -143,7 +143,9 @@ async def request_check(
 
 
 async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str:
-    """Предложить движку последствие: move, damage, heal, coins, give_item, take_item, npc_attitude, flag.
+    """Предложить движку последствие: move, damage, heal, coins, give_item, take_item, npc_attitude, flag,
+    cast (игрок колдует: spell, slot_level), condition (наложить/снять состояние), use_feature (умение с
+    ограниченными использованиями), use_item (выпить зелье и т. п.).
     Движок проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы он применился."""
     t = ctx.deps
     if len(t.accepted) >= t.limits.max_effects:

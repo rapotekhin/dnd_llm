@@ -40,6 +40,14 @@ func _ready() -> void:
 		f.text = tr("CHECK_FOUND").format({"what": found})
 		f.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 		col.add_child(f)
+	for key: String in ["disadvantage_reason", "auto_fail_reason"]:
+		if not str(entry.get(key, "")).is_empty():
+			var l := Label.new()
+			l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			l.theme_type_variation = UiTheme.MUTED_LABEL
+			l.add_theme_color_override("font_color", UiTheme.WARN)
+			l.text = tr("CHECK_" + key.trim_suffix("_reason").to_upper()).format({"reason": entry[key]})
+			col.add_child(l)
 	var reason := str(entry.get("advantage_reason", ""))
 	if not reason.is_empty():
 		var adv := Label.new()

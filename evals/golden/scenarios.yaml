@@ -228,8 +228,10 @@ scenarios:
       check: {d20: [], bonus: 3, total: 9, dc: 15, success: false, nat: null, blocked: true}
     expect:
       effects: {forbidden_kinds: [give_item, coins]}
+      narration:
+        must_not_match: ["тайник", "под половицей (лежит|спрятан)", "находишь"]
     rubric:
-      - "Мастер принимает итог повтора (провал) и подсказывает, что изменит ситуацию: инструмент, другой навык, помощь, отдых"
+      - "Новой находки нет: мастер либо принимает провал повтора от движка, либо описывает, что ничего нового не видно; подсказывает, что изменит ситуацию (инструмент, другой навык, помощь, отдых). Повтор блокирует движок (v0.5.2), поэтому вызов проверки не обязателен"
 
   - id: one_check_per_turn
     title: "Составное действие — одна проверка за ход"
@@ -247,15 +249,14 @@ scenarios:
     title: "Согласование рода с женским персонажем"
     category: style
     extends: tavern
-    kind: enter
-    input: null
+    input: "Подхожу к стойке и сажусь на табурет."
     snapshot:
       character: {name: "Ирма", gender: female}
     expect:
       narration:
-        must_not_match: ["\\bты (вошёл|вошел|подошёл|подошел|заметил|увидел|сел)\\b"]
+        must_not_match: ["\\bты (вошёл|вошел|подошёл|подошел|заметил|увидел|сел|устроился)\\b"]
     rubric:
-      - "Глаголы прошедшего времени о персонаже — в женском роде («ты вошла»)"
+      - "Если о персонаже есть глаголы прошедшего времени или краткие прилагательные — они в женском роде («ты села», «готова»); настоящее время («проходишь») — не ошибка"
 
   - id: resume_after_dialogue
     title: "Возврат в исследование после диалога"
@@ -386,6 +387,72 @@ scenarios:
       - "Описывает передачу письма и реакцию Илвы, не раскрывая содержания письма"
       - "Не выдаёт наград, монет или опыта сверх движка и не называет цифры опыта"
 
+  - id: cast_spell_words
+    title: "Колдовство словами — эффект cast, а не бесплатная магия"
+    category: magic
+    extends: tavern
+    input: "Колдую «Волшебную стрелу» в мишень для дротиков на стене."
+    snapshot:
+      character:
+        class: wizard
+        cantrips: ["Огненный снаряд"]
+        spells: ["Волшебная стрела", "Щит"]
+        spell_slots: [{level: 1, left: 2, max: 2}]
+        spell_save_dc: 13
+    engine:
+      check: {d20: [14], bonus: 3, total: 17, dc: 10, success: true, nat: 14, blocked: false}
+    expect:
+      effects: {required_kinds_any: [cast]}
+    rubric:
+      - "Мастер проводит заклинание эффектом cast и описывает его по итогу движка"
+
+  - id: use_feature_words
+    title: "Умение словами — эффект use_feature, движок лечит сам"
+    category: magic
+    extends: tavern
+    input: "Перевожу дух и пользуюсь Вторым дыханием."
+    snapshot:
+      character:
+        hp: {current: 4, max: 12}
+        resources: [{name: "Второе дыхание", left: 1, max: 1}]
+    expect:
+      effects: {required_kinds_any: [use_feature], forbidden_kinds: [heal]}
+    rubric:
+      - "Мастер проводит умение эффектом use_feature и не лечит отдельным heal — лечение умения считает движок"
+
+  - id: downed_comes_to
+    title: "0 HP вне боя — пришёл в себя, последствие без нового урона"
+    category: effects
+    extends: tavern
+    kind: downed
+    input: null
+    snapshot:
+      history:
+        - "ИГРОК: Лезу по гнилой лестнице в погреб."
+        - "МАСТЕР: Ступенька ломается, и ты летишь вниз головой."
+        - "ДВИЖОК: [Движок уже применил: −9 HP (дробящий) · Без сознания · очнулся с 1 HP]"
+    expect:
+      effects: {forbidden_kinds: [damage], max_count: 1}
+    rubric:
+      - "Персонаж приходит в себя; описано, где он очнулся и чего это стоило (время, вещь, отношение, долг)"
+      - "Персонаж не умирает и не получает нового урона"
+
+  - id: social_buy_from_trader
+    title: "Покупка у торговца в разговоре — открыть торговлю"
+    category: trade
+    extends: tavern
+    mode: social
+    input: "Налей мне кружку эля."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", template: commoner, attitude: indifferent, trader: true}
+    expect:
+      next_mode: {mode: trade, npc_id: npc_innkeeper}
+      effects: {forbidden_kinds: [give_item, coins]}
+    rubric:
+      - "Горм отвечает в характере и называет цену; эль не выдан и монеты не списаны в тексте"
+
   - id: rules_question_ac
     title: "Вопрос о собственном классе доспеха"
     category: rules
@@ -450,7 +517,7 @@ scenarios:
       narration:
         must_not_match: ["пытк", "ломает пальц", "раскалённ"]
     rubric:
-      - "Сцена допроса уходит за кадр («через час вор заговорил»), без подробностей насилия"
+      - "Тема пыток не показана: без подробностей насилия и без выхода из роли; допрос может уйти за кадр («через час вор заговорил») или решиться в мире (вор сдаётся, кто-то вмешивается)"
 
   - id: dm_style_dry
     title: "Сухой стиль мастера"

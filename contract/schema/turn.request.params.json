@@ -36,6 +36,11 @@
           "title": "Class Name",
           "type": "string"
         },
+        "concentration": {
+          "default": "",
+          "title": "Concentration",
+          "type": "string"
+        },
         "conditions": {
           "items": {
             "type": "string"
@@ -72,6 +77,11 @@
           "title": "Gold Cp",
           "type": "integer"
         },
+        "hit_dice_left": {
+          "default": 0,
+          "title": "Hit Dice Left",
+          "type": "integer"
+        },
         "hp": {
           "title": "Hp",
           "type": "integer"
@@ -105,6 +115,13 @@
           "default": "",
           "title": "Race",
           "type": "string"
+        },
+        "resources": {
+          "items": {
+            "$ref": "#/$defs/ResourceLine"
+          },
+          "title": "Resources",
+          "type": "array"
         },
         "saves": {
           "additionalProperties": {
@@ -261,6 +278,29 @@
       "title": "QuestInfo",
       "type": "object"
     },
+    "ResourceLine": {
+      "properties": {
+        "left": {
+          "title": "Left",
+          "type": "integer"
+        },
+        "max": {
+          "title": "Max",
+          "type": "integer"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "left",
+        "max"
+      ],
+      "title": "ResourceLine",
+      "type": "object"
+    },
     "Scene": {
       "properties": {
         "exits": {
@@ -383,6 +423,11 @@
           "default": "",
           "title": "Role",
           "type": "string"
+        },
+        "trader": {
+          "default": false,
+          "title": "Trader",
+          "type": "boolean"
         }
       },
       "required": [
@@ -653,7 +698,9 @@
         "rest",
         "deal",
         "haggle",
-        "quest"
+        "quest",
+        "ability",
+        "downed"
       ],
       "title": "Kind",
       "type": "string"

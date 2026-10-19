@@ -22,15 +22,21 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 		return {"error": "unknown save: %s" % save}
 
 	var rolls: Array[int] = [rng.randi_range(1, 20)]
-	# The LLM may suggest a situational advantage, but only with a reason that the card shows.
-	if not str(params.get("advantage_reason", "")).is_empty():
+	# The LLM may suggest a situational advantage, but only with a reason that the card shows. Disadvantage comes
+	# from the engine (conditions, ConditionRules); both cancel out (5e).
+	var adv := params.get("advantage_reason") != null and not str(params.get("advantage_reason", "")).is_empty()
+	var dis := not str(params.get("disadvantage_reason", "")).is_empty()
+	if adv != dis:
 		rolls.append(rng.randi_range(1, 20))
-	var nat: int = rolls.max()
+	var nat: int = rolls.max() if adv or not dis else rolls.min()
 	var dc := int(params["dc"]) if params.has("dc") else int(tiers[tier])
 	var total := nat + bonus
 	# House rule (ADR-0008 §2): natural 20 / 1 always succeed / fail, skill checks included.
 	var success := nat == 20 or (nat != 1 and total >= dc)
-	return {
+	var auto_fail := str(params.get("auto_fail_reason", ""))
+	if not auto_fail.is_empty():
+		success = false
+	var out := {
 		"check_id": check_id,
 		"rolls": rolls,
 		"bonus": bonus,
@@ -40,6 +46,11 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 		"nat": nat,
 		"blocked": false,
 	}
+	if dis:
+		out["disadvantage_reason"] = str(params["disadvantage_reason"])
+	if not auto_fail.is_empty():
+		out["auto_fail_reason"] = auto_fail
+	return out
 
 
 ## The character's total bonus for engine.check params: skill bonus or save bonus from the sheet.

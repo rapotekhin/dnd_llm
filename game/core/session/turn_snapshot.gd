@@ -17,7 +17,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		var n := world.npc(id)
 		npcs.append({"npc_id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 			"gender": n.get("gender", "other"), "description": n.get("description", ""),
-			"personality": n.get("personality", ""), "attitude": s.attitude(id)})
+			"personality": n.get("personality", ""), "attitude": s.attitude(id), "trader": bool(n.get("trader", false))})
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
 		summaries["location"] = s.summaries["location:" + loc_id]
@@ -80,6 +80,10 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"abilities": c.get("abilities", {}), "proficiency_bonus": int(c.get("prof_bonus", 2)),
 		"skill_proficiencies": c.get("skill_profs", []), "speed": int(c.get("speed", 30)), "equipped": equipped,
 		"backstory": str(c.get("story", "")),
+		"resources": FeatureUses.lines(c, data).map(func(r: Dictionary) -> Dictionary:
+			return {"name": r["name"], "left": r["left"], "max": r["max"]}),
+		"hit_dice_left": ExplorationRules.hit_dice_left(c),
+		"concentration": str(data["spells"].get(str(c.get("concentration", "")), {}).get("name", "")),
 	}
 	if not str(c.get("spell_ability", "")).is_empty():
 		var prepared := CharacterRules.spell_names(c, data, "prepared")

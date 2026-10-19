@@ -53,7 +53,7 @@ func long_rest() -> String:
 	var why := ExplorationRules.can_rest(session, Catalog.data["world"])
 	if not why.is_empty():
 		return why
-	var lines := ExplorationRules.long_rest(session, Catalog.data["world"])
+	var lines := ExplorationRules.long_rest(session, Catalog.data)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
@@ -139,6 +139,81 @@ func level_up(picks: Dictionary) -> String:
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	return ""
+
+
+## «Колдовать» on the sheet (SpellRules): the engine checks and spends the slot, the master narrates the cast
+## (kind=ability). `slot` 0 = the lowest fitting one. "" or a reason for the toast.
+func cast(spell_id: String, slot: int = 0) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return tr("ABILITY_BUSY")
+	var chk := SpellRules.check(session.character, Catalog.data, spell_id, slot)
+	if chk.has("reason"):
+		return str(chk["reason"])
+	var lines := SpellRules.cast(session.character, Catalog.data, chk["spell_id"], int(chk["slot"]))
+	_ability(lines, "Игрок колдует " + SpellRules.describe(Catalog.data, chk["spell_id"], int(chk["slot"])) +
+		". Движок уже потратил ячейку — не вызывай cast сам; опиши, как это выглядит и что происходит.")
+	return ""
+
+
+## «Использовать» a feature with limited uses on the sheet (FeatureUses). "" or a reason.
+func use_feature(resource_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return tr("ABILITY_BUSY")
+	var why := FeatureUses.can_use(session.character, Catalog.data, resource_id, 1)
+	if not why.is_empty():
+		return why
+	var lines := FeatureUses.use(session.character, Catalog.data, resource_id, 1, session.rng)
+	_ability(lines, "Игрок использует умение «%s». Движок уже учёл использование: %s. Опиши, как это выглядит." %
+		[FeatureUses.display_name(session.character, Catalog.data, resource_id), ", ".join(lines)])
+	return ""
+
+
+## «Использовать» an item on the sheet (ItemRules consumables). "" or a reason.
+func use_item(item_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return tr("ABILITY_BUSY")
+	var why := ItemRules.can_use(session.character, Catalog.data, session.items, item_id)
+	if not why.is_empty():
+		return why
+	var lines := ItemRules.use(session.character, Catalog.data, session.items, item_id, session.rng)
+	_ability(lines, "Игрок использует предмет. Движок уже применил: %s. Опиши коротко." % ", ".join(lines))
+	return ""
+
+
+func _ability(lines: Array[String], facts: String) -> void:
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("ability", facts)
+
+
+## «Короткий отдых» (ExplorationRules): an hour, `dice` hit dice; no master turn — the line goes to the history.
+func short_rest(dice: int) -> String:
+	if session == null or is_busy():
+		return "REST_BUSY"
+	var why := ExplorationRules.can_short_rest(session, Catalog.data)
+	if not why.is_empty():
+		return why
+	var lines := ExplorationRules.short_rest(session, Catalog.data, dice, session.rng)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	return ""
+
+
+## The prepared spells of the day (SpellRules): once after each long rest. "" or a localization key.
+func prepare_spells(ids: Array) -> String:
+	if session == null or is_busy():
+		return "PREP_BUSY"
+	var why := SpellRules.prepare_error(session.character, Catalog.data, session.day, ids)
+	if not why.is_empty():
+		return why
+	SpellRules.prepare(session.character, ids, session.day)
+	_add(GameSession.effect_entry(["Подготовлены заклинания: %d" % ids.size()]))
+	EventBus.state_changed.emit()
 	return ""
 
 
@@ -340,6 +415,13 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 		options.append(str(o))
 	_set_options(options)
 
+	if int(s.character["hp"]) <= 0:
+		var out := ExplorationRules.knock_out(s)
+		_add(GameSession.effect_entry(out))
+		_log("События: " + ", ".join(out))
+		_end_conversation()
+		return "downed"
+
 	if s.room_id != room_before:
 		ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 		_end_conversation()
@@ -437,7 +519,11 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 		return JsonRpcPeer.fail(-32041, "no such active turn")
 	if TradeRules.is_haggle(session, Catalog.data, params):
 		return _haggle_check(params)
-	params.erase("dc")  # the DC number is the engine's
+	params.erase("dc")  # the DC number and condition effects are the engine's
+	var mods := ConditionRules.check_mods(session.character, Catalog.data, params)
+	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
+	params["disadvantage_reason"] = ", ".join((mods["disadvantage"] as Array).map(cond_name))
+	params["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
 	var room := session.room_id
 	var result: Dictionary
 	var lock := ExplorationRules.locked(session, params, room)

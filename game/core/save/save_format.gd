@@ -11,8 +11,9 @@ extends RefCounted
 ## v5 (0.5.2): check locks, found secrets, visited rooms, the day.
 ## v6 (0.5.3): merchants — purses, stock left, haggling.
 ## v7 (0.5.4): completed quests.
+## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 
-const SAVE_VERSION := 7
+const SAVE_VERSION := 8
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -27,6 +28,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	4: _v4_to_v5,
 	5: _v5_to_v6,
 	6: _v6_to_v7,
+	7: _v7_to_v8,
 }
 
 
@@ -96,3 +98,17 @@ static func _v5_to_v6(data: Dictionary, _ctx: Dictionary) -> void:
 ## A 0.5.3 game had no quests: none done.
 static func _v6_to_v7(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["quests_done"] = []
+
+
+## A 0.5.4 character had no tracked feature uses or condition ends: everything fresh, conditions until a long rest.
+static func _v7_to_v8(data: Dictionary, _ctx: Dictionary) -> void:
+	var s: Dictionary = data["session"]
+	var c: Dictionary = s.get("character", {})
+	c["resources_used"] = {}
+	var ends := {}
+	for id: Variant in c.get("conditions", []):
+		ends[str(id)] = "long_rest"
+	c["condition_ends"] = ends
+	c["concentration"] = ""
+	c["prepared_day"] = 1
+	s["short_rests"] = 0

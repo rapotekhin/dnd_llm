@@ -46,6 +46,11 @@ func run() -> void:
 	var tabs: TabContainer = sheet.find_children("*", "TabContainer", true, false)[0]
 	tabs.current_tab = 1
 	await shot("sheet_after")
+	var scroll: ScrollContainer = tabs.get_child(1)
+	scroll.scroll_vertical = 100000
+	await frames(3)
+	await shot("sheet_spells")
+	step("cast buttons on the sheet", find(sheet, "Cast_" + str(gs.session.character["spells"]["prepared"][0])) != null)
 
 
 func _click(view: Control, node_name: String) -> void:

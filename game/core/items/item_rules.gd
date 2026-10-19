@@ -76,3 +76,42 @@ static func check_generated(items_data: Dictionary, item: Dictionary, level: int
 	if def["name"].is_empty():
 		return {"ok": false, "reason": "у предмета нет названия"}
 	return {"ok": true, "def": def}
+
+
+## What using an item does (rules.json `consumables`): {"heal": [n, sides, bonus], "remove": [conditions]}; {} = not usable.
+static func consumable(data: Dictionary, id: String) -> Dictionary:
+	var all: Dictionary = data["rules"].get("consumables", {})
+	return all.get(id, {}) if not id.begins_with("_") else {}
+
+
+## "" when the character can use the item now, otherwise the reason (for the master).
+static func can_use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, pending: int = 0) -> String:
+	if int(c.get("inventory", {}).get(id, 0)) - pending <= 0:
+		return "у персонажа нет %s" % display_name(data["items"], session_items, id)
+	if consumable(data, id).is_empty():
+		return "%s нельзя использовать так — это не расходник с действием движка" % display_name(data["items"], session_items, id)
+	return ""
+
+
+## Uses one item (can_use first): removes it, heals, lifts conditions. Returns the chat lines.
+static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, rng: RandomNumberGenerator) -> Array[String]:
+	var fx := consumable(data, id)
+	var lines: Array[String] = ["Использовано: %s" % display_name(data["items"], session_items, id)]
+	var left := int(c["inventory"][id]) - 1
+	if left > 0:
+		c["inventory"][id] = left
+	else:
+		(c["inventory"] as Dictionary).erase(id)
+	if fx.has("heal"):
+		var h: Array = fx["heal"]
+		var amount := int(h[2])
+		for i in int(h[0]):
+			amount += rng.randi_range(1, int(h[1]))
+		var before := int(c["hp"])
+		c["hp"] = mini(int(c["max_hp"]), before + amount)
+		lines.append("+%d HP" % (int(c["hp"]) - before))
+	for cond: Variant in fx.get("remove", []):
+		if ConditionRules.has(c, str(cond)):
+			ConditionRules.remove(c, str(cond))
+			lines.append("снято: %s" % str(data["rules"]["conditions"].get(str(cond), cond)).get_slice(":", 0))
+	return lines

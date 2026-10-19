@@ -1,5 +1,40 @@
 {
   "$defs": {
+    "CastEffect": {
+      "additionalProperties": false,
+      "description": "The player casts a spell (0.6.0): the engine checks it is ready and spends the slot.",
+      "properties": {
+        "kind": {
+          "const": "cast",
+          "default": "cast",
+          "title": "Kind",
+          "type": "string"
+        },
+        "slot_level": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Slot Level"
+        },
+        "spell": {
+          "title": "Spell",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spell"
+      ],
+      "title": "CastEffect",
+      "type": "object"
+    },
     "CoinsEffect": {
       "additionalProperties": false,
       "properties": {
@@ -23,6 +58,59 @@
         "reason"
       ],
       "title": "CoinsEffect",
+      "type": "object"
+    },
+    "ConditionEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "condition": {
+          "enum": [
+            "blinded",
+            "charmed",
+            "frightened",
+            "grappled",
+            "incapacitated",
+            "invisible",
+            "paralyzed",
+            "poisoned",
+            "prone",
+            "restrained",
+            "stunned",
+            "unconscious"
+          ],
+          "title": "Condition",
+          "type": "string"
+        },
+        "kind": {
+          "const": "condition",
+          "default": "condition",
+          "title": "Kind",
+          "type": "string"
+        },
+        "on": {
+          "default": true,
+          "title": "On",
+          "type": "boolean"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        },
+        "until": {
+          "default": "long_rest",
+          "enum": [
+            "short_rest",
+            "long_rest"
+          ],
+          "title": "Until",
+          "type": "string"
+        }
+      },
+      "required": [
+        "condition"
+      ],
+      "title": "ConditionEffect",
       "type": "object"
     },
     "DamageEffect": {
@@ -333,6 +421,53 @@
       ],
       "title": "TakeItemEffect",
       "type": "object"
+    },
+    "UseFeatureEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 1,
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "feature": {
+          "title": "Feature",
+          "type": "string"
+        },
+        "kind": {
+          "const": "use_feature",
+          "default": "use_feature",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "feature"
+      ],
+      "title": "UseFeatureEffect",
+      "type": "object"
+    },
+    "UseItemEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "use_item",
+          "default": "use_item",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_id"
+      ],
+      "title": "UseItemEffect",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -340,14 +475,18 @@
     "effect": {
       "discriminator": {
         "mapping": {
+          "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
+          "condition": "#/$defs/ConditionEffect",
           "damage": "#/$defs/DamageEffect",
           "flag": "#/$defs/FlagEffect",
           "give_item": "#/$defs/GiveItemEffect",
           "heal": "#/$defs/HealEffect",
           "move": "#/$defs/MoveEffect",
           "npc_attitude": "#/$defs/NpcAttitudeEffect",
-          "take_item": "#/$defs/TakeItemEffect"
+          "take_item": "#/$defs/TakeItemEffect",
+          "use_feature": "#/$defs/UseFeatureEffect",
+          "use_item": "#/$defs/UseItemEffect"
         },
         "propertyName": "kind"
       },
@@ -375,6 +514,18 @@
         },
         {
           "$ref": "#/$defs/FlagEffect"
+        },
+        {
+          "$ref": "#/$defs/CastEffect"
+        },
+        {
+          "$ref": "#/$defs/ConditionEffect"
+        },
+        {
+          "$ref": "#/$defs/UseFeatureEffect"
+        },
+        {
+          "$ref": "#/$defs/UseItemEffect"
         }
       ],
       "title": "Effect"

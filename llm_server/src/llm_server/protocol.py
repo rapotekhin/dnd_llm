@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.5.0"
+PROTOCOL_VERSION = "0.6.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -115,7 +115,9 @@ class StatusResult(_Out):
 Mode = Literal["exploration", "social", "trade"]
 # deal / haggle (0.4.0): the engine already made the deal or rolled the haggle; `input` holds its fact lines.
 # quest (0.5.0): the engine completed a pack quest and gave the reward; `input` is what happened and the reward.
-TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest"]
+# ability (0.6.0): the player cast a spell, used a feature or an item by a button — the engine applied it.
+# downed (0.6.0): the character dropped to 0 HP outside combat and came to with 1 HP; the master tells the cost.
+TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -133,6 +135,7 @@ class SceneNpc(_In):
     description: str = ""
     attitude: int = 0  # -3 hostile … 0 neutral … +3 friendly
     personality: str = ""
+    trader: bool = False  # sells goods: buying them goes through trade mode (0.6.0)
 
 
 class Scene(_In):
@@ -158,6 +161,12 @@ class InventoryLine(_In):
 
 class SpellSlots(_In):
     level: int
+    left: int
+    max: int
+
+
+class ResourceLine(_In):
+    name: str
     left: int
     max: int
 
@@ -191,6 +200,9 @@ class CharacterSheet(_In):
     spell_slots: list[SpellSlots] = Field(default_factory=list)
     spell_save_dc: int | None = None
     backstory: str = ""  # the player's or the ready-made character's story (0.2.2)
+    resources: list[ResourceLine] = Field(default_factory=list)  # feature uses left (0.6.0)
+    hit_dice_left: int = 0
+    concentration: str = ""  # the spell the character concentrates on
 
 
 class HistoryLine(_In):
@@ -389,6 +401,37 @@ class NpcAttitudeEffect(_Out):
     reason: str
 
 
+ConditionId = Literal["blinded", "charmed", "frightened", "grappled", "incapacitated", "invisible", "paralyzed",
+                      "poisoned", "prone", "restrained", "stunned", "unconscious"]
+
+
+class CastEffect(_Out):
+    """The player casts a spell (0.6.0): the engine checks it is ready and spends the slot."""
+
+    kind: Literal["cast"] = "cast"
+    spell: str  # id or name as in the sheet
+    slot_level: int | None = Field(default=None, ge=1, le=5)  # None = the lowest fitting slot
+
+
+class ConditionEffect(_Out):
+    kind: Literal["condition"] = "condition"
+    condition: ConditionId
+    on: bool = True  # False lifts it
+    until: Literal["short_rest", "long_rest"] = "long_rest"
+    reason: str = ""
+
+
+class UseFeatureEffect(_Out):
+    kind: Literal["use_feature"] = "use_feature"
+    feature: str  # a feature with limited uses, by name as in the sheet
+    amount: int = Field(default=1, ge=1, le=30)  # points (Ki, Lay on Hands)
+
+
+class UseItemEffect(_Out):
+    kind: Literal["use_item"] = "use_item"
+    item_id: str
+
+
 class FlagEffect(_Out):
     kind: Literal["flag"] = "flag"
     flag: str = Field(pattern=r"^[a-z][a-z0-9_]{1,40}$")
@@ -396,7 +439,8 @@ class FlagEffect(_Out):
 
 
 Effect = Annotated[
-    MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect,
+    MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
+    | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect,
     Field(discriminator="kind"),
 ]
 

@@ -1,4 +1,5 @@
 keys,ru
+ABILITY_BUSY,Сейчас нельзя: мастер думает или нет связи
 ABILITY_CHA,Харизма
 ABILITY_CON,Телосложение
 ABILITY_DEX,Ловкость
@@ -21,7 +22,9 @@ BACKEND_TOOLTIP_READY,"{url}
 BANNER_NO_MASTER,"Нет связи с мастером — переподключаюсь. Игра сохранена, ходы недоступны."
 BTN_BACK,Назад
 BTN_BACK_TO_WORLD,К выбору мира
+BTN_CANCEL,Отмена
 BTN_CANCEL_TURN,Отменить ход
+BTN_CAST,Колдовать
 BTN_CHARACTER_SHEET,Лист персонажа
 BTN_CLEAR_CART,Очистить
 BTN_CLOSE,Закрыть
@@ -45,8 +48,11 @@ BTN_LONG_REST_COST,Долгий отдых ({cost})
 BTN_MAP,Карта
 BTN_MENU,Меню
 BTN_NEW_GAME,Новая игра
+BTN_PREPARE,Подготовить заклинания
+BTN_PREP_CONFIRM,Подготовить
 BTN_QUEST,Задание: {action}
 BTN_QUIT,Выход
+BTN_REST_CONFIRM,Отдохнуть
 BTN_RESUME,Продолжить
 BTN_RETRY,Повторить
 BTN_RETRY_TURN,↻ Повторить ход
@@ -54,12 +60,14 @@ BTN_SAVE,Сохранить
 BTN_SAVE_AND_CHECK,Сохранить и проверить
 BTN_SEND,Действовать
 BTN_SETTINGS,Настройки
+BTN_SHORT_REST,Короткий отдых
 BTN_TALK_TO,Поговорить: {name}
 BTN_TO_MENU,В меню
 BTN_TO_TALK,К разговору
 BTN_TO_TRADE,Торговать
 BTN_TRADE_WITH,Торговать: {name}
 BTN_UNEQUIP,Снять
+BTN_USE,Использовать
 CC_BACKGROUND_SKILLS,Навыки: {skills}.
 CC_CANTRIPS,Заговоры — выберите {n}:
 CC_CLASS_CASTER,"Заклинатель, базовая характеристика — {ability}."
@@ -119,6 +127,8 @@ CC_STORY_PLACEHOLDER,"Кто вы, откуда и зачем пришли"
 CC_TITLE,Создание персонажа
 CC_UNNAMED,Без имени
 CHECK_ADVANTAGE,Преимущество: {reason}
+CHECK_AUTO_FAIL,Автопровал: {reason}
+CHECK_DISADVANTAGE,Помеха: {reason}
 CHECK_FOUND,Найдено: {what}
 CHECK_HAGGLE_LOST,Торг не удался — до завтра цены не сбить
 CHECK_HAGGLE_WON,"Торг: −{pct}% к покупкам, +{pct}% к продаже"
@@ -238,6 +248,12 @@ OPT_RESOLUTION,Размер окна
 PARTNER_LINE,{role} · {race} · отношение: {attitude}
 PLACEHOLDER_ACTION,Что вы делаете?
 PLACEHOLDER_SAY,Что вы говорите или делаете? ({name} слушает)
+PREP_ALREADY_TODAY,Заклинания на сегодня уже подготовлены — после долгого отдыха
+PREP_BUSY,Сейчас нельзя: мастер думает
+PREP_ERR_COUNT,"Нужно ровно столько заклинаний, сколько можно подготовить"
+PREP_ERR_PICKS,Выберите заклинания из списка
+PREP_NOT_PREPARER,Этот класс не готовит заклинания
+PREP_TITLE,Подготовленные заклинания на сегодня: выберите {n}
 QUEST_BUSY,Сейчас нельзя: мастер думает или нет связи
 QUEST_DONE,Задание уже выполнено
 QUEST_IN_CONVERSATION,Сначала закончите разговор
@@ -245,8 +261,11 @@ QUEST_UNKNOWN,Такого задания нет
 QUEST_WRONG_PLACE,Задание выполняется в другом месте
 REST_BUSY,Сейчас нельзя отдыхать
 REST_IN_CONVERSATION,Сначала закончите разговор
+REST_KIND_LONG,долгий отдых
+REST_KIND_SHORT,короткий отдых
 REST_NOT_SAFE,Здесь небезопасно отдыхать
 REST_NO_MONEY,Не хватает денег на ночлег
+REST_SHORT_LIMIT,Коротких отдыхов сегодня больше не будет — нужен долгий отдых
 SAVE_CHA,Спасбросок Харизмы
 SAVE_CON,Спасбросок Телосложения
 SAVE_DEX,Спасбросок Ловкости
@@ -255,11 +274,15 @@ SAVE_STR,Спасбросок Силы
 SAVE_WIS,Спасбросок Мудрости
 SHEET_ABILITIES,Характеристика · модификатор · спасбросок (● — владение)
 SHEET_ABILITY_ROW,{name} {score} ({mod}) · спасбросок {save}
+SHEET_CONCENTRATION,Концентрация: {spell}
 SHEET_EQUIPPED,Надето и в руках
+SHEET_HIT_DICE,Кости хитов: {left} из {max}
 SHEET_LANGUAGES,Языки: {list}
 SHEET_LINE,"{race}, {class}, {level} уровень · {background}"
 SHEET_PASSIVE,пассивная Внимательность {n}
 SHEET_PROF_SPEED,Бонус мастерства +{prof} · скорость {speed} футов
+SHEET_RESOURCE,{name}: {left} из {max} (восстановление: {rest})
+SHEET_RESOURCES,Умения с ограниченными использованиями
 SHEET_SKILLS,"Навыки (● — владение, ●● — компетентность)"
 SHEET_SLOT,{level} круг: {left}/{max}
 SHEET_SPELLCASTING,"Заклинания: {ability}, Сл спасброска {dc}, бонус атаки {attack}"
@@ -270,7 +293,11 @@ SHEET_SPELLS_PREPARED,Подготовлены
 SHEET_TAB_FEATURES,Умения и заклинания
 SHEET_TAB_GEAR,Снаряжение
 SHEET_TAB_STATS,Характеристики
+SHORT_REST_DICE,Потратить кости хитов (к{die} + Телосложение): осталось {left}
+SHORT_REST_HINT,Восстановятся умения «до короткого отдыха»; сегодня осталось отдыхов: {left}
+SHORT_REST_TITLE,Короткий отдых — час
 SIDE_COINS,Монеты: {coins}
+SIDE_CONCENTRATION,Концентрация: {spell}
 SIDE_CONDITIONS,Состояния: {list}
 SIDE_DAY,День {day}
 SIDE_EXITS,Выходы
@@ -301,6 +328,8 @@ SKILL_STEALTH,Скрытность
 SKILL_SURVIVAL,Выживание
 SLOT_ARMOR,Доспех
 SLOT_AUTOSAVE,Автосохранение
+SLOT_CANTRIP,заговор
+SLOT_CIRCLE,{n} круг (осталось {left})
 SLOT_EMPTY,пусто
 SLOT_HINT,Ходов: {turns} · {date}
 SLOT_MAIN_HAND,Основная рука
