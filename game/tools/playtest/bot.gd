@@ -43,6 +43,11 @@ func run() -> void:
 	var c: Dictionary = gs.session.character
 	step("info: end state", true, "level %d, xp %d, HP %d/%d, %d cp, day %d, room %s, quests %s" % [c["level"], c["xp"], c["hp"],
 		c["max_hp"], c["gold_cp"], gs.session.day, gs.session.room_id, gs.session.quests_done])
+	if CombatRules.active(gs.session):
+		var cb: Dictionary = gs.session.combat
+		step("info: fight", true, "turn %s, round %d, outcome '%s', busy %s, playing %s, retry %s, economy %s, foes %s" % [CombatRules.current(gs.session),
+			cb["round"], cb.get("outcome", ""), gs.busy_turn, gs.combat_playing, gs.can_retry(), cb.get("economy", {}),
+			CombatRules.enemies(gs.session, false).map(func(id: String) -> String: return "%s %s col %d hp %d" % [id, cb["fighters"][id]["status"], cb["fighters"][id]["col"], cb["fighters"][id]["hp"]])])
 	await shot("end")
 
 
@@ -64,6 +69,8 @@ func _act() -> String:
 	var s: GameSession = gs.session
 	var c := s.character
 	var w := WorldView.new(data["world"])
+	if CombatRules.active(s):
+		return await _combat_step(s)
 	if LevelUp.can_level_up(c, data):
 		gs.level_up(LevelUp.default_picks(c, data))
 		return "level_up"
@@ -150,6 +157,35 @@ func _act() -> String:
 	return "wait"
 
 
+## A fight: finish when it is over (take all loot), else on the player's turn attack, cast or step closer.
+func _combat_step(s: GameSession) -> String:
+	if not str(s.combat.get("outcome", "")).is_empty():
+		if str(s.combat["outcome"]) == "dead":
+			gs.load_from(gs.COMBAT_SAVE)
+			return "died_and_loaded"
+		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+		gs.finish_combat((s.combat.get("loot", []) as Array).map(func(l: Dictionary) -> String: return l["item_id"]))
+		return "combat_end"
+	if not CombatRules.is_player_turn(s) or gs.is_busy():
+		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+		return "combat_wait"
+	for id: String in CombatRules.enemies(s):
+		if CombatRules.can_attack(s, data, id).is_empty():
+			gs.combat_attack(id)
+			return "combat_attack"
+	var spell: Variant = _pick(SpellRules.ready(s.character))
+	var foe: Variant = _pick(CombatRules.enemies(s))
+	if spell != null and foe != null and CombatRules.can_cast(s, data, spell, 0, foe).is_empty() and rng.randf() < 0.5:
+		gs.combat_cast(spell, 0, foe)
+		return "combat_cast"
+	if foe != null and int(CombatRules.economy(s).get("move", 0)) > 0 and int(CombatRules.fighter(s, foe)["col"]) != int(CombatRules.player(s)["col"]):
+		var dir := 1 if int(CombatRules.fighter(s, foe)["col"]) > int(CombatRules.player(s)["col"]) else -1
+		gs.combat_move(dir)
+		return "combat_move"
+	gs.combat_end_turn()
+	return "combat_end_turn"
+
+
 ## "" when the session is consistent, otherwise what broke.
 func _invariants() -> String:
 	var s: GameSession = gs.session
@@ -157,7 +193,7 @@ func _invariants() -> String:
 	var w := WorldView.new(data["world"])
 	if counts.has("save_mismatch"):
 		return "save → load changed the session"
-	if int(c["hp"]) < 1 or int(c["hp"]) > int(c["max_hp"]):
+	if int(c["hp"]) < (0 if CombatRules.active(s) else 1) or int(c["hp"]) > int(c["max_hp"]):
 		return "HP %d of %d" % [c["hp"], c["max_hp"]]
 	if int(c["gold_cp"]) < 0:
 		return "coins %d" % c["gold_cp"]
@@ -174,6 +210,13 @@ func _invariants() -> String:
 		return "hit dice used %d" % c["hit_dice_used"]
 	if w.room(s.room_id).is_empty():
 		return "room %s" % s.room_id
+	if CombatRules.active(s):
+		for id: String in s.combat["fighters"]:
+			var f: Dictionary = s.combat["fighters"][id]
+			if absi(int(f.get("col", 0))) > CombatRules.edge(data) or int(f.get("hp", 0)) < 0:
+				return "fighter %s at col %d hp %d" % [id, f.get("col", 0), f.get("hp", 0)]
+		if s.mode != GameSession.MODE_COMBAT:
+			return "a fight without combat mode"
 	if s.in_conversation() and not w.npcs_in(s.room_id).has(s.npc_id):
 		return "talking to %s who is not here" % s.npc_id
 	if s.mode == GameSession.MODE_TRADE and not w.is_trader(s.npc_id):

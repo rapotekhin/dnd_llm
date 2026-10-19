@@ -46,7 +46,7 @@ _sleep = asyncio.sleep  # tests replace it to skip the pauses
 
 async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     usage = Usage(model="stub")
-    if params.kind in ("deal", "haggle", "quest", "ability", "downed"):
+    if params.kind in ("deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death"):
         return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
     if params.kind != "action":
         return TurnResult(turn_id=params.turn_id, narration="Вы осматриваетесь.", usage=usage)
@@ -131,7 +131,7 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     services = session.services
     assert services.model_factory is not None
     model = _model_id(session, params.model)
-    if params.mode != "exploration" and scene_npc(params, params.npc_id) is None:
+    if params.mode in ("social", "trade") and scene_npc(params, params.npc_id) is None:
         raise RpcError(ErrorCode.INVALID_PARAMS, f"mode {params.mode} needs npc_id of an NPC in the scene")
     agent = build_turn_agent(services.model_factory(model), system_prompt_for(params))
     user_prompt = turn_user_prompt(params)

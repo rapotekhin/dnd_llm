@@ -65,9 +65,6 @@ def load_scenarios(path: Path = SCENARIOS) -> list[dict[str, Any]]:
 def unsupported(sc: dict[str, Any]) -> str:
     """Why protocol 0.2.0 cannot run this scenario fairly, or ""."""
     expect = sc.get("expect", {})
-    nm = expect.get("next_mode")
-    if isinstance(nm, dict) and nm.get("mode") == "combat":
-        return "боевой режим — M3"
     if expect.get("check", {}).get("contest_npc"):
         return "состязания с NPC — engine.check без contest до v0.5"
     return ""
@@ -109,7 +106,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         "mode": mode,
         "kind": sc.get("kind", "action"),
         "input": sc.get("input") or "",
-        "npc_id": npcs[0]["npc_id"] if mode != "exploration" and npcs else None,
+        "npc_id": npcs[0]["npc_id"] if mode in ("social", "trade") and npcs else None,
         "snapshot": {
             "world": world,
             "scene": {
@@ -130,6 +127,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
             "summaries": summaries,
             "limits": {k: v for k, v in snap.get("limits", {}).items() if k in ("max_checks", "max_effects")},
             "trade": snap.get("trade"),  # already in the protocol shape (TradeInfo)
+            "combat": snap.get("combat"),  # already in the protocol shape (CombatInfo)
         },
     }
     return TurnRequestParams.model_validate(params)

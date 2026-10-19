@@ -13,7 +13,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 	for e: String in world.exits(s.room_id):
 		exits.append({"room_id": e, "name": world.room(e).get("name", e)})
 	var npcs: Array[Dictionary] = []
-	for id: String in world.npcs_in(s.room_id):
+	for id: String in s.npcs_alive(world.npcs_in(s.room_id)):
 		var n := world.npc(id)
 		npcs.append({"npc_id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 			"gender": n.get("gender", "other"), "description": n.get("description", ""),
@@ -21,7 +21,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
 		summaries["location"] = s.summaries["location:" + loc_id]
-	for id: String in world.npcs_in(s.room_id):
+	for id: String in s.npcs_alive(world.npcs_in(s.room_id)):
 		if s.summaries.has("dialogue:" + id):
 			summaries["dialogue:" + id] = s.summaries["dialogue:" + id]
 	var out := {
@@ -39,6 +39,8 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"max_effects": int(data["rules"]["turn_limits"]["max_effects"])},
 	}
 	out["quests"] = XpRules.quest_list(s, data["world"])
+	if CombatRules.active(s):
+		out["combat"] = CombatRules.snapshot(s, data)
 	if s.mode == GameSession.MODE_TRADE and not s.npc_id.is_empty():
 		out["trade"] = TradeRules.info(s, data, s.npc_id)
 	return out

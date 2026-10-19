@@ -180,6 +180,14 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 				e.append("комната %s: секрет — уникальный id, dc (число), text, skill perception | investigation" % id)
 			else:
 				ids[sec["id"]] = true
+		var enc: Variant = r.get("encounter")
+		if enc != null:
+			if not (enc is Dictionary) or str(enc.get("id", "")).is_empty() or not (enc.get("enemies") is Array) or (enc["enemies"] as Array).is_empty():
+				e.append("комната %s: encounter — {id, enemies: [{monster, count}]}" % id)
+			else:
+				for foe: Variant in enc["enemies"]:
+					if not (foe is Dictionary) or not data.get("monsters", {}).has(str(foe.get("monster", ""))):
+						e.append("комната %s: встреча %s — нет монстра %s" % [id, enc["id"], foe.get("monster") if foe is Dictionary else foe])
 		var safe: Variant = r.get("safe")
 		if safe != null and (not (safe is Dictionary) or int(safe.get("rest_cost_cp", -1)) < 0):
 			e.append("комната %s: safe — {rest_cost_cp: число ≥ 0}" % id)

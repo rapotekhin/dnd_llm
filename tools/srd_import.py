@@ -27,6 +27,7 @@ BACKGROUNDS = ROOT / "tools" / "srd" / "backgrounds.json"
 
 MAX_LEVEL = 5
 MAX_SPELL_LEVEL = 3
+MAX_MONSTER_CR = 3  # the combat of v0.6.x: levels 1–5
 ABILITIES = ["str", "dex", "con", "int", "wis", "cha"]
 
 # --- glossary: core terms by hand, always wins over ru.json -------------------------------------------
@@ -493,6 +494,59 @@ class Builder:
                 "classes": [sid(c["index"]) for c in s.get("classes", [])],
                 "subclasses": [sid(c["index"]) for c in s.get("subclasses", [])],
                 "desc": ru.get("desc", ""),
+                **spell_combat(s),
+            }
+        return out
+
+    def monsters(self) -> dict[str, dict[str, Any]]:
+        """Monsters of CR ≤ MAX_MONSTER_CR in the engine's shape (v0.6.1): numbers, attacks, saves, traits."""
+        items = {sid(e["index"]) for e in all_of("equipment")}
+        out = {}
+        for m in all_of("monsters"):
+            if m["challenge_rating"] > MAX_MONSTER_CR:
+                continue
+            ru = self.tr(f"monster:{m['index']}", m["name"])
+            abilities = {a[:3]: m[a] for a in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")}
+            saves, skills = {}, {}
+            for p in m.get("proficiencies", []):
+                idx = p["proficiency"]["index"]
+                if idx.startswith("saving-throw-"):
+                    saves[idx.removeprefix("saving-throw-")] = p["value"]
+                elif idx.startswith("skill-"):
+                    skills[sid(idx.removeprefix("skill-"))] = p["value"]
+            actions, multi = [], []
+            for a in m.get("actions", []):
+                if a["name"] == "Multiattack":
+                    multi = multiattack(a)
+                    continue
+                act = monster_action(a)
+                if act is None:
+                    continue
+                act["name"] = self.tr(f"monster_action:{a['name']}", a["name"])["name"]
+                actions.append(act)
+            if not actions:
+                continue  # nothing to fight with in the engine yet (pure spellcasters, swarms of effects)
+            traits = []
+            for t in m.get("special_abilities", []):
+                tr = self.tr(f"monster_trait:{t['name']}", t["name"], t.get("desc", ""))
+                traits.append({"id": sid(t["name"].lower().replace(" ", "_").replace("(", "").replace(")", "").replace("'", "")),
+                               "name": tr["name"], "desc": tr.get("desc", "")})
+            gear = [sid(x["index"]) for ac in m.get("armor_class", []) for x in ac.get("armor", [])]
+            for a in actions:
+                guess = sid(a["name_en"].lower().replace(" ", "-"))
+                if guess in items and guess not in gear:
+                    gear.append(guess)
+            speed = m.get("speed", {})
+            out[sid(m["index"])] = {
+                "name": ru["name"], "name_en": m["name"], "size": m["size"].lower(), "type": m["type"],
+                "cr": m["challenge_rating"], "xp": m["xp"], "ac": m["armor_class"][0]["value"], "hp": m["hit_points"],
+                "hit_dice": m["hit_dice"], "speed": ft(speed.get("walk", "30 ft.")), "fly": ft(speed.get("fly", "0 ft.")),
+                "abilities": abilities, "prof": m.get("proficiency_bonus", 2), "saves": saves, "skills": skills,
+                "passive_perception": m.get("senses", {}).get("passive_perception", 10),
+                "resistances": m.get("damage_resistances", []), "immunities": m.get("damage_immunities", []),
+                "vulnerabilities": m.get("damage_vulnerabilities", []),
+                "condition_immunities": [sid(c["index"]) for c in m.get("condition_immunities", [])],
+                "actions": actions, "multiattack": multi, "traits": traits, "equipment": gear,
             }
         return out
 
@@ -503,6 +557,81 @@ class Builder:
             ids = [sid(e["index"]) for e in cat["equipment"] if sid(e["index"]) in items]
             out[sid(idx)] = {"name": GLOSSARY[f"category:{idx}"], "items": ids}
         return out
+
+
+def ft(text: str) -> int:
+    m = re.match(r"(\d+)", str(text))
+    return int(m.group(1)) if m else 0
+
+
+def dice_text(d: str) -> str:
+    return d.replace(" ", "")
+
+
+def spell_combat(s: dict[str, Any]) -> dict[str, Any]:
+    """What the engine needs to resolve a spell in combat: attack roll or save, damage by slot or character level,
+    area, healing. Empty for spells the master narrates."""
+    out: dict[str, Any] = {}
+    if s.get("attack_type"):
+        out["attack"] = s["attack_type"]
+    dmg = s.get("damage") or {}
+    if dmg.get("damage_type"):
+        out["damage_type"] = dmg["damage_type"]["index"]
+    if dmg.get("damage_at_slot_level"):
+        out["damage_at_slot"] = {k: dice_text(v) for k, v in dmg["damage_at_slot_level"].items() if int(k) <= 5}
+    if dmg.get("damage_at_character_level"):
+        out["damage_at_level"] = {k: dice_text(v) for k, v in dmg["damage_at_character_level"].items()}
+    if s.get("dc"):
+        out["save"] = {"ability": s["dc"]["dc_type"]["index"], "success": s["dc"].get("dc_success", "none")}
+    if s.get("area_of_effect"):
+        out["area"] = {"type": s["area_of_effect"]["type"], "size": s["area_of_effect"]["size"]}
+    if s.get("heal_at_slot_level"):
+        out["heal_at_slot"] = {k: dice_text(v) for k, v in s["heal_at_slot_level"].items() if int(k) <= 5}
+    rng = str(s.get("range", ""))
+    out["range_ft"] = 0 if rng in ("Self", "Touch") else ft(rng)
+    if rng == "Touch":
+        out["range_ft"] = 5
+    return out
+
+
+def monster_action(a: dict[str, Any]) -> dict[str, Any] | None:
+    desc = a.get("desc", "")
+    parts = []
+    for d in a.get("damage", []):
+        if isinstance(d, dict) and d.get("from"):  # a choice (one- or two-handed): the first option
+            d = d["from"]["options"][0]
+        parts.append(d)
+    dmg = [{"dice": dice_text(d["damage_dice"]), "type": d["damage_type"]["index"]}
+           for d in parts if isinstance(d, dict) and d.get("damage_dice") and d.get("damage_type")]
+    act: dict[str, Any] = {"name_en": a["name"], "damage": dmg}
+    if "attack_bonus" in a:
+        act["to_hit"] = a["attack_bonus"]
+        rng = re.search(r"range (\d+)/(\d+) ft", desc)
+        reach = re.search(r"reach (\d+) ft", desc)
+        if rng and not desc.startswith("Melee"):
+            act["kind"], act["range"] = "ranged", [int(rng.group(1)), int(rng.group(2))]
+        else:
+            act["kind"], act["reach"] = "melee", int(reach.group(1)) if reach else 5
+            if rng:  # a thrown melee weapon: also usable at range
+                act["range"] = [int(rng.group(1)), int(rng.group(2))]
+    elif a.get("dc") and dmg:
+        act["kind"] = "save"
+        act["save"] = {"ability": a["dc"]["dc_type"]["index"], "dc": a["dc"]["dc_value"],
+                       "success": a["dc"].get("success_type", "none")}
+    else:
+        return None
+    if not dmg and act["kind"] != "save":
+        return None
+    return act
+
+
+def multiattack(a: dict[str, Any]) -> list[dict[str, Any]]:
+    seq = a.get("actions") or []
+    if not seq and a.get("action_options"):
+        first = a["action_options"]["from"]["options"][0]
+        seq = first.get("items", [first])
+    return [{"action": x["action_name"], "count": int(x["count"]) if str(x.get("count", 1)).isdigit() else 1}
+            for x in seq if x.get("action_name")]
 
 
 def untranslated(wanted: dict[str, Any], ru: dict[str, Any]) -> list[str]:
@@ -537,6 +666,7 @@ def build() -> None:
         "misc.json": {"languages": b.languages(), "categories": b.categories(items),
                       "damage_types": {k.removeprefix("damage:"): v for k, v in GLOSSARY.items() if k.startswith("damage:")}},
         "backgrounds.json": json.loads(BACKGROUNDS.read_text(encoding="utf-8")),
+        "monsters.json": b.monsters(),
     }
     OUT.mkdir(parents=True, exist_ok=True)
     for name, d in data.items():
@@ -547,7 +677,7 @@ def build() -> None:
     (ROOT / "build").mkdir(exist_ok=True)
     (ROOT / "build" / "srd_wanted.json").write_text(json.dumps(b.wanted, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"srd -> {OUT.relative_to(ROOT)}: {len(races['races'])} races, {len(classes['classes'])} classes, "
-          f"{len(data['spells.json'])} spells, {len(items)} items; untranslated: {len(missing)}")
+          f"{len(data['spells.json'])} spells, {len(data['monsters.json'])} monsters, {len(items)} items; untranslated: {len(missing)}")
 
 
 # --- translate ---------------------------------------------------------------------------------------

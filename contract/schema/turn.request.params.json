@@ -185,6 +185,101 @@
       "title": "CharacterSheet",
       "type": "object"
     },
+    "CombatFoe": {
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "distance_ft": {
+          "default": 0,
+          "title": "Distance Ft",
+          "type": "integer"
+        },
+        "health": {
+          "default": "",
+          "title": "Health",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "monster": {
+          "default": "",
+          "title": "Monster",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "side": {
+          "default": "same",
+          "enum": [
+            "left",
+            "right",
+            "same"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "dead",
+            "fled",
+            "surrendered"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "CombatFoe",
+      "type": "object"
+    },
+    "CombatInfo": {
+      "description": "The fight in progress (0.7.0): the engine's field and the lines of the round being narrated.",
+      "properties": {
+        "enemies": {
+          "items": {
+            "$ref": "#/$defs/CombatFoe"
+          },
+          "title": "Enemies",
+          "type": "array"
+        },
+        "log": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Log",
+          "type": "array"
+        },
+        "outcome": {
+          "default": "",
+          "title": "Outcome",
+          "type": "string"
+        },
+        "player_down": {
+          "default": false,
+          "title": "Player Down",
+          "type": "boolean"
+        },
+        "round": {
+          "default": 1,
+          "title": "Round",
+          "type": "integer"
+        }
+      },
+      "title": "CombatInfo",
+      "type": "object"
+    },
     "Exit": {
       "properties": {
         "name": {
@@ -450,6 +545,17 @@
           ],
           "default": null
         },
+        "combat": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CombatInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "history": {
           "items": {
             "$ref": "#/$defs/HistoryLine"
@@ -700,7 +806,10 @@
         "haggle",
         "quest",
         "ability",
-        "downed"
+        "downed",
+        "combat_start",
+        "combat_round",
+        "death"
       ],
       "title": "Kind",
       "type": "string"
@@ -709,7 +818,8 @@
       "enum": [
         "exploration",
         "social",
-        "trade"
+        "trade",
+        "combat"
       ],
       "title": "Mode",
       "type": "string"

@@ -9,6 +9,12 @@ var session: GameSession
 var busy_turn: String = ""
 var effects := EffectEngine.new()
 
+## Enemy turns of a fight are being played out (with a pause per line).
+var combat_playing: bool = false
+## Seconds between enemy lines; 0 in tests (LaunchArgs --combat-delay).
+var combat_delay: float = 0.6
+const COMBAT_SAVE := "autosave_combat"
+
 var _last_kind: String = ""
 var _last_input: String = ""
 
@@ -18,7 +24,7 @@ func has_session() -> bool:
 
 
 func is_busy() -> bool:
-	return not busy_turn.is_empty()
+	return not busy_turn.is_empty() or combat_playing
 
 
 func world() -> WorldView:
@@ -217,6 +223,255 @@ func prepare_spells(ids: Array) -> String:
 	return ""
 
 
+# --- combat (v0.6.1, CombatRules) ---------------------------------------------------------------
+
+
+## Starts a fight: an autosave to come back to, the combat screen, the master describes the start.
+func start_combat(foes: Array, source: Dictionary = {}) -> void:
+	if session == null:
+		return
+	_end_conversation()
+	combat_delay = float(LaunchArgs.value("--combat-delay", str(combat_delay)))
+	SaveManager.save_slot(COMBAT_SAVE, session)
+	var lines := CombatRules.start(session, Catalog.data, foes, source)
+	session.mode = GameSession.MODE_COMBAT
+	session.npc_id = ""
+	_combat_log(lines)
+	EventBus.state_changed.emit()
+	EventBus.navigate.emit("combat", {})
+	session.combat["log"] = []  # the start goes to the master as combat_start, not again with round 1
+	_request("combat_start", "\n".join(lines))
+
+
+func _start_pending_fight() -> void:
+	var foes := session.pending_fight.duplicate(true)
+	session.pending_fight = []
+	start_combat(foes, {"room_from": session.room_id})
+
+
+func _combat_log(lines: Array[String]) -> void:
+	if lines.is_empty() or not CombatRules.active(session):
+		return
+	var log: Array = session.combat.get("log", [])
+	log.append_array(lines)
+	session.combat["log"] = log
+	EventBus.combat_lines.emit(lines)
+
+
+func _combat_ready() -> bool:
+	return session != null and CombatRules.is_player_turn(session) and not is_busy() and Backend.is_ready() \
+		and int(session.character["hp"]) > 0
+
+
+## One player command in a fight: `why` "" means do it; the lines go to the log; an outcome ends the fight.
+func _combat_do(why: String, act: Callable) -> String:
+	if not _combat_ready():
+		return "COMBAT_NOT_YOUR_TURN" if session != null and CombatRules.active(session) else "COMBAT_NONE"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = act.call()
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_combat_log(lines)
+	_combat_log(CombatRules.after_player_action(session, Catalog.data))
+	EventBus.state_changed.emit()
+	if not str(session.combat.get("outcome", "")).is_empty():
+		_combat_continue()
+	elif int(session.character["hp"]) <= 0:  # dropped on its own turn (an attack of opportunity): the turn is over
+		CombatRules.end_player_turn(session, Catalog.data)
+		_combat_continue()
+	return ""
+
+
+func combat_attack(target_id: String, offhand: bool = false) -> String:
+	return _combat_do(CombatRules.can_attack(session, Catalog.data, target_id, offhand) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.player_attack(session, Catalog.data, target_id, offhand))
+
+
+## A spell in a fight: engine spells resolve at once; others spend the slot and go to the master (it costs the action).
+func combat_cast(spell_id: String, slot: int, target_id: String) -> String:
+	if session == null or not CombatRules.active(session):
+		return "COMBAT_NONE"
+	var why := CombatRules.can_cast(session, Catalog.data, spell_id, slot, target_id)
+	var sp: Dictionary = Catalog.data["spells"].get(spell_id, {})
+	if why.is_empty() and not CombatRules.is_engine_spell(Catalog.data, spell_id) and not sp.has("heal_at_slot"):
+		if not _combat_ready():
+			return "COMBAT_NOT_YOUR_TURN"
+		var lines := CombatRules.player_cast(session, Catalog.data, spell_id, slot, "")
+		_combat_log(lines)
+		var target := str(CombatRules.fighter(session, target_id).get("name", "")) if not target_id.is_empty() else ""
+		_request("action", "Игрок колдует %s%s. Ячейка уже потрачена движком — `cast` не нужен; реши исход проверками и эффектами с target_id врага." %
+			[SpellRules.describe(Catalog.data, spell_id, slot if slot > 0 else SpellRules.lowest_slot(session.character, Catalog.data, spell_id)),
+			(" на " + target) if not target.is_empty() else ""])
+		return ""
+	return _combat_do(why, func() -> Array[String]: return CombatRules.player_cast(session, Catalog.data, spell_id, slot, target_id))
+
+
+func combat_simple(what: String) -> String:
+	if session == null or not CombatRules.active(session):
+		return "COMBAT_NONE"
+	if not _combat_ready():
+		return "COMBAT_NOT_YOUR_TURN"
+	var why := CombatRules.player_simple(session, Catalog.data, what)
+	if why.is_empty():
+		_combat_log([tr("COMBAT_DID_" + what.to_upper()).format({"name": session.character["name"]})])
+		EventBus.state_changed.emit()
+	return why
+
+
+func combat_move(dir: int) -> String:
+	return _combat_do(CombatRules.can_move(session, Catalog.data, dir) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.player_move(session, Catalog.data, dir))
+
+
+## A feature in a fight costs what rules.resources say (combat_cost): Rage and Second Wind — a bonus action,
+## Action Surge — free and gives one more action.
+func combat_use_feature(resource_id: String) -> String:
+	if session == null or not CombatRules.active(session):
+		return "COMBAT_NONE"
+	var spec: Dictionary = FeatureUses.table(Catalog.data).get(resource_id, {})
+	var cost := str(spec.get("combat_cost", "action"))
+	var why := FeatureUses.can_use(session.character, Catalog.data, resource_id, 1)
+	if why.is_empty() and cost != "free" and int(CombatRules.economy(session).get(cost, 0)) <= 0:
+		why = "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
+	return _combat_do(why, func() -> Array[String]:
+		var e := CombatRules.economy(session)
+		if cost != "free":
+			e[cost] = int(e[cost]) - 1
+		if resource_id == "action_surge":
+			e["action"] = int(e["action"]) + 1
+		if resource_id == "rage":
+			session.combat["raging"] = true
+		return FeatureUses.use(session.character, Catalog.data, resource_id, 1, session.rng))
+
+
+func combat_use_item(item_id: String) -> String:
+	if session == null or not CombatRules.active(session):
+		return "COMBAT_NONE"
+	var why := ItemRules.can_use(session.character, Catalog.data, session.items, item_id)
+	if why.is_empty() and int(CombatRules.economy(session).get("action", 0)) <= 0:
+		why = "COMBAT_NO_ACTION"
+	return _combat_do(why, func() -> Array[String]:
+		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
+		return ItemRules.use(session.character, Catalog.data, session.items, item_id, session.rng))
+
+
+func combat_end_turn() -> String:
+	if not _combat_ready():
+		return "COMBAT_NOT_YOUR_TURN"
+	CombatRules.end_player_turn(session, Catalog.data)
+	EventBus.state_changed.emit()
+	_combat_continue()
+	return ""
+
+
+## Plays the turns of the others with a pause per actor until it is the player's turn (alive), the round ends
+## (the master narrates it) or the fight ends (the final narration, then the results).
+func _combat_continue() -> void:
+	if combat_playing or session == null or not CombatRules.active(session) or not busy_turn.is_empty():
+		return
+	var s := session
+	combat_playing = true
+	while CombatRules.active(s) and session == s:
+		if bool(s.combat.get("round_ended", false)):
+			s.combat.erase("round_ended")
+			combat_playing = false
+			_narrate_round()
+			return
+		if not str(s.combat.get("outcome", "")).is_empty():
+			combat_playing = false
+			_combat_outcome()
+			return
+		if CombatRules.is_player_turn(s) and int(s.character["hp"]) > 0:
+			break
+		var lines := CombatRules.next_actor(s, Catalog.data)
+		CharacterRules.refresh(s.character, Catalog.data, s.items)
+		_combat_log(lines)
+		EventBus.state_changed.emit()
+		if combat_delay > 0.0 and not lines.is_empty():
+			await get_tree().create_timer(combat_delay).timeout
+	combat_playing = false
+	EventBus.state_changed.emit()
+
+
+func _narrate_round() -> void:
+	var log: Array = session.combat.get("log", [])
+	session.combat["log"] = []
+	_request("combat_round", "\n".join(log))
+
+
+## The fight is over: the final narration (death — the epitaph), then the results wait for finish_combat().
+func _combat_outcome() -> void:
+	var s := session
+	if bool(s.combat.get("narrated", false)):
+		return
+	s.combat["narrated"] = true
+	var outcome := str(s.combat["outcome"])
+	if outcome == "victory":
+		var enc_loot := {}
+		var enc_id := str(s.combat.get("encounter", ""))
+		for rid: String in Catalog.data["world"]["rooms"]:
+			var enc: Dictionary = Catalog.data["world"]["rooms"][rid].get("encounter", {})
+			if str(enc.get("id", "")) == enc_id and not enc_id.is_empty():
+				enc_loot = enc.get("loot", {})
+		CombatRules.results(s, Catalog.data, enc_loot)
+		var xp_lines := XpRules.award(s.character, Catalog.data, int(s.combat["xp"]), "бой")
+		_combat_log(xp_lines)
+	var log: Array = s.combat.get("log", [])
+	s.combat["log"] = []
+	if outcome == "dead":
+		_request("death", "\n".join(log) + "\n" + _hero_path())
+	else:
+		_request("combat_round", "\n".join(log) + "\nИтог боя: " + tr("COMBAT_OUTCOME_" + outcome.to_upper()))
+
+
+func _hero_path() -> String:
+	var c := session.character
+	return "Путь героя: %s, %s %s %d уровня; дней в пути %d; выполнено заданий %d." % [c["name"], c.get("race_name", ""),
+		c.get("class_name", ""), int(c.get("level", 1)), session.day, session.quests_done.size()]
+
+
+## The player leaves the results: the chosen loot is taken, the world remembers the fight, back to the game.
+func finish_combat(take: Array = []) -> void:
+	if session == null or not CombatRules.active(session) or is_busy():
+		return
+	var s := session
+	var outcome := str(s.combat.get("outcome", ""))
+	if outcome == "dead":
+		return
+	var lines: Array[String] = [tr("COMBAT_OUTCOME_" + outcome.to_upper())]
+	if outcome == "victory":
+		var cp := int(s.combat.get("coins_cp", 0))
+		if cp > 0:
+			s.character["gold_cp"] = int(s.character["gold_cp"]) + cp
+			lines.append("+" + Money.format(cp))
+		for l: Dictionary in s.combat.get("loot", []):
+			if take.has(str(l["item_id"])):
+				s.character["inventory"][l["item_id"]] = int(s.character["inventory"].get(l["item_id"], 0)) + int(l["qty"])
+				lines.append("Взято: %s%s" % [ItemRules.display_name(Catalog.data["items"], s.items, str(l["item_id"])), " ×%d" % int(l["qty"]) if int(l["qty"]) > 1 else ""])
+		if int(s.combat.get("xp", 0)) > 0:
+			lines.append("+%d опыта" % int(s.combat["xp"]))
+		if not str(s.combat.get("encounter", "")).is_empty():
+			s.encounters_done.append(str(s.combat["encounter"]))
+	for id: String in CombatRules.enemies(s, false):
+		var f := CombatRules.fighter(s, id)
+		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():
+			s.dead_npcs.append(str(f["npc_id"]))
+	if outcome == "player_fled" and not str(s.combat.get("room_from", "")).is_empty():
+		s.room_id = str(s.combat["room_from"])
+	if int(s.character["hp"]) <= 0:
+		s.character["hp"] = 1
+	ConditionRules.remove(s.character, "unconscious")
+	s.combat = {}
+	s.mode = GameSession.MODE_EXPLORATION
+	CharacterRules.refresh(s.character, Catalog.data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	_set_options([])
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	EventBus.state_changed.emit()
+	EventBus.navigate.emit("game", {})
+
+
 ## Changes the master style of the running game (settings screen); kept in the save.
 func set_dm_style(style: String) -> void:
 	if session != null and WorldPack.DM_STYLES.has(style):
@@ -245,6 +500,11 @@ func submit(text: String) -> bool:
 	text = text.strip_edges()
 	if session == null or text.is_empty() or is_busy() or not Backend.is_ready():
 		return false
+	if session.mode == GameSession.MODE_COMBAT:
+		if not CombatRules.is_player_turn(session) or int(CombatRules.economy(session).get("action", 0)) <= 0:
+			EventBus.message.emit(tr("COMBAT_NO_ACTION"))
+			return false
+		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
 	_request("action", text)
@@ -256,16 +516,21 @@ func go(room_id: String) -> bool:
 	if session == null or is_busy() or not Backend.is_ready() or not world().exits(session.room_id).has(room_id):
 		return false
 	_end_conversation()
+	var from := session.room_id
 	ExplorationRules.enter_room(session, Catalog.data["world"], room_id)
 	_add(GameSession.effect_entry(["Переход: %s" % world().room(room_id).get("name", room_id)]))
 	EventBus.state_changed.emit()
+	var enc: Dictionary = world().room(room_id).get("encounter", {})
+	if not enc.is_empty() and not session.encounters_done.has(str(enc["id"])):
+		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from})
+		return true
 	_request("enter", "")
 	return true
 
 
 ## NPC button: start a conversation (or trade with a trader); the NPC greets the player.
 func talk_to(npc_id: String, trade: bool = false) -> bool:
-	if session == null or is_busy() or not Backend.is_ready() or not world().npcs_in(session.room_id).has(npc_id):
+	if session == null or is_busy() or not Backend.is_ready() or not session.npcs_alive(world().npcs_in(session.room_id)).has(npc_id):
 		return false
 	if trade and not world().is_trader(npc_id):
 		return false
@@ -392,8 +657,15 @@ func _request(kind: String, input: String) -> void:
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
 	_maybe_summarize_location()
-	if not follow_up.is_empty():
+	if follow_up == "combat":
+		_start_pending_fight()
+	elif not follow_up.is_empty():
 		_request(follow_up, "")
+	elif s.mode == GameSession.MODE_COMBAT:
+		if str(s.combat.get("outcome", "")) == "dead" and kind == "death":
+			EventBus.navigate.emit("death", {"epitaph": str(call.result.get("narration", ""))})
+		else:
+			_combat_continue()
 
 
 ## Shows the narration, applies listed reserves, handles next_mode. Returns the follow-up turn kind or "".
@@ -415,6 +687,13 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 		options.append(str(o))
 	_set_options(options)
 
+	if s.mode == GameSession.MODE_COMBAT:
+		var after := CombatRules.after_player_action(s, Catalog.data)
+		if not after.is_empty():
+			_combat_log(after)
+		return ""
+	if not s.pending_fight.is_empty():
+		return "combat"
 	if int(s.character["hp"]) <= 0:
 		var out := ExplorationRules.knock_out(s)
 		_add(GameSession.effect_entry(out))
@@ -434,7 +713,12 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 	if mode == GameSession.MODE_EXPLORATION and s.in_conversation():
 		_end_conversation()
 		return "resume"
-	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and world().npcs_in(s.room_id).has(npc_id):
+	if mode == GameSession.MODE_COMBAT and s.npcs_alive(world().npcs_in(s.room_id)).has(npc_id):
+		var npc := world().npc(npc_id)
+		s.pending_fight = [{"monster": str(npc.get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])),
+			"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0}]
+		return "combat"
+	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and s.npcs_alive(world().npcs_in(s.room_id)).has(npc_id):
 		if mode == GameSession.MODE_TRADE and not world().is_trader(npc_id):
 			mode = GameSession.MODE_SOCIAL
 		if s.in_conversation() and s.npc_id == npc_id:

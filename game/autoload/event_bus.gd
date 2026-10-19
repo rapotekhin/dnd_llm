@@ -18,3 +18,5 @@ signal message(text: String)
 signal settings_applied
 ## Screen switch handled by main.gd: "menu", "game", "slots", "settings", "offline".
 signal navigate(screen: String, args: Dictionary)
+## Combat (v0.6.1): engine lines of the fight as they happen (the combat screen's log).
+signal combat_lines(lines: Array[String])

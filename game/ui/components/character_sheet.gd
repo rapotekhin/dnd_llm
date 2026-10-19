@@ -88,6 +88,14 @@ func _stats_tab(c: Dictionary) -> Control:
 	_text(box, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}))
 	_text(box, tr("SHEET_PROF_SPEED").format({"prof": c["prof_bonus"], "speed": c["speed"]}) + " · " +
 		tr("SHEET_PASSIVE").format({"n": c["passive_perception"]}))
+	for hand: String in ["main_hand", "off_hand"]:
+		var wid := str(c.get("equipped", {}).get(hand, ""))
+		if hand == "off_hand" and wid.is_empty():
+			continue
+		var w := CombatRules.weapon_profile(c, d, GameState.session.items, wid, hand == "off_hand")
+		var b := int(w["bonus"])
+		_text(box, tr("SHEET_ATTACK").format({"name": w["name"], "hit": "%+d" % int(w["to_hit"]),
+			"dmg": str(w["dice"]).replace("d", tr("DICE_D")) + (("%+d" % b) if b != 0 else "")}))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 48)
 	box.add_child(row)

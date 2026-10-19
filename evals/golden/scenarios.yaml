@@ -174,7 +174,7 @@ scenarios:
     expect:
       check: {required: false}
       effects: {forbidden_kinds: [damage, heal]}
-      next_mode: {mode: combat}
+      next_mode: {mode: combat, npc_id: npc_innkeeper}
     rubric:
       - "Мастер не разрешает удар сам (урон, попадание) — это предложение боевого режима движку"
       - "Описание завязки конфликта, реакция зала"
@@ -452,6 +452,59 @@ scenarios:
       effects: {forbidden_kinds: [give_item, coins]}
     rubric:
       - "Горм отвечает в характере и называет цену; эль не выдан и монеты не списаны в тексте"
+
+  - id: combat_round_narration
+    title: "Раунд боя — рассказ строго по строкам движка, без чисел"
+    category: combat
+    extends: tavern
+    mode: combat
+    kind: combat_round
+    input: "Айра — Длинный меч по Гоблин 1: 7 + 5 = 12 против КД 15 — промах\nГоблин 1 — Ятаган: 18 + 4 = 22 против КД 19 — попадание, 6 (рубящий)\nГоблин 2 — Короткий лук: 3 + 4 = 7 против КД 19 — промах"
+    snapshot:
+      combat:
+        round: 2
+        enemies:
+          - {id: e1, name: "Гоблин 1", monster: "Гоблин", distance_ft: 0, side: same, status: active, health: full}
+          - {id: e2, name: "Гоблин 2", monster: "Гоблин", distance_ft: 90, side: left, status: active, health: full}
+    expect:
+      check: {required: false}
+      effects: {max_count: 0}
+      narration:
+        must_not_match: ["КД", "\\d+ против", "\\b1[0-9]\\b", "\\b2[0-9]\\b"]
+    rubric:
+      - "Айра промахивается, гоблин рядом ранит её ятаганом, стрела второго гоблина проходит мимо — именно так, без новых ударов"
+      - "Чисел бросков, КД и урона в тексте нет"
+
+  - id: combat_improvisation
+    title: "Импровизация в бою — проверка и эффект на врага"
+    category: combat
+    extends: tavern
+    mode: combat
+    input: "Опрокидываю тяжёлый стол на гоблина рядом со мной."
+    snapshot:
+      combat:
+        round: 1
+        enemies:
+          - {id: e1, name: "Гоблин", monster: "Гоблин", distance_ft: 0, side: same, status: active, health: full}
+    engine:
+      check: {d20: [15], bonus: 5, total: 20, dc: 15, success: true, nat: 15, blocked: false}
+    expect:
+      check: {required: true}
+      effects: {required_kinds_any: [damage, condition], forbidden_kinds: [move, coins, give_item]}
+    rubric:
+      - "Мастер просит проверку (Атлетика или похожее) и по успеху даёт урон или состояние врагу (target_id e1), а не игроку"
+
+  - id: death_epitaph
+    title: "Эпитафия павшему герою"
+    category: combat
+    extends: tavern
+    mode: combat
+    kind: death
+    input: "Гоблин 2 — Ятаган: 19 + 4 = 23 против КД 19 — попадание, 7 (рубящий)\nАйра: провал спасброска от смерти (3 из 3)\nПуть героя: Айра, Человек Воин 2 уровня; дней в пути 3; выполнено заданий 1."
+    expect:
+      effects: {max_count: 0}
+    rubric:
+      - "Короткая эпитафия: как пала Айра и каким её запомнят, без выдуманных подвигов сверх пути героя"
 
   - id: rules_question_ac
     title: "Вопрос о собственном классе доспеха"

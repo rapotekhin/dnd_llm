@@ -69,9 +69,10 @@ class TurnOutput(BaseModel):
     narration: str = Field(description="Текст для игрока: описание мастера или реплика NPC. Не пустой.")
     options: list[str] = Field(default_factory=list, max_length=3, description="1–3 коротких варианта действий игрока от первого лица.")
     effect_ids: list[str] = Field(default_factory=list, description="effect_id принятых движком эффектов, которые надо применить.")
-    next_mode: Literal["exploration", "social", "trade"] | None = Field(
-        default=None, description="Смена режима: social/trade — разговор/торговля с NPC (нужен npc_id), exploration — вернуться в общую сцену.")
-    npc_id: str | None = Field(default=None, description="NPC для social/trade, из списка NPC сцены.")
+    next_mode: Literal["exploration", "social", "trade", "combat"] | None = Field(
+        default=None, description="Смена режима: social/trade — разговор/торговля с NPC (нужен npc_id), combat — игрок нападает на NPC сцены "
+                                  "(нужен npc_id), exploration — вернуться в общую сцену.")
+    npc_id: str | None = Field(default=None, description="NPC для social/trade/combat, из списка NPC сцены.")
     changes: list[str] = Field(default_factory=list, description=(
         "Что по твоему тексту изменилось у игрока или в мире: получено, потеряно, заплачено, ранен, вылечен, перешёл. "
         "Пусто — ничего не изменилось. Каждое изменение должно быть принятым эффектом из effect_ids."))
@@ -216,8 +217,8 @@ def build_turn_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput
         unknown = [e for e in out.effect_ids if e not in t.accepted]
         if unknown:
             raise ModelRetry(f"effect_ids {unknown} не принимались движком в этом ходе. Используй только id из ответов propose_effect.")
-        if out.next_mode in ("social", "trade") and scene_npc(t.params, out.npc_id) is None:
-            raise ModelRetry("Для social/trade укажи npc_id из списка NPC сцены.")
+        if out.next_mode in ("social", "trade", "combat") and t.params.mode != "combat" and scene_npc(t.params, out.npc_id) is None:
+            raise ModelRetry("Для social/trade/combat укажи npc_id из списка NPC сцены.")
         return out
 
     return agent

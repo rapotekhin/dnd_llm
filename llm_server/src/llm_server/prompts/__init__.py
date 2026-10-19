@@ -95,6 +95,7 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
         "mode": mode,
         "trade": snap.trade,
         "quests": snap.quests,
+        "combat": snap.combat,
         "world": snap.world,
         "character": character,
         "coins": coins(character.gold_cp) if character else "",
@@ -106,6 +107,8 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
     }
     if mode == "exploration":
         return render("exploration.md.j2", **context)
+    if mode == "combat":
+        return render("combat.md.j2", **context)
     if npc is None:
         raise ValueError(f"mode {mode} needs an NPC")
     return render(f"{mode}.md.j2", npc=npc, npc_gender_rule=npc_gender_rule(npc.gender), **context)
@@ -113,6 +116,7 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
 
 def turn_prompt(mode: str, kind: str, player_input: str, snap: Snapshot, npc: SceneNpc | None) -> str:
     return render("turn.md.j2", mode=mode, kind=kind, input=player_input, history=snap.history,
+                  room_name=snap.scene.room_name if snap.scene else "",
                   npc_name=npc.name if npc else "")
 
 

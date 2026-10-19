@@ -60,6 +60,39 @@
       "title": "CoinsEffect",
       "type": "object"
     },
+    "CombatFoeSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "default": 1,
+          "maximum": 6,
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "monster": {
+          "title": "Monster",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        }
+      },
+      "required": [
+        "monster"
+      ],
+      "title": "CombatFoeSpec",
+      "type": "object"
+    },
     "ConditionEffect": {
       "additionalProperties": false,
       "properties": {
@@ -96,6 +129,18 @@
           "default": "",
           "title": "Reason",
           "type": "string"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Id"
         },
         "until": {
           "default": "long_rest",
@@ -138,6 +183,18 @@
           ],
           "title": "Severity",
           "type": "string"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Id"
         }
       },
       "required": [
@@ -395,6 +452,35 @@
       "title": "NpcAttitudeEffect",
       "type": "object"
     },
+    "StartCombatEffect": {
+      "additionalProperties": false,
+      "description": "The master starts a fight (0.7.0): the engine checks the XP budget of the character's level.",
+      "properties": {
+        "enemies": {
+          "items": {
+            "$ref": "#/$defs/CombatFoeSpec"
+          },
+          "title": "Enemies",
+          "type": "array"
+        },
+        "kind": {
+          "const": "start_combat",
+          "default": "start_combat",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enemies"
+      ],
+      "title": "StartCombatEffect",
+      "type": "object"
+    },
     "TakeItemEffect": {
       "additionalProperties": false,
       "properties": {
@@ -484,6 +570,7 @@
           "heal": "#/$defs/HealEffect",
           "move": "#/$defs/MoveEffect",
           "npc_attitude": "#/$defs/NpcAttitudeEffect",
+          "start_combat": "#/$defs/StartCombatEffect",
           "take_item": "#/$defs/TakeItemEffect",
           "use_feature": "#/$defs/UseFeatureEffect",
           "use_item": "#/$defs/UseItemEffect"
@@ -526,6 +613,9 @@
         },
         {
           "$ref": "#/$defs/UseItemEffect"
+        },
+        {
+          "$ref": "#/$defs/StartCombatEffect"
         }
       ],
       "title": "Effect"

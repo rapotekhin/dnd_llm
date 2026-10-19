@@ -10,6 +10,7 @@ const FILES: Dictionary[String, String] = {
 	"races": "res://data/srd/races.json",
 	"classes": "res://data/srd/classes.json",
 	"spells": "res://data/srd/spells.json",
+	"monsters": "res://data/srd/monsters.json",
 	"backgrounds": "res://data/srd/backgrounds.json",
 	"misc": "res://data/srd/misc.json",
 }

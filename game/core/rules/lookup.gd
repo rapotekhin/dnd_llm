@@ -39,7 +39,7 @@ static func find(s: GameSession, data: Dictionary, kind: String, id: String) -> 
 				return _found(out)
 		"npc":
 			var world := WorldView.new(data["world"])
-			if world.npcs_in(s.room_id).has(id):
+			if s.npcs_alive(world.npcs_in(s.room_id)).has(id):
 				var n := world.npc(id)
 				var out := {"id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 					"description": n.get("description", ""), "personality": n.get("personality", ""),

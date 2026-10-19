@@ -12,8 +12,9 @@ extends RefCounted
 ## v6 (0.5.3): merchants — purses, stock left, haggling.
 ## v7 (0.5.4): completed quests.
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
+## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 8
+const SAVE_VERSION := 9
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -29,6 +30,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	5: _v5_to_v6,
 	6: _v6_to_v7,
 	7: _v7_to_v8,
+	8: _v8_to_v9,
 }
 
 
@@ -112,3 +114,11 @@ static func _v7_to_v8(data: Dictionary, _ctx: Dictionary) -> void:
 	c["concentration"] = ""
 	c["prepared_day"] = 1
 	s["short_rests"] = 0
+
+
+## A 0.6.0 game had no fights.
+static func _v8_to_v9(data: Dictionary, _ctx: Dictionary) -> void:
+	var s: Dictionary = data["session"]
+	s["combat"] = {}
+	s["encounters_done"] = []
+	s["dead_npcs"] = []

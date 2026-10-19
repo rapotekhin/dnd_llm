@@ -75,6 +75,14 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 	var world := WorldView.new(data["world"])
 	var c := s.character
 	var level := int(c.get("level", 1))
+	if s.mode == GameSession.MODE_COMBAT:
+		if str(e.get("kind", "")) in ["move", "coins", "give_item", "take_item", "start_combat", "npc_attitude"]:
+			return {"reason": "в бою это нельзя: исход боя, переходы и добычу ведёт движок; здесь — проверки, урон и состояния врагам (target_id)"}
+		var tid := str(e.get("target_id", "")) if e.get("target_id") != null else ""
+		if not tid.is_empty():
+			return _plan_on_foe(s, data, e, tid)
+	if str(e.get("kind", "")) == "start_combat":
+		return _plan_fight(s, data, e)
 	if s.mode == GameSession.MODE_TRADE and str(e.get("kind", "")) in ["coins", "give_item", "take_item"]:
 		return {"reason": "в торговле сделки проводит панель сделки: назови цену и предложи игроку положить товар в сделку"}
 	if s.mode == GameSession.MODE_SOCIAL and str(e.get("kind", "")) == "give_item" and world.is_trader(s.npc_id) 			and TradeRules.pack_stock(world.npc(s.npc_id), rules).has(str(e.get("item_id", ""))):
@@ -123,7 +131,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				"summary": "Отдано: %s%s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else ""]}
 		"npc_attitude":
 			var npc_id := str(e.get("npc_id", ""))
-			if not world.npcs_in(s.room_id).has(npc_id):
+			if not s.npcs_alive(world.npcs_in(s.room_id)).has(npc_id):
 				return {"reason": "NPC %s нет в этой комнате" % npc_id}
 			var delta := clampi(int(e.get("delta", 0)), -2, 2)
 			if delta == 0:
@@ -178,6 +186,49 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 	return {"reason": "движок не знает эффект %s" % e.get("kind", "?")}
 
 
+## Effects on an enemy in a fight (the master's improvisation): damage by severity, a condition.
+func _plan_on_foe(s: GameSession, data: Dictionary, e: Dictionary, tid: String) -> Dictionary:
+	var f := CombatRules.fighter(s, tid)
+	if f.is_empty() or str(f.get("side")) != "enemy" or str(f.get("status")) != "active":
+		return {"reason": "в бою нет такого врага: %s (есть: %s)" % [tid, ", ".join(CombatRules.enemies(s))]}
+	match str(e.get("kind", "")):
+		"damage":
+			var dice := _damage_dice(data["rules"], int(s.character.get("level", 1)), str(e.get("severity", "")))
+			if dice.is_empty():
+				return {"reason": "неизвестная тяжесть урона"}
+			var amount := _roll(s.rng, int(dice[0]), int(dice[1]), 0)
+			return {"plan": {"foe": tid, "amount": amount}, "summary": "%s: −%d HP" % [f["name"], amount]}
+		"condition":
+			var cond := str(e.get("condition", ""))
+			if not ConditionRules.known(data, cond):
+				return {"reason": "неизвестное состояние %s" % cond}
+			return {"plan": {"foe": tid, "condition": cond, "on": bool(e.get("on", true))},
+				"summary": "%s: %s" % [f["name"], str(data["rules"]["conditions"][cond]).get_slice(":", 0)]}
+	return {"reason": "на врага в бою — только damage и condition"}
+
+
+## The master starts a fight: SRD monsters within the hard XP budget of the character's level (DMG).
+func _plan_fight(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
+	var foes: Array = []
+	var xp := 0
+	for spec: Variant in e.get("enemies", []):
+		if not (spec is Dictionary):
+			continue
+		var mid := str(spec.get("monster", ""))
+		var m: Dictionary = data["monsters"].get(mid, {})
+		if m.is_empty():
+			return {"reason": "нет такого монстра SRD: %s" % mid}
+		var n := clampi(int(spec.get("count", 1)), 1, 6)
+		xp += int(m["xp"]) * n
+		foes.append({"monster": mid, "count": n, "name": str(spec.get("name", m["name"]))})
+	if foes.is_empty():
+		return {"reason": "кого звать в бой? enemies: [{monster, count}]"}
+	var cap := int(CombatRules.cfg(data)["xp_budget_hard"].get(str(int(s.character.get("level", 1))), 750))
+	if xp > cap:
+		return {"reason": "бой слишком тяжёл для %d уровня: %d опыта врагов при пределе %d — меньше врагов или слабее" % [int(s.character.get("level", 1)), xp, cap]}
+	return {"plan": {"foes": foes}, "summary": "Бой: " + ", ".join(foes.map(func(f: Dictionary) -> String: return "%s ×%d" % [f["name"], f["count"]]))}
+
+
 func _plan_give(s: GameSession, items: Dictionary, rules: Dictionary, turn_id: String, e: Dictionary, level: int) -> Dictionary:
 	var qty := int(e.get("qty", 1))
 	var id := str(e.get("item_id", "")) if e.get("item_id") != null else ""
@@ -208,6 +259,16 @@ func _plan_give(s: GameSession, items: Dictionary, rules: Dictionary, turn_id: S
 
 func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 	var c := s.character
+	if plan.has("foe"):
+		var f := CombatRules.fighter(s, str(plan["foe"]))
+		if kind == "damage":
+			var tmp: Array[String] = []
+			CombatRules._hurt_enemy(s, _data, f, int(plan["amount"]), tmp)
+		elif bool(plan.get("on", true)):
+			(f["conditions"] as Array).append(str(plan["condition"]))
+		else:
+			(f["conditions"] as Array).erase(str(plan["condition"]))
+		return
 	match kind:
 		"move":
 			s.room_id = plan["room_id"]
@@ -229,6 +290,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 				c["inventory"].erase(plan["item_id"])
 		"npc_attitude":
 			s.attitudes[plan["npc_id"]] = clampi(s.attitude(plan["npc_id"]) + int(plan["delta"]), -3, 3)
+		"start_combat":
+			s.pending_fight = plan["foes"]
 		"cast":
 			SpellRules.cast(c, _data, plan["spell_id"], int(plan["slot"]))
 		"condition":

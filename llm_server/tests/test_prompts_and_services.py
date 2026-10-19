@@ -101,7 +101,7 @@ def test_strict_templates_fail_on_missing_variables():
 
 def test_turn_prompt_kinds():
     s = snap()
-    assert "Опиши место" in prompts.turn_prompt("exploration", "enter", "", s, None)
+    assert "«Таверна «Хромой олень» — общий зал». Опиши именно его" in prompts.turn_prompt("exploration", "enter", "", s, None)
     assert "вернулся в общую сцену" in prompts.turn_prompt("exploration", "resume", "", s, None)
     assert "Действие игрока: прыгаю" in prompts.turn_prompt("exploration", "action", "прыгаю", s, None)
     assert "Мастер: Таверна шумит." in prompts.turn_prompt("exploration", "action", "x", s, None)
@@ -134,6 +134,25 @@ def test_resources_concentration_and_v060_turns():
     assert "Товары торговца покупаются в торговле" in social
     assert "Игрок колдует" in prompts.turn_prompt("exploration", "ability", "Игрок колдует «Свет»", s, None)
     assert "очнулся с 1 HP" in prompts.turn_prompt("exploration", "downed", "", s, None)
+
+
+def test_combat_prompt_and_turns():
+    raw = tavern_snapshot()
+    raw["combat"] = {"round": 2, "enemies": [
+        {"id": "e1", "name": "Серый волк 1", "monster": "Волк", "distance_ft": 0, "side": "same", "status": "active", "health": "bloodied"},
+        {"id": "e2", "name": "Серый волк 2", "monster": "Волк", "distance_ft": 60, "side": "left", "status": "active", "health": "full"},
+        {"id": "e3", "name": "Гоблин", "status": "fled", "health": "fled"}], "log": []}
+    s = Snapshot.model_validate(raw)
+    text = prompts.system_prompt("combat", s, None)
+    assert "## Поле боя (раунд 2)" in text and "Серый волк 1 [e1] (Волк): вплотную, тяжело ранен" in text
+    assert "в 60 футах слева" in text and "Гоблин [e3]: сбежал" in text
+    assert "Бой ведёт движок" in text and "target_id" in text
+    explore = prompts.system_prompt("exploration", snap(), None)
+    assert "`next_mode = \"combat\"`" in explore and "`start_combat`" in explore
+    assert "Перескажи раунд" in prompts.turn_prompt("combat", "combat_round", "Волк — Укус: промах", s, None)
+    assert "Начался бой" in prompts.turn_prompt("combat", "combat_start", "Бой!", s, None)
+    assert "эпитафию" in prompts.turn_prompt("combat", "death", "Путь героя", s, None)
+    assert "стоит его действия" in prompts.turn_prompt("combat", "action", "опрокидываю стол", s, None)
 
 
 def test_coins_format():

@@ -7,7 +7,8 @@
           "enum": [
             "exploration",
             "social",
-            "trade"
+            "trade",
+            "combat"
           ],
           "title": "Mode",
           "type": "string"

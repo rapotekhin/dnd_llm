@@ -8,12 +8,12 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 
 | Folder | What | Status |
 |---|---|---|
-| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + start world «Сумеречная Марка» (v0.5.1), exploration: check locks, hidden things, long rest, map and journal (v0.5.2), dialogues and trade (v0.5.3), experience from quests and combat, level-up 1–5 (v0.5.4), 5e rules to the end: casting with slots, conditions, feature uses, short rest, consumables, 0 HP without death (v0.6.0) |
-| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.6.0 (v0.6.0) |
-| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.6.0 |
+| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + start world «Сумеречная Марка» (v0.5.1), exploration: check locks, hidden things, long rest, map and journal (v0.5.2), dialogues and trade (v0.5.3), experience from quests and combat, level-up 1–5 (v0.5.4), 5e rules to the end: casting with slots, conditions, feature uses, short rest, consumables, 0 HP without death (v0.6.0), combat: SRD monsters, 7-column field, engine AI, death saves, combat screen (v0.6.1) |
+| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.7.0 (v0.6.1) |
+| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.7.0 |
 | `tools/` | SRD import (`srd_import.py`, source in `tools/srd/source/`), pack validator, playtest and connectivity runners | |
 | `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
-| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 30 scenarios (28 runnable); runner `llm_server.golden` |
+| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 33 scenarios (32 runnable); runner `llm_server.golden` |
 | `docs/` | design + tech docs, ADRs | live |
 
 Decisions to follow in new code: [ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md) (who owns what), [ADR-0008](docs/tech/adr/0008-engine-decides-llm-narrates.md) (engine decides, LLM narrates), [ADR-0009](docs/tech/adr/0009-godot-backend-protocol.md) (protocol), [ADR-0010](docs/tech/adr/0010-game-decisions-worlds-tone-combat-death.md) (game decisions), [ADR-0011](docs/tech/adr/0011-default-master-model.md) (default model: change it only after golden scenarios with `--repeat 3` and a live playtest). Godot conventions follow the sibling project `C:\Code\hive_world_shop` (pure `core/`, seeded RNG, JSON saves with migrations, gdUnit4).
@@ -47,6 +47,7 @@ python tools/godot_playtest.py --scenario offline                     # live God
 python tools/godot_playtest.py --scenario live --real                 # live Godot playtest with the real OpenRouter model (cents)
 python tools/godot_playtest.py --scenario creation --no-server        # character creation step by step, screenshots of every step
 python tools/godot_playtest.py --scenario level_up                    # a wizard levels 1 → 3 by clicks
+python tools/godot_playtest.py --scenario combat                      # the wolves on the woodcutters' trail, fought by the buttons (--real; GODOT_COMBAT_HP=1 to see death)
 python tools/godot_playtest.py --scenario bot                         # bot player: 120 random steps on the stub master, session invariants (GODOT_BOT_STEPS, GODOT_BOT_SEED)
 python tools/srd_import.py build                                      # tools/srd/source + tools/srd/ru.json → game/data/srd/ and the item catalog
 uv run --project llm_server python tools/srd_import.py translate      # translate new SRD entries into tools/srd/ru.json (cents)

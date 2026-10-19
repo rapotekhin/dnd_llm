@@ -17,6 +17,7 @@ const KIND_SYSTEM := "system"
 const MODE_EXPLORATION := "exploration"
 const MODE_SOCIAL := "social"
 const MODE_TRADE := "trade"
+const MODE_COMBAT := "combat"
 
 var game_seed: int = 0
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -54,6 +55,11 @@ var day: int = 1
 ## npc_id → merchant state (TradeRules): purse_cp, stock {item_id: qty}, day of the last restock, haggle_pct of
 ## the current visit, haggle_failed_day, haggle_result. Created from the pack on the first trade.
 var merchants: Dictionary = {}
+## The fight in progress (CombatRules), {} when there is none.
+var combat: Dictionary = {}
+## Encounters of the pack already fought (CombatRules) and NPCs killed in a fight.
+var encounters_done: Array[String] = []
+var dead_npcs: Array[String] = []
 ## Short rests taken today (ExplorationRules); a long rest resets it.
 var short_rests: int = 0
 ## Ids of the pack quests the player completed (XpRules).
@@ -123,7 +129,11 @@ func attitude(id: String) -> int:
 
 
 func in_conversation() -> bool:
-	return mode != MODE_EXPLORATION
+	return mode == MODE_SOCIAL or mode == MODE_TRADE
+
+
+## Foes the master summoned this turn (effect start_combat): the fight starts after the turn. Not saved.
+var pending_fight: Array = []
 
 
 static func player_entry(text: String) -> Dictionary:
@@ -226,6 +236,9 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"merchants": merchants,
 		"quests_done": quests_done,
 		"short_rests": short_rests,
+		"combat": combat,
+		"encounters_done": encounters_done,
+		"dead_npcs": dead_npcs,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -266,6 +279,11 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.visited.append(str(v))
 	s.day = int(d.get("day", 1))
 	s.short_rests = int(d.get("short_rests", 0))
+	s.combat = _normalized_combat(d.get("combat", {}))
+	for e: Variant in d.get("encounters_done", []):
+		s.encounters_done.append(str(e))
+	for n: Variant in d.get("dead_npcs", []):
+		s.dead_npcs.append(str(n))
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):
@@ -275,6 +293,35 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for line: Variant in d.get("location_log", []):
 		s.location_log.append(str(line))
 	return s
+
+
+## JSON floats back to ints in a saved fight.
+static func _normalized_combat(raw: Variant) -> Dictionary:
+	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
+		return {}
+	var c: Dictionary = (raw as Dictionary).duplicate(true)
+	for k: String in ["round", "turn", "xp", "coins_cp"]:
+		if c.has(k):
+			c[k] = int(c[k])
+	for id: String in c.get("fighters", {}):
+		var f: Dictionary = c["fighters"][id]
+		for k: String in ["hp", "max_hp", "ac", "col", "init"]:
+			if f.has(k):
+				f[k] = int(f[k])
+	for k: String in ["ok", "fail"]:
+		if c.get("death_saves", {}).has(k):
+			c["death_saves"][k] = int(c["death_saves"][k])
+	for k: String in ["action", "bonus", "move", "attacks"]:
+		if c.get("economy", {}).has(k):
+			c["economy"][k] = int(c["economy"][k])
+	for l: Dictionary in c.get("loot", []):
+		l["qty"] = int(l["qty"])
+	return c
+
+
+## The NPCs of a room who are alive (killed ones are gone from the world).
+func npcs_alive(ids: Array[String]) -> Array[String]:
+	return ids.filter(func(id: String) -> bool: return not dead_npcs.has(id))
 
 
 static func _normalized_merchant(m: Dictionary) -> Dictionary:

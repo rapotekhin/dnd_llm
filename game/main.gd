@@ -35,7 +35,11 @@ func _go(screen: String, args: Dictionary) -> void:
 		"menu":
 			next = MainMenu.new()
 		"game":
-			next = GameScreen.new()
+			next = CombatScreen.new() if GameState.has_session() and CombatRules.active(GameState.session) else GameScreen.new()
+		"combat":
+			next = CombatScreen.new()
+		"death":
+			next = DeathScreen.new(str(args.get("epitaph", "")))
 		"new_game":
 			next = NewGameScreen.new()
 		"creation":

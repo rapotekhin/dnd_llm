@@ -1669,6 +1669,1569 @@
 		"en": "Yew wand",
 		"name": "Волшебная палочка из тиса"
 	},
+	"monster:acolyte": {
+		"en": "Acolyte",
+		"name": "Послушник"
+	},
+	"monster:animated-armor": {
+		"en": "Animated Armor",
+		"name": "Оживлённый доспех"
+	},
+	"monster:ankheg": {
+		"en": "Ankheg",
+		"name": "Анкег"
+	},
+	"monster:ape": {
+		"en": "Ape",
+		"name": "Обезьяна"
+	},
+	"monster:awakened-shrub": {
+		"en": "Awakened Shrub",
+		"name": "Пробуждённый кустарник"
+	},
+	"monster:awakened-tree": {
+		"en": "Awakened Tree",
+		"name": "Пробуждённое дерево"
+	},
+	"monster:axe-beak": {
+		"en": "Axe Beak",
+		"name": "Топороклюв"
+	},
+	"monster:azer": {
+		"en": "Azer",
+		"name": "Азер"
+	},
+	"monster:baboon": {
+		"en": "Baboon",
+		"name": "Бабуин"
+	},
+	"monster:badger": {
+		"en": "Badger",
+		"name": "Барсук"
+	},
+	"monster:bandit": {
+		"en": "Bandit",
+		"name": "Бандит"
+	},
+	"monster:bandit-captain": {
+		"en": "Bandit Captain",
+		"name": "Капитан бандитов"
+	},
+	"monster:basilisk": {
+		"en": "Basilisk",
+		"name": "Василиск"
+	},
+	"monster:bat": {
+		"en": "Bat",
+		"name": "Летучая мышь"
+	},
+	"monster:bearded-devil": {
+		"en": "Bearded Devil",
+		"name": "Бородатый дьявол"
+	},
+	"monster:berserker": {
+		"en": "Berserker",
+		"name": "Берсерк"
+	},
+	"monster:black-bear": {
+		"en": "Black Bear",
+		"name": "Чёрный медведь"
+	},
+	"monster:black-dragon-wyrmling": {
+		"en": "Black Dragon Wyrmling",
+		"name": "Детёныш чёрного дракона"
+	},
+	"monster:blink-dog": {
+		"en": "Blink Dog",
+		"name": "Мерцающий пёс"
+	},
+	"monster:blood-hawk": {
+		"en": "Blood Hawk",
+		"name": "Кровавый ястреб"
+	},
+	"monster:blue-dragon-wyrmling": {
+		"en": "Blue Dragon Wyrmling",
+		"name": "Детёныш синего дракона"
+	},
+	"monster:boar": {
+		"en": "Boar",
+		"name": "Кабан"
+	},
+	"monster:brass-dragon-wyrmling": {
+		"en": "Brass Dragon Wyrmling",
+		"name": "Латунный дракончик"
+	},
+	"monster:bronze-dragon-wyrmling": {
+		"en": "Bronze Dragon Wyrmling",
+		"name": "Бронзовый дракончик"
+	},
+	"monster:brown-bear": {
+		"en": "Brown Bear",
+		"name": "Бурый медведь"
+	},
+	"monster:bugbear": {
+		"en": "Bugbear",
+		"name": "Бугбир"
+	},
+	"monster:camel": {
+		"en": "Camel",
+		"name": "Верблюд"
+	},
+	"monster:cat": {
+		"en": "Cat",
+		"name": "Кошка"
+	},
+	"monster:centaur": {
+		"en": "Centaur",
+		"name": "Кентавр"
+	},
+	"monster:cockatrice": {
+		"en": "Cockatrice",
+		"name": "Кокатрис"
+	},
+	"monster:commoner": {
+		"en": "Commoner",
+		"name": "Простолюдин"
+	},
+	"monster:constrictor-snake": {
+		"en": "Constrictor Snake",
+		"name": "Душащая змея"
+	},
+	"monster:copper-dragon-wyrmling": {
+		"en": "Copper Dragon Wyrmling",
+		"name": "Детёныш медного дракона"
+	},
+	"monster:crab": {
+		"en": "Crab",
+		"name": "Краб"
+	},
+	"monster:crocodile": {
+		"en": "Crocodile",
+		"name": "Крокодил"
+	},
+	"monster:cult-fanatic": {
+		"en": "Cult Fanatic",
+		"name": "Фанатик культа"
+	},
+	"monster:cultist": {
+		"en": "Cultist",
+		"name": "Культист"
+	},
+	"monster:darkmantle": {
+		"en": "Darkmantle",
+		"name": "Тёмная мантия"
+	},
+	"monster:death-dog": {
+		"en": "Death Dog",
+		"name": "Смертельный пёс"
+	},
+	"monster:deep-gnome-svirfneblin": {
+		"en": "Deep Gnome (Svirfneblin)",
+		"name": "Глубинный гном (свирфнеблин)"
+	},
+	"monster:deer": {
+		"en": "Deer",
+		"name": "Олень"
+	},
+	"monster:dire-wolf": {
+		"en": "Dire Wolf",
+		"name": "Ужасный волк"
+	},
+	"monster:doppelganger": {
+		"en": "Doppelganger",
+		"name": "Доппельгангер"
+	},
+	"monster:draft-horse": {
+		"en": "Draft Horse",
+		"name": "Тяжеловоз"
+	},
+	"monster:dretch": {
+		"en": "Dretch",
+		"name": "Дрэтч"
+	},
+	"monster:drow": {
+		"en": "Drow",
+		"name": "Дроу"
+	},
+	"monster:druid": {
+		"en": "Druid",
+		"name": "Друид"
+	},
+	"monster:dryad": {
+		"en": "Dryad",
+		"name": "Дриада"
+	},
+	"monster:duergar": {
+		"en": "Duergar",
+		"name": "Дуэргар"
+	},
+	"monster:dust-mephit": {
+		"en": "Dust Mephit",
+		"name": "Пылевой мефит"
+	},
+	"monster:eagle": {
+		"en": "Eagle",
+		"name": "Орёл"
+	},
+	"monster:elk": {
+		"en": "Elk",
+		"name": "Лось"
+	},
+	"monster:ettercap": {
+		"en": "Ettercap",
+		"name": "Эттеркап"
+	},
+	"monster:flying-snake": {
+		"en": "Flying Snake",
+		"name": "Летающая змея"
+	},
+	"monster:flying-sword": {
+		"en": "Flying Sword",
+		"name": "Летающий меч"
+	},
+	"monster:frog": {
+		"en": "Frog",
+		"name": "Лягушка"
+	},
+	"monster:gargoyle": {
+		"en": "Gargoyle",
+		"name": "Горгулья"
+	},
+	"monster:gelatinous-cube": {
+		"en": "Gelatinous Cube",
+		"name": "Желатиновый куб"
+	},
+	"monster:ghast": {
+		"en": "Ghast",
+		"name": "Гаст"
+	},
+	"monster:ghoul": {
+		"en": "Ghoul",
+		"name": "Гуль"
+	},
+	"monster:giant-badger": {
+		"en": "Giant Badger",
+		"name": "Гигантский барсук"
+	},
+	"monster:giant-bat": {
+		"en": "Giant Bat",
+		"name": "Гигантская летучая мышь"
+	},
+	"monster:giant-boar": {
+		"en": "Giant Boar",
+		"name": "Гигантский кабан"
+	},
+	"monster:giant-centipede": {
+		"en": "Giant Centipede",
+		"name": "Гигантская сороконожка"
+	},
+	"monster:giant-constrictor-snake": {
+		"en": "Giant Constrictor Snake",
+		"name": "Гигантская змея-душитель"
+	},
+	"monster:giant-crab": {
+		"en": "Giant Crab",
+		"name": "Гигантский краб"
+	},
+	"monster:giant-eagle": {
+		"en": "Giant Eagle",
+		"name": "Гигантский орёл"
+	},
+	"monster:giant-elk": {
+		"en": "Giant Elk",
+		"name": "Гигантский лось"
+	},
+	"monster:giant-fire-beetle": {
+		"en": "Giant Fire Beetle",
+		"name": "Гигантский огненный жук"
+	},
+	"monster:giant-frog": {
+		"en": "Giant Frog",
+		"name": "Гигантская лягушка"
+	},
+	"monster:giant-goat": {
+		"en": "Giant Goat",
+		"name": "Гигантская коза"
+	},
+	"monster:giant-hyena": {
+		"en": "Giant Hyena",
+		"name": "Гигантская гиена"
+	},
+	"monster:giant-lizard": {
+		"en": "Giant Lizard",
+		"name": "Гигантская ящерица"
+	},
+	"monster:giant-octopus": {
+		"en": "Giant Octopus",
+		"name": "Гигантский осьминог"
+	},
+	"monster:giant-owl": {
+		"en": "Giant Owl",
+		"name": "Гигантская сова"
+	},
+	"monster:giant-poisonous-snake": {
+		"en": "Giant Poisonous Snake",
+		"name": "Гигантская ядовитая змея"
+	},
+	"monster:giant-rat": {
+		"en": "Giant Rat",
+		"name": "Гигантская крыса"
+	},
+	"monster:giant-rat-diseased": {
+		"en": "Giant Rat (Diseased)",
+		"name": "Гигантская крыса (больная)"
+	},
+	"monster:giant-scorpion": {
+		"en": "Giant Scorpion",
+		"name": "Гигантский скорпион"
+	},
+	"monster:giant-sea-horse": {
+		"en": "Giant Sea Horse",
+		"name": "Гигантский морской конёк"
+	},
+	"monster:giant-spider": {
+		"en": "Giant Spider",
+		"name": "Гигантский паук"
+	},
+	"monster:giant-toad": {
+		"en": "Giant Toad",
+		"name": "Гигантская жаба"
+	},
+	"monster:giant-vulture": {
+		"en": "Giant Vulture",
+		"name": "Гигантский гриф"
+	},
+	"monster:giant-wasp": {
+		"en": "Giant Wasp",
+		"name": "Гигантская оса"
+	},
+	"monster:giant-weasel": {
+		"en": "Giant Weasel",
+		"name": "Гигантская ласка"
+	},
+	"monster:giant-wolf-spider": {
+		"en": "Giant Wolf Spider",
+		"name": "Гигантский волчий паук"
+	},
+	"monster:gibbering-mouther": {
+		"en": "Gibbering Mouther",
+		"name": "Бормочущий рот"
+	},
+	"monster:gnoll": {
+		"en": "Gnoll",
+		"name": "Гнолл"
+	},
+	"monster:goat": {
+		"en": "Goat",
+		"name": "Коза"
+	},
+	"monster:goblin": {
+		"en": "Goblin",
+		"name": "Гоблин"
+	},
+	"monster:gold-dragon-wyrmling": {
+		"en": "Gold Dragon Wyrmling",
+		"name": "Детёныш золотого дракона"
+	},
+	"monster:gray-ooze": {
+		"en": "Gray Ooze",
+		"name": "Серая слизь"
+	},
+	"monster:green-dragon-wyrmling": {
+		"en": "Green Dragon Wyrmling",
+		"name": "Детёныш зелёного дракона"
+	},
+	"monster:green-hag": {
+		"en": "Green Hag",
+		"name": "Зелёная карга"
+	},
+	"monster:grick": {
+		"en": "Grick",
+		"name": "Грик"
+	},
+	"monster:griffon": {
+		"en": "Griffon",
+		"name": "Грифон"
+	},
+	"monster:grimlock": {
+		"en": "Grimlock",
+		"name": "Гримлок"
+	},
+	"monster:guard": {
+		"en": "Guard",
+		"name": "Стражник"
+	},
+	"monster:harpy": {
+		"en": "Harpy",
+		"name": "Гарпия"
+	},
+	"monster:hawk": {
+		"en": "Hawk",
+		"name": "Ястреб"
+	},
+	"monster:hell-hound": {
+		"en": "Hell Hound",
+		"name": "Адская гончая"
+	},
+	"monster:hippogriff": {
+		"en": "Hippogriff",
+		"name": "Гиппогриф"
+	},
+	"monster:hobgoblin": {
+		"en": "Hobgoblin",
+		"name": "Хобгоблин"
+	},
+	"monster:homunculus": {
+		"en": "Homunculus",
+		"name": "Гомункул"
+	},
+	"monster:hunter-shark": {
+		"en": "Hunter Shark",
+		"name": "Акула-охотник"
+	},
+	"monster:hyena": {
+		"en": "Hyena",
+		"name": "Гиена"
+	},
+	"monster:ice-mephit": {
+		"en": "Ice Mephit",
+		"name": "Ледяной мефит"
+	},
+	"monster:imp": {
+		"en": "Imp",
+		"name": "Бес"
+	},
+	"monster:jackal": {
+		"en": "Jackal",
+		"name": "Шакал"
+	},
+	"monster:killer-whale": {
+		"en": "Killer Whale",
+		"name": "Косатка"
+	},
+	"monster:knight": {
+		"en": "Knight",
+		"name": "Рыцарь"
+	},
+	"monster:kobold": {
+		"en": "Kobold",
+		"name": "Кобольд"
+	},
+	"monster:lemure": {
+		"en": "Lemure",
+		"name": "Лемур"
+	},
+	"monster:lion": {
+		"en": "Lion",
+		"name": "Лев"
+	},
+	"monster:lizard": {
+		"en": "Lizard",
+		"name": "Ящерица"
+	},
+	"monster:lizardfolk": {
+		"en": "Lizardfolk",
+		"name": "Ящеролюд"
+	},
+	"monster:magma-mephit": {
+		"en": "Magma Mephit",
+		"name": "Магматический мефит"
+	},
+	"monster:magmin": {
+		"en": "Magmin",
+		"name": "Магмин"
+	},
+	"monster:manticore": {
+		"en": "Manticore",
+		"name": "Мантикора"
+	},
+	"monster:mastiff": {
+		"en": "Mastiff",
+		"name": "Мастиф"
+	},
+	"monster:merfolk": {
+		"en": "Merfolk",
+		"name": "Морской народ"
+	},
+	"monster:merrow": {
+		"en": "Merrow",
+		"name": "Мерроу"
+	},
+	"monster:mimic": {
+		"en": "Mimic",
+		"name": "Мимик"
+	},
+	"monster:minotaur": {
+		"en": "Minotaur",
+		"name": "Минотавр"
+	},
+	"monster:minotaur-skeleton": {
+		"en": "Minotaur Skeleton",
+		"name": "Скелет минотавра"
+	},
+	"monster:mule": {
+		"en": "Mule",
+		"name": "Мул"
+	},
+	"monster:mummy": {
+		"en": "Mummy",
+		"name": "Мумия"
+	},
+	"monster:nightmare": {
+		"en": "Nightmare",
+		"name": "Ночной кошмар"
+	},
+	"monster:noble": {
+		"en": "Noble",
+		"name": "Дворянин"
+	},
+	"monster:ochre-jelly": {
+		"en": "Ochre Jelly",
+		"name": "Охряное желе"
+	},
+	"monster:octopus": {
+		"en": "Octopus",
+		"name": "Осьминог"
+	},
+	"monster:ogre": {
+		"en": "Ogre",
+		"name": "Огр"
+	},
+	"monster:ogre-zombie": {
+		"en": "Ogre Zombie",
+		"name": "Зомби-огр"
+	},
+	"monster:orc": {
+		"en": "Orc",
+		"name": "Орк"
+	},
+	"monster:owl": {
+		"en": "Owl",
+		"name": "Сова"
+	},
+	"monster:owlbear": {
+		"en": "Owlbear",
+		"name": "Совомедведь"
+	},
+	"monster:panther": {
+		"en": "Panther",
+		"name": "Пантера"
+	},
+	"monster:pegasus": {
+		"en": "Pegasus",
+		"name": "Пегас"
+	},
+	"monster:phase-spider": {
+		"en": "Phase Spider",
+		"name": "Фазовый паук"
+	},
+	"monster:plesiosaurus": {
+		"en": "Plesiosaurus",
+		"name": "Плезиозавр"
+	},
+	"monster:poisonous-snake": {
+		"en": "Poisonous Snake",
+		"name": "Ядовитая змея"
+	},
+	"monster:polar-bear": {
+		"en": "Polar Bear",
+		"name": "Полярный медведь"
+	},
+	"monster:pony": {
+		"en": "Pony",
+		"name": "Пони"
+	},
+	"monster:priest": {
+		"en": "Priest",
+		"name": "Жрец"
+	},
+	"monster:pseudodragon": {
+		"en": "Pseudodragon",
+		"name": "Псевдодракон"
+	},
+	"monster:quasit": {
+		"en": "Quasit",
+		"name": "Квазит"
+	},
+	"monster:quipper": {
+		"en": "Quipper",
+		"name": "Рыба-пила"
+	},
+	"monster:rat": {
+		"en": "Rat",
+		"name": "Крыса"
+	},
+	"monster:raven": {
+		"en": "Raven",
+		"name": "Ворон"
+	},
+	"monster:reef-shark": {
+		"en": "Reef Shark",
+		"name": "Рифовая акула"
+	},
+	"monster:rhinoceros": {
+		"en": "Rhinoceros",
+		"name": "Носорог"
+	},
+	"monster:riding-horse": {
+		"en": "Riding Horse",
+		"name": "Верховая лошадь"
+	},
+	"monster:rug-of-smothering": {
+		"en": "Rug of Smothering",
+		"name": "Ковёр удушения"
+	},
+	"monster:rust-monster": {
+		"en": "Rust Monster",
+		"name": "Ржавый монстр"
+	},
+	"monster:saber-toothed-tiger": {
+		"en": "Saber-Toothed Tiger",
+		"name": "Саблезубый тигр"
+	},
+	"monster:sahuagin": {
+		"en": "Sahuagin",
+		"name": "Сахуагин"
+	},
+	"monster:satyr": {
+		"en": "Satyr",
+		"name": "Сатир"
+	},
+	"monster:scorpion": {
+		"en": "Scorpion",
+		"name": "Скорпион"
+	},
+	"monster:scout": {
+		"en": "Scout",
+		"name": "Разведчик"
+	},
+	"monster:sea-hag": {
+		"en": "Sea Hag",
+		"name": "Морская карга"
+	},
+	"monster:sea-horse": {
+		"en": "Sea Horse",
+		"name": "Морской конёк"
+	},
+	"monster:shadow": {
+		"en": "Shadow",
+		"name": "Тень"
+	},
+	"monster:shrieker": {
+		"en": "Shrieker",
+		"name": "Визгун"
+	},
+	"monster:silver-dragon-wyrmling": {
+		"en": "Silver Dragon Wyrmling",
+		"name": "Детёныш серебряного дракона"
+	},
+	"monster:skeleton": {
+		"en": "Skeleton",
+		"name": "Скелет"
+	},
+	"monster:specter": {
+		"en": "Specter",
+		"name": "Призрак"
+	},
+	"monster:spider": {
+		"en": "Spider",
+		"name": "Паук"
+	},
+	"monster:sprite": {
+		"en": "Sprite",
+		"name": "Спрайт"
+	},
+	"monster:spy": {
+		"en": "Spy",
+		"name": "Шпион"
+	},
+	"monster:steam-mephit": {
+		"en": "Steam Mephit",
+		"name": "Паровой мефит"
+	},
+	"monster:stirge": {
+		"en": "Stirge",
+		"name": "Стирж"
+	},
+	"monster:swarm-of-bats": {
+		"en": "Swarm of Bats",
+		"name": "Рой летучих мышей"
+	},
+	"monster:swarm-of-beetles": {
+		"en": "Swarm of Beetles",
+		"name": "Рой жуков"
+	},
+	"monster:swarm-of-centipedes": {
+		"en": "Swarm of Centipedes",
+		"name": "Рой многоножек"
+	},
+	"monster:swarm-of-insects": {
+		"en": "Swarm of Insects",
+		"name": "Рой насекомых"
+	},
+	"monster:swarm-of-poisonous-snakes": {
+		"en": "Swarm of Poisonous Snakes",
+		"name": "Рой ядовитых змей"
+	},
+	"monster:swarm-of-quippers": {
+		"en": "Swarm of Quippers",
+		"name": "Рой квиперов"
+	},
+	"monster:swarm-of-rats": {
+		"en": "Swarm of Rats",
+		"name": "Рой крыс"
+	},
+	"monster:swarm-of-ravens": {
+		"en": "Swarm of Ravens",
+		"name": "Рой воронов"
+	},
+	"monster:swarm-of-spiders": {
+		"en": "Swarm of Spiders",
+		"name": "Рой пауков"
+	},
+	"monster:swarm-of-wasps": {
+		"en": "Swarm of Wasps",
+		"name": "Рой ос"
+	},
+	"monster:thug": {
+		"en": "Thug",
+		"name": "Головорез"
+	},
+	"monster:tiger": {
+		"en": "Tiger",
+		"name": "Тигр"
+	},
+	"monster:tribal-warrior": {
+		"en": "Tribal Warrior",
+		"name": "Племенной воин"
+	},
+	"monster:veteran": {
+		"en": "Veteran",
+		"name": "Ветеран"
+	},
+	"monster:violet-fungus": {
+		"en": "Violet Fungus",
+		"name": "Фиолетовый грибок"
+	},
+	"monster:vulture": {
+		"en": "Vulture",
+		"name": "Гриф"
+	},
+	"monster:warhorse": {
+		"en": "Warhorse",
+		"name": "Боевой конь"
+	},
+	"monster:warhorse-skeleton": {
+		"en": "Warhorse Skeleton",
+		"name": "Скелет боевого коня"
+	},
+	"monster:weasel": {
+		"en": "Weasel",
+		"name": "Ласка"
+	},
+	"monster:wererat-human": {
+		"en": "Wererat, Human Form",
+		"name": "Оборотень-крыса, человеческая форма"
+	},
+	"monster:wererat-hybrid": {
+		"en": "Wererat, Hybrid Form",
+		"name": "Оборотень-крыса, гибридная форма"
+	},
+	"monster:wererat-rat": {
+		"en": "Wererat, Rat Form",
+		"name": "Оборотень-крыса, крысиный облик"
+	},
+	"monster:werewolf-human": {
+		"en": "Werewolf, Human Form",
+		"name": "Оборотень-волк, человеческий облик"
+	},
+	"monster:werewolf-hybrid": {
+		"en": "Werewolf, Hybrid Form",
+		"name": "Оборотень-волк, гибридный облик"
+	},
+	"monster:werewolf-wolf": {
+		"en": "Werewolf, Wolf Form",
+		"name": "Оборотень-волк, волчий облик"
+	},
+	"monster:white-dragon-wyrmling": {
+		"en": "White Dragon Wyrmling",
+		"name": "Белый дракончик"
+	},
+	"monster:wight": {
+		"en": "Wight",
+		"name": "Вихт"
+	},
+	"monster:will-o-wisp": {
+		"en": "Will-o'-Wisp",
+		"name": "Блуждающий огонёк"
+	},
+	"monster:winter-wolf": {
+		"en": "Winter Wolf",
+		"name": "Зимний волк"
+	},
+	"monster:wolf": {
+		"en": "Wolf",
+		"name": "Волк"
+	},
+	"monster:worg": {
+		"en": "Worg",
+		"name": "Ворг"
+	},
+	"monster:zombie": {
+		"en": "Zombie",
+		"name": "Зомби"
+	},
+	"monster_action:Acid Breath": {
+		"en": "Acid Breath",
+		"name": "Кислотное дыхание"
+	},
+	"monster_action:Acid Spray": {
+		"en": "Acid Spray",
+		"name": "Кислотный плевок"
+	},
+	"monster_action:Beak": {
+		"en": "Beak",
+		"name": "Клюв"
+	},
+	"monster_action:Beaks": {
+		"en": "Beaks",
+		"name": "Клювы"
+	},
+	"monster_action:Beard": {
+		"en": "Beard",
+		"name": "Борода"
+	},
+	"monster_action:Bite": {
+		"en": "Bite",
+		"name": "Укус"
+	},
+	"monster_action:Bites": {
+		"en": "Bites",
+		"name": "Укусы"
+	},
+	"monster_action:Blood Drain": {
+		"en": "Blood Drain",
+		"name": "Высасывание крови"
+	},
+	"monster_action:Claw": {
+		"en": "Claw",
+		"name": "Коготь"
+	},
+	"monster_action:Claw (Bite in Beast Form)": {
+		"en": "Claw (Bite in Beast Form)",
+		"name": "Коготь (укус в звериной форме)"
+	},
+	"monster_action:Claws": {
+		"en": "Claws",
+		"name": "Когти"
+	},
+	"monster_action:Club": {
+		"en": "Club",
+		"name": "Дубинка"
+	},
+	"monster_action:Cold Breath": {
+		"en": "Cold Breath",
+		"name": "Холодное дыхание"
+	},
+	"monster_action:Constrict": {
+		"en": "Constrict",
+		"name": "Сдавливание"
+	},
+	"monster_action:Crush": {
+		"en": "Crush",
+		"name": "Раздавливание"
+	},
+	"monster_action:Dagger": {
+		"en": "Dagger",
+		"name": "Кинжал"
+	},
+	"monster_action:Engulf": {
+		"en": "Engulf",
+		"name": "Поглощение"
+	},
+	"monster_action:Fire Breath": {
+		"en": "Fire Breath",
+		"name": "Огненное дыхание"
+	},
+	"monster_action:Fist": {
+		"en": "Fist",
+		"name": "Кулак"
+	},
+	"monster_action:Frost Breath": {
+		"en": "Frost Breath",
+		"name": "Ледяное дыхание"
+	},
+	"monster_action:Glaive": {
+		"en": "Glaive",
+		"name": "Глефа"
+	},
+	"monster_action:Gore": {
+		"en": "Gore",
+		"name": "Таран"
+	},
+	"monster_action:Greataxe": {
+		"en": "Greataxe",
+		"name": "Секира"
+	},
+	"monster_action:Greatclub": {
+		"en": "Greatclub",
+		"name": "Двуручная дубина"
+	},
+	"monster_action:Greatsword": {
+		"en": "Greatsword",
+		"name": "Двуручный меч"
+	},
+	"monster_action:Hand Crossbow": {
+		"en": "Hand Crossbow",
+		"name": "Ручной арбалет"
+	},
+	"monster_action:Harpoon": {
+		"en": "Harpoon",
+		"name": "Гарпун"
+	},
+	"monster_action:Heavy Club": {
+		"en": "Heavy Club",
+		"name": "Тяжёлая дубина"
+	},
+	"monster_action:Heavy Crossbow": {
+		"en": "Heavy Crossbow",
+		"name": "Тяжёлый арбалет"
+	},
+	"monster_action:Hooves": {
+		"en": "Hooves",
+		"name": "Копыта"
+	},
+	"monster_action:Javelin": {
+		"en": "Javelin",
+		"name": "Метательное копьё"
+	},
+	"monster_action:Life Drain": {
+		"en": "Life Drain",
+		"name": "Высасывание жизни"
+	},
+	"monster_action:Light Crossbow": {
+		"en": "Light Crossbow",
+		"name": "Лёгкий арбалет"
+	},
+	"monster_action:Lightning Breath": {
+		"en": "Lightning Breath",
+		"name": "Дыхание молнией"
+	},
+	"monster_action:Longbow": {
+		"en": "Longbow",
+		"name": "Длинный лук"
+	},
+	"monster_action:Longsword": {
+		"en": "Longsword",
+		"name": "Длинный меч"
+	},
+	"monster_action:Mace": {
+		"en": "Mace",
+		"name": "Булава"
+	},
+	"monster_action:Morningstar": {
+		"en": "Morningstar",
+		"name": "Моргенштерн"
+	},
+	"monster_action:Pike": {
+		"en": "Pike",
+		"name": "Пика"
+	},
+	"monster_action:Poison Breath": {
+		"en": "Poison Breath",
+		"name": "Ядовитое дыхание"
+	},
+	"monster_action:Poisoned Dart": {
+		"en": "Poisoned Dart",
+		"name": "Отравленный дротик"
+	},
+	"monster_action:Pseudopod": {
+		"en": "Pseudopod",
+		"name": "Ложноножка"
+	},
+	"monster_action:Quarterstaff": {
+		"en": "Quarterstaff",
+		"name": "Боевой посох"
+	},
+	"monster_action:Rake": {
+		"en": "Rake",
+		"name": "Царапание"
+	},
+	"monster_action:Ram": {
+		"en": "Ram",
+		"name": "Таран"
+	},
+	"monster_action:Rapier": {
+		"en": "Rapier",
+		"name": "Рапира"
+	},
+	"monster_action:Rock": {
+		"en": "Rock",
+		"name": "Камень"
+	},
+	"monster_action:Rotting Fist": {
+		"en": "Rotting Fist",
+		"name": "Гниющий кулак"
+	},
+	"monster_action:Rotting Touch": {
+		"en": "Rotting Touch",
+		"name": "Гниющее прикосновение"
+	},
+	"monster_action:Scimitar": {
+		"en": "Scimitar",
+		"name": "Ятаган"
+	},
+	"monster_action:Shock": {
+		"en": "Shock",
+		"name": "Удар током"
+	},
+	"monster_action:Shortbow": {
+		"en": "Shortbow",
+		"name": "Короткий лук"
+	},
+	"monster_action:Shortsword": {
+		"en": "Shortsword",
+		"name": "Короткий меч"
+	},
+	"monster_action:Slam": {
+		"en": "Slam",
+		"name": "Удар"
+	},
+	"monster_action:Sling": {
+		"en": "Sling",
+		"name": "Праща"
+	},
+	"monster_action:Spear": {
+		"en": "Spear",
+		"name": "Копьё"
+	},
+	"monster_action:Spiked Bone Club": {
+		"en": "Spiked Bone Club",
+		"name": "Шипастая костяная дубина"
+	},
+	"monster_action:Spiked Shield": {
+		"en": "Spiked Shield",
+		"name": "Шипастый щит"
+	},
+	"monster_action:Steam Breath": {
+		"en": "Steam Breath",
+		"name": "Паровое дыхание"
+	},
+	"monster_action:Sting": {
+		"en": "Sting",
+		"name": "Жало"
+	},
+	"monster_action:Sting (Bite in Beast Form)": {
+		"en": "Sting (Bite in Beast Form)",
+		"name": "Жало (укус в звериной форме)"
+	},
+	"monster_action:Strength Drain": {
+		"en": "Strength Drain",
+		"name": "Высасывание Силы"
+	},
+	"monster_action:Tail Spike": {
+		"en": "Tail Spike",
+		"name": "Шип хвоста"
+	},
+	"monster_action:Talons": {
+		"en": "Talons",
+		"name": "Когти"
+	},
+	"monster_action:Tentacles": {
+		"en": "Tentacles",
+		"name": "Щупальца"
+	},
+	"monster_action:Touch": {
+		"en": "Touch",
+		"name": "Касание"
+	},
+	"monster_action:Tusk": {
+		"en": "Tusk",
+		"name": "Клык"
+	},
+	"monster_action:War Pick": {
+		"en": "War Pick",
+		"name": "Боевой кирка"
+	},
+	"monster_action:Warhammer": {
+		"en": "Warhammer",
+		"name": "Боевой молот"
+	},
+	"monster_trait:Aberrant Ground": {
+		"en": "Aberrant Ground",
+		"name": "Чуждая почва",
+		"desc": "Земля в радиусе 10 футов вокруг существа становится тестообразной труднопроходимой местностью. Каждое существо, начинающее в этой зоне свой ход, должно преуспеть в спасброске Силы Сл 10, иначе его скорость становится 0 до начала его следующего хода."
+	},
+	"monster_trait:Adhesive (Object Form Only)": {
+		"en": "Adhesive (Object Form Only)",
+		"name": "Липкость (только в форме предмета)",
+		"desc": "Мимик прилипает ко всему, что его касается. Существо размером Огромное или меньше, прилипшее к мимику, также схвачено им (побег, Сл 13). Проверки характеристик для побега из захвата совершаются с помехой."
+	},
+	"monster_trait:Aggressive": {
+		"en": "Aggressive",
+		"name": "Агрессивность",
+		"desc": "Бонусным действием орк может переместиться на расстояние до своей скорости к враждебному существу, которое он видит."
+	},
+	"monster_trait:Ambusher": {
+		"en": "Ambusher",
+		"name": "Засадник",
+		"desc": "В первом раунде боя доппельгангер имеет преимущество на броски атаки против существ, которых он застал врасплох."
+	},
+	"monster_trait:Amorphous": {
+		"en": "Amorphous",
+		"name": "Бесформенность",
+		"desc": "Тень может проходить через пространство шириной всего 1 дюйм без сжимания."
+	},
+	"monster_trait:Amphibious": {
+		"en": "Amphibious",
+		"name": "Земноводное",
+		"desc": "Ведьма может дышать воздухом и водой."
+	},
+	"monster_trait:Antimagic Susceptibility": {
+		"en": "Antimagic Susceptibility",
+		"name": "Уязвимость к антимагии",
+		"desc": "Меч лишается способности действовать в области антимагического поля. Если на него нацелено рассеивание магии, он должен преуспеть в спасброске Телосложения против Сл заклинания создателя или на 1 минуту потерять сознание."
+	},
+	"monster_trait:Beast of Burden": {
+		"en": "Beast of Burden",
+		"name": "Вьючное животное",
+		"desc": "Мул считается крупным животным при определении грузоподъёмности."
+	},
+	"monster_trait:Blind Senses": {
+		"en": "Blind Senses",
+		"name": "Слепые чувства",
+		"desc": "Гримлок не может использовать слепое зрение, будучи оглохшим и неспособным учуять запах."
+	},
+	"monster_trait:Blood Frenzy": {
+		"en": "Blood Frenzy",
+		"name": "Кровавое неистовство",
+		"desc": "Рой имеет преимущество на броски атаки ближнего боя против любого существа, у которого не все хиты на месте."
+	},
+	"monster_trait:Brave": {
+		"en": "Brave",
+		"name": "Храбрость",
+		"desc": "Рыцарь совершает спасброски от испуга с преимуществом."
+	},
+	"monster_trait:Brute": {
+		"en": "Brute",
+		"name": "Грубая сила",
+		"desc": "Когда бугбир попадает оружием ближнего боя, оно наносит один дополнительный кубик урона (учтено в атаке)."
+	},
+	"monster_trait:Charge": {
+		"en": "Charge",
+		"name": "Таран",
+		"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+	},
+	"monster_trait:Confer Fire Resistance": {
+		"en": "Confer Fire Resistance",
+		"name": "Передача сопротивления огню",
+		"desc": "Кошмар может даровать сопротивление урону огнём любому, кто на нём едет."
+	},
+	"monster_trait:Consume Life": {
+		"en": "Consume Life",
+		"name": "Поглощение жизни",
+		"desc": "Бонусным действием блуждающий огонёк может выбрать одно видимое существо в пределах 5 футов от себя, у которого 0 хитов и которое ещё живо. Цель должна пройти спасбросок Телосложения КС 10 против этой магии или умрёт. Если цель умирает, блуждающий огонёк восстанавливает 10 (3к6) хитов."
+	},
+	"monster_trait:Corrode Metal": {
+		"en": "Corrode Metal",
+		"name": "Разъедание металла",
+		"desc": "Любое немагическое металлическое оружие, попавшее по слизи, корродирует: после нанесения урона оно получает постоянный накопительный штраф -1 к броскам урона, а при штрафе -5 уничтожается. Немагические металлические боеприпасы, попавшие в слизь, уничтожаются после нанесения урона. Слизь может прогрызть немагический металл толщиной 2 дюйма за 1 раунд."
+	},
+	"monster_trait:Cunning Action": {
+		"en": "Cunning Action",
+		"name": "Хитрое действие",
+		"desc": "В каждый свой ход шпион может использовать бонусное действие, чтобы совершить действие Рывок, Отход или Засада."
+	},
+	"monster_trait:Dark Devotion": {
+		"en": "Dark Devotion",
+		"name": "Тёмная преданность",
+		"desc": "Культист имеет преимущество на спасброски от очарования и испуга."
+	},
+	"monster_trait:Death Burst": {
+		"en": "Death Burst",
+		"name": "Взрыв при смерти",
+		"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём."
+	},
+	"monster_trait:Devil's Sight": {
+		"en": "Devil's Sight",
+		"name": "Зрение дьявола",
+		"desc": "Магическая тьма не мешает тёмному зрению лемура."
+	},
+	"monster_trait:Divine Eminence": {
+		"en": "Divine Eminence",
+		"name": "Божественное превосходство",
+		"desc": "Бонусным действием жрец может потратить ячейку заклинаний, чтобы его рукопашные атаки оружием магически наносили цели при попадании дополнительно 10 (3к6) излучающего урона. Эффект длится до конца хода. Если потрачена ячейка 2-го уровня или выше, дополнительный урон увеличивается на 1к6 за каждый уровень выше 1-го."
+	},
+	"monster_trait:Duergar Resilience": {
+		"en": "Duergar Resilience",
+		"name": "Стойкость дуэргара",
+		"desc": "Дуэргар получает преимущество к спасброскам от яда, заклинаний и иллюзий, а также к спасброскам, чтобы противостоять очарованию или параличу."
+	},
+	"monster_trait:Echolocation": {
+		"en": "Echolocation",
+		"name": "Эхолокация",
+		"desc": "Рой не может использовать слепое зрение, будучи оглохшим."
+	},
+	"monster_trait:Ephemeral": {
+		"en": "Ephemeral",
+		"name": "Эфемерность",
+		"desc": "Блуждающий огонёк не может носить или нести какие-либо предметы."
+	},
+	"monster_trait:Ethereal Jaunt": {
+		"en": "Ethereal Jaunt",
+		"name": "Эфирный скачок",
+		"desc": "Бонусным действием паук может магически перейти из Материального плана в Эфирный или обратно."
+	},
+	"monster_trait:False Appearance": {
+		"en": "False Appearance",
+		"name": "Ложный облик",
+		"desc": "Пока фиолетовый грибок неподвижен, его невозможно отличить от обычного гриба."
+	},
+	"monster_trait:False Appearance (Object Form Only)": {
+		"en": "False Appearance (Object Form Only)",
+		"name": "Ложный облик (только в форме предмета)",
+		"desc": "Пока мимик неподвижен, его невозможно отличить от обычного предмета."
+	},
+	"monster_trait:Fey Ancestry": {
+		"en": "Fey Ancestry",
+		"name": "Наследие фей",
+		"desc": "Дроу имеет преимущество на спасброски против очарования, и магия не может усыпить дроу."
+	},
+	"monster_trait:Flyby": {
+		"en": "Flyby",
+		"name": "Пролёт",
+		"desc": "Сова не провоцирует атаки возможности, когда вылетает из досягаемости врага."
+	},
+	"monster_trait:Gibbering": {
+		"en": "Gibbering",
+		"name": "Бормотание",
+		"desc": "Пока видит существо и не находится в состоянии недееспособности, рот бессвязно бормочет. Каждое существо, начинающее ход в 20 футах от него и способное слышать бормотание, совершает спасбросок Мудрости Сл 10. При провале оно не может использовать реакции до начала своего следующего хода и бросает d8: на 1–4 ничего не делает; на 5–6 не совершает действие и бонусное действие, а тратит всё перемещение в случайном направлении; на 7–8 атакует ближнего случайного существа в пределах досягаемости или ничего не делает, если такой атаки нет."
+	},
+	"monster_trait:Gnome Cunning": {
+		"en": "Gnome Cunning",
+		"name": "Хитрость гнома",
+		"desc": "Гном имеет преимущество на спасброски Интеллекта, Мудрости и Харизмы against магии."
+	},
+	"monster_trait:Grappler": {
+		"en": "Grappler",
+		"name": "Захват",
+		"desc": "Мимик совершает броски атаки с преимуществом против любого существа, схваченного им."
+	},
+	"monster_trait:Heated Body": {
+		"en": "Heated Body",
+		"name": "Раскалённое тело",
+		"desc": "Существо, которое касается азера или атакует его оружием ближнего боя, находясь в пределах 5 футов от него, получает 5 (1к10) урона огнём."
+	},
+	"monster_trait:Heated Weapons": {
+		"en": "Heated Weapons",
+		"name": "Раскалённое оружие",
+		"desc": "Когда азер попадает металлическим оружием ближнего боя, он наносит дополнительно 3 (1к6) урона огнём (включено в атаку)."
+	},
+	"monster_trait:Hellish Rejuvenation": {
+		"en": "Hellish Rejuvenation",
+		"name": "Адское возрождение",
+		"desc": "Лемур, погибший в Девяти Адах, оживает со всеми хитами через 1к10 дней, если его не убьёт существо доброго мировоззрения, на котором наложено заклинание благословение, или если его останки не окропить святой водой."
+	},
+	"monster_trait:Hold Breath": {
+		"en": "Hold Breath",
+		"name": "Задержка дыхания",
+		"desc": "Плезиозавр может задерживать дыхание на 1 час."
+	},
+	"monster_trait:Horrific Appearance": {
+		"en": "Horrific Appearance",
+		"name": "Ужасающий облик",
+		"desc": "Гуманоид, начинающий ход в 30 футах от карги и видящий её истинный облик, должен пройти спасбросок Мудрости Сл 11. При провале он испуган 1 минуту; в конце каждого своего хода он может повторить спасбросок (с помехой, если карга в поле зрения), при успехе эффект прекращается. После успеха или окончания эффекта существо иммунно к Ужасающему облику карги в течение 24 часов. Цель, не застигнутая врасплох и не увидевшая внезапного открытия истинного облика, может отвести взгляд и не совершать первоначальный спасбросок; до начала её следующего хода броски атаки по карге совершаются с помехой."
+	},
+	"monster_trait:Ignited Illumination": {
+		"en": "Ignited Illumination",
+		"name": "Пылающее сияние",
+		"desc": "Бонусным действием магмин может поджечь себя или погасить пламя. Пока он горит, он испускает яркий свет в радиусе 10 футов и тусклый свет ещё на 10 футов."
+	},
+	"monster_trait:Illumination": {
+		"en": "Illumination",
+		"name": "Освещение",
+		"desc": "Кошмар испускает яркий свет в радиусе 10 футов и тусклый свет ещё на 10 футов."
+	},
+	"monster_trait:Incorporeal Movement": {
+		"en": "Incorporeal Movement",
+		"name": "Бестелесное перемещение",
+		"desc": "Болотный огонёк может перемещаться сквозь других существ и предметы, как через труднопроходимую местность. Если он заканчивает ход внутри предмета, он получает 5 (1к10) урона силой."
+	},
+	"monster_trait:Innate Spellcasting": {
+		"en": "Innate Spellcasting",
+		"name": "Врождённое колдовство",
+		"desc": "Мефит может врождённо колдовать размытие без материальных компонентов. Его врождённая способность к колдовству — Харизма."
+	},
+	"monster_trait:Iron Scent": {
+		"en": "Iron Scent",
+		"name": "Чутьё на железо",
+		"desc": "Ржавый монстр по запаху определяет местонахождение железного металла в пределах 30 футов от себя."
+	},
+	"monster_trait:Keen Hearing": {
+		"en": "Keen Hearing",
+		"name": "Острый слух",
+		"desc": "Рой имеет преимущество на проверки Мудрости (Внимательность), которые опираются на слух."
+	},
+	"monster_trait:Keen Hearing and Sight": {
+		"en": "Keen Hearing and Sight",
+		"name": "Острый слух и зрение",
+		"desc": "Разведчик имеет преимущество на проверки Мудрости (Внимательность), опирающиеся на слух или зрение."
+	},
+	"monster_trait:Keen Hearing and Smell": {
+		"en": "Keen Hearing and Smell",
+		"name": "Острый слух и обоняние",
+		"desc": "Ворг имеет преимущество на проверки Мудрости (Внимательность), основанные на слухе или обонянии."
+	},
+	"monster_trait:Keen Senses": {
+		"en": "Keen Senses",
+		"name": "Острые чувства",
+		"desc": "Псевдодракон имеет преимущество на проверки Мудрости (Внимательность), основанные на зрении, слухе или обонянии."
+	},
+	"monster_trait:Keen Sight": {
+		"en": "Keen Sight",
+		"name": "Острое зрение",
+		"desc": "Гиппогриф имеет преимущество на проверки Мудрости (Внимательность), основанные на зрении."
+	},
+	"monster_trait:Keen Sight and Smell": {
+		"en": "Keen Sight and Smell",
+		"name": "Острое зрение и обоняние",
+		"desc": "Гриф имеет преимущество на проверки Мудрости (Внимательность), основанные на зрении или обонянии."
+	},
+	"monster_trait:Keen Smell": {
+		"en": "Keen Smell",
+		"name": "Острый нюх",
+		"desc": "Крыса-оборотень совершает проверки Мудрости (Внимательность) с преимуществом, когда они основаны на обонянии."
+	},
+	"monster_trait:Labyrinthine Recall": {
+		"en": "Labyrinthine Recall",
+		"name": "Память лабиринта",
+		"desc": "Минотавр безошибочно помнит любой пройденный путь."
+	},
+	"monster_trait:Limited Amphibiousness": {
+		"en": "Limited Amphibiousness",
+		"name": "Ограниченная амфибийность",
+		"desc": "Сахуагин может дышать и воздухом, и водой, но должен находиться под водой хотя бы раз в 4 часа, чтобы не задохнуться."
+	},
+	"monster_trait:Limited Telepathy": {
+		"en": "Limited Telepathy",
+		"name": "Ограниченная телепатия",
+		"desc": "Псевдодракон может магически телепатически передавать простые идеи, эмоции и образы любому существу в пределах 100 футов, которое понимает какой-либо язык."
+	},
+	"monster_trait:Magic Resistance": {
+		"en": "Magic Resistance",
+		"name": "Магическая стойкость",
+		"desc": "Сатир имеет преимущество на спасброски от заклинаний и других магических эффектов."
+	},
+	"monster_trait:Martial Advantage": {
+		"en": "Martial Advantage",
+		"name": "Воинское превосходство",
+		"desc": "Раз в ход гоблин может нанести дополнительно 7 (2к6) урона существу, которое он поразил оружейной атакой, если это существо находится в пределах 5 футов от союзника гоблина, который не выведен из строя."
+	},
+	"monster_trait:Mimicry": {
+		"en": "Mimicry",
+		"name": "Подражание",
+		"desc": "Ворон может имитировать простые звуки, которые слышал, например шёпот человека, плач младенца или стрекотание животного. Существо, услышавшее звуки, может распознать подделку, пройдя проверку Мудрости (Проницательность) Сл 10."
+	},
+	"monster_trait:Nimble Escape": {
+		"en": "Nimble Escape",
+		"name": "Проворное бегство",
+		"desc": "Гоблин может использовать действие Отход или Засада как бонусное действие в каждом своём ходу."
+	},
+	"monster_trait:Ooze Cube": {
+		"en": "Ooze Cube",
+		"name": "Слизистый куб",
+		"desc": "Куб занимает всё своё пространство. Другие существа могут войти в это пространство, но существо, которое так сделает, подвергается Поглощению куба и совершает спасбросок с помехой. Существа внутри видны, но имеют полное укрытие. Существо в пределах 5 футов от куба может действием вытащить оттуда существо или предмет, для этого нужна успешная проверка Силы СЛ 12, а пытающийся получает 10 (3к6) кислотного урона. Внутри куба одновременно может находиться одно существо Крупного размера или до четырёх существ Среднего или меньшего размера."
+	},
+	"monster_trait:Pack Tactics": {
+		"en": "Pack Tactics",
+		"name": "Тактика стаи",
+		"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
+	},
+	"monster_trait:Petrifying Gaze": {
+		"en": "Petrifying Gaze",
+		"name": "Взгляд окаменения",
+		"desc": "Существо, начинающее ход в пределах 30 футов от василиска и видящее его (при условии, что василиск не недееспособен), должно совершить спасбросок Телосложения КС 12. При провале оно начинает превращаться в камень и становится опутанным; в конце своего следующего хода оно повторяет спасбросок: при успехе эффект заканчивается, при провале существо окаменевает до освобождения заклинанием высшего восстановления или иной магией. Существо, не застигнутое врасплох, может в начале хода отвести глаза, чтобы не делать спасбросок, но тогда не видит василиска до начала своего следующего хода. Если василиск видит своё отражение при ярком свете в пределах 30 футов, он принимает себя за соперника и направляет взгляд на себя."
+	},
+	"monster_trait:Pounce": {
+		"en": "Pounce",
+		"name": "Наскок",
+		"desc": "Если тигр переместится минимум на 20 футов по прямой к существу и в тот же ход попадёт по нему когтистой атакой, цель должна пройти спасбросок Силы Сл 13 или будет сбита с ног. Если цель сбита с ног, тигр может как бонусным действием совершить по ней одну атаку укусом."
+	},
+	"monster_trait:Rampage": {
+		"en": "Rampage",
+		"name": "Неистовство",
+		"desc": "Если гнолл в свой ход снижает существо до 0 хитов рукопашной атакой, он может бонусным действием переместиться на расстояние до половины своей скорости и совершить атаку укусом."
+	},
+	"monster_trait:Reckless": {
+		"en": "Reckless",
+		"name": "Безрассудство",
+		"desc": "В начале своего хода минотавр может получить преимущество на все броски атаки ближним оружием, сделанные в этом ходу, но броски атаки по нему имеют преимущество до начала его следующего хода."
+	},
+	"monster_trait:Relentless": {
+		"en": "Relentless",
+		"name": "Неумолимый",
+		"desc": "Если кабан получает 10 урона или меньше, который снизил бы его до 0 хитов, он вместо этого снижается до 1 хита."
+	},
+	"monster_trait:Running Leap": {
+		"en": "Running Leap",
+		"name": "Прыжок с разбега",
+		"desc": "При разбеге на 10 футов лев может прыгнуть в длину на расстояние до 25 футов."
+	},
+	"monster_trait:Rust Metal": {
+		"en": "Rust Metal",
+		"name": "Ржавление металла",
+		"desc": "Немагическое металлическое оружие, попавшее по ржавому монстру, корродирует: после нанесения урона оно получает постоянный накопительный штраф -1 к броскам урона. Если штраф достигает -5, оружие уничтожается. Немагические металлические боеприпасы, попавшие по монстру, уничтожаются после нанесения урона."
+	},
+	"monster_trait:Shadow Stealth": {
+		"en": "Shadow Stealth",
+		"name": "Скрытность тени",
+		"desc": "В тусклом свете или темноте тень может совершить действие Спрятаться как бонусное действие. Её бонус к Скрытности повышается до +6."
+	},
+	"monster_trait:Shapechanger": {
+		"en": "Shapechanger",
+		"name": "Смена облика",
+		"desc": "Оборотень может действием превратиться в гибрида волка и гуманоида, в волка или вернуться в истинный гуманоидный облик. Характеристики, кроме КД, одинаковы в каждой форме. Снаряжение не меняется. При смерти оборотень возвращается к истинному облику."
+	},
+	"monster_trait:Shark Telepathy": {
+		"en": "Shark Telepathy",
+		"name": "Акульая телепатия",
+		"desc": "Сахуагин может магически приказывать любой акуле в пределах 120 футов от себя, используя ограниченную телепатию."
+	},
+	"monster_trait:Sneak Attack (1/Turn)": {
+		"en": "Sneak Attack (1/Turn)",
+		"name": "Скрытая атака (1/ход)",
+		"desc": "Шпион наносит дополнительно 7 (2к6) урона, когда попадает по цели оружейной атакой с преимуществом на бросок атаки, либо когда цель находится в пределах 5 футов от союзника шпиона, который не выведен из строя, и у шпиона нет помехи на бросок атаки."
+	},
+	"monster_trait:Snow Camouflage": {
+		"en": "Snow Camouflage",
+		"name": "Маскировка в снегу",
+		"desc": "Волк получает преимущество на проверки Ловкости (Скрытность), когда прячется в заснеженной местности."
+	},
+	"monster_trait:Speak with Beasts and Plants": {
+		"en": "Speak with Beasts and Plants",
+		"name": "Речь со зверями и растениями",
+		"desc": "Дриада может общаться со зверями и растениями так, будто они говорят на одном языке."
+	},
+	"monster_trait:Spellcasting": {
+		"en": "Spellcasting",
+		"name": "Накладывание заклинаний",
+		"desc": "Жрец — заклинатель 5-го уровня. Его характеристика заклинаний — Мудрость (Сл спасброска от заклинаний 13, +5 к броскам атаки заклинаниями). Подготовлены заговоры (без ограничений): свет, священный огонь, чудотворство; 1-й уровень (4 ячейки): лечение ран, направляющий удар, убежище; 2-й уровень (3 ячейки): малое восстановление, духовное оружие; 3-й уровень (2 ячейки): рассеивание магии, духовные стражи."
+	},
+	"monster_trait:Spider Climb": {
+		"en": "Spider Climb",
+		"name": "Лазание паука",
+		"desc": "Рой может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
+	},
+	"monster_trait:Standing Leap": {
+		"en": "Standing Leap",
+		"name": "Прыжок с места",
+		"desc": "Длина прыжка жабы в длину до 20 футов, в высоту до 10 футов, с разбега или без него."
+	},
+	"monster_trait:Steadfast": {
+		"en": "Steadfast",
+		"name": "Стойкость",
+		"desc": "Дьявол не может быть испуган, пока видит союзное существо в пределах 30 футов от себя."
+	},
+	"monster_trait:Stench": {
+		"en": "Stench",
+		"name": "Зловоние",
+		"desc": "Любое существо, которое начинает ход в пределах 5 футов от гаста, должно преуспеть в спасброске Телосложения СЛ 10, иначе оно отравлено до начала своего следующего хода. При успехе существо на 24 часа получает иммунитет к Зловонию гаста."
+	},
+	"monster_trait:Stone Camouflage": {
+		"en": "Stone Camouflage",
+		"name": "Маскировка в камне",
+		"desc": "Гримлок имеет преимущество на проверки Ловкости (Скрытность) для укрытия в каменистой местности."
+	},
+	"monster_trait:Sunlight Sensitivity": {
+		"en": "Sunlight Sensitivity",
+		"name": "Чувствительность к солнцу",
+		"desc": "Находясь на солнечном свету, иссушитель получает помеху к броскам атаки и к проверкам Мудрости (Внимательность), основанным на зрении."
+	},
+	"monster_trait:Sunlight Weakness": {
+		"en": "Sunlight Weakness",
+		"name": "Слабость к солнечному свету",
+		"desc": "На солнечном свету тень совершает броски атаки, проверки характеристик и спасброски с помехой."
+	},
+	"monster_trait:Sure-Footed": {
+		"en": "Sure-Footed",
+		"name": "Уверенная поступь",
+		"desc": "Мул совершает спасброски Силы и Ловкости с преимуществом против эффектов, которые могут сбить его с ног."
+	},
+	"monster_trait:Surprise Attack": {
+		"en": "Surprise Attack",
+		"name": "Внезапная атака",
+		"desc": "Если двойник застаёт существо врасплох и попадает по нему атакой в первом раунде боя, цель получает дополнительно 10 (3d6) урона от этой атаки."
+	},
+	"monster_trait:Swarm": {
+		"en": "Swarm",
+		"name": "Рой",
+		"desc": "Рой может занимать пространство другого существа и наоборот, а также проходить через любое отверстие, достаточно большое для Крошечного насекомого. Рой не может восстанавливать хиты и получать временные хиты."
+	},
+	"monster_trait:Tail Spike Regrowth": {
+		"en": "Tail Spike Regrowth",
+		"name": "Отрастание шипов хвоста",
+		"desc": "У мантикоры двадцать четыре шипа на хвосте. Использованные шипы отрастают, когда мантикора завершает долгий отдых."
+	},
+	"monster_trait:Telepathic Bond": {
+		"en": "Telepathic Bond",
+		"name": "Телепатическая связь",
+		"desc": "Пока гомункул находится на одном плане существования со своим хозяином, он может магическим образом передавать хозяину то, что ощущает, и они могут общаться телепатически."
+	},
+	"monster_trait:Trampling Charge": {
+		"en": "Trampling Charge",
+		"name": "Растаптывающий натиск",
+		"desc": "Если конь проходит по прямой не менее 20 футов к существу и в тот же ход атакует его копытами, цель должна преуспеть в спасброске Силы Сл 14 или будет сбита с ног. Если цель сбита с ног, конь может бонусным действием совершить ещё одну атаку копытами по ней."
+	},
+	"monster_trait:Transparent": {
+		"en": "Transparent",
+		"name": "Прозрачность",
+		"desc": "Даже когда куб на виду, чтобы заметить куб, который не двигался и не атаковал, нужна успешная проверка Мудрости (Внимательность) СЛ 15. Существо, которое входит в пространство куба, не зная о нём, застаёт врасплох."
+	},
+	"monster_trait:Tree Stride": {
+		"en": "Tree Stride",
+		"name": "Древесный шаг",
+		"desc": "Один раз за свой ход дриада может потратить 10 футов движения, чтобы магически войти в одно живое дерево в пределах досягаемости и выйти из другого живого дерева в пределах 60 футов от первого, появившись в свободном пространстве в пределах 5 футов от второго дерева. Оба дерева должны быть большого размера или крупнее."
+	},
+	"monster_trait:Turn Defiance": {
+		"en": "Turn Defiance",
+		"name": "Устойчивость к изгнанию",
+		"desc": "Гаст и все гули в пределах 30 футов от него совершают спасброски против эффектов изгнания нежити с преимуществом."
+	},
+	"monster_trait:Two-Headed": {
+		"en": "Two-Headed",
+		"name": "Двуглавый",
+		"desc": "Пёс имеет преимущество на проверки Мудрости (Внимательность) и на спасброски от ослепления, очарования, глухоты, испуга, ошеломления и потери сознания."
+	},
+	"monster_trait:Undead Fortitude": {
+		"en": "Undead Fortitude",
+		"name": "Стойкость нежити",
+		"desc": "Если урон снижает зомби до 0 хитов, он должен пройти спасбросок Телосложения со Сл 5 + полученный урон, если только урон не излучающий или не от критического попадания. При успехе зомби вместо этого остаётся с 1 хитом."
+	},
+	"monster_trait:Underwater Camouflage": {
+		"en": "Underwater Camouflage",
+		"name": "Подводная маскировка",
+		"desc": "Осьминог имеет преимущество на проверки Ловкости (Скрытность), сделанные под водой."
+	},
+	"monster_trait:Variable Illumination": {
+		"en": "Variable Illumination",
+		"name": "Изменяемое освещение",
+		"desc": "Блуждающий огонёк испускает яркий свет в радиусе от 5 до 20 футов и тусклый свет на дополнительное расстояние, равное выбранному радиусу. Бонусным действием он может изменить радиус."
+	},
+	"monster_trait:Water Breathing": {
+		"en": "Water Breathing",
+		"name": "Водное дыхание",
+		"desc": "Рой может дышать только под водой."
+	},
+	"monster_trait:Web Sense": {
+		"en": "Web Sense",
+		"name": "Чувство паутины",
+		"desc": "Находясь в контакте с паутиной, рой точно знает местоположение любого другого существа, касающегося той же паутины."
+	},
+	"monster_trait:Web Walker": {
+		"en": "Web Walker",
+		"name": "Ходок по паутине",
+		"desc": "Рой игнорирует ограничения движения, вызванные паутиной."
+	},
 	"spell:acid-arrow": {
 		"en": "Acid Arrow",
 		"name": "Кислотная стрела",

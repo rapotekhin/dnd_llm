@@ -101,7 +101,7 @@ func _rebuild() -> void:
 	_subheading("SIDE_PLACE")
 	_line("%s — %s" % [world.location(world.location_id(s.room_id)).get("name", ""), room.get("name", s.room_id)], false)
 	if not s.in_conversation():
-		var npcs := world.npcs_in(s.room_id)
+		var npcs := s.npcs_alive(world.npcs_in(s.room_id))
 		if not npcs.is_empty():
 			_subheading("SIDE_PEOPLE")
 			for id: String in npcs:

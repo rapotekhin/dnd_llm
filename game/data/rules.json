@@ -302,7 +302,7 @@
 		}
 	},
 	"resources": {
-		"_doc": "Feature uses (v0.6.0): who has them (features), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent).",
+		"_doc": "Feature uses (v0.6.0): who has them (features), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent). combat_cost: what a use costs in a fight (action by default, bonus, free).",
 		"second_wind": {
 			"features": [
 				"second_wind"
@@ -317,7 +317,8 @@
 					10,
 					"level"
 				]
-			}
+			},
+			"combat_cost": "bonus"
 		},
 		"action_surge": {
 			"features": [
@@ -327,7 +328,8 @@
 				"class_specific": "action_surges",
 				"default": 1
 			},
-			"recharge": "short"
+			"recharge": "short",
+			"combat_cost": "free"
 		},
 		"rage": {
 			"features": [
@@ -337,7 +339,8 @@
 				"class_specific": "rage_count",
 				"default": 2
 			},
-			"recharge": "long"
+			"recharge": "long",
+			"combat_cost": "bonus"
 		},
 		"bardic_inspiration": {
 			"features": [
@@ -349,7 +352,8 @@
 				"min": 1
 			},
 			"recharge": "long",
-			"short_with": "font_of_inspiration"
+			"short_with": "font_of_inspiration",
+			"combat_cost": "bonus"
 		},
 		"channel_divinity": {
 			"features": [
@@ -380,7 +384,8 @@
 				"class_specific": "ki_points",
 				"default": 0
 			},
-			"recharge": "short"
+			"recharge": "short",
+			"combat_cost": "bonus"
 		},
 		"lay_on_hands": {
 			"features": [
@@ -496,5 +501,69 @@
 		"infernal_legacy": [
 			"thaumaturgy"
 		]
+	},
+	"combat": {
+		"_doc": "Combat (v0.6.1, ADR-0010 §7): 7 columns of 30 ft on a line (−3…3), the player starts at 0; a move is one column (speed ≥ 60 — two), Dash one more. Spells the engine resolves itself — engine_spells (the rest go to the master as improvisation); multi: several darts or rays. Morale: a WIS save at half HP or when the leader falls; intelligent foes (INT ≥ intelligent_int) surrender, the rest flee. XP budget per character level for the master's fights (DMG, hard).",
+		"edge": 3,
+		"col_ft": 30,
+		"engine_spells": [
+			"acid_arrow",
+			"acid_splash",
+			"burning_hands",
+			"chill_touch",
+			"cure_wounds",
+			"eldritch_blast",
+			"fire_bolt",
+			"fireball",
+			"guiding_bolt",
+			"healing_word",
+			"inflict_wounds",
+			"lightning_bolt",
+			"magic_missile",
+			"mass_healing_word",
+			"poison_spray",
+			"prayer_of_healing",
+			"produce_flame",
+			"ray_of_frost",
+			"sacred_flame",
+			"scorching_ray",
+			"shatter",
+			"shocking_grasp",
+			"thunderwave",
+			"vicious_mockery"
+		],
+		"multi": {
+			"magic_missile": {
+				"base": 3,
+				"per_slot": 1,
+				"auto_hit": true
+			},
+			"scorching_ray": {
+				"base": 3,
+				"per_slot": 1
+			},
+			"eldritch_blast": {
+				"by_level": {
+					"1": 1,
+					"5": 2,
+					"11": 3,
+					"17": 4
+				}
+			}
+		},
+		"morale_dc": 10,
+		"intelligent_int": 6,
+		"xp_budget_hard": {
+			"1": 75,
+			"2": 150,
+			"3": 225,
+			"4": 375,
+			"5": 750
+		},
+		"start_cols": {
+			"melee": 2,
+			"ranged": 3
+		},
+		"default_npc_monster": "commoner"
 	}
 }

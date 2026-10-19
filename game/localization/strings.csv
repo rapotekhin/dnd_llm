@@ -31,6 +31,7 @@ BTN_CLOSE,Закрыть
 BTN_CONNECTION_SETTINGS,Настройки связи
 BTN_CONTINUE,Продолжить
 BTN_DEAL,Заключить сделку
+BTN_END_TURN,Конец хода
 BTN_EQUIP_ARMOR,Надеть
 BTN_EQUIP_MAIN_HAND,В основную руку
 BTN_EQUIP_OFF_HAND,Во вторую руку
@@ -43,6 +44,7 @@ BTN_LEAVE_CONVERSATION,Закончить разговор
 BTN_LEVEL_UP,Новый уровень!
 BTN_LEVEL_UP_CONFIRM,Подтвердить
 BTN_LOAD,Загрузить
+BTN_LOAD_BEFORE_FIGHT,Загрузить момент перед боем
 BTN_LONG_REST,Долгий отдых
 BTN_LONG_REST_COST,Долгий отдых ({cost})
 BTN_MAP,Карта
@@ -61,6 +63,8 @@ BTN_SAVE_AND_CHECK,Сохранить и проверить
 BTN_SEND,Действовать
 BTN_SETTINGS,Настройки
 BTN_SHORT_REST,Короткий отдых
+BTN_STEP_LEFT,← Шаг
+BTN_STEP_RIGHT,Шаг →
 BTN_TALK_TO,Поговорить: {name}
 BTN_TO_MENU,В меню
 BTN_TO_TALK,К разговору
@@ -134,6 +138,47 @@ CHECK_HAGGLE_LOST,Торг не удался — до завтра цены не
 CHECK_HAGGLE_WON,"Торг: −{pct}% к покупкам, +{pct}% к продаже"
 CHECK_LINE,{what}: {roll} {bonus} = {total} против DC {dc} {mark}
 CHECK_REPEAT,Повтор без изменений — прежний итог
+COMBAT_ACTION,Действие
+COMBAT_ATTACK,"Атака: {name} ({hit}, {dmg})"
+COMBAT_ATTACK_OFF,Второй рукой: {name} ({dmg}) [бонус]
+COMBAT_BAD_MOVE,Можно шагнуть только на соседнюю колонку
+COMBAT_BAD_TARGET,Эта цель уже вне боя
+COMBAT_BONUS,Бонус
+COMBAT_BONUS_SHORT, [бонус]
+COMBAT_COINS,Монеты: {coins}
+COMBAT_DEATH_SAVES,"Спасброски от смерти: успехов {ok}, провалов {fail}"
+COMBAT_DID_DASH,{name} — рывок
+COMBAT_DID_DISENGAGE,{name} отходит осторожно
+COMBAT_DID_DODGE,{name} уходит в оборону
+COMBAT_DO_DASH,Рывок
+COMBAT_DO_DISENGAGE,Отход
+COMBAT_DO_DODGE,Уклонение
+COMBAT_FT,{ft} фт
+COMBAT_LOOT,"Добыча — отметьте, что взять:"
+COMBAT_MELEE,вплотную
+COMBAT_MOVE,➜ Движение: {n}
+COMBAT_NONE,Боя нет
+COMBAT_NOT_YOUR_TURN,Сейчас не ваш ход
+COMBAT_NO_ACTION,Действие этого хода уже потрачено
+COMBAT_NO_BONUS,Бонусное действие уже потрачено или недоступно
+COMBAT_NO_MOVE,Движение этого хода уже потрачено — возьмите Рывок
+COMBAT_OUTCOME_CAPTURED,Вы в плену у врагов
+COMBAT_OUTCOME_DEAD,Герой погиб
+COMBAT_OUTCOME_PLAYER_FLED,Вы вышли из боя
+COMBAT_OUTCOME_VICTORY,Победа
+COMBAT_OUT_OF_RANGE,Слишком далеко
+COMBAT_OUT_OF_REACH,Не достать: подойдите вплотную или возьмите оружие дальнего боя
+COMBAT_PICK_TARGET,"Выберите цель — подсвечены те, кого можно достать"
+COMBAT_RAGING,Ярость
+COMBAT_ROUND,Раунд {n}
+COMBAT_TAB_COMMON,Общие
+COMBAT_TAB_FEATURES,Умения
+COMBAT_TAB_ITEMS,Предметы
+COMBAT_TAB_SPELLS,Заклинания
+COMBAT_TAB_WEAPONS,Оружие
+COMBAT_WAIT,Ходят другие…
+COMBAT_XP,Опыт: +{xp}
+COMBAT_YOUR_TURN,Ваш ход
 COND_BLINDED,ослеплён
 COND_CHARMED,очарован
 COND_FRIGHTENED,испуган
@@ -148,8 +193,11 @@ COND_STUNNED,ошеломлён
 COND_UNCONSCIOUS,без сознания
 DEATH_ONE_LIFE,Одна жизнь
 DEATH_ONE_LIFE_HINT,"Смерть окончательна: один слот и автосохранение, воскрешения для героя нет. Режим вступит в силу вместе с боем и смертью (M4), выбор сохраняется уже сейчас."
+DEATH_PATH,Дней в пути: {days} · заданий: {quests} · опыта: {xp}
 DEATH_STORY,История
 DEATH_STORY_HINT,Обычные сохранения: после гибели можно загрузиться.
+DEATH_TITLE,Конец пути
+DEATH_WHO,"{name} — {race}, {class}, {level} уровень"
 DEV_SNAPSHOT,Снимок бага: {path}
 DICE_D,к
 DM_STYLE_CLASSIC,Классический
@@ -168,6 +216,13 @@ EQUIP_NO_PROFICIENCY,Нет владения этим видом доспеха
 EQUIP_WRONG_SLOT,Сюда это не надеть
 GAME_SUBTITLE,D&D 5e с мастером-ИИ
 GAME_TITLE,Between the Rolls
+HEALTH_BLOODIED,тяжело ранен
+HEALTH_DEAD,повержен
+HEALTH_FLED,сбежал
+HEALTH_FULL,цел
+HEALTH_HURT,ранен
+HEALTH_NEAR_DEATH,при смерти
+HEALTH_SURRENDERED,сдался
 HINT_BACKEND,"Мастер — отдельная программа llm_server: на этом компьютере или на сервере. Токен задаёт тот, кто её запустил (переменная LLM_SERVER_TOKEN). Токен хранится только в настройках на этом компьютере."
 ITEM_ARMOR_AC, — КД {n}{dex}
 ITEM_DEX, + Лов
@@ -247,6 +302,7 @@ OPT_MODEL_DEFAULT,По умолчанию сервера ({model})
 OPT_RESOLUTION,Размер окна
 PARTNER_LINE,{role} · {race} · отношение: {attitude}
 PLACEHOLDER_ACTION,Что вы делаете?
+PLACEHOLDER_COMBAT,Импровизация (стоит действия): что вы делаете?
 PLACEHOLDER_SAY,Что вы говорите или делаете? ({name} слушает)
 PREP_ALREADY_TODAY,Заклинания на сегодня уже подготовлены — после долгого отдыха
 PREP_BUSY,Сейчас нельзя: мастер думает
@@ -274,6 +330,7 @@ SAVE_STR,Спасбросок Силы
 SAVE_WIS,Спасбросок Мудрости
 SHEET_ABILITIES,Характеристика · модификатор · спасбросок (● — владение)
 SHEET_ABILITY_ROW,{name} {score} ({mod}) · спасбросок {save}
+SHEET_ATTACK,"Атака: {name} {hit}, урон {dmg}"
 SHEET_CONCENTRATION,Концентрация: {spell}
 SHEET_EQUIPPED,Надето и в руках
 SHEET_HIT_DICE,Кости хитов: {left} из {max}

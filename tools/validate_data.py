@@ -32,6 +32,7 @@ def known() -> dict[str, set[str]]:
         "races": set(races["races"]), "subraces": set(races["subraces"]), "classes": set(classes["classes"]),
         "subclasses": set(classes["subclasses"]), "backgrounds": set(load(DATA / "srd" / "backgrounds.json")),
         "items": set(load(DATA / "items.json")["catalog"]),
+        "monsters": set(load(DATA / "srd" / "monsters.json")),
     }
 
 
@@ -67,6 +68,10 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         if room["location_id"] not in world["locations"]:
             errors.append(f"комната {rid}: нет локации {room['location_id']}")
         errors += [f"комната {rid}: выход в несуществующую {x}" for x in room["exits"] if x not in rooms]
+        enc = room.get("encounter")
+        if enc:
+            errors += [f"комната {rid}: встреча {enc['id']} — нет монстра {e['monster']}" for e in enc["enemies"] if e["monster"] not in ids["monsters"]]
+            errors += [f"комната {rid}: в добыче нет предмета {x}" for x in enc.get("loot", {}).get("items", {}) if x not in items]
         secret_ids = [sec["id"] for sec in room.get("secrets", [])]
         if len(secret_ids) != len(set(secret_ids)):
             errors.append(f"комната {rid}: id секретов повторяются")
@@ -78,6 +83,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             placed.add(n)
     for nid, npc in npcs.items():
         errors += [f"NPC {nid}: в каталоге нет предмета {x}" for x in npc.get("stock", []) if x not in items]
+        if npc.get("monster") and npc["monster"] not in ids["monsters"]:
+            errors.append(f"NPC {nid}: нет монстра-шаблона {npc['monster']}")
         if npc.get("stock") and not npc.get("trader"):
             errors.append(f"NPC {nid}: есть stock, но нет trader: true")
 

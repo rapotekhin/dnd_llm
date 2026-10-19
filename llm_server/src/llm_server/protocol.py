@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.6.0"
+PROTOCOL_VERSION = "0.7.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -112,12 +112,15 @@ class StatusResult(_Out):
 
 # --- snapshot (ADR-0009 §4) ------------------------------------------------------
 
-Mode = Literal["exploration", "social", "trade"]
+Mode = Literal["exploration", "social", "trade", "combat"]
 # deal / haggle (0.4.0): the engine already made the deal or rolled the haggle; `input` holds its fact lines.
 # quest (0.5.0): the engine completed a pack quest and gave the reward; `input` is what happened and the reward.
 # ability (0.6.0): the player cast a spell, used a feature or an item by a button — the engine applied it.
 # downed (0.6.0): the character dropped to 0 HP outside combat and came to with 1 HP; the master tells the cost.
-TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed"]
+# combat_start / combat_round / death (0.7.0): the engine started the fight, played a round (or ended it), the hero died;
+# `input` holds the engine lines.
+TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
+                   "combat_start", "combat_round", "death"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -259,6 +262,27 @@ class QuestInfo(_In):
     done: bool = False
 
 
+class CombatFoe(_In):
+    id: str
+    name: str
+    monster: str = ""  # the SRD kind (Russian name)
+    distance_ft: int = 0
+    side: Literal["left", "right", "same"] = "same"
+    status: Literal["active", "dead", "fled", "surrendered"] = "active"
+    health: str = ""  # full | hurt | bloodied | near_death | dead | fled | surrendered — never numbers
+    description: str = ""
+
+
+class CombatInfo(_In):
+    """The fight in progress (0.7.0): the engine's field and the lines of the round being narrated."""
+
+    round: int = 1
+    enemies: list[CombatFoe] = Field(default_factory=list)
+    outcome: str = ""  # "" | victory | player_fled | captured | dead
+    player_down: bool = False
+    log: list[str] = Field(default_factory=list)
+
+
 class Snapshot(_In):
     world: WorldInfo | None = None
     scene: Scene | None = None
@@ -268,6 +292,7 @@ class Snapshot(_In):
     limits: TurnLimits = Field(default_factory=TurnLimits)
     trade: TradeInfo | None = None  # only in trade mode (0.4.0)
     quests: list[QuestInfo] = Field(default_factory=list)  # (0.5.0)
+    combat: CombatInfo | None = None  # only in combat mode (0.7.0)
 
 
 # --- turn.* -----------------------------------------------------------------
@@ -367,6 +392,7 @@ class DamageEffect(_Out):
     severity: DamageSeverity
     damage_type: str
     reason: str
+    target_id: str | None = None  # an enemy id in a fight (0.7.0); None = the player
 
 
 class HealEffect(_Out):
@@ -419,6 +445,7 @@ class ConditionEffect(_Out):
     on: bool = True  # False lifts it
     until: Literal["short_rest", "long_rest"] = "long_rest"
     reason: str = ""
+    target_id: str | None = None  # an enemy id in a fight (0.7.0)
 
 
 class UseFeatureEffect(_Out):
@@ -432,6 +459,20 @@ class UseItemEffect(_Out):
     item_id: str
 
 
+class CombatFoeSpec(_Out):
+    monster: str  # an SRD monster id (goblin, wolf, bandit, skeleton, …)
+    count: int = Field(default=1, ge=1, le=6)
+    name: str | None = None
+
+
+class StartCombatEffect(_Out):
+    """The master starts a fight (0.7.0): the engine checks the XP budget of the character's level."""
+
+    kind: Literal["start_combat"] = "start_combat"
+    enemies: list[CombatFoeSpec]
+    reason: str = ""
+
+
 class FlagEffect(_Out):
     kind: Literal["flag"] = "flag"
     flag: str = Field(pattern=r"^[a-z][a-z0-9_]{1,40}$")
@@ -440,7 +481,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect,
+    | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect,
     Field(discriminator="kind"),
 ]
 
