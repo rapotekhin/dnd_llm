@@ -11,7 +11,13 @@ extends RefCounted
 ## - Enemies are SRD monsters run by a simple engine AI: melee closes in, shooters keep the range, morale at half
 ##   HP — intelligent foes surrender, the rest flee off the field.
 ## - 0 HP of the player in combat: death saves by 5e. The end: victory, the player fled, captured (stable among
-##   intelligent foes), dead. XP by CR of everyone defeated, loot — their gear and the encounter's loot.
+##   intelligent foes), dead, truce (persuasion). XP by CR of everyone defeated, loot — their gear and the
+##   encounter's loot.
+## - v0.6.2: surprise (the player sneaks in — Stealth against each foe's passive Perception; a pack ambush — the
+##   foes' Stealth against the player's), Hide in combat (not with a foe in your column; hidden — advantage, foes
+##   attack with disadvantage; an attack or a spell reveals), reinforcements (pack waves, a foe calls for help,
+##   the master's start_combat — all come at the edge column at the start of a round), parley (Intimidation —
+##   intelligent foes surrender or flee, Persuasion — truce; one try per skill), the hit hint before the click.
 ## State — `s.combat` (empty when there is no fight). Pure: no nodes, randomness from `s.rng`.
 
 const PLAYER := "p"
@@ -73,6 +79,8 @@ static func health_key(f: Dictionary) -> String:
 			return "HEALTH_FLED"
 		"surrendered":
 			return "HEALTH_SURRENDERED"
+		"truce":
+			return "HEALTH_TRUCE"
 	var hp := int(f.get("hp", 0))
 	var mx := maxi(1, int(f.get("max_hp", 1)))
 	if hp >= mx:
@@ -121,36 +129,23 @@ static func _nat(rolls: Array[int], adv: bool, dis: bool) -> int:
 
 ## Starts a fight. `foes` = [{monster, count?, name?, desc?, col?, npc_id?}]; `source` = {encounter, room_from}.
 ## Returns the chat lines (who is here, the initiative order).
+## `source` may add (v0.6.2): sneak (the player sneaks in), ambush (the foes lie in wait), waves [{round, side,
+## enemies}] and help {enemies, side, delay} of a pack encounter.
 static func start(s: GameSession, data: Dictionary, foes: Array, source: Dictionary = {}) -> Array[String]:
-	var mons: Dictionary = data["monsters"]
-	var fighters := {}
 	var c := s.character
+	var fighters := {}
 	fighters[PLAYER] = {"id": PLAYER, "side": "player", "name": str(c.get("name", "")), "col": 0, "status": "active",
 		"init": 0, "conditions": []}
-	var n := 0
-	var side := 1
-	for spec: Dictionary in foes:
-		var m: Dictionary = mons.get(str(spec.get("monster", "")), {})
-		if m.is_empty():
-			continue
-		for i in int(spec.get("count", 1)):
-			n += 1
-			var ranged := (m["actions"] as Array).all(func(a: Dictionary) -> bool: return str(a.get("kind")) == "ranged")
-			var col := int(spec["col"]) if spec.has("col") else side * int(cfg(data)["start_cols"]["ranged" if ranged else "melee"])
-			side = -side
-			var name := str(spec.get("name", m["name"]))
-			if int(spec.get("count", 1)) > 1:
-				name += " %d" % (i + 1)
-			fighters["e%d" % n] = {"id": "e%d" % n, "side": "enemy", "monster": str(spec["monster"]), "name": name,
-				"desc": str(spec.get("desc", "")), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "ac": int(m["ac"]),
-				"col": clampi(col, -edge(data), edge(data)), "status": "active", "conditions": [], "morale": false,
-				"npc_id": str(spec.get("npc_id", ""))}
 	s.combat = {"round": 1, "turn": 0, "fighters": fighters, "order": [], "log": [], "encounter": str(source.get("encounter", "")),
-		"room_from": str(source.get("room_from", "")), "outcome": "", "death_saves": {"ok": 0, "fail": 0}, "loot": [], "xp": 0}
+		"room_from": str(source.get("room_from", "")), "outcome": "", "death_saves": {"ok": 0, "fail": 0}, "loot": [], "xp": 0,
+		"next_id": 0, "incoming": [], "help": (source.get("help", {}) as Dictionary).duplicate(true), "parley_tried": []}
+	_add_foes(s, data, foes)
+	for w: Dictionary in source.get("waves", []):
+		add_incoming(s, data, w.get("enemies", []), int(w.get("round", 2)), str(w.get("side", "right")))
 	# Initiative: d20 + DEX; ties — the higher DEX, then the player.
 	var inits := []
 	for id: String in fighters:
-		var dex := CharacterRules.mod(int(c["abilities"]["dex"])) if id == PLAYER else CharacterRules.mod(int(mons[fighters[id]["monster"]]["abilities"]["dex"]))
+		var dex := _dex_of(s, data, id)
 		var roll := s.rng.randi_range(1, 20) + dex
 		fighters[id]["init"] = roll
 		inits.append([roll, dex, 1 if id == PLAYER else 0, id])
@@ -158,8 +153,132 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 	s.combat["order"] = inits.map(func(x: Array) -> String: return str(x[3]))
 	var names: Array = (s.combat["order"] as Array).map(func(id: String) -> String: return "%s %d" % [fighters[id]["name"], fighters[id]["init"]])
 	var lines: Array[String] = ["Бой! Инициатива: " + ", ".join(names)]
+	lines.append_array(_surprise(s, data, source))
 	_begin_turn(s, data, lines)
 	return lines
+
+
+static func _dex_of(s: GameSession, data: Dictionary, id: String) -> int:
+	if id == PLAYER:
+		return CharacterRules.mod(int(s.character["abilities"]["dex"]))
+	return CharacterRules.mod(int(_monster(data, fighter(s, id))["abilities"]["dex"]))
+
+
+## Adds fighters for `specs` [{monster, count?, name?, desc?, col?, npc_id?}]; `col_at` puts them all in one
+## column (reinforcements at the edge). A name that is already in the fight gets the next number. Returns the ids.
+static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: int = 99) -> Array[String]:
+	var mons: Dictionary = data["monsters"]
+	var fighters: Dictionary = s.combat["fighters"]
+	var ids: Array[String] = []
+	var side := 1
+	for spec: Dictionary in specs:
+		var m: Dictionary = mons.get(str(spec.get("monster", "")), {})
+		if m.is_empty():
+			continue
+		var count := int(spec.get("count", 1))
+		var base := str(spec.get("name", m["name"]))
+		var same := fighters.values().filter(func(f: Dictionary) -> bool: return str(f.get("base", "")) == base).size()
+		for i in count:
+			var n := int(s.combat.get("next_id", 0)) + 1
+			s.combat["next_id"] = n
+			var ranged := (m["actions"] as Array).all(func(a: Dictionary) -> bool: return str(a.get("kind")) == "ranged")
+			var col := col_at if col_at != 99 else (int(spec["col"]) if spec.has("col") else side * int(cfg(data)["start_cols"]["ranged" if ranged else "melee"]))
+			side = -side
+			var name := base
+			if count > 1 or same > 0:
+				name += " %d" % (same + i + 1)
+			var id := "e%d" % n
+			fighters[id] = {"id": id, "side": "enemy", "monster": str(spec["monster"]), "name": name, "base": base,
+				"desc": str(spec.get("desc", "")), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "ac": int(m["ac"]),
+				"col": clampi(col, -edge(data), edge(data)), "status": "active", "conditions": [], "morale": false,
+				"npc_id": str(spec.get("npc_id", ""))}
+			ids.append(id)
+	return ids
+
+
+# --- surprise and stealth (v0.6.2) -------------------------------------------------------------------
+
+
+## The player's Stealth roll: d20 + skill, disadvantage from armor (stealth_disadvantage) and conditions.
+## {total, nat, note}.
+static func stealth_roll(s: GameSession, data: Dictionary) -> Dictionary:
+	var c := s.character
+	var armor := ItemRules.def_of(data["items"], s.items, str(c.get("equipped", {}).get("armor", "")))
+	var dis := bool(armor.get("armor", {}).get("stealth_disadvantage", false))
+	var why: Array[String] = []
+	if dis:
+		why.append("доспех")
+	var mods := ConditionRules.check_mods(c, data, {"skill": "stealth"})
+	if not (mods["disadvantage"] as Array).is_empty():
+		dis = true
+		why.append("состояние")
+	var rolls := _d20(s.rng, false, dis)
+	var nat := _nat(rolls, false, dis)
+	return {"total": nat + int(c.get("skills", {}).get("stealth", 0)), "nat": nat,
+		"note": (" (с помехой: %s)" % ", ".join(why)) if dis else ""}
+
+
+static func monster_passive(data: Dictionary, f: Dictionary) -> int:
+	var m := _monster(data, f)
+	return int(m.get("passive_perception", 10 + CharacterRules.mod(int(m["abilities"].get("wis", 10)))))
+
+
+static func _monster_stealth(data: Dictionary, f: Dictionary) -> int:
+	var m := _monster(data, f)
+	return int(m.get("skills", {}).get("stealth", CharacterRules.mod(int(m["abilities"].get("dex", 10)))))
+
+
+## Surprise at the start (5e): a sneaking player rolls Stealth once — every foe whose passive Perception it meets is
+## surprised (all of them — the player starts hidden); a pack ambush — each foe rolls Stealth against the player's
+## passive Perception, and only when every one of them beats it the player is surprised.
+static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var who := str(s.character.get("name", ""))
+	var foes := enemies(s)
+	if foes.is_empty():
+		return lines
+	if bool(source.get("sneak", false)):
+		var roll := stealth_roll(s, data)
+		var unseen: Array[String] = []
+		var seen: Array[String] = []
+		for id: String in foes:
+			var f := fighter(s, id)
+			if int(roll["total"]) >= monster_passive(data, f):
+				f["surprised"] = true
+				unseen.append(str(f["name"]))
+			else:
+				seen.append(str(f["name"]))
+		var line := "%s крадётся: Скрытность %d%s" % [who, int(roll["total"]), roll["note"]]
+		if not unseen.is_empty():
+			line += " — застигнуты врасплох: " + ", ".join(unseen)
+		if not seen.is_empty():
+			line += ("; " if not unseen.is_empty() else " — ") + "замечают: " + ", ".join(seen)
+		lines.append(line)
+		if seen.is_empty():
+			player(s)["hidden"] = true
+			lines.append("Враги не знают, где %s" % who)
+	elif bool(source.get("ambush", false)):
+		var passive := int(s.character.get("passive_perception", 10))
+		var all_hidden := true
+		for id: String in foes:
+			if s.rng.randi_range(1, 20) + _monster_stealth(data, fighter(s, id)) < passive:
+				all_hidden = false
+		if all_hidden:
+			player(s)["surprised"] = true
+			lines.append("Засада! Враги подкрались незаметно — %s пропускает первый ход" % who)
+		else:
+			lines.append("Засада, но %s вовремя замечает врагов (пассивная Внимательность %d)" % [who, passive])
+	return lines
+
+
+## The player's turn is skipped: at 0 HP (death saves instead) or surprised in the first round.
+static func player_skips(s: GameSession) -> bool:
+	return int(s.character.get("hp", 0)) <= 0 or bool(player(s).get("surprised", false))
+
+
+## The player can press buttons now.
+static func player_can_act(s: GameSession) -> bool:
+	return is_player_turn(s) and not player_skips(s)
 
 
 ## Resets the economy of whoever's turn it is; the player at 0 HP rolls a death save instead.
@@ -270,25 +389,56 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 	var wid := str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
 	var w := weapon_profile(c, data, s.items, wid, offhand)
 	var t := fighter(s, target_id)
-	var d := cols_between(player(s), t)
-	var ranged_use := d > 0
-	var adv := _target_disabled(t) and not ranged_use or bool(player(s).get("hidden", false))
-	var dis := bool(t.get("dodging", false)) or (ranged_use and d * int(cfg(data)["col_ft"]) > int(w["range"][0])) \
-		or (not bool(w["melee"]) and _foe_in_column(s, player(s))) or ConditionRules.has(c, "poisoned") or ConditionRules.has(c, "frightened")
+	var mods := _attack_mods(s, data, w, t)
+	var adv := not (mods["adv"] as Array).is_empty()
+	var dis := not (mods["dis"] as Array).is_empty()
 	var lines: Array[String] = []
-	var bonus_dmg := 0
-	if not ranged_use and bool(w["melee"]) and bool(s.combat.get("raging", false)):
-		bonus_dmg += int(CharacterRules.level_row(c, data).get("class_specific", {}).get("rage_damage_bonus", 2))
-	var sneak := ""
-	var finesse_or_ranged: bool = not bool(w["melee"]) or (ItemRules.def_of(data["items"], s.items, wid).get("properties", []) as Array).has("finesse")
-	if CharacterRules.has_feature(c, "sneak_attack") and not bool(e.get("sneak", false)) and adv and not dis and finesse_or_ranged:
-		var sa: Dictionary = CharacterRules.level_row(c, data).get("class_specific", {}).get("sneak_attack", {})
-		sneak = "%dd%d" % [int(sa.get("dice_count", 1)), int(sa.get("dice_value", 6))]
+	var bonus_dmg := _rage_bonus(s, data, w, t)
+	var sneak := _sneak_dice(s, data, w, adv, dis)
 	var res := _attack(s, data, str(c.get("name", "")), w["name"], int(w["to_hit"]), adv, dis, t, str(w["dice"]), int(w["bonus"]) + bonus_dmg, str(w["type"]), lines, sneak)
 	if bool(res["hit"]) and not sneak.is_empty():
 		e["sneak"] = true
 	player(s)["hidden"] = false
 	return lines
+
+
+## Why a weapon attack at `t` has advantage or disadvantage now: {"adv": [reasons], "dis": [reasons]}.
+static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary) -> Dictionary:
+	var c := s.character
+	var d := cols_between(player(s), t)
+	var adv: Array[String] = []
+	var dis: Array[String] = []
+	if _target_disabled(t) and d == 0:
+		adv.append("цель беспомощна")
+	if bool(player(s).get("hidden", false)):
+		adv.append("вы спрятаны")
+	if bool(t.get("dodging", false)):
+		dis.append("цель уклоняется")
+	if d > 0 and not (w["range"] as Array).is_empty() and d * int(cfg(data)["col_ft"]) > int(w["range"][0]):
+		dis.append("дальше обычной дальности")
+	if not bool(w["melee"]) and _foe_in_column(s, player(s)):
+		dis.append("враг вплотную")
+	if ConditionRules.has(c, "poisoned"):
+		dis.append("вы отравлены")
+	if ConditionRules.has(c, "frightened"):
+		dis.append("вы испуганы")
+	return {"adv": adv, "dis": dis}
+
+
+static func _rage_bonus(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary) -> int:
+	if cols_between(player(s), t) == 0 and bool(w["melee"]) and bool(s.combat.get("raging", false)):
+		return int(CharacterRules.level_row(s.character, data).get("class_specific", {}).get("rage_damage_bonus", 2))
+	return 0
+
+
+## Sneak Attack dice once a turn: a finesse or ranged weapon with advantage and without disadvantage; "" otherwise.
+static func _sneak_dice(s: GameSession, data: Dictionary, w: Dictionary, adv: bool, dis: bool) -> String:
+	var c := s.character
+	var finesse_or_ranged: bool = not bool(w["melee"]) or (ItemRules.def_of(data["items"], s.items, str(w.get("id", ""))).get("properties", []) as Array).has("finesse")
+	if CharacterRules.has_feature(c, "sneak_attack") and not bool(economy(s).get("sneak", false)) and adv and not dis and finesse_or_ranged:
+		var sa: Dictionary = CharacterRules.level_row(c, data).get("class_specific", {}).get("sneak_attack", {})
+		return "%dd%d" % [int(sa.get("dice_count", 1)), int(sa.get("dice_value", 6))]
+	return ""
 
 
 static func _target_disabled(t: Dictionary) -> bool:
@@ -385,6 +535,12 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 
 ## Casts a spell in combat (can_cast first): the slot, then attack rolls or saves, damage or healing. Lines.
 static func player_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> Array[String]:
+	var lines := _player_cast(s, data, spell_id, slot, target_id)
+	player(s)["hidden"] = false  # casting gives the player away
+	return lines
+
+
+static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> Array[String]:
 	var c := s.character
 	var sp: Dictionary = data["spells"][spell_id]
 	var e := economy(s)
@@ -431,7 +587,7 @@ static func player_cast(s: GameSession, data: Dictionary, spell_id: String, slot
 			_hurt_enemy(s, data, t, dmg, lines)
 		elif sp.has("attack"):
 			var dis: bool = (str(sp["attack"]) == "ranged" and _foe_in_column(s, player(s))) or bool(t.get("dodging", false))
-			_attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), false, dis, t, dice, 0, dtype, lines)
+			_attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), bool(player(s).get("hidden", false)), dis, t, dice, 0, dtype, lines)
 		elif sp.has("save"):
 			var dmg_full := roll_dice(s.rng, dice)
 			for tg: Dictionary in targets:
@@ -497,6 +653,40 @@ static func player_simple(s: GameSession, data: Dictionary, what: String) -> Str
 	return ""
 
 
+## Hide (v0.6.2): an action (a bonus action with Cunning Action); not with a foe in the player's column.
+static func can_hide(s: GameSession, data: Dictionary) -> String:
+	if not player_can_act(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if bool(player(s).get("hidden", false)):
+		return "COMBAT_ALREADY_HIDDEN"
+	if _foe_in_column(s, player(s)):
+		return "COMBAT_HIDE_SEEN"
+	var cost := _hide_cost(s)
+	if int(economy(s).get(cost, 0)) <= 0:
+		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
+	return ""
+
+
+static func _hide_cost(s: GameSession) -> String:
+	return "bonus" if CharacterRules.has_feature(s.character, "cunning_action") and int(economy(s).get("bonus", 0)) > 0 else "action"
+
+
+## Stealth against the best passive Perception of the foes still fighting (can_hide first). Lines.
+static func player_hide(s: GameSession, data: Dictionary) -> Array[String]:
+	var e := economy(s)
+	var cost := _hide_cost(s)
+	e[cost] = int(e[cost]) - 1
+	var roll := stealth_roll(s, data)
+	var best := 0
+	for id: String in enemies(s):
+		best = maxi(best, monster_passive(data, fighter(s, id)))
+	var ok := int(roll["total"]) >= best
+	if ok:
+		player(s)["hidden"] = true
+	return ["%s прячется: Скрытность %d%s против Внимательности %d — %s" % [s.character["name"], int(roll["total"]), roll["note"], best,
+		"враги теряют из виду" if ok else "враги всё видят"]]
+
+
 ## "" when the player can step one column in `dir` (−1 / +1) — off the edge means fleeing the fight.
 static func can_move(s: GameSession, data: Dictionary, dir: int) -> String:
 	if not is_player_turn(s):
@@ -534,13 +724,15 @@ static func player_move(s: GameSession, data: Dictionary, dir: int) -> Array[Str
 	return lines
 
 
-## The rest of the turn is skipped: next fighter. Returns the lines of the turns that follow
-## until it is the player's turn again or the fight ends — the UI plays them one by one via next_actor().
-static func end_player_turn(s: GameSession, data: Dictionary) -> void:
-	_advance(s, data)
+## The rest of the turn is skipped: next fighter (the UI plays the others one by one via next_actor()).
+## Returns the lines of a new round's start (reinforcements arriving).
+static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	_advance(s, data, lines)
+	return lines
 
 
-static func _advance(s: GameSession, data: Dictionary) -> void:
+static func _advance(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
 	var order: Array = s.combat["order"]
 	var t := int(s.combat["turn"]) + 1
 	if t >= order.size():
@@ -548,9 +740,69 @@ static func _advance(s: GameSession, data: Dictionary) -> void:
 		s.combat["round"] = int(s.combat["round"]) + 1
 		s.combat["round_ended"] = true
 		s.combat.erase("raging_rounds")
+		for id: String in order:
+			fighter(s, id).erase("surprised")  # surprise lasts the first round only
+		s.combat["turn"] = 0
+		_arrivals(s, data, lines)
 	s.combat["turn"] = t
-	var tmp: Array[String] = []
-	_begin_turn(s, data, tmp)
+	_begin_turn(s, data, lines)
+
+
+# --- reinforcements (v0.6.2) ---------------------------------------------------------------------
+
+
+## Enemies who join later: grey at the edge column on `side` until they arrive at the start of round `at`.
+static func add_incoming(s: GameSession, data: Dictionary, foes: Array, at: int, side: String) -> void:
+	var names: Array = []
+	var specs: Array = []
+	for spec: Variant in foes:
+		if not (spec is Dictionary) or not data["monsters"].has(str(spec.get("monster", ""))):
+			continue
+		var m: Dictionary = data["monsters"][spec["monster"]]
+		var n := int(spec.get("count", 1))
+		names.append(str(spec.get("name", m["name"])) + (" ×%d" % n if n > 1 else ""))
+		specs.append((spec as Dictionary).duplicate(true))
+	if specs.is_empty():
+		return
+	(s.combat["incoming"] as Array).append({"at": at, "col": edge(data) * (-1 if side == "left" else 1), "foes": specs, "names": names})
+
+
+## XP of the enemies still fighting and on the way (the master's reinforcements stay within the level's budget).
+static func xp_in_play(s: GameSession, data: Dictionary) -> int:
+	var xp := 0
+	for id: String in enemies(s):
+		xp += int(_monster(data, fighter(s, id))["xp"])
+	for w: Dictionary in s.combat.get("incoming", []):
+		for spec: Dictionary in w["foes"]:
+			xp += int(data["monsters"][spec["monster"]]["xp"]) * int(spec.get("count", 1))
+	return xp
+
+
+static func _arrivals(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
+	var left: Array = []
+	for w: Dictionary in s.combat.get("incoming", []):
+		if int(w["at"]) > int(s.combat["round"]):
+			left.append(w)
+			continue
+		var ids := _add_foes(s, data, w["foes"], int(w["col"]))
+		for id: String in ids:
+			_insert_initiative(s, data, id)
+		lines.append("Подкрепление %s: %s" % ["слева" if int(w["col"]) < 0 else "справа",
+			", ".join(ids.map(func(id: String) -> String: return str(fighter(s, id)["name"])))])
+	s.combat["incoming"] = left
+
+
+## A newcomer rolls initiative and takes its place in the order (called at the start of a round, turn 0).
+static func _insert_initiative(s: GameSession, data: Dictionary, id: String) -> void:
+	var f := fighter(s, id)
+	f["init"] = s.rng.randi_range(1, 20) + _dex_of(s, data, id)
+	var order: Array = s.combat["order"]
+	var at := order.size()
+	for i in order.size():
+		if int(fighter(s, str(order[i]))["init"]) < int(f["init"]):
+			at = i
+			break
+	order.insert(at, id)
 
 
 ## Runs the turn of the current non-player fighter (the AI) or the player's death save, then moves the turn on.
@@ -561,16 +813,25 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 	if id == PLAYER:
 		if int(s.character["hp"]) <= 0:
 			_death_save(s, lines)
-			_check_end(s, data, lines)
-			if str(s.combat["outcome"]).is_empty():
-				_advance(s, data)
+		elif bool(player(s).get("surprised", false)):
+			player(s).erase("surprised")
+			lines.append("%s застигнут врасплох и не успевает ничего сделать" % s.character["name"])
+		else:
+			return lines
+		_check_end(s, data, lines)
+		if str(s.combat["outcome"]).is_empty():
+			_advance(s, data, lines)
 		return lines
 	var f := fighter(s, id)
 	if str(f.get("status")) == "active":
-		_enemy_turn(s, data, f, lines)
+		if bool(f.get("surprised", false)):
+			f.erase("surprised")
+			lines.append("%s застигнут врасплох и не успевает ничего сделать" % f["name"])
+		else:
+			_enemy_turn(s, data, f, lines)
 	_check_end(s, data, lines)
 	if str(s.combat["outcome"]).is_empty():
-		_advance(s, data)
+		_advance(s, data, lines)
 	return lines
 
 
@@ -651,6 +912,14 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 				return
 			f["col"] = to
 		return
+	var help: Dictionary = s.combat.get("help", {})
+	if not help.is_empty() and not bool(s.combat.get("help_called", false)) and _intelligent(data, f) and int(s.character["hp"]) > 0 \
+			and (int(f["hp"]) * 2 <= int(f["max_hp"]) or enemies(s, false).size() > enemies(s).size()):
+		s.combat["help_called"] = true
+		add_incoming(s, data, help.get("enemies", []), int(s.combat["round"]) + int(help.get("delay", cfg(data)["help_delay"])),
+			str(help.get("side", "right")))
+		lines.append("%s зовёт на помощь!" % f["name"])
+		return
 	var down := int(s.character["hp"]) <= 0
 	if down and _intelligent(data, f):
 		lines.append("%s не добивает упавшего" % f["name"])
@@ -682,6 +951,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	while moved < steps and cols_between(f, p) > 0:
 		f["col"] = int(f["col"]) + dir
 		moved += 1
+	_find_hidden(s, f, lines)
 	if cols_between(f, p) == 0 and not melee.is_empty():
 		lines.append("%s сближается вплотную" % f["name"])
 		_enemy_attack_full(s, data, f, melee, lines)
@@ -695,7 +965,16 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	while moved < steps * 2 and cols_between(f, p) > 0:
 		f["col"] = int(f["col"]) + dir
 		moved += 1
+	_find_hidden(s, f, lines)
 	lines.append("%s бежит ближе" % f["name"] if cols_between(f, p) > 0 else "%s сближается вплотную" % f["name"])
+
+
+## A foe that comes into the hidden player's column finds them.
+static func _find_hidden(s: GameSession, f: Dictionary, lines: Array[String]) -> void:
+	var p := player(s)
+	if bool(p.get("hidden", false)) and cols_between(f, p) == 0:
+		p["hidden"] = false
+		lines.append("%s находит, где прячется %s" % [f["name"], s.character["name"]])
 
 
 ## The full attack of a monster: Multiattack when it has one for this kind of action.
@@ -742,7 +1021,7 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	var ranged_use := d > 0
 	var adv := (_target_disabled_player(c) and not ranged_use) or (_has_trait(data, f, "pack_tactics") and _ally_near_player(s, f))
 	var dis := bool(p.get("dodging", false)) and int(c["hp"]) > 0 or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) \
-		or (str(a.get("kind")) == "ranged" and d == 0) or (f["conditions"] as Array).has("poisoned")
+		or (str(a.get("kind")) == "ranged" and d == 0) or (f["conditions"] as Array).has("poisoned") or bool(p.get("hidden", false))
 	var rolls := _d20(s.rng, adv, dis)
 	var nat := _nat(rolls, adv, dis)
 	var total := nat + int(a.get("to_hit", 0))
@@ -818,8 +1097,9 @@ static func _check_end(s: GameSession, data: Dictionary, lines: Array[String]) -
 	if not str(s.combat.get("outcome", "")).is_empty():
 		return
 	if enemies(s).is_empty():
-		s.combat["outcome"] = "victory"
-		lines.append("Победа!")
+		var truce := enemies(s, false).any(func(id: String) -> bool: return str(fighter(s, id).get("status")) == "truce")
+		s.combat["outcome"] = "truce" if truce else "victory"
+		lines.append("Перемирие" if truce else "Победа!")
 		return
 	var ds: Dictionary = s.combat["death_saves"]
 	if int(s.character["hp"]) <= 0 and bool(ds.get("stable", false)) \
@@ -835,9 +1115,12 @@ static func after_player_action(s: GameSession, data: Dictionary) -> Array[Strin
 	return lines
 
 
-## XP of a won fight: everyone defeated, fled or surrendered; loot — gear of the defeated and surrendered and the
-## encounter's loot. Fills s.combat.xp / loot [{item_id, qty}] / coins_cp.
+## XP of a won fight (a truce too — DMG: XP for overcoming the encounter): everyone defeated, fled, surrendered or
+## at peace; loot — gear of the defeated and surrendered; the encounter's loot and coins — only for a victory.
+## Fills s.combat.xp / loot [{item_id, qty}] / coins_cp.
 static func results(s: GameSession, data: Dictionary, encounter_loot: Dictionary) -> void:
+	var won := str(s.combat["outcome"]) in ["victory", "truce"]
+	var victory := str(s.combat["outcome"]) == "victory"
 	var xp := 0
 	var loot := {}
 	for id: String in enemies(s, false):
@@ -849,12 +1132,13 @@ static func results(s: GameSession, data: Dictionary, encounter_loot: Dictionary
 			for item: Variant in m.get("equipment", []):
 				if data["items"]["catalog"].has(str(item)):
 					loot[str(item)] = int(loot.get(str(item), 0)) + 1
-	for item: String in encounter_loot.get("items", {}):
-		loot[item] = int(loot.get(item, 0)) + int(encounter_loot["items"][item])
-	s.combat["xp"] = xp if str(s.combat["outcome"]) == "victory" else 0
-	s.combat["coins_cp"] = int(encounter_loot.get("coins_cp", 0)) if str(s.combat["outcome"]) == "victory" else 0
+	if victory:
+		for item: String in encounter_loot.get("items", {}):
+			loot[item] = int(loot.get(item, 0)) + int(encounter_loot["items"][item])
+	s.combat["xp"] = xp if won else 0
+	s.combat["coins_cp"] = int(encounter_loot.get("coins_cp", 0)) if victory else 0
 	var list: Array = []
-	if str(s.combat["outcome"]) == "victory":
+	if won:
 		for item: String in loot:
 			list.append({"item_id": item, "qty": int(loot[item])})
 	s.combat["loot"] = list
@@ -868,6 +1152,166 @@ static func snapshot(s: GameSession, data: Dictionary) -> Dictionary:
 		var f := fighter(s, id)
 		foes.append({"id": id, "name": f["name"], "monster": _monster(data, f)["name"], "distance_ft": cols_between(f, p) * int(cfg(data)["col_ft"]),
 			"side": "left" if int(f["col"]) < int(p["col"]) else "right" if int(f["col"]) > int(p["col"]) else "same",
-			"status": f["status"], "health": health_key(f).trim_prefix("HEALTH_").to_lower(), "description": f.get("desc", "")})
+			"status": f["status"], "health": health_key(f).trim_prefix("HEALTH_").to_lower(), "description": f.get("desc", ""),
+			"surprised": bool(f.get("surprised", false))})
+	var incoming: Array[Dictionary] = []
+	for w: Dictionary in s.combat.get("incoming", []):
+		incoming.append({"names": w["names"], "side": "left" if int(w["col"]) < 0 else "right",
+			"in_rounds": maxi(0, int(w["at"]) - int(s.combat.get("round", 1)))})
 	return {"round": int(s.combat.get("round", 1)), "enemies": foes, "outcome": str(s.combat.get("outcome", "")),
-		"player_down": int(s.character.get("hp", 1)) <= 0, "log": s.combat.get("log", [])}
+		"player_down": int(s.character.get("hp", 1)) <= 0, "player_hidden": bool(p.get("hidden", false)),
+		"incoming": incoming, "log": s.combat.get("log", [])}
+
+
+# --- parley (v0.6.2) ------------------------------------------------------------------------------
+
+
+## DC of a parley: base + the best WIS save among intelligent foes, easier for every foe already out of the fight.
+static func parley_dc(s: GameSession, data: Dictionary) -> int:
+	var p: Dictionary = cfg(data)["parley"]
+	var wis := -5
+	for id: String in enemies(s):
+		var f := fighter(s, id)
+		if _intelligent(data, f):
+			var m := _monster(data, f)
+			wis = maxi(wis, int(m["saves"].get("wis", CharacterRules.mod(int(m["abilities"].get("wis", 10))))))
+	var out := enemies(s, false).size() - enemies(s).size()
+	return maxi(int(p["min_dc"]), int(p["base_dc"]) + wis + int(p["per_defeated"]) * out)
+
+
+static func is_parley_skill(data: Dictionary, skill: String) -> bool:
+	return (cfg(data)["parley"]["skills"] as Array).has(skill)
+
+
+## "" when a parley with this skill can be tried: intelligent foes are still fighting, this skill not tried yet.
+static func can_parley(s: GameSession, data: Dictionary, skill: String) -> String:
+	if not is_parley_skill(data, skill):
+		return "COMBAT_NO_PARLEY"
+	if not enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
+		return "COMBAT_NO_PARLEY"
+	if (s.combat.get("parley_tried", []) as Array).has(skill):
+		return "COMBAT_PARLEY_TRIED"
+	return ""
+
+
+## The outcome of a parley check: Intimidation — intelligent foes next to the player surrender, the rest flee;
+## Persuasion — they lower their weapons (truce). Beasts fight on. Lines.
+static func parley_apply(s: GameSession, data: Dictionary, skill: String, success: bool) -> Array[String]:
+	(s.combat["parley_tried"] as Array).append(skill)
+	var lines: Array[String] = []
+	if not success:
+		lines.append("Враги не слушают — бой продолжается")
+		return lines
+	var pcol := int(player(s)["col"])
+	for id: String in enemies(s):
+		var f := fighter(s, id)
+		if not _intelligent(data, f):
+			continue
+		if skill == "intimidation":
+			if int(f["col"]) == pcol:
+				f["status"] = "surrendered"
+				lines.append("%s бросает оружие и сдаётся" % f["name"])
+			else:
+				f["status"] = "fled"
+				lines.append("%s бежит с поля боя" % f["name"])
+		else:
+			f["status"] = "truce"
+			lines.append("%s опускает оружие" % f["name"])
+	return lines
+
+
+# --- the hint before the click (v0.6.2) ----------------------------------------------------------
+
+
+## Percent to hit with a d20 + to_hit against AC (natural 1 misses, 20 hits), with advantage or disadvantage.
+static func hit_chance(to_hit: int, ac: int, adv: bool, dis: bool) -> int:
+	var need := clampi(ac - to_hit, 2, 20)
+	var p := (21 - need) / 20.0
+	if adv and not dis:
+		p = 1.0 - (1.0 - p) * (1.0 - p)
+	elif dis and not adv:
+		p = p * p
+	return roundi(p * 100.0)
+
+
+## [min, max] of a dice expression like "2d6+3".
+static func dice_range(expr: String, mod: int = 0) -> Array[int]:
+	var e := expr.replace(" ", "").replace("MOD", str(mod))
+	var lo := 0
+	var hi := 0
+	for part: String in e.replace("-", "+-").split("+", false):
+		if part.contains("d"):
+			var n := int(part.get_slice("d", 0)) if not part.get_slice("d", 0).is_empty() else 1
+			lo += n
+			hi += n * int(part.get_slice("d", 1))
+		else:
+			lo += int(part)
+			hi += int(part)
+	return [lo, hi]
+
+
+## A weapon attack at `target_id` before the click: {chance, min, max, adv: [reasons], dis: [reasons]}. AC stays
+## hidden: only the percent.
+static func attack_preview(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false) -> Dictionary:
+	var c := s.character
+	var t := fighter(s, target_id)
+	if t.is_empty():
+		return {}
+	var w := weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", "")), offhand)
+	var mods := _attack_mods(s, data, w, t)
+	var adv := not (mods["adv"] as Array).is_empty()
+	var dis := not (mods["dis"] as Array).is_empty()
+	var r := dice_range(str(w["dice"]))
+	var bonus := int(w["bonus"]) + _rage_bonus(s, data, w, t)
+	var sneak := _sneak_dice(s, data, w, adv, dis)
+	var sr: Array[int] = [0, 0]
+	if not sneak.is_empty():
+		sr = dice_range(sneak)
+	return {"chance": hit_chance(int(w["to_hit"]), int(t["ac"]), adv, dis), "min": maxi(1, r[0] + bonus) + sr[0],
+		"max": maxi(1, r[1] + bonus) + sr[1], "adv": mods["adv"], "dis": mods["dis"], "sneak": not sneak.is_empty()}
+
+
+## An engine spell at `target_id` before the click: attack — the chance to hit; save — the chance the foe fails;
+## {chance, save, half, min, max, count, adv, dis}; {} for spells without a target or not resolved by the engine.
+static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> Dictionary:
+	var sp: Dictionary = data["spells"].get(spell_id, {})
+	var t := fighter(s, target_id)
+	if sp.is_empty() or t.is_empty() or sp.has("heal_at_slot") or not is_engine_spell(data, spell_id):
+		return {}
+	var c := s.character
+	var level := int(c.get("level", 1))
+	var r := dice_range(_spell_dice(sp, maxi(slot, int(sp.get("level", 0))), level))
+	var multi: Dictionary = cfg(data)["multi"].get(spell_id, {})
+	var count := 1
+	if multi.has("base"):
+		count = int(multi["base"]) + int(multi.get("per_slot", 0)) * maxi(0, slot - maxi(1, int(sp["level"])))
+	elif multi.has("by_level"):
+		for k: String in multi["by_level"]:
+			if level >= int(k):
+				count = int(multi["by_level"][k])
+	var out := {"min": r[0], "max": r[1], "count": count, "adv": [], "dis": [], "save": false, "half": false, "chance": 100}
+	if bool(multi.get("auto_hit", false)):
+		return out
+	if sp.has("attack"):
+		var adv: Array[String] = []
+		if bool(player(s).get("hidden", false)):
+			adv.append("вы спрятаны")
+		var dis: Array[String] = []
+		if str(sp["attack"]) == "ranged" and _foe_in_column(s, player(s)):
+			dis.append("враг вплотную")
+		if bool(t.get("dodging", false)):
+			dis.append("цель уклоняется")
+		out["adv"] = adv
+		out["dis"] = dis
+		out["chance"] = hit_chance(int(c.get("spell_attack", 0)), int(t["ac"]), not adv.is_empty(), not dis.is_empty())
+	elif sp.has("save"):
+		var ab := str(sp["save"]["ability"])
+		var m := _monster(data, t)
+		var bonus := int(m["saves"].get(ab, CharacterRules.mod(int(m["abilities"].get(ab, 10)))))
+		out["save"] = true
+		out["half"] = str(sp["save"]["success"]) == "half"
+		if ab in ["str", "dex"] and _target_disabled(t) and not (t["conditions"] as Array).has("prone"):
+			out["chance"] = 100
+		else:
+			out["chance"] = 100 - hit_chance(bonus, int(c.get("spell_dc", 10)), false, false)
+	return out

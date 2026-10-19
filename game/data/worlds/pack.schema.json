@@ -5,6 +5,23 @@
 	"$defs": {
 		"strings": {"type": "array", "items": {"type": "string"}},
 		"nonempty": {"type": "string", "minLength": 1},
+		"foes": {
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"type": "object",
+				"required": ["monster"],
+				"properties": {
+					"monster": {"type": "string"},
+					"count": {"type": "integer", "minimum": 1, "maximum": 8},
+					"name": {"type": "string"},
+					"desc": {"type": "string"},
+					"col": {"type": "integer", "minimum": -3, "maximum": 3}
+				},
+				"additionalProperties": false
+			}
+		},
+		"side": {"enum": ["left", "right"]},
 		"rename": {
 			"type": "object",
 			"additionalProperties": {
@@ -126,21 +143,30 @@
 								"required": ["id", "enemies"],
 								"properties": {
 									"id": {"$ref": "#/$defs/nonempty"},
-									"enemies": {
+									"enemies": {"$ref": "#/$defs/foes"},
+									"ambush": {"type": "boolean"},
+									"waves": {
 										"type": "array",
-										"minItems": 1,
 										"items": {
 											"type": "object",
-											"required": ["monster"],
+											"required": ["round", "enemies"],
 											"properties": {
-												"monster": {"type": "string"},
-												"count": {"type": "integer", "minimum": 1, "maximum": 8},
-												"name": {"type": "string"},
-												"desc": {"type": "string"},
-												"col": {"type": "integer", "minimum": -3, "maximum": 3}
+												"round": {"type": "integer", "minimum": 2, "maximum": 10},
+												"side": {"$ref": "#/$defs/side"},
+												"enemies": {"$ref": "#/$defs/foes"}
 											},
 											"additionalProperties": false
 										}
+									},
+									"help": {
+										"type": "object",
+										"required": ["enemies"],
+										"properties": {
+											"enemies": {"$ref": "#/$defs/foes"},
+											"side": {"$ref": "#/$defs/side"},
+											"delay": {"type": "integer", "minimum": 1, "maximum": 5}
+										},
+										"additionalProperties": false
 									},
 									"loot": {
 										"type": "object",

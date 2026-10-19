@@ -62,6 +62,10 @@ static func _reveal(s: GameSession, room_id: String, secret: Dictionary) -> bool
 	return true
 
 
+## Sneaking (v0.6.2) costs 5 of passive Perception (PHB, a stealthy pace).
+const SNEAK_PASSIVE_PENALTY := 5
+
+
 ## Moves the player into `room_id`: visited, passive Perception against the room's perception secrets.
 ## Returns the texts noticed just now.
 static func enter_room(s: GameSession, world: Dictionary, room_id: String) -> Array[String]:
@@ -69,7 +73,7 @@ static func enter_room(s: GameSession, world: Dictionary, room_id: String) -> Ar
 	if not s.visited.has(room_id):
 		s.visited.append(room_id)
 	var out: Array[String] = []
-	var passive := int(s.character.get("passive_perception", 10))
+	var passive := int(s.character.get("passive_perception", 10)) - (SNEAK_PASSIVE_PENALTY if s.sneaking else 0)
 	for sec: Dictionary in secrets(world, room_id):
 		if str(sec.get("skill", "perception")) == "perception" and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
 			out.append(str(sec["text"]))

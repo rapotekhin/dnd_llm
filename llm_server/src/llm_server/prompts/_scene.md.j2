@@ -22,6 +22,7 @@
 Локация: {{ scene.location_name }}. {{ scene.location_description }}
 Комната: {{ scene.room_name }} [{{ scene.room_id }}]. {{ scene.room_description }}
 {% if scene.time_of_day %}Время суток: {{ scene.time_of_day }}.
+{% endif %}{% if scene.sneaking %}Игрок крадётся: движется тихо и осторожно.
 {% endif %}
 Выходы (для эффекта `move`):
 {% for e in scene.exits %}- {{ e.name }} [{{ e.room_id }}]

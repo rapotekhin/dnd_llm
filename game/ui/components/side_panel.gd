@@ -121,6 +121,14 @@ func _rebuild() -> void:
 			qb.name = "Quest_" + qid
 			qb.tooltip_text = str(q["title"])
 		_subheading("SIDE_EXITS")
+		var sneak := CheckButton.new()
+		sneak.name = "SneakToggle"
+		sneak.text = "BTN_SNEAK"
+		sneak.tooltip_text = "BTN_SNEAK_TIP"
+		sneak.button_pressed = s.sneaking
+		sneak.disabled = not can_act
+		sneak.toggled.connect(func(on: bool) -> void: GameState.set_sneaking(on))
+		_content.add_child(sneak)
 		for e: String in world.exits(s.room_id):
 			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act)
 			b.name = "Exit_" + e

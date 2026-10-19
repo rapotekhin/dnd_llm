@@ -231,10 +231,16 @@
             "active",
             "dead",
             "fled",
-            "surrendered"
+            "surrendered",
+            "truce"
           ],
           "title": "Status",
           "type": "string"
+        },
+        "surprised": {
+          "default": false,
+          "title": "Surprised",
+          "type": "boolean"
         }
       },
       "required": [
@@ -242,6 +248,34 @@
         "name"
       ],
       "title": "CombatFoe",
+      "type": "object"
+    },
+    "CombatIncoming": {
+      "description": "Reinforcements on the way (0.8.0): they come at the edge of the field at the start of a round.",
+      "properties": {
+        "in_rounds": {
+          "default": 1,
+          "title": "In Rounds",
+          "type": "integer"
+        },
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Names",
+          "type": "array"
+        },
+        "side": {
+          "default": "right",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "Side",
+          "type": "string"
+        }
+      },
+      "title": "CombatIncoming",
       "type": "object"
     },
     "CombatInfo": {
@@ -252,6 +286,13 @@
             "$ref": "#/$defs/CombatFoe"
           },
           "title": "Enemies",
+          "type": "array"
+        },
+        "incoming": {
+          "items": {
+            "$ref": "#/$defs/CombatIncoming"
+          },
+          "title": "Incoming",
           "type": "array"
         },
         "log": {
@@ -269,6 +310,11 @@
         "player_down": {
           "default": false,
           "title": "Player Down",
+          "type": "boolean"
+        },
+        "player_hidden": {
+          "default": false,
+          "title": "Player Hidden",
           "type": "boolean"
         },
         "round": {
@@ -458,6 +504,11 @@
         "room_name": {
           "title": "Room Name",
           "type": "string"
+        },
+        "sneaking": {
+          "default": false,
+          "title": "Sneaking",
+          "type": "boolean"
         },
         "time_of_day": {
           "default": "",

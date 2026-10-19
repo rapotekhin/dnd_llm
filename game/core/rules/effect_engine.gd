@@ -76,8 +76,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 	var c := s.character
 	var level := int(c.get("level", 1))
 	if s.mode == GameSession.MODE_COMBAT:
-		if str(e.get("kind", "")) in ["move", "coins", "give_item", "take_item", "start_combat", "npc_attitude"]:
-			return {"reason": "в бою это нельзя: исход боя, переходы и добычу ведёт движок; здесь — проверки, урон и состояния врагам (target_id)"}
+		if str(e.get("kind", "")) in ["move", "coins", "give_item", "take_item", "npc_attitude"]:
+			return {"reason": "в бою это нельзя: исход боя, переходы и добычу ведёт движок; здесь — проверки, урон и состояния врагам (target_id), подкрепление (start_combat)"}
 		var tid := str(e.get("target_id", "")) if e.get("target_id") != null else ""
 		if not tid.is_empty():
 			return _plan_on_foe(s, data, e, tid)
@@ -207,7 +207,9 @@ func _plan_on_foe(s: GameSession, data: Dictionary, e: Dictionary, tid: String) 
 	return {"reason": "на врага в бою — только damage и condition"}
 
 
-## The master starts a fight: SRD monsters within the hard XP budget of the character's level (DMG).
+## The master starts a fight: SRD monsters within the hard XP budget of the character's level (DMG). In a fight it is
+## a reinforcement (v0.6.2): the foes still fighting and on the way plus the new ones stay within the same budget;
+## they come at the edge column after rules.combat.reinforce_delay rounds.
 func _plan_fight(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var foes: Array = []
 	var xp := 0
@@ -224,6 +226,14 @@ func _plan_fight(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	if foes.is_empty():
 		return {"reason": "кого звать в бой? enemies: [{monster, count}]"}
 	var cap := int(CombatRules.cfg(data)["xp_budget_hard"].get(str(int(s.character.get("level", 1))), 750))
+	if CombatRules.active(s):
+		var in_play := CombatRules.xp_in_play(s, data)
+		if in_play + xp > cap:
+			return {"reason": "подкрепление не по силам %d уровню: в бою и на подходе %d опыта врагов, с новыми %d при пределе %d" % [int(s.character.get("level", 1)), in_play, in_play + xp, cap]}
+		var side := str(e.get("side", "")) if e.get("side") != null else ""
+		if not side in ["left", "right"]:
+			side = "left" if s.rng.randi_range(0, 1) == 0 else "right"
+		return {"plan": {"foes": foes, "reinforce": true, "side": side}, "summary": "Подкрепление: " + ", ".join(foes.map(func(f: Dictionary) -> String: return "%s ×%d" % [f["name"], f["count"]]))}
 	if xp > cap:
 		return {"reason": "бой слишком тяжёл для %d уровня: %d опыта врагов при пределе %d — меньше врагов или слабее" % [int(s.character.get("level", 1)), xp, cap]}
 	return {"plan": {"foes": foes}, "summary": "Бой: " + ", ".join(foes.map(func(f: Dictionary) -> String: return "%s ×%d" % [f["name"], f["count"]]))}
@@ -291,7 +301,10 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"npc_attitude":
 			s.attitudes[plan["npc_id"]] = clampi(s.attitude(plan["npc_id"]) + int(plan["delta"]), -3, 3)
 		"start_combat":
-			s.pending_fight = plan["foes"]
+			if bool(plan.get("reinforce", false)) and CombatRules.active(s):
+				CombatRules.add_incoming(s, _data, plan["foes"], int(s.combat["round"]) + int(CombatRules.cfg(_data)["reinforce_delay"]), str(plan["side"]))
+			else:
+				s.pending_fight = plan["foes"]
 		"cast":
 			SpellRules.cast(c, _data, plan["spell_id"], int(plan["slot"]))
 		"condition":

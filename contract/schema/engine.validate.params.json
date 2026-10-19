@@ -454,7 +454,7 @@
     },
     "StartCombatEffect": {
       "additionalProperties": false,
-      "description": "The master starts a fight (0.7.0): the engine checks the XP budget of the character's level.",
+      "description": "The master starts a fight (0.7.0): the engine checks the XP budget of the character's level. In a fight it is a\nreinforcement (0.8.0): the newcomers come at the edge of the field (`side`) next round, within the same budget.",
       "properties": {
         "enemies": {
           "items": {
@@ -473,6 +473,22 @@
           "default": "",
           "title": "Reason",
           "type": "string"
+        },
+        "side": {
+          "anyOf": [
+            {
+              "enum": [
+                "left",
+                "right"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side"
         }
       },
       "required": [

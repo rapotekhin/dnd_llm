@@ -63,6 +63,8 @@ BTN_SAVE_AND_CHECK,Сохранить и проверить
 BTN_SEND,Действовать
 BTN_SETTINGS,Настройки
 BTN_SHORT_REST,Короткий отдых
+BTN_SNEAK,Красться
+BTN_SNEAK_TIP,"Входя туда, где ждут враги, вы проверяете Скрытность: кто не заметит — застигнут врасплох. Пока крадётесь, пассивная Внимательность ниже на 5"
 BTN_STEP_LEFT,← Шаг
 BTN_STEP_RIGHT,Шаг →
 BTN_TALK_TO,Поговорить: {name}
@@ -139,6 +141,7 @@ CHECK_HAGGLE_WON,"Торг: −{pct}% к покупкам, +{pct}% к прода
 CHECK_LINE,{what}: {roll} {bonus} = {total} против DC {dc} {mark}
 CHECK_REPEAT,Повтор без изменений — прежний итог
 COMBAT_ACTION,Действие
+COMBAT_ALREADY_HIDDEN,Вы уже спрятались
 COMBAT_ATTACK,"Атака: {name} ({hit}, {dmg})"
 COMBAT_ATTACK_OFF,Второй рукой: {name} ({dmg}) [бонус]
 COMBAT_BAD_MOVE,Можно шагнуть только на соседнюю колонку
@@ -153,7 +156,14 @@ COMBAT_DID_DODGE,{name} уходит в оборону
 COMBAT_DO_DASH,Рывок
 COMBAT_DO_DISENGAGE,Отход
 COMBAT_DO_DODGE,Уклонение
+COMBAT_DO_HIDE,Спрятаться
+COMBAT_FOE_SURPRISED,врасплох
 COMBAT_FT,{ft} фт
+COMBAT_HIDDEN,Спрятан — враги не видят
+COMBAT_HIDE_SEEN,Враг вплотную — спрятаться не выйдет
+COMBAT_HIDE_TIP,"Скрытность против Внимательности врагов. Спрятанный атакует с преимуществом, по нему бьют с помехой; атака или заклинание выдают"
+COMBAT_INCOMING,"{names}
+через {n} р."
 COMBAT_LOOT,"Добыча — отметьте, что взять:"
 COMBAT_MELEE,вплотную
 COMBAT_MOVE,➜ Движение: {n}
@@ -162,15 +172,22 @@ COMBAT_NOT_YOUR_TURN,Сейчас не ваш ход
 COMBAT_NO_ACTION,Действие этого хода уже потрачено
 COMBAT_NO_BONUS,Бонусное действие уже потрачено или недоступно
 COMBAT_NO_MOVE,Движение этого хода уже потрачено — возьмите Рывок
+COMBAT_NO_PARLEY,Здесь не с кем договариваться
 COMBAT_OUTCOME_CAPTURED,Вы в плену у врагов
 COMBAT_OUTCOME_DEAD,Герой погиб
 COMBAT_OUTCOME_PLAYER_FLED,Вы вышли из боя
+COMBAT_OUTCOME_TRUCE,Перемирие
 COMBAT_OUTCOME_VICTORY,Победа
 COMBAT_OUT_OF_RANGE,Слишком далеко
 COMBAT_OUT_OF_REACH,Не достать: подойдите вплотную или возьмите оружие дальнего боя
+COMBAT_PARLEY,Переговоры: {skill}
+COMBAT_PARLEY_TIP_INTIMIDATION,"Действие. Успех — разумные враги рядом сдаются, остальные бегут; звери дерутся дальше. Одна попытка за бой"
+COMBAT_PARLEY_TIP_PERSUASION,"Действие. Успех — разумные враги опускают оружие, бой кончается перемирием; звери дерутся дальше. Одна попытка за бой"
+COMBAT_PARLEY_TRIED,Так уже пробовали в этом бою
 COMBAT_PICK_TARGET,"Выберите цель — подсвечены те, кого можно достать"
 COMBAT_RAGING,Ярость
 COMBAT_ROUND,Раунд {n}
+COMBAT_SURPRISED,Застигнут врасплох
 COMBAT_TAB_COMMON,Общие
 COMBAT_TAB_FEATURES,Умения
 COMBAT_TAB_ITEMS,Предметы
@@ -223,7 +240,14 @@ HEALTH_FULL,цел
 HEALTH_HURT,ранен
 HEALTH_NEAR_DEATH,при смерти
 HEALTH_SURRENDERED,сдался
+HEALTH_TRUCE,опустил оружие
+HINT_ADV,Преимущество: {why}
 HINT_BACKEND,"Мастер — отдельная программа llm_server: на этом компьютере или на сервере. Токен задаёт тот, кто её запустил (переменная LLM_SERVER_TOKEN). Токен хранится только в настройках на этом компьютере."
+HINT_DIS,Помеха: {why}
+HINT_HALF, (при успехе — половина)
+HINT_HIT,Попадание {p}% · урон {min}–{max}
+HINT_SAVE,Провал спасброска {p}% · урон {min}–{max}
+HINT_SNEAK, · со Скрытой атакой
 ITEM_ARMOR_AC, — КД {n}{dex}
 ITEM_DEX, + Лов
 ITEM_DEX_MAX, + Лов (макс. {n})

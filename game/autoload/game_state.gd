@@ -259,8 +259,7 @@ func _combat_log(lines: Array[String]) -> void:
 
 
 func _combat_ready() -> bool:
-	return session != null and CombatRules.is_player_turn(session) and not is_busy() and Backend.is_ready() \
-		and int(session.character["hp"]) > 0
+	return session != null and CombatRules.player_can_act(session) and not is_busy() and Backend.is_ready()
 
 
 ## One player command in a fight: `why` "" means do it; the lines go to the log; an outcome ends the fight.
@@ -277,7 +276,7 @@ func _combat_do(why: String, act: Callable) -> String:
 	if not str(session.combat.get("outcome", "")).is_empty():
 		_combat_continue()
 	elif int(session.character["hp"]) <= 0:  # dropped on its own turn (an attack of opportunity): the turn is over
-		CombatRules.end_player_turn(session, Catalog.data)
+		_combat_log(CombatRules.end_player_turn(session, Catalog.data))
 		_combat_continue()
 	return ""
 
@@ -358,10 +357,58 @@ func combat_use_item(item_id: String) -> String:
 func combat_end_turn() -> String:
 	if not _combat_ready():
 		return "COMBAT_NOT_YOUR_TURN"
-	CombatRules.end_player_turn(session, Catalog.data)
+	_combat_log(CombatRules.end_player_turn(session, Catalog.data))
 	EventBus.state_changed.emit()
 	_combat_continue()
 	return ""
+
+
+## Hide in a fight (v0.6.2): an action (a bonus action with Cunning Action), Stealth against the foes' Perception.
+func combat_hide() -> String:
+	return _combat_do(CombatRules.can_hide(session, Catalog.data) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.player_hide(session, Catalog.data))
+
+
+## Parley in a fight (v0.6.2): the action, an engine check of Intimidation or Persuasion against the parley DC; the
+## outcome (surrender, flight, truce) is the engine's, the master narrates it with the round.
+func combat_parley(skill: String) -> String:
+	if session == null or not CombatRules.active(session):
+		return "COMBAT_NONE"
+	var why := CombatRules.can_parley(session, Catalog.data, skill)
+	if why.is_empty() and int(CombatRules.economy(session).get("action", 0)) <= 0:
+		why = "COMBAT_NO_ACTION"
+	return _combat_do(why, func() -> Array[String]:
+		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
+		return _parley_check({"skill": skill, "dc_tier": "medium"})["lines"])
+
+
+## A parley check (the button or the master's request_check of Intimidation / Persuasion in a fight): the DC is the
+## engine's, the outcome is applied at once and goes to the master in `note`. Adds the check card.
+func _parley_check(params: Dictionary) -> Dictionary:
+	var skill := str(params["skill"])
+	var p := params.duplicate()
+	p["dc"] = CombatRules.parley_dc(session, Catalog.data)
+	p["dc_tier"] = "medium"
+	var mods := ConditionRules.check_mods(session.character, Catalog.data, p)
+	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
+	p["disadvantage_reason"] = ", ".join((mods["disadvantage"] as Array).map(cond_name))
+	p["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
+	var result := CheckEngine.roll(Catalog.rules(), session.rng, p, CheckEngine.bonus_for(session.character, p), session.next_check_id())
+	var lines: Array[String] = ["%s — %s: %d против Сл %d — %s" % [session.character["name"], tr("SKILL_" + skill.to_upper()),
+		int(result["total"]), int(result["dc"]), "успех" if bool(result["success"]) else "провал"]]
+	var outcome := CombatRules.parley_apply(session, Catalog.data, skill, bool(result["success"]))
+	lines.append_array(outcome)
+	result["note"] = "Переговоры (исход решил движок): " + "; ".join(outcome)
+	_add(GameSession.check_entry(p, result))
+	return {"result": result, "lines": lines}
+
+
+## The «Красться» toggle of exploration (v0.6.2): entering a room with an encounter the engine rolls Stealth for
+## surprise; passive Perception for hidden things is 5 lower while sneaking (PHB).
+func set_sneaking(on: bool) -> void:
+	if session != null:
+		session.sneaking = on
+		EventBus.state_changed.emit()
 
 
 ## Plays the turns of the others with a pause per actor until it is the player's turn (alive), the round ends
@@ -381,7 +428,7 @@ func _combat_continue() -> void:
 			combat_playing = false
 			_combat_outcome()
 			return
-		if CombatRules.is_player_turn(s) and int(s.character["hp"]) > 0:
+		if CombatRules.player_can_act(s):
 			break
 		var lines := CombatRules.next_actor(s, Catalog.data)
 		CharacterRules.refresh(s.character, Catalog.data, s.items)
@@ -406,7 +453,7 @@ func _combat_outcome() -> void:
 		return
 	s.combat["narrated"] = true
 	var outcome := str(s.combat["outcome"])
-	if outcome == "victory":
+	if outcome in ["victory", "truce"]:
 		var enc_loot := {}
 		var enc_id := str(s.combat.get("encounter", ""))
 		for rid: String in Catalog.data["world"]["rooms"]:
@@ -439,7 +486,7 @@ func finish_combat(take: Array = []) -> void:
 	if outcome == "dead":
 		return
 	var lines: Array[String] = [tr("COMBAT_OUTCOME_" + outcome.to_upper())]
-	if outcome == "victory":
+	if outcome in ["victory", "truce"]:
 		var cp := int(s.combat.get("coins_cp", 0))
 		if cp > 0:
 			s.character["gold_cp"] = int(s.character["gold_cp"]) + cp
@@ -501,7 +548,7 @@ func submit(text: String) -> bool:
 	if session == null or text.is_empty() or is_busy() or not Backend.is_ready():
 		return false
 	if session.mode == GameSession.MODE_COMBAT:
-		if not CombatRules.is_player_turn(session) or int(CombatRules.economy(session).get("action", 0)) <= 0:
+		if not CombatRules.player_can_act(session) or int(CombatRules.economy(session).get("action", 0)) <= 0:
 			EventBus.message.emit(tr("COMBAT_NO_ACTION"))
 			return false
 		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
@@ -522,7 +569,8 @@ func go(room_id: String) -> bool:
 	EventBus.state_changed.emit()
 	var enc: Dictionary = world().room(room_id).get("encounter", {})
 	if not enc.is_empty() and not session.encounters_done.has(str(enc["id"])):
-		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from})
+		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
+			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {})})
 		return true
 	_request("enter", "")
 	return true
@@ -803,6 +851,11 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 		return JsonRpcPeer.fail(-32041, "no such active turn")
 	if TradeRules.is_haggle(session, Catalog.data, params):
 		return _haggle_check(params)
+	if session.mode == GameSession.MODE_COMBAT and CombatRules.active(session) and params.get("skill") != null \
+			and CombatRules.can_parley(session, Catalog.data, str(params["skill"])).is_empty():
+		var parley := _parley_check(params)
+		_combat_log(parley["lines"])
+		return parley["result"]
 	params.erase("dc")  # the DC number and condition effects are the engine's
 	var mods := ConditionRules.check_mods(session.character, Catalog.data, params)
 	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())

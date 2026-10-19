@@ -475,6 +475,26 @@ scenarios:
       - "Айра промахивается, гоблин рядом ранит её ятаганом, стрела второго гоблина проходит мимо — именно так, без новых ударов"
       - "Чисел бросков, КД и урона в тексте нет"
 
+  - id: combat_parley_words
+    title: "Переговоры словами в бою — проверка, исход от движка в note"
+    category: combat
+    extends: tavern
+    mode: combat
+    input: "Опускаю меч и говорю наёмникам: «Вам платят не за то, чтобы умирать. Разойдёмся миром»."
+    snapshot:
+      combat:
+        round: 2
+        enemies:
+          - {id: e1, name: "Наёмник 1", monster: "Бандит", distance_ft: 0, side: same, status: active, health: hurt}
+          - {id: e2, name: "Наёмник 2", monster: "Бандит", distance_ft: 30, side: right, status: active, health: full}
+    engine:
+      check: {d20: [14], bonus: 3, total: 17, dc: 12, success: true, nat: 14, blocked: false, note: "Переговоры (исход решил движок): Наёмник 1 опускает оружие; Наёмник 2 опускает оружие"}
+    expect:
+      check: {required: true}
+      effects: {max_count: 0}
+    rubric:
+      - "Мастер просит проверку Убеждения, а по успеху рассказывает, что наёмники опускают оружие, — без урона, состояний и выдуманного исхода сверх note"
+
   - id: combat_improvisation
     title: "Импровизация в бою — проверка и эффект на врага"
     category: combat

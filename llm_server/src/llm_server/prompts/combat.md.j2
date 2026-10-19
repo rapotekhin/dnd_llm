@@ -9,15 +9,23 @@
 2. Успех — обязательно эффект врагу с его `target_id`: `damage` (тяжесть по силе приёма: обычно `unpleasant`, редко `dangerous`) или `condition` (`prone` — сбит с ног, `blinded` — ослеплён, `restrained` — прижат). Провал — без эффекта.
 3. Описывай только то, что дал движок: «придавлен», «ослеп», «ранен» — только если эффект принят.
 
+## Переговоры и подкрепления
+
+- Игрок словами требует сдаться, запугивает или уговаривает разойтись миром — `request_check` Запугивания (`intimidation`) или Убеждения (`persuasion`). Исход решает движок и пишет его в `note` проверки (сдались, бегут, опустили оружие или не слушают) — рассказывай ровно его, эффектов к переговорам не добавляй.
+- Подмога врагам только по логике сцены (на шум боя сбегаются сородичи, из глубины выходит стража) — эффект `start_combat` с монстрами SRD и `side` (`left` / `right`): движок пустит их с края поля в следующем раунде, если бой останется по силам. Подкрепление — редкость, не каждый раунд.
+
 {% include "_rules.md.j2" %}
 
 {% include "_world.md.j2" %}
 
 {% if combat %}## Поле боя (раунд {{ combat.round }})
 
-{% for e in combat.enemies %}- {{ e.name }} [{{ e.id }}]{% if e.monster and e.monster != e.name %} ({{ e.monster }}){% endif %}: {% if e.status == "active" %}{% if e.distance_ft == 0 %}вплотную{% else %}в {{ e.distance_ft }} футах {{ "слева" if e.side == "left" else "справа" }}{% endif %}, {{ {"full": "цел", "hurt": "ранен", "bloodied": "тяжело ранен", "near_death": "при смерти"}.get(e.health, e.health) }}{% else %}{{ {"dead": "повержен", "fled": "сбежал", "surrendered": "сдался"}.get(e.status, e.status) }}{% endif %}.{% if e.description %} {{ e.description }}{% endif %}
+{% for e in combat.enemies %}- {{ e.name }} [{{ e.id }}]{% if e.monster and e.monster != e.name %} ({{ e.monster }}){% endif %}: {% if e.status == "active" %}{% if e.distance_ft == 0 %}вплотную{% else %}в {{ e.distance_ft }} футах {{ "слева" if e.side == "left" else "справа" }}{% endif %}, {{ {"full": "цел", "hurt": "ранен", "bloodied": "тяжело ранен", "near_death": "при смерти"}.get(e.health, e.health) }}{% if e.surprised %}, застигнут врасплох{% endif %}{% else %}{{ {"dead": "повержен", "fled": "сбежал", "surrendered": "сдался", "truce": "опустил оружие"}.get(e.status, e.status) }}{% endif %}.{% if e.description %} {{ e.description }}{% endif %}
+{% endfor %}
+{% for w in combat.incoming %}- На подходе {{ "слева" if w.side == "left" else "справа" }} (через {{ w.in_rounds }} р.): {{ w.names | join(", ") }}.
 {% endfor %}
 {% if combat.player_down %}Персонаж игрока лежит без сознания.
+{% endif %}{% if combat.player_hidden %}Персонаж игрока спрятался — враги его не видят.
 {% endif %}
 {% endif %}
 {% include "_scene.md.j2" %}

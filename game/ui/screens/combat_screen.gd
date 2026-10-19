@@ -3,7 +3,8 @@ extends Control
 ## The fight (roadmap v0.6.1, ADR-0010 §7): the initiative order on top, the field of 7 columns of 30 ft, the
 ## player's panel below like in BG3 (portrait block, action / bonus / move, tabs of actions, «Конец хода»), the
 ## log and free input on the right. An action that needs a target lights the cards that can be hit; a click on a
-## card does it. The results (XP, loot to take) or the death screen come when the fight ends.
+## card does it, hovering it shows the chance to hit and the damage (v0.6.2). Reinforcements wait grey at the edge
+## column with the rounds left. The results (XP, loot to take) or the death screen come when the fight ends.
 
 var _queue: HBoxContainer
 var _field: HBoxContainer
@@ -23,6 +24,8 @@ var _results_box: VBoxContainer
 ## The action waiting for a target: Callable(target_id) -> String (a reason or ""), and its check.
 var _pending: Callable
 var _pending_check: Callable
+## Callable(target_id) -> Dictionary: the hint of the pending action (CombatRules.attack_preview / cast_preview).
+var _pending_preview: Callable
 var _tab := 0
 
 
@@ -51,6 +54,7 @@ func _ready() -> void:
 	_field.add_theme_constant_override("separation", 6)
 	left.add_child(_field)
 	_hint = Label.new()
+	_hint.name = "Hint"
 	_hint.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_hint.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 	left.add_child(_hint)
@@ -205,7 +209,7 @@ func _refresh() -> void:
 		return
 	var s := GameState.session
 	var data := Catalog.data
-	var mine := CombatRules.is_player_turn(s) and not GameState.is_busy() and Backend.is_ready() and int(s.character["hp"]) > 0
+	var mine := CombatRules.player_can_act(s) and not GameState.is_busy() and Backend.is_ready()
 	_thinking.visible = not GameState.busy_turn.is_empty()
 	_retry.visible = GameState.can_retry()
 	input.editable = mine
@@ -217,8 +221,30 @@ func _refresh() -> void:
 	_draw_field(s, data, mine)
 	_draw_portrait(s, data)
 	_draw_actions(s, data, mine)
-	_hint.text = tr("COMBAT_PICK_TARGET") if _pending.is_valid() else (tr("COMBAT_YOUR_TURN") if mine else tr("COMBAT_WAIT"))
+	_hint.text = _base_hint(mine)
 	_draw_results(s, data)
+
+
+func _base_hint(mine: bool) -> String:
+	return tr("COMBAT_PICK_TARGET") if _pending.is_valid() else (tr("COMBAT_YOUR_TURN") if mine else tr("COMBAT_WAIT"))
+
+
+## The hint text: «Попадание 65% · урон 4–11» (or the chance the foe fails its save), why advantage / disadvantage.
+func _preview_text(pv: Dictionary) -> String:
+	if pv.is_empty():
+		return ""
+	var t := tr("HINT_SAVE" if bool(pv.get("save", false)) else "HINT_HIT").format({"p": int(pv["chance"]), "min": int(pv["min"]), "max": int(pv["max"])})
+	if int(pv.get("count", 1)) > 1:
+		t += " ×%d" % int(pv["count"])
+	if bool(pv.get("half", false)):
+		t += tr("HINT_HALF")
+	if bool(pv.get("sneak", false)):
+		t += tr("HINT_SNEAK")
+	if not (pv.get("adv", []) as Array).is_empty():
+		t += "\n" + tr("HINT_ADV").format({"why": ", ".join(pv["adv"])})
+	if not (pv.get("dis", []) as Array).is_empty():
+		t += "\n" + tr("HINT_DIS").format({"why": ", ".join(pv["dis"])})
+	return t
 
 
 func _draw_queue(s: GameSession) -> void:
@@ -282,6 +308,8 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			card.custom_minimum_size = Vector2(0, 76)
 			var conds: Array = (f.get("conditions", []) as Array).map(func(x: Variant) -> String: return tr("COND_" + str(x).to_upper()))
+			if bool(f.get("surprised", false)):
+				conds.append(tr("COMBAT_FOE_SURPRISED"))
 			card.text = "%s\n%s%s" % [f["name"], tr(CombatRules.health_key(f)), ("\n" + ", ".join(conds)) if not conds.is_empty() else ""]
 			card.tooltip_text = str(f.get("desc", ""))
 			var why := "COMBAT_NO_ACTION"
@@ -290,11 +318,34 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			card.disabled = not (mine and _pending.is_valid() and why.is_empty())
 			if _pending.is_valid() and not why.is_empty() and str(f.get("status")) == "active":
 				card.tooltip_text = tr(why)
+			elif str(f.get("status")) == "active":
+				var hint := ""
+				if _pending_preview.is_valid() and _pending.is_valid():
+					hint = _preview_text(_pending_preview.call(id))
+				else:  # no action picked: the main weapon, or why it cannot reach
+					var reach := CombatRules.can_attack(s, data, id)
+					hint = tr(reach) if reach in ["COMBAT_OUT_OF_REACH", "COMBAT_OUT_OF_RANGE"] else _preview_text(CombatRules.attack_preview(s, data, id))
+				if not hint.is_empty():
+					card.tooltip_text = hint + ("\n\n" + card.tooltip_text if not card.tooltip_text.is_empty() else "")
+					var title := str(f["name"])
+					card.mouse_entered.connect(func() -> void: _hint.text = "%s: %s" % [title, hint.replace("\n", " · ")])
+					card.mouse_exited.connect(func() -> void: _hint.text = _base_hint(mine))
 			card.pressed.connect(func() -> void:
 				var act := _pending
 				_pending = Callable()
 				_do(str(act.call(id))))
 			box.add_child(card)
+		for w: Dictionary in s.combat.get("incoming", []):
+			if int(w["col"]) != col:
+				continue
+			var ghost := Label.new()
+			ghost.name = "Incoming_%d" % col
+			ghost.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			ghost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			ghost.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			ghost.add_theme_color_override("font_color", UiTheme.MUTED)
+			ghost.text = tr("COMBAT_INCOMING").format({"names": "\n".join(w["names"]), "n": maxi(1, int(w["at"]) - int(s.combat.get("round", 1)))})
+			box.add_child(ghost)
 
 
 func _draw_portrait(s: GameSession, data: Dictionary) -> void:
@@ -319,6 +370,10 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 		_line(_portrait, tr("SIDE_CONCENTRATION").format({"spell": data["spells"].get(str(c["concentration"]), {}).get("name", "")}))
 	if bool(s.combat.get("raging", false)):
 		_line(_portrait, tr("COMBAT_RAGING")).add_theme_color_override("font_color", UiTheme.BAD)
+	if bool(CombatRules.player(s).get("hidden", false)):
+		_line(_portrait, tr("COMBAT_HIDDEN")).add_theme_color_override("font_color", UiTheme.ACCENT)
+	if bool(CombatRules.player(s).get("surprised", false)):
+		_line(_portrait, tr("COMBAT_SURPRISED")).add_theme_color_override("font_color", UiTheme.WARN)
 	if int(c["hp"]) <= 0:
 		var ds: Dictionary = s.combat.get("death_saves", {})
 		_line(_portrait, tr("COMBAT_DEATH_SAVES").format({"ok": int(ds.get("ok", 0)), "fail": int(ds.get("fail", 0))})).add_theme_color_override("font_color", UiTheme.BAD)
@@ -345,13 +400,15 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	var main := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
 	_action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), mine,
 		func(t: String) -> String: return GameState.combat_attack(t, false),
-		func(t: String) -> String: return CombatRules.can_attack(s, data, t, false))
+		func(t: String) -> String: return CombatRules.can_attack(s, data, t, false),
+		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
 	var off := str(c.get("equipped", {}).get("off_hand", ""))
 	if not off.is_empty():
 		var ow := CombatRules.weapon_profile(c, data, s.items, off, true)
 		_action(w, "Attack_off", tr("COMBAT_ATTACK_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), mine,
 			func(t: String) -> String: return GameState.combat_attack(t, true),
-			func(t: String) -> String: return CombatRules.can_attack(s, data, t, true))
+			func(t: String) -> String: return CombatRules.can_attack(s, data, t, true),
+			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true))
 	# Spells.
 	if not SpellRules.ready(c).is_empty():
 		var sp := _tab_box("COMBAT_TAB_SPELLS")
@@ -370,7 +427,8 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 				b.pressed.connect(func() -> void: _do(GameState.combat_cast(id, slot, "")))
 			else:
 				var ab := _action(sp, "Cast_" + id, label, mine, func(t: String) -> String: return GameState.combat_cast(id, slot, t),
-					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t))
+					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t),
+					func(t: String) -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t))
 				ab.tooltip_text = str(spell.get("desc", "")).left(500)
 	# Features.
 	var res := FeatureUses.lines(c, data)
@@ -395,6 +453,17 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	for what: String in ["dash", "dodge", "disengage"]:
 		var b := _button(g, "Do_" + what, tr("COMBAT_DO_" + what.to_upper()), mine)
 		b.pressed.connect(func() -> void: _do(GameState.combat_simple(what)))
+	var hide_why := CombatRules.can_hide(s, data)
+	var hb := _button(g, "Do_hide", tr("COMBAT_DO_HIDE"), mine and hide_why.is_empty())
+	hb.tooltip_text = tr(hide_why) if not hide_why.is_empty() else tr("COMBAT_HIDE_TIP")
+	hb.pressed.connect(func() -> void: _do(GameState.combat_hide()))
+	for skill: String in CombatRules.cfg(data)["parley"]["skills"]:
+		var why := CombatRules.can_parley(s, data, skill)
+		if why.is_empty() and int(e.get("action", 0)) <= 0:
+			why = "COMBAT_NO_ACTION"
+		var pb := _button(g, "Parley_" + skill, tr("COMBAT_PARLEY").format({"skill": tr("SKILL_" + skill.to_upper())}), mine and why.is_empty())
+		pb.tooltip_text = tr(why) if not why.is_empty() else tr("COMBAT_PARLEY_TIP_" + skill.to_upper())
+		pb.pressed.connect(func() -> void: _do(GameState.combat_parley(skill)))
 	_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
 
 
@@ -418,7 +487,8 @@ func _tab_box(title: String) -> HFlowContainer:
 
 func _button(parent: Control, node_name: String, text: String, enabled: bool) -> Button:
 	var b := Button.new()
-	b.name = node_name
+	if not node_name.is_empty():
+		b.name = node_name
 	b.text = text
 	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	b.custom_minimum_size = Vector2(0, 52)
@@ -432,7 +502,7 @@ func _disabled(parent: Control, text: String) -> void:
 
 
 ## A button that needs a target: pressing it lights the cards that can be hit.
-func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable) -> Button:
+func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable) -> Button:
 	var b := _button(parent, node_name, text, enabled)
 	b.toggle_mode = true
 	b.button_pressed = _pending.is_valid() and _pending_name == node_name
@@ -442,6 +512,7 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 		else:
 			_pending = act
 			_pending_check = check
+			_pending_preview = preview
 			_pending_name = node_name
 		_refresh())
 	return b

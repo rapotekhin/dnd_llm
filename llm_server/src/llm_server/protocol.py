@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.7.0"
+PROTOCOL_VERSION = "0.8.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -154,6 +154,7 @@ class Scene(_In):
     flags: list[str] = Field(default_factory=list)
     found: list[str] = Field(default_factory=list)  # hidden things the player noticed or found here (0.3.0)
     time_of_day: str = ""
+    sneaking: bool = False  # the player moves stealthily (0.8.0)
 
 
 class InventoryLine(_In):
@@ -268,9 +269,18 @@ class CombatFoe(_In):
     monster: str = ""  # the SRD kind (Russian name)
     distance_ft: int = 0
     side: Literal["left", "right", "same"] = "same"
-    status: Literal["active", "dead", "fled", "surrendered"] = "active"
-    health: str = ""  # full | hurt | bloodied | near_death | dead | fled | surrendered — never numbers
+    status: Literal["active", "dead", "fled", "surrendered", "truce"] = "active"
+    health: str = ""  # full | hurt | bloodied | near_death | dead | fled | surrendered | truce — never numbers
     description: str = ""
+    surprised: bool = False  # caught off guard: skips its first turn (0.8.0)
+
+
+class CombatIncoming(_In):
+    """Reinforcements on the way (0.8.0): they come at the edge of the field at the start of a round."""
+
+    names: list[str] = Field(default_factory=list)
+    side: Literal["left", "right"] = "right"
+    in_rounds: int = 1
 
 
 class CombatInfo(_In):
@@ -278,8 +288,10 @@ class CombatInfo(_In):
 
     round: int = 1
     enemies: list[CombatFoe] = Field(default_factory=list)
-    outcome: str = ""  # "" | victory | player_fled | captured | dead
+    outcome: str = ""  # "" | victory | truce | player_fled | captured | dead
     player_down: bool = False
+    player_hidden: bool = False  # the player hid: foes do not see them (0.8.0)
+    incoming: list[CombatIncoming] = Field(default_factory=list)  # (0.8.0)
     log: list[str] = Field(default_factory=list)
 
 
@@ -466,10 +478,12 @@ class CombatFoeSpec(_Out):
 
 
 class StartCombatEffect(_Out):
-    """The master starts a fight (0.7.0): the engine checks the XP budget of the character's level."""
+    """The master starts a fight (0.7.0): the engine checks the XP budget of the character's level. In a fight it is a
+    reinforcement (0.8.0): the newcomers come at the edge of the field (`side`) next round, within the same budget."""
 
     kind: Literal["start_combat"] = "start_combat"
     enemies: list[CombatFoeSpec]
+    side: Literal["left", "right"] | None = None
     reason: str = ""
 
 

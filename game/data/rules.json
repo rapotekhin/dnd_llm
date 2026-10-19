@@ -503,7 +503,7 @@
 		]
 	},
 	"combat": {
-		"_doc": "Combat (v0.6.1, ADR-0010 §7): 7 columns of 30 ft on a line (−3…3), the player starts at 0; a move is one column (speed ≥ 60 — two), Dash one more. Spells the engine resolves itself — engine_spells (the rest go to the master as improvisation); multi: several darts or rays. Morale: a WIS save at half HP or when the leader falls; intelligent foes (INT ≥ intelligent_int) surrender, the rest flee. XP budget per character level for the master's fights (DMG, hard).",
+		"_doc": "Combat (v0.6.1, ADR-0010 §7): 7 columns of 30 ft on a line (−3…3), the player starts at 0; a move is one column (speed ≥ 60 — two), Dash one more. Spells the engine resolves itself — engine_spells (the rest go to the master as improvisation); multi: several darts or rays. Morale: a WIS save at half HP or when the leader falls; intelligent foes (INT ≥ intelligent_int) surrender, the rest flee. XP budget per character level for the master's fights (DMG, hard); in a fight the master's reinforcement keeps the foes in play within it and comes after reinforce_delay rounds; a foe's call for help (pack encounter help) — after help_delay.",
 		"edge": 3,
 		"col_ft": 30,
 		"engine_spells": [
@@ -564,6 +564,15 @@
 			"melee": 2,
 			"ranged": 3
 		},
-		"default_npc_monster": "commoner"
+		"default_npc_monster": "commoner",
+		"help_delay": 2,
+		"reinforce_delay": 1,
+		"parley": {
+			"_doc": "Parley in a fight (v0.6.2): DC = base_dc + the best WIS save of intelligent foes + per_defeated for every foe already out of the fight, not below min_dc. One try per skill. Intimidation — they surrender (next to the player) or flee; Persuasion — truce.",
+			"skills": ["intimidation", "persuasion"],
+			"base_dc": 12,
+			"per_defeated": -2,
+			"min_dc": 5
+		}
 	}
 }

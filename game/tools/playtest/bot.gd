@@ -74,6 +74,9 @@ func _act() -> String:
 	if LevelUp.can_level_up(c, data):
 		gs.level_up(LevelUp.default_picks(c, data))
 		return "level_up"
+	if not s.in_conversation() and rng.randf() < 0.08:
+		gs.set_sneaking(not s.sneaking)
+		return "sneak_on" if s.sneaking else "sneak_off"
 	if s.mode == GameSession.MODE_TRADE:
 		match rng.randi_range(0, 3):
 			0:
@@ -166,9 +169,16 @@ func _combat_step(s: GameSession) -> String:
 		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 		gs.finish_combat((s.combat.get("loot", []) as Array).map(func(l: Dictionary) -> String: return l["item_id"]))
 		return "combat_end"
-	if not CombatRules.is_player_turn(s) or gs.is_busy():
+	if not CombatRules.player_can_act(s) or gs.is_busy():
 		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 		return "combat_wait"
+	var skill: String = _pick(CombatRules.cfg(data)["parley"]["skills"])
+	if rng.randf() < 0.15 and CombatRules.can_parley(s, data, skill).is_empty() and int(CombatRules.economy(s).get("action", 0)) > 0:
+		gs.combat_parley(skill)
+		return "combat_parley"
+	if rng.randf() < 0.2 and CombatRules.can_hide(s, data).is_empty():
+		gs.combat_hide()
+		return "combat_hide"
 	for id: String in CombatRules.enemies(s):
 		if CombatRules.can_attack(s, data, id).is_empty():
 			gs.combat_attack(id)

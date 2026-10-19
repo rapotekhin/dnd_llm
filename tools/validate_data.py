@@ -70,7 +70,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         errors += [f"комната {rid}: выход в несуществующую {x}" for x in room["exits"] if x not in rooms]
         enc = room.get("encounter")
         if enc:
-            errors += [f"комната {rid}: встреча {enc['id']} — нет монстра {e['monster']}" for e in enc["enemies"] if e["monster"] not in ids["monsters"]]
+            foes = enc["enemies"] + [e for w in enc.get("waves", []) for e in w["enemies"]] + enc.get("help", {}).get("enemies", [])
+            errors += [f"комната {rid}: встреча {enc['id']} — нет монстра {e['monster']}" for e in foes if e["monster"] not in ids["monsters"]]
             errors += [f"комната {rid}: в добыче нет предмета {x}" for x in enc.get("loot", {}).get("items", {}) if x not in items]
         secret_ids = [sec["id"] for sec in room.get("secrets", [])]
         if len(secret_ids) != len(set(secret_ids)):

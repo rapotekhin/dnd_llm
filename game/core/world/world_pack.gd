@@ -185,7 +185,19 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			if not (enc is Dictionary) or str(enc.get("id", "")).is_empty() or not (enc.get("enemies") is Array) or (enc["enemies"] as Array).is_empty():
 				e.append("комната %s: encounter — {id, enemies: [{monster, count}]}" % id)
 			else:
-				for foe: Variant in enc["enemies"]:
+				var foes: Array = (enc["enemies"] as Array).duplicate()
+				for wave: Variant in enc.get("waves", []):
+					if not (wave is Dictionary) or not (wave.get("enemies") is Array) or int(wave.get("round", 0)) < 2:
+						e.append("комната %s: встреча %s — волна {round ≥ 2, side, enemies}" % [id, enc["id"]])
+					else:
+						foes.append_array(wave["enemies"])
+				var help: Variant = enc.get("help")
+				if help != null:
+					if not (help is Dictionary) or not (help.get("enemies") is Array):
+						e.append("комната %s: встреча %s — help {enemies, side, delay}" % [id, enc["id"]])
+					else:
+						foes.append_array(help["enemies"])
+				for foe: Variant in foes:
 					if not (foe is Dictionary) or not data.get("monsters", {}).has(str(foe.get("monster", ""))):
 						e.append("комната %s: встреча %s — нет монстра %s" % [id, enc["id"], foe.get("monster") if foe is Dictionary else foe])
 		var safe: Variant = r.get("safe")

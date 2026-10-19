@@ -60,6 +60,8 @@ var combat: Dictionary = {}
 ## Encounters of the pack already fought (CombatRules) and NPCs killed in a fight.
 var encounters_done: Array[String] = []
 var dead_npcs: Array[String] = []
+## The «Красться» toggle of exploration (v0.6.2).
+var sneaking: bool = false
 ## Short rests taken today (ExplorationRules); a long rest resets it.
 var short_rests: int = 0
 ## Ids of the pack quests the player completed (XpRules).
@@ -239,6 +241,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"combat": combat,
 		"encounters_done": encounters_done,
 		"dead_npcs": dead_npcs,
+		"sneaking": sneaking,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -284,6 +287,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.encounters_done.append(str(e))
 	for n: Variant in d.get("dead_npcs", []):
 		s.dead_npcs.append(str(n))
+	s.sneaking = bool(d.get("sneaking", false))
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):
@@ -300,7 +304,7 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
 		return {}
 	var c: Dictionary = (raw as Dictionary).duplicate(true)
-	for k: String in ["round", "turn", "xp", "coins_cp"]:
+	for k: String in ["round", "turn", "xp", "coins_cp", "next_id"]:
 		if c.has(k):
 			c[k] = int(c[k])
 	for id: String in c.get("fighters", {}):
@@ -316,6 +320,15 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 			c["economy"][k] = int(c["economy"][k])
 	for l: Dictionary in c.get("loot", []):
 		l["qty"] = int(l["qty"])
+	for w: Dictionary in c.get("incoming", []):
+		w["at"] = int(w["at"])
+		w["col"] = int(w["col"])
+		for spec: Dictionary in w.get("foes", []):
+			if spec.has("count"):
+				spec["count"] = int(spec["count"])
+	for spec: Dictionary in c.get("help", {}).get("enemies", []):
+		if spec.has("count"):
+			spec["count"] = int(spec["count"])
 	return c
 
 
