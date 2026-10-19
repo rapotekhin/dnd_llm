@@ -20,7 +20,7 @@ Decisions to follow in new code: [ADR-0007](docs/tech/adr/0007-godot-client-pyth
 
 ## Documentation
 
-Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes; **`playtest`** to test the game live (see «Testing»); **`godot_conventions`** when writing GDScript in `game/`.
+Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes; **`playtest`** to test the game live (see «Testing»); **`trace_analyzer`** to analyse the author's own play session from its trace; **`godot_conventions`** when writing GDScript in `game/`.
 
 ## Commands
 

@@ -1,0 +1,18 @@
+---
+description: Use this skill when the author has played the game themselves and wants it analysed from the session trace — "посмотри мой трейс", "разбери мою игру", "что было в сессии", "проанализируй трейс", "я поиграл, посмотри", "analyze the trace", "look at my session". Builds the report with tools/trace_report.py, reads the client JSONL and the backend (model) trace, and turns them into findings: bugs, master mistakes, UX friction, 5e inaccuracies, cost. Do NOT use for scripted playtests (that is `playtest`) or for golden scenarios.
+alwaysApply: false
+---
+
+# trace_analyzer
+
+Analysis of the author's own play session from its full trace: findings with evidence (time, turn_id, state) and where to fix them.
+
+The full procedure is in [.claude/skills/trace_analyzer/SKILL.md](mdc:.claude/skills/trace_analyzer/SKILL.md).
+
+Read that file when this rule triggers, then follow it.
+
+**Quick reference:**
+
+- `python tools/trace_report.py` (newest author game; `--list`) → `build/traces/<name>.md`; client traces in `%APPDATA%/Godot/app_userdata/Between the Rolls/traces/`, backend in `llm_server/var/traces/`
+- Read «Что настораживает» → route → the timeline as a player → suspicious master turns (tool calls) → raw JSONL and `state` before / after
+- Main bug class: the master's words and the engine's state disagree (ADR-0008). Verify every automatic anomaly; findings go to the roadmap / backlog

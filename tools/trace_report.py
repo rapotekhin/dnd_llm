@@ -1,6 +1,6 @@
 """A readable report of a play session from its traces (v0.7.1).
 
-    python tools/trace_report.py                     # the newest client trace of the default profile
+    python tools/trace_report.py                     # the newest trace of the author's games (not the agent profile)
     python tools/trace_report.py path/to/trace.jsonl # a given one
     python tools/trace_report.py --list              # the client traces found
 
@@ -29,6 +29,9 @@ USER_DIR = Path(os.environ.get("APPDATA", Path.home())) / "Godot" / "app_userdat
 MONEY = re.compile(r"(ты (платишь|отсчитываешь|выкладываешь|отдаёшь|кладёшь) [^.]{0,30}(монет|медяк|серебр|золот)|"
                    r"(сгребает|забирает|прячет|берёт|смахивает) [^.]{0,30}(монет|медяк|серебр|золот|плату)|"
                    r"(протягивает|отсчитывает|бросает) тебе [^.]{0,30}(монет|медяк|серебр|золот|кошел))", re.I)
+REPEAT = 3  # the same click this many times in a row
+PAUSE_MS = 180_000  # no click or input this long
+COIN_WINDOW_MS = 15_000  # coins moved by the engine this long before a turn belong to it (a paid option)
 TAKE = re.compile(r"(ты (берёшь|забираешь|прячешь|кладёшь в (сумку|мешок|карман))|протягивает тебе|вручает тебе|отдаёт тебе)", re.I)
 
 
@@ -46,6 +49,11 @@ def load(path: Path) -> list[dict]:
 
 def client_traces() -> list[Path]:
     return sorted(USER_DIR.rglob("traces/*.jsonl"), key=lambda p: p.stat().st_mtime)
+
+
+def is_agent(path: Path) -> bool:
+    """Traces of the scripted playtests (profile «agent»), not of the author's own games."""
+    return "profiles" in path.parts and "agent" in path.parts
 
 
 def when(ts: int) -> str:
@@ -95,6 +103,14 @@ def report(path: Path) -> Path:
     start, end = int(ev[0]["ts"]), int(ev[-1]["ts"])
     model = backend_turns(start, end)
     states = [e["state"] for e in ev if e.get("ev") == "state"]
+    # when the engine moved coins (a paid option, a deal): money in the narration around then is no anomaly
+    coin_moves, gold = [], None
+    for e in ev:
+        if e.get("ev") == "state":
+            g = e["state"].get("gold_cp")
+            if gold is not None and g != gold:
+                coin_moves.append(int(e["ts"]))
+            gold = g
     session = next((e for e in ev if e.get("ev") == "session"), {})
 
     # turns from the protocol: requests, results, engine calls in between
@@ -171,7 +187,8 @@ def report(path: Path) -> Path:
         text = res.get("narration", "")
         if t["error"]:
             anomalies.append(f"- `{tid}` ход не удался: {short(json.dumps(t['error'], ensure_ascii=False), 200)}")
-        if text and MONEY.search(text) and not kinds & {"coins", "give_item", "take_item"} and t["kind"] not in ("deal", "theft", "quest"):
+        paid = any(t["ts"] - COIN_WINDOW_MS <= m <= t.get("done_ts", t["ts"]) for m in coin_moves)
+        if text and MONEY.search(text) and not paid and not kinds & {"coins", "give_item", "take_item"} and t["kind"] not in ("deal", "theft", "quest"):
             anomalies.append(f"- `{tid}` в тексте деньги, а эффекта монет нет: «{short(text, 160)}»")
         if text and TAKE.search(text) and not kinds & {"give_item", "take_prop", "coins"} and t["kind"] not in ("deal", "theft", "quest"):
             anomalies.append(f"- `{tid}` в тексте передача вещи без эффекта: «{short(text, 160)}»")
@@ -179,6 +196,20 @@ def report(path: Path) -> Path:
             anomalies.append(f"- `{tid}` долгий ход: {(t['done_ts'] - t['ts']) / 1000:.0f} с")
     toasts = Counter(e.get("text") for e in ev if e.get("ev") == "toast")
     anomalies += [f"- подсказка игроку «{k}» ×{v}" for k, v in toasts.most_common(10)]
+    # the same button again and again (it did not do what the player expected) and long pauses (stuck or away)
+    acts = [e for e in ev if e.get("ev") in ("click", "input")]
+    run, prev = 0, None
+    for i, e in enumerate(acts + [{}]):
+        key = (e.get("ev"), e.get("text") or e.get("node"), e.get("room"))
+        if key == prev:
+            run += 1
+            continue
+        if prev is not None and prev[0] == "click" and run >= REPEAT:
+            anomalies.append(f"- `{when(acts[i - 1]['ts'])}` «{short(prev[1], 60)}» нажато {run} раз подряд ({prev[2]})")
+        run, prev = 1, key
+    for a, b in zip(acts, acts[1:]):
+        if b["ts"] - a["ts"] > PAUSE_MS:
+            anomalies.append(f"- `{when(a['ts'])}` пауза {(b['ts'] - a['ts']) / 60000:.0f} мин после «{short(a.get('text') or a.get('node'), 60)}» ({a.get('room')})")
     lines += ["## Что настораживает", ""] + (anomalies or ["- ничего"]) + [""]
 
     # the timeline
@@ -253,11 +284,12 @@ def main() -> int:
     found = client_traces()
     if opts.list:
         for p in found:
-            print(p, f"{p.stat().st_size // 1024} КБ")
+            print(p, f"{p.stat().st_size // 1024} КБ", "(агент)" if is_agent(p) else "")
         return 0
-    path = Path(opts.trace) if opts.trace else (found[-1] if found else None)
+    mine = [p for p in found if not is_agent(p)]
+    path = Path(opts.trace) if opts.trace else (mine[-1] if mine else None)
     if path is None:
-        print(f"no client traces under {USER_DIR}")
+        print(f"no traces of the author's games under {USER_DIR} (--list shows the agent's too)")
         return 2
     print(report(path))
     return 0

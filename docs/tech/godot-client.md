@@ -164,9 +164,9 @@ game/
 
 ## Трейс сессии (v0.7.1)
 
-- **Клиент** (`Trace`, автозагрузка): `<profile>/traces/<created_at>_<seed>.jsonl` в каталоге Godot (`%APPDATA%/Godot/app_userdata/Between the Rolls/`), загрузка сейва дописывает тот же файл. Строка — `{ts, day, clock, room, mode, ev, …}`; `ev`: `session`, `click` (имя кнопки, текст, экран — ближайший предок с `class_name`), `input`, `nav`, `chat` (запись ленты как есть), `combat`, `state` (сжатое состояние, когда оно меняется), `turn`, `rpc` (каждое JSON-RPC сообщение, снимки целиком), `toast`. Под gdUnit выключен.
+- **Клиент** (`Trace`, автозагрузка): `<profile>/traces/<created_at>_<seed>.jsonl` в каталоге Godot (`%APPDATA%/Godot/app_userdata/Between the Rolls/`), загрузка сейва дописывает тот же файл. Строка — `{ts, day, clock, room, mode, ev, …}`; `ev`: `session`, `click` (имя кнопки, текст, экран — ближайший предок с `class_name`; пишется на `button_down`, до последствий нажатия), `input`, `nav`, `chat` (запись ленты как есть), `combat`, `state` (сжатое состояние, когда оно меняется), `turn`, `rpc` (каждое JSON-RPC сообщение, снимки целиком), `toast`. Под gdUnit выключен.
 - **Бэкенд** (`llm_server/trace.py`): `llm_server/var/traces/<date>.jsonl` — на ход: промпты, `messages` Pydantic AI (вызовы `request_check`, `propose_effect`, `lookup`, `find_items` с ответами движка), `output`, принятые эффекты, usage, время; ошибки хода; саммари. `LLM_SERVER_TRACE=0` выключает; сервер плейтестов (`connectivity_e2e.start_server`) по умолчанию без трейса.
-- **Отчёт** — `python tools/trace_report.py [трейс] [--list]` → `build/traces/<имя>.md`: сводка (время, герой, рост, монеты, ходы, токены, цена, проверки, эффекты, частые нажатия), маршрут mermaid, «Что настораживает», ход игры по шагам, ходы мастера с вызовами модели (по `turn_id` в окне времени сессии).
+- **Отчёт** — `python tools/trace_report.py [трейс] [--list]` → `build/traces/<имя>.md`: сводка (время, герой, рост, монеты, ходы, токены, цена, проверки, эффекты, частые нажатия), маршрут mermaid, «Что настораживает», ход игры по шагам, ходы мастера с вызовами модели (по `turn_id` в окне времени сессии). Разбор — скилл `trace_analyzer`.
 
 ## Исследование
 

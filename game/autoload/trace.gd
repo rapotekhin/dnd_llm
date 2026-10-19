@@ -56,6 +56,7 @@ func _on_session_started() -> void:
 		if _file != null:
 			_file.seek_end()
 	_last_digest = ""
+	_screen = "game"  # main.gd opens the game screen on session_started itself, not through navigate
 	_write({"ev": "session", "what": "start" if s.turn_counter == 0 else "load", "version": str(ProjectSettings.get_setting("application/config/version")),
 		"world": s.world_id, "seed": s.game_seed, "character": {"name": s.character.get("name", ""), "race": s.character.get("race_name", ""),
 		"class": s.character.get("class_name", ""), "level": s.character.get("level", 1)}, "settings": s.settings})
@@ -81,13 +82,17 @@ func _on_state_changed() -> void:
 	_write({"ev": "state", "state": d})
 
 
-## Buttons and line edits anywhere in the UI are recorded as they are pressed (no per-screen code).
+## Buttons and line edits anywhere in the UI are recorded as they are pressed (no per-screen code). A click is
+## written on button_down: `pressed` handlers are connected by the screens before the node enters the tree, so
+## ours would run after them and the click would land in the trace after its own consequences.
 func _hook(node: Node) -> void:
 	if node is BaseButton:
 		var b := node as BaseButton
-		b.pressed.connect(func() -> void:
+		b.button_down.connect(func() -> void:
+			if b.disabled:
+				return
 			var text := str(b.get("text")) if "text" in b else ""
-			_write({"ev": "click", "node": str(b.name), "text": tr(text), "screen": _screen_of(b), "pressed": b.button_pressed if b.toggle_mode else null}))
+			_write({"ev": "click", "node": str(b.name), "text": tr(text), "screen": _screen_of(b), "pressed": (not b.button_pressed) if b.toggle_mode else null}))
 	elif node is LineEdit:
 		var l := node as LineEdit
 		l.text_submitted.connect(func(t: String) -> void: _write({"ev": "input", "node": str(l.name), "text": t, "screen": _screen_of(l)}))

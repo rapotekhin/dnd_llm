@@ -127,6 +127,7 @@ func find_button_by_text(from: Node, text: String) -> Button:
 
 
 func press(button: BaseButton) -> void:
+	button.button_down.emit()  # a real click goes down first — the session trace records it there
 	button.pressed.emit()
 	await frames(2)
 

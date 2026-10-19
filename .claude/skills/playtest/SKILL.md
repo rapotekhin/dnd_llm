@@ -63,7 +63,6 @@ description: Use this skill to test the game for real — launch it, drive it li
 - [golden-scenarios.md](../../../docs/tech/golden-scenarios.md) — проверка промптов без игры
 - Скиллы: `godot_conventions`, `docs_updater`, `release_notes_updater`
 
-## Разбор живой игры автора (v0.7.1)
+## Разбор живой игры автора
 
-Автор играет сам — каждая игра пишет полный трейс (клиент: `%APPDATA%/Godot/app_userdata/Between the Rolls/traces/`, сервер: `llm_server/var/traces/`). Перед разбором: `python tools/trace_report.py` (или `--list` и путь) → `build/traces/<имя>.md`. Читай сначала «Что настораживает» и маршрут, потом ход игры по шагам и ходы мастера с вызовами модели; сырые строки — в самом JSONL (`ev`: click, chat, state, rpc).
-
+Автор играет сам, и каждая игра пишет полный трейс — его разбирает скилл `trace_analyzer`, не этот.
