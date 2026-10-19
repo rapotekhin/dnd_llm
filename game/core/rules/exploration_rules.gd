@@ -13,6 +13,11 @@ extends RefCounted
 ##   player chooses, short-rest feature uses, Pact Magic slots;
 ## - 0 HP outside combat (decision of v0.6.0): no death — the character comes to with 1 HP and the master tells
 ##   what it cost (kind downed). Death saves come with combat.
+## - traps (v0.6.3): a secret with `trap` {guards: the exit it guards, disarm_dc, save {ability, dc}, damage,
+##   damage_type, sprung_text}. Found like any secret — the player disarms it (Sleight of Hand, thieves' tools)
+##   or goes around it (Acrobatics), both against disarm_dc, a failure springs it; not found — it springs on the
+##   way out. A sprung or disarmed trap is spent (s.traps). Caches: a secret with `loot` {coins_cp, items} gives
+##   it once when found (s.caches_taken).
 
 const SEARCH_SKILLS: Array[String] = ["perception", "investigation"]
 
@@ -68,12 +73,13 @@ const SNEAK_PASSIVE_PENALTY := 5
 
 ## Moves the player into `room_id`: visited, passive Perception against the room's perception secrets.
 ## Returns the texts noticed just now.
-static func enter_room(s: GameSession, world: Dictionary, room_id: String) -> Array[String]:
+## `penalty` — passive Perception lost (TimeRules.passive_penalty: sneaking, darkness); -1 — sneaking only.
+static func enter_room(s: GameSession, world: Dictionary, room_id: String, penalty: int = -1) -> Array[String]:
 	s.room_id = room_id
 	if not s.visited.has(room_id):
 		s.visited.append(room_id)
 	var out: Array[String] = []
-	var passive := int(s.character.get("passive_perception", 10)) - (SNEAK_PASSIVE_PENALTY if s.sneaking else 0)
+	var passive := int(s.character.get("passive_perception", 10)) - (penalty if penalty >= 0 else (SNEAK_PASSIVE_PENALTY if s.sneaking else 0))
 	for sec: Dictionary in secrets(world, room_id):
 		if str(sec.get("skill", "perception")) == "perception" and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
 			out.append(str(sec["text"]))
@@ -91,6 +97,92 @@ static func active_reveal(s: GameSession, world: Dictionary, skill: String, tota
 		if (needs == skill or skill == "investigation") and total >= int(sec["dc"]) and _reveal(s, s.room_id, sec):
 			out.append(str(sec["text"]))
 	return out
+
+
+# --- traps and caches (v0.6.3) ---------------------------------------------------------------------
+
+
+static func secret_key(room_id: String, sec: Dictionary) -> String:
+	return "%s:%s" % [room_id, sec["id"]]
+
+
+static func is_found(s: GameSession, room_id: String, sec: Dictionary) -> bool:
+	return (s.revealed.get(room_id, []) as Array).has(str(sec["id"]))
+
+
+## The live trap of `room_id` that guards the exit to `to`, or {}.
+static func trap_on_exit(s: GameSession, world: Dictionary, room_id: String, to: String) -> Dictionary:
+	for sec: Dictionary in secrets(world, room_id):
+		var t: Variant = sec.get("trap")
+		if t is Dictionary and str(t.get("guards", "")) == to and not s.traps.has(secret_key(room_id, sec)):
+			return sec
+	return {}
+
+
+## Live traps of this room the player has found: [{secret, to}].
+static func found_traps(s: GameSession, world: Dictionary, room_id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for sec: Dictionary in secrets(world, room_id):
+		if sec.get("trap") is Dictionary and is_found(s, room_id, sec) and not s.traps.has(secret_key(room_id, sec)):
+			out.append({"secret": sec, "to": str(sec["trap"]["guards"])})
+	return out
+
+
+## The trap goes off: a save (half damage on success), damage to the character. The trap is spent. Lines.
+static func spring_trap(s: GameSession, data: Dictionary, room_id: String, sec: Dictionary) -> Array[String]:
+	var t: Dictionary = sec["trap"]
+	var c := s.character
+	s.traps[secret_key(room_id, sec)] = "sprung"
+	var lines: Array[String] = ["Ловушка! " + str(t.get("sprung_text", sec["text"]))]
+	var dmg := CombatRules.roll_dice(s.rng, str(t.get("damage", "1d6")))
+	if t.has("save"):
+		var ab := str(t["save"]["ability"])
+		var roll := s.rng.randi_range(1, 20)
+		var total := roll + int(c.get("saves", {}).get(ab, 0))
+		var ok := roll != 1 and (roll == 20 or total >= int(t["save"]["dc"]))
+		if ok:
+			dmg /= 2
+		lines.append("Спасбросок %s: %d против Сл %d — %s" % [CombatRules.ab_name(ab), total, int(t["save"]["dc"]),
+			"успех, урон вдвое меньше" if ok else "провал"])
+	c["hp"] = maxi(0, int(c["hp"]) - dmg)
+	lines.append("−%d HP (%s)" % [dmg, data["misc"]["damage_types"].get(str(t.get("damage_type", "")), t.get("damage_type", ""))])
+	return lines
+
+
+static func disarm_trap(s: GameSession, room_id: String, sec: Dictionary) -> void:
+	s.traps[secret_key(room_id, sec)] = "disarmed"
+
+
+## The bonus to disarm: Sleight of Hand, or DEX + proficiency with thieves' tools; without the tools in the pack —
+## disadvantage. {bonus, disadvantage_reason}.
+static func disarm_bonus(c: Dictionary) -> Dictionary:
+	var bonus := int(c.get("skills", {}).get("sleight_of_hand", 0))
+	var has_tools := int(c.get("inventory", {}).get("thieves_tools", 0)) > 0
+	if has_tools and (c.get("tools", []) as Array).has("thieves_tools"):
+		bonus = maxi(bonus, CharacterRules.mod(int(c["abilities"].get("dex", 10))) + int(c.get("prof_bonus", 2)))
+	return {"bonus": bonus, "disadvantage_reason": "" if has_tools else "нет воровских инструментов"}
+
+
+## Caches found in this room and not emptied yet give their loot. Lines.
+static func take_caches(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
+	var lines: Array[String] = []
+	var c := s.character
+	for sec: Dictionary in secrets(data["world"], room_id):
+		var key := secret_key(room_id, sec)
+		if not sec.has("loot") or not is_found(s, room_id, sec) or s.caches_taken.has(key):
+			continue
+		s.caches_taken.append(key)
+		var loot: Dictionary = sec["loot"]
+		var got: Array[String] = []
+		if int(loot.get("coins_cp", 0)) > 0:
+			c["gold_cp"] = int(c.get("gold_cp", 0)) + int(loot["coins_cp"])
+			got.append(Money.format(int(loot["coins_cp"])))
+		var items: Dictionary = loot.get("items", {})
+		for id: String in items:
+			c["inventory"][id] = int(c["inventory"].get(id, 0)) + int(items[id])
+			got.append(ItemRules.display_name(data["items"], s.items, id) + (" ×%d" % int(items[id]) if int(items[id]) > 1 else ""))
+		lines.append("Тайник: " + ", ".join(got))
+	return lines
 
 
 ## What the player already noticed or found in a room (for the snapshot and the journal).

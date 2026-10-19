@@ -38,7 +38,7 @@ static func quests_here(s: GameSession, world: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var all := quests(world)
 	for id: String in all:
-		if str(all[id].get("room", "")) == s.room_id and not s.quests_done.has(id):
+		if not all[id].has("steps") and str(all[id].get("room", "")) == s.room_id and not s.quests_done.has(id):
 			out.append(id)
 	return out
 
@@ -70,11 +70,15 @@ static func complete(s: GameSession, data: Dictionary, quest_id: String) -> Arra
 	return lines
 
 
-## Quests for the snapshot and the journal: [{id, title, description, done}].
+## Quests for the snapshot and the journal: [{id, title, description, done, step}] — one-button quests (always
+## known) and taken quests with steps (QuestRules, the current step).
 static func quest_list(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var all := quests(world)
 	for id: String in all:
+		if all[id].has("steps"):
+			continue
 		out.append({"id": id, "title": str(all[id]["title"]), "description": str(all[id].get("description", "")),
-			"done": s.quests_done.has(id)})
+			"done": s.quests_done.has(id), "step": ""})
+	out.append_array(QuestRules.info(s, world))
 	return out

@@ -95,7 +95,7 @@
 					"type": "object",
 					"additionalProperties": {
 						"type": "object",
-						"required": ["title", "description", "room", "action", "xp", "done_text"],
+						"required": ["title", "description"],
 						"properties": {
 							"title": {"$ref": "#/$defs/nonempty"},
 							"description": {"$ref": "#/$defs/nonempty"},
@@ -103,7 +103,40 @@
 							"action": {"$ref": "#/$defs/nonempty"},
 							"xp": {"type": "integer", "minimum": 0},
 							"reward_cp": {"type": "integer", "minimum": 0},
-							"done_text": {"$ref": "#/$defs/nonempty"}
+							"done_text": {"$ref": "#/$defs/nonempty"},
+							"giver": {"type": "string"},
+							"offer_text": {"type": "string"},
+							"steps": {
+								"type": "array",
+								"minItems": 1,
+								"items": {
+									"type": "object",
+									"required": ["text", "when"],
+									"properties": {
+										"text": {"$ref": "#/$defs/nonempty"},
+										"when": {
+											"type": "object",
+											"minProperties": 1,
+											"properties": {
+												"encounter": {"type": "string"},
+												"secret": {"type": "string", "pattern": "^[^:]+:[^:]+$"},
+												"room": {"type": "string"},
+												"flag": {"type": "string"},
+												"talk": {"type": "string"},
+												"item": {"type": "string"}
+											},
+											"additionalProperties": false
+										},
+										"action": {"type": "string"},
+										"done_text": {"type": "string"},
+										"xp": {"type": "integer", "minimum": 0},
+										"reward_cp": {"type": "integer", "minimum": 0},
+										"items": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}},
+										"attitude": {"type": "object", "additionalProperties": {"type": "integer", "minimum": -3, "maximum": 3}}
+									},
+									"additionalProperties": false
+								}
+							}
 						},
 						"additionalProperties": false
 					}
@@ -133,7 +166,33 @@
 										"id": {"$ref": "#/$defs/nonempty"},
 										"dc": {"type": "integer", "minimum": 1},
 										"text": {"$ref": "#/$defs/nonempty"},
-										"skill": {"enum": ["perception", "investigation"]}
+										"skill": {"enum": ["perception", "investigation"]},
+										"loot": {
+											"type": "object",
+											"properties": {
+												"coins_cp": {"type": "integer", "minimum": 0},
+												"items": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}}
+											},
+											"additionalProperties": false
+										},
+										"trap": {
+											"type": "object",
+											"required": ["guards", "disarm_dc", "damage"],
+											"properties": {
+												"guards": {"type": "string"},
+												"disarm_dc": {"type": "integer", "minimum": 5, "maximum": 30},
+												"save": {
+													"type": "object",
+													"required": ["ability", "dc"],
+													"properties": {"ability": {"enum": ["str", "dex", "con", "int", "wis", "cha"]}, "dc": {"type": "integer"}},
+													"additionalProperties": false
+												},
+												"damage": {"type": "string", "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$"},
+												"damage_type": {"type": "string"},
+												"sprung_text": {"type": "string"}
+											},
+											"additionalProperties": false
+										}
 									},
 									"additionalProperties": false
 								}

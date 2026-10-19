@@ -152,8 +152,19 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 	else:
 		for qid: String in quests:
 			var q: Variant = quests[qid]
-			if not (q is Dictionary) or str(q.get("title", "")).is_empty() or str(q.get("action", "")).is_empty() 					or str(q.get("done_text", "")).is_empty() or not rooms.has(str(q.get("room", ""))):
-				e.append("задание %s: title, action, done_text и room из комнат пакета" % qid)
+			if not (q is Dictionary) or str(q.get("title", "")).is_empty():
+				e.append("задание %s: нужен title" % qid)
+			elif not q.has("steps"):
+				if str(q.get("action", "")).is_empty() or str(q.get("done_text", "")).is_empty() or not rooms.has(str(q.get("room", ""))):
+					e.append("задание %s: title, action, done_text и room из комнат пакета" % qid)
+			elif not w["npcs"].has(str(q.get("giver", ""))) or not (q["steps"] is Array) or (q["steps"] as Array).is_empty():
+				e.append("задание %s: giver — NPC пакета, steps — непустой список" % qid)
+			else:
+				for st: Variant in q["steps"]:
+					var when: Variant = st.get("when") if st is Dictionary else null
+					if not (when is Dictionary) or str(st.get("text", "")).is_empty() \
+							or (when as Dictionary).keys().filter(func(k: String) -> bool: return k != "item").size() != 1:
+						e.append("задание %s: шаг — text и when с одним условием (encounter | secret | room | flag | talk)" % qid)
 	var placed := {}
 	for id: String in rooms:
 		var r: Dictionary = rooms[id]
@@ -174,6 +185,8 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			e.append("комната %s: hooks — список строк" % id)
 		var ids := {}
 		for sec: Variant in r.get("secrets", []):
+			if sec is Dictionary and sec.get("trap") is Dictionary and not (r.get("exits", []) as Array).has(str(sec["trap"].get("guards", ""))):
+				e.append("комната %s: ловушка %s стережёт не выход комнаты" % [id, sec.get("id")])
 			if not (sec is Dictionary) or str(sec.get("id", "")).is_empty() or str(sec.get("text", "")).is_empty() \
 					or not (sec.get("dc") is float or sec.get("dc") is int) or ids.has(sec.get("id")) \
 					or not str(sec.get("skill", "perception")) in ExplorationRules.SEARCH_SKILLS:

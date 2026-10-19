@@ -73,6 +73,10 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             foes = enc["enemies"] + [e for w in enc.get("waves", []) for e in w["enemies"]] + enc.get("help", {}).get("enemies", [])
             errors += [f"комната {rid}: встреча {enc['id']} — нет монстра {e['monster']}" for e in foes if e["monster"] not in ids["monsters"]]
             errors += [f"комната {rid}: в добыче нет предмета {x}" for x in enc.get("loot", {}).get("items", {}) if x not in items]
+        for sec in room.get("secrets", []):
+            errors += [f"комната {rid}: в тайнике {sec['id']} нет предмета {x}" for x in sec.get("loot", {}).get("items", {}) if x not in items]
+            if "trap" in sec and sec["trap"]["guards"] not in room["exits"]:
+                errors.append(f"комната {rid}: ловушка {sec['id']} стережёт не выход комнаты ({sec['trap']['guards']})")
         secret_ids = [sec["id"] for sec in room.get("secrets", [])]
         if len(secret_ids) != len(set(secret_ids)):
             errors.append(f"комната {rid}: id секретов повторяются")
@@ -90,8 +94,34 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"NPC {nid}: есть stock, но нет trader: true")
 
     for qid, q in world.get("quests", {}).items():
-        if q["room"] not in rooms:
-            errors.append(f"задание {qid}: нет комнаты {q['room']}")
+        if "steps" not in q:
+            missing = [k for k in ("room", "action", "xp", "done_text") if k not in q]
+            if missing:
+                errors.append(f"задание {qid}: без шагов нужны {', '.join(missing)}")
+            elif q["room"] not in rooms:
+                errors.append(f"задание {qid}: нет комнаты {q['room']}")
+            continue
+        if q.get("giver") not in npcs:
+            errors.append(f"задание {qid}: нет NPC-заказчика {q.get('giver')}")
+        for i, st in enumerate(q["steps"]):
+            w = st["when"]
+            where = f"задание {qid}, шаг {i + 1}"
+            if len(set(w) - {"item"}) != 1:
+                errors.append(f"{where}: в when ровно одно условие (item — только к talk)")
+            if "encounter" in w and w["encounter"] not in {r.get("encounter", {}).get("id") for r in rooms.values()}:
+                errors.append(f"{where}: нет встречи {w['encounter']}")
+            if "secret" in w:
+                rid, sec = w["secret"].split(":")
+                if sec not in [x["id"] for x in rooms.get(rid, {}).get("secrets", [])]:
+                    errors.append(f"{where}: нет секрета {w['secret']}")
+            if "room" in w and w["room"] not in rooms:
+                errors.append(f"{where}: нет комнаты {w['room']}")
+            if "talk" in w and w["talk"] not in npcs:
+                errors.append(f"{where}: нет NPC {w['talk']}")
+            if "item" in w and ("talk" not in w or w["item"] not in items):
+                errors.append(f"{where}: item — предмет каталога и только вместе с talk")
+            errors += [f"{where}: в награде нет предмета {x}" for x in st.get("items", {}) if x not in items]
+            errors += [f"{where}: нет NPC {x}" for x in st.get("attitude", {}) if x not in npcs]
 
     seen: set[str] = set()
     for p in chars["presets"]:

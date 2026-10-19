@@ -997,6 +997,11 @@
 		"en": "Book",
 		"name": "Книга"
 	},
+	"item:boots_of_elvenkind": {
+		"en": "Boots of Elvenkind",
+		"name": "Сапоги эльфов",
+		"desc": "Шаги в этих сапогах не издают звука; проверки Ловкости (Скрытность) совершаются с преимуществом."
+	},
 	"item:bottle_glass": {
 		"en": "Bottle, glass",
 		"name": "Стеклянная бутылка"
@@ -1068,6 +1073,11 @@
 	"item:climbers_kit": {
 		"en": "Climber's Kit",
 		"name": "Набор альпиниста"
+	},
+	"item:cloak_of_protection": {
+		"en": "Cloak of Protection",
+		"name": "Плащ защиты",
+		"desc": "Пока плащ на вас, вы получаете бонус +1 к КД и спасброскам."
 	},
 	"item:clothes_common": {
 		"en": "Clothes, common",
@@ -1428,6 +1438,11 @@
 	"item:pot_iron": {
 		"en": "Pot, iron",
 		"name": "Железный горшок"
+	},
+	"item:potion_of_greater_healing": {
+		"en": "Potion of Greater Healing",
+		"name": "Зелье большого лечения",
+		"desc": "Выпивший восстанавливает 4к4 + 4 хитов."
 	},
 	"item:potters_tools": {
 		"en": "Potter's Tools",

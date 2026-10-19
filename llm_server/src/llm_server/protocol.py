@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.8.0"
+PROTOCOL_VERSION = "0.9.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -118,9 +118,9 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # ability (0.6.0): the player cast a spell, used a feature or an item by a button — the engine applied it.
 # downed (0.6.0): the character dropped to 0 HP outside combat and came to with 1 HP; the master tells the cost.
 # combat_start / combat_round / death (0.7.0): the engine started the fight, played a round (or ended it), the hero died;
-# `input` holds the engine lines.
+# `input` holds the engine lines. trap (0.9.0): the player disarmed a found trap (or it went off); the engine lines.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
-                   "combat_start", "combat_round", "death"]
+                   "combat_start", "combat_round", "death", "trap"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -261,6 +261,7 @@ class QuestInfo(_In):
     title: str
     description: str = ""
     done: bool = False
+    step: str = ""  # the current step of a quest with steps (0.9.0); the engine closes steps, not the master
 
 
 class CombatFoe(_In):
@@ -379,7 +380,7 @@ ItemProperty = Literal[
     "finesse", "light", "heavy", "two_handed", "versatile", "thrown", "reach", "ammunition",
     "silvered", "magic_plus1", "magic_plus2", "magic_plus3",
     "fire_damage", "cold_damage", "lightning_damage", "radiant_damage", "necrotic_damage", "poison_damage",
-    "resist_fire", "resist_cold", "resist_poison", "ac_plus1", "ac_plus2",
+    "resist_fire", "resist_cold", "resist_poison", "ac_plus1", "ac_plus2", "saves_plus1", "stealth_advantage",
     "light_source", "healing", "cursed",
 ]
 

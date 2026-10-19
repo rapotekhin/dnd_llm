@@ -120,7 +120,9 @@ func _draw_journal() -> void:
 			found.append("%s: %s" % [w.room(room_id).get("name", room_id), t])
 	var quests: Array[String] = []
 	for q: Dictionary in XpRules.quest_list(s, Catalog.data["world"]):
-		quests.append(("✓ " if q["done"] else "") + "%s — %s" % [q["title"], q["description"]])
+		quests.append(("✓ " if q["done"] else "") + "%s — %s" % [q["title"], q["description"]]
+			+ (("
+   " + tr("JOURNAL_STEP").format({"step": q["step"]})) if not str(q.get("step", "")).is_empty() else ""))
 	if quests.is_empty() and places.is_empty() and people.is_empty() and found.is_empty():
 		_text(tr("JOURNAL_EMPTY"), UiTheme.MUTED_LABEL)
 		return

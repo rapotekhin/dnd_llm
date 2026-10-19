@@ -4,13 +4,41 @@ extends RefCounted
 ## points, the sum sets the rarity, the rarity is limited by character level and caps the value.
 
 
-## Definition of an item: catalog first, then items generated in this session. {} if unknown.
+## Definition of an item: catalog first, then items generated in this session. {} if unknown. An item on a `base`
+## (a magic sword on a longsword, v0.6.3) takes the base's weapon / armor block, weight, type and properties.
 static func def_of(items_data: Dictionary, session_items: Dictionary, id: String) -> Dictionary:
+	var d: Dictionary
 	if items_data["catalog"].has(id):
-		var d: Dictionary = items_data["catalog"][id].duplicate()
+		d = items_data["catalog"][id].duplicate()
 		d["rarity"] = str(d.get("rarity", "common"))
-		return d
-	return session_items.get(id, {})
+	elif session_items.has(id):
+		d = (session_items[id] as Dictionary).duplicate()
+	else:
+		return {}
+	var base := str(d.get("base", ""))
+	if not base.is_empty() and items_data["catalog"].has(base):
+		var b: Dictionary = items_data["catalog"][base]
+		for k: String in ["weapon", "armor", "weight"]:
+			if not d.has(k) and b.has(k):
+				d[k] = b[k]
+		if b.has("weapon") or b.has("armor"):
+			d["item_type"] = str(b.get("item_type", d.get("item_type", "gear")))
+		var props: Array = (b.get("properties", []) as Array).duplicate()
+		for p: Variant in d.get("properties", []):
+			if not props.has(p):
+				props.append(p)
+		d["properties"] = props
+	return d
+
+
+## The sum of «+N» properties of an item ("magic_plus1", "ac_plus2"…) for the given prefixes.
+static func plus(def: Dictionary, prefixes: Array) -> int:
+	var n := 0
+	for p: Variant in def.get("properties", []):
+		for pre: String in prefixes:
+			if str(p).begins_with(pre) and str(p).trim_prefix(pre).is_valid_int():
+				n += int(str(p).trim_prefix(pre))
+	return n
 
 
 static func display_name(items_data: Dictionary, session_items: Dictionary, id: String) -> String:

@@ -40,7 +40,7 @@ NPC здесь:
 {% if quests %}
 ## Задания игрока
 
-{% for q in quests %}- {{ q.title }}{% if q.done %} (выполнено){% endif %}: {{ q.description }}
+{% for q in quests %}- {{ q.title }}{% if q.done %} (выполнено){% endif %}: {{ q.description }}{% if q.step %} Сейчас: {{ q.step }}.{% endif %}
 {% endfor %}
 Выполняет задание сам игрок (движок отмечает и даёт награду); ты не объявляешь задание выполненным и не даёшь за него опыт или награду сам.
 

@@ -53,6 +53,7 @@ BTN_NEW_GAME,Новая игра
 BTN_PREPARE,Подготовить заклинания
 BTN_PREP_CONFIRM,Подготовить
 BTN_QUEST,Задание: {action}
+BTN_QUEST_TAKE,Взять задание: {title}
 BTN_QUIT,Выход
 BTN_REST_CONFIRM,Отдохнуть
 BTN_RESUME,Продолжить
@@ -72,6 +73,8 @@ BTN_TO_MENU,В меню
 BTN_TO_TALK,К разговору
 BTN_TO_TRADE,Торговать
 BTN_TRADE_WITH,Торговать: {name}
+BTN_TRAP_BYPASS,→ {room}: в обход
+BTN_TRAP_DISARM,Обезвредить ловушку
 BTN_UNEQUIP,Снять
 BTN_USE,Использовать
 CC_BACKGROUND_SKILLS,Навыки: {skills}.
@@ -257,6 +260,7 @@ JOURNAL_FOUND,Находки
 JOURNAL_PEOPLE,Разговоры
 JOURNAL_PLACES,Места
 JOURNAL_QUESTS,Задания
+JOURNAL_STEP,Сейчас: {step}
 JOURNAL_TITLE,Журнал
 LVL_ASI,Увеличение характеристик: +2 к одной или +1 к двум (не выше 20)
 LVL_CANTRIP,заговор
@@ -337,6 +341,7 @@ PREP_TITLE,Подготовленные заклинания на сегодня
 QUEST_BUSY,Сейчас нельзя: мастер думает или нет связи
 QUEST_DONE,Задание уже выполнено
 QUEST_IN_CONVERSATION,Сначала закончите разговор
+QUEST_NEEDS_ITEM,"Для этого нужна вещь, которой у вас нет"
 QUEST_UNKNOWN,Такого задания нет
 QUEST_WRONG_PLACE,Задание выполняется в другом месте
 REST_BUSY,Сейчас нельзя отдыхать
@@ -374,13 +379,16 @@ SHEET_SPELLS_PREPARED,Подготовлены
 SHEET_TAB_FEATURES,Умения и заклинания
 SHEET_TAB_GEAR,Снаряжение
 SHEET_TAB_STATS,Характеристики
+SHOP_CLOSED,Ночью лавки закрыты — приходите утром
 SHORT_REST_DICE,Потратить кости хитов (к{die} + Телосложение): осталось {left}
 SHORT_REST_HINT,Восстановятся умения «до короткого отдыха»; сегодня осталось отдыхов: {left}
 SHORT_REST_TITLE,Короткий отдых — час
 SIDE_COINS,Монеты: {coins}
 SIDE_CONCENTRATION,Концентрация: {spell}
 SIDE_CONDITIONS,Состояния: {list}
+SIDE_DARK,Темно: Внимательность с помехой — нужен факел или фонарь
 SIDE_DAY,День {day}
+SIDE_DAY_TIME,"День {day}, {part} ({clock})"
 SIDE_EXITS,Выходы
 SIDE_HP_AC,HP {hp}/{max} · КД {ac}
 SIDE_INVENTORY,Снаряжение
@@ -448,6 +456,10 @@ TRADE_PURSE,У торговца: {coins}
 TRADE_SOLD_OUT,Товары закончились
 TRADE_STOCK,Товары торговца
 TRADE_YOURS,Ваши вещи — он купит за
+TRAP_BUSY,Сейчас нельзя
+TRAP_BYPASS_TIP,"Проверка Акробатики: успех — проходите мимо, провал — ловушка срабатывает"
+TRAP_DISARM_TIP,"Проверка Ловкости рук (с воровскими инструментами — их бонус): успех — ловушки больше нет, провал — она срабатывает"
+TRAP_NONE,Ловушки здесь нет
 VIOLENCE_GRAPHIC,Жёстко
 VIOLENCE_MEDIUM,Умеренно
 VIOLENCE_MILD,Мягко

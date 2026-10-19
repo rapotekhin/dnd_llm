@@ -23,6 +23,8 @@
 		"resist_poison": 3,
 		"ac_plus1": 2,
 		"ac_plus2": 4,
+		"saves_plus1": 2,
+		"stealth_advantage": 2,
 		"light_source": 0,
 		"healing": 1,
 		"cursed": -1
@@ -209,6 +211,18 @@
 			},
 			"value_cp": 1000
 		},
+		"battleaxe_plus_1": {
+			"name": "Боевой топор +1",
+			"name_en": "Battleaxe +1",
+			"base": "battleaxe",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 4
+		},
 		"bedroll": {
 			"name": "Спальник",
 			"name_en": "Bedroll",
@@ -292,6 +306,17 @@
 			"value_cp": 2500,
 			"stack": true
 		},
+		"boots_of_elvenkind": {
+			"name": "Сапоги эльфов",
+			"name_en": "Boots of Elvenkind",
+			"item_type": "wondrous",
+			"properties": [
+				"stealth_advantage"
+			],
+			"rarity": "uncommon",
+			"value_cp": 40000,
+			"description": "Шаги в этих сапогах не издают звука; проверки Ловкости (Скрытность) совершаются с преимуществом."
+		},
 		"bottle_glass": {
 			"name": "Стеклянная бутылка",
 			"name_en": "Bottle, glass",
@@ -323,6 +348,18 @@
 				"stealth_disadvantage": false
 			},
 			"value_cp": 40000
+		},
+		"breastplate_plus_1": {
+			"name": "Нагрудник +1",
+			"name_en": "Breastplate +1",
+			"base": "breastplate",
+			"item_type": "armor",
+			"properties": [
+				"ac_plus1"
+			],
+			"rarity": "rare",
+			"value_cp": 150000,
+			"weight": 20
 		},
 		"brewers_supplies": {
 			"name": "Пивоваренные принадлежности",
@@ -441,6 +478,18 @@
 			},
 			"value_cp": 7500
 		},
+		"chain_mail_plus_1": {
+			"name": "Кольчуга +1",
+			"name_en": "Chain Mail +1",
+			"base": "chain_mail",
+			"item_type": "armor",
+			"properties": [
+				"ac_plus1"
+			],
+			"rarity": "rare",
+			"value_cp": 150000,
+			"weight": 55
+		},
 		"chain_shirt": {
 			"name": "Кольчужная рубаха",
 			"name_en": "Chain Shirt",
@@ -456,6 +505,18 @@
 				"stealth_disadvantage": false
 			},
 			"value_cp": 5000
+		},
+		"chain_shirt_plus_1": {
+			"name": "Кольчужная рубаха +1",
+			"name_en": "Chain Shirt +1",
+			"base": "chain_shirt",
+			"item_type": "armor",
+			"properties": [
+				"ac_plus1"
+			],
+			"rarity": "rare",
+			"value_cp": 150000,
+			"weight": 20
 		},
 		"chalk_1_piece": {
 			"name": "Мел (1 кусок)",
@@ -483,6 +544,18 @@
 			"properties": [],
 			"value_cp": 2500,
 			"stack": true
+		},
+		"cloak_of_protection": {
+			"name": "Плащ защиты",
+			"name_en": "Cloak of Protection",
+			"item_type": "wondrous",
+			"properties": [
+				"ac_plus1",
+				"saves_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"description": "Пока плащ на вас, вы получаете бонус +1 к КД и спасброскам."
 		},
 		"clothes_common": {
 			"name": "Одежда простая",
@@ -636,6 +709,18 @@
 			},
 			"value_cp": 2500
 		},
+		"crossbow_light_plus_1": {
+			"name": "Лёгкий арбалет +1",
+			"name_en": "Crossbow, light +1",
+			"base": "crossbow_light",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 5
+		},
 		"crowbar": {
 			"name": "Ломик",
 			"name_en": "Crowbar",
@@ -671,6 +756,18 @@
 				"damage_type": "piercing"
 			},
 			"value_cp": 200
+		},
+		"dagger_plus_1": {
+			"name": "Кинжал +1",
+			"name_en": "Dagger +1",
+			"base": "dagger",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 1
 		},
 		"dart": {
 			"name": "Дротик",
@@ -841,6 +938,18 @@
 			},
 			"value_cp": 3000
 		},
+		"greataxe_plus_1": {
+			"name": "Секира +1",
+			"name_en": "Greataxe +1",
+			"base": "greataxe",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 7
+		},
 		"greatclub": {
 			"name": "Большая дубина",
 			"name_en": "Greatclub",
@@ -873,6 +982,18 @@
 				"damage_type": "slashing"
 			},
 			"value_cp": 5000
+		},
+		"greatsword_plus_1": {
+			"name": "Двуручный меч +1",
+			"name_en": "Greatsword +1",
+			"base": "greatsword",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 6
 		},
 		"halberd": {
 			"name": "Алебарда",
@@ -942,6 +1063,18 @@
 				"damage_type": "slashing"
 			},
 			"value_cp": 500
+		},
+		"handaxe_plus_1": {
+			"name": "Ручной топор +1",
+			"name_en": "Handaxe +1",
+			"base": "handaxe",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 2
 		},
 		"healers_kit": {
 			"name": "Набор целителя",
@@ -1150,6 +1283,18 @@
 			},
 			"value_cp": 1000
 		},
+		"leather_armor_plus_1": {
+			"name": "Кожаный доспех +1",
+			"name_en": "Leather Armor +1",
+			"base": "leather_armor",
+			"item_type": "armor",
+			"properties": [
+				"ac_plus1"
+			],
+			"rarity": "rare",
+			"value_cp": 150000,
+			"weight": 10
+		},
 		"leatherworkers_tools": {
 			"name": "Инструменты кожевника",
 			"name_en": "Leatherworker's Tools",
@@ -1216,6 +1361,18 @@
 			},
 			"value_cp": 5000
 		},
+		"longbow_plus_1": {
+			"name": "Длинный лук +1",
+			"name_en": "Longbow +1",
+			"base": "longbow",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 2
+		},
 		"longsword": {
 			"name": "Длинный меч",
 			"name_en": "Longsword",
@@ -1232,6 +1389,18 @@
 				"versatile": "1d10"
 			},
 			"value_cp": 1500
+		},
+		"longsword_plus_1": {
+			"name": "Длинный меч +1",
+			"name_en": "Longsword +1",
+			"base": "longsword",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 3
 		},
 		"lute": {
 			"name": "Лютня",
@@ -1264,6 +1433,18 @@
 				"damage_type": "bludgeoning"
 			},
 			"value_cp": 500
+		},
+		"mace_plus_1": {
+			"name": "Булава +1",
+			"name_en": "Mace +1",
+			"base": "mace",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 4
 		},
 		"magnifying_glass": {
 			"name": "Увеличительное стекло",
@@ -1544,6 +1725,18 @@
 			"value_cp": 200,
 			"stack": true
 		},
+		"potion_of_greater_healing": {
+			"name": "Зелье большого лечения",
+			"name_en": "Potion of Greater Healing",
+			"item_type": "consumable",
+			"properties": [
+				"healing"
+			],
+			"stack": true,
+			"rarity": "uncommon",
+			"value_cp": 15000,
+			"description": "Выпивший восстанавливает 4к4 + 4 хитов."
+		},
 		"potters_tools": {
 			"name": "Инструменты гончара",
 			"name_en": "Potter's Tools",
@@ -1579,6 +1772,18 @@
 			},
 			"value_cp": 20
 		},
+		"quarterstaff_plus_1": {
+			"name": "Боевой посох +1",
+			"name_en": "Quarterstaff +1",
+			"base": "quarterstaff",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 4
+		},
 		"quiver": {
 			"name": "Колчан",
 			"name_en": "Quiver",
@@ -1612,6 +1817,18 @@
 				"damage_type": "piercing"
 			},
 			"value_cp": 2500
+		},
+		"rapier_plus_1": {
+			"name": "Рапира +1",
+			"name_en": "Rapier +1",
+			"base": "rapier",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 2
 		},
 		"rations": {
 			"name": "Паёк (1 день)",
@@ -1708,6 +1925,18 @@
 			},
 			"value_cp": 5000
 		},
+		"scale_mail_plus_1": {
+			"name": "Чешуйчатый доспех +1",
+			"name_en": "Scale Mail +1",
+			"base": "scale_mail",
+			"item_type": "armor",
+			"properties": [
+				"ac_plus1"
+			],
+			"rarity": "rare",
+			"value_cp": 150000,
+			"weight": 45
+		},
 		"scale_merchants": {
 			"name": "Весы торговца",
 			"name_en": "Scale, merchant's",
@@ -1733,6 +1962,18 @@
 				"damage_type": "slashing"
 			},
 			"value_cp": 2500
+		},
+		"scimitar_plus_1": {
+			"name": "Ятаган +1",
+			"name_en": "Scimitar +1",
+			"base": "scimitar",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 3
 		},
 		"sealing_wax": {
 			"name": "Сургуч",
@@ -1768,6 +2009,18 @@
 			},
 			"value_cp": 1000
 		},
+		"shield_plus_1": {
+			"name": "Щит +1",
+			"name_en": "Shield +1",
+			"base": "shield",
+			"item_type": "armor",
+			"properties": [
+				"ac_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 40000,
+			"weight": 6
+		},
 		"shortbow": {
 			"name": "Короткий лук",
 			"name_en": "Shortbow",
@@ -1789,6 +2042,18 @@
 			},
 			"value_cp": 2500
 		},
+		"shortbow_plus_1": {
+			"name": "Короткий лук +1",
+			"name_en": "Shortbow +1",
+			"base": "shortbow",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 2
+		},
 		"shortsword": {
 			"name": "Короткий меч",
 			"name_en": "Shortsword",
@@ -1805,6 +2070,18 @@
 				"damage_type": "piercing"
 			},
 			"value_cp": 1000
+		},
+		"shortsword_plus_1": {
+			"name": "Короткий меч +1",
+			"name_en": "Shortsword +1",
+			"base": "shortsword",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 2
 		},
 		"shovel": {
 			"name": "Лопата",
@@ -1929,6 +2206,18 @@
 			},
 			"value_cp": 100
 		},
+		"spear_plus_1": {
+			"name": "Копьё +1",
+			"name_en": "Spear +1",
+			"base": "spear",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 3
+		},
 		"spellbook": {
 			"name": "Книга заклинаний",
 			"name_en": "Spellbook",
@@ -2014,6 +2303,18 @@
 				"stealth_disadvantage": false
 			},
 			"value_cp": 4500
+		},
+		"studded_leather_armor_plus_1": {
+			"name": "Клёпаный кожаный доспех +1",
+			"name_en": "Studded Leather Armor +1",
+			"base": "studded_leather_armor",
+			"item_type": "armor",
+			"properties": [
+				"ac_plus1"
+			],
+			"rarity": "rare",
+			"value_cp": 150000,
+			"weight": 13
 		},
 		"tent_two_person": {
 			"name": "Палатка на двоих",
@@ -2155,6 +2456,18 @@
 				"versatile": "1d10"
 			},
 			"value_cp": 1500
+		},
+		"warhammer_plus_1": {
+			"name": "Боевой молот +1",
+			"name_en": "Warhammer +1",
+			"base": "warhammer",
+			"item_type": "weapon",
+			"properties": [
+				"magic_plus1"
+			],
+			"rarity": "uncommon",
+			"value_cp": 50000,
+			"weight": 2
 		},
 		"waterskin": {
 			"name": "Бурдюк",

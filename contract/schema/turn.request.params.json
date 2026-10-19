@@ -407,6 +407,11 @@
           "title": "Id",
           "type": "string"
         },
+        "step": {
+          "default": "",
+          "title": "Step",
+          "type": "string"
+        },
         "title": {
           "title": "Title",
           "type": "string"
@@ -860,7 +865,8 @@
         "downed",
         "combat_start",
         "combat_round",
-        "death"
+        "death",
+        "trap"
       ],
       "title": "Kind",
       "type": "string"

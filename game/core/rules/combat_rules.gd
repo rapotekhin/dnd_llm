@@ -212,10 +212,16 @@ static func stealth_roll(s: GameSession, data: Dictionary) -> Dictionary:
 	if not (mods["disadvantage"] as Array).is_empty():
 		dis = true
 		why.append("состояние")
-	var rolls := _d20(s.rng, false, dis)
-	var nat := _nat(rolls, false, dis)
-	return {"total": nat + int(c.get("skills", {}).get("stealth", 0)), "nat": nat,
-		"note": (" (с помехой: %s)" % ", ".join(why)) if dis else ""}
+	var boots := CharacterRules.carried_with(c, data, s.items, "stealth_advantage")
+	var adv := not boots.is_empty()
+	var rolls := _d20(s.rng, adv, dis)
+	var nat := _nat(rolls, adv, dis)
+	var note := ""
+	if dis and not adv:
+		note = " (с помехой: %s)" % ", ".join(why)
+	elif adv and not dis:
+		note = " (с преимуществом: %s)" % boots
+	return {"total": nat + int(c.get("skills", {}).get("stealth", 0)), "nat": nat, "note": note}
 
 
 static func monster_passive(data: Dictionary, f: Dictionary) -> int:
@@ -331,6 +337,9 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 		bonus += 2
 	if w.has("versatile") and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty() and not offhand:
 		dice = str(w["versatile"])
+	var magic := ItemRules.plus(def, ["magic_plus"])  # a +N weapon (v0.6.3)
+	to_hit += magic
+	bonus += magic
 	var rng: Array = w.get("reach_ft", [])
 	if rng.is_empty() and props.has("thrown"):
 		rng = [20, 60]

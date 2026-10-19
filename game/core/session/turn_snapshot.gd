@@ -30,6 +30,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"room_id": s.room_id, "room_name": room.get("name", s.room_id), "room_description": room.get("description", ""),
 			"exits": exits, "npcs": npcs, "hooks": room.get("hooks", []), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
+			"time_of_day": TimeRules.part_name(s, data) + (", темно" if TimeRules.dark(s, data) else ""),
 		},
 		"world": world_info(s, data),
 		"character": character_sheet(s, data),

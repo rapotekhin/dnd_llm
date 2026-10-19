@@ -117,6 +117,20 @@ func _act() -> String:
 				if gs.complete_quest(q).is_empty():
 					return "quest"
 			return "",
+		func() -> String:
+			for q: String in QuestRules.offers_here(s, data["world"]):
+				if gs.accept_quest(q).is_empty():
+					return "quest_take"
+			for t: Dictionary in QuestRules.talks_here(s, data["world"]):
+				if gs.quest_talk(str(t["quest_id"])).is_empty():
+					return "quest_step"
+			return "",
+		func() -> String:
+			var ft: Variant = _pick(ExplorationRules.found_traps(s, data["world"], s.room_id))
+			if ft == null:
+				return ""
+			var disarm := rng.randf() < 0.5
+			return ("trap_disarm" if disarm else "trap_bypass") if gs.trap_action(str(ft["to"]), disarm).is_empty() else "",
 		func() -> String: return "long_rest" if gs.long_rest().is_empty() else "",
 		func() -> String: return "short_rest" if rng.randf() < 0.5 and gs.short_rest(rng.randi_range(0, 2)).is_empty() else "",
 		func() -> String:
@@ -205,6 +219,11 @@ func _invariants() -> String:
 		return "save → load changed the session"
 	if int(c["hp"]) < (0 if CombatRules.active(s) else 1) or int(c["hp"]) > int(c["max_hp"]):
 		return "HP %d of %d" % [c["hp"], c["max_hp"]]
+	if s.minute < 0 or s.minute >= 1440:
+		return "minute %d" % s.minute
+	for q: String in s.quests_active:
+		if QuestRules.current(s, data["world"], q).is_empty() or s.quests_done.has(q):
+			return "quest %s at a bad step %s" % [q, s.quests_active[q]]
 	if int(c["gold_cp"]) < 0:
 		return "coins %d" % c["gold_cp"]
 	for id: String in c["inventory"]:

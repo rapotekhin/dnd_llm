@@ -107,7 +107,30 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 		ac = 13 + dex
 	if not shield.is_empty():
 		ac += int(shield.get("base", 2))
+	# Magic (v0.6.3): +N armor and shields, carried wondrous items (Cloak of Protection).
+	ac += ItemRules.plus(item_def(c, data, session_items, "armor"), ["ac_plus", "magic_plus"])
+	ac += ItemRules.plus(item_def(c, data, session_items, "shield"), ["ac_plus", "magic_plus"])
+	for d: Dictionary in carried(c, data, session_items):
+		ac += ItemRules.plus(d, ["ac_plus"])
 	return ac
+
+
+## Wondrous items in the pack (v0.6.3): they work while carried (no attunement in this version).
+static func carried(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for id: String in c.get("inventory", {}):
+		var d := ItemRules.def_of(data["items"], session_items, id)
+		if str(d.get("item_type", "")) == "wondrous":
+			out.append(d)
+	return out
+
+
+## The name of a carried wondrous item with this property, "" when there is none (Boots of Elvenkind → stealth).
+static func carried_with(c: Dictionary, data: Dictionary, session_items: Dictionary, prop: String) -> String:
+	for d: Dictionary in carried(c, data, session_items):
+		if (d.get("properties", []) as Array).has(prop):
+			return str(d.get("name", ""))
+	return ""
 
 
 static func slots_max(c: Dictionary, data: Dictionary) -> Array[int]:
@@ -158,8 +181,11 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 		skills[id] = skill_bonus(c, data, id)
 	c["skills"] = skills
 	var saves := {}
+	var save_plus := 0
+	for d: Dictionary in carried(c, data, session_items):
+		save_plus += ItemRules.plus(d, ["saves_plus"])
 	for id: String in ABILITIES:
-		saves[id] = save_bonus(c, data, id)
+		saves[id] = save_bonus(c, data, id) + save_plus
 	c["saves"] = saves
 	c["speed"] = speed(c, data)
 	c["passive_perception"] = 10 + int(skills["perception"])

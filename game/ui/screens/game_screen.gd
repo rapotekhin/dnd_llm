@@ -237,7 +237,8 @@ func _refresh() -> void:
 			"attitude": tr("ATTITUDE_" + ("M%d" % -att if att < 0 else "P%d" % att if att > 0 else "0"))})
 		trade_toggle.visible = GameState.world().is_trader(s.npc_id)
 		trade_toggle.text = tr("BTN_TO_TALK" if s.mode == GameSession.MODE_TRADE else "BTN_TO_TRADE")
-		trade_toggle.disabled = busy
+		trade_toggle.disabled = busy or (s.mode != GameSession.MODE_TRADE and TimeRules.shops_closed(s, Catalog.data))
+		trade_toggle.tooltip_text = tr("SHOP_CLOSED") if trade_toggle.disabled and not busy else ""
 		leave_button.disabled = busy or not online
 		input.placeholder_text = tr("PLACEHOLDER_SAY").format({"name": npc_name.get_slice(" ", 0)})
 	else:

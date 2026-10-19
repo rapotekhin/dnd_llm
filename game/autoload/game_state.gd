@@ -59,7 +59,9 @@ func long_rest() -> String:
 	var why := ExplorationRules.can_rest(session, Catalog.data["world"])
 	if not why.is_empty():
 		return why
+	var began := session.minute
 	var lines := ExplorationRules.long_rest(session, Catalog.data)
+	TimeRules.after_long_rest(session, Catalog.data, began)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
@@ -104,7 +106,7 @@ func haggle() -> String:
 func set_trade(on: bool) -> bool:
 	if session == null or is_busy() or not session.in_conversation():
 		return false
-	if on and not world().is_trader(session.npc_id):
+	if on and (not world().is_trader(session.npc_id) or TimeRules.shops_closed(session, Catalog.data)):
 		return false
 	var mode := GameSession.MODE_TRADE if on else GameSession.MODE_SOCIAL
 	if session.mode == mode:
@@ -203,6 +205,7 @@ func short_rest(dice: int) -> String:
 	if not why.is_empty():
 		return why
 	var lines := ExplorationRules.short_rest(session, Catalog.data, dice, session.rng)
+	lines.append_array(TimeRules.advance(session, Catalog.data, int(TimeRules.cfg(Catalog.data)["short_rest_minutes"])))
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
@@ -514,6 +517,7 @@ func finish_combat(take: Array = []) -> void:
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	_set_options([])
+	_quest_progress()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
 	EventBus.state_changed.emit()
 	EventBus.navigate.emit("game", {})
@@ -564,23 +568,145 @@ func go(room_id: String) -> bool:
 		return false
 	_end_conversation()
 	var from := session.room_id
-	ExplorationRules.enter_room(session, Catalog.data["world"], room_id)
-	_add(GameSession.effect_entry(["Переход: %s" % world().room(room_id).get("name", room_id)]))
+	var lines: Array[String] = []
+	var trap := ExplorationRules.trap_on_exit(session, Catalog.data["world"], from, room_id)
+	if not trap.is_empty():
+		if ExplorationRules.is_found(session, from, trap):
+			return false  # a found trap: disarm it or go around it (trap_action)
+		lines = ExplorationRules.spring_trap(session, Catalog.data, from, trap)
+		if _trap_downed(lines):
+			return true
+	_move_to(room_id, lines)
+	return true
+
+
+## Steps into `room_id`: time passes, passive Perception (sneaking, darkness), caches, quest steps; an encounter
+## starts the fight, otherwise the master describes the room. `lines` — what happened on the way (a trap).
+func _move_to(room_id: String, lines: Array[String]) -> void:
+	var from := session.room_id
+	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
+	ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
+	lines.push_front("Переход: %s" % world().room(room_id).get("name", room_id))
+	lines.append_array(ExplorationRules.take_caches(session, Catalog.data, room_id))
+	lines.append_array(QuestRules.advance(session, Catalog.data))
+	_add(GameSession.effect_entry(lines))
 	EventBus.state_changed.emit()
 	var enc: Dictionary = world().room(room_id).get("encounter", {})
 	if not enc.is_empty() and not session.encounters_done.has(str(enc["id"])):
 		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
 			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {})})
-		return true
-	_request("enter", "")
+		return
+	_request("enter", "
+".join(lines.slice(1)))
+
+
+## A trap brought the character to 0 HP outside combat: they come to on the spot (no death), the master tells the
+## cost. True when that happened (the move does not go on).
+func _trap_downed(lines: Array[String]) -> bool:
+	if int(session.character["hp"]) > 0:
+		return false
+	lines.append_array(ExplorationRules.knock_out(session))
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("downed", "")
 	return true
+
+
+## A found trap on the exit to `to`: «Обезвредить» (Sleight of Hand with thieves' tools) — success spends it,
+## the player stays; «Обойти» (Acrobatics) — success passes on. Both against disarm_dc; a failure springs the trap.
+## "" or a localization key.
+func trap_action(to: String, disarm: bool) -> String:
+	if session == null or is_busy() or not Backend.is_ready() or session.in_conversation():
+		return "TRAP_BUSY"
+	var from := session.room_id
+	var trap := ExplorationRules.trap_on_exit(session, Catalog.data["world"], from, to)
+	if trap.is_empty() or not ExplorationRules.is_found(session, from, trap):
+		return "TRAP_NONE"
+	var t: Dictionary = trap["trap"]
+	var params := {"skill": "sleight_of_hand" if disarm else "acrobatics", "dc_tier": "medium", "dc": int(t["disarm_dc"]),
+		"target_id": str(trap["id"])}
+	var bonus := CheckEngine.bonus_for(session.character, params)
+	if disarm:
+		var db := ExplorationRules.disarm_bonus(session.character)
+		bonus = int(db["bonus"])
+		params["disadvantage_reason"] = str(db["disadvantage_reason"])
+	var result := CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
+	_add(GameSession.check_entry(params, result))
+	var lines: Array[String] = []
+	if bool(result["success"]):
+		if disarm:
+			ExplorationRules.disarm_trap(session, from, trap)
+			lines.append("Ловушка обезврежена: %s" % trap["text"])
+			_add(GameSession.effect_entry(lines))
+			_log("События: " + ", ".join(lines))
+			EventBus.state_changed.emit()
+			_request("trap", "\n".join(lines))
+			return ""
+		lines.append("Ловушка обойдена — она по-прежнему на месте")
+		_move_to(to, lines)
+		return ""
+	lines = ExplorationRules.spring_trap(session, Catalog.data, from, trap)
+	if _trap_downed(lines):
+		return ""
+	if disarm:
+		_add(GameSession.effect_entry(lines))
+		_log("События: " + ", ".join(lines))
+		EventBus.state_changed.emit()
+		_request("trap", "\n".join(lines))
+		return ""
+	_move_to(to, lines)
+	return ""
+
+
+## The giver's button: take a quest with steps (QuestRules); the master plays the giver (kind=quest). "" or a key.
+func accept_quest(quest_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "QUEST_BUSY"
+	var why := QuestRules.can_accept(session, Catalog.data["world"], quest_id)
+	if not why.is_empty():
+		return why
+	var q := QuestRules.quest(Catalog.data["world"], quest_id)
+	var lines := QuestRules.accept(session, Catalog.data, quest_id)
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("quest", "%s даёт игроку задание «%s». %s %s" % [world().npc(str(q["giver"])).get("name", ""), q["title"],
+		str(q.get("offer_text", q.get("description", ""))), " ".join(lines.slice(1))])
+	return ""
+
+
+## A talk step of a quest: the button at the NPC closes it (the item is handed over); the master narrates. "" or a key.
+func quest_talk(quest_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "QUEST_BUSY"
+	var why := QuestRules.can_talk(session, Catalog.data["world"], quest_id)
+	if not why.is_empty():
+		return why
+	var step := QuestRules.current(session, Catalog.data["world"], quest_id)
+	var lines := QuestRules.talk(session, Catalog.data, quest_id)
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("quest", "%s Итог: %s." % [str(step.get("done_text", step["text"])), ", ".join(lines)])
+	return ""
+
+
+## Quest steps closed by new facts (a fight finished, a secret found, a flag set) go to the chat.
+func _quest_progress() -> void:
+	var lines := QuestRules.advance(session, Catalog.data)
+	if not lines.is_empty():
+		_add(GameSession.effect_entry(lines))
+		_log("События: " + ", ".join(lines))
 
 
 ## NPC button: start a conversation (or trade with a trader); the NPC greets the player.
 func talk_to(npc_id: String, trade: bool = false) -> bool:
 	if session == null or is_busy() or not Backend.is_ready() or not session.npcs_alive(world().npcs_in(session.room_id)).has(npc_id):
 		return false
-	if trade and not world().is_trader(npc_id):
+	if trade and (not world().is_trader(npc_id) or TimeRules.shops_closed(session, Catalog.data)):
 		return false
 	_begin_conversation(npc_id, GameSession.MODE_TRADE if trade else GameSession.MODE_SOCIAL)
 	_request("enter", "")
@@ -749,8 +875,14 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 		_end_conversation()
 		return "downed"
 
+	_quest_progress()
 	if s.room_id != room_before:
-		ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
+		var moved := TimeRules.on_move(s, Catalog.data, room_before, s.room_id)
+		ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id, TimeRules.passive_penalty(s, Catalog.data))
+		moved.append_array(ExplorationRules.take_caches(s, Catalog.data, s.room_id))
+		moved.append_array(QuestRules.advance(s, Catalog.data))
+		if not moved.is_empty():
+			_add(GameSession.effect_entry(moved))
 		_end_conversation()
 		return "enter"
 	var next: Variant = result.get("next_mode")
@@ -767,7 +899,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 			"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0}]
 		return "combat"
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and s.npcs_alive(world().npcs_in(s.room_id)).has(npc_id):
-		if mode == GameSession.MODE_TRADE and not world().is_trader(npc_id):
+		if mode == GameSession.MODE_TRADE and (not world().is_trader(npc_id) or TimeRules.shops_closed(s, Catalog.data)):
 			mode = GameSession.MODE_SOCIAL
 		if s.in_conversation() and s.npc_id == npc_id:
 			# The same partner: the master already answered, no new greeting (B33). Leaving the deal panel is the
@@ -859,8 +991,14 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 	params.erase("dc")  # the DC number and condition effects are the engine's
 	var mods := ConditionRules.check_mods(session.character, Catalog.data, params)
 	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
-	params["disadvantage_reason"] = ", ".join((mods["disadvantage"] as Array).map(cond_name))
+	var dis: Array = (mods["disadvantage"] as Array).map(cond_name)
+	if str(params.get("skill", "")) == "perception" and TimeRules.dark(session, Catalog.data):
+		dis.append("темнота")
+	params["disadvantage_reason"] = ", ".join(dis)
 	params["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
+	var boots := CharacterRules.carried_with(session.character, Catalog.data, session.items, "stealth_advantage")
+	if str(params.get("skill", "")) == "stealth" and not boots.is_empty() and str(params.get("advantage_reason", "")).is_empty():
+		params["advantage_reason"] = boots
 	var room := session.room_id
 	var result: Dictionary
 	var lock := ExplorationRules.locked(session, params, room)
@@ -878,6 +1016,12 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 		if bool(result["success"]) and params.get("skill") != null:
 			result["revealed"] = ExplorationRules.active_reveal(session, Catalog.data["world"], str(params["skill"]), int(result["total"]))
 	_add(GameSession.check_entry(params, result))
+	if not (result.get("revealed", []) as Array).is_empty():
+		var found := ExplorationRules.take_caches(session, Catalog.data, room)
+		found.append_array(QuestRules.advance(session, Catalog.data))
+		if not found.is_empty():
+			_add(GameSession.effect_entry(found))
+			_log("События: " + ", ".join(found))
 	return result
 
 

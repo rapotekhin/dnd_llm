@@ -39,6 +39,8 @@
           "resist_poison",
           "ac_plus1",
           "ac_plus2",
+          "saves_plus1",
+          "stealth_advantage",
           "light_source",
           "healing",
           "cursed"

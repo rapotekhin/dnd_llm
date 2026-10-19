@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 10
+const SAVE_VERSION := 11
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -32,6 +32,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	7: _v7_to_v8,
 	8: _v8_to_v9,
 	9: _v9_to_v10,
+	10: _v10_to_v11,
 }
 
 
@@ -128,3 +129,12 @@ static func _v8_to_v9(data: Dictionary, _ctx: Dictionary) -> void:
 ## A 0.6.1 game had no «Красться» toggle.
 static func _v9_to_v10(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["sneaking"] = false
+
+
+## A 0.6.2 game had no time of day, quests with steps, traps or caches; it goes on in the morning.
+static func _v10_to_v11(data: Dictionary, _ctx: Dictionary) -> void:
+	var s: Dictionary = data["session"]
+	s["minute"] = 480
+	s["quests_active"] = {}
+	s["traps"] = {}
+	s["caches_taken"] = []

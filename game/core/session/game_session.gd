@@ -62,6 +62,13 @@ var encounters_done: Array[String] = []
 var dead_npcs: Array[String] = []
 ## The «Красться» toggle of exploration (v0.6.2).
 var sneaking: bool = false
+## Minutes since midnight (TimeRules, v0.6.3); a new game starts in the morning.
+var minute: int = 480
+## Quests with steps taken: {quest_id: step index} (QuestRules, v0.6.3).
+var quests_active: Dictionary = {}
+## Spent traps {"room:secret": "sprung" | "disarmed"} and emptied caches ["room:secret"] (v0.6.3).
+var traps: Dictionary = {}
+var caches_taken: Array[String] = []
 ## Short rests taken today (ExplorationRules); a long rest resets it.
 var short_rests: int = 0
 ## Ids of the pack quests the player completed (XpRules).
@@ -242,6 +249,10 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"encounters_done": encounters_done,
 		"dead_npcs": dead_npcs,
 		"sneaking": sneaking,
+		"minute": minute,
+		"quests_active": quests_active,
+		"traps": traps,
+		"caches_taken": caches_taken,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -288,6 +299,12 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for n: Variant in d.get("dead_npcs", []):
 		s.dead_npcs.append(str(n))
 	s.sneaking = bool(d.get("sneaking", false))
+	s.minute = int(d.get("minute", 480))
+	for q: String in d.get("quests_active", {}):
+		s.quests_active[q] = int(d["quests_active"][q])
+	s.traps = d.get("traps", {})
+	for k: Variant in d.get("caches_taken", []):
+		s.caches_taken.append(str(k))
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):

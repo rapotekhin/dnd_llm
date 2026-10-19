@@ -94,6 +94,19 @@ EXTRA_PROPERTIES = {"torch": ["light_source"], "lantern": ["light_source"], "lan
                     "holy_water": ["radiant_damage"], "alchemists_fire_flask": ["fire_damage"], "acid_vial": []}
 CONSUMABLES = {"rations", "antitoxin", "holy_water", "alchemists_fire_flask", "acid_vial", "oil_flask"}
 SKIP_GEAR = {"equipment-packs"}
+# Magic items of the SRD the engine knows (v0.6.3): +1 weapons and armor on common bases (the base's block, a +N
+# property), a few wondrous items and a potion. Rarity and value by the DMG; no attunement in this version.
+MAGIC_WEAPON_BASES = ["dagger", "shortsword", "longsword", "rapier", "scimitar", "mace", "handaxe", "battleaxe",
+                      "warhammer", "greataxe", "greatsword", "quarterstaff", "spear", "shortbow", "longbow", "crossbow_light"]
+MAGIC_ARMOR_BASES = ["leather_armor", "studded_leather_armor", "chain_shirt", "scale_mail", "breastplate", "chain_mail", "shield"]
+MAGIC_OTHER = {
+    "potion-of-healing-greater": {"id": "potion_of_greater_healing", "item_type": "consumable", "properties": ["healing"],
+                                  "stack": True, "rarity": "uncommon", "value_cp": 15000},
+    "cloak-of-protection": {"id": "cloak_of_protection", "item_type": "wondrous", "properties": ["ac_plus1", "saves_plus1"],
+                            "rarity": "uncommon", "value_cp": 50000},
+    "boots-of-elvenkind": {"id": "boots_of_elvenkind", "item_type": "wondrous", "properties": ["stealth_advantage"],
+                           "rarity": "uncommon", "value_cp": 40000},
+}
 SKIP_CATEGORIES = {"mounts-and-vehicles"}
 WEAPON_PROPERTIES = {"finesse", "light", "heavy", "two-handed", "versatile", "thrown", "reach", "ammunition"}
 WEAPON_PROF_ALIASES = {"hand-crossbows": "crossbow-hand", "light-crossbows": "crossbow-light",
@@ -320,6 +333,26 @@ class Builder:
             if id_ in CONSUMABLES:
                 d["item_type"] = "consumable"
             out[id_] = {"name": d.pop("name"), **d}
+        return out
+
+    def magic_items(self, items: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
+        for base in MAGIC_WEAPON_BASES:
+            b = items[base]
+            out[f"{base}_plus_1"] = {"name": f"{b['name']} +1", "name_en": f"{b['name_en']} +1", "base": base,
+                                     "item_type": "weapon", "properties": ["magic_plus1"], "rarity": "uncommon",
+                                     "value_cp": 50000, "weight": b.get("weight", 0)}
+        for base in MAGIC_ARMOR_BASES:
+            b = items[base]
+            shield = base == "shield"
+            out[f"{base}_plus_1"] = {"name": f"{b['name']} +1", "name_en": f"{b['name_en']} +1", "base": base,
+                                     "item_type": "armor", "properties": ["ac_plus1"], "rarity": "uncommon" if shield else "rare",
+                                     "value_cp": 40000 if shield else 150000, "weight": b.get("weight", 0)}
+        for index, spec in MAGIC_OTHER.items():
+            e = j(f"magic-items/{index}.json")
+            t = self.tr(f"item:{spec['id']}", e["name"], desc_text(e))
+            d = {k: v for k, v in spec.items() if k != "id"}
+            out[spec["id"]] = {"name": t["name"], "name_en": e["name"], **d, "description": t.get("desc", "")}
         return out
 
     def languages(self) -> dict[str, dict[str, Any]]:
@@ -657,6 +690,7 @@ def build() -> None:
     items = b.items()
     for keep in EXTRA_ITEMS:
         items[keep] = old["catalog"][keep]
+    items.update(b.magic_items(items))
     races = b.races()
     classes = b.classes()
     data = {

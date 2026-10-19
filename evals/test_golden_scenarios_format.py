@@ -16,7 +16,7 @@ yaml = pytest.importorskip("yaml")
 SCENARIOS_FILE = Path(__file__).resolve().parent / "golden" / "scenarios.yaml"
 
 MODES = {"exploration", "social", "trade", "combat"}
-KINDS = {"enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death"}
+KINDS = {"enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death", "trap"}
 NO_INPUT_KINDS = {"enter", "resume", "rest", "downed"}  # deal / haggle / quest carry the engine facts in input
 DC_TIERS = {"very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"}
 EFFECT_KINDS = {"give_item", "take_item", "coins", "damage", "heal", "condition", "cast", "use_feature", "use_item", "start_combat",

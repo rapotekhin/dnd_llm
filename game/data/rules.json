@@ -439,6 +439,9 @@
 	},
 	"consumables": {
 		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions].",
+		"potion_of_greater_healing": {
+			"heal": [4, 4, 4]
+		},
 		"healing_potion": {
 			"heal": [
 				2,
@@ -500,6 +503,20 @@
 		"_doc": "Cantrips a race trait grants (the SRD import has no spell list in traits, v0.6.0).",
 		"infernal_legacy": [
 			"thaumaturgy"
+		]
+	},
+	"time": {
+		"_doc": "Time of day (v0.6.3): minutes since midnight. A step between rooms of one location — move_minutes, into another location — travel_minutes; a short rest — short_rest_minutes; a long rest ends at wake_minute. Parts start at `from`; night — traders closed (night_shops_closed), darkness outside lit locations.",
+		"move_minutes": 10,
+		"travel_minutes": 60,
+		"short_rest_minutes": 60,
+		"wake_minute": 420,
+		"night_shops_closed": true,
+		"parts": [
+			{"id": "morning", "name": "утро", "from": 360},
+			{"id": "day", "name": "день", "from": 660},
+			{"id": "evening", "name": "вечер", "from": 1080},
+			{"id": "night", "name": "ночь", "from": 1320}
 		]
 	},
 	"combat": {

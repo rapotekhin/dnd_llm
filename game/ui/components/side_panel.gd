@@ -96,7 +96,9 @@ func _rebuild() -> void:
 		lv.name = "LevelUpButton"
 		lv.theme_type_variation = UiTheme.ACCENT_BUTTON
 		lv.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_line(tr("SIDE_DAY").format({"day": s.day}), true)
+	_line(tr("SIDE_DAY_TIME").format({"day": s.day, "part": TimeRules.part_name(s, Catalog.data), "clock": TimeRules.clock(s)}), true)
+	if TimeRules.dark(s, Catalog.data):
+		_line(tr("SIDE_DARK"), true).add_theme_color_override("font_color", UiTheme.WARN)
 	var room := world.room(s.room_id)
 	_subheading("SIDE_PLACE")
 	_line("%s — %s" % [world.location(world.location_id(s.room_id)).get("name", ""), room.get("name", s.room_id)], false)
@@ -110,8 +112,11 @@ func _rebuild() -> void:
 				b.tooltip_text = "%s — %s" % [n.get("name", id), n.get("role", "")]
 				b.name = "Talk_" + id
 				if bool(n.get("trader", false)):
-					var t := _button(tr("BTN_TRADE_WITH").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, true), can_act)
+					var closed := TimeRules.shops_closed(s, Catalog.data)
+					var t := _button(tr("BTN_TRADE_WITH").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, true), can_act and not closed)
 					t.name = "Trade_" + id
+					if closed:
+						t.tooltip_text = tr("SHOP_CLOSED")
 		for qid: String in XpRules.quests_here(s, Catalog.data["world"]):
 			var q: Dictionary = XpRules.quests(Catalog.data["world"])[qid]
 			var qb := _button(tr("BTN_QUEST").format({"action": q["action"]}), func() -> void:
@@ -120,6 +125,23 @@ func _rebuild() -> void:
 					EventBus.message.emit(tr(err)), can_act)
 			qb.name = "Quest_" + qid
 			qb.tooltip_text = str(q["title"])
+		for qid: String in QuestRules.offers_here(s, Catalog.data["world"]):
+			var q := QuestRules.quest(Catalog.data["world"], qid)
+			var ab := _button(tr("BTN_QUEST_TAKE").format({"title": q["title"]}), func() -> void:
+				var err := GameState.accept_quest(qid)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)), can_act)
+			ab.name = "QuestTake_" + qid
+			ab.tooltip_text = str(q.get("description", ""))
+		for t: Dictionary in QuestRules.talks_here(s, Catalog.data["world"]):
+			var tid := str(t["quest_id"])
+			var why := QuestRules.can_talk(s, Catalog.data["world"], tid)
+			var tb := _button(tr("BTN_QUEST").format({"action": t["action"]}), func() -> void:
+				var err := GameState.quest_talk(tid)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)), can_act and why.is_empty())
+			tb.name = "QuestStep_" + tid
+			tb.tooltip_text = tr(why) if not why.is_empty() else str(QuestRules.quest(Catalog.data["world"], tid)["title"])
 		_subheading("SIDE_EXITS")
 		var sneak := CheckButton.new()
 		sneak.name = "SneakToggle"
@@ -129,7 +151,21 @@ func _rebuild() -> void:
 		sneak.disabled = not can_act
 		sneak.toggled.connect(func(on: bool) -> void: GameState.set_sneaking(on))
 		_content.add_child(sneak)
+		var trapped := {}
+		for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
+			trapped[ft["to"]] = ft["secret"]
 		for e: String in world.exits(s.room_id):
+			if trapped.has(e):
+				var to := e
+				var by := _button(tr("BTN_TRAP_BYPASS").format({"room": world.room(e).get("name", e)}), func() -> void: _trap(to, false), can_act)
+				by.name = "Exit_" + e
+				by.tooltip_text = str(trapped[e]["text"]) + "
+" + tr("TRAP_BYPASS_TIP")
+				var dis := _button(tr("BTN_TRAP_DISARM"), func() -> void: _trap(to, true), can_act)
+				dis.name = "Disarm_" + e
+				dis.tooltip_text = str(trapped[e]["text"]) + "
+" + tr("TRAP_DISARM_TIP")
+				continue
 			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act)
 			b.name = "Exit_" + e
 		var place := ExplorationRules.rest_place(Catalog.data["world"], s.room_id)
@@ -159,6 +195,12 @@ func _rebuild() -> void:
 			shown += 1
 	if inv.size() > shown:
 		_line(tr("SIDE_MORE_ITEMS").format({"n": inv.size() - shown}), true)
+
+
+func _trap(to: String, disarm: bool) -> void:
+	var err := GameState.trap_action(to, disarm)
+	if not err.is_empty():
+		EventBus.message.emit(tr(err))
 
 
 func _heading(text: String) -> void:
