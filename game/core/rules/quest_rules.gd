@@ -53,6 +53,10 @@ static func accept(s: GameSession, data: Dictionary, quest_id: String) -> Array[
 	var q := quest(data["world"], quest_id)
 	s.quests_active[quest_id] = 0
 	var lines: Array[String] = ["Новое задание: %s" % q["title"], "Цель: %s" % q["steps"][0]["text"]]
+	var given: Dictionary = q.get("offer_items", {})  # what the giver hands over (v0.6.5: the letter, the writ)
+	for id: String in given:
+		s.character["inventory"][id] = int(s.character["inventory"].get(id, 0)) + int(given[id])
+		lines.append("Получено: %s" % ItemRules.display_name(data["items"], s.items, id))
 	lines.append_array(advance(s, data))
 	return lines
 

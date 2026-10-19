@@ -157,8 +157,13 @@ func _rebuild() -> void:
 		sneak.text = "BTN_SNEAK"
 		sneak.tooltip_text = "BTN_SNEAK_TIP"
 		sneak.button_pressed = s.sneaking
-		sneak.disabled = not can_act
-		sneak.toggled.connect(func(on: bool) -> void: GameState.set_sneaking(on))
+		sneak.disabled = not can_act or s.sneak_noticed == s.room_id
+		if s.sneak_noticed == s.room_id:
+			sneak.tooltip_text = "SNEAK_NOTICED"
+		sneak.toggled.connect(func(on: bool) -> void:
+			var err := GameState.set_sneaking(on)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
 		_content.add_child(sneak)
 		var trapped := {}
 		for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
@@ -187,6 +192,22 @@ func _rebuild() -> void:
 						EventBus.message.emit(tr(err)), can_act)
 			rest.name = "RestButton"
 			rest.disabled = not can_act or not ExplorationRules.can_rest(s, Catalog.data["world"]).is_empty()
+		var wait := MenuButton.new()
+		wait.name = "WaitButton"
+		wait.text = tr("BTN_WAIT")
+		wait.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		wait.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		wait.flat = false
+		wait.disabled = not can_act
+		var targets: Array[String] = ["hour", "morning", "day", "evening", "night"]
+		for i in targets.size():
+			var mins := TimeRules.minutes_until(s, Catalog.data, targets[i])
+			wait.get_popup().add_item(tr("WAIT_" + targets[i].to_upper()).format({"clock": TimeRules.clock_after(s, mins)}), i)
+		wait.get_popup().id_pressed.connect(func(id: int) -> void:
+			var err := GameState.wait(targets[id])
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
+		_content.add_child(wait)
 		var short := _button(tr("BTN_SHORT_REST"), short_rest_requested.emit, not GameState.is_busy())
 		short.name = "ShortRestButton"
 		var why := ExplorationRules.can_short_rest(s, Catalog.data)

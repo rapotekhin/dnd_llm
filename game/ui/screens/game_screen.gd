@@ -250,9 +250,14 @@ func _refresh() -> void:
 		return
 	if GameState.can_retry():
 		_option_button("BTN_RETRY_TURN", GameState.retry, true).disabled = not online
-	for o: String in GameState.session.options:
-		var b := _option_button(o, func() -> void: GameState.submit(o), false)
-		b.disabled = not online
+	for i in GameState.session.options.size():
+		var o := GameState.session.options[i]
+		var cost := GameState.session.option_costs[i] if i < GameState.session.option_costs.size() else 0
+		var b := _option_button(o + ((" (%s)" % Money.format(cost)) if cost > 0 else ""), func() -> void:
+			var err := GameState.choose_option(i)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), false)
+		b.disabled = not online or (cost > 0 and int(GameState.session.character["gold_cp"]) < cost)
 
 
 func _option_button(text: String, action: Callable, translate: bool) -> Button:

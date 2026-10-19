@@ -41,7 +41,7 @@ func _add(e: Dictionary) -> void:
 			_list.add_child(_text("— " + str(e.get("text", "")), UiTheme.PLAYER_TEXT))
 		GameSession.KIND_NPC:
 			# The master writes the line with its own remarks and quotes; only the speaker is added.
-			_list.add_child(_text("%s — %s" % [e.get("name", ""), e.get("text", "")], UiTheme.NPC_TEXT))
+			_list.add_child(_text("%s — %s" % [e.get("name", ""), without_name(str(e.get("text", "")), str(e.get("name", "")))], UiTheme.NPC_TEXT))
 		GameSession.KIND_EFFECT:
 			_list.add_child(_text(" · ".join(e.get("lines", [])), UiTheme.EFFECT_TEXT))
 		GameSession.KIND_CHECK:
@@ -59,3 +59,13 @@ func _text(text: String, variation: String) -> Label:
 	# Chat text comes from the model and the player: never treat it as a translation key.
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	return l
+
+
+## The line without the speaker's name in front (the card is already signed): «Бруно Хмель понижает голос» →
+## «понижает голос»; the first name alone too (v0.6.5, playtest-1).
+static func without_name(text: String, name: String) -> String:
+	for n: String in [name, name.get_slice(" ", 0)]:
+		if not n.is_empty() and text.begins_with(n + " "):
+			return text.substr(n.length()).lstrip(" —–-:,")
+	return text
+

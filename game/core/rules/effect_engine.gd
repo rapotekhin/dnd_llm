@@ -76,7 +76,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 	var c := s.character
 	var level := int(c.get("level", 1))
 	if s.mode == GameSession.MODE_COMBAT:
-		if str(e.get("kind", "")) in ["move", "coins", "give_item", "take_item", "npc_attitude"]:
+		if str(e.get("kind", "")) in ["move", "coins", "give_item", "take_item", "npc_attitude", "advance_time"]:
 			return {"reason": "в бою это нельзя: исход боя, переходы и добычу ведёт движок; здесь — проверки, урон и состояния врагам (target_id), подкрепление (start_combat)"}
 		var tid := str(e.get("target_id", "")) if e.get("target_id") != null else ""
 		if not tid.is_empty():
@@ -178,6 +178,14 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if not why.is_empty():
 				return {"reason": why}
 			return {"plan": {"item_id": iid}, "summary": "Использовано: %s" % ItemRules.display_name(items, s.items, iid)}
+		"advance_time":
+			var mins := int(e.get("minutes", 0))
+			var cap := int(TimeRules.cfg(data)["max_master_minutes"])
+			if mins <= 0 or mins > cap:
+				return {"reason": "время — от 1 до %d минут за ход" % cap}
+			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "advance_time"):
+				return {"reason": "время уже сдвинуто в этом ходе"}
+			return {"plan": {"minutes": mins}, "summary": "Прошло: %s" % _duration(mins)}
 		"flag":
 			var flag := str(e.get("flag", ""))
 			if flag.is_empty():
@@ -316,6 +324,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
 		"use_item":
 			ItemRules.use(c, _data, s.items, plan["item_id"], s.rng)
+		"advance_time":
+			TimeRules.advance(s, _data, int(plan["minutes"]))
 		"flag":
 			if bool(plan["value"]) and not s.flags.has(plan["flag"]):
 				s.flags.append(plan["flag"])
@@ -358,3 +368,10 @@ static func _pending_taken(pending: Array[Dictionary], id: String) -> int:
 		if p["kind"] == "take_item" and p["plan"]["item_id"] == id:
 			sum += int(p["plan"]["qty"])
 	return sum
+
+
+static func _duration(mins: int) -> String:
+	if mins < 60:
+		return "%d мин" % mins
+	return "%d ч%s" % [mins / 60, (" %d мин" % (mins % 60)) if mins % 60 > 0 else ""]
+

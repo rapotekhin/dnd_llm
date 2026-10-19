@@ -33,9 +33,14 @@ def main() -> int:
     if not Path(godot).exists():
         print(f"Godot not found: {godot} (set GODOT)")
         return 2
-    if port_busy(PORT):
-        print(f"port {PORT} is busy: stop the running llm_server first")
+    port = PORT
+    while port_busy(port) and port < PORT + 20:
+        port += 1  # the player's own llm_server may hold 8765: the playtest takes the next free port
+    if port_busy(port):
+        print(f"ports {PORT}–{port} are busy: stop a running llm_server first")
         return 2
+    if port != PORT:
+        print(f"port {PORT} is busy (a running llm_server?) — the playtest uses {port}")
     out_dir = ROOT / "build" / "playtest" / opts.scenario
     out_dir.mkdir(parents=True, exist_ok=True)
     for stale in [out_dir / "report.txt", *out_dir.glob("*.png")]:  # a scenario that fails to compile must not show the old report
@@ -44,13 +49,13 @@ def main() -> int:
     subprocess.run([godot, "--headless", "--path", str(ROOT / "game"), "--import"], capture_output=True, timeout=300)
 
     token = secrets.token_urlsafe(32)
-    server = start_server(token, "agent" if opts.real else "stub") if with_server else None
+    server = start_server(token, "agent" if opts.real else "stub", port) if with_server else None
     try:
-        if server and not wait_http(f"http://127.0.0.1:{PORT}/healthz", 60):
+        if server and not wait_http(f"http://127.0.0.1:{port}/healthz", 60):
             print("llm_server did not start, see build/connectivity/llm_server.log")
             return 2
         args = [godot, "--path", str(ROOT / "game"), "--script", f"res://tools/playtest/{opts.scenario}.gd", "--",
-                "--profile=agent", f"--out={out_dir.as_posix()}", f"--backend-url=ws://127.0.0.1:{PORT}/ws", "--seed=42"]
+                "--profile=agent", f"--out={out_dir.as_posix()}", f"--backend-url=ws://127.0.0.1:{port}/ws", "--seed=42"]
         env = {**os.environ, "BTR_BACKEND_TOKEN": token}
         proc = subprocess.run(args, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
         (out_dir / "godot.log").write_text(proc.stdout + proc.stderr, encoding="utf-8")

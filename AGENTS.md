@@ -8,12 +8,12 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 
 | Folder | What | Status |
 |---|---|---|
-| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + start world «Сумеречная Марка» (v0.5.1), exploration: check locks, hidden things, long rest, map and journal (v0.5.2), dialogues and trade (v0.5.3), experience from quests and combat, level-up 1–5 (v0.5.4), 5e rules to the end: casting with slots, conditions, feature uses, short rest, consumables, 0 HP without death (v0.6.0), combat: SRD monsters, 7-column field, engine AI, death saves, combat screen (v0.6.1), combat details: surprise and sneaking, Hide, reinforcements, parley, hit hint, encounters in every Mark dungeon (v0.6.2), adventure systems: time of day, quests with steps, traps and caches, SRD magic items (v0.6.3), the captain's chain «Пепел над Маркой» with the finale and the menhir choice (v0.6.4) |
-| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.9.0 (v0.6.3) |
-| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.9.0 |
+| `game/` | Godot 4.7 client (GDScript), [godot-client.md](docs/tech/godot-client.md) | real master (v0.4.1), 5e character (v0.5.0), world packs + start world «Сумеречная Марка» (v0.5.1), exploration: check locks, hidden things, long rest, map and journal (v0.5.2), dialogues and trade (v0.5.3), experience from quests and combat, level-up 1–5 (v0.5.4), 5e rules to the end: casting with slots, conditions, feature uses, short rest, consumables, 0 HP without death (v0.6.0), combat: SRD monsters, 7-column field, engine AI, death saves, combat screen (v0.6.1), combat details: surprise and sneaking, Hide, reinforcements, parley, hit hint, encounters in every Mark dungeon (v0.6.2), adventure systems: time of day, quests with steps, traps and caches, SRD magic items (v0.6.3), the captain's chain «Пепел над Маркой» with the finale and the menhir choice (v0.6.4), playtest-1 fixes: quest things, paid options, theft, waiting, condition spells, incapacitated foes, sneaking among people (v0.6.5) |
+| `llm_server/` | Python LLM backend (FastAPI, Pydantic AI, OpenRouter), own `uv` env, [README](llm_server/README.md) | agents over OpenRouter, protocol 0.10.0 (v0.6.5) |
+| `contract/` | JSON Schema of the Godot ↔ backend protocol (generated) | all methods of protocol 0.10.0 |
 | `tools/` | SRD import (`srd_import.py`, source in `tools/srd/source/`), pack validator, playtest and connectivity runners | |
 | `infra/dev/` | Caddy in Docker for local `wss://` | dev only |
-| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 36 scenarios (35 runnable); runner `llm_server.golden` |
+| `evals/` | golden LLM scenarios ([docs](docs/tech/golden-scenarios.md)) | 40 scenarios (39 runnable); runner `llm_server.golden` |
 | `docs/` | design + tech docs, ADRs | live |
 
 Decisions to follow in new code: [ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md) (who owns what), [ADR-0008](docs/tech/adr/0008-engine-decides-llm-narrates.md) (engine decides, LLM narrates), [ADR-0009](docs/tech/adr/0009-godot-backend-protocol.md) (protocol), [ADR-0010](docs/tech/adr/0010-game-decisions-worlds-tone-combat-death.md) (game decisions), [ADR-0011](docs/tech/adr/0011-default-master-model.md) (default model: change it only after golden scenarios with `--repeat 3` and a live playtest). Godot conventions follow the sibling project `C:\Code\hive_world_shop` (pure `core/`, seeded RNG, JSON saves with migrations, gdUnit4).
@@ -42,7 +42,7 @@ uv sync --project llm_server && cd llm_server && uv run pytest && cd ..   # back
 uv run --project llm_server python -m llm_server.contract            # regenerate contract/schema/ after changing protocol models
 uv run --project llm_server python -m llm_server.golden              # golden LLM scenarios on the real model + judge → build/evals/ (cents; --model, --only, --repeat)
 python tools/connectivity_e2e.py                                      # Godot <-> Caddy wss:// <-> llm_server end to end (Docker; --no-proxy without it)
-python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/
+python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/ (takes the next free port when 8765 is busy)
 python tools/godot_playtest.py --scenario offline                     # live Godot playtest without the server
 python tools/godot_playtest.py --scenario live --real                 # live Godot playtest with the real OpenRouter model (cents)
 python tools/godot_playtest.py --scenario creation --no-server        # character creation step by step, screenshots of every step

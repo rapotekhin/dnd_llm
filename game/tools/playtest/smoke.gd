@@ -179,13 +179,25 @@ func _map_journal_rest(gs: Node, game: Control) -> void:
 
 
 func _quest_level_up(gs: Node, game: Control) -> void:
-	for room: String in ["brod-tavern-hall", "brod-square", "brod-temple"]:
+	for room: String in ["brod-tavern-hall"]:
+		var back: Button = find(game, "Exit_" + room)
+		if not step("walk to " + room, back != null and not back.disabled):
+			return
+		await press(back)
+		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+	var take: Button = find(game, "QuestTake_letter_to_ilva")
+	if not step("Bruno gives the letter", take != null and not take.disabled):
+		return
+	await press(take)
+	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+	step("the letter is in the pack", int(gs.session.character["inventory"].get("bruno_letter", 0)) == 1)
+	for room: String in ["brod-square", "brod-temple"]:
 		var exit: Button = find(game, "Exit_" + room)
 		if not step("walk to " + room, exit != null and not exit.disabled):
 			return
 		await press(exit)
 		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
-	var quest: Button = find(game, "Quest_letter_to_ilva")
+	var quest: Button = find(game, "QuestStep_letter_to_ilva")
 	if not step("quest button in the temple", quest != null and not quest.disabled):
 		return
 	await press(quest)

@@ -112,6 +112,7 @@ func _rebuild() -> void:
 		dice.max_value = left
 		dice.value = mini(left, 1) if int(c["hp"]) < int(c["max_hp"]) else 0
 		_box.add_child(dice)
+		_text(tr("SHORT_REST_UNTIL").format({"clock": TimeRules.clock_after(s, int(TimeRules.cfg(data)["short_rest_minutes"]))}))
 		_text(tr("SHORT_REST_HINT").format({"left": int(data["rules"]["rest"]["short_rests_per_day"]) - s.short_rests}), UiTheme.MUTED_LABEL)
 		confirm.disabled = GameState.is_busy()
 		return

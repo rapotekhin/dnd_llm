@@ -152,10 +152,12 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     next_mode = None
     if out.next_mode and not (out.next_mode == params.mode and out.npc_id == params.npc_id):
         next_mode = NextMode(mode=out.next_mode, npc_id=out.npc_id if out.next_mode != "exploration" else None)
+    picked = [(o.strip(), out.option_costs[i] if i < len(out.option_costs) else 0) for i, o in enumerate(out.options) if o.strip()][:3]
     return TurnResult(
         turn_id=params.turn_id,
         narration=out.narration.strip(),
-        options=[o.strip() for o in out.options if o.strip()][:3],
+        options=[o for o, _ in picked],
+        option_costs=[max(0, min(int(c), 100000)) for _, c in picked],
         effect_ids=[e for e in dict.fromkeys(out.effect_ids) if e in ctx.accepted],
         check_ids=ctx.check_ids,
         next_mode=next_mode,

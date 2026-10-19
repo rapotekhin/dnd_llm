@@ -187,6 +187,13 @@
     },
     "CombatFoe": {
       "properties": {
+        "conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conditions",
+          "type": "array"
+        },
         "description": {
           "default": "",
           "title": "Description",
@@ -866,7 +873,8 @@
         "combat_start",
         "combat_round",
         "death",
-        "trap"
+        "trap",
+        "wait"
       ],
       "title": "Kind",
       "type": "string"

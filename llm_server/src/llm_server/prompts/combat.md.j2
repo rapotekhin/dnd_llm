@@ -20,7 +20,7 @@
 
 {% if combat %}## Поле боя (раунд {{ combat.round }})
 
-{% for e in combat.enemies %}- {{ e.name }} [{{ e.id }}]{% if e.monster and e.monster != e.name %} ({{ e.monster }}){% endif %}: {% if e.status == "active" %}{% if e.distance_ft == 0 %}вплотную{% else %}в {{ e.distance_ft }} футах {{ "слева" if e.side == "left" else "справа" }}{% endif %}, {{ {"full": "цел", "hurt": "ранен", "bloodied": "тяжело ранен", "near_death": "при смерти"}.get(e.health, e.health) }}{% if e.surprised %}, застигнут врасплох{% endif %}{% else %}{{ {"dead": "повержен", "fled": "сбежал", "surrendered": "сдался", "truce": "опустил оружие"}.get(e.status, e.status) }}{% endif %}.{% if e.description %} {{ e.description }}{% endif %}
+{% for e in combat.enemies %}- {{ e.name }} [{{ e.id }}]{% if e.monster and e.monster != e.name %} ({{ e.monster }}){% endif %}: {% if e.status == "active" %}{% if e.distance_ft == 0 %}вплотную{% else %}в {{ e.distance_ft }} футах {{ "слева" if e.side == "left" else "справа" }}{% endif %}, {{ {"full": "цел", "hurt": "ранен", "bloodied": "тяжело ранен", "near_death": "при смерти"}.get(e.health, e.health) }}{% if e.surprised %}, застигнут врасплох{% endif %}{% if e.conditions %}, {{ e.conditions | join(", ") }}{% endif %}{% else %}{{ {"dead": "повержен", "fled": "сбежал", "surrendered": "сдался", "truce": "опустил оружие"}.get(e.status, e.status) }}{% endif %}.{% if e.description %} {{ e.description }}{% endif %}
 {% endfor %}
 {% for w in combat.incoming %}- На подходе {{ "слева" if w.side == "left" else "справа" }} (через {{ w.in_rounds }} р.): {{ w.names | join(", ") }}.
 {% endfor %}

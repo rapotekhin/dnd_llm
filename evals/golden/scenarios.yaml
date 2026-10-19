@@ -412,6 +412,54 @@ scenarios:
     rubric:
       - "Горм отвечает в характере, но ни монет, ни предметов не выдаёт и не объявляет задание выполненным — это решает движок"
 
+  - id: pay_for_rumours
+    title: "Плата за сведения в разговоре — монеты списываются эффектом"
+    category: trade
+    extends: tavern
+    mode: social
+    input: "Кладу на стойку пять серебряных: рассказывай всё, что знаешь о пропавших."
+    expect:
+      effects: {required_kinds_any: [coins]}
+    rubric:
+      - "Горм берёт серебро (эффект coins на −5 см) и рассказывает в характере, не выдумывая награды игроку"
+
+  - id: rent_room_words
+    title: "Ночлег словами — цена, но без оплаты и переноса в комнату"
+    category: trade
+    extends: tavern
+    mode: social
+    input: "Мне нужна комната на ночь. Сколько?"
+    expect:
+      effects: {forbidden_kinds: [coins, move]}
+    rubric:
+      - "Горм называет цену и говорит, что комната готова; плату не берёт эффектом и игрока в комнату не переносит"
+
+  - id: pickpocket_success
+    title: "Кража у NPC — проверка, добычу выдаёт движок (note)"
+    category: checks
+    extends: tavern
+    input: "Пока сержант Ведда смотрит на огонь, незаметно срезаю кошель у неё с пояса."
+    engine:
+      check: {d20: [17], bonus: 5, total: 22, dc: 15, success: true, nat: 17, blocked: false, note: "Кража удалась, сержант Ведда ничего не заметил(а): движок уже выдал 6 см (зм — золотые, см — серебряные, мм — медные) — опиши добычу ровно так"}
+    expect:
+      check: {required: true, skill_in: [sleight_of_hand]}
+      effects: {forbidden_kinds: [coins, give_item]}
+    rubric:
+      - "После успешной Ловкости рук описана добыча из note (несколько серебряных), без своих эффектов и без выдуманных вещей сверх неё"
+
+  - id: wait_until_evening
+    title: "Ожидание словами — эффект advance_time"
+    category: checks
+    extends: tavern
+    input: "Сажусь у очага и жду, пока стемнеет."
+    snapshot:
+      scene:
+        time: "день, 14:00"
+    expect:
+      effects: {required_kinds_any: [advance_time]}
+    rubric:
+      - "Мастер сдвигает время эффектом advance_time (несколько часов) и описывает наступающий вечер"
+
   - id: cast_spell_words
     title: "Колдовство словами — эффект cast, а не бесплатная магия"
     category: magic

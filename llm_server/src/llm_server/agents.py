@@ -68,13 +68,16 @@ class TurnOutput(BaseModel):
 
     narration: str = Field(description="Текст для игрока: описание мастера или реплика NPC. Не пустой.")
     options: list[str] = Field(default_factory=list, max_length=3, description="1–3 коротких варианта действий игрока от первого лица.")
+    option_costs: list[int] = Field(default_factory=list, max_length=3, description=(
+        "Цена каждого варианта в медных (мм), по порядку options: 0 — бесплатно. Вариант «Заплатить пять серебряных и выслушать» — 50. "
+        "Движок спишет монеты, когда игрок выберет вариант."))
     effect_ids: list[str] = Field(default_factory=list, description="effect_id принятых движком эффектов, которые надо применить.")
     next_mode: Literal["exploration", "social", "trade", "combat"] | None = Field(
         default=None, description="Смена режима: social/trade — разговор/торговля с NPC (нужен npc_id), combat — игрок нападает на NPC сцены "
                                   "(нужен npc_id), exploration — вернуться в общую сцену.")
     npc_id: str | None = Field(default=None, description="NPC для social/trade/combat, из списка NPC сцены.")
     changes: list[str] = Field(default_factory=list, description=(
-        "Что по твоему тексту изменилось у игрока или в мире: получено, потеряно, заплачено, ранен, вылечен, перешёл. "
+        "Что по твоему тексту изменилось у игрока или в мире: получено, потеряно, заплачено, отдано, украдено, ранен, вылечен, перешёл, прошло время. "
         "Пусто — ничего не изменилось. Каждое изменение должно быть принятым эффектом из effect_ids."))
 
 

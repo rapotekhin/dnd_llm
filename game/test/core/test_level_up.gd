@@ -134,6 +134,9 @@ func test_experience_only_from_combat_and_quests() -> void:
 func test_a_pack_quest_completes_once_in_its_room() -> void:
 	var s := TestUtils.new_session()
 	var world: Dictionary = data["world"]
+	# A one-button quest (v0.5.4); the letter itself is a quest with steps since v0.6.5.
+	world["quests"]["letter_to_ilva"] = {"title": "Письмо для Илвы", "description": "тест", "room": "brod-temple",
+		"action": "Отдать Илве письмо Бруно", "xp": 300, "done_text": "Илва благодарит."}
 	assert_array(XpRules.quests_here(s, world)).is_empty()
 	assert_str(XpRules.can_complete(s, world, "letter_to_ilva")).is_equal("QUEST_WRONG_PLACE")
 	s.room_id = "brod-temple"

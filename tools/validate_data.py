@@ -86,7 +86,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     for kind, entries in rules.get("rename", {}).items():
         errors += [f"pack.rules.rename.{kind}: неизвестный id {x}" for x in entries if x not in ids[kind]]
     allowed = {k: set(rules.get(k) or ids[k]) for k in ("races", "classes", "backgrounds")}
-    items = ids["items"] - set(rules.get("items_exclude", []))
+    items = (ids["items"] - set(rules.get("items_exclude", []))) | set(world.get("items", {}))
 
     rooms, npcs = world["rooms"], world["npcs"]
     if world["start_room"] not in rooms:
@@ -133,6 +133,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             elif q["room"] not in rooms:
                 errors.append(f"задание {qid}: нет комнаты {q['room']}")
             continue
+        errors += [f"задание {qid}: в offer_items нет предмета {x}" for x in q.get("offer_items", {}) if x not in items]
         if q.get("giver") not in npcs:
             errors.append(f"задание {qid}: нет NPC-заказчика {q.get('giver')}")
         for i, st in enumerate(q["steps"]):

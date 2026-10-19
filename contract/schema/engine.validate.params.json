@@ -1,5 +1,33 @@
 {
   "$defs": {
+    "AdvanceTimeEffect": {
+      "additionalProperties": false,
+      "description": "The player spends time in the scene (0.10.0): waits, sleeps rough, works — the engine moves the clock within its\nlimit; not in combat.",
+      "properties": {
+        "kind": {
+          "const": "advance_time",
+          "default": "advance_time",
+          "title": "Kind",
+          "type": "string"
+        },
+        "minutes": {
+          "maximum": 720,
+          "minimum": 1,
+          "title": "Minutes",
+          "type": "integer"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minutes"
+      ],
+      "title": "AdvanceTimeEffect",
+      "type": "object"
+    },
     "CastEffect": {
       "additionalProperties": false,
       "description": "The player casts a spell (0.6.0): the engine checks it is ready and spends the slot.",
@@ -579,6 +607,7 @@
     "effect": {
       "discriminator": {
         "mapping": {
+          "advance_time": "#/$defs/AdvanceTimeEffect",
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
@@ -634,6 +663,9 @@
         },
         {
           "$ref": "#/$defs/StartCombatEffect"
+        },
+        {
+          "$ref": "#/$defs/AdvanceTimeEffect"
         }
       ],
       "title": "Effect"

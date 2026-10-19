@@ -157,8 +157,9 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			elif not q.has("steps"):
 				if str(q.get("action", "")).is_empty() or str(q.get("done_text", "")).is_empty() or not rooms.has(str(q.get("room", ""))):
 					e.append("задание %s: title, action, done_text и room из комнат пакета" % qid)
-			elif not w["npcs"].has(str(q.get("giver", ""))) or not (q["steps"] is Array) or (q["steps"] as Array).is_empty():
-				e.append("задание %s: giver — NPC пакета, steps — непустой список" % qid)
+			elif not w["npcs"].has(str(q.get("giver", ""))) or not (q["steps"] is Array) or (q["steps"] as Array).is_empty() \
+					or not (q.get("offer_items", {}) as Dictionary).keys().all(func(i: String) -> bool: return data["items"]["catalog"].has(i) or (w.get("items", {}) as Dictionary).has(i)):
+				e.append("задание %s: giver — NPC пакета, steps — непустой список, offer_items — предметы каталога или пакета" % qid)
 			else:
 				for st: Variant in q["steps"]:
 					var when: Variant = st.get("when") if st is Dictionary else null
@@ -287,6 +288,12 @@ static func apply_rules(base: Dictionary, b: Dictionary) -> Dictionary:
 	var catalog: Dictionary = d["items"]["catalog"]
 	for id: Variant in rules.get("items_exclude", []):
 		catalog.erase(str(id))
+	# Items of the pack itself (v0.6.5): quest things like a sealed letter — they join the catalog.
+	var own: Dictionary = b["world"].get("items", {})
+	for id: String in own:
+		var def: Dictionary = (own[id] as Dictionary).duplicate(true)
+		def["pack_item"] = true
+		catalog[id] = def
 	var rename: Dictionary = rules.get("rename", {})
 	for kind: String in rename:
 		var pool := _known(d, kind)

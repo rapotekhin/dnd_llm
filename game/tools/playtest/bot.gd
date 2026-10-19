@@ -75,7 +75,7 @@ func _act() -> String:
 		gs.level_up(LevelUp.default_picks(c, data))
 		return "level_up"
 	if not s.in_conversation() and rng.randf() < 0.08:
-		gs.set_sneaking(not s.sneaking)
+		var _err: String = gs.set_sneaking(not s.sneaking)
 		return "sneak_on" if s.sneaking else "sneak_off"
 	if s.mode == GameSession.MODE_TRADE:
 		match rng.randi_range(0, 3):

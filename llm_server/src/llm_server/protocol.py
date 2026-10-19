@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.9.0"
+PROTOCOL_VERSION = "0.10.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -119,8 +119,9 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # downed (0.6.0): the character dropped to 0 HP outside combat and came to with 1 HP; the master tells the cost.
 # combat_start / combat_round / death (0.7.0): the engine started the fight, played a round (or ended it), the hero died;
 # `input` holds the engine lines. trap (0.9.0): the player disarmed a found trap (or it went off); the engine lines.
+# wait (0.10.0): the player waited by the button — the engine moved the time; `input` holds the lines.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
-                   "combat_start", "combat_round", "death", "trap"]
+                   "combat_start", "combat_round", "death", "trap", "wait"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -274,6 +275,7 @@ class CombatFoe(_In):
     health: str = ""  # full | hurt | bloodied | near_death | dead | fled | surrendered | truce — never numbers
     description: str = ""
     surprised: bool = False  # caught off guard: skips its first turn (0.8.0)
+    conditions: list[str] = Field(default_factory=list)  # Russian names with rounds left: «без сознания (9 р.)» (0.10.0)
 
 
 class CombatIncoming(_In):
@@ -342,6 +344,8 @@ class TurnResult(_Out):
     turn_id: str
     narration: str
     options: list[str] = Field(default_factory=list, max_length=3)
+    # The price of each option in copper (0.10.0): the engine takes it when the player picks the option; 0 — free.
+    option_costs: list[int] = Field(default_factory=list, max_length=3)
     effect_ids: list[str] = Field(default_factory=list)
     check_ids: list[str] = Field(default_factory=list)
     next_mode: NextMode | None = None
@@ -488,6 +492,15 @@ class StartCombatEffect(_Out):
     reason: str = ""
 
 
+class AdvanceTimeEffect(_Out):
+    """The player spends time in the scene (0.10.0): waits, sleeps rough, works — the engine moves the clock within its
+    limit; not in combat."""
+
+    kind: Literal["advance_time"] = "advance_time"
+    minutes: int = Field(ge=1, le=720)
+    reason: str = ""
+
+
 class FlagEffect(_Out):
     kind: Literal["flag"] = "flag"
     flag: str = Field(pattern=r"^[a-z][a-z0-9_]{1,40}$")
@@ -496,7 +509,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect,
+    | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect,
     Field(discriminator="kind"),
 ]
 

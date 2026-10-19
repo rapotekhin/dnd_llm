@@ -239,11 +239,21 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 	var lines := CombatRules.start(session, Catalog.data, foes, source)
 	session.mode = GameSession.MODE_COMBAT
 	session.npc_id = ""
-	_combat_log(lines)
+	session.combat["start_lines"] = lines  # shown after the master's description (playtest-1: the order)
 	EventBus.state_changed.emit()
 	EventBus.navigate.emit("combat", {})
-	session.combat["log"] = []  # the start goes to the master as combat_start, not again with round 1
 	_request("combat_start", "\n".join(lines))
+
+
+## The engine lines of the fight's start go to the combat log once the master has described the scene.
+func _show_start_lines() -> void:
+	if session == null or not CombatRules.active(session) or not session.combat.has("start_lines"):
+		return
+	var lines: Array[String] = []
+	for l: Variant in session.combat["start_lines"]:
+		lines.append(str(l))
+	session.combat.erase("start_lines")
+	EventBus.combat_lines.emit(lines)
 
 
 func _start_pending_fight() -> void:
@@ -408,10 +418,46 @@ func _parley_check(params: Dictionary) -> Dictionary:
 
 ## The «Красться» toggle of exploration (v0.6.2): entering a room with an encounter the engine rolls Stealth for
 ## surprise; passive Perception for hidden things is 5 lower while sneaking (PHB).
-func set_sneaking(on: bool) -> void:
-	if session != null:
-		session.sneaking = on
+## Among people (v0.6.5, playtest-1) it is a Stealth roll against the best passive Perception of the NPCs here: a
+## failure — they noticed, no sneaking in this room until the player leaves it. "" or a localization key.
+func set_sneaking(on: bool) -> String:
+	if session == null:
+		return "SNEAK_BUSY"
+	if not on:
+		session.sneaking = false
 		EventBus.state_changed.emit()
+		return ""
+	if session.sneak_noticed == session.room_id:
+		EventBus.state_changed.emit()
+		return "SNEAK_NOTICED"
+	var line := _sneak_past_people(session.room_id)
+	if not line.is_empty():
+		_add(GameSession.effect_entry([line]))
+		_log("События: " + line)
+	session.sneaking = session.sneak_noticed != session.room_id
+	EventBus.state_changed.emit()
+	return "" if session.sneaking else "SNEAK_NOTICED"
+
+
+## A Stealth roll against the NPCs of `room_id` (none — no roll, ""). A failure marks the room noticed. The line.
+func _sneak_past_people(room_id: String) -> String:
+	var npcs := session.npcs_alive(world().npcs_in(room_id))
+	if npcs.is_empty():
+		return ""
+	var best := 0
+	var who := ""
+	for id: String in npcs:
+		var m: Dictionary = Catalog.data["monsters"].get(str(world().npc(id).get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])), {})
+		var pp := int(m.get("passive_perception", 10))
+		if pp >= best:
+			best = pp
+			who = str(world().npc(id).get("name", id))
+	var roll := CombatRules.stealth_roll(session, Catalog.data)
+	if int(roll["total"]) >= best:
+		return "Крадётесь: Скрытность %d%s против Внимательности %d — никто не обращает внимания" % [int(roll["total"]), roll["note"], best]
+	session.sneak_noticed = room_id
+	session.sneaking = false
+	return "Крадётесь: Скрытность %d%s против Внимательности %d — %s замечает вас" % [int(roll["total"]), roll["note"], best, who]
 
 
 ## Plays the turns of the others with a pause per actor until it is the player's turn (alive), the round ends
@@ -546,8 +592,49 @@ func close_session() -> void:
 	EventBus.session_closed.emit()
 
 
-## Returns false when the input cannot be sent now (empty, a turn in flight, no master).
-func submit(text: String) -> bool:
+## An option button of the master: a paid one (option_costs, v0.6.5) takes the coins first — the engine, not the
+## master's words; the turn input tells the master it is paid. "" or a localization key.
+func choose_option(index: int) -> String:
+	if session == null or index < 0 or index >= session.options.size():
+		return "MSG_NO_MASTER"
+	var text := session.options[index]
+	var cost := session.option_costs[index] if index < session.option_costs.size() else 0
+	if cost <= 0:
+		return "" if submit(text) else "MSG_NO_MASTER"
+	if int(session.character["gold_cp"]) < cost:
+		return "MSG_NO_MONEY"
+	if is_busy() or not Backend.is_ready():
+		return "MSG_NO_MASTER"
+	session.character["gold_cp"] = int(session.character["gold_cp"]) - cost
+	var paid := "−" + Money.format(cost)
+	_add(GameSession.effect_entry([paid]))
+	_log("События: " + paid)
+	EventBus.state_changed.emit()
+	return "" if submit(text, "[движок уже списал %s]" % Money.format(cost)) else "MSG_NO_MASTER"
+
+
+## «Ждать» (v0.6.5): an hour or until a part of the day; not in a conversation or a fight. The master tells how the
+## time passed (kind=wait). "" or a localization key.
+func wait(target: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var mins := TimeRules.minutes_until(session, Catalog.data, target)
+	if mins <= 0:
+		return "WAIT_NOT_NOW"
+	var lines: Array[String] = ["Ожидание до %s" % TimeRules.clock_after(session, mins)]
+	lines.append_array(TimeRules.advance(session, Catalog.data, mins))
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("wait", "; ".join(lines))
+	return ""
+
+
+## Returns false when the input cannot be sent now (empty, a turn in flight, no master). `engine_note` goes to the
+## master after the text (a paid option), never into the chat.
+func submit(text: String, engine_note: String = "") -> bool:
 	text = text.strip_edges()
 	if session == null or text.is_empty() or is_busy() or not Backend.is_ready():
 		return false
@@ -558,7 +645,7 @@ func submit(text: String) -> bool:
 		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
-	_request("action", text)
+	_request("action", text + ((" " + engine_note) if not engine_note.is_empty() else ""))
 	return true
 
 
@@ -584,6 +671,12 @@ func go(room_id: String) -> bool:
 ## starts the fight, otherwise the master describes the room. `lines` — what happened on the way (a trap).
 func _move_to(room_id: String, lines: Array[String]) -> void:
 	var from := session.room_id
+	if session.sneak_noticed != room_id:
+		session.sneak_noticed = ""  # a new room: people there have not seen the player sneak yet
+	if session.sneaking:
+		var seen := _sneak_past_people(room_id)
+		if not seen.is_empty():
+			lines.append(seen)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
 	ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
 	lines.push_front("Переход: %s" % world().room(room_id).get("name", room_id))
@@ -801,8 +894,9 @@ func _add(entry: Dictionary) -> void:
 	EventBus.chat_appended.emit(entry)
 
 
-func _set_options(options: Array[String]) -> void:
+func _set_options(options: Array[String], costs: Array[int] = []) -> void:
 	session.options = options
+	session.option_costs = costs
 	EventBus.options_changed.emit(options)
 
 
@@ -840,6 +934,7 @@ func _request(kind: String, input: String) -> void:
 	busy_turn = ""
 	if call.is_error():
 		effects.discard(turn_id)
+		_show_start_lines()
 		_add(GameSession.system_entry(_error_key(call.reason())))
 		EventBus.turn_finished.emit(turn_id, false)
 		return
@@ -854,6 +949,7 @@ func _request(kind: String, input: String) -> void:
 	elif not follow_up.is_empty():
 		_request(follow_up, "")
 	elif s.mode == GameSession.MODE_COMBAT:
+		_show_start_lines()
 		if str(s.combat.get("outcome", "")) == "dead" and kind == "death":
 			EventBus.navigate.emit("death", {"epitaph": str(call.result.get("narration", ""))})
 		else:
@@ -877,7 +973,10 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 	var options: Array[String] = []
 	for o: Variant in result.get("options", []):
 		options.append(str(o))
-	_set_options(options)
+	var costs: Array[int] = []
+	for c: Variant in result.get("option_costs", []):
+		costs.append(maxi(0, int(c)))
+	_set_options(options, costs)
 
 	if s.mode == GameSession.MODE_COMBAT:
 		var after := CombatRules.after_player_action(s, Catalog.data)
@@ -1031,6 +1130,9 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 		if result.has("error"):
 			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
 		ExplorationRules.lock(session, params, room, result)
+		var mark := _theft_target(params)
+		if not mark.is_empty():
+			result["note"] = _theft(mark, bool(result["success"]))
 		if bool(result["success"]) and params.get("skill") != null:
 			result["revealed"] = ExplorationRules.active_reveal(session, Catalog.data["world"], str(params["skill"]), int(result["total"]))
 	_add(GameSession.check_entry(params, result))
@@ -1041,6 +1143,38 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 			_add(GameSession.effect_entry(found))
 			_log("События: " + ", ".join(found))
 	return result
+
+
+## The NPC of the scene a Sleight of Hand check aims at (theft by words, v0.6.5), or "".
+func _theft_target(params: Dictionary) -> String:
+	if str(params.get("skill", "")) != "sleight_of_hand" or CombatRules.active(session):
+		return ""
+	var tid := str(params.get("target_id", "")) if params.get("target_id") != null else ""
+	return tid if session.npcs_alive(world().npcs_in(session.room_id)).has(tid) else ""
+
+
+## Theft by words: the engine gives the loot (rules.theft) or the NPC notices; the master narrates the note.
+func _theft(npc_id: String, ok: bool) -> String:
+	var t: Dictionary = Catalog.data["rules"]["theft"]
+	var who := str(world().npc(npc_id).get("name", npc_id))
+	var lines: Array[String] = []
+	var note := ""
+	if ok and int(session.pickpocketed.get(npc_id, 0)) == session.day:
+		note = "Кража: у %s сегодня больше нечего взять — карманы уже пусты" % who
+	elif ok:
+		var cp := CombatRules.roll_dice(session.rng, str(t["coins_dice"])) * int(t["unit_cp"])
+		session.character["gold_cp"] = int(session.character["gold_cp"]) + cp
+		session.pickpocketed[npc_id] = session.day
+		lines.append("Украдено у %s: %s" % [who, Money.format(cp)])
+		note = "Кража удалась, %s ничего не заметил(а): движок уже выдал %s (зм — золотые, см — серебряные, мм — медные) — опиши добычу ровно так" % [who, Money.format(cp)]
+	else:
+		session.attitudes[npc_id] = clampi(session.attitude(npc_id) + int(t["failure_attitude"]), -3, 3)
+		lines.append("%s замечает руку в кармане: отношение хуже" % who)
+		note = "Кража провалилась: %s заметил(а) — отношение хуже; добычи нет" % who
+	if not lines.is_empty():
+		_add(GameSession.effect_entry(lines))
+		_log("События: " + ", ".join(lines))
+	return note
 
 
 ## A haggling check (the button or the master's request_check in trade mode): DC by attitude, the haggle percent or

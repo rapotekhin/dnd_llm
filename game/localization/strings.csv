@@ -77,6 +77,7 @@ BTN_TRAP_BYPASS,→ {room}: в обход
 BTN_TRAP_DISARM,Обезвредить ловушку
 BTN_UNEQUIP,Снять
 BTN_USE,Использовать
+BTN_WAIT,Ждать…
 CC_BACKGROUND_SKILLS,Навыки: {skills}.
 CC_CANTRIPS,Заговоры — выберите {n}:
 CC_CLASS_CASTER,"Заклинатель, базовая характеристика — {ability}."
@@ -246,9 +247,12 @@ HEALTH_SURRENDERED,сдался
 HEALTH_TRUCE,опустил оружие
 HINT_ADV,Преимущество: {why}
 HINT_BACKEND,"Мастер — отдельная программа llm_server: на этом компьютере или на сервере. Токен задаёт тот, кто её запустил (переменная LLM_SERVER_TOKEN). Токен хранится только в настройках на этом компьютере."
+HINT_COND,Провал спасброска {p}% · {cond}
 HINT_DIS,Помеха: {why}
 HINT_HALF, (при успехе — половина)
 HINT_HIT,Попадание {p}% · урон {min}–{max}
+HINT_IMMUNE,На эту цель заклинание не действует
+HINT_POOL,Пул хитов {min}–{max}: {cond} — сначала самые слабые
 HINT_SAVE,Провал спасброска {p}% · урон {min}–{max}
 HINT_SNEAK, · со Скрытой атакой
 ITEM_ARMOR_AC, — КД {n}{dex}
@@ -294,6 +298,7 @@ MSG_LOAD_FAILED,Не удалось прочитать сохранение
 MSG_MASTER_FAILED,Мастер не справился с ответом. Мир не изменился — можно повторить ход.
 MSG_MASTER_THINKING,Мастер думает…
 MSG_NO_MASTER,Нет связи с мастером. Мир не изменился — можно повторить ход.
+MSG_NO_MONEY,Не хватает монет
 MSG_NO_SAVES,Сохранений пока нет
 MSG_SAVED,Игра сохранена
 MSG_SAVE_FAILED,Не удалось сохранить игру
@@ -383,6 +388,7 @@ SHOP_CLOSED,Ночью лавки закрыты — приходите утро
 SHORT_REST_DICE,Потратить кости хитов (к{die} + Телосложение): осталось {left}
 SHORT_REST_HINT,Восстановятся умения «до короткого отдыха»; сегодня осталось отдыхов: {left}
 SHORT_REST_TITLE,Короткий отдых — час
+SHORT_REST_UNTIL,Отдых займёт ровно час — закончится в {clock}
 SIDE_COINS,Монеты: {coins}
 SIDE_CONCENTRATION,Концентрация: {spell}
 SIDE_CONDITIONS,Состояния: {list}
@@ -426,6 +432,8 @@ SLOT_N,Слот {n}
 SLOT_OFF_HAND,Вторая рука
 SLOT_SHIELD,Щит
 SLOT_TURNS,ходов: {n}
+SNEAK_BUSY,Сейчас нельзя
+SNEAK_NOTICED,"Здесь вас уже заметили — красться не выйдет, пока не уйдёте"
 TAB_DISPLAY,Экран
 TAB_MASTER,Мастер
 TITLE_LOAD,Загрузка
@@ -463,3 +471,10 @@ TRAP_NONE,Ловушки здесь нет
 VIOLENCE_GRAPHIC,Жёстко
 VIOLENCE_MEDIUM,Умеренно
 VIOLENCE_MILD,Мягко
+WAIT_BUSY,Сейчас нельзя: мастер думает или нет связи
+WAIT_DAY,До дня ({clock})
+WAIT_EVENING,До вечера ({clock})
+WAIT_HOUR,Час (до {clock})
+WAIT_MORNING,До утра ({clock})
+WAIT_NIGHT,До ночи ({clock})
+WAIT_NOT_NOW,Ждать можно вне разговора и вне боя

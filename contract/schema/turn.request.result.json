@@ -105,6 +105,14 @@
       ],
       "default": null
     },
+    "option_costs": {
+      "items": {
+        "type": "integer"
+      },
+      "maxItems": 3,
+      "title": "Option Costs",
+      "type": "array"
+    },
     "options": {
       "items": {
         "type": "string"

@@ -57,12 +57,12 @@ def stop_server(proc: subprocess.Popen) -> None:
     proc.wait(timeout=10)
 
 
-def start_server(token: str, handler: str = "stub") -> subprocess.Popen:
-    """llm_server on PORT; handler "stub" (no LLM, no money) or "agent" (real OpenRouter, key from the root .env)."""
+def start_server(token: str, handler: str = "stub", port: int = PORT) -> subprocess.Popen:
+    """llm_server on `port`; handler "stub" (no LLM, no money) or "agent" (real OpenRouter, key from the root .env)."""
     uv = shutil.which("uv")
     if not uv:
         sys.exit("uv not found: activate venv or install uv")
-    env = {**os.environ, "LLM_SERVER_TOKEN": token, "LLM_SERVER_PORT": str(PORT), "LLM_SERVER_TURN_HANDLER": handler}
+    env = {**os.environ, "LLM_SERVER_TOKEN": token, "LLM_SERVER_PORT": str(port), "LLM_SERVER_TURN_HANDLER": handler}
     env.pop("VIRTUAL_ENV", None)  # llm_server has its own uv environment
     # Docker reaches the host through host.docker.internal, which is not the loopback interface.
     env["LLM_SERVER_HOST"] = os.environ.get("LLM_SERVER_HOST", "127.0.0.1")

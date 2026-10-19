@@ -93,3 +93,21 @@ static func dark(s: GameSession, data: Dictionary) -> bool:
 ## Passive Perception lost now: sneaking (−5) and darkness (disadvantage = −5).
 static func passive_penalty(s: GameSession, data: Dictionary) -> int:
 	return (ExplorationRules.SNEAK_PASSIVE_PENALTY if s.sneaking else 0) + (5 if dark(s, data) else 0)
+
+
+## Minutes until `target`: "hour" — 60, a part id — its next start (a full day when it is starting right now).
+static func minutes_until(s: GameSession, data: Dictionary, target: String) -> int:
+	if target == "hour":
+		return 60
+	for p: Dictionary in cfg(data)["parts"]:
+		if str(p["id"]) == target:
+			var m := posmod(int(p["from"]) - s.minute, 1440)
+			return m if m > 0 else 1440
+	return 0
+
+
+## The clock after `minutes` («18:00»).
+static func clock_after(s: GameSession, minutes: int) -> String:
+	var m := posmod(s.minute + minutes, 1440)
+	return "%02d:%02d" % [m / 60, m % 60]
+

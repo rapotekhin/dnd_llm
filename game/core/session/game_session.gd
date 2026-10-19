@@ -27,6 +27,8 @@ var effect_counter: int = 0
 var chat: Array[Dictionary] = []
 ## The master's last «interesting» options (turn.result.options), shown as buttons.
 var options: Array[String] = []
+## The price of each option in copper (turn.result.option_costs, v0.6.5): taken when the player picks it.
+var option_costs: Array[int] = []
 var created_at: String = ""
 
 ## The world pack of this game and its version when the game started.
@@ -71,6 +73,10 @@ var quest_parts: Dictionary = {}
 ## Spent traps {"room:secret": "sprung" | "disarmed"} and emptied caches ["room:secret"] (v0.6.3).
 var traps: Dictionary = {}
 var caches_taken: Array[String] = []
+## Pickpocketed NPCs: {npc_id: day} — one theft per NPC a day (v0.6.5).
+var pickpocketed: Dictionary = {}
+## The room where people noticed the sneaking player: no sneaking there until they leave (v0.6.5).
+var sneak_noticed: String = ""
 ## Short rests taken today (ExplorationRules); a long rest resets it.
 var short_rests: int = 0
 ## Ids of the pack quests the player completed (XpRules).
@@ -228,6 +234,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"effect_counter": effect_counter,
 		"chat": chat.slice(maxi(0, chat.size() - kept_chat)),
 		"options": options,
+		"option_costs": option_costs,
 		"created_at": created_at,
 		"world_id": world_id,
 		"world_version": world_version,
@@ -256,6 +263,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"quest_parts": quest_parts,
 		"traps": traps,
 		"caches_taken": caches_taken,
+		"pickpocketed": pickpocketed,
+		"sneak_noticed": sneak_noticed,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -274,6 +283,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 			s.chat.append(_normalized(e))
 	for o: Variant in d.get("options", []):
 		s.options.append(str(o))
+	for c: Variant in d.get("option_costs", []):
+		s.option_costs.append(int(c))
 	s.created_at = str(d.get("created_at", ""))
 	s.world_id = str(d.get("world_id", ""))
 	s.world_version = str(d.get("world_version", ""))
@@ -310,6 +321,9 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.traps = d.get("traps", {})
 	for k: Variant in d.get("caches_taken", []):
 		s.caches_taken.append(str(k))
+	for n: String in d.get("pickpocketed", {}):
+		s.pickpocketed[n] = int(d["pickpocketed"][n])
+	s.sneak_noticed = str(d.get("sneak_noticed", ""))
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):

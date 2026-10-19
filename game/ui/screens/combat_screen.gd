@@ -233,6 +233,12 @@ func _base_hint(mine: bool) -> String:
 func _preview_text(pv: Dictionary) -> String:
 	if pv.is_empty():
 		return ""
+	if pv.has("condition"):
+		if bool(pv.get("immune", false)):
+			return tr("HINT_IMMUNE")
+		if bool(pv.get("pool", false)):
+			return tr("HINT_POOL").format({"min": int(pv["min"]), "max": int(pv["max"]), "cond": pv["condition"]})
+		return tr("HINT_COND").format({"p": int(pv["chance"]), "cond": pv["condition"]})
 	var t := tr("HINT_SAVE" if bool(pv.get("save", false)) else "HINT_HIT").format({"p": int(pv["chance"]), "min": int(pv["min"]), "max": int(pv["max"])})
 	if int(pv.get("count", 1)) > 1:
 		t += " ×%d" % int(pv["count"])
@@ -307,7 +313,7 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			card.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			card.custom_minimum_size = Vector2(0, 76)
-			var conds: Array = (f.get("conditions", []) as Array).map(func(x: Variant) -> String: return tr("COND_" + str(x).to_upper()))
+			var conds: Array = CombatRules.foe_conditions(data, f)
 			if bool(f.get("surprised", false)):
 				conds.append(tr("COMBAT_FOE_SURPRISED"))
 			card.text = "%s\n%s%s" % [f["name"], tr(CombatRules.health_key(f)), ("\n" + ", ".join(conds)) if not conds.is_empty() else ""]

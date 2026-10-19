@@ -505,6 +505,12 @@
 			"thaumaturgy"
 		]
 	},
+	"theft": {
+		"_doc": "Pickpocketing by words (v0.6.5, until the pockets of v0.7.0): a Sleight of Hand check at an NPC of the scene. Success — coins_dice × unit_cp, once per NPC a day; failure — the NPC notices, attitude failure_attitude.",
+		"coins_dice": "2d6",
+		"unit_cp": 10,
+		"failure_attitude": -1
+	},
 	"time": {
 		"_doc": "Time of day (v0.6.3): minutes since midnight. A step between rooms of one location — move_minutes, into another location — travel_minutes; a short rest — short_rest_minutes; a long rest ends at wake_minute. Parts start at `from`; night — traders closed (night_shops_closed), darkness outside lit locations.",
 		"move_minutes": 10,
@@ -512,6 +518,7 @@
 		"short_rest_minutes": 60,
 		"wake_minute": 420,
 		"night_shops_closed": true,
+		"max_master_minutes": 720,
 		"parts": [
 			{"id": "morning", "name": "утро", "from": 360},
 			{"id": "day", "name": "день", "from": 660},
@@ -582,6 +589,91 @@
 			"ranged": 3
 		},
 		"default_npc_monster": "commoner",
+		"condition_spells": {
+			"_doc": "Condition spells the engine resolves (v0.6.5): conditions for `rounds` (foe turns), a save against the spell DC (or a hit point `pool` + `pool_per_slot` — the weakest first), `repeat_save` at the end of the foe's turn, `ends_on_damage`, `types` it works on / `immune_types`, `immune_condition` (Sleep: those immune to charm), `min_int`, `area` (the target's column; range 0 — the player's).",
+			"sleep": {
+				"pool": "5d8",
+				"pool_per_slot": "2d8",
+				"conditions": [
+					"unconscious"
+				],
+				"rounds": 10,
+				"ends_on_damage": true,
+				"immune_types": [
+					"undead",
+					"construct"
+				],
+				"immune_condition": "charmed",
+				"area": true
+			},
+			"color_spray": {
+				"pool": "6d10",
+				"pool_per_slot": "2d10",
+				"conditions": [
+					"blinded"
+				],
+				"rounds": 1,
+				"area": true
+			},
+			"hold_person": {
+				"conditions": [
+					"paralyzed"
+				],
+				"rounds": 10,
+				"repeat_save": true,
+				"types": [
+					"humanoid"
+				]
+			},
+			"command": {
+				"conditions": [
+					"incapacitated"
+				],
+				"rounds": 1
+			},
+			"charm_person": {
+				"conditions": [
+					"charmed"
+				],
+				"rounds": 10,
+				"types": [
+					"humanoid"
+				],
+				"ends_on_damage": true
+			},
+			"blindness_deafness": {
+				"conditions": [
+					"blinded"
+				],
+				"rounds": 10,
+				"repeat_save": true
+			},
+			"hideous_laughter": {
+				"conditions": [
+					"prone",
+					"incapacitated"
+				],
+				"rounds": 10,
+				"repeat_save": true,
+				"min_int": 5
+			},
+			"entangle": {
+				"conditions": [
+					"restrained"
+				],
+				"rounds": 10,
+				"repeat_save": true,
+				"area": true
+			},
+			"fear": {
+				"conditions": [
+					"frightened"
+				],
+				"rounds": 10,
+				"repeat_save": true,
+				"area": true
+			}
+		},
 		"help_delay": 2,
 		"reinforce_delay": 1,
 		"parley": {
