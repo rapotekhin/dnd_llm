@@ -10,6 +10,9 @@ var _error: Label
 var confirm: Button
 
 
+## The rules text of the hovered choice (v0.6.6).
+var _info: InfoBox
+
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
@@ -35,6 +38,8 @@ func _ready() -> void:
 	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_box.add_theme_constant_override("separation", 8)
 	scroll.add_child(_box)
+	_info = InfoBox.new()
+	col.add_child(_info)
 	_error = Label.new()
 	_error.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_error.add_theme_color_override("font_color", UiTheme.WARN)
@@ -177,6 +182,7 @@ func _choice_text(title: String, group: String, ids: Array, label: Callable, n: 
 		cb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		cb.button_pressed = chosen.has(id)
 		cb.tooltip_text = _tip(str(id))
+		InfoBox.hook(cb, _info, cb.text, _tip(str(id)))
 		cb.toggled.connect(func(on: bool) -> void:
 			var sel := chosen.duplicate()
 			if on and not sel.has(id):
@@ -194,9 +200,11 @@ func _choice_text(title: String, group: String, ids: Array, label: Callable, n: 
 ## The rules text of a spell, feature or subclass for the checkbox tooltip.
 func _tip(id: String) -> String:
 	var data := Catalog.data
-	for pool: Dictionary in [data["spells"], data["classes"]["features"], data["classes"]["subclasses"]]:
+	if data["classes"]["subclasses"].has(id):
+		return InfoBox.subclass_text(data, id)
+	for pool: Dictionary in [data["spells"], data["classes"]["features"]]:
 		if pool.has(id):
-			return str(pool[id].get("desc", pool[id].get("flavor", ""))).left(600)
+			return str(pool[id].get("desc", pool[id].get("flavor", "")))
 	return ""
 
 

@@ -77,6 +77,8 @@ var caches_taken: Array[String] = []
 var pickpocketed: Dictionary = {}
 ## The room where people noticed the sneaking player: no sneaking there until they leave (v0.6.5).
 var sneak_noticed: String = ""
+## Kinds of foes the player knows (inspected in a fight, v0.6.6): their numbers show on the cards.
+var known_monsters: Array[String] = []
 ## Short rests taken today (ExplorationRules); a long rest resets it.
 var short_rests: int = 0
 ## Ids of the pack quests the player completed (XpRules).
@@ -265,6 +267,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"caches_taken": caches_taken,
 		"pickpocketed": pickpocketed,
 		"sneak_noticed": sneak_noticed,
+		"known_monsters": known_monsters,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -324,6 +327,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for n: String in d.get("pickpocketed", {}):
 		s.pickpocketed[n] = int(d["pickpocketed"][n])
 	s.sneak_noticed = str(d.get("sneak_noticed", ""))
+	for m: Variant in d.get("known_monsters", []):
+		s.known_monsters.append(str(m))
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):

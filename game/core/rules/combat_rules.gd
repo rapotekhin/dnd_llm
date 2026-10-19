@@ -1499,3 +1499,77 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 		else:
 			out["chance"] = 100 - hit_chance(bonus, int(c.get("spell_dc", 10)), false, false)
 	return out
+
+
+# --- inspect a foe (v0.6.6) ----------------------------------------------------------------------
+
+
+## The knowledge skill for a creature type (rules.combat.lore_skills): Nature for beasts, Religion for the undead…
+static func lore_skill(data: Dictionary, f: Dictionary) -> String:
+	var lore: Dictionary = cfg(data)["lore_skills"]
+	return str(lore.get(str(_monster(data, f).get("type", "")), lore["_default"]))
+
+
+## DC to know a creature: 10 + its challenge (rounded up).
+static func lore_dc(data: Dictionary, f: Dictionary) -> int:
+	return int(cfg(data)["lore_base_dc"]) + int(ceil(float(_monster(data, f).get("cr", 0))))
+
+
+static func known(s: GameSession, f: Dictionary) -> bool:
+	return s.known_monsters.has(str(f.get("monster", "")))
+
+
+## "" when the player can inspect `target_id` now: a bonus action on an active foe of an unknown kind.
+static func can_inspect(s: GameSession, data: Dictionary, target_id: String) -> String:
+	if not player_can_act(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if int(economy(s).get("bonus", 0)) <= 0:
+		return "COMBAT_NO_BONUS"
+	var t := fighter(s, target_id)
+	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
+		return "COMBAT_BAD_TARGET"
+	if known(s, t):
+		return "COMBAT_ALREADY_KNOWN"
+	return ""
+
+
+## Inspect a foe (can_inspect first): the knowledge check; success — the kind is known for good. Lines.
+static func player_inspect(s: GameSession, data: Dictionary, target_id: String) -> Array[String]:
+	var e := economy(s)
+	e["bonus"] = int(e["bonus"]) - 1
+	var t := fighter(s, target_id)
+	var skill := lore_skill(data, t)
+	var dc := lore_dc(data, t)
+	var roll := s.rng.randi_range(1, 20)
+	var total := roll + int(s.character.get("skills", {}).get(skill, 0))
+	var ok := roll != 1 and (roll == 20 or total >= dc)
+	if ok:
+		s.known_monsters.append(str(t["monster"]))
+	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], t["name"], TranslationServer.translate("SKILL_" + skill.to_upper()),
+		total, dc, "теперь ясно, на что способны такие враги" if ok else "ничего толкового"]]
+
+
+## The card of a known kind: HP (this one's), AC, speed, attacks, resistances. "" for an unknown one.
+static func monster_card(s: GameSession, data: Dictionary, f: Dictionary) -> String:
+	if not known(s, f):
+		return ""
+	var m := _monster(data, f)
+	var dtypes: Dictionary = data["misc"]["damage_types"]
+	var lines: Array[String] = ["%s · HP %d/%d · КД %d · скорость %d фт" % [m["name"], int(f["hp"]), int(f["max_hp"]), int(m["ac"]), int(m.get("speed", 30))]]
+	for a: Dictionary in m["actions"]:
+		var dmg: Array[String] = []
+		for d: Dictionary in a.get("damage", []):
+			dmg.append("%s %s" % [str(d["dice"]).replace("d", "к"), dtypes.get(str(d["type"]), d["type"])])
+		if a.has("save"):
+			lines.append("%s: спасбросок %s Сл %d, %s" % [a["name"], ab_name(str(a["save"]["ability"])), int(a["save"]["dc"]), ", ".join(dmg)])
+		else:
+			lines.append("%s: %+d, %s" % [a["name"], int(a.get("to_hit", 0)), ", ".join(dmg)])
+	for key: String in ["resistances", "immunities", "vulnerabilities", "condition_immunities"]:
+		var list: Array = m.get(key, [])
+		if not list.is_empty():
+			lines.append("%s: %s" % [{"resistances": "Сопротивление", "immunities": "Иммунитет", "vulnerabilities": "Уязвимость",
+				"condition_immunities": "Не бывает"}[key], ", ".join(list.map(func(x: Variant) -> String: return str(dtypes.get(str(x), x))))])
+	for tr_: Dictionary in m.get("traits", []):
+		lines.append("%s: %s" % [tr_["name"], str(tr_.get("desc", "")).left(160)])
+	return "\n".join(lines)
+

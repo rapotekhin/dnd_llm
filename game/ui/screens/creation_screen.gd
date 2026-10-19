@@ -20,6 +20,9 @@ var _next: Button
 var _start: Button
 
 
+## The rules text of the hovered choice (v0.6.6).
+var _info: InfoBox
+
 func _init(new_game_settings: Dictionary = {}) -> void:
 	settings = new_game_settings
 
@@ -71,6 +74,8 @@ func _ready() -> void:
 	_summary.add_theme_constant_override("separation", 6)
 	side_scroll.add_child(_summary)
 
+	_info = InfoBox.new(110)
+	col.add_child(_info)
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 16)
 	col.add_child(bottom)
@@ -241,6 +246,7 @@ func _radio(parent: Control, key: String, options: Array, columns: int = 3) -> v
 		b.name = "Pick_" + str(o["id"])
 		if o.has("tooltip"):
 			b.tooltip_text = str(o["tooltip"])
+			InfoBox.hook(b, _info, str(o["label"]), str(o["tooltip"]))
 		b.pressed.connect(_changed.bind(key, o["id"]))
 		grid.add_child(b)
 
@@ -258,6 +264,7 @@ func _checks(parent: Control, picked: Array, options: Array, limit: int, on_chan
 		cb.name = "Check_" + str(o["id"])
 		if o.has("tooltip"):
 			cb.tooltip_text = str(o["tooltip"])
+			InfoBox.hook(cb, _info, str(o["label"]), str(o["tooltip"]))
 		var id: Variant = o["id"]
 		if fixed.has(id):
 			cb.button_pressed = true
@@ -340,6 +347,7 @@ func _draw_start() -> void:
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.tooltip_text = str(p.get("story", ""))
+		InfoBox.hook(b, _info, b.text, str(p.get("story", "")))
 		b.pressed.connect(func() -> void:
 			choices = ch.duplicate(true)
 			step = CharacterBuilder.STEP_DETAILS
@@ -353,7 +361,7 @@ func _draw_race() -> void:
 	var races: Dictionary = data()["races"]["races"]
 	var opts: Array = []
 	for id: String in races:
-		opts.append({"id": id, "label": races[id]["name"]})
+		opts.append({"id": id, "label": races[id]["name"], "tooltip": InfoBox.race_text(data(), id)})
 	_radio(_body, "race", opts)
 	var r := CharacterBuilder.race(choices, data())
 	if r.is_empty():
@@ -369,7 +377,7 @@ func _draw_subrace() -> void:
 	var subs: Dictionary = data()["races"]["subraces"]
 	var opts: Array = []
 	for id: Variant in CharacterBuilder.race(choices, data()).get("subraces", []):
-		opts.append({"id": id, "label": subs[str(id)]["name"]})
+		opts.append({"id": id, "label": subs[str(id)]["name"], "tooltip": InfoBox.race_text(data(), str(id))})
 	_radio(_body, "subrace", opts)
 	var s := CharacterBuilder.subrace(choices, data())
 	if s.is_empty():
@@ -384,7 +392,7 @@ func _draw_class() -> void:
 	var classes: Dictionary = data()["classes"]["classes"]
 	var opts: Array = []
 	for id: String in classes:
-		opts.append({"id": id, "label": classes[id]["name"]})
+		opts.append({"id": id, "label": classes[id]["name"], "tooltip": InfoBox.class_text(data(), id)})
 	_radio(_body, "class", opts, 4)
 	var k := CharacterBuilder.klass(choices, data())
 	if k.is_empty():
@@ -403,12 +411,11 @@ func _draw_subclass() -> void:
 	var subs: Dictionary = data()["classes"]["subclasses"]
 	var opts: Array = []
 	for id: Variant in k.get("subclasses", []):
-		opts.append({"id": id, "label": subs[str(id)]["name"]})
+		opts.append({"id": id, "label": subs[str(id)]["name"], "tooltip": InfoBox.subclass_text(data(), str(id))})
 	_radio(_body, "subclass", opts)
 	var s: Dictionary = subs.get(str(choices.get("subclass", "")), {})
 	if not s.is_empty():
-		_text(_body, str(s.get("desc", "")), true)
-		_features_block(_body, s.get("features", {}).get("1", []))
+		_text(_body, InfoBox.subclass_text(data(), str(choices["subclass"])), true)
 
 
 func _draw_background() -> void:
@@ -416,7 +423,7 @@ func _draw_background() -> void:
 	var bgs: Dictionary = data()["backgrounds"]
 	var opts: Array = []
 	for id: String in bgs:
-		opts.append({"id": id, "label": bgs[id]["name"]})
+		opts.append({"id": id, "label": bgs[id]["name"], "tooltip": InfoBox.background_text(data(), id)})
 	_radio(_body, "background", opts)
 	var b := CharacterBuilder.background(choices, data())
 	if b.is_empty():

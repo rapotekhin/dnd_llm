@@ -318,6 +318,10 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 				conds.append(tr("COMBAT_FOE_SURPRISED"))
 			card.text = "%s\n%s%s" % [f["name"], tr(CombatRules.health_key(f)), ("\n" + ", ".join(conds)) if not conds.is_empty() else ""]
 			card.tooltip_text = str(f.get("desc", ""))
+			var lore := CombatRules.monster_card(s, data, f)
+			if not lore.is_empty():
+				card.tooltip_text = lore + "\n\n" + card.tooltip_text
+				card.text += "\nHP %d/%d · КД %d" % [int(f["hp"]), int(f["max_hp"]), int(f["ac"])]
 			var why := "COMBAT_NO_ACTION"
 			if _pending.is_valid() and str(f.get("status")) == "active":
 				why = str(_pending_check.call(id))
@@ -459,6 +463,11 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	for what: String in ["dash", "dodge", "disengage"]:
 		var b := _button(g, "Do_" + what, tr("COMBAT_DO_" + what.to_upper()), mine)
 		b.pressed.connect(func() -> void: _do(GameState.combat_simple(what)))
+	var ib := _action(g, "Do_inspect", tr("COMBAT_DO_INSPECT"), mine,
+		func(t: String) -> String: return GameState.combat_inspect(t),
+		func(t: String) -> String: return CombatRules.can_inspect(s, data, t),
+		func(_t: String) -> Dictionary: return {})
+	ib.tooltip_text = tr("COMBAT_INSPECT_TIP")
 	var hide_why := CombatRules.can_hide(s, data)
 	var hb := _button(g, "Do_hide", tr("COMBAT_DO_HIDE"), mine and hide_why.is_empty())
 	hb.tooltip_text = tr(hide_why) if not hide_why.is_empty() else tr("COMBAT_HIDE_TIP")

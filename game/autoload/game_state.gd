@@ -376,6 +376,12 @@ func combat_end_turn() -> String:
 	return ""
 
 
+## Inspect a foe (v0.6.6): a bonus action, a knowledge check by the creature type; success opens the kind's numbers.
+func combat_inspect(target_id: String) -> String:
+	return _combat_do(CombatRules.can_inspect(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.player_inspect(session, Catalog.data, target_id))
+
+
 ## Hide in a fight (v0.6.2): an action (a bonus action with Cunning Action), Stealth against the foes' Perception.
 func combat_hide() -> String:
 	return _combat_do(CombatRules.can_hide(session, Catalog.data) if session != null and CombatRules.active(session) else "COMBAT_NONE",
@@ -414,6 +420,34 @@ func _parley_check(params: Dictionary) -> Dictionary:
 	result["note"] = "Переговоры (исход решил движок): " + "; ".join(outcome)
 	_add(GameSession.check_entry(p, result))
 	return {"result": result, "lines": lines}
+
+
+## «Осмотреться» (Perception) and «Обыскать» (Investigation, 10 minutes) buttons (v0.6.6, playtest-1): the engine
+## rolls for the room (with the lock of a repeat), the master narrates the result and asks for no new check.
+## "" or a localization key.
+func search_room(skill: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session) or not ExplorationRules.SEARCH_SKILLS.has(skill):
+		return "WAIT_NOT_NOW"
+	var params := {"skill": skill, "dc_tier": "medium"}
+	var result := _engine_check(params)
+	if result.has("error"):
+		return "MSG_MASTER_FAILED"
+	if skill == "investigation":
+		var passed := TimeRules.advance(session, Catalog.data, int(TimeRules.cfg(Catalog.data)["search_minutes"]))
+		if not passed.is_empty():
+			_add(GameSession.effect_entry(passed))
+	var found: Array = result.get("revealed", [])
+	var what := tr("SKILL_" + skill.to_upper())
+	var note := "[движок уже бросил: %s %d%s — %s]" % [what, int(result["total"]), " (повтор без изменений)" if bool(result.get("blocked", false)) else "",
+		("найдено: " + "; ".join(found)) if not found.is_empty() else "ничего нового"]
+	var text := tr("SEARCH_SAY_" + skill.to_upper())
+	_add(GameSession.player_entry(text))
+	_log("Игрок: " + text)
+	EventBus.state_changed.emit()
+	_request("action", text + " " + note)
+	return ""
 
 
 ## The «Красться» toggle of exploration (v0.6.2): entering a room with an encounter the engine rolls Stealth for
@@ -1105,6 +1139,12 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 		var parley := _parley_check(params)
 		_combat_log(parley["lines"])
 		return parley["result"]
+	return _engine_check(params)
+
+
+## An engine check (the master's request_check or a button of the client): DC by tier, conditions and darkness,
+## the lock of a repeat, theft, hidden things and caches found. Adds the check card.
+func _engine_check(params: Dictionary) -> Dictionary:
 	params.erase("dc")  # the DC number and condition effects are the engine's
 	var mods := ConditionRules.check_mods(session.character, Catalog.data, params)
 	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())

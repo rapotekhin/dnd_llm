@@ -102,33 +102,111 @@ func _draw_map() -> void:
 	_text(tr("MAP_EXITS").format({"list": ", ".join(exits)}), UiTheme.MUTED_LABEL)
 
 
+## Journal tabs (v0.6.6, playtest-1): quests, places, conversations, finds; inside — groups by location that fold.
+const TABS: Array[String] = ["quests", "places", "people", "found"]
+var _tab := "quests"
+var _folded := {}
+
+
 func _draw_journal() -> void:
 	var s := GameState.session
 	var w := GameState.world()
 	_text(tr("JOURNAL_TITLE"), UiTheme.HEADING)
-	var places: Array[String] = []
-	var people: Array[String] = []
-	for key: String in s.summaries:
-		var text := str(s.summaries[key])
-		if key.begins_with("location:"):
-			places.append("%s — %s" % [w.location(key.get_slice(":", 1)).get("name", key), text])
-		elif key.begins_with("dialogue:"):
-			people.append("%s — %s" % [w.npc(key.get_slice(":", 1)).get("name", key), text])
-	var found: Array[String] = []
-	for room_id: String in s.visited:
-		for t: String in ExplorationRules.found_texts(s, Catalog.data["world"], room_id):
-			found.append("%s: %s" % [w.room(room_id).get("name", room_id), t])
-	var quests: Array[String] = []
-	for q: Dictionary in XpRules.quest_list(s, Catalog.data["world"]):
-		quests.append(("✓ " if q["done"] else "") + "%s — %s" % [q["title"], q["description"]]
-			+ (("
-   " + tr("JOURNAL_STEP").format({"step": q["step"]})) if not str(q.get("step", "")).is_empty() else ""))
-	if quests.is_empty() and places.is_empty() and people.is_empty() and found.is_empty():
-		_text(tr("JOURNAL_EMPTY"), UiTheme.MUTED_LABEL)
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 8)
+	_box.add_child(bar)
+	for t: String in TABS:
+		var b := Button.new()
+		b.name = "JournalTab_" + t
+		b.text = tr("JOURNAL_TAB_" + t.to_upper())
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.toggle_mode = true
+		b.button_pressed = t == _tab
+		b.custom_minimum_size = Vector2(0, 48)
+		b.pressed.connect(func() -> void:
+			_tab = t
+			_rebuild())
+		bar.add_child(b)
+	_box.add_child(HSeparator.new())
+	var groups := _groups(s, w)
+	if groups.is_empty():
+		_text(tr("JOURNAL_EMPTY_" + _tab.to_upper()), UiTheme.MUTED_LABEL)
 		return
-	for section: Array in [["JOURNAL_QUESTS", quests], ["JOURNAL_PLACES", places], ["JOURNAL_PEOPLE", people], ["JOURNAL_FOUND", found]]:
-		if (section[1] as Array).is_empty():
+	for g: Dictionary in groups:
+		var key := "%s|%s" % [_tab, g["title"]]
+		var folded := bool(_folded.get(key, g.get("folded", false)))
+		var head := Button.new()
+		head.name = "JournalGroup_" + str(g["title"]).md5_text().left(6)
+		head.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		head.flat = true
+		head.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		head.text = ("▸ " if folded else "▾ ") + "%s (%d)" % [g["title"], (g["lines"] as Array).size()]
+		head.add_theme_color_override("font_color", UiTheme.ACCENT)
+		head.pressed.connect(func() -> void:
+			_folded[key] = not folded
+			_rebuild())
+		_box.add_child(head)
+		if folded:
 			continue
-		_text(tr(section[0])).add_theme_color_override("font_color", UiTheme.ACCENT)
-		for line: String in section[1]:
-			_text("• " + line, UiTheme.MUTED_LABEL)
+		for line: String in g["lines"]:
+			_text("   " + line, UiTheme.MUTED_LABEL)
+
+
+## The groups of the current tab: [{title, lines, folded?}], by location (quests: taken, then done — folded).
+func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	match _tab:
+		"quests":
+			var open: Array[String] = []
+			var done: Array[String] = []
+			for q: Dictionary in XpRules.quest_list(s, Catalog.data["world"]):
+				var line := "%s — %s" % [q["title"], q["description"]]
+				if not str(q.get("step", "")).is_empty():
+					line += "\n      " + tr("JOURNAL_STEP").format({"step": q["step"]})
+				(done if bool(q["done"]) else open).append(("✓ " if bool(q["done"]) else "• ") + line)
+			if not open.is_empty():
+				out.append({"title": tr("JOURNAL_QUESTS_OPEN"), "lines": open})
+			if not done.is_empty():
+				out.append({"title": tr("JOURNAL_QUESTS_DONE"), "lines": done, "folded": true})
+		"places":
+			var by_loc := {}
+			for room_id: String in s.visited:
+				var loc := w.location_id(room_id)
+				if not by_loc.has(loc):
+					by_loc[loc] = []
+					var summary := str(s.summaries.get("location:" + loc, ""))
+					if not summary.is_empty():
+						(by_loc[loc] as Array).append(summary)
+				(by_loc[loc] as Array).append("• " + str(w.room(room_id).get("name", room_id)) + ("  — " + tr("MAP_HERE") if room_id == s.room_id else ""))
+			for loc: String in by_loc:
+				out.append({"title": str(w.location(loc).get("name", loc)), "lines": by_loc[loc]})
+		"people":
+			var by_loc := {}
+			for key: String in s.summaries:
+				if not key.begins_with("dialogue:"):
+					continue
+				var npc := key.get_slice(":", 1)
+				var loc := w.location_id(_npc_room(w, npc))
+				if not by_loc.has(loc):
+					by_loc[loc] = []
+				(by_loc[loc] as Array).append("%s — %s" % [w.npc(npc).get("name", npc), s.summaries[key]])
+			for loc: String in by_loc:
+				out.append({"title": str(w.location(loc).get("name", loc)) if not loc.is_empty() else tr("JOURNAL_ELSEWHERE"), "lines": by_loc[loc]})
+		"found":
+			var by_loc := {}
+			for room_id: String in s.visited:
+				for t: String in ExplorationRules.found_texts(s, Catalog.data["world"], room_id):
+					var loc := w.location_id(room_id)
+					if not by_loc.has(loc):
+						by_loc[loc] = []
+					(by_loc[loc] as Array).append("%s: %s" % [w.room(room_id).get("name", room_id), t])
+			for loc: String in by_loc:
+				out.append({"title": str(w.location(loc).get("name", loc)), "lines": by_loc[loc]})
+	return out
+
+
+func _npc_room(w: WorldView, npc_id: String) -> String:
+	for room_id: String in Catalog.data["world"]["rooms"]:
+		if w.npcs_in(room_id).has(npc_id):
+			return room_id
+	return ""

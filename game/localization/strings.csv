@@ -47,6 +47,8 @@ BTN_LOAD,Загрузить
 BTN_LOAD_BEFORE_FIGHT,Загрузить момент перед боем
 BTN_LONG_REST,Долгий отдых
 BTN_LONG_REST_COST,Долгий отдых ({cost})
+BTN_LOOK,Осмотреться
+BTN_LOOK_TIP,"Проверка Внимательности по этой комнате: заметить то, что на виду. Повтор без перемен — прежний итог"
 BTN_MAP,Карта
 BTN_MENU,Меню
 BTN_NEW_GAME,Новая игра
@@ -61,6 +63,8 @@ BTN_RETRY,Повторить
 BTN_RETRY_TURN,↻ Повторить ход
 BTN_SAVE,Сохранить
 BTN_SAVE_AND_CHECK,Сохранить и проверить
+BTN_SEARCH,Обыскать
+BTN_SEARCH_TIP,"Проверка Анализа: тщательный обыск — тайники, механизмы, следы. Занимает 10 минут"
 BTN_SEND,Действовать
 BTN_SETTINGS,Настройки
 BTN_SHORT_REST,Короткий отдых
@@ -146,6 +150,7 @@ CHECK_LINE,{what}: {roll} {bonus} = {total} против DC {dc} {mark}
 CHECK_REPEAT,Повтор без изменений — прежний итог
 COMBAT_ACTION,Действие
 COMBAT_ALREADY_HIDDEN,Вы уже спрятались
+COMBAT_ALREADY_KNOWN,Этот вид врагов вам уже знаком
 COMBAT_ATTACK,"Атака: {name} ({hit}, {dmg})"
 COMBAT_ATTACK_OFF,Второй рукой: {name} ({dmg}) [бонус]
 COMBAT_BAD_MOVE,Можно шагнуть только на соседнюю колонку
@@ -161,6 +166,7 @@ COMBAT_DO_DASH,Рывок
 COMBAT_DO_DISENGAGE,Отход
 COMBAT_DO_DODGE,Уклонение
 COMBAT_DO_HIDE,Спрятаться
+COMBAT_DO_INSPECT,Осмотреть [бонус]
 COMBAT_FOE_SURPRISED,врасплох
 COMBAT_FT,{ft} фт
 COMBAT_HIDDEN,Спрятан — враги не видят
@@ -168,6 +174,7 @@ COMBAT_HIDE_SEEN,Враг вплотную — спрятаться не вый�
 COMBAT_HIDE_TIP,"Скрытность против Внимательности врагов. Спрятанный атакует с преимуществом, по нему бьют с помехой; атака или заклинание выдают"
 COMBAT_INCOMING,"{names}
 через {n} р."
+COMBAT_INSPECT_TIP,"Бонусное действие: проверка знаний по виду врага (Природа, Религия, Магия, Проницательность). Успех открывает хиты, КД, атаки и сопротивления таких врагов насовсем"
 COMBAT_LOOT,"Добыча — отметьте, что взять:"
 COMBAT_MELEE,вплотную
 COMBAT_MOVE,➜ Движение: {n}
@@ -255,16 +262,28 @@ HINT_IMMUNE,На эту цель заклинание не действует
 HINT_POOL,Пул хитов {min}–{max}: {cond} — сначала самые слабые
 HINT_SAVE,Провал спасброска {p}% · урон {min}–{max}
 HINT_SNEAK, · со Скрытой атакой
+INFO_HINT,Наведите на вариант — здесь появится его описание
 ITEM_ARMOR_AC, — КД {n}{dex}
 ITEM_DEX, + Лов
 ITEM_DEX_MAX, + Лов (макс. {n})
 ITEM_SHIELD_AC, — КД +{n}
+JOURNAL_ELSEWHERE,В пути
 JOURNAL_EMPTY,"Пока пусто: записи появятся, когда вы осмотритесь и поговорите с людьми."
+JOURNAL_EMPTY_FOUND,Здесь появится найденное
+JOURNAL_EMPTY_PEOPLE,Здесь появятся итоги разговоров
+JOURNAL_EMPTY_PLACES,"Здесь появятся места, где вы побывали"
+JOURNAL_EMPTY_QUESTS,Заданий пока нет — их дают люди Марки
 JOURNAL_FOUND,Находки
 JOURNAL_PEOPLE,Разговоры
 JOURNAL_PLACES,Места
 JOURNAL_QUESTS,Задания
+JOURNAL_QUESTS_DONE,Выполнено
+JOURNAL_QUESTS_OPEN,В работе
 JOURNAL_STEP,Сейчас: {step}
+JOURNAL_TAB_FOUND,Находки
+JOURNAL_TAB_PEOPLE,Разговоры
+JOURNAL_TAB_PLACES,Места
+JOURNAL_TAB_QUESTS,Задания
 JOURNAL_TITLE,Журнал
 LVL_ASI,Увеличение характеристик: +2 к одной или +1 к двум (не выше 20)
 LVL_CANTRIP,заговор
@@ -362,6 +381,8 @@ SAVE_DEX,Спасбросок Ловкости
 SAVE_INT,Спасбросок Интеллекта
 SAVE_STR,Спасбросок Силы
 SAVE_WIS,Спасбросок Мудрости
+SEARCH_SAY_INVESTIGATION,Тщательно обыскиваю это место
+SEARCH_SAY_PERCEPTION,Осматриваюсь по сторонам
 SHEET_ABILITIES,Характеристика · модификатор · спасбросок (● — владение)
 SHEET_ABILITY_ROW,{name} {score} ({mod}) · спасбросок {save}
 SHEET_ATTACK,"Атака: {name} {hit}, урон {dmg}"

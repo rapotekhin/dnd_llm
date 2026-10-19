@@ -519,6 +519,7 @@
 		"wake_minute": 420,
 		"night_shops_closed": true,
 		"max_master_minutes": 720,
+		"search_minutes": 10,
 		"parts": [
 			{"id": "morning", "name": "утро", "from": 360},
 			{"id": "day", "name": "день", "from": 660},
@@ -673,6 +674,25 @@
 				"repeat_save": true,
 				"area": true
 			}
+		},
+		"lore_base_dc": 10,
+		"lore_skills": {
+			"_doc": "Inspect a foe (v0.6.6): the knowledge skill by creature type, DC = lore_base_dc + CR rounded up; success opens the kind for good.",
+			"_default": "investigation",
+			"beast": "nature",
+			"plant": "nature",
+			"monstrosity": "nature",
+			"ooze": "nature",
+			"undead": "religion",
+			"fiend": "religion",
+			"celestial": "religion",
+			"aberration": "arcana",
+			"construct": "arcana",
+			"elemental": "arcana",
+			"dragon": "arcana",
+			"fey": "arcana",
+			"giant": "history",
+			"humanoid": "insight"
 		},
 		"help_delay": 2,
 		"reinforce_delay": 1,

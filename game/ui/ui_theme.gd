@@ -37,6 +37,11 @@ const HEADING := "HeadingLabel"
 const CARD := "CardPanel"  # PanelContainer: check cards
 const SIDE := "SidePanel"  # PanelContainer: side panel / dialogs
 const ACCENT_BUTTON := "AccentButton"
+## Suffix of the RichTextLabel twins of the chat variations: DmText + Rich (v0.6.6).
+const RICH := "Rich"
+## Colours of the chat markup: names of people and places, direct speech.
+const NAME_COLOR := Color("#e6c47e")
+const SPEECH_COLOR := Color("#cfd8b8")
 
 
 static func build() -> Theme:
@@ -67,6 +72,24 @@ static func build() -> Theme:
 		t.set_font_size("font_size", v[0], v[2])
 		t.set_color("font_color", v[0], v[3])
 	t.set_constant("line_spacing", DM_TEXT, 6)
+	# The same looks for the chat's RichTextLabels (v0.6.6): selectable text, bold key words, names and speech in colour.
+	for v: Array in [
+		[DM_TEXT, FONT_SERIF, SIZE_BODY, TEXT],
+		[PLAYER_TEXT, FONT_SERIF_ITALIC, SIZE_BODY, ACCENT],
+		[SYSTEM_TEXT, FONT_UI, SIZE_SMALL, MUTED],
+		[NPC_TEXT, FONT_SERIF, SIZE_BODY, Color("#d9c9a8")],
+		[EFFECT_TEXT, FONT_UI, SIZE_SMALL, OK],
+	]:
+		var rich: String = str(v[0]) + RICH
+		t.set_type_variation(rich, "RichTextLabel")
+		t.set_font("normal_font", rich, font(v[1], 600 if v[0] == EFFECT_TEXT else 400))
+		t.set_font("bold_font", rich, font(v[1], 700))
+		t.set_font("italics_font", rich, font(FONT_SERIF_ITALIC, 400))
+		for k: String in ["normal_font_size", "bold_font_size", "italics_font_size"]:
+			t.set_font_size(k, rich, v[2])
+		t.set_color("default_color", rich, v[3])
+		t.set_color("selection_color", rich, ACCENT.darkened(0.55))
+		t.set_constant("line_separation", rich, 6 if v[0] == DM_TEXT else 2)
 
 	for type: String in ["Button", "OptionButton"]:
 		t.set_stylebox("normal", type, box(PANEL_RAISED, BORDER, 1, 10, 4))

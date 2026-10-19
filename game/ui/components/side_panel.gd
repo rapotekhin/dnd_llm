@@ -165,6 +165,23 @@ func _rebuild() -> void:
 			if not err.is_empty():
 				EventBus.message.emit(tr(err)))
 		_content.add_child(sneak)
+		var look_row := HBoxContainer.new()
+		look_row.add_theme_constant_override("separation", 8)
+		_content.add_child(look_row)
+		for spec: Array in [["LookButton", "BTN_LOOK", "perception"], ["SearchButton", "BTN_SEARCH", "investigation"]]:
+			var lb := Button.new()
+			lb.name = spec[0]
+			lb.text = tr(spec[1])
+			lb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			lb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			lb.disabled = not can_act
+			lb.tooltip_text = tr(spec[1] + "_TIP")
+			var skill: String = spec[2]
+			lb.pressed.connect(func() -> void:
+				var err := GameState.search_room(skill)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)))
+			look_row.add_child(lb)
 		var trapped := {}
 		for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
 			trapped[ft["to"]] = ft["secret"]
