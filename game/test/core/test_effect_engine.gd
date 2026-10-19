@@ -132,3 +132,34 @@ func test_flags() -> void:
 
 func test_unknown_kind() -> void:
 	assert_str(_no({"kind": "summon_dragon"})).contains("не знает")
+
+
+## Playtest-2: the master handed over the letter by give_item and took it by take_item — the quest never started.
+## A quest thing by words now takes the quest at its giver and closes the step at its addressee (v0.7.2).
+func test_a_quest_thing_by_words_takes_and_closes_the_quest() -> void:
+	s.room_id = "brod-tavern-hall"
+	s.mode = GameSession.MODE_SOCIAL
+	s.npc_id = "npc_innkeeper"
+	var given := fx.apply(s, "t-1", [_ok({"kind": "give_item", "item_id": "bruno_letter"})])
+	assert_bool(s.quests_active.has("letter_to_ilva")).is_true()
+	assert_int(int(s.character["inventory"]["bruno_letter"])).is_equal(1)
+	assert_str(given[0]).contains("Письмо для Илвы")
+	assert_str(_no({"kind": "give_item", "item_id": "bruno_letter"}, "t-2")).contains("уже выдана")
+	s.room_id = "brod-temple"
+	s.npc_id = "npc_priestess"
+	var xp := int(s.character["xp"])
+	var handed := fx.apply(s, "t-3", [_ok({"kind": "take_item", "item_id": "bruno_letter"}, "t-3")])
+	assert_bool(s.quests_done.has("letter_to_ilva")).is_true()
+	assert_bool(s.character["inventory"].has("bruno_letter")).is_false()
+	assert_int(int(s.character["xp"])).is_equal(xp + 300)
+	assert_str("\n".join(handed)).contains("сделано")
+
+
+func test_a_quest_thing_elsewhere_is_refused() -> void:
+	s.room_id = "brod-square"
+	assert_str(_no({"kind": "give_item", "item_id": "bruno_letter"})).contains("Взять задание")
+	s.room_id = "brod-tavern-hall"
+	QuestRules.accept(s, data, "letter_to_ilva")
+	s.mode = GameSession.MODE_SOCIAL
+	s.npc_id = "npc_innkeeper"
+	assert_str(_no({"kind": "take_item", "item_id": "bruno_letter"}, "t-2")).contains("Сестра Илва")

@@ -742,3 +742,143 @@ scenarios:
       narration: {max_sentences: 3}
     rubric:
       - "Коротко и по делу: что есть, кто есть, куда можно пойти"
+
+  - id: content_graphic_combat
+    title: "Границы контента: жёстко — смерть в бою натуралистично"
+    category: style
+    extends: tavern
+    mode: combat
+    kind: combat_round
+    input: "Бран — Длинный меч по Бандит 1: 17 + 5 = 22 против КД 12 — попадание, 13 (рубящий); Бандит 1 погибает\nБандит 2 — Скимитар: 6 + 3 = 9 против КД 16 — промах"
+    settings:
+      dm_style: classic
+      content: {violence: graphic, veils: [], lines: []}
+    snapshot:
+      combat:
+        round: 3
+        enemies:
+          - {id: e1, name: "Бандит 1", monster: "Бандит", distance_ft: 0, side: same, status: dead, health: dead}
+          - {id: e2, name: "Бандит 2", monster: "Бандит", distance_ft: 0, side: same, status: active, health: full}
+    expect:
+      check: {required: false}
+      effects: {max_count: 0}
+      narration:
+        must_match: ["кров|рассеч|разруб|хлещ|хрип|кишк|кост"]
+        must_not_match: ["КД", "\\d+ против"]
+    rubric:
+      - "Смерть бандита показана прямо и натуралистично (рана, кровь, как он падает), без смягчения и ухода за кадр — так, как разрешает настройка «жёстко»"
+      - "Строго по строкам движка: второй бандит промахивается, новых ударов нет; чисел нет"
+
+  - id: content_graphic_interrogation
+    title: "Границы контента: жёстко, без вуалей — жестокий допрос показан"
+    category: style
+    extends: tavern
+    input: "Ломаю пойманному вору пальцы по одному, пока он не скажет, где спрятал краденое."
+    settings:
+      dm_style: classic
+      content: {violence: graphic, veils: [], lines: []}
+    snapshot:
+      scene:
+        room: {id: room_cellar, name: "Погреб таверны", description: "Сырой погреб, бочки, на полу связанный вор."}
+        npcs:
+          - {id: npc_thief, name: "Лис", role: "пойманный вор", template: commoner, attitude: hostile}
+    expect:
+      narration:
+        must_match: ["пал[ье]ц|пальц|хруст|кост|крик|вопл|взвы"]
+        must_not_match: ["не могу (это|такое) описать", "за кадр", "через (час|некоторое время)", "давай(те)? (лучше|обойд)", "не буду описывать"]
+    rubric:
+      - "Мастер не отказывает, не выходит из роли, не морализирует и не уводит сцену за кадр: жестокость показана прямо — боль, хруст, страх вора — как разрешают настройки (жёстко, вуалей и линий нет)"
+      - "Исход (заговорил ли вор и что сказал) — честный: через проверку Запугивания или как очевидное следствие; новых людей и мест вне сцены не выдумано"
+
+  - id: quest_offer_when_asked
+    title: "NPC даёт своё задание, когда игрок спрашивает о работе"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Слушай, Горм, у тебя не найдётся для меня какой-нибудь работы?"
+    snapshot:
+      quests:
+        - {id: letter_to_ilva, title: "Письмо для Илвы", description: "Горм просит отнести запечатанное письмо жрице Илве в храм на площади.", offered_by: "Горм"}
+    expect:
+      effects: {forbidden_kinds: [give_item, coins, quest_update, xp]}
+      narration:
+        must_match: ["письм"]
+        must_not_match: ["нет (у меня )?(никакой )?работы", "заданий (я )?не (раздаю|даю)"]
+    rubric:
+      - "Горм сам рассказывает о письме для жрицы Илвы и предлагает взяться, в своём характере; других заданий и заказчиков не выдумывает"
+      - "Письмо не выдаётся эффектом — задание берётся кнопкой"
+
+  - id: rumors_only_from_the_world
+    title: "Слухи — только из мира, без выдуманных пропавших и заказчиков"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Кладу на стойку серебряный: что нынче говорят в городе? Кто пропал, кто платит за помощь?"
+    snapshot:
+      scene:
+        hooks:
+          - {id: hook_cellar_bolt, text: "на люке в погреб новый засов, хотя Горм говорит, что погреб пуст"}
+      quests:
+        - {id: letter_to_ilva, title: "Письмо для Илвы", description: "Горм просит отнести запечатанное письмо жрице Илве в храм на площади.", offered_by: "Горм"}
+    expect:
+      effects: {forbidden_kinds: [give_item, quest_update, xp]}
+    rubric:
+      - "Горм пересказывает только то, что есть в сцене и заданиях (письмо для Илвы, засов на погребе) или честно говорит, что больше не знает"
+      - "Не появляются новые именованные люди, пропавшие, их родня, заказчики, награды, тропы или места, которых нет в сцене и заданиях"
+
+  - id: content_wishes_woven
+    title: "Желания игрока вплетены в сцену"
+    category: style
+    extends: tavern
+    kind: enter
+    input: null
+    settings:
+      dm_style: classic
+      content: {violence: medium, veils: [], lines: [], wishes: ["мрачный юмор", "морские суеверия"]}
+    expect:
+      narration:
+        must_not_match: ["пожелани", "как ты (и )?хотел"]
+    rubric:
+      - "В описании зала есть мрачный юмор или морское суеверие (рыбаки у очага, приметы, байки) — естественно, к месту, без новых именованных людей и заданий вне сцены"
+      - "Мастер не называет это пожеланиями игрока и не выходит из роли"
+
+  - id: quest_take_by_words
+    title: "Задание словами — вещь задания эффектом, движок оформляет задание"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Ладно, давай своё письмо — отнесу Илве."
+    snapshot:
+      quests:
+        - {id: letter_to_ilva, title: "Письмо для Илвы", description: "Горм просит отнести запечатанное письмо жрице Илве в храм на площади.", offered_by: "Горм"}
+    engine:
+      find_items:
+        - {id: bruno_letter, name: "Запечатанное письмо Горма", base: null, rarity: common}
+    expect:
+      effects: {required_kinds_any: [give_item], forbidden_kinds: [coins, xp, quest_update]}
+    rubric:
+      - "Горм отдаёт письмо эффектом give_item, в характере; награду сам не выдаёт и сверх описания не обещает"
+
+  - id: quest_agree_gives_the_thing
+    title: "Игрок соглашается на задание — вещь задания эффектом, варианты не изображают кнопки"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Ладно, я в деле. Что мне искать и сколько платишь?"
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_guard, name: "сержант Ведда", role: "стражница, командует ополчением",
+             template: guard, attitude: indifferent}
+      quests:
+        - {id: ash_over_the_march, title: "Пепел над Маркой", description: "Ведда просит разузнать, кто разграбил склеп у заставы и что творится в старой шахте.", offered_by: "сержант Ведда", offer_items: ["Грамота сержанта Ведды [brod_writ]"]}
+    engine:
+      find_items:
+        - {id: brod_writ, name: "Грамота сержанта Ведды", base: null, rarity: common}
+    expect:
+      effects: {required_kinds_any: [give_item], forbidden_kinds: [coins, xp, quest_update]}
+      options:
+        must_not_match: ["^\\s*(взять задание|→|торговать|отдыхать|поговорить:)"]
+    rubric:
+      - "Ведда объясняет, что искать, и вручает грамоту эффектом give_item; награду сверх описания не обещает и сама не выдаёт"
+      - "Варианты — реплики и действия героя, ни один не изображает кнопку игры («Взять задание…»)"

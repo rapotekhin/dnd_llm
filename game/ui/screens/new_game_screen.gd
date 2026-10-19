@@ -131,6 +131,7 @@ func _redraw() -> void:
 	_choice(_form, "violence", WorldPack.VIOLENCE, "VIOLENCE_")
 	_list_field(_form, "lines", "NG_LINES")
 	_list_field(_form, "veils", "NG_VEILS")
+	_list_field(_form, "wishes", "NG_WISHES")
 
 
 func _label(parent: Control, text: String, variation: String) -> void:
@@ -171,7 +172,7 @@ func _choice(parent: Control, key: String, values: Array, prefix: String) -> voi
 		row.add_child(b)
 
 
-## Lines and veils as comma-separated text.
+## Lines, veils and wishes as comma-separated text.
 func _list_field(parent: Control, key: String, label_key: String) -> void:
 	_label(parent, label_key, UiTheme.MUTED_LABEL)
 	var edit := LineEdit.new()

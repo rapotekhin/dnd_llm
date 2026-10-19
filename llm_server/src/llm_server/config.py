@@ -17,6 +17,7 @@ DEFAULT_MODELS = (
     "qwen/qwen3.8-omni-flash",
     "qwen/qwen3.8-27b",
     "google/gemini-3.8-flash",
+    "deepseek/deepseek-v4.1-flash-1017",
 )
 
 

@@ -75,8 +75,8 @@ static func validate(b: Dictionary, base: Dictionary) -> Array[String]:
 	var content: Variant = p.get("content")
 	if not (content is Dictionary) or not VIOLENCE.has(str(content.get("violence", ""))):
 		e.append("pack.content.violence: одно из %s" % ", ".join(VIOLENCE))
-	elif not _strings(content.get("lines", [])) or not _strings(content.get("veils", [])):
-		e.append("pack.content.lines / veils: списки строк")
+	elif not _strings(content.get("lines", [])) or not _strings(content.get("veils", [])) or not _strings(content.get("wishes", [])):
+		e.append("pack.content.lines / veils / wishes: списки строк")
 	var names: Variant = p.get("names")
 	if not (names is Dictionary) or not _strings(names.get("male")) or not _strings(names.get("female")) \
 			or (names["male"] as Array).is_empty() or (names["female"] as Array).is_empty():
@@ -312,7 +312,7 @@ static func default_settings(p: Dictionary) -> Dictionary:
 	var content: Dictionary = p.get("content", {})
 	return {"world": str(p.get("id", "")), "dm_style": str(p.get("dm_style", "classic")), "death_mode": "story",
 		"violence": str(content.get("violence", "medium")), "lines": (content.get("lines", []) as Array).duplicate(),
-		"veils": (content.get("veils", []) as Array).duplicate()}
+		"veils": (content.get("veils", []) as Array).duplicate(), "wishes": (content.get("wishes", []) as Array).duplicate()}
 
 
 ## A quest or exit condition has one fact (a button — talk / choice — only on a quest step), all / any recursively.

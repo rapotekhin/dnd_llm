@@ -129,23 +129,7 @@ func _rebuild() -> void:
 					EventBus.message.emit(tr(err)), can_act)
 			qb.name = "Quest_" + qid
 			qb.tooltip_text = str(q["title"])
-		for qid: String in QuestRules.offers_here(s, Catalog.data["world"]):
-			var q := QuestRules.quest(Catalog.data["world"], qid)
-			var ab := _button(tr("BTN_QUEST_TAKE").format({"title": q["title"]}), func() -> void:
-				var err := GameState.accept_quest(qid)
-				if not err.is_empty():
-					EventBus.message.emit(tr(err)), can_act)
-			ab.name = "QuestTake_" + qid
-			ab.tooltip_text = str(q.get("description", ""))
-		for t: Dictionary in QuestRules.talks_here(s, Catalog.data["world"]):
-			var tid := str(t["quest_id"])
-			var why := QuestRules.can_talk(s, Catalog.data["world"], tid)
-			var tb := _button(tr("BTN_QUEST").format({"action": t["action"]}), func() -> void:
-				var err := GameState.quest_talk(tid)
-				if not err.is_empty():
-					EventBus.message.emit(tr(err)), can_act and why.is_empty())
-			tb.name = "QuestStep_" + tid
-			tb.tooltip_text = tr(why) if not why.is_empty() else str(QuestRules.quest(Catalog.data["world"], tid)["title"])
+		_quest_buttons(s, can_act, "")
 		for ch: Dictionary in QuestRules.choices_here(s, Catalog.data["world"]):
 			var qid2 := str(ch["quest_id"])
 			var cid := str(ch["choice_id"])
@@ -234,6 +218,8 @@ func _rebuild() -> void:
 		var why := ExplorationRules.can_short_rest(s, Catalog.data)
 		short.disabled = GameState.is_busy() or not why.is_empty()
 		short.tooltip_text = tr(why) if not why.is_empty() else ""
+	else:
+		_quest_buttons(s, can_act, s.npc_id)  # take the quest from, or hand the thing to, the one you talk to (v0.7.2)
 
 	# Only what is worn and wielded; the full inventory is on the character sheet.
 	_subheading("SIDE_INVENTORY")
@@ -291,3 +277,31 @@ func _button(text: String, action: Callable, enabled: bool) -> Button:
 	b.pressed.connect(func() -> void: action.call())
 	_content.add_child(b)
 	return b
+
+
+## «Взять задание» from a giver here and «Отдать …» of a talk step; in a conversation only those of its NPC
+## (playtest-2: the buttons vanished while talking to the captain, and the master drew a fake one as an option).
+func _quest_buttons(s: GameSession, can_act: bool, only_npc: String) -> void:
+	var world: Dictionary = Catalog.data["world"]
+	for qid: String in QuestRules.offers_here(s, world):
+		var q := QuestRules.quest(world, qid)
+		if not only_npc.is_empty() and str(q.get("giver", "")) != only_npc:
+			continue
+		var ab := _button(tr("BTN_QUEST_TAKE").format({"title": q["title"]}), func() -> void:
+			var err := GameState.accept_quest(qid)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act)
+		ab.name = "QuestTake_" + qid
+		ab.tooltip_text = str(q.get("description", ""))
+		ab.theme_type_variation = UiTheme.ACCENT_BUTTON
+	for t: Dictionary in QuestRules.talks_here(s, world):
+		if not only_npc.is_empty() and str(t["npc_id"]) != only_npc:
+			continue
+		var tid := str(t["quest_id"])
+		var why := QuestRules.can_talk(s, world, tid)
+		var tb := _button(tr("BTN_QUEST").format({"action": t["action"]}), func() -> void:
+			var err := GameState.quest_talk(tid)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and why.is_empty())
+		tb.name = "QuestStep_" + tid
+		tb.tooltip_text = tr(why) if not why.is_empty() else str(QuestRules.quest(world, tid)["title"])

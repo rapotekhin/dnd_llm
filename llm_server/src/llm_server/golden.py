@@ -100,7 +100,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
     if settings:
         content = settings.get("content", {})
         world = {"dm_style": settings.get("dm_style", "classic"), "violence": content.get("violence", "medium"),
-                 "lines": content.get("lines", []), "veils": content.get("veils", [])}
+                 "lines": content.get("lines", []), "veils": content.get("veils", []), "wishes": content.get("wishes", [])}
     params = {
         "turn_id": "t-1",
         "mode": mode,
@@ -130,6 +130,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
             "limits": {k: v for k, v in snap.get("limits", {}).items() if k in ("max_checks", "max_effects")},
             "trade": snap.get("trade"),  # already in the protocol shape (TradeInfo)
             "combat": snap.get("combat"),  # already in the protocol shape (CombatInfo)
+            "quests": snap.get("quests", []),  # already in the protocol shape (QuestInfo; offered_by 0.12.0)
         },
     }
     return TurnRequestParams.model_validate(params)
@@ -255,6 +256,10 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
         fails.append(f"вариантов {count} < {o['min']}")
     if "max" in o and count > o["max"]:
         fails.append(f"вариантов {count} > {o['max']}")
+    for pattern in o.get("must_not_match", []):
+        for opt in out.get("options", []):
+            if re.search(pattern, opt, re.IGNORECASE):
+                fails.append(f"вариант «{opt}» похож на /{pattern}/")
 
     created = any(x["kind"] == "give_item" and x.get("item") for x in effects)
     for t in expect.get("tools_required", []):

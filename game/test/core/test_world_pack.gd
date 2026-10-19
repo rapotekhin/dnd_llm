@@ -111,11 +111,13 @@ func test_snapshot_carries_the_world_and_settings() -> void:
 	var s := TestUtils.new_session()
 	s.settings["dm_style"] = "dry"
 	s.settings["veils"] = ["пауки"]
+	s.settings["wishes"] = ["мрачный юмор"]
 	var w: Dictionary = TurnSnapshot.build(s, TestUtils.data(), 4000)["world"]
 	assert_str(w["name"]).is_equal("Сумеречная Марка")
 	assert_str(w["lore"]).contains("Пепельн")
 	assert_str(w["dm_style"]).is_equal("dry")
 	assert_array(w["veils"]).is_equal(["пауки"])
+	assert_array(w["wishes"]).is_equal(["мрачный юмор"])
 	var c: Dictionary = TurnSnapshot.build(s, TestUtils.data(), 4000)["character"]
 	assert_str(c["backstory"]).contains("Серой заставы")
 

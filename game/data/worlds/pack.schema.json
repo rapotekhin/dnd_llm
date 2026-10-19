@@ -67,7 +67,8 @@
 					"properties": {
 						"violence": {"enum": ["mild", "medium", "graphic"]},
 						"lines": {"$ref": "#/$defs/strings"},
-						"veils": {"$ref": "#/$defs/strings"}
+						"veils": {"$ref": "#/$defs/strings"},
+						"wishes": {"$ref": "#/$defs/strings"}
 					},
 					"additionalProperties": false
 				},

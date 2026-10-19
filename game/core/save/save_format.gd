@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 15
+const SAVE_VERSION := 16
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -37,6 +37,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	12: _v12_to_v13,
 	13: _v13_to_v14,
 	14: _v14_to_v15,
+	15: _v15_to_v16,
 }
 
 
@@ -168,3 +169,7 @@ static func _v14_to_v15(data: Dictionary, _ctx: Dictionary) -> void:
 	for k: String in ["props", "pockets", "shop_closed", "caught_by"]:
 		s[k] = {}
 
+
+## A 0.7.1 pre-fight save did not keep the fight about to start (loading it skipped a lost fight).
+static func _v15_to_v16(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["fight_on_load"] = {}

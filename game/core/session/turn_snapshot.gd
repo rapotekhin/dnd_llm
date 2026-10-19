@@ -42,10 +42,26 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"max_effects": int(data["rules"]["turn_limits"]["max_effects"])},
 	}
 	out["quests"] = XpRules.quest_list(s, data["world"])
+	out["quests"].append_array(quest_offers(s, data["world"]))
 	if CombatRules.active(s):
 		out["combat"] = CombatRules.snapshot(s, data)
 	if s.mode == GameSession.MODE_TRADE and not s.npc_id.is_empty():
 		out["trade"] = TradeRules.info(s, data, s.npc_id)
+	return out
+
+
+## Quests a giver in this room offers and the player has not taken (protocol 0.12.0): the master lets the giver
+## speak of them when asked, and the player takes one by the button.
+static func quest_offers(s: GameSession, world: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for id: String in QuestRules.offers_here(s, world):
+		var q := QuestRules.quest(world, id)
+		var giver := str(q.get("giver", ""))
+		var things: Array[String] = []
+		for item_id: String in q.get("offer_items", {}):
+			things.append("%s [%s]" % [str(world.get("items", {}).get(item_id, {}).get("name", item_id)), item_id])
+		out.append({"id": id, "title": str(q["title"]), "description": str(q.get("description", "")), "done": false,
+			"step": "", "offered_by": str(world.get("npcs", {}).get(giver, {}).get("name", giver)), "offer_items": things})
 	return out
 
 
@@ -55,7 +71,7 @@ static func world_info(s: GameSession, data: Dictionary) -> Dictionary:
 	var st := s.settings if not s.settings.is_empty() else WorldPack.default_settings(p)
 	return {"name": str(p.get("name", "")), "lore": str(p.get("lore", "")), "tone": str(p.get("tone", "")),
 		"magic": str(p.get("magic", "")), "dm_style": str(st.get("dm_style", "classic")),
-		"violence": str(st.get("violence", "medium")), "lines": st.get("lines", []), "veils": st.get("veils", [])}
+		"violence": str(st.get("violence", "medium")), "lines": st.get("lines", []), "veils": st.get("veils", []), "wishes": st.get("wishes", [])}
 
 
 ## The sheet in final numbers (ADR-0009 §4): the master never computes bonuses. Features and spells go by name;

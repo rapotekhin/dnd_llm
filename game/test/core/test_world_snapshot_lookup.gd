@@ -40,6 +40,16 @@ func test_snapshot_scene_and_character() -> void:
 	assert_dict(snap["limits"]).is_equal({"max_checks": 1, "max_effects": 3})
 
 
+func test_snapshot_offers_the_givers_quests_until_taken() -> void:
+	s.room_id = "brod-tavern-hall"
+	var offers: Array = TurnSnapshot.build(s, data, 4000)["quests"].filter(func(q: Dictionary) -> bool: return q.get("offered_by", "") != "")
+	assert_array(offers.map(func(q: Dictionary) -> String: return q["id"])).contains(["letter_to_ilva"])
+	assert_str(str(offers[0]["offered_by"])).is_equal("Бруно Хмель")
+	assert_array(offers[0]["offer_items"]).is_equal(["Запечатанное письмо Бруно [bruno_letter]"])
+	s.quests_active["letter_to_ilva"] = 0
+	assert_array(TurnSnapshot.quest_offers(s, data["world"])).is_empty()
+
+
 func test_history_budget_keeps_the_newest() -> void:
 	for i in 20:
 		s.append(GameSession.dm_entry("строка %02d %s" % [i, "x".repeat(90)], "t-%d" % i))

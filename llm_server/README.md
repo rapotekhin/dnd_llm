@@ -28,7 +28,7 @@ uv run python -m llm_server.contract     # перевыгрузить contract/s
 | `OPENROUTER_API_KEY` | — | обязателен для `agent`; при старте проверяется, в логи не пишется |
 | `LLM_SERVER_TURN_HANDLER` | `agent` | `agent` (ЛЛМ) или `stub` |
 | `LLM_SERVER_MODEL` | `anthropic/claude-haiku-5.5` | модель по умолчанию |
-| `LLM_SERVER_MODELS` | haiku-5.5, qwen3.8-omni-flash, qwen3.8-27b, gemini-3.8-flash | белый список для выбора в игре |
+| `LLM_SERVER_MODELS` | haiku-5.5, qwen3.8-omni-flash, qwen3.8-27b, gemini-3.8-flash, deepseek-v4.1-flash-1017 | белый список для выбора в игре |
 | `LLM_SERVER_DAILY_BUDGET_USD` | `1.0` | дневной лимит, `off` — без лимита |
 | `LLM_SERVER_DATA_DIR` | `llm_server/var` | счётчик бюджета, библиотека предметов |
 | `LLM_SERVER_HOST` / `PORT` | `127.0.0.1` / `8765` | |

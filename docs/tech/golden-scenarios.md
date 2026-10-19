@@ -56,6 +56,7 @@ scenarios:
 | `narration.must_match` / `must_not_match` | регулярные выражения по тексту |
 | `narration.max_sentences` | не больше N предложений |
 | `options.min` / `max` | число вариантов действий |
+| `options.must_not_match` | регэкспы, которых не должно быть ни в одном варианте (например, вариант, изображающий кнопку «Взять задание»), v0.7.2 |
 | `tools_required` / `tools_forbidden` | инструменты, которые вызваны / не вызваны |
 
 Допустимые значения (режимы, ступени DC, виды эффектов, инструменты) — в тесте формата. Новый ключ проверки добавляется туда же и в эту таблицу.
@@ -116,6 +117,19 @@ uv run python -m llm_server.golden --no-judge                       # тольк
 - v0.6.5 (плейтест-1): `pay_for_rumours` (плата за сведения — `coins`) 2/3, `rent_room_words` (ночлег без оплаты и переноса) 3/3, `pickpocket_success` (кража — исход в `note` движка) 3/3 после «кража — сразу проверка», `wait_until_evening` (`advance_time` до описания) 2/3. `trap_damage_severity` — 0/3 и на промптах v0.6.4: дрейф модели, как `inspect_hook_needs_check`.
 - v0.7.0 (интерактивный мир): `furnish_on_first_visit` 3/3, `describe_only_props` 3/3, `read_prop_text` 3/3 (2/3 в первом прогоне), `take_prop_words` 2/3 после правила «взять вещь — всегда эффект, до описания» (было 0/3: старое правило «взять — `give_item`» спорило с новым).
 - Стабильно спорные: `gender_agreement_female` (вход без глаголов прошедшего времени), `retry_blocked` и `content_veil_respected` (рубрика судьи) — в [бэклоге](../production/backlog.md).
+
+## Сравнение Haiku и DeepSeek (2026-10-19, v0.7.2)
+
+49 сценариев × 3 прогона (`--repeat 3`), промпты v0.7.2, судья `google/gemini-3.8-flash`. Исполнимых ходов — 147.
+
+| Модель | Прошло | Цена прогона | Средний ход | Стабильно падает (×3) |
+|---|---|---|---|---|
+| `deepseek/deepseek-v4.1-flash-1017` | **133/147 (90%)** | $0.413 | 4.7 с | `narration_matches_effects`, `combat_parley_words`, `item_dedupe` |
+| `anthropic/claude-haiku-5.5` | 120/147 (82%) | $0.355 | 5.6 с | `inspect_hook_needs_check`, `narration_matches_effects`, `rumors_only_from_the_world` |
+
+- Новые сценарии v0.7.2: у обеих 3/3 — `quest_offer_when_asked`, `quest_take_by_words`, `content_graphic_combat`, `content_wishes_woven`. Haiku: `quest_agree_gives_the_thing` 2/3 (пишет «кладёт грамоту», эффекта нет), `rumors_only_from_the_world` 0/3 (мелкие выдуманные слухи — улов, лодка; один отказ судьи ошибочен: Ведда есть в сцене). DeepSeek: `content_graphic_interrogation` и `content_veil_respected` 2/3.
+- `narration_matches_effects` падает у обеих ×3 — к разбору сценария и правила оплаты словами.
+- Модель по умолчанию не меняется без живого плейтеста (ADR-0011); DeepSeek — кандидат.
 
 ## Сравнение моделей (2026-10-18, v0.4.2)
 

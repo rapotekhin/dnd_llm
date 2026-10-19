@@ -32,7 +32,7 @@ STYLE_RULES = {
 VIOLENCE_RULES = {
     "mild": "мягко: насилие и раны — без натурализма, одной фразой; смерть — за кадром",
     "medium": "умеренно: бой и раны описываются честно, но без смакования крови и увечий",
-    "graphic": "жёстко: можно описывать раны и смерть натуралистично, если это служит сцене",
+    "graphic": "жёстко — игрок выбрал это сам: раны, кровь, увечья, боль и смерть описывай прямо и натуралистично, конкретными телесными деталями; жестокость, которую игрок совершает или видит, показывай в кадре, не смягчай, не уводи за кадр и не морализируй (кроме того, что в линиях и вуалях)",
 }
 
 
@@ -117,7 +117,7 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
 def turn_prompt(mode: str, kind: str, player_input: str, snap: Snapshot, npc: SceneNpc | None) -> str:
     return render("turn.md.j2", mode=mode, kind=kind, input=player_input, history=snap.history,
                   room_name=snap.scene.room_name if snap.scene else "",
-                  npc_name=npc.name if npc else "")
+                  npc_name=npc.name if npc else "", world=snap.world)
 
 
 def summary_prompt(kind: str, subject_id: str, previous: str, events: list[str]) -> str:

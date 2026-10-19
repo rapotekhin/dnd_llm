@@ -21,9 +21,16 @@ func run() -> void:
 	s.encounters_done.append_array(["trail_wolves", "hollow_spiders", "road_watch"])  # the way to the hollow is not the test
 	if not await _walk(gs, ["brod-square", "brod-gate"]):
 		return
-	if not await _press(gs, "QuestTake_" + QID, "the captain offers the chain"):
+	# playtest-2: the quest buttons vanished while talking to the giver — take it inside the conversation
+	if not await _press(gs, "Talk_npc_captain", "talk to the captain"):
+		return
+	step("in conversation with the captain", s.in_conversation() and s.npc_id == "npc_captain")
+	if not await _press(gs, "QuestTake_" + QID, "the captain offers the chain in the conversation"):
 		return
 	step("quest taken", s.quests_active.has(QID), QuestRules.step_text(s, node("Catalog").data["world"], QID))
+	await shot("quest_taken_in_conversation")
+	if not await _press(gs, "LeaveButton", "end the conversation"):
+		return
 
 	s.encounters_done.append("deep_ghoul")  # the mine first
 	if not await _walk(gs, ["mine-entrance", "brod-gate"]):

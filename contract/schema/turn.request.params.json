@@ -414,6 +414,18 @@
           "title": "Id",
           "type": "string"
         },
+        "offer_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Offer Items",
+          "type": "array"
+        },
+        "offered_by": {
+          "default": "",
+          "title": "Offered By",
+          "type": "string"
+        },
         "step": {
           "default": "",
           "title": "Step",
@@ -910,6 +922,13 @@
           ],
           "title": "Violence",
           "type": "string"
+        },
+        "wishes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Wishes",
+          "type": "array"
         }
       },
       "title": "WorldInfo",

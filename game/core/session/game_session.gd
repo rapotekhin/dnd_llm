@@ -34,7 +34,7 @@ var created_at: String = ""
 ## The world pack of this game and its version when the game started.
 var world_id: String = ""
 var world_version: String = ""
-## Master settings of the new game screen: dm_style, death_mode, violence, lines, veils (WorldPack.default_settings).
+## Master settings of the new game screen: dm_style, death_mode, violence, lines, veils, wishes (WorldPack.default_settings).
 var settings: Dictionary = {}
 var room_id: String = ""
 var mode: String = MODE_EXPLORATION
@@ -160,6 +160,10 @@ func in_conversation() -> bool:
 ## Foes the master summoned this turn (effect start_combat): the fight starts after the turn. Not saved.
 var pending_fight: Array = []
 
+## The fight about to start, kept only in the pre-fight save {foes, source} (v0.7.2): the hero is already in the
+## encounter room there, and an encounter starts only on entering — loading that save starts this fight again.
+var fight_on_load: Dictionary = {}
+
 
 static func player_entry(text: String) -> Dictionary:
 	return {"kind": KIND_PLAYER, "text": text}
@@ -273,6 +277,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"caches_taken": caches_taken,
 		"pickpocketed": pickpocketed,
 		"sneak_noticed": sneak_noticed,
+		"fight_on_load": fight_on_load,
 		"known_monsters": known_monsters,
 		"props": props,
 		"pockets": pockets,
@@ -337,6 +342,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for n: String in d.get("pickpocketed", {}):
 		s.pickpocketed[n] = int(d["pickpocketed"][n])
 	s.sneak_noticed = str(d.get("sneak_noticed", ""))
+	var fight: Variant = d.get("fight_on_load", {})
+	s.fight_on_load = (fight as Dictionary).duplicate(true) if fight is Dictionary else {}
 	for m: Variant in d.get("known_monsters", []):
 		s.known_monsters.append(str(m))
 	s.props = d.get("props", {})

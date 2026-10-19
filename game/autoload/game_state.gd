@@ -235,7 +235,9 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 		return
 	_end_conversation()
 	combat_delay = float(LaunchArgs.value("--combat-delay", str(combat_delay)))
-	SaveManager.save_slot(COMBAT_SAVE, session)
+	session.fight_on_load = {"foes": foes.duplicate(true), "source": source.duplicate(true)}
+	SaveManager.save_slot(COMBAT_SAVE, session)  # loading it starts this fight again (a lost fight is not skipped)
+	session.fight_on_load = {}
 	var lines := CombatRules.start(session, Catalog.data, foes, source)
 	session.mode = GameSession.MODE_COMBAT
 	session.npc_id = ""
@@ -947,7 +949,17 @@ func load_from(slot: String) -> String:
 	if res is String:
 		return res
 	start(res)
+	if not session.fight_on_load.is_empty() and not CombatRules.active(session):
+		var fight := session.fight_on_load
+		session.fight_on_load = {}
+		_restart_fight.call_deferred(fight)  # after the game screen opens
 	return ""
+
+
+## The pre-fight save was loaded: the same fight starts again (v0.7.2).
+func _restart_fight(fight: Dictionary) -> void:
+	if session != null and not CombatRules.active(session):
+		start_combat(fight.get("foes", []), fight.get("source", {}))
 
 
 # --- turn --------------------------------------------------------------------------

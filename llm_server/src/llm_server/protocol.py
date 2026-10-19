@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.11.0"
+PROTOCOL_VERSION = "0.12.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -250,6 +250,7 @@ class WorldInfo(_In):
     violence: Violence = "medium"
     lines: list[str] = Field(default_factory=list)  # never in the game
     veils: list[str] = Field(default_factory=list)  # may happen, off screen
+    wishes: list[str] = Field(default_factory=list)  # what the player wants to meet in the game (0.12.0)
 
 
 class TradeLine(_In):
@@ -278,6 +279,8 @@ class QuestInfo(_In):
     description: str = ""
     done: bool = False
     step: str = ""  # the current step of a quest with steps (0.9.0); the engine closes steps, not the master
+    offered_by: str = ""  # an NPC here offers it and the player has not taken it (0.12.0); taken by the button
+    offer_items: list[str] = Field(default_factory=list)  # «name [item_id]» the giver hands over with it (0.12.0)
 
 
 class CombatFoe(_In):

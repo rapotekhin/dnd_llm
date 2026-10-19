@@ -69,6 +69,15 @@ func run() -> void:
 	if outcome == "dead":
 		step("death screen", await wait_until(func() -> bool: return screen_is("DeathScreen"), 60.0))
 		await shot("death")
+		# v0.7.2: loading the pre-fight save used to leave the hero in the room with the fight skipped
+		var load_btn: Button = find(screen(), "LoadBeforeFight")
+		if step("load before the fight", load_btn != null and not load_btn.disabled):
+			await press(load_btn)
+			var again: GameSession = gs.session
+			var fighting := func() -> bool: return screen_is("CombatScreen") and CombatRules.active(gs.session) and str(gs.session.combat.get("outcome", "")).is_empty()
+			step("the same fight starts again", await wait_until(fighting, 60.0), "room %s, encounters done %s" % [again.room_id, again.encounters_done])
+			await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+			await shot("fight_again")
 		return
 	var finish: Button = find(screen(), "FinishCombat")
 	if step("results panel", finish != null and finish.is_visible_in_tree(), str(s.combat.get("loot", []))):

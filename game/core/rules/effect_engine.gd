@@ -125,8 +125,14 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": "награда больше бюджета для %d уровня (до %s)" % [level, Money.format(_reward_cap(rules, level))]}
 			return {"plan": {"delta": delta}, "summary": ("+" if delta > 0 else "") + Money.format(delta)}
 		"give_item":
+			var given := _plan_quest_give(s, data, str(e.get("item_id", "")) if e.get("item_id") != null else "")
+			if not given.is_empty():
+				return given
 			return _plan_give(s, items, rules, turn_id, e, level)
 		"take_item":
+			var taken := _plan_quest_take(s, data, str(e.get("item_id", "")))
+			if not taken.is_empty():
+				return taken
 			var id := str(e.get("item_id", ""))
 			var qty := int(e.get("qty", 1))
 			var have := int(c["inventory"].get(id, 0)) - _pending_taken(pending, id)
@@ -260,6 +266,42 @@ func _plan_fight(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	return {"plan": {"foes": foes}, "summary": "Бой: " + ", ".join(foes.map(func(f: Dictionary) -> String: return "%s ×%d" % [f["name"], f["count"]]))}
 
 
+## A thing of a quest (its giver hands it over, or a step wants it) never changes hands by a plain effect (v0.7.2):
+## the master giving it where its giver offers the quest takes the quest — the thing comes with it; anywhere else it
+## is refused. {} when the thing belongs to no quest.
+func _plan_quest_give(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+	var world: Dictionary = data["world"]
+	var quests := QuestRules.stepped(world)
+	for qid: String in quests:
+		if not (quests[qid].get("offer_items", {}) as Dictionary).has(id):
+			continue
+		var q: Dictionary = quests[qid]
+		if QuestRules.can_accept(s, world, qid).is_empty() and (not s.in_conversation() or s.npc_id == str(q.get("giver", ""))):
+			return {"plan": {"quest_accept": qid}, "summary": "Новое задание: %s" % q["title"]}
+		if s.quests_active.has(qid) or s.quests_done.has(qid):
+			return {"reason": "это вещь задания «%s», она уже выдана по заданию — второй раз её не дают" % q["title"]}
+		return {"reason": "это вещь задания «%s»: её даёт %s вместе с заданием — игрок берёт его кнопкой «Взять задание» у него" % [q["title"],
+			WorldView.new(world).npc(str(q.get("giver", ""))).get("name", q.get("giver", ""))]}
+	return {}
+
+
+## The thing a talk step of an active quest wants: handing it over by words to that NPC closes the step, as its
+## button does; to anyone else it is refused. {} when no active step wants it.
+func _plan_quest_take(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+	var world: Dictionary = data["world"]
+	for qid: String in s.quests_active:
+		var when: Dictionary = QuestRules.current(s, world, qid).get("when", {})
+		if str(when.get("item", "")) != id:
+			continue
+		var q := QuestRules.quest(world, qid)
+		var npc := str(when.get("talk", ""))
+		if not npc.is_empty() and QuestRules.can_talk(s, world, qid).is_empty():
+			return {"plan": {"quest_talk": qid}, "summary": "Отдано: %s" % ItemRules.display_name(data["items"], s.items, id)}
+		return {"reason": "это вещь задания «%s»: её отдают только %s — не забирай её эффектом" % [q["title"],
+			WorldView.new(world).npc(npc).get("name", npc) if not npc.is_empty() else "по заданию"]}
+	return {}
+
+
 func _plan_give(s: GameSession, items: Dictionary, rules: Dictionary, turn_id: String, e: Dictionary, level: int) -> Dictionary:
 	var qty := int(e.get("qty", 1))
 	var id := str(e.get("item_id", "")) if e.get("item_id") != null else ""
@@ -299,6 +341,12 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			(f["conditions"] as Array).append(str(plan["condition"]))
 		else:
 			(f["conditions"] as Array).erase(str(plan["condition"]))
+		return
+	if plan.has("quest_accept"):  # a quest thing given by words takes the quest (v0.7.2)
+		_extra_lines.append_array(QuestRules.accept(s, _data, str(plan["quest_accept"])).slice(1))
+		return
+	if plan.has("quest_talk"):  # a quest thing handed over by words closes the talk step
+		_extra_lines.append_array(QuestRules.talk(s, _data, str(plan["quest_talk"])).slice(1))
 		return
 	match kind:
 		"move":

@@ -54,3 +54,13 @@ func test_history_keeps_applied_effects() -> void:
 	s.append(GameSession.effect_entry(["−4 мм", "Получено: Кружка эля"]))
 	var h := s.history(4000)
 	assert_dict(h[-1]).is_equal({"role": "dm", "text": "[Движок уже применил: −4 мм · Получено: Кружка эля]"})
+
+
+## The pre-fight save keeps the fight about to start (v0.7.2: loading it after a lost fight skipped the fight).
+func test_the_fight_on_load_survives_the_save() -> void:
+	var s := TestUtils.new_session()
+	s.fight_on_load = {"foes": [{"monster": "wolf", "name": "Волк", "col": 1}], "source": {"encounter": "trail_wolves", "room_from": "brod-gate"}}
+	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
+	assert_str(str(back.fight_on_load["source"]["encounter"])).is_equal("trail_wolves")
+	assert_int((back.fight_on_load["foes"] as Array).size()).is_equal(1)
+	assert_dict(GameSession.from_dict(JSON.parse_string(JSON.stringify(TestUtils.new_session().to_dict(500)))).fight_on_load).is_empty()
