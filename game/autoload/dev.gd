@@ -1,5 +1,5 @@
 extends Node
-## Debug tools (docs/tech/dev-tools.md): console (~), F3 overlay, F12 bug snapshot. Debug builds or `--dev`.
+## Debug tools (docs/tech/godot-client.md «Отладка»): console (~), F3 overlay, F12 bug snapshot. Debug builds or `--dev`.
 
 const MESSAGES_KEPT := 50
 
@@ -65,7 +65,8 @@ func run(line: String) -> String:
 	var args := parts.slice(1)
 	match parts[0]:
 		"help":
-			return "help · backend · reconnect · say <text> · retry · cancel · save <slot> · load <slot> · seed · snapshot · clear"
+			return "help · backend · reconnect · say <text> · retry · cancel · save <slot> · load <slot> · seed · snapshot · clear
+" 				+ "мир: room [id] · rooms · quests · items [поиск] · npc <id|имя> · state"
 		"backend":
 			var c := Backend.client
 			return "%s %s reason=%s server=%s last_ms=%s" % [BackendClient.State.keys()[c.state], Backend.config.describe(),
@@ -93,7 +94,28 @@ func run(line: String) -> String:
 		"clear":
 			_console.clear()
 			return ""
+		"room", "rooms", "quests", "items", "npc", "state":
+			if not GameState.has_session():
+				return "no session"
+			return _world_report(parts[0], " ".join(args))
 	return "unknown command: %s (help)" % parts[0]
+
+
+## The world inspection commands (WorldReport): the pack's data and what this game already knows about it.
+func _world_report(cmd: String, arg: String) -> String:
+	var s: GameSession = GameState.session
+	match cmd:
+		"room":
+			return WorldReport.room(s, Catalog.data, arg if not arg.is_empty() else s.room_id)
+		"rooms":
+			return WorldReport.rooms(s, Catalog.data)
+		"quests":
+			return WorldReport.quests(s, Catalog.data)
+		"items":
+			return WorldReport.items(s, Catalog.data, arg)
+		"npc":
+			return WorldReport.npc(s, Catalog.data, arg) if not arg.is_empty() else "npc <id или часть имени>"
+	return WorldReport.state(s)
 
 
 func _slot(args: PackedStringArray) -> String:

@@ -84,6 +84,7 @@ func run() -> void:
 	await shot("game_restored")
 
 	await _budget_settings()
+	await _dev_console()
 
 func _sheet(gs: Node, game: Control) -> void:
 	await press(find(game, "SheetButton"))
@@ -244,3 +245,24 @@ func _budget_settings() -> void:
 	step("budget set to " + want, await wait_until(func() -> bool: return status.text.contains("$" + want), 10.0), status.text)
 	await shot("settings_budget")
 
+
+## The world inspection commands of the dev console (~): room, quests, items, npc, rooms, state.
+func _dev_console() -> void:
+	node("EventBus").navigate.emit("game", {})
+	await frames(5)
+	var dev := node("Dev")
+	for cmd: String in ["room", "quests", "items письм", "npc бруно", "rooms", "state"]:
+		var out: String = dev.run(cmd)
+		step("console: " + cmd, not out.is_empty() and not out.begins_with("unknown") and out != "no session", out.left(1500))
+	dev.call("_input", _key_event(KEY_QUOTELEFT))
+	var console: Control = dev.get("_console")
+	console.call("_on_submitted", "room")
+	await frames(5)
+	await shot("dev_console_room")
+
+
+func _key_event(code: Key) -> InputEventKey:
+	var e := InputEventKey.new()
+	e.physical_keycode = code
+	e.pressed = true
+	return e

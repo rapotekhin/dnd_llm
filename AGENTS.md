@@ -67,6 +67,7 @@ Godot binary: `C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.
 "$GODOT" --headless --path game --import     # after adding scripts or editing strings.csv (registers class_name, builds translations)
 "$GODOT" --path game --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test --ignoreHeadlessMode   # gdUnit4 (exit 0 = pass)
 "$GODOT" --path game                         # run the game; saves in %APPDATA%/Godot/app_userdata/Between the Rolls/
+"$GODOT" --path game -- --dev               # the game with the dev console (~: room, rooms, quests, items, npc, state, …), F3 overlay, F12 bug snapshot
 ```
 
 Pytest configuration: `pytest.ini` (`testpaths = evals`); the backend has its own in `llm_server/`. There is no linter wired up.
