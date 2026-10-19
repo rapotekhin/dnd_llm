@@ -129,7 +129,7 @@ uv run python -m llm_server.golden --no-judge                       # тольк
 
 - Новые сценарии v0.7.2: у обеих 3/3 — `quest_offer_when_asked`, `quest_take_by_words`, `content_graphic_combat`, `content_wishes_woven`. Haiku: `quest_agree_gives_the_thing` 2/3 (пишет «кладёт грамоту», эффекта нет), `rumors_only_from_the_world` 0/3 (мелкие выдуманные слухи — улов, лодка; один отказ судьи ошибочен: Ведда есть в сцене). DeepSeek: `content_graphic_interrogation` и `content_veil_respected` 2/3.
 - `narration_matches_effects` падает у обеих ×3 — к разбору сценария и правила оплаты словами.
-- Модель по умолчанию не меняется без живого плейтеста (ADR-0011); DeepSeek — кандидат.
+- После живого плейтеста (`live`, `world`, `combat` с `--real`) DeepSeek стал моделью по умолчанию (ADR-0011).
 
 ## Сравнение моделей (2026-10-18, v0.4.2)
 
@@ -139,7 +139,7 @@ uv run python -m llm_server.golden --no-judge                       # тольк
 
 | Модель | Жёсткие проверки | Рубрика судьи | Ошибки | Цена 16 ходов | Задержка хода |
 |---|---|---|---|---|---|
-| `anthropic/claude-haiku-5.5` (по умолчанию) | 14–16/16 | 17–18/21 | 0 | $0.025–0.028 | 5.6–5.9 с |
+| `anthropic/claude-haiku-5.5` (по умолчанию до v0.7.3) | 14–16/16 | 17–18/21 | 0 | $0.025–0.028 | 5.6–5.9 с |
 | `qwen/qwen3.8-omni-flash` | 13/16 | 17–20/21 | 0 | $0.039–0.042 | 12–14 с |
 | `qwen/qwen3.8-27b` | 11/15 | 13/20 | 1 | $0.063 | 4.9 с |
 | `google/gemini-3.8-flash` | 13/16 | 17/21 ¹ | 0 | $0.118 | 12.5 с |

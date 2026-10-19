@@ -8,7 +8,7 @@ from starlette.websockets import WebSocketDisconnect
 from llm_server.app import create_app
 from llm_server.protocol import PROTOCOL_VERSION, protocol_compatible
 
-from conftest import AUTH, hello, make_settings, request
+from conftest import AUTH, hello, make_services, make_settings, request
 
 
 
@@ -48,8 +48,8 @@ def test_hello_returns_versions_limits_and_models(client):
     with client.websocket_connect("/ws", headers=AUTH) as ws:
         result = hello(ws)["result"]
     assert result["protocol_version"] == PROTOCOL_VERSION
-    assert result["model"] == "anthropic/claude-haiku-5.5"
-    assert [m["id"] for m in result["models"]][0] == "anthropic/claude-haiku-5.5"
+    assert result["model"] == "deepseek/deepseek-v4.1-flash-1017"
+    assert [m["id"] for m in result["models"]][0] == "deepseek/deepseek-v4.1-flash-1017"
     assert result["server_version"]
     assert result["limits"]["max_message_bytes"] == 1024 * 1024
     assert result["limits"]["turn_timeout_s"] == 90
@@ -194,3 +194,19 @@ def test_disconnect_mid_turn_frees_the_slot(client):
         hello(b)
         turn(b, "g-2", "t-1", kind="enter")
         assert "result" in b.receive_json()
+
+
+def test_the_game_sets_the_daily_budget_and_it_survives_a_restart(data_dir):
+    services = make_services(data_dir)
+    with TestClient(create_app(services.settings, services=services)) as c, c.websocket_connect("/ws", headers=AUTH) as ws:
+        hello(ws)
+        request(ws, "g-2", "session.set_budget", {"daily_usd": 2.5})
+        assert ws.receive_json()["result"]["budget"]["daily_usd"] == 2.5
+        request(ws, "g-3", "session.set_budget", {"daily_usd": -1})
+        assert "error" in ws.receive_json()
+        request(ws, "g-4", "session.set_budget", {"daily_usd": None})
+        assert ws.receive_json()["result"]["budget"]["daily_usd"] is None
+        request(ws, "g-5", "session.set_budget", {"daily_usd": 3})
+        ws.receive_json()
+    assert make_services(data_dir).budget.limit_usd == 3
+

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.12.0"
+PROTOCOL_VERSION = "0.13.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -101,6 +101,12 @@ class HelloResult(_Out):
     model: str  # the server default
     models: list[ModelInfo] = Field(default_factory=list)  # what the player may pick (server whitelist)
     limits: Limits
+
+
+class SetBudgetParams(_In):
+    """The daily spending limit from the game's settings (0.13.0); None = no limit. Answered with the status."""
+
+    daily_usd: float | None = Field(default=None, gt=0, le=1000)
 
 
 class StatusResult(_Out):
@@ -647,6 +653,8 @@ CONTRACT_MODELS: dict[str, type[BaseModel]] = {
     "session.hello.params": HelloParams,
     "session.hello.result": HelloResult,
     "session.status.result": StatusResult,
+    "session.set_budget.params": SetBudgetParams,
+    "session.set_budget.result": StatusResult,
     "turn.request.params": TurnRequestParams,
     "turn.request.result": TurnResult,
     "turn.cancel.params": TurnCancelParams,

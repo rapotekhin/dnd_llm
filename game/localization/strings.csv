@@ -354,6 +354,13 @@ OPT_DM_STYLE,Стиль мастера в этой игре
 OPT_FULLSCREEN,Полный экран
 OPT_MODEL,Модель мастера (список и цены задаёт сервер; цена за миллион токенов: ввод / вывод)
 OPT_MODEL_DEFAULT,По умолчанию сервера ({model})
+OPT_BUDGET,"Лимит трат на мастера в день, $ (общий для сервера; сброс в полночь UTC)"
+OPT_BUDGET_OFF,Без лимита
+OPT_BUDGET_SAVE,Сохранить лимит
+OPT_BUDGET_SPENT,"Сегодня потрачено ${spent} из ${limit}, осталось ${left}"
+OPT_BUDGET_SPENT_OFF,"Сегодня потрачено ${spent}, лимита нет"
+OPT_BUDGET_UNKNOWN,Траты видны, когда мастер на связи
+OPT_BUDGET_BAD,Лимит — число долларов от 0.01 до 1000
 OPT_RESOLUTION,Размер окна
 PARTNER_LINE,{role} · {race} · отношение: {attitude}
 PLACEHOLDER_ACTION,Что вы делаете?

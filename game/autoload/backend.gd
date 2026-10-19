@@ -85,6 +85,23 @@ func default_model() -> String:
 	return str(client.server_info.get("model", "")) if client != null else ""
 
 
+## The server's spending today and its daily limit (session.status): {daily_usd (null = none), spent_today_usd}, or {}.
+func budget() -> Dictionary:
+	if not is_ready():
+		return {}
+	var call := await request("session.status", {}, 10.0)
+	return call.result.get("budget", {}) if not call.is_error() and call.result is Dictionary else {}
+
+
+## Sets the server's daily limit from the game's settings (session.set_budget, 0.13.0); null = no limit. The new
+## budget, or {} on an error.
+func set_budget(daily_usd: Variant) -> Dictionary:
+	if not is_ready():
+		return {}
+	var call := await request("session.set_budget", {"daily_usd": daily_usd}, 10.0)
+	return call.result.get("budget", {}) if not call.is_error() and call.result is Dictionary else {}
+
+
 func request(method: String, params: Dictionary, timeout_s: float) -> RpcCall:
 	var started := Time.get_ticks_msec()
 	var call := await client.request(method, params, timeout_s).wait()

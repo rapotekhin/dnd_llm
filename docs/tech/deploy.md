@@ -27,8 +27,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh      # uv в ~/.local/bin
 ```bash
 LLM_SERVER_TOKEN=<общий токен для игроков>
 OPENROUTER_API_KEY=<ключ OpenRouter>
-LLM_SERVER_MODEL=anthropic/claude-haiku-5.5
-LLM_SERVER_MODELS=anthropic/claude-haiku-5.5,qwen/qwen3.8-omni-flash,qwen/qwen3.8-27b,google/gemini-3.8-flash,deepseek/deepseek-v4.1-flash-1017
+LLM_SERVER_MODEL=deepseek/deepseek-v4.1-flash-1017
+LLM_SERVER_MODELS=deepseek/deepseek-v4.1-flash-1017,anthropic/claude-haiku-5.5,qwen/qwen3.8-omni-flash,qwen/qwen3.8-27b,google/gemini-3.8-flash
 LLM_SERVER_DAILY_BUDGET_USD=1.0
 # LANGFUSE_ENABLED=1, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST — по желанию (uv sync --group observability)
 ```

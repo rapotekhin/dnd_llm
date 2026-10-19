@@ -15,6 +15,9 @@ var _token: LineEdit
 var _ca: LineEdit
 var _check_status: Label
 var _model: OptionButton
+var _budget_edit: LineEdit
+var _budget_off: CheckBox
+var _budget_status: Label
 var _model_ids: Array[String] = []
 
 
@@ -137,6 +140,7 @@ func _master_tab() -> Control:
 	_model.item_selected.connect(_on_model_selected)
 	box.add_child(_model)
 	_fill_models()
+	_budget_row(box)
 	if GameState.has_session():
 		var style_label := Label.new()
 		style_label.text = "OPT_DM_STYLE"
@@ -150,6 +154,72 @@ func _master_tab() -> Control:
 		style.item_selected.connect(func(i: int) -> void: GameState.set_dm_style(WorldPack.DM_STYLES[i]))
 		box.add_child(style)
 	return box
+
+
+## The server's daily spending limit (v0.7.3): spent today of the limit, the limit in dollars or «без лимита».
+func _budget_row(box: VBoxContainer) -> void:
+	var label := Label.new()
+	label.text = "OPT_BUDGET"
+	label.theme_type_variation = UiTheme.MUTED_LABEL
+	box.add_child(label)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	box.add_child(row)
+	_budget_edit = LineEdit.new()
+	_budget_edit.name = "BudgetEdit"
+	_budget_edit.placeholder_text = "1.00"
+	_budget_edit.custom_minimum_size = Vector2(140, 52)
+	row.add_child(_budget_edit)
+	_budget_off = CheckBox.new()
+	_budget_off.name = "BudgetOff"
+	_budget_off.text = "OPT_BUDGET_OFF"
+	_budget_off.toggled.connect(func(on: bool) -> void: _budget_edit.editable = not on)
+	row.add_child(_budget_off)
+	var save := Button.new()
+	save.name = "BudgetSave"
+	save.text = "OPT_BUDGET_SAVE"
+	save.custom_minimum_size = Vector2(0, 52)
+	save.pressed.connect(_save_budget)
+	row.add_child(save)
+	_budget_status = Label.new()
+	_budget_status.name = "BudgetStatus"
+	_budget_status.theme_type_variation = UiTheme.MUTED_LABEL
+	_budget_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_budget_status)
+	_refresh_budget()
+
+
+func _refresh_budget() -> void:
+	if _budget_status == null:
+		return
+	var b := await Backend.budget()
+	_show_budget(b)
+
+
+func _show_budget(b: Dictionary) -> void:
+	if b.is_empty():
+		_budget_status.text = tr("OPT_BUDGET_UNKNOWN")
+		return
+	var limit: Variant = b.get("daily_usd")
+	_budget_off.set_pressed_no_signal(limit == null)
+	_budget_edit.editable = limit != null
+	if limit != null:
+		_budget_edit.text = "%.2f" % float(limit)
+	var spent := float(b.get("spent_today_usd", 0.0))
+	_budget_status.text = tr("OPT_BUDGET_SPENT_OFF").format({"spent": "%.3f" % spent}) if limit == null \
+		else tr("OPT_BUDGET_SPENT").format({"spent": "%.3f" % spent, "limit": "%.2f" % float(limit), "left": "%.3f" % maxf(0.0, float(limit) - spent)})
+
+
+func _save_budget() -> void:
+	var limit: Variant = null
+	if not _budget_off.button_pressed:
+		var text := _budget_edit.text.strip_edges().replace(",", ".")
+		if not text.is_valid_float() or float(text) <= 0.0 or float(text) > 1000.0:
+			_budget_status.text = tr("OPT_BUDGET_BAD")
+			return
+		limit = float(text)
+	var b := await Backend.set_budget(limit)
+	_show_budget(b)
 
 
 ## Models come from the server (session.hello); "" = the server's default. Price per million tokens in/out.
@@ -197,6 +267,7 @@ func _save_and_check() -> void:
 func _on_backend_state(state: int, _detail: String) -> void:
 	if state == BackendClient.State.READY:
 		_fill_models()
+		_refresh_budget()
 	if _check_status == null or _check_status.text.is_empty():
 		return
 	if state == BackendClient.State.READY:

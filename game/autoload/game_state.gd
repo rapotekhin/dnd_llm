@@ -1014,8 +1014,9 @@ func _request(kind: String, input: String) -> void:
 		_add(GameSession.system_entry(_error_key(call.reason())))
 		EventBus.turn_finished.emit(turn_id, false)
 		return
+	var turn_kind := _last_kind
 	_last_kind = ""
-	var follow_up := _apply_result(s, turn_id, call.result)
+	var follow_up := _apply_result(s, turn_id, call.result, turn_kind)
 	EventBus.turn_finished.emit(turn_id, true)
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
@@ -1033,7 +1034,7 @@ func _request(kind: String, input: String) -> void:
 
 
 ## Shows the narration, applies listed reserves, handles next_mode. Returns the follow-up turn kind or "".
-func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> String:
+func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kind: String = "") -> String:
 	var text := str(result.get("narration", ""))
 	if s.in_conversation():
 		_add(GameSession.npc_entry(s.npc_id, str(world().npc(s.npc_id).get("name", s.npc_id)), text, turn_id))
@@ -1091,6 +1092,8 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary) -> Strin
 		s.pending_fight = [{"monster": str(npc.get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])),
 			"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0}]
 		return "combat"
+	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and not s.in_conversation() and turn_kind != "action":
+		return ""  # a conversation starts only from the player's own words (v0.7.2: the master opened one on «resume»)
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and s.npcs_alive(world().npcs_in(s.room_id)).has(npc_id):
 		if mode == GameSession.MODE_TRADE and (not world().is_trader(npc_id) or TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, npc_id)):
 			mode = GameSession.MODE_SOCIAL

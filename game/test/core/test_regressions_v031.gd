@@ -45,18 +45,26 @@ func test_b8_move_only_to_an_adjacent_room() -> void:
 
 func test_b9_conversation_only_with_an_npc_in_the_room() -> void:
 	var s := GameState.session
-	assert_str(GameState._apply_result(s, "t-1", {"narration": "x", "next_mode": {"mode": "social", "npc_id": TestUtils.COOK}})).is_empty()
+	assert_str(GameState._apply_result(s, "t-1", {"narration": "x", "next_mode": {"mode": "social", "npc_id": TestUtils.COOK}}, "action")).is_empty()
 	assert_str(s.mode).is_equal(GameSession.MODE_EXPLORATION)
-	assert_str(GameState._apply_result(s, "t-2", {"narration": "x", "next_mode": {"mode": "social", "npc_id": "ghost"}})).is_empty()
-	assert_str(GameState._apply_result(s, "t-3", {"narration": "x", "next_mode": {"mode": "social", "npc_id": TestUtils.INNKEEPER}})).is_equal("enter")
+	assert_str(GameState._apply_result(s, "t-2", {"narration": "x", "next_mode": {"mode": "social", "npc_id": "ghost"}}, "action")).is_empty()
+	assert_str(GameState._apply_result(s, "t-3", {"narration": "x", "next_mode": {"mode": "social", "npc_id": TestUtils.INNKEEPER}}, "action")).is_equal("enter")
 	assert_str(s.mode).is_equal(GameSession.MODE_SOCIAL)
 	assert_str(s.npc_id).is_equal(TestUtils.INNKEEPER)
+
+
+## v0.7.2: the master opened a conversation on its own on «resume» — only the player's words start one.
+func test_the_master_does_not_start_a_conversation_on_its_own() -> void:
+	var s := GameState.session
+	for kind: String in ["enter", "resume", "rest", "wait"]:
+		assert_str(GameState._apply_result(s, "t-" + kind, {"narration": "x", "next_mode": {"mode": "social", "npc_id": TestUtils.INNKEEPER}}, kind)).is_empty()
+		assert_str(s.mode).is_equal(GameSession.MODE_EXPLORATION)
 
 
 func test_b9_trade_with_a_non_trader_becomes_a_conversation() -> void:
 	var s := GameState.session
 	var lira := TestUtils.SERVING
-	GameState._apply_result(s, "t-1", {"narration": "x", "next_mode": {"mode": "trade", "npc_id": lira}})
+	GameState._apply_result(s, "t-1", {"narration": "x", "next_mode": {"mode": "trade", "npc_id": lira}}, "action")
 	assert_str(s.mode).is_equal(GameSession.MODE_SOCIAL)
 
 

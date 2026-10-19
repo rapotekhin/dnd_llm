@@ -63,7 +63,9 @@ def start_server(token: str, handler: str = "stub", port: int = PORT) -> subproc
     if not uv:
         sys.exit("uv not found: activate venv or install uv")
     env = {**os.environ, "LLM_SERVER_TOKEN": token, "LLM_SERVER_PORT": str(port), "LLM_SERVER_TURN_HANDLER": handler,
-           "LLM_SERVER_TRACE": os.environ.get("LLM_SERVER_TRACE", "0")}  # test runs stay out of the player's traces
+           "LLM_SERVER_TRACE": os.environ.get("LLM_SERVER_TRACE", "0"),  # test runs stay out of the player's traces
+           # their own budget counter and limit (v0.7.3): tests neither eat the player's daily limit nor change it
+           "LLM_SERVER_DATA_DIR": os.environ.get("LLM_SERVER_DATA_DIR", str(ROOT / "build" / "test_server_var"))}
     env.pop("VIRTUAL_ENV", None)  # llm_server has its own uv environment
     # Docker reaches the host through host.docker.internal, which is not the loopback interface.
     env["LLM_SERVER_HOST"] = os.environ.get("LLM_SERVER_HOST", "127.0.0.1")

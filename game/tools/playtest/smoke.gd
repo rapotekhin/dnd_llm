@@ -83,6 +83,7 @@ func run() -> void:
 		"%d / %d entries" % [gs.session.chat.size() if gs.has_session() else -1, chat_size])
 	await shot("game_restored")
 
+	await _budget_settings()
 
 func _sheet(gs: Node, game: Control) -> void:
 	await press(find(game, "SheetButton"))
@@ -226,3 +227,20 @@ func _quest_level_up(gs: Node, game: Control) -> void:
 
 func _count(gs: Node, kind: String) -> int:
 	return gs.session.chat.filter(func(e: Dictionary) -> bool: return e["kind"] == kind).size()
+
+
+## v0.7.3: the daily spending limit on the master tab of the settings (the test server has its own data dir).
+func _budget_settings() -> void:
+	node("EventBus").navigate.emit("settings", {"back": "game", "tab": 1})  # SettingsScreen.TAB_MASTER (its class does not compile from a -s script)
+	await frames(5)
+	var status: Label = find(screen(), "BudgetStatus")
+	step("budget shown in the settings", await wait_until(func() -> bool: return status != null and tr("OPT_BUDGET_UNKNOWN") != status.text and not status.text.is_empty(), 10.0),
+		status.text if status != null else "")
+	var edit: LineEdit = find(screen(), "BudgetEdit")
+	(find(screen(), "BudgetOff") as CheckBox).button_pressed = false
+	var want := "%d.50" % randi_range(2, 99)  # a fresh value: the test server keeps its limit between runs
+	edit.text = want.replace(".", ",")
+	await press(find(screen(), "BudgetSave"))
+	step("budget set to " + want, await wait_until(func() -> bool: return status.text.contains("$" + want), 10.0), status.text)
+	await shot("settings_budget")
+

@@ -164,9 +164,9 @@ func test_b33_switching_talk_and_trade_with_the_same_partner_asks_no_new_turn() 
 	assert_bool(GameState.set_trade(true)).is_true()
 	assert_str(s.mode).is_equal(GameSession.MODE_TRADE)
 	assert_bool(GameState.set_trade(false)).is_true()
-	assert_str(GameState._apply_result(s, "t-1", {"narration": "x", "next_mode": {"mode": "trade", "npc_id": INNKEEPER}})).is_empty()
+	assert_str(GameState._apply_result(s, "t-1", {"narration": "x", "next_mode": {"mode": "trade", "npc_id": INNKEEPER}}, "action")).is_empty()
 	assert_str(s.mode).is_equal(GameSession.MODE_TRADE)
-	GameState._apply_result(s, "t-2", {"narration": "x", "next_mode": {"mode": "social", "npc_id": INNKEEPER}})
+	GameState._apply_result(s, "t-2", {"narration": "x", "next_mode": {"mode": "social", "npc_id": INNKEEPER}}, "action")
 	assert_str(s.mode).is_equal(GameSession.MODE_TRADE)  # only the player closes the deal panel
 	s.npc_id = TestUtils.SERVING
 	s.mode = GameSession.MODE_SOCIAL

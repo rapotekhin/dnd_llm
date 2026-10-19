@@ -10,14 +10,14 @@ from . import REPO_ROOT
 
 MAX_MESSAGE_BYTES = 1024 * 1024  # ADR-0009 §2
 
-DEFAULT_MODEL = "anthropic/claude-haiku-5.5"
+DEFAULT_MODEL = "deepseek/deepseek-v4.1-flash-1017"  # ADR-0011, since v0.7.3
 # The whitelist the player can pick from in the game settings; the server owner pays, so the server decides.
 DEFAULT_MODELS = (
+    "deepseek/deepseek-v4.1-flash-1017",
     "anthropic/claude-haiku-5.5",
     "qwen/qwen3.8-omni-flash",
     "qwen/qwen3.8-27b",
     "google/gemini-3.8-flash",
-    "deepseek/deepseek-v4.1-flash-1017",
 )
 
 

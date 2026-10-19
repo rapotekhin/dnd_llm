@@ -23,7 +23,7 @@ class Services:
         return cls(
             settings=settings,
             models=ModelCatalog(settings.models, settings.model),
-            budget=DailyBudget(settings.data_dir / "budget.json", settings.daily_budget_usd),
+            budget=DailyBudget(settings.data_dir / "budget.json", settings.daily_budget_usd, settings.data_dir / "budget_limit.json"),
             library=ItemLibrary(settings.data_dir / "items" / "library.jsonl"),
             model_factory=model_factory,
             trace=TraceWriter(settings.data_dir / "traces", settings.trace),

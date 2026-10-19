@@ -16,6 +16,7 @@ from .protocol import (
     PROTOCOL_VERSION,
     RETRYABLE,
     Budget,
+    SetBudgetParams,
     ErrorCode,
     HelloParams,
     HelloResult,
@@ -194,6 +195,9 @@ class Session:
         if method == "turn.cancel":
             return self._cancel(_parse(TurnCancelParams, params))
         if method == "session.status":
+            return self._status()
+        if method == "session.set_budget":
+            self.services.budget.set_limit(_parse(SetBudgetParams, params).daily_usd)
             return self._status()
         if method == "summary.request":
             # Runs alongside a turn (ADR-0009 §2); it does not take a turn slot.

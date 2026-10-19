@@ -61,7 +61,7 @@ Jinja2 со `StrictUndefined` в `llm_server/src/llm_server/prompts/`:
 
 ## Модели
 
-- OpenRouter через Pydantic AI, по умолчанию `anthropic/claude-haiku-5.5` ([ADR-0011](adr/0011-default-master-model.md)). Белый список (`LLM_SERVER_MODELS`) с ценами уходит в игру, игрок выбирает модель в «Настройки → Мастер».
+- OpenRouter через Pydantic AI, по умолчанию `deepseek/deepseek-v4.1-flash-1017` (с v0.7.3; до него — `anthropic/claude-haiku-5.5`) ([ADR-0011](adr/0011-default-master-model.md)). Белый список (`LLM_SERVER_MODELS`) с ценами уходит в игру, игрок выбирает модель в «Настройки → Мастер».
 - `MODEL_SETTINGS`: `temperature` 0.8, `max_tokens` 1500. Особенности моделей — в коде, не в промптах: `settings_for()` выключает размышления у Qwen, аргумент `propose_effect` принимает строку JSON.
 - Дневной бюджет (`LLM_SERVER_DAILY_BUDGET_USD`), расход и остаток — в `usage` каждого ответа.
 - Сменить модель по умолчанию — только после «золотых» сценариев с `--repeat 3` и живого плейтеста.

@@ -29,7 +29,8 @@ func run() -> void:
 				await frames(2)
 				step("sneaking on", s_sneaking(gs))
 		var exit: Button = find(screen(), "Exit_" + room)
-		if not step("walk to " + room, exit != null and not exit.disabled):
+		if not step("walk to " + room, exit != null and not exit.disabled, "mode %s, busy %s" % [gs.session.mode, gs.is_busy()]):
+			await shot("no_exit_" + room)
 			return
 		await press(exit)
 		await wait_until(func() -> bool: return not gs.is_busy() or screen_is("CombatScreen"), 60.0)

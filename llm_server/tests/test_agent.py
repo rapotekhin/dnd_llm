@@ -100,7 +100,7 @@ def test_turn_with_check_and_effect(data_dir):
     assert result["effect_ids"] == ["e-1"]
     assert result["options"] == ["Догнать вора"]
     assert result["next_mode"] is None
-    assert result["usage"]["model"] == "anthropic/claude-haiku-5.5"
+    assert result["usage"]["model"] == "deepseek/deepseek-v4.1-flash-1017"
     # the model saw the engine's verdict, not a number it made up
     assert "Успех: 18 против DC 15" in last_tool_text(fn.state["prompts"][1])
 
@@ -235,8 +235,8 @@ def test_budget_is_spent_and_enforced(data_dir):
     fn = scripted(("final", {"narration": "x"}))
     services = make_services(data_dir, model_factory=lambda m: FunctionModel(fn, model_name=m), turn_handler="agent",
                              daily_budget_usd=0.0001)
-    services.models._info["anthropic/claude-haiku-5.5"] = ModelInfo(
-        id="anthropic/claude-haiku-5.5", name="Haiku", input_usd_per_mtok=1000.0, output_usd_per_mtok=1000.0)
+    services.models._info["deepseek/deepseek-v4.1-flash-1017"] = ModelInfo(
+        id="deepseek/deepseek-v4.1-flash-1017", name="Haiku", input_usd_per_mtok=1000.0, output_usd_per_mtok=1000.0)
     msg, _, _ = play(data_dir, fn, services=services)
     assert msg["result"]["usage"]["cost_usd"] > 0
     assert msg["result"]["usage"]["daily_budget_left_usd"] == 0
@@ -291,7 +291,7 @@ def test_summary_request(data_dir):
         status = ws.receive_json()["result"]
     assert msg["result"]["summary"] == "Игрок выпил эля с Бориком."
     assert status["budget"]["daily_usd"] == 1.0
-    assert status["models"][0]["id"] == "anthropic/claude-haiku-5.5"
+    assert status["models"][0]["id"] == "deepseek/deepseek-v4.1-flash-1017"
 
 
 def test_effect_sent_as_a_json_string_is_accepted(data_dir):

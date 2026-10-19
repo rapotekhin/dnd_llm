@@ -1,0 +1,21 @@
+{
+  "description": "The daily spending limit from the game's settings (0.13.0); None = no limit. Answered with the status.",
+  "properties": {
+    "daily_usd": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 1000,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Daily Usd"
+    }
+  },
+  "title": "SetBudgetParams",
+  "type": "object"
+}
