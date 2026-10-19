@@ -6,6 +6,7 @@ from .config import Settings
 from .llm.budget import DailyBudget
 from .llm.catalog import ModelCatalog, ModelFactory
 from .llm.library import ItemLibrary
+from .trace import TraceWriter
 
 
 @dataclass
@@ -15,6 +16,7 @@ class Services:
     budget: DailyBudget
     library: ItemLibrary
     model_factory: ModelFactory | None = None  # None with the stub turn handler
+    trace: TraceWriter | None = None
 
     @classmethod
     def create(cls, settings: Settings, model_factory: ModelFactory | None = None) -> "Services":
@@ -24,4 +26,5 @@ class Services:
             budget=DailyBudget(settings.data_dir / "budget.json", settings.daily_budget_usd),
             library=ItemLibrary(settings.data_dir / "items" / "library.jsonl"),
             model_factory=model_factory,
+            trace=TraceWriter(settings.data_dir / "traces", settings.trace),
         )

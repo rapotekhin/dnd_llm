@@ -44,6 +44,7 @@ func connect_with(cfg: BackendConfig) -> void:
 	config = cfg
 	client = BackendClient.new(cfg)
 	client.peer.traffic.connect(protocol_log.record)
+	client.peer.traffic.connect(Trace.record_rpc)
 	client.peer.register_handler("engine.check", GameState.handle_engine_check)
 	client.peer.register_handler("engine.validate", GameState.handle_engine_validate)
 	client.peer.register_handler("engine.lookup", GameState.handle_engine_lookup)

@@ -133,7 +133,8 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     model = _model_id(session, params.model)
     if params.mode in ("social", "trade") and scene_npc(params, params.npc_id) is None:
         raise RpcError(ErrorCode.INVALID_PARAMS, f"mode {params.mode} needs npc_id of an NPC in the scene")
-    agent = build_turn_agent(services.model_factory(model), system_prompt_for(params))
+    system = system_prompt_for(params)
+    agent = build_turn_agent(services.model_factory(model), system)
     user_prompt = turn_user_prompt(params)
     ctx = TurnContext(session, params, services.library)
 
@@ -143,9 +144,21 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
 
     started = time.monotonic()
-    result = await _with_retries(attempt, services.settings.llm_retries, lambda: not ctx.check_ids and not ctx.accepted)
+    trace = {"what": "turn", "turn_id": params.turn_id, "mode": params.mode, "kind": params.kind, "input": params.input,
+             "npc_id": params.npc_id, "model": model, "system": system, "user": user_prompt}
+    try:
+        result = await _with_retries(attempt, services.settings.llm_retries, lambda: not ctx.check_ids and not ctx.accepted)
+    except Exception as exc:
+        if services.trace:
+            services.trace.write({**trace, "error": f"{type(exc).__name__}: {exc}", "checks": ctx.check_ids,
+                                  "accepted": ctx.accepted, "seconds": round(time.monotonic() - started, 2)})
+        raise
     out = result.output
     usage = _usage(session, model, result.usage)
+    if services.trace:
+        services.trace.write({**trace, "messages": services.trace.messages(result), "output": out.model_dump(mode="json"),
+                              "checks": ctx.check_ids, "accepted": ctx.accepted, "usage": usage.model_dump(mode="json"),
+                              "seconds": round(time.monotonic() - started, 2)})
     log.info("turn %s mode=%s model=%s tokens=%d/%d cost=$%.5f checks=%d effects=%d/%d %.1fs",
              params.turn_id, params.mode, model, usage.input_tokens, usage.output_tokens, usage.cost_usd,
              len(ctx.check_ids), len(out.effect_ids), len(ctx.accepted), time.monotonic() - started)
@@ -176,4 +189,8 @@ async def agent_summary(session: Session, params: SummaryParams) -> SummaryResul
     agent = build_summary_agent(services.model_factory(model), params.kind)
     prompt = prompts.summary_prompt(params.kind, params.subject_id, params.previous, params.events)
     result = await _with_retries(lambda: agent.run(prompt), services.settings.llm_retries, lambda: True)
-    return SummaryResult(summary=result.output.summary.strip(), usage=_usage(session, model, result.usage))
+    usage = _usage(session, model, result.usage)
+    if services.trace:
+        services.trace.write({"what": "summary", "kind": params.kind, "subject": params.subject_id, "model": model, "prompt": prompt,
+                              "summary": result.output.summary, "usage": usage.model_dump(mode="json")})
+    return SummaryResult(summary=result.output.summary.strip(), usage=usage)

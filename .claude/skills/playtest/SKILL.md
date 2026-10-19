@@ -62,3 +62,8 @@ description: Use this skill to test the game for real — launch it, drive it li
 - [godot-client.md](../../../docs/tech/godot-client.md) — тесты и живая проверка
 - [golden-scenarios.md](../../../docs/tech/golden-scenarios.md) — проверка промптов без игры
 - Скиллы: `godot_conventions`, `docs_updater`, `release_notes_updater`
+
+## Разбор живой игры автора (v0.7.1)
+
+Автор играет сам — каждая игра пишет полный трейс (клиент: `%APPDATA%/Godot/app_userdata/Between the Rolls/traces/`, сервер: `llm_server/var/traces/`). Перед разбором: `python tools/trace_report.py` (или `--list` и путь) → `build/traces/<имя>.md`. Читай сначала «Что настораживает» и маршрут, потом ход игры по шагам и ходы мастера с вызовами модели; сырые строки — в самом JSONL (`ev`: click, chat, state, rpc).
+
