@@ -86,7 +86,7 @@ func _stats_tab(c: Dictionary) -> Control:
 	_text(box, str(c["name"]), UiTheme.HEADING)
 	_text(box, tr("SHEET_LINE").format({"race": c["race_name"], "class": c["class_name"] + (" (%s)" % sub["name"] if not sub.is_empty() else ""),
 		"level": c["level"], "background": d["backgrounds"].get(str(c["background"]), {}).get("name", "")}), UiTheme.MUTED_LABEL)
-	_text(box, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}))
+	_text(box, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}) + ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""))
 	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
 	box.add_child(chips)
 	chips.refresh()
@@ -158,6 +158,10 @@ func _abilities_tab(c: Dictionary) -> Control:
 			box.add_child(row)
 			_text(row, tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"],
 				"rest": tr("REST_KIND_" + str(r["recharge"]).to_upper())}))
+			if str(r["id"]) == "sorcery_points":  # Font of Magic: slots and points (v0.7.10)
+				for o: Dictionary in FeatureRules.font_options(c, d):
+					_action(row, "Font_" + str(o["id"]), str(o["label"]), can_act, GameState.font_convert.bind(str(o["id"])))
+				continue
 			_action(row, "Use_" + str(r["id"]), "BTN_USE", can_act and int(r["left"]) > 0, GameState.use_feature.bind(str(r["id"])))
 	if str(c.get("spell_ability", "")).is_empty():
 		return box.get_parent()

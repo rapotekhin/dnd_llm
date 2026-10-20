@@ -135,20 +135,28 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 	var effects: Array = []
 	for e: Variant in c.get("effects", []):
 		if e is Dictionary:
-			var x: Dictionary = (e as Dictionary).duplicate(true)
-			x["uid"] = int(x.get("uid", 0))
-			if x.get("ends", {}).has("at"):
-				x["ends"]["at"] = int(x["ends"]["at"])
-			if x.get("save", {}).has("dc"):
-				x["save"]["dc"] = int(x["save"]["dc"])
-			effects.append(x)
+			effects.append(_whole_numbers((e as Dictionary).duplicate(true)))
 	c["effects"] = effects
 	c["next_effect"] = int(c.get("next_effect", 1))
+	c["temp_hp"] = int(c.get("temp_hp", 0))  # v0.7.10
+	if c.get("wild_shape") is Dictionary:
+		c["wild_shape"] = _whole_numbers(c["wild_shape"])
 	c["exhaustion"] = int(c.get("exhaustion", 0))
 	c["concentration"] = str(c.get("concentration", ""))
 	c["concentration_ends"] = int(c.get("concentration_ends", -1))
 	c["prepared_day"] = int(c.get("prepared_day", 1))
 	return c
+
+
+## JSON brings every number back as a float: whole ones become ints again, all the way down (effects, the beast form).
+static func _whole_numbers(d: Dictionary) -> Dictionary:
+	for k: Variant in d.keys():
+		var v: Variant = d[k]
+		if v is float and is_equal_approx(v, roundf(v)):
+			d[k] = int(v)
+		elif v is Dictionary:
+			d[k] = _whole_numbers(v)
+	return d
 
 
 func next_turn_id() -> String:

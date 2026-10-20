@@ -52,7 +52,8 @@ static func skill_bonus(c: Dictionary, data: Dictionary, skill: String) -> int:
 	var pb := prof_bonus(c, data)
 	if (c.get("expertise", []) as Array).has(skill):
 		bonus += pb * 2
-	elif (c.get("skill_profs", []) as Array).has(skill):
+	elif (c.get("skill_profs", []) as Array).has(skill) or has_feature(c, "skill_prof_" + skill) \
+			or (skill in ["deception", "persuasion"] and has_feature(c, "eldritch_invocation_beguiling_influence")):  # v0.7.10
 		bonus += pb
 	elif has_feature(c, "jack_of_all_trades"):
 		bonus += pb / 2
@@ -87,6 +88,8 @@ static func item_def(c: Dictionary, data: Dictionary, session_items: Dictionary,
 ## Armor Class: worn armor (base + DEX within its cap) or an unarmored formula (Barbarian 10+DEX+CON,
 ## Monk 10+DEX+WIS without a shield, Draconic Resilience 13+DEX), +2 for a shield, +1 for the Defense style in armor.
 static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> int:
+	if c.has("wild_shape"):  # the beast's AC (v0.7.10)
+		return int(data["monsters"].get(str(c["wild_shape"]["monster"]), {}).get("ac", 10))
 	var dex := mod(ability(c, "dex"))
 	var armor: Dictionary = item_def(c, data, session_items, "armor").get("armor", {})
 	var shield: Dictionary = item_def(c, data, session_items, "shield").get("armor", {})
@@ -103,8 +106,8 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 		ac = 10 + dex + mod(ability(c, "con"))
 	elif has_feature(c, "monk_unarmored_defense") and shield.is_empty():
 		ac = 10 + dex + mod(ability(c, "wis"))
-	elif has_feature(c, "draconic_resilience"):
-		ac = 13 + dex
+	elif has_feature(c, "draconic_resilience") or has_feature(c, "eldritch_invocation_armor_of_shadows"):
+		ac = 13 + dex  # Armor of Shadows: mage armor at will (v0.7.10)
 	if not shield.is_empty():
 		ac += int(shield.get("base", 2))
 	# Magic (v0.6.3): +N armor and shields, carried wondrous items (Cloak of Protection).
@@ -145,13 +148,28 @@ static func spell_ability(c: Dictionary, data: Dictionary) -> String:
 	return str(class_def(c, data).get("spellcasting", {}).get("ability", ""))
 
 
+## Attacks an Attack action adds (5e Extra Attack of every class; Thirsting Blade of the Blade pact) (v0.7.10).
+static func extra_attacks(c: Dictionary, data: Dictionary) -> int:
+	var n := int(level_row(c, data).get("class_specific", {}).get("extra_attacks", 0))
+	for f: String in ["barbarian_extra_attack", "monk_extra_attack", "paladin_extra_attack", "ranger_extra_attack"]:
+		if has_feature(c, f):
+			n = maxi(n, 1)
+	if has_feature(c, "eldritch_invocation_thirsting_blade") and has_feature(c, "pact_of_the_blade"):
+		n = maxi(n, 1)
+	return n
+
+
 static func speed(c: Dictionary, data: Dictionary) -> int:
+	if c.has("wild_shape"):
+		return int(data["monsters"].get(str(c["wild_shape"]["monster"]), {}).get("speed", 30))
 	var race: Dictionary = data["races"]["races"].get(str(c.get("race", "")), {})
 	var bonus := 0
 	var spec: Dictionary = level_row(c, data).get("class_specific", {})
 	if item_def(c, data, {}, "armor").is_empty() and item_def(c, data, {}, "shield").is_empty():
 		bonus = int(spec.get("unarmored_movement", 0))
 	var feet := int(race.get("speed", 30)) + bonus
+	if has_feature(c, "fast_movement") and str(item_def(c, data, {}, "armor").get("armor", {}).get("category", "")) != "heavy":
+		feet += 10  # the barbarian's Fast Movement
 	# v0.7.8: grappled and restrained — 0; exhaustion 5 — 0, 2 — half (5e).
 	var exhaustion := int(c.get("exhaustion", 0))
 	if exhaustion >= 5 or (c.get("conditions", []) as Array).any(func(x: Variant) -> bool: return str(x) in ["grappled", "restrained", "paralyzed", "petrified"]):

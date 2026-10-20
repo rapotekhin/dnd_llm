@@ -27,6 +27,10 @@ extends RefCounted
 ## - v0.7.9: monsters by 5e (MonsterRules) — the effects of their attacks on the hero, recharge, control before damage,
 ##   traits, casters, Parry; magic weapons pierce resistance to nonmagical attacks; foes immune to a condition do not
 ##   get it; beasts do not finish a downed hero either — left for dead, the hero comes to after the fight.
+## - v0.7.10: class features and race traits (FeatureRules) — prompts of the hero's turn (`prompt`: Divine Smite,
+##   Wild Shape, Font of Magic), reactions to a foe's hit (`pending`: the foe's turn stops until answer_reaction),
+##   strikes of monks and frenzy, Extra Attack of every class, Improved Critical, Great Weapon Fighting, Lucky,
+##   inspiration, temporary HP, Wild Shape, metamagic, darkness of the pack's rooms.
 ## State — `s.combat` (empty when there is no fight). Pure: no nodes, randomness from `s.rng`.
 
 const PLAYER := "p"
@@ -108,6 +112,8 @@ static func health_key(f: Dictionary) -> String:
 
 ## "2d6+3" (or "1d8+MOD" with `mod`) → total; a critical doubles the dice.
 static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = false, mod: int = 0) -> int:
+	if expr.begins_with("E"):  # Empowered Spell: two rolls, the better (v0.7.10)
+		return maxi(roll_dice(rng, expr.substr(1), crit, mod), roll_dice(rng, expr.substr(1), crit, mod))
 	var e := expr.replace(" ", "").replace("MOD", str(mod))
 	var total := 0
 	var parts := e.replace("-", "+-").split("+", false)
@@ -337,6 +343,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	if id == PLAYER:
 		s.combat["economy"] = {"action": 1, "bonus": 1, "move": _move_cols(int(s.character.get("speed", 30)), data), "attacks": 0,
 			"attacked": false, "sneak": false}
+		s.combat.erase("reckless")  # Reckless Attack lasts until the hero's next turn
 
 
 static func _move_cols(speed: int, data: Dictionary) -> int:
@@ -354,22 +361,30 @@ static func economy(s: GameSession) -> Dictionary:
 
 ## The weapon attack of the character: {name, to_hit, dice, bonus, type, melee, range [normal, long] ft or [], light}.
 static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dictionary, weapon_id: String, offhand: bool = false) -> Dictionary:
+	if c.has("wild_shape"):  # a druid in a beast form fights with the beast's attack (v0.7.10)
+		return FeatureRules.shape_profile(c, data)
 	var ab := c.get("abilities", {}) as Dictionary
 	var str_mod := CharacterRules.mod(int(ab.get("str", 10)))
 	var dex_mod := CharacterRules.mod(int(ab.get("dex", 10)))
 	var prof := int(c.get("prof_bonus", 2))
+	var martial := FeatureRules.martial_die(c, data)
 	if weapon_id.is_empty():
-		return {"name": "Безоружный удар", "to_hit": str_mod + prof, "dice": "1", "bonus": str_mod, "type": "bludgeoning",
-			"melee": true, "range": [], "light": false, "id": ""}
+		var umod := maxi(str_mod, dex_mod) if not martial.is_empty() else str_mod
+		return {"name": "Безоружный удар", "to_hit": umod + prof, "dice": martial if not martial.is_empty() else "1", "bonus": umod,
+			"type": "bludgeoning", "melee": true, "range": [], "light": false, "id": "", "magical": false, "silvered": false,
+			"crit_min": FeatureRules.crit_min(c), "str_based": umod == str_mod}
 	var def := ItemRules.def_of(data["items"], session_items, weapon_id)
 	var w: Dictionary = def.get("weapon", {})
 	var props: Array = def.get("properties", [])
 	var ranged := str(w.get("range", "melee")) == "ranged"
-	var mod := dex_mod if ranged else (maxi(str_mod, dex_mod) if props.has("finesse") else str_mod)
+	var monk := not martial.is_empty() and FeatureRules.monk_weapon(def) and not ranged
+	var mod := dex_mod if ranged else (maxi(str_mod, dex_mod) if props.has("finesse") or monk else str_mod)
 	var profs: Array = c.get("weapon_profs", [])
-	var proficient := profs.has(str(w.get("category", ""))) or profs.has(weapon_id)
+	var proficient := profs.has(str(w.get("category", ""))) or profs.has(weapon_id) or (FeatureRules.pact_blade(c) and not ranged)
 	var to_hit := mod + (prof if proficient else 0)
 	var dice := str(w.get("damage", "1d4"))
+	if monk and CombatRules.dice_range(martial)[1] > CombatRules.dice_range(dice)[1]:
+		dice = martial
 	var eq: Dictionary = c.get("equipped", {})
 	var bonus := mod
 	if offhand and not _has_style(c, "two_weapon_fighting"):
@@ -388,9 +403,18 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 		rng = [20, 60]
 	if not rng.is_empty():
 		rng = [int(rng[0]), int(rng[1])]
+	var two_hands := props.has("two_handed") or (w.has("versatile") and dice == str(w["versatile"]))
 	return {"name": str(def.get("name", weapon_id)), "to_hit": to_hit, "dice": dice, "bonus": bonus,
 		"type": str(w.get("damage_type", "bludgeoning")), "melee": not ranged, "range": rng, "light": props.has("light"), "id": weapon_id,
-		"magical": magic > 0 or not str(def.get("rarity", "")).is_empty(), "silvered": props.has("silvered")}
+		"magical": magic > 0 or not str(def.get("rarity", "")).is_empty(), "silvered": props.has("silvered"),
+		"gwf": not ranged and two_hands and FeatureRules.great_weapon(c), "crit_min": FeatureRules.crit_min(c), "str_based": mod == str_mod and not ranged}
+
+
+## The hero's bare hands (the monk's Martial Arts die).
+static func unarmed_profile(c: Dictionary, data: Dictionary) -> Dictionary:
+	if c.has("wild_shape"):
+		return FeatureRules.shape_profile(c, data)
+	return weapon_profile(c, data, {}, "")
 
 
 static func _has_style(c: Dictionary, style: String) -> bool:
@@ -471,12 +495,22 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 		e["attacks"] = int(e["attacks"]) - 1
 	else:
 		e["action"] = int(e["action"]) - 1
-		var extra := int(CharacterRules.level_row(c, data).get("class_specific", {}).get("extra_attacks", 0))
-		e["attacks"] = extra
+		e["attacks"] = CharacterRules.extra_attacks(c, data)
 	e["attacked"] = true
 	var wid := str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
-	var w := weapon_profile(c, data, s.items, wid, offhand)
+	return strike(s, data, target_id, weapon_profile(c, data, s.items, wid, offhand), {})
+
+
+## One weapon attack of the hero with the profile `w`, its economy already paid (v0.7.10: monks' strikes and the
+## features' attacks come here too). `opts` — stunning, open_hand, no_horde. Lines.
+static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dictionary, opts: Dictionary) -> Array[String]:
+	var c := s.character
+	var e := economy(s)
+	s.combat["rage_kept"] = true
 	var t := fighter(s, target_id)
+	if int(s.combat.get("sacred_weapon", 0)) > 0:
+		w = w.duplicate()
+		w["to_hit"] = int(w["to_hit"]) + maxi(1, FeatureRules.ab_mod(c, "cha"))
 	if _missed_unseen(s, t):
 		player(s)["hidden"] = false
 		var miss: Array[String] = ["%s — %s: удар в пустоту, %s уже не там" % [c.get("name", ""), w["name"], t["name"]]]
@@ -494,6 +528,21 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 	if bool(res["hit"]) and not sneak.is_empty():
 		e["sneak"] = true
 	player(s)["hidden"] = false
+	if bool(res["hit"]) and str(t.get("status")) == "active":
+		var x := FeatureRules.hit_extras(s, data, w, t, bool(res["crit"]))
+		if not str(x["dice"]).is_empty():
+			var more := _resist(data, t, str(w["type"]), roll_dice(s.rng, str(x["dice"])), bool(w.get("magical", false)), bool(w.get("silvered", false)))
+			lines.append("%s: ещё %d" % [", ".join(x["notes"]), more])
+			_hurt_enemy(s, data, t, more, lines, str(w["type"]))
+		FeatureRules.after_hit(s, data, w, t, bool(res["crit"]), opts, lines)
+	if not bool(opts.get("no_horde", false)) and FeatureRules.has(c, "hunters_prey_horde_breaker") and not bool(e.get("horde", false)):
+		for id: String in enemies(s):
+			var o := fighter(s, id)
+			if id != target_id and int(o["col"]) == int(t["col"]) and absi(int(o["col"]) - int(player(s)["col"])) <= (0 if bool(w["melee"]) else 99):
+				e["horde"] = true
+				lines.append("Разрушитель орд: удар по %s" % o["name"])
+				lines.append_array(strike(s, data, id, w, {"no_horde": true}))
+				break
 	return lines
 
 
@@ -521,6 +570,12 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		dis.append("цель спряталась")
 	if bool(t.get("reckless", false)) and bool(w["melee"]):
 		adv.append("цель безрассудна")
+	if bool(s.combat.get("reckless", false)) and bool(w["melee"]) and bool(w.get("str_based", true)):
+		adv.append("безрассудная атака")
+	if TimeRules.dark(s, data) and not MonsterRules.sees_in_dark(data, t):
+		pass  # both sides are blind: it evens out (5e)
+	elif TimeRules.dark(s, data):
+		dis.append("темнота")
 	if d > 0 and not (w["range"] as Array).is_empty() and d * int(cfg(data)["col_ft"]) > int(w["range"][0]):
 		dis.append("дальше обычной дальности")
 	if not bool(w["melee"]) and _foe_in_column(s, player(s)):
@@ -597,27 +652,49 @@ static func _foe_in_column(s: GameSession, f: Dictionary) -> bool:
 ## One attack roll against an enemy and its damage; adds the line. {"hit", "damage"}.
 static func _attack(s: GameSession, data: Dictionary, who: String, what: String, to_hit: int, adv: bool, dis: bool, t: Dictionary,
 		dice: String, bonus: int, dtype: String, lines: Array[String], extra_dice: String = "", auto_crit: bool = false, w: Dictionary = {}) -> Dictionary:
-	var rolls := _d20(s.rng, adv, dis)
+	var rolls := FeatureRules.hero_d20(s, adv, dis)  # the hero's roll: Lucky (v0.7.10)
 	var nat := _nat(rolls, adv, dis)
 	var total := nat + to_hit
-	var hit := nat == 20 or (nat != 1 and total >= int(t["ac"]))
+	var crit_min := int(w.get("crit_min", 20))
+	var hit := nat >= crit_min or (nat != 1 and total >= int(t["ac"]))
 	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
 	var line := "%s — %s по %s: %d%s%d = %d против КД %d%s" % [who, what, t["name"], nat, " + " if to_hit >= 0 else " − ", absi(to_hit), total, int(t["ac"]), mark]
+	if not hit and nat != 1:
+		var insp := FeatureRules.use_inspiration(s)
+		if insp > 0:
+			total += insp
+			hit = total >= int(t["ac"])
+			line += " + вдохновение %d = %d" % [insp, total]
 	if not hit:
 		lines.append(line + " — промах")
-		return {"hit": false, "damage": 0}
-	var crit := nat == 20 or auto_crit
+		return {"hit": false, "damage": 0, "crit": false}
+	var crit := nat >= crit_min or auto_crit
 	if not crit and bool(w.get("melee", false)) and MonsterRules.parry(s, data, t, total, lines):  # v0.7.9
 		lines.append(line + " — отбито")
-		return {"hit": false, "damage": 0}
-	var dmg := maxi(1, roll_dice(s.rng, dice, crit) + bonus)
+		return {"hit": false, "damage": 0, "crit": false}
+	var dmg := maxi(1, (_roll_gwf(s.rng, dice, crit) if bool(w.get("gwf", false)) else roll_dice(s.rng, dice, crit)) + bonus)
 	if not extra_dice.is_empty():
 		dmg += roll_dice(s.rng, extra_dice, crit)
 	dmg = _resist(data, t, dtype, dmg, bool(w.get("magical", true)) or w.is_empty(), bool(w.get("silvered", false)))
 	lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, str(data["misc"]["damage_types"].get(dtype, dtype)),
 		", Скрытая атака" if not extra_dice.is_empty() else ""])
 	_hurt_enemy(s, data, t, dmg, lines, dtype, crit)
-	return {"hit": true, "damage": dmg}
+	return {"hit": true, "damage": dmg, "crit": crit}
+
+
+## Great Weapon Fighting: damage dice of 1 or 2 are rolled again, once.
+static func _roll_gwf(rng: RandomNumberGenerator, expr: String, crit: bool) -> int:
+	var total := 0
+	for p: String in expr.replace(" ", "").replace("-", "+-").split("+", false):
+		if p.contains("d"):
+			var n := int(p.get_slice("d", 0)) if not p.get_slice("d", 0).is_empty() else 1
+			var sides := int(p.get_slice("d", 1))
+			for i in n * (2 if crit else 1):
+				var r := rng.randi_range(1, sides)
+				total += rng.randi_range(1, sides) if r <= 2 else r
+		else:
+			total += int(p)
+	return total
 
 
 ## Resistance, immunity or vulnerability of a foe. «…from nonmagical attacks» does not hold against a magic weapon or a
@@ -659,6 +736,7 @@ static func _hurt_enemy(s: GameSession, data: Dictionary, t: Dictionary, dmg: in
 	if int(t["hp"]) == 0:
 		t["status"] = "dead"
 		lines.append("%s повержен" % t["name"])
+		FeatureRules.on_kill(s, data, lines)
 		MonsterRules.release(s, data, t, lines)
 		MonsterRules.death_burst(s, data, t, lines)
 
@@ -722,7 +800,7 @@ static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, 
 	else:
 		targets.append(target)
 	var conds: Array = spec["conditions"]
-	var timer := {"rounds": int(spec.get("rounds", 10)), "spell": spell_id, "wake": bool(spec.get("ends_on_damage", false)),
+	var timer := {"rounds": int(spec.get("rounds", 10)) * (2 if str(s.combat.get("meta_now", "")) == "extended_spell" else 1), "spell": spell_id, "wake": bool(spec.get("ends_on_damage", false)),
 		"save": str(sp["save"]["ability"]) if bool(spec.get("repeat_save", false)) and sp.has("save") else "", "dc": int(c.get("spell_dc", 10))}
 	if spec.has("pool"):  # Sleep, Color Spray: the weakest first while the pool lasts
 		var extra := maxi(0, slot - maxi(1, int(sp["level"])))
@@ -756,7 +834,7 @@ static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, 
 			tags.append("fear")
 		if conds.has("paralyzed"):
 			tags.append("paralysis")
-		var ok := _monster_save(s, data, t, ab, int(c.get("spell_dc", 10)), tags)
+		var ok := _monster_save(s, data, t, ab, int(c.get("spell_dc", 10)), tags, str(s.combat.get("meta_now", "")) == "heightened_spell")
 		lines.append("%s: %s — спасбросок %s против Сл %d %s" % [name, t["name"], ab_name(ab), int(c.get("spell_dc", 10)),
 			"успех" if ok else "провал — " + ", ".join(conds.map(func(x: String) -> String: return cond_name(data, x)))])
 		if not ok:
@@ -819,7 +897,11 @@ static func spell_cost(data: Dictionary, spell_id: String) -> String:
 static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
+	if s.character.has("wild_shape"):
+		return "COMBAT_WILD_SHAPE"
 	var cost := spell_cost(data, spell_id)
+	if FeatureRules.active_metamagic(s, data) == "quickened_spell":
+		cost = "bonus"
 	if int(economy(s).get(cost, 0)) <= 0:
 		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
 	var chk := SpellRules.check(s.character, data, spell_id, slot)
@@ -833,9 +915,19 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 		return "COMBAT_BAD_TARGET"
 	if charmed_by(s, t) and (sp.has("attack") or sp.has("save") or is_engine_spell(data, spell_id)):
 		return "COMBAT_CHARMED"
-	if absi(shown_col(t) - int(player(s)["col"])) > range_cols(data, int(sp.get("range_ft", 0))):
+	if absi(shown_col(t) - int(player(s)["col"])) > range_cols(data, spell_range(s, data, spell_id)):
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
+
+
+## A spell's range for the hero: Eldritch Spear (300 ft for Eldritch Blast), Distant Spell (double).
+static func spell_range(s: GameSession, data: Dictionary, spell_id: String) -> int:
+	var ft := int(data["spells"].get(spell_id, {}).get("range_ft", 0))
+	if spell_id == "eldritch_blast" and FeatureRules.has(s.character, "eldritch_invocation_eldritch_spear"):
+		ft = 300
+	if FeatureRules.active_metamagic(s, data) == "distant_spell":
+		ft *= 2
+	return ft
 
 
 ## Casts a spell in combat (can_cast first): the slot, then attack rolls or saves, damage or healing. Lines.
@@ -850,7 +942,11 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 	var sp: Dictionary = data["spells"][spell_id]
 	var e := economy(s)
 	var cost := spell_cost(data, spell_id)
+	var meta := FeatureRules.pay_metamagic(s, data)
+	if meta == "quickened_spell":
+		cost = "bonus"
 	e[cost] = int(e[cost]) - 1
+	s.combat["meta_now"] = meta
 	var chk := SpellRules.check(c, data, spell_id, slot)
 	var held := str(c.get("concentration", ""))
 	var lines: Array[String] = SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]), s, target_id.is_empty())
@@ -864,6 +960,8 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 	var ab := CharacterRules.mod(int(c["abilities"].get(str(c.get("spell_ability", "int")), 10)))
 	if sp.has("heal_at_slot"):
 		var heal := roll_dice(s.rng, str(sp["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD")), false, ab)
+		if FeatureRules.has(c, "disciple_of_life") and slot > 0:
+			heal += 2 + slot  # Disciple of Life
 		var before := int(c["hp"])
 		c["hp"] = mini(int(c["max_hp"]), before + heal)
 		lines.append("+%d HP" % (int(c["hp"]) - before))
@@ -896,19 +994,26 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		if not sp.has("area") and str(t.get("status")) != "active":
 			break
 		if bool(multi.get("auto_hit", false)):
-			var dmg := _resist(data, t, dtype, roll_dice(s.rng, dice))
+			var dmg := _resist(data, t, dtype, roll_dice(s.rng, _empowered(s, dice)))
 			lines.append("%s: %d (%s) по %s" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype), t["name"]])
 			_hurt_enemy(s, data, t, dmg, lines)
 		elif sp.has("attack"):
 			var dis: bool = (str(sp["attack"]) == "ranged" and _foe_in_column(s, player(s))) or bool(t.get("dodging", false)) \
 				or not hero_attack_dis(s, data, t).is_empty()
-			_attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), bool(player(s).get("hidden", false)), dis, t, dice, 0, dtype, lines)
+			var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
+			var sres := _attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), bool(player(s).get("hidden", false)), dis, t,
+				_empowered(s, dice), agonizing, dtype, lines)
+			if bool(sres["hit"]) and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_repelling_blast") and str(t.get("status")) == "active" \
+					and SIZES.find(str(_monster(data, t).get("size", "medium"))) <= 3:
+				var away := 1 if int(t["col"]) >= int(player(s)["col"]) else -1
+				t["col"] = clampi(int(t["col"]) + away, -edge(data), edge(data))
+				lines.append("Отталкивающий заряд: %s отброшен на 30 фт" % t["name"])
 		elif sp.has("save"):
-			var dmg_full := roll_dice(s.rng, dice)
+			var dmg_full := roll_dice(s.rng, _empowered(s, dice))
 			for tg: Dictionary in targets:
 				if str(tg.get("status")) != "active":
 					continue
-				var ok := _monster_save(s, data, tg, str(sp["save"]["ability"]), int(c.get("spell_dc", 10)), ["magic"])
+				var ok := _monster_save(s, data, tg, str(sp["save"]["ability"]), int(c.get("spell_dc", 10)), ["magic"], str(s.combat.get("meta_now", "")) == "heightened_spell")
 				var dmg := dmg_full / 2 if ok and str(sp["save"]["success"]) == "half" else (0 if ok else dmg_full)
 				dmg = _resist(data, tg, dtype, dmg)
 				lines.append("%s: %s — спасбросок %s против Сл %d %s, %d (%s)" % [name, tg["name"], ab_name(str(sp["save"]["ability"])),
@@ -920,6 +1025,11 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 
 static func ab_name(ab: String) -> String:
 	return {"str": "Сил", "dex": "Лов", "con": "Тел", "int": "Инт", "wis": "Мдр", "cha": "Хар"}.get(ab, ab)
+
+
+## Empowered Spell: the damage dice once more, the better roll counts (approximated as a dice expression «max of two»).
+static func _empowered(s: GameSession, dice: String) -> String:
+	return dice if str(s.combat.get("meta_now", "")) != "empowered_spell" else "E" + dice
 
 
 static func _spell_dice(sp: Dictionary, slot: int, level: int) -> String:
@@ -936,12 +1046,15 @@ static func _spell_dice(sp: Dictionary, slot: int, level: int) -> String:
 
 
 ## A monster's save; `tags` — what it is against (magic, charm, fear…) for the advantages of its traits (v0.7.9).
-static func _monster_save(s: GameSession, data: Dictionary, t: Dictionary, ab: String, dc: int, tags: Array = []) -> bool:
+static func _monster_save(s: GameSession, data: Dictionary, t: Dictionary, ab: String, dc: int, tags: Array = [], disadv: bool = false) -> bool:
 	var m: Dictionary = data["monsters"][t["monster"]]
 	var bonus := int(m["saves"].get(ab, CharacterRules.mod(int(m["abilities"].get(ab, 10)))))
 	var roll := s.rng.randi_range(1, 20)
-	if MonsterRules.save_advantage(data, t, ab, tags):
+	var adv := MonsterRules.save_advantage(data, t, ab, tags)
+	if adv and not disadv:
 		roll = maxi(roll, s.rng.randi_range(1, 20))
+	elif disadv and not adv:  # Heightened Spell (v0.7.10)
+		roll = mini(roll, s.rng.randi_range(1, 20))
 	if ab in ["str", "dex"] and _target_disabled(t) and not (t["conditions"] as Array).has("prone"):
 		return false
 	return roll != 1 and (roll == 20 or roll + bonus >= dc)
@@ -977,12 +1090,23 @@ static func can_hide(s: GameSession, data: Dictionary) -> String:
 		return "COMBAT_NOT_YOUR_TURN"
 	if bool(player(s).get("hidden", false)):
 		return "COMBAT_ALREADY_HIDDEN"
-	if _foe_in_column(s, player(s)):
+	if _foe_in_column(s, player(s)) and not _hides_behind(s, data):
 		return "COMBAT_HIDE_SEEN"
 	var cost := _hide_cost(s)
 	if int(economy(s).get(cost, 0)) <= 0:
 		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
 	return ""
+
+
+## Naturally Stealthy (lightfoot halfling): hides behind a foe at least one size larger.
+static func _hides_behind(s: GameSession, data: Dictionary) -> bool:
+	if not CharacterRules.has_trait(s.character, "naturally_stealthy"):
+		return false
+	for id: String in enemies(s):
+		var f := fighter(s, id)
+		if int(f["col"]) == int(player(s)["col"]) and SIZES.find(str(_monster(data, f).get("size", "medium"))) > SIZES.find(hero_size(s, data)):
+			return true
+	return false
 
 
 static func _hide_cost(s: GameSession) -> String:
@@ -1174,8 +1298,9 @@ static func grapple(s: GameSession, data: Dictionary, target_id: String, shove: 
 		e["attacks"] = int(e["attacks"]) - 1
 	else:
 		e["action"] = int(e["action"]) - 1
-		e["attacks"] = int(CharacterRules.level_row(c, data).get("class_specific", {}).get("extra_attacks", 0))
+		e["attacks"] = CharacterRules.extra_attacks(c, data)
 	e["attacked"] = true
+	s.combat["rage_kept"] = true
 	var t := fighter(s, target_id)
 	var mods := ConditionRules.check_mods(c, data, {"skill": "athletics"})
 	var lines: Array[String] = []
@@ -1235,6 +1360,8 @@ static func can_react(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 ## Returns the lines of a new round's start (reinforcements arriving).
 static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = ConditionRules.end_of_turn(s, data)
+	FeatureRules.end_hero_turn(s, data, lines)
+	s.combat.erase("prompt")
 	_advance(s, data, lines)
 	return lines
 
@@ -1351,12 +1478,24 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 				_remove_condition(f, "prone")
 				lines.append("%s поднимается на ноги" % f["name"])
 			_enemy_turn(s, data, f, lines)
+			if bool(s.combat.get("halt", false)):
+				return lines  # answer_reaction finishes this turn
 			MonsterRules.end_turn(s, data, f, lines)
 		_tick_conditions(s, data, f, lines)
 	_check_end(s, data, lines)
 	if str(s.combat["outcome"]).is_empty():
 		_advance(s, data, lines)
 	return lines
+
+
+## The rest of a foe's turn after its attacks (also after a reaction prompt). Lines.
+static func _end_actor(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	if str(f.get("status")) == "active":
+		MonsterRules.end_turn(s, data, f, lines)
+		_tick_conditions(s, data, f, lines)
+	_check_end(s, data, lines)
+	if str(s.combat["outcome"]).is_empty():
+		_advance(s, data, lines)
 
 
 static func _death_save(s: GameSession, lines: Array[String]) -> void:
@@ -1525,12 +1664,18 @@ static func _enemy_attack_full(s: GameSession, data: Dictionary, f: Dictionary, 
 				plan.append(a)
 	if plan.is_empty():
 		plan.append(act)
-	for a: Dictionary in plan:
-		if int(s.character["hp"]) <= 0 and _intelligent(data, f):
-			return
+	for i in plan.size():
+		if int(s.character["hp"]) <= 0:
+			return  # nobody finishes the downed hero (v0.7.9)
 		if str(s.combat.get("outcome", "")) == "dead":
 			return
-		_enemy_attack(s, data, f, a, lines)
+		_enemy_attack(s, data, f, plan[i], lines)
+		if bool(s.combat.get("halt", false)):  # the hero is asked about a reaction: the rest of the attacks wait
+			var rest: Array = []
+			for b: Dictionary in plan.slice(i + 1):
+				rest.append(str(b["name_en"]))
+			s.combat["resume_plan"] = rest
+			return
 
 
 static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, lines: Array[String]) -> void:
@@ -1571,7 +1716,8 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	var tm := MonsterRules.attack_mods(s, data, f, a)
 	f["hidden"] = false  # an attack gives a hidden foe away
 	var adv := (_target_disabled_player(c) and not ranged_use) or helpless or (_has_trait(data, f, "pack_tactics") and _ally_near_player(s, f)) \
-		or ConditionRules.has(c, "blinded") or _has(f, "invisible") or not (tm["adv"] as Array).is_empty()
+		or ConditionRules.has(c, "blinded") or _has(f, "invisible") or not (tm["adv"] as Array).is_empty() or bool(s.combat.get("reckless", false)) \
+		or (TimeRules.dark(s, data) and MonsterRules.sees_in_dark(data, f))
 	var dis := bool(p.get("dodging", false)) and int(c["hp"]) > 0 and not ConditionRules.incapacitated(c) \
 		or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) \
 		or (str(a.get("kind")) == "ranged" and d == 0) or (f["conditions"] as Array).has("poisoned") or bool(p.get("hidden", false)) \
@@ -1587,6 +1733,8 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	if not hit:
 		lines.append(line + " — промах")
 		return
+	if c.has("wild_shape"):
+		ac = int(c.get("ac", 10))  # the beast's AC is the sheet's while in the form
 	var crit := nat == 20 or (not ranged_use and (int(c["hp"]) <= 0 or ConditionRules.has(c, "paralyzed") or ConditionRules.has(c, "unconscious")))
 	var dmg := 0
 	var types: Array[String] = []
@@ -1607,21 +1755,81 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		types.append(str(dtypes.get(str(dd["type"]), dd["type"])))
 		if not str(adj["note"]).is_empty() and not notes.has(str(adj["note"])):
 			notes.append(str(adj["note"]))
-	if (a["damage"] as Array).is_empty():
+	var ctx := {"foe": str(f["id"]), "action": str(a.get("name_en", "")), "line": line, "crit": crit, "dmg": dmg, "types": types, "notes": notes,
+		"prone": extra["prone"], "hit": true, "total": total, "ac": ac, "nat20": nat == 20}
+	var rx := FeatureRules.reactions(s, data, f, a, ranged_use, dmg)  # v0.7.10: the hero's reaction
+	if not rx.is_empty():
+		var pol := FeatureRules.policy(s)
+		if pol == "ask" and current(s) == str(f["id"]):
+			ctx["options"] = rx
+			s.combat["pending"] = ctx
+			s.combat["halt"] = true
+			return
+		if pol != "never":
+			FeatureRules.apply_reaction(s, data, f, str(rx[0]["id"]), ctx, lines)
+	_land_hit(s, data, f, a, ctx, lines)
+
+
+## A foe's hit lands (after the hero's reaction, if any): damage, a charge's fall, the effect of the attack, a pounce,
+## Giant Killer's strike back. Lines.
+static func _land_hit(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, ctx: Dictionary, lines: Array[String]) -> void:
+	var dmg := int(ctx["dmg"])
+	var crit := bool(ctx["crit"])
+	var line := str(ctx["line"])
+	if not bool(ctx["hit"]):
+		lines.append(line + " — промах")
+	elif (a["damage"] as Array).is_empty():
 		lines.append(line + " — попадание")
 	else:
-		lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, ", ".join(types), (", " + ", ".join(notes)) if not notes.is_empty() else ""])
+		var notes: Array = ctx["notes"]
+		lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, ", ".join(ctx["types"]), (", " + ", ".join(notes)) if not notes.is_empty() else ""])
 		_hurt_player(s, data, dmg, crit, lines)
 	if str(s.combat.get("outcome", "")) == "dead":
 		return
-	var pounce := MonsterRules.charge_prone(s, data, f, extra["prone"], lines)
-	MonsterRules.apply_effect(s, data, f, a, dmg, lines)
-	if pounce:  # a pounce: one bite at the prone hero as a bonus action
-		for b: Dictionary in _monster(data, f)["actions"]:
-			if str(b.get("name_en", "")) == "Bite" and str(b.get("kind")) == "melee":
-				lines.append("%s кусает упавшего" % f["name"])
-				_enemy_attack(s, data, f, b, lines)
+	if bool(ctx["hit"]):
+		var pounce := MonsterRules.charge_prone(s, data, f, ctx["prone"], lines)
+		MonsterRules.apply_effect(s, data, f, a, dmg, lines)
+		if pounce:  # a pounce: one bite at the prone hero as a bonus action
+			for b: Dictionary in _monster(data, f)["actions"]:
+				if str(b.get("name_en", "")) == "Bite" and str(b.get("kind")) == "melee":
+					lines.append("%s кусает упавшего" % f["name"])
+					_enemy_attack(s, data, f, b, lines)
+					break
+	if bool(ctx.get("counter", false)) and str(f.get("status")) == "active" and int(s.character.get("hp", 0)) > 0:
+		var w := weapon_profile(s.character, data, s.items, str(s.character.get("equipped", {}).get("main_hand", "")))
+		lines.append("%s: Убийца великанов — удар в ответ" % s.character.get("name", ""))
+		lines.append_array(strike(s, data, str(f["id"]), w, {"no_horde": true}))
+
+
+## The player answered the reaction prompt: `choice` — a reaction id or "none". The foe's turn goes on. Lines.
+static func answer_reaction(s: GameSession, data: Dictionary, choice: String) -> Array[String]:
+	var ctx: Dictionary = s.combat.get("pending", {})
+	s.combat.erase("pending")
+	s.combat.erase("halt")
+	var lines: Array[String] = []
+	if ctx.is_empty():
+		return lines
+	var f := fighter(s, str(ctx["foe"]))
+	var a := {}
+	for x: Dictionary in _monster(data, f)["actions"]:
+		if str(x["name_en"]) == str(ctx["action"]):
+			a = x
+	if choice != "none":
+		FeatureRules.apply_reaction(s, data, f, choice, ctx, lines)
+	_land_hit(s, data, f, a, ctx, lines)
+	var plan: Array = s.combat.get("resume_plan", [])
+	s.combat.erase("resume_plan")
+	while not plan.is_empty() and str(s.combat.get("outcome", "")).is_empty() and int(s.character.get("hp", 0)) > 0:
+		var name := str(plan.pop_front())
+		for x: Dictionary in _monster(data, f)["actions"]:
+			if str(x["name_en"]) == name:
+				_enemy_attack(s, data, f, x, lines)
 				break
+		if bool(s.combat.get("halt", false)):
+			s.combat["resume_plan"] = plan
+			return lines
+	_end_actor(s, data, f, lines)
+	return lines
 
 
 static func _target_disabled_player(c: Dictionary) -> bool:
@@ -1656,6 +1864,11 @@ static func _ally_near_player(s: GameSession, f: Dictionary) -> bool:
 ## Damage to the player: 0 HP — unconscious and death saves; hits at 0 HP — failed saves; massive damage — death.
 static func _hurt_player(s: GameSession, data: Dictionary, dmg: int, crit: bool, lines: Array[String]) -> void:
 	var c := s.character
+	if dmg <= 0:
+		return
+	s.combat["rage_kept"] = true
+	dmg = HeroDefense.absorb(c, dmg, lines)  # temporary HP (v0.7.10)
+	dmg = FeatureRules.hurt_shape(s, data, dmg, lines)  # a beast form takes it first
 	if dmg <= 0:
 		return
 	var ds: Dictionary = s.combat["death_saves"]
@@ -1991,7 +2204,8 @@ static func player_inspect(s: GameSession, data: Dictionary, target_id: String) 
 	var t := fighter(s, target_id)
 	var skill := lore_skill(data, t)
 	var dc := lore_dc(data, t)
-	var roll := s.rng.randi_range(1, 20)
+	var favored := FeatureRules.has(s.character, "favored_enemy_" + str(_monster(data, t).get("type", "")))  # Favored Enemy (v0.7.10)
+	var roll := _nat(FeatureRules.hero_d20(s, favored, false), favored, false)
 	var total := roll + int(s.character.get("skills", {}).get(skill, 0))
 	var ok := roll != 1 and (roll == 20 or total >= dc)
 	if ok:

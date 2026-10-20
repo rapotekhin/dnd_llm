@@ -11,6 +11,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 10,
@@ -107,6 +109,8 @@
 		"hit_dice": "6d8",
 		"speed": 25,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 11,
@@ -189,6 +193,8 @@
 		"hit_dice": "6d10",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 17,
 			"dex": 11,
@@ -264,6 +270,8 @@
 		"hit_dice": "3d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 14,
@@ -337,6 +345,8 @@
 		"hit_dice": "3d6",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 8,
@@ -396,6 +406,8 @@
 		"hit_dice": "7d12",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 6,
@@ -456,6 +468,8 @@
 		"hit_dice": "3d10",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 12,
@@ -505,6 +519,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 12,
@@ -590,6 +606,8 @@
 		"hit_dice": "1d6",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 14,
@@ -645,6 +663,8 @@
 		"hit_dice": "1d4",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 30,
 		"abilities": {
 			"str": 4,
 			"dex": 11,
@@ -700,6 +720,8 @@
 		"hit_dice": "10d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 16,
@@ -792,6 +814,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 12,
@@ -857,6 +881,8 @@
 		"hit_dice": "8d8",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 16,
 			"dex": 8,
@@ -927,6 +953,8 @@
 		"hit_dice": "1d4",
 		"speed": 5,
 		"fly": 30,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 15,
@@ -987,6 +1015,8 @@
 		"hit_dice": "8d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 16,
 			"dex": 15,
@@ -1105,6 +1135,8 @@
 		"hit_dice": "9d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 12,
@@ -1163,6 +1195,8 @@
 		"hit_dice": "3d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -1240,6 +1274,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 30,
+		"darkvision": 60,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -1332,6 +1368,8 @@
 		"hit_dice": "4d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 17,
@@ -1390,6 +1428,8 @@
 		"hit_dice": "2d6",
 		"speed": 10,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 14,
@@ -1452,6 +1492,8 @@
 		"hit_dice": "8d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 17,
 			"dex": 10,
@@ -1538,6 +1580,8 @@
 		"hit_dice": "2d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 11,
@@ -1613,6 +1657,8 @@
 		"hit_dice": "3d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -1695,6 +1741,8 @@
 		"hit_dice": "5d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 30,
+		"darkvision": 60,
 		"abilities": {
 			"str": 17,
 			"dex": 10,
@@ -1783,6 +1831,8 @@
 		"hit_dice": "4d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 10,
@@ -1862,6 +1912,8 @@
 		"hit_dice": "5d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -1953,6 +2005,8 @@
 		"hit_dice": "2d10",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 8,
@@ -2002,6 +2056,8 @@
 		"hit_dice": "1d4",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 15,
@@ -2060,6 +2116,8 @@
 		"hit_dice": "6d10",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 14,
@@ -2167,6 +2225,8 @@
 		"hit_dice": "6d6",
 		"speed": 20,
 		"fly": 40,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 6,
 			"dex": 12,
@@ -2232,6 +2292,8 @@
 		"hit_dice": "1d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 10,
@@ -2283,6 +2345,8 @@
 		"hit_dice": "2d10",
 		"speed": 30,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -2350,6 +2414,8 @@
 		"hit_dice": "4d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 15,
 			"dex": 12,
@@ -2432,6 +2498,8 @@
 		"hit_dice": "1d4",
 		"speed": 20,
 		"fly": 0,
+		"swim": 20,
+		"darkvision": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 11,
@@ -2489,6 +2557,8 @@
 		"hit_dice": "3d10",
 		"speed": 20,
 		"fly": 0,
+		"swim": 20,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -2551,6 +2621,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 14,
@@ -2672,6 +2744,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 12,
@@ -2733,6 +2807,8 @@
 		"hit_dice": "5d6",
 		"speed": 10,
 		"fly": 30,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 12,
@@ -2796,6 +2872,8 @@
 		"hit_dice": "6d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -2860,6 +2938,8 @@
 		"hit_dice": "3d6",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -2986,6 +3066,8 @@
 		"hit_dice": "1d8",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 16,
@@ -3035,6 +3117,8 @@
 		"hit_dice": "5d10",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 15,
@@ -3105,6 +3189,8 @@
 		"hit_dice": "8d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 11,
 			"dex": 18,
@@ -3186,6 +3272,8 @@
 		"hit_dice": "3d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 10,
@@ -3235,6 +3323,8 @@
 		"hit_dice": "4d6",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 11,
 			"dex": 11,
@@ -3330,6 +3420,8 @@
 		"hit_dice": "3d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 10,
 			"dex": 14,
@@ -3451,6 +3543,8 @@
 		"hit_dice": "5d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 12,
@@ -3561,6 +3655,8 @@
 		"hit_dice": "5d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 10,
 			"dex": 12,
@@ -3692,6 +3788,8 @@
 		"hit_dice": "4d8",
 		"speed": 25,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 14,
 			"dex": 11,
@@ -3776,6 +3874,8 @@
 		"hit_dice": "5d6",
 		"speed": 30,
 		"fly": 30,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 5,
 			"dex": 14,
@@ -3893,6 +3993,8 @@
 		"hit_dice": "1d6",
 		"speed": 10,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 15,
@@ -3950,6 +4052,8 @@
 		"hit_dice": "2d10",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 10,
@@ -4033,6 +4137,8 @@
 		"hit_dice": "8d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 14,
 			"dex": 15,
@@ -4154,6 +4260,8 @@
 		"hit_dice": "2d4",
 		"speed": 30,
 		"fly": 60,
+		"swim": 30,
+		"darkvision": 0,
 		"abilities": {
 			"str": 4,
 			"dex": 18,
@@ -4213,6 +4321,8 @@
 		"hit_dice": "5d6",
 		"speed": 0,
 		"fly": 50,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 15,
@@ -4293,6 +4403,8 @@
 		"hit_dice": "7d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 15,
 			"dex": 11,
@@ -4378,6 +4490,8 @@
 		"hit_dice": "8d10",
 		"speed": 15,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 3,
@@ -4462,6 +4576,8 @@
 		"hit_dice": "8d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 16,
 			"dex": 17,
@@ -4564,6 +4680,8 @@
 		"hit_dice": "5d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 13,
 			"dex": 15,
@@ -4647,6 +4765,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 30,
 		"abilities": {
 			"str": 13,
 			"dex": 10,
@@ -4724,6 +4844,8 @@
 		"hit_dice": "4d10",
 		"speed": 10,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 16,
@@ -4784,6 +4906,8 @@
 		"hit_dice": "5d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 10,
@@ -4859,6 +4983,8 @@
 		"hit_dice": "1d6",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 5,
 			"dex": 14,
@@ -4921,6 +5047,8 @@
 		"hit_dice": "8d12",
 		"speed": 30,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 14,
@@ -4990,6 +5118,8 @@
 		"hit_dice": "3d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 15,
@@ -5051,6 +5181,8 @@
 		"hit_dice": "4d10",
 		"speed": 10,
 		"fly": 80,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 17,
@@ -5130,6 +5262,8 @@
 		"hit_dice": "5d12",
 		"speed": 60,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 16,
@@ -5215,6 +5349,8 @@
 		"hit_dice": "1d6",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 10,
@@ -5270,6 +5406,8 @@
 		"hit_dice": "4d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 30,
 		"abilities": {
 			"str": 12,
 			"dex": 13,
@@ -5338,6 +5476,8 @@
 		"hit_dice": "3d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 11,
@@ -5410,6 +5550,8 @@
 		"hit_dice": "6d10",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 14,
@@ -5467,6 +5609,8 @@
 		"hit_dice": "3d10",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 30,
 		"abilities": {
 			"str": 15,
 			"dex": 12,
@@ -5516,6 +5660,8 @@
 		"hit_dice": "8d10",
 		"speed": 10,
 		"fly": 0,
+		"swim": 60,
+		"darkvision": 60,
 		"abilities": {
 			"str": 17,
 			"dex": 13,
@@ -5589,6 +5735,8 @@
 		"hit_dice": "3d10",
 		"speed": 5,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 13,
 			"dex": 15,
@@ -5652,6 +5800,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 18,
@@ -5714,6 +5864,8 @@
 		"hit_dice": "2d6",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 7,
 			"dex": 15,
@@ -5775,6 +5927,8 @@
 		"hit_dice": "2d6",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 7,
 			"dex": 15,
@@ -5835,6 +5989,8 @@
 		"hit_dice": "7d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -5921,6 +6077,8 @@
 		"hit_dice": "3d10",
 		"speed": 0,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 15,
@@ -5993,6 +6151,8 @@
 		"hit_dice": "4d10",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 14,
 			"dex": 16,
@@ -6089,6 +6249,8 @@
 		"hit_dice": "6d10",
 		"speed": 20,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 30,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -6158,6 +6320,8 @@
 		"hit_dice": "3d10",
 		"speed": 10,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -6242,6 +6406,8 @@
 		"hit_dice": "3d8",
 		"speed": 10,
 		"fly": 50,
+		"swim": 50,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 14,
@@ -6304,6 +6470,8 @@
 		"hit_dice": "2d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 11,
 			"dex": 16,
@@ -6362,6 +6530,8 @@
 		"hit_dice": "2d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 12,
 			"dex": 16,
@@ -6443,6 +6613,8 @@
 		"hit_dice": "9d8",
 		"speed": 10,
 		"fly": 0,
+		"swim": 10,
+		"darkvision": 60,
 		"abilities": {
 			"str": 10,
 			"dex": 8,
@@ -6554,6 +6726,8 @@
 		"hit_dice": "5d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 14,
 			"dex": 12,
@@ -6647,6 +6821,8 @@
 		"hit_dice": "1d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 10,
@@ -6719,6 +6895,8 @@
 		"hit_dice": "2d6",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 8,
 			"dex": 14,
@@ -6797,6 +6975,8 @@
 		"hit_dice": "8d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 30,
+		"darkvision": 60,
 		"abilities": {
 			"str": 19,
 			"dex": 14,
@@ -6885,6 +7065,8 @@
 		"hit_dice": "3d8",
 		"speed": 10,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 6,
@@ -6967,6 +7149,8 @@
 		"hit_dice": "7d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 30,
+		"darkvision": 60,
 		"abilities": {
 			"str": 15,
 			"dex": 12,
@@ -7061,6 +7245,8 @@
 		"hit_dice": "11d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 18,
 			"dex": 12,
@@ -7153,6 +7339,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 14,
 			"dex": 14,
@@ -7232,6 +7420,8 @@
 		"hit_dice": "7d10",
 		"speed": 30,
 		"fly": 80,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 18,
 			"dex": 15,
@@ -7311,6 +7501,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 12,
@@ -7386,6 +7578,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 12,
@@ -7445,6 +7639,8 @@
 		"hit_dice": "7d8",
 		"speed": 20,
 		"fly": 40,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 13,
@@ -7541,6 +7737,8 @@
 		"hit_dice": "1d4",
 		"speed": 10,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 5,
 			"dex": 16,
@@ -7598,6 +7796,8 @@
 		"hit_dice": "7d8",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 17,
 			"dex": 12,
@@ -7689,6 +7889,8 @@
 		"hit_dice": "3d10",
 		"speed": 40,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 13,
@@ -7768,6 +7970,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 13,
 			"dex": 12,
@@ -7850,6 +8054,8 @@
 		"hit_dice": "2d4",
 		"speed": 20,
 		"fly": 40,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 4,
 			"dex": 15,
@@ -7920,6 +8126,8 @@
 		"hit_dice": "6d10",
 		"speed": 30,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 30,
 		"abilities": {
 			"str": 18,
 			"dex": 13,
@@ -7982,6 +8190,8 @@
 		"hit_dice": "1d8",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 13,
@@ -8039,6 +8249,8 @@
 		"hit_dice": "6d6",
 		"speed": 30,
 		"fly": 30,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 7,
 			"dex": 13,
@@ -8172,6 +8384,8 @@
 		"hit_dice": "3d4",
 		"speed": 20,
 		"fly": 40,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 6,
 			"dex": 17,
@@ -8261,6 +8475,8 @@
 		"hit_dice": "1d6",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 15,
@@ -8323,6 +8539,8 @@
 		"hit_dice": "12d12",
 		"speed": 30,
 		"fly": 0,
+		"swim": 60,
+		"darkvision": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 10,
@@ -8390,6 +8608,8 @@
 		"hit_dice": "8d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 11,
@@ -8478,6 +8698,8 @@
 		"hit_dice": "2d6",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 7,
 			"dex": 15,
@@ -8557,6 +8779,8 @@
 		"hit_dice": "3d8",
 		"speed": 15,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 10,
 			"dex": 5,
@@ -8626,6 +8850,8 @@
 		"hit_dice": "4d10",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 15,
@@ -8720,6 +8946,8 @@
 		"hit_dice": "1d4",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 30,
 		"abilities": {
 			"str": 2,
 			"dex": 11,
@@ -8769,6 +8997,8 @@
 		"hit_dice": "4d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -8883,6 +9113,8 @@
 		"hit_dice": "5d6",
 		"speed": 30,
 		"fly": 30,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 8,
 			"dex": 12,
@@ -9014,6 +9246,8 @@
 		"hit_dice": "2d6",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 7,
 			"dex": 15,
@@ -9093,6 +9327,8 @@
 		"hit_dice": "8d10",
 		"speed": 30,
 		"fly": 50,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 17,
 			"dex": 16,
@@ -9186,6 +9422,8 @@
 		"hit_dice": "1d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 14,
@@ -9250,6 +9488,8 @@
 		"hit_dice": "2d8",
 		"speed": 10,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 13,
@@ -9313,6 +9553,8 @@
 		"hit_dice": "6d10",
 		"speed": 10,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 60,
 		"abilities": {
 			"str": 18,
 			"dex": 10,
@@ -9407,6 +9649,8 @@
 		"hit_dice": "9d8",
 		"speed": 15,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 17,
 			"dex": 12,
@@ -9500,6 +9744,8 @@
 		"hit_dice": "9d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 18,
 			"dex": 11,
@@ -9589,6 +9835,8 @@
 		"hit_dice": "9d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 18,
 			"dex": 11,
@@ -9683,6 +9931,8 @@
 		"hit_dice": "2d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 10,
@@ -9743,6 +9993,8 @@
 		"hit_dice": "9d8",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 16,
 			"dex": 8,
@@ -9842,6 +10094,8 @@
 		"hit_dice": "8d10",
 		"speed": 60,
 		"fly": 90,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 15,
@@ -9908,6 +10162,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 12,
@@ -9970,6 +10226,8 @@
 		"hit_dice": "6d10",
 		"speed": 10,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 6,
@@ -10051,6 +10309,8 @@
 		"hit_dice": "1d6",
 		"speed": 5,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 30,
 		"abilities": {
 			"str": 4,
 			"dex": 15,
@@ -10123,6 +10383,8 @@
 		"hit_dice": "9d10",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 19,
 			"dex": 6,
@@ -10186,6 +10448,8 @@
 		"hit_dice": "7d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 19,
 			"dex": 8,
@@ -10256,6 +10520,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 16,
 			"dex": 12,
@@ -10334,6 +10600,8 @@
 		"hit_dice": "1d4",
 		"speed": 5,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -10397,6 +10665,8 @@
 		"hit_dice": "7d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 20,
 			"dex": 12,
@@ -10476,6 +10746,8 @@
 		"hit_dice": "3d8",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 15,
@@ -10560,6 +10832,8 @@
 		"hit_dice": "7d10",
 		"speed": 60,
 		"fly": 90,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 15,
@@ -10615,6 +10889,8 @@
 		"hit_dice": "5d10",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 15,
 			"dex": 15,
@@ -10695,6 +10971,8 @@
 		"hit_dice": "8d10",
 		"speed": 20,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 15,
@@ -10753,6 +11031,8 @@
 		"hit_dice": "1d4",
 		"speed": 30,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 16,
@@ -10813,6 +11093,8 @@
 		"hit_dice": "5d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 0,
 		"abilities": {
 			"str": 20,
 			"dex": 10,
@@ -10892,6 +11174,8 @@
 		"hit_dice": "2d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -10941,6 +11225,8 @@
 		"hit_dice": "5d8",
 		"speed": 25,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 10,
@@ -11069,6 +11355,8 @@
 		"hit_dice": "2d4",
 		"speed": 15,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 6,
 			"dex": 15,
@@ -11160,6 +11448,8 @@
 		"hit_dice": "3d4",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 5,
 			"dex": 17,
@@ -11266,6 +11556,8 @@
 		"hit_dice": "1d4",
 		"speed": 30,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 60,
 		"abilities": {
 			"str": 2,
 			"dex": 16,
@@ -11326,6 +11618,8 @@
 		"hit_dice": "1d4",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 30,
 		"abilities": {
 			"str": 2,
 			"dex": 11,
@@ -11381,6 +11675,8 @@
 		"hit_dice": "1d4",
 		"speed": 10,
 		"fly": 50,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 14,
@@ -11438,6 +11734,8 @@
 		"hit_dice": "4d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 13,
@@ -11500,6 +11798,8 @@
 		"hit_dice": "6d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 21,
 			"dex": 8,
@@ -11567,6 +11867,8 @@
 		"hit_dice": "2d10",
 		"speed": 60,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 10,
@@ -11616,6 +11918,8 @@
 		"hit_dice": "6d10",
 		"speed": 10,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 14,
@@ -11698,6 +12002,8 @@
 		"hit_dice": "5d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 13,
 			"dex": 12,
@@ -11758,6 +12064,8 @@
 		"hit_dice": "7d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 14,
@@ -11842,6 +12150,8 @@
 		"hit_dice": "4d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 120,
 		"abilities": {
 			"str": 13,
 			"dex": 11,
@@ -11950,6 +12260,8 @@
 		"hit_dice": "7d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 16,
@@ -12042,6 +12354,8 @@
 		"hit_dice": "1d4",
 		"speed": 10,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 11,
@@ -12102,6 +12416,8 @@
 		"hit_dice": "3d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 14,
@@ -12187,6 +12503,8 @@
 		"hit_dice": "7d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 60,
 		"abilities": {
 			"str": 16,
 			"dex": 13,
@@ -12255,6 +12573,8 @@
 		"hit_dice": "3d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 6,
 			"dex": 14,
@@ -12343,6 +12663,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 19,
 			"dex": 10,
@@ -12425,6 +12747,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 10,
 			"dex": 14,
@@ -12500,6 +12824,8 @@
 		"hit_dice": "5d8",
 		"speed": 0,
 		"fly": 50,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 1,
 			"dex": 14,
@@ -12587,6 +12913,8 @@
 		"hit_dice": "1d4",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 30,
 		"abilities": {
 			"str": 2,
 			"dex": 14,
@@ -12665,6 +12993,8 @@
 		"hit_dice": "1d4",
 		"speed": 10,
 		"fly": 40,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 18,
@@ -12747,6 +13077,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 15,
@@ -12843,6 +13175,8 @@
 		"hit_dice": "6d6",
 		"speed": 30,
 		"fly": 30,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 5,
 			"dex": 11,
@@ -12965,6 +13299,8 @@
 		"hit_dice": "1d4",
 		"speed": 10,
 		"fly": 40,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 4,
 			"dex": 16,
@@ -13014,6 +13350,8 @@
 		"hit_dice": "5d8",
 		"speed": 0,
 		"fly": 30,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 5,
 			"dex": 15,
@@ -13092,6 +13430,8 @@
 		"hit_dice": "5d8",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -13160,6 +13500,8 @@
 		"hit_dice": "5d8",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -13229,6 +13571,8 @@
 		"hit_dice": "5d8",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -13297,6 +13641,8 @@
 		"hit_dice": "8d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 30,
+		"darkvision": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 18,
@@ -13376,6 +13722,8 @@
 		"hit_dice": "8d8",
 		"speed": 0,
 		"fly": 0,
+		"swim": 40,
+		"darkvision": 60,
 		"abilities": {
 			"str": 13,
 			"dex": 16,
@@ -13454,6 +13802,8 @@
 		"hit_dice": "7d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 30,
 		"abilities": {
 			"str": 9,
 			"dex": 11,
@@ -13527,6 +13877,8 @@
 		"hit_dice": "7d8",
 		"speed": 10,
 		"fly": 50,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 14,
@@ -13595,6 +13947,8 @@
 		"hit_dice": "5d8",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -13677,6 +14031,8 @@
 		"hit_dice": "5d8",
 		"speed": 5,
 		"fly": 30,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -13745,6 +14101,8 @@
 		"hit_dice": "5d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 11,
@@ -13826,6 +14184,8 @@
 		"hit_dice": "5d10",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 17,
 			"dex": 15,
@@ -13910,6 +14270,8 @@
 		"hit_dice": "2d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 11,
@@ -13972,6 +14334,8 @@
 		"hit_dice": "9d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 13,
@@ -14066,6 +14430,8 @@
 		"hit_dice": "4d8",
 		"speed": 5,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 1,
@@ -14130,6 +14496,8 @@
 		"hit_dice": "1d8",
 		"speed": 10,
 		"fly": 50,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 7,
 			"dex": 10,
@@ -14192,6 +14560,8 @@
 		"hit_dice": "3d10",
 		"speed": 60,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 18,
 			"dex": 12,
@@ -14248,6 +14618,8 @@
 		"hit_dice": "3d10",
 		"speed": 60,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 12,
@@ -14311,6 +14683,8 @@
 		"hit_dice": "1d4",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 16,
@@ -14369,6 +14743,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 15,
@@ -14457,6 +14833,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 15,
@@ -14559,6 +14937,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 10,
 			"dex": 15,
@@ -14625,6 +15005,8 @@
 		"hit_dice": "9d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -14700,6 +15082,8 @@
 		"hit_dice": "9d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -14787,6 +15171,8 @@
 		"hit_dice": "9d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -14852,6 +15238,8 @@
 		"hit_dice": "5d8",
 		"speed": 30,
 		"fly": 60,
+		"swim": 30,
+		"darkvision": 60,
 		"abilities": {
 			"str": 14,
 			"dex": 10,
@@ -14938,6 +15326,8 @@
 		"hit_dice": "6d8",
 		"speed": 30,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -15049,6 +15439,8 @@
 		"hit_dice": "9d4",
 		"speed": 0,
 		"fly": 50,
+		"swim": 0,
+		"darkvision": 120,
 		"abilities": {
 			"str": 1,
 			"dex": 28,
@@ -15148,6 +15540,8 @@
 		"hit_dice": "10d10",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 13,
@@ -15248,6 +15642,8 @@
 		"hit_dice": "2d8",
 		"speed": 40,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 15,
@@ -15318,6 +15714,8 @@
 		"hit_dice": "4d10",
 		"speed": 50,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 16,
 			"dex": 13,
@@ -15382,6 +15780,8 @@
 		"hit_dice": "3d8",
 		"speed": 20,
 		"fly": 0,
+		"swim": 0,
+		"darkvision": 60,
 		"abilities": {
 			"str": 13,
 			"dex": 6,

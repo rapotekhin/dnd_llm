@@ -683,3 +683,8 @@ static func effect_text(data: Dictionary, a: Dictionary) -> String:
 	if a.has("per_day"):
 		parts.append("%d раз за бой" % int(a["per_day"]))
 	return ", ".join(parts)
+
+
+## Darkvision of a monster (v0.7.10): it fights in the dark of a dungeon without trouble.
+static func sees_in_dark(data: Dictionary, f: Dictionary) -> bool:
+	return int(monster(data, f).get("darkvision", 0)) > 0

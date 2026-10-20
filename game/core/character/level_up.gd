@@ -90,7 +90,9 @@ static func plan(c: Dictionary, data: Dictionary, picks: Dictionary = {}) -> Dic
 	for f: String in out["features"]:
 		var d: Dictionary = feats.get(f, {})
 		if d.has("options"):
-			(out["options"] as Array).append({"id": f, "name": d["name"], "choose": int(d["options"]["choose"]), "from": d["options"]["from"]})
+			var pool: Array = (d["options"]["from"] as Array).filter(func(o: Variant) -> bool:  # prerequisites (v0.7.10: invocations)
+				return _meets(c, data, str(o)) and not CharacterRules.has_feature(c, str(o)))
+			(out["options"] as Array).append({"id": f, "name": d["name"], "choose": int(d["options"]["choose"]), "from": pool})
 		out["expertise"] = int(out["expertise"]) + int(d.get("expertise", 0))
 		bonus_cantrips += int(grants.get(f, {}).get("cantrips", 0))
 
@@ -296,3 +298,14 @@ static func default_picks(c: Dictionary, data: Dictionary) -> Dictionary:
 	p = plan(c, data, picks)
 	picks["prepared"] = (p["prepared_list"] as Array).slice(0, maxi(0, int(p["prepared"])))
 	return picks
+
+
+## An option's prerequisite (rules.class_features.prerequisites): a feature the character has, or «spell:<id>» — a spell
+## it knows (Agonizing Blast needs Eldritch Blast, Thirsting Blade — the Blade pact).
+static func _meets(c: Dictionary, data: Dictionary, option: String) -> bool:
+	var need := str(data["rules"].get("class_features", {}).get("prerequisites", {}).get(option, ""))
+	if need.is_empty():
+		return true
+	if need.begins_with("spell:"):
+		return SpellRules.ready(c).has(need.trim_prefix("spell:")) or (c.get("spells", {}).get("known", []) as Array).has(need.trim_prefix("spell:"))
+	return CharacterRules.has_feature(c, need)

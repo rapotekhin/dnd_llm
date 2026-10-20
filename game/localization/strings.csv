@@ -167,7 +167,10 @@ CHECK_REPEAT,Повтор без изменений — прежний итог
 COMBAT_ACTION,Действие
 COMBAT_ALREADY_HIDDEN,Вы уже спрятались
 COMBAT_ALREADY_KNOWN,Этот вид врагов вам уже знаком
+COMBAT_ANSWER_FIRST,Сначала ответьте на вопрос
+COMBAT_ASK_TITLE,Использовать?
 COMBAT_ATTACK,"Атака: {name} ({hit}, {dmg})"
+COMBAT_ATTACK_FIRST,Сначала действие «Атака»
 COMBAT_ATTACK_FRENZY,Удар в неистовстве: {name} ({dmg}) ▲
 COMBAT_ATTACK_OFF,Второй рукой: {name} ({dmg}) [бонус]
 COMBAT_BAD_MOVE,Можно шагнуть только на соседнюю колонку
@@ -191,6 +194,7 @@ COMBAT_DO_INSPECT,Осмотреть [бонус]
 COMBAT_DO_SHOVE,Сбить с ног
 COMBAT_DO_STAND,Встать
 COMBAT_ESCAPE_TIP,Действие: Атлетика или Акробатика против хватки или пут
+COMBAT_FEATURE_TAB,Это — кнопками на вкладке «Умения»
 COMBAT_FOE_SURPRISED,врасплох
 COMBAT_FOE_UNKNOWN,"Вид не изучен. «Осмотреть» (бонусное действие) — проверка знаний; удача запоминает таких врагов навсегда: хиты, КД, атаки, сопротивления"
 COMBAT_FRENZY_TIP,Пока вы в ярости: удар бонусным действием каждый ход; после боя — степень истощения
@@ -212,7 +216,10 @@ COMBAT_NOT_PRONE,Вы и так на ногах
 COMBAT_NOT_YOUR_TURN,Сейчас не ваш ход
 COMBAT_NO_ACTION,Действие этого хода уже потрачено
 COMBAT_NO_BONUS,Бонусное действие уже потрачено или недоступно
+COMBAT_NO_CHARGE,Заряды кончились — нужен отдых
+COMBAT_NO_FEATURE,Этого умения у героя нет
 COMBAT_NO_FRENZY,"Неистовство — только в ярости, один раз за бой"
+COMBAT_NO_KI,Не хватает ки
 COMBAT_NO_MOVE,Движение этого хода уже потрачено — возьмите Рывок
 COMBAT_NO_PARLEY,Здесь не с кем договариваться
 COMBAT_NO_SPEED,Скорость 0 — с места не сдвинуться
@@ -232,7 +239,13 @@ COMBAT_PARLEY_REFUSED,Враги больше не станут слушать �
 COMBAT_PARLEY_PROGRESS,"Сейчас: {progress}"
 COMBAT_PICK_TARGET,"Выберите цель — подсвечены те, кого можно достать"
 COMBAT_PRONE,Вы лежите — сначала встаньте
+COMBAT_RAGE_ARMOR,В тяжёлом доспехе ярость не берёт
 COMBAT_RAGING,Ярость
+COMBAT_REACTION_HIT,"{line} — попадание, {dmg} урона"
+COMBAT_REACTION_NO,Нет
+COMBAT_REACTION_TITLE,Реакция — использовать?
+COMBAT_RECKLESS,Безрассудно: по вам — с преимуществом
+COMBAT_RECKLESS_LATE,Безрассудно — только до первой атаки хода
 COMBAT_ROUND,Раунд {n}
 COMBAT_SHOVE_TIP,"Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом. Сбитый лежит: по нему вплотную — с преимуществом, издалека — с помехой; встаёт он в свой ход"
 COMBAT_STAND_TIP,Подняться на ноги — на это уходит всё перемещение хода
@@ -244,6 +257,8 @@ COMBAT_TAB_SPELLS,Заклинания
 COMBAT_TAB_WEAPONS,Оружие
 COMBAT_TOO_BIG,Враг слишком велик — больше вас на два размера и более
 COMBAT_WAIT,Ходят другие…
+COMBAT_WILD_SHAPE,В облике зверя не колдуют
+COMBAT_WILD_SHAPE_LINE,Облик: {beast} — HP {hp}/{max}
 COMBAT_XP,Опыт: +{xp}
 COMBAT_YOUR_TURN,Ваш ход
 COND_BLINDED,ослеплён
@@ -419,6 +434,11 @@ MAP_RESET,Сбросить вид
 MAP_TITLE,Карта
 MAP_UNKNOWN,Неизведанное место
 MAP_UNKNOWN_HINT,Туда ведёт выход из знакомого места — дойдите до соседней комнаты и шагните сами
+META_TIP_DISTANT_SPELL,Дальность следующего заклинания — вдвое
+META_TIP_EMPOWERED_SPELL,"Кости урона следующего заклинания — дважды, берётся лучший бросок"
+META_TIP_EXTENDED_SPELL,Состояния следующего заклинания длятся вдвое дольше
+META_TIP_HEIGHTENED_SPELL,Цель следующего заклинания спасается с помехой
+META_TIP_QUICKENED_SPELL,Следующее заклинание — бонусным действием
 MSG_BUDGET_EXCEEDED,Дневной лимит расходов мастера исчерпан. Ходы снова будут доступны завтра.
 MSG_CHECKING,Проверяю…
 MSG_CHECK_OK,Мастер на связи.
@@ -467,6 +487,7 @@ OPT_BUDGET_SPENT,"Сегодня потрачено ${spent} из ${limit}, ос
 OPT_BUDGET_SPENT_OFF,"Сегодня потрачено ${spent}, лимита нет"
 OPT_BUDGET_UNKNOWN,"Траты видны, когда мастер на связи"
 OPT_BUDGET_BAD,Лимит — число долларов от 0.01 до 1000
+OPT_REACTIONS,"Реакции и умения в бою (кара, уклонение, отражение снарядов)"
 OPT_RESOLUTION,Размер окна
 PARTNER_LINE,{role} · {race} · отношение: {attitude}
 PLACEHOLDER_ACTION,Что вы делаете?
@@ -494,6 +515,9 @@ RARITY_LEGENDARY,Легендарный
 RARITY_RARE,Редкий
 RARITY_UNCOMMON,Необычный
 RARITY_VERY_RARE,Очень редкий
+REACTIONS_ALWAYS,Использовать сами
+REACTIONS_ASK,Спрашивать каждый раз
+REACTIONS_NEVER,Не использовать
 REST_BAD_SUPPLIES,Таких припасов нет в рюкзаке
 REST_BUSY,Сейчас нельзя отдыхать
 REST_DANGER,Здесь ещё опасно — лагерь не разбить

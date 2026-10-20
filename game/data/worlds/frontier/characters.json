@@ -101,7 +101,7 @@
 			"choices": {
 				"name": "Велена", "gender": "female", "race": "human", "subrace": "", "class": "ranger", "subclass": "", "background": "folk_hero",
 				"base_abilities": {"str": 12, "dex": 15, "con": 13, "int": 10, "wis": 14, "cha": 8},
-				"ability_choice": [], "skills": ["perception", "stealth", "nature"], "extra_skills": [], "expertise": [], "options": {},
+				"ability_choice": [], "skills": ["perception", "stealth", "nature"], "extra_skills": [], "expertise": [], "options": {"favored_enemy_1_type": ["favored_enemy_undead"], "natural_explorer_1_terrain_type": ["natural_explorer_forest"]},
 				"cantrips": [], "spells": [], "race_cantrips": [],
 				"equipment": [{"alt": 1, "picks": []}, {"alt": 0, "picks": []}, {"alt": 1, "picks": []}],
 				"languages": ["elvish"]

@@ -356,6 +356,9 @@
 			},
 			"recharge": "long",
 			"short_with": "font_of_inspiration",
+			"on_use": {
+				"inspire": true
+			},
 			"combat_cost": "bonus"
 		},
 		"channel_divinity": {
@@ -367,7 +370,8 @@
 				"class_specific": "channel_divinity_charges",
 				"default": 1
 			},
-			"recharge": "short"
+			"recharge": "short",
+			"combat_cost": "never"
 		},
 		"wild_shape": {
 			"features": [
@@ -377,7 +381,8 @@
 			"max": {
 				"fixed": 2
 			},
-			"recharge": "short"
+			"recharge": "short",
+			"combat_cost": "never"
 		},
 		"ki": {
 			"features": [
@@ -388,7 +393,7 @@
 				"default": 0
 			},
 			"recharge": "short",
-			"combat_cost": "bonus"
+			"combat_cost": "never"
 		},
 		"lay_on_hands": {
 			"features": [
@@ -421,7 +426,8 @@
 				"class_specific": "sorcery_points",
 				"default": 0
 			},
-			"recharge": "long"
+			"recharge": "long",
+			"combat_cost": "never"
 		},
 		"arcane_recovery": {
 			"features": [
@@ -430,7 +436,24 @@
 			"max": {
 				"fixed": 1
 			},
-			"recharge": "long"
+			"recharge": "long",
+			"on_use": {
+				"recover_slots": "half_level"
+			},
+			"combat_cost": "never"
+		},
+		"natural_recovery": {
+			"features": [
+				"natural_recovery"
+			],
+			"max": {
+				"fixed": 1
+			},
+			"recharge": "long",
+			"on_use": {
+				"recover_slots": "half_level"
+			},
+			"combat_cost": "never"
 		}
 	},
 	"rest": {
@@ -925,6 +948,46 @@
 			"food": {
 				"rations": 2,
 				"bread": 1
+			}
+		}
+	},
+	"class_features": {
+		"_doc": "Class features in the engine (v0.7.10, FeatureRules): Font of Magic — sorcery points for a slot by circle; metamagic — the cost in points and what it does (quickened: a bonus action; empowered: the damage dice twice, the better; heightened: the first save of the target with disadvantage; distant: double range; extended: double rounds); careful, twinned and subtle stay with the master (no allies, social). Sacred Weapon lasts 10 rounds; Song of Rest — a die on a short rest when hit dice are spent.",
+		"prerequisites": {
+			"eldritch_invocation_agonizing_blast": "spell:eldritch_blast",
+			"eldritch_invocation_repelling_blast": "spell:eldritch_blast",
+			"eldritch_invocation_eldritch_spear": "spell:eldritch_blast",
+			"eldritch_invocation_thirsting_blade": "pact_of_the_blade",
+			"eldritch_invocation_book_of_ancient_secrets": "pact_of_the_tome",
+			"eldritch_invocation_voice_of_the_chain_master": "pact_of_the_chain"
+		},
+		"font_of_magic": {
+			"slot_cost": {
+				"1": 2,
+				"2": 3,
+				"3": 5
+			}
+		},
+		"metamagic": {
+			"quickened_spell": {
+				"name": "Ускоренное",
+				"cost": 2
+			},
+			"empowered_spell": {
+				"name": "Усиленное",
+				"cost": 1
+			},
+			"heightened_spell": {
+				"name": "Увеличенное",
+				"cost": 3
+			},
+			"distant_spell": {
+				"name": "Дальнее",
+				"cost": 1
+			},
+			"extended_spell": {
+				"name": "Продлённое",
+				"cost": 1
 			}
 		}
 	}

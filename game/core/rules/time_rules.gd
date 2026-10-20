@@ -110,6 +110,8 @@ static func after_long_rest(s: GameSession, data: Dictionary, began_minute: int)
 	if began_minute < int(cfg(data)["wake_minute"]):
 		s.day = maxi(1, s.day - 1)
 	s.minute = int(cfg(data)["wake_minute"])
+	if CharacterRules.has_trait(s.character, "trance"):  # an elf rests four hours, not eight (v0.7.10)
+		s.minute = maxi(0, s.minute - 180)
 	s.rested_at = abs_minute(s)
 	s.awake_saves = 0
 
@@ -118,10 +120,10 @@ static func shops_closed(s: GameSession, data: Dictionary) -> bool:
 	return is_night(s, data) and bool(cfg(data).get("night_shops_closed", true))
 
 
-## Darkvision or a light source in the pack (an item with the light_source property).
+## Darkvision (or Devil's Sight, v0.7.10) or a light source in the pack (an item with the light_source property).
 static func can_see(s: GameSession, data: Dictionary) -> bool:
 	var c := s.character
-	if CharacterRules.has_trait(c, "darkvision"):
+	if CharacterRules.has_trait(c, "darkvision") or CharacterRules.has_feature(c, "eldritch_invocation_devils_sight"):
 		return true
 	for id: String in c.get("inventory", {}):
 		if (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source"):
@@ -129,13 +131,14 @@ static func can_see(s: GameSession, data: Dictionary) -> bool:
 	return false
 
 
-## Night outside a lit location without a way to see.
+## Night outside a lit location, or a dark room of the pack (`dark` at a room or its location — a mine, a crypt, a
+## burrow; v0.7.10), without a way to see.
 static func dark(s: GameSession, data: Dictionary) -> bool:
-	if not is_night(s, data):
-		return false
 	var w := WorldView.new(data["world"])
-	if bool(w.location(w.location_id(s.room_id)).get("lit", false)):
-		return false
+	var unlit := bool(w.room(s.room_id).get("dark", false)) or bool(w.location(w.location_id(s.room_id)).get("dark", false))
+	if not unlit:
+		if not is_night(s, data) or bool(w.location(w.location_id(s.room_id)).get("lit", false)):
+			return false
 	return not can_see(s, data)
 
 

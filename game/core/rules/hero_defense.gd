@@ -83,9 +83,15 @@ static func adjust(s: GameSession, data: Dictionary, dtype: String, dmg: int) ->
 	return {"damage": dmg, "note": ""}
 
 
-## Why the hero has advantage on a save of `ability` against `tag` now (race traits, effects).
-static func save_advantages(c: Dictionary, data: Dictionary, ability: String, tag: String) -> Array[String]:
+## Why the hero has advantage on a save of `ability` against `tag` now (race traits, effects; v0.7.10: Danger Sense
+## on DEX saves, Rage on STR).
+static func save_advantages(c: Dictionary, data: Dictionary, ability: String, tag: String, raging: bool = false) -> Array[String]:
 	var out: Array[String] = []
+	if ability == "dex" and CharacterRules.has_feature(c, "danger_sense") \
+			and not ["blinded", "deafened"].any(func(x: String) -> bool: return ConditionRules.has(c, x)) and not ConditionRules.incapacitated(c):
+		out.append(str(data["classes"]["features"].get("danger_sense", {}).get("name", "")))
+	if ability == "str" and raging:
+		out.append("ярость")
 	if tag.is_empty():
 		return out
 	var tags := tag.split(",")  # a save against several things at once: «charm,magic» (v0.7.9)
@@ -102,8 +108,11 @@ static func save_advantages(c: Dictionary, data: Dictionary, ability: String, ta
 	return out
 
 
-## The race trait that makes the hero immune to `cond` laid with `tag` (an elf and magical sleep), "" when none.
+## The race trait that makes the hero immune to `cond` laid with `tag` (an elf and magical sleep; a paladin's Divine
+## Health and disease, v0.7.10), "" when none.
 static func immune(c: Dictionary, data: Dictionary, cond: String, tag: String) -> String:
+	if tag.split(",").has("disease") and CharacterRules.has_feature(c, "divine_health"):
+		return str(data["classes"]["features"].get("divine_health", {}).get("name", ""))
 	var table: Dictionary = cfg(data)["trait_immune"]
 	for t: String in table:
 		if CharacterRules.has_trait(c, t) and tag.split(",").has(str(table[t]["tag"])) and (table[t]["conditions"] as Array).has(cond):
@@ -118,23 +127,27 @@ static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag
 	var c := s.character
 	var mods := ConditionRules.check_mods(c, data, {"save": ability})
 	var bonus := int(c.get("saves", {}).get(ability, 0))
-	var adv_why := save_advantages(c, data, ability, tag)
+	var adv_why := save_advantages(c, data, ability, tag, CombatRules.active(s) and bool(s.combat.get("raging", false)))
 	var adv := not adv_why.is_empty()
 	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls: Array[int] = [s.rng.randi_range(1, 20)]
-	if adv != dis:
-		rolls.append(s.rng.randi_range(1, 20))
+	var rolls := FeatureRules.hero_d20(s, adv, dis)  # Lucky (v0.7.10)
 	var nat: int = rolls.max() if adv and not dis else rolls.min() if dis and not adv else rolls[0]
 	var total := nat + bonus
 	var ok := nat == 20 or (nat != 1 and total >= dc)
 	var note := ""
+	if not ok and nat != 1 and (mods["auto_fail"] as Array).is_empty():
+		var insp := FeatureRules.use_inspiration(s)  # Bardic Inspiration on a failed save
+		if insp > 0:
+			total += insp
+			ok = total >= dc
+			note = ", вдохновение +%d" % insp
 	if not (mods["auto_fail"] as Array).is_empty():
 		ok = false
-		note = ", автопровал: " + ", ".join((mods["auto_fail"] as Array).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower()))
+		note += ", автопровал: " + ", ".join((mods["auto_fail"] as Array).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower()))
 	elif adv and not dis:
-		note = ", с преимуществом (%s)" % ", ".join(adv_why)
+		note += ", с преимуществом (%s)" % ", ".join(adv_why)
 	elif dis and not adv:
-		note = ", с помехой (%s)" % ", ".join((mods["disadvantage"] as Array).map(func(x: Variant) -> String:
+		note += ", с помехой (%s)" % ", ".join((mods["disadvantage"] as Array).map(func(x: Variant) -> String:
 			return "истощение" if str(x) == "exhaustion" else ConditionRules.name_of(data, str(x)).to_lower()))
 	return {"ok": ok, "total": total, "nat": nat,
 		"text": "%s %d против Сл %d%s — %s" % [CombatRules.ab_name(ability), total, dc, note, "успех" if ok else "провал"]}
@@ -171,3 +184,14 @@ static func relentless(s: GameSession, data: Dictionary, lines: Array[String]) -
 	c["relentless_used"] = true
 	lines.append("%s: %s — остаётся на ногах с 1 HP" % [c.get("name", ""), data["races"]["traits"].get("relentless_endurance", {}).get("name", "")])
 	return true
+
+
+## Temporary hit points take damage first (Dark One's Blessing and the like, v0.7.10). Returns what is left.
+static func absorb(c: Dictionary, dmg: int, lines: Array[String]) -> int:
+	var thp := int(c.get("temp_hp", 0))
+	if thp <= 0 or dmg <= 0:
+		return dmg
+	var taken := mini(thp, dmg)
+	c["temp_hp"] = thp - taken
+	lines.append("временные хиты: −%d" % taken)
+	return dmg - taken

@@ -439,6 +439,8 @@ func _combat_ready() -> bool:
 func _combat_do(why: String, act: Callable) -> String:
 	if not _combat_ready():
 		return "COMBAT_NOT_YOUR_TURN" if session != null and CombatRules.active(session) else "COMBAT_NONE"
+	if session.combat.has("prompt"):
+		return "COMBAT_ANSWER_FIRST"
 	if not why.is_empty():
 		return why
 	var lines: Array[String] = act.call()
@@ -509,6 +511,10 @@ func combat_use_feature(resource_id: String) -> String:
 	var spec: Dictionary = FeatureUses.table(Catalog.data).get(resource_id, {})
 	var cost := str(spec.get("combat_cost", "action"))
 	var why := FeatureUses.can_use(session.character, Catalog.data, resource_id, 1)
+	if cost == "never":
+		why = "COMBAT_FEATURE_TAB"
+	if resource_id == "rage" and str(CharacterRules.item_def(session.character, Catalog.data, session.items, "armor").get("armor", {}).get("category", "")) == "heavy":
+		why = "COMBAT_RAGE_ARMOR"
 	if why.is_empty() and cost != "free" and int(CombatRules.economy(session).get(cost, 0)) <= 0:
 		why = "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
 	return _combat_do(why, func() -> Array[String]:
@@ -550,10 +556,12 @@ func combat_use_item(item_id: String) -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
 	var why := ItemRules.can_use(session.character, Catalog.data, session.items, item_id)
-	if why.is_empty() and int(CombatRules.economy(session).get("action", 0)) <= 0:
+	# Fast Hands (thief, v0.7.10): an item is a bonus action
+	var cost := "bonus" if FeatureRules.has(session.character, "fast_hands") and int(CombatRules.economy(session).get("bonus", 0)) > 0 else "action"
+	if why.is_empty() and int(CombatRules.economy(session).get(cost, 0)) <= 0:
 		why = "COMBAT_NO_ACTION"
 	return _combat_do(why, func() -> Array[String]:
-		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
+		CombatRules.economy(session)[cost] = int(CombatRules.economy(session)[cost]) - 1
 		return ItemRules.use(session.character, Catalog.data, session.items, item_id, session.rng, session))
 
 
@@ -564,6 +572,60 @@ func combat_end_turn() -> String:
 	EventBus.state_changed.emit()
 	_combat_continue()
 	return ""
+
+
+## A feature action of the fight (v0.7.10, FeatureRules): Reckless Attack, the ki techniques, Channel Divinity, Wild
+## Shape, Font of Magic, Breath Weapon. "" or a localization key.
+func combat_feature(id: String, target_id: String = "") -> String:
+	return _combat_do(FeatureRules.can_act(session, Catalog.data, id, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return FeatureRules.act(session, Catalog.data, id, target_id))
+
+
+## The answer to a prompt of the hero's turn (Divine Smite, the beast of Wild Shape, Font of Magic).
+func combat_answer(choice: String) -> String:
+	if session == null or not CombatRules.active(session) or not session.combat.has("prompt"):
+		return "COMBAT_NONE"
+	var lines := FeatureRules.answer_prompt(session, Catalog.data, choice)
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_combat_log(lines)
+	_combat_log(CombatRules.after_player_action(session, Catalog.data))
+	EventBus.state_changed.emit()
+	if not str(session.combat.get("outcome", "")).is_empty():
+		_combat_continue()
+	return ""
+
+
+## The answer to a reaction prompt in a foe's turn (Uncanny Dodge, Deflect Missiles, Cutting Words, Giant Killer).
+func combat_react(choice: String) -> String:
+	if session == null or not CombatRules.active(session) or not session.combat.has("pending"):
+		return "COMBAT_NONE"
+	var lines := CombatRules.answer_reaction(session, Catalog.data, choice)
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_combat_log(lines)
+	EventBus.state_changed.emit()
+	_combat_continue()
+	return ""
+
+
+## Font of Magic outside a fight (the sheet): a slot for points or points for a slot. Stays out of the master's turns.
+func font_convert(id: String) -> String:
+	if session == null or is_busy():
+		return "ABILITY_BUSY"
+	var lines := FeatureRules.font_convert(session, Catalog.data, id)
+	_add(GameSession.effect_entry(lines))
+	EventBus.state_changed.emit()
+	return ""
+
+
+## The metamagic of the next spell (a toggle; "" — none).
+func combat_metamagic(id: String) -> void:
+	if session == null or not CombatRules.active(session):
+		return
+	if str(session.combat.get("metamagic", "")) == id or id.is_empty():
+		session.combat.erase("metamagic")
+	else:
+		session.combat["metamagic"] = id
+	EventBus.state_changed.emit()
 
 
 ## Inspect a foe (v0.6.6): a bonus action, a knowledge check by the creature type; success opens the kind's numbers.
@@ -750,6 +812,8 @@ func _combat_continue() -> void:
 	var s := session
 	combat_playing = true
 	while CombatRules.active(s) and session == s:
+		if s.combat.has("pending"):  # the hero is asked about a reaction (v0.7.10): combat_react goes on
+			break
 		if bool(s.combat.get("round_ended", false)):
 			s.combat.erase("round_ended")
 			combat_playing = false
@@ -840,6 +904,7 @@ func finish_combat(take: Array = []) -> void:
 		s.character["hp"] = 1
 	for cond: String in ["unconscious", "prone", "grappled"]:  # the fight is over: up, and nobody holds the hero
 		ConditionRules.remove(s.character, cond)
+	lines.append_array(FeatureRules.end_shape(s, Catalog.data, 0))  # the beast form ends with the fight (v0.7.10)
 	var frenzied := bool(s.combat.get("frenzy", false))
 	var minutes := ceili(int(s.combat.get("round", 1)) / float(ConditionRules.ROUNDS_PER_MINUTE))
 	s.combat = {}
@@ -864,6 +929,7 @@ func set_dm_style(style: String) -> void:
 
 
 func start(s: GameSession) -> void:
+	s.settings["reactions"] = SaveManager.reactions  # the player's choice of the settings (v0.7.10)
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 	session = s
@@ -1584,6 +1650,10 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		dis.append("темнота")
 	params["disadvantage_reason"] = ", ".join(dis)
 	params["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
+	params["reroll_ones"] = CharacterRules.has_trait(session.character, "lucky")  # v0.7.10
+	if CombatRules.active(session) and bool(session.combat.get("raging", false)) and str(params.get("skill", "")) == "athletics" \
+			and str(params.get("advantage_reason", "")).is_empty():
+		params["advantage_reason"] = "ярость"
 	var boots := CharacterRules.carried_with(session.character, Catalog.data, session.items, "stealth_advantage")
 	if str(params.get("skill", "")) == "stealth" and not boots.is_empty() and str(params.get("advantage_reason", "")).is_empty():
 		params["advantage_reason"] = boots
@@ -1596,10 +1666,16 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		result["check_id"] = session.next_check_id()
 		result["blocked"] = true
 	else:
-		var bonus := CheckEngine.bonus_for(session.character, params)
+		var bonus := CheckEngine.bonus_for(session.character, params) + _terrain_bonus(params)
 		result = CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
 		if result.has("error"):
 			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
+		if not bool(result["success"]) and int(result["nat"]) != 1 and str(params.get("auto_fail_reason", "")).is_empty():
+			var insp := FeatureRules.use_inspiration(session)  # Bardic Inspiration on a failed check (v0.7.10)
+			if insp > 0:
+				result["total"] = int(result["total"]) + insp
+				result["bonus"] = int(result["bonus"]) + insp
+				result["success"] = int(result["total"]) >= int(result["dc"])
 		ExplorationRules.lock(session, params, room, result)
 		var mark := _theft_target(params)
 		if not mark.is_empty():
@@ -1614,6 +1690,20 @@ func _engine_check(params: Dictionary) -> Dictionary:
 			_add(GameSession.effect_entry(found))
 			_log("События: " + ", ".join(found))
 	return result
+
+
+## Natural Explorer (v0.7.10): in the ranger's favored terrain (`terrain` of the pack's location) a proficient INT or
+## WIS skill gets the proficiency bonus twice.
+func _terrain_bonus(params: Dictionary) -> int:
+	var c := session.character
+	var skill := str(params.get("skill", "")) if params.get("skill") != null else ""
+	if skill.is_empty() or not str(Catalog.rules()["skills"].get(skill, "")) in ["int", "wis"]:
+		return 0
+	var terrain := str(world().location(world().location_id(session.room_id)).get("terrain", ""))
+	if terrain.is_empty() or not CharacterRules.has_feature(c, "natural_explorer_" + terrain):
+		return 0
+	var proficient := (c.get("skill_profs", []) as Array).has(skill) or CharacterRules.has_feature(c, "skill_prof_" + skill)
+	return CharacterRules.prof_bonus(c, Catalog.data) if proficient else 0
 
 
 ## The NPC of the scene a Sleight of Hand check aims at (theft by words, v0.6.5), or "".

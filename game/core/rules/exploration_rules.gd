@@ -358,6 +358,13 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 		c["hp"] = mini(int(c["max_hp"]), before + healed)
 		c["hit_dice_used"] = int(c.get("hit_dice_used", 0)) + n
 		lines.append("кости хитов: %d (к%d) — +%d HP" % [n, die, int(c["hp"]) - before])
+		for f: Variant in c.get("features", []):  # Song of Rest (v0.7.10)
+			if str(f).begins_with("song_of_rest"):
+				var song := rng.randi_range(1, int(CharacterRules.level_row(c, data).get("class_specific", {}).get("song_of_rest_die", 6)))
+				var was := int(c["hp"])
+				c["hp"] = mini(int(c["max_hp"]), was + song)
+				lines.append("Песнь отдыха: +%d HP" % (int(c["hp"]) - was))
+				break
 	FeatureUses.recharge_all(c, data, "short")
 	for f: Variant in data["rules"]["rest"]["short_rest_slot_features"]:
 		if CharacterRules.has_feature(c, str(f)):
@@ -378,11 +385,13 @@ static func _rest_ends(c: Dictionary, data: Dictionary, rest: String) -> Array[S
 	if not str(c.get("concentration", "")).is_empty():
 		c["concentration"] = ""
 		c["concentration_ends"] = -1
+	c["breath_used"] = false  # the dragonborn's breath comes back with any rest (v0.7.10)
 	if rest == "long":
 		if ConditionRules.exhaustion(c) > 0:
 			lines.append("истощение снято")
 		c["exhaustion"] = 0
 		c["relentless_used"] = false
+		c["temp_hp"] = 0
 	return lines
 
 

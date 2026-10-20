@@ -22,6 +22,9 @@ var send_button: Button
 var end_turn: Button
 var _results: PanelContainer
 var _results_box: VBoxContainer
+## «Использовать?» — a choice of a feature or a reaction, as in Baldur's Gate 3 (v0.7.10).
+var _ask: PanelContainer
+var _ask_box: VBoxContainer
 ## The action waiting for a target: Callable(target_id) -> String (a reason or ""), and its check.
 var _pending: Callable
 var _pending_check: Callable
@@ -150,6 +153,16 @@ func _ready() -> void:
 	_results_box = VBoxContainer.new()
 	_results_box.add_theme_constant_override("separation", 10)
 	_results.add_child(_results_box)
+	_ask = PanelContainer.new()
+	_ask.name = "CombatAsk"
+	_ask.theme_type_variation = UiTheme.SIDE
+	_ask.visible = false
+	add_child(_ask)
+	_ask.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_ask.custom_minimum_size = Vector2(720, 0)
+	_ask_box = VBoxContainer.new()
+	_ask_box.add_theme_constant_override("separation", 10)
+	_ask.add_child(_ask_box)
 
 	if GameState.has_session() and CombatRules.active(GameState.session):
 		for i in range(maxi(0, GameState.session.chat.size() - 4), GameState.session.chat.size()):
@@ -230,6 +243,7 @@ func _refresh() -> void:
 	_draw_actions(s, data, mine)
 	_hint.text = _base_hint(mine)
 	_draw_results(s, data)
+	_draw_ask(s)
 
 
 func _base_hint(mine: bool) -> String:
@@ -384,7 +398,13 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 	bar.show_percentage = false
 	bar.custom_minimum_size = Vector2(0, 14)
 	_portrait.add_child(bar)
-	_line(_portrait, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}))
+	_line(_portrait, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}) \
+		+ ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""))
+	if c.has("wild_shape"):  # v0.7.10
+		_line(_portrait, tr("COMBAT_WILD_SHAPE_LINE").format({"beast": data["monsters"].get(str(c["wild_shape"]["monster"]), {}).get("name", ""),
+			"hp": int(c["wild_shape"]["hp"]), "max": int(c["wild_shape"]["max_hp"])})).add_theme_color_override("font_color", UiTheme.ACCENT)
+	if bool(s.combat.get("reckless", false)):
+		_line(_portrait, tr("COMBAT_RECKLESS")).add_theme_color_override("font_color", UiTheme.BAD)
 	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
 	_portrait.add_child(chips)
 	chips.refresh()
@@ -433,8 +453,15 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			func(t: String) -> String: return CombatRules.can_attack(s, data, t, true),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true))
 	# Spells.
-	if not SpellRules.ready(c).is_empty():
+	if not SpellRules.ready(c).is_empty() and not c.has("wild_shape"):
 		var sp := _tab_box("COMBAT_TAB_SPELLS")
+		for mm: Dictionary in FeatureRules.metamagic(c, data):  # v0.7.10: metamagic toggles of the next spell
+			var mid := str(mm["id"])
+			var mb := _button(sp, "Meta_" + mid, "✦ %s (%d)" % [mm["name"], int(mm["cost"])], mine and FeatureUses.left(c, data, "sorcery_points") >= int(mm["cost"]))
+			mb.toggle_mode = true
+			mb.button_pressed = str(s.combat.get("metamagic", "")) == mid
+			mb.tooltip_text = tr("META_TIP_" + mid.to_upper())
+			mb.pressed.connect(func() -> void: GameState.combat_metamagic(mid))
 		for id: String in SpellRules.ready(c):
 			var spell: Dictionary = data["spells"].get(id, {})
 			var lv := int(spell.get("level", 0))
@@ -453,10 +480,26 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t),
 					func(t: String) -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t))
 				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id))
-	# Features.
-	var res := FeatureUses.lines(c, data)
-	if not res.is_empty():
+	# Features: limited uses with an action of their own, then the feature actions (v0.7.10).
+	var res := FeatureUses.lines(c, data).filter(func(r: Dictionary) -> bool:
+		return str(FeatureUses.table(data).get(str(r["id"]), {}).get("combat_cost", "action")) != "never")
+	var feats := FeatureRules.actions(s, data)
+	if not res.is_empty() or not feats.is_empty():
 		var fb := _tab_box("COMBAT_TAB_FEATURES")
+		for fa: Dictionary in feats:
+			var fid := str(fa["id"])
+			var label := "%s%s" % [fa["name"], tr("COMBAT_BONUS_SHORT") if str(fa["cost"]) == "bonus" else ""]
+			if bool(fa["target"]):
+				var tb := _action(fb, "Feat_" + fid, label, mine, func(t: String) -> String: return GameState.combat_feature(fid, t),
+					func(t: String) -> String: return FeatureRules.can_act(s, data, fid, t), func(_t: String) -> Dictionary: return {})
+				tb.tooltip_text = str(fa["tip"])
+				_details.hook(tb, str(fa["name"]), str(fa["tip"]))
+			else:
+				var why := FeatureRules.can_act(s, data, fid)
+				var ub := _button(fb, "Feat_" + fid, label, mine and why.is_empty())
+				ub.tooltip_text = str(fa["tip"]) + (("\n" + tr(why)) if not why.is_empty() and why != "COMBAT_NOT_YOUR_TURN" else "")
+				_details.hook(ub, str(fa["name"]), str(fa["tip"]))
+				ub.pressed.connect(func() -> void: _do(GameState.combat_feature(fid)))
 		for r: Dictionary in res:
 			var b := _button(fb, "Feature_" + str(r["id"]), "%s (%d/%d)" % [r["name"], r["left"], r["max"]], mine and int(r["left"]) > 0)
 			var rid := str(r["id"])
@@ -577,6 +620,47 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 
 
 var _pending_name := ""
+
+
+## The window of a choice: a prompt of the hero's turn (Divine Smite, Wild Shape, Font of Magic) or a reaction to a
+## foe's hit; the buttons answer it.
+func _draw_ask(s: GameSession) -> void:
+	var prompt: Dictionary = s.combat.get("prompt", {})
+	var pending: Dictionary = s.combat.get("pending", {})
+	_ask.visible = not prompt.is_empty() or not pending.is_empty()
+	if not _ask.visible:
+		return
+	_clear(_ask_box)
+	var title := Label.new()
+	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	title.theme_type_variation = UiTheme.HEADING
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_ask_box.add_child(title)
+	var options: Array = prompt.get("options", []) if not prompt.is_empty() else pending.get("options", [])
+	if not prompt.is_empty():
+		title.text = str(prompt.get("text", tr("COMBAT_ASK_TITLE")))
+	else:
+		title.text = tr("COMBAT_REACTION_TITLE")
+		_line(_ask_box, tr("COMBAT_REACTION_HIT").format({"line": str(pending.get("line", "")), "dmg": int(pending.get("dmg", 0))}))
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 10)
+	flow.add_theme_constant_override("v_separation", 10)
+	_ask_box.add_child(flow)
+	if prompt.is_empty():
+		options = options.duplicate()
+		options.append({"id": "none", "label": tr("COMBAT_REACTION_NO")})
+	for o: Dictionary in options:
+		var b := Button.new()
+		b.name = "Ask_" + str(o["id"])
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.text = str(o["label"])
+		b.custom_minimum_size = Vector2(0, 56)
+		if str(o["id"]) != "none":
+			b.theme_type_variation = UiTheme.ACCENT_BUTTON
+		var id := str(o["id"])
+		var is_prompt := not prompt.is_empty()
+		b.pressed.connect(func() -> void: _do(GameState.combat_answer(id) if is_prompt else GameState.combat_react(id)))
+		flow.add_child(b)
 
 
 func _draw_results(s: GameSession, data: Dictionary) -> void:

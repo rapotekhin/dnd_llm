@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 18
+const SAVE_VERSION := 19
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -40,6 +40,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	15: _v15_to_v16,
 	16: _v16_to_v17,
 	17: _v17_to_v18,
+	18: _v18_to_v19,
 }
 
 
@@ -204,3 +205,9 @@ static func _v17_to_v18(data: Dictionary, _ctx: Dictionary) -> void:
 	s["awake_saves"] = 0
 	s["march_day"] = int(s.get("day", 1))
 	s["march_minutes"] = 0
+
+
+## A 0.7.9 hero had no temporary hit points (v0.7.10: Dark One's Blessing and the like).
+static func _v18_to_v19(data: Dictionary, _ctx: Dictionary) -> void:
+	var c: Dictionary = data["session"].get("character", {})
+	c["temp_hp"] = 0

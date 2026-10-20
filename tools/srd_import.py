@@ -581,6 +581,7 @@ class Builder:
                 "name": ru["name"], "name_en": m["name"], "size": m["size"].lower(), "type": m["type"],
                 "cr": m["challenge_rating"], "xp": m["xp"], "ac": m["armor_class"][0]["value"], "hp": m["hit_points"],
                 "hit_dice": m["hit_dice"], "speed": ft(speed.get("walk", "30 ft.")), "fly": ft(speed.get("fly", "0 ft.")),
+                "swim": ft(speed.get("swim", "0 ft.")), "darkvision": ft(m.get("senses", {}).get("darkvision", "0 ft.")),
                 "abilities": abilities, "prof": m.get("proficiency_bonus", 2), "saves": saves, "skills": skills,
                 "passive_perception": m.get("senses", {}).get("passive_perception", 10),
                 "resistances": m.get("damage_resistances", []), "immunities": m.get("damage_immunities", []),
@@ -604,6 +605,55 @@ class Builder:
             ids = [sid(e["index"]) for e in cat["equipment"] if sid(e["index"]) in items]
             out[sid(idx)] = {"name": GLOSSARY[f"category:{idx}"], "items": ids}
         return out
+
+
+# Choices the SRD lists only in prose (v0.7.10): favored enemy, favored terrain, eldritch invocations, the Lore bard's
+# three skills. Each option becomes a feature of its own so that creation and level-up offer it like a fighting style.
+FAVORED_ENEMIES = {"aberration": "Аберрации", "beast": "Звери", "celestial": "Небожители", "construct": "Конструкты",
+                   "dragon": "Драконы", "elemental": "Элементали", "fey": "Феи", "fiend": "Исчадия", "giant": "Великаны",
+                   "humanoid": "Гуманоиды", "monstrosity": "Монстры", "ooze": "Слизи", "plant": "Растения", "undead": "Нежить"}
+FAVORED_TERRAINS = {"arctic": "Арктика", "coast": "Побережье", "desert": "Пустыня", "forest": "Лес", "grassland": "Равнины",
+                    "mountain": "Горы", "swamp": "Болота", "underdark": "Подземье"}
+SKILL_NAMES = {"acrobatics": "Акробатика", "animal_handling": "Уход за животными", "arcana": "Магия", "athletics": "Атлетика",
+               "deception": "Обман", "history": "История", "insight": "Проницательность", "intimidation": "Запугивание",
+               "investigation": "Анализ", "medicine": "Медицина", "nature": "Природа", "perception": "Внимательность",
+               "performance": "Выступление", "persuasion": "Убеждение", "religion": "Религия", "sleight_of_hand": "Ловкость рук",
+               "stealth": "Скрытность", "survival": "Выживание"}
+# Invocations a warlock of level 2 may take; the rest need level 5 or a pact (offered at level 5).
+INVOCATIONS_L2 = ["agonizing_blast", "armor_of_shadows", "beast_speech", "beguiling_influence", "devils_sight", "eldritch_sight",
+                  "eldritch_spear", "eyes_of_the_rune_keeper", "fiendish_vigor", "gaze_of_two_minds", "mask_of_many_faces",
+                  "misty_visions", "repelling_blast", "thief_of_five_fates"]
+INVOCATIONS_L5 = ["mire_the_mind", "one_with_shadows", "sign_of_ill_omen", "thirsting_blade", "book_of_ancient_secrets",
+                  "voice_of_the_chain_master"]
+
+
+def add_choices(classes: dict[str, Any]) -> dict[str, Any]:
+    feats = classes["features"]
+    fe = feats["favored_enemy_1_type"]
+    fe["options"] = {"choose": 1, "from": [f"favored_enemy_{k}" for k in FAVORED_ENEMIES]}
+    for k, name in FAVORED_ENEMIES.items():
+        feats[f"favored_enemy_{k}"] = {"name": f"Любимый враг: {name.lower()}", "name_en": f"Favored Enemy: {k}", "level": 1,
+                                       "class": "ranger", "parent": "favored_enemy_1_type", "creature_type": k,
+                                       "desc": f"{name}: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."}
+    ne = feats["natural_explorer_1_terrain_type"]
+    ne["options"] = {"choose": 1, "from": [f"natural_explorer_{k}" for k in FAVORED_TERRAINS]}
+    for k, name in FAVORED_TERRAINS.items():
+        feats[f"natural_explorer_{k}"] = {"name": f"Родная местность: {name.lower()}", "name_en": f"Favored Terrain: {k}", "level": 1,
+                                          "class": "ranger", "parent": "natural_explorer_1_terrain_type", "terrain": k,
+                                          "desc": f"{name}: удвоенный бонус мастерства к проверкам Интеллекта и Мудрости о ней; здесь не заблудиться."}
+    feats["eldritch_invocations"]["options"] = {"choose": 2, "from": [f"eldritch_invocation_{k}" for k in INVOCATIONS_L2]}
+    feats["eldritch_invocations_5"] = {"name": "Жуткие воззвания (третье)", "name_en": "Eldritch Invocations (third)", "level": 5,
+                                       "class": "warlock", "desc": feats["eldritch_invocations"].get("desc", ""),
+                                       "options": {"choose": 1, "from": [f"eldritch_invocation_{k}" for k in INVOCATIONS_L2 + INVOCATIONS_L5]}}
+    lv5 = classes["classes"]["warlock"]["levels"]["5"]["features"]
+    if "eldritch_invocations_5" not in lv5:
+        lv5.append("eldritch_invocations_5")
+    if "bonus_proficiencies" in feats:
+        feats["bonus_proficiencies"]["options"] = {"choose": 3, "from": [f"skill_prof_{k}" for k in SKILL_NAMES]}
+        for k, name in SKILL_NAMES.items():
+            feats[f"skill_prof_{k}"] = {"name": f"Навык: {name}", "name_en": f"Skill: {k}", "level": 3, "class": "bard",
+                                        "parent": "bonus_proficiencies", "skill": k, "desc": f"Владение навыком «{name}»."}
+    return classes
 
 
 def ft(text: str) -> int:
@@ -847,7 +897,7 @@ def build() -> None:
     classes = b.classes()
     data = {
         "races.json": races,
-        "classes.json": {**classes, "features": b.features()},
+        "classes.json": add_choices({**classes, "features": b.features()}),
         "spells.json": b.spells(),
         "misc.json": {"languages": b.languages(), "categories": b.categories(items),
                       "damage_types": {k.removeprefix("damage:"): v for k, v in GLOSSARY.items() if k.startswith("damage:")}},

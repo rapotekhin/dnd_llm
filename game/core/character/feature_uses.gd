@@ -107,6 +107,25 @@ static func use(c: Dictionary, data: Dictionary, id: String, amount: int, rng: R
 		var before := int(c["hp"])
 		c["hp"] = mini(int(c["max_hp"]), before + heal)
 		lines.append("+%d HP" % (int(c["hp"]) - before))
+	if bool(on_use.get("inspire", false)):  # a solo bard inspires themself (house rule, ADR-0010 §6в, v0.7.10)
+		var die := int(CharacterRules.level_row(c, data).get("class_specific", {}).get("bardic_inspiration_die", 6))
+		for e: Dictionary in ConditionRules.effects(c).duplicate():
+			if int(e.get("inspiration", 0)) > 0:
+				ConditionRules.remove_effect(c, int(e["uid"]))
+		ConditionRules.add_effect(c, {"condition": "", "inspiration": die, "ends": {"rest": "short"},
+			"source": {"kind": "feature", "id": id, "name": "Вдохновение (к%d)" % die}})
+		lines.append("к%d добавится к следующему проваленному броску" % die)
+	if str(on_use.get("recover_slots", "")) == "half_level":  # Arcane / Natural Recovery: the highest slots first
+		var budget := ceili(int(c.get("level", 1)) / 2.0)
+		var slots: Array = (c.get("slots_used", [0, 0, 0, 0, 0]) as Array).duplicate()
+		var back: Array[String] = []
+		for lv in range(mini(5, budget), 0, -1):
+			while int(slots[lv - 1]) > 0 and budget >= lv:
+				slots[lv - 1] = int(slots[lv - 1]) - 1
+				budget -= lv
+				back.append(str(lv))
+		c["slots_used"] = slots
+		lines.append(("ячейки назад: круг " + ", ".join(back)) if not back.is_empty() else "потраченных ячеек нет")
 	return lines
 
 

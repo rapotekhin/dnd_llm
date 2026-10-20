@@ -141,6 +141,22 @@ func _master_tab() -> Control:
 	box.add_child(_model)
 	_fill_models()
 	_budget_row(box)
+	var rx_label := Label.new()  # v0.7.10: reactions in a fight, as in Baldur's Gate 3
+	rx_label.text = "OPT_REACTIONS"
+	rx_label.theme_type_variation = UiTheme.MUTED_LABEL
+	box.add_child(rx_label)
+	var rx := OptionButton.new()
+	rx.name = "ReactionsOption"
+	var policies: Array[String] = ["ask", "always", "never"]
+	for p: String in policies:
+		rx.add_item(tr("REACTIONS_" + p.to_upper()))
+	rx.selected = maxi(0, policies.find(SaveManager.reactions))
+	rx.item_selected.connect(func(i: int) -> void:
+		SaveManager.reactions = policies[i]
+		SaveManager.save_settings()
+		if GameState.has_session():
+			GameState.session.settings["reactions"] = policies[i])
+	box.add_child(rx)
 	if GameState.has_session():
 		var style_label := Label.new()
 		style_label.text = "OPT_DM_STYLE"

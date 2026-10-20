@@ -3131,7 +3131,9 @@
 				},
 				"5": {
 					"prof_bonus": 3,
-					"features": [],
+					"features": [
+						"eldritch_invocations_5"
+					],
 					"asi": 1,
 					"cantrips_known": 3,
 					"spells_known": 6,
@@ -3761,7 +3763,30 @@
 			"desc": "На 3 уровне при вступлении в Коллегию знаний вы получаете владение тремя навыками по своему выбору.",
 			"level": 3,
 			"class": "bard",
-			"subclass": "lore"
+			"subclass": "lore",
+			"options": {
+				"choose": 3,
+				"from": [
+					"skill_prof_acrobatics",
+					"skill_prof_animal_handling",
+					"skill_prof_arcana",
+					"skill_prof_athletics",
+					"skill_prof_deception",
+					"skill_prof_history",
+					"skill_prof_insight",
+					"skill_prof_intimidation",
+					"skill_prof_investigation",
+					"skill_prof_medicine",
+					"skill_prof_nature",
+					"skill_prof_perception",
+					"skill_prof_performance",
+					"skill_prof_persuasion",
+					"skill_prof_religion",
+					"skill_prof_sleight_of_hand",
+					"skill_prof_stealth",
+					"skill_prof_survival"
+				]
+			}
 		},
 		"bonus_proficiency": {
 			"name": "Бонусное владение",
@@ -4337,7 +4362,26 @@
 			"name_en": "Eldritch Invocations",
 			"desc": "Изучая тайные знания, вы открываете жуткие воззвания, которые наделяют вас постоянной магической способностью. На 2 уровне вы получаете два воззвания на выбор, а при получении определённых уровней колдуна — дополнительные по таблице. При повышении уровня в классе можно заменить одно известное воззвание другим, доступным на этом уровне.",
 			"level": 2,
-			"class": "warlock"
+			"class": "warlock",
+			"options": {
+				"choose": 2,
+				"from": [
+					"eldritch_invocation_agonizing_blast",
+					"eldritch_invocation_armor_of_shadows",
+					"eldritch_invocation_beast_speech",
+					"eldritch_invocation_beguiling_influence",
+					"eldritch_invocation_devils_sight",
+					"eldritch_invocation_eldritch_sight",
+					"eldritch_invocation_eldritch_spear",
+					"eldritch_invocation_eyes_of_the_rune_keeper",
+					"eldritch_invocation_fiendish_vigor",
+					"eldritch_invocation_gaze_of_two_minds",
+					"eldritch_invocation_mask_of_many_faces",
+					"eldritch_invocation_misty_visions",
+					"eldritch_invocation_repelling_blast",
+					"eldritch_invocation_thief_of_five_fates"
+				]
+			}
 		},
 		"evocation_savant": {
 			"name": "Мастер воплощения",
@@ -4374,7 +4418,26 @@
 			"name_en": "Favored Enemy (1 type)",
 			"desc": "С 1 уровня вы изучаете определённый тип врагов: аберрации, звери, небожители, конструкты, драконы, элементали, феи, исчадия, великаны, чудовища, слизи, растения или нежить, либо два народа гуманоидов. Вы имеете преимущество на проверки Мудрости (Выживание) для выслеживания и Интеллекта для вспоминания сведений о них. При получении умения вы также изучаете один язык, на котором говорят ваши враги. Дополнительного врага и язык выбираете на 6 и 14 уровнях.",
 			"level": 1,
-			"class": "ranger"
+			"class": "ranger",
+			"options": {
+				"choose": 1,
+				"from": [
+					"favored_enemy_aberration",
+					"favored_enemy_beast",
+					"favored_enemy_celestial",
+					"favored_enemy_construct",
+					"favored_enemy_dragon",
+					"favored_enemy_elemental",
+					"favored_enemy_fey",
+					"favored_enemy_fiend",
+					"favored_enemy_giant",
+					"favored_enemy_humanoid",
+					"favored_enemy_monstrosity",
+					"favored_enemy_ooze",
+					"favored_enemy_plant",
+					"favored_enemy_undead"
+				]
+			}
 		},
 		"fighter_ability_score_improvement_1": {
 			"name": "Увеличение характеристик",
@@ -4726,7 +4789,20 @@
 			"name_en": "Natural Explorer (1 terrain type)",
 			"desc": "Вы особенно хорошо знаете один тип природной среды и умеете путешествовать и выживать в ней. Выберите один излюбленный тип местности: арктическая, побережье, пустыня, лес, равнина, горы или болото. При проверках Интеллекта или Мудрости, связанных с излюбленной местностью, ваш бонус мастерства удваивается для навыков, в которых вы владеете мастерством. Во время путешествия по излюбленной местности в течение часа и более вы получаете следующие преимущества: трудная местность не замедляет группу; группа не может заблудиться, кроме как с помощью магии; вы остаётесь настороже к опасности, даже занимаясь другим делом в пути; если вы путешествуете в одиночку, можете двигаться скрытно с обычной скоростью; при добыче пищи находите вдвое больше; выслеживая существ, также узнаёте их точное количество, размеры и давность их прохода. Дополнительные излюбленные типы местности выбираются на 6-м и 10-м уровнях.",
 			"level": 1,
-			"class": "ranger"
+			"class": "ranger",
+			"options": {
+				"choose": 1,
+				"from": [
+					"natural_explorer_arctic",
+					"natural_explorer_coast",
+					"natural_explorer_desert",
+					"natural_explorer_forest",
+					"natural_explorer_grassland",
+					"natural_explorer_mountain",
+					"natural_explorer_swamp",
+					"natural_explorer_underdark"
+				]
+			}
 		},
 		"natural_recovery": {
 			"name": "Естественное восстановление",
@@ -5136,6 +5212,398 @@
 			"desc": "На 4-м уровне и затем на 8-м, 12-м, 16-м и 19-м уровнях вы можете увеличить одну характеристику на 2 или две характеристики на 1. Характеристика не может быть повышена выше 20 таким способом.",
 			"level": 4,
 			"class": "wizard"
+		},
+		"favored_enemy_aberration": {
+			"name": "Любимый враг: аберрации",
+			"name_en": "Favored Enemy: aberration",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "aberration",
+			"desc": "Аберрации: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_beast": {
+			"name": "Любимый враг: звери",
+			"name_en": "Favored Enemy: beast",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "beast",
+			"desc": "Звери: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_celestial": {
+			"name": "Любимый враг: небожители",
+			"name_en": "Favored Enemy: celestial",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "celestial",
+			"desc": "Небожители: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_construct": {
+			"name": "Любимый враг: конструкты",
+			"name_en": "Favored Enemy: construct",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "construct",
+			"desc": "Конструкты: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_dragon": {
+			"name": "Любимый враг: драконы",
+			"name_en": "Favored Enemy: dragon",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "dragon",
+			"desc": "Драконы: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_elemental": {
+			"name": "Любимый враг: элементали",
+			"name_en": "Favored Enemy: elemental",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "elemental",
+			"desc": "Элементали: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_fey": {
+			"name": "Любимый враг: феи",
+			"name_en": "Favored Enemy: fey",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "fey",
+			"desc": "Феи: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_fiend": {
+			"name": "Любимый враг: исчадия",
+			"name_en": "Favored Enemy: fiend",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "fiend",
+			"desc": "Исчадия: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_giant": {
+			"name": "Любимый враг: великаны",
+			"name_en": "Favored Enemy: giant",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "giant",
+			"desc": "Великаны: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_humanoid": {
+			"name": "Любимый враг: гуманоиды",
+			"name_en": "Favored Enemy: humanoid",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "humanoid",
+			"desc": "Гуманоиды: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_monstrosity": {
+			"name": "Любимый враг: монстры",
+			"name_en": "Favored Enemy: monstrosity",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "monstrosity",
+			"desc": "Монстры: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_ooze": {
+			"name": "Любимый враг: слизи",
+			"name_en": "Favored Enemy: ooze",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "ooze",
+			"desc": "Слизи: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_plant": {
+			"name": "Любимый враг: растения",
+			"name_en": "Favored Enemy: plant",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "plant",
+			"desc": "Растения: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"favored_enemy_undead": {
+			"name": "Любимый враг: нежить",
+			"name_en": "Favored Enemy: undead",
+			"level": 1,
+			"class": "ranger",
+			"parent": "favored_enemy_1_type",
+			"creature_type": "undead",
+			"desc": "Нежить: преимущество на Выживание, чтобы их выследить, и на Интеллект, чтобы о них вспомнить."
+		},
+		"natural_explorer_arctic": {
+			"name": "Родная местность: арктика",
+			"name_en": "Favored Terrain: arctic",
+			"level": 1,
+			"class": "ranger",
+			"parent": "natural_explorer_1_terrain_type",
+			"terrain": "arctic",
+			"desc": "Арктика: удвоенный бонус мастерства к проверкам Интеллекта и Мудрости о ней; здесь не заблудиться."
+		},
+		"natural_explorer_coast": {
+			"name": "Родная местность: побережье",
+			"name_en": "Favored Terrain: coast",
+			"level": 1,
+			"class": "ranger",
+			"parent": "natural_explorer_1_terrain_type",
+			"terrain": "coast",
+			"desc": "Побережье: удвоенный бонус мастерства к проверкам Интеллекта и Мудрости о ней; здесь не заблудиться."
+		},
+		"natural_explorer_desert": {
+			"name": "Родная местность: пустыня",
+			"name_en": "Favored Terrain: desert",
+			"level": 1,
+			"class": "ranger",
+			"parent": "natural_explorer_1_terrain_type",
+			"terrain": "desert",
+			"desc": "Пустыня: удвоенный бонус мастерства к проверкам Интеллекта и Мудрости о ней; здесь не заблудиться."
+		},
+		"natural_explorer_forest": {
+			"name": "Родная местность: лес",
+			"name_en": "Favored Terrain: forest",
+			"level": 1,
+			"class": "ranger",
+			"parent": "natural_explorer_1_terrain_type",
+			"terrain": "forest",
+			"desc": "Лес: удвоенный бонус мастерства к проверкам Интеллекта и Мудрости о ней; здесь не заблудиться."
+		},
+		"natural_explorer_grassland": {
+			"name": "Родная местность: равнины",
+			"name_en": "Favored Terrain: grassland",
+			"level": 1,
+			"class": "ranger",
+			"parent": "natural_explorer_1_terrain_type",
+			"terrain": "grassland",
+			"desc": "Равнины: удвоенный бонус мастерства к проверкам Интеллекта и Мудрости о ней; здесь не заблудиться."
+		},
+		"natural_explorer_mountain": {
+			"name": "Родная местность: горы",
+			"name_en": "Favored Terrain: mountain",
+			"level": 1,
+			"class": "ranger",
+			"parent": "natural_explorer_1_terrain_type",
+			"terrain": "mountain",
+			"desc": "Горы: удвоенный бонус мастерства к проверкам Интеллекта и Мудрости о ней; здесь не заблудиться."
+		},
+		"natural_explorer_swamp": {
+			"name": "Родная местность: болота",
+			"name_en": "Favored Terrain: swamp",
+			"level": 1,
+			"class": "ranger",
+			"parent": "natural_explorer_1_terrain_type",
+			"terrain": "swamp",
+			"desc": "Болота: удвоенный бонус мастерства к проверкам Интеллекта и Мудрости о ней; здесь не заблудиться."
+		},
+		"natural_explorer_underdark": {
+			"name": "Родная местность: подземье",
+			"name_en": "Favored Terrain: underdark",
+			"level": 1,
+			"class": "ranger",
+			"parent": "natural_explorer_1_terrain_type",
+			"terrain": "underdark",
+			"desc": "Подземье: удвоенный бонус мастерства к проверкам Интеллекта и Мудрости о ней; здесь не заблудиться."
+		},
+		"eldritch_invocations_5": {
+			"name": "Жуткие воззвания (третье)",
+			"name_en": "Eldritch Invocations (third)",
+			"level": 5,
+			"class": "warlock",
+			"desc": "Изучая тайные знания, вы открываете жуткие воззвания, которые наделяют вас постоянной магической способностью. На 2 уровне вы получаете два воззвания на выбор, а при получении определённых уровней колдуна — дополнительные по таблице. При повышении уровня в классе можно заменить одно известное воззвание другим, доступным на этом уровне.",
+			"options": {
+				"choose": 1,
+				"from": [
+					"eldritch_invocation_agonizing_blast",
+					"eldritch_invocation_armor_of_shadows",
+					"eldritch_invocation_beast_speech",
+					"eldritch_invocation_beguiling_influence",
+					"eldritch_invocation_devils_sight",
+					"eldritch_invocation_eldritch_sight",
+					"eldritch_invocation_eldritch_spear",
+					"eldritch_invocation_eyes_of_the_rune_keeper",
+					"eldritch_invocation_fiendish_vigor",
+					"eldritch_invocation_gaze_of_two_minds",
+					"eldritch_invocation_mask_of_many_faces",
+					"eldritch_invocation_misty_visions",
+					"eldritch_invocation_repelling_blast",
+					"eldritch_invocation_thief_of_five_fates",
+					"eldritch_invocation_mire_the_mind",
+					"eldritch_invocation_one_with_shadows",
+					"eldritch_invocation_sign_of_ill_omen",
+					"eldritch_invocation_thirsting_blade",
+					"eldritch_invocation_book_of_ancient_secrets",
+					"eldritch_invocation_voice_of_the_chain_master"
+				]
+			}
+		},
+		"skill_prof_acrobatics": {
+			"name": "Навык: Акробатика",
+			"name_en": "Skill: acrobatics",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "acrobatics",
+			"desc": "Владение навыком «Акробатика»."
+		},
+		"skill_prof_animal_handling": {
+			"name": "Навык: Уход за животными",
+			"name_en": "Skill: animal_handling",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "animal_handling",
+			"desc": "Владение навыком «Уход за животными»."
+		},
+		"skill_prof_arcana": {
+			"name": "Навык: Магия",
+			"name_en": "Skill: arcana",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "arcana",
+			"desc": "Владение навыком «Магия»."
+		},
+		"skill_prof_athletics": {
+			"name": "Навык: Атлетика",
+			"name_en": "Skill: athletics",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "athletics",
+			"desc": "Владение навыком «Атлетика»."
+		},
+		"skill_prof_deception": {
+			"name": "Навык: Обман",
+			"name_en": "Skill: deception",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "deception",
+			"desc": "Владение навыком «Обман»."
+		},
+		"skill_prof_history": {
+			"name": "Навык: История",
+			"name_en": "Skill: history",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "history",
+			"desc": "Владение навыком «История»."
+		},
+		"skill_prof_insight": {
+			"name": "Навык: Проницательность",
+			"name_en": "Skill: insight",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "insight",
+			"desc": "Владение навыком «Проницательность»."
+		},
+		"skill_prof_intimidation": {
+			"name": "Навык: Запугивание",
+			"name_en": "Skill: intimidation",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "intimidation",
+			"desc": "Владение навыком «Запугивание»."
+		},
+		"skill_prof_investigation": {
+			"name": "Навык: Анализ",
+			"name_en": "Skill: investigation",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "investigation",
+			"desc": "Владение навыком «Анализ»."
+		},
+		"skill_prof_medicine": {
+			"name": "Навык: Медицина",
+			"name_en": "Skill: medicine",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "medicine",
+			"desc": "Владение навыком «Медицина»."
+		},
+		"skill_prof_nature": {
+			"name": "Навык: Природа",
+			"name_en": "Skill: nature",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "nature",
+			"desc": "Владение навыком «Природа»."
+		},
+		"skill_prof_perception": {
+			"name": "Навык: Внимательность",
+			"name_en": "Skill: perception",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "perception",
+			"desc": "Владение навыком «Внимательность»."
+		},
+		"skill_prof_performance": {
+			"name": "Навык: Выступление",
+			"name_en": "Skill: performance",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "performance",
+			"desc": "Владение навыком «Выступление»."
+		},
+		"skill_prof_persuasion": {
+			"name": "Навык: Убеждение",
+			"name_en": "Skill: persuasion",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "persuasion",
+			"desc": "Владение навыком «Убеждение»."
+		},
+		"skill_prof_religion": {
+			"name": "Навык: Религия",
+			"name_en": "Skill: religion",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "religion",
+			"desc": "Владение навыком «Религия»."
+		},
+		"skill_prof_sleight_of_hand": {
+			"name": "Навык: Ловкость рук",
+			"name_en": "Skill: sleight_of_hand",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "sleight_of_hand",
+			"desc": "Владение навыком «Ловкость рук»."
+		},
+		"skill_prof_stealth": {
+			"name": "Навык: Скрытность",
+			"name_en": "Skill: stealth",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "stealth",
+			"desc": "Владение навыком «Скрытность»."
+		},
+		"skill_prof_survival": {
+			"name": "Навык: Выживание",
+			"name_en": "Skill: survival",
+			"level": 3,
+			"class": "bard",
+			"parent": "bonus_proficiencies",
+			"skill": "survival",
+			"desc": "Владение навыком «Выживание»."
 		}
 	}
 }
