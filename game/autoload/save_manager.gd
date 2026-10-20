@@ -17,7 +17,7 @@ var master_model: String = ""
 
 
 func _ready() -> void:
-	profile = LaunchArgs.value("--profile")
+	profile = LaunchArgs.value("--profile", "preview" if LaunchArgs.has("--preview") else "")  # a preview never touches real saves
 	if not profile.is_empty():
 		profile_dir = "user://profiles/" + profile
 		save_dir = profile_dir + "/saves"

@@ -58,6 +58,7 @@ python tools/godot_playtest.py --scenario debts                     # item stats
 python tools/godot_playtest.py --scenario attach --real            # the real master: «Очарование личности» on Bruno and «Малая иллюзия» pinned to the words, one cast each (v0.7.7)
 python tools/godot_playtest.py --scenario conditions                # 5e conditions: a poison chip that runs out, the march, the camp, prone / afraid / grappled in a fight (--real: the master's poison with a save) (v0.7.8)
 python tools/godot_playtest.py --scenario monsters                  # 5e monsters: a spider's web and its card, breaking free, a ghoul's paralysis passes the turn (v0.7.9)
+python tools/godot_playtest.py --scenario preview                   # every --preview screen opens: a screenshot of each
 python tools/godot_playtest.py --scenario bot                         # bot player: 120 random steps on the stub master, session invariants (GODOT_BOT_STEPS, GODOT_BOT_SEED)
 python tools/trace_report.py                                         # report of the newest play session trace → build/traces/<name>.md (--list; the backend side from llm_server/var/traces)
 python tools/rules_audit.py                                         # audit of the 5e rules (conditions, monsters, features, traits, languages, items, spells): engine or master only → docs/production/rules-audit.md
@@ -76,6 +77,7 @@ Godot binary: `C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.
 "$GODOT" --path game --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test --ignoreHeadlessMode   # gdUnit4 (exit 0 = pass)
 "$GODOT" --path game                         # run the game; saves in %APPDATA%/Godot/app_userdata/Between the Rolls/
 "$GODOT" --path game -- --dev               # the game with the dev console (~: room, rooms, quests, items, npc, state, …), F3 overlay, F12 bug snapshot
+"$GODOT" --path game -- --preview=combat    # straight into a screen with a ready state (--preview=list; --preset=<hero>, --room=<room>); saves go to the «preview» profile
 ```
 
 Pytest configuration: `pytest.ini` (`testpaths = evals`); the backend has its own in `llm_server/`. There is no linter wired up.

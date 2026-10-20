@@ -27,6 +27,17 @@ func _ready() -> void:
 	EventBus.session_started.connect(_go.bind("game", {}))
 	EventBus.session_closed.connect(_go.bind("menu", {}))
 	_go("menu", {})
+	if Preview.requested():  # straight into a screen with a ready state (--preview=<name>)
+		preview.call_deferred("")
+
+
+## Opens a preview screen (Preview.SCREENS); the playtest «preview» goes through here.
+func preview(which: String) -> void:
+	Preview.open(self, which)
+
+
+func preview_names() -> Array:
+	return Preview.SCREENS.keys()
 
 
 func _go(screen: String, args: Dictionary) -> void:
