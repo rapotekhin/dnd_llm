@@ -1,5 +1,5 @@
 """The audit of the 5e rules a hero of levels 1–5 meets: what the engine does with each thing today (roadmap series
-«Правила 5e», v0.7.7–v0.7.12). Conditions, damage to the hero, monsters, class features, race traits, languages and
+«Правила 5e», v0.7.8–v0.7.13). Conditions, damage to the hero, monsters, class features, race traits, languages and
 backgrounds, items, spells.
 
     python tools/rules_audit.py            # → docs/production/rules-audit.md
@@ -29,7 +29,7 @@ STATUS = {
 }
 MISSING = ("master", "none")
 
-# Spells (v0.7.12): groups of the master-only ones.
+# Spells (v0.7.13): groups of the master-only ones.
 SPELL_GROUPS = {
     "buff": ("Защита и усиления героя", "числа листа и боя: КД, бонусы к атакам и спасброскам, урон, скорость, сопротивления, временные хиты"),
     "sustained": ("Длящийся урон и удары", "заклинание остаётся на поле или на оружии и бьёт каждый ход"),
@@ -57,7 +57,7 @@ SPELL_ASSIGN = {
              "clairvoyance zone_of_truth sending gentle_repose create_or_destroy_water",
 }
 
-# Conditions (v0.7.7): checks outside combat, on the hero in combat, on a foe in combat, who lays it on the hero.
+# Conditions (v0.7.8): checks outside combat, on the hero in combat, on a foe in combat, who lays it on the hero.
 CONDITIONS = {
     "blinded": ("помеха Внимательности и Анализу (по 5e — провал всего, что требует зрения)", "нет: герой бьёт без помехи, враги — без преимущества",
                 "да: преимущество по нему, помеха ему", "мастер словами"),
@@ -81,7 +81,7 @@ CONDITIONS = {
 EXTRA_CONDITION_NAMES = {"deafened": "Оглох", "exhaustion": "Истощение", "petrified": "Окаменел"}  # not in rules.json yet
 CONDITION_DURATIONS = "у врага — раунды и повторный спасбросок (заклинания движка); у героя — только «до короткого / долгого отдыха»"
 
-# Damage to the hero (v0.7.7): every source of resistance a level 1–5 hero can have.
+# Damage to the hero (v0.7.8): every source of resistance a level 1–5 hero can have.
 HERO_DAMAGE = [
     ("Сопротивление урону", "дварф (яд), тифлинг (огонь), драконорождённый (по предку), ярость (дробящий, колющий, рубящий), Противоядие, предметы `resist_*`, «Защита от энергии»", "none"),
     ("Преимущество на спасброски", "дварф против яда, эльф и полуэльф против очарования, гном против магии (Инт, Мдр, Хар), полурослик против испуга", "none"),
@@ -151,7 +151,7 @@ ITEM_PROPS = {
     "resist_poison": ("partial", "Противоядие снимает отравление; сопротивления нет"), "cursed": ("none", "проклятие ни на что не влияет"),
 }
 
-# Languages, backgrounds, tools (v0.7.10).
+# Languages, backgrounds, tools (v0.7.11).
 SOCIAL = [
     ("Языки героя", "выбираются при создании и лежат в листе; мастеру не передаются, движок их не читает", "none"),
     ("Языки NPC и монстров", "в пакете у NPC языков нет; у монстров SRD они есть в источнике, но при импорте отброшены", "none"),
@@ -246,11 +246,11 @@ def main() -> int:
         cid = c["index"]
         name = str(rules["conditions"].get(cid, EXTRA_CONDITION_NAMES.get(cid, c["name"]))).split(":")[0]
         rows.append((name, f"`{cid}`", *CONDITIONS[cid]))
-    section("Состояния", "v0.7.7", rows, ["Состояние", "id", "Вне боя: проверки", "Бой: на герое", "Бой: на враге", "Кто накладывает на героя"],
+    section("Состояния", "v0.7.8", rows, ["Состояние", "id", "Вне боя: проверки", "Бой: на герое", "Бой: на враге", "Кто накладывает на героя"],
             f"Длительность: {CONDITION_DURATIONS}.")
     summary.append(("Состояния (15 по SRD)", len(rows), sum(1 for r in CONDITIONS.values() if r[1].startswith("да")), sum(1 for r in CONDITIONS.values() if r[1] == "нет")))
 
-    section("Урон по герою", "v0.7.7", [(a, b, mark(s)) for a, b, s in HERO_DAMAGE], ["Что", "Источники", "Сейчас"])
+    section("Урон по герою", "v0.7.8", [(a, b, mark(s)) for a, b, s in HERO_DAMAGE], ["Что", "Источники", "Сейчас"])
     summary.append(("Урон по герою", len(HERO_DAMAGE), sum(1 for *_, s in HERO_DAMAGE if s == "engine"), sum(1 for *_, s in HERO_DAMAGE if s in MISSING)))
 
     # Monsters.
@@ -260,7 +260,7 @@ def main() -> int:
     rows = [(names[t], f"`{t}`", str(k), mark("engine" if t in MONSTER_TRAITS_ENGINE else "master")) for t, k in traits.most_common()]
     cond_names = {c: str(rules["conditions"].get(c, EXTRA_CONDITION_NAMES.get(c, c))).split(":")[0] for c in riders}
     rider_text = ", ".join(f"{'лишний урон со спасброском' if c == 'extra_save_damage' else cond_names[c]} — {k}" for c, k in riders.most_common())
-    section("Монстры", "v0.7.8", rows, ["Особенность", "id", "Монстров", "Сейчас"],
+    section("Монстры", "v0.7.9", rows, ["Особенность", "id", "Монстров", "Сейчас"],
             f"В движке {len(monsters)} монстров (класс опасности ≤ {MAX_MONSTER_CR} с атаками; в источнике SRD таких {n_src}). "
             f"**Особые эффекты атак при импорте отброшены у {with_riders} монстров** — урон есть, эффекта нет: {rider_text}. "
             f"Колдующих монстров {casters} — колдовство только текстом; реакции у {reactions}; языки монстров при импорте отброшены. "
@@ -273,7 +273,7 @@ def main() -> int:
     for f in sorted(feats, key=lambda x: classes["features"][x]["name"]):
         st, what = FEATURES.get(f, ("master", ""))
         rows.append((classes["features"][f]["name"], f"`{f}`", ", ".join(sorted(set(feats[f]))), mark(st), what, CHECKED.get(f, "")))
-    section("Особенности классов (1–5 уровень)", "v0.7.9", rows, ["Особенность", "id", "Класс", "Сейчас", "Что именно", "Проверено"])
+    section("Особенности классов (1–5 уровень)", "v0.7.10", rows, ["Особенность", "id", "Класс", "Сейчас", "Что именно", "Проверено"])
     st = Counter(FEATURES.get(f, ("master",))[0] for f in feats)
     summary.append(("Особенности классов", len(feats), st["engine"] + st["creation"], st["master"] + st["none"]))
 
@@ -282,13 +282,13 @@ def main() -> int:
     for t, d in sorted(races["traits"].items(), key=lambda kv: kv[1]["name"]):
         s, what = TRAITS.get(t, ("master", ""))
         rows.append((d["name"], f"`{t}`", mark(s), what, CHECKED.get(t, "")))
-    section("Черты рас", "v0.7.9", rows, ["Черта", "id", "Сейчас", "Что именно", "Проверено"])
+    section("Черты рас", "v0.7.10", rows, ["Черта", "id", "Сейчас", "Что именно", "Проверено"])
     st = Counter(TRAITS.get(t, ("master",))[0] for t in races["traits"])
     summary.append(("Черты рас", len(races["traits"]), st["engine"] + st["creation"], st["master"] + st["none"]))
 
     # Languages, backgrounds, tools.
     bg = ", ".join(f"{b['name']} — «{b['feature']['name']}»" for b in backgrounds.values())
-    section("Языки, предыстории, инструменты", "v0.7.10", [(a, b, mark(s)) for a, b, s in SOCIAL], ["Что", "Сейчас", ""],
+    section("Языки, предыстории, инструменты", "v0.7.11", [(a, b, mark(s)) for a, b, s in SOCIAL], ["Что", "Сейчас", ""],
             f"Особенности предысторий: {bg}.")
     summary.append(("Языки, предыстории, инструменты", len(SOCIAL), 0, sum(1 for *_, s in SOCIAL if s in MISSING)))
 
@@ -298,7 +298,7 @@ def main() -> int:
     magic = sum(1 for v in cat.values() if v.get("rarity") and v["rarity"] != "common")
     srd_magic = len(load(SRD / "magic-items.json")["results"])
     rows = [(f"`{p}`", str(items["properties"][p]), str(with_prop.get(p, 0)), mark(ITEM_PROPS[p][0]), ITEM_PROPS[p][1]) for p in items["properties"]]
-    section("Предметы", "v0.7.11", rows, ["Свойство", "Очки редкости", "Предметов в каталоге", "Сейчас", "Что именно"],
+    section("Предметы", "v0.7.12", rows, ["Свойство", "Очки редкости", "Предметов в каталоге", "Сейчас", "Что именно"],
             f"В каталоге {len(cat)} предметов, магических {magic} (оружие и доспехи +1, Плащ защиты, Сапоги эльфов, зелья) из {srd_magic} магических предметов SRD. "
             "Свойства — и словарь предметов, которые создаёт мастер: за свойство «нет нигде» он платит очки редкости, а предмет ничего не делает.")
     st = Counter(v[0] for v in ITEM_PROPS.values())
@@ -330,7 +330,7 @@ def main() -> int:
     for sid, v in sorted(playable.items(), key=lambda kv: (int(kv[1].get("level", 0)), kv[1]["name"])):
         g = SPELL_GROUPS[group_of[sid]][0] if sid in group_of else "—"
         rows.append((v["name"], f"`{sid}`", str(v.get("level", 0)), "да" if v.get("concentration") else "", spell_status(sid), g, CHECKED.get(sid, "")))
-    section("Заклинания (круги 0–3)", "v0.7.12", rows, ["Заклинание", "id", "Круг", "Конц.", "Сейчас", "Группа", "Проверено"],
+    section("Заклинания (круги 0–3)", "v0.7.13", rows, ["Заклинание", "id", "Круг", "Конц.", "Сейчас", "Группа", "Проверено"],
             f"Доступно героям 1–5 уровня {len(playable)}; движок разрешает {len(playable) - master}; **{master} — только мастер**: ячейка и "
             f"концентрация тратятся, остальное — лишь в рассказе. По группам: {groups}.")
     summary.append(("Заклинания", len(playable), len(playable) - master, master))
@@ -338,7 +338,7 @@ def main() -> int:
     head = [
         "# Аудит правил 5e",
         "",
-        "Генерируется: `python tools/rules_audit.py`. План — серия версий [«Правила 5e»](roadmap.md#правила-5e) (v0.7.7–v0.7.12). "
+        "Генерируется: `python tools/rules_audit.py`. План — серия версий [«Правила 5e»](roadmap.md#правила-5e) (v0.7.8–v0.7.13). "
         "Числа — из данных; статусы — по чтению движка (`game/core`), их правят в `tools/rules_audit.py` вместе с работой.",
         "",
         "Статусы: **движок** — правило считает движок; **при создании** — выдаётся при создании или повышении уровня (навык, владение, заговор); "
