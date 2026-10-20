@@ -270,6 +270,7 @@ ITEM_DEX, + Лов
 ITEM_DEX_MAX, + Лов (макс. {n})
 ITEM_SHIELD_AC, — КД +{n}
 JOURNAL_ELSEWHERE,В пути
+JOURNAL_NOTES,Что было
 JOURNAL_EMPTY,"Пока пусто: записи появятся, когда вы осмотритесь и поговорите с людьми."
 JOURNAL_EMPTY_FOUND,Здесь появится найденное
 JOURNAL_EMPTY_PEOPLE,Здесь появятся итоги разговоров

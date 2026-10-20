@@ -894,3 +894,59 @@ scenarios:
       next_mode: null
     rubric:
       - "Мастер описывает, что видно и слышно; NPC может взглянуть или окликнуть, но режим разговора сам не включается"
+
+  - id: closed_way_stays_closed
+    title: "Закрытый путь — без выдуманных ходов, подземелий и врагов"
+    category: hidden
+    extends: tavern
+    input: "Поддеваю корни ломиком, расширяю лаз и ползу внутрь, на запах дыма."
+    snapshot:
+      scene:
+        room: {id: room_hollow, name: "Тёмная лощина", description: "Сырая низина в тумане, мёртвый дуб с вывороченными корнями."}
+        exits:
+          - {id: room_trail, name: "Тропа лесорубов"}
+        npcs: []
+        hooks: ["под корнями мёртвого дуба темнеет то ли нора, то ли лаз"]
+        closed_exits: ["лаз под корнями мёртвого дуба ещё надо найти"]
+    expect:
+      check: {skill_in: [perception, investigation]}
+      effects: {forbidden_kinds: [move, start_combat, give_item]}
+      narration:
+        must_not_match: ["туннел", "камер[аеу]", "колод[ец]", "подземел", "выработк"]
+    rubric:
+      - "Мастер не ведёт игрока за закрытый путь и не описывает, что за ним: ход не поддаётся или ведёт в тупик, либо мастер просит проверку Внимательности или Анализа"
+      - "Нет новых помещений, ходов, людей и врагов"
+
+  - id: memory_is_a_note
+    title: "Память о событии — note по-русски, не выдуманный флаг"
+    category: effects
+    extends: tavern
+    mode: social
+    input: "Клянусь тебе, Горм: никому не скажу, что видел в погребе."
+    expect:
+      effects: {forbidden_kinds: [flag]}
+    rubric:
+      - "Если мастер запоминает клятву, то эффектом note с короткой фразой по-русски, а не флагом; Горм отвечает в характере"
+
+  - id: strip_by_words
+    title: "Раздеться словами — эффект equip, не только текст"
+    category: effects
+    extends: tavern
+    input: "Снимаю доспех и щит, остаюсь в одной рубахе."
+    snapshot:
+      character:
+        name: "Бран"
+        gender: male
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 18
+        equipped: ["armor: Кольчуга [chain_mail]", "shield: Щит [shield]", "main_hand: Длинный меч [longsword]"]
+        inventory: [{item_id: rations, name: "Паёк (1 день)", qty: 3}, {item_id: torch, name: "Факел", qty: 2}]
+    engine:
+      check: {d20: [15], bonus: 3, total: 18, dc: 10, success: true, nat: 15, blocked: false}
+    expect:
+      check: {required: false}
+      effects: {required_kinds_any: [equip]}
+    rubric:
+      - "Мастер снимает снаряжение эффектом equip (slot armor и shield или all) и описывает это как сделанное; проверка здесь не нужна"

@@ -48,8 +48,8 @@ func test_unlisted_and_foreign_reserves_burn() -> void:
 
 func test_effect_limit_per_turn() -> void:
 	for i in 3:
-		_ok({"kind": "flag", "flag": "f%d" % i})
-	assert_str(_no({"kind": "flag", "flag": "f9"})).contains("лимит")
+		_ok({"kind": "note", "text": "событие номер %d" % i})
+	assert_str(_no({"kind": "note", "text": "событие номер 9"})).contains("лимит")
 
 
 func test_move_only_to_an_exit_and_once() -> void:
@@ -124,10 +124,38 @@ func test_npc_attitude_only_for_npcs_here_and_clamped() -> void:
 
 
 func test_flags() -> void:
-	fx.apply(s, "t-1", [_ok({"kind": "flag", "flag": "barrel_opened"})])
-	assert_array(s.flags).is_equal(["barrel_opened"])
-	fx.apply(s, "t-2", [_ok({"kind": "flag", "flag": "barrel_opened", "value": false}, "t-2")])
+	fx.apply(s, "t-1", [_ok({"kind": "flag", "flag": "burrow_known"})])
+	assert_array(s.flags).is_equal(["burrow_known"])
+	fx.apply(s, "t-2", [_ok({"kind": "flag", "flag": "burrow_known", "value": false}, "t-2")])
 	assert_array(s.flags).is_empty()
+
+
+## Playtest-3: the master set made-up flags («ayra_swore_to_hooded») the player saw as ids — only the pack's
+## flags are flags, the master's own memory is a note in Russian (v0.7.4).
+func test_a_made_up_flag_is_refused_and_a_note_is_kept() -> void:
+	assert_str(_no({"kind": "flag", "flag": "ayra_swore_to_hooded"})).contains("note")
+	var lines := fx.apply(s, "t-1", [_ok({"kind": "note", "text": "Айра поклялась служить человеку в капюшоне"})])
+	assert_str(lines[0]).is_equal("Запомнено: Айра поклялась служить человеку в капюшоне")
+	assert_str(str(s.notes[0]["text"])).contains("поклялась")
+	assert_int(int(s.notes[0]["day"])).is_equal(s.day)
+
+
+func test_gear_by_words_strips_and_dresses() -> void:
+	var eq: Dictionary = s.character["equipped"]
+	var armor := str(eq.get("armor", ""))
+	var shield := str(eq.get("shield", ""))
+	var ac := int(s.character["ac"])
+	var lines := fx.apply(s, "t-1", [_ok({"kind": "equip", "slot": "all"})])
+	assert_str(lines[0]).starts_with("Снято:")
+	for sl: String in CharacterRules.SLOTS:
+		assert_str(str(s.character["equipped"][sl])).is_empty()
+	assert_int(int(s.character["ac"])).is_less_equal(ac)
+	assert_str(_no({"kind": "equip", "slot": "all"}, "t-2")).contains("ничего не надето")
+	if not armor.is_empty():
+		fx.apply(s, "t-3", [_ok({"kind": "equip", "slot": "armor", "item_id": armor}, "t-3")])
+		assert_str(str(s.character["equipped"]["armor"])).is_equal(armor)
+		assert_int(int(s.character["ac"])).is_equal(ac - (2 if not shield.is_empty() else 0))  # the armour back, the shield still off
+	assert_str(_no({"kind": "equip", "slot": "armor", "item_id": "no_such_item"}, "t-4")).contains("нельзя надеть")
 
 
 func test_unknown_kind() -> void:

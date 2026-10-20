@@ -468,6 +468,13 @@
     },
     "Scene": {
       "properties": {
+        "closed_exits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Closed Exits",
+          "type": "array"
+        },
         "exits": {
           "items": {
             "$ref": "#/$defs/Exit"
@@ -513,6 +520,13 @@
         "location_name": {
           "title": "Location Name",
           "type": "string"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
         },
         "npcs": {
           "items": {

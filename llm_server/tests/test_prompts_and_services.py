@@ -24,7 +24,7 @@ def test_exploration_prompt():
     assert "10 зм" in text
     assert "женском роде" in text
     assert "Сил 16" in text and "athletics +5*" in text and "(* — владеет)" in text
-    assert "Кольчуга, Щит, Длинный меч" in text
+    assert "Надето и в руках (слот: предмет [id]): armor: Кольчуга [chain_mail], shield: Щит [shield]" in text
     assert "Заклинатель" not in text
     assert "## Мир: Сумеречная Марка" in text and "Пепельный Князь" in text
     assert "Забытые Королевства" in text  # the rule against other settings
@@ -181,3 +181,16 @@ def test_catalog_resolves_only_whitelisted_models():
 def test_item_properties_match_the_godot_vocabulary():
     godot = json.loads((REPO_ROOT / "game" / "data" / "items.json").read_text(encoding="utf-8"))["properties"]
     assert set(godot) == set(ItemProperty.__args__)
+
+
+def test_openrouter_takes_the_cheapest_provider(monkeypatch):
+    from pydantic_ai.models.openrouter import OpenRouterModel
+    from pydantic_ai.providers.openrouter import OpenRouterProvider
+
+    from llm_server.agents import settings_for
+
+    model = OpenRouterModel("deepseek/deepseek-v4.1-flash-1017", provider=OpenRouterProvider(api_key="test"))
+    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True}
+    monkeypatch.setenv("LLM_SERVER_PROVIDER_SORT", "off")
+    assert "openrouter_provider" not in settings_for(model)
+

@@ -33,7 +33,7 @@ func test_snapshot_scene_and_character() -> void:
 	assert_int(c["proficiency_bonus"]).is_equal(2)
 	assert_str(c["background"]).is_equal("Ветеран войны")  # renamed by the pack
 	assert_array(c["features"]).contains(["Второе дыхание", "Боевой стиль: защита"])
-	assert_array(c["equipped"]).contains(["Кольчуга", "Щит", "Длинный меч"])
+	assert_array(c["equipped"]).contains(["armor: Кольчуга [chain_mail]", "shield: Щит [shield]", "main_hand: Длинный меч [longsword]"])
 	assert_bool(c.has("spells")).is_false()
 	var names: Array = c["inventory"].map(func(i: Dictionary) -> String: return i["name"])
 	assert_array(names).contains(["Длинный меч", "Факел"])
@@ -110,3 +110,14 @@ func test_money_format() -> void:
 	assert_str(Money.format(1537)).is_equal("15 зм 3 см 7 мм")
 	assert_str(Money.format(-500)).is_equal("−5 зм")
 	assert_str(Money.format(0)).is_equal("0 зм")
+
+
+## Playtest-3: the master did not know of the shut burrow and built its own dungeon — the snapshot names the closed
+## ways of the room until the engine opens them (v0.7.4).
+func test_the_snapshot_names_closed_ways_until_they_open() -> void:
+	s.room_id = "pushcha-hollow"
+	var closed: Array = TurnSnapshot.build(s, data, 4000)["scene"]["closed_exits"]
+	assert_array(closed).has_size(1)
+	assert_str(str(closed[0])).contains("лаз")
+	s.flags.append("burrow_known")
+	assert_array(TurnSnapshot.build(s, data, 4000)["scene"]["closed_exits"]).is_empty()

@@ -7,6 +7,7 @@ lists only effect ids the engine reserved this turn.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
@@ -38,7 +39,9 @@ if TYPE_CHECKING:
     from .llm.library import ItemLibrary
     from .session import Session
 
-MODEL_SETTINGS: ModelSettings = {"temperature": 0.8, "max_tokens": 1500}
+MODEL_SETTINGS: ModelSettings = {"temperature": 0.8, "max_tokens": 2500}
+# A turn that ran out of output tokens (a long fight start, a model that reasons first) is tried once more with this.
+RETRY_MAX_TOKENS = 6000
 
 
 def _json_object(value: Any) -> Any:
@@ -56,10 +59,15 @@ EffectArg = Annotated[Effect, BeforeValidator(_json_object)]
 
 def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSettings:
     """Per-model tweaks. Qwen 3.x answers in thinking mode by default, and thinking mode rejects the forced
-    tool choice that structured output needs (HTTP 400), so reasoning is switched off for it."""
+    tool choice that structured output needs (HTTP 400), so reasoning is switched off for it. On OpenRouter the
+    cheapest provider of the model that supports every parameter of the request is taken (v0.7.4, the author's
+    wish); LLM_SERVER_PROVIDER_SORT = price (default) | throughput | latency | off."""
     settings: dict = dict(base)
     if "qwen/" in model.model_name:
         settings["openrouter_reasoning"] = {"enabled": False}
+    sort = os.environ.get("LLM_SERVER_PROVIDER_SORT", "price").strip().lower()
+    if getattr(model, "system", "") == "openrouter" and sort in ("price", "throughput", "latency"):
+        settings["openrouter_provider"] = {"sort": sort, "require_parameters": True}
     return settings  # type: ignore[return-value]
 
 
@@ -93,6 +101,8 @@ class TurnContext:
     check_ids: list[str] = field(default_factory=list)
     accepted: dict[str, str] = field(default_factory=dict)  # effect_id -> summary
     searched_items: bool = False
+    proposed: set[str] = field(default_factory=set)  # effects accepted this turn (proposing one again is refused)
+    empty_gives: int = 0  # give_item with neither item_id nor item
 
     @property
     def limits(self):
@@ -151,14 +161,23 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     cast (игрок колдует: spell, slot_level), condition (наложить/снять состояние), use_feature (умение с
     ограниченными использованиями), use_item (выпить зелье и т. п.), advance_time (прошло время),
     furnish (обставить комнату при первом входе), take_prop (взять вещь комнаты), prop_state (вещь открыта,
-    сломана, сожжена, сдвинута).
+    сломана, сожжена, сдвинута), note (память о событии короткой фразой по-русски), equip (игрок надевает или
+    снимает снаряжение: slot, item_id или пусто; slot=all — раздеться).
     Движок проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы он применился."""
     t = ctx.deps
+    # DeepSeek sometimes repeats one effect or an empty give_item many times in a row (v0.7.4 goldens): stop it early
+    key = effect.model_dump_json()
+    if key in t.proposed:
+        return "Отказ: этот эффект уже принят в этом ходе — не повторяй его; если всё нужное сделано, заверши ход."
     if len(t.accepted) >= t.limits.max_effects:
         return "Отказ: лимит эффектов на этот ход исчерпан."
     if isinstance(effect, GiveItemEffect):
         if (effect.item_id is None) == (effect.item is None):
-            raise ModelRetry("give_item: укажи либо item_id существующего предмета, либо item для нового.")
+            # a refusal, not ModelRetry: three of those failed the whole turn (v0.7.4 goldens)
+            t.empty_gives += 1
+            if t.empty_gives >= 2:
+                return "Отказ: выдавать здесь нечего — give_item не нужен. Если герой пострадал — damage; иначе заверши ход."
+            return "Отказ: give_item — укажи либо item_id существующего предмета, либо item для нового; если давать нечего — не предлагай эффект."
         if effect.item is not None and not t.searched_items:
             return "Отказ: перед созданием нового предмета найди похожие через find_items."
     raw = await t.session.call_engine("engine.validate", EngineValidateParams(turn_id=t.params.turn_id, effect=effect))
@@ -166,6 +185,7 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     if not r.accepted or not r.effect_id:
         return f"Отклонено движком: {r.reason or 'без причины'}. Перепиши описание с учётом отказа."
     t.accepted[r.effect_id] = r.summary
+    t.proposed.add(key)
     if isinstance(effect, GiveItemEffect) and effect.item is not None and t.library is not None and r.item_id:
         t.library.add(r.item_id, effect.item)
     return f"Принято: effect_id={r.effect_id}. {r.summary}"
@@ -200,7 +220,8 @@ async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None 
 # --- agents ---------------------------------------------------------------------
 
 
-def build_turn_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput]:
+def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -> Agent[TurnContext, TurnOutput]:
+    base: ModelSettings = {**MODEL_SETTINGS, "max_tokens": max_tokens} if max_tokens else MODEL_SETTINGS  # type: ignore[typeddict-item]
     agent: Agent[TurnContext, TurnOutput] = Agent(
         model,
         output_type=TurnOutput,
@@ -208,7 +229,7 @@ def build_turn_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput
         instructions=system,
         tools=[request_check, propose_effect, lookup, find_items],
         retries=2,
-        model_settings=settings_for(model),
+        model_settings=settings_for(model, base),
     )
 
     @agent.output_validator

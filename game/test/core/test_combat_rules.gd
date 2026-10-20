@@ -246,15 +246,14 @@ func test_effects_in_a_fight_hit_foes_and_the_master_cannot_move_or_pay() -> voi
 	assert_bool(fx.validate(s, data, "t-3", {"kind": "coins", "delta_cp": 5})["accepted"]).is_false()
 
 
-func test_the_master_starts_a_fight_within_the_xp_budget() -> void:
+## v0.7.4 (playtest-3: the master summoned made-up miners in a made-up tunnel): outside a fight the master starts
+## none — a fight begins with the scene's people or an encounter of the world; in a fight it is a reinforcement.
+func test_the_master_does_not_summon_foes_outside_a_fight() -> void:
 	var s := _session()
 	var fx := EffectEngine.new()
-	var ok := fx.validate(s, data, "t-1", {"kind": "start_combat", "enemies": [{"monster": "wolf", "count": 1}]})
-	assert_bool(ok["accepted"]).is_true()
-	var heavy := fx.validate(s, data, "t-1", {"kind": "start_combat", "enemies": [{"monster": "wolf", "count": 4}]})
-	assert_str(str(heavy.get("reason", ""))).contains("слишком тяжёл")
-	fx.apply(s, "t-1", [ok["effect_id"]])
-	assert_array(s.pending_fight).has_size(1)
+	var r := fx.validate(s, data, "t-1", {"kind": "start_combat", "enemies": [{"monster": "wolf", "count": 1}]})
+	assert_bool(r["accepted"]).is_false()
+	assert_str(str(r.get("reason", ""))).contains("вне боя")
 
 
 func test_the_snapshot_and_the_save_keep_the_fight() -> void:

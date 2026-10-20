@@ -6,10 +6,10 @@ Incoming models ignore unknown fields: a newer minor client may send optional fi
 from enum import IntEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.13.0"
+PROTOCOL_VERSION = "0.14.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -177,6 +177,8 @@ class Scene(_In):
     sneaking: bool = False  # the player moves stealthily (0.8.0)
     props: list[SceneProp] = Field(default_factory=list)  # the things of the room — the only ones to describe (0.11.0)
     furnish: bool = False  # the room was never furnished: propose `furnish` before describing it (0.11.0)
+    closed_exits: list[str] = Field(default_factory=list)  # ways the pack keeps shut until the engine opens them (0.14.0)
+    notes: list[str] = Field(default_factory=list)  # the master's own memory of events here, in Russian (0.14.0)
 
 
 class InventoryLine(_In):
@@ -539,6 +541,25 @@ class CombatFoeSpec(_Out):
     name: str | None = None
 
 
+class NoteEffect(_Out):
+    """The master's own memory of an event (0.14.0): a short Russian sentence the player sees in the chat and the
+    journal («Айра поклялась служить человеку в капюшоне»). A `flag` is only a flag the world pack knows."""
+
+    kind: Literal["note"] = "note"
+    # a long note is cut, not refused: a refused schema made the turn fail after the tool's retries (v0.7.4 goldens)
+    text: Annotated[str, BeforeValidator(lambda v: v.strip()[:200] if isinstance(v, str) else v)] = Field(min_length=3)
+
+
+class EquipEffect(_Out):
+    """The player changes gear by words (0.14.0): `slot` armor / shield / main_hand / off_hand, or `all` to strip;
+    `item_id` puts that carried item on, none takes the slot off. The engine checks it like the character sheet; in
+    a fight armour cannot be changed."""
+
+    kind: Literal["equip"] = "equip"
+    slot: Literal["armor", "shield", "main_hand", "off_hand", "all"]
+    item_id: str | None = None
+
+
 class StartCombatEffect(_Out):
     """The master starts a fight (0.7.0): the engine checks the XP budget of the character's level. In a fight it is a
     reinforcement (0.8.0): the newcomers come at the edge of the field (`side`) next round, within the same budget."""
@@ -567,7 +588,7 @@ class FlagEffect(_Out):
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
-    | FurnishEffect | TakePropEffect | PropStateEffect,
+    | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect,
     Field(discriminator="kind"),
 ]
 

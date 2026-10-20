@@ -117,13 +117,15 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "time_of_day": scene.get("time", ""),
                 "props": scene.get("props", []),  # already in the protocol shape (SceneProp, 0.11.0)
                 "furnish": bool(scene.get("furnish", False)),
+                "closed_exits": scene.get("closed_exits", []),  # (0.14.0)
+                "notes": scene.get("notes", []),
             },
             "character": {
                 "name": ch.get("name", ""), "gender": ch.get("gender", "other"), "class_name": ch.get("class", ""),
                 "level": ch.get("level", 1), "hp": hp.get("current", 10), "max_hp": hp.get("max", 10),
                 "ac": ch.get("ac", 10), "conditions": ch.get("conditions", []), "skills": ch.get("skills", {}),
                 "saves": ch.get("saves", {}), "features": ch.get("features", []), "gold_cp": ch.get("gold_cp", 1000),
-                **{k: ch[k] for k in ("cantrips", "spells", "spell_slots", "spell_save_dc", "resources") if k in ch},
+                **{k: ch[k] for k in ("cantrips", "spells", "spell_slots", "spell_save_dc", "resources", "equipped", "inventory") if k in ch},
             },
             "history": history,
             "summaries": summaries,

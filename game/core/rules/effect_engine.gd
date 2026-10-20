@@ -87,6 +87,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 		if not tid.is_empty():
 			return _plan_on_foe(s, data, e, tid)
 	if str(e.get("kind", "")) == "start_combat":
+		if not CombatRules.active(s):  # v0.7.4: a fight starts only with the scene's people or an encounter of the world
+			return {"reason": "вне боя мастер не зовёт врагов: драка начинается, когда игрок нападает на NPC сцены (next_mode combat), или встречей мира"}
 		return _plan_fight(s, data, e)
 	if s.mode == GameSession.MODE_TRADE and str(e.get("kind", "")) in ["coins", "give_item", "take_item"]:
 		return {"reason": "в торговле сделки проводит панель сделки: назови цену и предложи игроку положить товар в сделку"}
@@ -209,7 +211,16 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var flag := str(e.get("flag", ""))
 			if flag.is_empty():
 				return {"reason": "пустой флаг"}
+			if not QuestRules.known_flags(data["world"]).has(flag):
+				return {"reason": "флаг %s миру не знаком; память о событии — эффект note с короткой фразой по-русски" % flag}
 			return {"plan": {"flag": flag, "value": bool(e.get("value", true))}, "summary": "Отмечено: %s" % flag}
+		"note":
+			var text := str(e.get("text", "")).strip_edges()
+			if text.length() < 5:
+				return {"reason": "пустая заметка"}
+			return {"plan": {"text": text.left(200)}, "summary": "Запомнено: %s" % text.left(200)}
+		"equip":
+			return _plan_equip(s, data, e)
 	return {"reason": "движок не знает эффект %s" % e.get("kind", "?")}
 
 
@@ -264,6 +275,36 @@ func _plan_fight(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	if xp > cap:
 		return {"reason": "бой слишком тяжёл для %d уровня: %d опыта врагов при пределе %d — меньше врагов или слабее" % [int(s.character.get("level", 1)), xp, cap]}
 	return {"plan": {"foes": foes}, "summary": "Бой: " + ", ".join(foes.map(func(f: Dictionary) -> String: return "%s ×%d" % [f["name"], f["count"]]))}
+
+
+## Gear by words (v0.7.4): like the character sheet; `all` strips every slot; in a fight armour cannot change.
+func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
+	var c := s.character
+	var slot := str(e.get("slot", ""))
+	var id := str(e.get("item_id", "")) if e.get("item_id") != null else ""
+	var eq: Dictionary = c.get("equipped", {})
+	if slot == "all":
+		if CombatRules.active(s) and not str(eq.get("armor", "")).is_empty():
+			return {"reason": "в бою доспех не снять — на это уходят минуты"}
+		var worn: Array[String] = []
+		for sl: String in CharacterRules.SLOTS:
+			if not str(eq.get(sl, "")).is_empty():
+				worn.append(ItemRules.display_name(data["items"], s.items, str(eq[sl])))
+		if worn.is_empty():
+			return {"reason": "на персонаже и так ничего не надето"}
+		return {"plan": {"slots": CharacterRules.SLOTS.duplicate(), "item_id": ""}, "summary": "Снято: %s" % ", ".join(worn)}
+	if not CharacterRules.SLOTS.has(slot):
+		return {"reason": "нет такого слота: %s (armor, shield, main_hand, off_hand, all)" % slot}
+	if slot == "armor" and CombatRules.active(s):
+		return {"reason": "в бою доспех не сменить — на это уходят минуты"}
+	if id.is_empty():
+		if str(eq.get(slot, "")).is_empty():
+			return {"reason": "в слоте %s и так пусто" % slot}
+		return {"plan": {"slots": [slot], "item_id": ""}, "summary": "Снято: %s" % ItemRules.display_name(data["items"], s.items, str(eq[slot]))}
+	var why := CharacterRules.can_equip(c, data, s.items, id, slot)
+	if not why.is_empty():
+		return {"reason": "нельзя надеть %s в %s: %s" % [id, slot, tr(why)]}
+	return {"plan": {"slots": [slot], "item_id": id}, "summary": "Надето: %s" % ItemRules.display_name(data["items"], s.items, id)}
 
 
 ## A thing of a quest (its giver hands it over, or a step wants it) never changes hands by a plain effect (v0.7.2):
@@ -341,6 +382,17 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			(f["conditions"] as Array).append(str(plan["condition"]))
 		else:
 			(f["conditions"] as Array).erase(str(plan["condition"]))
+		return
+	if plan.has("text"):  # note (v0.7.4)
+		s.notes.append({"day": s.day, "clock": TimeRules.clock(s), "room": s.room_id, "text": str(plan["text"])})
+		return
+	if plan.has("slots"):  # equip (v0.7.4)
+		for sl: Variant in plan["slots"]:
+			s.character["equipped"][str(sl)] = str(plan["item_id"])
+		var main := str(s.character["equipped"].get("main_hand", ""))
+		if not main.is_empty() and str(s.character["equipped"].get("off_hand", "")) == main and int(s.character["inventory"].get(main, 0)) < 2:
+			s.character["equipped"]["off_hand"] = ""
+		CharacterRules.refresh(s.character, _data, s.items)
 		return
 	if plan.has("quest_accept"):  # a quest thing given by words takes the quest (v0.7.2)
 		_extra_lines.append_array(QuestRules.accept(s, _data, str(plan["quest_accept"])).slice(1))

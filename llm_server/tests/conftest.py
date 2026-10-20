@@ -78,7 +78,7 @@ def tavern_snapshot() -> dict:
             "saves": {"str": 5, "dex": 2, "con": 4, "int": -1, "wis": 1, "cha": 0},
             "gold_cp": 1000, "features": ["Боевой стиль: защита", "Второе дыхание"],
             "backstory": "Айра стояла на стене Серой заставы в ту ночь, когда пришёл огонь Пепельного Князя.",
-            "equipped": ["Кольчуга", "Щит", "Длинный меч"],
+            "equipped": ["armor: Кольчуга [chain_mail]", "shield: Щит [shield]", "main_hand: Длинный меч [longsword]"],
             "inventory": [{"item_id": k, "name": k, "qty": v} for k, v in
                           {"chain_mail": 1, "shield": 1, "longsword": 1, "handaxe": 2, "torch": 10, "rations": 10}.items()],
         },

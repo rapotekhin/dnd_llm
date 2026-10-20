@@ -85,6 +85,9 @@ var props: Dictionary = {}
 var pockets: Dictionary = {}
 var shop_closed: Dictionary = {}
 var caught_by: Dictionary = {}
+
+## The master's own memory of events (effect `note`, v0.7.4): [{day, clock, room, text}] — shown in the journal.
+var notes: Array[Dictionary] = []
 ## Short rests taken today (ExplorationRules); a long rest resets it.
 var short_rests: int = 0
 ## Ids of the pack quests the player completed (XpRules).
@@ -283,6 +286,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"pockets": pockets,
 		"shop_closed": shop_closed,
 		"caught_by": caught_by,
+		"notes": notes,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -356,6 +360,9 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.shop_closed[n] = int(d["shop_closed"][n])
 	for n: String in d.get("caught_by", {}):
 		s.caught_by[n] = int(d["caught_by"][n])
+	for e: Variant in d.get("notes", []):
+		if e is Dictionary:
+			s.notes.append((e as Dictionary).duplicate())
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):

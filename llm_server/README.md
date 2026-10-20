@@ -29,6 +29,7 @@ uv run python -m llm_server.contract     # перевыгрузить contract/s
 | `LLM_SERVER_TURN_HANDLER` | `agent` | `agent` (ЛЛМ) или `stub` |
 | `LLM_SERVER_MODEL` | `deepseek/deepseek-v4.1-flash-1017` | модель по умолчанию (ADR-0011, с v0.7.3) |
 | `LLM_SERVER_MODELS` | deepseek-v4.1-flash-1017, haiku-5.5, qwen3.8-omni-flash, qwen3.8-27b, gemini-3.8-flash | белый список для выбора в игре |
+| `LLM_SERVER_PROVIDER_SORT` | `price` | провайдер модели на OpenRouter: `price` — самый дешёвый из поддерживающих все параметры запроса, `throughput`, `latency`, `off` — маршрутизация OpenRouter (v0.7.4) |
 | `LLM_SERVER_DAILY_BUDGET_USD` | `1.0` | дневной лимит, `off` — без лимита |
 | `LLM_SERVER_DATA_DIR` | `llm_server/var` | счётчик бюджета, библиотека предметов |
 | `LLM_SERVER_HOST` / `PORT` | `127.0.0.1` / `8765` | |

@@ -4,7 +4,7 @@ Godot and answers engine.* calls (ADR-0008, ADR-0009). No network, no money."""
 import re
 
 from fastapi.testclient import TestClient
-from pydantic_ai.exceptions import ModelHTTPError
+from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelMessage, ModelResponse, RetryPromptPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
@@ -345,3 +345,19 @@ def test_cast_and_condition_effects_reach_the_engine(data_dir):
     msg, calls, _ = play(data_dir, fn)
     kinds = [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"]
     assert kinds == ["cast", "condition"]
+
+
+def test_a_turn_out_of_output_tokens_is_tried_again_with_more(data_dir):
+    # v0.7.4: the fight start in the burrow failed with «Model token limit (1500) exceeded» and the player saw an error.
+    seen = []
+
+    async def fn(messages, info):
+        seen.append(info.model_settings.get("max_tokens") if info.model_settings else None)
+        if len(seen) == 1:
+            raise UnexpectedModelBehavior("Model token limit (2500) exceeded before any response was generated.")
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"narration": "Со второй попытки."})])
+
+    msg, _, _ = play(data_dir, fn)
+    assert msg["result"]["narration"] == "Со второй попытки."
+    assert seen[-1] == 6000
+

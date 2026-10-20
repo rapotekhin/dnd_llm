@@ -202,6 +202,9 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 					(by_loc[loc] as Array).append("%s: %s" % [w.room(room_id).get("name", room_id), t])
 			for loc: String in by_loc:
 				out.append({"title": str(w.location(loc).get("name", loc)), "lines": by_loc[loc]})
+			if not s.notes.is_empty():  # the master's memory of events (v0.7.4)
+				out.append({"title": tr("JOURNAL_NOTES"), "lines": s.notes.map(func(n: Dictionary) -> String:
+					return "День %d, %s, %s — %s" % [int(n["day"]), n.get("clock", ""), w.room(str(n["room"])).get("name", n["room"]), n["text"]])})
 	return out
 
 

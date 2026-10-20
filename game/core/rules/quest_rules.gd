@@ -263,3 +263,24 @@ static func info(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 		out.append({"id": id, "title": str(all[id]["title"]), "description": str(all[id].get("description", "")),
 			"done": s.quests_done.has(id), "step": step_text(s, world, id)})
 	return out
+
+
+## Every flag the world pack reads or sets (quest facts, closed exits, choices; v0.7.4): only these may be set by
+## the master's `flag` effect — its own memory goes to `note`.
+static func known_flags(world: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	_collect_flags(world.get("quests", {}), out)
+	_collect_flags(world.get("rooms", {}), out)
+	return out
+
+
+static func _collect_flags(v: Variant, out: Array[String]) -> void:
+	if v is Dictionary:
+		for k: Variant in v:
+			if str(k) == "flag" and v[k] is String and not out.has(str(v[k])):
+				out.append(str(v[k]))
+			else:
+				_collect_flags(v[k], out)
+	elif v is Array:
+		for x: Variant in v:
+			_collect_flags(x, out)

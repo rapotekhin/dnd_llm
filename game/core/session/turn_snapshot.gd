@@ -31,6 +31,8 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"exits": exits, "npcs": npcs, "hooks": room.get("hooks", []), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
 			"props": PropRules.snapshot(s, data, s.room_id),
+			"closed_exits": closed_exits(s, data["world"]),
+			"notes": s.notes.slice(-12).map(func(n: Dictionary) -> String: return "день %d, %s — %s" % [int(n["day"]), world.room(str(n["room"])).get("name", n["room"]), n["text"]]),
 			"furnish": PropRules.needs_furnish(s, s.room_id) and not CombatRules.active(s) and s.mode == GameSession.MODE_EXPLORATION,
 			"time_of_day": "%s, %s%s" % [TimeRules.part_name(s, data), TimeRules.clock(s), ", темно" if TimeRules.dark(s, data) else ""],
 		},
@@ -86,7 +88,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 	for slot: String in CharacterRules.SLOTS:
 		var id := str(c.get("equipped", {}).get(slot, ""))
 		if not id.is_empty():
-			equipped.append(ItemRules.display_name(items, s.items, id))
+			equipped.append("%s: %s [%s]" % [slot, ItemRules.display_name(items, s.items, id), id])
 	var sub: Dictionary = data["classes"]["subclasses"].get(str(c.get("subclass", "")), {})
 	var class_text := str(c.get("class_name", ""))
 	if not sub.is_empty():
@@ -122,3 +124,15 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		sheet["spell_slots"] = slots
 		sheet["spell_save_dc"] = int(c.get("spell_dc", 0))
 	return sheet
+
+
+## Ways out of this room the pack keeps shut now (v0.7.4): their `text` («лаз под корнями ещё надо найти»), never
+## where they lead — the master describes them as closed instead of inventing what lies behind.
+static func closed_exits(s: GameSession, world: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	var closed: Dictionary = world["rooms"].get(s.room_id, {}).get("closed_exits", {})
+	var open := ExplorationRules.open_exits(s, world, s.room_id)
+	for to: String in closed:
+		if not open.has(to):
+			out.append(str(closed[to].get("text", "закрытый путь")))
+	return out

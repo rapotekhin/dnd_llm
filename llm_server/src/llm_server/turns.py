@@ -14,7 +14,7 @@ from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UnexpectedMode
 from pydantic_ai.usage import RunUsage, UsageLimits
 
 from . import prompts
-from .agents import TurnContext, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
+from .agents import RETRY_MAX_TOKENS, TurnContext, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
 from .protocol import (
     CoinsEffect,
     ConditionEffect,
@@ -139,9 +139,19 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     ctx = TurnContext(session, params, services.library)
 
     async def attempt():
-        nonlocal ctx
+        nonlocal ctx, agent
         ctx = TurnContext(session, params, services.library)
-        return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
+        try:
+            return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
+        except UnexpectedModelBehavior as exc:
+            # Out of output tokens (v0.7.4: the fight start in the burrow failed at 1500): once more with room to
+            # spare, while the engine is untouched — the player sees no error.
+            if "token limit" not in str(exc).lower() or ctx.check_ids or ctx.accepted:
+                raise
+            log.warning("turn %s ran out of output tokens, retrying with %d", params.turn_id, RETRY_MAX_TOKENS)
+            agent = build_turn_agent(services.model_factory(model), system, RETRY_MAX_TOKENS)
+            ctx = TurnContext(session, params, services.library)
+            return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
 
     started = time.monotonic()
     trace = {"what": "turn", "turn_id": params.turn_id, "mode": params.mode, "kind": params.kind, "input": params.input,
