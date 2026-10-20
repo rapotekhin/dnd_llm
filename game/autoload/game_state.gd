@@ -737,6 +737,22 @@ func go(room_id: String) -> bool:
 ## starts the fight, otherwise the master describes the room. `lines` — what happened on the way (a trap).
 func _move_to(room_id: String, lines: Array[String]) -> void:
 	var from := session.room_id
+	_step(room_id, lines)
+	lines.push_front("Переход: %s" % world().room(room_id).get("name", room_id))
+	_add(GameSession.effect_entry(lines))
+	EventBus.state_changed.emit()
+	if _live_encounter(room_id):
+		var enc: Dictionary = world().room(room_id)["encounter"]
+		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
+			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {}), "parley": str(enc.get("parley", ""))})
+		return
+	_request("enter", "\n".join(lines.slice(1)))
+
+
+## The engine side of a step into `room_id` (no master, no fight): sneaking past people, time, passive Perception,
+## caches, quest steps. Appends the lines; returns what passive Perception found on entering.
+func _step(room_id: String, lines: Array[String]) -> Array[String]:
+	var from := session.room_id
 	if session.sneak_noticed != room_id:
 		session.sneak_noticed = ""  # a new room: people there have not seen the player sneak yet
 	if session.sneaking:
@@ -744,19 +760,64 @@ func _move_to(room_id: String, lines: Array[String]) -> void:
 		if not seen.is_empty():
 			lines.append(seen)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
-	ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
-	lines.push_front("Переход: %s" % world().room(room_id).get("name", room_id))
+	var found := ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
 	lines.append_array(ExplorationRules.take_caches(session, Catalog.data, room_id))
 	lines.append_array(QuestRules.advance(session, Catalog.data))
-	_add(GameSession.effect_entry(lines))
-	EventBus.state_changed.emit()
+	return found
+
+
+func _live_encounter(room_id: String) -> bool:
 	var enc: Dictionary = world().room(room_id).get("encounter", {})
-	if not enc.is_empty() and not session.encounters_done.has(str(enc["id"])):
-		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
-			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {}), "parley": str(enc.get("parley", ""))})
+	return not enc.is_empty() and not session.encounters_done.has(str(enc["id"]))
+
+
+## «Идти сюда» on the map (roadmap v0.7.6, decisions of the author): a fast travel to a visited room along known
+## paths. The engine walks the route step by step without the master: time, sneaking, passive Perception, caches,
+## quest steps; the line «Путь: … · N мин» goes to the chat and the history. It stops on a live encounter (that
+## step is an ordinary move — the fight starts), on a trap that springs (an ordinary move — the master tells it)
+## and before an exit whose trap the hero has just noticed. "" or a localization key.
+func travel(to: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready() or session.mode == GameSession.MODE_COMBAT:
+		return "TRAVEL_BUSY"
+	var path := WorldMap.route(session, Catalog.data["world"], session.room_id, to)
+	if path.is_empty():
+		return "TRAVEL_NO_ROUTE"
+	_end_conversation()
+	var names: Array[String] = [str(world().room(session.room_id).get("name", session.room_id))]
+	var lines: Array[String] = []
+	var minute0 := session.day * 1440 + session.minute
+	for to_room: String in path:
+		var from := session.room_id
+		var trap := ExplorationRules.trap_on_exit(session, Catalog.data["world"], from, to_room)
+		if not trap.is_empty() and ExplorationRules.is_found(session, from, trap):
+			lines.append("Дальше путь стережёт найденная ловушка — переход остановлен")
+			break
+		if not trap.is_empty() or _live_encounter(to_room):
+			_travel_line(names, minute0, lines)
+			var step_lines: Array[String] = []
+			if not trap.is_empty():
+				step_lines = ExplorationRules.spring_trap(session, Catalog.data, from, trap)
+				if _trap_downed(step_lines):
+					return ""
+			_move_to(to_room, step_lines)
+			return ""
+		for f: String in _step(to_room, lines):
+			lines.append("Замечено: " + f)
+		names.append(str(world().room(to_room).get("name", to_room)))
+	_travel_line(names, minute0, lines)
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	return ""
+
+
+## «Путь: A → B → C · N мин» and what happened on the way, into the chat and the history (no master turn).
+func _travel_line(names: Array[String], minute0: int, lines: Array[String]) -> void:
+	if names.size() < 2 and lines.is_empty():
 		return
-	_request("enter", "
-".join(lines.slice(1)))
+	var all: Array[String] = ["Путь: %s · %d мин" % [" → ".join(names), session.day * 1440 + session.minute - minute0]]
+	all.append_array(lines)
+	_add(GameSession.effect_entry(all))
+	_log("События: " + ", ".join(all))
 
 
 ## A trap brought the character to 0 HP outside combat: they come to on the spot (no death), the master tells the

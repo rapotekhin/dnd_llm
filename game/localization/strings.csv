@@ -81,6 +81,7 @@ BTN_TO_TRADE,Торговать
 BTN_TRADE_WITH,Торговать: {name}
 BTN_TRAP_BYPASS,→ {room}: в обход
 BTN_TRAP_DISARM,Обезвредить ловушку
+BTN_TRAVEL,"Идти сюда · шагов {steps}, {min} мин"
 BTN_UNEQUIP,Снять
 BTN_USE,Использовать
 BTN_WAIT,Ждать…
@@ -312,9 +313,14 @@ LVL_SPELLS,Новые заклинания: выберите {n}
 LVL_SPELLS_SPELLBOOK,В книгу заклинаний: выберите {n}
 LVL_SUBCLASS,Выберите подкласс
 LVL_TITLE,{class}: {level} уровень
-MAP_EXITS,Отсюда: {list}
 MAP_HERE,вы здесь
+MAP_HERE_EXITS,Вы здесь. Отсюда: {list}
+MAP_LEGEND,"Колесо — масштаб, перетаскивание — сдвиг, клик — выбрать место. «?» — куда ещё не ходили, «!» — здесь шаг задания"
+MAP_QUEST,Задание: {quest}
+MAP_RESET,Сбросить вид
 MAP_TITLE,Карта
+MAP_UNKNOWN,Неизведанное место
+MAP_UNKNOWN_HINT,Туда ведёт выход из знакомого места — дойдите до соседней комнаты и шагните сами
 MSG_BUDGET_EXCEEDED,Дневной лимит расходов мастера исчерпан. Ходы снова будут доступны завтра.
 MSG_CHECKING,Проверяю…
 MSG_CHECK_OK,Мастер на связи.
@@ -362,7 +368,7 @@ OPT_BUDGET_OFF,Без лимита
 OPT_BUDGET_SAVE,Сохранить лимит
 OPT_BUDGET_SPENT,"Сегодня потрачено ${spent} из ${limit}, осталось ${left}"
 OPT_BUDGET_SPENT_OFF,"Сегодня потрачено ${spent}, лимита нет"
-OPT_BUDGET_UNKNOWN,Траты видны, когда мастер на связи
+OPT_BUDGET_UNKNOWN,"Траты видны, когда мастер на связи"
 OPT_BUDGET_BAD,Лимит — число долларов от 0.01 до 1000
 OPT_RESOLUTION,Размер окна
 PARTNER_LINE,{role} · {race} · отношение: {attitude}
@@ -515,6 +521,8 @@ TRAP_BUSY,Сейчас нельзя
 TRAP_BYPASS_TIP,"Проверка Акробатики: успех — проходите мимо, провал — ловушка срабатывает"
 TRAP_DISARM_TIP,"Проверка Ловкости рук (с воровскими инструментами — их бонус): успех — ловушки больше нет, провал — она срабатывает"
 TRAP_NONE,Ловушки здесь нет
+TRAVEL_BUSY,Сейчас нельзя отправиться в путь
+TRAVEL_NO_ROUTE,Нет известного пути
 VIOLENCE_GRAPHIC,Жёстко
 VIOLENCE_MEDIUM,Умеренно
 VIOLENCE_MILD,Мягко

@@ -1,7 +1,8 @@
 class_name WorldNotes
 extends Control
-## Map and journal over the game screen (roadmap v0.5.2). Map: visited places by location, the current room
-## marked, where one can go from here. Journal: quests, location and conversation summaries, found secrets.
+## Map and journal over the game screen (roadmap v0.5.2). Map (v0.7.6): the scheme of visited places and the «?»
+## behind their exits (MapCanvas), the picked place, its quests and the fast travel there. Journal: quests,
+## location and conversation summaries, found secrets.
 ## Read-only; built from the session (visited, summaries, revealed) on every open.
 
 const MAP := "map"
@@ -9,6 +10,9 @@ const JOURNAL := "journal"
 
 var kind: String
 var _box: VBoxContainer
+var _selected := ""  # the picked room on the map
+var _zoom := 1.0
+var _pan := Vector2.ZERO
 
 
 func _init(view_kind: String) -> void:
@@ -80,26 +84,96 @@ func _text(text: String, variation: String = "") -> Label:
 func _draw_map() -> void:
 	var s := GameState.session
 	var w := GameState.world()
-	_text(tr("MAP_TITLE"), UiTheme.HEADING)
-	var by_location: Dictionary = {}
-	var order: Array[String] = []
-	for room_id: String in s.visited:
-		var loc := w.location_id(room_id)
-		if not by_location.has(loc):
-			by_location[loc] = []
-			order.append(loc)
-		(by_location[loc] as Array).append(room_id)
-	for loc: String in order:
-		_text(str(w.location(loc).get("name", loc))).add_theme_color_override("font_color", UiTheme.ACCENT)
-		for room_id: String in by_location[loc]:
-			var here := room_id == s.room_id
-			var line := _text(("◆ " if here else "• ") + str(w.room(room_id).get("name", room_id)) + ("  — " + tr("MAP_HERE") if here else ""),
-				"" if here else UiTheme.MUTED_LABEL)
-			if here:
-				line.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
-	var exits: Array = ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id).map(func(e: String) -> String: return str(w.room(e).get("name", e)))
-	_box.add_child(HSeparator.new())
-	_text(tr("MAP_EXITS").format({"list": ", ".join(exits)}), UiTheme.MUTED_LABEL)
+	var world: Dictionary = Catalog.data["world"]
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	_box.add_child(head)
+	_text(tr("MAP_TITLE"), UiTheme.HEADING).reparent(head)
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 16)
+	_box.add_child(body)
+	var canvas := MapCanvas.new()
+	canvas.name = "MapCanvas"
+	canvas.custom_minimum_size = Vector2(0, maxf(420.0, get_viewport_rect().size.y - 480.0))  # the overlay height without its header, legend and margins
+	canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	canvas.layout = WorldMap.layout(world)
+	canvas.known = WorldMap.known(s, world)
+	canvas.marks = WorldMap.quest_marks(s, world)
+	canvas.here = s.room_id
+	canvas.selected = _selected if not _selected.is_empty() else s.room_id
+	canvas.zoom = _zoom
+	canvas.pan = _pan
+	for r: String in canvas.known["rooms"] + canvas.known["frontier"]:
+		canvas.names[r] = str(w.room(r).get("name", r))
+		canvas.locations[r] = str(w.location(w.location_id(r)).get("name", ""))
+	for z: Array in [["MapZoomIn", "+", 1.25], ["MapZoomOut", "−", 0.8]]:
+		var b := Button.new()
+		b.name = z[0]
+		b.text = z[1]
+		b.custom_minimum_size = Vector2(48, 44)
+		b.pressed.connect(func() -> void: canvas.set_zoom(canvas.zoom * float(z[2]), canvas.size / 2))
+		head.add_child(b)
+	var reset := Button.new()
+	reset.name = "MapReset"
+	reset.text = "MAP_RESET"
+	reset.pressed.connect(canvas.reset_view)
+	head.add_child(reset)
+	body.add_child(canvas)
+	canvas.view_changed.connect(func(z: float, p: Vector2) -> void:
+		_zoom = z
+		_pan = p)
+	canvas.picked.connect(func(r: String) -> void:
+		_selected = r
+		_rebuild())
+	var info := VBoxContainer.new()
+	info.name = "MapPlace"
+	info.custom_minimum_size = Vector2(400, 0)
+	info.add_theme_constant_override("separation", 10)
+	body.add_child(info)
+	_draw_place(info, canvas.selected, canvas.known, canvas.marks)
+	_text(tr("MAP_LEGEND"), UiTheme.MUTED_LABEL)
+
+
+## What the picked room is and the fast travel there: «Идти сюда · N мин» or why not.
+func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks: Dictionary) -> void:
+	var s := GameState.session
+	var w := GameState.world()
+	if (known["frontier"] as Array).has(room_id):
+		_text(tr("MAP_UNKNOWN"), UiTheme.HEADING).reparent(info)
+		_text(tr("MAP_UNKNOWN_HINT"), UiTheme.MUTED_LABEL).reparent(info)
+		return
+	_text(str(w.room(room_id).get("name", room_id)), UiTheme.HEADING).reparent(info)
+	_text(str(w.location(w.location_id(room_id)).get("name", "")), UiTheme.MUTED_LABEL).reparent(info)
+	for q: Variant in marks.get(room_id, []):
+		var ql := _text(tr("MAP_QUEST").format({"quest": str(q)}))
+		ql.add_theme_color_override("font_color", UiTheme.WARN)
+		ql.reparent(info)
+	if room_id == s.room_id:
+		var exits: Array = ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id).map(func(e: String) -> String:
+			return str(w.room(e).get("name", e)) if s.visited.has(e) else "?")
+		_text(tr("MAP_HERE_EXITS").format({"list": ", ".join(exits)}), UiTheme.MUTED_LABEL).reparent(info)
+		return
+	var path := WorldMap.route(s, Catalog.data["world"], s.room_id, room_id)
+	var go := Button.new()
+	go.name = "TravelButton"
+	go.theme_type_variation = UiTheme.ACCENT_BUTTON
+	go.custom_minimum_size = Vector2(0, 52)
+	go.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	go.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if path.is_empty():
+		go.text = tr("TRAVEL_NO_ROUTE")
+		go.disabled = true
+	else:
+		go.text = tr("BTN_TRAVEL").format({"steps": path.size(), "min": WorldMap.minutes(Catalog.data, s.room_id, path)})
+		go.disabled = GameState.is_busy() or not Backend.is_ready() or s.mode == GameSession.MODE_COMBAT
+		go.pressed.connect(func() -> void:
+			var err := GameState.travel(room_id)
+			if err.is_empty():
+				_selected = ""
+				visible = false
+			else:
+				EventBus.message.emit(tr(err)))
+	info.add_child(go)
 
 
 ## Journal tabs (v0.6.6, playtest-1): quests, places, conversations, finds; inside — groups by location that fold.
