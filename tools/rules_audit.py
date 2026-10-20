@@ -1,0 +1,359 @@
+"""The audit of the 5e rules a hero of levels 1–5 meets: what the engine does with each thing today (roadmap series
+«Правила 5e», v0.7.7–v0.7.12). Conditions, damage to the hero, monsters, class features, race traits, languages and
+backgrounds, items, spells.
+
+    python tools/rules_audit.py            # → docs/production/rules-audit.md
+
+Counts come from the data (game/data, the SRD source in tools/srd/source); the statuses live here, next to the plan,
+and are set by reading the engine (game/core). Change a status when a version makes the thing work, and fill in
+CHECKED once a test covers it against the 5e rules.
+"""
+
+import json
+import re
+from collections import Counter
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+DATA = ROOT / "game" / "data"
+SRD = ROOT / "tools" / "srd" / "source" / "2014"
+OUT = ROOT / "docs" / "production" / "rules-audit.md"
+MAX_MONSTER_CR = 3  # as tools/srd_import.py
+
+STATUS = {
+    "engine": "движок",
+    "partial": "частично",
+    "creation": "при создании",
+    "master": "**только мастер**",
+    "none": "**нет нигде**",
+}
+MISSING = ("master", "none")
+
+# Spells (v0.7.12): groups of the master-only ones.
+SPELL_GROUPS = {
+    "buff": ("Защита и усиления героя", "числа листа и боя: КД, бонусы к атакам и спасброскам, урон, скорость, сопротивления, временные хиты"),
+    "sustained": ("Длящийся урон и удары", "заклинание остаётся на поле или на оружии и бьёт каждый ход"),
+    "control": ("Ослабление и контроль врагов", "помехи, состояния, зоны на поле, прерывание чужих заклинаний"),
+    "restore": ("Лечение и спасение", "стабилизация, снятие состояний и проклятий, воскрешение, еда"),
+    "summon": ("Призывы и спутники", "существа на поле боя или помощники вне боя — нужны союзники в бою (M4)"),
+    "world": ("Мир и исследование", "вне боя: свет, иллюзии, замки, обнаружение, разговоры, перемещение — связь с проверками, секретами, выходами"),
+}
+SPELL_ASSIGN = {
+    "buff": "mage_armor shield shield_of_faith barkskin blur mirror_image sanctuary false_life aid heroism bless guidance resistance "
+            "enhance_ability divine_favor magic_weapon hunters_mark longstrider expeditious_retreat jump haste protection_from_energy "
+            "protection_from_poison protection_from_evil_and_good warding_bond beacon_of_hope true_strike darkvision see_invisibility "
+            "spider_climb enlarge_reduce alter_self pass_without_trace blink fly gaseous_form water_breathing water_walk",
+    "sustained": "shillelagh flame_blade flaming_sphere spiritual_weapon moonbeam branding_smite call_lightning spirit_guardians heat_metal "
+                 "vampiric_touch hellish_rebuke spike_growth",
+    "control": "bane faerie_fire ray_of_enfeeblement bestow_curse slow hypnotic_pattern web grease sleet_storm stinking_cloud fog_cloud "
+               "darkness silence gust_of_wind wind_wall calm_emotions enthrall suggestion animal_friendship counterspell dispel_magic",
+    "restore": "spare_the_dying lesser_restoration remove_curse revivify goodberry create_food_and_water purify_food_and_drink",
+    "summon": "find_familiar find_steed conjure_animals animate_dead unseen_servant phantom_steed floating_disk animal_messenger",
+    "world": "light dancing_lights daylight continual_flame mage_hand mending message minor_illusion prestidigitation thaumaturgy "
+             "druidcraft silent_image major_image disguise_self illusory_script magic_mouth arcane_lock knock arcanists_magic_aura alarm "
+             "glyph_of_warding tiny_hut rope_trick magic_circle nondetection meld_into_stone plant_growth levitate feather_fall misty_step "
+             "identify detect_magic detect_evil_and_good detect_poison_and_disease detect_thoughts find_traps locate_object "
+             "locate_animals_or_plants comprehend_languages tongues speak_with_animals speak_with_dead speak_with_plants augury "
+             "clairvoyance zone_of_truth sending gentle_repose create_or_destroy_water",
+}
+
+# Conditions (v0.7.7): checks outside combat, on the hero in combat, on a foe in combat, who lays it on the hero.
+CONDITIONS = {
+    "blinded": ("помеха Внимательности и Анализу (по 5e — провал всего, что требует зрения)", "нет: герой бьёт без помехи, враги — без преимущества",
+                "да: преимущество по нему, помеха ему", "мастер словами"),
+    "charmed": ("нет", "нет", "да: очарованный враг не атакует", "мастер словами"),
+    "deafened": ("нет состояния", "нет", "нет", "никто"),
+    "exhaustion": ("нет состояния (6 степеней, помеха, скорость, смерть)", "нет", "нет", "никто"),
+    "frightened": ("помеха проверкам", "частично: помеха атакам; не подходить к источнику — нет", "да: держится подальше, помеха", "мастер словами"),
+    "grappled": ("нет", "нет: скорость 0 не действует", "да: не двигается", "мастер словами; атаки монстров — нет"),
+    "incapacitated": ("автопровал проверок (в 5e — нет действий, проверки идут)", "проверить: может ли герой действовать", "да: пропускает ход",
+                      "мастер словами"),
+    "invisible": ("да (v0.7.5): скрытность, кражи, голос", "да: преимущество, помеха по нему", "нет: враги не бывают невидимыми", "заклинание"),
+    "paralyzed": ("автопровал проверок, спасбросков Силы и Ловкости", "частично: преимущество врагам; авто-крит вплотную — нет", "да: авто-крит вплотную",
+                  "мастер словами; упырь — нет"),
+    "petrified": ("нет состояния", "нет", "нет", "никто"),
+    "poisoned": ("помеха проверкам", "да: помеха атакам", "да: помеха атакам", "мастер словами; укусы и яды монстров — нет; Противоядие снимает"),
+    "prone": ("нет", "частично: преимущество врагам вплотную; помеха дальним — проверить; встать — нет", "да: встаёт за ход", "мастер словами; волк — нет"),
+    "restrained": ("помеха спасброскам Ловкости", "частично: преимущество врагам; своя помеха атакам — нет", "да", "мастер словами; паутина и сети — нет"),
+    "stunned": ("автопровал проверок, спасбросков Силы и Ловкости", "частично: преимущество врагам", "да", "мастер словами"),
+    "unconscious": ("автопровал", "да: 0 HP, спасброски от смерти", "да: просыпается от урона", "движок: 0 HP"),
+}
+EXTRA_CONDITION_NAMES = {"deafened": "Оглох", "exhaustion": "Истощение", "petrified": "Окаменел"}  # not in rules.json yet
+CONDITION_DURATIONS = "у врага — раунды и повторный спасбросок (заклинания движка); у героя — только «до короткого / долгого отдыха»"
+
+# Damage to the hero (v0.7.7): every source of resistance a level 1–5 hero can have.
+HERO_DAMAGE = [
+    ("Сопротивление урону", "дварф (яд), тифлинг (огонь), драконорождённый (по предку), ярость (дробящий, колющий, рубящий), Противоядие, предметы `resist_*`, «Защита от энергии»", "none"),
+    ("Преимущество на спасброски", "дварф против яда, эльф и полуэльф против очарования, гном против магии (Инт, Мдр, Хар), полурослик против испуга", "none"),
+    ("Иммунитет к состоянию", "эльф — магический сон", "none"),
+    ("Ноль хитов", "без сознания, спасброски от смерти, мгновенная смерть от урона ≥ максимума", "engine"),
+    ("Непреклонность полуорка", "1 хит вместо 0 раз за долгий отдых", "none"),
+    ("Истощение", "голод, холод, марш без сна", "none"),
+]
+
+# Monster traits the engine reads (combat_rules.gd).
+MONSTER_TRAITS_ENGINE = {"pack_tactics"}
+
+# Class features of levels 1–5 (classes and subclasses). Not listed — master only.
+_creation = ("spellcasting_bard spellcasting_cleric spellcasting_druid spellcasting_paladin spellcasting_ranger spellcasting_sorcerer "
+             "spellcasting_wizard bard_expertise_1 rogue_expertise_1 bonus_cantrip bonus_proficiency arcane_tradition bard_college divine_domain "
+             "druid_circle martial_archetype monastic_tradition otherworldly_patron primal_path ranger_archetype roguish_archetype sacred_oath "
+             "sorcerous_origin barbarian_ability_score_improvement_1 bard_ability_score_improvement_1 cleric_ability_score_improvement_1 "
+             "druid_ability_score_improvement_1 fighter_ability_score_improvement_1 monk_ability_score_improvement_1 "
+             "paladin_ability_score_improvement_1 ranger_ability_score_improvement_1 rogue_ability_score_improvement_1 "
+             "sorcerer_ability_score_improvement_1 warlock_ability_score_improvement_1 wizard_ability_score_improvement_1")
+FEATURES = {
+    **{f: ("creation", "выбор при создании или повышении уровня") for f in _creation.split()},
+    "barbarian_unarmored_defense": ("engine", "КД"), "monk_unarmored_defense": ("engine", "КД"), "draconic_resilience": ("engine", "КД и хиты"),
+    "jack_of_all_trades": ("engine", "половина бонуса к проверкам"), "sneak_attack": ("engine", "бой"), "cunning_action": ("engine", "бонусное действие в бою"),
+    "extra_attack_1": ("engine", "бой"), "barbarian_extra_attack": ("engine", "бой"), "monk_extra_attack": ("engine", "бой"),
+    "paladin_extra_attack": ("engine", "бой"), "ranger_extra_attack": ("engine", "бой"), "pact_magic": ("engine", "ячейки на коротком отдыхе"),
+    "second_wind": ("engine", "лечение"), "lay_on_hands": ("engine", "лечение"), "font_of_inspiration": ("engine", "восстановление на коротком отдыхе"),
+    "fighter_fighting_style": ("partial", "работают стрельба, защита, дуэлянт, бой двумя оружиями; нет — большое оружие, защита союзника"),
+    "ranger_fighting_style": ("partial", "работают стрельба, защита, дуэлянт, бой двумя оружиями"),
+    "paladin_fighting_style": ("partial", "работают защита и дуэлянт; нет — большое оружие, защита союзника"),
+    "rage": ("partial", "бонус к урону; нет — сопротивления, преимущества на Силу, конца ярости без атак"),
+    "action_surge_1_use": ("partial", "заряд тратится; лишнее действие — проверить"),
+    "bardic_inspiration_d6": ("partial", "заряд тратится, кость к броску не добавляется"),
+    "bardic_inspiration_d8": ("partial", "заряд тратится, кость к броску не добавляется"),
+    "channel_divinity": ("partial", "заряд тратится, действие — у мастера"), "channel_divinity_1_rest": ("partial", "заряд тратится, действие — у мастера"),
+    "wild_shape_cr_1_4_or_below_no_flying_or_swim_speed": ("partial", "заряд тратится, облика зверя в движке нет"),
+    "wild_shape_cr_1_2_or_below_no_flying_speed": ("partial", "заряд тратится, облика зверя в движке нет"),
+    "ki": ("partial", "очки тратятся, приёмы (Шквал, Терпеливая оборона, Шаг ветра, Оглушающий удар) — у мастера"),
+    "divine_sense": ("partial", "заряд тратится, действие — у мастера"), "font_of_magic": ("partial", "очки тратятся, обмен на ячейки — у мастера"),
+    "arcane_recovery": ("partial", "заряд тратится, ячейки — проверить"),
+}
+
+# Race traits.
+TRAITS = {
+    "darkvision": ("engine", "ночью вне освещённых мест; в бою и подземельях — нет"), "dwarven_toughness": ("engine", "хиты"),
+    "infernal_legacy": ("engine", "заговор; заклинания 3–5 уровня — проверить"), "menacing": ("creation", "навык"), "keen_senses": ("creation", "навык"),
+    "skill_versatility": ("creation", "навыки"), "dwarven_combat_training": ("creation", "владение оружием"), "elf_weapon_training": ("creation", "владение оружием"),
+    "tool_proficiency": ("creation", "инструмент"), "tinker": ("partial", "инструмент; устройства — у мастера"), "high_elf_cantrip": ("creation", "заговор"),
+    "extra_language": ("creation", "язык (сам язык ни на что не влияет)"),
+    "draconic_ancestry": ("partial", "выбор при создании; ни дыхание, ни сопротивление его не читают"),
+}
+TRAITS.update({f"draconic_ancestry_{c}": TRAITS["draconic_ancestry"] for c in
+               "white silver red green gold copper bronze brass blue black".split()})
+
+# Item properties (items.json `properties`): what the engine reads.
+ITEM_PROPS = {
+    "finesse": ("engine", "Сила или Ловкость, Скрытая атака"), "light": ("engine", "второе оружие"), "two_handed": ("engine", "без щита"),
+    "versatile": ("engine", "двумя руками"), "thrown": ("engine", "метание"), "heavy": ("partial", "кражи; помеха маленьким расам — нет"),
+    "reach": ("partial", "поле по колонкам 30 футов — досягаемость 10 футов ничего не меняет"), "ammunition": ("none", "стрелы и болты не тратятся"),
+    "silvered": ("none", "сопротивление оборотней не снимается"), "magic_plus1": ("engine", "атака и урон"), "magic_plus2": ("engine", "атака и урон"),
+    "magic_plus3": ("engine", "атака и урон"), "ac_plus1": ("engine", "КД"), "ac_plus2": ("engine", "КД"), "saves_plus1": ("engine", "спасброски"),
+    "stealth_advantage": ("engine", "Скрытность"), "light_source": ("engine", "ночь"), "healing": ("engine", "зелья лечения"),
+    "fire_damage": ("none", "лишний урон огнём (Алхимический огонь — нет и броска)"), "cold_damage": ("none", "лишний урон"),
+    "lightning_damage": ("none", "лишний урон"), "radiant_damage": ("none", "лишний урон (Святая вода — нет и броска)"),
+    "necrotic_damage": ("none", "лишний урон"), "poison_damage": ("none", "лишний урон"),
+    "resist_fire": ("none", "сопротивления героя нет вообще"), "resist_cold": ("none", "сопротивления героя нет вообще"),
+    "resist_poison": ("partial", "Противоядие снимает отравление; сопротивления нет"), "cursed": ("none", "проклятие ни на что не влияет"),
+}
+
+# Languages, backgrounds, tools (v0.7.10).
+SOCIAL = [
+    ("Языки героя", "выбираются при создании и лежат в листе; мастеру не передаются, движок их не читает", "none"),
+    ("Языки NPC и монстров", "в пакете у NPC языков нет; у монстров SRD они есть в источнике, но при импорте отброшены", "none"),
+    ("Разговор без общего языка", "сейчас с кем угодно говорят на всеобщем: гоблин понимает и поддаётся убеждению", "none"),
+    ("Особенность предыстории", "«Убежище верующих», «Военный чин», «Связь с преступным миром» и др. — только текст в листе", "master"),
+    ("Владение инструментами", "выбираются при создании; проверка движка берёт только навык или спасбросок — воровские инструменты для замка ничего не дают", "none"),
+    ("Воровской жаргон, Друидический", "тайные языки — нигде", "none"),
+]
+
+# Things a test checks against the 5e rules: id → test. Fill in as the work goes.
+CHECKED: dict[str, str] = {}
+
+
+def load(path: Path):
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def mark(status: str) -> str:
+    return STATUS[status]
+
+
+def class_features(classes: dict) -> dict[str, list[str]]:
+    """Feature id → the classes and subclasses that get it at levels 1–5."""
+    out: dict[str, list[str]] = {}
+    for cid, c in classes["classes"].items():
+        for lvl, row in c["levels"].items():
+            if int(lvl) <= 5:
+                for f in row.get("features", []):
+                    out.setdefault(f, []).append(c["name"])
+    for sid, s in classes["subclasses"].items():
+        for lvl, fl in (s.get("features") or {}).items():
+            if int(lvl) <= 5:
+                for f in fl:
+                    out.setdefault(f, []).append(s.get("name", sid))
+    return out
+
+
+def monster_riders() -> tuple[Counter, int, int, int, int]:
+    """Attack riders (conditions, extra save damage) of the imported monsters, spellcasters, reactions — SRD source."""
+    cond = re.compile(r"\b(poisoned|paralyzed|prone|grappled|restrained|frightened|charmed|stunned|blinded|incapacitated|unconscious|petrified)\b")
+    riders: Counter = Counter()
+    with_riders = casters = reactions = n = 0
+    for p in sorted((SRD / "monsters").glob("*.json")):
+        m = load(p)
+        if m["challenge_rating"] > MAX_MONSTER_CR:
+            continue
+        n += 1
+        hit = False
+        for a in m.get("actions", []):
+            d = a.get("desc", "")
+            if a.get("attack_bonus") is None:
+                continue
+            found = set(cond.findall(d))
+            if found or "saving throw" in d:
+                hit = True
+                riders.update(found or {"extra_save_damage"})
+        with_riders += hit
+        names = [t["name"] for t in m.get("special_abilities", [])] + [a["name"] for a in m.get("actions", [])]
+        casters += any("Spellcasting" in x for x in names)
+        reactions += bool(m.get("reactions"))
+    return riders, with_riders, casters, reactions, n
+
+
+def main() -> int:
+    rules = load(DATA / "rules.json")
+    classes = load(DATA / "srd" / "classes.json")
+    races = load(DATA / "srd" / "races.json")
+    monsters = load(DATA / "srd" / "monsters.json")
+    spells = load(DATA / "srd" / "spells.json")
+    backgrounds = load(DATA / "srd" / "backgrounds.json")
+    items = load(DATA / "items.json")
+
+    feats = class_features(classes)
+    unknown = [f for f in FEATURES if f not in classes["features"]] + [t for t in TRAITS if t not in races["traits"]] \
+        + [p for p in ITEM_PROPS if p not in items["properties"]] + [p for p in items["properties"] if p not in ITEM_PROPS]
+    if unknown:
+        raise SystemExit(f"stale ids in rules_audit.py: {', '.join(unknown)}")
+
+    summary: list[tuple[str, int, int, int]] = []  # title, total, works (engine + creation), missing
+    out: list[str] = []
+
+    def section(title: str, version: str, rows: list[tuple[str, ...]], header: list[str], note: str = "") -> None:
+        out.extend(["", f"## {title}", "", f"План — [роадмап {version}](roadmap.md#правила-5e)." + (f" {note}" if note else ""), ""])
+        out.append("| " + " | ".join(header) + " |")
+        out.append("|" + "---|" * len(header))
+        out.extend("| " + " | ".join(r) + " |" for r in rows)
+
+    # Conditions.
+    srd_conditions = sorted(load(SRD / "conditions.json")["results"], key=lambda c: c["index"])
+    rows = []
+    for c in srd_conditions:
+        cid = c["index"]
+        name = str(rules["conditions"].get(cid, EXTRA_CONDITION_NAMES.get(cid, c["name"]))).split(":")[0]
+        rows.append((name, f"`{cid}`", *CONDITIONS[cid]))
+    section("Состояния", "v0.7.7", rows, ["Состояние", "id", "Вне боя: проверки", "Бой: на герое", "Бой: на враге", "Кто накладывает на героя"],
+            f"Длительность: {CONDITION_DURATIONS}.")
+    summary.append(("Состояния (15 по SRD)", len(rows), sum(1 for r in CONDITIONS.values() if r[1].startswith("да")), sum(1 for r in CONDITIONS.values() if r[1] == "нет")))
+
+    section("Урон по герою", "v0.7.7", [(a, b, mark(s)) for a, b, s in HERO_DAMAGE], ["Что", "Источники", "Сейчас"])
+    summary.append(("Урон по герою", len(HERO_DAMAGE), sum(1 for *_, s in HERO_DAMAGE if s == "engine"), sum(1 for *_, s in HERO_DAMAGE if s in MISSING)))
+
+    # Monsters.
+    riders, with_riders, casters, reactions, n_src = monster_riders()
+    traits = Counter(t["id"] for m in monsters.values() for t in m["traits"])
+    names = {t["id"]: t["name"] for m in monsters.values() for t in m["traits"]}
+    rows = [(names[t], f"`{t}`", str(k), mark("engine" if t in MONSTER_TRAITS_ENGINE else "master")) for t, k in traits.most_common()]
+    cond_names = {c: str(rules["conditions"].get(c, EXTRA_CONDITION_NAMES.get(c, c))).split(":")[0] for c in riders}
+    rider_text = ", ".join(f"{'лишний урон со спасброском' if c == 'extra_save_damage' else cond_names[c]} — {k}" for c, k in riders.most_common())
+    section("Монстры", "v0.7.8", rows, ["Особенность", "id", "Монстров", "Сейчас"],
+            f"В движке {len(monsters)} монстров (класс опасности ≤ {MAX_MONSTER_CR} с атаками; в источнике SRD таких {n_src}). "
+            f"**Особые эффекты атак при импорте отброшены у {with_riders} монстров** — урон есть, эффекта нет: {rider_text}. "
+            f"Колдующих монстров {casters} — колдовство только текстом; реакции у {reactions}; языки монстров при импорте отброшены. "
+            f"Особенностей {len(traits)} видов, движок читает {len(MONSTER_TRAITS_ENGINE)}:")
+    summary.append(("Особенности монстров", len(traits), len(MONSTER_TRAITS_ENGINE), len(traits) - len(MONSTER_TRAITS_ENGINE)))
+    summary.append(("Эффекты атак монстров", with_riders, 0, with_riders))
+
+    # Class features.
+    rows = []
+    for f in sorted(feats, key=lambda x: classes["features"][x]["name"]):
+        st, what = FEATURES.get(f, ("master", ""))
+        rows.append((classes["features"][f]["name"], f"`{f}`", ", ".join(sorted(set(feats[f]))), mark(st), what, CHECKED.get(f, "")))
+    section("Особенности классов (1–5 уровень)", "v0.7.9", rows, ["Особенность", "id", "Класс", "Сейчас", "Что именно", "Проверено"])
+    st = Counter(FEATURES.get(f, ("master",))[0] for f in feats)
+    summary.append(("Особенности классов", len(feats), st["engine"] + st["creation"], st["master"] + st["none"]))
+
+    # Race traits.
+    rows = []
+    for t, d in sorted(races["traits"].items(), key=lambda kv: kv[1]["name"]):
+        s, what = TRAITS.get(t, ("master", ""))
+        rows.append((d["name"], f"`{t}`", mark(s), what, CHECKED.get(t, "")))
+    section("Черты рас", "v0.7.9", rows, ["Черта", "id", "Сейчас", "Что именно", "Проверено"])
+    st = Counter(TRAITS.get(t, ("master",))[0] for t in races["traits"])
+    summary.append(("Черты рас", len(races["traits"]), st["engine"] + st["creation"], st["master"] + st["none"]))
+
+    # Languages, backgrounds, tools.
+    bg = ", ".join(f"{b['name']} — «{b['feature']['name']}»" for b in backgrounds.values())
+    section("Языки, предыстории, инструменты", "v0.7.10", [(a, b, mark(s)) for a, b, s in SOCIAL], ["Что", "Сейчас", ""],
+            f"Особенности предысторий: {bg}.")
+    summary.append(("Языки, предыстории, инструменты", len(SOCIAL), 0, sum(1 for *_, s in SOCIAL if s in MISSING)))
+
+    # Items.
+    cat = items["catalog"]
+    with_prop = Counter(p for v in cat.values() for p in v.get("properties", []))
+    magic = sum(1 for v in cat.values() if v.get("rarity") and v["rarity"] != "common")
+    srd_magic = len(load(SRD / "magic-items.json")["results"])
+    rows = [(f"`{p}`", str(items["properties"][p]), str(with_prop.get(p, 0)), mark(ITEM_PROPS[p][0]), ITEM_PROPS[p][1]) for p in items["properties"]]
+    section("Предметы", "v0.7.11", rows, ["Свойство", "Очки редкости", "Предметов в каталоге", "Сейчас", "Что именно"],
+            f"В каталоге {len(cat)} предметов, магических {magic} (оружие и доспехи +1, Плащ защиты, Сапоги эльфов, зелья) из {srd_magic} магических предметов SRD. "
+            "Свойства — и словарь предметов, которые создаёт мастер: за свойство «нет нигде» он платит очки редкости, а предмет ничего не делает.")
+    st = Counter(v[0] for v in ITEM_PROPS.values())
+    summary.append(("Свойства предметов", len(ITEM_PROPS), st["engine"], st["none"]))
+
+    # Spells.
+    engine = set(rules["combat"]["engine_spells"])
+    conditions = set(rules["combat"]["condition_spells"]) - {"_doc"}
+    invisibility = set(rules.get("invisibility", {}).get("spells", {}))
+    group_of = {sid: g for g, ids in SPELL_ASSIGN.items() for sid in ids.split()}
+    playable = {k: v for k, v in spells.items() if int(v.get("level", 0)) <= 3}
+
+    def spell_status(sid: str) -> str:
+        if sid in engine:
+            return "движок: урон / лечение"
+        if sid in conditions:
+            return "движок: состояния"
+        if sid in invisibility:
+            return "движок: невидимость"
+        return STATUS["master"]
+
+    unassigned = sorted(sid for sid in playable if spell_status(sid) == STATUS["master"] and sid not in group_of)
+    if unassigned:
+        raise SystemExit(f"no group for: {', '.join(unassigned)}")
+    master = sum(1 for sid in playable if spell_status(sid) == STATUS["master"])
+    groups = "; ".join(f"{SPELL_GROUPS[g][0]} — {sum(1 for sid in playable if group_of.get(sid) == g and spell_status(sid) == STATUS['master'])}"
+                       for g in SPELL_GROUPS)
+    rows = []
+    for sid, v in sorted(playable.items(), key=lambda kv: (int(kv[1].get("level", 0)), kv[1]["name"])):
+        g = SPELL_GROUPS[group_of[sid]][0] if sid in group_of else "—"
+        rows.append((v["name"], f"`{sid}`", str(v.get("level", 0)), "да" if v.get("concentration") else "", spell_status(sid), g, CHECKED.get(sid, "")))
+    section("Заклинания (круги 0–3)", "v0.7.12", rows, ["Заклинание", "id", "Круг", "Конц.", "Сейчас", "Группа", "Проверено"],
+            f"Доступно героям 1–5 уровня {len(playable)}; движок разрешает {len(playable) - master}; **{master} — только мастер**: ячейка и "
+            f"концентрация тратятся, остальное — лишь в рассказе. По группам: {groups}.")
+    summary.append(("Заклинания", len(playable), len(playable) - master, master))
+
+    head = [
+        "# Аудит правил 5e",
+        "",
+        "Генерируется: `python tools/rules_audit.py`. План — серия версий [«Правила 5e»](roadmap.md#правила-5e) (v0.7.7–v0.7.12). "
+        "Числа — из данных; статусы — по чтению движка (`game/core`), их правят в `tools/rules_audit.py` вместе с работой.",
+        "",
+        "Статусы: **движок** — правило считает движок; **при создании** — выдаётся при создании или повышении уровня (навык, владение, заговор); "
+        "**частично** — что-то работает, что именно — в колонке; **только мастер** — существует лишь в рассказе; **нет нигде** — ни движок, ни мастер этого не знают.",
+        "",
+        "| Что | Всего | Работает | Только мастер или нет нигде |",
+        "|---|---|---|---|",
+        *[f"| {t} | {n} | {w} | {m} |" for t, n, w, m in summary],
+    ]
+    OUT.write_text("\n".join(head + out) + "\n", encoding="utf-8")
+    print(OUT)
+    for t, n, w, m in summary:
+        print(f"  {t}: {n} total, {w} work, {m} missing")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

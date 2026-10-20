@@ -55,7 +55,7 @@ python tools/godot_playtest.py --scenario pack_only --real            # playtest
 python tools/godot_playtest.py --scenario unseen --real              # playtest-4 on the real master: invisible past the captain, a voice from nowhere (v0.7.5)
 python tools/godot_playtest.py --scenario bot                         # bot player: 120 random steps on the stub master, session invariants (GODOT_BOT_STEPS, GODOT_BOT_SEED)
 python tools/trace_report.py                                         # report of the newest play session trace → build/traces/<name>.md (--list; the backend side from llm_server/var/traces)
-python tools/spells_audit.py                                        # audit of every spell of circles 0–3: engine or master only, group, checked → docs/production/spells-audit.md
+python tools/rules_audit.py                                         # audit of the 5e rules (conditions, monsters, features, traits, languages, items, spells): engine or master only → docs/production/rules-audit.md
 python tools/srd_import.py build                                      # tools/srd/source + tools/srd/ru.json → game/data/srd/ and the item catalog
 uv run --project llm_server python tools/srd_import.py translate      # translate new SRD entries into tools/srd/ru.json (cents)
 "$GODOT" --headless --path game -s res://tools/balance_sim.gd -- burrow_priest 3 60   # encounter balance on the engine: win rate per ready-made hero
