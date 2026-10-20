@@ -368,7 +368,7 @@ B27 (наррация vs состояние) решается в v0.6.0 эффе
 - **Бой** — `CombatRules.can_react` (реакция раз в раунд, `reacted` сбрасывается в начале своего хода), `can_grapple` / `grapple` (размер не больше героя +1, Атлетика против лучшей из Атлетики и Акробатики, недееспособный не сопротивляется; схваченный отпускается шагом героя прочь).
 - **Вес** — `rules.carry.per_str`, `CharacterRules.carried_weight` / `capacity` / `overloaded`: «Вес: 131 из 240 фнт.» в листе, перегруженный не уходит ни выходом, ни быстрым путём.
 - **Чистка** — `GameSession.shift_attitude` по `rules.attitude_range`; протокол 0.15.0 (ADR-0009 §25): без `limits.max_*`, `usage.daily_budget_left_usd`, `scene.location_id`, `character.saves` / `proficiency_bonus` / `hit_dice_left`.
-- **Попутно:** с v0.7.4 мастер на Haiku падал на каждом ходу — Claude 5 не принимает `temperature`, а `require_parameters` отсекал всех провайдеров (404); `NO_TEMPERATURE` в `agents.py` и тест. Тесты `test_ui_debts.gd`, живой `debts`.
+- **Попутно:** с v0.7.4 мастер на Haiku падал на каждом ходу — Claude 5 не принимает `temperature`, а `require_parameters` отсекал всех провайдеров (404); `NO_TEMPERATURE` в `agents.py` и тест. Тесты `test_ui_debts.gd`, живой `debts`; на реальном мастере (DeepSeek) — `attach --real`: «Очарование личности» на Бруно — налил в долг, отношение +1, ячейка потрачена один раз; «Малая иллюзия» — крыса в углу, Мира отвлеклась, Бруно слышал шёпот.
 
 Уже в плане: карта — список, а не схема (v0.7.6); стрелы и болты не тратятся (v0.7.12); выбор у менгира ничего не меняет (v0.7.14).
 

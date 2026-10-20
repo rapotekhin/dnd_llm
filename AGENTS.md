@@ -55,6 +55,7 @@ python tools/godot_playtest.py --scenario pack_only --real            # playtest
 python tools/godot_playtest.py --scenario unseen --real              # playtest-4 on the real master: invisible past the captain, a voice from nowhere (v0.7.5)
 python tools/godot_playtest.py --scenario map                       # the map 2.0: a scheme of known places, fast travel without a master turn, wolves stop the way (v0.7.6)
 python tools/godot_playtest.py --scenario debts                     # item stats in the sheet and the trade, the mail off takes minutes, Second Wind pinned to a message (v0.7.7)
+python tools/godot_playtest.py --scenario attach --real            # the real master: «Очарование личности» on Bruno and «Малая иллюзия» pinned to the words, one cast each (v0.7.7)
 python tools/godot_playtest.py --scenario bot                         # bot player: 120 random steps on the stub master, session invariants (GODOT_BOT_STEPS, GODOT_BOT_SEED)
 python tools/trace_report.py                                         # report of the newest play session trace → build/traces/<name>.md (--list; the backend side from llm_server/var/traces)
 python tools/rules_audit.py                                         # audit of the 5e rules (conditions, monsters, features, traits, languages, items, spells): engine or master only → docs/production/rules-audit.md
