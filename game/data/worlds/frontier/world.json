@@ -913,6 +913,7 @@
 			],
 			"encounter": {
 				"id": "burrow_priest",
+				"parley": "hard",
 				"enemies": [
 					{
 						"monster": "cult_fanatic",

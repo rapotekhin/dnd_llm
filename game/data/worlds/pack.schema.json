@@ -258,6 +258,7 @@
 									"id": {"$ref": "#/$defs/nonempty"},
 									"enemies": {"$ref": "#/$defs/foes"},
 									"ambush": {"type": "boolean"},
+									"parley": {"enum": ["hard"]},
 									"waves": {
 										"type": "array",
 										"items": {

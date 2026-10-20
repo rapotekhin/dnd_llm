@@ -206,7 +206,8 @@ func test_the_master_reinforces_within_the_budget() -> void:
 # --- parley ---------------------------------------------------------------------------------------
 
 
-func test_parley_needs_intelligent_foes_and_one_try_per_skill() -> void:
+## v0.7.5 (playtest-4: one Persuasion won the finale): a parley is a challenge — 3 successes before 2 failures.
+func test_parley_needs_intelligent_foes_and_is_a_challenge() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "wolf", "col": 1}])
 	assert_str(CombatRules.can_parley(s, data, "intimidation")).is_equal("COMBAT_NO_PARLEY")
@@ -214,10 +215,25 @@ func test_parley_needs_intelligent_foes_and_one_try_per_skill() -> void:
 	_fight(b, [{"monster": "bandit", "col": 1}])
 	assert_str(CombatRules.can_parley(b, data, "persuasion")).is_empty()
 	assert_str(CombatRules.can_parley(b, data, "deception")).is_equal("COMBAT_NO_PARLEY")
-	var lines := CombatRules.parley_apply(b, data, "persuasion", false)
-	assert_str(lines[0]).contains("не слушают")
-	assert_str(CombatRules.can_parley(b, data, "persuasion")).is_equal("COMBAT_PARLEY_TRIED")
-	assert_str(CombatRules.can_parley(b, data, "intimidation")).is_empty()
+	assert_str(CombatRules.parley_apply(b, data, "persuasion", false)[0]).contains("не слушают")
+	assert_str(CombatRules.can_parley(b, data, "persuasion")).is_empty()  # one failure — they still listen
+	assert_str(CombatRules.parley_apply(b, data, "intimidation", true)[0]).contains("колеблются")
+	assert_str(CombatRules.fighter(b, "e1")["status"]).is_equal("active")
+	assert_str(CombatRules.parley_apply(b, data, "persuasion", false)[0]).contains("больше не станут слушать")
+	assert_str(CombatRules.can_parley(b, data, "persuasion")).is_equal("COMBAT_PARLEY_REFUSED")
+
+
+func test_the_parley_dc_grows_with_the_threat_and_a_hard_encounter() -> void:
+	var weak := _session()
+	_fight(weak, [{"monster": "bandit", "col": 1}])
+	var strong := _session()
+	_fight(strong, [{"monster": "cult_fanatic", "col": 1}])
+	var hard := _session()
+	_fight(hard, [{"monster": "cult_fanatic", "col": 1}], {"parley": "hard"})
+	assert_int(CombatRules.parley_dc(strong, data)).is_greater(CombatRules.parley_dc(weak, data))
+	assert_int(CombatRules.parley_dc(hard, data)).is_equal(CombatRules.parley_dc(strong, data) + 5)
+	CombatRules.fighter(strong, "e1")["hp"] = 1  # below half: easier
+	assert_int(CombatRules.parley_dc(strong, data)).is_equal(CombatRules.parley_dc(hard, data) - 5 - 1)
 
 
 func test_the_parley_dc_falls_with_every_foe_out() -> void:
@@ -232,7 +248,9 @@ func test_the_parley_dc_falls_with_every_foe_out() -> void:
 func test_intimidation_makes_foes_surrender_or_flee_and_the_fight_is_won() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "col": 0}, {"monster": "bandit", "col": 2}, {"monster": "wolf", "col": 3}])
-	var lines := CombatRules.parley_apply(s, data, "intimidation", true)
+	CombatRules.parley_apply(s, data, "persuasion", true)
+	CombatRules.parley_apply(s, data, "persuasion", true)
+	var lines := CombatRules.parley_apply(s, data, "intimidation", true)  # the deciding success sets the outcome
 	assert_str(CombatRules.fighter(s, "e1")["status"]).is_equal("surrendered")
 	assert_str(CombatRules.fighter(s, "e2")["status"]).is_equal("fled")
 	assert_str(CombatRules.fighter(s, "e3")["status"]).is_equal("active")  # the beast fights on
@@ -245,7 +263,8 @@ func test_intimidation_makes_foes_surrender_or_flee_and_the_fight_is_won() -> vo
 func test_persuasion_ends_the_fight_in_a_truce_with_full_xp_and_no_encounter_loot() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "count": 2, "col": 1}])
-	CombatRules.parley_apply(s, data, "persuasion", true)
+	for i in 3:
+		CombatRules.parley_apply(s, data, "persuasion", true)
 	assert_str(CombatRules.health_key(CombatRules.fighter(s, "e1"))).is_equal("HEALTH_TRUCE")
 	CombatRules.after_player_action(s, data)
 	assert_str(s.combat["outcome"]).is_equal("truce")
@@ -346,3 +365,57 @@ func test_scorching_ray_makes_three_attack_rolls() -> void:
 	assert_int(pv["count"]).is_equal(3)
 	assert_int(pv["chance"]).is_less(100)
 	assert_int(int(data["spells"]["produce_flame"]["range_ft"])).is_equal(30)
+
+
+# --- invisibility (v0.7.5, playtest-4: the captain «noticed» an invisible hero) -----------------------------
+
+
+func test_concentration_on_invisibility_makes_the_hero_invisible_until_an_attack() -> void:
+	var s := _session()
+	s.character["concentration"] = "invisibility"
+	assert_bool(ConditionRules.invisible(s.character, data)).is_true()
+	assert_int(ConditionRules.unseen_penalty(s.character, data)).is_equal(5)
+	_fight(s, [{"monster": "bandit", "col": 0}])
+	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"]["main_hand"]), false)
+	assert_array(CombatRules._attack_mods(s, data, w, CombatRules.fighter(s, "e1"))["adv"]).contains(["вы невидимы"])
+	var lines := CombatRules.player_attack(s, data, "e1")
+	assert_str("\n".join(lines)).contains("Невидимость спадает")
+	assert_bool(ConditionRules.invisible(s.character, data)).is_false()
+
+
+func test_greater_invisibility_stays_and_a_spell_ends_the_plain_one() -> void:
+	var s := _session()
+	s.character["concentration"] = "greater_invisibility"
+	assert_array(ConditionRules.end_invisibility_on_attack(s.character, data)).is_empty()
+	assert_bool(ConditionRules.invisible(s.character, data)).is_true()
+	s.character["concentration"] = "invisibility"
+	SpellRules.cast(s.character, data, "light", 0) if data["spells"].has("light") else ConditionRules.end_invisibility_on_attack(s.character, data)
+	assert_bool(ConditionRules.invisible(s.character, data)).is_false()
+
+
+func test_an_invisible_thief_is_felt_not_seen() -> void:
+	var s := _session()
+	s.character["concentration"] = "invisibility"
+	var npc := "npc_serving"
+	var before := s.attitude(npc)
+	s.caught_by[npc] = s.day
+	var lines := TheftRules.react(s, data, npc)
+	assert_str(lines[0]).contains("вора не видно")
+	assert_int(s.attitude(npc)).is_equal(before)
+	assert_bool(s.caught_by.has(npc)).is_false()
+
+
+func test_the_master_sees_the_hero_invisible() -> void:
+	var s := _session()
+	s.character["concentration"] = "invisibility"
+	assert_array(TurnSnapshot.build(s, data, 4000)["character"]["conditions"]).contains(["invisible"])
+
+
+
+## Playtest-4 check: a foe fallen in the hero's column no longer gives ranged attacks disadvantage.
+func test_a_fallen_foe_next_to_the_hero_gives_no_ranged_disadvantage() -> void:
+	var s := _session()
+	_fight(s, [{"monster": "bandit", "col": 0}, {"monster": "bandit", "col": 3}])
+	assert_bool(CombatRules._foe_in_column(s, CombatRules.player(s))).is_true()
+	CombatRules.fighter(s, "e1")["status"] = "dead"
+	assert_bool(CombatRules._foe_in_column(s, CombatRules.player(s))).is_false()

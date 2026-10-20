@@ -950,3 +950,62 @@ scenarios:
       effects: {required_kinds_any: [equip]}
     rubric:
       - "Мастер снимает снаряжение эффектом equip (slot armor и shield или all) и описывает это как сделанное; проверка здесь не нужна"
+
+  - id: invisible_not_noticed
+    title: "Невидимый герой осматривается — никто не замечает"
+    category: modes
+    extends: tavern
+    input: "Обхожу зал и высматриваю, что плохо лежит."
+    snapshot:
+      character:
+        name: "Айра"
+        gender: female
+        class: rogue
+        level: 2
+        hp: {current: 14, max: 14}
+        ac: 14
+        conditions: ["invisible"]
+    expect:
+      effects: {forbidden_kinds: [npc_attitude, start_combat]}
+    rubric:
+      - "Никто в зале не видит героиню и не реагирует на неё взглядом или словами; можно описать, что кто-то слышит шорох или скрип половицы"
+      - "Отношение NPC не меняется"
+
+  - id: invisible_voice_from_nowhere
+    title: "Невидимый заговорил — NPC слышит голос из пустоты"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Горм, не пугайся, это я — ты меня не видишь, но слышишь."
+    snapshot:
+      character:
+        name: "Айра"
+        gender: female
+        class: rogue
+        level: 2
+        hp: {current: 14, max: 14}
+        ac: 14
+        conditions: ["invisible"]
+    rubric:
+      - "Горм слышит голос, но никого не видит: озирается, пугается или настораживается по характеру; не смотрит героине в лицо и не описывает её внешность"
+
+  - id: parley_wavering_line
+    title: "Переговоры в бою — реплика героя, враги лишь колеблются"
+    category: combat
+    extends: tavern
+    mode: combat
+    kind: combat_round
+    input: "Айра — Убеждение: 17 против Сл 15 — успех\nВраги колеблются (успехов 1 из 3, провалов 0 из 2, Сл 15)\nНаёмник 2 — Скимитар: 9 + 3 = 12 против КД 14 — промах"
+    snapshot:
+      combat:
+        round: 2
+        enemies:
+          - {id: e1, name: "Наёмник 1", monster: "Бандит", distance_ft: 0, side: same, status: active, health: hurt}
+          - {id: e2, name: "Наёмник 2", monster: "Бандит", distance_ft: 0, side: same, status: active, health: full}
+    expect:
+      effects: {max_count: 0}
+      narration:
+        must_not_match: ["сда(ё|е)тся", "бросает оружие", "опуска\\w* оружие", "\\d+ против"]
+    rubric:
+      - "В тексте есть то, что героиня сказала наёмникам (довод или сделка), правдоподобно для них"
+      - "Наёмники колеблются, но не сдаются и не опускают оружие; второй промахивается"

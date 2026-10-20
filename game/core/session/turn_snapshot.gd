@@ -96,7 +96,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 	var sheet := {
 		"name": c.get("name", ""), "gender": c.get("gender", "other"), "race": c.get("race_name", ""),
 		"class_name": class_text, "level": int(c.get("level", 1)), "hp": int(c.get("hp", 0)),
-		"max_hp": int(c.get("max_hp", 0)), "ac": int(c.get("ac", 10)), "conditions": c.get("conditions", []),
+		"max_hp": int(c.get("max_hp", 0)), "ac": int(c.get("ac", 10)), "conditions": _conditions(c, data),
 		"skills": c.get("skills", {}), "saves": c.get("saves", {}), "gold_cp": int(c.get("gold_cp", 0)),
 		"inventory": inventory, "features": CharacterRules.feature_names(c, data),
 		"background": str(data["backgrounds"].get(str(c.get("background", "")), {}).get("name", "")),
@@ -135,4 +135,12 @@ static func closed_exits(s: GameSession, world: Dictionary) -> Array[String]:
 	for to: String in closed:
 		if not open.has(to):
 			out.append(str(closed[to].get("text", "закрытый путь")))
+	return out
+
+
+## The hero's conditions for the master, invisibility from a held spell included (v0.7.5).
+static func _conditions(c: Dictionary, data: Dictionary) -> Array:
+	var out: Array = (c.get("conditions", []) as Array).duplicate()
+	if ConditionRules.invisible(c, data) and not out.has("invisible"):
+		out.append("invisible")
 	return out

@@ -129,6 +129,10 @@ static func react(s: GameSession, data: Dictionary, npc_id: String) -> Array[Str
 	var npc := world.npc(npc_id)
 	var who := str(npc.get("name", npc_id))
 	var lines: Array[String] = []
+	if ConditionRules.invisible(s.character, data):  # v0.7.5: felt, not seen — nobody to blame
+		s.caught_by.erase(npc_id)
+		lines.append("%s хватается за кошель и озирается — вора не видно" % who)
+		return lines
 	s.attitudes[npc_id] = clampi(s.attitude(npc_id) + int(cfg(data)["caught_attitude"]), -3, 3)
 	lines.append("%s: отношение хуже" % who)
 	match reaction_kind(data, npc_id):

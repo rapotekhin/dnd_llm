@@ -514,7 +514,7 @@ func _sneak_past_people(room_id: String) -> String:
 	var who := ""
 	for id: String in npcs:
 		var m: Dictionary = Catalog.data["monsters"].get(str(world().npc(id).get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])), {})
-		var pp := int(m.get("passive_perception", 10))
+		var pp := int(m.get("passive_perception", 10)) - ConditionRules.unseen_penalty(session.character, Catalog.data)
 		if pp >= best:
 			best = pp
 			who = str(world().npc(id).get("name", id))
@@ -753,7 +753,7 @@ func _move_to(room_id: String, lines: Array[String]) -> void:
 	var enc: Dictionary = world().room(room_id).get("encounter", {})
 	if not enc.is_empty() and not session.encounters_done.has(str(enc["id"])):
 		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
-			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {})})
+			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {}), "parley": str(enc.get("parley", ""))})
 		return
 	_request("enter", "
 ".join(lines.slice(1)))

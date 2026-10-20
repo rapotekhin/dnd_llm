@@ -477,7 +477,8 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		if why.is_empty() and int(e.get("action", 0)) <= 0:
 			why = "COMBAT_NO_ACTION"
 		var pb := _button(g, "Parley_" + skill, tr("COMBAT_PARLEY").format({"skill": tr("SKILL_" + skill.to_upper())}), mine and why.is_empty())
-		pb.tooltip_text = tr(why) if not why.is_empty() else tr("COMBAT_PARLEY_TIP_" + skill.to_upper())
+		pb.tooltip_text = tr(why) if not why.is_empty() else "%s\n%s" % [tr("COMBAT_PARLEY_TIP_" + skill.to_upper()),
+			tr("COMBAT_PARLEY_PROGRESS").format({"progress": CombatRules.parley_progress(s, data)})]
 		pb.pressed.connect(func() -> void: _do(GameState.combat_parley(skill)))
 	_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
 

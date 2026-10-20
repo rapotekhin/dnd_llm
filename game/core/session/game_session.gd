@@ -379,7 +379,7 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
 		return {}
 	var c: Dictionary = (raw as Dictionary).duplicate(true)
-	for k: String in ["round", "turn", "xp", "coins_cp", "next_id"]:
+	for k: String in ["round", "turn", "xp", "coins_cp", "next_id", "parley_ok", "parley_fail"]:
 		if c.has(k):
 			c[k] = int(c[k])
 	for id: String in c.get("fighters", {}):

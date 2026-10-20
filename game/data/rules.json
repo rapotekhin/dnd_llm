@@ -808,11 +808,21 @@
 		"help_delay": 2,
 		"reinforce_delay": 1,
 		"parley": {
-			"_doc": "Parley in a fight (v0.6.2): DC = base_dc + the best WIS save of intelligent foes + per_defeated for every foe already out of the fight, not below min_dc. One try per skill. Intimidation — they surrender (next to the player) or flee; Persuasion — truce.",
+			"_doc": "Parley in a fight (v0.6.2; a challenge since v0.7.5): every try costs the action and rolls Intimidation or Persuasion against DC = base_dc + the best WIS save of intelligent foes + per_cr × the highest CR among them + per_defeated for every foe out of the fight + per_bloodied for every foe below half HP + hard (an encounter of the pack with \"parley\": \"hard\" — finales, fanatics), not below min_dc. `successes` before `failures` win: the skill of the deciding success sets the outcome (Intimidation — surrender or flight, Persuasion — truce); `failures` — they will not listen until the end of the fight.",
 			"skills": ["intimidation", "persuasion"],
 			"base_dc": 12,
+			"per_cr": 1,
 			"per_defeated": -2,
+			"per_bloodied": -1,
+			"hard": 5,
+			"successes": 3,
+			"failures": 2,
 			"min_dc": 5
 		}
+	},
+	"invisibility": {
+		"_doc": "Invisibility (v0.7.5): the hero is invisible with the condition `invisible` or while concentrating on one of `spells`. Those who would see them get `passive_penalty` off passive Perception (5e disadvantage); in a fight the hero attacks with advantage and is attacked with disadvantage; an attack or a spell ends a spell with ends_on_attack (5e Invisibility; Greater Invisibility stays). Talking does not end it: NPCs hear a voice.",
+		"spells": {"invisibility": {"ends_on_attack": true}, "greater_invisibility": {"ends_on_attack": false}},
+		"passive_penalty": 5
 	}
 }

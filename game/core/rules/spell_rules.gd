@@ -75,6 +75,8 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int) -
 		c["slots_used"] = used
 		line += " (ячейка %d круга, осталось %d)" % [slot, slots_left(c, slot)]
 	var lines: Array[String] = [line]
+	if not (data["rules"].get("invisibility", {}).get("spells", {}) as Dictionary).has(spell_id):
+		lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))  # a spell gives the caster away (v0.7.5)
 	if bool(s.get("concentration", false)):
 		var prev := str(c.get("concentration", ""))
 		if not prev.is_empty() and prev != spell_id:

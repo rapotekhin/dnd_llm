@@ -58,3 +58,31 @@ static func check_mods(c: Dictionary, data: Dictionary, params: Dictionary) -> D
 		if mode == "disadvantage" or mode == "auto_fail":
 			(out[mode] as Array).append(str(id))
 	return out
+
+
+## The hero is invisible (v0.7.5): the condition, or concentration on an invisibility spell (rules.invisibility).
+static func invisible(c: Dictionary, data: Dictionary) -> bool:
+	if has(c, "invisible"):
+		return true
+	return (data["rules"].get("invisibility", {}).get("spells", {}) as Dictionary).has(str(c.get("concentration", "")))
+
+
+## −passive Perception for those who would see the hero (5e disadvantage on a passive check), 0 when visible.
+static func unseen_penalty(c: Dictionary, data: Dictionary) -> int:
+	return int(data["rules"].get("invisibility", {}).get("passive_penalty", 5)) if invisible(c, data) else 0
+
+
+## An attack or a spell ends 5e Invisibility (not Greater): its concentration and the condition go. Lines.
+static func end_invisibility_on_attack(c: Dictionary, data: Dictionary) -> Array[String]:
+	var spells: Dictionary = data["rules"].get("invisibility", {}).get("spells", {})
+	var conc := str(c.get("concentration", ""))
+	var lines: Array[String] = []
+	if spells.has(conc) and bool(spells[conc].get("ends_on_attack", true)):
+		c["concentration"] = ""
+		lines.append("Невидимость спадает")
+	if has(c, "invisible") and lines.is_empty() and not (spells.has(conc) and not bool(spells[conc].get("ends_on_attack", true))):
+		remove(c, "invisible")
+		lines.append("Невидимость спадает")
+	elif has(c, "invisible") and not lines.is_empty():
+		remove(c, "invisible")
+	return lines

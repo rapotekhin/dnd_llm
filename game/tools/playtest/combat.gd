@@ -27,7 +27,8 @@ func run() -> void:
 			if step("sneak toggle", sneak != null and not sneak.disabled):
 				sneak.button_pressed = true
 				await frames(2)
-				step("sneaking on", s_sneaking(gs))
+				# a fair Stealth roll against the captain at the gate: noticed is an outcome, not a failure
+				step("info: sneaking", true, "on" if s_sneaking(gs) else "noticed: " + str(gs.session.chat.back().get("lines", [""])[0]))
 		var exit: Button = find(screen(), "Exit_" + room)
 		if not step("walk to " + room, exit != null and not exit.disabled, "mode %s, busy %s" % [gs.session.mode, gs.is_busy()]):
 			await shot("no_exit_" + room)

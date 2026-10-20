@@ -140,7 +140,8 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 		"init": 0, "conditions": []}
 	s.combat = {"round": 1, "turn": 0, "fighters": fighters, "order": [], "log": [], "encounter": str(source.get("encounter", "")),
 		"room_from": str(source.get("room_from", "")), "outcome": "", "death_saves": {"ok": 0, "fail": 0}, "loot": [], "xp": 0,
-		"next_id": 0, "incoming": [], "help": (source.get("help", {}) as Dictionary).duplicate(true), "parley_tried": []}
+		"next_id": 0, "incoming": [], "help": (source.get("help", {}) as Dictionary).duplicate(true), "parley_tried": [],
+		"parley_ok": 0, "parley_fail": 0, "parley_hard": str(source.get("parley", "")) == "hard"}
 	_add_foes(s, data, foes)
 	for w: Dictionary in source.get("waves", []):
 		add_incoming(s, data, w.get("enemies", []), int(w.get("round", 2)), str(w.get("side", "right")))
@@ -251,7 +252,7 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 		var seen: Array[String] = []
 		for id: String in foes:
 			var f := fighter(s, id)
-			if int(roll["total"]) >= monster_passive(data, f):
+			if int(roll["total"]) >= monster_passive(data, f) - ConditionRules.unseen_penalty(s.character, data):
 				f["surprised"] = true
 				unseen.append(str(f["name"]))
 			else:
@@ -408,6 +409,7 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 	var sneak := _sneak_dice(s, data, w, adv, dis)
 	var auto_crit := cols_between(player(s), t) == 0 and (_has(t, "paralyzed") or _has(t, "unconscious"))
 	var res := _attack(s, data, str(c.get("name", "")), w["name"], int(w["to_hit"]), adv, dis, t, str(w["dice"]), int(w["bonus"]) + bonus_dmg, str(w["type"]), lines, sneak, auto_crit)
+	lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))  # the attack is made unseen, then it ends
 	if bool(res["hit"]) and not sneak.is_empty():
 		e["sneak"] = true
 	player(s)["hidden"] = false
@@ -424,6 +426,8 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		adv.append("цель беспомощна")
 	if bool(player(s).get("hidden", false)):
 		adv.append("вы спрятаны")
+	if ConditionRules.invisible(c, data):
+		adv.append("вы невидимы")
 	if _has(t, "blinded"):
 		adv.append("цель ослеплена")
 	if _has(t, "prone") and d > 0:
@@ -838,7 +842,7 @@ static func player_hide(s: GameSession, data: Dictionary) -> Array[String]:
 	var roll := stealth_roll(s, data)
 	var best := 0
 	for id: String in enemies(s):
-		best = maxi(best, monster_passive(data, fighter(s, id)))
+		best = maxi(best, monster_passive(data, fighter(s, id)) - ConditionRules.unseen_penalty(s.character, data))
 	var ok := int(roll["total"]) >= best
 	if ok:
 		player(s)["hidden"] = true
@@ -1193,6 +1197,7 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	var adv := (_target_disabled_player(c) and not ranged_use) or (_has_trait(data, f, "pack_tactics") and _ally_near_player(s, f))
 	var dis := bool(p.get("dodging", false)) and int(c["hp"]) > 0 or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) \
 		or (str(a.get("kind")) == "ranged" and d == 0) or (f["conditions"] as Array).has("poisoned") or bool(p.get("hidden", false)) \
+		or ConditionRules.invisible(c, data) \
 		or ["blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x))
 	var rolls := _d20(s.rng, adv, dis)
 	var nat := _nat(rolls, adv, dis)
@@ -1339,41 +1344,67 @@ static func snapshot(s: GameSession, data: Dictionary) -> Dictionary:
 # --- parley (v0.6.2) ------------------------------------------------------------------------------
 
 
-## DC of a parley: base + the best WIS save among intelligent foes, easier for every foe already out of the fight.
+## DC of a parley (v0.7.5): base + the best WIS save and per_cr × the highest CR among intelligent foes, + hard for a
+## pack encounter marked so (finales, fanatics); easier for every foe out of the fight and every one below half HP.
 static func parley_dc(s: GameSession, data: Dictionary) -> int:
 	var p: Dictionary = cfg(data)["parley"]
 	var wis := -5
+	var cr := 0.0
+	var bloodied := 0
 	for id: String in enemies(s):
 		var f := fighter(s, id)
+		if int(f.get("hp", 1)) * 2 < int(f.get("max_hp", 1)):
+			bloodied += 1
 		if _intelligent(data, f):
 			var m := _monster(data, f)
 			wis = maxi(wis, int(m["saves"].get("wis", CharacterRules.mod(int(m["abilities"].get("wis", 10))))))
+			cr = maxf(cr, float(m.get("cr", 0)))
 	var out := enemies(s, false).size() - enemies(s).size()
-	return maxi(int(p["min_dc"]), int(p["base_dc"]) + wis + int(p["per_defeated"]) * out)
+	var dc := int(p["base_dc"]) + wis + int(p.get("per_cr", 0)) * int(floor(cr)) + int(p["per_defeated"]) * out + int(p.get("per_bloodied", 0)) * bloodied
+	if bool(s.combat.get("parley_hard", false)):
+		dc += int(p.get("hard", 0))
+	return maxi(int(p["min_dc"]), dc)
 
 
 static func is_parley_skill(data: Dictionary, skill: String) -> bool:
 	return (cfg(data)["parley"]["skills"] as Array).has(skill)
 
 
-## "" when a parley with this skill can be tried: intelligent foes are still fighting, this skill not tried yet.
+## "" when a parley try can be made: intelligent foes are still fighting and they have not stopped listening.
 static func can_parley(s: GameSession, data: Dictionary, skill: String) -> String:
 	if not is_parley_skill(data, skill):
 		return "COMBAT_NO_PARLEY"
 	if not enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
 		return "COMBAT_NO_PARLEY"
-	if (s.combat.get("parley_tried", []) as Array).has(skill):
-		return "COMBAT_PARLEY_TRIED"
+	if int(s.combat.get("parley_fail", 0)) >= int(cfg(data)["parley"].get("failures", 2)):
+		return "COMBAT_PARLEY_REFUSED"
 	return ""
 
 
-## The outcome of a parley check: Intimidation — intelligent foes next to the player surrender, the rest flee;
-## Persuasion — they lower their weapons (truce). Beasts fight on. Lines.
+## The parley so far for the button and the master: «успехов 1 из 3, провалов 0 из 2, Сл 17».
+static func parley_progress(s: GameSession, data: Dictionary) -> String:
+	var p: Dictionary = cfg(data)["parley"]
+	return "успехов %d из %d, провалов %d из %d, Сл %d" % [int(s.combat.get("parley_ok", 0)), int(p.get("successes", 3)),
+		int(s.combat.get("parley_fail", 0)), int(p.get("failures", 2)), parley_dc(s, data)]
+
+
+## One try of the parley challenge (v0.7.5): `successes` before `failures` win; the skill of the deciding success sets
+## the outcome — Intimidation: intelligent foes next to the player surrender, the rest flee; Persuasion: truce. Beasts
+## fight on. Lines.
 static func parley_apply(s: GameSession, data: Dictionary, skill: String, success: bool) -> Array[String]:
+	var p: Dictionary = cfg(data)["parley"]
 	(s.combat["parley_tried"] as Array).append(skill)
 	var lines: Array[String] = []
 	if not success:
-		lines.append("Враги не слушают — бой продолжается")
+		s.combat["parley_fail"] = int(s.combat.get("parley_fail", 0)) + 1
+		if int(s.combat["parley_fail"]) >= int(p.get("failures", 2)):
+			lines.append("Враги больше не станут слушать — только бой")
+		else:
+			lines.append("Враги не слушают (%s)" % parley_progress(s, data))
+		return lines
+	s.combat["parley_ok"] = int(s.combat.get("parley_ok", 0)) + 1
+	if int(s.combat["parley_ok"]) < int(p.get("successes", 3)):
+		lines.append("Враги колеблются (%s)" % parley_progress(s, data))
 		return lines
 	var pcol := int(player(s)["col"])
 	for id: String in enemies(s):
