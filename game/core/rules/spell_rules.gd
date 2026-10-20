@@ -65,8 +65,10 @@ static func check(c: Dictionary, data: Dictionary, name: String, slot: int, pend
 	return {"spell_id": id, "slot": slot}
 
 
-## Spends the slot (check first) and keeps concentration. Returns the chat lines.
-static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int) -> Array[String]:
+## Spends the slot (check first) and keeps concentration. With the session (v0.7.8) the concentration gets its end
+## by the spell's duration on the game clock, and a spell cast on the hero (`on_self`) lifts what it cures
+## (rules.hero_effects.spell_cures). Returns the chat lines.
+static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, session: GameSession = null, on_self: bool = false) -> Array[String]:
 	var s: Dictionary = data["spells"][spell_id]
 	var line := "Заклинание: %s" % s["name"]
 	if slot > 0:
@@ -82,8 +84,23 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int) -
 		if not prev.is_empty() and prev != spell_id:
 			lines.append("концентрация на «%s» прервана" % data["spells"].get(prev, {}).get("name", prev))
 		c["concentration"] = spell_id
+		var rounds := ConditionRules.spell_rounds(data, spell_id)
+		c["concentration_ends"] = ConditionRules.now(session) + rounds if session != null and rounds >= 0 else -1
 		lines.append("концентрация")
+	if session != null and on_self:
+		var cure: Dictionary = data["rules"]["hero_effects"]["spell_cures"].get(spell_id, {})
+		if not cure.is_empty():
+			lines.append_array(ConditionRules.cure(session, data, cure, {"kind": "spell", "id": spell_id, "name": s_name(data, spell_id)}))
 	return lines
+
+
+static func s_name(data: Dictionary, spell_id: String) -> String:
+	return str(data["spells"].get(spell_id, {}).get("name", spell_id))
+
+
+## A spell that does something to the hero when cast on them (a cure).
+static func cures(data: Dictionary, spell_id: String) -> bool:
+	return data["rules"]["hero_effects"]["spell_cures"].has(spell_id)
 
 
 ## The facts of a cast for the master (turn input of kind ability, effect summary).

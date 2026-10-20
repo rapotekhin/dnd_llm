@@ -106,6 +106,10 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"resources": FeatureUses.lines(c, data).map(func(r: Dictionary) -> Dictionary:
 			return {"name": r["name"], "left": r["left"], "max": r["max"]}),
 		"concentration": str(data["spells"].get(str(c.get("concentration", "")), {}).get("name", "")),
+		"effects": ConditionRules.shown(s, data).map(func(e: Dictionary) -> String:
+			return "%s — %s%s" % [e["name"], e["left"], (", " + str(e["source"])) if not str(e["source"]).is_empty() else ""]),
+		"exhaustion": ConditionRules.exhaustion(c),
+		"resistances": HeroDefense.resistances(s, data).keys().map(func(t: Variant) -> String: return str(data["misc"]["damage_types"].get(str(t), t))),
 	}
 	if not str(c.get("spell_ability", "")).is_empty():
 		var prepared := CharacterRules.spell_names(c, data, "prepared")

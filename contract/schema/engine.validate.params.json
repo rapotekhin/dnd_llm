@@ -38,6 +38,11 @@
           "title": "Kind",
           "type": "string"
         },
+        "on_self": {
+          "default": false,
+          "title": "On Self",
+          "type": "boolean"
+        },
         "slot_level": {
           "anyOf": [
             {
@@ -123,16 +128,45 @@
     },
     "ConditionEffect": {
       "additionalProperties": false,
+      "description": "A condition (0.16.0 for the hero: a reason, a save of the engine with its tag, a duration from the list;\nwithout a save only when the hero brought it on with their own words this turn — cause \"player\").",
       "properties": {
+        "by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "By"
+        },
+        "cause": {
+          "anyOf": [
+            {
+              "const": "player",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cause"
+        },
         "condition": {
           "enum": [
             "blinded",
             "charmed",
+            "deafened",
+            "exhaustion",
             "frightened",
             "grappled",
             "incapacitated",
             "invisible",
             "paralyzed",
+            "petrified",
             "poisoned",
             "prone",
             "restrained",
@@ -141,6 +175,26 @@
           ],
           "title": "Condition",
           "type": "string"
+        },
+        "duration": {
+          "default": "long_rest",
+          "enum": [
+            "round",
+            "minute",
+            "ten_minutes",
+            "hour",
+            "eight_hours",
+            "short_rest",
+            "long_rest",
+            "until_removed"
+          ],
+          "title": "Duration",
+          "type": "string"
+        },
+        "ends_on_damage": {
+          "default": false,
+          "title": "Ends On Damage",
+          "type": "boolean"
         },
         "kind": {
           "const": "condition",
@@ -158,6 +212,42 @@
           "title": "Reason",
           "type": "string"
         },
+        "repeat_save": {
+          "default": false,
+          "title": "Repeat Save",
+          "type": "boolean"
+        },
+        "save": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConditionSave"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tag": {
+          "anyOf": [
+            {
+              "enum": [
+                "poison",
+                "charm",
+                "fear",
+                "magic",
+                "sleep",
+                "disease"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tag"
+        },
         "target_id": {
           "anyOf": [
             {
@@ -169,21 +259,48 @@
           ],
           "default": null,
           "title": "Target Id"
-        },
-        "until": {
-          "default": "long_rest",
-          "enum": [
-            "short_rest",
-            "long_rest"
-          ],
-          "title": "Until",
-          "type": "string"
         }
       },
       "required": [
         "condition"
       ],
       "title": "ConditionEffect",
+      "type": "object"
+    },
+    "ConditionSave": {
+      "additionalProperties": false,
+      "description": "The hero's save against a condition (0.16.0): the engine rolls it with the hero's bonuses.",
+      "properties": {
+        "ability": {
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "title": "Ability",
+          "type": "string"
+        },
+        "dc_tier": {
+          "enum": [
+            "very_easy",
+            "easy",
+            "medium",
+            "hard",
+            "very_hard",
+            "nearly_impossible"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ability",
+        "dc_tier"
+      ],
+      "title": "ConditionSave",
       "type": "object"
     },
     "DamageEffect": {

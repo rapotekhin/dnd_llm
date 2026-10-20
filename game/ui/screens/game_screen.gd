@@ -19,6 +19,8 @@ var _map: WorldNotes
 var _journal: WorldNotes
 var _level_up: LevelUpView
 var _short_rest: SmallDialog
+var _long_rest: SmallDialog
+var _chips: EffectChips
 var _theft: TheftPanel
 var _prepare: SmallDialog
 var _mode_bar: HBoxContainer
@@ -108,6 +110,8 @@ func _ready() -> void:
 	_options.add_theme_constant_override("v_separation", 12)
 	left.add_child(_options)
 
+	_chips = EffectChips.new()  # what is on the hero, over the input (v0.7.8)
+	left.add_child(_chips)
 	var input_row := HBoxContainer.new()
 	input_row.add_theme_constant_override("separation", 12)
 	left.add_child(input_row)
@@ -149,6 +153,7 @@ func _ready() -> void:
 	side.journal_requested.connect(func() -> void: _journal.open())
 	side.level_up_requested.connect(func() -> void: _level_up.open())
 	side.short_rest_requested.connect(func() -> void: _short_rest.open())
+	side.long_rest_requested.connect(func() -> void: _long_rest.open())
 	side.pockets_requested.connect(func(npc: String) -> void: _theft.open(npc))
 	row.add_child(side)
 
@@ -170,7 +175,9 @@ func _ready() -> void:
 	_short_rest.name = "ShortRestView"
 	_prepare = SmallDialog.new(SmallDialog.PREPARE)
 	_prepare.name = "PrepareView"
-	for v: SmallDialog in [_short_rest, _prepare]:
+	_long_rest = SmallDialog.new(SmallDialog.LONG_REST)
+	_long_rest.name = "LongRestView"
+	for v: SmallDialog in [_short_rest, _prepare, _long_rest]:
 		v.visible = false
 		add_child(v)
 		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -206,7 +213,7 @@ func _ready() -> void:
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause_menu"):
-		var overlays: Array[Control] = [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _theft]
+		var overlays: Array[Control] = [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft]
 		var open := overlays.filter(func(o: Control) -> bool: return o.visible)
 		if not open.is_empty():
 			for o: Control in open:
@@ -251,6 +258,7 @@ func _refresh() -> void:
 	input.editable = online and not busy
 	send_button.disabled = not online or busy
 	var s := GameState.session if GameState.has_session() else null
+	_chips.refresh()
 	_mode_bar.visible = s != null and s.in_conversation()
 	trade_panel.visible = s != null and s.mode == GameSession.MODE_TRADE
 	if _mode_bar.visible:

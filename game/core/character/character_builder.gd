@@ -379,7 +379,7 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 		"subclass": str(ch.get("subclass", "")), "background": str(ch["background"]), "level": 1, "xp": 0,
 		"abilities": final_abilities(ch, data), "save_profs": (k["saves"] as Array).duplicate(),
 		"conditions": [], "slots_used": [0, 0, 0, 0, 0], "hit_dice_used": 0,
-		"resources_used": {}, "condition_ends": {}, "concentration": "", "prepared_day": 1,
+		"resources_used": {}, "effects": [], "next_effect": 1, "exhaustion": 0, "concentration": "", "concentration_ends": -1, "prepared_day": 1,
 		"story": str(ch.get("story", "")).strip_edges(),
 	}
 	var skills := fixed_skills(ch, data)

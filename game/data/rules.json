@@ -141,18 +141,21 @@
 		3
 	],
 	"conditions": {
-		"blinded": "Ослеплён: автоматически проваливает проверки, требующие зрения; атаки по нему с преимуществом, его атаки с помехой.",
+		"blinded": "Ослеплён: автоматически проваливает проверки, требующие зрения (Внимательность, Анализ); атаки по нему с преимуществом, его атаки с помехой.",
 		"charmed": "Очарован: не может атаковать очаровавшего; тот совершает с преимуществом социальные проверки против него.",
+		"deafened": "Оглох: ничего не слышит и автоматически проваливает проверки, требующие слуха.",
+		"exhaustion": "Истощение: шесть степеней — 1: помеха на проверки; 2: скорость вдвое меньше; 3: помеха на атаки и спасброски; 4: максимум хитов вдвое меньше; 5: скорость 0; 6: смерть. Долгий отдых снимает всё.",
 		"frightened": "Испуган: помеха на проверки и атаки, пока источник страха в поле зрения; не может к нему приближаться.",
-		"grappled": "Схвачен: скорость 0.",
-		"incapacitated": "Недееспособен: не может совершать действия и реакции.",
+		"grappled": "Схвачен: скорость 0; вырваться — действием, Атлетика или Акробатика.",
+		"incapacitated": "Недееспособен: не может совершать действия и реакции; говорить и проходить проверки может.",
 		"invisible": "Невидим: его нельзя увидеть без магии; его атаки с преимуществом, атаки по нему с помехой.",
-		"paralyzed": "Парализован: недееспособен, проваливает спасброски Силы и Ловкости.",
+		"paralyzed": "Парализован: недееспособен, не двигается и не говорит, проваливает спасброски Силы и Ловкости; атаки по нему с преимуществом, вплотную — критические.",
+		"petrified": "Окаменел: недееспособен, сопротивление всему урону, проваливает спасброски Силы и Ловкости; атаки по нему с преимуществом.",
 		"poisoned": "Отравлен: помеха на броски атаки и проверки характеристик.",
-		"prone": "Лежит ничком: помеха на атаки; атаки по нему вблизи с преимуществом, издалека с помехой.",
-		"restrained": "Опутан: скорость 0, помеха на атаки и спасброски Ловкости.",
-		"stunned": "Ошеломлён: недееспособен, проваливает спасброски Силы и Ловкости.",
-		"unconscious": "Без сознания: недееспособен, роняет всё, лежит ничком."
+		"prone": "Лежит ничком: помеха на атаки; атаки по нему вблизи с преимуществом, издалека с помехой; встать — всё перемещение хода.",
+		"restrained": "Опутан: скорость 0, помеха на атаки и спасброски Ловкости, атаки по нему с преимуществом.",
+		"stunned": "Ошеломлён: недееспособен, проваливает спасброски Силы и Ловкости; атаки по нему с преимуществом.",
+		"unconscious": "Без сознания: недееспособен, роняет всё, лежит ничком; атаки по нему с преимуществом, вплотную — критические."
 	},
 	"glossary": {
 		"advantage": "Преимущество: бросаются две d20, берётся большая. Помеха — меньшая.",
@@ -452,11 +455,13 @@
 		"antitoxin": {
 			"remove": [
 				"poisoned"
-			]
+			],
+			"adv_tag": "poison",
+			"duration": "hour"
 		}
 	},
 	"condition_effects": {
-		"_doc": "What a condition does to engine checks (SRD, simplified outside combat): checks | skills {id} | saves {ability}: disadvantage | auto_fail.",
+		"_doc": "What a condition does to engine checks (SRD; v0.7.8): checks | skills {id} | saves {ability} | senses {sight, hearing}: disadvantage | auto_fail. A sense comes with the master's check (a check that needs sight or hearing). Incapacitated and stunned heroes still make checks: the master decides whether they can try.",
 		"poisoned": {
 			"checks": "disadvantage"
 		},
@@ -465,17 +470,22 @@
 		},
 		"blinded": {
 			"skills": {
-				"perception": "disadvantage",
-				"investigation": "disadvantage"
+				"perception": "auto_fail",
+				"investigation": "auto_fail"
+			},
+			"senses": {
+				"sight": "auto_fail"
+			}
+		},
+		"deafened": {
+			"senses": {
+				"hearing": "auto_fail"
 			}
 		},
 		"restrained": {
 			"saves": {
 				"dex": "disadvantage"
 			}
-		},
-		"incapacitated": {
-			"checks": "auto_fail"
 		},
 		"paralyzed": {
 			"checks": "auto_fail",
@@ -485,6 +495,12 @@
 			}
 		},
 		"stunned": {
+			"saves": {
+				"str": "auto_fail",
+				"dex": "auto_fail"
+			}
+		},
+		"petrified": {
 			"checks": "auto_fail",
 			"saves": {
 				"str": "auto_fail",
@@ -838,5 +854,77 @@
 		"_doc": "Invisibility (v0.7.5): the hero is invisible with the condition `invisible` or while concentrating on one of `spells`. Those who would see them get `passive_penalty` off passive Perception (5e disadvantage); in a fight the hero attacks with advantage and is attacked with disadvantage; an attack or a spell ends a spell with ends_on_attack (5e Invisibility; Greater Invisibility stays). Talking does not end it: NPCs hear a voice.",
 		"spells": {"invisibility": {"ends_on_attack": true}, "greater_invisibility": {"ends_on_attack": false}},
 		"passive_penalty": 5
+	},
+	"hero_effects": {
+		"_doc": "Effects on the hero (v0.7.8): a condition or a boon with its source, duration, save and concentration. Durations are in rounds (10 a minute) of the game clock: round, minute, ten_minutes, hour, eight_hours; or short_rest / long_rest / until_removed. A save names its tag (save_tags): race traits give advantage against it (trait_saves) or immunity (trait_immune). Damage to the hero: resistances of race traits (trait_resist; damage_resistance — the draconic ancestry), of Rage, of items (item_resist), of effects; petrified — resistance to all. spell_cures: what a spell cast on the hero lifts (remove), how much exhaustion it takes away, and the boon it leaves (adv_tag, resist, duration). exhaustion: forced march — each hour of travel past march_hours a day, a CON save DC march_dc + hours past; a day awake — each awake_hours without a long rest, a CON save DC awake_dc + awake_dc_step per day before; a long rest takes all exhaustion away (decision of the author, ADR-0010). camp: a long rest outside an inn costs `need` points of food (food: item → points).",
+		"durations": {
+			"round": 1,
+			"minute": 10,
+			"ten_minutes": 100,
+			"hour": 600,
+			"eight_hours": 4800
+		},
+		"save_tags": ["poison", "charm", "fear", "magic", "sleep", "disease"],
+		"trait_saves": {
+			"dwarven_resilience": {
+				"tags": ["poison"]
+			},
+			"fey_ancestry": {
+				"tags": ["charm"]
+			},
+			"brave": {
+				"tags": ["fear"]
+			},
+			"gnome_cunning": {
+				"tags": ["magic"],
+				"abilities": ["int", "wis", "cha"]
+			}
+		},
+		"trait_immune": {
+			"fey_ancestry": {
+				"tag": "sleep",
+				"conditions": ["unconscious"]
+			}
+		},
+		"trait_resist": {
+			"dwarven_resilience": ["poison"],
+			"hellish_resistance": ["fire"],
+			"damage_resistance": "ancestry"
+		},
+		"rage_resist": ["bludgeoning", "piercing", "slashing"],
+		"item_resist": {
+			"resist_fire": "fire",
+			"resist_cold": "cold",
+			"resist_poison": "poison"
+		},
+		"spell_cures": {
+			"lesser_restoration": {
+				"remove": ["blinded", "deafened", "paralyzed", "poisoned"]
+			},
+			"greater_restoration": {
+				"remove": ["charmed", "petrified"],
+				"exhaustion": 1
+			},
+			"protection_from_poison": {
+				"remove": ["poisoned"],
+				"adv_tag": "poison",
+				"resist": ["poison"],
+				"duration": "hour"
+			}
+		},
+		"exhaustion": {
+			"march_hours": 8,
+			"march_dc": 10,
+			"awake_hours": 24,
+			"awake_dc": 10,
+			"awake_dc_step": 5
+		},
+		"camp": {
+			"need": 2,
+			"food": {
+				"rations": 2,
+				"bread": 1
+			}
+		}
 	}
 }

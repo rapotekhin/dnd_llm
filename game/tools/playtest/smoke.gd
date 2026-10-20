@@ -174,6 +174,12 @@ func _map_journal_rest(gs: Node, game: Control) -> void:
 		return
 	var gold: int = gs.session.character["gold_cp"]
 	await press(rest)
+	await frames(3)
+	var inn: Button = find(game, "RestInn")  # v0.7.8: the dialog — the inn's room or a camp
+	if not step("the inn's room in the rest dialog", inn != null and not inn.disabled):
+		return
+	await shot("rest_dialog")
+	await press(inn)
 	step("rest turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
 	step("a new day, paid for the room", gs.session.day == 2 and gs.session.character["gold_cp"] == gold - 50,
 		"day %d, %d → %d cp" % [gs.session.day, gold, gs.session.character["gold_cp"]])

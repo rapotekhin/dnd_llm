@@ -102,6 +102,35 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		"summary": "Взято: %s%s" % [p["name"], (" — на глазах у хозяина" if seen else "")]}
 
 
+## «Забрать всё» (просьба автора, after v0.7.8): the portable things of the room nobody owns, in order, as long as the
+## hero can carry them (CharacterRules.capacity). {"take": [prop], "left": [prop too heavy]}.
+static func take_all_plan(s: GameSession, data: Dictionary) -> Dictionary:
+	var c := s.character
+	var weight := CharacterRules.carried_weight(c, data, s.items)
+	var cap := float(CharacterRules.capacity(c, data))
+	var take: Array[Dictionary] = []
+	var left: Array[Dictionary] = []
+	for p: Dictionary in room_props(s, s.room_id):
+		if str(p.get("item_id", "")).is_empty() or not str(p.get("owner", "")).is_empty():
+			continue
+		var w := float(ItemRules.def_of(data["items"], s.items, str(p["item_id"])).get("weight", 0))
+		if weight + w > cap:
+			left.append(p)
+			continue
+		weight += w
+		take.append(p)
+	return {"take": take, "left": left}
+
+
+## Takes what take_all_plan allows. Returns the names taken.
+static func take_all(s: GameSession, data: Dictionary) -> Array[String]:
+	var names: Array[String] = []
+	for p: Dictionary in take_all_plan(s, data)["take"]:
+		apply_take(s, data, {"room": s.room_id, "prop": p["id"], "owner": ""})
+		names.append(str(p["name"]))
+	return names
+
+
 static func plan_state(s: GameSession, e: Dictionary) -> Dictionary:
 	var p := find(s, s.room_id, str(e.get("prop_id", "")))
 	if p.is_empty():

@@ -32,6 +32,7 @@ BANNER_NO_MASTER,"Нет связи с мастером — переподклю
 BTN_ATTACH,"Заклинание, умение или предмет — вместе с сообщением"
 BTN_BACK,Назад
 BTN_BACK_TO_WORLD,К выбору мира
+BTN_CAMP_CONFIRM,Разбить лагерь
 BTN_CANCEL,Отмена
 BTN_CANCEL_TURN,Отменить ход
 BTN_CAST,Колдовать
@@ -55,8 +56,9 @@ BTN_LEVEL_UP,Новый уровень!
 BTN_LEVEL_UP_CONFIRM,Подтвердить
 BTN_LOAD,Загрузить
 BTN_LOAD_BEFORE_FIGHT,Загрузить момент перед боем
-BTN_LONG_REST,Долгий отдых
-BTN_LONG_REST_COST,Долгий отдых ({cost})
+BTN_LONG_REST,Снять комнату
+BTN_LONG_REST_COST,Снять комнату ({cost})
+BTN_LONG_REST_OPEN,Долгий отдых…
 BTN_LOOK,Осмотреться
 BTN_LOOK_TIP,"Проверка Внимательности по этой комнате: заметить то, что на виду. Повтор без перемен — прежний итог"
 BTN_MAP,Карта
@@ -84,6 +86,7 @@ BTN_SNEAK_TIP,"Входя туда, где ждут враги, вы прове�
 BTN_STEAL,Стащить
 BTN_STEP_LEFT,← Шаг
 BTN_STEP_RIGHT,Шаг →
+BTN_TAKE_ALL,Забрать всё
 BTN_TALK_TO,Поговорить: {name}
 BTN_TO_MENU,В меню
 BTN_TO_TALK,К разговору
@@ -165,11 +168,13 @@ COMBAT_ACTION,Действие
 COMBAT_ALREADY_HIDDEN,Вы уже спрятались
 COMBAT_ALREADY_KNOWN,Этот вид врагов вам уже знаком
 COMBAT_ATTACK,"Атака: {name} ({hit}, {dmg})"
+COMBAT_ATTACK_FRENZY,Удар в неистовстве: {name} ({dmg}) ▲
 COMBAT_ATTACK_OFF,Второй рукой: {name} ({dmg}) [бонус]
 COMBAT_BAD_MOVE,Можно шагнуть только на соседнюю колонку
 COMBAT_BAD_TARGET,Эта цель уже вне боя
 COMBAT_BONUS,Бонус
 COMBAT_BONUS_SHORT, [бонус]
+COMBAT_CHARMED,Вы очарованы им и не можете напасть
 COMBAT_COINS,Монеты: {coins}
 COMBAT_DEATH_SAVES,"Спасброски от смерти: успехов {ok}, провалов {fail}"
 COMBAT_DID_DASH,{name} — рывок
@@ -178,12 +183,18 @@ COMBAT_DID_DODGE,{name} уходит в оборону
 COMBAT_DO_DASH,Рывок
 COMBAT_DO_DISENGAGE,Отход
 COMBAT_DO_DODGE,Уклонение
+COMBAT_DO_ESCAPE,Вырваться
+COMBAT_DO_FRENZY,Неистовство
 COMBAT_DO_GRAPPLE,Схватить
 COMBAT_DO_HIDE,Спрятаться
 COMBAT_DO_INSPECT,Осмотреть [бонус]
 COMBAT_DO_SHOVE,Сбить с ног
+COMBAT_DO_STAND,Встать
+COMBAT_ESCAPE_TIP,Действие: Атлетика или Акробатика против хватки или пут
 COMBAT_FOE_SURPRISED,врасплох
 COMBAT_FOE_UNKNOWN,"Вид не изучен. «Осмотреть» (бонусное действие) — проверка знаний; удача запоминает таких врагов навсегда: хиты, КД, атаки, сопротивления"
+COMBAT_FRENZY_TIP,Пока вы в ярости: удар бонусным действием каждый ход; после боя — степень истощения
+COMBAT_FRIGHTENED,Страх не пускает ближе к его источнику
 COMBAT_FT,{ft} фт
 COMBAT_GRAPPLE_TIP,"Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом. Схваченный не может отойти, пока вы его держите (до вашего шага прочь)"
 COMBAT_HIDDEN,Спрятан — враги не видят
@@ -196,11 +207,15 @@ COMBAT_LOOT,"Добыча — отметьте, что взять:"
 COMBAT_MELEE,вплотную
 COMBAT_MOVE,➜ Движение: {n}
 COMBAT_NONE,Боя нет
+COMBAT_NOT_HELD,Вас никто не держит
+COMBAT_NOT_PRONE,Вы и так на ногах
 COMBAT_NOT_YOUR_TURN,Сейчас не ваш ход
 COMBAT_NO_ACTION,Действие этого хода уже потрачено
 COMBAT_NO_BONUS,Бонусное действие уже потрачено или недоступно
+COMBAT_NO_FRENZY,"Неистовство — только в ярости, один раз за бой"
 COMBAT_NO_MOVE,Движение этого хода уже потрачено — возьмите Рывок
 COMBAT_NO_PARLEY,Здесь не с кем договариваться
+COMBAT_NO_SPEED,Скорость 0 — с места не сдвинуться
 COMBAT_OUTCOME_CAPTURED,Вы в плену у врагов
 COMBAT_OUTCOME_DEAD,Герой погиб
 COMBAT_OUTCOME_PLAYER_FLED,Вы вышли из боя
@@ -215,9 +230,11 @@ COMBAT_PARLEY_TRIED,Так уже пробовали в этом бою
 COMBAT_PARLEY_REFUSED,Враги больше не станут слушать — только бой
 COMBAT_PARLEY_PROGRESS,"Сейчас: {progress}"
 COMBAT_PICK_TARGET,"Выберите цель — подсвечены те, кого можно достать"
+COMBAT_PRONE,Вы лежите — сначала встаньте
 COMBAT_RAGING,Ярость
 COMBAT_ROUND,Раунд {n}
 COMBAT_SHOVE_TIP,"Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом. Сбитый лежит: по нему вплотную — с преимуществом, издалека — с помехой; встаёт он в свой ход"
+COMBAT_STAND_TIP,Подняться на ноги — на это уходит всё перемещение хода
 COMBAT_SURPRISED,Застигнут врасплох
 COMBAT_TAB_COMMON,Общие
 COMBAT_TAB_FEATURES,Умения
@@ -230,11 +247,14 @@ COMBAT_XP,Опыт: +{xp}
 COMBAT_YOUR_TURN,Ваш ход
 COND_BLINDED,ослеплён
 COND_CHARMED,очарован
+COND_DEAFENED,оглох
+COND_EXHAUSTION,истощение
 COND_FRIGHTENED,испуган
 COND_GRAPPLED,схвачен
 COND_INCAPACITATED,недееспособен
 COND_INVISIBLE,невидим
 COND_PARALYZED,парализован
+COND_PETRIFIED,окаменел
 COND_POISONED,отравлен
 COND_PRONE,лежит
 COND_RESTRAINED,опутан
@@ -257,6 +277,7 @@ DM_STYLE_IRONIC,Ироничный
 DM_STYLE_IRONIC_HINT,"С усмешкой: лёгкая ирония над штампами, но мир остаётся опасным."
 DM_STYLE_LITERARY,Литературный
 DM_STYLE_LITERARY_HINT,"Образно и атмосферно: метафоры, запахи и звуки, чуть медленнее темп."
+EFFECT_SOURCE,Причина: {source}
 EQUIP_BUSY,"Нельзя, пока мастер думает"
 EQUIP_HANDS_BUSY,Руки заняты
 EQUIP_IN_COMBAT,В бою доспех и щит не сменить — на это уходят минуты
@@ -361,6 +382,12 @@ JOURNAL_TAB_PEOPLE,Разговоры
 JOURNAL_TAB_PLACES,Места
 JOURNAL_TAB_QUESTS,Задания
 JOURNAL_TITLE,Журнал
+LONG_REST_CAMP,Лагерь — нужна еда на {need} очка
+LONG_REST_FOOD,"{item}: есть {have}, по {points} очк."
+LONG_REST_GIVES,"До {clock} утра: все хиты и ячейки, половина костей хитов, истощение проходит. Пока вы спите, идёт время."
+LONG_REST_NO_FOOD,В рюкзаке нет еды. Пайки и хлеб продаёт трактирщик.
+LONG_REST_POINTS,Припасы: {have} из {need}
+LONG_REST_TITLE,Долгий отдых
 LVL_ASI,Увеличение характеристик: +2 к одной или +1 к двум (не выше 20)
 LVL_CANTRIP,заговор
 LVL_CANTRIPS,Новые заговоры: выберите {n}
@@ -466,11 +493,14 @@ RARITY_LEGENDARY,Легендарный
 RARITY_RARE,Редкий
 RARITY_UNCOMMON,Необычный
 RARITY_VERY_RARE,Очень редкий
+REST_BAD_SUPPLIES,Таких припасов нет в рюкзаке
 REST_BUSY,Сейчас нельзя отдыхать
+REST_DANGER,Здесь ещё опасно — лагерь не разбить
 REST_IN_CONVERSATION,Сначала закончите разговор
 REST_KIND_LONG,долгий отдых
 REST_KIND_SHORT,короткий отдых
 REST_NOT_SAFE,Здесь небезопасно отдыхать
+REST_NO_FOOD,Не хватает еды для лагеря
 REST_NO_MONEY,Не хватает денег на ночлег
 REST_SHORT_LIMIT,Коротких отдыхов сегодня больше не будет — нужен долгий отдых
 SAVE_CHA,Спасбросок Харизмы
@@ -491,6 +521,7 @@ SHEET_LANGUAGES,Языки: {list}
 SHEET_LINE,"{race}, {class}, {level} уровень · {background}"
 SHEET_PASSIVE,пассивная Внимательность {n}
 SHEET_PROF_SPEED,Бонус мастерства +{prof} · скорость {speed} футов
+SHEET_RESIST,Сопротивление урону: {list}
 SHEET_RESOURCE,{name}: {left} из {max} (восстановление: {rest})
 SHEET_RESOURCES,Умения с ограниченными использованиями
 SHEET_SKILLS,"Навыки (● — владение, ●● — компетентность)"
@@ -511,8 +542,6 @@ SHORT_REST_HINT,Восстановятся умения «до коротког�
 SHORT_REST_TITLE,Короткий отдых — час
 SHORT_REST_UNTIL,Отдых займёт ровно час — закончится в {clock}
 SIDE_COINS,Монеты: {coins}
-SIDE_CONCENTRATION,Концентрация: {spell}
-SIDE_CONDITIONS,Состояния: {list}
 SIDE_DARK,Темно: Внимательность с помехой — нужен факел или фонарь
 SIDE_DAY,День {day}
 SIDE_DAY_TIME,"День {day}, {part} ({clock})"
@@ -557,6 +586,10 @@ SNEAK_BUSY,Сейчас нельзя
 SNEAK_NOTICED,"Здесь вас уже заметили — красться не выйдет, пока не уйдёте"
 TAB_DISPLAY,Экран
 TAB_MASTER,Мастер
+TAKE_ALL_NOTHING,Здесь нечего забрать: ничьих переносных вещей нет
+TAKE_ALL_SAY,"Собираю всё, что могу унести."
+TAKE_ALL_TIP,"Взять всё, что здесь ничьё и что вы унесёте: {list}"
+TAKE_ALL_TOO_HEAVY,Больше не унести — рюкзак и так тяжёл
 THEFT_CAUGHT,Вас уже поймали на этом сегодня — ни шагу к его карманам
 THEFT_EMPTY,Карманы пусты
 THEFT_HIDDEN,вы крадётесь

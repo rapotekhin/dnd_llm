@@ -220,7 +220,10 @@ func _refresh() -> void:
 	send_button.disabled = not mine
 	end_turn.disabled = not mine
 	for b: String in ["MoveLeft", "MoveRight"]:
-		(find_child(b, true, false) as Button).disabled = not mine or int(CombatRules.economy(s).get("move", 0)) <= 0
+		var mb := find_child(b, true, false) as Button
+		var why := CombatRules.can_move(s, data, -1 if b == "MoveLeft" else 1)  # prone, held, afraid (v0.7.8)
+		mb.disabled = not mine or not why.is_empty()
+		mb.tooltip_text = tr(why) if not why.is_empty() and why != "COMBAT_NOT_YOUR_TURN" else ""
 	_draw_queue(s)
 	_draw_field(s, data, mine)
 	_draw_portrait(s, data)
@@ -310,7 +313,7 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			box.add_child(me)
 		for id: String in s.combat.get("order", []):
 			var f := CombatRules.fighter(s, id)
-			if str(f.get("side")) != "enemy" or int(f["col"]) != col:
+			if str(f.get("side")) != "enemy" or CombatRules.shown_col(f) != col:
 				continue
 			var card := Button.new()
 			card.name = "Foe_" + id
@@ -382,11 +385,9 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 	bar.custom_minimum_size = Vector2(0, 14)
 	_portrait.add_child(bar)
 	_line(_portrait, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}))
-	var conds: Array = c.get("conditions", [])
-	if not conds.is_empty():
-		_line(_portrait, ", ".join(conds.map(func(x: Variant) -> String: return tr("COND_" + str(x).to_upper())))).add_theme_color_override("font_color", UiTheme.WARN)
-	if not str(c.get("concentration", "")).is_empty():
-		_line(_portrait, tr("SIDE_CONCENTRATION").format({"spell": data["spells"].get(str(c["concentration"]), {}).get("name", "")}))
+	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
+	_portrait.add_child(chips)
+	chips.refresh()
 	if bool(s.combat.get("raging", false)):
 		_line(_portrait, tr("COMBAT_RAGING")).add_theme_color_override("font_color", UiTheme.BAD)
 	if bool(CombatRules.player(s).get("hidden", false)):
@@ -488,6 +489,27 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			func(t: String) -> String: return CombatRules.can_grapple(s, data, t),
 			func(_t: String) -> Dictionary: return {})
 		gb.tooltip_text = tr("COMBAT_SHOVE_TIP" if shove else "COMBAT_GRAPPLE_TIP")
+	if ConditionRules.has(c, "prone"):
+		var sw := CombatRules.can_stand(s)
+		var sb := _button(g, "Do_stand", tr("COMBAT_DO_STAND"), mine and sw.is_empty())
+		sb.tooltip_text = tr(sw) if not sw.is_empty() else tr("COMBAT_STAND_TIP")
+		sb.pressed.connect(func() -> void: _do(GameState.combat_stand()))
+	if ConditionRules.has(c, "grappled") or ConditionRules.has(c, "restrained"):
+		var ew := CombatRules.can_escape(s)
+		var eb := _button(g, "Do_escape", tr("COMBAT_DO_ESCAPE"), mine and ew.is_empty())
+		eb.tooltip_text = tr(ew) if not ew.is_empty() else tr("COMBAT_ESCAPE_TIP")
+		eb.pressed.connect(func() -> void: _do(GameState.combat_escape()))
+	if CharacterRules.has_feature(c, "frenzy") and bool(s.combat.get("raging", false)):
+		if not bool(s.combat.get("frenzy", false)):
+			var fw := CombatRules.can_frenzy(s)
+			var frb := _button(g, "Do_frenzy", tr("COMBAT_DO_FRENZY"), mine and fw.is_empty())
+			frb.tooltip_text = tr("COMBAT_FRENZY_TIP")
+			frb.pressed.connect(func() -> void: _do(GameState.combat_frenzy()))
+		else:
+			_action(w, "Attack_frenzy", tr("COMBAT_ATTACK_FRENZY").format({"name": main["name"], "dmg": _dmg_text(main)}), mine,
+				func(t: String) -> String: return GameState.combat_frenzy_attack(t),
+				func(t: String) -> String: return CombatRules.can_frenzy_attack(s, data, t),
+				func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
 	var hide_why := CombatRules.can_hide(s, data)
 	var hb := _button(g, "Do_hide", tr("COMBAT_DO_HIDE"), mine and hide_why.is_empty())
 	hb.tooltip_text = tr(hide_why) if not hide_why.is_empty() else tr("COMBAT_HIDE_TIP")

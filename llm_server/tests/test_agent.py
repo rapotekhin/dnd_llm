@@ -339,7 +339,8 @@ def test_a_haggle_check_passes_the_engine_note(data_dir):
 def test_cast_and_condition_effects_reach_the_engine(data_dir):
     fn = scripted(
         ("propose_effect", {"effect": {"kind": "cast", "spell": "Волшебная стрела"}}),
-        ("propose_effect", {"effect": {"kind": "condition", "condition": "poisoned", "until": "short_rest"}}),
+        ("propose_effect", {"effect": {"kind": "condition", "condition": "poisoned", "duration": "hour", "reason": "яд в кружке",
+                                       "save": {"ability": "con", "dc_tier": "medium"}, "tag": "poison"}}),
         ("final", lambda m: {"narration": "Стрелы срываются с пальцев.", "effect_ids": ["e-1", "e-2"]}),
     )
     msg, calls, _ = play(data_dir, fn)

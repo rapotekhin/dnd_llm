@@ -693,11 +693,13 @@ scenarios:
       check: {d20: [4], bonus: 1, total: 5, dc: 13, success: false, nat: null, blocked: false}
     expect:
       effects:
-        required_kinds_any: [damage]
+        required_kinds_any: [damage, condition]
         damage_severity_in: [setback, dangerous]
         forbidden_fields: [dice, amount]
+        condition_save: save
+        condition_tag_in: [poison]
     rubric:
-      - "Мастер выбирает тяжесть и тип урона (яд), кубики бросает движок"
+      - "Последствие яда — эффектом: урон ядом (тяжесть выбирает мастер, кубики бросает движок) и/или отравление со спасброском (v0.7.8)"
 
   - id: item_dedupe
     title: "Находка предмета — сначала поиск в каталоге"
@@ -1009,3 +1011,89 @@ scenarios:
     rubric:
       - "В тексте есть то, что героиня сказала наёмникам (довод или сделка), правдоподобно для них"
       - "Наёмники колеблются, но не сдаются и не опускают оружие; второй промахивается"
+
+  - id: condition_vial_of_poison
+    title: "Герой пьёт из склянки с черепом — отравление через движок"
+    category: rules
+    extends: tavern
+    input: "Беру со стола склянку с черепом на ярлыке и выпиваю её залпом."
+    engine:
+      validate:
+        - {kind: condition, status: accept, summary: "Отравлен (1 ч 0 мин, склянка с ядом) — спасбросок Тел 8 против Сл 15 — провал"}
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p1, name: "Склянка с черепом на ярлыке", description: "Стоит на столе у окна, внутри мутная зеленоватая жидкость", portable: true}
+      character:
+        name: "Айра"
+        gender: female
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 16
+    expect:
+      effects: {required_kinds_any: [condition, damage], condition_save: save_or_player, condition_tag_in: [poison], condition_in: [poisoned, incapacitated, unconscious]}
+    rubric:
+      - "Отравление (или урон ядом) проведено эффектом, а не одними словами; описание совпадает с тем, что принял движок"
+      - "Если был спасбросок — исход описан строго по нему (устояла — яд не подействовал)"
+
+  - id: condition_ghost_fear
+    title: "Вопль призрака — страх со спасброском Мудрости"
+    category: rules
+    extends: tavern
+    input: "Призрак девочки бросается ко мне с жутким воплем — стою на месте и не бегу."
+    engine:
+      validate:
+        - {kind: condition, status: accept, summary: "Испуган (1 мин, вопль призрака) — спасбросок Мдр 9 против Сл 15 — провал"}
+    snapshot:
+      scene:
+        description: "Ночь. Посреди зала мерцает призрак девочки в обгоревшем платье; посетители забились по углам."
+      character:
+        name: "Айра"
+        gender: female
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 16
+    expect:
+      effects: {required_kinds_any: [condition], condition_save: save, condition_tag_in: [fear, magic], condition_in: [frightened]}
+    rubric:
+      - "Страх проведён эффектом condition со спасброском Мудрости, исход описан по нему"
+
+  - id: condition_let_them_bind
+    title: "Герой даёт себя связать — без спасброска, по своей воле"
+    category: rules
+    extends: tavern
+    input: "Протягиваю стражникам руки: вяжите, я не сопротивляюсь."
+    snapshot:
+      scene:
+        description: "У дверей таверны двое стражников с верёвкой — капитан велел доставить Айру на допрос."
+      character:
+        name: "Айра"
+        gender: female
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 16
+    expect:
+      effects: {required_kinds_any: [condition], condition_save: save_or_player, condition_in: [restrained, grappled]}
+    rubric:
+      - "Связанные руки — эффектом состояния; спасбросок не нужен, раз героиня сама сдалась"
+
+  - id: condition_doze_by_the_fire
+    title: "Герой сам засыпает у очага — время, а не сон навсегда"
+    category: rules
+    extends: tavern
+    input: "Устраиваюсь у очага и дремлю часок."
+    snapshot:
+      character:
+        name: "Айра"
+        gender: female
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 16
+    expect:
+      effects: {required_kinds_any: [advance_time, condition], condition_save: save_or_player, condition_in: [unconscious]}
+    rubric:
+      - "Прошло время (advance_time) или сон наложен на время из списка по воле героя; без спасброска и без опасности из ниоткуда"

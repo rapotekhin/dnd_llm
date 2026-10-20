@@ -48,12 +48,24 @@
           "title": "Conditions",
           "type": "array"
         },
+        "effects": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
         "equipped": {
           "items": {
             "type": "string"
           },
           "title": "Equipped",
           "type": "array"
+        },
+        "exhaustion": {
+          "default": 0,
+          "title": "Exhaustion",
+          "type": "integer"
         },
         "features": {
           "items": {
@@ -105,6 +117,13 @@
           "default": "",
           "title": "Race",
           "type": "string"
+        },
+        "resistances": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resistances",
+          "type": "array"
         },
         "resources": {
           "items": {

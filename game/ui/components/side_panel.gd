@@ -9,6 +9,7 @@ signal map_requested
 signal journal_requested
 signal level_up_requested
 signal short_rest_requested
+signal long_rest_requested
 signal pockets_requested(npc_id: String)
 
 var _content: VBoxContainer
@@ -83,12 +84,6 @@ func _rebuild() -> void:
 	if int(c["hp"]) * 2 <= int(c["max_hp"]):
 		hp.add_theme_color_override("font_color", UiTheme.BAD)
 	_line(tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}), false)
-	var conditions: Array = c.get("conditions", [])
-	if not conditions.is_empty():
-		var cond := _line(tr("SIDE_CONDITIONS").format({"list": ", ".join(conditions.map(func(x: Variant) -> String: return tr("COND_" + str(x).to_upper())))}), false)
-		cond.add_theme_color_override("font_color", UiTheme.WARN)
-	if not str(c.get("concentration", "")).is_empty():
-		_line(tr("SIDE_CONCENTRATION").format({"spell": Catalog.data["spells"].get(str(c["concentration"]), {}).get("name", "")}), true)
 	var next_xp := LevelUp.xp_for(Catalog.data, int(c.get("level", 1)) + 1)
 	if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data):
 		_line(tr("SIDE_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}), true)
@@ -170,6 +165,20 @@ func _rebuild() -> void:
 				if not err.is_empty():
 					EventBus.message.emit(tr(err)))
 			look_row.add_child(lb)
+		# «Забрать всё» (v0.7.8): what nobody owns and the hero can carry, after a search.
+		var takeable: Array = PropRules.take_all_plan(s, Catalog.data)["take"]
+		var tb := Button.new()
+		tb.name = "TakeAllButton"
+		tb.text = tr("BTN_TAKE_ALL")
+		tb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tb.disabled = not can_act or takeable.is_empty()
+		tb.tooltip_text = tr("TAKE_ALL_TIP").format({"list": ", ".join(takeable.map(func(p: Dictionary) -> String: return str(p["name"])))}) 			if not takeable.is_empty() else tr("TAKE_ALL_NOTHING")
+		tb.pressed.connect(func() -> void:
+			var err := GameState.take_all()
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
+		_content.add_child(tb)  # its own row under the look buttons: three in one row widen the panel
 		var trapped := {}
 		for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
 			trapped[ft["to"]] = ft["secret"]
@@ -187,16 +196,13 @@ func _rebuild() -> void:
 				continue
 			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act)
 			b.name = "Exit_" + e
-		var place := ExplorationRules.rest_place(Catalog.data["world"], s.room_id)
-		if not place.is_empty():
-			var cost := int(place["cost_cp"])
-			var rest := _button(tr("BTN_LONG_REST_COST").format({"cost": Money.format(cost)}) if cost > 0 else tr("BTN_LONG_REST"),
-				func() -> void:
-					var err := GameState.long_rest()
-					if not err.is_empty():
-						EventBus.message.emit(tr(err)), can_act)
-			rest.name = "RestButton"
-			rest.disabled = not can_act or not ExplorationRules.can_rest(s, Catalog.data["world"]).is_empty()
+		# The long rest (v0.7.8): the inn's room or a camp with food — chosen in the dialog.
+		var inn_ok := ExplorationRules.can_rest(s, Catalog.data["world"]).is_empty()
+		var camp_why := ExplorationRules.can_camp(s, Catalog.data)
+		var rest := _button(tr("BTN_LONG_REST_OPEN"), long_rest_requested.emit, can_act)
+		rest.name = "RestButton"
+		rest.disabled = not can_act or (not inn_ok and not camp_why.is_empty())
+		rest.tooltip_text = tr(camp_why) if not inn_ok and not camp_why.is_empty() else ""
 		var wait := MenuButton.new()
 		wait.name = "WaitButton"
 		wait.text = tr("BTN_WAIT")

@@ -16,6 +16,9 @@ var _data: Dictionary = {}
 
 ## Lines an applied effect adds after its summary (the owner of a taken thing reacts, v0.7.0).
 var _extra_lines: Array[String] = []
+## Turns started by the player's own words or ability (v0.7.8): only there a condition may come without a save
+## (`cause: player` — the hero drank it, lay down to sleep). turn_id → true; GameState marks them.
+var player_turns: Dictionary = {}
 
 func mark_searched(turn_id: String) -> void:
 	searched[turn_id] = true
@@ -27,6 +30,7 @@ func discard(turn_id: String) -> void:
 		if reserves[id]["turn_id"] == turn_id:
 			reserves.erase(id)
 	searched.erase(turn_id)
+	player_turns.erase(turn_id)
 
 
 func _of_turn(turn_id: String) -> Array[Dictionary]:
@@ -107,7 +111,11 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if dice.is_empty():
 				return {"reason": "неизвестная тяжесть урона"}
 			var amount := _roll(s.rng, int(dice[0]), int(dice[1]), 0)
-			return {"plan": {"amount": amount}, "summary": "−%d HP (%s)" % [amount, e.get("damage_type", "урон")]}
+			var dtype := HeroDefense.damage_type(data, str(e.get("damage_type", "")))
+			var adj := HeroDefense.adjust(s, data, dtype, amount)  # v0.7.8: the hero's resistances
+			var note := str(adj["note"])
+			return {"plan": {"amount": int(adj["damage"])}, "summary": "−%d HP (%s%s)" % [int(adj["damage"]),
+				data["misc"]["damage_types"].get(dtype, e.get("damage_type", "урон")), (", " + note) if not note.is_empty() else ""]}
 		"heal":
 			var h: Array = rules["heal_dice"].get(str(e.get("tier", "")), [])
 			if h.is_empty():
@@ -159,18 +167,11 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var chk := SpellRules.check(c, data, str(e.get("spell", "")), int(e.get("slot_level", 0)) if e.get("slot_level") != null else 0, slots)
 			if chk.has("reason"):
 				return {"reason": chk["reason"]}
-			return {"plan": {"spell_id": chk["spell_id"], "slot": chk["slot"]},
-				"summary": "Заклинание: " + SpellRules.describe(data, chk["spell_id"], chk["slot"])}
+			var on_self := bool(e.get("on_self", false))
+			return {"plan": {"spell_id": chk["spell_id"], "slot": chk["slot"], "on_self": on_self},
+				"summary": "Заклинание: " + SpellRules.describe(data, chk["spell_id"], chk["slot"]) + (" — на себя" if on_self else "")}
 		"condition":
-			var cond := str(e.get("condition", ""))
-			if not ConditionRules.known(data, cond):
-				return {"reason": "неизвестное состояние %s; есть: %s" % [cond, ", ".join((rules["conditions"] as Dictionary).keys())]}
-			var on := bool(e.get("on", true))
-			if not on and not ConditionRules.has(c, cond):
-				return {"reason": "у персонажа нет состояния %s" % cond}
-			var until := str(e.get("until", "long_rest"))
-			return {"plan": {"condition": cond, "on": on, "until": until},
-				"summary": ("Состояние: %s" if on else "Снято: %s") % str(rules["conditions"][cond]).get_slice(":", 0)}
+			return _plan_condition(s, data, turn_id, e, pending)
 		"use_feature":
 			var rid := FeatureUses.resolve(c, data, str(e.get("feature", "")))
 			var amount := int(e.get("amount", 1))
@@ -222,6 +223,74 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 		"equip":
 			return _plan_equip(s, data, e)
 	return {"reason": "движок не знает эффект %s" % e.get("kind", "?")}
+
+
+## A condition on the hero by the master (v0.7.8, «Правила 5e: состояния»): with a reason, a save the engine rolls
+## (an ability and a DC tier; the tag gives race traits their advantage or immunity) and a duration from the list.
+## Without a save — only when the hero brought it on themselves this turn (`cause: player`: drank, lay down). An
+## incapacitating condition out of a fight needs an end in time (the engine lets the time pass). `on: false` lifts
+## it (exhaustion — one level).
+func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var rules: Dictionary = data["rules"]
+	var c := s.character
+	var cond := str(e.get("condition", ""))
+	if e.get("target_id") != null and not str(e.get("target_id", "")).is_empty():
+		return {"reason": "вне боя target_id не нужен: состояние ложится на героя; что случилось с NPC — опиши словами"}
+	if not ConditionRules.known(data, cond):
+		return {"reason": "неизвестное состояние %s; есть: %s" % [cond, ", ".join((rules["conditions"] as Dictionary).keys())]}
+	var title := ConditionRules.name_of(data, cond)
+	if not bool(e.get("on", true)):
+		if cond == "exhaustion" and ConditionRules.exhaustion(c) <= 0 or cond != "exhaustion" and not ConditionRules.has(c, cond):
+			return {"reason": "у персонажа нет состояния %s" % cond}
+		return {"plan": {"condition": cond, "on": false}, "summary": "Снято: %s" % title}
+	if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "condition" and str(p["plan"].get("condition", "")) == cond):
+		return {"reason": "это состояние уже предложено в этом ходе"}
+	var duration := str(e.get("duration", "")) if e.get("duration") != null else ""
+	if duration.is_empty():
+		duration = "long_rest"
+	if not ConditionRules.durations(data).has(duration):
+		return {"reason": "неизвестная длительность %s; есть: %s" % [duration, ", ".join(ConditionRules.durations(data))]}
+	if cond == "invisible":
+		return {"reason": "невидимость героя — только заклинанием (cast) или вещью"}
+	if ConditionRules.INCAPACITATING.has(cond) and not CombatRules.active(s) and not (rules["hero_effects"]["durations"] as Dictionary).has(duration):
+		return {"reason": "«%s» вне боя — только на время из списка (round … eight_hours): движок проматывает его, пока герой не очнётся" % title}
+	var reason := str(e.get("reason", "")).strip_edges()
+	if reason.is_empty():
+		return {"reason": "у состояния нужна причина (reason): что его вызвало"}
+	var sv: Variant = e.get("save")
+	var tag := str(e.get("tag", "")) if e.get("tag") != null else ""
+	if not tag.is_empty() and not (rules["hero_effects"]["save_tags"] as Array).has(tag):
+		return {"reason": "неизвестный тег %s; есть: %s" % [tag, ", ".join(rules["hero_effects"]["save_tags"])]}
+	var by_player := str(e.get("cause", "")) == "player"
+	if sv == null or not (sv is Dictionary):
+		if not by_player:
+			return {"reason": "состояние на героя — со спасброском (save {ability, dc_tier} и tag); без него — только если герой сам навлёк его своими словами в этом ходе (cause: player)"}
+		if not player_turns.has(turn_id):
+			return {"reason": "cause: player — только в ход, где игрок сам что-то сделал; здесь нужен спасбросок"}
+	var source := {"kind": "master", "name": reason}
+	var plan := {"condition": cond, "on": true, "ends": ConditionRules.ends_for(s, data, duration), "duration": duration, "source": source}
+	var by := str(e.get("by", "")) if e.get("by") != null else ""
+	if not by.is_empty():
+		plan["by"] = by
+	if bool(e.get("ends_on_damage", false)):
+		plan["wake"] = true
+	var dur_text := ConditionRules.left_text(s, {"ends": plan["ends"]})
+	var immune := HeroDefense.immune(c, data, cond, tag)
+	if not immune.is_empty():
+		return {"plan": {"condition": cond, "on": true, "resisted": true}, "summary": "%s: не действует — %s" % [title, immune]}
+	if sv is Dictionary:
+		var ab := str((sv as Dictionary).get("ability", ""))
+		var tier := str((sv as Dictionary).get("dc_tier", ""))
+		if not (rules["saves"] as Array).has(ab) or not (rules["dc_tiers"] as Dictionary).has(tier):
+			return {"reason": "спасбросок: ability одна из %s, dc_tier один из %s" % [", ".join(rules["saves"]), ", ".join((rules["dc_tiers"] as Dictionary).keys())]}
+		var dc := int(rules["dc_tiers"][tier])
+		var r := HeroDefense.save(s, data, ab, dc, tag)
+		if bool(r["ok"]):
+			return {"plan": {"condition": cond, "on": true, "resisted": true}, "summary": "%s: устоял — спасбросок %s" % [title, r["text"]]}
+		if bool(e.get("repeat_save", false)):
+			plan["save"] = {"ability": ab, "dc": dc, "tag": tag, "repeat": true}
+		return {"plan": plan, "summary": "%s (%s, %s) — спасбросок %s" % [title, dur_text, reason, r["text"]]}
+	return {"plan": plan, "summary": "%s (%s, %s)" % [title, dur_text, reason]}
 
 
 ## Effects on an enemy in a fight (the master's improvisation): damage by severity, a condition.
@@ -383,7 +452,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			var tmp: Array[String] = []
 			CombatRules._hurt_enemy(s, _data, f, int(plan["amount"]), tmp)
 		elif bool(plan.get("on", true)):
-			(f["conditions"] as Array).append(str(plan["condition"]))
+			CombatRules._hold(f, str(plan["condition"]))
 		else:
 			(f["conditions"] as Array).erase(str(plan["condition"]))
 		return
@@ -421,6 +490,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			s.room_id = plan["room_id"]
 		"damage":
 			c["hp"] = maxi(0, int(c["hp"]) - int(plan["amount"]))
+			_extra_lines.append_array(HeroDefense.after_damage(s, _data, int(plan["amount"])))
+			HeroDefense.relentless(s, _data, _extra_lines)
 		"heal":
 			c["hp"] = mini(int(c["max_hp"]), int(c["hp"]) + int(plan["amount"]))
 		"coins":
@@ -443,18 +514,34 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			else:
 				s.pending_fight = plan["foes"]
 		"cast":
-			SpellRules.cast(c, _data, plan["spell_id"], int(plan["slot"]))
+			SpellRules.cast(c, _data, plan["spell_id"], int(plan["slot"]), s)
+			var cure: Dictionary = _data["rules"]["hero_effects"]["spell_cures"].get(str(plan["spell_id"]), {})
+			if bool(plan.get("on_self", false)) and not cure.is_empty():
+				_extra_lines.append_array(ConditionRules.cure(s, _data, cure, {"kind": "spell", "id": str(plan["spell_id"]),
+					"name": SpellRules.s_name(_data, str(plan["spell_id"]))}))
 		"condition":
-			if bool(plan["on"]):
-				ConditionRules.add(c, plan["condition"], plan["until"])
-			else:
-				ConditionRules.remove(c, plan["condition"])
+			if bool(plan.get("resisted", false)):
+				return
+			var cond := str(plan["condition"])
+			if not bool(plan["on"]):
+				if cond == "exhaustion":
+					_extra_lines.append_array(ConditionRules.add_exhaustion(s, _data, -1, ""))
+				else:
+					ConditionRules.remove(c, cond)
+				CharacterRules.refresh(c, _data, s.items)
+				return
+			var fx := {"condition": cond, "ends": plan["ends"], "source": plan["source"]}
+			for k: String in ["by", "wake", "save"]:
+				if plan.has(k):
+					fx[k] = plan[k]
+			_extra_lines.append_array(ConditionRules.impose(s, _data, fx))
+			CharacterRules.refresh(c, _data, s.items)
 		"use_feature":
 			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
 		"use_item":
-			ItemRules.use(c, _data, s.items, plan["item_id"], s.rng)
+			ItemRules.use(c, _data, s.items, plan["item_id"], s.rng, s)
 		"advance_time":
-			TimeRules.advance(s, _data, int(plan["minutes"]))
+			_extra_lines.append_array(TimeRules.advance(s, _data, int(plan["minutes"])))
 		"furnish":
 			PropRules.apply_furnish(s, plan)
 		"take_prop":

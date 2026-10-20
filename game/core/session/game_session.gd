@@ -90,6 +90,12 @@ var caught_by: Dictionary = {}
 var notes: Array[Dictionary] = []
 ## Short rests taken today (ExplorationRules); a long rest resets it.
 var short_rests: int = 0
+## Exhaustion by the clock (TimeRules, v0.7.8): minutes on the way on `march_day`; the absolute minute the last long
+## rest ended and the saves already made for the days awake since.
+var march_day: int = 1
+var march_minutes: int = 0
+var rested_at: int = 480  # a new game starts in the morning, rested
+var awake_saves: int = 0
 ## Ids of the pack quests the player completed (XpRules).
 var quests_done: Array[String] = []
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
@@ -126,8 +132,21 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		if c.get(k) is Array:
 			c[k] = (c[k] as Array).map(func(v: Variant) -> int: return int(v))
 	c["conditions"] = c.get("conditions", [])
-	c["condition_ends"] = c.get("condition_ends", {})
+	var effects: Array = []
+	for e: Variant in c.get("effects", []):
+		if e is Dictionary:
+			var x: Dictionary = (e as Dictionary).duplicate(true)
+			x["uid"] = int(x.get("uid", 0))
+			if x.get("ends", {}).has("at"):
+				x["ends"]["at"] = int(x["ends"]["at"])
+			if x.get("save", {}).has("dc"):
+				x["save"]["dc"] = int(x["save"]["dc"])
+			effects.append(x)
+	c["effects"] = effects
+	c["next_effect"] = int(c.get("next_effect", 1))
+	c["exhaustion"] = int(c.get("exhaustion", 0))
 	c["concentration"] = str(c.get("concentration", ""))
+	c["concentration_ends"] = int(c.get("concentration_ends", -1))
 	c["prepared_day"] = int(c.get("prepared_day", 1))
 	return c
 
@@ -280,6 +299,10 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"merchants": merchants,
 		"quests_done": quests_done,
 		"short_rests": short_rests,
+		"march_day": march_day,
+		"march_minutes": march_minutes,
+		"rested_at": rested_at,
+		"awake_saves": awake_saves,
 		"combat": combat,
 		"encounters_done": encounters_done,
 		"dead_npcs": dead_npcs,
@@ -340,6 +363,10 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.visited.append(str(v))
 	s.day = int(d.get("day", 1))
 	s.short_rests = int(d.get("short_rests", 0))
+	s.march_day = int(d.get("march_day", 1))
+	s.march_minutes = int(d.get("march_minutes", 0))
+	s.rested_at = int(d.get("rested_at", 480))
+	s.awake_saves = int(d.get("awake_saves", 0))
 	s.combat = _normalized_combat(d.get("combat", {}))
 	for e: Variant in d.get("encounters_done", []):
 		s.encounters_done.append(str(e))

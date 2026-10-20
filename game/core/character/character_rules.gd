@@ -151,7 +151,12 @@ static func speed(c: Dictionary, data: Dictionary) -> int:
 	var spec: Dictionary = level_row(c, data).get("class_specific", {})
 	if item_def(c, data, {}, "armor").is_empty() and item_def(c, data, {}, "shield").is_empty():
 		bonus = int(spec.get("unarmored_movement", 0))
-	return int(race.get("speed", 30)) + bonus
+	var feet := int(race.get("speed", 30)) + bonus
+	# v0.7.8: grappled and restrained — 0; exhaustion 5 — 0, 2 — half (5e).
+	var exhaustion := int(c.get("exhaustion", 0))
+	if exhaustion >= 5 or (c.get("conditions", []) as Array).any(func(x: Variant) -> bool: return str(x) in ["grappled", "restrained", "paralyzed", "petrified"]):
+		return 0
+	return feet / 2 if exhaustion >= 2 else feet
 
 
 static func race_name(c: Dictionary, data: Dictionary) -> String:
@@ -173,7 +178,7 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	c["race_name"] = race_name(c, data)
 	c["class_name"] = class_name_of(c, data)
 	c["prof_bonus"] = prof_bonus(c, data)
-	c["max_hp"] = max_hp(c, data)
+	c["max_hp"] = maxi(1, max_hp(c, data) / (2 if int(c.get("exhaustion", 0)) >= 4 else 1))  # exhaustion 4 halves it (v0.7.8)
 	c["hp"] = clampi(int(c.get("hp", c["max_hp"])), 0, int(c["max_hp"]))
 	c["ac"] = armor_class(c, data, session_items)
 	var skills := {}

@@ -124,7 +124,8 @@ func test_effects_cast_condition_use_feature_and_item() -> void:
 	assert_bool(r3["accepted"]).is_false()  # two slots of circle 1, both reserved
 	fx.apply(s, "t-1", [r1["effect_id"]])
 	assert_int(SpellRules.slots_left(s.character, 1)).is_equal(1)
-	var cond := fx.validate(s, data, "t-2", {"kind": "condition", "condition": "frightened", "until": "short_rest"})
+	fx.player_turns["t-2"] = true  # the hero brought it on (v0.7.8: otherwise a save)
+	var cond := fx.validate(s, data, "t-2", {"kind": "condition", "condition": "frightened", "duration": "short_rest", "reason": "страшный сон", "cause": "player"})
 	fx.apply(s, "t-2", [cond["effect_id"]])
 	assert_bool(ConditionRules.has(s.character, "frightened")).is_true()
 	assert_bool(fx.validate(s, data, "t-3", {"kind": "condition", "condition": "drunk"})["accepted"]).is_false()
@@ -183,7 +184,8 @@ func test_new_fields_survive_a_save() -> void:
 	s.short_rests = 1
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
 	assert_dict(back.character["resources_used"]).is_equal({"second_wind": 1})
-	assert_dict(back.character["condition_ends"]).is_equal({"poisoned": "short_rest"})
+	assert_array(back.character["conditions"]).is_equal(["poisoned"])
+	assert_dict(back.character["effects"][0]["ends"]).is_equal({"rest": "short"})
 	assert_int(back.short_rests).is_equal(1)
 
 

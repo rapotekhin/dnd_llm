@@ -4,7 +4,9 @@
 {{ character.name }} — {{ character.race }} {{ character.class_name }}, {{ character.level }} уровень{% if character.background %}, {{ character.background | lower }}{% endif %}. HP {{ character.hp }}/{{ character.max_hp }}, КД {{ character.ac }}, скорость {{ character.speed }} футов, монеты: {{ coins }}.
 {% if character.backstory %}История персонажа: {{ character.backstory }}
 {% endif %}{% if character.abilities %}Характеристики: {% for k, v in character.abilities.items() %}{{ ability_name(k) }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.
-{% endif %}{% if character.conditions %}Состояния: {{ character.conditions | join(", ") }} (их влияние на проверки движок учитывает сам).
+{% endif %}{% if character.effects %}Состояния и эффекты: {{ character.effects | join("; ") }} (их влияние на проверки и бой движок учитывает сам).
+{% elif character.conditions %}Состояния: {{ character.conditions | join(", ") }} (их влияние на проверки движок учитывает сам).
+{% endif %}{% if character.resistances %}Сопротивление урону: {{ character.resistances | join(", ") }}.
 {% endif %}{% if character.resources %}Умения с ограниченными использованиями: {% for r in character.resources %}{{ r.name }} {{ r.left }}/{{ r.max }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if character.concentration %}Концентрация: {{ character.concentration }}.
 {% endif %}{% if character.skills %}Бонусы навыков: {% for k, v in character.skills.items() %}{{ k }} {{ "%+d" | format(v) }}{% if k in character.skill_proficiencies %}*{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% if character.skill_proficiencies %} (* — владеет){% endif %}.

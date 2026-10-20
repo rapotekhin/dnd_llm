@@ -62,17 +62,21 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	_request("enter", "")
 
 
-## Long rest button (ADR-0010 §6): only in a safe room, outside a conversation, with the price paid. The engine
-## restores the character and clears the check locks, then the master describes the morning (kind=rest).
-func long_rest() -> String:
+## Long rest (ADR-0010 §6): in a safe room outside a conversation with the price paid, or — v0.7.8, the author: «as in
+## Baldur's Gate» — a camp anywhere safe for `supplies` {item_id: qty} of food from the pack. The engine restores the
+## character, clears the check locks and all exhaustion, then the master describes the morning (kind=rest).
+func long_rest(supplies: Dictionary = {}) -> String:
 	if session == null or is_busy() or not Backend.is_ready():
 		return "REST_BUSY"
-	var why := ExplorationRules.can_rest(session, Catalog.data["world"])
+	var why := ExplorationRules.can_rest(session, Catalog.data["world"]) if supplies.is_empty() \
+		else ExplorationRules.camp_error(session, Catalog.data, supplies)
 	if not why.is_empty():
 		return why
 	var began := session.minute
-	var lines := ExplorationRules.long_rest(session, Catalog.data)
+	var lines := ExplorationRules.long_rest(session, Catalog.data, supplies)
 	TimeRules.after_long_rest(session, Catalog.data, began)
+	lines.append_array(ConditionRules.expire(session, Catalog.data))
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
@@ -200,7 +204,7 @@ func _spend(what: Dictionary) -> Dictionary:
 			var chk := SpellRules.check(c, Catalog.data, id, int(what.get("slot", 0)))
 			if chk.has("reason"):
 				return {"reason": str(chk["reason"])}
-			lines = SpellRules.cast(c, Catalog.data, chk["spell_id"], int(chk["slot"]))
+			lines = SpellRules.cast(c, Catalog.data, chk["spell_id"], int(chk["slot"]), session, str(what.get("target", "")).is_empty())
 			what["spent_slot"] = int(chk["slot"])
 			facts = "Игрок колдует " + SpellRules.describe(Catalog.data, chk["spell_id"], int(chk["slot"])) + \
 				". Движок уже потратил ячейку — не вызывай cast сам; опиши, как это выглядит и что происходит."
@@ -215,7 +219,7 @@ func _spend(what: Dictionary) -> Dictionary:
 			var why := ItemRules.can_use(c, Catalog.data, session.items, id)
 			if not why.is_empty():
 				return {"reason": why}
-			lines = ItemRules.use(c, Catalog.data, session.items, id, session.rng)
+			lines = ItemRules.use(c, Catalog.data, session.items, id, session.rng, session)
 			facts = "Игрок использует предмет. Движок уже применил: %s. Опиши коротко." % ", ".join(lines)
 		"feature_note":
 			var f: Dictionary = Catalog.data["classes"]["features"].get(id, Catalog.data["races"]["traits"].get(id, {}))
@@ -308,8 +312,35 @@ func short_rest(dice: int) -> String:
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
+	if _exhaustion_death():
+		return ""
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 	return ""
+
+
+## Exhaustion 6 outside a fight (v0.7.8, 5e): the hero dies — the master's epitaph, then the death screen. True
+## when it happened.
+func _exhaustion_death() -> bool:
+	if session == null or not ConditionRules.dead(session.character) or CombatRules.active(session):
+		return false
+	_request("death", "Герой умирает от истощения (шестая степень).\n" + _hero_path())
+	return true
+
+
+## The hero cannot act outside a fight (asleep, paralysed for a while — v0.7.8): the engine lets the time pass until
+## the longest such effect ends. Lines.
+func _sleep_through() -> Array[String]:
+	var c := session.character
+	var longest := 0
+	for cond: String in ConditionRules.INCAPACITATING:
+		for e: Dictionary in ConditionRules.effects_of(c, cond):
+			longest = maxi(longest, ConditionRules.rounds_left(session, e))
+	if longest <= 0:
+		return []
+	var minutes := ceili(longest / float(ConditionRules.ROUNDS_PER_MINUTE))
+	var lines: Array[String] = ["Без чувств: %d мин" % minutes]
+	lines.append_array(TimeRules.advance(session, Catalog.data, minutes))
+	return lines
 
 
 ## The prepared spells of the day (SpellRules): once after each long rest. "" or a localization key.
@@ -491,6 +522,30 @@ func combat_use_feature(resource_id: String) -> String:
 		return FeatureUses.use(session.character, Catalog.data, resource_id, 1, session.rng))
 
 
+## «Встать» (v0.7.8): the whole move of the turn.
+func combat_stand() -> String:
+	return _combat_do(CombatRules.can_stand(session) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.stand(session))
+
+
+## «Вырваться» (v0.7.8): an action, Athletics or Acrobatics against the hold.
+func combat_escape() -> String:
+	return _combat_do(CombatRules.can_escape(session) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.escape(session, Catalog.data))
+
+
+## «Неистовство» of a berserker (v0.7.8): while raging, a melee attack as a bonus action every turn; when the fight
+## ends, a level of exhaustion.
+func combat_frenzy() -> String:
+	return _combat_do(CombatRules.can_frenzy(session) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.frenzy(session))
+
+
+func combat_frenzy_attack(target_id: String) -> String:
+	return _combat_do(CombatRules.can_frenzy_attack(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.player_attack(session, Catalog.data, target_id, false, true))
+
+
 func combat_use_item(item_id: String) -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
@@ -499,7 +554,7 @@ func combat_use_item(item_id: String) -> String:
 		why = "COMBAT_NO_ACTION"
 	return _combat_do(why, func() -> Array[String]:
 		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
-		return ItemRules.use(session.character, Catalog.data, session.items, item_id, session.rng))
+		return ItemRules.use(session.character, Catalog.data, session.items, item_id, session.rng, session))
 
 
 func combat_end_turn() -> String:
@@ -582,6 +637,34 @@ func search_room(skill: String) -> String:
 	_log("Игрок: " + text)
 	EventBus.state_changed.emit()
 	_request("action", text + " " + note)
+	return ""
+
+
+## «Забрать всё» (the author, v0.7.8): the engine takes every portable thing of the room nobody owns, as long as the
+## hero can carry it (PropRules.take_all), then the master narrates it — the same as the words «I take everything I
+## can carry». "" or a localization key.
+func take_all() -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var plan := PropRules.take_all_plan(session, Catalog.data)
+	if (plan["take"] as Array).is_empty():
+		return "TAKE_ALL_TOO_HEAVY" if not (plan["left"] as Array).is_empty() else "TAKE_ALL_NOTHING"
+	var names := PropRules.take_all(session, Catalog.data)
+	var left: Array = (plan["left"] as Array).map(func(p: Dictionary) -> String: return str(p["name"]))
+	var lines: Array[String] = ["Взято: " + ", ".join(names)]
+	if not left.is_empty():
+		lines.append("не унести: " + ", ".join(left))
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	var text := tr("TAKE_ALL_SAY")
+	_add(GameSession.player_entry(text))
+	_add(GameSession.effect_entry(lines))
+	_log("Игрок: " + text)
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("action", text + " [движок уже забрал: %s%s — эффекты take_prop не нужны; опиши коротко, как герой собирает вещи]" %
+		[", ".join(names), ("; не унести: " + ", ".join(left)) if not left.is_empty() else ""])
 	return ""
 
 
@@ -755,8 +838,14 @@ func finish_combat(take: Array = []) -> void:
 		s.room_id = str(s.combat["room_from"])
 	if int(s.character["hp"]) <= 0:
 		s.character["hp"] = 1
-	ConditionRules.remove(s.character, "unconscious")
+	for cond: String in ["unconscious", "prone", "grappled"]:  # the fight is over: up, and nobody holds the hero
+		ConditionRules.remove(s.character, cond)
+	var frenzied := bool(s.combat.get("frenzy", false))
+	var minutes := ceili(int(s.combat.get("round", 1)) / float(ConditionRules.ROUNDS_PER_MINUTE))
 	s.combat = {}
+	lines.append_array(TimeRules.advance(s, Catalog.data, minutes))  # the rounds of the fight on the clock (v0.7.8)
+	if frenzied:
+		lines.append_array(ConditionRules.add_exhaustion(s, Catalog.data, 1, "неистовство"))
 	s.mode = GameSession.MODE_EXPLORATION
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	_add(GameSession.effect_entry(lines))
@@ -969,8 +1058,12 @@ func travel(to: String) -> String:
 		for f: String in _step(to_room, lines):
 			lines.append("Замечено: " + f)
 		names.append(str(world().room(to_room).get("name", to_room)))
+		if ConditionRules.dead(session.character):
+			break
 	_travel_line(names, minute0, lines)
 	EventBus.state_changed.emit()
+	if _exhaustion_death():
+		return ""
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 	return ""
 
@@ -1256,6 +1349,8 @@ func _request(kind: String, input: String) -> void:
 	var turn_id := s.next_turn_id()
 	_retry_spend = {}  # a new turn: an older given-back spend is not repeated
 	_last_kind = kind
+	if kind in ["action", "ability"]:
+		effects.player_turns[turn_id] = true
 	_last_input = input
 	busy_turn = turn_id
 	_set_options([])
@@ -1301,6 +1396,9 @@ func _request(kind: String, input: String) -> void:
 	_maybe_summarize_location()
 	if follow_up != "combat":
 		_opening = {}
+	if kind == "death" and s.mode != GameSession.MODE_COMBAT:
+		EventBus.navigate.emit("death", {"epitaph": str(call.result.get("narration", ""))})
+		return
 	if follow_up == "combat":
 		_start_pending_fight()
 	elif not follow_up.is_empty():
@@ -1342,6 +1440,14 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 		return ""
 	if not s.pending_fight.is_empty():
 		return "combat"
+	if ConditionRules.incapacitated(s.character) and int(s.character["hp"]) > 0:
+		var slept := _sleep_through()
+		if not slept.is_empty():
+			_add(GameSession.effect_entry(slept))
+			_log("События: " + ", ".join(slept))
+	if ConditionRules.dead(s.character) and turn_kind != "death":
+		_request.call_deferred("death", "Герой умирает от истощения (шестая степень).\n" + _hero_path())
+		return ""
 	if int(s.character["hp"]) <= 0:
 		var out := ExplorationRules.knock_out(s)
 		_add(GameSession.effect_entry(out))

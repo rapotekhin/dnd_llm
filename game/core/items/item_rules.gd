@@ -121,8 +121,9 @@ static func can_use(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 	return ""
 
 
-## Uses one item (can_use first): removes it, heals, lifts conditions. Returns the chat lines.
-static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, rng: RandomNumberGenerator) -> Array[String]:
+## Uses one item (can_use first): removes it, heals, lifts conditions; with the session (v0.7.8) it also leaves its
+## boon for a while (antitoxin — advantage on saves against poison for an hour). Returns the chat lines.
+static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, rng: RandomNumberGenerator, s: GameSession = null) -> Array[String]:
 	var fx := consumable(data, id)
 	var lines: Array[String] = ["Использовано: %s" % display_name(data["items"], session_items, id)]
 	var left := int(c["inventory"][id]) - 1
@@ -138,6 +139,9 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		var before := int(c["hp"])
 		c["hp"] = mini(int(c["max_hp"]), before + amount)
 		lines.append("+%d HP" % (int(c["hp"]) - before))
+	if s != null and (fx.has("adv_tag") or fx.has("resist")):
+		lines.append_array(ConditionRules.cure(s, data, fx, {"kind": "item", "id": id, "name": display_name(data["items"], session_items, id)}))
+		return lines
 	for cond: Variant in fx.get("remove", []):
 		if ConditionRules.has(c, str(cond)):
 			ConditionRules.remove(c, str(cond))

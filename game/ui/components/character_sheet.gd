@@ -87,6 +87,13 @@ func _stats_tab(c: Dictionary) -> Control:
 	_text(box, tr("SHEET_LINE").format({"race": c["race_name"], "class": c["class_name"] + (" (%s)" % sub["name"] if not sub.is_empty() else ""),
 		"level": c["level"], "background": d["backgrounds"].get(str(c["background"]), {}).get("name", "")}), UiTheme.MUTED_LABEL)
 	_text(box, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}))
+	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
+	box.add_child(chips)
+	chips.refresh()
+	var resist := HeroDefense.resistances(GameState.session, d)
+	if not resist.is_empty():
+		_text(box, tr("SHEET_RESIST").format({"list": ", ".join(resist.keys().map(func(t: Variant) -> String:
+			return "%s (%s)" % [d["misc"]["damage_types"].get(str(t), t), resist[t]]))}))
 	_text(box, tr("SHEET_PROF_SPEED").format({"prof": c["prof_bonus"], "speed": c["speed"]}) + " · " +
 		tr("SHEET_PASSIVE").format({"n": c["passive_perception"]}))
 	for hand: String in ["main_hand", "off_hand"]:

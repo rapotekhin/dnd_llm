@@ -37,6 +37,22 @@
       "default": null,
       "title": "Save"
     },
+    "sense": {
+      "anyOf": [
+        {
+          "enum": [
+            "sight",
+            "hearing"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sense"
+    },
     "skill": {
       "anyOf": [
         {

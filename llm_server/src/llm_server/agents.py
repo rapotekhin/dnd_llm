@@ -132,10 +132,12 @@ async def request_check(
     save: str | None = None,
     target_id: str | None = None,
     advantage_reason: str | None = None,
+    sense: Literal["sight", "hearing"] | None = None,
 ) -> str:
     """Попросить движок о проверке навыка (skill: perception, persuasion, stealth, …) или спасброске
     (save: str, dex, con, int, wis, cha). dc_tier — ступень сложности. reason — что проверяем, одной фразой.
-    advantage_reason — только если в ситуации есть явная причина для преимущества."""
+    advantage_reason — только если в ситуации есть явная причина для преимущества. sense — sight, если
+    проверке нужно зрение (разглядеть), hearing — если слух (подслушать): ослеплённый или оглохший её провалит."""
     t = ctx.deps
     if len(t.check_ids) >= t.limits.max_checks:
         return "Отказ: лимит проверок на этот ход исчерпан. Опиши исход без новой проверки."
@@ -143,7 +145,7 @@ async def request_check(
         raise ModelRetry("Укажи ровно одно: skill или save.")
     raw = await t.session.call_engine("engine.check", EngineCheckParams(
         turn_id=t.params.turn_id, skill=skill, save=save, dc_tier=dc_tier, target_id=target_id,
-        advantage_reason=advantage_reason))
+        advantage_reason=advantage_reason, sense=sense))
     r = EngineCheckResult.model_validate(raw)
     t.check_ids.append(r.check_id)
     if r.note:
@@ -163,7 +165,8 @@ async def request_check(
 
 async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str:
     """Предложить движку последствие: move, damage, heal, coins, give_item, take_item, npc_attitude, flag,
-    cast (игрок колдует: spell, slot_level), condition (наложить/снять состояние), use_feature (умение с
+    cast (игрок колдует: spell, slot_level, on_self — на себя), condition (наложить/снять состояние: reason,
+    save {ability, dc_tier}, tag, duration, cause, by, repeat_save, ends_on_damage), use_feature (умение с
     ограниченными использованиями), use_item (выпить зелье и т. п.), advance_time (прошло время),
     furnish (обставить комнату при первом входе), take_prop (взять вещь комнаты), prop_state (вещь открыта,
     сломана, сожжена, сдвинута), note (память о событии короткой фразой по-русски), equip (игрок надевает или

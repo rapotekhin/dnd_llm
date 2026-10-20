@@ -164,11 +164,14 @@ class MockEngine:
         if method == "engine.validate":
             rule = self.engine.get("validate", "accept")
             kind = p["effect"]["kind"]
+            summary = kind
             if isinstance(rule, list):
                 for r in rule:
                     if r.get("kind") == kind and r.get("status") == "reject":
                         return {"accepted": False, "reason": r.get("reason", "отклонено")}
-            return {"accepted": True, "effect_id": f"e-{self._n}", "summary": kind,
+                    if r.get("kind") == kind and r.get("summary"):  # what the engine says back (a save rolled, v0.7.8)
+                        summary = r["summary"]
+            return {"accepted": True, "effect_id": f"e-{self._n}", "summary": summary,
                     "item_id": "gen_item" if p["effect"].get("item") else None}
         if method == "engine.lookup":
             data = self.engine.get("lookup", {}).get(p["id"])
@@ -231,6 +234,19 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
     for f in e.get("forbidden_fields", []):
         if any(f in x for x in effects):
             fails.append(f"поле {f} в эффекте")
+    if e.get("condition_save"):  # v0.7.8: a condition on the hero by the rules — a reason, a save with a tag, or the hero's own cause
+        mine = [x for x in effects if x["kind"] == "condition" and x.get("on", True) and not x.get("target_id")]
+        for x in mine:
+            if not str(x.get("reason") or "").strip():
+                fails.append(f"состояние {x.get('condition')} без причины")
+            if e["condition_save"] == "save" and not x.get("save"):
+                fails.append(f"состояние {x.get('condition')} без спасброска")
+            if e["condition_save"] == "save_or_player" and not x.get("save") and x.get("cause") != "player":
+                fails.append(f"состояние {x.get('condition')} без спасброска и без cause=player")
+            if x.get("save") and e.get("condition_tag_in") and x.get("tag") not in e["condition_tag_in"]:
+                fails.append(f"тег {x.get('tag')} не из {e['condition_tag_in']}")
+            if e.get("condition_in") and x.get("condition") not in e["condition_in"]:
+                fails.append(f"состояние {x.get('condition')} не из {e['condition_in']}")
 
     if "next_mode" in expect:
         want = expect["next_mode"]

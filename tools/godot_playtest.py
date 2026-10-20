@@ -56,7 +56,7 @@ def main() -> int:
             return 2
         args = [godot, "--path", str(ROOT / "game"), "--script", f"res://tools/playtest/{opts.scenario}.gd", "--",
                 "--profile=agent", f"--out={out_dir.as_posix()}", f"--backend-url=ws://127.0.0.1:{port}/ws", "--seed=42"]
-        env = {**os.environ, "BTR_BACKEND_TOKEN": token}
+        env = {**os.environ, "BTR_BACKEND_TOKEN": token, "BTR_PLAYTEST_REAL": "1" if opts.real else ""}
         proc = subprocess.run(args, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
         (out_dir / "godot.log").write_text(proc.stdout + proc.stderr, encoding="utf-8")
     finally:

@@ -148,16 +148,17 @@ static func spring_trap(s: GameSession, data: Dictionary, room_id: String, sec: 
 	var lines: Array[String] = ["Ловушка! " + str(t.get("sprung_text", sec["text"]))]
 	var dmg := CombatRules.roll_dice(s.rng, str(t.get("damage", "1d6")))
 	if t.has("save"):
-		var ab := str(t["save"]["ability"])
-		var roll := s.rng.randi_range(1, 20)
-		var total := roll + int(c.get("saves", {}).get(ab, 0))
-		var ok := roll != 1 and (roll == 20 or total >= int(t["save"]["dc"]))
-		if ok:
+		var r := HeroDefense.save(s, data, str(t["save"]["ability"]), int(t["save"]["dc"]), str(t["save"].get("tag", "")))
+		if bool(r["ok"]):
 			dmg /= 2
-		lines.append("Спасбросок %s: %d против Сл %d — %s" % [CombatRules.ab_name(ab), total, int(t["save"]["dc"]),
-			"успех, урон вдвое меньше" if ok else "провал"])
+		lines.append("Спасбросок " + str(r["text"]) + (", урон вдвое меньше" if bool(r["ok"]) else ""))
+	var adj := HeroDefense.adjust(s, data, str(t.get("damage_type", "")), dmg)
+	dmg = int(adj["damage"])
 	c["hp"] = maxi(0, int(c["hp"]) - dmg)
-	lines.append("−%d HP (%s)" % [dmg, data["misc"]["damage_types"].get(str(t.get("damage_type", "")), t.get("damage_type", ""))])
+	lines.append("−%d HP (%s%s)" % [dmg, data["misc"]["damage_types"].get(str(t.get("damage_type", "")), t.get("damage_type", "")),
+		(", " + str(adj["note"])) if not str(adj["note"]).is_empty() else ""])
+	lines.append_array(HeroDefense.after_damage(s, data, dmg))
+	HeroDefense.relentless(s, data, lines)
 	return lines
 
 
@@ -227,14 +228,91 @@ static func can_rest(s: GameSession, world: Dictionary) -> String:
 	return ""
 
 
-## Applies a long rest; returns the effect lines for the chat. Call can_rest first. `data` = Catalog.data.
-static func long_rest(s: GameSession, data: Dictionary) -> Array[String]:
+## A camp (v0.7.8, the author: «a long rest with supplies from the pack, as in Baldur's Gate»): a long rest anywhere
+## outside a conversation and a fight, not where a fight of the world still waits, for rules.hero_effects.camp.need
+## points of food from the pack. "" or a localization key.
+static func can_camp(s: GameSession, data: Dictionary) -> String:
+	if s.in_conversation() or CombatRules.active(s):
+		return "REST_IN_CONVERSATION"
+	var enc: Dictionary = data["world"]["rooms"].get(s.room_id, {}).get("encounter", {})
+	if not enc.is_empty() and not s.encounters_done.has(str(enc.get("id", ""))):
+		return "REST_DANGER"
+	if camp_points(data, camp_food(s.character, data)) < camp_need(data):
+		return "REST_NO_FOOD"
+	return ""
+
+
+static func camp_need(data: Dictionary) -> int:
+	return int(data["rules"]["hero_effects"]["camp"]["need"])
+
+
+## The food the hero carries: {item_id: qty} of the items rules.hero_effects.camp.food knows.
+static func camp_food(c: Dictionary, data: Dictionary) -> Dictionary:
+	var food: Dictionary = data["rules"]["hero_effects"]["camp"]["food"]
+	var out := {}
+	for id: String in c.get("inventory", {}):
+		if food.has(id) and int(c["inventory"][id]) > 0:
+			out[id] = int(c["inventory"][id])
+	return out
+
+
+static func camp_points(data: Dictionary, supplies: Dictionary) -> int:
+	var food: Dictionary = data["rules"]["hero_effects"]["camp"]["food"]
+	var n := 0
+	for id: String in supplies:
+		n += int(food.get(id, 0)) * int(supplies[id])
+	return n
+
+
+## The supplies picked by default: the cheapest food first until the need is met (bread before rations).
+static func camp_default(c: Dictionary, data: Dictionary) -> Dictionary:
+	var food: Dictionary = data["rules"]["hero_effects"]["camp"]["food"]
+	var have := camp_food(c, data)
+	var ids: Array = have.keys()
+	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return int(food[a]) < int(food[b]))
+	var out := {}
+	var left := camp_need(data)
+	for id: Variant in ids:
+		while left > 0 and int(out.get(id, 0)) < int(have[id]):
+			out[id] = int(out.get(id, 0)) + 1
+			left -= int(food[id])
+	return out
+
+
+## "" when these supplies feed a camp: the hero has them and they make the need, otherwise a localization key.
+static func camp_error(s: GameSession, data: Dictionary, supplies: Dictionary) -> String:
+	var why := can_camp(s, data)
+	if not why.is_empty():
+		return why
+	var have := camp_food(s.character, data)
+	for id: String in supplies:
+		if int(supplies[id]) < 0 or int(supplies[id]) > int(have.get(id, 0)):
+			return "REST_BAD_SUPPLIES"
+	return "" if camp_points(data, supplies) >= camp_need(data) else "REST_NO_FOOD"
+
+
+## Applies a long rest; returns the effect lines for the chat. An inn (can_rest first) takes its price; a camp
+## (`supplies`, camp_error first) eats the food. `data` = Catalog.data.
+static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {}) -> Array[String]:
 	var c := s.character
-	var cost := int(rest_place(data["world"], s.room_id).get("cost_cp", 0))
-	var lines: Array[String] = ["Долгий отдых"]
+	var cost := int(rest_place(data["world"], s.room_id).get("cost_cp", 0)) if supplies.is_empty() else 0
+	var lines: Array[String] = ["Долгий отдых" if supplies.is_empty() else "Долгий отдых в лагере"]
 	if cost > 0:
 		c["gold_cp"] = int(c["gold_cp"]) - cost
 		lines.append("−" + Money.format(cost))
+	var eaten: Array[String] = []
+	for id: String in supplies:
+		var n := int(supplies[id])
+		if n <= 0:
+			continue
+		var left := int(c["inventory"].get(id, 0)) - n
+		if left > 0:
+			c["inventory"][id] = left
+		else:
+			(c["inventory"] as Dictionary).erase(id)
+		eaten.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), n])
+	if not eaten.is_empty():
+		lines.append("съедено: " + ", ".join(eaten))
 	c["hp"] = int(c.get("max_hp", c.get("hp", 1)))
 	lines.append("HP %d/%d" % [c["hp"], c["max_hp"]])
 	c["slots_used"] = [0, 0, 0, 0, 0]
@@ -290,14 +368,21 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 	return lines
 
 
-## Conditions and concentration a rest ends; returns the lines.
+## Conditions and concentration a rest ends; a long rest also takes all exhaustion away (decision of the author,
+## v0.7.8, ADR-0010) and gives Relentless Endurance back. Returns the lines.
 static func _rest_ends(c: Dictionary, data: Dictionary, rest: String) -> Array[String]:
 	var lines: Array[String] = []
 	var gone := ConditionRules.clear_on_rest(c, rest)
 	if not gone.is_empty():
-		lines.append("прошло: " + ", ".join(gone.map(func(id: String) -> String: return str(data["rules"]["conditions"].get(id, id)).get_slice(":", 0))))
+		lines.append("прошло: " + ", ".join(gone.map(func(id: String) -> String: return ConditionRules.name_of(data, id))))
 	if not str(c.get("concentration", "")).is_empty():
 		c["concentration"] = ""
+		c["concentration_ends"] = -1
+	if rest == "long":
+		if ConditionRules.exhaustion(c) > 0:
+			lines.append("истощение снято")
+		c["exhaustion"] = 0
+		c["relentless_used"] = false
 	return lines
 
 
@@ -307,4 +392,5 @@ static func knock_out(s: GameSession) -> Array[String]:
 	var c := s.character
 	c["hp"] = 1
 	c["concentration"] = ""
+	c["concentration_ends"] = -1
 	return ["Без сознания", "очнулся с 1 HP"]

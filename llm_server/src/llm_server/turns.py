@@ -82,7 +82,7 @@ STUB_EFFECTS: list[Effect | None] = [  # by turn number; the first turns stay pl
     None,
     DamageEffect(severity="dangerous", damage_type="колющий", reason="заглушка"),
     CoinsEffect(delta_cp=5, reason="заглушка"),
-    ConditionEffect(condition="poisoned", until="short_rest", reason="заглушка"),
+    ConditionEffect(condition="poisoned", duration="short_rest", reason="заглушка", save={"ability": "con", "dc_tier": "easy"}, tag="poison"),
     DamageEffect(severity="deadly", damage_type="дробящий", reason="заглушка"),
 ]
 

@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 17
+const SAVE_VERSION := 18
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -39,6 +39,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	14: _v14_to_v15,
 	15: _v15_to_v16,
 	16: _v16_to_v17,
+	17: _v17_to_v18,
 }
 
 
@@ -179,3 +180,27 @@ static func _v15_to_v16(data: Dictionary, _ctx: Dictionary) -> void:
 ## A 0.7.3 game kept the master's memory as made-up flags; they stay flags, the notes start empty.
 static func _v16_to_v17(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["notes"] = []
+
+
+## A 0.7.7 hero kept conditions as a list with «until a rest» ends: each becomes an effect of the same end with the
+## source «прежнее»; no exhaustion, concentration without an end in time; the clock of exhaustion starts rested now.
+static func _v17_to_v18(data: Dictionary, _ctx: Dictionary) -> void:
+	var s: Dictionary = data["session"]
+	var c: Dictionary = s.get("character", {})
+	var ends: Dictionary = c.get("condition_ends", {})
+	var effects: Array = []
+	var uid := 1
+	for id: Variant in c.get("conditions", []):
+		effects.append({"uid": uid, "condition": str(id), "source": {"kind": "old", "name": "прежнее"},
+			"ends": {"rest": "short" if str(ends.get(id, "long_rest")) == "short_rest" else "long"}})
+		uid += 1
+	c["effects"] = effects
+	c["next_effect"] = uid
+	c.erase("condition_ends")
+	c["exhaustion"] = 0
+	c["concentration_ends"] = -1
+	var now := (int(s.get("day", 1)) - 1) * 1440 + int(s.get("minute", 480))
+	s["rested_at"] = now
+	s["awake_saves"] = 0
+	s["march_day"] = int(s.get("day", 1))
+	s["march_minutes"] = 0

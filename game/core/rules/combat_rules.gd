@@ -18,6 +18,12 @@ extends RefCounted
 ##   attack with disadvantage; an attack or a spell reveals), reinforcements (pack waves, a foe calls for help,
 ##   the master's start_combat — all come at the edge column at the start of a round), parley (Intimidation —
 ##   intelligent foes surrender or flee, Persuasion — truce; one try per skill), the hit hint before the click.
+## - v0.7.8: the hero's conditions by 5e — prone (attacks with disadvantage, close foes with advantage, far ones with
+##   disadvantage, «Встать» takes the move), grappled and restrained (speed 0, «Вырваться» — an action), blinded,
+##   frightened (no step towards the source), charmed (no attack on the charmer), paralysed / stunned / unconscious /
+##   petrified (the turn is skipped, foes hit with advantage, close hits on the paralysed and the unconscious are
+##   critical), exhaustion; repeat saves at the end of the hero's turn; resistances and the concentration save on
+##   damage (HeroDefense); invisible foes are where they were last seen until they strike (`seen_col`).
 ## State — `s.combat` (empty when there is no fight). Pure: no nodes, randomness from `s.rng`.
 
 const PLAYER := "p"
@@ -306,9 +312,10 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 	return lines
 
 
-## The player's turn is skipped: at 0 HP (death saves instead) or surprised in the first round.
+## The player's turn is skipped: at 0 HP (death saves instead), surprised in the first round or unable to act
+## (paralysed, stunned, asleep, petrified, incapacitated — v0.7.8).
 static func player_skips(s: GameSession) -> bool:
-	return int(s.character.get("hp", 0)) <= 0 or bool(player(s).get("surprised", false))
+	return int(s.character.get("hp", 0)) <= 0 or bool(player(s).get("surprised", false)) or ConditionRules.incapacitated(s.character)
 
 
 ## The player can press buttons now.
@@ -329,6 +336,8 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 
 
 static func _move_cols(speed: int, data: Dictionary) -> int:
+	if speed <= 0:
+		return 0  # grappled, restrained, exhaustion 5 (v0.7.8)
 	return maxi(1, speed / (int(cfg(data)["col_ft"]) * 2) + 1) if speed >= 60 else 1
 
 
@@ -399,10 +408,12 @@ static func can_attack(s: GameSession, data: Dictionary, target_id: String, offh
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active":
 		return "COMBAT_BAD_TARGET"
+	if charmed_by(s, t):
+		return "COMBAT_CHARMED"
 	var c := s.character
 	var wid := str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
 	var w := weapon_profile(c, data, s.items, wid, offhand)
-	var d := cols_between(player(s), t)
+	var d := absi(shown_col(t) - int(player(s)["col"]))
 	if d == 0:
 		return ""
 	if (w["range"] as Array).is_empty():
@@ -412,11 +423,44 @@ static func can_attack(s: GameSession, data: Dictionary, target_id: String, offh
 	return ""
 
 
-## A weapon attack of the player (can_attack first). Returns the lines.
-static func player_attack(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false) -> Array[String]:
+## Frenzy (v0.7.8): a raging berserker may go into a frenzy — free; ends with the fight and a level of
+## exhaustion (GameState.finish_combat).
+static func can_frenzy(s: GameSession) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if not CharacterRules.has_feature(s.character, "frenzy") or not bool(s.combat.get("raging", false)) or bool(s.combat.get("frenzy", false)):
+		return "COMBAT_NO_FRENZY"
+	return ""
+
+
+static func frenzy(s: GameSession) -> Array[String]:
+	s.combat["frenzy"] = true
+	return ["%s впадает в неистовство: удар бонусным действием каждый ход, после боя — истощение" % s.character.get("name", "")]
+
+
+## The frenzied hero's melee attack as a bonus action: the main weapon at a foe in the hero's column.
+static func can_frenzy_attack(s: GameSession, data: Dictionary, target_id: String) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if not bool(s.combat.get("frenzy", false)):
+		return "COMBAT_NO_FRENZY"
+	if int(economy(s).get("bonus", 0)) <= 0:
+		return "COMBAT_NO_BONUS"
+	var t := fighter(s, target_id)
+	if t.is_empty() or str(t.get("status")) != "active":
+		return "COMBAT_BAD_TARGET"
+	if absi(shown_col(t) - int(player(s)["col"])) != 0:
+		return "COMBAT_OUT_OF_REACH"
+	return ""
+
+
+## A weapon attack of the player (can_attack first; a frenzy strike — can_frenzy_attack). Returns the lines.
+static func player_attack(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, frenzied: bool = false) -> Array[String]:
 	var c := s.character
 	var e := economy(s)
-	if offhand:
+	if frenzied:
+		e["bonus"] = int(e["bonus"]) - 1
+	elif offhand:
 		e["bonus"] = int(e["bonus"]) - 1
 	elif int(e.get("attacks", 0)) > 0:
 		e["attacks"] = int(e["attacks"]) - 1
@@ -428,6 +472,11 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 	var wid := str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
 	var w := weapon_profile(c, data, s.items, wid, offhand)
 	var t := fighter(s, target_id)
+	if _missed_unseen(s, t):
+		player(s)["hidden"] = false
+		var miss: Array[String] = ["%s — %s: удар в пустоту, %s уже не там" % [c.get("name", ""), w["name"], t["name"]]]
+		miss.append_array(ConditionRules.end_invisibility_on_attack(c, data))
+		return miss
 	var mods := _attack_mods(s, data, w, t)
 	var adv := not (mods["adv"] as Array).is_empty()
 	var dis := not (mods["dis"] as Array).is_empty()
@@ -449,7 +498,9 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 	var d := cols_between(player(s), t)
 	var adv: Array[String] = []
 	var dis: Array[String] = []
-	if _target_disabled(t) and d == 0:
+	if _has(t, "prone") and d == 0:
+		adv.append("цель лежит")
+	if ["paralyzed", "stunned", "unconscious", "restrained", "petrified"].any(func(x: String) -> bool: return _has(t, x)):
 		adv.append("цель беспомощна")
 	if bool(player(s).get("hidden", false)):
 		adv.append("вы спрятаны")
@@ -465,11 +516,41 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		dis.append("дальше обычной дальности")
 	if not bool(w["melee"]) and _foe_in_column(s, player(s)):
 		dis.append("враг вплотную")
-	if ConditionRules.has(c, "poisoned"):
-		dis.append("вы отравлены")
-	if ConditionRules.has(c, "frightened"):
-		dis.append("вы испуганы")
+	dis.append_array(hero_attack_dis(s, data, t))
 	return {"adv": adv, "dis": dis}
+
+
+## Why the hero's own attack rolls (weapons and spells) have disadvantage now (v0.7.8).
+static func hero_attack_dis(s: GameSession, data: Dictionary, t: Dictionary) -> Array[String]:
+	var c := s.character
+	var dis: Array[String] = []
+	for pair: Array in [["poisoned", "вы отравлены"], ["frightened", "вы испуганы"], ["blinded", "вы ослеплены"],
+			["prone", "вы лежите"], ["restrained", "вы опутаны"]]:
+		if ConditionRules.has(c, str(pair[0])):
+			dis.append(str(pair[1]))
+	if ConditionRules.exhaustion(c) >= 3:
+		dis.append("истощение")
+	if _has(t, "invisible"):
+		dis.append("цель невидима")
+	return dis
+
+
+## A foe can be targeted where the hero last saw it: an invisible one stays at `seen_col` until it strikes (v0.7.8).
+static func shown_col(f: Dictionary) -> int:
+	return int(f.get("seen_col", f["col"])) if _has(f, "invisible") else int(f["col"])
+
+
+## The hero aims where an invisible foe was, and it is not there any more.
+static func _missed_unseen(s: GameSession, t: Dictionary) -> bool:
+	return _has(t, "invisible") and int(t.get("seen_col", t["col"])) != int(t["col"])
+
+
+## The hero is charmed by this foe (the master's charm with `by`, or a monster's in v0.7.9): no attack on it (5e).
+static func charmed_by(s: GameSession, t: Dictionary) -> bool:
+	if not ConditionRules.has(s.character, "charmed"):
+		return false
+	var by := ConditionRules.caused_by(s.character, "charmed")
+	return not by.is_empty() and (by == str(t.get("id", "")) or by == str(t.get("npc_id", "")))
 
 
 static func _rage_bonus(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary) -> int:
@@ -585,6 +666,8 @@ static func foe_conditions(data: Dictionary, f: Dictionary) -> Array[String]:
 static func _add_condition(f: Dictionary, cond: String, timer: Dictionary) -> void:
 	if not _has(f, cond):
 		(f["conditions"] as Array).append(cond)
+	if cond == "invisible":
+		f["seen_col"] = int(f["col"])
 	var timers: Dictionary = f.get("timers", {})
 	timers[cond] = timer
 	f["timers"] = timers
@@ -712,7 +795,9 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
 		return "COMBAT_BAD_TARGET"
-	if cols_between(player(s), t) > range_cols(data, int(sp.get("range_ft", 0))):
+	if charmed_by(s, t) and (sp.has("attack") or sp.has("save") or is_engine_spell(data, spell_id)):
+		return "COMBAT_CHARMED"
+	if absi(shown_col(t) - int(player(s)["col"])) > range_cols(data, int(sp.get("range_ft", 0))):
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
 
@@ -732,7 +817,7 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 	e[cost] = int(e[cost]) - 1
 	var chk := SpellRules.check(c, data, spell_id, slot)
 	var held := str(c.get("concentration", ""))
-	var lines: Array[String] = SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]))
+	var lines: Array[String] = SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]), s, target_id.is_empty())
 	slot = int(chk["slot"])
 	if held != str(c.get("concentration", "")):
 		lines.append_array(end_spell(s, data, held))
@@ -751,6 +836,9 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		return lines
 	var dice := _spell_dice(sp, slot, level)
 	var t := fighter(s, target_id)
+	if not sp.has("area") and _missed_unseen(s, t):
+		lines.append("%s: в пустоту — %s уже не там" % [sp["name"], t["name"]])
+		return lines
 	var targets: Array[Dictionary] = [t]
 	if sp.has("area"):
 		targets = []
@@ -776,7 +864,8 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 			lines.append("%s: %d (%s) по %s" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype), t["name"]])
 			_hurt_enemy(s, data, t, dmg, lines)
 		elif sp.has("attack"):
-			var dis: bool = (str(sp["attack"]) == "ranged" and _foe_in_column(s, player(s))) or bool(t.get("dodging", false))
+			var dis: bool = (str(sp["attack"]) == "ranged" and _foe_in_column(s, player(s))) or bool(t.get("dodging", false)) \
+				or not hero_attack_dis(s, data, t).is_empty()
 			_attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), bool(player(s).get("hidden", false)), dis, t, dice, 0, dtype, lines)
 		elif sp.has("save"):
 			var dmg_full := roll_dice(s.rng, dice)
@@ -881,11 +970,99 @@ static func player_hide(s: GameSession, data: Dictionary) -> Array[String]:
 static func can_move(s: GameSession, data: Dictionary, dir: int) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
+	var c := s.character
+	if int(c.get("speed", 30)) <= 0:
+		return "COMBAT_NO_SPEED"
+	if ConditionRules.has(c, "prone"):
+		return "COMBAT_PRONE"
 	if int(economy(s).get("move", 0)) <= 0:
 		return "COMBAT_NO_MOVE"
 	if absi(dir) != 1:
 		return "COMBAT_BAD_MOVE"
+	var src := fear_source(s)
+	if not src.is_empty() and absi(int(player(s)["col"]) + dir - int(src["col"])) < absi(int(player(s)["col"]) - int(src["col"])):
+		return "COMBAT_FRIGHTENED"
 	return ""
+
+
+## The foe the hero is frightened of, when it is on the field ({} otherwise).
+static func fear_source(s: GameSession) -> Dictionary:
+	if not ConditionRules.has(s.character, "frightened"):
+		return {}
+	var by := ConditionRules.caused_by(s.character, "frightened")
+	if by.is_empty():
+		return {}
+	var f := fighter(s, by)
+	if f.is_empty():
+		f = fighter(s, fighter_of_npc(s, by))
+	return f if not f.is_empty() and str(f.get("status")) == "active" else {}
+
+
+## «Встать» (v0.7.8, decision of the author): standing up takes the whole move of the turn. "" or a key.
+static func can_stand(s: GameSession) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if not ConditionRules.has(s.character, "prone"):
+		return "COMBAT_NOT_PRONE"
+	if int(s.character.get("speed", 30)) <= 0 or int(economy(s).get("move", 0)) <= 0:
+		return "COMBAT_NO_MOVE"
+	return ""
+
+
+static func stand(s: GameSession) -> Array[String]:
+	economy(s)["move"] = 0
+	ConditionRules.remove(s.character, "prone")
+	return ["%s поднимается на ноги" % s.character.get("name", "")]
+
+
+## «Вырваться» (v0.7.8): grappled, or restrained by something with a DC to break (a net, a web) — an action.
+static func can_escape(s: GameSession) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if _hold_on_hero(s).is_empty():
+		return "COMBAT_NOT_HELD"
+	if int(economy(s).get("action", 0)) <= 0:
+		return "COMBAT_NO_ACTION"
+	return ""
+
+
+## The effect that holds the hero and can be broken: grappled (by a fighter or a DC), restrained with escape_dc.
+static func _hold_on_hero(s: GameSession) -> Dictionary:
+	for cond: String in ["grappled", "restrained"]:
+		for e: Dictionary in ConditionRules.effects_of(s.character, cond):
+			if cond == "grappled" or e.has("escape_dc"):
+				return e
+	return {}
+
+
+## Athletics or Acrobatics (the better) against the hold's DC or the grappler's Athletics (5e). Lines.
+static func escape(s: GameSession, data: Dictionary) -> Array[String]:
+	var c := s.character
+	var e := economy(s)
+	e["action"] = int(e["action"]) - 1
+	var hold := _hold_on_hero(s)
+	var skill := "athletics" if int(c["skills"].get("athletics", 0)) >= int(c["skills"].get("acrobatics", 0)) else "acrobatics"
+	var mods := ConditionRules.check_mods(c, data, {"skill": skill})
+	var dis := not (mods["disadvantage"] as Array).is_empty()
+	var mine := _nat(_d20(s.rng, false, dis), false, dis) + int(c["skills"].get(skill, 0))
+	var dc := int(hold.get("escape_dc", 0))
+	var against := "Сл %d" % dc
+	if dc <= 0:
+		var g := fighter(s, str(hold.get("by", "")))
+		if g.is_empty():
+			g = fighter(s, fighter_of_npc(s, str(hold.get("by", ""))))
+		var m: Dictionary = _monster(data, g) if not g.is_empty() else {}
+		var bonus := int(m.get("skills", {}).get("athletics", CharacterRules.mod(int(m.get("abilities", {}).get("str", 10))))) if not m.is_empty() else 0
+		dc = s.rng.randi_range(1, 20) + bonus
+		against = "%d (%s)" % [dc, g.get("name", "хватка")]
+	var ok := (mods["auto_fail"] as Array).is_empty() and mine >= dc
+	var what := ConditionRules.name_of(data, str(hold.get("condition", ""))).to_lower()
+	if ok:
+		ConditionRules.remove_effect(c, int(hold["uid"]))
+		CharacterRules.refresh(c, data, s.items)
+		e["move"] = _move_cols(int(c.get("speed", 30)), data)
+	return ["%s вырывается: %s %d против %s — %s" % [c.get("name", ""), "Атлетика" if skill == "athletics" else "Акробатика", mine, against,
+		("больше не " + what) if ok else "не выходит"]]
 
 
 ## Steps the player (can_move first): attacks of opportunity from foes left behind, fleeing off the edge. Lines.
@@ -986,6 +1163,8 @@ static func grapple(s: GameSession, data: Dictionary, target_id: String, shove: 
 static func _hold(f: Dictionary, cond: String) -> void:
 	if not _has(f, cond):
 		(f["conditions"] as Array).append(cond)
+	if cond == "invisible":
+		f["seen_col"] = int(f["col"])
 
 
 ## The hero walked off: the foes the hero held are free (Lines).
@@ -1009,7 +1188,7 @@ static func can_react(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 ## The rest of the turn is skipped: next fighter (the UI plays the others one by one via next_actor()).
 ## Returns the lines of a new round's start (reinforcements arriving).
 static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
-	var lines: Array[String] = []
+	var lines: Array[String] = ConditionRules.end_of_turn(s, data)
 	_advance(s, data, lines)
 	return lines
 
@@ -1098,6 +1277,13 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 		elif bool(player(s).get("surprised", false)):
 			player(s).erase("surprised")
 			lines.append("%s застигнут врасплох и не успевает ничего сделать" % s.character["name"])
+		elif ConditionRules.incapacitated(s.character):
+			lines.append("%s не может действовать: %s" % [s.character["name"], ", ".join((s.character["conditions"] as Array).filter(
+				func(x: Variant) -> bool: return ConditionRules.INCAPACITATING.has(str(x))).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower()))])
+			lines.append_array(ConditionRules.end_of_turn(s, data))
+			if _held_for_good(s):
+				s.combat["outcome"] = "captured" if enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))) else "dead"
+				lines.append("%s не может больше сражаться" % s.character["name"])
 		else:
 			return lines
 		_check_end(s, data, lines)
@@ -1301,22 +1487,32 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	if str(a.get("kind")) == "save":
 		var sv: Dictionary = a["save"]
 		var ab := str(sv["ability"])
-		var roll := s.rng.randi_range(1, 20)
-		var ok := roll != 1 and (roll == 20 or roll + int(c["saves"].get(ab, 0)) >= int(sv["dc"]))
-		var full := 0
+		var tag := "poison" if (a["damage"] as Array).any(func(d: Dictionary) -> bool: return str(d.get("type", "")) == "poison") else ""
+		var r := HeroDefense.save(s, data, ab, int(sv["dc"]), tag)
+		var ok := bool(r["ok"])
+		var dmg := 0
+		var notes: Array[String] = []
 		for d: Dictionary in a["damage"]:
-			full += roll_dice(s.rng, str(d["dice"]))
-		var dmg := full / 2 if ok and str(sv["success"]) == "half" else (0 if ok else full)
-		lines.append("%s — %s: спасбросок %s %d против Сл %d — %s, %d урона" % [f["name"], a["name"], ab_name(ab), roll + int(c["saves"].get(ab, 0)),
-			int(sv["dc"]), "успех" if ok else "провал", dmg])
+			var part := roll_dice(s.rng, str(d["dice"]))
+			part = part / 2 if ok and str(sv["success"]) == "half" else (0 if ok else part)
+			var adj := HeroDefense.adjust(s, data, str(d.get("type", "")), part)
+			dmg += int(adj["damage"])
+			if not str(adj["note"]).is_empty() and not notes.has(str(adj["note"])):
+				notes.append(str(adj["note"]))
+		lines.append("%s — %s: спасбросок %s, %d урона%s" % [f["name"], a["name"], r["text"], dmg, (" (%s)" % ", ".join(notes)) if not notes.is_empty() else ""])
 		_hurt_player(s, data, dmg, false, lines)
 		return
 	var d := cols_between(f, p)
 	var ranged_use := d > 0
-	var adv := (_target_disabled_player(c) and not ranged_use) or (_has_trait(data, f, "pack_tactics") and _ally_near_player(s, f))
-	var dis := bool(p.get("dodging", false)) and int(c["hp"]) > 0 or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) \
+	if _has(f, "invisible"):
+		f["seen_col"] = int(f["col"])  # a strike gives an invisible foe away
+	var helpless := ["paralyzed", "stunned", "unconscious", "restrained", "petrified"].any(func(x: String) -> bool: return ConditionRules.has(c, x))
+	var adv := (_target_disabled_player(c) and not ranged_use) or helpless or (_has_trait(data, f, "pack_tactics") and _ally_near_player(s, f)) \
+		or ConditionRules.has(c, "blinded") or _has(f, "invisible")
+	var dis := bool(p.get("dodging", false)) and int(c["hp"]) > 0 and not ConditionRules.incapacitated(c) \
+		or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) \
 		or (str(a.get("kind")) == "ranged" and d == 0) or (f["conditions"] as Array).has("poisoned") or bool(p.get("hidden", false)) \
-		or ConditionRules.invisible(c, data) \
+		or (ConditionRules.invisible(c, data) and not _has(f, "invisible")) or (ranged_use and ConditionRules.has(c, "prone")) \
 		or ["blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x))
 	var rolls := _d20(s.rng, adv, dis)
 	var nat := _nat(rolls, adv, dis)
@@ -1328,22 +1524,41 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	if not hit:
 		lines.append(line + " — промах")
 		return
-	var crit := nat == 20 or (int(c["hp"]) <= 0 and not ranged_use)
+	var crit := nat == 20 or (not ranged_use and (int(c["hp"]) <= 0 or ConditionRules.has(c, "paralyzed") or ConditionRules.has(c, "unconscious")))
 	var dmg := 0
 	var types: Array[String] = []
+	var notes: Array[String] = []
+	var first := true
 	for dd: Dictionary in a["damage"]:
-		dmg += roll_dice(s.rng, str(dd["dice"]), crit)
+		var part := roll_dice(s.rng, str(dd["dice"]), crit)
+		if first:
+			part = maxi(1, part)
+			first = false
+		var adj := HeroDefense.adjust(s, data, str(dd["type"]), part)
+		dmg += int(adj["damage"])
 		types.append(str(dtypes.get(str(dd["type"]), dd["type"])))
-	dmg = maxi(1, dmg)
-	lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)" % [dmg, ", ".join(types)])
+		if not str(adj["note"]).is_empty() and not notes.has(str(adj["note"])):
+			notes.append(str(adj["note"]))
+	lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, ", ".join(types), (", " + ", ".join(notes)) if not notes.is_empty() else ""])
 	_hurt_player(s, data, dmg, crit, lines)
 
 
 static func _target_disabled_player(c: Dictionary) -> bool:
-	for cnd: String in ["prone", "paralyzed", "stunned", "unconscious", "restrained"]:
+	for cnd: String in ["prone", "paralyzed", "stunned", "unconscious", "restrained", "petrified"]:
 		if ConditionRules.has(c, cnd):
 			return true
 	return int(c.get("hp", 1)) <= 0
+
+
+## The hero cannot act and nothing will end it in the fight: no time limit and no repeat save (petrified for good).
+static func _held_for_good(s: GameSession) -> bool:
+	for cond: String in ConditionRules.INCAPACITATING:
+		for e: Dictionary in ConditionRules.effects_of(s.character, cond):
+			if e.get("ends", {}).has("at") or bool(e.get("save", {}).get("repeat", false)) or bool(e.get("wake", false)):
+				return false
+			if not e.get("ends", {}).has("at"):
+				return true
+	return false
 
 
 static func _has_trait(data: Dictionary, f: Dictionary, trait_id: String) -> bool:
@@ -1373,15 +1588,17 @@ static func _hurt_player(s: GameSession, data: Dictionary, dmg: int, crit: bool,
 	var left := int(c["hp"]) - dmg
 	if left > 0:
 		c["hp"] = left
+		lines.append_array(HeroDefense.after_damage(s, data, dmg))
 		return
 	c["hp"] = 0
 	if -left >= int(c["max_hp"]):
 		s.combat["outcome"] = "dead"
 		lines.append("%s погибает на месте" % c["name"])
 		return
-	ConditionRules.add(c, "unconscious", "long_rest")
-	lines.append_array(end_spell(s, data, str(c.get("concentration", ""))))
-	c["concentration"] = ""
+	if HeroDefense.relentless(s, data, lines):
+		lines.append_array(HeroDefense.after_damage(s, data, dmg))
+		return
+	lines.append_array(ConditionRules.impose(s, data, {"condition": "unconscious", "ends": {"rest": "long"}, "source": {"kind": "engine", "name": "0 HP"}}))
 	s.combat["death_saves"] = {"ok": 0, "fail": 0}
 	s.combat.erase("raging")
 	lines.append("%s падает без сознания" % c["name"])

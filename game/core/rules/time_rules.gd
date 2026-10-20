@@ -36,7 +36,8 @@ static func is_night(s: GameSession, data: Dictionary) -> bool:
 	return part(s, data) == "night"
 
 
-## Moves time on; a new part of the day or a new day gives a line.
+## Moves time on; a new part of the day or a new day gives a line. Effects on the hero run out, and a day awake
+## without a long rest calls for a CON save against exhaustion (v0.7.8).
 static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[String]:
 	var lines: Array[String] = []
 	var before := part(s, data)
@@ -47,14 +48,60 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 		lines.append("Наступил день %d" % s.day)
 	if part(s, data) != before:
 		lines.append("Время суток: %s" % part_name(s, data))
+	lines.append_array(ConditionRules.expire(s, data))
+	lines.append_array(_awake(s, data))
 	return lines
 
 
-## A step from room to room: rules.time.move_minutes, into another location — travel_minutes.
+## The absolute minute of the game clock (since the first day's midnight).
+static func abs_minute(s: GameSession) -> int:
+	return (s.day - 1) * 1440 + s.minute
+
+
+## Each full rules.hero_effects.exhaustion.awake_hours without a long rest: a CON save, DC awake_dc + awake_dc_step
+## per day before; a failure — a level of exhaustion. Lines.
+static func _awake(s: GameSession, data: Dictionary) -> Array[String]:
+	var ex: Dictionary = data["rules"]["hero_effects"]["exhaustion"]
+	var days := (abs_minute(s) - s.rested_at) / (int(ex["awake_hours"]) * 60)
+	var lines: Array[String] = []
+	while s.awake_saves < days:
+		var dc := int(ex["awake_dc"]) + int(ex["awake_dc_step"]) * s.awake_saves
+		s.awake_saves += 1
+		var r := HeroDefense.save(s, data, "con", dc)
+		lines.append("Без сна %d ч: %s" % [s.awake_saves * int(ex["awake_hours"]), r["text"]])
+		if not bool(r["ok"]):
+			lines.append_array(ConditionRules.add_exhaustion(s, data, 1, "без сна"))
+	return lines
+
+
+## A step from room to room: rules.time.move_minutes, into another location — travel_minutes. The way counts towards
+## the day's march (v0.7.8).
 static func on_move(s: GameSession, data: Dictionary, from: String, to: String) -> Array[String]:
 	var w := WorldView.new(data["world"])
 	var same := w.location_id(from) == w.location_id(to)
-	return advance(s, data, int(cfg(data)["move_minutes" if same else "travel_minutes"]))
+	var minutes := int(cfg(data)["move_minutes" if same else "travel_minutes"])
+	var lines := advance(s, data, minutes)
+	lines.append_array(march(s, data, minutes))
+	return lines
+
+
+## A forced march (5e): every hour on the way past rules.hero_effects.exhaustion.march_hours a day — a CON save,
+## DC march_dc + the hours past; a failure — a level of exhaustion. Lines.
+static func march(s: GameSession, data: Dictionary, minutes: int) -> Array[String]:
+	var ex: Dictionary = data["rules"]["hero_effects"]["exhaustion"]
+	if s.march_day != s.day:
+		s.march_day = s.day
+		s.march_minutes = 0
+	var limit := int(ex["march_hours"]) * 60
+	var before := s.march_minutes
+	s.march_minutes += maxi(0, minutes)
+	var lines: Array[String] = []
+	for hour in range(maxi(0, (before - limit) / 60) + 1, maxi(0, (s.march_minutes - limit) / 60) + 1):
+		var r := HeroDefense.save(s, data, "con", int(ex["march_dc"]) + hour)
+		lines.append("Марш %d ч за день: %s" % [int(ex["march_hours"]) + hour, r["text"]])
+		if not bool(r["ok"]):
+			lines.append_array(ConditionRules.add_exhaustion(s, data, 1, "марш"))
+	return lines
 
 
 ## A long rest ends in the morning (wake_minute). ExplorationRules.long_rest already counted the new day; a rest
@@ -63,6 +110,8 @@ static func after_long_rest(s: GameSession, data: Dictionary, began_minute: int)
 	if began_minute < int(cfg(data)["wake_minute"]):
 		s.day = maxi(1, s.day - 1)
 	s.minute = int(cfg(data)["wake_minute"])
+	s.rested_at = abs_minute(s)
+	s.awake_saves = 0
 
 
 static func shops_closed(s: GameSession, data: Dictionary) -> bool:

@@ -1,13 +1,17 @@
 class_name SmallDialog
 extends Control
-## Small overlays of v0.6.0 over the game screen: the short rest (how many hit dice to spend) and the prepared
-## spells of the day. Rules are ExplorationRules / SpellRules; the dialog only collects the choice.
+## Small overlays of v0.6.0 over the game screen: the short rest (how many hit dice to spend), the prepared
+## spells of the day and (v0.7.8) the long rest — a room at the inn, or a camp with food picked from the pack.
+## Rules are ExplorationRules / SpellRules; the dialog only collects the choice.
 
 const SHORT_REST := "short_rest"
 const PREPARE := "prepare"
+const LONG_REST := "long_rest"
 
 var kind: String
 var picks: Array = []
+## The food picked for a camp: {item_id: qty}.
+var supplies: Dictionary = {}
 var dice: SpinBox
 var confirm: Button
 var _box: VBoxContainer
@@ -25,11 +29,11 @@ func _ready() -> void:
 	add_child(dim)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var margin := MarginContainer.new()
-	var side := 360 if kind == SHORT_REST else 160
+	var side := 160 if kind == PREPARE else 360
 	for s in ["left", "right"]:
 		margin.add_theme_constant_override("margin_" + s, side)
 	for s in ["top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + s, 260 if kind == SHORT_REST else 100)
+		margin.add_theme_constant_override("margin_" + s, {SHORT_REST: 260, LONG_REST: 160}.get(kind, 100))
 	add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var col := VBoxContainer.new()
@@ -61,7 +65,7 @@ func _ready() -> void:
 	buttons.add_child(close)
 	confirm = Button.new()
 	confirm.name = "DialogConfirm"
-	confirm.text = "BTN_REST_CONFIRM" if kind == SHORT_REST else "BTN_PREP_CONFIRM"
+	confirm.text = {SHORT_REST: "BTN_REST_CONFIRM", LONG_REST: "BTN_CAMP_CONFIRM"}.get(kind, "BTN_PREP_CONFIRM")
 	confirm.theme_type_variation = UiTheme.ACCENT_BUTTON
 	confirm.custom_minimum_size = Vector2(0, 56)
 	confirm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -73,6 +77,8 @@ func _ready() -> void:
 			_error.text = ""
 			if kind == PREPARE and GameState.has_session():
 				picks = (GameState.session.character.get("spells", {}).get("prepared", []) as Array).duplicate()
+			if kind == LONG_REST and GameState.has_session():
+				supplies = ExplorationRules.camp_default(GameState.session.character, Catalog.data)
 		_rebuild())
 
 
@@ -116,6 +122,9 @@ func _rebuild() -> void:
 		_text(tr("SHORT_REST_HINT").format({"left": int(data["rules"]["rest"]["short_rests_per_day"]) - s.short_rests}), UiTheme.MUTED_LABEL)
 		confirm.disabled = GameState.is_busy()
 		return
+	if kind == LONG_REST:
+		_long_rest(s, data)
+		return
 	var p := SpellRules.prepare_pool(c, data)
 	var n := mini(int(p["count"]), (p["pool"] as Array).size())
 	picks = picks.filter(func(id: Variant) -> bool: return (p["pool"] as Array).has(id))
@@ -143,7 +152,67 @@ func _rebuild() -> void:
 	confirm.disabled = not err.is_empty() or GameState.is_busy()
 
 
+## The long rest (v0.7.8): an inn's room for its price when there is one here; a camp for food from the pack.
+func _long_rest(s: GameSession, data: Dictionary) -> void:
+	var c := s.character
+	_text(tr("LONG_REST_TITLE"), UiTheme.HEADING)
+	_text(tr("LONG_REST_GIVES").format({"clock": "%02d:00" % (int(TimeRules.cfg(data)["wake_minute"]) / 60)}), UiTheme.MUTED_LABEL)
+	var place := ExplorationRules.rest_place(data["world"], s.room_id)
+	if not place.is_empty():
+		var cost := int(place["cost_cp"])
+		var inn := Button.new()
+		inn.name = "RestInn"
+		inn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		inn.text = tr("BTN_LONG_REST_COST").format({"cost": Money.format(cost)}) if cost > 0 else tr("BTN_LONG_REST")
+		inn.custom_minimum_size = Vector2(0, 56)
+		inn.theme_type_variation = UiTheme.ACCENT_BUTTON
+		var why := ExplorationRules.can_rest(s, data["world"])
+		inn.disabled = GameState.is_busy() or not why.is_empty()
+		inn.tooltip_text = tr(why) if not why.is_empty() else ""
+		inn.pressed.connect(func() -> void:
+			var err := GameState.long_rest()
+			if err.is_empty():
+				visible = false
+			else:
+				_error.text = tr(err))
+		_box.add_child(inn)
+	_text(tr("LONG_REST_CAMP").format({"need": ExplorationRules.camp_need(data)}), UiTheme.HEADING)
+	var have := ExplorationRules.camp_food(c, data)
+	var food: Dictionary = data["rules"]["hero_effects"]["camp"]["food"]
+	if have.is_empty():
+		_text(tr("LONG_REST_NO_FOOD"), UiTheme.MUTED_LABEL)
+	for id: String in have:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		_box.add_child(row)
+		var l := Label.new()
+		l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.text = tr("LONG_REST_FOOD").format({"item": ItemRules.display_name(data["items"], s.items, id), "have": int(have[id]), "points": int(food[id])})
+		row.add_child(l)
+		var spin := SpinBox.new()
+		spin.name = "Supply_" + id
+		spin.min_value = 0
+		spin.max_value = int(have[id])
+		spin.value = int(supplies.get(id, 0))
+		spin.value_changed.connect(func(v: float) -> void:
+			supplies[id] = int(v)
+			_rebuild.call_deferred())
+		row.add_child(spin)
+	_text(tr("LONG_REST_POINTS").format({"have": ExplorationRules.camp_points(data, supplies), "need": ExplorationRules.camp_need(data)}))
+	var err := ExplorationRules.camp_error(s, data, supplies)
+	_error.text = tr(err) if not err.is_empty() else ""
+	confirm.disabled = not err.is_empty() or GameState.is_busy()
+
+
 func _on_confirm() -> void:
+	if kind == LONG_REST:
+		var err_rest := GameState.long_rest(supplies)
+		if err_rest.is_empty():
+			visible = false
+		else:
+			_error.text = tr(err_rest)
+		return
 	var err := GameState.short_rest(int(dice.value)) if kind == SHORT_REST else GameState.prepare_spells(picks)
 	if err.is_empty():
 		visible = false

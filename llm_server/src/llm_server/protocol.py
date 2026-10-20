@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.15.0"
+PROTOCOL_VERSION = "0.16.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -225,6 +225,9 @@ class CharacterSheet(_In):
     backstory: str = ""  # the player's or the ready-made character's story (0.2.2)
     resources: list[ResourceLine] = Field(default_factory=list)  # feature uses left (0.6.0)
     concentration: str = ""  # the spell the character concentrates on
+    effects: list[str] = Field(default_factory=list)  # conditions and boons with time left and cause, in Russian (0.16.0)
+    exhaustion: int = 0  # exhaustion level 0-6 (0.16.0)
+    resistances: list[str] = Field(default_factory=list)  # damage types the hero resists now, Russian (0.16.0)
 
 
 class HistoryLine(_In):
@@ -496,8 +499,13 @@ class NpcAttitudeEffect(_Out):
     reason: str
 
 
-ConditionId = Literal["blinded", "charmed", "frightened", "grappled", "incapacitated", "invisible", "paralyzed",
-                      "poisoned", "prone", "restrained", "stunned", "unconscious"]
+ConditionId = Literal["blinded", "charmed", "deafened", "exhaustion", "frightened", "grappled", "incapacitated",
+                      "invisible", "paralyzed", "petrified", "poisoned", "prone", "restrained", "stunned", "unconscious"]
+DcTier = Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"]
+SaveAbility = Literal["str", "dex", "con", "int", "wis", "cha"]
+SaveTag = Literal["poison", "charm", "fear", "magic", "sleep", "disease"]
+ConditionDuration = Literal["round", "minute", "ten_minutes", "hour", "eight_hours", "short_rest", "long_rest",
+                            "until_removed"]
 
 
 class CastEffect(_Out):
@@ -506,14 +514,31 @@ class CastEffect(_Out):
     kind: Literal["cast"] = "cast"
     spell: str  # id or name as in the sheet
     slot_level: int | None = Field(default=None, ge=1, le=5)  # None = the lowest fitting slot
+    on_self: bool = False  # cast on the hero: the engine lifts what it cures (0.16.0)
+
+
+class ConditionSave(_Out):
+    """The hero's save against a condition (0.16.0): the engine rolls it with the hero's bonuses."""
+
+    ability: SaveAbility
+    dc_tier: DcTier
 
 
 class ConditionEffect(_Out):
+    """A condition (0.16.0 for the hero: a reason, a save of the engine with its tag, a duration from the list;
+    without a save only when the hero brought it on with their own words this turn — cause "player")."""
+
     kind: Literal["condition"] = "condition"
     condition: ConditionId
-    on: bool = True  # False lifts it
-    until: Literal["short_rest", "long_rest"] = "long_rest"
-    reason: str = ""
+    on: bool = True  # False lifts it (exhaustion — one level)
+    reason: str = ""  # what caused it, in Russian
+    save: ConditionSave | None = None
+    tag: SaveTag | None = None  # what the save is against: race traits give advantage or immunity
+    duration: ConditionDuration = "long_rest"
+    repeat_save: bool = False  # in a fight the hero repeats the save at the end of each own turn
+    cause: Literal["player"] | None = None  # the hero did it themselves this turn: no save
+    by: str | None = None  # the NPC who caused it (the source of fear, the charmer, the grappler)
+    ends_on_damage: bool = False  # a sleep that ends when the hero is hurt
     target_id: str | None = None  # an enemy id in a fight (0.7.0)
 
 
@@ -588,7 +613,6 @@ Effect = Annotated[
 
 # --- engine.* (backend -> Godot) ---------------------------------------------
 
-DcTier = Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"]
 
 
 class EngineCheckParams(_Out):
@@ -598,6 +622,7 @@ class EngineCheckParams(_Out):
     dc_tier: DcTier
     target_id: str | None = None
     advantage_reason: str | None = None
+    sense: Literal["sight", "hearing"] | None = None  # the check needs sight or hearing: blinded / deafened fail (0.16.0)
 
 
 class EngineCheckResult(_In):

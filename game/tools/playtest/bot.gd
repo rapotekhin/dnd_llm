@@ -264,6 +264,8 @@ func _invariants() -> String:
 			if int(m["stock"][id]) < 0:
 				return "merchant %s stock %s %d" % [npc, id, m["stock"][id]]
 	for cond: Variant in c.get("conditions", []):
-		if not (c.get("condition_ends", {}) as Dictionary).has(cond):
-			return "condition %s without an end" % cond
+		if ConditionRules.effects_of(c, str(cond)).is_empty():
+			return "condition %s without an effect" % cond
+	if ConditionRules.exhaustion(c) < 0 or ConditionRules.exhaustion(c) > 6:
+		return "exhaustion %d" % ConditionRules.exhaustion(c)
 	return ""
