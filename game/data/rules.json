@@ -862,7 +862,8 @@
 			"minute": 10,
 			"ten_minutes": 100,
 			"hour": 600,
-			"eight_hours": 4800
+			"eight_hours": 4800,
+			"day": 14400
 		},
 		"save_tags": ["poison", "charm", "fear", "magic", "sleep", "disease"],
 		"trait_saves": {

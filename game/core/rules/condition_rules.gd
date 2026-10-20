@@ -149,11 +149,15 @@ static func remove(c: Dictionary, id: String) -> void:
 	_sync(c)
 
 
+## Removes one effect and those that last only with it (`with`: restrained while grappled, v0.7.9).
 static func remove_effect(c: Dictionary, uid: int) -> void:
 	var list := effects(c)
 	for e: Dictionary in list.duplicate():
 		if int(e.get("uid", 0)) == uid:
 			list.erase(e)
+			for o: Dictionary in list.duplicate():
+				if str(o.get("with", "")) == str(e.get("condition", "")) and str(o.get("by", "")) == str(e.get("by", "")):
+					list.erase(o)
 	_sync(c)
 
 
@@ -255,6 +259,13 @@ static func end_of_turn(s: GameSession, data: Dictionary) -> Array[String]:
 		if bool(r["ok"]):
 			remove_effect(c, int(e["uid"]))
 			lines.append("%s стряхивает: %s (%s)" % [c.get("name", ""), what, r["text"]])
+		elif bool(sv.get("once", false)):  # one more save, then it gets worse (a cockatrice's stone, v0.7.9)
+			remove_effect(c, int(e["uid"]))
+			var next: Dictionary = e.get("escalate", {})
+			if not next.is_empty():
+				lines.append_array(impose(s, data, {"condition": str(next["condition"]), "ends": ends_for(s, data, str(next.get("duration", ""))),
+					"source": e.get("source", {}), "by": str(e.get("by", ""))}))
+				lines.append("%s: %s (%s)" % [c.get("name", ""), name_of(data, str(next["condition"])).to_lower(), r["text"]])
 		else:
 			lines.append("%s: %s держится (%s)" % [c.get("name", ""), what, r["text"]])
 	lines.append_array(expire(s, data))

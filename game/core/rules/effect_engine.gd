@@ -309,6 +309,8 @@ func _plan_on_foe(s: GameSession, data: Dictionary, e: Dictionary, tid: String) 
 			var cond := str(e.get("condition", ""))
 			if not ConditionRules.known(data, cond):
 				return {"reason": "неизвестное состояние %s" % cond}
+			if bool(e.get("on", true)) and CombatRules.immune_to(data, f, cond):
+				return {"reason": "%s невосприимчив к этому состоянию (иммунитет монстра) — опиши, что не вышло" % f["name"]}
 			return {"plan": {"foe": tid, "condition": cond, "on": bool(e.get("on", true))},
 				"summary": "%s: %s" % [f["name"], str(data["rules"]["conditions"][cond]).get_slice(":", 0)]}
 	return {"reason": "на врага в бою — только damage и condition"}

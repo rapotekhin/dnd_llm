@@ -218,6 +218,7 @@ COMBAT_NO_PARLEY,Здесь не с кем договариваться
 COMBAT_NO_SPEED,Скорость 0 — с места не сдвинуться
 COMBAT_OUTCOME_CAPTURED,Вы в плену у врагов
 COMBAT_OUTCOME_DEAD,Герой погиб
+COMBAT_OUTCOME_LEFT,Звери бросили вас лежать и ушли — вы приходите в себя
 COMBAT_OUTCOME_PLAYER_FLED,Вы вышли из боя
 COMBAT_OUTCOME_TRUCE,Перемирие
 COMBAT_OUTCOME_VICTORY,Победа

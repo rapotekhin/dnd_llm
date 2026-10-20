@@ -2617,9 +2617,21 @@
 		"en": "Bites",
 		"name": "Укусы"
 	},
+	"monster_action:Blinding Breath": {
+		"en": "Blinding Breath",
+		"name": "Слепящее дыхание"
+	},
+	"monster_action:Blinding Spittle": {
+		"en": "Blinding Spittle",
+		"name": "Слепящая слюна"
+	},
 	"monster_action:Blood Drain": {
 		"en": "Blood Drain",
 		"name": "Высасывание крови"
+	},
+	"monster_action:Breath Weapons": {
+		"en": "Breath Weapons",
+		"name": "Оружие дыхания"
 	},
 	"monster_action:Claw": {
 		"en": "Claw",
@@ -2653,9 +2665,21 @@
 		"en": "Dagger",
 		"name": "Кинжал"
 	},
+	"monster_action:Dreadful Glare": {
+		"en": "Dreadful Glare",
+		"name": "Ужасающий взгляд"
+	},
 	"monster_action:Engulf": {
 		"en": "Engulf",
 		"name": "Поглощение"
+	},
+	"monster_action:Fetid Cloud": {
+		"en": "Fetid Cloud",
+		"name": "Зловонное облако"
+	},
+	"monster_action:Fey Charm": {
+		"en": "Fey Charm",
+		"name": "Очарование феи"
 	},
 	"monster_action:Fire Breath": {
 		"en": "Fire Breath",
@@ -2733,6 +2757,10 @@
 		"en": "Longsword",
 		"name": "Длинный меч"
 	},
+	"monster_action:Luring Song": {
+		"en": "Luring Song",
+		"name": "Манящая песня"
+	},
 	"monster_action:Mace": {
 		"en": "Mace",
 		"name": "Булава"
@@ -2785,6 +2813,10 @@
 		"en": "Rotting Touch",
 		"name": "Гниющее прикосновение"
 	},
+	"monster_action:Scare": {
+		"en": "Scare",
+		"name": "Испуг"
+	},
 	"monster_action:Scimitar": {
 		"en": "Scimitar",
 		"name": "Ятаган"
@@ -2808,6 +2840,10 @@
 	"monster_action:Sling": {
 		"en": "Sling",
 		"name": "Праща"
+	},
+	"monster_action:Smother": {
+		"en": "Smother",
+		"name": "Удушение"
 	},
 	"monster_action:Spear": {
 		"en": "Spear",
@@ -2864,6 +2900,10 @@
 	"monster_action:Warhammer": {
 		"en": "Warhammer",
 		"name": "Боевой молот"
+	},
+	"monster_action:Web": {
+		"en": "Web",
+		"name": "Паутина"
 	},
 	"monster_trait:Aberrant Ground": {
 		"en": "Aberrant Ground",
@@ -2949,6 +2989,11 @@
 		"en": "Cunning Action",
 		"name": "Хитрое действие",
 		"desc": "В каждый свой ход шпион может использовать бонусное действие, чтобы совершить действие Рывок, Отход или Засада."
+	},
+	"monster_trait:Damage Transfer": {
+		"en": "Damage Transfer",
+		"name": "Перенос урона",
+		"desc": "Пока ковёр схватил существо, он получает только половину урона, направленного на него, а вторую половину получает схваченное им существо."
 	},
 	"monster_trait:Dark Devotion": {
 		"en": "Dark Devotion",
@@ -3228,7 +3273,7 @@
 	"monster_trait:Spider Climb": {
 		"en": "Spider Climb",
 		"name": "Лазание паука",
-		"desc": "Рой может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
+		"desc": "Существо может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
 	},
 	"monster_trait:Standing Leap": {
 		"en": "Standing Leap",
@@ -3333,12 +3378,12 @@
 	"monster_trait:Web Sense": {
 		"en": "Web Sense",
 		"name": "Чувство паутины",
-		"desc": "Находясь в контакте с паутиной, рой точно знает местоположение любого другого существа, касающегося той же паутины."
+		"desc": "Находясь в контакте с паутиной, существо точно знает местоположение любого другого существа, касающегося той же паутины."
 	},
 	"monster_trait:Web Walker": {
 		"en": "Web Walker",
 		"name": "Ходок по паутине",
-		"desc": "Рой игнорирует ограничения движения, вызванные паутиной."
+		"desc": "Существо игнорирует ограничения движения, вызванные паутиной."
 	},
 	"spell:acid-arrow": {
 		"en": "Acid Arrow",

@@ -88,15 +88,16 @@ static func save_advantages(c: Dictionary, data: Dictionary, ability: String, ta
 	var out: Array[String] = []
 	if tag.is_empty():
 		return out
+	var tags := tag.split(",")  # a save against several things at once: «charm,magic» (v0.7.9)
 	var traits: Dictionary = data["races"]["traits"]
 	var table: Dictionary = cfg(data)["trait_saves"]
 	for t: String in table:
 		var spec: Dictionary = table[t]
-		if CharacterRules.has_trait(c, t) and (spec["tags"] as Array).has(tag) \
+		if CharacterRules.has_trait(c, t) and (spec["tags"] as Array).any(func(x: Variant) -> bool: return tags.has(str(x))) \
 				and (not spec.has("abilities") or (spec["abilities"] as Array).has(ability)):
 			out.append(str(traits.get(t, {}).get("name", t)))
 	for e: Dictionary in ConditionRules.effects(c):
-		if str(e.get("adv_tag", "")) == tag:
+		if tags.has(str(e.get("adv_tag", ""))) and not out.has(str(e.get("source", {}).get("name", ""))):
 			out.append(str(e.get("source", {}).get("name", "")))
 	return out
 
@@ -105,7 +106,7 @@ static func save_advantages(c: Dictionary, data: Dictionary, ability: String, ta
 static func immune(c: Dictionary, data: Dictionary, cond: String, tag: String) -> String:
 	var table: Dictionary = cfg(data)["trait_immune"]
 	for t: String in table:
-		if CharacterRules.has_trait(c, t) and str(table[t]["tag"]) == tag and (table[t]["conditions"] as Array).has(cond):
+		if CharacterRules.has_trait(c, t) and tag.split(",").has(str(table[t]["tag"])) and (table[t]["conditions"] as Array).has(cond):
 			return str(data["races"]["traits"].get(t, {}).get("name", t))
 	return ""
 

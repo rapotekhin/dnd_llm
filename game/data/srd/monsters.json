@@ -55,7 +55,45 @@
 		],
 		"equipment": [
 			"club"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 12,
+			"attack": 4,
+			"ability": "wis",
+			"level": 1,
+			"slots": {
+				"1": 3
+			},
+			"spells": [
+				{
+					"id": "light",
+					"level": 0
+				},
+				{
+					"id": "sacred_flame",
+					"level": 0
+				},
+				{
+					"id": "thaumaturgy",
+					"level": 0
+				},
+				{
+					"id": "bless",
+					"level": 1
+				},
+				{
+					"id": "cure_wounds",
+					"level": 1
+				},
+				{
+					"id": "sanctuary",
+					"level": 1
+				}
+			],
+			"innate": false
+		}
 	},
 	"animated_armor": {
 		"name": "Оживлённый доспех",
@@ -122,7 +160,12 @@
 			{
 				"id": "antimagic_susceptibility",
 				"name": "Уязвимость к антимагии",
-				"desc": "Меч лишается способности действовать в области антимагического поля. Если на него нацелено рассеивание магии, он должен преуспеть в спасброске Телосложения против Сл заклинания создателя или на 1 минуту потерять сознание."
+				"desc": "Меч лишается способности действовать в области антимагического поля. Если на него нацелено рассеивание магии, он должен преуспеть в спасброске Телосложения против Сл заклинания создателя или на 1 минуту потерять сознание.",
+				"effect": {
+					"condition": "unconscious",
+					"duration": "minute",
+					"magic": true
+				}
 			},
 			{
 				"id": "false_appearance",
@@ -130,7 +173,9 @@
 				"desc": "Пока фиолетовый грибок неподвижен, его невозможно отличить от обычного гриба."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"ankheg": {
 		"name": "Анкег",
@@ -176,6 +221,11 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 13,
+					"size_max": "large"
+				},
 				"name": "Укус"
 			},
 			{
@@ -192,12 +242,15 @@
 					"dc": 13,
 					"success": "half"
 				},
+				"recharge": 6,
 				"name": "Кислотный плевок"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"ape": {
 		"name": "Обезьяна",
@@ -268,7 +321,9 @@
 			}
 		],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"awakened_shrub": {
 		"name": "Пробуждённый кустарник",
@@ -325,7 +380,9 @@
 				"desc": "Пока фиолетовый грибок неподвижен, его невозможно отличить от обычного гриба."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "one language known by its creator",
+		"reactions": []
 	},
 	"awakened_tree": {
 		"name": "Пробуждённое дерево",
@@ -383,7 +440,9 @@
 				"desc": "Пока фиолетовый грибок неподвижен, его невозможно отличить от обычного гриба."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "one language known by its creator",
+		"reactions": []
 	},
 	"axe_beak": {
 		"name": "Топороклюв",
@@ -430,7 +489,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"azer": {
 		"name": "Азер",
@@ -496,7 +557,13 @@
 			{
 				"id": "heated_weapons",
 				"name": "Раскалённое оружие",
-				"desc": "Когда азер попадает металлическим оружием ближнего боя, он наносит дополнительно 3 (1к6) урона огнём (включено в атаку)."
+				"desc": "Когда азер попадает металлическим оружием ближнего боя, он наносит дополнительно 3 (1к6) урона огнём (включено в атаку).",
+				"effect": {
+					"extra": {
+						"dice": "1d6",
+						"type": "fire"
+					}
+				}
 			},
 			{
 				"id": "illumination",
@@ -507,7 +574,9 @@
 		"equipment": [
 			"shield",
 			"warhammer"
-		]
+		],
+		"languages": "Ignan",
+		"reactions": []
 	},
 	"baboon": {
 		"name": "Бабуин",
@@ -560,7 +629,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"badger": {
 		"name": "Барсук",
@@ -613,7 +684,9 @@
 				"desc": "Крыса-оборотень совершает проверки Мудрости (Внимательность) с преимуществом, когда они основаны на обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"bandit_captain": {
 		"name": "Капитан бандитов",
@@ -697,6 +770,14 @@
 			"studded_leather_armor",
 			"scimitar",
 			"dagger"
+		],
+		"languages": "any two languages",
+		"reactions": [
+			{
+				"id": "parry",
+				"name_en": "Parry",
+				"ac": 2
+			}
 		]
 	},
 	"bandit": {
@@ -760,7 +841,9 @@
 		"equipment": [
 			"leather_armor",
 			"scimitar"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": []
 	},
 	"basilisk": {
 		"name": "Василиск",
@@ -814,10 +897,23 @@
 			{
 				"id": "petrifying_gaze",
 				"name": "Взгляд окаменения",
-				"desc": "Существо, начинающее ход в пределах 30 футов от василиска и видящее его (при условии, что василиск не недееспособен), должно совершить спасбросок Телосложения КС 12. При провале оно начинает превращаться в камень и становится опутанным; в конце своего следующего хода оно повторяет спасбросок: при успехе эффект заканчивается, при провале существо окаменевает до освобождения заклинанием высшего восстановления или иной магией. Существо, не застигнутое врасплох, может в начале хода отвести глаза, чтобы не делать спасбросок, но тогда не видит василиска до начала своего следующего хода. Если василиск видит своё отражение при ярком свете в пределах 30 футов, он принимает себя за соперника и направляет взгляд на себя."
+				"desc": "Существо, начинающее ход в пределах 30 футов от василиска и видящее его (при условии, что василиск не недееспособен), должно совершить спасбросок Телосложения КС 12. При провале оно начинает превращаться в камень и становится опутанным; в конце своего следующего хода оно повторяет спасбросок: при успехе эффект заканчивается, при провале существо окаменевает до освобождения заклинанием высшего восстановления или иной магией. Существо, не застигнутое врасплох, может в начале хода отвести глаза, чтобы не делать спасбросок, но тогда не видит василиска до начала своего следующего хода. Если василиск видит своё отражение при ярком свете в пределах 30 футов, он принимает себя за соперника и направляет взгляд на себя.",
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 12
+					},
+					"area": {
+						"shape": "burst",
+						"ft": 30
+					},
+					"magic": true
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"bat": {
 		"name": "Летучая мышь",
@@ -875,7 +971,9 @@
 				"desc": "Рой имеет преимущество на проверки Мудрости (Внимательность), которые опираются на слух."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"bearded_devil": {
 		"name": "Бородатый дьявол",
@@ -929,6 +1027,15 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 12
+					},
+					"condition": "poisoned",
+					"duration": "minute",
+					"repeat": true
+				},
 				"name": "Борода"
 			},
 			{
@@ -942,6 +1049,7 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 10,
+				"master_effect": "адская рана (урон в начале каждого хода, лечится Медициной) — мастер",
 				"name": "Глефа"
 			}
 		],
@@ -969,12 +1077,21 @@
 			{
 				"id": "steadfast",
 				"name": "Стойкость",
-				"desc": "Дьявол не может быть испуган, пока видит союзное существо в пределах 30 футов от себя."
+				"desc": "Дьявол не может быть испуган, пока видит союзное существо в пределах 30 футов от себя.",
+				"effect": {
+					"condition": "frightened",
+					"area": {
+						"shape": "burst",
+						"ft": 30
+					}
+				}
 			}
 		],
 		"equipment": [
 			"glaive"
-		]
+		],
+		"languages": "Infernal, telepathy 120 ft.",
+		"reactions": []
 	},
 	"berserker": {
 		"name": "Берсерк",
@@ -1030,7 +1147,9 @@
 		"equipment": [
 			"hide_armor",
 			"greataxe"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": []
 	},
 	"black_bear": {
 		"name": "Чёрный медведь",
@@ -1105,7 +1224,9 @@
 				"desc": "Крыса-оборотень совершает проверки Мудрости (Внимательность) с преимуществом, когда они основаны на обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"black_dragon_wyrmling": {
 		"name": "Детёныш чёрного дракона",
@@ -1177,6 +1298,13 @@
 					"dc": 11,
 					"success": "half"
 				},
+				"effect": {
+					"area": {
+						"shape": "line",
+						"ft": 15
+					}
+				},
+				"recharge": 5,
 				"name": "Кислотное дыхание"
 			}
 		],
@@ -1188,7 +1316,9 @@
 				"desc": "Ведьма может дышать воздухом и водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"blink_dog": {
 		"name": "Мерцающий пёс",
@@ -1244,7 +1374,9 @@
 				"desc": "Ворг имеет преимущество на проверки Мудрости (Внимательность), основанные на слухе или обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Blink Dog, understands Sylvan but can't speak it",
+		"reactions": []
 	},
 	"blood_hawk": {
 		"name": "Кровавый ястреб",
@@ -1304,7 +1436,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"blue_dragon_wyrmling": {
 		"name": "Детёныш синего дракона",
@@ -1376,12 +1510,21 @@
 					"dc": 12,
 					"success": "half"
 				},
+				"effect": {
+					"area": {
+						"shape": "line",
+						"ft": 30
+					}
+				},
+				"recharge": 5,
 				"name": "Дыхание молнией"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"boar": {
 		"name": "Кабан",
@@ -1431,15 +1574,32 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 11
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "1d6",
+						"type": "slashing"
+					},
+					"charge_ft": 20
+				}
 			},
 			{
 				"id": "relentless",
 				"name": "Неумолимый",
-				"desc": "Если кабан получает 10 урона или меньше, который снизил бы его до 0 хитов, он вместо этого снижается до 1 хита."
+				"desc": "Если кабан получает 10 урона или меньше, который снизил бы его до 0 хитов, он вместо этого снижается до 1 хита.",
+				"effect": {
+					"relentless": 7
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"brass_dragon_wyrmling": {
 		"name": "Латунный дракончик",
@@ -1492,11 +1652,36 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Укус"
+			},
+			{
+				"name_en": "Breath Weapons",
+				"damage": [
+					{
+						"dice": "4d6",
+						"type": "fire"
+					}
+				],
+				"kind": "save",
+				"save": {
+					"ability": "dex",
+					"dc": 11,
+					"success": "half"
+				},
+				"effect": {
+					"area": {
+						"shape": "line",
+						"ft": 20
+					}
+				},
+				"recharge": 5,
+				"name": "Оружие дыхания"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"bronze_dragon_wyrmling": {
 		"name": "Бронзовый дракончик",
@@ -1549,6 +1734,29 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Укус"
+			},
+			{
+				"name_en": "Breath Weapons",
+				"damage": [
+					{
+						"dice": "3d10",
+						"type": "lightning"
+					}
+				],
+				"kind": "save",
+				"save": {
+					"ability": "dex",
+					"dc": 12,
+					"success": "half"
+				},
+				"effect": {
+					"area": {
+						"shape": "line",
+						"ft": 40
+					}
+				},
+				"recharge": 5,
+				"name": "Оружие дыхания"
 			}
 		],
 		"multiattack": [],
@@ -1559,7 +1767,9 @@
 				"desc": "Ведьма может дышать воздухом и водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"brown_bear": {
 		"name": "Бурый медведь",
@@ -1636,7 +1846,9 @@
 				"desc": "Крыса-оборотень совершает проверки Мудрости (Внимательность) с преимуществом, когда они основаны на обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"bugbear": {
 		"name": "Бугбир",
@@ -1711,7 +1923,13 @@
 			{
 				"id": "surprise_attack",
 				"name": "Внезапная атака",
-				"desc": "Если двойник застаёт существо врасплох и попадает по нему атакой в первом раунде боя, цель получает дополнительно 10 (3d6) урона от этой атаки."
+				"desc": "Если двойник застаёт существо врасплох и попадает по нему атакой в первом раунде боя, цель получает дополнительно 10 (3d6) урона от этой атаки.",
+				"effect": {
+					"extra": {
+						"dice": "2d6",
+						"type": ""
+					}
+				}
 			}
 		],
 		"equipment": [
@@ -1719,7 +1937,9 @@
 			"hide_armor",
 			"morningstar",
 			"javelin"
-		]
+		],
+		"languages": "Common, Goblin",
+		"reactions": []
 	},
 	"camel": {
 		"name": "Верблюд",
@@ -1766,7 +1986,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"cat": {
 		"name": "Кошка",
@@ -1822,7 +2044,9 @@
 				"desc": "Крыса-оборотень совершает проверки Мудрости (Внимательность) с преимуществом, когда они основаны на обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"centaur": {
 		"name": "Кентавр",
@@ -1914,13 +2138,22 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"extra": {
+						"dice": "3d6",
+						"type": "piercing"
+					},
+					"charge_ft": 30
+				}
 			}
 		],
 		"equipment": [
 			"pike",
 			"longbow"
-		]
+		],
+		"languages": "Elvish, Sylvan",
+		"reactions": []
 	},
 	"cockatrice": {
 		"name": "Кокатрис",
@@ -1962,12 +2195,30 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"duration": "minute",
+					"magic": true,
+					"condition": "restrained",
+					"repeat": true,
+					"repeat_once": true,
+					"escalate": {
+						"condition": "petrified",
+						"duration": "day"
+					},
+					"tag": "magic"
+				},
 				"name": "Укус"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"commoner": {
 		"name": "Простолюдин",
@@ -2016,7 +2267,9 @@
 		"traits": [],
 		"equipment": [
 			"club"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": []
 	},
 	"constrictor_snake": {
 		"name": "Душащая змея",
@@ -2071,12 +2324,19 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 14,
+					"also": "restrained"
+				},
 				"name": "Сдавливание"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"copper_dragon_wyrmling": {
 		"name": "Детёныш медного дракона",
@@ -2129,11 +2389,36 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Укус"
+			},
+			{
+				"name_en": "Breath Weapons",
+				"damage": [
+					{
+						"dice": "4d8",
+						"type": "acid"
+					}
+				],
+				"kind": "save",
+				"save": {
+					"ability": "dex",
+					"dc": 11,
+					"success": "half"
+				},
+				"effect": {
+					"area": {
+						"shape": "line",
+						"ft": 20
+					}
+				},
+				"recharge": 5,
+				"name": "Оружие дыхания"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"crab": {
 		"name": "Краб",
@@ -2188,7 +2473,9 @@
 				"desc": "Ведьма может дышать воздухом и водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"crocodile": {
 		"name": "Крокодил",
@@ -2232,6 +2519,11 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 12,
+					"also": "restrained"
+				},
 				"name": "Укус"
 			}
 		],
@@ -2243,7 +2535,9 @@
 				"desc": "Плезиозавр может задерживать дыхание на 1 час."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"cult_fanatic": {
 		"name": "Фанатик культа",
@@ -2317,7 +2611,54 @@
 		"equipment": [
 			"leather_armor",
 			"dagger"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 11,
+			"attack": 3,
+			"ability": "wis",
+			"level": 4,
+			"slots": {
+				"1": 4,
+				"2": 3
+			},
+			"spells": [
+				{
+					"id": "light",
+					"level": 0
+				},
+				{
+					"id": "sacred_flame",
+					"level": 0
+				},
+				{
+					"id": "thaumaturgy",
+					"level": 0
+				},
+				{
+					"id": "command",
+					"level": 1
+				},
+				{
+					"id": "inflict_wounds",
+					"level": 1
+				},
+				{
+					"id": "shield_of_faith",
+					"level": 1
+				},
+				{
+					"id": "hold_person",
+					"level": 2
+				},
+				{
+					"id": "spiritual_weapon",
+					"level": 2
+				}
+			],
+			"innate": false
+		}
 	},
 	"cultist": {
 		"name": "Культист",
@@ -2376,7 +2717,9 @@
 		"equipment": [
 			"leather_armor",
 			"scimitar"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": []
 	},
 	"darkmantle": {
 		"name": "Тёмная мантия",
@@ -2420,6 +2763,7 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"master_effect": "присасывается к голове и ослепляет — мастер",
 				"name": "Раздавливание"
 			}
 		],
@@ -2436,7 +2780,9 @@
 				"desc": "Пока фиолетовый грибок неподвижен, его невозможно отличить от обычного гриба."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"death_dog": {
 		"name": "Смертельный пёс",
@@ -2481,6 +2827,7 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"master_effect": "болезнь: отравление до излечения и потеря максимума хитов раз в сутки — мастер ведёт её вне боя",
 				"name": "Укус"
 			}
 		],
@@ -2497,7 +2844,9 @@
 				"desc": "Пёс имеет преимущество на проверки Мудрости (Внимательность) и на спасброски от ослепления, очарования, глухоты, испуга, ошеломления и потери сознания."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"deep_gnome_svirfneblin": {
 		"name": "Глубинный гном (свирфнеблин)",
@@ -2559,6 +2908,15 @@
 					30,
 					120
 				],
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 12
+					},
+					"condition": "poisoned",
+					"duration": "minute",
+					"repeat": true
+				},
 				"name": "Отравленный дротик"
 			}
 		],
@@ -2583,7 +2941,38 @@
 		"equipment": [
 			"chain_shirt",
 			"war_pick"
-		]
+		],
+		"languages": "Gnomish, Terran, Undercommon",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 11,
+			"attack": 0,
+			"ability": "int",
+			"level": 1,
+			"slots": {},
+			"spells": [
+				{
+					"id": "nondetection",
+					"level": 3
+				},
+				{
+					"id": "blindness_deafness",
+					"level": 2,
+					"per_day": 1
+				},
+				{
+					"id": "blur",
+					"level": 2,
+					"per_day": 1
+				},
+				{
+					"id": "disguise_self",
+					"level": 1,
+					"per_day": 1
+				}
+			],
+			"innate": true
+		}
 	},
 	"deer": {
 		"name": "Олень",
@@ -2630,7 +3019,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"dire_wolf": {
 		"name": "Ужасный волк",
@@ -2675,6 +3066,13 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 13
+					},
+					"condition": "prone"
+				},
 				"name": "Укус"
 			}
 		],
@@ -2691,7 +3089,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"doppelganger": {
 		"name": "Доппельгангер",
@@ -2761,10 +3161,18 @@
 			{
 				"id": "surprise_attack",
 				"name": "Внезапная атака",
-				"desc": "Если двойник застаёт существо врасплох и попадает по нему атакой в первом раунде боя, цель получает дополнительно 10 (3d6) урона от этой атаки."
+				"desc": "Если двойник застаёт существо врасплох и попадает по нему атакой в первом раунде боя, цель получает дополнительно 10 (3d6) урона от этой атаки.",
+				"effect": {
+					"extra": {
+						"dice": "3d6",
+						"type": ""
+					}
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Common",
+		"reactions": []
 	},
 	"draft_horse": {
 		"name": "Тяжеловоз",
@@ -2811,7 +3219,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"dretch": {
 		"name": "Дрэтч",
@@ -2875,6 +3285,22 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Когти"
+			},
+			{
+				"name_en": "Fetid Cloud",
+				"damage": [],
+				"kind": "save",
+				"save": {
+					"ability": "con",
+					"dc": 11,
+					"success": "none"
+				},
+				"effect": {
+					"condition": "poisoned",
+					"duration": "minute"
+				},
+				"per_day": 1,
+				"name": "Зловонное облако"
 			}
 		],
 		"multiattack": [
@@ -2888,7 +3314,9 @@
 			}
 		],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "Abyssal, telepathy 60 ft. (works only with creatures that understand Abyssal)",
+		"reactions": []
 	},
 	"drow": {
 		"name": "Дроу",
@@ -2949,6 +3377,16 @@
 					30,
 					120
 				],
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 13
+					},
+					"condition": "poisoned",
+					"duration": "hour",
+					"fail_by_5": "unconscious",
+					"wake": true
+				},
 				"name": "Ручной арбалет"
 			}
 		],
@@ -2973,7 +3411,33 @@
 		"equipment": [
 			"chain_shirt",
 			"shortsword"
-		]
+		],
+		"languages": "Elvish, Undercommon",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 11,
+			"attack": 0,
+			"ability": "cha",
+			"level": 1,
+			"slots": {},
+			"spells": [
+				{
+					"id": "dancing_lights",
+					"level": 0
+				},
+				{
+					"id": "darkness",
+					"level": 2,
+					"per_day": 1
+				},
+				{
+					"id": "faerie_fire",
+					"level": 1,
+					"per_day": 1
+				}
+			],
+			"innate": true
+		}
 	},
 	"druid": {
 		"name": "Друид",
@@ -3032,7 +3496,58 @@
 		],
 		"equipment": [
 			"quarterstaff"
-		]
+		],
+		"languages": "Druidic plus any two languages",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 12,
+			"attack": 4,
+			"ability": "wis",
+			"level": 4,
+			"slots": {
+				"1": 4,
+				"2": 3
+			},
+			"spells": [
+				{
+					"id": "druidcraft",
+					"level": 0
+				},
+				{
+					"id": "produce_flame",
+					"level": 0
+				},
+				{
+					"id": "shillelagh",
+					"level": 0
+				},
+				{
+					"id": "entangle",
+					"level": 1
+				},
+				{
+					"id": "longstrider",
+					"level": 1
+				},
+				{
+					"id": "speak_with_animals",
+					"level": 1
+				},
+				{
+					"id": "thunderwave",
+					"level": 1
+				},
+				{
+					"id": "animal_messenger",
+					"level": 2
+				},
+				{
+					"id": "barkskin",
+					"level": 2
+				}
+			],
+			"innate": false
+		}
 	},
 	"dryad": {
 		"name": "Дриада",
@@ -3078,6 +3593,23 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Дубинка"
+			},
+			{
+				"name_en": "Fey Charm",
+				"damage": [],
+				"kind": "save",
+				"save": {
+					"ability": "wis",
+					"dc": 14,
+					"success": "none"
+				},
+				"effect": {
+					"condition": "charmed",
+					"magic": true,
+					"duration": "day",
+					"tag": "charm"
+				},
+				"name": "Очарование феи"
 			}
 		],
 		"multiattack": [],
@@ -3105,7 +3637,48 @@
 		],
 		"equipment": [
 			"club"
-		]
+		],
+		"languages": "Elvish, Sylvan",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 14,
+			"attack": 0,
+			"ability": "cha",
+			"level": 1,
+			"slots": {},
+			"spells": [
+				{
+					"id": "druidcraft",
+					"level": 0
+				},
+				{
+					"id": "entangle",
+					"level": 1,
+					"per_day": 3
+				},
+				{
+					"id": "goodberry",
+					"level": 1,
+					"per_day": 3
+				},
+				{
+					"id": "barkskin",
+					"level": 2,
+					"per_day": 1
+				},
+				{
+					"id": "pass_without_trace",
+					"level": 2,
+					"per_day": 1
+				},
+				{
+					"id": "shillelagh",
+					"level": 0,
+					"per_day": 1
+				}
+			],
+			"innate": true
+		}
 	},
 	"duergar": {
 		"name": "Дуэргар",
@@ -3187,7 +3760,9 @@
 			"shield",
 			"war_pick",
 			"javelin"
-		]
+		],
+		"languages": "Dwarvish, Undercommon",
+		"reactions": []
 	},
 	"dust_mephit": {
 		"name": "Пылевой мефит",
@@ -3239,6 +3814,27 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Когти"
+			},
+			{
+				"name_en": "Blinding Breath",
+				"damage": [],
+				"kind": "save",
+				"save": {
+					"ability": "dex",
+					"dc": 10,
+					"success": "none"
+				},
+				"effect": {
+					"condition": "blinded",
+					"duration": "minute",
+					"repeat": true,
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 6,
+				"name": "Слепящее дыхание"
 			}
 		],
 		"multiattack": [],
@@ -3246,7 +3842,19 @@
 			{
 				"id": "death_burst",
 				"name": "Взрыв при смерти",
-				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём."
+				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём.",
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"condition": "blinded",
+					"duration": "minute",
+					"area": {
+						"shape": "burst",
+						"ft": 5
+					}
+				}
 			},
 			{
 				"id": "innate_spellcasting",
@@ -3254,7 +3862,24 @@
 				"desc": "Мефит может врождённо колдовать размытие без материальных компонентов. Его врождённая способность к колдовству — Харизма."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Auran, Terran",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 10,
+			"attack": 0,
+			"ability": "cha",
+			"level": 1,
+			"slots": {},
+			"spells": [
+				{
+					"id": "sleep",
+					"level": 1,
+					"per_day": 1
+				}
+			],
+			"innate": true
+		}
 	},
 	"eagle": {
 		"name": "Орёл",
@@ -3309,7 +3934,9 @@
 				"desc": "Гиппогриф имеет преимущество на проверки Мудрости (Внимательность), основанные на зрении."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"elk": {
 		"name": "Лось",
@@ -3364,6 +3991,9 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"target_prone": true
+				},
 				"name": "Копыта"
 			}
 		],
@@ -3372,10 +4002,24 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 13
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "2d6",
+						"type": ""
+					},
+					"charge_ft": 20
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"ettercap": {
 		"name": "Эттеркап",
@@ -3425,6 +4069,15 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"condition": "poisoned",
+					"duration": "minute",
+					"repeat": true
+				},
 				"name": "Укус"
 			},
 			{
@@ -3439,6 +4092,23 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Когти"
+			},
+			{
+				"name_en": "Web",
+				"damage": [],
+				"to_hit": 4,
+				"kind": "ranged",
+				"range": [
+					30,
+					60
+				],
+				"effect": {
+					"condition": "restrained",
+					"escape_dc": 11,
+					"size_max": "large"
+				},
+				"recharge": 5,
+				"name": "Паутина"
 			}
 		],
 		"multiattack": [
@@ -3455,20 +4125,22 @@
 			{
 				"id": "spider_climb",
 				"name": "Лазание паука",
-				"desc": "Рой может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
+				"desc": "Существо может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
 			},
 			{
 				"id": "web_sense",
 				"name": "Чувство паутины",
-				"desc": "Находясь в контакте с паутиной, рой точно знает местоположение любого другого существа, касающегося той же паутины."
+				"desc": "Находясь в контакте с паутиной, существо точно знает местоположение любого другого существа, касающегося той же паутины."
 			},
 			{
 				"id": "web_walker",
 				"name": "Ходок по паутине",
-				"desc": "Рой игнорирует ограничения движения, вызванные паутиной."
+				"desc": "Существо игнорирует ограничения движения, вызванные паутиной."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"flying_snake": {
 		"name": "Летающая змея",
@@ -3525,7 +4197,9 @@
 				"desc": "Сова не провоцирует атаки возможности, когда вылетает из досягаемости врага."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"flying_sword": {
 		"name": "Летающий меч",
@@ -3588,7 +4262,12 @@
 			{
 				"id": "antimagic_susceptibility",
 				"name": "Уязвимость к антимагии",
-				"desc": "Меч лишается способности действовать в области антимагического поля. Если на него нацелено рассеивание магии, он должен преуспеть в спасброске Телосложения против Сл заклинания создателя или на 1 минуту потерять сознание."
+				"desc": "Меч лишается способности действовать в области антимагического поля. Если на него нацелено рассеивание магии, он должен преуспеть в спасброске Телосложения против Сл заклинания создателя или на 1 минуту потерять сознание.",
+				"effect": {
+					"condition": "unconscious",
+					"duration": "minute",
+					"magic": true
+				}
 			},
 			{
 				"id": "false_appearance",
@@ -3598,7 +4277,9 @@
 		],
 		"equipment": [
 			"longsword"
-		]
+		],
+		"languages": "",
+		"reactions": []
 	},
 	"gargoyle": {
 		"name": "Горгулья",
@@ -3681,7 +4362,9 @@
 				"desc": "Пока фиолетовый грибок неподвижен, его невозможно отличить от обычного гриба."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Terran",
+		"reactions": []
 	},
 	"gelatinous_cube": {
 		"name": "Желатиновый куб",
@@ -3746,6 +4429,7 @@
 					"dc": 12,
 					"success": "none"
 				},
+				"master_effect": "поглощение — мастер (решение v0.7.9)",
 				"name": "Поглощение"
 			}
 		],
@@ -3762,7 +4446,9 @@
 				"desc": "Даже когда куб на виду, чтобы заметить куб, который не двигался и не атаковал, нужна успешная проверка Мудрости (Внимательность) СЛ 15. Существо, которое входит в пространство куба, не зная о нём, застаёт врасплох."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"ghast": {
 		"name": "Гаст",
@@ -3825,6 +4511,19 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"condition": "paralyzed",
+					"duration": "minute",
+					"repeat": true,
+					"immune_races": [],
+					"immune_types": [
+						"undead"
+					]
+				},
 				"name": "Когти"
 			}
 		],
@@ -3833,7 +4532,15 @@
 			{
 				"id": "stench",
 				"name": "Зловоние",
-				"desc": "Любое существо, которое начинает ход в пределах 5 футов от гаста, должно преуспеть в спасброске Телосложения СЛ 10, иначе оно отравлено до начала своего следующего хода. При успехе существо на 24 часа получает иммунитет к Зловонию гаста."
+				"desc": "Любое существо, которое начинает ход в пределах 5 футов от гаста, должно преуспеть в спасброске Телосложения СЛ 10, иначе оно отравлено до начала своего следующего хода. При успехе существо на 24 часа получает иммунитет к Зловонию гаста.",
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"condition": "poisoned",
+					"duration": "day"
+				}
 			},
 			{
 				"id": "turn_defiance",
@@ -3841,7 +4548,9 @@
 				"desc": "Гаст и все гули в пределах 30 футов от него совершают спасброски против эффектов изгнания нежити с преимуществом."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Common",
+		"reactions": []
 	},
 	"ghoul": {
 		"name": "Гуль",
@@ -3902,12 +4611,29 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"condition": "paralyzed",
+					"duration": "minute",
+					"repeat": true,
+					"immune_races": [
+						"elf"
+					],
+					"immune_types": [
+						"undead"
+					]
+				},
 				"name": "Когти"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "Common",
+		"reactions": []
 	},
 	"giant_badger": {
 		"name": "Гигантский барсук",
@@ -3982,7 +4708,9 @@
 				"desc": "Крыса-оборотень совершает проверки Мудрости (Внимательность) с преимуществом, когда они основаны на обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_bat": {
 		"name": "Гигантская летучая мышь",
@@ -4040,7 +4768,9 @@
 				"desc": "Рой имеет преимущество на проверки Мудрости (Внимательность), которые опираются на слух."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_boar": {
 		"name": "Гигантский кабан",
@@ -4090,15 +4820,32 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 13
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "2d6",
+						"type": "slashing"
+					},
+					"charge_ft": 20
+				}
 			},
 			{
 				"id": "relentless",
 				"name": "Неумолимый",
-				"desc": "Если кабан получает 10 урона или меньше, который снизил бы его до 0 хитов, он вместо этого снижается до 1 хита."
+				"desc": "Если кабан получает 10 урона или меньше, который снизил бы его до 0 хитов, он вместо этого снижается до 1 хита.",
+				"effect": {
+					"relentless": 10
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_centipede": {
 		"name": "Гигантская сороконожка",
@@ -4140,12 +4887,27 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"damage": {
+						"dice": "3d6",
+						"type": "poison",
+						"half": false
+					},
+					"duration": "hour",
+					"zero_hp_paralyzed": true
+				},
 				"name": "Укус"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_constrictor_snake": {
 		"name": "Гигантская змея-душитель",
@@ -4202,12 +4964,19 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 16,
+					"also": "restrained"
+				},
 				"name": "Сдавливание"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_crab": {
 		"name": "Гигантский краб",
@@ -4251,6 +5020,10 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 11
+				},
 				"name": "Коготь"
 			}
 		],
@@ -4262,7 +5035,9 @@
 				"desc": "Ведьма может дышать воздухом и водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_eagle": {
 		"name": "Гигантский орёл",
@@ -4339,7 +5114,9 @@
 				"desc": "Гиппогриф имеет преимущество на проверки Мудрости (Внимательность), основанные на зрении."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Giant Eagle, understands Common and Auran but can't speak",
+		"reactions": []
 	},
 	"giant_elk": {
 		"name": "Гигантский лось",
@@ -4396,6 +5173,9 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"target_prone": true
+				},
 				"name": "Копыта"
 			}
 		],
@@ -4404,10 +5184,24 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 14
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "2d6",
+						"type": ""
+					},
+					"charge_ft": 20
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Giant Elk, understands Common, Elvish, and Sylvan but can't speak",
+		"reactions": []
 	},
 	"giant_fire_beetle": {
 		"name": "Гигантский огненный жук",
@@ -4460,7 +5254,9 @@
 				"desc": "Кошмар испускает яркий свет в радиусе 10 футов и тусклый свет ещё на 10 футов."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_frog": {
 		"name": "Гигантская лягушка",
@@ -4505,6 +5301,11 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 11,
+					"also": "restrained"
+				},
 				"name": "Укус"
 			}
 		],
@@ -4521,7 +5322,9 @@
 				"desc": "Длина прыжка жабы в длину до 20 футов, в высоту до 10 футов, с разбега или без него."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_goat": {
 		"name": "Гигантская коза",
@@ -4571,7 +5374,19 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 13
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "2d4",
+						"type": "bludgeoning"
+					},
+					"charge_ft": 20
+				}
 			},
 			{
 				"id": "sure_footed",
@@ -4579,7 +5394,9 @@
 				"desc": "Мул совершает спасброски Силы и Ловкости с преимуществом против эффектов, которые могут сбить его с ног."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_hyena": {
 		"name": "Гигантская гиена",
@@ -4634,7 +5451,9 @@
 				"desc": "Если гнолл в свой ход снижает существо до 0 хитов рукопашной атакой, он может бонусным действием переместиться на расстояние до половины своей скорости и совершить атаку укусом."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_lizard": {
 		"name": "Гигантская ящерица",
@@ -4681,7 +5500,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_octopus": {
 		"name": "Гигантский осьминог",
@@ -4726,6 +5547,11 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 15,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 16,
+					"also": "restrained"
+				},
 				"name": "Щупальца"
 			}
 		],
@@ -4747,7 +5573,9 @@
 				"desc": "Рой может дышать только под водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_owl": {
 		"name": "Гигантская сова",
@@ -4808,7 +5636,9 @@
 				"desc": "Разведчик имеет преимущество на проверки Мудрости (Внимательность), опирающиеся на слух или зрение."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Giant Owl, understands Common, Elvish, and Sylvan but can't speak",
+		"reactions": []
 	},
 	"giant_poisonous_snake": {
 		"name": "Гигантская ядовитая змея",
@@ -4852,12 +5682,25 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 10,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"damage": {
+						"dice": "3d6",
+						"type": "poison",
+						"half": true
+					}
+				},
 				"name": "Укус"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_rat_diseased": {
 		"name": "Гигантская крыса (больная)",
@@ -4899,6 +5742,7 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"master_effect": "болезнь: без лечения, кроме магии, и потеря максимума хитов раз в сутки — мастер ведёт её вне боя",
 				"name": "Укус"
 			}
 		],
@@ -4915,7 +5759,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_rat": {
 		"name": "Гигантская крыса",
@@ -4973,7 +5819,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_scorpion": {
 		"name": "Гигантский скорпион",
@@ -5015,6 +5863,10 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 12
+				},
 				"name": "Коготь"
 			},
 			{
@@ -5028,6 +5880,17 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 12
+					},
+					"damage": {
+						"dice": "4d10",
+						"type": "poison",
+						"half": true
+					}
+				},
 				"name": "Жало"
 			}
 		],
@@ -5042,7 +5905,9 @@
 			}
 		],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_sea_horse": {
 		"name": "Гигантский морской конёк",
@@ -5092,7 +5957,19 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 11
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "2d6",
+						"type": "bludgeoning"
+					},
+					"charge_ft": 20
+				}
 			},
 			{
 				"id": "water_breathing",
@@ -5100,7 +5977,9 @@
 				"desc": "Рой может дышать только под водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_spider": {
 		"name": "Гигантский паук",
@@ -5144,7 +6023,36 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"damage": {
+						"dice": "2d8",
+						"type": "poison",
+						"half": true
+					},
+					"duration": "hour",
+					"zero_hp_paralyzed": true
+				},
 				"name": "Укус"
+			},
+			{
+				"name_en": "Web",
+				"damage": [],
+				"to_hit": 5,
+				"kind": "ranged",
+				"range": [
+					30,
+					60
+				],
+				"effect": {
+					"condition": "restrained",
+					"escape_dc": 12
+				},
+				"recharge": 5,
+				"name": "Паутина"
 			}
 		],
 		"multiattack": [],
@@ -5152,20 +6060,22 @@
 			{
 				"id": "spider_climb",
 				"name": "Лазание паука",
-				"desc": "Рой может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
+				"desc": "Существо может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
 			},
 			{
 				"id": "web_sense",
 				"name": "Чувство паутины",
-				"desc": "Находясь в контакте с паутиной, рой точно знает местоположение любого другого существа, касающегося той же паутины."
+				"desc": "Находясь в контакте с паутиной, существо точно знает местоположение любого другого существа, касающегося той же паутины."
 			},
 			{
 				"id": "web_walker",
 				"name": "Ходок по паутине",
-				"desc": "Рой игнорирует ограничения движения, вызванные паутиной."
+				"desc": "Существо игнорирует ограничения движения, вызванные паутиной."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_toad": {
 		"name": "Гигантская жаба",
@@ -5211,6 +6121,11 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 13,
+					"also": "restrained"
+				},
 				"name": "Укус"
 			}
 		],
@@ -5227,7 +6142,9 @@
 				"desc": "Длина прыжка жабы в длину до 20 футов, в высоту до 10 футов, с разбега или без него."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_vulture": {
 		"name": "Гигантский гриф",
@@ -5309,7 +6226,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "understands Common but can't speak",
+		"reactions": []
 	},
 	"giant_wasp": {
 		"name": "Гигантская оса",
@@ -5351,12 +6270,27 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"damage": {
+						"dice": "3d6",
+						"type": "poison",
+						"half": true
+					},
+					"duration": "hour",
+					"zero_hp_paralyzed": true
+				},
 				"name": "Жало"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_weasel": {
 		"name": "Гигантская ласка",
@@ -5412,7 +6346,9 @@
 				"desc": "Ворг имеет преимущество на проверки Мудрости (Внимательность), основанные на слухе или обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"giant_wolf_spider": {
 		"name": "Гигантский волчий паук",
@@ -5457,6 +6393,19 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"damage": {
+						"dice": "2d6",
+						"type": "poison",
+						"half": true
+					},
+					"duration": "hour",
+					"zero_hp_paralyzed": true
+				},
 				"name": "Укус"
 			}
 		],
@@ -5465,20 +6414,22 @@
 			{
 				"id": "spider_climb",
 				"name": "Лазание паука",
-				"desc": "Рой может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
+				"desc": "Существо может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
 			},
 			{
 				"id": "web_sense",
 				"name": "Чувство паутины",
-				"desc": "Находясь в контакте с паутиной, рой точно знает местоположение любого другого существа, касающегося той же паутины."
+				"desc": "Находясь в контакте с паутиной, существо точно знает местоположение любого другого существа, касающегося той же паутины."
 			},
 			{
 				"id": "web_walker",
 				"name": "Ходок по паутине",
-				"desc": "Рой игнорирует ограничения движения, вызванные паутиной."
+				"desc": "Существо игнорирует ограничения движения, вызванные паутиной."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"gibbering_mouther": {
 		"name": "Бормочущий рот",
@@ -5522,7 +6473,35 @@
 				"to_hit": 2,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 10
+					},
+					"condition": "prone",
+					"size_max": "medium"
+				},
 				"name": "Укусы"
+			},
+			{
+				"name_en": "Blinding Spittle",
+				"damage": [],
+				"kind": "save",
+				"save": {
+					"ability": "dex",
+					"dc": 13,
+					"success": "none"
+				},
+				"effect": {
+					"condition": "blinded",
+					"duration": "round",
+					"area": {
+						"shape": "burst",
+						"ft": 15
+					}
+				},
+				"recharge": 5,
+				"name": "Слепящая слюна"
 			}
 		],
 		"multiattack": [
@@ -5539,15 +6518,29 @@
 			{
 				"id": "aberrant_ground",
 				"name": "Чуждая почва",
-				"desc": "Земля в радиусе 10 футов вокруг существа становится тестообразной труднопроходимой местностью. Каждое существо, начинающее в этой зоне свой ход, должно преуспеть в спасброске Силы Сл 10, иначе его скорость становится 0 до начала его следующего хода."
+				"desc": "Земля в радиусе 10 футов вокруг существа становится тестообразной труднопроходимой местностью. Каждое существо, начинающее в этой зоне свой ход, должно преуспеть в спасброске Силы Сл 10, иначе его скорость становится 0 до начала его следующего хода.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 10
+					}
+				}
 			},
 			{
 				"id": "gibbering",
 				"name": "Бормотание",
-				"desc": "Пока видит существо и не находится в состоянии недееспособности, рот бессвязно бормочет. Каждое существо, начинающее ход в 20 футах от него и способное слышать бормотание, совершает спасбросок Мудрости Сл 10. При провале оно не может использовать реакции до начала своего следующего хода и бросает d8: на 1–4 ничего не делает; на 5–6 не совершает действие и бонусное действие, а тратит всё перемещение в случайном направлении; на 7–8 атакует ближнего случайного существа в пределах досягаемости или ничего не делает, если такой атаки нет."
+				"desc": "Пока видит существо и не находится в состоянии недееспособности, рот бессвязно бормочет. Каждое существо, начинающее ход в 20 футах от него и способное слышать бормотание, совершает спасбросок Мудрости Сл 10. При провале оно не может использовать реакции до начала своего следующего хода и бросает d8: на 1–4 ничего не делает; на 5–6 не совершает действие и бонусное действие, а тратит всё перемещение в случайном направлении; на 7–8 атакует ближнего случайного существа в пределах досягаемости или ничего не делает, если такой атаки нет.",
+				"effect": {
+					"save": {
+						"ability": "wis",
+						"dc": 10
+					}
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"gnoll": {
 		"name": "Гнолл",
@@ -5638,7 +6631,9 @@
 			"shield",
 			"spear",
 			"longbow"
-		]
+		],
+		"languages": "Gnoll",
+		"reactions": []
 	},
 	"goat": {
 		"name": "Коза",
@@ -5688,7 +6683,19 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 10
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "1d4",
+						"type": "bludgeoning"
+					},
+					"charge_ft": 20
+				}
 			},
 			{
 				"id": "sure_footed",
@@ -5696,7 +6703,9 @@
 				"desc": "Мул совершает спасброски Силы и Ловкости с преимуществом против эффектов, которые могут сбить его с ног."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"goblin": {
 		"name": "Гоблин",
@@ -5772,7 +6781,9 @@
 			"shield",
 			"scimitar",
 			"shortbow"
-		]
+		],
+		"languages": "Common, Goblin",
+		"reactions": []
 	},
 	"gold_dragon_wyrmling": {
 		"name": "Детёныш золотого дракона",
@@ -5825,6 +6836,29 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Укус"
+			},
+			{
+				"name_en": "Breath Weapons",
+				"damage": [
+					{
+						"dice": "4d10",
+						"type": "fire"
+					}
+				],
+				"kind": "save",
+				"save": {
+					"ability": "dex",
+					"dc": 13,
+					"success": "half"
+				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 5,
+				"name": "Оружие дыхания"
 			}
 		],
 		"multiattack": [],
@@ -5835,7 +6869,9 @@
 				"desc": "Ведьма может дышать воздухом и водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"gray_ooze": {
 		"name": "Серая слизь",
@@ -5915,7 +6951,9 @@
 				"desc": "Пока фиолетовый грибок неподвижен, его невозможно отличить от обычного гриба."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"green_dragon_wyrmling": {
 		"name": "Детёныш зелёного дракона",
@@ -5989,6 +7027,13 @@
 					"dc": 11,
 					"success": "none"
 				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 5,
 				"name": "Ядовитое дыхание"
 			}
 		],
@@ -6000,7 +7045,9 @@
 				"desc": "Ведьма может дышать воздухом и водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"green_hag": {
 		"name": "Зелёная карга",
@@ -6068,7 +7115,31 @@
 				"desc": "Ворон может имитировать простые звуки, которые слышал, например шёпот человека, плач младенца или стрекотание животного. Существо, услышавшее звуки, может распознать подделку, пройдя проверку Мудрости (Проницательность) Сл 10."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Common, Draconic, Sylvan",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 12,
+			"attack": 0,
+			"ability": "cha",
+			"level": 1,
+			"slots": {},
+			"spells": [
+				{
+					"id": "dancing_lights",
+					"level": 0
+				},
+				{
+					"id": "minor_illusion",
+					"level": 0
+				},
+				{
+					"id": "vicious_mockery",
+					"level": 0
+				}
+			],
+			"innate": true
+		}
 	},
 	"grick": {
 		"name": "Грик",
@@ -6145,7 +7216,9 @@
 				"desc": "Гримлок имеет преимущество на проверки Ловкости (Скрытность) для укрытия в каменистой местности."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"griffon": {
 		"name": "Грифон",
@@ -6222,7 +7295,9 @@
 				"desc": "Гиппогриф имеет преимущество на проверки Мудрости (Внимательность), основанные на зрении."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"grimlock": {
 		"name": "Гримлок",
@@ -6295,7 +7370,9 @@
 				"desc": "Гримлок имеет преимущество на проверки Ловкости (Скрытность) для укрытия в каменистой местности."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Undercommon",
+		"reactions": []
 	},
 	"guard": {
 		"name": "Стражник",
@@ -6352,7 +7429,9 @@
 			"chain_shirt",
 			"shield",
 			"spear"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": []
 	},
 	"harpy": {
 		"name": "Гарпия",
@@ -6408,6 +7487,29 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Дубинка"
+			},
+			{
+				"name_en": "Luring Song",
+				"damage": [],
+				"kind": "save",
+				"save": {
+					"ability": "wis",
+					"dc": 11,
+					"success": "none"
+				},
+				"effect": {
+					"condition": "charmed",
+					"repeat": true,
+					"magic": true,
+					"also": "incapacitated",
+					"duration": "minute",
+					"tag": "charm",
+					"area": {
+						"shape": "burst",
+						"ft": 300
+					}
+				},
+				"name": "Манящая песня"
 			}
 		],
 		"multiattack": [
@@ -6423,7 +7525,9 @@
 		"traits": [],
 		"equipment": [
 			"club"
-		]
+		],
+		"languages": "Common",
+		"reactions": []
 	},
 	"hawk": {
 		"name": "Ястреб",
@@ -6478,7 +7582,9 @@
 				"desc": "Гиппогриф имеет преимущество на проверки Мудрости (Внимательность), основанные на зрении."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"hell_hound": {
 		"name": "Адская гончая",
@@ -6544,6 +7650,13 @@
 					"dc": 12,
 					"success": "half"
 				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 5,
 				"name": "Огненное дыхание"
 			}
 		],
@@ -6560,7 +7673,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "understands Infernal but can't speak it",
+		"reactions": []
 	},
 	"hippogriff": {
 		"name": "Гиппогриф",
@@ -6637,7 +7752,9 @@
 				"desc": "Гиппогриф имеет преимущество на проверки Мудрости (Внимательность), основанные на зрении."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"hobgoblin": {
 		"name": "Хобгоблин",
@@ -6703,7 +7820,13 @@
 			{
 				"id": "martial_advantage",
 				"name": "Воинское превосходство",
-				"desc": "Раз в ход гоблин может нанести дополнительно 7 (2к6) урона существу, которое он поразил оружейной атакой, если это существо находится в пределах 5 футов от союзника гоблина, который не выведен из строя."
+				"desc": "Раз в ход гоблин может нанести дополнительно 7 (2к6) урона существу, которое он поразил оружейной атакой, если это существо находится в пределах 5 футов от союзника гоблина, который не выведен из строя.",
+				"effect": {
+					"extra": {
+						"dice": "2d6",
+						"type": ""
+					}
+				}
 			}
 		],
 		"equipment": [
@@ -6711,7 +7834,9 @@
 			"shield",
 			"longsword",
 			"longbow"
-		]
+		],
+		"languages": "Common, Goblin",
+		"reactions": []
 	},
 	"homunculus": {
 		"name": "Гомункул",
@@ -6758,6 +7883,16 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"condition": "poisoned",
+					"duration": "minute",
+					"fail_by_5": "unconscious",
+					"wake": true
+				},
 				"name": "Укус"
 			}
 		],
@@ -6769,7 +7904,9 @@
 				"desc": "Пока гомункул находится на одном плане существования со своим хозяином, он может магическим образом передавать хозяину то, что ощущает, и они могут общаться телепатически."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "understands the languages of its creator but can't speak",
+		"reactions": []
 	},
 	"hunter_shark": {
 		"name": "Акула-охотник",
@@ -6829,7 +7966,9 @@
 				"desc": "Рой может дышать только под водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"hyena": {
 		"name": "Гиена",
@@ -6884,7 +8023,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"ice_mephit": {
 		"name": "Ледяной мефит",
@@ -6957,6 +8098,13 @@
 					"dc": 10,
 					"success": "half"
 				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 6,
 				"name": "Ледяное дыхание"
 			}
 		],
@@ -6965,7 +8113,22 @@
 			{
 				"id": "death_burst",
 				"name": "Взрыв при смерти",
-				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём."
+				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём.",
+				"effect": {
+					"save": {
+						"ability": "dex",
+						"dc": 10
+					},
+					"damage": {
+						"dice": "1d8",
+						"type": "slashing",
+						"half": true
+					},
+					"area": {
+						"shape": "burst",
+						"ft": 5
+					}
+				}
 			},
 			{
 				"id": "false_appearance",
@@ -6978,7 +8141,24 @@
 				"desc": "Мефит может врождённо колдовать размытие без материальных компонентов. Его врождённая способность к колдовству — Харизма."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Aquan, Auran",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 10,
+			"attack": 0,
+			"ability": "cha",
+			"level": 1,
+			"slots": {},
+			"spells": [
+				{
+					"id": "fog_cloud",
+					"level": 1,
+					"per_day": 1
+				}
+			],
+			"innate": true
+		}
 	},
 	"imp": {
 		"name": "Бес",
@@ -7033,6 +8213,17 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"damage": {
+						"dice": "3d6",
+						"type": "poison",
+						"half": true
+					}
+				},
 				"name": "Жало (укус в звериной форме)"
 			}
 		],
@@ -7054,7 +8245,9 @@
 				"desc": "Сатир имеет преимущество на спасброски от заклинаний и других магических эффектов."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Infernal, Common",
+		"reactions": []
 	},
 	"jackal": {
 		"name": "Шакал",
@@ -7114,7 +8307,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"killer_whale": {
 		"name": "Косатка",
@@ -7179,7 +8374,9 @@
 				"desc": "Рой имеет преимущество на проверки Мудрости (Внимательность), которые опираются на слух."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"knight": {
 		"name": "Рыцарь",
@@ -7259,6 +8456,14 @@
 		"equipment": [
 			"plate_armor",
 			"greatsword"
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": [
+			{
+				"id": "parry",
+				"name_en": "Parry",
+				"ac": 2
+			}
 		]
 	},
 	"kobold": {
@@ -7336,7 +8541,9 @@
 		"equipment": [
 			"dagger",
 			"sling"
-		]
+		],
+		"languages": "Common, Draconic",
+		"reactions": []
 	},
 	"lemure": {
 		"name": "Лемур",
@@ -7403,7 +8610,9 @@
 				"desc": "Лемур, погибший в Девяти Адах, оживает со всеми хитами через 1к10 дней, если его не убьёт существо доброго мировоззрения, на котором наложено заклинание благословение, или если его останки не окропить святой водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "understands infernal but can't speak",
+		"reactions": []
 	},
 	"lion": {
 		"name": "Лев",
@@ -7479,7 +8688,15 @@
 			{
 				"id": "pounce",
 				"name": "Наскок",
-				"desc": "Если тигр переместится минимум на 20 футов по прямой к существу и в тот же ход попадёт по нему когтистой атакой, цель должна пройти спасбросок Силы Сл 13 или будет сбита с ног. Если цель сбита с ног, тигр может как бонусным действием совершить по ней одну атаку укусом."
+				"desc": "Если тигр переместится минимум на 20 футов по прямой к существу и в тот же ход попадёт по нему когтистой атакой, цель должна пройти спасбросок Силы Сл 13 или будет сбита с ног. Если цель сбита с ног, тигр может как бонусным действием совершить по ней одну атаку укусом.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 13
+					},
+					"condition": "prone",
+					"charge_ft": 20
+				}
 			},
 			{
 				"id": "running_leap",
@@ -7487,7 +8704,9 @@
 				"desc": "При разбеге на 10 футов лев может прыгнуть в длину на расстояние до 25 футов."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"lizard": {
 		"name": "Ящерица",
@@ -7534,7 +8753,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"lizardfolk": {
 		"name": "Ящеролюд",
@@ -7646,7 +8867,9 @@
 		"equipment": [
 			"shield",
 			"javelin"
-		]
+		],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"magma_mephit": {
 		"name": "Магматический мефит",
@@ -7717,6 +8940,13 @@
 					"dc": 11,
 					"success": "half"
 				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 6,
 				"name": "Огненное дыхание"
 			}
 		],
@@ -7725,7 +8955,22 @@
 			{
 				"id": "death_burst",
 				"name": "Взрыв при смерти",
-				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём."
+				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём.",
+				"effect": {
+					"save": {
+						"ability": "dex",
+						"dc": 11
+					},
+					"damage": {
+						"dice": "2d6",
+						"type": "fire",
+						"half": true
+					},
+					"area": {
+						"shape": "burst",
+						"ft": 5
+					}
+				}
 			},
 			{
 				"id": "false_appearance",
@@ -7738,7 +8983,24 @@
 				"desc": "Мефит может врождённо колдовать размытие без материальных компонентов. Его врождённая способность к колдовству — Харизма."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Ignan, Terran",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 10,
+			"attack": 0,
+			"ability": "cha",
+			"level": 1,
+			"slots": {},
+			"spells": [
+				{
+					"id": "heat_metal",
+					"level": 2,
+					"per_day": 1
+				}
+			],
+			"innate": true
+		}
 	},
 	"magmin": {
 		"name": "Магмин",
@@ -7792,7 +9054,22 @@
 			{
 				"id": "death_burst",
 				"name": "Взрыв при смерти",
-				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём."
+				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём.",
+				"effect": {
+					"save": {
+						"ability": "dex",
+						"dc": 11
+					},
+					"damage": {
+						"dice": "2d6",
+						"type": "fire",
+						"half": true
+					},
+					"area": {
+						"shape": "burst",
+						"ft": 10
+					}
+				}
 			},
 			{
 				"id": "ignited_illumination",
@@ -7800,7 +9077,9 @@
 				"desc": "Бонусным действием магмин может поджечь себя или погасить пламя. Пока он горит, он испускает яркий свет в радиусе 10 футов и тусклый свет ещё на 10 футов."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Ignan",
+		"reactions": []
 	},
 	"manticore": {
 		"name": "Мантикора",
@@ -7891,7 +9170,9 @@
 				"desc": "У мантикоры двадцать четыре шипа на хвосте. Использованные шипы отрастают, когда мантикора завершает долгий отдых."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"mastiff": {
 		"name": "Мастиф",
@@ -7935,6 +9216,13 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 11
+					},
+					"condition": "prone"
+				},
 				"name": "Укус"
 			}
 		],
@@ -7946,7 +9234,9 @@
 				"desc": "Ворг имеет преимущество на проверки Мудрости (Внимательность), основанные на слухе или обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"merfolk": {
 		"name": "Морской народ",
@@ -8007,7 +9297,9 @@
 		],
 		"equipment": [
 			"spear"
-		]
+		],
+		"languages": "Aquan, Common",
+		"reactions": []
 	},
 	"merrow": {
 		"name": "Мерроу",
@@ -8099,7 +9391,9 @@
 				"desc": "Ведьма может дышать воздухом и водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Abyssal, Aquan",
+		"reactions": []
 	},
 	"mimic": {
 		"name": "Мимик",
@@ -8190,7 +9484,9 @@
 				"desc": "Мимик совершает броски атаки с преимуществом против любого существа, схваченного им."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"minotaur_skeleton": {
 		"name": "Скелет минотавра",
@@ -8260,12 +9556,26 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 14
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "2d8",
+						"type": "piercing"
+					},
+					"charge_ft": 10
+				}
 			}
 		],
 		"equipment": [
 			"greataxe"
-		]
+		],
+		"languages": "understands Abyssal but can't speak",
+		"reactions": []
 	},
 	"minotaur": {
 		"name": "Минотавр",
@@ -8330,7 +9640,19 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 14
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "2d8",
+						"type": "piercing"
+					},
+					"charge_ft": 10
+				}
 			},
 			{
 				"id": "labyrinthine_recall",
@@ -8345,7 +9667,9 @@
 		],
 		"equipment": [
 			"greataxe"
-		]
+		],
+		"languages": "Abyssal",
+		"reactions": []
 	},
 	"mule": {
 		"name": "Мул",
@@ -8403,7 +9727,9 @@
 				"desc": "Мул совершает спасброски Силы и Ловкости с преимуществом против эффектов, которые могут сбить его с ног."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"mummy": {
 		"name": "Мумия",
@@ -8464,7 +9790,29 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"master_effect": "проклятие мумии — болезнь сюжета: мастер ведёт его вне боя, снимает «Снятие проклятия»",
 				"name": "Гниющий кулак"
+			},
+			{
+				"name_en": "Dreadful Glare",
+				"damage": [],
+				"kind": "save",
+				"save": {
+					"ability": "wis",
+					"dc": 11,
+					"success": "none"
+				},
+				"effect": {
+					"condition": "frightened",
+					"duration": "round",
+					"area": {
+						"shape": "burst",
+						"ft": 60
+					},
+					"magic": true,
+					"fail_by_5": "paralyzed"
+				},
+				"name": "Ужасающий взгляд"
 			}
 		],
 		"multiattack": [
@@ -8478,7 +9826,9 @@
 			}
 		],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "the languages it knew in life",
+		"reactions": []
 	},
 	"nightmare": {
 		"name": "Ночной кошмар",
@@ -8542,7 +9892,9 @@
 				"desc": "Кошмар испускает яркий свет в радиусе 10 футов и тусклый свет ещё на 10 футов."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "understands Abyssal, Common, and Infernal but can't speak",
+		"reactions": []
 	},
 	"noble": {
 		"name": "Дворянин",
@@ -8596,6 +9948,14 @@
 		"equipment": [
 			"breastplate",
 			"rapier"
+		],
+		"languages": "any two languages",
+		"reactions": [
+			{
+				"id": "parry",
+				"name_en": "Parry",
+				"ac": 2
+			}
 		]
 	},
 	"ochre_jelly": {
@@ -8667,10 +10027,17 @@
 			{
 				"id": "spider_climb",
 				"name": "Лазание паука",
-				"desc": "Рой может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
+				"desc": "Существо может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": [
+			{
+				"id": "split",
+				"name_en": "Split"
+			}
+		]
 	},
 	"octopus": {
 		"name": "Осьминог",
@@ -8715,6 +10082,10 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 10
+				},
 				"name": "Щупальца"
 			}
 		],
@@ -8736,7 +10107,9 @@
 				"desc": "Рой может дышать только под водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"ogre_zombie": {
 		"name": "Зомби-огр",
@@ -8797,7 +10170,9 @@
 		],
 		"equipment": [
 			"morningstar"
-		]
+		],
+		"languages": "understands Common and Giant but can't speak",
+		"reactions": []
 	},
 	"ogre": {
 		"name": "Огр",
@@ -8865,7 +10240,9 @@
 			"hide_armor",
 			"greatclub",
 			"javelin"
-		]
+		],
+		"languages": "Common, Giant",
+		"reactions": []
 	},
 	"orc": {
 		"name": "Орк",
@@ -8941,7 +10318,9 @@
 			"hide_armor",
 			"greataxe",
 			"javelin"
-		]
+		],
+		"languages": "Common, Orc",
+		"reactions": []
 	},
 	"owl": {
 		"name": "Сова",
@@ -9002,7 +10381,9 @@
 				"desc": "Разведчик имеет преимущество на проверки Мудрости (Внимательность), опирающиеся на слух или зрение."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"owlbear": {
 		"name": "Совомедведь",
@@ -9079,7 +10460,9 @@
 				"desc": "Гриф имеет преимущество на проверки Мудрости (Внимательность), основанные на зрении или обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"panther": {
 		"name": "Пантера",
@@ -9150,10 +10533,20 @@
 			{
 				"id": "pounce",
 				"name": "Наскок",
-				"desc": "Если тигр переместится минимум на 20 футов по прямой к существу и в тот же ход попадёт по нему когтистой атакой, цель должна пройти спасбросок Силы Сл 13 или будет сбита с ног. Если цель сбита с ног, тигр может как бонусным действием совершить по ней одну атаку укусом."
+				"desc": "Если тигр переместится минимум на 20 футов по прямой к существу и в тот же ход попадёт по нему когтистой атакой, цель должна пройти спасбросок Силы Сл 13 или будет сбита с ног. Если цель сбита с ног, тигр может как бонусным действием совершить по ней одну атаку укусом.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 12
+					},
+					"condition": "prone",
+					"charge_ft": 20
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"pegasus": {
 		"name": "Пегас",
@@ -9206,7 +10599,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "understands Celestial, Common, Elvish, and Sylvan but can't speak",
+		"reactions": []
 	},
 	"phase_spider": {
 		"name": "Фазовый паук",
@@ -9250,6 +10645,19 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"damage": {
+						"dice": "4d8",
+						"type": "poison",
+						"half": true
+					},
+					"duration": "hour",
+					"zero_hp_paralyzed": true
+				},
 				"name": "Укус"
 			}
 		],
@@ -9263,15 +10671,17 @@
 			{
 				"id": "spider_climb",
 				"name": "Лазание паука",
-				"desc": "Рой может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
+				"desc": "Существо может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
 			},
 			{
 				"id": "web_walker",
 				"name": "Ходок по паутине",
-				"desc": "Рой игнорирует ограничения движения, вызванные паутиной."
+				"desc": "Существо игнорирует ограничения движения, вызванные паутиной."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"plesiosaurus": {
 		"name": "Плезиозавр",
@@ -9327,7 +10737,9 @@
 				"desc": "Плезиозавр может задерживать дыхание на 1 час."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"poisonous_snake": {
 		"name": "Ядовитая змея",
@@ -9369,12 +10781,25 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"damage": {
+						"dice": "2d4",
+						"type": "poison",
+						"half": true
+					}
+				},
 				"name": "Укус"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"polar_bear": {
 		"name": "Полярный медведь",
@@ -9451,7 +10876,9 @@
 				"desc": "Крыса-оборотень совершает проверки Мудрости (Внимательность) с преимуществом, когда они основаны на обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"pony": {
 		"name": "Пони",
@@ -9498,7 +10925,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"priest": {
 		"name": "Жрец",
@@ -9552,7 +10981,14 @@
 			{
 				"id": "divine_eminence",
 				"name": "Божественное превосходство",
-				"desc": "Бонусным действием жрец может потратить ячейку заклинаний, чтобы его рукопашные атаки оружием магически наносили цели при попадании дополнительно 10 (3к6) излучающего урона. Эффект длится до конца хода. Если потрачена ячейка 2-го уровня или выше, дополнительный урон увеличивается на 1к6 за каждый уровень выше 1-го."
+				"desc": "Бонусным действием жрец может потратить ячейку заклинаний, чтобы его рукопашные атаки оружием магически наносили цели при попадании дополнительно 10 (3к6) излучающего урона. Эффект длится до конца хода. Если потрачена ячейка 2-го уровня или выше, дополнительный урон увеличивается на 1к6 за каждый уровень выше 1-го.",
+				"effect": {
+					"extra": {
+						"dice": "3d6",
+						"type": "radiant"
+					},
+					"magic": true
+				}
 			},
 			{
 				"id": "spellcasting",
@@ -9563,7 +10999,63 @@
 		"equipment": [
 			"chain_shirt",
 			"mace"
-		]
+		],
+		"languages": "any two languages",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 13,
+			"attack": 5,
+			"ability": "wis",
+			"level": 5,
+			"slots": {
+				"1": 4,
+				"2": 3,
+				"3": 2
+			},
+			"spells": [
+				{
+					"id": "light",
+					"level": 0
+				},
+				{
+					"id": "sacred_flame",
+					"level": 0
+				},
+				{
+					"id": "thaumaturgy",
+					"level": 0
+				},
+				{
+					"id": "cure_wounds",
+					"level": 1
+				},
+				{
+					"id": "guiding_bolt",
+					"level": 1
+				},
+				{
+					"id": "sanctuary",
+					"level": 1
+				},
+				{
+					"id": "lesser_restoration",
+					"level": 2
+				},
+				{
+					"id": "spiritual_weapon",
+					"level": 2
+				},
+				{
+					"id": "dispel_magic",
+					"level": 3
+				},
+				{
+					"id": "spirit_guardians",
+					"level": 3
+				}
+			],
+			"innate": false
+		}
 	},
 	"pseudodragon": {
 		"name": "Псевдодракон",
@@ -9621,6 +11113,16 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 11
+					},
+					"condition": "poisoned",
+					"duration": "hour",
+					"fail_by_5": "unconscious",
+					"wake": true
+				},
 				"name": "Жало"
 			}
 		],
@@ -9642,7 +11144,9 @@
 				"desc": "Псевдодракон может магически телепатически передавать простые идеи, эмоции и образы любому существу в пределах 100 футов, которое понимает какой-либо язык."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "understands Common and Draconic but can't speak",
+		"reactions": []
 	},
 	"quasit": {
 		"name": "Квазит",
@@ -9695,7 +11199,42 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"condition": "poisoned",
+					"damage": {
+						"dice": "2d4",
+						"type": "poison",
+						"half": false
+					},
+					"duration": "minute",
+					"repeat": true
+				},
 				"name": "Коготь (укус в звериной форме)"
+			},
+			{
+				"name_en": "Scare",
+				"damage": [],
+				"kind": "save",
+				"save": {
+					"ability": "wis",
+					"dc": 10,
+					"success": "none"
+				},
+				"effect": {
+					"condition": "frightened",
+					"duration": "minute",
+					"repeat": true,
+					"area": {
+						"shape": "burst",
+						"ft": 20
+					}
+				},
+				"per_day": 1,
+				"name": "Испуг"
 			}
 		],
 		"multiattack": [],
@@ -9711,7 +11250,9 @@
 				"desc": "Сатир имеет преимущество на спасброски от заклинаний и других магических эффектов."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Abyssal, Common",
+		"reactions": []
 	},
 	"quipper": {
 		"name": "Рыба-пила",
@@ -9769,7 +11310,9 @@
 				"desc": "Рой может дышать только под водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"rat": {
 		"name": "Крыса",
@@ -9822,7 +11365,9 @@
 				"desc": "Крыса-оборотень совершает проверки Мудрости (Внимательность) с преимуществом, когда они основаны на обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"raven": {
 		"name": "Ворон",
@@ -9877,7 +11422,9 @@
 				"desc": "Ворон может имитировать простые звуки, которые слышал, например шёпот человека, плач младенца или стрекотание животного. Существо, услышавшее звуки, может распознать подделку, пройдя проверку Мудрости (Проницательность) Сл 10."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"reef_shark": {
 		"name": "Рифовая акула",
@@ -9937,7 +11484,9 @@
 				"desc": "Рой может дышать только под водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"rhinoceros": {
 		"name": "Носорог",
@@ -9987,10 +11536,24 @@
 			{
 				"id": "charge",
 				"name": "Таран",
-				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног."
+				"desc": "Если носорог перемещается минимум на 20 футов прямо к цели и затем поражает её атакой рогом в том же ходу, цель получает дополнительно 9 (2к8) дробящего урона. Если цель — существо, оно должно преуспеть в спасброске Силы СЛ 15 или будет сбито с ног.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 15
+					},
+					"condition": "prone",
+					"extra": {
+						"dice": "2d8",
+						"type": "bludgeoning"
+					},
+					"charge_ft": 20
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"riding_horse": {
 		"name": "Верховая лошадь",
@@ -10037,7 +11600,91 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
+	},
+	"rug_of_smothering": {
+		"name": "Ковёр удушения",
+		"name_en": "Rug of Smothering",
+		"size": "large",
+		"type": "construct",
+		"cr": 2,
+		"xp": 450,
+		"ac": 12,
+		"hp": 33,
+		"hit_dice": "6d10",
+		"speed": 10,
+		"fly": 0,
+		"abilities": {
+			"str": 17,
+			"dex": 14,
+			"con": 10,
+			"int": 1,
+			"wis": 3,
+			"cha": 1
+		},
+		"prof": 2,
+		"saves": {},
+		"skills": {},
+		"passive_perception": 6,
+		"resistances": [],
+		"immunities": [
+			"poison",
+			"psychic"
+		],
+		"vulnerabilities": [],
+		"condition_immunities": [
+			"blinded",
+			"charmed",
+			"blinded",
+			"frightened",
+			"paralyzed",
+			"petrified",
+			"poisoned"
+		],
+		"actions": [
+			{
+				"name_en": "Smother",
+				"damage": [],
+				"to_hit": 5,
+				"kind": "melee",
+				"reach": 5,
+				"effect": {
+					"condition": "grappled",
+					"escape_dc": 13,
+					"also": "restrained",
+					"size_max": "medium"
+				},
+				"name": "Удушение"
+			}
+		],
+		"multiattack": [],
+		"traits": [
+			{
+				"id": "antimagic_susceptibility",
+				"name": "Уязвимость к антимагии",
+				"desc": "Меч лишается способности действовать в области антимагического поля. Если на него нацелено рассеивание магии, он должен преуспеть в спасброске Телосложения против Сл заклинания создателя или на 1 минуту потерять сознание.",
+				"effect": {
+					"condition": "unconscious",
+					"duration": "minute",
+					"magic": true
+				}
+			},
+			{
+				"id": "damage_transfer",
+				"name": "Перенос урона",
+				"desc": "Пока ковёр схватил существо, он получает только половину урона, направленного на него, а вторую половину получает схваченное им существо."
+			},
+			{
+				"id": "false_appearance",
+				"name": "Ложный облик",
+				"desc": "Пока фиолетовый грибок неподвижен, его невозможно отличить от обычного гриба."
+			}
+		],
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"rust_monster": {
 		"name": "Ржавый монстр",
@@ -10095,7 +11742,9 @@
 				"desc": "Немагическое металлическое оружие, попавшее по ржавому монстру, корродирует: после нанесения урона оно получает постоянный накопительный штраф -1 к броскам урона. Если штраф достигает -5, оружие уничтожается. Немагические металлические боеприпасы, попавшие по монстру, уничтожаются после нанесения урона."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"saber_toothed_tiger": {
 		"name": "Саблезубый тигр",
@@ -10166,10 +11815,20 @@
 			{
 				"id": "pounce",
 				"name": "Наскок",
-				"desc": "Если тигр переместится минимум на 20 футов по прямой к существу и в тот же ход попадёт по нему когтистой атакой, цель должна пройти спасбросок Силы Сл 13 или будет сбита с ног. Если цель сбита с ног, тигр может как бонусным действием совершить по ней одну атаку укусом."
+				"desc": "Если тигр переместится минимум на 20 футов по прямой к существу и в тот же ход попадёт по нему когтистой атакой, цель должна пройти спасбросок Силы Сл 13 или будет сбита с ног. Если цель сбита с ног, тигр может как бонусным действием совершить по ней одну атаку укусом.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 14
+					},
+					"condition": "prone",
+					"charge_ft": 20
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"sahuagin": {
 		"name": "Сахуагин",
@@ -10275,7 +11934,9 @@
 		],
 		"equipment": [
 			"spear"
-		]
+		],
+		"languages": "Sahuagin",
+		"reactions": []
 	},
 	"satyr": {
 		"name": "Сатир",
@@ -10365,7 +12026,9 @@
 			"leather_armor",
 			"shortsword",
 			"shortbow"
-		]
+		],
+		"languages": "Common, Elvish, Sylvan",
+		"reactions": []
 	},
 	"scorpion": {
 		"name": "Скорпион",
@@ -10407,12 +12070,25 @@
 				"to_hit": 2,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 9
+					},
+					"damage": {
+						"dice": "1d8",
+						"type": "poison",
+						"half": true
+					}
+				},
 				"name": "Жало"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"scout": {
 		"name": "Разведчик",
@@ -10495,7 +12171,9 @@
 			"leather_armor",
 			"shortsword",
 			"longbow"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": []
 	},
 	"sea_hag": {
 		"name": "Морская карга",
@@ -10550,10 +12228,20 @@
 			{
 				"id": "horrific_appearance",
 				"name": "Ужасающий облик",
-				"desc": "Гуманоид, начинающий ход в 30 футах от карги и видящий её истинный облик, должен пройти спасбросок Мудрости Сл 11. При провале он испуган 1 минуту; в конце каждого своего хода он может повторить спасбросок (с помехой, если карга в поле зрения), при успехе эффект прекращается. После успеха или окончания эффекта существо иммунно к Ужасающему облику карги в течение 24 часов. Цель, не застигнутая врасплох и не увидевшая внезапного открытия истинного облика, может отвести взгляд и не совершать первоначальный спасбросок; до начала её следующего хода броски атаки по карге совершаются с помехой."
+				"desc": "Гуманоид, начинающий ход в 30 футах от карги и видящий её истинный облик, должен пройти спасбросок Мудрости Сл 11. При провале он испуган 1 минуту; в конце каждого своего хода он может повторить спасбросок (с помехой, если карга в поле зрения), при успехе эффект прекращается. После успеха или окончания эффекта существо иммунно к Ужасающему облику карги в течение 24 часов. Цель, не застигнутая врасплох и не увидевшая внезапного открытия истинного облика, может отвести взгляд и не совершать первоначальный спасбросок; до начала её следующего хода броски атаки по карге совершаются с помехой.",
+				"effect": {
+					"save": {
+						"ability": "wis",
+						"dc": 11
+					},
+					"duration": "minute",
+					"repeat": true
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Aquan, Common, Giant",
+		"reactions": []
 	},
 	"shadow": {
 		"name": "Тень",
@@ -10639,7 +12327,9 @@
 				"desc": "На солнечном свету тень совершает броски атаки, проверки характеристик и спасброски с помехой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"silver_dragon_wyrmling": {
 		"name": "Детёныш серебряного дракона",
@@ -10692,11 +12382,36 @@
 				"kind": "melee",
 				"reach": 5,
 				"name": "Укус"
+			},
+			{
+				"name_en": "Breath Weapons",
+				"damage": [
+					{
+						"dice": "4d8",
+						"type": "cold"
+					}
+				],
+				"kind": "save",
+				"save": {
+					"ability": "con",
+					"dc": 13,
+					"success": "half"
+				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 5,
+				"name": "Оружие дыхания"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"skeleton": {
 		"name": "Скелет",
@@ -10769,7 +12484,9 @@
 		"equipment": [
 			"shortsword",
 			"shortbow"
-		]
+		],
+		"languages": "understands all languages it spoke in life but can't speak",
+		"reactions": []
 	},
 	"specter": {
 		"name": "Призрак",
@@ -10831,6 +12548,13 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"drain": true
+				},
 				"name": "Высасывание жизни"
 			}
 		],
@@ -10847,7 +12571,9 @@
 				"desc": "Находясь на солнечном свету, иссушитель получает помеху к броскам атаки и к проверкам Мудрости (Внимательность), основанным на зрении."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "understands all languages it knew in life but can't speak",
+		"reactions": []
 	},
 	"spider": {
 		"name": "Паук",
@@ -10891,6 +12617,17 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 9
+					},
+					"damage": {
+						"dice": "1d4",
+						"type": "poison",
+						"half": false
+					}
+				},
 				"name": "Укус"
 			}
 		],
@@ -10899,20 +12636,22 @@
 			{
 				"id": "spider_climb",
 				"name": "Лазание паука",
-				"desc": "Рой может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
+				"desc": "Существо может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
 			},
 			{
 				"id": "web_sense",
 				"name": "Чувство паутины",
-				"desc": "Находясь в контакте с паутиной, рой точно знает местоположение любого другого существа, касающегося той же паутины."
+				"desc": "Находясь в контакте с паутиной, существо точно знает местоположение любого другого существа, касающегося той же паутины."
 			},
 			{
 				"id": "web_walker",
 				"name": "Ходок по паутине",
-				"desc": "Рой игнорирует ограничения движения, вызванные паутиной."
+				"desc": "Существо игнорирует ограничения движения, вызванные паутиной."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"sprite": {
 		"name": "Спрайт",
@@ -10973,6 +12712,16 @@
 					40,
 					160
 				],
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"condition": "poisoned",
+					"duration": "minute",
+					"fail_by_5": "unconscious",
+					"wake": true
+				},
 				"name": "Короткий лук"
 			}
 		],
@@ -10982,7 +12731,9 @@
 			"leather_armor",
 			"longsword",
 			"shortbow"
-		]
+		],
+		"languages": "Common, Elvish, Sylvan",
+		"reactions": []
 	},
 	"spy": {
 		"name": "Шпион",
@@ -11065,12 +12816,20 @@
 			{
 				"id": "sneak_attack_1/turn",
 				"name": "Скрытая атака (1/ход)",
-				"desc": "Шпион наносит дополнительно 7 (2к6) урона, когда попадает по цели оружейной атакой с преимуществом на бросок атаки, либо когда цель находится в пределах 5 футов от союзника шпиона, который не выведен из строя, и у шпиона нет помехи на бросок атаки."
+				"desc": "Шпион наносит дополнительно 7 (2к6) урона, когда попадает по цели оружейной атакой с преимуществом на бросок атаки, либо когда цель находится в пределах 5 футов от союзника шпиона, который не выведен из строя, и у шпиона нет помехи на бросок атаки.",
+				"effect": {
+					"extra": {
+						"dice": "2d6",
+						"type": ""
+					}
+				}
 			}
 		],
 		"equipment": [
 			"shortsword"
-		]
+		],
+		"languages": "any two languages",
+		"reactions": []
 	},
 	"steam_mephit": {
 		"name": "Паровой мефит",
@@ -11137,6 +12896,13 @@
 					"dc": 10,
 					"success": "half"
 				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 6,
 				"name": "Паровое дыхание"
 			}
 		],
@@ -11145,7 +12911,22 @@
 			{
 				"id": "death_burst",
 				"name": "Взрыв при смерти",
-				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём."
+				"desc": "Когда мефит умирает, он взрывается облаком пара. Каждое существо в пределах 5 футов от мефита должно преуспеть в спасброске Ловкости Сл 10 или получить 4 (1к8) урона огнём.",
+				"effect": {
+					"save": {
+						"ability": "dex",
+						"dc": 10
+					},
+					"damage": {
+						"dice": "1d8",
+						"type": "fire",
+						"half": false
+					},
+					"area": {
+						"shape": "burst",
+						"ft": 5
+					}
+				}
 			},
 			{
 				"id": "innate_spellcasting",
@@ -11153,7 +12934,24 @@
 				"desc": "Мефит может врождённо колдовать размытие без материальных компонентов. Его врождённая способность к колдовству — Харизма."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Aquan, Ignan",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 11,
+			"attack": 0,
+			"ability": "cha",
+			"level": 1,
+			"slots": {},
+			"spells": [
+				{
+					"id": "blur",
+					"level": 2,
+					"per_day": 1
+				}
+			],
+			"innate": true
+		}
 	},
 	"stirge": {
 		"name": "Стирж",
@@ -11200,7 +12998,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_bats": {
 		"name": "Рой летучих мышей",
@@ -11276,7 +13076,9 @@
 				"desc": "Рой может занимать пространство другого существа и наоборот, а также проходить через любое отверстие, достаточно большое для Крошечного насекомого. Рой не может восстанавливать хиты и получать временные хиты."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_beetles": {
 		"name": "Рой жуков",
@@ -11342,7 +13144,9 @@
 				"desc": "Рой может занимать пространство другого существа и наоборот, а также проходить через любое отверстие, достаточно большое для Крошечного насекомого. Рой не может восстанавливать хиты и получать временные хиты."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_centipedes": {
 		"name": "Рой многоножек",
@@ -11397,6 +13201,7 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 0,
+				"master_effect": "паралич при 0 HP от роя — мастер",
 				"name": "Укусы"
 			}
 		],
@@ -11408,7 +13213,9 @@
 				"desc": "Рой может занимать пространство другого существа и наоборот, а также проходить через любое отверстие, достаточно большое для Крошечного насекомого. Рой не может восстанавливать хиты и получать временные хиты."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_insects": {
 		"name": "Рой насекомых",
@@ -11474,7 +13281,9 @@
 				"desc": "Рой может занимать пространство другого существа и наоборот, а также проходить через любое отверстие, достаточно большое для Крошечного насекомого. Рой не может восстанавливать хиты и получать временные хиты."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_poisonous_snakes": {
 		"name": "Рой ядовитых змей",
@@ -11529,6 +13338,17 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 0,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"damage": {
+						"dice": "4d6",
+						"type": "poison",
+						"half": true
+					}
+				},
 				"name": "Укусы"
 			}
 		],
@@ -11540,7 +13360,9 @@
 				"desc": "Рой может занимать пространство другого существа и наоборот, а также проходить через любое отверстие, достаточно большое для Крошечного насекомого. Рой не может восстанавливать хиты и получать временные хиты."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_quippers": {
 		"name": "Рой квиперов",
@@ -11616,7 +13438,9 @@
 				"desc": "Рой может дышать только под водой."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_rats": {
 		"name": "Рой крыс",
@@ -11687,7 +13511,9 @@
 				"desc": "Рой может занимать пространство другого существа и наоборот, а также проходить через любое отверстие, достаточно большое для Крошечного насекомого. Рой не может восстанавливать хиты и получать временные хиты."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_ravens": {
 		"name": "Рой воронов",
@@ -11753,7 +13579,9 @@
 				"desc": "Рой может занимать пространство другого существа и наоборот, а также проходить через любое отверстие, достаточно большое для Крошечного насекомого. Рой не может восстанавливать хиты и получать временные хиты."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_spiders": {
 		"name": "Рой пауков",
@@ -11820,20 +13648,22 @@
 			{
 				"id": "spider_climb",
 				"name": "Лазание паука",
-				"desc": "Рой может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
+				"desc": "Существо может карабкаться по сложным поверхностям, в том числе вверх ногами по потолкам, без проверки характеристики."
 			},
 			{
 				"id": "web_sense",
 				"name": "Чувство паутины",
-				"desc": "Находясь в контакте с паутиной, рой точно знает местоположение любого другого существа, касающегося той же паутины."
+				"desc": "Находясь в контакте с паутиной, существо точно знает местоположение любого другого существа, касающегося той же паутины."
 			},
 			{
 				"id": "web_walker",
 				"name": "Ходок по паутине",
-				"desc": "Рой игнорирует ограничения движения, вызванные паутиной."
+				"desc": "Существо игнорирует ограничения движения, вызванные паутиной."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"swarm_of_wasps": {
 		"name": "Рой ос",
@@ -11899,7 +13729,9 @@
 				"desc": "Рой может занимать пространство другого существа и наоборот, а также проходить через любое отверстие, достаточно большое для Крошечного насекомого. Рой не может восстанавливать хиты и получать временные хиты."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"thug": {
 		"name": "Головорез",
@@ -11978,7 +13810,9 @@
 		"equipment": [
 			"leather_armor",
 			"mace"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": []
 	},
 	"tiger": {
 		"name": "Тигр",
@@ -12049,10 +13883,20 @@
 			{
 				"id": "pounce",
 				"name": "Наскок",
-				"desc": "Если тигр переместится минимум на 20 футов по прямой к существу и в тот же ход попадёт по нему когтистой атакой, цель должна пройти спасбросок Силы Сл 13 или будет сбита с ног. Если цель сбита с ног, тигр может как бонусным действием совершить по ней одну атаку укусом."
+				"desc": "Если тигр переместится минимум на 20 футов по прямой к существу и в тот же ход попадёт по нему когтистой атакой, цель должна пройти спасбросок Силы Сл 13 или будет сбита с ног. Если цель сбита с ног, тигр может как бонусным действием совершить по ней одну атаку укусом.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 13
+					},
+					"condition": "prone",
+					"charge_ft": 20
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"tribal_warrior": {
 		"name": "Племенной воин",
@@ -12112,7 +13956,9 @@
 		"equipment": [
 			"hide_armor",
 			"spear"
-		]
+		],
+		"languages": "any one language",
+		"reactions": []
 	},
 	"veteran": {
 		"name": "Ветеран",
@@ -12204,7 +14050,9 @@
 			"splint_armor",
 			"longsword",
 			"shortsword"
-		]
+		],
+		"languages": "any one language (usually Common)",
+		"reactions": []
 	},
 	"violet_fungus": {
 		"name": "Фиолетовый грибок",
@@ -12266,7 +14114,9 @@
 				"desc": "Пока фиолетовый грибок неподвижен, его невозможно отличить от обычного гриба."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"vulture": {
 		"name": "Гриф",
@@ -12326,7 +14176,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"warhorse_skeleton": {
 		"name": "Скелет боевого коня",
@@ -12380,7 +14232,9 @@
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"warhorse": {
 		"name": "Боевой конь",
@@ -12430,10 +14284,20 @@
 			{
 				"id": "trampling_charge",
 				"name": "Растаптывающий натиск",
-				"desc": "Если конь проходит по прямой не менее 20 футов к существу и в тот же ход атакует его копытами, цель должна преуспеть в спасброске Силы Сл 14 или будет сбита с ног. Если цель сбита с ног, конь может бонусным действием совершить ещё одну атаку копытами по ней."
+				"desc": "Если конь проходит по прямой не менее 20 футов к существу и в тот же ход атакует его копытами, цель должна преуспеть в спасброске Силы Сл 14 или будет сбита с ног. Если цель сбита с ног, конь может бонусным действием совершить ещё одну атаку копытами по ней.",
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 14
+					},
+					"condition": "prone",
+					"charge_ft": 20
+				}
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"weasel": {
 		"name": "Ласка",
@@ -12489,7 +14353,9 @@
 				"desc": "Ворг имеет преимущество на проверки Мудрости (Внимательность), основанные на слухе или обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"wererat_human": {
 		"name": "Оборотень-крыса, человеческая форма",
@@ -12575,7 +14441,9 @@
 		],
 		"equipment": [
 			"shortsword"
-		]
+		],
+		"languages": "Common",
+		"reactions": []
 	},
 	"wererat_hybrid": {
 		"name": "Оборотень-крыса, гибридная форма",
@@ -12622,6 +14490,7 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"master_effect": "проклятие ликантропии — сюжет мастера",
 				"name": "Укус"
 			},
 			{
@@ -12674,7 +14543,9 @@
 		],
 		"equipment": [
 			"shortsword"
-		]
+		],
+		"languages": "Common",
+		"reactions": []
 	},
 	"wererat_rat": {
 		"name": "Оборотень-крыса, крысиный облик",
@@ -12721,6 +14592,7 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"master_effect": "проклятие ликантропии — сюжет мастера",
 				"name": "Укус"
 			}
 		],
@@ -12737,7 +14609,9 @@
 				"desc": "Крыса-оборотень совершает проверки Мудрости (Внимательность) с преимуществом, когда они основаны на обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"werewolf_human": {
 		"name": "Оборотень-волк, человеческий облик",
@@ -12810,7 +14684,9 @@
 		],
 		"equipment": [
 			"spear"
-		]
+		],
+		"languages": "Common",
+		"reactions": []
 	},
 	"werewolf_hybrid": {
 		"name": "Оборотень-волк, гибридный облик",
@@ -12856,6 +14732,7 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"master_effect": "проклятие ликантропии — сюжет мастера",
 				"name": "Укус"
 			},
 			{
@@ -12894,7 +14771,9 @@
 				"desc": "Ворг имеет преимущество на проверки Мудрости (Внимательность), основанные на слухе или обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Common",
+		"reactions": []
 	},
 	"werewolf_wolf": {
 		"name": "Оборотень-волк, волчий облик",
@@ -12940,6 +14819,7 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"master_effect": "проклятие ликантропии — сюжет мастера",
 				"name": "Укус"
 			}
 		],
@@ -12956,7 +14836,9 @@
 				"desc": "Ворг имеет преимущество на проверки Мудрости (Внимательность), основанные на слухе или обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"white_dragon_wyrmling": {
 		"name": "Белый дракончик",
@@ -13028,12 +14910,21 @@
 					"dc": 12,
 					"success": "half"
 				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 5,
 				"name": "Холодное дыхание"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
-		"equipment": []
+		"equipment": [],
+		"languages": "Draconic",
+		"reactions": []
 	},
 	"wight": {
 		"name": "Вихт",
@@ -13086,6 +14977,13 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 13
+					},
+					"drain": true
+				},
 				"name": "Высасывание жизни"
 			},
 			{
@@ -13135,7 +15033,9 @@
 			"studded_leather_armor",
 			"longsword",
 			"longbow"
-		]
+		],
+		"languages": "the languages it knew in life",
+		"reactions": []
 	},
 	"will_o_wisp": {
 		"name": "Блуждающий огонёк",
@@ -13203,7 +15103,18 @@
 			{
 				"id": "consume_life",
 				"name": "Поглощение жизни",
-				"desc": "Бонусным действием блуждающий огонёк может выбрать одно видимое существо в пределах 5 футов от себя, у которого 0 хитов и которое ещё живо. Цель должна пройти спасбросок Телосложения КС 10 против этой магии или умрёт. Если цель умирает, блуждающий огонёк восстанавливает 10 (3к6) хитов."
+				"desc": "Бонусным действием блуждающий огонёк может выбрать одно видимое существо в пределах 5 футов от себя, у которого 0 хитов и которое ещё живо. Цель должна пройти спасбросок Телосложения КС 10 против этой магии или умрёт. Если цель умирает, блуждающий огонёк восстанавливает 10 (3к6) хитов.",
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"area": {
+						"shape": "burst",
+						"ft": 5
+					},
+					"magic": true
+				}
 			},
 			{
 				"id": "ephemeral",
@@ -13221,7 +15132,9 @@
 				"desc": "Блуждающий огонёк испускает яркий свет в радиусе от 5 до 20 футов и тусклый свет на дополнительное расстояние, равное выбранному радиусу. Бонусным действием он может изменить радиус."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "the languages it knew in life",
+		"reactions": []
 	},
 	"winter_wolf": {
 		"name": "Зимний волк",
@@ -13268,6 +15181,13 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 14
+					},
+					"condition": "prone"
+				},
 				"name": "Укус"
 			},
 			{
@@ -13284,6 +15204,13 @@
 					"dc": 12,
 					"success": "none"
 				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 15
+					}
+				},
+				"recharge": 5,
 				"name": "Холодное дыхание"
 			}
 		],
@@ -13305,7 +15232,9 @@
 				"desc": "Волк получает преимущество на проверки Ловкости (Скрытность), когда прячется в заснеженной местности."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Common, Giant, Winter Wolf",
+		"reactions": []
 	},
 	"wolf": {
 		"name": "Волк",
@@ -13350,6 +15279,13 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 11
+					},
+					"condition": "prone"
+				},
 				"name": "Укус"
 			}
 		],
@@ -13366,7 +15302,9 @@
 				"desc": "Волк совершает бросок атаки с преимуществом против существа, если хотя бы один союзник волка находится в пределах 5 футов от этого существа и не недееспособен."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	},
 	"worg": {
 		"name": "Ворг",
@@ -13410,6 +15348,13 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
+				"effect": {
+					"save": {
+						"ability": "str",
+						"dc": 13
+					},
+					"condition": "prone"
+				},
 				"name": "Укус"
 			}
 		],
@@ -13421,7 +15366,9 @@
 				"desc": "Ворг имеет преимущество на проверки Мудрости (Внимательность), основанные на слухе или обонянии."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "Goblin, Worg",
+		"reactions": []
 	},
 	"zombie": {
 		"name": "Зомби",
@@ -13480,6 +15427,8 @@
 				"desc": "Если урон снижает зомби до 0 хитов, он должен пройти спасбросок Телосложения со Сл 5 + полученный урон, если только урон не излучающий или не от критического попадания. При успехе зомби вместо этого остаётся с 1 хитом."
 			}
 		],
-		"equipment": []
+		"equipment": [],
+		"languages": "understands all languages it spoke in life but can't speak",
+		"reactions": []
 	}
 }

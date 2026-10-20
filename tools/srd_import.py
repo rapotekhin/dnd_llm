@@ -555,7 +555,7 @@ class Builder:
                 if a["name"] == "Multiattack":
                     multi = multiattack(a)
                     continue
-                act = monster_action(a)
+                act = monster_action(a, RIDERS.get(f"{m['index']}:{a['name']}", {}))
                 if act is None:
                     continue
                 act["name"] = self.tr(f"monster_action:{a['name']}", a["name"])["name"]
@@ -565,8 +565,12 @@ class Builder:
             traits = []
             for t in m.get("special_abilities", []):
                 tr = self.tr(f"monster_trait:{t['name']}", t["name"], t.get("desc", ""))
-                traits.append({"id": sid(t["name"].lower().replace(" ", "_").replace("(", "").replace(")", "").replace("'", "")),
-                               "name": tr["name"], "desc": tr.get("desc", "")})
+                trait = {"id": sid(t["name"].lower().replace(" ", "_").replace("(", "").replace(")", "").replace("'", "")),
+                         "name": tr["name"], "desc": tr.get("desc", "")}
+                fx = parse_effect(t.get("desc", ""))  # v0.7.9: charge, pounce, death burst, relentless — numbers for the engine
+                if fx:
+                    trait["effect"] = fx
+                traits.append(trait)
             gear = [sid(x["index"]) for ac in m.get("armor_class", []) for x in ac.get("armor", [])]
             for a in actions:
                 guess = sid(a["name_en"].lower().replace(" ", "-"))
@@ -583,7 +587,14 @@ class Builder:
                 "vulnerabilities": m.get("damage_vulnerabilities", []),
                 "condition_immunities": [sid(c["index"]) for c in m.get("condition_immunities", [])],
                 "actions": actions, "multiattack": multi, "traits": traits, "equipment": gear,
+                "languages": m.get("languages", ""),  # v0.7.9: kept for v0.7.11
+                "reactions": [{"id": sid(r["name"].lower().replace(" ", "_")), "name_en": r["name"],
+                               **({"ac": int(x.group(1))} if (x := re.search(r"adds (\d+) to its AC", r.get("desc", ""))) else {})}
+                              for r in m.get("reactions", [])],
             }
+            spells = monster_spells(m)
+            if spells:
+                out[sid(m["index"])]["spellcasting"] = spells
         return out
 
     def categories(self, items: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -636,8 +647,115 @@ def spell_combat(s: dict[str, Any]) -> dict[str, Any]:
 SPELL_FIXES = {"scorching-ray": {"attack": "ranged"}, "produce-flame": {"range_ft": 30}}
 
 
-def monster_action(a: dict[str, Any]) -> dict[str, Any] | None:
-    desc = a.get("desc", "")
+# What a monster's action or trait does besides its damage (v0.7.9), parsed from the SRD text; RIDERS overrides it.
+ABILITY_BY_NAME = {"Strength": "str", "Dexterity": "dex", "Constitution": "con", "Intelligence": "int", "Wisdom": "wis", "Charisma": "cha"}
+CONDITION_WORDS = [("knocked prone", "prone"), ("be poisoned", "poisoned"), ("become poisoned", "poisoned"), ("be paralyzed", "paralyzed"),
+                   ("be blinded", "blinded"), ("be frightened", "frightened"), ("become frightened", "frightened"),
+                   ("be magically charmed", "charmed"), ("be charmed", "charmed"), ("fall unconscious", "unconscious"),
+                   ("be stunned", "stunned"), ("restrained by webbing", "restrained")]
+
+
+def parse_effect(desc: str) -> dict[str, Any]:
+    """The engine's shape of a rider: save {ability, dc}, condition, duration, repeat, grapple escape_dc (with
+    restrained while grappled), save damage {dice, type, half}, extra damage of a charge (`extra`), unconscious when the
+    save fails by 5 (`fail_by_5`), paralysis when the poison drops the target to 0 (`zero_hp_paralyzed`), who is immune
+    (`immune_races`, `immune_types`), the biggest size it works on (`size_max`), an area (`area` {shape, ft})."""
+    fx: dict[str, Any] = {}
+    sv = re.search(r"DC (\d+) (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throw", desc)
+    if sv:
+        fx["save"] = {"ability": ABILITY_BY_NAME[sv.group(2)], "dc": int(sv.group(1))}
+    for words, cond in CONDITION_WORDS:
+        if words in desc:
+            fx["condition"] = cond
+            break
+    g = re.search(r"grappled \(escape DC (\d+)\)", desc)
+    if g:
+        fx["condition"] = "grappled"
+        fx["escape_dc"] = int(g.group(1))
+        if re.search(r"Until this grapple ends, the (target|creature) is restrained", desc):
+            fx["also"] = "restrained"
+    esc = re.search(r"DC (\d+) Strength check", desc)
+    if esc and fx.get("condition") == "restrained":
+        fx["escape_dc"] = int(esc.group(1))
+    dm = re.search(r"taking \d+ \((\d+d\d+)\) (\w+) damage on a failed save, or half", desc) \
+        or re.search(r"saving throw,? taking \d+ \((\d+d\d+)\) (\w+) damage", desc)
+    if dm:
+        fx["damage"] = {"dice": dm.group(1), "type": dm.group(2), "half": "half as much" in desc}
+    else:
+        dm = re.search(r"or take \d+ \((\d+d\d+)\) (\w+) damage", desc)
+        if dm:
+            fx["damage"] = {"dice": dm.group(1), "type": dm.group(2), "half": False}
+    ex = re.search(r"(?:takes|deal|deals) an extra \d+ \((\d+d\d+)\)(?: (\w+))? damage", desc)
+    if ex:
+        fx["extra"] = {"dice": ex.group(1), "type": ex.group(2) or ""}
+    mv = re.search(r"moves at least (\d+) (?:ft\.|feet) straight toward", desc)
+    if mv:
+        fx["charge_ft"] = int(mv.group(1))
+    if "until the end of" in desc and "next turn" in desc:
+        fx["duration"] = "round"
+    elif re.search(r"(lasts|for) 24 hours", desc) and "next 24 hours" not in desc:
+        fx["duration"] = "day"
+    elif "for 1 minute" in desc:
+        fx["duration"] = "minute"
+    elif "for 1 hour" in desc:
+        fx["duration"] = "hour"
+    if "repeat the saving throw at the end of each of its turns" in desc:
+        fx["repeat"] = True
+    if "fails by 5 or more" in desc or "saving throw result is 5 or lower" in desc:
+        fx["fail_by_5"] = "unconscious"
+    rel = re.search(r"takes (\d+) damage or less that would reduce it to 0", desc)
+    if rel:
+        fx["relentless"] = int(rel.group(1))
+    if "reduces the target to 0 hit points, the target is stable but poisoned for 1 hour" in desc:
+        fx["zero_hp_paralyzed"] = True
+    if "takes damage or" in desc and fx.get("condition") == "unconscious" or fx.get("fail_by_5"):
+        fx["wake"] = True
+    im = re.search(r"creature other than (?:an? )?([\w ]+?)(?:,|\.| it)", desc)
+    if im:
+        words = [w.strip() for w in re.split(r" or | and ", im.group(1).replace("an ", "").replace("a ", ""))]
+        fx["immune_races"] = [w for w in words if w in ("elf", "dwarf")]
+        fx["immune_types"] = [w for w in words if w in ("undead", "construct")]
+    size = re.search(r"(Tiny|Small|Medium|Large|Huge) or smaller", desc)
+    if size:
+        fx["size_max"] = size.group(1).lower()
+    area = re.search(r"(\d+)-foot(?:-radius)? (cone|line|sphere|cube)", desc) or re.search(r"within (\d+) (?:ft\.|feet) of (it|the flash|the mephit)", desc)
+    if area:
+        fx["area"] = {"shape": area.group(2) if area.group(2) in ("cone", "line", "sphere", "cube") else "burst", "ft": int(area.group(1))}
+    if "magically" in desc or "magic" in desc:
+        fx["magic"] = True
+    return fx if any(k in fx for k in ("condition", "damage", "extra", "save", "zero_hp_paralyzed", "relentless")) else {}
+
+
+def load_riders() -> dict[str, Any]:
+    path = ROOT / "tools" / "srd" / "riders.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+RIDERS = load_riders()
+
+
+def monster_spells(m: dict[str, Any]) -> dict[str, Any]:
+    """A caster's spells (v0.7.9): DC, attack bonus, slots, the list with per-day uses of innate casting."""
+    for t in m.get("special_abilities", []):
+        sc = t.get("spellcasting")
+        if not sc:
+            continue
+        spells = []
+        for x in sc.get("spells", []):
+            use = x.get("usage", {})
+            spells.append({"id": sid(x["url"].rsplit("/", 1)[-1]), "level": x.get("level", 0),
+                           **({"per_day": int(use["times"])} if use.get("type") == "per day" else {})})
+        return {"dc": sc.get("dc", 10), "attack": sc.get("modifier", 0), "ability": sc.get("ability", {}).get("index", ""), "level": sc.get("level", 1),
+                "slots": {str(k): int(v) for k, v in sc.get("slots", {}).items()}, "spells": spells,
+                "innate": "Innate" in t["name"]}
+    return {}
+
+
+def monster_action(a: dict[str, Any], override: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    override = override or {}
+    if override.get("skip"):
+        return None
+    desc = override.get("desc", a.get("desc", ""))
     parts = []
     for d in a.get("damage", []):
         if isinstance(d, dict) and d.get("from"):  # a choice (one- or two-handed): the first option
@@ -645,6 +763,8 @@ def monster_action(a: dict[str, Any]) -> dict[str, Any] | None:
         parts.append(d)
     dmg = [{"dice": dice_text(d["damage_dice"]), "type": d["damage_type"]["index"]}
            for d in parts if isinstance(d, dict) and d.get("damage_dice") and d.get("damage_type")]
+    if override.get("damage"):
+        dmg = override["damage"]
     act: dict[str, Any] = {"name_en": a["name"], "damage": dmg}
     if "attack_bonus" in a:
         act["to_hit"] = a["attack_bonus"]
@@ -656,14 +776,35 @@ def monster_action(a: dict[str, Any]) -> dict[str, Any] | None:
             act["kind"], act["reach"] = "melee", int(reach.group(1)) if reach else 5
             if rng:  # a thrown melee weapon: also usable at range
                 act["range"] = [int(rng.group(1)), int(rng.group(2))]
-    elif a.get("dc") and dmg:
+    elif a.get("dc") or override.get("save"):  # a save of its own (breath, gaze, song)
         act["kind"] = "save"
-        act["save"] = {"ability": a["dc"]["dc_type"]["index"], "dc": a["dc"]["dc_value"],
-                       "success": a["dc"].get("success_type", "none")}
+        dc = a.get("dc") or {}
+        act["save"] = override.get("save") or {"ability": dc["dc_type"]["index"], "dc": dc["dc_value"], "success": dc.get("success_type", "none")}
     else:
         return None
-    if not dmg and act["kind"] != "save":
+    fx = {} if override.get("master") else parse_effect(desc)
+    if override.get("master"):
+        act["master_effect"] = override["master"]  # what the hit also does stays with the master, on purpose
+    if act["kind"] == "save":  # the save is the action's own: its effect is what a failure brings
+        fx.pop("save", None)
+        fx.pop("damage", None)
+    fx.update(override.get("effect", {}))
+    if fx:
+        act["effect"] = fx
+    use = a.get("usage") or {}
+    if use.get("type") == "recharge on roll":
+        act["recharge"] = int(use.get("min_value", 6))
+    elif use.get("type") == "per day":
+        act["per_day"] = int(use.get("times", 1))
+    elif use.get("type") == "recharge after rest":
+        act["per_day"] = 1
+    if not dmg and act["kind"] != "save" and not fx.get("condition"):
         return None
+    if act["kind"] == "save" and not dmg and not fx.get("condition"):
+        return None
+    for k in ("damage", "kind", "range"):
+        if k in override:
+            act[k] = override[k]
     return act
 
 

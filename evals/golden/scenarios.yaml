@@ -1097,3 +1097,60 @@ scenarios:
       effects: {required_kinds_any: [advance_time, condition], condition_save: save_or_player, condition_in: [unconscious]}
     rubric:
       - "Прошло время (advance_time) или сон наложен на время из списка по воле героя; без спасброска и без опасности из ниоткуда"
+
+  - id: monster_round_prone_and_grappled
+    title: "Раунд, где волк сбил героиню, а удав схватил — рассказ по строкам движка"
+    category: combat
+    extends: tavern
+    mode: combat
+    kind: combat_round
+    input: "Волк — Укус: 15 + 4 = 19 против КД 16 — попадание, 6 (колющий)\nАйра: спасбросок Сил 7 против Сл 11 — провал\nАйра: лежит ничком\nУдав — Сжатие: 14 + 4 = 18 против КД 16 — попадание, 5 (дробящий)\nАйра: схвачен и опутан, вырваться — Сл 14"
+    snapshot:
+      character:
+        name: "Айра"
+        gender: female
+        class: fighter
+        level: 2
+        hp: {current: 9, max: 20}
+        ac: 16
+        conditions: ["prone", "grappled", "restrained"]
+      combat:
+        round: 2
+        enemies:
+          - {id: e1, name: "Волк", monster: "Волк", distance_ft: 0, side: same, status: active, health: full}
+          - {id: e2, name: "Удав", monster: "Удав", distance_ft: 0, side: same, status: active, health: hurt}
+    expect:
+      effects: {max_count: 0}
+      narration:
+        must_not_match: ["\\d+ против", "отравл", "паралич", "парализ"]
+    rubric:
+      - "Волк сбивает героиню с ног, удав обвивает её и сжимает — оба события из строк, без новых ударов и без чисел"
+      - "Нет состояний, которых не было в строках (яд, паралич)"
+
+  - id: monster_conditions_not_doubled
+    title: "Импровизация после того, как монстр уже наложил состояние, — мастер не дублирует его эффектом"
+    category: combat
+    extends: tavern
+    mode: combat
+    input: "Пытаюсь разорвать паутину и дотянуться до меча."
+    snapshot:
+      character:
+        name: "Айра"
+        gender: female
+        class: fighter
+        level: 2
+        hp: {current: 14, max: 20}
+        ac: 16
+        conditions: ["restrained"]
+        effects: ["Опутан — пока не снимут, Гигантский паук — Паутина"]
+      combat:
+        round: 3
+        enemies:
+          - {id: e1, name: "Гигантский паук", monster: "Гигантский паук", distance_ft: 30, side: right, status: active, health: full}
+    engine:
+      check: {d20: [8], bonus: 4, total: 12, dc: 15, success: false, nat: 8, blocked: false}
+    expect:
+      effects: {forbidden_kinds: [condition, damage]}
+    rubric:
+      - "Мастер не накладывает опутывание повторно и не наносит урон героине сам; паутина держит по итогу проверки"
+

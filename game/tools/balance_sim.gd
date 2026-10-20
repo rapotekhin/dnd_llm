@@ -74,6 +74,11 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 			CombatRules.economy(s)["action"] = 0
 			lines.append_array(ItemRules.use(c, data, s.items, "healing_potion", s.rng))
 			return lines
+	if CombatRules.can_stand(s).is_empty():  # v0.7.9: get up, break out of a web or a coil
+		lines.append_array(CombatRules.stand(s))
+	if ConditionRules.has(c, "restrained") and CombatRules.can_escape(s).is_empty():
+		lines.append_array(CombatRules.escape(s, data))
+		return lines
 	for guard in 3:
 		var near := ""
 		var best := 99
@@ -99,6 +104,8 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 			lines.append_array(CombatRules.player_cast(s, data, cast, 0, near))
 			continue
 		var dir := 1 if int(CombatRules.fighter(s, near)["col"]) > int(CombatRules.player(s)["col"]) else -1
+		if caster and not SpellRules.ready(c).is_empty():
+			return lines  # a caster waits for the foe to come, it does not walk into its teeth
 		if CombatRules.can_move(s, data, dir).is_empty() and best > 0:
 			lines.append_array(CombatRules.player_move(s, data, dir))
 			continue

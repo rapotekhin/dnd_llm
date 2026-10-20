@@ -105,8 +105,74 @@ HERO_DAMAGE = [
     ("Истощение", "марш, сутки без сна, Неистовство берсерка, мастер; голод и холод — с припасами и погодой", "engine"),
 ]
 
-# Monster traits the engine reads (combat_rules.gd).
-MONSTER_TRAITS_ENGINE = {"pack_tactics"}
+# Monster traits (v0.7.9): what the engine does with each (combat_rules.gd, monster_rules.gd) or why it stays with
+# the master. Every trait of the imported monsters must be here.
+_E = "engine"
+_M = "master"
+_FIELD = "передвижение и чувства, которых нет на линейном поле боя: мастер описывает в сцене"
+_WATER = "вода и дыхание: поле боя их не знает, мастер в сцене"
+_HIDE = "маскировка вне боя: мастер в сцене; засады встреч задаёт пакет"
+_MIND = "речь, телепатия, облики: социальное и сюжетное — мастер"
+_LIGHT = "свет: мастер в сцене (тьма — из времени суток)"
+MONSTER_TRAITS = {
+    "pack_tactics": (_E, "преимущество, когда союзник рядом с героем"),
+    **{k: (_E, "+5 к пассивной Внимательности против скрытности героя") for k in
+       ["keen_hearing", "keen_hearing_and_sight", "keen_hearing_and_smell", "keen_senses", "keen_sight", "keen_sight_and_smell", "keen_smell"]},
+    "charge": (_E, "после сближения — лишний урон и спасбросок Силы против падения"),
+    "pounce": (_E, "после сближения — спасбросок против падения и укус лежачего бонусом"),
+    "trampling_charge": (_E, "после сближения — спасбросок против падения и удар лежачего бонусом"),
+    "blood_frenzy": (_E, "преимущество по раненому герою"),
+    "magic_resistance": (_E, "преимущество на спасброски от заклинаний героя"),
+    "sunlight_sensitivity": (_E, "помеха на атаки днём вне помещений (`indoor` в пакете)"),
+    "sunlight_weakness": (_E, "помеха на атаки днём вне помещений"),
+    "reckless": (_E, "преимущество своим атакам вплотную и герою по нему"),
+    "relentless": (_E, "раз за бой 1 HP вместо 0 от слабого удара"),
+    "undead_fortitude": (_E, "спасбросок Тел 5 + урон — 1 HP вместо 0 (не от излучения и крита)"),
+    "death_burst": (_E, "смерть рядом с героем — спасбросок, урон или ослепление"),
+    "flyby": (_E, "герой не бьёт вдогонку, когда он улетает"),
+    "nimble_escape": (_E, "вне досягаемости героя прячется бонусом — помеха по нему, преимущество его атаке"),
+    "surprise_attack": (_E, "лишний урон в первом раунде по застигнутому герою"),
+    "ambusher": (_E, "преимущество в первом раунде по застигнутому герою"),
+    "martial_advantage": (_E, "лишний урон раз в ход, когда союзник рядом с героем"),
+    "sneak_attack_1/turn": (_E, "лишний урон раз в ход с преимуществом или при союзнике рядом"),
+    "aggressive": (_E, "лишнее движение к герою бонусом"),
+    "dark_devotion": (_E, "преимущество на спасброски от очарования и страха"),
+    "fey_ancestry": (_E, "преимущество против очарования, магический сон не действует"),
+    "gnome_cunning": (_E, "преимущество на спасброски Инт, Мдр, Хар от магии"),
+    "brave": (_E, "преимущество на спасброски от страха"),
+    "duergar_resilience": (_E, "преимущество против заклинаний, яда, очарования и паралича"),
+    "spellcasting": (_E, "заклинания, которые движок разрешает за героя, — ячейками; прочие не колдует"),
+    "innate_spellcasting": (_E, "то же, с использованиями в день"),
+    "brute": (_E, "лишняя кость урона уже в атаках SRD"),
+    "amphibious": (_M, _WATER), "water_breathing": (_M, _WATER), "hold_breath": (_M, _WATER),
+    "limited_amphibiousness": (_M, _WATER), "underwater_camouflage": (_M, _WATER),
+    "false_appearance": (_M, _HIDE), "false_appearance_object_form_only": (_M, _HIDE), "stone_camouflage": (_M, _HIDE),
+    "snow_camouflage": (_M, _HIDE), "shadow_stealth": (_M, _HIDE), "transparent": (_M, _HIDE),
+    "spider_climb": (_M, _FIELD), "web_walker": (_M, _FIELD), "web_sense": (_M, _FIELD), "echolocation": (_M, _FIELD),
+    "devils_sight": (_M, _FIELD), "blind_senses": (_M, _FIELD), "iron_scent": (_M, _FIELD), "labyrinthine_recall": (_M, _FIELD),
+    "sure_footed": (_M, _FIELD), "standing_leap": (_M, _FIELD), "running_leap": (_M, _FIELD), "tree_stride": (_M, _FIELD),
+    "ethereal_jaunt": (_M, _FIELD), "incorporeal_movement": (_M, _FIELD), "amorphous": (_M, _FIELD), "beast_of_burden": (_M, _FIELD),
+    "shapechanger": (_M, _MIND), "mimicry": (_M, _MIND), "speak_with_beasts_and_plants": (_M, _MIND), "telepathic_bond": (_M, _MIND),
+    "limited_telepathy": (_M, _MIND), "shark_telepathy": (_M, _MIND), "divine_eminence": (_M, _MIND),
+    "illumination": (_M, _LIGHT), "ignited_illumination": (_M, _LIGHT), "variable_illumination": (_M, _LIGHT),
+    "swarm": (_M, "рой бьётся как одно существо; сжатие и лечение роя — мастер"),
+    "rampage": (_M, "соло-герой: после его падения кусать больше некого"),
+    "antimagic_susceptibility": (_M, "антимагии в игре нет"),
+    "steadfast": (_M, "не бывает испуган, пока видит союзника — мастер (страх на монстров накладывает только он и «Страх»)"),
+    "two_headed": (_M, "преимущество на Внимательность и спасброски от части состояний — мастер"),
+    "ooze_cube": (_M, "куб поглощает — мастер (решение v0.7.9)"),
+    "adhesive_object_form_only": (_M, "прилипание в облике предмета — мастер"),
+    "corrode_metal": (_M, "портит оружие и доспехи — предметы, v0.7.12"), "rust_metal": (_M, "портит оружие и доспехи — предметы, v0.7.12"),
+    "heated_body": (_M, "жар при касании — мастер"), "heated_weapons": (_M, "раскалённое оружие — лишний урон в атаках SRD уже есть"),
+    "stench": (_M, "вонь вокруг — отравление по сцене, мастер"),
+    "petrifying_gaze": (_M, "взгляд окаменения (класс опасности выше боя v0.7.9) — мастер"),
+    "aberrant_ground": (_M, "трудная местность — мастер"), "gibbering": (_M, "бормотание сводит с ума — мастер"),
+    "consume_life": (_M, "поглощение жизни умирающих — мастер"), "ephemeral": (_M, "эфемерность — мастер"),
+    "tail_spike_regrowth": (_M, "шипы отрастают за отдых — вне боя"), "confer_fire_resistance": (_M, "дарит сопротивление союзникам — их нет"),
+    "grappler": (_M, "преимущество по схваченному — соло: мастер"), "turn_defiance": (_M, "против Изгнания нежити — v0.7.10"),
+    "hellish_rejuvenation": (_M, "возрождение через сутки — сюжет мастера"), "cunning_action": (_M, "хитрое действие — ИИ движка его не использует, мастер"),
+    "damage_transfer": (_M, "переносит урон на схваченного — мастер"), "horrific_appearance": (_M, "ужасный облик — страх по сцене, мастер"),
+}
 
 # Class features of levels 1–5 (classes and subclasses). Not listed — master only.
 _creation = ("spellcasting_bard spellcasting_cleric spellcasting_druid spellcasting_paladin spellcasting_ranger spellcasting_sorcerer "
@@ -218,6 +284,43 @@ def class_features(classes: dict) -> dict[str, list[str]]:
     return out
 
 
+def engine_riders(monsters: dict) -> tuple[list[tuple[str, str, str, str]], int, int, int]:
+    """Attack effects of the imported monsters (v0.7.9): rows (monster, action, what, status) and how many monsters have
+    one in the engine, at the master on purpose."""
+    rows = []
+    engine = master = 0
+    for mid, m in sorted(monsters.items(), key=lambda kv: kv[1]["name"]):
+        e = ms = False
+        for a in m["actions"]:
+            fx = a.get("effect", {})
+            what = ", ".join(x for x in [
+                fx.get("condition", ""), ("+ " + fx["also"]) if fx.get("also") else "",
+                ("урон " + fx["damage"]["dice"] + " " + fx["damage"]["type"]) if fx.get("damage") else "",
+                ("спасбросок " + fx["save"]["ability"] + " " + str(fx["save"]["dc"])) if fx.get("save") else "",
+                ("вырваться " + str(fx["escape_dc"])) if fx.get("escape_dc") else "", "повтор" if fx.get("repeat") else "",
+                "высасывание" if fx.get("drain") else "", "паралич при 0 HP" if fx.get("zero_hp_paralyzed") else "",
+                ("перезарядка " + str(a["recharge"])) if a.get("recharge") else ""] if x)
+            if a.get("master_effect"):
+                rows.append((m["name"], a["name"], a["master_effect"], "master"))
+                ms = True
+            elif fx.get("condition") or fx.get("damage") or fx.get("drain") or fx.get("zero_hp_paralyzed"):
+                rows.append((m["name"], a["name"], what, "engine"))
+                e = True
+        engine += e
+        master += ms and not e
+    riders_json = load(ROOT / "tools" / "srd" / "riders.json")
+    seen = {(r[0], r[1]) for r in rows}
+    for key, spec in riders_json.items():  # actions the engine does not take at all (swallow, rust): the reason stays
+        if not isinstance(spec, dict) or not spec.get("master"):
+            continue
+        mid, action = key.split(":", 1)
+        m = monsters.get(mid.replace("-", "_"))
+        if m and not any(a["name_en"] == action for a in m["actions"]):
+            rows.append((m["name"], action, spec["master"], "master"))
+            master += 1
+    return rows, engine, master, len(rows)
+
+
 def monster_riders() -> tuple[Counter, int, int, int, int]:
     """Attack riders (conditions, extra save damage) of the imported monsters, spellcasters, reactions — SRD source."""
     cond = re.compile(r"\b(poisoned|paralyzed|prone|grappled|restrained|frightened|charmed|stunned|blinded|incapacitated|unconscious|petrified)\b")
@@ -286,16 +389,28 @@ def main() -> int:
     riders, with_riders, casters, reactions, n_src = monster_riders()
     traits = Counter(t["id"] for m in monsters.values() for t in m["traits"])
     names = {t["id"]: t["name"] for m in monsters.values() for t in m["traits"]}
-    rows = [(names[t], f"`{t}`", str(k), mark("engine" if t in MONSTER_TRAITS_ENGINE else "master")) for t, k in traits.most_common()]
-    cond_names = {c: str(rules["conditions"].get(c, EXTRA_CONDITION_NAMES.get(c, c))).split(":")[0] for c in riders}
-    rider_text = ", ".join(f"{'лишний урон со спасброском' if c == 'extra_save_damage' else cond_names[c]} — {k}" for c, k in riders.most_common())
-    section("Монстры", "v0.7.9", rows, ["Особенность", "id", "Монстров", "Сейчас"],
-            f"В движке {len(monsters)} монстров (класс опасности ≤ {MAX_MONSTER_CR} с атаками; в источнике SRD таких {n_src}). "
-            f"**Особые эффекты атак при импорте отброшены у {with_riders} монстров** — урон есть, эффекта нет: {rider_text}. "
-            f"Колдующих монстров {casters} — колдовство только текстом; реакции у {reactions}; языки монстров при импорте отброшены. "
-            f"Особенностей {len(traits)} видов, движок читает {len(MONSTER_TRAITS_ENGINE)}:")
-    summary.append(("Особенности монстров", len(traits), len(MONSTER_TRAITS_ENGINE), len(traits) - len(MONSTER_TRAITS_ENGINE)))
-    summary.append(("Эффекты атак монстров", with_riders, 0, with_riders))
+    stale = [t for t in traits if t not in MONSTER_TRAITS]
+    if stale:
+        raise SystemExit(f"monster traits without a status in rules_audit.py: {', '.join(stale)}")
+    rows = [(names[t], f"`{t}`", str(k), mark(MONSTER_TRAITS[t][0]), MONSTER_TRAITS[t][1], CHECKED.get(t, "")) for t, k in traits.most_common()]
+    r_rows, r_engine, r_master, r_count = engine_riders(monsters)
+    with_casting = sum(1 for m in monsters.values() if m.get("spellcasting"))
+    with_parry = sum(1 for m in monsters.values() if any(r.get("ac") for r in m.get("reactions", [])))
+    section("Монстры", "v0.7.9", rows, ["Особенность", "id", "Монстров", "Сейчас", "Что именно", "Проверено"],
+            f"В движке {len(monsters)} монстров (класс опасности ≤ {MAX_MONSTER_CR}; в источнике SRD таких {n_src}). "
+            f"Эффекты атак (v0.7.9, разбор текста SRD и `tools/srd/riders.json`): у {r_engine} монстров — в движке, у {r_master} — осознанно у мастера; "
+            f"в источнике эффекты есть у {with_riders}. Колдующих монстров {with_casting} (в источнике {casters}): заклинания, которые движок "
+            f"разрешает за героя, — с ячейками и использованиями. Реакции: Парирование у {with_parry} (в источнике реакции у {reactions}; "
+            f"прочие — M4). Языки монстров — в данных, для v0.7.11. Особенностей {len(traits)} видов:")
+    out.append("")
+    out.append("### Эффекты атак монстров")
+    out.append("")
+    out.append("| Монстр | Действие | Что | Сейчас |")
+    out.append("|---|---|---|---|")
+    out.extend(f"| {a} | {b} | {c} | {mark(d)} |" for a, b, c, d in r_rows)
+    st = Counter(MONSTER_TRAITS[t][0] for t in traits)
+    summary.append(("Особенности монстров", len(traits), st["engine"], st["master"] + st["none"]))
+    summary.append(("Эффекты атак монстров", r_count, sum(1 for *_, d in r_rows if d == "engine"), sum(1 for *_, d in r_rows if d != "engine")))
 
     # Class features.
     rows = []
