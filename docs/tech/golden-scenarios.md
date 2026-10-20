@@ -118,6 +118,12 @@ uv run python -m llm_server.golden --no-judge                       # тольк
 - v0.7.0 (интерактивный мир): `furnish_on_first_visit` 3/3, `describe_only_props` 3/3, `read_prop_text` 3/3 (2/3 в первом прогоне), `take_prop_words` 2/3 после правила «взять вещь — всегда эффект, до описания» (было 0/3: старое правило «взять — `give_item`» спорило с новым).
 - Стабильно спорные: `gender_agreement_female` (вход без глаголов прошедшего времени), `retry_blocked` и `content_veil_respected` (рубрика судьи) — в [бэклоге](../production/backlog.md).
 
+## Прогон v0.7.4 (2026-10-20, DeepSeek, 54 сценария × 3)
+
+- `deepseek/deepseek-v4.1-flash-1017`: **133/159 (84%)**, из них 6 — ошибки связи с OpenRouter (без них 133/153, 87%); $1.59, 9.8 с на ход. Прогон стартовал до включения самого дешёвого провайдера — цена с маршрутизацией `price` ещё не измерена.
+- Новые сценарии v0.7.4 — 3/3: `closed_way_stays_closed`, `memory_is_a_note`, `strip_by_words`, а также `listen_does_not_start_talk`, `quest_agree_gives_the_thing`.
+- Слабые места: `rumors_only_from_the_world` 0/3 (мелкие слухи про рыбаков из обстановки сцены; выдуманных пропавших с роднёй и заданиями нет), `trap_damage_severity` 0/3 (яд описан, урона эффектом нет — давняя причуда DeepSeek, см. беклог), `narration_matches_effects` 0/3.
+
 ## Сравнение Haiku и DeepSeek (2026-10-19, v0.7.2)
 
 49 сценариев × 3 прогона (`--repeat 3`), промпты v0.7.2, судья `google/gemini-3.8-flash`. Исполнимых ходов — 147.
