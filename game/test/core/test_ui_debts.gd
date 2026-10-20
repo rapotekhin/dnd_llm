@@ -185,3 +185,38 @@ func test_attitude_stays_in_the_rules_range() -> void:
 	assert_int(s.attitude("npc_innkeeper")).is_equal(int(data["rules"]["attitude_range"][1]))
 	s.shift_attitude("npc_innkeeper", -20, data)
 	assert_int(s.attitude("npc_innkeeper")).is_equal(int(data["rules"]["attitude_range"][0]))
+
+
+# --- v0.7.7 fixes: the opening strike, everything can be pinned -------------------------------------------
+
+
+func test_a_pinned_spell_that_starts_the_fight_lands_first_on_the_caught_npc() -> void:
+	var s := _session("wizard_yalika")
+	GameState.session = s
+	(s.character["slots_used"] as Array)[0] = 1  # the slot spent with the words
+	var foes := [{"monster": "acolyte", "name": "Сестра Илва", "npc_id": "npc_priestess", "col": 0}]
+	var lines := CombatRules.start(s, data, foes, {"opening": {"npc_id": "npc_priestess"}})
+	s.mode = GameSession.MODE_COMBAT
+	assert_str(CombatRules.current(s)).is_equal(CombatRules.PLAYER)
+	var id := CombatRules.fighter_of_npc(s, "npc_priestess")
+	var f := CombatRules.fighter(s, id)
+	assert_bool(bool(f.get("surprised", false))).is_true()
+	assert_str(" ".join(lines)).contains("без предупреждения")
+	var hp := int(f["hp"])
+	var strike := GameState._opening_strike({"spell": "magic_missile", "slot": 1, "npc_id": "npc_priestess"})
+	assert_str(" ".join(strike)).contains("Волшебная стрела")
+	assert_int(int(f["hp"])).is_less(hp)
+	assert_int(int((s.character["slots_used"] as Array)[0])).is_equal(1)  # spent once, not twice
+
+
+func test_features_and_any_item_can_be_pinned() -> void:
+	var s := _session()
+	GameState.session = s
+	var kinds := {}
+	for ch: Dictionary in GameState.attach_choices():
+		kinds[str(ch["kind"])] = int(kinds.get(str(ch["kind"]), 0)) + 1
+	assert_bool(kinds.has("feature")).is_true()  # Second Wind
+	assert_bool(kinds.has("item_note")).is_true()  # the rope, the bedroll…
+	var spent := GameState._spend({"kind": "item_note", "id": "chain_mail"})
+	assert_str(" ".join(spent["lines"])).contains("Кольчуга")
+	assert_str(str(spent["facts"])).contains("chain_mail")

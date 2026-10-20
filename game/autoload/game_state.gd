@@ -25,6 +25,9 @@ var attached: Dictionary = {}
 var _refund: Dictionary = {}
 var _refund_what: Dictionary = {}  # the attachment spent then
 var _retry_spend: Dictionary = {}  # an attachment given back by a failed turn: «Повторить» spends it again
+## A combat spell pinned to words aimed at an NPC (v0.7.7, as in BG3): if that turn starts the fight, the hero
+## strikes first with it, the NPC caught off guard. {spell, slot, npc_id} or {}.
+var _opening: Dictionary = {}
 
 
 func has_session() -> bool:
@@ -198,6 +201,7 @@ func _spend(what: Dictionary) -> Dictionary:
 			if chk.has("reason"):
 				return {"reason": str(chk["reason"])}
 			lines = SpellRules.cast(c, Catalog.data, chk["spell_id"], int(chk["slot"]))
+			what["spent_slot"] = int(chk["slot"])
 			facts = "Игрок колдует " + SpellRules.describe(Catalog.data, chk["spell_id"], int(chk["slot"])) + \
 				". Движок уже потратил ячейку — не вызывай cast сам; опиши, как это выглядит и что происходит."
 		"feature":
@@ -213,6 +217,17 @@ func _spend(what: Dictionary) -> Dictionary:
 				return {"reason": why}
 			lines = ItemRules.use(c, Catalog.data, session.items, id, session.rng)
 			facts = "Игрок использует предмет. Движок уже применил: %s. Опиши коротко." % ", ".join(lines)
+		"feature_note":
+			var f: Dictionary = Catalog.data["classes"]["features"].get(id, Catalog.data["races"]["traits"].get(id, {}))
+			lines = ["Умение: %s" % f.get("name", id)]
+			facts = "Игрок пускает в ход умение «%s» (%s). Движок его не считает: реши исход по правилам — проверкой engine.check, если нужна." % \
+				[f.get("name", id), str(f.get("desc", "")).left(240)]
+		"item_note":
+			if int(c.get("inventory", {}).get(id, 0)) <= 0:
+				return {"reason": "EQUIP_NOT_OWNED"}
+			var nm := ItemRules.display_name(Catalog.data["items"], session.items, id)
+			lines = ["Предмет: %s" % nm]
+			facts = "Игрок пускает в ход предмет «%s» [%s] из своего снаряжения. Опиши по правилам; трата или потеря — эффектом." % [nm, id]
 		_:
 			return {"reason": "ABILITY_BUSY"}
 	var target := str(what.get("target", ""))
@@ -239,8 +254,9 @@ func detach() -> void:
 	EventBus.state_changed.emit()
 
 
-## What can be pinned now: [{kind, id, name, slots [circles]}] — spells ready with a slot left (cantrips), features
-## with uses left, consumables in the pack.
+## What can be pinned now (v0.7.7 fixes: everything, not only spells): [{kind, id, name, slots [circles], off}].
+## spell — ready spells (`off` when no slot is left); feature — uses that the engine spends; feature_note — any other
+## feature or trait of the hero; item — consumables the engine uses; item_note — any other thing in the pack.
 func attach_choices() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if session == null:
@@ -253,15 +269,31 @@ func attach_choices() -> Array[Dictionary]:
 		for circle in range(maxi(1, lv), 6):
 			if lv > 0 and SpellRules.slots_left(c, circle) > 0:
 				slots.append(circle)
-		if lv == 0 or not slots.is_empty():
-			out.append({"kind": "spell", "id": str(sid), "name": str(data["spells"][str(sid)]["name"]), "slots": slots})
+		out.append({"kind": "spell", "id": str(sid), "name": str(data["spells"][str(sid)]["name"]), "slots": slots, "off": lv > 0 and slots.is_empty()})
+	var with_uses: Array[String] = []
 	for r: Dictionary in FeatureUses.lines(c, data):
-		if int(r["left"]) > 0:
-			out.append({"kind": "feature", "id": str(r["id"]), "name": "%s (%d/%d)" % [r["name"], int(r["left"]), int(r["max"])], "slots": []})
+		out.append({"kind": "feature", "id": str(r["id"]), "name": "%s (%d/%d)" % [r["name"], int(r["left"]), int(r["max"])], "slots": [], "off": int(r["left"]) <= 0})
+		for f: Variant in data["rules"]["resources"].get(str(r["id"]), {}).get("features", []):
+			with_uses.append(str(f))
+	for pool: Array in [[c.get("features", []), data["classes"]["features"]], [c.get("traits", []), data["races"]["traits"]]]:
+		for fid: Variant in pool[0]:
+			var f: Dictionary = (pool[1] as Dictionary).get(str(fid), {})
+			if f.is_empty() or with_uses.has(str(fid)) or f.has("options") or _quiet_feature(str(fid)):
+				continue
+			out.append({"kind": "feature_note", "id": str(fid), "name": str(f["name"]), "slots": [], "off": false})
 	for iid: String in c.get("inventory", {}):
-		if not ItemRules.consumable(data, iid).is_empty():
-			out.append({"kind": "item", "id": iid, "name": "%s ×%d" % [ItemRules.display_name(data["items"], session.items, iid), int(c["inventory"][iid])], "slots": []})
+		var usable := not ItemRules.consumable(data, iid).is_empty()
+		out.append({"kind": "item" if usable else "item_note", "id": iid,
+			"name": "%s ×%d" % [ItemRules.display_name(data["items"], session.items, iid), int(c["inventory"][iid])], "slots": [], "off": false})
 	return out
+
+
+## Features that are bookkeeping, not something to use: spellcasting, ability increases, the choice of a subclass.
+static func _quiet_feature(id: String) -> bool:
+	return id.begins_with("spellcasting") or id.contains("ability_score_improvement") or id.ends_with("_expertise_1") or id in [
+		"bonus_cantrip", "bonus_proficiency", "bonus_proficiencies", "arcane_tradition", "bard_college", "divine_domain", "druid_circle",
+		"martial_archetype", "monastic_tradition", "otherworldly_patron", "primal_path", "ranger_archetype", "roguish_archetype",
+		"sacred_oath", "sorcerous_origin", "fighter_fighting_style", "ranger_fighting_style", "paladin_fighting_style", "pact_magic"]
 
 
 ## «Короткий отдых» (ExplorationRules): an hour, `dice` hit dice; no master turn — the line goes to the history.
@@ -306,12 +338,36 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 	SaveManager.save_slot(COMBAT_SAVE, session)  # loading it starts this fight again (a lost fight is not skipped)
 	session.fight_on_load = {}
 	var lines := CombatRules.start(session, Catalog.data, foes, source)
+	lines.append_array(_opening_strike(source.get("opening", {})))
 	session.mode = GameSession.MODE_COMBAT
 	session.npc_id = ""
 	session.combat["start_lines"] = lines  # shown after the master's description (playtest-1: the order)
 	EventBus.state_changed.emit()
 	EventBus.navigate.emit("combat", {})
 	_request("combat_start", "\n".join(lines))
+
+
+## The pinned spell that started the fight lands first (v0.7.7): its slot was spent with the words, so it is given
+## back and spent again by the combat cast — on that NPC, now caught off guard. Lines.
+func _opening_strike(opening: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if opening.is_empty():
+		return lines
+	var data: Dictionary = Catalog.data
+	var target := CombatRules.fighter_of_npc(session, str(opening["npc_id"]))
+	var spell := str(opening["spell"])
+	var slot := int(opening.get("slot", 0))
+	if target.is_empty():
+		return lines
+	if slot > 0:
+		var used: Array = session.character["slots_used"]
+		used[slot - 1] = maxi(0, int(used[slot - 1]) - 1)
+	var why := CombatRules.can_cast(session, data, spell, slot, target)
+	if not why.is_empty():
+		lines.append("%s не удаётся: %s — ячейка не потрачена" % [data["spells"][spell]["name"], tr(why)])
+		return lines
+	lines.append_array(CombatRules.player_cast(session, data, spell, slot, target))
+	return lines
 
 
 ## The engine lines of the fight's start go to the combat log once the master has described the scene.
@@ -328,7 +384,11 @@ func _show_start_lines() -> void:
 func _start_pending_fight() -> void:
 	var foes := session.pending_fight.duplicate(true)
 	session.pending_fight = []
-	start_combat(foes, {"room_from": session.room_id})
+	var source := {"room_from": session.room_id}
+	if not _opening.is_empty() and foes.any(func(f: Dictionary) -> bool: return str(f.get("npc_id", "")) == str(_opening["npc_id"])):
+		source["opening"] = _opening
+	_opening = {}
+	start_combat(foes, source)
 
 
 func _combat_log(lines: Array[String]) -> void:
@@ -800,6 +860,11 @@ func submit(text: String, engine_note: String = "") -> bool:
 		_refund = backup
 		_refund_what = attached
 		_retry_spend = {}
+		_opening = {}
+		var data: Dictionary = Catalog.data
+		if str(attached.get("kind", "")) == "spell" and not str(attached.get("target", "")).is_empty() and CombatRules.is_engine_spell(data, str(attached["id"])):
+			_opening = {"spell": str(attached["id"]), "slot": int(attached.get("spent_slot", 0)), "npc_id": str(attached["target"])}
+			spent["facts"] = str(spent["facts"]) + " Если этим игрок нападает на NPC — начни бой с ним (next_mode combat): исход заклинания движок разрешит первым ходом боя, урон и последствия не описывай."
 		attached = {}
 		_add(GameSession.effect_entry(spent["lines"]))
 		_log("События: " + ", ".join(spent["lines"]))
@@ -1218,6 +1283,7 @@ func _request(kind: String, input: String) -> void:
 			_refund = {}
 			_retry_spend = _refund_what
 			_refund_what = {}
+			_opening = {}
 			_add(GameSession.system_entry("ATTACH_REFUNDED"))
 		_show_start_lines()
 		_add(GameSession.system_entry(_error_key(call.reason())))
@@ -1233,6 +1299,8 @@ func _request(kind: String, input: String) -> void:
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
 	_maybe_summarize_location()
+	if follow_up != "combat":
+		_opening = {}
 	if follow_up == "combat":
 		_start_pending_fight()
 	elif not follow_up.is_empty():

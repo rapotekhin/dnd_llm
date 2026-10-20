@@ -8,6 +8,7 @@ extends Control
 signal prepare_requested
 
 var _tabs: TabContainer
+var _picked_item := ""  # the item shown in the details panel of the gear tab (v0.7.7 fixes)
 
 
 func _ready() -> void:
@@ -235,6 +236,17 @@ func _entry(parent: Control, title: String, body: String) -> void:
 
 func _gear_tab(c: Dictionary) -> Control:
 	var box := _page("SHEET_TAB_GEAR")
+	var list_scroll := box.get_parent()
+	var root := HBoxContainer.new()
+	root.name = list_scroll.name
+	root.add_theme_constant_override("separation", 16)
+	list_scroll.name = "GearList"
+	list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.add_child(list_scroll)
+	var details := DetailsPanel.new(Vector2(560, 0))
+	details.name = "ItemDetails"
+	details.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(details)
 	var s := GameState.session
 	var items: Dictionary = Catalog.data["items"]
 	var busy := GameState.is_busy()
@@ -244,7 +256,10 @@ func _gear_tab(c: Dictionary) -> Control:
 		row.add_theme_constant_override("separation", 12)
 		box.add_child(row)
 		var id := str(c["equipped"].get(slot, ""))
-		_text(row, "%s: %s" % [tr("SLOT_" + slot.to_upper()), ItemRules.display_name(items, s.items, id) if not id.is_empty() else "—"])
+		if id.is_empty():
+			_text(row, "%s: —" % tr("SLOT_" + slot.to_upper()))
+		else:
+			_item_button(row, details, c, id, "%s: %s" % [tr("SLOT_" + slot.to_upper()), ItemRules.display_name(items, s.items, id)], "Slot_" + slot)
 		if not id.is_empty():
 			var b := Button.new()
 			b.text = "BTN_UNEQUIP"
@@ -252,7 +267,6 @@ func _gear_tab(c: Dictionary) -> Control:
 			b.disabled = busy
 			b.pressed.connect(GameState.unequip.bind(slot))
 			row.add_child(b)
-			_item_details(box, c, id, false)
 	box.add_child(HSeparator.new())
 	_text(box, tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}))
 	var weight := _text(box, tr("SHEET_WEIGHT").format({"n": int(ceilf(CharacterRules.carried_weight(c, Catalog.data, s.items))), "max": CharacterRules.capacity(c, Catalog.data)}),
@@ -267,7 +281,7 @@ func _gear_tab(c: Dictionary) -> Control:
 		row.add_theme_constant_override("separation", 12)
 		box.add_child(row)
 		var qty := int(c["inventory"][id])
-		_text(row, "%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else ""]).name = "Item_" + id
+		_item_button(row, details, c, id, "%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else ""], "Item_" + id)
 		if not ItemRules.consumable(Catalog.data, id).is_empty():
 			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
 		var slot := CharacterRules.slot_for(def)
@@ -292,34 +306,24 @@ func _gear_tab(c: Dictionary) -> Control:
 				if not err.is_empty():
 					EventBus.message.emit(tr(err)))
 			row.add_child(b)
-		_item_details(box, c, id, true)
-	return box.get_parent()
+	var shown := _picked_item if (c.get("inventory", {}) as Dictionary).has(_picked_item) else ""
+	if not shown.is_empty():
+		details.show_text(ItemRules.display_name(items, s.items, shown), DetailsPanel.item_text(c, Catalog.data, s.items, shown))
+	return root
 
 
-## What the item is (ItemInfo, v0.7.7): numbers, properties, rarity, weight, price, proficiency, use; for things in the
-## pack — how it compares with what is worn; the description under it.
-func _item_details(box: Control, c: Dictionary, id: String, compare: bool) -> void:
-	var data: Dictionary = Catalog.data
-	var lines := ItemInfo.lines(c, data, GameState.session.items, id)
-	var desc := str(ItemRules.def_of(data["items"], GameState.session.items, id).get("description", ""))
-	if not desc.is_empty():
-		lines.erase(desc)
-	if compare:
-		var cmp := ItemInfo.compare(c, data, GameState.session.items, id)
-		if not cmp.is_empty():
-			lines.append(cmp)
-	var info := HBoxContainer.new()
-	info.name = "ItemInfo_" + id
-	box.add_child(info)
-	var pad := Control.new()
-	pad.custom_minimum_size = Vector2(24, 0)
-	info.add_child(pad)
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 2)
-	info.add_child(col)
-	if not lines.is_empty():
-		_text(col, "\n".join(lines), UiTheme.MUTED_LABEL)
-	if not desc.is_empty():
-		var d := _text(col, desc, UiTheme.MUTED_LABEL)
-		d.add_theme_font_override("font", UiTheme.font(UiTheme.FONT_SERIF_ITALIC, 400))
+## The item's name as a flat button: a click shows what it is in the details panel (v0.7.7 fixes).
+func _item_button(row: Control, details: DetailsPanel, c: Dictionary, id: String, text: String, node_name: String) -> void:
+	var b := Button.new()
+	b.name = node_name
+	b.text = text
+	b.flat = true
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if id == _picked_item:
+		b.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
+	b.pressed.connect(func() -> void:
+		_picked_item = id
+		details.show_text(ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), DetailsPanel.item_text(c, Catalog.data, GameState.session.items, id)))
+	row.add_child(b)

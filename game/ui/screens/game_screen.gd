@@ -108,25 +108,19 @@ func _ready() -> void:
 	_options.add_theme_constant_override("v_separation", 12)
 	left.add_child(_options)
 
-	var attach_row := HBoxContainer.new()
-	attach_row.name = "AttachRow"
-	attach_row.add_theme_constant_override("separation", 10)
-	left.add_child(attach_row)
-	_attach_menu = MenuButton.new()
-	_attach_menu.name = "AttachButton"
-	_attach_menu.text = "BTN_ATTACH"
-	_attach_menu.flat = false
-	_attach_menu.about_to_popup.connect(_fill_attach_menu)
-	_attach_menu.get_popup().id_pressed.connect(_on_attach_picked)
-	attach_row.add_child(_attach_menu)
-	_attach_chip = HBoxContainer.new()
-	_attach_chip.name = "AttachChip"
-	_attach_chip.add_theme_constant_override("separation", 8)
-	attach_row.add_child(_attach_chip)
-
 	var input_row := HBoxContainer.new()
 	input_row.add_theme_constant_override("separation", 12)
 	left.add_child(input_row)
+	# The pin button sits in the input row like «attach a file» in a messenger (v0.7.7 fixes, the author).
+	_attach_menu = MenuButton.new()
+	_attach_menu.name = "AttachButton"
+	_attach_menu.text = "✦"
+	_attach_menu.flat = false
+	_attach_menu.tooltip_text = "BTN_ATTACH"
+	_attach_menu.custom_minimum_size = Vector2(60, 60)
+	_attach_menu.add_theme_font_size_override("font_size", 28)
+	_attach_menu.about_to_popup.connect(_fill_attach_menu)
+	input_row.add_child(_attach_menu)
 	input = LineEdit.new()
 	input.name = "Input"
 	input.placeholder_text = "PLACEHOLDER_ACTION"
@@ -140,6 +134,11 @@ func _ready() -> void:
 	send_button.custom_minimum_size = Vector2(180, 60)
 	send_button.pressed.connect(_send)
 	input_row.add_child(send_button)
+	# What is pinned: a chip under the input, out of the chat.
+	_attach_chip = HBoxContainer.new()
+	_attach_chip.name = "AttachChip"
+	_attach_chip.add_theme_constant_override("separation", 8)
+	left.add_child(_attach_chip)
 
 	var side := SidePanel.new()
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -302,21 +301,27 @@ func _option_button(text: String, action: Callable, translate: bool) -> Button:
 # --- attached spells, features, consumables (v0.7.7) ---------------------------------------------------------
 
 
-## The menu of what can be pinned now: spells (with a slot left), features with uses, consumables.
+## The menu of what can be pinned: three submenus — spells, features, items (v0.7.7 fixes: all of them).
 func _fill_attach_menu() -> void:
 	var pop := _attach_menu.get_popup()
 	pop.clear()
+	for child in pop.get_children():
+		pop.remove_child(child)
+		child.queue_free()
 	_attach_choices = GameState.attach_choices()
-	var last_kind := ""
-	for i in _attach_choices.size():
-		var ch: Dictionary = _attach_choices[i]
-		if str(ch["kind"]) != last_kind:
-			last_kind = str(ch["kind"])
-			pop.add_separator(tr("ATTACH_GROUP_" + last_kind.to_upper()))
-		pop.add_item(str(ch["name"]), i)
-	if _attach_choices.is_empty():
-		pop.add_item(tr("ATTACH_NOTHING"), -1)
-		pop.set_item_disabled(0, true)
+	for group: Array in [["ATTACH_GROUP_SPELL", ["spell"]], ["ATTACH_GROUP_FEATURE", ["feature", "feature_note"]], ["ATTACH_GROUP_ITEM", ["item", "item_note"]]]:
+		var sub := PopupMenu.new()
+		sub.name = "AttachSub_" + str(group[0])
+		sub.id_pressed.connect(_on_attach_picked)
+		for i in _attach_choices.size():
+			var ch: Dictionary = _attach_choices[i]
+			if (group[1] as Array).has(str(ch["kind"])):
+				sub.add_item(str(ch["name"]), i)
+				sub.set_item_disabled(sub.item_count - 1, bool(ch.get("off", false)))
+		if sub.item_count == 0:
+			sub.add_item(tr("ATTACH_NOTHING"), -1)
+			sub.set_item_disabled(0, true)
+		pop.add_submenu_node_item(tr(str(group[0])), sub)
 
 
 func _on_attach_picked(index: int) -> void:
@@ -334,7 +339,7 @@ func _refresh_attach(s: GameSession, busy: bool, online: bool) -> void:
 		_attach_chip.remove_child(c)
 		c.queue_free()
 	var usable := s != null and s.mode != GameSession.MODE_COMBAT
-	_attach_menu.get_parent().visible = usable
+	_attach_menu.visible = usable
 	_attach_menu.disabled = busy or not online
 	var a := GameState.attached
 	if not usable or a.is_empty():

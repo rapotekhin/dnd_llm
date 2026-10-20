@@ -157,8 +157,34 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 	var names: Array = (s.combat["order"] as Array).map(func(id: String) -> String: return "%s %d" % [fighters[id]["name"], fighters[id]["init"]])
 	var lines: Array[String] = ["Бой! Инициатива: " + ", ".join(names)]
 	lines.append_array(_surprise(s, data, source))
+	lines.append_array(_opening(s, source))
 	_begin_turn(s, data, lines)
 	return lines
+
+
+## The fight began with the hero's own attack on an NPC (v0.7.7, as in BG3): the hero acts first and that NPC is
+## caught off guard. `source.opening` {npc_id}; the strike itself is resolved by the caller.
+static func _opening(s: GameSession, source: Dictionary) -> Array[String]:
+	var npc := str(source.get("opening", {}).get("npc_id", ""))
+	if npc.is_empty():
+		return []
+	for id: String in enemies(s):
+		var f := fighter(s, id)
+		if str(f.get("npc_id", "")) == npc:
+			f["surprised"] = true
+			var order: Array = s.combat["order"]
+			order.erase(PLAYER)
+			order.push_front(PLAYER)
+			return ["Удар без предупреждения: %s ходит первой очередью, %s не ждёт нападения" % [s.character.get("name", ""), f["name"]]]
+	return []
+
+
+## The fighter of an NPC of the scene, "" if not in the fight.
+static func fighter_of_npc(s: GameSession, npc_id: String) -> String:
+	for id: String in enemies(s):
+		if str(fighter(s, id).get("npc_id", "")) == npc_id:
+			return id
+	return ""
 
 
 static func _dex_of(s: GameSession, data: Dictionary, id: String) -> int:

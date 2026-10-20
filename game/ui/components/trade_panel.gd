@@ -18,7 +18,7 @@ var _error: Label
 var haggle_button: Button
 var deal_button: Button
 var _clear: Button
-var _info: InfoBox  # v0.7.7: what the item under the mouse is
+var _info: DetailsPanel  # v0.7.7: what the picked item is (a click on its name)
 
 
 func _ready() -> void:
@@ -40,7 +40,7 @@ func _ready() -> void:
 	col.add_child(lists)
 	_stock = _list(lists, "TRADE_STOCK")
 	_yours = _list(lists, "TRADE_YOURS")
-	_info = InfoBox.new(120)
+	_info = DetailsPanel.new(Vector2(0, 150))
 	_info.name = "TradeItemInfo"
 	col.add_child(_info)
 
@@ -50,7 +50,7 @@ func _ready() -> void:
 	cart_title.add_theme_color_override("font_color", UiTheme.ACCENT)
 	col.add_child(cart_title)
 	var cart_scroll := ScrollContainer.new()
-	cart_scroll.custom_minimum_size = Vector2(0, 96)
+	cart_scroll.custom_minimum_size = Vector2(0, 72)
 	cart_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(cart_scroll)
 	_cart_rows = VBoxContainer.new()
@@ -209,31 +209,20 @@ func _fill(box: VBoxContainer, lines: Array, side: String, prefix: String, empty
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		box.add_child(row)
-		var names := VBoxContainer.new()
-		names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		names.add_theme_constant_override("separation", 0)
-		names.mouse_filter = Control.MOUSE_FILTER_STOP
-		row.add_child(names)
-		var title := _label(names, false)
+		var title := Button.new()
+		title.name = "TradeItem_" + id
 		title.text = "%s ×%d" % [line["name"], left]
-		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var s := GameState.session
-		var short: Array[String] = []
-		var data: Dictionary = Catalog.data
-		var def := ItemRules.def_of(data["items"], s.items, id)
-		for part: String in [ItemInfo.kind_line(data, def), ItemInfo.proficiency_line(s.character, def, id), ItemInfo.compare(s.character, data, s.items, id)]:
-			if not part.is_empty():
-				short.append(part)
-		if not short.is_empty():
-			var sub := _label(names, true)
-			sub.name = "TradeItemStats_" + id
-			sub.text = "\n".join(short)
-			sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var full := ItemInfo.lines(s.character, data, s.items, id)
-		var cmp := ItemInfo.compare(s.character, data, s.items, id)
-		if not cmp.is_empty():
-			full.append(cmp)
-		InfoBox.hook(names, _info, str(line["name"]), "\n".join(full))
+		title.flat = true
+		title.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title.clip_text = true
+		title.tooltip_text = str(line["name"])
+		var item_name := str(line["name"])
+		title.pressed.connect(func() -> void:
+			var s := GameState.session
+			_info.show_text(item_name, DetailsPanel.item_text(s.character, Catalog.data, s.items, id)))
+		row.add_child(title)
 		var price := _label(row, true)
 		price.text = Money.format(int(line["price_cp"]))
 		var plus := Button.new()

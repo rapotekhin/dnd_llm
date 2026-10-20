@@ -29,7 +29,7 @@ BACKEND_TOOLTIP_READY,"{url}
 Модель: {model}
 Сервер: {version}"
 BANNER_NO_MASTER,"Нет связи с мастером — переподключаюсь. Игра сохранена, ходы недоступны."
-BTN_ATTACH,"✦ Заклинание, умение, предмет"
+BTN_ATTACH,"Заклинание, умение или предмет — вместе с сообщением"
 BTN_BACK,Назад
 BTN_BACK_TO_WORLD,К выбору мира
 BTN_CANCEL,Отмена
@@ -183,6 +183,7 @@ COMBAT_DO_HIDE,Спрятаться
 COMBAT_DO_INSPECT,Осмотреть [бонус]
 COMBAT_DO_SHOVE,Сбить с ног
 COMBAT_FOE_SURPRISED,врасплох
+COMBAT_FOE_UNKNOWN,"Вид не изучен. «Осмотреть» (бонусное действие) — проверка знаний; удача запоминает таких врагов навсегда: хиты, КД, атаки, сопротивления"
 COMBAT_FT,{ft} фт
 COMBAT_GRAPPLE_TIP,"Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом. Схваченный не может отойти, пока вы его держите (до вашего шага прочь)"
 COMBAT_HIDDEN,Спрятан — враги не видят
@@ -242,6 +243,10 @@ COND_UNCONSCIOUS,без сознания
 DEATH_PATH,Дней в пути: {days} · заданий: {quests} · опыта: {xp}
 DEATH_TITLE,Конец пути
 DEATH_WHO,"{name} — {race}, {class}, {level} уровень"
+DETAILS_CANTRIP,Заговор
+DETAILS_CIRCLE,{n} круг
+DETAILS_CONCENTRATION,концентрация
+DETAILS_HINT,Выберите — здесь появится описание
 DEV_SNAPSHOT,Снимок бага: {path}
 DICE_D,к
 DM_STYLE_CLASSIC,Классический

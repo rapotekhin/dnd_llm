@@ -6,6 +6,7 @@ extends Control
 ## card does it, hovering it shows the chance to hit and the damage (v0.6.2). Reinforcements wait grey at the edge
 ## column with the rounds left. The results (XP, loot to take) or the death screen come when the fight ends.
 
+var _details: DetailsPanel  # v0.7.7 fixes: what a spell, feature, item or foe is (hover or press)
 var _queue: HBoxContainer
 var _field: HBoxContainer
 var _portrait: VBoxContainer
@@ -109,6 +110,9 @@ func _ready() -> void:
 	var rcol := VBoxContainer.new()
 	rcol.add_theme_constant_override("separation", 10)
 	right.add_child(rcol)
+	_details = DetailsPanel.new(Vector2(0, 240))
+	_details.name = "CombatDetails"
+	rcol.add_child(_details)
 	_log_scroll = ScrollContainer.new()
 	_log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_log_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -319,6 +323,11 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			card.text = "%s\n%s%s" % [f["name"], tr(CombatRules.health_key(f)), ("\n" + ", ".join(conds)) if not conds.is_empty() else ""]
 			card.tooltip_text = str(f.get("desc", ""))
 			var lore := CombatRules.monster_card(s, data, f)
+			var about := lore if not lore.is_empty() else tr("COMBAT_FOE_UNKNOWN")
+			if not str(f.get("desc", "")).is_empty():
+				about += "\n\n" + str(f["desc"])
+			var foe_name := str(f["name"])
+			card.mouse_entered.connect(func() -> void: _details.show_text(foe_name, about))
 			if not lore.is_empty():
 				card.tooltip_text = lore + "\n\n" + card.tooltip_text
 				card.text += "\nHP %d/%d · КД %d" % [int(f["hp"]), int(f["max_hp"]), int(f["ac"])]
@@ -408,10 +417,13 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	# Weapons.
 	var w := _tab_box("COMBAT_TAB_WEAPONS")
 	var main := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
-	_action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), mine,
+	var main_id := str(c.get("equipped", {}).get("main_hand", ""))
+	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), mine,
 		func(t: String) -> String: return GameState.combat_attack(t, false),
 		func(t: String) -> String: return CombatRules.can_attack(s, data, t, false),
 		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
+	if not main_id.is_empty():
+		_details.hook(main_b, str(main["name"]), DetailsPanel.item_text(c, data, s.items, main_id))
 	var off := str(c.get("equipped", {}).get("off_hand", ""))
 	if not off.is_empty():
 		var ow := CombatRules.weapon_profile(c, data, s.items, off, true)
@@ -433,13 +445,13 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 				continue
 			if spell.has("heal_at_slot") or int(spell.get("range_ft", 0)) == 0 and not spell.has("area"):
 				var b := _button(sp, "Cast_" + id, label, mine)
-				b.tooltip_text = str(spell.get("desc", "")).left(500)
+				_details.hook(b, str(spell.get("name", id)), DetailsPanel.spell_text(data, id))
 				b.pressed.connect(func() -> void: _do(GameState.combat_cast(id, slot, "")))
 			else:
 				var ab := _action(sp, "Cast_" + id, label, mine, func(t: String) -> String: return GameState.combat_cast(id, slot, t),
 					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t),
 					func(t: String) -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t))
-				ab.tooltip_text = str(spell.get("desc", "")).left(500)
+				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id))
 	# Features.
 	var res := FeatureUses.lines(c, data)
 	if not res.is_empty():
@@ -447,6 +459,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		for r: Dictionary in res:
 			var b := _button(fb, "Feature_" + str(r["id"]), "%s (%d/%d)" % [r["name"], r["left"], r["max"]], mine and int(r["left"]) > 0)
 			var rid := str(r["id"])
+			_details.hook(b, str(r["name"]), DetailsPanel.feature_text(data, rid))
 			b.pressed.connect(func() -> void: _do(GameState.combat_use_feature(rid)))
 	# Items.
 	var usable: Array[String] = []
@@ -457,6 +470,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		var ib := _tab_box("COMBAT_TAB_ITEMS")
 		for id: String in usable:
 			var b := _button(ib, "Item_" + id, "%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), int(c["inventory"][id])], mine)
+			_details.hook(b, ItemRules.display_name(data["items"], s.items, id), DetailsPanel.item_text(c, data, s.items, id))
 			b.pressed.connect(func() -> void: _do(GameState.combat_use_item(id)))
 	# Common.
 	var g := _tab_box("COMBAT_TAB_COMMON")
