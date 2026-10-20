@@ -18,6 +18,7 @@ var _error: Label
 var haggle_button: Button
 var deal_button: Button
 var _clear: Button
+var _info: InfoBox  # v0.7.7: what the item under the mouse is
 
 
 func _ready() -> void:
@@ -39,6 +40,9 @@ func _ready() -> void:
 	col.add_child(lists)
 	_stock = _list(lists, "TRADE_STOCK")
 	_yours = _list(lists, "TRADE_YOURS")
+	_info = InfoBox.new(120)
+	_info.name = "TradeItemInfo"
+	col.add_child(_info)
 
 	var cart_title := Label.new()
 	cart_title.text = "TRADE_CART"
@@ -205,10 +209,31 @@ func _fill(box: VBoxContainer, lines: Array, side: String, prefix: String, empty
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		box.add_child(row)
-		var title := _label(row, false)
+		var names := VBoxContainer.new()
+		names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		names.add_theme_constant_override("separation", 0)
+		names.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.add_child(names)
+		var title := _label(names, false)
 		title.text = "%s ×%d" % [line["name"], left]
-		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var s := GameState.session
+		var short: Array[String] = []
+		var data: Dictionary = Catalog.data
+		var def := ItemRules.def_of(data["items"], s.items, id)
+		for part: String in [ItemInfo.kind_line(data, def), ItemInfo.proficiency_line(s.character, def, id), ItemInfo.compare(s.character, data, s.items, id)]:
+			if not part.is_empty():
+				short.append(part)
+		if not short.is_empty():
+			var sub := _label(names, true)
+			sub.name = "TradeItemStats_" + id
+			sub.text = "\n".join(short)
+			sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var full := ItemInfo.lines(s.character, data, s.items, id)
+		var cmp := ItemInfo.compare(s.character, data, s.items, id)
+		if not cmp.is_empty():
+			full.append(cmp)
+		InfoBox.hook(names, _info, str(line["name"]), "\n".join(full))
 		var price := _label(row, true)
 		price.text = Money.format(int(line["price_cp"]))
 		var plus := Button.new()

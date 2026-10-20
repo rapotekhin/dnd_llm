@@ -133,7 +133,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String) -> Array[Str
 		s.caught_by.erase(npc_id)
 		lines.append("%s хватается за кошель и озирается — вора не видно" % who)
 		return lines
-	s.attitudes[npc_id] = clampi(s.attitude(npc_id) + int(cfg(data)["caught_attitude"]), -3, 3)
+	s.shift_attitude(npc_id, int(cfg(data)["caught_attitude"]), data)
 	lines.append("%s: отношение хуже" % who)
 	match reaction_kind(data, npc_id):
 		"fight":

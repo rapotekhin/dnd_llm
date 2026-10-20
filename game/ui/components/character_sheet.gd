@@ -252,15 +252,22 @@ func _gear_tab(c: Dictionary) -> Control:
 			b.disabled = busy
 			b.pressed.connect(GameState.unequip.bind(slot))
 			row.add_child(b)
+			_item_details(box, c, id, false)
 	box.add_child(HSeparator.new())
 	_text(box, tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}))
+	var weight := _text(box, tr("SHEET_WEIGHT").format({"n": int(ceilf(CharacterRules.carried_weight(c, Catalog.data, s.items))), "max": CharacterRules.capacity(c, Catalog.data)}),
+		UiTheme.MUTED_LABEL)
+	weight.name = "CarriedWeight"
+	if CharacterRules.overloaded(c, Catalog.data, s.items):
+		weight.text += " — " + tr("TOO_HEAVY")
+		weight.add_theme_color_override("font_color", UiTheme.WARN)
 	for id: String in c.get("inventory", {}):
 		var def := ItemRules.def_of(items, s.items, id)
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		box.add_child(row)
 		var qty := int(c["inventory"][id])
-		_text(row, "%s%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else "", _item_stats(def)])
+		_text(row, "%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else ""]).name = "Item_" + id
 		if not ItemRules.consumable(Catalog.data, id).is_empty():
 			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
 		var slot := CharacterRules.slot_for(def)
@@ -285,19 +292,34 @@ func _gear_tab(c: Dictionary) -> Control:
 				if not err.is_empty():
 					EventBus.message.emit(tr(err)))
 			row.add_child(b)
+		_item_details(box, c, id, true)
 	return box.get_parent()
 
 
-func _item_stats(def: Dictionary) -> String:
-	if def.has("weapon"):
-		var w: Dictionary = def["weapon"]
-		var dmg := str(w.get("damage", "")).replace("d", tr("DICE_D"))
-		var dt := str(Catalog.data["misc"]["damage_types"].get(str(w.get("damage_type", "")), ""))
-		return " — %s %s" % [dmg, dt]
-	if def.has("armor"):
-		var a: Dictionary = def["armor"]
-		if str(a["category"]) == "shield":
-			return tr("ITEM_SHIELD_AC").format({"n": int(a["base"])})
-		var dex := "" if not bool(a["dex"]) else (tr("ITEM_DEX") if a.get("max_dex") == null else tr("ITEM_DEX_MAX").format({"n": int(a["max_dex"])}))
-		return tr("ITEM_ARMOR_AC").format({"n": int(a["base"]), "dex": dex})
-	return ""
+## What the item is (ItemInfo, v0.7.7): numbers, properties, rarity, weight, price, proficiency, use; for things in the
+## pack — how it compares with what is worn; the description under it.
+func _item_details(box: Control, c: Dictionary, id: String, compare: bool) -> void:
+	var data: Dictionary = Catalog.data
+	var lines := ItemInfo.lines(c, data, GameState.session.items, id)
+	var desc := str(ItemRules.def_of(data["items"], GameState.session.items, id).get("description", ""))
+	if not desc.is_empty():
+		lines.erase(desc)
+	if compare:
+		var cmp := ItemInfo.compare(c, data, GameState.session.items, id)
+		if not cmp.is_empty():
+			lines.append(cmp)
+	var info := HBoxContainer.new()
+	info.name = "ItemInfo_" + id
+	box.add_child(info)
+	var pad := Control.new()
+	pad.custom_minimum_size = Vector2(24, 0)
+	info.add_child(pad)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 2)
+	info.add_child(col)
+	if not lines.is_empty():
+		_text(col, "\n".join(lines), UiTheme.MUTED_LABEL)
+	if not desc.is_empty():
+		var d := _text(col, desc, UiTheme.MUTED_LABEL)
+		d.add_theme_font_override("font", UiTheme.font(UiTheme.FONT_SERIF_ITALIC, 400))

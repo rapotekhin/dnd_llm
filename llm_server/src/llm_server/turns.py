@@ -124,7 +124,7 @@ def _usage(session: Session, model: str, run_usage: RunUsage) -> Usage:
     cost = float(getattr(run_usage, "cost", 0) or 0) or services.models.cost_usd(model, run_usage.input_tokens, run_usage.output_tokens)
     services.budget.add(cost)
     return Usage(input_tokens=run_usage.input_tokens, output_tokens=run_usage.output_tokens, cost_usd=round(cost, 6),
-                 model=model, daily_budget_left_usd=services.budget.left())
+                 model=model)
 
 
 async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:

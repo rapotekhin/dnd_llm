@@ -8,8 +8,8 @@ func run() -> void:
 	await tap("NewGameButton")
 	if not step("new game screen", screen_is("NewGameScreen")):
 		return
-	await tap("death_mode_one_life")
-	await shot("new_game_one_life")
+	step("no «Одна жизнь» before M5 (v0.7.7)", find(screen(), "death_mode_one_life") == null)
+	await shot("new_game")
 	await tap("NextButton")
 	if not step("creation screen", screen_is("CreationScreen")):
 		return

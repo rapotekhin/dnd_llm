@@ -30,7 +30,7 @@ func test_snapshot_scene_and_character() -> void:
 	assert_int(c["hp"]).is_equal(12)
 	assert_int(c["ac"]).is_equal(19)  # chain mail 16 + shield 2 + Defense style 1
 	assert_int(c["skills"]["athletics"]).is_equal(5)
-	assert_int(c["proficiency_bonus"]).is_equal(2)
+	assert_bool(c.has("proficiency_bonus")).is_false()  # protocol 0.15.0: the engine rolls, the master needs no bonus
 	assert_str(c["background"]).is_equal("Ветеран войны")  # renamed by the pack
 	assert_array(c["features"]).contains(["Второе дыхание", "Боевой стиль: защита"])
 	assert_array(c["equipped"]).contains(["armor: Кольчуга [chain_mail]", "shield: Щит [shield]", "main_hand: Длинный меч [longsword]"])

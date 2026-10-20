@@ -62,7 +62,7 @@ def tavern_snapshot() -> dict:
         "world": {"name": pack["name"], "lore": pack["lore"], "tone": pack["tone"], "magic": pack["magic"],
                   "dm_style": pack["dm_style"], **pack["content"]},
         "scene": {
-            "location_id": room["location_id"], "location_name": loc["name"], "location_description": loc["description"],
+            "location_name": loc["name"], "location_description": loc["description"],
             "room_id": room_id, "room_name": room["name"], "room_description": room["description"],
             "exits": [{"room_id": e, "name": world["rooms"][e]["name"]} for e in room["exits"]],
             "npcs": [{"npc_id": n, **{k: world["npcs"][n][k] for k in ("name", "role", "race", "gender", "description", "personality")}}
@@ -70,7 +70,7 @@ def tavern_snapshot() -> dict:
         },
         "character": {  # Айра, fighter 1 (the start pack's first ready-made character as CharacterBuilder builds it)
             "name": "Айра", "gender": "female", "race": "Человек", "class_name": "Воин", "level": 1,
-            "hp": 12, "max_hp": 12, "ac": 19, "background": "Солдат", "proficiency_bonus": 2, "speed": 30,
+            "hp": 12, "max_hp": 12, "ac": 19, "background": "Солдат", "speed": 30,
             "abilities": {"str": 16, "dex": 14, "con": 15, "int": 9, "wis": 13, "cha": 11},
             "skills": {"athletics": 5, "acrobatics": 2, "perception": 3, "survival": 3, "intimidation": 2, "stealth": 2,
                        "arcana": -1, "persuasion": 0, "insight": 1},

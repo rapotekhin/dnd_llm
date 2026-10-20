@@ -27,6 +27,9 @@ var _partner_line: Label
 var trade_toggle: Button
 var leave_button: Button
 var trade_panel: TradePanel
+var _attach_menu: MenuButton  # v0.7.7: a spell, feature or consumable pinned to the message
+var _attach_chip: HBoxContainer
+var _attach_choices: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -104,6 +107,22 @@ func _ready() -> void:
 	_options.add_theme_constant_override("h_separation", 12)
 	_options.add_theme_constant_override("v_separation", 12)
 	left.add_child(_options)
+
+	var attach_row := HBoxContainer.new()
+	attach_row.name = "AttachRow"
+	attach_row.add_theme_constant_override("separation", 10)
+	left.add_child(attach_row)
+	_attach_menu = MenuButton.new()
+	_attach_menu.name = "AttachButton"
+	_attach_menu.text = "BTN_ATTACH"
+	_attach_menu.flat = false
+	_attach_menu.about_to_popup.connect(_fill_attach_menu)
+	_attach_menu.get_popup().id_pressed.connect(_on_attach_picked)
+	attach_row.add_child(_attach_menu)
+	_attach_chip = HBoxContainer.new()
+	_attach_chip.name = "AttachChip"
+	_attach_chip.add_theme_constant_override("separation", 8)
+	attach_row.add_child(_attach_chip)
 
 	var input_row := HBoxContainer.new()
 	input_row.add_theme_constant_override("separation", 12)
@@ -239,7 +258,8 @@ func _refresh() -> void:
 		var npc := GameState.world().npc(s.npc_id)
 		var npc_name := str(npc.get("name", s.npc_id))
 		_mode_label.text = npc_name
-		var att := clampi(s.attitude(s.npc_id), -3, 3)
+		var bounds := GameSession.attitude_bounds(Catalog.data)
+		var att := clampi(s.attitude(s.npc_id), bounds.x, bounds.y)
 		_partner_line.text = tr("PARTNER_LINE").format({"role": npc.get("role", ""), "race": npc.get("race", ""),
 			"attitude": tr("ATTITUDE_" + ("M%d" % -att if att < 0 else "P%d" % att if att > 0 else "0"))})
 		trade_toggle.visible = GameState.world().is_trader(s.npc_id)
@@ -250,6 +270,7 @@ func _refresh() -> void:
 		input.placeholder_text = tr("PLACEHOLDER_SAY").format({"name": npc_name.get_slice(" ", 0)})
 	else:
 		input.placeholder_text = tr("PLACEHOLDER_ACTION")
+	_refresh_attach(s, busy, online)
 	for c in _options.get_children():
 		_options.remove_child(c)
 		c.queue_free()
@@ -276,3 +297,88 @@ func _option_button(text: String, action: Callable, translate: bool) -> Button:
 	b.pressed.connect(action)
 	_options.add_child(b)
 	return b
+
+
+# --- attached spells, features, consumables (v0.7.7) ---------------------------------------------------------
+
+
+## The menu of what can be pinned now: spells (with a slot left), features with uses, consumables.
+func _fill_attach_menu() -> void:
+	var pop := _attach_menu.get_popup()
+	pop.clear()
+	_attach_choices = GameState.attach_choices()
+	var last_kind := ""
+	for i in _attach_choices.size():
+		var ch: Dictionary = _attach_choices[i]
+		if str(ch["kind"]) != last_kind:
+			last_kind = str(ch["kind"])
+			pop.add_separator(tr("ATTACH_GROUP_" + last_kind.to_upper()))
+		pop.add_item(str(ch["name"]), i)
+	if _attach_choices.is_empty():
+		pop.add_item(tr("ATTACH_NOTHING"), -1)
+		pop.set_item_disabled(0, true)
+
+
+func _on_attach_picked(index: int) -> void:
+	if index < 0 or index >= _attach_choices.size():
+		return
+	var ch: Dictionary = _attach_choices[index]
+	var slots: Array = ch["slots"]
+	GameState.attach(str(ch["kind"]), str(ch["id"]), int(slots[0]) if not slots.is_empty() else 0)
+	input.grab_focus()
+
+
+## The chip of the pinned thing: its name, the slot circle (spells), the target (an NPC here or none), «✕».
+func _refresh_attach(s: GameSession, busy: bool, online: bool) -> void:
+	for c in _attach_chip.get_children():
+		_attach_chip.remove_child(c)
+		c.queue_free()
+	var usable := s != null and s.mode != GameSession.MODE_COMBAT
+	_attach_menu.get_parent().visible = usable
+	_attach_menu.disabled = busy or not online
+	var a := GameState.attached
+	if not usable or a.is_empty():
+		return
+	var choice := {}
+	for ch: Dictionary in GameState.attach_choices():
+		if str(ch["kind"]) == str(a["kind"]) and str(ch["id"]) == str(a["id"]):
+			choice = ch
+	if choice.is_empty():  # spent or gone meanwhile
+		GameState.attached = {}
+		return
+	var label := Label.new()
+	label.name = "AttachName"
+	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	label.text = tr("ATTACH_PINNED").format({"name": choice["name"]})
+	label.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
+	_attach_chip.add_child(label)
+	var slots: Array = choice["slots"]
+	if slots.size() > 1:
+		var pick := OptionButton.new()
+		pick.name = "AttachSlot"
+		for circle: Variant in slots:
+			pick.add_item(tr("ATTACH_SLOT").format({"n": int(circle)}), int(circle))
+		pick.select(maxi(0, slots.find(int(a.get("slot", 0)))))
+		pick.item_selected.connect(func(i: int) -> void:
+			GameState.attached["slot"] = pick.get_item_id(i))
+		_attach_chip.add_child(pick)
+	var npcs := s.npcs_alive(GameState.world().npcs_in(s.room_id))
+	if not npcs.is_empty():
+		var who := OptionButton.new()
+		who.name = "AttachTarget"
+		who.add_item(tr("ATTACH_NO_TARGET"))
+		var ids: Array[String] = [""]
+		for id: String in npcs:
+			who.add_item(str(GameState.world().npc(id).get("name", id)))
+			ids.append(id)
+		who.select(maxi(0, ids.find(str(a.get("target", "")))))
+		who.item_selected.connect(func(i: int) -> void:
+			GameState.attached["target"] = ids[i])
+		_attach_chip.add_child(who)
+	var drop := Button.new()
+	drop.name = "AttachRemove"
+	drop.text = "✕"
+	drop.tooltip_text = "ATTACH_REMOVE"
+	drop.pressed.connect(GameState.detach)
+	_attach_chip.add_child(drop)
+	input.placeholder_text = tr("PLACEHOLDER_ATTACHED")

@@ -239,7 +239,7 @@ def test_budget_is_spent_and_enforced(data_dir):
         id="deepseek/deepseek-v4.1-flash-1017", name="Haiku", input_usd_per_mtok=1000.0, output_usd_per_mtok=1000.0)
     msg, _, _ = play(data_dir, fn, services=services)
     assert msg["result"]["usage"]["cost_usd"] > 0
-    assert msg["result"]["usage"]["daily_budget_left_usd"] == 0
+    assert services.budget.left() == 0
     msg, _, _ = play(data_dir, fn, services=services)
     assert reason(msg) == "budget_exceeded"
 

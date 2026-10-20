@@ -468,6 +468,12 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		func(t: String) -> String: return CombatRules.can_inspect(s, data, t),
 		func(_t: String) -> Dictionary: return {})
 	ib.tooltip_text = tr("COMBAT_INSPECT_TIP")
+	for shove: bool in [false, true]:
+		var gb := _action(g, "Do_shove" if shove else "Do_grapple", tr("COMBAT_DO_SHOVE" if shove else "COMBAT_DO_GRAPPLE"), mine,
+			func(t: String) -> String: return GameState.combat_grapple(t, shove),
+			func(t: String) -> String: return CombatRules.can_grapple(s, data, t),
+			func(_t: String) -> Dictionary: return {})
+		gb.tooltip_text = tr("COMBAT_SHOVE_TIP" if shove else "COMBAT_GRAPPLE_TIP")
 	var hide_why := CombatRules.can_hide(s, data)
 	var hb := _button(g, "Do_hide", tr("COMBAT_DO_HIDE"), mine and hide_why.is_empty())
 	hb.tooltip_text = tr(hide_why) if not hide_why.is_empty() else tr("COMBAT_HIDE_TIP")

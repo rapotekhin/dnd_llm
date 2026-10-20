@@ -45,7 +45,10 @@ static func pack_stock(npc: Dictionary, rules: Dictionary) -> Dictionary:
 
 
 static func _pct(table: Dictionary, attitude: int) -> int:
-	return int(table.get(str(clampi(attitude, -3, 3)), 100))
+	var keys: Array = table.keys().filter(func(k: Variant) -> bool: return str(k).is_valid_int()).map(func(k: Variant) -> int: return int(k))
+	if keys.is_empty():
+		return 100
+	return int(table.get(str(clampi(attitude, keys.min(), keys.max())), 100))
 
 
 static func _value(s: GameSession, data: Dictionary, item_id: String) -> int:

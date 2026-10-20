@@ -8,18 +8,6 @@
           "title": "Cost Usd",
           "type": "number"
         },
-        "daily_budget_left_usd": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Daily Budget Left Usd"
-        },
         "input_tokens": {
           "default": 0,
           "title": "Input Tokens",

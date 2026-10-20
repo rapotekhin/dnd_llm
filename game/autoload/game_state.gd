@@ -17,6 +17,14 @@ const COMBAT_SAVE := "autosave_combat"
 
 var _last_kind: String = ""
 var _last_input: String = ""
+## The spell, feature or consumable pinned to the next message at the input field (roadmap v0.7.7, the author's
+## request): {kind, id, slot, target} or {}. The engine spends it when the message goes, and the master gets the
+## cast and the player's intent in one turn. Not saved.
+var attached: Dictionary = {}
+## The character before an attached spend: back if that turn fails to reach the master (the slot is returned).
+var _refund: Dictionary = {}
+var _refund_what: Dictionary = {}  # the attachment spent then
+var _retry_spend: Dictionary = {}  # an attachment given back by a failed turn: «Повторить» spends it again
 
 
 func has_session() -> bool:
@@ -153,48 +161,107 @@ func level_up(picks: Dictionary) -> String:
 ## «Колдовать» on the sheet (SpellRules): the engine checks and spends the slot, the master narrates the cast
 ## (kind=ability). `slot` 0 = the lowest fitting one. "" or a reason for the toast.
 func cast(spell_id: String, slot: int = 0) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
-		return tr("ABILITY_BUSY")
-	var chk := SpellRules.check(session.character, Catalog.data, spell_id, slot)
-	if chk.has("reason"):
-		return str(chk["reason"])
-	var lines := SpellRules.cast(session.character, Catalog.data, chk["spell_id"], int(chk["slot"]))
-	_ability(lines, "Игрок колдует " + SpellRules.describe(Catalog.data, chk["spell_id"], int(chk["slot"])) +
-		". Движок уже потратил ячейку — не вызывай cast сам; опиши, как это выглядит и что происходит.")
-	return ""
+	return _use_alone({"kind": "spell", "id": spell_id, "slot": slot})
 
 
 ## «Использовать» a feature with limited uses on the sheet (FeatureUses). "" or a reason.
 func use_feature(resource_id: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
-		return tr("ABILITY_BUSY")
-	var why := FeatureUses.can_use(session.character, Catalog.data, resource_id, 1)
-	if not why.is_empty():
-		return why
-	var lines := FeatureUses.use(session.character, Catalog.data, resource_id, 1, session.rng)
-	_ability(lines, "Игрок использует умение «%s». Движок уже учёл использование: %s. Опиши, как это выглядит." %
-		[FeatureUses.display_name(session.character, Catalog.data, resource_id), ", ".join(lines)])
-	return ""
+	return _use_alone({"kind": "feature", "id": resource_id})
 
 
 ## «Использовать» an item on the sheet (ItemRules consumables). "" or a reason.
 func use_item(item_id: String) -> String:
+	return _use_alone({"kind": "item", "id": item_id})
+
+
+func _use_alone(what: Dictionary) -> String:
 	if session == null or is_busy() or not Backend.is_ready():
 		return tr("ABILITY_BUSY")
-	var why := ItemRules.can_use(session.character, Catalog.data, session.items, item_id)
-	if not why.is_empty():
-		return why
-	var lines := ItemRules.use(session.character, Catalog.data, session.items, item_id, session.rng)
-	_ability(lines, "Игрок использует предмет. Движок уже применил: %s. Опиши коротко." % ", ".join(lines))
+	var spent := _spend(what)
+	if spent.has("reason"):
+		return str(spent["reason"])
+	_ability(spent["lines"], str(spent["facts"]))
 	return ""
 
 
+## A spell, a feature use or a consumable checked and spent by the engine (v0.7.7: shared by the sheet buttons and
+## the attachment at the input field): {"lines", "facts"} or {"reason"}. `what`: {kind spell|feature|item, id,
+## slot (spells, 0 = the lowest fitting), target (an NPC id of the scene, optional)}.
+func _spend(what: Dictionary) -> Dictionary:
+	var c := session.character
+	var id := str(what.get("id", ""))
+	var lines: Array[String] = []
+	var facts := ""
+	match str(what.get("kind", "")):
+		"spell":
+			var chk := SpellRules.check(c, Catalog.data, id, int(what.get("slot", 0)))
+			if chk.has("reason"):
+				return {"reason": str(chk["reason"])}
+			lines = SpellRules.cast(c, Catalog.data, chk["spell_id"], int(chk["slot"]))
+			facts = "Игрок колдует " + SpellRules.describe(Catalog.data, chk["spell_id"], int(chk["slot"])) + \
+				". Движок уже потратил ячейку — не вызывай cast сам; опиши, как это выглядит и что происходит."
+		"feature":
+			var why := FeatureUses.can_use(c, Catalog.data, id, 1)
+			if not why.is_empty():
+				return {"reason": why}
+			lines = FeatureUses.use(c, Catalog.data, id, 1, session.rng)
+			facts = "Игрок использует умение «%s». Движок уже учёл использование: %s. Опиши, как это выглядит." % \
+				[FeatureUses.display_name(c, Catalog.data, id), ", ".join(lines)]
+		"item":
+			var why := ItemRules.can_use(c, Catalog.data, session.items, id)
+			if not why.is_empty():
+				return {"reason": why}
+			lines = ItemRules.use(c, Catalog.data, session.items, id, session.rng)
+			facts = "Игрок использует предмет. Движок уже применил: %s. Опиши коротко." % ", ".join(lines)
+		_:
+			return {"reason": "ABILITY_BUSY"}
+	var target := str(what.get("target", ""))
+	if not target.is_empty():
+		facts += " Цель — %s [%s]." % [world().npc(target).get("name", target), target]
+	CharacterRules.refresh(c, Catalog.data, session.items)
+	return {"lines": lines, "facts": facts}
+
+
 func _ability(lines: Array[String], facts: String) -> void:
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
 	_request("ability", facts)
+
+
+func attach(kind: String, id: String, slot: int = 0, target: String = "") -> void:
+	attached = {"kind": kind, "id": id, "slot": slot, "target": target}
+	EventBus.state_changed.emit()
+
+
+func detach() -> void:
+	attached = {}
+	EventBus.state_changed.emit()
+
+
+## What can be pinned now: [{kind, id, name, slots [circles]}] — spells ready with a slot left (cantrips), features
+## with uses left, consumables in the pack.
+func attach_choices() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if session == null:
+		return out
+	var c := session.character
+	var data: Dictionary = Catalog.data
+	for sid: Variant in SpellRules.ready(c):
+		var lv := SpellRules.level_of(data, str(sid))
+		var slots: Array[int] = []
+		for circle in range(maxi(1, lv), 6):
+			if lv > 0 and SpellRules.slots_left(c, circle) > 0:
+				slots.append(circle)
+		if lv == 0 or not slots.is_empty():
+			out.append({"kind": "spell", "id": str(sid), "name": str(data["spells"][str(sid)]["name"]), "slots": slots})
+	for r: Dictionary in FeatureUses.lines(c, data):
+		if int(r["left"]) > 0:
+			out.append({"kind": "feature", "id": str(r["id"]), "name": "%s (%d/%d)" % [r["name"], int(r["left"]), int(r["max"])], "slots": []})
+	for iid: String in c.get("inventory", {}):
+		if not ItemRules.consumable(data, iid).is_empty():
+			out.append({"kind": "item", "id": iid, "name": "%s ×%d" % [ItemRules.display_name(data["items"], session.items, iid), int(c["inventory"][iid])], "slots": []})
+	return out
 
 
 ## «Короткий отдых» (ExplorationRules): an hour, `dice` hit dice; no master turn — the line goes to the history.
@@ -299,6 +366,12 @@ func _combat_do(why: String, act: Callable) -> String:
 func combat_attack(target_id: String, offhand: bool = false) -> String:
 	return _combat_do(CombatRules.can_attack(session, Catalog.data, target_id, offhand) if session != null and CombatRules.active(session) else "COMBAT_NONE",
 		func() -> Array[String]: return CombatRules.player_attack(session, Catalog.data, target_id, offhand))
+
+
+## «Схватить» / «Сбить с ног» (v0.7.7): instead of one attack, Athletics against the foe (CombatRules.grapple).
+func combat_grapple(target_id: String, shove: bool) -> String:
+	return _combat_do(CombatRules.can_grapple(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.grapple(session, Catalog.data, target_id, shove))
 
 
 ## A spell in a fight: engine spells resolve at once; others spend the slot and go to the master (it costs the action).
@@ -702,22 +775,47 @@ func wait(target: String) -> String:
 ## master after the text (a paid option), never into the chat.
 func submit(text: String, engine_note: String = "") -> bool:
 	text = text.strip_edges()
-	if session == null or text.is_empty() or is_busy() or not Backend.is_ready():
+	var pinned := not attached.is_empty() and session != null and session.mode != GameSession.MODE_COMBAT
+	if session == null or (text.is_empty() and not pinned) or is_busy() or not Backend.is_ready():
 		return false
+	if pinned and text.is_empty():  # the attachment alone: a cast as from the sheet
+		var why := _use_alone(attached)
+		if not why.is_empty():
+			EventBus.message.emit(tr(why))
+			return false
+		attached = {}
+		return true
 	if session.mode == GameSession.MODE_COMBAT:
 		if not CombatRules.player_can_act(session) or int(CombatRules.economy(session).get("action", 0)) <= 0:
 			EventBus.message.emit(tr("COMBAT_NO_ACTION"))
 			return false
 		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
+	var facts := ""
+	if pinned:
+		var backup := session.character.duplicate(true)
+		var spent := _spend(attached)
+		if spent.has("reason"):
+			EventBus.message.emit(tr(str(spent["reason"])))
+			return false
+		_refund = backup
+		_refund_what = attached
+		_retry_spend = {}
+		attached = {}
+		_add(GameSession.effect_entry(spent["lines"]))
+		_log("События: " + ", ".join(spent["lines"]))
+		facts = " [Вместе с этим, до слов игрока: %s]" % spent["facts"]
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
-	_request("action", text + ((" " + engine_note) if not engine_note.is_empty() else ""))
+	_request("action", text + facts + ((" " + engine_note) if not engine_note.is_empty() else ""))
 	return true
 
 
 ## Exit button: the engine moves the player (no model decision), then the master describes the new room.
 func go(room_id: String) -> bool:
 	if session == null or is_busy() or not Backend.is_ready() or not ExplorationRules.open_exits(session, Catalog.data["world"], session.room_id).has(room_id):
+		return false
+	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
+		EventBus.message.emit(tr("TOO_HEAVY"))
 		return false
 	_end_conversation()
 	var from := session.room_id
@@ -782,6 +880,8 @@ func travel(to: String) -> String:
 	var path := WorldMap.route(session, Catalog.data["world"], session.room_id, to)
 	if path.is_empty():
 		return "TRAVEL_NO_ROUTE"
+	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
+		return "TOO_HEAVY"
 	_end_conversation()
 	var names: Array[String] = [str(world().room(session.room_id).get("name", session.room_id))]
 	var lines: Array[String] = []
@@ -960,9 +1060,21 @@ func leave_conversation() -> bool:
 
 
 ## Repeats the last failed request as a new turn (ADR-0009 §5: no idempotency, a retry is a new turn_id).
+## An attached spend given back by the failed turn is spent again first (its facts are in the input).
 func retry() -> void:
-	if can_retry():
-		_request(_last_kind, _last_input)
+	if not can_retry():
+		return
+	if not _retry_spend.is_empty():
+		var backup := session.character.duplicate(true)
+		var spent := _spend(_retry_spend)
+		if spent.has("reason"):
+			EventBus.message.emit(tr(str(spent["reason"])))
+			return
+		_refund = backup
+		_refund_what = _retry_spend
+		_retry_spend = {}
+		_add(GameSession.effect_entry(spent["lines"]))
+	_request(_last_kind, _last_input)
 
 
 ## The last turn failed and can be repeated.
@@ -981,22 +1093,50 @@ func equip(item_id: String, slot: String) -> String:
 	if session == null or is_busy():
 		return "EQUIP_BUSY"
 	var c := session.character
+	if (slot == "armor" or slot == "shield") and session.mode == GameSession.MODE_COMBAT:
+		return "EQUIP_IN_COMBAT"
 	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot)
 	if not why.is_empty():
 		return why
+	var before: Dictionary = (c["equipped"] as Dictionary).duplicate()
 	c["equipped"][slot] = item_id
 	if slot == "main_hand" and str(c["equipped"].get("off_hand", "")) == item_id and int(c["inventory"][item_id]) < 2:
 		c["equipped"]["off_hand"] = ""
-	CharacterRules.refresh(c, Catalog.data, session.items)
-	EventBus.state_changed.emit()
+	_gear_changed(before)
 	return ""
 
 
 func unequip(slot: String) -> void:
 	if session == null or is_busy():
 		return
+	if (slot == "armor" or slot == "shield") and session.mode == GameSession.MODE_COMBAT:
+		EventBus.message.emit(tr("EQUIP_IN_COMBAT"))
+		return
+	var before: Dictionary = (session.character["equipped"] as Dictionary).duplicate()
 	session.character["equipped"][slot] = ""
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_gear_changed(before)
+
+
+## After the sheet changed the gear: the minutes of armour (v0.7.7, rules.equip_minutes) pass and show in the chat
+## and the history, so the master knows the hero is now in other clothes.
+func _gear_changed(before: Dictionary) -> void:
+	var c := session.character
+	CharacterRules.refresh(c, Catalog.data, session.items)
+	var minutes := CharacterRules.gear_minutes(Catalog.data, session.items, before, c["equipped"])
+	if minutes > 0 and session.mode != GameSession.MODE_COMBAT:
+		var lines: Array[String] = []
+		for slot: String in ["armor", "shield"]:
+			var was := str(before.get(slot, ""))
+			var now := str(c["equipped"].get(slot, ""))
+			if was != now:
+				if not was.is_empty():
+					lines.append("Снято: " + ItemRules.display_name(Catalog.data["items"], session.items, was))
+				if not now.is_empty():
+					lines.append("Надето: " + ItemRules.display_name(Catalog.data["items"], session.items, now))
+		lines.append("Переодевание: %d мин" % minutes)
+		lines.append_array(TimeRules.advance(session, Catalog.data, minutes))
+		_add(GameSession.effect_entry(lines))
+		_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
 
 
@@ -1049,6 +1189,7 @@ func _log(line: String) -> void:
 func _request(kind: String, input: String) -> void:
 	var s := session
 	var turn_id := s.next_turn_id()
+	_retry_spend = {}  # a new turn: an older given-back spend is not repeated
 	_last_kind = kind
 	_last_input = input
 	busy_turn = turn_id
@@ -1071,10 +1212,20 @@ func _request(kind: String, input: String) -> void:
 	busy_turn = ""
 	if call.is_error():
 		effects.discard(turn_id)
+		if not _refund.is_empty():  # the attached spend did not reach the master: give the slot back
+			session.character.clear()
+			session.character.merge(_refund)
+			_refund = {}
+			_retry_spend = _refund_what
+			_refund_what = {}
+			_add(GameSession.system_entry("ATTACH_REFUNDED"))
 		_show_start_lines()
 		_add(GameSession.system_entry(_error_key(call.reason())))
 		EventBus.turn_finished.emit(turn_id, false)
 		return
+	_refund = {}
+	_refund_what = {}
+	_retry_spend = {}
 	var turn_kind := _last_kind
 	_last_kind = ""
 	var follow_up := _apply_result(s, turn_id, call.result, turn_kind)

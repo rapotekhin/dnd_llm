@@ -110,7 +110,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         "snapshot": {
             "world": world,
             "scene": {
-                "location_id": loc.get("id", ""), "location_name": loc.get("name", ""),
+                "location_name": loc.get("name", ""),
                 "room_id": room.get("id", ""), "room_name": room.get("name", ""), "room_description": description,
                 "exits": [{"room_id": e["id"], "name": e["name"]} for e in scene.get("exits", [])],
                 "npcs": npcs, "hooks": [h["text"] if isinstance(h, dict) else str(h) for h in scene.get("hooks", [])],

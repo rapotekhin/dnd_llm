@@ -295,8 +295,12 @@ func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		return {"plan": {"slots": CharacterRules.SLOTS.duplicate(), "item_id": ""}, "summary": "Снято: %s" % ", ".join(worn)}
 	if not CharacterRules.SLOTS.has(slot):
 		return {"reason": "нет такого слота: %s (armor, shield, main_hand, off_hand, all)" % slot}
-	if slot == "armor" and CombatRules.active(s):
-		return {"reason": "в бою доспех не сменить — на это уходят минуты"}
+	if (slot == "armor" or slot == "shield") and CombatRules.active(s):
+		return {"reason": "в бою %s не сменить — на это уходят минуты или целое действие" % ("доспех" if slot == "armor" else "щит")}
+	if CombatRules.active(s) and not id.is_empty():  # drawing a weapon: free once a turn, then the action (5e)
+		var econ := CombatRules.economy(s)
+		if bool(econ.get("object", false)) and int(econ.get("action", 0)) <= 0:
+			return {"reason": "в этот ход оружие уже доставали, а действие потрачено — сменить можно в следующий ход"}
 	if id.is_empty():
 		if str(eq.get(slot, "")).is_empty():
 			return {"reason": "в слоте %s и так пусто" % slot}
@@ -386,9 +390,21 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 	if plan.has("text"):  # note (v0.7.4)
 		s.notes.append({"day": s.day, "clock": TimeRules.clock(s), "room": s.room_id, "text": str(plan["text"])})
 		return
-	if plan.has("slots"):  # equip (v0.7.4)
+	if plan.has("slots"):  # equip (v0.7.4); time and the turn's economy (v0.7.7)
+		var before: Dictionary = (s.character["equipped"] as Dictionary).duplicate()
 		for sl: Variant in plan["slots"]:
 			s.character["equipped"][str(sl)] = str(plan["item_id"])
+		if CombatRules.active(s):
+			if not str(plan["item_id"]).is_empty():
+				var econ := CombatRules.economy(s)
+				if bool(econ.get("object", false)):
+					econ["action"] = int(econ.get("action", 0)) - 1
+				econ["object"] = true
+		else:
+			var minutes := CharacterRules.gear_minutes(_data, s.items, before, s.character["equipped"])
+			if minutes > 0:
+				_extra_lines.append("Переодевание: %d мин" % minutes)
+				_extra_lines.append_array(TimeRules.advance(s, _data, minutes))
 		var main := str(s.character["equipped"].get("main_hand", ""))
 		if not main.is_empty() and str(s.character["equipped"].get("off_hand", "")) == main and int(s.character["inventory"].get(main, 0)) < 2:
 			s.character["equipped"]["off_hand"] = ""
@@ -420,7 +436,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			else:
 				c["inventory"].erase(plan["item_id"])
 		"npc_attitude":
-			s.attitudes[plan["npc_id"]] = clampi(s.attitude(plan["npc_id"]) + int(plan["delta"]), -3, 3)
+			s.shift_attitude(str(plan["npc_id"]), int(plan["delta"]), _data)
 		"start_combat":
 			if bool(plan.get("reinforce", false)) and CombatRules.active(s):
 				CombatRules.add_incoming(s, _data, plan["foes"], int(s.combat["round"]) + int(CombatRules.cfg(_data)["reinforce_delay"]), str(plan["side"]))

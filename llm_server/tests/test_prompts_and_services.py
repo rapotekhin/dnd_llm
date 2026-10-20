@@ -194,3 +194,16 @@ def test_openrouter_takes_the_cheapest_provider(monkeypatch):
     monkeypatch.setenv("LLM_SERVER_PROVIDER_SORT", "off")
     assert "openrouter_provider" not in settings_for(model)
 
+
+
+def test_no_temperature_for_claude_on_openrouter():
+    # v0.7.7: Haiku 5.5 endpoints take no temperature; with require_parameters the request found no provider (404).
+    from pydantic_ai.models.openrouter import OpenRouterModel
+    from pydantic_ai.providers.openrouter import OpenRouterProvider
+
+    from llm_server.agents import settings_for
+
+    haiku = settings_for(OpenRouterModel("anthropic/claude-haiku-5.5", provider=OpenRouterProvider(api_key="test")))
+    assert "temperature" not in haiku and haiku["openrouter_provider"]["require_parameters"] is True
+    deepseek = settings_for(OpenRouterModel("deepseek/deepseek-v4.1-flash-1017", provider=OpenRouterProvider(api_key="test")))
+    assert deepseek["temperature"] == 0.8

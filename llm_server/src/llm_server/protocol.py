@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.14.0"
+PROTOCOL_VERSION = "0.15.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -79,8 +79,6 @@ class Limits(_Out):
     turn_timeout_s: float
     engine_timeout_s: float
     hello_timeout_s: float
-    max_checks_per_turn: int = 1  # ADR-0008 §4
-    max_effects_per_turn: int = 3
 
 
 class ModelInfo(_Out):
@@ -162,7 +160,6 @@ class SceneProp(_In):
 
 
 class Scene(_In):
-    location_id: str
     location_name: str
     location_description: str = ""
     room_id: str
@@ -213,13 +210,11 @@ class CharacterSheet(_In):
     ac: int
     conditions: list[str] = Field(default_factory=list)
     skills: dict[str, int] = Field(default_factory=dict)  # total bonuses
-    saves: dict[str, int] = Field(default_factory=dict)
     gold_cp: int = 0
     inventory: list[InventoryLine] = Field(default_factory=list)
     features: list[str] = Field(default_factory=list)
     background: str = ""
     abilities: dict[str, int] = Field(default_factory=dict)  # scores, str..cha
-    proficiency_bonus: int = 2
     skill_proficiencies: list[str] = Field(default_factory=list)
     speed: int = 30
     equipped: list[str] = Field(default_factory=list)  # names of worn armor and wielded items
@@ -229,7 +224,6 @@ class CharacterSheet(_In):
     spell_save_dc: int | None = None
     backstory: str = ""  # the player's or the ready-made character's story (0.2.2)
     resources: list[ResourceLine] = Field(default_factory=list)  # feature uses left (0.6.0)
-    hit_dice_left: int = 0
     concentration: str = ""  # the spell the character concentrates on
 
 
@@ -363,7 +357,6 @@ class Usage(_Out):
     output_tokens: int = 0
     cost_usd: float = 0.0
     model: str
-    daily_budget_left_usd: float | None = None
 
 
 class TurnResult(_Out):

@@ -77,11 +77,6 @@
           "title": "Gold Cp",
           "type": "integer"
         },
-        "hit_dice_left": {
-          "default": 0,
-          "title": "Hit Dice Left",
-          "type": "integer"
-        },
         "hp": {
           "title": "Hp",
           "type": "integer"
@@ -106,11 +101,6 @@
           "title": "Name",
           "type": "string"
         },
-        "proficiency_bonus": {
-          "default": 2,
-          "title": "Proficiency Bonus",
-          "type": "integer"
-        },
         "race": {
           "default": "",
           "title": "Race",
@@ -122,13 +112,6 @@
           },
           "title": "Resources",
           "type": "array"
-        },
-        "saves": {
-          "additionalProperties": {
-            "type": "integer"
-          },
-          "title": "Saves",
-          "type": "object"
         },
         "skill_proficiencies": {
           "items": {
@@ -513,10 +496,6 @@
           "title": "Location Description",
           "type": "string"
         },
-        "location_id": {
-          "title": "Location Id",
-          "type": "string"
-        },
         "location_name": {
           "title": "Location Name",
           "type": "string"
@@ -567,7 +546,6 @@
         }
       },
       "required": [
-        "location_id",
         "location_name",
         "room_id",
         "room_name"

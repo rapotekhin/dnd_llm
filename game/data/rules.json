@@ -820,6 +820,20 @@
 			"min_dc": 5
 		}
 	},
+	"carry": {
+		"_doc": "Carrying capacity (v0.7.7, PHB): Strength × per_str pounds; over it the hero cannot leave the room. Coins weigh nothing in this version.",
+		"per_str": 15
+	},
+	"equip_minutes": {
+
+		"_doc": "Changing armour out of a fight (v0.7.7, PHB): minutes to don / doff by category; a shield and weapons take no minutes (in a fight a shield and armour cannot change, a weapon is drawn free once a turn, then for the action).",
+
+		"don": {"light": 1, "medium": 5, "heavy": 10, "shield": 0},
+
+		"doff": {"light": 1, "medium": 1, "heavy": 5, "shield": 0}
+
+	},
+
 	"invisibility": {
 		"_doc": "Invisibility (v0.7.5): the hero is invisible with the condition `invisible` or while concentrating on one of `spells`. Those who would see them get `passive_penalty` off passive Perception (5e disadvantage); in a fight the hero attacks with advantage and is attacked with disadvantage; an attack or a spell ends a spell with ends_on_attack (5e Invisibility; Greater Invisibility stays). Talking does not end it: NPCs hear a voice.",
 		"spells": {"invisibility": {"ends_on_attack": true}, "greater_invisibility": {"ends_on_attack": false}},

@@ -328,7 +328,10 @@ class Builder:
             if d is None:
                 continue
             id_ = sid(e["index"])
-            d["name"] = self.tr(f"item:{id_}", e["name"])["name"]
+            t = self.tr(f"item:{id_}", e["name"], desc_text(e))
+            d["name"] = t["name"]
+            if t.get("desc"):
+                d["description"] = t["desc"]  # v0.7.7: shown in the inventory and the trade
             d["properties"] = sorted(set(d["properties"]) | set(EXTRA_PROPERTIES.get(id_, [])))
             if id_ in CONSUMABLES:
                 d["item_type"] = "consumable"
@@ -674,7 +677,9 @@ def multiattack(a: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def untranslated(wanted: dict[str, Any], ru: dict[str, Any]) -> list[str]:
-    return [k for k in wanted if k not in ru and k not in GLOSSARY and not k.startswith(("language:", "category:"))]
+    """Keys with no Russian entry, or with an English text but no Russian one yet (item descriptions, v0.7.7)."""
+    return [k for k in wanted if (k not in ru or ("desc_en" in wanted[k] and not ru[k].get("desc")))
+            and k not in GLOSSARY and not k.startswith(("language:", "category:"))]
 
 
 def seed_ru_from_catalog(catalog: dict[str, Any]) -> None:
@@ -802,7 +807,7 @@ def translate(model_id: str, batch: int, limit: int | None) -> None:
         for res in asyncio.as_completed([one(c) for c in chunks]):
             for e in await res:
                 if e.key in wanted:
-                    entry = {"en": wanted[e.key]["en"], "name": e.name.strip()}
+                    entry = {"en": wanted[e.key]["en"], "name": ru.get(e.key, {}).get("name") or e.name.strip()}  # a name once set stays
                     for f in ("desc", "casting_time", "range", "duration"):
                         if getattr(e, f) and (f != "desc" or "desc_en" in wanted[e.key]) and (f == "desc" or f"{f}_en" in wanted[e.key]):
                             entry[f] = getattr(e, f).strip()

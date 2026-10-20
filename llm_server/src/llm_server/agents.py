@@ -40,6 +40,8 @@ if TYPE_CHECKING:
     from .session import Session
 
 MODEL_SETTINGS: ModelSettings = {"temperature": 0.8, "max_tokens": 2500}
+# Models whose OpenRouter endpoints take no `temperature` (Claude 5): it is not sent to them.
+NO_TEMPERATURE = ("anthropic/",)
 # A turn that ran out of output tokens (a long fight start, a model that reasons first) is tried once more with this.
 RETRY_MAX_TOKENS = 6000
 
@@ -65,6 +67,9 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
     settings: dict = dict(base)
     if "qwen/" in model.model_name:
         settings["openrouter_reasoning"] = {"enabled": False}
+    if model.model_name.startswith(NO_TEMPERATURE):
+        # Their endpoints reject `temperature`: with require_parameters no provider is left (HTTP 404, v0.7.7).
+        settings.pop("temperature", None)
     sort = os.environ.get("LLM_SERVER_PROVIDER_SORT", "price").strip().lower()
     if getattr(model, "system", "") == "openrouter" and sort in ("price", "throughput", "latency"):
         settings["openrouter_provider"] = {"sort": sort, "require_parameters": True}

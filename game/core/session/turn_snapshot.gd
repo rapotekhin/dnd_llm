@@ -26,7 +26,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			summaries["dialogue:" + id] = s.summaries["dialogue:" + id]
 	var out := {
 		"scene": {
-			"location_id": loc_id, "location_name": loc.get("name", loc_id), "location_description": loc.get("description", ""),
+			"location_name": loc.get("name", loc_id), "location_description": loc.get("description", ""),
 			"room_id": s.room_id, "room_name": room.get("name", s.room_id), "room_description": room.get("description", ""),
 			"exits": exits, "npcs": npcs, "hooks": room.get("hooks", []), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
@@ -97,15 +97,14 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"name": c.get("name", ""), "gender": c.get("gender", "other"), "race": c.get("race_name", ""),
 		"class_name": class_text, "level": int(c.get("level", 1)), "hp": int(c.get("hp", 0)),
 		"max_hp": int(c.get("max_hp", 0)), "ac": int(c.get("ac", 10)), "conditions": _conditions(c, data),
-		"skills": c.get("skills", {}), "saves": c.get("saves", {}), "gold_cp": int(c.get("gold_cp", 0)),
+		"skills": c.get("skills", {}), "gold_cp": int(c.get("gold_cp", 0)),
 		"inventory": inventory, "features": CharacterRules.feature_names(c, data),
 		"background": str(data["backgrounds"].get(str(c.get("background", "")), {}).get("name", "")),
-		"abilities": c.get("abilities", {}), "proficiency_bonus": int(c.get("prof_bonus", 2)),
+		"abilities": c.get("abilities", {}),
 		"skill_proficiencies": c.get("skill_profs", []), "speed": int(c.get("speed", 30)), "equipped": equipped,
 		"backstory": str(c.get("story", "")),
 		"resources": FeatureUses.lines(c, data).map(func(r: Dictionary) -> Dictionary:
 			return {"name": r["name"], "left": r["left"], "max": r["max"]}),
-		"hit_dice_left": ExplorationRules.hit_dice_left(c),
 		"concentration": str(data["spells"].get(str(c.get("concentration", "")), {}).get("name", "")),
 	}
 	if not str(c.get("spell_ability", "")).is_empty():

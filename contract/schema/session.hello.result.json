@@ -11,16 +11,6 @@
           "title": "Hello Timeout S",
           "type": "number"
         },
-        "max_checks_per_turn": {
-          "default": 1,
-          "title": "Max Checks Per Turn",
-          "type": "integer"
-        },
-        "max_effects_per_turn": {
-          "default": 3,
-          "title": "Max Effects Per Turn",
-          "type": "integer"
-        },
         "max_message_bytes": {
           "title": "Max Message Bytes",
           "type": "integer"

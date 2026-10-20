@@ -6,6 +6,15 @@ ABILITY_DEX,Ловкость
 ABILITY_INT,Интеллект
 ABILITY_STR,Сила
 ABILITY_WIS,Мудрость
+ATTACH_GROUP_FEATURE,Умения
+ATTACH_GROUP_ITEM,Предметы
+ATTACH_GROUP_SPELL,Заклинания
+ATTACH_NOTHING,Сейчас нечего применить
+ATTACH_NO_TARGET,без цели
+ATTACH_PINNED,Вместе с сообщением: {name}
+ATTACH_REFUNDED,Ход не дошёл до мастера — потраченное возвращено
+ATTACH_REMOVE,Открепить
+ATTACH_SLOT,ячейка {n} круга
 ATTITUDE_0,нейтральное
 ATTITUDE_M1,настороженное
 ATTITUDE_M2,неприязненное
@@ -20,6 +29,7 @@ BACKEND_TOOLTIP_READY,"{url}
 Модель: {model}
 Сервер: {version}"
 BANNER_NO_MASTER,"Нет связи с мастером — переподключаюсь. Игра сохранена, ходы недоступны."
+BTN_ATTACH,"✦ Заклинание, умение, предмет"
 BTN_BACK,Назад
 BTN_BACK_TO_WORLD,К выбору мира
 BTN_CANCEL,Отмена
@@ -168,10 +178,13 @@ COMBAT_DID_DODGE,{name} уходит в оборону
 COMBAT_DO_DASH,Рывок
 COMBAT_DO_DISENGAGE,Отход
 COMBAT_DO_DODGE,Уклонение
+COMBAT_DO_GRAPPLE,Схватить
 COMBAT_DO_HIDE,Спрятаться
 COMBAT_DO_INSPECT,Осмотреть [бонус]
+COMBAT_DO_SHOVE,Сбить с ног
 COMBAT_FOE_SURPRISED,врасплох
 COMBAT_FT,{ft} фт
+COMBAT_GRAPPLE_TIP,"Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом. Схваченный не может отойти, пока вы его держите (до вашего шага прочь)"
 COMBAT_HIDDEN,Спрятан — враги не видят
 COMBAT_HIDE_SEEN,Враг вплотную — спрятаться не выйдет
 COMBAT_HIDE_TIP,"Скрытность против Внимательности врагов. Спрятанный атакует с преимуществом, по нему бьют с помехой; атака или заклинание выдают"
@@ -203,12 +216,14 @@ COMBAT_PARLEY_PROGRESS,"Сейчас: {progress}"
 COMBAT_PICK_TARGET,"Выберите цель — подсвечены те, кого можно достать"
 COMBAT_RAGING,Ярость
 COMBAT_ROUND,Раунд {n}
+COMBAT_SHOVE_TIP,"Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом. Сбитый лежит: по нему вплотную — с преимуществом, издалека — с помехой; встаёт он в свой ход"
 COMBAT_SURPRISED,Застигнут врасплох
 COMBAT_TAB_COMMON,Общие
 COMBAT_TAB_FEATURES,Умения
 COMBAT_TAB_ITEMS,Предметы
 COMBAT_TAB_SPELLS,Заклинания
 COMBAT_TAB_WEAPONS,Оружие
+COMBAT_TOO_BIG,Враг слишком велик — больше вас на два размера и более
 COMBAT_WAIT,Ходят другие…
 COMBAT_XP,Опыт: +{xp}
 COMBAT_YOUR_TURN,Ваш ход
@@ -224,11 +239,7 @@ COND_PRONE,лежит
 COND_RESTRAINED,опутан
 COND_STUNNED,ошеломлён
 COND_UNCONSCIOUS,без сознания
-DEATH_ONE_LIFE,Одна жизнь
-DEATH_ONE_LIFE_HINT,"Смерть окончательна: один слот и автосохранение, воскрешения для героя нет. Режим вступит в силу вместе с боем и смертью (M4), выбор сохраняется уже сейчас."
 DEATH_PATH,Дней в пути: {days} · заданий: {quests} · опыта: {xp}
-DEATH_STORY,История
-DEATH_STORY_HINT,Обычные сохранения: после гибели можно загрузиться.
 DEATH_TITLE,Конец пути
 DEATH_WHO,"{name} — {race}, {class}, {level} уровень"
 DEV_SNAPSHOT,Снимок бага: {path}
@@ -243,6 +254,7 @@ DM_STYLE_LITERARY,Литературный
 DM_STYLE_LITERARY_HINT,"Образно и атмосферно: метафоры, запахи и звуки, чуть медленнее темп."
 EQUIP_BUSY,"Нельзя, пока мастер думает"
 EQUIP_HANDS_BUSY,Руки заняты
+EQUIP_IN_COMBAT,В бою доспех и щит не сменить — на это уходят минуты
 EQUIP_NOT_LIGHT,Во вторую руку — только лёгкое оружие
 EQUIP_NOT_OWNED,Этого предмета нет
 EQUIP_NO_PROFICIENCY,Нет владения этим видом доспеха
@@ -268,10 +280,63 @@ HINT_POOL,Пул хитов {min}–{max}: {cond} — сначала самые 
 HINT_SAVE,Провал спасброска {p}% · урон {min}–{max}
 HINT_SNEAK, · со Скрытой атакой
 INFO_HINT,Наведите на вариант — здесь появится его описание
-ITEM_ARMOR_AC, — КД {n}{dex}
+ITEM_AC,КД {n}
+ITEM_ARMOR_HEAVY,Тяжёлый доспех
+ITEM_ARMOR_LIGHT,Лёгкий доспех
+ITEM_ARMOR_MEDIUM,Средний доспех
+ITEM_CMP_AC,КД {now} → {then}
+ITEM_CMP_WEAPON,"Атака {hit}, урон {dmg} (сейчас {hit_now}, {dmg_now})"
 ITEM_DEX, + Лов
 ITEM_DEX_MAX, + Лов (макс. {n})
-ITEM_SHIELD_AC, — КД +{n}
+ITEM_NO_PROF_ARMOR,Вы не владеете этим доспехом: надеть нельзя
+ITEM_NO_PROF_WEAPON,Вы не владеете этим оружием: атака без бонуса мастерства
+ITEM_PROPERTIES,Свойства: {list}
+ITEM_PROP_AC_PLUS1,КД +1
+ITEM_PROP_AC_PLUS2,КД +2
+ITEM_PROP_AMMUNITION,нужны боеприпасы
+ITEM_PROP_COLD_DAMAGE,урон холодом
+ITEM_PROP_CURSED,проклятие
+ITEM_PROP_FINESSE,фехтовальное (Сила или Ловкость)
+ITEM_PROP_FIRE_DAMAGE,урон огнём
+ITEM_PROP_HEALING,лечит
+ITEM_PROP_HEAVY,тяжёлое
+ITEM_PROP_LIGHT,лёгкое (можно взять второе в левую руку)
+ITEM_PROP_LIGHTNING_DAMAGE,урон молнией
+ITEM_PROP_LIGHT_SOURCE,даёт свет
+ITEM_PROP_MAGIC_PLUS1,магическое +1 к атаке и урону
+ITEM_PROP_MAGIC_PLUS2,магическое +2 к атаке и урону
+ITEM_PROP_MAGIC_PLUS3,магическое +3 к атаке и урону
+ITEM_PROP_NECROTIC_DAMAGE,некротический урон
+ITEM_PROP_POISON_DAMAGE,урон ядом
+ITEM_PROP_RADIANT_DAMAGE,урон излучением
+ITEM_PROP_REACH,досягаемость
+ITEM_PROP_RESIST_COLD,сопротивление холоду
+ITEM_PROP_RESIST_FIRE,сопротивление огню
+ITEM_PROP_RESIST_POISON,защита от яда
+ITEM_PROP_SAVES_PLUS1,спасброски +1
+ITEM_PROP_SILVERED,посеребрённое
+ITEM_PROP_STEALTH_ADVANTAGE,преимущество к Скрытности
+ITEM_PROP_THROWN,метательное
+ITEM_PROP_TWO_HANDED,двуручное
+ITEM_PROP_VERSATILE,универсальное
+ITEM_RANGE,дальность {near}/{far} фт.
+ITEM_SHIELD_LINE,Щит · КД +{n}
+ITEM_STEALTH_DIS,помеха Скрытности
+ITEM_STR_MIN,нужна Сила {n}
+ITEM_TYPE_ARMOR,Доспех
+ITEM_TYPE_CONSUMABLE,Расходуемый предмет
+ITEM_TYPE_GEAR,Снаряжение
+ITEM_TYPE_TREASURE,Ценность
+ITEM_TYPE_WEAPON,Оружие
+ITEM_TYPE_WONDROUS,"Чудесный предмет: действует, пока при себе"
+ITEM_USE_HEAL,Лечит {dice} хитов
+ITEM_USE_REMOVE,Снимает: {list}
+ITEM_VERSATILE,двумя руками {dice}
+ITEM_WEAPON_MARTIAL_MELEE,Воинское оружие ближнего боя
+ITEM_WEAPON_MARTIAL_RANGED,Воинское дальнобойное оружие
+ITEM_WEAPON_SIMPLE_MELEE,Простое оружие ближнего боя
+ITEM_WEAPON_SIMPLE_RANGED,Простое дальнобойное оружие
+ITEM_WEIGHT,{n} фнт.
 JOURNAL_ELSEWHERE,В пути
 JOURNAL_NOTES,Что было
 JOURNAL_EMPTY,"Пока пусто: записи появятся, когда вы осмотритесь и поговорите с людьми."
@@ -338,7 +403,6 @@ MSG_SERVER_BUSY,Мастер занят другим ходом. Попробу�
 MSG_TURN_CANCELLED,Ход отменён. Мир не изменился.
 MSG_TURN_TIMEOUT,Мастер не успел ответить. Мир не изменился — можно повторить ход.
 MSG_WORLD_MISSING,Мир этого сохранения не найден: пакет удалён или содержит ошибки
-NG_DEATH,Смерть персонажа
 NG_DM_STYLE,Стиль мастера
 NG_LINES,Линии — этого в игре не будет вовсе (через запятую):
 NG_LIST_PLACEHOLDER,"например: пауки, пытки"
@@ -373,6 +437,7 @@ OPT_BUDGET_BAD,Лимит — число долларов от 0.01 до 1000
 OPT_RESOLUTION,Размер окна
 PARTNER_LINE,{role} · {race} · отношение: {attitude}
 PLACEHOLDER_ACTION,Что вы делаете?
+PLACEHOLDER_ATTACHED,Что вы делаете при этом? Можно отправить и без слов
 PLACEHOLDER_COMBAT,Импровизация (стоит действия): что вы делаете?
 PLACEHOLDER_SAY,Что вы говорите или делаете? ({name} слушает)
 PREP_ALREADY_TODAY,Заклинания на сегодня уже подготовлены — после долгого отдыха
@@ -392,6 +457,10 @@ QUEST_IN_CONVERSATION,Сначала закончите разговор
 QUEST_NEEDS_ITEM,"Для этого нужна вещь, которой у вас нет"
 QUEST_UNKNOWN,Такого задания нет
 QUEST_WRONG_PLACE,Задание выполняется в другом месте
+RARITY_LEGENDARY,Легендарный
+RARITY_RARE,Редкий
+RARITY_UNCOMMON,Необычный
+RARITY_VERY_RARE,Очень редкий
 REST_BUSY,Сейчас нельзя отдыхать
 REST_IN_CONVERSATION,Сначала закончите разговор
 REST_KIND_LONG,долгий отдых
@@ -429,6 +498,7 @@ SHEET_SPELLS_PREPARED,Подготовлены
 SHEET_TAB_FEATURES,Умения и заклинания
 SHEET_TAB_GEAR,Снаряжение
 SHEET_TAB_STATS,Характеристики
+SHEET_WEIGHT,Вес: {n} из {max} фнт.
 SHOP_CLOSED,Ночью лавки закрыты — приходите утром
 SHOP_CLOSED_FOR_YOU,Лавка закрыта для вас до завтра
 SHORT_REST_DICE,Потратить кости хитов (к{die} + Телосложение): осталось {left}
@@ -493,6 +563,7 @@ TITLE_LOAD,Загрузка
 TITLE_PAUSE,Пауза
 TITLE_SAVE,Сохранение
 TITLE_SETTINGS,Настройки
+TOO_HEAVY,Слишком тяжело: с такой ношей не уйти — избавьтесь от лишнего
 TRADE_CART,Сделка
 TRADE_CART_BUY,Купить: {item} — {coins}
 TRADE_CART_EMPTY,"Нажмите «+» у товара или своей вещи, чтобы положить её в сделку"

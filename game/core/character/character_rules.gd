@@ -252,6 +252,44 @@ static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary
 	return ""
 
 
+## Pounds the hero carries: everything in the pack, worn things too (v0.7.7).
+static func carried_weight(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> float:
+	var total := 0.0
+	for id: String in c.get("inventory", {}):
+		total += float(ItemRules.def_of(data["items"], session_items, id).get("weight", 0)) * int(c["inventory"][id])
+	return total
+
+
+## Carrying capacity (PHB): Strength × rules.carry.per_str pounds.
+static func capacity(c: Dictionary, data: Dictionary) -> int:
+	return ability(c, "str") * int(data["rules"].get("carry", {}).get("per_str", 15))
+
+
+static func overloaded(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> bool:
+	return carried_weight(c, data, session_items) > capacity(c, data)
+
+
+## Minutes a change of gear takes out of a fight (v0.7.7, PHB): armour off and on by its category
+## (rules.equip_minutes); a shield and weapons take none. `before` / `after` — the equipped slots.
+static func gear_minutes(data: Dictionary, session_items: Dictionary, before: Dictionary, after: Dictionary) -> int:
+	var t: Dictionary = data["rules"].get("equip_minutes", {})
+	var total := 0
+	for slot: String in ["armor", "shield"]:
+		var was := str(before.get(slot, ""))
+		var now := str(after.get(slot, ""))
+		if was == now:
+			continue
+		if not was.is_empty():
+			total += int(t.get("doff", {}).get(_armor_category(data, session_items, was), 0))
+		if not now.is_empty():
+			total += int(t.get("don", {}).get(_armor_category(data, session_items, now), 0))
+	return total
+
+
+static func _armor_category(data: Dictionary, session_items: Dictionary, id: String) -> String:
+	return str(ItemRules.def_of(data["items"], session_items, id).get("armor", {}).get("category", ""))
+
+
 static func _two_handed(data: Dictionary, session_items: Dictionary, id: String) -> bool:
 	return not id.is_empty() and (ItemRules.def_of(data["items"], session_items, id).get("properties", []) as Array).has("two_handed")
 

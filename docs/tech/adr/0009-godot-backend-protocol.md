@@ -205,6 +205,14 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 25. Протокол 0.15.0 (v0.7.7)
+
+Чистка: поля, которые одна сторона шлёт, а другая не читает, убраны (один источник правды).
+
+- **`hello.limits`** без `max_checks_per_turn` / `max_effects_per_turn`: лимиты хода — только `snapshot.limits` из `rules.turn_limits` клиента. Таймауты в `limits` остаются справкой о сервере.
+- **`usage.daily_budget_left_usd`** убран: остаток дня клиент берёт из `session.status` / `session.set_budget`.
+- **Снимок хода** без `scene.location_id` и `character.saves` / `proficiency_bonus` / `hit_dice_left`: в промпты они не попадали (броски делает движок).
+
 ### 24. Протокол 0.14.0 (v0.7.4)
 
 - **`scene.closed_exits`** — тексты закрытых путей комнаты из пакета («лаз под корнями мёртвого дуба ещё надо найти»), пока движок их не открыл; куда они ведут — не сообщается. **`scene.notes`** — память мастера (последние 12): «день, место — текст».

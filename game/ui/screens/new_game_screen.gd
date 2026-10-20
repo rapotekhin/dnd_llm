@@ -121,11 +121,7 @@ func _redraw() -> void:
 	_choice(_form, "dm_style", WorldPack.DM_STYLES, "DM_STYLE_")
 	_text(_form, tr("DM_STYLE_%s_HINT" % str(settings["dm_style"]).to_upper()), true)
 
-	_label(_form, "NG_DEATH", UiTheme.MUTED_LABEL)
-	_choice(_form, "death_mode", ["story", "one_life"], "DEATH_")
-	var hint := _text(_form, tr("DEATH_%s_HINT" % str(settings["death_mode"]).to_upper()), true)
-	if settings["death_mode"] == "one_life":
-		hint.add_theme_color_override("font_color", UiTheme.WARN)
+	# «Одна жизнь» comes with the roguelike loop (M5): until then every game is «История» (v0.7.7).
 
 	_label(_form, "NG_VIOLENCE", UiTheme.MUTED_LABEL)
 	_choice(_form, "violence", WorldPack.VIOLENCE, "VIOLENCE_")

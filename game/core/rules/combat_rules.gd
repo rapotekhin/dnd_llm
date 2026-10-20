@@ -296,6 +296,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	var f := fighter(s, id)
 	f["dodging"] = false
 	f["disengaged"] = false
+	f["reacted"] = false  # the reaction comes back at the start of one's own turn (5e)
 	if id == PLAYER:
 		s.combat["economy"] = {"action": 1, "bonus": 1, "move": _move_cols(int(s.character.get("speed", 30)), data), "attacks": 0,
 			"attacked": false, "sneak": false}
@@ -870,9 +871,10 @@ static func player_move(s: GameSession, data: Dictionary, dir: int) -> Array[Str
 	if not bool(p.get("disengaged", false)):
 		for id: String in enemies(s):
 			var f := fighter(s, id)
-			if int(f["col"]) == int(p["col"]) and not _target_disabled(f):
+			if int(f["col"]) == int(p["col"]) and can_react(s, data, f):
 				var act := _best_action(data, f, "melee")
 				if not act.is_empty():
+					f["reacted"] = true
 					lines.append("%s бьёт вдогонку" % f["name"])
 					_enemy_attack(s, data, f, act, lines)
 	if str(s.combat.get("outcome", "")) == "dead" or int(s.character["hp"]) <= 0:
@@ -884,7 +886,98 @@ static func player_move(s: GameSession, data: Dictionary, dir: int) -> Array[Str
 		return lines
 	p["col"] = to
 	lines.append("%s: шаг на %d фт %s" % [s.character["name"], int(cfg(data)["col_ft"]), "вправо" if dir > 0 else "влево"])
+	_release_grapples(s, lines)
 	return lines
+
+
+# --- grapple and shove (v0.7.7) ---------------------------------------------------------------------------
+
+const SIZES: Array[String] = ["tiny", "small", "medium", "large", "huge", "gargantuan"]
+
+
+## "" when the hero can grapple or shove `target_id` now (instead of one attack of the Attack action, 5e), else a
+## localization key: the hero's turn, an attack left, the foe right next to the hero and at most one size larger.
+static func can_grapple(s: GameSession, data: Dictionary, target_id: String) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	var e := economy(s)
+	if int(e.get("attacks", 0)) <= 0 and int(e.get("action", 0)) <= 0:
+		return "COMBAT_NO_ACTION"
+	var t := fighter(s, target_id)
+	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
+		return "COMBAT_BAD_TARGET"
+	if cols_between(player(s), t) != 0:
+		return "COMBAT_OUT_OF_REACH"
+	if SIZES.find(str(_monster(data, t).get("size", "medium"))) > SIZES.find(hero_size(s, data)) + 1:
+		return "COMBAT_TOO_BIG"
+	return ""
+
+
+static func hero_size(s: GameSession, data: Dictionary) -> String:
+	return str(data["races"]["races"].get(str(s.character.get("race", "")), {}).get("size", "medium"))
+
+
+## Grapple (`shove` false: the foe is «схвачен», its speed 0, until the hero walks off) or shove (the foe falls
+## «лежит ничком»): the hero's Athletics against the foe's better of Athletics and Acrobatics (can_grapple first).
+## Takes one attack of the Attack action. Returns the lines.
+static func grapple(s: GameSession, data: Dictionary, target_id: String, shove: bool) -> Array[String]:
+	var c := s.character
+	var e := economy(s)
+	if int(e.get("attacks", 0)) > 0:
+		e["attacks"] = int(e["attacks"]) - 1
+	else:
+		e["action"] = int(e["action"]) - 1
+		e["attacks"] = int(CharacterRules.level_row(c, data).get("class_specific", {}).get("extra_attacks", 0))
+	e["attacked"] = true
+	var t := fighter(s, target_id)
+	var mods := ConditionRules.check_mods(c, data, {"skill": "athletics"})
+	var lines: Array[String] = []
+	lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))
+	var dis := not (mods["disadvantage"] as Array).is_empty()
+	var rolls := _d20(s.rng, false, dis)
+	var mine := _nat(rolls, false, dis) + int(c.get("skills", {}).get("athletics", 0))
+	var m := _monster(data, t)
+	var sk: Dictionary = m.get("skills", {})
+	var ab: Dictionary = m.get("abilities", {})
+	var theirs_bonus := maxi(int(sk.get("athletics", CharacterRules.mod(int(ab.get("str", 10))))), int(sk.get("acrobatics", CharacterRules.mod(int(ab.get("dex", 10))))))
+	var auto_lose := incapacitated(t)  # a foe that cannot act does not resist (5e: it fails Str / Dex)
+	var theirs := 0 if auto_lose else s.rng.randi_range(1, 20) + theirs_bonus
+	var won := not (mods["auto_fail"] as Array).size() > 0 and mine >= theirs
+	var what := "толкает, чтобы сбить с ног" if shove else "пытается схватить"
+	lines.append("%s %s %s: Атлетика %d против %d — %s" % [c.get("name", ""), what, t["name"], mine, theirs, "успех" if won else "не выходит"])
+	if won:
+		if shove:
+			_hold(t, "prone")
+			lines.append("%s падает" % t["name"])
+		else:
+			_hold(t, "grappled")
+			t["grappled_by_player"] = true
+			lines.append("%s схвачен: не может отойти" % t["name"])
+	return lines
+
+
+## A condition with no timer: it lasts until something ends it (standing up, the hero walking off).
+static func _hold(f: Dictionary, cond: String) -> void:
+	if not _has(f, cond):
+		(f["conditions"] as Array).append(cond)
+
+
+## The hero walked off: the foes the hero held are free (Lines).
+static func _release_grapples(s: GameSession, lines: Array[String]) -> void:
+	for id: String in enemies(s):
+		var f := fighter(s, id)
+		if bool(f.get("grappled_by_player", false)):
+			f.erase("grappled_by_player")
+			_remove_condition(f, "grappled")
+			lines.append("%s больше не схвачен" % f["name"])
+
+
+## A foe can strike the leaving hero (5e, v0.7.7): its reaction is unspent this round, it can act (not
+## incapacitated, paralysed, stunned, asleep), is not charmed by the hero and sees the hero (not blinded, the hero
+## not invisible). A prone or restrained foe still can.
+static func can_react(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
+	return not bool(f.get("reacted", false)) and not incapacitated(f) and not _has(f, "charmed") and not _has(f, "blinded") \
+		and not ConditionRules.invisible(s.character, data)
 
 
 ## The rest of the turn is skipped: next fighter (the UI plays the others one by one via next_actor()).

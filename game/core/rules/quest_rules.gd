@@ -248,7 +248,7 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 	var att: Dictionary = r.get("attitude", {})
 	var world := WorldView.new(data["world"])
 	for npc: String in att:
-		s.attitudes[npc] = clampi(s.attitude(npc) + int(att[npc]), -3, 3)
+		s.shift_attitude(npc, int(att[npc]), data)
 		lines.append("%s: отношение %s" % [world.npc(npc).get("name", npc), "лучше" if int(att[npc]) > 0 else "хуже"])
 	lines.append_array(XpRules.award(c, data, int(r.get("xp", 0)), "задание"))
 

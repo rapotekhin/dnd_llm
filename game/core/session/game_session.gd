@@ -156,6 +156,17 @@ func attitude(id: String) -> int:
 	return int(attitudes.get(id, 0))
 
 
+## Moves an NPC's attitude by `delta` within rules.attitude_range (v0.7.7: the range is data, not code).
+func shift_attitude(id: String, delta: int, data: Dictionary) -> void:
+	var r := attitude_bounds(data)
+	attitudes[id] = clampi(attitude(id) + delta, r.x, r.y)
+
+
+static func attitude_bounds(data: Dictionary) -> Vector2i:
+	var r: Array = data["rules"].get("attitude_range", [-3, 3])
+	return Vector2i(int(r[0]), int(r[1]))
+
+
 func in_conversation() -> bool:
 	return mode == MODE_SOCIAL or mode == MODE_TRADE
 
