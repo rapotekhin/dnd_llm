@@ -22,7 +22,7 @@ func run() -> void:
 		return
 	var s: GameSession = gs.session
 	var c := s.character
-	_learn(c, ["bless", "bane", "guiding_bolt", "shield_of_faith", "sanctuary", "fly", "haste", "hunters_mark"])
+	_learn(c, ["bless", "bane", "guiding_bolt", "shield_of_faith", "sanctuary", "fly", "haste", "hunters_mark", "moonbeam", "spiritual_weapon"])
 	c["temp_hp"] = 500  # the hero lasts the whole scenario
 
 	# v0.7.13.1: Bless, then Bane over it.
@@ -165,6 +165,46 @@ func run() -> void:
 	step("the mark's d6 on a hit", probe.any(func(l: String) -> bool: return l.contains("Метка охотника: ещё")), " · ".join(probe))
 	await shot("hunters_mark")
 
+	# v0.7.13.5: Moonbeam on the wolf's column (the question about the mark), the label on the field; Spiritual Weapon's button.
+	await press(find(screen(), "EndTurnButton"))
+	await _my_turn(gs, s)
+	c["slots_max"] = [4, 3, 3, 0, 0]
+	c["slots_used"] = [0, 0, 0, 0, 0]
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	cs = screen()
+	_tab(cs, "COMBAT_TAB_SPELLS")
+	await frames(2)
+	var mb: Button = find(cs, "Cast_moonbeam")
+	if step("Moonbeam on the tab", mb != null):
+		await press(mb)
+		await frames(2)
+		await press(find(cs, "Foe_" + str(wolf["id"])))
+		await frames(3)
+		var yes2: Button = find(screen(), "Ask_conc_yes")
+		if yes2 != null:
+			await press(yes2)
+			await frames(4)
+	step("the beam on the field", not SpellEffects.zone_names(s, int(wolf["col"])).is_empty(), _tail(3))
+	c["slots_max"] = [4, 3, 3, 0, 0]  # the cast refreshed the sheet (a level-1 cleric again)
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	_tab(screen(), "COMBAT_TAB_SPELLS")
+	await frames(2)
+	var sw: Button = find(screen(), "Cast_spiritual_weapon")
+	if step("Spiritual Weapon on the tab", sw != null):
+		await press(sw)
+		await frames(2)
+		await press(find(screen(), "Foe_" + str(wolf["id"])))
+		await frames(4)
+	_tab(screen(), "COMBAT_TAB_SPELLS")
+	await frames(2)
+	step("its button for the next turns", find(screen(), "Feat_spell_spiritual_weapon") != null, _tail(3))
+	await shot("moonbeam")
+	_seen.clear()
+	await press(find(screen(), "EndTurnButton"))
+	await _my_turn(gs, s)
+	step("the wolf burns in the beam", _seen.any(func(l: String) -> bool: return l.contains("Лунный луч: Волк")), _tail(4))
 
 func _learn(c: Dictionary, ids: Array) -> void:
 	var sp: Dictionary = c["spells"]

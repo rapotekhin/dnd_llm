@@ -318,6 +318,9 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 		head.theme_type_variation = UiTheme.MUTED_LABEL
 		var d := absi(col - pcol) * int(CombatRules.cfg(data)["col_ft"])
 		head.text = tr("COMBAT_MELEE") if d == 0 else tr("COMBAT_FT").format({"ft": d})
+		var zone_names := SpellEffects.zone_names(s, col)  # v0.7.13.5: Moonbeam, Spirit Guardians…
+		if not zone_names.is_empty():
+			head.text += "\n" + ", ".join(zone_names)
 		box.add_child(head)
 		if col == pcol:
 			var me := Label.new()
@@ -482,10 +485,22 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t),
 					func(t: String) -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t))
 				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id))
+		for sa: Dictionary in SpellEffects.actions(s, data):  # v0.7.13.5: the spells that go on each turn
+			var said := str(sa["id"])
+			var slabel := "%s%s" % [sa["name"], tr("COMBAT_BONUS_SHORT") if str(sa["cost"]) == "bonus" else ""]
+			if bool(sa["target"]):
+				var stb := _action(sp, "Feat_" + said, slabel, mine, func(t: String) -> String: return GameState.combat_feature(said, t),
+					func(t: String) -> String: return FeatureRules.can_act(s, data, said, t), func(_t: String) -> Dictionary: return {})
+				stb.tooltip_text = str(sa["tip"])
+			else:
+				var swhy := FeatureRules.can_act(s, data, said)
+				var sub := _button(sp, "Feat_" + said, slabel, mine and swhy.is_empty())
+				sub.tooltip_text = str(sa["tip"])
+				sub.pressed.connect(func() -> void: _do(GameState.combat_feature(said)))
 	# Features: limited uses with an action of their own, then the feature actions (v0.7.10).
 	var res := FeatureUses.lines(c, data).filter(func(r: Dictionary) -> bool:
 		return str(FeatureUses.table(data).get(str(r["id"]), {}).get("combat_cost", "action")) != "never")
-	var feats := FeatureRules.actions(s, data)
+	var feats := FeatureRules.actions(s, data).filter(func(a: Dictionary) -> bool: return not str(a["id"]).begins_with("spell_"))
 	if not res.is_empty() or not feats.is_empty():
 		var fb := _tab_box("COMBAT_TAB_FEATURES")
 		for fa: Dictionary in feats:

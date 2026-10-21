@@ -21,7 +21,7 @@ static func spec(data: Dictionary, spell_id: String) -> Dictionary:
 ## A spell the hero casts on themselves (no target to pick).
 static func self_spell(data: Dictionary, spell_id: String) -> bool:
 	var sp := spec(data, spell_id)
-	return not sp.is_empty() and not bool(sp.get("foe", false)) and not bool(sp.get("foe_target", false))
+	return not sp.is_empty() and not bool(sp.get("foe", false)) and not bool(sp.get("foe_target", false)) and not sp.has("sustained")
 
 
 static func foe_spell(data: Dictionary, spell_id: String) -> bool:
@@ -429,3 +429,243 @@ static func blade_profile(c: Dictionary) -> Dictionary:
 			"bonus": 0, "type": str(e.get("blade", "fire")), "melee": true, "range": [], "light": false, "id": "", "magical": true,
 			"silvered": false, "crit_min": 20, "str_based": false}
 	return {}
+
+
+# --- sustained damage (v0.7.13.5) ----------------------------------------------------------------------
+
+
+static func sustained(data: Dictionary, spell_id: String) -> Dictionary:
+	return spec(data, spell_id).get("sustained", {})
+
+
+static func _dice(data: Dictionary, spell_id: String, slot: int) -> String:
+	var sus := sustained(data, spell_id)
+	var spell: Dictionary = data["spells"][spell_id]
+	if sus.has("dice"):
+		var best := ""
+		for k: String in sus["dice"]:
+			if slot >= int(k) or best.is_empty():
+				best = str(sus["dice"][k])
+		return best
+	return CombatRules._spell_dice(spell, maxi(slot, int(spell["level"])), 1)
+
+
+static func zones(s: GameSession) -> Array:
+	return s.combat.get("zones", [])
+
+
+## The column a zone stands on now (Spirit Guardians follow the hero).
+static func zone_col(s: GameSession, z: Dictionary) -> int:
+	return int(CombatRules.player(s)["col"]) if bool(z.get("follow", false)) else int(z["col"])
+
+
+## The names of the zones on a column, for the field.
+static func zone_names(s: GameSession, col: int) -> Array[String]:
+	var out: Array[String] = []
+	for z: Dictionary in zones(s):
+		if zone_col(s, z) == col:
+			out.append(str(z["name"]))
+	return out
+
+
+## The spell comes into the fight: a zone, or the first strike and the button for the next ones. Lines.
+static func start_sustained(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String, lines: Array[String]) -> void:
+	var c := s.character
+	var sus := sustained(data, spell_id)
+	var spell: Dictionary = data["spells"][spell_id]
+	var dice := _dice(data, spell_id, slot)
+	var t := CombatRules.fighter(s, target_id)
+	if t.is_empty() and str(sus["kind"]) in ["attack", "heat"]:  # a touch: the nearest foe in the hero's column
+		for id: String in CombatRules.enemies(s):
+			if CombatRules.cols_between(CombatRules.fighter(s, id), CombatRules.player(s)) == 0:
+				t = CombatRules.fighter(s, id)
+				break
+	var rounds := ConditionRules.spell_rounds(data, spell_id)
+	var e := {"condition": "", "source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])},
+		"concentration": bool(spell.get("concentration", false)), "ends": {"at": ConditionRules.now(s) + rounds} if rounds > 0 else {},
+		"sustained": spell_id, "dice": dice, "target": str(t.get("id", ""))}
+	if str(sus["kind"]) == "zone":
+		if not s.combat.has("zones"):
+			s.combat["zones"] = []
+		var col := int(CombatRules.player(s)["col"]) if bool(sus.get("follow", false)) or t.is_empty() else int(t["col"])
+		(s.combat["zones"] as Array).append({"spell": spell_id, "name": str(spell["name"]), "col": col, "follow": bool(sus.get("follow", false)),
+			"dice": dice, "type": str(sus["type"]), "save": str(sus.get("save", "")), "on": sus.get("on", []), "dc": int(c.get("spell_dc", 10)),
+			"slow": bool(sus.get("slow", false))})
+		lines.append("%s: %s" % [spell["name"], "вокруг героя" if bool(sus.get("follow", false)) else "встаёт на поле"])
+	if sus.has("cost"):
+		ConditionRules.add_effect(c, e)
+	if bool(sus.get("now", false)) and not t.is_empty():
+		lines.append_array(_hit(s, data, spell_id, e, t))
+
+
+## The buttons of the spells that go on each turn: [{id, name, cost, target, tip}].
+static func actions(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for e: Dictionary in hero_effects(s.character, "sustained"):
+		var sus := sustained(data, str(e["sustained"]))
+		if not sus.has("cost"):
+			continue
+		var fixed := str(sus["kind"]) == "heat"
+		out.append({"id": "spell_" + str(e["sustained"]), "name": "%s: %s" % [e["source"]["name"], sus.get("label", "")], "cost": str(sus["cost"]),
+			"target": not fixed, "tip": text(data, spec(data, str(e["sustained"])))})
+	return out
+
+
+static func _effect_of(s: GameSession, spell_id: String) -> Dictionary:
+	for e: Dictionary in hero_effects(s.character, "sustained"):
+		if str(e["sustained"]) == spell_id:
+			return e
+	return {}
+
+
+## "" when the sustained spell's button can go at `target_id` now.
+static func can_act(s: GameSession, data: Dictionary, id: String, target_id: String) -> String:
+	var spell_id := id.trim_prefix("spell_")
+	var e := _effect_of(s, spell_id)
+	if e.is_empty():
+		return "COMBAT_NO_FEATURE"
+	var sus := sustained(data, spell_id)
+	var t := CombatRules.fighter(s, target_id if str(sus["kind"]) != "heat" else str(e.get("target", "")))
+	if t.is_empty() or str(t.get("status")) != "active":
+		return "COMBAT_BAD_TARGET"
+	var reach := 0 if str(sus["kind"]) == "attack" and spell_id == "vampiric_touch" else CombatRules.range_cols(data, int(data["spells"][spell_id].get("range_ft", 60)))
+	if str(sus["kind"]) == "zone":
+		reach = int(sus.get("move", 1))
+		if absi(int(t["col"]) - _zone_of(s, spell_id)) > reach and not bool(sus.get("ram", false)):
+			return "COMBAT_OUT_OF_RANGE"
+		return ""
+	if CombatRules.cols_between(t, CombatRules.player(s)) > reach:
+		return "COMBAT_OUT_OF_RANGE"
+	return ""
+
+
+static func _zone_of(s: GameSession, spell_id: String) -> int:
+	for z: Dictionary in zones(s):
+		if str(z["spell"]) == spell_id:
+			return zone_col(s, z)
+	return 0
+
+
+## The button: the next strike, or the zone moved toward the target (the sphere strikes where it comes). Lines.
+static func act(s: GameSession, data: Dictionary, id: String, target_id: String) -> Array[String]:
+	var spell_id := id.trim_prefix("spell_")
+	var e := _effect_of(s, spell_id)
+	var sus := sustained(data, spell_id)
+	var econ := CombatRules.economy(s)
+	econ[str(sus["cost"])] = int(econ[str(sus["cost"])]) - 1
+	var lines: Array[String] = []
+	if str(sus["kind"]) == "zone":
+		for z: Dictionary in zones(s):
+			if str(z["spell"]) != spell_id:
+				continue
+			var to := int(CombatRules.fighter(s, target_id)["col"])
+			var step := clampi(to - int(z["col"]), -int(sus.get("move", 1)), int(sus.get("move", 1)))
+			z["col"] = int(z["col"]) + step
+			lines.append("%s сдвигается" % z["name"])
+			if bool(sus.get("ram", false)):
+				for fid: String in CombatRules.enemies(s):
+					var f := CombatRules.fighter(s, fid)
+					if int(f["col"]) == int(z["col"]):
+						lines.append_array(_zone_hit(s, data, z, f))
+			else:
+				for fid: String in CombatRules.enemies(s):
+					var f := CombatRules.fighter(s, fid)
+					if int(f["col"]) == int(z["col"]) and (z["on"] as Array).has("enter"):
+						lines.append_array(_zone_hit(s, data, z, f))
+		return lines
+	var t := CombatRules.fighter(s, target_id if str(sus["kind"]) != "heat" else str(e.get("target", "")))
+	if str(sus["kind"]) == "strike":
+		for fid: String in CombatRules.enemies(s):
+			var f := CombatRules.fighter(s, fid)
+			if int(f["col"]) == int(t["col"]):
+				lines.append_array(_save_hit(s, data, str(e["source"]["name"]), str(sus["type"]), str(sus.get("save", "dex")), str(e["dice"]),
+					int(s.character.get("spell_dc", 10)), f, true))
+		return lines
+	return _hit(s, data, spell_id, e, t)
+
+
+## A strike of an attack / heat / strike spell at `t`. Lines.
+static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictionary, t: Dictionary) -> Array[String]:
+	var c := s.character
+	var sus := sustained(data, spell_id)
+	var name := str(e["source"]["name"])
+	var lines: Array[String] = []
+	match str(sus["kind"]):
+		"attack":
+			var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "wis"))))
+			var res := CombatRules._attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), false,
+				not CombatRules.hero_attack_dis(s, data, t).is_empty(), t, str(e["dice"]).replace("+MOD", ""), ab if str(e["dice"]).contains("MOD") else 0,
+				str(sus["type"]), lines)
+			if bool(res["hit"]) and bool(sus.get("drain", false)):
+				var back := int(res["damage"]) / 2
+				var was := int(c["hp"])
+				c["hp"] = mini(int(c["max_hp"]), was + back)
+				lines.append("%s: +%d HP" % [name, int(c["hp"]) - was])
+		"heat":
+			var dmg := CombatRules._resist(data, t, str(sus["type"]), CombatRules.roll_dice(s.rng, str(e["dice"])))
+			lines.append("%s: %s — %d (огонь)" % [name, t["name"], dmg])
+			CombatRules._hurt_enemy(s, data, t, dmg, lines, str(sus["type"]))
+			if str(t.get("status")) == "active" and not CombatRules._monster_save(s, data, t, "con", int(c.get("spell_dc", 10)), ["magic"]):
+				t["mocked"] = true  # the burning metal: disadvantage on its next attack
+				lines.append("%s едва держит раскалённое — атака с помехой" % t["name"])
+		"strike":
+			for fid: String in CombatRules.enemies(s):
+				var f := CombatRules.fighter(s, fid)
+				if int(f["col"]) == int(t["col"]):
+					lines.append_array(_save_hit(s, data, name, str(sus["type"]), str(sus.get("save", "dex")), str(e["dice"]), int(c.get("spell_dc", 10)), f, true))
+	return lines
+
+
+static func _save_hit(s: GameSession, data: Dictionary, name: String, dtype: String, save: String, dice: String, dc: int, f: Dictionary, half: bool) -> Array[String]:
+	var lines: Array[String] = []
+	if str(f.get("status")) != "active":
+		return lines
+	var dmg := CombatRules.roll_dice(s.rng, dice)
+	var ok := not save.is_empty() and CombatRules._monster_save(s, data, f, save, dc, ["magic"])
+	if ok:
+		dmg = dmg / 2 if half else 0
+	dmg = CombatRules._resist(data, f, dtype, dmg)
+	lines.append("%s: %s — %s%d (%s)" % [name, f["name"], ("спасбросок %s %s, " % [CombatRules.ab_name(save), "успех" if ok else "провал"]) if not save.is_empty() else "",
+		dmg, data["misc"]["damage_types"].get(dtype, dtype)])
+	if dmg > 0:
+		CombatRules._hurt_enemy(s, data, f, dmg, lines, dtype)
+	return lines
+
+
+static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary) -> Array[String]:
+	return _save_hit(s, data, str(z["name"]), str(z["type"]), str(z["save"]), str(z["dice"]), int(z["dc"]), f, true)
+
+
+## A foe and the zones: `when` — start (of its turn), enter (a column it moves into; once a turn a zone), end. Lines.
+static func zone_tick(s: GameSession, data: Dictionary, f: Dictionary, when: String) -> Array[String]:
+	var lines: Array[String] = []
+	if when == "start":
+		f["zoned"] = []
+	for z: Dictionary in zones(s):
+		if str(f.get("status")) != "active" or zone_col(s, z) != int(f["col"]) or not (z["on"] as Array).has(when):
+			continue
+		if when == "enter" and (f.get("zoned", []) as Array).has(str(z["spell"])):
+			continue
+		if not f.has("zoned"):
+			f["zoned"] = []
+		(f["zoned"] as Array).append(str(z["spell"]))
+		lines.append_array(_zone_hit(s, data, z, f))
+	return lines
+
+
+## A foe that starts its turn in a slowing zone (Spirit Guardians, Spike Growth) moves half: one column less, at least 0.
+static func slowed(s: GameSession, f: Dictionary) -> bool:
+	for z: Dictionary in zones(s):
+		if bool(z.get("slow", false)) and zone_col(s, z) == int(f["col"]):
+			return true
+	return false
+
+
+## The concentration (or the time) ends: the zones of the spell go.
+static func end_zones(s: GameSession, spell_id: String) -> Array[String]:
+	var lines: Array[String] = []
+	for z: Dictionary in zones(s).duplicate():
+		if str(z["spell"]) == spell_id:
+			zones(s).erase(z)
+			lines.append("%s гаснет" % z["name"])
+	return lines

@@ -440,6 +440,10 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 		for k: String in ["hp", "max_hp", "ac", "col", "init"]:
 			if f.has(k):
 				f[k] = int(f[k])
+		_whole_numbers(f)  # the riders of v0.7.13 (guided, slowed, oiled…) and the timers
+	for z: Variant in c.get("zones", []):  # the spell zones of v0.7.13.5
+		if z is Dictionary:
+			_whole_numbers(z)
 	for k: String in ["ok", "fail"]:
 		if c.get("death_saves", {}).has(k):
 			c["death_saves"][k] = int(c["death_saves"][k])

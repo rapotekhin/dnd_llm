@@ -566,3 +566,90 @@ func test_flame_blade_attacks_with_the_spell() -> void:
 		if int(f["hp"]) < hp:
 			break
 	assert_int(int(f["hp"])).is_less(hp)
+
+
+# --- batch 6 (v0.7.13.5): sustained damage ----------------------------------------------------------------
+
+
+func _cast_at(s: GameSession, id: String, slot: int, target: String) -> Array[String]:
+	_learn(s, id)
+	s.combat["economy"]["action"] = 1
+	s.combat["economy"]["bonus"] = 1
+	return CombatRules.player_cast(s, data, id, slot, target)
+
+
+func test_spiritual_weapon_strikes_now_and_each_turn() -> void:
+	var s := _hero("cleric_branko", 3)
+	var f := _fight(s, [{"monster": "ogre", "col": 1}])[0]
+	f["ac"] = 1
+	var lines := _cast_at(s, "spiritual_weapon", 2, str(f["id"]))
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("Духовное оружие") and l.contains("КД"))).override_failure_message(" · ".join(lines)).is_true()
+	assert_bool(FeatureRules.actions(s, data).any(func(a: Dictionary) -> bool: return str(a["id"]) == "spell_spiritual_weapon")).is_true()
+	s.combat["economy"]["bonus"] = 1
+	assert_str(FeatureRules.can_act(s, data, "spell_spiritual_weapon", str(f["id"]))).is_empty()
+	var again := FeatureRules.act(s, data, "spell_spiritual_weapon", str(f["id"]))
+	assert_int(int(s.combat["economy"]["bonus"])).is_equal(0)
+	assert_bool(again.any(func(l: String) -> bool: return l.contains("КД"))).is_true()
+
+
+func test_moonbeam_burns_who_starts_in_it_and_moves() -> void:
+	var s := _hero("druid_olha", 3)
+	var foes := _fight(s, [{"monster": "ogre", "col": 2}, {"monster": "goblin", "col": 3}])
+	_cast_at(s, "moonbeam", 2, str(foes[0]["id"]))
+	assert_array(SpellEffects.zone_names(s, 2)).contains(["Лунный луч"])
+	var hp := int(foes[0]["hp"])
+	var lines := SpellEffects.zone_tick(s, data, foes[0], "start")
+	assert_int(int(foes[0]["hp"])).override_failure_message(" · ".join(lines)).is_less_equal(hp)
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("спасбросок Тел"))).is_true()
+	s.combat["economy"]["action"] = 1
+	FeatureRules.act(s, data, "spell_moonbeam", str(foes[1]["id"]))
+	assert_array(SpellEffects.zone_names(s, 3)).contains(["Лунный луч"])
+	ConditionRules.end_concentration(s, data, "проверка")
+	assert_array(SpellEffects.zones(s)).is_empty()
+
+
+func test_spirit_guardians_follow_and_slow() -> void:
+	var s := _hero("cleric_branko", 5)
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	_cast_at(s, "spirit_guardians", 3, "")
+	assert_array(SpellEffects.zone_names(s, 0)).contains(["Духовные стражи"])
+	assert_bool(SpellEffects.slowed(s, f)).is_true()
+	CombatRules.player(s)["col"] = 1
+	assert_array(SpellEffects.zone_names(s, 1)).contains(["Духовные стражи"])
+	assert_bool(SpellEffects.slowed(s, f)).is_false()
+
+
+func test_spike_growth_hurts_who_walks_in() -> void:
+	var s := _hero("druid_olha", 3)
+	var f := _fight(s, [{"monster": "ogre", "col": 2}])[0]
+	_cast_at(s, "spike_growth", 2, str(f["id"]))
+	f["col"] = 1
+	var zone: Dictionary = SpellEffects.zones(s)[0]
+	zone["col"] = 1
+	var hp := int(f["hp"])
+	var lines := SpellEffects.zone_tick(s, data, f, "enter")
+	assert_int(int(f["hp"])).override_failure_message(" · ".join(lines)).is_less(hp)
+	assert_int(SpellEffects.zone_tick(s, data, f, "enter").size()).is_equal(0)  # once a turn
+
+
+func test_call_lightning_heat_metal_vampiric_touch() -> void:
+	var s := _hero("druid_olha", 5)
+	var f := _fight(s, [{"monster": "knight" if data["monsters"].has("knight") else "ogre", "col": 1}])[0]
+	var lines := _cast_at(s, "call_lightning", 3, str(f["id"]))
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("Призыв молнии:"))).override_failure_message(" · ".join(lines)).is_true()
+	ConditionRules.end_concentration(s, data, "проверка")
+	var hm := _cast_at(s, "heat_metal", 2, str(f["id"]))
+	assert_bool(hm.any(func(l: String) -> bool: return l.contains("(огонь)"))).override_failure_message(" · ".join(hm)).is_true()
+	assert_bool(SpellEffects.actions(s, data).any(func(a: Dictionary) -> bool: return not bool(a["target"]))).is_true()
+	ConditionRules.end_concentration(s, data, "проверка")
+	var w := _hero("wizard_yalika", 5)
+	var g := _fight(w, [{"monster": "ogre", "col": 0}])[0]
+	g["ac"] = 1
+	w.character["hp"] = 1
+	var vt: Array[String] = []
+	for i in 4:
+		vt = _cast_at(w, "vampiric_touch", 3, "")
+		if vt.any(func(l: String) -> bool: return l.contains("+") and l.contains("HP")):
+			break
+		ConditionRules.end_concentration(w, data, "ещё раз")
+	assert_int(int(w.character["hp"])).override_failure_message(" · ".join(vt)).is_greater(1)

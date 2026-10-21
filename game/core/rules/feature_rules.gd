@@ -299,6 +299,8 @@ static func actions(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	if c.has("wild_shape"):
 		add.call("revert", "Вернуть облик", "bonus", false, "Снова стать собой; хиты героя — какими были")
 		return out
+	for sa: Dictionary in SpellEffects.actions(s, data):  # v0.7.13.5: the spells that go on (the Spells tab draws them)
+		out.append(sa)
 	var blade := SpellEffects.blade_profile(c)  # v0.7.13.4: the spells' own buttons
 	if not blade.is_empty():
 		add.call("flame_blade", "%s: удар (%s)" % [blade["name"], str(blade["dice"]).replace("d", "к")], "action", true, "Рукопашная атака заклинанием огненным клинком")
@@ -353,6 +355,8 @@ static func can_act(s: GameSession, data: Dictionary, id: String, target_id: Str
 	var cost := str(spec["cost"])
 	if cost != "free" and int(e.get(cost, 0)) <= 0:
 		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
+	if id.begins_with("spell_"):
+		return SpellEffects.can_act(s, data, id, target_id)
 	var ki := {"flurry": 1, "patient_defense": 1, "step_disengage": 1, "step_dash": 1, "stunning": 0}
 	for how: String in OPEN_HAND:
 		ki["flurry_" + how] = 1
@@ -387,6 +391,8 @@ static func act(s: GameSession, data: Dictionary, id: String, target_id: String 
 	var spend := func(cost: String) -> void:
 		if cost != "free":
 			e[cost] = int(e[cost]) - 1
+	if id.begins_with("spell_"):
+		return SpellEffects.act(s, data, id, target_id)
 	match id:
 		"flame_blade":
 			spend.call("action")

@@ -977,6 +977,7 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String) -> Arr
 	if spell_id.is_empty() or not active(s):
 		return lines
 	lines.append_array(SpellEffects.end_on_foes(s, spell_id))
+	lines.append_array(SpellEffects.end_zones(s, spell_id))  # v0.7.13.5
 	if spell_id == "haste":  # v0.7.13.3: a wave of lethargy
 		s.character["lethargy"] = true
 		lines.append("Ускорение кончилось — на ход накатывает вялость")
@@ -1207,6 +1208,9 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		lines.append_array(end_spell(s, data, held))
 	if cfg(data)["condition_spells"].has(spell_id) and not target_id.is_empty():
 		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
+		return lines
+	if not SpellEffects.sustained(data, spell_id).is_empty():  # v0.7.13.5: zones and strikes each turn
+		SpellEffects.start_sustained(s, data, spell_id, slot, target_id, lines)
 		return lines
 	if bool(SpellEffects.spec(data, spell_id).get("foe_target", false)):  # Hunter's Mark (v0.7.13.4)
 		lines.append_array(SpellEffects.apply_self(s, data, spell_id, slot))
@@ -1858,6 +1862,8 @@ static func _end_actor(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 		lines.append("%s: кислота жжёт — %d" % [f["name"], acid])
 		_hurt_enemy(s, data, f, acid, lines, "acid")
 	if str(f.get("status")) == "active":
+		lines.append_array(SpellEffects.zone_tick(s, data, f, "end"))  # Flaming Sphere (v0.7.13.5)
+	if str(f.get("status")) == "active":
 		MonsterRules.end_turn(s, data, f, lines)
 		_tick_conditions(s, data, f, lines)
 	_check_end(s, data, lines)
@@ -1919,6 +1925,9 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	var p := player(s)
 	var m := _monster(data, f)
 	MonsterRules.start_turn(s, data, f, lines)
+	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # Moonbeam, Spirit Guardians (v0.7.13.5)
+	if str(f["status"]) != "active":
+		return
 	if f.has("burning"):  # alchemist's fire (v0.7.12): burns until a DEX save DC 10 puts it out
 		var burn := _resist(data, f, "fire", roll_dice(s.rng, str(f["burning"])))
 		lines.append("%s горит: %d (огонь)" % [f["name"], burn])
@@ -1940,6 +1949,8 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 			f["fleeing"] = true
 			lines.append("%s дрогнул и пытается бежать" % f["name"])
 	var steps := _move_cols(int(m.get("speed", 30)) - int(f.get("slowed", 0)), data)
+	if SpellEffects.slowed(s, f) and steps > 0:  # a slowing zone: half the way (v0.7.13.5)
+		steps = maxi(1, steps / 2) if int(m.get("speed", 30)) >= 60 else 0 if s.rng.randi_range(0, 1) == 0 else 1
 	if _has(f, "restrained") or _has(f, "grappled"):
 		steps = 0
 	if bool(f.get("fleeing", false)):
@@ -2017,6 +2028,9 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	while moved < steps and cols_between(f, p) > 0:
 		f["col"] = int(f["col"]) + dir
 		moved += 1
+		lines.append_array(SpellEffects.zone_tick(s, data, f, "enter"))  # v0.7.13.5
+		if str(f["status"]) != "active":
+			return
 	f["moved"] = moved
 	_find_hidden(s, f, lines)
 	if cols_between(f, p) == 0 and not melee.is_empty():
@@ -2033,6 +2047,9 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	while moved < steps * 2 and cols_between(f, p) > 0 and steps > 0:
 		f["col"] = int(f["col"]) + dir
 		moved += 1
+		lines.append_array(SpellEffects.zone_tick(s, data, f, "enter"))
+		if str(f["status"]) != "active":
+			return
 	_find_hidden(s, f, lines)
 	lines.append("%s бежит ближе" % f["name"] if cols_between(f, p) > 0 else "%s сближается вплотную" % f["name"])
 
