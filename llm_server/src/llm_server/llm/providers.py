@@ -1,12 +1,17 @@
-"""Which OpenRouter providers serve a model (the author's wish after a slow day, v0.7.14.4): the `top` cheapest of a
+"""Which OpenRouter providers serve a model (the author's wish after a slow day, v0.7.14.5): the `top` cheapest of a
 typical turn that support tools and were up in the last 30 minutes. A request goes only to them, cheapest first, and
-OpenRouter moves the ones slower than `min_tps` (p50, its own 5-minute stats) to the end — a slow cheap provider is
-skipped for a fast one of the three, never for an expensive one. The list is refreshed every `ttl` seconds; when
-OpenRouter cannot be reached the old list stays (or none: plain price sorting)."""
+OpenRouter moves the ones slower than `min_tps` (p50, its own 5-minute stats) to the end. Its stats come from short
+requests, so they missed a provider crawling at 14 tok/s on our 40k-token turns: every request of ours is timed too
+(`observe`), and a provider slower than `min_turn_tps` in the last `SPEED_WINDOW` seconds leaves the three until
+then — a slow cheap provider is skipped for a fast one of the three, never for an expensive one; when all three are
+slow, all three stay. The price list is refreshed every `ttl` seconds; when OpenRouter cannot be reached the old list
+stays (or none: plain price sorting)."""
 
 import logging
 import os
+import statistics
 import time
+from collections import deque
 
 import httpx
 
@@ -17,6 +22,8 @@ TURN_INPUT_TOKENS = 20_000  # a typical turn of the master (traces: 14–45k in,
 TURN_OUTPUT_TOKENS = 1_500
 NEEDS = ("tools", "tool_choice")
 MIN_UPTIME = 90.0
+SPEED_WINDOW = 1800.0  # seconds an observed speed counts
+MIN_SAMPLE_TOKENS = 150  # shorter answers say little about the speed
 
 
 def top() -> int:
@@ -27,8 +34,17 @@ def min_tps() -> float:
     return float(os.environ.get("LLM_SERVER_MIN_TPS", "30") or 0)
 
 
+def min_turn_tps() -> float:
+    return float(os.environ.get("LLM_SERVER_MIN_TURN_TPS", "20") or 0)
+
+
 def cheapest(endpoints: list[dict], n: int) -> list[str]:
     """Tags of the `n` cheapest endpoints for a typical turn that support tools and are up."""
+    return [tag for tag, _ in ranked(endpoints)[:n]]
+
+
+def ranked(endpoints: list[dict]) -> list[tuple[str, str]]:
+    """(tag, provider name) of the endpoints that support tools and are up, cheapest for a typical turn first."""
     ok = []
     for e in endpoints:
         params = e.get("supported_parameters") or []
@@ -42,19 +58,38 @@ def cheapest(endpoints: list[dict], n: int) -> list[str]:
             continue
         tag = str(e.get("tag") or "")
         if tag:
-            ok.append((cost, tag))
+            ok.append((cost, tag, str(e.get("provider_name") or "")))
     ok.sort()
-    return [tag for _, tag in ok[:n]]
+    return [(tag, name) for _, tag, name in ok]
 
 
 class ProviderPicker:
     def __init__(self, ttl: float = 900.0):
         self.ttl = ttl
-        self._lists: dict[str, list[str]] = {}
+        self._ranked: dict[str, list[tuple[str, str]]] = {}
         self._at: dict[str, float] = {}
+        self._speed: dict[str, deque[tuple[float, float]]] = {}
 
     def providers(self, model: str) -> list[str]:
-        return self._lists.get(model, [])
+        """The `top` cheapest, without the ones observed slow (all of them when every one is slow)."""
+        three = self._ranked.get(model, [])[:top()]
+        fast = [tag for tag, name in three if not self.slow(name)]
+        return fast or [tag for tag, _ in three]
+
+    def observe(self, provider: str, output_tokens: int, seconds: float) -> None:
+        """One request of ours: who answered, how many tokens, how long (the prompt's reading included)."""
+        if not provider or output_tokens < MIN_SAMPLE_TOKENS or seconds <= 0:
+            return
+        was_slow = self.slow(provider)
+        self._speed.setdefault(provider, deque(maxlen=8)).append((time.monotonic(), output_tokens / seconds))
+        if self.slow(provider) and not was_slow:
+            log.warning("provider %s is slow now (%.1f tok/s < %s): left out for %d min", provider,
+                        output_tokens / seconds, min_turn_tps(), SPEED_WINDOW // 60)
+
+    def slow(self, provider: str) -> bool:
+        now = time.monotonic()
+        recent = [tps for at, tps in self._speed.get(provider, ()) if now - at < SPEED_WINDOW]
+        return bool(recent) and min_turn_tps() > 0 and statistics.median(recent) < min_turn_tps()
 
     async def refresh(self, model: str, client: httpx.AsyncClient | None = None) -> list[str]:
         """The current list, fetched again when older than `ttl`."""
@@ -72,11 +107,11 @@ class ProviderPicker:
         except (httpx.HTTPError, KeyError, ValueError, TypeError) as exc:
             log.warning("cannot load OpenRouter providers of %s: %s", model, exc)
             return self.providers(model)
-        picked = cheapest(endpoints, top())
-        if picked:
-            if picked != self._lists.get(model):
-                log.info("providers of %s: %s (min %s tok/s)", model, ", ".join(picked), min_tps())
-            self._lists[model] = picked
+        order = ranked(endpoints)
+        if order:
+            if order[:top()] != self._ranked.get(model, [])[:top()]:
+                log.info("providers of %s: %s (min %s tok/s)", model, ", ".join(tag for tag, _ in order[:top()]), min_tps())
+            self._ranked[model] = order
         return self.providers(model)
 
 

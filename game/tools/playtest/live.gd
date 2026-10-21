@@ -6,7 +6,7 @@ extends "res://tools/playtest/playtest_base.gd"
 
 const INNKEEPER := "npc_innkeeper"
 const KITCHEN := "brod-tavern-kitchen"
-const TURN_TIMEOUT := 120.0
+const TURN_TIMEOUT := 200.0  # the server waits up to 180 s (v0.7.14.5)
 
 
 func run() -> void:

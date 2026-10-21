@@ -12,7 +12,7 @@
 		"events_max": 40
 	},
 	"turn": {
-		"client_timeout_s": 95.0,
+		"client_timeout_s": 185.0,
 		"summary_timeout_s": 60.0
 	},
 	"ui": {

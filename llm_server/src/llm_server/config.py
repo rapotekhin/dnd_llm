@@ -31,7 +31,7 @@ class Settings:
     host: str = "127.0.0.1"
     port: int = 8765
     hello_timeout: float = 10.0
-    turn_timeout: float = 90.0
+    turn_timeout: float = 180.0  # a slow provider day: a late answer beats an error (v0.7.14.5, was 90)
     engine_timeout: float = 10.0
     max_concurrent_turns: int = 1
     max_message_bytes: int = MAX_MESSAGE_BYTES

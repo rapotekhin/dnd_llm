@@ -239,7 +239,7 @@ def test_the_picked_providers_go_into_the_request(monkeypatch):
 
     model_id = "deepseek/deepseek-v4.1-flash-1017"
     model = OpenRouterModel(model_id, provider=OpenRouterProvider(api_key="test"))
-    monkeypatch.setitem(PICKER._lists, model_id, ["a", "b", "c"])
+    monkeypatch.setitem(PICKER._ranked, model_id, [("a", "A"), ("b", "B"), ("c", "C"), ("d", "D")])
     monkeypatch.setenv("LLM_SERVER_MIN_TPS", "40")
     assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True, "only": ["a", "b", "c"],
                                                         "allow_fallbacks": True, "preferred_min_throughput": {"p50": 40.0}}
@@ -271,3 +271,21 @@ def test_the_picker_keeps_its_list_when_openrouter_fails():
 
     asyncio.run(twice())
     assert calls == ["/api/v1/models/m/x/endpoints"] * 2
+
+
+def test_a_provider_observed_slow_leaves_the_three():
+    # v0.7.14.5, the live playtest: OpenRouter's own stats did not see OpenInference crawling at 14 tok/s on 40k-token
+    # turns — our own timing of each request does.
+    from llm_server.llm.providers import ProviderPicker
+
+    picker = ProviderPicker()
+    picker._ranked["m"] = [("open-inference/fp4", "OpenInference"), ("decart/fp4", "Decart"), ("relace", "Relace"), ("x", "X")]
+    picker.observe("OpenInference", 600, 45.0)  # 13 tok/s
+    assert picker.providers("m") == ["decart/fp4", "relace"]
+    picker.observe("Decart", 50, 30.0)  # too short to judge
+    picker.observe("Relace", 600, 10.0)
+    assert picker.providers("m") == ["decart/fp4", "relace"]
+    picker.observe("Decart", 600, 60.0)
+    picker.observe("Relace", 600, 60.0)
+    picker.observe("Relace", 600, 60.0)  # the median of 60, 10, 10 tok/s
+    assert picker.providers("m") == ["open-inference/fp4", "decart/fp4", "relace"]  # all slow: the three stay

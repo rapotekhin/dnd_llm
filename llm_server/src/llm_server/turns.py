@@ -132,10 +132,14 @@ def _usage(session: Session, model: str, run_usage: RunUsage) -> Usage:
 def _served_by(result: object) -> str:
     """The OpenRouter provider that answered the last request of the run ("" when unknown), for the trace."""
     try:
-        details = result.all_messages()[-1].provider_details or {}  # type: ignore[attr-defined]
-    except (AttributeError, IndexError):
+        messages = result.all_messages()  # type: ignore[attr-defined]
+    except AttributeError:
         return ""
-    return str(details.get("downstream_provider", ""))
+    for m in reversed(messages):  # the last answer of the model (a tool's return comes after it)
+        details = getattr(m, "provider_details", None)
+        if details:
+            return str(details.get("downstream_provider", ""))
+    return ""
 
 
 async def _pick_providers(model: Model) -> None:

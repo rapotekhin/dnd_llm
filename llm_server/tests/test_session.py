@@ -52,7 +52,7 @@ def test_hello_returns_versions_limits_and_models(client):
     assert [m["id"] for m in result["models"]][0] == "deepseek/deepseek-v4.1-flash-1017"
     assert result["server_version"]
     assert result["limits"]["max_message_bytes"] == 1024 * 1024
-    assert result["limits"]["turn_timeout_s"] == 90
+    assert result["limits"]["turn_timeout_s"] == 180
 
 
 def test_version_mismatch_errors_and_closes(client):

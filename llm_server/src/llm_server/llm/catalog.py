@@ -1,6 +1,7 @@
 """Models the player may pick: names and prices from the OpenRouter catalog, fetched once at start."""
 
 import logging
+import time
 from collections.abc import Callable
 
 import httpx
@@ -63,15 +64,32 @@ class ModelCatalog:
 
 
 def openrouter_factory(api_key: str) -> ModelFactory:
+    import httpx2
+    from pydantic_ai.models import DEFAULT_HTTP_TIMEOUT, create_async_httpx2_client
     from pydantic_ai.models.openrouter import OpenRouterModel
+    from pydantic_ai.models.wrapper import WrapperModel
     from pydantic_ai.providers.openrouter import OpenRouterProvider
 
-    provider = OpenRouterProvider(api_key=api_key)
+    from .providers import PICKER
+
+    class TimedModel(WrapperModel):
+        """Times every request and tells the picker who answered how fast (v0.7.14.5)."""
+
+        async def request(self, messages, model_settings, model_request_parameters):  # type: ignore[no-untyped-def]
+            started = time.monotonic()
+            response = await self.wrapped.request(messages, model_settings, model_request_parameters)
+            PICKER.observe(str((response.provider_details or {}).get("downstream_provider", "")),
+                           int(response.usage.output_tokens or 0), time.monotonic() - started)
+            return response
+
+    # pydantic-ai gives a connection 5 s: a slow link to OpenRouter failed whole turns with «Request timed out» after
+    # three such tries (v0.7.14.5) — 20 s to connect, the answer itself as long as it takes.
+    provider = OpenRouterProvider(api_key=api_key, http_client=create_async_httpx2_client(timeout=httpx2.Timeout(DEFAULT_HTTP_TIMEOUT, connect=20)))
     cache: dict[str, Model] = {}
 
     def make(model_id: str) -> Model:
         if model_id not in cache:
-            cache[model_id] = OpenRouterModel(model_id, provider=provider)
+            cache[model_id] = TimedModel(OpenRouterModel(model_id, provider=provider))
         return cache[model_id]
 
     return make
