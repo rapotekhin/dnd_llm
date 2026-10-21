@@ -1296,3 +1296,74 @@ scenarios:
       effects: {forbidden_kinds: [give_item, coins, start_combat]}
     rubric:
       - "Метла взлетает по своему описанию (полёт до 50 футов скоростью 50 футов, с грузом до 200 фунтов) — мастер ведёт сцену без лишних эффектов"
+
+  - id: spell_zone_of_truth
+    title: "Зона истины — NPC не лжёт сознательно, исход решает мастер"
+    category: magic
+    extends: tavern
+    mode: social
+    input: "Ты знаешь, куда пропал лесоруб Влас? Отвечай прямо."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", template: commoner, attitude: indifferent, trader: true}
+      character:
+        name: "Ирма"
+        gender: female
+        class: cleric
+        level: 3
+        spells: ["Зона истины"]
+        spell_slots: [{level: 1, left: 4, max: 4}, {level: 2, left: 1, max: 2}]
+        spell_save_dc: 13
+      history:
+        - "ИГРОК: Колдую «Зону истины» вокруг стойки, где стоит Горм."
+        - "ДВИЖОК: [Движок уже применил: Зона истины (ячейка 2 круга) · Горм — спасбросок Харизмы: провал]"
+    expect:
+      effects: {forbidden_kinds: [cast, give_item, coins]}
+    rubric:
+      - "Горм не произносит сознательной лжи: отвечает правду, увиливает или молчит — по своему характеру"
+      - "Заклинание не проводится второй раз, мастер не выдумывает механик сверх Зоны истины"
+
+  - id: spell_minor_illusion
+    title: "Малая иллюзия — эффект cast, образ без вещества"
+    category: magic
+    extends: tavern
+    input: "Колдую «Малую иллюзию»: звон монет под дальним столом, чтобы Горм отвернулся."
+    snapshot:
+      character:
+        name: "Ялика"
+        gender: female
+        class: wizard
+        level: 2
+        cantrips: ["Малая иллюзия", "Огненный снаряд"]
+        spells: ["Волшебная стрела"]
+        spell_slots: [{level: 1, left: 3, max: 3}]
+        spell_save_dc: 13
+    expect:
+      effects: {required_kinds_any: [cast], forbidden_kinds: [coins, give_item]}
+    rubric:
+      - "Мастер проводит заговор эффектом cast; звон — только звук, настоящих монет не появляется"
+      - "Реакция Горма описана по характеру, без выдуманных механик; если он разглядывает источник звука, распознание — только проверкой Анализа"
+
+  - id: spell_speak_with_animals
+    title: "Разговор с животными — зверь знает только звериное"
+    category: magic
+    extends: tavern
+    input: "Спрашиваю кошку у очага: видела ли она, кто вчера ночью выходил из таверны?"
+    snapshot:
+      character:
+        name: "Велемир"
+        gender: male
+        class: druid
+        level: 2
+        spells: ["Разговор с животными", "Лечение ран"]
+        spell_slots: [{level: 1, left: 2, max: 3}]
+        spell_save_dc: 13
+      history:
+        - "ИГРОК: Колдую «Разговор с животными»."
+        - "ДВИЖОК: [Движок уже применил: Разговор с животными (ритуал, 10 минут)]"
+    expect:
+      effects: {forbidden_kinds: [cast, give_item, coins, start_combat]}
+    rubric:
+      - "Кошка отвечает в рамках кошачьего понимания (запахи, шаги, кто кормил), без имён и сведений, которых зверь знать не может"
+      - "Мастер не проводит заклинание второй раз"

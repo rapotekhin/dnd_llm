@@ -33,6 +33,9 @@ MISSING = ("master", "none")
 SPELL_LATER = {"warding_bond", "find_familiar", "find_steed", "conjure_animals", "animate_dead", "unseen_servant", "phantom_steed",
                "tensers_floating_disk", "animal_messenger", "spare_the_dying", "revivify"}
 
+# The world spells the engine does not track: the master decides by the prompt rule (v0.7.13.9).
+WORLD_RULE = "мастер: правило мира"
+
 # Spells (v0.7.13): groups of the master-only ones.
 SPELL_GROUPS = {
     "buff": ("Защита и усиления героя", "числа листа и боя: КД, бонусы к атакам и спасброскам, урон, скорость, сопротивления, временные хиты"),
@@ -339,6 +342,7 @@ CHECKED: dict[str, str] = {
                                              "calm_emotions", "suggestion", "enthrall", "animal_friendship", "remove_curse", "goodberry",
                                              "create_food_and_water", "lesser_restoration", "light", "dancing_lights", "daylight",
                                              "continual_flame", "find_traps", "detect_magic", "knock"]},
+    **{sp: "golden spell_* (v0.7.13.9)" for sp in ["zone_of_truth", "minor_illusion", "speak_with_animals"]},
     **{p: "test_items_v0712.gd" for p in ["ammunition", "heavy", "reach", "silvered", "fire_damage", "cursed", "no_crit", "mithral", "str_19"]},
     **{f: "test_features_v0710.gd" for f in ["barbarian_extra_attack", "monk_extra_attack", "paladin_extra_attack", "ranger_extra_attack",
                                              "rage", "reckless_attack", "danger_sense", "improved_critical", "uncanny_dodge", "martial_arts",
@@ -561,22 +565,27 @@ def main() -> int:
             return "движок: усиление или ослабление"
         if sid in SPELL_LATER:
             return "ждёт M4"
+        if group_of.get(sid) == "world":
+            return WORLD_RULE
         return STATUS["master"]
 
     unassigned = sorted(sid for sid in playable if spell_status(sid) == STATUS["master"] and sid not in group_of)
+    world_rule = sum(1 for sid in playable if spell_status(sid) == WORLD_RULE)
     if unassigned:
         raise SystemExit(f"no group for: {', '.join(unassigned)}")
-    master = sum(1 for sid in playable if spell_status(sid) == STATUS["master"])
+    master = sum(1 for sid in playable if spell_status(sid) in (STATUS["master"], WORLD_RULE))
     later = sum(1 for sid in playable if spell_status(sid) == "ждёт M4")
     groups = "; ".join(f"{SPELL_GROUPS[g][0]} — {sum(1 for sid in playable if group_of.get(sid) == g and spell_status(sid) == STATUS['master'])}"
-                       for g in SPELL_GROUPS)
+                       for g in SPELL_GROUPS if g != "world")
     rows = []
     for sid, v in sorted(playable.items(), key=lambda kv: (int(kv[1].get("level", 0)), kv[1]["name"])):
         g = SPELL_GROUPS[group_of[sid]][0] if sid in group_of else "—"
         rows.append((v["name"], f"`{sid}`", str(v.get("level", 0)), "да" if v.get("concentration") else "", spell_status(sid), g, CHECKED.get(sid, "")))
     section("Заклинания (круги 0–3)", "v0.7.13", rows, ["Заклинание", "id", "Круг", "Конц.", "Сейчас", "Группа", "Проверено"],
             f"Доступно героям 1–5 уровня {len(playable)}; движок разрешает {len(playable) - master - later}; ждут союзников (M4) {later}; "
-            f"**{master} — только мастер**: ячейка и концентрация тратятся, остальное — лишь в рассказе. По группам: {groups}.")
+            f"**{master} — только мастер**: ячейка и концентрация тратятся, остальное — лишь в рассказе. Из них {world_rule} — «{SPELL_GROUPS['world'][0]}»: "
+            f"исход по описанию SRD решает мастер по правилу промпта (v0.7.13.9: иллюзия распознаётся Анализом, в Зоне истины не лгут, звери и мёртвые "
+            f"знают только своё, вещей заклинание не создаёт); остальные по группам: {groups}.")
     summary.append(("Заклинания", len(playable), len(playable) - master - later, master + later))
 
     head = [
