@@ -872,10 +872,10 @@
 			"min_dc": 5
 		}
 	},
-	"carry": {
-		"_doc": "Carrying capacity (v0.7.7, PHB): Strength × per_str pounds; over it the hero cannot leave the room. Coins weigh nothing in this version.",
-		"per_str": 15
-	},
+	"carry": {
+		"_doc": "Carrying capacity (v0.7.7, PHB): Strength × per_str pounds; over it the hero cannot leave the room. Coins weigh nothing in this version.",
+		"per_str": 15
+	},
 	"equip_minutes": {
 
 		"_doc": "Changing armour out of a fight (v0.7.7, PHB): minutes to don / doff by category; a shield and weapons take no minutes (in a fight a shield and armour cannot change, a weapon is drawn free once a turn, then for the action).",
@@ -1235,13 +1235,13 @@
 		}
 	},
 	"spell_effects": {
-		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves. Defenses (v0.7.13.2): ac_base (unarmored: base + DEX), ac_plus, ac_min; attackers_dis; images (Mirror Image: d20 6/8/11+ hits an image, AC 10 + DEX); sanctuary (a WIS save or no attack; ends when the hero attacks a foe); temp_dice (+temp_per_slot); max_hp_plus (+per_slot) with as much healing; resist / resist_auto (the most common damage type of the foes, fire by default), adv_tag, remove; foe_types_dis — those types attack with disadvantage; save_adv [abilities], death_adv, max_heal (healing rolls its maximum). Movement and form (v0.7.13.3): speed_x2 and haste (one more action: one weapon attack, Dash, Disengage, Dodge; a turn of lethargy when it ends), flying (foes without a ranged attack cannot reach the hero), blink (d20 11+ at the end of the hero's turn — gone until their next turn), speed_plus, bonus_dash, teleport (a column away from the nearest foe, no opportunity attacks), enlarged, darkvision, see_invisible, skill_bonus, ability_adv (best — the hero's highest ability).",
+		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves. Defenses (v0.7.13.2): ac_base (unarmored: base + DEX), ac_plus, ac_min; attackers_dis; images (Mirror Image: d20 6/8/11+ hits an image, AC 10 + DEX); sanctuary (a WIS save or no attack; ends when the hero attacks a foe); temp_dice (+temp_per_slot); max_hp_plus (+per_slot) with as much healing; resist / resist_auto (the most common damage type of the foes, fire by default), adv_tag, remove; foe_types_dis — those types attack with disadvantage; save_adv [abilities], death_adv, max_heal (healing rolls its maximum). Movement and form (v0.7.13.3): speed_x2 and haste (one more action: one weapon attack, Dash, Disengage, Dodge; a turn of lethargy when it ends), flying (foes without a ranged attack cannot reach the hero), blink (d20 11+ at the end of the hero's turn — gone until their next turn), speed_plus, bonus_dash, teleport (a column away from the nearest foe, no opportunity attacks), enlarged, darkvision, see_invisible, skill_bonus, ability_adv (best — the hero's highest ability). On the weapon (v0.7.13.4): shillelagh [bases] — the spellcasting ability, d8, magic; weapon_plus (plus_at_slot); weapon_extra [dice, type] on every hit; next_hit — the next hit's dice by the slot (next_dice); mark — +dice on hits at the marked foe (foe_target: cast at a foe; moved by a bonus action when it falls); blade — a melee spell attack with blade_dice by the slot.",
 		"bless": {"die": "1d4", "on": ["attack", "save"]},
 		"guidance": {"die": "1d4", "on": ["check"], "once": true},
 		"resistance": {"die": "1d4", "on": ["save"], "once": true},
 		"heroism": {"immune": ["frightened"], "temp_hp": "MOD"},
 		"true_strike": {"next_attack_adv": true},
-		"bane": {"foe": true, "die": "1d4", "save": "cha", "targets": 3},
+		"bane": {"foe": true, "die": "1d4", "on": ["attack", "save"], "save": "cha", "targets": 3},
 		"mage_armor": {"ac_base": 13},
 		"shield_of_faith": {"ac_plus": 2},
 		"barkskin": {"ac_min": 16},
@@ -1264,6 +1264,12 @@
 		"darkvision": {"darkvision": true},
 		"see_invisibility": {"see_invisible": true},
 		"pass_without_trace": {"skill_bonus": {"stealth": 10}},
-		"enhance_ability": {"ability_adv": "best"}
+		"enhance_ability": {"ability_adv": "best"},
+		"shillelagh": {"shillelagh": ["club", "quarterstaff"]},
+		"magic_weapon": {"weapon_plus": 1, "plus_at_slot": {"4": 2}},
+		"divine_favor": {"weapon_extra": ["1d4", "radiant"]},
+		"branding_smite": {"next_hit": "radiant", "next_dice": {"2": "2d6", "3": "3d6", "4": "4d6", "5": "5d6"}},
+		"hunters_mark": {"mark": "1d6", "foe_target": true},
+		"flame_blade": {"blade": "fire", "blade_dice": {"2": "3d6", "3": "3d6", "4": "4d6", "5": "4d6"}}
 	}
 }

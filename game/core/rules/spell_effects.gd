@@ -21,7 +21,7 @@ static func spec(data: Dictionary, spell_id: String) -> Dictionary:
 ## A spell the hero casts on themselves (no target to pick).
 static func self_spell(data: Dictionary, spell_id: String) -> bool:
 	var sp := spec(data, spell_id)
-	return not sp.is_empty() and not bool(sp.get("foe", false))
+	return not sp.is_empty() and not bool(sp.get("foe", false)) and not bool(sp.get("foe_target", false))
 
 
 static func foe_spell(data: Dictionary, spell_id: String) -> bool:
@@ -42,13 +42,22 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	var e := {"condition": "", "source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])},
 		"concentration": bool(spell.get("concentration", false)), "ends": {"at": ConditionRules.now(s) + rounds} if rounds > 0 else {}}
 	for k: String in sp:
-		if not k in ["foe", "targets", "save", "temp_dice", "temp_per_slot", "per_slot", "resist_auto", "remove", "max_hp_plus"]:
+		if not k in ["foe", "targets", "save", "temp_dice", "temp_per_slot", "per_slot", "resist_auto", "remove", "max_hp_plus", "plus_at_slot",
+				"next_dice", "blade_dice", "foe_target"]:
 			e[k] = sp[k]
 	var lines: Array[String] = []
 	var slot_up := maxi(0, slot - maxi(1, int(spell["level"])))
 	if sp.has("resist_auto"):  # Protection from Energy: the type the foes deal most (v0.7.13.2)
 		var dtype := _likely_type(s, data, sp["resist_auto"])
 		e["resist"] = [dtype]
+	if sp.has("plus_at_slot"):  # Magic Weapon: +2 from the 4th circle
+		for k: String in sp["plus_at_slot"]:
+			if slot >= int(k):
+				e["weapon_plus"] = int(sp["plus_at_slot"][k])
+	if sp.has("next_dice"):  # Branding Smite: the dice by the slot
+		e["next_dice"] = str(sp["next_dice"].get(str(maxi(slot, int(spell["level"]))), sp["next_dice"].values()[0]))
+	if sp.has("blade_dice"):  # Flame Blade
+		e["blade_dice"] = str(sp["blade_dice"].get(str(maxi(slot, int(spell["level"]))), sp["blade_dice"].values()[0]))
 	if str(sp.get("ability_adv", "")) == "best":  # Enhance Ability: the hero's strongest side
 		var best := "str"
 		for ab: String in CharacterRules.ABILITIES:
@@ -232,6 +241,18 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 		parts.append("+%d к %s" % [int(sp["skill_bonus"][k]), TranslationServer.translate("SKILL_" + str(k).to_upper())])
 	if sp.has("ability_adv"):
 		parts.append("преимущество на проверки одной характеристики")
+	if sp.has("shillelagh"):
+		parts.append("дубинка или посох бьют к8 характеристикой заклинаний, магически")
+	if sp.has("weapon_plus"):
+		parts.append("оружие +%d, магическое" % int(sp["weapon_plus"]))
+	if sp.has("weapon_extra"):
+		parts.append("+%s излучением при каждом попадании" % str(sp["weapon_extra"][0]).replace("d", "к"))
+	if sp.has("next_hit"):
+		parts.append("следующее попадание — ещё урон излучением, невидимый становится видимым")
+	if sp.has("mark"):
+		parts.append("+%s по отмеченному врагу" % str(sp["mark"]).replace("d", "к"))
+	if sp.has("blade"):
+		parts.append("огненный клинок: рукопашная атака заклинанием")
 	if sp.has("immune"):
 		parts.append("не испугать")
 	if sp.has("temp_hp"):
@@ -341,3 +362,70 @@ static func end_on_foes(s: GameSession, spell_id: String) -> Array[String]:
 
 static func data_name(f: Dictionary) -> String:
 	return str(f.get("minus_die", {}).get("name", "заклинание"))
+
+
+# --- on the weapon (v0.7.13.4) -------------------------------------------------------------------------
+
+
+## The weapon profile under the hero's spells: Shillelagh (the spellcasting ability, d8, magic), Magic Weapon (+N).
+static func weapon(c: Dictionary, w: Dictionary, kind: String) -> Dictionary:
+	if w.is_empty():
+		return w
+	var out := w
+	for e: Dictionary in hero_effects(c, "shillelagh"):
+		if (e["shillelagh"] as Array).has(kind):
+			out = out.duplicate()
+			var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "wis"))))
+			var old := CharacterRules.mod(CharacterRules.ability(c, "str"))
+			if ab > old:
+				out["to_hit"] = int(out["to_hit"]) - old + ab
+				out["bonus"] = int(out["bonus"]) - old + ab
+			if CombatRules.dice_range(str(out["dice"]))[1] < 8:
+				out["dice"] = "1d8"
+			out["magical"] = true
+	for e: Dictionary in hero_effects(c, "weapon_plus"):
+		if not str(c.get("equipped", {}).get("main_hand", "")).is_empty() and kind != "":
+			out = out.duplicate()
+			out["to_hit"] = int(out["to_hit"]) + int(e["weapon_plus"])
+			out["bonus"] = int(out["bonus"]) + int(e["weapon_plus"])
+			out["magical"] = true
+	return out
+
+
+## The extra damage of the hero's spells on a weapon hit at `t`: [{dice, type, name}]; Branding Smite's is spent.
+static func hit_extras(c: Dictionary, t: Dictionary, weapon_type: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for e: Dictionary in hero_effects(c, "weapon_extra"):
+		out.append({"dice": str(e["weapon_extra"][0]), "type": str(e["weapon_extra"][1]), "name": str(e.get("source", {}).get("name", ""))})
+	for e: Dictionary in hero_effects(c, "mark"):
+		if str(e.get("target", "")) == str(t.get("id", "")):
+			out.append({"dice": str(e["mark"]), "type": weapon_type, "name": str(e.get("source", {}).get("name", ""))})
+	for e: Dictionary in hero_effects(c, "next_dice"):
+		out.append({"dice": str(e["next_dice"]), "type": str(e.get("next_hit", "radiant")), "name": str(e.get("source", {}).get("name", "")),
+			"reveal": true})
+		e.erase("next_dice")  # once (the concentration keeps nothing more)
+	return out
+
+
+## Hunter's Mark lands on a foe (or moves to another).
+static func mark(c: Dictionary, target_id: String) -> void:
+	for e: Dictionary in hero_effects(c, "mark"):
+		e["target"] = target_id
+
+
+## The marked foe has fallen: the mark can move (a bonus action).
+static func mark_free(s: GameSession) -> bool:
+	for e: Dictionary in hero_effects(s.character, "mark"):
+		var t := CombatRules.fighter(s, str(e.get("target", "")))
+		if t.is_empty() or str(t.get("status")) != "active":
+			return true
+	return false
+
+
+## Flame Blade's attack: a melee spell attack, the blade's dice of fire. {} without the blade.
+static func blade_profile(c: Dictionary) -> Dictionary:
+	for e: Dictionary in hero_effects(c, "blade_dice"):
+		return {"name": str(e.get("source", {}).get("name", "Огненный клинок")), "to_hit": int(c.get("spell_attack", 0)), "dice": str(e["blade_dice"]),
+			"bonus": 0, "type": str(e.get("blade", "fire")), "melee": true, "range": [], "light": false, "id": "", "magical": true,
+			"silvered": false, "crit_min": 20, "str_based": false}
+	return {}

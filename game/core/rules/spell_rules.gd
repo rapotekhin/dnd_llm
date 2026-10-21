@@ -83,6 +83,9 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 		var prev := str(c.get("concentration", ""))
 		if not prev.is_empty() and prev != spell_id:
 			lines.append("концентрация на «%s» прервана" % data["spells"].get(prev, {}).get("name", prev))
+			for e: Dictionary in ConditionRules.effects(c).duplicate():  # its effects on the hero go with it (v0.7.13.4)
+				if bool(e.get("concentration", false)) and str(e.get("source", {}).get("id", "")) == prev:
+					ConditionRules.remove_effect(c, int(e.get("uid", 0)))
 		c["concentration"] = spell_id
 		var rounds := ConditionRules.spell_rounds(data, spell_id)
 		c["concentration_ends"] = ConditionRules.now(session) + rounds if session != null and rounds >= 0 else -1

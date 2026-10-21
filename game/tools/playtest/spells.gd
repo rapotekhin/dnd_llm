@@ -22,7 +22,7 @@ func run() -> void:
 		return
 	var s: GameSession = gs.session
 	var c := s.character
-	_learn(c, ["bless", "bane", "guiding_bolt", "shield_of_faith", "sanctuary", "fly", "haste"])
+	_learn(c, ["bless", "bane", "guiding_bolt", "shield_of_faith", "sanctuary", "fly", "haste", "hunters_mark"])
 	c["temp_hp"] = 500  # the hero lasts the whole scenario
 
 	# v0.7.13.1: Bless, then Bane over it.
@@ -64,7 +64,8 @@ func run() -> void:
 	if ask != null and find(ask, "Ask_conc_yes") != null:
 		await press(find(ask, "Ask_conc_yes"))
 		await frames(4)
-	step("Bane now, Bless gone", str(c.get("concentration", "")) == "bane", _tail(4))
+	step("Bane now, Bless gone", str(c.get("concentration", "")) == "bane" and not SpellEffects.has(c, "die") or 		SpellEffects.hero_effects(c, "die").all(func(e: Dictionary) -> bool: return str(e["source"]["id"]) != "bless"), _tail(4))
+	step("Bane on the goblins", _seen.any(func(l: String) -> bool: return l.contains("Бедствие:") and l.contains("спасбросок")), _tail(6))
 	await shot("bane")
 
 	# v0.7.13.2: Shield of Faith asks too — «no» keeps Bane; Sanctuary (a bonus action) goes on.
@@ -133,6 +134,36 @@ func run() -> void:
 	step("the wolf cannot reach", _seen.any(func(l: String) -> bool: return l.contains("не достаёт летящего")), _tail(3))
 	await shot("fly")
 
+
+	# v0.7.13.4: Hunter's Mark on the wolf (the question about Fly first), then a hit adds the d6.
+	await _my_turn(gs, s)
+	cs = screen()
+	_tab(cs, "COMBAT_TAB_SPELLS")
+	await frames(2)
+	var wolf := CombatRules.fighter(s, CombatRules.enemies(s)[0])
+	wolf["ac"] = 1
+	wolf["hp"] = 200
+	var hm: Button = find(cs, "Cast_hunters_mark")
+	if step("Hunter's Mark on the tab", hm != null):
+		await press(hm)
+		await frames(2)
+		await press(find(cs, "Foe_" + str(wolf["id"])))
+		await frames(3)
+		var yes: Button = find(screen(), "Ask_conc_yes")
+		if yes != null:
+			await press(yes)
+			await frames(4)
+	step("the wolf is marked", SpellEffects.hit_extras(s.character, wolf, "bludgeoning").size() == 1,
+		"%s | %s | wolf %s" % [_tail(3), str(SpellEffects.hero_effects(s.character, "mark")), wolf["id"]])
+	var probe: Array[String] = []
+	for i in 4:
+		probe.clear()
+		CombatRules._attack(s, data, str(c["name"]), "проба", 10, false, false, wolf, "1d6", 0, "bludgeoning", probe)
+		if probe[0].contains("попадание"):
+			CombatRules._item_extras(s, data, {"type": "bludgeoning", "id": ""}, wolf, false, probe)
+			break
+	step("the mark's d6 on a hit", probe.any(func(l: String) -> bool: return l.contains("Метка охотника: ещё")), " · ".join(probe))
+	await shot("hunters_mark")
 
 
 func _learn(c: Dictionary, ids: Array) -> void:

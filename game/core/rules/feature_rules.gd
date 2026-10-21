@@ -299,6 +299,11 @@ static func actions(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	if c.has("wild_shape"):
 		add.call("revert", "Вернуть облик", "bonus", false, "Снова стать собой; хиты героя — какими были")
 		return out
+	var blade := SpellEffects.blade_profile(c)  # v0.7.13.4: the spells' own buttons
+	if not blade.is_empty():
+		add.call("flame_blade", "%s: удар (%s)" % [blade["name"], str(blade["dice"]).replace("d", "к")], "action", true, "Рукопашная атака заклинанием огненным клинком")
+	if SpellEffects.mark_free(s):
+		add.call("move_mark", "Перенести метку охотника", "bonus", true, "Отмеченный враг пал — метка переходит на другого")
 	if has(c, "reckless_attack"):
 		add.call("reckless", "Безрассудная атака", "free", false, "Атаки Силой вплотную с преимуществом до конца хода, но и по вам — до вашего следующего хода")
 	if has(c, "martial_arts"):
@@ -383,6 +388,13 @@ static func act(s: GameSession, data: Dictionary, id: String, target_id: String 
 		if cost != "free":
 			e[cost] = int(e[cost]) - 1
 	match id:
+		"flame_blade":
+			spend.call("action")
+			lines.append_array(CombatRules.strike(s, data, target_id, SpellEffects.blade_profile(c), {}))
+		"move_mark":
+			spend.call("bonus")
+			SpellEffects.mark(c, target_id)
+			lines.append("Метка охотника переходит на %s" % CombatRules.fighter(s, target_id).get("name", ""))
 		"reckless":
 			s.combat["reckless"] = true
 			lines.append("%s атакует безрассудно: с преимуществом, но и открывшись" % c.get("name", ""))

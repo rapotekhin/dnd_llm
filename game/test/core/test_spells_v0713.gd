@@ -498,3 +498,71 @@ func test_see_invisibility_removes_the_disadvantage() -> void:
 	assert_array(CombatRules.hero_attack_dis(s, data, f)).contains(["цель невидима"])
 	_cast_self(s, "see_invisibility")
 	assert_array(CombatRules.hero_attack_dis(s, data, f)).not_contains(["цель невидима"])
+
+
+# --- batch 5 (v0.7.13.4): spells on the weapon -------------------------------------------------------------
+
+
+func test_shillelagh_uses_wisdom_and_a_d8() -> void:
+	var s := _hero("druid_olha")
+	var c := s.character
+	c["inventory"]["quarterstaff"] = 1
+	c["equipped"]["main_hand"] = "quarterstaff"
+	var before := CombatRules.weapon_profile(c, data, s.items, "quarterstaff")
+	_cast_self(s, "shillelagh")
+	var w := CombatRules.weapon_profile(c, data, s.items, "quarterstaff")
+	assert_str(str(w["dice"])).is_equal("1d8")
+	assert_bool(bool(w["magical"])).is_true()
+	assert_int(int(w["to_hit"])).is_greater_equal(int(before["to_hit"]))
+
+
+func test_magic_weapon_and_divine_favor() -> void:
+	var s := _hero("paladin_gordey", 5)
+	var c := s.character
+	var main := str(c["equipped"]["main_hand"])
+	var before := CombatRules.weapon_profile(c, data, s.items, main)
+	_cast_self(s, "magic_weapon")
+	assert_int(int(CombatRules.weapon_profile(c, data, s.items, main)["to_hit"])).is_equal(int(before["to_hit"]) + 1)
+	ConditionRules.end_concentration(s, data, "проверка")
+	_cast_self(s, "divine_favor")
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	var extras := SpellEffects.hit_extras(c, f, "slashing")
+	assert_str(str(extras[0]["type"])).is_equal("radiant")
+
+
+func test_branding_smite_once_and_hunters_mark_on_the_target() -> void:
+	var s := _hero("paladin_gordey", 5)
+	var c := s.character
+	var f := _fight(s, [{"monster": "ogre", "col": 0}, {"monster": "goblin", "col": 0}])
+	_cast_self(s, "branding_smite")
+	assert_int(SpellEffects.hit_extras(c, f[0], "slashing").size()).is_equal(1)
+	assert_int(SpellEffects.hit_extras(c, f[0], "slashing").size()).is_equal(0)
+	ConditionRules.end_concentration(s, data, "проверка")
+	var r := _hero("ranger_velena", 2)
+	var g := _fight(r, [{"monster": "ogre", "col": 1}, {"monster": "goblin", "col": 1}])
+	_learn(r, "hunters_mark")
+	CombatRules.player_cast(r, data, "hunters_mark", 1, str(g[0]["id"]))
+	assert_int(SpellEffects.hit_extras(r.character, g[0], "piercing").size()).is_equal(1)
+	assert_int(SpellEffects.hit_extras(r.character, g[1], "piercing").size()).is_equal(0)
+	g[0]["status"] = "dead"
+	assert_bool(SpellEffects.mark_free(r)).is_true()
+	r.combat["economy"]["bonus"] = 1
+	FeatureRules.act(r, data, "move_mark", str(g[1]["id"]))
+	assert_int(SpellEffects.hit_extras(r.character, g[1], "piercing").size()).is_equal(1)
+
+
+func test_flame_blade_attacks_with_the_spell() -> void:
+	var s := _hero("druid_olha", 3)
+	_cast_self(s, "flame_blade")
+	var b := SpellEffects.blade_profile(s.character)
+	assert_str(str(b["dice"])).is_equal("3d6")
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	assert_bool(FeatureRules.actions(s, data).any(func(a: Dictionary) -> bool: return str(a["id"]) == "flame_blade")).is_true()
+	var hp := int(f["hp"])
+	f["ac"] = 1
+	for i in 4:
+		s.combat["economy"]["action"] = 1
+		FeatureRules.act(s, data, "flame_blade", str(f["id"]))
+		if int(f["hp"]) < hp:
+			break
+	assert_int(int(f["hp"])).is_less(hp)

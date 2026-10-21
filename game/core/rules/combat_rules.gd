@@ -430,11 +430,11 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	if ranged and CharacterRules.item_prop(c, "ranged_damage_plus2") and kind in ["longbow", "shortbow"]:
 		bonus += 2  # Bracers of Archery (v0.7.12)
 	var ammo := str(ItemRules.cfg(data)["ammo"].get(ItemRules.real_id(weapon_id), ItemRules.cfg(data)["ammo"].get(kind, ""))) if props.has("ammunition") else ""
-	return {"name": str(def.get("name", weapon_id)), "to_hit": to_hit, "dice": dice, "bonus": bonus,
+	return SpellEffects.weapon(c, {"name": str(def.get("name", weapon_id)), "to_hit": to_hit, "dice": dice, "bonus": bonus,
 		"type": str(w.get("damage_type", "bludgeoning")), "melee": not ranged, "range": rng, "light": props.has("light"), "id": weapon_id,
 		"magical": magic > 0 or str(def.get("rarity", "common")) not in ["common", ""], "silvered": props.has("silvered"), "ammo": ammo,
 		"heavy": props.has("heavy"), "reach": props.has("reach"),
-		"gwf": not ranged and two_hands and FeatureRules.great_weapon(c), "crit_min": FeatureRules.crit_min(c), "str_based": mod == str_mod and not ranged}
+		"gwf": not ranged and two_hands and FeatureRules.great_weapon(c), "crit_min": FeatureRules.crit_min(c), "str_based": mod == str_mod and not ranged}, kind)  # Shillelagh, Magic Weapon (v0.7.13.4)
 
 
 ## The hero's bare hands (the monk's Martial Arts die).
@@ -599,6 +599,15 @@ static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dicti
 
 ## The extra damage of a hit by the weapon's properties (fire_damage — +1d6 fire, v0.7.12) and by a Potion of Growth.
 static func _item_extras(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary, crit: bool, lines: Array[String]) -> void:
+	for x: Dictionary in SpellEffects.hit_extras(s.character, t, str(w["type"])):  # Divine Favor, Hunter's Mark, Branding Smite (v0.7.13.4)
+		if str(t.get("status")) != "active":
+			break
+		var add := _resist(data, t, str(x["type"]), roll_dice(s.rng, str(x["dice"]), crit), true, false)
+		lines.append("%s: ещё %d (%s)" % [x["name"], add, data["misc"]["damage_types"].get(str(x["type"]), x["type"])])
+		_hurt_enemy(s, data, t, add, lines, str(x["type"]))
+		if bool(x.get("reveal", false)) and _has(t, "invisible"):
+			_remove_condition(t, "invisible")
+			lines.append("%s светится — невидимость спадает" % t["name"])
 	var def := ItemRules.def_of(data["items"], s.items, str(w.get("id", "")))
 	var dice := str(ItemRules.cfg(data)["element_dice"])
 	for p: Variant in def.get("properties", []):
@@ -827,7 +836,7 @@ static func _hurt_enemy(s: GameSession, data: Dictionary, t: Dictionary, dmg: in
 
 ## Engine spells (rules.combat.engine_spells): "" when castable at that target now, otherwise a reason.
 static func is_engine_spell(data: Dictionary, spell_id: String) -> bool:
-	return (cfg(data)["engine_spells"] as Array).has(spell_id) or cfg(data)["condition_spells"].has(spell_id)
+	return (cfg(data)["engine_spells"] as Array).has(spell_id) or cfg(data)["condition_spells"].has(spell_id) 		or not SpellEffects.spec(data, spell_id).is_empty()  # the buffs and curses of v0.7.13 resolve in the engine too
 
 
 static func _has(f: Dictionary, cond: String) -> bool:
@@ -1198,6 +1207,12 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		lines.append_array(end_spell(s, data, held))
 	if cfg(data)["condition_spells"].has(spell_id) and not target_id.is_empty():
 		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
+		return lines
+	if bool(SpellEffects.spec(data, spell_id).get("foe_target", false)):  # Hunter's Mark (v0.7.13.4)
+		lines.append_array(SpellEffects.apply_self(s, data, spell_id, slot))
+		if not target_id.is_empty():
+			SpellEffects.mark(c, target_id)
+			lines.append("%s отмечен" % fighter(s, target_id)["name"])
 		return lines
 	if int(SpellEffects.spec(data, spell_id).get("teleport", 0)) > 0:  # Misty Step (v0.7.13.3)
 		lines.append_array(_teleport(s, data, int(SpellEffects.spec(data, spell_id)["teleport"])))

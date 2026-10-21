@@ -642,8 +642,6 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 var _pending_name := ""
 
 
-## The window of a choice: a prompt of the hero's turn (Divine Smite, Wild Shape, Font of Magic) or a reaction to a
-## foe's hit; the buttons answer it.
 ## A concentration spell while another one is held (v0.7.13.1, as in BG3): «Прервать «Благословение»?» first.
 func _conc_guard(spell_id: String, go: Callable) -> String:
 	var held := GameState.concentration_conflict(spell_id)
@@ -685,6 +683,8 @@ func _draw_conc_ask() -> void:
 		flow.add_child(b)
 
 
+## The window of a choice: a prompt of the hero's turn (Divine Smite, Wild Shape, Font of Magic) or a reaction to a
+## foe's hit; the buttons answer it. The concentration question comes first.
 func _draw_ask(s: GameSession) -> void:
 	if not _conc_ask.is_empty():
 		_draw_conc_ask()
