@@ -140,6 +140,23 @@
 		-3,
 		3
 	],
+	"social": {
+		"memory_in_snapshot": 8,
+		"contests": {
+			"deception": "insight",
+			"intimidation": "wis_save",
+			"persuasion": "wis",
+			"insight": "deception"
+		},
+		"tier_base": "easy",
+		"attitude_skills": [
+			"persuasion",
+			"deception"
+		],
+		"attitude_step": 2,
+		"dc_min": 5,
+		"dc_max": 30
+	},
 	"conditions": {
 		"blinded": "Ослеплён: автоматически проваливает проверки, требующие зрения (Внимательность, Анализ); атаки по нему с преимуществом, его атаки с помехой.",
 		"charmed": "Очарован: не может атаковать очаровавшего; тот совершает с преимуществом социальные проверки против него.",

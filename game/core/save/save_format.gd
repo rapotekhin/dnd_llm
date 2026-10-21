@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 23
+const SAVE_VERSION := 24
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -45,6 +45,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	20: _v20_to_v21,
 	21: _v21_to_v22,
 	22: _v22_to_v23,
+	23: _v23_to_v24,
 }
 
 
@@ -251,3 +252,8 @@ static func _v22_to_v23(data: Dictionary, _ctx: Dictionary) -> void:
 			out.append({"day": int(s.get("day", 1)), "minute": int(s.get("minute", 480)), "room": str(s.get("room_id", "")),
 				"text": " · ".join(e["lines"])})
 	s["chronicle"] = out
+
+
+## v0.7.15: NPCs remember facts about the hero — an old game starts with empty memories (the summaries stay).
+static func _v23_to_v24(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["npc_memory"] = {}

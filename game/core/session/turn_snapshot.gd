@@ -19,7 +19,8 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"gender": n.get("gender", "other"), "description": n.get("description", ""),
 			"personality": n.get("personality", ""), "attitude": s.attitude(id), "trader": bool(n.get("trader", false)),
 			"speaks": ", ".join(LanguageRules.npc(data, n).map(func(l: String) -> String: return LanguageRules.name_of(data, l).to_lower())),
-			"understands_hero": LanguageRules.npc_understands(s.character, data, n), "tie": BackgroundRules.tie_text(s.character, data, n)})
+			"understands_hero": LanguageRules.npc_understands(s.character, data, n), "tie": BackgroundRules.tie_text(s.character, data, n),
+			"memory": s.memory_of(id, int(data["rules"].get("social", {}).get("memory_in_snapshot", 8)))})
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
 		summaries["location"] = s.summaries["location:" + loc_id]

@@ -35,7 +35,8 @@
 {% else %}- нет
 {% endfor %}
 NPC здесь:
-{% for n in scene.npcs %}- {{ n.name }} [{{ n.npc_id }}] — {{ n.role }}{% if n.race %}, {{ n.race }}{% endif %}{% if n.trader %}; торговец{% endif %}; отношение к игроку: {{ attitude_word(n.attitude) }}.{% if n.speaks %} Говорит: {{ n.speaks }}{% if not n.understands_hero %} — героя НЕ понимает{% endif %}.{% endif %}{% if n.tie %} Связь с прошлым героя: {{ n.tie }}.{% endif %}{% if n.description %} {{ n.description }}{% endif %}
+{% for n in scene.npcs %}- {{ n.name }} [{{ n.npc_id }}] — {{ n.role }}{% if n.race %}, {{ n.race }}{% endif %}{% if n.trader %}; торговец{% endif %}; отношение к игроку: {{ attitude_word(n.attitude) }}.{% if n.speaks %} Говорит: {{ n.speaks }}{% if not n.understands_hero %} — героя НЕ понимает{% endif %}.{% endif %}{% if n.tie %} Связь с прошлым героя: {{ n.tie }}.{% endif %}{% if n.description %} {{ n.description }}{% endif %}{% if n.memory %}
+  Помнит о герое: {{ n.memory | join("; ") }}.{% endif %}
 {% else %}- никого
 {% endfor %}
 {% if scene.props %}Вокруг (только это и описывай):

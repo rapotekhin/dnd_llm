@@ -70,6 +70,7 @@ static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array
 	for id: String in people_of(data, loc):
 		if not s.dead_npcs.has(id):
 			s.shift_attitude(id, int(cfg(data)["attitude"]), data)
+			s.remember(id, "знает: %s убит%s героем" % [_name(data, str(crime["victim"])), _ending(data, str(crime["victim"]))])
 	if not law(data, loc).is_empty():
 		if not s.wanted.has(loc):
 			s.wanted[loc] = TimeRules.abs_minute(s)
@@ -102,6 +103,16 @@ static func reveal(s: GameSession, data: Dictionary, victim: String) -> Array[St
 		if str(crime["victim"]) == victim and not bool(crime["known"]):
 			return _known(s, data, crime)
 	return []
+
+
+## «убит» / «убита» / «убит(а)» by the NPC's gender (v0.7.15).
+static func _ending(data: Dictionary, npc_id: String) -> String:
+	match str(data["world"]["npcs"].get(npc_id, {}).get("gender", "")):
+		"male":
+			return ""
+		"female":
+			return "а"
+	return "(а)"
 
 
 static func _name(data: Dictionary, npc_id: String) -> String:

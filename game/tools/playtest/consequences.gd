@@ -82,6 +82,15 @@ func run() -> void:
 		var text := " ".join(box.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text))
 		step("the murder in the chronicle", text.contains("Убийство: Кейра"), "")
 		await shot("chronicle")
+	# v0.7.15: the people of Brod remember the murder — the journal's «Разговоры» shows it under each of them.
+	var people: Button = find(game, "JournalTab_people")
+	if step("the people tab", people != null):
+		await press(people)
+		await frames(3)
+		var box: Node = find(game, "JournalTab_people").get_parent().get_parent()
+		var text := " ".join(box.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text))
+		step("the people remember the murder", text.contains("помнит: день 1 — знает: Кейра убита героем"), text.left(200))
+		await shot("people")
 	await key(KEY_ESCAPE)
 
 

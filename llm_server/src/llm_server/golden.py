@@ -66,9 +66,6 @@ def load_scenarios(path: Path = SCENARIOS) -> list[dict[str, Any]]:
 
 def unsupported(sc: dict[str, Any]) -> str:
     """Why protocol 0.2.0 cannot run this scenario fairly, or ""."""
-    expect = sc.get("expect", {})
-    if expect.get("check", {}).get("contest_npc"):
-        return "состязания с NPC — engine.check без contest до v0.5"
     return ""
 
 
@@ -84,7 +81,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         description += " На виду: " + "; ".join(names) + "."
     npcs = [{"npc_id": n["id"], "name": n["name"], "role": n.get("role", ""), "trader": bool(n.get("trader", False)),
              "attitude": ATTITUDE.get(str(n.get("attitude", "indifferent")), 0),
-             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie") if k in n}} for n in scene.get("npcs", [])]
+             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie", "memory") if k in n}} for n in scene.get("npcs", [])]
     ch = snap.get("character", {})
     hp = ch.get("hp", {})
     history = []
@@ -218,6 +215,9 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
         fails.append(f"навык {[ch.get('skill') or ch.get('save') for ch in checks]} не из {c['skill_in']}")
     if checks and c.get("dc_tier_in") and not any(ch["dc_tier"] in c["dc_tier_in"] for ch in checks):
         fails.append(f"сложность {[ch['dc_tier'] for ch in checks]} не из {c['dc_tier_in']}")
+    if checks and c.get("contest_npc") and not any(ch.get("target_id") == c["contest_npc"] for ch in checks):
+        # v0.7.15.1: the engine contests a social check with the NPC of its target_id (SocialRules)
+        fails.append(f"проверка не против {c['contest_npc']}: target_id {[ch.get('target_id') for ch in checks]}")
     if checks and c.get("tool_in") and not any(ch.get("tool") in c["tool_in"] for ch in checks):
         fails.append(f"инструмент {[ch.get('tool') for ch in checks]} не из {c['tool_in']}")
     if "max_checks" in expect and len(checks) > expect["max_checks"]:

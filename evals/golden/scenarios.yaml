@@ -148,7 +148,7 @@ scenarios:
     expect:
       check: {required: true, skill_in: [deception], contest_npc: npc_guard, contest_skill_in: [insight]}
     rubric:
-      - "Проверка оформлена как состязание Обман против Проницательности стражницы, а не как DC"
+      - "Проверка Обмана нацелена на стражницу (target_id), ступень — по дерзости лжи; рассказ строго по итогу проверки"
 
   - id: narration_matches_effects
     title: "Подобрать видимый кошелёк"
@@ -1436,3 +1436,38 @@ scenarios:
       effects: {forbidden_kinds: [coins, give_item]}
     rubric:
       - "Бруно благодарит без монет и вещей: услугой, кровом, наводкой или обещанием — в характере"
+
+  - id: npc_memory_promise
+    title: "Обещание NPC — в его память"
+    category: social
+    extends: tavern
+    mode: social
+    input: "По рукам, Бруно. Пять золотых верну к празднику урожая — слово даю."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Бруно Хмель", role: "хозяин таверны", template: commoner, attitude: friendly, trader: true}
+      history:
+        - "ИГРОК: Бруно, выручи — дай пять золотых в долг, мне не на что купить снаряжение."
+        - "МАСТЕР: Бруно чешет затылок: «Пять золотых… Ладно, ты парень вроде честный. Но к празднику урожая — вернёшь, слышишь?»"
+    expect:
+      effects: {required_kinds_any: [note]}
+    rubric:
+      - "Бруно отвечает в характере: принимает слово героя, может пригрозить или напомнить срок"
+      - "Обещание записано заметкой о Бруно (`note` с npc_id npc_innkeeper), а не общей"
+
+  - id: npc_memory_recall
+    title: "NPC помнит долг героя"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Бруно, здорово! Плесни-ка мне эля."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Бруно Хмель", role: "хозяин таверны", template: commoner, attitude: neutral, trader: true,
+             memory: ["день 1 — герой взял в долг 5 зм и обещал вернуть к празднику урожая", "день 3 — праздник урожая прошёл, долг не возвращён"]}
+    expect:
+      effects: {forbidden_kinds: [give_item, coins]}
+    rubric:
+      - "Бруно сам вспоминает невозвращённый долг в 5 зм и не наливает, пока о нём не договорятся, — в характере"

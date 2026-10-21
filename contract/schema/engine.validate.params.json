@@ -677,13 +677,25 @@
     },
     "NoteEffect": {
       "additionalProperties": false,
-      "description": "The master's own memory of an event (0.14.0): a short Russian sentence the player sees in the chat and the\njournal («Айра поклялась служить человеку в капюшоне»). A `flag` is only a flag the world pack knows.",
+      "description": "The master's own memory of an event (0.14.0): a short Russian sentence the player sees in the chat and the\njournal («Айра поклялась служить человеку в капюшоне»). A `flag` is only a flag the world pack knows. With\n`npc_id` (0.20.0) — what that NPC of the scene remembers of the hero («герой обещал вернуть 5 зм к празднику»):\nit comes back in `scene.npcs[].memory` at every meeting.",
       "properties": {
         "kind": {
           "const": "note",
           "default": "note",
           "title": "Kind",
           "type": "string"
+        },
+        "npc_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Npc Id"
         },
         "text": {
           "minLength": 3,

@@ -134,6 +134,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String) -> Array[Str
 		lines.append("%s хватается за кошель и озирается — вора не видно" % who)
 		return lines
 	s.shift_attitude(npc_id, int(cfg(data)["caught_attitude"]), data)
+	s.remember(npc_id, "поймал%s героя на краже из своих карманов" % CrimeRules._ending(data, npc_id))
 	lines.append("%s: отношение хуже" % who)
 	match reaction_kind(data, npc_id):
 		"fight":

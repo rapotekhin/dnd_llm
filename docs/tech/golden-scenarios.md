@@ -48,7 +48,7 @@ scenarios:
 | `check.required` | была (`true`) или не было (`false`) запроса `engine.check` |
 | `check.skill_in`, `check.dc_tier_in` | навык и ступень сложности из списка |
 | `check.tool_in` | проверка с инструментом из списка (`tool`, v0.7.11) |
-| `check.contest_npc`, `check.contest_skill_in` | состязание с этим NPC и навыком |
+| `check.contest_npc`, `check.contest_skill_in` | проверка с `target_id` этого NPC — состязание с ним считает движок по шаблону SRD (v0.7.15.1); `contest_skill_in` — для рубрики |
 | `max_checks` | не больше N проверок за ход |
 | `effects.required_kinds_any` / `forbidden_kinds` | среди предложенных эффектов есть хотя бы один из / нет ни одного из |
 | `effects.max_count`, `effects.coins_max` | число эффектов, сумма монет |
@@ -96,7 +96,7 @@ uv run python -m llm_server.golden --no-judge                       # тольк
 3. Автомат проверяет `expect`, судья — `rubric` (каждый критерий отдельно).
 4. Отчёт — `build/evals/<время>-<модель>.md` и `.json`: итог по сценарию, нарушения, вердикты, текст мастера, проверки, эффекты, цена и задержка.
 
-**Не поддерживается протоколом 0.2** (сценарий помечается `unsupported` с причиной, а не проваливается): боевой режим (v0.6.1), состязания с NPC (`contest`), стиль мастера и границы контента (ADR-0010, v0.5).
+**Не поддерживается протоколом 0.2** (сценарий помечается `unsupported` с причиной, а не проваливается): боевой режим (v0.6.1), стиль мастера и границы контента (ADR-0010, v0.5).
 
 Офлайн-тесты раннера (адаптер, проверки, прогон на `FunctionModel`) — `llm_server/tests/test_golden_runner.py`, в CI.
 

@@ -257,16 +257,23 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 				(by_loc[loc] as Array).append("• " + str(w.room(room_id).get("name", room_id)) + ("  — " + tr("MAP_HERE") if room_id == s.room_id else ""))
 			for loc: String in by_loc:
 				out.append({"title": str(w.location(loc).get("name", loc)), "lines": by_loc[loc]})
-		"people":
+		"people":  # the conversations' summaries and what each NPC remembers of the hero (v0.7.15)
 			var by_loc := {}
+			var met: Array[String] = []
 			for key: String in s.summaries:
-				if not key.begins_with("dialogue:"):
-					continue
-				var npc := key.get_slice(":", 1)
+				if key.begins_with("dialogue:"):
+					met.append(key.get_slice(":", 1))
+			for npc: String in s.npc_memory:
+				if not met.has(npc):
+					met.append(npc)
+			for npc: String in met:
 				var loc := w.location_id(_npc_room(w, npc))
 				if not by_loc.has(loc):
 					by_loc[loc] = []
-				(by_loc[loc] as Array).append("%s — %s" % [w.npc(npc).get("name", npc), s.summaries[key]])
+				var summary := str(s.summaries.get("dialogue:" + npc, ""))
+				(by_loc[loc] as Array).append("%s%s" % [w.npc(npc).get("name", npc), " — " + summary if not summary.is_empty() else ""])
+				for m: String in s.memory_of(npc):
+					(by_loc[loc] as Array).append("    · " + tr("JOURNAL_REMEMBERS").format({"fact": m}))
 			for loc: String in by_loc:
 				out.append({"title": str(w.location(loc).get("name", loc)) if not loc.is_empty() else tr("JOURNAL_ELSEWHERE"), "lines": by_loc[loc]})
 		"found":

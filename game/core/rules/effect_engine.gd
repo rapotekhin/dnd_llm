@@ -263,6 +263,12 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var text := str(e.get("text", "")).strip_edges()
 			if text.length() < 5:
 				return {"reason": "пустая заметка"}
+			var about := str(e.get("npc_id", "")) if e.get("npc_id") != null else ""
+			if not about.is_empty():  # v0.7.15: the NPC of the scene remembers it
+				if not s.npcs_here(world.world, s.room_id).has(about):
+					return {"reason": "NPC %s нет в этой комнате: память — о тех, кто здесь" % about}
+				return {"plan": {"text": text.left(200), "npc_id": about},
+					"summary": "%s запомнит: %s" % [world.npc(about).get("name", about), text.left(200)]}
 			return {"plan": {"text": text.left(200)}, "summary": "Запомнено: %s" % text.left(200)}
 		"equip":
 			return _plan_equip(s, data, e)
@@ -511,6 +517,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		return
 	if plan.has("victim"):  # crime_known (v0.7.14)
 		_extra_lines.append_array(CrimeRules.reveal(s, _data, str(plan["victim"])))
+		return
+	if plan.has("text") and plan.has("npc_id"):  # note about an NPC (v0.7.15)
+		s.remember(str(plan["npc_id"]), str(plan["text"]))
 		return
 	if plan.has("text"):  # note (v0.7.4)
 		s.notes.append({"day": s.day, "clock": TimeRules.clock(s), "room": s.room_id, "text": str(plan["text"])})

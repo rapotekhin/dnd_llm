@@ -40,6 +40,12 @@ func _ready() -> void:
 		f.text = tr("CHECK_FOUND").format({"what": found})
 		f.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 		col.add_child(f)
+	if not str(entry.get("dc_reason", "")).is_empty():  # v0.7.15.1: the DC of a social check by the NPC
+		var why := Label.new()
+		why.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		why.theme_type_variation = UiTheme.MUTED_LABEL
+		why.text = tr("CHECK_DC_REASON").format({"dc": int(entry.get("dc", 0)), "reason": entry["dc_reason"]})
+		col.add_child(why)
 	for key: String in ["disadvantage_reason", "auto_fail_reason"]:
 		if not str(entry.get(key, "")).is_empty():
 			var l := Label.new()

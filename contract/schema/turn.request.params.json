@@ -678,6 +678,13 @@
           "title": "Gender",
           "type": "string"
         },
+        "memory": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Memory",
+          "type": "array"
+        },
         "name": {
           "title": "Name",
           "type": "string"

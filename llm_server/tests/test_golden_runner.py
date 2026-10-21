@@ -26,7 +26,7 @@ def test_every_scenario_adapts_or_is_marked_unsupported():
 def test_unsupported_ones_say_why():
     by_id = scenarios()
     assert golden.unsupported(by_id["attack_innkeeper"]) == ""  # combat mode since 0.7.0
-    assert "состязан" in golden.unsupported(by_id["lie_to_guard_contest"])
+    assert golden.unsupported(by_id["lie_to_guard_contest"]) == ""  # the engine contests since v0.7.15.1
     assert golden.unsupported(by_id["dm_style_dry"]) == ""  # style and content limits travel in 0.2.2
     veil = golden.to_turn_params(by_id["content_veil_respected"]).snapshot.world
     assert veil is not None and veil.veils == ["пытки"]

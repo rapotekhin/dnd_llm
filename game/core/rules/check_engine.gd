@@ -52,6 +52,8 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 	}
 	if dis:
 		out["disadvantage_reason"] = str(params["disadvantage_reason"])
+	if not str(params.get("dc_reason", "")).is_empty():  # the NPC's SRD template set the DC (v0.7.15.1)
+		out["dc_reason"] = str(params["dc_reason"])
 	if not auto_fail.is_empty():
 		out["auto_fail_reason"] = auto_fail
 	return out

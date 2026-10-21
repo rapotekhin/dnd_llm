@@ -89,6 +89,7 @@ static func can_accept(s: GameSession, world: Dictionary, quest_id: String) -> S
 static func accept(s: GameSession, data: Dictionary, quest_id: String) -> Array[String]:
 	var q := quest(data["world"], quest_id)
 	s.quests_active[quest_id] = 0
+	s.remember(stand_in(s, data["world"], str(q.get("giver", ""))), "герой взял задание «%s»" % q["title"])
 	var lines: Array[String] = ["Новое задание: %s" % q["title"], "Цель: %s" % q["steps"][0]["text"]]
 	var given: Dictionary = q.get("offer_items", {})  # what the giver hands over (v0.6.5: the letter, the writ)
 	for id: String in given:
@@ -263,6 +264,7 @@ static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -
 	if i + 1 >= (q["steps"] as Array).size():
 		s.quests_active.erase(quest_id)
 		s.quests_done.append(quest_id)
+		s.remember(stand_in(s, data["world"], str(q.get("giver", ""))), "герой выполнил задание «%s»" % q["title"])
 		lines.append("Задание выполнено: %s" % q["title"])
 	else:
 		s.quests_active[quest_id] = i + 1

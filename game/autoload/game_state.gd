@@ -1818,6 +1818,10 @@ func _engine_check(params: Dictionary) -> Dictionary:
 	# v0.7.11: the words reach only who understands them; a tool of the check.
 	var skill_id := str(params.get("skill", "")) if params.get("skill") != null else ""
 	var listener := _listener(params)
+	var by_npc := SocialRules.dc(session, Catalog.data, _listener_id(params), skill_id, str(params.get("dc_tier", "")))  # v0.7.15.1
+	if not by_npc.is_empty():
+		params["dc"] = by_npc["dc"]
+		params["dc_reason"] = by_npc["reason"]
 	if not listener.is_empty():
 		var gate := LanguageRules.check_gate(session.character, Catalog.data, skill_id, LanguageRules.npc_understands(session.character, Catalog.data, listener))
 		if gate.has("auto_fail"):
@@ -1889,10 +1893,16 @@ func _engine_check(params: Dictionary) -> Dictionary:
 
 ## The NPC a social check speaks to: the check's target or the one the hero talks with ({} — none).
 func _listener(params: Dictionary) -> Dictionary:
+	var tid := _listener_id(params)
+	return world().npc(tid) if not tid.is_empty() else {}
+
+
+## The id of that NPC ("" — none, or a foe of the fight).
+func _listener_id(params: Dictionary) -> String:
 	var tid := str(params.get("target_id", "")) if params.get("target_id") != null else ""
 	if tid.is_empty() and session.in_conversation():
 		tid = session.npc_id
-	return world().npc(tid) if not tid.is_empty() else {}
+	return tid if world().world.get("npcs", {}).has(tid) and not session.dead_npcs.has(tid) else ""
 
 
 ## «Выступить» (v0.7.11): a Performance check on a stage of the pack, once a day; coins and, for an entertainer, a free

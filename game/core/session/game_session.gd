@@ -113,6 +113,10 @@ var rested_at: int = 480  # a new game starts in the morning, rested
 var awake_saves: int = 0
 ## Ids of the pack quests the player completed (XpRules).
 var quests_done: Array[String] = []
+## What each NPC remembers of the hero (v0.7.15, «Социальный режим 2.0»): npc_id → [{day, text}], the newest
+## NPC_MEMORY_MAX — facts the engine records (quests, caught thefts, murders) and the master's notes about the NPC.
+const NPC_MEMORY_MAX := 12
+var npc_memory: Dictionary = {}
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
 var summaries: Dictionary = {}
 ## Lines of the current conversation, the events for its summary.
@@ -214,6 +218,25 @@ func chronicle_tail(world: Dictionary, n: int) -> Array[String]:
 			continue
 		out.append("день %d, %02d:%02d, %s — %s" % [int(e["day"]), int(e["minute"]) / 60, int(e["minute"]) % 60,
 			world["rooms"].get(str(e["room"]), {}).get("name", e["room"]), t])
+	return out.slice(maxi(0, out.size() - n))
+
+
+## The NPC remembers a fact about the hero (the same fact twice is kept once).
+func remember(npc_id: String, text: String) -> void:
+	if npc_id.is_empty() or text.strip_edges().is_empty():
+		return
+	var list: Array = npc_memory.get(npc_id, [])
+	if list.any(func(m: Dictionary) -> bool: return str(m["text"]) == text):
+		return
+	list.append({"day": day, "text": text})
+	npc_memory[npc_id] = list.slice(maxi(0, list.size() - NPC_MEMORY_MAX))
+
+
+## What the NPC remembers, «день 2 — …», the newest `n`.
+func memory_of(npc_id: String, n: int = NPC_MEMORY_MAX) -> Array[String]:
+	var out: Array[String] = []
+	for m: Dictionary in npc_memory.get(npc_id, []):
+		out.append("день %d — %s" % [int(m["day"]), m["text"]])
 	return out.slice(maxi(0, out.size() - n))
 
 
@@ -367,6 +390,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"shop_closed": shop_closed,
 		"caught_by": caught_by,
 		"notes": notes,
+		"npc_memory": npc_memory,
 		"crimes": crimes,
 		"wanted": wanted,
 		"arrest": arrest,
@@ -474,6 +498,14 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for e: Variant in d.get("notes", []):
 		if e is Dictionary:
 			s.notes.append((e as Dictionary).duplicate())
+	var mem: Variant = d.get("npc_memory", {})
+	if mem is Dictionary:
+		for id: String in mem:
+			var list: Array = []
+			for m: Variant in mem[id]:
+				if m is Dictionary:
+					list.append({"day": int(m.get("day", 1)), "text": str(m.get("text", ""))})
+			s.npc_memory[id] = list
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):

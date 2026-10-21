@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.19.0"
+PROTOCOL_VERSION = "0.20.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -148,6 +148,7 @@ class SceneNpc(_In):
     speaks: str = ""  # the NPC's languages, Russian: «общий, дварфийский» (0.17.0)
     understands_hero: bool = True  # shares a tongue with the hero (or a spell bridges it) (0.17.0)
     tie: str = ""  # the NPC's tie with the hero's background: «служивый: уважает звание героя-солдата» (0.17.0)
+    memory: list[str] = Field(default_factory=list)  # what the NPC remembers of the hero: «день 2 — …» (0.20.0)
 
 
 class SceneProp(_In):
@@ -586,11 +587,14 @@ class CombatFoeSpec(_Out):
 
 class NoteEffect(_Out):
     """The master's own memory of an event (0.14.0): a short Russian sentence the player sees in the chat and the
-    journal («Айра поклялась служить человеку в капюшоне»). A `flag` is only a flag the world pack knows."""
+    journal («Айра поклялась служить человеку в капюшоне»). A `flag` is only a flag the world pack knows. With
+    `npc_id` (0.20.0) — what that NPC of the scene remembers of the hero («герой обещал вернуть 5 зм к празднику»):
+    it comes back in `scene.npcs[].memory` at every meeting."""
 
     kind: Literal["note"] = "note"
     # a long note is cut, not refused: a refused schema made the turn fail after the tool's retries (v0.7.4 goldens)
     text: Annotated[str, BeforeValidator(lambda v: v.strip()[:200] if isinstance(v, str) else v)] = Field(min_length=3)
+    npc_id: str | None = None
 
 
 class EquipEffect(_Out):
