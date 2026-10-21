@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 22
+const SAVE_VERSION := 23
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -44,6 +44,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	19: _v19_to_v20,
 	20: _v20_to_v21,
 	21: _v21_to_v22,
+	22: _v22_to_v23,
 }
 
 
@@ -238,3 +239,15 @@ static func _v20_to_v21(data: Dictionary, _ctx: Dictionary) -> void:
 ## v0.7.14.3: the master's rewards since the long rest — an old game starts with a full budget.
 static func _v21_to_v22(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["reward_spent"] = 0
+
+
+## v0.7.14.4: the chronicle starts with the engine lines still in the saved chat (their day and room unknown — the
+## save's own).
+static func _v22_to_v23(data: Dictionary, _ctx: Dictionary) -> void:
+	var s: Dictionary = data["session"]
+	var out: Array = []
+	for e: Variant in s.get("chat", []):
+		if e is Dictionary and str(e.get("kind", "")) == GameSession.KIND_EFFECT and not (e.get("lines", []) as Array).is_empty():
+			out.append({"day": int(s.get("day", 1)), "minute": int(s.get("minute", 480)), "room": str(s.get("room_id", "")),
+				"text": " · ".join(e["lines"])})
+	s["chronicle"] = out

@@ -547,6 +547,13 @@
     },
     "Scene": {
       "properties": {
+        "chronicle": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Chronicle",
+          "type": "array"
+        },
         "closed_exits": {
           "items": {
             "type": "string"

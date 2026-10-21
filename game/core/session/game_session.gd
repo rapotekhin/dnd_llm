@@ -95,6 +95,10 @@ var arrest: String = ""
 var bodies: Dictionary = {}
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
+## The chronicle (v0.7.14.4): every line of the engine in the chat with its day, minute and room
+## [{day, minute, room, text}], the newest CHRONICLE_MAX — the journal's «Хроника» and the master's memory.
+const CHRONICLE_MAX := 400
+var chronicle: Array[Dictionary] = []
 ## What the master gave (cp of coins and things) since the last long rest (EffectEngine, v0.7.14.3).
 var reward_spent: int = 0
 ## The master's own memory of events (effect `note`, v0.7.4): [{day, clock, room, text}] — shown in the journal.
@@ -194,7 +198,23 @@ func next_effect_id() -> String:
 
 func append(entry: Dictionary) -> Dictionary:
 	chat.append(entry)
+	if str(entry.get("kind", "")) == KIND_EFFECT and not (entry.get("lines", []) as Array).is_empty():  # v0.7.14.4
+		chronicle.append({"day": day, "minute": minute, "room": room_id, "text": " · ".join(entry["lines"])})
+		if chronicle.size() > CHRONICLE_MAX:
+			chronicle = chronicle.slice(chronicle.size() - CHRONICLE_MAX)
 	return entry
+
+
+## The chronicle for the master: the last `n` facts away from mere walking, «день 2, 09:12, Таверна — …».
+func chronicle_tail(world: Dictionary, n: int) -> Array[String]:
+	var out: Array[String] = []
+	for e: Dictionary in chronicle:
+		var t := str(e["text"])
+		if t.begins_with("Переход:") and not t.contains(" · ") or t.begins_with("Путь:") and not t.contains(" · "):
+			continue
+		out.append("день %d, %02d:%02d, %s — %s" % [int(e["day"]), int(e["minute"]) / 60, int(e["minute"]) % 60,
+			world["rooms"].get(str(e["room"]), {}).get("name", e["room"]), t])
+	return out.slice(maxi(0, out.size() - n))
 
 
 func attitude(id: String) -> int:
@@ -354,6 +374,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"searched": searched,
 		"quests_failed": quests_failed,
 		"reward_spent": reward_spent,
+		"chronicle": chronicle,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -447,6 +468,9 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for q: Variant in d.get("quests_failed", []):
 		s.quests_failed.append(str(q))
 	s.reward_spent = int(d.get("reward_spent", 0))
+	for e: Variant in d.get("chronicle", []):
+		if e is Dictionary:
+			s.chronicle.append({"day": int(e.get("day", 1)), "minute": int(e.get("minute", 0)), "room": str(e.get("room", "")), "text": str(e.get("text", ""))})
 	for e: Variant in d.get("notes", []):
 		if e is Dictionary:
 			s.notes.append((e as Dictionary).duplicate())

@@ -749,3 +749,6 @@ BTN_CRIME_RESIST_TIP,Бой со стражей — новое преступл�
 BTN_SEARCH_BODY,Обыскать: {name}
 SHOP_CLOSED_WANTED,Вы в розыске — здесь вам ничего не продадут
 JOURNAL_FAILED,провалено
+JOURNAL_TAB_CHRONICLE,Хроника
+JOURNAL_EMPTY_CHRONICLE,Здесь появятся события: бои, находки, сделки, раны
+JOURNAL_DAY,День {day}

@@ -179,6 +179,7 @@ class Scene(_In):
     furnish: bool = False  # the room was never furnished: propose `furnish` before describing it (0.11.0)
     closed_exits: list[str] = Field(default_factory=list)  # ways the pack keeps shut until the engine opens them (0.14.0)
     notes: list[str] = Field(default_factory=list)  # the master's own memory of events here, in Russian (0.14.0)
+    chronicle: list[str] = Field(default_factory=list)  # the last facts of the engine: «день 2, 09:12, Таверна — …» (0.19.0)
 
 
 class InventoryLine(_In):

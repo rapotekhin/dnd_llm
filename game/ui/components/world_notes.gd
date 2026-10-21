@@ -177,7 +177,7 @@ func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks:
 
 
 ## Journal tabs (v0.6.6, playtest-1): quests, places, conversations, finds; inside — groups by location that fold.
-const TABS: Array[String] = ["quests", "places", "people", "found"]
+const TABS: Array[String] = ["quests", "places", "people", "found", "chronicle"]
 var _tab := "quests"
 var _folded := {}
 
@@ -282,6 +282,18 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 			if not s.notes.is_empty():  # the master's memory of events (v0.7.4)
 				out.append({"title": tr("JOURNAL_NOTES"), "lines": s.notes.map(func(n: Dictionary) -> String:
 					return "День %d, %s, %s — %s" % [int(n["day"]), n.get("clock", ""), w.room(str(n["room"])).get("name", n["room"]), n["text"]])})
+		"chronicle":  # v0.7.14.4: the facts of the engine by day, the newest day first and open
+			var by_day := {}
+			for e: Dictionary in s.chronicle:
+				var d := int(e["day"])
+				if not by_day.has(d):
+					by_day[d] = []
+				(by_day[d] as Array).append("%02d:%02d · %s — %s" % [int(e["minute"]) / 60, int(e["minute"]) % 60, w.room(str(e["room"])).get("name", e["room"]), e["text"]])
+			var days := by_day.keys()
+			days.sort()
+			days.reverse()
+			for d: int in days:
+				out.append({"title": tr("JOURNAL_DAY").format({"day": d}), "lines": by_day[d], "folded": d != days[0]})
 	return out
 
 

@@ -34,6 +34,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
 			"props": PropRules.snapshot(s, data, s.room_id),
 			"closed_exits": closed_exits(s, data["world"]),
+			"chronicle": s.chronicle_tail(data["world"], 12),
 			"notes": s.notes.slice(-12).map(func(n: Dictionary) -> String: return "день %d, %s — %s" % [int(n["day"]), world.room(str(n["room"])).get("name", n["room"]), n["text"]]),
 			"furnish": PropRules.needs_furnish(s, s.room_id) and not CombatRules.active(s) and s.mode == GameSession.MODE_EXPLORATION,
 			"time_of_day": "%s, %s%s" % [TimeRules.part_name(s, data), TimeRules.clock(s), ", темно" if TimeRules.dark(s, data) else ""],

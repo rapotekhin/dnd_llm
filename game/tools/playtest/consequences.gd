@@ -2,7 +2,7 @@ extends "res://tools/playtest/playtest_base.gd"
 ## «Последствия и время» (python tools/godot_playtest.py --scenario consequences), v0.7.14: the fighter attacks the
 ## mercenary Keira in the tavern before Bruno and Mira (the master's next_mode combat — here set by hand) and kills
 ## her: a murder with witnesses, the Brod knows, Bruno's trade is shut; the body is searched; an hour later a patrol
-## holds the hero on the square — the exits are shut, the stocks settle it.
+## holds the hero on the square — the exits are shut, the stocks settle it; the journal's «Хроника» keeps it all.
 
 
 func run() -> void:
@@ -64,6 +64,25 @@ func run() -> void:
 		await frames(3)
 	step("the stocks — days later, free", s.day == day + 2 and not s.wanted.has("brod") and not CrimeRules.held(s), _chat(s))
 	await shot("stocks")
+
+	# v0.7.14.4: the journal's «Хроника» keeps the murder with its day and place.
+	var game := screen()
+	await press(find(game, "JournalButton"))
+	var tab: Button = find(game, "JournalTab_chronicle")
+	if step("the chronicle tab", tab != null):
+		await press(tab)
+		await frames(3)
+		var box: Node = find(game, "JournalTab_chronicle").get_parent().get_parent()  # the journal's column (rebuilt on a click)
+		for b: Node in box.find_children("*", "Button", true, false):  # older days are folded: open the first
+			if (b as Button).text.begins_with("▸ " + tr("JOURNAL_DAY").format({"day": 1})):
+				await press(b as Button)
+				await frames(3)
+				break
+		box = find(game, "JournalTab_chronicle").get_parent().get_parent()  # rebuilt after the click
+		var text := " ".join(box.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text))
+		step("the murder in the chronicle", text.contains("Убийство: Кейра"), "")
+		await shot("chronicle")
+	await key(KEY_ESCAPE)
 
 
 func _chat(s: GameSession) -> String:
