@@ -673,6 +673,11 @@
           "title": "Description",
           "type": "string"
         },
+        "eager": {
+          "default": false,
+          "title": "Eager",
+          "type": "boolean"
+        },
         "gender": {
           "default": "other",
           "enum": [
@@ -708,10 +713,22 @@
           "title": "Race",
           "type": "string"
         },
+        "refuses": {
+          "default": false,
+          "title": "Refuses",
+          "type": "boolean"
+        },
         "role": {
           "default": "",
           "title": "Role",
           "type": "string"
+        },
+        "secrets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Secrets",
+          "type": "array"
         },
         "services": {
           "items": {

@@ -275,6 +275,11 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if str(e["kind"]) == "npc_discount":
 				return SocialRules.plan_discount(s, data, npc_id, int(e.get("percent", 0)), won)
 			return SocialRules.plan_favor(s, data, npc_id, str(e.get("service", "")), str(e.get("item_id", "")) if e.get("item_id") != null else "", won)
+		"reveal_secret":  # the NPC tells a secret of its own by goodwill (v0.7.15.3)
+			var who := str(e.get("npc_id", ""))
+			if not s.npcs_here(world.world, s.room_id).has(who):
+				return {"reason": "NPC %s нет в этой комнате" % who}
+			return SocialRules.plan_secret(s, data, who, str(e.get("secret_id", "")))
 		"accept_quest":  # the hero takes a quest the NPC offers by words, like the button (v0.7.15.2)
 			var qid := str(e.get("quest_id", ""))
 			var why := QuestRules.can_accept(s, world.world, qid)
@@ -571,6 +576,12 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		if not main.is_empty() and str(s.character["equipped"].get("off_hand", "")) == main and int(s.character["inventory"].get(main, 0)) < 2:
 			s.character["equipped"]["off_hand"] = ""
 		CharacterRules.refresh(s.character, _data, s.items)
+		return
+	if plan.has("secret"):  # reveal_secret (v0.7.15.3)
+		for sec: Dictionary in SocialRules.secrets(_data, str(plan["secret_npc"])):
+			if str(sec["id"]) == str(plan["secret"]):
+				SocialRules.tell(s, _data, str(plan["secret_npc"]), sec)
+		_extra_lines.append_array(QuestRules.advance(s, _data))
 		return
 	if plan.has("discount"):  # npc_discount (v0.7.15.2)
 		SocialRules.grant_discount(s, _data, plan)

@@ -8,6 +8,9 @@ extends RefCounted
 ##   contest, medium +5, hard +10…);
 ## - attitude: a friendly NPC is easier to persuade and to fool, a hostile one harder (`attitude_step` a step);
 ## - the DC stays within [dc_min, dc_max]. The master never sends a number (ADR-0008 §2).
+## An NPC secret (v0.7.15.3) is a concept of the engine, not a list: knowledge (`text`) behind a price — a social check
+## with total ≥ `dc` or attitude ≥ `attitude` — that sets a world `flag` and/or reveals a room secret elsewhere
+## (`reveals` "room:secret"). The master sees only the `hint` until the engine tells it.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -154,3 +157,81 @@ static func deal_text(s: GameSession, data: Dictionary, npc_id: String) -> Strin
 	if s.favors.has(npc_id):
 		parts.append("услугу даром оказывал(а) в день %d" % int(s.favors[npc_id]))
 	return "; ".join(parts)
+
+
+# --- attitude thresholds and NPC secrets (v0.7.15.3) --------------------------------------------------------------
+
+
+## The NPC will not talk or trade with the hero (attitude at rules.social.thresholds.refuse_at or below).
+static func refuses(s: GameSession, data: Dictionary, npc_id: String) -> bool:
+	return s.attitude(npc_id) <= int(cfg(data)["thresholds"]["refuse_at"])
+
+
+## The NPC offers help by itself (attitude at eager_at or above).
+static func eager(s: GameSession, data: Dictionary, npc_id: String) -> bool:
+	return s.attitude(npc_id) >= int(cfg(data)["thresholds"]["eager_at"])
+
+
+## The pack secrets of the NPC: [{id, hint, text, dc, attitude, skills?, flag?, reveals?}].
+static func secrets(data: Dictionary, npc_id: String) -> Array:
+	return data["world"]["npcs"].get(npc_id, {}).get("secrets", [])
+
+
+static func told(s: GameSession, npc_id: String, secret_id: String) -> bool:
+	return s.secrets_told.has("%s:%s" % [npc_id, secret_id])
+
+
+static func _skills(data: Dictionary, sec: Dictionary) -> Array:
+	return sec.get("skills", cfg(data)["secret_skills"])
+
+
+## A social check against the NPC that won: the secrets its total pays for. Their texts.
+static func reveal_by_check(s: GameSession, data: Dictionary, npc_id: String, skill: String, total: int) -> Array[String]:
+	var out: Array[String] = []
+	for sec: Dictionary in secrets(data, npc_id):
+		if not told(s, npc_id, str(sec["id"])) and _skills(data, sec).has(skill) and total >= int(sec.get("dc", 99)):
+			out.append(tell(s, data, npc_id, sec))
+	return out
+
+
+## The plan of reveal_secret (the NPC tells it by goodwill): {plan, summary} or {reason}.
+static func plan_secret(s: GameSession, data: Dictionary, npc_id: String, secret_id: String) -> Dictionary:
+	var name := str(data["world"]["npcs"].get(npc_id, {}).get("name", npc_id))
+	for sec: Dictionary in secrets(data, npc_id):
+		if str(sec["id"]) != secret_id:
+			continue
+		if told(s, npc_id, secret_id):
+			return {"reason": "%s уже рассказал(а) это герою" % name}
+		if s.attitude(npc_id) < int(sec.get("attitude", 99)):
+			return {"reason": "%s пока не доверяет герою настолько (нужно отношение %+d) — или выведать проверкой %s с его target_id" % [
+				name, int(sec.get("attitude", 99)), "/".join(_skills(data, sec))]}
+		return {"plan": {"secret": secret_id, "secret_npc": npc_id}, "summary": "%s рассказывает: %s" % [name, sec["text"]]}
+	return {"reason": "у %s нет тайны %s" % [name, secret_id]}
+
+
+## The NPC tells the secret: the flag, the room secret it reveals, the NPC's memory. Its text.
+static func tell(s: GameSession, data: Dictionary, npc_id: String, sec: Dictionary) -> String:
+	s.secrets_told.append("%s:%s" % [npc_id, sec["id"]])
+	var flag := str(sec.get("flag", ""))
+	if not flag.is_empty() and not s.flags.has(flag):
+		s.flags.append(flag)
+	var reveals := str(sec.get("reveals", ""))
+	if reveals.contains(":"):
+		var room := reveals.get_slice(":", 0)
+		var ids: Array = s.revealed.get(room, [])
+		if not ids.has(reveals.get_slice(":", 1)):
+			ids.append(reveals.get_slice(":", 1))
+			s.revealed[room] = ids
+	s.remember(npc_id, "рассказал%s герою тайну: %s" % [CrimeRules._ending(data, npc_id), sec["text"]])
+	return str(sec["text"])
+
+
+## The secrets the master sees, untold ones only as a hint: «[cellar] что-то скрывает: … — выведать: …».
+static func secret_hints(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
+	var out: Array[String] = []
+	for sec: Dictionary in secrets(data, npc_id):
+		if told(s, npc_id, str(sec["id"])):
+			continue
+		out.append("[%s] %s — расскажет при отношении %+d или выдаст успешной проверкой (%s) с его target_id" % [
+			sec["id"], sec.get("hint", "что-то скрывает"), int(sec.get("attitude", 99)), ", ".join(_skills(data, sec))])
+	return out

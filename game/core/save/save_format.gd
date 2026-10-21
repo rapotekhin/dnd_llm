@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 25
+const SAVE_VERSION := 26
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -47,6 +47,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	22: _v22_to_v23,
 	23: _v23_to_v24,
 	24: _v24_to_v25,
+	25: _v25_to_v26,
 }
 
 
@@ -264,3 +265,8 @@ static func _v23_to_v24(data: Dictionary, _ctx: Dictionary) -> void:
 static func _v24_to_v25(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["discounts"] = {}
 	data["session"]["favors"] = {}
+
+
+## v0.7.15.3: the NPC secrets the hero learned — none yet in an old game.
+static func _v25_to_v26(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["secrets_told"] = []

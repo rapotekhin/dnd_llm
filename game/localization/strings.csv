@@ -99,6 +99,7 @@ BTN_STEP_LEFT,← Шаг
 BTN_STEP_RIGHT,Шаг →
 BTN_TAKE_ALL,Забрать всё
 BTN_TALK_TO,Поговорить: {name}
+TALK_REFUSED,Враждебен к вам — не станет говорить
 BTN_TO_MENU,В меню
 BTN_TO_TALK,К разговору
 BTN_TO_TRADE,Торговать

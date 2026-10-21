@@ -1,6 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## «Социальный режим 2.0» playtest (python tools/godot_playtest.py --scenario social), v0.7.15: a discount the
-## merchant gave by words shows in the deal panel and lowers the prices; the people remember it.
+## merchant gave by words shows in the deal panel and lowers the prices; the people remember it; a hostile NPC will
+## not talk or trade (v0.7.15.3).
 
 
 func run() -> void:
@@ -41,3 +42,14 @@ func run() -> void:
 		await press(find(game, "LeaveButton"))
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	step("the merchant remembers it", " ".join(s.memory_of("npc_merchant")).contains("скидку 20%"), " ".join(s.memory_of("npc_merchant")))
+
+	# v0.7.15.3: a hostile NPC turns the hero away — the talk and trade buttons are off.
+	s.attitudes["npc_merchant"] = -3
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var talk: Button = find(game, "Talk_npc_merchant")
+	var deal_b: Button = find(game, "Trade_npc_merchant")
+	step("a hostile merchant will not talk", talk != null and talk.disabled and talk.tooltip_text.contains("Враждебен"), talk.tooltip_text if talk != null else "")
+	step("nor trade", deal_b != null and deal_b.disabled)
+	step("talking by the engine is refused too", not gs.talk_to("npc_merchant"))
+	await shot("hostile")

@@ -924,6 +924,32 @@
       "title": "PropStateEffect",
       "type": "object"
     },
+    "RevealSecretEffect": {
+      "additionalProperties": false,
+      "description": "An NPC of the scene tells a secret of its own by goodwill (0.22.0): `secret_id` from `scene.npcs[].secrets`.\nThe engine checks the attitude it needs; a secret won by a social check comes in the check's `revealed`.",
+      "properties": {
+        "kind": {
+          "const": "reveal_secret",
+          "default": "reveal_secret",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "secret_id": {
+          "title": "Secret Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "secret_id"
+      ],
+      "title": "RevealSecretEffect",
+      "type": "object"
+    },
     "StartCombatEffect": {
       "additionalProperties": false,
       "description": "The master starts a fight (0.7.0): the engine checks the XP budget of the character's level. In a fight it is a\nreinforcement (0.8.0): the newcomers come at the edge of the field (`side`) next round, within the same budget.",
@@ -1088,6 +1114,7 @@
           "npc_discount": "#/$defs/NpcDiscountEffect",
           "npc_favor": "#/$defs/NpcFavorEffect",
           "prop_state": "#/$defs/PropStateEffect",
+          "reveal_secret": "#/$defs/RevealSecretEffect",
           "start_combat": "#/$defs/StartCombatEffect",
           "take_item": "#/$defs/TakeItemEffect",
           "take_prop": "#/$defs/TakePropEffect",
@@ -1165,6 +1192,9 @@
         },
         {
           "$ref": "#/$defs/AcceptQuestEffect"
+        },
+        {
+          "$ref": "#/$defs/RevealSecretEffect"
         }
       ],
       "title": "Effect"

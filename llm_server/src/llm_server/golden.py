@@ -81,7 +81,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         description += " На виду: " + "; ".join(names) + "."
     npcs = [{"npc_id": n["id"], "name": n["name"], "role": n.get("role", ""), "trader": bool(n.get("trader", False)),
              "attitude": ATTITUDE.get(str(n.get("attitude", "indifferent")), 0),
-             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie", "memory", "services", "deal") if k in n}} for n in scene.get("npcs", [])]
+             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie", "memory", "services", "deal", "secrets", "refuses", "eager") if k in n}} for n in scene.get("npcs", [])]
     ch = snap.get("character", {})
     hp = ch.get("hp", {})
     history = []
@@ -163,7 +163,7 @@ class MockEngine:
             return {"check_id": f"c-{self._n}", "rolls": d20 or [max(1, int(c.get("total", 10)) - int(c.get("bonus", 0)))],
                     "bonus": c.get("bonus", 0), "total": c.get("total", 10), "dc": c.get("dc", 15),
                     "success": bool(c.get("success")), "nat": nat or 0, "blocked": bool(c.get("blocked")),
-                    "note": c.get("note", "")}
+                    "note": c.get("note", ""), "revealed": list(c.get("revealed") or [])}
         if method == "engine.validate":
             rule = self.engine.get("validate", "accept")
             kind = p["effect"]["kind"]

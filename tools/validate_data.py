@@ -148,6 +148,15 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
                 errors.append(f"NPC {nid}: schedule — from/to часы 0–23, room — комната пакета или пусто")
         if npc.get("heir") and (npc["heir"] not in npcs or npc["heir"] == nid):
             errors.append(f"NPC {nid}: наследник heir — другой NPC пакета")
+        for sec in npc.get("secrets", []):  # v0.7.15.3: knowledge behind a check or attitude
+            where = f"NPC {nid}, тайна {sec.get('id')}"
+            if not all(sec.get(k) for k in ("id", "hint", "text")):
+                errors.append(f"{where}: нужны id, hint, text")
+            if not isinstance(sec.get("dc", 0), int) or not isinstance(sec.get("attitude", 0), int):
+                errors.append(f"{where}: dc и attitude — целые")
+            rv = sec.get("reveals", "")
+            if rv and (":" not in rv or rv.split(":")[1] not in [x["id"] for x in rooms.get(rv.split(":")[0], {}).get("secrets", [])]):
+                errors.append(f"{where}: reveals «комната:тайна» — нет такой тайны комнаты {rv}")
     for lid, loc in world["locations"].items():  # v0.7.14: the law of a location
         law = loc.get("law")
         if law is None:

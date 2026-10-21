@@ -1423,6 +1423,8 @@ func talk_to(npc_id: String, trade: bool = false) -> bool:
 		return false
 	if trade and (not world().is_trader(npc_id) or TimeRules.shops_closed(session, Catalog.data) or TheftRules.shop_closed_for(session, npc_id, Catalog.data)):
 		return false
+	if SocialRules.refuses(session, Catalog.data, npc_id):  # v0.7.15.3: a hostile NPC turns away
+		return false
 	_begin_conversation(npc_id, GameSession.MODE_TRADE if trade else GameSession.MODE_SOCIAL)
 	_request("enter", "")
 	return true
@@ -1708,6 +1710,8 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 		return "combat"
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and not s.in_conversation() and turn_kind != "action":
 		return ""  # a conversation starts only from the player's own words (v0.7.2: the master opened one on «resume»)
+	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and not s.in_conversation() and SocialRules.refuses(s, Catalog.data, npc_id):
+		return ""  # v0.7.15.3: a hostile NPC will not talk; the master narrated the refusal
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and s.npcs_here(world().world, s.room_id).has(npc_id):
 		if mode == GameSession.MODE_TRADE and (not world().is_trader(npc_id) or TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, npc_id, Catalog.data)):
 			mode = GameSession.MODE_SOCIAL
@@ -1882,6 +1886,9 @@ func _engine_check(params: Dictionary) -> Dictionary:
 			result["note"] = _theft(mark, bool(result["success"]))
 		if bool(result["success"]) and params.get("skill") != null:
 			result["revealed"] = ExplorationRules.active_reveal(session, Catalog.data["world"], str(params["skill"]), int(result["total"]))
+			var told := _listener_id(params)  # v0.7.15.3: a won social check makes the NPC tell what it paid for
+			if not told.is_empty():
+				(result["revealed"] as Array).append_array(SocialRules.reveal_by_check(session, Catalog.data, told, str(params["skill"]), int(result["total"])))
 	_add(GameSession.check_entry(params, result))
 	if not (result.get("revealed", []) as Array).is_empty():
 		var found := ExplorationRules.take_caches(session, Catalog.data, room)

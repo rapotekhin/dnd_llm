@@ -1470,7 +1470,7 @@ scenarios:
     expect:
       effects: {forbidden_kinds: [give_item, coins]}
     rubric:
-      - "Бруно сам вспоминает невозвращённый долг в 5 зм и не наливает, пока о нём не договорятся, — в характере"
+      - "Бруно сам вспоминает невозвращённый долг в 5 зм и ведёт себя по нему: требует вернуть или договориться, в долг больше не даёт — в характере"
 
   - id: discount_after_persuasion
     title: "Уговорил торговца — скидка эффектом"
@@ -1525,3 +1525,54 @@ scenarios:
       effects: {required_kinds_any: [accept_quest], forbidden_kinds: [coins, give_item, xp]}
     rubric:
       - "Дрогин принимает согласие героя в характере и объясняет, где искать; задание оформлено эффектом accept_quest, награда сверх описания не обещана"
+
+  - id: secret_hint_not_invented
+    title: "NPC скрывает тайну — мастер её не выдумывает"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Тук, а чего ты такой дёрганый? Что у тебя с погребом?"
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_cook, name: "Тук", role: "повар", template: commoner, attitude: indifferent,
+             secrets: ["[cellar] нервничает из-за погреба и нового засова — расскажет при отношении +2 или выдаст успешной проверкой (persuasion, intimidation, insight) с его target_id"]}
+    engine:
+      check: {d20: [4], bonus: 2, total: 6, dc: 12, success: false, nat: 4, blocked: false}
+    expect:
+      effects: {forbidden_kinds: [reveal_secret]}
+    rubric:
+      - "Тук уклоняется в характере; что именно в погребе (лаз, твари, контрабандисты) — не названо: тайну знает только движок"
+
+  - id: secret_by_check
+    title: "Тайна выпытана проверкой — рассказ по ответу движка"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Тук, выкладывай как есть, что у тебя в погребе, или я сам туда полезу и всем расскажу."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_cook, name: "Тук", role: "повар", template: commoner, attitude: indifferent,
+             secrets: ["[cellar] нервничает из-за погреба и нового засова — расскажет при отношении +2 или выдаст успешной проверкой (persuasion, intimidation, insight) с его target_id"]}
+    engine:
+      check: {d20: [15], bonus: 2, total: 17, dc: 12, success: true, nat: 15, blocked: false,
+              revealed: ["Тук признаётся: ночами в погребе скребётся что-то из-за дальних бочек — там старый лаз контрабандистов к реке; он заставил его бочками и поставил засов"]}
+    expect:
+      check: {required: true, skill_in: [intimidation, persuasion], contest_npc: npc_cook}
+    rubric:
+      - "Тук признаётся устами в характере: лаз контрабандистов за дальними бочками, скребётся по ночам, засов — ровно по ответу движка, без новых подробностей"
+
+  - id: hostile_refuses_to_talk
+    title: "Враждебный NPC не заговаривает"
+    category: social
+    extends: tavern
+    input: "Подхожу к Туку: слушай, давай поговорим по-хорошему."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_cook, name: "Тук", role: "повар", template: commoner, attitude: hostile, refuses: true}
+    expect:
+      next_mode: null
+    rubric:
+      - "Тук отказывается говорить в характере (отворачивается, гонит); разговор не начинается"

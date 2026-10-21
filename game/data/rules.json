@@ -163,6 +163,17 @@
 			"days": 7,
 			"min_attitude": 1
 		},
+		"thresholds": {
+			"_doc": "Attitude thresholds (v0.7.15.3): at refuse_at and below the NPC will not talk or trade; at eager_at and above it offers help by its own roles and services.",
+			"refuse_at": -3,
+			"eager_at": 3
+		},
+		"secret_skills": [
+			"persuasion",
+			"deception",
+			"intimidation",
+			"insight"
+		],
 		"favor": {
 			"_doc": "A service of the NPC for free (v0.7.15.2, effect npc_favor): attitude ≥ min_attitude or won over this turn; one per NPC in cooldown_days.",
 			"min_attitude": 2,

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.21.0"
+PROTOCOL_VERSION = "0.22.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -151,6 +151,9 @@ class SceneNpc(_In):
     memory: list[str] = Field(default_factory=list)  # what the NPC remembers of the hero: «день 2 — …» (0.20.0)
     services: list[str] = Field(default_factory=list)  # «опознание вещей [identify]» — for npc_favor (0.21.0)
     deal: str = ""  # what the NPC granted by words: «скидка герою 10% до дня 9» (0.21.0)
+    secrets: list[str] = Field(default_factory=list)  # untold secrets as hints: «[cellar] нервничает из-за погреба — …» (0.22.0)
+    refuses: bool = False  # hostile: will not talk or trade (0.22.0)
+    eager: bool = False  # a close friend: offers help by itself (0.22.0)
 
 
 class SceneProp(_In):
@@ -659,6 +662,15 @@ class NpcFavorEffect(_Out):
     reason: str
 
 
+class RevealSecretEffect(_Out):
+    """An NPC of the scene tells a secret of its own by goodwill (0.22.0): `secret_id` from `scene.npcs[].secrets`.
+    The engine checks the attitude it needs; a secret won by a social check comes in the check's `revealed`."""
+
+    kind: Literal["reveal_secret"] = "reveal_secret"
+    npc_id: str
+    secret_id: str
+
+
 class AcceptQuestEffect(_Out):
     """The hero takes by words a quest its giver here offers (0.21.0), like the button «Взять задание»."""
 
@@ -676,7 +688,7 @@ Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
-    | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect,
+    | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect,
     Field(discriminator="kind"),
 ]
 

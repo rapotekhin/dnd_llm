@@ -106,18 +106,19 @@ func _rebuild() -> void:
 			_subheading("SIDE_PEOPLE")
 			for id: String in npcs:
 				var n := world.npc(id)
-				var b := _button(tr("BTN_TALK_TO").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, false), can_act)
-				b.tooltip_text = "%s — %s" % [n.get("name", id), n.get("role", "")]
+				var refuses := SocialRules.refuses(s, Catalog.data, id)  # v0.7.15.3
+				var b := _button(tr("BTN_TALK_TO").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, false), can_act and not refuses)
+				b.tooltip_text = tr("TALK_REFUSED") if refuses else "%s — %s" % [n.get("name", id), n.get("role", "")]
 				b.name = "Talk_" + id
 				var pk := _button(tr("BTN_POCKETS").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), pockets_requested.emit.bind(id),
 					can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
 				pk.name = "Pockets_" + id
 				if bool(n.get("trader", false)):
-					var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id, Catalog.data)
+					var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id, Catalog.data) or refuses
 					var t := _button(tr("BTN_TRADE_WITH").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, true), can_act and not closed)
 					t.name = "Trade_" + id
 					if closed:
-						t.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else
+						t.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else "TALK_REFUSED" if refuses else
 							"SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED")
 		for away: String in SceneRules.absent(s, Catalog.data["world"], s.room_id):  # v0.7.14.2: their hours
 			_line(away, true)

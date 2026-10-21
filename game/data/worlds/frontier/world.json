@@ -1075,6 +1075,20 @@
 			"monster": "guard",
 			"tags": [
 				"military"
+			],
+			"secrets": [
+				{
+					"id": "crypt",
+					"hint": "знает о заставе больше, чем говорит",
+					"dc": 13,
+					"attitude": 1,
+					"skills": [
+						"persuasion",
+						"deception"
+					],
+					"text": "Орвин вспоминает: коменданта заставы похоронили в склепе под часовней, в нише со знаком пламени — если он поднялся, то оттуда",
+					"reveals": "outpost-crypt:niche"
+				}
 			]
 		},
 		"npc_mercenary": {
@@ -1099,6 +1113,21 @@
 			"monster": "commoner",
 			"tags": [
 				"commoner"
+			],
+			"secrets": [
+				{
+					"id": "cellar",
+					"hint": "нервничает из-за погреба и нового засова",
+					"dc": 12,
+					"attitude": 2,
+					"skills": [
+						"persuasion",
+						"intimidation",
+						"insight"
+					],
+					"text": "Тук признаётся: ночами в погребе скребётся что-то из-за дальних бочек — там старый лаз контрабандистов к реке; он заставил его бочками и поставил засов",
+					"reveals": "brod-tavern-cellar:tunnel"
+				}
 			]
 		},
 		"npc_merchant": {
@@ -1205,6 +1234,20 @@
 					"to": 7,
 					"room": ""
 				}
+			],
+			"secrets": [
+				{
+					"id": "hollow",
+					"hint": "что-то знает о Тёмной лощине, но боится говорить",
+					"dc": 15,
+					"attitude": 2,
+					"skills": [
+						"persuasion",
+						"intimidation"
+					],
+					"text": "Ведана продавала противоядия людям в капюшонах с заставы; они говорили о лазе под мёртвым дубом в Тёмной лощине, откуда тянет гарью",
+					"reveals": "pushcha-hollow:burrow"
+				}
 			]
 		},
 		"npc_priestess": {
@@ -1273,6 +1316,21 @@
 			"monster": "commoner",
 			"tags": [
 				"commoner"
+			],
+			"secrets": [
+				{
+					"id": "sabotage",
+					"hint": "о чём-то умалчивает насчёт обвала",
+					"dc": 13,
+					"attitude": 2,
+					"skills": [
+						"persuasion",
+						"intimidation",
+						"insight"
+					],
+					"text": "Дрогин признаётся: крепь в галерее подпилили задолго до обвала — обвал устроили нарочно, чтобы закрыть старую выработку",
+					"reveals": "mine-gallery:sabotage"
+				}
 			]
 		}
 	},

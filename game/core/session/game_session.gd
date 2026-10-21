@@ -121,6 +121,8 @@ var npc_memory: Dictionary = {}
 ## its last free service.
 var discounts: Dictionary = {}
 var favors: Dictionary = {}
+## NPC secrets the hero learned (v0.7.15.3): "npc_id:secret_id".
+var secrets_told: Array[String] = []
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
 var summaries: Dictionary = {}
 ## Lines of the current conversation, the events for its summary.
@@ -397,6 +399,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"npc_memory": npc_memory,
 		"discounts": discounts,
 		"favors": favors,
+		"secrets_told": secrets_told,
 		"crimes": crimes,
 		"wanted": wanted,
 		"arrest": arrest,
@@ -509,6 +512,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.discounts[id] = {"pct": int(dsc.get("pct", 0)), "until_day": int(dsc.get("until_day", 0))}
 	for id: String in d.get("favors", {}):
 		s.favors[id] = int(d["favors"][id])
+	for k: Variant in d.get("secrets_told", []):
+		s.secrets_told.append(str(k))
 	var mem: Variant = d.get("npc_memory", {})
 	if mem is Dictionary:
 		for id: String in mem:
