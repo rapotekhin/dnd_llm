@@ -22,7 +22,7 @@ func run() -> void:
 		return
 	var s: GameSession = gs.session
 	var c := s.character
-	_learn(c, ["bless", "bane", "guiding_bolt", "shield_of_faith", "sanctuary"])
+	_learn(c, ["bless", "bane", "guiding_bolt", "shield_of_faith", "sanctuary", "fly", "haste"])
 	c["temp_hp"] = 500  # the hero lasts the whole scenario
 
 	# v0.7.13.1: Bless, then Bane over it.
@@ -96,6 +96,43 @@ func run() -> void:
 		await frames(4)
 	step("Sanctuary on the hero", not SpellEffects.hero_effects(c, "sanctuary").is_empty(), _tail(2))
 	await shot("sanctuary")
+
+	# v0.7.13.3: Fly over wolves — they cannot reach; Haste gives one more attack.
+	for id: String in CombatRules.enemies(s):
+		var g := CombatRules.fighter(s, id)
+		g["hp"] = 0
+		g["status"] = "dead"
+	await press(find(screen(), "EndTurnButton"))
+	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing, 60.0)
+	gs.finish_combat([])
+	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
+	c["slots_used"] = [0, 0, 0, 0, 0]
+	ConditionRules.end_concentration(s, data, "новый бой")
+	c["hp"] = int(c["max_hp"])
+	c["temp_hp"] = 500
+	ConditionRules.remove(c, "unconscious")
+	ConditionRules.remove(c, "prone")
+	gs.start_combat([{"monster": "wolf", "col": 0}])
+	if not step("a fight with a wolf", await _my_turn(gs, s)):
+		return
+	c["slots_max"] = [4, 3, 3, 0, 0]  # a level-1 cleric lent third-circle slots for the test
+	c["slots_used"] = [0, 0, 0, 0, 0]
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	cs = screen()
+	_tab(cs, "COMBAT_TAB_SPELLS")
+	await frames(2)
+	var fly: Button = find(cs, "Cast_fly")
+	if step("Fly on the tab", fly != null):
+		await press(fly)
+		await frames(4)
+	step("flying", SpellEffects.has(c, "flying"), _tail(2))
+	_seen.clear()
+	await press(find(screen(), "EndTurnButton"))
+	await _my_turn(gs, s)
+	step("the wolf cannot reach", _seen.any(func(l: String) -> bool: return l.contains("не достаёт летящего")), _tail(3))
+	await shot("fly")
+
 
 
 func _learn(c: Dictionary, ids: Array) -> void:

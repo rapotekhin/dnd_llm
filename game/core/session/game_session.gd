@@ -443,7 +443,7 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 	for k: String in ["ok", "fail"]:
 		if c.get("death_saves", {}).has(k):
 			c["death_saves"][k] = int(c["death_saves"][k])
-	for k: String in ["action", "bonus", "move", "attacks"]:
+	for k: String in ["action", "bonus", "move", "attacks", "haste"]:
 		if c.get("economy", {}).has(k):
 			c["economy"][k] = int(c["economy"][k])
 	for l: Dictionary in c.get("loot", []):

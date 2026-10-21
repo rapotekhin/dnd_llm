@@ -33,6 +33,8 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	var c := s.character
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
+	if sp.has("teleport"):  # an instant spell: the fight moves the hero (Misty Step)
+		return []
 	for e: Dictionary in ConditionRules.effects(c).duplicate():  # cast again: the new one replaces the old
 		if str(e.get("source", {}).get("id", "")) == spell_id:
 			ConditionRules.remove_effect(c, int(e.get("uid", 0)))
@@ -47,6 +49,12 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	if sp.has("resist_auto"):  # Protection from Energy: the type the foes deal most (v0.7.13.2)
 		var dtype := _likely_type(s, data, sp["resist_auto"])
 		e["resist"] = [dtype]
+	if str(sp.get("ability_adv", "")) == "best":  # Enhance Ability: the hero's strongest side
+		var best := "str"
+		for ab: String in CharacterRules.ABILITIES:
+			if int(c.get("abilities", {}).get(ab, 10)) > int(c.get("abilities", {}).get(best, 10)):
+				best = ab
+		e["ability_adv"] = best
 	if sp.has("max_hp_plus"):  # Aid: the maximum and the hit points up
 		e["max_hp"] = int(sp["max_hp_plus"]) + int(sp.get("per_slot", 0)) * slot_up
 	ConditionRules.add_effect(c, e)
@@ -159,6 +167,10 @@ static func attack_dis(s: GameSession, data: Dictionary, f: Dictionary) -> Array
 	return out
 
 
+static func has(c: Dictionary, key: String) -> bool:
+	return not hero_effects(c, key).is_empty()
+
+
 static func max_heal(c: Dictionary) -> bool:
 	return not hero_effects(c, "max_heal").is_empty()
 
@@ -198,8 +210,28 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 		parts.append("сопротивление: %s" % str(data["misc"]["damage_types"].get(str(t), t)))
 	if sp.has("foe_types_dis"):
 		parts.append("нежить, исчадия, феи и подобные бьют с помехой")
-	if sp.has("save_adv"):
+	if sp.has("save_adv") and bool(sp.get("death_adv", false)):
 		parts.append("преимущество на спасброски Мудрости и от смерти, лечение по максимуму")
+	if bool(sp.get("haste", false)):
+		parts.append("КД +2, скорость вдвое, ещё одно действие; потом ход вялости")
+	if bool(sp.get("flying", false)):
+		parts.append("полёт: враги без дальних атак не достают")
+	if bool(sp.get("blink", false)):
+		parts.append("в конце хода к20 11+ — герой исчезает до своего хода")
+	if sp.has("speed_plus"):
+		parts.append("скорость +%d фт" % int(sp["speed_plus"]))
+	if bool(sp.get("bonus_dash", false)):
+		parts.append("Рывок бонусным действием")
+	if bool(sp.get("enlarged", false)):
+		parts.append("+1к4 к урону оружием, преимущество на проверки Силы")
+	if bool(sp.get("darkvision", false)):
+		parts.append("тёмное зрение")
+	if bool(sp.get("see_invisible", false)):
+		parts.append("видит невидимое")
+	for k: Variant in sp.get("skill_bonus", {}):
+		parts.append("+%d к %s" % [int(sp["skill_bonus"][k]), TranslationServer.translate("SKILL_" + str(k).to_upper())])
+	if sp.has("ability_adv"):
+		parts.append("преимущество на проверки одной характеристики")
 	if sp.has("immune"):
 		parts.append("не испугать")
 	if sp.has("temp_hp"):

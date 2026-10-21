@@ -353,7 +353,14 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	f["reacted"] = false  # the reaction comes back at the start of one's own turn (5e)
 	if id == PLAYER:
 		s.combat["economy"] = {"action": 1, "bonus": 1, "move": _move_cols(int(s.character.get("speed", 30)), data), "attacks": 0,
-			"attacked": false, "sneak": false}
+			"attacked": false, "sneak": false, "haste": 1 if SpellEffects.has(s.character, "haste") else 0}
+		if bool(f.get("blinked", false)):  # Blink: back from the Ethereal Plane (v0.7.13.3)
+			f["blinked"] = false
+			lines.append("%s возвращается из эфира" % s.character["name"])
+		if bool(s.character.get("lethargy", false)):  # Haste is over: a turn of lethargy
+			s.character.erase("lethargy")
+			s.combat["economy"] = {"action": 0, "bonus": 0, "move": 0, "attacks": 0, "attacked": false, "sneak": false, "haste": 0}
+			lines.append("%s вялый после Ускорения — ход без действий и движения" % s.character["name"])
 		s.combat.erase("reckless")  # Reckless Attack lasts until the hero's next turn
 		lines.append_array(SpellEffects.turn_start(s, data))  # Heroism (v0.7.13.1)
 		for eid: String in enemies(s):  # v0.7.13: riders that last until the start of the hero's next turn
@@ -452,7 +459,7 @@ static func can_attack(s: GameSession, data: Dictionary, target_id: String, offh
 	if offhand:
 		if int(e.get("bonus", 0)) <= 0 or not bool(e.get("attacked", false)):
 			return "COMBAT_NO_BONUS"
-	elif int(e.get("attacks", 0)) <= 0 and int(e.get("action", 0)) <= 0:
+	elif int(e.get("attacks", 0)) <= 0 and int(e.get("action", 0)) <= 0 and int(e.get("haste", 0)) <= 0:
 		return "COMBAT_NO_ACTION"
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active":
@@ -515,6 +522,8 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 		e["bonus"] = int(e["bonus"]) - 1
 	elif int(e.get("attacks", 0)) > 0:
 		e["attacks"] = int(e["attacks"]) - 1
+	elif int(e.get("action", 0)) <= 0 and int(e.get("haste", 0)) > 0:
+		e["haste"] = 0  # Haste's action: one weapon attack (v0.7.13.3)
 	else:
 		e["action"] = int(e["action"]) - 1
 		e["attacks"] = CharacterRules.extra_attacks(c, data)
@@ -658,7 +667,7 @@ static func hero_attack_dis(s: GameSession, data: Dictionary, t: Dictionary) -> 
 			dis.append(str(pair[1]))
 	if ConditionRules.exhaustion(c) >= 3:
 		dis.append("истощение")
-	if _has(t, "invisible"):
+	if _has(t, "invisible") and not SpellEffects.has(c, "see_invisible"):  # See Invisibility (v0.7.13.3)
 		dis.append("цель невидима")
 	return dis
 
@@ -959,6 +968,9 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String) -> Arr
 	if spell_id.is_empty() or not active(s):
 		return lines
 	lines.append_array(SpellEffects.end_on_foes(s, spell_id))
+	if spell_id == "haste":  # v0.7.13.3: a wave of lethargy
+		s.character["lethargy"] = true
+		lines.append("Ускорение кончилось — на ход накатывает вялость")
 	for id: String in enemies(s):
 		var f := fighter(s, id)
 		for cond: String in (f.get("timers", {}) as Dictionary).keys():
@@ -1187,6 +1199,9 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 	if cfg(data)["condition_spells"].has(spell_id) and not target_id.is_empty():
 		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
 		return lines
+	if int(SpellEffects.spec(data, spell_id).get("teleport", 0)) > 0:  # Misty Step (v0.7.13.3)
+		lines.append_array(_teleport(s, data, int(SpellEffects.spec(data, spell_id)["teleport"])))
+		return lines
 	if SpellEffects.foe_spell(data, spell_id) and not target_id.is_empty():  # Bane (v0.7.13.1)
 		SpellEffects.curse_foes(s, data, spell_id, slot, fighter(s, target_id), lines)
 		return lines
@@ -1384,6 +1399,10 @@ static func player_simple(s: GameSession, data: Dictionary, what: String) -> Str
 		cost = "bonus"
 	if what == "dash" and CharacterRules.has_feature(s.character, "cunning_action") and int(e.get("bonus", 0)) > 0 and int(e.get("action", 0)) <= 0:
 		cost = "bonus"
+	if what == "dash" and SpellEffects.has(s.character, "bonus_dash") and int(e.get("bonus", 0)) > 0 and int(e.get("action", 0)) <= 0:
+		cost = "bonus"  # Expeditious Retreat (v0.7.13.3)
+	if cost == "action" and int(e.get("action", 0)) <= 0 and int(e.get("haste", 0)) > 0:
+		cost = "haste"  # Haste's action
 	if int(e.get(cost, 0)) <= 0:
 		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
 	e[cost] = int(e[cost]) - 1
@@ -1674,6 +1693,13 @@ static func can_react(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 ## Returns the lines of a new round's start (reinforcements arriving).
 static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = ConditionRules.end_of_turn(s, data)
+	if SpellEffects.has(s.character, "blink"):  # Blink (v0.7.13.3)
+		var r := s.rng.randi_range(1, 20)
+		if r >= 11:
+			player(s)["blinked"] = true
+			lines.append("Мерцание: %d — %s исчезает в эфире до своего хода" % [r, s.character["name"]])
+		else:
+			lines.append("Мерцание: %d — остаётся здесь" % r)
 	for eid: String in enemies(s):  # Guiding Bolt lasts until the end of the hero's next turn (v0.7.13)
 		var o := fighter(s, eid)
 		if o.has("guided"):
@@ -1942,6 +1968,16 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 		return
 	var melee := MonsterRules.pick(s, data, f, "melee")
 	var ranged := MonsterRules.pick(s, data, f, "ranged")
+	if SpellEffects.has(s.character, "flying") and not MonsterRules.flies(data, f):  # Fly (v0.7.13.3): only what reaches the air
+		if not ranged.is_empty() and d * int(cfg(data)["col_ft"]) <= int(ranged["range"][1]):
+			_enemy_attack_full(s, data, f, ranged, lines)
+		elif not ranged.is_empty():
+			var to_hero := 1 if int(p["col"]) > int(f["col"]) else -1
+			f["col"] = int(f["col"]) + to_hero
+			lines.append("%s подходит на выстрел" % f["name"])
+		else:
+			lines.append("%s не достаёт летящего героя" % f["name"])
+		return
 	if d == 0 and not melee.is_empty():
 		_enemy_attack_full(s, data, f, melee, lines)
 		return
@@ -1984,6 +2020,24 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 		moved += 1
 	_find_hidden(s, f, lines)
 	lines.append("%s бежит ближе" % f["name"] if cols_between(f, p) > 0 else "%s сближается вплотную" % f["name"])
+
+
+## Misty Step: `cols` columns away from the nearest foe, no opportunity attacks (v0.7.13.3). Lines.
+static func _teleport(s: GameSession, data: Dictionary, cols: int) -> Array[String]:
+	var p := player(s)
+	var nearest := 99
+	var dir := 1
+	for id: String in enemies(s):
+		var f := fighter(s, id)
+		var dd := absi(int(f["col"]) - int(p["col"]))
+		if dd < nearest:
+			nearest = dd
+			dir = -1 if int(f["col"]) >= int(p["col"]) else 1
+	var to := clampi(int(p["col"]) + dir * cols, -edge(data), edge(data))
+	if to == int(p["col"]):
+		to = clampi(int(p["col"]) - dir * cols, -edge(data), edge(data))
+	p["col"] = to
+	return ["%s переносится серебристым туманом на %d фт" % [s.character["name"], cols * int(cfg(data)["col_ft"])]]
 
 
 ## A reach weapon meets a foe on its way in (v0.7.12): the hero's reaction, one attack before the foe strikes.
@@ -2075,7 +2129,7 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	var tm := MonsterRules.attack_mods(s, data, f, a)
 	f["hidden"] = false  # an attack gives a hidden foe away
 	var adv := (_target_disabled_player(c) and not ranged_use) or helpless or (_has_trait(data, f, "pack_tactics") and _ally_near_player(s, f)) \
-		or ConditionRules.has(c, "blinded") or _has(f, "invisible") or not (tm["adv"] as Array).is_empty() or bool(s.combat.get("reckless", false)) \
+		or ConditionRules.has(c, "blinded") or (_has(f, "invisible") and not SpellEffects.has(c, "see_invisible")) or not (tm["adv"] as Array).is_empty() or bool(s.combat.get("reckless", false)) \
 		or (TimeRules.dark(s, data) and MonsterRules.sees_in_dark(data, f))
 	var dis := bool(p.get("dodging", false)) and int(c["hp"]) > 0 and not ConditionRules.incapacitated(c) \
 		or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) \
@@ -2084,6 +2138,9 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		or ["blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x)) or not (tm["dis"] as Array).is_empty() \
 		or bool(f.get("mocked", false)) or bool(f.get("chilled", false)) or not SpellEffects.attack_dis(s, data, f).is_empty()
 	f.erase("mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
+	if bool(p.get("blinked", false)):  # Blink (v0.7.13.3)
+		lines.append("%s бьёт в пустоту — героя нет на этом плане" % f["name"])
+		return
 	var held := SpellEffects.sanctuary_holds(s, data, f)  # Sanctuary (v0.7.13.2)
 	if not held.is_empty():
 		lines.append(held)

@@ -1788,6 +1788,10 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		var thing := CharacterRules.carried_with(session.character, Catalog.data, session.items, str(by_item[skill_id]))
 		if not thing.is_empty():
 			params["advantage_reason"] = thing
+	var skill_ab := str(Catalog.rules()["skills"].get(skill_id, ""))
+	for e: Dictionary in SpellEffects.hero_effects(session.character, "ability_adv"):  # Enhance Ability (v0.7.13.3)
+		if str(e["ability_adv"]) == skill_ab and str(params.get("advantage_reason", "")).is_empty():
+			params["advantage_reason"] = str(e.get("source", {}).get("name", ""))
 	for e: Dictionary in ConditionRules.effects(session.character):
 		if (str(e.get("check_adv", "")) == skill_id or (bool(e.get("enlarged", false)) and skill_id == "athletics")) and not skill_id.is_empty() 				and str(params.get("advantage_reason", "")).is_empty():
 			params["advantage_reason"] = str(e.get("source", {}).get("name", "зелье"))

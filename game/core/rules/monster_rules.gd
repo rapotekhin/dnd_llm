@@ -690,3 +690,8 @@ static func effect_text(data: Dictionary, a: Dictionary) -> String:
 ## Darkvision of a monster (v0.7.10): it fights in the dark of a dungeon without trouble.
 static func sees_in_dark(data: Dictionary, f: Dictionary) -> bool:
 	return int(monster(data, f).get("darkvision", 0)) > 0
+
+
+## The monster flies (a fly speed in the SRD): it reaches a flying hero (v0.7.13.3).
+static func flies(data: Dictionary, f: Dictionary) -> bool:
+	return int(monster(data, f).get("fly", 0)) > 0

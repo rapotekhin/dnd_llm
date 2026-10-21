@@ -1235,7 +1235,7 @@
 		}
 	},
 	"spell_effects": {
-		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves. Defenses (v0.7.13.2): ac_base (unarmored: base + DEX), ac_plus, ac_min; attackers_dis; images (Mirror Image: d20 6/8/11+ hits an image, AC 10 + DEX); sanctuary (a WIS save or no attack; ends when the hero attacks a foe); temp_dice (+temp_per_slot); max_hp_plus (+per_slot) with as much healing; resist / resist_auto (the most common damage type of the foes, fire by default), adv_tag, remove; foe_types_dis — those types attack with disadvantage; save_adv [abilities], death_adv, max_heal (healing rolls its maximum).",
+		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves. Defenses (v0.7.13.2): ac_base (unarmored: base + DEX), ac_plus, ac_min; attackers_dis; images (Mirror Image: d20 6/8/11+ hits an image, AC 10 + DEX); sanctuary (a WIS save or no attack; ends when the hero attacks a foe); temp_dice (+temp_per_slot); max_hp_plus (+per_slot) with as much healing; resist / resist_auto (the most common damage type of the foes, fire by default), adv_tag, remove; foe_types_dis — those types attack with disadvantage; save_adv [abilities], death_adv, max_heal (healing rolls its maximum). Movement and form (v0.7.13.3): speed_x2 and haste (one more action: one weapon attack, Dash, Disengage, Dodge; a turn of lethargy when it ends), flying (foes without a ranged attack cannot reach the hero), blink (d20 11+ at the end of the hero's turn — gone until their next turn), speed_plus, bonus_dash, teleport (a column away from the nearest foe, no opportunity attacks), enlarged, darkvision, see_invisible, skill_bonus, ability_adv (best — the hero's highest ability).",
 		"bless": {"die": "1d4", "on": ["attack", "save"]},
 		"guidance": {"die": "1d4", "on": ["check"], "once": true},
 		"resistance": {"die": "1d4", "on": ["save"], "once": true},
@@ -1253,6 +1253,17 @@
 		"protection_from_energy": {"resist_auto": ["acid", "cold", "fire", "lightning", "thunder"]},
 		"protection_from_poison": {"resist": ["poison"], "adv_tag": "poison", "remove": ["poisoned"]},
 		"protection_from_evil_and_good": {"foe_types_dis": ["aberration", "celestial", "elemental", "fey", "fiend", "undead"]},
-		"beacon_of_hope": {"save_adv": ["wis"], "death_adv": true, "max_heal": true}
+		"beacon_of_hope": {"save_adv": ["wis"], "death_adv": true, "max_heal": true},
+		"haste": {"ac_plus": 2, "save_adv": ["dex"], "speed_x2": true, "haste": true},
+		"fly": {"flying": true},
+		"blink": {"blink": true},
+		"longstrider": {"speed_plus": 10},
+		"expeditious_retreat": {"bonus_dash": true},
+		"misty_step": {"teleport": 1},
+		"enlarge_reduce": {"enlarged": true},
+		"darkvision": {"darkvision": true},
+		"see_invisibility": {"see_invisible": true},
+		"pass_without_trace": {"skill_bonus": {"stealth": 10}},
+		"enhance_ability": {"ability_adv": "best"}
 	}
 }

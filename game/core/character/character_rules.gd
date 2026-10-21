@@ -193,6 +193,10 @@ static func speed(c: Dictionary, data: Dictionary) -> int:
 	var feet := int(race.get("speed", 30)) + bonus
 	if item_prop(c, "speed_30"):  # Boots of Striding and Springing (v0.7.12)
 		feet = maxi(feet, 30 + bonus)
+	for e: Dictionary in SpellEffects.hero_effects(c, "speed_plus"):  # Longstrider (v0.7.13.3)
+		feet += int(e["speed_plus"])
+	if SpellEffects.has(c, "speed_x2"):  # Haste
+		feet *= 2
 	if has_feature(c, "fast_movement") and str(item_def(c, data, {}, "armor").get("armor", {}).get("category", "")) != "heavy":
 		feet += 10  # the barbarian's Fast Movement
 	# v0.7.8: grappled and restrained — 0; exhaustion 5 — 0, 2 — half (5e).
@@ -238,6 +242,9 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	var check_plus := 1 if item_prop(c, "checks_plus1") else 0  # Stone of Good Luck (v0.7.12)
 	for id: String in data["rules"]["skills"]:
 		skills[id] = skill_bonus(c, data, id) + check_plus
+	for e: Dictionary in SpellEffects.hero_effects(c, "skill_bonus"):  # Pass without Trace (v0.7.13.3)
+		for k: Variant in e["skill_bonus"]:
+			skills[str(k)] = int(skills.get(str(k), 0)) + int(e["skill_bonus"][k])
 	c["skills"] = skills
 	var saves := {}
 	var save_plus := 0

@@ -412,3 +412,89 @@ func test_beacon_of_hope_maximizes_healing() -> void:
 	var mod := CharacterRules.mod(CharacterRules.ability(s.character, "wis"))
 	assert_int(int(s.character["hp"])).is_equal(mini(int(s.character["max_hp"]), 1 + 8 + mod + 3))  # + Disciple of Life 2 + 1
 	assert_str(SpellEffects.save_adv(s.character, "wis")).is_not_empty()
+
+
+# --- batch 4 (v0.7.13.3): movement and form ---------------------------------------------------------------
+
+
+func test_haste_gives_an_action_and_then_lethargy() -> void:
+	var s := _hero("wizard_yalika", 5)
+	var c := s.character
+	var ac := int(c["ac"])
+	var speed := int(c["speed"])
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	_cast_self(s, "haste")
+	assert_int(int(c["ac"])).is_equal(ac + 2)
+	assert_int(int(c["speed"])).is_equal(speed * 2)
+	var lines: Array[String] = []
+	CombatRules._begin_turn(s, data, lines)
+	var e := CombatRules.economy(s)
+	assert_int(int(e["haste"])).is_equal(1)
+	e["action"] = 0
+	assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
+	CombatRules.player_attack(s, data, str(f["id"]))
+	assert_int(int(e["haste"])).is_equal(0)
+	ConditionRules.end_concentration(s, data, "проверка")
+	CombatRules._begin_turn(s, data, lines)
+	assert_int(int(CombatRules.economy(s)["action"])).is_equal(0)
+	assert_int(int(CombatRules.economy(s)["move"])).is_equal(0)
+
+
+func test_fly_keeps_melee_foes_off() -> void:
+	var s := _hero("wizard_yalika", 5)
+	var foes := _fight(s, [{"monster": "wolf", "col": 0}, {"monster": "goblin", "col": 1}])
+	_cast_self(s, "fly")
+	var lines: Array[String] = []
+	var hp := int(s.character["hp"])
+	CombatRules._enemy_turn(s, data, foes[0], lines)
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("не достаёт летящего"))).override_failure_message(" · ".join(lines)).is_true()
+	assert_int(int(s.character["hp"])).is_equal(hp)
+	var shots: Array[String] = []
+	CombatRules._enemy_turn(s, data, foes[1], shots)
+	assert_bool(shots.any(func(l: String) -> bool: return l.contains("лук") or l.contains("Лук"))).override_failure_message(" · ".join(shots)).is_true()
+
+
+func test_blink_hides_the_hero_between_turns() -> void:
+	var s := _hero("wizard_yalika", 5)
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	_cast_self(s, "blink")
+	CombatRules.player(s)["blinked"] = true
+	var lines: Array[String] = []
+	var hp := int(s.character["hp"])
+	CombatRules._enemy_turn(s, data, f, lines)
+	assert_int(int(s.character["hp"])).is_equal(hp)
+	CombatRules._begin_turn(s, data, lines)
+	assert_bool(bool(CombatRules.player(s)["blinked"])).is_false()
+
+
+func test_misty_step_moves_away_without_leaving_an_effect() -> void:
+	var s := _hero("wizard_yalika", 3)
+	_learn(s, "misty_step")
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	var lines := CombatRules.player_cast(s, data, "misty_step", 2, "")
+	assert_int(int(CombatRules.player(s)["col"])).is_not_equal(int(f["col"]))
+	assert_array(SpellEffects.hero_effects(s.character, "teleport")).is_empty()
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("туманом"))).is_true()
+
+
+func test_longstrider_darkvision_pass_without_trace() -> void:
+	var s := _hero("druid_olha", 3)
+	var c := s.character
+	var speed := int(c["speed"])
+	var stealth := int(c["skills"]["stealth"])
+	_cast_self(s, "longstrider")
+	assert_int(int(c["speed"])).is_equal(speed + 10)
+	_cast_self(s, "pass_without_trace")
+	assert_int(int(c["skills"]["stealth"])).is_equal(stealth + 10)
+	var w := _hero("wizard_yalika", 3)
+	_cast_self(w, "darkvision")
+	assert_bool(SpellEffects.has(w.character, "darkvision")).is_true()
+
+
+func test_see_invisibility_removes_the_disadvantage() -> void:
+	var s := _hero("wizard_yalika", 3)
+	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
+	CombatRules._add_condition(f, "invisible", {"rounds": 10})
+	assert_array(CombatRules.hero_attack_dis(s, data, f)).contains(["цель невидима"])
+	_cast_self(s, "see_invisibility")
+	assert_array(CombatRules.hero_attack_dis(s, data, f)).not_contains(["цель невидима"])
