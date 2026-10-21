@@ -320,6 +320,8 @@ CHECKED: dict[str, str] = {
     "poisoned": "test_conditions_v078.gd, test_rules_v060.gd",
     **{t: "test_conditions_v078.gd" for t in ["damage_resistance", "dwarven_resilience", "hellish_resistance", "fey_ancestry", "gnome_cunning",
                                                "brave", "relentless_endurance", "frenzy"]},
+    **{sp: "test_spells_v0713.gd" for sp in ["acid_arrow", "acid_splash", "blindness_deafness", "burning_hands", "charm_person", "chill_touch", "color_spray", "command", "cure_wounds", "eldritch_blast", "entangle", "fear", "fire_bolt", "fireball", "guiding_bolt", "healing_word", "hideous_laughter", "hold_person", "inflict_wounds", "lightning_bolt", "magic_missile", "mass_healing_word", "poison_spray", "prayer_of_healing", "produce_flame", "ray_of_frost", "sacred_flame", "scorching_ray", "shatter", "shocking_grasp", "sleep", "thunderwave", "vicious_mockery", "web"]},
+    "invisibility": "test_conditions_v078.gd",
     **{p: "test_items_v0712.gd" for p in ["ammunition", "heavy", "reach", "silvered", "fire_damage", "cursed", "no_crit", "mithral", "str_19"]},
     **{f: "test_features_v0710.gd" for f in ["barbarian_extra_attack", "monk_extra_attack", "paladin_extra_attack", "ranger_extra_attack",
                                              "rage", "reckless_attack", "danger_sense", "improved_critical", "uncanny_dodge", "martial_arts",

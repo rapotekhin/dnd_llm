@@ -384,6 +384,8 @@ static func death_burst(s: GameSession, data: Dictionary, t: Dictionary, lines: 
 ## fear), gnome cunning (INT / WIS / CHA against magic), brave (fear), duergar resilience. `tags` — what the save is
 ## against (magic, charm, fear, sleep, paralysis, poison).
 static func save_advantage(data: Dictionary, f: Dictionary, ability: String, tags: Array) -> bool:
+	if tags.has("fighting"):  # Charm Person on a foe in a fight (v0.7.13)
+		return true
 	if tags.has("magic") and (has_trait(data, f, "magic_resistance") or has_trait(data, f, "duergar_resilience")):
 		return true
 	if (tags.has("charm") or tags.has("fear")) and has_trait(data, f, "dark_devotion"):

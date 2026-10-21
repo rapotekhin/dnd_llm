@@ -344,6 +344,10 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 		s.combat["economy"] = {"action": 1, "bonus": 1, "move": _move_cols(int(s.character.get("speed", 30)), data), "attacks": 0,
 			"attacked": false, "sneak": false}
 		s.combat.erase("reckless")  # Reckless Attack lasts until the hero's next turn
+		for eid: String in enemies(s):  # v0.7.13: riders that last until the start of the hero's next turn
+			var o := fighter(s, eid)
+			for k: String in ["slowed", "no_heal", "chilled"]:
+				o.erase(k)
 
 
 static func _move_cols(speed: int, data: Dictionary) -> int:
@@ -603,6 +607,8 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		adv.append("вы невидимы")
 	if _has(t, "blinded"):
 		adv.append("цель ослеплена")
+	if int(t.get("guided", 0)) > 0:
+		adv.append("Направляющий снаряд")
 	if _has(t, "prone") and d > 0:
 		dis.append("цель лежит, а вы далеко")
 	if bool(t.get("dodging", false)):
@@ -697,6 +703,7 @@ static func _attack(s: GameSession, data: Dictionary, who: String, what: String,
 		dice: String, bonus: int, dtype: String, lines: Array[String], extra_dice: String = "", auto_crit: bool = false, w: Dictionary = {}) -> Dictionary:
 	var rolls := FeatureRules.hero_d20(s, adv, dis)  # the hero's roll: Lucky (v0.7.10)
 	var nat := _nat(rolls, adv, dis)
+	t.erase("guided")  # Guiding Bolt's light goes with the first attack roll (v0.7.13)
 	var total := nat + to_hit
 	var crit_min := int(w.get("crit_min", 20))
 	var hit := nat >= crit_min or (nat != 1 and total >= int(t["ac"]))
@@ -876,6 +883,8 @@ static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, 
 			continue
 		var ab := str(sp["save"]["ability"])
 		var tags: Array = ["magic"]
+		if spell_id == "charm_person":
+			tags.append("fighting")  # 5e: advantage when you or your companions are fighting it (v0.7.13)
 		if conds.has("charmed"):
 			tags.append("charm")
 		if conds.has("frightened"):
@@ -956,6 +965,8 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 	if chk.has("reason"):
 		return str(chk["reason"])
 	var sp: Dictionary = data["spells"][spell_id]
+	if SpellRules.long_cast(sp):
+		return "COMBAT_SPELL_TOO_LONG"  # v0.7.13: minutes to cast — not in a fight (Prayer of Healing)
 	if sp.has("heal_at_slot") or target_id.is_empty():
 		return ""
 	var t := fighter(s, target_id)
@@ -1174,11 +1185,12 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		return lines
 	var targets: Array[Dictionary] = [t]
 	if sp.has("area"):
-		targets = []
-		var col := int(player(s)["col"]) if int(sp.get("range_ft", 0)) == 0 else int(t["col"])
+		targets = area_targets(s, data, sp, t)
+	elif spell_id == "acid_splash":  # v0.7.13: a second creature within 5 ft of the first
 		for id: String in enemies(s):
-			if int(fighter(s, id)["col"]) == col:
+			if id != str(t["id"]) and int(fighter(s, id)["col"]) == int(t["col"]):
 				targets.append(fighter(s, id))
+				break
 	var multi: Dictionary = cfg(data)["multi"].get(spell_id, {})
 	var count := 1
 	if multi.has("base"):
@@ -1197,11 +1209,18 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 			lines.append("%s: %d (%s) по %s" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype), t["name"]])
 			_hurt_enemy(s, data, t, dmg, lines)
 		elif sp.has("attack"):
-			var dis: bool = (str(sp["attack"]) == "ranged" and _foe_in_column(s, player(s))) or bool(t.get("dodging", false)) \
-				or not hero_attack_dis(s, data, t).is_empty()
+			# v0.7.13: a spell attack has the advantages and disadvantages of any attack (prone, hidden, guided, dark…)
+			var probe := {"melee": str(sp["attack"]) == "melee", "range": [int(sp.get("range_ft", 5)), int(sp.get("range_ft", 5))], "id": "",
+				"name": name, "str_based": false}
+			var mods := _attack_mods(s, data, probe, t)
+			if spell_id == "shocking_grasp" and _metal_armor(data, t):
+				(mods["adv"] as Array).append("металлический доспех")
+			var dis := not (mods["dis"] as Array).is_empty()
+			var adv := not (mods["adv"] as Array).is_empty()
 			var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
-			var sres := _attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), bool(player(s).get("hidden", false)), dis, t,
+			var sres := _attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), adv, dis, t,
 				_empowered(s, dice), agonizing, dtype, lines)
+			_spell_rider(s, data, spell_id, slot, t, bool(sres["hit"]), lines)
 			if bool(sres["hit"]) and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_repelling_blast") and str(t.get("status")) == "active" \
 					and SIZES.find(str(_monster(data, t).get("size", "medium"))) <= 3:
 				var away := 1 if int(t["col"]) >= int(player(s)["col"]) else -1
@@ -1219,7 +1238,76 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 					int(c.get("spell_dc", 10)), "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 				if dmg > 0:
 					_hurt_enemy(s, data, tg, dmg, lines)
+				_spell_rider(s, data, spell_id, slot, tg, not ok, lines)
 	return lines
+
+
+## Who an area spell covers (v0.7.13): a cone, a cube or a sphere — one column (the hero's for those from self, the
+## target's otherwise); a line (Lightning Bolt, 100 ft) — every column from the hero towards the target within it.
+static func area_targets(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var me := int(player(s)["col"])
+	var area: Dictionary = sp.get("area", {})
+	if str(area.get("type", "")) == "line":
+		var dir := signi(int(t["col"]) - me)
+		var reach := int(area.get("size", 30)) / int(cfg(data)["col_ft"])
+		for id: String in enemies(s):
+			var col := int(fighter(s, id)["col"])
+			var along := (col - me) * dir if dir != 0 else (0 if col == me else -1)
+			if along >= 0 and along <= reach and (dir != 0 or col == me):
+				out.append(fighter(s, id))
+		return out
+	var col := me if int(sp.get("range_ft", 0)) == 0 else int(t["col"])
+	for id: String in enemies(s):
+		if int(fighter(s, id)["col"]) == col:
+			out.append(fighter(s, id))
+	return out
+
+
+## The riders of the engine's spells by 5e (v0.7.13): what lasts after the hit or the failed save.
+static func _spell_rider(s: GameSession, data: Dictionary, spell_id: String, slot: int, t: Dictionary, landed: bool, lines: Array[String]) -> void:
+	if str(t.get("status")) != "active":
+		return
+	match spell_id:
+		"guiding_bolt":
+			if landed:
+				t["guided"] = 2  # the next attack roll against it has advantage, until the end of the hero's next turn
+				lines.append("%s светится — следующая атака по нему с преимуществом" % t["name"])
+		"vicious_mockery":
+			if landed:
+				t["mocked"] = true
+				lines.append("%s сбит с толку — его следующая атака с помехой" % t["name"])
+		"ray_of_frost":
+			if landed:
+				t["slowed"] = 10
+				lines.append("%s скован холодом: скорость −10 фт" % t["name"])
+		"chill_touch":
+			if landed:
+				t["no_heal"] = true
+				if str(_monster(data, t).get("type", "")) == "undead":
+					t["chilled"] = true
+					lines.append("%s: нежить бьёт героя с помехой" % t["name"])
+		"shocking_grasp":
+			if landed:
+				t["reacted"] = true
+				lines.append("%s не может ответить реакцией" % t["name"])
+		"acid_arrow":
+			var more := "%dd4" % (2 + maxi(0, slot - 2))
+			if landed:
+				t["acid"] = more
+			else:
+				var half := _resist(data, t, "acid", roll_dice(s.rng, "%dd4" % (4 + maxi(0, slot - 2))) / 2)
+				lines.append("Кислотная стрела: брызги — %d (кислота)" % half)
+				_hurt_enemy(s, data, t, half, lines, "acid")
+		"thunderwave":
+			if landed and SIZES.find(str(_monster(data, t).get("size", "medium"))) <= 3:
+				lines.append("%s отброшен на 10 фт" % t["name"])  # within the 30-ft column of the field
+
+
+## A foe in metal armor (Shocking Grasp): its armor line names mail, plate, scale, a breastplate or splint.
+static func _metal_armor(data: Dictionary, t: Dictionary) -> bool:
+	var text := " ".join(_monster(data, t).get("equipment", [])).to_lower()
+	return ["mail", "plate", "chain", "splint", "breastplate"].any(func(x: String) -> bool: return text.contains(x))
 
 
 static func ab_name(ab: String) -> String:
@@ -1559,6 +1647,12 @@ static func can_react(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 ## Returns the lines of a new round's start (reinforcements arriving).
 static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = ConditionRules.end_of_turn(s, data)
+	for eid: String in enemies(s):  # Guiding Bolt lasts until the end of the hero's next turn (v0.7.13)
+		var o := fighter(s, eid)
+		if o.has("guided"):
+			o["guided"] = int(o["guided"]) - 1
+			if int(o["guided"]) <= 0:
+				o.erase("guided")
 	FeatureRules.end_hero_turn(s, data, lines)
 	s.combat.erase("prompt")
 	_advance(s, data, lines)
@@ -1689,6 +1783,12 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 
 ## The rest of a foe's turn after its attacks (also after a reaction prompt). Lines.
 static func _end_actor(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	f.erase("mocked")
+	if str(f.get("status")) == "active" and f.has("acid"):  # Acid Arrow burns at the end of the foe's next turn (v0.7.13)
+		var acid := _resist(data, f, "acid", roll_dice(s.rng, str(f["acid"])))
+		f.erase("acid")
+		lines.append("%s: кислота жжёт — %d" % [f["name"], acid])
+		_hurt_enemy(s, data, f, acid, lines, "acid")
 	if str(f.get("status")) == "active":
 		MonsterRules.end_turn(s, data, f, lines)
 		_tick_conditions(s, data, f, lines)
@@ -1769,7 +1869,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 				return
 			f["fleeing"] = true
 			lines.append("%s дрогнул и пытается бежать" % f["name"])
-	var steps := _move_cols(int(m.get("speed", 30)), data)
+	var steps := _move_cols(int(m.get("speed", 30)) - int(f.get("slowed", 0)), data)
 	if _has(f, "restrained") or _has(f, "grappled"):
 		steps = 0
 	if bool(f.get("fleeing", false)):
@@ -1952,7 +2052,9 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) \
 		or (str(a.get("kind")) == "ranged" and d == 0) or (f["conditions"] as Array).has("poisoned") or bool(p.get("hidden", false)) \
 		or (ConditionRules.invisible(c, data) and not _has(f, "invisible")) or (ranged_use and ConditionRules.has(c, "prone")) \
-		or ["blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x)) or not (tm["dis"] as Array).is_empty()
+		or ["blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x)) or not (tm["dis"] as Array).is_empty() \
+		or bool(f.get("mocked", false)) or bool(f.get("chilled", false))
+	f.erase("mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
 	var rolls := _d20(s.rng, adv, dis)
 	var nat := _nat(rolls, adv, dis)
 	var total := nat + int(a.get("to_hit", 0))

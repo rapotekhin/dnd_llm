@@ -93,11 +93,33 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 		ConditionRules.add_effect(c, {"condition": "", "understand_all": true, "ends": ConditionRules.ends_for(session, data, "hour"),
 			"source": {"kind": "spell", "id": spell_id, "name": s_name(data, spell_id)}})
 		lines.append("понимает любой язык — час")
+	if session != null and on_self and not CombatRules.active(session):  # v0.7.13: the engine heals out of a fight too
+		lines.append_array(heal_self(c, data, spell_id, slot, session.rng))
 	if session != null and on_self:
 		var cure: Dictionary = data["rules"]["hero_effects"]["spell_cures"].get(spell_id, {})
 		if not cure.is_empty():
 			lines.append_array(ConditionRules.cure(session, data, cure, {"kind": "spell", "id": spell_id, "name": s_name(data, spell_id)}))
 	return lines
+
+
+## A spell cast over minutes (Prayer of Healing, rituals): not in a fight (v0.7.13).
+static func long_cast(sp: Dictionary) -> bool:
+	var t := str(sp.get("casting_time", ""))
+	return t.contains("мин") or t.contains("час")
+
+
+## Healing the hero out of a fight (v0.7.13): a healing spell cast on themselves rolls its dice (Disciple of Life too).
+static func heal_self(c: Dictionary, data: Dictionary, spell_id: String, slot: int, rng: RandomNumberGenerator) -> Array[String]:
+	var sp: Dictionary = data["spells"].get(spell_id, {})
+	if not sp.has("heal_at_slot"):
+		return []
+	var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "wis"))))
+	var heal := CombatRules.roll_dice(rng, str(sp["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD")), false, ab)
+	if CharacterRules.has_feature(c, "disciple_of_life") and slot > 0:
+		heal += 2 + slot
+	var before := int(c["hp"])
+	c["hp"] = mini(int(c["max_hp"]), before + heal)
+	return ["+%d HP" % (int(c["hp"]) - before)]
 
 
 static func s_name(data: Dictionary, spell_id: String) -> String:
