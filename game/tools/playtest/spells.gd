@@ -229,6 +229,29 @@ func run() -> void:
 	step("Shield among the reactions", rx.any(func(r: Dictionary) -> bool: return str(r["id"]) == "spell_shield"), str(rx))
 
 
+	# v0.7.13.8: out of the fight, in the dark gallery of the mine: Find Traps from the sheet, then Light.
+	for id: String in CombatRules.enemies(s):
+		var g := CombatRules.fighter(s, id)
+		g["hp"] = 0
+		g["status"] = "dead"
+	await press(find(screen(), "EndTurnButton"))
+	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing, 60.0)
+	gs.finish_combat([])
+	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
+	ConditionRules.end_concentration(s, data, "конец боя")
+	s.room_id = "mine-gallery"
+	_learn(c, ["find_traps", "light"])
+	c["slots_max"] = [4, 3, 3, 0, 0]
+	c["slots_used"] = [0, 0, 0, 0, 0]
+	var err: String = gs.cast("find_traps", 2)
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	step("Find Traps finds the deadfall", err.is_empty() and s.chat.any(func(e: Dictionary) -> bool:
+		return " ".join(e.get("lines", [])).contains("ловушка:")), err)
+	var err2: String = gs.cast("light", 0)
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	step("Light — the gallery is not dark", err2.is_empty() and SpellEffects.has(c, "light"), err2)
+	await shot("world_spells")
+
 func _learn(c: Dictionary, ids: Array) -> void:
 	var sp: Dictionary = c["spells"]
 	var always: Array = sp.get("always", [])

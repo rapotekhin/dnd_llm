@@ -34,11 +34,17 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	var c := s.character
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
+	var lines_before: Array[String] = []
 	if sp.has("teleport"):  # an instant spell: the fight moves the hero (Misty Step)
 		return []
 	if bool(sp.get("lift_curse", false)):  # Remove Curse (v0.7.13.7)
 		var lifted := ItemRules.lift_curse(c, data, s.items)
 		return lifted if not lifted.is_empty() else ["проклятых вещей на герое нет"] as Array[String]
+	if sp.has("reveal") or sp.has("knock"):  # Find Traps, Detect Magic, Knock (v0.7.13.8)
+		var found := world_spell(s, data, spell_id)
+		if not bool(spell.get("concentration", false)):
+			return found
+		lines_before = found
 	if sp.has("make"):  # Goodberry, Create Food and Water
 		var made: Array[String] = []
 		for id: String in sp["make"]:
@@ -77,6 +83,7 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	if sp.has("max_hp_plus"):  # Aid: the maximum and the hit points up
 		e["max_hp"] = int(sp["max_hp_plus"]) + int(sp.get("per_slot", 0)) * slot_up
 	ConditionRules.add_effect(c, GameSession._whole_numbers(e))  # the table's numbers come as floats from JSON
+	lines.append_array(lines_before)
 	lines.append("%s: %s" % [spell["name"], text(data, e)])
 	if sp.has("remove"):
 		lines.append_array(ConditionRules.cure(s, data, {"remove": sp["remove"]}, e["source"]))
@@ -263,6 +270,10 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 		parts.append("+%s по отмеченному врагу" % str(sp["mark"]).replace("d", "к"))
 	if sp.has("blade"):
 		parts.append("огненный клинок: рукопашная атака заклинанием")
+	if bool(sp.get("light", false)):
+		parts.append("свет вокруг героя")
+	if str(sp.get("reveal", "")) == "magic":
+		parts.append("чувствует магию рядом")
 	if sp.has("immune"):
 		parts.append("не испугать")
 	if sp.has("temp_hp"):
@@ -957,3 +968,39 @@ static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc: Di
 	var saved := roll + bonus >= dc
 	return {"ok": not saved, "line": "%s: %s — спасбросок %s %d против Сл %d — %s" % [spell["name"], name, CombatRules.ab_name(ab), roll + bonus, dc,
 		"устоял" if saved else "поддался"]}
+
+
+# --- the world (v0.7.13.8) -----------------------------------------------------------------------------
+
+
+## Find Traps, Detect Magic, Knock in the hero's room: what they find or open. Lines.
+static func world_spell(s: GameSession, data: Dictionary, spell_id: String) -> Array[String]:
+	var sp := spec(data, spell_id)
+	var world: Dictionary = data["world"]
+	var lines: Array[String] = []
+	var room := s.room_id
+	match str(sp.get("reveal", "knock" if sp.has("knock") else "")):
+		"trap":
+			for sec: Dictionary in ExplorationRules.secrets(world, room):
+				if sec.get("trap") is Dictionary and ExplorationRules._reveal(s, room, sec):
+					lines.append("ловушка: " + str(sec["text"]))
+			if lines.is_empty():
+				lines.append("ловушек здесь нет")
+		"magic":
+			for sec: Dictionary in ExplorationRules.secrets(world, room):
+				var magic := (sec.get("loot", {}).get("items", {}) as Dictionary).keys().any(func(id: Variant) -> bool:
+					return ItemRules.needs_identify(ItemRules.def_of(data["items"], s.items, str(id))))
+				if magic and ExplorationRules._reveal(s, room, sec):
+					lines.append("аура магии: " + str(sec["text"]))
+			lines.append_array(ExplorationRules.take_caches(s, data, room))
+			for id: String in ItemRules.unknown_ids(s.character):
+				lines.append("от «%s» веет магией" % ItemRules.display_name(data["items"], s.items, id))
+			if lines.is_empty():
+				lines.append("магии рядом не чувствуется")
+		"knock":
+			for p: Dictionary in PropRules.room_props(s, room):
+				if str(p.get("state", "")) == "closed":
+					p["state"] = "open"
+					lines.append("открылось: %s" % p.get("name", ""))
+			lines.append("громкий стук разносится вокруг" if not lines.is_empty() else "запертого рядом нет — только громкий стук")
+	return lines

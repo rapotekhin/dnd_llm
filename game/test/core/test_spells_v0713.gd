@@ -842,3 +842,38 @@ func test_remove_curse_lifts_the_hold() -> void:
 	var lines := _cast_self(s, "remove_curse")
 	assert_str(str(c["equipped"]["main_hand"])).is_empty()
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("проклятие отпустило"))).is_true()
+
+
+# --- batch 9 (v0.7.13.8): the world -----------------------------------------------------------------------
+
+
+func test_light_ends_the_darkness() -> void:
+	var s := _hero("cleric_branko")
+	s.room_id = "mine-gallery"
+	s.character["traits"] = []
+	(s.character["inventory"] as Dictionary).erase("torch")
+	(s.character["inventory"] as Dictionary).erase("candle")
+	var dark_before := TimeRules.dark(s, data)
+	_cast_self(s, "light")
+	assert_bool(TimeRules.dark(s, data)).is_false()
+	assert_bool(dark_before).is_true()
+
+
+func test_find_traps_and_detect_magic() -> void:
+	var s := _hero("cleric_branko", 3)
+	s.room_id = "mine-gallery"
+	var lines := _cast_self(s, "find_traps")
+	assert_bool(lines.any(func(l: String) -> bool: return l.begins_with("ловушка:"))).override_failure_message(" · ".join(lines)).is_true()
+	var w := _hero("wizard_yalika")
+	w.room_id = "mine-deep"
+	var found := _cast_self(w, "detect_magic")
+	assert_bool(found.any(func(l: String) -> bool: return l.contains("аура магии"))).override_failure_message(" · ".join(found)).is_true()
+	assert_bool(w.character["inventory"].has("unk_cloak_of_protection")).is_true()
+
+
+func test_knock_opens_closed_things() -> void:
+	var s := _hero("wizard_yalika", 3)
+	s.props[s.room_id] = [{"prop_id": "chest", "name": "Сундук", "state": "closed"}]
+	var lines := _cast_self(s, "knock")
+	assert_str(str(s.props[s.room_id][0]["state"])).is_equal("open")
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("стук"))).is_true()
