@@ -119,6 +119,8 @@ func _rebuild() -> void:
 					if closed:
 						t.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else
 							"SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED")
+		for away: String in SceneRules.absent(s, Catalog.data["world"], s.room_id):  # v0.7.14.2: their hours
+			_line(away, true)
 		for body: Dictionary in CrimeRules.bodies_here(s, Catalog.data):  # v0.7.14: the body of a killed NPC
 			if bool(body["searched"]):
 				_line(str(body["name"]), true)

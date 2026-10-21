@@ -143,6 +143,9 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"NPC {nid}: нет монстра-шаблона {npc['monster']}")
         if npc.get("stock") and not npc.get("trader"):
             errors.append(f"NPC {nid}: есть stock, но нет trader: true")
+        for sc in npc.get("schedule", []):  # v0.7.14.2: hours and a room ("" — away)
+            if not all(isinstance(sc.get(k), int) and 0 <= sc[k] <= 23 for k in ("from", "to")) or (sc.get("room") and sc["room"] not in rooms):
+                errors.append(f"NPC {nid}: schedule — from/to часы 0–23, room — комната пакета или пусто")
         if npc.get("heir") and (npc["heir"] not in npcs or npc["heir"] == nid):
             errors.append(f"NPC {nid}: наследник heir — другой NPC пакета")
     for lid, loc in world["locations"].items():  # v0.7.14: the law of a location

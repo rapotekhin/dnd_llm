@@ -1679,6 +1679,10 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 		_end_conversation()
 		return "downed"
 
+	if s.in_conversation() and not s.npcs_here(Catalog.data["world"], s.room_id).has(s.npc_id):  # its hour came (v0.7.14.2)
+		_add(GameSession.effect_entry(["%s уходит" % world().npc(s.npc_id).get("name", s.npc_id)]))
+		_end_conversation()
+		return "resume"
 	_quest_progress()
 	if s.room_id != room_before:
 		var moved := TimeRules.on_move(s, Catalog.data, room_before, s.room_id)

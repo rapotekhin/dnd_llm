@@ -252,6 +252,9 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 		var has_stock: bool = (stock as Array).size() > 0 if stock is Array else (stock as Dictionary).size() > 0
 		if has_stock and not bool(n.get("trader", false)):
 			e.append("NPC %s: есть stock, но нет trader: true" % id)
+		for sc: Variant in n.get("schedule", []):  # v0.7.14.2: hours and a room ("" — away)
+			if not (sc is Dictionary) or not (sc.get("from") is float or sc.get("from") is int) or not (sc.get("to") is float or sc.get("to") is int) 					or int(sc["from"]) < 0 or int(sc["from"]) > 23 or int(sc["to"]) < 0 or int(sc["to"]) > 23 					or (not str(sc.get("room", "")).is_empty() and not w["rooms"].has(str(sc.get("room", "")))):
+				e.append("NPC %s: schedule — [{from, to — часы 0–23, room — комната пакета или \"\"}]" % id)
 		var heir := str(n.get("heir", ""))
 		if not heir.is_empty() and (not w["npcs"].has(heir) or heir == id):
 			e.append("NPC %s: наследник heir — другой NPC пакета" % id)

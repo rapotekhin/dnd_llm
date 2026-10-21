@@ -74,7 +74,8 @@ func run() -> void:
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var trade: Button = find(screen(), "Trade_npc_merchant")
-	step("at night the trader is closed", trade != null and trade.disabled, trade.tooltip_text if trade != null else "")
+	var away := SceneRules.absent(s, node("Catalog").data["world"], s.room_id)  # v0.7.14.2: at night he is at home
+	step("at night the trader is at home", trade == null and " ".join(away).contains("Ферн"), " ".join(away))
 	await shot("night")
 	_report.append("----- chat -----")
 	for e: Dictionary in s.chat.slice(maxi(0, s.chat.size() - 24)):

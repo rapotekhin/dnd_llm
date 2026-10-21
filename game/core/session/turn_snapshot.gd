@@ -60,6 +60,8 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 ## The room's hooks; a secret sign only a rogue (Thieves' Cant) or a druid (Druidic) reads (v0.7.11).
 static func hooks(s: GameSession, data: Dictionary, room: Dictionary) -> Array:
 	var out: Array = (room.get("hooks", []) as Array).duplicate()
+	for a: String in SceneRules.absent(s, data["world"], s.room_id):  # v0.7.14.2: not here at this hour
+		out.append("нет на месте: " + a)
 	var langs := LanguageRules.hero(s.character)
 	if langs.has("thieves_cant") and not str(room.get("thieves_sign", "")).is_empty():
 		out.append("тайный знак (читает только герой): " + str(room["thieves_sign"]))

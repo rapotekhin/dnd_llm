@@ -3,6 +3,7 @@ extends RefCounted
 ## The room as the world is now (roadmap v0.7.14.1): a pack room may carry `variants` [{if_flag | if_not_flag,
 ## description?, npcs?, hooks?, encounter?, safe?}] — every variant whose flag condition holds overrides those keys,
 ## in order. The menhir's choice darkens or lights the Pushcha this way, and whoever left a room is gone from it.
+## NPCs keep hours too (`schedule`, v0.7.14.2): the trader goes home at night, the captain drinks in the tavern.
 
 const KEYS := ["description", "npcs", "hooks", "encounter", "safe"]
 
@@ -29,9 +30,48 @@ static func room(s: GameSession, world: Dictionary, room_id: String) -> Dictiona
 	return out
 
 
-## The pack NPCs standing in the room now (alive or not).
+## The pack NPCs standing in the room now (alive or not): the room's people (by its variants), minus those whose
+## `schedule` sends them elsewhere at this hour, plus those it sends here (v0.7.14.2).
 static func npcs(s: GameSession, world: Dictionary, room_id: String) -> Array[String]:
 	var out: Array[String] = []
 	for n: Variant in room(s, world, room_id).get("npcs", []):
-		out.append(str(n))
+		var at: Variant = scheduled(s, world, str(n))
+		if at == null or str(at) == room_id:
+			out.append(str(n))
+	var all: Dictionary = world.get("npcs", {})
+	for id: String in all:
+		if all[id].has("schedule") and not out.has(id) and str(scheduled(s, world, id)) == room_id:
+			out.append(id)
+	return out
+
+
+## Where the NPC's `schedule` [{from, to, room}] (hours; to < from wraps past midnight; room "" — away, at home)
+## puts it at this hour; null when no entry holds — it stands in its pack room.
+static func scheduled(s: GameSession, world: Dictionary, npc_id: String) -> Variant:
+	var hour := s.minute / 60
+	for e: Dictionary in world.get("npcs", {}).get(npc_id, {}).get("schedule", []):
+		var a := int(e["from"])
+		var b := int(e["to"])
+		if (a <= b and hour >= a and hour < b) or (a > b and (hour >= a or hour < b)):
+			return str(e.get("room", ""))
+	return null
+
+
+## The room's own living people away at this hour: «Ферн Кривой — ушёл, вернётся к 7:00» (for the master and the panel).
+static func absent(s: GameSession, world: Dictionary, room_id: String) -> Array[String]:
+	var out: Array[String] = []
+	for n: Variant in room(s, world, room_id).get("npcs", []):
+		var id := str(n)
+		var at: Variant = scheduled(s, world, id)
+		if at == null or str(at) == room_id or s.dead_npcs.has(id):
+			continue
+		var back := 0
+		for e: Dictionary in world["npcs"][id]["schedule"]:
+			var a := int(e["from"])
+			var b := int(e["to"])
+			var hour := s.minute / 60
+			if (a <= b and hour >= a and hour < b) or (a > b and (hour >= a or hour < b)):
+				back = b
+		out.append("%s — %s, вернётся к %d:00" % [world["npcs"][id].get("name", id),
+			("ушла домой" if str(world["npcs"][id].get("gender", "")) == "female" else "ушёл домой") if str(at).is_empty() else "сейчас в другом месте", back])
 	return out

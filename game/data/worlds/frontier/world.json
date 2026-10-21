@@ -1056,6 +1056,13 @@
 			"monster": "commoner",
 			"tags": [
 				"commoner"
+			],
+			"schedule": [
+				{
+					"from": 23,
+					"to": 6,
+					"room": "brod-tavern-upstairs"
+				}
 			]
 		},
 		"npc_veteran": {
@@ -1121,6 +1128,13 @@
 			"monster": "commoner",
 			"tags": [
 				"underworld"
+			],
+			"schedule": [
+				{
+					"from": 20,
+					"to": 7,
+					"room": ""
+				}
 			]
 		},
 		"npc_smith": {
@@ -1151,6 +1165,18 @@
 			],
 			"services": [
 				"silver"
+			],
+			"schedule": [
+				{
+					"from": 19,
+					"to": 22,
+					"room": "brod-tavern-hall"
+				},
+				{
+					"from": 22,
+					"to": 6,
+					"room": ""
+				}
 			]
 		},
 		"npc_herbalist": {
@@ -1172,6 +1198,13 @@
 			"monster": "commoner",
 			"tags": [
 				"commoner"
+			],
+			"schedule": [
+				{
+					"from": 21,
+					"to": 7,
+					"room": ""
+				}
 			]
 		},
 		"npc_priestess": {
@@ -1209,6 +1242,13 @@
 			"monster": "veteran",
 			"tags": [
 				"military"
+			],
+			"schedule": [
+				{
+					"from": 19,
+					"to": 21,
+					"room": "brod-tavern-hall"
+				}
 			]
 		},
 		"npc_hermit": {

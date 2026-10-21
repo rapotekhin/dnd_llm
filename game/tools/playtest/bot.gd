@@ -259,7 +259,7 @@ func _invariants() -> String:
 				return "fighter %s at col %d hp %d" % [id, f.get("col", 0), f.get("hp", 0)]
 		if s.mode != GameSession.MODE_COMBAT:
 			return "a fight without combat mode"
-	if s.in_conversation() and not w.npcs_in(s.room_id).has(s.npc_id):
+	if s.in_conversation() and not s.npcs_here(w.world, s.room_id).has(s.npc_id):
 		return "talking to %s who is not here" % s.npc_id
 	if s.mode == GameSession.MODE_TRADE and not w.is_trader(s.npc_id):
 		return "trading with a non-trader %s" % s.npc_id
