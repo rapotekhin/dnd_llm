@@ -214,6 +214,7 @@ class CharacterSheet(_In):
     conditions: list[str] = Field(default_factory=list)
     skills: dict[str, int] = Field(default_factory=dict)  # total bonuses
     gold_cp: int = 0
+    reward_left_cp: int | None = None  # what the master may still give until the long rest, cp (0.19.0)
     inventory: list[InventoryLine] = Field(default_factory=list)
     features: list[str] = Field(default_factory=list)
     background: str = ""

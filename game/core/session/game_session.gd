@@ -95,6 +95,8 @@ var arrest: String = ""
 var bodies: Dictionary = {}
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
+## What the master gave (cp of coins and things) since the last long rest (EffectEngine, v0.7.14.3).
+var reward_spent: int = 0
 ## The master's own memory of events (effect `note`, v0.7.4): [{day, clock, room, text}] — shown in the journal.
 var notes: Array[Dictionary] = []
 ## Short rests taken today (ExplorationRules); a long rest resets it.
@@ -351,6 +353,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"bodies": bodies,
 		"searched": searched,
 		"quests_failed": quests_failed,
+		"reward_spent": reward_spent,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -443,6 +446,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.searched.append(str(n))
 	for q: Variant in d.get("quests_failed", []):
 		s.quests_failed.append(str(q))
+	s.reward_spent = int(d.get("reward_spent", 0))
 	for e: Variant in d.get("notes", []):
 		if e is Dictionary:
 			s.notes.append((e as Dictionary).duplicate())

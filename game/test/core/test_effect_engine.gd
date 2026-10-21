@@ -96,7 +96,7 @@ func test_give_and_take_catalog_items() -> void:
 
 
 func test_new_item_needs_a_search_and_a_level_fitting_rarity() -> void:
-	var item := {"name": "Кинжал инея", "item_type": "weapon", "base": "dagger", "rarity": "common", "value_cp": 20000,
+	var item := {"name": "Кинжал инея", "item_type": "weapon", "base": "dagger", "rarity": "common", "value_cp": 2000,
 		"properties": ["finesse", "cold_damage"]}
 	assert_str(_no({"kind": "give_item", "item": item})).contains("find_items")
 	fx.mark_searched("t-1")

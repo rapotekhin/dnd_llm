@@ -151,6 +151,18 @@
           "title": "Resources",
           "type": "array"
         },
+        "reward_left_cp": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reward Left Cp"
+        },
         "skill_proficiencies": {
           "items": {
             "type": "string"

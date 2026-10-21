@@ -100,6 +100,7 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
         "world": snap.world,
         "character": character,
         "coins": coins(character.gold_cp) if character else "",
+        "reward_left": coins(character.reward_left_cp) if character and character.reward_left_cp is not None else "",
         "scene": snap.scene,
         "summaries": snap.summaries,
         "limits": snap.limits,

@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 21
+const SAVE_VERSION := 22
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -43,6 +43,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	18: _v18_to_v19,
 	19: _v19_to_v20,
 	20: _v20_to_v21,
+	21: _v21_to_v22,
 }
 
 
@@ -232,3 +233,8 @@ static func _v20_to_v21(data: Dictionary, _ctx: Dictionary) -> void:
 	for k: String in ["wanted", "bodies"]:
 		s[k] = {}
 	s["arrest"] = ""
+
+
+## v0.7.14.3: the master's rewards since the long rest — an old game starts with a full budget.
+static func _v21_to_v22(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["reward_spent"] = 0

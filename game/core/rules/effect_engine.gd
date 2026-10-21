@@ -16,6 +16,8 @@ var _data: Dictionary = {}
 
 ## Lines an applied effect adds after its summary (the owner of a taken thing reacts, v0.7.0).
 var _extra_lines: Array[String] = []
+## The tiers of successful checks of each turn (v0.7.14.3): a nearly_impossible one caps the turn's rewards.
+var _won: Dictionary = {}
 ## Turns started by the player's own words or ability (v0.7.8): only there a condition may come without a save
 ## (`cause: player` — the hero drank it, lay down to sleep). turn_id → true; GameState marks them.
 var player_turns: Dictionary = {}
@@ -26,6 +28,7 @@ func mark_searched(turn_id: String) -> void:
 
 ## Drops every reserve (and the search mark) of `turn_id`.
 func discard(turn_id: String) -> void:
+	_won.erase(turn_id)
 	for id: String in reserves.keys():
 		if reserves[id]["turn_id"] == turn_id:
 			reserves.erase(id)
@@ -42,6 +45,31 @@ func _of_turn(turn_id: String) -> Array[Dictionary]:
 
 
 ## Returns the engine.validate result: {accepted, effect_id, summary, item_id} or {accepted: false, reason}.
+## A check of the turn resolved (GameState): a success on nearly_impossible caps what the master may give this turn.
+func note_check(turn_id: String, dc_tier: String, success: bool) -> void:
+	if success:
+		var tiers: Array = _won.get(turn_id, [])
+		tiers.append(dc_tier)
+		_won[turn_id] = tiers
+
+
+## What the master may still give (cp) this turn: the budget of the level until the long rest, minus what it gave
+## and what this turn already holds; a quarter of it after a nearly impossible success.
+func reward_left(s: GameSession, data: Dictionary, turn_id: String, pending: Array[Dictionary]) -> int:
+	var left := budget_left(s, data)
+	for p: Dictionary in pending:
+		left -= int(p["plan"].get("reward", 0))
+	if (_won.get(turn_id, []) as Array).has("nearly_impossible"):
+		left = int(left * float(data["rules"]["reward_budget"]["impossible_share"]))
+	return maxi(0, left)
+
+
+static func budget_left(s: GameSession, data: Dictionary) -> int:
+	var per: Dictionary = data["rules"]["reward_budget"]["per_rest_cp"]
+	var level := clampi(int(s.character.get("level", 1)), 1, per.size())
+	return maxi(0, int(per[str(level)]) - s.reward_spent)
+
+
 func validate(s: GameSession, data: Dictionary, turn_id: String, effect: Dictionary) -> Dictionary:
 	_data = data
 	var rules: Dictionary = data["rules"]
@@ -67,6 +95,7 @@ func apply(s: GameSession, turn_id: String, ids: Array) -> Array[String]:
 		if r.is_empty() or r["turn_id"] != turn_id:
 			continue
 		_extra_lines.clear()
+		s.reward_spent += int(r["plan"].get("reward", 0))  # the master's gift counts against the budget (v0.7.14.3)
 		_apply_one(s, r["kind"], r["plan"])
 		lines.append(str(r["summary"]))
 		lines.append_array(_extra_lines)  # an owner's reaction to a taken thing (v0.7.0)
@@ -135,12 +164,21 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": "у персонажа нет %s (есть %s)" % [Money.format(-delta), Money.format(gold)]}
 			if delta > _reward_cap(rules, level):
 				return {"reason": "награда больше бюджета для %d уровня (до %s)" % [level, Money.format(_reward_cap(rules, level))]}
-			return {"plan": {"delta": delta}, "summary": ("+" if delta > 0 else "") + Money.format(delta)}
+			if delta > 0 and delta > reward_left(s, data, turn_id, pending):
+				return {"reason": _over_budget(s, data, turn_id, pending)}
+			return {"plan": {"delta": delta, "reward": maxi(0, delta)}, "summary": ("+" if delta > 0 else "") + Money.format(delta)}
 		"give_item":
 			var given := _plan_quest_give(s, data, str(e.get("item_id", "")) if e.get("item_id") != null else "")
 			if not given.is_empty():
 				return given
-			return _plan_give(s, items, rules, turn_id, e, level)
+			var give := _plan_give(s, items, rules, turn_id, e, level)
+			if give.has("plan"):  # the master's own gift: within the budget until the long rest (v0.7.14.3)
+				var def := ItemRules.def_of(items, s.items, str(give["plan"]["item_id"])) if not give["plan"].has("def") else (give["plan"]["def"] as Dictionary)
+				var value := int(def.get("value_cp", 0)) * int(give["plan"]["qty"])
+				if value > reward_left(s, data, turn_id, pending):
+					return {"reason": _over_budget(s, data, turn_id, pending)}
+				give["plan"]["reward"] = value
+			return give
 		"take_item":
 			var taken := _plan_quest_take(s, data, str(e.get("item_id", "")))
 			if not taken.is_empty():
@@ -578,6 +616,13 @@ static func _damage_dice(rules: Dictionary, level: int, severity: String) -> Arr
 		if level <= int(row["max_level"]):
 			return row.get(severity, [])
 	return []
+
+
+func _over_budget(s: GameSession, data: Dictionary, turn_id: String, pending: Array[Dictionary]) -> String:
+	var left := reward_left(s, data, turn_id, pending)
+	if (_won.get(turn_id, []) as Array).has("nearly_impossible"):
+		return "после «почти невозможного» успеха награда не больше %s — дай лучший исход словами: услугу, наводку, расположение" % Money.format(left)
+	return "бюджет наград до долгого отдыха исчерпан (осталось %s) — награди словами: услугой, наводкой, расположением" % Money.format(left)
 
 
 static func _reward_cap(rules: Dictionary, level: int) -> int:

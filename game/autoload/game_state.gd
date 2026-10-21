@@ -1798,7 +1798,9 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 		var parley := _parley_check(params)
 		_combat_log(parley["lines"])
 		return parley["result"]
-	return _engine_check(params)
+	var result := _engine_check(params)
+	effects.note_check(str(params.get("turn_id", "")), str(params.get("dc_tier", "")), bool(result.get("success", false)))
+	return result
 
 
 ## An engine check (the master's request_check or a button of the client): DC by tier, conditions and darkness,

@@ -116,6 +116,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"class_name": class_text, "level": int(c.get("level", 1)), "hp": int(c.get("hp", 0)),
 		"max_hp": int(c.get("max_hp", 0)), "ac": int(c.get("ac", 10)), "conditions": _conditions(c, data),
 		"skills": c.get("skills", {}), "gold_cp": int(c.get("gold_cp", 0)),
+		"reward_left_cp": EffectEngine.budget_left(s, data),
 		"inventory": inventory, "features": CharacterRules.feature_names(c, data),
 		"background": str(data["backgrounds"].get(str(c.get("background", "")), {}).get("name", "")),
 		"background_feature": BackgroundRules.master_text(c, data),
