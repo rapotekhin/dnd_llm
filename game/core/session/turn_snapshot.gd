@@ -21,7 +21,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"speaks": ", ".join(LanguageRules.npc(data, n).map(func(l: String) -> String: return LanguageRules.name_of(data, l).to_lower())),
 			"understands_hero": LanguageRules.npc_understands(s.character, data, n), "tie": BackgroundRules.tie_text(s.character, data, n),
 			"memory": s.memory_of(id, int(data["rules"].get("social", {}).get("memory_in_snapshot", 8))),
-			"services": (n.get("services", []) as Array).map(func(x: Variant) -> String: return "%s [%s]" % [SocialRules.tr_service(str(x)), x]),
+			"services": (n.get("services", []) as Array).map(func(x: Variant) -> String: return "%s [%s]" % [SocialRules.tr_service(data, str(x)), x]),
 			"deal": SocialRules.deal_text(s, data, id),
 			"secrets": SocialRules.secret_hints(s, data, id), "refuses": SocialRules.refuses(s, data, id), "eager": SocialRules.eager(s, data, id)})
 	var summaries := {}

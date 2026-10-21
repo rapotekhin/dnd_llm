@@ -256,6 +256,8 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
             if e.get("condition_in") and x.get("condition") not in e["condition_in"]:
                 fails.append(f"состояние {x.get('condition')} не из {e['condition_in']}")
 
+    if "missing_concept" in expect and bool(out.get("missing_concept")) != expect["missing_concept"]:  # v0.7.16
+        fails.append(f"missing_concept={out.get('missing_concept')!r}, ожидалось {'заполнено' if expect['missing_concept'] else 'пусто'}")
     if "next_mode" in expect:
         want = expect["next_mode"]
         got = out.get("next_mode")
@@ -323,7 +325,7 @@ async def judge(model: Model, sc: dict[str, Any], out: dict[str, Any], engine: M
         f"Ответ движка на проверку (если была): {json.dumps(sc.get('engine', {}).get('check', {}), ensure_ascii=False)}\n\n"
         f"Текст мастера:\n{out.get('narration', '')}\n\nВарианты: {out.get('options', [])}\n"
         f"Проверки: {json.dumps(engine.checks(), ensure_ascii=False)}\nЭффекты: {json.dumps(engine.effects(), ensure_ascii=False)}\n"
-        f"Смена режима: {out.get('next_mode')}\n\nКритерии:\n" + "\n".join(f"- {r}" for r in sc.get("rubric", []))
+        f"Смена режима: {out.get('next_mode')}\nНедостающее понятие (заметка автору): {out.get('missing_concept')}\n\nКритерии:\n" + "\n".join(f"- {r}" for r in sc.get("rubric", []))
     )
     result = await agent.run(prompt)
     return result.output.verdicts
@@ -387,12 +389,12 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     o.input_tokens, o.output_tokens = usage.input_tokens, usage.output_tokens
     price_in, price_out = prices.get(model_id, (0.0, 0.0))
     o.cost_usd = sum(billed) or (usage.input_tokens * price_in + usage.output_tokens * price_out) / 1e6
-    o.fails = check_expect(sc.get("expect", {}), {"narration": out.narration, "options": out.options, "next_mode": o.next_mode},
-                           engine, o.tools)
+    o.fails = check_expect(sc.get("expect", {}), {"narration": out.narration, "options": out.options, "next_mode": o.next_mode,
+                                                 "missing_concept": out.missing_concept}, engine, o.tools)
     if judge_model is not None and sc.get("rubric"):
         try:
             o.verdicts = [v.model_dump() for v in await judge(judge_model, sc, {"narration": out.narration, "options": out.options,
-                                                                              "next_mode": o.next_mode}, engine)]
+                                                                              "next_mode": o.next_mode, "missing_concept": out.missing_concept}, engine)]
         except Exception as exc:  # noqa: BLE001
             o.note = f"судья упал: {type(exc).__name__}"
     if o.fails or any(not v["passed"] for v in o.verdicts):

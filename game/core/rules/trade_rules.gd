@@ -273,22 +273,37 @@ static func info(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary
 ## bought now, otherwise a localization key.
 static func services(s: GameSession, data: Dictionary, npc_id: String) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	var table: Dictionary = ItemRules.cfg(data)["services"]
 	for id: Variant in data["world"]["npcs"].get(npc_id, {}).get("services", []):
-		if not table.has(str(id)):
+		var def := service_def(data, str(id))
+		if def.is_empty():
 			continue
-		var cost := int(table[str(id)]["cost_cp"])
+		var cost := int(def["cost_cp"])
 		var why := ""
 		if int(s.character.get("gold_cp", 0)) < cost:
 			why = "TRADE_ERR_NO_COINS"
-		elif str(id) == "identify" and ItemRules.unknown_ids(s.character).is_empty():
+		elif targets(s, data, str(id)).is_empty():
 			why = "SERVICE_NOTHING"
-		elif str(id) == "remove_curse" and cursed_held(s, data).is_empty():
-			why = "SERVICE_NOTHING"
-		elif str(id) == "silver" and silverable(s, data).is_empty():
-			why = "SERVICE_NOTHING"
-		out.append({"id": str(id), "cost_cp": cost, "why": why})
+		out.append({"id": str(id), "cost_cp": cost, "why": why, "name": str(def.get("name", id))})
 	return out
+
+
+## A service by id (v0.7.16, pillar 6): the pack's own (world.json `services`) or the rules'; {} — unknown.
+static func service_def(data: Dictionary, id: String) -> Dictionary:
+	var own: Dictionary = data["world"].get("services", {})
+	return own.get(id, ItemRules.cfg(data)["services"].get(id, {}))
+
+
+## What the service would act on now: the unknown things, the cursed ones, the items it can enchant.
+static func targets(s: GameSession, data: Dictionary, id: String) -> Array[String]:
+	var def := service_def(data, id)
+	match str(def.get("op", "")):
+		"identify":
+			return ItemRules.unknown_ids(s.character)
+		"lift_curse":
+			return cursed_held(s, data)
+		"enchant":
+			return enchantable(s, data, def)
+	return []
 
 
 static func cursed_held(s: GameSession, data: Dictionary) -> Array[String]:
@@ -299,32 +314,36 @@ static func cursed_held(s: GameSession, data: Dictionary) -> Array[String]:
 	return out
 
 
-## Weapons of the hero that are not silvered yet.
-static func silverable(s: GameSession, data: Dictionary) -> Array[String]:
+## Catalog items of the hero the `enchant` service takes: of its `needs` kind, without its `property` yet.
+static func enchantable(s: GameSession, data: Dictionary, def: Dictionary) -> Array[String]:
 	var out: Array[String] = []
+	var needs := str(def.get("needs", "any"))
 	for id: String in s.character.get("inventory", {}):
 		var d := ItemRules.def_of(data["items"], s.items, id)
-		if d.has("weapon") and data["items"]["catalog"].has(id) and not (d.get("properties", []) as Array).has("silvered"):
+		if (needs == "any" or d.has(needs)) and data["items"]["catalog"].has(id) and not (d.get("properties", []) as Array).has(str(def["property"])):
 			out.append(id)
 	return out
 
 
-## Buys a service (services first; `item` — the weapon to silver; `free` — a favor by words, v0.7.15.2). Lines.
+## Buys a service (services first; `item` — the thing to enchant; `free` — a favor by words, v0.7.15.2). Lines.
 static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: String, item: String = "", free: bool = false) -> Array[String]:
 	var c := s.character
-	var cost := 0 if free else int(ItemRules.cfg(data)["services"][id]["cost_cp"])
+	var sv := service_def(data, id)
+	var cost := 0 if free else int(sv["cost_cp"])
 	c["gold_cp"] = int(c["gold_cp"]) - cost
 	var lines: Array[String] = ["Услуга даром" if free else "Услуга: −%s" % Money.format(cost)]
-	match id:
+	match str(sv["op"]):
 		"identify":
 			lines.append_array(ItemRules.identify(c, data, s.items))
-		"remove_curse":
+		"lift_curse":
 			lines.append_array(ItemRules.lift_curse(c, data, s.items))
-		"silver":
-			var weapon := item if not item.is_empty() else silverable(s, data)[0]
+		"enchant":
+			var weapon := item if not item.is_empty() else enchantable(s, data, sv)[0]
 			var base := ItemRules.def_of(data["items"], s.items, weapon)
-			var def := {"name": "%s (посеребрённый)" % base.get("name", weapon), "item_type": "weapon", "base": weapon,
-				"rarity": str(base.get("rarity", "common")), "value_cp": int(base.get("value_cp", 0)) + cost, "properties": ["silvered"],
+			var props: Array = (base.get("properties", []) as Array).duplicate()
+			props.append(str(sv["property"]))
+			var def := {"name": "%s (%s)" % [base.get("name", weapon), sv["suffix"]], "item_type": str(base.get("item_type", "weapon")), "base": weapon,
+				"rarity": str(base.get("rarity", "common")), "value_cp": int(base.get("value_cp", 0)) + int(sv["cost_cp"]), "properties": props,
 				"description": str(base.get("description", "")), "generated": true}
 			var new_id := ItemRules.generated_id(def)
 			s.items[new_id] = def
@@ -338,6 +357,6 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 			ItemRules._remove_one(c, weapon)
 			if not slot_of.is_empty():
 				eq[slot_of] = new_id
-			lines.append("посеребрено: %s" % def["name"])
+			lines.append("%s: %s" % [sv.get("done", "готово"), def["name"]])
 	CharacterRules.refresh(c, data, s.items)
 	return lines

@@ -1299,10 +1299,10 @@
 		"rarity_order": ["common", "uncommon", "rare", "very_rare", "legendary", "artifact"],
 		"unknown_suffix": ", свойства неизвестны",
 		"services": {
-			"_doc": "Paid services of traders (NPC `services` in the pack): identify — every unknown item the hero carries; remove_curse — the cursed items come off (they stay cursed); silver — a weapon is silvered (PHB: 100 gp).",
-			"identify": {"cost_cp": 2000},
-			"remove_curse": {"cost_cp": 9000},
-			"silver": {"cost_cp": 10000}
+			"_doc": "Services of NPCs (NPC `services` in the pack; a pack may add its own in world.json `services`), v0.7.16 by pillar 6 — a service is data over an operation of the engine (`op`): identify — every unknown item the hero carries; lift_curse — the cursed items come off (they stay cursed); enchant — one carried item of `needs` (weapon | armor | any) from the catalog gets `property` from the item properties and the name «… (`suffix`)», its value + the cost. `name` — the button, `short` — for the lines and the master, `done` — the line of the result. Silver: PHB 100 gp.",
+			"identify": {"cost_cp": 2000, "op": "identify", "name": "Опознать вещи", "short": "опознание вещей"},
+			"remove_curse": {"cost_cp": 9000, "op": "lift_curse", "name": "Снять проклятие", "short": "снятие проклятия"},
+			"silver": {"cost_cp": 10000, "op": "enchant", "needs": "weapon", "property": "silvered", "suffix": "посеребрённый", "done": "посеребрено", "name": "Посеребрить оружие", "short": "серебрение оружия"}
 		}
 	},
 	"spell_effects": {

@@ -110,43 +110,44 @@ static func plan_favor(s: GameSession, data: Dictionary, npc_id: String, service
 		var ids: Array = npc.get("services", [])
 		return {"reason": "у %s нет услуги %s%s" % [npc.get("name", npc_id), service, "; есть: " + ", ".join(ids) if not ids.is_empty() else ""]}
 	if str(own[0]["why"]) == "SERVICE_NOTHING":
-		return {"reason": "услуга %s сейчас не нужна: у героя нечего (опознать, снять проклятие, посеребрить)" % service}
-	if service == "silver" and not item.is_empty() and not TradeRules.silverable(s, data).has(item):
-		return {"reason": "%s не посеребрить: нужно оружие героя из каталога, ещё не посеребрённое" % item}
+		return {"reason": "услуга %s сейчас не нужна: у героя нет того, к чему она применима" % service}
+	if not item.is_empty() and not TradeRules.targets(s, data, service).has(item):
+		return {"reason": "%s — не для услуги %s; подходят: %s" % [item, service, ", ".join(TradeRules.targets(s, data, service))]}
 	if s.favors.has(npc_id) and s.day - int(s.favors[npc_id]) < int(c["cooldown_days"]):
 		return {"reason": "%s уже оказал(а) герою услугу даром в день %d — следующая не раньше дня %d" % [npc.get("name", npc_id), int(s.favors[npc_id]), int(s.favors[npc_id]) + int(c["cooldown_days"])]}
 	var why := _willing(s, data, npc_id, int(c["min_attitude"]), won)
 	if not why.is_empty():
 		return {"reason": why}
 	return {"plan": {"favor": npc_id, "service": service, "item_id": item},
-		"summary": "%s: %s даром — %s" % [npc.get("name", npc_id), tr_service(service), "; ".join(_outcome(s, data, service, item))]}
+		"summary": "%s: %s даром — %s" % [npc.get("name", npc_id), tr_service(data, service), "; ".join(_outcome(s, data, service, item))]}
 
 
 ## What the service will do, told to the master before the turn ends: «опознано: Кольцо защиты» (the master narrates
 ## it, never invents it).
 static func _outcome(s: GameSession, data: Dictionary, service: String, item: String) -> Array[String]:
 	var c: Dictionary = s.character.duplicate(true)
-	match service:
+	var sv := TradeRules.service_def(data, service)
+	match str(sv.get("op", "")):
 		"identify":
 			return ItemRules.identify(c, data, s.items.duplicate(true))
-		"remove_curse":
+		"lift_curse":
 			return ItemRules.lift_curse(c, data, s.items)
-		"silver":
-			var weapon := item if not item.is_empty() else TradeRules.silverable(s, data)[0]
-			return ["посеребрено: %s" % ItemRules.display_name(data["items"], s.items, weapon)]
+		"enchant":
+			var thing := item if not item.is_empty() else TradeRules.targets(s, data, service)[0]
+			return ["%s: %s" % [sv.get("done", "готово"), ItemRules.display_name(data["items"], s.items, thing)]]
 	return []
 
 
 static func grant_favor(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
 	var npc_id := str(plan["favor"])
 	s.favors[npc_id] = s.day
-	s.remember(npc_id, "оказал%s герою услугу даром (%s) — герой в долгу" % [CrimeRules._ending(data, npc_id), tr_service(str(plan["service"]))])
+	s.remember(npc_id, "оказал%s герою услугу даром (%s) — герой в долгу" % [CrimeRules._ending(data, npc_id), tr_service(data, str(plan["service"]))])
 	return TradeRules.buy_service(s, data, npc_id, str(plan["service"]), str(plan.get("item_id", "")), true)
 
 
-## A service's name for the lines and the master: «опознание».
-static func tr_service(id: String) -> String:
-	return {"identify": "опознание вещей", "remove_curse": "снятие проклятия", "silver": "серебрение оружия"}.get(id, id)
+## A service's name for the lines and the master: «опознание вещей» (`short` of its data).
+static func tr_service(data: Dictionary, id: String) -> String:
+	return str(TradeRules.service_def(data, id).get("short", id))
 
 
 ## What the NPC granted, for the snapshot: «скидка 10% до дня 9; услуга даром — была в день 3».

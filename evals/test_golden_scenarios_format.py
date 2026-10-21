@@ -23,7 +23,7 @@ EFFECT_KINDS = {"give_item", "take_item", "coins", "damage", "heal", "condition"
                 "quest_update", "flag", "xp", "npc_attitude", "advance_time", "move", "note", "equip", "crime_known", "npc_discount", "npc_favor", "accept_quest", "reveal_secret"}
 TOOLS = {"find_items", "create_item", "lookup_rule", "lookup_spell"}
 EXPECT_KEYS = {"check", "max_checks", "effects", "next_mode", "narration", "options",
-               "tools_required", "tools_forbidden"}
+               "tools_required", "tools_forbidden", "missing_concept"}
 CHECK_KEYS = {"required", "skill_in", "dc_tier_in", "contest_npc", "contest_skill_in", "tool_in"}
 EFFECT_KEYS = {"required_kinds_any", "forbidden_kinds", "max_count", "coins_max",
                "damage_severity_in", "forbidden_fields", "condition_save", "condition_tag_in", "condition_in"}

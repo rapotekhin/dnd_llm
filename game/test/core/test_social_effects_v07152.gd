@@ -59,7 +59,7 @@ func test_a_favor_is_free_once_a_week_and_leaves_a_debt() -> void:
 	var s := _hero("brod-smithy")
 	var fx := EffectEngine.new()
 	s.attitudes["npc_smith"] = 2
-	var weapon := TradeRules.silverable(s, data)[0]
+	var weapon := TradeRules.targets(s, data, "silver")[0]
 	var gold := int(s.character["gold_cp"])
 	var r := _apply(s, fx, {"kind": "npc_favor", "npc_id": "npc_smith", "service": "silver", "item_id": weapon, "reason": "по дружбе"})
 	assert_bool(bool(r["accepted"])).is_true()

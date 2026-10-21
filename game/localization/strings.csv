@@ -599,10 +599,8 @@ SAVE_STR,Спасбросок Силы
 SAVE_WIS,Спасбросок Мудрости
 SEARCH_SAY_INVESTIGATION,Тщательно обыскиваю это место
 SEARCH_SAY_PERCEPTION,Осматриваюсь по сторонам
-SERVICE_IDENTIFY,Опознать вещи — {cost}
+SERVICE_BUTTON,{name} — {cost}
 SERVICE_NOTHING,Нечего — услуга сейчас не нужна
-SERVICE_REMOVE_CURSE,Снять проклятие — {cost}
-SERVICE_SILVER,Посеребрить оружие — {cost}
 SHEET_ABILITIES,Характеристика · модификатор · спасбросок (● — владение)
 SHEET_ABILITY_ROW,{name} {score} ({mod}) · спасбросок {save}
 SHEET_ATTACK,"Атака: {name} {hit}, урон {dmg}"

@@ -149,7 +149,9 @@ static func react(s: GameSession, data: Dictionary, npc_id: String) -> Array[Str
 				s.character["gold_cp"] = int(s.character["gold_cp"]) - fine
 				lines.append("%s зовёт стражу — штраф %s" % [who, Money.format(fine)])
 			else:
-				s.pending_fight = [{"monster": str(cfg(data)["guard_monster"]), "name": "Стражник", "desc": "Стражник Ольхового Брода с дубинкой.", "col": 1}]
+				var law := CrimeRules.law(data, world.location_id(s.room_id))  # v0.7.16: the guard of the place's law
+				s.pending_fight = [{"monster": str(law.get("guard_monster", cfg(data)["guard_monster"])), "name": str(law.get("guard_name", "Стражник")),
+					"desc": str(law.get("guard_desc", "")), "col": 1}]
 				lines.append("%s зовёт стражу — платить нечем, стражник идёт с дубинкой" % who)
 	return lines
 

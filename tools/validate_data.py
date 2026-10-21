@@ -66,7 +66,7 @@ def known() -> dict[str, set[str]]:
 
 
 ROOM_TAGS = {"temple", "stage"}  # v0.7.11: an acolyte's free rest, a show (rules.json backgrounds)
-SERVICES = {"identify", "remove_curse", "silver"}  # v0.7.12: rules.json item_rules.services
+SERVICE_OPS = {"identify", "lift_curse", "enchant"}  # v0.7.16: the engine's operations a service runs (rules.json items.services)
 NPC_TAGS = {"clergy", "underworld", "commoner", "military"}  # the people of the hero's past (rules.json backgrounds ties)
 
 
@@ -95,6 +95,13 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     items = (ids["items"] - set(rules.get("items_exclude", []))) | set(world.get("items", {}))
 
     rooms, npcs = world["rooms"], world["npcs"]
+    services = {**json.loads((ROOT / "game" / "data" / "rules.json").read_text(encoding="utf-8"))["item_rules"]["services"], **world.get("services", {})}
+    services.pop("_doc", None)
+    for sid, sv in world.get("services", {}).items():  # v0.7.16: a pack's own services — data over the engine's operations
+        if sv.get("op") not in SERVICE_OPS or not isinstance(sv.get("cost_cp"), int) or not sv.get("name"):
+            errors.append(f"услуга {sid}: нужны op из {sorted(SERVICE_OPS)}, cost_cp, name")
+        if sv.get("op") == "enchant" and not (sv.get("property") and sv.get("suffix")):
+            errors.append(f"услуга {sid}: enchant — нужны property и suffix")
     if world["start_room"] not in rooms:
         errors.append(f"world.start_room: нет комнаты {world['start_room']}")
     placed: set[str] = set()
@@ -136,7 +143,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         errors += [f"NPC {nid}: в каталоге нет предмета {x}" for x in npc.get("stock", []) if x not in items]
         errors += [f"NPC {nid}: неизвестный язык {x}" for x in npc.get("languages", []) if x not in ids["languages"]]
         errors += [f"NPC {nid}: неизвестная метка {x}" for x in npc.get("tags", []) if x not in NPC_TAGS]
-        errors += [f"NPC {nid}: неизвестная услуга {x}" for x in npc.get("services", []) if x not in SERVICES]
+        errors += [f"NPC {nid}: неизвестная услуга {x}" for x in npc.get("services", []) if x not in services]
         if npc.get("services") and not npc.get("trader"):
             errors.append(f"NPC {nid}: услуги только у торговца (trader)")
         if npc.get("monster") and npc["monster"] not in ids["monsters"]:

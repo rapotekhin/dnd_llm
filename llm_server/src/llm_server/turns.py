@@ -215,6 +215,7 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         check_ids=ctx.check_ids,
         next_mode=next_mode,
         usage=usage,
+        missing_concept=(out.missing_concept or "").strip()[:200],
     )
 
 

@@ -78,6 +78,11 @@
       "title": "Effect Ids",
       "type": "array"
     },
+    "missing_concept": {
+      "default": "",
+      "title": "Missing Concept",
+      "type": "string"
+    },
     "narration": {
       "title": "Narration",
       "type": "string"

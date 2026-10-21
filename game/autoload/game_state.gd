@@ -355,7 +355,7 @@ func collect_ammo() -> String:
 	return ""
 
 
-## A trader's service (v0.7.12): identify, remove a curse, silver the main weapon (or the first one). "" or a key.
+## A trader's service (v0.7.12; data since v0.7.16): an enchant takes the main hand when it fits, else the first. "" or a key.
 func buy_service(id: String) -> String:
 	if session == null or is_busy() or session.mode != GameSession.MODE_TRADE:
 		return "EQUIP_BUSY"
@@ -364,10 +364,8 @@ func buy_service(id: String) -> String:
 			continue
 		if not str(sv["why"]).is_empty():
 			return str(sv["why"])
-		var weapon := ""
-		if id == "silver":
-			var main := str(session.character.get("equipped", {}).get("main_hand", ""))
-			weapon = main if TradeRules.silverable(session, Catalog.data).has(main) else ""
+		var main := str(session.character.get("equipped", {}).get("main_hand", ""))
+		var weapon := main if TradeRules.targets(session, Catalog.data, id).has(main) else ""
 		_quiet_lines(TradeRules.buy_service(session, Catalog.data, session.npc_id, id, weapon))
 		return ""
 	return "SERVICE_NOTHING"

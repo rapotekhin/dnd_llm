@@ -212,6 +212,11 @@ def report(path: Path) -> Path:
             anomalies.append(f"- `{when(a['ts'])}` пауза {(b['ts'] - a['ts']) / 60000:.0f} мин после «{short(a.get('text') or a.get('node'), 60)}» ({a.get('room')})")
     lines += ["## Что настораживает", ""] + (anomalies or ["- ничего"]) + [""]
 
+    # v0.7.16, pillar 6: what the players wanted and the engine has no concepts for — what to add first
+    missing = [(tid, t) for tid, t in turns.items() if (t["result"] or {}).get("missing_concept")]
+    lines += ["## Недостающие понятия", ""] + ([f"- `{tid}` {t['room']}: **{short(t['result']['missing_concept'], 160)}** — ввод «{short(t['input'], 160)}»"
+                                               for tid, t in missing] or ["- нет"]) + [""]
+
     # the timeline
     lines += ["## Ход игры", ""]
     for e in ev:

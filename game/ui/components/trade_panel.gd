@@ -208,7 +208,7 @@ func _rebuild() -> void:
 		var b := Button.new()
 		b.name = "Service_" + sid
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		b.text = tr("SERVICE_" + sid.to_upper()).format({"cost": Money.format(int(sv["cost_cp"]))})
+		b.text = tr("SERVICE_BUTTON").format({"name": sv["name"], "cost": Money.format(int(sv["cost_cp"]))})
 		b.disabled = not can_act or not str(sv["why"]).is_empty()
 		b.tooltip_text = tr(str(sv["why"])) if not str(sv["why"]).is_empty() else ""
 		b.pressed.connect(func() -> void:

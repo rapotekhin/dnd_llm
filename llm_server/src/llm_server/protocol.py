@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.22.0"
+PROTOCOL_VERSION = "0.23.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -400,6 +400,7 @@ class TurnResult(_Out):
     check_ids: list[str] = Field(default_factory=list)
     next_mode: NextMode | None = None
     usage: Usage
+    missing_concept: str = ""  # the player's wish the engine has no concepts for (0.23.0): a note for the author, in the trace
 
 
 class OkResult(_Out):
