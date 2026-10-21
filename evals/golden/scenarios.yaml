@@ -338,7 +338,7 @@ scenarios:
           - {item_id: ale, name: "Кружка эля", qty: 40, price_cp: 4}
     engine:
       check: {d20: [16], bonus: 2, total: 18, dc: 13, success: true, nat: 16, blocked: false,
-              note: "Торг удался (Убеждение 18 против DC 13): до конца визита торговец уступает 15% на покупки и платит на 15% больше за вещи игрока. Цены уже пересчитаны движком."}
+              note: "Торг удался (Убеждение 18 против DC 13): на ближайшую сделку торговец уступает 15% на покупки и платит на 15% больше за вещи игрока. Цены уже пересчитаны движком."}
     expect:
       check: {required: true, skill_in: [persuasion, deception]}
       effects: {forbidden_kinds: [coins, give_item, take_item]}
@@ -1642,3 +1642,25 @@ scenarios:
       effects: {forbidden_kinds: [reputation]}
     rubric:
       - "Горм отвечает в характере, слава не меняется"
+
+  - id: trader_news_explains_prices
+    title: "Торговец объясняет цены событиями мира"
+    category: trade
+    extends: tavern
+    mode: trade
+    input: "Ферн, ты что, с ума сошёл? Верёвка вчера стоила вдвое меньше!"
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_merchant, name: "Ферн Кривой", role: "торговец всякой всячиной", template: commoner, attitude: indifferent, trader: true}
+      trade:
+        npc_id: npc_merchant
+        purse_cp: 15000
+        news: ["после того, что случилось у менгира, караваны боятся Пущи — Ферн поднял цены"]
+        stock:
+          - {item_id: rope, name: "Верёвка (15 м)", qty: 3, price_cp: 125}
+    expect:
+      effects: {forbidden_kinds: [coins, give_item, npc_discount]}
+    rubric:
+      - "Ферн объясняет подорожание тем, что караваны боятся Пущи после событий у менгира; цену сам не снижает, в характере"
+

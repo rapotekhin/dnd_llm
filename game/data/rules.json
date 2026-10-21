@@ -321,6 +321,7 @@
 			"max_ratio": 0.75,
 			"tag_names": {"weapon": "оружие", "armor": "доспехи", "gear": "снаряжение", "consumable": "припасы и зелья", "wondrous": "диковины", "treasure": "ценности", "magic": "магические вещи", "scroll": "свитки", "tool": "инструменты"}
 		},
+		"haggle_escalation": 2,
 		"haggle_skills": [
 			"persuasion",
 			"deception"

@@ -1166,6 +1166,22 @@
 				"gear",
 				"tool"
 			],
+			"trade_variants": [
+				{
+					"if_flag": "menhir_power",
+					"price_pct": 125,
+					"news": "после того, что случилось у менгира, караваны боятся Пущи — Ферн поднял цены"
+				},
+				{
+					"if_flag": "menhir_restored",
+					"price_pct": 90,
+					"stock": {
+						"torch": 20,
+						"rations": 20
+					},
+					"news": "лес успокоился, караваны снова пошли через Пущу — у Ферна товара много и цены ниже"
+				}
+			],
 			"purse_cp": 15000,
 			"monster": "commoner",
 			"tags": [
@@ -1207,6 +1223,17 @@
 			"shuns": [
 				"consumable",
 				"scroll"
+			],
+			"trade_variants": [
+				{
+					"if_flag": "menhir_power",
+					"price_pct": 115,
+					"stock": {
+						"spear": 8,
+						"shield": 5
+					},
+					"news": "весь Брод вооружается после того, что было у менгира, — оружие подорожало, Гуннар куёт копья и щиты"
+				}
 			],
 			"purse_cp": 25000,
 			"monster": "thug",
@@ -1250,6 +1277,15 @@
 			"shuns": [
 				"weapon",
 				"armor"
+			],
+			"trade_variants": [
+				{
+					"if_flag": "burrow_known",
+					"stock": {
+						"antitoxin": 8
+					},
+					"news": "Ведана знает, что за логово под лощиной, и наварила противоядий для тех, кто туда пойдёт"
+				}
 			],
 			"purse_cp": 12000,
 			"monster": "commoner",

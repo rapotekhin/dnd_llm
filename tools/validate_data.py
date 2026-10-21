@@ -148,6 +148,11 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"NPC {nid}: услуги только у торговца (trader)")
         if npc.get("monster") and npc["monster"] not in ids["monsters"]:
             errors.append(f"NPC {nid}: нет монстра-шаблона {npc['monster']}")
+        for i, tv in enumerate(npc.get("trade_variants", [])):  # v0.7.17.2: the trader and the world's flags
+            where = f"NPC {nid}, trade_variants[{i}]"
+            if not (set(tv) <= {"if_flag", "if_not_flag", "price_pct", "stock", "remove", "news"}) or not ({"if_flag", "if_not_flag"} & set(tv)):
+                errors.append(f"{where}: ключи if_flag / if_not_flag, price_pct, stock, remove, news")
+            errors += [f"{where}: нет предмета {x}" for x in list(tv.get("stock", {})) + list(tv.get("remove", [])) if x not in items]
         for key in ("wants", "shuns"):  # v0.7.17.1: demand by trade tags
             if key in npc and not (isinstance(npc[key], list) and all(isinstance(x, str) for x in npc[key])):
                 errors.append(f"NPC {nid}: {key} — список тегов (item_type, magic, scroll, tool или теги вещей)")

@@ -19,7 +19,7 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
 	var m: Dictionary = s.merchants.get(npc_id, {})
 	if m.is_empty():
-		m = {"purse_cp": 0, "stock": {}, "day": 0, "haggle_pct": 0, "haggle_failed_day": 0, "haggle_result": {}, "sold": {}}
+		m = {"purse_cp": 0, "stock": {}, "day": 0, "haggle_pct": 0, "haggle_failed_day": 0, "haggle_result": {}, "sold": {}, "haggles": 0, "haggle_day": 0}
 		s.merchants[npc_id] = m
 	if not m.has("sold"):
 		m["sold"] = {}
@@ -31,9 +31,14 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 			if int(sold[id]) <= 0:
 				sold.erase(id)
 		var pack := pack_stock(npc, data["rules"])
+		var mods := variant(s, data, npc_id)  # the world changed the goods (v0.7.17.2)
+		for id: String in mods["stock"]:
+			pack[id] = int(mods["stock"][id])
 		var stock: Dictionary = m["stock"]
 		for id: String in pack:
 			stock[id] = maxi(int(stock.get(id, 0)), int(pack[id]))
+		for id: String in mods["remove"]:
+			stock.erase(id)
 		m["purse_cp"] = maxi(int(m["purse_cp"]), int(npc.get("purse_cp", 0)))
 		m["day"] = s.day
 	return m
@@ -70,7 +75,8 @@ static func buy_price(s: GameSession, data: Dictionary, npc_id: String, item_id:
 	if value <= 0:
 		return 0
 	var haggle := int(merchant(s, data, npc_id)["haggle_pct"])
-	var price := ceili(value * _pct(t["buy_pct_by_attitude"], s.attitude(npc_id)) * (100 - haggle) / 10000.0 * ReputationRules.price_pct(s, data, npc_id, "buy") / 100.0)
+	var price := ceili(value * _pct(t["buy_pct_by_attitude"], s.attitude(npc_id)) * (100 - haggle) / 10000.0 * ReputationRules.price_pct(s, data, npc_id, "buy") / 100.0
+		* int(variant(s, data, npc_id)["price_pct"]) / 100.0)
 	var off := SocialRules.discount(s, npc_id)  # a discount by words (v0.7.15.2)
 	if off > 0:
 		price = ceili(price * (100 - off) / 100.0)
@@ -104,6 +110,39 @@ static func _sell_unit(s: GameSession, data: Dictionary, npc_id: String, item_id
 	v *= _pct(t["sell_pct_by_attitude"], s.attitude(npc_id)) / 100.0 * ReputationRules.price_pct(s, data, npc_id, "sell") / 100.0
 	v *= (100 + int(m["haggle_pct"])) / 100.0
 	return floori(clampf(v, value * float(d["min_ratio"]), value * float(d["max_ratio"])))
+
+
+# --- the trader and the world (v0.7.17.2) ----------------------------------------------------------------------
+
+
+## What the world's flags change at this trader (pack NPC `trade_variants` [{if_flag | if_not_flag, price_pct, stock,
+## remove, news}], like the rooms' variants v0.7.14.1): {price_pct, stock {id: qty}, remove [ids], news [lines]}.
+static func variant(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary:
+	var out := {"price_pct": 100, "stock": {}, "remove": [], "news": []}
+	for v: Dictionary in data["world"]["npcs"].get(npc_id, {}).get("trade_variants", []):
+		if v.has("if_flag") and not s.flags.has(str(v["if_flag"])) or v.has("if_not_flag") and s.flags.has(str(v["if_not_flag"])):
+			continue
+		out["price_pct"] = int(round(int(out["price_pct"]) * int(v.get("price_pct", 100)) / 100.0))
+		for id: String in v.get("stock", {}):
+			out["stock"][id] = int(v["stock"][id])
+		(out["remove"] as Array).append_array(v.get("remove", []))
+		if not str(v.get("news", "")).is_empty():
+			(out["news"] as Array).append(str(v["news"]))
+	return out
+
+
+## A trader died: its unsold goods pass to its pack `heir` when the heir trades too. Lines.
+static func on_death(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
+	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
+	var heir := str(npc.get("heir", ""))
+	if not bool(npc.get("trader", false)) or heir.is_empty() or not bool(data["world"]["npcs"].get(heir, {}).get("trader", false)):
+		return []
+	var from := merchant(s, data, npc_id)
+	var to := merchant(s, data, heir)
+	for id: String in from["stock"]:
+		to["stock"][id] = int(to["stock"].get(id, 0)) + int(from["stock"][id])
+	from["stock"] = {}
+	return ["Товар %s переходит к %s" % [npc.get("name", npc_id), data["world"]["npcs"][heir].get("name", heir)]]
 
 
 # --- demand (v0.7.17.1) ---------------------------------------------------------------------------------------
@@ -245,6 +284,9 @@ static func execute(s: GameSession, data: Dictionary, npc_id: String, cart: Dict
 	var net := int(q["net_cp"])
 	c["gold_cp"] = int(c["gold_cp"]) - net
 	m["purse_cp"] = int(m["purse_cp"]) + net
+	if int(m["haggle_pct"]) > 0:  # the haggle was for this deal (v0.7.17.2)
+		m["haggle_pct"] = 0
+		m["haggle_result"] = {}
 	lines.append("Итого: %s" % ("−" + Money.format(net) if net > 0 else "+" + Money.format(-net) if net < 0 else "без доплаты"))
 	return lines
 
@@ -257,8 +299,11 @@ static func deal_note(lines: Array[String], net_cp: int) -> String:
 	return "; ".join(goods) + "; итог: " + money
 
 
+## The DC by the attitude; every haggle already made with this trader today makes the next one harder (v0.7.17.2).
 static func haggle_dc(s: GameSession, data: Dictionary, npc_id: String) -> int:
-	return _pct(data["rules"]["trade"]["haggle_dc_by_attitude"], s.attitude(npc_id))
+	var m := merchant(s, data, npc_id)
+	var done := int(m.get("haggles", 0)) if int(m.get("haggle_day", 0)) == s.day else 0
+	return _pct(data["rules"]["trade"]["haggle_dc_by_attitude"], s.attitude(npc_id)) + done * int(data["rules"]["trade"]["haggle_escalation"])
 
 
 ## "" when the player may haggle with this merchant now, otherwise a localization key.
@@ -288,10 +333,14 @@ static func best_skill(s: GameSession, data: Dictionary) -> String:
 	return best
 
 
-## Applies a haggle check result: a success sets the percent for this visit by the margin, a failure locks
-## haggling until the next day. Returns the percent won (0 on a failure).
+## Applies a haggle check result: a success sets the percent for the next deal by the margin (v0.7.17.2: a deal
+## each, every one harder that day), a failure locks haggling until the next day. Returns the percent (0 — failed).
 static func apply_haggle(s: GameSession, data: Dictionary, npc_id: String, result: Dictionary) -> int:
 	var m := merchant(s, data, npc_id)
+	if int(m.get("haggle_day", 0)) != s.day:
+		m["haggle_day"] = s.day
+		m["haggles"] = 0
+	m["haggles"] = int(m["haggles"]) + 1
 	var kept := result.duplicate()
 	kept.erase("note")
 	m["haggle_result"] = kept
@@ -313,10 +362,10 @@ static func haggle_note(skill_name: String, result: Dictionary, pct: int) -> Str
 	var roll := "%s %d против DC %d" % [skill_name, int(result["total"]), int(result["dc"])]
 	if bool(result.get("blocked", false)):
 		if bool(result["success"]):
-			return "Торг уже состоялся (%s): скидка действует до конца визита, больше торговец не уступит." % roll
+			return "Торг уже состоялся (%s): скидка — на ближайшую сделку, до неё торговец больше не уступит." % roll
 		return "Сегодня торг с этим торговцем уже провален (%s): до завтра он о скидках слышать не хочет." % roll
 	if pct > 0:
-		return ("Торг удался (%s): до конца визита торговец уступает %d%% на покупки и платит на %d%% больше за вещи " +
+		return ("Торг удался (%s): на ближайшую сделку торговец уступает %d%% на покупки и платит на %d%% больше за вещи " +
 			"игрока. Цены уже пересчитаны движком.") % [roll, pct, pct]
 	return "Торг не удался (%s): цены прежние, до завтра торговец о скидках слышать не хочет." % roll
 
@@ -345,7 +394,7 @@ static func info(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary
 				"wanted": demand(s, data, npc_id, id) == "wants"})
 	return {"npc_id": npc_id, "purse_cp": int(m["purse_cp"]), "haggle_pct": int(m["haggle_pct"]), "discount_pct": SocialRules.discount(s, npc_id),
 		"haggle_locked": int(m["haggle_failed_day"]) == s.day, "stock": stock, "buys": buys,
-		"wants": tag_words(data, wants(data, npc_id)), "shuns": tag_words(data, shuns(data, npc_id))}
+		"wants": tag_words(data, wants(data, npc_id)), "shuns": tag_words(data, shuns(data, npc_id)), "news": variant(s, data, npc_id)["news"]}
 
 
 # --- services (v0.7.12) ----------------------------------------------------------------------------

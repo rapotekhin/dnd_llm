@@ -965,6 +965,13 @@
           "title": "Haggle Pct",
           "type": "integer"
         },
+        "news": {
+          "items": {
+            "type": "string"
+          },
+          "title": "News",
+          "type": "array"
+        },
         "npc_id": {
           "title": "Npc Id",
           "type": "string"

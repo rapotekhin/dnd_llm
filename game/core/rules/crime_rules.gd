@@ -37,7 +37,7 @@ static func people_of(data: Dictionary, location_id: String) -> Array[String]:
 ## is a murder. Lines.
 static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: bool, room_id: String) -> Array[String]:
 	var world := WorldView.new(data["world"])
-	var lines: Array[String] = []
+	var lines: Array[String] = TradeRules.on_death(s, data, npc_id)  # v0.7.17.2: the goods to the heir
 	if not s.dead_npcs.has(npc_id):
 		s.dead_npcs.append(npc_id)
 	s.bodies[npc_id] = room_id

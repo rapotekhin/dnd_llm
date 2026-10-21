@@ -593,7 +593,7 @@ func npcs_here(world: Dictionary, room_id: String) -> Array[String]:
 
 static func _normalized_merchant(m: Dictionary) -> Dictionary:
 	var out := m.duplicate(true)
-	for k: String in ["purse_cp", "day", "haggle_pct", "haggle_failed_day"]:
+	for k: String in ["purse_cp", "day", "haggle_pct", "haggle_failed_day", "haggles", "haggle_day"]:
 		out[k] = int(out.get(k, 0))
 	var stock := {}
 	for id: String in out.get("stock", {}):
