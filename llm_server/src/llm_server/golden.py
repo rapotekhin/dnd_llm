@@ -29,6 +29,7 @@ from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models import Model
 
 from . import REPO_ROOT
+from .llm.providers import PICKER
 from .agents import TurnContext, build_turn_agent, settings_for, system_prompt_for, turn_user_prompt
 from .protocol import TurnRequestParams
 
@@ -360,6 +361,8 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     params = to_turn_params(sc)
     engine = MockEngine(sc.get("engine", {}))
     ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]
+    if getattr(model, "system", "") == "openrouter":  # the same providers as the game (v0.7.14.4)
+        await PICKER.refresh(model.model_name)
     agent = build_turn_agent(model, system_prompt_for(params))
     started = time.monotonic()
     try:

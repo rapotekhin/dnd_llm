@@ -30,6 +30,8 @@ uv run python -m llm_server.contract     # перевыгрузить contract/s
 | `LLM_SERVER_MODEL` | `deepseek/deepseek-v4.1-flash-1017` | модель по умолчанию (ADR-0011, с v0.7.3) |
 | `LLM_SERVER_MODELS` | deepseek-v4.1-flash-1017, haiku-5.5, qwen3.8-omni-flash, qwen3.8-27b, gemini-3.8-flash | белый список для выбора в игре |
 | `LLM_SERVER_PROVIDER_SORT` | `price` | провайдер модели на OpenRouter: `price` — самый дешёвый из поддерживающих все параметры запроса, `throughput`, `latency`, `off` — маршрутизация OpenRouter (v0.7.4) |
+| `LLM_SERVER_PROVIDER_TOP` | `3` | при `price` (v0.7.14.5): запрос идёт только к N самым дешёвым провайдерам на типичный ход (20k токенов на входе, 1.5k на выходе), умеющим `tools` и живым последние 30 минут; список обновляется раз в 15 минут (`llm/providers.py`) |
+| `LLM_SERVER_MIN_TPS` | `30` | порог скорости из этих N (p50, токенов в секунду, статистика OpenRouter за 5 минут): кто медленнее, идёт в конец очереди — отвечает самый дешёвый из шустрых; `0` — без порога. Кто ответил — `provider` в трейсе хода |
 | `LLM_SERVER_DAILY_BUDGET_USD` | `1.0` | дневной лимит, `off` — без лимита |
 | `LLM_SERVER_DATA_DIR` | `llm_server/var` | счётчик бюджета, библиотека предметов |
 | `LLM_SERVER_HOST` / `PORT` | `127.0.0.1` / `8765` | |

@@ -11,9 +11,11 @@ from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UnexpectedModelBehavior, UsageLimitExceeded
+from pydantic_ai.models import Model
 from pydantic_ai.usage import RunUsage, UsageLimits
 
 from . import prompts
+from .llm.providers import PICKER
 from .agents import RETRY_MAX_TOKENS, TurnContext, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
 from .protocol import (
     CoinsEffect,
@@ -127,6 +129,21 @@ def _usage(session: Session, model: str, run_usage: RunUsage) -> Usage:
                  model=model)
 
 
+def _served_by(result: object) -> str:
+    """The OpenRouter provider that answered the last request of the run ("" when unknown), for the trace."""
+    try:
+        details = result.all_messages()[-1].provider_details or {}  # type: ignore[attr-defined]
+    except (AttributeError, IndexError):
+        return ""
+    return str(details.get("downstream_provider", ""))
+
+
+async def _pick_providers(model: Model) -> None:
+    """The cheapest fast OpenRouter providers of the model, refreshed now and then (v0.7.14.4)."""
+    if getattr(model, "system", "") == "openrouter":
+        await PICKER.refresh(model.model_name)
+
+
 async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     services = session.services
     assert services.model_factory is not None
@@ -134,6 +151,7 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     if params.mode in ("social", "trade") and scene_npc(params, params.npc_id) is None:
         raise RpcError(ErrorCode.INVALID_PARAMS, f"mode {params.mode} needs npc_id of an NPC in the scene")
     system = system_prompt_for(params)
+    await _pick_providers(services.model_factory(model))
     agent = build_turn_agent(services.model_factory(model), system)
     user_prompt = turn_user_prompt(params)
     ctx = TurnContext(session, params, services.library)
@@ -168,7 +186,7 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     if services.trace:
         services.trace.write({**trace, "messages": services.trace.messages(result), "output": out.model_dump(mode="json"),
                               "checks": ctx.check_ids, "accepted": ctx.accepted, "usage": usage.model_dump(mode="json"),
-                              "seconds": round(time.monotonic() - started, 2)})
+                              "provider": _served_by(result), "seconds": round(time.monotonic() - started, 2)})
     log.info("turn %s mode=%s model=%s tokens=%d/%d cost=$%.5f checks=%d effects=%d/%d %.1fs",
              params.turn_id, params.mode, model, usage.input_tokens, usage.output_tokens, usage.cost_usd,
              len(ctx.check_ids), len(out.effect_ids), len(ctx.accepted), time.monotonic() - started)
@@ -196,6 +214,7 @@ async def agent_summary(session: Session, params: SummaryParams) -> SummaryResul
     services = session.services
     assert services.model_factory is not None
     model = _model_id(session, params.model)
+    await _pick_providers(services.model_factory(model))
     agent = build_summary_agent(services.model_factory(model), params.kind)
     prompt = prompts.summary_prompt(params.kind, params.subject_id, params.previous, params.events)
     result = await _with_retries(lambda: agent.run(prompt), services.settings.llm_retries, lambda: True)

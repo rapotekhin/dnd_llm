@@ -17,6 +17,7 @@ from pydantic_ai.models import Model
 from pydantic_ai.settings import ModelSettings
 
 from . import prompts
+from .llm.providers import PICKER, min_tps
 from .protocol import (
     DcTier,
     Effect,
@@ -63,7 +64,9 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
     """Per-model tweaks. Qwen 3.x answers in thinking mode by default, and thinking mode rejects the forced
     tool choice that structured output needs (HTTP 400), so reasoning is switched off for it. On OpenRouter the
     cheapest provider of the model that supports every parameter of the request is taken (v0.7.4, the author's
-    wish); LLM_SERVER_PROVIDER_SORT = price (default) | throughput | latency | off."""
+    wish); LLM_SERVER_PROVIDER_SORT = price (default) | throughput | latency | off. With price, v0.7.14.4: only the
+    `LLM_SERVER_PROVIDER_TOP` cheapest providers (llm.providers.PICKER, refreshed before a turn), and those slower than
+    `LLM_SERVER_MIN_TPS` tokens/s go last — the cheapest fast one of them serves."""
     settings: dict = dict(base)
     if "qwen/" in model.model_name:
         settings["openrouter_reasoning"] = {"enabled": False}
@@ -73,6 +76,11 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
     sort = os.environ.get("LLM_SERVER_PROVIDER_SORT", "price").strip().lower()
     if getattr(model, "system", "") == "openrouter" and sort in ("price", "throughput", "latency"):
         settings["openrouter_provider"] = {"sort": sort, "require_parameters": True}
+        picked = PICKER.providers(model.model_name)
+        if sort == "price" and picked:
+            settings["openrouter_provider"].update({"only": picked, "allow_fallbacks": True})
+            if min_tps() > 0:
+                settings["openrouter_provider"]["preferred_min_throughput"] = {"p50": min_tps()}
     return settings  # type: ignore[return-value]
 
 

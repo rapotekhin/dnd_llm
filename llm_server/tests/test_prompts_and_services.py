@@ -207,3 +207,67 @@ def test_no_temperature_for_claude_on_openrouter():
     assert "temperature" not in haiku and haiku["openrouter_provider"]["require_parameters"] is True
     deepseek = settings_for(OpenRouterModel("deepseek/deepseek-v4.1-flash-1017", provider=OpenRouterProvider(api_key="test")))
     assert deepseek["temperature"] == 0.8
+
+
+def _endpoint(tag: str, prompt: float, completion: float, uptime: float = 100, tools: bool = True) -> dict:
+    return {"tag": tag, "pricing": {"prompt": str(prompt / 1e6), "completion": str(completion / 1e6)}, "uptime_last_30m": uptime,
+            "supported_parameters": ["tools", "tool_choice", "temperature"] if tools else ["temperature"]}
+
+
+def test_the_three_cheapest_providers_with_tools_that_are_up():
+    # v0.7.14.4: a slow day of the cheapest provider — the request goes to the cheapest three, fast ones first.
+    from llm_server.llm.providers import cheapest
+
+    endpoints = [
+        _endpoint("expensive", 0.3, 1.2),
+        _endpoint("open-inference/fp4", 0.049, 0.375),
+        _endpoint("no-tools", 0.01, 0.01, tools=False),
+        _endpoint("down", 0.02, 0.02, uptime=40),
+        _endpoint("decart/fp4", 0.09, 0.18),
+        _endpoint("deepinfra/fp8", 0.098, 0.294),
+        _endpoint("cloudflare", 0.1, 0.6),
+    ]
+    assert cheapest(endpoints, 3) == ["open-inference/fp4", "decart/fp4", "deepinfra/fp8"]
+
+
+def test_the_picked_providers_go_into_the_request(monkeypatch):
+    from pydantic_ai.models.openrouter import OpenRouterModel
+    from pydantic_ai.providers.openrouter import OpenRouterProvider
+
+    from llm_server.agents import settings_for
+    from llm_server.llm.providers import PICKER
+
+    model_id = "deepseek/deepseek-v4.1-flash-1017"
+    model = OpenRouterModel(model_id, provider=OpenRouterProvider(api_key="test"))
+    monkeypatch.setitem(PICKER._lists, model_id, ["a", "b", "c"])
+    monkeypatch.setenv("LLM_SERVER_MIN_TPS", "40")
+    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True, "only": ["a", "b", "c"],
+                                                        "allow_fallbacks": True, "preferred_min_throughput": {"p50": 40.0}}
+    monkeypatch.setenv("LLM_SERVER_PROVIDER_SORT", "throughput")
+    assert "only" not in settings_for(model)["openrouter_provider"]
+
+
+def test_the_picker_keeps_its_list_when_openrouter_fails():
+    import asyncio
+
+    import httpx
+
+    from llm_server.llm.providers import ProviderPicker
+
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        if len(calls) == 1:
+            return httpx.Response(200, json={"data": {"endpoints": [_endpoint("x", 0.1, 0.1), _endpoint("y", 0.2, 0.2)]}})
+        return httpx.Response(500)
+
+    picker = ProviderPicker(ttl=0)
+
+    async def twice() -> None:
+        for _ in range(2):
+            async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+                assert await picker.refresh("m/x", c) == ["x", "y"]
+
+    asyncio.run(twice())
+    assert calls == ["/api/v1/models/m/x/endpoints"] * 2
