@@ -8,6 +8,7 @@
 {% elif character.conditions %}Состояния: {{ character.conditions | join(", ") }} (их влияние на проверки движок учитывает сам).
 {% endif %}{% if character.resistances %}Сопротивление урону: {{ character.resistances | join(", ") }}.
 {% endif %}{% if character.languages %}Языки героя: {{ character.languages | join(", ") }}.
+{% endif %}{% if character.attuned %}Настроен на: {{ character.attuned | join(", ") }}.
 {% endif %}{% if character.tools %}Владеет инструментами: {{ character.tools | join(", ") }}.
 {% endif %}{% if character.background_feature %}Умение предыстории — {{ character.background_feature }}.
 {% endif %}{% if character.resources %}Умения с ограниченными использованиями: {% for r in character.resources %}{{ r.name }} {{ r.left }}/{{ r.max }}{% if not loop.last %}, {% endif %}{% endfor %}.

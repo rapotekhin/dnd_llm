@@ -6,6 +6,7 @@ ABILITY_DEX,Ловкость
 ABILITY_INT,Интеллект
 ABILITY_STR,Сила
 ABILITY_WIS,Мудрость
+AMMO_NOTHING,Собирать нечего
 ATTACH_GROUP_FEATURE,Умения
 ATTACH_GROUP_ITEM,Предметы
 ATTACH_GROUP_SPELL,Заклинания
@@ -22,6 +23,12 @@ ATTITUDE_M3,враждебное
 ATTITUDE_P1,приветливое
 ATTITUDE_P2,дружеское
 ATTITUDE_P3,тёплое
+ATTUNE_ALREADY,Уже настроено
+ATTUNE_CASTER_ONLY,Настроиться может только заклинатель
+ATTUNE_FULL,Настроено уже три вещи — сначала снимите настройку с одной
+ATTUNE_NOT_ATTUNED,Вещь не настроена
+ATTUNE_NOT_NEEDED,Эта вещь не требует настройки
+ATTUNE_NOT_NOW,Настройка — час спокойного времени: не в бою и не посреди разговора
 BACKEND_CONNECTING,Подключаюсь к мастеру…
 BACKEND_OFFLINE,Мастер недоступен
 BACKEND_READY,Мастер на связи
@@ -30,6 +37,7 @@ BACKEND_TOOLTIP_READY,"{url}
 Сервер: {version}"
 BANNER_NO_MASTER,"Нет связи с мастером — переподключаюсь. Игра сохранена, ходы недоступны."
 BTN_ATTACH,"Заклинание, умение или предмет — вместе с сообщением"
+BTN_ATTUNE,Настроиться (1 ч)
 BTN_BACK,Назад
 BTN_BACK_TO_WORLD,К выбору мира
 BTN_CAMP_CONFIRM,Разбить лагерь
@@ -39,6 +47,7 @@ BTN_CAST,Колдовать
 BTN_CHARACTER_SHEET,Лист персонажа
 BTN_CLEAR_CART,Очистить
 BTN_CLOSE,Закрыть
+BTN_COLLECT_AMMO,Собрать стрелы ({n})
 BTN_CONNECTION_SETTINGS,Настройки связи
 BTN_CONTINUE,Продолжить
 BTN_DEAL,Заключить сделку
@@ -97,6 +106,7 @@ BTN_TRADE_WITH,Торговать: {name}
 BTN_TRAP_BYPASS,→ {room}: в обход
 BTN_TRAP_DISARM,Обезвредить ловушку
 BTN_TRAVEL,"Идти сюда · шагов {steps}, {min} мин"
+BTN_UNATTUNE,Снять настройку
 BTN_UNEQUIP,Снять
 BTN_USE,Использовать
 BTN_WAIT,Ждать…
@@ -209,6 +219,7 @@ COMBAT_HIDE_TIP,"Скрытность против Внимательности 
 COMBAT_INCOMING,"{names}
 через {n} р."
 COMBAT_INSPECT_TIP,"Бонусное действие: проверка знаний по виду врага (Природа, Религия, Магия, Проницательность). Успех открывает хиты, КД, атаки и сопротивления таких врагов насовсем"
+COMBAT_ITEM_CANT,Этим сейчас не воспользоваться
 COMBAT_LOOT,"Добыча — отметьте, что взять:"
 COMBAT_MELEE,вплотную
 COMBAT_MOVE,➜ Движение: {n}
@@ -217,6 +228,7 @@ COMBAT_NOT_HELD,Вас никто не держит
 COMBAT_NOT_PRONE,Вы и так на ногах
 COMBAT_NOT_YOUR_TURN,Сейчас не ваш ход
 COMBAT_NO_ACTION,Действие этого хода уже потрачено
+COMBAT_NO_AMMO,Нет боеприпасов
 COMBAT_NO_BONUS,Бонусное действие уже потрачено или недоступно
 COMBAT_NO_CHARGE,Заряды кончились — нужен отдых
 COMBAT_NO_FEATURE,Этого умения у героя нет
@@ -329,41 +341,67 @@ ITEM_AC,КД {n}
 ITEM_ARMOR_HEAVY,Тяжёлый доспех
 ITEM_ARMOR_LIGHT,Лёгкий доспех
 ITEM_ARMOR_MEDIUM,Средний доспех
+ITEM_ATTUNED,Настроено — работает
+ITEM_CHARGES,Заряды: {left} из {max} (восстанавливаются на рассвете)
 ITEM_CMP_AC,КД {now} → {then}
 ITEM_CMP_WEAPON,"Атака {hit}, урон {dmg} (сейчас {hit_now}, {dmg_now})"
+ITEM_CURSED,Проклятая вещь не снимается — помочь может только «Снятие проклятия»
+ITEM_CURSED_LINE,Проклято: надетое или настроенное не снять без «Снятия проклятия»
 ITEM_DEX, + Лов
 ITEM_DEX_MAX, + Лов (макс. {n})
+ITEM_MASTER,"Что умеет эта вещь, решает мастер по её описанию"
+ITEM_NEEDS_ATTUNEMENT,"Требует настройки: час с вещью, не больше трёх вещей сразу"
 ITEM_NO_PROF_ARMOR,Вы не владеете этим доспехом: надеть нельзя
 ITEM_NO_PROF_WEAPON,Вы не владеете этим оружием: атака без бонуса мастерства
 ITEM_PROPERTIES,Свойства: {list}
 ITEM_PROP_AC_PLUS1,КД +1
 ITEM_PROP_AC_PLUS2,КД +2
-ITEM_PROP_AMMUNITION,нужны боеприпасы
-ITEM_PROP_COLD_DAMAGE,урон холодом
-ITEM_PROP_CURSED,проклятие
+ITEM_PROP_AMMUNITION,нужны боеприпасы: половину выпущенных можно собрать после боя
+ITEM_PROP_CARRY_PLUS_500,+500 фунтов к переносимому весу
+ITEM_PROP_CHECKS_PLUS1,проверки +1
+ITEM_PROP_COLD_DAMAGE,+1к6 урона холодом при попадании
+ITEM_PROP_CURSED,проклятие: не снимается
+ITEM_PROP_DARKVISION,тёмное зрение
 ITEM_PROP_FINESSE,фехтовальное (Сила или Ловкость)
-ITEM_PROP_FIRE_DAMAGE,урон огнём
+ITEM_PROP_FIRE_DAMAGE,+1к6 урона огнём при попадании
 ITEM_PROP_HEALING,лечит
-ITEM_PROP_HEAVY,тяжёлое
+ITEM_PROP_HEAVY,тяжёлое (маленьким расам — помеха)
+ITEM_PROP_IMMUNE_DISEASE,иммунитет к болезням
+ITEM_PROP_INT_19,Интеллект 19
+ITEM_PROP_INVESTIGATION_ADVANTAGE,преимущество к Анализу
 ITEM_PROP_LIGHT,лёгкое (можно взять второе в левую руку)
-ITEM_PROP_LIGHTNING_DAMAGE,урон молнией
+ITEM_PROP_LIGHTNING_DAMAGE,+1к6 урона молнией при попадании
 ITEM_PROP_LIGHT_SOURCE,даёт свет
 ITEM_PROP_MAGIC_PLUS1,магическое +1 к атаке и урону
 ITEM_PROP_MAGIC_PLUS2,магическое +2 к атаке и урону
 ITEM_PROP_MAGIC_PLUS3,магическое +3 к атаке и урону
-ITEM_PROP_NECROTIC_DAMAGE,некротический урон
-ITEM_PROP_POISON_DAMAGE,урон ядом
-ITEM_PROP_RADIANT_DAMAGE,урон излучением
-ITEM_PROP_REACH,досягаемость
+ITEM_PROP_MISSILE_SNARING,"реакция: ловит снаряд, урон −1к10 + Ловкость"
+ITEM_PROP_MITHRAL,мифрил: без требования Силы и помехи Скрытности
+ITEM_PROP_NECROTIC_DAMAGE,+1к6 некротического урона при попадании
+ITEM_PROP_NO_CRIT,адамантин: критическое попадание по вам — обычное
+ITEM_PROP_PERCEPTION_ADVANTAGE,преимущество к Внимательности
+ITEM_PROP_POISON_DAMAGE,+1к6 урона ядом при попадании
+ITEM_PROP_RADIANT_DAMAGE,+1к6 урона излучением при попадании
+ITEM_PROP_RANGED_DAMAGE_PLUS2,+2 к урону луком
+ITEM_PROP_REACH,досягаемость: бьёт подходящего врага первым (реакция)
+ITEM_PROP_RESIST_ACID,сопротивление кислоте
 ITEM_PROP_RESIST_COLD,сопротивление холоду
 ITEM_PROP_RESIST_FIRE,сопротивление огню
+ITEM_PROP_RESIST_FORCE,сопротивление силовому полю
+ITEM_PROP_RESIST_LIGHTNING,сопротивление электричеству
+ITEM_PROP_RESIST_NECROTIC,сопротивление некротической энергии
 ITEM_PROP_RESIST_POISON,защита от яда
 ITEM_PROP_SAVES_PLUS1,спасброски +1
-ITEM_PROP_SILVERED,посеребрённое
+ITEM_PROP_SILVERED,посеребрённое: пробивает сопротивление оборотней и им подобных
+ITEM_PROP_SPEED_30,скорость не меньше 30 футов
+ITEM_PROP_SPELL_ATTACK_PLUS1,атака заклинанием +1
 ITEM_PROP_STEALTH_ADVANTAGE,преимущество к Скрытности
+ITEM_PROP_STR_19,Сила 19
 ITEM_PROP_THROWN,метательное
 ITEM_PROP_TWO_HANDED,двуручное
+ITEM_PROP_UNDERSTAND_ALL,понимание любого языка
 ITEM_PROP_VERSATILE,универсальное
+ITEM_PROP_WOUND_CLOSURE,при смерти — сразу стабилизирует; кости хитов лечат вдвое
 ITEM_RANGE,дальность {near}/{far} фт.
 ITEM_SHIELD_LINE,Щит · КД +{n}
 ITEM_STEALTH_DIS,помеха Скрытности
@@ -373,9 +411,14 @@ ITEM_TYPE_CONSUMABLE,Расходуемый предмет
 ITEM_TYPE_GEAR,Снаряжение
 ITEM_TYPE_TREASURE,Ценность
 ITEM_TYPE_WEAPON,Оружие
-ITEM_TYPE_WONDROUS,"Чудесный предмет: действует, пока при себе"
+ITEM_TYPE_WONDROUS,Чудесный предмет
+ITEM_UNKNOWN,"Не опознано: свойства станут известны после короткого отдыха, настройки, «Опознания» или у жрицы за плату"
 ITEM_USE_HEAL,Лечит {dice} хитов
 ITEM_USE_REMOVE,Снимает: {list}
+ITEM_USE_RESIST,Сопротивление: {type} на час
+ITEM_USE_SLOT,Восстанавливает потраченную ячейку до 3 круга
+ITEM_USE_SPELL,Заклинание «{spell}» ({n} круг) без ячейки
+ITEM_USE_THROW,Бросить во врага (вкладка «Предметы» в бою)
 ITEM_VERSATILE,двумя руками {dice}
 ITEM_WEAPON_MARTIAL_MELEE,Воинское оружие ближнего боя
 ITEM_WEAPON_MARTIAL_RANGED,Воинское дальнобойное оружие
@@ -545,9 +588,14 @@ SAVE_STR,Спасбросок Силы
 SAVE_WIS,Спасбросок Мудрости
 SEARCH_SAY_INVESTIGATION,Тщательно обыскиваю это место
 SEARCH_SAY_PERCEPTION,Осматриваюсь по сторонам
+SERVICE_IDENTIFY,Опознать вещи — {cost}
+SERVICE_NOTHING,Нечего — услуга сейчас не нужна
+SERVICE_REMOVE_CURSE,Снять проклятие — {cost}
+SERVICE_SILVER,Посеребрить оружие — {cost}
 SHEET_ABILITIES,Характеристика · модификатор · спасбросок (● — владение)
 SHEET_ABILITY_ROW,{name} {score} ({mod}) · спасбросок {save}
 SHEET_ATTACK,"Атака: {name} {hit}, урон {dmg}"
+SHEET_ATTUNED,Настроено: {n} из 3
 SHEET_BG_IN_GAME,В игре: {rule}
 SHEET_CONCENTRATION,Концентрация: {spell}
 SHEET_EQUIPPED,Надето и в руках
@@ -661,6 +709,7 @@ TRADE_NOTHING_TO_SELL,Продать нечего (надетое не прод�
 TRADE_PAY,Вы платите: {coins}
 TRADE_PRICE_EACH,{coins} за шт.
 TRADE_PURSE,У торговца: {coins}
+TRADE_SERVICES,Услуги
 TRADE_SOLD_OUT,Товары закончились
 TRADE_STOCK,Товары торговца
 TRADE_YOURS,Ваши вещи — он купит за

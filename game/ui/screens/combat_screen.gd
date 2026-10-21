@@ -513,9 +513,27 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	if not usable.is_empty():
 		var ib := _tab_box("COMBAT_TAB_ITEMS")
 		for id: String in usable:
-			var b := _button(ib, "Item_" + id, "%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), int(c["inventory"][id])], mine)
-			_details.hook(b, ItemRules.display_name(data["items"], s.items, id), DetailsPanel.item_text(c, data, s.items, id))
-			b.pressed.connect(func() -> void: _do(GameState.combat_use_item(id)))
+			var d := ItemRules.def_of(data["items"], s.items, id)
+			var fx := ItemRules.consumable(data, id)
+			var label := "%s ×%d" % [d.get("name", id), int(c["inventory"][id])]
+			if ItemRules.charges_max(d) > 0:
+				label = "%s (%d/%d)" % [d.get("name", id), ItemRules.charges_left(c, d, id), ItemRules.charges_max(d)]
+			var sp_id := str(fx.get("spell", ""))
+			var sp: Dictionary = data["spells"].get(sp_id, {})
+			var item_btn: Button
+			if fx.has("throw"):  # v0.7.12: flasks and the net at a foe
+				item_btn = _action(ib, "Item_" + id, label, mine, func(t: String) -> String: return GameState.combat_throw(id, t),
+					func(t: String) -> String: return CombatRules.can_throw(s, data, id, t), func(_t: String) -> Dictionary: return {})
+			elif not sp_id.is_empty() and CombatRules.is_engine_spell(data, sp_id) and not sp.has("heal_at_slot") 					and (int(sp.get("range_ft", 0)) > 0 or sp.has("area")):
+				item_btn = _action(ib, "Item_" + id, label, mine, func(t: String) -> String: return GameState.combat_item_spell(id, t),
+					func(t: String) -> String: return CombatRules.can_item_spell(s, data, id, t), func(_t: String) -> Dictionary: return {})
+			elif not sp_id.is_empty():
+				item_btn = _button(ib, "Item_" + id, label, mine)
+				item_btn.pressed.connect(func() -> void: _do(GameState.combat_item_spell(id, "")))
+			else:
+				item_btn = _button(ib, "Item_" + id, label, mine)
+				item_btn.pressed.connect(func() -> void: _do(GameState.combat_use_item(id)))
+			_details.hook(item_btn, str(d.get("name", id)), DetailsPanel.item_text(c, data, s.items, id))
 	# Common.
 	var g := _tab_box("COMBAT_TAB_COMMON")
 	for what: String in ["dash", "dodge", "disengage"]:

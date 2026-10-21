@@ -34,8 +34,14 @@ static func prof_bonus(c: Dictionary, data: Dictionary) -> int:
 	return int(level_row(c, data).get("prof_bonus", 2 + (int(c.get("level", 1)) - 1) / 4))
 
 
+## The score in play: the sheet's, or an item's floor (Gauntlets of Ogre Power — STR 19, v0.7.12).
 static func ability(c: Dictionary, id: String) -> int:
-	return int(c.get("abilities", {}).get(id, 10))
+	return maxi(int(c.get("abilities", {}).get(id, 10)), int(c.get("ability_floor", {}).get(id, 0)))
+
+
+## A property of an item that works now (refresh caches them in `item_props`, v0.7.12).
+static func item_prop(c: Dictionary, prop: String) -> bool:
+	return (c.get("item_props", []) as Array).has(prop)
 
 
 static func has_feature(c: Dictionary, id: String) -> bool:
@@ -118,13 +124,30 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 	return ac
 
 
-## Wondrous items in the pack (v0.6.3): they work while carried (no attunement in this version).
+## Wondrous items in the pack (v0.6.3): they work while carried — those that need it, only when attuned (v0.7.12).
 static func carried(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for id: String in c.get("inventory", {}):
 		var d := ItemRules.def_of(data["items"], session_items, id)
-		if str(d.get("item_type", "")) == "wondrous":
+		if str(d.get("item_type", "")) == "wondrous" and ItemRules.active(c, d, id):
 			out.append(d)
+	return out
+
+
+## Properties of the things that work now: carried wondrous items and the equipped gear (v0.7.12).
+static func active_props(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array:
+	var out: Array = []
+	var defs := carried(c, data, session_items)
+	for slot: String in SLOTS:
+		var id := str(c.get("equipped", {}).get(slot, ""))
+		if not id.is_empty():
+			var d := ItemRules.def_of(data["items"], session_items, id)
+			if ItemRules.active(c, d, id):
+				defs.append(d)
+	for d: Dictionary in defs:
+		for p: Variant in d.get("properties", []):
+			if not out.has(str(p)):
+				out.append(str(p))
 	return out
 
 
@@ -168,6 +191,8 @@ static func speed(c: Dictionary, data: Dictionary) -> int:
 	if item_def(c, data, {}, "armor").is_empty() and item_def(c, data, {}, "shield").is_empty():
 		bonus = int(spec.get("unarmored_movement", 0))
 	var feet := int(race.get("speed", 30)) + bonus
+	if item_prop(c, "speed_30"):  # Boots of Striding and Springing (v0.7.12)
+		feet = maxi(feet, 30 + bonus)
 	if has_feature(c, "fast_movement") and str(item_def(c, data, {}, "armor").get("armor", {}).get("category", "")) != "heavy":
 		feet += 10  # the barbarian's Fast Movement
 	# v0.7.8: grappled and restrained — 0; exhaustion 5 — 0, 2 — half (5e).
@@ -193,6 +218,12 @@ static func class_name_of(c: Dictionary, data: Dictionary) -> String:
 static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> void:
 	sanitize_equipped(c)
 	_grant_trait_cantrips(c, data)
+	c["item_props"] = active_props(c, data, session_items)  # v0.7.12
+	var floors := {}
+	for p: Variant in c["item_props"]:
+		if str(p).ends_with("_19") and ABILITIES.has(str(p).get_slice("_", 0)):
+			floors[str(p).get_slice("_", 0)] = 19
+	c["ability_floor"] = floors
 	c["race_name"] = race_name(c, data)
 	c["class_name"] = class_name_of(c, data)
 	c["prof_bonus"] = prof_bonus(c, data)
@@ -204,8 +235,9 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	c["hp"] = clampi(int(c.get("hp", c["max_hp"])), 0, int(c["max_hp"]))
 	c["ac"] = armor_class(c, data, session_items)
 	var skills := {}
+	var check_plus := 1 if item_prop(c, "checks_plus1") else 0  # Stone of Good Luck (v0.7.12)
 	for id: String in data["rules"]["skills"]:
-		skills[id] = skill_bonus(c, data, id)
+		skills[id] = skill_bonus(c, data, id) + check_plus
 	c["skills"] = skills
 	var saves := {}
 	var save_plus := 0
@@ -221,7 +253,7 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	c["spell_ability"] = ab
 	if not ab.is_empty():
 		c["spell_dc"] = 8 + int(c["prof_bonus"]) + mod(ability(c, ab))
-		c["spell_attack"] = int(c["prof_bonus"]) + mod(ability(c, ab))
+		c["spell_attack"] = int(c["prof_bonus"]) + mod(ability(c, ab)) + (1 if item_prop(c, "spell_attack_plus1") else 0)
 	else:
 		c.erase("spell_dc")
 		c.erase("spell_attack")
@@ -236,6 +268,9 @@ static func sanitize_equipped(c: Dictionary) -> void:
 		if not id.is_empty() and int(inv.get(id, 0)) <= 0:
 			eq[slot] = ""
 	c["equipped"] = eq
+	for id: Variant in (c.get("attuned", []) as Array).duplicate():  # a thing given away loses its attunement (v0.7.12)
+		if int(inv.get(str(id), 0)) <= 0:
+			(c["attuned"] as Array).erase(id)
 
 
 ## The slot an item goes to, or "" if it cannot be equipped. A weapon goes to the main hand.
@@ -289,7 +324,7 @@ static func carried_weight(c: Dictionary, data: Dictionary, session_items: Dicti
 
 ## Carrying capacity (PHB): Strength × rules.carry.per_str pounds.
 static func capacity(c: Dictionary, data: Dictionary) -> int:
-	return ability(c, "str") * int(data["rules"].get("carry", {}).get("per_str", 15))
+	return ability(c, "str") * int(data["rules"].get("carry", {}).get("per_str", 15)) + (500 if item_prop(c, "carry_plus_500") else 0)
 
 
 static func overloaded(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> bool:

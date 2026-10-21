@@ -67,6 +67,8 @@ static func monster(data: Dictionary, monster_id: String) -> Dictionary:
 
 ## The hero understands everyone now («Понимание языков»).
 static func understands_all(c: Dictionary) -> bool:
+	if CharacterRules.item_prop(c, "understand_all"):  # Helm of Comprehending Languages (v0.7.12)
+		return true
 	return ConditionRules.effects(c).any(func(e: Dictionary) -> bool: return bool(e.get("understand_all", false)))
 
 

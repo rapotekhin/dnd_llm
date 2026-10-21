@@ -10,6 +10,11 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	var out: Array[String] = []
 	if def.is_empty():
 		return out
+	if def.has("unknown_of"):  # v0.7.12: an unidentified thing shows only what it looks like
+		if def.has("weapon") or def.has("armor"):
+			out.append(kind_line(data, ItemRules.def_of(data["items"], session_items, str(def.get("base", "")))) if not str(def.get("base", "")).is_empty() else kind_line(data, def))
+		out.append(_t("ITEM_UNKNOWN"))
+		return out
 	var head := kind_line(data, def)
 	if not head.is_empty():
 		out.append(head)
@@ -32,6 +37,14 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	var use := use_line(data, id)
 	if not use.is_empty():
 		out.append(use)
+	if ItemRules.charges_max(def) > 0:  # v0.7.12
+		out.append(_t("ITEM_CHARGES").format({"left": ItemRules.charges_left(c, def, id) if not c.is_empty() else ItemRules.charges_max(def), "max": ItemRules.charges_max(def)}))
+	if ItemRules.needs_attunement(def):
+		out.append(_t("ITEM_ATTUNED") if not c.is_empty() and ItemRules.attuned(c).has(id) else _t("ITEM_NEEDS_ATTUNEMENT"))
+	if ItemRules.cursed(def):
+		out.append(_t("ITEM_CURSED_LINE"))
+	if bool(def.get("master", false)):
+		out.append(_t("ITEM_MASTER"))
 	var text := str(def.get("description", ""))
 	if not text.is_empty():
 		out.append(text)
@@ -109,6 +122,15 @@ static func use_line(data: Dictionary, id: String) -> String:
 		var names: Array = (fx["remove"] as Array).map(func(x: Variant) -> String:
 			return str(data["rules"]["conditions"].get(str(x), x)).get_slice(":", 0).to_lower())
 		parts.append(TranslationServer.translate("ITEM_USE_REMOVE").format({"list": ", ".join(names)}))
+	if fx.has("throw"):
+		parts.append(_t("ITEM_USE_THROW"))
+	if fx.has("spell"):
+		var sp: Dictionary = data["spells"].get(str(fx["spell"]), {})
+		parts.append(_t("ITEM_USE_SPELL").format({"spell": sp.get("name", fx["spell"]), "n": int(fx.get("level", 1))}))
+	if fx.has("resist"):
+		parts.append(_t("ITEM_USE_RESIST").format({"type": str(data["misc"]["damage_types"].get(str(fx["resist"]), fx["resist"]))}))
+	if fx.has("recover_slot"):
+		parts.append(_t("ITEM_USE_SLOT"))
 	return " · ".join(parts)
 
 

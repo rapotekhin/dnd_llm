@@ -151,7 +151,7 @@ static func apply_take(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 		return lines
 	p["state"] = "taken"
 	var item := str(p["item_id"])
-	s.character["inventory"][item] = int(s.character["inventory"].get(item, 0)) + 1
+	ItemRules.found(s.character, data, s.items, item)
 	if not str(plan.get("owner", "")).is_empty():
 		lines.append_array(TheftRules.react(s, data, str(plan["owner"])))
 	return lines

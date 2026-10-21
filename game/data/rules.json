@@ -464,7 +464,12 @@
 		"_doc": "short_rest_slot_features: who gets spell slots back on a short rest (warlock's Pact Magic)."
 	},
 	"consumables": {
-		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions].",
+		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions]. Thrown in a fight (v0.7.12, the «Предметы» tab, PHB): `throw` — a ranged attack (improvised: no proficiency; range ft) and on a hit `damage` [dice, type] (only to `types` when given), `burning` dice at the start of the foe's turn until a DEX save DC 10 puts it out, `oiled` — the next fire damage to the foe +N, `condition` with an escape (a STR save each turn, `escape_dc`) on foes up to `max_size`. A catalog item may carry its own `use` (potions, the ointment, scrolls, wands).",
+		"alchemists_fire_flask": {"throw": {"range": 20, "improvised": true, "damage": ["1d4", "fire"], "burning": "1d4"}},
+		"acid_vial": {"throw": {"range": 20, "improvised": true, "damage": ["2d6", "acid"]}},
+		"holy_water": {"throw": {"range": 20, "improvised": true, "damage": ["2d6", "radiant"], "types": ["undead", "fiend"]}},
+		"oil_flask": {"throw": {"range": 20, "improvised": true, "oiled": 5}},
+		"net": {"throw": {"range": 15, "weapon": true, "condition": "restrained", "escape_dc": 10, "max_size": "large"}},
 		"potion_of_greater_healing": {
 			"heal": [4, 4, 4]
 		},
@@ -823,6 +828,14 @@
 				"rounds": 10,
 				"repeat_save": true,
 				"area": true
+			},
+			"web": {
+				"conditions": [
+					"restrained"
+				],
+				"rounds": 10,
+				"repeat_save": true,
+				"area": true
 			}
 		},
 		"lore_base_dc": 10,
@@ -919,7 +932,11 @@
 		"item_resist": {
 			"resist_fire": "fire",
 			"resist_cold": "cold",
-			"resist_poison": "poison"
+			"resist_poison": "poison",
+			"resist_force": "force",
+			"resist_lightning": "lightning",
+			"resist_acid": "acid",
+			"resist_necrotic": "necrotic"
 		},
 		"spell_cures": {
 			"lesser_restoration": {
@@ -1195,6 +1212,26 @@
 			"skills": [
 				"performance"
 			]
+		}
+	},
+	"item_rules": {
+		"_doc": "Items by 5e (v0.7.12, ItemRules): attunement — up to `attune_max` items, an hour with the item (`attune_minutes`) out of a fight; a found magic item (rarity above common) is unidentified until a short rest with it, an attunement, Identify or a trader's service; ammunition by the weapon (`ammo`), half the spent comes back after the fight (`recover`); `element_dice` — the extra damage of a weapon with fire_damage and the like; `small_races` — heavy weapons with disadvantage; `scrolls` — DC and attack bonus by the circle (DMG); `max_found_rarity` — what the master may hand out at levels 1-5 (quest rewards of the pack excepted).",
+		"attune_max": 3,
+		"attune_minutes": 60,
+		"ammo": {"shortbow": "arrows", "longbow": "arrows", "shortbow_plus_1": "arrows", "longbow_plus_1": "arrows", "crossbow_light": "crossbow_bolt", "crossbow_light_plus_1": "crossbow_bolt", "crossbow_hand": "crossbow_bolt", "crossbow_heavy": "crossbow_bolt", "sling": "sling_bullet", "blowgun": "blowgun_needle"},
+		"recover": 0.5,
+		"collect_minutes": 1,
+		"element_dice": "1d6",
+		"small_races": ["small", "tiny"],
+		"scrolls": {"0": [13, 5], "1": [13, 5], "2": [13, 5], "3": [15, 7]},
+		"max_found_rarity": "uncommon",
+		"rarity_order": ["common", "uncommon", "rare", "very_rare", "legendary", "artifact"],
+		"unknown_suffix": ", свойства неизвестны",
+		"services": {
+			"_doc": "Paid services of traders (NPC `services` in the pack): identify — every unknown item the hero carries; remove_curse — the cursed items come off (they stay cursed); silver — a weapon is silvered (PHB: 100 gp).",
+			"identify": {"cost_cp": 2000},
+			"remove_curse": {"cost_cp": 9000},
+			"silver": {"cost_cp": 10000}
 		}
 	}
 }

@@ -47,6 +47,9 @@
 					"reward_cp": 2500,
 					"attitude": {
 						"npc_prospector": 1
+					},
+					"items": {
+						"goggles_of_night": 1
 					}
 				}
 			]
@@ -141,6 +144,9 @@
 					"reward_cp": 5000,
 					"attitude": {
 						"npc_captain": 1
+					},
+					"items": {
+						"stone_of_good_luck": 1
 					}
 				}
 			],
@@ -532,7 +538,8 @@
 				"loot": {
 					"coins_cp": 1200,
 					"items": {
-						"healing_potion": 1
+						"healing_potion": 1,
+						"potion_of_climbing": 1
 					}
 				}
 			},
@@ -710,7 +717,8 @@
 					"coins_cp": 3000,
 					"items": {
 						"signet_ring": 1,
-						"healing_potion": 1
+						"healing_potion": 1,
+						"wand_of_magic_missiles": 1
 					}
 				},
 				"waves": [
@@ -802,7 +810,8 @@
 				"loot": {
 					"coins_cp": 600,
 					"items": {
-						"lantern": 1
+						"lantern": 1,
+						"spell_scroll_web": 1
 					}
 				}
 			}
@@ -895,7 +904,9 @@
 					"loot": {
 						"coins_cp": 4000,
 						"items": {
-							"potion_of_greater_healing": 1
+							"potion_of_greater_healing": 1,
+							"periapt_of_wound_closure": 1,
+							"potion_of_resistance_necrotic": 1
 						}
 					}
 				}
@@ -1024,7 +1035,11 @@
 				"tinderbox": 4,
 				"backpack": 2,
 				"lantern": 2,
-				"crowbar": 2
+				"crowbar": 2,
+				"alchemists_fire_flask": 2,
+				"oil_flask": 6,
+				"acid_vial": 2,
+				"net": 1
 			},
 			"purse_cp": 15000,
 			"monster": "commoner",
@@ -1050,12 +1065,16 @@
 				"leather_armor": 2,
 				"chain_shirt": 1,
 				"arrows": 60,
-				"crossbow_bolt": 40
+				"crossbow_bolt": 40,
+				"sling_bullet": 40
 			},
 			"purse_cp": 25000,
 			"monster": "thug",
 			"tags": [
 				"commoner"
+			],
+			"services": [
+				"silver"
 			]
 		},
 		"npc_herbalist": {
@@ -1069,7 +1088,9 @@
 			"stock": {
 				"healing_potion": 3,
 				"antitoxin": 2,
-				"healers_kit": 2
+				"healers_kit": 2,
+				"potion_of_climbing": 2,
+				"potion_of_resistance_poison": 1
 			},
 			"purse_cp": 12000,
 			"monster": "commoner",
@@ -1087,12 +1108,18 @@
 			"trader": true,
 			"stock": {
 				"holy_water": 2,
-				"candle": 30
+				"candle": 30,
+				"spell_scroll_cure_wounds": 2,
+				"spell_scroll_identify": 1
 			},
 			"purse_cp": 4000,
 			"monster": "acolyte",
 			"tags": [
 				"clergy"
+			],
+			"services": [
+				"identify",
+				"remove_curse"
 			]
 		},
 		"npc_captain": {

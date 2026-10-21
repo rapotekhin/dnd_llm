@@ -145,6 +145,13 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 	c["concentration"] = str(c.get("concentration", ""))
 	c["concentration_ends"] = int(c.get("concentration_ends", -1))
 	c["prepared_day"] = int(c.get("prepared_day", 1))
+	c["attuned"] = (c.get("attuned", []) as Array).map(func(v: Variant) -> String: return str(v))  # v0.7.12
+	var used := {}
+	for id: Variant in c.get("charges_used", {}):
+		used[str(id)] = int(c["charges_used"][id])
+	c["charges_used"] = used
+	if c.get("ammo_left") is Dictionary:
+		c["ammo_left"] = _whole_numbers(c["ammo_left"])
 	return c
 
 

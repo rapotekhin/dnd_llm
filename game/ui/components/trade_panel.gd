@@ -16,6 +16,7 @@ var _cart_rows: VBoxContainer
 var _total: Label
 var _error: Label
 var haggle_button: Button
+var _services: HBoxContainer
 var deal_button: Button
 var _clear: Button
 var _info: DetailsPanel  # v0.7.7: what the picked item is (a click on its name)
@@ -75,6 +76,10 @@ func _ready() -> void:
 	deal_button = _action(buttons, "DealButton", _on_deal)
 	deal_button.text = "BTN_DEAL"
 	deal_button.theme_type_variation = UiTheme.ACCENT_BUTTON
+	_services = HBoxContainer.new()  # v0.7.12: identify, remove a curse, silver a weapon
+	_services.name = "TradeServices"
+	_services.add_theme_constant_override("separation", 12)
+	col.add_child(_services)
 
 	EventBus.state_changed.connect(_rebuild)
 	EventBus.turn_started.connect(func(_id: String) -> void: _rebuild())
@@ -191,6 +196,20 @@ func _rebuild() -> void:
 		_error.text = tr(cart_error).format(q["args"])
 	deal_button.disabled = not can_act or not cart_error.is_empty() or empty
 	_clear.disabled = empty
+	_clear_children(_services)
+	for sv: Dictionary in TradeRules.services(s, data, _npc):
+		var sid := str(sv["id"])
+		var b := Button.new()
+		b.name = "Service_" + sid
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.text = tr("SERVICE_" + sid.to_upper()).format({"cost": Money.format(int(sv["cost_cp"]))})
+		b.disabled = not can_act or not str(sv["why"]).is_empty()
+		b.tooltip_text = tr(str(sv["why"])) if not str(sv["why"]).is_empty() else ""
+		b.pressed.connect(func() -> void:
+			var err := GameState.buy_service(sid)
+			if not err.is_empty():
+				_error.text = tr(err))
+		_services.add_child(b)
 	var skill := TradeRules.best_skill(s, data)
 	haggle_button.text = tr("BTN_HAGGLE").format({"skill": tr("SKILL_" + skill.to_upper())})
 	var why := TradeRules.can_haggle(s, data, _npc)

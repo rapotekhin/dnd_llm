@@ -91,7 +91,7 @@ EXTRA_ITEMS = ["healing_potion", "ale", "bread", "silver_ring"]
 # Engine properties (items.json "properties") and item types the SRD does not have, by game id.
 EXTRA_PROPERTIES = {"torch": ["light_source"], "lantern": ["light_source"], "lantern_bullseye": ["light_source"],
                     "candle": ["light_source"], "lamp": ["light_source"], "antitoxin": ["resist_poison"],
-                    "holy_water": ["radiant_damage"], "alchemists_fire_flask": ["fire_damage"], "acid_vial": []}
+                    "holy_water": [], "alchemists_fire_flask": [], "acid_vial": []}
 CONSUMABLES = {"rations", "antitoxin", "holy_water", "alchemists_fire_flask", "acid_vial", "oil_flask"}
 SKIP_GEAR = {"equipment-packs"}
 # Magic items of the SRD the engine knows (v0.6.3): +1 weapons and armor on common bases (the base's block, a +N
@@ -99,14 +99,91 @@ SKIP_GEAR = {"equipment-packs"}
 MAGIC_WEAPON_BASES = ["dagger", "shortsword", "longsword", "rapier", "scimitar", "mace", "handaxe", "battleaxe",
                       "warhammer", "greataxe", "greatsword", "quarterstaff", "spear", "shortbow", "longbow", "crossbow_light"]
 MAGIC_ARMOR_BASES = ["leather_armor", "studded_leather_armor", "chain_shirt", "scale_mail", "breastplate", "chain_mail", "shield"]
+# v0.7.12: the common and uncommon magic items of the SRD useful at levels 1-5. `look` — what an unidentified one
+# looks like; `attunement`, `charges` {max, regain dice at dawn, crumble on the last}, `use` {spell, level, dc} or
+# {recover_slot} — what the engine does with it; `master` — the engine has no rule for it, the master decides (its
+# description is all there is).
+def _w(id_: str, props: list[str], value: int, look: str, **kw: Any) -> dict[str, Any]:
+    return {"id": id_, "item_type": "wondrous", "properties": props, "rarity": kw.pop("rarity", "uncommon"), "value_cp": value,
+            "look": look, **kw}
+
+
+def _potion(id_: str, value: int, rarity: str = "uncommon", **kw: Any) -> dict[str, Any]:
+    return {"id": id_, "item_type": "consumable", "properties": [], "stack": True, "rarity": rarity, "value_cp": value,
+            "look": "зелье", **kw}
+
+
 MAGIC_OTHER = {
     "potion-of-healing-greater": {"id": "potion_of_greater_healing", "item_type": "consumable", "properties": ["healing"],
-                                  "stack": True, "rarity": "uncommon", "value_cp": 15000},
-    "cloak-of-protection": {"id": "cloak_of_protection", "item_type": "wondrous", "properties": ["ac_plus1", "saves_plus1"],
-                            "rarity": "uncommon", "value_cp": 50000},
-    "boots-of-elvenkind": {"id": "boots_of_elvenkind", "item_type": "wondrous", "properties": ["stealth_advantage"],
-                           "rarity": "uncommon", "value_cp": 40000},
+                                  "stack": True, "rarity": "uncommon", "value_cp": 15000, "look": "зелье"},
+    "cloak-of-protection": _w("cloak_of_protection", ["ac_plus1", "saves_plus1"], 50000, "плащ", attunement=True),
+    "boots-of-elvenkind": _w("boots_of_elvenkind", ["stealth_advantage"], 40000, "сапоги"),
+    "cloak-of-elvenkind": _w("cloak_of_elvenkind", ["stealth_advantage"], 50000, "плащ", attunement=True),
+    "bracers-of-archery": _w("bracers_of_archery", ["ranged_damage_plus2"], 50000, "наручи", attunement=True),
+    "brooch-of-shielding": _w("brooch_of_shielding", ["resist_force"], 50000, "брошь", attunement=True),
+    "boots-of-striding-and-springing": _w("boots_of_striding_and_springing", ["speed_30"], 40000, "сапоги", attunement=True),
+    "boots-of-the-winterlands": _w("boots_of_the_winterlands", ["resist_cold"], 40000, "сапоги", attunement=True),
+    "ring-of-warmth": _w("ring_of_warmth", ["resist_cold"], 40000, "кольцо", attunement=True),
+    "eyes-of-the-eagle": _w("eyes_of_the_eagle", ["perception_advantage"], 40000, "линзы", attunement=True),
+    "eyes-of-minute-seeing": _w("eyes_of_minute_seeing", ["investigation_advantage"], 25000, "линзы"),
+    "goggles-of-night": _w("goggles_of_night", ["darkvision"], 30000, "очки"),
+    "gauntlets-of-ogre-power": _w("gauntlets_of_ogre_power", ["str_19"], 50000, "латные перчатки", attunement=True),
+    "headband-of-intellect": _w("headband_of_intellect", ["int_19"], 50000, "обруч", attunement=True),
+    "periapt-of-health": _w("periapt_of_health", ["immune_disease"], 30000, "амулет"),
+    "periapt-of-wound-closure": _w("periapt_of_wound_closure", ["wound_closure"], 50000, "амулет", attunement=True),
+    "stone-of-good-luck-luckstone": _w("stone_of_good_luck", ["saves_plus1", "checks_plus1"], 50000, "камень", attunement=True),
+    "helm-of-comprehending-languages": _w("helm_of_comprehending_languages", ["understand_all"], 30000, "шлем"),
+    "gloves-of-missile-snaring": _w("gloves_of_missile_snaring", ["missile_snaring"], 30000, "перчатки", attunement=True),
+    "bag-of-holding": _w("bag_of_holding", ["carry_plus_500"], 40000, "сумка"),
+    "lantern-of-revealing": _w("lantern_of_revealing", ["light_source"], 50000, "фонарь", master=True),
+    "pearl-of-power": _w("pearl_of_power", [], 50000, "жемчужина", attunement=True, caster=True,
+                         charges={"max": 1, "regain": "1"}, use={"recover_slot": 3}),
+    "wand-of-magic-missiles": _w("wand_of_magic_missiles", [], 50000, "волшебная палочка",
+                                 charges={"max": 7, "regain": "1d6+1", "crumble": True}, use={"spell": "magic_missile", "level": 1}),
+    "wand-of-web": _w("wand_of_web", [], 50000, "волшебная палочка", attunement=True, caster=True,
+                      charges={"max": 7, "regain": "1d6+1", "crumble": True}, use={"spell": "web", "level": 2, "dc": 15}),
+    "wand-of-the-war-mage": _w("wand_of_the_war_mage_1", ["spell_attack_plus1"], 50000, "волшебная палочка",
+                               attunement=True, caster=True),
+    "restorative-ointment": _w("restorative_ointment", [], 30000, "баночка мази", charges={"max": 5},
+                               use={"heal": [2, 8, 2], "remove": ["poisoned"], "cure": ["disease"]}),
+    "dust-of-disappearance": _potion("dust_of_disappearance", 30000, look="мешочек с пылью", use={"invisible_minutes": "2d4"}),
+    "potion-of-climbing": _potion("potion_of_climbing", 7500, "common", use={"check_adv": "athletics", "duration": "hour"}),
+    "potion-of-growth": _potion("potion_of_growth", 27000, use={"enlarged": True, "duration": "hour"}),
+    "potion-of-poison": _potion("potion_of_poison", 10000, use={"poison": {"dice": "3d6", "save": "con", "dc": 13}}),
+    # The master's: what they do is in the description.
+    **{i: _w(i.replace("-", "_"), [], v, look, master=True, **kw) for i, v, look, kw in [
+        ("amulet-of-proof-against-detection-and-location", 40000, "амулет", {"attunement": True}),
+        ("bag-of-tricks", 30000, "сумка", {}), ("broom-of-flying", 50000, "метла", {}),
+        ("circlet-of-blasting", 30000, "обруч", {}), ("cloak-of-the-manta-ray", 30000, "плащ", {}),
+        ("decanter-of-endless-water", 30000, "графин", {}), ("deck-of-illusions", 30000, "колода карт", {}),
+        ("dust-of-dryness", 12000, "мешочек с пылью", {"stack": True}),
+        ("dust-of-sneezing-and-choking", 12000, "мешочек с пылью", {"stack": True}),
+        ("efficient-quiver", 30000, "колчан", {}), ("elemental-gem", 30000, "самоцвет", {}),
+        ("eversmoking-bottle", 30000, "бутыль", {}), ("eyes-of-charming", 30000, "линзы", {"attunement": True}),
+        ("gem-of-brightness", 30000, "самоцвет", {}),
+        ("gloves-of-swimming-and-climbing", 30000, "перчатки", {"attunement": True}),
+        ("hat-of-disguise", 30000, "шляпа", {"attunement": True}), ("helm-of-telepathy", 50000, "шлем", {"attunement": True}),
+        ("immovable-rod", 50000, "жезл", {}), ("medallion-of-thoughts", 30000, "медальон", {"attunement": True}),
+        ("necklace-of-adaptation", 30000, "ожерелье", {"attunement": True}), ("pipes-of-haunting", 30000, "свирель", {}),
+        ("pipes-of-the-sewers", 30000, "свирель", {"attunement": True}), ("ring-of-jumping", 30000, "кольцо", {"attunement": True}),
+        ("ring-of-mind-shielding", 50000, "кольцо", {"attunement": True}), ("ring-of-swimming", 30000, "кольцо", {}),
+        ("ring-of-water-walking", 30000, "кольцо", {}), ("robe-of-useful-items", 30000, "мантия", {}),
+        ("rope-of-climbing", 30000, "верёвка", {}), ("slippers-of-spider-climbing", 30000, "туфли", {"attunement": True}),
+        ("wand-of-magic-detection", 15000, "волшебная палочка", {"charges": {"max": 3, "regain": "1d3"}}),
+        ("wand-of-secrets", 15000, "волшебная палочка", {"charges": {"max": 3, "regain": "1d3"}}),
+        ("wind-fan", 30000, "веер", {}), ("winged-boots", 50000, "сапоги", {"attunement": True}),
+    ]},
+    **{i: _potion(i.replace("-", "_"), v, master=True) for i, v in [
+        ("potion-of-animal-friendship", 20000), ("potion-of-water-breathing", 18000), ("oil-of-slipperiness", 48000),
+        ("philter-of-love", 9000)]},
 }
+# Potion of Resistance: one per damage type the pack meets (the SRD leaves the type to the DM).
+RESIST_POTIONS = {"fire": "огня", "cold": "холода", "poison": "яда", "lightning": "электричества", "acid": "кислоты", "necrotic": "некротической энергии"}
+# Mithral and adamantine armor on the medium and heavy bases (DMG): no Strength need and no stealth disadvantage; a
+# critical hit becomes a normal one.
+SPECIAL_ARMOR_BASES = ["chain_shirt", "scale_mail", "breastplate", "half_plate_armor", "chain_mail", "splint_armor", "plate_armor"]
+# Spell scrolls (DMG): the spells the engine resolves, circles 0-2; DC and attack by the circle.
+SCROLL_EXTRA = ["identify"]
 SKIP_CATEGORIES = {"mounts-and-vehicles"}
 WEAPON_PROPERTIES = {"finesse", "light", "heavy", "two-handed", "versatile", "thrown", "reach", "ammunition"}
 WEAPON_PROF_ALIASES = {"hand-crossbows": "crossbow-hand", "light-crossbows": "crossbow-light",
@@ -356,6 +433,38 @@ class Builder:
             t = self.tr(f"item:{spec['id']}", e["name"], desc_text(e))
             d = {k: v for k, v in spec.items() if k != "id"}
             out[spec["id"]] = {"name": t["name"], "name_en": e["name"], **d, "description": t.get("desc", "")}
+        e = j("magic-items/potion-of-resistance.json")
+        t = self.tr("item:potion_of_resistance", e["name"], desc_text(e))
+        for dtype, ru in RESIST_POTIONS.items():
+            out[f"potion_of_resistance_{dtype}"] = {"name": f"{t['name']} ({ru})", "name_en": f"{e['name']} ({dtype})",
+                                                   **_potion("", 30000, use={"resist": dtype, "duration": "hour"}), "description": t.get("desc", "")}
+            del out[f"potion_of_resistance_{dtype}"]["id"]
+        for kind, props, ru_m, ru_a in [("mithral", ["mithral"], "мифриловый", "Мифрил"), ("adamantine", ["no_crit"], "адамантиновый", "Адамантин")]:
+            e = j(f"magic-items/{kind}-armor.json")
+            t = self.tr(f"item:{kind}_armor", e["name"], desc_text(e))
+            for base in SPECIAL_ARMOR_BASES:
+                b = items[base]
+                out[f"{kind}_{base}"] = {"name": f"{b['name']} ({ru_a.lower()})", "name_en": f"{kind.title()} {b['name_en']}", "base": base,
+                                         "item_type": "armor", "properties": props, "rarity": "uncommon",
+                                         "value_cp": int(b.get("value_cp", 0)) + (80000 if kind == "mithral" else 50000),
+                                         "weight": b.get("weight", 0) // (2 if kind == "mithral" else 1), "look": b["name"].lower(),
+                                         "description": t.get("desc", "")}
+        return out
+
+    def scrolls(self, spells: dict[str, Any], rules: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        """Spell scrolls of the engine's spells, circles 0-2 (DMG prices; the DC and attack bonus — rules.scrolls)."""
+        ids = set(rules["combat"]["engine_spells"]) | set(k for k in rules["combat"]["condition_spells"] if not k.startswith("_")) | set(SCROLL_EXTRA)
+        out: dict[str, dict[str, Any]] = {}
+        for sp in sorted(ids):
+            if sp not in spells or int(spells[sp]["level"]) > 2:
+                continue
+            lv = int(spells[sp]["level"])
+            out[f"spell_scroll_{sp}"] = {"name": f"Свиток: {spells[sp]['name']}", "name_en": f"Spell Scroll ({spells[sp].get('name_en', sp)})",
+                                         "item_type": "consumable", "properties": [], "stack": True,
+                                         "rarity": "common" if lv <= 1 else "uncommon", "value_cp": [2500, 7500, 15000][lv],
+                                         "weight": 0, "look": "свиток", "use": {"spell": sp, "level": lv, "scroll": True},
+                                         "description": f"Прочесть свиток — сотворить «{spells[sp]['name']}» ({lv} круг) без ячейки; свиток рассыпается. "
+                                                        "Заклинание своего класса и по силам — без проверки, иначе проверка Магии Сл 10 + круг."}
         return out
 
     def languages(self) -> dict[str, dict[str, Any]]:
@@ -895,10 +1004,12 @@ def build() -> None:
     items.update(b.magic_items(items))
     races = b.races()
     classes = b.classes()
+    spells = b.spells()
+    items.update(b.scrolls(spells, json.loads((ROOT / "game" / "data" / "rules.json").read_text(encoding="utf-8"))))
     data = {
         "races.json": races,
         "classes.json": add_choices({**classes, "features": b.features()}),
-        "spells.json": b.spells(),
+        "spells.json": spells,
         "misc.json": {"languages": b.languages(), "categories": b.categories(items),
                       "damage_types": {k.removeprefix("damage:"): v for k, v in GLOSSARY.items() if k.startswith("damage:")}},
         "backgrounds.json": json.loads(BACKGROUNDS.read_text(encoding="utf-8")),

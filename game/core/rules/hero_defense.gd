@@ -113,6 +113,8 @@ static func save_advantages(c: Dictionary, data: Dictionary, ability: String, ta
 static func immune(c: Dictionary, data: Dictionary, cond: String, tag: String) -> String:
 	if tag.split(",").has("disease") and CharacterRules.has_feature(c, "divine_health"):
 		return str(data["classes"]["features"].get("divine_health", {}).get("name", ""))
+	if tag.split(",").has("disease") and CharacterRules.item_prop(c, "immune_disease"):
+		return "Амулет здоровья"  # Periapt of Health (v0.7.12)
 	var table: Dictionary = cfg(data)["trait_immune"]
 	for t: String in table:
 		if CharacterRules.has_trait(c, t) and tag.split(",").has(str(table[t]["tag"])) and (table[t]["conditions"] as Array).has(cond):

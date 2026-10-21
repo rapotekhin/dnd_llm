@@ -301,6 +301,79 @@ static func _quiet_feature(id: String) -> bool:
 		"sacred_oath", "sorcerous_origin", "fighter_fighting_style", "ranger_fighting_style", "paladin_fighting_style", "pact_magic"]
 
 
+## Attunement (v0.7.12): an hour with the thing out of a fight, no master turn; the line goes to the history. "" or a key.
+func attune(item_id: String) -> String:
+	if session == null or is_busy():
+		return "EQUIP_BUSY"
+	if CombatRules.active(session) or session.in_conversation():
+		return "ATTUNE_NOT_NOW"
+	var c := session.character
+	var why := ItemRules.can_attune(c, Catalog.data, session.items, item_id)
+	if not why.is_empty():
+		return why
+	var lines := ItemRules.attune(c, Catalog.data, session.items, item_id)
+	lines.append("Настройка: %d мин" % int(ItemRules.cfg(Catalog.data)["attune_minutes"]))
+	lines.append_array(TimeRules.advance(session, Catalog.data, int(ItemRules.cfg(Catalog.data)["attune_minutes"])))
+	CharacterRules.refresh(c, Catalog.data, session.items)
+	_quiet_lines(lines)
+	return ""
+
+
+func unattune(item_id: String) -> String:
+	if session == null or is_busy():
+		return "EQUIP_BUSY"
+	var why := ItemRules.can_unattune(session.character, Catalog.data, session.items, item_id)
+	if not why.is_empty():
+		return why
+	ItemRules.unattune(session.character, item_id)
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_quiet_lines(["Настройка снята: " + ItemRules.display_name(Catalog.data["items"], session.items, item_id)])
+	return ""
+
+
+## «Собрать стрелы» after a fight (v0.7.12): half the spent ammunition, a minute, here only. "" or a key.
+func collect_ammo() -> String:
+	if session == null or is_busy():
+		return "EQUIP_BUSY"
+	var left: Dictionary = session.character.get("ammo_left", {})
+	if left.is_empty() or str(left.get("room", "")) != session.room_id or CombatRules.active(session):
+		return "AMMO_NOTHING"
+	var lines: Array[String] = []
+	for id: String in left["items"]:
+		session.character["inventory"][id] = int(session.character["inventory"].get(id, 0)) + int(left["items"][id])
+		lines.append("Собрано: %s ×%d" % [ItemRules.display_name(Catalog.data["items"], session.items, id), int(left["items"][id])])
+	session.character.erase("ammo_left")
+	lines.append_array(TimeRules.advance(session, Catalog.data, int(ItemRules.cfg(Catalog.data)["collect_minutes"])))
+	_quiet_lines(lines)
+	return ""
+
+
+## A trader's service (v0.7.12): identify, remove a curse, silver the main weapon (or the first one). "" or a key.
+func buy_service(id: String) -> String:
+	if session == null or is_busy() or session.mode != GameSession.MODE_TRADE:
+		return "EQUIP_BUSY"
+	for sv: Dictionary in TradeRules.services(session, Catalog.data, session.npc_id):
+		if str(sv["id"]) != id:
+			continue
+		if not str(sv["why"]).is_empty():
+			return str(sv["why"])
+		var weapon := ""
+		if id == "silver":
+			var main := str(session.character.get("equipped", {}).get("main_hand", ""))
+			weapon = main if TradeRules.silverable(session, Catalog.data).has(main) else ""
+		_quiet_lines(TradeRules.buy_service(session, Catalog.data, session.npc_id, id, weapon))
+		return ""
+	return "SERVICE_NOTHING"
+
+
+## Lines of a deterministic action without a master turn: the chat, the log, the history the master reads next.
+func _quiet_lines(lines: Array[String]) -> void:
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+
+
 ## «Короткий отдых» (ExplorationRules): an hour, `dice` hit dice; no master turn — the line goes to the history.
 func short_rest(dice: int) -> String:
 	if session == null or is_busy():
@@ -309,6 +382,7 @@ func short_rest(dice: int) -> String:
 	if not why.is_empty():
 		return why
 	var lines := ExplorationRules.short_rest(session, Catalog.data, dice, session.rng)
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
 	lines.append_array(TimeRules.advance(session, Catalog.data, int(TimeRules.cfg(Catalog.data)["short_rest_minutes"])))
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
@@ -564,6 +638,18 @@ func combat_use_item(item_id: String) -> String:
 	return _combat_do(why, func() -> Array[String]:
 		CombatRules.economy(session)[cost] = int(CombatRules.economy(session)[cost]) - 1
 		return ItemRules.use(session.character, Catalog.data, session.items, item_id, session.rng, session))
+
+
+## A flask or a net thrown at a foe (v0.7.12). "" or a localization key.
+func combat_throw(item_id: String, target_id: String) -> String:
+	return _combat_do(CombatRules.can_throw(session, Catalog.data, item_id, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.throw_item(session, Catalog.data, item_id, target_id))
+
+
+## The spell of a scroll or a wand in a fight (v0.7.12). "" or a localization key.
+func combat_item_spell(item_id: String, target_id: String) -> String:
+	return _combat_do(CombatRules.can_item_spell(session, Catalog.data, item_id, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.item_spell(session, Catalog.data, item_id, target_id))
 
 
 func combat_end_turn() -> String:
@@ -892,8 +978,15 @@ func finish_combat(take: Array = []) -> void:
 			lines.append("+" + Money.format(cp))
 		for l: Dictionary in s.combat.get("loot", []):
 			if take.has(str(l["item_id"])):
-				s.character["inventory"][l["item_id"]] = int(s.character["inventory"].get(l["item_id"], 0)) + int(l["qty"])
-				lines.append("Взято: %s%s" % [ItemRules.display_name(Catalog.data["items"], s.items, str(l["item_id"])), " ×%d" % int(l["qty"]) if int(l["qty"]) > 1 else ""])
+				var key := ItemRules.found(s.character, Catalog.data, s.items, str(l["item_id"]), int(l["qty"]))
+				lines.append("Взято: %s%s" % [ItemRules.display_name(Catalog.data["items"], s.items, key), " ×%d" % int(l["qty"]) if int(l["qty"]) > 1 else ""])
+		var back := {}  # v0.7.12: half the spent arrows can be picked up here
+		for ammo: String in s.combat.get("ammo_spent", {}):
+			var n := int(floor(int(s.combat["ammo_spent"][ammo]) * float(ItemRules.cfg(Catalog.data)["recover"])))
+			if n > 0:
+				back[ammo] = n
+		if not back.is_empty():
+			s.character["ammo_left"] = {"room": s.room_id, "items": back}
 		if int(s.combat.get("xp", 0)) > 0:
 			lines.append("+%d опыта" % int(s.combat["xp"]))
 		if not str(s.combat.get("encounter", "")).is_empty():
@@ -1326,6 +1419,8 @@ func equip(item_id: String, slot: String) -> String:
 	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot)
 	if not why.is_empty():
 		return why
+	if ItemRules.held_by_curse(c, Catalog.data, session.items, str(c["equipped"].get(slot, ""))):
+		return "ITEM_CURSED"
 	var before: Dictionary = (c["equipped"] as Dictionary).duplicate()
 	c["equipped"][slot] = item_id
 	if slot == "main_hand" and str(c["equipped"].get("off_hand", "")) == item_id and int(c["inventory"][item_id]) < 2:
@@ -1339,6 +1434,9 @@ func unequip(slot: String) -> void:
 		return
 	if (slot == "armor" or slot == "shield") and session.mode == GameSession.MODE_COMBAT:
 		EventBus.message.emit(tr("EQUIP_IN_COMBAT"))
+		return
+	if ItemRules.held_by_curse(session.character, Catalog.data, session.items, str(session.character["equipped"].get(slot, ""))):
+		EventBus.message.emit(tr("ITEM_CURSED"))
 		return
 	var before: Dictionary = (session.character["equipped"] as Dictionary).duplicate()
 	session.character["equipped"][slot] = ""
@@ -1676,6 +1774,15 @@ func _engine_check(params: Dictionary) -> Dictionary:
 	var boots := CharacterRules.carried_with(session.character, Catalog.data, session.items, "stealth_advantage")
 	if str(params.get("skill", "")) == "stealth" and not boots.is_empty() and str(params.get("advantage_reason", "")).is_empty():
 		params["advantage_reason"] = boots
+	# v0.7.12: items and potions that give advantage on a skill.
+	var by_item := {"perception": "perception_advantage", "investigation": "investigation_advantage"}
+	if by_item.has(skill_id) and str(params.get("advantage_reason", "")).is_empty():
+		var thing := CharacterRules.carried_with(session.character, Catalog.data, session.items, str(by_item[skill_id]))
+		if not thing.is_empty():
+			params["advantage_reason"] = thing
+	for e: Dictionary in ConditionRules.effects(session.character):
+		if (str(e.get("check_adv", "")) == skill_id or (bool(e.get("enlarged", false)) and skill_id == "athletics")) and not skill_id.is_empty() 				and str(params.get("advantage_reason", "")).is_empty():
+			params["advantage_reason"] = str(e.get("source", {}).get("name", "зелье"))
 	var room := session.room_id
 	var result: Dictionary
 	var lock := ExplorationRules.locked(session, params, room)

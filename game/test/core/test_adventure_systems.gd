@@ -161,8 +161,8 @@ func test_a_found_cache_gives_its_loot_once() -> void:
 	assert_array(ExplorationRules.take_caches(s, data, "mine-deep")).is_empty()
 	s.revealed["mine-deep"] = ["wall"]
 	var lines := ExplorationRules.take_caches(s, data, "mine-deep")
-	assert_str(lines[0]).contains("Плащ защиты")
-	assert_int(int(s.character["inventory"]["cloak_of_protection"])).is_equal(1)
+	assert_str(lines[0]).contains("Плащ, свойства неизвестны")  # magic comes unidentified (v0.7.12)
+	assert_int(int(s.character["inventory"]["unk_cloak_of_protection"])).is_equal(1)
 	assert_array(ExplorationRules.take_caches(s, data, "mine-deep")).is_empty()
 
 
@@ -205,6 +205,9 @@ func test_magic_armor_and_a_carried_cloak_raise_ac_and_saves() -> void:
 	CharacterRules.refresh(c, data, s.items)
 	assert_int(int(c["ac"])).is_equal(ac + 1)
 	c["inventory"]["cloak_of_protection"] = 1
+	CharacterRules.refresh(c, data, s.items)
+	assert_int(int(c["ac"])).is_equal(ac + 1)  # v0.7.12: the cloak works only when attuned
+	c["attuned"] = ["cloak_of_protection"]
 	CharacterRules.refresh(c, data, s.items)
 	assert_int(int(c["ac"])).is_equal(ac + 2)
 	assert_int(int(c["saves"]["wis"])).is_equal(save + 1)

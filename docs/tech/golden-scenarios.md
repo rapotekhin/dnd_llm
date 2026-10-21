@@ -119,6 +119,7 @@ uv run python -m llm_server.golden --no-judge                       # тольк
 - v0.6.5 (плейтест-1): `pay_for_rumours` (плата за сведения — `coins`) 2/3, `rent_room_words` (ночлег без оплаты и переноса) 3/3, `pickpocket_success` (кража — исход в `note` движка) 3/3 после «кража — сразу проверка», `wait_until_evening` (`advance_time` до описания) 2/3. `trap_damage_severity` — 0/3 и на промптах v0.6.4: дрейф модели, как `inspect_hook_needs_check`.
 - v0.7.0 (интерактивный мир): `furnish_on_first_visit` 3/3, `describe_only_props` 3/3, `read_prop_text` 3/3 (2/3 в первом прогоне), `take_prop_words` 2/3 после правила «взять вещь — всегда эффект, до описания» (было 0/3: старое правило «взять — `give_item`» спорило с новым).
 - v0.7.11 (языки, предыстории, инструменты): `language_npc_no_common_tongue` 3/3, `tool_pick_lock` 3/3 (сундук должен быть вещью сцены: без неё мастер честно говорит, что сундука нет), `background_soldier_tie` 3/3; `social_buy_from_trader`, `pickpocket_success`, `inspect_hook_needs_check` — 3/3 на новых промптах.
+- v0.7.12 (предметы): `item_unknown_not_revealed` 3/3 (после замены проверки слов на рубрику: «холодное кольцо» — не раскрытие свойства), `throw_flask_out_of_combat` 3/3, `master_item_by_description` 3/3, `take_prop_words` 3/3.
 - Стабильно спорные: `gender_agreement_female` (вход без глаголов прошедшего времени), `retry_blocked` и `content_veil_respected` (рубрика судьи) — в [бэклоге](../production/backlog.md).
 
 ## Прогон v0.7.4 (2026-10-20, DeepSeek, 54 сценария × 3)

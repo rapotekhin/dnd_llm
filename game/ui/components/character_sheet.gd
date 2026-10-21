@@ -293,6 +293,8 @@ func _gear_tab(c: Dictionary) -> Control:
 	var weight := _text(box, tr("SHEET_WEIGHT").format({"n": int(ceilf(CharacterRules.carried_weight(c, Catalog.data, s.items))), "max": CharacterRules.capacity(c, Catalog.data)}),
 		UiTheme.MUTED_LABEL)
 	weight.name = "CarriedWeight"
+	var att_line := _text(box, tr("SHEET_ATTUNED").format({"n": ItemRules.attuned(c).size()}), UiTheme.MUTED_LABEL)  # v0.7.12
+	att_line.name = "AttunedCount"
 	if CharacterRules.overloaded(c, Catalog.data, s.items):
 		weight.text += " — " + tr("TOO_HEAVY")
 		weight.add_theme_color_override("font_color", UiTheme.WARN)
@@ -305,6 +307,26 @@ func _gear_tab(c: Dictionary) -> Control:
 		_item_button(row, details, c, id, "%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else ""], "Item_" + id)
 		if not ItemRules.consumable(Catalog.data, id).is_empty():
 			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
+		if ItemRules.needs_attunement(def):  # v0.7.12
+			if ItemRules.attuned(c).has(id):
+				var un := Button.new()
+				un.name = "Unattune_" + id
+				un.text = "BTN_UNATTUNE"
+				un.disabled = busy
+				var un_why := ItemRules.can_unattune(c, Catalog.data, s.items, id)
+				if not un_why.is_empty():
+					un.disabled = true
+					un.tooltip_text = tr(un_why)
+				un.pressed.connect(func() -> void:
+					var err := GameState.unattune(id)
+					if not err.is_empty():
+						EventBus.message.emit(tr(err)))
+				row.add_child(un)
+			else:
+				var at_why := ItemRules.can_attune(c, Catalog.data, s.items, id)
+				_action(row, "Attune_" + id, "BTN_ATTUNE", not busy and at_why.is_empty(), GameState.attune.bind(id))
+				if not at_why.is_empty():
+					(row.get_child(row.get_child_count() - 1) as Button).tooltip_text = tr(at_why)
 		var slot := CharacterRules.slot_for(def)
 		var targets: Array[String] = []
 		if not slot.is_empty():

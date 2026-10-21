@@ -146,6 +146,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var id := str(e.get("item_id", ""))
 			var qty := int(e.get("qty", 1))
 			var have := int(c["inventory"].get(id, 0)) - _pending_taken(pending, id)
+			if ItemRules.held_by_curse(c, data, s.items, id):
+				return {"reason": "%s проклят: герой не может с ним расстаться" % ItemRules.display_name(items, s.items, id)}
 			if have < qty:
 				return {"reason": "у персонажа нет %s ×%d" % [id, qty]}
 			return {"plan": {"item_id": id, "qty": qty},
@@ -359,6 +361,8 @@ func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 			return {"reason": "в бою доспех не снять — на это уходят минуты"}
 		var worn: Array[String] = []
 		for sl: String in CharacterRules.SLOTS:
+			if ItemRules.held_by_curse(c, data, s.items, str(eq.get(sl, ""))):
+				return {"reason": "%s проклят и не снимается — только «Снятие проклятия»" % ItemRules.display_name(data["items"], s.items, str(eq[sl]))}
 			if not str(eq.get(sl, "")).is_empty():
 				worn.append(ItemRules.display_name(data["items"], s.items, str(eq[sl])))
 		if worn.is_empty():
@@ -372,6 +376,8 @@ func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		var econ := CombatRules.economy(s)
 		if bool(econ.get("object", false)) and int(econ.get("action", 0)) <= 0:
 			return {"reason": "в этот ход оружие уже доставали, а действие потрачено — сменить можно в следующий ход"}
+	if ItemRules.held_by_curse(c, data, s.items, str(eq.get(slot, ""))):
+		return {"reason": "%s проклят и не снимается — только «Снятие проклятия»" % ItemRules.display_name(data["items"], s.items, str(eq[slot]))}
 	if id.is_empty():
 		if str(eq.get(slot, "")).is_empty():
 			return {"reason": "в слоте %s и так пусто" % slot}
@@ -437,6 +443,9 @@ func _plan_give(s: GameSession, items: Dictionary, rules: Dictionary, turn_id: S
 		return {"reason": "предмета %s нет ни в каталоге, ни в игре; найди его через find_items" % id}
 	if qty > 1 and not bool(def.get("stack", false)):
 		return {"reason": "%s не складывается в стопку, дай по одному" % def.get("name", id)}
+	var rare := ItemRules.rarity_ok({"rules": rules}, def, level)  # v0.7.12: nothing rarer than uncommon at levels 1-5
+	if not rare.is_empty():
+		return {"reason": rare}
 	if int(def.get("value_cp", 0)) * qty > _reward_cap(rules, level):
 		return {"reason": "предмет дороже бюджета награды для %d уровня" % level}
 	var plan := {"item_id": id, "qty": qty}
@@ -501,7 +510,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"give_item":
 			if plan.has("def"):
 				s.items[plan["item_id"]] = plan["def"]
-			c["inventory"][plan["item_id"]] = int(c["inventory"].get(plan["item_id"], 0)) + int(plan["qty"])
+			ItemRules.found(c, _data, s.items, str(plan["item_id"]), int(plan["qty"]))
 		"take_item":
 			var left := int(c["inventory"].get(plan["item_id"], 0)) - int(plan["qty"])
 			if left > 0:

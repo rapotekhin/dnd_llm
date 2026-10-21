@@ -280,16 +280,27 @@ TRAITS.update({f"draconic_ancestry_{c}": TRAITS["draconic_ancestry"] for c in
 # Item properties (items.json `properties`): what the engine reads.
 ITEM_PROPS = {
     "finesse": ("engine", "Сила или Ловкость, Скрытая атака"), "light": ("engine", "второе оружие"), "two_handed": ("engine", "без щита"),
-    "versatile": ("engine", "двумя руками"), "thrown": ("engine", "метание"), "heavy": ("partial", "кражи; помеха маленьким расам — нет"),
-    "reach": ("partial", "поле по колонкам 30 футов — досягаемость 10 футов ничего не меняет"), "ammunition": ("none", "стрелы и болты не тратятся"),
-    "silvered": ("none", "сопротивление оборотней не снимается"), "magic_plus1": ("engine", "атака и урон"), "magic_plus2": ("engine", "атака и урон"),
+    "versatile": ("engine", "двумя руками"), "thrown": ("engine", "метание"),
+    "heavy": ("engine", "кражи; маленьким расам — помеха к атакам (v0.7.12)"),
+    "reach": ("engine", "реакцией бьёт подходящего врага раньше его удара (v0.7.12; поле по 30 футов)"),
+    "ammunition": ("engine", "стрела за выстрел, половину собрать после боя (v0.7.12)"),
+    "silvered": ("engine", "снимает сопротивление «не посеребрённому»; кузнец серебрит за 100 зм (v0.7.12)"),
+    "magic_plus1": ("engine", "атака и урон"), "magic_plus2": ("engine", "атака и урон"),
     "magic_plus3": ("engine", "атака и урон"), "ac_plus1": ("engine", "КД"), "ac_plus2": ("engine", "КД"), "saves_plus1": ("engine", "спасброски"),
     "stealth_advantage": ("engine", "Скрытность"), "light_source": ("engine", "ночь"), "healing": ("engine", "зелья лечения"),
-    "fire_damage": ("none", "лишний урон огнём (Алхимический огонь — нет и броска)"), "cold_damage": ("none", "лишний урон"),
-    "lightning_damage": ("none", "лишний урон"), "radiant_damage": ("none", "лишний урон (Святая вода — нет и броска)"),
-    "necrotic_damage": ("none", "лишний урон"), "poison_damage": ("none", "лишний урон"),
+    **{f"{t}_damage": ("engine", "+1к6 этого типа при попадании оружием (v0.7.12)") for t in ["fire", "cold", "lightning", "radiant", "necrotic", "poison"]},
     "resist_fire": ("engine", "сопротивление огню, пока вещь надета или при себе (v0.7.8)"), "resist_cold": ("engine", "сопротивление холоду (v0.7.8)"),
-    "resist_poison": ("engine", "сопротивление яду (v0.7.8)"), "cursed": ("none", "проклятие ни на что не влияет"),
+    "resist_poison": ("engine", "сопротивление яду (v0.7.8)"),
+    **{f"resist_{t}": ("engine", "сопротивление (v0.7.12)") for t in ["force", "lightning", "acid", "necrotic"]},
+    "cursed": ("engine", "надетое или настроенное не снять, не продать, не отдать; «Снятие проклятия» у жрицы (v0.7.12)"),
+    "checks_plus1": ("engine", "проверки +1 (Камень удачи)"), "ranged_damage_plus2": ("engine", "+2 к урону луком (Наручи стрельбы)"),
+    "spell_attack_plus1": ("engine", "атака заклинанием +1"), "speed_30": ("engine", "скорость не меньше 30"),
+    "perception_advantage": ("engine", "преимущество к Внимательности"), "investigation_advantage": ("engine", "преимущество к Анализу"),
+    "darkvision": ("engine", "тёмное зрение"), "wound_closure": ("engine", "стабилизация при смерти, кости хитов вдвое"),
+    "immune_disease": ("engine", "иммунитет к болезням"), "understand_all": ("engine", "понимание языков"),
+    "missile_snaring": ("engine", "реакция на выстрел: урон −1к10 + Лов"), "carry_plus_500": ("engine", "+500 фунтов"),
+    "str_19": ("engine", "Сила 19"), "int_19": ("engine", "Интеллект 19"), "mithral": ("engine", "без требования Силы и помехи"),
+    "no_crit": ("engine", "крит по герою — обычное попадание"),
 }
 
 # Languages, backgrounds, tools (v0.7.11).
@@ -309,6 +320,7 @@ CHECKED: dict[str, str] = {
     "poisoned": "test_conditions_v078.gd, test_rules_v060.gd",
     **{t: "test_conditions_v078.gd" for t in ["damage_resistance", "dwarven_resilience", "hellish_resistance", "fey_ancestry", "gnome_cunning",
                                                "brave", "relentless_endurance", "frenzy"]},
+    **{p: "test_items_v0712.gd" for p in ["ammunition", "heavy", "reach", "silvered", "fire_damage", "cursed", "no_crit", "mithral", "str_19"]},
     **{f: "test_features_v0710.gd" for f in ["barbarian_extra_attack", "monk_extra_attack", "paladin_extra_attack", "ranger_extra_attack",
                                              "rage", "reckless_attack", "danger_sense", "improved_critical", "uncanny_dodge", "martial_arts",
                                              "flurry_of_blows", "patient_defense", "divine_smite", "cutting_words", "channel_divinity_turn_undead",
@@ -504,8 +516,9 @@ def main() -> int:
     srd_magic = len(load(SRD / "magic-items.json")["results"])
     rows = [(f"`{p}`", str(items["properties"][p]), str(with_prop.get(p, 0)), mark(ITEM_PROPS[p][0]), ITEM_PROPS[p][1]) for p in items["properties"]]
     section("Предметы", "v0.7.12", rows, ["Свойство", "Очки редкости", "Предметов в каталоге", "Сейчас", "Что именно"],
-            f"В каталоге {len(cat)} предметов, магических {magic} (оружие и доспехи +1, Плащ защиты, Сапоги эльфов, зелья) из {srd_magic} магических предметов SRD. "
-            "Свойства — и словарь предметов, которые создаёт мастер: за свойство «нет нигде» он платит очки редкости, а предмет ничего не делает.")
+            f"В каталоге {len(cat)} предметов, магических {magic} из {srd_magic} магических предметов SRD (v0.7.12: обычные и необычные для 1–5 уровня, "
+            f"свитки заклинаний движка 0–2 круга; {sum(1 for v in cat.values() if v.get('master'))} вещей — «действие решает мастер» по описанию). "
+            "Свойства — и словарь предметов, которые создаёт мастер: все работают в движке. Настройка — до трёх вещей, опознание — отдых, настройка, «Опознание» или жрица.")
     st = Counter(v[0] for v in ITEM_PROPS.values())
     summary.append(("Свойства предметов", len(ITEM_PROPS), st["engine"], st["none"]))
 

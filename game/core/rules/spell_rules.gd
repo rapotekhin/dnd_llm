@@ -87,6 +87,8 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 		var rounds := ConditionRules.spell_rounds(data, spell_id)
 		c["concentration_ends"] = ConditionRules.now(session) + rounds if session != null and rounds >= 0 else -1
 		lines.append("концентрация")
+	if session != null and spell_id == "identify":  # v0.7.12: every unknown thing the hero carries
+		lines.append_array(ItemRules.identify(c, data, session.items))
 	if session != null and (data["rules"]["languages"]["understand_spells"] as Array).has(spell_id):  # v0.7.11
 		ConditionRules.add_effect(c, {"condition": "", "understand_all": true, "ends": ConditionRules.ends_for(session, data, "hour"),
 			"source": {"kind": "spell", "id": spell_id, "name": s_name(data, spell_id)}})

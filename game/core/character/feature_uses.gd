@@ -35,7 +35,7 @@ static func max_uses(c: Dictionary, data: Dictionary, id: String) -> int:
 		var row := CharacterRules.level_row(c, data).get("class_specific", {}) as Dictionary
 		return int(row.get(str(spec["class_specific"]), spec.get("default", 0)))
 	if spec.has("ability_mod"):
-		var m := CharacterRules.mod(int(c.get("abilities", {}).get(str(spec["ability_mod"]), 10))) + int(spec.get("plus", 0))
+		var m := CharacterRules.mod(CharacterRules.ability(c, str(spec["ability_mod"]))) + int(spec.get("plus", 0))
 		return maxi(int(spec.get("min", 0)), m)
 	if spec.has("per_level"):
 		return int(spec["per_level"]) * int(c.get("level", 1))

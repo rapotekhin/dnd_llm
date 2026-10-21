@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 19
+const SAVE_VERSION := 20
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -41,6 +41,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	16: _v16_to_v17,
 	17: _v17_to_v18,
 	18: _v18_to_v19,
+	19: _v19_to_v20,
 }
 
 
@@ -211,3 +212,11 @@ static func _v17_to_v18(data: Dictionary, _ctx: Dictionary) -> void:
 static func _v18_to_v19(data: Dictionary, _ctx: Dictionary) -> void:
 	var c: Dictionary = data["session"].get("character", {})
 	c["temp_hp"] = 0
+
+
+## v0.7.12: attunement and charges. Of the 0.7.11 catalog only the Cloak of Protection asks for attunement — a hero
+## who had it keeps it working (attuned at load, ADR-0010 §6д).
+static func _v19_to_v20(data: Dictionary, _ctx: Dictionary) -> void:
+	var c: Dictionary = data["session"].get("character", {})
+	c["attuned"] = ["cloak_of_protection"] if int(c.get("inventory", {}).get("cloak_of_protection", 0)) > 0 else []
+	c["charges_used"] = {}

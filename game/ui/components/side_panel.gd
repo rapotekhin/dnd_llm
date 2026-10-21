@@ -207,6 +207,17 @@ func _rebuild() -> void:
 			pf.name = "PerformButton"
 			pf.disabled = not can_act or not perform_why.is_empty()
 			pf.tooltip_text = tr(perform_why) if not perform_why.is_empty() else tr("PERFORM_TIP")
+		var ammo_left: Dictionary = c.get("ammo_left", {})  # v0.7.12: arrows after a fight
+		if not ammo_left.is_empty() and str(ammo_left.get("room", "")) == s.room_id:
+			var n := 0
+			for k: String in ammo_left.get("items", {}):
+				n += int(ammo_left["items"][k])
+			var do_collect := func() -> void:
+				var err := GameState.collect_ammo()
+				if not err.is_empty():
+					EventBus.message.emit(tr(err))
+			var ca := _button(tr("BTN_COLLECT_AMMO").format({"n": n}), do_collect, can_act)
+			ca.name = "CollectAmmo"
 		# The long rest (v0.7.8): the inn's room or a camp with food — chosen in the dialog.
 		var inn_ok := ExplorationRules.can_rest(s, Catalog.data["world"], Catalog.data).is_empty()
 		var camp_why := ExplorationRules.can_camp(s, Catalog.data)

@@ -66,6 +66,7 @@ def known() -> dict[str, set[str]]:
 
 
 ROOM_TAGS = {"temple", "stage"}  # v0.7.11: an acolyte's free rest, a show (rules.json backgrounds)
+SERVICES = {"identify", "remove_curse", "silver"}  # v0.7.12: rules.json item_rules.services
 NPC_TAGS = {"clergy", "underworld", "commoner", "military"}  # the people of the hero's past (rules.json backgrounds ties)
 
 
@@ -128,6 +129,9 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         errors += [f"NPC {nid}: в каталоге нет предмета {x}" for x in npc.get("stock", []) if x not in items]
         errors += [f"NPC {nid}: неизвестный язык {x}" for x in npc.get("languages", []) if x not in ids["languages"]]
         errors += [f"NPC {nid}: неизвестная метка {x}" for x in npc.get("tags", []) if x not in NPC_TAGS]
+        errors += [f"NPC {nid}: неизвестная услуга {x}" for x in npc.get("services", []) if x not in SERVICES]
+        if npc.get("services") and not npc.get("trader"):
+            errors.append(f"NPC {nid}: услуги только у торговца (trader)")
         if npc.get("monster") and npc["monster"] not in ids["monsters"]:
             errors.append(f"NPC {nid}: нет монстра-шаблона {npc['monster']}")
         if npc.get("stock") and not npc.get("trader"):

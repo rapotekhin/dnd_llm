@@ -204,7 +204,7 @@ static func fighter_of_npc(s: GameSession, npc_id: String) -> String:
 
 static func _dex_of(s: GameSession, data: Dictionary, id: String) -> int:
 	if id == PLAYER:
-		return CharacterRules.mod(int(s.character["abilities"]["dex"]))
+		return CharacterRules.mod(CharacterRules.ability(s.character, "dex"))
 	return CharacterRules.mod(int(_monster(data, fighter(s, id))["abilities"]["dex"]))
 
 
@@ -363,9 +363,8 @@ static func economy(s: GameSession) -> Dictionary:
 static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dictionary, weapon_id: String, offhand: bool = false) -> Dictionary:
 	if c.has("wild_shape"):  # a druid in a beast form fights with the beast's attack (v0.7.10)
 		return FeatureRules.shape_profile(c, data)
-	var ab := c.get("abilities", {}) as Dictionary
-	var str_mod := CharacterRules.mod(int(ab.get("str", 10)))
-	var dex_mod := CharacterRules.mod(int(ab.get("dex", 10)))
+	var str_mod := CharacterRules.mod(CharacterRules.ability(c, "str"))
+	var dex_mod := CharacterRules.mod(CharacterRules.ability(c, "dex"))
 	var prof := int(c.get("prof_bonus", 2))
 	var martial := FeatureRules.martial_die(c, data)
 	if weapon_id.is_empty():
@@ -404,9 +403,14 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	if not rng.is_empty():
 		rng = [int(rng[0]), int(rng[1])]
 	var two_hands := props.has("two_handed") or (w.has("versatile") and dice == str(w["versatile"]))
+	var kind := ItemRules.real_id(str(def.get("base", weapon_id))) if not str(def.get("base", "")).is_empty() else ItemRules.real_id(weapon_id)
+	if ranged and CharacterRules.item_prop(c, "ranged_damage_plus2") and kind in ["longbow", "shortbow"]:
+		bonus += 2  # Bracers of Archery (v0.7.12)
+	var ammo := str(ItemRules.cfg(data)["ammo"].get(ItemRules.real_id(weapon_id), ItemRules.cfg(data)["ammo"].get(kind, ""))) if props.has("ammunition") else ""
 	return {"name": str(def.get("name", weapon_id)), "to_hit": to_hit, "dice": dice, "bonus": bonus,
 		"type": str(w.get("damage_type", "bludgeoning")), "melee": not ranged, "range": rng, "light": props.has("light"), "id": weapon_id,
-		"magical": magic > 0 or not str(def.get("rarity", "")).is_empty(), "silvered": props.has("silvered"),
+		"magical": magic > 0 or str(def.get("rarity", "common")) not in ["common", ""], "silvered": props.has("silvered"), "ammo": ammo,
+		"heavy": props.has("heavy"), "reach": props.has("reach"),
 		"gwf": not ranged and two_hands and FeatureRules.great_weapon(c), "crit_min": FeatureRules.crit_min(c), "str_based": mod == str_mod and not ranged}
 
 
@@ -442,6 +446,8 @@ static func can_attack(s: GameSession, data: Dictionary, target_id: String, offh
 	var c := s.character
 	var wid := str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
 	var w := weapon_profile(c, data, s.items, wid, offhand)
+	if not str(w.get("ammo", "")).is_empty() and int(c.get("inventory", {}).get(str(w["ammo"]), 0)) <= 0:
+		return "COMBAT_NO_AMMO"  # v0.7.12: arrows and bolts are spent
 	var d := absi(shown_col(t) - int(player(s)["col"]))
 	if d == 0:
 		return ""
@@ -498,7 +504,25 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 		e["attacks"] = CharacterRules.extra_attacks(c, data)
 	e["attacked"] = true
 	var wid := str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
-	return strike(s, data, target_id, weapon_profile(c, data, s.items, wid, offhand), {})
+	var w := weapon_profile(c, data, s.items, wid, offhand)
+	var lines := strike(s, data, target_id, w, {})
+	spend_ammo(s, str(w.get("ammo", "")))
+	return lines
+
+
+## One arrow (bolt, bullet) is gone; half the spent come back after the fight (v0.7.12, PHB).
+static func spend_ammo(s: GameSession, ammo: String) -> void:
+	if ammo.is_empty():
+		return
+	var inv: Dictionary = s.character["inventory"]
+	var left := int(inv.get(ammo, 0)) - 1
+	if left > 0:
+		inv[ammo] = left
+	else:
+		inv.erase(ammo)
+	if not s.combat.has("ammo_spent"):
+		s.combat["ammo_spent"] = {}
+	s.combat["ammo_spent"][ammo] = int(s.combat["ammo_spent"].get(ammo, 0)) + 1
 
 
 ## One weapon attack of the hero with the profile `w`, its economy already paid (v0.7.10: monks' strikes and the
@@ -534,6 +558,7 @@ static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dicti
 			var more := _resist(data, t, str(w["type"]), roll_dice(s.rng, str(x["dice"])), bool(w.get("magical", false)), bool(w.get("silvered", false)))
 			lines.append("%s: ещё %d" % [", ".join(x["notes"]), more])
 			_hurt_enemy(s, data, t, more, lines, str(w["type"]))
+		_item_extras(s, data, w, t, bool(res["crit"]), lines)
 		FeatureRules.after_hit(s, data, w, t, bool(res["crit"]), opts, lines)
 	if not bool(opts.get("no_horde", false)) and FeatureRules.has(c, "hunters_prey_horde_breaker") and not bool(e.get("horde", false)):
 		for id: String in enemies(s):
@@ -544,6 +569,22 @@ static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dicti
 				lines.append_array(strike(s, data, id, w, {"no_horde": true}))
 				break
 	return lines
+
+
+## The extra damage of a hit by the weapon's properties (fire_damage — +1d6 fire, v0.7.12) and by a Potion of Growth.
+static func _item_extras(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary, crit: bool, lines: Array[String]) -> void:
+	var def := ItemRules.def_of(data["items"], s.items, str(w.get("id", "")))
+	var dice := str(ItemRules.cfg(data)["element_dice"])
+	for p: Variant in def.get("properties", []):
+		var dtype := str(p).trim_suffix("_damage")
+		if str(p).ends_with("_damage") and data["misc"]["damage_types"].has(dtype) and str(t.get("status")) == "active":
+			var more := _resist(data, t, dtype, roll_dice(s.rng, dice, crit))
+			lines.append("%s: ещё %d (%s)" % [def.get("name", ""), more, data["misc"]["damage_types"][dtype]])
+			_hurt_enemy(s, data, t, more, lines, dtype)
+	if ConditionRules.effects(s.character).any(func(e: Dictionary) -> bool: return bool(e.get("enlarged", false))) and str(t.get("status")) == "active":
+		var big := _resist(data, t, str(w["type"]), roll_dice(s.rng, "1d4", crit), bool(w.get("magical", false)), bool(w.get("silvered", false)))
+		lines.append("увеличение: ещё %d" % big)
+		_hurt_enemy(s, data, t, big, lines, str(w["type"]))
 
 
 ## Why a weapon attack at `t` has advantage or disadvantage now: {"adv": [reasons], "dis": [reasons]}.
@@ -580,6 +621,8 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		dis.append("дальше обычной дальности")
 	if not bool(w["melee"]) and _foe_in_column(s, player(s)):
 		dis.append("враг вплотную")
+	if bool(w.get("heavy", false)) and (ItemRules.cfg(data)["small_races"] as Array).has(hero_size(s, data)):
+		dis.append("тяжёлое оружие не по росту")  # v0.7.12, PHB
 	dis.append_array(hero_attack_dis(s, data, t))
 	return {"adv": adv, "dis": dis}
 
@@ -724,6 +767,11 @@ static func _resist(data: Dictionary, t: Dictionary, dtype: String, dmg: int, ma
 ## Damage to an enemy: 0 HP — down (dead), unless a trait keeps it up (v0.7.9); half HP — a morale check on its next
 ## turn; a hit breaks its concentration on a failed save; a dead one bursts and lets go of the hero.
 static func _hurt_enemy(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, lines: Array[String], dtype: String = "", crit: bool = false) -> void:
+	if dtype == "fire" and t.has("oiled") and dmg > 0:  # oil on the foe catches (v0.7.12)
+		var more := _resist(data, t, "fire", int(t["oiled"]))
+		t.erase("oiled")
+		dmg += more
+		lines.append("%s: масло вспыхивает, ещё %d" % [t["name"], more])
 	if dmg >= int(t["hp"]) and int(t["hp"]) > 0 and MonsterRules.survives(s, data, t, dmg, dtype, crit, lines):
 		t["hp"] = 1
 		return
@@ -930,6 +978,157 @@ static func spell_range(s: GameSession, data: Dictionary, spell_id: String) -> i
 	return ft
 
 
+# --- items in a fight (v0.7.12) --------------------------------------------------------------------
+
+
+## A flask or a net thrown at a foe (rules.consumables `throw`): "" or a localization key.
+static func can_throw(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	var fx: Dictionary = ItemRules.consumable(data, item_id).get("throw", {})
+	if fx.is_empty() or int(s.character.get("inventory", {}).get(item_id, 0)) <= 0:
+		return "COMBAT_ITEM_CANT"
+	if int(economy(s).get("action", 0)) <= 0 and int(economy(s).get("attacks", 0)) <= 0:
+		return "COMBAT_NO_ACTION"
+	var t := fighter(s, target_id)
+	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
+		return "COMBAT_BAD_TARGET"
+	var far := 60 if bool(fx.get("improvised", false)) else int(fx.get("range", 15))
+	if absi(shown_col(t) - int(player(s)["col"])) * int(cfg(data)["col_ft"]) > far:
+		return "COMBAT_OUT_OF_RANGE"
+	return ""
+
+
+## Throws the thing (can_throw first): a ranged attack — improvised (DEX, no proficiency, 20/60 ft) or the net's;
+## on a hit its damage (only to `types` when given), burning, oil or the net's hold. Lines.
+static func throw_item(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> Array[String]:
+	var c := s.character
+	var e := economy(s)
+	if int(e.get("attacks", 0)) > 0:
+		e["attacks"] = int(e["attacks"]) - 1
+	else:
+		e["action"] = int(e["action"]) - 1
+		e["attacks"] = CharacterRules.extra_attacks(c, data)
+	e["attacked"] = true
+	var fx: Dictionary = ItemRules.consumable(data, item_id)["throw"]
+	var name := ItemRules.display_name(data["items"], s.items, item_id)
+	ItemRules._remove_one(c, item_id)
+	var t := fighter(s, target_id)
+	var dex := CharacterRules.mod(CharacterRules.ability(c, "dex"))
+	var proficient := bool(fx.get("weapon", false)) and ((c.get("weapon_profs", []) as Array).has("martial") or (c.get("weapon_profs", []) as Array).has(item_id))
+	var to_hit := dex + (int(c.get("prof_bonus", 2)) if proficient else 0)
+	var near := int(fx.get("range", 20))
+	var w := {"melee": false, "range": [near, 60 if bool(fx.get("improvised", false)) else near], "id": "", "name": name, "str_based": false}
+	var mods := _attack_mods(s, data, w, t)
+	var adv := not (mods["adv"] as Array).is_empty()
+	var dis := not (mods["dis"] as Array).is_empty()
+	var lines: Array[String] = []
+	var rolls := FeatureRules.hero_d20(s, adv, dis)
+	var nat := _nat(rolls, adv, dis)
+	var total := nat + to_hit
+	var hit := nat == 20 or (nat != 1 and total >= int(t["ac"]))
+	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
+	lines.append("%s бросает %s в %s: %d%s%d = %d против КД %d%s — %s" % [c["name"], name, t["name"], nat, " + " if to_hit >= 0 else " − ",
+		absi(to_hit), total, int(t["ac"]), mark, "попадание" if hit else "промах"])
+	player(s)["hidden"] = false
+	lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))
+	if not hit:
+		return lines
+	if fx.has("damage"):
+		var types: Array = fx.get("types", [])
+		if not types.is_empty() and not types.has(str(_monster(data, t).get("type", ""))):
+			lines.append("%s: на %s не действует" % [name, t["name"]])
+		else:
+			var dtype := str(fx["damage"][1])
+			var dmg := _resist(data, t, dtype, roll_dice(s.rng, str(fx["damage"][0]), nat == 20))
+			lines.append("%s: %d (%s)" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype)])
+			_hurt_enemy(s, data, t, dmg, lines, dtype)
+	if fx.has("burning") and str(t.get("status")) == "active":
+		t["burning"] = str(fx["burning"])
+		lines.append("%s горит" % t["name"])
+	if fx.has("oiled") and str(t.get("status")) == "active":
+		t["oiled"] = int(fx["oiled"])
+		lines.append("%s облит маслом — огонь возьмёт его сильнее" % t["name"])
+	if fx.has("condition") and str(t.get("status")) == "active":
+		if SIZES.find(str(_monster(data, t).get("size", "medium"))) > SIZES.find(str(fx.get("max_size", "large"))):
+			lines.append("%s слишком велик для сети" % t["name"])
+		else:
+			_add_condition(t, str(fx["condition"]), {"rounds": 10, "save": "str", "dc": int(fx.get("escape_dc", 10)), "item": item_id})
+			lines.append("%s: %s, вырваться — Сил Сл %d" % [t["name"], cond_name(data, str(fx["condition"])), int(fx.get("escape_dc", 10))])
+	return lines
+
+
+## The spell of an item (a scroll, a wand) in a fight: "" or a localization key. `target_id` as for a spell.
+static func can_item_spell(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	var fx := ItemRules.consumable(data, item_id)
+	if not fx.has("spell") or not ItemRules.can_use(s.character, data, s.items, item_id).is_empty():
+		return "COMBAT_ITEM_CANT"
+	if int(economy(s).get("action", 0)) <= 0:
+		return "COMBAT_NO_ACTION"
+	var sp_id := str(fx["spell"])
+	var sp: Dictionary = data["spells"].get(sp_id, {})
+	if sp.has("heal_at_slot") or target_id.is_empty() or not is_engine_spell(data, sp_id):
+		return ""
+	var t := fighter(s, target_id)
+	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
+		return "COMBAT_BAD_TARGET"
+	if absi(shown_col(t) - int(player(s)["col"])) > range_cols(data, int(sp.get("range_ft", 0))):
+		return "COMBAT_OUT_OF_RANGE"
+	return ""
+
+
+## Casts the item's spell (can_item_spell first): the item gives the spell, its DC and attack (a scroll — by the
+## circle, DMG; a wand — its own); no slot of the hero's is spent. A scroll beyond the hero asks for Arcana. Lines.
+static func item_spell(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> Array[String]:
+	var c := s.character
+	var fx := ItemRules.consumable(data, item_id)
+	var sp_id := str(fx["spell"])
+	var level := int(fx.get("level", 1))
+	var name := ItemRules.display_name(data["items"], s.items, item_id)
+	var lines: Array[String] = ["%s: %s" % [c["name"], name]]
+	lines.append_array(ItemRules.consume(c, data, s.items, item_id, s.rng))
+	if bool(fx.get("scroll", false)):
+		var read := ItemRules.read_scroll(c, data, sp_id, level, s.rng)
+		lines.append(str(read["line"]))
+		if not bool(read["ok"]):
+			economy(s)["action"] = int(economy(s)["action"]) - 1
+			return lines
+	if sp_id == "identify":
+		economy(s)["action"] = int(economy(s)["action"]) - 1
+		lines.append_array(ItemRules.identify(c, data, s.items))
+		return lines
+	var nums := ItemRules.scroll_numbers(data, level)
+	var keep := {}
+	for k: String in ["spell_dc", "spell_attack", "spell_ability", "spells", "slots_max", "slots_used"]:
+		keep[k] = c[k].duplicate() if c.get(k) is Dictionary or c.get(k) is Array else c.get(k)
+	c["spell_dc"] = int(fx.get("dc", nums[0]))
+	c["spell_attack"] = int(fx.get("attack", nums[1]))
+	if str(c.get("spell_ability", "")).is_empty():
+		c["spell_ability"] = "int"
+	var spells: Dictionary = (c.get("spells", {}) as Dictionary).duplicate(true)
+	var always: Array = spells.get("always", [])
+	always.append(sp_id)
+	spells["always"] = always
+	c["spells"] = spells
+	if level > 0:
+		var mx: Array = (c.get("slots_max", [0, 0, 0, 0, 0]) as Array).duplicate()
+		mx[level - 1] = int(mx[level - 1]) + 1
+		c["slots_max"] = mx
+	var cast := _player_cast(s, data, sp_id, level, target_id)
+	if not cast.is_empty() and str(cast[0]).begins_with("Заклинание"):
+		cast[0] = "Заклинание: %s" % data["spells"][sp_id]["name"]
+	lines.append_array(cast)
+	for k: String in keep:
+		if keep[k] == null:
+			c.erase(k)
+		else:
+			c[k] = keep[k]
+	player(s)["hidden"] = false
+	return lines
+
+
 ## Casts a spell in combat (can_cast first): the slot, then attack rolls or saves, damage or healing. Lines.
 static func player_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> Array[String]:
 	var lines := _player_cast(s, data, spell_id, slot, target_id)
@@ -957,7 +1156,7 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
 		return lines
 	var level := int(c.get("level", 1))
-	var ab := CharacterRules.mod(int(c["abilities"].get(str(c.get("spell_ability", "int")), 10)))
+	var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "int"))))
 	if sp.has("heal_at_slot"):
 		var heal := roll_dice(s.rng, str(sp["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD")), false, ab)
 		if FeatureRules.has(c, "disciple_of_life") and slot > 0:
@@ -1502,6 +1701,10 @@ static func _death_save(s: GameSession, lines: Array[String]) -> void:
 	var ds: Dictionary = s.combat["death_saves"]
 	if bool(ds.get("stable", false)):
 		return
+	if CharacterRules.item_prop(s.character, "wound_closure"):  # Periapt of Wound Closure (v0.7.12)
+		ds["stable"] = true
+		lines.append("%s стабилизируется — Амулет закрытия ран" % s.character["name"])
+		return
 	var roll := s.rng.randi_range(1, 20)
 	if roll == 20:
 		s.character["hp"] = 1
@@ -1546,6 +1749,15 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	var p := player(s)
 	var m := _monster(data, f)
 	MonsterRules.start_turn(s, data, f, lines)
+	if f.has("burning"):  # alchemist's fire (v0.7.12): burns until a DEX save DC 10 puts it out
+		var burn := _resist(data, f, "fire", roll_dice(s.rng, str(f["burning"])))
+		lines.append("%s горит: %d (огонь)" % [f["name"], burn])
+		_hurt_enemy(s, data, f, burn, lines, "fire")
+		if str(f["status"]) != "active":
+			return
+		if _monster_save(s, data, f, "dex", 10):
+			f.erase("burning")
+			lines.append("%s сбивает пламя" % f["name"])
 	# Morale: once, at half HP or less.
 	if not bool(f.get("morale", false)) and int(f["hp"]) * 2 <= int(f["max_hp"]):
 		f["morale"] = true
@@ -1629,6 +1841,10 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	_find_hidden(s, f, lines)
 	if cols_between(f, p) == 0 and not melee.is_empty():
 		lines.append("%s сближается вплотную" % f["name"])
+		if moved > 0:
+			_reach_strike(s, data, f, lines)
+			if str(f["status"]) != "active":
+				return
 		_enemy_attack_full(s, data, f, melee, lines)
 		return
 	if not ranged.is_empty() and cols_between(f, p) * int(cfg(data)["col_ft"]) <= int(ranged["range"][1]):
@@ -1639,6 +1855,20 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 		moved += 1
 	_find_hidden(s, f, lines)
 	lines.append("%s бежит ближе" % f["name"] if cols_between(f, p) > 0 else "%s сближается вплотную" % f["name"])
+
+
+## A reach weapon meets a foe on its way in (v0.7.12): the hero's reaction, one attack before the foe strikes.
+static func _reach_strike(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	var c := s.character
+	var wid := str(c.get("equipped", {}).get("main_hand", ""))
+	if wid.is_empty() or bool(player(s).get("reacted", false)) or ConditionRules.incapacitated(c) or int(c.get("hp", 0)) <= 0:
+		return
+	var w := weapon_profile(c, data, s.items, wid)
+	if not bool(w.get("reach", false)) or not bool(w["melee"]):
+		return
+	player(s)["reacted"] = true
+	lines.append("%s встречает %s на подходе — %s бьёт дальше (досягаемость)" % [c["name"], f["name"], w["name"]])
+	_attack(s, data, str(c["name"]), w["name"], int(w["to_hit"]), false, false, f, str(w["dice"]), int(w["bonus"]), str(w["type"]), lines, "", false, w)
 
 
 ## A foe that comes into the hidden player's column finds them.
@@ -1736,6 +1966,9 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	if c.has("wild_shape"):
 		ac = int(c.get("ac", 10))  # the beast's AC is the sheet's while in the form
 	var crit := nat == 20 or (not ranged_use and (int(c["hp"]) <= 0 or ConditionRules.has(c, "paralyzed") or ConditionRules.has(c, "unconscious")))
+	if crit and CharacterRules.item_prop(c, "no_crit"):
+		crit = false  # adamantine armor: a critical hit is a normal one (v0.7.12)
+		line += " (адамантин: не крит)"
 	var dmg := 0
 	var types: Array[String] = []
 	var notes: Array[String] = []

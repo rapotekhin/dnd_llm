@@ -125,7 +125,7 @@ static func shops_closed(s: GameSession, data: Dictionary) -> bool:
 ## Darkvision (or Devil's Sight, v0.7.10) or a light source in the pack (an item with the light_source property).
 static func can_see(s: GameSession, data: Dictionary) -> bool:
 	var c := s.character
-	if CharacterRules.has_trait(c, "darkvision") or CharacterRules.has_feature(c, "eldritch_invocation_devils_sight"):
+	if CharacterRules.has_trait(c, "darkvision") or CharacterRules.has_feature(c, "eldritch_invocation_devils_sight") or CharacterRules.item_prop(c, "darkvision"):
 		return true
 	for id: String in c.get("inventory", {}):
 		if (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source"):

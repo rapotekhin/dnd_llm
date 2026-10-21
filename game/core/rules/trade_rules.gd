@@ -75,8 +75,10 @@ static func sell_price(s: GameSession, data: Dictionary, npc_id: String, item_id
 
 
 ## How many of an item the player can sell: owned minus what is worn or wielded.
-static func sellable(s: GameSession, item_id: String) -> int:
+static func sellable(s: GameSession, item_id: String, data: Dictionary = {}) -> int:
 	var c := s.character
+	if not data.is_empty() and ItemRules.held_by_curse(c, data, s.items, item_id):
+		return 0  # a cursed thing does not leave the hero (v0.7.12)
 	var worn := 0
 	for slot: String in CharacterRules.SLOTS:
 		if str(c.get("equipped", {}).get(slot, "")) == item_id:
@@ -103,7 +105,7 @@ static func quote(s: GameSession, data: Dictionary, npc_id: String, cart: Dictio
 		var qty := int(sell[id])
 		if qty <= 0:
 			continue
-		if sellable(s, id) < qty:
+		if sellable(s, id, data) < qty:
 			return _fail(out, "TRADE_ERR_NO_ITEM", {"item": ItemRules.display_name(items, s.items, id)})
 		var price := sell_price(s, data, npc_id, id)
 		if price <= 0:
@@ -151,7 +153,7 @@ static func execute(s: GameSession, data: Dictionary, npc_id: String, cart: Dict
 			continue
 		lines.append("Продано: %s%s — %s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else "",
 			Money.format(sell_price(s, data, npc_id, id) * qty)])
-		stock[id] = int(stock.get(id, 0)) + qty
+		stock[ItemRules.real_id(id)] = int(stock.get(ItemRules.real_id(id), 0)) + qty  # the trader knows what it is (v0.7.12)
 		var left := int(inv[id]) - qty
 		if left > 0:
 			inv[id] = left
@@ -253,9 +255,92 @@ static func info(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary
 				"price_cp": buy_price(s, data, npc_id, id)})
 	var buys: Array[Dictionary] = []
 	for id: String in s.character.get("inventory", {}):
-		var qty := sellable(s, id)
+		var qty := sellable(s, id, data)
 		var price := sell_price(s, data, npc_id, id)
 		if qty > 0 and price > 0:
 			buys.append({"item_id": id, "name": ItemRules.display_name(items, s.items, id), "qty": qty, "price_cp": price})
 	return {"npc_id": npc_id, "purse_cp": int(m["purse_cp"]), "haggle_pct": int(m["haggle_pct"]),
 		"haggle_locked": int(m["haggle_failed_day"]) == s.day, "stock": stock, "buys": buys}
+
+
+# --- services (v0.7.12) ----------------------------------------------------------------------------
+
+
+## The paid services of this trader (NPC `services` in the pack): [{id, cost_cp, why}] — `why` "" when it can be
+## bought now, otherwise a localization key.
+static func services(s: GameSession, data: Dictionary, npc_id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var table: Dictionary = ItemRules.cfg(data)["services"]
+	for id: Variant in data["world"]["npcs"].get(npc_id, {}).get("services", []):
+		if not table.has(str(id)):
+			continue
+		var cost := int(table[str(id)]["cost_cp"])
+		var why := ""
+		if int(s.character.get("gold_cp", 0)) < cost:
+			why = "TRADE_ERR_NO_COINS"
+		elif str(id) == "identify" and ItemRules.unknown_ids(s.character).is_empty():
+			why = "SERVICE_NOTHING"
+		elif str(id) == "remove_curse" and cursed_held(s, data).is_empty():
+			why = "SERVICE_NOTHING"
+		elif str(id) == "silver" and silverable(s, data).is_empty():
+			why = "SERVICE_NOTHING"
+		out.append({"id": str(id), "cost_cp": cost, "why": why})
+	return out
+
+
+static func cursed_held(s: GameSession, data: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for id: String in s.character.get("inventory", {}):
+		if ItemRules.held_by_curse(s.character, data, s.items, id):
+			out.append(id)
+	return out
+
+
+## Weapons of the hero that are not silvered yet.
+static func silverable(s: GameSession, data: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for id: String in s.character.get("inventory", {}):
+		var d := ItemRules.def_of(data["items"], s.items, id)
+		if d.has("weapon") and data["items"]["catalog"].has(id) and not (d.get("properties", []) as Array).has("silvered"):
+			out.append(id)
+	return out
+
+
+## Buys a service (services first; `item` — the weapon to silver). Lines.
+static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: String, item: String = "") -> Array[String]:
+	var c := s.character
+	var cost := int(ItemRules.cfg(data)["services"][id]["cost_cp"])
+	c["gold_cp"] = int(c["gold_cp"]) - cost
+	var lines: Array[String] = ["Услуга: −%s" % Money.format(cost)]
+	match id:
+		"identify":
+			lines.append_array(ItemRules.identify(c, data, s.items))
+		"remove_curse":
+			for thing: String in cursed_held(s, data):
+				ItemRules.unattune(c, thing)
+				var eq: Dictionary = c.get("equipped", {})
+				for slot: String in eq:
+					if str(eq[slot]) == thing:
+						eq[slot] = ""
+				lines.append("проклятие отпустило: %s (сама вещь проклята по-прежнему)" % ItemRules.display_name(data["items"], s.items, thing))
+		"silver":
+			var weapon := item if not item.is_empty() else silverable(s, data)[0]
+			var base := ItemRules.def_of(data["items"], s.items, weapon)
+			var def := {"name": "%s (посеребрённый)" % base.get("name", weapon), "item_type": "weapon", "base": weapon,
+				"rarity": str(base.get("rarity", "common")), "value_cp": int(base.get("value_cp", 0)) + cost, "properties": ["silvered"],
+				"description": str(base.get("description", "")), "generated": true}
+			var new_id := ItemRules.generated_id(def)
+			s.items[new_id] = def
+			var inv: Dictionary = c["inventory"]
+			inv[new_id] = int(inv.get(new_id, 0)) + 1
+			var eq: Dictionary = c.get("equipped", {})
+			var slot_of := ""
+			for slot: String in eq:
+				if str(eq[slot]) == weapon and slot_of.is_empty():
+					slot_of = slot
+			ItemRules._remove_one(c, weapon)
+			if not slot_of.is_empty():
+				eq[slot_of] = new_id
+			lines.append("посеребрено: %s" % def["name"])
+	CharacterRules.refresh(c, data, s.items)
+	return lines

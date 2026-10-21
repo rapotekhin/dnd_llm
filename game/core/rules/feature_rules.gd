@@ -246,6 +246,8 @@ static func reactions(s: GameSession, data: Dictionary, f: Dictionary, a: Dictio
 		out.append({"id": "uncanny_dodge", "label": "Невероятное уклонение: урон вдвое меньше"})
 	if has(c, "deflect_missiles") and ranged and str(a.get("kind")) == "ranged" and dmg > 0:
 		out.append({"id": "deflect_missiles", "label": "Отражение снарядов: урон −1к10 + %d" % (ab_mod(c, "dex") + level(c))})
+	if CharacterRules.item_prop(c, "missile_snaring") and not has(c, "deflect_missiles") and ranged and str(a.get("kind")) == "ranged" and dmg > 0:
+		out.append({"id": "missile_snaring", "label": "Перчатки ловли снарядов: урон −1к10 + %d" % ab_mod(c, "dex")})  # v0.7.12
 	if has(c, "cutting_words") and FeatureUses.left(c, data, "bardic_inspiration") > 0 and see:
 		out.append({"id": "cutting_words", "label": "Язвительные слова: −1к%d к броску атаки" % bardic_die(c, data)})
 	if has(c, "hunters_prey_giant_killer") and CombatRules.SIZES.find(str(CombatRules._monster(data, f).get("size", "medium"))) >= 3 \
@@ -270,6 +272,10 @@ static func apply_reaction(s: GameSession, data: Dictionary, f: Dictionary, id: 
 			var cut := s.rng.randi_range(1, 10) + ab_mod(c, "dex") + level(c)
 			ctx["dmg"] = maxi(0, int(ctx["dmg"]) - cut)
 			lines.append("%s: Отражение снарядов — урон −%d" % [c.get("name", ""), cut])
+		"missile_snaring":
+			var snag := s.rng.randi_range(1, 10) + ab_mod(c, "dex")
+			ctx["dmg"] = maxi(0, int(ctx["dmg"]) - snag)
+			lines.append("%s ловит снаряд перчатками — урон −%d" % [c.get("name", ""), snag])
 		"cutting_words":
 			FeatureUses.use(c, data, "bardic_inspiration", 1, s.rng)
 			var cut := s.rng.randi_range(1, bardic_die(c, data))

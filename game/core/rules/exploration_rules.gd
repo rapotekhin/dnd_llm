@@ -172,7 +172,7 @@ static func disarm_bonus(c: Dictionary) -> Dictionary:
 	var bonus := int(c.get("skills", {}).get("sleight_of_hand", 0))
 	var has_tools := int(c.get("inventory", {}).get("thieves_tools", 0)) > 0
 	if has_tools and (c.get("tools", []) as Array).has("thieves_tools"):
-		bonus = maxi(bonus, CharacterRules.mod(int(c["abilities"].get("dex", 10))) + int(c.get("prof_bonus", 2)))
+		bonus = maxi(bonus, CharacterRules.mod(CharacterRules.ability(c, "dex")) + int(c.get("prof_bonus", 2)))
 	return {"bonus": bonus, "disadvantage_reason": "" if has_tools else "нет воровских инструментов"}
 
 
@@ -192,8 +192,8 @@ static func take_caches(s: GameSession, data: Dictionary, room_id: String) -> Ar
 			got.append(Money.format(int(loot["coins_cp"])))
 		var items: Dictionary = loot.get("items", {})
 		for id: String in items:
-			c["inventory"][id] = int(c["inventory"].get(id, 0)) + int(items[id])
-			got.append(ItemRules.display_name(data["items"], s.items, id) + (" ×%d" % int(items[id]) if int(items[id]) > 1 else ""))
+			var got_id := ItemRules.found(c, data, s.items, id, int(items[id]))  # magic comes unidentified (v0.7.12)
+			got.append(ItemRules.display_name(data["items"], s.items, got_id) + (" ×%d" % int(items[id]) if int(items[id]) > 1 else ""))
 		lines.append("Тайник: " + ", ".join(got))
 	return lines
 
@@ -333,6 +333,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	s.locks.clear()
 	FeatureUses.recharge_all(c, data, "long")
 	lines.append_array(_rest_ends(c, data, "long"))
+	lines.append_array(ItemRules.dawn(c, data, s.items, s.rng))  # charges come back at dawn (v0.7.12)
 	s.short_rests = 0
 	s.day += 1
 	return lines
@@ -360,10 +361,12 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 	var n := clampi(dice, 0, hit_dice_left(c))
 	if n > 0:
 		var die := int(CharacterRules.class_def(c, data).get("hit_die", 8))
-		var con := CharacterRules.mod(int(c["abilities"].get("con", 10)))
+		var con := CharacterRules.mod(CharacterRules.ability(c, "con"))
 		var healed := 0
 		for i in n:
 			healed += maxi(0, rng.randi_range(1, die) + con)
+		if CharacterRules.item_prop(c, "wound_closure"):  # Periapt of Wound Closure: hit dice heal twice as much (v0.7.12)
+			healed *= 2
 		var before := int(c["hp"])
 		c["hp"] = mini(int(c["max_hp"]), before + healed)
 		c["hit_dice_used"] = int(c.get("hit_dice_used", 0)) + n
@@ -381,6 +384,7 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 			c["slots_used"] = [0, 0, 0, 0, 0]
 			lines.append("ячейки договора восстановлены")
 	lines.append_array(_rest_ends(c, data, "short"))
+	lines.append_array(ItemRules.identify(c, data, s.items))  # an hour with the things names them (v0.7.12)
 	s.short_rests += 1
 	return lines
 

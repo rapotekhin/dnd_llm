@@ -412,12 +412,21 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 			lines.append("снято: %s" % name_of(data, str(cond)))
 	if int(spec.get("exhaustion", 0)) > 0 and exhaustion(c) > 0:
 		lines.append_array(add_exhaustion(s, data, -int(spec["exhaustion"]), ""))
-	if spec.has("adv_tag") or spec.has("resist"):
+	for tag: Variant in spec.get("cure", []):  # a disease and the like: effects of that tag go (v0.7.12)
+		for e: Dictionary in effects(c):
+			if str(e.get("tag", "")).split(",").has(str(tag)):
+				remove_effect(c, int(e.get("uid", -1)))
+				lines.append("снято: %s" % HeroDefense.tag_name(str(tag)))
+	if spec.has("adv_tag") or spec.has("resist") or spec.has("check_adv") or spec.has("enlarged"):
 		var boon := {"condition": "", "source": source, "ends": ends_for(s, data, str(spec.get("duration", "hour")))}
 		if spec.has("adv_tag"):
 			boon["adv_tag"] = str(spec["adv_tag"])
 		if spec.has("resist"):
-			boon["resist"] = (spec["resist"] as Array).duplicate()
+			boon["resist"] = (spec["resist"] as Array).duplicate() if spec["resist"] is Array else [str(spec["resist"])]
+		if spec.has("check_adv"):  # Potion of Climbing: advantage on the skill (v0.7.12)
+			boon["check_adv"] = str(spec["check_adv"])
+		if spec.has("enlarged"):  # Potion of Growth: +1d4 weapon damage, advantage on STR checks (v0.7.12)
+			boon["enlarged"] = true
 		add_effect(c, boon)
 		lines.append("%s: %s" % [source.get("name", ""), boon_text(data, boon)])
 	return lines
@@ -430,6 +439,10 @@ static func boon_text(data: Dictionary, e: Dictionary) -> String:
 		parts.append("преимущество на спасброски: %s" % HeroDefense.tag_name(str(e["adv_tag"])))
 	for t: Variant in e.get("resist", []):
 		parts.append("сопротивление: %s" % str(data["misc"]["damage_types"].get(str(t), t)))
+	if e.has("check_adv"):
+		parts.append("преимущество на проверки: %s" % TranslationServer.translate("SKILL_" + str(e["check_adv"]).to_upper()))
+	if bool(e.get("enlarged", false)):
+		parts.append("увеличение: +1к4 к урону оружием, преимущество на проверки Силы")
 	return ", ".join(parts)
 
 

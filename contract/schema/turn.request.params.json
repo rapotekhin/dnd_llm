@@ -14,6 +14,13 @@
           "title": "Ac",
           "type": "integer"
         },
+        "attuned": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Attuned",
+          "type": "array"
+        },
         "background": {
           "default": "",
           "title": "Background",

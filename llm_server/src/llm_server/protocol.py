@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.17.0"
+PROTOCOL_VERSION = "0.18.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -234,6 +234,7 @@ class CharacterSheet(_In):
     background_feature: str = ""  # the background's feature as a rule for the master (0.17.0)
     languages: list[str] = Field(default_factory=list)  # the hero's languages, Russian, secret ones included (0.17.0)
     tools: list[str] = Field(default_factory=list)  # tool proficiencies: «Воровские инструменты [thieves_tools]» (0.17.0)
+    attuned: list[str] = Field(default_factory=list)  # magic items the hero is attuned to, Russian names (0.18.0)
 
 
 class HistoryLine(_In):
@@ -407,7 +408,7 @@ class SummaryResult(_Out):
 DamageSeverity = Literal["unpleasant", "dangerous", "deadly"]
 HealTier = Literal["minor", "moderate", "major"]
 Rarity = Literal["common", "uncommon", "rare", "very_rare", "legendary"]
-ItemType = Literal["weapon", "armor", "gear", "consumable", "treasure"]
+ItemType = Literal["weapon", "armor", "gear", "consumable", "treasure", "wondrous"]  # wondrous — 0.18.0
 # Mechanical properties the engine understands (ADR-0008 §6); free text never carries mechanics.
 # Keep in sync with game/data/items.json "properties" (a test checks it).
 ItemProperty = Literal[
@@ -416,6 +417,10 @@ ItemProperty = Literal[
     "fire_damage", "cold_damage", "lightning_damage", "radiant_damage", "necrotic_damage", "poison_damage",
     "resist_fire", "resist_cold", "resist_poison", "ac_plus1", "ac_plus2", "saves_plus1", "stealth_advantage",
     "light_source", "healing", "cursed",
+    # v0.7.12 (0.18.0): every property the engine now resolves
+    "resist_force", "resist_lightning", "resist_acid", "resist_necrotic", "checks_plus1", "ranged_damage_plus2",
+    "spell_attack_plus1", "speed_30", "perception_advantage", "investigation_advantage", "darkvision", "wound_closure",
+    "immune_disease", "understand_all", "missile_snaring", "carry_plus_500", "str_19", "int_19", "mithral", "no_crit",
 ]
 
 

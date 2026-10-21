@@ -98,7 +98,7 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 			lines.append("%s — украдено: %s" % [who, Money.format(int(e["cp"]))])
 		else:
 			var id := str(e["item_id"])
-			s.character["inventory"][id] = int(s.character["inventory"].get(id, 0)) + int(e.get("qty", 1))
+			ItemRules.found(s.character, data, s.items, id, int(e.get("qty", 1)))
 			lines.append("%s — украдено: %s" % [who, e["name"]])
 		return lines
 	return lines

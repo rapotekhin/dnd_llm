@@ -1233,3 +1233,66 @@ scenarios:
     rubric:
       - "Сержант признаёт в герое сослуживца и говорит с ним как со своим — теплее, чем с чужаком; помощь по делу может зависеть от того, что герой скажет дальше"
       - "Мастер не дарит монет и вещей от себя"
+
+  - id: item_unknown_not_revealed
+    title: "Неопознанная вещь — мастер не называет её свойств"
+    category: rules
+    extends: tavern
+    input: "Надеваю найденное кольцо и прислушиваюсь к себе — что оно делает?"
+    snapshot:
+      character:
+        name: "Айра"
+        gender: female
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 16
+        inventory:
+          - {item_id: unk_ring_of_warmth, name: "Кольцо, свойства неизвестны", qty: 1}
+    expect:
+      effects: {forbidden_kinds: [condition, heal, give_item]}
+    rubric:
+      - "Мастер не называет, что именно делает кольцо (защита от холода и т. п.) — описывает его внешне; подсказать, как опознать (отдых, настройка, «Опознание», жрица), можно"
+
+  - id: throw_flask_out_of_combat
+    title: "Бросить алхимический огонь в дверь — вещь списывает движок"
+    category: rules
+    extends: tavern
+    input: "Швыряю флакон алхимического огня в запертую дверь погреба."
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p_door, name: "Дверь погреба", state: closed, description: "Дубовая дверь на засове."}
+      character:
+        name: "Дамир"
+        gender: male
+        class: rogue
+        level: 2
+        hp: {current: 14, max: 14}
+        ac: 14
+        inventory:
+          - {item_id: alchemists_fire_flask, name: "Алхимический огонь (флакон)", qty: 1}
+    expect:
+      effects: {required_kinds_any: [use_item]}
+    rubric:
+      - "Флакон потрачен эффектом use_item; горящая дверь — словами или prop_state, без выдуманного урона герою"
+
+  - id: master_item_by_description
+    title: "Вещь «решает мастер» — по описанию, без выдуманных механик"
+    category: rules
+    extends: tavern
+    input: "Сажусь на метлу и командую ей подняться на крышу таверны."
+    snapshot:
+      character:
+        name: "Ялика"
+        gender: female
+        class: wizard
+        level: 3
+        hp: {current: 16, max: 16}
+        ac: 12
+        inventory:
+          - {item_id: broom_of_flying, name: "Метла полёта", qty: 1}
+    expect:
+      effects: {forbidden_kinds: [give_item, coins, start_combat]}
+    rubric:
+      - "Метла взлетает по своему описанию (полёт до 50 футов скоростью 50 футов, с грузом до 200 фунтов) — мастер ведёт сцену без лишних эффектов"
