@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.16.0"
+PROTOCOL_VERSION = "0.17.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -145,6 +145,9 @@ class SceneNpc(_In):
     attitude: int = 0  # -3 hostile … 0 neutral … +3 friendly
     personality: str = ""
     trader: bool = False  # sells goods: buying them goes through trade mode (0.6.0)
+    speaks: str = ""  # the NPC's languages, Russian: «общий, дварфийский» (0.17.0)
+    understands_hero: bool = True  # shares a tongue with the hero (or a spell bridges it) (0.17.0)
+    tie: str = ""  # the NPC's tie with the hero's background: «служивый: уважает звание героя-солдата» (0.17.0)
 
 
 class SceneProp(_In):
@@ -228,6 +231,9 @@ class CharacterSheet(_In):
     effects: list[str] = Field(default_factory=list)  # conditions and boons with time left and cause, in Russian (0.16.0)
     exhaustion: int = 0  # exhaustion level 0-6 (0.16.0)
     resistances: list[str] = Field(default_factory=list)  # damage types the hero resists now, Russian (0.16.0)
+    background_feature: str = ""  # the background's feature as a rule for the master (0.17.0)
+    languages: list[str] = Field(default_factory=list)  # the hero's languages, Russian, secret ones included (0.17.0)
+    tools: list[str] = Field(default_factory=list)  # tool proficiencies: «Воровские инструменты [thieves_tools]» (0.17.0)
 
 
 class HistoryLine(_In):
@@ -299,6 +305,8 @@ class CombatFoe(_In):
     description: str = ""
     surprised: bool = False  # caught off guard: skips its first turn (0.8.0)
     conditions: list[str] = Field(default_factory=list)  # Russian names with rounds left: «без сознания (9 р.)» (0.10.0)
+    speaks: str = ""  # «гоблинский, общий» or «без речи» (0.17.0)
+    understands_hero: bool = True  # shares a tongue with the hero or telepathy (0.17.0)
 
 
 class CombatIncoming(_In):
@@ -623,6 +631,7 @@ class EngineCheckParams(_Out):
     target_id: str | None = None
     advantage_reason: str | None = None
     sense: Literal["sight", "hearing"] | None = None  # the check needs sight or hearing: blinded / deafened fail (0.16.0)
+    tool: str | None = None  # the tool the check uses (thieves_tools, herbalism_kit…): proficiency, a must (0.17.0)
 
 
 class EngineCheckResult(_In):

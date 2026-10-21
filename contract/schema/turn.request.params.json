@@ -19,6 +19,11 @@
           "title": "Background",
           "type": "string"
         },
+        "background_feature": {
+          "default": "",
+          "title": "Background Feature",
+          "type": "string"
+        },
         "backstory": {
           "default": "",
           "title": "Backstory",
@@ -100,6 +105,13 @@
           "title": "Inventory",
           "type": "array"
         },
+        "languages": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
         "level": {
           "default": 1,
           "title": "Level",
@@ -176,6 +188,13 @@
           },
           "title": "Spells",
           "type": "array"
+        },
+        "tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
         }
       },
       "required": [
@@ -234,6 +253,11 @@
           "title": "Side",
           "type": "string"
         },
+        "speaks": {
+          "default": "",
+          "title": "Speaks",
+          "type": "string"
+        },
         "status": {
           "default": "active",
           "enum": [
@@ -249,6 +273,11 @@
         "surprised": {
           "default": false,
           "title": "Surprised",
+          "type": "boolean"
+        },
+        "understands_hero": {
+          "default": true,
+          "title": "Understands Hero",
           "type": "boolean"
         }
       },
@@ -617,9 +646,24 @@
           "title": "Role",
           "type": "string"
         },
+        "speaks": {
+          "default": "",
+          "title": "Speaks",
+          "type": "string"
+        },
+        "tie": {
+          "default": "",
+          "title": "Tie",
+          "type": "string"
+        },
         "trader": {
           "default": false,
           "title": "Trader",
+          "type": "boolean"
+        },
+        "understands_hero": {
+          "default": true,
+          "title": "Understands Hero",
           "type": "boolean"
         }
       },

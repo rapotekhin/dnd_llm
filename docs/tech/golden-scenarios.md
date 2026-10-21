@@ -47,6 +47,7 @@ scenarios:
 |---|---|
 | `check.required` | была (`true`) или не было (`false`) запроса `engine.check` |
 | `check.skill_in`, `check.dc_tier_in` | навык и ступень сложности из списка |
+| `check.tool_in` | проверка с инструментом из списка (`tool`, v0.7.11) |
 | `check.contest_npc`, `check.contest_skill_in` | состязание с этим NPC и навыком |
 | `max_checks` | не больше N проверок за ход |
 | `effects.required_kinds_any` / `forbidden_kinds` | среди предложенных эффектов есть хотя бы один из / нет ни одного из |
@@ -117,6 +118,7 @@ uv run python -m llm_server.golden --no-judge                       # тольк
 - v0.6.3: `trap_disarm_narration` (рассказ об обезвреженной ловушке без чисел и эффектов) 3/3, `quest_claim_by_words` (игрок объявляет задание выполненным — мастер не платит) 3/3, `quest_done_narration` 3/3. `inspect_hook_needs_check` упал до 0/3 — и на промптах v0.6.2 тоже 1/4: дрейф модели, не правка (в бэклоге).
 - v0.6.5 (плейтест-1): `pay_for_rumours` (плата за сведения — `coins`) 2/3, `rent_room_words` (ночлег без оплаты и переноса) 3/3, `pickpocket_success` (кража — исход в `note` движка) 3/3 после «кража — сразу проверка», `wait_until_evening` (`advance_time` до описания) 2/3. `trap_damage_severity` — 0/3 и на промптах v0.6.4: дрейф модели, как `inspect_hook_needs_check`.
 - v0.7.0 (интерактивный мир): `furnish_on_first_visit` 3/3, `describe_only_props` 3/3, `read_prop_text` 3/3 (2/3 в первом прогоне), `take_prop_words` 2/3 после правила «взять вещь — всегда эффект, до описания» (было 0/3: старое правило «взять — `give_item`» спорило с новым).
+- v0.7.11 (языки, предыстории, инструменты): `language_npc_no_common_tongue` 3/3, `tool_pick_lock` 3/3 (сундук должен быть вещью сцены: без неё мастер честно говорит, что сундука нет), `background_soldier_tie` 3/3; `social_buy_from_trader`, `pickpocket_success`, `inspect_hook_needs_check` — 3/3 на новых промптах.
 - Стабильно спорные: `gender_agreement_female` (вход без глаголов прошедшего времени), `retry_blocked` и `content_veil_respected` (рубрика судьи) — в [бэклоге](../production/backlog.md).
 
 ## Прогон v0.7.4 (2026-10-20, DeepSeek, 54 сценария × 3)

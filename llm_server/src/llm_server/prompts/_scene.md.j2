@@ -7,6 +7,9 @@
 {% endif %}{% if character.effects %}Состояния и эффекты: {{ character.effects | join("; ") }} (их влияние на проверки и бой движок учитывает сам).
 {% elif character.conditions %}Состояния: {{ character.conditions | join(", ") }} (их влияние на проверки движок учитывает сам).
 {% endif %}{% if character.resistances %}Сопротивление урону: {{ character.resistances | join(", ") }}.
+{% endif %}{% if character.languages %}Языки героя: {{ character.languages | join(", ") }}.
+{% endif %}{% if character.tools %}Владеет инструментами: {{ character.tools | join(", ") }}.
+{% endif %}{% if character.background_feature %}Умение предыстории — {{ character.background_feature }}.
 {% endif %}{% if character.resources %}Умения с ограниченными использованиями: {% for r in character.resources %}{{ r.name }} {{ r.left }}/{{ r.max }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if character.concentration %}Концентрация: {{ character.concentration }}.
 {% endif %}{% if character.skills %}Бонусы навыков: {% for k, v in character.skills.items() %}{{ k }} {{ "%+d" | format(v) }}{% if k in character.skill_proficiencies %}*{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% if character.skill_proficiencies %} (* — владеет){% endif %}.
@@ -31,7 +34,7 @@
 {% else %}- нет
 {% endfor %}
 NPC здесь:
-{% for n in scene.npcs %}- {{ n.name }} [{{ n.npc_id }}] — {{ n.role }}{% if n.race %}, {{ n.race }}{% endif %}{% if n.trader %}; торговец{% endif %}; отношение к игроку: {{ attitude_word(n.attitude) }}.{% if n.description %} {{ n.description }}{% endif %}
+{% for n in scene.npcs %}- {{ n.name }} [{{ n.npc_id }}] — {{ n.role }}{% if n.race %}, {{ n.race }}{% endif %}{% if n.trader %}; торговец{% endif %}; отношение к игроку: {{ attitude_word(n.attitude) }}.{% if n.speaks %} Говорит: {{ n.speaks }}{% if not n.understands_hero %} — героя НЕ понимает{% endif %}.{% endif %}{% if n.tie %} Связь с прошлым героя: {{ n.tie }}.{% endif %}{% if n.description %} {{ n.description }}{% endif %}
 {% else %}- никого
 {% endfor %}
 {% if scene.props %}Вокруг (только это и описывай):

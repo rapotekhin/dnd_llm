@@ -125,8 +125,15 @@ func _stats_tab(c: Dictionary) -> Control:
 	for s: String in ids:
 		var mark := " ●●" if (c.get("expertise", []) as Array).has(s) else (" ●" if (c.get("skill_profs", []) as Array).has(s) else "")
 		_text(skills, "%s %+d%s" % [tr("SKILL_" + s.to_upper()), int(c["skills"][s]), mark])
-	var langs: Array = (c.get("languages", []) as Array).map(func(l: Variant) -> String: return str(d["misc"]["languages"].get(str(l), {}).get("name", l)))
-	_text(box, tr("SHEET_LANGUAGES").format({"list": ", ".join(langs)}), UiTheme.MUTED_LABEL)
+	var langs: Array = LanguageRules.hero(c).map(func(l: String) -> String: return LanguageRules.name_of(d, l))
+	var lang_line := _text(box, tr("SHEET_LANGUAGES").format({"list": ", ".join(langs)}), UiTheme.MUTED_LABEL)
+	lang_line.mouse_filter = Control.MOUSE_FILTER_STOP
+	lang_line.tooltip_text = tr("SHEET_LANGUAGES_TIP")
+	var tools: Array = (c.get("tools", []) as Array).map(func(t: Variant) -> String: return BackgroundRules.tool_name(d, str(t)))
+	if not tools.is_empty():
+		var tool_line := _text(box, tr("SHEET_TOOLS").format({"list": ", ".join(tools)}), UiTheme.MUTED_LABEL)
+		tool_line.mouse_filter = Control.MOUSE_FILTER_STOP
+		tool_line.tooltip_text = tr("SHEET_TOOLS_TIP")
 	return box.get_parent()
 
 
@@ -145,7 +152,10 @@ func _abilities_tab(c: Dictionary) -> Control:
 			_entry(box, str(t["name"]), str(t.get("desc", "")))
 	var bg: Dictionary = d["backgrounds"].get(str(c.get("background", "")), {})
 	if not bg.is_empty():
-		_entry(box, str(bg["feature"]["name"]), str(bg["feature"]["desc"]))
+		var rule := str(BackgroundRules.spec(c, d).get("master", ""))
+		_entry(box, str(bg["feature"]["name"]), str(bg["feature"]["desc"]) + (("
+
+" + tr("SHEET_BG_IN_GAME").format({"rule": rule})) if not rule.is_empty() else ""))
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 	box.add_child(HSeparator.new())
 	_text(box, tr("SHEET_HIT_DICE").format({"left": ExplorationRules.hit_dice_left(c), "max": int(c.get("level", 1))}), UiTheme.MUTED_LABEL)

@@ -81,7 +81,8 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         names = [f"{i['name']}" + (f" ({i['contents_cp']} мм внутри)" if "contents_cp" in i else "") for i in visible]
         description += " На виду: " + "; ".join(names) + "."
     npcs = [{"npc_id": n["id"], "name": n["name"], "role": n.get("role", ""), "trader": bool(n.get("trader", False)),
-             "attitude": ATTITUDE.get(str(n.get("attitude", "indifferent")), 0)} for n in scene.get("npcs", [])]
+             "attitude": ATTITUDE.get(str(n.get("attitude", "indifferent")), 0),
+             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie") if k in n}} for n in scene.get("npcs", [])]
     ch = snap.get("character", {})
     hp = ch.get("hp", {})
     history = []
@@ -125,7 +126,8 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "level": ch.get("level", 1), "hp": hp.get("current", 10), "max_hp": hp.get("max", 10),
                 "ac": ch.get("ac", 10), "conditions": ch.get("conditions", []), "skills": ch.get("skills", {}),
                 "saves": ch.get("saves", {}), "features": ch.get("features", []), "gold_cp": ch.get("gold_cp", 1000),
-                **{k: ch[k] for k in ("cantrips", "spells", "spell_slots", "spell_save_dc", "resources", "equipped", "inventory") if k in ch},
+                **{k: ch[k] for k in ("cantrips", "spells", "spell_slots", "spell_save_dc", "resources", "equipped", "inventory",
+                                      "background", "background_feature", "languages", "tools") if k in ch},
             },
             "history": history,
             "summaries": summaries,
@@ -212,6 +214,8 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
         fails.append(f"навык {[ch.get('skill') or ch.get('save') for ch in checks]} не из {c['skill_in']}")
     if checks and c.get("dc_tier_in") and not any(ch["dc_tier"] in c["dc_tier_in"] for ch in checks):
         fails.append(f"сложность {[ch['dc_tier'] for ch in checks]} не из {c['dc_tier_in']}")
+    if checks and c.get("tool_in") and not any(ch.get("tool") in c["tool_in"] for ch in checks):
+        fails.append(f"инструмент {[ch.get('tool') for ch in checks]} не из {c['tool_in']}")
     if "max_checks" in expect and len(checks) > expect["max_checks"]:
         fails.append(f"проверок {len(checks)} > {expect['max_checks']}")
 

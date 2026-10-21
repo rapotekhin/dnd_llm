@@ -58,6 +58,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	s.world_version = str(Catalog.data["pack"].get("version", ""))
 	s.settings = settings.duplicate(true)
 	s.settings["world"] = Catalog.active_world
+	BackgroundRules.apply_ties(s, Catalog.data)  # the people of the hero's past (v0.7.11)
 	start(s)
 	_request("enter", "")
 
@@ -68,7 +69,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 func long_rest(supplies: Dictionary = {}) -> String:
 	if session == null or is_busy() or not Backend.is_ready():
 		return "REST_BUSY"
-	var why := ExplorationRules.can_rest(session, Catalog.data["world"]) if supplies.is_empty() \
+	var why := ExplorationRules.can_rest(session, Catalog.data["world"], Catalog.data) if supplies.is_empty() \
 		else ExplorationRules.camp_error(session, Catalog.data, supplies)
 	if not why.is_empty():
 		return why
@@ -662,7 +663,10 @@ func _parley_check(params: Dictionary) -> Dictionary:
 	p["dc_tier"] = "medium"
 	var mods := ConditionRules.check_mods(session.character, Catalog.data, p)
 	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
-	p["disadvantage_reason"] = ", ".join((mods["disadvantage"] as Array).map(cond_name))
+	var dis_why: Array = (mods["disadvantage"] as Array).map(cond_name)
+	if skill == "intimidation" and not CombatRules.parley_understood(session, Catalog.data):
+		dis_why.append("без общего языка — жесты и оружие")  # v0.7.11
+	p["disadvantage_reason"] = ", ".join(dis_why)
 	p["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
 	var result := CheckEngine.roll(Catalog.rules(), session.rng, p, CheckEngine.bonus_for(session.character, p), session.next_check_id())
 	var lines: Array[String] = ["%s — %s: %d против Сл %d — %s" % [session.character["name"], tr("SKILL_" + skill.to_upper()),
@@ -1651,6 +1655,21 @@ func _engine_check(params: Dictionary) -> Dictionary:
 	params["disadvantage_reason"] = ", ".join(dis)
 	params["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
 	params["reroll_ones"] = CharacterRules.has_trait(session.character, "lucky")  # v0.7.10
+	# v0.7.11: the words reach only who understands them; a tool of the check.
+	var skill_id := str(params.get("skill", "")) if params.get("skill") != null else ""
+	var listener := _listener(params)
+	if not listener.is_empty():
+		var gate := LanguageRules.check_gate(session.character, Catalog.data, skill_id, LanguageRules.npc_understands(session.character, Catalog.data, listener))
+		if gate.has("auto_fail"):
+			params["auto_fail_reason"] = ", ".join(([params["auto_fail_reason"]] if not str(params["auto_fail_reason"]).is_empty() else []) + [gate["auto_fail"]])
+		if gate.has("disadvantage"):
+			params["disadvantage_reason"] = ", ".join(([params["disadvantage_reason"]] if not str(params["disadvantage_reason"]).is_empty() else []) + [gate["disadvantage"]])
+	var tool := str(params.get("tool", "")) if params.get("tool") != null else ""
+	var tool_fx := BackgroundRules.tool_check(session.character, Catalog.data, tool, skill_id)
+	if not str(tool_fx["auto_fail"]).is_empty():
+		params["auto_fail_reason"] = ", ".join(([params["auto_fail_reason"]] if not str(params["auto_fail_reason"]).is_empty() else []) + [tool_fx["auto_fail"]])
+	if not str(tool_fx["advantage"]).is_empty() and str(params.get("advantage_reason", "")).is_empty():
+		params["advantage_reason"] = tool_fx["advantage"]
 	if CombatRules.active(session) and bool(session.combat.get("raging", false)) and str(params.get("skill", "")) == "athletics" \
 			and str(params.get("advantage_reason", "")).is_empty():
 		params["advantage_reason"] = "ярость"
@@ -1666,7 +1685,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		result["check_id"] = session.next_check_id()
 		result["blocked"] = true
 	else:
-		var bonus := CheckEngine.bonus_for(session.character, params) + _terrain_bonus(params)
+		var bonus := CheckEngine.bonus_for(session.character, params) + _terrain_bonus(params) + int(tool_fx["bonus"])
 		result = CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
 		if result.has("error"):
 			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
@@ -1690,6 +1709,35 @@ func _engine_check(params: Dictionary) -> Dictionary:
 			_add(GameSession.effect_entry(found))
 			_log("События: " + ", ".join(found))
 	return result
+
+
+## The NPC a social check speaks to: the check's target or the one the hero talks with ({} — none).
+func _listener(params: Dictionary) -> Dictionary:
+	var tid := str(params.get("target_id", "")) if params.get("target_id") != null else ""
+	if tid.is_empty() and session.in_conversation():
+		tid = session.npc_id
+	return world().npc(tid) if not tid.is_empty() else {}
+
+
+## «Выступить» (v0.7.11): a Performance check on a stage of the pack, once a day; coins and, for an entertainer, a free
+## room tonight; the master narrates the show. "" or a localization key.
+func perform() -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	var why := BackgroundRules.can_perform(session, Catalog.data)
+	if not why.is_empty():
+		return why
+	var text := tr("PERFORM_SAY")
+	_add(GameSession.player_entry(text))
+	var result := _engine_check({"skill": "performance", "dc_tier": str(Catalog.rules()["backgrounds"]["_perform"]["dc_tier"])})
+	if result.has("error"):
+		return "MSG_MASTER_FAILED"
+	var lines := BackgroundRules.performed(session, Catalog.data, int(result["total"]), bool(result["success"]))
+	_add(GameSession.effect_entry(lines))
+	EventBus.state_changed.emit()
+	_request("action", text + " [движок уже бросил Выступление %d — %s; %s — эффекты coins не нужны, опиши выступление и публику]" %
+		[int(result["total"]), "успех" if bool(result["success"]) else "провал", ", ".join(lines)])
+	return ""
 
 
 ## Natural Explorer (v0.7.10): in the ranger's favored terrain (`terrain` of the pack's location) a proficient INT or

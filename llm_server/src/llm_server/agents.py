@@ -133,11 +133,14 @@ async def request_check(
     target_id: str | None = None,
     advantage_reason: str | None = None,
     sense: Literal["sight", "hearing"] | None = None,
+    tool: str | None = None,
 ) -> str:
     """Попросить движок о проверке навыка (skill: perception, persuasion, stealth, …) или спасброске
     (save: str, dex, con, int, wis, cha). dc_tier — ступень сложности. reason — что проверяем, одной фразой.
     advantage_reason — только если в ситуации есть явная причина для преимущества. sense — sight, если
-    проверке нужно зрение (разглядеть), hearing — если слух (подслушать): ослеплённый или оглохший её провалит."""
+    проверке нужно зрение (разглядеть), hearing — если слух (подслушать): ослеплённый или оглохший её провалит.
+    tool — инструмент, которым герой действует (thieves_tools — вскрыть замок, herbalism_kit — травы, disguise_kit…):
+    владение им и его наличие учитывает движок; замок без воровских инструментов не вскрыть."""
     t = ctx.deps
     if len(t.check_ids) >= t.limits.max_checks:
         return "Отказ: лимит проверок на этот ход исчерпан. Опиши исход без новой проверки."
@@ -145,7 +148,7 @@ async def request_check(
         raise ModelRetry("Укажи ровно одно: skill или save.")
     raw = await t.session.call_engine("engine.check", EngineCheckParams(
         turn_id=t.params.turn_id, skill=skill, save=save, dc_tier=dc_tier, target_id=target_id,
-        advantage_reason=advantage_reason, sense=sense))
+        advantage_reason=advantage_reason, sense=sense, tool=tool))
     r = EngineCheckResult.model_validate(raw)
     t.check_ids.append(r.check_id)
     if r.note:

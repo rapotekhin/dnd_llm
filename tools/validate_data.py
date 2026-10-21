@@ -61,7 +61,12 @@ def known() -> dict[str, set[str]]:
         "subclasses": set(classes["subclasses"]), "backgrounds": set(load(DATA / "srd" / "backgrounds.json")),
         "items": set(load(DATA / "items.json")["catalog"]),
         "monsters": set(load(DATA / "srd" / "monsters.json")),
+        "languages": set(load(DATA / "srd" / "misc.json")["languages"]) | set(load(DATA / "rules.json")["languages"]["secret"]),
     }
+
+
+ROOM_TAGS = {"temple", "stage"}  # v0.7.11: an acolyte's free rest, a show (rules.json backgrounds)
+NPC_TAGS = {"clergy", "underworld", "commoner", "military"}  # the people of the hero's past (rules.json backgrounds ties)
 
 
 def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
@@ -112,6 +117,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         secret_ids = [sec["id"] for sec in room.get("secrets", [])]
         if len(secret_ids) != len(set(secret_ids)):
             errors.append(f"комната {rid}: id секретов повторяются")
+        errors += [f"комната {rid}: неизвестная метка {t}" for t in room.get("tags", []) if t not in ROOM_TAGS]
         for n in room["npcs"]:
             if n not in npcs:
                 errors.append(f"комната {rid}: нет NPC {n}")
@@ -120,6 +126,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             placed.add(n)
     for nid, npc in npcs.items():
         errors += [f"NPC {nid}: в каталоге нет предмета {x}" for x in npc.get("stock", []) if x not in items]
+        errors += [f"NPC {nid}: неизвестный язык {x}" for x in npc.get("languages", []) if x not in ids["languages"]]
+        errors += [f"NPC {nid}: неизвестная метка {x}" for x in npc.get("tags", []) if x not in NPC_TAGS]
         if npc.get("monster") and npc["monster"] not in ids["monsters"]:
             errors.append(f"NPC {nid}: нет монстра-шаблона {npc['monster']}")
         if npc.get("stock") and not npc.get("trader"):

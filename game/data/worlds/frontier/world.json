@@ -202,6 +202,9 @@
 					"text": "на листке с портретом — лицо юноши и подпись капитана Ратмира: «Пропал у Тёмной лощины. Видевших — к воротам»",
 					"skill": "investigation"
 				}
+			],
+			"tags": [
+				"stage"
 			]
 		},
 		"brod-tavern-kitchen": {
@@ -303,7 +306,11 @@
 					"text": "знак пламени в круге — тот же, что был на знамёнах Пепельного Князя",
 					"skill": "investigation"
 				}
-			]
+			],
+			"tags": [
+				"stage"
+			],
+			"thieves_sign": "на срубе колодца нацарапан воровской знак: «здесь берут краденое — спроси у лотка с амулетами»"
 		},
 		"brod-smithy": {
 			"name": "Кузница",
@@ -374,7 +381,10 @@
 			],
 			"safe": {
 				"rest_cost_cp": 0
-			}
+			},
+			"tags": [
+				"temple"
+			]
 		},
 		"brod-gate": {
 			"name": "Северные ворота",
@@ -485,7 +495,8 @@
 					"text": "под стёсанными знаками угадывается охранный обет: менгир сдерживает что-то в лощине; знаки можно восстановить — или забрать то, что они держат",
 					"skill": "investigation"
 				}
-			]
+			],
+			"druid_sign": "у подножия менгира друидическая метка: «место силы; огонь здесь чужой, его принесли»"
 		},
 		"pushcha-hollow": {
 			"name": "Тёмная лощина",
@@ -943,7 +954,10 @@
 				"candle": 20
 			},
 			"purse_cp": 3000,
-			"monster": "commoner"
+			"monster": "commoner",
+			"tags": [
+				"commoner"
+			]
 		},
 		"npc_serving": {
 			"name": "Мира",
@@ -952,7 +966,10 @@
 			"gender": "female",
 			"description": "Быстрая и острая на язык девушка с тёмной косой.",
 			"personality": "весёлая, наблюдательная, тайно встречается с кем-то из ополчения; боится леса",
-			"monster": "commoner"
+			"monster": "commoner",
+			"tags": [
+				"commoner"
+			]
 		},
 		"npc_veteran": {
 			"name": "Старый Орвин",
@@ -961,7 +978,10 @@
 			"gender": "male",
 			"description": "Однорукий старик у очага, на груди потёртый знак заставы.",
 			"personality": "мрачный, пьёт в долг, уверен, что Пепельный Князь вернётся; знает заставу лучше всех",
-			"monster": "guard"
+			"monster": "guard",
+			"tags": [
+				"military"
+			]
 		},
 		"npc_mercenary": {
 			"name": "Кейра",
@@ -970,7 +990,10 @@
 			"gender": "female",
 			"description": "Женщина в дорожном плаще с луком за спиной, сидит лицом к двери.",
 			"personality": "немногословная и прямая; ищет младшего брата, ушедшего лесорубом в Пущу; платит за правду",
-			"monster": "scout"
+			"monster": "scout",
+			"tags": [
+				"military"
+			]
 		},
 		"npc_cook": {
 			"name": "Тук",
@@ -979,7 +1002,10 @@
 			"gender": "male",
 			"description": "Пухлый полурослик в колпаке, вечно с половником.",
 			"personality": "болтливый, обидчивый, гордится похлёбкой; в последнее время нервничает из-за погреба",
-			"monster": "commoner"
+			"monster": "commoner",
+			"tags": [
+				"commoner"
+			]
 		},
 		"npc_merchant": {
 			"name": "Ферн Кривой",
@@ -1001,7 +1027,10 @@
 				"crowbar": 2
 			},
 			"purse_cp": 15000,
-			"monster": "commoner"
+			"monster": "commoner",
+			"tags": [
+				"underworld"
+			]
 		},
 		"npc_smith": {
 			"name": "Гуннар Тяжёлая Рука",
@@ -1024,7 +1053,10 @@
 				"crossbow_bolt": 40
 			},
 			"purse_cp": 25000,
-			"monster": "thug"
+			"monster": "thug",
+			"tags": [
+				"commoner"
+			]
 		},
 		"npc_herbalist": {
 			"name": "Ведана",
@@ -1040,7 +1072,10 @@
 				"healers_kit": 2
 			},
 			"purse_cp": 12000,
-			"monster": "commoner"
+			"monster": "commoner",
+			"tags": [
+				"commoner"
+			]
 		},
 		"npc_priestess": {
 			"name": "Сестра Илва",
@@ -1055,7 +1090,10 @@
 				"candle": 30
 			},
 			"purse_cp": 4000,
-			"monster": "acolyte"
+			"monster": "acolyte",
+			"tags": [
+				"clergy"
+			]
 		},
 		"npc_captain": {
 			"name": "Капитан Ратмир",
@@ -1064,7 +1102,10 @@
 			"gender": "male",
 			"description": "Усталый мужчина средних лет в старой кольчуге, при мече и с охотничьим рогом на поясе.",
 			"personality": "честный, перегруженный; людей мало, пропавших много; готов заплатить тем, кто сходит в лес",
-			"monster": "veteran"
+			"monster": "veteran",
+			"tags": [
+				"military"
+			]
 		},
 		"npc_hermit": {
 			"name": "Мох",
@@ -1073,7 +1114,10 @@
 			"gender": "male",
 			"description": "Старик в одежде из шкур, волосы спутаны с листьями, глаза светлые и внимательные.",
 			"personality": "говорит загадками, недоверчив к горожанам; говорит, что лес болен и болезнь пришла из лощины",
-			"monster": "druid"
+			"monster": "druid",
+			"tags": [
+				"commoner"
+			]
 		},
 		"npc_prospector": {
 			"name": "Дрогин",
@@ -1082,7 +1126,10 @@
 			"gender": "male",
 			"description": "Жилистый дварф с киркой и фонарём, сидит на перевёрнутой вагонетке.",
 			"personality": "жадный, но не злой; уверен, что обвал открыл что-то ценное; ищет напарника",
-			"monster": "commoner"
+			"monster": "commoner",
+			"tags": [
+				"commoner"
+			]
 		}
 	},
 	"items": {

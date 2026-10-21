@@ -990,5 +990,211 @@
 				"cost": 1
 			}
 		}
+	},
+	"languages": {
+		"_doc": "Languages (v0.7.11, LanguageRules): NPCs of the pack without `languages` speak Common and the language of their people (by_race: the start of the Russian race word). understand_spells: a spell cast on oneself that lets the hero understand every tongue for an hour.",
+		"by_race": {
+			"дварф": "dwarvish",
+			"эльф": "elvish",
+			"полуэльф": "elvish",
+			"гном": "gnomish",
+			"полурослик": "halfling",
+			"орк": "orc",
+			"полуорк": "orc",
+			"драконорожд": "draconic",
+			"тифлинг": "infernal",
+			"гоблин": "goblin",
+			"кобольд": "draconic"
+		},
+		"secret": {"thieves_cant": "Воровской жаргон", "druidic": "Друидический"},
+		"understand_spells": [
+			"comprehend_languages",
+			"tongues"
+		]
+	},
+	"backgrounds": {
+		"_doc": "Background features (v0.7.11, BackgroundRules): `ties` — the tag of the pack's NPCs who like the hero from the start (+1 attitude) and `tie_text` for the master; temple_rest — a free long rest in a room tagged temple; forage — a camp without food once a day outside settlements; wayfinder — a quarter less on the way outside settlements; stage_lodging — a show on a stage gives a free room that night; `master` — the rule for the master. _perform — the pay of a show by the Performance total.",
+		"_perform": {
+			"dc_tier": "medium",
+			"good_cp": 50,
+			"great_cp": 200,
+			"great_total": 20
+		},
+		"acolyte": {
+			"ties": "clergy",
+			"tie_text": "единоверец героя-прислужника: поможет, приютит, вылечит",
+			"temple_rest": true,
+			"master": "в храмах своей веры героя приютят, накормят и вылечат бесплатно; единоверцы помогают"
+		},
+		"criminal": {
+			"ties": "underworld",
+			"tie_text": "связной: знает героя по преступному миру",
+			"master": "у героя есть связной в преступном мире: через него можно передать весть, найти скупщика, узнать то, что прячут от стражи"
+		},
+		"folk_hero": {
+			"ties": "commoner",
+			"tie_text": "простой человек: уважает героя из народа, спрячет и накормит",
+			"master": "простые люди укроют героя, если он не опасен им самим, и не выдадут страже"
+		},
+		"soldier": {
+			"ties": "military",
+			"tie_text": "служивый: уважает звание героя-солдата",
+			"master": "солдаты и стража уважают звание героя: слушают, пропускают, дают на время коня или снаряжение"
+		},
+		"sage": {
+			"master": "если герой чего-то не знает, он знает, где и у кого это узнать: подскажи место или человека из мира"
+		},
+		"outlander": {
+			"forage": true,
+			"wayfinder": true,
+			"master": "герой помнит карты и местность, вне поселений находит еду и воду для себя (лагерь без припасов раз в день)"
+		},
+		"entertainer": {
+			"stage_lodging": true,
+			"master": "за выступление в таверне или на площади герою дают ночлег и еду; публика его узнаёт"
+		}
+	},
+	"tools": {
+		"_doc": "Tools in checks (v0.7.11, BackgroundRules.tool_check): the master's check names `tool`; the hero proficient with it and carrying it adds the proficiency bonus, or gets advantage when also proficient in a skill of `skills` (XGtE); `required` — without the tool the check fails (a lock without thieves' tools).",
+		"thieves_tools": {
+			"skills": [
+				"sleight_of_hand",
+				"investigation"
+			],
+			"required": true
+		},
+		"herbalism_kit": {
+			"skills": [
+				"nature",
+				"medicine",
+				"survival"
+			]
+		},
+		"disguise_kit": {
+			"skills": [
+				"deception",
+				"performance"
+			]
+		},
+		"forgery_kit": {
+			"skills": [
+				"deception",
+				"investigation"
+			]
+		},
+		"poisoners_kit": {
+			"skills": [
+				"nature",
+				"investigation"
+			]
+		},
+		"healers_kit": {
+			"skills": [
+				"medicine"
+			]
+		},
+		"navigators_tools": {
+			"skills": [
+				"survival"
+			]
+		},
+		"cartographers_tools": {
+			"skills": [
+				"survival",
+				"history"
+			]
+		},
+		"smiths_tools": {
+			"skills": [
+				"athletics",
+				"investigation"
+			]
+		},
+		"masons_tools": {
+			"skills": [
+				"investigation",
+				"history"
+			]
+		},
+		"carpenters_tools": {
+			"skills": [
+				"athletics",
+				"investigation"
+			]
+		},
+		"tinkers_tools": {
+			"skills": [
+				"investigation",
+				"arcana"
+			]
+		},
+		"alchemists_supplies": {
+			"skills": [
+				"arcana",
+				"investigation"
+			]
+		},
+		"dice_set": {
+			"skills": [
+				"deception",
+				"insight"
+			]
+		},
+		"playing_card_set": {
+			"skills": [
+				"deception",
+				"insight"
+			]
+		},
+		"lute": {
+			"skills": [
+				"performance"
+			]
+		},
+		"flute": {
+			"skills": [
+				"performance"
+			]
+		},
+		"lyre": {
+			"skills": [
+				"performance"
+			]
+		},
+		"drum": {
+			"skills": [
+				"performance"
+			]
+		},
+		"bagpipes": {
+			"skills": [
+				"performance"
+			]
+		},
+		"horn": {
+			"skills": [
+				"performance"
+			]
+		},
+		"pan_flute": {
+			"skills": [
+				"performance"
+			]
+		},
+		"shawm": {
+			"skills": [
+				"performance"
+			]
+		},
+		"viol": {
+			"skills": [
+				"performance"
+			]
+		},
+		"dulcimer": {
+			"skills": [
+				"performance"
+			]
+		}
 	}
 }

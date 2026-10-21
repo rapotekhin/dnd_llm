@@ -157,16 +157,16 @@ func _long_rest(s: GameSession, data: Dictionary) -> void:
 	var c := s.character
 	_text(tr("LONG_REST_TITLE"), UiTheme.HEADING)
 	_text(tr("LONG_REST_GIVES").format({"clock": "%02d:00" % (int(TimeRules.cfg(data)["wake_minute"]) / 60)}), UiTheme.MUTED_LABEL)
-	var place := ExplorationRules.rest_place(data["world"], s.room_id)
+	var place := ExplorationRules.rest_place(data["world"], s.room_id, s, data)
 	if not place.is_empty():
 		var cost := int(place["cost_cp"])
 		var inn := Button.new()
 		inn.name = "RestInn"
 		inn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		inn.text = tr("BTN_LONG_REST_COST").format({"cost": Money.format(cost)}) if cost > 0 else tr("BTN_LONG_REST")
+		inn.text = tr("BTN_LONG_REST_COST").format({"cost": Money.format(cost)}) if cost > 0 			else tr("BTN_LONG_REST_FREE") if bool(place.get("free", false)) else tr("BTN_LONG_REST")
 		inn.custom_minimum_size = Vector2(0, 56)
 		inn.theme_type_variation = UiTheme.ACCENT_BUTTON
-		var why := ExplorationRules.can_rest(s, data["world"])
+		var why := ExplorationRules.can_rest(s, data["world"], data)
 		inn.disabled = GameState.is_busy() or not why.is_empty()
 		inn.tooltip_text = tr(why) if not why.is_empty() else ""
 		inn.pressed.connect(func() -> void:
@@ -177,6 +177,20 @@ func _long_rest(s: GameSession, data: Dictionary) -> void:
 				_error.text = tr(err))
 		_box.add_child(inn)
 	_text(tr("LONG_REST_CAMP").format({"need": ExplorationRules.camp_need(data)}), UiTheme.HEADING)
+	if BackgroundRules.can_forage(s, data):  # an outlander finds food (v0.7.11)
+		var forage := Button.new()
+		forage.name = "RestForage"
+		forage.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		forage.text = tr("LONG_REST_FORAGE")
+		forage.custom_minimum_size = Vector2(0, 48)
+		forage.disabled = GameState.is_busy() or not ExplorationRules.can_camp(s, data).is_empty()
+		forage.pressed.connect(func() -> void:
+			var err := GameState.long_rest({"forage": 1})
+			if err.is_empty():
+				visible = false
+			else:
+				_error.text = tr(err))
+		_box.add_child(forage)
 	var have := ExplorationRules.camp_food(c, data)
 	var food: Dictionary = data["rules"]["hero_effects"]["camp"]["food"]
 	if have.is_empty():

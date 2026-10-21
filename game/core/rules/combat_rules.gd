@@ -1964,7 +1964,8 @@ static func snapshot(s: GameSession, data: Dictionary) -> Dictionary:
 		foes.append({"id": id, "name": f["name"], "monster": _monster(data, f)["name"], "distance_ft": cols_between(f, p) * int(cfg(data)["col_ft"]),
 			"side": "left" if int(f["col"]) < int(p["col"]) else "right" if int(f["col"]) > int(p["col"]) else "same",
 			"status": f["status"], "health": health_key(f).trim_prefix("HEALTH_").to_lower(), "description": f.get("desc", ""),
-			"surprised": bool(f.get("surprised", false)), "conditions": foe_conditions(data, f)})
+			"surprised": bool(f.get("surprised", false)), "conditions": foe_conditions(data, f),
+			"speaks": LanguageRules.foe_speech(data, f), "understands_hero": LanguageRules.foe_understands(s.character, data, f)})
 	var incoming: Array[Dictionary] = []
 	for w: Dictionary in s.combat.get("incoming", []):
 		incoming.append({"names": w["names"], "side": "left" if int(w["col"]) < 0 else "right",
@@ -2009,9 +2010,17 @@ static func can_parley(s: GameSession, data: Dictionary, skill: String) -> Strin
 		return "COMBAT_NO_PARLEY"
 	if not enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
 		return "COMBAT_NO_PARLEY"
+	if skill == "persuasion" and not parley_understood(s, data):
+		return "COMBAT_NO_LANGUAGE"  # v0.7.11: nobody understands the hero's words
 	if int(s.combat.get("parley_fail", 0)) >= int(cfg(data)["parley"].get("failures", 2)):
 		return "COMBAT_PARLEY_REFUSED"
 	return ""
+
+
+## Whether one of the intelligent foes still fighting understands the hero (a common tongue, telepathy, a spell).
+static func parley_understood(s: GameSession, data: Dictionary) -> bool:
+	return enemies(s).any(func(id: String) -> bool:
+		return _intelligent(data, fighter(s, id)) and LanguageRules.foe_understands(s.character, data, fighter(s, id)))
 
 
 ## The parley so far for the button and the master: «успехов 1 из 3, провалов 0 из 2, Сл 17».

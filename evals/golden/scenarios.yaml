@@ -1154,3 +1154,82 @@ scenarios:
     rubric:
       - "Мастер не накладывает опутывание повторно и не наносит урон героине сам; паутина держит по итогу проверки"
 
+  - id: language_npc_no_common_tongue
+    title: "NPC не понимает языка героя — чужая речь, уговоры словами не работают"
+    category: rules
+    extends: tavern
+    input: "Подхожу к орку у двери и вежливо уговариваю его пропустить меня в погреб."
+    snapshot:
+      scene:
+        description: "У двери в погреб стоит орк-наёмник с секирой и что-то бурчит себе под нос."
+        npcs:
+          - {id: npc_orc, name: "Гхаш", role: "наёмник у двери", race: "орк", attitude: indifferent,
+             speaks: "орочий", understands_hero: false}
+      character:
+        name: "Айра"
+        gender: female
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 16
+        languages: ["Общий", "Эльфийский"]
+    engine:
+      check: {d20: [14], bonus: 1, total: 1, dc: 10, success: false, nat: 14, blocked: false}
+    expect:
+      effects: {forbidden_kinds: [npc_attitude, move]}
+    rubric:
+      - "Орк не понимает слов героини: отвечает на своём языке или жестами, без перевода её просьбы в согласие"
+      - "Её не пропускают из-за вежливых слов; можно объясниться жестами, монетой или угрозой"
+
+  - id: tool_pick_lock
+    title: "Вскрыть замок отмычками — проверка с воровскими инструментами"
+    category: rules
+    extends: tavern
+    input: "Достаю отмычки и вскрываю замок на сундуке в углу."
+    snapshot:
+      scene:
+        description: "В углу зала стоит окованный сундук с висячим замком; хозяин ушёл в погреб."
+        props:
+          - {prop_id: p_chest, name: "Окованный сундук", state: closed, owner: "Горм", description: "Тяжёлый сундук с висячим замком."}
+      character:
+        name: "Дамир"
+        gender: male
+        class: rogue
+        level: 2
+        hp: {current: 14, max: 14}
+        ac: 14
+        tools: ["Воровские инструменты [thieves_tools]"]
+        inventory:
+          - {item_id: thieves_tools, name: "Воровские инструменты", qty: 1}
+    engine:
+      check: {d20: [15], bonus: 7, total: 22, dc: 15, success: true, nat: 15, blocked: false}
+    expect:
+      check: {required: true, skill_in: [sleight_of_hand], tool_in: [thieves_tools]}
+    rubric:
+      - "Вскрытие замка — проверка Ловкости рук с инструментом thieves_tools; исход описан по её итогу"
+
+  - id: background_soldier_tie
+    title: "Солдат узнаёт сослуживца — связь с прошлым героя без подарков от мастера"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Сержант, я тоже служил — третий пограничный полк. Мне нужно поговорить с капитаном."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_guard, name: "сержант Ведда", role: "стражница", attitude: friendly,
+             tie: "служивый: уважает звание героя-солдата"}
+      character:
+        name: "Бран"
+        gender: male
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 16
+        background: "Солдат"
+        background_feature: "Воинское звание: солдаты и стража уважают звание героя: слушают, пропускают, дают на время коня или снаряжение"
+    expect:
+      effects: {forbidden_kinds: [coins, give_item]}
+    rubric:
+      - "Сержант признаёт в герое сослуживца и говорит с ним как со своим — теплее, чем с чужаком; помощь по делу может зависеть от того, что герой скажет дальше"
+      - "Мастер не дарит монет и вещей от себя"

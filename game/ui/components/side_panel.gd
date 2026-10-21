@@ -196,8 +196,19 @@ func _rebuild() -> void:
 				continue
 			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act)
 			b.name = "Exit_" + e
+		# A show on a stage of the pack (v0.7.11): a Performance check for coins, an entertainer's free room.
+		if (world.room(s.room_id).get("tags", []) as Array).has("stage"):
+			var perform_why := BackgroundRules.can_perform(s, Catalog.data)
+			var do_perform := func() -> void:
+				var err := GameState.perform()
+				if not err.is_empty():
+					EventBus.message.emit(tr(err))
+			var pf := _button(tr("BTN_PERFORM"), do_perform, can_act)
+			pf.name = "PerformButton"
+			pf.disabled = not can_act or not perform_why.is_empty()
+			pf.tooltip_text = tr(perform_why) if not perform_why.is_empty() else tr("PERFORM_TIP")
 		# The long rest (v0.7.8): the inn's room or a camp with food — chosen in the dialog.
-		var inn_ok := ExplorationRules.can_rest(s, Catalog.data["world"]).is_empty()
+		var inn_ok := ExplorationRules.can_rest(s, Catalog.data["world"], Catalog.data).is_empty()
 		var camp_why := ExplorationRules.can_camp(s, Catalog.data)
 		var rest := _button(tr("BTN_LONG_REST_OPEN"), long_rest_requested.emit, can_act)
 		rest.name = "RestButton"

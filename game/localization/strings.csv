@@ -58,12 +58,14 @@ BTN_LOAD,Загрузить
 BTN_LOAD_BEFORE_FIGHT,Загрузить момент перед боем
 BTN_LONG_REST,Снять комнату
 BTN_LONG_REST_COST,Снять комнату ({cost})
+BTN_LONG_REST_FREE,Отдохнуть бесплатно
 BTN_LONG_REST_OPEN,Долгий отдых…
 BTN_LOOK,Осмотреться
 BTN_LOOK_TIP,"Проверка Внимательности по этой комнате: заметить то, что на виду. Повтор без перемен — прежний итог"
 BTN_MAP,Карта
 BTN_MENU,Меню
 BTN_NEW_GAME,Новая игра
+BTN_PERFORM,Выступить
 BTN_POCKETS,Карманы: {name}
 BTN_PREPARE,Подготовить заклинания
 BTN_PREP_CONFIRM,Подготовить
@@ -220,6 +222,7 @@ COMBAT_NO_CHARGE,Заряды кончились — нужен отдых
 COMBAT_NO_FEATURE,Этого умения у героя нет
 COMBAT_NO_FRENZY,"Неистовство — только в ярости, один раз за бой"
 COMBAT_NO_KI,Не хватает ки
+COMBAT_NO_LANGUAGE,"Никто из врагов не понимает твоего языка — уговорить не выйдет, только запугать"
 COMBAT_NO_MOVE,Движение этого хода уже потрачено — возьмите Рывок
 COMBAT_NO_PARLEY,Здесь не с кем договариваться
 COMBAT_NO_SPEED,Скорость 0 — с места не сдвинуться
@@ -400,6 +403,7 @@ JOURNAL_TAB_QUESTS,Задания
 JOURNAL_TITLE,Журнал
 LONG_REST_CAMP,Лагерь — нужна еда на {need} очка
 LONG_REST_FOOD,"{item}: есть {have}, по {points} очк."
+LONG_REST_FORAGE,"Лагерь без припасов — еду найду сам (странник, раз в день)"
 LONG_REST_GIVES,"До {clock} утра: все хиты и ячейки, половина костей хитов, истощение проходит. Пока вы спите, идёт время."
 LONG_REST_NO_FOOD,В рюкзаке нет еды. Пайки и хлеб продаёт трактирщик.
 LONG_REST_POINTS,Припасы: {have} из {need}
@@ -490,6 +494,11 @@ OPT_BUDGET_BAD,Лимит — число долларов от 0.01 до 1000
 OPT_REACTIONS,"Реакции и умения в бою (кара, уклонение, отражение снарядов)"
 OPT_RESOLUTION,Размер окна
 PARTNER_LINE,{role} · {race} · отношение: {attitude}
+PERFORM_DONE_TODAY,Сегодня выступление уже было — публика ждёт завтра
+PERFORM_NOT_NOW,Сейчас не до выступлений
+PERFORM_NO_STAGE,Здесь негде выступать
+PERFORM_SAY,Я выступаю перед публикой
+PERFORM_TIP,Проверка Выступления: монеты от публики; артисту — ещё и бесплатный ночлег сегодня. Раз в день.
 PLACEHOLDER_ACTION,Что вы делаете?
 PLACEHOLDER_ATTACHED,Что вы делаете при этом? Можно отправить и без слов
 PLACEHOLDER_COMBAT,Импровизация (стоит действия): что вы делаете?
@@ -539,10 +548,12 @@ SEARCH_SAY_PERCEPTION,Осматриваюсь по сторонам
 SHEET_ABILITIES,Характеристика · модификатор · спасбросок (● — владение)
 SHEET_ABILITY_ROW,{name} {score} ({mod}) · спасбросок {save}
 SHEET_ATTACK,"Атака: {name} {hit}, урон {dmg}"
+SHEET_BG_IN_GAME,В игре: {rule}
 SHEET_CONCENTRATION,Концентрация: {spell}
 SHEET_EQUIPPED,Надето и в руках
 SHEET_HIT_DICE,Кости хитов: {left} из {max}
 SHEET_LANGUAGES,Языки: {list}
+SHEET_LANGUAGES_TIP,"Кто не понимает твоего языка, того не уговорить и не обмануть словами; запугать можно, но с помехой. Тайные языки (воровской жаргон, друидический) открывают знаки, которые видишь только ты."
 SHEET_LINE,"{race}, {class}, {level} уровень · {background}"
 SHEET_PASSIVE,пассивная Внимательность {n}
 SHEET_PROF_SPEED,Бонус мастерства +{prof} · скорость {speed} футов
@@ -559,6 +570,8 @@ SHEET_SPELLS_PREPARED,Подготовлены
 SHEET_TAB_FEATURES,Умения и заклинания
 SHEET_TAB_GEAR,Снаряжение
 SHEET_TAB_STATS,Характеристики
+SHEET_TOOLS,Инструменты: {list}
+SHEET_TOOLS_TIP,"Действуешь инструментом, которым владеешь, и он с собой — бонус мастерства к проверке, а если владеешь и навыком — преимущество. Замок без воровских инструментов не вскрыть."
 SHEET_WEIGHT,Вес: {n} из {max} фнт.
 SHOP_CLOSED,Ночью лавки закрыты — приходите утром
 SHOP_CLOSED_FOR_YOU,Лавка закрыта для вас до завтра

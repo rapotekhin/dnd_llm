@@ -77,6 +77,18 @@
       "default": null,
       "title": "Target Id"
     },
+    "tool": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tool"
+    },
     "turn_id": {
       "title": "Turn Id",
       "type": "string"

@@ -209,16 +209,20 @@ static func found_texts(s: GameSession, world: Dictionary, room_id: String) -> A
 
 
 ## {"cost_cp": n} when a long rest is possible in this room, {} otherwise.
-static func rest_place(world: Dictionary, room_id: String) -> Dictionary:
-	var safe: Variant = world["rooms"].get(room_id, {}).get("safe")
+## With the session and the data (v0.7.11) a background may make it free: an acolyte in a temple of the pack (even
+## where nobody rents rooms), an entertainer after a show.
+static func rest_place(world: Dictionary, room_id: String, s: GameSession = null, data: Dictionary = {}) -> Dictionary:
+	var room: Dictionary = world["rooms"].get(room_id, {})
+	var free := s != null and not data.is_empty() and BackgroundRules.free_rest(s, data, room)
+	var safe: Variant = room.get("safe")
 	if not (safe is Dictionary):
-		return {}
-	return {"cost_cp": int(safe.get("rest_cost_cp", 0))}
+		return {"cost_cp": 0, "free": true} if free and (room.get("tags", []) as Array).has("temple") else {}
+	return {"cost_cp": 0 if free else int(safe.get("rest_cost_cp", 0)), "free": free}
 
 
 ## "" when the character can take a long rest here now, otherwise a localization key.
-static func can_rest(s: GameSession, world: Dictionary) -> String:
-	var place := rest_place(world, s.room_id)
+static func can_rest(s: GameSession, world: Dictionary, data: Dictionary = {}) -> String:
+	var place := rest_place(world, s.room_id, s, data)
 	if place.is_empty():
 		return "REST_NOT_SAFE"
 	if s.in_conversation():
@@ -237,7 +241,7 @@ static func can_camp(s: GameSession, data: Dictionary) -> String:
 	var enc: Dictionary = data["world"]["rooms"].get(s.room_id, {}).get("encounter", {})
 	if not enc.is_empty() and not s.encounters_done.has(str(enc.get("id", ""))):
 		return "REST_DANGER"
-	if camp_points(data, camp_food(s.character, data)) < camp_need(data):
+	if camp_points(data, camp_food(s.character, data)) < camp_need(data) and not BackgroundRules.can_forage(s, data):
 		return "REST_NO_FOOD"
 	return ""
 
@@ -284,6 +288,8 @@ static func camp_error(s: GameSession, data: Dictionary, supplies: Dictionary) -
 	var why := can_camp(s, data)
 	if not why.is_empty():
 		return why
+	if supplies.has("forage"):  # an outlander finds food (v0.7.11)
+		return "" if BackgroundRules.can_forage(s, data) else "REST_NO_FOOD"
 	var have := camp_food(s.character, data)
 	for id: String in supplies:
 		if int(supplies[id]) < 0 or int(supplies[id]) > int(have.get(id, 0)):
@@ -295,12 +301,16 @@ static func camp_error(s: GameSession, data: Dictionary, supplies: Dictionary) -
 ## (`supplies`, camp_error first) eats the food. `data` = Catalog.data.
 static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {}) -> Array[String]:
 	var c := s.character
-	var cost := int(rest_place(data["world"], s.room_id).get("cost_cp", 0)) if supplies.is_empty() else 0
+	var cost := int(rest_place(data["world"], s.room_id, s, data).get("cost_cp", 0)) if supplies.is_empty() else 0
 	var lines: Array[String] = ["Долгий отдых" if supplies.is_empty() else "Долгий отдых в лагере"]
 	if cost > 0:
 		c["gold_cp"] = int(c["gold_cp"]) - cost
 		lines.append("−" + Money.format(cost))
 	var eaten: Array[String] = []
+	if supplies.has("forage"):
+		c["foraged_day"] = s.day
+		lines.append("еду нашёл сам — ягоды, коренья, силки")
+		supplies = {}
 	for id: String in supplies:
 		var n := int(supplies[id])
 		if n <= 0:

@@ -17,7 +17,9 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		var n := world.npc(id)
 		npcs.append({"npc_id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 			"gender": n.get("gender", "other"), "description": n.get("description", ""),
-			"personality": n.get("personality", ""), "attitude": s.attitude(id), "trader": bool(n.get("trader", false))})
+			"personality": n.get("personality", ""), "attitude": s.attitude(id), "trader": bool(n.get("trader", false)),
+			"speaks": ", ".join(LanguageRules.npc(data, n).map(func(l: String) -> String: return LanguageRules.name_of(data, l).to_lower())),
+			"understands_hero": LanguageRules.npc_understands(s.character, data, n), "tie": BackgroundRules.tie_text(s.character, data, n)})
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
 		summaries["location"] = s.summaries["location:" + loc_id]
@@ -28,7 +30,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		"scene": {
 			"location_name": loc.get("name", loc_id), "location_description": loc.get("description", ""),
 			"room_id": s.room_id, "room_name": room.get("name", s.room_id), "room_description": room.get("description", ""),
-			"exits": exits, "npcs": npcs, "hooks": room.get("hooks", []), "flags": s.flags,
+			"exits": exits, "npcs": npcs, "hooks": hooks(s, data, room), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
 			"props": PropRules.snapshot(s, data, s.room_id),
 			"closed_exits": closed_exits(s, data["world"]),
@@ -49,6 +51,17 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		out["combat"] = CombatRules.snapshot(s, data)
 	if s.mode == GameSession.MODE_TRADE and not s.npc_id.is_empty():
 		out["trade"] = TradeRules.info(s, data, s.npc_id)
+	return out
+
+
+## The room's hooks; a secret sign only a rogue (Thieves' Cant) or a druid (Druidic) reads (v0.7.11).
+static func hooks(s: GameSession, data: Dictionary, room: Dictionary) -> Array:
+	var out: Array = (room.get("hooks", []) as Array).duplicate()
+	var langs := LanguageRules.hero(s.character)
+	if langs.has("thieves_cant") and not str(room.get("thieves_sign", "")).is_empty():
+		out.append("тайный знак (читает только герой): " + str(room["thieves_sign"]))
+	if langs.has("druidic") and not str(room.get("druid_sign", "")).is_empty():
+		out.append("тайный знак (читает только герой): " + str(room["druid_sign"]))
 	return out
 
 
@@ -100,6 +113,10 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"skills": c.get("skills", {}), "gold_cp": int(c.get("gold_cp", 0)),
 		"inventory": inventory, "features": CharacterRules.feature_names(c, data),
 		"background": str(data["backgrounds"].get(str(c.get("background", "")), {}).get("name", "")),
+		"background_feature": BackgroundRules.master_text(c, data),
+		"languages": LanguageRules.hero(c).map(func(l: String) -> String: return LanguageRules.name_of(data, l)),
+		"tools": (c.get("tools", []) as Array).map(func(t: Variant) -> String:
+			return "%s [%s]%s" % [BackgroundRules.tool_name(data, str(t)), t, "" if int(c.get("inventory", {}).get(str(t), 0)) > 0 else " (нет с собой)"]),
 		"abilities": c.get("abilities", {}),
 		"skill_proficiencies": c.get("skill_profs", []), "speed": int(c.get("speed", 30)), "equipped": equipped,
 		"backstory": str(c.get("story", "")),

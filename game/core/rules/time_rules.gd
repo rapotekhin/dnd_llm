@@ -80,6 +80,8 @@ static func on_move(s: GameSession, data: Dictionary, from: String, to: String) 
 	var w := WorldView.new(data["world"])
 	var same := w.location_id(from) == w.location_id(to)
 	var minutes := int(cfg(data)["move_minutes" if same else "travel_minutes"])
+	if not same:
+		minutes = BackgroundRules.travel_minutes(s, data, minutes, to)  # an outlander's Wanderer (v0.7.11)
 	var lines := advance(s, data, minutes)
 	lines.append_array(march(s, data, minutes))
 	return lines
