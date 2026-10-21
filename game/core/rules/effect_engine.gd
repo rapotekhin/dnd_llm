@@ -156,7 +156,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				"summary": "Отдано: %s%s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else ""]}
 		"npc_attitude":
 			var npc_id := str(e.get("npc_id", ""))
-			if not s.npcs_alive(world.npcs_in(s.room_id)).has(npc_id):
+			if not s.npcs_here(world.world, s.room_id).has(npc_id):
 				return {"reason": "NPC %s нет в этой комнате" % npc_id}
 			var delta := clampi(int(e.get("delta", 0)), -2, 2)
 			if delta == 0:

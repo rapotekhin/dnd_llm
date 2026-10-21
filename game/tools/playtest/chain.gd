@@ -62,6 +62,11 @@ func run() -> void:
 		return
 	step("the menhir restored", s.flags.has("menhir_restored") and int(s.character["inventory"].get("potion_of_greater_healing", 0)) >= 2,
 		"hermit %d" % s.attitude("npc_hermit"))
+	await frames(3)  # v0.7.14.1: the glade by the flag — lit, and a free rest by the hermit's fire
+	var rest: Button = find(screen(), "RestButton")
+	step("the restored glade: lit and safe", str(SceneRules.room(s, node("Catalog").data["world"], s.room_id)["description"]).contains("залитая светом")
+		and rest != null and not rest.disabled and ExplorationRules.can_rest(s, node("Catalog").data["world"], node("Catalog").data).is_empty(), "")
+	await shot("glade_restored")
 	if not await _walk(gs, ["pushcha-trail", "pushcha-edge", "brod-gate"]):
 		return
 	var gold: int = s.character["gold_cp"]

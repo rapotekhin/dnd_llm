@@ -228,7 +228,7 @@ func test_finish_combat_takes_the_chosen_loot_and_remembers_the_fight() -> void:
 	assert_int(s.character["gold_cp"]).is_equal(gold + 20)
 	assert_int(int(s.character["inventory"].get("club", 0))).is_greater_equal(1)
 	assert_array(s.encounters_done).contains(["test_enc"])
-	assert_bool(s.npcs_alive(GameState.world().npcs_in(s.room_id)).has(TestUtils.INNKEEPER)).is_false()
+	assert_bool(s.npcs_here(GameState.world().world, s.room_id).has(TestUtils.INNKEEPER)).is_false()
 
 
 func test_effects_in_a_fight_hit_foes_and_the_master_cannot_move_or_pay() -> void:

@@ -39,7 +39,7 @@ static func stand_in(s: GameSession, world: Dictionary, npc_id: String) -> Strin
 ## Quests the giver in this room offers now (its heir, when the giver is dead; nobody gives work to the wanted hero).
 static func offers_here(s: GameSession, world: Dictionary) -> Array[String]:
 	var out: Array[String] = []
-	var here := s.npcs_alive(WorldView.new(world).npcs_in(s.room_id))
+	var here := s.npcs_here(WorldView.new(world).world, s.room_id)
 	var all := stepped(world)
 	for id: String in all:
 		var giver := stand_in(s, world, str(all[id].get("giver", "")))
@@ -216,7 +216,7 @@ static func choose(s: GameSession, data: Dictionary, quest_id: String, choice_id
 ## Talk steps that can be closed in this room: [{quest_id, action, npc_id}].
 static func talks_here(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	var here := s.npcs_alive(WorldView.new(world).npcs_in(s.room_id))
+	var here := s.npcs_here(WorldView.new(world).world, s.room_id)
 	for id: String in s.quests_active:
 		var step := current(s, world, id)
 		var when: Dictionary = step.get("when", {})
@@ -316,7 +316,7 @@ static func known_flags(world: Dictionary) -> Array[String]:
 static func _collect_flags(v: Variant, out: Array[String]) -> void:
 	if v is Dictionary:
 		for k: Variant in v:
-			if str(k) == "flag" and v[k] is String and not out.has(str(v[k])):
+			if str(k) in ["flag", "if_flag", "if_not_flag"] and v[k] is String and not out.has(str(v[k])):
 				out.append(str(v[k]))
 			else:
 				_collect_flags(v[k], out)

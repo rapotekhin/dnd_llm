@@ -119,6 +119,13 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         if len(secret_ids) != len(set(secret_ids)):
             errors.append(f"комната {rid}: id секретов повторяются")
         errors += [f"комната {rid}: неизвестная метка {t}" for t in room.get("tags", []) if t not in ROOM_TAGS]
+        for v in room.get("variants", []):  # v0.7.14.1: the room by the world's flags
+            keys = {"if_flag", "if_not_flag", "description", "npcs", "hooks", "encounter", "safe"}
+            if not ("if_flag" in v or "if_not_flag" in v) or set(v) - keys:
+                errors.append(f"комната {rid}: вариант — if_flag или if_not_flag и только {', '.join(sorted(keys))}")
+            errors += [f"комната {rid}: в варианте нет NPC {n}" for n in v.get("npcs", []) if n not in npcs]
+            errors += [f"комната {rid}: в варианте нет монстра {f.get('monster')}" for f in v.get("encounter", {}).get("enemies", [])
+                       if f.get("monster") not in ids["monsters"]]
         for n in room["npcs"]:
             if n not in npcs:
                 errors.append(f"комната {rid}: нет NPC {n}")

@@ -200,6 +200,18 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 				e.append("комната %s: секрет — уникальный id, dc (число), text, skill perception | investigation" % id)
 			else:
 				ids[sec["id"]] = true
+		for v: Variant in r.get("variants", []):  # v0.7.14.1: the room by the world's flags
+			if not (v is Dictionary) or not (v.has("if_flag") or v.has("if_not_flag")) 					or (v as Dictionary).keys().any(func(k: Variant) -> bool: return not (SceneRules.KEYS + ["if_flag", "if_not_flag"]).has(str(k))):
+				e.append("комната %s: вариант — {if_flag | if_not_flag, %s}" % [id, ", ".join(SceneRules.KEYS)])
+				continue
+			for n: Variant in v.get("npcs", []):
+				if not w["npcs"].has(str(n)):
+					e.append("комната %s: в варианте нет NPC %s" % [id, n])
+			var venc: Variant = v.get("encounter")
+			if venc is Dictionary:
+				for foe: Variant in venc.get("enemies", []):
+					if not (foe is Dictionary) or not data.get("monsters", {}).has(str(foe.get("monster", ""))):
+						e.append("комната %s: встреча варианта — нет монстра" % id)
 		var enc: Variant = r.get("encounter")
 		if enc != null:
 			if not (enc is Dictionary) or str(enc.get("id", "")).is_empty() or not (enc.get("enemies") is Array) or (enc["enemies"] as Array).is_empty():

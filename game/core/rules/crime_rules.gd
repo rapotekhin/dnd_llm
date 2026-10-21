@@ -44,7 +44,7 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: 
 	lines.append_array(QuestRules.on_death(s, data, npc_id))
 	if not by_hero:
 		return lines
-	var witnesses := s.npcs_alive(world.npcs_in(room_id)).filter(func(id: String) -> bool: return id != npc_id)
+	var witnesses := s.npcs_here(world.world, room_id).filter(func(id: String) -> bool: return id != npc_id)
 	if ConditionRules.invisible(s.character, data):
 		witnesses = []  # an unseen killer: they saw a death, not who did it
 	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "victim": npc_id, "room": room_id, "location": world.location_id(room_id),
@@ -131,7 +131,7 @@ static func check_arrest(s: GameSession, data: Dictionary) -> Array[String]:
 	if not s.wanted.has(loc) or s.arrest == s.room_id or CombatRules.active(s):
 		return []
 	var l := law(data, loc)
-	var guards := s.npcs_alive(world.npcs_in(s.room_id)).filter(func(id: String) -> bool: return (l.get("guards", []) as Array).has(id))
+	var guards := s.npcs_here(world.world, s.room_id).filter(func(id: String) -> bool: return (l.get("guards", []) as Array).has(id))
 	var patrol := TimeRules.abs_minute(s) - int(s.wanted[loc]) >= int(cfg(data)["search_minutes"]) \
 		and not s.sneaking and not ConditionRules.invisible(s.character, data)
 	if guards.is_empty() and not patrol:
@@ -200,7 +200,7 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 		"resist":
 			var foes: Array = [{"monster": str(l.get("guard_monster", "guard")), "count": int(cfg(data)["patrol_size"]),
 				"name": str(l.get("guard_name", "Стражник")), "col": 1, "by_hero": true}]
-			for id: String in s.npcs_alive(world.npcs_in(s.room_id)):
+			for id: String in s.npcs_here(world.world, s.room_id):
 				if (l.get("guards", []) as Array).has(id):
 					var n := world.npc(id)
 					foes.append({"monster": str(n.get("monster", "guard")), "name": str(n.get("name", id)), "desc": str(n.get("description", "")),
@@ -255,7 +255,7 @@ static func search_body(s: GameSession, data: Dictionary, npc_id: String) -> Arr
 		got.append(ItemRules.display_name(data["items"], s.items, id))
 	s.searched.append(npc_id)
 	var lines: Array[String] = ["Обыскано тело %s: %s" % [world.npc(npc_id).get("name", npc_id), ", ".join(got) if not got.is_empty() else "ничего"]]
-	var seen := s.npcs_alive(world.npcs_in(s.room_id))
+	var seen := s.npcs_here(world.world, s.room_id)
 	if not seen.is_empty() and not ConditionRules.invisible(c, data):
 		s.shift_attitude(seen[0], int(data["rules"]["theft"]["caught_attitude"]), data)
 		lines.append("%s видит, как вы обираете мёртвого: отношение хуже" % world.npc(seen[0]).get("name", seen[0]))

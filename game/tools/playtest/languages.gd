@@ -50,7 +50,7 @@ func run() -> void:
 
 	# An innkeeper who speaks only Giant: Persuasion fails by itself.
 	var keeper := ""
-	for id: String in s.npcs_alive(gs.world().npcs_in(s.room_id)):
+	for id: String in s.npcs_here(gs.world().world, s.room_id):
 		keeper = id
 		break
 	if step("someone to talk to in the hall", not keeper.is_empty()):

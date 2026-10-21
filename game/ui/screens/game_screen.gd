@@ -375,7 +375,7 @@ func _refresh_attach(s: GameSession, busy: bool, online: bool) -> void:
 		pick.item_selected.connect(func(i: int) -> void:
 			GameState.attached["slot"] = pick.get_item_id(i))
 		_attach_chip.add_child(pick)
-	var npcs := s.npcs_alive(GameState.world().npcs_in(s.room_id))
+	var npcs := s.npcs_here(GameState.world().world, s.room_id)
 	if not npcs.is_empty():
 		var who := OptionButton.new()
 		who.name = "AttachTarget"

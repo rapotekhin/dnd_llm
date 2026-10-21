@@ -53,7 +53,7 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 	var level := str(int(s.character.get("level", 1)))
 	var value_cap := int(cfg(data)["room_value_cap_cp"].get(level, cfg(data)["room_value_cap_cp"]["5"]))
 	var item_cap := int(cfg(data)["item_value_cap_cp"])
-	var here := s.npcs_alive(WorldView.new(data["world"]).npcs_in(room))
+	var here := s.npcs_here(WorldView.new(data["world"]).world, room)
 	var total := 0
 	var props: Array = []
 	for spec: Variant in specs:
@@ -97,7 +97,7 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 	if str(p.get("item_id", "")).is_empty():
 		return {"reason": "%s не унести — это обстановка; опиши попытку словами или `prop_state`" % p["name"]}
 	var owner := str(p.get("owner", ""))
-	var seen := not owner.is_empty() and s.npcs_alive(WorldView.new(data["world"]).npcs_in(s.room_id)).has(owner)
+	var seen := not owner.is_empty() and s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(owner)
 	return {"plan": {"room": s.room_id, "prop": p["id"], "owner": owner if seen else ""},
 		"summary": "Взято: %s%s" % [p["name"], (" — на глазах у хозяина" if seen else "")]}
 

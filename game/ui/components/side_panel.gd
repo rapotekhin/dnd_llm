@@ -101,7 +101,7 @@ func _rebuild() -> void:
 	if not s.in_conversation() and CrimeRules.held(s):
 		_arrest(s, can_act)
 	if not s.in_conversation():
-		var npcs := s.npcs_alive(world.npcs_in(s.room_id))
+		var npcs := s.npcs_here(world.world, s.room_id)
 		if not npcs.is_empty():
 			_subheading("SIDE_PEOPLE")
 			for id: String in npcs:

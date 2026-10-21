@@ -212,7 +212,7 @@ static func found_texts(s: GameSession, world: Dictionary, room_id: String) -> A
 ## With the session and the data (v0.7.11) a background may make it free: an acolyte in a temple of the pack (even
 ## where nobody rents rooms), an entertainer after a show.
 static func rest_place(world: Dictionary, room_id: String, s: GameSession = null, data: Dictionary = {}) -> Dictionary:
-	var room: Dictionary = world["rooms"].get(room_id, {})
+	var room: Dictionary = SceneRules.room(s, world, room_id)  # a variant may make it safe (v0.7.14.1)
 	var free := s != null and not data.is_empty() and BackgroundRules.free_rest(s, data, room)
 	var safe: Variant = room.get("safe")
 	if not (safe is Dictionary):
@@ -238,7 +238,7 @@ static func can_rest(s: GameSession, world: Dictionary, data: Dictionary = {}) -
 static func can_camp(s: GameSession, data: Dictionary) -> String:
 	if s.in_conversation() or CombatRules.active(s):
 		return "REST_IN_CONVERSATION"
-	var enc: Dictionary = data["world"]["rooms"].get(s.room_id, {}).get("encounter", {})
+	var enc: Dictionary = SceneRules.room(s, data["world"], s.room_id).get("encounter", {})
 	if not enc.is_empty() and not s.encounters_done.has(str(enc.get("id", ""))):
 		return "REST_DANGER"
 	if camp_points(data, camp_food(s.character, data)) < camp_need(data) and not BackgroundRules.can_forage(s, data):

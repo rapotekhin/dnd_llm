@@ -499,6 +499,11 @@ func npcs_alive(ids: Array[String]) -> Array[String]:
 	return ids.filter(func(id: String) -> bool: return not dead_npcs.has(id))
 
 
+## The living pack NPCs in the room now: the room's variants by the world's flags (SceneRules, v0.7.14.1).
+func npcs_here(world: Dictionary, room_id: String) -> Array[String]:
+	return npcs_alive(SceneRules.npcs(self, world, room_id))
+
+
 static func _normalized_merchant(m: Dictionary) -> Dictionary:
 	var out := m.duplicate(true)
 	for k: String in ["purse_cp", "day", "haggle_pct", "haggle_failed_day"]:

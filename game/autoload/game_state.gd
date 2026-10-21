@@ -890,7 +890,7 @@ func set_sneaking(on: bool) -> String:
 
 ## A Stealth roll against the NPCs of `room_id` (none — no roll, ""). A failure marks the room noticed. The line.
 func _sneak_past_people(room_id: String) -> String:
-	var npcs := session.npcs_alive(world().npcs_in(room_id))
+	var npcs := session.npcs_here(world().world, room_id)
 	if npcs.is_empty():
 		return ""
 	var best := 0
@@ -957,7 +957,7 @@ func _combat_outcome() -> void:
 		var enc_loot := {}
 		var enc_id := str(s.combat.get("encounter", ""))
 		for rid: String in Catalog.data["world"]["rooms"]:
-			var enc: Dictionary = Catalog.data["world"]["rooms"][rid].get("encounter", {})
+			var enc: Dictionary = SceneRules.room(s, Catalog.data["world"], rid).get("encounter", {})
 			if str(enc.get("id", "")) == enc_id and not enc_id.is_empty():
 				enc_loot = enc.get("loot", {})
 		CombatRules.results(s, Catalog.data, enc_loot)
@@ -1176,7 +1176,7 @@ func _move_to(room_id: String, lines: Array[String]) -> void:
 	_add(GameSession.effect_entry(lines))
 	EventBus.state_changed.emit()
 	if _live_encounter(room_id):
-		var enc: Dictionary = world().room(room_id)["encounter"]
+		var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id)["encounter"]
 		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
 			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {}), "parley": str(enc.get("parley", ""))})
 		return
@@ -1202,7 +1202,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 
 
 func _live_encounter(room_id: String) -> bool:
-	var enc: Dictionary = world().room(room_id).get("encounter", {})
+	var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id).get("encounter", {})  # by the flags (v0.7.14.1)
 	return not enc.is_empty() and not session.encounters_done.has(str(enc["id"]))
 
 
@@ -1419,7 +1419,7 @@ func _quest_progress() -> void:
 
 ## NPC button: start a conversation (or trade with a trader); the NPC greets the player.
 func talk_to(npc_id: String, trade: bool = false) -> bool:
-	if session == null or is_busy() or not Backend.is_ready() or not session.npcs_alive(world().npcs_in(session.room_id)).has(npc_id):
+	if session == null or is_busy() or not Backend.is_ready() or not session.npcs_here(world().world, session.room_id).has(npc_id):
 		return false
 	if trade and (not world().is_trader(npc_id) or TimeRules.shops_closed(session, Catalog.data) or TheftRules.shop_closed_for(session, npc_id, Catalog.data)):
 		return false
@@ -1697,14 +1697,14 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 	if mode == GameSession.MODE_EXPLORATION and s.in_conversation():
 		_end_conversation()
 		return "resume"
-	if mode == GameSession.MODE_COMBAT and s.npcs_alive(world().npcs_in(s.room_id)).has(npc_id):
+	if mode == GameSession.MODE_COMBAT and s.npcs_here(world().world, s.room_id).has(npc_id):
 		var npc := world().npc(npc_id)
 		s.pending_fight = [{"monster": str(npc.get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])),
 			"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0, "by_hero": true}]
 		return "combat"
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and not s.in_conversation() and turn_kind != "action":
 		return ""  # a conversation starts only from the player's own words (v0.7.2: the master opened one on «resume»)
-	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and s.npcs_alive(world().npcs_in(s.room_id)).has(npc_id):
+	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and s.npcs_here(world().world, s.room_id).has(npc_id):
 		if mode == GameSession.MODE_TRADE and (not world().is_trader(npc_id) or TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, npc_id, Catalog.data)):
 			mode = GameSession.MODE_SOCIAL
 		if s.in_conversation() and s.npc_id == npc_id:
@@ -1929,7 +1929,7 @@ func _theft_target(params: Dictionary) -> String:
 	if str(params.get("skill", "")) != "sleight_of_hand" or CombatRules.active(session):
 		return ""
 	var tid := str(params.get("target_id", "")) if params.get("target_id") != null else ""
-	return tid if session.npcs_alive(world().npcs_in(session.room_id)).has(tid) else ""
+	return tid if session.npcs_here(world().world, session.room_id).has(tid) else ""
 
 
 ## Theft by words: the engine gives the loot (rules.theft) or the NPC notices; the master narrates the note.

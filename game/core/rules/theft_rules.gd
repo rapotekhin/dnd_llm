@@ -70,7 +70,7 @@ static func dc(s: GameSession, data: Dictionary, npc_id: String, e: Dictionary) 
 
 ## "" when the player can pick this NPC's pockets now: the NPC is here, the player is not caught by it today.
 static func can_steal(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	if not s.npcs_alive(WorldView.new(data["world"]).npcs_in(s.room_id)).has(npc_id):
+	if not s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(npc_id):
 		return "THEFT_NOBODY"
 	if int(s.caught_by.get(npc_id, 0)) == s.day:
 		return "THEFT_CAUGHT"
