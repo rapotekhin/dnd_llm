@@ -3,11 +3,14 @@
 import logging
 import time
 from collections.abc import Callable
+from contextvars import ContextVar
 
 import httpx
 from pydantic_ai.models import Model
+from pydantic_ai.models.wrapper import WrapperModel
 
 from ..protocol import ModelInfo
+from .providers import PICKER
 
 log = logging.getLogger("llm_server.models")
 
@@ -15,6 +18,10 @@ OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 OPENROUTER_CREDITS_URL = "https://openrouter.ai/api/v1/credits"
 
 ModelFactory = Callable[[str], Model]
+
+## What OpenRouter billed for each request of the current turn or summary (v0.7.14.5): the caller sets a list, the
+## timed model appends `cost` of every answer — retries and failed runs included, they are paid too.
+REQUEST_COSTS: ContextVar[list[float] | None] = ContextVar("request_costs", default=None)
 
 
 class ModelCatalog:
@@ -63,24 +70,28 @@ class ModelCatalog:
             )
 
 
+class TimedModel(WrapperModel):
+    """Times every request and tells the picker who answered how fast; notes what OpenRouter billed (v0.7.14.5)."""
+
+    async def request(self, messages, model_settings, model_request_parameters):  # type: ignore[no-untyped-def]
+        started = time.monotonic()
+        response = await self.wrapped.request(messages, model_settings, model_request_parameters)
+        details = response.provider_details or {}
+        PICKER.observe(str(details.get("downstream_provider", "")), int(response.usage.output_tokens or 0), time.monotonic() - started)
+        costs = REQUEST_COSTS.get()
+        if costs is not None:
+            try:
+                costs.append(float(details.get("cost") or 0))
+            except (TypeError, ValueError):
+                costs.append(0.0)
+        return response
+
+
 def openrouter_factory(api_key: str) -> ModelFactory:
     import httpx2
     from pydantic_ai.models import DEFAULT_HTTP_TIMEOUT, create_async_httpx2_client
     from pydantic_ai.models.openrouter import OpenRouterModel
-    from pydantic_ai.models.wrapper import WrapperModel
     from pydantic_ai.providers.openrouter import OpenRouterProvider
-
-    from .providers import PICKER
-
-    class TimedModel(WrapperModel):
-        """Times every request and tells the picker who answered how fast (v0.7.14.5)."""
-
-        async def request(self, messages, model_settings, model_request_parameters):  # type: ignore[no-untyped-def]
-            started = time.monotonic()
-            response = await self.wrapped.request(messages, model_settings, model_request_parameters)
-            PICKER.observe(str((response.provider_details or {}).get("downstream_provider", "")),
-                           int(response.usage.output_tokens or 0), time.monotonic() - started)
-            return response
 
     # pydantic-ai gives a connection 5 s: a slow link to OpenRouter failed whole turns with «Request timed out» after
     # three such tries (v0.7.14.5) — 20 s to connect, the answer itself as long as it takes.

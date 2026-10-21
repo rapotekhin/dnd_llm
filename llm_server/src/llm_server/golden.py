@@ -29,6 +29,7 @@ from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models import Model
 
 from . import REPO_ROOT
+from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER
 from .agents import TurnContext, build_turn_agent, settings_for, system_prompt_for, turn_user_prompt
 from .protocol import TurnRequestParams
@@ -365,12 +366,17 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
         await PICKER.refresh(model.model_name)
     agent = build_turn_agent(model, system_prompt_for(params))
     started = time.monotonic()
+    billed: list[float] = []  # what OpenRouter charged for each request (v0.7.14.5)
+    token = REQUEST_COSTS.set(billed)
     try:
         result = await agent.run(turn_user_prompt(params), deps=ctx)
     except Exception as exc:  # noqa: BLE001 — a failed model run is a result, not a crash of the runner
         o.status, o.note = "error", f"{type(exc).__name__}: {str(exc)[:300]}"
         o.seconds = time.monotonic() - started
+        o.cost_usd = sum(billed)
         return o
+    finally:
+        REQUEST_COSTS.reset(token)
     o.seconds = time.monotonic() - started
     out = result.output
     o.narration, o.options = out.narration, out.options
@@ -380,7 +386,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     usage = result.usage
     o.input_tokens, o.output_tokens = usage.input_tokens, usage.output_tokens
     price_in, price_out = prices.get(model_id, (0.0, 0.0))
-    o.cost_usd = float(getattr(usage, "cost", 0) or 0) or (usage.input_tokens * price_in + usage.output_tokens * price_out) / 1e6
+    o.cost_usd = sum(billed) or (usage.input_tokens * price_in + usage.output_tokens * price_out) / 1e6
     o.fails = check_expect(sc.get("expect", {}), {"narration": out.narration, "options": out.options, "next_mode": o.next_mode},
                            engine, o.tools)
     if judge_model is not None and sc.get("rubric"):

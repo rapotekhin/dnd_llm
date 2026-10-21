@@ -15,6 +15,7 @@ from pydantic_ai.models import Model
 from pydantic_ai.usage import RunUsage, UsageLimits
 
 from . import prompts
+from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER
 from .agents import RETRY_MAX_TOKENS, TurnContext, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
 from .protocol import (
@@ -121,9 +122,11 @@ async def _with_retries(attempt: Callable[[], Awaitable[T]], retries: int, can_r
     raise AssertionError("unreachable")
 
 
-def _usage(session: Session, model: str, run_usage: RunUsage) -> Usage:
+def _usage(session: Session, model: str, run_usage: RunUsage, billed: list[float] | None = None) -> Usage:
+    """Tokens and cost of a run; the cost goes to the daily budget. `billed` — what OpenRouter charged for each request
+    (v0.7.14.5: the real price of the provider that answered); without it, the catalog price of the model."""
     services = session.services
-    cost = float(getattr(run_usage, "cost", 0) or 0) or services.models.cost_usd(model, run_usage.input_tokens, run_usage.output_tokens)
+    cost = sum(billed or []) or services.models.cost_usd(model, run_usage.input_tokens, run_usage.output_tokens)
     services.budget.add(cost)
     return Usage(input_tokens=run_usage.input_tokens, output_tokens=run_usage.output_tokens, cost_usd=round(cost, 6),
                  model=model)
@@ -178,15 +181,20 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     started = time.monotonic()
     trace = {"what": "turn", "turn_id": params.turn_id, "mode": params.mode, "kind": params.kind, "input": params.input,
              "npc_id": params.npc_id, "model": model, "system": system, "user": user_prompt}
+    billed: list[float] = []
+    token = REQUEST_COSTS.set(billed)
     try:
         result = await _with_retries(attempt, services.settings.llm_retries, lambda: not ctx.check_ids and not ctx.accepted)
     except Exception as exc:
+        services.budget.add(sum(billed))  # the requests before the failure are paid all the same
         if services.trace:
             services.trace.write({**trace, "error": f"{type(exc).__name__}: {exc}", "checks": ctx.check_ids,
-                                  "accepted": ctx.accepted, "seconds": round(time.monotonic() - started, 2)})
+                                  "accepted": ctx.accepted, "billed_usd": round(sum(billed), 6), "seconds": round(time.monotonic() - started, 2)})
         raise
+    finally:
+        REQUEST_COSTS.reset(token)
     out = result.output
-    usage = _usage(session, model, result.usage)
+    usage = _usage(session, model, result.usage, billed)
     if services.trace:
         services.trace.write({**trace, "messages": services.trace.messages(result), "output": out.model_dump(mode="json"),
                               "checks": ctx.check_ids, "accepted": ctx.accepted, "usage": usage.model_dump(mode="json"),
@@ -221,8 +229,16 @@ async def agent_summary(session: Session, params: SummaryParams) -> SummaryResul
     await _pick_providers(services.model_factory(model))
     agent = build_summary_agent(services.model_factory(model), params.kind)
     prompt = prompts.summary_prompt(params.kind, params.subject_id, params.previous, params.events)
-    result = await _with_retries(lambda: agent.run(prompt), services.settings.llm_retries, lambda: True)
-    usage = _usage(session, model, result.usage)
+    billed: list[float] = []
+    token = REQUEST_COSTS.set(billed)
+    try:
+        result = await _with_retries(lambda: agent.run(prompt), services.settings.llm_retries, lambda: True)
+    except Exception:
+        services.budget.add(sum(billed))
+        raise
+    finally:
+        REQUEST_COSTS.reset(token)
+    usage = _usage(session, model, result.usage, billed)
     if services.trace:
         services.trace.write({"what": "summary", "kind": params.kind, "subject": params.subject_id, "model": model, "prompt": prompt,
                               "summary": result.output.summary, "usage": usage.model_dump(mode="json")})

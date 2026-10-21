@@ -289,3 +289,47 @@ def test_a_provider_observed_slow_leaves_the_three():
     picker.observe("Relace", 600, 60.0)
     picker.observe("Relace", 600, 60.0)  # the median of 60, 10, 10 tok/s
     assert picker.providers("m") == ["open-inference/fp4", "decart/fp4", "relace"]  # all slow: the three stay
+
+
+def test_the_daily_budget_counts_what_openrouter_billed(tmp_path):
+    # v0.7.14.5: the catalog price of DeepSeek is 0.3 / 1.2 $ per Mtok, the providers we use bill ~5 times less —
+    # the budget takes the `cost` of every answer, retries included.
+    import asyncio
+
+    from pydantic_ai import Agent
+    from pydantic_ai.messages import ModelResponse, TextPart
+    from pydantic_ai.models.function import FunctionModel
+
+    from llm_server.llm.catalog import REQUEST_COSTS, TimedModel
+
+    calls = []
+
+    def answer(messages, info):
+        calls.append(1)
+        return ModelResponse(parts=[TextPart("ок")], provider_details={"cost": 0.0021, "downstream_provider": "Relace"})
+
+    billed: list[float] = []
+
+    async def run() -> None:
+        token = REQUEST_COSTS.set(billed)
+        try:
+            await Agent(TimedModel(FunctionModel(answer))).run("привет")
+            await Agent(TimedModel(FunctionModel(answer))).run("ещё")
+        finally:
+            REQUEST_COSTS.reset(token)
+
+    asyncio.run(run())
+    assert billed == [0.0021, 0.0021]
+
+    from llm_server.config import Settings
+    from llm_server.services import Services
+    from llm_server.turns import _usage
+
+    class S:
+        services = Services.create(Settings(token="x" * 16, data_dir=tmp_path, trace=False))
+
+    from pydantic_ai.usage import RunUsage
+
+    usage = _usage(S, "deepseek/deepseek-v4.1-flash-1017", RunUsage(input_tokens=30000, output_tokens=500), billed)
+    assert usage.cost_usd == 0.0042
+    assert abs(S.services.budget.spent_today() - 0.0042) < 1e-9
