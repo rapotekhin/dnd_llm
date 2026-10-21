@@ -1233,5 +1233,14 @@
 			"remove_curse": {"cost_cp": 9000},
 			"silver": {"cost_cp": 10000}
 		}
+	},
+	"spell_effects": {
+		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves.",
+		"bless": {"die": "1d4", "on": ["attack", "save"]},
+		"guidance": {"die": "1d4", "on": ["check"], "once": true},
+		"resistance": {"die": "1d4", "on": ["save"], "once": true},
+		"heroism": {"immune": ["frightened"], "temp_hp": "MOD"},
+		"true_strike": {"next_attack_adv": true},
+		"bane": {"foe": true, "die": "1d4", "save": "cha", "targets": 3}
 	}
 }

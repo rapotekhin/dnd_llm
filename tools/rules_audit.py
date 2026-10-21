@@ -29,6 +29,10 @@ STATUS = {
 }
 MISSING = ("master", "none")
 
+# Spells that wait for allies (M4): summons, help for the dying, raising the dead (author's decision, v0.7.13).
+SPELL_LATER = {"find_familiar", "find_steed", "conjure_animals", "animate_dead", "unseen_servant", "phantom_steed",
+               "tensers_floating_disk", "animal_messenger", "spare_the_dying", "revivify"}
+
 # Spells (v0.7.13): groups of the master-only ones.
 SPELL_GROUPS = {
     "buff": ("Защита и усиления героя", "числа листа и боя: КД, бонусы к атакам и спасброскам, урон, скорость, сопротивления, временные хиты"),
@@ -322,6 +326,7 @@ CHECKED: dict[str, str] = {
                                                "brave", "relentless_endurance", "frenzy"]},
     **{sp: "test_spells_v0713.gd" for sp in ["acid_arrow", "acid_splash", "blindness_deafness", "burning_hands", "charm_person", "chill_touch", "color_spray", "command", "cure_wounds", "eldritch_blast", "entangle", "fear", "fire_bolt", "fireball", "guiding_bolt", "healing_word", "hideous_laughter", "hold_person", "inflict_wounds", "lightning_bolt", "magic_missile", "mass_healing_word", "poison_spray", "prayer_of_healing", "produce_flame", "ray_of_frost", "sacred_flame", "scorching_ray", "shatter", "shocking_grasp", "sleep", "thunderwave", "vicious_mockery", "web"]},
     "invisibility": "test_conditions_v078.gd",
+    **{sp: "test_spells_v0713.gd" for sp in ["bless", "bane", "guidance", "resistance", "heroism", "true_strike"]},
     **{p: "test_items_v0712.gd" for p in ["ammunition", "heavy", "reach", "silvered", "fire_damage", "cursed", "no_crit", "mithral", "str_19"]},
     **{f: "test_features_v0710.gd" for f in ["barbarian_extra_attack", "monk_extra_attack", "paladin_extra_attack", "ranger_extra_attack",
                                              "rage", "reckless_attack", "danger_sense", "improved_critical", "uncanny_dodge", "martial_arts",
@@ -531,6 +536,8 @@ def main() -> int:
     group_of = {sid: g for g, ids in SPELL_ASSIGN.items() for sid in ids.split()}
     playable = {k: v for k, v in spells.items() if int(v.get("level", 0)) <= 3}
 
+    spell_effects = set(rules.get("spell_effects", {})) - {"_doc"}
+
     def spell_status(sid: str) -> str:
         if sid in engine:
             return "движок: урон / лечение"
@@ -538,12 +545,17 @@ def main() -> int:
             return "движок: состояния"
         if sid in invisibility:
             return "движок: невидимость"
+        if sid in spell_effects:
+            return "движок: усиление или ослабление"
+        if sid in SPELL_LATER:
+            return "ждёт M4"
         return STATUS["master"]
 
     unassigned = sorted(sid for sid in playable if spell_status(sid) == STATUS["master"] and sid not in group_of)
     if unassigned:
         raise SystemExit(f"no group for: {', '.join(unassigned)}")
     master = sum(1 for sid in playable if spell_status(sid) == STATUS["master"])
+    later = sum(1 for sid in playable if spell_status(sid) == "ждёт M4")
     groups = "; ".join(f"{SPELL_GROUPS[g][0]} — {sum(1 for sid in playable if group_of.get(sid) == g and spell_status(sid) == STATUS['master'])}"
                        for g in SPELL_GROUPS)
     rows = []
@@ -551,9 +563,9 @@ def main() -> int:
         g = SPELL_GROUPS[group_of[sid]][0] if sid in group_of else "—"
         rows.append((v["name"], f"`{sid}`", str(v.get("level", 0)), "да" if v.get("concentration") else "", spell_status(sid), g, CHECKED.get(sid, "")))
     section("Заклинания (круги 0–3)", "v0.7.13", rows, ["Заклинание", "id", "Круг", "Конц.", "Сейчас", "Группа", "Проверено"],
-            f"Доступно героям 1–5 уровня {len(playable)}; движок разрешает {len(playable) - master}; **{master} — только мастер**: ячейка и "
-            f"концентрация тратятся, остальное — лишь в рассказе. По группам: {groups}.")
-    summary.append(("Заклинания", len(playable), len(playable) - master, master))
+            f"Доступно героям 1–5 уровня {len(playable)}; движок разрешает {len(playable) - master - later}; ждут союзников (M4) {later}; "
+            f"**{master} — только мастер**: ячейка и концентрация тратятся, остальное — лишь в рассказе. По группам: {groups}.")
+    summary.append(("Заклинания", len(playable), len(playable) - master - later, master + later))
 
     head = [
         "# Аудит правил 5e",

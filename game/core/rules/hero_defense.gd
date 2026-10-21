@@ -111,6 +111,9 @@ static func save_advantages(c: Dictionary, data: Dictionary, ability: String, ta
 ## The race trait that makes the hero immune to `cond` laid with `tag` (an elf and magical sleep; a paladin's Divine
 ## Health and disease, v0.7.10), "" when none.
 static func immune(c: Dictionary, data: Dictionary, cond: String, tag: String) -> String:
+	var by_spell := SpellEffects.immune(c, cond)  # Heroism (v0.7.13.1)
+	if not by_spell.is_empty():
+		return by_spell
 	if tag.split(",").has("disease") and CharacterRules.has_feature(c, "divine_health"):
 		return str(data["classes"]["features"].get("divine_health", {}).get("name", ""))
 	if tag.split(",").has("disease") and CharacterRules.item_prop(c, "immune_disease"):
@@ -134,9 +137,10 @@ static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag
 	var dis := not (mods["disadvantage"] as Array).is_empty()
 	var rolls := FeatureRules.hero_d20(s, adv, dis)  # Lucky (v0.7.10)
 	var nat: int = rolls.max() if adv and not dis else rolls.min() if dis and not adv else rolls[0]
-	var total := nat + bonus
+	var die := SpellEffects.hero_die(s, data, "save")  # Bless, Resistance (v0.7.13.1)
+	var total := nat + bonus + int(die["bonus"])
 	var ok := nat == 20 or (nat != 1 and total >= dc)
-	var note := ""
+	var note := (" " + str(die["note"])) if not str(die["note"]).is_empty() else ""
 	if not ok and nat != 1 and (mods["auto_fail"] as Array).is_empty():
 		var insp := FeatureRules.use_inspiration(s)  # Bardic Inspiration on a failed save
 		if insp > 0:

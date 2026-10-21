@@ -93,6 +93,8 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 		ConditionRules.add_effect(c, {"condition": "", "understand_all": true, "ends": ConditionRules.ends_for(session, data, "hour"),
 			"source": {"kind": "spell", "id": spell_id, "name": s_name(data, spell_id)}})
 		lines.append("понимает любой язык — час")
+	if session != null and on_self and SpellEffects.self_spell(data, spell_id):  # v0.7.13.1: Bless, Guidance, Heroism…
+		lines.append_array(SpellEffects.apply_self(session, data, spell_id))
 	if session != null and on_self and not CombatRules.active(session):  # v0.7.13: the engine heals out of a fight too
 		lines.append_array(heal_self(c, data, spell_id, slot, session.rng))
 	if session != null and on_self:

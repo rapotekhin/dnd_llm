@@ -366,6 +366,14 @@ func buy_service(id: String) -> String:
 	return "SERVICE_NOTHING"
 
 
+## The name of the spell the hero concentrates on that this one would break (v0.7.13.1), or "".
+func concentration_conflict(spell_id: String) -> String:
+	if session == null or not bool(Catalog.data["spells"].get(spell_id, {}).get("concentration", false)):
+		return ""
+	var held := str(session.character.get("concentration", ""))
+	return "" if held.is_empty() or held == spell_id else str(Catalog.data["spells"].get(held, {}).get("name", held))
+
+
 ## Lines of a deterministic action without a master turn: the chat, the log, the history the master reads next.
 func _quiet_lines(lines: Array[String]) -> void:
 	_add(GameSession.effect_entry(lines))
@@ -1792,7 +1800,10 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		result["check_id"] = session.next_check_id()
 		result["blocked"] = true
 	else:
-		var bonus := CheckEngine.bonus_for(session.character, params) + _terrain_bonus(params) + int(tool_fx["bonus"])
+		var spell_die := SpellEffects.hero_die(session, Catalog.data, "check")  # Guidance (v0.7.13.1)
+		if not str(spell_die["note"]).is_empty():
+			_add(GameSession.effect_entry(["Проверка: " + str(spell_die["note"])]))
+		var bonus := CheckEngine.bonus_for(session.character, params) + _terrain_bonus(params) + int(tool_fx["bonus"]) + int(spell_die["bonus"])
 		result = CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
 		if result.has("error"):
 			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))

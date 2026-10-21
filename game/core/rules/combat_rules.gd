@@ -344,6 +344,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 		s.combat["economy"] = {"action": 1, "bonus": 1, "move": _move_cols(int(s.character.get("speed", 30)), data), "attacks": 0,
 			"attacked": false, "sneak": false}
 		s.combat.erase("reckless")  # Reckless Attack lasts until the hero's next turn
+		lines.append_array(SpellEffects.turn_start(s, data))  # Heroism (v0.7.13.1)
 		for eid: String in enemies(s):  # v0.7.13: riders that last until the start of the hero's next turn
 			var o := fighter(s, eid)
 			for k: String in ["slowed", "no_heal", "chilled"]:
@@ -609,6 +610,8 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		adv.append("цель ослеплена")
 	if int(t.get("guided", 0)) > 0:
 		adv.append("Направляющий снаряд")
+	if SpellEffects.has_next_attack_adv(c):
+		adv.append("Верный удар")
 	if _has(t, "prone") and d > 0:
 		dis.append("цель лежит, а вы далеко")
 	if bool(t.get("dodging", false)):
@@ -701,14 +704,19 @@ static func _foe_in_column(s: GameSession, f: Dictionary) -> bool:
 ## One attack roll against an enemy and its damage; adds the line. {"hit", "damage"}.
 static func _attack(s: GameSession, data: Dictionary, who: String, what: String, to_hit: int, adv: bool, dis: bool, t: Dictionary,
 		dice: String, bonus: int, dtype: String, lines: Array[String], extra_dice: String = "", auto_crit: bool = false, w: Dictionary = {}) -> Dictionary:
+	if SpellEffects.take_next_attack_adv(s.character):  # True Strike (v0.7.13.1)
+		adv = true
 	var rolls := FeatureRules.hero_d20(s, adv, dis)  # the hero's roll: Lucky (v0.7.10)
 	var nat := _nat(rolls, adv, dis)
 	t.erase("guided")  # Guiding Bolt's light goes with the first attack roll (v0.7.13)
+	var die := SpellEffects.hero_die(s, data, "attack")  # Bless (v0.7.13.1)
+	to_hit += int(die["bonus"])
 	var total := nat + to_hit
 	var crit_min := int(w.get("crit_min", 20))
 	var hit := nat >= crit_min or (nat != 1 and total >= int(t["ac"]))
 	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
-	var line := "%s — %s по %s: %d%s%d = %d против КД %d%s" % [who, what, t["name"], nat, " + " if to_hit >= 0 else " − ", absi(to_hit), total, int(t["ac"]), mark]
+	var line := "%s — %s по %s: %d%s%d = %d против КД %d%s%s" % [who, what, t["name"], nat, " + " if to_hit >= 0 else " − ", absi(to_hit), total, int(t["ac"]), mark,
+		(" [%s]" % die["note"]) if not str(die["note"]).is_empty() else ""]
 	if not hit and nat != 1:
 		var insp := FeatureRules.use_inspiration(s)
 		if insp > 0:
@@ -938,6 +946,7 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String) -> Arr
 	var lines: Array[String] = []
 	if spell_id.is_empty() or not active(s):
 		return lines
+	lines.append_array(SpellEffects.end_on_foes(s, spell_id))
 	for id: String in enemies(s):
 		var f := fighter(s, id)
 		for cond: String in (f.get("timers", {}) as Dictionary).keys():
@@ -1166,6 +1175,9 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 	if cfg(data)["condition_spells"].has(spell_id) and not target_id.is_empty():
 		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
 		return lines
+	if SpellEffects.foe_spell(data, spell_id) and not target_id.is_empty():  # Bane (v0.7.13.1)
+		SpellEffects.curse_foes(s, data, spell_id, slot, fighter(s, target_id), lines)
+		return lines
 	var level := int(c.get("level", 1))
 	var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "int"))))
 	if sp.has("heal_at_slot"):
@@ -1344,6 +1356,7 @@ static func _monster_save(s: GameSession, data: Dictionary, t: Dictionary, ab: S
 		roll = mini(roll, s.rng.randi_range(1, 20))
 	if ab in ["str", "dex"] and _target_disabled(t) and not (t["conditions"] as Array).has("prone"):
 		return false
+	bonus -= int(SpellEffects.foe_die(s, t)["minus"])  # Bane (v0.7.13.1)
 	return roll != 1 and (roll == 20 or roll + bonus >= dc)
 
 
@@ -2057,11 +2070,12 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	f.erase("mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
 	var rolls := _d20(s.rng, adv, dis)
 	var nat := _nat(rolls, adv, dis)
-	var total := nat + int(a.get("to_hit", 0))
+	var bane := SpellEffects.foe_die(s, f)  # Bane (v0.7.13.1)
+	var total := nat + int(a.get("to_hit", 0)) - int(bane["minus"])
 	var ac := int(c.get("ac", 10))
 	var hit := nat == 20 or (nat != 1 and total >= ac)
 	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
-	var line := "%s — %s: %d + %d = %d против КД %d%s" % [f["name"], a["name"], nat, int(a.get("to_hit", 0)), total, ac, mark]
+	var line := "%s — %s: %d + %d%s = %d против КД %d%s" % [f["name"], a["name"], nat, int(a.get("to_hit", 0)), bane["note"], total, ac, mark]
 	if not hit:
 		lines.append(line + " — промах")
 		return

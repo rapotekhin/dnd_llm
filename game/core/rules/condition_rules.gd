@@ -454,6 +454,8 @@ static func shown(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 		var id := str(e.get("condition", ""))
 		var title := name_of(data, id) if not id.is_empty() else str(e.get("source", {}).get("name", ""))
 		var text := str(data["rules"]["conditions"].get(id, "")) if not id.is_empty() else boon_text(data, e)
+		if text.is_empty() and str(e.get("source", {}).get("kind", "")) == "spell":
+			text = SpellEffects.text(data, SpellEffects.spec(data, str(e["source"].get("id", ""))))
 		out.append({"condition": id, "name": title, "left": left_text(s, e), "source": str(e.get("source", {}).get("name", "")), "text": text})
 	if exhaustion(c) > 0:
 		out.append({"condition": "exhaustion", "name": "Истощение %d" % exhaustion(c), "left": "до долгого отдыха", "source": "",

@@ -7,6 +7,7 @@ extends Control
 
 signal prepare_requested
 
+var _conc_armed := ""  # a concentration spell pressed once while another is held (v0.7.13.1)
 var _tabs: TabContainer
 var _picked_item := ""  # the item shown in the details panel of the gear tab (v0.7.7 fixes)
 
@@ -231,7 +232,13 @@ func _cast_row(parent: Control, c: Dictionary, id: String, level: int, can_act: 
 				pick.add_item(tr("SLOT_CIRCLE").format({"n": lv, "left": left}), lv)
 	row.add_child(pick)
 	_action(row, "Cast_" + id, "BTN_CAST", can_act and pick.item_count > 0,
-		func() -> String: return GameState.cast(id, pick.get_selected_id() if pick.item_count > 0 else 0))
+		func() -> String:
+			var held := GameState.concentration_conflict(id)  # v0.7.13.1: the second press breaks the old concentration
+			if not held.is_empty() and _conc_armed != id:
+				_conc_armed = id
+				return tr("CONC_SWITCH_AGAIN").format({"old": held})
+			_conc_armed = ""
+			return GameState.cast(id, pick.get_selected_id() if pick.item_count > 0 else 0))
 
 
 ## A button that calls `action` (returns "" or a reason): on success the sheet closes, otherwise a toast.

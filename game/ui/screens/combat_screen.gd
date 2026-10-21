@@ -24,6 +24,7 @@ var _results: PanelContainer
 var _results_box: VBoxContainer
 ## «Использовать?» — a choice of a feature or a reaction, as in Baldur's Gate 3 (v0.7.10).
 var _ask: PanelContainer
+var _conc_ask: Dictionary = {}  # v0.7.13.1: the «Прервать …?» question
 var _ask_box: VBoxContainer
 ## The action waiting for a target: Callable(target_id) -> String (a reason or ""), and its check.
 var _pending: Callable
@@ -471,12 +472,13 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			if lv > 0 and slot == 0:
 				_disabled(sp, label)
 				continue
-			if spell.has("heal_at_slot") or int(spell.get("range_ft", 0)) == 0 and not spell.has("area"):
+			if spell.has("heal_at_slot") or SpellEffects.self_spell(data, id) or int(spell.get("range_ft", 0)) == 0 and not spell.has("area"):
 				var b := _button(sp, "Cast_" + id, label, mine)
 				_details.hook(b, str(spell.get("name", id)), DetailsPanel.spell_text(data, id))
-				b.pressed.connect(func() -> void: _do(GameState.combat_cast(id, slot, "")))
+				b.pressed.connect(func() -> void: _do(_conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, ""))))
 			else:
-				var ab := _action(sp, "Cast_" + id, label, mine, func(t: String) -> String: return GameState.combat_cast(id, slot, t),
+				var ab := _action(sp, "Cast_" + id, label, mine,
+					func(t: String) -> String: return _conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, t)),
 					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t),
 					func(t: String) -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t))
 				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id))
@@ -642,7 +644,51 @@ var _pending_name := ""
 
 ## The window of a choice: a prompt of the hero's turn (Divine Smite, Wild Shape, Font of Magic) or a reaction to a
 ## foe's hit; the buttons answer it.
+## A concentration spell while another one is held (v0.7.13.1, as in BG3): «Прервать «Благословение»?» first.
+func _conc_guard(spell_id: String, go: Callable) -> String:
+	var held := GameState.concentration_conflict(spell_id)
+	if held.is_empty():
+		return go.call()
+	_conc_ask = {"text": tr("CONC_SWITCH").format({"old": held, "new": Catalog.data["spells"][spell_id]["name"]}), "go": go}
+	_draw_ask(GameState.session)
+	return ""
+
+
+func _draw_conc_ask() -> void:
+	_ask.visible = true
+	_clear(_ask_box)
+	var title := Label.new()
+	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	title.theme_type_variation = UiTheme.HEADING
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.text = str(_conc_ask["text"])
+	_ask_box.add_child(title)
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 10)
+	_ask_box.add_child(flow)
+	for yes: bool in [true, false]:
+		var b := Button.new()
+		b.name = "Ask_conc_" + ("yes" if yes else "no")
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.text = tr("CONC_YES" if yes else "CONC_NO")
+		b.custom_minimum_size = Vector2(0, 56)
+		if yes:
+			b.theme_type_variation = UiTheme.ACCENT_BUTTON
+		b.pressed.connect(func() -> void:
+			var go: Callable = _conc_ask.get("go", Callable())
+			_conc_ask = {}
+			_ask.visible = false
+			if yes and go.is_valid():
+				_do(go.call())
+			else:
+				_draw_ask(GameState.session))
+		flow.add_child(b)
+
+
 func _draw_ask(s: GameSession) -> void:
+	if not _conc_ask.is_empty():
+		_draw_conc_ask()
+		return
 	var prompt: Dictionary = s.combat.get("prompt", {})
 	var pending: Dictionary = s.combat.get("pending", {})
 	_ask.visible = not prompt.is_empty() or not pending.is_empty()

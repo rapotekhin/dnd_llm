@@ -252,3 +252,72 @@ func test_cure_wounds_heals_the_hero_out_of_a_fight() -> void:
 	var lines := SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]), s, true)
 	assert_int(int(c["hp"])).override_failure_message(" · ".join(lines)).is_greater(1)
 	assert_bool(lines.any(func(l: String) -> bool: return l.begins_with("+"))).is_true()
+
+
+# --- batch 2 (v0.7.13.1): dice of the buffs, concentration ------------------------------------------------
+
+
+func test_bless_adds_a_d4_to_attacks_and_saves() -> void:
+	var s := _hero("cleric_branko")
+	_learn(s, "bless")
+	var c := s.character
+	SpellRules.cast(c, data, "bless", 1, s, true)
+	assert_str(str(c["concentration"])).is_equal("bless")
+	var r := HeroDefense.save(s, data, "dex", 30)
+	assert_str(str(r["text"])).contains("Благословение")
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	var lines: Array[String] = []
+	CombatRules._attack(s, data, "x", "удар", 3, false, false, f, "1d4", 0, "bludgeoning", lines)
+	assert_str(lines[0]).contains("Благословение")
+
+
+func test_guidance_is_one_roll() -> void:
+	var s := _hero("cleric_branko")
+	_learn(s, "guidance")
+	SpellRules.cast(s.character, data, "guidance", 0, s, true)
+	var first := SpellEffects.hero_die(s, data, "check")
+	assert_int(int(first["bonus"])).is_between(1, 4)
+	assert_int(int(SpellEffects.hero_die(s, data, "check")["bonus"])).is_equal(0)
+	assert_str(str(s.character["concentration"])).is_empty()
+
+
+func test_bane_takes_a_d4_from_foes() -> void:
+	var s := _hero("cleric_branko")
+	_learn(s, "bane")
+	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 2}])
+	s.character["spell_dc"] = 30  # they fail
+	var lines := CombatRules.player_cast(s, data, "bane", 1, str(foes[0]["id"]))
+	assert_bool(foes.all(func(f: Dictionary) -> bool: return f.has("minus_die"))).override_failure_message(" · ".join(lines)).is_true()
+	var out := ConditionRules.end_concentration(s, data, "проверка")
+	assert_bool(foes.any(func(f: Dictionary) -> bool: return f.has("minus_die"))).is_false()
+	assert_int(out.size()).is_greater(1)
+
+
+func test_heroism_keeps_fear_away_and_gives_temp_hp() -> void:
+	var s := _hero("paladin_gordey")
+	_learn(s, "heroism")
+	SpellRules.cast(s.character, data, "heroism", 1, s, true)
+	assert_int(int(s.character["temp_hp"])).is_greater(0)
+	assert_str(HeroDefense.immune(s.character, data, "frightened", "fear")).is_equal("Героизм")
+
+
+func test_true_strike_gives_advantage_once() -> void:
+	var s := _hero("wizard_yalika")
+	_learn(s, "true_strike")
+	SpellRules.cast(s.character, data, "true_strike", 0, s, true)
+	assert_bool(SpellEffects.has_next_attack_adv(s.character)).is_true()
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	var lines: Array[String] = []
+	CombatRules._attack(s, data, "x", "удар", 3, false, false, f, "1d4", 0, "bludgeoning", lines)
+	assert_str(lines[0]).contains("(с преимуществом)")
+	assert_bool(SpellEffects.has_next_attack_adv(s.character)).is_false()
+
+
+func test_a_second_concentration_spell_is_asked_about() -> void:
+	var s := _hero("cleric_branko")
+	_learn(s, "bless")
+	_learn(s, "bane")
+	SpellRules.cast(s.character, data, "bless", 1, s, true)
+	assert_str(str(s.character["concentration"])).is_equal("bless")
+	assert_bool(bool(data["spells"]["bane"]["concentration"])).is_true()
+	assert_array(ConditionRules.shown(s, data).filter(func(e: Dictionary) -> bool: return str(e["text"]).contains("+к4"))).is_not_empty()
