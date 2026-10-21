@@ -82,6 +82,14 @@ func run() -> void:
 		var text := " ".join(box.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text))
 		step("the murder in the chronicle", text.contains("Убийство: Кейра"), "")
 		await shot("chronicle")
+	# v0.7.17: the places tab shows the name of Brod after the murder.
+	var places: Button = find(game, "JournalTab_places")
+	if step("the places tab", places != null):
+		await press(places)
+		await frames(3)
+		var pbox: Node = find(game, "JournalTab_places").get_parent().get_parent()
+		var ptext := " ".join(pbox.find_children("*", "Button", true, false).map(func(l: Node) -> String: return (l as Button).text))
+		step("Brod's name is bad", ptext.contains("Ольховый Брод — дурная слава") or ptext.contains("Ольховый Брод — чужак с душком"), ptext.left(200))
 	# v0.7.15: the people of Brod remember the murder — the journal's «Разговоры» shows it under each of them.
 	var people: Button = find(game, "JournalTab_people")
 	if step("the people tab", people != null):

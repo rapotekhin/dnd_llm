@@ -121,6 +121,10 @@ var npc_memory: Dictionary = {}
 ## its last free service.
 var discounts: Dictionary = {}
 var favors: Dictionary = {}
+## Reputation in settlements (v0.7.17, ReputationRules): location_id → points; the attitude of the people not dealt
+## with yet by it: npc_id → attitude (recomputed when the reputation changes).
+var reputation: Dictionary = {}
+var attitude_base: Dictionary = {}
 ## NPC secrets the hero learned (v0.7.15.3): "npc_id:secret_id".
 var secrets_told: Array[String] = []
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
@@ -246,8 +250,9 @@ func memory_of(npc_id: String, n: int = NPC_MEMORY_MAX) -> Array[String]:
 	return out.slice(maxi(0, out.size() - n))
 
 
+## The NPC's attitude; one the hero has not dealt with yet — by the reputation of its place (v0.7.17).
 func attitude(id: String) -> int:
-	return int(attitudes.get(id, 0))
+	return int(attitudes.get(id, attitude_base.get(id, 0)))
 
 
 ## Moves an NPC's attitude by `delta` within rules.attitude_range (v0.7.7: the range is data, not code).
@@ -400,6 +405,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"discounts": discounts,
 		"favors": favors,
 		"secrets_told": secrets_told,
+		"reputation": reputation,
+		"attitude_base": attitude_base,
 		"crimes": crimes,
 		"wanted": wanted,
 		"arrest": arrest,
@@ -514,6 +521,10 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.favors[id] = int(d["favors"][id])
 	for k: Variant in d.get("secrets_told", []):
 		s.secrets_told.append(str(k))
+	for k: String in d.get("reputation", {}):
+		s.reputation[k] = int(d["reputation"][k])
+	for k: String in d.get("attitude_base", {}):
+		s.attitude_base[k] = int(d["attitude_base"][k])
 	var mem: Variant = d.get("npc_memory", {})
 	if mem is Dictionary:
 		for id: String in mem:

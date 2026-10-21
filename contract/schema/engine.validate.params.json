@@ -924,6 +924,34 @@
       "title": "PropStateEffect",
       "type": "object"
     },
+    "ReputationEffect": {
+      "additionalProperties": false,
+      "description": "The settlement learned of a deed of the hero (0.24.0): `delta` −3…+3 points of its reputation, once a turn,\nwith the deed and who knows of it in `reason`. Quests, murders, thefts the engine counts itself.",
+      "properties": {
+        "delta": {
+          "maximum": 3,
+          "minimum": -3,
+          "title": "Delta",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "reputation",
+          "default": "reputation",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delta",
+        "reason"
+      ],
+      "title": "ReputationEffect",
+      "type": "object"
+    },
     "RevealSecretEffect": {
       "additionalProperties": false,
       "description": "An NPC of the scene tells a secret of its own by goodwill (0.22.0): `secret_id` from `scene.npcs[].secrets`.\nThe engine checks the attitude it needs; a secret won by a social check comes in the check's `revealed`.",
@@ -1114,6 +1142,7 @@
           "npc_discount": "#/$defs/NpcDiscountEffect",
           "npc_favor": "#/$defs/NpcFavorEffect",
           "prop_state": "#/$defs/PropStateEffect",
+          "reputation": "#/$defs/ReputationEffect",
           "reveal_secret": "#/$defs/RevealSecretEffect",
           "start_combat": "#/$defs/StartCombatEffect",
           "take_item": "#/$defs/TakeItemEffect",
@@ -1195,6 +1224,9 @@
         },
         {
           "$ref": "#/$defs/RevealSecretEffect"
+        },
+        {
+          "$ref": "#/$defs/ReputationEffect"
         }
       ],
       "title": "Effect"

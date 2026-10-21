@@ -1613,3 +1613,32 @@ scenarios:
       effects: {forbidden_kinds: [flag, give_item, coins]}
     rubric:
       - "Ведда не назначает сразу, но и не отрезает: называет путь — вступить в стражу, послужить, заслужить доверие, проявить себя; в характере"
+
+  - id: reputation_public_deed
+    title: "Поступок на глазах у всех — слава в поселении"
+    category: consequences
+    extends: tavern
+    input: "Вижу, как у очага вспыхнула юбка служанки — хватаю кувшин с водой, тушу и выношу её на улицу, пока все смотрят."
+    snapshot:
+      scene:
+        reputation: "Серое Устье — чужак (+0)"
+    engine:
+      check: {d20: [16], bonus: 3, total: 19, dc: 15, success: true, nat: 16, blocked: false}
+    expect:
+      effects: {required_kinds_any: [reputation], forbidden_kinds: [coins, give_item]}
+    rubric:
+      - "Мастер описывает спасение по итогу проверки, а слава растёт эффектом reputation с причиной (что сделал и кто видел), без денег и вещей"
+
+  - id: reputation_not_for_small_talk
+    title: "Разговор один на один славы не меняет"
+    category: consequences
+    extends: tavern
+    mode: social
+    input: "Горм, а эль у тебя хороший. Давно варишь?"
+    snapshot:
+      scene:
+        reputation: "Серое Устье — чужак (+0)"
+    expect:
+      effects: {forbidden_kinds: [reputation]}
+    rubric:
+      - "Горм отвечает в характере, слава не меняется"

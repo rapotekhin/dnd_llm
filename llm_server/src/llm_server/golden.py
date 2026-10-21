@@ -120,6 +120,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "closed_exits": scene.get("closed_exits", []),  # (0.14.0)
                 "notes": scene.get("notes", []),
                 "chronicle": scene.get("chronicle", []),
+                "reputation": scene.get("reputation", ""),
             },
             "character": {
                 "name": ch.get("name", ""), "gender": ch.get("gender", "other"), "class_name": ch.get("class", ""),

@@ -624,6 +624,11 @@
           "title": "Props",
           "type": "array"
         },
+        "reputation": {
+          "default": "",
+          "title": "Reputation",
+          "type": "string"
+        },
         "room_description": {
           "default": "",
           "title": "Room Description",

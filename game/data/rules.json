@@ -140,6 +140,16 @@
 		-3,
 		3
 	],
+	"reputation": {
+		"_doc": "Reputation in a settlement (v0.7.17, ReputationRules): points of the hero in a pack location with settlement: true; thresholds → steps −3…+3 (names); points by the engine's facts; master_max — the master's effect for a deed the place learned of; prices of every trader of the place (buy_pct the hero pays, sell_pct the trader pays) and the attitude of the people not dealt with yet (stranger_attitude).",
+		"thresholds": [5, 15, 30],
+		"names": {"-3": "изгой", "-2": "дурная слава", "-1": "чужак с душком", "0": "чужак", "1": "свой", "2": "уважаемый", "3": "герой"},
+		"points": {"quest_done": 6, "crime_known": -20, "crime_settled": 10, "theft_caught": -4},
+		"master_max": 3,
+		"buy_pct": {"-3": 130, "-2": 115, "-1": 105, "0": 100, "1": 97, "2": 93, "3": 90},
+		"sell_pct": {"-3": 75, "-2": 85, "-1": 95, "0": 100, "1": 103, "2": 107, "3": 110},
+		"stranger_attitude": {"-3": -2, "-2": -1, "-1": -1, "0": 0, "1": 0, "2": 1, "3": 1}
+	},
 	"social": {
 		"memory_in_snapshot": 8,
 		"contests": {

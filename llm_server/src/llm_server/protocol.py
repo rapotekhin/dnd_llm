@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.23.0"
+PROTOCOL_VERSION = "0.24.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -186,6 +186,7 @@ class Scene(_In):
     closed_exits: list[str] = Field(default_factory=list)  # ways the pack keeps shut until the engine opens them (0.14.0)
     notes: list[str] = Field(default_factory=list)  # the master's own memory of events here, in Russian (0.14.0)
     chronicle: list[str] = Field(default_factory=list)  # the last facts of the engine: «день 2, 09:12, Таверна — …» (0.19.0)
+    reputation: str = ""  # the hero's name in this settlement: «Ольховый Брод — свой (+1)» (0.24.0)
 
 
 class InventoryLine(_In):
@@ -663,6 +664,15 @@ class NpcFavorEffect(_Out):
     reason: str
 
 
+class ReputationEffect(_Out):
+    """The settlement learned of a deed of the hero (0.24.0): `delta` −3…+3 points of its reputation, once a turn,
+    with the deed and who knows of it in `reason`. Quests, murders, thefts the engine counts itself."""
+
+    kind: Literal["reputation"] = "reputation"
+    delta: int = Field(ge=-3, le=3)
+    reason: str
+
+
 class RevealSecretEffect(_Out):
     """An NPC of the scene tells a secret of its own by goodwill (0.22.0): `secret_id` from `scene.npcs[].secrets`.
     The engine checks the attitude it needs; a secret won by a social check comes in the check's `revealed`."""
@@ -689,7 +699,7 @@ Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
-    | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect,
+    | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect,
     Field(discriminator="kind"),
 ]
 

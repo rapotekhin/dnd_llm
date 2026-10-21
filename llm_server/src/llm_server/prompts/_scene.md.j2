@@ -46,6 +46,7 @@ NPC здесь:
 {% endif %}{% if scene.hooks %}Зацепки: {{ scene.hooks | join("; ") }}.
 {% endif %}{% if scene.found %}Игрок уже заметил или нашёл (это факты, их можно описывать): {{ scene.found | join("; ") }}.
 {% endif %}{% if scene.closed_exits %}Закрытые пути (их открывает только движок — находка проверкой поиска или факт задания; пока закрыто, туда не пройти, и что за ними — не описывай): {{ scene.closed_exits | join("; ") }}.
+{% endif %}{% if scene.reputation %}Слава героя здесь: {{ scene.reputation }} — так к нему относятся незнакомые люди и торговцы.
 {% endif %}{% if scene.chronicle %}Хроника — что уже случилось, по порядку (факты движка; не проводи их снова эффектами): {{ scene.chronicle | join("; ") }}.
 {% endif %}{% if scene.notes %}Помнишь о прошлом: {{ scene.notes | join("; ") }}.
 {% endif %}{% if scene.flags %}Уже произошло: {{ scene.flags | join(", ") }}.

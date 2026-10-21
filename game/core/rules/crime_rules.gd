@@ -71,6 +71,7 @@ static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array
 		if not s.dead_npcs.has(id):
 			s.shift_attitude(id, int(cfg(data)["attitude"]), data)
 			s.remember(id, "знает: %s убит%s героем" % [_name(data, str(crime["victim"])), _ending(data, str(crime["victim"]))])
+	lines.append_array(ReputationRules.add(s, data, loc, int(ReputationRules.cfg(data)["points"]["crime_known"]), "убийство"))  # v0.7.17
 	if not law(data, loc).is_empty():
 		if not s.wanted.has(loc):
 			s.wanted[loc] = TimeRules.abs_minute(s)
@@ -231,7 +232,9 @@ static func _settle(s: GameSession, data: Dictionary, loc: String) -> Array[Stri
 	for id: String in people_of(data, loc):
 		if not s.dead_npcs.has(id):
 			s.shift_attitude(id, int(cfg(data)["forgiven"]), data)
-	return ["Вы больше не в розыске"]
+	var lines: Array[String] = ["Вы больше не в розыске"]
+	lines.append_array(ReputationRules.add(s, data, loc, int(ReputationRules.cfg(data)["points"]["crime_settled"]), "вина искуплена"))  # v0.7.17
+	return lines
 
 
 # --- the body -----------------------------------------------------------------------------------------------

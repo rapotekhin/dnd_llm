@@ -62,7 +62,7 @@ static func buy_price(s: GameSession, data: Dictionary, npc_id: String, item_id:
 	if value <= 0:
 		return 0
 	var haggle := int(merchant(s, data, npc_id)["haggle_pct"])
-	var price := ceili(value * _pct(t["buy_pct_by_attitude"], s.attitude(npc_id)) * (100 - haggle) / 10000.0)
+	var price := ceili(value * _pct(t["buy_pct_by_attitude"], s.attitude(npc_id)) * (100 - haggle) / 10000.0 * ReputationRules.price_pct(s, data, npc_id, "buy") / 100.0)
 	var off := SocialRules.discount(s, npc_id)  # a discount by words (v0.7.15.2)
 	if off > 0:
 		price = ceili(price * (100 - off) / 100.0)
@@ -73,7 +73,7 @@ static func buy_price(s: GameSession, data: Dictionary, npc_id: String, item_id:
 static func sell_price(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> int:
 	var t: Dictionary = data["rules"]["trade"]
 	var haggle := int(merchant(s, data, npc_id)["haggle_pct"])
-	var v := _value(s, data, item_id) * float(t["sell_ratio"]) * _pct(t["sell_pct_by_attitude"], s.attitude(npc_id))
+	var v := _value(s, data, item_id) * float(t["sell_ratio"]) * _pct(t["sell_pct_by_attitude"], s.attitude(npc_id)) * ReputationRules.price_pct(s, data, npc_id, "sell") / 100.0
 	return floori(v * (100 + haggle) / 10000.0)
 
 

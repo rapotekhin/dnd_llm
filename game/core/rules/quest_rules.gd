@@ -264,8 +264,11 @@ static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -
 	if i + 1 >= (q["steps"] as Array).size():
 		s.quests_active.erase(quest_id)
 		s.quests_done.append(quest_id)
-		s.remember(stand_in(s, data["world"], str(q.get("giver", ""))), "герой выполнил задание «%s»" % q["title"])
+		var giver := stand_in(s, data["world"], str(q.get("giver", "")))
+		s.remember(giver, "герой выполнил задание «%s»" % q["title"])
 		lines.append("Задание выполнено: %s" % q["title"])
+		lines.append_array(ReputationRules.add(s, data, ReputationRules.home_of(data, giver),
+			int(ReputationRules.cfg(data)["points"]["quest_done"]), "задание «%s»" % q["title"]))  # v0.7.17
 	else:
 		s.quests_active[quest_id] = i + 1
 		lines.append("Цель: %s" % q["steps"][i + 1]["text"])

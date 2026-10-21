@@ -164,6 +164,9 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             rv = sec.get("reveals", "")
             if rv and (":" not in rv or rv.split(":")[1] not in [x["id"] for x in rooms.get(rv.split(":")[0], {}).get("secrets", [])]):
                 errors.append(f"{where}: reveals «комната:тайна» — нет такой тайны комнаты {rv}")
+    for lid, loc in world["locations"].items():  # v0.7.17: a settlement keeps the hero's reputation
+        if "settlement" in loc and not isinstance(loc["settlement"], bool):
+            errors.append(f"локация {lid}: settlement — true / false")
     for lid, loc in world["locations"].items():  # v0.7.14: the law of a location
         law = loc.get("law")
         if law is None:

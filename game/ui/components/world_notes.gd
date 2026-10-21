@@ -256,7 +256,8 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 						(by_loc[loc] as Array).append(summary)
 				(by_loc[loc] as Array).append("• " + str(w.room(room_id).get("name", room_id)) + ("  — " + tr("MAP_HERE") if room_id == s.room_id else ""))
 			for loc: String in by_loc:
-				out.append({"title": str(w.location(loc).get("name", loc)), "lines": by_loc[loc]})
+				var rep := ReputationRules.text(s, Catalog.data, loc)  # v0.7.17
+				out.append({"title": rep if not rep.is_empty() else str(w.location(loc).get("name", loc)), "lines": by_loc[loc]})
 		"people":  # the conversations' summaries and what each NPC remembers of the hero (v0.7.15)
 			var by_loc := {}
 			var met: Array[String] = []

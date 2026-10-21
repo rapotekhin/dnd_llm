@@ -275,6 +275,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if str(e["kind"]) == "npc_discount":
 				return SocialRules.plan_discount(s, data, npc_id, int(e.get("percent", 0)), won)
 			return SocialRules.plan_favor(s, data, npc_id, str(e.get("service", "")), str(e.get("item_id", "")) if e.get("item_id") != null else "", won)
+		"reputation":  # the place learned of a deed of the hero (v0.7.17)
+			return ReputationRules.plan(s, data, int(e.get("delta", 0)), str(e.get("reason", "")), pending)
 		"reveal_secret":  # the NPC tells a secret of its own by goodwill (v0.7.15.3)
 			var who := str(e.get("npc_id", ""))
 			if not s.npcs_here(world.world, s.room_id).has(who):
@@ -576,6 +578,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		if not main.is_empty() and str(s.character["equipped"].get("off_hand", "")) == main and int(s.character["inventory"].get(main, 0)) < 2:
 			s.character["equipped"]["off_hand"] = ""
 		CharacterRules.refresh(s.character, _data, s.items)
+		return
+	if plan.has("reputation"):  # reputation (v0.7.17)
+		_extra_lines.append_array(ReputationRules.add(s, _data, str(plan["reputation"]), int(plan["delta"]), str(plan["why"])))
 		return
 	if plan.has("secret"):  # reveal_secret (v0.7.15.3)
 		for sec: Dictionary in SocialRules.secrets(_data, str(plan["secret_npc"])):
