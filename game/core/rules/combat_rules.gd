@@ -363,6 +363,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			lines.append("%s вялый после Ускорения — ход без действий и движения" % s.character["name"])
 		s.combat.erase("reckless")  # Reckless Attack lasts until the hero's next turn
 		lines.append_array(SpellEffects.turn_start(s, data))  # Heroism (v0.7.13.1)
+		lines.append_array(SpellEffects.zones_expire(s))  # Grease (v0.7.13.6)
 		for eid: String in enemies(s):  # v0.7.13: riders that last until the start of the hero's next turn
 			var o := fighter(s, eid)
 			for k: String in ["slowed", "no_heal", "chilled"]:
@@ -642,6 +643,12 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		adv.append("Направляющий снаряд")
 	if SpellEffects.has_next_attack_adv(c):
 		adv.append("Верный удар")
+	if t.has("outlined"):
+		adv.append("Огонь фей")
+	var fog_t := SpellEffects.obscured(s, int(t["col"]))  # Fog Cloud, Darkness (v0.7.13.6)
+	var fog_me := SpellEffects.obscured(s, int(player(s)["col"]))
+	if fog_t != fog_me:
+		dis.append((fog_t if not fog_t.is_empty() else fog_me).to_lower())
 	if _has(t, "prone") and d > 0:
 		dis.append("цель лежит, а вы далеко")
 	if bool(t.get("dodging", false)):
@@ -676,7 +683,7 @@ static func hero_attack_dis(s: GameSession, data: Dictionary, t: Dictionary) -> 
 			dis.append(str(pair[1]))
 	if ConditionRules.exhaustion(c) >= 3:
 		dis.append("истощение")
-	if _has(t, "invisible") and not SpellEffects.has(c, "see_invisible"):  # See Invisibility (v0.7.13.3)
+	if _has(t, "invisible") and not SpellEffects.has(c, "see_invisible") and not t.has("outlined"):  # See Invisibility, Faerie Fire
 		dis.append("цель невидима")
 	return dis
 
@@ -978,6 +985,7 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String) -> Arr
 		return lines
 	lines.append_array(SpellEffects.end_on_foes(s, spell_id))
 	lines.append_array(SpellEffects.end_zones(s, spell_id))  # v0.7.13.5
+	lines.append_array(SpellEffects.end_curses(s, spell_id))  # v0.7.13.6
 	if spell_id == "haste":  # v0.7.13.3: a wave of lethargy
 		s.character["lethargy"] = true
 		lines.append("Ускорение кончилось — на ход накатывает вялость")
@@ -1009,7 +1017,9 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 		return str(chk["reason"])
 	var sp: Dictionary = data["spells"][spell_id]
 	if SpellRules.long_cast(sp):
-		return "COMBAT_SPELL_TOO_LONG"  # v0.7.13: minutes to cast — not in a fight (Prayer of Healing)
+		return "COMBAT_SPELL_TOO_LONG"
+	if (sp.get("components", []) as Array).has("V") and SpellEffects.silenced(s, int(player(s)["col"])):
+		return "COMBAT_SILENCED"  # v0.7.13.6  # v0.7.13: minutes to cast — not in a fight (Prayer of Healing)
 	if sp.has("heal_at_slot") or target_id.is_empty():
 		return ""
 	var t := fighter(s, target_id)
@@ -1208,6 +1218,9 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		lines.append_array(end_spell(s, data, held))
 	if cfg(data)["condition_spells"].has(spell_id) and not target_id.is_empty():
 		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
+		return lines
+	if not SpellEffects.curse(data, spell_id).is_empty() and not target_id.is_empty():  # v0.7.13.6: Faerie Fire, Slow…
+		SpellEffects.cast_curse(s, data, spell_id, slot, fighter(s, target_id), lines)
 		return lines
 	if not SpellEffects.sustained(data, spell_id).is_empty():  # v0.7.13.5: zones and strikes each turn
 		SpellEffects.start_sustained(s, data, spell_id, slot, target_id, lines)
@@ -1864,6 +1877,8 @@ static func _end_actor(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 	if str(f.get("status")) == "active":
 		lines.append_array(SpellEffects.zone_tick(s, data, f, "end"))  # Flaming Sphere (v0.7.13.5)
 	if str(f.get("status")) == "active":
+		lines.append_array(SpellEffects.curse_saves(s, data, f))  # v0.7.13.6
+	if str(f.get("status")) == "active":
 		MonsterRules.end_turn(s, data, f, lines)
 		_tick_conditions(s, data, f, lines)
 	_check_end(s, data, lines)
@@ -1928,6 +1943,12 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # Moonbeam, Spirit Guardians (v0.7.13.5)
 	if str(f["status"]) != "active":
 		return
+	if f.has("slowed_spell"):
+		f["reacted"] = true  # Slow: no reactions
+	if bool(f.get("retching", false)):  # Stinking Cloud (v0.7.13.6)
+		f.erase("retching")
+		lines.append("%s давится и пропускает ход" % f["name"])
+		return
 	if f.has("burning"):  # alchemist's fire (v0.7.12): burns until a DEX save DC 10 puts it out
 		var burn := _resist(data, f, "fire", roll_dice(s.rng, str(f["burning"])))
 		lines.append("%s горит: %d (огонь)" % [f["name"], burn])
@@ -1949,7 +1970,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 			f["fleeing"] = true
 			lines.append("%s дрогнул и пытается бежать" % f["name"])
 	var steps := _move_cols(int(m.get("speed", 30)) - int(f.get("slowed", 0)), data)
-	if SpellEffects.slowed(s, f) and steps > 0:  # a slowing zone: half the way (v0.7.13.5)
+	if (SpellEffects.slowed(s, f) or f.has("slowed_spell")) and steps > 0:  # a slowing zone or Slow: half the way
 		steps = maxi(1, steps / 2) if int(m.get("speed", 30)) >= 60 else 0 if s.rng.randi_range(0, 1) == 0 else 1
 	if _has(f, "restrained") or _has(f, "grappled"):
 		steps = 0
@@ -2109,6 +2130,8 @@ static func _enemy_attack_full(s: GameSession, data: Dictionary, f: Dictionary, 
 				plan.append(a)
 	if plan.is_empty():
 		plan.append(act)
+	if f.has("slowed_spell"):  # Slow: one attack (v0.7.13.6)
+		plan = [plan[0]]
 	for i in plan.size():
 		if int(s.character["hp"]) <= 0:
 			return  # nobody finishes the downed hero (v0.7.9)
@@ -2168,10 +2191,14 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		or (str(a.get("kind")) == "ranged" and d == 0) or (f["conditions"] as Array).has("poisoned") or bool(p.get("hidden", false)) \
 		or (ConditionRules.invisible(c, data) and not _has(f, "invisible")) or (ranged_use and ConditionRules.has(c, "prone")) \
 		or ["blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x)) or not (tm["dis"] as Array).is_empty() \
-		or bool(f.get("mocked", false)) or bool(f.get("chilled", false)) or not SpellEffects.attack_dis(s, data, f).is_empty()
+		or bool(f.get("mocked", false)) or bool(f.get("chilled", false)) or not SpellEffects.attack_dis(s, data, f).is_empty() \
+		or f.has("cursed_dis") or SpellEffects.obscured(s, int(f["col"])) != SpellEffects.obscured(s, int(p["col"]))
 	f.erase("mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
 	if bool(p.get("blinked", false)):  # Blink (v0.7.13.3)
 		lines.append("%s бьёт в пустоту — героя нет на этом плане" % f["name"])
+		return
+	if ranged_use and a.has("range") and not SpellEffects.wall_between(s, int(f["col"]), int(p["col"])).is_empty():
+		lines.append("%s — %s: снаряд сносит Стена ветра" % [f["name"], a["name"]])  # v0.7.13.6
 		return
 	var held := SpellEffects.sanctuary_holds(s, data, f)  # Sanctuary (v0.7.13.2)
 	if not held.is_empty():
@@ -2217,6 +2244,9 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		types.append(str(dtypes.get(str(dd["type"]), dd["type"])))
 		if not str(adj["note"]).is_empty() and not notes.has(str(adj["note"])):
 			notes.append(str(adj["note"]))
+	if f.has("enfeebled") and str(a.get("kind")) in ["melee", "ranged"]:  # Ray of Enfeeblement (v0.7.13.6)
+		dmg /= 2
+		notes.append("ослаблен")
 	var ctx := {"foe": str(f["id"]), "action": str(a.get("name_en", "")), "line": line, "crit": crit, "dmg": dmg, "types": types, "notes": notes,
 		"prone": extra["prone"], "hit": true, "total": total, "ac": ac, "nat20": nat == 20}
 	var rx := FeatureRules.reactions(s, data, f, a, ranged_use, dmg)  # v0.7.10: the hero's reaction

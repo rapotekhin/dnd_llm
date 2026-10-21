@@ -653,3 +653,91 @@ func test_call_lightning_heat_metal_vampiric_touch() -> void:
 			break
 		ConditionRules.end_concentration(w, data, "ещё раз")
 	assert_int(int(w.character["hp"])).override_failure_message(" · ".join(vt)).is_greater(1)
+
+
+# --- batch 7 (v0.7.13.6): zones and control ---------------------------------------------------------------
+
+
+func test_grease_lays_them_down() -> void:
+	var s := _hero("wizard_yalika", 3)
+	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
+	s.character["spell_dc"] = 40
+	var lines := _cast_at(s, "grease", 1, str(foes[0]["id"]))
+	assert_bool(foes.all(func(f: Dictionary) -> bool: return CombatRules._has(f, "prone"))).override_failure_message(" · ".join(lines)).is_true()
+	assert_bool(SpellEffects.slowed(s, foes[0])).is_true()
+
+
+func test_fog_and_darkness_blind_the_column() -> void:
+	var s := _hero("wizard_yalika", 3)
+	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
+	_cast_at(s, "fog_cloud", 1, str(f["id"]))
+	var w := CombatRules.weapon_profile(s.character, data, s.items, "")
+	assert_bool((CombatRules._attack_mods(s, data, w, f)["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_true()
+	CombatRules.player(s)["col"] = 1  # both inside: they cancel
+	assert_bool((CombatRules._attack_mods(s, data, w, f)["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_false()
+
+
+func test_silence_stops_spells_inside() -> void:
+	var s := _hero("cleric_branko", 3)
+	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
+	_cast_at(s, "silence", 2, str(f["id"]))
+	_learn(s, "guiding_bolt")
+	s.combat["economy"]["action"] = 1
+	assert_str(CombatRules.can_cast(s, data, "guiding_bolt", 1, str(f["id"]))).is_equal("COMBAT_SILENCED")
+	assert_bool(SpellEffects.silenced(s, int(f["col"]))).is_true()
+
+
+func test_stinking_cloud_takes_the_turn() -> void:
+	var s := _hero("wizard_yalika", 5)
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	s.character["spell_dc"] = 40
+	_cast_at(s, "stinking_cloud", 3, str(f["id"]))
+	var hp := int(s.character["hp"])
+	var lines: Array[String] = []
+	CombatRules._enemy_turn(s, data, f, lines)
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("пропускает ход"))).override_failure_message(" · ".join(lines)).is_true()
+	assert_int(int(s.character["hp"])).is_equal(hp)
+
+
+func test_wind_wall_stops_arrows_and_gust_pushes() -> void:
+	var s := _hero("druid_olha", 5)
+	var foes := _fight(s, [{"monster": "goblin", "col": 3}])
+	var wall := _cast_at(s, "wind_wall", 3, str(foes[0]["id"]))
+	(SpellEffects.zones(s)[0] as Dictionary)["col"] = 1
+	assert_str(SpellEffects.wall_between(s, 3, 0)).is_not_empty()
+	var lines: Array[String] = []
+	CombatRules._enemy_turn(s, data, foes[0], lines)
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("Стена ветра"))).override_failure_message(" · ".join(lines) + " | " + " · ".join(wall)).is_true()
+	var g := _hero("wizard_yalika", 3)
+	var gf := _fight(g, [{"monster": "goblin", "col": 1}])[0]
+	g.character["spell_dc"] = 40
+	_cast_at(g, "gust_of_wind", 2, str(gf["id"]))
+	assert_int(int(gf["col"])).is_equal(2)
+
+
+func test_faerie_fire_slow_ray_and_curse() -> void:
+	var s := _hero("bard_yas", 3)
+	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
+	s.character["spell_dc"] = 40
+	_cast_at(s, "faerie_fire", 1, str(foes[0]["id"]))
+	assert_bool(foes.all(func(f: Dictionary) -> bool: return f.has("outlined"))).is_true()
+	var w := CombatRules.weapon_profile(s.character, data, s.items, "")
+	assert_array(CombatRules._attack_mods(s, data, w, foes[0])["adv"]).contains(["Огонь фей"])
+	ConditionRules.end_concentration(s, data, "проверка")
+	assert_bool(foes.any(func(f: Dictionary) -> bool: return f.has("outlined"))).is_false()
+	var z := _hero("wizard_yalika", 5)
+	var o := _fight(z, [{"monster": "ogre", "col": 1}])[0]
+	z.character["spell_dc"] = 40
+	var ac := int(o["ac"])
+	_cast_at(z, "slow", 3, str(o["id"]))
+	assert_int(int(o["ac"])).is_equal(ac - 2)
+	ConditionRules.end_concentration(z, data, "проверка")
+	assert_int(int(o["ac"])).is_equal(ac)
+	_cast_at(z, "bestow_curse", 3, str(o["id"]))
+	assert_bool(o.has("cursed_dis")).is_true()
+
+
+func test_hypnotic_pattern_is_a_condition_spell() -> void:
+	var cs: Dictionary = data["rules"]["combat"]["condition_spells"]
+	assert_array(cs["hypnotic_pattern"]["conditions"]).contains(["charmed", "incapacitated"])
+	assert_bool(bool(cs["hypnotic_pattern"]["ends_on_damage"])).is_true()

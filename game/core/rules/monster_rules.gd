@@ -470,8 +470,8 @@ static func castable(data: Dictionary, f: Dictionary) -> Array[Dictionary]:
 ## than the weapon. True when it cast (the turn's action is spent).
 static func cast_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> bool:
 	var options := castable(data, f)
-	if options.is_empty() or int(s.character.get("hp", 0)) <= 0:
-		return false
+	if options.is_empty() or int(s.character.get("hp", 0)) <= 0 or SpellEffects.silenced(s, int(f["col"])):
+		return false  # Silence (v0.7.13.6): no spell from inside
 	var d := CombatRules.cols_between(f, CombatRules.player(s))
 	var in_range := func(id: String) -> bool:
 		return d <= CombatRules.range_cols(data, int(data["spells"][id].get("range_ft", 0))) or int(data["spells"][id].get("range_ft", 0)) == 0 and d == 0

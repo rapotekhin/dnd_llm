@@ -21,7 +21,8 @@ static func spec(data: Dictionary, spell_id: String) -> Dictionary:
 ## A spell the hero casts on themselves (no target to pick).
 static func self_spell(data: Dictionary, spell_id: String) -> bool:
 	var sp := spec(data, spell_id)
-	return not sp.is_empty() and not bool(sp.get("foe", false)) and not bool(sp.get("foe_target", false)) and not sp.has("sustained")
+	return not sp.is_empty() and not bool(sp.get("foe", false)) and not bool(sp.get("foe_target", false)) and not sp.has("sustained") \
+		and not sp.has("curse")
 
 
 static func foe_spell(data: Dictionary, spell_id: String) -> bool:
@@ -66,7 +67,7 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 		e["ability_adv"] = best
 	if sp.has("max_hp_plus"):  # Aid: the maximum and the hit points up
 		e["max_hp"] = int(sp["max_hp_plus"]) + int(sp.get("per_slot", 0)) * slot_up
-	ConditionRules.add_effect(c, e)
+	ConditionRules.add_effect(c, GameSession._whole_numbers(e))  # the table's numbers come as floats from JSON
 	lines.append("%s: %s" % [spell["name"], text(data, e)])
 	if sp.has("remove"):
 		lines.append_array(ConditionRules.cure(s, data, {"remove": sp["remove"]}, e["source"]))
@@ -447,6 +448,8 @@ static func _dice(data: Dictionary, spell_id: String, slot: int) -> String:
 			if slot >= int(k) or best.is_empty():
 				best = str(sus["dice"][k])
 		return best
+	if not spell.has("damage_at_slot") and not spell.has("damage_at_level"):
+		return ""  # Grease, Fog Cloud: no damage of their own (v0.7.13.6)
 	return CombatRules._spell_dice(spell, maxi(slot, int(spell["level"])), 1)
 
 
@@ -488,12 +491,22 @@ static func start_sustained(s: GameSession, data: Dictionary, spell_id: String, 
 		if not s.combat.has("zones"):
 			s.combat["zones"] = []
 		var col := int(CombatRules.player(s)["col"]) if bool(sus.get("follow", false)) or t.is_empty() else int(t["col"])
-		(s.combat["zones"] as Array).append({"spell": spell_id, "name": str(spell["name"]), "col": col, "follow": bool(sus.get("follow", false)),
-			"dice": dice, "type": str(sus["type"]), "save": str(sus.get("save", "")), "on": sus.get("on", []), "dc": int(c.get("spell_dc", 10)),
-			"slow": bool(sus.get("slow", false))})
+		var zone := {"spell": spell_id, "name": str(spell["name"]), "col": col, "follow": bool(sus.get("follow", false)),
+			"dice": dice, "type": str(sus.get("type", "")), "save": str(sus.get("save", "")), "on": sus.get("on", []), "dc": int(c.get("spell_dc", 10)),
+			"slow": bool(sus.get("slow", false))}
+		for k: String in ["cond", "obscure", "silence", "retch", "block_ranged"]:
+			if sus.has(k):
+				zone[k] = sus[k]
+		if not bool(spell.get("concentration", false)) and rounds > 0:  # Grease: a minute on the field
+			zone["until_round"] = int(s.combat.get("round", 1)) + rounds
+		(s.combat["zones"] as Array).append(GameSession._whole_numbers(zone))
 		lines.append("%s: %s" % [spell["name"], "вокруг героя" if bool(sus.get("follow", false)) else "встаёт на поле"])
+		if (zone["on"] as Array).has("now"):
+			for fid: String in CombatRules.enemies(s):
+				if int(CombatRules.fighter(s, fid)["col"]) == col:
+					lines.append_array(_zone_hit(s, data, zone, CombatRules.fighter(s, fid)))
 	if sus.has("cost"):
-		ConditionRules.add_effect(c, e)
+		ConditionRules.add_effect(c, GameSession._whole_numbers(e))
 	if bool(sus.get("now", false)) and not t.is_empty():
 		lines.append_array(_hit(s, data, spell_id, e, t))
 
@@ -574,6 +587,8 @@ static func act(s: GameSession, data: Dictionary, id: String, target_id: String)
 						lines.append_array(_zone_hit(s, data, z, f))
 		return lines
 	var t := CombatRules.fighter(s, target_id if str(sus["kind"]) != "heat" else str(e.get("target", "")))
+	if str(sus["kind"]) == "push":
+		return _hit(s, data, spell_id, e, t)
 	if str(sus["kind"]) == "strike":
 		for fid: String in CombatRules.enemies(s):
 			var f := CombatRules.fighter(s, fid)
@@ -613,6 +628,20 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 				var f := CombatRules.fighter(s, fid)
 				if int(f["col"]) == int(t["col"]):
 					lines.append_array(_save_hit(s, data, name, str(sus["type"]), str(sus.get("save", "dex")), str(e["dice"]), int(c.get("spell_dc", 10)), f, true))
+		"push":  # Gust of Wind: the line toward the target, a STR save or a column away
+			var me := int(CombatRules.player(s)["col"])
+			var dir := signi(int(t["col"]) - me)
+			for fid: String in CombatRules.enemies(s):
+				var f := CombatRules.fighter(s, fid)
+				var along := (int(f["col"]) - me) * dir if dir != 0 else (0 if int(f["col"]) == me else -1)
+				if along < 0 or along > int(sus.get("reach", 2)):
+					continue
+				if CombatRules._monster_save(s, data, f, str(sus.get("save", "str")), int(c.get("spell_dc", 10)), ["magic"]):
+					lines.append("%s: %s устоял" % [name, f["name"]])
+				else:
+					var away := dir if dir != 0 else (1 if int(f["col"]) >= 0 else -1)
+					f["col"] = clampi(int(f["col"]) + away, -CombatRules.edge(data), CombatRules.edge(data))
+					lines.append("%s: %s отброшен на 30 фт" % [name, f["name"]])
 	return lines
 
 
@@ -633,7 +662,130 @@ static func _save_hit(s: GameSession, data: Dictionary, name: String, dtype: Str
 
 
 static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary) -> Array[String]:
-	return _save_hit(s, data, str(z["name"]), str(z["type"]), str(z["save"]), str(z["dice"]), int(z["dc"]), f, true)
+	if not str(z["dice"]).is_empty():
+		return _save_hit(s, data, str(z["name"]), str(z["type"]), str(z["save"]), str(z["dice"]), int(z["dc"]), f, true)
+	var lines: Array[String] = []
+	if str(f.get("status")) != "active" or str(z["save"]).is_empty():
+		return lines
+	var ok := CombatRules._monster_save(s, data, f, str(z["save"]), int(z["dc"]), ["magic"])
+	if ok:
+		lines.append("%s: %s — спасбросок %s успех" % [z["name"], f["name"], CombatRules.ab_name(str(z["save"]))])
+		return lines
+	if z.has("cond") and not CombatRules._has(f, str(z["cond"])):
+		CombatRules._add_condition(f, str(z["cond"]), {})
+		lines.append("%s: %s — %s" % [z["name"], f["name"], CombatRules.cond_name(data, str(z["cond"]))])
+	if bool(z.get("retch", false)):
+		f["retching"] = true
+		lines.append("%s: %s давится и теряет ход" % [z["name"], f["name"]])
+	return lines
+
+
+## A column under Fog Cloud or Darkness: those inside see nothing out, nobody sees in.
+static func obscured(s: GameSession, col: int) -> String:
+	for z: Dictionary in zones(s):
+		if bool(z.get("obscure", false)) and zone_col(s, z) == col:
+			return str(z["name"])
+	return ""
+
+
+static func silenced(s: GameSession, col: int) -> bool:
+	return zones(s).any(func(z: Dictionary) -> bool: return bool(z.get("silence", false)) and zone_col(s, z) == col)
+
+
+## Wind Wall between a shooter and the hero: the arrow misses. Its name, or "".
+static func wall_between(s: GameSession, from_col: int, to_col: int) -> String:
+	for z: Dictionary in zones(s):
+		if not bool(z.get("block_ranged", false)):
+			continue
+		var c := zone_col(s, z)
+		if c != to_col and ((c >= from_col and c < to_col) or (c <= from_col and c > to_col)):
+			return str(z["name"])
+	return ""
+
+
+## A minute of Grease is over: its zones leave the field. Lines.
+static func zones_expire(s: GameSession) -> Array[String]:
+	var lines: Array[String] = []
+	for z: Dictionary in zones(s).duplicate():
+		if z.has("until_round") and int(s.combat.get("round", 1)) > int(z["until_round"]):
+			zones(s).erase(z)
+			lines.append("%s исчезает" % z["name"])
+	return lines
+
+
+# --- curses on foes (v0.7.13.6) ------------------------------------------------------------------------
+
+
+static func curse(data: Dictionary, spell_id: String) -> Dictionary:
+	return spec(data, spell_id).get("curse", {})
+
+
+## Faerie Fire, Ray of Enfeeblement, Bestow Curse, Slow: a save (or the ray's attack) and the flag on who failed. Lines.
+static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot: int, target: Dictionary, lines: Array[String]) -> void:
+	var c := s.character
+	var cu := curse(data, spell_id)
+	var spell: Dictionary = data["spells"][spell_id]
+	var name := str(spell["name"])
+	var dc := int(c.get("spell_dc", 10))
+	var foes: Array[Dictionary] = [target]
+	if bool(cu.get("area", false)):
+		foes = []
+		for id: String in CombatRules.enemies(s):
+			var f := CombatRules.fighter(s, id)
+			if int(f["col"]) == int(target["col"]) and foes.size() < int(cu.get("targets", 99)):
+				foes.append(f)
+	for f: Dictionary in foes:
+		var landed := false
+		if bool(cu.get("attack", false)):
+			var res := CombatRules._attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), false,
+				not CombatRules.hero_attack_dis(s, data, f).is_empty(), f, "0", 0, "force", lines)
+			landed = bool(res["hit"])
+		else:
+			var ok := CombatRules._monster_save(s, data, f, str(cu["save"]), dc, ["magic"])
+			lines.append("%s: %s — спасбросок %s %s" % [name, f["name"], CombatRules.ab_name(str(cu["save"])), "успех" if ok else "провал"])
+			landed = not ok
+		if not landed:
+			continue
+		var flag := str(cu["flag"])
+		f[flag] = {"spell": spell_id, "name": name, "repeat": str(cu.get("repeat", "")), "dc": dc}
+		if flag == "slowed_spell":
+			f["ac"] = int(f["ac"]) - 2
+		lines.append("%s: %s" % [f["name"], FLAG_TEXT.get(flag, name)])
+
+
+const FLAG_TEXT := {"outlined": "светится — атаки по нему с преимуществом", "enfeebled": "ослаблен — оружием вполсилы",
+	"cursed_dis": "проклят — бьёт героя с помехой", "slowed_spell": "замедлен: КД −2, вдвое медленнее, одна атака, без реакций"}
+const FLAGS := ["outlined", "enfeebled", "cursed_dis", "slowed_spell"]
+
+
+static func _drop_flag(f: Dictionary, flag: String) -> void:
+	if flag == "slowed_spell" and f.has(flag):
+		f["ac"] = int(f["ac"]) + 2
+	f.erase(flag)
+
+
+## The end of a foe's turn: a repeat save may shake a curse off. Lines.
+static func curse_saves(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	for flag: String in FLAGS:
+		if not f.has(flag) or str(f[flag].get("repeat", "")).is_empty() or str(f.get("status")) != "active":
+			continue
+		if CombatRules._monster_save(s, data, f, str(f[flag]["repeat"]), int(f[flag]["dc"]), ["magic"]):
+			lines.append("%s стряхивает «%s»" % [f["name"], f[flag]["name"]])
+			_drop_flag(f, flag)
+	return lines
+
+
+## The concentration ends: the curses of the spell go. Lines.
+static func end_curses(s: GameSession, spell_id: String) -> Array[String]:
+	var lines: Array[String] = []
+	for id: String in CombatRules.enemies(s, false):
+		var f := CombatRules.fighter(s, id)
+		for flag: String in FLAGS:
+			if f.has(flag) and str(f[flag].get("spell", "")) == spell_id:
+				lines.append("%s: «%s» проходит" % [f["name"], f[flag]["name"]])
+				_drop_flag(f, flag)
+	return lines
 
 
 ## A foe and the zones: `when` — start (of its turn), enter (a column it moves into; once a turn a zone), end. Lines.

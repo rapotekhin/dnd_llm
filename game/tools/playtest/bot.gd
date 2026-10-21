@@ -163,8 +163,15 @@ func _act() -> String:
 			var before := JSON.stringify(s.to_dict(500))
 			gs.save_to("slot_1")
 			gs.load_from("slot_1")
-			if before != JSON.stringify(gs.session.to_dict(500)):
+			var after := JSON.stringify(gs.session.to_dict(500))
+			if before != after:
 				counts["save_mismatch"] = int(counts.get("save_mismatch", 0)) + 1
+				var at := 0
+				while at < mini(before.length(), after.length()) and before[at] == after[at]:
+					at += 1
+				print("SAVE MISMATCH at %d:
+  before: %s
+  after:  %s" % [at, before.substr(maxi(0, at - 120), 240), after.substr(maxi(0, at - 120), 240)])
 			return "save_load",
 	]
 	for k in tries.size():

@@ -22,7 +22,7 @@ func run() -> void:
 		return
 	var s: GameSession = gs.session
 	var c := s.character
-	_learn(c, ["bless", "bane", "guiding_bolt", "shield_of_faith", "sanctuary", "fly", "haste", "hunters_mark", "moonbeam", "spiritual_weapon"])
+	_learn(c, ["bless", "bane", "guiding_bolt", "shield_of_faith", "sanctuary", "fly", "haste", "hunters_mark", "moonbeam", "spiritual_weapon", "grease"])
 	c["temp_hp"] = 500  # the hero lasts the whole scenario
 
 	# v0.7.13.1: Bless, then Bane over it.
@@ -205,6 +205,23 @@ func run() -> void:
 	await press(find(screen(), "EndTurnButton"))
 	await _my_turn(gs, s)
 	step("the wolf burns in the beam", _seen.any(func(l: String) -> bool: return l.contains("Лунный луч: Волк")), _tail(4))
+	# v0.7.13.6: Grease under the wolf (no concentration: Moonbeam stays) — the label and a save.
+	c["slots_max"] = [4, 3, 3, 0, 0]
+	c["slots_used"] = [0, 0, 0, 0, 0]
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	cs = screen()
+	_tab(cs, "COMBAT_TAB_SPELLS")
+	await frames(2)
+	var gr: Button = find(cs, "Cast_grease")
+	if step("Grease on the tab", gr != null):
+		await press(gr)
+		await frames(2)
+		await press(find(cs, "Foe_" + str(wolf["id"])))
+		await frames(4)
+	step("Grease on the field, Moonbeam kept", SpellEffects.zone_names(s, int(wolf["col"])).size() >= 2 and str(c.get("concentration", "")) == "moonbeam",
+		", ".join(SpellEffects.zone_names(s, int(wolf["col"]))) + " | " + _tail(3))
+	await shot("grease")
 
 func _learn(c: Dictionary, ids: Array) -> void:
 	var sp: Dictionary = c["spells"]
