@@ -599,6 +599,10 @@ static func _normalized_merchant(m: Dictionary) -> Dictionary:
 	for id: String in out.get("stock", {}):
 		stock[id] = int(out["stock"][id])
 	out["stock"] = stock
+	var sold := {}
+	for id: String in out.get("sold", {}):
+		sold[id] = int(out["sold"][id])
+	out["sold"] = sold
 	if out.get("haggle_result") is Dictionary and not (out["haggle_result"] as Dictionary).is_empty():
 		_normalized(out["haggle_result"])
 	else:

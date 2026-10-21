@@ -10,7 +10,16 @@ var s: GameSession
 
 
 func before_test() -> void:
-	data = TestUtils.data()
+	data = TestUtils.data().duplicate(true)
+	# These tests check the deal, the attitude and the haggle on a neutral market: demand off (it has its own tests,
+	# test_demand_v07171.gd).
+	var d: Dictionary = data["rules"]["trade"]["demand"]
+	d["wanted"] = 1.0
+	d["other"] = 1.0
+	d["min_ratio"] = 0.0
+	d["max_ratio"] = 1.0
+	for id: String in data["world"]["npcs"]:
+		(data["world"]["npcs"][id] as Dictionary).erase("shuns")
 	s = TestUtils.new_session()
 	CharacterRules.refresh(s.character, data)
 	s.character["gold_cp"] = 10000

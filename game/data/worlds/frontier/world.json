@@ -1042,6 +1042,13 @@
 				"rations": 10,
 				"candle": 20
 			},
+			"wants": [
+				"consumable"
+			],
+			"shuns": [
+				"weapon",
+				"armor"
+			],
 			"purse_cp": 3000,
 			"monster": "commoner",
 			"tags": [
@@ -1155,6 +1162,10 @@
 				"acid_vial": 2,
 				"net": 1
 			},
+			"wants": [
+				"gear",
+				"tool"
+			],
 			"purse_cp": 15000,
 			"monster": "commoner",
 			"tags": [
@@ -1189,6 +1200,14 @@
 				"crossbow_bolt": 40,
 				"sling_bullet": 40
 			},
+			"wants": [
+				"weapon",
+				"armor"
+			],
+			"shuns": [
+				"consumable",
+				"scroll"
+			],
 			"purse_cp": 25000,
 			"monster": "thug",
 			"tags": [
@@ -1225,6 +1244,13 @@
 				"potion_of_climbing": 2,
 				"potion_of_resistance_poison": 1
 			},
+			"wants": [
+				"consumable"
+			],
+			"shuns": [
+				"weapon",
+				"armor"
+			],
 			"purse_cp": 12000,
 			"monster": "commoner",
 			"tags": [
@@ -1266,6 +1292,13 @@
 				"spell_scroll_cure_wounds": 2,
 				"spell_scroll_identify": 1
 			},
+			"wants": [
+				"magic",
+				"scroll"
+			],
+			"shuns": [
+				"weapon"
+			],
 			"purse_cp": 4000,
 			"monster": "acolyte",
 			"tags": [

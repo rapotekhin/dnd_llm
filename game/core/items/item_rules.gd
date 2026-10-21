@@ -84,6 +84,20 @@ static func found(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	return key
 
 
+## The trade tags of an item (v0.7.17.1, demand): its item_type, magic, scroll, tool and the item's own `tags`.
+static func trade_tags(def: Dictionary) -> Array[String]:
+	var out: Array[String] = [str(def.get("item_type", "gear"))]
+	if not str(def.get("rarity", "common")) in ["common", ""]:
+		out.append("magic")
+	if bool(def.get("use", {}).get("scroll", false)):
+		out.append("scroll")
+	if def.has("tool"):
+		out.append("tool")
+	for t: Variant in def.get("tags", []):
+		out.append(str(t))
+	return out
+
+
 static func unknown_ids(c: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	for id: String in c.get("inventory", {}):

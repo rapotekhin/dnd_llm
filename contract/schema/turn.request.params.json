@@ -974,12 +974,22 @@
           "title": "Purse Cp",
           "type": "integer"
         },
+        "shuns": {
+          "default": "",
+          "title": "Shuns",
+          "type": "string"
+        },
         "stock": {
           "items": {
             "$ref": "#/$defs/TradeLine"
           },
           "title": "Stock",
           "type": "array"
+        },
+        "wants": {
+          "default": "",
+          "title": "Wants",
+          "type": "string"
         }
       },
       "required": [

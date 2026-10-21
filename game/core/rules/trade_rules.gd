@@ -19,9 +19,17 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
 	var m: Dictionary = s.merchants.get(npc_id, {})
 	if m.is_empty():
-		m = {"purse_cp": 0, "stock": {}, "day": 0, "haggle_pct": 0, "haggle_failed_day": 0, "haggle_result": {}}
+		m = {"purse_cp": 0, "stock": {}, "day": 0, "haggle_pct": 0, "haggle_failed_day": 0, "haggle_result": {}, "sold": {}}
 		s.merchants[npc_id] = m
+	if not m.has("sold"):
+		m["sold"] = {}
 	if int(m["day"]) < s.day:
+		var back := int(demand_cfg(data)["recover_per_day"]) * (s.day - int(m["day"])) if int(m["day"]) > 0 else 9999
+		var sold: Dictionary = m["sold"]
+		for id: String in sold.keys():  # the market forgets what the hero sold (v0.7.17.1)
+			sold[id] = int(sold[id]) - back
+			if int(sold[id]) <= 0:
+				sold.erase(id)
 		var pack := pack_stock(npc, data["rules"])
 		var stock: Dictionary = m["stock"]
 		for id: String in pack:
@@ -69,12 +77,82 @@ static func buy_price(s: GameSession, data: Dictionary, npc_id: String, item_id:
 	return maxi(1, price)
 
 
-## What the merchant pays for one item of the player now; 0 = not worth selling.
+## What the merchant pays for one item of the player now; 0 = it will not buy it or it is worth nothing.
 static func sell_price(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> int:
+	return _sell_unit(s, data, npc_id, item_id, 0)
+
+
+## What the merchant pays for `qty` of an item: each unit sells a little cheaper (the market fills, v0.7.17.1).
+static func sell_total(s: GameSession, data: Dictionary, npc_id: String, item_id: String, qty: int) -> int:
+	var total := 0
+	for i in qty:
+		total += _sell_unit(s, data, npc_id, item_id, i)
+	return total
+
+
+static func _sell_unit(s: GameSession, data: Dictionary, npc_id: String, item_id: String, more: int) -> int:
 	var t: Dictionary = data["rules"]["trade"]
-	var haggle := int(merchant(s, data, npc_id)["haggle_pct"])
-	var v := _value(s, data, item_id) * float(t["sell_ratio"]) * _pct(t["sell_pct_by_attitude"], s.attitude(npc_id)) * ReputationRules.price_pct(s, data, npc_id, "sell") / 100.0
-	return floori(v * (100 + haggle) / 10000.0)
+	var d := demand_cfg(data)
+	var want := demand(s, data, npc_id, item_id)
+	var value := _value(s, data, item_id)
+	if want == "shuns" or value <= 0:
+		return 0
+	var m := merchant(s, data, npc_id)
+	var sold := int((m["sold"] as Dictionary).get(ItemRules.real_id(item_id), 0)) + more
+	var fill := maxf(float(d["saturation_floor"]), 1.0 - float(d["saturation_step"]) * sold)
+	var v := value * float(t["sell_ratio"]) * float(d["wanted"] if want == "wants" else d["other"]) * fill
+	v *= _pct(t["sell_pct_by_attitude"], s.attitude(npc_id)) / 100.0 * ReputationRules.price_pct(s, data, npc_id, "sell") / 100.0
+	v *= (100 + int(m["haggle_pct"])) / 100.0
+	return floori(clampf(v, value * float(d["min_ratio"]), value * float(d["max_ratio"])))
+
+
+# --- demand (v0.7.17.1) ---------------------------------------------------------------------------------------
+
+
+static func demand_cfg(data: Dictionary) -> Dictionary:
+	return data["rules"]["trade"]["demand"]
+
+
+## The tags the trader buys gladly: the pack's `wants`, else the item types of a good share of its own goods.
+static func wants(data: Dictionary, npc_id: String) -> Array[String]:
+	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
+	var out: Array[String] = []
+	if npc.has("wants"):
+		for t: Variant in npc["wants"]:
+			out.append(str(t))
+		return out
+	var stock := pack_stock(npc, data["rules"])
+	var count := {}
+	for id: String in stock:
+		var ty := str(data["items"]["catalog"].get(id, {}).get("item_type", "gear"))
+		count[ty] = int(count.get(ty, 0)) + 1
+	for ty: String in count:
+		if int(count[ty]) >= maxi(2, ceili(stock.size() * float(demand_cfg(data)["default_share"]))):
+			out.append(ty)
+	return out
+
+
+static func shuns(data: Dictionary, npc_id: String) -> Array[String]:
+	var out: Array[String] = []
+	for t: Variant in data["world"]["npcs"].get(npc_id, {}).get("shuns", []):
+		out.append(str(t))
+	return out
+
+
+## "wants", "shuns" or "other" for an item of the hero.
+static func demand(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> String:
+	var tags := ItemRules.trade_tags(ItemRules.def_of(data["items"], s.items, item_id))
+	if shuns(data, npc_id).any(func(t: String) -> bool: return tags.has(t)):
+		return "shuns"
+	if wants(data, npc_id).any(func(t: String) -> bool: return tags.has(t)):
+		return "wants"
+	return "other"
+
+
+## Tags in words for the panel and the master: «оружие, доспехи».
+static func tag_words(data: Dictionary, tags: Array[String]) -> String:
+	var names: Dictionary = demand_cfg(data)["tag_names"]
+	return ", ".join(tags.map(func(t: String) -> String: return str(names.get(t, t))))
 
 
 ## How many of an item the player can sell: owned minus what is worn or wielded.
@@ -110,10 +188,10 @@ static func quote(s: GameSession, data: Dictionary, npc_id: String, cart: Dictio
 			continue
 		if sellable(s, id, data) < qty:
 			return _fail(out, "TRADE_ERR_NO_ITEM", {"item": ItemRules.display_name(items, s.items, id)})
-		var price := sell_price(s, data, npc_id, id)
+		var price := sell_total(s, data, npc_id, id, qty)
 		if price <= 0:
 			return _fail(out, "TRADE_ERR_WORTHLESS", {"item": ItemRules.display_name(items, s.items, id)})
-		out["sell_cp"] += price * qty
+		out["sell_cp"] += price
 	out["net_cp"] = int(out["buy_cp"]) - int(out["sell_cp"])
 	if int(out["buy_cp"]) == 0 and int(out["sell_cp"]) == 0:
 		return _fail(out, "TRADE_ERR_EMPTY", {})
@@ -155,8 +233,10 @@ static func execute(s: GameSession, data: Dictionary, npc_id: String, cart: Dict
 		if qty <= 0:
 			continue
 		lines.append("Продано: %s%s — %s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else "",
-			Money.format(sell_price(s, data, npc_id, id) * qty)])
+			Money.format(sell_total(s, data, npc_id, id, qty))])
 		stock[ItemRules.real_id(id)] = int(stock.get(ItemRules.real_id(id), 0)) + qty  # the trader knows what it is (v0.7.12)
+		var sold: Dictionary = m["sold"]  # the market fills (v0.7.17.1)
+		sold[ItemRules.real_id(id)] = int(sold.get(ItemRules.real_id(id), 0)) + qty
 		var left := int(inv[id]) - qty
 		if left > 0:
 			inv[id] = left
@@ -261,9 +341,11 @@ static func info(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary
 		var qty := sellable(s, id, data)
 		var price := sell_price(s, data, npc_id, id)
 		if qty > 0 and price > 0:
-			buys.append({"item_id": id, "name": ItemRules.display_name(items, s.items, id), "qty": qty, "price_cp": price})
+			buys.append({"item_id": id, "name": ItemRules.display_name(items, s.items, id), "qty": qty, "price_cp": price,
+				"wanted": demand(s, data, npc_id, id) == "wants"})
 	return {"npc_id": npc_id, "purse_cp": int(m["purse_cp"]), "haggle_pct": int(m["haggle_pct"]), "discount_pct": SocialRules.discount(s, npc_id),
-		"haggle_locked": int(m["haggle_failed_day"]) == s.day, "stock": stock, "buys": buys}
+		"haggle_locked": int(m["haggle_failed_day"]) == s.day, "stock": stock, "buys": buys,
+		"wants": tag_words(data, wants(data, npc_id)), "shuns": tag_words(data, shuns(data, npc_id))}
 
 
 # --- services (v0.7.12) ----------------------------------------------------------------------------

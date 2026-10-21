@@ -148,6 +148,9 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"NPC {nid}: услуги только у торговца (trader)")
         if npc.get("monster") and npc["monster"] not in ids["monsters"]:
             errors.append(f"NPC {nid}: нет монстра-шаблона {npc['monster']}")
+        for key in ("wants", "shuns"):  # v0.7.17.1: demand by trade tags
+            if key in npc and not (isinstance(npc[key], list) and all(isinstance(x, str) for x in npc[key])):
+                errors.append(f"NPC {nid}: {key} — список тегов (item_type, magic, scroll, tool или теги вещей)")
         if npc.get("stock") and not npc.get("trader"):
             errors.append(f"NPC {nid}: есть stock, но нет trader: true")
         for sc in npc.get("schedule", []):  # v0.7.14.2: hours and a room ("" — away)

@@ -36,6 +36,7 @@ func run() -> void:
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		var deal: Label = find(game, "DealState")
 		step("the deal panel shows the discount", deal != null and deal.visible and deal.text.contains("Скидка 20%"), deal.text if deal != null else "")
+		step("and what the merchant buys gladly", deal != null and deal.text.contains("Охотно берёт: снаряжение"), deal.text if deal != null else "")  # v0.7.17.1
 		var now := TradeRules.buy_price(s, data, "npc_merchant", item)
 		step("the price is lower", now < full, "%d → %d" % [full, now])
 		await shot("discount")

@@ -712,6 +712,8 @@ TRADE_ERR_WORTHLESS,Торговец не возьмёт: {item} ничего н
 TRADE_EVEN,Обмен без доплаты
 TRADE_GET,Вы получаете: {coins}
 TRADE_HAGGLE_ACTIVE,"Сторговались: −{pct}% к покупкам, +{pct}% к продаже"
+TRADE_WANTS,Охотно берёт: {tags}
+TRADE_SHUNS,Не берёт: {tags}
 TRADE_DISCOUNT,Скидка {pct}% до дня {day}
 TRADE_HAGGLE_DONE,Вы уже сторговались в этот визит
 TRADE_HAGGLE_LOCKED,Сегодня торговец уже не уступит — попробуйте завтра
