@@ -30,7 +30,7 @@ STATUS = {
 MISSING = ("master", "none")
 
 # Spells that wait for allies (M4): summons, help for the dying, raising the dead (author's decision, v0.7.13).
-SPELL_LATER = {"find_familiar", "find_steed", "conjure_animals", "animate_dead", "unseen_servant", "phantom_steed",
+SPELL_LATER = {"warding_bond", "find_familiar", "find_steed", "conjure_animals", "animate_dead", "unseen_servant", "phantom_steed",
                "tensers_floating_disk", "animal_messenger", "spare_the_dying", "revivify"}
 
 # Spells (v0.7.13): groups of the master-only ones.
@@ -326,7 +326,9 @@ CHECKED: dict[str, str] = {
                                                "brave", "relentless_endurance", "frenzy"]},
     **{sp: "test_spells_v0713.gd" for sp in ["acid_arrow", "acid_splash", "blindness_deafness", "burning_hands", "charm_person", "chill_touch", "color_spray", "command", "cure_wounds", "eldritch_blast", "entangle", "fear", "fire_bolt", "fireball", "guiding_bolt", "healing_word", "hideous_laughter", "hold_person", "inflict_wounds", "lightning_bolt", "magic_missile", "mass_healing_word", "poison_spray", "prayer_of_healing", "produce_flame", "ray_of_frost", "sacred_flame", "scorching_ray", "shatter", "shocking_grasp", "sleep", "thunderwave", "vicious_mockery", "web"]},
     "invisibility": "test_conditions_v078.gd",
-    **{sp: "test_spells_v0713.gd" for sp in ["bless", "bane", "guidance", "resistance", "heroism", "true_strike"]},
+    **{sp: "test_spells_v0713.gd" for sp in ["bless", "bane", "guidance", "resistance", "heroism", "true_strike", "mage_armor", "shield_of_faith",
+                                             "barkskin", "blur", "mirror_image", "sanctuary", "false_life", "aid", "protection_from_energy",
+                                             "protection_from_poison", "protection_from_evil_and_good", "beacon_of_hope"]},
     **{p: "test_items_v0712.gd" for p in ["ammunition", "heavy", "reach", "silvered", "fire_damage", "cursed", "no_crit", "mithral", "str_19"]},
     **{f: "test_features_v0710.gd" for f in ["barbarian_extra_attack", "monk_extra_attack", "paladin_extra_attack", "ranger_extra_attack",
                                              "rage", "reckless_attack", "danger_sense", "improved_critical", "uncanny_dodge", "martial_arts",

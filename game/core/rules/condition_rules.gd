@@ -240,6 +240,7 @@ static func expire(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	if not gone.is_empty():
 		lines.append("прошло: " + ", ".join(gone))
+		CharacterRules.refresh(c, data, s.items)  # Mage Armor, Aid and the like leave the numbers (v0.7.13.2)
 	var ends := int(c.get("concentration_ends", -1))
 	if not str(c.get("concentration", "")).is_empty() and ends >= 0 and ends <= t:
 		lines.append_array(end_concentration(s, data, "время вышло"))
@@ -288,6 +289,7 @@ static func end_concentration(s: GameSession, data: Dictionary, why: String) -> 
 		if str(e.get("source", {}).get("kind", "")) == "spell" and str(e["source"].get("id", "")) == spell and bool(e.get("concentration", false)):
 			list.erase(e)
 	_sync(c)
+	CharacterRules.refresh(c, data, s.items)  # an AC or a maximum of hit points from the spell goes (v0.7.13.2)
 	var lines: Array[String] = ["концентрация на «%s» прервана: %s" % [data["spells"].get(spell, {}).get("name", spell), why]]
 	lines.append_array(CombatRules.end_spell(s, data, spell))
 	return lines

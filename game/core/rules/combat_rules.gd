@@ -110,6 +110,17 @@ static func health_key(f: Dictionary) -> String:
 # --- dice -----------------------------------------------------------------------------------------
 
 
+## The most a dice expression can give (Beacon of Hope's healing, v0.7.13.2).
+static func max_dice(expr: String, mod: int = 0) -> int:
+	var total := 0
+	for p: String in expr.replace(" ", "").replace("MOD", str(mod)).replace("-", "+-").split("+", false):
+		if p.contains("d"):
+			total += (int(p.get_slice("d", 0)) if not p.get_slice("d", 0).is_empty() else 1) * int(p.get_slice("d", 1))
+		else:
+			total += int(p)
+	return total
+
+
 ## "2d6+3" (or "1d8+MOD" with `mod`) → total; a critical doubles the dice.
 static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = false, mod: int = 0) -> int:
 	if expr.begins_with("E"):  # Empowered Spell: two rolls, the better (v0.7.10)
@@ -537,6 +548,7 @@ static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dicti
 	var e := economy(s)
 	s.combat["rage_kept"] = true
 	var t := fighter(s, target_id)
+	var broke := SpellEffects.break_sanctuary(c)  # v0.7.13.2
 	if int(s.combat.get("sacred_weapon", 0)) > 0:
 		w = w.duplicate()
 		w["to_hit"] = int(w["to_hit"]) + maxi(1, FeatureRules.ab_mod(c, "cha"))
@@ -548,7 +560,7 @@ static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dicti
 	var mods := _attack_mods(s, data, w, t)
 	var adv := not (mods["adv"] as Array).is_empty()
 	var dis := not (mods["dis"] as Array).is_empty()
-	var lines: Array[String] = []
+	var lines: Array[String] = broke
 	var bonus_dmg := _rage_bonus(s, data, w, t)
 	var sneak := _sneak_dice(s, data, w, adv, dis)
 	var auto_crit := cols_between(player(s), t) == 0 and (_has(t, "paralyzed") or _has(t, "unconscious"))
@@ -1181,7 +1193,8 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 	var level := int(c.get("level", 1))
 	var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "int"))))
 	if sp.has("heal_at_slot"):
-		var heal := roll_dice(s.rng, str(sp["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD")), false, ab)
+		var heal_expr := str(sp["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
+		var heal := max_dice(heal_expr, ab) if SpellEffects.max_heal(c) else roll_dice(s.rng, heal_expr, false, ab)
 		if FeatureRules.has(c, "disciple_of_life") and slot > 0:
 			heal += 2 + slot  # Disciple of Life
 		var before := int(c["hp"])
@@ -1190,6 +1203,7 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		return lines
 	if not is_engine_spell(data, spell_id) or target_id.is_empty():
 		return lines
+	lines.append_array(SpellEffects.break_sanctuary(c))  # a spell at a foe ends Sanctuary (v0.7.13.2)
 	var dice := _spell_dice(sp, slot, level)
 	var t := fighter(s, target_id)
 	if not sp.has("area") and _missed_unseen(s, t):
@@ -1819,6 +1833,8 @@ static func _death_save(s: GameSession, lines: Array[String]) -> void:
 		lines.append("%s стабилизируется — Амулет закрытия ран" % s.character["name"])
 		return
 	var roll := s.rng.randi_range(1, 20)
+	if not SpellEffects.hero_effects(s.character, "death_adv").is_empty():  # Beacon of Hope (v0.7.13.2)
+		roll = maxi(roll, s.rng.randi_range(1, 20))
 	if roll == 20:
 		s.character["hp"] = 1
 		ConditionRules.remove(s.character, "unconscious")
@@ -2066,8 +2082,12 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		or (str(a.get("kind")) == "ranged" and d == 0) or (f["conditions"] as Array).has("poisoned") or bool(p.get("hidden", false)) \
 		or (ConditionRules.invisible(c, data) and not _has(f, "invisible")) or (ranged_use and ConditionRules.has(c, "prone")) \
 		or ["blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x)) or not (tm["dis"] as Array).is_empty() \
-		or bool(f.get("mocked", false)) or bool(f.get("chilled", false))
+		or bool(f.get("mocked", false)) or bool(f.get("chilled", false)) or not SpellEffects.attack_dis(s, data, f).is_empty()
 	f.erase("mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
+	var held := SpellEffects.sanctuary_holds(s, data, f)  # Sanctuary (v0.7.13.2)
+	if not held.is_empty():
+		lines.append(held)
+		return
 	var rolls := _d20(s.rng, adv, dis)
 	var nat := _nat(rolls, adv, dis)
 	var bane := SpellEffects.foe_die(s, f)  # Bane (v0.7.13.1)
@@ -2078,6 +2098,10 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	var line := "%s — %s: %d + %d%s = %d против КД %d%s" % [f["name"], a["name"], nat, int(a.get("to_hit", 0)), bane["note"], total, ac, mark]
 	if not hit:
 		lines.append(line + " — промах")
+		return
+	var guard := SpellEffects.against_attack(s, data, f, total, hit)  # Mirror Image (v0.7.13.2)
+	if not str(guard["stop"]).is_empty():
+		lines.append(line + " — " + str(guard["stop"]))
 		return
 	if c.has("wild_shape"):
 		ac = int(c.get("ac", 10))  # the beast's AC is the sheet's while in the form

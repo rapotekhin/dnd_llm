@@ -121,7 +121,7 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 	ac += ItemRules.plus(item_def(c, data, session_items, "shield"), ["ac_plus", "magic_plus"])
 	for d: Dictionary in carried(c, data, session_items):
 		ac += ItemRules.plus(d, ["ac_plus"])
-	return ac
+	return SpellEffects.armor_class(c, ac, armor.is_empty(), dex)  # Mage Armor, Shield of Faith, Barkskin (v0.7.13.2)
 
 
 ## Wondrous items in the pack (v0.6.3): they work while carried — those that need it, only when attuned (v0.7.12).

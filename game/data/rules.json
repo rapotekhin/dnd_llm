@@ -1235,12 +1235,24 @@
 		}
 	},
 	"spell_effects": {
-		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves.",
+		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves. Defenses (v0.7.13.2): ac_base (unarmored: base + DEX), ac_plus, ac_min; attackers_dis; images (Mirror Image: d20 6/8/11+ hits an image, AC 10 + DEX); sanctuary (a WIS save or no attack; ends when the hero attacks a foe); temp_dice (+temp_per_slot); max_hp_plus (+per_slot) with as much healing; resist / resist_auto (the most common damage type of the foes, fire by default), adv_tag, remove; foe_types_dis — those types attack with disadvantage; save_adv [abilities], death_adv, max_heal (healing rolls its maximum).",
 		"bless": {"die": "1d4", "on": ["attack", "save"]},
 		"guidance": {"die": "1d4", "on": ["check"], "once": true},
 		"resistance": {"die": "1d4", "on": ["save"], "once": true},
 		"heroism": {"immune": ["frightened"], "temp_hp": "MOD"},
 		"true_strike": {"next_attack_adv": true},
-		"bane": {"foe": true, "die": "1d4", "save": "cha", "targets": 3}
+		"bane": {"foe": true, "die": "1d4", "save": "cha", "targets": 3},
+		"mage_armor": {"ac_base": 13},
+		"shield_of_faith": {"ac_plus": 2},
+		"barkskin": {"ac_min": 16},
+		"blur": {"attackers_dis": true},
+		"mirror_image": {"images": 3},
+		"sanctuary": {"sanctuary": true},
+		"false_life": {"temp_dice": "1d4+4", "temp_per_slot": 5},
+		"aid": {"max_hp_plus": 5, "per_slot": 5},
+		"protection_from_energy": {"resist_auto": ["acid", "cold", "fire", "lightning", "thunder"]},
+		"protection_from_poison": {"resist": ["poison"], "adv_tag": "poison", "remove": ["poisoned"]},
+		"protection_from_evil_and_good": {"foe_types_dis": ["aberration", "celestial", "elemental", "fey", "fiend", "undead"]},
+		"beacon_of_hope": {"save_adv": ["wis"], "death_adv": true, "max_heal": true}
 	}
 }

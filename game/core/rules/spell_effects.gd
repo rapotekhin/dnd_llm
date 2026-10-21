@@ -29,7 +29,7 @@ static func foe_spell(data: Dictionary, spell_id: String) -> bool:
 
 
 ## The spell lands on the hero: the effect for its duration (the concentration's end comes with it). Lines.
-static func apply_self(s: GameSession, data: Dictionary, spell_id: String) -> Array[String]:
+static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot: int = 0) -> Array[String]:
 	var c := s.character
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
@@ -39,14 +39,135 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String) -> Ar
 	var rounds := ConditionRules.spell_rounds(data, spell_id)
 	var e := {"condition": "", "source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])},
 		"concentration": bool(spell.get("concentration", false)), "ends": {"at": ConditionRules.now(s) + rounds} if rounds > 0 else {}}
-	for k: String in ["die", "on", "once", "next_attack_adv", "immune", "temp_hp"]:
-		if sp.has(k):
+	for k: String in sp:
+		if not k in ["foe", "targets", "save", "temp_dice", "temp_per_slot", "per_slot", "resist_auto", "remove", "max_hp_plus"]:
 			e[k] = sp[k]
+	var lines: Array[String] = []
+	var slot_up := maxi(0, slot - maxi(1, int(spell["level"])))
+	if sp.has("resist_auto"):  # Protection from Energy: the type the foes deal most (v0.7.13.2)
+		var dtype := _likely_type(s, data, sp["resist_auto"])
+		e["resist"] = [dtype]
+	if sp.has("max_hp_plus"):  # Aid: the maximum and the hit points up
+		e["max_hp"] = int(sp["max_hp_plus"]) + int(sp.get("per_slot", 0)) * slot_up
 	ConditionRules.add_effect(c, e)
-	var lines: Array[String] = ["%s: %s" % [spell["name"], text(data, sp)]]
+	lines.append("%s: %s" % [spell["name"], text(data, e)])
+	if sp.has("remove"):
+		lines.append_array(ConditionRules.cure(s, data, {"remove": sp["remove"]}, e["source"]))
+	if sp.has("temp_dice"):  # False Life
+		var n := CombatRules.roll_dice(s.rng, str(sp["temp_dice"])) + int(sp.get("temp_per_slot", 0)) * slot_up
+		if n > int(c.get("temp_hp", 0)):
+			c["temp_hp"] = n
+		lines.append("временные хиты: %d" % int(c["temp_hp"]))
 	if sp.has("temp_hp"):
 		lines.append_array(turn_start(s, data))
+	CharacterRules.refresh(c, data, s.items)
+	if e.has("max_hp"):
+		c["hp"] = mini(int(c["max_hp"]), int(c["hp"]) + int(e["max_hp"]))
 	return lines
+
+
+## The damage type the foes of this fight deal most (of `types`), the first of them otherwise.
+static func _likely_type(s: GameSession, data: Dictionary, types: Array) -> String:
+	var count := {}
+	if CombatRules.active(s):
+		for id: String in CombatRules.enemies(s):
+			for a: Dictionary in CombatRules._monster(data, CombatRules.fighter(s, id)).get("actions", []):
+				for d: Variant in a.get("damage", []):
+					var t := str((d as Dictionary).get("type", ""))
+					if types.has(t):
+						count[t] = int(count.get(t, 0)) + 1
+	var best := str(types[types.find("fire")] if types.has("fire") else types[0])
+	for t: String in count:
+		if int(count[t]) > int(count.get(best, 0)):
+			best = t
+	return best
+
+
+## The effects of the hero's spells with this key (a sum or a flag of the defenses).
+static func hero_effects(c: Dictionary, key: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for e: Dictionary in ConditionRules.effects(c):
+		if e.has(key):
+			out.append(e)
+	return out
+
+
+## Armor Class by the spells (v0.7.13.2): Mage Armor's base without armor, Shield of Faith's plus, Barkskin's floor.
+static func armor_class(c: Dictionary, ac: int, unarmored: bool, dex: int) -> int:
+	for e: Dictionary in hero_effects(c, "ac_base"):
+		if unarmored:
+			ac = maxi(ac, int(e["ac_base"]) + dex)
+	for e: Dictionary in hero_effects(c, "ac_plus"):
+		ac += int(e["ac_plus"])
+	for e: Dictionary in hero_effects(c, "ac_min"):
+		ac = maxi(ac, int(e["ac_min"]))
+	return ac
+
+
+## A foe's attack meets the hero's defenses (v0.7.13.2): {"dis": reasons, "stop": a line when the attack never lands
+## on the hero (Sanctuary held it back, an image of Mirror Image took it)}.
+static func against_attack(s: GameSession, data: Dictionary, f: Dictionary, total: int, hit: bool) -> Dictionary:
+	var c := s.character
+	var out := {"stop": ""}
+	for e: Dictionary in hero_effects(c, "images"):
+		var n := int(e["images"])
+		if n <= 0:
+			continue
+		var need: int = {3: 6, 2: 8, 1: 11}.get(n, 11)
+		if s.rng.randi_range(1, 20) >= need:
+			var image_ac := 10 + CharacterRules.mod(CharacterRules.ability(c, "dex"))
+			if total >= image_ac:
+				e["images"] = n - 1
+				out["stop"] = "удар приходится в иллюзорного двойника — он исчезает (осталось %d)" % (n - 1)
+				if n - 1 <= 0:
+					ConditionRules.remove_effect(c, int(e["uid"]))
+			else:
+				out["stop"] = "удар по иллюзорному двойнику — мимо"
+			return out
+	return out
+
+
+## Sanctuary: the foe must pass a WIS save against the hero's spell DC or lose the attack. A line, or "".
+static func sanctuary_holds(s: GameSession, data: Dictionary, f: Dictionary) -> String:
+	if hero_effects(s.character, "sanctuary").is_empty():
+		return ""
+	var dc := maxi(int(s.character.get("spell_dc", 10)), 10)
+	if CombatRules._monster_save(s, data, f, "wis", dc, ["magic"]):
+		return ""
+	return "%s не решается ударить — Святилище" % f["name"]
+
+
+## The hero attacks or casts at a foe: Sanctuary ends (5e).
+static func break_sanctuary(c: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	for e: Dictionary in hero_effects(c, "sanctuary"):
+		ConditionRules.remove_effect(c, int(e["uid"]))
+		lines.append("Святилище развеялось")
+	return lines
+
+
+## Why a foe attacks the hero with disadvantage by the hero's spells: Blur, Protection from Evil and Good.
+static func attack_dis(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
+	var c := s.character
+	var out: Array[String] = []
+	for e: Dictionary in hero_effects(c, "attackers_dis"):
+		out.append(str(e.get("source", {}).get("name", "")))
+	var t := str(CombatRules._monster(data, f).get("type", ""))
+	for e: Dictionary in hero_effects(c, "foe_types_dis"):
+		if (e["foe_types_dis"] as Array).has(t):
+			out.append(str(e.get("source", {}).get("name", "")))
+	return out
+
+
+static func max_heal(c: Dictionary) -> bool:
+	return not hero_effects(c, "max_heal").is_empty()
+
+
+static func save_adv(c: Dictionary, ability: String) -> String:
+	for e: Dictionary in hero_effects(c, "save_adv"):
+		if (e["save_adv"] as Array).has(ability):
+			return str(e.get("source", {}).get("name", ""))
+	return ""
 
 
 ## «+к4 к атакам и спасброскам» — what the effect gives, for the chip and the line.
@@ -59,6 +180,26 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 			" (один раз)" if bool(sp.get("once", false)) else ""])
 	if bool(sp.get("next_attack_adv", false)):
 		parts.append("следующая атака с преимуществом")
+	if sp.has("ac_base"):
+		parts.append("КД %d + Ловкость без доспеха" % int(sp["ac_base"]))
+	if sp.has("ac_plus"):
+		parts.append("КД +%d" % int(sp["ac_plus"]))
+	if sp.has("ac_min"):
+		parts.append("КД не ниже %d" % int(sp["ac_min"]))
+	if bool(sp.get("attackers_dis", false)):
+		parts.append("атаки по герою с помехой")
+	if sp.has("images"):
+		parts.append("иллюзорных двойников: %d" % int(sp["images"]))
+	if bool(sp.get("sanctuary", false)):
+		parts.append("враг бьёт, только пройдя спасбросок Мудрости")
+	if sp.has("max_hp"):
+		parts.append("максимум хитов +%d" % int(sp["max_hp"]))
+	for t: Variant in sp.get("resist", []):
+		parts.append("сопротивление: %s" % str(data["misc"]["damage_types"].get(str(t), t)))
+	if sp.has("foe_types_dis"):
+		parts.append("нежить, исчадия, феи и подобные бьют с помехой")
+	if sp.has("save_adv"):
+		parts.append("преимущество на спасброски Мудрости и от смерти, лечение по максимуму")
 	if sp.has("immune"):
 		parts.append("не испугать")
 	if sp.has("temp_hp"):

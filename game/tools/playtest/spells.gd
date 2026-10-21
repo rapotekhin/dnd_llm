@@ -22,7 +22,7 @@ func run() -> void:
 		return
 	var s: GameSession = gs.session
 	var c := s.character
-	_learn(c, ["bless", "bane", "guiding_bolt"])
+	_learn(c, ["bless", "bane", "guiding_bolt", "shield_of_faith", "sanctuary"])
 	c["temp_hp"] = 500  # the hero lasts the whole scenario
 
 	# v0.7.13.1: Bless, then Bane over it.
@@ -66,6 +66,36 @@ func run() -> void:
 		await frames(4)
 	step("Bane now, Bless gone", str(c.get("concentration", "")) == "bane", _tail(4))
 	await shot("bane")
+
+	# v0.7.13.2: Shield of Faith asks too — «no» keeps Bane; Sanctuary (a bonus action) goes on.
+	await press(find(screen(), "EndTurnButton"))
+	await _my_turn(gs, s)
+	cs = screen()
+	_tab(cs, "COMBAT_TAB_SPELLS")
+	await frames(2)
+	c["slots_used"] = [0, 0, 0, 0, 0]  # the level-1 cleric spent both slots on Bless and Bane
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	cs = screen()
+	_tab(cs, "COMBAT_TAB_SPELLS")
+	await frames(2)
+	var ac := int(c["ac"])
+	var sof: Button = find(cs, "Cast_shield_of_faith")
+	if step("Shield of Faith on the tab", sof != null):
+		await press(sof)
+		await frames(3)
+		var no: Button = find(screen(), "Ask_conc_no")
+		step("asked again", no != null)
+		if no != null:
+			await press(no)
+			await frames(3)
+	step("«no» keeps Bane and the AC", str(c.get("concentration", "")) == "bane" and int(c["ac"]) == ac)
+	var sanct: Button = find(screen(), "Cast_sanctuary")
+	if step("Sanctuary on the tab", sanct != null):
+		await press(sanct)
+		await frames(4)
+	step("Sanctuary on the hero", not SpellEffects.hero_effects(c, "sanctuary").is_empty(), _tail(2))
+	await shot("sanctuary")
 
 
 func _learn(c: Dictionary, ids: Array) -> void:

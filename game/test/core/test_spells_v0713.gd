@@ -321,3 +321,94 @@ func test_a_second_concentration_spell_is_asked_about() -> void:
 	assert_str(str(s.character["concentration"])).is_equal("bless")
 	assert_bool(bool(data["spells"]["bane"]["concentration"])).is_true()
 	assert_array(ConditionRules.shown(s, data).filter(func(e: Dictionary) -> bool: return str(e["text"]).contains("+к4"))).is_not_empty()
+
+
+# --- batch 3 (v0.7.13.2): defenses ----------------------------------------------------------------------
+
+
+func _cast_self(s: GameSession, id: String, slot: int = 0) -> Array[String]:
+	_learn(s, id)
+	var lv := int(data["spells"][id]["level"])
+	return SpellRules.cast(s.character, data, id, maxi(lv, slot), s, true)
+
+
+func test_mage_armor_shield_of_faith_and_barkskin() -> void:
+	var s := _hero("wizard_yalika")
+	var c := s.character
+	var dex := CharacterRules.mod(CharacterRules.ability(c, "dex"))
+	_cast_self(s, "mage_armor")
+	assert_int(int(c["ac"])).is_equal(13 + dex)
+	_cast_self(s, "shield_of_faith")
+	assert_int(int(c["ac"])).is_equal(15 + dex)
+	var druid := _hero("druid_olha")
+	_cast_self(druid, "barkskin")
+	assert_int(int(druid.character["ac"])).is_greater_equal(16)
+	ConditionRules.end_concentration(druid, data, "проверка")
+	assert_int(int(druid.character["ac"])).is_less(16)
+
+
+func test_false_life_and_aid() -> void:
+	var s := _hero("cleric_branko", 3)
+	var c := s.character
+	_cast_self(s, "false_life")
+	assert_int(int(c["temp_hp"])).is_between(5, 8)
+	var max_hp := int(c["max_hp"])
+	_cast_self(s, "aid", 3)
+	assert_int(int(c["max_hp"])).is_equal(max_hp + 10)
+
+
+func test_blur_and_protection_from_evil_hamper_attackers() -> void:
+	var s := _hero("wizard_yalika", 3)
+	var f := _fight(s, [{"monster": "skeleton", "col": 0}])[0]
+	_cast_self(s, "blur")
+	assert_array(SpellEffects.attack_dis(s, data, f)).contains(["Размытость"])
+	var c2 := _hero("cleric_branko")
+	var f2 := _fight(c2, [{"monster": "skeleton", "col": 0}])[0]
+	_cast_self(c2, "protection_from_evil_and_good")
+	assert_int(SpellEffects.attack_dis(c2, data, f2).size()).is_equal(1)
+
+
+func test_mirror_image_takes_hits() -> void:
+	var s := _hero("wizard_yalika", 3)
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	_cast_self(s, "mirror_image")
+	var stopped := 0
+	for i in 20:
+		if not str(SpellEffects.against_attack(s, data, f, 30, true)["stop"]).is_empty():
+			stopped += 1
+	assert_int(stopped).is_greater(0)
+	assert_bool(SpellEffects.hero_effects(s.character, "images").all(func(e: Dictionary) -> bool: return int(e["images"]) < 3)).is_true()
+
+
+func test_sanctuary_holds_and_breaks() -> void:
+	var s := _hero("cleric_branko")
+	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
+	_cast_self(s, "sanctuary")
+	s.character["spell_dc"] = 40
+	assert_str(SpellEffects.sanctuary_holds(s, data, f)).contains("Святилище")
+	s.combat["economy"]["action"] = 1
+	CombatRules.player_attack(s, data, str(f["id"]))
+	assert_array(SpellEffects.hero_effects(s.character, "sanctuary")).is_empty()
+
+
+func test_protection_from_energy_picks_the_foes_type() -> void:
+	var s := _hero("wizard_yalika", 5)
+	_fight(s, [{"monster": "fire_beetle" if data["monsters"].has("fire_beetle") else "goblin", "col": 2}])
+	_cast_self(s, "protection_from_energy")
+	assert_int(HeroDefense.resistances(s, data).size()).is_greater(0)
+	var p := _hero("cleric_branko", 3)
+	ConditionRules.add_effect(p.character, {"condition": "poisoned", "ends": {}, "source": {"kind": "master", "name": "яд"}})
+	_cast_self(p, "protection_from_poison")
+	assert_bool(ConditionRules.has(p.character, "poisoned")).is_false()
+	assert_bool(HeroDefense.resistances(p, data).has("poison")).is_true()
+
+
+func test_beacon_of_hope_maximizes_healing() -> void:
+	var s := _hero("cleric_branko", 5)
+	_cast_self(s, "beacon_of_hope")
+	s.character["hp"] = 1
+	_learn(s, "cure_wounds")
+	SpellRules.cast(s.character, data, "cure_wounds", 1, s, true)
+	var mod := CharacterRules.mod(CharacterRules.ability(s.character, "wis"))
+	assert_int(int(s.character["hp"])).is_equal(mini(int(s.character["max_hp"]), 1 + 8 + mod + 3))  # + Disciple of Life 2 + 1
+	assert_str(SpellEffects.save_adv(s.character, "wis")).is_not_empty()

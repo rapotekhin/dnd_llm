@@ -92,6 +92,9 @@ static func save_advantages(c: Dictionary, data: Dictionary, ability: String, ta
 		out.append(str(data["classes"]["features"].get("danger_sense", {}).get("name", "")))
 	if ability == "str" and raging:
 		out.append("ярость")
+	var by_spell := SpellEffects.save_adv(c, ability)  # Beacon of Hope (v0.7.13.2)
+	if not by_spell.is_empty():
+		out.append(by_spell)
 	if tag.is_empty():
 		return out
 	var tags := tag.split(",")  # a save against several things at once: «charm,magic» (v0.7.9)
