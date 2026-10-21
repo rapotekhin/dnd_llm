@@ -461,7 +461,7 @@ def main() -> int:
     out: list[str] = []
 
     def section(title: str, version: str, rows: list[tuple[str, ...]], header: list[str], note: str = "") -> None:
-        out.extend(["", f"## {title}", "", f"План — [роадмап {version}](roadmap.md#правила-5e)." + (f" {note}" if note else ""), ""])
+        out.extend(["", f"## {title}", "", f"План — [роадмап {version}](closed_roadmap.md#правила-5e)." + (f" {note}" if note else ""), ""])
         out.append("| " + " | ".join(header) + " |")
         out.append("|" + "---|" * len(header))
         out.extend("| " + " | ".join(r) + " |" for r in rows)
@@ -591,7 +591,7 @@ def main() -> int:
     head = [
         "# Аудит правил 5e",
         "",
-        "Генерируется: `python tools/rules_audit.py`. План — серия версий [«Правила 5e»](roadmap.md#правила-5e) (v0.7.8–v0.7.13). "
+        "Генерируется: `python tools/rules_audit.py`. План — серия версий [«Правила 5e»](closed_roadmap.md#правила-5e) (v0.7.8–v0.7.13). "
         "Числа — из данных; статусы — по чтению движка (`game/core`), их правят в `tools/rules_audit.py` вместе с работой.",
         "",
         "Статусы: **движок** — правило считает движок; **при создании** — выдаётся при создании или повышении уровня (навык, владение, заговор); "
