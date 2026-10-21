@@ -316,13 +316,7 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 		"identify":
 			lines.append_array(ItemRules.identify(c, data, s.items))
 		"remove_curse":
-			for thing: String in cursed_held(s, data):
-				ItemRules.unattune(c, thing)
-				var eq: Dictionary = c.get("equipped", {})
-				for slot: String in eq:
-					if str(eq[slot]) == thing:
-						eq[slot] = ""
-				lines.append("проклятие отпустило: %s (сама вещь проклята по-прежнему)" % ItemRules.display_name(data["items"], s.items, thing))
+			lines.append_array(ItemRules.lift_curse(c, data, s.items))
 		"silver":
 			var weapon := item if not item.is_empty() else silverable(s, data)[0]
 			var base := ItemRules.def_of(data["items"], s.items, weapon)

@@ -1391,6 +1391,18 @@
 			"look": "очки",
 			"description": "Пока вы носите тёмные линзы, у вас есть тёмное зрение на 60 футов. Если тёмное зрение у вас уже есть, его дальность увеличивается на 60 футов."
 		},
+		"goodberry": {
+			"name": "Добрая ягода",
+			"item_type": "consumable",
+			"properties": [
+				"healing"
+			],
+			"stack": true,
+			"value_cp": 0,
+			"weight": 0,
+			"rarity": "common",
+			"description": "Ягода «Добрых ягод»: лечит 1 хит и насыщает на день; в лагере — как паёк."
+		},
 		"grappling_hook": {
 			"name": "Крюк-кошка",
 			"name_en": "Grappling hook",

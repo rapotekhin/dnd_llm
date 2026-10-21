@@ -186,6 +186,21 @@ static func held_by_curse(c: Dictionary, data: Dictionary, session_items: Dictio
 	return attuned(c).has(id) or (c.get("equipped", {}) as Dictionary).values().has(id)
 
 
+## Remove Curse (the spell or the priestess): the cursed things come off and lose the attunement; they stay cursed.
+static func lift_curse(c: Dictionary, data: Dictionary, session_items: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	for thing: String in (c.get("inventory", {}) as Dictionary).keys():
+		if not held_by_curse(c, data, session_items, thing):
+			continue
+		unattune(c, thing)
+		var eq: Dictionary = c.get("equipped", {})
+		for slot: String in eq:
+			if str(eq[slot]) == thing:
+				eq[slot] = ""
+		lines.append("проклятие отпустило: %s (сама вещь проклята по-прежнему)" % display_name(data["items"], session_items, thing))
+	return lines
+
+
 static func unattune(c: Dictionary, id: String) -> void:
 	(c.get("attuned", []) as Array).erase(id)
 

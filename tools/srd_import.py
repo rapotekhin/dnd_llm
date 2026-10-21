@@ -87,7 +87,7 @@ ITEM_ALIASES = {
     "antitoxin-vial": "antitoxin", "holy-water-flask": "holy_water",
 }
 # Hand-made catalog items that are not SRD equipment (kept from the v0.4.x catalog).
-EXTRA_ITEMS = ["healing_potion", "ale", "bread", "silver_ring"]
+EXTRA_ITEMS = ["healing_potion", "ale", "bread", "silver_ring", "goodberry"]
 # Engine properties (items.json "properties") and item types the SRD does not have, by game id.
 EXTRA_PROPERTIES = {"torch": ["light_source"], "lantern": ["light_source"], "lantern_bullseye": ["light_source"],
                     "candle": ["light_source"], "lamp": ["light_source"], "antitoxin": ["resist_poison"],

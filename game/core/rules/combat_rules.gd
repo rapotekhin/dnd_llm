@@ -364,6 +364,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 		s.combat.erase("reckless")  # Reckless Attack lasts until the hero's next turn
 		lines.append_array(SpellEffects.turn_start(s, data))  # Heroism (v0.7.13.1)
 		lines.append_array(SpellEffects.zones_expire(s))  # Grease (v0.7.13.6)
+		SpellEffects.end_until_turn(s, data)  # Shield (v0.7.13.7)
 		for eid: String in enemies(s):  # v0.7.13: riders that last until the start of the hero's next turn
 			var o := fighter(s, eid)
 			for k: String in ["slowed", "no_heal", "chilled"]:
@@ -1017,9 +1018,11 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 		return str(chk["reason"])
 	var sp: Dictionary = data["spells"][spell_id]
 	if SpellRules.long_cast(sp):
-		return "COMBAT_SPELL_TOO_LONG"
+		return "COMBAT_SPELL_TOO_LONG"  # v0.7.13: minutes to cast — not in a fight (Prayer of Healing)
+	if SpellEffects.spec(data, spell_id).has("reaction"):
+		return "COMBAT_REACTION_SPELL"  # Shield, Counterspell: cast in the window of a foe's turn (v0.7.13.7)
 	if (sp.get("components", []) as Array).has("V") and SpellEffects.silenced(s, int(player(s)["col"])):
-		return "COMBAT_SILENCED"  # v0.7.13.6  # v0.7.13: minutes to cast — not in a fight (Prayer of Healing)
+		return "COMBAT_SILENCED"  # v0.7.13.6
 	if sp.has("heal_at_slot") or target_id.is_empty():
 		return ""
 	var t := fighter(s, target_id)
@@ -1218,6 +1221,9 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		lines.append_array(end_spell(s, data, held))
 	if cfg(data)["condition_spells"].has(spell_id) and not target_id.is_empty():
 		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
+		return lines
+	if bool(SpellEffects.spec(data, spell_id).get("dispel", false)):  # Dispel Magic (v0.7.13.7)
+		lines.append_array(SpellEffects.dispel(s, data, target_id))
 		return lines
 	if not SpellEffects.curse(data, spell_id).is_empty() and not target_id.is_empty():  # v0.7.13.6: Faerie Fire, Slow…
 		SpellEffects.cast_curse(s, data, spell_id, slot, fighter(s, target_id), lines)
@@ -2249,6 +2255,7 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		notes.append("ослаблен")
 	var ctx := {"foe": str(f["id"]), "action": str(a.get("name_en", "")), "line": line, "crit": crit, "dmg": dmg, "types": types, "notes": notes,
 		"prone": extra["prone"], "hit": true, "total": total, "ac": ac, "nat20": nat == 20}
+	f["last_total"] = total  # for the labels of the reaction spells (v0.7.13.7)
 	var rx := FeatureRules.reactions(s, data, f, a, ranged_use, dmg)  # v0.7.10: the hero's reaction
 	if not rx.is_empty():
 		var pol := FeatureRules.policy(s)
@@ -2287,6 +2294,8 @@ static func _land_hit(s: GameSession, data: Dictionary, f: Dictionary, a: Dictio
 					lines.append("%s кусает упавшего" % f["name"])
 					_enemy_attack(s, data, f, b, lines)
 					break
+	if int(ctx.get("rebuke", 0)) > 0 and str(f.get("status")) == "active":  # Hellish Rebuke (v0.7.13.7)
+		SpellEffects.rebuke(s, data, f, int(ctx["rebuke"]), lines)
 	if bool(ctx.get("counter", false)) and str(f.get("status")) == "active" and int(s.character.get("hp", 0)) > 0:
 		var w := weapon_profile(s.character, data, s.items, str(s.character.get("equipped", {}).get("main_hand", "")))
 		lines.append("%s: Убийца великанов — удар в ответ" % s.character.get("name", ""))
@@ -2302,6 +2311,11 @@ static func answer_reaction(s: GameSession, data: Dictionary, choice: String) ->
 	if ctx.is_empty():
 		return lines
 	var f := fighter(s, str(ctx["foe"]))
+	if str(ctx.get("kind", "")) == "counter":  # a foe's spell waits for Counterspell (v0.7.13.7)
+		if choice == "none" or not SpellEffects.counter(s, data, f, str(ctx["option"]["id"]), int(ctx["circle"]), lines):
+			MonsterRules._cast(s, data, f, ctx["option"], lines, true)
+		_end_actor(s, data, f, lines)
+		return lines
 	var a := {}
 	for x: Dictionary in _monster(data, f)["actions"]:
 		if str(x["name_en"]) == str(ctx["action"]):

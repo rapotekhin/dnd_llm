@@ -480,6 +480,7 @@
 				2
 			]
 		},
+		"goodberry": {"heal": [0, 1, 1]},
 		"antitoxin": {
 			"remove": [
 				"poisoned"
@@ -973,6 +974,7 @@
 		"camp": {
 			"need": 2,
 			"food": {
+			"goodberry": 1,
 				"rations": 2,
 				"bread": 1
 			}
@@ -1245,7 +1247,7 @@
 		}
 	},
 	"spell_effects": {
-		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves. Defenses (v0.7.13.2): ac_base (unarmored: base + DEX), ac_plus, ac_min; attackers_dis; images (Mirror Image: d20 6/8/11+ hits an image, AC 10 + DEX); sanctuary (a WIS save or no attack; ends when the hero attacks a foe); temp_dice (+temp_per_slot); max_hp_plus (+per_slot) with as much healing; resist / resist_auto (the most common damage type of the foes, fire by default), adv_tag, remove; foe_types_dis — those types attack with disadvantage; save_adv [abilities], death_adv, max_heal (healing rolls its maximum). Movement and form (v0.7.13.3): speed_x2 and haste (one more action: one weapon attack, Dash, Disengage, Dodge; a turn of lethargy when it ends), flying (foes without a ranged attack cannot reach the hero), blink (d20 11+ at the end of the hero's turn — gone until their next turn), speed_plus, bonus_dash, teleport (a column away from the nearest foe, no opportunity attacks), enlarged, darkvision, see_invisible, skill_bonus, ability_adv (best — the hero's highest ability). On the weapon (v0.7.13.4): shillelagh [bases] — the spellcasting ability, d8, magic; weapon_plus (plus_at_slot); weapon_extra [dice, type] on every hit; next_hit — the next hit's dice by the slot (next_dice); mark — +dice on hits at the marked foe (foe_target: cast at a foe; moved by a bonus action when it falls); blade — a melee spell attack with blade_dice by the slot. Sustained (v0.7.13.5): `sustained` — attack (a spell attack again each turn by `cost`; drain — half back as hit points), heat (the same foe takes the dice, CON save or disadvantage on its attacks), strike (a save in the target's column), zone (a column of the field: a save or damage when a foe starts its turn there, enters it or ends its turn there; `follow` — the hero's column; `move` — columns the button moves it; `ram` — the sphere strikes where it moves; `slow` — a foe in it moves half); `dice` — when the spell has no damage by slot (spike growth: 2d4 per 5 ft ≈ 6d4 per 30-ft column). Control (v0.7.13.6): zones — `now` (at once on who stands there), `cond` (a failed save lays it: Grease — prone), obscure (Fog Cloud, Darkness: attacks into or out of the column have disadvantage, inside both — even), silence (no spells with a verbal component inside), retch (Stinking Cloud: the turn is lost), block_ranged (Wind Wall: ranged weapon attacks through the column miss); push (Gust of Wind: a STR save or a column away, `reach` columns); `curse` — a flag on foes by a save (or a spell attack): outlined (Faerie Fire: advantage at it, no invisibility), enfeebled (half damage of its weapons), cursed_dis (its attacks at the hero with disadvantage), slowed_spell (AC −2, half the way, no reactions, one attack); `repeat` — a save at the end of its turn ends it.",
+		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves. Defenses (v0.7.13.2): ac_base (unarmored: base + DEX), ac_plus, ac_min; attackers_dis; images (Mirror Image: d20 6/8/11+ hits an image, AC 10 + DEX); sanctuary (a WIS save or no attack; ends when the hero attacks a foe); temp_dice (+temp_per_slot); max_hp_plus (+per_slot) with as much healing; resist / resist_auto (the most common damage type of the foes, fire by default), adv_tag, remove; foe_types_dis — those types attack with disadvantage; save_adv [abilities], death_adv, max_heal (healing rolls its maximum). Movement and form (v0.7.13.3): speed_x2 and haste (one more action: one weapon attack, Dash, Disengage, Dodge; a turn of lethargy when it ends), flying (foes without a ranged attack cannot reach the hero), blink (d20 11+ at the end of the hero's turn — gone until their next turn), speed_plus, bonus_dash, teleport (a column away from the nearest foe, no opportunity attacks), enlarged, darkvision, see_invisible, skill_bonus, ability_adv (best — the hero's highest ability). On the weapon (v0.7.13.4): shillelagh [bases] — the spellcasting ability, d8, magic; weapon_plus (plus_at_slot); weapon_extra [dice, type] on every hit; next_hit — the next hit's dice by the slot (next_dice); mark — +dice on hits at the marked foe (foe_target: cast at a foe; moved by a bonus action when it falls); blade — a melee spell attack with blade_dice by the slot. Sustained (v0.7.13.5): `sustained` — attack (a spell attack again each turn by `cost`; drain — half back as hit points), heat (the same foe takes the dice, CON save or disadvantage on its attacks), strike (a save in the target's column), zone (a column of the field: a save or damage when a foe starts its turn there, enters it or ends its turn there; `follow` — the hero's column; `move` — columns the button moves it; `ram` — the sphere strikes where it moves; `slow` — a foe in it moves half); `dice` — when the spell has no damage by slot (spike growth: 2d4 per 5 ft ≈ 6d4 per 30-ft column). Control (v0.7.13.6): zones — `now` (at once on who stands there), `cond` (a failed save lays it: Grease — prone), obscure (Fog Cloud, Darkness: attacks into or out of the column have disadvantage, inside both — even), silence (no spells with a verbal component inside), retch (Stinking Cloud: the turn is lost), block_ranged (Wind Wall: ranged weapon attacks through the column miss); push (Gust of Wind: a STR save or a column away, `reach` columns); `curse` — a flag on foes by a save (or a spell attack): outlined (Faerie Fire: advantage at it, no invisibility), enfeebled (half damage of its weapons), cursed_dis (its attacks at the hero with disadvantage), slowed_spell (AC −2, half the way, no reactions, one attack); `repeat` — a save at the end of its turn ends it. Reactions (v0.7.13.7, the window «Использовать?»): `reaction` hit (Shield: +5 AC until the hero's turn, the hit may miss), damage (Hellish Rebuke: the attacker takes the dice, DEX half), spell (Counterspell: a foe's spell of circle 3 or less fails, higher — a check DC 10 + circle); dispel (Dispel Magic: the target foe's spells on the hero end; calmed — Calm Emotions: the foe lowers its weapon); npc_save (out of a fight: the NPC's save by its monster template, `types` it works on; the master narrates the outcome); lift_curse; make — items made (Goodberry, Create Food and Water).",
 		"bless": {"die": "1d4", "on": ["attack", "save"]},
 		"guidance": {"die": "1d4", "on": ["check"], "once": true},
 		"resistance": {"die": "1d4", "on": ["save"], "once": true},
@@ -1299,6 +1301,18 @@
 		"faerie_fire": {"curse": {"flag": "outlined", "save": "dex", "area": true}},
 		"ray_of_enfeeblement": {"curse": {"flag": "enfeebled", "attack": true, "repeat": "con"}},
 		"bestow_curse": {"curse": {"flag": "cursed_dis", "save": "wis"}},
-		"slow": {"curse": {"flag": "slowed_spell", "save": "wis", "area": true, "targets": 6, "repeat": "wis"}}
+		"slow": {"curse": {"flag": "slowed_spell", "save": "wis", "area": true, "targets": 6, "repeat": "wis"}},
+		"shield": {"reaction": "hit", "ac_plus": 5, "until_turn": true},
+		"hellish_rebuke": {"reaction": "damage"},
+		"counterspell": {"reaction": "spell"},
+		"dispel_magic": {"dispel": true, "foe_target": true},
+		"calm_emotions": {"curse": {"flag": "calmed", "save": "cha", "area": true}},
+		"suggestion": {"npc_save": true},
+		"enthrall": {"npc_save": true},
+		"animal_friendship": {"npc_save": true, "types": ["beast"]},
+		"charm_person": {"npc_save": true, "types": ["humanoid"]},
+		"remove_curse": {"lift_curse": true},
+		"goodberry": {"make": {"goodberry": 10}},
+		"create_food_and_water": {"make": {"rations": 3}}
 	}
 }

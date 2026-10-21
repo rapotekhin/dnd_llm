@@ -524,11 +524,23 @@ static func _avg(expr: String) -> float:
 
 
 ## Resolves one spell of a monster at the hero (or itself for healing). Lines.
-static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary, lines: Array[String]) -> void:
+static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary, lines: Array[String], asked: bool = false) -> void:
 	var id := str(o["id"])
 	var sp: Dictionary = data["spells"][id]
 	var sc: Dictionary = monster(data, f)["spellcasting"]
 	var slot := int(o["slot"])
+	if not asked:  # Counterspell (v0.7.13.7): the window, or the policy decides
+		var label := SpellEffects.counter_option(s, data, f, id)
+		if not label.is_empty():
+			var pol := FeatureRules.policy(s)
+			if pol == "ask":
+				lines.append("%s начинает колдовать «%s»…" % [f["name"], sp["name"]])
+				s.combat["pending"] = {"kind": "counter", "foe": str(f["id"]), "option": o, "circle": maxi(int(sp["level"]), slot),
+					"options": [{"id": "counterspell", "label": label}], "line": "%s колдует «%s»" % [f["name"], sp["name"]], "dmg": 0}
+				s.combat["halt"] = true
+				return
+			if pol == "always" and SpellEffects.counter(s, data, f, id, maxi(int(sp["level"]), slot), lines):
+				return
 	if not f.has("slots"):
 		f["slots"] = (sc.get("slots", {}) as Dictionary).duplicate()
 	if slot > 0:

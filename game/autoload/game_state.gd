@@ -209,6 +209,11 @@ func _spend(what: Dictionary) -> Dictionary:
 			what["spent_slot"] = int(chk["slot"])
 			facts = "Игрок колдует " + SpellRules.describe(Catalog.data, chk["spell_id"], int(chk["slot"])) + \
 				". Движок уже потратил ячейку — не вызывай cast сам; опиши, как это выглядит и что происходит."
+			var npc_try := SpellEffects.npc_save(session, Catalog.data, str(chk["spell_id"]), world().npc(str(what.get("target", ""))))
+			if not npc_try.is_empty():  # Suggestion, Charm Person… (v0.7.13.7): the engine rolls the NPC's save
+				lines.append(str(npc_try["line"]))
+				facts += " Движок бросил спасбросок цели: %s. %s" % [npc_try["line"], "Заклинание действует — отыграй это по его описанию." if bool(npc_try["ok"]) \
+					else "Заклинание не подействовало — цель может заметить попытку."]
 		"feature":
 			var why := FeatureUses.can_use(c, Catalog.data, id, 1)
 			if not why.is_empty():

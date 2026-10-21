@@ -250,10 +250,16 @@ static func reactions(s: GameSession, data: Dictionary, f: Dictionary, a: Dictio
 		out.append({"id": "missile_snaring", "label": "Перчатки ловли снарядов: урон −1к10 + %d" % ab_mod(c, "dex")})  # v0.7.12
 	if has(c, "cutting_words") and FeatureUses.left(c, data, "bardic_inspiration") > 0 and see:
 		out.append({"id": "cutting_words", "label": "Язвительные слова: −1к%d к броску атаки" % bardic_die(c, data)})
+	out.append_array(SpellEffects.hit_reactions(s, data, {"total": total_of(a, f), "ac": int(c.get("ac", 10)), "dmg": dmg}))  # v0.7.13.7
 	if has(c, "hunters_prey_giant_killer") and CombatRules.SIZES.find(str(CombatRules._monster(data, f).get("size", "medium"))) >= 3 \
 			and CombatRules.cols_between(f, CombatRules.player(s)) == 0:
 		out.append({"id": "giant_killer", "label": "Убийца великанов: удар в ответ"})
 	return out
+
+
+## The attack's total for the reactions' labels (CombatRules keeps it in the attack's context; 0 — unknown).
+static func total_of(a: Dictionary, f: Dictionary) -> int:
+	return int(f.get("last_total", 0))
 
 
 static func bardic_die(c: Dictionary, data: Dictionary) -> int:
@@ -264,6 +270,9 @@ static func bardic_die(c: Dictionary, data: Dictionary) -> int:
 static func apply_reaction(s: GameSession, data: Dictionary, f: Dictionary, id: String, ctx: Dictionary, lines: Array[String]) -> void:
 	var c := s.character
 	CombatRules.player(s)["reacted"] = true
+	if id.begins_with("spell_"):  # Shield, Hellish Rebuke (v0.7.13.7)
+		SpellEffects.apply_hit_reaction(s, data, f, id, ctx, lines)
+		return
 	match id:
 		"uncanny_dodge":
 			ctx["dmg"] = int(ctx["dmg"]) / 2

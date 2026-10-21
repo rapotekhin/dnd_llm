@@ -258,6 +258,8 @@ COMBAT_RAGE_ARMOR,В тяжёлом доспехе ярость не берёт
 COMBAT_RAGING,Ярость
 COMBAT_REACTION_HIT,"{line} — попадание, {dmg} урона"
 COMBAT_REACTION_NO,Нет
+COMBAT_REACTION_SPELL,Это реакция: её предложит окно «Использовать?» в ход врага
+COMBAT_REACTION_SPELL_CAST,{line} — ответить реакцией?
 COMBAT_REACTION_TITLE,Реакция — использовать?
 COMBAT_RECKLESS,Безрассудно: по вам — с преимуществом
 COMBAT_RECKLESS_LATE,Безрассудно — только до первой атаки хода

@@ -741,3 +741,104 @@ func test_hypnotic_pattern_is_a_condition_spell() -> void:
 	var cs: Dictionary = data["rules"]["combat"]["condition_spells"]
 	assert_array(cs["hypnotic_pattern"]["conditions"]).contains(["charmed", "incapacitated"])
 	assert_bool(bool(cs["hypnotic_pattern"]["ends_on_damage"])).is_true()
+
+
+# --- batch 8 (v0.7.13.7): reactions, dispel, charms, food -------------------------------------------------
+
+
+func test_shield_turns_a_hit_into_a_miss() -> void:
+	var s := _hero("wizard_yalika")
+	_learn(s, "shield")
+	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
+	var c := s.character
+	var ac := int(c["ac"])
+	var rx := SpellEffects.hit_reactions(s, data, {"total": ac + 2, "ac": ac, "dmg": 5})
+	assert_bool(rx.any(func(r: Dictionary) -> bool: return str(r["id"]) == "spell_shield")).is_true()
+	var ctx := {"total": ac + 2, "ac": ac, "hit": true, "dmg": 5}
+	var lines: Array[String] = []
+	FeatureRules.apply_reaction(s, data, f, "spell_shield", ctx, lines)
+	assert_bool(bool(ctx["hit"])).is_false()
+	assert_int(int(c["ac"])).is_equal(ac + 5)
+	assert_int(SpellRules.slots_left(c, 1)).is_equal(int(c["slots_max"][0]) - 1)
+	CombatRules._begin_turn(s, data, lines)
+	assert_int(int(c["ac"])).is_equal(ac)
+	_fight(s, [{"monster": "goblin", "col": 0}])
+	assert_str(CombatRules.can_cast(s, data, "shield", 1, "")).is_equal("COMBAT_REACTION_SPELL")
+
+
+func test_hellish_rebuke_burns_the_attacker() -> void:
+	var s := _hero("warlock_fiber")
+	_learn(s, "hellish_rebuke")
+	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
+	var hp := int(f["hp"])
+	var lines: Array[String] = []
+	SpellEffects.rebuke(s, data, f, 1, lines)
+	assert_int(int(f["hp"])).override_failure_message(" · ".join(lines)).is_less(hp)
+
+
+func test_counterspell_stops_a_foes_spell() -> void:
+	var s := _hero("wizard_yalika", 5)
+	_learn(s, "counterspell")
+	var caster := ""
+	for id: String in data["monsters"]:
+		if data["monsters"][id].has("spellcasting") and float(data["monsters"][id].get("cr", 9)) <= 3.0:
+			caster = id
+			break
+	var f := _fight(s, [{"monster": caster, "col": 1}])[0]
+	assert_str(SpellEffects.counter_option(s, data, f, "magic_missile")).is_not_empty()
+	var lines: Array[String] = []
+	assert_bool(SpellEffects.counter(s, data, f, "magic_missile", 1, lines)).is_true()
+	assert_bool(bool(CombatRules.player(s)["reacted"])).is_true()
+	assert_str(SpellEffects.counter_option(s, data, f, "magic_missile")).is_empty()
+
+
+func test_dispel_magic_ends_a_foes_spell_on_the_hero() -> void:
+	var s := _hero("wizard_yalika", 5)
+	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
+	ConditionRules.add_effect(s.character, {"condition": "frightened", "ends": {}, "by": str(f["id"]),
+		"source": {"kind": "monster_spell", "id": "fear", "name": "Гоблин — Страх"}})
+	_learn(s, "dispel_magic")
+	var lines := _cast_at(s, "dispel_magic", 3, str(f["id"]))
+	assert_bool(ConditionRules.has(s.character, "frightened")).override_failure_message(" · ".join(lines)).is_false()
+
+
+func test_calm_emotions_lowers_their_weapons() -> void:
+	var s := _hero("cleric_branko", 3)
+	var foes := _fight(s, [{"monster": "bandit", "col": 1}, {"monster": "bandit", "col": 1}])
+	s.character["spell_dc"] = 40
+	_cast_at(s, "calm_emotions", 2, str(foes[0]["id"]))
+	assert_bool(foes.all(func(f: Dictionary) -> bool: return str(f["status"]) == "truce")).is_true()
+
+
+func test_suggestion_rolls_the_npcs_save() -> void:
+	var s := _hero("bard_yas", 3)
+	var npc: Dictionary = data["world"]["npcs"]["npc_innkeeper"]
+	s.character["spell_dc"] = 40
+	var r := SpellEffects.npc_save(s, data, "suggestion", npc)
+	assert_bool(bool(r["ok"])).is_true()
+	assert_str(str(r["line"])).contains("поддался")
+	assert_bool(SpellEffects.npc_save(s, data, "animal_friendship", npc)["ok"]).is_false()
+
+
+func test_goodberry_and_create_food_feed_the_camp() -> void:
+	var s := _hero("druid_olha")
+	(s.character["inventory"] as Dictionary).erase("rations")
+	_cast_self(s, "goodberry")
+	assert_int(int(s.character["inventory"]["goodberry"])).is_equal(10)
+	assert_int(ExplorationRules.camp_points(data, {"goodberry": 2})).is_equal(2)
+	s.character["hp"] = 1
+	ItemRules.use(s.character, data, s.items, "goodberry", s.rng, s)
+	assert_int(int(s.character["hp"])).is_equal(2)
+
+
+func test_remove_curse_lifts_the_hold() -> void:
+	var s := _hero("cleric_branko", 5)
+	var c := s.character
+	var def := {"name": "Чёрный меч", "item_type": "weapon", "base": "longsword", "rarity": "common", "properties": ["cursed"], "generated": true}
+	var id := ItemRules.generated_id(def)
+	s.items[id] = def
+	c["inventory"][id] = 1
+	c["equipped"]["main_hand"] = id
+	var lines := _cast_self(s, "remove_curse")
+	assert_str(str(c["equipped"]["main_hand"])).is_empty()
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("проклятие отпустило"))).is_true()

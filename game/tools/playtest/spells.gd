@@ -222,6 +222,12 @@ func run() -> void:
 	step("Grease on the field, Moonbeam kept", SpellEffects.zone_names(s, int(wolf["col"])).size() >= 2 and str(c.get("concentration", "")) == "moonbeam",
 		", ".join(SpellEffects.zone_names(s, int(wolf["col"]))) + " | " + _tail(3))
 	await shot("grease")
+	# v0.7.13.7: the reaction window lists Shield next to the hit (the window itself is the features playtest's).
+	_learn(c, ["shield"])
+	c["slots_used"] = [0, 0, 0, 0, 0]
+	var rx := FeatureRules.reactions(s, data, wolf, data["monsters"]["wolf"]["actions"][0], false, 5)
+	step("Shield among the reactions", rx.any(func(r: Dictionary) -> bool: return str(r["id"]) == "spell_shield"), str(rx))
+
 
 func _learn(c: Dictionary, ids: Array) -> void:
 	var sp: Dictionary = c["spells"]

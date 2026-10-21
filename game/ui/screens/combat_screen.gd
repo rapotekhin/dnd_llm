@@ -720,7 +720,10 @@ func _draw_ask(s: GameSession) -> void:
 		title.text = str(prompt.get("text", tr("COMBAT_ASK_TITLE")))
 	else:
 		title.text = tr("COMBAT_REACTION_TITLE")
-		_line(_ask_box, tr("COMBAT_REACTION_HIT").format({"line": str(pending.get("line", "")), "dmg": int(pending.get("dmg", 0))}))
+		if str(pending.get("kind", "")) == "counter":  # a foe's spell (v0.7.13.7)
+			_line(_ask_box, tr("COMBAT_REACTION_SPELL_CAST").format({"line": str(pending.get("line", ""))}))
+		else:
+			_line(_ask_box, tr("COMBAT_REACTION_HIT").format({"line": str(pending.get("line", "")), "dmg": int(pending.get("dmg", 0))}))
 	var flow := HFlowContainer.new()
 	flow.add_theme_constant_override("h_separation", 10)
 	flow.add_theme_constant_override("v_separation", 10)

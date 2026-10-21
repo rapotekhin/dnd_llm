@@ -22,7 +22,7 @@ static func spec(data: Dictionary, spell_id: String) -> Dictionary:
 static func self_spell(data: Dictionary, spell_id: String) -> bool:
 	var sp := spec(data, spell_id)
 	return not sp.is_empty() and not bool(sp.get("foe", false)) and not bool(sp.get("foe_target", false)) and not sp.has("sustained") \
-		and not sp.has("curse")
+		and not sp.has("curse") and not sp.has("reaction") and not sp.has("npc_save")
 
 
 static func foe_spell(data: Dictionary, spell_id: String) -> bool:
@@ -36,6 +36,15 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	var spell: Dictionary = data["spells"][spell_id]
 	if sp.has("teleport"):  # an instant spell: the fight moves the hero (Misty Step)
 		return []
+	if bool(sp.get("lift_curse", false)):  # Remove Curse (v0.7.13.7)
+		var lifted := ItemRules.lift_curse(c, data, s.items)
+		return lifted if not lifted.is_empty() else ["проклятых вещей на герое нет"] as Array[String]
+	if sp.has("make"):  # Goodberry, Create Food and Water
+		var made: Array[String] = []
+		for id: String in sp["make"]:
+			c["inventory"][id] = int(c["inventory"].get(id, 0)) + int(sp["make"][id])
+			made.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), int(sp["make"][id])])
+		return ["Сотворено: " + ", ".join(made)]
 	for e: Dictionary in ConditionRules.effects(c).duplicate():  # cast again: the new one replaces the old
 		if str(e.get("source", {}).get("id", "")) == spell_id:
 			ConditionRules.remove_effect(c, int(e.get("uid", 0)))
@@ -747,6 +756,10 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 		if not landed:
 			continue
 		var flag := str(cu["flag"])
+		if flag == "calmed":  # Calm Emotions: no more fight in it (5e: indifferent)
+			f["status"] = "truce"
+			lines.append("%s опускает оружие — %s" % [f["name"], name])
+			continue
 		f[flag] = {"spell": spell_id, "name": name, "repeat": str(cu.get("repeat", "")), "dc": dc}
 		if flag == "slowed_spell":
 			f["ac"] = int(f["ac"]) - 2
@@ -821,3 +834,126 @@ static func end_zones(s: GameSession, spell_id: String) -> Array[String]:
 			zones(s).erase(z)
 			lines.append("%s гаснет" % z["name"])
 	return lines
+
+
+# --- reactions, dispel, charms (v0.7.13.7) ----------------------------------------------------------------
+
+
+## A reaction spell the hero has ready with a slot for it: its lowest slot, 0 — none.
+static func reaction_slot(c: Dictionary, data: Dictionary, spell_id: String) -> int:
+	if not SpellRules.ready(c).has(spell_id):
+		return 0
+	return SpellRules.lowest_slot(c, data, spell_id)
+
+
+## The reaction spells of the hero at a foe's hit (`when`: hit — before the damage, damage — after it).
+static func hit_reactions(s: GameSession, data: Dictionary, ctx: Dictionary) -> Array[Dictionary]:
+	var c := s.character
+	var out: Array[Dictionary] = []
+	if reaction_slot(c, data, "shield") > 0:
+		var miss := int(ctx.get("total", 0)) < int(ctx.get("ac", 10)) + 5 and not bool(ctx.get("nat20", false))
+		out.append({"id": "spell_shield", "label": "Щит: КД +5 до вашего хода%s" % (" — удар мимо" if miss else " (удар всё равно попадёт)")})
+	if reaction_slot(c, data, "hellish_rebuke") > 0 and int(ctx.get("dmg", 0)) > 0:
+		out.append({"id": "spell_hellish_rebuke", "label": "Адское возмездие: огонь по обидчику"})
+	return out
+
+
+## Uses a reaction spell on a hit (the slot spent). Lines.
+static func apply_hit_reaction(s: GameSession, data: Dictionary, f: Dictionary, id: String, ctx: Dictionary, lines: Array[String]) -> void:
+	var c := s.character
+	var spell_id := id.trim_prefix("spell_")
+	var slot := reaction_slot(c, data, spell_id)
+	SpellRules.cast(c, data, spell_id, slot, null, false)
+	match spell_id:
+		"shield":
+			ConditionRules.add_effect(c, {"condition": "", "ac_plus": 5, "until_turn": true, "ends": {},
+				"source": {"kind": "spell", "id": "shield", "name": str(data["spells"]["shield"]["name"])}})
+			CharacterRules.refresh(c, data, s.items)
+			ctx["ac"] = int(ctx["ac"]) + 5
+			var still := int(ctx["total"]) >= int(ctx["ac"]) or bool(ctx.get("nat20", false))
+			ctx["hit"] = still
+			lines.append("%s: Щит — КД %d, %s" % [c.get("name", ""), int(c["ac"]), "удар всё же попадает" if still else "удар отскакивает"])
+		"hellish_rebuke":
+			ctx["rebuke"] = slot
+
+
+## Hellish Rebuke after the damage: the attacker takes fire, a DEX save for half. Lines.
+static func rebuke(s: GameSession, data: Dictionary, f: Dictionary, slot: int, lines: Array[String]) -> void:
+	var sp: Dictionary = data["spells"]["hellish_rebuke"]
+	var dice := str(sp["damage_at_slot"].get(str(maxi(1, slot)), "2d10"))
+	lines.append_array(_save_hit(s, data, str(sp["name"]), "fire", "dex", dice, int(s.character.get("spell_dc", 10)), f, true))
+
+
+## The start of the hero's turn: Shield's AC goes.
+static func end_until_turn(s: GameSession, data: Dictionary) -> void:
+	var c := s.character
+	var gone := false
+	for e: Dictionary in hero_effects(c, "until_turn").duplicate():
+		ConditionRules.remove_effect(c, int(e["uid"]))
+		gone = true
+	if gone:
+		CharacterRules.refresh(c, data, s.items)
+
+
+## Counterspell at a foe's spell: "" when the hero cannot, else the option label.
+static func counter_option(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String) -> String:
+	var c := s.character
+	if bool(CombatRules.player(s).get("reacted", false)) or ConditionRules.incapacitated(c) or int(c.get("hp", 0)) <= 0:
+		return ""
+	if reaction_slot(c, data, "counterspell") <= 0 or CombatRules.cols_between(f, CombatRules.player(s)) > CombatRules.range_cols(data, 60):
+		return ""
+	return "Контрзаклинание: сорвать «%s»" % data["spells"][spell_id]["name"]
+
+
+## Counterspell: a spell of circle 3 or less fails; higher — the hero's check of the spellcasting ability, DC 10 +
+## circle. True when the spell is stopped.
+static func counter(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String, circle: int, lines: Array[String]) -> bool:
+	var c := s.character
+	var slot := reaction_slot(c, data, "counterspell")
+	SpellRules.cast(c, data, "counterspell", slot, null, false)
+	CombatRules.player(s)["reacted"] = true
+	var name := str(data["spells"][spell_id]["name"])
+	if circle <= slot:
+		lines.append("%s: Контрзаклинание — «%s» срывается" % [c.get("name", ""), name])
+		return true
+	var roll := s.rng.randi_range(1, 20) + CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "int"))))
+	var ok := roll >= 10 + circle
+	lines.append("%s: Контрзаклинание — проверка %d против Сл %d — %s" % [c.get("name", ""), roll, 10 + circle, "«%s» срывается" % name if ok else "не вышло"])
+	return ok
+
+
+## Dispel Magic at a foe: its spells on the hero end (and those of anyone, cast at the hero, when `target` is empty).
+static func dispel(s: GameSession, data: Dictionary, target_id: String) -> Array[String]:
+	var c := s.character
+	var lines: Array[String] = []
+	for e: Dictionary in ConditionRules.effects(c).duplicate():
+		if str(e.get("source", {}).get("kind", "")) != "monster_spell":
+			continue
+		if not target_id.is_empty() and str(e.get("by", "")) != target_id:
+			continue
+		ConditionRules.remove_effect(c, int(e["uid"]))
+		lines.append("развеяно: %s" % e["source"].get("name", ""))
+	if lines.is_empty():
+		lines.append("развеивать нечего")
+	CharacterRules.refresh(c, data, s.items)
+	return lines
+
+
+## Out of a fight: the NPC's save against the hero's spell (Suggestion, Charm Person…). {"ok": the spell holds,
+## "line"} or {} when the spell is not of this kind.
+static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc: Dictionary) -> Dictionary:
+	var sp := spec(data, spell_id)
+	if not bool(sp.get("npc_save", false)) or npc.is_empty():
+		return {}
+	var spell: Dictionary = data["spells"][spell_id]
+	var tmpl: Dictionary = data["monsters"].get(str(npc.get("monster", data["rules"]["combat"]["default_npc_monster"])), {})
+	var name := str(npc.get("name", ""))
+	if sp.has("types") and not (sp["types"] as Array).has(str(tmpl.get("type", "humanoid"))):
+		return {"ok": false, "line": "%s: на %s не действует" % [spell["name"], name]}
+	var ab := str(spell.get("save", {}).get("ability", "wis"))
+	var bonus := int(tmpl.get("saves", {}).get(ab, CharacterRules.mod(int(tmpl.get("abilities", {}).get(ab, 10)))))
+	var roll := s.rng.randi_range(1, 20)
+	var dc := int(s.character.get("spell_dc", 10))
+	var saved := roll + bonus >= dc
+	return {"ok": not saved, "line": "%s: %s — спасбросок %s %d против Сл %d — %s" % [spell["name"], name, CombatRules.ab_name(ab), roll + bonus, dc,
+		"устоял" if saved else "поддался"]}
