@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.20.0"
+PROTOCOL_VERSION = "0.21.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -149,6 +149,8 @@ class SceneNpc(_In):
     understands_hero: bool = True  # shares a tongue with the hero (or a spell bridges it) (0.17.0)
     tie: str = ""  # the NPC's tie with the hero's background: «служивый: уважает звание героя-солдата» (0.17.0)
     memory: list[str] = Field(default_factory=list)  # what the NPC remembers of the hero: «день 2 — …» (0.20.0)
+    services: list[str] = Field(default_factory=list)  # «опознание вещей [identify]» — for npc_favor (0.21.0)
+    deal: str = ""  # what the NPC granted by words: «скидка герою 10% до дня 9» (0.21.0)
 
 
 class SceneProp(_In):
@@ -281,6 +283,7 @@ class TradeInfo(_In):
     npc_id: str
     purse_cp: int = 0
     haggle_pct: int = 0  # won for this visit: −pct on buying, +pct on selling
+    discount_pct: int = 0  # granted by words for days (npc_discount, 0.21.0), already in the prices
     haggle_locked: bool = False  # a haggle failed today
     stock: list[TradeLine] = Field(default_factory=list)  # what the merchant sells
     buys: list[TradeLine] = Field(default_factory=list)  # the player's things and what the merchant pays
@@ -634,6 +637,35 @@ class CrimeKnownEffect(_Out):
     victim_id: str
 
 
+class NpcDiscountEffect(_Out):
+    """A trader of the scene gives the hero a discount by words (0.21.0): `percent` 5–20 off buying for a week. The
+    engine grants it only from an NPC who likes the hero (attitude ≥ +1) or was won over by a successful
+    Persuasion, Deception or Intimidation against it this turn."""
+
+    kind: Literal["npc_discount"] = "npc_discount"
+    npc_id: str
+    percent: int = Field(ge=1, le=100)
+    reason: str
+
+
+class NpcFavorEffect(_Out):
+    """An NPC of the scene does one of its services for free (0.21.0): `service` from `scene.npcs[].services`
+    (`silver` — `item_id` the weapon). Attitude ≥ +2 or won over this turn; one in a week; the hero owes it."""
+
+    kind: Literal["npc_favor"] = "npc_favor"
+    npc_id: str
+    service: str
+    item_id: str | None = None
+    reason: str
+
+
+class AcceptQuestEffect(_Out):
+    """The hero takes by words a quest its giver here offers (0.21.0), like the button «Взять задание»."""
+
+    kind: Literal["accept_quest"] = "accept_quest"
+    quest_id: str
+
+
 class FlagEffect(_Out):
     kind: Literal["flag"] = "flag"
     flag: str = Field(pattern=r"^[a-z][a-z0-9_]{1,40}$")
@@ -643,7 +675,8 @@ class FlagEffect(_Out):
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
-    | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect,
+    | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
+    | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect,
     Field(discriminator="kind"),
 ]
 

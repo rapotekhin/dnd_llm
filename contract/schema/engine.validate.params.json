@@ -1,5 +1,26 @@
 {
   "$defs": {
+    "AcceptQuestEffect": {
+      "additionalProperties": false,
+      "description": "The hero takes by words a quest its giver here offers (0.21.0), like the button «Взять задание».",
+      "properties": {
+        "kind": {
+          "const": "accept_quest",
+          "default": "accept_quest",
+          "title": "Kind",
+          "type": "string"
+        },
+        "quest_id": {
+          "title": "Quest Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "quest_id"
+      ],
+      "title": "AcceptQuestEffect",
+      "type": "object"
+    },
     "AdvanceTimeEffect": {
       "additionalProperties": false,
       "description": "The player spends time in the scene (0.10.0): waits, sleeps rough, works — the engine moves the clock within its\nlimit; not in combat.",
@@ -741,6 +762,82 @@
       "title": "NpcAttitudeEffect",
       "type": "object"
     },
+    "NpcDiscountEffect": {
+      "additionalProperties": false,
+      "description": "A trader of the scene gives the hero a discount by words (0.21.0): `percent` 5–20 off buying for a week. The\nengine grants it only from an NPC who likes the hero (attitude ≥ +1) or was won over by a successful\nPersuasion, Deception or Intimidation against it this turn.",
+      "properties": {
+        "kind": {
+          "const": "npc_discount",
+          "default": "npc_discount",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "percent": {
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Percent",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "percent",
+        "reason"
+      ],
+      "title": "NpcDiscountEffect",
+      "type": "object"
+    },
+    "NpcFavorEffect": {
+      "additionalProperties": false,
+      "description": "An NPC of the scene does one of its services for free (0.21.0): `service` from `scene.npcs[].services`\n(`silver` — `item_id` the weapon). Attitude ≥ +2 or won over this turn; one in a week; the hero owes it.",
+      "properties": {
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "kind": {
+          "const": "npc_favor",
+          "default": "npc_favor",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "service": {
+          "title": "Service",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "service",
+        "reason"
+      ],
+      "title": "NpcFavorEffect",
+      "type": "object"
+    },
     "PropSpec": {
       "additionalProperties": false,
       "description": "A thing to put in the room when it is furnished (0.11.0).",
@@ -973,6 +1070,7 @@
     "effect": {
       "discriminator": {
         "mapping": {
+          "accept_quest": "#/$defs/AcceptQuestEffect",
           "advance_time": "#/$defs/AdvanceTimeEffect",
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
@@ -987,6 +1085,8 @@
           "move": "#/$defs/MoveEffect",
           "note": "#/$defs/NoteEffect",
           "npc_attitude": "#/$defs/NpcAttitudeEffect",
+          "npc_discount": "#/$defs/NpcDiscountEffect",
+          "npc_favor": "#/$defs/NpcFavorEffect",
           "prop_state": "#/$defs/PropStateEffect",
           "start_combat": "#/$defs/StartCombatEffect",
           "take_item": "#/$defs/TakeItemEffect",
@@ -1056,6 +1156,15 @@
         },
         {
           "$ref": "#/$defs/CrimeKnownEffect"
+        },
+        {
+          "$ref": "#/$defs/NpcDiscountEffect"
+        },
+        {
+          "$ref": "#/$defs/NpcFavorEffect"
+        },
+        {
+          "$ref": "#/$defs/AcceptQuestEffect"
         }
       ],
       "title": "Effect"

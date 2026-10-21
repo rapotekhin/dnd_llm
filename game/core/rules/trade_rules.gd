@@ -63,6 +63,9 @@ static func buy_price(s: GameSession, data: Dictionary, npc_id: String, item_id:
 		return 0
 	var haggle := int(merchant(s, data, npc_id)["haggle_pct"])
 	var price := ceili(value * _pct(t["buy_pct_by_attitude"], s.attitude(npc_id)) * (100 - haggle) / 10000.0)
+	var off := SocialRules.discount(s, npc_id)  # a discount by words (v0.7.15.2)
+	if off > 0:
+		price = ceili(price * (100 - off) / 100.0)
 	return maxi(1, price)
 
 
@@ -259,7 +262,7 @@ static func info(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary
 		var price := sell_price(s, data, npc_id, id)
 		if qty > 0 and price > 0:
 			buys.append({"item_id": id, "name": ItemRules.display_name(items, s.items, id), "qty": qty, "price_cp": price})
-	return {"npc_id": npc_id, "purse_cp": int(m["purse_cp"]), "haggle_pct": int(m["haggle_pct"]),
+	return {"npc_id": npc_id, "purse_cp": int(m["purse_cp"]), "haggle_pct": int(m["haggle_pct"]), "discount_pct": SocialRules.discount(s, npc_id),
 		"haggle_locked": int(m["haggle_failed_day"]) == s.day, "stock": stock, "buys": buys}
 
 
@@ -306,12 +309,12 @@ static func silverable(s: GameSession, data: Dictionary) -> Array[String]:
 	return out
 
 
-## Buys a service (services first; `item` — the weapon to silver). Lines.
-static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: String, item: String = "") -> Array[String]:
+## Buys a service (services first; `item` — the weapon to silver; `free` — a favor by words, v0.7.15.2). Lines.
+static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: String, item: String = "", free: bool = false) -> Array[String]:
 	var c := s.character
-	var cost := int(ItemRules.cfg(data)["services"][id]["cost_cp"])
+	var cost := 0 if free else int(ItemRules.cfg(data)["services"][id]["cost_cp"])
 	c["gold_cp"] = int(c["gold_cp"]) - cost
-	var lines: Array[String] = ["Услуга: −%s" % Money.format(cost)]
+	var lines: Array[String] = ["Услуга даром" if free else "Услуга: −%s" % Money.format(cost)]
 	match id:
 		"identify":
 			lines.append_array(ItemRules.identify(c, data, s.items))

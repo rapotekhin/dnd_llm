@@ -1799,7 +1799,8 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 		_combat_log(parley["lines"])
 		return parley["result"]
 	var result := _engine_check(params)
-	effects.note_check(str(params.get("turn_id", "")), str(params.get("dc_tier", "")), bool(result.get("success", false)))
+	var won_over := _listener_id(params) if ["persuasion", "deception", "intimidation"].has(str(params.get("skill", ""))) and not bool(result.get("blocked", false)) else ""
+	effects.note_check(str(params.get("turn_id", "")), str(params.get("dc_tier", "")), bool(result.get("success", false)), won_over)
 	return result
 
 

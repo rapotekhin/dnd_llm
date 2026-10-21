@@ -18,6 +18,8 @@ var _data: Dictionary = {}
 var _extra_lines: Array[String] = []
 ## The tiers of successful checks of each turn (v0.7.14.3): a nearly_impossible one caps the turn's rewards.
 var _won: Dictionary = {}
+## NPCs won over this turn by a successful Persuasion, Deception or Intimidation (v0.7.15.2): turn_id → [npc_id].
+var _won_over: Dictionary = {}
 ## Turns started by the player's own words or ability (v0.7.8): only there a condition may come without a save
 ## (`cause: player` — the hero drank it, lay down to sleep). turn_id → true; GameState marks them.
 var player_turns: Dictionary = {}
@@ -29,6 +31,7 @@ func mark_searched(turn_id: String) -> void:
 ## Drops every reserve (and the search mark) of `turn_id`.
 func discard(turn_id: String) -> void:
 	_won.erase(turn_id)
+	_won_over.erase(turn_id)
 	for id: String in reserves.keys():
 		if reserves[id]["turn_id"] == turn_id:
 			reserves.erase(id)
@@ -46,11 +49,16 @@ func _of_turn(turn_id: String) -> Array[Dictionary]:
 
 ## Returns the engine.validate result: {accepted, effect_id, summary, item_id} or {accepted: false, reason}.
 ## A check of the turn resolved (GameState): a success on nearly_impossible caps what the master may give this turn.
-func note_check(turn_id: String, dc_tier: String, success: bool) -> void:
+## `npc_id` — the NPC of a social check (v0.7.15.2): a success wins it over for this turn's discount or favor.
+func note_check(turn_id: String, dc_tier: String, success: bool, npc_id: String = "") -> void:
 	if success:
 		var tiers: Array = _won.get(turn_id, [])
 		tiers.append(dc_tier)
 		_won[turn_id] = tiers
+		if not npc_id.is_empty():
+			var who: Array = _won_over.get(turn_id, [])
+			who.append(npc_id)
+			_won_over[turn_id] = who
 
 
 ## What the master may still give (cp) this turn: the budget of the level until the long rest, minus what it gave
@@ -257,6 +265,26 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if not QuestRules.known_flags(data["world"]).has(flag):
 				return {"reason": "флаг %s миру не знаком; память о событии — эффект note с короткой фразой по-русски" % flag}
 			return {"plan": {"flag": flag, "value": bool(e.get("value", true))}, "summary": "Отмечено: %s" % flag}
+		"npc_discount", "npc_favor":  # what an NPC grants by words (v0.7.15.2)
+			var npc_id := str(e.get("npc_id", ""))
+			if not s.npcs_here(world.world, s.room_id).has(npc_id):
+				return {"reason": "NPC %s нет в этой комнате" % npc_id}
+			var won := (_won_over.get(turn_id, []) as Array).has(npc_id)
+			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == e["kind"] and str(p["plan"].get("discount", p["plan"].get("favor", ""))) == npc_id):
+				return {"reason": "это уже есть в этом ходе"}
+			if str(e["kind"]) == "npc_discount":
+				return SocialRules.plan_discount(s, data, npc_id, int(e.get("percent", 0)), won)
+			return SocialRules.plan_favor(s, data, npc_id, str(e.get("service", "")), str(e.get("item_id", "")) if e.get("item_id") != null else "", won)
+		"accept_quest":  # the hero takes a quest the NPC offers by words, like the button (v0.7.15.2)
+			var qid := str(e.get("quest_id", ""))
+			var why := QuestRules.can_accept(s, world.world, qid)
+			if not why.is_empty():
+				return {"reason": {"QUEST_UNKNOWN": "нет задания %s в пакете" % qid, "QUEST_DONE": "задание %s уже взято или сделано" % qid,
+					"QUEST_WRONG_PLACE": "задание %s здесь не предлагают — только его задатель (список в quests)" % qid}.get(why, why)}
+			var giver := QuestRules.stand_in(s, world.world, str(QuestRules.quest(world.world, qid).get("giver", "")))
+			if s.in_conversation() and s.npc_id != giver:
+				return {"reason": "задание %s даёт не собеседник, а %s" % [qid, world.npc(giver).get("name", giver)]}
+			return {"plan": {"quest_accept": qid}, "summary": "Новое задание: %s" % QuestRules.quest(world.world, qid)["title"]}
 		"crime_known":  # the hero confessed or was exposed (v0.7.14)
 			return CrimeRules.plan_reveal(s, data, str(e.get("victim_id", "")))
 		"note":
@@ -543,6 +571,12 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		if not main.is_empty() and str(s.character["equipped"].get("off_hand", "")) == main and int(s.character["inventory"].get(main, 0)) < 2:
 			s.character["equipped"]["off_hand"] = ""
 		CharacterRules.refresh(s.character, _data, s.items)
+		return
+	if plan.has("discount"):  # npc_discount (v0.7.15.2)
+		SocialRules.grant_discount(s, _data, plan)
+		return
+	if plan.has("favor"):  # npc_favor (v0.7.15.2)
+		_extra_lines.append_array(SocialRules.grant_favor(s, _data, plan))
 		return
 	if plan.has("quest_accept"):  # a quest thing given by words takes the quest (v0.7.2)
 		_extra_lines.append_array(QuestRules.accept(s, _data, str(plan["quest_accept"])).slice(1))

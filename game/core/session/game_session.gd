@@ -117,6 +117,10 @@ var quests_done: Array[String] = []
 ## NPC_MEMORY_MAX — facts the engine records (quests, caught thefts, murders) and the master's notes about the NPC.
 const NPC_MEMORY_MAX := 12
 var npc_memory: Dictionary = {}
+## What NPCs granted by words (v0.7.15.2): npc_id → {pct, until_day} — a trader's discount; npc_id → the day of
+## its last free service.
+var discounts: Dictionary = {}
+var favors: Dictionary = {}
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
 var summaries: Dictionary = {}
 ## Lines of the current conversation, the events for its summary.
@@ -391,6 +395,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"caught_by": caught_by,
 		"notes": notes,
 		"npc_memory": npc_memory,
+		"discounts": discounts,
+		"favors": favors,
 		"crimes": crimes,
 		"wanted": wanted,
 		"arrest": arrest,
@@ -498,6 +504,11 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for e: Variant in d.get("notes", []):
 		if e is Dictionary:
 			s.notes.append((e as Dictionary).duplicate())
+	for id: String in d.get("discounts", {}):
+		var dsc: Dictionary = d["discounts"][id]
+		s.discounts[id] = {"pct": int(dsc.get("pct", 0)), "until_day": int(dsc.get("until_day", 0))}
+	for id: String in d.get("favors", {}):
+		s.favors[id] = int(d["favors"][id])
 	var mem: Variant = d.get("npc_memory", {})
 	if mem is Dictionary:
 		for id: String in mem:

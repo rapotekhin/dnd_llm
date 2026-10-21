@@ -1471,3 +1471,57 @@ scenarios:
       effects: {forbidden_kinds: [give_item, coins]}
     rubric:
       - "Бруно сам вспоминает невозвращённый долг в 5 зм и не наливает, пока о нём не договорятся, — в характере"
+
+  - id: discount_after_persuasion
+    title: "Уговорил торговца — скидка эффектом"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Горм, я у тебя теперь каждый вечер ужинаю и друзей приведу. Скинь мне цену на эль и пайки, а?"
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", template: commoner, attitude: indifferent, trader: true}
+    engine:
+      check: {d20: [17], bonus: 4, total: 21, dc: 15, success: true, nat: 17, blocked: false}
+    expect:
+      check: {required: true, skill_in: [persuasion, deception], contest_npc: npc_innkeeper}
+      effects: {required_kinds_any: [npc_discount], forbidden_kinds: [coins, give_item]}
+    rubric:
+      - "После успешной проверки Горм уступает в цене эффектом npc_discount (5–20%), в характере, без монет и вещей"
+
+  - id: favor_from_a_friend
+    title: "Друг-жрица опознаёт вещь даром"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Сестра Илва, у меня совсем пусто в кошеле. Не глянешь по старой дружбе на это кольцо — что в нём?"
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_priestess, name: "Сестра Илва", role: "жрица храма", template: acolyte, attitude: helpful, trader: true,
+             services: ["опознание вещей [identify]", "снятие проклятия [remove_curse]"]}
+    engine:
+      validate:
+        - {kind: npc_favor, summary: "Сестра Илва: опознание вещей даром — опознано: Кольцо защиты"}
+    expect:
+      effects: {required_kinds_any: [npc_favor], forbidden_kinds: [coins]}
+    rubric:
+      - "Илва опознаёт кольцо даром эффектом npc_favor с service identify, в характере. Движок ответил на эффект «опознано: Кольцо защиты» (проверки в этом сценарии нет): кольцо названо или описано по этому ответу (защитное кольцо), без выдумок сверх него"
+
+  - id: accept_quest_by_words
+    title: "Задание без вещи — берётся словами"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Берусь. Найду я твой амулет, Дрогин, — по рукам."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_prospector, name: "Дрогин", role: "старатель", template: commoner, attitude: indifferent}
+      quests:
+        - {id: drogin_amulet, title: "Амулет старателя", description: "Дрогин обронил в старой шахте фамильный амулет и просит его найти.", offered_by: "Дрогин"}
+    expect:
+      effects: {required_kinds_any: [accept_quest], forbidden_kinds: [coins, give_item, xp]}
+    rubric:
+      - "Дрогин принимает согласие героя в характере и объясняет, где искать; задание оформлено эффектом accept_quest, награда сверх описания не обещана"

@@ -33,6 +33,7 @@ func _ready() -> void:
 	_purse = _label(purses, true)
 	_coins = _label(purses, false)
 	_haggle_state = _label(col, false)
+	_haggle_state.name = "DealState"
 	_haggle_state.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 
 	var lists := HBoxContainer.new()
@@ -147,8 +148,13 @@ func _rebuild() -> void:
 	_purse.text = tr("TRADE_PURSE").format({"coins": Money.format(int(m["purse_cp"]))})
 	_coins.text = tr("TRADE_COINS").format({"coins": Money.format(int(s.character["gold_cp"]))})
 	var pct := int(m["haggle_pct"])
-	_haggle_state.text = tr("TRADE_HAGGLE_ACTIVE").format({"pct": pct}) if pct > 0 else ""
-	_haggle_state.visible = pct > 0
+	var states: Array[String] = []
+	if pct > 0:
+		states.append(tr("TRADE_HAGGLE_ACTIVE").format({"pct": pct}))
+	if int(info["discount_pct"]) > 0:  # a discount by words (v0.7.15.2)
+		states.append(tr("TRADE_DISCOUNT").format({"pct": int(info["discount_pct"]), "day": int(s.discounts[_npc]["until_day"])}))
+	_haggle_state.text = " · ".join(states)
+	_haggle_state.visible = not states.is_empty()
 
 	_fill(_stock, info["stock"], "buy", "Buy_", "TRADE_SOLD_OUT", can_act)
 	_fill(_yours, info["buys"], "sell", "Sell_", "TRADE_NOTHING_TO_SELL", can_act)

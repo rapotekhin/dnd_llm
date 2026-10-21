@@ -663,6 +663,11 @@
           "title": "Attitude",
           "type": "integer"
         },
+        "deal": {
+          "default": "",
+          "title": "Deal",
+          "type": "string"
+        },
         "description": {
           "default": "",
           "title": "Description",
@@ -707,6 +712,13 @@
           "default": "",
           "title": "Role",
           "type": "string"
+        },
+        "services": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Services",
+          "type": "array"
         },
         "speaks": {
           "default": "",
@@ -915,6 +927,11 @@
           },
           "title": "Buys",
           "type": "array"
+        },
+        "discount_pct": {
+          "default": 0,
+          "title": "Discount Pct",
+          "type": "integer"
         },
         "haggle_locked": {
           "default": false,

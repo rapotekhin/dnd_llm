@@ -12,7 +12,8 @@
 ## Торговля
 
 {% if trade %}- Кошелёк {{ npc.name }}: {{ money(trade.purse_cp) }}.
-{% if trade.haggle_pct %}- Игрок уже сторговался: цены ниже уже со скидкой {{ trade.haggle_pct }}% — больше не уступай.
+{% if trade.discount_pct %}- Ты уже дал игроку скидку {{ trade.discount_pct }}% — она в ценах ниже.
+{% endif %}{% if trade.haggle_pct %}- Игрок уже сторговался: цены ниже уже со скидкой {{ trade.haggle_pct }}% — больше не уступай.
 {% elif trade.haggle_locked %}- Сегодня игрок уже пытался сбить цену и не смог: до завтра ты не уступаешь.
 {% endif %}
 - Продаёшь (цена за штуку, количество):

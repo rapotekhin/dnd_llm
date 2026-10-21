@@ -155,7 +155,19 @@
 		],
 		"attitude_step": 2,
 		"dc_min": 5,
-		"dc_max": 30
+		"dc_max": 30,
+		"discount": {
+			"_doc": "A trader's discount by words (v0.7.15.2, effect npc_discount): min_pct..max_pct off buying, `days` days; only from an NPC with attitude ≥ min_attitude or one won over by a social check this turn.",
+			"min_pct": 5,
+			"max_pct": 20,
+			"days": 7,
+			"min_attitude": 1
+		},
+		"favor": {
+			"_doc": "A service of the NPC for free (v0.7.15.2, effect npc_favor): attitude ≥ min_attitude or won over this turn; one per NPC in cooldown_days.",
+			"min_attitude": 2,
+			"cooldown_days": 7
+		}
 	},
 	"conditions": {
 		"blinded": "Ослеплён: автоматически проваливает проверки, требующие зрения (Внимательность, Анализ); атаки по нему с преимуществом, его атаки с помехой.",
