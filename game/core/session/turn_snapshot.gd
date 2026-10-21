@@ -51,6 +51,9 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		out["combat"] = CombatRules.snapshot(s, data)
 	if s.mode == GameSession.MODE_TRADE and not s.npc_id.is_empty():
 		out["trade"] = TradeRules.info(s, data, s.npc_id)
+	var crimes := CrimeRules.snapshot(s, data)
+	if not crimes.is_empty():
+		out["crimes"] = crimes
 	return out
 
 

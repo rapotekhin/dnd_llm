@@ -303,6 +303,27 @@
       "title": "ConditionSave",
       "type": "object"
     },
+    "CrimeKnownEffect": {
+      "additionalProperties": false,
+      "description": "A hidden murder becomes known (0.19.0): the hero confessed or was exposed in the scene. `victim_id` — the\nnpc_id of a deed «никто не знает». The engine spreads it: attitudes, and the wanted hero where there is law.",
+      "properties": {
+        "kind": {
+          "const": "crime_known",
+          "default": "crime_known",
+          "title": "Kind",
+          "type": "string"
+        },
+        "victim_id": {
+          "title": "Victim Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "victim_id"
+      ],
+      "title": "CrimeKnownEffect",
+      "type": "object"
+    },
     "DamageEffect": {
       "additionalProperties": false,
       "properties": {
@@ -944,6 +965,7 @@
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
+          "crime_known": "#/$defs/CrimeKnownEffect",
           "damage": "#/$defs/DamageEffect",
           "equip": "#/$defs/EquipEffect",
           "flag": "#/$defs/FlagEffect",
@@ -1019,6 +1041,9 @@
         },
         {
           "$ref": "#/$defs/EquipEffect"
+        },
+        {
+          "$ref": "#/$defs/CrimeKnownEffect"
         }
       ],
       "title": "Effect"

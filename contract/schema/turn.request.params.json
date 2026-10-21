@@ -389,6 +389,30 @@
       "title": "Exit",
       "type": "object"
     },
+    "HeroCrimes": {
+      "description": "Crimes of the hero (0.19.0): facts of the engine, not the master's memory.",
+      "properties": {
+        "arrest": {
+          "default": false,
+          "title": "Arrest",
+          "type": "boolean"
+        },
+        "deeds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deeds",
+          "type": "array"
+        },
+        "wanted": {
+          "default": false,
+          "title": "Wanted",
+          "type": "boolean"
+        }
+      },
+      "title": "HeroCrimes",
+      "type": "object"
+    },
     "HistoryLine": {
       "properties": {
         "role": {
@@ -446,6 +470,11 @@
         "done": {
           "default": false,
           "title": "Done",
+          "type": "boolean"
+        },
+        "failed": {
+          "default": false,
+          "title": "Failed",
           "type": "boolean"
         },
         "id": {
@@ -756,6 +785,17 @@
           ],
           "default": null
         },
+        "crimes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HeroCrimes"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "history": {
           "items": {
             "$ref": "#/$defs/HistoryLine"
@@ -1019,7 +1059,8 @@
         "death",
         "trap",
         "wait",
-        "theft"
+        "theft",
+        "law"
       ],
       "title": "Kind",
       "type": "string"

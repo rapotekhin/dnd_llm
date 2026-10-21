@@ -105,6 +105,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": "переход уже предложен в этом ходе"}
 			if not ExplorationRules.open_exits(s, data["world"], s.room_id).has(to):
 				return {"reason": "из этой комнаты нет выхода в %s" % to}
+			if CrimeRules.held(s):
+				return {"reason": "стража держит героя: уйти нельзя, пока он не ответит (кнопки ареста — у игрока)"}
 			return {"plan": {"room_id": to}, "summary": "Переход: %s" % world.room(to).get("name", to)}
 		"damage":
 			var dice := _damage_dice(rules, level, str(e.get("severity", "")))
@@ -217,6 +219,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if not QuestRules.known_flags(data["world"]).has(flag):
 				return {"reason": "флаг %s миру не знаком; память о событии — эффект note с короткой фразой по-русски" % flag}
 			return {"plan": {"flag": flag, "value": bool(e.get("value", true))}, "summary": "Отмечено: %s" % flag}
+		"crime_known":  # the hero confessed or was exposed (v0.7.14)
+			return CrimeRules.plan_reveal(s, data, str(e.get("victim_id", "")))
 		"note":
 			var text := str(e.get("text", "")).strip_edges()
 			if text.length() < 5:
@@ -466,6 +470,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			CombatRules._hold(f, str(plan["condition"]))
 		else:
 			(f["conditions"] as Array).erase(str(plan["condition"]))
+		return
+	if plan.has("victim"):  # crime_known (v0.7.14)
+		_extra_lines.append_array(CrimeRules.reveal(s, _data, str(plan["victim"])))
 		return
 	if plan.has("text"):  # note (v0.7.4)
 		s.notes.append({"day": s.day, "clock": TimeRules.clock(s), "room": s.room_id, "text": str(plan["text"])})

@@ -26,15 +26,52 @@ static func quest(world: Dictionary, quest_id: String) -> Dictionary:
 	return stepped(world).get(quest_id, {})
 
 
-## Quests the giver in this room offers now.
+## Who stands for `npc_id` now (v0.7.14): the NPC while alive, else its living heir (pack `heir`, in a chain), else "".
+static func stand_in(s: GameSession, world: Dictionary, npc_id: String) -> String:
+	var id := npc_id
+	for i in 5:
+		if id.is_empty() or not s.dead_npcs.has(id):
+			return id
+		id = str(WorldView.new(world).npc(id).get("heir", ""))
+	return ""
+
+
+## Quests the giver in this room offers now (its heir, when the giver is dead; nobody gives work to the wanted hero).
 static func offers_here(s: GameSession, world: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var here := s.npcs_alive(WorldView.new(world).npcs_in(s.room_id))
 	var all := stepped(world)
 	for id: String in all:
-		if here.has(str(all[id].get("giver", ""))) and not s.quests_active.has(id) and not s.quests_done.has(id):
+		var giver := stand_in(s, world, str(all[id].get("giver", "")))
+		if here.has(giver) and not s.quests_active.has(id) and not s.quests_done.has(id) and not s.quests_failed.has(id) 				and not s.wanted.has(WorldView.new(world).location_id(s.room_id)):
 			out.append(id)
 	return out
+
+
+## A pack NPC died (v0.7.14): the taken quests it gave or has a talk step in pass to its heir or fail. Lines.
+static func on_death(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
+	var world: Dictionary = data["world"]
+	var lines: Array[String] = []
+	var all := stepped(world)
+	var heir := stand_in(s, world, npc_id)
+	var who := str(WorldView.new(world).npc(npc_id).get("name", npc_id))
+	for id: String in all:
+		if s.quests_done.has(id) or s.quests_failed.has(id):
+			continue
+		if not s.quests_active.has(id):
+			continue  # an untaken quest of the dead is simply never offered (offers_here)
+		var talks := (all[id]["steps"] as Array).slice(int(s.quests_active[id])).any(func(st: Dictionary) -> bool:
+			return str(st.get("when", {}).get("talk", "")) == npc_id)
+		if str(all[id].get("giver", "")) != npc_id and not talks:
+			continue
+		if not heir.is_empty():
+			lines.append("«%s»: дело %s продолжит %s" % [all[id]["title"], who, WorldView.new(world).npc(heir).get("name", heir)])
+			continue
+		lines.append("Задание провалено: %s — %s мёртв(а)" % [all[id]["title"], who])
+		s.quests_active.erase(id)
+		s.quest_parts.erase(id)
+		s.quests_failed.append(id)
+	return lines
 
 
 ## "" when the quest can be taken here now, otherwise a localization key.
@@ -183,8 +220,9 @@ static func talks_here(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 	for id: String in s.quests_active:
 		var step := current(s, world, id)
 		var when: Dictionary = step.get("when", {})
-		if when.has("talk") and here.has(str(when["talk"])):
-			out.append({"quest_id": id, "action": str(step.get("action", step["text"])), "npc_id": str(when["talk"]),
+		var to := stand_in(s, world, str(when.get("talk", "")))
+		if when.has("talk") and here.has(to):
+			out.append({"quest_id": id, "action": str(step.get("action", step["text"])), "npc_id": to,
 				"item": str(when.get("item", ""))})
 	return out
 
@@ -253,15 +291,16 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 	lines.append_array(XpRules.award(c, data, int(r.get("xp", 0)), "задание"))
 
 
-## Taken quests for the snapshot and the journal: [{id, title, description, done, step}].
+## Taken quests for the snapshot and the journal: [{id, title, description, done, failed, step}]; failed ones —
+## taken before the NPC died (v0.7.14).
 static func info(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var all := stepped(world)
 	for id: String in all:
-		if not s.quests_active.has(id) and not s.quests_done.has(id):
+		if not s.quests_active.has(id) and not s.quests_done.has(id) and not s.quests_failed.has(id):
 			continue
 		out.append({"id": id, "title": str(all[id]["title"]), "description": str(all[id].get("description", "")),
-			"done": s.quests_done.has(id), "step": step_text(s, world, id)})
+			"done": s.quests_done.has(id), "failed": s.quests_failed.has(id), "step": step_text(s, world, id)})
 	return out
 
 

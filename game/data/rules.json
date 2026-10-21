@@ -655,6 +655,20 @@
 		"fine_cp": 200,
 		"guard_monster": "guard"
 	},
+	"crime": {
+		"_doc": "Crimes of the hero (v0.7.14, CrimeRules): a pack NPC killed in a fight the hero began. Witnesses (the living NPCs of the room) know at once and like the hero witness_attitude less; a hidden body is found after found_minutes. Known — every NPC of the location attitude; in a location with `law` (pack) the hero is wanted: traders and givers turn away, a guard NPC or a patrol (after search_minutes) holds the hero — wergild fine_cp a crime (×notable_mult for a victim with notable_tags), or stocks_days a crime in the stocks, or a fight with patrol_size guards. Settled — the location forgives `forgiven`. A body gives its pockets and body_wares things of its wares.",
+		"witness_attitude": -1,
+		"attitude": -2,
+		"forgiven": 1,
+		"found_minutes": 360,
+		"search_minutes": 60,
+		"fine_cp": 5000,
+		"notable_tags": ["clergy", "military"],
+		"notable_mult": 2,
+		"stocks_days": 2,
+		"patrol_size": 2,
+		"body_wares": 2
+	},
 	"props": {
 		"_doc": "Things of the rooms (v0.7.0): the master furnishes a room on its first visit — up to max_per_room things; portable ones are catalog items, each worth at most item_value_cap_cp, together at most room_value_cap_cp of the character's level.",
 		"max_per_room": 10,

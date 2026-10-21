@@ -96,6 +96,7 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
         "trade": snap.trade,
         "quests": snap.quests,
         "combat": snap.combat,
+        "crimes": snap.crimes,
         "world": snap.world,
         "character": character,
         "coins": coins(character.gold_cp) if character else "",

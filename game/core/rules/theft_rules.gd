@@ -153,5 +153,6 @@ static func react(s: GameSession, data: Dictionary, npc_id: String) -> Array[Str
 	return lines
 
 
-static func shop_closed_for(s: GameSession, npc_id: String) -> bool:
-	return int(s.shop_closed.get(npc_id, 0)) == s.day
+## Closed for this hero: caught stealing today, or wanted in the trader's location (v0.7.14).
+static func shop_closed_for(s: GameSession, npc_id: String, data: Dictionary = {}) -> bool:
+	return int(s.shop_closed.get(npc_id, 0)) == s.day or (not data.is_empty() and CrimeRules.shunned_by(s, data, npc_id))

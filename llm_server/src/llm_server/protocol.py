@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.18.0"
+PROTOCOL_VERSION = "0.19.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -126,7 +126,7 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # wait (0.10.0): the player waited by the button — the engine moved the time; `input` holds the lines.
 # theft (0.11.0): the player picked a pocket in the theft window — the engine rolled and applied it; `input` holds the lines.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
-                   "combat_start", "combat_round", "death", "trap", "wait", "theft"]
+                   "combat_start", "combat_round", "death", "trap", "wait", "theft", "law"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -290,6 +290,7 @@ class QuestInfo(_In):
     title: str
     description: str = ""
     done: bool = False
+    failed: bool = False  # taken, then its NPC died without an heir (0.19.0)
     step: str = ""  # the current step of a quest with steps (0.9.0); the engine closes steps, not the master
     offered_by: str = ""  # an NPC here offers it and the player has not taken it (0.12.0); taken by the button
     offer_items: list[str] = Field(default_factory=list)  # «name [item_id]» the giver hands over with it (0.12.0)
@@ -330,6 +331,14 @@ class CombatInfo(_In):
     log: list[str] = Field(default_factory=list)
 
 
+class HeroCrimes(_In):
+    """Crimes of the hero (0.19.0): facts of the engine, not the master's memory."""
+
+    deeds: list[str] = Field(default_factory=list)  # «убит(а) Сестра Илва [npc_priestess] — Храм, день 2; видели: …; знает вся округа»
+    wanted: bool = False  # wanted in this location: its traders and givers turn the hero away
+    arrest: bool = False  # the guard holds the hero here now; the answer is the player's button
+
+
 class Snapshot(_In):
     world: WorldInfo | None = None
     scene: Scene | None = None
@@ -340,6 +349,7 @@ class Snapshot(_In):
     trade: TradeInfo | None = None  # only in trade mode (0.4.0)
     quests: list[QuestInfo] = Field(default_factory=list)  # (0.5.0)
     combat: CombatInfo | None = None  # only in combat mode (0.7.0)
+    crimes: HeroCrimes | None = None  # only when the hero has crimes (0.19.0)
 
 
 # --- turn.* -----------------------------------------------------------------
@@ -610,6 +620,14 @@ class AdvanceTimeEffect(_Out):
     reason: str = ""
 
 
+class CrimeKnownEffect(_Out):
+    """A hidden murder becomes known (0.19.0): the hero confessed or was exposed in the scene. `victim_id` — the
+    npc_id of a deed «никто не знает». The engine spreads it: attitudes, and the wanted hero where there is law."""
+
+    kind: Literal["crime_known"] = "crime_known"
+    victim_id: str
+
+
 class FlagEffect(_Out):
     kind: Literal["flag"] = "flag"
     flag: str = Field(pattern=r"^[a-z][a-z0-9_]{1,40}$")
@@ -619,7 +637,7 @@ class FlagEffect(_Out):
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
-    | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect,
+    | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect,
     Field(discriminator="kind"),
 ]
 

@@ -237,6 +237,9 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 				var line := "%s — %s" % [q["title"], q["description"]]
 				if not str(q.get("step", "")).is_empty():
 					line += "\n      " + tr("JOURNAL_STEP").format({"step": q["step"]})
+				if bool(q.get("failed", false)):  # v0.7.14: its NPC died
+					done.append("✗ %s — %s" % [q["title"], tr("JOURNAL_FAILED")])
+					continue
 				(done if bool(q["done"]) else open).append(("✓ " if bool(q["done"]) else "• ") + line)
 			if not open.is_empty():
 				out.append({"title": tr("JOURNAL_QUESTS_OPEN"), "lines": open})

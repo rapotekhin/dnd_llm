@@ -240,6 +240,21 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 		var has_stock: bool = (stock as Array).size() > 0 if stock is Array else (stock as Dictionary).size() > 0
 		if has_stock and not bool(n.get("trader", false)):
 			e.append("NPC %s: есть stock, но нет trader: true" % id)
+		var heir := str(n.get("heir", ""))
+		if not heir.is_empty() and (not w["npcs"].has(heir) or heir == id):
+			e.append("NPC %s: наследник heir — другой NPC пакета" % id)
+	for id: String in w["locations"]:  # v0.7.14: the law of a location
+		var law: Variant = w["locations"][id].get("law")
+		if law == null:
+			continue
+		if not (law is Dictionary):
+			e.append("локация %s: law — {guards, guard_monster}" % id)
+			continue
+		for g: Variant in law.get("guards", []):
+			if not w["npcs"].has(str(g)):
+				e.append("локация %s: страж %s — нет NPC" % [id, g])
+		if not data["monsters"].has(str(law.get("guard_monster", "guard"))):
+			e.append("локация %s: нет монстра стражи %s" % [id, law.get("guard_monster")])
 	return e
 
 

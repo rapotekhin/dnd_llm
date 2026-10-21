@@ -98,6 +98,8 @@ func _rebuild() -> void:
 	var room := world.room(s.room_id)
 	_subheading("SIDE_PLACE")
 	_line("%s — %s" % [world.location(world.location_id(s.room_id)).get("name", ""), room.get("name", s.room_id)], false)
+	if not s.in_conversation() and CrimeRules.held(s):
+		_arrest(s, can_act)
 	if not s.in_conversation():
 		var npcs := s.npcs_alive(world.npcs_in(s.room_id))
 		if not npcs.is_empty():
@@ -111,11 +113,22 @@ func _rebuild() -> void:
 					can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
 				pk.name = "Pockets_" + id
 				if bool(n.get("trader", false)):
-					var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id)
+					var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id, Catalog.data)
 					var t := _button(tr("BTN_TRADE_WITH").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, true), can_act and not closed)
 					t.name = "Trade_" + id
 					if closed:
-						t.tooltip_text = tr("SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED")
+						t.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else
+							"SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED")
+		for body: Dictionary in CrimeRules.bodies_here(s, Catalog.data):  # v0.7.14: the body of a killed NPC
+			if bool(body["searched"]):
+				_line(str(body["name"]), true)
+				continue
+			var bid := str(body["npc_id"])
+			var bb := _button(tr("BTN_SEARCH_BODY").format({"name": body["name"]}), func() -> void:
+				var err := GameState.search_body(bid)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)), can_act)
+			bb.name = "Body_" + bid
 		for qid: String in XpRules.quests_here(s, Catalog.data["world"]):
 			var q: Dictionary = XpRules.quests(Catalog.data["world"])[qid]
 			var qb := _button(tr("BTN_QUEST").format({"action": q["action"]}), func() -> void:
@@ -194,8 +207,10 @@ func _rebuild() -> void:
 				dis.tooltip_text = str(trapped[e]["text"]) + "
 " + tr("TRAP_DISARM_TIP")
 				continue
-			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act)
+			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act and not CrimeRules.held(s))
 			b.name = "Exit_" + e
+			if CrimeRules.held(s):
+				b.tooltip_text = tr("CRIME_HELD")
 		# A show on a stage of the pack (v0.7.11): a Performance check for coins, an entertainer's free room.
 		if (world.room(s.room_id).get("tags", []) as Array).has("stage"):
 			var perform_why := BackgroundRules.can_perform(s, Catalog.data)
@@ -305,6 +320,25 @@ func _button(text: String, action: Callable, enabled: bool) -> Button:
 	b.pressed.connect(func() -> void: action.call())
 	_content.add_child(b)
 	return b
+
+
+## The guard holds the hero (v0.7.14): the wergild, the stocks or a fight.
+func _arrest(s: GameSession, can_act: bool) -> void:
+	_subheading("SIDE_ARREST")
+	var loc := GameState.world().location_id(s.room_id)
+	var specs := [["pay", tr("BTN_CRIME_PAY").format({"cost": Money.format(CrimeRules.fine(s, Catalog.data, loc))}), ""],
+		["stocks", tr("BTN_CRIME_STOCKS").format({"days": CrimeRules.stocks_days(s, Catalog.data, loc)}), ""],
+		["resist", tr("BTN_CRIME_RESIST"), tr("BTN_CRIME_RESIST_TIP")]]
+	for spec: Array in specs:
+		var how: String = spec[0]
+		var why := CrimeRules.can_answer(s, Catalog.data, how)
+		var b := _button(spec[1], func() -> void:
+			var err := GameState.crime_answer(how)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and why.is_empty())
+		b.name = "Crime_" + how
+		b.theme_type_variation = UiTheme.ACCENT_BUTTON
+		b.tooltip_text = tr(why) if not why.is_empty() else spec[2]
 
 
 ## «Взять задание» from a giver here and «Отдать …» of a talk step; in a conversation only those of its NPC

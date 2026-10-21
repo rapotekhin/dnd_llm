@@ -122,7 +122,7 @@ func haggle() -> String:
 func set_trade(on: bool) -> bool:
 	if session == null or is_busy() or not session.in_conversation():
 		return false
-	if on and (not world().is_trader(session.npc_id) or TimeRules.shops_closed(session, Catalog.data) or TheftRules.shop_closed_for(session, session.npc_id)):
+	if on and (not world().is_trader(session.npc_id) or TimeRules.shops_closed(session, Catalog.data) or TheftRules.shop_closed_for(session, session.npc_id, Catalog.data)):
 		return false
 	var mode := GameSession.MODE_TRADE if on else GameSession.MODE_SOCIAL
 	if session.mode == mode:
@@ -1008,8 +1008,8 @@ func finish_combat(take: Array = []) -> void:
 			s.encounters_done.append(str(s.combat["encounter"]))
 	for id: String in CombatRules.enemies(s, false):
 		var f := CombatRules.fighter(s, id)
-		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():
-			s.dead_npcs.append(str(f["npc_id"]))
+		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():  # the body, quests, a murder (v0.7.14)
+			lines.append_array(CrimeRules.on_death(s, Catalog.data, str(f["npc_id"]), bool(f.get("by_hero", false)), s.room_id))
 	if outcome == "player_fled" and not str(s.combat.get("room_from", "")).is_empty():
 		s.room_id = str(s.combat["room_from"])
 	if int(s.character["hp"]) <= 0:
@@ -1024,6 +1024,7 @@ func finish_combat(take: Array = []) -> void:
 	if frenzied:
 		lines.append_array(ConditionRules.add_exhaustion(s, Catalog.data, 1, "неистовство"))
 	s.mode = GameSession.MODE_EXPLORATION
+	lines.append_array(CrimeRules.check_arrest(s, Catalog.data))  # a murder before the guard's eyes (v0.7.14)
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
@@ -1146,6 +1147,9 @@ func submit(text: String, engine_note: String = "") -> bool:
 func go(room_id: String) -> bool:
 	if session == null or is_busy() or not Backend.is_ready() or not ExplorationRules.open_exits(session, Catalog.data["world"], session.room_id).has(room_id):
 		return false
+	if CrimeRules.held(session):
+		EventBus.message.emit(tr("CRIME_HELD"))
+		return false
 	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
 		EventBus.message.emit(tr("TOO_HEAVY"))
 		return false
@@ -1193,6 +1197,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	var found := ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
 	lines.append_array(ExplorationRules.take_caches(session, Catalog.data, room_id))
 	lines.append_array(QuestRules.advance(session, Catalog.data))
+	lines.append_array(CrimeRules.check_arrest(session, Catalog.data))  # the wanted hero meets the guard (v0.7.14)
 	return found
 
 
@@ -1212,6 +1217,8 @@ func travel(to: String) -> String:
 	var path := WorldMap.route(session, Catalog.data["world"], session.room_id, to)
 	if path.is_empty():
 		return "TRAVEL_NO_ROUTE"
+	if CrimeRules.held(session):
+		return "CRIME_HELD"
 	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
 		return "TOO_HEAVY"
 	_end_conversation()
@@ -1236,7 +1243,7 @@ func travel(to: String) -> String:
 		for f: String in _step(to_room, lines):
 			lines.append("Замечено: " + f)
 		names.append(str(world().room(to_room).get("name", to_room)))
-		if ConditionRules.dead(session.character):
+		if ConditionRules.dead(session.character) or CrimeRules.held(session):
 			break
 	_travel_line(names, minute0, lines)
 	EventBus.state_changed.emit()
@@ -1368,6 +1375,40 @@ func quest_choose(quest_id: String, choice_id: String) -> String:
 	return ""
 
 
+## The arrest buttons (v0.7.14, CrimeRules): pay the wergild, sit in the stocks, or resist — then a fight. "" or a key.
+func crime_answer(how: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "QUEST_BUSY"
+	var why := CrimeRules.can_answer(session, Catalog.data, how)
+	if not why.is_empty():
+		return why
+	var lines := CrimeRules.answer(session, Catalog.data, how)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	if how == "resist":
+		_start_pending_fight()
+		return ""
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	_request("law", ", ".join(lines))
+	return ""
+
+
+## «Обыскать тело» (v0.7.14): its pockets and some wares come to the hero; living people here see it. "" or a key.
+func search_body(npc_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready() or session.in_conversation():
+		return "QUEST_BUSY"
+	if str(session.bodies.get(npc_id, "")) != session.room_id or session.searched.has(npc_id):
+		return "CRIME_NO_BODY"
+	var lines := CrimeRules.search_body(session, Catalog.data, npc_id)
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	return ""
+
+
 ## Quest steps closed by new facts (a fight finished, a secret found, a flag set) go to the chat.
 func _quest_progress() -> void:
 	var lines := QuestRules.advance(session, Catalog.data)
@@ -1380,7 +1421,7 @@ func _quest_progress() -> void:
 func talk_to(npc_id: String, trade: bool = false) -> bool:
 	if session == null or is_busy() or not Backend.is_ready() or not session.npcs_alive(world().npcs_in(session.room_id)).has(npc_id):
 		return false
-	if trade and (not world().is_trader(npc_id) or TimeRules.shops_closed(session, Catalog.data) or TheftRules.shop_closed_for(session, npc_id)):
+	if trade and (not world().is_trader(npc_id) or TimeRules.shops_closed(session, Catalog.data) or TheftRules.shop_closed_for(session, npc_id, Catalog.data)):
 		return false
 	_begin_conversation(npc_id, GameSession.MODE_TRADE if trade else GameSession.MODE_SOCIAL)
 	_request("enter", "")
@@ -1659,12 +1700,12 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 	if mode == GameSession.MODE_COMBAT and s.npcs_alive(world().npcs_in(s.room_id)).has(npc_id):
 		var npc := world().npc(npc_id)
 		s.pending_fight = [{"monster": str(npc.get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])),
-			"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0}]
+			"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0, "by_hero": true}]
 		return "combat"
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and not s.in_conversation() and turn_kind != "action":
 		return ""  # a conversation starts only from the player's own words (v0.7.2: the master opened one on «resume»)
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and s.npcs_alive(world().npcs_in(s.room_id)).has(npc_id):
-		if mode == GameSession.MODE_TRADE and (not world().is_trader(npc_id) or TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, npc_id)):
+		if mode == GameSession.MODE_TRADE and (not world().is_trader(npc_id) or TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, npc_id, Catalog.data)):
 			mode = GameSession.MODE_SOCIAL
 		if s.in_conversation() and s.npc_id == npc_id:
 			# The same partner: the master already answered, no new greeting (B33). Leaving the deal panel is the

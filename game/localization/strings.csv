@@ -737,3 +737,15 @@ WAIT_HOUR,Час (до {clock})
 WAIT_MORNING,До утра ({clock})
 WAIT_NIGHT,До ночи ({clock})
 WAIT_NOT_NOW,Ждать можно вне разговора и вне боя
+CRIME_HELD,Стража не даёт уйти — сначала ответьте ей
+CRIME_NOT_HELD,Стража вас сейчас не держит
+CRIME_NO_MONEY,Не хватает монет на вергельд
+CRIME_NO_BODY,Тела здесь нет или его уже обыскали
+SIDE_ARREST,Стража держит вас
+BTN_CRIME_PAY,Уплатить вергельд: {cost}
+BTN_CRIME_STOCKS,Отсидеть в колодках: {days} дн.
+BTN_CRIME_RESIST,Сопротивляться страже
+BTN_CRIME_RESIST_TIP,Бой со стражей — новое преступление
+BTN_SEARCH_BODY,Обыскать: {name}
+SHOP_CLOSED_WANTED,Вы в розыске — здесь вам ничего не продадут
+JOURNAL_FAILED,провалено

@@ -135,6 +135,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
             "trade": snap.get("trade"),  # already in the protocol shape (TradeInfo)
             "combat": snap.get("combat"),  # already in the protocol shape (CombatInfo)
             "quests": snap.get("quests", []),  # already in the protocol shape (QuestInfo; offered_by 0.12.0)
+            "crimes": snap.get("crimes"),  # already in the protocol shape (HeroCrimes, 0.19.0)
         },
     }
     return TurnRequestParams.model_validate(params)

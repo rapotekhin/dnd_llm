@@ -1367,3 +1367,51 @@ scenarios:
     rubric:
       - "Кошка отвечает в рамках кошачьего понимания (запахи, шаги, кто кормил), без имён и сведений, которых зверь знать не может"
       - "Мастер не проводит заклинание второй раз"
+
+  - id: crime_confession
+    title: "Признание в тайном убийстве — эффект crime_known"
+    category: consequences
+    extends: tavern
+    mode: social
+    input: "Капитан, это я убила Сестру Илву в храме. Не могу больше молчать."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Бруно Хмель", role: "хозяин таверны", template: commoner, attitude: indifferent, trader: true}
+          - {id: npc_captain, name: "Капитан Ратмир", role: "капитан ополчения", template: veteran, attitude: friendly}
+      crimes:
+        deeds: ["убит(а) Сестра Илва [npc_priestess] — Храм Светлой Матери, день 1; никто не знает — тайна героя"]
+    expect:
+      effects: {required_kinds_any: [crime_known], forbidden_kinds: [start_combat, give_item]}
+    rubric:
+      - "Мастер раскрывает убийство эффектом crime_known с victim_id npc_priestess и описывает потрясение и гнев капитана"
+      - "Капитан не даёт герою задание и не прощает его словами"
+
+  - id: crime_wanted_no_work
+    title: "Герой в розыске — работы не дают, преступление не забыто"
+    category: consequences
+    extends: tavern
+    mode: social
+    input: "Бруно, есть для меня какая-нибудь работа? Заплачу за эль."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Бруно Хмель", role: "хозяин таверны", template: commoner, attitude: hostile, trader: true}
+      crimes:
+        deeds: ["убит(а) Кейра [npc_mercenary] — Таверна «Хромой олень», день 1; видели: Бруно Хмель, Мира; знает вся округа"]
+        wanted: true
+    expect:
+      effects: {forbidden_kinds: [give_item, coins]}
+    rubric:
+      - "Бруно помнит убийство Кейры: отказывает, боится или гонит героя, не продаёт и работы не даёт"
+
+  - id: crime_stocks_narration
+    title: "Колодки — рассказ строго по строкам движка"
+    category: consequences
+    extends: tavern
+    kind: law
+    input: "2 дн. в колодках — день 3, утро; вещи вернули, Вы больше не в розыске"
+    expect:
+      effects: {max_count: 0}
+    rubric:
+      - "Описаны два дня в колодках на площади и освобождение; без новых наказаний, урона и эффектов"

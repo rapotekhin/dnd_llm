@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 20
+const SAVE_VERSION := 21
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -42,6 +42,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	17: _v17_to_v18,
 	18: _v18_to_v19,
 	19: _v19_to_v20,
+	20: _v20_to_v21,
 }
 
 
@@ -220,3 +221,14 @@ static func _v19_to_v20(data: Dictionary, _ctx: Dictionary) -> void:
 	var c: Dictionary = data["session"].get("character", {})
 	c["attuned"] = ["cloak_of_protection"] if int(c.get("inventory", {}).get("cloak_of_protection", 0)) > 0 else []
 	c["charges_used"] = {}
+
+
+## v0.7.14: crimes, wanted, the guard's hold, bodies, failed quests. NPCs killed before were fought in self-defence
+## or forgotten — no crime; their bodies are not kept.
+static func _v20_to_v21(data: Dictionary, _ctx: Dictionary) -> void:
+	var s: Dictionary = data["session"]
+	for k: String in ["crimes", "searched", "quests_failed"]:
+		s[k] = []
+	for k: String in ["wanted", "bodies"]:
+		s[k] = {}
+	s["arrest"] = ""

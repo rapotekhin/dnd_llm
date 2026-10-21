@@ -246,7 +246,7 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: in
 			fighters[id] = {"id": id, "side": "enemy", "monster": str(spec["monster"]), "name": name, "base": base,
 				"desc": str(spec.get("desc", "")), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "ac": int(m["ac"]),
 				"col": clampi(col, -edge(data), edge(data)), "status": "active", "conditions": [], "morale": false,
-				"npc_id": str(spec.get("npc_id", ""))}
+				"npc_id": str(spec.get("npc_id", "")), "by_hero": bool(spec.get("by_hero", false))}
 			ids.append(id)
 	return ids
 

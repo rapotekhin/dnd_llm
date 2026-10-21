@@ -86,6 +86,15 @@ var pockets: Dictionary = {}
 var shop_closed: Dictionary = {}
 var caught_by: Dictionary = {}
 
+## Crimes of the hero (CrimeRules, v0.7.14): [{id, victim, room, location, at, witnesses, known, settled}]; wanted
+## {location_id: abs minute since}; the room where the guard holds the hero ("" — free); bodies {npc_id: room_id}
+## and the searched ones; quests failed with a dead NPC (QuestRules.on_death).
+var crimes: Array[Dictionary] = []
+var wanted: Dictionary = {}
+var arrest: String = ""
+var bodies: Dictionary = {}
+var searched: Array[String] = []
+var quests_failed: Array[String] = []
 ## The master's own memory of events (effect `note`, v0.7.4): [{day, clock, room, text}] — shown in the journal.
 var notes: Array[Dictionary] = []
 ## Short rests taken today (ExplorationRules); a long rest resets it.
@@ -336,6 +345,12 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"shop_closed": shop_closed,
 		"caught_by": caught_by,
 		"notes": notes,
+		"crimes": crimes,
+		"wanted": wanted,
+		"arrest": arrest,
+		"bodies": bodies,
+		"searched": searched,
+		"quests_failed": quests_failed,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -413,6 +428,21 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.shop_closed[n] = int(d["shop_closed"][n])
 	for n: String in d.get("caught_by", {}):
 		s.caught_by[n] = int(d["caught_by"][n])
+	for e: Variant in d.get("crimes", []):
+		if e is Dictionary:
+			var cr := (e as Dictionary).duplicate(true)
+			cr["at"] = int(cr.get("at", 0))
+			cr["witnesses"] = (cr.get("witnesses", []) as Array).map(func(x: Variant) -> String: return str(x))
+			s.crimes.append(cr)
+	for loc: String in d.get("wanted", {}):
+		s.wanted[loc] = int(d["wanted"][loc])
+	s.arrest = str(d.get("arrest", ""))
+	for n: String in d.get("bodies", {}):
+		s.bodies[n] = str(d["bodies"][n])
+	for n: Variant in d.get("searched", []):
+		s.searched.append(str(n))
+	for q: Variant in d.get("quests_failed", []):
+		s.quests_failed.append(str(q))
 	for e: Variant in d.get("notes", []):
 		if e is Dictionary:
 			s.notes.append((e as Dictionary).duplicate())

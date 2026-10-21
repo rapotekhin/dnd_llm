@@ -136,6 +136,15 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"NPC {nid}: нет монстра-шаблона {npc['monster']}")
         if npc.get("stock") and not npc.get("trader"):
             errors.append(f"NPC {nid}: есть stock, но нет trader: true")
+        if npc.get("heir") and (npc["heir"] not in npcs or npc["heir"] == nid):
+            errors.append(f"NPC {nid}: наследник heir — другой NPC пакета")
+    for lid, loc in world["locations"].items():  # v0.7.14: the law of a location
+        law = loc.get("law")
+        if law is None:
+            continue
+        errors += [f"локация {lid}: страж law.guards {g} — нет NPC" for g in law.get("guards", []) if g not in npcs]
+        if law.get("guard_monster", "guard") not in ids["monsters"]:
+            errors.append(f"локация {lid}: нет монстра стражи {law.get('guard_monster')}")
 
     for qid, q in world.get("quests", {}).items():
         if "steps" not in q:
