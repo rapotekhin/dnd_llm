@@ -8,7 +8,7 @@ enum State { OFFLINE, CONNECTING, HANDSHAKE, READY, WAITING_RETRY, FAILED }
 signal state_changed(state: State, detail: String)
 
 ## Keep in sync with llm_server/src/llm_server/protocol.py and contract/schema/protocol_version.json.
-const PROTOCOL_VERSION := "0.38.0"
+const PROTOCOL_VERSION := "0.39.0"
 const RETRY_DELAYS_S: Array[float] = [1.0, 2.0, 4.0, 8.0, 16.0, 30.0]
 ## WebSocketPeer may sit in CONNECTING forever (e.g. a refused IPv6 address), so the client gives up itself.
 const CONNECT_TIMEOUT_S := 10.0

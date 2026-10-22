@@ -59,11 +59,45 @@ func _rebuild() -> void:
 	_tabs.current_tab = clampi(current, 0, 3)
 
 
+## The life goal (v0.7.22): the player's own words, the master's assessment, a field to change or clear it.
+func _goal_section(box: VBoxContainer, c: Dictionary) -> void:
+	_text(box, tr("GOAL_TITLE"), UiTheme.HEADING)
+	_text(box, tr("GOAL_HINT"), UiTheme.MUTED_LABEL)
+	var shown := GoalRules.text_of(c, Catalog.data)
+	if not shown.is_empty():
+		var l := _text(box, shown)
+		l.name = "GoalText"
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	box.add_child(row)
+	var edit := LineEdit.new()
+	edit.name = "GoalEdit"
+	edit.placeholder_text = tr("GOAL_PLACEHOLDER")
+	edit.text = str(GoalRules.goal(c).get("text", ""))
+	edit.max_length = 240
+	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	edit.custom_minimum_size = Vector2(0, 48)
+	row.add_child(edit)
+	var save := Button.new()
+	save.name = "GoalSave"
+	save.text = "BTN_GOAL_SAVE"
+	save.disabled = GameState.is_busy()
+	save.pressed.connect(func() -> void: GameState.set_goal(edit.text))
+	row.add_child(save)
+	var clear := Button.new()
+	clear.name = "GoalClear"
+	clear.text = "BTN_GOAL_CLEAR"
+	clear.disabled = GameState.is_busy() or GoalRules.goal(c).is_empty()
+	clear.pressed.connect(func() -> void: GameState.set_goal(""))
+	row.add_child(clear)
+
+
 ## Peaceful development (v0.7.19.1): each direction — its level and experience, the skills taken, and on a level not
 ## yet paid — the skills to pick from, like the class's level-up.
 func _development_tab(c: Dictionary) -> Control:
 	var box := _page("SHEET_TAB_DEV")
 	var data := Catalog.data
+	_goal_section(box, c)  # v0.7.22
 	_text(box, tr("DEV_HINT"), UiTheme.MUTED_LABEL)
 	for dir: String in DevelopmentRules.cfg(data)["directions"]:
 		var d := DevelopmentRules.direction(data, dir)

@@ -868,6 +868,20 @@ func pick_development(dir: String, skill: String) -> String:
 	return why
 
 
+## Writes the hero's life goal (v0.7.22; "" clears it); a new goal goes to the master for its assessment. "" or a key.
+func set_goal(text: String) -> String:
+	if session == null or is_busy():
+		return "WAIT_BUSY"
+	var before := str(GoalRules.goal(session.character).get("text", ""))
+	GoalRules.write(session.character, text)
+	var now := str(GoalRules.goal(session.character).get("text", ""))
+	_log("Жизненная цель: %s" % (now if not now.is_empty() else "стёрта"))
+	EventBus.state_changed.emit()
+	if not now.is_empty() and now != before and Backend.is_ready():
+		_request("goal", now)
+	return ""
+
+
 ## Leaves a thing of the pack — a bag with what is in it — in the room (v0.7.18.2), no master turn. "" or a key.
 func drop_item(what: String, qty: int = 1) -> String:
 	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):

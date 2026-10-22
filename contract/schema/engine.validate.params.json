@@ -1002,6 +1002,46 @@
       "title": "GiveItemEffect",
       "type": "object"
     },
+    "GoalAssessEffect": {
+      "additionalProperties": false,
+      "description": "The master's assessment of the hero's life goal (0.39.0): its scale, the direction it needs (`class` or a\npeaceful direction id), the engine concepts it is made of; the engine sets the threshold.",
+      "properties": {
+        "concepts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Concepts",
+          "type": "array"
+        },
+        "direction": {
+          "default": "class",
+          "title": "Direction",
+          "type": "string"
+        },
+        "kind": {
+          "const": "goal_assess",
+          "default": "goal_assess",
+          "title": "Kind",
+          "type": "string"
+        },
+        "scale": {
+          "enum": [
+            "easy",
+            "medium",
+            "hard",
+            "epic",
+            "legendary"
+          ],
+          "title": "Scale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scale"
+      ],
+      "title": "GoalAssessEffect",
+      "type": "object"
+    },
     "HealEffect": {
       "additionalProperties": false,
       "properties": {
@@ -2225,6 +2265,7 @@
           "flag": "#/$defs/FlagEffect",
           "furnish": "#/$defs/FurnishEffect",
           "give_item": "#/$defs/GiveItemEffect",
+          "goal_assess": "#/$defs/GoalAssessEffect",
           "heal": "#/$defs/HealEffect",
           "move": "#/$defs/MoveEffect",
           "note": "#/$defs/NoteEffect",
@@ -2345,6 +2386,9 @@
         },
         {
           "$ref": "#/$defs/CreateQuestEffect"
+        },
+        {
+          "$ref": "#/$defs/GoalAssessEffect"
         }
       ],
       "title": "Effect"

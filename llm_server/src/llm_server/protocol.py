@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.38.0"
+PROTOCOL_VERSION = "0.39.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -134,7 +134,7 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # wait (0.10.0): the player waited by the button — the engine moved the time; `input` holds the lines.
 # theft (0.11.0): the player picked a pocket in the theft window — the engine rolled and applied it; `input` holds the lines.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
-                   "combat_start", "combat_round", "death", "trap", "wait", "theft", "law"]
+                   "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -238,6 +238,7 @@ class CharacterSheet(_In):
     reward_left_cp: int | None = None  # what the master may still give until the long rest, cp (0.19.0)
     bags: list[str] = Field(default_factory=list)  # the hero's bags and what is in them: «Рюкзак [bag1]: Верёвка [rope]» (0.29.0)
     development: list[str] = Field(default_factory=list)  # peaceful development: «Торговля 2: Глаз оценщика» (0.30.0)
+    goal: str = ""  # the hero's life goal with its assessment: ««…» — трудная, рано: уровень класса 1 из 3» (0.39.0)
     inventory: list[InventoryLine] = Field(default_factory=list)
     features: list[str] = Field(default_factory=list)
     background: str = ""
@@ -918,6 +919,16 @@ class RevealSecretEffect(_Out):
     secret_id: str
 
 
+class GoalAssessEffect(_Out):
+    """The master's assessment of the hero's life goal (0.39.0): its scale, the direction it needs (`class` or a
+    peaceful direction id), the engine concepts it is made of; the engine sets the threshold."""
+
+    kind: Literal["goal_assess"] = "goal_assess"
+    scale: Literal["easy", "medium", "hard", "epic", "legendary"]
+    direction: str = "class"
+    concepts: list[str] = Field(default_factory=list)
+
+
 class NpcFollowEffect(_Out):
     """An NPC of the scene goes with the hero (0.33.0): from now on it stands wherever the hero is. `follow: false` —
     one who follows stays here (`home: true` — goes back to its own place). The engine allows following to one
@@ -947,7 +958,7 @@ Effect = Annotated[
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
-    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect,
+    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect,
     Field(discriminator="kind"),
 ]
 

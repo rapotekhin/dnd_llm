@@ -288,6 +288,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_place"):
 				return {"reason": "одно новое место за ход"}
 			return WorldGen.plan_place(s, data, e, searched_places.has(turn_id))
+		"goal_assess":  # the master assesses the hero's life goal (v0.7.22)
+			return GoalRules.plan_assess(s.character, data, e)
 		"create_quest":  # a quest of the pack's schema from a giver of the scene (v0.7.21)
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_quest"):
 				return {"reason": "одно новое задание за ход"}
@@ -663,6 +665,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			if str(sec["id"]) == str(plan["secret"]):
 				SocialRules.tell(s, _data, str(plan["secret_npc"]), sec)
 		_extra_lines.append_array(QuestRules.advance(s, _data))
+		return
+	if plan.has("goal_scale"):  # goal_assess (v0.7.22)
+		GoalRules.apply_assess(c, plan)
 		return
 	if plan.has("follow_npc"):  # npc_follow (v0.7.20.3)
 		FollowRules.apply(s, plan)

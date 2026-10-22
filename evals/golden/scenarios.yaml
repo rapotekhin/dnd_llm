@@ -1916,3 +1916,48 @@ scenarios:
       tools_required: [find_quests]
     rubric:
       - "Мастер оформляет замысел игрока своим делом create_quest с own: true без заказчика, шаги — по тому, что есть в сцене и мире (люди, места), а не выдуманные; награду не обещает"
+
+  - id: goal_assessed
+    title: "Игрок записал жизненную цель — goal_assess, мысль героя без событий"
+    category: concepts
+    extends: tavern
+    kind: goal
+    input: "Убить дракона и повесить его голову над воротами"
+    snapshot:
+      character:
+        goal: "«Убить дракона и повесить его голову над воротами» — ещё не оценена"
+    expect:
+      effects: {required_kinds_any: [goal_assess], forbidden_kinds: [create_quest, create_npc, create_place, start_combat]}
+    rubric:
+      - "Мастер оценивает цель эффектом goal_assess с масштабом epic или legendary и направлением class; в рассказе — только мысль героя, без дракона поблизости, людей и событий; цель не высмеивает и не отговаривает"
+
+  - id: goal_novice_and_the_dragon
+    title: "Новичок ищет дракона до порога — мир отвечает по логике, без заданий и людей под цель"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, а где тут водятся драконы? Хочу добыть себе драконью голову."
+    snapshot:
+      character:
+        goal: "«Убить дракона» — великая, рано: уровень класса 2 из 5"
+    engine:
+      find_quests: []
+      find_npcs: []
+    expect:
+      effects: {forbidden_kinds: [create_quest, create_npc, create_place, start_combat]}
+    rubric:
+      - "Горм отвечает в характере и по логике мира — смеётся, отговаривает или советует подрасти и набраться опыта; не выдумывает дракона поблизости, не даёт задания и не создаёт людей под цель"
+
+  - id: goal_not_brought_up
+    title: "Цель — мысли героя: мастер сам о ней не заговаривает"
+    category: concepts
+    extends: tavern
+    input: "Заказываю похлёбку и сажусь у очага погреться."
+    snapshot:
+      character:
+        goal: "«Открыть свою таверну» — непростая, рано: Торговля 0 из 2"
+    expect:
+      narration:
+        must_not_match: ["таверн[уы] свою", "свою таверн", "своё дело", "мечт"]
+    rubric:
+      - "Мастер описывает ужин у очага и не упоминает цель героя, не подсовывает продающуюся таверну и разговоры о своём деле"

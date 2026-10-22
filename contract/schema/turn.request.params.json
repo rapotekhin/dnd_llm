@@ -110,6 +110,11 @@
           "title": "Gender",
           "type": "string"
         },
+        "goal": {
+          "default": "",
+          "title": "Goal",
+          "type": "string"
+        },
         "gold_cp": {
           "default": 0,
           "title": "Gold Cp",
@@ -1183,7 +1188,8 @@
         "trap",
         "wait",
         "theft",
-        "law"
+        "law",
+        "goal"
       ],
       "title": "Kind",
       "type": "string"
