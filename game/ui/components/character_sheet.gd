@@ -55,7 +55,51 @@ func _rebuild() -> void:
 	_tabs.add_child(_stats_tab(c))
 	_tabs.add_child(_abilities_tab(c))
 	_tabs.add_child(_gear_tab(c))
-	_tabs.current_tab = clampi(current, 0, 2)
+	_tabs.add_child(_development_tab(c))  # v0.7.19.1
+	_tabs.current_tab = clampi(current, 0, 3)
+
+
+## Peaceful development (v0.7.19.1): each direction — its level and experience, the skills taken, and on a level not
+## yet paid — the skills to pick from, like the class's level-up.
+func _development_tab(c: Dictionary) -> Control:
+	var box := _page("SHEET_TAB_DEV")
+	var data := Catalog.data
+	_text(box, tr("DEV_HINT"), UiTheme.MUTED_LABEL)
+	for dir: String in DevelopmentRules.cfg(data)["directions"]:
+		var d := DevelopmentRules.direction(data, dir)
+		var next := DevelopmentRules.next_xp(c, data, dir)
+		_text(box, tr("DEV_DIRECTION").format({"name": d["name"], "level": DevelopmentRules.level(c, data, dir), "xp": DevelopmentRules.xp(c, dir),
+			"next": next if next >= 0 else "—"}), UiTheme.HEADING)
+		for id: Variant in DevelopmentRules.skills(c, dir):
+			var sk: Dictionary = d["skills"].get(str(id), {})
+			_text(box, "• %s — %s" % [sk.get("name", id), sk.get("desc", "")])
+		var choices := DevelopmentRules.choices(c, data, dir)
+		if not choices.is_empty():
+			_text(box, tr("DEV_PICK"), UiTheme.MUTED_LABEL)
+		for id: String in choices:
+			var sk: Dictionary = d["skills"][id]
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 12)
+			box.add_child(row)
+			_text(row, "%s — %s" % [sk["name"], sk.get("desc", "")])
+			var b := Button.new()
+			b.name = "DevPick_%s_%s" % [dir, id]
+			b.text = "BTN_DEV_PICK"
+			b.disabled = GameState.is_busy()
+			var pick_dir := dir
+			var pick_id := id
+			b.pressed.connect(func() -> void:
+				var err := GameState.pick_development(pick_dir, pick_id)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)))
+			row.add_child(b)
+	return box.get_parent()
+
+
+## Opens the sheet on a tab (3 — development).
+func open_tab(i: int) -> void:
+	visible = true
+	_tabs.current_tab = i
 
 
 func _page(title_key: String) -> VBoxContainer:

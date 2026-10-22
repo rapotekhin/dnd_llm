@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.29.0"
+PROTOCOL_VERSION = "0.30.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -227,6 +227,7 @@ class CharacterSheet(_In):
     gold_cp: int = 0
     reward_left_cp: int | None = None  # what the master may still give until the long rest, cp (0.19.0)
     bags: list[str] = Field(default_factory=list)  # the hero's bags and what is in them: «Рюкзак [bag1]: Верёвка [rope]» (0.29.0)
+    development: list[str] = Field(default_factory=list)  # peaceful development: «Торговля 2: Глаз оценщика» (0.30.0)
     inventory: list[InventoryLine] = Field(default_factory=list)
     features: list[str] = Field(default_factory=list)
     background: str = ""

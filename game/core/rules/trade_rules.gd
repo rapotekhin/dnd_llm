@@ -80,6 +80,7 @@ static func buy_price(s: GameSession, data: Dictionary, npc_id: String, item_id:
 	var off := SocialRules.discount(s, npc_id)  # a discount by words (v0.7.15.2)
 	if off > 0:
 		price = ceili(price * (100 - off) / 100.0)
+	price = ceili(price * float(DevelopmentRules.effect(s.character, data, "trade", "buy_pct", 100.0)) / 100.0)  # v0.7.19.1
 	return maxi(1, price)
 
 
@@ -104,12 +105,16 @@ static func _sell_unit(s: GameSession, data: Dictionary, npc_id: String, item_id
 	if want == "shuns" or value <= 0:
 		return 0
 	var m := merchant(s, data, npc_id)
+	var c := s.character  # the hero's trade skills (v0.7.19.1)
 	var sold := int((m["sold"] as Dictionary).get(ItemRules.real_id(item_id), 0)) + more
-	var fill := maxf(float(d["saturation_floor"]), 1.0 - float(d["saturation_step"]) * sold)
-	var v := value * float(t["sell_ratio"]) * float(d["wanted"] if want == "wants" else d["other"]) * fill
+	var step := float(d["saturation_step"]) * float(DevelopmentRules.effect(c, data, "trade", "saturation_mult", 1.0))
+	var fill := maxf(float(d["saturation_floor"]), 1.0 - step * sold)
+	var other := minf(1.0, float(d["other"]) * float(DevelopmentRules.effect(c, data, "trade", "other_mult", 1.0)))
+	var v := value * float(t["sell_ratio"]) * (float(d["wanted"]) if want == "wants" else other) * fill
 	v *= _pct(t["sell_pct_by_attitude"], s.attitude(npc_id)) / 100.0 * ReputationRules.price_pct(s, data, npc_id, "sell") / 100.0
-	v *= (100 + int(m["haggle_pct"])) / 100.0
-	return floori(clampf(v, value * float(d["min_ratio"]), value * float(d["max_ratio"])))
+	v *= (100 + int(m["haggle_pct"])) / 100.0 * float(DevelopmentRules.effect(c, data, "trade", "sell_pct", 100.0)) / 100.0
+	var top := maxf(float(d["max_ratio"]), float(DevelopmentRules.effect(c, data, "trade", "max_ratio", 0.0)))
+	return floori(clampf(v, value * float(d["min_ratio"]), value * top))
 
 
 # --- the trader and the world (v0.7.17.2) ----------------------------------------------------------------------
@@ -287,6 +292,10 @@ static func execute(s: GameSession, data: Dictionary, npc_id: String, cart: Dict
 	if int(m["haggle_pct"]) > 0:  # the haggle was for this deal (v0.7.17.2)
 		m["haggle_pct"] = 0
 		m["haggle_result"] = {}
+	var src: Dictionary = DevelopmentRules.direction(data, "trade").get("sources", {})  # trade experience (v0.7.19.1)
+	var turnover := (int(q["buy_cp"]) + int(q["sell_cp"])) / 100
+	var dev := DevelopmentRules.add_xp(c, data, "trade", mini(int(src.get("deal_xp_max", 0)), turnover * int(src.get("deal_xp_per_gp", 0))))
+	lines.append_array(dev)  # before «Итого»: deal_note takes the last line for the total
 	lines.append("Итого: %s" % ("−" + Money.format(net) if net > 0 else "+" + Money.format(-net) if net < 0 else "без доплаты"))
 	return lines
 
@@ -303,6 +312,8 @@ static func deal_note(lines: Array[String], net_cp: int) -> String:
 static func haggle_dc(s: GameSession, data: Dictionary, npc_id: String) -> int:
 	var m := merchant(s, data, npc_id)
 	var done := int(m.get("haggles", 0)) if int(m.get("haggle_day", 0)) == s.day else 0
+	if bool(DevelopmentRules.effect(s.character, data, "trade", "no_haggle_escalation", false)):  # «Упорство» (v0.7.19.1)
+		done = 0
 	return _pct(data["rules"]["trade"]["haggle_dc_by_attitude"], s.attitude(npc_id)) + done * int(data["rules"]["trade"]["haggle_escalation"])
 
 
@@ -344,8 +355,14 @@ static func apply_haggle(s: GameSession, data: Dictionary, npc_id: String, resul
 	var kept := result.duplicate()
 	kept.erase("note")
 	m["haggle_result"] = kept
+	var src: Dictionary = DevelopmentRules.direction(data, "trade").get("sources", {})
 	if not bool(result["success"]):
-		m["haggle_failed_day"] = s.day
+		if bool(DevelopmentRules.effect(s.character, data, "trade", "haggle_retry", false)) and int(m.get("retry_day", 0)) != s.day:
+			m["retry_day"] = s.day  # «Второй заход»: once a day the failure does not lock (v0.7.19.1)
+			m["haggle_result"] = {}
+		else:
+			m["haggle_failed_day"] = s.day
+		DevelopmentRules.add_xp(s.character, data, "trade", int(src.get("haggle_lost", 0)))
 		return 0
 	var margin := int(result["total"]) - int(result["dc"])
 	var pct := 0
@@ -353,6 +370,8 @@ static func apply_haggle(s: GameSession, data: Dictionary, npc_id: String, resul
 		if margin >= int(tier[0]):
 			pct = int(tier[1])
 	pct = maxi(pct, int(data["rules"]["trade"]["haggle_tiers"][0][1]))  # a natural 20 under the DC still wins
+	pct += int(DevelopmentRules.effect(s.character, data, "trade", "haggle_plus", 0))  # «Мастер торга» (v0.7.19.1)
+	DevelopmentRules.add_xp(s.character, data, "trade", int(src.get("haggle_won", 0)))
 	m["haggle_pct"] = pct
 	return pct
 

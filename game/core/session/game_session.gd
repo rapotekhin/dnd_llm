@@ -160,6 +160,10 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 	for k: String in ["slots_used", "slots_max"]:
 		if c.get(k) is Array:
 			c[k] = (c[k] as Array).map(func(v: Variant) -> int: return int(v))
+	var dev := {}
+	for dir: String in c.get("development", {}):
+		dev[dir] = {"xp": int(c["development"][dir].get("xp", 0)), "skills": (c["development"][dir].get("skills", []) as Array).map(func(x: Variant) -> String: return str(x))}
+	c["development"] = dev
 	var bags := {}
 	for id: String in c.get("bags", {}):
 		var contents := {}

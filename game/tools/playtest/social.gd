@@ -42,6 +42,23 @@ func run() -> void:
 		await shot("discount")
 		await press(find(game, "LeaveButton"))
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	# v0.7.19.1: a deal teaches trade — the side panel offers a skill, the sheet takes it.
+	s.character["gold_cp"] = 20000
+	var lesson := DevelopmentRules.add_xp(s.character, data, "trade", 50)
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var devb: Button = find(game, "DevelopmentButton")
+	if step("a trade level offers a skill", devb != null, " ".join(lesson)):
+		await press(devb)
+		await frames(3)
+		var pick: Button = find(game, "DevPick_trade_appraiser")
+		if step("the sheet opens on development", pick != null):
+			await press(pick)
+			await frames(3)
+			step("the skill is taken", DevelopmentRules.skills(s.character, "trade").has("appraiser"))
+			await shot("development")
+		await press(find(game, "CloseSheetButton"))
+		await frames(2)
 	step("the merchant remembers it", " ".join(s.memory_of("npc_merchant")).contains("скидку 20%"), " ".join(s.memory_of("npc_merchant")))
 
 	# v0.7.15.3: a hostile NPC turns the hero away — the talk and trade buttons are off.

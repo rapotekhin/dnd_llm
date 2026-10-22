@@ -12,6 +12,7 @@ signal short_rest_requested
 signal long_rest_requested
 signal pockets_requested(npc_id: String)
 signal container_requested(prop_id: String)
+signal development_requested
 
 var _content: VBoxContainer
 
@@ -93,6 +94,11 @@ func _rebuild() -> void:
 		lv.name = "LevelUpButton"
 		lv.theme_type_variation = UiTheme.ACCENT_BUTTON
 		lv.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var dev := DevelopmentRules.any_pick(c, Catalog.data)  # v0.7.19.1: a peaceful level not yet paid with a skill
+	if not dev.is_empty():
+		var db := _button(tr("BTN_DEV_LEVEL").format({"name": DevelopmentRules.direction(Catalog.data, dev)["name"]}), development_requested.emit, true)
+		db.name = "DevelopmentButton"
+		db.theme_type_variation = UiTheme.ACCENT_BUTTON
 	_line(tr("SIDE_DAY_TIME").format({"day": s.day, "part": TimeRules.part_name(s, Catalog.data), "clock": TimeRules.clock(s)}), true)
 	if TimeRules.dark(s, Catalog.data):
 		_line(tr("SIDE_DARK"), true).add_theme_color_override("font_color", UiTheme.WARN)

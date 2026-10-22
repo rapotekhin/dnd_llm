@@ -124,6 +124,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"skills": c.get("skills", {}), "gold_cp": int(c.get("gold_cp", 0)),
 		"reward_left_cp": EffectEngine.budget_left(s, data),
 		"bags": ContainerRules.bags_text(c, data, s.items),
+		"development": DevelopmentRules.text(c, data),
 		"inventory": inventory, "features": CharacterRules.feature_names(c, data),
 		"background": str(data["backgrounds"].get(str(c.get("background", "")), {}).get("name", "")),
 		"background_feature": BackgroundRules.master_text(c, data),

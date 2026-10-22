@@ -67,6 +67,13 @@
           "title": "Conditions",
           "type": "array"
         },
+        "development": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Development",
+          "type": "array"
+        },
         "effects": {
           "items": {
             "type": "string"

@@ -857,6 +857,17 @@ func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> S
 	return ""
 
 
+## Picks a skill of a peaceful direction for a level reached (v0.7.19.1), no master turn. "" or a localization key.
+func pick_development(dir: String, skill: String) -> String:
+	if session == null or is_busy():
+		return "WAIT_BUSY"
+	var why := DevelopmentRules.pick(session.character, Catalog.data, dir, skill)
+	if why.is_empty():
+		var sk: Dictionary = DevelopmentRules.direction(Catalog.data, dir)["skills"][skill]
+		_quiet_lines(["%s: навык «%s»" % [DevelopmentRules.direction(Catalog.data, dir)["name"], sk["name"]]] as Array[String])
+	return why
+
+
 ## Leaves a thing of the pack — a bag with what is in it — in the room (v0.7.18.2), no master turn. "" or a key.
 func drop_item(what: String, qty: int = 1) -> String:
 	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
@@ -2063,6 +2074,8 @@ func _haggle_check(params: Dictionary) -> Dictionary:
 		var p := params.duplicate()
 		p["dc"] = TradeRules.haggle_dc(session, Catalog.data, npc_id)
 		p["dc_tier"] = "medium"
+		if bool(DevelopmentRules.effect(session.character, Catalog.data, "trade", "haggle_adv", false)):  # v0.7.19.1
+			p["advantage_reason"] = str(DevelopmentRules.direction(Catalog.data, "trade")["skills"]["silver_tongue"]["name"])
 		result = CheckEngine.roll(Catalog.rules(), session.rng, p, CheckEngine.bonus_for(session.character, p), session.next_check_id())
 		pct = TradeRules.apply_haggle(session, Catalog.data, npc_id, result)
 		result["haggle_pct"] = pct

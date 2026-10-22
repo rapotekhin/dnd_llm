@@ -157,6 +157,115 @@
 		"lock_dc": {"simple": 10, "good": 15, "masterwork": 20},
 		"force_dc_plus": 2
 	},
+	"development": {
+		"_doc": "Peaceful development (v0.7.19.1, DevelopmentRules): the 5e levelling carried over to peaceful deeds — a direction has its own experience (`xp` — the experience of levels 0–5), its sources (`sources`) and its skills, one picked on every level from those of a level ≤ the direction's (`needs` — skills taken first); a skill's `effect` works only in the deeds of its direction. Trade: buy_pct / sell_pct (prices), haggle_adv, haggle_plus (percent of a won haggle), haggle_retry (a failed haggle does not lock the day once), no_haggle_escalation, other_mult (other goods ×0.7 → ×0.7·mult), saturation_mult, max_ratio (the ceiling of a sell price).",
+		"xp": [
+			0,
+			50,
+			150,
+			350,
+			700,
+			1200
+		],
+		"directions": {
+			"trade": {
+				"name": "Торговля",
+				"sources": {
+					"deal_xp_per_gp": 1,
+					"deal_xp_max": 25,
+					"haggle_won": 10,
+					"haggle_lost": 3
+				},
+				"skills": {
+					"appraiser": {
+						"name": "Глаз оценщика",
+						"level": 1,
+						"desc": "Торговцы платят вам за вещи на 5% больше.",
+						"effect": {
+							"sell_pct": 105
+						}
+					},
+					"regular": {
+						"name": "Постоянный покупатель",
+						"level": 1,
+						"desc": "Покупаете у торговцев на 5% дешевле.",
+						"effect": {
+							"buy_pct": 95
+						}
+					},
+					"silver_tongue": {
+						"name": "Язык без костей",
+						"level": 2,
+						"desc": "Торгуетесь с преимуществом.",
+						"effect": {
+							"haggle_adv": true
+						}
+					},
+					"market_sense": {
+						"name": "Чутьё рынка",
+						"level": 2,
+						"desc": "Чужой товар торговец берёт у вас почти как свой.",
+						"effect": {
+							"other_mult": 1.2
+						}
+					},
+					"stubborn": {
+						"name": "Упорство",
+						"level": 3,
+						"desc": "Следующий торг за день не труднее первого.",
+						"effect": {
+							"no_haggle_escalation": true
+						}
+					},
+					"bulk_seller": {
+						"name": "Оптовик",
+						"level": 3,
+						"desc": "Рынок насыщается вашим товаром вдвое медленнее.",
+						"effect": {
+							"saturation_mult": 0.5
+						}
+					},
+					"second_chance": {
+						"name": "Второй заход",
+						"level": 4,
+						"desc": "Раз в день проваленный торг не закрывает торг до завтра.",
+						"effect": {
+							"haggle_retry": true
+						}
+					},
+					"master_haggler": {
+						"name": "Мастер торга",
+						"level": 4,
+						"desc": "Выигранный торг даёт на 5% больше.",
+						"effect": {
+							"haggle_plus": 5
+						}
+					},
+					"magnate": {
+						"name": "Хватка",
+						"level": 5,
+						"desc": "Продаёте до 4/5 стоимости вместо 3/4.",
+						"effect": {
+							"max_ratio": 0.8
+						}
+					},
+					"merchant_name": {
+						"name": "Имя в гильдии",
+						"level": 5,
+						"desc": "Покупки ещё на 5% дешевле, продажи — на 5% дороже.",
+						"needs": [
+							"regular",
+							"appraiser"
+						],
+						"effect": {
+							"buy_pct": 95,
+							"sell_pct": 105
+						}
+					}
+				}
+			}
+		}
+	},
 	"reputation": {
 		"_doc": "Reputation in a settlement (v0.7.17, ReputationRules): points of the hero in a pack location with settlement: true; thresholds → steps −3…+3 (names); points by the engine's facts; master_max — the master's effect for a deed the place learned of; prices of every trader of the place (buy_pct the hero pays, sell_pct the trader pays) and the attitude of the people not dealt with yet (stranger_attitude).",
 		"thresholds": [5, 15, 30],

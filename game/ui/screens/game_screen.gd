@@ -157,6 +157,7 @@ func _ready() -> void:
 	side.long_rest_requested.connect(func() -> void: _long_rest.open())
 	side.pockets_requested.connect(func(npc: String) -> void: _theft.open(npc))
 	side.container_requested.connect(func(prop: String) -> void: _container.open(prop))
+	side.development_requested.connect(func() -> void: _sheet.open_tab(3))  # v0.7.19.1
 	row.add_child(side)
 
 	_sheet = CharacterSheet.new()
