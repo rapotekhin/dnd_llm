@@ -15,8 +15,7 @@ DEFAULT_MODEL = "deepseek/deepseek-v4.1-flash-1017"  # ADR-0011, since v0.7.3
 DEFAULT_MODELS = (
     "deepseek/deepseek-v4.1-flash-1017",
     "anthropic/claude-haiku-5.5",
-    "qwen/qwen3.8-omni-flash",
-    "qwen/qwen3.8-27b",
+    "qwen/qwen3.8-27b",  # Qwen3.8 Omni Flash left (v0.7.21): its only provider has no forced tool_choice — every turn failed
     "google/gemini-3.8-flash",
     # free (v0.7.20.2, the author's request): OpenRouter's free router and free models — limited by requests a day
     "openrouter/free",
@@ -34,8 +33,8 @@ PROVIDERS: dict[str, tuple[tuple[str, str], ...]] = {
     "anthropic/claude-haiku-5.5": (("google-vertex/global", "Google Vertex"), ("google-vertex/us", "Google Vertex (US)"),
                                    ("anthropic", "Anthropic")),
     "qwen/qwen3.8-27b": (("near-ai/fp8", "Near AI"), ("modal", "Modal"), ("dekallm", "DekaLLM")),
-    # Gemini 3.8 Flash and Qwen3.8 Omni Flash fail our turn with any provider (2026-10-22: Google answers 400, Alibaba
-    # has no forced tool_choice) — nothing to pin until that is fixed
+    "google/gemini-3.8-flash": (("google-ai-studio/flex", "Google AI Studio (flex)"), ("google-ai-studio", "Google AI Studio"),
+                                ("google-ai-studio/priority", "Google AI Studio (priority)")),
 }
 
 

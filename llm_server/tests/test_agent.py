@@ -442,3 +442,23 @@ def test_the_short_master_may_ask_for_the_full_prompt(data_dir):
     fn = scripted(("final", {"full": False}), ("final", {"need_full": True}), ("final", {"narration": "Ты отдаёшь монету."}))
     msg, _, _ = play(data_dir, fn, services=_routed(data_dir, fn), input="кидаю монету нищему")
     assert msg["result"]["narration"] == "Ты отдаёшь монету." and fn.state["n"] == 3
+
+
+def test_a_model_that_rejects_big_schemas_sends_the_effect_as_json_text(data_dir):
+    # v0.7.21: Google rejected the 33-kind union outright — for it the effect is a JSON string, checked by the backend
+    seen = {}
+
+    def fn_tools(messages, info):
+        seen["param"] = next(t for t in info.function_tools if t.name == "propose_effect").parameters_json_schema["properties"]["effect"]
+        return fn(messages, info)
+
+    fn = scripted(
+        ("propose_effect", {"effect": '{"kind": "flag", "flag": "door_open"}'}),
+        ("propose_effect", {"effect": '{"kind": "flag", "flag": "door_open", "colour": "red"}'}),
+        ("final", lambda m: {"narration": "Дверь открыта.", "effect_ids": [effect_id(m)]}),
+    )
+    services = make_services(data_dir, model_factory=lambda m: FunctionModel(fn_tools, model_name=m), turn_handler="agent")
+    msg, calls, _ = play(data_dir, fn, services=services, model="google/gemini-3.8-flash")
+    assert seen["param"]["type"] == "string"
+    assert [c["params"]["effect"] for c in calls if c["method"] == "engine.validate"] == [{"kind": "flag", "flag": "door_open", "value": True}]
+    assert "Эффект не по схеме" in last_tool_text(fn.state["prompts"][2])

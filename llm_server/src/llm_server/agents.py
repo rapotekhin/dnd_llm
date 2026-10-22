@@ -11,8 +11,8 @@ import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, Field
-from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic import BaseModel, BeforeValidator, Field, TypeAdapter, ValidationError
+from pydantic_ai import Agent, ModelRetry, RunContext, Tool
 from pydantic_ai.models import Model
 from pydantic_ai.settings import ModelSettings
 
@@ -246,6 +246,65 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     return f"Принято: effect_id={r.effect_id}. {r.summary}{hint}"
 
 
+# Google rejects the whole request when a tool's schema is too complex (v0.7.21: all 33 effect kinds in one union —
+# Gemini 3.8 Flash failed every turn with «invalid argument»). For such models `propose_effect` takes a plain object, its
+# description lists every kind with its fields, and the effect is checked here against the same schema. A JSON string,
+# not an object: an object without a schema came from Gemini flattened («props_1_name»).
+LOOSE_EFFECT_MODELS = ("google/",)
+_EFFECT = TypeAdapter(Effect)
+
+
+def _shape(ann: Any, depth: int = 0) -> str:
+    """A field's type in a few characters: nested objects with their fields, choices with their values."""
+    import types
+    import typing
+
+    args = [a for a in typing.get_args(ann) if a is not type(None)]
+    origin = typing.get_origin(ann)
+    if origin is typing.Annotated:
+        return _shape(args[0], depth)
+    if origin in (typing.Union, types.UnionType) and len(args) == 1:
+        return _shape(args[0], depth)
+    if origin is typing.Literal:
+        return "|".join(map(str, typing.get_args(ann)))
+    if origin is list and args:
+        return f"[{_shape(args[0], depth)}]"
+    if isinstance(ann, type) and issubclass(ann, BaseModel) and depth < 3:
+        return "{" + ", ".join(f"{n}{'' if f.is_required() else '?'}: {_shape(f.annotation, depth + 1)}"
+                               for n, f in ann.model_fields.items()) + "}"
+    return getattr(ann, "__name__", "…") if depth else ""
+
+
+def _effect_kinds() -> str:
+    import typing
+
+    lines = []
+    for cls in typing.get_args(typing.get_args(Effect)[0]):
+        fields = []
+        for n, f in cls.model_fields.items():
+            if n == "kind":
+                continue
+            shape = _shape(f.annotation, 1)
+            fields.append(f"{n}{'' if f.is_required() else '?'}" + (f": {shape}" if shape and shape not in ("str", "int", "bool") else ""))
+        lines.append(f"{cls.model_fields['kind'].default}({', '.join(fields)})")
+    return "; ".join(lines)
+
+
+async def propose_effect_loose(ctx: RunContext[TurnContext], effect: str) -> str:
+    try:
+        checked = _EFFECT.validate_python(_json_object(effect))
+    except ValidationError as exc:
+        raise ModelRetry("Эффект не по схеме: " + "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:4]))
+    return await propose_effect(ctx, checked)
+
+
+def propose_effect_tool(model: Model) -> Tool | object:
+    if not model.model_name.startswith(LOOSE_EFFECT_MODELS):
+        return propose_effect
+    return Tool(propose_effect_loose, name="propose_effect",
+                description=(propose_effect.__doc__ or "") + "\nЭффект — JSON-объект строкой, с полем kind; виды и поля (? — необязательное): " + _effect_kinds())
+
+
 RuleTopic = Literal[tuple(prompts.TOPICS)]  # type: ignore[valid-type]
 
 
@@ -329,7 +388,7 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -
         output_type=TurnOutput,
         deps_type=TurnContext,
         instructions=system,
-        tools=[request_check, propose_effect, rules, lookup, find_items, find_npcs, find_places, find_quests],
+        tools=[request_check, propose_effect_tool(model), rules, lookup, find_items, find_npcs, find_places, find_quests],
         retries=2,
         model_settings=settings_for(model, base),
     )

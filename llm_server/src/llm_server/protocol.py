@@ -6,7 +6,7 @@ Incoming models ignore unknown fields: a newer minor client may send optional fi
 from enum import IntEnum
 from typing import Annotated, Literal
 
-from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
 PROTOCOL_VERSION = "0.36.0"
@@ -541,7 +541,9 @@ class PropSpec(_Out):
     owner: str | None = None  # npc_id of the scene who owns it
     text: str = Field(default="", max_length=800)  # what is written in it (a book, a note, a sign)
     container: str | None = None  # 0.28.0: a container kind (rules.containers: chest, barrel, basket, sack, cabinet, crate…)
-    contents: list[ContentSpec] = Field(default_factory=list, max_length=10)  # 0.28.0: what lies inside
+    # 0.28.0: what lies inside; at most 10 — cut here, not by `maxItems` in the schema: Google rejects the whole request
+    # with a limit on a list nested in a list (Gemini 3.8 Flash failed every turn, v0.7.21)
+    contents: Annotated[list[ContentSpec], AfterValidator(lambda v: v[:10])] = Field(default_factory=list)
     lock: Literal["simple", "good", "masterwork"] | None = None  # 0.28.0: locked, and how well
     key: str | None = None  # 0.28.0: the item_id of the key that opens it
 
@@ -551,7 +553,7 @@ class FurnishEffect(_Out):
     the value of the portable ones."""
 
     kind: Literal["furnish"] = "furnish"
-    props: list[PropSpec] = Field(min_length=1, max_length=10)
+    props: Annotated[list[PropSpec], AfterValidator(lambda v: v[:10])] = Field(min_length=1)  # at most 10; no maxItems (Gemini)
 
 
 class TakeFromEffect(_Out):

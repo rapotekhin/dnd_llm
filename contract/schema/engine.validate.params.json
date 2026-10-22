@@ -678,7 +678,6 @@
           "items": {
             "$ref": "#/$defs/PropSpec"
           },
-          "maxItems": 10,
           "minItems": 1,
           "title": "Props",
           "type": "array"
@@ -1551,7 +1550,6 @@
           "items": {
             "$ref": "#/$defs/ContentSpec"
           },
-          "maxItems": 10,
           "title": "Contents",
           "type": "array"
         },

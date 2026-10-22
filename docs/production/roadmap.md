@@ -258,7 +258,7 @@ M0–M2 и закрытые версии M3 — в [closed_roadmap.md](closed_ro
 #### v0.7.20.5 — провайдер руками (просьба автора) ✓
 
 - [x] В настройках под моделью — провайдер OpenRouter: «Авто» (как было: три самых дешёвых, медленный уходит) или закреплённый — запрос идёт только к нему, без запасных (`only` + `order`, `allow_fallbacks: false`). Список — `config.PROVIDERS`, топ-3 по скорости и цене хода ~20k токенов (статистика OpenRouter 2026-10-22): DeepSeek — Relace, OpenInference, DeepInfra flex (выбор автора); Claude Haiku 5.5 — Google Vertex, Google Vertex US, Anthropic; Qwen3.8 27B — Near AI, Modal, DekaLLM; бесплатным — нет. Протокол 0.35.0: `ModelInfo.providers`, `provider` в `turn.request` и `summary.request`
-- [ ] **Gemini 3.8 Flash и Qwen3.8 Omni Flash не проходят ход ни у одного провайдера** (живая проверка 2026-10-22: Google отвечает 400, у Alibaba нет обязательного `tool_choice`) — разобраться или убрать из списка моделей
+- [x] **Gemini 3.8 Flash и Qwen3.8 Omni Flash не проходили ход ни у одного провайдера** (v0.7.21): Google отклонял запрос целиком — `maxItems` у списка вещей обстановки (в них — списки содержимого) и сложность объединения 33 видов эффектов; лимиты списков теперь — обрезка при проверке, а для Gemini `propose_effect` берёт эффект JSON-строкой (виды и поля — в описании инструмента, проверка — в бэкенде); golden на Gemini 8/8 (обстановка, место, задание, взять вещь). Провайдеры Gemini — AI Studio flex, обычный, priority (Vertex не принимает наших параметров). Qwen3.8 Omni Flash убран из списка: у его единственного провайдера нет обязательного `tool_choice`
 
 **Проверка:** живой ход на каждом закреплённом провайдере DeepSeek, Haiku и Qwen 27B — отвечает именно он; gdUnit 536, pytest 110; плейтесты `smoke`, `preview`.
 
