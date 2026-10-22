@@ -205,6 +205,13 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 46. Протокол 0.36.0 (v0.7.21)
+
+Генерация заданий.
+
+- **`engine.find_quests`** (`turn_id`, `query`) → `quests` [{`quest_id`, `title`, `giver`, `status`: offered / taken / done / failed, `source`: pack / made}], `open_made`, `max_open`; обязателен перед `create_quest`.
+- **Эффект `create_quest`** (`giver` — NPC сцены, `title`, `description`, `offer_text`, `scale`: trifle / ordinary / major, `steps` — 1–4 `NewQuestStep` {`text`, `kind`: talk / visit / find / fight, `target`, `item_id`, `danger`}, `reward_item_id`): движок проверяет цели шагов по миру, добавляет возвращение к заказчику, считает награду по таблице; задание живёт в этой игре как задание пакета.
+
 ### 45. Протокол 0.35.0 (v0.7.20.5)
 
 - **`ModelInfo.providers`** [{`tag`, `name`}] — провайдеры OpenRouter, которых игрок может закрепить за моделью (пусто — выбирает сервер).

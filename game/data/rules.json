@@ -303,6 +303,16 @@
 		"stock_item_cap_cp": 5000,
 		"purse_cp": 3000
 	},
+	"quest_gen": {
+		"_doc": "Quests the master makes (v0.7.21, QuestGen): from a giver of the scene, 1..max_steps steps (talk, visit, find, fight) on what the world has, plus a return to the giver; at most max_open made quests offered or taken at once. The reward by scale and the hero's level (1..5): reward_cp, class xp (only when a step is dangerous or the quest major), the giver's attitude.",
+		"max_open": 3,
+		"max_steps": 4,
+		"scales": {
+			"trifle": {"name": "пустяк", "reward_cp": [500, 700, 1000, 1500, 2000], "xp": [50, 75, 100, 150, 200], "attitude": 1},
+			"ordinary": {"name": "обычное дело", "reward_cp": [2500, 3500, 5000, 7500, 10000], "xp": [150, 225, 300, 450, 600], "attitude": 1},
+			"major": {"name": "важное дело", "reward_cp": [7500, 10000, 15000, 22500, 30000], "xp": [300, 450, 600, 900, 1200], "attitude": 2}
+		}
+	},
 	"difficulty": {
 		"_doc": "Difficulty of a game (M5, first iteration v0.7.20.4, DifficultyRules): check_bonus is added to the hero's checks and saving throws (death saves too), not to attacks. Chosen for a new game, changed in the settings.",
 		"default": "normal",

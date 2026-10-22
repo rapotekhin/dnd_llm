@@ -434,6 +434,74 @@
       "title": "CreatePlaceEffect",
       "type": "object"
     },
+    "CreateQuestEffect": {
+      "additionalProperties": false,
+      "description": "A quest from a giver of the scene (0.36.0) — only after find_quests in the same turn. The master names the scale,\nthe engine sets the reward (coins, class XP for the dangerous, the giver's goodwill) and adds the way back to the\ngiver; the quest is offered at once and lives like a pack quest.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "giver": {
+          "title": "Giver",
+          "type": "string"
+        },
+        "kind": {
+          "const": "create_quest",
+          "default": "create_quest",
+          "title": "Kind",
+          "type": "string"
+        },
+        "offer_text": {
+          "default": "",
+          "title": "Offer Text",
+          "type": "string"
+        },
+        "reward_item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reward Item Id"
+        },
+        "scale": {
+          "enum": [
+            "trifle",
+            "ordinary",
+            "major"
+          ],
+          "title": "Scale",
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/NewQuestStep"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "giver",
+        "title",
+        "scale",
+        "steps"
+      ],
+      "title": "CreateQuestEffect",
+      "type": "object"
+    },
     "CrimeKnownEffect": {
       "additionalProperties": false,
       "description": "A hidden murder becomes known (0.19.0): the hero confessed or was exposed in the scene. `victim_id` — the\nnpc_id of a deed «никто не знает». The engine spreads it: attitudes, and the wanted hero where there is law.",
@@ -1098,6 +1166,54 @@
         "role"
       ],
       "title": "NewNpc",
+      "type": "object"
+    },
+    "NewQuestStep": {
+      "additionalProperties": false,
+      "description": "A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),\n`visit` — a room id the hero has not been to, `find` — «room:secret» of the world, `fight` — an encounter id.",
+      "properties": {
+        "danger": {
+          "default": false,
+          "title": "Danger",
+          "type": "boolean"
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "kind": {
+          "enum": [
+            "talk",
+            "visit",
+            "find",
+            "fight"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "kind",
+        "target"
+      ],
+      "title": "NewQuestStep",
       "type": "object"
     },
     "NewRoom": {
@@ -1854,6 +1970,7 @@
           "condition": "#/$defs/ConditionEffect",
           "create_npc": "#/$defs/CreateNpcEffect",
           "create_place": "#/$defs/CreatePlaceEffect",
+          "create_quest": "#/$defs/CreateQuestEffect",
           "crime_known": "#/$defs/CrimeKnownEffect",
           "damage": "#/$defs/DamageEffect",
           "drop_item": "#/$defs/DropItemEffect",
@@ -1978,6 +2095,9 @@
         },
         {
           "$ref": "#/$defs/NpcFollowEffect"
+        },
+        {
+          "$ref": "#/$defs/CreateQuestEffect"
         }
       ],
       "title": "Effect"

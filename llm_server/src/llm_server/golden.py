@@ -185,6 +185,9 @@ class MockEngine:
         if method == "engine.find_places":  # v0.7.20.1
             return {"places": [{"room_id": p.get("id", ""), "name": p.get("name", ""), "location": p.get("location", "")}
                                for p in self.engine.get("find_places", [])]}
+        if method == "engine.find_quests":  # v0.7.21
+            return {"quests": [{"quest_id": q.get("id", ""), "title": q.get("title", ""), "giver": q.get("giver", ""),
+                                "status": q.get("status", "offered")} for q in self.engine.get("find_quests", [])]}
         if method == "engine.find_npcs":  # v0.7.20
             return {"npcs": [{"npc_id": n.get("id", ""), "name": n.get("name", ""), "role": n.get("role", ""), "location": n.get("location", "")}
                              for n in self.engine.get("find_npcs", [])]}

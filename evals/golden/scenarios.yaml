@@ -1835,3 +1835,33 @@ scenarios:
     rubric:
       - "Мастер не создаёт мельницу и не ведёт туда героя словами: выходы — только из сцены; объясняет в мире (за таверной — двор и та же улица) или отсылает спросить у местных"
 
+  - id: quest_npc_gives_work
+    title: "Игрок ищет работу — find_quests, затем create_quest от NPC сцены"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, есть для меня какая работа? Деньги нужны, руки свободны."
+    engine:
+      find_quests: []
+      validate:
+        - {kind: create_quest, summary: "Новое задание: «Крысы в погребе» от Горм (пустяк)"}
+    expect:
+      effects: {required_kinds_any: [create_quest]}
+      tools_required: [find_quests]
+    rubric:
+      - "Горм даёт дело по своему характеру и заведению, и мастер оформляет его эффектом create_quest с шагами по тому, что есть в сцене (погреб, рынок, люди сцены), а не только словами; сумму награды сам не называет"
+
+  - id: quest_existing_not_made_again
+    title: "Похожее задание уже предлагается — новое не создавать"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, а работёнки не найдётся? Что-нибудь по силам."
+    engine:
+      find_quests:
+        - {id: q_cellar, title: "Крысы в погребе", giver: "Горм", status: offered}
+    expect:
+      effects: {forbidden_kinds: [create_quest]}
+      tools_required: [find_quests]
+    rubric:
+      - "Горм предлагает уже существующее дело про крыс в погребе, нового задания не создаёт"

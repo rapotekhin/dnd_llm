@@ -18,6 +18,10 @@ static func cfg(data: Dictionary) -> Dictionary:
 ## The pack's world with what this game made, a deep copy (the pack itself is never touched).
 static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
 	var w := _merge_places(pack_world.duplicate(true), gen)  # places first: made people may live in made rooms
+	for id: String in gen.get("quests", {}):  # v0.7.21: quests the master made
+		if not w.has("quests"):
+			w["quests"] = {}
+		w["quests"][id] = (gen["quests"][id] as Dictionary).duplicate(true)
 	for id: String in gen.get("npcs", {}):
 		w["npcs"][id] = (gen["npcs"][id] as Dictionary).duplicate(true)
 		var room := str(gen.get("npc_rooms", {}).get(id, ""))

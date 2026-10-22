@@ -2127,6 +2127,14 @@ func handle_engine_find_npcs(params: Dictionary) -> Dictionary:
 	return {"npcs": WorldGen.find_npcs(session, Catalog.data, str(params.get("query", ""))).slice(0, 10)}
 
 
+func handle_engine_find_quests(params: Dictionary) -> Dictionary:  # v0.7.21
+	if not _active(params):
+		return JsonRpcPeer.fail(-32041, "no such active turn")
+	effects.searched_quests[busy_turn] = true
+	return {"quests": QuestGen.find_quests(session, Catalog.data, str(params.get("query", ""))).slice(0, 10),
+		"open_made": QuestGen.open_made(session).size(), "max_open": int(QuestGen.cfg(Catalog.data)["max_open"])}
+
+
 func handle_engine_find_items(params: Dictionary) -> Dictionary:
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")

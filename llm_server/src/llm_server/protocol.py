@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.35.0"
+PROTOCOL_VERSION = "0.36.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -658,6 +658,32 @@ class CreateNpcEffect(_Out):
     npc: NewNpc
 
 
+class NewQuestStep(_Out):
+    """A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),
+    `visit` — a room id the hero has not been to, `find` — «room:secret» of the world, `fight` — an encounter id."""
+
+    text: str
+    kind: Literal["talk", "visit", "find", "fight"]
+    target: str
+    item_id: str | None = None
+    danger: bool = False
+
+
+class CreateQuestEffect(_Out):
+    """A quest from a giver of the scene (0.36.0) — only after find_quests in the same turn. The master names the scale,
+    the engine sets the reward (coins, class XP for the dangerous, the giver's goodwill) and adds the way back to the
+    giver; the quest is offered at once and lives like a pack quest."""
+
+    kind: Literal["create_quest"] = "create_quest"
+    giver: str
+    title: str
+    description: str = ""
+    offer_text: str = ""
+    scale: Literal["trifle", "ordinary", "major"]
+    steps: list[NewQuestStep] = Field(min_length=1, max_length=4)
+    reward_item_id: str | None = None
+
+
 class DropItemEffect(_Out):
     """The hero leaves a thing in the room (0.29.0): an item of the pack, or a bag (`item_id` = its bag id) with what
     is in it; it becomes a thing of the room that can be picked up again."""
@@ -873,7 +899,7 @@ Effect = Annotated[
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
-    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect,
+    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect,
     Field(discriminator="kind"),
 ]
 
@@ -957,6 +983,25 @@ class FoundNpc(_In):
 
 class EngineFindNpcsResult(_In):
     npcs: list[FoundNpc] = Field(default_factory=list)
+
+
+class EngineFindQuestsParams(_Out):
+    turn_id: str
+    query: str
+
+
+class FoundQuest(_In):
+    quest_id: str
+    title: str
+    giver: str = ""
+    status: str = "offered"  # offered | taken | done | failed
+    source: str = "pack"  # pack | made
+
+
+class EngineFindQuestsResult(_In):
+    quests: list[FoundQuest] = Field(default_factory=list)
+    open_made: int = 0  # made quests offered or taken now (0.36.0)
+    max_open: int = 3
 
 
 class EngineFindPlacesParams(_Out):

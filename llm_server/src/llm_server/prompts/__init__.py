@@ -105,6 +105,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "equip": ("надеть, снять, раздеться (`equip`)", ("equip",)),
     "invisible": ("невидимый герой", ()),
     "people": ("новый человек (`create_npc`)", ("create_npc",)),
+    "quests": ("новое задание: NPC просит о помощи, игрок ищет работу (`create_quest`)", ("create_quest",)),
     "languages": ("NPC не понимает героя; языки", ()),
     "tools": ("действие инструментом: замок, травы, подделка, грим (`request_check` с `tool`)", ()),
     "background": ("предыстория героя и связь NPC с его прошлым", ()),

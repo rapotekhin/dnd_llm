@@ -25,6 +25,9 @@ from .protocol import (
     EngineCheckResult,
     EngineFindItemsParams,
     EngineFindNpcsParams,
+    EngineFindQuestsParams,
+    EngineFindQuestsResult,
+    CreateQuestEffect,
     EngineFindPlacesParams,
     EngineFindPlacesResult,
     CreatePlaceEffect,
@@ -132,6 +135,7 @@ class TurnContext:
     searched_items: bool = False
     searched_npcs: bool = False  # find_npcs this turn (v0.7.20: before create_npc)
     searched_places: bool = False  # find_places this turn (v0.7.20.1: before create_place)
+    searched_quests: bool = False  # find_quests this turn (v0.7.21: before create_quest)
     proposed: set[str] = field(default_factory=set)  # effects accepted this turn (proposing one again is refused)
     empty_gives: int = 0  # give_item with neither item_id nor item
     topics: set[str] = field(default_factory=set)  # rule topics the master has: in the prompt or read with `rules` (v0.7.20.4)
@@ -224,6 +228,8 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     topic = prompts.topic_for(effect.kind)
     if topic and topic not in t.topics:
         return f"Отказ: сначала прочитай правила темы — rules(\"{topic}\"), потом предложи эффект снова."
+    if isinstance(effect, CreateQuestEffect) and not t.searched_quests:
+        return "Отказ: перед созданием задания поищи похожие через find_quests."
     if isinstance(effect, CreateNpcEffect) and not t.searched_npcs:
         return "Отказ: перед созданием человека поищи его через find_npcs."
     if isinstance(effect, CreatePlaceEffect) and not t.searched_places:
@@ -270,6 +276,20 @@ async def find_npcs(ctx: RunContext[TurnContext], query: str) -> str:
     return "\n".join(f"[{n.npc_id}] {n.name} — {n.role}, {n.location}{' (мёртв)' if n.dead else ''}" for n in found)
 
 
+async def find_quests(ctx: RunContext[TurnContext], query: str) -> str:
+    """Найти задания мира (пакет и созданные в этой игре): query — суть дела, заказчик или место по-русски. Обязательно
+    перед create_quest: может, такое дело уже есть."""
+    t = ctx.deps
+    t.searched_quests = True
+    raw = await t.session.call_engine("engine.find_quests", EngineFindQuestsParams(turn_id=t.params.turn_id, query=query))
+    r = EngineFindQuestsResult.model_validate(raw)
+    head = f"Созданных заданий открыто: {r.open_made} из {r.max_open}."
+    if not r.quests:
+        return head + " Похожих нет. Если дело нужно — create_quest."
+    status = {"offered": "предлагается", "taken": "взято", "done": "сделано", "failed": "провалено"}
+    return head + "\n" + "\n".join(f"[{q.quest_id}] «{q.title}» — {q.giver}, {status.get(q.status, q.status)}" for q in r.quests)
+
+
 async def find_places(ctx: RunContext[TurnContext], query: str) -> str:
     """Найти места мира (комнаты и локации пакета и созданные в этой игре): query — название по-русски. Обязательно
     перед create_place: может, такое место уже есть."""
@@ -309,7 +329,7 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -
         output_type=TurnOutput,
         deps_type=TurnContext,
         instructions=system,
-        tools=[request_check, propose_effect, rules, lookup, find_items, find_npcs, find_places],
+        tools=[request_check, propose_effect, rules, lookup, find_items, find_npcs, find_places, find_quests],
         retries=2,
         model_settings=settings_for(model, base),
     )
