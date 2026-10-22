@@ -1961,3 +1961,54 @@ scenarios:
         must_not_match: ["таверн[уы] свою", "свою таверн", "своё дело", "мечт"]
     rubric:
       - "Мастер описывает ужин у очага и не упоминает цель героя, не подсовывает продающуюся таверну и разговоры о своём деле"
+
+  - id: goal_hint_after_the_threshold
+    title: "Цель по силам, игрок сам расспрашивает в таверне — намёк goal_hint, ещё не задание"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, а не слыхал ли ты про тролля, что, говорят, разоряет хутора? Я давно хочу с ним разделаться."
+    snapshot:
+      character:
+        goal: "«Убить тролля» — трудная, по силам: уровень класса 3 из 3; намёков 0 из 2 перед заданием"
+    engine:
+      find_quests: []
+    expect:
+      effects: {required_kinds_any: [goal_hint], forbidden_kinds: [create_quest, create_npc, create_place]}
+    rubric:
+      - "Горм даёт намёк по логике места (что-то слышал, советует расспросить ещё — можно отослать к человеку из сцены, например к сержанту Ведде) и мастер проводит goal_hint; задания ещё нет, новых людей, которых нет в сцене и мире, мастер не выдумывает и не создаёт"
+
+  - id: goal_quest_after_hints
+    title: "Намёков достаточно, игрок снова ищет — задание для цели create_quest for_goal"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, ты обещал свести меня с тем, кто видел тролля. Я готов идти, рассказывай всё."
+    snapshot:
+      character:
+        goal: "«Убить тролля» — трудная, по силам: уровень класса 3 из 3; намёков 2 из 2 перед заданием"
+    engine:
+      find_quests: []
+    expect:
+      effects: {required_kinds_any: [create_quest]}
+      tools_required: [find_quests]
+    rubric:
+      - "Мастер создаёт задание для цели create_quest с for_goal: true (заказчик — Горм или человек из задания), шаги — по миру и по тому, что задание приносит"
+
+  - id: goal_no_hint_in_the_wrong_place
+    title: "Неуместная сцена — у менялы о драконе не намекают"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Слушай, меняла, а где мне найти дракона? Очень надо."
+    snapshot:
+      scene:
+        room: {id: room_exchange, name: "Меняльная лавка", description: "Тесная лавка с весами и счётами, за решёткой — меняла."}
+        npcs:
+          - {id: npc_changer, name: "Ольгерд", role: "меняла", template: commoner, attitude: indifferent}
+      character:
+        goal: "«Убить дракона» — великая, по силам: уровень класса 5 из 5; намёков 0 из 3 перед заданием"
+    expect:
+      effects: {forbidden_kinds: [goal_hint, create_quest, create_npc]}
+    rubric:
+      - "Меняла отвечает в характере — он про деньги и курсы, о драконах не знает и намёков не даёт; заданий и людей под цель нет"

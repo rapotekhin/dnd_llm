@@ -120,6 +120,11 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 	for q: Dictionary in QuestRules.stepped(data["world"]).values():
 		if str(q.get("title", "")).to_lower() == title.to_lower():
 			return {"reason": "задание «%s» уже есть" % title}
+	var for_goal := bool(spec.get("for_goal", false))
+	if for_goal:  # the quest for the hero's life goal (v0.7.22.1)
+		var why := GoalRules.quest_why_not(s.character, data)
+		if not why.is_empty():
+			return {"reason": why}
 	var content := _plan_content(s, data, spec, depth + 1)
 	if content.has("reason"):
 		return content
@@ -172,6 +177,8 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		q["major"] = true
 	if own:
 		q["own"] = true
+	if for_goal:
+		q["for_goal"] = true
 	if not board.is_empty():
 		q["board"] = {"room": s.room_id, "prop": board}
 	var brings: Array = (content["npcs"] as Array).map(func(n: Dictionary) -> String: return str(n["plan"]["npc"]["name"]))

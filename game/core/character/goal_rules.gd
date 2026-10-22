@@ -6,6 +6,9 @@ extends RefCounted
 ## needs — the class or a peaceful direction, v0.7.19.1); the engine sets the threshold by `rules.goal.thresholds` —
 ## the level of that direction from which the master may lead to the goal. Until then the world answers the player's
 ## questions in its own way and makes nothing for the goal; the master never brings it up by itself.
+## Batch 2 (v0.7.22.1): past the threshold, when the player asks or seeks in a fitting place, the master hints
+## (`goal_hint`, counted on the goal); after `rules.goal.hints` of them for its scale it may make the quest for the
+## goal (`create_quest` with `for_goal`) — a simple goal at once, a great one through a chain of hints.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -67,6 +70,47 @@ static func reached(c: Dictionary, data: Dictionary) -> bool:
 	return need >= 0 and level(c, data) >= need
 
 
+## Hints the goal needs before its quest; given so far.
+static func hints_needed(c: Dictionary, data: Dictionary) -> int:
+	return int(cfg(data)["hints"].get(str(goal(c).get("scale", "")), 0))
+
+
+static func hints(c: Dictionary) -> int:
+	return int(goal(c).get("hints", 0))
+
+
+## "" when the master may hint now, else the reason.
+static func hint_why_not(c: Dictionary, data: Dictionary) -> String:
+	if goal(c).is_empty() or not goal(c).has("scale"):
+		return "у героя нет оценённой жизненной цели"
+	if not reached(c, data):
+		return "цель героя ещё не по силам (%s) — до порога мир к ней не ведёт" % text_of(c, data)
+	return ""
+
+
+## "" when the quest for the goal may be made now, else the reason.
+static func quest_why_not(c: Dictionary, data: Dictionary) -> String:
+	var why := hint_why_not(c, data)
+	if not why.is_empty():
+		return why
+	if hints(c) < hints_needed(c, data):
+		return "к заданию цели ещё рано: намёков %d из %d — сначала goal_hint, когда игрок снова спросит" % [hints(c), hints_needed(c, data)]
+	return ""
+
+
+static func plan_hint(c: Dictionary, data: Dictionary) -> Dictionary:
+	var why := hint_why_not(c, data)
+	if not why.is_empty():
+		return {"reason": why}
+	return {"plan": {"goal_hint": true}, "summary": "Намёк о цели: %d из %d перед заданием" % [hints(c) + 1, hints_needed(c, data)]}
+
+
+static func apply_hint(c: Dictionary) -> void:
+	var g := goal(c).duplicate()
+	g["hints"] = int(g.get("hints", 0)) + 1
+	c["goal"] = g
+
+
 ## For the sheet and the master: «Открыть свою таверну — по силам: Торговля 2 из 2» / «… — рано: уровень класса 1 из 3».
 static func text_of(c: Dictionary, data: Dictionary) -> String:
 	var g := goal(c)
@@ -79,5 +123,8 @@ static func text_of(c: Dictionary, data: Dictionary) -> String:
 	var what := "уровень класса" if dir == "class" else str(DevelopmentRules.direction(data, dir).get("name", dir))
 	if need > int(cfg(data)["max_level"]):
 		return "«%s» — %s: пока недостижима (%s выше %d)" % [g["text"], cfg(data)["names"].get(g["scale"], g["scale"]), what, int(cfg(data)["max_level"])]
-	return "«%s» — %s, %s: %s %d из %d" % [g["text"], cfg(data)["names"].get(g["scale"], g["scale"]),
+	var out := "«%s» — %s, %s: %s %d из %d" % [g["text"], cfg(data)["names"].get(g["scale"], g["scale"]),
 		"по силам" if reached(c, data) else "рано", what, level(c, data), need]
+	if reached(c, data):
+		out += "; намёков %d из %d перед заданием" % [mini(hints(c), hints_needed(c, data)), hints_needed(c, data)]
+	return out

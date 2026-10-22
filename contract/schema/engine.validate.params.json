@@ -455,6 +455,11 @@
           "title": "Description",
           "type": "string"
         },
+        "for_goal": {
+          "default": false,
+          "title": "For Goal",
+          "type": "boolean"
+        },
         "giver": {
           "default": "",
           "title": "Giver",
@@ -1040,6 +1045,20 @@
         "scale"
       ],
       "title": "GoalAssessEffect",
+      "type": "object"
+    },
+    "GoalHintEffect": {
+      "additionalProperties": false,
+      "description": "A hint toward the hero's life goal (0.40.0): only past its threshold and only when the player asks or seeks;\nthe engine counts them — the quest for the goal comes after enough.",
+      "properties": {
+        "kind": {
+          "const": "goal_hint",
+          "default": "goal_hint",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "GoalHintEffect",
       "type": "object"
     },
     "HealEffect": {
@@ -2266,6 +2285,7 @@
           "furnish": "#/$defs/FurnishEffect",
           "give_item": "#/$defs/GiveItemEffect",
           "goal_assess": "#/$defs/GoalAssessEffect",
+          "goal_hint": "#/$defs/GoalHintEffect",
           "heal": "#/$defs/HealEffect",
           "move": "#/$defs/MoveEffect",
           "note": "#/$defs/NoteEffect",
@@ -2389,6 +2409,9 @@
         },
         {
           "$ref": "#/$defs/GoalAssessEffect"
+        },
+        {
+          "$ref": "#/$defs/GoalHintEffect"
         }
       ],
       "title": "Effect"

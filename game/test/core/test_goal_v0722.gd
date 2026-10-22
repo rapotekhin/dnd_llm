@@ -59,3 +59,36 @@ func test_the_goal_is_in_the_snapshot_and_the_save() -> void:
 	assert_str(str(snap["character"]["goal"])).contains("по силам")
 	var back := GameSession.from_dict(s.to_dict(5))
 	assert_str(str(GoalRules.goal(back.character)["scale"])).is_equal("easy")
+
+
+func test_past_the_threshold_hints_come_first_then_the_quest() -> void:
+	var c := s.character
+	s.room_id = "brod-tavern-hall"
+	GoalRules.write(c, "Убить тролля")
+	_assess({"scale": "hard"})  # level 3 of the class, two hints before the quest
+	assert_str(str(_assess_kind({"kind": "goal_hint"}, "t-2")["reason"])).contains("ещё не по силам")
+	var quest := {"kind": "create_quest", "giver": "npc_innkeeper", "title": "След тролля", "scale": "major", "for_goal": true,
+		"steps": [{"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"}]}
+	fx.searched_quests["t-3"] = true
+	assert_str(str(_assess_kind(quest, "t-3")["reason"])).contains("ещё не по силам")
+	c["level"] = 3
+	fx.searched_quests["t-4"] = true
+	assert_str(str(_assess_kind(quest, "t-4")["reason"])).contains("намёков 0 из 2")
+	assert_bool(bool(_assess_kind({"kind": "goal_hint"}, "t-5")["accepted"])).is_true()
+	assert_bool(bool(_assess_kind({"kind": "goal_hint"}, "t-6")["accepted"])).is_true()
+	assert_str(GoalRules.text_of(c, data)).contains("намёков 2 из 2")
+	fx.searched_quests["t-7"] = true
+	assert_bool(bool(_assess_kind(quest, "t-7")["accepted"])).is_true()
+
+
+func test_a_simple_goal_needs_no_hints() -> void:
+	GoalRules.write(s.character, "Изучить пещеры")
+	_assess({"scale": "easy"})
+	assert_str(GoalRules.quest_why_not(s.character, data)).is_empty()
+
+
+func _assess_kind(e: Dictionary, turn: String) -> Dictionary:
+	var r := fx.validate(s, data, turn, e)
+	if bool(r["accepted"]):
+		fx.apply(s, turn, [r["effect_id"]])
+	return r

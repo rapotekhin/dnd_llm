@@ -406,7 +406,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
             try:
                 result = await agent.run(turn_user_prompt(params), deps=ctx)
             except UnexpectedModelBehavior as exc:  # as the game does: once more with room to spare (turns.py)
-                if "token limit" not in str(exc).lower() or engine.calls:
+                if "token limit" not in str(exc).lower() or engine.checks() or engine.effects():  # searches do not count, as in turns.py
                     raise
                 agent = build_turn_agent(model, system_prompt_for(params), RETRY_MAX_TOKENS)
                 ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]

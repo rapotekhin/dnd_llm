@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.39.0"
+PROTOCOL_VERSION = "0.40.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -711,6 +711,7 @@ class CreateQuestEffect(_Out):
     kind: Literal["create_quest"] = "create_quest"
     giver: str = ""  # an NPC of the scene; on a board — anyone alive or «new:<key>»; empty for one's own deed (0.38.0)
     board_prop_id: str | None = None  # 0.38.0: an order on a board — a thing of the room that offers it
+    for_goal: bool = False  # 0.40.0: the quest for the hero's life goal — past its threshold and after enough hints
     own: bool = False  # 0.38.0: the player's own deed — no giver, taken at once, pays only class XP for the dangerous
     title: str
     description: str = ""
@@ -929,6 +930,13 @@ class GoalAssessEffect(_Out):
     concepts: list[str] = Field(default_factory=list)
 
 
+class GoalHintEffect(_Out):
+    """A hint toward the hero's life goal (0.40.0): only past its threshold and only when the player asks or seeks;
+    the engine counts them — the quest for the goal comes after enough."""
+
+    kind: Literal["goal_hint"] = "goal_hint"
+
+
 class NpcFollowEffect(_Out):
     """An NPC of the scene goes with the hero (0.33.0): from now on it stands wherever the hero is. `follow: false` —
     one who follows stays here (`home: true` — goes back to its own place). The engine allows following to one
@@ -958,7 +966,7 @@ Effect = Annotated[
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
-    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect,
+    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect,
     Field(discriminator="kind"),
 ]
 
