@@ -34,7 +34,7 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	var prof := proficiency_line(c, def, id)
 	if not prof.is_empty():
 		out.append(prof)
-	var use := use_line(data, id)
+	var use := use_line(data, id, session_items)
 	if not use.is_empty():
 		out.append(use)
 	if ItemRules.charges_max(def) > 0:  # v0.7.12
@@ -48,6 +48,8 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	var text := str(def.get("description", ""))
 	if not text.is_empty():
 		out.append(text)
+	if not str(def.get("text", "")).is_empty():  # a letter, a diary, an inscription (v0.7.18)
+		out.append(TranslationServer.translate("ITEM_WRITTEN").format({"text": def["text"]}))
 	return out
 
 
@@ -112,8 +114,8 @@ static func proficiency_line(c: Dictionary, def: Dictionary, id: String) -> Stri
 
 
 ## What using a consumable does (rules.consumables): «Лечит 2к4+2 хитов», «Снимает: отравление».
-static func use_line(data: Dictionary, id: String) -> String:
-	var fx := ItemRules.consumable(data, id)
+static func use_line(data: Dictionary, id: String, session_items: Dictionary = {}) -> String:
+	var fx := ItemRules.consumable(data, id, session_items)
 	var parts: Array[String] = []
 	if fx.has("heal"):
 		var h: Array = fx["heal"]

@@ -25,18 +25,23 @@ class ItemLibrary:
                 f.write(json.dumps({"item_id": item_id, **item.model_dump()}, ensure_ascii=False) + "\n")
 
     def search(self, query: str, base: str | None = None, properties: list[str] | None = None, limit: int = 5) -> list[FoundItem]:
-        q = query.lower().strip()
+        """By words (v0.7.18): any word of the query, by its stem, in the name, the type or the properties; the best
+        matches first."""
+        words = [w[:5] for w in query.lower().replace("ё", "е").split() if len(w) >= 3]
         props = set(properties or [])
-        out: list[FoundItem] = []
+        scored: list[tuple[int, FoundItem]] = []
         for item in self._all():
-            if q and q not in item.name.lower() and q not in (item.item_type or ""):
-                continue
             if props and not props.issubset(item.properties):
                 continue
-            out.append(item)
-        if base:
-            out.sort(key=lambda f: 0 if base in f.item_id or base in f.name.lower() else 1)
-        return out[:limit]
+            hay = " ".join([item.name.lower().replace("ё", "е"), item.item_type or "", *item.properties])
+            score = sum(1 for w in words if w in hay)
+            if base and (base in item.item_id or base in item.name.lower()):
+                score += 2
+            if words and score == 0:
+                continue
+            scored.append((score, item))
+        scored.sort(key=lambda x: -x[0])
+        return [item for _, item in scored[:limit]]
 
     def _all(self) -> list[FoundItem]:
         try:

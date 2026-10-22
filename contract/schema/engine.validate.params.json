@@ -588,6 +588,22 @@
           "title": "Rarity",
           "type": "string"
         },
+        "text": {
+          "default": "",
+          "title": "Text",
+          "type": "string"
+        },
+        "use": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedUse"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "value_cp": {
           "minimum": 0,
           "title": "Value Cp",
@@ -601,6 +617,95 @@
         "value_cp"
       ],
       "title": "GeneratedItem",
+      "type": "object"
+    },
+    "GeneratedUse": {
+      "additionalProperties": false,
+      "description": "What a generated thing does when used (0.27.0), one of: a `spell` of the engine's book (with `charges` — a\nwand that regains them at dawn; without — a scroll, once), `heal` light / medium / strong, `resist` a damage\ntype for an hour, `check_adv` — advantage on a skill for an hour (potions, once). The engine prices it in rarity.",
+      "properties": {
+        "charges": {
+          "anyOf": [
+            {
+              "maximum": 7,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Charges"
+        },
+        "check_adv": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Check Adv"
+        },
+        "heal": {
+          "anyOf": [
+            {
+              "enum": [
+                "light",
+                "medium",
+                "strong"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heal"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "maximum": 3,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Level"
+        },
+        "resist": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resist"
+        },
+        "spell": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spell"
+        }
+      },
+      "title": "GeneratedUse",
       "type": "object"
     },
     "GiveItemEffect": {

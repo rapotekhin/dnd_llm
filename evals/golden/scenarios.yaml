@@ -1664,3 +1664,37 @@ scenarios:
     rubric:
       - "Ферн объясняет подорожание тем, что караваны боятся Пущи после событий у менгира; цену сам не снижает, в характере"
 
+  - id: item_letter_with_text
+    title: "Сюжетная вещь без механики — письмо с текстом"
+    category: effects
+    extends: tavern
+    input: "Беру со стола запечатанное письмо и вскрываю его — что там написано?"
+    snapshot:
+      scene:
+        hooks: ["на столе у очага лежит запечатанное письмо без адреса"]
+    engine:
+      validate:
+        - {kind: take_prop, status: reject, reason: "такой вещи нет в «Вокруг» — найденную вещь даёт give_item (сначала find_items)"}
+    expect:
+      effects: {required_kinds_any: [give_item]}
+    rubric:
+      - "Письмо выдано эффектом give_item как вещь без механики (gear, без свойств) с текстом письма в поле text; рассказ передаёт ровно этот текст"
+
+  - id: item_wand_with_charges
+    title: "Жезл с зарядами заклинания — use.spell и charges"
+    category: effects
+    extends: tavern
+    input: "Разгребаю золу в старом очаге и достаю резной жезл, который там блеснул."
+    snapshot:
+      scene:
+        hooks: ["в золе старого очага что-то блестит — тонкий резной жезл, от него пахнет грозой и по резьбе пробегают искры"]
+    engine:
+      check: {d20: [15], bonus: 3, total: 18, dc: 12, success: true, nat: 15, blocked: false}
+      validate:
+        - {kind: take_prop, status: reject, reason: "такой вещи нет в «Вокруг» — найденную вещь даёт give_item (сначала find_items)"}
+    expect:
+      effects: {required_kinds_any: [give_item]}
+      tools_required: [find_items]
+    rubric:
+      - "Жезл, искрящий грозой, создан волшебным: с действием use.spell (заклинание молнии или похожее из книги движка) и charges, wondrous; рассказ не приписывает ему силы сверх этого"
+

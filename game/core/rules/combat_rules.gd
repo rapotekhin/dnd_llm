@@ -1052,7 +1052,7 @@ static func spell_range(s: GameSession, data: Dictionary, spell_id: String) -> i
 static func can_throw(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
-	var fx: Dictionary = ItemRules.consumable(data, item_id).get("throw", {})
+	var fx: Dictionary = ItemRules.consumable(data, item_id, s.items).get("throw", {})
 	if fx.is_empty() or int(s.character.get("inventory", {}).get(item_id, 0)) <= 0:
 		return "COMBAT_ITEM_CANT"
 	if int(economy(s).get("action", 0)) <= 0 and int(economy(s).get("attacks", 0)) <= 0:
@@ -1077,7 +1077,7 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 		e["action"] = int(e["action"]) - 1
 		e["attacks"] = CharacterRules.extra_attacks(c, data)
 	e["attacked"] = true
-	var fx: Dictionary = ItemRules.consumable(data, item_id)["throw"]
+	var fx: Dictionary = ItemRules.consumable(data, item_id, s.items)["throw"]
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
 	ItemRules._remove_one(c, item_id)
 	var t := fighter(s, target_id)
@@ -1129,7 +1129,7 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 static func can_item_spell(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
-	var fx := ItemRules.consumable(data, item_id)
+	var fx := ItemRules.consumable(data, item_id, s.items)
 	if not fx.has("spell") or not ItemRules.can_use(s.character, data, s.items, item_id).is_empty():
 		return "COMBAT_ITEM_CANT"
 	if int(economy(s).get("action", 0)) <= 0:
@@ -1150,7 +1150,7 @@ static func can_item_spell(s: GameSession, data: Dictionary, item_id: String, ta
 ## circle, DMG; a wand — its own); no slot of the hero's is spent. A scroll beyond the hero asks for Arcana. Lines.
 static func item_spell(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> Array[String]:
 	var c := s.character
-	var fx := ItemRules.consumable(data, item_id)
+	var fx := ItemRules.consumable(data, item_id, s.items)
 	var sp_id := str(fx["spell"])
 	var level := int(fx.get("level", 1))
 	var name := ItemRules.display_name(data["items"], s.items, item_id)

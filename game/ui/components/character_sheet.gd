@@ -312,7 +312,7 @@ func _gear_tab(c: Dictionary) -> Control:
 		box.add_child(row)
 		var qty := int(c["inventory"][id])
 		_item_button(row, details, c, id, "%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else ""], "Item_" + id)
-		if not ItemRules.consumable(Catalog.data, id).is_empty():
+		if not ItemRules.consumable(Catalog.data, id, GameState.session.items).is_empty():
 			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
 		if ItemRules.needs_attunement(def):  # v0.7.12
 			if ItemRules.attuned(c).has(id):

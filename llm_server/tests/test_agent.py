@@ -362,3 +362,16 @@ def test_a_turn_out_of_output_tokens_is_tried_again_with_more(data_dir):
     assert msg["result"]["narration"] == "Со второй попытки."
     assert seen[-1] == 6000
 
+
+
+def test_the_library_finds_items_by_words(tmp_path):
+    # v0.7.18: any word of the query by its stem — «серебряный кинжал» finds «Кинжал инея».
+    from llm_server.llm.library import ItemLibrary
+
+    lib = ItemLibrary(tmp_path / "library.jsonl")
+    lib.add("gen-a", GeneratedItem(name="Кинжал инея", item_type="weapon", base="dagger", rarity="uncommon", value_cp=1,
+                                   properties=["cold_damage"]))
+    lib.add("gen-b", GeneratedItem(name="Письмо Бруно", item_type="gear", rarity="common", value_cp=0, text="Илва, приходи."))
+    assert [f.item_id for f in lib.search("серебряный кинжал")] == ["gen-a"]
+    assert [f.item_id for f in lib.search("письмо")] == ["gen-b"]
+    assert lib.search("меч") == []

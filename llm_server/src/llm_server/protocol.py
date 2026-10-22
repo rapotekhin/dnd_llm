@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.26.0"
+PROTOCOL_VERSION = "0.27.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -448,6 +448,19 @@ ItemProperty = Literal[
 ]
 
 
+class GeneratedUse(_Out):
+    """What a generated thing does when used (0.27.0), one of: a `spell` of the engine's book (with `charges` — a
+    wand that regains them at dawn; without — a scroll, once), `heal` light / medium / strong, `resist` a damage
+    type for an hour, `check_adv` — advantage on a skill for an hour (potions, once). The engine prices it in rarity."""
+
+    spell: str | None = None
+    level: int | None = Field(default=None, ge=0, le=3)
+    charges: int | None = Field(default=None, ge=1, le=7)
+    heal: Literal["light", "medium", "strong"] | None = None
+    resist: str | None = None
+    check_adv: str | None = None
+
+
 class GeneratedItem(_Out):
     name: str
     item_type: ItemType
@@ -456,6 +469,8 @@ class GeneratedItem(_Out):
     value_cp: int = Field(ge=0)
     properties: list[ItemProperty] = Field(default_factory=list)
     description: str = ""
+    use: GeneratedUse | None = None  # 0.27.0: a wand, a scroll, a potion
+    text: str = ""  # 0.27.0: what is written in it — a letter, a diary, an inscription (a thing without mechanics is fine)
 
 
 class MoveEffect(_Out):

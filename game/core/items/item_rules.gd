@@ -347,7 +347,7 @@ static func generated_id(item: Dictionary) -> String:
 
 
 ## {"ok": true, "def": normalized definition} or {"ok": false, "reason": text for the master}.
-static func check_generated(items_data: Dictionary, item: Dictionary, level: int) -> Dictionary:
+static func check_generated(items_data: Dictionary, item: Dictionary, level: int, spells: Dictionary = {}) -> Dictionary:
 	var costs: Dictionary = items_data["properties"]
 	var points := 0
 	for p: Variant in item.get("properties", []):
@@ -357,6 +357,10 @@ static func check_generated(items_data: Dictionary, item: Dictionary, level: int
 	var base := str(item.get("base", ""))
 	if not base.is_empty() and not items_data["catalog"].has(base):
 		return {"ok": false, "reason": "базового предмета %s нет в каталоге" % base}
+	var use := _generated_use(items_data, item, spells)  # v0.7.18: what the thing does when used
+	if use.has("reason"):
+		return {"ok": false, "reason": use["reason"]}
+	points += int(use.get("points", 0))
 	var rarity := rarity_for_points(items_data, points)
 	if level < int(items_data["rarity_min_level"][rarity]):
 		return {"ok": false, "reason": "предмет редкости %s недоступен на %d уровне" % [rarity, level]}
@@ -366,19 +370,88 @@ static func check_generated(items_data: Dictionary, item: Dictionary, level: int
 		"rarity": rarity, "value_cp": value, "properties": item.get("properties", []),
 		"description": str(item.get("description", "")), "generated": true,
 	}
+	if not str(item.get("text", "")).strip_edges().is_empty():  # what is written on it (a letter, a diary), v0.7.18
+		def["text"] = str(item["text"]).strip_edges().left(1000)
+	if use.has("use"):
+		def["use"] = use["use"]
+		if use.has("charges"):
+			def["charges"] = use["charges"]
+		if use.has("look"):
+			def["look"] = use["look"]
 	if def["name"].is_empty():
 		return {"ok": false, "reason": "у предмета нет названия"}
 	return {"ok": true, "def": def}
 
 
+## The `use` of a generated thing (v0.7.18, by the catalog's own shapes): a spell of the engine's book with charges
+## (a wand) or once (a scroll), healing, a resistance or an advantage once (a potion). {} — none; {reason}; or
+## {use, charges?, look?, points}. Points by items.json `use_points`.
+static func _generated_use(items_data: Dictionary, item: Dictionary, spells: Dictionary) -> Dictionary:
+	var u: Variant = item.get("use")
+	if u == null or not (u is Dictionary) or (u as Dictionary).is_empty():
+		return {}
+	var cost: Dictionary = items_data["use_points"]
+	var charges := int(u.get("charges", 0)) if u.get("charges") != null else 0
+	var once := charges <= 0
+	var out := {"points": 0}
+	if u.get("spell") != null and not str(u["spell"]).is_empty():
+		var sp := str(u["spell"])
+		var spell: Dictionary = spells.get(sp, {})
+		if spell.is_empty():
+			return {"reason": "заклинания %s нет в книге движка" % sp}
+		var lvl := maxi(int(spell.get("level", 0)), int(u.get("level", 0)) if u.get("level") != null else 0)
+		if lvl > 3:
+			return {"reason": "заклинание в предмете — не выше 3 круга"}
+		out["use"] = {"spell": sp, "level": lvl}
+		if once:
+			out["use"]["scroll"] = true
+			out["look"] = "свиток"
+			out["points"] = int(cost["scroll"][lvl])
+		else:
+			out["look"] = "волшебная палочка"
+			out["points"] = int(cost["wand"][lvl])
+	elif u.get("heal") != null and not str(u["heal"]).is_empty():
+		var h: Dictionary = cost["heal"].get(str(u["heal"]), {})
+		if h.is_empty():
+			return {"reason": "лечение: light, medium или strong"}
+		out["use"] = {"heal": (h["dice"] as Array).map(func(x: Variant) -> int: return int(x))}
+		out["points"] = int(h["points"])
+		out["look"] = "зелье"
+	elif u.get("resist") != null and not str(u["resist"]).is_empty():
+		out["use"] = {"resist": str(u["resist"]), "duration": "hour"}
+		out["points"] = int(cost["resist"])
+		out["look"] = "зелье"
+	elif u.get("check_adv") != null and not str(u["check_adv"]).is_empty():
+		out["use"] = {"check_adv": str(u["check_adv"]), "duration": "hour"}
+		out["points"] = int(cost["check_adv"])
+		out["look"] = "зелье"
+	else:
+		return {"reason": "use: spell, heal, resist или check_adv"}
+	if not once:
+		if not out["use"].has("spell"):
+			return {"reason": "заряды — только у предмета с заклинанием (жезл); зелья и свитки одноразовые"}
+		var most := int(cost["charges_max"])
+		if charges > most:
+			return {"reason": "зарядов не больше %d" % most}
+		out["charges"] = {"max": charges, "regain": "1d%d" % maxi(1, charges - 1), "crumble": true}
+		if str(item.get("item_type", "")) not in ["wondrous", "weapon", "gear"]:
+			return {"reason": "предмет с зарядами — wondrous (жезл, посох), оружие или снаряжение"}
+	elif str(item.get("item_type", "")) != "consumable":
+		return {"reason": "одноразовый предмет (зелье, свиток) — item_type consumable"}
+	return out
+
+
 ## What using an item does (rules.json `consumables`): {"heal": [n, sides, bonus], "remove": [conditions]}; {} = not usable.
-static func consumable(data: Dictionary, id: String) -> Dictionary:
+## `session_items` — the generated things of the game: a thing the master made has its own `use` too (v0.7.18).
+static func consumable(data: Dictionary, id: String, session_items: Dictionary = {}) -> Dictionary:
 	id = real_id(id)
 	if id.begins_with("_"):
 		return {}
 	var all: Dictionary = data["rules"].get("consumables", {})
 	if all.has(id):
 		return all[id]
+	if session_items.has(id):
+		return session_items[id].get("use", {})
 	return data["items"]["catalog"].get(id, {}).get("use", {})  # potions, scrolls, wands, the pearl (v0.7.12)
 
 
@@ -386,7 +459,7 @@ static func consumable(data: Dictionary, id: String) -> Dictionary:
 static func can_use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, pending: int = 0) -> String:
 	if int(c.get("inventory", {}).get(id, 0)) - pending <= 0:
 		return "у персонажа нет %s" % display_name(data["items"], session_items, id)
-	var fx := consumable(data, id)
+	var fx := consumable(data, id, session_items)
 	if fx.is_empty():
 		return "%s нельзя использовать так — это не расходник с действием движка" % display_name(data["items"], session_items, id)
 	var d := def_of(data["items"], session_items, id)
@@ -402,7 +475,7 @@ static func can_use(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 ## Uses one item (can_use first): removes it, heals, lifts conditions; with the session (v0.7.8) it also leaves its
 ## boon for a while (antitoxin — advantage on saves against poison for an hour). Returns the chat lines.
 static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, rng: RandomNumberGenerator, s: GameSession = null) -> Array[String]:
-	var fx := consumable(data, id)
+	var fx := consumable(data, id, session_items)
 	var d := def_of(data["items"], session_items, real_id(id))
 	var lines: Array[String] = ["Использовано: %s" % d.get("name", id)]
 	lines.append_array(consume(c, data, session_items, id, rng))

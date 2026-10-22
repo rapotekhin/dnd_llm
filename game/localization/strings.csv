@@ -436,6 +436,7 @@ ITEM_WEAPON_SIMPLE_MELEE,Простое оружие ближнего боя
 ITEM_WEAPON_SIMPLE_RANGED,Простое дальнобойное оружие
 ITEM_WEIGHT,{n} фнт.
 JOURNAL_ELSEWHERE,В пути
+ITEM_WRITTEN,"Написано: «{text}»"
 JOURNAL_NOTES,Что было
 JOURNAL_REMEMBERS,помнит: {fact}
 JOURNAL_EMPTY,"Пока пусто: записи появятся, когда вы осмотритесь и поговорите с людьми."

@@ -85,6 +85,50 @@
 		"very_rare": 5000000,
 		"legendary": 50000000
 	},
+	"use_points": {
+		"_doc": "Rarity points of a generated thing's `use` (v0.7.18), by the circle of its spell 0–3: a scroll (once) and a wand (charges, up to charges_max; regains 1d(charges−1) at dawn); potions — healing light/medium/strong (dice of 2d4+2 … 8d4+8), resistance, an advantage on a skill.",
+		"scroll": [
+			0,
+			0,
+			2,
+			2
+		],
+		"wand": [
+			1,
+			2,
+			4,
+			5
+		],
+		"charges_max": 7,
+		"heal": {
+			"light": {
+				"dice": [
+					2,
+					4,
+					2
+				],
+				"points": 0
+			},
+			"medium": {
+				"dice": [
+					4,
+					4,
+					4
+				],
+				"points": 2
+			},
+			"strong": {
+				"dice": [
+					8,
+					4,
+					8
+				],
+				"points": 4
+			}
+		},
+		"resist": 2,
+		"check_adv": 0
+	},
 	"catalog": {
 		"abacus": {
 			"name": "Счёты",

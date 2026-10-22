@@ -525,13 +525,13 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	# Items.
 	var usable: Array[String] = []
 	for id: String in c.get("inventory", {}):
-		if not ItemRules.consumable(data, id).is_empty():
+		if not ItemRules.consumable(data, id, s.items).is_empty():
 			usable.append(id)
 	if not usable.is_empty():
 		var ib := _tab_box("COMBAT_TAB_ITEMS")
 		for id: String in usable:
 			var d := ItemRules.def_of(data["items"], s.items, id)
-			var fx := ItemRules.consumable(data, id)
+			var fx := ItemRules.consumable(data, id, s.items)
 			var label := "%s ×%d" % [d.get("name", id), int(c["inventory"][id])]
 			if ItemRules.charges_max(d) > 0:
 				label = "%s (%d/%d)" % [d.get("name", id), ItemRules.charges_left(c, d, id), ItemRules.charges_max(d)]

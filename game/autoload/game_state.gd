@@ -294,7 +294,7 @@ func attach_choices() -> Array[Dictionary]:
 				continue
 			out.append({"kind": "feature_note", "id": str(fid), "name": str(f["name"]), "slots": [], "off": false})
 	for iid: String in c.get("inventory", {}):
-		var usable := not ItemRules.consumable(data, iid).is_empty()
+		var usable := not ItemRules.consumable(data, iid, session.items).is_empty()
 		out.append({"kind": "item" if usable else "item_note", "id": iid,
 			"name": "%s ×%d" % [ItemRules.display_name(data["items"], session.items, iid), int(c["inventory"][iid])], "slots": [], "off": false})
 	return out
