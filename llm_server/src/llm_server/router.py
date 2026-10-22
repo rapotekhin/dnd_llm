@@ -71,12 +71,19 @@ def router_prompt(params: TurnRequestParams) -> str:
 
 def build_router_agent(model: Model) -> Agent[None, RouteOutput]:
     return Agent(model, output_type=RouteOutput, instructions=ROUTER_SYSTEM, retries=1, name="router",
-                 model_settings=settings_for(model, {"temperature": 0.0, "max_tokens": 200}))
+                 model_settings=_no_thinking(settings_for(model, {"temperature": 0.0, "max_tokens": 600})))
 
 
 def build_short_agent(model: Model, system: str) -> Agent[None, ShortOutput]:
     return Agent(model, output_type=ShortOutput, instructions=system, retries=1, name="short_turn",
-                 model_settings=settings_for(model, {"temperature": 0.8, "max_tokens": 900}))
+                 model_settings=_no_thinking(settings_for(model, {"temperature": 0.8, "max_tokens": 2000})))
+
+
+def _no_thinking(settings: dict) -> dict:
+    """A short request needs no reasoning: DeepSeek thought the router's whole budget away (v0.7.21 `--route` goldens)."""
+    settings = dict(settings)
+    settings["openrouter_reasoning"] = {"enabled": False}
+    return settings
 
 
 def short_system(params: TurnRequestParams) -> str:
