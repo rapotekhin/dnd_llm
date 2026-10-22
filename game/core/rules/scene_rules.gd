@@ -31,17 +31,25 @@ static func room(s: GameSession, world: Dictionary, room_id: String) -> Dictiona
 
 
 ## The pack NPCs standing in the room now (alive or not): the room's people (by its variants), minus those whose
-## `schedule` sends them elsewhere at this hour, plus those it sends here (v0.7.14.2).
+## `schedule` sends them elsewhere at this hour, plus those it sends here (v0.7.14.2); those who go with the hero stand
+## where the hero is, those left in a room stand there (v0.7.20.3, FollowRules).
 static func npcs(s: GameSession, world: Dictionary, room_id: String) -> Array[String]:
 	var out: Array[String] = []
+	var all: Dictionary = world.get("npcs", {})
 	for n: Variant in room(s, world, room_id).get("npcs", []):
 		var at: Variant = scheduled(s, world, str(n))
-		if at == null or str(at) == room_id:
+		if (at == null or str(at) == room_id) and not FollowRules.placed(s, str(n)):
 			out.append(str(n))
-	var all: Dictionary = world.get("npcs", {})
 	for id: String in all:
-		if all[id].has("schedule") and not out.has(id) and str(scheduled(s, world, id)) == room_id:
+		if all[id].has("schedule") and not out.has(id) and not FollowRules.placed(s, id) and str(scheduled(s, world, id)) == room_id:
 			out.append(id)
+	for id: String in s.npc_at:
+		if str(s.npc_at[id]) == room_id and all.has(id) and not out.has(id):
+			out.append(id)
+	if room_id == s.room_id:
+		for id: String in s.followers:
+			if all.has(id) and not out.has(id):
+				out.append(id)
 	return out
 
 
@@ -63,7 +71,7 @@ static func absent(s: GameSession, world: Dictionary, room_id: String) -> Array[
 	for n: Variant in room(s, world, room_id).get("npcs", []):
 		var id := str(n)
 		var at: Variant = scheduled(s, world, id)
-		if at == null or str(at) == room_id or s.dead_npcs.has(id):
+		if at == null or str(at) == room_id or s.dead_npcs.has(id) or FollowRules.placed(s, id):
 			continue
 		var back := 0
 		for e: Dictionary in world["npcs"][id]["schedule"]:

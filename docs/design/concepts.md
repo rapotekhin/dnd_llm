@@ -27,6 +27,7 @@
 |---|---|---|---|---|
 | NPC | имя, роль, раса, пол, внешность, характер, шаблон SRD, языки, теги, наследник, связи | `WorldView`, `SocialRules`, `WorldGen` | пакет `npcs`; созданные — `session.generated` | **мастер** (`create_npc` после `find_npcs`, v0.7.20) |
 | Расписание | часы → комната или «нет на месте» | `SceneRules.scheduled` (v0.7.14.2) | пакет `schedule` | пакет |
+| Спутник | идёт с героем; оставлен в комнате; вернулся к себе | `FollowRules` (v0.7.20.3) | `rules.json` `followers` | **мастер** (`npc_follow`) |
 | Репутация в поселении | очки → ступень −3…+3, источники, цены, отношение незнакомых | `ReputationRules` (v0.7.17) | `rules.json` `reputation`, пакет `settlement` | **мастер** (`reputation` за поступок) |
 | Отношение | −3…+3, пороги (враждебен, близкий друг) | `GameSession.attitude`, `SocialRules.refuses` / `eager` | — | **мастер** (`npc_attitude`) |
 | Память NPC | факты о герое с днём | `GameSession.remember` (v0.7.15) | движок пишет сам | **мастер** (`note` с `npc_id`) |

@@ -303,6 +303,11 @@
 		"stock_item_cap_cp": 5000,
 		"purse_cp": 3000
 	},
+	"followers": {
+		"_doc": "NPCs who go with the hero (v0.7.20.3, FollowRules): the effect npc_follow — to one with an attitude of at least min_attitude or won over by a check this turn; at most max at once.",
+		"min_attitude": 2,
+		"max": 3
+	},
 	"reputation": {
 		"_doc": "Reputation in a settlement (v0.7.17, ReputationRules): points of the hero in a pack location with settlement: true; thresholds → steps −3…+3 (names); points by the engine's facts; master_max — the master's effect for a deed the place learned of; prices of every trader of the place (buy_pct the hero pays, sell_pct the trader pays) and the attitude of the people not dealt with yet (stranger_attitude).",
 		"thresholds": [5, 15, 30],

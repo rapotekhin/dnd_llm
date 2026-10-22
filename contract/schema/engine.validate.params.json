@@ -1347,6 +1347,37 @@
       "title": "NpcFavorEffect",
       "type": "object"
     },
+    "NpcFollowEffect": {
+      "additionalProperties": false,
+      "description": "An NPC of the scene goes with the hero (0.33.0): from now on it stands wherever the hero is. `follow: false` —\none who follows stays here (`home: true` — goes back to its own place). The engine allows following to one\ndisposed to the hero («дружески») or won over by a check this turn; a few at once.",
+      "properties": {
+        "follow": {
+          "default": true,
+          "title": "Follow",
+          "type": "boolean"
+        },
+        "home": {
+          "default": false,
+          "title": "Home",
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "npc_follow",
+          "default": "npc_follow",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id"
+      ],
+      "title": "NpcFollowEffect",
+      "type": "object"
+    },
     "NpcLink": {
       "additionalProperties": false,
       "properties": {
@@ -1829,6 +1860,7 @@
           "npc_attitude": "#/$defs/NpcAttitudeEffect",
           "npc_discount": "#/$defs/NpcDiscountEffect",
           "npc_favor": "#/$defs/NpcFavorEffect",
+          "npc_follow": "#/$defs/NpcFollowEffect",
           "prop_state": "#/$defs/PropStateEffect",
           "put_in": "#/$defs/PutInEffect",
           "reputation": "#/$defs/ReputationEffect",
@@ -1936,6 +1968,9 @@
         },
         {
           "$ref": "#/$defs/CreatePlaceEffect"
+        },
+        {
+          "$ref": "#/$defs/NpcFollowEffect"
         }
       ],
       "title": "Effect"

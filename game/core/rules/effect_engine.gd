@@ -307,6 +307,12 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if str(e["kind"]) == "npc_discount":
 				return SocialRules.plan_discount(s, data, npc_id, int(e.get("percent", 0)), won)
 			return SocialRules.plan_favor(s, data, npc_id, str(e.get("service", "")), str(e.get("item_id", "")) if e.get("item_id") != null else "", won)
+		"npc_follow":  # an NPC goes with the hero, or stays (v0.7.20.3)
+			var fid := str(e.get("npc_id", ""))
+			if pending.any(func(p: Dictionary) -> bool: return str(p["plan"].get("follow_npc", "")) == fid):
+				return {"reason": "это уже есть в этом ходе"}
+			return FollowRules.plan(s, data, fid, bool(e.get("follow", true)), bool(e.get("home", false)),
+				(_won_over.get(turn_id, []) as Array).has(fid))
 		"reputation":  # the place learned of a deed of the hero (v0.7.17)
 			return ReputationRules.plan(s, data, int(e.get("delta", 0)), str(e.get("reason", "")), pending)
 		"reveal_secret":  # the NPC tells a secret of its own by goodwill (v0.7.15.3)
@@ -637,6 +643,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			if str(sec["id"]) == str(plan["secret"]):
 				SocialRules.tell(s, _data, str(plan["secret_npc"]), sec)
 		_extra_lines.append_array(QuestRules.advance(s, _data))
+		return
+	if plan.has("follow_npc"):  # npc_follow (v0.7.20.3)
+		FollowRules.apply(s, plan)
 		return
 	if plan.has("discount"):  # npc_discount (v0.7.15.2)
 		SocialRules.grant_discount(s, _data, plan)

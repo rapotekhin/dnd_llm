@@ -81,7 +81,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         description += " На виду: " + "; ".join(names) + "."
     npcs = [{"npc_id": n["id"], "name": n["name"], "role": n.get("role", ""), "trader": bool(n.get("trader", False)),
              "attitude": ATTITUDE.get(str(n.get("attitude", "indifferent")), 0),
-             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie", "memory", "services", "deal", "secrets", "refuses", "eager") if k in n}} for n in scene.get("npcs", [])]
+             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie", "memory", "services", "deal", "secrets", "refuses", "eager", "follows") if k in n}} for n in scene.get("npcs", [])]
     ch = snap.get("character", {})
     hp = ch.get("hp", {})
     history = []

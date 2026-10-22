@@ -704,6 +704,11 @@
           "title": "Eager",
           "type": "boolean"
         },
+        "follows": {
+          "default": false,
+          "title": "Follows",
+          "type": "boolean"
+        },
         "gender": {
           "default": "other",
           "enum": [

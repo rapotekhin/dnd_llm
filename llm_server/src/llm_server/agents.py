@@ -54,10 +54,11 @@ RETRY_MAX_TOKENS = 6000
 
 
 def _json_object(value: Any) -> Any:
-    # Some models (Qwen 3.x) send a nested object argument as a JSON string.
+    # Some models (Qwen 3.x, DeepSeek) send a nested object argument as a JSON string, at times with a stray bracket
+    # after it (`{…}]`): the first JSON value of the string is taken, what follows it is dropped.
     if isinstance(value, str):
         try:
-            return json.loads(value)
+            return json.JSONDecoder().raw_decode(value.strip())[0]
         except ValueError:
             return value
     return value

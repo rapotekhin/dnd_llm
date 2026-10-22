@@ -305,6 +305,17 @@ def test_effect_sent_as_a_json_string_is_accepted(data_dir):
     assert msg["result"]["effect_ids"] == ["e-1"]
 
 
+def test_effect_string_with_a_stray_bracket_after_it_is_accepted(data_dir):
+    # DeepSeek at times sends the effect as a string with a stray `]` after the object (a place was never made).
+    fn = scripted(
+        ("propose_effect", {"effect": '{"kind": "npc_follow", "npc_id": "npc_guard"}]'}),
+        ("final", lambda m: {"narration": "Ведда идёт с тобой.", "effect_ids": [effect_id(m)]}),
+    )
+    msg, calls, _ = play(data_dir, fn)
+    assert calls[0]["params"]["effect"] == {"kind": "npc_follow", "npc_id": "npc_guard", "follow": True, "home": False}
+    assert msg["result"]["effect_ids"] == ["e-1"]
+
+
 def test_a_search_check_passes_what_the_engine_revealed(data_dir):
     def engine(method, params):
         if method == "engine.check":

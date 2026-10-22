@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.32.0"
+PROTOCOL_VERSION = "0.33.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -154,6 +154,7 @@ class SceneNpc(_In):
     secrets: list[str] = Field(default_factory=list)  # untold secrets as hints: «[cellar] нервничает из-за погреба — …» (0.22.0)
     refuses: bool = False  # hostile: will not talk or trade (0.22.0)
     eager: bool = False  # a close friend: offers help by itself (0.22.0)
+    follows: bool = False  # goes with the hero from room to room (0.33.0)
 
 
 class SceneProp(_In):
@@ -832,6 +833,17 @@ class RevealSecretEffect(_Out):
     secret_id: str
 
 
+class NpcFollowEffect(_Out):
+    """An NPC of the scene goes with the hero (0.33.0): from now on it stands wherever the hero is. `follow: false` —
+    one who follows stays here (`home: true` — goes back to its own place). The engine allows following to one
+    disposed to the hero («дружески») or won over by a check this turn; a few at once."""
+
+    kind: Literal["npc_follow"] = "npc_follow"
+    npc_id: str
+    follow: bool = True
+    home: bool = False
+
+
 class AcceptQuestEffect(_Out):
     """The hero takes by words a quest its giver here offers (0.21.0), like the button «Взять задание»."""
 
@@ -850,7 +862,7 @@ Effect = Annotated[
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
-    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect,
+    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect,
     Field(discriminator="kind"),
 ]
 

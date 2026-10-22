@@ -205,6 +205,14 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 43. Протокол 0.33.0 (v0.7.20.3)
+
+Спутники.
+
+- **Эффект `npc_follow`** (`npc_id`, `follow` = true, `home` = false): NPC сцены идёт с героем — стоит там, где герой (`session.followers`); `follow: false` — остаётся в этой комнате (`session.npc_at`), с `home: true` — возвращается к себе. Движок: от «дружески» или успешная проверка с этим NPC в ходе; до `rules.followers.max`.
+- **`scene.npcs[].follows`** — идёт с героем.
+- Аргумент `effect` строкой JSON принимается и с мусором после объекта (`{…}]`).
+
 ### 42. Протокол 0.32.0 (v0.7.20.1)
 
 Генерация мест.

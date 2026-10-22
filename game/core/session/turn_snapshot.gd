@@ -23,7 +23,8 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"memory": s.memory_of(id, int(data["rules"].get("social", {}).get("memory_in_snapshot", 8))),
 			"services": (n.get("services", []) as Array).map(func(x: Variant) -> String: return "%s [%s]" % [SocialRules.tr_service(data, str(x)), x]),
 			"deal": SocialRules.deal_text(s, data, id),
-			"secrets": SocialRules.secret_hints(s, data, id), "refuses": SocialRules.refuses(s, data, id), "eager": SocialRules.eager(s, data, id)})
+			"secrets": SocialRules.secret_hints(s, data, id), "refuses": SocialRules.refuses(s, data, id), "eager": SocialRules.eager(s, data, id),
+			"follows": s.followers.has(id)})
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
 		summaries["location"] = s.summaries["location:" + loc_id]
