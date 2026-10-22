@@ -767,7 +767,7 @@ func _parley_check(params: Dictionary) -> Dictionary:
 		dis_why.append("без общего языка — жесты и оружие")  # v0.7.11
 	p["disadvantage_reason"] = ", ".join(dis_why)
 	p["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
-	var result := CheckEngine.roll(Catalog.rules(), session.rng, p, CheckEngine.bonus_for(session.character, p), session.next_check_id())
+	var result := _hero_roll(p, CheckEngine.bonus_for(session.character, p))
 	var lines: Array[String] = ["%s — %s: %d против Сл %d — %s" % [session.character["name"], tr("SKILL_" + skill.to_upper()),
 		int(result["total"]), int(result["dc"]), "успех" if bool(result["success"]) else "провал"]]
 	var outcome := CombatRules.parley_apply(session, Catalog.data, skill, bool(result["success"]))
@@ -900,7 +900,7 @@ func container_unlock(prop_id: String, how: String) -> String:
 			var db := ExplorationRules.disarm_bonus(session.character)
 			bonus = int(db["bonus"])
 			params["disadvantage_reason"] = str(db["disadvantage_reason"])
-		var result := CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
+		var result := _hero_roll(params, bonus)
 		_add(GameSession.check_entry(params, result))
 		TimeRules.advance(session, Catalog.data, int(ContainerRules.cfg(Catalog.data).get("minutes", 1)))
 		if not bool(result["success"]):
@@ -933,7 +933,7 @@ func steal(npc_id: String, entry_id: String) -> String:
 	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
 	params["disadvantage_reason"] = ", ".join((mods["disadvantage"] as Array).map(cond_name))
 	params["advantage_reason"] = tr("THEFT_HIDDEN") if session.sneaking else ""
-	var result := CheckEngine.roll(Catalog.rules(), session.rng, params, CheckEngine.bonus_for(session.character, params), session.next_check_id())
+	var result := _hero_roll(params, CheckEngine.bonus_for(session.character, params))
 	_add(GameSession.check_entry(params, result))
 	var lines := TheftRules.steal(session, Catalog.data, npc_id, entry_id, bool(result["success"]))
 	_add(GameSession.effect_entry(lines))
@@ -1115,6 +1115,20 @@ func finish_combat(take: Array = []) -> void:
 
 
 ## Changes the master style of the running game (settings screen); kept in the save.
+## A check of the hero by the engine with the game's difficulty (v0.7.20.4): its bonus is in the total and on the card.
+func _hero_roll(params: Dictionary, bonus: int) -> Dictionary:
+	var extra := DifficultyRules.bonus(session, Catalog.data)
+	var result := CheckEngine.roll(Catalog.rules(), session.rng, params, bonus + extra, session.next_check_id())
+	if extra != 0 and not result.has("error"):
+		result["difficulty_note"] = DifficultyRules.note(session, Catalog.data)
+	return result
+
+
+func set_difficulty(id: String) -> void:
+	if session != null and DifficultyRules.levels(Catalog.data).has(id):
+		session.settings["difficulty"] = id
+
+
 func set_dm_style(style: String) -> void:
 	if session != null and WorldPack.DM_STYLES.has(style):
 		session.settings["dm_style"] = style
@@ -1376,7 +1390,7 @@ func trap_action(to: String, disarm: bool) -> String:
 		var db := ExplorationRules.disarm_bonus(session.character)
 		bonus = int(db["bonus"])
 		params["disadvantage_reason"] = str(db["disadvantage_reason"])
-	var result := CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
+	var result := _hero_roll(params, bonus)
 	_add(GameSession.check_entry(params, result))
 	var lines: Array[String] = []
 	if bool(result["success"]):
@@ -1954,7 +1968,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		if not str(spell_die["note"]).is_empty():
 			_add(GameSession.effect_entry(["Проверка: " + str(spell_die["note"])]))
 		var bonus := CheckEngine.bonus_for(session.character, params) + _terrain_bonus(params) + int(tool_fx["bonus"]) + int(spell_die["bonus"])
-		result = CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
+		result = _hero_roll(params, bonus)
 		if result.has("error"):
 			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
 		if not bool(result["success"]) and int(result["nat"]) != 1 and str(params.get("auto_fail_reason", "")).is_empty():
@@ -2079,7 +2093,7 @@ func _haggle_check(params: Dictionary) -> Dictionary:
 		p["dc_tier"] = "medium"
 		if bool(DevelopmentRules.effect(session.character, Catalog.data, "trade", "haggle_adv", false)):  # v0.7.19.1
 			p["advantage_reason"] = str(DevelopmentRules.direction(Catalog.data, "trade")["skills"]["silver_tongue"]["name"])
-		result = CheckEngine.roll(Catalog.rules(), session.rng, p, CheckEngine.bonus_for(session.character, p), session.next_check_id())
+		result = _hero_roll(p, CheckEngine.bonus_for(session.character, p))
 		pct = TradeRules.apply_haggle(session, Catalog.data, npc_id, result)
 		result["haggle_pct"] = pct
 	result["note"] = TradeRules.haggle_note(tr("SKILL_" + skill.to_upper()), result, pct)

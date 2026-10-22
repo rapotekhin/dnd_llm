@@ -51,6 +51,7 @@ class Settings:
     daily_budget_usd: float | None = 1.0
     data_dir: Path = REPO_ROOT / "llm_server" / "var"  # budget counter, generated item library
     langfuse: bool = False
+    router: bool = True  # v0.7.20.4: a turn of words only goes with the short prompt; LLM_SERVER_ROUTER=0 — always the full one
     trace: bool = True  # the model side of play sessions in data_dir/traces (v0.7.1); LLM_SERVER_TRACE=0 turns it off
 
     @classmethod
@@ -92,6 +93,7 @@ class Settings:
             openrouter_api_key=key,
             daily_budget_usd=budget,
             data_dir=Path(os.environ.get("LLM_SERVER_DATA_DIR", str(cls.data_dir))),
+            router=os.environ.get("LLM_SERVER_ROUTER", "1").strip() not in ("0", "false", "no", ""),
             trace=os.environ.get("LLM_SERVER_TRACE", "1").strip() not in ("0", "false", "no", ""),
             langfuse=os.environ.get("LANGFUSE_ENABLED") == "1",
         )

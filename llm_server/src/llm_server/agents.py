@@ -130,6 +130,10 @@ class TurnContext:
     searched_places: bool = False  # find_places this turn (v0.7.20.1: before create_place)
     proposed: set[str] = field(default_factory=set)  # effects accepted this turn (proposing one again is refused)
     empty_gives: int = 0  # give_item with neither item_id nor item
+    topics: set[str] = field(default_factory=set)  # rule topics the master has: in the prompt or read with `rules` (v0.7.20.4)
+
+    def __post_init__(self) -> None:
+        self.topics |= set(prompts.auto_topics(self.params.mode, self.params.snapshot))
 
     @property
     def limits(self):
@@ -213,6 +217,9 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
             return "Отказ: give_item — укажи либо item_id существующего предмета, либо item для нового; если давать нечего — не предлагай эффект."
         if effect.item is not None and not t.searched_items:
             return "Отказ: перед созданием нового предмета найди похожие через find_items."
+    topic = prompts.topic_for(effect.kind)
+    if topic and topic not in t.topics:
+        return f"Отказ: сначала прочитай правила темы — rules(\"{topic}\"), потом предложи эффект снова."
     if isinstance(effect, CreateNpcEffect) and not t.searched_npcs:
         return "Отказ: перед созданием человека поищи его через find_npcs."
     if isinstance(effect, CreatePlaceEffect) and not t.searched_places:
@@ -225,7 +232,17 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     t.proposed.add(key)
     if isinstance(effect, GiveItemEffect) and effect.item is not None and t.library is not None and r.item_id:
         t.library.add(r.item_id, effect.item)
-    return f"Принято: effect_id={r.effect_id}. {r.summary}"
+    hint = " Что заклинание сделало в мире — по правилам rules(\"spells\")." if effect.kind == "cast" and "spells" not in t.topics else ""
+    return f"Принято: effect_id={r.effect_id}. {r.summary}{hint}"
+
+
+RuleTopic = Literal[tuple(prompts.TOPICS)]  # type: ignore[valid-type]
+
+
+async def rules(ctx: RunContext[TurnContext], topic: RuleTopic) -> str:
+    """Подробные правила темы из оглавления в системном промпте: прочитай, прежде чем действовать по ней."""
+    ctx.deps.topics.add(topic)
+    return prompts.topic_text(topic)
 
 
 async def lookup(ctx: RunContext[TurnContext], kind: LookupKind, id: str) -> str:
@@ -288,7 +305,7 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -
         output_type=TurnOutput,
         deps_type=TurnContext,
         instructions=system,
-        tools=[request_check, propose_effect, lookup, find_items, find_npcs, find_places],
+        tools=[request_check, propose_effect, rules, lookup, find_items, find_npcs, find_places],
         retries=2,
         model_settings=settings_for(model, base),
     )

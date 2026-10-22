@@ -779,3 +779,14 @@ JOURNAL_FAILED,провалено
 JOURNAL_TAB_CHRONICLE,Хроника
 JOURNAL_EMPTY_CHRONICLE,Здесь появятся события: бои, находки, сделки, раны
 JOURNAL_DAY,День {day}
+CHECK_DIFFICULTY,"С учётом: {note}"
+NG_DIFFICULTY,Сложность
+OPT_DIFFICULTY,Сложность в этой игре
+DIFFICULTY_TRIVIAL,Элементарная
+DIFFICULTY_EASY,Лёгкая
+DIFFICULTY_NORMAL,Средняя
+DIFFICULTY_HARD,Сложная
+DIFFICULTY_TRIVIAL_HINT,"+20 к проверкам и спасброскам героя: почти всё удаётся, кроме натуральной 1."
+DIFFICULTY_EASY_HINT,"+10 к проверкам и спасброскам героя: обычные трудности почти не страшны."
+DIFFICULTY_NORMAL_HINT,"Броски по правилам 5e, без поправок."
+DIFFICULTY_HARD_HINT,"−5 к проверкам и спасброскам героя: каждый бросок даётся тяжелее."

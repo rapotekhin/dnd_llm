@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.33.0"
+PROTOCOL_VERSION = "0.34.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -483,6 +483,7 @@ class GeneratedItem(_Out):
 class MoveEffect(_Out):
     kind: Literal["move"] = "move"
     room_id: str
+    npcs: list[str] = Field(default_factory=list)  # NPCs of the scene who go along (0.33.0): as npc_follow, checked by the engine
 
 
 class DamageEffect(_Out):

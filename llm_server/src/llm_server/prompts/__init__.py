@@ -87,6 +87,64 @@ def render(name: str, **context: object) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+# Rules of a topic (prompts/topics/<key>.md.j2, v0.7.20.4): out of the system prompt, read by the master with the tool
+# `rules` when it needs them; the scene puts a topic in by itself when it is there (an open edge, a crime, a stranger).
+# key -> (the line of the index: when to read it, the effect kinds the engine accepts only after it is read or shown).
+TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "conditions": ("состояния героя: яд, страх, сон, паралич, путы, истощение; проверки зрения и слуха (`condition`)", ("condition",)),
+    "spells": ("что заклинание сделало в мире: иллюзии, разговор со зверьми и мёртвыми, гадание; заклинание на себя", ()),
+    "pay": ("покупка у не-торговца, плата за услугу или сведения, платный вариант (`option_costs`), ночлег", ()),
+    "theft": ("кража из карманов: как её отыграть", ()),
+    "items": ("новый предмет (`give_item.item`): жезлы, свитки, зелья, вещи с текстом; магические вещи, неопознанные и проклятые", ()),
+    "places": ("новое место на открытом краю мира (`create_place`)", ("create_place",)),
+    "crime": ("преступления героя: убитые, розыск, стража, признание (`crime_known`)", ("crime_known",)),
+    "social": ("что NPC даёт словами: скидка, услуга даром, тайна, идёт с героем, слава в поселении "
+               "(`npc_discount`, `npc_favor`, `reveal_secret`, `npc_follow`, `reputation`)",
+               ("npc_discount", "npc_favor", "reveal_secret", "npc_follow", "reputation")),
+    "goals": ("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", ()),
+    "equip": ("надеть, снять, раздеться (`equip`)", ("equip",)),
+    "invisible": ("невидимый герой", ()),
+    "people": ("новый человек (`create_npc`)", ("create_npc",)),
+    "languages": ("NPC не понимает героя; языки", ()),
+    "tools": ("действие инструментом: замок, травы, подделка, грим (`request_check` с `tool`)", ()),
+    "background": ("предыстория героя и связь NPC с его прошлым", ()),
+    "containers": ("сундуки, ящики, сумки героя: достать, положить, отпереть, оставить (`take_from`, `put_in`, `unlock`, `drop_item`)",
+                   ("take_from", "put_in", "unlock", "drop_item")),
+}
+
+
+def auto_topics(mode: str, snap: Snapshot) -> list[str]:
+    """Topics the scene needs now: they go into the system prompt whole."""
+    scene, character = snap.scene, snap.character
+    out: list[str] = []
+    if mode != "trade":  # conditions come often and by words (v0.7.20.4 goldens): their rules stay in the prompt
+        out.append("conditions")
+    if mode in ("social", "trade"):
+        out += ["social"] if mode == "trade" else ["social", "pay"]  # in trade the deal panel pays
+    if scene and scene.open_edges:
+        out.append("places")
+    if snap.crimes:
+        out.append("crime")
+    if character and any("невидим" in c for c in character.conditions):
+        out.append("invisible")
+    if scene and any(not n.understands_hero for n in scene.npcs):
+        out.append("languages")
+    if scene and any(n.tie for n in scene.npcs):
+        out.append("background")
+    if scene and any(p.container for p in scene.props):
+        out.append("containers")
+    return [t for t in TOPICS if t in out]
+
+
+def topic_for(kind: str) -> str:
+    """The topic whose rules an effect kind needs ("" — none)."""
+    return next((k for k, (_, kinds) in TOPICS.items() if kind in kinds), "")
+
+
+def topic_text(key: str) -> str:
+    return render(f"topics/{key}.md.j2")
+
+
 def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE) -> str:
     character: CharacterSheet | None = snap.character
     if snap.world is not None and snap.world.tone:
@@ -107,6 +165,9 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
         "tone": tone,
         "gender_rule": gender_rule(character.gender if character else "other"),
     }
+    shown = auto_topics(mode, snap)
+    context["auto_topics"] = shown
+    context["topic_index"] = [(k, v[0]) for k, v in TOPICS.items() if k not in shown]
     if mode == "exploration":
         return render("exploration.md.j2", **context)
     if mode == "combat":
@@ -114,6 +175,16 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
     if npc is None:
         raise ValueError(f"mode {mode} needs an NPC")
     return render(f"{mode}.md.j2", npc=npc, npc_gender_rule=npc_gender_rule(npc.gender), **context)
+
+
+def short_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE) -> str:
+    """The short system prompt of the router (v0.7.20.4): only words, the scene in brief."""
+    if snap.world is not None and snap.world.tone:
+        tone = snap.world.tone
+    character = snap.character
+    return render("short.md.j2", mode=mode, npc=npc if mode != "exploration" else None, scene=snap.scene, world=snap.world,
+                  character=character, tone=tone, gender_rule=gender_rule(character.gender if character else "other"),
+                  npc_gender_rule=npc_gender_rule(npc.gender) if npc else "")
 
 
 def turn_prompt(mode: str, kind: str, player_input: str, snap: Snapshot, npc: SceneNpc | None) -> str:

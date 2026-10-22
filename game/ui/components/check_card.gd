@@ -40,6 +40,12 @@ func _ready() -> void:
 		f.text = tr("CHECK_FOUND").format({"what": found})
 		f.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 		col.add_child(f)
+	if not str(entry.get("difficulty_note", "")).is_empty():  # v0.7.20.4: the game's difficulty in the total
+		var diff := Label.new()
+		diff.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		diff.theme_type_variation = UiTheme.MUTED_LABEL
+		diff.text = tr("CHECK_DIFFICULTY").format({"note": entry["difficulty_note"]})
+		col.add_child(diff)
 	if not str(entry.get("dc_reason", "")).is_empty():  # v0.7.15.1: the DC of a social check by the NPC
 		var why := Label.new()
 		why.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED

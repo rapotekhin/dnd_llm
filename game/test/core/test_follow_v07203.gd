@@ -57,3 +57,14 @@ func test_followers_survive_a_save() -> void:
 	assert_array(back.followers).contains_exactly(["npc_merchant"])
 	back.room_id = "brod-smithy"
 	assert_array(back.npcs_here(data["world"], "brod-smithy")).contains(["npc_merchant"])
+
+
+func test_a_move_takes_the_won_over_along() -> void:
+	# v0.7.20.4, the author's trace: Mira was talked into going upstairs, the master only moved the hero
+	var r := _do({"kind": "move", "room_id": "brod-gate", "npcs": ["npc_merchant"]})
+	assert_str(str(r["reason"])).contains("без него")  # not won over: the move waits for a word without him
+	fx.note_check("t-2", "medium", true, "npc_merchant")
+	r = _do({"kind": "move", "room_id": "brod-gate", "npcs": ["npc_merchant"]}, "t-2")
+	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
+	assert_str(s.room_id).is_equal("brod-gate")
+	assert_array(s.npcs_here(data["world"], "brod-gate")).contains(["npc_merchant"])

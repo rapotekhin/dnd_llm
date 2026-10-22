@@ -141,9 +141,11 @@ static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag
 	var rolls := FeatureRules.hero_d20(s, adv, dis)  # Lucky (v0.7.10)
 	var nat: int = rolls.max() if adv and not dis else rolls.min() if dis and not adv else rolls[0]
 	var die := SpellEffects.hero_die(s, data, "save")  # Bless, Resistance (v0.7.13.1)
-	var total := nat + bonus + int(die["bonus"])
+	var total := nat + bonus + int(die["bonus"]) + DifficultyRules.bonus(s, data)  # the game's difficulty (v0.7.20.4)
 	var ok := nat == 20 or (nat != 1 and total >= dc)
 	var note := (" " + str(die["note"])) if not str(die["note"]).is_empty() else ""
+	if DifficultyRules.bonus(s, data) != 0:
+		note += ", " + DifficultyRules.note(s, data)
 	if not ok and nat != 1 and (mods["auto_fail"] as Array).is_empty():
 		var insp := FeatureRules.use_inspiration(s)  # Bardic Inspiration on a failed save
 		if insp > 0:

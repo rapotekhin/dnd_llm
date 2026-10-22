@@ -15,6 +15,7 @@ AUTH = {"Authorization": f"Bearer {TOKEN}"}
 
 def make_settings(**overrides) -> Settings:
     overrides.setdefault("turn_handler", "stub")
+    overrides.setdefault("router", False)  # the scripted models answer the master only; router tests turn it on
     return Settings(token=TOKEN, **overrides)
 
 

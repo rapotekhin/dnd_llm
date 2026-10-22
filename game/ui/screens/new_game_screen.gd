@@ -121,6 +121,10 @@ func _redraw() -> void:
 	_choice(_form, "dm_style", WorldPack.DM_STYLES, "DM_STYLE_")
 	_text(_form, tr("DM_STYLE_%s_HINT" % str(settings["dm_style"]).to_upper()), true)
 
+	_label(_form, "NG_DIFFICULTY", UiTheme.MUTED_LABEL)
+	_choice(_form, "difficulty", DifficultyRules.levels(Catalog.data), "DIFFICULTY_")
+	_text(_form, tr("DIFFICULTY_%s_HINT" % str(settings.get("difficulty", "normal")).to_upper()), true)
+
 	# «Одна жизнь» comes with the roguelike loop (M5): until then every game is «История» (v0.7.7).
 
 	_label(_form, "NG_VIOLENCE", UiTheme.MUTED_LABEL)

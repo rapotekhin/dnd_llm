@@ -303,6 +303,16 @@
 		"stock_item_cap_cp": 5000,
 		"purse_cp": 3000
 	},
+	"difficulty": {
+		"_doc": "Difficulty of a game (M5, first iteration v0.7.20.4, DifficultyRules): check_bonus is added to the hero's checks and saving throws (death saves too), not to attacks. Chosen for a new game, changed in the settings.",
+		"default": "normal",
+		"levels": {
+			"trivial": {"name": "Элементарная", "check_bonus": 20},
+			"easy": {"name": "Лёгкая", "check_bonus": 10},
+			"normal": {"name": "Средняя", "check_bonus": 0},
+			"hard": {"name": "Сложная", "check_bonus": -5}
+		}
+	},
 	"followers": {
 		"_doc": "NPCs who go with the hero (v0.7.20.3, FollowRules): the effect npc_follow — to one with an attitude of at least min_attitude or won over by a check this turn; at most max at once.",
 		"min_attitude": 2,

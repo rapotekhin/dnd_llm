@@ -1830,7 +1830,7 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 	var id := current(s)
 	if id == PLAYER:
 		if int(s.character["hp"]) <= 0:
-			_death_save(s, lines)
+			_death_save(s, data, lines)
 		elif bool(player(s).get("surprised", false)):
 			player(s).erase("surprised")
 			lines.append("%s застигнут врасплох и не успевает ничего сделать" % s.character["name"])
@@ -1892,7 +1892,7 @@ static func _end_actor(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 		_advance(s, data, lines)
 
 
-static func _death_save(s: GameSession, lines: Array[String]) -> void:
+static func _death_save(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
 	var ds: Dictionary = s.combat["death_saves"]
 	if bool(ds.get("stable", false)):
 		return
@@ -1909,7 +1909,7 @@ static func _death_save(s: GameSession, lines: Array[String]) -> void:
 		s.combat["death_saves"] = {"ok": 0, "fail": 0}
 		lines.append("%s: спасбросок от смерти 20 — приходит в себя с 1 HP!" % s.character["name"])
 		return
-	if roll >= 10:
+	if roll + DifficultyRules.bonus(s, data) >= 10:
 		ds["ok"] = int(ds["ok"]) + 1
 	else:
 		ds["fail"] = int(ds["fail"]) + (2 if roll == 1 else 1)
@@ -2721,7 +2721,7 @@ static func player_inspect(s: GameSession, data: Dictionary, target_id: String) 
 	var dc := lore_dc(data, t)
 	var favored := FeatureRules.has(s.character, "favored_enemy_" + str(_monster(data, t).get("type", "")))  # Favored Enemy (v0.7.10)
 	var roll := _nat(FeatureRules.hero_d20(s, favored, false), favored, false)
-	var total := roll + int(s.character.get("skills", {}).get(skill, 0))
+	var total := roll + int(s.character.get("skills", {}).get(skill, 0)) + DifficultyRules.bonus(s, data)  # v0.7.20.4
 	var ok := roll != 1 and (roll == 20 or total >= dc)
 	if ok:
 		s.known_monsters.append(str(t["monster"]))

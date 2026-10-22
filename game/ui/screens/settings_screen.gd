@@ -169,6 +169,18 @@ func _master_tab() -> Control:
 		style.selected = WorldPack.DM_STYLES.find(str(GameState.session.settings.get("dm_style", "classic")))
 		style.item_selected.connect(func(i: int) -> void: GameState.set_dm_style(WorldPack.DM_STYLES[i]))
 		box.add_child(style)
+		var diff_label := Label.new()
+		diff_label.text = "OPT_DIFFICULTY"
+		diff_label.theme_type_variation = UiTheme.MUTED_LABEL
+		box.add_child(diff_label)
+		var diff := OptionButton.new()
+		diff.name = "DifficultyOption"
+		var levels := DifficultyRules.levels(Catalog.data)
+		for d: Variant in levels:
+			diff.add_item(tr("DIFFICULTY_" + str(d).to_upper()))
+		diff.selected = levels.find(DifficultyRules.level(GameState.session, Catalog.data))
+		diff.item_selected.connect(func(i: int) -> void: GameState.set_difficulty(str(levels[i])))
+		box.add_child(diff)
 	return box
 
 

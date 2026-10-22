@@ -25,6 +25,7 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
+from pydantic_ai.usage import RunUsage
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models import Model
 
@@ -360,10 +361,21 @@ class Outcome:
     output_tokens: int = 0
     cost_usd: float = 0.0
     note: str = ""
+    route: str = ""  # --route: the router's way (v0.7.20.4)
+
+
+class _ShortResult:
+    """A short answer of the router's way in the shape the runner reads."""
+
+    def __init__(self, out: Any, usage: RunUsage) -> None:
+        self.output, self.usage = out, usage
+
+    def all_messages(self) -> list[Any]:
+        return []
 
 
 async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: Model | None,
-                  prices: dict[str, tuple[float, float]]) -> Outcome:
+                  prices: dict[str, tuple[float, float]], route: bool = False) -> Outcome:
     o = Outcome(id=sc["id"], category=sc.get("category", ""), status="pass")
     reason = unsupported(sc)
     if reason:
@@ -378,8 +390,13 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     started = time.monotonic()
     billed: list[float] = []  # what OpenRouter charged for each request (v0.7.14.5)
     token = REQUEST_COSTS.set(billed)
+    short = None
+    before = RunUsage()
     try:
-        result = await agent.run(turn_user_prompt(params), deps=ctx)
+        if route:  # v0.7.20.4: the way of the game — the router, the short prompt, the full one when needed
+            from .turns import _short_turn
+            short, before, o.route = await _short_turn(model, params, turn_user_prompt(params), {})
+        result = _ShortResult(short, before) if short is not None else await agent.run(turn_user_prompt(params), deps=ctx)
     except Exception as exc:  # noqa: BLE001 — a failed model run is a result, not a crash of the runner
         o.status, o.note = "error", f"{type(exc).__name__}: {str(exc)[:300]}"
         o.seconds = time.monotonic() - started
@@ -393,7 +410,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     o.next_mode = {"mode": out.next_mode, "npc_id": out.npc_id} if out.next_mode and out.next_mode != params.mode else None
     o.checks, o.effects = engine.checks(), engine.effects()
     o.tools = [p.tool_name for m in result.all_messages() for p in getattr(m, "parts", []) if isinstance(p, ToolCallPart)]
-    usage = result.usage
+    usage = result.usage if short is not None else before + result.usage
     o.input_tokens, o.output_tokens = usage.input_tokens, usage.output_tokens
     price_in, price_out = prices.get(model_id, (0.0, 0.0))
     o.cost_usd = sum(billed) or (usage.input_tokens * price_in + usage.output_tokens * price_out) / 1e6
@@ -447,7 +464,8 @@ def report_markdown(model_id: str, judge_id: str | None, outcomes: list[Outcome]
     return "\n".join(lines)
 
 
-async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, repeat: int = 1) -> tuple[list[Outcome], Path]:
+async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, repeat: int = 1,
+                  route: bool = False) -> tuple[list[Outcome], Path]:
     import os
 
     from dotenv import load_dotenv
@@ -469,10 +487,10 @@ async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, re
         for sc in load_scenarios():
             if only and sc["id"] not in only:
                 continue
-            o = await run_one(sc, model, model_id, judge_model, prices)
+            o = await run_one(sc, model, model_id, judge_model, prices, route)
             if repeat > 1:
                 o.id = f"{o.id}#{n + 1}"
-            print(f"{o.status:12} {o.id:34} {o.seconds:5.1f}s  ${o.cost_usd:.4f}  {'; '.join(o.fails)[:120]}", flush=True)
+            print(f"{o.status:12} {o.id:34} {o.seconds:5.1f}s  ${o.cost_usd:.4f}  {o.route + '  ' if o.route else ''}{'; '.join(o.fails)[:120]}", flush=True)
             outcomes.append(o)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     stem = f"{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{re.sub(r'[^A-Za-z0-9._-]+', '_', model_id)}"
@@ -493,13 +511,14 @@ def main() -> None:
     parser.add_argument("--judge", default="google/gemini-3.8-flash", help="judge model id")
     parser.add_argument("--no-judge", action="store_true")
     parser.add_argument("--only", default="", help="comma-separated scenario ids")
+    parser.add_argument("--route", action="store_true", help="the game's way: the router and the short prompt (v0.7.20.4)")
     parser.add_argument("--repeat", type=int, default=1, help="run every scenario N times (models are not deterministic)")
     opts = parser.parse_args()
     from .config import DEFAULT_MODEL
 
     model_id = opts.model or os.environ.get("LLM_SERVER_MODEL") or DEFAULT_MODEL
     only = {s.strip() for s in opts.only.split(",") if s.strip()} or None
-    outcomes, md = asyncio.run(run_all(model_id, None if opts.no_judge else opts.judge, only, opts.repeat))
+    outcomes, md = asyncio.run(run_all(model_id, None if opts.no_judge else opts.judge, only, opts.repeat, opts.route))
     print(f"\nreport: {md}")
     sys.exit(1 if any(o.status in ("fail", "error") for o in outcomes) else 0)
 

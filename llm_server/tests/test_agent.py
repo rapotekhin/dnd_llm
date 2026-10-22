@@ -308,6 +308,7 @@ def test_effect_sent_as_a_json_string_is_accepted(data_dir):
 def test_effect_string_with_a_stray_bracket_after_it_is_accepted(data_dir):
     # DeepSeek at times sends the effect as a string with a stray `]` after the object (a place was never made).
     fn = scripted(
+        ("rules", {"topic": "social"}),
         ("propose_effect", {"effect": '{"kind": "npc_follow", "npc_id": "npc_guard"}]'}),
         ("final", lambda m: {"narration": "Ведда идёт с тобой.", "effect_ids": [effect_id(m)]}),
     )
@@ -350,6 +351,7 @@ def test_a_haggle_check_passes_the_engine_note(data_dir):
 def test_cast_and_condition_effects_reach_the_engine(data_dir):
     fn = scripted(
         ("propose_effect", {"effect": {"kind": "cast", "spell": "Волшебная стрела"}}),
+        ("rules", {"topic": "conditions"}),
         ("propose_effect", {"effect": {"kind": "condition", "condition": "poisoned", "duration": "hour", "reason": "яд в кружке",
                                        "save": {"ability": "con", "dc_tier": "medium"}, "tag": "poison"}}),
         ("final", lambda m: {"narration": "Стрелы срываются с пальцев.", "effect_ids": ["e-1", "e-2"]}),
@@ -357,6 +359,21 @@ def test_cast_and_condition_effects_reach_the_engine(data_dir):
     msg, calls, _ = play(data_dir, fn)
     kinds = [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"]
     assert kinds == ["cast", "condition"]
+
+
+def test_an_effect_of_a_topic_waits_for_its_rules(data_dir):
+    # v0.7.20.4: the rules of a topic left the system prompt; its effect is refused until the master reads them
+    fn = scripted(
+        ("propose_effect", {"effect": {"kind": "equip", "slot": "armor"}}),
+        ("rules", {"topic": "equip"}),
+        ("propose_effect", {"effect": {"kind": "equip", "slot": "armor"}}),
+        ("final", lambda m: {"narration": "Ты снимаешь кольчугу.", "effect_ids": [effect_id(m)]}),
+    )
+    msg, calls, _ = play(data_dir, fn)
+    assert [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"] == ["equip"]
+    texts = [last_tool_text(p) for p in fn.state["prompts"][1:3]]
+    assert 'rules(\\"equip\\")' in texts[0] or 'rules("equip")' in texts[0]
+    assert "Снаряжение — эффектом `equip`" in texts[1]
 
 
 def test_a_turn_out_of_output_tokens_is_tried_again_with_more(data_dir):
@@ -396,3 +413,32 @@ def test_forgotten_effect_ids_are_taken_from_the_turn(data_dir):
     )
     msg, calls, services = play(data_dir, fn)
     assert msg["result"]["effect_ids"] == ["e-1"]
+
+
+def _routed(data_dir, fn):
+    return make_services(data_dir, model_factory=lambda m: FunctionModel(fn, model_name=m), turn_handler="agent", router=True)
+
+
+def test_a_turn_the_engine_resolved_goes_short_without_a_router(data_dir):
+    # v0.7.20.4: a deal is only retold — the short prompt, no rules, no tools, no router call
+    fn = scripted(("final", {"narration": "Бруно ставит кружку перед тобой.", "options": ["Выпить"]}))
+    msg, calls, _ = play(data_dir, fn, services=_routed(data_dir, fn), kind="deal", input="куплено: эль")
+    assert msg["result"]["narration"] == "Бруно ставит кружку перед тобой." and calls == []
+    system = str(fn.state["prompts"][0][0].instructions)
+    assert "Короткий ход" in system and len(system) < 4000 and fn.state["n"] == 1
+
+
+def test_the_router_sends_words_short_and_deeds_full(data_dir):
+    fn = scripted(("final", {"full": False}), ("final", {"narration": "Борик кивает: тихий вечер."}))
+    msg, _, _ = play(data_dir, fn, services=_routed(data_dir, fn), input="спрашиваю, как вечер")
+    assert msg["result"]["narration"] == "Борик кивает: тихий вечер." and fn.state["n"] == 2
+    fn = scripted(("final", {"full": True}), ("request_check", {"skill": "investigation", "dc_tier": "medium", "reason": "обыск"}),
+                  ("final", {"narration": "Под стойкой — ничего."}))
+    msg, calls, _ = play(data_dir, fn, services=_routed(data_dir, fn), input="обыскиваю стойку")
+    assert [c["method"] for c in calls] == ["engine.check"] and "Подробные правила" in str(fn.state["prompts"][1][0].instructions)
+
+
+def test_the_short_master_may_ask_for_the_full_prompt(data_dir):
+    fn = scripted(("final", {"full": False}), ("final", {"need_full": True}), ("final", {"narration": "Ты отдаёшь монету."}))
+    msg, _, _ = play(data_dir, fn, services=_routed(data_dir, fn), input="кидаю монету нищему")
+    assert msg["result"]["narration"] == "Ты отдаёшь монету." and fn.state["n"] == 3

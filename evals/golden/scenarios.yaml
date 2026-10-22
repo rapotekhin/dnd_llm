@@ -1505,6 +1505,20 @@ scenarios:
     rubric:
       - "Ведда соглашается пойти с героем, и мастер оформляет это эффектом npc_follow с её npc_id (не только словами); если герой уходит в погреб — она там вместе с ним"
 
+  - id: npc_goes_along_on_move
+    title: "Уговорил NPC пойти вместе и сразу идёт — move с npcs"
+    category: social
+    extends: tavern
+    input: "Ведда, спустись со мной в погреб — там кто-то скребётся, одному не с руки. Спускаемся."
+    engine:
+      check: {d20: [15], bonus: 3, total: 18, dc: 15, success: true, nat: 15, blocked: false}
+      validate:
+        - {kind: move, summary: "Переход: Погреб (с героем: сержант Ведда)"}
+    expect:
+      effects: {required_kinds_any: [move, npc_follow]}
+    rubric:
+      - "Ведда соглашается и спускается вместе с героем: мастер указывает её в npcs эффекта move (или даёт npc_follow), а не только описывает словами; в описании погреба она рядом"
+
   - id: favor_from_a_friend
     title: "Друг-жрица опознаёт вещь даром"
     category: social

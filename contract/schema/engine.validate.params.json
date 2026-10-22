@@ -928,6 +928,13 @@
           "title": "Kind",
           "type": "string"
         },
+        "npcs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Npcs",
+          "type": "array"
+        },
         "room_id": {
           "title": "Room Id",
           "type": "string"

@@ -73,6 +73,18 @@ def test_npc_prompts():
         prompts.system_prompt("social", s, None)
 
 
+def test_rule_topics_out_of_the_prompt_unless_the_scene_needs_them():
+    # v0.7.20.4: a topic's rules come by `rules(topic)`; the index names the rest, the scene brings its own
+    s = snap()
+    text = prompts.system_prompt("exploration", s, None)
+    assert "Снаряжение — эффектом `equip`" not in text and "`equip` — надеть, снять" in text
+    assert "Новое место — только `create_place`" not in text
+    s.scene.open_edges = ["[0] чаща по обе стороны просеки (forest)"]
+    text = prompts.system_prompt("exploration", s, None)
+    assert "Новое место — только `create_place` на открытом краю" in text and "`places` —" not in text
+    assert all(prompts.topic_text(k).strip() for k in prompts.TOPICS)
+
+
 def test_trade_prompt_lists_engine_prices_and_haggle_state():
     raw = tavern_snapshot()
     raw["trade"] = {"npc_id": INNKEEPER, "purse_cp": 3000, "haggle_pct": 10,

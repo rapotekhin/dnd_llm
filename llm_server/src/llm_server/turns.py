@@ -14,10 +14,10 @@ from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UnexpectedMode
 from pydantic_ai.models import Model
 from pydantic_ai.usage import RunUsage, UsageLimits
 
-from . import prompts
+from . import prompts, router
 from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER
-from .agents import RETRY_MAX_TOKENS, TurnContext, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
+from .agents import RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
 from .protocol import (
     CoinsEffect,
     ConditionEffect,
@@ -183,6 +183,19 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
              "npc_id": params.npc_id, "model": model, "system": system, "user": user_prompt}
     billed: list[float] = []
     token = REQUEST_COSTS.set(billed)
+    before = RunUsage()  # the router and a short attempt, paid on top of the full run (v0.7.20.4)
+    try:
+        if not services.settings.router:
+            raise _NoRouter
+        short, before, trace["route"] = await _short_turn(services.model_factory(model), params, user_prompt, trace)
+    except _NoRouter:
+        short, trace["route"] = None, "full: router off"
+    except Exception as exc:  # noqa: BLE001 — the router is a saving, never a failure: the full turn goes on
+        log.warning("turn %s: the router failed (%s), the full prompt", params.turn_id, exc)
+        short, trace["route"] = None, "full: router error"
+    if short is not None:
+        REQUEST_COSTS.reset(token)
+        return _finish(session, params, model, short, before, billed, ctx, trace, started, None)
     try:
         result = await _with_retries(attempt, services.settings.llm_retries, lambda: not ctx.check_ids and not ctx.accepted)
     except Exception as exc:
@@ -193,12 +206,45 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         raise
     finally:
         REQUEST_COSTS.reset(token)
-    out = result.output
-    usage = _usage(session, model, result.usage, billed)
+    return _finish(session, params, model, result.output, before + result.usage, billed, ctx, trace, started, result)
+
+
+class _NoRouter(Exception):
+    pass
+
+
+async def _short_turn(model: Model, params: TurnRequestParams, user_prompt: str, trace: dict) -> tuple[TurnOutput | None, RunUsage, str]:
+    """The router's way (v0.7.20.4): the master's answer with the short prompt, or None — the full prompt is needed."""
+    usage = RunUsage()
+    route = router.by_kind(params)
+    if route == "full":
+        return None, usage, "full: kind"
+    why = "kind"
+    if not route:
+        r = await router.build_router_agent(model).run(router.router_prompt(params))
+        usage = usage + r.usage
+        why = "router"
+        if r.output.full:
+            return None, usage, "full: router"
+    system = router.short_system(params)
+    trace["short_system"] = system
+    sr = await router.build_short_agent(model, system).run(user_prompt)
+    usage = usage + sr.usage
+    if not router.short_ok(params, sr.output):
+        return None, usage, "full: the short master asked"
+    trace["system"] = system  # the prompt that answered
+    return router.to_turn_output(sr.output), usage, f"short: {why}"
+
+
+def _finish(session: Session, params: TurnRequestParams, model: str, out: TurnOutput, run_usage: RunUsage, billed: list[float],
+            ctx: TurnContext, trace: dict, started: float, result: object | None) -> TurnResult:
+    services = session.services
+    usage = _usage(session, model, run_usage, billed)
     if services.trace:
-        services.trace.write({**trace, "messages": services.trace.messages(result), "output": out.model_dump(mode="json"),
-                              "checks": ctx.check_ids, "accepted": ctx.accepted, "usage": usage.model_dump(mode="json"),
-                              "provider": _served_by(result), "seconds": round(time.monotonic() - started, 2)})
+        services.trace.write({**trace, "messages": services.trace.messages(result) if result is not None else [],
+                              "output": out.model_dump(mode="json"), "checks": ctx.check_ids, "accepted": ctx.accepted,
+                              "usage": usage.model_dump(mode="json"), "provider": _served_by(result) if result is not None else "",
+                              "seconds": round(time.monotonic() - started, 2)})
     log.info("turn %s mode=%s model=%s tokens=%d/%d cost=$%.5f checks=%d effects=%d/%d %.1fs",
              params.turn_id, params.mode, model, usage.input_tokens, usage.output_tokens, usage.cost_usd,
              len(ctx.check_ids), len(out.effect_ids), len(ctx.accepted), time.monotonic() - started)

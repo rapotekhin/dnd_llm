@@ -160,7 +160,18 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": "из этой комнаты нет выхода в %s" % to}
 			if CrimeRules.held(s):
 				return {"reason": "стража держит героя: уйти нельзя, пока он не ответит (кнопки ареста — у игрока)"}
-			return {"plan": {"room_id": to}, "summary": "Переход: %s" % world.room(to).get("name", to)}
+			var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as npc_follow
+			for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
+				var nid := str(n)
+				if s.followers.has(nid) or with.has(nid) or pending.any(func(p: Dictionary) -> bool: return str(p["plan"].get("follow_npc", "")) == nid):
+					continue
+				var f := FollowRules.plan(s, data, nid, true, false, (_won_over.get(turn_id, []) as Array).has(nid))
+				if f.has("reason"):
+					return {"reason": "%s; без него — move без npcs" % f["reason"]}
+				with.append(nid)
+			var names := ", ".join(with.map(func(n: String) -> String: return str(world.npc(n).get("name", n))))
+			return {"plan": {"room_id": to, "with": with},
+				"summary": "Переход: %s%s" % [world.room(to).get("name", to), (" (с героем: %s)" % names) if not with.is_empty() else ""]}
 		"damage":
 			var dice := _damage_dice(rules, level, str(e.get("severity", "")))
 			if dice.is_empty():
@@ -662,6 +673,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 	match kind:
 		"move":
 			s.room_id = plan["room_id"]
+			for n: Variant in plan.get("with", []):
+				FollowRules.apply(s, {"follow_npc": str(n), "on": true, "room": ""})
 		"damage":
 			c["hp"] = maxi(0, int(c["hp"]) - int(plan["amount"]))
 			_extra_lines.append_array(HeroDefense.after_damage(s, _data, int(plan["amount"])))
