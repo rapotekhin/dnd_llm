@@ -1,6 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Quests playtest (python tools/godot_playtest.py --scenario quests), v0.7.21: a quest the master makes from Bruno —
-## its «Взять задание» button, the step at Mira, the way back to Bruno, the reward and the journal.
+## its «Взять задание» button, the step at Mira, the way back to Bruno, the reward and the journal; an order on the
+## tavern's board taken at the board (v0.7.21.2) and the hero's own deed.
 
 
 func run() -> void:
@@ -53,3 +54,35 @@ func run() -> void:
 	await press(find(game, "JournalButton"))
 	await frames(5)
 	await shot("journal")
+
+	# an order on the board: the smith is not here, the board offers it (v0.7.21.2)
+	var f := fx.validate(s, data, "t-pb", {"kind": "furnish", "props": [{"name": "Доска объявлений", "text": "Заказы Брода"}]})
+	if f["accepted"]:
+		fx.apply(s, "t-pb", [f["effect_id"]])
+	var board := str(PropRules.room_props(s, s.room_id)[0]["id"])
+	fx.searched_quests["t-pb2"] = true
+	var o := fx.validate(s, data, "t-pb2", {"kind": "create_quest", "giver": "npc_smith", "board_prop_id": board,
+		"title": "Уголь для кузни", "scale": "trifle", "steps": [{"text": "Расспросить Миру об угольщике", "kind": "talk", "target": "npc_serving"}]})
+	if not step("the board order is accepted", bool(o["accepted"]), str(o)):
+		return
+	fx.apply(s, "t-pb2", [o["effect_id"]])
+	var order := str(QuestGen.offered_by(s, "board:%s:%s" % [s.room_id, board])[0])
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var take_order: Button = find(game, "QuestTake_" + order)
+	if step("the board offers the smith's order", take_order != null and not take_order.disabled):
+		await press(take_order)
+		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	step("the order is taken", s.quests_active.has(order))
+	# the hero's own deed: taken at once
+	fx.searched_quests["t-po"] = true
+	var d := fx.validate(s, data, "t-po", {"kind": "create_quest", "own": true, "title": "Кто травит колодцы", "scale": "ordinary",
+		"steps": [{"text": "Осмотреть погреб таверны", "kind": "visit", "target": "brod-tavern-cellar"}]})
+	if step("the own deed is accepted", bool(d["accepted"]), str(d)):
+		fx.apply(s, "t-po", [d["effect_id"]])
+		var deed := str(s.generated["quests"].keys()[-1])
+		step("the own deed is in work at once", s.quests_active.has(deed))
+		node("EventBus").state_changed.emit()
+		await press(find(game, "JournalButton"))
+		await frames(5)
+		await shot("journal_deeds")

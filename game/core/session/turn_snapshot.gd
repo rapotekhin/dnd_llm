@@ -89,8 +89,11 @@ static func quest_offers(s: GameSession, world: Dictionary) -> Array[Dictionary]
 		var things: Array[String] = []
 		for item_id: String in q.get("offer_items", {}):
 			things.append("%s [%s]" % [str(world.get("items", {}).get(item_id, {}).get("name", item_id)), item_id])
+		var by := str(world.get("npcs", {}).get(giver, {}).get("name", giver))
+		if q.has("board"):  # an order on a board (v0.7.21.2)
+			by = "%s (заказчик — %s)" % [str(PropRules.find(s, str(q["board"]["room"]), str(q["board"]["prop"])).get("name", "доска")), by]
 		out.append({"id": id, "title": str(q["title"]), "description": str(q.get("description", "")), "done": false,
-			"step": "", "offered_by": str(world.get("npcs", {}).get(giver, {}).get("name", giver)), "offer_items": things})
+			"step": "", "offered_by": by, "offer_items": things})
 	return out
 
 

@@ -461,4 +461,17 @@ def test_a_model_that_rejects_big_schemas_sends_the_effect_as_json_text(data_dir
     msg, calls, _ = play(data_dir, fn, services=services, model="google/gemini-3.8-flash")
     assert seen["param"]["type"] == "string"
     assert [c["params"]["effect"] for c in calls if c["method"] == "engine.validate"] == [{"kind": "flag", "flag": "door_open", "value": True}]
-    assert "Эффект не по схеме" in last_tool_text(fn.state["prompts"][2])
+    assert "не по схеме" in last_tool_text(fn.state["prompts"][2])
+
+
+def test_a_malformed_effect_is_refused_and_the_turn_goes_on(data_dir):
+    # v0.7.21.2: a mistyped effect is a refusal of the tool, not a failed turn
+    fn = scripted(
+        ("propose_effect", {"effect": {"kind": "create_quest", "title": "Заказ", "scale": "trifle", "steps": []}}),
+        ("propose_effect", {"effect": {"kind": "create_quest", "title": "Заказ", "scale": "huge"}}),
+        ("propose_effect", {"effect": {"kind": "create_quest"}}),
+        ("final", {"narration": "На доске ничего не разобрать."}),
+    )
+    msg, calls, _ = play(data_dir, fn)
+    assert msg["result"]["narration"] == "На доске ничего не разобрать." and calls == []
+    assert "заверши ход словами" in last_tool_text(fn.state["prompts"][3])

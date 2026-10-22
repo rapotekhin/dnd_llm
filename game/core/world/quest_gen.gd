@@ -11,19 +11,47 @@ extends RefCounted
 ## on an open edge (WorldGen.plan_place) and the quest's thing in a hiding place of a room (a secret with loot, as the
 ## pack's amulet in the mine); its steps name them `new:<key>` and `item`. The engine takes the whole deal or none.
 ## A person a quest made may give quests too, but no deeper than `quest_depth` (its own depth is on the NPC).
+##
+## Batch 3: an order on a board — a thing of the room (`board_prop_id`) offers it whoever stands there, its customer
+## (the giver) may be anyone alive in the world or a person the order brings; the player's own deed (`own`) has no
+## giver — it is taken at once, ends with its last fact and pays only class XP for the dangerous. Taken made quests
+## are limited (`max_open`), offered ones — per giver or board (`max_offered`).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["quest_gen"]
 
 
-## Made quests not done and not failed (offered or taken): the limit counts them.
+## Made quests the hero has taken and not finished: `max_open` limits them.
 static func open_made(s: GameSession) -> Array[String]:
 	var out: Array[String] = []
 	for id: String in WorldGen.generated(s).get("quests", {}):
-		if not s.quests_done.has(id) and not s.quests_failed.has(id):
+		if s.quests_active.has(id):
 			out.append(id)
 	return out
+
+
+## Made quests offered and not taken by this giver or on this board («board:<room>:<prop>»).
+static func offered_by(s: GameSession, source: String) -> Array[String]:
+	var out: Array[String] = []
+	var all: Dictionary = WorldGen.generated(s).get("quests", {})
+	for id: String in all:
+		if s.quests_active.has(id) or s.quests_done.has(id) or s.quests_failed.has(id):
+			continue
+		if _source(all[id]) == source:
+			out.append(id)
+	return out
+
+
+static func _source(q: Dictionary) -> String:
+	return "board:%s:%s" % [q["board"]["room"], q["board"]["prop"]] if q.has("board") else str(q.get("giver", ""))
+
+
+## "" when a made quest may be taken (the limit of taken ones), else a localization key; a pack quest — always "".
+static func can_take(s: GameSession, data: Dictionary, quest_id: String) -> String:
+	if not WorldGen.generated(s).get("quests", {}).has(quest_id):
+		return ""
+	return "QUEST_TOO_MANY" if open_made(s).size() >= int(cfg(data)["max_open"]) else ""
 
 
 ## Quests of the world by a query: [{quest_id, title, giver, status, source}]; status — offered | taken | done | failed.
@@ -50,18 +78,39 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 	if not searched:
 		return {"reason": "сначала find_quests: может, такое задание уже есть"}
 	var world := WorldView.new(data["world"])
-	var giver := str(spec.get("giver", ""))
-	if not s.npcs_here(data["world"], s.room_id).has(giver):
-		return {"reason": "заказчик %s — только NPC этой сцены" % giver}
-	if SocialRules.refuses(s, data, giver):
+	var own := bool(spec.get("own", false))
+	var giver := "" if own else str(spec.get("giver", "")) if spec.get("giver") != null else ""
+	var board := str(spec.get("board_prop_id", "")) if spec.get("board_prop_id") != null else ""
+	var keys: Array = []
+	for n: Variant in spec.get("new_npcs", []) if spec.get("new_npcs") is Array else []:
+		if n is Dictionary:
+			keys.append(str(n.get("key", "")))
+	if own:
+		if open_made(s).size() >= int(c["max_open"]):
+			return {"reason": "у героя уже %d созданных дел в работе — сначала их" % open_made(s).size()}
+	elif not board.is_empty():
+		var prop := PropRules.find(s, s.room_id, board)
+		if prop.is_empty():
+			return {"reason": "доски %s в этой комнате нет — вещь из «Вокруг» (prop_id)" % board}
+		if offered_by(s, "board:%s:%s" % [s.room_id, board]).size() >= int(c["max_offered"]):
+			return {"reason": "на %s уже %d заказа — больше не помещается" % [prop.get("name", board), int(c["max_offered"])]}
+		if giver.begins_with("new:"):
+			if not keys.has(giver.trim_prefix("new:")):
+				return {"reason": "заказчик %s — нет такого нового человека в задании" % giver}
+		elif not data["world"]["npcs"].has(giver) or s.dead_npcs.has(giver):
+			return {"reason": "заказчик заказа на доске — живой человек мира (find_npcs) или новый «new:<key>»"}
+	else:
+		if not s.npcs_here(data["world"], s.room_id).has(giver):
+			return {"reason": "заказчик %s — только NPC этой сцены (или заказ на доске — board_prop_id, или своё дело — own)" % giver}
+		if offered_by(s, giver).size() >= int(c["max_offered"]):
+			return {"reason": "%s уже предлагает %d дела — сначала их" % [world.npc(giver).get("name", giver), int(c["max_offered"])]}
+	if not giver.is_empty() and not giver.begins_with("new:") and SocialRules.refuses(s, data, giver):
 		return {"reason": "%s враждебен герою и работы не даст" % world.npc(giver).get("name", giver)}
-	if s.wanted.has(world.location_id(s.room_id)):
+	if not own and s.wanted.has(world.location_id(s.room_id)):
 		return {"reason": "герой в розыске: здесь ему работы не дают"}
-	var depth := int(world.npc(giver).get("quest_depth", 0))
+	var depth := int(world.npc(giver).get("quest_depth", 0)) if not giver.is_empty() and not giver.begins_with("new:") else 0
 	if depth >= int(c["quest_depth"]):
 		return {"reason": "%s сам(а) появился(лась) из задания — своих заданий не даёт (глубина %d)" % [world.npc(giver).get("name", giver), depth]}
-	if open_made(s).size() >= int(c["max_open"]):
-		return {"reason": "у героя уже %d созданных заданий в работе или предложенных — сначала их" % open_made(s).size()}
 	var scale := str(spec.get("scale", ""))
 	if not (c["scales"] as Dictionary).has(scale):
 		return {"reason": "величина задания — из %s" % ", ".join((c["scales"] as Dictionary).keys())}
@@ -88,19 +137,21 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		danger = danger or bool(st.get("danger", false)) or (st["when"] as Dictionary).has("encounter")
 		steps.append(st)
 	var last: Dictionary = steps[-1]
-	if str(last["when"].get("talk", "")) != giver:  # the quest ends where it began: back to the giver
-		last = {"text": "Вернуться к %s" % world.npc(giver).get("name", giver), "when": {"talk": giver},
-			"action": "Рассказать %s" % world.npc(giver).get("name", giver)}
+	var who := _name(data, giver, content)
+	if not own and str(last["when"].get("talk", "")) != giver:  # the quest ends where it began: back to the giver
+		last = {"text": "Вернуться к %s" % who, "when": {"talk": giver}, "action": "Рассказать %s" % who}
 		steps.append(last)
 	var handed := steps.any(func(st: Dictionary) -> bool: return str(st["when"].get("item", "")) == "item")
 	if not (content["item"] as Dictionary).is_empty() and not handed and str(last["when"].get("talk", "")) == giver:
 		last["when"]["item"] = "item"  # the quest's thing goes back to the giver
-		last["text"] = "Отдать %s: %s" % [world.npc(giver).get("name", giver), content["item"]["name"]]
+		last["text"] = "Отдать %s: %s" % [who, content["item"]["name"]]
 		last.erase("action")
 	var level := clampi(int(s.character.get("level", 1)), 1, 5)
 	var sc: Dictionary = c["scales"][scale]
-	var cp := int(sc["reward_cp"][level - 1])
+	var cp := 0 if own else int(sc["reward_cp"][level - 1])  # one's own deed pays with what it finds
 	var reward_item := str(spec.get("reward_item_id", "")) if spec.get("reward_item_id") != null else ""
+	if not reward_item.is_empty() and own:
+		return {"reason": "у своего дела нет заказчика — награды-вещи нет"}
 	if not reward_item.is_empty():
 		var item: Dictionary = data["items"]["catalog"].get(reward_item, {})
 		if item.is_empty():
@@ -111,20 +162,35 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		last["items"] = {reward_item: 1}
 	last["reward_cp"] = cp
 	last["xp"] = int(sc["xp"][level - 1])
-	last["attitude"] = {giver: int(sc["attitude"])}
+	if not own:
+		last["attitude"] = {giver: int(sc["attitude"])}
 	if danger:
 		last["danger"] = true  # class XP for the whole quest at its end (v0.7.19: only the dangerous)
 	var q := {"title": title.left(60), "description": str(spec.get("description", "")).left(400), "giver": giver,
 		"offer_text": str(spec.get("offer_text", "")).left(300), "steps": steps, "generated": true, "scale": scale, "depth": depth}
 	if scale == "major":
 		q["major"] = true
+	if own:
+		q["own"] = true
+	if not board.is_empty():
+		q["board"] = {"room": s.room_id, "prop": board}
 	var brings: Array = (content["npcs"] as Array).map(func(n: Dictionary) -> String: return str(n["plan"]["npc"]["name"]))
 	if not (content["place"] as Dictionary).is_empty():
 		brings.append_array((content["place"]["place"]["rooms"] as Array).map(func(r: Dictionary) -> String: return str(r["name"])))
 	if not (content["item"] as Dictionary).is_empty():
 		brings.append(str(content["item"]["name"]))
-	return {"plan": {"quest": q, "content": content}, "summary": "Новое задание: «%s» от %s (%s)%s" % [q["title"],
-		world.npc(giver).get("name", giver), sc["name"], ("; с ним: " + ", ".join(brings)) if not brings.is_empty() else ""]}
+	var from := "своё дело" if own else ("заказ на доске, заказчик %s" % who) if not board.is_empty() else "от %s" % who
+	return {"plan": {"quest": q, "content": content}, "summary": "Новое задание: «%s» — %s (%s)%s" % [q["title"],
+		from, sc["name"], ("; с ним: " + ", ".join(brings)) if not brings.is_empty() else ""]}
+
+
+## A giver's name: of the world, or of a person the quest brings («new:<key>»).
+static func _name(data: Dictionary, giver: String, content: Dictionary) -> String:
+	if giver.begins_with("new:"):
+		for n: Dictionary in content.get("npcs", []):
+			if "new:" + str(n["key"]) == giver:
+				return str(n["plan"]["npc"]["name"])
+	return str(WorldView.new(data["world"]).npc(giver).get("name", giver))
 
 
 ## What the quest brings: {npcs: [{key, plan, room}], npc_keys, place: plan of create_place | {}, room_keys,
@@ -276,7 +342,14 @@ static func apply_quest(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 	var id := "gen_quest_%d" % _next_n(data)
 	var refs := _apply_content(s, data, plan.get("content", {}), id)
 	var q: Dictionary = (plan["quest"] as Dictionary).duplicate(true)
+	if refs.has(str(q["giver"])):  # the customer the order brings
+		q["giver"] = refs[str(q["giver"])]
 	for st: Dictionary in q["steps"]:
+		if st.has("attitude"):
+			var att := {}
+			for k: String in st["attitude"]:
+				att[str(refs.get(k, k))] = st["attitude"][k]
+			st["attitude"] = att
 		var w: Dictionary = st["when"]
 		if w.has("encounter") and refs.has("enc:" + str(w["encounter"])):
 			w["encounter"] = refs["enc:" + str(w["encounter"])]

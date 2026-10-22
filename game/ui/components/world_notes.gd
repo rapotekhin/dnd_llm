@@ -234,7 +234,7 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 			var open: Array[String] = []
 			var done: Array[String] = []
 			for q: Dictionary in XpRules.quest_list(s, Catalog.data["world"]):
-				var line := "%s — %s" % [q["title"], q["description"]]
+				var line := ("%s — %s" % [q["title"], q["description"]]) if not str(q["description"]).is_empty() else str(q["title"])
 				if not str(q.get("step", "")).is_empty():
 					line += "\n      " + tr("JOURNAL_STEP").format({"step": q["step"]})
 				if bool(q.get("failed", false)):  # v0.7.14: its NPC died

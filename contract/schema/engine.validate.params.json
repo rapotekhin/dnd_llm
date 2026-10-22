@@ -438,12 +438,25 @@
       "additionalProperties": false,
       "description": "A quest from a giver of the scene (0.36.0) — only after find_quests in the same turn. The master names the scale,\nthe engine sets the reward (coins, class XP for the dangerous, the giver's goodwill) and adds the way back to the\ngiver; the quest is offered at once and lives like a pack quest.",
       "properties": {
+        "board_prop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Board Prop Id"
+        },
         "description": {
           "default": "",
           "title": "Description",
           "type": "string"
         },
         "giver": {
+          "default": "",
           "title": "Giver",
           "type": "string"
         },
@@ -475,6 +488,11 @@
           "default": "",
           "title": "Offer Text",
           "type": "string"
+        },
+        "own": {
+          "default": false,
+          "title": "Own",
+          "type": "boolean"
         },
         "quest_item": {
           "anyOf": [
@@ -523,7 +541,6 @@
         }
       },
       "required": [
-        "giver",
         "title",
         "scale",
         "steps"

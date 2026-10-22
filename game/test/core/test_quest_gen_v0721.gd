@@ -71,7 +71,7 @@ func test_at_most_three_open_made_quests_and_they_survive_a_save() -> void:
 		q["steps"] = [{"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"}]
 		assert_bool(bool(_make(q, "t-%d" % i)["accepted"])).is_true()
 	var more := _wolves()
-	assert_str(str(_make(more, "t-9")["reason"])).contains("уже 3")
+	assert_str(str(_make(more, "t-9")["reason"])).contains("уже предлагает 3")  # offered: per giver (v0.7.21.2)
 	var back := GameSession.from_dict(s.to_dict(5))
 	var world := WorldGen.merged(TestUtils.data()["world"], back.generated)
 	assert_int(QuestRules.stepped(world).size() - QuestRules.stepped(TestUtils.data()["world"]).size()).is_equal(3)
@@ -145,3 +145,57 @@ func test_the_way_back_takes_the_quest_thing_to_the_giver() -> void:
 	assert_bool(bool(_make(q)["accepted"])).is_true()
 	var steps: Array = QuestRules.quest(data["world"], str(s.generated["quests"].keys()[0]))["steps"]
 	assert_dict(steps[-1]["when"]).is_equal({"talk": "npc_innkeeper", "item": "amulet"})
+
+
+func _board() -> String:
+	var r := fx.validate(s, data, "t-b", {"kind": "furnish", "props": [{"name": "Доска объявлений", "text": "Заказы и вести Брода"}]})
+	fx.apply(s, "t-b", [r["effect_id"]])
+	return str(PropRules.room_props(s, s.room_id)[0]["id"])
+
+
+func test_an_order_on_a_board_is_offered_at_the_board_and_paid_by_its_customer() -> void:
+	var board := _board()
+	var order := {"giver": "npc_smith", "board_prop_id": board, "title": "Уголь для кузни", "scale": "trifle",
+		"steps": [{"text": "Расспросить Миру об угольщике", "kind": "talk", "target": "npc_serving"}]}
+	var r := _make(order)
+	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
+	assert_str(str(r["summary"])).contains("заказ на доске")
+	var qid := str(s.generated["quests"].keys()[0])
+	assert_array(QuestRules.offers_here(s, data["world"])).contains([qid])  # the smith is not here — the board offers it
+	var steps: Array = QuestRules.quest(data["world"], qid)["steps"]
+	assert_str(str(steps[-1]["when"]["talk"])).is_equal("npc_smith")  # paid where the customer is
+	s.room_id = "brod-square"
+	assert_array(QuestRules.offers_here(s, data["world"])).not_contains([qid])
+	var snap := TurnSnapshot.build(s, data, 2000)
+	s.room_id = "brod-tavern-hall"
+	snap = TurnSnapshot.build(s, data, 2000)
+	var offer: Array = (snap["quests"] as Array).filter(func(q: Dictionary) -> bool: return q["id"] == qid)
+	assert_str(str(offer[0]["offered_by"])).contains("Доска объявлений")
+
+
+func test_an_own_deed_is_taken_at_once_without_a_giver() -> void:
+	var deed := {"own": true, "title": "Кто травит колодцы", "scale": "ordinary", "description": "Герой сам решил узнать.",
+		"steps": [{"text": "Осмотреть погреб таверны", "kind": "visit", "target": "brod-tavern-cellar"}]}
+	var r := _make(deed)
+	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
+	var qid := str(s.generated["quests"].keys()[0])
+	assert_bool(s.quests_active.has(qid)).is_true()  # no offer, no button: it is the hero's
+	var q := QuestRules.quest(data["world"], qid)
+	assert_int((q["steps"] as Array).size()).is_equal(1)  # no way back to anyone
+	assert_int(int(q["steps"][0]["reward_cp"])).is_equal(0)
+	var gold := int(s.character["gold_cp"])
+	s.visited.append("brod-tavern-cellar")
+	QuestRules.advance(s, data)
+	assert_bool(s.quests_done.has(qid)).is_true()
+	assert_int(int(s.character["gold_cp"])).is_equal(gold)
+
+
+func test_at_most_three_made_quests_taken() -> void:
+	for i in 3:
+		var deed := {"own": true, "title": "Своё дело %d" % i, "scale": "trifle", "steps": [{"text": "Сходить в погреб", "kind": "visit", "target": "brod-tavern-cellar"}]}
+		assert_bool(bool(_make(deed, "t-%d" % i)["accepted"])).is_true()
+	assert_int(QuestGen.open_made(s).size()).is_equal(3)
+	var offer := _wolves()
+	assert_bool(bool(_make(offer, "t-8")["accepted"])).is_true()  # offering is fine
+	var qid := str(QuestGen.offered_by(s, "npc_innkeeper")[0])
+	assert_str(QuestGen.can_take(s, data, qid)).is_equal("QUEST_TOO_MANY")

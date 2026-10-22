@@ -344,6 +344,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if not why.is_empty():
 				return {"reason": {"QUEST_UNKNOWN": "нет задания %s в пакете" % qid, "QUEST_DONE": "задание %s уже взято или сделано" % qid,
 					"QUEST_WRONG_PLACE": "задание %s здесь не предлагают — только его задатель (список в quests)" % qid}.get(why, why)}
+			if not QuestGen.can_take(s, data, qid).is_empty():
+				return {"reason": "у героя уже %d созданных заданий в работе — больше не взять" % QuestGen.open_made(s).size()}
 			var giver := QuestRules.stand_in(s, world.world, str(QuestRules.quest(world.world, qid).get("giver", "")))
 			if s.in_conversation() and s.npc_id != giver:
 				return {"reason": "задание %s даёт не собеседник, а %s" % [qid, world.npc(giver).get("name", giver)]}
@@ -749,7 +751,12 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"create_npc":
 			_extra_lines.append("[%s]" % WorldGen.apply_npc(s, _data, plan))
 		"create_quest":
-			_extra_lines.append("[%s]" % QuestGen.apply_quest(s, _data, plan))
+			var qid := QuestGen.apply_quest(s, _data, plan)
+			_extra_lines.append("[%s]" % qid)
+			if bool(plan["quest"].get("own", false)):  # one's own deed is taken at once (v0.7.21.2)
+				s.quests_active[qid] = 0
+				_extra_lines.append("Своё дело: %s · Цель: %s" % [plan["quest"]["title"], plan["quest"]["steps"][0]["text"]])
+				_extra_lines.append_array(QuestRules.advance(s, _data))
 		"create_place":
 			_extra_lines.append("выход: [%s]" % WorldGen.apply_place(s, _data, plan))
 		"unlock":

@@ -25,6 +25,7 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.usage import RunUsage
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models import Model
@@ -32,7 +33,7 @@ from pydantic_ai.models import Model
 from . import REPO_ROOT
 from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER
-from .agents import TurnContext, build_turn_agent, settings_for, system_prompt_for, turn_user_prompt
+from .agents import RETRY_MAX_TOKENS, TurnContext, build_turn_agent, settings_for, system_prompt_for, turn_user_prompt
 from .protocol import TurnRequestParams
 
 SCENARIOS = REPO_ROOT / "evals" / "golden" / "scenarios.yaml"
@@ -399,7 +400,17 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
         if route:  # v0.7.20.4: the way of the game — the router, the short prompt, the full one when needed
             from .turns import _short_turn
             short, before, o.route = await _short_turn(model, params, turn_user_prompt(params), {})
-        result = _ShortResult(short, before) if short is not None else await agent.run(turn_user_prompt(params), deps=ctx)
+        if short is not None:
+            result = _ShortResult(short, before)
+        else:
+            try:
+                result = await agent.run(turn_user_prompt(params), deps=ctx)
+            except UnexpectedModelBehavior as exc:  # as the game does: once more with room to spare (turns.py)
+                if "token limit" not in str(exc).lower() or engine.calls:
+                    raise
+                agent = build_turn_agent(model, system_prompt_for(params), RETRY_MAX_TOKENS)
+                ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]
+                result = await agent.run(turn_user_prompt(params), deps=ctx)
     except Exception as exc:  # noqa: BLE001 — a failed model run is a result, not a crash of the runner
         o.status, o.note = "error", f"{type(exc).__name__}: {str(exc)[:300]}"
         o.seconds = time.monotonic() - started

@@ -6,10 +6,10 @@ Incoming models ignore unknown fields: a newer minor client may send optional fi
 from enum import IntEnum
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.37.0"
+PROTOCOL_VERSION = "0.38.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -708,13 +708,25 @@ class CreateQuestEffect(_Out):
     giver; the quest is offered at once and lives like a pack quest."""
 
     kind: Literal["create_quest"] = "create_quest"
-    giver: str
+    giver: str = ""  # an NPC of the scene; on a board — anyone alive or «new:<key>»; empty for one's own deed (0.38.0)
+    board_prop_id: str | None = None  # 0.38.0: an order on a board — a thing of the room that offers it
+    own: bool = False  # 0.38.0: the player's own deed — no giver, taken at once, pays only class XP for the dangerous
     title: str
     description: str = ""
     offer_text: str = ""
     scale: Literal["trifle", "ordinary", "major"]
     steps: list[NewQuestStep] = Field(min_length=1, max_length=4)
     reward_item_id: str | None = None
+    @model_validator(mode="after")
+    def _giver_or_own(self) -> "CreateQuestEffect":
+        # the model left the customer out of a board order (v0.7.21.2 goldens): said at once, before the engine
+        if not self.own and not self.giver and self.board_prop_id and len(self.new_npcs) == 1:
+            self.giver = f"new:{self.new_npcs[0].key}"  # the order's one new person is its customer
+        if not self.own and not self.giver:
+            raise ValueError("giver обязателен: id NPC сцены; на доске — id человека мира (find_npcs) или новый заказчик: "
+                             "добавь его в new_npcs (name, role, key) и укажи giver «new:<key>»; своё дело без заказчика — own: true")
+        return self
+
     new_npcs: list[QuestNpc] = Field(default_factory=list)  # 0.37.0: up to 2 people the quest brings
     new_place: QuestPlace | None = None  # 0.37.0: a place on an open edge of this room, as create_place
     quest_item: QuestItem | None = None  # 0.37.0: the quest's thing in a hiding place

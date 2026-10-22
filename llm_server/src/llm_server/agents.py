@@ -67,7 +67,19 @@ def _json_object(value: Any) -> Any:
     return value
 
 
-EffectArg = Annotated[Effect, BeforeValidator(_json_object)]
+# An effect that does not fit the schema still reaches the tool (as a plain object) and is refused there with the
+# reason: a refusal lets the master fix it or end the turn in words, where a validation retry spent the turn's retries
+# and failed it whole (v0.7.21.2: a board order with its people and place was mistyped five times in a row).
+EffectArg = Annotated[Effect | dict[str, Any], BeforeValidator(_json_object)]
+BAD_EFFECTS_MAX = 3
+
+
+def _schema_refusal(t: "TurnContext", exc: ValidationError) -> str:
+    t.bad_effects += 1
+    why = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:4])
+    if t.bad_effects >= BAD_EFFECTS_MAX:
+        return f"Отказ: эффект снова не по схеме ({why}). Больше не пробуй — заверши ход словами, без этого эффекта."
+    return f"Отказ: эффект не по схеме — {why}. Исправь и предложи снова."
 
 
 def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSettings:
@@ -138,6 +150,7 @@ class TurnContext:
     searched_quests: bool = False  # find_quests this turn (v0.7.21: before create_quest)
     proposed: set[str] = field(default_factory=set)  # effects accepted this turn (proposing one again is refused)
     empty_gives: int = 0  # give_item with neither item_id nor item
+    bad_effects: int = 0  # effects refused for their shape this turn (v0.7.21.2)
     topics: set[str] = field(default_factory=set)  # rule topics the master has: in the prompt or read with `rules` (v0.7.20.4)
 
     def __post_init__(self) -> None:
@@ -210,6 +223,11 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     снимает снаряжение: slot, item_id или пусто; slot=all — раздеться).
     Движок проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы он применился."""
     t = ctx.deps
+    if isinstance(effect, dict):
+        try:
+            effect = _EFFECT.validate_python(effect)
+        except ValidationError as exc:
+            return _schema_refusal(t, exc)
     # DeepSeek sometimes repeats one effect or an empty give_item many times in a row (v0.7.4 goldens): stop it early
     key = effect.model_dump_json()
     if key in t.proposed:
@@ -294,14 +312,17 @@ async def propose_effect_loose(ctx: RunContext[TurnContext], effect: str) -> str
     try:
         checked = _EFFECT.validate_python(_json_object(effect))
     except ValidationError as exc:
-        raise ModelRetry("Эффект не по схеме: " + "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:4]))
+        return _schema_refusal(ctx.deps, exc)
     return await propose_effect(ctx, checked)
 
 
-def propose_effect_tool(model: Model) -> Tool | object:
+EFFECT_RETRIES = 4  # a big effect (a quest with its people and place) is often mistyped once or twice (v0.7.21.2 goldens)
+
+
+def propose_effect_tool(model: Model) -> Tool:
     if not model.model_name.startswith(LOOSE_EFFECT_MODELS):
-        return propose_effect
-    return Tool(propose_effect_loose, name="propose_effect",
+        return Tool(propose_effect, max_retries=EFFECT_RETRIES)
+    return Tool(propose_effect_loose, name="propose_effect", max_retries=EFFECT_RETRIES,
                 description=(propose_effect.__doc__ or "") + "\nЭффект — JSON-объект строкой, с полем kind; виды и поля (? — необязательное): " + _effect_kinds())
 
 

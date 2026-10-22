@@ -1423,6 +1423,8 @@ func accept_quest(quest_id: String) -> String:
 	if session == null or is_busy() or not Backend.is_ready():
 		return "QUEST_BUSY"
 	var why := QuestRules.can_accept(session, Catalog.data["world"], quest_id)
+	if why.is_empty():
+		why = QuestGen.can_take(session, Catalog.data, quest_id)  # v0.7.21.2: the limit of taken made quests
 	if not why.is_empty():
 		return why
 	var q := QuestRules.quest(Catalog.data["world"], quest_id)

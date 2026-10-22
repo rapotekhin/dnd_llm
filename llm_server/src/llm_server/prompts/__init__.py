@@ -1,5 +1,6 @@
 """Prompt templates (Jinja2, *.md.j2 next to this file). StrictUndefined: a missing variable is an error."""
 
+import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -114,6 +115,9 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
 }
 
 
+BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
+
+
 def auto_topics(mode: str, snap: Snapshot) -> list[str]:
     """Topics the scene needs now: they go into the system prompt whole."""
     scene, character = snap.scene, snap.character
@@ -134,6 +138,8 @@ def auto_topics(mode: str, snap: Snapshot) -> list[str]:
         out.append("background")
     if scene and any(p.container for p in scene.props):
         out.append("containers")
+    if mode == "social" or (scene and any(BOARD.search(p.name) for p in scene.props)):  # work is asked of people and boards (v0.7.21.2)
+        out.append("quests")
     return [t for t in TOPICS if t in out]
 
 

@@ -1882,3 +1882,37 @@ scenarios:
       tools_required: [find_quests]
     rubric:
       - "Мастер создаёт задание create_quest, которое приносит своё кольцо (quest_item: новая вещь или из каталога, спрятана в погребе с подсказкой) и шаг найти его (find item); вернуть кольцо Горму — шаг talk с item_id item или его добавит движок (возвращение к заказчику с вещью задания); кольцо не выдаётся сразу словами"
+
+  - id: quest_board_order
+    title: "Ищет работу у доски — заказ create_quest с board_prop_id"
+    category: concepts
+    extends: tavern
+    input: "Подхожу к доске объявлений — нет ли там заказа для наёмника?"
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p1, name: "Доска объявлений", description: "Столб у двери, к нему прибиты листки", text: "Заказы и вести Серого Устья"}
+    engine:
+      find_quests: []
+      find_npcs:
+        - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", location: "Серое Устье"}
+    expect:
+      effects: {required_kinds_any: [create_quest]}
+      tools_required: [find_quests]
+    rubric:
+      - "Мастер оформляет заказ на доске эффектом create_quest с board_prop_id p1 и заказчиком — человеком мира или новым, а не выдумывает листки словами"
+
+  - id: quest_own_deed
+    title: "Своё дело без заказчика — create_quest с own"
+    category: concepts
+    extends: tavern
+    input: "Решено: возьмусь сам выяснить, кто травит колодцы в Устье. Это моё дело, без всяких заказчиков — с чего бы начать?"
+    engine:
+      find_quests: []
+      validate:
+        - {kind: create_quest, summary: "Новое задание: «Шорох в погребе» — своё дело (пустяк)"}
+    expect:
+      effects: {required_kinds_any: [create_quest]}
+      tools_required: [find_quests]
+    rubric:
+      - "Мастер оформляет замысел игрока своим делом create_quest с own: true без заказчика, шаги — по тому, что есть в сцене и мире (люди, места), а не выдуманные; награду не обещает"
