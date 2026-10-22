@@ -83,10 +83,11 @@ func _rebuild() -> void:
 		c.queue_free()
 	var s := GameState.session
 	var data := Catalog.data
-	var p := PropRules.find(s, s.room_id, prop_id)
-	if p.is_empty() or not ContainerRules.is_container(p):
+	var p := ContainerRules.target(s, data, prop_id)  # a thing of the room or a bag of the hero (v0.7.18.2)
+	if p.is_empty():
 		visible = false
 		return
+	var is_bag := ContainerRules.bags(s.character).has(prop_id)
 	var can_act := not GameState.is_busy()
 	var cap := float(ContainerRules.kind(data, str(p["container"]))["capacity_lb"])
 	var contents: Dictionary = p.get("contents", {})
@@ -96,6 +97,12 @@ func _rebuild() -> void:
 	if not owner.is_empty():
 		meta += " · " + tr("CONTAINER_OWNER").format({"name": GameState.world().npc(owner).get("name", owner)})
 	_box.add_child(_label(meta, UiTheme.MUTED_LABEL))
+	if is_bag:  # leave it here with what is in it
+		var drop_row := HBoxContainer.new()
+		_box.add_child(drop_row)
+		_row_button(drop_row, "DropBag", tr("BTN_DROP_BAG"), can_act and not session_busy(), func() -> String:
+			visible = false
+			return GameState.drop_item(prop_id))
 	if bool(p.get("locked", false)):
 		_box.add_child(_label(tr("CONTAINER_LOCKED")))
 		var row := HBoxContainer.new()
@@ -119,6 +126,8 @@ func _rebuild() -> void:
 	_box.add_child(_label(tr("CONTAINER_YOURS"), UiTheme.MUTED_LABEL))
 	for id: String in s.character.get("inventory", {}):
 		var free := TradeRules.sellable(s, id, data)
+		if is_bag and id == str(p["kind"]):
+			free -= ContainerRules.bags_of(s.character, id).size() - ContainerRules.full_bags(s.character, id)  # not into itself
 		if free <= 0:
 			continue
 		var row := HBoxContainer.new()
@@ -131,3 +140,7 @@ func _rebuild() -> void:
 
 func _num(x: float) -> String:
 	return str(int(x)) if is_equal_approx(x, roundf(x)) else str(snappedf(x, 0.1))
+
+
+func session_busy() -> bool:
+	return GameState.session.in_conversation() or CombatRules.active(GameState.session)

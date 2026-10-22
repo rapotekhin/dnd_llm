@@ -36,6 +36,13 @@
           "title": "Backstory",
           "type": "string"
         },
+        "bags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Bags",
+          "type": "array"
+        },
         "cantrips": {
           "items": {
             "type": "string"

@@ -6,6 +6,7 @@ extends Control
 ## «Подготовить заклинания» after a long rest. A cast or use closes the sheet: the master answers in the chat.
 
 signal prepare_requested
+signal bag_requested(bag_id: String)
 
 var _conc_armed := ""  # a concentration spell pressed once while another is held (v0.7.13.1)
 var _tabs: TabContainer
@@ -305,6 +306,20 @@ func _gear_tab(c: Dictionary) -> Control:
 	if CharacterRules.overloaded(c, Catalog.data, s.items):
 		weight.text += " — " + tr("TOO_HEAVY")
 		weight.add_theme_color_override("font_color", UiTheme.WARN)
+	for bag_id: String in ContainerRules.bags(c):  # v0.7.18.2: the bags and what is in them
+		var bag: Dictionary = ContainerRules.bags(c)[bag_id]
+		var brow := HBoxContainer.new()
+		brow.add_theme_constant_override("separation", 12)
+		box.add_child(brow)
+		_text(brow, tr("SHEET_BAG").format({"name": ContainerRules.bag_name(Catalog.data, c, bag_id),
+			"w": int(ceilf(ContainerRules.weight(Catalog.data, s.items, bag["contents"]))),
+			"cap": int(ContainerRules.kind(Catalog.data, str(bag["kind"]))["capacity_lb"])}))
+		var ob := Button.new()
+		ob.name = "OpenBag_" + bag_id
+		ob.text = "BTN_OPEN_BAG"
+		ob.disabled = busy
+		ob.pressed.connect(func() -> void: bag_requested.emit(bag_id))
+		brow.add_child(ob)
 	for id: String in c.get("inventory", {}):
 		var def := ItemRules.def_of(items, s.items, id)
 		var row := HBoxContainer.new()

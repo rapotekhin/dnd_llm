@@ -1735,3 +1735,16 @@ scenarios:
     rubric:
       - "После успешной проверки — unlock с how pick; содержимое описано только после вскрытия, без лишних вещей; герой ничего не взял, пока не просил"
 
+  - id: bag_take_out
+    title: "Достать из рюкзака — take_from сумки героя"
+    category: effects
+    extends: tavern
+    input: "Достаю из рюкзака верёвку и привязываю её к балке."
+    snapshot:
+      character:
+        bags: ["Рюкзак [bag1]: Верёвка (15 м) [rope], Факел ×3 [torch]"]
+    expect:
+      effects: {required_kinds_any: [take_from], forbidden_kinds: [give_item, take_prop]}
+    rubric:
+      - "Верёвка достана эффектом take_from из bag1 с item_id rope; новых вещей не появилось"
+

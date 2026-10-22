@@ -12,7 +12,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 
 static func needs_furnish(s: GameSession, room_id: String) -> bool:
-	return not s.props.has(room_id)
+	return not s.props.has(room_id) or (s.props[room_id] as Array).all(func(p: Dictionary) -> bool: return bool(p.get("dropped", false)))
 
 
 ## The things still in the room (a taken one is gone).
@@ -100,7 +100,7 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 
 static func apply_furnish(s: GameSession, plan: Dictionary) -> void:
 	s.items.merge(plan.get("made", {}))  # things the master made inside the containers (v0.7.18.1)
-	var list: Array = []
+	var list: Array = (s.props.get(str(plan["room"]), []) as Array).duplicate()  # what the hero dropped stays (v0.7.18.2)
 	var n := 0
 	for p: Dictionary in plan["props"]:
 		n += 1
@@ -117,7 +117,7 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		return {"reason": "в комнате нет вещи %s (есть: %s)" % [e.get("prop_id", ""), ", ".join(room_props(s, s.room_id).map(func(x: Dictionary) -> String: return x["id"]))]}
 	if str(p.get("item_id", "")).is_empty():
 		return {"reason": "%s не унести — это обстановка; опиши попытку словами или `prop_state`" % p["name"]}
-	if not (p.get("contents", {}) as Dictionary).is_empty():
+	if not (p.get("contents", {}) as Dictionary).is_empty() and not ContainerRules.is_carried_kind(data, str(p["item_id"])):
 		return {"reason": "в %s что-то лежит — сначала `take_from` содержимое" % p["name"]}
 	var owner := str(p.get("owner", ""))
 	var seen := not owner.is_empty() and s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(owner)
@@ -177,6 +177,8 @@ static func apply_take(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	p["state"] = "taken"
 	var item := str(p["item_id"])
 	ItemRules.found(s.character, data, s.items, item)
+	if ContainerRules.is_carried_kind(data, item):  # a bag comes with what is in it (v0.7.18.2)
+		ContainerRules.pick_up(s, data, item, p.get("contents", {}))
 	if not str(plan.get("owner", "")).is_empty():
 		lines.append_array(TheftRules.react(s, data, str(plan["owner"])))
 	return lines

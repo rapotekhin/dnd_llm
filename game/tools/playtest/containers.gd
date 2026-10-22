@@ -1,6 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Containers playtest (python tools/godot_playtest.py --scenario containers), v0.7.18.1: a locked chest in the hall —
-## the side panel opens its window, the key opens it, a thing is taken out and another put in.
+## the side panel opens its window, the key opens it, a thing is taken out and another put in; the backpack from the
+## sheet (v0.7.18.2) — a torch put in, the backpack left in the hall with it.
 
 
 func run() -> void:
@@ -48,3 +49,31 @@ func run() -> void:
 		step("put in", int((PropRules.find(s, s.room_id, "pchest")["contents"] as Dictionary).get("lock", 0)) == 1)
 	await shot("open")
 	await press(find(view, "CloseContainerButton"))
+	await frames(3)
+
+	# v0.7.18.2: the backpack from the sheet.
+	await press(find(game, "SheetButton"))
+	var sheet: Control = find(game, "CharacterSheet")
+	var tabs: TabContainer = sheet.find_children("*", "TabContainer", true, false)[0]
+	tabs.current_tab = 2
+	await frames(3)
+	var bags: Array = ContainerRules.bags_of(s.character, "backpack")
+	if not step("the hero has a backpack bag", not bags.is_empty(), str(s.character.get("bags", {}))):
+		return
+	var bag := str(bags[0])
+	var ob: Button = find(sheet, "OpenBag_" + bag)
+	if step("the sheet offers to open it", ob != null):
+		await press(ob)
+		await frames(3)
+		var put_torch: Button = find(view, "PutIn_torch")
+		if step("a torch to put in", put_torch != null):
+			await press(put_torch)
+			await frames(3)
+			step("the torch is in the backpack", int(ContainerRules.bags(s.character)[bag]["contents"].get("torch", 0)) == 1)
+		await shot("backpack")
+		var drop: Button = find(view, "DropBag")
+		if step("the backpack can be left here", drop != null):
+			await press(drop)
+			await frames(3)
+			var left := PropRules.room_props(s, s.room_id).filter(func(p: Dictionary) -> bool: return str(p.get("item_id", "")) == "backpack")
+			step("the backpack lies in the hall with the torch", not left.is_empty() and int((left[0]["contents"] as Dictionary).get("torch", 0)) == 1)

@@ -264,6 +264,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return ContainerRules.plan_put(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
 		"unlock":
 			return _plan_unlock(s, data, turn_id, e)
+		"drop_item":  # the hero leaves a thing (a bag with what is in it) in the room (v0.7.18.2)
+			return ContainerRules.plan_drop(s, data, str(e.get("item_id", "")), int(e.get("qty", 1)))
 		"prop_state":
 			return PropRules.plan_state(s, e)
 		"advance_time":
@@ -699,6 +701,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(ContainerRules.apply_take(s, _data, plan))
 		"put_in":
 			ContainerRules.apply_put(s, _data, plan)
+		"drop_item":
+			ContainerRules.apply_drop(s, _data, plan)
 		"unlock":
 			_extra_lines.append_array(ContainerRules.unlock(PropRules.find(s, str(plan["room"]), str(plan["prop"])), str(plan["how"])))
 		"prop_state":

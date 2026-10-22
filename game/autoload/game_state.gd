@@ -847,13 +847,26 @@ func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> S
 		lines.append_array(ContainerRules.apply_take(session, Catalog.data, r["plan"]))
 	else:
 		ContainerRules.apply_put(session, Catalog.data, r["plan"])
-	if take and not str(r["plan"]["owner"]).is_empty():  # caught: the master narrates the owner
+	if take and not str(r["plan"].get("owner", "")).is_empty():  # caught: the master narrates the owner
 		_add(GameSession.effect_entry(lines))
 		_log("События: " + ", ".join(lines))
 		EventBus.state_changed.emit()
 		_request("action", "Беру из чужого %s [движок: %s]" % [PropRules.find(session, session.room_id, prop_id).get("name", ""), " · ".join(lines)])
 		return ""
 	_quiet_lines(lines)
+	return ""
+
+
+## Leaves a thing of the pack — a bag with what is in it — in the room (v0.7.18.2), no master turn. "" or a key.
+func drop_item(what: String, qty: int = 1) -> String:
+	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var r := ContainerRules.plan_drop(session, Catalog.data, what, qty)
+	if r.has("reason"):
+		EventBus.message.emit(str(r["reason"]))
+		return ""
+	ContainerRules.apply_drop(session, Catalog.data, r["plan"])
+	_quiet_lines([str(r["summary"])] as Array[String])
 	return ""
 
 

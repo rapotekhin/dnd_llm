@@ -221,6 +221,8 @@ static func class_name_of(c: Dictionary, data: Dictionary) -> String:
 ## Recomputes the derived cache in place. Call after creation, load, equip, level-up.
 static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> void:
 	sanitize_equipped(c)
+	if data.has("rules") and data["rules"].has("containers"):
+		ContainerRules.sync_bags(c, data)  # one bag per container item in the pack (v0.7.18.2)
 	_grant_trait_cantrips(c, data)
 	c["item_props"] = active_props(c, data, session_items)  # v0.7.12
 	var floors := {}
@@ -326,7 +328,7 @@ static func carried_weight(c: Dictionary, data: Dictionary, session_items: Dicti
 	var total := 0.0
 	for id: String in c.get("inventory", {}):
 		total += float(ItemRules.def_of(data["items"], session_items, id).get("weight", 0)) * int(c["inventory"][id])
-	return total
+	return total + ContainerRules.bags_weight(c, data, session_items)  # what lies in the bags (v0.7.18.2)
 
 
 ## Carrying capacity (PHB): Strength × rules.carry.per_str pounds.

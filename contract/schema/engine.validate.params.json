@@ -430,6 +430,34 @@
       "title": "DamageEffect",
       "type": "object"
     },
+    "DropItemEffect": {
+      "additionalProperties": false,
+      "description": "The hero leaves a thing in the room (0.29.0): an item of the pack, or a bag (`item_id` = its bag id) with what\nis in it; it becomes a thing of the room that can be picked up again.",
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "drop_item",
+          "default": "drop_item",
+          "title": "Kind",
+          "type": "string"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "item_id"
+      ],
+      "title": "DropItemEffect",
+      "type": "object"
+    },
     "EquipEffect": {
       "additionalProperties": false,
       "description": "The player changes gear by words (0.14.0): `slot` armor / shield / main_hand / off_hand, or `all` to strip;\n`item_id` puts that carried item on, none takes the slot off. The engine checks it like the character sheet; in\na fight armour cannot be changed.",
@@ -1420,6 +1448,7 @@
           "condition": "#/$defs/ConditionEffect",
           "crime_known": "#/$defs/CrimeKnownEffect",
           "damage": "#/$defs/DamageEffect",
+          "drop_item": "#/$defs/DropItemEffect",
           "equip": "#/$defs/EquipEffect",
           "flag": "#/$defs/FlagEffect",
           "furnish": "#/$defs/FurnishEffect",
@@ -1528,6 +1557,9 @@
         },
         {
           "$ref": "#/$defs/UnlockEffect"
+        },
+        {
+          "$ref": "#/$defs/DropItemEffect"
         }
       ],
       "title": "Effect"

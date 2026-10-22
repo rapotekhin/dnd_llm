@@ -19,7 +19,8 @@
 {% if character.cantrips %}Заговоры: {{ character.cantrips | join(", ") }}.
 {% endif %}{% if character.spells %}Заклинания: {{ character.spells | join(", ") }}.
 {% endif %}{% endif %}{% if character.equipped %}Надето и в руках (слот: предмет [id]): {{ character.equipped | join(", ") }}.
-{% endif %}{% if character.inventory %}В рюкзаке: {% for i in character.inventory %}{{ i.name }}{% if i.qty > 1 %} ×{{ i.qty }}{% endif %} [{{ i.item_id }}]{% if not loop.last %}, {% endif %}{% endfor %}.
+{% endif %}{% if character.inventory %}При себе (под рукой): {% for i in character.inventory %}{{ i.name }}{% if i.qty > 1 %} ×{{ i.qty }}{% endif %} [{{ i.item_id }}]{% if not loop.last %}, {% endif %}{% endfor %}.
+{% endif %}{% if character.bags %}Сумки (что внутри — не под рукой): {{ character.bags | join("; ") }}.
 {% endif %}
 {% endif %}
 {% if scene %}

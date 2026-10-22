@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 27
+const SAVE_VERSION := 28
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -49,6 +49,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	24: _v24_to_v25,
 	25: _v25_to_v26,
 	26: _v26_to_v27,
+	27: _v27_to_v28,
 }
 
 
@@ -277,3 +278,8 @@ static func _v25_to_v26(data: Dictionary, _ctx: Dictionary) -> void:
 static func _v26_to_v27(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["reputation"] = {}
 	data["session"]["attitude_base"] = {}
+
+
+## v0.7.18.2: the hero's bags — empty; the first refresh makes one for each container item in the pack.
+static func _v27_to_v28(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["character"]["bags"] = {}

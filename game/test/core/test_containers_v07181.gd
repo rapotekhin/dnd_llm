@@ -61,7 +61,10 @@ func test_putting_in_keeps_the_capacity_and_a_full_box_is_not_carried_off() -> v
 	s.character["inventory"]["candle"] = 3
 	assert_bool(bool(_do({"kind": "put_in", "prop_id": "p1", "item_id": "candle", "qty": 2}, "t-3")["accepted"])).is_true()
 	assert_int(int(s.character["inventory"]["candle"])).is_equal(1)
-	assert_str(str(_do({"kind": "take_prop", "prop_id": "p1"}, "t-4")["reason"])).contains("сначала")
+	assert_bool(bool(_do({"kind": "take_prop", "prop_id": "p1"}, "t-4")["accepted"])).is_true()  # a basket goes with what is in it (v0.7.18.2)
+	var bag := ContainerRules.bags_of(s.character, "basket")[0]
+	assert_dict(ContainerRules.bags(s.character)[bag]["contents"]).is_equal({"candle": 2})
+
 
 
 func test_taking_from_someone_elses_chest_before_them_is_a_theft() -> void:

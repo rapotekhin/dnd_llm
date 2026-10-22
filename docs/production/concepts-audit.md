@@ -7,13 +7,13 @@
 
 | Где | Что | Решение | Почему |
 |---|---|---|---|
-| `game/core/rules/container_rules.gd:192` | match по pick, force | понятие движка | способы открыть замок — понятие движка (ключ, отмычки, сила); сложность — rules.containers |
+| `game/core/rules/container_rules.gd:208` | match по pick, force | понятие движка | способы открыть замок — понятие движка (ключ, отмычки, сила); сложность — rules.containers |
 | `game/core/rules/crime_rules.gd:111` | match по male, female | служебное | окончание по роду NPC (данные пакета) |
 | `game/core/rules/crime_rules.gd:197` | match по pay, stocks, resist | понятие движка | ответ страже — три исхода понятия «задержание» (вергельд, колодки, сопротивление); сумма и сроки — rules.json |
 | `game/core/rules/crime_rules.gd:248` | имя или описание вещи мира в коде | служебное | подпись тела убитого NPC на панели: «Тело: имя» |
 | `game/core/rules/effect_engine.gd:148` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, cast… | понятие движка | виды эффектов — словарь понятий движка, который знает мастер (протокол); новый вид — новое понятие |
-| `game/core/rules/effect_engine.gd:402` | match по damage, condition | понятие движка | эффекты на врага в бою — те же понятия |
-| `game/core/rules/effect_engine.gd:637` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, start_combat… | понятие движка | применение видов эффектов |
+| `game/core/rules/effect_engine.gd:404` | match по damage, condition | понятие движка | эффекты на врага в бою — те же понятия |
+| `game/core/rules/effect_engine.gd:639` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, start_combat… | понятие движка | применение видов эффектов |
 | `game/core/rules/lookup.gd:10` | match по condition, rule, spell, feature, item, npc | служебное | справка движка по видам |
 | `game/core/rules/social_rules.gd:32` | match по insight, deception, wis_save | правило 5e | состязания 5e: против чего проверка (rules.social.contests) |
 | `game/core/rules/social_rules.gd:130` | match по identify, lift_curse, enchant | сделано | v0.7.16: услуга — данные `rules.items.services` (операция движка + название), не код |

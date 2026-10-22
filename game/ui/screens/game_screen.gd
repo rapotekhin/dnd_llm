@@ -193,6 +193,7 @@ func _ready() -> void:
 	_container.visible = false
 	add_child(_container)
 	_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_sheet.bag_requested.connect(func(bag: String) -> void: _container.open(bag))  # v0.7.18.2
 	_sheet.prepare_requested.connect(func() -> void:
 		_sheet.visible = false
 		_prepare.open())

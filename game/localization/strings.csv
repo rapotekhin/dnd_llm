@@ -449,6 +449,9 @@ CONTAINER_LOCKED,"Заперто."
 CONTAINER_INSIDE,Внутри
 CONTAINER_EMPTY,пусто
 CONTAINER_YOURS,Ваши вещи — положить
+BTN_DROP_BAG,Оставить здесь
+BTN_OPEN_BAG,Открыть
+SHEET_BAG,"{name}: внутри {w} из {cap} фнт"
 JOURNAL_NOTES,Что было
 JOURNAL_REMEMBERS,помнит: {fact}
 JOURNAL_EMPTY,"Пока пусто: записи появятся, когда вы осмотритесь и поговорите с людьми."

@@ -203,7 +203,7 @@ static func sellable(s: GameSession, item_id: String, data: Dictionary = {}) -> 
 	for slot: String in CharacterRules.SLOTS:
 		if str(c.get("equipped", {}).get(slot, "")) == item_id:
 			worn += 1
-	return maxi(0, int(c.get("inventory", {}).get(item_id, 0)) - worn)
+	return maxi(0, int(c.get("inventory", {}).get(item_id, 0)) - worn - ContainerRules.full_bags(c, item_id))  # a full bag — empty it first (v0.7.18.2)
 
 
 ## Totals of a cart and the first reason it cannot go through:
