@@ -115,6 +115,8 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
 }
 
 
+# Topics of a scene, not of a conversation: out of the index while the hero talks (still readable by `rules`).
+SCENE_TOPICS = {"places", "containers", "equip", "tools", "invisible"}
 BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
 
 
@@ -122,10 +124,12 @@ def auto_topics(mode: str, snap: Snapshot) -> list[str]:
     """Topics the scene needs now: they go into the system prompt whole."""
     scene, character = snap.scene, snap.character
     out: list[str] = []
-    if mode != "trade":  # conditions come often and by words (v0.7.20.4 goldens): their rules stay in the prompt
+    # conditions come often and by words in a scene (v0.7.20.4 goldens); a conversation keeps only its own topic —
+    # the NPC's prompt grew to 28k characters with conditions, payment and quests in it (the author's trace, v0.7.21.3)
+    if mode in ("exploration", "combat") or (character and character.conditions):
         out.append("conditions")
     if mode in ("social", "trade"):
-        out += ["social"] if mode == "trade" else ["social", "pay"]  # in trade the deal panel pays
+        out.append("social")
     if scene and scene.open_edges:
         out.append("places")
     if snap.crimes:
@@ -138,7 +142,7 @@ def auto_topics(mode: str, snap: Snapshot) -> list[str]:
         out.append("background")
     if scene and any(p.container for p in scene.props):
         out.append("containers")
-    if mode == "social" or (scene and any(BOARD.search(p.name) for p in scene.props)):  # work is asked of people and boards (v0.7.21.2)
+    if scene and any(BOARD.search(p.name) for p in scene.props):  # work is asked at a board (v0.7.21.2)
         out.append("quests")
     return [t for t in TOPICS if t in out]
 
@@ -174,7 +178,8 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
     }
     shown = auto_topics(mode, snap)
     context["auto_topics"] = shown
-    context["topic_index"] = [(k, v[0]) for k, v in TOPICS.items() if k not in shown]
+    scene_only = SCENE_TOPICS if mode in ("social", "trade") else set()  # a conversation does not search or carry
+    context["topic_index"] = [(k, v[0]) for k, v in TOPICS.items() if k not in shown and k not in scene_only]
     if mode == "exploration":
         return render("exploration.md.j2", **context)
     if mode == "combat":

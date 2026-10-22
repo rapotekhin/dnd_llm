@@ -34,3 +34,14 @@ def test_godot_client_speaks_the_same_protocol_version():
     source = (REPO_ROOT / "game" / "core" / "net" / "backend_client.gd").read_text(encoding="utf-8")
     match = re.search(r'const PROTOCOL_VERSION := "([^"]+)"', source)
     assert match and match.group(1) == PROTOCOL_VERSION
+
+
+def test_every_engine_method_the_tools_call_is_allowed():
+    # v0.7.21.3: engine.find_quests was called by the master but not allowed — every quest turn failed
+    import re
+
+    from llm_server import REPO_ROOT
+    from llm_server.session import ENGINE_METHODS
+
+    called = set(re.findall(r'call_engine\("(engine\.[a-z_]+)"', (REPO_ROOT / "llm_server" / "src" / "llm_server" / "agents.py").read_text(encoding="utf-8")))
+    assert called and called <= ENGINE_METHODS, called - ENGINE_METHODS

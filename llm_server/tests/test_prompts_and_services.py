@@ -67,7 +67,7 @@ def test_npc_prompts():
     trade = prompts.system_prompt("trade", s, npc)
     assert social.startswith("# Ты — Бруно Хмель")
     assert "target_id = \"" + INNKEEPER in social
-    assert "Покупка и оплата — всегда эффектами" in social
+    assert "Покупка и оплата — эффектами" in social and "Платный вариант" not in social  # payment details by rules("pay")
     assert "Сделки — только через панель сделки" in trade and "Покупка и оплата" not in trade
     with pytest.raises(ValueError):
         prompts.system_prompt("social", s, None)
