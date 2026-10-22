@@ -208,7 +208,7 @@ static func can_choose(s: GameSession, world: Dictionary, quest_id: String, choi
 static func choose(s: GameSession, data: Dictionary, quest_id: String, choice_id: String) -> Array[String]:
 	var c := choice(s, data["world"], quest_id, choice_id)
 	var lines: Array[String] = ["Выбор: %s" % c["action"]]
-	_reward(s, data, c, lines)
+	_reward(s, data, c, lines, bool(quest(data["world"], quest_id).get("major", false)))
 	lines.append_array(_complete_step(s, data, quest_id))
 	lines.append_array(advance(s, data))
 	return lines
@@ -259,7 +259,7 @@ static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -
 	var i := int(s.quests_active[quest_id])
 	var step: Dictionary = q["steps"][i]
 	var lines: Array[String] = ["«%s»: %s — сделано" % [q["title"], step["text"]]]
-	_reward(s, data, step, lines)
+	_reward(s, data, step, lines, dangerous(q, step))
 	s.quest_parts.erase(quest_id)
 	if i + 1 >= (q["steps"] as Array).size():
 		s.quests_active.erase(quest_id)
@@ -275,7 +275,24 @@ static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -
 	return lines
 
 
-static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Array[String]) -> void:
+## Class experience for a quest (v0.7.19, the author: «a letter brought — 300 XP and new spells» makes no sense): only
+## for the dangerous — a step with a fight (`encounter` in its fact) or marked `danger: true` — and for every step of a
+## quest marked `major`. A peaceful step pays in coins, things and reputation.
+static func dangerous(q: Dictionary, step: Dictionary) -> bool:
+	return bool(q.get("major", false)) or bool(step.get("danger", false)) or _has_fight(step.get("when", {}))
+
+
+static func _has_fight(when: Dictionary) -> bool:
+	if when.has("encounter"):
+		return true
+	for key: String in ["all", "any"]:
+		for w: Variant in when.get(key, []):
+			if w is Dictionary and _has_fight(w):
+				return true
+	return false
+
+
+static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Array[String], class_xp: bool = true) -> void:
 	var c := s.character
 	var flag := str(r.get("flag", ""))
 	if not flag.is_empty() and not s.flags.has(flag):
@@ -293,7 +310,8 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 	for npc: String in att:
 		s.shift_attitude(npc, int(att[npc]), data)
 		lines.append("%s: отношение %s" % [world.npc(npc).get("name", npc), "лучше" if int(att[npc]) > 0 else "хуже"])
-	lines.append_array(XpRules.award(c, data, int(r.get("xp", 0)), "задание"))
+	if class_xp:
+		lines.append_array(XpRules.award(c, data, int(r.get("xp", 0)), "задание"))
 
 
 ## Taken quests for the snapshot and the journal: [{id, title, description, done, failed, step}]; failed ones —

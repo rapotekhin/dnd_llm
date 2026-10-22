@@ -52,7 +52,7 @@ func test_the_letter_comes_from_bruno_and_only_it_goes_to_ilva() -> void:
 	s.character["inventory"]["bruno_letter"] = 1
 	QuestRules.talk(s, data, "letter_to_ilva")
 	assert_bool(s.quests_done.has("letter_to_ilva")).is_true()
-	assert_int(int(s.character["xp"])).is_equal(300)
+	assert_int(int(s.character["xp"])).is_equal(0)  # v0.7.19: a delivery pays in coins, not in class experience
 	assert_bool(s.character["inventory"].has("bruno_letter")).is_false()
 
 

@@ -184,6 +184,10 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"локация {lid}: нет монстра стражи {law.get('guard_monster')}")
 
     for qid, q in world.get("quests", {}).items():
+        if "major" in q and not isinstance(q["major"], bool):  # v0.7.19: class experience only for the dangerous
+            errors.append(f"задание {qid}: major — true / false")
+        errors += [f"задание {qid}, шаг {i + 1}: danger — true / false" for i, st in enumerate(q.get("steps", []))
+                   if "danger" in st and not isinstance(st["danger"], bool)]
         if "steps" not in q:
             missing = [k for k in ("room", "action", "xp", "done_text") if k not in q]
             if missing:

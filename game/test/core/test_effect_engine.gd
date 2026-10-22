@@ -179,7 +179,7 @@ func test_a_quest_thing_by_words_takes_and_closes_the_quest() -> void:
 	var handed := fx.apply(s, "t-3", [_ok({"kind": "take_item", "item_id": "bruno_letter"}, "t-3")])
 	assert_bool(s.quests_done.has("letter_to_ilva")).is_true()
 	assert_bool(s.character["inventory"].has("bruno_letter")).is_false()
-	assert_int(int(s.character["xp"])).is_equal(xp + 300)
+	assert_int(int(s.character["xp"])).is_equal(xp)  # v0.7.19: a delivery gives no class experience
 	assert_str("\n".join(handed)).contains("сделано")
 
 

@@ -137,6 +137,7 @@
 							"room": {"type": "string"},
 							"action": {"$ref": "#/$defs/nonempty"},
 							"xp": {"type": "integer", "minimum": 0},
+							"major": {"type": "boolean"},
 							"reward_cp": {"type": "integer", "minimum": 0},
 							"done_text": {"$ref": "#/$defs/nonempty"},
 							"giver": {"type": "string"},
@@ -175,6 +176,7 @@
 										"action": {"type": "string"},
 										"done_text": {"type": "string"},
 										"xp": {"type": "integer", "minimum": 0},
+										"danger": {"type": "boolean"},
 										"reward_cp": {"type": "integer", "minimum": 0},
 										"items": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}},
 										"attitude": {"type": "object", "additionalProperties": {"type": "integer", "minimum": -3, "maximum": 3}}

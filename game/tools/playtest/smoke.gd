@@ -210,8 +210,11 @@ func _quest_level_up(gs: Node, game: Control) -> void:
 		return
 	await press(quest)
 	step("quest turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
-	step("quest done, experience", gs.session.quests_done.has("letter_to_ilva") and int(gs.session.character["xp"]) == 300)
+	step("quest done: coins, no class experience (v0.7.19)", gs.session.quests_done.has("letter_to_ilva") and int(gs.session.character["xp"]) == 0)
 	await shot("quest_done")
+	gs.session.character["xp"] = 300  # the experience of a fight (a delivery gives none since v0.7.19)
+	node("EventBus").state_changed.emit()
+	await frames(3)
 	var lv: Button = find(game, "LevelUpButton")
 	if not step("level-up button", lv != null and not lv.disabled):
 		return
