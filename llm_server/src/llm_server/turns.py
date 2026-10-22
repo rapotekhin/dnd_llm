@@ -16,7 +16,7 @@ from pydantic_ai.usage import RunUsage, UsageLimits
 
 from . import prompts, router
 from .llm.catalog import REQUEST_COSTS
-from .llm.providers import PICKER
+from .llm.providers import PICKER, PINNED, pinned_for
 from .agents import RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
 from .protocol import (
     CoinsEffect,
@@ -152,6 +152,14 @@ async def _pick_providers(model: Model) -> None:
 
 
 async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
+    token = PINNED.set(pinned_for(_model_id(session, params.model), params.provider))  # v0.7.20.5
+    try:
+        return await _agent_turn(session, params)
+    finally:
+        PINNED.reset(token)
+
+
+async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     services = session.services
     assert services.model_factory is not None
     model = _model_id(session, params.model)
@@ -180,7 +188,7 @@ async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
 
     started = time.monotonic()
     trace = {"what": "turn", "turn_id": params.turn_id, "mode": params.mode, "kind": params.kind, "input": params.input,
-             "npc_id": params.npc_id, "model": model, "system": system, "user": user_prompt}
+             "npc_id": params.npc_id, "model": model, "pinned": PINNED.get(), "system": system, "user": user_prompt}
     billed: list[float] = []
     token = REQUEST_COSTS.set(billed)
     before = RunUsage()  # the router and a short attempt, paid on top of the full run (v0.7.20.4)
@@ -270,6 +278,14 @@ async def stub_summary(session: Session, params: SummaryParams) -> SummaryResult
 
 
 async def agent_summary(session: Session, params: SummaryParams) -> SummaryResult:
+    token = PINNED.set(pinned_for(_model_id(session, params.model), params.provider))  # v0.7.20.5
+    try:
+        return await _agent_summary(session, params)
+    finally:
+        PINNED.reset(token)
+
+
+async def _agent_summary(session: Session, params: SummaryParams) -> SummaryResult:
     services = session.services
     assert services.model_factory is not None
     model = _model_id(session, params.model)

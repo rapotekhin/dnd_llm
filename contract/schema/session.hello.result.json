@@ -49,6 +49,13 @@
           "default": 0.0,
           "title": "Output Usd Per Mtok",
           "type": "number"
+        },
+        "providers": {
+          "items": {
+            "$ref": "#/$defs/ProviderInfo"
+          },
+          "title": "Providers",
+          "type": "array"
         }
       },
       "required": [
@@ -56,6 +63,26 @@
         "name"
       ],
       "title": "ModelInfo",
+      "type": "object"
+    },
+    "ProviderInfo": {
+      "additionalProperties": false,
+      "description": "An OpenRouter provider the player may pin the model to (0.35.0).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "tag": {
+          "title": "Tag",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tag",
+        "name"
+      ],
+      "title": "ProviderInfo",
       "type": "object"
     }
   },

@@ -25,6 +25,19 @@ DEFAULT_MODELS = (
     "nvidia/nemotron-3-ultra-550b-a55b:free",
 )
 
+# Providers the player may pin a paid model to (v0.7.20.5, the author's request): OpenRouter endpoint tags with a name,
+# the fastest and cheapest for a ~20k-token turn by OpenRouter's stats of 2026-10-22 (DeepSeek's — the author's pick).
+# Pinned, a request goes only to that provider; free models are left to OpenRouter.
+PROVIDERS: dict[str, tuple[tuple[str, str], ...]] = {
+    "deepseek/deepseek-v4.1-flash-1017": (("relace", "Relace"), ("open-inference/fp4", "OpenInference"),
+                                          ("deepinfra/fp8/flex", "DeepInfra (flex)")),
+    "anthropic/claude-haiku-5.5": (("google-vertex/global", "Google Vertex"), ("google-vertex/us", "Google Vertex (US)"),
+                                   ("anthropic", "Anthropic")),
+    "qwen/qwen3.8-27b": (("near-ai/fp8", "Near AI"), ("modal", "Modal"), ("dekallm", "DekaLLM")),
+    # Gemini 3.8 Flash and Qwen3.8 Omni Flash fail our turn with any provider (2026-10-22: Google answers 400, Alibaba
+    # has no forced tool_choice) — nothing to pin until that is fixed
+}
+
 
 class ConfigError(RuntimeError):
     pass

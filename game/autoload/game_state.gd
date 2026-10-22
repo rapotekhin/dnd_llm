@@ -1686,8 +1686,7 @@ func _request(kind: String, input: String) -> void:
 	}
 	if s.in_conversation():
 		params["npc_id"] = s.npc_id
-	if not SaveManager.master_model.is_empty():
-		params["model"] = SaveManager.master_model
+	SaveManager.master_params(params)
 	var call := await Backend.request("turn.request", params, float(Catalog.game()["turn"]["client_timeout_s"]))
 	if session != s or busy_turn != turn_id:
 		return  # the session was closed or replaced while the master was thinking
@@ -1858,8 +1857,7 @@ func _maybe_summarize_location() -> void:
 func _summarize(kind: String, subject: String, key: String, events: Array) -> void:
 	var s := session
 	var params := {"kind": kind, "subject_id": subject, "previous": str(s.summaries.get(key, "")), "events": events}
-	if not SaveManager.master_model.is_empty():
-		params["model"] = SaveManager.master_model
+	SaveManager.master_params(params)
 	var call := await Backend.request("summary.request", params, float(Catalog.game()["turn"]["summary_timeout_s"]))
 	if session == s and not call.is_error():
 		s.summaries[key] = str(call.result.get("summary", ""))

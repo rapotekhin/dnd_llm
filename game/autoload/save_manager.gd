@@ -14,6 +14,8 @@ var fullscreen: bool = false
 var resolution: Vector2i = Vector2i(1600, 900)
 ## The player's model pick from the server list; "" = the server default.
 var master_model: String = ""
+## The OpenRouter provider pinned for a model (v0.7.20.5): model id ("" — the server's default) → provider tag.
+var master_providers: Dictionary = {}
 ## Reactions and choices of the hero's features in a fight (v0.7.10, as in Baldur's Gate 3): "ask" — a window
 ## «Использовать?»; "always" — the engine uses them; "never".
 var reactions: String = "ask"
@@ -126,6 +128,7 @@ func load_settings() -> void:
 		fullscreen = cfg.get_value("display", "fullscreen", false)
 		resolution = cfg.get_value("display", "resolution", resolution)
 		master_model = str(cfg.get_value("master", "model", ""))
+		master_providers = cfg.get_value("master", "providers", {})
 		reactions = str(cfg.get_value("game", "reactions", "ask"))
 
 
@@ -134,6 +137,7 @@ func save_settings() -> void:
 	cfg.set_value("display", "fullscreen", fullscreen)
 	cfg.set_value("display", "resolution", resolution)
 	cfg.set_value("master", "model", master_model)
+	cfg.set_value("master", "providers", master_providers)
 	cfg.set_value("game", "reactions", reactions)
 	cfg.save(settings_path)
 
@@ -165,3 +169,13 @@ func available_resolutions() -> Array[Vector2i]:
 		out.append(resolution)
 		out.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x < b.x)
 	return out
+
+
+## The master's model and pinned provider for turn.request and summary.request (v0.7.20.5).
+func master_params(params: Dictionary) -> Dictionary:
+	if not master_model.is_empty():
+		params["model"] = master_model
+	var provider := str(master_providers.get(master_model, ""))
+	if not provider.is_empty():
+		params["provider"] = provider
+	return params

@@ -17,7 +17,7 @@ from pydantic_ai.models import Model
 from pydantic_ai.settings import ModelSettings
 
 from . import prompts
-from .llm.providers import PICKER, min_tps
+from .llm.providers import PICKER, PINNED, min_tps
 from .protocol import (
     DcTier,
     Effect,
@@ -81,6 +81,10 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
     if model.model_name.startswith(NO_TEMPERATURE):
         # Their endpoints reject `temperature`: with require_parameters no provider is left (HTTP 404, v0.7.7).
         settings.pop("temperature", None)
+    pinned = PINNED.get()
+    if pinned and getattr(model, "system", "") == "openrouter":  # the player's provider and no other (v0.7.20.5)
+        settings["openrouter_provider"] = {"only": [pinned], "order": [pinned], "allow_fallbacks": False, "require_parameters": True}
+        return settings  # type: ignore[return-value]
     sort = os.environ.get("LLM_SERVER_PROVIDER_SORT", "price").strip().lower()
     if getattr(model, "system", "") == "openrouter" and sort in ("price", "throughput", "latency"):
         settings["openrouter_provider"] = {"sort": sort, "require_parameters": True}

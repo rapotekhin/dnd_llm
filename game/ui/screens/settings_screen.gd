@@ -15,6 +15,8 @@ var _token: LineEdit
 var _ca: LineEdit
 var _check_status: Label
 var _model: OptionButton
+var _provider: OptionButton
+var _provider_tags: Array = []
 var _budget_edit: LineEdit
 var _budget_off: CheckBox
 var _budget_status: Label
@@ -139,6 +141,15 @@ func _master_tab() -> Control:
 	_model.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_model.item_selected.connect(_on_model_selected)
 	box.add_child(_model)
+	var provider_label := Label.new()  # v0.7.20.5: the provider pinned by hand
+	provider_label.text = "OPT_PROVIDER"
+	provider_label.theme_type_variation = UiTheme.MUTED_LABEL
+	box.add_child(provider_label)
+	_provider = OptionButton.new()
+	_provider.name = "ProviderOption"
+	_provider.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_provider.item_selected.connect(_on_provider_selected)
+	box.add_child(_provider)
 	_fill_models()
 	_budget_row(box)
 	var rx_label := Label.new()  # v0.7.10: reactions in a fight, as in Baldur's Gate 3
@@ -266,11 +277,36 @@ func _fill_models() -> void:
 		_model.add_item(SaveManager.master_model)
 	_model.selected = _model_ids.find(SaveManager.master_model)
 	_model.disabled = Backend.models().is_empty()
+	_fill_providers()
+
+
+## The providers of the chosen model (session.hello): «Авто» — the server picks the cheapest fast one and may change it.
+func _fill_providers() -> void:
+	if _provider == null:
+		return
+	_provider.clear()
+	_provider_tags = [""]
+	_provider.add_item(tr("OPT_PROVIDER_AUTO"))
+	var id := SaveManager.master_model if not SaveManager.master_model.is_empty() else Backend.default_model()
+	for m: Variant in Backend.models():
+		if m is Dictionary and str(m.get("id", "")) == id:
+			for p: Variant in m.get("providers", []):
+				_provider_tags.append(str(p.get("tag", "")))
+				_provider.add_item(str(p.get("name", p.get("tag", ""))))
+	var pinned := str(SaveManager.master_providers.get(SaveManager.master_model, ""))
+	_provider.selected = maxi(0, _provider_tags.find(pinned))
+	_provider.disabled = _provider_tags.size() < 2
+
+
+func _on_provider_selected(i: int) -> void:
+	SaveManager.master_providers[SaveManager.master_model] = _provider_tags[i]
+	SaveManager.save_settings()
 
 
 func _on_model_selected(i: int) -> void:
 	SaveManager.master_model = _model_ids[i]
 	SaveManager.save_settings()
+	_fill_providers()
 
 
 func _field(parent: Control, key: String, value: String, secret: bool) -> LineEdit:

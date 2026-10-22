@@ -259,6 +259,29 @@ def test_the_picked_providers_go_into_the_request(monkeypatch):
     assert "only" not in settings_for(model)["openrouter_provider"]
 
 
+def test_a_pinned_provider_is_the_only_one(monkeypatch):
+    # v0.7.20.5: the player's provider from the settings — no picking, no fallbacks
+    from pydantic_ai.models.openrouter import OpenRouterModel
+    from pydantic_ai.providers.openrouter import OpenRouterProvider
+
+    from llm_server.agents import settings_for
+    from llm_server.llm.providers import PINNED, pinned_for
+
+    model_id = "deepseek/deepseek-v4.1-flash-1017"
+    model = OpenRouterModel(model_id, provider=OpenRouterProvider(api_key="test"))
+    assert pinned_for(model_id, "relace") == "relace"
+    assert pinned_for(model_id, "google-vertex/global") is None and pinned_for(model_id, None) is None
+    token = PINNED.set("relace")
+    try:
+        assert settings_for(model)["openrouter_provider"] == {"only": ["relace"], "order": ["relace"], "allow_fallbacks": False,
+                                                            "require_parameters": True}
+    finally:
+        PINNED.reset(token)
+    infos = {m.id: m for m in ModelCatalog(("deepseek/deepseek-v4.1-flash-1017", "openrouter/free"), model_id).infos()}
+    assert [p.name for p in infos[model_id].providers] == ["Relace", "OpenInference", "DeepInfra (flex)"]
+    assert infos["openrouter/free"].providers == []
+
+
 def test_the_picker_keeps_its_list_when_openrouter_fails():
     import asyncio
 

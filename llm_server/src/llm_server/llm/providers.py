@@ -12,6 +12,7 @@ import os
 import statistics
 import time
 from collections import deque
+from contextvars import ContextVar
 
 import httpx
 
@@ -116,3 +117,13 @@ class ProviderPicker:
 
 
 PICKER = ProviderPicker()
+
+# The provider the player pinned for this turn or summary (v0.7.20.5): set by turns.py, read by agents.settings_for.
+PINNED: ContextVar[str | None] = ContextVar("pinned_provider", default=None)
+
+
+def pinned_for(model_id: str, wish: str | None) -> str | None:
+    """The player's provider when it is one of the model's list (another model was picked since — None)."""
+    from ..config import PROVIDERS
+
+    return wish if wish and any(tag == wish for tag, _ in PROVIDERS.get(model_id, ())) else None

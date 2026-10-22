@@ -1222,6 +1222,18 @@
       "default": null,
       "title": "Npc Id"
     },
+    "provider": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Provider"
+    },
     "snapshot": {
       "$ref": "#/$defs/Snapshot"
     },

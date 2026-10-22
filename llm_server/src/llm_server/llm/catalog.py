@@ -9,7 +9,8 @@ import httpx
 from pydantic_ai.models import Model
 from pydantic_ai.models.wrapper import WrapperModel
 
-from ..protocol import ModelInfo
+from ..config import PROVIDERS
+from ..protocol import ModelInfo, ProviderInfo
 from .providers import PICKER
 
 log = logging.getLogger("llm_server.models")
@@ -24,11 +25,15 @@ ModelFactory = Callable[[str], Model]
 REQUEST_COSTS: ContextVar[list[float] | None] = ContextVar("request_costs", default=None)
 
 
+def _providers(model_id: str) -> list[ProviderInfo]:
+    return [ProviderInfo(tag=t, name=n) for t, n in PROVIDERS.get(model_id, ())]
+
+
 class ModelCatalog:
     def __init__(self, allowed: tuple[str, ...], default: str):
         self.allowed = allowed
         self.default = default
-        self._info: dict[str, ModelInfo] = {m: ModelInfo(id=m, name=m) for m in allowed}
+        self._info: dict[str, ModelInfo] = {m: ModelInfo(id=m, name=m, providers=_providers(m)) for m in allowed}
 
     def infos(self) -> list[ModelInfo]:
         return [self._info[m] for m in self.allowed]
@@ -67,6 +72,7 @@ class ModelCatalog:
                 name=str(m.get("name", model_id)),
                 input_usd_per_mtok=float(pricing.get("prompt", 0)) * 1_000_000,
                 output_usd_per_mtok=float(pricing.get("completion", 0)) * 1_000_000,
+                providers=_providers(model_id),
             )
 
 
