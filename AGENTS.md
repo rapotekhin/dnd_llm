@@ -69,6 +69,7 @@ python tools/godot_playtest.py --scenario social                    # social mod
 python tools/godot_playtest.py --scenario preview                   # every --preview screen opens: a screenshot of each
 python tools/godot_playtest.py --scenario bot                         # bot player: 120 random steps on the stub master, session invariants (GODOT_BOT_STEPS, GODOT_BOT_SEED)
 python tools/trace_report.py                                         # report of the newest play session trace → build/traces/<name>.md (--list; the backend side from llm_server/var/traces)
+python tools/promote_items.py                                       # the master's item library: checked, how often given; --promote gen_id[=id] moves an item into the catalog (tools/srd/promoted.json)
 python tools/concepts_audit.py                                      # audit by pillar 6: closed lists of cases in the engine and the prompts → docs/production/concepts-audit.md (registry: docs/design/concepts.md)
 python tools/rules_audit.py                                         # audit of the 5e rules (conditions, monsters, features, traits, languages, items, spells): engine or master only → docs/production/rules-audit.md
 python tools/srd_import.py build                                      # tools/srd/source + tools/srd/ru.json → game/data/srd/ and the item catalog

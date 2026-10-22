@@ -1001,6 +1001,9 @@ def build() -> None:
     items = b.items()
     for keep in EXTRA_ITEMS:
         items[keep] = old["catalog"][keep]
+    promoted = ROOT / "tools" / "srd" / "promoted.json"  # items the author moved from the master's library (v0.7.18.3)
+    if promoted.exists():
+        items.update(json.loads(promoted.read_text(encoding="utf-8")))
     items.update(b.magic_items(items))
     races = b.races()
     classes = b.classes()
