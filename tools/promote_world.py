@@ -4,12 +4,16 @@
     python tools/promote_world.py --promote autosave:gen_npc_1           # into the pack with an id from the name
     python tools/promote_world.py --promote autosave:gen_npc_1=npc_ferryman
     python tools/promote_world.py --promote profiles/agent/slot_1:gen_room_2=pushcha-glade
+    python tools/promote_world.py --promote autosave:gen_quest_1=quest_lost_ring
 
 The master makes NPCs and places within the engine's rules (WorldGen); they live in the save of that game only
 (`session.generated`), with their final ids, rooms and exits. The author picks which become part of the world: a
 promoted NPC goes into the pack's world.json under a permanent id (in its room; its links to people that stay made
 are dropped); a promoted place takes the whole of it — every made room connected to the picked one, its made location,
 the people who live there, and the exit from the pack room it grew from; the open edge it used leaves that room.
+A promoted quest (v0.7.21.3) takes what it stands on: the made people and places of its giver and steps (whole, as
+above; one already in the pack — found by its name), its thing (a made item goes into the pack's `items`) and the
+hiding place of it; every id in its steps and rewards is rewritten. The player's own deed has no giver and stays.
 The pack is checked by tools/validate_data.py after the change and left as it was on errors. Saves are not touched:
 an old game keeps its own copy (two of a kind there, the pack's and its own), a new game gets the pack's.
 """
@@ -52,6 +56,11 @@ def load_save(path: Path) -> tuple[str, dict]:
     return str(session.get("world_id", "")), session.get("generated") or {}
 
 
+def save_items(path: Path) -> dict:
+    """The items this game made (their full descriptions live in the save)."""
+    return json.loads(path.read_text(encoding="utf-8")).get("session", {}).get("items") or {}
+
+
 def place_of(gen: dict, room_id: str) -> list[str]:
     """The made rooms connected to this one (the whole place), entry first."""
     rooms = gen.get("rooms", {})
@@ -72,8 +81,8 @@ def report(user_dir: Path = USER_DIR) -> list[str]:
     lines = []
     for name, path in saves(user_dir).items():
         world_id, gen = load_save(path)
-        npcs, rooms = gen.get("npcs", {}), gen.get("rooms", {})
-        if not npcs and not rooms:
+        npcs, rooms, quests = gen.get("npcs", {}), gen.get("rooms", {}), gen.get("quests", {})
+        if not npcs and not rooms and not quests:
             continue
         lines.append(f"{name} ({world_id})")
         for nid, d in npcs.items():
@@ -88,6 +97,9 @@ def report(user_dir: Path = USER_DIR) -> list[str]:
             loc_name = gen.get("locations", {}).get(loc, {}).get("name")
             names = ", ".join(f"{r} «{rooms[r].get('name')}»" for r in place)
             lines.append(f"  место: {names}" + (f" — новая локация «{loc_name}»" if loc_name else ""))
+        for qid, q in quests.items():
+            kind = "своё дело — не переносится" if q.get("own") else "заказ на доске" if q.get("board") else f"от {q.get('giver')}"
+            lines.append(f"  {qid}: задание «{q.get('title')}» — {kind}, шагов {len(q.get('steps', []))}")
     return lines or ["в сейвах нет созданного мастером"]
 
 
@@ -172,6 +184,123 @@ def made_from(gen: dict, origin: str, used: str, entry: str) -> bool:
     return entry in exits and mine.index(used) == exits.index(entry)
 
 
+def _by_name(table: dict, name: str) -> str:
+    return next((k for k, v in table.items() if str(v.get("name", "")).lower() == name.lower()), "")
+
+
+def promote_quest(world: dict, gen: dict, items: dict, qid: str, new_id: str, ids: dict[str, str]) -> list[str]:
+    q = gen["quests"][qid]
+    if q.get("own"):
+        return [f"✗ {qid}: своё дело игрока — без заказчика его в пакете никто не предложит"]
+    if any(str(x.get("title", "")).lower() == str(q.get("title", "")).lower() for x in world.get("quests", {}).values()):
+        return [f"✗ {qid}: «{q.get('title')}» уже есть в пакете"]
+    lines: list[str] = []
+    steps = q.get("steps", [])
+    made_rooms, made_npcs = gen.get("rooms", {}), gen.get("npcs", {})
+    # what the quest stands on: rooms first (people may live there), then people
+    rooms: list[str] = []
+    npcs: list[str] = [str(q.get("giver", ""))]
+    for st in steps:
+        w = st.get("when", {})
+        if w.get("room"):
+            rooms.append(str(w["room"]))
+        if w.get("encounter"):
+            rooms.append(str(w["encounter"]).removesuffix("_enc"))
+        if w.get("secret"):
+            rooms.append(str(w["secret"]).split(":")[0])
+        if w.get("talk"):
+            npcs.append(str(w["talk"]))
+        npcs += list(st.get("attitude", {}))
+    if q.get("board"):
+        rooms.append(str(q["board"]["room"]))
+    rooms += [str(gen.get("npc_rooms", {}).get(n, "")) for n in npcs if n in made_npcs]
+    for r in dict.fromkeys(rooms):
+        if r not in made_rooms or r in ids:
+            continue
+        known = _by_name(world["rooms"], str(made_rooms[r].get("name", "")))
+        if known:
+            ids[r] = known
+            continue
+        out = promote_place(world, gen, r, "", ids)
+        if not out[0].startswith("✓"):
+            return [f"✗ {qid}: место задания — {out[0][2:]}"]
+        lines += ["  " + x for x in out]
+    for n in dict.fromkeys(npcs):
+        if n not in made_npcs or n in ids:
+            continue
+        known = _by_name(world["npcs"], str(made_npcs[n].get("name", "")))
+        if known:
+            ids[n] = known
+            continue
+        out = promote_npc(world, gen, n, "", ids)
+        if not out.startswith("✓"):
+            return [f"✗ {qid}: человек задания — {out[2:]}"]
+        lines.append("  " + out)
+    new_id = _free(world.setdefault("quests", {}), new_id or "quest_" + slug(str(q.get("title", qid))))
+    pack_items = world.setdefault("items", {})
+    item_ids: dict[str, str] = {}
+
+    def item(i: str) -> str:  # a made item into the pack's items under a readable id
+        if i in item_ids:
+            return item_ids[i]
+        if i not in items or i in pack_items:
+            item_ids[i] = i
+            return i
+        d = items[i]
+        if d.get("properties") or d.get("use"):  # the pack keeps plain things; a wand or a potion is the catalog's
+            raise ValueError(f"вещь {i} «{d.get('name')}» с механикой — сначала в каталог (tools/promote_items.py), потом задание")
+        nid = _free(pack_items, slug(str(d.get("name", i))))
+        pack_items[nid] = {k: v for k, v in {"name": d.get("name", i), "item_type": "quest", "description": d.get("description") or d.get("name", i),
+                                              "text": d.get("text", ""), "weight": d.get("weight", 0), "value_cp": int(d.get("value_cp", 0))}.items()
+                           if v != ""}
+        item_ids[i] = nid
+        lines.append(f"  вещь {i} → {nid} «{items[i].get('name')}»")
+        return nid
+
+    try:
+        return _quest_into(world, gen, q, qid, new_id, ids, item, lines)
+    except ValueError as exc:
+        return [f"✗ {qid}: {exc}"]
+
+
+def _quest_into(world: dict, gen: dict, q: dict, qid: str, new_id: str, ids: dict[str, str], item, lines: list[str]) -> list[str]:
+    quest = _clean(q)
+    for k in ("depth", "scale", "own"):
+        quest.pop(k, None)
+    quest["giver"] = ids.get(quest["giver"], quest["giver"])
+    quest["description"] = quest.get("description") or quest["title"]
+    if quest.get("board"):
+        quest["board"]["room"] = ids.get(quest["board"]["room"], quest["board"]["room"])
+    for st in quest["steps"]:
+        w = st["when"]
+        for k in ("talk", "room"):
+            if k in w:
+                w[k] = ids.get(w[k], w[k])
+        if "encounter" in w:
+            room = w["encounter"].removesuffix("_enc")
+            w["encounter"] = ids[room] + "_enc" if room in ids else w["encounter"]
+        if "item" in w:
+            w["item"] = item(w["item"])
+        if "secret" in w:
+            room, _, sid = w["secret"].partition(":")
+            if sid == "q_" + qid:  # the hiding place of the quest's thing
+                sec = next((dict(x) for x in gen.get("room_secrets", {}).get(room, []) if x.get("id") == sid), None)
+                if sec is None:
+                    return [f"✗ {qid}: в сейве нет тайника {w['secret']}"]
+                sec["id"] = "q_" + new_id
+                sec["loot"] = {"items": {item(i): n for i, n in sec.get("loot", {}).get("items", {}).items()}}
+                world["rooms"][ids.get(room, room)].setdefault("secrets", []).append(sec)
+                sid = sec["id"]
+            w["secret"] = f"{ids.get(room, room)}:{sid}"
+        st["attitude"] = {ids.get(k, k): v for k, v in st.get("attitude", {}).items()}
+        if not st["attitude"]:
+            st.pop("attitude")
+        if st.get("items"):
+            st["items"] = {item(i): n for i, n in st["items"].items()}
+    world["quests"][new_id] = quest
+    return [f"✓ {qid} → {new_id} «{quest['title']}»"] + lines
+
+
 def promote(picks: list[str], user_dir: Path = USER_DIR, worlds: Path = WORLDS) -> list[str]:
     known = saves(user_dir)
     ids_known = validate_data.known()
@@ -193,6 +322,8 @@ def promote(picks: list[str], user_dir: Path = USER_DIR, worlds: Path = WORLDS) 
             out = [promote_npc(world, gen, gid, new_id, ids)]
         elif gid in gen.get("rooms", {}):
             out = promote_place(world, gen, gid, new_id, ids)
+        elif gid in gen.get("quests", {}):
+            out = promote_quest(world, gen, save_items(known[save]), gid, new_id, ids)
         else:
             out = [f"✗ {pick}: в сейве нет {gid}"]
         lines += out

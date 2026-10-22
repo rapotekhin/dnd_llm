@@ -97,3 +97,73 @@ def test_a_bad_pack_is_left_as_it_was(tmp_path):
     lines = promote_world.promote(["autosave:gen_npc_1"], user, worlds)
     assert any("не прошёл проверку" in line for line in lines) and any("no_such_monster" in line for line in lines), lines
     assert (worlds / "frontier" / "world.json").read_bytes() == before
+
+
+QUEST_GEN = {
+    "npcs": {"gen_npc_1": {"name": "Тимоша", "role": "посыльный", "gender": "male", "monster": "commoner", "tags": [], "generated": True,
+                           "links": [], "quest_depth": 1}},
+    "npc_rooms": {"gen_npc_1": "gen_room_1"},
+    "rooms": {"gen_room_1": {"name": "Задний двор лавки", "location_id": "brod", "description": "Бочки и крапива.",
+                             "exits": ["brod-square"], "npcs": ["gen_npc_1"], "hooks": [], "secrets": [], "generated": True,
+                             "encounter": {"id": "gen_room_1_enc", "enemies": [{"monster": "wolf", "count": 1, "name": "Волк", "desc": "", "col": 3}],
+                                           "loot": {"coins_cp": 0, "items": {}}}}},
+    "edge_exits": {"brod-square": ["gen_room_1"]},
+    "edges_used": ["brod-square:0"],
+    "room_secrets": {"gen_room_1": [{"id": "q_gen_quest_1", "dc": 10, "text": "Под крыльцом блестит", "skill": "perception",
+                                     "loot": {"items": {"gen_ab12": 1}}}]},
+    "quests": {
+        "gen_quest_1": {"title": "Пропавший задаток", "description": "", "giver": "npc_merchant", "offer_text": "Найди задаток.",
+                        "generated": True, "scale": "ordinary", "depth": 0, "steps": [
+                            {"text": "Расспросить посыльного", "when": {"talk": "gen_npc_1"}, "action": "Поговорить: Тимоша"},
+                            {"text": "Найти задаток", "when": {"secret": "gen_room_1:q_gen_quest_1"}},
+                            {"text": "Отогнать волка", "when": {"encounter": "gen_room_1_enc"}, "danger": True},
+                            {"text": "Отдать задаток", "when": {"talk": "npc_merchant", "item": "gen_ab12"}, "reward_cp": 3500, "xp": 150,
+                             "attitude": {"npc_merchant": 1}, "danger": True}]},
+        "gen_quest_2": {"title": "Кто травит колодцы", "description": "Своё.", "giver": "", "own": True, "generated": True,
+                        "steps": [{"text": "Осмотреть погреб", "when": {"room": "brod-tavern-cellar"}, "xp": 300}]},
+    },
+}
+ITEMS = {"gen_ab12": {"name": "Кошель задатка", "item_type": "treasure", "rarity": "common", "value_cp": 500, "weight": 0.5,
+                      "properties": [], "description": "Тугой кожаный кошель.", "generated": True}}
+
+
+def _setup_quest(tmp_path: Path) -> tuple[Path, Path]:
+    user, worlds = _setup(tmp_path)
+    save = {"session": {"world_id": "frontier", "generated": QUEST_GEN, "items": ITEMS}}
+    (user / "saves" / "autosave.json").write_text(json.dumps(save, ensure_ascii=False), encoding="utf-8")
+    return user, worlds
+
+
+def test_a_quest_comes_with_its_place_person_and_thing(tmp_path):
+    user, worlds = _setup_quest(tmp_path)
+    assert "gen_quest_1: задание «Пропавший задаток» — от npc_merchant" in "\n".join(promote_world.report(user))
+    lines = promote_world.promote(["autosave:gen_quest_1=quest_deposit"], user, worlds)
+    assert lines[0].startswith("✓ gen_quest_1 → quest_deposit"), lines
+    assert not any(line.startswith("✗") for line in lines), lines
+    w = _world(worlds)
+    q = w["quests"]["quest_deposit"]
+    yard = next(r for r, d in w["rooms"].items() if d["name"] == "Задний двор лавки")
+    boy = next(n for n, d in w["npcs"].items() if d["name"] == "Тимоша")
+    item = next(i for i, d in w["items"].items() if d["name"] == "Кошель задатка")
+    assert q["steps"][0]["when"] == {"talk": boy}
+    assert q["steps"][1]["when"] == {"secret": f"{yard}:q_quest_deposit"}
+    assert q["steps"][2]["when"] == {"encounter": f"{yard}_enc"}
+    assert q["steps"][3]["when"] == {"talk": "npc_merchant", "item": item}
+    assert q["description"] == "Пропавший задаток" and "generated" not in q and "scale" not in q
+    hiding = next(s for s in w["rooms"][yard]["secrets"] if s["id"] == "q_quest_deposit")
+    assert hiding["loot"] == {"items": {item: 1}}
+
+
+def test_an_own_deed_stays_in_its_game(tmp_path):
+    user, worlds = _setup_quest(tmp_path)
+    assert "своё дело" in promote_world.promote(["autosave:gen_quest_2"], user, worlds)[0]
+
+
+def test_a_thing_with_mechanics_waits_for_the_catalog(tmp_path):
+    user, worlds = _setup_quest(tmp_path)
+    save = json.loads((user / "saves" / "autosave.json").read_text(encoding="utf-8"))
+    save["session"]["items"]["gen_ab12"]["properties"] = ["magic_plus1"]
+    (user / "saves" / "autosave.json").write_text(json.dumps(save, ensure_ascii=False), encoding="utf-8")
+    before = (worlds / "frontier" / "world.json").read_bytes()
+    assert "promote_items" in promote_world.promote(["autosave:gen_quest_1"], user, worlds)[0]
+    assert (worlds / "frontier" / "world.json").read_bytes() == before
