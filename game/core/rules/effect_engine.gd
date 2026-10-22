@@ -12,6 +12,8 @@ var reserves: Dictionary = {}
 var searched: Dictionary = {}
 ## turn_id -> true once the master searched the world's people this turn (v0.7.20: before create_npc).
 var searched_npcs: Dictionary = {}
+## turn_id -> true once the master searched the world's places this turn (v0.7.20.1: before create_place).
+var searched_places: Dictionary = {}
 ## Catalog.data of the last validate: apply() needs the rules of casts, feature uses and items.
 var _data: Dictionary = {}
 
@@ -36,6 +38,7 @@ func mark_searched(turn_id: String) -> void:
 func discard(turn_id: String) -> void:
 	_won.erase(turn_id)
 	searched_npcs.erase(turn_id)
+	searched_places.erase(turn_id)
 	_rolls.erase(turn_id)
 	_won_over.erase(turn_id)
 	for id: String in reserves.keys():
@@ -267,6 +270,10 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return ContainerRules.plan_put(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
 		"unlock":
 			return _plan_unlock(s, data, turn_id, e)
+		"create_place":  # a room or a small place on an open edge of the pack (v0.7.20.1)
+			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_place"):
+				return {"reason": "одно новое место за ход"}
+			return WorldGen.plan_place(s, data, e, searched_places.has(turn_id))
 		"create_npc":  # a person the world lacks, by the pack's schema (v0.7.20)
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_npc"):
 				return {"reason": "один новый человек за ход"}
@@ -712,6 +719,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			ContainerRules.apply_drop(s, _data, plan)
 		"create_npc":
 			_extra_lines.append("[%s]" % WorldGen.apply_npc(s, _data, plan))
+		"create_place":
+			_extra_lines.append("выход: [%s]" % WorldGen.apply_place(s, _data, plan))
 		"unlock":
 			_extra_lines.append_array(ContainerRules.unlock(PropRules.find(s, str(plan["room"]), str(plan["prop"])), str(plan["how"])))
 		"prop_state":

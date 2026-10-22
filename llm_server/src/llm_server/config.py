@@ -18,6 +18,11 @@ DEFAULT_MODELS = (
     "qwen/qwen3.8-omni-flash",
     "qwen/qwen3.8-27b",
     "google/gemini-3.8-flash",
+    # free (v0.7.20.2, the author's request): OpenRouter's free router and free models — limited by requests a day
+    "openrouter/free",
+    "nvidia/nemotron-3.5-super-vl:free",
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
 )
 
 

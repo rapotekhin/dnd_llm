@@ -40,6 +40,8 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"closed_exits": closed_exits(s, data["world"]),
 			"chronicle": s.chronicle_tail(data["world"], 12),
 			"reputation": ReputationRules.text(s, data, loc_id),
+			"open_edges": WorldGen.open_edges(s, data, s.room_id).map(func(e: Dictionary) -> String:
+				return "[%d] %s (%s%s)" % [e["index"], e["text"], ", ".join(e.get("terrain", [])), "; можно новую локацию" if bool(e.get("new_location", false)) else ""]),
 			"notes": s.notes.slice(-12).map(func(n: Dictionary) -> String: return "день %d, %s — %s" % [int(n["day"]), world.room(str(n["room"])).get("name", n["room"]), n["text"]]),
 			"furnish": PropRules.needs_furnish(s, s.room_id) and not CombatRules.active(s) and s.mode == GameSession.MODE_EXPLORATION,
 			"time_of_day": "%s, %s%s" % [TimeRules.part_name(s, data), TimeRules.clock(s), ", темно" if TimeRules.dark(s, data) else ""],

@@ -203,6 +203,7 @@
 							"description": {"type": "string"},
 							"exits": {"$ref": "#/$defs/strings"},
 							"npcs": {"$ref": "#/$defs/strings"},
+							"open_edges": {"type": "array", "items": {"type": "object", "required": ["text", "terrain"], "properties": {"text": {"$ref": "#/$defs/nonempty"}, "terrain": {"type": "array", "items": {"type": "string"}, "minItems": 1}, "new_location": {"type": "boolean"}}, "additionalProperties": false}},
 							"hooks": {"$ref": "#/$defs/strings"},
 							"secrets": {
 								"type": "array",

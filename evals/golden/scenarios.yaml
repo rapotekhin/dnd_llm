@@ -1777,3 +1777,32 @@ scenarios:
     rubric:
       - "Горм отсылает к кузнецу Гуннару, которого вернул поиск; нового кузнеца не создаёт"
 
+  - id: place_off_the_trail
+    title: "Свернуть с тропы на открытом краю — find_places, затем create_place"
+    category: concepts
+    extends: tavern
+    input: "Сворачиваю с просеки в чащу — посмотрю, что там, за поваленными елями."
+    snapshot:
+      scene:
+        location: {id: pushcha, name: "Сумеречная Пуща", type: forest}
+        room: {id: pushcha-trail, name: "Тропа лесорубов", description: "Старая просека, заросшая папоротником."}
+        npcs: []
+        open_edges: ["[0] чаща по обе стороны просеки (forest)"]
+    engine:
+      find_places: []
+    expect:
+      effects: {required_kinds_any: [create_place, move]}
+      tools_required: [find_places]
+    rubric:
+      - "Мастер создаёт место эффектом create_place с edge 0 (1–4 комнаты чащи с описанием, может быть зацепка или тайна; встреча — если есть, из монстров SRD), а не описывает несуществующее место словами"
+
+  - id: no_edge_no_place
+    title: "Без открытого края места не создаются"
+    category: concepts
+    extends: tavern
+    input: "Выхожу через заднюю дверь таверны и иду искать заброшенную мельницу где-то за городом."
+    expect:
+      effects: {forbidden_kinds: [create_place]}
+    rubric:
+      - "Мастер не создаёт мельницу и не ведёт туда героя словами: выходы — только из сцены; объясняет в мире (за таверной — двор и та же улица) или отсылает спросить у местных"
+

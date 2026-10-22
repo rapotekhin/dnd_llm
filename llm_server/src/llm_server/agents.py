@@ -25,6 +25,9 @@ from .protocol import (
     EngineCheckResult,
     EngineFindItemsParams,
     EngineFindNpcsParams,
+    EngineFindPlacesParams,
+    EngineFindPlacesResult,
+    CreatePlaceEffect,
     EngineFindNpcsResult,
     CreateNpcEffect,
     EngineFindItemsResult,
@@ -71,7 +74,8 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
     `LLM_SERVER_PROVIDER_TOP` cheapest providers (llm.providers.PICKER, refreshed before a turn), and those slower than
     `LLM_SERVER_MIN_TPS` tokens/s go last — the cheapest fast one of them serves."""
     settings: dict = dict(base)
-    if "qwen/" in model.model_name:
+    if "qwen/" in model.model_name or "nvidia/nemotron" in model.model_name:
+        # v0.7.20.2: Nemotron thinks the whole max_tokens away before answering — the same switch
         settings["openrouter_reasoning"] = {"enabled": False}
     if model.model_name.startswith(NO_TEMPERATURE):
         # Their endpoints reject `temperature`: with require_parameters no provider is left (HTTP 404, v0.7.7).
@@ -122,6 +126,7 @@ class TurnContext:
     accepted: dict[str, str] = field(default_factory=dict)  # effect_id -> summary
     searched_items: bool = False
     searched_npcs: bool = False  # find_npcs this turn (v0.7.20: before create_npc)
+    searched_places: bool = False  # find_places this turn (v0.7.20.1: before create_place)
     proposed: set[str] = field(default_factory=set)  # effects accepted this turn (proposing one again is refused)
     empty_gives: int = 0  # give_item with neither item_id nor item
 
@@ -209,6 +214,8 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
             return "Отказ: перед созданием нового предмета найди похожие через find_items."
     if isinstance(effect, CreateNpcEffect) and not t.searched_npcs:
         return "Отказ: перед созданием человека поищи его через find_npcs."
+    if isinstance(effect, CreatePlaceEffect) and not t.searched_places:
+        return "Отказ: перед созданием места поищи его через find_places."
     raw = await t.session.call_engine("engine.validate", EngineValidateParams(turn_id=t.params.turn_id, effect=effect))
     r = EngineValidateResult.model_validate(raw)
     if not r.accepted or not r.effect_id:
@@ -241,6 +248,18 @@ async def find_npcs(ctx: RunContext[TurnContext], query: str) -> str:
     return "\n".join(f"[{n.npc_id}] {n.name} — {n.role}, {n.location}{' (мёртв)' if n.dead else ''}" for n in found)
 
 
+async def find_places(ctx: RunContext[TurnContext], query: str) -> str:
+    """Найти места мира (комнаты и локации пакета и созданные в этой игре): query — название по-русски. Обязательно
+    перед create_place: может, такое место уже есть."""
+    t = ctx.deps
+    t.searched_places = True
+    raw = await t.session.call_engine("engine.find_places", EngineFindPlacesParams(turn_id=t.params.turn_id, query=query))
+    found = EngineFindPlacesResult.model_validate(raw).places
+    if not found:
+        return "Ничего похожего. Если место нужно и в сцене есть открытый край — create_place."
+    return "\n".join(f"[{p.room_id}] {p.name} — {p.location}" for p in found)
+
+
 async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None = None,
                      properties: list[ItemProperty] | None = None) -> str:
     """Найти предметы в каталоге игры и библиотеке созданных: query — название или тип по-русски или id,
@@ -268,7 +287,7 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -
         output_type=TurnOutput,
         deps_type=TurnContext,
         instructions=system,
-        tools=[request_check, propose_effect, lookup, find_items, find_npcs],
+        tools=[request_check, propose_effect, lookup, find_items, find_npcs, find_places],
         retries=2,
         model_settings=settings_for(model, base),
     )

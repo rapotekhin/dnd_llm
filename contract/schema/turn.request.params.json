@@ -631,6 +631,13 @@
           "title": "Npcs",
           "type": "array"
         },
+        "open_edges": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Open Edges",
+          "type": "array"
+        },
         "props": {
           "items": {
             "$ref": "#/$defs/SceneProp"

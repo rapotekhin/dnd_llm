@@ -312,6 +312,15 @@
 				"brod-temple",
 				"brod-gate"
 			],
+			"open_edges": [
+				{
+					"text": "улочки и дворы вокруг площади — дома, лавки, мастерские",
+					"terrain": [
+						"grassland"
+					],
+					"new_location": false
+				}
+			],
 			"npcs": [
 				"npc_merchant"
 			],
@@ -415,6 +424,16 @@
 				"outpost-road",
 				"mine-entrance"
 			],
+			"open_edges": [
+				{
+					"text": "поля и хутора за северными воротами",
+					"terrain": [
+						"grassland",
+						"hills"
+					],
+					"new_location": true
+				}
+			],
 			"npcs": [
 				"npc_captain"
 			],
@@ -436,6 +455,15 @@
 			"exits": [
 				"brod-gate",
 				"pushcha-trail"
+			],
+			"open_edges": [
+				{
+					"text": "кромка леса уходит на восток, к ручьям",
+					"terrain": [
+						"forest"
+					],
+					"new_location": true
+				}
 			],
 			"npcs": [],
 			"hooks": [
@@ -470,6 +498,15 @@
 				"pushcha-edge",
 				"pushcha-glade",
 				"pushcha-hollow"
+			],
+			"open_edges": [
+				{
+					"text": "чаща по обе стороны просеки",
+					"terrain": [
+						"forest"
+					],
+					"new_location": false
+				}
 			],
 			"npcs": [],
 			"hooks": [
@@ -647,6 +684,16 @@
 			"exits": [
 				"brod-gate",
 				"outpost-yard"
+			],
+			"open_edges": [
+				{
+					"text": "обочина и холмы вдоль разбитой дороги",
+					"terrain": [
+						"grassland",
+						"hills"
+					],
+					"new_location": true
+				}
 			],
 			"npcs": [],
 			"hooks": [
@@ -847,6 +894,15 @@
 				"mine-entrance",
 				"mine-flooded",
 				"mine-deep"
+			],
+			"open_edges": [
+				{
+					"text": "боковые штреки, заваленные и полуобвалившиеся",
+					"terrain": [
+						"underdark"
+					],
+					"new_location": false
+				}
 			],
 			"npcs": [],
 			"hooks": [

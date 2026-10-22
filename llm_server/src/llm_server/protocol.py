@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.31.0"
+PROTOCOL_VERSION = "0.32.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -190,6 +190,7 @@ class Scene(_In):
     notes: list[str] = Field(default_factory=list)  # the master's own memory of events here, in Russian (0.14.0)
     chronicle: list[str] = Field(default_factory=list)  # the last facts of the engine: «день 2, 09:12, Таверна — …» (0.19.0)
     reputation: str = ""  # the hero's name in this settlement: «Ольховый Брод — свой (+1)» (0.24.0)
+    open_edges: list[str] = Field(default_factory=list)  # where the pack lets the master draw new places (0.32.0)
 
 
 class InventoryLine(_In):
@@ -591,6 +592,52 @@ class NewNpc(_Out):
     links: list[NpcLink] = Field(default_factory=list, max_length=5)
 
 
+class NewSecret(_Out):
+    text: str = Field(min_length=5, max_length=240)
+    dc_tier: Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"] = "medium"
+    skill: Literal["perception", "investigation"] = "perception"
+
+
+class NewEnemy(_Out):
+    monster: str
+    count: int = Field(default=1, ge=1, le=6)
+    name: str | None = None
+    desc: str = Field(default="", max_length=200)
+
+
+class NewEncounter(_Out):
+    enemies: list[NewEnemy] = Field(min_length=1, max_length=4)
+
+
+class NewRoom(_Out):
+    """A room of a new place (0.32.0) by the schema of a pack room; `exits` — keys of rooms of the same place (only the
+    first room leads back to the world)."""
+
+    key: str = Field(min_length=1, max_length=20)
+    name: str = Field(min_length=2, max_length=60)
+    description: str = Field(default="", max_length=600)
+    indoor: bool = False
+    dark: bool = False
+    hooks: list[str] = Field(default_factory=list, max_length=4)
+    exits: list[str] = Field(default_factory=list)
+    secrets: list[NewSecret] = Field(default_factory=list, max_length=3)
+    encounter: NewEncounter | None = None
+
+
+class CreatePlaceEffect(_Out):
+    """A room or a small place (0.32.0) on an open edge of this room (`edge` — its index from scene.open_edges), only
+    after find_places in the same turn: 1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the
+    edge allows it. The engine checks the schema, the links, the encounter budget and the limits."""
+
+    kind: Literal["create_place"] = "create_place"
+    edge: int = Field(default=0, ge=0)
+    rooms: list[NewRoom] = Field(min_length=1, max_length=4)
+    new_location: bool = False
+    name: str = ""
+    description: str = ""
+    terrain: str = ""
+
+
 class CreateNpcEffect(_Out):
     """Makes a person the world lacks (0.31.0) — only after find_npcs in the same turn; the engine checks the schema,
     the limits and the duplicates; the person lives in this game like one of the pack."""
@@ -803,7 +850,7 @@ Effect = Annotated[
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
-    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect,
+    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect,
     Field(discriminator="kind"),
 ]
 
@@ -889,6 +936,22 @@ class EngineFindNpcsResult(_In):
     npcs: list[FoundNpc] = Field(default_factory=list)
 
 
+class EngineFindPlacesParams(_Out):
+    turn_id: str
+    query: str
+
+
+class FoundPlace(_In):
+    room_id: str
+    name: str
+    location: str = ""
+    source: str = "pack"
+
+
+class EngineFindPlacesResult(_In):
+    places: list[FoundPlace] = Field(default_factory=list)
+
+
 class FoundItem(_In):
     item_id: str
     name: str
@@ -927,4 +990,6 @@ CONTRACT_MODELS: dict[str, type[BaseModel]] = {
     "engine.find_items.result": EngineFindItemsResult,
     "engine.find_npcs.params": EngineFindNpcsParams,
     "engine.find_npcs.result": EngineFindNpcsResult,
+    "engine.find_places.params": EngineFindPlacesParams,
+    "engine.find_places.result": EngineFindPlacesResult,
 }

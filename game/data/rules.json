@@ -267,7 +267,7 @@
 		}
 	},
 	"world_gen": {
-		"_doc": "People and places the master makes (v0.7.20, WorldGen): an NPC by the pack's schema — a template of people (npc_templates, CR at most max_cr), a race of the SRD, links to NPCs of the world (link_kinds), a trader with goods of the catalog (each at most stock_item_cap_cp) and purse_cp; at most max_per_location new people in a location and max_per_session in a game.",
+		"_doc": "People and places the master makes (v0.7.20, WorldGen): an NPC by the pack's schema — a template of people (npc_templates, CR at most max_cr), a race of the SRD, links to NPCs of the world (link_kinds), a trader with goods of the catalog (each at most stock_item_cap_cp) and purse_cp; at most max_per_location new people in a location and max_per_session in a game. A place (v0.7.20.1) — max_rooms rooms on an open edge of the pack, max_rooms_per_session in a game; its encounter within the hard XP budget of the level.",
 		"npc_templates": [
 			"commoner",
 			"guard",
@@ -287,6 +287,8 @@
 		"max_cr": 3,
 		"max_per_location": 4,
 		"max_per_session": 12,
+		"max_rooms": 4,
+		"max_rooms_per_session": 12,
 		"link_kinds": [
 			"family",
 			"spouse",

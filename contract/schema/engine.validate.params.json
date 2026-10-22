@@ -382,6 +382,58 @@
       "title": "CreateNpcEffect",
       "type": "object"
     },
+    "CreatePlaceEffect": {
+      "additionalProperties": false,
+      "description": "A room or a small place (0.32.0) on an open edge of this room (`edge` — its index from scene.open_edges), only\nafter find_places in the same turn: 1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the\nedge allows it. The engine checks the schema, the links, the encounter budget and the limits.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "edge": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Edge",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "create_place",
+          "default": "create_place",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "new_location": {
+          "default": false,
+          "title": "New Location",
+          "type": "boolean"
+        },
+        "rooms": {
+          "items": {
+            "$ref": "#/$defs/NewRoom"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Rooms",
+          "type": "array"
+        },
+        "terrain": {
+          "default": "",
+          "title": "Terrain",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rooms"
+      ],
+      "title": "CreatePlaceEffect",
+      "type": "object"
+    },
     "CrimeKnownEffect": {
       "additionalProperties": false,
       "description": "A hidden murder becomes known (0.19.0): the hero confessed or was exposed in the scene. `victim_id` — the\nnpc_id of a deed «никто не знает». The engine spreads it: attitudes, and the wanted hero where there is law.",
@@ -887,6 +939,64 @@
       "title": "MoveEffect",
       "type": "object"
     },
+    "NewEncounter": {
+      "additionalProperties": false,
+      "properties": {
+        "enemies": {
+          "items": {
+            "$ref": "#/$defs/NewEnemy"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Enemies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enemies"
+      ],
+      "title": "NewEncounter",
+      "type": "object"
+    },
+    "NewEnemy": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "default": 1,
+          "maximum": 6,
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "desc": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Desc",
+          "type": "string"
+        },
+        "monster": {
+          "title": "Monster",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        }
+      },
+      "required": [
+        "monster"
+      ],
+      "title": "NewEnemy",
+      "type": "object"
+    },
     "NewNpc": {
       "additionalProperties": false,
       "description": "A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;\n`monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),\n`race` — an SRD race id, `room_id` — a room of this location (none — here), `trader` with `stock` of catalog ids.",
@@ -981,6 +1091,118 @@
         "role"
       ],
       "title": "NewNpc",
+      "type": "object"
+    },
+    "NewRoom": {
+      "additionalProperties": false,
+      "description": "A room of a new place (0.32.0) by the schema of a pack room; `exits` — keys of rooms of the same place (only the\nfirst room leads back to the world).",
+      "properties": {
+        "dark": {
+          "default": false,
+          "title": "Dark",
+          "type": "boolean"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 600,
+          "title": "Description",
+          "type": "string"
+        },
+        "encounter": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NewEncounter"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "exits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exits",
+          "type": "array"
+        },
+        "hooks": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Hooks",
+          "type": "array"
+        },
+        "indoor": {
+          "default": false,
+          "title": "Indoor",
+          "type": "boolean"
+        },
+        "key": {
+          "maxLength": 20,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 60,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "secrets": {
+          "items": {
+            "$ref": "#/$defs/NewSecret"
+          },
+          "maxItems": 3,
+          "title": "Secrets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "key",
+        "name"
+      ],
+      "title": "NewRoom",
+      "type": "object"
+    },
+    "NewSecret": {
+      "additionalProperties": false,
+      "properties": {
+        "dc_tier": {
+          "default": "medium",
+          "enum": [
+            "very_easy",
+            "easy",
+            "medium",
+            "hard",
+            "very_hard",
+            "nearly_impossible"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        },
+        "skill": {
+          "default": "perception",
+          "enum": [
+            "perception",
+            "investigation"
+          ],
+          "title": "Skill",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 240,
+          "minLength": 5,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "NewSecret",
       "type": "object"
     },
     "NoteEffect": {
@@ -1593,6 +1815,7 @@
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
           "create_npc": "#/$defs/CreateNpcEffect",
+          "create_place": "#/$defs/CreatePlaceEffect",
           "crime_known": "#/$defs/CrimeKnownEffect",
           "damage": "#/$defs/DamageEffect",
           "drop_item": "#/$defs/DropItemEffect",
@@ -1710,6 +1933,9 @@
         },
         {
           "$ref": "#/$defs/CreateNpcEffect"
+        },
+        {
+          "$ref": "#/$defs/CreatePlaceEffect"
         }
       ],
       "title": "Effect"

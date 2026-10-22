@@ -28,7 +28,7 @@ uv run python -m llm_server.contract     # перевыгрузить contract/s
 | `OPENROUTER_API_KEY` | — | обязателен для `agent`; при старте проверяется, в логи не пишется |
 | `LLM_SERVER_TURN_HANDLER` | `agent` | `agent` (ЛЛМ) или `stub` |
 | `LLM_SERVER_MODEL` | `deepseek/deepseek-v4.1-flash-1017` | модель по умолчанию (ADR-0011, с v0.7.3) |
-| `LLM_SERVER_MODELS` | deepseek-v4.1-flash-1017, haiku-5.5, qwen3.8-omni-flash, qwen3.8-27b, gemini-3.8-flash | белый список для выбора в игре |
+| `LLM_SERVER_MODELS` | deepseek-v4.1-flash-1017, haiku-5.5, qwen3.8-omni-flash, qwen3.8-27b, gemini-3.8-flash; бесплатные (v0.7.20.1): openrouter/free, nemotron-3.5-super-vl:free, gemma-4-31b-it:free, nemotron-3-ultra-550b-a55b:free | белый список для выбора в игре; у бесплатных — лимит запросов в день, у Nemotron рассуждения выключены (иначе съедают весь ответ) |
 | `LLM_SERVER_PROVIDER_SORT` | `price` | провайдер модели на OpenRouter: `price` — самый дешёвый из поддерживающих все параметры запроса, `throughput`, `latency`, `off` — маршрутизация OpenRouter (v0.7.4) |
 | `LLM_SERVER_PROVIDER_TOP` | `3` | при `price` (v0.7.14.5): запрос идёт только к N самым дешёвым провайдерам на типичный ход (20k токенов на входе, 1.5k на выходе), умеющим `tools` и живым последние 30 минут; список обновляется раз в 15 минут (`llm/providers.py`) |
 | `LLM_SERVER_MIN_TPS` | `30` | порог скорости из этих N (p50, токенов в секунду, статистика OpenRouter за 5 минут): кто медленнее, идёт в конец очереди; `0` — без порога. Кто ответил — `provider` в трейсе хода |

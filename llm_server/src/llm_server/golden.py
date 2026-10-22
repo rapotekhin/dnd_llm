@@ -121,6 +121,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "notes": scene.get("notes", []),
                 "chronicle": scene.get("chronicle", []),
                 "reputation": scene.get("reputation", ""),
+                "open_edges": scene.get("open_edges", []),
             },
             "character": {
                 "name": ch.get("name", ""), "gender": ch.get("gender", "other"), "class_name": ch.get("class", ""),
@@ -180,6 +181,9 @@ class MockEngine:
         if method == "engine.lookup":
             data = self.engine.get("lookup", {}).get(p["id"])
             return {"found": data is not None, "data": data or {}}
+        if method == "engine.find_places":  # v0.7.20.1
+            return {"places": [{"room_id": p.get("id", ""), "name": p.get("name", ""), "location": p.get("location", "")}
+                               for p in self.engine.get("find_places", [])]}
         if method == "engine.find_npcs":  # v0.7.20
             return {"npcs": [{"npc_id": n.get("id", ""), "name": n.get("name", ""), "role": n.get("role", ""), "location": n.get("location", "")}
                              for n in self.engine.get("find_npcs", [])]}
@@ -471,7 +475,7 @@ async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, re
             print(f"{o.status:12} {o.id:34} {o.seconds:5.1f}s  ${o.cost_usd:.4f}  {'; '.join(o.fails)[:120]}", flush=True)
             outcomes.append(o)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    stem = f"{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{model_id.replace('/', '_')}"
+    stem = f"{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{re.sub(r'[^A-Za-z0-9._-]+', '_', model_id)}"
     (OUT_DIR / f"{stem}.json").write_text(json.dumps([o.__dict__ for o in outcomes], ensure_ascii=False, indent=2), encoding="utf-8")
     md = OUT_DIR / f"{stem}.md"
     md.write_text(report_markdown(model_id, judge_id, outcomes), encoding="utf-8")

@@ -6,7 +6,9 @@ extends RefCounted
 ## the pack (tools/promote_world.py). The game merges it into its own copy of the pack's world (`merged`), so every rule
 ## that reads data["world"] treats a made NPC as one of the pack.
 ##
-## s.generated = {"npcs": {id: def}, "npc_rooms": {id: room_id}}.
+## s.generated = {"npcs": {id: def}, "npc_rooms": {id: room_id}, "rooms": {id: def}, "locations": {id: def},
+## "edge_exits": {pack room: [made room]}, "edges_used": ["room:edge"]}. Places (v0.7.20.1) grow only from the open
+## edges the pack marked (`open_edges` of a room).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -15,7 +17,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 ## The pack's world with what this game made, a deep copy (the pack itself is never touched).
 static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
-	var w := pack_world.duplicate(true)
+	var w := _merge_places(pack_world.duplicate(true), gen)  # places first: made people may live in made rooms
 	for id: String in gen.get("npcs", {}):
 		w["npcs"][id] = (gen["npcs"][id] as Dictionary).duplicate(true)
 		var room := str(gen.get("npc_rooms", {}).get(id, ""))
@@ -145,3 +147,196 @@ static func merged_into(world: Dictionary, id: String, def: Dictionary, room: St
 	list.append(id)
 	world["rooms"][room]["npcs"] = list
 	return world
+
+
+# --- places (v0.7.20.1) -------------------------------------------------------------------------------------------
+
+
+## The open edges of a room: where the pack lets the master draw the world on ([{text, terrain: [..], new_location,
+## index}]); one used already is gone.
+static func open_edges(s: GameSession, data: Dictionary, room_id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var edges: Array = data["world"]["rooms"].get(room_id, {}).get("open_edges", [])
+	for i in edges.size():
+		if not (generated(s).get("edges_used", []) as Array).has("%s:%d" % [room_id, i]):
+			var e: Dictionary = (edges[i] as Dictionary).duplicate()
+			e["index"] = i
+			out.append(e)
+	return out
+
+
+## Places of the world by a query (rooms and locations): [{room_id, name, location, source}].
+static func find_places(s: GameSession, data: Dictionary, query: String) -> Array[Dictionary]:
+	var world := WorldView.new(data["world"])
+	var words := query.to_lower().replace("ё", "е").split(" ", false)
+	var out: Array[Dictionary] = []
+	for rid: String in data["world"]["rooms"]:
+		var loc := world.location_id(rid)
+		var hay := ("%s %s" % [world.room(rid).get("name", ""), world.location(loc).get("name", "")]).to_lower().replace("ё", "е")
+		if not words.is_empty() and not Array(words).any(func(w: String) -> bool: return w.length() >= 3 and hay.contains(w.left(5))):
+			continue
+		out.append({"room_id": rid, "name": str(world.room(rid).get("name", rid)), "location": str(world.location(loc).get("name", loc)),
+			"source": "made" if generated(s).get("rooms", {}).has(rid) else "pack"})
+	return out
+
+
+## Checks a `create_place`: one room or a small place (rules.world_gen.max_rooms) on an open edge of this room, by the
+## pack's schema of a room. {plan, summary} or {reason}.
+static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searched: bool) -> Dictionary:
+	var c := cfg(data)
+	if not searched:
+		return {"reason": "сначала find_places: может, такое место уже есть"}
+	var world := WorldView.new(data["world"])
+	var edges := open_edges(s, data, s.room_id)
+	if edges.is_empty():
+		return {"reason": "отсюда пакет не позволяет дорисовывать мир (нет открытых краёв); места — только по выходам сцены"}
+	var idx := int(spec.get("edge", 0)) if spec.get("edge") != null else 0
+	var edge: Dictionary = {}
+	for e: Dictionary in edges:
+		if int(e["index"]) == idx:
+			edge = e
+	if edge.is_empty():
+		return {"reason": "края %d здесь нет; есть: %s" % [idx, ", ".join(edges.map(func(e: Dictionary) -> String: return "%d — %s" % [e["index"], e["text"]]))]}
+	var made: Dictionary = generated(s).get("rooms", {})
+	var rooms: Array = spec.get("rooms", [])
+	if rooms.is_empty() or rooms.size() > int(c["max_rooms"]):
+		return {"reason": "место — от 1 до %d комнат" % int(c["max_rooms"])}
+	if made.size() + rooms.size() > int(c["max_rooms_per_session"]):
+		return {"reason": "в этой игре создано уже %d комнат — больше нельзя" % made.size()}
+	var new_loc := bool(spec.get("new_location", false))
+	if new_loc and not bool(edge.get("new_location", false)):
+		return {"reason": "с этого края — только продолжение %s, не новая локация" % world.location(world.location_id(s.room_id)).get("name", "")}
+	var terrain := str(spec.get("terrain", "")) if spec.get("terrain") != null else ""
+	if new_loc and not (edge.get("terrain", []) as Array).has(terrain):
+		return {"reason": "местность новой локации — из %s (связность мира пакета)" % ", ".join(edge.get("terrain", []))}
+	var names: Array = []
+	for rid: String in data["world"]["rooms"]:
+		names.append(str(data["world"]["rooms"][rid].get("name", "")).to_lower())
+	var keys: Array = rooms.map(func(r: Variant) -> String: return str((r as Dictionary).get("key", "")) if r is Dictionary else "")
+	var cap := int(CombatRules.cfg(data)["xp_budget_hard"].get(str(int(s.character.get("level", 1))), 750))
+	var defs: Array = []
+	for r: Variant in rooms:
+		if not (r is Dictionary):
+			return {"reason": "комната — объект схемы"}
+		var key := str(r.get("key", ""))
+		var name := str(r.get("name", "")).strip_edges()
+		if key.is_empty() or keys.count(key) > 1:
+			return {"reason": "у каждой комнаты свой key"}
+		if name.length() < 2 or names.has(name.to_lower()):
+			return {"reason": "комната «%s»: нужно новое имя, не как у мест мира" % name}
+		for x: Variant in r.get("exits", []):
+			if not keys.has(str(x)):
+				return {"reason": "выходы комнаты %s — только к комнатам этого места (key); к миру ведёт только первая" % key}
+		var secrets: Array = []
+		for sec: Variant in r.get("secrets", []):
+			var tier := str(sec.get("dc_tier", "medium"))
+			if not (data["rules"]["dc_tiers"] as Dictionary).has(tier) or str(sec.get("text", "")).length() < 5:
+				return {"reason": "тайна: text и dc_tier из %s" % ", ".join((data["rules"]["dc_tiers"] as Dictionary).keys())}
+			secrets.append({"id": "s%d" % (secrets.size() + 1), "dc": int(data["rules"]["dc_tiers"][tier]), "text": str(sec["text"]).left(240),
+				"skill": "investigation" if str(sec.get("skill", "")) == "investigation" else "perception"})
+		var enc := {}
+		if r.get("encounter") is Dictionary and not (r["encounter"].get("enemies", []) as Array).is_empty():
+			var xp := 0
+			var enemies: Array = []
+			for f: Variant in r["encounter"]["enemies"]:
+				var mid := str(f.get("monster", ""))
+				if not data["monsters"].has(mid):
+					return {"reason": "нет такого монстра SRD: %s" % mid}
+				var n := clampi(int(f.get("count", 1)), 1, 6)
+				xp += int(data["monsters"][mid]["xp"]) * n
+				enemies.append({"monster": mid, "count": n, "name": str(f.get("name", data["monsters"][mid]["name"])), "desc": str(f.get("desc", "")).left(200), "col": 3})
+			if xp > cap:
+				return {"reason": "встреча в %s не по силам %d уровню: %d опыта врагов при пределе %d" % [name, int(s.character.get("level", 1)), xp, cap]}
+			enc = {"enemies": enemies, "loot": {"coins_cp": 0, "items": {}}}
+		defs.append({"key": key, "name": name.left(60), "description": str(r.get("description", "")).left(600),
+			"indoor": bool(r.get("indoor", false)), "dark": bool(r.get("dark", false)),
+			"hooks": (r.get("hooks", []) as Array).slice(0, 4).map(func(h: Variant) -> String: return str(h).left(160)),
+			"exits": (r.get("exits", []) as Array).map(func(x: Variant) -> String: return str(x)), "secrets": secrets, "encounter": enc})
+	# every room is reachable from the entry (the first one)
+	var seen: Array = [keys[0]]
+	var frontier: Array = [keys[0]]
+	while not frontier.is_empty():
+		var k: String = frontier.pop_back()
+		for d: Dictionary in defs:
+			if d["key"] != k and not (d["exits"] as Array).has(k):
+				continue
+			for x: Variant in [d["key"]] + d["exits"]:
+				if not seen.has(x):
+					seen.append(x)
+					frontier.append(x)
+	if seen.size() < keys.size():
+		return {"reason": "все комнаты места должны быть связаны выходами с первой"}
+	var place := {"from": s.room_id, "edge": idx, "rooms": defs, "new_location": new_loc, "location": {}}
+	if new_loc:
+		place["location"] = {"name": str(spec.get("name", "")).strip_edges().left(60), "description": str(spec.get("description", "")).left(400), "terrain": terrain}
+		if str(place["location"]["name"]).length() < 2:
+			return {"reason": "у новой локации нужно имя"}
+	return {"plan": {"place": place}, "summary": "Новое место: %s" % ", ".join(defs.map(func(d: Dictionary) -> String: return d["name"]))}
+
+
+## Makes the place: in the save and in this game's world. The id of its first room.
+static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> String:
+	var gen := generated(s)
+	for k: String in ["rooms", "locations", "edge_exits"]:
+		if not gen.has(k):
+			gen[k] = {}
+	if not gen.has("edges_used"):
+		gen["edges_used"] = []
+	var place: Dictionary = plan["place"]
+	var world := WorldView.new(data["world"])
+	var loc := world.location_id(str(place["from"]))
+	if bool(place["new_location"]):
+		var n := 1
+		while data["world"]["locations"].has("gen_loc_%d" % n):
+			n += 1
+		loc = "gen_loc_%d" % n
+		gen["locations"][loc] = place["location"]
+	var ids := {}
+	var next := 1
+	for d: Dictionary in place["rooms"]:
+		while data["world"]["rooms"].has("gen_room_%d" % next):
+			next += 1
+		ids[d["key"]] = "gen_room_%d" % next
+		next += 1
+	var first := ""
+	for d: Dictionary in place["rooms"]:
+		var id: String = ids[d["key"]]
+		var exits: Array = (d["exits"] as Array).map(func(k: String) -> String: return ids[k])
+		for other: Dictionary in place["rooms"]:  # exits both ways inside the place
+			if (other["exits"] as Array).has(d["key"]) and not exits.has(ids[other["key"]]):
+				exits.append(ids[other["key"]])
+		if first.is_empty():
+			first = id
+			exits.append(str(place["from"]))
+		var room := {"name": d["name"], "location_id": loc, "description": d["description"], "exits": exits, "npcs": [],
+			"hooks": d["hooks"], "secrets": d["secrets"], "generated": true}
+		if bool(d["indoor"]):
+			room["indoor"] = true
+		if bool(d["dark"]):
+			room["dark"] = true
+		if not (d["encounter"] as Dictionary).is_empty():
+			room["encounter"] = (d["encounter"] as Dictionary).duplicate(true)
+			room["encounter"]["id"] = id + "_enc"
+		gen["rooms"][id] = room
+	var edge_exits: Array = gen["edge_exits"].get(str(place["from"]), [])
+	edge_exits.append(first)
+	gen["edge_exits"][str(place["from"])] = edge_exits
+	(gen["edges_used"] as Array).append("%s:%d" % [place["from"], int(place["edge"])])
+	data["world"] = _merge_places(data["world"], gen)
+	return first
+
+
+static func _merge_places(w: Dictionary, gen: Dictionary) -> Dictionary:
+	for loc: String in gen.get("locations", {}):
+		w["locations"][loc] = (gen["locations"][loc] as Dictionary).duplicate(true)
+	for rid: String in gen.get("rooms", {}):
+		w["rooms"][rid] = (gen["rooms"][rid] as Dictionary).duplicate(true)
+	for from: String in gen.get("edge_exits", {}):
+		if not w["rooms"].has(from):
+			continue
+		var exits: Array = w["rooms"][from].get("exits", [])
+		for to: Variant in gen["edge_exits"][from]:
+			if not exits.has(str(to)):
+				exits.append(str(to))
+		w["rooms"][from]["exits"] = exits
+	return w
