@@ -76,3 +76,72 @@ func test_at_most_three_open_made_quests_and_they_survive_a_save() -> void:
 	var world := WorldGen.merged(TestUtils.data()["world"], back.generated)
 	assert_int(QuestRules.stepped(world).size() - QuestRules.stepped(TestUtils.data()["world"]).size()).is_equal(3)
 	assert_str(str(QuestGen.find_quests(s, data, "Дело")[0]["source"])).is_equal("made")
+
+
+func _yard_quest() -> Dictionary:
+	return {"giver": "npc_merchant", "title": "Пропавший задаток", "scale": "ordinary",
+		"new_place": {"edge": 0, "rooms": [{"key": "yard", "name": "Задний двор лавки", "description": "Бочки, крапива, гнилое крыльцо.",
+			"encounter": {"enemies": [{"monster": "wolf", "count": 1}]}}]},
+		"new_npcs": [{"key": "boy", "name": "Тимоша", "role": "мальчишка-посыльный", "room_id": "new:yard"}],
+		"quest_item": {"item_id": "amulet", "room": "new:yard", "hint": "Под гнилым крыльцом что-то блестит", "dc_tier": "easy"},
+		"steps": [{"text": "Расспросить посыльного", "kind": "talk", "target": "new:boy"},
+			{"text": "Найти задаток", "kind": "find", "target": "item"},
+			{"text": "Отогнать волка со двора", "kind": "fight", "target": "new:yard"},
+			{"text": "Отдать задаток торговцу", "kind": "talk", "target": "npc_merchant", "item_id": "item"}]}
+
+
+func test_a_quest_brings_its_place_person_and_thing_in_one_deal() -> void:
+	s.room_id = "brod-square"
+	var r := _make(_yard_quest())
+	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
+	assert_str(str(r["summary"])).contains("Тимоша")
+	var qid := str(s.generated["quests"].keys()[0])
+	var steps: Array = QuestRules.quest(data["world"], qid)["steps"]
+	var yard := str(steps[0]["when"]["talk"])  # the boy's id; his room is the new yard
+	assert_str(yard).starts_with("gen_npc_")
+	var room := str(s.generated["npc_rooms"][yard])
+	assert_bool(s.generated["rooms"].has(room)).is_true()
+	assert_str(str(steps[1]["when"]["secret"])).is_equal("%s:q_%s" % [room, qid])
+	assert_str(str(steps[2]["when"]["encounter"])).is_equal(room + "_enc")
+	assert_str(str(steps[3]["when"]["item"])).is_equal("amulet")
+	assert_int(steps.size()).is_equal(4)  # the last step is already the way back to the giver
+	# the whole chain by the engine's facts
+	QuestRules.accept(s, data, qid)
+	s.room_id = room
+	QuestRules.talk(s, data, qid)
+	s.revealed[room] = ["q_" + qid]
+	ExplorationRules.take_caches(s, data, room)
+	assert_int(int(s.character["inventory"].get("amulet", 0))).is_equal(1)
+	QuestRules.advance(s, data)
+	s.encounters_done.append(room + "_enc")
+	QuestRules.advance(s, data)
+	s.room_id = "brod-square"
+	QuestRules.talk(s, data, qid)
+	assert_bool(s.quests_done.has(qid)).is_true()
+	# the hiding place survives a save
+	var world := WorldGen.merged(TestUtils.data()["world"], GameSession.from_dict(s.to_dict(5)).generated)
+	assert_bool((world["rooms"][room]["secrets"] as Array).any(func(x: Dictionary) -> bool: return str(x["id"]) == "q_" + qid)).is_true()
+
+
+func test_a_quest_is_all_or_nothing_and_its_people_have_a_depth() -> void:
+	s.room_id = "brod-square"
+	var bad := _yard_quest()
+	bad["new_npcs"][0]["monster"] = "young_red_dragon"
+	assert_str(str(_make(bad)["reason"])).contains("человек задания boy")
+	assert_bool(WorldGen.generated(s).get("rooms", {}).is_empty()).is_true()  # nothing of the deal was made
+	assert_bool(bool(_make(_yard_quest(), "t-2")["accepted"])).is_true()
+	var boy := str(WorldGen.generated(s)["npcs"].keys()[0])
+	assert_int(int(data["world"]["npcs"][boy]["quest_depth"])).is_equal(1)
+	data["world"]["npcs"][boy]["quest_depth"] = 2  # a person of a quest of a quest
+	s.room_id = str(s.generated["npc_rooms"][boy])
+	var deeper := {"giver": boy, "title": "Ещё глубже", "scale": "trifle", "steps": [{"text": "Сходить к Мире", "kind": "talk", "target": "npc_serving"}]}
+	assert_str(str(_make(deeper, "t-3")["reason"])).contains("глубина")
+
+
+func test_the_way_back_takes_the_quest_thing_to_the_giver() -> void:
+	var q := {"giver": "npc_innkeeper", "title": "Кольцо хозяйки", "scale": "trifle",
+		"quest_item": {"item_id": "amulet", "room": "brod-tavern-cellar", "hint": "Меж бочек блестит", "dc_tier": "easy"},
+		"steps": [{"text": "Найти кольцо в погребе", "kind": "find", "target": "item"}]}
+	assert_bool(bool(_make(q)["accepted"])).is_true()
+	var steps: Array = QuestRules.quest(data["world"], str(s.generated["quests"].keys()[0]))["steps"]
+	assert_dict(steps[-1]["when"]).is_equal({"talk": "npc_innkeeper", "item": "amulet"})

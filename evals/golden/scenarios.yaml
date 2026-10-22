@@ -1865,3 +1865,20 @@ scenarios:
       tools_required: [find_quests]
     rubric:
       - "Горм предлагает уже существующее дело про крыс в погребе, нового задания не создаёт"
+
+  - id: quest_brings_its_thing
+    title: "Заданию нужна вещь, которой в мире нет — quest_item в create_quest"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, ты обмолвился, что жена потеряла обручальное кольцо где-то в погребе? Давай я поищу — за пару монет."
+    engine:
+      find_quests: []
+      find_items: []
+      validate:
+        - {kind: create_quest, summary: "Новое задание: «Кольцо хозяйки» от Горм (пустяк); с ним: Обручальное кольцо"}
+    expect:
+      effects: {required_kinds_any: [create_quest]}
+      tools_required: [find_quests]
+    rubric:
+      - "Мастер создаёт задание create_quest, которое приносит своё кольцо (quest_item: новая вещь или из каталога, спрятана в погребе с подсказкой) и шаг найти его (find item); вернуть кольцо Горму — шаг talk с item_id item или его добавит движок (возвращение к заказчику с вещью задания); кольцо не выдаётся сразу словами"

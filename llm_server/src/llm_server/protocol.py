@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.36.0"
+PROTOCOL_VERSION = "0.37.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -660,9 +660,40 @@ class CreateNpcEffect(_Out):
     npc: NewNpc
 
 
+class QuestNpc(NewNpc):
+    """A person a quest brings (0.37.0): the schema of create_npc and a `key` its steps name («new:<key>»);
+    `room_id` may be «new:<room key>» of the quest's new place."""
+
+    key: str
+
+
+class QuestPlace(_Out):
+    """The place a quest brings (0.37.0): the fields of create_place."""
+
+    edge: int = Field(default=0, ge=0)
+    rooms: list[NewRoom] = Field(min_length=1, max_length=4)
+    new_location: bool = False
+    name: str = ""
+    description: str = ""
+    terrain: str = ""
+
+
+class QuestItem(_Out):
+    """The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);
+    `hint` — where it lies, found by a check of `dc_tier`."""
+
+    item_id: str | None = None
+    item: GeneratedItem | None = None
+    room: str
+    hint: str
+    dc_tier: Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"] = "medium"
+
+
 class NewQuestStep(_Out):
     """A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),
-    `visit` — a room id the hero has not been to, `find` — «room:secret» of the world, `fight` — an encounter id."""
+    `visit` — a room id the hero has not been to, `find` — «room:secret» of the world, `fight` — an encounter id.
+    What the quest brings (0.37.0): `target` «new:<key>» — its new person or room (fight — the encounter of that room),
+    `find` with `target` «item» and `item_id` «item» — its thing."""
 
     text: str
     kind: Literal["talk", "visit", "find", "fight"]
@@ -684,6 +715,9 @@ class CreateQuestEffect(_Out):
     scale: Literal["trifle", "ordinary", "major"]
     steps: list[NewQuestStep] = Field(min_length=1, max_length=4)
     reward_item_id: str | None = None
+    new_npcs: list[QuestNpc] = Field(default_factory=list)  # 0.37.0: up to 2 people the quest brings
+    new_place: QuestPlace | None = None  # 0.37.0: a place on an open edge of this room, as create_place
+    quest_item: QuestItem | None = None  # 0.37.0: the quest's thing in a hiding place
 
 
 class DropItemEffect(_Out):

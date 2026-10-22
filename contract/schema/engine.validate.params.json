@@ -453,10 +453,39 @@
           "title": "Kind",
           "type": "string"
         },
+        "new_npcs": {
+          "items": {
+            "$ref": "#/$defs/QuestNpc"
+          },
+          "title": "New Npcs",
+          "type": "array"
+        },
+        "new_place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuestPlace"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "offer_text": {
           "default": "",
           "title": "Offer Text",
           "type": "string"
+        },
+        "quest_item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuestItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "reward_item_id": {
           "anyOf": [
@@ -1169,7 +1198,7 @@
     },
     "NewQuestStep": {
       "additionalProperties": false,
-      "description": "A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),\n`visit` — a room id the hero has not been to, `find` — «room:secret» of the world, `fight` — an encounter id.",
+      "description": "A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),\n`visit` — a room id the hero has not been to, `find` — «room:secret» of the world, `fight` — an encounter id.\nWhat the quest brings (0.37.0): `target` «new:<key>» — its new person or room (fight — the encounter of that room),\n`find` with `target` «item» and `item_id` «item» — its thing.",
       "properties": {
         "danger": {
           "default": false,
@@ -1695,6 +1724,209 @@
         "item_id"
       ],
       "title": "PutInEffect",
+      "type": "object"
+    },
+    "QuestItem": {
+      "additionalProperties": false,
+      "description": "The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);\n`hint` — where it lies, found by a check of `dc_tier`.",
+      "properties": {
+        "dc_tier": {
+          "default": "medium",
+          "enum": [
+            "very_easy",
+            "easy",
+            "medium",
+            "hard",
+            "very_hard",
+            "nearly_impossible"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        },
+        "hint": {
+          "title": "Hint",
+          "type": "string"
+        },
+        "item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "room": {
+          "title": "Room",
+          "type": "string"
+        }
+      },
+      "required": [
+        "room",
+        "hint"
+      ],
+      "title": "QuestItem",
+      "type": "object"
+    },
+    "QuestNpc": {
+      "additionalProperties": false,
+      "description": "A person a quest brings (0.37.0): the schema of create_npc and a `key` its steps name («new:<key>»);\n`room_id` may be «new:<room key>» of the quest's new place.",
+      "properties": {
+        "description": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Description",
+          "type": "string"
+        },
+        "gender": {
+          "default": "other",
+          "enum": [
+            "male",
+            "female",
+            "other"
+          ],
+          "title": "Gender",
+          "type": "string"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "links": {
+          "items": {
+            "$ref": "#/$defs/NpcLink"
+          },
+          "maxItems": 5,
+          "title": "Links",
+          "type": "array"
+        },
+        "monster": {
+          "default": "commoner",
+          "title": "Monster",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 60,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "personality": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Personality",
+          "type": "string"
+        },
+        "race": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Race"
+        },
+        "role": {
+          "maxLength": 60,
+          "minLength": 2,
+          "title": "Role",
+          "type": "string"
+        },
+        "room_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Room Id"
+        },
+        "stock": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Stock",
+          "type": "array"
+        },
+        "trader": {
+          "default": false,
+          "title": "Trader",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "role",
+        "key"
+      ],
+      "title": "QuestNpc",
+      "type": "object"
+    },
+    "QuestPlace": {
+      "additionalProperties": false,
+      "description": "The place a quest brings (0.37.0): the fields of create_place.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "edge": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Edge",
+          "type": "integer"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "new_location": {
+          "default": false,
+          "title": "New Location",
+          "type": "boolean"
+        },
+        "rooms": {
+          "items": {
+            "$ref": "#/$defs/NewRoom"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Rooms",
+          "type": "array"
+        },
+        "terrain": {
+          "default": "",
+          "title": "Terrain",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rooms"
+      ],
+      "title": "QuestPlace",
       "type": "object"
     },
     "ReputationEffect": {

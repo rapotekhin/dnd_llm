@@ -205,6 +205,11 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 47. Протокол 0.37.0 (v0.7.21.1)
+
+- **`create_quest`** приносит своё одной сделкой: `new_npcs` (`QuestNpc` — `NewNpc` + `key`; `room_id` — «new:<key>» нового места), `new_place` (`QuestPlace` — поля `create_place`), `quest_item` (`QuestItem`: `item_id` или `item`, `room`, `hint`, `dc_tier`). Шаги ссылаются на них: `target` «new:<key>», `find` с `target` «item», `talk` с `item_id` «item». Движок принимает сделку целиком; люди задания получают `quest_depth`.
+- Списки вещей обстановки и их содержимого — без `maxItems` в схеме (обрезка при проверке): Google отклонял весь запрос. Для моделей Google `propose_effect` берёт эффект JSON-строкой (бэкенд, без изменения протокола).
+
 ### 46. Протокол 0.36.0 (v0.7.21)
 
 Генерация заданий.

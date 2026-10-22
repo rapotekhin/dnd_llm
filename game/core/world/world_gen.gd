@@ -343,4 +343,12 @@ static func _merge_places(w: Dictionary, gen: Dictionary) -> Dictionary:
 			if not exits.has(str(to)):
 				exits.append(str(to))
 		w["rooms"][from]["exits"] = exits
+	for rid: String in gen.get("room_secrets", {}):  # v0.7.21: the hiding places of quest things
+		if not w["rooms"].has(rid):
+			continue
+		var secrets: Array = (w["rooms"][rid].get("secrets", []) as Array).duplicate(true)
+		for sec: Dictionary in gen["room_secrets"][rid]:
+			if not secrets.any(func(x: Dictionary) -> bool: return str(x.get("id", "")) == str(sec["id"])):
+				secrets.append(sec.duplicate(true))
+		w["rooms"][rid]["secrets"] = secrets
 	return w
