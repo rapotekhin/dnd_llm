@@ -362,6 +362,26 @@
       "title": "ContentSpec",
       "type": "object"
     },
+    "CreateNpcEffect": {
+      "additionalProperties": false,
+      "description": "Makes a person the world lacks (0.31.0) — only after find_npcs in the same turn; the engine checks the schema,\nthe limits and the duplicates; the person lives in this game like one of the pack.",
+      "properties": {
+        "kind": {
+          "const": "create_npc",
+          "default": "create_npc",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc": {
+          "$ref": "#/$defs/NewNpc"
+        }
+      },
+      "required": [
+        "npc"
+      ],
+      "title": "CreateNpcEffect",
+      "type": "object"
+    },
     "CrimeKnownEffect": {
       "additionalProperties": false,
       "description": "A hidden murder becomes known (0.19.0): the hero confessed or was exposed in the scene. `victim_id` — the\nnpc_id of a deed «никто не знает». The engine spreads it: attitudes, and the wanted hero where there is law.",
@@ -867,6 +887,102 @@
       "title": "MoveEffect",
       "type": "object"
     },
+    "NewNpc": {
+      "additionalProperties": false,
+      "description": "A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;\n`monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),\n`race` — an SRD race id, `room_id` — a room of this location (none — here), `trader` with `stock` of catalog ids.",
+      "properties": {
+        "description": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Description",
+          "type": "string"
+        },
+        "gender": {
+          "default": "other",
+          "enum": [
+            "male",
+            "female",
+            "other"
+          ],
+          "title": "Gender",
+          "type": "string"
+        },
+        "links": {
+          "items": {
+            "$ref": "#/$defs/NpcLink"
+          },
+          "maxItems": 5,
+          "title": "Links",
+          "type": "array"
+        },
+        "monster": {
+          "default": "commoner",
+          "title": "Monster",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 60,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "personality": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Personality",
+          "type": "string"
+        },
+        "race": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Race"
+        },
+        "role": {
+          "maxLength": 60,
+          "minLength": 2,
+          "title": "Role",
+          "type": "string"
+        },
+        "room_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Room Id"
+        },
+        "stock": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Stock",
+          "type": "array"
+        },
+        "trader": {
+          "default": false,
+          "title": "Trader",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "role"
+      ],
+      "title": "NewNpc",
+      "type": "object"
+    },
     "NoteEffect": {
       "additionalProperties": false,
       "description": "The master's own memory of an event (0.14.0): a short Russian sentence the player sees in the chat and the\njournal («Айра поклялась служить человеку в капюшоне»). A `flag` is only a flag the world pack knows. With\n`npc_id` (0.20.0) — what that NPC of the scene remembers of the hero («герой обещал вернуть 5 зм к празднику»):\nit comes back in `scene.npcs[].memory` at every meeting.",
@@ -1007,6 +1123,36 @@
         "reason"
       ],
       "title": "NpcFavorEffect",
+      "type": "object"
+    },
+    "NpcLink": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "family",
+            "spouse",
+            "parent",
+            "child",
+            "friend",
+            "rival",
+            "master",
+            "servant",
+            "colleague"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "kind"
+      ],
+      "title": "NpcLink",
       "type": "object"
     },
     "PropSpec": {
@@ -1446,6 +1592,7 @@
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
+          "create_npc": "#/$defs/CreateNpcEffect",
           "crime_known": "#/$defs/CrimeKnownEffect",
           "damage": "#/$defs/DamageEffect",
           "drop_item": "#/$defs/DropItemEffect",
@@ -1560,6 +1707,9 @@
         },
         {
           "$ref": "#/$defs/DropItemEffect"
+        },
+        {
+          "$ref": "#/$defs/CreateNpcEffect"
         }
       ],
       "title": "Effect"

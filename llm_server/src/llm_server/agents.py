@@ -24,6 +24,9 @@ from .protocol import (
     EngineCheckParams,
     EngineCheckResult,
     EngineFindItemsParams,
+    EngineFindNpcsParams,
+    EngineFindNpcsResult,
+    CreateNpcEffect,
     EngineFindItemsResult,
     EngineLookupParams,
     EngineLookupResult,
@@ -118,6 +121,7 @@ class TurnContext:
     check_ids: list[str] = field(default_factory=list)
     accepted: dict[str, str] = field(default_factory=dict)  # effect_id -> summary
     searched_items: bool = False
+    searched_npcs: bool = False  # find_npcs this turn (v0.7.20: before create_npc)
     proposed: set[str] = field(default_factory=set)  # effects accepted this turn (proposing one again is refused)
     empty_gives: int = 0  # give_item with neither item_id nor item
 
@@ -203,6 +207,8 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
             return "Отказ: give_item — укажи либо item_id существующего предмета, либо item для нового; если давать нечего — не предлагай эффект."
         if effect.item is not None and not t.searched_items:
             return "Отказ: перед созданием нового предмета найди похожие через find_items."
+    if isinstance(effect, CreateNpcEffect) and not t.searched_npcs:
+        return "Отказ: перед созданием человека поищи его через find_npcs."
     raw = await t.session.call_engine("engine.validate", EngineValidateParams(turn_id=t.params.turn_id, effect=effect))
     r = EngineValidateResult.model_validate(raw)
     if not r.accepted or not r.effect_id:
@@ -221,6 +227,18 @@ async def lookup(ctx: RunContext[TurnContext], kind: LookupKind, id: str) -> str
     raw = await t.session.call_engine("engine.lookup", EngineLookupParams(turn_id=t.params.turn_id, kind=kind, id=id))
     r = EngineLookupResult.model_validate(raw)
     return json.dumps(r.data, ensure_ascii=False) if r.found else "Не найдено."
+
+
+async def find_npcs(ctx: RunContext[TurnContext], query: str) -> str:
+    """Найти людей мира (пакет и созданные в этой игре): query — имя, роль или место по-русски. Обязательно перед
+    create_npc: может, такой человек уже есть."""
+    t = ctx.deps
+    t.searched_npcs = True
+    raw = await t.session.call_engine("engine.find_npcs", EngineFindNpcsParams(turn_id=t.params.turn_id, query=query))
+    found = EngineFindNpcsResult.model_validate(raw).npcs
+    if not found:
+        return "Никого похожего. Если человек нужен по сцене или замыслу игрока — create_npc."
+    return "\n".join(f"[{n.npc_id}] {n.name} — {n.role}, {n.location}{' (мёртв)' if n.dead else ''}" for n in found)
 
 
 async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None = None,
@@ -250,7 +268,7 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -
         output_type=TurnOutput,
         deps_type=TurnContext,
         instructions=system,
-        tools=[request_check, propose_effect, lookup, find_items],
+        tools=[request_check, propose_effect, lookup, find_items, find_npcs],
         retries=2,
         model_settings=settings_for(model, base),
     )
@@ -260,6 +278,10 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -
         t = ctx.deps
         if not out.narration.strip():
             raise ModelRetry("narration не может быть пустым.")
+        if out.changes and not out.effect_ids and t.accepted:
+            # v0.7.20: the model proposed the effects (the engine accepted them) and forgot to list them — they are this
+            # turn's, take them all instead of a retry the model tends to repeat until the turn fails
+            out.effect_ids = list(t.accepted)
         if out.changes and not out.effect_ids:
             raise ModelRetry(f"В тексте есть изменения {out.changes}, но нет эффектов. Предложи их через propose_effect "
                              "и верни effect_ids, или перепиши текст так, чтобы ничего не менялось.")

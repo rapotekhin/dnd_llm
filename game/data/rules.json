@@ -266,6 +266,41 @@
 			}
 		}
 	},
+	"world_gen": {
+		"_doc": "People and places the master makes (v0.7.20, WorldGen): an NPC by the pack's schema — a template of people (npc_templates, CR at most max_cr), a race of the SRD, links to NPCs of the world (link_kinds), a trader with goods of the catalog (each at most stock_item_cap_cp) and purse_cp; at most max_per_location new people in a location and max_per_session in a game.",
+		"npc_templates": [
+			"commoner",
+			"guard",
+			"acolyte",
+			"noble",
+			"scout",
+			"thug",
+			"bandit",
+			"tribal_warrior",
+			"cultist",
+			"spy",
+			"priest",
+			"druid",
+			"veteran",
+			"knight"
+		],
+		"max_cr": 3,
+		"max_per_location": 4,
+		"max_per_session": 12,
+		"link_kinds": [
+			"family",
+			"spouse",
+			"parent",
+			"child",
+			"friend",
+			"rival",
+			"master",
+			"servant",
+			"colleague"
+		],
+		"stock_item_cap_cp": 5000,
+		"purse_cp": 3000
+	},
 	"reputation": {
 		"_doc": "Reputation in a settlement (v0.7.17, ReputationRules): points of the hero in a pack location with settlement: true; thresholds → steps −3…+3 (names); points by the engine's facts; master_max — the master's effect for a deed the place learned of; prices of every trader of the place (buy_pct the hero pays, sell_pct the trader pays) and the attitude of the people not dealt with yet (stranger_attitude).",
 		"thresholds": [5, 15, 30],

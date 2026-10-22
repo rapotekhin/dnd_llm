@@ -36,6 +36,15 @@ static func word(data: Dictionary, st: int) -> String:
 	return str(cfg(data)["names"][str(st)])
 
 
+## The room of an NPC in the world ("" — none).
+static func home_room(data: Dictionary, npc_id: String) -> String:
+	var rooms: Dictionary = data["world"]["rooms"]
+	for rid: String in rooms:
+		if (rooms[rid].get("npcs", []) as Array).has(npc_id):
+			return rid
+	return ""
+
+
 ## The pack location of an NPC ("" — none).
 static func home_of(data: Dictionary, npc_id: String) -> String:
 	var rooms: Dictionary = data["world"]["rooms"]

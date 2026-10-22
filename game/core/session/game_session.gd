@@ -125,6 +125,9 @@ var favors: Dictionary = {}
 ## with yet by it: npc_id → attitude (recomputed when the reputation changes).
 var reputation: Dictionary = {}
 var attitude_base: Dictionary = {}
+## What the master made in this game (v0.7.20, WorldGen): {"npcs": {id: def}, "npc_rooms": {id: room}} — merged into the
+## game's copy of the pack's world.
+var generated: Dictionary = {}
 ## NPC secrets the hero learned (v0.7.15.3): "npc_id:secret_id".
 var secrets_told: Array[String] = []
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
@@ -416,6 +419,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"discounts": discounts,
 		"favors": favors,
 		"secrets_told": secrets_told,
+		"generated": generated,
 		"reputation": reputation,
 		"attitude_base": attitude_base,
 		"crimes": crimes,
@@ -532,6 +536,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.favors[id] = int(d["favors"][id])
 	for k: Variant in d.get("secrets_told", []):
 		s.secrets_told.append(str(k))
+	if d.get("generated") is Dictionary:
+		s.generated = (d["generated"] as Dictionary).duplicate(true)
 	for k: String in d.get("reputation", {}):
 		s.reputation[k] = int(d["reputation"][k])
 	for k: String in d.get("attitude_base", {}):

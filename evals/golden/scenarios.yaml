@@ -1748,3 +1748,32 @@ scenarios:
     rubric:
       - "Верёвка достана эффектом take_from из bag1 с item_id rope; новых вещей не появилось"
 
+  - id: npc_missing_is_made
+    title: "Нужного человека нет в мире — find_npcs, затем create_npc"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, а есть в Устье пекарь? Хочу заказать каравай к празднику."
+    engine:
+      find_npcs: []
+    expect:
+      effects: {required_kinds_any: [create_npc]}
+      tools_required: [find_npcs]
+    rubric:
+      - "Горм отвечает, что пекарь есть, и мастер создаёт его эффектом create_npc (имя, роль пекаря, шаблон commoner или похожий), а не выдумывает словами; где его найти — в этой локации"
+
+  - id: npc_existing_not_made_again
+    title: "Человек уже есть в мире — не создавать"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, где тут кузнец? Хочу починить меч."
+    engine:
+      find_npcs:
+        - {id: npc_smith, name: "Гуннар Тяжёлая Рука", role: "кузнец", location: "Серое Устье"}
+    expect:
+      effects: {forbidden_kinds: [create_npc]}
+      tools_required: [find_npcs]
+    rubric:
+      - "Горм отсылает к кузнецу Гуннару, которого вернул поиск; нового кузнеца не создаёт"
+

@@ -1122,6 +1122,9 @@ func set_dm_style(style: String) -> void:
 
 func start(s: GameSession) -> void:
 	s.settings["reactions"] = SaveManager.reactions  # the player's choice of the settings (v0.7.10)
+	# v0.7.20: this game's world — the pack's with what the master made in it (a copy; the pack is never touched)
+	var pack: Dictionary = Catalog.bundle(Catalog.active_world).get("world", Catalog.data["world"])
+	Catalog.data["world"] = WorldGen.merged(pack, s.generated)
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 	session = s
@@ -2094,6 +2097,14 @@ func handle_engine_lookup(params: Dictionary) -> Dictionary:
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")
 	return Lookup.find(session, Catalog.data, str(params.get("kind", "")), str(params.get("id", "")))
+
+
+## The master looks for a person in the world before making one (v0.7.20).
+func handle_engine_find_npcs(params: Dictionary) -> Dictionary:
+	if not _active(params):
+		return JsonRpcPeer.fail(-32041, "no such active turn")
+	effects.searched_npcs[busy_turn] = true
+	return {"npcs": WorldGen.find_npcs(session, Catalog.data, str(params.get("query", ""))).slice(0, 10)}
 
 
 func handle_engine_find_items(params: Dictionary) -> Dictionary:

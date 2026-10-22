@@ -180,6 +180,9 @@ class MockEngine:
         if method == "engine.lookup":
             data = self.engine.get("lookup", {}).get(p["id"])
             return {"found": data is not None, "data": data or {}}
+        if method == "engine.find_npcs":  # v0.7.20
+            return {"npcs": [{"npc_id": n.get("id", ""), "name": n.get("name", ""), "role": n.get("role", ""), "location": n.get("location", "")}
+                             for n in self.engine.get("find_npcs", [])]}
         if method == "engine.find_items":
             items = [{"item_id": i.get("id", ""), "name": i.get("name", ""), "rarity": i.get("rarity", "common"),
                       "item_type": i.get("item_type", "weapon"), "properties": i.get("properties", [])}

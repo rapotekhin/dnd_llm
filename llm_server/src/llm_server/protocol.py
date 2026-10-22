@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.30.0"
+PROTOCOL_VERSION = "0.31.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -568,6 +568,37 @@ class UnlockEffect(_Out):
     how: Literal["key", "pick", "force"] = "key"
 
 
+class NpcLink(_Out):
+    npc_id: str
+    kind: Literal["family", "spouse", "parent", "child", "friend", "rival", "master", "servant", "colleague"]
+
+
+class NewNpc(_Out):
+    """A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;
+    `monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),
+    `race` — an SRD race id, `room_id` — a room of this location (none — here), `trader` with `stock` of catalog ids."""
+
+    name: str = Field(min_length=2, max_length=60)
+    role: str = Field(min_length=2, max_length=60)
+    race: str | None = None
+    gender: Gender = "other"
+    description: str = Field(default="", max_length=300)
+    personality: str = Field(default="", max_length=300)
+    monster: str = "commoner"
+    room_id: str | None = None
+    trader: bool = False
+    stock: list[str] = Field(default_factory=list, max_length=10)
+    links: list[NpcLink] = Field(default_factory=list, max_length=5)
+
+
+class CreateNpcEffect(_Out):
+    """Makes a person the world lacks (0.31.0) — only after find_npcs in the same turn; the engine checks the schema,
+    the limits and the duplicates; the person lives in this game like one of the pack."""
+
+    kind: Literal["create_npc"] = "create_npc"
+    npc: NewNpc
+
+
 class DropItemEffect(_Out):
     """The hero leaves a thing in the room (0.29.0): an item of the pack, or a bag (`item_id` = its bag id) with what
     is in it; it becomes a thing of the room that can be picked up again."""
@@ -772,7 +803,7 @@ Effect = Annotated[
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
-    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect,
+    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect,
     Field(discriminator="kind"),
 ]
 
@@ -839,6 +870,25 @@ class EngineFindItemsParams(_Out):
     properties: list[ItemProperty] = Field(default_factory=list)
 
 
+class EngineFindNpcsParams(_Out):
+    turn_id: str
+    query: str
+
+
+class FoundNpc(_In):
+    npc_id: str
+    name: str
+    role: str = ""
+    room: str = ""
+    location: str = ""
+    source: str = "pack"  # pack | made
+    dead: bool = False
+
+
+class EngineFindNpcsResult(_In):
+    npcs: list[FoundNpc] = Field(default_factory=list)
+
+
 class FoundItem(_In):
     item_id: str
     name: str
@@ -875,4 +925,6 @@ CONTRACT_MODELS: dict[str, type[BaseModel]] = {
     "engine.lookup.result": EngineLookupResult,
     "engine.find_items.params": EngineFindItemsParams,
     "engine.find_items.result": EngineFindItemsResult,
+    "engine.find_npcs.params": EngineFindNpcsParams,
+    "engine.find_npcs.result": EngineFindNpcsResult,
 }

@@ -41,7 +41,7 @@ CLOSE_HELLO_TIMEOUT = 4002
 CLOSE_MESSAGE_TOO_BIG = 1009
 
 # Methods the backend may call on Godot, and only inside an active turn (ADR-0009 §3).
-ENGINE_METHODS = frozenset({"engine.check", "engine.validate", "engine.lookup", "engine.find_items"})
+ENGINE_METHODS = frozenset({"engine.check", "engine.validate", "engine.lookup", "engine.find_items", "engine.find_npcs"})
 
 
 class RpcError(Exception):

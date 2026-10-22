@@ -375,3 +375,13 @@ def test_the_library_finds_items_by_words(tmp_path):
     assert [f.item_id for f in lib.search("серебряный кинжал")] == ["gen-a"]
     assert [f.item_id for f in lib.search("письмо")] == ["gen-b"]
     assert lib.search("меч") == []
+
+
+def test_forgotten_effect_ids_are_taken_from_the_turn(data_dir):
+    # v0.7.20: the model proposed a payment (accepted) and then forgot effect_ids — the turn keeps it instead of failing.
+    fn = scripted(
+        ("propose_effect", {"effect": {"kind": "coins", "delta_cp": -10, "reason": "серебряный за слухи"}}),
+        ("final", lambda m: {"narration": "Горм сгребает монету.", "changes": ["Бран заплатил серебряный"], "effect_ids": []}),
+    )
+    msg, calls, services = play(data_dir, fn)
+    assert msg["result"]["effect_ids"] == ["e-1"]

@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "FoundNpc": {
+      "properties": {
+        "dead": {
+          "default": false,
+          "title": "Dead",
+          "type": "boolean"
+        },
+        "location": {
+          "default": "",
+          "title": "Location",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "role": {
+          "default": "",
+          "title": "Role",
+          "type": "string"
+        },
+        "room": {
+          "default": "",
+          "title": "Room",
+          "type": "string"
+        },
+        "source": {
+          "default": "pack",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "name"
+      ],
+      "title": "FoundNpc",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "npcs": {
+      "items": {
+        "$ref": "#/$defs/FoundNpc"
+      },
+      "title": "Npcs",
+      "type": "array"
+    }
+  },
+  "title": "EngineFindNpcsResult",
+  "type": "object"
+}

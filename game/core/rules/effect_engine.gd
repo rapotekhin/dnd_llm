@@ -10,6 +10,8 @@ extends RefCounted
 var reserves: Dictionary = {}
 ## turn_id -> true once the master searched items this turn (required before creating one).
 var searched: Dictionary = {}
+## turn_id -> true once the master searched the world's people this turn (v0.7.20: before create_npc).
+var searched_npcs: Dictionary = {}
 ## Catalog.data of the last validate: apply() needs the rules of casts, feature uses and items.
 var _data: Dictionary = {}
 
@@ -33,6 +35,7 @@ func mark_searched(turn_id: String) -> void:
 ## Drops every reserve (and the search mark) of `turn_id`.
 func discard(turn_id: String) -> void:
 	_won.erase(turn_id)
+	searched_npcs.erase(turn_id)
 	_rolls.erase(turn_id)
 	_won_over.erase(turn_id)
 	for id: String in reserves.keys():
@@ -264,6 +267,10 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return ContainerRules.plan_put(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
 		"unlock":
 			return _plan_unlock(s, data, turn_id, e)
+		"create_npc":  # a person the world lacks, by the pack's schema (v0.7.20)
+			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_npc"):
+				return {"reason": "один новый человек за ход"}
+			return WorldGen.plan_npc(s, data, e.get("npc", {}) if e.get("npc") is Dictionary else {}, searched_npcs.has(turn_id))
 		"drop_item":  # the hero leaves a thing (a bag with what is in it) in the room (v0.7.18.2)
 			return ContainerRules.plan_drop(s, data, str(e.get("item_id", "")), int(e.get("qty", 1)))
 		"prop_state":
@@ -703,6 +710,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			ContainerRules.apply_put(s, _data, plan)
 		"drop_item":
 			ContainerRules.apply_drop(s, _data, plan)
+		"create_npc":
+			_extra_lines.append("[%s]" % WorldGen.apply_npc(s, _data, plan))
 		"unlock":
 			_extra_lines.append_array(ContainerRules.unlock(PropRules.find(s, str(plan["room"]), str(plan["prop"])), str(plan["how"])))
 		"prop_state":
