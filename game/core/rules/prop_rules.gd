@@ -38,6 +38,11 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 		out.append({"prop_id": p["id"], "name": p["name"], "description": p.get("description", ""), "state": p.get("state", ""),
 			"owner": p.get("owner") if not str(p.get("owner", "")).is_empty() else null, "portable": not str(p.get("item_id", "")).is_empty(),
 			"text": p.get("text", "")})
+		if ContainerRules.is_container(p):  # v0.7.18.1
+			var row: Dictionary = out[-1]
+			row["container"] = ContainerRules.kind_name(data, str(p["container"]))
+			row["locked"] = bool(p.get("locked", false))
+			row["contents"] = ContainerRules.contents_text(data, s.items, p.get("contents", {}))
 	return out
 
 
@@ -55,6 +60,8 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 	var item_cap := int(cfg(data)["item_value_cap_cp"])
 	var here := s.npcs_here(WorldView.new(data["world"]).world, room)
 	var total := 0
+	var gift := 0  # what nobody owns inside the containers: the master's gift (v0.7.18.1)
+	var made := {}
 	var props: Array = []
 	for spec: Variant in specs:
 		if not (spec is Dictionary) or str(spec.get("name", "")).strip_edges().is_empty():
@@ -71,14 +78,28 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 		var owner := str(spec.get("owner", "")) if spec.get("owner") != null else ""
 		if not owner.is_empty() and not here.has(owner):
 			return {"reason": "хозяин %s — не NPC этой комнаты" % owner}
-		props.append({"name": str(spec["name"]).strip_edges().left(60), "description": str(spec.get("description", "")).left(240),
-			"item_id": item, "owner": owner, "text": str(spec.get("text", "")).left(800), "state": ""})
+		var prop := {"name": str(spec["name"]).strip_edges().left(60), "description": str(spec.get("description", "")).left(240),
+			"item_id": item, "owner": owner, "text": str(spec.get("text", "")).left(800), "state": ""}
+		var box := ContainerRules.plan_spec(s, data, spec)
+		if box.has("reason"):
+			return {"reason": box["reason"]}
+		if not box.is_empty():
+			for k: String in ["container", "contents", "locked", "lock_dc", "key"]:
+				prop[k] = box[k]
+			made.merge(box["made"])
+			if owner.is_empty():
+				gift += int(box["value"])
+		props.append(prop)
 	if total > value_cap:
 		return {"reason": "переносные вещи комнаты стоят %d мм при пределе %d для %s уровня — убери дорогое" % [total, value_cap, level]}
-	return {"plan": {"room": room, "props": props}, "summary": "Обстановка: " + ", ".join(props.map(func(p: Dictionary) -> String: return p["name"]))}
+	if gift > EffectEngine.budget_left(s, data):
+		return {"reason": "ничейное в контейнерах стоит %d мм — больше, чем мастер может дать до долгого отдыха (%d мм); положи меньше или дай им хозяина" % [gift, EffectEngine.budget_left(s, data)]}
+	return {"plan": {"room": room, "props": props, "made": made, "reward": gift},
+		"summary": "Обстановка: " + ", ".join(props.map(func(p: Dictionary) -> String: return p["name"]))}
 
 
 static func apply_furnish(s: GameSession, plan: Dictionary) -> void:
+	s.items.merge(plan.get("made", {}))  # things the master made inside the containers (v0.7.18.1)
 	var list: Array = []
 	var n := 0
 	for p: Dictionary in plan["props"]:
@@ -96,6 +117,8 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		return {"reason": "в комнате нет вещи %s (есть: %s)" % [e.get("prop_id", ""), ", ".join(room_props(s, s.room_id).map(func(x: Dictionary) -> String: return x["id"]))]}
 	if str(p.get("item_id", "")).is_empty():
 		return {"reason": "%s не унести — это обстановка; опиши попытку словами или `prop_state`" % p["name"]}
+	if not (p.get("contents", {}) as Dictionary).is_empty():
+		return {"reason": "в %s что-то лежит — сначала `take_from` содержимое" % p["name"]}
 	var owner := str(p.get("owner", ""))
 	var seen := not owner.is_empty() and s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(owner)
 	return {"plan": {"room": s.room_id, "prop": p["id"], "owner": owner if seen else ""},
@@ -111,7 +134,7 @@ static func take_all_plan(s: GameSession, data: Dictionary) -> Dictionary:
 	var take: Array[Dictionary] = []
 	var left: Array[Dictionary] = []
 	for p: Dictionary in room_props(s, s.room_id):
-		if str(p.get("item_id", "")).is_empty() or not str(p.get("owner", "")).is_empty():
+		if str(p.get("item_id", "")).is_empty() or not str(p.get("owner", "")).is_empty() or not (p.get("contents", {}) as Dictionary).is_empty():
 			continue
 		var w := float(ItemRules.def_of(data["items"], s.items, str(p["item_id"])).get("weight", 0))
 		if weight + w > cap:
@@ -138,6 +161,8 @@ static func plan_state(s: GameSession, e: Dictionary) -> Dictionary:
 	var state := str(e.get("state", ""))
 	if not state in ["open", "closed", "broken", "burned", "moved"]:
 		return {"reason": "состояние — open, closed, broken, burned или moved"}
+	if state == "open" and bool(p.get("locked", false)):  # v0.7.18.1
+		return {"reason": "%s заперт — открыть только `unlock` (ключ; или после успешной проверки Ловкости рук / Атлетики)" % p["name"]}
 	if str(p.get("state", "")) in ["broken", "burned"] and state in ["open", "closed", "moved"]:
 		return {"reason": "%s уже испорчена" % p["name"]}
 	return {"plan": {"room": s.room_id, "prop": p["id"], "state": state}, "summary": "%s: %s" % [p["name"], TranslationServer.translate("PROP_STATE_" + state.to_upper())]}

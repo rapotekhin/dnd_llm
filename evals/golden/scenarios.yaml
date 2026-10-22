@@ -1698,3 +1698,40 @@ scenarios:
     rubric:
       - "Жезл, искрящий грозой, создан волшебным: с действием use.spell (заклинание молнии или похожее из книги движка) и charges, wondrous; рассказ не приписывает ему силы сверх этого"
 
+  - id: container_take_from
+    title: "Взять из открытого сундука — take_from"
+    category: effects
+    extends: tavern
+    input: "Заглядываю в сундук под лестницей и беру оттуда кинжал."
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p3, name: "Сундук под лестницей", description: "Окованный сундук, крышка откинута.", state: open,
+             container: "сундук", locked: false, contents: "Кинжал ×2 [dagger], Свеча [candle]"}
+    expect:
+      effects: {required_kinds_any: [take_from], forbidden_kinds: [give_item, take_prop]}
+    rubric:
+      - "Кинжал взят эффектом take_from из p3 с item_id dagger; в сундуке, по сцене, — два кинжала и свеча: рассказ не добавляет вещей сверх этого"
+
+  - id: container_locked_pick
+    title: "Запертый сундук — проверка, затем unlock"
+    category: effects
+    extends: tavern
+    input: "Достаю отмычки и вскрываю замок сундука под лестницей."
+    snapshot:
+      character:
+        tools: ["Воровские инструменты"]
+      scene:
+        props:
+          - {prop_id: p3, name: "Сундук под лестницей", description: "Окованный сундук с висячим замком.", container: "сундук",
+             locked: true, contents: "Кинжал ×2 [dagger]"}
+    engine:
+      check: {d20: [16], bonus: 5, total: 21, dc: 15, success: true, nat: 16, blocked: false}
+      validate:
+        - {kind: prop_state, status: reject, reason: "Сундук под лестницей заперт — открыть только `unlock` (ключ; или после успешной проверки Ловкости рук / Атлетики)"}
+    expect:
+      check: {required: true, skill_in: [sleight_of_hand]}
+      effects: {required_kinds_any: [unlock], forbidden_kinds: [give_item, take_from]}
+    rubric:
+      - "После успешной проверки — unlock с how pick; содержимое описано только после вскрытия, без лишних вещей; герой ничего не взял, пока не просил"
+

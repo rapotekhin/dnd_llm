@@ -20,7 +20,7 @@ KINDS = {"enter", "resume", "action", "rest", "deal", "haggle", "quest", "abilit
 NO_INPUT_KINDS = {"enter", "resume", "rest", "downed"}  # deal / haggle / quest carry the engine facts in input
 DC_TIERS = {"very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"}
 EFFECT_KINDS = {"give_item", "take_item", "coins", "damage", "heal", "condition", "cast", "use_feature", "use_item", "start_combat", "advance_time", "furnish", "take_prop", "prop_state",
-                "quest_update", "flag", "xp", "npc_attitude", "advance_time", "move", "note", "equip", "crime_known", "npc_discount", "npc_favor", "accept_quest", "reveal_secret", "reputation"}
+                "quest_update", "flag", "xp", "npc_attitude", "advance_time", "move", "note", "equip", "crime_known", "npc_discount", "npc_favor", "accept_quest", "reveal_secret", "reputation", "take_from", "put_in", "unlock"}
 TOOLS = {"find_items", "create_item", "lookup_rule", "lookup_spell"}
 EXPECT_KEYS = {"check", "max_checks", "effects", "next_mode", "narration", "options",
                "tools_required", "tools_forbidden", "missing_concept"}

@@ -833,6 +833,63 @@ func take_all() -> String:
 	return ""
 
 
+## The container window (v0.7.18.1): take or put without a master's turn — like the gear in the sheet; taking from
+## someone else's container before them is a theft, the master narrates the owner's reaction. "" or a localization key.
+func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> String:
+	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var r := ContainerRules.plan_take(session, Catalog.data, prop_id, item_id, qty) if take else ContainerRules.plan_put(session, Catalog.data, prop_id, item_id, qty)
+	if r.has("reason"):
+		EventBus.message.emit(str(r["reason"]))
+		return ""
+	var lines: Array[String] = [str(r["summary"])]
+	if take:
+		lines.append_array(ContainerRules.apply_take(session, Catalog.data, r["plan"]))
+	else:
+		ContainerRules.apply_put(session, Catalog.data, r["plan"])
+	if take and not str(r["plan"]["owner"]).is_empty():  # caught: the master narrates the owner
+		_add(GameSession.effect_entry(lines))
+		_log("События: " + ", ".join(lines))
+		EventBus.state_changed.emit()
+		_request("action", "Беру из чужого %s [движок: %s]" % [PropRules.find(session, session.room_id, prop_id).get("name", ""), " · ".join(lines)])
+		return ""
+	_quiet_lines(lines)
+	return ""
+
+
+## A locked container (v0.7.18.1): the key, thieves' tools (Sleight of Hand) or force (Athletics) against its lock;
+## the master narrates the attempt. "" or a localization key.
+func container_unlock(prop_id: String, how: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var p := PropRules.find(session, session.room_id, prop_id)
+	if p.is_empty() or not ContainerRules.ways(session, Catalog.data, p).has(how):
+		return "WAIT_NOT_NOW"
+	var lines: Array[String] = []
+	if how != "key":
+		var need := ContainerRules.lock_check(Catalog.data, p, how)
+		var params := {"skill": need["skill"], "dc_tier": "medium", "dc": int(need["dc"]), "target_id": prop_id}
+		var bonus := CheckEngine.bonus_for(session.character, params)
+		if how == "pick":
+			var db := ExplorationRules.disarm_bonus(session.character)
+			bonus = int(db["bonus"])
+			params["disadvantage_reason"] = str(db["disadvantage_reason"])
+		var result := CheckEngine.roll(Catalog.rules(), session.rng, params, bonus, session.next_check_id())
+		_add(GameSession.check_entry(params, result))
+		TimeRules.advance(session, Catalog.data, int(ContainerRules.cfg(Catalog.data).get("minutes", 1)))
+		if not bool(result["success"]):
+			lines.append("%s не поддался" % p["name"])
+	if lines.is_empty():
+		lines = ContainerRules.unlock(p, how)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("action", "%s %s [движок: %s]" % [{"key": "Открываю ключом", "pick": "Вскрываю отмычками", "force": "Выбиваю"}[how], p["name"], " · ".join(lines)])
+	return ""
+
+
 ## The theft window (v0.7.0): a Sleight of Hand against the entry's DC; success — it is taken; failure — the NPC
 ## reacts by its kind. The master narrates it (kind=theft); a fight it causes starts after. "" or a localization key.
 func steal(npc_id: String, entry_id: String) -> String:
@@ -1803,6 +1860,7 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 	var result := _engine_check(params)
 	var won_over := _listener_id(params) if ["persuasion", "deception", "intimidation"].has(str(params.get("skill", ""))) and not bool(result.get("blocked", false)) else ""
 	effects.note_check(str(params.get("turn_id", "")), str(params.get("dc_tier", "")), bool(result.get("success", false)), won_over)
+	effects.note_roll(str(params.get("turn_id", "")), str(params.get("skill", "")), int(result.get("total", 0)), bool(result.get("success", false)))
 	return result
 
 

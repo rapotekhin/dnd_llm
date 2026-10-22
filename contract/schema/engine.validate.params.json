@@ -324,6 +324,44 @@
       "title": "ConditionSave",
       "type": "object"
     },
+    "ContentSpec": {
+      "additionalProperties": false,
+      "description": "A thing inside a container when the room is furnished (0.28.0): an item of the catalog (`item_id`) or a new one\n(`item`, by the same rules as give_item.item).",
+      "properties": {
+        "item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "title": "ContentSpec",
+      "type": "object"
+    },
     "CrimeKnownEffect": {
       "additionalProperties": false,
       "description": "A hidden murder becomes known (0.19.0): the hero confessed or was exposed in the scene. `victim_id` — the\nnpc_id of a deed «никто не знает». The engine spreads it: attitudes, and the wanted hero where there is law.",
@@ -947,6 +985,26 @@
       "additionalProperties": false,
       "description": "A thing to put in the room when it is furnished (0.11.0).",
       "properties": {
+        "container": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Container"
+        },
+        "contents": {
+          "items": {
+            "$ref": "#/$defs/ContentSpec"
+          },
+          "maxItems": 10,
+          "title": "Contents",
+          "type": "array"
+        },
         "description": {
           "default": "",
           "maxLength": 240,
@@ -964,6 +1022,35 @@
           ],
           "default": null,
           "title": "Item Id"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key"
+        },
+        "lock": {
+          "anyOf": [
+            {
+              "enum": [
+                "simple",
+                "good",
+                "masterwork"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lock"
         },
         "name": {
           "maxLength": 60,
@@ -1027,6 +1114,39 @@
         "state"
       ],
       "title": "PropStateEffect",
+      "type": "object"
+    },
+    "PutInEffect": {
+      "additionalProperties": false,
+      "description": "The hero puts a thing of their own into a container of the room (0.28.0), within its capacity.",
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "put_in",
+          "default": "put_in",
+          "title": "Kind",
+          "type": "string"
+        },
+        "prop_id": {
+          "title": "Prop Id",
+          "type": "string"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "prop_id",
+        "item_id"
+      ],
+      "title": "PutInEffect",
       "type": "object"
     },
     "ReputationEffect": {
@@ -1128,6 +1248,39 @@
       "title": "StartCombatEffect",
       "type": "object"
     },
+    "TakeFromEffect": {
+      "additionalProperties": false,
+      "description": "The hero takes a thing out of a container of the room (0.28.0); someone else's before its owner — a theft.",
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "take_from",
+          "default": "take_from",
+          "title": "Kind",
+          "type": "string"
+        },
+        "prop_id": {
+          "title": "Prop Id",
+          "type": "string"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "prop_id",
+        "item_id"
+      ],
+      "title": "TakeFromEffect",
+      "type": "object"
+    },
     "TakeItemEffect": {
       "additionalProperties": false,
       "properties": {
@@ -1174,6 +1327,37 @@
         "prop_id"
       ],
       "title": "TakePropEffect",
+      "type": "object"
+    },
+    "UnlockEffect": {
+      "additionalProperties": false,
+      "description": "A locked container opens (0.28.0): `key` the hero carries, or after a passed check this turn — `pick`\n(Sleight of Hand with thieves' tools) or `force` (Athletics; it breaks).",
+      "properties": {
+        "how": {
+          "default": "key",
+          "enum": [
+            "key",
+            "pick",
+            "force"
+          ],
+          "title": "How",
+          "type": "string"
+        },
+        "kind": {
+          "const": "unlock",
+          "default": "unlock",
+          "title": "Kind",
+          "type": "string"
+        },
+        "prop_id": {
+          "title": "Prop Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prop_id"
+      ],
+      "title": "UnlockEffect",
       "type": "object"
     },
     "UseFeatureEffect": {
@@ -1247,11 +1431,14 @@
           "npc_discount": "#/$defs/NpcDiscountEffect",
           "npc_favor": "#/$defs/NpcFavorEffect",
           "prop_state": "#/$defs/PropStateEffect",
+          "put_in": "#/$defs/PutInEffect",
           "reputation": "#/$defs/ReputationEffect",
           "reveal_secret": "#/$defs/RevealSecretEffect",
           "start_combat": "#/$defs/StartCombatEffect",
+          "take_from": "#/$defs/TakeFromEffect",
           "take_item": "#/$defs/TakeItemEffect",
           "take_prop": "#/$defs/TakePropEffect",
+          "unlock": "#/$defs/UnlockEffect",
           "use_feature": "#/$defs/UseFeatureEffect",
           "use_item": "#/$defs/UseItemEffect"
         },
@@ -1332,6 +1519,15 @@
         },
         {
           "$ref": "#/$defs/ReputationEffect"
+        },
+        {
+          "$ref": "#/$defs/TakeFromEffect"
+        },
+        {
+          "$ref": "#/$defs/PutInEffect"
+        },
+        {
+          "$ref": "#/$defs/UnlockEffect"
         }
       ],
       "title": "Effect"

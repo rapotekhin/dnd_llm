@@ -140,6 +140,23 @@
 		-3,
 		3
 	],
+	"containers": {
+		"_doc": "Containers (v0.7.18.1, ContainerRules): kinds by a catalog item id or furniture (with `name`) — capacity_lb by 5e (a chest 300 lb, a barrel and a basket by volume, a backpack and a sack 30, a pouch 6, a bag of holding 500 and weightless inside), lockable; lock_dc of a lock by its quality; force_dc_plus — Athletics to break it open.",
+		"kinds": {
+			"chest": {"capacity_lb": 300, "lockable": true},
+			"barrel": {"capacity_lb": 150},
+			"basket": {"capacity_lb": 40},
+			"sack": {"capacity_lb": 30},
+			"backpack": {"capacity_lb": 30},
+			"pouch": {"capacity_lb": 6},
+			"bag_of_holding": {"capacity_lb": 500, "weightless": true},
+			"cabinet": {"name": "шкаф", "capacity_lb": 200, "lockable": true},
+			"crate": {"name": "ящик", "capacity_lb": 100},
+			"strongbox": {"name": "окованный ларец", "capacity_lb": 20, "lockable": true}
+		},
+		"lock_dc": {"simple": 10, "good": 15, "masterwork": 20},
+		"force_dc_plus": 2
+	},
 	"reputation": {
 		"_doc": "Reputation in a settlement (v0.7.17, ReputationRules): points of the hero in a pack location with settlement: true; thresholds → steps −3…+3 (names); points by the engine's facts; master_max — the master's effect for a deed the place learned of; prices of every trader of the place (buy_pct the hero pays, sell_pct the trader pays) and the attitude of the people not dealt with yet (stranger_attitude).",
 		"thresholds": [5, 15, 30],

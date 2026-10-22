@@ -20,6 +20,8 @@ var _extra_lines: Array[String] = []
 var _won: Dictionary = {}
 ## NPCs won over this turn by a successful Persuasion, Deception or Intimidation (v0.7.15.2): turn_id → [npc_id].
 var _won_over: Dictionary = {}
+## The checks of each turn (v0.7.18.1): turn_id → [{skill, total, success}] — a lock opened by words needs one.
+var _rolls: Dictionary = {}
 ## Turns started by the player's own words or ability (v0.7.8): only there a condition may come without a save
 ## (`cause: player` — the hero drank it, lay down to sleep). turn_id → true; GameState marks them.
 var player_turns: Dictionary = {}
@@ -31,6 +33,7 @@ func mark_searched(turn_id: String) -> void:
 ## Drops every reserve (and the search mark) of `turn_id`.
 func discard(turn_id: String) -> void:
 	_won.erase(turn_id)
+	_rolls.erase(turn_id)
 	_won_over.erase(turn_id)
 	for id: String in reserves.keys():
 		if reserves[id]["turn_id"] == turn_id:
@@ -49,6 +52,13 @@ func _of_turn(turn_id: String) -> Array[Dictionary]:
 
 ## Returns the engine.validate result: {accepted, effect_id, summary, item_id} or {accepted: false, reason}.
 ## A check of the turn resolved (GameState): a success on nearly_impossible caps what the master may give this turn.
+## A check of the turn and its total (v0.7.18.1): the effect `unlock` by words needs a passed one.
+func note_roll(turn_id: String, skill: String, total: int, success: bool) -> void:
+	var list: Array = _rolls.get(turn_id, [])
+	list.append({"skill": skill, "total": total, "success": success})
+	_rolls[turn_id] = list
+
+
 ## `npc_id` — the NPC of a social check (v0.7.15.2): a success wins it over for this turn's discount or favor.
 func note_check(turn_id: String, dc_tier: String, success: bool, npc_id: String = "") -> void:
 	if success:
@@ -248,6 +258,12 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return PropRules.plan_furnish(s, data, e)
 		"take_prop":
 			return PropRules.plan_take(s, data, e)
+		"take_from":  # out of a container of the room (v0.7.18.1)
+			return ContainerRules.plan_take(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
+		"put_in":
+			return ContainerRules.plan_put(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
+		"unlock":
+			return _plan_unlock(s, data, turn_id, e)
 		"prop_state":
 			return PropRules.plan_state(s, e)
 		"advance_time":
@@ -471,6 +487,24 @@ func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	return {"plan": {"slots": [slot], "item_id": id}, "summary": "Надето: %s" % ItemRules.display_name(data["items"], s.items, id)}
 
 
+## Opening a locked container by words (v0.7.18.1): a key the hero carries, or a check of this turn that beat the lock
+## (Sleight of Hand with thieves' tools — `pick`, Athletics — `force`, it breaks).
+func _plan_unlock(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary) -> Dictionary:
+	var p := PropRules.find(s, s.room_id, str(e.get("prop_id", "")))
+	if p.is_empty() or not bool(p.get("locked", false)):
+		return {"reason": "в комнате нет запертого %s" % e.get("prop_id", "")}
+	var how := str(e.get("how", "key"))
+	if not ContainerRules.ways(s, data, p).has(how):
+		return {"reason": "так не открыть: можно %s" % ", ".join(ContainerRules.ways(s, data, p))}
+	if how != "key":
+		var need := ContainerRules.lock_check(data, p, how)
+		var ok := (_rolls.get(turn_id, []) as Array).any(func(r: Dictionary) -> bool:
+			return str(r["skill"]) == str(need["skill"]) and bool(r["success"]) and int(r["total"]) >= int(need["dc"]))
+		if not ok:
+			return {"reason": "сначала проверка %s (DC движок знает) — `request_check`; при успехе — `unlock`" % need["skill"]}
+	return {"plan": {"room": s.room_id, "prop": p["id"], "how": how}, "summary": "%s: %s" % [p["name"], "открыт ключом" if how == "key" else "вскрыт" if how == "pick" else "взломан"]}
+
+
 ## A thing of a quest (its giver hands it over, or a step wants it) never changes hands by a plain effect (v0.7.2):
 ## the master giving it where its giver offers the quest takes the quest — the thing comes with it; anywhere else it
 ## is refused. {} when the thing belongs to no quest.
@@ -661,6 +695,12 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			PropRules.apply_furnish(s, plan)
 		"take_prop":
 			_extra_lines.append_array(PropRules.apply_take(s, _data, plan))
+		"take_from":
+			_extra_lines.append_array(ContainerRules.apply_take(s, _data, plan))
+		"put_in":
+			ContainerRules.apply_put(s, _data, plan)
+		"unlock":
+			_extra_lines.append_array(ContainerRules.unlock(PropRules.find(s, str(plan["room"]), str(plan["prop"])), str(plan["how"])))
 		"prop_state":
 			PropRules.apply_state(s, plan)
 		"flag":

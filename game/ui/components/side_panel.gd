@@ -11,6 +11,7 @@ signal level_up_requested
 signal short_rest_requested
 signal long_rest_requested
 signal pockets_requested(npc_id: String)
+signal container_requested(prop_id: String)
 
 var _content: VBoxContainer
 
@@ -195,6 +196,12 @@ func _rebuild() -> void:
 			if not err.is_empty():
 				EventBus.message.emit(tr(err)))
 		_content.add_child(tb)  # its own row under the look buttons: three in one row widen the panel
+		for p: Dictionary in PropRules.room_props(s, s.room_id):  # v0.7.18.1: containers of the room
+			if not ContainerRules.is_container(p):
+				continue
+			var pid := str(p["id"])
+			var cb := _button(tr("BTN_OPEN_CONTAINER").format({"name": p["name"]}), container_requested.emit.bind(pid), not GameState.is_busy())
+			cb.name = "Container_" + pid
 		var trapped := {}
 		for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
 			trapped[ft["to"]] = ft["secret"]

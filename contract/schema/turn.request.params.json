@@ -773,10 +773,25 @@
     "SceneProp": {
       "description": "A thing of the room (0.11.0): what the master may describe and the player may act on.",
       "properties": {
+        "container": {
+          "default": "",
+          "title": "Container",
+          "type": "string"
+        },
+        "contents": {
+          "default": "",
+          "title": "Contents",
+          "type": "string"
+        },
         "description": {
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "locked": {
+          "default": false,
+          "title": "Locked",
+          "type": "boolean"
         },
         "name": {
           "title": "Name",

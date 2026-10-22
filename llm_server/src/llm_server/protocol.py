@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BeforeValidator, BaseModel, ConfigDict, Field
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.27.0"
+PROTOCOL_VERSION = "0.28.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -166,6 +166,9 @@ class SceneProp(_In):
     owner: str | None = None  # npc_id of whoever owns it
     portable: bool = False  # can be taken (it is an item of the catalog)
     text: str = ""  # what is written in or on it
+    container: str = ""  # 0.28.0: a container — its kind («сундук», «шкаф»); its contents below
+    locked: bool = False  # 0.28.0: locked — a key, thieves' tools or force (effect unlock)
+    contents: str = ""  # 0.28.0: «Кинжал ×2 [dagger], Свеча [candle]» — what lies inside
 
 
 class Scene(_In):
@@ -505,6 +508,15 @@ class GiveItemEffect(_Out):
     qty: int = Field(default=1, ge=1, le=20)
 
 
+class ContentSpec(_Out):
+    """A thing inside a container when the room is furnished (0.28.0): an item of the catalog (`item_id`) or a new one
+    (`item`, by the same rules as give_item.item)."""
+
+    item_id: str | None = None
+    item: GeneratedItem | None = None
+    qty: int = Field(default=1, ge=1, le=99)
+
+
 class PropSpec(_Out):
     """A thing to put in the room when it is furnished (0.11.0)."""
 
@@ -513,6 +525,10 @@ class PropSpec(_Out):
     item_id: str | None = None  # portable: an item of the catalog (find it with find_items first)
     owner: str | None = None  # npc_id of the scene who owns it
     text: str = Field(default="", max_length=800)  # what is written in it (a book, a note, a sign)
+    container: str | None = None  # 0.28.0: a container kind (rules.containers: chest, barrel, basket, sack, cabinet, crate…)
+    contents: list[ContentSpec] = Field(default_factory=list, max_length=10)  # 0.28.0: what lies inside
+    lock: Literal["simple", "good", "masterwork"] | None = None  # 0.28.0: locked, and how well
+    key: str | None = None  # 0.28.0: the item_id of the key that opens it
 
 
 class FurnishEffect(_Out):
@@ -521,6 +537,33 @@ class FurnishEffect(_Out):
 
     kind: Literal["furnish"] = "furnish"
     props: list[PropSpec] = Field(min_length=1, max_length=10)
+
+
+class TakeFromEffect(_Out):
+    """The hero takes a thing out of a container of the room (0.28.0); someone else's before its owner — a theft."""
+
+    kind: Literal["take_from"] = "take_from"
+    prop_id: str
+    item_id: str
+    qty: int = Field(default=1, ge=1, le=99)
+
+
+class PutInEffect(_Out):
+    """The hero puts a thing of their own into a container of the room (0.28.0), within its capacity."""
+
+    kind: Literal["put_in"] = "put_in"
+    prop_id: str
+    item_id: str
+    qty: int = Field(default=1, ge=1, le=99)
+
+
+class UnlockEffect(_Out):
+    """A locked container opens (0.28.0): `key` the hero carries, or after a passed check this turn — `pick`
+    (Sleight of Hand with thieves' tools) or `force` (Athletics; it breaks)."""
+
+    kind: Literal["unlock"] = "unlock"
+    prop_id: str
+    how: Literal["key", "pick", "force"] = "key"
 
 
 class TakePropEffect(_Out):
@@ -717,7 +760,8 @@ Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
-    | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect,
+    | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
+    | TakeFromEffect | PutInEffect | UnlockEffect,
     Field(discriminator="kind"),
 ]
 
