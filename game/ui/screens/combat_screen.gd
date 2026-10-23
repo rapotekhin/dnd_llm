@@ -32,6 +32,7 @@ var _pending_check: Callable
 ## Callable(target_id) -> Dictionary: the hint of the pending action (CombatRules.attack_preview / cast_preview).
 var _pending_preview: Callable
 var _tab := 0
+var _cast_circle := 0  # v0.7.22.19 (#19): the slot circle the player picked; 0 — the lowest that fits
 
 
 func _ready() -> void:
@@ -538,11 +539,27 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			mb.button_pressed = str(s.combat.get("metamagic", "")) == mid
 			mb.tooltip_text = tr("META_TIP_" + mid.to_upper())
 			mb.pressed.connect(func() -> void: GameState.combat_metamagic(mid))
+		var circles: Array[int] = []
+		for lv in range(1, 6):
+			if SpellRules.slots_left(c, lv) > 0:
+				circles.append(lv)
+		if circles.size() > 1:
+			var cp := OptionButton.new()
+			cp.name = "CastCircle"
+			cp.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			cp.add_item(tr("COMBAT_SLOT_LOWEST"), 0)
+			for lv: int in circles:
+				cp.add_item(tr("COMBAT_SLOT_CIRCLE").format({"n": lv, "left": SpellRules.slots_left(c, lv)}), lv)
+			cp.select(maxi(0, cp.get_item_index(_cast_circle)))
+			cp.item_selected.connect(func(i: int) -> void:
+				_cast_circle = cp.get_item_id(i)
+				_refresh())
+			sp.add_child(cp)
 		for id: String in SpellRules.ready(c):
 			var spell: Dictionary = data["spells"].get(id, {})
 			var lv := int(spell.get("level", 0))
 			var free := SpellRules.is_free(c, id)  # an invocation's spell at will (v0.7.22.4)
-			var slot := 0 if lv == 0 or free else SpellRules.lowest_slot(c, data, id)
+			var slot := 0 if lv == 0 or free else _slot_for(c, data, id)
 			var cost := tr("COMBAT_BONUS_SHORT") if CombatRules.spell_cost(data, id) == "bonus" else ""
 			var label := "%s%s%s%s" % [spell.get("name", id), (" (%d)" % slot) if slot > 0 else "", tr("SPELL_AT_WILL_SHORT") if free else "", cost]
 			if lv > 0 and slot == 0 and not free:
@@ -550,14 +567,14 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 				continue
 			if spell.has("heal_at_slot") or SpellEffects.self_spell(data, id) or int(spell.get("range_ft", 0)) == 0 and not spell.has("area"):
 				var b := _button(sp, "Cast_" + id, label, mine)
-				_details.hook(b, str(spell.get("name", id)), DetailsPanel.spell_text(data, id))
+				_details.hook(b, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
 				b.pressed.connect(func() -> void: _do(_conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, ""))))
 			else:
 				var ab := _action(sp, "Cast_" + id, label, mine,
 					func(t: String) -> String: return _conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, t)),
 					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t),
 					func(t: String) -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t))
-				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id))
+				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
 		for sa: Dictionary in SpellEffects.actions(s, data):  # v0.7.13.5: the spells that go on each turn
 			var said := str(sa["id"])
 			var slabel := "%s%s" % [sa["name"], tr("COMBAT_BONUS_SHORT") if str(sa["cost"]) == "bonus" else ""]
@@ -680,6 +697,13 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	surr.tooltip_text = tr(sw) if not sw.is_empty() and sw != "COMBAT_NOT_YOUR_TURN" else tr("COMBAT_SURRENDER_TIP")
 	surr.pressed.connect(func() -> void: _do(GameState.combat_surrender()))
 	_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
+
+
+## The picked circle when it fits the spell and has a slot left, else the lowest that fits.
+func _slot_for(c: Dictionary, data: Dictionary, id: String) -> int:
+	if _cast_circle >= maxi(1, SpellRules.level_of(data, id)) and SpellRules.slots_left(c, _cast_circle) > 0:
+		return _cast_circle
+	return SpellRules.lowest_slot(c, data, id)
 
 
 func _dmg_text(w: Dictionary) -> String:

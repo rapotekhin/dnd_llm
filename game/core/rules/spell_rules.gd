@@ -142,11 +142,33 @@ static func cures(data: Dictionary, spell_id: String) -> bool:
 	return data["rules"]["hero_effects"]["spell_cures"].has(spell_id)
 
 
+## What a higher slot gives (v0.7.22.19, #19): «Ячейкой 3 круга: урон 3к6, снарядов 5»; "" for a cantrip, the spell's
+## own circle or a spell that does not grow.
+static func at_slot(data: Dictionary, spell_id: String, slot: int) -> String:
+	var sp: Dictionary = data["spells"].get(spell_id, {})
+	var lv := int(sp.get("level", 0))
+	if lv == 0 or slot <= 0:
+		return ""
+	var bits: Array[String] = []
+	if sp.has("heal_at_slot"):
+		bits.append("лечение " + str(sp["heal_at_slot"].get(str(slot), "")).replace("d", "к").replace("+MOD", " + мод."))
+	elif sp.has("damage_at_slot") and str(sp["damage_at_slot"].get(str(slot), "")) != str(sp["damage_at_slot"].get(str(lv), "")):
+		bits.append("урон " + str(sp["damage_at_slot"][str(slot)]).replace("d", "к"))
+	var multi: Dictionary = CombatRules.cfg(data)["multi"].get(spell_id, {})
+	if multi.has("base") and int(multi.get("per_slot", 0)) > 0:
+		bits.append("снарядов %d" % (int(multi["base"]) + int(multi["per_slot"]) * maxi(0, slot - lv)))
+	if bits.is_empty() or (slot == lv and not sp.has("heal_at_slot") and not multi.has("base")):
+		return ""
+	return "Ячейкой %d круга: %s" % [slot, ", ".join(bits)]
+
+
 ## The facts of a cast for the master (turn input of kind ability, effect summary).
 static func describe(data: Dictionary, spell_id: String, slot: int) -> String:
 	var s: Dictionary = data["spells"][spell_id]
-	return "«%s»%s%s; время %s, дистанция %s, длительность %s" % [s["name"], " ячейкой %d круга" % slot if slot > 0 else " (заговор)",
-		", концентрация" if bool(s.get("concentration", false)) else "", s.get("casting_time", ""), s.get("range", ""), s.get("duration", "")]
+	var grown := at_slot(data, spell_id, slot) if slot > int(s.get("level", 0)) else ""
+	return "«%s»%s%s; время %s, дистанция %s, длительность %s%s" % [s["name"], " ячейкой %d круга" % slot if slot > 0 else " (заговор)",
+		", концентрация" if bool(s.get("concentration", false)) else "", s.get("casting_time", ""), s.get("range", ""), s.get("duration", ""),
+		"; усилено: " + grown.get_slice(": ", 1) if not grown.is_empty() else ""]
 
 
 ## Prepared casters (cleric, druid, paladin, wizard) change their prepared spells after a long rest (once a day).

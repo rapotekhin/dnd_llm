@@ -104,7 +104,7 @@ func run() -> void:
 		g["hp"] = 0
 		g["status"] = "dead"
 	await press(find(screen(), "EndTurnButton"))
-	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing, 60.0)
+	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing and not gs.is_busy(), 60.0)
 	gs.finish_combat([])
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
 	c["slots_used"] = [0, 0, 0, 0, 0]
@@ -235,7 +235,7 @@ func run() -> void:
 		g["hp"] = 0
 		g["status"] = "dead"
 	await press(find(screen(), "EndTurnButton"))
-	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing, 60.0)
+	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing and not gs.is_busy(), 60.0)
 	gs.finish_combat([])
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
 	ConditionRules.end_concentration(s, data, "конец боя")

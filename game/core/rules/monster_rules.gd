@@ -83,6 +83,8 @@ static func pick(s: GameSession, data: Dictionary, f: Dictionary, kind: String) 
 		var ok := str(a.get("kind")) == kind or (kind == "ranged" and a.has("range"))
 		if not ok or not available(f, a):
 			continue
+		if kind == "ranged" and str(a.get("kind")) == "melee" and (f.get("thrown", []) as Array).has(str(a.get("name_en", ""))):
+			continue  # v0.7.22.19 (#13): a thrown dagger is gone — no second throw
 		if bool(a.get("effect", {}).get("target_prone", false)) and not ConditionRules.has(s.character, "prone"):
 			continue  # hooves only for one who lies down
 		var cond := str(a.get("effect", {}).get("condition", ""))
@@ -480,16 +482,21 @@ static func cast_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Ar
 	var in_range := func(id: String) -> bool:
 		return d <= CombatRules.range_cols(data, int(data["spells"][id].get("range_ft", 0))) or int(data["spells"][id].get("range_ft", 0)) == 0 and d == 0
 	var cfg: Dictionary = CombatRules.cfg(data)
-	if int(f["hp"]) * 2 <= int(f["max_hp"]):
-		for o: Dictionary in options:
-			if data["spells"][o["id"]].has("heal_at_slot"):
-				_cast(s, data, f, o, lines)
+	for o: Dictionary in options:  # v0.7.22.19 (#14): the most wounded of its side within the spell's reach, not only itself
+		if data["spells"][o["id"]].has("heal_at_slot"):
+			var who := _wounded_ally(s, data, f, str(o["id"]))
+			if not who.is_empty():
+				var oh := o.duplicate()
+				oh["target"] = who
+				_cast(s, data, f, oh, lines)
 				return true
 	if str(f.get("concentration", "")).is_empty():
 		for o: Dictionary in options:
 			var spec: Dictionary = cfg["condition_spells"].get(str(o["id"]), {})
 			if spec.is_empty() or not in_range.call(str(o["id"])):
 				continue
+			if str(f.get("last_spell", "")) == str(o["id"]) and not bool(data["spells"][o["id"]].get("concentration", false)):
+				continue  # not the same Command every turn (#14): a spell that holds by itself waits a turn
 			if (spec["conditions"] as Array).all(func(x: String) -> bool: return ConditionRules.has(s.character, x)):
 				continue
 			if spec.has("min_int") and int(s.character["abilities"].get("int", 10)) < int(spec["min_int"]):
@@ -516,6 +523,20 @@ static func cast_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Ar
 		return false
 	_cast(s, data, f, best, lines)
 	return true
+
+
+## Who of the caster's side needs healing most: at half HP or less, the lowest share, within the spell's reach. "" — none.
+static func _wounded_ally(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String) -> String:
+	var reach := CombatRules.range_cols(data, int(data["spells"][spell_id].get("range_ft", 0)))
+	var best := ""
+	var share := 0.5
+	for id: String in CombatRules.enemies(s):
+		var a := CombatRules.fighter(s, id)
+		var part := float(a["hp"]) / maxf(1.0, float(a["max_hp"]))
+		if CombatRules.cols_between(a, f) <= reach and (part < share or (part == share and best.is_empty())):
+			best = id
+			share = part
+	return best
 
 
 static func _caster_level(data: Dictionary, f: Dictionary) -> int:
@@ -559,11 +580,15 @@ static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary
 	var dc := int(sc.get("dc", 10))
 	var ab_mod := CharacterRules.mod(int(monster(data, f)["abilities"].get(str(sc.get("ability", "wis")), 10)))
 	f["hidden"] = false
+	f["last_spell"] = id
 	if sp.has("heal_at_slot"):
 		var heal := CombatRules.roll_dice(s.rng, str(sp["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD")), false, ab_mod)
-		var before := int(f["hp"])
-		f["hp"] = mini(int(f["max_hp"]), before + heal)
-		lines.append("%s колдует «%s» на себя: +%d HP" % [f["name"], name, int(f["hp"]) - before])
+		var who := CombatRules.fighter(s, str(o.get("target", f["id"])))
+		if who.is_empty():
+			who = f
+		var before := int(who["hp"])
+		who["hp"] = mini(int(who["max_hp"]), before + heal)
+		lines.append("%s колдует «%s» на %s: +%d HP" % [f["name"], name, "себя" if who == f else who["name"], int(who["hp"]) - before])
 		return
 	var spec: Dictionary = CombatRules.cfg(data)["condition_spells"].get(id, {})
 	if not spec.is_empty():

@@ -17,7 +17,7 @@
 | `game/core/rules/effect_engine.gd:162` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, cast… | понятие движка | виды эффектов — словарь понятий движка, который знает мастер (протокол); новый вид — новое понятие |
 | `game/core/rules/effect_engine.gd:477` | match по damage, condition | понятие движка | эффекты на врага в бою — те же понятия |
 | `game/core/rules/effect_engine.gd:729` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, start_combat… | понятие движка | применение видов эффектов |
-| `game/core/rules/encounter_rules.gd:137` | словарь id → русский текст в коде | служебное | окончание «связан / связана» по полу героя |
+| `game/core/rules/encounter_rules.gd:146` | словарь id → русский текст в коде | служебное | окончание «связан / связана» по полу героя |
 | `game/core/rules/lookup.gd:10` | match по condition, rule, spell, feature, item, npc | служебное | справка движка по видам |
 | `game/core/rules/prop_rules.gd:55` | имя или описание вещи мира в коде | служебное | подпись контейнера товаров торговца: «Товары: имя» (v0.7.22.8) |
 | `game/core/rules/social_rules.gd:32` | match по insight, deception, wis_save | правило 5e | состязания 5e: против чего проверка (rules.social.contests) |

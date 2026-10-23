@@ -235,8 +235,9 @@ static func answer_prompt(s: GameSession, data: Dictionary, choice: String) -> A
 # --- reactions ------------------------------------------------------------------------------------
 
 
-## The reactions the hero can take to this hit of a foe: [{id, label}].
-static func reactions(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, ranged: bool, dmg: int) -> Array[Dictionary]:
+## The reactions the hero can take to this hit of a foe: [{id, label}]. `hit` — the attack's context {total, ac, nat20}:
+## the Shield's «мимо» is counted against the same roll and AC as the hit itself (v0.7.22.19, #31).
+static func reactions(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, ranged: bool, dmg: int, hit: Dictionary = {}) -> Array[Dictionary]:
 	var c := s.character
 	var out: Array[Dictionary] = []
 	if bool(CombatRules.player(s).get("reacted", false)) or ConditionRules.incapacitated(c) or int(c.get("hp", 0)) <= 0:
@@ -250,7 +251,8 @@ static func reactions(s: GameSession, data: Dictionary, f: Dictionary, a: Dictio
 		out.append({"id": "missile_snaring", "label": "Перчатки ловли снарядов: урон −1к10 + %d" % ab_mod(c, "dex")})  # v0.7.12
 	if has(c, "cutting_words") and FeatureUses.left(c, data, "bardic_inspiration") > 0 and see:
 		out.append({"id": "cutting_words", "label": "Язвительные слова: −1к%d к броску атаки" % bardic_die(c, data)})
-	out.append_array(SpellEffects.hit_reactions(s, data, {"total": total_of(a, f), "ac": int(c.get("ac", 10)), "dmg": dmg}))  # v0.7.13.7
+	out.append_array(SpellEffects.hit_reactions(s, data, {"total": int(hit.get("total", total_of(a, f))), "ac": int(hit.get("ac", c.get("ac", 10))),
+		"nat20": bool(hit.get("nat20", false)), "dmg": dmg}))  # v0.7.13.7
 	if has(c, "hunters_prey_giant_killer") and CombatRules.SIZES.find(str(CombatRules._monster(data, f).get("size", "medium"))) >= 3 \
 			and CombatRules.cols_between(f, CombatRules.player(s)) == 0:
 		out.append({"id": "giant_killer", "label": "Убийца великанов: удар в ответ"})

@@ -2262,6 +2262,8 @@ static func _enemy_attack_full(s: GameSession, data: Dictionary, f: Dictionary, 
 	for a: Dictionary in m["actions"]:
 		by_en[str(a["name_en"])] = a
 	var plan: Array[Dictionary] = []
+	if str(act.get("kind")) == "melee" and cols_between(f, player(s)) > 0:
+		seq = []  # a throw of a melee weapon is one attack: Multiattack counts melee strikes (v0.7.22.19, #13)
 	for x: Dictionary in seq:
 		var a: Dictionary = by_en.get(str(x["action"]), {})
 		if not a.is_empty() and (str(a.get("kind")) == str(act.get("kind")) or (str(act.get("kind")) == "ranged" and a.has("range"))):
@@ -2317,6 +2319,10 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		return
 	var d := cols_between(f, p)
 	var ranged_use := d > 0
+	if ranged_use and str(a.get("kind")) == "melee" and a.has("range"):  # thrown: out of the hand for the fight (v0.7.22.19)
+		var gone: Array = f.get("thrown", [])
+		gone.append(str(a.get("name_en", "")))
+		f["thrown"] = gone
 	if _has(f, "invisible"):
 		f["seen_col"] = int(f["col"])  # a strike gives an invisible foe away
 	var helpless := ["paralyzed", "stunned", "unconscious", "restrained", "petrified"].any(func(x: String) -> bool: return ConditionRules.has(c, x))
@@ -2390,7 +2396,7 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	var ctx := {"foe": str(f["id"]), "action": str(a.get("name_en", "")), "line": line, "crit": crit, "dmg": dmg, "types": types, "notes": notes,
 		"prone": extra["prone"], "hit": true, "total": total, "ac": ac, "nat20": nat == 20}
 	f["last_total"] = total  # for the labels of the reaction spells (v0.7.13.7)
-	var rx := FeatureRules.reactions(s, data, f, a, ranged_use, dmg)  # v0.7.10: the hero's reaction
+	var rx := FeatureRules.reactions(s, data, f, a, ranged_use, dmg, ctx)  # v0.7.10: the hero's reaction
 	if not rx.is_empty():
 		var pol := FeatureRules.policy(s)
 		if pol == "ask" and current(s) == str(f["id"]):

@@ -61,15 +61,22 @@ static func lurking_encounter(s: GameSession, data: Dictionary, room_id: String)
 	return SceneRules.room(s, data["world"], room_id).get("encounter", {})
 
 
-## The foes of an encounter that think, and whether one of them understands the hero.
-static func talkable(s: GameSession, data: Dictionary, enemies: Array) -> String:
+## The foes of an encounter that think, and whether one of them understands the hero. A threat needs no common tongue
+## (v0.7.22.19, #9): gestures and a blade say it — with disadvantage (`mute`).
+static func talkable(s: GameSession, data: Dictionary, enemies: Array, skill: String = "persuasion") -> String:
 	var thinking := enemies.filter(func(e: Dictionary) -> bool:
 		return int(_monster(data, e).get("abilities", {}).get("int", 1)) >= int(CombatRules.cfg(data)["intelligent_int"]))
 	if thinking.is_empty():
 		return "COMBAT_NO_PARLEY"
-	if not thinking.any(func(e: Dictionary) -> bool: return LanguageRules.foe_understands(s.character, data, e)):
+	if skill != "intimidation" and mute(s, data, enemies):
 		return "COMBAT_NO_LANGUAGE"
 	return ""
+
+
+## Nobody of the thinking foes understands the hero.
+static func mute(s: GameSession, data: Dictionary, enemies: Array) -> bool:
+	return not enemies.any(func(e: Dictionary) -> bool:
+		return int(_monster(data, e).get("abilities", {}).get("int", 1)) >= int(CombatRules.cfg(data)["intelligent_int"]) 			and LanguageRules.foe_understands(s.character, data, e))
 
 
 ## The parley DC of the fight for foes not fighting yet (CombatRules.parley_dc without the wounds).
@@ -87,12 +94,14 @@ static func parley_dc(data: Dictionary, enemies: Array, hard: bool) -> int:
 
 
 ## A roll of the hero's skill against `dc` (the game's difficulty counts). {total, ok, line}.
-static func roll(s: GameSession, data: Dictionary, skill: String, dc: int) -> Dictionary:
+static func roll(s: GameSession, data: Dictionary, skill: String, dc: int, dis: bool = false) -> Dictionary:
 	var nat := s.rng.randi_range(1, 20)
+	if dis:
+		nat = mini(nat, s.rng.randi_range(1, 20))
 	var total := nat + CheckEngine.bonus_for(s.character, {"skill": skill}) + DifficultyRules.bonus(s, data)
 	var ok := nat == 20 or (nat != 1 and total >= dc)
 	var skill_name := TranslationServer.translate("SKILL_" + skill.to_upper())
-	return {"total": total, "ok": ok, "line": "%s %d против Сл %d — %s" % [skill_name, total, dc, "успех" if ok else "провал"]}
+	return {"total": total, "ok": ok, "line": "%s %d против Сл %d%s — %s" % [skill_name, total, dc, " (помеха: без общего языка — жесты и оружие)" if dis else "", "успех" if ok else "провал"]}
 
 
 ## The foes of the encounter as creatures of the room (a truce), one per head.
@@ -111,7 +120,7 @@ static func as_creatures(s: GameSession, room_id: String, enemies: Array, state:
 ## (Intimidation), the encounter is over; a failure — the fight, they know where the hero is.
 static func parley(s: GameSession, data: Dictionary, room_id: String, enc: Dictionary, skill: String) -> Dictionary:
 	var dc := parley_dc(data, enc["enemies"], str(enc.get("parley", "")) == "hard")
-	var r := roll(s, data, skill, dc)
+	var r := roll(s, data, skill, dc, skill == "intimidation" and mute(s, data, enc["enemies"]))
 	var lines: Array[String] = [str(r["line"])]
 	s.lurking.erase(room_id)
 	if not bool(r["ok"]):

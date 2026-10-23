@@ -1685,7 +1685,7 @@ func encounter_parley(skill: String) -> String:
 	if lk.is_empty():
 		return "ENCOUNTER_NONE"
 	var enc := EncounterRules.lurking_encounter(session, Catalog.data, session.room_id)
-	var why := EncounterRules.talkable(session, Catalog.data, enc["enemies"])
+	var why := EncounterRules.talkable(session, Catalog.data, enc["enemies"], skill)
 	if not why.is_empty():
 		return why
 	var text := tr("ENCOUNTER_PARLEY_SAY_" + skill.to_upper())

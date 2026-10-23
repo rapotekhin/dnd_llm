@@ -314,6 +314,14 @@ func _cast_row(parent: Control, c: Dictionary, id: String, level: int, can_act: 
 			if left > 0:
 				pick.add_item(tr("SLOT_CIRCLE").format({"n": lv, "left": left}), lv)
 	row.add_child(pick)
+	var grown := Label.new()  # v0.7.22.19 (#19): what the chosen slot gives
+	grown.name = "Grown_" + id
+	grown.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	grown.add_theme_color_override("font_color", UiTheme.MUTED)
+	var show_grown := func() -> void:
+		grown.text = SpellRules.at_slot(Catalog.data, id, pick.get_selected_id()) if pick.item_count > 0 and level > 0 else ""
+	show_grown.call()
+	pick.item_selected.connect(func(_i: int) -> void: show_grown.call())
 	_action(row, "Cast_" + id, "BTN_CAST", can_act and pick.item_count > 0,
 		func() -> String:
 			var held := GameState.concentration_conflict(id)  # v0.7.13.1: the second press breaks the old concentration
@@ -322,6 +330,7 @@ func _cast_row(parent: Control, c: Dictionary, id: String, level: int, can_act: 
 				return tr("CONC_SWITCH_AGAIN").format({"old": held})
 			_conc_armed = ""
 			return GameState.cast(id, pick.get_selected_id() if pick.item_count > 0 else 0))
+	row.add_child(grown)
 
 
 ## A button that calls `action` (returns "" or a reason): on success the sheet closes, otherwise a toast.

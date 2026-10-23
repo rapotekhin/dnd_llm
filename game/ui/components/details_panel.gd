@@ -67,7 +67,7 @@ static func item_text(c: Dictionary, data: Dictionary, session_items: Dictionary
 	return "\n".join(lines)
 
 
-static func spell_text(data: Dictionary, id: String) -> String:
+static func spell_text(data: Dictionary, id: String, slot: int = 0) -> String:
 	var s: Dictionary = data["spells"].get(id, {})
 	if s.is_empty():
 		return ""
@@ -77,6 +77,9 @@ static func spell_text(data: Dictionary, id: String) -> String:
 		(" · " + TranslationServer.translate("DETAILS_CONCENTRATION")) if bool(s.get("concentration", false)) else ""]]
 	if not str(s.get("desc", "")).is_empty():
 		lines.append(str(s["desc"]))
+	var grown := SpellRules.at_slot(data, id, slot)  # v0.7.22.19: what the chosen slot gives
+	if not grown.is_empty():
+		lines.append(grown)
 	return "\n".join(lines)
 
 

@@ -409,7 +409,8 @@ func _meeting(s: GameSession, can_act: bool) -> void:
 		var why := EncounterRules.talkable(s, data, enc.get("enemies", []))
 		specs = [["Encounter_attack", tr("BTN_ENCOUNTER_ATTACK"), "", func() -> String: return GameState.encounter_attack()],
 			["Encounter_persuasion", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_PERSUASION")}), why, func() -> String: return GameState.encounter_parley("persuasion")],
-			["Encounter_intimidation", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_INTIMIDATION")}), why, func() -> String: return GameState.encounter_parley("intimidation")]]
+			["Encounter_intimidation", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_INTIMIDATION")}),
+				EncounterRules.talkable(s, data, enc.get("enemies", []), "intimidation"), func() -> String: return GameState.encounter_parley("intimidation")]]
 	elif EncounterRules.captive(s):
 		_subheading("SIDE_CAPTIVE")
 		for e: Dictionary in s.captive.get("foes", []):

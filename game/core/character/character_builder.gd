@@ -303,8 +303,8 @@ static func errors(ch: Dictionary, data: Dictionary, step: String) -> Array[Stri
 			var sp := spell_choices(ch, data)
 			if not _picked_ok(ch.get("cantrips", []), {"choose": sp["cantrips"], "from": sp["cantrip_list"]}) \
 					or not _picked_ok(ch.get("spells", []), {"choose": mini(int(sp["spells"]), (sp["spell_list"] as Array).size()), "from": sp["spell_list"]}) \
-					or not _picked_ok(ch.get("race_cantrips", []), {"choose": sp["race_cantrips"], "from": sp["race_list"]}):
-				out.append("CC_ERR_SPELLS")
+					or not _picked_ok(ch.get("race_cantrips", []), {"choose": sp["race_cantrips"], "from": sp["race_list"]}) 					or (ch.get("race_cantrips", []) as Array).any(func(x: Variant) -> bool: return (ch.get("cantrips", []) as Array).has(x)):
+				out.append("CC_ERR_SPELLS")  # v0.7.22.19 (#1): one cantrip is not taken twice
 		STEP_EQUIPMENT:
 			var sets: Array = klass(ch, data).get("equipment_choices", [])
 			var picked: Array = ch.get("equipment", [])
@@ -520,7 +520,7 @@ static func random_choices(data: Dictionary, rng: RandomNumberGenerator) -> Dict
 	var sp := spell_choices(ch, data)
 	ch["cantrips"] = _sample(rng, sp["cantrip_list"], int(sp["cantrips"]))
 	ch["spells"] = _sample(rng, sp["spell_list"], int(sp["spells"]))
-	ch["race_cantrips"] = _sample(rng, sp["race_list"], int(sp["race_cantrips"]))
+	ch["race_cantrips"] = _sample(rng, (sp["race_list"] as Array).filter(func(x: Variant) -> bool: return not (ch["cantrips"] as Array).has(x)), int(sp["race_cantrips"]))
 	var eq: Array = []
 	for set: Dictionary in klass(ch, data).get("equipment_choices", []):
 		var alt := rng.randi_range(0, (set["alternatives"] as Array).size() - 1)

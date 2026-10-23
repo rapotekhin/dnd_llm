@@ -147,6 +147,7 @@ CC_NAME,Имя персонажа
 CC_NEXT,Далее
 CC_POINTS_LEFT,Осталось очков: {n} из 27. Значения от 8 до 15 до бонусов расы.
 CC_RACE_ABILITY_CHOICE,Ещё +1 к {n} характеристикам на выбор (на шаге «Характеристики»).
+CC_TAKEN_ELSEWHERE,Уже выбран в другом списке
 CC_RACE_CANTRIP,Заговор расы — выберите 1:
 CC_RACE_LINE,Бонусы: {bonuses}. Скорость {speed} футов.
 CC_RANDOM,Случайный персонаж
@@ -214,6 +215,8 @@ COMBAT_DO_SHOVE,Сбить с ног
 COMBAT_DO_STAND,Встать
 COMBAT_ESCAPE_TIP,Действие: Атлетика или Акробатика против хватки или пут
 COMBAT_DO_SURRENDER,Сдаться
+COMBAT_SLOT_LOWEST,Ячейка: наименьшая подходящая
+COMBAT_SLOT_CIRCLE,Ячейка {n} круга (осталось {left})
 COMBAT_SURRENDER_TIP,"Бросить оружие: бой окончен, вы в плену у разумных врагов, вещи отберут; страже — задержание"
 COMBAT_NO_SURRENDER,Сдаваться некому: среди врагов нет разумных
 COMBAT_FEATURE_TAB,Это — кнопками на вкладке «Умения»

@@ -257,7 +257,8 @@ func _radio(parent: Control, key: String, options: Array, columns: int = 3) -> v
 
 
 ## Several choices (up to `limit`) from `options` [{id, label, tooltip?}]; `fixed` are shown checked and locked.
-func _checks(parent: Control, picked: Array, options: Array, limit: int, on_change: Callable, fixed: Array = [], columns: int = 3) -> void:
+## `blocked` — taken in another list: shown, but closed (v0.7.22.19, #1: one cantrip twice).
+func _checks(parent: Control, picked: Array, options: Array, limit: int, on_change: Callable, fixed: Array = [], columns: int = 3, blocked: Array = []) -> void:
 	var grid := GridContainer.new()
 	grid.columns = columns
 	grid.add_theme_constant_override("h_separation", 16)
@@ -273,6 +274,9 @@ func _checks(parent: Control, picked: Array, options: Array, limit: int, on_chan
 		if fixed.has(id):
 			cb.button_pressed = true
 			cb.disabled = true
+		elif blocked.has(id):
+			cb.disabled = true
+			cb.tooltip_text = tr("CC_TAKEN_ELSEWHERE")
 		else:
 			cb.button_pressed = picked.has(id)
 			cb.disabled = not picked.has(id) and picked.size() >= limit
@@ -535,13 +539,13 @@ func _draw_spells() -> void:
 	var sp := CharacterBuilder.spell_choices(choices, data())
 	if int(sp["cantrips"]) > 0:
 		_text(_body, tr("CC_CANTRIPS").format({"n": sp["cantrips"]}))
-		_checks(_body, choices["cantrips"], _spell_options(sp["cantrip_list"]), int(sp["cantrips"]), _setter("cantrips"))
+		_checks(_body, choices["cantrips"], _spell_options(sp["cantrip_list"]), int(sp["cantrips"]), _setter("cantrips"), [], 3, choices["race_cantrips"])
 	if int(sp["spells"]) > 0:
 		_text(_body, tr("CC_SPELLS_" + str(sp["mode"]).to_upper()).format({"n": sp["spells"]}))
 		_checks(_body, choices["spells"], _spell_options(sp["spell_list"]), int(sp["spells"]), _setter("spells"))
 	if int(sp["race_cantrips"]) > 0:
 		_text(_body, tr("CC_RACE_CANTRIP"))
-		_checks(_body, choices["race_cantrips"], _spell_options(sp["race_list"]), int(sp["race_cantrips"]), _setter("race_cantrips"))
+		_checks(_body, choices["race_cantrips"], _spell_options(sp["race_list"]), int(sp["race_cantrips"]), _setter("race_cantrips"), [], 3, choices["cantrips"])
 
 
 func _item_name(id: String) -> String:
