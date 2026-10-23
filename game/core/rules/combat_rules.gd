@@ -778,11 +778,15 @@ static func _attack(s: GameSession, data: Dictionary, who: String, what: String,
 			line += " + вдохновение %d = %d" % [insp, total]
 	if not hit:
 		lines.append(line + " — промах")
+		fx(s, str(t["id"]), "dodge")
 		return {"hit": false, "damage": 0, "crit": false}
 	var crit := nat >= crit_min or auto_crit
 	if not crit and bool(w.get("melee", false)) and MonsterRules.parry(s, data, t, total, lines):  # v0.7.9
 		lines.append(line + " — отбито")
+		fx(s, str(t["id"]), "dodge")
 		return {"hit": false, "damage": 0, "crit": false}
+	if crit:
+		fx(s, str(t["id"]), "crit")
 	var dmg := maxi(1, (_roll_gwf(s.rng, dice, crit) if bool(w.get("gwf", false)) else roll_dice(s.rng, dice, crit)) + bonus)
 	if not extra_dice.is_empty():
 		dmg += roll_dice(s.rng, extra_dice, crit)
@@ -834,6 +838,20 @@ static func _resist(data: Dictionary, t: Dictionary, dtype: String, dmg: int, ma
 
 ## Damage to an enemy: 0 HP — down (dead), unless a trait keeps it up (v0.7.9); half HP — a morale check on its next
 ## turn; a hit breaks its concentration on a failed save; a dead one bursts and lets go of the hero.
+## A moment of the fight for the screen to show (v0.7.22.14, CombatFx): what HP and states do not tell — a miss
+## dodged, a critical hit. {who: fighter id or PLAYER, kind}; the screen takes them and clears the list.
+static func fx(s: GameSession, who: String, kind: String) -> void:
+	var list: Array = s.combat.get("fx", [])
+	list.append({"who": who, "kind": kind})
+	s.combat["fx"] = list
+
+
+static func take_fx(s: GameSession) -> Array:
+	var list: Array = s.combat.get("fx", [])
+	s.combat.erase("fx")
+	return list
+
+
 static func _hurt_enemy(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, lines: Array[String], dtype: String = "", crit: bool = false) -> void:
 	if dtype == "fire" and t.has("oiled") and dmg > 0:  # oil on the foe catches (v0.7.12)
 		var more := _resist(data, t, "fire", int(t["oiled"]))
@@ -1217,6 +1235,7 @@ static func item_spell(s: GameSession, data: Dictionary, item_id: String, target
 
 ## Casts a spell in combat (can_cast first): the slot, then attack rolls or saves, damage or healing. Lines.
 static func player_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> Array[String]:
+	fx(s, target_id if not target_id.is_empty() else PLAYER, "spell")  # v0.7.22.14
 	var lines := _player_cast(s, data, spell_id, slot, target_id)
 	player(s)["hidden"] = false  # casting gives the player away
 	return lines
@@ -2310,6 +2329,7 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	var line := "%s — %s: %d + %d%s = %d против КД %d%s" % [f["name"], a["name"], nat, int(a.get("to_hit", 0)), bane["note"], total, ac, mark]
 	if not hit:
 		lines.append(line + " — промах")
+		fx(s, PLAYER, "dodge")
 		return
 	var guard := SpellEffects.against_attack(s, data, f, total, hit)  # Mirror Image (v0.7.13.2)
 	if not str(guard["stop"]).is_empty():
@@ -2367,11 +2387,14 @@ static func _land_hit(s: GameSession, data: Dictionary, f: Dictionary, a: Dictio
 	var line := str(ctx["line"])
 	if not bool(ctx["hit"]):
 		lines.append(line + " — промах")
+		fx(s, PLAYER, "dodge")
 	elif (a["damage"] as Array).is_empty():
 		lines.append(line + " — попадание")
 	else:
 		var notes: Array = ctx["notes"]
 		lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, ", ".join(ctx["types"]), (", " + ", ".join(notes)) if not notes.is_empty() else ""])
+		if crit:
+			fx(s, PLAYER, "crit")
 		_hurt_player(s, data, dmg, crit, lines)
 	if str(s.combat.get("outcome", "")) == "dead":
 		return

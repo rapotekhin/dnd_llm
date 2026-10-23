@@ -249,11 +249,48 @@ func _refresh() -> void:
 		mb.tooltip_text = tr(why) if not why.is_empty() and why != "COMBAT_NOT_YOUR_TURN" else ""
 	_draw_queue(s)
 	_draw_field(s, data, mine)
+	_play_fx(s)
 	_draw_portrait(s, data)
 	_draw_actions(s, data, mine)
 	_hint.text = _base_hint(mine)
 	_draw_results(s, data)
 	_draw_ask(s)
+
+
+## The animations of what just happened (v0.7.22.14, CombatFx): the engine's events (a dodge, a crit, a spell) and
+## the difference from the last refresh — HP down is a hit, up a heal, out of the fight — down.
+var _last_fx: Dictionary = {}
+
+
+func _play_fx(s: GameSession) -> void:
+	var snap := {CombatRules.PLAYER: {"hp": int(s.character.get("hp", 0)), "down": int(s.character.get("hp", 0)) <= 0}}
+	for id: String in CombatRules.enemies(s, false):
+		var f := CombatRules.fighter(s, id)
+		snap[id] = {"hp": int(f.get("hp", 0)), "down": str(f.get("status")) != "active"}
+	var kinds := {}
+	for e: Dictionary in CombatRules.take_fx(s):
+		var list: Array = kinds.get(str(e["who"]), [])
+		list.append(str(e["kind"]))
+		kinds[str(e["who"])] = list
+	for id: String in snap:
+		if not _last_fx.has(id):
+			continue
+		var was: Dictionary = _last_fx[id]
+		var now: Dictionary = snap[id]
+		var list: Array = kinds.get(id, [])
+		if int(now["hp"]) < int(was["hp"]) and not list.has("crit"):
+			list.append("hit")
+		elif int(now["hp"]) > int(was["hp"]):
+			list.append("heal")
+		if bool(now["down"]) and not bool(was["down"]):
+			list.append("down")
+		if not list.is_empty():
+			kinds[id] = list
+	_last_fx = snap
+	for who: String in kinds:
+		var node := _field.find_child("Foe_" + who, true, false) as Control
+		for k: Variant in kinds[who]:
+			CombatFx.play(node, str(k))
 
 
 func _base_hint(mine: bool) -> String:
@@ -332,18 +369,25 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			head.text += "\n" + ", ".join(zone_names)
 		box.add_child(head)
 		if col == pcol:
+			var chip := PanelContainer.new()  # the hero's chip: the animations play on it (v0.7.22.14)
+			chip.name = "Foe_" + CombatRules.PLAYER
+			box.add_child(chip)
 			var me := Label.new()
 			me.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			me.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			me.text = "(%s)" % s.character["name"]
 			me.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
-			box.add_child(me)
+			chip.add_child(me)
+			if bool(CombatRules.player(s).get("hidden", false)):
+				CombatFx.look(chip, "hidden")
 		for id: String in s.combat.get("order", []):
 			var f := CombatRules.fighter(s, id)
 			if str(f.get("side")) != "enemy" or CombatRules.shown_col(f) != col:
 				continue
 			var card := Button.new()
 			card.name = "Foe_" + id
+			if bool(f.get("hidden", false)) and str(f.get("status")) == "active":
+				CombatFx.look(card, "hidden")
 			card.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			card.custom_minimum_size = Vector2(0, 76)

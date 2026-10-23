@@ -555,6 +555,7 @@ static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary
 		f["used"] = used
 	var c := s.character
 	var name := str(sp["name"])
+	CombatRules.fx(s, str(f["id"]) if sp.has("heal_at_slot") else CombatRules.PLAYER, "spell")  # v0.7.22.14
 	var dc := int(sc.get("dc", 10))
 	var ab_mod := CharacterRules.mod(int(monster(data, f)["abilities"].get(str(sc.get("ability", "wis")), 10)))
 	f["hidden"] = false
