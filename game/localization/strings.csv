@@ -133,6 +133,11 @@ CC_ERR_POINTS_LEFT,Потратьте все 27 очков
 CC_ERR_POINTS_OVER,Потрачено больше 27 очков
 CC_ERR_SKILLS,Выберите навыки
 CC_ERR_SPELLS,Выберите заклинания
+CC_BODY,"Возраст, телосложение и рост — выберите сами или оставьте движку:"
+CC_BODY_AGE,Возраст
+CC_BODY_BUILD,Телосложение
+CC_BODY_HEIGHT,Рост
+CC_BODY_RANDOM,Подберёт движок
 CC_EXPERTISE,"Компетентность — двойной бонус мастерства, выберите {n}:"
 CC_GENDER_FEMALE,Женский
 CC_GENDER_MALE,Мужской
@@ -156,7 +161,7 @@ CC_START_HINT,Готовые герои этого мира — со своей 
 CC_STEP_ABILITIES,Характеристики
 CC_STEP_BACKGROUND,Предыстория
 CC_STEP_CLASS,Класс
-CC_STEP_DETAILS,Имя и языки
+CC_STEP_DETAILS,"Имя, облик, языки"
 CC_STEP_EQUIPMENT,Снаряжение
 CC_STEP_FEATURES,Умения
 CC_STEP_RACE,Раса

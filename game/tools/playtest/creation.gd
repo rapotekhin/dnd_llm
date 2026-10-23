@@ -57,6 +57,18 @@ func run() -> void:
 	name_edit.text_submitted.emit("Айра")
 	await frames(2)
 	await tap("Pick_female")
+	# Age, build, height by the player (v0.7.22.15): the female list, the pick in the hero.
+	var build_pick: OptionButton = find(cs, "Body_build")
+	var slender := BodyRules.hero_ids(node("Catalog").data, "build", "female").find("slender") + 1
+	step("the female build list", build_pick != null and slender > 0 and build_pick.get_item_text(slender) == "стройная")
+	build_pick.select(slender)
+	build_pick.item_selected.emit(slender)
+	await frames(2)
+	var age_pick: OptionButton = find(cs, "Body_age")
+	var elderly := BodyRules.hero_ids(node("Catalog").data, "age", "female").find("elderly") + 1
+	age_pick.select(elderly)
+	age_pick.item_selected.emit(elderly)
+	await frames(2)
 	await tick("Check_dwarvish")
 	var start: Button = find(cs, "StartButton")
 	step("character complete", start.visible and not start.disabled, str(cs.get("choices")))
@@ -64,6 +76,9 @@ func run() -> void:
 	var built := CharacterBuilder.build(cs.get("choices"), node("Catalog").data)
 	step("same numbers as the start preset", built["ac"] == 19 and built["max_hp"] == 12 and built["skills"]["athletics"] == 5,
 		"AC %d, HP %d" % [built["ac"], built["max_hp"]])
+	step("the chosen body", built["body"]["build"] == "slender" and built["body"]["age"] == "elderly", str(built["body"]))
+	var sb: Label = find(cs, "SummaryBody")
+	step("the body in the summary", sb != null and sb.text.begins_with("пожилая, стройная"), sb.text if sb != null else "")
 
 	# A caster: the spell step appears and needs its picks.
 	await tap("NextButton")  # still on the last step: no-op

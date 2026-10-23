@@ -34,6 +34,20 @@ static func ids_for(data: Dictionary, key: String, gender: String) -> Array[Stri
 	return out
 
 
+## Ids the player may choose for the hero (v0.7.22.15): the gender's list but those with `hero: false`.
+static func hero_ids(data: Dictionary, key: String, gender: String) -> Array[String]:
+	return ids_for(data, key, gender).filter(func(id: String) -> bool: return bool((options(data, key)[id] as Dictionary).get("hero", true)))
+
+
+## The player's picks that still fit the hero's gender (a gender changed — «стройная» is dropped for a man).
+static func fit(data: Dictionary, given: Dictionary, gender: String) -> Dictionary:
+	var out := {}
+	for key: String in KEYS:
+		if hero_ids(data, key, gender).has(str(given.get(key, ""))):
+			out[key] = str(given[key])
+	return out
+
+
 ## {age, build, height} ids: `given` stays (when it is an id of the list), the rest picked by weights.
 static func make(data: Dictionary, gender: String, given: Dictionary, seed_text: String, hero: bool = false) -> Dictionary:
 	var rng := RandomNumberGenerator.new()

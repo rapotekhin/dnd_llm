@@ -167,7 +167,13 @@ func _changed(key: String, value: Variant) -> void:
 		"background":
 			for k: String in ["skills", "extra_skills", "expertise", "languages"]:
 				choices[k] = []
+		"gender":
+			choices["body"] = BodyRules.fit(data(), _body_picks(), str(value))
 	_redraw()
+
+
+func _body_picks() -> Dictionary:
+	return (choices.get("body", {}) as Dictionary).duplicate() if choices.get("body") is Dictionary else {}
 
 
 # --- drawing -------------------------------------------------------------------------
@@ -619,6 +625,7 @@ func _draw_details() -> void:
 	name_edit.text_submitted.connect(func(_t: String) -> void: _redraw())
 	_body.add_child(name_edit)
 	_radio(_body, "gender", [{"id": "male", "label": tr("CC_GENDER_MALE")}, {"id": "female", "label": tr("CC_GENDER_FEMALE")}], 2)
+	_draw_body_picks()
 	_text(_body, tr("CC_STORY"), true)
 	var story := TextEdit.new()
 	story.name = "StoryEdit"
@@ -634,6 +641,41 @@ func _draw_details() -> void:
 		var langs: Dictionary = data()["misc"]["languages"]
 		var opts: Array = CharacterBuilder.language_options(choices, data()).map(func(l: String) -> Dictionary: return {"id": l, "label": langs[l]["name"]})
 		_checks(_body, choices["languages"], opts, n, _setter("languages"))
+
+
+## Age, build and height (v0.7.22.15): a list of the gender's words each; «Подберёт движок» leaves it to the engine.
+func _draw_body_picks() -> void:
+	_text(_body, tr("CC_BODY"), true)
+	var grid := GridContainer.new()
+	grid.name = "BodyPicks"
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("v_separation", 8)
+	_body.add_child(grid)
+	var gender := str(choices.get("gender", "other"))
+	var picks := _body_picks()
+	for key: String in BodyRules.KEYS:
+		var l := Label.new()
+		l.text = "CC_BODY_" + key.to_upper()
+		grid.add_child(l)
+		var ids := BodyRules.hero_ids(data(), key, gender)
+		var ob := OptionButton.new()
+		ob.name = "Body_" + key
+		ob.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		ob.custom_minimum_size = Vector2(260, 44)
+		ob.add_item(tr("CC_BODY_RANDOM"))
+		for id: String in ids:
+			ob.add_item(BodyRules.word(data(), key, id, gender))
+		ob.selected = ids.find(str(picks.get(key, ""))) + 1
+		ob.item_selected.connect(func(idx: int) -> void:
+			var b := _body_picks()
+			if idx == 0:
+				b.erase(key)
+			else:
+				b[key] = ids[idx - 1]
+			choices["body"] = b
+			_redraw())
+		grid.add_child(ob)
 
 
 func _draw_summary() -> void:
@@ -656,6 +698,7 @@ func _draw_summary() -> void:
 	if not CharacterBuilder.complete(choices, d):
 		return
 	var c := CharacterBuilder.build(choices, d)
+	_text(_summary, BodyRules.text(d, c["body"], str(c["gender"])), true).name = "SummaryBody"
 	_summary.add_child(HSeparator.new())
 	_text(_summary, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}))
 	_text(_summary, tr("SHEET_PROF_SPEED").format({"prof": c["prof_bonus"], "speed": c["speed"]}), true)
