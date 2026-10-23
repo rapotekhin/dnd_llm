@@ -82,7 +82,9 @@ func _rebuild() -> void:
 
 	_heading(str(c.get("name", "")))
 	_line(tr("SIDE_RACE_CLASS").format({"race": c.get("race_name", ""), "class": c.get("class_name", ""), "level": int(c.get("level", 1))}), true)
-	var hp := _line(tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}), false)
+	var hp := _line(tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]})
+		+ ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""), false)  # big test #19 (v0.7.22.3)
+	hp.name = "HeroHp"
 	if int(c["hp"]) * 2 <= int(c["max_hp"]):
 		hp.add_theme_color_override("font_color", UiTheme.BAD)
 	_line(tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}), false)

@@ -96,6 +96,8 @@ var arrest: String = ""
 ## answers already tried in this hold.
 var let_go: Dictionary = {}
 var arrest_tried: Array[String] = []
+## The hero's spells on NPCs (v0.7.22.3, SpellEffects.npc_spells): {npc_id: [{spell, name, until, conc}]}.
+var npc_spells: Dictionary = {}
 var bodies: Dictionary = {}
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
@@ -437,6 +439,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"arrest": arrest,
 		"let_go": let_go,
 		"arrest_tried": arrest_tried,
+		"npc_spells": npc_spells,
 		"bodies": bodies,
 		"searched": searched,
 		"quests_failed": quests_failed,
@@ -533,6 +536,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.let_go[loc] = int(d["let_go"][loc])
 	for how: Variant in d.get("arrest_tried", []):
 		s.arrest_tried.append(str(how))
+	s.npc_spells = (d.get("npc_spells", {}) as Dictionary).duplicate(true)
 	for n: String in d.get("bodies", {}):
 		s.bodies[n] = str(d["bodies"][n])
 	for n: Variant in d.get("searched", []):

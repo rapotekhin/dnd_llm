@@ -970,6 +970,52 @@ static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc: Di
 		"устоял" if saved else "поддался"]}
 
 
+## The hero's spells on an NPC (v0.7.22.3, the author's request: Charm Person must end): [{spell, name, until, conc}].
+static func npc_spells(s: GameSession, npc_id: String) -> Array:
+	return s.npc_spells.get(npc_id, [])
+
+
+## A spell that held on the NPC (npc_save ok): it stays for its `minutes`.
+static func charm_npc(s: GameSession, data: Dictionary, spell_id: String, npc_id: String) -> void:
+	var sp := spec(data, spell_id)
+	var list: Array = (s.npc_spells.get(npc_id, []) as Array).filter(func(e: Dictionary) -> bool: return str(e["spell"]) != spell_id)
+	list.append({"spell": spell_id, "name": str(data["spells"][spell_id]["name"]), "until": TimeRules.abs_minute(s) + int(sp.get("minutes", 60)),
+		"conc": bool(data["spells"][spell_id].get("concentration", false))})
+	s.npc_spells[npc_id] = list
+
+
+## The hero's spells on NPCs whose time is up or whose concentration is gone end; the NPC knows it was charmed
+## (`aftermath` attitude). Called as time passes. Lines.
+static func npc_expire(s: GameSession, data: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var now := TimeRules.abs_minute(s)
+	for npc_id: String in s.npc_spells.keys():
+		var keep: Array = []
+		for e: Dictionary in s.npc_spells[npc_id]:
+			var held := not bool(e.get("conc", false)) or str(s.character.get("concentration", "")) == str(e["spell"])
+			if now < int(e["until"]) and held and not s.dead_npcs.has(npc_id):
+				keep.append(e)
+				continue
+			var who := str(data["world"]["npcs"].get(npc_id, {}).get("name", npc_id))
+			var after := int(spec(data, str(e["spell"])).get("aftermath", 0))
+			lines.append("«%s» спадает с %s%s" % [e["name"], who, " — понимает, что был(а) очарован(а)" if after != 0 else ""])
+			if after != 0:
+				s.shift_attitude(npc_id, after, data)
+				s.remember(npc_id, "понял(а), что герой очаровал(а) его/её заклинанием «%s»" % e["name"])
+		if keep.is_empty():
+			s.npc_spells.erase(npc_id)
+		else:
+			s.npc_spells[npc_id] = keep
+	return lines
+
+
+## For the snapshot: «Очарование личности — до 10:35».
+static func npc_spell_text(s: GameSession, npc_id: String) -> String:
+	return ", ".join(npc_spells(s, npc_id).map(func(e: Dictionary) -> String:
+		var m := int(e["until"]) % 1440
+		return "%s — до %02d:%02d" % [e["name"], m / 60, m % 60]))
+
+
 # --- the world (v0.7.13.8) -----------------------------------------------------------------------------
 
 

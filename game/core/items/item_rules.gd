@@ -459,6 +459,16 @@ static func consumable(data: Dictionary, id: String, session_items: Dictionary =
 	return data["items"]["catalog"].get(id, {}).get("use", {})  # potions, scrolls, wands, the pearl (v0.7.12)
 
 
+## A potion (v0.7.22.3: drunk as a bonus action in a fight): a catalog potion or a made one with a potion's `use`.
+static func is_potion(data: Dictionary, session_items: Dictionary, id: String) -> bool:
+	var real := real_id(id)
+	var d := def_of(data["items"], session_items, real)
+	if real.contains("potion") or str(d.get("look", "")) == "зелье":
+		return true
+	var use: Dictionary = d.get("use", {}) if d.get("use") is Dictionary else {}
+	return use.has("heal") or use.has("resist") or use.has("check_adv")
+
+
 ## "" when the character can use the item now, otherwise the reason (for the master).
 static func can_use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, pending: int = 0) -> String:
 	if int(c.get("inventory", {}).get(id, 0)) - pending <= 0:

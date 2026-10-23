@@ -458,8 +458,8 @@ static func can_attack(s: GameSession, data: Dictionary, target_id: String, offh
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
 	var e := economy(s)
-	if offhand:
-		if int(e.get("bonus", 0)) <= 0 or not bool(e.get("attacked", false)):
+	if offhand:  # as in BG3 (v0.7.22.3): no main-hand attack needed first, unless rules.combat.offhand_needs_attack
+		if int(e.get("bonus", 0)) <= 0 or (bool(cfg(data).get("offhand_needs_attack", true)) and not bool(e.get("attacked", false))):
 			return "COMBAT_NO_BONUS"
 	elif int(e.get("attacks", 0)) <= 0 and int(e.get("action", 0)) <= 0 and int(e.get("haste", 0)) <= 0:
 		return "COMBAT_NO_ACTION"

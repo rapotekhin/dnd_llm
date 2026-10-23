@@ -795,6 +795,11 @@
           "title": "Trader",
           "type": "boolean"
         },
+        "under": {
+          "default": "",
+          "title": "Under",
+          "type": "string"
+        },
         "understands_hero": {
           "default": true,
           "title": "Understands Hero",

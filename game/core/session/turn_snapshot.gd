@@ -24,7 +24,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"services": (n.get("services", []) as Array).map(func(x: Variant) -> String: return "%s [%s]" % [SocialRules.tr_service(data, str(x)), x]),
 			"deal": SocialRules.deal_text(s, data, id),
 			"secrets": SocialRules.secret_hints(s, data, id), "refuses": SocialRules.refuses(s, data, id), "eager": SocialRules.eager(s, data, id),
-			"follows": s.followers.has(id)})
+			"follows": s.followers.has(id), "under": SpellEffects.npc_spell_text(s, id)})
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
 		summaries["location"] = s.summaries["location:" + loc_id]

@@ -548,6 +548,8 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 				item_btn = _button(ib, "Item_" + id, label, mine)
 				item_btn.pressed.connect(func() -> void: _do(GameState.combat_item_spell(id, "")))
 			else:
+				if ItemRules.is_potion(data, s.items, id) and str(CombatRules.cfg(data).get("potion_cost", "action")) == "bonus":
+					label += tr("COMBAT_BONUS_SHORT")  # v0.7.22.3: a potion — a bonus action
 				item_btn = _button(ib, "Item_" + id, label, mine)
 				item_btn.pressed.connect(func() -> void: _do(GameState.combat_use_item(id)))
 			_details.hook(item_btn, str(d.get("name", id)), DetailsPanel.item_text(c, data, s.items, id))

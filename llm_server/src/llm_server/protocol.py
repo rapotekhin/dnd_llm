@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.41.0"
+PROTOCOL_VERSION = "0.42.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -163,6 +163,7 @@ class SceneNpc(_In):
     refuses: bool = False  # hostile: will not talk or trade (0.22.0)
     eager: bool = False  # a close friend: offers help by itself (0.22.0)
     follows: bool = False  # goes with the hero from room to room (0.33.0)
+    under: str = ""  # 0.42.0: the hero's spells on it and until when — «Очарование личности — до 10:35»
 
 
 class SceneProp(_In):
@@ -992,6 +993,7 @@ class EngineCheckParams(_Out):
     advantage_reason: str | None = None
     sense: Literal["sight", "hearing"] | None = None  # the check needs sight or hearing: blinded / deafened fail (0.16.0)
     tool: str | None = None  # the tool the check uses (thieves_tools, herbalism_kit…): proficiency, a must (0.17.0)
+    argument: str | None = None  # 0.42.0: a social check — the player's argument in a few words; a repeat rolls only with a new one
 
 
 class EngineCheckResult(_In):

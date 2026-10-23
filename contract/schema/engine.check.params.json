@@ -13,6 +13,18 @@
       "default": null,
       "title": "Advantage Reason"
     },
+    "argument": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Argument"
+    },
     "dc_tier": {
       "enum": [
         "very_easy",

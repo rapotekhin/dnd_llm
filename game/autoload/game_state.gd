@@ -214,6 +214,8 @@ func _spend(what: Dictionary) -> Dictionary:
 			var npc_try := SpellEffects.npc_save(session, Catalog.data, str(chk["spell_id"]), world().npc(str(what.get("target", ""))))
 			if not npc_try.is_empty():  # Suggestion, Charm Person… (v0.7.13.7): the engine rolls the NPC's save
 				lines.append(str(npc_try["line"]))
+				if bool(npc_try["ok"]):
+					SpellEffects.charm_npc(session, Catalog.data, str(chk["spell_id"]), str(what.get("target", "")))  # v0.7.22.3: it lasts, then ends
 				facts += " Движок бросил спасбросок цели: %s. %s" % [npc_try["line"], "Заклинание действует — отыграй это по его описанию." if bool(npc_try["ok"]) \
 					else "Заклинание не подействовало — цель может заметить попытку."]
 		"feature":
@@ -644,8 +646,10 @@ func combat_use_item(item_id: String) -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
 	var why := ItemRules.can_use(session.character, Catalog.data, session.items, item_id)
-	# Fast Hands (thief, v0.7.10): an item is a bonus action
-	var cost := "bonus" if FeatureRules.has(session.character, "fast_hands") and int(CombatRules.economy(session).get("bonus", 0)) > 0 else "action"
+	# Fast Hands (thief, v0.7.10): an item is a bonus action; a potion — for everyone, as in BG3 (v0.7.22.3)
+	var by_bonus := FeatureRules.has(session.character, "fast_hands") or (ItemRules.is_potion(Catalog.data, session.items, item_id)
+		and str(CombatRules.cfg(Catalog.data).get("potion_cost", "action")) == "bonus")
+	var cost := "bonus" if by_bonus and int(CombatRules.economy(session).get("bonus", 0)) > 0 else "action"
 	if why.is_empty() and int(CombatRules.economy(session).get(cost, 0)) <= 0:
 		why = "COMBAT_NO_ACTION"
 	return _combat_do(why, func() -> Array[String]:
@@ -1980,7 +1984,15 @@ func _engine_check(params: Dictionary) -> Dictionary:
 			params["advantage_reason"] = str(e.get("source", {}).get("name", "зелье"))
 	var room := session.room_id
 	var result: Dictionary
-	var lock := ExplorationRules.locked(session, params, room)
+	var listener_id := _listener_id(params)
+	if not listener_id.is_empty() and ExplorationRules.SOCIAL_SKILLS.has(skill_id):
+		if (params.get("target_id") == null or str(params["target_id"]).is_empty()):
+			params["target_id"] = listener_id  # a talk's check is locked on its NPC, not on the room (v0.7.22.3)
+		var charm := SpellEffects.npc_spells(session, listener_id)
+		if not charm.is_empty() and str(params.get("advantage_reason", "")).is_empty():
+			params["advantage_reason"] = "очарован: " + str(charm[0]["name"])  # Charm Person and the like (v0.7.22.3)
+	var state := ExplorationRules.state_key(session, Catalog.data, params, listener_id)
+	var lock := ExplorationRules.locked(session, params, room, state)
 	if not lock.is_empty():
 		# A repeat without a change: the old result, no roll (ADR-0008 §2).
 		result = (lock["result"] as Dictionary).duplicate()
@@ -2000,7 +2012,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 				result["total"] = int(result["total"]) + insp
 				result["bonus"] = int(result["bonus"]) + insp
 				result["success"] = int(result["total"]) >= int(result["dc"])
-		ExplorationRules.lock(session, params, room, result)
+		ExplorationRules.lock(session, params, room, result, state)
 		var mark := _theft_target(params)
 		if not mark.is_empty():
 			result["note"] = _theft(mark, bool(result["success"]))

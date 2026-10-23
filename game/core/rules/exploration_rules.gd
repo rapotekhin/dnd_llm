@@ -2,7 +2,10 @@ class_name ExplorationRules
 extends RefCounted
 ## Exploration rules of the engine (ADR-0008 §2, ADR-0010 §6, roadmap v0.5.2):
 ## - a failed skill check is locked by «skill + target» (the room when no target) until a long rest; a repeat
-##   returns the old result without a roll, unless the situation changed — a new source of advantage;
+##   returns the old result without a roll, unless the situation changed — a new source of advantage, or (big test,
+##   v0.7.22.2-3) the state the check was rolled in: the hero's conditions and spells, the darkness of a look, the
+##   listener's attitude and the charms on it (paralysis gone — the look is rolled again); a social check — also a
+##   new argument of the player (`argument`, the master names it), not the same words ten times;
 ## - hidden things of a room (world.json `secrets`: id, dc, text, skill perception | investigation) are noticed
 ##   by passive Perception on entering, or found by a successful search check with total ≥ DC (Investigation
 ##   finds any secret, Perception only the perception ones);
@@ -20,6 +23,22 @@ extends RefCounted
 ##   it once when found (s.caches_taken).
 
 const SEARCH_SKILLS: Array[String] = ["perception", "investigation"]
+const SOCIAL_SKILLS: Array[String] = ["persuasion", "deception", "intimidation", "performance"]
+
+
+## What the check depends on besides the dice (v0.7.22.3): a lock holds only while it is the same.
+static func state_key(s: GameSession, data: Dictionary, params: Dictionary, listener: String = "") -> String:
+	var c := s.character
+	var conds: Array = (c.get("conditions", []) as Array).duplicate()
+	conds.sort()
+	var fx: Array = ConditionRules.effects(c).map(func(e: Dictionary) -> String: return str(e.get("source", {}).get("id", e.get("condition", ""))))
+	fx.sort()
+	var parts: Array[String] = [",".join(conds), ",".join(fx)]
+	if str(params.get("skill", "")) == "perception":
+		parts.append("dark" if TimeRules.dark(s, data) else "light")
+	if not listener.is_empty():
+		parts.append("%s:%d:%s" % [listener, s.attitude(listener), ",".join(SpellEffects.npc_spells(s, listener).map(func(e: Dictionary) -> String: return str(e["spell"])))])
+	return "|".join(parts)
 
 
 static func lock_key(params: Dictionary, room_id: String) -> String:
@@ -28,7 +47,8 @@ static func lock_key(params: Dictionary, room_id: String) -> String:
 
 
 ## The lock for these check params, or {} when the check may be rolled.
-static func locked(s: GameSession, params: Dictionary, room_id: String) -> Dictionary:
+## `state` — state_key now ("" — not compared).
+static func locked(s: GameSession, params: Dictionary, room_id: String, state: String = "") -> Dictionary:
 	if params.get("skill") == null or str(params.get("skill", "")).is_empty():
 		return {}
 	var lock: Dictionary = s.locks.get(lock_key(params, room_id), {})
@@ -37,11 +57,20 @@ static func locked(s: GameSession, params: Dictionary, room_id: String) -> Dicti
 	var adv := str(params.get("advantage_reason", "")) if params.get("advantage_reason") != null else ""
 	if not adv.is_empty() and not (lock.get("advantages", []) as Array).has(adv):
 		return {}  # a new source of advantage changes the situation
+	if not state.is_empty() and lock.has("state") and str(lock["state"]) != state:
+		return {}  # the hero, the light or the listener changed (v0.7.22.3)
+	var arg := _argument(params)
+	if SOCIAL_SKILLS.has(str(params["skill"])) and not arg.is_empty() and not (lock.get("arguments", []) as Array).has(arg):
+		return {}  # a new argument of the player (v0.7.22.3)
 	return lock
 
 
+static func _argument(params: Dictionary) -> String:
+	return str(params.get("argument", "")).strip_edges().to_lower().left(120) if params.get("argument") != null else ""
+
+
 ## Remembers a failed skill check (with the advantage it already used).
-static func lock(s: GameSession, params: Dictionary, room_id: String, result: Dictionary) -> void:
+static func lock(s: GameSession, params: Dictionary, room_id: String, result: Dictionary, state: String = "") -> void:
 	if params.get("skill") == null or bool(result.get("success", false)):
 		return
 	var key := lock_key(params, room_id)
@@ -49,9 +78,14 @@ static func lock(s: GameSession, params: Dictionary, room_id: String, result: Di
 	var advantages: Array = (prev.get("advantages", []) as Array).duplicate()
 	if params.get("advantage_reason") != null and not str(params["advantage_reason"]).is_empty():
 		advantages.append(str(params["advantage_reason"]))
+	var arguments: Array = (prev.get("arguments", []) as Array).duplicate()
+	if not _argument(params).is_empty():
+		arguments.append(_argument(params))
 	var kept := result.duplicate()
 	kept.erase("revealed")
-	s.locks[key] = {"result": kept, "advantages": advantages}
+	s.locks[key] = {"result": kept, "advantages": advantages, "arguments": arguments}
+	if not state.is_empty():
+		s.locks[key]["state"] = state
 
 
 static func secrets(world: Dictionary, room_id: String) -> Array:
