@@ -185,6 +185,10 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		bags[id] = {"kind": str(c["bags"][id].get("kind", "")), "contents": contents}
 	c["bags"] = bags
 	c["conditions"] = c.get("conditions", [])
+	var body := {}  # v0.7.22.5: age, build, height — ids of rules.body
+	for k: String in c.get("body", {}):
+		body[k] = str(c["body"][k])
+	c["body"] = body
 	var effects: Array = []
 	for e: Variant in c.get("effects", []):
 		if e is Dictionary:

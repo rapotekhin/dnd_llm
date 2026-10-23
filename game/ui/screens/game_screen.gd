@@ -277,6 +277,7 @@ func _refresh() -> void:
 		var bounds := GameSession.attitude_bounds(Catalog.data)
 		var att := clampi(s.attitude(s.npc_id), bounds.x, bounds.y)
 		_partner_line.text = tr("PARTNER_LINE").format({"role": npc.get("role", ""), "race": npc.get("race", ""),
+			"body": BodyRules.npc_text(Catalog.data, s.npc_id, npc),
 			"attitude": tr("ATTITUDE_" + ("M%d" % -att if att < 0 else "P%d" % att if att > 0 else "0"))})
 		trade_toggle.visible = GameState.world().is_trader(s.npc_id)
 		trade_toggle.text = tr("BTN_TO_TALK" if s.mode == GameSession.MODE_TRADE else "BTN_TO_TRADE")

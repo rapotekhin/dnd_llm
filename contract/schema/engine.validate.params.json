@@ -1194,6 +1194,30 @@
       "additionalProperties": false,
       "description": "A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;\n`monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),\n`race` — an SRD race id, `room_id` — a room of this location (none — here), `trader` with `stock` of catalog ids.",
       "properties": {
+        "age": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age"
+        },
+        "build": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Build"
+        },
         "description": {
           "default": "",
           "maxLength": 300,
@@ -1209,6 +1233,18 @@
           ],
           "title": "Gender",
           "type": "string"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
         },
         "links": {
           "items": {
@@ -1876,6 +1912,30 @@
       "additionalProperties": false,
       "description": "A person a quest brings (0.37.0): the schema of create_npc and a `key` its steps name («new:<key>»);\n`room_id` may be «new:<room key>» of the quest's new place.",
       "properties": {
+        "age": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age"
+        },
+        "build": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Build"
+        },
         "description": {
           "default": "",
           "maxLength": 300,
@@ -1891,6 +1951,18 @@
           ],
           "title": "Gender",
           "type": "string"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
         },
         "key": {
           "title": "Key",

@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 33
+const SAVE_VERSION := 34
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -55,6 +55,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	30: _v30_to_v31,
 	31: _v31_to_v32,
 	32: _v32_to_v33,
+	33: _v33_to_v34,
 }
 
 
@@ -316,3 +317,8 @@ static func _v31_to_v32(data: Dictionary, _ctx: Dictionary) -> void:
 ## v0.7.22.3: no spell of the hero lies on any NPC.
 static func _v32_to_v33(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["npc_spells"] = {}
+
+
+## v0.7.22.5: the hero's age, height and weight — empty; the first refresh rolls them by the race.
+static func _v33_to_v34(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["character"]["body"] = {}

@@ -814,6 +814,37 @@
 		"eldritch_invocation_fiendish_vigor": ["false_life"],
 		"eldritch_invocation_mask_of_many_faces": ["disguise_self"]
 	},
+	"body": {
+		"_doc": "Age, build and height of the hero and the NPCs (v0.7.22.5, BodyRules, the author's choice: words, not numbers): the engine picks each by `weight` (the hero — by `hero_weight`), its own word for men and women; an id without a female or male word is not offered to that gender. A child and a teenager (weight 0) come only when a pack or the master sets them.",
+		"age": {
+			"child": {"male": "ребёнок", "female": "ребёнок", "weight": 0},
+			"teen": {"male": "подросток", "female": "подросток", "weight": 0},
+			"young": {"male": "молодой", "female": "молодая", "weight": 3, "hero_weight": 4},
+			"adult": {"male": "зрелый", "female": "зрелая", "weight": 3, "hero_weight": 3},
+			"middle": {"male": "средних лет", "female": "средних лет", "weight": 3, "hero_weight": 2},
+			"elderly": {"male": "пожилой", "female": "пожилая", "weight": 2, "hero_weight": 0},
+			"old": {"male": "старик", "female": "старуха", "weight": 1, "hero_weight": 0}
+		},
+		"build": {
+			"skinny": {"male": "тощий", "female": "тощая", "weight": 1},
+			"thin": {"male": "худой", "female": "худая", "weight": 2},
+			"slender": {"female": "стройная", "weight": 3},
+			"wiry": {"male": "жилистый", "weight": 2},
+			"athletic": {"male": "спортивный", "female": "спортивная", "weight": 3},
+			"sturdy": {"male": "крепкий", "female": "крепкая", "weight": 2},
+			"stocky": {"male": "коренастый", "weight": 2},
+			"curvy": {"female": "пышная", "weight": 2},
+			"plump": {"male": "полный", "female": "полная", "weight": 2},
+			"heavy": {"male": "грузный", "female": "грузная", "weight": 1}
+		},
+		"height": {
+			"very_short": {"male": "низкорослый", "female": "низкорослая", "weight": 1},
+			"short": {"male": "невысокий", "female": "невысокая", "weight": 3},
+			"medium": {"male": "среднего роста", "female": "среднего роста", "weight": 4},
+			"tall": {"male": "высокий", "female": "высокая", "weight": 3},
+			"very_tall": {"male": "рослый", "female": "рослая", "weight": 1}
+		}
+	},
 	"trait_cantrips": {
 		"_doc": "Cantrips a race trait grants (the SRD import has no spell list in traits, v0.6.0).",
 		"infernal_legacy": [

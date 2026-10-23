@@ -1,7 +1,7 @@
 {% if character %}
 ## Персонаж игрока
 
-{{ character.name }} — {{ character.race }} {{ character.class_name }}, {{ character.level }} уровень{% if character.background %}, {{ character.background | lower }}{% endif %}. HP {{ character.hp }}/{{ character.max_hp }}, КД {{ character.ac }}, скорость {{ character.speed }} футов, монеты: {{ coins }}.{% if reward_left %} Награды от тебя (монеты и вещи вне заданий) до долгого отдыха — ещё на {{ reward_left }}.{% endif %}
+{{ character.name }} — {{ character.race }} {{ character.class_name }}, {{ character.level }} уровень{% if character.body %} ({{ character.body }}){% endif %}{% if character.background %}, {{ character.background | lower }}{% endif %}. HP {{ character.hp }}/{{ character.max_hp }}, КД {{ character.ac }}, скорость {{ character.speed }} футов, монеты: {{ coins }}.{% if reward_left %} Награды от тебя (монеты и вещи вне заданий) до долгого отдыха — ещё на {{ reward_left }}.{% endif %}
 {% if character.backstory %}История персонажа: {{ character.backstory }}
 {% endif %}{% if character.abilities %}Характеристики: {% for k, v in character.abilities.items() %}{{ ability_name(k) }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if character.effects %}Состояния и эффекты: {{ character.effects | join("; ") }} (их влияние на проверки и бой движок учитывает сам).
@@ -38,7 +38,7 @@
 {% else %}- нет
 {% endfor %}
 NPC здесь:
-{% for n in scene.npcs %}- {{ n.name }} [{{ n.npc_id }}] — {{ n.role }}{% if n.race %}, {{ n.race }}{% endif %}{% if n.trader %}; торговец{% endif %}; отношение к игроку: {{ attitude_word(n.attitude) }}.{% if n.speaks %} Говорит: {{ n.speaks }}{% if not n.understands_hero %} — героя НЕ понимает{% endif %}.{% endif %}{% if n.tie %} Связь с прошлым героя: {{ n.tie }}.{% endif %}{% if n.description %} {{ n.description }}{% endif %}{% if n.refuses %} Враждебен: говорить и торговать с героем не станет.{% elif n.eager %} Близкий друг героя: сам предлагает помощь по своей роли и услугам.{% endif %}{% if n.services %} Услуги: {{ n.services | join(", ") }}.{% endif %}{% if n.deal %} Уже дал(а) герою: {{ n.deal }}.{% endif %}{% if n.follows %} Идёт с героем.{% endif %}{% if n.under %} Сейчас под чарами героя ({{ n.under }}): чары действуют — относится к герою как к доброму знакомому и охотно помогает в разумных пределах.{% endif %}{% if n.memory %}
+{% for n in scene.npcs %}- {{ n.name }} [{{ n.npc_id }}] — {{ n.role }}{% if n.race %}, {{ n.race }}{% endif %}{% if n.body %} ({{ n.body }}){% endif %}{% if n.trader %}; торговец{% endif %}; отношение к игроку: {{ attitude_word(n.attitude) }}.{% if n.speaks %} Говорит: {{ n.speaks }}{% if not n.understands_hero %} — героя НЕ понимает{% endif %}.{% endif %}{% if n.tie %} Связь с прошлым героя: {{ n.tie }}.{% endif %}{% if n.description %} {{ n.description }}{% endif %}{% if n.refuses %} Враждебен: говорить и торговать с героем не станет.{% elif n.eager %} Близкий друг героя: сам предлагает помощь по своей роли и услугам.{% endif %}{% if n.services %} Услуги: {{ n.services | join(", ") }}.{% endif %}{% if n.deal %} Уже дал(а) герою: {{ n.deal }}.{% endif %}{% if n.follows %} Идёт с героем.{% endif %}{% if n.under %} Сейчас под чарами героя ({{ n.under }}): чары действуют — относится к герою как к доброму знакомому и охотно помогает в разумных пределах.{% endif %}{% if n.memory %}
   Помнит о герое: {{ n.memory | join("; ") }}.{% endif %}{% if n.secrets %}
   Скрывает (саму тайну ты не знаешь — только намёк; не выдумывай её): {{ n.secrets | join("; ") }}.{% endif %}
 {% else %}- никого

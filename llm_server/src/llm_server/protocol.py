@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.42.0"
+PROTOCOL_VERSION = "0.43.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -148,6 +148,7 @@ class SceneNpc(_In):
     name: str
     role: str = ""
     race: str = ""
+    body: str = ""  # 0.43.0: «средних лет, коренастый, невысокий»
     gender: Gender = "other"
     description: str = ""
     attitude: int = 0  # -3 hostile … 0 neutral … +3 friendly
@@ -228,6 +229,7 @@ class CharacterSheet(_In):
     name: str
     gender: Gender = "other"
     race: str = ""
+    body: str = ""  # 0.43.0: the hero's age, build and height in words
     class_name: str = ""
     level: int = 1
     hp: int
@@ -600,6 +602,12 @@ class NewNpc(_Out):
     role: str = Field(min_length=2, max_length=60)
     race: str | None = None
     gender: Gender = "other"
+    # 0.43.0: ids of the engine's lists — age: child, teen, young, adult, middle, elderly, old; build: skinny, thin,
+    # slender, wiry, athletic, sturdy, stocky, curvy, plump, heavy; height: very_short, short, medium, tall, very_tall.
+    # None — the engine picks.
+    age: str | None = None
+    build: str | None = None
+    height: str | None = None
     description: str = Field(default="", max_length=300)
     personality: str = Field(default="", max_length=300)
     monster: str = "commoner"

@@ -382,6 +382,8 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 		"resources_used": {}, "effects": [], "next_effect": 1, "exhaustion": 0, "concentration": "", "concentration_ends": -1, "prepared_day": 1,
 		"story": str(ch.get("story", "")).strip_edges(),
 	}
+	# Age, height, weight (v0.7.22.5): what the player set, the rest by the race's table.
+	c["body"] = BodyRules.make(data, c["gender"], ch.get("body", {}) if ch.get("body") is Dictionary else {}, "hero:" + str(c["name"]), true)
 	var skills := fixed_skills(ch, data)
 	for s: String in all_skills(ch):
 		if not skills.has(s):

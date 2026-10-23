@@ -103,6 +103,10 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 		"monster": tpl, "tags": [], "generated": true}
 	if not race.is_empty():
 		def["race_id"] = race
+	var body := BodyRules.check(data, spec)  # v0.7.22.5: age, build, height
+	if body.has("reason"):
+		return {"reason": str(body["reason"])}
+	def.merge(body)
 	var links: Array = []
 	for l: Variant in spec.get("links", []):
 		if not (l is Dictionary):

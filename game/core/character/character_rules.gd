@@ -241,6 +241,8 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	if data.has("rules") and data["rules"].has("containers"):
 		ContainerRules.sync_bags(c, data)  # one bag per container item in the pack (v0.7.18.2)
 	_grant_trait_cantrips(c, data)
+	if (c.get("body", {}) as Dictionary).is_empty() and data.has("rules") and data["rules"].has("body") and c.has("race"):
+		c["body"] = BodyRules.make(data, str(c.get("gender", "other")), {}, "hero:" + str(c.get("name", "")), true)  # an old save (v0.7.22.5)
 	c["item_props"] = active_props(c, data, session_items)  # v0.7.12
 	var floors := {}
 	for p: Variant in c["item_props"]:

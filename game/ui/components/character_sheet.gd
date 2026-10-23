@@ -166,6 +166,8 @@ func _stats_tab(c: Dictionary) -> Control:
 	_text(box, str(c["name"]), UiTheme.HEADING)
 	_text(box, tr("SHEET_LINE").format({"race": c["race_name"], "class": c["class_name"] + (" (%s)" % sub["name"] if not sub.is_empty() else ""),
 		"level": c["level"], "background": d["backgrounds"].get(str(c["background"]), {}).get("name", "")}), UiTheme.MUTED_LABEL)
+	if not (c.get("body", {}) as Dictionary).is_empty():  # v0.7.22.5
+		_text(box, BodyRules.text(d, c["body"], str(c.get("gender", "other"))), UiTheme.MUTED_LABEL).name = "HeroBody"
 	_text(box, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}) + ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""))
 	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
 	box.add_child(chips)

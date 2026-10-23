@@ -576,7 +576,7 @@ OPT_BUDGET_UNKNOWN,"Траты видны, когда мастер на связ
 OPT_BUDGET_BAD,Лимит — число долларов от 0.01 до 1000
 OPT_REACTIONS,"Реакции и умения в бою (кара, уклонение, отражение снарядов)"
 OPT_RESOLUTION,Размер окна
-PARTNER_LINE,{role} · {race} · отношение: {attitude}
+PARTNER_LINE,{role} · {race} · {body} · отношение: {attitude}
 PERFORM_DONE_TODAY,Сегодня выступление уже было — публика ждёт завтра
 PERFORM_NOT_NOW,Сейчас не до выступлений
 PERFORM_NO_STAGE,Здесь негде выступать

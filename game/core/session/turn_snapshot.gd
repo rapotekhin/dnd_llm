@@ -16,6 +16,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 	for id: String in s.npcs_here(world.world, s.room_id):
 		var n := world.npc(id)
 		npcs.append({"npc_id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
+			"body": BodyRules.npc_text(data, id, n),
 			"gender": n.get("gender", "other"), "description": n.get("description", ""),
 			"personality": n.get("personality", ""), "attitude": s.attitude(id), "trader": bool(n.get("trader", false)),
 			"speaks": ", ".join(LanguageRules.npc(data, n).map(func(l: String) -> String: return LanguageRules.name_of(data, l).to_lower())),
@@ -124,7 +125,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 	if not sub.is_empty():
 		class_text += " (%s)" % sub["name"]
 	var sheet := {
-		"name": c.get("name", ""), "gender": c.get("gender", "other"), "race": c.get("race_name", ""),
+		"name": c.get("name", ""), "gender": c.get("gender", "other"), "race": c.get("race_name", ""), "body": BodyRules.text(data, c.get("body", {}), str(c.get("gender", "other"))),
 		"class_name": class_text, "level": int(c.get("level", 1)), "hp": int(c.get("hp", 0)),
 		"max_hp": int(c.get("max_hp", 0)), "ac": int(c.get("ac", 10)), "conditions": _conditions(c, data),
 		"skills": c.get("skills", {}), "gold_cp": int(c.get("gold_cp", 0)),
