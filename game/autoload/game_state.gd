@@ -1527,6 +1527,45 @@ func accept_quest(quest_id: String) -> String:
 	return ""
 
 
+## «Прочитать объявления» (v0.7.22.13): an empty board — the master puts its orders up as real quests. "" or a key.
+func read_board(prop_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "QUEST_BUSY"
+	var why := QuestGen.board_why_not(session, Catalog.data, prop_id)
+	if not why.is_empty():
+		return why
+	var p := PropRules.find(session, session.room_id, prop_id)
+	QuestGen.mark_board_read(session, prop_id)
+	var text := tr("BOARD_READ_SAY").format({"name": p.get("name", prop_id)})
+	_add(GameSession.player_entry(text))
+	_log("Игрок: " + text)
+	_request("action", text + (" [движок: на «%s» [%s] заказов ещё нет — повесь 1–%d настоящих заказа: сначала find_quests, потом create_quest с board_prop_id %s " +
+		"и заказчиком из этой округи; что написано в листках — это и есть эти задания, игрок возьмёт их кнопкой]") % [p.get("name", prop_id), prop_id,
+		int(QuestGen.cfg(Catalog.data)["max_offered"]), prop_id])
+	return ""
+
+
+## «Взять все» on a board (v0.7.22.13): every order that fits under the limit of taken quests, one master's turn. "" or a key.
+func take_board_all(orders: Array) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "QUEST_BUSY"
+	var lines: Array[String] = []
+	var titles: Array[String] = []
+	for qid: Variant in orders:
+		if not QuestRules.can_accept(session, Catalog.data["world"], str(qid)).is_empty() or not QuestGen.can_take(session, Catalog.data, str(qid)).is_empty():
+			continue
+		lines.append_array(QuestRules.accept(session, Catalog.data, str(qid)))
+		titles.append(str(QuestRules.quest(Catalog.data["world"], str(qid))["title"]))
+	if titles.is_empty():
+		return "QUEST_TOO_MANY"
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("quest", "Игрок срывает с доски листки заказов: %s. %s" % [", ".join(titles), " ".join(lines)])
+	return ""
+
+
 ## A talk step of a quest: the button at the NPC closes it (the item is handed over); the master narrates. "" or a key.
 func quest_talk(quest_id: String) -> String:
 	if session == null or is_busy() or not Backend.is_ready():

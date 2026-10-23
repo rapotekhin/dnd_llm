@@ -58,9 +58,6 @@ func _ready() -> void:
 	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_field.add_theme_constant_override("separation", 6)
 	left.add_child(_field)
-	_details = DetailsPanel.new(Vector2(0, 150))  # under the field, not over the chat (v0.7.22.12, the author)
-	_details.name = "CombatDetails"
-	left.add_child(_details)
 	_hint = Label.new()
 	_hint.name = "Hint"
 	_hint.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -117,8 +114,15 @@ func _ready() -> void:
 	var rcol := VBoxContainer.new()
 	rcol.add_theme_constant_override("separation", 10)
 	right.add_child(rcol)
+	# The right side: a third — the static details, two thirds — the chat (the author, v0.7.22.13).
+	_details = DetailsPanel.new(Vector2(0, 120))
+	_details.name = "CombatDetails"
+	_details.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_details.size_flags_stretch_ratio = 1.0
+	rcol.add_child(_details)
 	_log_scroll = ScrollContainer.new()
 	_log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_log_scroll.size_flags_stretch_ratio = 2.0
 	_log_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	rcol.add_child(_log_scroll)
 	_log_box = VBoxContainer.new()

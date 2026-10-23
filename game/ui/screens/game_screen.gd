@@ -24,6 +24,7 @@ var _chips: EffectChips
 var _theft: TheftPanel
 var _container: ContainerPanel
 var _place: PlacePanel
+var _board: BoardPanel
 var _prepare: SmallDialog
 var _mode_bar: HBoxContainer
 var _mode_label: Label
@@ -153,6 +154,7 @@ func _ready() -> void:
 	side.pockets_requested.connect(func(npc: String) -> void: _theft.open(npc))
 	side.container_requested.connect(func(prop: String) -> void: _container.open(prop))
 	side.place_requested.connect(func() -> void: _place.open())  # v0.7.22.7
+	side.board_requested.connect(func(prop: String) -> void: _board.open(prop))  # v0.7.22.13
 	side.development_requested.connect(func() -> void: _sheet.open_tab(3))  # v0.7.19.1
 	row.add_child(side)
 
@@ -204,6 +206,11 @@ func _ready() -> void:
 		_place.visible = false
 		_container.open(prop))
 	move_child(_container, -1)  # the container opens over the place window
+	_board = BoardPanel.new()  # v0.7.22.13: a notice board's orders
+	_board.name = "BoardView"
+	_board.visible = false
+	add_child(_board)
+	_board.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_sheet.bag_requested.connect(func(bag: String) -> void: _container.open(bag))  # v0.7.18.2
 	_sheet.prepare_requested.connect(func() -> void:
 		_sheet.visible = false

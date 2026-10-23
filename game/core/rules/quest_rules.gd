@@ -185,6 +185,8 @@ static func step_text(s: GameSession, world: Dictionary, quest_id: String) -> St
 	if step.is_empty():
 		return ""
 	var text := str(step["text"])
+	if step.has("needs") and not met(s, step["needs"]) and not str(step.get("needs_text", "")).is_empty():
+		text += " — " + str(step["needs_text"])  # v0.7.22.13
 	if step.has("parts"):
 		var done: Array = s.quest_parts.get(quest_id, [])
 		var bits: Array[String] = []
@@ -201,6 +203,8 @@ static func choices_here(s: GameSession, world: Dictionary) -> Array[Dictionary]
 		return out
 	for id: String in s.quests_active:
 		var step := current(s, world, id)
+		if step.has("needs") and not met(s, step["needs"]):
+			continue  # the hero does not know yet what is decided (v0.7.22.13, big test #27)
 		if str(step.get("when", {}).get("choice", "")) == s.room_id:
 			for c: Dictionary in step.get("choices", []):
 				out.append({"quest_id": id, "choice_id": str(c["id"]), "action": str(c["action"])})

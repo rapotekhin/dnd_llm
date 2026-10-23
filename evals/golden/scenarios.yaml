@@ -1978,6 +1978,45 @@ scenarios:
     rubric:
       - "Горм отвечает, что пекарь есть, и мастер создаёт его эффектом create_npc (имя, роль пекаря, шаблон commoner или похожий), а не выдумывает словами; где его найти — в этой локации"
 
+  - id: place_made_at_mention
+    title: "Трактирщик называет баню — она создаётся в том же ходе (большой тест, v0.7.22.13)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, а где у вас можно помыться с дороги? Баня есть?"
+    engine:
+      find_npcs: []
+    expect:
+      effects: {required_kinds_any: [create_npc, create_place]}
+    rubric:
+      - "Горм называет баню или банщика, и мастер в этом же ходе создаёт их (create_npc банщика/банщицы или create_place бани), а не только говорит о них словами"
+
+  - id: trader_made_as_trader
+    title: "Новый кузнец — торговец с товаром (большой тест, v0.7.22.13)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, мне нужен кузнец — купить подковы и гвозди. Есть такой в Устье?"
+    engine:
+      find_npcs: []
+      find_items:
+        - {id: hammer, name: "Молот", base: null, rarity: common}
+        - {id: piton, name: "Шлямбур", base: null, rarity: common}
+    expect:
+      effects: {required_kinds_any: [create_npc]}
+    rubric:
+      - "Мастер создаёт кузнеца эффектом create_npc с trader: true и товаром из каталога (stock), чтобы с ним можно было торговать"
+
+  - id: absent_npc_does_not_answer
+    title: "Обращение к NPC, которого нет в сцене, — он не отвечает (большой тест, v0.7.22.13)"
+    category: concepts
+    extends: tavern
+    input: "Ондрей, расскажи-ка, кто режет твоих овец?"
+    expect:
+      effects: {forbidden_kinds: [create_npc]}
+    rubric:
+      - "Ондрея в зале нет — мастер не говорит за него, а описывает, что его здесь нет (и, может быть, где его искать)"
+
   - id: npc_existing_not_made_again
     title: "Человек уже есть в мире — не создавать"
     category: concepts

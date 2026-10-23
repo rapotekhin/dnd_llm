@@ -58,6 +58,9 @@ func run() -> void:
 	if not await _walk(gs, ["pushcha-hollow", "pushcha-trail", "pushcha-glade"]):
 		return
 	await shot("menhir")
+	gs.session.revealed["pushcha-glade"] = ["runes"]  # the runes read (v0.7.22.13: the ending needs knowing)
+	node("EventBus").state_changed.emit()
+	await frames(3)
 	if not await _press(gs, "QuestChoice_%s_restore" % QID, "the menhir choice"):
 		return
 	step("the menhir restored", s.flags.has("menhir_restored") and int(s.character["inventory"].get("potion_of_greater_healing", 0)) >= 2,

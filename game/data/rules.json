@@ -318,6 +318,8 @@
 		"_doc": "Quests the master makes (v0.7.21, QuestGen): from a giver of the scene, 1..max_steps steps (talk, visit, find, fight) on what the world has, plus a return to the giver; at most max_open made quests taken at once and max_offered offered by one giver or board. Batch 2: a quest brings up to max_new_npcs new people, a place on an open edge and its thing in a hiding place; a person a quest made gives quests while its depth is below quest_depth. The reward by scale and the hero's level (1..5): reward_cp, class xp (only when a step is dangerous or the quest major), the giver's attitude.",
 		"max_open": 3,
 		"max_offered": 3,
+		"board_words": ["доск", "объявлен", "листк", "столб с"],
+		"_board": "v0.7.22.13 (big test #30, #31): a thing of the room whose name has one of board_words is a notice board — a window of its orders; an empty one may be read once a day: a master's turn puts its orders up.",
 		"max_steps": 4,
 		"max_new_npcs": 2,
 		"quest_depth": 2,

@@ -31,6 +31,27 @@ static func open_made(s: GameSession) -> Array[String]:
 	return out
 
 
+## A notice board (v0.7.22.13): a thing of the room whose name has one of rules.quest_gen.board_words.
+static func is_board(data: Dictionary, p: Dictionary) -> bool:
+	var name := str(p.get("name", "")).to_lower()
+	return (cfg(data).get("board_words", []) as Array).any(func(w: Variant) -> bool: return name.contains(str(w)))
+
+
+## "" when the hero may read this empty board now (once a day), else a localization key.
+static func board_why_not(s: GameSession, data: Dictionary, prop_id: String) -> String:
+	var key := "board:%s:%s" % [s.room_id, prop_id]
+	if int(WorldGen.generated(s).get("boards_read", {}).get(key, 0)) == s.day:
+		return "BOARD_READ_TODAY"
+	return ""
+
+
+static func mark_board_read(s: GameSession, prop_id: String) -> void:
+	var gen := WorldGen.generated(s)
+	var read: Dictionary = gen.get("boards_read", {})
+	read["board:%s:%s" % [s.room_id, prop_id]] = s.day
+	gen["boards_read"] = read
+
+
 ## Made quests offered and not taken by this giver or on this board («board:<room>:<prop>»).
 static func offered_by(s: GameSession, source: String) -> Array[String]:
 	var out: Array[String] = []

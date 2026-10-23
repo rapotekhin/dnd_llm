@@ -153,6 +153,8 @@
 										"text": {"$ref": "#/$defs/nonempty"},
 										"when": {"$ref": "#/$defs/when"},
 										"parts": {"type": "array", "items": {"$ref": "#/$defs/nonempty"}},
+										"needs": {"$ref": "#/$defs/when"},
+										"needs_text": {"type": "string"},
 										"flag": {"type": "string"},
 										"choices": {
 											"type": "array",

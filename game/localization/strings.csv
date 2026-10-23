@@ -719,6 +719,15 @@ SLOT_AT_WILL,по желанию
 HEALTH_KNOCKED_OUT,без сознания
 SIDE_CREATURES,После боя
 SIDE_UNSEEN,Вас не заметили
+BTN_BOARD,"{name}: заказов {n}"
+BOARD_EMPTY,На доске пока ничего не разобрать
+BTN_BOARD_READ,Прочитать объявления
+BOARD_READ_SAY,Читаю объявления: {name}
+BOARD_READ_TODAY,Сегодня вы уже читали эту доску
+BOARD_LIMIT,"Можно взять ещё: {n}"
+BOARD_ORDER_LINE,"Заказчик: {who} · награда: {reward}"
+BTN_BOARD_TAKE,Сорвать листок — взять заказ
+BTN_BOARD_TAKE_ALL,Взять все (сколько можно)
 SIDE_CAPTIVE,Вы в плену — связаны
 BTN_ENCOUNTER_ATTACK,Напасть врасплох
 BTN_ENCOUNTER_TALK,"Заговорить ({skill})"

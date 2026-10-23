@@ -106,6 +106,17 @@
 					"when": {
 						"choice": "pushcha-glade"
 					},
+					"needs": {
+						"any": [
+							{
+								"secret": "pushcha-glade:runes"
+							},
+							{
+								"flag": "menhir_understood"
+							}
+						]
+					},
+					"needs_text": "сначала поймите, что держит менгир: осмотрите знаки или расспросите отшельника",
 					"choices": [
 						{
 							"id": "restore",

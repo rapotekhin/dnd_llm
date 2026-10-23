@@ -13,6 +13,7 @@ signal long_rest_requested
 signal pockets_requested(npc_id: String)
 signal container_requested(prop_id: String)
 signal place_requested
+signal board_requested(prop_id: String)
 signal development_requested
 
 var _content: VBoxContainer
@@ -232,6 +233,12 @@ func _rebuild() -> void:
 		pb.disabled = GameState.is_busy()
 		pb.pressed.connect(place_requested.emit)
 		_content.add_child(pb)
+		for bp: Dictionary in PropRules.room_props(s, s.room_id):  # a notice board — its own window (v0.7.22.13)
+			if QuestGen.is_board(Catalog.data, bp):
+				var bpid := str(bp["id"])
+				var n_orders := QuestGen.offered_by(s, "board:%s:%s" % [s.room_id, bpid]).size()
+				var bb := _button(tr("BTN_BOARD").format({"name": bp["name"], "n": n_orders}), board_requested.emit.bind(bpid), not GameState.is_busy())
+				bb.name = "Board_" + bpid
 		var trapped := {}
 		for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
 			trapped[ft["to"]] = ft["secret"]
