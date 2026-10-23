@@ -111,6 +111,8 @@ func _rebuild() -> void:
 	if not s.in_conversation() and CrimeRules.held(s):
 		_arrest(s, can_act)
 	if not s.in_conversation():
+		_meeting(s, can_act)  # v0.7.22.12: the foes did not notice the hero; the hero is a captive
+	if not s.in_conversation():
 		var npcs := s.npcs_here(world.world, s.room_id)
 		if not npcs.is_empty():
 			_subheading("SIDE_PEOPLE")
@@ -245,7 +247,7 @@ func _rebuild() -> void:
 				dis.tooltip_text = str(trapped[e]["text"]) + "
 " + tr("TRAP_DISARM_TIP")
 				continue
-			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act and not CrimeRules.held(s))
+			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act and not CrimeRules.held(s) and not EncounterRules.captive(s))
 			b.name = "Exit_" + e
 			if CrimeRules.held(s):
 				b.tooltip_text = tr("CRIME_HELD")
@@ -358,6 +360,39 @@ func _button(text: String, action: Callable, enabled: bool) -> Button:
 	b.pressed.connect(func() -> void: action.call())
 	_content.add_child(b)
 	return b
+
+
+## The foes lurking unaware (attack by surprise, talk first) and the captivity (break free, slip, talk), v0.7.22.12.
+func _meeting(s: GameSession, can_act: bool) -> void:
+	var data := Catalog.data
+	var specs: Array = []
+	if not EncounterRules.lurking(s, s.room_id).is_empty():
+		var enc: Dictionary = SceneRules.room(s, data["world"], s.room_id).get("encounter", {})
+		_subheading("SIDE_UNSEEN")
+		for e: Dictionary in enc.get("enemies", []):
+			_line("%s ×%d" % [e.get("name", e["monster"]), int(e.get("count", 1))], false)
+		var why := EncounterRules.talkable(s, data, enc.get("enemies", []))
+		specs = [["Encounter_attack", tr("BTN_ENCOUNTER_ATTACK"), "", func() -> String: return GameState.encounter_attack()],
+			["Encounter_persuasion", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_PERSUASION")}), why, func() -> String: return GameState.encounter_parley("persuasion")],
+			["Encounter_intimidation", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_INTIMIDATION")}), why, func() -> String: return GameState.encounter_parley("intimidation")]]
+	elif EncounterRules.captive(s):
+		_subheading("SIDE_CAPTIVE")
+		for e: Dictionary in s.captive.get("foes", []):
+			_line(str(e.get("name", e["monster"])), false)
+		specs = [["Escape_athletics", tr("BTN_ESCAPE_ATHLETICS").format({"dc": int(EncounterRules.cfg(data)["escape_dc"])}), "", func() -> String: return GameState.escape_captivity("escape_athletics")],
+			["Escape_sleight", tr("BTN_ESCAPE_SLEIGHT").format({"dc": int(EncounterRules.cfg(data)["escape_dc"])}), "", func() -> String: return GameState.escape_captivity("escape_sleight")],
+			["Escape_talk", tr("BTN_ESCAPE_TALK"), EncounterRules.can_escape(s, data, "talk"), func() -> String: return GameState.escape_captivity("talk")]]
+	for sp: Array in specs:
+		var act: Callable = sp[3]
+		var why: String = sp[2]
+		var b := _button(sp[1], func() -> void:
+			var err: String = act.call()
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and why.is_empty())
+		b.name = sp[0]
+		b.theme_type_variation = UiTheme.ACCENT_BUTTON
+		if not why.is_empty():
+			b.tooltip_text = tr(why)
 
 
 ## The guard holds the hero (v0.7.14): the wergild, the stocks or a fight.

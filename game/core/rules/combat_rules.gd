@@ -304,6 +304,8 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 		return lines
 	if bool(source.get("sneak", false)):
 		var roll := stealth_roll(s, data)
+		if source.has("stealth_total"):  # rolled at the door already (v0.7.22.12): the same roll decides
+			roll = {"total": int(source["stealth_total"]), "note": ""}
 		var unseen: Array[String] = []
 		var seen: Array[String] = []
 		for id: String in foes:
@@ -313,7 +315,7 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 				unseen.append(str(f["name"]))
 			else:
 				seen.append(str(f["name"]))
-		var line := "%s крадётся: Скрытность %d%s" % [who, int(roll["total"]), roll["note"]]
+		var line := ("%s нападает из укрытия" % who) if bool(source.get("from_hiding", false)) else "%s крадётся: Скрытность %d%s" % [who, int(roll["total"]), roll["note"]]
 		if not unseen.is_empty():
 			line += " — застигнуты врасплох: " + ", ".join(unseen)
 		if not seen.is_empty():

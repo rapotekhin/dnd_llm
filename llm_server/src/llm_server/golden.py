@@ -119,6 +119,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "time_of_day": scene.get("time", ""),
                 "props": scene.get("props", []),  # already in the protocol shape (SceneProp, 0.11.0)
                 "creatures": scene.get("creatures", []),  # the foes a fight left (0.45.0)
+                "sneaking": bool(scene.get("sneaking", False)),
                 "furnish": bool(scene.get("furnish", False)),
                 "closed_exits": scene.get("closed_exits", []),  # (0.14.0)
                 "notes": scene.get("notes", []),

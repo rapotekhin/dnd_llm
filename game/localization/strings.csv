@@ -718,6 +718,21 @@ SLOT_CANTRIP,заговор
 SLOT_AT_WILL,по желанию
 HEALTH_KNOCKED_OUT,без сознания
 SIDE_CREATURES,После боя
+SIDE_UNSEEN,Вас не заметили
+SIDE_CAPTIVE,Вы в плену — связаны
+BTN_ENCOUNTER_ATTACK,Напасть врасплох
+BTN_ENCOUNTER_TALK,"Заговорить ({skill})"
+ENCOUNTER_PARLEY_SAY_PERSUASION,"Выхожу из укрытия с поднятыми руками и предлагаю договориться"
+ENCOUNTER_PARLEY_SAY_INTIMIDATION,"Выхожу из укрытия и велю им убираться, пока целы"
+ENCOUNTER_NONE,Врагов здесь нет
+BTN_ESCAPE_ATHLETICS,"Порвать путы (Атлетика, СЛ {dc})"
+BTN_ESCAPE_SLEIGHT,"Выскользнуть из пут (Ловкость рук, СЛ {dc})"
+BTN_ESCAPE_TALK,Уговорить отпустить (Убеждение)
+CAPTIVE_SAY_ESCAPE_ATHLETICS,Пытаюсь порвать путы
+CAPTIVE_SAY_ESCAPE_SLEIGHT,Пытаюсь выскользнуть из пут
+CAPTIVE_SAY_TALK,Уговариваю их меня отпустить
+CAPTIVE_HELD,Вы связаны — сначала освободитесь
+CAPTIVE_NOT,Вы не в плену
 BTN_CREATURE_BIND,Связать
 BTN_CREATURE_FREE,Отпустить
 BTN_CREATURE_LEAD,Вести с собой

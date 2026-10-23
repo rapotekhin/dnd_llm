@@ -1515,6 +1515,24 @@ scenarios:
     rubric:
       - "Связанный наёмник есть в сцене и реагирует как живой: боится, молчит, торгуется, врёт или выдаёт сведения; мастер не говорит, что пленника нет или что он исчез"
 
+  - id: lurking_foes_no_fight
+    title: "Враги не заметили крадущегося героя — мастер не начинает бой сам (большой тест, v0.7.22.12)"
+    category: combat
+    extends: tavern
+    input: "Тихо выглядываю из-за камней: сколько их и чем вооружены?"
+    snapshot:
+      scene:
+        room: {id: outpost-yard, name: "Двор заставы", description: "Развалины казармы, у костра — чьи-то тени."}
+        npcs: []
+        sneaking: true
+        creatures: ["Разбойник ×2 — враждебны, героя не заметили (он крадётся рядом)"]
+    engine:
+      check: {d20: [16], bonus: 5, total: 21, dc: 12, success: true, nat: null, blocked: false}
+    expect:
+      effects: {forbidden_kinds: [start_combat, damage]}
+    rubric:
+      - "Мастер описывает двух разбойников у костра, не замечающих героя; бой не начинается — напасть, заговорить или уйти герой решит сам"
+
   - id: crime_hide_body_no_promise
     title: "Спрятать тело словами — не обещать, что его никогда не найдут (большой тест, v0.7.22.10)"
     category: consequences

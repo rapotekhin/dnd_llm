@@ -1010,6 +1010,9 @@ func set_sneaking(on: bool) -> String:
 		return "SNEAK_BUSY"
 	if not on:
 		session.sneaking = false
+		if not EncounterRules.lurking(session, session.room_id).is_empty() and not is_busy():
+			encounter_attack(false)  # v0.7.22.12: out of hiding — they see the hero
+			return ""
 		EventBus.state_changed.emit()
 		return ""
 	if session.sneak_noticed == session.room_id:
@@ -1144,6 +1147,13 @@ func finish_combat(take: Array = []) -> void:
 			s.encounters_done.append(str(s.combat["encounter"]))
 	if outcome in ["victory", "truce"]:
 		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id))  # the beaten stay in the room (v0.7.22.11)
+	if outcome == "captured":  # v0.7.22.12: bound in their place, not a won fight
+		var foes: Array = []
+		for fid: String in CombatRules.enemies(s):
+			var f := CombatRules.fighter(s, fid)
+			if str(f.get("npc_id", "")).is_empty():
+				foes.append({"monster": str(f["monster"]), "name": str(f["name"]), "count": 1})
+		lines.append_array(EncounterRules.capture(s, foes, str(s.combat.get("encounter", "")), str(s.combat.get("room_from", ""))))
 	for id: String in CombatRules.enemies(s, false):
 		var f := CombatRules.fighter(s, id)
 		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():  # the body, quests, a murder (v0.7.14)
@@ -1305,6 +1315,9 @@ func go(room_id: String) -> bool:
 	if CrimeRules.held(session):
 		EventBus.message.emit(tr("CRIME_HELD"))
 		return false
+	if EncounterRules.captive(session):
+		EventBus.message.emit(tr("CAPTIVE_HELD"))
+		return false
 	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
 		EventBus.message.emit(tr("TOO_HEAVY"))
 		return false
@@ -1332,8 +1345,17 @@ func _move_to(room_id: String, lines: Array[String]) -> void:
 	EventBus.state_changed.emit()
 	if _live_encounter(room_id):
 		var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id)["encounter"]
-		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
-			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {}), "parley": str(enc.get("parley", ""))})
+		var meet := EncounterRules.meet(session, Catalog.data, room_id, from, enc)  # not a fight from the doorway (v0.7.22.12)
+		if bool(meet["lurk"]):
+			_add(GameSession.effect_entry([str(meet["line"])]))
+			EventBus.state_changed.emit()
+			_request("enter", "\n".join(lines.slice(1) + [str(meet["line"])]))
+			return
+		var src := {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
+			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {}), "parley": str(enc.get("parley", ""))}
+		if int(meet["stealth"]) >= 0:
+			src["stealth_total"] = int(meet["stealth"])
+		start_combat(enc["enemies"], src)
 		return
 	_request("enter", "\n".join(lines.slice(1)))
 
@@ -1344,6 +1366,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	var from := session.room_id
 	if session.sneak_noticed != room_id:
 		session.sneak_noticed = ""  # a new room: people there have not seen the player sneak yet
+	session.lurking.erase(from)  # the unaware foes are left behind (v0.7.22.12)
 	if session.sneaking:
 		var seen := _sneak_past_people(room_id)
 		if not seen.is_empty():
@@ -1378,6 +1401,8 @@ func travel(to: String) -> String:
 		return "TRAVEL_NO_ROUTE"
 	if CrimeRules.held(session):
 		return "CRIME_HELD"
+	if EncounterRules.captive(session):
+		return "CAPTIVE_HELD"
 	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
 		return "TOO_HEAVY"
 	_end_conversation()
@@ -1561,6 +1586,68 @@ func crime_answer(how: String) -> String:
 		return ""
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 	_request("law", ", ".join(lines))
+	return ""
+
+
+## The foes lurking unaware (v0.7.22.12): attack them by surprise (or, `surprise` false, they saw the hero). "" or a key.
+func encounter_attack(surprise: bool = true) -> String:
+	if session == null or is_busy():
+		return "WAIT_BUSY"
+	var lk := EncounterRules.lurking(session, session.room_id)
+	if lk.is_empty():
+		return "ENCOUNTER_NONE"
+	var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], session.room_id).get("encounter", {})
+	session.lurking.erase(session.room_id)
+	var src := {"encounter": str(enc["id"]), "room_from": str(lk.get("from", "")), "sneak": surprise, "waves": enc.get("waves", []),
+		"help": enc.get("help", {}), "parley": str(enc.get("parley", ""))}
+	if surprise:
+		src["stealth_total"] = 99  # nobody saw the hero: all caught off guard
+		src["from_hiding"] = true
+	start_combat(enc["enemies"], src)
+	return ""
+
+
+## Talking to the lurking foes before a fight (v0.7.22.12): one roll; a truce, they go, or the fight. "" or a key.
+func encounter_parley(skill: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	var lk := EncounterRules.lurking(session, session.room_id)
+	if lk.is_empty():
+		return "ENCOUNTER_NONE"
+	var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], session.room_id).get("encounter", {})
+	var why := EncounterRules.talkable(session, Catalog.data, enc["enemies"])
+	if not why.is_empty():
+		return why
+	var text := tr("ENCOUNTER_PARLEY_SAY_" + skill.to_upper())
+	_add(GameSession.player_entry(text))
+	var from := str(lk.get("from", ""))
+	var r := EncounterRules.parley(session, Catalog.data, session.room_id, enc, skill)
+	_add(GameSession.effect_entry(r["lines"]))
+	_log("События: " + ", ".join(r["lines"]))
+	if bool(r["fight"]):
+		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from, "waves": enc.get("waves", []),
+			"help": enc.get("help", {}), "parley": str(enc.get("parley", ""))})
+		return ""
+	EventBus.state_changed.emit()
+	_request("action", text + " [движок уже решил: %s — опиши это, эффекты не нужны]" % ", ".join(r["lines"]))
+	return ""
+
+
+## A way out of captivity (v0.7.22.12): break free, slip the ropes, or talk the captors round. "" or a key.
+func escape_captivity(how: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	var why := EncounterRules.can_escape(session, Catalog.data, how)
+	if not why.is_empty():
+		return why
+	var text := tr("CAPTIVE_SAY_" + how.to_upper())
+	_add(GameSession.player_entry(text))
+	var lines := EncounterRules.escape(session, Catalog.data, how)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	_request("action", text + " [движок уже решил: %s — опиши это, эффекты не нужны]" % ", ".join(lines))
 	return ""
 
 

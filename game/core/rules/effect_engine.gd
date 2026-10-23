@@ -161,6 +161,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var to := str(e.get("room_id", ""))
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "move"):
 				return {"reason": "переход уже предложен в этом ходе"}
+			if EncounterRules.captive(s):  # v0.7.22.12: bound by the captors
+				return {"reason": "герой связан и в плену — уйти нельзя, пока не освободится (кнопки игрока)"}
 			if CrimeRules.held(s):  # big test #5 (v0.7.22.2): the guard leads the hero — anywhere in the location
 				if world.location_id(to) != world.location_id(s.room_id) or world.room(to).is_empty():
 					return {"reason": "стража держит героя: увести его можно только в комнату этой же округи (%s) — к капитану, в караулку; сам он не уйдёт" % world.location_id(s.room_id)}

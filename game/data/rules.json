@@ -849,6 +849,11 @@
 			"very_tall": {"male": "рослый", "female": "рослая", "weight": 1}
 		}
 	},
+	"encounters": {
+		"_doc": "Meetings and captivity (v0.7.22.12, EncounterRules): sneaking in unseen — the foes lurk, no fight; talking first — one roll against the parley DC of the fight; a lost fight to thinking foes — captivity: Athletics or Sleight of Hand against escape_dc (a failure costs escape_fail_minutes), or Persuasion against the parley DC.",
+		"escape_dc": 15,
+		"escape_fail_minutes": 60
+	},
 	"creatures": {
 		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay); a bound one stays and can be led.",
 		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120}

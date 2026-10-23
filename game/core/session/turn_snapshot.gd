@@ -39,7 +39,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"exits": exits, "npcs": npcs, "hooks": hooks(s, data, room), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
 			"props": _props(s, data),
-			"creatures": CreatureRules.snapshot(s, s.room_id),  # v0.7.22.11
+			"creatures": CreatureRules.snapshot(s, s.room_id) + EncounterRules.snapshot(s, data, s.room_id),  # v0.7.22.11, v0.7.22.12
 			"closed_exits": closed_exits(s, data["world"]),
 			"chronicle": s.chronicle_tail(data["world"], 12),
 			"reputation": ReputationRules.text(s, data, loc_id),

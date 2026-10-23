@@ -58,6 +58,9 @@ func _ready() -> void:
 	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_field.add_theme_constant_override("separation", 6)
 	left.add_child(_field)
+	_details = DetailsPanel.new(Vector2(0, 150))  # under the field, not over the chat (v0.7.22.12, the author)
+	_details.name = "CombatDetails"
+	left.add_child(_details)
 	_hint = Label.new()
 	_hint.name = "Hint"
 	_hint.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -114,9 +117,6 @@ func _ready() -> void:
 	var rcol := VBoxContainer.new()
 	rcol.add_theme_constant_override("separation", 10)
 	right.add_child(rcol)
-	_details = DetailsPanel.new(Vector2(0, 240))
-	_details.name = "CombatDetails"
-	rcol.add_child(_details)
 	_log_scroll = ScrollContainer.new()
 	_log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_log_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -454,6 +454,12 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		vb.theme_type_variation = UiTheme.ACCENT_BUTTON
 	var main := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
 	var main_id := str(c.get("equipped", {}).get("main_hand", ""))
+	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), mine,
+		func(t: String) -> String: return GameState.combat_attack(t, false),
+		func(t: String) -> String: return CombatRules.can_attack(s, data, t, false),
+		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
+	if not main_id.is_empty():
+		_details.hook(main_b, str(main["name"]), DetailsPanel.item_text(c, data, s.items, main_id))
 	if not main_id.is_empty():  # fists with a weapon in hand (v0.7.22.11, big test #45)
 		var fist := CombatRules.weapon_profile(c, data, s.items, "")
 		_action(w, "Attack_unarmed", tr("COMBAT_ATTACK").format({"name": fist["name"], "hit": "%+d" % int(fist["to_hit"]), "dmg": _dmg_text(fist)}), mine,
@@ -467,12 +473,6 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	nl.button_pressed = bool(s.combat.get("nonlethal", false))
 	nl.toggled.connect(func(on: bool) -> void: GameState.combat_nonlethal(on))
 	w.add_child(nl)
-	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), mine,
-		func(t: String) -> String: return GameState.combat_attack(t, false),
-		func(t: String) -> String: return CombatRules.can_attack(s, data, t, false),
-		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
-	if not main_id.is_empty():
-		_details.hook(main_b, str(main["name"]), DetailsPanel.item_text(c, data, s.items, main_id))
 	var off := str(c.get("equipped", {}).get("off_hand", ""))
 	if not off.is_empty():
 		var ow := CombatRules.weapon_profile(c, data, s.items, off, true)

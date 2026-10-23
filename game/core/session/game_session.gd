@@ -105,6 +105,10 @@ var body_at: Dictionary = {}
 ## The creatures fights left in the rooms (v0.7.22.11, CreatureRules): {room_id: [creature]}.
 var creatures: Dictionary = {}
 var creature_counter: int = 0
+## v0.7.22.12 (EncounterRules): foes that did not notice the hero {room: {encounter, from}}; the hero's captivity
+## {room, foes, encounter, from} ({} — free).
+var lurking: Dictionary = {}
+var captive: Dictionary = {}
 var bodies: Dictionary = {}
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
@@ -455,6 +459,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"body_at": body_at,
 		"creatures": creatures,
 		"creature_counter": creature_counter,
+		"lurking": lurking,
+		"captive": captive,
 		"bodies": bodies,
 		"searched": searched,
 		"quests_failed": quests_failed,
@@ -569,6 +575,11 @@ static func from_dict(d: Dictionary) -> GameSession:
 		for c: Variant in s.creatures[room]:
 			c["since"] = int(c.get("since", 0))
 	s.creature_counter = int(d.get("creature_counter", 0))
+	s.lurking = (d.get("lurking", {}) as Dictionary).duplicate(true)
+	s.captive = (d.get("captive", {}) as Dictionary).duplicate(true)
+	for f: Variant in s.captive.get("foes", []):
+		if f is Dictionary and f.has("count"):
+			f["count"] = int(f["count"])
 	for npc: String in d.get("body_at", {}):
 		s.body_at[npc] = int(d["body_at"][npc])
 	for npc: String in d.get("disarmed", {}):
