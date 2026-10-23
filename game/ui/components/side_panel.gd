@@ -333,7 +333,7 @@ func _button(text: String, action: Callable, enabled: bool) -> Button:
 	b.text = text
 	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # big test #25 (v0.7.22.5): the whole text, on two lines if need be
 	b.disabled = not enabled
 	b.pressed.connect(func() -> void: action.call())
 	_content.add_child(b)

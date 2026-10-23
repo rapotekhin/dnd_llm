@@ -1367,6 +1367,7 @@ func travel(to: String) -> String:
 		if ConditionRules.dead(session.character) or CrimeRules.held(session):
 			break
 	_travel_line(names, minute0, lines)
+	_set_options([])  # the old room's replies do not follow the hero (big test #34, v0.7.22.5)
 	EventBus.state_changed.emit()
 	if _exhaustion_death():
 		return ""

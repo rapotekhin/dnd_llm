@@ -90,7 +90,7 @@ func _ready() -> void:
 	trade_panel = TradePanel.new()
 	trade_panel.name = "TradePanel"
 	trade_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	trade_panel.size_flags_stretch_ratio = 1.2
+	trade_panel.size_flags_stretch_ratio = 2.6  # big test #29 (v0.7.22.5): the goods take most of the screen, the talk a strip
 	trade_panel.visible = false
 	body.add_child(trade_panel)
 

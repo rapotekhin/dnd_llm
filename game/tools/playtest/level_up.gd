@@ -36,7 +36,7 @@ func run() -> void:
 			await _click(view, "Pick_prep_" + str(p["prepared_list"][i]))
 		await shot("level_%d_picked" % target)
 		var confirm: Button = find(view, "LevelUpConfirm")
-		step("picks complete for %d" % target, not confirm.disabled, (find(view, "LevelUpConfirm").get_parent().get_parent().get_child(2) as Label).text)
+		step("picks complete for %d" % target, not confirm.disabled, (find(view, "LevelUpError") as Label).text)
 		await press(confirm)
 		var c: Dictionary = gs.session.character
 		step("level %d" % target, int(c["level"]) == target and not view.visible,

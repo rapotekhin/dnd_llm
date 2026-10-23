@@ -104,9 +104,14 @@ func _apply_display() -> void:
 
 
 func _master_tab() -> Control:
+	var scroll := ScrollContainer.new()  # big test #1 (v0.7.22.5): the tab grew past the window
+	scroll.name = "Master"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var box := VBoxContainer.new()
-	box.name = "Master"
+	box.name = "MasterBox"
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 10)
+	scroll.add_child(box)
 	var cfg := Backend.config
 	_url = _field(box, "OPT_BACKEND_URL", cfg.url, false)
 	_token = _field(box, "OPT_BACKEND_TOKEN", cfg.token, true)
@@ -192,7 +197,7 @@ func _master_tab() -> Control:
 		diff.selected = levels.find(DifficultyRules.level(GameState.session, Catalog.data))
 		diff.item_selected.connect(func(i: int) -> void: GameState.set_difficulty(str(levels[i])))
 		box.add_child(diff)
-	return box
+	return scroll
 
 
 ## The server's daily spending limit (v0.7.3): spent today of the limit, the limit in dollars or «без лимита».

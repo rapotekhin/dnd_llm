@@ -34,6 +34,7 @@ func _ready() -> void:
 	_coins = _label(purses, false)
 	_haggle_state = _label(col, false)
 	_haggle_state.name = "DealState"
+	_haggle_state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # big test #37 (v0.7.22.5): a long discount line widened the panel
 	_haggle_state.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 
 	var lists := HBoxContainer.new()

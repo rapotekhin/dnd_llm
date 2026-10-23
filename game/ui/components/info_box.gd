@@ -30,6 +30,18 @@ func _init(min_height: int = 130) -> void:
 	show_text(tr("INFO_HINT"), "")
 
 
+## A column of its own beside a list (v0.7.22.5, big test #36): a fixed width, the text scrolls inside, the box does
+## not jump in size from one choice to another.
+func as_column(width: int) -> InfoBox:
+	custom_minimum_size = Vector2(width, 0)
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_body.fit_content = false
+	_body.scroll_active = true
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	(_body.get_parent() as Control).size_flags_vertical = Control.SIZE_EXPAND_FILL
+	return self
+
+
 func show_text(title: String, body: String) -> void:
 	_title.text = title
 	_body.text = body

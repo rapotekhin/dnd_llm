@@ -27,10 +27,15 @@ func _ready() -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 12)
 	margin.add_child(col)
+	var mid := HBoxContainer.new()  # the choices on the left, what the picked one does on the right (big test #36)
+	mid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mid.add_theme_constant_override("separation", 12)
+	col.add_child(mid)
 	var panel := PanelContainer.new()
 	panel.theme_type_variation = UiTheme.SIDE
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(panel)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mid.add_child(panel)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	panel.add_child(scroll)
@@ -38,9 +43,10 @@ func _ready() -> void:
 	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_box.add_theme_constant_override("separation", 8)
 	scroll.add_child(_box)
-	_info = InfoBox.new()
-	col.add_child(_info)
+	_info = InfoBox.new().as_column(560)
+	mid.add_child(_info)
 	_error = Label.new()
+	_error.name = "LevelUpError"
 	_error.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_error.add_theme_color_override("font_color", UiTheme.WARN)
 	col.add_child(_error)
@@ -181,7 +187,6 @@ func _choice_text(title: String, group: String, ids: Array, label: Callable, n: 
 		cb.text = label.call(str(id))
 		cb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		cb.button_pressed = chosen.has(id)
-		cb.tooltip_text = _tip(str(id))
 		InfoBox.hook(cb, _info, cb.text, _tip(str(id)))
 		cb.toggled.connect(func(on: bool) -> void:
 			var sel := chosen.duplicate()
@@ -197,15 +202,21 @@ func _choice_text(title: String, group: String, ids: Array, label: Callable, n: 
 		flow.add_child(cb)
 
 
-## The rules text of a spell, feature or subclass for the checkbox tooltip.
+## The rules text of a spell, feature or subclass for the info column: a spell with its circle, time, range and
+## duration; a feature with the spells it gives (big test #18, v0.7.22.5).
 func _tip(id: String) -> String:
 	var data := Catalog.data
 	if data["classes"]["subclasses"].has(id):
 		return InfoBox.subclass_text(data, id)
-	for pool: Dictionary in [data["spells"], data["classes"]["features"]]:
-		if pool.has(id):
-			return str(pool[id].get("desc", pool[id].get("flavor", "")))
-	return ""
+	if data["spells"].has(id):
+		return DetailsPanel.spell_text(data, id)
+	var f: Dictionary = data["classes"]["features"].get(id, {})
+	if f.is_empty():
+		return ""
+	var out := str(f.get("desc", f.get("flavor", "")))
+	for sid: Variant in data["rules"].get("feature_spells", {}).get(id, []):
+		out += "\n\n%s (по желанию, без ячейки)\n%s" % [data["spells"].get(str(sid), {}).get("name", sid), DetailsPanel.spell_text(data, str(sid))]
+	return out
 
 
 func _asi(c: Dictionary) -> void:

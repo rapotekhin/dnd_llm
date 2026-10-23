@@ -244,8 +244,7 @@ func _radio(parent: Control, key: String, options: Array, columns: int = 3) -> v
 		b.button_pressed = str(choices.get(key, "")) == str(o["id"])
 		b.custom_minimum_size = Vector2(220, 52)
 		b.name = "Pick_" + str(o["id"])
-		if o.has("tooltip"):
-			b.tooltip_text = str(o["tooltip"])
+		if o.has("tooltip"):  # the rules text only in the box below (big test #35, v0.7.22.5)
 			InfoBox.hook(b, _info, str(o["label"]), str(o["tooltip"]))
 		b.pressed.connect(_changed.bind(key, o["id"]))
 		grid.add_child(b)
@@ -263,7 +262,6 @@ func _checks(parent: Control, picked: Array, options: Array, limit: int, on_chan
 		cb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		cb.name = "Check_" + str(o["id"])
 		if o.has("tooltip"):
-			cb.tooltip_text = str(o["tooltip"])
 			InfoBox.hook(cb, _info, str(o["label"]), str(o["tooltip"]))
 		var id: Variant = o["id"]
 		if fixed.has(id):

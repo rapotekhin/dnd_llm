@@ -347,7 +347,7 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			if bool(f.get("surprised", false)):
 				conds.append(tr("COMBAT_FOE_SURPRISED"))
 			card.text = "%s\n%s%s" % [f["name"], tr(CombatRules.health_key(f)), ("\n" + ", ".join(conds)) if not conds.is_empty() else ""]
-			card.tooltip_text = str(f.get("desc", ""))
+			card.tooltip_text = ""  # what the foe is — in the details panel only (big test #35, v0.7.22.5)
 			var lore := CombatRules.monster_card(s, data, f)
 			var about := lore if not lore.is_empty() else tr("COMBAT_FOE_UNKNOWN")
 			if not str(f.get("desc", "")).is_empty():
@@ -355,7 +355,6 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			var foe_name := str(f["name"])
 			card.mouse_entered.connect(func() -> void: _details.show_text(foe_name, about))
 			if not lore.is_empty():
-				card.tooltip_text = lore + "\n\n" + card.tooltip_text
 				card.text += "\nHP %d/%d · КД %d" % [int(f["hp"]), int(f["max_hp"]), int(f["ac"])]
 			var why := "COMBAT_NO_ACTION"
 			if _pending.is_valid() and str(f.get("status")) == "active":
