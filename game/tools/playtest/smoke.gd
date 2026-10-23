@@ -169,6 +169,19 @@ func _map_journal_rest(gs: Node, game: Control) -> void:
 		return
 	await press(up)
 	step("upstairs enter turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
+	# v0.7.22.20 (#8): down and up again the same day — the engine's line, no master's turn
+	await press(find(game, "Exit_brod-tavern-hall"))
+	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+	var masters: int = gs.session.chat.filter(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == GameSession.KIND_DM).size()
+	if PropRules.needs_furnish(gs.session, "brod-tavern-upstairs"):  # the stub master furnishes nothing; the real one does
+		gs.session.props["brod-tavern-upstairs"] = [{"id": "p1", "name": "Кровать", "description": "", "item_id": "", "owner": "", "text": "", "state": ""}]
+	await press(find(game, "Exit_brod-tavern-upstairs"))
+	await frames(3)
+	var last: Dictionary = gs.session.chat.back()
+	var upstairs := str(node("Catalog").data["world"]["rooms"]["brod-tavern-upstairs"]["name"])
+	step("the second entry today — the engine's line", not gs.is_busy() and " ".join(last.get("lines", [])).contains(upstairs)
+		and gs.session.chat.filter(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == GameSession.KIND_DM).size() == masters,
+		" | ".join(gs.session.chat.slice(-4).map(func(e: Dictionary) -> String: return str(e.get("kind", "")) + ": " + " · ".join(e.get("lines", [str(e.get("text", ""))])))))
 	var rest: Button = find(game, "RestButton")
 	if not step("rest button in a safe room", rest != null and not rest.disabled):
 		return

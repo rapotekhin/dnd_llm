@@ -113,6 +113,8 @@ var captive: Dictionary = {}
 ## last spoke to (its master's replies go when it does).
 var foreign: Dictionary = {}
 var talk_creature: String = ""
+## The day the master last described each room (v0.7.22.20, ExplorationRules.again_line): {room_id: day}.
+var described: Dictionary = {}
 var bodies: Dictionary = {}
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
@@ -467,6 +469,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"captive": captive,
 		"foreign": foreign,
 		"talk_creature": talk_creature,
+		"described": described,
 		"bodies": bodies,
 		"searched": searched,
 		"quests_failed": quests_failed,
@@ -592,6 +595,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 			by[owner] = int(d["foreign"][id][owner])
 		s.foreign[id] = by
 	s.talk_creature = str(d.get("talk_creature", ""))
+	for r: String in d.get("described", {}):
+		s.described[r] = int(d["described"][r])
 	var foe_lists: Array = [s.captive.get("foes", [])]
 	for room: String in s.lurking:  # the captors that lurk after an escape (v0.7.22.16)
 		foe_lists.append((s.lurking[room] as Dictionary).get("foes", []))

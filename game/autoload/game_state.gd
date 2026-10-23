@@ -836,10 +836,9 @@ func search_room(skill: String) -> String:
 
 
 ## «Забрать всё» (the author, v0.7.8): the engine takes every portable thing of the room nobody owns, as long as the
-## hero can carry it (PropRules.take_all), then the master narrates it — the same as the words «I take everything I
-## can carry». "" or a localization key.
+## hero can carry it (PropRules.take_all); since v0.7.22.20 (#6) without a master's turn. "" or a localization key.
 func take_all() -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if session == null or is_busy():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
@@ -852,19 +851,12 @@ func take_all() -> String:
 	if not left.is_empty():
 		lines.append("не унести: " + ", ".join(left))
 	CharacterRules.refresh(session.character, Catalog.data, session.items)
-	var text := tr("TAKE_ALL_SAY")
-	_add(GameSession.player_entry(text))
-	_add(GameSession.effect_entry(lines))
-	_log("Игрок: " + text)
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	_request("action", text + " [движок уже забрал: %s%s — эффекты take_prop не нужны; опиши коротко, как герой собирает вещи]" %
-		[", ".join(names), ("; не унести: " + ", ".join(left)) if not left.is_empty() else ""])
+	_quiet_lines(lines)  # nobody's things: the engine's move, no master (v0.7.22.20, #6)
 	return ""
 
 
-## «Взять» in the place window (v0.7.22.7): one thing of the room by the engine (an owner who sees it reacts), then the
-## master narrates it — the same as the words «I take it». "" or a localization key.
+## «Взять» in the place window (v0.7.22.7): one thing of the room by the engine; the master narrates only an owner who
+## saw it (v0.7.22.20, #6). "" or a localization key.
 func take_prop(prop_id: String) -> String:
 	if session == null or is_busy() or not Backend.is_ready():
 		return "WAIT_BUSY"
@@ -877,6 +869,9 @@ func take_prop(prop_id: String) -> String:
 	var lines: Array[String] = [str(r["summary"])]
 	lines.append_array(PropRules.apply_take(session, Catalog.data, r["plan"]))
 	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	if str(r["plan"].get("owner", "")).is_empty():  # nobody saw a theft: the engine's move, no master (v0.7.22.20, #6)
+		_quiet_lines(lines)
+		return ""
 	var p := PropRules.find(session, session.room_id, prop_id)
 	var text := tr("PLACE_TAKE_SAY").format({"name": p.get("name", prop_id)})
 	_add(GameSession.player_entry(text))
@@ -1388,6 +1383,11 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 			src["stealth_total"] = int(meet["stealth"])
 		start_combat(enc["enemies"], src)
 		return
+	var again := ExplorationRules.again_line(session, Catalog.data, room_id) if lines.size() <= 1 else ""
+	if not again.is_empty():  # described today and nothing on the way: the engine's line, no master (v0.7.22.20, #8)
+		_quiet_lines([again] as Array[String])
+		return
+	session.described[room_id] = session.day
 	_request("enter", "\n".join(lines.slice(1)))
 
 

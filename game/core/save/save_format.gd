@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 39
+const SAVE_VERSION := 40
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -61,6 +61,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	36: _v36_to_v37,
 	37: _v37_to_v38,
 	38: _v38_to_v39,
+	39: _v39_to_v40,
 }
 
 
@@ -359,3 +360,8 @@ static func _v38_to_v39(data: Dictionary, _ctx: Dictionary) -> void:
 				c["owner"] = OwnerRules.HERO
 	data["session"]["foreign"] = {}
 	data["session"]["talk_creature"] = ""
+
+
+## v0.7.22.20: no room counts as described today — the next entry of each gets the master's description.
+static func _v39_to_v40(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["described"] = {}

@@ -1,7 +1,7 @@
 {% if character %}
 ## Персонаж игрока
 
-{{ character.name }} — {{ character.race }} {{ character.class_name }}, {{ character.level }} уровень{% if character.body %} ({{ character.body }}){% endif %}{% if character.background %}, {{ character.background | lower }}{% endif %}. HP {{ character.hp }}/{{ character.max_hp }}, КД {{ character.ac }}, скорость {{ character.speed }} футов, монеты: {{ coins }}.{% if reward_left %} Награды от тебя (монеты и вещи вне заданий) до долгого отдыха — ещё на {{ reward_left }}.{% endif %}
+{{ character.name }} — {{ hero_gender(character.gender) }}, {{ character.race }} {{ character.class_name }}, {{ character.level }} уровень{% if character.body %} ({{ character.body }}){% endif %}{% if character.background %}, {{ character.background | lower }}{% endif %}. HP {{ character.hp }}/{{ character.max_hp }}, КД {{ character.ac }}, скорость {{ character.speed }} футов, монеты: {{ coins }}.{% if reward_left %} Награды от тебя (монеты и вещи вне заданий) до долгого отдыха — ещё на {{ reward_left }}.{% endif %}
 {% if character.backstory %}История персонажа: {{ character.backstory }}
 {% endif %}{% if character.abilities %}Характеристики: {% for k, v in character.abilities.items() %}{{ ability_name(k) }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if character.effects %}Состояния и эффекты: {{ character.effects | join("; ") }} (их влияние на проверки и бой движок учитывает сам).

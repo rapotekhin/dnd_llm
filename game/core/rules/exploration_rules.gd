@@ -242,6 +242,24 @@ static func found_texts(s: GameSession, world: Dictionary, room_id: String) -> A
 	return out
 
 
+## A room the master already described today, entered again (v0.7.22.20, #8): one line of the engine — «Снова Зал
+## таверны. Здесь: Бруно, Мира» — instead of a master's turn. "" when the master should describe it: the first visit
+## of the day, a room still to furnish.
+static func again_line(s: GameSession, data: Dictionary, room_id: String) -> String:
+	if int(s.described.get(room_id, -1)) != s.day or PropRules.needs_furnish(s, room_id):
+		return ""
+	var world := WorldView.new(data["world"])
+	var lines: Array = data["world"].get("revisit", data["rules"]["revisit"]["lines"])
+	if lines.is_empty():
+		return ""
+	var place := str(world.room(room_id).get("name", room_id))
+	var line := str(lines[absi(hash(room_id + str(s.minute))) % lines.size()]).format({"place": place})
+	var who: Array = s.npcs_here(world.world, room_id).map(func(id: String) -> String: return str(world.npc(id).get("name", id)))
+	for c: Dictionary in CreatureRules.here(s, room_id):
+		who.append(str(c["name"]))
+	return line + (" Здесь: %s." % ", ".join(who) if not who.is_empty() else "")
+
+
 ## {"cost_cp": n} when a long rest is possible in this room, {} otherwise.
 ## With the session and the data (v0.7.11) a background may make it free: an acolyte in a temple of the pack (even
 ## where nobody rents rooms), an entertainer after a show.

@@ -85,6 +85,20 @@ def test_rule_topics_out_of_the_prompt_unless_the_scene_needs_them():
     assert all(prompts.topic_text(k).strip() for k in prompts.TOPICS)
 
 
+def test_the_short_prompt_knows_the_hour_and_the_heros_looks():
+    # v0.7.22.20 (#17, #22): a words-only turn keeps the time of day and who the hero is
+    s = snap()
+    s.scene.time_of_day = "ночь, 23:10, темно"
+    s.character.gender = "female"
+    s.character.body = "пожилая, стройная, невысокая"
+    npc = s.scene.npcs[0]
+    for text in (prompts.short_prompt("exploration", s, None), prompts.short_prompt("social", s, npc)):
+        assert "Сейчас: ночь, 23:10, темно" in text and "не путай ночь с днём" in text
+        assert "женщина" in text and "облик: пожилая, стройная, невысокая" in text
+    assert "его и видит" in prompts.short_prompt("social", s, npc)
+    assert "женщина" in prompts.system_prompt("exploration", s, None)
+
+
 def test_creatures_of_the_scene_bring_the_captives_rules():
     # v0.7.22.17: a prisoner is sold by `owner`, a truce is no captivity
     s = snap()

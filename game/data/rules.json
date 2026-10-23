@@ -1032,6 +1032,10 @@
 		"wait_step": 30,
 		"defend": {"tags": ["military"], "friend_attitude": 2}
 	},
+	"revisit": {
+		"_doc": "A room the master already described today (v0.7.22.20, the author's fixes check #8): entered again with nothing on the way, the engine says one of these lines ({place} — the room's name) and who is here, with no master's turn. A pack may give its own (world.json `revisit`).",
+		"lines": ["Снова {place}.", "{place} — вы здесь уже были сегодня.", "Вы возвращаетесь: {place}.", "{place}: всё на прежних местах."]
+	},
 	"props": {
 		"abandon_hours": 24,
 		"_abandon": "v0.7.22.8 (big test #28): what the hero dropped in the world is gone after abandon_hours (someone took it); a thing put into a container stays.",

@@ -52,6 +52,11 @@ def gender_rule(gender: Gender) -> str:
     }.get(gender, "Пол персонажа не указан: избегай родовых форм при обращении к игроку.")
 
 
+def hero_gender(gender: Gender) -> str:
+    """The hero's sex in a word for the scene (v0.7.22.20, #22): the NPCs see it in every talk."""
+    return {"female": "женщина", "male": "мужчина"}.get(gender, "пол не указан")
+
+
 def npc_gender_rule(gender: Gender) -> str:
     return {
         "female": "О себе NPC говорит в женском роде.",
@@ -73,7 +78,7 @@ _env = Environment(
     lstrip_blocks=True,
     keep_trailing_newline=False,
 )
-_env.globals.update(attitude_word=attitude_word, money=coins, summary_title=summary_title, ability_name=ability_name,
+_env.globals.update(attitude_word=attitude_word, hero_gender=hero_gender, money=coins, summary_title=summary_title, ability_name=ability_name,
                     style_rule=lambda s: STYLE_RULES.get(s, STYLE_RULES["classic"]),
                     violence_rule=lambda v: VIOLENCE_RULES.get(v, VIOLENCE_RULES["medium"]), role_name=lambda r: _ROLES.get(r, r))
 
