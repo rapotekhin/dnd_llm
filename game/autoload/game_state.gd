@@ -472,7 +472,7 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 ## back and spent again by the combat cast — on that NPC, now caught off guard. Lines.
 func _opening_strike(opening: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
-	if opening.is_empty():
+	if opening.is_empty() or not opening.has("spell"):  # the button or a weapon: the hero strikes by the combat buttons
 		return lines
 	var data: Dictionary = Catalog.data
 	var target := CombatRules.fighter_of_npc(session, str(opening["npc_id"]))
@@ -1151,13 +1151,15 @@ func finish_combat(take: Array = []) -> void:
 		var foes: Array = []
 		for fid: String in CombatRules.enemies(s):
 			var f := CombatRules.fighter(s, fid)
-			if str(f.get("npc_id", "")).is_empty():
-				foes.append({"monster": str(f["monster"]), "name": str(f["name"]), "count": 1})
+			if str(f.get("npc_id", "")).is_empty():  # wounds and XP kept for a fight with them again (v0.7.22.16)
+				foes.append({"monster": str(f["monster"]), "name": str(f["name"]), "count": 1, "hp": int(f["hp"]), "no_xp": bool(f.get("no_xp", false))})
 		lines.append_array(EncounterRules.capture(s, foes, str(s.combat.get("encounter", "")), str(s.combat.get("room_from", ""))))
 	for id: String in CombatRules.enemies(s, false):
 		var f := CombatRules.fighter(s, id)
 		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():  # the body, quests, a murder (v0.7.14)
 			lines.append_array(CrimeRules.on_death(s, Catalog.data, str(f["npc_id"]), bool(f.get("by_hero", false)), s.room_id))
+		elif not str(f.get("npc_id", "")).is_empty() and bool(f.get("by_hero", false)) and outcome != "captured":  # v0.7.22.16: an assault
+			lines.append_array(CrimeRules.on_assault(s, Catalog.data, str(f["npc_id"]), str(f.get("status")) != "unconscious", s.room_id))
 	if outcome == "player_fled" and not str(s.combat.get("room_from", "")).is_empty():
 		s.room_id = str(s.combat["room_from"])
 	if int(s.character["hp"]) <= 0:
@@ -1271,7 +1273,8 @@ func submit(text: String, engine_note: String = "") -> bool:
 	var pinned := not attached.is_empty() and session != null and session.mode != GameSession.MODE_COMBAT
 	if session == null or (text.is_empty() and not pinned) or is_busy() or not Backend.is_ready():
 		return false
-	if pinned and text.is_empty():  # the attachment alone: a cast as from the sheet
+	var hostile := pinned and _hostile_attach(attached)  # v0.7.22.16: a blow or a hostile spell at an NPC — the fight
+	if pinned and text.is_empty() and not hostile:  # the attachment alone: a cast as from the sheet
 		var why := _use_alone(attached)
 		if not why.is_empty():
 			EventBus.message.emit(tr(why))
@@ -1298,10 +1301,19 @@ func submit(text: String, engine_note: String = "") -> bool:
 		if str(attached.get("kind", "")) == "spell" and not str(attached.get("target", "")).is_empty() and CombatRules.is_engine_spell(data, str(attached["id"])):
 			_opening = {"spell": str(attached["id"]), "slot": int(attached.get("spent_slot", 0)), "npc_id": str(attached["target"])}
 			spent["facts"] = str(spent["facts"]) + " Если этим игрок нападает на NPC — начни бой с ним (next_mode combat): исход заклинания движок разрешит первым ходом боя, урон и последствия не описывай."
+		var target := str(attached.get("target", ""))
 		attached = {}
 		_add(GameSession.effect_entry(spent["lines"]))
 		_log("События: " + ", ".join(spent["lines"]))
 		facts = " [Вместе с этим, до слов игрока: %s]" % spent["facts"]
+		if hostile:  # v0.7.22.16 (#26): a blow or a hostile spell at an NPC is an attack — the engine starts the fight
+			var op := _opening.duplicate()
+			_refund = {}
+			_refund_what = {}
+			if not text.is_empty():
+				_add(GameSession.player_entry(text))
+				_log("Игрок: " + text)
+			return attack_npc(target, op).is_empty()
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
 	_request("action", text + facts + ((" " + engine_note) if not engine_note.is_empty() else ""))
@@ -1337,11 +1349,13 @@ func go(room_id: String) -> bool:
 
 ## Steps into `room_id`: time passes, passive Perception (sneaking, darkness), caches, quest steps; an encounter
 ## starts the fight, otherwise the master describes the room. `lines` — what happened on the way (a trap).
-func _move_to(room_id: String, lines: Array[String]) -> void:
+func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> void:
 	var from := session.room_id
 	_step(room_id, lines)
-	lines.push_front("Переход: %s" % world().room(room_id).get("name", room_id))
-	_add(GameSession.effect_entry(lines))
+	if announce:  # the master's move already showed «Переход» among its effects (v0.7.22.16)
+		lines.push_front("Переход: %s" % world().room(room_id).get("name", room_id))
+	if not lines.is_empty():
+		_add(GameSession.effect_entry(lines))
 	EventBus.state_changed.emit()
 	if _live_encounter(room_id):
 		var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id)["encounter"]
@@ -1635,9 +1649,9 @@ func encounter_attack(surprise: bool = true) -> String:
 	var lk := EncounterRules.lurking(session, session.room_id)
 	if lk.is_empty():
 		return "ENCOUNTER_NONE"
-	var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], session.room_id).get("encounter", {})
+	var enc := EncounterRules.lurking_encounter(session, Catalog.data, session.room_id)
 	session.lurking.erase(session.room_id)
-	var src := {"encounter": str(enc["id"]), "room_from": str(lk.get("from", "")), "sneak": surprise, "waves": enc.get("waves", []),
+	var src := {"encounter": str(enc.get("id", "")), "room_from": str(lk.get("from", "")), "sneak": surprise, "waves": enc.get("waves", []),
 		"help": enc.get("help", {}), "parley": str(enc.get("parley", ""))}
 	if surprise:
 		src["stealth_total"] = 99  # nobody saw the hero: all caught off guard
@@ -1653,7 +1667,7 @@ func encounter_parley(skill: String) -> String:
 	var lk := EncounterRules.lurking(session, session.room_id)
 	if lk.is_empty():
 		return "ENCOUNTER_NONE"
-	var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], session.room_id).get("encounter", {})
+	var enc := EncounterRules.lurking_encounter(session, Catalog.data, session.room_id)
 	var why := EncounterRules.talkable(session, Catalog.data, enc["enemies"])
 	if not why.is_empty():
 		return why
@@ -1664,7 +1678,7 @@ func encounter_parley(skill: String) -> String:
 	_add(GameSession.effect_entry(r["lines"]))
 	_log("События: " + ", ".join(r["lines"]))
 	if bool(r["fight"]):
-		start_combat(enc["enemies"], {"encounter": str(enc["id"]), "room_from": from, "waves": enc.get("waves", []),
+		start_combat(enc["enemies"], {"encounter": str(enc.get("id", "")), "room_from": from, "waves": enc.get("waves", []),
 			"help": enc.get("help", {}), "parley": str(enc.get("parley", ""))})
 		return ""
 	EventBus.state_changed.emit()
@@ -1762,6 +1776,39 @@ func _quest_progress() -> void:
 	if not lines.is_empty():
 		_add(GameSession.effect_entry(lines))
 		_log("События: " + ", ".join(lines))
+
+
+## A hostile thing pinned to the words with an NPC of the scene as its target (v0.7.22.16): a weapon, or a spell that
+## hurts or holds (CombatRules.hostile_spell). Charms, heals and words stay a master's turn.
+func _hostile_attach(what: Dictionary) -> bool:
+	var target := str(what.get("target", ""))
+	if target.is_empty() or not session.npcs_here(world().world, session.room_id).has(target):
+		return false
+	match str(what.get("kind", "")):
+		"spell":
+			return CombatRules.hostile_spell(Catalog.data, str(what.get("id", "")))
+		"item_note":
+			return ItemRules.def_of(Catalog.data["items"], session.items, str(what.get("id", ""))).has("weapon")
+	return false
+
+
+## «Напасть» on an NPC of the scene (v0.7.22.16, the author's fixes check #32): the fight at once, without the master.
+## The hero acts first; one who does not expect it is caught off guard (CombatRules.npc_unaware). `opening` — a
+## spell already spent at it ({spell, slot}): the engine resolves it as the first blow. "" or a localization key.
+func attack_npc(npc_id: String, opening: Dictionary = {}) -> String:
+	if session == null or is_busy() or not Backend.is_ready() or CombatRules.active(session):
+		return "WAIT_BUSY"
+	if not session.npcs_here(world().world, session.room_id).has(npc_id):
+		return "CREATURE_NONE"
+	_end_conversation()
+	var npc := world().npc(npc_id)
+	session.pending_fight = [{"monster": str(npc.get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])),
+		"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0, "by_hero": true}]
+	_opening = opening.duplicate()
+	_opening["npc_id"] = npc_id
+	_opening["unaware"] = CombatRules.npc_unaware(session, Catalog.data, npc_id)
+	_start_pending_fight()
+	return ""
 
 
 ## NPC button: start a conversation (or trade with a trader); the NPC greets the player.
@@ -2035,6 +2082,20 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 		_end_conversation()
 		return "resume"
 	_quest_progress()
+	if s.room_id != room_before and s.arrest != s.room_id:
+		# v0.7.22.16: the master's move goes the way of the exit button — a trap on the exit, a meeting, the fight
+		var to := s.room_id
+		s.room_id = room_before
+		_end_conversation()
+		var steps: Array[String] = []
+		var trap := ExplorationRules.trap_on_exit(s, Catalog.data["world"], room_before, to)
+		if not trap.is_empty():
+			steps = ExplorationRules.spring_trap(s, Catalog.data, room_before, trap)
+			if int(s.character["hp"]) <= 0:
+				_trap_downed.call_deferred(steps)
+				return ""
+		_move_to.call_deferred(to, steps, false)
+		return ""
 	if s.room_id != room_before:
 		CreatureRules.follow(s, room_before, s.room_id)  # v0.7.22.11
 		var moved := TimeRules.on_move(s, Catalog.data, room_before, s.room_id)

@@ -179,6 +179,22 @@ def test_second_check_is_refused_without_calling_the_engine(data_dir):
     assert msg["result"]["check_ids"] == ["c-1"]
 
 
+def test_a_wrong_check_is_refused_not_a_failed_turn(data_dir):
+    # v0.7.22.16 (the author's trace): request_check without a skill or with a wrong tier lost three turns in a row
+    fn = scripted(
+        ("request_check", {"dc_tier": "medium", "reason": "a"}),
+        ("request_check", {"skill": "perception", "dc_tier": "trivial", "reason": "b"}),
+        ("request_check", {"skill": "perception", "save": "", "dc_tier": "easy", "reason": "c", "sense": "smell"}),
+        ("final", {"narration": "Готово."}),
+    )
+    msg, calls, _ = play(data_dir, fn)
+    assert "ровно одно" in last_tool_text(fn.state["prompts"][1])
+    assert "dc_tier" in last_tool_text(fn.state["prompts"][2])
+    assert [c["method"] for c in calls] == ["engine.check"]
+    assert calls[0]["params"].get("sense") is None  # a sense the engine does not know is dropped
+    assert msg["result"]["check_ids"] == ["c-1"]
+
+
 def test_new_item_needs_a_search_first_and_lands_in_the_library(data_dir):
     item = GeneratedItem(name="Кинжал инея", item_type="weapon", base="dagger", rarity="uncommon", value_cp=20000,
                          properties=["finesse", "cold_damage"], description="Клинок покрыт изморозью.").model_dump()

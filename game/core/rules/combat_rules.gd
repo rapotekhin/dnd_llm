@@ -191,7 +191,8 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 
 
 ## The fight began with the hero's own attack on an NPC (v0.7.7, as in BG3): the hero acts first and that NPC is
-## caught off guard. `source.opening` {npc_id}; the strike itself is resolved by the caller.
+## caught off guard. `source.opening` {npc_id, unaware}; the strike itself is resolved by the caller. v0.7.22.16:
+## `unaware` false — the NPC expected it (hostile, wary): the hero still acts first, but nobody is caught off guard.
 static func _opening(s: GameSession, source: Dictionary) -> Array[String]:
 	var npc := str(source.get("opening", {}).get("npc_id", ""))
 	if npc.is_empty():
@@ -199,10 +200,12 @@ static func _opening(s: GameSession, source: Dictionary) -> Array[String]:
 	for id: String in enemies(s):
 		var f := fighter(s, id)
 		if str(f.get("npc_id", "")) == npc:
-			f["surprised"] = true
 			var order: Array = s.combat["order"]
 			order.erase(PLAYER)
 			order.push_front(PLAYER)
+			if not bool(source.get("opening", {}).get("unaware", true)):
+				return ["%s нападает первой очередью — %s ждал(а) этого" % [s.character.get("name", ""), f["name"]]]
+			f["surprised"] = true
 			return ["Удар без предупреждения: %s ходит первой очередью, %s не ждёт нападения" % [s.character.get("name", ""), f["name"]]]
 	return []
 
@@ -249,6 +252,10 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: in
 				"desc": str(spec.get("desc", "")), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "ac": int(m["ac"]),
 				"col": clampi(col, -edge(data), edge(data)), "status": "active", "conditions": [], "morale": false,
 				"npc_id": str(spec.get("npc_id", "")), "by_hero": bool(spec.get("by_hero", false))}
+			if spec.has("hp"):  # a creature of the room fought again keeps its wounds (v0.7.22.16, #21)
+				fighters[id]["hp"] = clampi(int(spec["hp"]), 1, int(m["hp"]))
+			if bool(spec.get("no_xp", false)):  # its XP was given for the fight that beat it
+				fighters[id]["no_xp"] = true
 			if not str(spec.get("npc_id", "")).is_empty() and not TheftRules.lost_weapons(s, data, str(spec["npc_id"])).is_empty():
 				fighters[id]["actions"] = TheftRules.armed_actions(s, data, str(spec["npc_id"]), m["actions"])  # big test #3 (v0.7.22.8)
 			ids.append(id)
@@ -880,6 +887,21 @@ static func _hurt_enemy(s: GameSession, data: Dictionary, t: Dictionary, dmg: in
 
 
 ## Engine spells (rules.combat.engine_spells): "" when castable at that target now, otherwise a reason.
+## An attack, not a word (v0.7.22.16): a spell of the engine's that hurts (an attack roll or damage) or holds (a
+## condition spell beyond a charm). Cast at an NPC out of a fight, it starts the fight.
+static func hostile_spell(data: Dictionary, spell_id: String) -> bool:
+	var sp: Dictionary = data["spells"].get(spell_id, {})
+	if (cfg(data)["engine_spells"] as Array).has(spell_id) and (sp.has("attack") or sp.has("damage_at_slot") or sp.has("damage_at_level")):
+		return true
+	var cs: Dictionary = cfg(data)["condition_spells"].get(spell_id, {}) if cfg(data)["condition_spells"].get(spell_id) is Dictionary else {}
+	return not cs.is_empty() and (cs.get("conditions", []) as Array).any(func(x: Variant) -> bool: return str(x) != "charmed")
+
+
+## An NPC who does not expect an attack (v0.7.22.16): not hostile and its attitude at least unaware_attitude.
+static func npc_unaware(s: GameSession, data: Dictionary, npc_id: String) -> bool:
+	return not SocialRules.refuses(s, data, npc_id) and s.attitude(npc_id) >= int(cfg(data)["unaware_attitude"])
+
+
 static func is_engine_spell(data: Dictionary, spell_id: String) -> bool:
 	return (cfg(data)["engine_spells"] as Array).has(spell_id) or cfg(data)["condition_spells"].has(spell_id) 		or not SpellEffects.spec(data, spell_id).is_empty()  # the buffs and curses of v0.7.13 resolve in the engine too
 
@@ -2556,7 +2578,7 @@ static func results(s: GameSession, data: Dictionary, encounter_loot: Dictionary
 	for id: String in enemies(s, false):
 		var f := fighter(s, id)
 		var m := _monster(data, f)
-		if str(f["status"]) != "active":
+		if str(f["status"]) != "active" and not bool(f.get("no_xp", false)):
 			xp += int(m["xp"])
 		if str(f["status"]) in ["dead", "surrendered", "unconscious"]:
 			for item: Variant in m.get("equipment", []):

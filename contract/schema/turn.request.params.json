@@ -308,7 +308,8 @@
             "dead",
             "fled",
             "surrendered",
-            "truce"
+            "truce",
+            "unconscious"
           ],
           "title": "Status",
           "type": "string"

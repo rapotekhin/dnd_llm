@@ -858,7 +858,9 @@
 	},
 	"creatures": {
 		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay); a bound one stays and can be led.",
-		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120}
+		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120},
+		"_v07_22_16": "A creature keeps hp and xp_given (fought again — its wounds, no XP twice); the helpless (unconscious or bound) is finished off without a fight. A pack NPC knocked out lies as a creature with its npc_id; waking or let go it goes home with woken_attitude and the assault is known (crime kind `assault`).",
+		"woken_attitude": -3
 	},
 	"wear_slots": {
 		"_doc": "Slots of worn things (v0.7.22.9, big test #24): a wondrous item goes to the slot of its `look` (or its own `slot`; a made one — by the first word of its name); it works only worn. Without a slot (a stone, a pearl, a wand) it works carried.",
@@ -998,7 +1000,13 @@
 		"notable_mult": 2,
 		"stocks_days": 2,
 		"patrol_size": 2,
+		"kinds": {
+			"_doc": "Kinds of crimes (v0.7.22.16): severity — how much each adds to the sentence (a sentence by the sum), fine_cp — its wergild (murder — fine_cp above), name — in the lines.",
+			"murder": {"severity": 1, "name": "убийство"},
+			"assault": {"severity": 0, "fine_cp": 1000, "name": "нападение"}
+		},
 		"sentences": [
+			{"severity": 0, "kind": "stocks", "days": 1, "name": "колодки"},
 			{"severity": 1, "kind": "prison", "days": 3, "name": "заключение"},
 			{"severity": 2, "kind": "prison", "days": 7, "name": "заключение"},
 			{"severity": 3, "kind": "labour", "days": 14, "name": "каторга", "exhaustion": 1}
@@ -1109,6 +1117,8 @@
 			"ranged": 3
 		},
 		"default_npc_monster": "commoner",
+		"_attack_npc": "v0.7.22.16 (the author's fixes check #32): the hero attacks an NPC of the scene by the button «Напасть» or by a hostile spell or a weapon pinned to the words with the NPC as its target — the engine starts the fight, the hero acts first; an NPC whose attitude is at least unaware_attitude (and who is not hostile) does not expect it — caught off guard.",
+		"unaware_attitude": -1,
 		"condition_spells": {
 			"_doc": "Condition spells the engine resolves (v0.6.5): conditions for `rounds` (foe turns), a save against the spell DC (or a hit point `pool` + `pool_per_slot` — the weakest first), `repeat_save` at the end of the foe's turn, `ends_on_damage`, `types` it works on / `immune_types`, `immune_condition` (Sleep: those immune to charm), `min_int`, `area` (the target's column; range 0 — the player's).",
 			"sleep": {

@@ -753,6 +753,15 @@ BTN_CREATURE_LEAD,Вести с собой
 BTN_CREATURE_STAY,Оставить здесь
 BTN_CREATURE_TALK,Заговорить
 BTN_CREATURE_ATTACK,Напасть
+BTN_CREATURE_FINISH,Добить
+BTN_CREATURE_SEARCH,Обыскать
+BTN_ATTACK_NPC,Напасть: {name}
+BTN_ATTACK_SHORT,Напасть
+BTN_POCKETS_SHORT,Карманы
+BTN_TRADE_SHORT,Торговать
+CREATURE_HELPLESS,"Он беспомощен — его можно только добить"
+CREATURE_NOT_HELPLESS,"Он может драться — нападайте"
+CREATURE_NOTHING,Обыскивать нечего
 CREATURE_TALK_SAY,Обращаюсь к пленнику: {name}
 CREATURE_NONE,Его здесь уже нет
 CREATURE_CANNOT_BIND,"Связать нельзя: он уже связан или вы в перемирии"

@@ -50,6 +50,15 @@ static func lurking(s: GameSession, room_id: String) -> Dictionary:
 	return s.lurking.get(room_id, {})
 
 
+## The encounter the lurking foes of the room are: the room's own, or — the captors of a fight without one (a creature
+## attacked again, an NPC's guard), v0.7.22.16 (#16) — their list as it was. {id, enemies, waves?, help?, parley?}.
+static func lurking_encounter(s: GameSession, data: Dictionary, room_id: String) -> Dictionary:
+	var lk := lurking(s, room_id)
+	if lk.has("foes"):
+		return {"id": "", "enemies": lk["foes"]}
+	return SceneRules.room(s, data["world"], room_id).get("encounter", {})
+
+
 ## The foes of an encounter that think, and whether one of them understands the hero.
 static func talkable(s: GameSession, data: Dictionary, enemies: Array) -> String:
 	var thinking := enemies.filter(func(e: Dictionary) -> bool:
@@ -106,7 +115,8 @@ static func parley(s: GameSession, data: Dictionary, room_id: String, enc: Dicti
 	if not bool(r["ok"]):
 		lines.append("Слова не помогли — они хватаются за оружие")
 		return {"lines": lines, "fight": true}
-	s.encounters_done.append(str(enc["id"]))
+	if not str(enc.get("id", "")).is_empty():
+		s.encounters_done.append(str(enc["id"]))
 	if skill == "intimidation":
 		lines.append("Угроза подействовала — они уходят прочь")
 	else:
@@ -161,6 +171,8 @@ static func escape(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 		s.sneaking = true
 		if not str(s.captive.get("encounter", "")).is_empty():
 			s.lurking[room] = {"encounter": str(s.captive["encounter"]), "from": str(s.captive.get("from", ""))}
+		elif not foes.is_empty():  # a fight without an encounter: the captors stay, unaware (v0.7.22.16, #16)
+			s.lurking[room] = {"foes": foes.duplicate(true), "from": str(s.captive.get("from", ""))}
 		lines.append("Путы сброшены — враги ещё не заметили; можно ускользнуть или ударить первым")
 	s.captive = {}
 	return lines
@@ -171,7 +183,7 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 	var out: Array[String] = []
 	var lk := lurking(s, room_id)
 	if not lk.is_empty():
-		var enc: Dictionary = SceneRules.room(s, data["world"], room_id).get("encounter", {})
+		var enc := lurking_encounter(s, data, room_id)
 		for e: Dictionary in enc.get("enemies", []):
 			out.append("%s ×%d — враждебны, героя не заметили (он крадётся рядом)" % [e.get("name", e["monster"]), int(e.get("count", 1))])
 	if captive(s):

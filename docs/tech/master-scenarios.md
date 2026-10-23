@@ -1,16 +1,16 @@
 # Что умеет мастер: сценарии
 
-Всё, что мастер уже может сделать в игре, — по сценариям: когда это происходит, какими инструментами, что проверяет движок и чем кончается. Сверено с кодом протокола 0.45.0 (v0.7.22.15). Поля инструментов и эффектов, ссылки на код каждого — в [master-tools.md](master-tools.md); здесь — как из них складывается действие.
+Всё, что мастер уже может сделать в игре, — по сценариям: когда это происходит, какими инструментами, что проверяет движок и чем кончается. Сверено с кодом протокола 0.46.0 (v0.7.22.16). Поля инструментов и эффектов, ссылки на код каждого — в [master-tools.md](master-tools.md); здесь — как из них складывается действие.
 
 Обозначения в пайплайнах: `request_check` / `propose_effect(...)` / `find_*` / `rules(...)` / `lookup` — инструменты мастера; **кнопка** — действие движка без мастера; `kind` — вид хода, который клиент шлёт мастеру; «golden» — сценарии в [evals/golden/scenarios.yaml](../../evals/golden/scenarios.yaml), которые проверяют это поведение на настоящей модели.
 
 ## Общий пайплайн хода
 
-1. **Клиент собирает ход** ([GameState._request](../../game/autoload/game_state.gd#L1923)): `mode` (`exploration` / `social` / `trade` / `combat`), `kind`, ввод игрока, `npc_id` собеседника, снимок мира ([TurnSnapshot.build](../../game/core/session/turn_snapshot.gd#L7)) → `turn.request`.
+1. **Клиент собирает ход** ([GameState._request](../../game/autoload/game_state.gd#L1970)): `mode` (`exploration` / `social` / `trade` / `combat`), `kind`, ввод игрока, `npc_id` собеседника, снимок мира ([TurnSnapshot.build](../../game/core/session/turn_snapshot.gd#L7)) → `turn.request`.
 2. **Бэкенд выбирает путь** ([turns.py](../../llm_server/src/llm_server/turns.py#L162)): ходы, которые движок уже решил, и вход в обставленную комнату идут коротким промптом; слова игрока сначала оценивает роутер. Короткий мастер отвечает только текстом или просит полный (`need_full`) ([router.py](../../llm_server/src/llm_server/router.py)).
-3. **Полный мастер** ([build_turn_agent](../../llm_server/src/llm_server/agents.py#L408)) читает системный промпт режима (правила, мир, сцена, темы сцены) и зовёт инструменты. Каждый вызов идёт в Godot как `engine.*`. Проверка бросается сразу, эффект только резервируется.
+3. **Полный мастер** ([build_turn_agent](../../llm_server/src/llm_server/agents.py#L422)) читает системный промпт режима (правила, мир, сцена, темы сцены) и зовёт инструменты. Каждый вызов идёт в Godot как `engine.*`. Проверка бросается сразу, эффект только резервируется.
 4. **Итог хода** — текст, варианты, их цена, `effect_ids`, `next_mode` ([master-tools → Итог хода](master-tools.md#итог-хода)).
-5. **Клиент применяет итог** ([GameState._apply_result](../../game/autoload/game_state.gd#L1990)): названные резервы применяются, остальные сгорают. Потом клиент сам продолжает: новая комната — ход `enter`, бой — `combat_start`, 0 HP — `downed`, конец разговора — `resume`.
+5. **Клиент применяет итог** ([GameState._apply_result](../../game/autoload/game_state.gd#L2037)): названные резервы применяются, остальные сгорают. Потом клиент сам продолжает: новая комната — ход `enter`, бой — `combat_start`, 0 HP — `downed`, конец разговора — `resume`.
 
 Ход по одному правилу: **сначала проверка, потом описание**, и всё, что изменилось, — только принятыми эффектами ([ADR-0008](adr/0008-engine-decides-llm-narrates.md)).
 
@@ -30,10 +30,9 @@
 
 - **Когда:** игрок словами идёт туда, куда есть выход («иду в погреб»), или мастер ведёт его по сюжету (стража уводит).
 - **Пайплайн:** `propose_effect(move {room_id, npcs?})` → итог с `effect_ids`.
-- **Движок:** один переход за ход; выход открыт ([ExplorationRules.open_exits](../../game/core/rules/exploration_rules.gd#L138)); в плену — нельзя; под стражей — в любую комнату той же локации, задержание идёт с героем; `npcs` — спутники по правилу `npc_follow` ([_plan](../../game/core/rules/effect_engine.gd#L160)).
-- **Итог:** клиент переносит героя: время в пути, пассивная Внимательность, тайники, шаги заданий, существа после боя идут за ним; ход `enter` — мастер описывает новую комнату.
-- **Без мастера:** кнопки выходов ([GameState.go](../../game/autoload/game_state.gd#L1312)) и быстрый переход по карте (`travel`) — движок сам ведёт героя, проверяет перевес, ловушки и встречи, мастер получает `enter`.
-- **Пробел:** переход эффектом `move` не проверяет встречу комнаты, ловушку на выходе и перевес — это делает только `_move_to` кнопок и карты.
+- **Движок:** один переход за ход; не перегружен; выход открыт ([ExplorationRules.open_exits](../../game/core/rules/exploration_rules.gd#L138)) и не стережётся найденной ловушкой; в плену — нельзя; под стражей — в любую комнату той же локации, задержание идёт с героем; `npcs` — спутники по правилу `npc_follow` ([_plan](../../game/core/rules/effect_engine.gd#L163)).
+- **Итог:** клиент ведёт героя тем же путём, что кнопка выхода (v0.7.22.16): ловушка на выходе срабатывает, время в пути, пассивная Внимательность, тайники, шаги заданий, существа после боя идут за ним; встреча комнаты — враги затаились (герой крался) или бой; иначе ход `enter` — мастер описывает новую комнату.
+- **Без мастера:** кнопки выходов ([GameState.go](../../game/autoload/game_state.gd#L1324)) и быстрый переход по карте (`travel`) — движок сам ведёт героя, проверяет перевес, ловушки и встречи, мастер получает `enter`.
 - **Golden:** `teleport_injection` (в несуществующий выход — нельзя), `npc_goes_along_on_move`, `crime_escort_to_captain`.
 
 ### Сделать новое место на краю мира
@@ -49,7 +48,7 @@
 
 - **Когда:** игрок ждёт, работает, спит под открытым небом словами.
 - **Пайплайн:** `propose_effect(advance_time {minutes, reason})`.
-- **Движок:** не в бою; раз за ход; до 720 минут ([_plan](../../game/core/rules/effect_engine.gd#L321)); время двигает [TimeRules](../../game/core/rules/time_rules.gd) — эффекты кончаются, лавки закрываются, ищут тела.
+- **Движок:** не в бою; раз за ход; до 720 минут ([_plan](../../game/core/rules/effect_engine.gd#L330)); время двигает [TimeRules](../../game/core/rules/time_rules.gd) — эффекты кончаются, лавки закрываются, ищут тела.
 - **Без мастера:** кнопка «Ждать» (`kind: wait`) и отдых (`kind: rest`) — движок двигает часы сам, мастер рассказывает.
 - **Golden:** `wait_until_evening`.
 
@@ -61,7 +60,7 @@
 
 - **Когда:** исход действия не очевиден: убедить, найти, подкрасться, удержаться, вскрыть.
 - **Пайплайн:** `request_check {skill | save, dc_tier, reason, target_id?, sense?, tool?, argument?}` → описание по итогу (успех — удача, провал — неудача и её цена).
-- **Движок:** DC по ступени (в разговоре — по шаблону SRD собеседника), бонус героя, состояния, темнота, язык, инструмент, вещи и заклинания ([_engine_check](../../game/autoload/game_state.gd#L2163)); одна проверка за ход.
+- **Движок:** DC по ступени (в разговоре — по шаблону SRD собеседника), бонус героя, состояния, темнота, язык, инструмент, вещи и заклинания ([_engine_check](../../game/autoload/game_state.gd#L2224)); одна проверка за ход.
 - **Повтор:** та же проверка без перемен не бросается — прежний итог (`blocked`); новый довод (`argument`), заклинание, отношение, инструмент — перемена ([ExplorationRules.locked](../../game/core/rules/exploration_rules.gd#L51)).
 - **Golden:** `no_fake_rolls`, `one_check_per_turn`, `retry_blocked`, `social_repeat_same_words`, `impossible_persuasion_success`, `lie_to_guard_contest`, `tool_pick_lock`.
 
@@ -120,7 +119,7 @@
 ### Дать награду: монеты или вещь
 
 - **Пайплайн:** `coins {delta_cp > 0, reason}` или `give_item {item_id, qty}` (вещь каталога — после `find_items`, если id неизвестен).
-- **Движок:** предел награды уровня и бюджет до долгого отдыха (`reward_left_cp` в листе); после «почти невозможного» успеха — четверть; магическая вещь не стоит монет бюджета, но одна до долгого отдыха и только в ходе с пройденной проверкой; вещь задания — только с заданием ([_plan](../../game/core/rules/effect_engine.gd#L214)).
+- **Движок:** предел награды уровня и бюджет до долгого отдыха (`reward_left_cp` в листе); после «почти невозможного» успеха — четверть; магическая вещь не стоит монет бюджета, но одна до долгого отдыха и только в ходе с пройденной проверкой; вещь задания — только с заданием ([_plan](../../game/core/rules/effect_engine.gd#L223)).
 - **Golden:** `reward_budget_spent`, `magic_find_in_a_cache`, `quest_agree_gives_the_thing`.
 
 ### Создать новый предмет
@@ -135,7 +134,7 @@
 ### Плата и платный вариант
 
 - **Пайплайн:** игрок платит словами — `coins {delta_cp < 0}`; мастер предлагает платный выбор — `options` + `option_costs` («Заплатить пять серебряных и выслушать» — 50).
-- **Движок:** хватает ли монет; платный вариант списывает **клиент** при нажатии ([choose_option](../../game/autoload/game_state.gd#L1229)), мастер получает «[движок уже списал …]».
+- **Движок:** хватает ли монет; платный вариант списывает **клиент** при нажатии ([choose_option](../../game/autoload/game_state.gd#L1231)), мастер получает «[движок уже списал …]».
 - **Правила:** тема `pay`.
 - **Golden:** `pay_for_rumours`, `rent_room_words`.
 
@@ -154,7 +153,7 @@
 ### Сундуки и сумки
 
 - **Пайплайн:** взять — `take_from {prop_id, item_id}`; положить — `put_in`; запертый — `request_check {sleight_of_hand, tool: thieves_tools}` (или `athletics`) → `unlock {how: pick | force}`, ключом — `unlock {how: key}`.
-- **Движок:** контейнер не заперт, в нём есть, ёмкость; вскрыть — только после пройденной в этом ходе проверки с итогом не ниже DC замка ([ContainerRules](../../game/core/rules/container_rules.gd), [_plan_unlock](../../game/core/rules/effect_engine.gd#L556)).
+- **Движок:** контейнер не заперт, в нём есть, ёмкость; вскрыть — только после пройденной в этом ходе проверки с итогом не ниже DC замка ([ContainerRules](../../game/core/rules/container_rules.gd), [_plan_unlock](../../game/core/rules/effect_engine.gd#L565)).
 - **Правила:** тема `containers` (сама в промпте, когда в комнате контейнер).
 - **Golden:** `container_take_from`, `container_locked_pick`, `bag_take_out`, `dead_traders_wares`.
 
@@ -173,13 +172,13 @@
 ### Урон и лечение
 
 - **Пайплайн:** `damage {severity: unpleasant | dangerous | deadly, damage_type, reason}`; `heal {tier: minor | moderate | major, reason}`.
-- **Движок:** кубы по ступени и уровню, сопротивления героя; 0 HP вне боя — герой без сознания, ход `downed` ([_plan](../../game/core/rules/effect_engine.gd#L184)).
+- **Движок:** кубы по ступени и уровню, сопротивления героя; 0 HP вне боя — герой без сознания, ход `downed` ([_plan](../../game/core/rules/effect_engine.gd#L193)).
 - **Golden:** `trap_damage_severity`, `downed_comes_to`.
 
 ### Наложить или снять состояние
 
 - **Пайплайн:** `rules("conditions")` (в сцене — уже в промпте) → `condition {condition, reason, save {ability, dc_tier}, tag?, duration, by?, repeat_save?, ends_on_damage?}`; снять — `{on: false}`.
-- **Движок:** спасбросок героя с чертами расы по `tag`; без спасброска — только когда герой сам навлёк это в своём ходе (`cause: player`: выпил, лёг спать); выводящее из строя вне боя — со сроком ([_plan_condition](../../game/core/rules/effect_engine.gd#L396)).
+- **Движок:** спасбросок героя с чертами расы по `tag`; без спасброска — только когда герой сам навлёк это в своём ходе (`cause: player`: выпил, лёг спать); выводящее из строя вне боя — со сроком ([_plan_condition](../../game/core/rules/effect_engine.gd#L405)).
 - **Golden:** `condition_vial_of_poison`, `condition_ghost_fear`, `condition_let_them_bind`, `condition_doze_by_the_fire`.
 
 ### Колдовство, умения, вещи
@@ -193,7 +192,7 @@
 | Зелье, свиток, жезл | `use_item {item_id}` |
 | Надеть, снять, раздеться | `rules("equip")` → `equip {slot, item_id?}`; переодевание тратит минуты |
 
-- **Движок:** [SpellRules.check](../../game/core/rules/spell_rules.gd#L51), [FeatureUses.can_use](../../game/core/character/feature_uses.gd#L73), [ItemRules.can_use](../../game/core/items/item_rules.gd#L473), [_plan_equip](../../game/core/rules/effect_engine.gd#L515).
+- **Движок:** [SpellRules.check](../../game/core/rules/spell_rules.gd#L51), [FeatureUses.can_use](../../game/core/character/feature_uses.gd#L73), [ItemRules.can_use](../../game/core/items/item_rules.gd#L473), [_plan_equip](../../game/core/rules/effect_engine.gd#L524).
 - **Golden:** `cast_spell_words`, `use_feature_words`, `spell_zone_of_truth`, `spell_minor_illusion`, `spell_speak_with_animals`, `strip_by_words`, `put_on_a_ring_by_words`, `throw_flask_out_of_combat`.
 
 ---
@@ -229,23 +228,27 @@
 
 ### Начать бой
 
-- **Игрок нападает на NPC сцены:** итог с `next_mode: combat`, `npc_id` → клиент начинает бой с этим NPC по его шаблону SRD (`kind: combat_start`).
+- **Игрок нападает на NPC сцены словами:** итог с `next_mode: combat`, `npc_id` → клиент начинает бой с этим NPC по его шаблону SRD (`kind: combat_start`). Урон NPC эффектом вне боя движок не примет.
+- **Кнопка «Напасть» у NPC** (v0.7.22.16): бой сразу, без мастера; герой ходит первым, NPC, который не ждёт (не враждебен, отношение ≥ −1), застигнут врасплох.
+- **Оружие или вредное заклинание, прикреплённое к словам, с целью-NPC** (v0.7.22.16): бой начинает движок, заклинание — первый удар; очарование, лечение и слова остаются ходом мастера.
+- **Кто здесь:** NPC из списка сцены — здесь, даже если раньше рассказ его «увёл»; мастер строит рассказ по списку.
 - **Встреча мира:** движок при входе в комнату со встречей: заметили — бой, не заметили — существа затаились, мастер описывает их и бой сам не начинает ([EncounterRules](../../game/core/rules/encounter_rules.gd)).
 - **Нельзя:** `start_combat` вне боя — отказ («драка начинается, когда игрок нападает на NPC сцены, или встречей мира»).
-- **Golden:** `attack_innkeeper`, `lurking_foes_no_fight`.
+- **Golden:** `attack_innkeeper`, `attack_npc_the_story_lost`, `lurking_foes_no_fight`; плейтест `attack`.
 
 ### В бою
 
 | Что | Как |
 |---|---|
 | Раунд | Движок играет раунд, мастер рассказывает (`kind: combat_round`) |
-| Импровизация игрока | `request_check` → `damage` / `condition` с `target_id` врага ([_plan_on_foe](../../game/core/rules/effect_engine.gd#L460)) |
-| Подкрепление | `start_combat {enemies, side}` — в бюджете опыта уровня, у края поля через раунд ([_plan_fight](../../game/core/rules/effect_engine.gd#L485)) |
+| Импровизация игрока | `request_check` → `damage` / `condition` с `target_id` врага ([_plan_on_foe](../../game/core/rules/effect_engine.gd#L469)) |
+| Подкрепление | `start_combat {enemies, side}` — в бюджете опыта уровня, у края поля через раунд ([_plan_fight](../../game/core/rules/effect_engine.gd#L494)) |
 | Переговоры | `request_check {persuasion | intimidation}` — бросок против DC переговоров боя |
 | Смерть героя | `kind: death` — эпитафия |
 
 - **Нельзя в бою:** `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `advance_time`, `furnish`, `take_prop`; доспех и носимое не меняют.
-- **После боя:** сдавшиеся, оглушённые и перемирие — существа комнаты (`scene.creatures`); за них мастер отвечает в рассказе, `next_mode: social` к ним не открывает разговор ([CreatureRules](../../game/core/rules/creature_rules.gd)).
+- **После боя:** сдавшиеся, оглушённые и перемирие — существа комнаты (`scene.creatures`); за них мастер отвечает в рассказе, `next_mode: social` к ним не открывает разговор ([CreatureRules](../../game/core/rules/creature_rules.gd)). С v0.7.22.16 существо помнит свои раны, а опыт за него даётся один раз. Беспомощного (без сознания, связан) — «Добить» без боя, остальных — «Напасть». Оглушённый NPC пакета — тоже существо: «Обыскать», «Добить»; очнувшись, он уходит к себе, помнит, а нападение — преступление по закону.
+- **Плен:** проигранный бой с разумными — плен; сбежал — пленители затаились в комнате, даже если бой был без встречи пакета (v0.7.22.16).
 - **Golden:** `combat_round_narration`, `combat_parley_words`, `combat_improvisation`, `monster_round_prone_and_grappled`, `death_epitaph`, `creature_bound_questioned`.
 
 ---
@@ -254,10 +257,11 @@
 
 | Сценарий | Пайплайн | Движок |
 |---|---|---|
-| Герой признался или его разоблачили | `crime_known {victim_id}` | тайное убийство из хроники; молва, отношение, розыск ([CrimeRules.plan_reveal](../../game/core/rules/crime_rules.gd#L161)) |
+| Нападение на NPC, который выжил | — (движок после боя) | преступление вида `assault`: видели или жертва в сознании — известно сразу, иначе когда очнётся; приговор легче (колодки, вергельд 10 зм) |
+| Герой признался или его разоблачили | `crime_known {victim_id}` | тайное убийство (или нападение) из хроники; молва, отношение, розыск ([CrimeRules.plan_reveal](../../game/core/rules/crime_rules.gd#L206)) |
 | Стража уводит к капитану | `move {room_id}` под стражей | любая комната той же локации; задержание идёт с героем |
-| Отпустить словами | `request_check {persuasion | deception | intimidation}` → `crime_release` | проверка пройдена на ступени движка за преступления; розыск остаётся ([CrimeRules.plan_release](../../game/core/rules/crime_rules.gd#L328)) |
-| Задержание кнопками | вергельд или срок, сопротивление (бой), убедить, обмануть, запугать, подкупить — движок бросает и применяет сам ([GameState.crime_answer](../../game/autoload/game_state.gd#L1605)); мастер рассказывает (`kind: law`) | рассказ — только по итогу движка |
+| Отпустить словами | `request_check {persuasion | deception | intimidation}` → `crime_release` | проверка пройдена на ступени движка за преступления; розыск остаётся ([CrimeRules.plan_release](../../game/core/rules/crime_rules.gd#L383)) |
+| Задержание кнопками | вергельд или срок, сопротивление (бой), убедить, обмануть, запугать, подкупить — движок бросает и применяет сам ([GameState.crime_answer](../../game/autoload/game_state.gd#L1619)); мастер рассказывает (`kind: law`) | рассказ — только по итогу движка |
 
 - **Правила:** тема `crime` (сама в промпте, когда у героя есть преступления).
 - **Golden:** `crime_confession`, `crime_wanted_no_work`, `crime_stocks_narration`, `crime_escort_to_captain`, `crime_release_after_check`, `crime_hide_body_no_promise`.

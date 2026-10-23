@@ -10,6 +10,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import get_args as typing_get_args
 
 from pydantic import BaseModel, BeforeValidator, Field, TypeAdapter, ValidationError
 from pydantic_ai import Agent, ModelRetry, RunContext, Tool
@@ -173,18 +174,19 @@ def scene_npc(params: TurnRequestParams, npc_id: str | None) -> SceneNpc | None:
 
 async def request_check(
     ctx: RunContext[TurnContext],
-    dc_tier: DcTier,
+    dc_tier: str,
     reason: str,
     skill: str | None = None,
     save: str | None = None,
     target_id: str | None = None,
     advantage_reason: str | None = None,
-    sense: Literal["sight", "hearing"] | None = None,
+    sense: str | None = None,
     tool: str | None = None,
     argument: str | None = None,
 ) -> str:
     """Попросить движок о проверке навыка (skill: perception, persuasion, stealth, …) или спасброске
-    (save: str, dex, con, int, wis, cha). dc_tier — ступень сложности. reason — что проверяем, одной фразой.
+    (save: str, dex, con, int, wis, cha). dc_tier — ступень сложности: very_easy, easy, medium, hard, very_hard,
+    nearly_impossible. reason — что проверяем, одной фразой.
     advantage_reason — только если в ситуации есть явная причина для преимущества. sense — sight, если
     проверке нужно зрение (разглядеть), hearing — если слух (подслушать): ослеплённый или оглохший её провалит.
     tool — инструмент, которым герой действует (thieves_tools — вскрыть замок, herbalism_kit — травы, disguise_kit…):
@@ -194,8 +196,19 @@ async def request_check(
     t = ctx.deps
     if len(t.check_ids) >= t.limits.max_checks:
         return "Отказ: лимит проверок на этот ход исчерпан. Опиши исход без новой проверки."
+    # A wrong value is a refusal with the reason, not a schema error: the tool's retries failed the whole turn
+    # (v0.7.22.16, the author's trace: three turns in a row lost on request_check).
+    if dc_tier not in DC_TIERS:
+        return f"Отказ: dc_tier — одно из {', '.join(DC_TIERS)}; вызови снова."
+    if sense not in (None, "sight", "hearing"):
+        sense = None
+    if not skill:
+        skill = None
+    if not save:
+        save = None
     if (skill is None) == (save is None):
-        raise ModelRetry("Укажи ровно одно: skill или save.")
+        # a refusal, not ModelRetry: three of those failed the whole turn (v0.7.22.16, the author's trace)
+        return "Отказ: укажи ровно одно — skill (навык) или save (спасбросок) — и вызови снова; или заверши ход без проверки."
     raw = await t.session.call_engine("engine.check", EngineCheckParams(
         turn_id=t.params.turn_id, skill=skill, save=save, dc_tier=dc_tier, target_id=target_id,
         advantage_reason=advantage_reason, sense=sense, tool=tool, argument=argument))
@@ -319,6 +332,7 @@ async def propose_effect_loose(ctx: RunContext[TurnContext], effect: str) -> str
     return await propose_effect(ctx, checked)
 
 
+DC_TIERS: tuple[str, ...] = typing_get_args(DcTier)
 EFFECT_RETRIES = 4  # a big effect (a quest with its people and place) is often mistyped once or twice (v0.7.21.2 goldens)
 
 
@@ -412,7 +426,7 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -
         output_type=TurnOutput,
         deps_type=TurnContext,
         instructions=system,
-        tools=[request_check, propose_effect_tool(model), rules, lookup, find_items, find_npcs, find_places, find_quests],
+        tools=[Tool(request_check, max_retries=EFFECT_RETRIES), propose_effect_tool(model), rules, lookup, find_items, find_npcs, find_places, find_quests],
         retries=2,
         model_settings=settings_for(model, base),
     )

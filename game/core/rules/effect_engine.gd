@@ -148,6 +148,9 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 		var tid := str(e.get("target_id", "")) if e.get("target_id") != null else ""
 		if not tid.is_empty():
 			return _plan_on_foe(s, data, e, tid)
+	elif str(e.get("kind", "")) in ["damage", "condition"] and e.get("target_id") != null and not str(e.get("target_id", "")).is_empty():
+		# v0.7.22.16 (the author's trace): out of a fight a blow at an NPC is a fight, not an effect — the damage went to the hero
+		return {"reason": "вне боя урон и состояния NPC эффектом не проводятся: нападение на NPC сцены — next_mode combat с его npc_id, исход решит бой"}
 	if str(e.get("kind", "")) == "start_combat":
 		if not CombatRules.active(s):  # v0.7.4: a fight starts only with the scene's people or an encounter of the world
 			return {"reason": "вне боя мастер не зовёт врагов: драка начинается, когда игрок нападает на NPC сцены (next_mode combat), или встречей мира"}
@@ -169,6 +172,12 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"plan": {"room_id": to, "with": [], "escort": true}, "summary": "Под стражей: %s" % world.room(to).get("name", to)}
 			if not ExplorationRules.open_exits(s, data["world"], s.room_id).has(to):
 				return {"reason": "из этой комнаты нет выхода в %s" % to}
+			# v0.7.22.16: the master's move is checked as the exit button — the overload, a trap the hero found
+			if CharacterRules.overloaded(c, data, s.items):
+				return {"reason": "герой перегружен и не может идти — сначала оставить лишнее (drop_item)"}
+			var trap := ExplorationRules.trap_on_exit(s, data["world"], s.room_id, to)
+			if not trap.is_empty() and ExplorationRules.is_found(s, s.room_id, trap):
+				return {"reason": "путь стережёт найденная ловушка — её обезвреживают или обходят (кнопки игрока), просто пройти нельзя"}
 			var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as npc_follow
 			for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
 				var nid := str(n)

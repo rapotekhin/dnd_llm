@@ -5,7 +5,12 @@ extends RefCounted
 ## {id, name, monster, state: truce | surrendered | unconscious, bound, led, since}. The hero ties up the beaten
 ## (`bind`), lets them go, leads a bound one along (it moves with the hero), talks to them (a master's turn) or
 ## attacks them again (a fight). Left alone they go: a knocked-out one wakes and slips away, a truce lasts its hours
-## (rules.creatures). A pack NPC knocked out is a person of the world, not a creature — it just lives.
+## (rules.creatures).
+## v0.7.22.16 (the author's fixes check #21, #34): a creature keeps its HP and `xp_given` — attacked again it fights
+## with its wounds and gives no XP twice; the helpless one (knocked out or bound) is finished off without a fight
+## (5e: a melee blow at the helpless is a critical hit). A pack NPC knocked out lies here as a creature with its
+## `npc_id` (not a person of the scene till it wakes): bound, searched, led, let go or finished off; waking or let
+## go it goes home, remembers the attack and the assault is known (CrimeRules, kind `assault`).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -30,11 +35,16 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String) -> Ar
 	for fid: String in CombatRules.enemies(s, false):
 		var f := CombatRules.fighter(s, fid)
 		var state := str(f.get("status", ""))
-		if not state in ["truce", "surrendered", "unconscious"] or not str(f.get("npc_id", "")).is_empty():
-			continue
+		var npc := str(f.get("npc_id", ""))
+		if not state in ["truce", "surrendered", "unconscious"] or (not npc.is_empty() and state != "unconscious"):
+			continue  # a pack NPC who surrendered or made peace is a person of the scene, not a creature
 		s.creature_counter += 1
-		list.append({"id": "c%d" % s.creature_counter, "name": str(f["name"]), "monster": str(f["monster"]), "state": state,
-			"bound": false, "led": false, "since": TimeRules.abs_minute(s)})
+		var c := {"id": "c%d" % s.creature_counter, "name": str(f["name"]), "monster": str(f["monster"]), "state": state,
+			"bound": false, "led": false, "since": TimeRules.abs_minute(s), "hp": int(f.get("hp", 1)), "max_hp": int(f.get("max_hp", 1)),
+			"xp_given": not bool(f.get("no_xp", false)) and str(s.combat.get("outcome", "")) in ["victory", "truce"]}
+		if not npc.is_empty():
+			c["npc_id"] = npc
+		list.append(c)
 		lines.append("%s — %s" % [f["name"], state_word(state)])
 	if not list.is_empty():
 		s.creatures[room_id] = list
@@ -55,12 +65,26 @@ static func text(c: Dictionary) -> String:
 	return "%s — %s" % [c["name"], ", ".join(bits)]
 
 
-## "" when the hero can do `what` (bind, free, lead, attack) with this creature now, else a localization key.
+## Helpless: knocked out or bound — finished off without a fight.
+static func helpless(c: Dictionary) -> bool:
+	return str(c.get("state", "")) == "unconscious" or bool(c.get("bound", false))
+
+
+## "" when the hero can do `what` (bind, free, lead, attack, finish, search) with this creature now, else a key.
 static func can(s: GameSession, id: String, what: String) -> String:
 	var c := find(s, s.room_id, id)
 	if c.is_empty():
 		return "CREATURE_NONE"
 	match what:
+		"attack":
+			if helpless(c):
+				return "CREATURE_HELPLESS"
+		"finish":
+			if not helpless(c):
+				return "CREATURE_NOT_HELPLESS"
+		"search":
+			if str(c.get("npc_id", "")).is_empty() or bool(c.get("searched", false)):
+				return "CREATURE_NOTHING"
 		"bind":
 			if bool(c.get("bound", false)) or str(c["state"]) == "truce":
 				return "CREATURE_CANNOT_BIND"
@@ -82,12 +106,62 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 			return ["%s %s" % [c["name"], "идёт за вами на верёвке" if bool(c["led"]) else "остаётся здесь, связанный"]]
 		"free":
 			(s.creatures[s.room_id] as Array).erase(c)
-			return ["%s отпущен и уходит" % c["name"]]
+			var lines: Array[String] = ["%s отпущен и уходит" % c["name"]]
+			lines.append_array(_npc_back(s, data, c))
+			return lines
 		"attack":
 			(s.creatures[s.room_id] as Array).erase(c)
-			s.pending_fight = [{"monster": str(c["monster"]), "name": str(c["name"]), "col": 0, "by_hero": true}]
+			var spec := {"monster": str(c["monster"]), "name": str(c["name"]), "col": 0, "by_hero": true,
+				"no_xp": bool(c.get("xp_given", false))}
+			if c.has("hp"):
+				spec["hp"] = int(c["hp"])
+			if c.has("npc_id"):
+				spec["npc_id"] = str(c["npc_id"])
+			s.pending_fight = [spec]
 			return ["Вы нападаете: %s" % c["name"]]
+		"finish":  # 5e: a blow at the helpless — the killing blow, no fight and no XP (it was given)
+			(s.creatures[s.room_id] as Array).erase(c)
+			var lines: Array[String] = ["Вы добиваете: %s" % c["name"]]
+			if c.has("npc_id"):
+				lines.append_array(CrimeRules.on_death(s, data, str(c["npc_id"]), true, s.room_id))
+			return lines
+		"search":
+			c["searched"] = true
+			return _search(s, data, str(c["npc_id"]), str(c["name"]))
 	return []
+
+
+## A knocked-out pack NPC searched: what its pockets hold; whoever sees it — a theft before their eyes. Lines.
+static func _search(s: GameSession, data: Dictionary, npc_id: String, name: String) -> Array[String]:
+	var got: Array[String] = []
+	for e: Dictionary in TheftRules.pockets(s, data, npc_id):
+		if int(e.get("cp", 0)) > 0:
+			s.character["gold_cp"] = int(s.character["gold_cp"]) + int(e["cp"])
+			got.append(Money.format(int(e["cp"])))
+		elif not str(e.get("item_id", "")).is_empty() and not bool(e.get("worn", false)):
+			ItemRules.found(s.character, data, s.items, str(e["item_id"]), int(e.get("qty", 1)))
+			got.append(str(e["name"]))
+	s.pockets[npc_id] = (TheftRules.pockets(s, data, npc_id) as Array).filter(func(e: Dictionary) -> bool: return bool(e.get("worn", false)))
+	var lines: Array[String] = ["Обыскан(а) %s: %s" % [name, ", ".join(got) if not got.is_empty() else "ничего"]]
+	var world := WorldView.new(data["world"])
+	var seen := s.npcs_here(world.world, s.room_id)
+	if not seen.is_empty() and not ConditionRules.invisible(s.character, data):
+		s.shift_attitude(seen[0], int(data["rules"]["theft"]["caught_attitude"]), data)
+		lines.append("%s видит, как вы обираете беспомощного: отношение хуже" % world.npc(seen[0]).get("name", seen[0]))
+	return lines
+
+
+## A pack NPC that was a creature comes back to its life (woke up or let go): it goes home, remembers the attack,
+## and the assault is known (v0.7.22.16). Lines.
+static func _npc_back(s: GameSession, data: Dictionary, c: Dictionary) -> Array[String]:
+	var npc := str(c.get("npc_id", ""))
+	if npc.is_empty():
+		return []
+	s.npc_at.erase(npc)
+	s.followers.erase(npc)
+	s.shift_attitude(npc, int(cfg(data)["woken_attitude"]), data)
+	s.remember(npc, "герой напал на меня и оставил без сознания")
+	return CrimeRules.assault_known(s, data, npc)
 
 
 ## The led ones go with the hero from `from` to `to`.
@@ -116,8 +190,10 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 			var limit := int(leave.get(str(c["state"]), 0))
 			if bool(c.get("bound", false)) or limit <= 0 or now - int(c["since"]) < limit:
 				keep.append(c)
-			elif room == s.room_id:
-				lines.append("%s уходит" % c["name"])
+				continue
+			if room == s.room_id:
+				lines.append("%s %s" % [c["name"], "приходит в себя и уходит" if str(c["state"]) == "unconscious" else "уходит"])
+			lines.append_array(_npc_back(s, data, c))
 		if keep.is_empty():
 			s.creatures.erase(room)
 		else:

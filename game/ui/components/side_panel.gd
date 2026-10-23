@@ -123,16 +123,25 @@ func _rebuild() -> void:
 				var b := _button(tr("BTN_TALK_TO").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, false), can_act and not refuses)
 				b.tooltip_text = tr("TALK_REFUSED") if refuses else "%s — %s" % [n.get("name", id), n.get("role", "")]
 				b.name = "Talk_" + id
-				var pk := _button(tr("BTN_POCKETS").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), pockets_requested.emit.bind(id),
-					can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
-				pk.name = "Pockets_" + id
+				# v0.7.22.16: the other acts with this NPC in one row under the talk — trade, pockets, attack
+				var row := HBoxContainer.new()
+				row.add_theme_constant_override("separation", 6)
+				_content.add_child(row)
 				if bool(n.get("trader", false)):
 					var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id, Catalog.data) or refuses
-					var t := _button(tr("BTN_TRADE_WITH").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, true), can_act and not closed)
+					var t := _small(row, tr("BTN_TRADE_SHORT"), GameState.talk_to.bind(id, true), can_act and not closed)
 					t.name = "Trade_" + id
-					if closed:
-						t.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else "TALK_REFUSED" if refuses else
-							"SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED")
+					t.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else "TALK_REFUSED" if refuses else
+						"SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED") if closed else tr("BTN_TRADE_WITH").format({"name": n.get("name", id)})
+				var pk := _small(row, tr("BTN_POCKETS_SHORT"), pockets_requested.emit.bind(id), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
+				pk.name = "Pockets_" + id
+				pk.tooltip_text = tr("BTN_POCKETS").format({"name": n.get("name", id)})
+				var at := _small(row, tr("BTN_ATTACK_SHORT"), func() -> void:
+					var err := GameState.attack_npc(id)
+					if not err.is_empty():
+						EventBus.message.emit(tr(err)), can_act)
+				at.name = "Attack_" + id  # the fight at once, without the master
+				at.tooltip_text = tr("BTN_ATTACK_NPC").format({"name": n.get("name", id)})
 		for away: String in SceneRules.absent(s, Catalog.data["world"], s.room_id):  # v0.7.14.2: their hours
 			_line(away, true)
 		for body: Dictionary in CrimeRules.bodies_here(s, Catalog.data):  # v0.7.14: the body of a killed NPC
@@ -154,12 +163,15 @@ func _rebuild() -> void:
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 6)
 			_content.add_child(row)
-			var specs: Array = [["talk", "BTN_CREATURE_TALK"]]
+			var specs: Array = [["talk", "BTN_CREATURE_TALK"]] if str(cr["state"]) != "unconscious" else []  # v0.7.22.16: one knocked out does not talk
 			if not bool(cr.get("bound", false)) and str(cr["state"]) != "truce":
 				specs.append(["bind", "BTN_CREATURE_BIND"])
 			if bool(cr.get("bound", false)):
 				specs.append(["lead", "BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_CREATURE_LEAD"])
-			specs.append_array([["free", "BTN_CREATURE_FREE"], ["attack", "BTN_CREATURE_ATTACK"]])
+			if not str(cr.get("npc_id", "")).is_empty() and not bool(cr.get("searched", false)):
+				specs.append(["search", "BTN_CREATURE_SEARCH"])  # v0.7.22.16: a knocked-out person's pockets
+			specs.append(["free", "BTN_CREATURE_FREE"])
+			specs.append(["finish", "BTN_CREATURE_FINISH"] if CreatureRules.helpless(cr) else ["attack", "BTN_CREATURE_ATTACK"])
 			for sp: Array in specs:
 				var what: String = sp[0]
 				var cb := Button.new()
@@ -369,12 +381,24 @@ func _button(text: String, action: Callable, enabled: bool) -> Button:
 	return b
 
 
+## A short button of a row (v0.7.22.16): it shares the row with the others.
+func _small(row: HBoxContainer, text: String, action: Callable, enabled: bool) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.disabled = not enabled
+	b.pressed.connect(func() -> void: action.call())
+	row.add_child(b)
+	return b
+
+
 ## The foes lurking unaware (attack by surprise, talk first) and the captivity (break free, slip, talk), v0.7.22.12.
 func _meeting(s: GameSession, can_act: bool) -> void:
 	var data := Catalog.data
 	var specs: Array = []
 	if not EncounterRules.lurking(s, s.room_id).is_empty():
-		var enc: Dictionary = SceneRules.room(s, data["world"], s.room_id).get("encounter", {})
+		var enc := EncounterRules.lurking_encounter(s, data, s.room_id)
 		_subheading("SIDE_UNSEEN")
 		for e: Dictionary in enc.get("enemies", []):
 			_line("%s ×%d" % [e.get("name", e["monster"]), int(e.get("count", 1))], false)

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.45.0"
+PROTOCOL_VERSION = "0.46.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -335,8 +335,9 @@ class CombatFoe(_In):
     monster: str = ""  # the SRD kind (Russian name)
     distance_ft: int = 0
     side: Literal["left", "right", "same"] = "same"
-    status: Literal["active", "dead", "fled", "surrendered", "truce"] = "active"
-    health: str = ""  # full | hurt | bloodied | near_death | dead | fled | surrendered | truce — never numbers
+    # 0.46.0: unconscious — knocked out by a nonlethal blow (v0.7.22.11); the snapshot failed the turn without it
+    status: Literal["active", "dead", "fled", "surrendered", "truce", "unconscious"] = "active"
+    health: str = ""  # full | hurt | bloodied | near_death | dead | fled | surrendered | truce | unconscious — never numbers
     description: str = ""
     surprised: bool = False  # caught off guard: skips its first turn (0.8.0)
     conditions: list[str] = Field(default_factory=list)  # Russian names with rounds left: «без сознания (9 р.)» (0.10.0)

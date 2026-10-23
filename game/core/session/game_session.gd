@@ -574,12 +574,20 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for room: String in s.creatures:
 		for c: Variant in s.creatures[room]:
 			c["since"] = int(c.get("since", 0))
+			for k: String in ["hp", "max_hp"]:  # v0.7.22.16
+				if c.has(k):
+					c[k] = int(c[k])
 	s.creature_counter = int(d.get("creature_counter", 0))
 	s.lurking = (d.get("lurking", {}) as Dictionary).duplicate(true)
 	s.captive = (d.get("captive", {}) as Dictionary).duplicate(true)
-	for f: Variant in s.captive.get("foes", []):
-		if f is Dictionary and f.has("count"):
-			f["count"] = int(f["count"])
+	var foe_lists: Array = [s.captive.get("foes", [])]
+	for room: String in s.lurking:  # the captors that lurk after an escape (v0.7.22.16)
+		foe_lists.append((s.lurking[room] as Dictionary).get("foes", []))
+	for list: Variant in foe_lists:
+		for f: Variant in list:
+			for k: String in ["count", "hp"]:
+				if f is Dictionary and f.has(k):
+					f[k] = int(f[k])
 	for npc: String in d.get("body_at", {}):
 		s.body_at[npc] = int(d["body_at"][npc])
 	for npc: String in d.get("disarmed", {}):
@@ -681,7 +689,16 @@ func npcs_alive(ids: Array[String]) -> Array[String]:
 
 ## The living pack NPCs in the room now: the room's variants by the world's flags (SceneRules, v0.7.14.1).
 func npcs_here(world: Dictionary, room_id: String) -> Array[String]:
-	return npcs_alive(SceneRules.npcs(self, world, room_id))
+	return npcs_alive(SceneRules.npcs(self, world, room_id)).filter(func(id: String) -> bool: return not held_as_creature(id))
+
+
+## A pack NPC knocked out in a fight lies as a creature of a room (v0.7.22.16): not a person of the scene till it wakes.
+func held_as_creature(npc_id: String) -> bool:
+	for room: String in creatures:
+		for c: Dictionary in creatures[room]:
+			if str(c.get("npc_id", "")) == npc_id:
+				return true
+	return false
 
 
 static func _normalized_merchant(m: Dictionary) -> Dictionary:
