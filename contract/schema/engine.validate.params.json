@@ -574,6 +574,20 @@
       "title": "CrimeKnownEffect",
       "type": "object"
     },
+    "CrimeReleaseEffect": {
+      "additionalProperties": false,
+      "description": "The guard lets the held hero go by words (0.41.0): only after a Persuasion, Deception or Intimidation check this\nturn that passed at the engine's tier for the crimes. The hero stays wanted; the guard does not come back at once.",
+      "properties": {
+        "kind": {
+          "const": "crime_release",
+          "default": "crime_release",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "CrimeReleaseEffect",
+      "type": "object"
+    },
     "DamageEffect": {
       "additionalProperties": false,
       "properties": {
@@ -2278,6 +2292,7 @@
           "create_place": "#/$defs/CreatePlaceEffect",
           "create_quest": "#/$defs/CreateQuestEffect",
           "crime_known": "#/$defs/CrimeKnownEffect",
+          "crime_release": "#/$defs/CrimeReleaseEffect",
           "damage": "#/$defs/DamageEffect",
           "drop_item": "#/$defs/DropItemEffect",
           "equip": "#/$defs/EquipEffect",
@@ -2367,6 +2382,9 @@
         },
         {
           "$ref": "#/$defs/CrimeKnownEffect"
+        },
+        {
+          "$ref": "#/$defs/CrimeReleaseEffect"
         },
         {
           "$ref": "#/$defs/NpcDiscountEffect"

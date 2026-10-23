@@ -361,6 +361,10 @@ static func check_generated(items_data: Dictionary, item: Dictionary, level: int
 	if use.has("reason"):
 		return {"ok": false, "reason": use["reason"]}
 	points += int(use.get("points", 0))
+	if points == 0 and not str(item.get("rarity", "common")) in ["common", ""]:  # big test #16 (v0.7.22.2)
+		return {"ok": false, "reason": ("магическая вещь (%s) без механики станет простой безделушкой — движок не опознает её и ничего ей не даст. " +
+			"Дай ей свойства (`properties` из словаря движка) или `use` (заряды заклинания, зелье), либо возьми готовую магическую вещь " +
+			"каталога через find_items (кольцо, плащ, амулет, очки…). Если это и правда простая вещь — rarity common") % item.get("rarity", "")}
 	var rarity := rarity_for_points(items_data, points)
 	if level < int(items_data["rarity_min_level"][rarity]):
 		return {"ok": false, "reason": "предмет редкости %s недоступен на %d уровне" % [rarity, level]}

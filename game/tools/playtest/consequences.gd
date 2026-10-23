@@ -56,7 +56,24 @@ func run() -> void:
 	step("the exits are shut", exit != null and exit.disabled, "")
 	var stocks: Button = find(screen(), "Crime_stocks")
 	step("the arrest buttons", stocks != null and find(screen(), "Crime_pay") != null and find(screen(), "Crime_resist") != null, "")
+	step("the talk buttons (v0.7.22.2)", find(screen(), "Crime_persuade") != null and find(screen(), "Crime_deceive") != null
+		and find(screen(), "Crime_intimidate") != null and find(screen(), "Crime_bribe") != null, "")
 	await shot("arrest")
+	# A bribe lets the hero go but keeps them wanted; no patrol at once. Then the hold again for the stocks.
+	s.character["gold_cp"] = int(s.character["gold_cp"]) + CrimeRules.bribe(s, data, "brod")
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var bribe: Button = find(screen(), "Crime_bribe")
+	if bribe != null:
+		await press(bribe)
+		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+		await frames(3)
+	step("bribed — free but still wanted", not CrimeRules.held(s) and s.wanted.has("brod") and CrimeRules.check_arrest(s, data).is_empty(), _chat(s))
+	s.let_go.erase("brod")
+	CrimeRules.check_arrest(s, data)
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	stocks = find(screen(), "Crime_stocks")
 	var day := s.day
 	if stocks != null:
 		await press(stocks)

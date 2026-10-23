@@ -398,6 +398,7 @@ func _gear_tab(c: Dictionary) -> Control:
 		ob.disabled = busy
 		ob.pressed.connect(func() -> void: bag_requested.emit(bag_id))
 		brow.add_child(ob)
+		_drop_button(brow, bag_id, 1, "DropBag_" + bag_id, "BTN_DROP", busy)
 	for id: String in c.get("inventory", {}):
 		var def := ItemRules.def_of(items, s.items, id)
 		var row := HBoxContainer.new()
@@ -407,6 +408,11 @@ func _gear_tab(c: Dictionary) -> Control:
 		_item_button(row, details, c, id, "%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else ""], "Item_" + id)
 		if not ItemRules.consumable(Catalog.data, id, GameState.session.items).is_empty():
 			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
+		var free := ContainerRules.droppable(s, Catalog.data, id)  # big test #10 (v0.7.22.2)
+		if free > 0:
+			_drop_button(row, id, 1, "Drop_" + id, "BTN_DROP", busy)
+			if free > 1:
+				_drop_button(row, id, free, "DropAll_" + id, "BTN_DROP_ALL", busy)
 		if ItemRules.needs_attunement(def):  # v0.7.12
 			if ItemRules.attuned(c).has(id):
 				var un := Button.new()
@@ -453,6 +459,20 @@ func _gear_tab(c: Dictionary) -> Control:
 	if not shown.is_empty():
 		details.show_text(ItemRules.display_name(items, s.items, shown), DetailsPanel.item_text(c, Catalog.data, s.items, shown))
 	return root
+
+
+## «Выбросить»: the thing (a bag — with what is in it) goes down in the room; the sheet stays open.
+func _drop_button(row: Control, what: String, qty: int, node_name: String, text: String, busy: bool) -> void:
+	var b := Button.new()
+	b.name = node_name
+	b.text = text
+	b.disabled = busy
+	b.tooltip_text = tr("BTN_DROP_TIP")
+	b.pressed.connect(func() -> void:
+		var err := GameState.drop_item(what, qty)
+		if not err.is_empty():
+			EventBus.message.emit(tr(err)))
+	row.add_child(b)
 
 
 ## The item's name as a flat button: a click shows what it is in the details panel (v0.7.7 fixes).

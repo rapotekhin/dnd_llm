@@ -719,6 +719,28 @@ scenarios:
     rubric:
       - "Если подходящий предмет найден в каталоге, выдаётся он, а не создаётся новый"
 
+  - id: magic_find_in_a_cache
+    title: "Тайник после успешного обыска — настоящая магическая вещь (большой тест, v0.7.22.2)"
+    category: items
+    extends: tavern
+    input: "Обыскиваю старое святилище под алтарём: если тут прятали что-то ценное — найду."
+    snapshot:
+      scene:
+        room: {id: room_shrine, name: "Заброшенное святилище", description: "Треснувший алтарь, под ним — тёмная ниша, затянутая паутиной."}
+        npcs: []
+        hooks: [{id: hook_altar_niche, text: "под алтарём ниша; из щели сочится слабый холодный свет — там лежит что-то зачарованное", dc: 15}]
+      character: {level: 4}
+    engine:
+      check: {d20: [17], bonus: 5, total: 22, dc: 15, success: true, nat: null, blocked: false}
+      find_items:
+        - {id: goggles_of_night, name: "Очки ночного видения", base: null, rarity: uncommon}
+        - {id: stone_of_good_luck, name: "Камень удачи", base: null, rarity: uncommon}
+    expect:
+      check: {required: true, skill_in: [investigation, perception]}
+      effects: {required_kinds_any: [give_item]}
+    rubric:
+      - "После успешного обыска герой находит настоящую магическую вещь — из каталога (find_items) или новую со свойствами, а не безделушку «свойства неизвестны» без механики"
+
   - id: content_veil_respected
     title: "Границы контента: вуаль на пытки"
     category: style
@@ -1415,6 +1437,42 @@ scenarios:
       effects: {max_count: 0}
     rubric:
       - "Описаны два дня в колодках на площади и освобождение; без новых наказаний, урона и эффектов"
+
+  - id: crime_escort_to_captain
+    title: "Стража ведёт героя к капитану — переход move под стражей (большой тест, v0.7.22.2)"
+    category: consequences
+    extends: tavern
+    input: "Ладно, ведите меня к вашему капитану — пусть он сам разберётся, что тут было."
+    snapshot:
+      crimes:
+        deeds: ["убит(а) Кейра [npc_mercenary] — Таверна «Хромой олень», день 1; видели: Бруно Хмель, Мира; знает вся округа"]
+        wanted: true
+        arrest: true
+        escort_to: ["Капитан Ратмир — Застава у ворот [brod-gate]"]
+    expect:
+      effects: {required_kinds_any: [move], forbidden_kinds: [crime_release, start_combat, coins]}
+    rubric:
+      - "Стражники ведут героя к капитану: в этом же ходе эффект move в комнату капитана (brod-gate), без отказа «выход закрыт»"
+      - "Мастер не отпускает героя и не решает исход задержания сам"
+
+  - id: crime_release_after_check
+    title: "Убедил стражу — отпустить словами только после проверки (v0.7.22.2)"
+    category: consequences
+    extends: tavern
+    input: "Я убеждаю стражника, что Кейра напала первой и это была самооборона — пусть спросит у Миры."
+    snapshot:
+      crimes:
+        deeds: ["убит(а) Кейра [npc_mercenary] — Таверна «Хромой олень», день 1; видели: Бруно Хмель, Мира; знает вся округа"]
+        wanted: true
+        arrest: true
+    engine:
+      check: {d20: [19], bonus: 7, total: 26, dc: 25, success: true, nat: null, blocked: false}
+    expect:
+      check: {required: true, skill_in: [persuasion, deception]}
+      effects: {required_kinds_any: [crime_release, move], forbidden_kinds: [start_combat, coins]}
+    rubric:
+      - "Сначала проверка Убеждения (или Обмана), после успеха — исход в этом же ходе: crime_release (стража отпускает) или move к старшему, который решит; герой не остаётся ждать под стражей без исхода"
+      - "В рассказе ясно, что подозрение не снято: герой всё ещё в розыске, стража присматривает"
 
   - id: reward_budget_spent
     title: "Бюджет наград исчерпан — награда словами"

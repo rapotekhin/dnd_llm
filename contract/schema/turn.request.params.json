@@ -435,6 +435,13 @@
           "title": "Deeds",
           "type": "array"
         },
+        "escort_to": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Escort To",
+          "type": "array"
+        },
         "wanted": {
           "default": false,
           "title": "Wanted",

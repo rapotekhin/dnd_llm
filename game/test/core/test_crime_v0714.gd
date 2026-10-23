@@ -142,8 +142,8 @@ func test_the_master_cannot_walk_the_held_hero_away() -> void:
 	CrimeRules.on_death(s, data, "npc_mercenary", true, s.room_id)
 	s.room_id = "brod-gate"
 	CrimeRules.check_arrest(s, data)
-	var r := EffectEngine.new().validate(s, data, "t-1", {"kind": "move", "room_id": "brod-square"})
-	assert_str(str(r)).contains("стража держит героя")
+	var r := EffectEngine.new().validate(s, data, "t-1", {"kind": "move", "room_id": "pushcha-edge"})
+	assert_str(str(r)).contains("стража держит героя")  # out of Brod — no; within it the guard may lead (v0.7.22.2)
 
 
 func test_old_saves_have_no_crimes() -> void:

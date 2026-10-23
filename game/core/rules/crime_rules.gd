@@ -11,6 +11,13 @@ extends RefCounted
 ## a guard NPC in the room or a patrol (after search_minutes, not when sneaking or invisible) holds the hero
 ## (s.arrest = room): pay the wergild, sit in the stocks, or resist (a fight). Paid or served — the location forgives
 ## one step of the attitude. The body stays in the room as a thing to search (s.bodies {npc_id: room}).
+## Big test (v0.7.22.2): the hold has more answers, as in BG3 — Persuasion, Deception, Intimidation against a
+## tier by the crimes (`talk_tier`, a notable victim one step harder), each once a hold, or a bribe (bribe_share of
+## the wergild). Talked out or bribed — the hero is let go (s.let_go {location: abs minute}) but still wanted; resisted
+## — the same after the fight. Until let_go_minutes pass nobody holds the hero there; then a guard NPC in the room
+## holds again and a patrol finds the hero only by patrol_chance a step. The guard may lead the hero (the master's
+## `move` while held — to any room of the location, the hold goes along) and let go by words after a check that
+## passed at the talk tier (`crime_release`).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -142,13 +149,19 @@ static func check_arrest(s: GameSession, data: Dictionary) -> Array[String]:
 	var loc := world.location_id(s.room_id)
 	if not s.wanted.has(loc) or s.arrest == s.room_id or CombatRules.active(s):
 		return []
+	var now := TimeRules.abs_minute(s)
+	if now < int(s.let_go.get(loc, -1)):
+		return []  # just let go or fought free: the guard does not come back at once (big test #6)
 	var l := law(data, loc)
 	var guards := s.npcs_here(world.world, s.room_id).filter(func(id: String) -> bool: return (l.get("guards", []) as Array).has(id))
-	var patrol := TimeRules.abs_minute(s) - int(s.wanted[loc]) >= int(cfg(data)["search_minutes"]) \
+	var patrol := now - int(s.wanted[loc]) >= int(cfg(data)["search_minutes"]) \
 		and not s.sneaking and not ConditionRules.invisible(s.character, data)
+	if patrol and s.let_go.has(loc):
+		patrol = s.rng.randf() < float(cfg(data)["patrol_chance"])
 	if guards.is_empty() and not patrol:
 		return []
 	s.arrest = s.room_id
+	s.arrest_tried = []
 	var who := str(world.npc(guards[0]).get("name", "")) if not guards.is_empty() else str(l.get("patrol", "Патруль стражи"))
 	return ["%s: «Стой! Именем закона — ты задержан»" % who]
 
@@ -179,13 +192,72 @@ static func stocks_days(s: GameSession, data: Dictionary, loc: String) -> int:
 	return int(cfg(data)["stocks_days"]) * maxi(1, _open(s, loc).size())
 
 
-## "" when the arrest can be answered this way: pay / stocks / resist.
+## The talk answers to the guard and their skills (v0.7.22.2).
+const TALK := {"persuade": "persuasion", "deceive": "deception", "intimidate": "intimidation"}
+
+
+## The tier of talking the guard out of it: talk_tier, one step harder for each crime past the first and a notable victim.
+static func talk_tier(s: GameSession, data: Dictionary, loc: String) -> String:
+	var tiers: Array = (data["rules"]["dc_tiers"] as Dictionary).keys()
+	var i := tiers.find(str(cfg(data)["talk_tier"])) + maxi(0, _open(s, loc).size() - 1)
+	for crime: Dictionary in _open(s, loc):
+		var tags: Array = WorldView.new(data["world"]).npc(str(crime["victim"])).get("tags", [])
+		if tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(t)):
+			i += 1
+			break
+	return str(tiers[clampi(i, 0, tiers.size() - 1)])
+
+
+static func bribe(s: GameSession, data: Dictionary, loc: String) -> int:
+	return int(fine(s, data, loc) * float(cfg(data)["bribe_share"]))
+
+
+## "" when the arrest can be answered this way: pay / stocks / resist / persuade / deceive / intimidate / bribe.
 static func can_answer(s: GameSession, data: Dictionary, how: String) -> String:
 	if not held(s):
 		return "CRIME_NOT_HELD"
-	if how == "pay" and int(s.character["gold_cp"]) < fine(s, data, WorldView.new(data["world"]).location_id(s.room_id)):
+	var loc := WorldView.new(data["world"]).location_id(s.room_id)
+	if how == "pay" and int(s.character["gold_cp"]) < fine(s, data, loc):
+		return "CRIME_NO_MONEY"
+	if (TALK.has(how) or how == "bribe") and s.arrest_tried.has(how):
+		return "CRIME_TRIED"
+	if how == "bribe" and int(s.character["gold_cp"]) < bribe(s, data, loc):
 		return "CRIME_NO_MONEY"
 	return ""
+
+
+## The outcome of a talk answer whose check the engine rolled (GameState). Lines; a failed threat leaves
+## s.pending_fight with the guard.
+static func talked(s: GameSession, data: Dictionary, how: String, success: bool) -> Array[String]:
+	s.arrest_tried.append(how)
+	if success:
+		return let_go(s, data, "Стража отпускает героя — но розыск не снят")
+	if how == "intimidate":
+		var lines: Array[String] = ["Угроза не подействовала — стража берётся за оружие"]
+		lines.append_array(answer(s, data, "resist"))
+		return lines
+	return ["Стража не верит ни слову"]
+
+
+## The hero is free for now but still wanted: nobody holds them here for let_go_minutes. Lines.
+static func let_go(s: GameSession, data: Dictionary, line: String) -> Array[String]:
+	var loc := WorldView.new(data["world"]).location_id(s.room_id)
+	s.arrest = ""
+	s.arrest_tried = []
+	s.let_go[loc] = TimeRules.abs_minute(s) + int(cfg(data)["let_go_minutes"])
+	return [line]
+
+
+## The master's `crime_release`: the guard lets the hero go by words — only after a check this turn that passed at
+## the talk tier (`won` — the tiers of the passed checks). {"reason"} or {"plan", "summary"}.
+static func plan_release(s: GameSession, data: Dictionary, won: Array) -> Dictionary:
+	if not held(s):
+		return {"reason": "стража не держит героя"}
+	var need := talk_tier(s, data, WorldView.new(data["world"]).location_id(s.room_id))
+	var dcs: Dictionary = data["rules"]["dc_tiers"]
+	if not won.any(func(t: Variant) -> bool: return int(dcs.get(str(t), 0)) >= int(dcs[need])):
+		return {"reason": "отпустить словами — только после пройденной в этом ходе проверки Убеждения, Обмана или Запугивания сложности %s (%d); сначала engine.check" % [need, int(dcs[need])]}
+	return {"plan": {"crime_release": true}, "summary": "Стража отпускает героя (розыск не снят)"}
 
 
 ## The answer to the guard (can_answer first). Lines; resisting leaves s.pending_fight with the guard.
@@ -195,6 +267,12 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 	var l := law(data, loc)
 	var lines: Array[String] = []
 	match how:
+		"bribe":
+			var bcp := bribe(s, data, loc)
+			s.character["gold_cp"] = int(s.character["gold_cp"]) - bcp
+			s.arrest_tried.append("bribe")
+			lines.append("Взятка: −%s" % Money.format(bcp))
+			lines.append_array(let_go(s, data, "Стража смотрит в сторону — но розыск не снят"))
 		"pay":
 			var cp := fine(s, data, loc)
 			s.character["gold_cp"] = int(s.character["gold_cp"]) - cp
@@ -218,8 +296,7 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 					foes.append({"monster": str(n.get("monster", "guard")), "name": str(n.get("name", id)), "desc": str(n.get("description", "")),
 						"npc_id": id, "col": 1, "by_hero": true})
 			s.pending_fight = foes
-			s.arrest = ""
-			lines.append("Вы сопротивляетесь страже")
+			lines.append_array(let_go(s, data, "Вы сопротивляетесь страже"))  # fought free — no new patrol at once (big test #6)
 	return lines
 
 
@@ -228,6 +305,7 @@ static func _settle(s: GameSession, data: Dictionary, loc: String) -> Array[Stri
 	for crime: Dictionary in _open(s, loc):
 		crime["settled"] = true
 	s.wanted.erase(loc)
+	s.let_go.erase(loc)
 	s.arrest = ""
 	for id: String in people_of(data, loc):
 		if not s.dead_npcs.has(id):
@@ -291,4 +369,12 @@ static func snapshot(s: GameSession, data: Dictionary) -> Dictionary:
 			world.room(str(crime["room"])).get("name", crime["room"]), int(crime["at"]) / 1440 + 1,
 			("видели: " + ", ".join(w.map(func(id: Variant) -> String: return str(world.npc(str(id)).get("name", id)))) + "; ") if not w.is_empty() else "",
 			"искуплено" if bool(crime["settled"]) else ("знает вся округа" if bool(crime["known"]) else "никто не знает — тайна героя")])
-	return {"deeds": deeds, "wanted": wanted_at(s, data, s.room_id), "arrest": held(s)}
+	var out := {"deeds": deeds, "wanted": wanted_at(s, data, s.room_id), "arrest": held(s)}
+	if held(s):  # v0.7.22.2: where the guard may lead the hero — the rooms of the law's people
+		var escort: Array[String] = []
+		for g: Variant in law(data, world.location_id(s.room_id)).get("guards", []):
+			var r := WorldMap.npc_room(world.world, str(g))
+			if not r.is_empty() and r != s.room_id:
+				escort.append("%s — %s [%s]" % [world.npc(str(g)).get("name", g), world.room(r).get("name", r), r])
+		out["escort_to"] = escort
+	return out

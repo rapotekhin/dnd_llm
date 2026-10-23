@@ -77,3 +77,18 @@ func run() -> void:
 			await frames(3)
 			var left := PropRules.room_props(s, s.room_id).filter(func(p: Dictionary) -> bool: return str(p.get("item_id", "")) == "backpack")
 			step("the backpack lies in the hall with the torch", not left.is_empty() and int((left[0]["contents"] as Dictionary).get("torch", 0)) == 1)
+
+	# v0.7.22.2 (big test #10): «Выбросить» right in the sheet — the sheet stays open, the thing lies in the room.
+	if not sheet.visible:
+		await press(find(game, "SheetButton"))
+	tabs.current_tab = 2
+	await frames(3)
+	var weapon := str(s.character["equipped"].get("main_hand", ""))
+	var drop_w: Button = find(sheet, "Drop_" + weapon)
+	if step("the sheet offers to drop the weapon in hand", drop_w != null and not drop_w.disabled, weapon):
+		await press(drop_w)
+		await frames(3)
+		var on_floor := PropRules.room_props(s, s.room_id).any(func(p: Dictionary) -> bool: return str(p.get("item_id", "")) == weapon)
+		step("the weapon left the hand and lies in the hall", str(s.character["equipped"].get("main_hand", "")) != weapon and on_floor, str(s.character["equipped"]))
+		step("the sheet is still open", sheet.visible)
+		await shot("dropped")

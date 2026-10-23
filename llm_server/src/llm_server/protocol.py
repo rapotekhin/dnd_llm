@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.40.0"
+PROTOCOL_VERSION = "0.41.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -366,6 +366,7 @@ class HeroCrimes(_In):
     deeds: list[str] = Field(default_factory=list)  # «убит(а) Сестра Илва [npc_priestess] — Храм, день 2; видели: …; знает вся округа»
     wanted: bool = False  # wanted in this location: its traders and givers turn the hero away
     arrest: bool = False  # the guard holds the hero here now; the answer is the player's button
+    escort_to: list[str] = Field(default_factory=list)  # 0.41.0: «Капитан Ольга — Караулка [room_id]» — where the guard may lead the held hero
 
 
 class Snapshot(_In):
@@ -880,6 +881,13 @@ class CrimeKnownEffect(_Out):
     victim_id: str
 
 
+class CrimeReleaseEffect(_Out):
+    """The guard lets the held hero go by words (0.41.0): only after a Persuasion, Deception or Intimidation check this
+    turn that passed at the engine's tier for the crimes. The hero stays wanted; the guard does not come back at once."""
+
+    kind: Literal["crime_release"] = "crime_release"
+
+
 class NpcDiscountEffect(_Out):
     """A trader of the scene gives the hero a discount by words (0.21.0): `percent` 5–20 off buying for a week. The
     engine grants it only from an NPC who likes the hero (attitude ≥ +1) or was won over by a successful
@@ -964,7 +972,7 @@ class FlagEffect(_Out):
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
-    | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect
+    | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect,
     Field(discriminator="kind"),

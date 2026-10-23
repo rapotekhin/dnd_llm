@@ -41,6 +41,8 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 		out.append(_t("ITEM_CHARGES").format({"left": ItemRules.charges_left(c, def, id) if not c.is_empty() else ItemRules.charges_max(def), "max": ItemRules.charges_max(def)}))
 	if ItemRules.needs_attunement(def):
 		out.append(_t("ITEM_ATTUNED") if not c.is_empty() and ItemRules.attuned(c).has(id) else _t("ITEM_NEEDS_ATTUNEMENT"))
+	elif str(def.get("item_type", "")) == "wondrous" and not (def.get("properties", []) as Array).is_empty() and not id.begins_with(ItemRules.UNKNOWN):
+		out.append(_t("ITEM_WORKS_CARRIED"))  # big test #23 (v0.7.22.2): the goggles work in the pack, nothing to put on
 	if ItemRules.cursed(def):
 		out.append(_t("ITEM_CURSED_LINE"))
 	if bool(def.get("master", false)):

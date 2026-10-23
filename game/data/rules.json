@@ -917,12 +917,13 @@
 		"guard_monster": "guard"
 	},
 	"reward_budget": {
-		"_doc": "The master's rewards between long rests (v0.7.14.3, DMG treasure by level): coins and things the master gives (`coins` up, `give_item` outside quests) together cost at most per_rest_cp of the hero's level until the next long rest; quest rewards, fights, thefts and searches are not counted. A success on a nearly_impossible check this turn lets the master give at most impossible_share of what is left.",
+		"_doc": "The master's rewards between long rests (v0.7.14.3, DMG treasure by level): coins and things the master gives (`coins` up, `give_item` outside quests) together cost at most per_rest_cp of the hero's level until the next long rest; quest rewards, fights, thefts and searches are not counted. A success on a nearly_impossible check this turn lets the master give at most impossible_share of what is left. A magic thing (not common, v0.7.22.2) is not counted by its price: at most magic_per_rest of them until the long rest, each in a turn with a check that passed.",
 		"per_rest_cp": {"1": 3000, "2": 5000, "3": 8000, "4": 12000, "5": 20000},
-		"impossible_share": 0.25
+		"impossible_share": 0.25,
+		"magic_per_rest": 1
 	},
 	"crime": {
-		"_doc": "Crimes of the hero (v0.7.14, CrimeRules): a pack NPC killed in a fight the hero began. Witnesses (the living NPCs of the room) know at once and like the hero witness_attitude less; a hidden body is found after found_minutes. Known — every NPC of the location attitude; in a location with `law` (pack) the hero is wanted: traders and givers turn away, a guard NPC or a patrol (after search_minutes) holds the hero — wergild fine_cp a crime (×notable_mult for a victim with notable_tags), or stocks_days a crime in the stocks, or a fight with patrol_size guards. Settled — the location forgives `forgiven`. A body gives its pockets and body_wares things of its wares.",
+		"_doc": "Crimes of the hero (v0.7.14, CrimeRules): a pack NPC killed in a fight the hero began. Witnesses (the living NPCs of the room) know at once and like the hero witness_attitude less; a hidden body is found after found_minutes. Known — every NPC of the location attitude; in a location with `law` (pack) the hero is wanted: traders and givers turn away, a guard NPC or a patrol (after search_minutes) holds the hero — wergild fine_cp a crime (×notable_mult for a victim with notable_tags), or stocks_days a crime in the stocks, or a fight with patrol_size guards. Settled — the location forgives `forgiven`. v0.7.22.2 (big test): Persuasion / Deception / Intimidation against talk_tier (a step harder for each crime past the first and a notable victim), each once a hold, or a bribe of bribe_share × the wergild — let go but still wanted; nobody holds the hero there for let_go_minutes (after a resist too), then a guard NPC holds and a patrol comes by patrol_chance a step. While held the master may lead the hero to any room of the location (`move`) and let go after a check passed at the talk tier (`crime_release`). A body gives its pockets and body_wares things of its wares.",
 		"witness_attitude": -1,
 		"attitude": -2,
 		"forgiven": 1,
@@ -933,6 +934,10 @@
 		"notable_mult": 2,
 		"stocks_days": 2,
 		"patrol_size": 2,
+		"talk_tier": "hard",
+		"bribe_share": 0.5,
+		"let_go_minutes": 240,
+		"patrol_chance": 0.25,
 		"body_wares": 2
 	},
 	"props": {

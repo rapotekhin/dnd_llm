@@ -303,10 +303,24 @@ static func plan_drop(s: GameSession, data: Dictionary, what: String, qty: int) 
 	if bags(c).has(what):
 		var item_id := str(bags(c)[what]["kind"])
 		return {"plan": {"room": s.room_id, "item_id": item_id, "bag": what}, "summary": "Оставлено здесь: %s" % bag_name(data, c, what)}
-	if qty <= 0 or TradeRules.sellable(s, what, data) < qty:
+	if qty <= 0 or droppable(s, data, what) < qty:
 		return {"reason": "у героя нет свободных %s ×%d" % [what, qty]}
 	return {"plan": {"room": s.room_id, "item_id": what, "qty": qty},
 		"summary": "Оставлено здесь: %s%s" % [ItemRules.display_name(data["items"], s.items, what), " ×%d" % qty if qty > 1 else ""]}
+
+
+## How many of `item_id` the hero can drop (big test #10, v0.7.22.2): a held weapon or a worn trinket goes down
+## too (5e: dropping is free), worn armour and a shield are taken off first (minutes), a full bag goes as a bag,
+## a cursed thing does not leave the hero.
+static func droppable(s: GameSession, data: Dictionary, item_id: String) -> int:
+	var c := s.character
+	if ItemRules.held_by_curse(c, data, s.items, item_id):
+		return 0
+	var worn := 0
+	for slot: String in ["armor", "shield"]:
+		if str(c.get("equipped", {}).get(slot, "")) == item_id:
+			worn += 1
+	return maxi(0, int(c.get("inventory", {}).get(item_id, 0)) - worn - full_bags(c, item_id))
 
 
 static func apply_drop(s: GameSession, data: Dictionary, plan: Dictionary) -> void:
@@ -322,6 +336,13 @@ static func apply_drop(s: GameSession, data: Dictionary, plan: Dictionary) -> vo
 	inv[item_id] = int(inv.get(item_id, 0)) - qty
 	if int(inv[item_id]) <= 0:
 		inv.erase(item_id)
+		(c.get("attuned", []) as Array).erase(item_id)
+	var held := 0  # the hands let go of what is no longer carried
+	for slot: String in CharacterRules.SLOTS:
+		if str(c.get("equipped", {}).get(slot, "")) == item_id:
+			held += 1
+			if held > int(inv.get(item_id, 0)):
+				c["equipped"][slot] = ""
 	sync_bags(c, data)
 	var list: Array = s.props.get(str(plan["room"]), [])
 	for i in qty:

@@ -92,6 +92,10 @@ var caught_by: Dictionary = {}
 var crimes: Array[Dictionary] = []
 var wanted: Dictionary = {}
 var arrest: String = ""
+## v0.7.22.2: {location_id: abs minute} — let go or fought free, nobody holds the hero there until then; the talk
+## answers already tried in this hold.
+var let_go: Dictionary = {}
+var arrest_tried: Array[String] = []
 var bodies: Dictionary = {}
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
@@ -101,6 +105,7 @@ const CHRONICLE_MAX := 400
 var chronicle: Array[Dictionary] = []
 ## What the master gave (cp of coins and things) since the last long rest (EffectEngine, v0.7.14.3).
 var reward_spent: int = 0
+var magic_given: int = 0  # magic things the master gave since the long rest (v0.7.22.2)
 ## The master's own memory of events (effect `note`, v0.7.4): [{day, clock, room, text}] — shown in the journal.
 var notes: Array[Dictionary] = []
 ## Short rests taken today (ExplorationRules); a long rest resets it.
@@ -430,10 +435,13 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"crimes": crimes,
 		"wanted": wanted,
 		"arrest": arrest,
+		"let_go": let_go,
+		"arrest_tried": arrest_tried,
 		"bodies": bodies,
 		"searched": searched,
 		"quests_failed": quests_failed,
 		"reward_spent": reward_spent,
+		"magic_given": magic_given,
 		"chronicle": chronicle,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
@@ -521,6 +529,10 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for loc: String in d.get("wanted", {}):
 		s.wanted[loc] = int(d["wanted"][loc])
 	s.arrest = str(d.get("arrest", ""))
+	for loc: String in d.get("let_go", {}):
+		s.let_go[loc] = int(d["let_go"][loc])
+	for how: Variant in d.get("arrest_tried", []):
+		s.arrest_tried.append(str(how))
 	for n: String in d.get("bodies", {}):
 		s.bodies[n] = str(d["bodies"][n])
 	for n: Variant in d.get("searched", []):
@@ -528,6 +540,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for q: Variant in d.get("quests_failed", []):
 		s.quests_failed.append(str(q))
 	s.reward_spent = int(d.get("reward_spent", 0))
+	s.magic_given = int(d.get("magic_given", 0))
 	for e: Variant in d.get("chronicle", []):
 		if e is Dictionary:
 			s.chronicle.append({"day": int(e.get("day", 1)), "minute": int(e.get("minute", 0)), "room": str(e.get("room", "")), "text": str(e.get("text", ""))})

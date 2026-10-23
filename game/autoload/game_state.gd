@@ -882,9 +882,10 @@ func set_goal(text: String) -> String:
 	return ""
 
 
-## Leaves a thing of the pack — a bag with what is in it — in the room (v0.7.18.2), no master turn. "" or a key.
+## Leaves a thing of the pack — a bag with what is in it — in the room (v0.7.18.2), no master turn; from the sheet
+## too, in a talk or a fight (big test #10, v0.7.22.2: an overloaded hero could not leave). "" or a key.
 func drop_item(what: String, qty: int = 1) -> String:
-	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
+	if session == null or is_busy():
 		return "WAIT_NOT_NOW"
 	var r := ContainerRules.plan_drop(session, Catalog.data, what, qty)
 	if r.has("reason"):
@@ -1494,11 +1495,19 @@ func crime_answer(how: String) -> String:
 	var why := CrimeRules.can_answer(session, Catalog.data, how)
 	if not why.is_empty():
 		return why
-	var lines := CrimeRules.answer(session, Catalog.data, how)
+	var lines: Array[String] = []
+	if CrimeRules.TALK.has(how):  # v0.7.22.2: talk the guard out of it — the engine rolls
+		var loc := world().location_id(session.room_id)
+		var result := _engine_check({"skill": CrimeRules.TALK[how], "dc_tier": CrimeRules.talk_tier(session, Catalog.data, loc)})
+		if result.has("error"):
+			return "MSG_MASTER_FAILED"
+		lines = CrimeRules.talked(session, Catalog.data, how, bool(result["success"]))
+	else:
+		lines = CrimeRules.answer(session, Catalog.data, how)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
-	if how == "resist":
+	if not session.pending_fight.is_empty():  # resisted, or a threat that failed
 		_start_pending_fight()
 		return ""
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)

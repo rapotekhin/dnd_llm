@@ -98,7 +98,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "theft": ("кража из карманов: как её отыграть", ()),
     "items": ("новый предмет (`give_item.item`): жезлы, свитки, зелья, вещи с текстом; магические вещи, неопознанные и проклятые", ()),
     "places": ("новое место на открытом краю мира (`create_place`)", ("create_place",)),
-    "crime": ("преступления героя: убитые, розыск, стража, признание (`crime_known`)", ("crime_known",)),
+    "crime": ("преступления героя: убитые, розыск, стража, признание (`crime_known`)", ("crime_known", "crime_release")),
     "social": ("что NPC даёт словами: скидка, услуга даром, тайна, идёт с героем, слава в поселении "
                "(`npc_discount`, `npc_favor`, `reveal_secret`, `npc_follow`, `reputation`)",
                ("npc_discount", "npc_favor", "reveal_secret", "npc_follow", "reputation")),

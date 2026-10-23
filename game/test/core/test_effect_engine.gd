@@ -100,6 +100,7 @@ func test_new_item_needs_a_search_and_a_level_fitting_rarity() -> void:
 		"properties": ["finesse", "cold_damage"]}
 	assert_str(_no({"kind": "give_item", "item": item})).contains("find_items")
 	fx.mark_searched("t-1")
+	fx.note_check("t-1", "medium", true)  # a magic find needs a passed check (v0.7.22.2)
 	var r := fx.validate(s, data, "t-1", {"kind": "give_item", "item": item})
 	assert_bool(r["accepted"]).is_true()
 	assert_str(r["item_id"]).starts_with("gen_")

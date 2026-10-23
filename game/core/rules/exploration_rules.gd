@@ -336,6 +336,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	lines.append_array(ItemRules.dawn(c, data, s.items, s.rng))  # charges come back at dawn (v0.7.12)
 	s.short_rests = 0
 	s.reward_spent = 0  # a new budget of the master's rewards (v0.7.14.3)
+	s.magic_given = 0  # and of its magic things (v0.7.22.2)
 	s.day += 1
 	return lines
 

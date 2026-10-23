@@ -123,6 +123,8 @@ func apply(s: GameSession, turn_id: String, ids: Array) -> Array[String]:
 			continue
 		_extra_lines.clear()
 		s.reward_spent += int(r["plan"].get("reward", 0))  # the master's gift counts against the budget (v0.7.14.3)
+		if bool(r["plan"].get("magic", false)):
+			s.magic_given += 1
 		_apply_one(s, r["kind"], r["plan"])
 		lines.append(str(r["summary"]))
 		lines.append_array(_extra_lines)  # an owner's reaction to a taken thing (v0.7.0)
@@ -159,10 +161,12 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var to := str(e.get("room_id", ""))
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "move"):
 				return {"reason": "переход уже предложен в этом ходе"}
+			if CrimeRules.held(s):  # big test #5 (v0.7.22.2): the guard leads the hero — anywhere in the location
+				if world.location_id(to) != world.location_id(s.room_id) or world.room(to).is_empty():
+					return {"reason": "стража держит героя: увести его можно только в комнату этой же округи (%s) — к капитану, в караулку; сам он не уйдёт" % world.location_id(s.room_id)}
+				return {"plan": {"room_id": to, "with": [], "escort": true}, "summary": "Под стражей: %s" % world.room(to).get("name", to)}
 			if not ExplorationRules.open_exits(s, data["world"], s.room_id).has(to):
 				return {"reason": "из этой комнаты нет выхода в %s" % to}
-			if CrimeRules.held(s):
-				return {"reason": "стража держит героя: уйти нельзя, пока он не ответит (кнопки ареста — у игрока)"}
 			var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as npc_follow
 			for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
 				var nid := str(n)
@@ -213,6 +217,12 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if give.has("plan"):  # the master's own gift: within the budget until the long rest (v0.7.14.3)
 				var def := ItemRules.def_of(items, s.items, str(give["plan"]["item_id"])) if not give["plan"].has("def") else (give["plan"]["def"] as Dictionary)
 				var value := int(def.get("value_cp", 0)) * int(give["plan"]["qty"])
+				if not str(def.get("rarity", "common")) in ["common", ""]:  # big test #16 (v0.7.22.2): magic is a find, not coins
+					var why := _magic_why_not(s, data, turn_id, pending)
+					if not why.is_empty():
+						return {"reason": why}
+					give["plan"]["magic"] = true
+					return give
 				if value > reward_left(s, data, turn_id, pending):
 					return {"reason": _over_budget(s, data, turn_id, pending)}
 				give["plan"]["reward"] = value
@@ -358,6 +368,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return {"plan": {"quest_accept": qid}, "summary": "Новое задание: %s" % QuestRules.quest(world.world, qid)["title"]}
 		"crime_known":  # the hero confessed or was exposed (v0.7.14)
 			return CrimeRules.plan_reveal(s, data, str(e.get("victim_id", "")))
+		"crime_release":  # the guard lets the hero go by words after a passed check (v0.7.22.2)
+			return CrimeRules.plan_release(s, data, _won.get(turn_id, []))
 		"note":
 			var text := str(e.get("text", "")).strip_edges()
 			if text.length() < 5:
@@ -635,6 +647,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 	if plan.has("victim"):  # crime_known (v0.7.14)
 		_extra_lines.append_array(CrimeRules.reveal(s, _data, str(plan["victim"])))
 		return
+	if plan.has("crime_release"):  # crime_release (v0.7.22.2)
+		_extra_lines.append_array(CrimeRules.let_go(s, _data, "Стража отпускает героя — но розыск не снят"))
+		return
 	if plan.has("text") and plan.has("npc_id"):  # note about an NPC (v0.7.15)
 		s.remember(str(plan["npc_id"]), str(plan["text"]))
 		return
@@ -694,6 +709,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 	match kind:
 		"move":
 			s.room_id = plan["room_id"]
+			if bool(plan.get("escort", false)):
+				s.arrest = s.room_id  # the hold goes along with the guard
 			for n: Variant in plan.get("with", []):
 				FollowRules.apply(s, {"follow_npc": str(n), "on": true, "room": ""})
 		"damage":
@@ -787,6 +804,18 @@ static func _damage_dice(rules: Dictionary, level: int, severity: String) -> Arr
 		if level <= int(row["max_level"]):
 			return row.get(severity, [])
 	return []
+
+
+## A magic thing the master gives (v0.7.22.2): not by its price in the coin budget (an uncommon thing costs more
+## than the whole budget of levels 1-5), but rules.reward_budget.magic_per_rest of them until the long rest, each
+## in a turn with a check that passed (a search, Arcana, Perception). "" or the reason.
+func _magic_why_not(s: GameSession, data: Dictionary, turn_id: String, pending: Array[Dictionary]) -> String:
+	if (_won.get(turn_id, []) as Array).is_empty():
+		return "магическая вещь — находка: только в ходе с пройденной проверкой (обыск, Анализ, Внимательность — engine.check); иначе награди словами или обычной вещью"
+	var given := s.magic_given + pending.filter(func(p: Dictionary) -> bool: return bool(p["plan"].get("magic", false))).size()
+	if given >= int(data["rules"]["reward_budget"]["magic_per_rest"]):
+		return "магическая вещь до долгого отдыха уже дана — дай обычную вещь, монеты или наводку"
+	return ""
 
 
 func _over_budget(s: GameSession, data: Dictionary, turn_id: String, pending: Array[Dictionary]) -> String:
