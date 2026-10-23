@@ -279,7 +279,7 @@ func _abilities_tab(c: Dictionary) -> Control:
 		box.add_child(prep)
 	var ready_ids := SpellRules.ready(c)
 	var sp: Dictionary = c.get("spells", {})
-	for list: String in ["cantrips", "prepared", "always", "known"]:
+	for list: String in ["cantrips", "free", "prepared", "always", "known"]:
 		var ids: Array = sp.get(list, [])
 		if list == "known" and ids == sp.get("prepared", []):
 			continue
@@ -290,7 +290,7 @@ func _abilities_tab(c: Dictionary) -> Control:
 			var s: Dictionary = d["spells"].get(str(id), {})
 			_entry(box, "%s — %s, %s, %s" % [s.get("name", id), s.get("casting_time", ""), s.get("range", ""), s.get("duration", "")], str(s.get("desc", "")))
 			if list != "known" and ready_ids.has(str(id)):
-				_cast_row(box, c, str(id), int(s.get("level", 0)), can_act)
+				_cast_row(box, c, str(id), 0 if list == "free" else int(s.get("level", 0)), can_act)
 	return box.get_parent()
 
 
@@ -302,7 +302,9 @@ func _cast_row(parent: Control, c: Dictionary, id: String, level: int, can_act: 
 	var pick := OptionButton.new()
 	pick.name = "Slot_" + id
 	pick.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	if level == 0:
+	if SpellRules.is_free(c, id):
+		pick.add_item(tr("SLOT_AT_WILL"), 0)  # an invocation's spell (v0.7.22.4)
+	elif level == 0:
 		pick.add_item(tr("SLOT_CANTRIP"), 0)
 	else:
 		for lv in range(level, 6):

@@ -611,6 +611,11 @@ static func _cast_condition_on_hero(s: GameSession, data: Dictionary, f: Diction
 	var sp: Dictionary = data["spells"][id]
 	var name := str(sp["name"])
 	var conds: Array = spec["conditions"]
+	var word := _command_word(s, spec)  # Command's word (v0.7.22.4)
+	var said := ""
+	if not word.is_empty():
+		conds = word["conditions"]
+		said = " — «%s»" % word["word"]
 	var tags: Array[String] = ["magic"]
 	if conds.has("charmed"):
 		tags.push_front("charm")
@@ -622,25 +627,25 @@ static func _cast_condition_on_hero(s: GameSession, data: Dictionary, f: Diction
 	for cond: String in conds:
 		var immune := HeroDefense.immune(c, data, cond, tag)
 		if not immune.is_empty():
-			lines.append("%s колдует «%s» — не действует: %s" % [f["name"], name, immune])
+			lines.append("%s колдует «%s»%s — не действует: %s" % [f["name"], name, said, immune])
 			return
 	if spec.has("pool"):
 		var pool := CombatRules.roll_dice(s.rng, str(spec["pool"]))
 		for i in maxi(0, slot - maxi(1, int(sp["level"]))):
 			pool += CombatRules.roll_dice(s.rng, str(spec["pool_per_slot"]))
 		if int(c["hp"]) > pool:
-			lines.append("%s колдует «%s»: пул %d хитов — %s устоял" % [f["name"], name, pool, c.get("name", "")])
+			lines.append("%s колдует «%s»%s: пул %d хитов — %s устоял" % [f["name"], name, said, pool, c.get("name", "")])
 			return
-		lines.append("%s колдует «%s»: пул %d хитов" % [f["name"], name, pool])
+		lines.append("%s колдует «%s»%s: пул %d хитов" % [f["name"], name, said, pool])
 	elif sp.has("save"):
 		var r := HeroDefense.save(s, data, str(sp["save"]["ability"]), dc, tag)
-		lines.append("%s колдует «%s»: спасбросок %s" % [f["name"], name, r["text"]])
+		lines.append("%s колдует «%s»%s: спасбросок %s" % [f["name"], name, said, r["text"]])
 		if bool(r["ok"]):
 			return
 	var ends := {"at": ConditionRules.now(s) + int(spec.get("rounds", 10))}
 	var conc := bool(sp.get("concentration", false))
 	for cond: String in conds:
-		var e := {"condition": cond, "ends": ends, "by": str(f["id"]), "source": {"kind": "monster_spell", "id": id, "name": "%s — %s" % [f["name"], name]}}
+		var e := {"condition": cond, "ends": {} if cond == "prone" else ends, "by": str(f["id"]), "source": {"kind": "monster_spell", "id": id, "name": "%s — %s" % [f["name"], name]}}
 		if bool(spec.get("repeat_save", false)) and sp.has("save"):
 			e["save"] = {"ability": str(sp["save"]["ability"]), "dc": dc, "tag": tag, "repeat": true}
 		if bool(spec.get("ends_on_damage", false)):
@@ -650,8 +655,30 @@ static func _cast_condition_on_hero(s: GameSession, data: Dictionary, f: Diction
 		lines.append_array(ConditionRules.impose(s, data, e))
 	if conc:
 		f["concentration"] = id
+	if bool(word.get("drop", false)):
+		var held := str(c.get("equipped", {}).get("main_hand", ""))
+		c["equipped"]["main_hand"] = ""
+		c["dropped"] = held  # picked up at the start of the hero's next turn it can act (a free interaction, 5e)
+		lines.append("%s роняет %s" % [c.get("name", ""), ItemRules.display_name(data["items"], s.items, held)])
+	if int(word.get("flee", 0)) > 0:
+		var p := CombatRules.player(s)
+		var away := signi(int(p["col"]) - int(f["col"]))
+		var edge := int(CombatRules.cfg(data)["edge"])
+		p["col"] = clampi(int(p["col"]) + (away if away != 0 else 1) * int(word["flee"]), -edge, edge)
+		lines.append("%s бежит прочь" % c.get("name", ""))
 	CharacterRules.refresh(c, data, s.items)
 	lines.append("%s: %s" % [c.get("name", ""), ", ".join(conds.map(func(x: String) -> String: return ConditionRules.name_of(data, x).to_lower()))])
+
+
+## Command's word: the first that does something now (Grovel — not when prone, Drop — only with a weapon in hand);
+## {} for a spell without words.
+static func _command_word(s: GameSession, spec: Dictionary) -> Dictionary:
+	var c := s.character
+	var fits: Array = (spec.get("words", []) as Array).filter(func(w: Dictionary) -> bool:
+		if not str(w.get("not_if", "")).is_empty() and ConditionRules.has(c, str(w["not_if"])):
+			return false
+		return not bool(w.get("drop", false)) or not str(c.get("equipped", {}).get("main_hand", "")).is_empty())
+	return fits[s.rng.randi_range(0, fits.size() - 1)] if not fits.is_empty() else {}
 
 
 ## Damage breaks a monster's concentration on a failed CON save (DC 10 or half the damage). Lines.

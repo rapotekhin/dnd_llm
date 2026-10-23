@@ -669,6 +669,12 @@ func combat_item_spell(item_id: String, target_id: String) -> String:
 		func() -> Array[String]: return CombatRules.item_spell(session, Catalog.data, item_id, target_id))
 
 
+## The next dart or ray of the spell just cast at a target of its own (v0.7.22.4, as in BG3). "" or a key.
+func combat_volley(target_id: String) -> String:
+	return _combat_do(CombatRules.can_volley(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.volley_shot(session, Catalog.data, target_id))
+
+
 func combat_end_turn() -> String:
 	if not _combat_ready():
 		return "COMBAT_NOT_YOUR_TURN"

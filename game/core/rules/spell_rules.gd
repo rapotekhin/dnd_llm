@@ -16,11 +16,16 @@ static func resolve(c: Dictionary, data: Dictionary, name: String) -> String:
 static func ready(c: Dictionary) -> Array:
 	var out: Array = []
 	var sp: Dictionary = c.get("spells", {})
-	for list: String in ["cantrips", "prepared", "always"]:
+	for list: String in ["cantrips", "prepared", "always", "free"]:
 		for id: Variant in sp.get(list, []):
 			if not out.has(str(id)):
 				out.append(str(id))
 	return out
+
+
+## A spell the hero casts at will, without a slot (an invocation, v0.7.22.4).
+static func is_free(c: Dictionary, spell_id: String) -> bool:
+	return (c.get("spells", {}).get("free", []) as Array).has(spell_id)
 
 
 static func level_of(data: Dictionary, spell_id: String) -> int:
@@ -52,7 +57,7 @@ static func check(c: Dictionary, data: Dictionary, name: String, slot: int, pend
 	if id.is_empty():
 		return {"reason": "«%s» не подготовлено у персонажа — он не может его сотворить" % sname}
 	var lv := level_of(data, id)
-	if lv == 0:
+	if lv == 0 or is_free(c, id):
 		return {"spell_id": id, "slot": 0}
 	if slot == 0:
 		slot = lowest_slot(c, data, id, pending)

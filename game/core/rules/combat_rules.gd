@@ -362,6 +362,13 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			s.combat["economy"] = {"action": 0, "bonus": 0, "move": 0, "attacks": 0, "attacked": false, "sneak": false, "haste": 0}
 			lines.append("%s вялый после Ускорения — ход без действий и движения" % s.character["name"])
 		s.combat.erase("reckless")  # Reckless Attack lasts until the hero's next turn
+		var dropped := str(s.character.get("dropped", ""))
+		if not dropped.is_empty() and not ConditionRules.incapacitated(s.character):  # Command «Брось!» (v0.7.22.4)
+			s.character.erase("dropped")
+			if str(s.character["equipped"].get("main_hand", "")).is_empty() and int(s.character["inventory"].get(dropped, 0)) > 0:
+				s.character["equipped"]["main_hand"] = dropped
+				CharacterRules.refresh(s.character, data, s.items)
+				lines.append("%s поднимает %s" % [s.character["name"], ItemRules.display_name(data["items"], s.items, dropped)])
 		lines.append_array(SpellEffects.turn_start(s, data))  # Heroism (v0.7.13.1)
 		lines.append_array(SpellEffects.zones_expire(s))  # Grease (v0.7.13.6)
 		SpellEffects.end_until_turn(s, data)  # Shield (v0.7.13.7)
@@ -1280,31 +1287,15 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 				count = int(multi["by_level"][k])
 	var dtype := str(sp.get("damage_type", ""))
 	var name := str(sp["name"])
+	if count > 1 and not sp.has("area") and bool(cfg(data).get("volley_one_by_one", false)):
+		# As in BG3 (v0.7.22.4, big test #33): one dart or ray now, a target for each of the rest by the button.
+		s.combat["volley"] = {"spell": spell_id, "slot": slot, "left": count - 1, "last": target_id}
+		count = 1
 	for i in count:
 		if not sp.has("area") and str(t.get("status")) != "active":
 			break
-		if bool(multi.get("auto_hit", false)):
-			var dmg := _resist(data, t, dtype, roll_dice(s.rng, _empowered(s, dice)))
-			lines.append("%s: %d (%s) по %s" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype), t["name"]])
-			_hurt_enemy(s, data, t, dmg, lines)
-		elif sp.has("attack"):
-			# v0.7.13: a spell attack has the advantages and disadvantages of any attack (prone, hidden, guided, dark…)
-			var probe := {"melee": str(sp["attack"]) == "melee", "range": [int(sp.get("range_ft", 5)), int(sp.get("range_ft", 5))], "id": "",
-				"name": name, "str_based": false}
-			var mods := _attack_mods(s, data, probe, t)
-			if spell_id == "shocking_grasp" and _metal_armor(data, t):
-				(mods["adv"] as Array).append("металлический доспех")
-			var dis := not (mods["dis"] as Array).is_empty()
-			var adv := not (mods["adv"] as Array).is_empty()
-			var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
-			var sres := _attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), adv, dis, t,
-				_empowered(s, dice), agonizing, dtype, lines)
-			_spell_rider(s, data, spell_id, slot, t, bool(sres["hit"]), lines)
-			if bool(sres["hit"]) and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_repelling_blast") and str(t.get("status")) == "active" \
-					and SIZES.find(str(_monster(data, t).get("size", "medium"))) <= 3:
-				var away := 1 if int(t["col"]) >= int(player(s)["col"]) else -1
-				t["col"] = clampi(int(t["col"]) + away, -edge(data), edge(data))
-				lines.append("Отталкивающий заряд: %s отброшен на 30 фт" % t["name"])
+		if bool(multi.get("auto_hit", false)) or sp.has("attack"):
+			_bolt(s, data, spell_id, slot, t, dice, lines)
 		elif sp.has("save"):
 			var dmg_full := roll_dice(s.rng, _empowered(s, dice))
 			for tg: Dictionary in targets:
@@ -1318,6 +1309,88 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 				if dmg > 0:
 					_hurt_enemy(s, data, tg, dmg, lines)
 				_spell_rider(s, data, spell_id, slot, tg, not ok, lines)
+	return lines
+
+
+## One dart or ray of a spell (an auto hit or a spell attack) at `t`. Lines.
+static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int, t: Dictionary, dice: String, lines: Array[String]) -> void:
+	var c := s.character
+	var sp: Dictionary = data["spells"][spell_id]
+	var dtype := str(sp.get("damage_type", ""))
+	var name := str(sp["name"])
+	if bool(cfg(data)["multi"].get(spell_id, {}).get("auto_hit", false)):
+		var dmg := _resist(data, t, dtype, roll_dice(s.rng, _empowered(s, dice)))
+		lines.append("%s: %d (%s) по %s" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype), t["name"]])
+		_hurt_enemy(s, data, t, dmg, lines)
+		return
+	# v0.7.13: a spell attack has the advantages and disadvantages of any attack (prone, hidden, guided, dark…)
+	var probe := {"melee": str(sp["attack"]) == "melee", "range": [int(sp.get("range_ft", 5)), int(sp.get("range_ft", 5))], "id": "",
+		"name": name, "str_based": false}
+	var mods := _attack_mods(s, data, probe, t)
+	if spell_id == "shocking_grasp" and _metal_armor(data, t):
+		(mods["adv"] as Array).append("металлический доспех")
+	var dis := not (mods["dis"] as Array).is_empty()
+	var adv := not (mods["adv"] as Array).is_empty()
+	var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
+	var sres := _attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), adv, dis, t,
+		_empowered(s, dice), agonizing, dtype, lines)
+	_spell_rider(s, data, spell_id, slot, t, bool(sres["hit"]), lines)
+	var repel := bool(sres["hit"]) and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_repelling_blast")
+	if repel and str(t.get("status")) == "active" and SIZES.find(str(_monster(data, t).get("size", "medium"))) <= 3:
+		var away := 1 if int(t["col"]) >= int(player(s)["col"]) else -1
+		t["col"] = clampi(int(t["col"]) + away, -edge(data), edge(data))
+		lines.append("Отталкивающий заряд: %s отброшен на 30 фт" % t["name"])
+
+
+## The darts or rays left of the spell just cast (v0.7.22.4): {spell, slot, left, last} or {}.
+static func volley(s: GameSession) -> Dictionary:
+	return s.combat.get("volley", {}) if s.combat.get("volley") is Dictionary else {}
+
+
+## "" when the next dart or ray may fly at `target_id`, else the reason (a localization key).
+static func can_volley(s: GameSession, data: Dictionary, target_id: String) -> String:
+	var v := volley(s)
+	if v.is_empty() or not is_player_turn(s):
+		return "COMBAT_NO_VOLLEY"
+	var t := fighter(s, target_id)
+	if t.is_empty() or str(t.get("status")) != "active":
+		return "COMBAT_BAD_TARGET"
+	var sp: Dictionary = data["spells"][str(v["spell"])]
+	if cols_between(player(s), t) > range_cols(data, int(sp.get("range_ft", 0))):
+		return "COMBAT_OUT_OF_RANGE"
+	return ""
+
+
+## The next dart or ray at `target_id` (can_volley first). Lines.
+static func volley_shot(s: GameSession, data: Dictionary, target_id: String) -> Array[String]:
+	var v := volley(s)
+	var lines: Array[String] = []
+	var sp: Dictionary = data["spells"][str(v["spell"])]
+	var t := fighter(s, target_id)
+	_bolt(s, data, str(v["spell"]), int(v["slot"]), t, _spell_dice(sp, int(v["slot"]), int(s.character.get("level", 1))), lines)
+	v["left"] = int(v["left"]) - 1
+	v["last"] = target_id
+	if int(v["left"]) <= 0 or enemies(s).is_empty():
+		s.combat.erase("volley")
+	return lines
+
+
+## The turn ends with darts left: they fly at the last target, or the nearest foe still standing. Lines.
+static func volley_flush(s: GameSession, data: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	while not volley(s).is_empty():
+		var v := volley(s)
+		var to := str(v["last"])
+		if not can_volley(s, data, to).is_empty():
+			to = ""
+			for id: String in enemies(s):
+				if can_volley(s, data, id).is_empty():
+					to = id
+					break
+		if to.is_empty():
+			s.combat.erase("volley")
+			break
+		lines.append_array(volley_shot(s, data, to))
 	return lines
 
 
@@ -1730,7 +1803,8 @@ static func can_react(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 ## The rest of the turn is skipped: next fighter (the UI plays the others one by one via next_actor()).
 ## Returns the lines of a new round's start (reinforcements arriving).
 static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
-	var lines: Array[String] = ConditionRules.end_of_turn(s, data)
+	var lines: Array[String] = volley_flush(s, data)  # darts left fly at the last target (v0.7.22.4)
+	lines.append_array(ConditionRules.end_of_turn(s, data))
 	if SpellEffects.has(s.character, "blink"):  # Blink (v0.7.13.3)
 		var r := s.rng.randi_range(1, 20)
 		if r >= 11:
@@ -2754,6 +2828,10 @@ static func monster_card(s: GameSession, data: Dictionary, f: Dictionary) -> Str
 			if data["spells"].has(str(x["id"])):
 				names.append(str(data["spells"][str(x["id"])]["name"]) + (" (%d/день)" % int(x["per_day"]) if x.has("per_day") else ""))
 		lines.append("Заклинания (Сл %d): %s" % [int(sc.get("dc", 10)), ", ".join(names)])
+		var full: Dictionary = sc.get("slots", {})
+		if not full.is_empty():  # what is left of its slots (big test #21, v0.7.22.4)
+			var left: Dictionary = f.get("slots", full)
+			lines.append("Ячейки: " + " · ".join(full.keys().map(func(k: Variant) -> String: return "%s круг %d/%d" % [k, int(left.get(k, 0)), int(full[k])])))
 	for r: Dictionary in m.get("reactions", []):
 		if r.has("ac"):
 			lines.append("Реакция: парирование (+%d КД против удара вплотную)" % int(r["ac"]))

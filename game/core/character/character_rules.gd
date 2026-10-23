@@ -151,6 +151,23 @@ static func active_props(c: Dictionary, data: Dictionary, session_items: Diction
 	return out
 
 
+## Spells a feature lets the hero cast at will (rules.feature_spells, v0.7.22.4): c.spells.free, rebuilt each refresh.
+static func _grant_free_spells(c: Dictionary, data: Dictionary) -> void:
+	var sp: Dictionary = c.get("spells", {})
+	if sp.is_empty():
+		return
+	var free: Array = []
+	var table: Dictionary = data["rules"].get("feature_spells", {})
+	for f: Variant in c.get("features", []):
+		for id: Variant in table.get(str(f), []):
+			if data["spells"].has(str(id)) and not free.has(str(id)):
+				free.append(str(id))
+	if free.is_empty():
+		sp.erase("free")
+	else:
+		sp["free"] = free
+
+
 ## The name of a carried wondrous item with this property, "" when there is none (Boots of Elvenkind → stealth).
 static func carried_with(c: Dictionary, data: Dictionary, session_items: Dictionary, prop: String) -> String:
 	for d: Dictionary in carried(c, data, session_items):
@@ -425,6 +442,7 @@ static func spell_names(c: Dictionary, data: Dictionary, list: String) -> Array[
 ## Cantrips of race traits (rules.json `trait_cantrips`, e.g. Infernal Legacy → Thaumaturgy) belong to the
 ## character's cantrips: casting checks them like any other.
 static func _grant_trait_cantrips(c: Dictionary, data: Dictionary) -> void:
+	_grant_free_spells(c, data)
 	var table: Dictionary = data["rules"].get("trait_cantrips", {})
 	for t: Variant in c.get("traits", []):
 		for id: Variant in table.get(str(t), []):

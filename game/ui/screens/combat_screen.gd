@@ -228,6 +228,11 @@ func _refresh() -> void:
 	var s := GameState.session
 	var data := Catalog.data
 	var mine := CombatRules.player_can_act(s) and not GameState.is_busy() and Backend.is_ready()
+	if mine and not _pending.is_valid() and not CombatRules.volley(s).is_empty():  # v0.7.22.4: the next dart is armed at once
+		_pending = func(t: String) -> String: return GameState.combat_volley(t)
+		_pending_check = func(t: String) -> String: return CombatRules.can_volley(s, data, t)
+		_pending_preview = func(_t: String) -> Dictionary: return {}
+		_pending_name = "Volley"
 	_thinking.visible = not GameState.busy_turn.is_empty()
 	_retry.visible = GameState.can_retry()
 	input.editable = mine
@@ -441,6 +446,13 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	var c := s.character
 	# Weapons.
 	var w := _tab_box("COMBAT_TAB_WEAPONS")
+	var vol := CombatRules.volley(s)
+	if not vol.is_empty():  # v0.7.22.4: the next dart or ray — pick its target (armed at once)
+		var vname := str(data["spells"][str(vol["spell"])]["name"])
+		var vb := _action(w, "Volley", tr("COMBAT_VOLLEY").format({"spell": vname, "n": int(vol["left"])}), mine,
+			func(t: String) -> String: return GameState.combat_volley(t),
+			func(t: String) -> String: return CombatRules.can_volley(s, data, t), func(_t: String) -> Dictionary: return {})
+		vb.theme_type_variation = UiTheme.ACCENT_BUTTON
 	var main := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
 	var main_id := str(c.get("equipped", {}).get("main_hand", ""))
 	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), mine,
@@ -469,10 +481,11 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		for id: String in SpellRules.ready(c):
 			var spell: Dictionary = data["spells"].get(id, {})
 			var lv := int(spell.get("level", 0))
-			var slot := 0 if lv == 0 else SpellRules.lowest_slot(c, data, id)
+			var free := SpellRules.is_free(c, id)  # an invocation's spell at will (v0.7.22.4)
+			var slot := 0 if lv == 0 or free else SpellRules.lowest_slot(c, data, id)
 			var cost := tr("COMBAT_BONUS_SHORT") if CombatRules.spell_cost(data, id) == "bonus" else ""
-			var label := "%s%s%s" % [spell.get("name", id), (" (%d)" % slot) if slot > 0 else "", cost]
-			if lv > 0 and slot == 0:
+			var label := "%s%s%s%s" % [spell.get("name", id), (" (%d)" % slot) if slot > 0 else "", tr("SPELL_AT_WILL_SHORT") if free else "", cost]
+			if lv > 0 and slot == 0 and not free:
 				_disabled(sp, label)
 				continue
 			if spell.has("heal_at_slot") or SpellEffects.self_spell(data, id) or int(spell.get("range_ft", 0)) == 0 and not spell.has("area"):

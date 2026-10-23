@@ -453,6 +453,8 @@ CONTAINER_YOURS,Ваши вещи — положить
 BTN_DROP_BAG,Оставить здесь
 BTN_OPEN_BAG,Открыть
 BTN_DROP,Выбросить
+SHEET_SPELLS_FREE,По желанию (без ячейки)
+SPELL_AT_WILL_SHORT, [по желанию]
 BTN_DROP_ALL,Выбросить все
 BTN_DROP_TIP,Вещь останется лежать здесь — её можно будет поднять
 SHEET_BAG,"{name}: внутри {w} из {cap} фнт"
@@ -696,6 +698,9 @@ SKILL_SURVIVAL,Выживание
 SLOT_ARMOR,Доспех
 SLOT_AUTOSAVE,Автосохранение
 SLOT_CANTRIP,заговор
+SLOT_AT_WILL,по желанию
+COMBAT_VOLLEY,"Следующий заряд «{spell}» (осталось {n}): выберите цель"
+COMBAT_NO_VOLLEY,Зарядов больше нет
 SLOT_CIRCLE,{n} круг (осталось {left})
 SLOT_EMPTY,пусто
 SLOT_HINT,Ходов: {turns} · {date}

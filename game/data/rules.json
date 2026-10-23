@@ -805,6 +805,15 @@
 			}
 		}
 	},
+	"feature_spells": {
+		"_doc": "Spells a feature lets the hero cast at will, without a slot (v0.7.22.4, big test #15: «Туманные видения» gave no spell): the warlock's invocations; they come into c.spells.free and cast at their own circle.",
+		"eldritch_invocation_misty_visions": ["silent_image"],
+		"eldritch_invocation_armor_of_shadows": ["mage_armor"],
+		"eldritch_invocation_beast_speech": ["speak_with_animals"],
+		"eldritch_invocation_eldritch_sight": ["detect_magic"],
+		"eldritch_invocation_fiendish_vigor": ["false_life"],
+		"eldritch_invocation_mask_of_many_faces": ["disguise_self"]
+	},
 	"trait_cantrips": {
 		"_doc": "Cantrips a race trait grants (the SRD import has no spell list in traits, v0.6.0).",
 		"infernal_legacy": [
@@ -1001,6 +1010,7 @@
 			"thunderwave",
 			"vicious_mockery"
 		],
+		"volley_one_by_one": true,
 		"multi": {
 			"magic_missile": {
 				"base": 3,
@@ -1074,7 +1084,14 @@
 				"conditions": [
 					"incapacitated"
 				],
-				"rounds": 1
+				"rounds": 1,
+				"_words": "v0.7.22.3 (big test #22): Command speaks one word of 5e — Grovel (prone, the turn lost), Halt, Flee (a column away), Drop (the weapon in hand falls); the caster picks a word that does something now.",
+				"words": [
+					{"word": "Пади!", "conditions": ["prone", "incapacitated"], "not_if": "prone"},
+					{"word": "Брось!", "conditions": ["incapacitated"], "drop": true},
+					{"word": "Беги!", "conditions": ["incapacitated"], "flee": 1},
+					{"word": "Замри!", "conditions": ["incapacitated"]}
+				]
 			},
 			"charm_person": {
 				"conditions": [
