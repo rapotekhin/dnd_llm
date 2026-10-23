@@ -38,7 +38,7 @@ func test_a_room_is_furnished_once_and_kept() -> void:
 	assert_bool(PropRules.needs_furnish(s, s.room_id)).is_false()
 	var snap: Dictionary = TurnSnapshot.build(s, data, 4000)
 	assert_bool(snap["scene"]["furnish"]).is_false()
-	assert_int((snap["scene"]["props"] as Array).size()).is_equal(3)
+	assert_int((snap["scene"]["props"] as Array).filter(func(p: Dictionary) -> bool: return not str(p["prop_id"]).begins_with("w_")).size()).is_equal(3)  # and Bruno's wares (v0.7.22.8)
 	assert_str(str(snap["scene"]["props"][0]["text"])).contains("Пропал лесоруб")
 	assert_bool(snap["scene"]["props"][1]["portable"]).is_true()
 	assert_str(str(fx.validate(s, data, "t-2", {"kind": "furnish", "props": [{"name": "Стул"}]}).get("reason", ""))).contains("уже обставлена")

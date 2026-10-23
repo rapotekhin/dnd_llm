@@ -98,6 +98,8 @@ var let_go: Dictionary = {}
 var arrest_tried: Array[String] = []
 ## The hero's spells on NPCs (v0.7.22.3, SpellEffects.npc_spells): {npc_id: [{spell, name, until, conc}]}.
 var npc_spells: Dictionary = {}
+## Weapons stolen from NPCs (v0.7.22.8, TheftRules.lost_weapons): {npc_id: {item_id: day}}.
+var disarmed: Dictionary = {}
 var bodies: Dictionary = {}
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
@@ -444,6 +446,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"let_go": let_go,
 		"arrest_tried": arrest_tried,
 		"npc_spells": npc_spells,
+		"disarmed": disarmed,
 		"bodies": bodies,
 		"searched": searched,
 		"quests_failed": quests_failed,
@@ -518,6 +521,18 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for m: Variant in d.get("known_monsters", []):
 		s.known_monsters.append(str(m))
 	s.props = d.get("props", {})
+	for room: String in s.props:  # whole numbers back from JSON: contents, the lock, when it was dropped (v0.7.22.8)
+		for p: Variant in s.props[room]:
+			if not (p is Dictionary):
+				continue
+			if p.get("contents") is Dictionary:
+				var contents := {}
+				for id: String in p["contents"]:
+					contents[id] = int(p["contents"][id])
+				p["contents"] = contents
+			for k: String in ["lock_dc", "dropped_at"]:
+				if p.has(k):
+					p[k] = int(p[k])
 	s.pockets = d.get("pockets", {})
 	for n: String in s.pockets:
 		for e: Dictionary in s.pockets[n]:
@@ -541,6 +556,11 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for how: Variant in d.get("arrest_tried", []):
 		s.arrest_tried.append(str(how))
 	s.npc_spells = (d.get("npc_spells", {}) as Dictionary).duplicate(true)
+	for npc: String in d.get("disarmed", {}):
+		var gone := {}
+		for id: String in d["disarmed"][npc]:
+			gone[id] = int(d["disarmed"][npc][id])
+		s.disarmed[npc] = gone
 	for n: String in d.get("bodies", {}):
 		s.bodies[n] = str(d["bodies"][n])
 	for n: Variant in d.get("searched", []):

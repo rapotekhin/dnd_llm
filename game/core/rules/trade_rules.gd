@@ -23,7 +23,7 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 		s.merchants[npc_id] = m
 	if not m.has("sold"):
 		m["sold"] = {}
-	if int(m["day"]) < s.day:
+	if int(m["day"]) < s.day and not s.dead_npcs.has(npc_id):  # the dead restock nothing (v0.7.22.8)
 		var back := int(demand_cfg(data)["recover_per_day"]) * (s.day - int(m["day"])) if int(m["day"]) > 0 else 9999
 		var sold: Dictionary = m["sold"]
 		for id: String in sold.keys():  # the market forgets what the hero sold (v0.7.17.1)

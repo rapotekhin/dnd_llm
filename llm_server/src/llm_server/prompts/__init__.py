@@ -110,7 +110,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "languages": ("NPC не понимает героя; языки", ()),
     "tools": ("действие инструментом: замок, травы, подделка, грим (`request_check` с `tool`)", ()),
     "background": ("предыстория героя и связь NPC с его прошлым", ()),
-    "containers": ("сундуки, ящики, сумки героя: достать, положить, отпереть, оставить (`take_from`, `put_in`, `unlock`, `drop_item`)",
+    "containers": ("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`take_from`, `put_in`, `unlock`, `drop_item`)",
                    ("take_from", "put_in", "unlock", "drop_item")),
 }
 

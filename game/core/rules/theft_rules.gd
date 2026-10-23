@@ -100,8 +100,36 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 			var id := str(e["item_id"])
 			ItemRules.found(s.character, data, s.items, id, int(e.get("qty", 1)))
 			lines.append("%s — украдено: %s" % [who, e["name"]])
+			if bool(e.get("worn", false)) and ItemRules.def_of(data["items"], s.items, id).has("weapon"):
+				var gone: Dictionary = s.disarmed.get(npc_id, {})  # big test #3 (v0.7.22.8): not in its hands in a fight
+				gone[id] = s.day
+				s.disarmed[npc_id] = gone
 		return lines
 	return lines
+
+
+## The weapons stolen from an NPC it has not replaced yet (rules.theft.rearm_days): their catalog names.
+static func lost_weapons(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
+	var out: Array[String] = []
+	var gone: Dictionary = s.disarmed.get(npc_id, {})
+	for id: String in gone:
+		if s.day - int(gone[id]) < int(cfg(data).get("rearm_days", 3)):
+			out.append(str(ItemRules.def_of(data["items"], s.items, id).get("name", id)))
+	return out
+
+
+## The NPC's statblock actions without the stolen weapons; with no weapon left — its fists.
+static func armed_actions(s: GameSession, data: Dictionary, npc_id: String, actions: Array) -> Array:
+	var lost := lost_weapons(s, data, npc_id)
+	if lost.is_empty():
+		return actions
+	var kept := actions.filter(func(a: Dictionary) -> bool: return not lost.has(str(a.get("name", ""))))
+	if not kept.any(func(a: Dictionary) -> bool: return str(a.get("kind", "")) == "melee"):
+		var best := 0
+		for a: Dictionary in actions:
+			best = maxi(best, int(a.get("to_hit", 0)))
+		kept.append({"name": "Безоружный удар", "kind": "melee", "to_hit": best, "damage": [{"dice": "1", "type": "bludgeoning"}]})
+	return kept
 
 
 ## Coins by words (a Sleight of Hand at an NPC without the window): the purse of the pockets, if any is left. cp.

@@ -340,10 +340,15 @@ static func search_body(s: GameSession, data: Dictionary, npc_id: String) -> Arr
 			ItemRules.found(c, data, s.items, str(e["item_id"]), int(e.get("qty", 1)))
 			got.append(str(e["name"]))
 	s.pockets[npc_id] = []
-	var stock := TradeRules.pack_stock(world.npc(npc_id), data["rules"]).keys()
+	# What a trader carried of its wares — out of its stock, the rest stays in its shop (v0.7.22.8).
+	var wares: Dictionary = TradeRules.merchant(s, data, npc_id)["stock"] if bool(world.npc(npc_id).get("trader", false)) else {}
+	var stock := wares.keys().filter(func(id: Variant) -> bool: return int(wares[id]) > 0)
 	for i in mini(stock.size(), int(cfg(data)["body_wares"])):
 		var id := str(stock[i])
 		ItemRules.found(c, data, s.items, id, 1)
+		wares[id] = int(wares[id]) - 1
+		if int(wares[id]) <= 0:
+			wares.erase(id)
 		got.append(ItemRules.display_name(data["items"], s.items, id))
 	s.searched.append(npc_id)
 	var lines: Array[String] = ["Обыскано тело %s: %s" % [world.npc(npc_id).get("name", npc_id), ", ".join(got) if not got.is_empty() else "ничего"]]

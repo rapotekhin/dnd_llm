@@ -1838,6 +1838,23 @@ scenarios:
     rubric:
       - "Кинжал взят эффектом take_from из p3 с item_id dagger; в сундуке, по сцене, — два кинжала и свеча: рассказ не добавляет вещей сверх этого"
 
+  - id: dead_traders_wares
+    title: "Товары убитого кузнеца лежат в кузнице — take_from, а не выдуманные вещи (большой тест, v0.7.22.8)"
+    category: effects
+    extends: tavern
+    input: "Кузнец мёртв. Хочу забрать всё, что он держал на продажу."
+    snapshot:
+      scene:
+        room: {id: brod-smithy, name: "Кузница Гуннара", description: "Холодный горн, наковальня, полки с железом."}
+        npcs: []
+        props:
+          - {prop_id: w_npc_smith, name: "Товары: Гуннар Тяжёлая Рука", description: "То, чем Гуннар торгует, — на полках и под прилавком.",
+             state: "", container: "товары", locked: false, contents: "Кинжал ×3 [dagger], Короткий меч ×2 [shortsword], Длинный меч ×1 [longsword]"}
+    expect:
+      effects: {required_kinds_any: [take_from], forbidden_kinds: [give_item]}
+    rubric:
+      - "Мастер забирает товары эффектами take_from из w_npc_smith — кинжалы, мечи из списка; не выдумывает других вещей (топоров, молотов) и не выдаёт give_item"
+
   - id: container_locked_pick
     title: "Запертый сундук — проверка, затем unlock"
     category: effects

@@ -1340,6 +1340,9 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 		if not seen.is_empty():
 			lines.append(seen)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
+	var gone := PropRules.abandon(session, Catalog.data, room_id)  # big test #28 (v0.7.22.8)
+	if not gone.is_empty():
+		lines.append("Того, что вы здесь оставили, уже нет: " + ", ".join(gone))
 	var found := ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
 	lines.append_array(ExplorationRules.take_caches(session, Catalog.data, room_id))
 	lines.append_array(QuestRules.advance(session, Catalog.data))

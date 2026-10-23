@@ -112,6 +112,7 @@ static func target(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 		bag["name"] = bag_name(data, s.character, id)
 		bag["container"] = bag["kind"]
 		return bag
+	PropRules.ensure_wares(s, data, s.room_id)  # the trader's wares (v0.7.22.8)
 	var p := PropRules.find(s, s.room_id, id)
 	return p if not p.is_empty() and is_container(p) else {}
 
@@ -350,7 +351,7 @@ static func apply_drop(s: GameSession, data: Dictionary, plan: Dictionary) -> vo
 		while list.any(func(p: Dictionary) -> bool: return str(p["id"]) == "d%d" % n):
 			n += 1
 		var prop := {"id": "d%d" % n, "name": ItemRules.display_name(data["items"], s.items, item_id), "description": "", "item_id": item_id,
-			"owner": "", "text": "", "state": "", "dropped": true}
+			"owner": "", "text": "", "state": "", "dropped": true, "dropped_at": TimeRules.abs_minute(s)}
 		if not contents.is_empty() or is_carried_kind(data, item_id):
 			prop["container"] = item_id
 			prop["contents"] = contents

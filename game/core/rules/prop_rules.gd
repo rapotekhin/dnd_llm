@@ -12,7 +12,8 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 
 static func needs_furnish(s: GameSession, room_id: String) -> bool:
-	return not s.props.has(room_id) or (s.props[room_id] as Array).all(func(p: Dictionary) -> bool: return bool(p.get("dropped", false)))
+	return not s.props.has(room_id) or (s.props[room_id] as Array).all(func(p: Dictionary) -> bool:
+		return bool(p.get("dropped", false)) or p.has("wares"))  # the hero's things and a trader's wares are no furnishing
 
 
 ## The things still in the room (a taken one is gone).
@@ -22,6 +23,40 @@ static func room_props(s: GameSession, room_id: String) -> Array[Dictionary]:
 		if str(p.get("state", "")) != "taken":
 			out.append(p)
 	return out
+
+
+## What the hero dropped in this room and left longer than rules.props.abandon_hours is gone (v0.7.22.8, big test
+## #28: someone took it). Called on entering the room. The names gone.
+static func abandon(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
+	var gone: Array[String] = []
+	var limit := int(cfg(data).get("abandon_hours", 24)) * 60
+	for p: Dictionary in room_props(s, room_id):
+		if bool(p.get("dropped", false)) and TimeRules.abs_minute(s) - int(p.get("dropped_at", TimeRules.abs_minute(s))) >= limit:
+			p["state"] = "taken"
+			gone.append(str(p["name"]))
+	return gone
+
+
+## The trader's wares (v0.7.22.8, big test #4: the goods of a killed smith were nowhere): a container «Товары: …» in
+## the trader's own room whose contents ARE its stock (TradeRules.merchant) — a deal, a theft and a death all show in
+## it; taking from it before the trader is a theft. Made and linked anew whenever the room is looked at.
+static func ensure_wares(s: GameSession, data: Dictionary, room_id: String) -> void:
+	for npc_id: Variant in data["world"]["rooms"].get(room_id, {}).get("npcs", []):
+		var n: Dictionary = data["world"]["npcs"].get(str(npc_id), {})
+		if not bool(n.get("trader", false)):
+			continue
+		var pid := "w_" + str(npc_id)
+		var list: Array = s.props.get(room_id, [])
+		var p := {}
+		for x: Dictionary in list:
+			if str(x["id"]) == pid:
+				p = x
+		if p.is_empty():
+			p = {"id": pid, "name": "Товары: %s" % n.get("name", npc_id), "description": "То, чем %s торгует, — на полках и под прилавком." % n.get("name", npc_id),
+				"item_id": "", "owner": str(npc_id), "text": "", "state": "", "container": "wares", "wares": str(npc_id)}
+			list.append(p)
+			s.props[room_id] = list
+		p["contents"] = TradeRules.merchant(s, data, str(npc_id))["stock"]
 
 
 static func find(s: GameSession, room_id: String, prop_id: String) -> Dictionary:
@@ -100,13 +135,14 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 
 static func apply_furnish(s: GameSession, plan: Dictionary) -> void:
 	s.items.merge(plan.get("made", {}))  # things the master made inside the containers (v0.7.18.1)
-	var list: Array = (s.props.get(str(plan["room"]), []) as Array).duplicate()  # what the hero dropped stays (v0.7.18.2)
+	var list: Array = []
 	var n := 0
 	for p: Dictionary in plan["props"]:
 		n += 1
 		var prop := p.duplicate()
 		prop["id"] = "p%d" % n
 		list.append(prop)
+	list.append_array(s.props.get(str(plan["room"]), []))  # what the hero dropped and a trader's wares stay, after (v0.7.18.2)
 	s.props[str(plan["room"])] = list
 
 

@@ -18,6 +18,10 @@ const CHARGES := ["charge", "pounce", "trampling_charge"]
 
 
 static func monster(data: Dictionary, f: Dictionary) -> Dictionary:
+	if f.has("actions"):  # a fighter that lost its weapon (v0.7.22.8)
+		var m: Dictionary = (data["monsters"].get(str(f.get("monster", "")), {}) as Dictionary).duplicate()
+		m["actions"] = f["actions"]
+		return m
 	return data["monsters"].get(str(f.get("monster", "")), {})
 
 

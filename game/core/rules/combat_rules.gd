@@ -247,6 +247,8 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: in
 				"desc": str(spec.get("desc", "")), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "ac": int(m["ac"]),
 				"col": clampi(col, -edge(data), edge(data)), "status": "active", "conditions": [], "morale": false,
 				"npc_id": str(spec.get("npc_id", "")), "by_hero": bool(spec.get("by_hero", false))}
+			if not str(spec.get("npc_id", "")).is_empty() and not TheftRules.lost_weapons(s, data, str(spec["npc_id"])).is_empty():
+				fighters[id]["actions"] = TheftRules.armed_actions(s, data, str(spec["npc_id"]), m["actions"])  # big test #3 (v0.7.22.8)
 			ids.append(id)
 	return ids
 
@@ -1999,6 +2001,10 @@ static func _death_save(s: GameSession, data: Dictionary, lines: Array[String]) 
 
 
 static func _monster(data: Dictionary, f: Dictionary) -> Dictionary:
+	if f.has("actions"):  # a fighter that lost its weapon (v0.7.22.8)
+		var m: Dictionary = (data["monsters"][f["monster"]] as Dictionary).duplicate()
+		m["actions"] = f["actions"]
+		return m
 	return data["monsters"][f["monster"]]
 
 

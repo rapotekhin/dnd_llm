@@ -152,7 +152,8 @@
 			"bag_of_holding": {"capacity_lb": 500, "weightless": true},
 			"cabinet": {"name": "шкаф", "capacity_lb": 200, "lockable": true},
 			"crate": {"name": "ящик", "capacity_lb": 100},
-			"strongbox": {"name": "окованный ларец", "capacity_lb": 20, "lockable": true}
+			"strongbox": {"name": "окованный ларец", "capacity_lb": 20, "lockable": true},
+			"wares": {"name": "товары", "capacity_lb": 5000}
 		},
 		"lock_dc": {"simple": 10, "good": 15, "masterwork": 20},
 		"force_dc_plus": 2
@@ -852,6 +853,8 @@
 		]
 	},
 	"theft": {
+		"rearm_days": 3,
+		"_rearm": "v0.7.22.8 (big test #3): a weapon stolen from an NPC's belt is gone from its hands in a fight (another weapon of its statblock, or the fists) for rearm_days.",
 		"_doc": "Theft (v0.7.0): the pockets of an NPC — the pack's `pockets` list or by its monster template (pockets: coins_dice × unit_cp in a purse, item_count things of `items`, worn weapons of the SRD statblock). DC of an entry = max(10, passive Perception) + dc modifiers. Caught (or a thing of the owner taken before its eyes) — caught_attitude, then the reaction by template (reactions; traders close the shop for the day): fight, call_guard (fine_cp, or a fight with guard_monster when the player cannot pay). Words without the window take only the purse.",
 		"pockets": {
 			"_default": {
@@ -981,6 +984,8 @@
 		"body_wares": 2
 	},
 	"props": {
+		"abandon_hours": 24,
+		"_abandon": "v0.7.22.8 (big test #28): what the hero dropped in the world is gone after abandon_hours (someone took it); a thing put into a container stays.",
 		"_doc": "Things of the rooms (v0.7.0): the master furnishes a room on its first visit — up to max_per_room things; portable ones are catalog items, each worth at most item_value_cap_cp, together at most room_value_cap_cp of the character's level.",
 		"max_per_room": 10,
 		"item_value_cap_cp": 1000,

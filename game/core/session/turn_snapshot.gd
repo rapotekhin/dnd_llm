@@ -38,7 +38,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"room_id": s.room_id, "room_name": room.get("name", s.room_id), "room_description": room.get("description", ""),
 			"exits": exits, "npcs": npcs, "hooks": hooks(s, data, room), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
-			"props": PropRules.snapshot(s, data, s.room_id),
+			"props": _props(s, data),
 			"closed_exits": closed_exits(s, data["world"]),
 			"chronicle": s.chronicle_tail(data["world"], 12),
 			"reputation": ReputationRules.text(s, data, loc_id),
@@ -182,6 +182,12 @@ static func closed_exits(s: GameSession, world: Dictionary) -> Array[String]:
 
 
 ## The hero's conditions for the master, invisibility from a held spell included (v0.7.5).
+## The things of the room for the master, the trader's wares among them (v0.7.22.8).
+static func _props(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	PropRules.ensure_wares(s, data, s.room_id)
+	return PropRules.snapshot(s, data, s.room_id)
+
+
 static func _conditions(c: Dictionary, data: Dictionary) -> Array:
 	var out: Array = (c.get("conditions", []) as Array).duplicate()
 	if ConditionRules.invisible(c, data) and not out.has("invisible"):
