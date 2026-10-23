@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 35
+const SAVE_VERSION := 36
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -57,6 +57,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	32: _v32_to_v33,
 	33: _v33_to_v34,
 	34: _v34_to_v35,
+	35: _v35_to_v36,
 }
 
 
@@ -328,3 +329,8 @@ static func _v33_to_v34(data: Dictionary, _ctx: Dictionary) -> void:
 ## v0.7.22.8: no NPC has lost a weapon to the hero yet.
 static func _v34_to_v35(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["disarmed"] = {}
+
+
+## v0.7.22.10: the bodies already lying fell long ago — buried at the next look of the clock.
+static func _v35_to_v36(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["body_at"] = {}

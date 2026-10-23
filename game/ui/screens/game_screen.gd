@@ -88,12 +88,6 @@ func _ready() -> void:
 	chat = ChatView.new()
 	chat.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_child(chat)
-	trade_panel = TradePanel.new()
-	trade_panel.name = "TradePanel"
-	trade_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	trade_panel.size_flags_stretch_ratio = 2.6  # big test #29 (v0.7.22.5): the goods take most of the screen, the talk a strip
-	trade_panel.visible = false
-	body.add_child(trade_panel)
 
 	var status_row := HBoxContainer.new()
 	status_row.add_theme_constant_override("separation", 16)
@@ -196,6 +190,11 @@ func _ready() -> void:
 	_container.visible = false
 	add_child(_container)
 	_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	trade_panel = TradePanel.new()  # a screen of its own over everything (v0.7.22.10, the author: «как в BG3»)
+	trade_panel.name = "TradePanel"
+	trade_panel.visible = false
+	add_child(trade_panel)
+	trade_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_place = PlacePanel.new()  # v0.7.22.7: the things of the room
 	_place.name = "PlaceView"
 	_place.visible = false

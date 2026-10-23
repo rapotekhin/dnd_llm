@@ -75,11 +75,13 @@ func run() -> void:
 	await frames(3)
 	stocks = find(screen(), "Crime_stocks")
 	var day := s.day
+	var days := CrimeRules.stocks_days(s, data, "brod")  # the sentence by severity (v0.7.22.10)
 	if stocks != null:
 		await press(stocks)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		await frames(3)
-	step("the stocks — days later, free", s.day == day + 2 and not s.wanted.has("brod") and not CrimeRules.held(s), _chat(s))
+	step("the sentence — days later, free, in the lockup", s.day == day + days and s.room_id == "brod-lockup" and not s.wanted.has("brod")
+		and not CrimeRules.held(s), _chat(s))
 	await shot("stocks")
 
 	# v0.7.14.4: the journal's «Хроника» keeps the murder with its day and place.

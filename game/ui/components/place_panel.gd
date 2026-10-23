@@ -134,3 +134,6 @@ func _rebuild() -> void:
 		var bid := str(body["npc_id"])
 		if not bool(body["searched"]):
 			_button(row, "PlaceBody_" + bid, tr("BTN_SEARCH_SHORT"), can_act, GameState.search_body.bind(bid))
+		if CrimeRules.can_hide(s, data, bid).is_empty():  # v0.7.22.10: a secret murder — hide the body
+			var hb := _button(row, "HideBody_" + bid, tr("BTN_HIDE_BODY"), can_act, GameState.hide_body.bind(bid))
+			hb.tooltip_text = tr("BTN_HIDE_BODY_TIP")

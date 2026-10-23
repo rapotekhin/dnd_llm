@@ -172,7 +172,8 @@
 				"guard_monster": "guard",
 				"guard_name": "Ополченец",
 				"guard_desc": "Ополченец Ольхового Брода с дубинкой.",
-				"patrol": "Патруль ополчения"
+				"patrol": "Патруль ополчения",
+				"prison": "brod-lockup"
 			}
 		},
 		"pushcha": {
@@ -414,6 +415,23 @@
 				"temple"
 			]
 		},
+		"brod-lockup": {
+			"name": "Холодная при воротах",
+			"location_id": "brod",
+			"description": "Сырая каменная клеть под вышкой у северных ворот: охапка соломы, ведро, решётка на двери. Сюда ополчение сажает тех, кого судит капитан.",
+			"exits": [
+				"brod-gate"
+			],
+			"npcs": [],
+			"secrets": [
+				{
+					"id": "lockup_scratches",
+					"dc": 12,
+					"text": "под соломой на стене нацарапаны зарубки по дням и слова: «Кто служил у Ратмира — тот знает, где ключ от решётки: за третьим камнем снизу»",
+					"skill": "investigation"
+				}
+			]
+		},
 		"brod-gate": {
 			"name": "Северные ворота",
 			"location_id": "brod",
@@ -422,7 +440,8 @@
 				"brod-square",
 				"pushcha-edge",
 				"outpost-road",
-				"mine-entrance"
+				"mine-entrance",
+				"brod-lockup"
 			],
 			"open_edges": [
 				{

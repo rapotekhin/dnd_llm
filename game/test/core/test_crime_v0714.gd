@@ -72,7 +72,7 @@ func test_the_captain_holds_the_wanted_hero_and_the_wergild_settles_it() -> void
 	CrimeRules.answer(s, data, "pay")
 	assert_int(int(s.character["gold_cp"])).is_equal(2000)
 	assert_bool(CrimeRules.held(s) or s.wanted.has("brod")).is_false()
-	assert_int(s.attitude("npc_innkeeper")).is_equal(-1)  # forgiven one step
+	assert_int(s.attitude("npc_innkeeper")).is_equal(-2)  # paid, but not forgiven (v0.7.22.10)
 	assert_array(QuestRules.offers_here(s, data["world"])).contains(["ash_over_the_march"])
 
 
@@ -93,8 +93,9 @@ func test_the_stocks_take_days_and_resisting_is_a_fight() -> void:
 	s.room_id = "brod-gate"
 	CrimeRules.check_arrest(s, data)
 	var day := s.day
+	var days := CrimeRules.stocks_days(s, data, "brod")  # the sentence by severity (v0.7.22.10): a notable victim — 7
 	CrimeRules.answer(s, data, "stocks")
-	assert_int(s.day).is_equal(day + 2)
+	assert_int(s.day).is_equal(day + days)
 	assert_bool(s.wanted.has("brod")).is_false()
 	var s2 := _hero("brod-tavern-hall")
 	CrimeRules.on_death(s2, data, "npc_mercenary", true, s2.room_id)

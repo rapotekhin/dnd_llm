@@ -48,6 +48,7 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: 
 	if not s.dead_npcs.has(npc_id):
 		s.dead_npcs.append(npc_id)
 	s.bodies[npc_id] = room_id
+	s.body_at[npc_id] = TimeRules.abs_minute(s)  # buried some days later (v0.7.22.10)
 	lines.append_array(QuestRules.on_death(s, data, npc_id))
 	if not by_hero:
 		return lines
@@ -71,6 +72,7 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: 
 ## The crime becomes known in its location: attitudes, and the hero is wanted where there is law. Lines.
 static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array[String]:
 	crime["known"] = true
+	crime["known_at"] = TimeRules.abs_minute(s)
 	var loc := str(crime["location"])
 	var world := WorldView.new(data["world"])
 	var lines: Array[String] = ["%s знает об убийстве: отношение хуже" % world.location(loc).get("name", loc)]
@@ -87,14 +89,71 @@ static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array
 	return lines
 
 
-## Hidden crimes whose body is found by now (rules.crime.found_minutes). Called as time passes. Lines.
+## Hidden crimes whose body is found by now: an unhidden body after rules.crime.found_minutes; a hidden one by a roll
+## once a day, harder each day (v0.7.22.10). Then the found bodies are buried. Called as time passes. Lines.
 static func spread(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var now := TimeRules.abs_minute(s)
+	var h: Dictionary = cfg(data)["hide"]
 	for crime: Dictionary in s.crimes:
-		if not bool(crime["known"]) and now - int(crime["at"]) >= int(cfg(data)["found_minutes"]):
-			lines.append("Нашли тело: %s" % _name(data, str(crime["victim"])))
-			lines.append_array(_known(s, data, crime))
+		if bool(crime["known"]):
+			continue
+		if not crime.has("hide_dc"):
+			if now - int(crime["at"]) >= int(cfg(data)["found_minutes"]):
+				lines.append("Нашли тело: %s" % _name(data, str(crime["victim"])))
+				lines.append_array(_known(s, data, crime))
+			continue
+		var days := (now - int(crime["at"])) / 1440
+		while int(crime.get("searched_days", 0)) < days and not bool(crime["known"]):
+			crime["searched_days"] = int(crime.get("searched_days", 0)) + 1
+			var dc := int(crime["hide_dc"]) + int(h["day_step"]) * int(crime["searched_days"])
+			if s.rng.randi_range(1, 20) + int(h["search_bonus"]) >= dc:
+				lines.append("Нашли спрятанное тело: %s" % _name(data, str(crime["victim"])))
+				lines.append_array(_known(s, data, crime))
+	lines.append_array(bury(s, data))
+	return lines
+
+
+## "" when the hero can hide this body now: it lies here and its murder is still a secret.
+static func can_hide(s: GameSession, data: Dictionary, npc_id: String) -> String:
+	if str(s.bodies.get(npc_id, "")) != s.room_id:
+		return "CRIME_NO_BODY"
+	for crime: Dictionary in s.crimes:
+		if str(crime["victim"]) == npc_id and not bool(crime["known"]):
+			return "CRIME_HIDDEN_ALREADY" if crime.has("hide_dc") else ""
+	return "CRIME_NO_SECRET"
+
+
+## The body hidden by a check that the engine rolled (rules.crime.hide): a success — its total is how hard it is to
+## find; a failure — hidden badly, found like an unhidden one. Lines.
+static func hide(s: GameSession, data: Dictionary, npc_id: String, total: int, success: bool) -> Array[String]:
+	for crime: Dictionary in s.crimes:
+		if str(crime["victim"]) == npc_id and not bool(crime["known"]):
+			if not success:
+				return ["Тело спрятано наспех — его найдут"]
+			crime["hide_dc"] = total
+			crime["searched_days"] = 0
+			return ["Тело %s спрятано: искать его будут, но найти непросто" % _name(data, npc_id)]
+	return []
+
+
+## Known bodies are buried after rules.crime.bury_days (a body of a hidden murder is not — nobody knows of it). Lines.
+static func bury(s: GameSession, data: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var now := TimeRules.abs_minute(s)
+	var world := WorldView.new(data["world"])
+	for npc_id: String in s.bodies.keys():
+		var since := int(s.body_at.get(npc_id, 0))
+		var secret := false
+		for crime: Dictionary in s.crimes:
+			if str(crime["victim"]) == npc_id:
+				secret = not bool(crime["known"])
+				since = int(crime.get("known_at", since))
+		if secret or now - since < int(cfg(data)["bury_days"]) * 1440:
+			continue
+		var room := str(s.bodies[npc_id])
+		s.bodies.erase(npc_id)
+		lines.append("Похоронили: %s — там, где лежало тело (%s), осталось тёмное пятно" % [_name(data, npc_id), world.room(room).get("name", room)])
 	return lines
 
 
@@ -189,7 +248,23 @@ static func _open(s: GameSession, loc: String) -> Array[Dictionary]:
 
 
 static func stocks_days(s: GameSession, data: Dictionary, loc: String) -> int:
-	return int(cfg(data)["stocks_days"]) * maxi(1, _open(s, loc).size())
+	return int(sentence(s, data, loc)["days"])
+
+
+## The sentence for the open crimes of the location (v0.7.22.10): the highest of rules.crime.sentences whose severity
+## fits — the crimes, +1 for a notable victim. {kind, days, name, exhaustion?}.
+static func sentence(s: GameSession, data: Dictionary, loc: String) -> Dictionary:
+	var severity := _open(s, loc).size()
+	for crime: Dictionary in _open(s, loc):
+		var tags: Array = WorldView.new(data["world"]).npc(str(crime["victim"])).get("tags", [])
+		if tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(t)):
+			severity += 1
+			break
+	var out: Dictionary = cfg(data)["sentences"][0]
+	for sn: Dictionary in cfg(data)["sentences"]:
+		if severity >= int(sn["severity"]):
+			out = sn
+	return out
 
 
 ## The talk answers to the guard and their skills (v0.7.22.2).
@@ -278,14 +353,24 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 			s.character["gold_cp"] = int(s.character["gold_cp"]) - cp
 			lines.append("Вергельд уплачен: −%s" % Money.format(cp))
 			lines.append_array(_settle(s, data, loc))
-		"stocks":
-			var days := stocks_days(s, data, loc)
+		"stocks":  # the sentence by severity (v0.7.22.10): prison or hard labour, the hero wakes in the law's prison
+			var sn := sentence(s, data, loc)
+			var days := int(sn["days"])
 			s.day += days
 			s.minute = int(TimeRules.cfg(data)["wake_minute"])
 			s.rested_at = TimeRules.abs_minute(s)
 			s.awake_saves = 0
-			lines.append("%d дн. в колодках — день %d, утро; вещи вернули" % [days, s.day])
+			s.character["hp"] = int(s.character["max_hp"])  # the wounds healed in the days
+			var prison := str(l.get("prison", ""))
+			if not prison.is_empty() and data["world"]["rooms"].has(prison):
+				s.room_id = prison
+				if not s.visited.has(prison):
+					s.visited.append(prison)
+			lines.append("%d дн. — %s; день %d, утро, %s; вещи вернули" % [days, sn["name"], s.day,
+				world.room(s.room_id).get("name", s.room_id)])
 			lines.append_array(ConditionRules.expire(s, data))
+			if int(sn.get("exhaustion", 0)) > 0:
+				lines.append_array(ConditionRules.add_exhaustion(s, data, int(sn["exhaustion"]), str(sn["name"])))
 			lines.append_array(_settle(s, data, loc))
 		"resist":
 			var foes: Array = [{"monster": str(l.get("guard_monster", "guard")), "count": int(cfg(data)["patrol_size"]),
@@ -309,9 +394,13 @@ static func _settle(s: GameSession, data: Dictionary, loc: String) -> Array[Stri
 	s.arrest = ""
 	for id: String in people_of(data, loc):
 		if not s.dead_npcs.has(id):
-			s.shift_attitude(id, int(cfg(data)["forgiven"]), data)
-	var lines: Array[String] = ["Вы больше не в розыске"]
-	lines.append_array(ReputationRules.add(s, data, loc, int(ReputationRules.cfg(data)["points"]["crime_settled"]), "вина искуплена"))  # v0.7.17
+			if int(cfg(data)["forgiven"]) != 0:
+				s.shift_attitude(id, int(cfg(data)["forgiven"]), data)
+			s.remember(id, "герой отбыл наказание за убийство — но доверия ему нет")
+	var lines: Array[String] = ["Вы больше не в розыске — но люди помнят"]  # the guilt stays (v0.7.22.10, big test #7)
+	var back := int(ReputationRules.cfg(data)["points"]["crime_settled"])
+	if back != 0:
+		lines.append_array(ReputationRules.add(s, data, loc, back, "вина искуплена"))  # v0.7.17
 	return lines
 
 

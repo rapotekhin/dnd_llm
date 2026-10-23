@@ -716,6 +716,12 @@ ITEM_WORN_TO_WORK,Действует только надетой — кнопк�
 SLOT_AUTOSAVE,Автосохранение
 SLOT_CANTRIP,заговор
 SLOT_AT_WILL,по желанию
+TRADE_YOU_BUY,Вы покупаете
+TRADE_YOU_SELL,Вы продаёте
+TRADE_NOTHING_YET,—
+TRADE_SERVICES,Услуги
+TRADE_CART_EMPTY_SHORT,"Нажмите «+» у товара или своей вещи"
+TRADE_INFO_HINT,Наведите на вещь — здесь появится её описание
 BTN_PLACE,Взаимодействие с местом ({n})
 JOURNAL_DEAD,мёртв(а)
 JOURNAL_GAVE,уже дал(а): {deal}
@@ -813,7 +819,13 @@ CRIME_NO_MONEY,Не хватает монет на вергельд
 CRIME_NO_BODY,Тела здесь нет или его уже обыскали
 SIDE_ARREST,Стража держит вас
 BTN_CRIME_PAY,Уплатить вергельд: {cost}
-BTN_CRIME_STOCKS,Отсидеть в колодках: {days} дн.
+BTN_CRIME_STOCKS,"Отбыть: {name}, {days} дн."
+BTN_CRIME_STOCKS_TIP,"Наказание по тяжести: дни в холодной или на каторге, раны заживут, розыск снимут — но люди будут помнить"
+BTN_HIDE_BODY,Спрятать
+BTN_HIDE_BODY_TIP,"Проверка Скрытности: чем лучше спрячете, тем труднее найти — искать будут каждый день, и с каждым днём всё безнадёжнее"
+HIDE_BODY_SAY,Прячу тело: {name}
+CRIME_HIDDEN_ALREADY,Тело уже спрятано
+CRIME_NO_SECRET,"Об этой смерти уже знают — прятать тело поздно"
 BTN_CRIME_RESIST,Сопротивляться страже
 BTN_CRIME_RESIST_TIP,Бой со стражей — новое преступление
 BTN_CRIME_PERSUADE,"Убедить, СЛ {dc}"

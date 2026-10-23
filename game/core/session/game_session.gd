@@ -100,6 +100,8 @@ var arrest_tried: Array[String] = []
 var npc_spells: Dictionary = {}
 ## Weapons stolen from NPCs (v0.7.22.8, TheftRules.lost_weapons): {npc_id: {item_id: day}}.
 var disarmed: Dictionary = {}
+## When each body fell (v0.7.22.10, CrimeRules.bury): {npc_id: abs minute}.
+var body_at: Dictionary = {}
 var bodies: Dictionary = {}
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
@@ -447,6 +449,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"arrest_tried": arrest_tried,
 		"npc_spells": npc_spells,
 		"disarmed": disarmed,
+		"body_at": body_at,
 		"bodies": bodies,
 		"searched": searched,
 		"quests_failed": quests_failed,
@@ -556,6 +559,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for how: Variant in d.get("arrest_tried", []):
 		s.arrest_tried.append(str(how))
 	s.npc_spells = (d.get("npc_spells", {}) as Dictionary).duplicate(true)
+	for npc: String in d.get("body_at", {}):
+		s.body_at[npc] = int(d["body_at"][npc])
 	for npc: String in d.get("disarmed", {}):
 		var gone := {}
 		for id: String in d["disarmed"][npc]:

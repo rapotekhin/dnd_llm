@@ -1554,6 +1554,34 @@ func crime_answer(how: String) -> String:
 	return ""
 
 
+## «Спрятать тело» (v0.7.22.10, big test #9): the engine rolls (rules.crime.hide) — its total is how hard the body is
+## to find; the master narrates. "" or a key.
+func hide_body(npc_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var why := CrimeRules.can_hide(session, Catalog.data, npc_id)
+	if not why.is_empty():
+		return why
+	var h: Dictionary = CrimeRules.cfg(Catalog.data)["hide"]
+	var who := str(world().npc(npc_id).get("name", npc_id))
+	var text := tr("HIDE_BODY_SAY").format({"name": who})
+	_add(GameSession.player_entry(text))
+	var result := _engine_check({"skill": str(h["skill"]), "dc_tier": str(h["dc_tier"])})
+	if result.has("error"):
+		return "MSG_MASTER_FAILED"
+	var lines := CrimeRules.hide(session, Catalog.data, npc_id, int(result["total"]), bool(result["success"]))
+	lines.append_array(TimeRules.advance(session, Catalog.data, int(TimeRules.cfg(Catalog.data).get("search_minutes", 10))))
+	_add(GameSession.effect_entry(lines))
+	_log("Игрок: " + text)
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("action", text + " [движок уже бросил Скрытность %d — %s; %s — эффекты не нужны, опиши, куда и как герой прячет тело]" %
+		[int(result["total"]), "успех" if bool(result["success"]) else "провал", ", ".join(lines)])
+	return ""
+
+
 ## «Обыскать тело» (v0.7.14): its pockets and some wares come to the hero; living people here see it. "" or a key.
 func search_body(npc_id: String) -> String:
 	if session == null or is_busy() or not Backend.is_ready() or session.in_conversation():
