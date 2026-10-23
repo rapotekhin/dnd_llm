@@ -1,6 +1,6 @@
 # Мастер: интеграция ЛЛМ
 
-Как устроен ЛЛМ-мастер в v0.5.4. Запуск и конфиг — [llm_server/README.md](../../llm_server/README.md), сообщения — [ADR-0009](adr/0009-godot-backend-protocol.md), сторона Godot — [godot-client.md → «Ход»](godot-client.md#ход).
+Как устроен ЛЛМ-мастер (общая схема заложена в v0.5.4; инструменты и эффекты на сегодня — [master-tools.md](master-tools.md)). Запуск и конфиг — [llm_server/README.md](../../llm_server/README.md), сообщения — [ADR-0009](adr/0009-godot-backend-protocol.md), сторона Godot — [godot-client.md → «Ход»](godot-client.md#ход).
 
 ## Главный принцип
 
@@ -31,15 +31,9 @@
 
 ## Инструменты
 
-| Инструмент | Вызов движка | Что |
-|---|---|---|
-| `request_check(dc_tier, reason, skill \| save, target_id, advantage_reason)` | `engine.check` | проверка навыка или спасбросок. Мастер выбирает ступень сложности (`very_easy` … `nearly_impossible`), DC, бросок и nat 20/1 — у движка. Ответ: успех / провал, найденное скрытое (`revealed`), повтор проваленной проверки без броска (`blocked`), итог торга (`note`) |
-| `propose_effect(effect)` | `engine.validate` | последствие: `move`, `damage`, `heal`, `coins`, `give_item`, `take_item`, `npc_attitude`, `flag`. Урон и лечение — ступенями тяжести, числа считает движок. Принятый эффект возвращает `effect_id`, отклонённый — причину, и мастер переписывает текст под отказ |
-| `rules(topic)` | — | подробные правила темы из оглавления системного промпта (v0.7.20.4): состояния, места, люди, социальные эффекты, контейнеры, снаряжение… Эффект темы (`condition`, `create_place`, `npc_follow`, `equip`, `take_from`…) бэкенд не отправляет движку, пока её правил нет в промпте и мастер их не прочитал |
-| `lookup(kind, id)` | `engine.lookup` | справка: `rule`, `spell`, `feature`, `condition`, `item`, `npc` — по id или русскому названию |
-| `find_items(query, base, properties)` | `engine.find_items` | поиск в каталоге игры + библиотеке созданных предметов бэкенда. Без него `give_item` с новым предметом отклоняется |
+Полный справочник — [master-tools.md](master-tools.md): восемь инструментов (`request_check`, `propose_effect`, `rules`, `lookup`, `find_items`, `find_npcs`, `find_places`, `find_quests`), их вызовы `engine.*`, 36 видов эффектов с проверками движка и ссылками на код, итог хода и лимиты. Что мастер умеет по сценариям (создать место, переместить героя, выдать вещь, начать бой…) и как устроен каждый — [master-scenarios.md](master-scenarios.md).
 
-Опыта среди эффектов нет: опыт дают только бой и задания пакета (`XpRules`). В торговле `coins` / `give_item` / `take_item` движок отклоняет — сделки идут панелью игрока, мастер их только отыгрывает (`kind=deal`, `haggle`).
+Опыта среди эффектов нет: опыт дают только бой и задания (`XpRules`). В торговле `coins` / `give_item` / `take_item` движок отклоняет — сделки идут панелью игрока, мастер их только отыгрывает (`kind=deal`, `haggle`).
 
 ## Промпты
 

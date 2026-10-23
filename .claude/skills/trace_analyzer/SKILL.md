@@ -78,4 +78,5 @@ description: Use this skill when the author has played the game themselves and w
 - [godot-client.md → «Трейс сессии»](../../../docs/tech/godot-client.md) — формат клиента и бэкенда
 - `tools/trace_report.py`, `game/autoload/trace.gd`, `llm_server/src/llm_server/trace.py`
 - [ADR-0008](../../../docs/tech/adr/0008-engine-decides-llm-narrates.md) — движок решает, LLM рассказывает
+- [master-tools.md](../../../docs/tech/master-tools.md) — что мастер мог вызвать и что движок проверяет у каждого эффекта (отказ `engine.validate` в трейсе — сверять здесь); [master-scenarios.md](../../../docs/tech/master-scenarios.md) — каким пайплайном мастер должен был действовать
 - Скиллы: `playtest` (скриптовые прогоны), `docs_updater`, `release_notes_updater`

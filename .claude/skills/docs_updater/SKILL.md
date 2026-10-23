@@ -33,7 +33,8 @@ description: Use this skill after making meaningful code changes to the Between 
 | Новый/удалённый экран | [tech/godot-client.md](docs/tech/godot-client.md) §«Структура», §«Поток экранов» |
 | Новый/удалённый gameplay-режим | новый файл в `design/systems/`, обновить `design/overview.md` |
 | Новое правило / система Godot (`game/core/`) | [tech/godot-client.md](docs/tech/godot-client.md) — свой раздел, `design/systems/<система>.md` |
-| Новый инструмент агента или сообщение протокола | [tech/adr/0009-godot-backend-protocol.md](docs/tech/adr/0009-godot-backend-protocol.md) (новый пункт «Протокол X.Y»), `contract/` |
+| Новый инструмент агента или сообщение протокола | [tech/adr/0009-godot-backend-protocol.md](docs/tech/adr/0009-godot-backend-protocol.md) (новый пункт «Протокол X.Y»), `contract/`, [tech/master-tools.md](docs/tech/master-tools.md) |
+| Новый или изменённый эффект, проверка движка в `EffectEngine._plan`, новый `kind` хода, тема правил | [tech/master-tools.md](docs/tech/master-tools.md) (строка эффекта: поля, что проверяет движок, ссылки на код) и [tech/master-scenarios.md](docs/tech/master-scenarios.md) (сценарий и его пайплайн); номера строк в ссылках — сверить |
 | Изменение системного промпта | [tech/llm-integration.md](docs/tech/llm-integration.md) + соответствующий `design/systems/<режим>.md` |
 | Новый/изменённый класс entity | [tech/data-models.md](docs/tech/data-models.md) |
 | Смена дефолтной LLM-модели | [tech/llm-integration.md](docs/tech/llm-integration.md), [README.md](README.md) |

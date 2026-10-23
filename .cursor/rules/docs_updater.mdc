@@ -23,7 +23,8 @@ Read that file when this rule triggers, then follow it.
 | New/removed screen | `docs/tech/godot-client.md` (structure, screen flow) |
 | New/removed gameplay mode | new file in `docs/design/systems/`, update `docs/design/overview.md` |
 | New rule / system in `game/core/` | `docs/tech/godot-client.md` + `docs/design/systems/` |
-| New agent tool / protocol message | ADR-0009 «Протокол X.Y», `contract/` |
+| New agent tool / protocol message | ADR-0009 «Протокол X.Y», `contract/`, `docs/tech/master-tools.md` |
+| New or changed effect kind, engine check, turn `kind`, rules topic | `docs/tech/master-tools.md` (the effect's row) + `docs/tech/master-scenarios.md` (the scenario); re-check line numbers in links |
 | Changed system prompt | `docs/tech/llm-integration.md` + relevant `docs/design/systems/<mode>.md` |
 | New/changed entity class | `docs/tech/data-models.md` |
 | LLM model/provider change | `docs/tech/llm-integration.md` + `README.md` |

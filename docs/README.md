@@ -20,7 +20,7 @@
 | **Впервые видишь проект** | [vision/pitch.md](vision/pitch.md), [vision/pillars.md](vision/pillars.md) |
 | **Хочешь понять, во что играть** | [design/overview.md](design/overview.md) |
 | **Программист, лезешь в Godot-клиент** | [tech/godot-client.md](tech/godot-client.md) |
-| **Работаешь с мастером (бэкенд, промпты)** | [../llm_server/README.md](../llm_server/README.md), [ADR-0009 — протокол](tech/adr/0009-godot-backend-protocol.md), [tech/golden-scenarios.md](tech/golden-scenarios.md) |
+| **Работаешь с мастером (бэкенд, промпты)** | [tech/master-tools.md](tech/master-tools.md) — все инструменты и эффекты мастера, [tech/master-scenarios.md](tech/master-scenarios.md) — что мастер умеет по сценариям, [tech/llm-integration.md](tech/llm-integration.md), [../llm_server/README.md](../llm_server/README.md), [ADR-0009 — протокол](tech/adr/0009-godot-backend-protocol.md), [tech/golden-scenarios.md](tech/golden-scenarios.md) |
 | **Хочешь добавить контент (мир, NPC, задания)** | [tech/godot-client.md → «Пакеты миров»](tech/godot-client.md#пакеты-миров), пакет `game/data/worlds/frontier/` |
 | **Планируешь, что делать дальше** | [production/roadmap.md](production/roadmap.md), [production/backlog.md](production/backlog.md) |
 | **Разворачиваешь сервер мастера** | [tech/deploy.md](tech/deploy.md) |

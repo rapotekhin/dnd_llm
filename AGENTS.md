@@ -22,6 +22,8 @@ Decisions to follow in new code: [pillar 6](docs/vision/pillars.md#6-движо�
 
 Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes; **`playtest`** to test the game live (see «Testing»); **`trace_analyzer`** to analyse the author's own play session from its trace; **`godot_conventions`** when writing GDScript in `game/`.
 
+The master's ways into the engine are in two pages: [master-tools.md](docs/tech/master-tools.md) — every tool, `engine.*` call and effect kind with what the engine checks and links to the code; [master-scenarios.md](docs/tech/master-scenarios.md) — what the master can do, scenario by scenario, with its pipeline. Read them before touching `agents.py`, `protocol.py` effects, `EffectEngine` or the prompts; update them with any new tool, effect or turn `kind`.
+
 ## Commands
 
 Always activate `venv` as the Python interpreter before running any command.
@@ -120,6 +122,7 @@ Never print or log keys from `.env`.
 | Godot screen or overlay | `game/ui/screens/` or `game/ui/components/` (built in code), navigation via `EventBus.navigate` |
 | Godot live scenario | `game/tools/playtest/<name>.gd` (base `playtest_base.gd`) |
 | Protocol message / schema | Pydantic model in `llm_server/` → export to `contract/`, bump `PROTOCOL_VERSION` on both sides, ADR-0009 «Протокол X.Y» |
+| Master's tool or effect kind | `protocol.py` (`Effect` union) + `EffectEngine._plan` / `_apply_one` + a rules topic if needed; steps in [master-tools.md → «Как добавить»](docs/tech/master-tools.md#как-добавить-инструмент-или-эффект), a row there and a scenario in [master-scenarios.md](docs/tech/master-scenarios.md) |
 | Golden LLM scenario | `evals/golden/scenarios.yaml` + [format doc](docs/tech/golden-scenarios.md); run `python -m llm_server.golden` after prompt changes |
 | Architectural decision | new ADR in `docs/tech/adr/` |
 | World content (lore, places, NPCs, merchants, quests, ready-made characters) | a pack in `game/data/worlds/<id>/` ([format](docs/tech/godot-client.md#пакеты-миров)); never in code |

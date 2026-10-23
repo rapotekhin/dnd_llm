@@ -52,7 +52,9 @@ docs/
 │
 ├── tech/                                     ← How
 │   ├── architecture.md                       — общая схема, слои
-│   ├── llm-integration.md                    — агенты, tools, промпты, экономия токенов
+│   ├── llm-integration.md                    — агенты, промпты, модели, экономия токенов
+│   ├── master-tools.md                       — все инструменты мастера, engine.*, 36 эффектов, итог хода, лимиты
+│   ├── master-scenarios.md                   — что мастер умеет: сценарии и пайплайн каждого
 │   ├── data-models.md                        — классы, MainGameState
 │   └── adr/                                  — Architecture Decision Records
 │       ├── 0001-llm-as-gm-not-engine.md      — главный принцип
@@ -78,7 +80,9 @@ docs/
    | «Какие экраны и как они связаны?» | `design/ux/screens-flow.md` |
    | «Какой сеттинг / лор / тон?» | `narrative/world.md`, `dm-style.md` |
    | «Как устроена архитектура?» | `tech/architecture.md` |
-   | «Как ЛЛМ интегрирован? Какие tools?» | `tech/llm-integration.md` |
+   | «Как ЛЛМ интегрирован?» | `tech/llm-integration.md` |
+   | «Какие у мастера инструменты / эффекты? Что проверяет движок у `move`, `give_item`…?» | `tech/master-tools.md` |
+   | «Может ли мастер X? Как мастер создаёт место / человека / задание / вещь?» | `tech/master-scenarios.md` |
    | «Почему Pickle / LangChain / Pygame?» | `tech/adr/<NNNN>-*.md` |
    | «Что в планах / что в работе?» | `production/roadmap.md`, `backlog.md` |
 
