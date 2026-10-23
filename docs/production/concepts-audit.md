@@ -12,8 +12,8 @@
 | `game/core/rules/creature_rules.gd:95` | match по attack, finish, search, bind, lead, hand_over | понятие движка | действия с пленником — понятие «Пленник» (concepts.md): связать, вести, отдать страже, добить…; числа — rules.creatures (v0.7.22.17) |
 | `game/core/rules/creature_rules.gd:122` | match по bind, lead, free, hand_over, attack, finish, search | понятие движка | применение действий понятия «Пленник»; продажа и подарок — эффект мастера `owner` (v0.7.22.17) |
 | `game/core/rules/crime_rules.gd:223` | match по male, female | служебное | окончание по роду NPC (данные пакета) |
-| `game/core/rules/crime_rules.gd:408` | match по bribe, pay, stocks, resist | понятие движка | ответ страже — три исхода понятия «задержание» (вергельд, колодки, сопротивление); сумма и сроки — rules.json |
-| `game/core/rules/crime_rules.gd:479` | имя или описание вещи мира в коде | служебное | подпись тела убитого NPC на панели: «Тело: имя» |
+| `game/core/rules/crime_rules.gd:466` | match по bribe, pay, stocks, resist | понятие движка | ответ страже — три исхода понятия «задержание» (вергельд, колодки, сопротивление); сумма и сроки — rules.json |
+| `game/core/rules/crime_rules.gd:537` | имя или описание вещи мира в коде | служебное | подпись тела убитого NPC на панели: «Тело: имя» |
 | `game/core/rules/effect_engine.gd:162` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, cast… | понятие движка | виды эффектов — словарь понятий движка, который знает мастер (протокол); новый вид — новое понятие |
 | `game/core/rules/effect_engine.gd:477` | match по damage, condition | понятие движка | эффекты на врага в бою — те же понятия |
 | `game/core/rules/effect_engine.gd:729` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, start_combat… | понятие движка | применение видов эффектов |
@@ -21,12 +21,12 @@
 | `game/core/rules/lookup.gd:10` | match по condition, rule, spell, feature, item, npc | служебное | справка движка по видам |
 | `game/core/rules/prop_rules.gd:55` | имя или описание вещи мира в коде | служебное | подпись контейнера товаров торговца: «Товары: имя» (v0.7.22.8) |
 | `game/core/rules/social_rules.gd:32` | match по insight, deception, wis_save | правило 5e | состязания 5e: против чего проверка (rules.social.contests) |
-| `game/core/rules/social_rules.gd:130` | match по identify, lift_curse, enchant | сделано | v0.7.16: услуга — данные `rules.items.services` (операция движка + название), не код |
+| `game/core/rules/social_rules.gd:132` | match по identify, lift_curse, enchant | сделано | v0.7.16: услуга — данные `rules.items.services` (операция движка + название), не код |
 | `game/core/rules/theft_rules.gd:29` | имя или описание вещи мира в коде | служебное | монеты в карманах — понятие «кошель», не вещь мира |
 | `game/core/rules/theft_rules.gd:131` | имя или описание вещи мира в коде | правило 5e | безоружный удар 5e, когда у NPC украли оружие |
 | `game/core/rules/theft_rules.gd:168` | match по fight, close_shop | понятие движка | реакция пойманного вора — понятие с видами из шаблона (бой, лавка, стража); виды — rules.theft |
-| `game/core/rules/trade_rules.gd:451` | match по identify, lift_curse, enchant | понятие движка | операции услуг движка (identify, lift_curse, enchant): услуга — данные над ними |
-| `game/core/rules/trade_rules.gd:487` | match по identify, lift_curse, enchant | сделано | v0.7.16: услуга — операция движка из данных (`op`: identify, lift_curse, enchant) |
+| `game/core/rules/trade_rules.gd:453` | match по identify, lift_curse, enchant | понятие движка | операции услуг движка (identify, lift_curse, enchant): услуга — данные над ними |
+| `game/core/rules/trade_rules.gd:489` | match по identify, lift_curse, enchant | сделано | v0.7.16: услуга — операция движка из данных (`op`: identify, lift_curse, enchant) |
 | `game/core/world/quest_gen.gd:295` | match по talk, visit, find, fight | понятие движка | виды шагов задания — понятие «Шаг задания» (talk, visit, find, fight); новый вид — новое понятие |
 | `game/core/world/quest_gen.gd:342` | match по talk, visit, fight, find | понятие движка | те же виды шагов для людей, места и вещи, которые задание приносит (v0.7.21.1) |
 | `game/core/world/world_pack.gd:98` | match по races, classes, backgrounds, items | служебное | разделы SRD в пакете мира |

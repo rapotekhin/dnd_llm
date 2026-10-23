@@ -785,8 +785,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
 		"use_item":
 			ItemRules.use(c, _data, s.items, plan["item_id"], s.rng, s)
-		"advance_time":
-			_extra_lines.append_array(TimeRules.advance(s, _data, int(plan["minutes"])))
+		"advance_time":  # the patrol looks in on the way, as at «Ждать» (v0.7.22.18)
+			_extra_lines.append_array(CrimeRules.wait(s, _data, int(plan["minutes"]))["lines"])
 		"furnish":
 			PropRules.apply_furnish(s, plan)
 		"take_prop":

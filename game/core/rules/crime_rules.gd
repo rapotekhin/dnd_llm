@@ -280,6 +280,64 @@ static func held_after_fight(s: GameSession, data: Dictionary) -> Array[String]:
 	return ["Стража скручивает героя — задержан"]
 
 
+## Time passes where the law may come (v0.7.22.18, #27): the wanted hero waits in steps of rules.crime.wait_step
+## minutes and the patrol looks in after each — held, the wait stops there. Elsewhere — the whole wait at once.
+## {lines, minutes} — the minutes really waited.
+static func wait(s: GameSession, data: Dictionary, minutes: int) -> Dictionary:
+	var loc := WorldView.new(data["world"]).location_id(s.room_id)
+	var lines: Array[String] = []
+	if law(data, loc).is_empty() or held(s):
+		lines.append_array(TimeRules.advance(s, data, minutes))
+		return {"lines": lines, "minutes": minutes}
+	var step := maxi(1, int(cfg(data)["wait_step"]))
+	var done := 0
+	while done < minutes:
+		var m := mini(step, minutes - done)
+		lines.append_array(TimeRules.advance(s, data, m))  # a body found on the way makes the hero wanted
+		done += m
+		lines.append_array(check_arrest(s, data))
+		if held(s):
+			lines.append("Ожидание прервано: стража здесь")
+			break
+	return {"lines": lines, "minutes": done}
+
+
+## Who comes to the help of an NPC the hero attacks (v0.7.22.18, #29): the people of the room who are the law's guards
+## or carry a tag of rules.crime.defend — not the hero's friends (attitude from friend_attitude), not those who go
+## with the hero, not ones already in the fight. `foes` — the specs of the fight about to start; [] when no NPC of
+## them was attacked by the hero. Specs of the defenders.
+static func defenders(s: GameSession, data: Dictionary, foes: Array) -> Array:
+	var victims: Array = foes.filter(func(f: Dictionary) -> bool: return bool(f.get("by_hero", false)) and not str(f.get("npc_id", "")).is_empty())
+	if victims.is_empty():
+		return []
+	var world := WorldView.new(data["world"])
+	var d: Dictionary = cfg(data)["defend"]
+	var guards: Array = law(data, world.location_id(s.room_id)).get("guards", [])
+	var out: Array = []
+	for id: String in s.npcs_here(world.world, s.room_id):
+		if foes.any(func(f: Dictionary) -> bool: return str(f.get("npc_id", "")) == id) or s.followers.has(id):
+			continue
+		if s.attitude(id) >= int(d["friend_attitude"]):
+			continue
+		var n := world.npc(id)
+		var tags: Array = n.get("tags", [])
+		if not guards.has(id) and not tags.any(func(t: Variant) -> bool: return (d["tags"] as Array).has(t)):
+			continue
+		out.append({"monster": str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"])), "name": str(n.get("name", id)),
+			"desc": str(n.get("description", "")), "npc_id": id, "col": 1, "by_hero": true, "law": guards.has(id)})
+	return out
+
+
+## The outcome of an answer to the guard in words for the master (v0.7.22.18, #28): it narrated a wergild and the
+## stocks after a threat that let the hero go. One of three, by the state after the answer.
+static func outcome(s: GameSession, data: Dictionary) -> String:
+	if held(s):
+		return "стража по-прежнему держит героя: его не отпустили и не наказали — дальше выбирает игрок"
+	if wanted_at(s, data, s.room_id):
+		return "героя отпустили, но розыск не снят; вергельда он не платил, в колодках и под замком не был"
+	return "вина искуплена — розыск снят"
+
+
 static func held(s: GameSession) -> bool:
 	return not s.arrest.is_empty() and s.arrest == s.room_id
 

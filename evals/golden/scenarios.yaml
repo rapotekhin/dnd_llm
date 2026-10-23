@@ -1505,6 +1505,39 @@ scenarios:
     rubric:
       - "Бруно помнит убийство Кейры: отказывает, боится или гонит героя, не продаёт и работы не даёт"
 
+  - id: crime_threat_let_go
+    title: "Запугал стражу — рассказ без вергельда и колодок (проверка исправлений #28, v0.7.22.18)"
+    category: consequences
+    extends: tavern
+    kind: law
+    input: "Запугивание 18 против Сл 15 — успех, Стража отпускает героя — но розыск не снят. Исход: героя отпустили, но розыск не снят; вергельда он не платил, в колодках и под замком не был"
+    snapshot:
+      crimes:
+        deeds: ["убит(а) Кейра [npc_mercenary] — Таверна «Хромой олень», день 1; видели: Бруно Хмель; знает вся округа"]
+        wanted: true
+    expect:
+      effects: {max_count: 0}
+    rubric:
+      - "Стража отступает перед угрозой и отпускает героя, но дальше следит за ним; нет ни уплаченного вергельда, ни колодок, ни заключения"
+
+  - id: crime_wanted_no_room
+    title: "Убийце не сдают комнату (проверка исправлений #30, v0.7.22.18)"
+    category: consequences
+    extends: tavern
+    mode: social
+    input: "Бруно, мне нужна комната на ночь. Вот серебро."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Бруно Хмель", role: "хозяин таверны", template: commoner, attitude: unfriendly, trader: true}
+      crimes:
+        deeds: ["убит(а) Кейра [npc_mercenary] — Таверна «Хромой олень», день 1; видели: Бруно Хмель; знает вся округа"]
+        wanted: true
+    expect:
+      effects: {forbidden_kinds: [coins, give_item, move, npc_favor]}
+    rubric:
+      - "Бруно отказывает в комнате: убийце здесь не сдают; денег не берёт, комнату не обещает"
+
   - id: crime_stocks_narration
     title: "Заключение — рассказ строго по строкам движка (v0.7.22.10)"
     category: consequences

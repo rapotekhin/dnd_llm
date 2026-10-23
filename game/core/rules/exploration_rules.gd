@@ -261,6 +261,8 @@ static func can_rest(s: GameSession, world: Dictionary, data: Dictionary = {}) -
 		return "REST_NOT_SAFE"
 	if s.in_conversation():
 		return "REST_IN_CONVERSATION"
+	if int(place["cost_cp"]) > 0 and not data.is_empty() and CrimeRules.wanted_at(s, data, s.room_id):
+		return "REST_WANTED"  # v0.7.22.18 (#30): no paid bed for the wanted
 	if int(s.character.get("gold_cp", 0)) < int(place["cost_cp"]):
 		return "REST_NO_MONEY"
 	return ""

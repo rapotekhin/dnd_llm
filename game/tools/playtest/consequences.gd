@@ -3,6 +3,8 @@ extends "res://tools/playtest/playtest_base.gd"
 ## mercenary Keira in the tavern before Bruno and Mira (the master's next_mode combat — here set by hand) and kills
 ## her: a murder with witnesses, the Brod knows, Bruno's trade is shut; the body is searched; an hour later a patrol
 ## holds the hero on the square — the exits are shut, the stocks settle it; the journal's «Хроника» keeps it all.
+## v0.7.22.18: the veteran of the hall comes to Keira's help; the hero waits on the square till evening and the patrol
+## breaks the wait.
 
 
 func run() -> void:
@@ -24,6 +26,9 @@ func run() -> void:
 	gs._start_pending_fight()
 	if not step("a fight with Keira", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy() and not gs.combat_playing, 90.0)):
 		return
+	var helpers: Array = CombatRules.enemies(s).filter(func(id: String) -> bool: return str(CombatRules.fighter(s, id).get("npc_id", "")) == "npc_veteran")
+	step("the veteran comes to her help (v0.7.22.18)", not helpers.is_empty(), str(CombatRules.enemies(s).map(func(id: String) -> String: return str(CombatRules.fighter(s, id)["name"]))))
+	await shot("defenders")
 	for id: String in CombatRules.enemies(s):
 		var f := CombatRules.fighter(s, id)
 		f["hp"] = 0
@@ -46,12 +51,18 @@ func run() -> void:
 	step("the body searched", _chat(s).contains("Обыскано тело Кейра"), _chat(s))
 	await shot("murder")
 
-	# An hour later a patrol finds the hero on the square.
-	TimeRules.advance(s, data, 61)
+	# On the square the hero waits till evening: the patrol comes on the way and breaks the wait (v0.7.22.18).
 	gs.go("brod-square")
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)
-	step("the patrol holds the hero", CrimeRules.held(s), _chat(s))
+	step("not held at once", not CrimeRules.held(s), _chat(s))
+	var before := TimeRules.abs_minute(s)
+	var want := TimeRules.minutes_until(s, data, "evening")
+	gs.wait("evening")
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	await frames(3)
+	step("the patrol holds the hero, the wait broken", CrimeRules.held(s) and _chat(s).contains("Ожидание прервано")
+		and TimeRules.abs_minute(s) - before < want, "%d of %d min · %s" % [TimeRules.abs_minute(s) - before, want, _chat(s)])
 	var exit: Button = find(screen(), "Exit_brod-gate")
 	step("the exits are shut", exit != null and exit.disabled, "")
 	var stocks: Button = find(screen(), "Crime_stocks")
@@ -108,7 +119,7 @@ func run() -> void:
 		await frames(3)
 		var pbox: Node = find(game, "JournalTab_places").get_parent().get_parent()
 		var ptext := " ".join(pbox.find_children("*", "Button", true, false).map(func(l: Node) -> String: return (l as Button).text))
-		step("Brod's name is bad", ptext.contains("Ольховый Брод — дурная слава") or ptext.contains("Ольховый Брод — чужак с душком"), ptext.left(200))
+		step("Brod's name is bad", ptext.contains("Ольховый Брод — дурная слава") or ptext.contains("Ольховый Брод — чужак с душком") or ptext.contains("Ольховый Брод — изгой"), ptext.left(200))
 	# v0.7.15: the people of Brod remember the murder — the journal's «Разговоры» shows it under each of them.
 	var people: Button = find(game, "JournalTab_people")
 	if step("the people tab", people != null):

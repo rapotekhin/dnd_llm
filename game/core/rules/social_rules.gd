@@ -109,6 +109,8 @@ static func plan_favor(s: GameSession, data: Dictionary, npc_id: String, service
 	if own.is_empty():
 		var ids: Array = npc.get("services", [])
 		return {"reason": "у %s нет услуги %s%s" % [npc.get("name", npc_id), service, "; есть: " + ", ".join(ids) if not ids.is_empty() else ""]}
+	if str(own[0]["why"]) == "SHOP_CLOSED_WANTED":
+		return {"reason": "герой в розыске в округе %s: услуг ему не оказывают, даром тоже" % npc.get("name", npc_id)}
 	if str(own[0]["why"]) == "SERVICE_NOTHING":
 		return {"reason": "услуга %s сейчас не нужна: у героя нет того, к чему она применима" % service}
 	if not item.is_empty() and not TradeRules.targets(s, data, service).has(item):

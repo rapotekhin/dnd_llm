@@ -277,10 +277,13 @@
 | Герой признался или его разоблачили | `crime_known {victim_id}` | тайное убийство (или нападение) из хроники; молва, отношение, розыск ([CrimeRules.plan_reveal](../../game/core/rules/crime_rules.gd#L206)) |
 | Стража уводит к капитану | `move {room_id}` под стражей | любая комната той же локации; задержание идёт с героем |
 | Отпустить словами | `request_check {persuasion | deception | intimidation}` → `crime_release` | проверка пройдена на ступени движка за преступления; розыск остаётся ([CrimeRules.plan_release](../../game/core/rules/crime_rules.gd#L383)) |
-| Задержание кнопками | вергельд или срок, сопротивление (бой), убедить, обмануть, запугать, подкупить — движок бросает и применяет сам ([GameState.crime_answer](../../game/autoload/game_state.gd#L1619)); мастер рассказывает (`kind: law`) | рассказ — только по итогу движка |
+| Задержание кнопками | вергельд или срок, сопротивление (бой), убедить, обмануть, запугать, подкупить — движок бросает и применяет сам ([GameState.crime_answer](../../game/autoload/game_state.gd#L1619)); мастер рассказывает (`kind: law`) | рассказ — только по итогу движка: в конце строк — «Исход» (держат / отпустили, розыск остаётся / искуплено), наказаний сверх названных нет (v0.7.22.18) |
+| Ожидание в розыске | «Ждать» или `advance_time` | в округе с законом время идёт шагами `crime.wait_step`, после каждого — патруль; задержали — ожидание прервано (v0.7.22.18, [CrimeRules.wait](../../game/core/rules/crime_rules.gd)) |
+| Нападение на NPC при людях | кнопка «Напасть», `next_mode: combat`, вредное заклинание | стража закона и NPC с боевыми тегами (`crime.defend.tags`) вступают в бой, кроме друзей героя (отношение от +2) и спутников; бой проигран страже — задержание, нападение — преступление (v0.7.22.18, [CrimeRules.defenders](../../game/core/rules/crime_rules.gd)) |
+| Ночлег и услуги в розыске | — | услуги торговцев (и даром, `npc_favor`) и платная комната закрыты, как торговля; бесплатный ночлег (храм для прислужника, лагерь) остаётся (v0.7.22.18) |
 
 - **Правила:** тема `crime` (сама в промпте, когда у героя есть преступления).
-- **Golden:** `crime_confession`, `crime_wanted_no_work`, `crime_stocks_narration`, `crime_escort_to_captain`, `crime_release_after_check`, `crime_hide_body_no_promise`.
+- **Golden:** `crime_confession`, `crime_wanted_no_work`, `crime_stocks_narration`, `crime_escort_to_captain`, `crime_release_after_check`, `crime_hide_body_no_promise`, `crime_threat_let_go`, `crime_wanted_no_room`; плейтест `consequences`.
 
 ---
 

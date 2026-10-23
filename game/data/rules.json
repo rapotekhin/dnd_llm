@@ -1027,7 +1027,10 @@
 		"bribe_share": 0.5,
 		"let_go_minutes": 240,
 		"patrol_chance": 0.25,
-		"body_wares": 2
+		"body_wares": 2,
+		"_v07_22_18": "The sequence of a crime (v0.7.22.18): waiting where the law is goes in wait_step minutes — the patrol looks in after each and stops the wait; people of the room come to the help of an NPC the hero attacks (`defend`: the law's guards and NPCs with its tags, not the hero's friends from friend_attitude); the wanted hero gets no services and no paid bed (`rest_cost_cp` > 0) where he is wanted.",
+		"wait_step": 30,
+		"defend": {"tags": ["military"], "friend_attitude": 2}
 	},
 	"props": {
 		"abandon_hours": 24,

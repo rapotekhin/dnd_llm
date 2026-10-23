@@ -18,6 +18,8 @@ func run() -> void:
 	var s: GameSession = gs.session
 	var data: Dictionary = node("Catalog").data
 	s.room_id = "brod-tavern-hall"
+	for id: String in ["npc_veteran", "npc_mercenary"]:  # the hero's friends stay out of the fight (v0.7.22.18)
+		s.shift_attitude(id, 3, data)
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var here := s.npcs_here(data["world"], s.room_id)
@@ -30,6 +32,7 @@ func run() -> void:
 	if not step("the fight at once", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)):
 		return
 	await frames(3)
+	step("the hero's friends stay out", CombatRules.enemies(s).size() == 1, str(CombatRules.enemies(s).map(func(id: String) -> String: return str(CombatRules.fighter(s, id)["name"]))))
 	var fid := CombatRules.fighter_of_npc(s, first)
 	step("caught off guard, the hero first", bool(CombatRules.fighter(s, fid).get("surprised", false)) and str(s.combat["order"][0]) == CombatRules.PLAYER,
 		str(s.combat.get("start_lines", s.combat.get("log", []))))
@@ -55,6 +58,8 @@ func run() -> void:
 	s.crimes = []
 	s.wanted = {}
 	s.arrest = ""
+	for id: String in ["npc_veteran", "npc_mercenary"]:  # the assault made the Brod colder: friends again for this part
+		s.shift_attitude(id, 6, data)
 	var second := ""
 	for id: String in s.npcs_here(data["world"], s.room_id):
 		if id != first:

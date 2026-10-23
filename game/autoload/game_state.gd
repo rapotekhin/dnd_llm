@@ -506,6 +506,12 @@ func _show_start_lines() -> void:
 func _start_pending_fight() -> void:
 	var foes := session.pending_fight.duplicate(true)
 	session.pending_fight = []
+	var help := CrimeRules.defenders(session, Catalog.data, foes)  # v0.7.22.18: the room stands up for the NPC
+	if not help.is_empty():
+		foes.append_array(help)
+		var lines: Array[String] = ["На помощь бросается: " + ", ".join(help.map(func(f: Dictionary) -> String: return str(f["name"])))]
+		_add(GameSession.effect_entry(lines))
+		_log("События: " + lines[0])
 	var source := {"room_from": session.room_id}
 	if not _opening.is_empty() and foes.any(func(f: Dictionary) -> bool: return str(f.get("npc_id", "")) == str(_opening["npc_id"])):
 		source["opening"] = _opening
@@ -1154,7 +1160,8 @@ func finish_combat(take: Array = []) -> void:
 			s.encounters_done.append(str(s.combat["encounter"]))
 	if outcome in ["victory", "truce"]:
 		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id))  # the beaten stay in the room (v0.7.22.11)
-	if outcome == "captured" and CombatRules.law_captors(s):  # v0.7.22.17: the guard holds the hero, as at an arrest
+	var by_law := outcome == "captured" and CombatRules.law_captors(s)
+	if by_law:  # v0.7.22.17: the guard holds the hero, as at an arrest
 		lines.append_array(CrimeRules.held_after_fight(s, Catalog.data))
 	elif outcome == "captured":  # v0.7.22.12: bound in their place, not a won fight
 		var foes: Array = []
@@ -1168,7 +1175,7 @@ func finish_combat(take: Array = []) -> void:
 		var f := CombatRules.fighter(s, id)
 		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():  # the body, quests, a murder (v0.7.14)
 			lines.append_array(CrimeRules.on_death(s, Catalog.data, str(f["npc_id"]), bool(f.get("by_hero", false)), s.room_id))
-		elif not str(f.get("npc_id", "")).is_empty() and bool(f.get("by_hero", false)) and outcome != "captured":  # v0.7.22.16: an assault
+		elif not str(f.get("npc_id", "")).is_empty() and bool(f.get("by_hero", false)) and (outcome != "captured" or by_law):  # v0.7.22.16: an assault
 			lines.append_array(CrimeRules.on_assault(s, Catalog.data, str(f["npc_id"]), str(f.get("status")) != "unconscious", s.room_id))
 	if outcome == "player_fled" and not str(s.combat.get("room_from", "")).is_empty():
 		s.room_id = str(s.combat["room_from"])
@@ -1268,7 +1275,7 @@ func wait(target: String) -> String:
 	if mins <= 0:
 		return "WAIT_NOT_NOW"
 	var lines: Array[String] = ["Ожидание до %s" % TimeRules.clock_after(session, mins)]
-	lines.append_array(TimeRules.advance(session, Catalog.data, mins))
+	lines.append_array(CrimeRules.wait(session, Catalog.data, mins)["lines"])  # the patrol looks in on the way (v0.7.22.18)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
@@ -1648,7 +1655,7 @@ func crime_answer(how: String) -> String:
 		_start_pending_fight()
 		return ""
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
-	_request("law", ", ".join(lines))
+	_request("law", "%s. Исход: %s" % [", ".join(lines), CrimeRules.outcome(session, Catalog.data)])
 	return ""
 
 

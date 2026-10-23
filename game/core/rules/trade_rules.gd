@@ -431,7 +431,9 @@ static func services(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 			continue
 		var cost := int(def["cost_cp"])
 		var why := ""
-		if int(s.character.get("gold_cp", 0)) < cost:
+		if CrimeRules.shunned_by(s, data, npc_id):  # v0.7.22.18 (#30): a murderer gets no service either
+			why = "SHOP_CLOSED_WANTED"
+		elif int(s.character.get("gold_cp", 0)) < cost:
 			why = "TRADE_ERR_NO_COINS"
 		elif targets(s, data, str(id)).is_empty():
 			why = "SERVICE_NOTHING"
