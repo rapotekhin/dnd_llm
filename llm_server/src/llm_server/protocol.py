@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.46.0"
+PROTOCOL_VERSION = "0.47.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -968,6 +968,19 @@ class NpcFollowEffect(_Out):
     home: bool = False
 
 
+class OwnerEffect(_Out):
+    """Ownership changes hands by words (0.47.0): `creature_id` — the hero's bound prisoner of the scene goes to the NPC
+    `owner_id` of this room (a sale: `price_cp` the NPC pays, capped by the engine; a thinking one is not sold — no
+    slavery in this world) or free (`owner_id` empty); `item_id` with `owner_id` "hero" — the NPC here gives up to the
+    hero a thing of its that the hero took without asking."""
+
+    kind: Literal["owner"] = "owner"
+    creature_id: str | None = None
+    item_id: str | None = None
+    owner_id: str = ""
+    price_cp: int = Field(default=0, ge=0)
+
+
 class AcceptQuestEffect(_Out):
     """The hero takes by words a quest its giver here offers (0.21.0), like the button «Взять задание»."""
 
@@ -986,7 +999,8 @@ Effect = Annotated[
     | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
-    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect,
+    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect
+    | OwnerEffect,
     Field(discriminator="kind"),
 ]
 

@@ -112,6 +112,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "background": ("предыстория героя и связь NPC с его прошлым", ()),
     "containers": ("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`take_from`, `put_in`, `unlock`, `drop_item`)",
                    ("take_from", "put_in", "unlock", "drop_item")),
+    "captives": ("пленные и существа после боя, перемирие, продажа пленника, чужие вещи героя, герой в плену (`owner`)", ("owner",)),
 }
 
 
@@ -142,6 +143,8 @@ def auto_topics(mode: str, snap: Snapshot) -> list[str]:
         out.append("background")
     if scene and any(p.container for p in scene.props):
         out.append("containers")
+    if scene and scene.creatures:  # the prisoners, a truce, the hero's captors (v0.7.22.17)
+        out.append("captives")
     if scene and any(BOARD.search(p.name) for p in scene.props):  # work is asked at a board (v0.7.21.2)
         out.append("quests")
     return [t for t in TOPICS if t in out]

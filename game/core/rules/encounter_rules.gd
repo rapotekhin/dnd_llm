@@ -10,6 +10,8 @@ extends RefCounted
 ## Captivity: the foes take the hero alive (s.captive {room, foes, encounter, from}): the exits are shut; the hero
 ## breaks free by Athletics or Sleight of Hand against rules.encounters.escape_dc (a failure — an hour), or talks
 ## the captors round (the parley DC). Free — the captors lurk, unaware, as at a meeting.
+## v0.7.22.17 (#12, #15): «Сдаться» makes the hero a captive at once; the captors take the hero's things into a
+## container of the room (`seize`) — taken back from it once free; the hero bound reaches into no container.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -132,7 +134,60 @@ static func parley(s: GameSession, data: Dictionary, room_id: String, enc: Dicti
 static func capture(s: GameSession, foes: Array, encounter: String, from: String) -> Array[String]:
 	s.captive = {"room": s.room_id, "foes": foes, "encounter": encounter, "from": from}
 	var names := ", ".join(foes.map(func(e: Dictionary) -> String: return str(e.get("name", e["monster"]))))
-	return ["%s связан — в плену у: %s" % [s.character.get("name", ""), names]]
+	var bound: String = {"female": "связана", "male": "связан"}.get(str(s.character.get("gender", "")), "связан(а)")
+	return ["%s %s — в плену у: %s" % [s.character.get("name", ""), bound, names]]
+
+
+## The captors take what the hero carries (v0.7.22.17, #15): the pack and the bags with what is in them go into a
+## container of the room — one standing there nobody owns (not a trader's wares), or a new one (rules.encounters.seized_*). A
+## cursed thing does not leave the hero; the coins stay hidden on the hero. Lines.
+static func seize(s: GameSession, data: Dictionary) -> Array[String]:
+	var c := s.character
+	var taken := {}
+	for bag: Dictionary in ContainerRules.bags(c).values():
+		for id: String in bag.get("contents", {}):
+			taken[id] = int(taken.get(id, 0)) + int(bag["contents"][id])
+	c["bags"] = {}
+	var inv: Dictionary = c["inventory"]
+	for id: String in inv.keys():
+		var keep := 1 if ItemRules.held_by_curse(c, data, s.items, id) else 0
+		var n := int(inv[id]) - keep
+		if n <= 0:
+			continue
+		taken[id] = int(taken.get(id, 0)) + n
+		if keep > 0:
+			inv[id] = keep
+		else:
+			inv.erase(id)
+	for slot: String in CharacterRules.SLOTS:
+		if not inv.has(str(c.get("equipped", {}).get(slot, ""))):
+			c["equipped"][slot] = ""
+	c["attuned"] = (c.get("attuned", []) as Array).filter(func(id: Variant) -> bool: return inv.has(str(id)))
+	CharacterRules.refresh(c, data, s.items)
+	if taken.is_empty():
+		return []
+	var chest := {}
+	for p: Dictionary in PropRules.room_props(s, s.room_id):
+		if ContainerRules.is_container(p) and not p.has("wares") and not bool(p.get("dropped", false)) and str(p.get("owner", "")).is_empty():
+			chest = p
+			break
+	if chest.is_empty():
+		var list: Array = s.props.get(s.room_id, [])
+		var n := 1
+		while list.any(func(p: Dictionary) -> bool: return str(p["id"]) == "seized%d" % n):
+			n += 1
+		chest = {"id": "seized%d" % n, "name": str(cfg(data)["seized_name"]), "description": "", "item_id": "", "owner": "",
+			"text": "", "state": "", "container": str(cfg(data)["seized_container"]), "contents": {}, "seized": true}
+		list.append(chest)
+		s.props[s.room_id] = list
+	if not chest.has("contents"):
+		chest["contents"] = {}
+	for id: String in taken:
+		chest["contents"][id] = int(chest["contents"].get(id, 0)) + int(taken[id])
+	var count := 0
+	for id: String in taken:
+		count += int(taken[id])
+	return ["Пленители отбирают у героя вещи (%d) и складывают в %s" % [count, chest["name"]]]
 
 
 static func captive(s: GameSession) -> bool:

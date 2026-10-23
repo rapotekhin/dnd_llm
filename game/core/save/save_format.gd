@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 38
+const SAVE_VERSION := 39
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -60,6 +60,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	35: _v35_to_v36,
 	36: _v36_to_v37,
 	37: _v37_to_v38,
+	38: _v38_to_v39,
 }
 
 
@@ -348,3 +349,13 @@ static func _v36_to_v37(data: Dictionary, _ctx: Dictionary) -> void:
 static func _v37_to_v38(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["lurking"] = {}
 	data["session"]["captive"] = {}
+
+
+## v0.7.22.17: a creature the hero has bound is the hero's prisoner; nothing carried is marked as someone else's.
+static func _v38_to_v39(data: Dictionary, _ctx: Dictionary) -> void:
+	for room: Variant in data["session"].get("creatures", {}):
+		for c: Variant in data["session"]["creatures"][room]:
+			if c is Dictionary and bool(c.get("bound", false)):
+				c["owner"] = OwnerRules.HERO
+	data["session"]["foreign"] = {}
+	data["session"]["talk_creature"] = ""

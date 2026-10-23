@@ -381,6 +381,10 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return CrimeRules.plan_reveal(s, data, str(e.get("victim_id", "")))
 		"crime_release":  # the guard lets the hero go by words after a passed check (v0.7.22.2)
 			return CrimeRules.plan_release(s, data, _won.get(turn_id, []))
+		"owner":  # a prisoner sold or let go, a thing given up by its owner (v0.7.22.17)
+			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "owner"):
+				return {"reason": "одна смена хозяина за ход"}
+			return OwnerRules.plan(s, data, e)
 		"note":
 			var text := str(e.get("text", "")).strip_edges()
 			if text.length() < 5:
@@ -659,6 +663,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		return
 	if plan.has("victim"):  # crime_known (v0.7.14)
 		_extra_lines.append_array(CrimeRules.reveal(s, _data, str(plan["victim"])))
+		return
+	if kind == "owner":  # owner (v0.7.22.17)
+		_extra_lines.append_array(OwnerRules.apply(s, _data, plan))
 		return
 	if plan.has("crime_release"):  # crime_release (v0.7.22.2)
 		_extra_lines.append_array(CrimeRules.let_go(s, _data, "Стража отпускает героя — но розыск не снят"))

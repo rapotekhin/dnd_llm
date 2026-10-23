@@ -13,7 +13,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 static func needs_furnish(s: GameSession, room_id: String) -> bool:
 	return not s.props.has(room_id) or (s.props[room_id] as Array).all(func(p: Dictionary) -> bool:
-		return bool(p.get("dropped", false)) or p.has("wares"))  # the hero's things and a trader's wares are no furnishing
+		return bool(p.get("dropped", false)) or p.has("wares") or bool(p.get("seized", false)))  # the hero's things and a trader's wares are no furnishing
 
 
 ## The things still in the room (a taken one is gone).
@@ -148,6 +148,8 @@ static func apply_furnish(s: GameSession, plan: Dictionary) -> void:
 
 ## Checks a `take_prop`: a portable thing of this room. The plan says whether its owner is here and sees it.
 static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
+	if EncounterRules.captive(s):
+		return {"reason": "герой связан — сначала освободиться"}
 	var p := find(s, s.room_id, str(e.get("prop_id", "")))
 	if p.is_empty():
 		return {"reason": "в комнате нет вещи %s (есть: %s)" % [e.get("prop_id", ""), ", ".join(room_props(s, s.room_id).map(func(x: Dictionary) -> String: return x["id"]))]}
@@ -169,6 +171,8 @@ static func take_all_plan(s: GameSession, data: Dictionary) -> Dictionary:
 	var cap := float(CharacterRules.capacity(c, data))
 	var take: Array[Dictionary] = []
 	var left: Array[Dictionary] = []
+	if EncounterRules.captive(s):
+		return {"take": take, "left": left}
 	for p: Dictionary in room_props(s, s.room_id):
 		if str(p.get("item_id", "")).is_empty() or not str(p.get("owner", "")).is_empty() or not (p.get("contents", {}) as Dictionary).is_empty():
 			continue
@@ -212,7 +216,7 @@ static func apply_take(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 		return lines
 	p["state"] = "taken"
 	var item := str(p["item_id"])
-	ItemRules.found(s.character, data, s.items, item)
+	OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, item), 1, str(p.get("owner", "")))
 	if ContainerRules.is_carried_kind(data, item):  # a bag comes with what is in it (v0.7.18.2)
 		ContainerRules.pick_up(s, data, item, p.get("contents", {}))
 	if not str(plan.get("owner", "")).is_empty():

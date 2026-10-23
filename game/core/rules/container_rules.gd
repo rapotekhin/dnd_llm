@@ -119,6 +119,8 @@ static func target(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 
 ## Checks taking `qty` of `item_id` out of the container `prop_id` (of the room or a bag): {plan, summary} or {reason}.
 static func plan_take(s: GameSession, data: Dictionary, prop_id: String, item_id: String, qty: int) -> Dictionary:
+	if EncounterRules.captive(s):
+		return {"reason": "герой связан — сначала освободиться"}
 	var p := target(s, data, prop_id)
 	if p.is_empty():
 		return {"reason": "нет контейнера %s (в комнате или сумка героя)" % prop_id}
@@ -145,7 +147,7 @@ static func apply_take(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	contents[id] = int(contents.get(id, 0)) - int(plan["qty"])
 	if int(contents[id]) <= 0:
 		contents.erase(id)
-	ItemRules.found(s.character, data, s.items, id, int(plan["qty"]))
+	OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, id, int(plan["qty"])), int(plan["qty"]), str(p.get("owner", "")))
 	CharacterRules.refresh(s.character, data, s.items)
 	if not str(plan.get("owner", "")).is_empty():
 		lines.append_array(TheftRules.react(s, data, str(plan["owner"])))

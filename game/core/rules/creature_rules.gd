@@ -11,6 +11,10 @@ extends RefCounted
 ## (5e: a melee blow at the helpless is a critical hit). A pack NPC knocked out lies here as a creature with its
 ## `npc_id` (not a person of the scene till it wakes): bound, searched, led, let go or finished off; waking or let
 ## go it goes home, remembers the attack and the assault is known (CrimeRules, kind `assault`).
+## v0.7.22.17 (#34, #7, #10): the prisoner's branch — the table in docs/design/concepts.md «Пленник». A bound one is
+## the hero's (`owner`, OwnerRules): handed to the law's guard for a bounty, sold by the master's `owner`, executed
+## (the NPCs who see it think worse of the hero); someone else's creature led away or let go before its owner — a
+## theft. A truce is no captivity: its creatures are talked to as equals and are not bound.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -56,13 +60,25 @@ static func state_word(state: String) -> String:
 
 
 ## «Гоблин 2 — сдался, связан, идёт с героем» — for the side panel and the master.
-static func text(c: Dictionary) -> String:
+static func text(c: Dictionary, data: Dictionary) -> String:
 	var bits: Array[String] = [state_word(str(c["state"]))]
 	if bool(c.get("bound", false)):
 		bits.append("связан")
 	if bool(c.get("led", false)):
 		bits.append("идёт с героем на привязи")
+	if not str(c.get("owner", "")).is_empty():
+		bits.append(OwnerRules.owner_word(data, str(c["owner"])))
 	return "%s — %s" % [c["name"], ", ".join(bits)]
+
+
+## A prisoner: surrendered or bound — not one of a truce (v0.7.22.17, #10).
+static func captive(c: Dictionary) -> bool:
+	return str(c.get("state", "")) == "surrendered" or bool(c.get("bound", false))
+
+
+## Someone else's: an NPC owns it — leading it away or letting it go is a theft.
+static func foreign(c: Dictionary) -> bool:
+	return not str(c.get("owner", "")).is_empty() and str(c["owner"]) != OwnerRules.HERO
 
 
 ## Helpless: knocked out or bound — finished off without a fight.
@@ -70,8 +86,9 @@ static func helpless(c: Dictionary) -> bool:
 	return str(c.get("state", "")) == "unconscious" or bool(c.get("bound", false))
 
 
-## "" when the hero can do `what` (bind, free, lead, attack, finish, search) with this creature now, else a key.
-static func can(s: GameSession, id: String, what: String) -> String:
+## "" when the hero can do `what` (bind, free, lead, attack, finish, search, hand_over) with this creature now, else a
+## key.
+static func can(s: GameSession, id: String, what: String, data: Dictionary = {}) -> String:
 	var c := find(s, s.room_id, id)
 	if c.is_empty():
 		return "CREATURE_NONE"
@@ -91,6 +108,11 @@ static func can(s: GameSession, id: String, what: String) -> String:
 		"lead":
 			if not bool(c.get("bound", false)):
 				return "CREATURE_NOT_BOUND"
+		"hand_over":
+			if not bool(c.get("bound", false)) or foreign(c) or not str(c.get("npc_id", "")).is_empty():
+				return "CREATURE_NOT_YOUR_PRISONER"
+			if data.is_empty() or CrimeRules.law(data, WorldView.new(data["world"]).location_id(s.room_id)).is_empty():
+				return "CREATURE_NO_LAW"
 	return ""
 
 
@@ -100,14 +122,27 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 	match what:
 		"bind":
 			c["bound"] = true
-			return ["%s связан" % c["name"]]
+			c["owner"] = OwnerRules.HERO
+			return ["%s связан — ваш пленник" % c["name"]]
 		"lead":
+			var lines: Array[String] = _taken_from_owner(s, data, c)
 			c["led"] = not bool(c.get("led", false))
-			return ["%s %s" % [c["name"], "идёт за вами на верёвке" if bool(c["led"]) else "остаётся здесь, связанный"]]
+			lines.push_front("%s %s" % [c["name"], "идёт за вами на верёвке" if bool(c["led"]) else "остаётся здесь, связанный"])
+			return lines
 		"free":
+			var lines: Array[String] = _taken_from_owner(s, data, c)
 			(s.creatures[s.room_id] as Array).erase(c)
-			var lines: Array[String] = ["%s отпущен и уходит" % c["name"]]
+			lines.push_front("%s отпущен и уходит" % c["name"])
 			lines.append_array(_npc_back(s, data, c))
+			return lines
+		"hand_over":  # the law takes the prisoner: a bounty by its XP, the settlement thinks better of the hero
+			(s.creatures[s.room_id] as Array).erase(c)
+			var cp := int(cfg(data)["bounty_cp_per_xp"]) * OwnerRules.xp_of(data, c)
+			s.character["gold_cp"] = int(s.character["gold_cp"]) + cp
+			var loc := WorldView.new(data["world"]).location_id(s.room_id)
+			var law := CrimeRules.law(data, loc)
+			var lines: Array[String] = ["%s передан: %s%s" % [c["name"], law.get("name", "стража"), ", награда +" + Money.format(cp) if cp > 0 else ""]]
+			lines.append_array(ReputationRules.add(s, data, loc, int(cfg(data)["hand_over_reputation"]), "сдал страже пленника: %s" % c["name"]))
 			return lines
 		"attack":
 			(s.creatures[s.room_id] as Array).erase(c)
@@ -124,10 +159,38 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 			var lines: Array[String] = ["Вы добиваете: %s" % c["name"]]
 			if c.has("npc_id"):
 				lines.append_array(CrimeRules.on_death(s, data, str(c["npc_id"]), true, s.room_id))
+			elif bool(c.get("bound", false)):
+				lines.append_array(_executed(s, data, c))
 			return lines
 		"search":
 			c["searched"] = true
 			return _search(s, data, str(c["npc_id"]), str(c["name"]))
+	return []
+
+
+## A bound prisoner killed before NPCs of the room (v0.7.22.17): each who sees it thinks worse of the hero and
+## remembers. Lines.
+static func _executed(s: GameSession, data: Dictionary, c: Dictionary) -> Array[String]:
+	if ConditionRules.invisible(s.character, data):
+		return []
+	var world := WorldView.new(data["world"])
+	var seen := s.npcs_here(world.world, s.room_id)
+	for npc: String in seen:
+		s.shift_attitude(npc, int(cfg(data)["execute_attitude"]), data)
+		s.remember(npc, "герой убил связанного пленника: %s" % c["name"])
+	if seen.is_empty():
+		return []
+	return ["%s видят казнь связанного пленника: отношение хуже" % ", ".join(seen.map(func(n: String) -> String: return str(world.npc(n).get("name", n))))]
+
+
+## Someone else's creature led away or let go (v0.7.22.17, #7): it is now the hero's; its owner here sees a theft.
+static func _taken_from_owner(s: GameSession, data: Dictionary, c: Dictionary) -> Array[String]:
+	if not foreign(c):
+		return []
+	var owner := str(c["owner"])
+	c["owner"] = OwnerRules.HERO
+	if s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(owner) and not ConditionRules.invisible(s.character, data):
+		return TheftRules.react(s, data, owner)
 	return []
 
 
@@ -139,7 +202,7 @@ static func _search(s: GameSession, data: Dictionary, npc_id: String, name: Stri
 			s.character["gold_cp"] = int(s.character["gold_cp"]) + int(e["cp"])
 			got.append(Money.format(int(e["cp"])))
 		elif not str(e.get("item_id", "")).is_empty() and not bool(e.get("worn", false)):
-			ItemRules.found(s.character, data, s.items, str(e["item_id"]), int(e.get("qty", 1)))
+			OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, str(e["item_id"]), int(e.get("qty", 1))), int(e.get("qty", 1)), npc_id)
 			got.append(str(e["name"]))
 	s.pockets[npc_id] = (TheftRules.pockets(s, data, npc_id) as Array).filter(func(e: Dictionary) -> bool: return bool(e.get("worn", false)))
 	var lines: Array[String] = ["Обыскан(а) %s: %s" % [name, ", ".join(got) if not got.is_empty() else "ничего"]]
@@ -201,9 +264,9 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	return lines
 
 
-## For the master: [«Гоблин 2 [c3] — сдался, связан»].
-static func snapshot(s: GameSession, room_id: String) -> Array[String]:
+## For the master: [«Гоблин 2 [c3] — сдался, связан»]; a truce says it is no captivity (v0.7.22.17, #10).
+static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
 	var out: Array[String] = []
 	for c: Dictionary in here(s, room_id):
-		out.append("%s [%s]" % [text(c), c["id"]])
+		out.append("%s [%s]%s" % [text(c, data), c["id"], " — не пленник: свободен, не связан, при оружии, говорит на равных" if str(c["state"]) == "truce" else ""])
 	return out

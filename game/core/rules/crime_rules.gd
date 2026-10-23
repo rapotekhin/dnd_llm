@@ -271,6 +271,15 @@ static func check_arrest(s: GameSession, data: Dictionary) -> Array[String]:
 	return ["%s: «Стой! Именем закона — ты задержан»" % who]
 
 
+## The fight with the guard is lost or the hero gave up to it (v0.7.22.17): held here again, as at an arrest — the
+## answers are the same, only resisting is spent. Lines.
+static func held_after_fight(s: GameSession, data: Dictionary) -> Array[String]:
+	s.let_go.erase(WorldView.new(data["world"]).location_id(s.room_id))
+	s.arrest = s.room_id
+	s.arrest_tried = ["resist", "intimidate"]  # a beaten threat rings hollow
+	return ["Стража скручивает героя — задержан"]
+
+
 static func held(s: GameSession) -> bool:
 	return not s.arrest.is_empty() and s.arrest == s.room_id
 
@@ -349,7 +358,7 @@ static func can_answer(s: GameSession, data: Dictionary, how: String) -> String:
 	var loc := WorldView.new(data["world"]).location_id(s.room_id)
 	if how == "pay" and int(s.character["gold_cp"]) < fine(s, data, loc):
 		return "CRIME_NO_MONEY"
-	if (TALK.has(how) or how == "bribe") and s.arrest_tried.has(how):
+	if (TALK.has(how) or how in ["bribe", "resist"]) and s.arrest_tried.has(how):
 		return "CRIME_TRIED"
 	if how == "bribe" and int(s.character["gold_cp"]) < bribe(s, data, loc):
 		return "CRIME_NO_MONEY"
@@ -429,12 +438,12 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 			lines.append_array(_settle(s, data, loc))
 		"resist":
 			var foes: Array = [{"monster": str(l.get("guard_monster", "guard")), "count": int(cfg(data)["patrol_size"]),
-				"name": str(l.get("guard_name", "Стражник")), "col": 1, "by_hero": true}]
+				"name": str(l.get("guard_name", "Стражник")), "col": 1, "by_hero": true, "law": true}]
 			for id: String in s.npcs_here(world.world, s.room_id):
 				if (l.get("guards", []) as Array).has(id):
 					var n := world.npc(id)
 					foes.append({"monster": str(n.get("monster", "guard")), "name": str(n.get("name", id)), "desc": str(n.get("description", "")),
-						"npc_id": id, "col": 1, "by_hero": true})
+						"npc_id": id, "col": 1, "by_hero": true, "law": true})
 			s.pending_fight = foes
 			lines.append_array(let_go(s, data, "Вы сопротивляетесь страже"))  # fought free — no new patrol at once (big test #6)
 	return lines

@@ -385,6 +385,7 @@ func concentration_conflict(spell_id: String) -> String:
 func _quiet_lines(lines: Array[String]) -> void:
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
+	_forget_gone_creature()
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 
@@ -632,6 +633,12 @@ func combat_stand() -> String:
 
 
 ## «Вырваться» (v0.7.8): an action, Athletics or Acrobatics against the hold.
+## «Сдаться» (v0.7.22.17, #12): the fight ends at once — the captive of thinking foes, or held by the law's guard.
+func combat_surrender() -> String:
+	return _combat_do(CombatRules.can_surrender(session, Catalog.data) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.surrender(session))
+
+
 func combat_escape() -> String:
 	return _combat_do(CombatRules.can_escape(session) if session != null and CombatRules.active(session) else "COMBAT_NONE",
 		func() -> Array[String]: return CombatRules.escape(session, Catalog.data))
@@ -1147,13 +1154,16 @@ func finish_combat(take: Array = []) -> void:
 			s.encounters_done.append(str(s.combat["encounter"]))
 	if outcome in ["victory", "truce"]:
 		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id))  # the beaten stay in the room (v0.7.22.11)
-	if outcome == "captured":  # v0.7.22.12: bound in their place, not a won fight
+	if outcome == "captured" and CombatRules.law_captors(s):  # v0.7.22.17: the guard holds the hero, as at an arrest
+		lines.append_array(CrimeRules.held_after_fight(s, Catalog.data))
+	elif outcome == "captured":  # v0.7.22.12: bound in their place, not a won fight
 		var foes: Array = []
 		for fid: String in CombatRules.enemies(s):
 			var f := CombatRules.fighter(s, fid)
 			if str(f.get("npc_id", "")).is_empty():  # wounds and XP kept for a fight with them again (v0.7.22.16)
 				foes.append({"monster": str(f["monster"]), "name": str(f["name"]), "count": 1, "hp": int(f["hp"]), "no_xp": bool(f.get("no_xp", false))})
 		lines.append_array(EncounterRules.capture(s, foes, str(s.combat.get("encounter", "")), str(s.combat.get("room_from", ""))))
+		lines.append_array(EncounterRules.seize(s, Catalog.data))  # v0.7.22.17, #15
 	for id: String in CombatRules.enemies(s, false):
 		var f := CombatRules.fighter(s, id)
 		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():  # the body, quests, a murder (v0.7.14)
@@ -1711,20 +1721,33 @@ func creature_act(id: String, what: String) -> String:
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
 	var c := CreatureRules.find(session, session.room_id, id)
-	if what == "talk":
-		return "" if submit(tr("CREATURE_TALK_SAY").format({"name": c.get("name", id)})) else "WAIT_BUSY"
-	var why := CreatureRules.can(session, id, what)
+	if what == "talk":  # a truce is talked to as an equal, a prisoner as a prisoner (v0.7.22.17, #10)
+		var say := tr("CREATURE_TALK_SAY_CAPTIVE" if CreatureRules.captive(c) else "CREATURE_TALK_SAY").format({"name": c.get("name", id)})
+		if not submit(say):
+			return "WAIT_BUSY"
+		session.talk_creature = id
+		return ""
+	var why := CreatureRules.can(session, id, what, Catalog.data)
 	if not why.is_empty():
 		return why
 	var lines := CreatureRules.act(session, Catalog.data, id, what)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
+	_forget_gone_creature()
 	EventBus.state_changed.emit()
 	if what == "attack":
 		_start_pending_fight()
 		return ""
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 	return ""
+
+
+## The master's replies of a talk with a creature go when it is gone — let go, sold, finished off (v0.7.22.17, #11).
+func _forget_gone_creature() -> void:
+	if session.talk_creature.is_empty() or not CreatureRules.find(session, session.room_id, session.talk_creature).is_empty():
+		return
+	session.talk_creature = ""
+	_set_options([])
 
 
 ## «Спрятать тело» (v0.7.22.10, big test #9): the engine rolls (rules.crime.hide) — its total is how hard the body is
@@ -1819,6 +1842,7 @@ func talk_to(npc_id: String, trade: bool = false) -> bool:
 		return false
 	if SocialRules.refuses(session, Catalog.data, npc_id):  # v0.7.15.3: a hostile NPC turns away
 		return false
+	session.talk_creature = ""
 	_begin_conversation(npc_id, GameSession.MODE_TRADE if trade else GameSession.MODE_SOCIAL)
 	_request("enter", "")
 	return true
@@ -2054,6 +2078,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 	for c: Variant in result.get("option_costs", []):
 		costs.append(maxi(0, int(c)))
 	_set_options(options, costs)
+	_forget_gone_creature()
 
 	if s.mode == GameSession.MODE_COMBAT:
 		var after := CombatRules.after_player_action(s, Catalog.data)

@@ -28,7 +28,7 @@
 
 {% if scene %}{{ scene.location_name }} — {{ scene.room_name }}{% if scene.time_of_day %}, {{ scene.time_of_day }}{% endif %}. {{ scene.room_description }}
 {% if scene.exits %}Выходы: {% for e in scene.exits %}{{ e.name }}{% if not loop.last %}, {% endif %}{% endfor %}.
-{% endif %}{% if scene.npcs %}Здесь: {% for n in scene.npcs %}{{ n.name }} [{{ n.npc_id }}] — {{ n.role }}, {{ attitude_word(n.attitude) }}{% if n.follows %}, идёт с героем{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}.{% endif %}{% if scene.creatures %} Живые после боя, здесь же (отвечают, если с ними говорят): {{ scene.creatures | join("; ") }}.
+{% endif %}{% if scene.npcs %}Здесь: {% for n in scene.npcs %}{{ n.name }} [{{ n.npc_id }}] — {{ n.role }}, {{ attitude_word(n.attitude) }}{% if n.follows %}, идёт с героем{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}.{% endif %}{% if scene.creatures %} Живые после боя, здесь же (отвечают, если с ними говорят; связан — только кто так помечен): {{ scene.creatures | join("; ") }}.
 {% endif %}{% if scene.props %}Вокруг: {% for p in scene.props %}{{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if scene.hooks %}Зацепки: {{ scene.hooks | join("; ") }}.
 {% endif %}{% endif %}{% if character %}Герой: {{ character.name }}{% if character.conditions %}; состояния: {{ character.conditions | join(", ") }}{% endif %}.

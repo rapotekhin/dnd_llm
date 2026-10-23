@@ -854,13 +854,22 @@
 	"encounters": {
 		"_doc": "Meetings and captivity (v0.7.22.12, EncounterRules): sneaking in unseen — the foes lurk, no fight; talking first — one roll against the parley DC of the fight; a lost fight to thinking foes — captivity: Athletics or Sleight of Hand against escape_dc (a failure costs escape_fail_minutes), or Persuasion against the parley DC.",
 		"escape_dc": 15,
-		"escape_fail_minutes": 60
+		"escape_fail_minutes": 60,
+		"_v07_22_17": "Captivity, whole (v0.7.22.17): «Сдаться» in a fight — at once the captive of thinking foes; to the law's guard — held, as at an arrest. The captors take the hero's things into a container of the room (seized_container, made when the room has none): taken back from it once free.",
+		"seized_container": "chest",
+		"seized_name": "Сундук с вашими вещами"
 	},
 	"creatures": {
 		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay); a bound one stays and can be led.",
 		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120},
 		"_v07_22_16": "A creature keeps hp and xp_given (fought again — its wounds, no XP twice); the helpless (unconscious or bound) is finished off without a fight. A pack NPC knocked out lies as a creature with its npc_id; waking or let go it goes home with woken_attitude and the assault is known (crime kind `assault`).",
-		"woken_attitude": -3
+		"woken_attitude": -3,
+		"_v07_22_17": "The prisoner's branch (v0.7.22.17, docs/design/concepts.md «Пленник»): a bound one is the hero's (owner `hero`, OwnerRules). Handed to the law's guard — bounty_cp_per_xp × its XP and hand_over_reputation in the settlement; executed (finished off bound) before NPCs — execute_attitude for each who sees; sold (the master's `owner` with price_cp) — at most sale_cp_per_xp × its XP and the buyer's purse; a thinking one is not sold while slavery is off (v0.7.27 makes it a setting of the world).",
+		"bounty_cp_per_xp": 10,
+		"hand_over_reputation": 1,
+		"execute_attitude": -1,
+		"sale_cp_per_xp": 50,
+		"slavery": false
 	},
 	"wear_slots": {
 		"_doc": "Slots of worn things (v0.7.22.9, big test #24): a wondrous item goes to the slot of its `look` (or its own `slot`; a made one — by the first word of its name); it works only worn. Without a slot (a stone, a pearl, a wand) it works carried.",

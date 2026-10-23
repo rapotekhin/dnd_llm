@@ -39,7 +39,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"exits": exits, "npcs": npcs, "hooks": hooks(s, data, room), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
 			"props": _props(s, data),
-			"creatures": CreatureRules.snapshot(s, s.room_id) + EncounterRules.snapshot(s, data, s.room_id),  # v0.7.22.11, v0.7.22.12
+			"creatures": CreatureRules.snapshot(s, data, s.room_id) + EncounterRules.snapshot(s, data, s.room_id),  # v0.7.22.11, v0.7.22.12
 			"closed_exits": closed_exits(s, data["world"]),
 			"chronicle": s.chronicle_tail(data["world"], 12),
 			"reputation": ReputationRules.text(s, data, loc_id),
@@ -114,8 +114,11 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 	var c := s.character
 	var items: Dictionary = data["items"]
 	var inventory: Array[Dictionary] = []
+	var foreign := OwnerRules.foreign(s)  # v0.7.22.17: someone else's, taken without asking
 	for id: String in c.get("inventory", {}):
-		inventory.append({"item_id": id, "name": ItemRules.display_name(items, s.items, id), "qty": int(c["inventory"][id])})
+		var whose: Array = (foreign.get(id, {}) as Dictionary).keys().map(func(o: String) -> String: return str(WorldView.new(data["world"]).npc(o).get("name", o)))
+		inventory.append({"item_id": id, "name": ItemRules.display_name(items, s.items, id) + (" (чужое: %s — взято без спроса)" % ", ".join(whose) if not whose.is_empty() else ""),
+			"qty": int(c["inventory"][id])})
 	var equipped: Array[String] = []
 	for slot: String in CharacterRules.SLOTS:
 		var id := str(c.get("equipped", {}).get(slot, ""))

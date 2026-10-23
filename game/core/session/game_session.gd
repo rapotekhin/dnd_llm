@@ -109,6 +109,10 @@ var creature_counter: int = 0
 ## {room, foes, encounter, from} ({} — free).
 var lurking: Dictionary = {}
 var captive: Dictionary = {}
+## v0.7.22.17 (OwnerRules): what the hero carries of someone else's {item_id: {owner: qty}}; the creature the hero
+## last spoke to (its master's replies go when it does).
+var foreign: Dictionary = {}
+var talk_creature: String = ""
 var bodies: Dictionary = {}
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
@@ -461,6 +465,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"creature_counter": creature_counter,
 		"lurking": lurking,
 		"captive": captive,
+		"foreign": foreign,
+		"talk_creature": talk_creature,
 		"bodies": bodies,
 		"searched": searched,
 		"quests_failed": quests_failed,
@@ -580,6 +586,12 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.creature_counter = int(d.get("creature_counter", 0))
 	s.lurking = (d.get("lurking", {}) as Dictionary).duplicate(true)
 	s.captive = (d.get("captive", {}) as Dictionary).duplicate(true)
+	for id: String in d.get("foreign", {}):
+		var by := {}
+		for owner: String in d["foreign"][id]:
+			by[owner] = int(d["foreign"][id][owner])
+		s.foreign[id] = by
+	s.talk_creature = str(d.get("talk_creature", ""))
 	var foe_lists: Array = [s.captive.get("foes", [])]
 	for room: String in s.lurking:  # the captors that lurk after an escape (v0.7.22.16)
 		foe_lists.append((s.lurking[room] as Dictionary).get("foes", []))

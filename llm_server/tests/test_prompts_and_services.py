@@ -85,6 +85,16 @@ def test_rule_topics_out_of_the_prompt_unless_the_scene_needs_them():
     assert all(prompts.topic_text(k).strip() for k in prompts.TOPICS)
 
 
+def test_creatures_of_the_scene_bring_the_captives_rules():
+    # v0.7.22.17: a prisoner is sold by `owner`, a truce is no captivity
+    s = snap()
+    assert "captives" not in prompts.auto_topics("exploration", s)
+    s.scene.creatures = ["Гоблин [c1] — сдался, связан, ваш пленник"]
+    text = prompts.system_prompt("exploration", s, None)
+    assert "Перемирие — не плен" in text and "`owner`" in text
+    assert prompts.topic_for("owner") == "captives"
+
+
 def test_trade_prompt_lists_engine_prices_and_haggle_state():
     raw = tavern_snapshot()
     raw["trade"] = {"npc_id": INNKEEPER, "purse_cp": 3000, "haggle_pct": 10,

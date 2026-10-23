@@ -98,7 +98,7 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 			lines.append("%s — украдено: %s" % [who, Money.format(int(e["cp"]))])
 		else:
 			var id := str(e["item_id"])
-			ItemRules.found(s.character, data, s.items, id, int(e.get("qty", 1)))
+			OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, id, int(e.get("qty", 1))), int(e.get("qty", 1)), npc_id)
 			lines.append("%s — украдено: %s" % [who, e["name"]])
 			if bool(e.get("worn", false)) and ItemRules.def_of(data["items"], s.items, id).has("weapon"):
 				var gone: Dictionary = s.disarmed.get(npc_id, {})  # big test #3 (v0.7.22.8): not in its hands in a fight

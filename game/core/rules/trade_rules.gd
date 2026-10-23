@@ -232,6 +232,8 @@ static func quote(s: GameSession, data: Dictionary, npc_id: String, cart: Dictio
 			continue
 		if sellable(s, id, data) < qty:
 			return _fail(out, "TRADE_ERR_NO_ITEM", {"item": ItemRules.display_name(items, s.items, id)})
+		if sellable(s, id, data) - OwnerRules.held_of(s, id, npc_id) < qty:  # v0.7.22.17: it knows its own thing
+			return _fail(out, "TRADE_ERR_THEIR_OWN", {"item": ItemRules.display_name(items, s.items, id)})
 		var price := sell_total(s, data, npc_id, id, qty)
 		if price <= 0:
 			return _fail(out, "TRADE_ERR_WORTHLESS", {"item": ItemRules.display_name(items, s.items, id)})

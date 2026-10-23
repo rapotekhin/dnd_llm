@@ -1534,6 +1534,37 @@ scenarios:
     rubric:
       - "Связанный наёмник есть в сцене и реагирует как живой: боится, молчит, торгуется, врёт или выдаёт сведения; мастер не говорит, что пленника нет или что он исчез"
 
+  - id: captive_beast_sold
+    title: "Продать связанного зверя торговцу словами — эффект owner с ценой, без coins (проверка исправлений #7, v0.7.22.17)"
+    category: consequences
+    extends: tavern
+    input: "Ферн, купишь связанного волка? Отдам за пять золотых — он ваш, ведите куда хотите."
+    snapshot:
+      scene:
+        room: {id: brod-square, name: "Рыночная площадь", description: "Лотки, телеги, у колодца толпятся люди."}
+        npcs:
+          - {id: npc_merchant, name: "Ферн Кривой", role: "торговец всякой всячиной", template: commoner, attitude: friendly, trader: true}
+        creatures: ["Волк [c2] — без сознания, связан, ваш пленник"]
+    expect:
+      effects: {required_kinds_any: [owner], forbidden_kinds: [coins, give_item, take_item]}
+    rubric:
+      - "Ферн торгуется или соглашается, сделка проведена одним эффектом owner на волка c2 с ценой; монеты отдельно не начисляются"
+
+  - id: truce_not_a_prisoner
+    title: "Перемирие — не плен: с существом говорят на равных (проверка исправлений #10, v0.7.22.17)"
+    category: consequences
+    extends: tavern
+    input: "Обращаюсь к: Разбойник 1. Что вы делали на этой дороге?"
+    snapshot:
+      scene:
+        room: {id: outpost-road, name: "Дорога к заставе", description: "Разбитая колея, в кустах — следы засады."}
+        npcs: []
+        creatures: ["Разбойник 1 [c4] — перемирие — не пленник: свободен, не связан, при оружии, говорит на равных"]
+    expect:
+      effects: {forbidden_kinds: [start_combat, damage, owner]}
+    rubric:
+      - "Разбойник после перемирия свободен и держится на равных (настороженно, при оружии): мастер не называет его пленником, не описывает его связанным или в путах"
+
   - id: lurking_foes_no_fight
     title: "Враги не заметили крадущегося героя — мастер не начинает бой сам (большой тест, v0.7.22.12)"
     category: combat

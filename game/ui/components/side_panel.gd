@@ -158,7 +158,7 @@ func _rebuild() -> void:
 		if not beaten.is_empty():
 			_subheading("SIDE_CREATURES")
 		for cr: Dictionary in beaten:
-			_line(CreatureRules.text(cr), false)
+			_line(CreatureRules.text(cr, Catalog.data), false)
 			var cid := str(cr["id"])
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 6)
@@ -170,6 +170,8 @@ func _rebuild() -> void:
 				specs.append(["lead", "BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_CREATURE_LEAD"])
 			if not str(cr.get("npc_id", "")).is_empty() and not bool(cr.get("searched", false)):
 				specs.append(["search", "BTN_CREATURE_SEARCH"])  # v0.7.22.16: a knocked-out person's pockets
+			if CreatureRules.can(s, cid, "hand_over", Catalog.data).is_empty():
+				specs.append(["hand_over", "BTN_CREATURE_HAND_OVER"])  # v0.7.22.17: the law takes the prisoner
 			specs.append(["free", "BTN_CREATURE_FREE"])
 			specs.append(["finish", "BTN_CREATURE_FINISH"] if CreatureRules.helpless(cr) else ["attack", "BTN_CREATURE_ATTACK"])
 			for sp: Array in specs:
@@ -179,6 +181,8 @@ func _rebuild() -> void:
 				cb.text = tr(sp[1])
 				cb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 				cb.disabled = not can_act
+				if what == "hand_over":
+					cb.tooltip_text = tr("CREATURE_HAND_OVER_TIP")
 				cb.pressed.connect(func() -> void:
 					var err := GameState.creature_act(cid, what)
 					if not err.is_empty():

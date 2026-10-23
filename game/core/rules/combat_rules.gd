@@ -256,6 +256,8 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: in
 				fighters[id]["hp"] = clampi(int(spec["hp"]), 1, int(m["hp"]))
 			if bool(spec.get("no_xp", false)):  # its XP was given for the fight that beat it
 				fighters[id]["no_xp"] = true
+			if bool(spec.get("law", false)):  # the law's guard: its captive is held, not bound (v0.7.22.17)
+				fighters[id]["law"] = true
 			if not str(spec.get("npc_id", "")).is_empty() and not TheftRules.lost_weapons(s, data, str(spec["npc_id"])).is_empty():
 				fighters[id]["actions"] = TheftRules.armed_actions(s, data, str(spec["npc_id"]), m["actions"])  # big test #3 (v0.7.22.8)
 			ids.append(id)
@@ -2558,6 +2560,27 @@ static func _check_end(s: GameSession, data: Dictionary, lines: Array[String]) -
 		else:  # v0.7.9: beasts leave a still body
 			s.combat["outcome"] = "left"
 			lines.append("%s остаётся лежать — звери теряют к нему интерес и уходят" % s.character["name"])
+
+
+## «Сдаться» (v0.7.22.17, #12): on the hero's turn, while a thinking foe still fights. "" or a key.
+static func can_surrender(s: GameSession, data: Dictionary) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if not enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
+		return "COMBAT_NO_SURRENDER"
+	return ""
+
+
+## The hero throws down the weapon: the fight ends at once — the captive of the foes (or held by the law). Lines.
+static func surrender(s: GameSession) -> Array[String]:
+	s.combat["outcome"] = "captured"
+	s.combat["surrendered"] = true
+	return ["%s бросает оружие и сдаётся" % s.character.get("name", "")]
+
+
+## The captors are the law's guard: the hero is held, as at an arrest, not bound in their place.
+static func law_captors(s: GameSession) -> bool:
+	return enemies(s).any(func(id: String) -> bool: return bool(fighter(s, id).get("law", false)))
 
 
 ## Checks the outcome after a player action (an enemy may have fallen). Returns the lines.

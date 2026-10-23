@@ -675,6 +675,10 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		pb.tooltip_text = tr(why) if not why.is_empty() else "%s\n%s" % [tr("COMBAT_PARLEY_TIP_" + skill.to_upper()),
 			tr("COMBAT_PARLEY_PROGRESS").format({"progress": CombatRules.parley_progress(s, data)})]
 		pb.pressed.connect(func() -> void: _do(GameState.combat_parley(skill)))
+	var sw := CombatRules.can_surrender(s, data)  # v0.7.22.17, #12
+	var surr := _button(g, "Do_surrender", tr("COMBAT_DO_SURRENDER"), mine and sw.is_empty())
+	surr.tooltip_text = tr(sw) if not sw.is_empty() and sw != "COMBAT_NOT_YOUR_TURN" else tr("COMBAT_SURRENDER_TIP")
+	surr.pressed.connect(func() -> void: _do(GameState.combat_surrender()))
 	_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
 
 

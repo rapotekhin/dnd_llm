@@ -213,6 +213,9 @@ COMBAT_DO_INSPECT,Осмотреть [бонус]
 COMBAT_DO_SHOVE,Сбить с ног
 COMBAT_DO_STAND,Встать
 COMBAT_ESCAPE_TIP,Действие: Атлетика или Акробатика против хватки или пут
+COMBAT_DO_SURRENDER,Сдаться
+COMBAT_SURRENDER_TIP,"Бросить оружие: бой окончен, вы в плену у разумных врагов, вещи отберут; страже — задержание"
+COMBAT_NO_SURRENDER,Сдаваться некому: среди врагов нет разумных
 COMBAT_FEATURE_TAB,Это — кнопками на вкладке «Умения»
 COMBAT_FOE_SURPRISED,врасплох
 COMBAT_FOE_UNKNOWN,"Вид не изучен. «Осмотреть» (бонусное действие) — проверка знаний; удача запоминает таких врагов навсегда: хиты, КД, атаки, сопротивления"
@@ -762,10 +765,15 @@ BTN_TRADE_SHORT,Торговать
 CREATURE_HELPLESS,"Он беспомощен — его можно только добить"
 CREATURE_NOT_HELPLESS,"Он может драться — нападайте"
 CREATURE_NOTHING,Обыскивать нечего
-CREATURE_TALK_SAY,Обращаюсь к пленнику: {name}
+CREATURE_TALK_SAY,Обращаюсь к: {name}
+CREATURE_TALK_SAY_CAPTIVE,Обращаюсь к пленнику: {name}
 CREATURE_NONE,Его здесь уже нет
 CREATURE_CANNOT_BIND,"Связать нельзя: он уже связан или вы в перемирии"
 CREATURE_NOT_BOUND,Сначала свяжите
+BTN_CREATURE_HAND_OVER,Отдать страже
+CREATURE_HAND_OVER_TIP,"Стража забирает связанного пленника: награда за голову и уважение в поселении"
+CREATURE_NOT_YOUR_PRISONER,Это не ваш связанный пленник
+CREATURE_NO_LAW,Здесь нет стражи — отдавать некому
 COMBAT_NONLETHAL,"Оглушать, а не убивать"
 COMBAT_NONLETHAL_TIP,"Удар вблизи, который валит врага, оставляет его без сознания — живым: потом его можно связать и увести"
 TRADE_YOU_BUY,Вы покупаете
@@ -830,6 +838,7 @@ TRADE_ERR_BUSY,Сейчас нельзя: мастер думает или не�
 TRADE_ERR_EMPTY,Сделка пуста
 TRADE_ERR_MERCHANT_NO_MONEY,У торговца не хватит денег: у него {have}
 TRADE_ERR_NO_ITEM,У вас столько нет: {item} (надетое не продаётся)
+TRADE_ERR_THEIR_OWN,«Это же моя вещь!» — {item} у себя не покупают
 TRADE_ERR_NO_MONEY,Не хватает денег: нужно {need}
 TRADE_ERR_NO_STOCK,У торговца столько нет: {item}
 TRADE_ERR_WORTHLESS,Торговец не возьмёт: {item} ничего не стоит
