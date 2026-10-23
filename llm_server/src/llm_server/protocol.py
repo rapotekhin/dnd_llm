@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.44.0"
+PROTOCOL_VERSION = "0.45.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -196,6 +196,7 @@ class Scene(_In):
     time_of_day: str = ""
     sneaking: bool = False  # the player moves stealthily (0.8.0)
     props: list[SceneProp] = Field(default_factory=list)  # the things of the room — the only ones to describe (0.11.0)
+    creatures: list[str] = Field(default_factory=list)  # 0.45.0: foes a fight left here — «Гоблин 2 [c3] — сдался, связан»
     furnish: bool = False  # the room was never furnished: propose `furnish` before describing it (0.11.0)
     closed_exits: list[str] = Field(default_factory=list)  # ways the pack keeps shut until the engine opens them (0.14.0)
     notes: list[str] = Field(default_factory=list)  # the master's own memory of events here, in Russian (0.14.0)

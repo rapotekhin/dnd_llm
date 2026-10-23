@@ -96,6 +96,8 @@ static func health_key(f: Dictionary) -> String:
 			return "HEALTH_SURRENDERED"
 		"truce":
 			return "HEALTH_TRUCE"
+		"unconscious":
+			return "HEALTH_KNOCKED_OUT"
 	var hp := int(f.get("hp", 0))
 	var mx := maxi(1, int(f.get("max_hp", 1)))
 	if hp >= mx:
@@ -463,7 +465,7 @@ static func _has_style(c: Dictionary, style: String) -> bool:
 
 
 ## "" when the player can attack `target` with this weapon now, otherwise the reason (a localization key).
-static func can_attack(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false) -> String:
+static func can_attack(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, unarmed: bool = false) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
 	var e := economy(s)
@@ -478,7 +480,7 @@ static func can_attack(s: GameSession, data: Dictionary, target_id: String, offh
 	if charmed_by(s, t):
 		return "COMBAT_CHARMED"
 	var c := s.character
-	var wid := str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
+	var wid := "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))  # fists (v0.7.22.11)
 	var w := weapon_profile(c, data, s.items, wid, offhand)
 	if not str(w.get("ammo", "")).is_empty() and int(c.get("inventory", {}).get(str(w["ammo"]), 0)) <= 0:
 		return "COMBAT_NO_AMMO"  # v0.7.12: arrows and bolts are spent
@@ -524,7 +526,7 @@ static func can_frenzy_attack(s: GameSession, data: Dictionary, target_id: Strin
 
 
 ## A weapon attack of the player (can_attack first; a frenzy strike — can_frenzy_attack). Returns the lines.
-static func player_attack(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, frenzied: bool = false) -> Array[String]:
+static func player_attack(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, frenzied: bool = false, unarmed: bool = false) -> Array[String]:
 	var c := s.character
 	var e := economy(s)
 	if frenzied:
@@ -539,9 +541,11 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 		e["action"] = int(e["action"]) - 1
 		e["attacks"] = CharacterRules.extra_attacks(c, data)
 	e["attacked"] = true
-	var wid := str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
+	var wid := "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
 	var w := weapon_profile(c, data, s.items, wid, offhand)
+	s.combat["melee_strike"] = bool(w.get("melee", false)) and cols_between(player(s), fighter(s, target_id)) == 0  # nonlethal needs a melee blow (5e)
 	var lines := strike(s, data, target_id, w, {})
+	s.combat.erase("melee_strike")
 	spend_ammo(s, str(w.get("ammo", "")))
 	return lines
 
@@ -843,6 +847,10 @@ static func _hurt_enemy(s: GameSession, data: Dictionary, t: Dictionary, dmg: in
 		if bool(t["timers"][cond].get("wake", false)) and int(t["hp"]) > 0:
 			_remove_condition(t, cond)
 			lines.append("%s приходит в себя от удара" % t["name"] if cond == "unconscious" else "%s: %s проходит от удара" % [t["name"], cond_name(data, cond)])
+	if int(t["hp"]) == 0 and bool(s.combat.get("nonlethal", false)) and bool(s.combat.get("melee_strike", false)):
+		t["status"] = "unconscious"  # 5e: a melee blow at 0 HP may knock out instead of killing (v0.7.22.11, big test #44)
+		lines.append("%s оглушён и падает без сознания" % t["name"])
+		return
 	if int(t["hp"]) == 0:
 		t["status"] = "dead"
 		lines.append("%s повержен" % t["name"])
@@ -2525,7 +2533,7 @@ static func results(s: GameSession, data: Dictionary, encounter_loot: Dictionary
 		var m := _monster(data, f)
 		if str(f["status"]) != "active":
 			xp += int(m["xp"])
-		if str(f["status"]) in ["dead", "surrendered"]:
+		if str(f["status"]) in ["dead", "surrendered", "unconscious"]:
 			for item: Variant in m.get("equipment", []):
 				if data["items"]["catalog"].has(str(item)):
 					loot[str(item)] = int(loot.get(str(item), 0)) + 1
@@ -2684,12 +2692,12 @@ static func dice_range(expr: String, mod: int = 0) -> Array[int]:
 
 ## A weapon attack at `target_id` before the click: {chance, min, max, adv: [reasons], dis: [reasons]}. AC stays
 ## hidden: only the percent.
-static func attack_preview(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false) -> Dictionary:
+static func attack_preview(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, unarmed: bool = false) -> Dictionary:
 	var c := s.character
 	var t := fighter(s, target_id)
 	if t.is_empty():
 		return {}
-	var w := weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", "")), offhand)
+	var w := weapon_profile(c, data, s.items, "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", "")), offhand)
 	var mods := _attack_mods(s, data, w, t)
 	var adv := not (mods["adv"] as Array).is_empty()
 	var dis := not (mods["dis"] as Array).is_empty()

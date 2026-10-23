@@ -1498,6 +1498,23 @@ scenarios:
       - "Описаны семь дней в холодной и выход на волю утром; без новых наказаний, урона и эффектов"
       - "Ясно, что вина не забыта: на героя косятся, доверия нет"
 
+  - id: creature_bound_questioned
+    title: "Связанный пленник после боя — его можно допросить (большой тест, v0.7.22.11)"
+    category: consequences
+    extends: tavern
+    input: "Обращаюсь к пленнику: кто вас послал на дорогу и где ваш лагерь?"
+    snapshot:
+      scene:
+        room: {id: outpost-road, name: "Дорога к заставе", description: "Разбитая колея, в кустах — следы засады."}
+        npcs: []
+        creatures: ["Наёмник [c1] — сдался, связан"]
+    engine:
+      check: {d20: [14], bonus: 2, total: 16, dc: 15, success: true, nat: null, blocked: false}
+    expect:
+      effects: {forbidden_kinds: [start_combat, give_item, coins]}
+    rubric:
+      - "Связанный наёмник есть в сцене и реагирует как живой: боится, молчит, торгуется, врёт или выдаёт сведения; мастер не говорит, что пленника нет или что он исчез"
+
   - id: crime_hide_body_no_promise
     title: "Спрятать тело словами — не обещать, что его никогда не найдут (большой тест, v0.7.22.10)"
     category: consequences

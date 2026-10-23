@@ -849,6 +849,10 @@
 			"very_tall": {"male": "рослый", "female": "рослая", "weight": 1}
 		}
 	},
+	"creatures": {
+		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay); a bound one stays and can be led.",
+		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120}
+	},
 	"wear_slots": {
 		"_doc": "Slots of worn things (v0.7.22.9, big test #24): a wondrous item goes to the slot of its `look` (or its own `slot`; a made one — by the first word of its name); it works only worn. Without a slot (a stone, a pearl, a wand) it works carried.",
 		"slots": ["head", "eyes", "neck", "cloak", "hands", "feet", "ring1", "ring2"],

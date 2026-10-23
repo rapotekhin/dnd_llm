@@ -592,6 +592,13 @@
           "title": "Closed Exits",
           "type": "array"
         },
+        "creatures": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Creatures",
+          "type": "array"
+        },
         "exits": {
           "items": {
             "$ref": "#/$defs/Exit"

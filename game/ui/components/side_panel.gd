@@ -142,6 +142,33 @@ func _rebuild() -> void:
 				if not err.is_empty():
 					EventBus.message.emit(tr(err)), can_act)
 			bb.name = "Body_" + bid
+		var beaten := CreatureRules.here(s, s.room_id)  # v0.7.22.11: the foes a fight left here
+		if not beaten.is_empty():
+			_subheading("SIDE_CREATURES")
+		for cr: Dictionary in beaten:
+			_line(CreatureRules.text(cr), false)
+			var cid := str(cr["id"])
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 6)
+			_content.add_child(row)
+			var specs: Array = [["talk", "BTN_CREATURE_TALK"]]
+			if not bool(cr.get("bound", false)) and str(cr["state"]) != "truce":
+				specs.append(["bind", "BTN_CREATURE_BIND"])
+			if bool(cr.get("bound", false)):
+				specs.append(["lead", "BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_CREATURE_LEAD"])
+			specs.append_array([["free", "BTN_CREATURE_FREE"], ["attack", "BTN_CREATURE_ATTACK"]])
+			for sp: Array in specs:
+				var what: String = sp[0]
+				var cb := Button.new()
+				cb.name = "Creature_%s_%s" % [what, cid]
+				cb.text = tr(sp[1])
+				cb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+				cb.disabled = not can_act
+				cb.pressed.connect(func() -> void:
+					var err := GameState.creature_act(cid, what)
+					if not err.is_empty():
+						EventBus.message.emit(tr(err)))
+				row.add_child(cb)
 		for qid: String in XpRules.quests_here(s, Catalog.data["world"]):
 			var q: Dictionary = XpRules.quests(Catalog.data["world"])[qid]
 			var qb := _button(tr("BTN_QUEST").format({"action": q["action"]}), func() -> void:

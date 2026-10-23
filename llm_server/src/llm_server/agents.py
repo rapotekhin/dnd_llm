@@ -432,8 +432,13 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -
         unknown = [e for e in out.effect_ids if e not in t.accepted]
         if unknown:
             raise ModelRetry(f"effect_ids {unknown} не принимались движком в этом ходе. Используй только id из ответов propose_effect.")
+        if (out.next_mode == "social" and out.npc_id
+                and any(f"[{out.npc_id}]" in c for c in t.params.snapshot.scene.creatures)):
+            out.next_mode = None  # 0.45.0: a creature a fight left is no NPC — the talk goes on in the narration
+            out.npc_id = None
         if out.next_mode in ("social", "trade", "combat") and t.params.mode != "combat" and scene_npc(t.params, out.npc_id) is None:
-            raise ModelRetry("Для social/trade/combat укажи npc_id из списка NPC сцены.")
+            raise ModelRetry("Для social/trade/combat укажи npc_id из списка NPC сцены (существа после боя — не NPC: "
+                             "за них отвечай прямо в рассказе, без next_mode).")
         return out
 
     return agent

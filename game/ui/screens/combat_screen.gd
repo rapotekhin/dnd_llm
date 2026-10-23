@@ -454,6 +454,19 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		vb.theme_type_variation = UiTheme.ACCENT_BUTTON
 	var main := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
 	var main_id := str(c.get("equipped", {}).get("main_hand", ""))
+	if not main_id.is_empty():  # fists with a weapon in hand (v0.7.22.11, big test #45)
+		var fist := CombatRules.weapon_profile(c, data, s.items, "")
+		_action(w, "Attack_unarmed", tr("COMBAT_ATTACK").format({"name": fist["name"], "hit": "%+d" % int(fist["to_hit"]), "dmg": _dmg_text(fist)}), mine,
+			func(t: String) -> String: return GameState.combat_attack(t, false, true),
+			func(t: String) -> String: return CombatRules.can_attack(s, data, t, false, true),
+			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false, true))
+	var nl := CheckButton.new()  # knock out, not kill (v0.7.22.11, big test #44)
+	nl.name = "NonlethalToggle"
+	nl.text = "COMBAT_NONLETHAL"
+	nl.tooltip_text = "COMBAT_NONLETHAL_TIP"
+	nl.button_pressed = bool(s.combat.get("nonlethal", false))
+	nl.toggled.connect(func(on: bool) -> void: GameState.combat_nonlethal(on))
+	w.add_child(nl)
 	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), mine,
 		func(t: String) -> String: return GameState.combat_attack(t, false),
 		func(t: String) -> String: return CombatRules.can_attack(s, data, t, false),

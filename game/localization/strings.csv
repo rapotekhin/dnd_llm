@@ -716,6 +716,20 @@ ITEM_WORN_TO_WORK,Действует только надетой — кнопк�
 SLOT_AUTOSAVE,Автосохранение
 SLOT_CANTRIP,заговор
 SLOT_AT_WILL,по желанию
+HEALTH_KNOCKED_OUT,без сознания
+SIDE_CREATURES,После боя
+BTN_CREATURE_BIND,Связать
+BTN_CREATURE_FREE,Отпустить
+BTN_CREATURE_LEAD,Вести с собой
+BTN_CREATURE_STAY,Оставить здесь
+BTN_CREATURE_TALK,Заговорить
+BTN_CREATURE_ATTACK,Напасть
+CREATURE_TALK_SAY,Обращаюсь к пленнику: {name}
+CREATURE_NONE,Его здесь уже нет
+CREATURE_CANNOT_BIND,"Связать нельзя: он уже связан или вы в перемирии"
+CREATURE_NOT_BOUND,Сначала свяжите
+COMBAT_NONLETHAL,"Оглушать, а не убивать"
+COMBAT_NONLETHAL_TIP,"Удар вблизи, который валит врага, оставляет его без сознания — живым: потом его можно связать и увести"
 TRADE_YOU_BUY,Вы покупаете
 TRADE_YOU_SELL,Вы продаёте
 TRADE_NOTHING_YET,—

@@ -546,9 +546,16 @@ func _combat_do(why: String, act: Callable) -> String:
 	return ""
 
 
-func combat_attack(target_id: String, offhand: bool = false) -> String:
-	return _combat_do(CombatRules.can_attack(session, Catalog.data, target_id, offhand) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.player_attack(session, Catalog.data, target_id, offhand))
+func combat_attack(target_id: String, offhand: bool = false, unarmed: bool = false) -> String:
+	return _combat_do(CombatRules.can_attack(session, Catalog.data, target_id, offhand, unarmed) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.player_attack(session, Catalog.data, target_id, offhand, false, unarmed))
+
+
+## «Оглушать, а не убивать» (v0.7.22.11, big test #44): a melee blow that brings a foe to 0 HP knocks it out.
+func combat_nonlethal(on: bool) -> void:
+	if session != null and CombatRules.active(session):
+		session.combat["nonlethal"] = on
+		EventBus.state_changed.emit()
 
 
 ## «Схватить» / «Сбить с ног» (v0.7.7): instead of one attack, Athletics against the foe (CombatRules.grapple).
@@ -1135,6 +1142,8 @@ func finish_combat(take: Array = []) -> void:
 			lines.append("+%d опыта" % int(s.combat["xp"]))
 		if not str(s.combat.get("encounter", "")).is_empty():
 			s.encounters_done.append(str(s.combat["encounter"]))
+	if outcome in ["victory", "truce"]:
+		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id))  # the beaten stay in the room (v0.7.22.11)
 	for id: String in CombatRules.enemies(s, false):
 		var f := CombatRules.fighter(s, id)
 		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():  # the body, quests, a murder (v0.7.14)
@@ -1340,6 +1349,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 		if not seen.is_empty():
 			lines.append(seen)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
+	CreatureRules.follow(session, from, room_id)  # a bound captive on the rope (v0.7.22.11)
 	var gone := PropRules.abandon(session, Catalog.data, room_id)  # big test #28 (v0.7.22.8)
 	if not gone.is_empty():
 		lines.append("Того, что вы здесь оставили, уже нет: " + ", ".join(gone))
@@ -1551,6 +1561,29 @@ func crime_answer(how: String) -> String:
 		return ""
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 	_request("law", ", ".join(lines))
+	return ""
+
+
+## The creatures a fight left (v0.7.22.11): bind, free, lead, talk (a master's turn), attack (a fight). "" or a key.
+func creature_act(id: String, what: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var c := CreatureRules.find(session, session.room_id, id)
+	if what == "talk":
+		return "" if submit(tr("CREATURE_TALK_SAY").format({"name": c.get("name", id)})) else "WAIT_BUSY"
+	var why := CreatureRules.can(session, id, what)
+	if not why.is_empty():
+		return why
+	var lines := CreatureRules.act(session, Catalog.data, id, what)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	if what == "attack":
+		_start_pending_fight()
+		return ""
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 	return ""
 
 
@@ -1877,6 +1910,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 		return "resume"
 	_quest_progress()
 	if s.room_id != room_before:
+		CreatureRules.follow(s, room_before, s.room_id)  # v0.7.22.11
 		var moved := TimeRules.on_move(s, Catalog.data, room_before, s.room_id)
 		ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id, TimeRules.passive_penalty(s, Catalog.data))
 		moved.append_array(ExplorationRules.take_caches(s, Catalog.data, s.room_id))

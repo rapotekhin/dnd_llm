@@ -83,7 +83,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         description += " На виду: " + "; ".join(names) + "."
     npcs = [{"npc_id": n["id"], "name": n["name"], "role": n.get("role", ""), "trader": bool(n.get("trader", False)),
              "attitude": ATTITUDE.get(str(n.get("attitude", "indifferent")), 0),
-             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie", "memory", "services", "deal", "secrets", "refuses", "eager", "follows") if k in n}} for n in scene.get("npcs", [])]
+             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie", "memory", "services", "deal", "secrets", "refuses", "eager", "follows", "under", "body") if k in n}} for n in scene.get("npcs", [])]
     ch = snap.get("character", {})
     hp = ch.get("hp", {})
     history = []
@@ -118,6 +118,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "npcs": npcs, "hooks": [h["text"] if isinstance(h, dict) else str(h) for h in scene.get("hooks", [])],
                 "time_of_day": scene.get("time", ""),
                 "props": scene.get("props", []),  # already in the protocol shape (SceneProp, 0.11.0)
+                "creatures": scene.get("creatures", []),  # the foes a fight left (0.45.0)
                 "furnish": bool(scene.get("furnish", False)),
                 "closed_exits": scene.get("closed_exits", []),  # (0.14.0)
                 "notes": scene.get("notes", []),
