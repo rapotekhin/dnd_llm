@@ -64,7 +64,7 @@ static func resistances(s: GameSession, data: Dictionary) -> Dictionary:
 ## Carried wondrous items and the equipped gear: where resist_* properties work.
 static func _worn(c: Dictionary, data: Dictionary, session_items: Dictionary) -> Array[Dictionary]:
 	var out := CharacterRules.carried(c, data, session_items)
-	for slot: String in CharacterRules.SLOTS:
+	for slot: String in ["armor", "shield", "main_hand", "off_hand"]:  # worn things are in carried() (v0.7.22.9)
 		var id := str(c.get("equipped", {}).get(slot, ""))
 		if not id.is_empty():
 			out.append(ItemRules.def_of(data["items"], session_items, id))

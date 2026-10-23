@@ -528,7 +528,9 @@ func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 			return {"reason": "на персонаже и так ничего не надето"}
 		return {"plan": {"slots": CharacterRules.SLOTS.duplicate(), "item_id": ""}, "summary": "Снято: %s" % ", ".join(worn)}
 	if not CharacterRules.SLOTS.has(slot):
-		return {"reason": "нет такого слота: %s (armor, shield, main_hand, off_hand, all)" % slot}
+		return {"reason": "нет такого слота: %s (%s, all)" % [slot, ", ".join(CharacterRules.SLOTS)]}
+	if CharacterRules.WEAR_SLOTS.has(slot) and CombatRules.active(s):
+		return {"reason": "в бою кольца, плащи и сапоги не меняют — на это уходит время"}
 	if (slot == "armor" or slot == "shield") and CombatRules.active(s):
 		return {"reason": "в бою %s не сменить — на это уходят минуты или целое действие" % ("доспех" if slot == "armor" else "щит")}
 	if CombatRules.active(s) and not id.is_empty():  # drawing a weapon: free once a turn, then the action (5e)

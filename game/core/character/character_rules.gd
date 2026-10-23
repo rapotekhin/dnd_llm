@@ -15,7 +15,9 @@ extends RefCounted
 ## `data` = Catalog.data: "rules", "items", "races", "classes", "spells", "backgrounds", "misc".
 
 const ABILITIES: Array[String] = ["str", "dex", "con", "int", "wis", "cha"]
-const SLOTS: Array[String] = ["armor", "shield", "main_hand", "off_hand"]
+const SLOTS: Array[String] = ["armor", "shield", "main_hand", "off_hand", "head", "eyes", "neck", "cloak", "hands", "feet", "ring1", "ring2"]
+## Slots of worn things (v0.7.22.9): put on and off out of a fight, like armour.
+const WEAR_SLOTS: Array[String] = ["head", "eyes", "neck", "cloak", "hands", "feet", "ring1", "ring2"]
 
 
 static func mod(score: int) -> int:
@@ -124,13 +126,21 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 	return SpellEffects.armor_class(c, ac, armor.is_empty(), dex)  # Mage Armor, Shield of Faith, Barkskin (v0.7.13.2)
 
 
-## Wondrous items in the pack (v0.6.3): they work while carried — those that need it, only when attuned (v0.7.12).
+## Wondrous items that work now (v0.6.3): carried — those that need it, only when attuned (v0.7.12); a worn kind (a
+## cloak, a ring, boots) only in its slot (v0.7.22.9).
 static func carried(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
+	var eq: Dictionary = c.get("equipped", {})
 	for id: String in c.get("inventory", {}):
 		var d := ItemRules.def_of(data["items"], session_items, id)
-		if str(d.get("item_type", "")) == "wondrous" and ItemRules.active(c, d, id):
+		if str(d.get("item_type", "")) != "wondrous" or not ItemRules.active(c, d, id):
+			continue
+		if wear_slot(d, data).is_empty():
 			out.append(d)
+			continue
+		for slot: String in WEAR_SLOTS:
+			if str(eq.get(slot, "")) == id:
+				out.append(d)
 	return out
 
 
@@ -139,6 +149,8 @@ static func active_props(c: Dictionary, data: Dictionary, session_items: Diction
 	var out: Array = []
 	var defs := carried(c, data, session_items)
 	for slot: String in SLOTS:
+		if WEAR_SLOTS.has(slot):
+			continue  # already in carried()
 		var id := str(c.get("equipped", {}).get(slot, ""))
 		if not id.is_empty():
 			var d := ItemRules.def_of(data["items"], session_items, id)
@@ -301,12 +313,30 @@ static func sanitize_equipped(c: Dictionary) -> void:
 			(c["attuned"] as Array).erase(id)
 
 
-## The slot an item goes to, or "" if it cannot be equipped. A weapon goes to the main hand.
-static func slot_for(def: Dictionary) -> String:
+## The slot an item goes to, or "" if it cannot be equipped. A weapon goes to the main hand; a wondrous thing to the
+## slot of its look (rules.wear_slots, v0.7.22.9; a ring — ring1, ring2 fits too).
+static func slot_for(def: Dictionary, data: Dictionary = {}) -> String:
 	if def.has("armor"):
 		return "shield" if str(def["armor"]["category"]) == "shield" else "armor"
 	if def.has("weapon") or str(def.get("item_type", "")) == "weapon":
 		return "main_hand"
+	return wear_slot(def, data)
+
+
+## The worn slot of a wondrous thing ("" — it works carried).
+static func wear_slot(def: Dictionary, data: Dictionary) -> String:
+	if not str(def.get("slot", "")).is_empty():
+		return str(def["slot"])
+	if str(def.get("item_type", "")) != "wondrous" or data.is_empty() or not data["rules"].has("wear_slots"):
+		return ""
+	var by: Dictionary = data["rules"]["wear_slots"]["by_look"]
+	var look := str(def.get("look", "")).to_lower()
+	if by.has(look):
+		return str(by[look])
+	var first := str(def.get("name", "")).to_lower().get_slice(" ", 0)
+	for k: String in by:
+		if first.begins_with(k.get_slice(" ", 0)):
+			return str(by[k])
 	return ""
 
 
@@ -315,9 +345,11 @@ static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary
 	if int(c.get("inventory", {}).get(id, 0)) <= 0:
 		return "EQUIP_NOT_OWNED"
 	var def := ItemRules.def_of(data["items"], session_items, id)
-	var natural := slot_for(def)
-	if natural.is_empty() or (natural != slot and not (natural == "main_hand" and slot == "off_hand")):
+	var natural := slot_for(def, data)
+	if natural.is_empty() or (natural != slot and not (natural == "main_hand" and slot == "off_hand") and not (natural == "ring1" and slot == "ring2")):
 		return "EQUIP_WRONG_SLOT"
+	if natural == "ring1" and str(c.get("equipped", {}).get("ring1" if slot == "ring2" else "ring2", "")) == id and int(c["inventory"][id]) < 2:
+		return "EQUIP_NOT_OWNED"
 	var eq: Dictionary = c.get("equipped", {})
 	var profs: Array = c.get("armor_profs", [])
 	match slot:

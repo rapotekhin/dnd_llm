@@ -1632,7 +1632,7 @@ func equip(item_id: String, slot: String) -> String:
 	if session == null or is_busy():
 		return "EQUIP_BUSY"
 	var c := session.character
-	if (slot == "armor" or slot == "shield") and session.mode == GameSession.MODE_COMBAT:
+	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot)) and session.mode == GameSession.MODE_COMBAT:
 		return "EQUIP_IN_COMBAT"
 	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot)
 	if not why.is_empty():
@@ -1643,6 +1643,9 @@ func equip(item_id: String, slot: String) -> String:
 	c["equipped"][slot] = item_id
 	if slot == "main_hand" and str(c["equipped"].get("off_hand", "")) == item_id and int(c["inventory"][item_id]) < 2:
 		c["equipped"]["off_hand"] = ""
+	for pair: Array in [["ring1", "ring2"], ["ring2", "ring1"]]:  # one ring cannot be on two fingers
+		if slot == pair[0] and str(c["equipped"].get(pair[1], "")) == item_id and int(c["inventory"][item_id]) < 2:
+			c["equipped"][pair[1]] = ""
 	_gear_changed(before)
 	return ""
 
@@ -1650,7 +1653,7 @@ func equip(item_id: String, slot: String) -> String:
 func unequip(slot: String) -> void:
 	if session == null or is_busy():
 		return
-	if (slot == "armor" or slot == "shield") and session.mode == GameSession.MODE_COMBAT:
+	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot)) and session.mode == GameSession.MODE_COMBAT:
 		EventBus.message.emit(tr("EQUIP_IN_COMBAT"))
 		return
 	if ItemRules.held_by_curse(session.character, Catalog.data, session.items, str(session.character["equipped"].get(slot, ""))):

@@ -239,6 +239,7 @@ func test_gauntlets_need_attunement_and_set_strength_19() -> void:
 	var s := _hero("wizard_yalika")
 	var c := s.character
 	c["inventory"]["gauntlets_of_ogre_power"] = 1
+	c["equipped"]["hands"] = "gauntlets_of_ogre_power"  # v0.7.22.9: worn on the hands
 	CharacterRules.refresh(c, data, s.items)
 	assert_int(CharacterRules.ability(c, "str")).is_less(19)
 	ItemRules.attune(c, data, s.items, "gauntlets_of_ogre_power")

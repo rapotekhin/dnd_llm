@@ -27,18 +27,20 @@ func _do(effect: Dictionary, turn := "t-1") -> Dictionary:
 
 func test_a_bag_for_each_container_item() -> void:
 	assert_array(ContainerRules.bags_of(s.character, "backpack")).has_size(1)
-	s.character["inventory"]["sack"] = 2
+	s.character["inventory"]["pouch"] = 2
 	CharacterRules.refresh(s.character, data, s.items)
-	assert_array(ContainerRules.bags_of(s.character, "sack")).has_size(2)
-	assert_str(ContainerRules.bag_name(data, s.character, ContainerRules.bags_of(s.character, "sack")[1])).is_equal("Мешок 2")
+	var pouches := ContainerRules.bags_of(s.character, "pouch")
+	assert_array(pouches).has_size(2)  # two small bags at a time (v0.7.22.9)
+	assert_str(ContainerRules.bag_name(data, s.character, pouches[1])).is_equal("Мешочек 2")
 
 
-func test_putting_into_a_bag_keeps_the_weight_and_takes_it_out_of_hand() -> void:
+func test_putting_into_a_bag_halves_the_weight_and_takes_it_out_of_hand() -> void:
 	var bag := ContainerRules.bags_of(s.character, "backpack")[0]
 	var before := CharacterRules.carried_weight(s.character, data, s.items)
 	assert_bool(bool(_do({"kind": "put_in", "prop_id": bag, "item_id": "torch", "qty": 3})["accepted"])).is_true()
 	assert_int(int(s.character["inventory"]["torch"])).is_equal(1)
-	assert_float(CharacterRules.carried_weight(s.character, data, s.items)).is_equal_approx(before, 0.01)
+	var torch := float(data["items"]["catalog"]["torch"]["weight"])
+	assert_float(CharacterRules.carried_weight(s.character, data, s.items)).is_equal_approx(before - torch * 3 * 0.5, 0.01)  # v0.7.22.9
 	assert_str(" ".join(ContainerRules.bags_text(s.character, data, s.items))).contains("Факел ×3")
 	assert_int(TradeRules.sellable(s, "backpack", data)).is_equal(0)  # a full bag is not sold
 	assert_bool(bool(_do({"kind": "take_from", "prop_id": bag, "item_id": "torch", "qty": 1}, "t-2")["accepted"])).is_true()
@@ -46,6 +48,7 @@ func test_putting_into_a_bag_keeps_the_weight_and_takes_it_out_of_hand() -> void
 
 
 func test_a_bag_of_holding_weighs_nothing_inside() -> void:
+	s.character["inventory"].erase("backpack")  # one big bag at a time (v0.7.22.9): the bag of holding instead
 	s.character["inventory"]["bag_of_holding"] = 1
 	s.character["inventory"]["chain_mail"] = 1
 	CharacterRules.refresh(s.character, data, s.items)

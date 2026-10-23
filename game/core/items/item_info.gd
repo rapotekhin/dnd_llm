@@ -42,7 +42,8 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	if ItemRules.needs_attunement(def):
 		out.append(_t("ITEM_ATTUNED") if not c.is_empty() and ItemRules.attuned(c).has(id) else _t("ITEM_NEEDS_ATTUNEMENT"))
 	elif str(def.get("item_type", "")) == "wondrous" and not (def.get("properties", []) as Array).is_empty() and not id.begins_with(ItemRules.UNKNOWN):
-		out.append(_t("ITEM_WORKS_CARRIED"))  # big test #23 (v0.7.22.2): the goggles work in the pack, nothing to put on
+		# big test #23: a worn kind works only worn (v0.7.22.9), a stone or a pearl — in the pack
+		out.append(_t("ITEM_WORN_TO_WORK" if not CharacterRules.wear_slot(def, data).is_empty() else "ITEM_WORKS_CARRIED"))
 	if ItemRules.cursed(def):
 		out.append(_t("ITEM_CURSED_LINE"))
 	if bool(def.get("master", false)):

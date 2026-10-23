@@ -162,8 +162,8 @@ static func plan_put(s: GameSession, data: Dictionary, prop_id: String, item_id:
 		return {"reason": why}
 	if qty <= 0 or TradeRules.sellable(s, item_id, data) < qty:
 		return {"reason": "у героя нет свободных %s ×%d (надетое сначала снимают, полную сумку — опустошают)" % [item_id, qty]}
-	if bags(s.character).has(prop_id) and str(p["kind"]) == item_id and int(s.character["inventory"].get(item_id, 0)) - qty < bags_of(s.character, item_id).size():
-		return {"reason": "сумку в саму себя не положить"}
+	if bags(s.character).has(prop_id) and is_carried_kind(data, item_id):
+		return {"reason": "сумку в сумку не кладут"}  # v0.7.22.9
 	var add := float(ItemRules.def_of(data["items"], s.items, item_id).get("weight", 0)) * qty
 	var cap := float(kind(data, str(p["container"]))["capacity_lb"])
 	if weight(data, s.items, p.get("contents", {})) + add > cap:
@@ -249,24 +249,39 @@ static func is_carried_kind(data: Dictionary, item_id: String) -> bool:
 ## the empty bags go first, then the full ones with what is in them.
 static func sync_bags(c: Dictionary, data: Dictionary) -> void:
 	var all := bags(c)
+	for id: String in all.keys():  # the bags gone first: a freed place takes a new bag (v0.7.22.9)
+		if not all.has(id):
+			continue
+		var gone_kind := str(all[id]["kind"])
+		var extra := bags_of(c, gone_kind).size() - int(c.get("inventory", {}).get(gone_kind, 0))
+		if extra <= 0:
+			continue
+		var order := bags_of(c, gone_kind)
+		order.sort_custom(func(a: String, b: String) -> bool: return (all[a]["contents"] as Dictionary).size() < (all[b]["contents"] as Dictionary).size())
+		for k in extra:
+			all.erase(order[k])
 	for item_id: String in c.get("inventory", {}):
 		if not is_carried_kind(data, item_id):
 			continue
 		var have := bags_of(c, item_id)
 		for i in int(c["inventory"][item_id]) - have.size():
+			if not _bag_room(c, data, item_id):
+				break  # one big bag and two small ones at a time (v0.7.22.9): the rest are plain things
 			var n := 1
 			while all.has("bag%d" % n):
 				n += 1
 			all["bag%d" % n] = {"kind": item_id, "contents": {}}
-	for id: String in all.keys():
-		var item_id := str(all[id]["kind"])
-		var extra := bags_of(c, item_id).size() - int(c.get("inventory", {}).get(item_id, 0))
-		if extra <= 0:
-			continue
-		var order := bags_of(c, item_id)
-		order.sort_custom(func(a: String, b: String) -> bool: return (all[a]["contents"] as Dictionary).size() < (all[b]["contents"] as Dictionary).size())
-		for k in extra:
-			all.erase(order[k])
+
+
+## Whether the hero can carry one more bag of this kind (rules.containers.worn_bags by its size).
+static func _bag_room(c: Dictionary, data: Dictionary, item_id: String) -> bool:
+	var size := str(kind(data, item_id).get("size", "big"))
+	var limit := int(cfg(data).get("worn_bags", {}).get(size, 99))
+	var n := 0
+	for id: String in bags(c):
+		if str(kind(data, str(bags(c)[id]["kind"])).get("size", "big")) == size:
+			n += 1
+	return n < limit
 
 
 ## How many of a kind are full bags (they cannot be sold or put away until emptied).
@@ -287,7 +302,7 @@ static func bags_weight(c: Dictionary, data: Dictionary, session_items: Dictiona
 	for id: String in bags(c):
 		if not bool(kind(data, str(bags(c)[id]["kind"])).get("weightless", false)):
 			w += weight(data, session_items, bags(c)[id]["contents"])
-	return w
+	return w * float(cfg(data).get("bag_weight_share", 1.0))  # a bag makes it easier to carry (v0.7.22.9)
 
 
 ## For the master: «Рюкзак [bag1]: Верёвка [rope], Факел ×3 [torch]».
@@ -370,3 +385,6 @@ static func pick_up(s: GameSession, data: Dictionary, item_id: String, contents:
 		if (bags(s.character)[id]["contents"] as Dictionary).is_empty():
 			bags(s.character)[id]["contents"] = contents.duplicate()
 			return
+	var inv: Dictionary = s.character["inventory"]  # no room for one more bag (v0.7.22.9): what was in it goes loose
+	for id: String in contents:
+		inv[id] = int(inv.get(id, 0)) + int(contents[id])

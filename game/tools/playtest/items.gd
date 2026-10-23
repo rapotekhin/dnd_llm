@@ -39,6 +39,19 @@ func run() -> void:
 	await frames(3)
 	_gear_tab(sheet)
 	await frames(2)
+	var wear: Button = find(sheet, "Equip_hands_gauntlets_of_ogre_power")  # v0.7.22.9: worn on the hands
+	if step("the gauntlets go on the hands", wear != null and not wear.disabled, wear.tooltip_text if wear != null else ""):
+		await press(wear)
+		await frames(3)
+		_gear_tab(find(screen(), "CharacterSheet"))
+		await frames(2)
+	sheet = find(screen(), "CharacterSheet")
+	if not sheet.visible:
+		await press(find(game, "SheetButton"))
+		await frames(3)
+		_gear_tab(sheet)
+		await frames(2)
+	await shot("sheet_worn")
 	var att: Button = find(sheet, "Attune_gauntlets_of_ogre_power")
 	step("the attune button", att != null and not att.disabled, att.tooltip_text if att != null else "")
 	await shot("sheet_attune")

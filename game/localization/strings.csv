@@ -696,6 +696,23 @@ SKILL_SLEIGHT_OF_HAND,Ловкость рук
 SKILL_STEALTH,Скрытность
 SKILL_SURVIVAL,Выживание
 SLOT_ARMOR,Доспех
+SLOT_HEAD,Голова
+SLOT_EYES,Глаза
+SLOT_NECK,Шея
+SLOT_CLOAK,Плечи
+SLOT_HANDS,Руки
+SLOT_FEET,Ноги
+SLOT_RING1,Кольцо
+SLOT_RING2,Второе кольцо
+BTN_EQUIP_HEAD,Надеть
+BTN_EQUIP_EYES,Надеть
+BTN_EQUIP_NECK,Надеть
+BTN_EQUIP_CLOAK,Надеть
+BTN_EQUIP_HANDS,Надеть
+BTN_EQUIP_FEET,Надеть
+BTN_EQUIP_RING1,Надеть
+BTN_EQUIP_RING2,На другую руку
+ITEM_WORN_TO_WORK,Действует только надетой — кнопка «Надеть» в листе персонажа
 SLOT_AUTOSAVE,Автосохранение
 SLOT_CANTRIP,заговор
 SLOT_AT_WILL,по желанию

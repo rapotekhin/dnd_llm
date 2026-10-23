@@ -146,16 +146,19 @@
 			"chest": {"capacity_lb": 300, "lockable": true},
 			"barrel": {"capacity_lb": 150},
 			"basket": {"capacity_lb": 40},
-			"sack": {"capacity_lb": 30},
-			"backpack": {"capacity_lb": 30},
-			"pouch": {"capacity_lb": 6},
-			"bag_of_holding": {"capacity_lb": 500, "weightless": true},
+			"sack": {"capacity_lb": 30, "size": "big"},
+			"backpack": {"capacity_lb": 30, "size": "big"},
+			"pouch": {"capacity_lb": 6, "size": "small"},
+			"bag_of_holding": {"capacity_lb": 500, "weightless": true, "size": "big"},
 			"cabinet": {"name": "шкаф", "capacity_lb": 200, "lockable": true},
 			"crate": {"name": "ящик", "capacity_lb": 100},
 			"strongbox": {"name": "окованный ларец", "capacity_lb": 20, "lockable": true},
 			"wares": {"name": "товары", "capacity_lb": 5000}
 		},
 		"lock_dc": {"simple": 10, "good": 15, "masterwork": 20},
+		"bag_weight_share": 0.5,
+		"worn_bags": {"big": 1, "small": 2},
+		"_bags": "v0.7.22.9 (the author's request): what lies in a bag weighs bag_weight_share of its weight (a bag of holding — nothing); the hero carries at most worn_bags of each size as bags (a backpack or a sack — big, a pouch — small), more of them are plain things; a bag does not go into a bag.",
 		"force_dc_plus": 2
 	},
 	"development": {
@@ -845,6 +848,13 @@
 			"tall": {"male": "высокий", "female": "высокая", "weight": 3},
 			"very_tall": {"male": "рослый", "female": "рослая", "weight": 1}
 		}
+	},
+	"wear_slots": {
+		"_doc": "Slots of worn things (v0.7.22.9, big test #24): a wondrous item goes to the slot of its `look` (or its own `slot`; a made one — by the first word of its name); it works only worn. Without a slot (a stone, a pearl, a wand) it works carried.",
+		"slots": ["head", "eyes", "neck", "cloak", "hands", "feet", "ring1", "ring2"],
+		"by_look": {"кольцо": "ring1", "сапоги": "feet", "туфли": "feet", "амулет": "neck", "ожерелье": "neck", "медальон": "neck", "брошь": "neck",
+			"плащ": "cloak", "мантия": "cloak", "линзы": "eyes", "очки": "eyes", "обруч": "head", "шлем": "head", "шляпа": "head", "венец": "head",
+			"перчатки": "hands", "латные перчатки": "hands", "наручи": "hands", "пояс": "hands"}
 	},
 	"trait_cantrips": {
 		"_doc": "Cantrips a race trait grants (the SRD import has no spell list in traits, v0.6.0).",

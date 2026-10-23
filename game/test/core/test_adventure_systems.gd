@@ -205,6 +205,7 @@ func test_magic_armor_and_a_carried_cloak_raise_ac_and_saves() -> void:
 	CharacterRules.refresh(c, data, s.items)
 	assert_int(int(c["ac"])).is_equal(ac + 1)
 	c["inventory"]["cloak_of_protection"] = 1
+	c["equipped"]["cloak"] = "cloak_of_protection"  # v0.7.22.9: a cloak works on the shoulders
 	CharacterRules.refresh(c, data, s.items)
 	assert_int(int(c["ac"])).is_equal(ac + 1)  # v0.7.12: the cloak works only when attuned
 	c["attuned"] = ["cloak_of_protection"]
@@ -217,6 +218,7 @@ func test_boots_of_elvenkind_give_advantage_on_stealth() -> void:
 	var s := _session()
 	s.character["equipped"]["armor"] = ""
 	s.character["inventory"]["boots_of_elvenkind"] = 1
+	s.character["equipped"]["feet"] = "boots_of_elvenkind"  # v0.7.22.9: boots work on the feet
 	assert_str(str(CombatRules.stealth_roll(s, data)["note"])).contains("Сапоги эльфов")
 
 

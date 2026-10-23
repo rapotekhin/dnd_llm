@@ -665,7 +665,7 @@
     },
     "EquipEffect": {
       "additionalProperties": false,
-      "description": "The player changes gear by words (0.14.0): `slot` armor / shield / main_hand / off_hand, or `all` to strip;\n`item_id` puts that carried item on, none takes the slot off. The engine checks it like the character sheet; in\na fight armour cannot be changed.",
+      "description": "The player changes gear by words (0.14.0): `slot` armor / shield / main_hand / off_hand, worn things (0.44.0)\nhead / eyes / neck / cloak / hands / feet / ring1 / ring2, or `all` to strip; `item_id` puts that carried item on,\nnone takes the slot off. The engine checks it like the character sheet; in a fight armour and worn things cannot\nbe changed.",
       "properties": {
         "item_id": {
           "anyOf": [
@@ -691,6 +691,14 @@
             "shield",
             "main_hand",
             "off_hand",
+            "head",
+            "eyes",
+            "neck",
+            "cloak",
+            "hands",
+            "feet",
+            "ring1",
+            "ring2",
             "all"
           ],
           "title": "Slot",

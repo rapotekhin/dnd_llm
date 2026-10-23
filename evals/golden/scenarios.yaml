@@ -1013,6 +1013,27 @@ scenarios:
     rubric:
       - "Мастер снимает снаряжение эффектом equip (slot armor и shield или all) и описывает это как сделанное; проверка здесь не нужна"
 
+  - id: put_on_a_ring_by_words
+    title: "Надеть кольцо словами — equip в слот кольца (v0.7.22.9)"
+    category: effects
+    extends: tavern
+    input: "Надеваю кольцо тепла на палец."
+    snapshot:
+      character:
+        name: "Бран"
+        gender: male
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 18
+        equipped: ["armor: Кольчуга [chain_mail]", "main_hand: Длинный меч [longsword]"]
+        inventory: [{item_id: ring_of_warmth, name: "Кольцо тепла", qty: 1}, {item_id: torch, name: "Факел", qty: 2}]
+    expect:
+      check: {required: false}
+      effects: {required_kinds_any: [equip], forbidden_kinds: [give_item]}
+    rubric:
+      - "Мастер надевает кольцо эффектом equip со slot ring1 (или ring2) и item_id ring_of_warmth и описывает это как сделанное"
+
   - id: invisible_not_noticed
     title: "Невидимый герой осматривается — никто не замечает"
     category: modes

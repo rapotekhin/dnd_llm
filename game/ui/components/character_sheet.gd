@@ -437,10 +437,12 @@ func _gear_tab(c: Dictionary) -> Control:
 				_action(row, "Attune_" + id, "BTN_ATTUNE", not busy and at_why.is_empty(), GameState.attune.bind(id))
 				if not at_why.is_empty():
 					(row.get_child(row.get_child_count() - 1) as Button).tooltip_text = tr(at_why)
-		var slot := CharacterRules.slot_for(def)
+		var slot := CharacterRules.slot_for(def, Catalog.data)
 		var targets: Array[String] = []
 		if not slot.is_empty():
 			targets.append(slot)
+		if slot == "ring1":
+			targets.append("ring2")
 		if slot == "main_hand" and (def.get("properties", []) as Array).has("light"):
 			targets.append("off_hand")
 		for t: String in targets:

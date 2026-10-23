@@ -154,8 +154,10 @@ func test_a_magic_find_needs_a_check_and_one_a_rest() -> void:
 	assert_int(s.magic_given).is_equal(0)
 
 
-func test_carried_goggles_say_they_work() -> void:
+func test_goggles_say_they_are_worn_a_stone_works_carried() -> void:
 	var s := _hero("brod-temple")
 	s.character["inventory"]["goggles_of_night"] = 1
+	s.character["inventory"]["stone_of_good_luck"] = 1
 	CharacterRules.refresh(s.character, data, s.items)
-	assert_array(ItemInfo.lines(s.character, data, s.items, "goggles_of_night")).contains([TranslationServer.translate("ITEM_WORKS_CARRIED")])
+	assert_array(ItemInfo.lines(s.character, data, s.items, "goggles_of_night")).contains([TranslationServer.translate("ITEM_WORN_TO_WORK")])  # v0.7.22.9
+	assert_array(ItemInfo.lines(s.character, data, s.items, "goggles_of_night")).not_contains([TranslationServer.translate("ITEM_WORKS_CARRIED")])

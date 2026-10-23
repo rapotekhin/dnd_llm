@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.43.0"
+PROTOCOL_VERSION = "0.44.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -854,12 +854,13 @@ class NoteEffect(_Out):
 
 
 class EquipEffect(_Out):
-    """The player changes gear by words (0.14.0): `slot` armor / shield / main_hand / off_hand, or `all` to strip;
-    `item_id` puts that carried item on, none takes the slot off. The engine checks it like the character sheet; in
-    a fight armour cannot be changed."""
+    """The player changes gear by words (0.14.0): `slot` armor / shield / main_hand / off_hand, worn things (0.44.0)
+    head / eyes / neck / cloak / hands / feet / ring1 / ring2, or `all` to strip; `item_id` puts that carried item on,
+    none takes the slot off. The engine checks it like the character sheet; in a fight armour and worn things cannot
+    be changed."""
 
     kind: Literal["equip"] = "equip"
-    slot: Literal["armor", "shield", "main_hand", "off_hand", "all"]
+    slot: Literal["armor", "shield", "main_hand", "off_hand", "head", "eyes", "neck", "cloak", "hands", "feet", "ring1", "ring2", "all"]
     item_id: str | None = None
 
 
