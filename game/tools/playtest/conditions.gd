@@ -43,6 +43,8 @@ func run() -> void:
 		{"id": "pt3", "name": "Кружка Горма", "item_id": "ale", "owner": "npc_innkeeper", "state": ""}]
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	await press(find(game, "PlaceButton"))  # v0.7.22.7: the things of the room in their own window
+	await frames(3)
 	var take: Button = find(game, "TakeAllButton")
 	step("the take-all button names what it takes", take != null and not take.disabled and take.tooltip_text.contains("верёвки")
 		and not take.tooltip_text.contains("Кружка"), take.tooltip_text if take != null else "")

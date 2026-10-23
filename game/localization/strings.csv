@@ -480,7 +480,7 @@ JOURNAL_QUESTS_DONE,Выполнено
 JOURNAL_QUESTS_OPEN,В работе
 JOURNAL_STEP,Сейчас: {step}
 JOURNAL_TAB_FOUND,Находки
-JOURNAL_TAB_PEOPLE,Разговоры
+JOURNAL_TAB_PEOPLE,Люди
 JOURNAL_TAB_PLACES,Места
 JOURNAL_TAB_QUESTS,Задания
 JOURNAL_TITLE,Журнал
@@ -699,6 +699,23 @@ SLOT_ARMOR,Доспех
 SLOT_AUTOSAVE,Автосохранение
 SLOT_CANTRIP,заговор
 SLOT_AT_WILL,по желанию
+BTN_PLACE,Взаимодействие с местом ({n})
+JOURNAL_DEAD,мёртв(а)
+JOURNAL_GAVE,уже дал(а): {deal}
+JOURNAL_Q_TAKEN,задание «{title}» — взято
+JOURNAL_Q_DONE,задание «{title}» — выполнено
+JOURNAL_Q_FAILED,задание «{title}» — провалено
+JOURNAL_LAST_TALK,разговор: {text}
+PLACE_EMPTY,"Здесь ничего нет — осмотритесь или обыщите место, чтобы найти вещи"
+PLACE_OWNER,хозяин: {name}
+PLACE_TAKE_OWNED,"Чужая вещь: взять — это кража, хозяин может заметить"
+PLACE_SEARCHED,обыскано
+PLACE_LOOK_SAY,Внимательно осматриваю: {name}
+PLACE_TAKE_SAY,Беру: {name}
+BTN_TAKE,Взять
+BTN_LOOK_AT,Осмотреть
+BTN_OPEN_SHORT,Открыть
+BTN_SEARCH_SHORT,Обыскать
 COMBAT_VOLLEY,"Следующий заряд «{spell}» (осталось {n}): выберите цель"
 COMBAT_NO_VOLLEY,Зарядов больше нет
 SLOT_CIRCLE,{n} круг (осталось {left})

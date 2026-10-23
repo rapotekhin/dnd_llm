@@ -12,6 +12,7 @@ signal short_rest_requested
 signal long_rest_requested
 signal pockets_requested(npc_id: String)
 signal container_requested(prop_id: String)
+signal place_requested
 signal development_requested
 
 var _content: VBoxContainer
@@ -190,26 +191,17 @@ func _rebuild() -> void:
 				if not err.is_empty():
 					EventBus.message.emit(tr(err)))
 			look_row.add_child(lb)
-		# «Забрать всё» (v0.7.8): what nobody owns and the hero can carry, after a search.
-		var takeable: Array = PropRules.take_all_plan(s, Catalog.data)["take"]
-		var tb := Button.new()
-		tb.name = "TakeAllButton"
-		tb.text = tr("BTN_TAKE_ALL")
-		tb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tb.disabled = not can_act or takeable.is_empty()
-		tb.tooltip_text = tr("TAKE_ALL_TIP").format({"list": ", ".join(takeable.map(func(p: Dictionary) -> String: return str(p["name"])))}) 			if not takeable.is_empty() else tr("TAKE_ALL_NOTHING")
-		tb.pressed.connect(func() -> void:
-			var err := GameState.take_all()
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)))
-		_content.add_child(tb)  # its own row under the look buttons: three in one row widen the panel
-		for p: Dictionary in PropRules.room_props(s, s.room_id):  # v0.7.18.1: containers of the room
-			if not ContainerRules.is_container(p):
-				continue
-			var pid := str(p["id"])
-			var cb := _button(tr("BTN_OPEN_CONTAINER").format({"name": p["name"]}), container_requested.emit.bind(pid), not GameState.is_busy())
-			cb.name = "Container_" + pid
+		# «Взаимодействие с местом» (v0.7.22.7, big test #17): every thing of the room in its own window — take one,
+		# open, look closer, «Забрать всё».
+		var n_things := PropRules.room_props(s, s.room_id).size() + CrimeRules.bodies_here(s, Catalog.data).size()
+		var pb := Button.new()
+		pb.name = "PlaceButton"
+		pb.text = tr("BTN_PLACE").format({"n": n_things})
+		pb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		pb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pb.disabled = GameState.is_busy()
+		pb.pressed.connect(place_requested.emit)
+		_content.add_child(pb)
 		var trapped := {}
 		for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
 			trapped[ft["to"]] = ft["secret"]

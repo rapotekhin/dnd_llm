@@ -235,6 +235,8 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 			var done: Array[String] = []
 			for q: Dictionary in XpRules.quest_list(s, Catalog.data["world"]):
 				var line := ("%s — %s" % [q["title"], q["description"]]) if not str(q["description"]).is_empty() else str(q["title"])
+				for h: String in QuestRules.history(s, Catalog.data["world"], str(q["id"])):  # what was done (v0.7.22.7)
+					line += "\n      " + h
 				if not str(q.get("step", "")).is_empty():
 					line += "\n      " + tr("JOURNAL_STEP").format({"step": q["step"]})
 				if bool(q.get("failed", false)):  # v0.7.14: its NPC died
@@ -258,23 +260,13 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 			for loc: String in by_loc:
 				var rep := ReputationRules.text(s, Catalog.data, loc)  # v0.7.17
 				out.append({"title": rep if not rep.is_empty() else str(w.location(loc).get("name", loc)), "lines": by_loc[loc]})
-		"people":  # the conversations' summaries and what each NPC remembers of the hero (v0.7.15)
+		"people":  # everyone met (v0.7.22.7, big test #2): attitude, looks, what they gave, their quests, what they remember
 			var by_loc := {}
-			var met: Array[String] = []
-			for key: String in s.summaries:
-				if key.begins_with("dialogue:"):
-					met.append(key.get_slice(":", 1))
-			for npc: String in s.npc_memory:
-				if not met.has(npc):
-					met.append(npc)
-			for npc: String in met:
+			for npc: String in _met(s, w):
 				var loc := w.location_id(_npc_room(w, npc))
 				if not by_loc.has(loc):
 					by_loc[loc] = []
-				var summary := str(s.summaries.get("dialogue:" + npc, ""))
-				(by_loc[loc] as Array).append("%s%s" % [w.npc(npc).get("name", npc), " — " + summary if not summary.is_empty() else ""])
-				for m: String in s.memory_of(npc):
-					(by_loc[loc] as Array).append("    · " + tr("JOURNAL_REMEMBERS").format({"fact": m}))
+				(by_loc[loc] as Array).append_array(_person(s, w, npc))
 			for loc: String in by_loc:
 				out.append({"title": str(w.location(loc).get("name", loc)) if not loc.is_empty() else tr("JOURNAL_ELSEWHERE"), "lines": by_loc[loc]})
 		"found":
@@ -302,6 +294,53 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 			days.reverse()
 			for d: int in days:
 				out.append({"title": tr("JOURNAL_DAY").format({"day": d}), "lines": by_day[d], "folded": d != days[0]})
+	return out
+
+
+## The NPCs the hero has met: talked to, remembered by, going along, or seen in a visited room.
+func _met(s: GameSession, w: WorldView) -> Array[String]:
+	var met: Array[String] = []
+	for key: String in s.summaries:
+		if key.begins_with("dialogue:") and not met.has(key.get_slice(":", 1)):
+			met.append(key.get_slice(":", 1))
+	for npc: String in s.npc_memory.keys() + s.followers:
+		if not met.has(npc):
+			met.append(npc)
+	for room_id: String in s.visited:
+		for npc: String in w.npcs_in(room_id):
+			if not met.has(npc):
+				met.append(npc)
+	return met.filter(func(id: String) -> bool: return not w.npc(id).is_empty())
+
+
+## A person in the journal: «Бруно Хмель — хозяин таверны, человек · дружески · средних лет, полный, невысокий» and
+## what they gave, their quests, the last talk and what they remember of the hero.
+func _person(s: GameSession, w: WorldView, npc: String) -> Array[String]:
+	var data := Catalog.data
+	var n := w.npc(npc)
+	var bounds := GameSession.attitude_bounds(data)
+	var att := clampi(s.attitude(npc), bounds.x, bounds.y)
+	var head := "%s — %s%s · %s · %s" % [n.get("name", npc), n.get("role", ""), (", " + str(n["race"])) if not str(n.get("race", "")).is_empty() else "",
+		tr("ATTITUDE_" + ("M%d" % -att if att < 0 else "P%d" % att if att > 0 else "0")), BodyRules.npc_text(data, npc, n)]
+	if s.dead_npcs.has(npc):
+		head += " · " + tr("JOURNAL_DEAD")
+	var out: Array[String] = [head]
+	var deal := SocialRules.deal_text(s, data, npc)
+	if not deal.is_empty():
+		out.append("    · " + tr("JOURNAL_GAVE").format({"deal": deal}))
+	for qid: String in XpRules.quests(data["world"]):
+		var q: Dictionary = XpRules.quests(data["world"])[qid]
+		if str(q.get("giver", "")) != npc:
+			continue
+		var state := "JOURNAL_Q_DONE" if s.quests_done.has(qid) else "JOURNAL_Q_FAILED" if s.quests_failed.has(qid) \
+			else "JOURNAL_Q_TAKEN" if s.quests_active.has(qid) else ""
+		if not state.is_empty():
+			out.append("    · " + tr(state).format({"title": q["title"]}))
+	var summary := str(s.summaries.get("dialogue:" + npc, ""))
+	if not summary.is_empty():
+		out.append("    · " + tr("JOURNAL_LAST_TALK").format({"text": summary}))
+	for m: String in s.memory_of(npc):
+		out.append("    · " + tr("JOURNAL_REMEMBERS").format({"fact": m}))
 	return out
 
 

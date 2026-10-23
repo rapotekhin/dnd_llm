@@ -24,8 +24,15 @@ func run() -> void:
 	s.character["inventory"]["lock"] = 1
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	var place: Button = find(game, "PlaceButton")
+	if not step("the place button (v0.7.22.7)", place != null and not place.disabled):
+		return
+	await press(place)
+	await frames(3)
+	await shot("place")
+	step("the place window lists the chest and its actions", find(game, "Look_pchest") != null)
 	var open: Button = find(game, "Container_pchest")
-	if not step("the side panel offers the chest", open != null and not open.disabled):
+	if not step("the place window offers the chest", open != null and not open.disabled):
 		return
 	await press(open)
 	await frames(3)

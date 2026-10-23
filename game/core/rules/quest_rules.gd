@@ -162,6 +162,23 @@ static func _announce_parts(s: GameSession, world: Dictionary, quest_id: String,
 	return lines
 
 
+## What the hero has done in the quest, for the journal (v0.7.22.7, big test #26): the closed steps, and for a choice
+## step — which way it went and how it turned out (by the choice's flag). Lines «✓ …».
+static func history(s: GameSession, world: Dictionary, quest_id: String) -> Array[String]:
+	var q := quest(world, quest_id)
+	var out: Array[String] = []
+	var steps: Array = q.get("steps", [])
+	var n := steps.size() if s.quests_done.has(quest_id) else int(s.quests_active.get(quest_id, 0))
+	for i in mini(n, steps.size()):
+		var step: Dictionary = steps[i]
+		var line := "✓ " + str(step["text"])
+		for c: Dictionary in step.get("choices", []):
+			if not str(c.get("flag", "")).is_empty() and s.flags.has(str(c["flag"])):
+				line += " — %s. %s" % [c["action"], c.get("done_text", "")]
+		out.append(line.strip_edges())
+	return out
+
+
 ## The step text with its parts: «Разузнать… (✓ застава; шахта)».
 static func step_text(s: GameSession, world: Dictionary, quest_id: String) -> String:
 	var step := current(s, world, quest_id)

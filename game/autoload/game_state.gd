@@ -843,6 +843,31 @@ func take_all() -> String:
 	return ""
 
 
+## «Взять» in the place window (v0.7.22.7): one thing of the room by the engine (an owner who sees it reacts), then the
+## master narrates it — the same as the words «I take it». "" or a localization key.
+func take_prop(prop_id: String) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var r := PropRules.plan_take(session, Catalog.data, {"prop_id": prop_id})
+	if r.has("reason"):
+		EventBus.message.emit(str(r["reason"]))
+		return ""
+	var lines: Array[String] = [str(r["summary"])]
+	lines.append_array(PropRules.apply_take(session, Catalog.data, r["plan"]))
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	var p := PropRules.find(session, session.room_id, prop_id)
+	var text := tr("PLACE_TAKE_SAY").format({"name": p.get("name", prop_id)})
+	_add(GameSession.player_entry(text))
+	_add(GameSession.effect_entry(lines))
+	_log("Игрок: " + text)
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	_request("action", text + " [движок уже применил: %s — эффект take_prop не нужен; опиши коротко]" % ", ".join(lines))
+	return ""
+
+
 ## The container window (v0.7.18.1): take or put without a master's turn — like the gear in the sheet; taking from
 ## someone else's container before them is a theft, the master narrates the owner's reaction. "" or a localization key.
 func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> String:

@@ -68,7 +68,8 @@ func test_the_journal_groups_by_tab_and_location() -> void:
 	var places := notes._groups(s, GameState.world())
 	assert_array(places.map(func(g: Dictionary) -> String: return g["title"])).contains(["Сумеречная Пуща"])
 	notes._tab = "people"
-	assert_str(str(notes._groups(s, GameState.world())[0]["lines"][0])).contains("Бруно рассказал")
+	var people := " ".join(notes._groups(s, GameState.world()).map(func(g: Dictionary) -> String: return " ".join(g["lines"])))
+	assert_str(people).contains("Бруно Хмель — хозяин таверны").contains("Бруно рассказал")  # v0.7.22.7: a line of its own
 	notes._tab = "quests"
 	QuestRules.accept(s, data, "letter_to_ilva")
 	var quests := notes._groups(s, GameState.world())
