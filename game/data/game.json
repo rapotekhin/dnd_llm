@@ -15,6 +15,32 @@
 		"client_timeout_s": 185.0,
 		"summary_timeout_s": 60.0
 	},
+	"keys": {
+		"_doc": "Hotkeys (v0.7.22.27, as in BG3): action → [key, where]; where — game (the game screen, outside the input field), combat (the fight screen, outside its input), any. A key is a Godot key name (OS.find_keycode_from_string), by the physical place on the keyboard so the Russian layout works; the player rebinds them in the settings (settings.cfg [keys]).",
+		"pause_menu": ["Escape", "any"],
+		"character_sheet": ["C", "game"],
+		"inventory": ["I", "game"],
+		"spells": ["K", "game"],
+		"map": ["M", "game"],
+		"journal": ["J", "game"],
+		"option_1": ["1", "game"],
+		"option_2": ["2", "game"],
+		"option_3": ["3", "game"],
+		"quick_save": ["F5", "game"],
+		"quick_load": ["F9", "game"],
+		"end_turn": ["Space", "combat"],
+		"next_target": ["Tab", "combat"],
+		"action_1": ["1", "combat"],
+		"action_2": ["2", "combat"],
+		"action_3": ["3", "combat"],
+		"action_4": ["4", "combat"],
+		"action_5": ["5", "combat"],
+		"action_6": ["6", "combat"],
+		"action_7": ["7", "combat"],
+		"action_8": ["8", "combat"],
+		"action_9": ["9", "combat"],
+		"action_10": ["0", "combat"]
+	},
 	"ui": {
 		"default_resolution": [
 			1600,

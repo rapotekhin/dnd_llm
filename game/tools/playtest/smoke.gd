@@ -62,6 +62,8 @@ func run() -> void:
 
 	await key(KEY_ESCAPE)
 	var pause: Control = find_all(game, "PauseMenu")[0]
+	if not pause.visible:  # the first Esc only leaves the input (v0.7.22.27)
+		await key(KEY_ESCAPE)
 	step("Esc opens the pause menu", pause.visible)
 	await shot("pause")
 	await press(find_button_by_text(pause, "Сохранить"))

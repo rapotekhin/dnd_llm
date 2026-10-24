@@ -65,7 +65,7 @@ func _fill() -> void:
 		var b := Button.new()
 		b.name = slot
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.custom_minimum_size = Vector2(0, 72)
+		b.custom_minimum_size = Vector2(0, 110)
 		b.text = _label(slot, meta)
 		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		b.pressed.connect(_on_slot.bind(slot))
@@ -78,11 +78,17 @@ func _fill() -> void:
 
 
 func _label(slot: String, meta: Dictionary) -> String:
-	var slot_name := tr("SLOT_AUTOSAVE") if slot == SaveManager.AUTOSAVE else tr("SLOT_N").format({"n": slot.trim_prefix("slot_")})
+	var slot_name := tr("SLOT_AUTOSAVE") if slot == SaveManager.AUTOSAVE else tr("SLOT_QUICKSAVE") if slot == SaveManager.QUICKSAVE \
+		else tr("SLOT_N").format({"n": slot.trim_prefix("slot_")})
 	if meta.is_empty():
 		return "%s — %s" % [slot_name, tr("SLOT_EMPTY")]
-	return "%s — %s · %s   %s" % [slot_name, tr("SLOT_TURNS").format({"n": meta.get("turns", 0)}),
-		str(meta.get("saved_at", "")).replace("T", " "), str(meta.get("preview", ""))]
+	var head := "%s — %s" % [slot_name, str(meta.get("saved_at", "")).replace("T", " ")]
+	if meta.has("day"):  # where, when and who (v0.7.22.27, Н6); older saves have only the turns
+		head += "\n" + tr("SLOT_WHERE").format({"place": meta.get("place", meta.get("room_id", "")), "day": int(meta["day"]),
+			"class": meta.get("class", ""), "level": int(meta.get("level", 1)), "name": meta.get("character", "")})
+	else:
+		head += " · " + tr("SLOT_TURNS").format({"n": meta.get("turns", 0)})
+	return head + "\n" + str(meta.get("preview", ""))
 
 
 func _on_slot(slot: String) -> void:

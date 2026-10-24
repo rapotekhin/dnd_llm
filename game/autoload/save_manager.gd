@@ -3,6 +3,7 @@ extends Node
 ## `--profile=<name>` keeps saves, settings and logs apart in user://profiles/<name>/ (agent checks use "agent").
 
 const AUTOSAVE := "autosave"
+const QUICKSAVE := "quicksave"  # F5 / F9 (v0.7.22.27)
 
 var profile: String = ""
 var profile_dir: String = "user:/"
@@ -19,6 +20,10 @@ var master_providers: Dictionary = {}
 ## Reactions and choices of the hero's features in a fight (v0.7.10, as in Baldur's Gate 3): "ask" — a window
 ## «Использовать?»; "always" — the engine uses them; "never".
 var reactions: String = "ask"
+## The player's own keys (v0.7.22.27): action → key name; the rest from data/game.json `keys`.
+var keys: Dictionary = {}
+## Ask before an irreversible act (v0.7.22.27, UI audit С3): attacking a person, finishing off, surrendering, resisting.
+var confirm_risky: bool = true
 
 
 func _ready() -> void:
@@ -48,6 +53,7 @@ func manual_slots() -> Array[String]:
 
 func all_slots() -> Array[String]:
 	var out := manual_slots()
+	out.append(QUICKSAVE)
 	out.append(AUTOSAVE)
 	return out
 
@@ -57,8 +63,20 @@ func _path(slot: String) -> String:
 
 
 func build_save(session: GameSession) -> Dictionary:
-	return SaveFormat.build(session, str(ProjectSettings.get_setting("application/config/version", "0.0.0")),
+	var out := SaveFormat.build(session, str(ProjectSettings.get_setting("application/config/version", "0.0.0")),
 		Time.get_datetime_string_from_system(), int(Catalog.game()["chat"]["kept_in_save"]))
+	out["meta"].merge(preview_names(session), true)  # the slot's preview (v0.7.22.27, Н6)
+	return out
+
+
+## Where the hero is and who: «Ольховый Брод, Рыночная площадь», «Воин» — for the slot list.
+func preview_names(session: GameSession) -> Dictionary:
+	var world := WorldView.new(Catalog.data.get("world", {}))
+	var room := world.room(session.room_id)
+	var loc := world.location(world.location_id(session.room_id))
+	var place := ", ".join([str(loc.get("name", "")), str(room.get("name", ""))].filter(func(x: String) -> bool: return not x.is_empty()))
+	var klass := str(Catalog.data.get("classes", {}).get("classes", {}).get(str(session.character.get("class", "")), {}).get("name", ""))
+	return {"place": place, "class": klass}
 
 
 ## Atomic: writes a temp file, then replaces the slot.
@@ -130,6 +148,9 @@ func load_settings() -> void:
 		master_model = str(cfg.get_value("master", "model", ""))
 		master_providers = cfg.get_value("master", "providers", {})
 		reactions = str(cfg.get_value("game", "reactions", "ask"))
+		keys = cfg.get_value("keys", "keys", {})
+		confirm_risky = bool(cfg.get_value("game", "confirm_risky", true))
+	Hotkeys.apply(keys)
 
 
 func save_settings() -> void:
@@ -139,6 +160,8 @@ func save_settings() -> void:
 	cfg.set_value("master", "model", master_model)
 	cfg.set_value("master", "providers", master_providers)
 	cfg.set_value("game", "reactions", reactions)
+	cfg.set_value("game", "confirm_risky", confirm_risky)
+	cfg.set_value("keys", "keys", keys)
 	cfg.save(settings_path)
 
 

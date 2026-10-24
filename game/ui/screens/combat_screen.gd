@@ -208,6 +208,68 @@ func _add_log(text: String, master: bool) -> void:
 	_log_scroll.scroll_vertical = int(_log_scroll.get_v_scroll_bar().max_value)
 
 
+## v0.7.22.27 (as in BG3), outside the input: Space ends the turn, 1–0 press the buttons of the open tab, Tab picks
+## the next foe that can be hit (Enter strikes it); Esc leaves the input.
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo() or get_window().get_node_or_null("ConfirmBox") != null:
+		return
+	if event.is_action_pressed("pause_menu") and input.has_focus():
+		input.release_focus()
+	elif input.has_focus():
+		return
+	elif event.is_action_pressed("end_turn"):
+		if not end_turn.disabled:
+			end_turn.pressed.emit()
+	elif event.is_action_pressed("next_target"):
+		_next_target()
+	else:
+		var buttons := _tab_buttons()
+		var hit := false
+		for i in buttons.size():
+			if event.is_action_pressed("action_%d" % (i + 1)):
+				hit = true
+				if not buttons[i].disabled:
+					if buttons[i] is CheckButton:
+						buttons[i].button_pressed = not buttons[i].button_pressed
+					else:
+						buttons[i].pressed.emit()
+		if not hit:
+			return
+	get_viewport().set_input_as_handled()
+
+
+## The buttons of a tab (the open one by default) in their order: the keys 1–0.
+func _tab_buttons(page: Control = null) -> Array[BaseButton]:
+	var out: Array[BaseButton] = []
+	if page == null:
+		page = _tabs.get_current_tab_control()
+	if page == null:
+		return out
+	for b: Node in page.find_children("*", "BaseButton", true, false):
+		if (b as BaseButton).visible and out.size() < 10:
+			out.append(b as BaseButton)
+	return out
+
+
+func _number_actions() -> void:
+	for page: Node in _tabs.get_children():
+		var buttons := _tab_buttons(page as Control)
+		for i in buttons.size():
+			buttons[i].tooltip_text = Hotkeys.tip(buttons[i].tooltip_text, "action_%d" % (i + 1), SaveManager.keys)
+
+
+## The focus to the next foe card that can be pressed now.
+func _next_target() -> void:
+	var cards: Array[Button] = []
+	for n: Node in _field.find_children("Foe_*", "Button", true, false):
+		cards.append(n as Button)  # a disabled card still takes focus: Tab reads a foe before the attack is picked
+	if cards.is_empty():
+		return
+	var card := cards[(cards.find(get_viewport().gui_get_focus_owner()) + 1) % cards.size()]
+	card.grab_focus()
+	card.mouse_entered.emit()  # its description into the panel
+
+
 func _send() -> void:
 	if GameState.submit(input.text):
 		input.clear()
@@ -253,6 +315,8 @@ func _refresh() -> void:
 	_play_fx(s)
 	_draw_portrait(s, data)
 	_draw_actions(s, data, mine)
+	_number_actions()
+	end_turn.tooltip_text = Hotkeys.tip("", "end_turn", SaveManager.keys)
 	_hint.text = _base_hint(mine)
 	_draw_results(s, data)
 	_draw_ask(s)
@@ -715,7 +779,8 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	var sw := CombatRules.can_surrender(s, data)  # v0.7.22.17, #12
 	var surr := _button(g, "Do_surrender", tr("COMBAT_DO_SURRENDER"), mine and sw.is_empty())
 	surr.tooltip_text = tr(sw) if not sw.is_empty() and sw != "COMBAT_NOT_YOUR_TURN" else tr("COMBAT_SURRENDER_TIP")
-	surr.pressed.connect(func() -> void: _do(GameState.combat_surrender()))
+	surr.pressed.connect(func() -> void:  # v0.7.22.27: the fight ends in captivity
+		ConfirmBox.ask(self, tr("CONFIRM_SURRENDER_TITLE"), tr("CONFIRM_SURRENDER"), tr("COMBAT_DO_SURRENDER"), func() -> void: _do(GameState.combat_surrender())))
 	_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
 
 

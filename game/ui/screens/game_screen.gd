@@ -35,6 +35,7 @@ var trade_panel: TradePanel
 var _attach_menu: MenuButton  # v0.7.7: a spell, feature or consumable pinned to the message
 var _attach_chip: HBoxContainer
 var _attach_choices: Array[Dictionary] = []
+var _typed := true  # the last turn came from the input: its focus comes back after the turn (v0.7.22.27)
 
 
 func _ready() -> void:
@@ -234,22 +235,79 @@ func _ready() -> void:
 	EventBus.state_changed.connect(_refresh)
 	_refresh()
 	input.grab_focus.call_deferred()
+	for o: Control in _overlays() + [_pause]:
+		o.visibility_changed.connect(func() -> void:  # an open window takes the keys from the input
+			if o.visible:
+				input.release_focus())
+
+
+func _overlays() -> Array[Control]:
+	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container]
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
+# v0.7.22.27 (as in BG3): the keys work outside the input; Esc leaves the input, Enter or a letter comes back to it.
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause_menu"):
-		var overlays: Array[Control] = [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container]
-		var open := overlays.filter(func(o: Control) -> bool: return o.visible)
-		if not open.is_empty():
+	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo():
+		return
+	var open := _overlays().filter(func(o: Control) -> bool: return o.visible)
+	if get_window().get_node_or_null("ConfirmBox") != null:
+		return
+	if event.is_action_pressed("quick_save"):
+		var err := GameState.quick_save()
+		EventBus.message.emit(tr(err if not err.is_empty() else "MSG_QUICK_SAVED"))
+	elif event.is_action_pressed("quick_load"):
+		if GameState.is_busy() or not SaveManager.has_slot(SaveManager.QUICKSAVE):
+			EventBus.message.emit(tr("MSG_NO_QUICKSAVE" if not GameState.is_busy() else "REST_BUSY"))
+		else:
+			GameEntry.enter({"kind": "load", "slot": SaveManager.QUICKSAVE})
+	elif event.is_action_pressed("pause_menu"):
+		if input.has_focus() and open.is_empty() and not _pause.visible:
+			input.release_focus()
+		elif not open.is_empty():
 			for o: Control in open:
 				o.visible = false
 		else:
 			_pause.toggle()
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("character_sheet") and not input.has_focus():
-		_sheet.visible = not _sheet.visible
-		get_viewport().set_input_as_handled()
+	elif input.has_focus() or _pause.visible or get_viewport().gui_get_focus_owner() is LineEdit:
+		return
+	elif _hotkey(event, open.is_empty()):
+		pass
+	elif (event as InputEventKey).keycode in [KEY_ENTER, KEY_KP_ENTER] and open.is_empty():
+		input.grab_focus()
+	elif (event as InputEventKey).unicode >= 32 and open.is_empty() and input.editable:  # typing goes to the input
+		input.grab_focus()
+		input.insert_text_at_caret(char((event as InputEventKey).unicode))
+	else:
+		return
+	get_viewport().set_input_as_handled()
+
+
+## A key of the game screen; false — not one.
+func _hotkey(event: InputEvent, nothing_open: bool) -> bool:
+	for tab: Array in [["character_sheet", 0], ["spells", 1], ["inventory", 2]]:
+		if event.is_action_pressed(tab[0]):
+			if _sheet.visible and _sheet.current_tab() == int(tab[1]):
+				_sheet.visible = false
+			else:
+				_sheet.open_tab(int(tab[1]))
+			return true
+	for view: Array in [["map", _map], ["journal", _journal]]:
+		if event.is_action_pressed(view[0]):
+			if (view[1] as WorldNotes).visible:
+				(view[1] as WorldNotes).visible = false
+			else:
+				(view[1] as WorldNotes).open()
+			return true
+	for i in 3:
+		if event.is_action_pressed("option_%d" % (i + 1)):
+			if nothing_open and not GameState.is_busy() and Backend.is_ready() and i < GameState.session.options.size():
+				_typed = false
+				var err := GameState.choose_option(i)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err))
+			return true
+	return false
 
 
 func _on_turn_started(_turn_id: String) -> void:
@@ -258,7 +316,7 @@ func _on_turn_started(_turn_id: String) -> void:
 
 func _on_turn_finished(_turn_id: String, _ok: bool) -> void:
 	_refresh()
-	if Backend.is_ready():
+	if Backend.is_ready() and _typed and not _pause.visible and _overlays().all(func(o: Control) -> bool: return not o.visible):
 		input.grab_focus()
 
 
@@ -272,6 +330,7 @@ func _on_backend_state_changed(_state: int, _detail: String) -> void:
 
 func _send() -> void:
 	if GameState.submit(input.text):
+		_typed = true
 		input.clear()
 
 
@@ -316,10 +375,13 @@ func _refresh() -> void:
 		var o := GameState.session.options[i]
 		var cost := GameState.session.option_costs[i] if i < GameState.session.option_costs.size() else 0
 		var b := _option_button(o + ((" (%s)" % Money.format(cost)) if cost > 0 else ""), func() -> void:
+			_typed = false
 			var err := GameState.choose_option(i)
 			if not err.is_empty():
 				EventBus.message.emit(tr(err)), false)
 		b.disabled = not online or (cost > 0 and int(GameState.session.character["gold_cp"]) < cost)
+		if i < 3:
+			b.tooltip_text = Hotkeys.tip("", "option_%d" % (i + 1), SaveManager.keys)
 
 
 func _option_button(text: String, action: Callable, translate: bool) -> Button:

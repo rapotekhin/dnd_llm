@@ -138,6 +138,10 @@ func _development_tab(c: Dictionary) -> Control:
 	return box.get_parent()
 
 
+func current_tab() -> int:
+	return _tabs.current_tab
+
+
 ## Opens the sheet on a tab (3 — development).
 func open_tab(i: int) -> void:
 	visible = true

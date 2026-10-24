@@ -400,7 +400,8 @@ func meta() -> Dictionary:
 			preview = str(chat[i]["text"]).left(80)
 			break
 	return {"turns": turn_counter, "preview": preview, "created_at": created_at,
-		"character": str(character.get("name", "")), "room_id": room_id, "world_id": world_id}
+		"character": str(character.get("name", "")), "room_id": room_id, "world_id": world_id,
+		"day": day, "level": int(character.get("level", 1))}
 
 
 func to_dict(kept_chat: int) -> Dictionary:

@@ -4,6 +4,7 @@ extends Control
 
 const TAB_DISPLAY := 0
 const TAB_MASTER := 1
+const TAB_CONTROLS := 2  # v0.7.22.27: keys and the irreversible questions
 
 var back: String
 var start_tab: int
@@ -21,6 +22,8 @@ var _budget_edit: LineEdit
 var _budget_off: CheckBox
 var _budget_status: Label
 var _model_ids: Array[String] = []
+var _key_buttons: Dictionary = {}  # action → its button
+var _waiting := ""  # the action waiting for a key
 
 
 func _init(back_to: String, tab: int) -> void:
@@ -49,8 +52,10 @@ func _ready() -> void:
 	col.add_child(tabs)
 	tabs.add_child(_display_tab())
 	tabs.add_child(_master_tab())
+	tabs.add_child(_controls_tab())
 	tabs.set_tab_title(TAB_DISPLAY, tr("TAB_DISPLAY"))
 	tabs.set_tab_title(TAB_MASTER, tr("TAB_MASTER"))
+	tabs.set_tab_title(TAB_CONTROLS, tr("TAB_CONTROLS"))
 	tabs.current_tab = start_tab
 
 	var back_btn := Button.new()
@@ -64,9 +69,94 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause_menu"):
+	if event.is_action_pressed("pause_menu") and _waiting.is_empty():
 		_back()
 		get_viewport().set_input_as_handled()
+
+
+# --- controls (v0.7.22.27) ----------------------------------------------------------------------------------------
+
+
+func _controls_tab() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.name = "Controls"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var box := VBoxContainer.new()
+	box.name = "ControlsBox"
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 8)
+	scroll.add_child(box)
+	var ask := CheckBox.new()
+	ask.name = "ConfirmRisky"
+	ask.text = "OPT_CONFIRM_RISKY"
+	ask.tooltip_text = "OPT_CONFIRM_RISKY_TIP"
+	ask.button_pressed = SaveManager.confirm_risky
+	ask.toggled.connect(func(on: bool) -> void:
+		SaveManager.confirm_risky = on
+		SaveManager.save_settings())
+	box.add_child(ask)
+	var head := Label.new()
+	head.text = "OPT_KEYS"
+	head.theme_type_variation = UiTheme.MUTED_LABEL
+	box.add_child(head)
+	for action: String in Hotkeys.defaults():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 16)
+		var lbl := Label.new()
+		lbl.text = "KEY_ACT_" + action.to_upper()
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(lbl)
+		var b := Button.new()
+		b.name = "Key_" + action
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.custom_minimum_size = Vector2(220, 44)
+		b.pressed.connect(func() -> void:
+			_waiting = action
+			_show_keys())
+		row.add_child(b)
+		_key_buttons[action] = b
+		box.add_child(row)
+	var reset := Button.new()
+	reset.name = "KeysReset"
+	reset.text = "BTN_KEYS_RESET"
+	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	reset.pressed.connect(func() -> void:
+		SaveManager.keys = {}
+		_save_keys())
+	box.add_child(reset)
+	_show_keys()
+	return scroll
+
+
+func _show_keys() -> void:
+	for action: String in _key_buttons:
+		(_key_buttons[action] as Button).text = tr("KEY_PRESS") if action == _waiting else Hotkeys.key_of(action, SaveManager.keys)
+
+
+## The key for the waiting action; Esc cancels. A key another action of the same place has — refused.
+func _input(event: InputEvent) -> void:
+	if _waiting.is_empty() or not (event is InputEventKey) or not event.is_pressed() or event.is_echo():
+		return
+	get_viewport().set_input_as_handled()
+	var action := _waiting
+	_waiting = ""
+	var key := Hotkeys.name_of(event as InputEventKey)
+	if (event as InputEventKey).physical_keycode == KEY_ESCAPE and action != "pause_menu":
+		_show_keys()
+		return
+	var other := Hotkeys.clash(action, key, SaveManager.keys)
+	if not other.is_empty():
+		EventBus.message.emit(tr("KEY_TAKEN").format({"key": key, "action": tr("KEY_ACT_" + other.to_upper())}))
+		_show_keys()
+		return
+	SaveManager.keys[action] = key
+	_save_keys()
+
+
+func _save_keys() -> void:
+	SaveManager.save_settings()
+	Hotkeys.apply(SaveManager.keys)
+	_show_keys()
 
 
 func _display_tab() -> Control:

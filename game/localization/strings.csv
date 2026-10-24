@@ -970,3 +970,48 @@ BTN_FOLLOWER_STAY_TIP,Спутник остаётся в этом месте и 
 BTN_SUMMON_DISMISS,Отпустить
 ALLY_NOT_HERE,Этого спутника здесь нет
 ALLY_TOO_MANY,С героем уже идут все, кого можно взять
+MSG_QUICK_SAVED,Быстрое сохранение
+MSG_NO_QUICKSAVE,Быстрого сохранения ещё нет — F5 его сделает
+MSG_NO_SAVE_IN_FIGHT,В бою сохраняться нельзя
+SLOT_QUICKSAVE,Быстрое сохранение
+SLOT_WHERE,"{name}, {class} {level} ур. · {place} · день {day}"
+CONFIRM_NEVER,Больше не показывать
+CONFIRM_ATTACK_TITLE,Напасть на {name}?
+CONFIRM_ATTACK,"Это нападение: начнётся бой, и люди вокруг это запомнят."
+CONFIRM_FINISH_TITLE,Добить {name}?
+CONFIRM_FINISH,Это убийство — его уже не отменить.
+CONFIRM_LAW,"Здесь действует закон ({place}): за это вас будут искать."
+CONFIRM_RESIST_TITLE,Сопротивляться страже?
+CONFIRM_RESIST,Начнётся бой со стражей — это ещё одно преступление.
+CONFIRM_SURRENDER_TITLE,Сдаться?
+CONFIRM_SURRENDER,"Бой окончится, вы окажетесь в плену, вещи отберут."
+TAB_CONTROLS,Управление
+OPT_CONFIRM_RISKY,Спрашивать перед необратимым
+OPT_CONFIRM_RISKY_TIP,"Напасть на человека, добить, сдаться, сопротивляться страже — сначала окно «Точно?»"
+OPT_KEYS,"Клавиши (нажмите на клавишу, чтобы сменить)"
+BTN_KEYS_RESET,Клавиши по умолчанию
+KEY_PRESS,Нажмите клавишу…
+KEY_TAKEN,Клавиша {key} уже у «{action}»
+KEY_ACT_PAUSE_MENU,Меню
+KEY_ACT_CHARACTER_SHEET,Персонаж
+KEY_ACT_INVENTORY,Инвентарь
+KEY_ACT_SPELLS,Умения и заклинания
+KEY_ACT_MAP,Карта
+KEY_ACT_JOURNAL,Журнал
+KEY_ACT_OPTION_1,Вариант мастера 1
+KEY_ACT_OPTION_2,Вариант мастера 2
+KEY_ACT_OPTION_3,Вариант мастера 3
+KEY_ACT_QUICK_SAVE,Быстрое сохранение
+KEY_ACT_QUICK_LOAD,Быстрая загрузка
+KEY_ACT_END_TURN,Бой: конец хода
+KEY_ACT_NEXT_TARGET,Бой: следующая цель
+KEY_ACT_ACTION_1,Бой: кнопка 1
+KEY_ACT_ACTION_2,Бой: кнопка 2
+KEY_ACT_ACTION_3,Бой: кнопка 3
+KEY_ACT_ACTION_4,Бой: кнопка 4
+KEY_ACT_ACTION_5,Бой: кнопка 5
+KEY_ACT_ACTION_6,Бой: кнопка 6
+KEY_ACT_ACTION_7,Бой: кнопка 7
+KEY_ACT_ACTION_8,Бой: кнопка 8
+KEY_ACT_ACTION_9,Бой: кнопка 9
+KEY_ACT_ACTION_10,Бой: кнопка 10

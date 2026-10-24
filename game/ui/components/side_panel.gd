@@ -47,17 +47,19 @@ func _ready() -> void:
 	var tools := HBoxContainer.new()
 	tools.add_theme_constant_override("separation", 8)
 	col.add_child(tools)
-	for spec: Array in [["SheetButton", "BTN_CHARACTER_SHEET", sheet_requested], ["MapButton", "BTN_MAP", map_requested],
-			["JournalButton", "BTN_JOURNAL", journal_requested]]:
+	for spec: Array in [["SheetButton", "BTN_CHARACTER_SHEET", sheet_requested, "character_sheet"], ["MapButton", "BTN_MAP", map_requested, "map"],
+			["JournalButton", "BTN_JOURNAL", journal_requested, "journal"]]:
 		var b := Button.new()
 		b.name = spec[0]
 		b.text = spec[1]
+		b.tooltip_text = Hotkeys.tip(tr(spec[1]), spec[3], SaveManager.keys)  # v0.7.22.27
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size = Vector2(0, 56)
 		b.pressed.connect((spec[2] as Signal).emit)
 		tools.add_child(b)
 	var menu := Button.new()
 	menu.text = "BTN_MENU"
+	menu.tooltip_text = Hotkeys.tip(tr("BTN_MENU"), "pause_menu", SaveManager.keys)
 	menu.custom_minimum_size = Vector2(0, 56)
 	menu.pressed.connect(menu_requested.emit)
 	col.add_child(menu)
@@ -322,10 +324,12 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		fb.name = "Follower_%s_%s" % [what, id]
 		if tr(fa[1] + "_TIP") != fa[1] + "_TIP":
 			fb.tooltip_text = tr(fa[1] + "_TIP")
+	var who := str(n.get("name", id))
 	var at := _flow(acts, tr("BTN_ATTACK_SHORT"), func() -> void:
-		var err := GameState.attack_npc(id)
-		if not err.is_empty():
-			EventBus.message.emit(tr(err)), can_act)
+		ConfirmBox.ask(self, tr("CONFIRM_ATTACK_TITLE").format({"name": who}), tr("CONFIRM_ATTACK") + _law_line(s), tr("BTN_ATTACK_SHORT"), func() -> void:
+			var err := GameState.attack_npc(id)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err))), can_act)
 	at.name = "Attack_" + id  # the fight at once, without the master: last and red, apart from the peaceful acts
 	at.tooltip_text = tr("BTN_ATTACK_NPC").format({"name": n.get("name", id)})
 	at.add_theme_color_override("font_color", UiTheme.BAD)
@@ -364,10 +368,16 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	var acts := _acts("CreatureActs_" + cid)
 	for sp: Array in specs:
 		var what: String = sp[0]
-		var cb := _flow(acts, tr(sp[1]), func() -> void:
+		var run := func() -> void:
 			var err := GameState.creature_act(cid, what)
 			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act)
+				EventBus.message.emit(tr(err))
+		var cr_name := str(cr.get("name", cid))
+		var cb := _flow(acts, tr(sp[1]), func() -> void:
+			if what == "finish":  # v0.7.22.27: a kill is not undone
+				ConfirmBox.ask(self, tr("CONFIRM_FINISH_TITLE").format({"name": cr_name}), tr("CONFIRM_FINISH") + _law_line(s), tr(sp[1]), run)
+			else:
+				run.call(), can_act)
 		cb.name = "Creature_%s_%s" % [what, cid]
 		if what == "hand_over":
 			cb.tooltip_text = tr("CREATURE_HAND_OVER_TIP")
@@ -661,10 +671,15 @@ func _arrest(s: GameSession, can_act: bool) -> void:
 	for spec: Array in specs:
 		var how: String = spec[0]
 		var why := CrimeRules.can_answer(s, Catalog.data, how)
-		var b := _button(spec[1], func() -> void:
+		var answer := func() -> void:
 			var err := GameState.crime_answer(how)
 			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act and why.is_empty())
+				EventBus.message.emit(tr(err))
+		var b := _button(spec[1], func() -> void:
+			if how == "resist":  # v0.7.22.27: a fight with the guard
+				ConfirmBox.ask(self, tr("CONFIRM_RESIST_TITLE"), tr("CONFIRM_RESIST"), tr("BTN_CRIME_RESIST"), answer)
+			else:
+				answer.call(), can_act and why.is_empty())
 		b.name = "Crime_" + how
 		b.theme_type_variation = UiTheme.ACCENT_BUTTON
 		b.tooltip_text = tr(why) if not why.is_empty() else spec[2]
@@ -696,3 +711,11 @@ func _quest_buttons(s: GameSession, can_act: bool, only_npc: String) -> void:
 				EventBus.message.emit(tr(err)), can_act and why.is_empty())
 		tb.name = "QuestStep_" + tid
 		tb.tooltip_text = tr(why) if not why.is_empty() else str(QuestRules.quest(world, tid)["title"])
+
+
+## «Здесь действует закон (…)» under a question when the hero's location keeps the law (v0.7.22.27).
+func _law_line(s: GameSession) -> String:
+	var loc := GameState.world().location_id(s.room_id)
+	if CrimeRules.law(Catalog.data, loc).is_empty():
+		return ""
+	return "\n\n" + tr("CONFIRM_LAW").format({"place": GameState.world().location(loc).get("name", loc)})

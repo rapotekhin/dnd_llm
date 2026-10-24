@@ -2074,6 +2074,17 @@ func save_to(slot: String) -> bool:
 	return SaveManager.save_slot(slot, session)
 
 
+## F5 (v0.7.22.27): the quick slot, not while the master thinks or in a fight. "" or a localization key.
+func quick_save() -> String:
+	if session == null:
+		return "MSG_SAVE_FAILED"
+	if is_busy():
+		return "REST_BUSY"
+	if CombatRules.active(session):
+		return "MSG_NO_SAVE_IN_FIGHT"
+	return "" if save_to(SaveManager.QUICKSAVE) else "MSG_SAVE_FAILED"
+
+
 ## "" on success or a localization key.
 func load_from(slot: String) -> String:
 	var res: Variant = SaveManager.read_slot(slot)
