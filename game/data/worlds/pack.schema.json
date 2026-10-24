@@ -267,6 +267,19 @@
 									"additionalProperties": false
 								}
 							},
+							"doors": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "object",
+									"properties": {
+										"material": {"enum": ["wood", "iron"]},
+										"lock": {"enum": ["simple", "good", "masterwork"]},
+										"key": {"type": "string"},
+										"locked": {"type": "boolean"}
+									},
+									"additionalProperties": false
+								}
+							},
 							"closed_exits": {
 								"type": "object",
 								"additionalProperties": {

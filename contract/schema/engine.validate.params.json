@@ -663,6 +663,37 @@
       "title": "DamageEffect",
       "type": "object"
     },
+    "DoorEffect": {
+      "additionalProperties": false,
+      "description": "A door on the way to `to_room` from the hero's room (0.51.0): `unlock` / `lock` — its owner (the site's owner,\nhere or behind it) does it, or `unlock` after a passed Sleight of Hand this turn; `break` — after a passed Athletics\nthis turn. The engine knows the DC; breaking in before eyes is a trespass.",
+      "properties": {
+        "action": {
+          "default": "unlock",
+          "enum": [
+            "unlock",
+            "lock",
+            "break"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "kind": {
+          "const": "door",
+          "default": "door",
+          "title": "Kind",
+          "type": "string"
+        },
+        "to_room": {
+          "title": "To Room",
+          "type": "string"
+        }
+      },
+      "required": [
+        "to_room"
+      ],
+      "title": "DoorEffect",
+      "type": "object"
+    },
     "DropItemEffect": {
       "additionalProperties": false,
       "description": "The hero leaves a thing in the room (0.29.0): an item of the pack, or a bag (`item_id` = its bag id) with what\nis in it; it becomes a thing of the room that can be picked up again.",
@@ -2501,6 +2532,7 @@
           "crime_known": "#/$defs/CrimeKnownEffect",
           "crime_release": "#/$defs/CrimeReleaseEffect",
           "damage": "#/$defs/DamageEffect",
+          "door": "#/$defs/DoorEffect",
           "drop_item": "#/$defs/DropItemEffect",
           "equip": "#/$defs/EquipEffect",
           "flag": "#/$defs/FlagEffect",
@@ -2641,6 +2673,9 @@
         },
         {
           "$ref": "#/$defs/OwnerEffect"
+        },
+        {
+          "$ref": "#/$defs/DoorEffect"
         }
       ],
       "title": "Effect"

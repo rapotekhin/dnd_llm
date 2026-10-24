@@ -981,6 +981,73 @@ func container_unlock(prop_id: String, how: String) -> String:
 	return ""
 
 
+## A door on the way to `to` (v0.7.22.25, DoorRules): a key, thieves' tools (Sleight of Hand), force (Athletics),
+## blows of the weapon, a door spell, a torch, waiting for the site's hours. Breaking into someone's closed or
+## private site before eyes is a trespass at once. The master narrates it. "" or a localization key.
+func door_act(to: String, how: String, spell_id: String = "") -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var data := Catalog.data
+	var from := session.room_id
+	var way := {"how": how, "spell": spell_id} if how == "spell" else {"how": how}
+	if not DoorRules.ways(session, data, from, to).has(way):
+		return "WAIT_NOT_NOW"
+	var lines: Array[String] = []
+	var minutes := int(DoorRules.cfg(data)["try_minutes"])
+	match how:
+		"key":
+			DoorRules.unlock(session, data, from, to)
+			lines.append("Дверь отперта ключом")
+		"pick", "force":
+			var dc := int(DoorRules.dcs(session, data, from, to)[how])
+			var params := {"skill": "sleight_of_hand" if how == "pick" else "athletics", "dc_tier": "medium", "dc": dc, "target_id": to}
+			var bonus := CheckEngine.bonus_for(session.character, params)
+			if how == "pick":
+				var db := ExplorationRules.disarm_bonus(session.character)
+				bonus = int(db["bonus"])
+				params["disadvantage_reason"] = str(db["disadvantage_reason"])
+			var result := _hero_roll(params, bonus)
+			_add(GameSession.check_entry(params, result))
+			if not bool(result["success"]):
+				lines.append("Замок не поддался" if how == "pick" else "Дверь выдержала")
+			elif how == "pick":
+				DoorRules.unlock(session, data, from, to)
+				lines.append("Замок вскрыт")
+			else:
+				DoorRules.break_down(session, from, to)
+				lines.append("Дверь выбита")
+		"hit":
+			lines = DoorRules.hit(session, data, from, to)
+		"spell":
+			var r := _spend({"kind": "spell", "id": spell_id})
+			if r.has("reason"):
+				return str(r["reason"])
+			lines.assign(r["lines"])
+			lines.append_array(DoorRules.spell(session, data, from, to, spell_id))
+		"torch":
+			lines = DoorRules.ignite(session, data, from, to, "факел")
+		"wait":
+			var h := DoorRules.hours(session, data, str(DoorRules.def(data, from, to)["site"]))
+			minutes = 0
+			lines.append("Ожидание до %02d:00" % int(h["from"]))
+			lines.append_array(CrimeRules.wait(session, data, int(h["opens"]) - TimeRules.abs_minute(session))["lines"])
+	if minutes > 0:
+		lines.append_array(TimeRules.advance(session, data, minutes))
+	if how in ["pick", "force", "hit", "torch"] or (how == "spell" and str(data["rules"]["spell_effects"].get(spell_id, {}).get("door", "")) != "lock"):
+		var seen := DoorRules.witnesses(session, data, from, to)
+		if not seen.is_empty():
+			lines.append_array(CrimeRules.on_trespass(session, data, SiteRules.unwelcome(session, data, to), to, seen))
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	var verb: String = {"key": "Отпираю ключом", "pick": "Вскрываю отмычками", "force": "Выбиваю", "hit": "Рублю",
+		"spell": "Колдую на", "torch": "Поджигаю", "wait": "Жду, пока откроют"}[how]
+	_request("wait" if how == "wait" else "action", "%s дверь в «%s» [движок: %s]" % [verb, world().room(to).get("name", to), " · ".join(lines)])
+	return ""
+
+
 ## The theft window (v0.7.0): a Sleight of Hand against the entry's DC; success — it is taken; failure — the NPC
 ## reacts by its kind. The master narrates it (kind=theft); a fight it causes starts after. "" or a localization key.
 func steal(npc_id: String, entry_id: String) -> String:
@@ -1348,6 +1415,10 @@ func go(room_id: String) -> bool:
 	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
 		EventBus.message.emit(tr("TOO_HEAVY"))
 		return false
+	var shut := DoorRules.blocked(session, Catalog.data, session.room_id, room_id)
+	if not shut.is_empty():
+		EventBus.message.emit(tr(shut))
+		return false
 	_end_conversation()
 	var from := session.room_id
 	var lines: Array[String] = []
@@ -1432,7 +1503,7 @@ func _live_encounter(room_id: String) -> bool:
 func travel(to: String) -> String:
 	if session == null or is_busy() or not Backend.is_ready() or session.mode == GameSession.MODE_COMBAT:
 		return "TRAVEL_BUSY"
-	var path := WorldMap.route(session, Catalog.data["world"], session.room_id, to)
+	var path := WorldMap.route(session, Catalog.data["world"], session.room_id, to, Catalog.data)  # a locked door stops the way (v0.7.22.25)
 	if path.is_empty():
 		return "TRAVEL_NO_ROUTE"
 	if CrimeRules.held(session):

@@ -16,7 +16,8 @@ static func cfg(data: Dictionary) -> Dictionary:
 ## "" — the hero may be here; otherwise why not: the owner of this private room is alive and did not ask the hero in.
 static func unwelcome(s: GameSession, data: Dictionary, room_id: String) -> String:
 	var world := WorldView.new(data["world"])
-	if world.is_public(room_id):
+	var h := DoorRules.hours(s, data, world.site_id(room_id))  # v0.7.22.25: a closed site is nobody's to walk in
+	if world.is_public(room_id) and (h.is_empty() or bool(h["open"])):
 		return ""
 	var owner := str(world.site_of(room_id).get("owner", ""))
 	if owner.is_empty() or s.dead_npcs.has(owner) or s.followers.has(owner):

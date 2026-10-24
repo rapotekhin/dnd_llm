@@ -117,12 +117,13 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "background": ("предыстория героя и связь NPC с его прошлым", ()),
     "containers": ("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`take_from`, `put_in`, `unlock`, `drop_item`)",
                    ("take_from", "put_in", "unlock", "drop_item")),
+    "doors": ("двери у выходов: заперто, часы объекта, взлом, выбить, отпереть или запереть хозяином (`door`)", ("door",)),
     "captives": ("пленные и существа после боя, перемирие, продажа пленника, чужие вещи героя, герой в плену (`owner`)", ("owner",)),
 }
 
 
 # Topics of a scene, not of a conversation: out of the index while the hero talks (still readable by `rules`).
-SCENE_TOPICS = {"places", "containers", "equip", "tools", "invisible"}
+SCENE_TOPICS = {"places", "containers", "doors", "equip", "tools", "invisible"}
 BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
 
 
@@ -148,6 +149,8 @@ def auto_topics(mode: str, snap: Snapshot) -> list[str]:
         out.append("background")
     if scene and any(p.container for p in scene.props):
         out.append("containers")
+    if scene and any(e.door for e in scene.exits):  # v0.7.22.25
+        out.append("doors")
     if scene and scene.creatures:  # the prisoners, a truce, the hero's captors (v0.7.22.17)
         out.append("captives")
     if scene and any(BOARD.search(p.name) for p in scene.props):  # work is asked at a board (v0.7.21.2)

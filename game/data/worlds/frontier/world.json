@@ -382,6 +382,13 @@
 		},
 		"brod-tavern-kitchen": {
 			"name": "Кухня таверны",
+			"doors": {
+				"brod-tavern-cellar": {
+					"material": "wood",
+					"lock": "simple",
+					"locked": true
+				}
+			},
 			"indoor": true,
 			"location_id": "brod",
 			"description": "Жаркая кухня: котлы над огнём, связки лука и трав, люк в погреб в углу.",

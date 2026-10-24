@@ -2088,6 +2088,24 @@ scenarios:
     rubric:
       - "После успешной проверки — unlock с how pick; содержимое описано только после вскрытия, без лишних вещей; герой ничего не взял, пока не просил"
 
+  - id: door_forced_by_words
+    title: "Запертая дверь погреба — проверка Атлетики, затем door break (v0.7.22.25)"
+    category: effects
+    extends: tavern
+    input: "Погреб заперт? Разбегаюсь и выбиваю дверь плечом."
+    snapshot:
+      scene:
+        exits:
+          - {id: room_market, name: "Рыночная площадь"}
+          - {id: room_cellar, name: "Погреб", door: "дверь (дерево) · заперта"}
+    engine:
+      check: {d20: [17], bonus: 5, total: 22, dc: 12, success: true, nat: 17, blocked: false}
+    expect:
+      check: {required: true, skill_in: [athletics]}
+      effects: {required_kinds_any: [door], forbidden_kinds: [give_item, take_prop]}
+    rubric:
+      - "После успешной Атлетики — эффект door с to_room room_cellar и action break; герой не входит в погреб сам (move не обязателен), что за дверью — не выдумано подробно до входа"
+
   - id: bag_take_out
     title: "Достать из рюкзака — take_from сумки героя"
     category: effects

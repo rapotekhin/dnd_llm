@@ -196,6 +196,13 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			placed[n] = true
 		if not _strings(r.get("hooks", [])):
 			e.append("комната %s: hooks — список строк" % id)
+		var doors: Variant = r.get("doors", {})
+		if not (doors is Dictionary):
+			e.append("комната %s: doors — словарь {выход: дверь}" % id)
+		else:
+			for to: String in doors:
+				if not (r.get("exits", []) as Array).has(to) or not (doors[to] is Dictionary):
+					e.append("комната %s: дверь в %s — выход комнаты и {material, lock, key, locked}" % [id, to])
 		var closed: Variant = r.get("closed_exits", {})
 		if closed is Dictionary:
 			for to: String in closed:

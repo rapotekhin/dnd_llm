@@ -187,7 +187,7 @@ func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks:
 ## «Идти сюда · N шагов, M мин» to a visited room, or why not.
 func _travel_button(info: VBoxContainer, room_id: String) -> void:
 	var s := GameState.session
-	var path := WorldMap.route(s, Catalog.data["world"], s.room_id, room_id)
+	var path := WorldMap.route(s, Catalog.data["world"], s.room_id, room_id, Catalog.data)
 	var go := Button.new()
 	go.name = "TravelButton"
 	go.theme_type_variation = UiTheme.ACCENT_BUTTON

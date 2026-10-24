@@ -41,7 +41,7 @@ static func known(s: GameSession, world: Dictionary) -> Dictionary:
 ## The route of a fast travel from `from` to `to`: room ids after `from`, the last is `to`; [] when there is none.
 ## Only through visited rooms and open exits, never over an exit guarded by a found live trap (that one is
 ## disarmed or gone round by hand). Shortest by steps.
-static func route(s: GameSession, world: Dictionary, from: String, to: String) -> Array[String]:
+static func route(s: GameSession, world: Dictionary, from: String, to: String, data: Dictionary = {}) -> Array[String]:
 	if from == to or not s.visited.has(to):
 		return []
 	var prev := {from: ""}
@@ -51,7 +51,7 @@ static func route(s: GameSession, world: Dictionary, from: String, to: String) -
 		if r == to:
 			break
 		for e: String in ExplorationRules.open_exits(s, world, r):
-			if prev.has(e) or not s.visited.has(e) or blocked(s, world, r, e):
+			if prev.has(e) or not s.visited.has(e) or blocked(s, world, r, e) or (not data.is_empty() and not DoorRules.blocked(s, data, r, e).is_empty()):
 				continue
 			prev[e] = r
 			queue.append(e)

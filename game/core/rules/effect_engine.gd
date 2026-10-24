@@ -178,6 +178,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var trap := ExplorationRules.trap_on_exit(s, data["world"], s.room_id, to)
 			if not trap.is_empty() and ExplorationRules.is_found(s, s.room_id, trap):
 				return {"reason": "путь стережёт найденная ловушка — её обезвреживают или обходят (кнопки игрока), просто пройти нельзя"}
+			if not DoorRules.blocked(s, data, s.room_id, to).is_empty():  # v0.7.22.25
+				return {"reason": "%s — пройти нельзя: открыть её — кнопки игрока (ключ, отмычки, сила, заклинание) или эффект door, если её отпирает хозяин" % DoorRules.describe(s, data, s.room_id, to)}
 			var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as npc_follow
 			for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
 				var nid := str(n)
@@ -305,6 +307,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return ContainerRules.plan_put(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
 		"unlock":
 			return _plan_unlock(s, data, turn_id, e)
+		"door":  # a door on the way (v0.7.22.25)
+			return _plan_door(s, data, turn_id, e)
 		"create_place":  # a room or a small place on an open edge of the pack (v0.7.20.1)
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_place"):
 				return {"reason": "одно новое место за ход"}
@@ -582,6 +586,41 @@ func _plan_unlock(s: GameSession, data: Dictionary, turn_id: String, e: Dictiona
 	return {"plan": {"room": s.room_id, "prop": p["id"], "how": how}, "summary": "%s: %s" % [p["name"], "открыт ключом" if how == "key" else "вскрыт" if how == "pick" else "взломан"]}
 
 
+## The master's door (v0.7.22.25): its owner unlocks or locks it; a passed Sleight of Hand this turn picks it, a passed
+## Athletics breaks it — against DoorRules.dcs.
+func _plan_door(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary) -> Dictionary:
+	var to := str(e.get("to_room", ""))
+	if not ExplorationRules.open_exits(s, data["world"], s.room_id).has(to) or DoorRules.def(data, s.room_id, to).is_empty():
+		return {"reason": "между %s и %s нет двери" % [s.room_id, to]}
+	var action := str(e.get("action", "unlock"))
+	var w := WorldView.new(data["world"])
+	var owner := str(w.site_of(to).get("owner", w.site_of(s.room_id).get("owner", "")))
+	var by_owner := not owner.is_empty() and (s.npcs_here(w.world, s.room_id).has(owner) or s.npcs_here(w.world, to).has(owner)) 		and not s.dead_npcs.has(owner)
+	var dcs := DoorRules.dcs(s, data, s.room_id, to)
+	var passed := func(skill: String, dc: int) -> bool:
+		return (_rolls.get(turn_id, []) as Array).any(func(r: Dictionary) -> bool:
+			return str(r["skill"]) == skill and bool(r["success"]) and int(r["total"]) >= dc)
+	var how := ""
+	match action:
+		"lock":
+			if not by_owner:
+				return {"reason": "запереть дверь может её хозяин, когда он рядом; игрок запирает ключом сам"}
+			how = "owner"
+		"unlock":
+			if DoorRules.blocked(s, data, s.room_id, to).is_empty():
+				return {"reason": "дверь и так открыта"}
+			how = "owner" if by_owner else "pick" if passed.call("sleight_of_hand", int(dcs["pick"])) else ""
+			if how.is_empty():
+				return {"reason": "отпереть может хозяин (его здесь нет) или проверка sleight_of_hand с отмычками (`request_check`) — либо кнопки игрока у выхода"}
+		"break":
+			if not passed.call("athletics", int(dcs["force"])):
+				return {"reason": "сначала проверка athletics (DC движок знает) — `request_check`; при успехе — `door` break"}
+			how = "force"
+	var words := {"lock": "заперта", "unlock": "отперта", "break": "выбита"}
+	return {"plan": {"from": s.room_id, "to": to, "action": action, "how": how},
+		"summary": "Дверь в «%s» %s" % [w.room(to).get("name", to), words[action]]}
+
+
 ## A thing of a quest (its giver hands it over, or a step wants it) never changes hands by a plain effect (v0.7.2):
 ## the master giving it where its giver offers the quest takes the quest — the thing comes with it; anywhere else it
 ## is refused. {} when the thing belongs to no quest.
@@ -808,6 +847,20 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 				_extra_lines.append_array(QuestRules.advance(s, _data))
 		"create_place":
 			_extra_lines.append("выход: [%s]" % WorldGen.apply_place(s, _data, plan))
+		"door":
+			var a := str(plan["from"])
+			var b := str(plan["to"])
+			match str(plan["action"]):
+				"lock":
+					DoorRules.lock(s, a, b)
+				"unlock":
+					DoorRules.unlock(s, _data, a, b)
+				"break":
+					DoorRules.break_down(s, a, b)
+			if str(plan["how"]) != "owner":
+				var seen := DoorRules.witnesses(s, _data, a, b)
+				if not seen.is_empty():
+					_extra_lines.append_array(CrimeRules.on_trespass(s, _data, SiteRules.unwelcome(s, _data, b), b, seen))
 		"unlock":
 			_extra_lines.append_array(ContainerRules.unlock(PropRules.find(s, str(plan["room"]), str(plan["prop"])), str(plan["how"])))
 		"prop_state":

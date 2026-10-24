@@ -427,9 +427,21 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 			dis.tooltip_text = str(trapped[e]["text"]) + "\n" + tr("TRAP_DISARM_TIP")
 			continue
 		var private := not world.is_public(e)  # v0.7.22.24: the player knows before the step
-		var b := _exit_button(line, "→ " + room_name + (tr("EXIT_PRIVATE") if private else ""), GameState.go.bind(e), can_act and not shut)
+		var why := DoorRules.blocked(s, Catalog.data, s.room_id, e)
+		var door_key := "door:" + e
+		var go_or_door := GameState.go.bind(e) if why.is_empty() else _toggle.bind(door_key)  # a shut door opens its ways
+		var b := _exit_button(line, "→ " + room_name + (tr("EXIT_PRIVATE") if private else "") + DoorRules.label(s, Catalog.data, s.room_id, e),
+			go_or_door, can_act and not shut)
 		b.name = "Exit_" + e
 		b.tooltip_text = tr("CRIME_HELD") if CrimeRules.held(s) else room_name
+		if not why.is_empty():
+			b.tooltip_text = "%s
+%s" % [room_name, tr(why)]
+		var ways := DoorRules.ways(s, Catalog.data, s.room_id, e)
+		if not ways.is_empty() and not shut:
+			_more(line, "Door_" + e, door_key)
+			if _open == door_key:
+				_door_acts(e, ways, can_act)
 		var owner := str(world.site_of(e).get("owner", ""))
 		if private and not CrimeRules.held(s) and not owner.is_empty():
 			b.tooltip_text = "%s
@@ -515,6 +527,33 @@ func _show_open() -> void:
 	for n: Node in _content.get_children():
 		if n is HFlowContainer and is_instance_valid(n):
 			_scroll.ensure_control_visible(n as Control)
+
+
+## The ways with a door (v0.7.22.25) under its exit: a key, thieves' tools, force, blows, a spell, a torch, waiting.
+func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
+	var s := GameState.session
+	var acts := HFlowContainer.new()
+	acts.name = "DoorActs_" + to
+	acts.add_theme_constant_override("h_separation", 6)
+	acts.add_theme_constant_override("v_separation", 6)
+	_footer.add_child(acts)
+	var dcs := DoorRules.dcs(s, Catalog.data, s.room_id, to)
+	var d := DoorRules.def(Catalog.data, s.room_id, to)
+	var mat: Dictionary = DoorRules.cfg(Catalog.data)["materials"].get(str(d.get("material", "wood")), {})
+	for w: Dictionary in ways:
+		var how := str(w["how"])
+		var sp := str(w.get("spell", ""))
+		var text := tr("DOOR_WAY_" + how.to_upper())
+		if how == "spell":
+			text = text.format({"spell": str(Catalog.data["spells"].get(sp, {}).get("name", sp))})
+		var btn := _flow(acts, text, func() -> void:
+			var err := GameState.door_act(to, how, sp)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act)
+		btn.name = "DoorWay_%s%s" % [how, "_" + sp if not sp.is_empty() else ""]
+		btn.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		btn.tooltip_text = tr("DOOR_WAY_%s_TIP" % how.to_upper()).format({"dc": dcs.get(how, 0), "ac": int(mat.get("ac", 15)),
+			"hp": DoorRules.hp(s, Catalog.data, s.room_id, to), "max": DoorRules.max_hp(Catalog.data, d)})
 
 
 func _trap(to: String, disarm: bool) -> void:

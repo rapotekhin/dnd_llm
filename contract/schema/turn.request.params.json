@@ -476,6 +476,11 @@
     },
     "Exit": {
       "properties": {
+        "door": {
+          "default": "",
+          "title": "Door",
+          "type": "string"
+        },
         "name": {
           "title": "Name",
           "type": "string"

@@ -29,7 +29,7 @@
 {% if scene %}{{ scene.location_name }}{% if scene.site_name and scene.site_name != scene.room_name %} — {{ scene.site_name }}{% endif %} — {{ scene.room_name }}{% if scene.private %} (частная комната){% endif %}. {{ scene.room_description }}
 {% if scene.time_of_day %}Сейчас: {{ scene.time_of_day }}. Держи это в каждой реплике: не путай ночь с днём и утро с вечером (ночью темно, люди спят, лавки закрыты).
 {% endif %}
-{% if scene.exits %}Выходы: {% for e in scene.exits %}{{ e.name }}{% if not loop.last %}, {% endif %}{% endfor %}.
+{% if scene.exits %}Выходы: {% for e in scene.exits %}{{ e.name }}{% if e.door %} ({{ e.door }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if scene.npcs %}Здесь: {% for n in scene.npcs %}{{ n.name }} [{{ n.npc_id }}] — {{ n.role }}, {{ attitude_word(n.attitude) }}{% if n.follows %}, идёт с героем{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}.{% endif %}{% if scene.summons %} С героем (призваны): {{ scene.summons | join("; ") }}.{% endif %}{% if scene.creatures %} Живые после боя, здесь же (отвечают, если с ними говорят; связан — только кто так помечен): {{ scene.creatures | join("; ") }}.
 {% endif %}{% if scene.props %}Вокруг: {% for p in scene.props %}{{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if scene.hooks %}Зацепки: {{ scene.hooks | join("; ") }}.

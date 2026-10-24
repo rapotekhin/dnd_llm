@@ -134,6 +134,11 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors += [f"комната {rid}: в тайнике {sec['id']} нет предмета {x}" for x in sec.get("loot", {}).get("items", {}) if x not in items]
             if "trap" in sec and sec["trap"]["guards"] not in room["exits"]:
                 errors.append(f"комната {rid}: ловушка {sec['id']} стережёт не выход комнаты ({sec['trap']['guards']})")
+        for to, door in room.get("doors", {}).items():
+            if to not in room["exits"]:
+                errors.append(f"комната {rid}: дверь в {to} — не выход комнаты")
+            if door.get("key") and door["key"] not in items:
+                errors.append(f"комната {rid}: ключ двери в {to} — нет предмета {door['key']}")
         for to, lock in room.get("closed_exits", {}).items():
             if to not in room["exits"]:
                 errors.append(f"комната {rid}: closed_exits {to} — не выход комнаты")

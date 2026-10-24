@@ -1048,5 +1048,9 @@ static func world_spell(s: GameSession, data: Dictionary, spell_id: String) -> A
 				if str(p.get("state", "")) == "closed":
 					p["state"] = "open"
 					lines.append("открылось: %s" % p.get("name", ""))
+			for e: String in ExplorationRules.open_exits(s, world, room):  # the doors of the room too (v0.7.22.25)
+				if DoorRules.blocked(s, data, room, e) in ["DOOR_LOCKED", "DOOR_CLOSED_HOURS", "DOOR_ARCANE"]:
+					DoorRules.spell(s, data, room, e, spell_id)
+					lines.append("открылась дверь: %s" % WorldView.new(world).room(e).get("name", e))
 			lines.append("громкий стук разносится вокруг" if not lines.is_empty() else "запертого рядом нет — только громкий стук")
 	return lines

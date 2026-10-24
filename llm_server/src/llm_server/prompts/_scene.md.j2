@@ -35,7 +35,7 @@
 {% endif %}{% if scene.sneaking %}Игрок крадётся: движется тихо и осторожно.
 {% endif %}
 Выходы (для эффекта `move`):
-{% for e in scene.exits %}- {{ e.name }} [{{ e.room_id }}]
+{% for e in scene.exits %}- {{ e.name }} [{{ e.room_id }}]{% if e.door %} — {{ e.door }}{% endif %}
 {% else %}- нет
 {% endfor %}
 NPC здесь:

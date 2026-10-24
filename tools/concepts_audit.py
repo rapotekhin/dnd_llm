@@ -38,6 +38,8 @@ DECISIONS: dict[str, tuple[str, str]] = {
     "match:effect_engine.gd:_plan": ("concept", "виды эффектов — словарь понятий движка, который знает мастер (протокол); новый вид — новое понятие"),
     "match:effect_engine.gd:_plan_on_foe": ("concept", "эффекты на врага в бою — те же понятия"),
     "match:effect_engine.gd:_apply_one": ("concept", "применение видов эффектов"),
+    "match:effect_engine.gd:_plan_door": ("concept", "три действия эффекта `door` (протокол) — отпереть, запереть, выбить; двери и их числа — rules.doors (v0.7.22.25)"),
+    "dict:effect_engine.gd:_plan_door": ("engine", "слова итога эффекта `door` для ленты: заперта, отперта, выбита"),
     "match:game_session.gd:history": ("engine", "виды записей чата"),
     "match:lookup.gd:find": ("engine", "справка движка по видам"),
     "match:world_pack.gd:_merge": ("engine", "разделы пакета мира"),

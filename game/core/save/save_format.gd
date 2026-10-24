@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 42
+const SAVE_VERSION := 43
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -64,6 +64,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	39: _v39_to_v40,
 	40: _v40_to_v41,
 	41: _v41_to_v42,
+	42: _v42_to_v43,
 }
 
 
@@ -401,3 +402,8 @@ static func _v41_to_v42(data: Dictionary, _ctx: Dictionary) -> void:
 		for r: Variant in group:
 			rooms[str(r)]["site_id"] = sid
 	gen["sites"] = sites
+
+
+## v0.7.22.25: no door has been touched yet.
+static func _v42_to_v43(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["doors"] = {}

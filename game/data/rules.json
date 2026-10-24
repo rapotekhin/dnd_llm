@@ -873,6 +873,19 @@
 		"seized_container": "chest",
 		"seized_name": "Сундук с вашими вещами"
 	},
+	"doors": {
+		"_doc": "Doors (v0.7.22.25, DoorRules): a way between rooms may have a door — the pack's own (a room's `doors` {to: {material, lock, key, locked}}) or the entrance of a site with hours (`default`). Outside the site's hours it is locked. A key or picked lock (Sleight of Hand against containers.lock_dc of its `lock`) opens it until the site's next opening; force (Athletics, the pick DC + containers.force_dc_plus + the material's force_plus) breaks it; blows of the weapon in hand — an attack against the material's ac, damage off its hp; an arcane lock adds arcane_plus to both and only Knock quiets it for knock_minutes; fire (a spell of the fire damage type or a `torch`) burns a wooden door through in burn_minutes. Each try takes try_minutes. Forcing a way into a closed or private site before eyes is a trespass at once.",
+		"default": {"material": "wood", "lock": "simple"},
+		"materials": {
+			"wood": {"name": "дерево", "hp": 18, "ac": 15, "burns": true, "force_plus": 0},
+			"iron": {"name": "железо", "hp": 60, "ac": 19, "burns": false, "force_plus": 5}
+		},
+		"arcane_plus": 10,
+		"knock_minutes": 10,
+		"burn_minutes": 10,
+		"try_minutes": 1,
+		"torch": "torch"
+	},
 	"sites": {
 		"_doc": "Sites (v0.7.22.24, SiteRules): a private room (`public` false of the room or its site) of a site with a living owner — entering it unasked before eyes: the owner trespass_attitude and a light crime `trespass` where there is law, once a day a site. Asked in: the owner goes with the hero or likes the hero from welcome_attitude.",
 		"welcome_attitude": 2,
@@ -1736,6 +1749,7 @@
 		"continual_flame": {"light": true},
 		"find_traps": {"reveal": "trap"},
 		"detect_magic": {"reveal": "magic"},
-		"knock": {"knock": true}
+		"knock": {"knock": true, "door": "unlock"},
+		"arcane_lock": {"door": "lock"}
 	}
 }

@@ -2,7 +2,7 @@
 
 Генерируется: `python tools/concepts_audit.py`. Столп — [«Движок — конструктор, а не список»](../vision/pillars.md#6-движок--конструктор-а-не-список); реестр понятий — [concepts.md](../design/concepts.md); план — [роадмап v0.7.16](roadmap.md#v0716--аудит-по-столпу-6-движок-конструктор). Ищет закрытые перечни случаев в коде вне правил 5e (они — столп 2) и в промптах мастера; решение по каждой находке — в `DECISIONS` инструмента.
 
-Находок: 28 — понятие движка 15, **пробел до инструмента** 1, правило 5e 2, служебное 8, сделано 2.
+Находок: 30 — понятие движка 16, **пробел до инструмента** 1, правило 5e 2, служебное 9, сделано 2.
 Правила 5e вне аудита (столп 2): background_rules.gd, character_builder.gd, character_rules.gd, combat_rules.gd, condition_rules.gd, feature_rules.gd, feature_uses.gd, hero_defense.gd, language_rules.gd, level_up.gd, monster_rules.gd, spell_effects.gd, spell_rules.gd.
 
 | Где | Что | Решение | Почему |
@@ -15,8 +15,10 @@
 | `game/core/rules/crime_rules.gd:488` | match по bribe, pay, stocks, resist | понятие движка | ответ страже — три исхода понятия «задержание» (вергельд, колодки, сопротивление); сумма и сроки — rules.json |
 | `game/core/rules/crime_rules.gd:559` | имя или описание вещи мира в коде | служебное | подпись тела убитого NPC на панели: «Тело: имя» |
 | `game/core/rules/effect_engine.gd:162` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, cast… | понятие движка | виды эффектов — словарь понятий движка, который знает мастер (протокол); новый вид — новое понятие |
-| `game/core/rules/effect_engine.gd:477` | match по damage, condition | понятие движка | эффекты на врага в бою — те же понятия |
-| `game/core/rules/effect_engine.gd:729` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, start_combat… | понятие движка | применение видов эффектов |
+| `game/core/rules/effect_engine.gd:481` | match по damage, condition | понятие движка | эффекты на врага в бою — те же понятия |
+| `game/core/rules/effect_engine.gd:604` | match по lock, unlock, break | понятие движка | три действия эффекта `door` (протокол) — отпереть, запереть, выбить; двери и их числа — rules.doors (v0.7.22.25) |
+| `game/core/rules/effect_engine.gd:619` | словарь id → русский текст в коде | служебное | слова итога эффекта `door` для ленты: заперта, отперта, выбита |
+| `game/core/rules/effect_engine.gd:768` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, start_combat… | понятие движка | применение видов эффектов |
 | `game/core/rules/encounter_rules.gd:146` | словарь id → русский текст в коде | служебное | окончание «связан / связана» по полу героя |
 | `game/core/rules/lookup.gd:10` | match по condition, rule, spell, feature, item, npc | служебное | справка движка по видам |
 | `game/core/rules/prop_rules.gd:55` | имя или описание вещи мира в коде | служебное | подпись контейнера товаров торговца: «Товары: имя» (v0.7.22.8) |

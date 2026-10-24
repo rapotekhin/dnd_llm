@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.50.0"
+PROTOCOL_VERSION = "0.51.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -141,6 +141,7 @@ Gender = Literal["male", "female", "other"]
 class Exit(_In):
     room_id: str
     name: str
+    door: str = ""  # 0.51.0: «дверь (дерево) · заперта до 08:00 — часы объекта»; empty — no door
 
 
 class SceneNpc(_In):
@@ -609,6 +610,16 @@ class UnlockEffect(_Out):
     how: Literal["key", "pick", "force"] = "key"
 
 
+class DoorEffect(_Out):
+    """A door on the way to `to_room` from the hero's room (0.51.0): `unlock` / `lock` — its owner (the site's owner,
+    here or behind it) does it, or `unlock` after a passed Sleight of Hand this turn; `break` — after a passed Athletics
+    this turn. The engine knows the DC; breaking in before eyes is a trespass."""
+
+    kind: Literal["door"] = "door"
+    to_room: str
+    action: Literal["unlock", "lock", "break"] = "unlock"
+
+
 class NpcLink(_Out):
     npc_id: str
     kind: Literal["family", "spouse", "parent", "child", "friend", "rival", "master", "servant", "colleague"]
@@ -1038,7 +1049,7 @@ Effect = Annotated[
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect
-    | OwnerEffect,
+    | OwnerEffect | DoorEffect,
     Field(discriminator="kind"),
 ]
 
