@@ -22,7 +22,9 @@
 
 {% for e in combat.enemies %}- {{ e.name }} [{{ e.id }}]{% if e.monster and e.monster != e.name %} ({{ e.monster }}){% endif %}: {% if e.status == "active" %}{% if e.distance_ft == 0 %}вплотную{% else %}в {{ e.distance_ft }} футах {{ "слева" if e.side == "left" else "справа" }}{% endif %}, {{ {"full": "цел", "hurt": "ранен", "bloodied": "тяжело ранен", "near_death": "при смерти"}.get(e.health, e.health) }}{% if e.surprised %}, застигнут врасплох{% endif %}{% if e.conditions %}, {{ e.conditions | join(", ") }}{% endif %}{% if e.speaks %}; речь: {{ e.speaks }}{% if not e.understands_hero %} (героя не понимает){% endif %}{% endif %}{% else %}{{ {"dead": "повержен", "fled": "сбежал", "surrendered": "сдался", "truce": "опустил оружие"}.get(e.status, e.status) }}{% endif %}.{% if e.description %} {{ e.description }}{% endif %}
 {% endfor %}
-{% for w in combat.incoming %}- На подходе {{ "слева" if w.side == "left" else "справа" }} (через {{ w.in_rounds }} р.): {{ w.names | join(", ") }}.
+{% if combat.allies %}На стороне героя (ходят сами, движок решает их удары — описывай только то, что в строках раунда):
+{% for a in combat.allies %}- {{ a.name }} [{{ a.id }}]{% if a.monster and a.monster != a.name %} ({{ a.monster }}){% endif %}{{ {"follower": ", спутник", "summon": ", призван заклинанием", "pack": ""}.get(a.source, "") }}: {% if a.status == "active" %}{% if a.distance_ft == 0 %}рядом с героем{% else %}в {{ a.distance_ft }} футах{% endif %}, {{ {"full": "цел", "hurt": "ранен", "bloodied": "тяжело ранен", "near_death": "при смерти"}.get(a.health, a.health) }}{% else %}{{ {"down": "без сознания", "gone": "исчез"}.get(a.status, a.status) }}{% endif %}.
+{% endfor %}{% endif %}{% for w in combat.incoming %}- На подходе {{ "слева" if w.side == "left" else "справа" }} (через {{ w.in_rounds }} р.): {{ w.names | join(", ") }}.
 {% endfor %}
 {% if combat.player_down %}Персонаж игрока лежит без сознания.
 {% endif %}{% if combat.player_hidden %}Персонаж игрока спрятался — враги его не видят.

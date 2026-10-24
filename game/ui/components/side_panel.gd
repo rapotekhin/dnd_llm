@@ -142,6 +142,39 @@ func _rebuild() -> void:
 						EventBus.message.emit(tr(err)), can_act)
 				at.name = "Attack_" + id  # the fight at once, without the master
 				at.tooltip_text = tr("BTN_ATTACK_NPC").format({"name": n.get("name", id)})
+				var acts: Array = []  # v0.7.22.22 (#25): a follower by the buttons, as the prisoners
+				if s.followers.has(id):
+					acts = [["stay", "BTN_FOLLOWER_STAY"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
+				elif str(s.npc_at.get(id, "")) == s.room_id:
+					acts = [["lead", "BTN_FOLLOWER_LEAD"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
+				for fa: Array in acts:
+					var what: String = fa[0]
+					var fb := _small(row, tr(fa[1]), func() -> void:
+						var err := GameState.follower_act(id, what)
+						if not err.is_empty():
+							EventBus.message.emit(tr(err)), can_act)
+					fb.name = "Follower_%s_%s" % [what, id]
+					if tr(fa[1] + "_TIP") != fa[1] + "_TIP":
+						fb.tooltip_text = tr(fa[1] + "_TIP")
+		if not s.summons.is_empty():  # v0.7.22.22: the creatures a spell called
+			_subheading("SIDE_WITH_YOU")
+			var texts := AllyRules.summon_lines(s, Catalog.data)
+			for i in s.summons.size():
+				var srow := HBoxContainer.new()
+				srow.add_theme_constant_override("separation", 6)
+				_content.add_child(srow)
+				var sl := Label.new()
+				sl.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+				sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				sl.text = texts[i]
+				srow.add_child(sl)
+				var sid := str(s.summons[i]["id"])
+				var db := _small(srow, tr("BTN_SUMMON_DISMISS"), func() -> void:
+					var err := GameState.dismiss_summon(sid)
+					if not err.is_empty():
+						EventBus.message.emit(tr(err)), can_act)
+				db.name = "Dismiss_" + sid
 		for away: String in SceneRules.absent(s, Catalog.data["world"], s.room_id):  # v0.7.14.2: their hours
 			_line(away, true)
 		for body: Dictionary in CrimeRules.bodies_here(s, Catalog.data):  # v0.7.14: the body of a killed NPC

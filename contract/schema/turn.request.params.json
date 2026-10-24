@@ -249,6 +249,65 @@
       "title": "CharacterSheet",
       "type": "object"
     },
+    "CombatAlly": {
+      "description": "A fighter on the hero's side under the engine's AI (0.49.0): a follower, a pack ally, a summoned creature.",
+      "properties": {
+        "distance_ft": {
+          "default": 0,
+          "title": "Distance Ft",
+          "type": "integer"
+        },
+        "health": {
+          "default": "",
+          "title": "Health",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "monster": {
+          "default": "",
+          "title": "Monster",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "npc_id": {
+          "default": "",
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "source": {
+          "default": "pack",
+          "enum": [
+            "follower",
+            "pack",
+            "summon"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "down",
+            "gone"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "CombatAlly",
+      "type": "object"
+    },
     "CombatFoe": {
       "properties": {
         "conditions": {
@@ -363,6 +422,13 @@
     "CombatInfo": {
       "description": "The fight in progress (0.7.0): the engine's field and the lines of the round being narrated.",
       "properties": {
+        "allies": {
+          "items": {
+            "$ref": "#/$defs/CombatAlly"
+          },
+          "title": "Allies",
+          "type": "array"
+        },
         "enemies": {
           "items": {
             "$ref": "#/$defs/CombatFoe"
@@ -692,6 +758,13 @@
           "default": false,
           "title": "Sneaking",
           "type": "boolean"
+        },
+        "summons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Summons",
+          "type": "array"
         },
         "time_of_day": {
           "default": "",

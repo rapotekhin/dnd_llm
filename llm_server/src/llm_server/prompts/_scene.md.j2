@@ -42,7 +42,8 @@ NPC здесь:
   Помнит о герое: {{ n.memory | join("; ") }}.{% endif %}{% if n.secrets %}
   Скрывает (саму тайну ты не знаешь — только намёк; не выдумывай её): {{ n.secrets | join("; ") }}.{% endif %}
 {% else %}{% if not scene.creatures %}- никого
-{% endif %}{% endfor %}{% for c in scene.creatures %}- {{ c }} — живой, здесь, в сцене после боя: отвечает, если с ним говорят; связан — только если так написано (связать, отпустить, вести — кнопки игрока)
+{% endif %}{% endfor %}{% for c in scene.summons %}- {{ c }} — призван заклинанием героя, идёт с ним, в бою на его стороне; отпускает игрок кнопкой
+{% endfor %}{% for c in scene.creatures %}- {{ c }} — живой, здесь, в сцене после боя: отвечает, если с ним говорят; связан — только если так написано (связать, отпустить, вести — кнопки игрока)
 {% endfor %}
 {% if scene.props %}Вокруг (только это и описывай):
 {% for p in scene.props %}- {{ p.name }} [{{ p.prop_id }}]{% if p.state %} ({{ {"open": "открыто", "closed": "закрыто", "broken": "сломано", "burned": "сожжено", "moved": "сдвинуто"}.get(p.state, p.state) }}){% endif %}{% if p.owner %}, хозяин: {{ p.owner }}{% endif %}{% if p.portable %}, можно взять{% endif %}.{% if p.description %} {{ p.description }}{% endif %}{% if p.text %} Написано: «{{ p.text }}»{% endif %}{% if p.container %} Это {{ p.container }}{% if p.locked %}, заперт{% endif %}; внутри: {{ p.contents or "пусто" }}.{% endif %}

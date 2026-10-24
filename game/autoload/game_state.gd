@@ -206,6 +206,8 @@ func _spend(what: Dictionary) -> Dictionary:
 			if chk.has("reason"):
 				return {"reason": str(chk["reason"])}
 			lines = SpellRules.cast(c, Catalog.data, chk["spell_id"], int(chk["slot"]), session, str(what.get("target", "")).is_empty())
+			lines.append_array(AllyRules.expire(session))  # a new concentration lets the old summons go (v0.7.22.22)
+			lines.append_array(AllyRules.summon(session, Catalog.data, str(chk["spell_id"])))
 			what["spent_slot"] = int(chk["slot"])
 			facts = "Игрок колдует " + SpellRules.describe(Catalog.data, chk["spell_id"], int(chk["slot"])) + \
 				". Движок уже потратил ячейку — не вызывай cast сам; опиши, как это выглядит и что происходит."
@@ -1155,6 +1157,7 @@ func finish_combat(take: Array = []) -> void:
 			s.encounters_done.append(str(s.combat["encounter"]))
 	if outcome in ["victory", "truce"]:
 		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id))  # the beaten stay in the room (v0.7.22.11)
+	lines.append_array(AllyRules.after_fight(s))  # v0.7.22.22: the fallen followers come to, the summoned keep their wounds
 	var by_law := outcome == "captured" and CombatRules.law_captors(s)
 	if by_law:  # v0.7.22.17: the guard holds the hero, as at an arrest
 		lines.append_array(CrimeRules.held_after_fight(s, Catalog.data))
@@ -1378,7 +1381,8 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 			_request("enter", "\n".join(lines.slice(1) + [str(meet["line"])]))
 			return
 		var src := {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
-			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {}), "parley": str(enc.get("parley", ""))}
+			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {}), "parley": str(enc.get("parley", "")),
+			"allies": enc.get("allies", [])}
 		if int(meet["stealth"]) >= 0:
 			src["stealth_total"] = int(meet["stealth"])
 		start_combat(enc["enemies"], src)
@@ -1669,7 +1673,8 @@ func encounter_attack(surprise: bool = true) -> String:
 	var enc := EncounterRules.lurking_encounter(session, Catalog.data, session.room_id)
 	session.lurking.erase(session.room_id)
 	var src := {"encounter": str(enc.get("id", "")), "room_from": str(lk.get("from", "")), "sneak": surprise, "waves": enc.get("waves", []),
-		"help": enc.get("help", {}), "parley": str(enc.get("parley", ""))}
+		"help": enc.get("help", {}), "parley": str(enc.get("parley", "")),
+			"allies": enc.get("allies", [])}
 	if surprise:
 		src["stealth_total"] = 99  # nobody saw the hero: all caught off guard
 		src["from_hiding"] = true
@@ -1696,7 +1701,8 @@ func encounter_parley(skill: String) -> String:
 	_log("События: " + ", ".join(r["lines"]))
 	if bool(r["fight"]):
 		start_combat(enc["enemies"], {"encounter": str(enc.get("id", "")), "room_from": from, "waves": enc.get("waves", []),
-			"help": enc.get("help", {}), "parley": str(enc.get("parley", ""))})
+			"help": enc.get("help", {}), "parley": str(enc.get("parley", "")),
+			"allies": enc.get("allies", [])})
 		return ""
 	EventBus.state_changed.emit()
 	_request("action", text + " [движок уже решил: %s — опиши это, эффекты не нужны]" % ", ".join(r["lines"]))
@@ -1718,6 +1724,46 @@ func escape_captivity(how: String) -> String:
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 	_request("action", text + " [движок уже решил: %s — опиши это, эффекты не нужны]" % ", ".join(lines))
+	return ""
+
+
+## A follower by the buttons, without the master (v0.7.22.22, #25): `what` stay (waits here), lead (one left here
+## goes again), let_go (goes home). "" or a key.
+func follower_act(npc_id: String, what: String) -> String:
+	if session == null or is_busy():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var here := session.followers.has(npc_id) or str(session.npc_at.get(npc_id, "")) == session.room_id
+	if not here:
+		return "ALLY_NOT_HERE"
+	var name := str(world().npc(npc_id).get("name", npc_id))
+	var plan := {"follow_npc": npc_id, "on": what == "lead", "room": session.room_id if what == "stay" else ""}
+	if what == "lead" and session.followers.size() >= int(FollowRules.cfg(Catalog.data)["max"]):
+		return "ALLY_TOO_MANY"
+	FollowRules.apply(session, plan)
+	var line: String = {"stay": "%s остаётся здесь и ждёт", "lead": "%s снова идёт с героем", "let_go": "%s уходит к себе"}[what] % name
+	_add(GameSession.effect_entry([line]))
+	_log("События: " + line)
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	return ""
+
+
+## «Отпустить» a summoned creature (v0.7.22.22). "" or a key.
+func dismiss_summon(summon_id: String) -> String:
+	if session == null or is_busy() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var name := ""
+	for m: Dictionary in session.summons:
+		if str(m["id"]) == summon_id:
+			name = str(m["name"])
+	var why := AllyRules.dismiss(session, summon_id)
+	if not why.is_empty():
+		return why
+	_add(GameSession.effect_entry(["%s отпущен(а) и исчезает" % name]))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 	return ""
 
 

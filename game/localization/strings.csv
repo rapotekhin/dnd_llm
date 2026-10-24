@@ -928,3 +928,15 @@ GOAL_HINT,"Чего герой хочет добиться — любыми сл
 GOAL_PLACEHOLDER,"Например: убить дракона, открыть свою таверну, изучить пещеры"
 BTN_GOAL_SAVE,Записать
 BTN_GOAL_CLEAR,Стереть
+COMBAT_ALLY_DOWN,без сознания
+COMBAT_ALLY_ABOUT,"На вашей стороне — ходит сам, по правилам движка.
+{monster}"
+SIDE_WITH_YOU,С вами
+BTN_FOLLOWER_STAY,Ждать здесь
+BTN_FOLLOWER_LEAD,Вести с собой
+BTN_FOLLOWER_LET_GO,Отпустить
+BTN_FOLLOWER_LET_GO_TIP,Спутник уходит к себе домой
+BTN_FOLLOWER_STAY_TIP,Спутник остаётся в этом месте и ждёт
+BTN_SUMMON_DISMISS,Отпустить
+ALLY_NOT_HERE,Этого спутника здесь нет
+ALLY_TOO_MANY,С героем уже идут все, кого можно взять

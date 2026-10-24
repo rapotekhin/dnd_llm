@@ -156,8 +156,20 @@ class MockEngine:
     """Answers engine.* from the scenario's `engine` block and records every call."""
 
     engine: dict[str, Any]
+    scene: dict[str, Any] = field(default_factory=dict)
     calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
     _n: int = 0
+
+    def _scene_edges(self) -> list[dict[str, Any]]:
+        """The hero's own room's open edges first, as the engine's reach lists them; "[N] text (terrain, …)" in the scene."""
+        room = self.scene.get("room", {})
+        out = []
+        for line in self.scene.get("open_edges", []):
+            m = re.match(r"\[(\d+)\]\s*(.*?)(?:\s*\(([^)]*)\))?$", str(line))
+            if m:
+                out.append({"room_id": room.get("id", ""), "room": room.get("name", ""), "edge": int(m[1]), "text": m[2],
+                            "terrain": [x.strip() for x in (m[3] or "").split(",") if x.strip()]})
+        return out
 
     async def call_engine(self, method: str, params: BaseModel) -> Any:
         p = params.model_dump(mode="json", exclude_none=True)
@@ -189,7 +201,7 @@ class MockEngine:
         if method == "engine.find_places":  # v0.7.20.1
             return {"places": [{"room_id": p.get("id", ""), "name": p.get("name", ""), "location": p.get("location", "")}
                                for p in self.engine.get("find_places", [])],
-                    "edges": self.engine.get("find_edges", [])}  # 0.48.0: the open edges of the known world
+                    "edges": self._scene_edges() + list(self.engine.get("find_edges", []))}  # 0.48.0: the open edges of the known world
         if method == "engine.find_quests":  # v0.7.21
             return {"quests": [{"quest_id": q.get("id", ""), "title": q.get("title", ""), "giver": q.get("giver", ""),
                                 "status": q.get("status", "offered")} for q in self.engine.get("find_quests", [])]}
@@ -390,7 +402,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
         o.status, o.note = "unsupported", reason
         return o
     params = to_turn_params(sc)
-    engine = MockEngine(sc.get("engine", {}))
+    engine = MockEngine(sc.get("engine", {}), sc.get("snapshot", {}).get("scene", {}))
     ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]
     if getattr(model, "system", "") == "openrouter":  # the same providers as the game (v0.7.14.4)
         await PICKER.refresh(model.model_name)

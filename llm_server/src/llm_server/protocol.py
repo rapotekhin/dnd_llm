@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.48.0"
+PROTOCOL_VERSION = "0.49.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -203,6 +203,7 @@ class Scene(_In):
     chronicle: list[str] = Field(default_factory=list)  # the last facts of the engine: «день 2, 09:12, Таверна — …» (0.19.0)
     reputation: str = ""  # the hero's name in this settlement: «Ольховый Брод — свой (+1)» (0.24.0)
     open_edges: list[str] = Field(default_factory=list)  # where the pack lets the master draw new places (0.32.0)
+    summons: list[str] = Field(default_factory=list)  # 0.49.0: creatures a spell called to go with the hero — «Волк 1 (Призыв зверей, до конца концентрации)»
 
 
 class InventoryLine(_In):
@@ -353,11 +354,25 @@ class CombatIncoming(_In):
     in_rounds: int = 1
 
 
+class CombatAlly(_In):
+    """A fighter on the hero's side under the engine's AI (0.49.0): a follower, a pack ally, a summoned creature."""
+
+    id: str
+    name: str
+    monster: str = ""
+    distance_ft: int = 0
+    status: Literal["active", "down", "gone"] = "active"  # down — a follower or a pack ally unconscious; gone — the summoned vanished
+    health: str = ""
+    source: Literal["follower", "pack", "summon"] = "pack"
+    npc_id: str = ""
+
+
 class CombatInfo(_In):
     """The fight in progress (0.7.0): the engine's field and the lines of the round being narrated."""
 
     round: int = 1
     enemies: list[CombatFoe] = Field(default_factory=list)
+    allies: list[CombatAlly] = Field(default_factory=list)  # 0.49.0
     outcome: str = ""  # "" | victory | truce | player_fled | captured | dead
     player_down: bool = False
     player_hidden: bool = False  # the player hid: foes do not see them (0.8.0)

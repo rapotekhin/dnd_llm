@@ -38,7 +38,8 @@ func _init() -> void:
 				LevelUp.apply(s.character, data, LevelUp.default_picks(s.character, data))
 				CharacterRules.refresh(s.character, data)
 			s.character["hp"] = int(s.character["max_hp"])
-			CombatRules.start(s, data, enc["enemies"], {"waves": enc.get("waves", []), "help": enc.get("help", {}), "ambush": enc.get("ambush", false)})
+			CombatRules.start(s, data, enc["enemies"], {"waves": enc.get("waves", []), "help": enc.get("help", {}), "ambush": enc.get("ambush", false),
+				"allies": [] if OS.get_environment("BALANCE_NO_ALLIES") == "1" else enc.get("allies", [])})
 			var guard := 0
 			var log: Array[String] = []
 			while str(s.combat["outcome"]).is_empty() and guard < 400:

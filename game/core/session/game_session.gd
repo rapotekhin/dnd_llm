@@ -155,6 +155,10 @@ var generated: Dictionary = {}
 ## NPCs who go with the hero (v0.7.20.3, FollowRules) and those left in a room other than their own: npc_id → room.
 var followers: Array[String] = []
 var npc_at: Dictionary = {}
+## Creatures a spell called to go with the hero (v0.7.22.22, AllyRules): [{id, spell, monster, name, until, concentration,
+## hp, helper}]; `until` — the absolute minute they go, −1 until let go.
+var summons: Array[Dictionary] = []
+var summon_counter: int = 0
 ## NPC secrets the hero learned (v0.7.15.3): "npc_id:secret_id".
 var secrets_told: Array[String] = []
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
@@ -453,6 +457,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"generated": generated,
 		"followers": followers,
 		"npc_at": npc_at,
+		"summons": summons,
+		"summon_counter": summon_counter,
 		"reputation": reputation,
 		"attitude_base": attitude_base,
 		"crimes": crimes,
@@ -639,6 +645,10 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.followers.append(str(n))
 	for k: String in d.get("npc_at", {}):
 		s.npc_at[k] = str(d["npc_at"][k])
+	for m: Variant in d.get("summons", []):
+		if m is Dictionary:
+			s.summons.append((m as Dictionary).duplicate(true))
+	s.summon_counter = int(d.get("summon_counter", 0))
 	for k: String in d.get("reputation", {}):
 		s.reputation[k] = int(d["reputation"][k])
 	for k: String in d.get("attitude_base", {}):

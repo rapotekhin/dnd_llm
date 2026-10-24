@@ -50,6 +50,7 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 		lines.append("Время суток: %s" % part_name(s, data))
 	lines.append_array(ConditionRules.expire(s, data))
 	lines.append_array(SpellEffects.npc_expire(s, data))  # Charm Person on an NPC ends (v0.7.22.3)
+	lines.append_array(AllyRules.expire(s))  # the summoned go when their time is out (v0.7.22.22)
 	if data["rules"].has("creatures"):
 		lines.append_array(CreatureRules.tick(s, data))  # the beaten foes left alone go (v0.7.22.11)
 	lines.append_array(_awake(s, data))

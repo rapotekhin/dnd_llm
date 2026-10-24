@@ -264,6 +264,7 @@
 									"enemies": {"$ref": "#/$defs/foes"},
 									"ambush": {"type": "boolean"},
 									"parley": {"enum": ["hard"]},
+									"allies": {"$ref": "#/$defs/foes"},
 									"waves": {
 										"type": "array",
 										"items": {

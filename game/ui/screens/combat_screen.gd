@@ -381,6 +381,26 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			chip.add_child(me)
 			if bool(CombatRules.player(s).get("hidden", false)):
 				CombatFx.look(chip, "hidden")
+		for id: String in CombatRules.allies(s, false):  # v0.7.22.22: the hero's side, not a target of the buttons
+			var a := CombatRules.fighter(s, id)
+			if int(a["col"]) != col or str(a["status"]) == "gone":
+				continue
+			var ally := PanelContainer.new()
+			ally.name = "Foe_" + id
+			box.add_child(ally)
+			var al := Label.new()
+			al.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			al.mouse_filter = Control.MOUSE_FILTER_STOP
+			al.text = "%s\nHP %d/%d · КД %d%s" % [a["name"], int(a["hp"]), int(a["max_hp"]), int(a["ac"]),
+				("\n" + tr("COMBAT_ALLY_DOWN")) if str(a["status"]) == "down" else ""]
+			al.add_theme_color_override("font_color", UiTheme.OK if str(a["status"]) == "active" else UiTheme.MUTED)
+			var ally_name := str(a["name"])
+			var ally_about := tr("COMBAT_ALLY_ABOUT").format({"monster": CombatRules.monster_card(s, data, a)}) + \
+				("\n\n" + str(a["desc"]) if not str(a.get("desc", "")).is_empty() else "")
+			al.mouse_entered.connect(func() -> void: _details.show_text(ally_name, ally_about))
+			ally.add_child(al)
 		for id: String in s.combat.get("order", []):
 			var f := CombatRules.fighter(s, id)
 			if str(f.get("side")) != "enemy" or CombatRules.shown_col(f) != col:
@@ -565,7 +585,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			if lv > 0 and slot == 0 and not free:
 				_disabled(sp, label)
 				continue
-			if spell.has("heal_at_slot") or SpellEffects.self_spell(data, id) or int(spell.get("range_ft", 0)) == 0 and not spell.has("area"):
+			if spell.has("heal_at_slot") or SpellEffects.self_spell(data, id) or int(spell.get("range_ft", 0)) == 0 and not spell.has("area") 					or not AllyRules.summon_spec(data, id).is_empty():
 				var b := _button(sp, "Cast_" + id, label, mine)
 				_details.hook(b, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
 				b.pressed.connect(func() -> void: _do(_conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, ""))))

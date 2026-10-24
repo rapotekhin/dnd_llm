@@ -553,6 +553,7 @@ def main() -> int:
     playable = {k: v for k, v in spells.items() if int(v.get("level", 0)) <= 3}
 
     spell_effects = set(rules.get("spell_effects", {})) - {"_doc"}
+    summons = set(rules.get("allies", {}).get("summons", {}))  # v0.7.22.22: allies in a fight
 
     def spell_status(sid: str) -> str:
         if sid in engine:
@@ -563,6 +564,8 @@ def main() -> int:
             return "движок: невидимость"
         if sid in spell_effects:
             return "движок: усиление или ослабление"
+        if sid in summons:
+            return "движок: союзники в бою"
         if sid in SPELL_LATER:
             return "ждёт M4"
         if group_of.get(sid) == "world":

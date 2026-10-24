@@ -223,6 +223,10 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 						e.append("комната %s: встреча %s — волна {round ≥ 2, side, enemies}" % [id, enc["id"]])
 					else:
 						foes.append_array(wave["enemies"])
+				if not (enc.get("allies", []) is Array):
+					e.append("комната %s: встреча %s — allies [{monster, name, desc}]" % [id, enc["id"]])
+				else:
+					foes.append_array(enc.get("allies", []))  # v0.7.22.22: the hero's side, the same monsters' check
 				var help: Variant = enc.get("help")
 				if help != null:
 					if not (help is Dictionary) or not (help.get("enemies") is Array):

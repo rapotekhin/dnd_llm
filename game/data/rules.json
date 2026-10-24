@@ -346,6 +346,16 @@
 		"min_attitude": 2,
 		"max": 3
 	},
+	"allies": {
+		"_doc": "Allies in a fight (v0.7.22.22, AllyRules): fighters on the hero's side under the engine's AI — followers who join (not against the law's guard or the people of their own location), a pack encounter's `allies`, summoned creatures. summons — a spell → {monster, count, minutes (absent — until let go), helper (does not attack: the Help action, the hero's next attack at that foe with advantage)}; a concentration spell's creatures go when it ends. Followers at 0 HP fall unconscious and come to after the fight; a summoned one at 0 HP vanishes.",
+		"followers_join": true,
+		"summons": {
+			"find_familiar": {"monster": "owl", "count": 1, "helper": true},
+			"find_steed": {"monster": "warhorse", "count": 1},
+			"conjure_animals": {"monster": "wolf", "count": 4, "minutes": 60},
+			"animate_dead": {"monster": "skeleton", "count": 1, "minutes": 1440}
+		}
+	},
 	"reputation": {
 		"_doc": "Reputation in a settlement (v0.7.17, ReputationRules): points of the hero in a pack location with settlement: true; thresholds → steps −3…+3 (names); points by the engine's facts; master_max — the master's effect for a deed the place learned of; prices of every trader of the place (buy_pct the hero pays, sell_pct the trader pays) and the attitude of the people not dealt with yet (stranger_attitude).",
 		"thresholds": [5, 15, 30],

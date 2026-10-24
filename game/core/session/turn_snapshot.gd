@@ -41,6 +41,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"props": _props(s, data),
 			"creatures": CreatureRules.snapshot(s, data, s.room_id) + EncounterRules.snapshot(s, data, s.room_id),  # v0.7.22.11, v0.7.22.12
 			"closed_exits": closed_exits(s, data["world"]),
+			"summons": AllyRules.summon_lines(s, data),  # v0.7.22.22
 			"chronicle": s.chronicle_tail(data["world"], 12),
 			"reputation": ReputationRules.text(s, data, loc_id),
 			"open_edges": WorldGen.open_edges(s, data, s.room_id).map(func(e: Dictionary) -> String:

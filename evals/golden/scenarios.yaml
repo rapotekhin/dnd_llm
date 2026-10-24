@@ -48,6 +48,8 @@ bases:
       validate: accept
       find_items: []
       lookup: {}
+      find_edges:  # the town's edge next to the hall, as the engine's reach shows it (0.48.0)
+        - {room_id: room_market, room: "Рыночная площадь", location: "Серое Устье", edge: 0, text: "переулки и дворы вокруг рынка — дома, лавки, мастерские", terrain: [grassland], new_location: false}
 
 scenarios:
 
@@ -669,6 +671,31 @@ scenarios:
     rubric:
       - "Айра промахивается, гоблин рядом ранит её ятаганом, стрела второго гоблина проходит мимо — именно так, без новых ударов"
       - "Чисел бросков, КД и урона в тексте нет"
+
+  - id: allies_in_the_round
+    title: "Союзники в раунде — их удары только по строкам движка (v0.7.22.22)"
+    category: combat
+    extends: tavern
+    mode: combat
+    kind: combat_round
+    input: "Ждан из ополчения — Длинный лук по Сектант Пепла: 16 + 4 = 20 против КД 12 — попадание, 7 (колющий)\nСектант Пепла повержен\nЖрец Пепла — Кинжал по Влада из ополчения: 15 + 4 = 19 против КД 16 — попадание, 5 (колющий)\nАйра — Длинный меч по Жрец Пепла: 6 + 5 = 11 против КД 13 — промах"
+    snapshot:
+      combat:
+        round: 2
+        enemies:
+          - {id: e1, name: "Жрец Пепла", monster: "Фанатик культа", distance_ft: 0, side: same, status: active, health: full}
+          - {id: e2, name: "Сектант Пепла", monster: "Культист", distance_ft: 30, side: right, status: dead, health: dead}
+        allies:
+          - {id: a3, name: "Ждан из ополчения", monster: "Разведчик", distance_ft: 0, status: active, health: full, source: pack}
+          - {id: a4, name: "Влада из ополчения", monster: "Стражник", distance_ft: 0, status: active, health: hurt, source: pack}
+    expect:
+      check: {required: false}
+      effects: {max_count: 0}
+      narration:
+        must_not_match: ["КД", "\\d+ против"]
+    rubric:
+      - "Стрела Ждана сражает сектанта, Жрец ранит Владу кинжалом, удар Айры мимо — союзники делают ровно то, что в строках, без новых ударов и без того, чтобы мастер решал за них"
+      - "Ждан и Влада описаны как союзники героя, а не враги"
 
   - id: combat_parley_words
     title: "Переговоры словами в бою — проверка, исход от движка в note"
@@ -2173,6 +2200,7 @@ scenarios:
         open_edges: ["[0] чаща по обе стороны просеки (forest)"]
     engine:
       find_places: []
+      find_edges: []
     expect:
       effects: {required_kinds_any: [create_place, move]}
       tools_required: [find_places]
@@ -2184,6 +2212,8 @@ scenarios:
     category: concepts
     extends: tavern
     input: "Выхожу через заднюю дверь таверны и иду искать заброшенную мельницу где-то за городом."
+    engine:
+      find_edges: []
     expect:
       effects: {forbidden_kinds: [create_place]}
     rubric:
