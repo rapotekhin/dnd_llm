@@ -33,7 +33,7 @@ const app = new EditorApp({
 	showLinks: true,
 	welcome: `
 		<h2>Редактор мира</h2>
-		<p>Пакеты мира из <code>game/data/worlds/&lt;id&gt;/</code>: локации, комнаты (выходы, NPC, встречи с <code>enemies</code> / <code>allies</code> / <code>waves</code>, открытые края, тайны),
+		<p>Пакеты мира из <code>game/data/worlds/&lt;id&gt;/</code>: локации, объекты (здания, дворы, пещеры), комнаты (выходы, NPC, встречи с <code>enemies</code> / <code>allies</code> / <code>waves</code>, открытые края, тайны),
 		NPC, задания, предметы пакета, готовые персонажи и <code>pack.json</code>. Ссылки кликабельны, в «Связях» видно, кто ссылается на запись.</p>
 		<p><b>Открыть папку</b> — корень репозитория или <code>game/data</code> (тогда видны все пакеты и SRD для подсказок) либо папка одного пакета.
 		Нужен Chrome или Edge; без них — <b>Открыть только для чтения</b> (правки скачаются файлами) или <code>python tools/editors/serve.py</code>.</p>
@@ -78,12 +78,18 @@ const app = new EditorApp({
 			sub: (e) => [e.terrain, e.settlement ? 'поселение' : '', e.law ? 'закон: ' + (e.law.name || '') : ''].filter(Boolean).join(' · '),
 			filterOrder: ['terrain', 'settlement', 'indoor', 'lit', 'dark'],
 			refs: [{ p: 'law.guards.[]', to: 'npcs' }, { p: 'law.prison', to: 'rooms' }, { p: 'law.guard_monster', to: 'monsters' }] });
+		add({ id: 'sites', group: 'Мир', title: 'Объекты', file: wfile, at: ['sites'], idHint: 'например brod-tavern',
+			note: 'Объект — здание, двор или пещера внутри локации; у каждой комнаты есть site_id объекта той же локации.',
+			sub: (e, sid) => [world().locations?.[e.location_id]?.name || e.location_id, `комнат ${Object.values(world().rooms || {}).filter((r) => r.site_id === sid).length}`,
+				e.owner ? 'хозяин: ' + (world().npcs?.[e.owner]?.name || e.owner) : '', e.public === false ? 'частный' : ''].filter(Boolean).join(' · '),
+			filterOrder: ['location_id', 'public', 'tags', 'owner'],
+			refs: [{ p: 'location_id', to: 'locations' }, { p: 'owner', to: 'npcs' }, { p: 'entry', to: 'rooms' }] });
 		add({ id: 'rooms', group: 'Мир', title: 'Комнаты', file: wfile, at: ['rooms'], idHint: 'латиница через дефис, например brod-square',
-			sub: (e) => [world().locations?.[e.location_id]?.name || e.location_id, `выходов ${(e.exits || []).length}`, (e.npcs || []).length ? `NPC ${e.npcs.length}` : '',
+			sub: (e) => [world().locations?.[e.location_id]?.name || e.location_id, world().sites?.[e.site_id]?.name || e.site_id, `выходов ${(e.exits || []).length}`, (e.npcs || []).length ? `NPC ${e.npcs.length}` : '',
 				e.encounter ? `⚔ ${e.encounter.id}` : '', (e.open_edges || []).length ? 'открытый край' : ''].filter(Boolean).join(' · '),
 			computed: { 'встреча': (e) => !!e.encounter, 'открытый край': (e) => !!(e.open_edges || []).length, 'тайны': (e) => !!(e.secrets || []).length, 'варианты': (e) => !!(e.variants || []).length },
-			filterOrder: ['location_id', '=встреча', '=тайны', '=открытый край', '=варианты', 'tags', 'indoor', 'dark'],
-			refs: [{ p: 'location_id', to: 'locations' }, { p: 'exits.[]', to: 'rooms' }, { p: 'npcs.[]', to: 'npcs' }, { p: 'closed_exits.{}', to: 'rooms' },
+			filterOrder: ['location_id', 'site_id', 'public', '=встреча', '=тайны', '=открытый край', '=варианты', 'tags', 'indoor', 'dark'],
+			refs: [{ p: 'location_id', to: 'locations' }, { p: 'site_id', to: 'sites' }, { p: 'exits.[]', to: 'rooms' }, { p: 'npcs.[]', to: 'npcs' }, { p: 'closed_exits.{}', to: 'rooms' },
 				{ p: '**.monster', to: 'monsters' }, { p: '**.loot.items.{}', to: 'all_items' }, { p: 'secrets.[].trap.guards', to: 'rooms' },
 				{ p: 'variants.[].npcs.[]', to: 'npcs' }, ...WHEN_REFS('closed_exits.*.')] });
 		add({ id: 'npcs', group: 'Мир', title: 'NPC', file: wfile, at: ['npcs'], idHint: 'например npc_smith',
@@ -152,7 +158,12 @@ const app = new EditorApp({
 		const firstLoc = Object.keys(app.coll('locations').container() || {})[0] || '';
 		const curRoom = app.cur?.id === 'rooms' && app.selected ? app.coll('rooms').get(app.selected) : null;
 		switch (c.id) {
-			case 'rooms': return { name: '', location_id: curRoom?.location_id || firstLoc, description: '', exits: [], npcs: [] };
+			case 'rooms': {
+				const loc = curRoom?.location_id || firstLoc;
+				const site = curRoom?.site_id || Object.entries(app.coll('sites').container() || {}).find(([, x]) => x.location_id === loc)?.[0] || '';
+				return { name: '', location_id: loc, site_id: site, description: '', exits: [], npcs: [] };
+			}
+			case 'sites': return { name: '', location_id: curRoom?.location_id || firstLoc, description: '' };
 			case 'locations': return { name: '', description: '', terrain: '', lit: true };
 			case 'npcs': return { name: '', role: '', race: 'человек', gender: 'male', description: '', personality: '' };
 			case 'quests': return { title: '', description: '', giver: '', offer_text: '', steps: [{ text: '', when: { talk: '' }, action: '', done_text: '', reward_cp: 0 }] };
@@ -227,7 +238,7 @@ function validatePack(app) {
 	const where = (doc, path) => {
 		if (doc === 'pack') return ['pack', pack.id];
 		if (doc === 'characters') return ['presets', C?.presets?.[path[1]]?.id ?? ''];
-		const map = { rooms: 'rooms', npcs: 'npcs', quests: 'quests', locations: 'locations', items: 'pack_items', services: 'services', start_room: 'start' };
+		const map = { sites: 'sites', rooms: 'rooms', npcs: 'npcs', quests: 'quests', locations: 'locations', items: 'pack_items', services: 'services', start_room: 'start' };
 		return [map[path[0]] || 'start', path[0] === 'start_room' ? 'start_room' : path[1]];
 	};
 	const push = (coll, id, msg) => errs.push({ coll, id, msg });
@@ -274,8 +285,18 @@ function validatePack(app) {
 	}
 	if (!rooms[Wd.start_room]) push('start', 'start_room', `start_room: нет комнаты ${Wd.start_room}`);
 	const placed = new Map();
+	const sites = Wd.sites || {};
+	for (const [sid, st] of Object.entries(sites)) {
+		if (!locs[st.location_id]) push('sites', sid, `нет локации ${st.location_id}`);
+		if (st.owner && !npcs[st.owner]) push('sites', sid, `хозяин ${st.owner} — не NPC пакета`);
+		const members = Object.keys(rooms).filter((rid) => rooms[rid].site_id === sid);
+		if (!members.length) push('sites', sid, 'ни одной комнаты');
+		if (st.entry && !members.includes(st.entry)) push('sites', sid, `вход ${st.entry} — не его комната`);
+	}
 	for (const [rid, r] of Object.entries(rooms)) {
 		if (!locs[r.location_id]) push('rooms', rid, `нет локации ${r.location_id}`);
+		if (!sites[r.site_id]) push('rooms', rid, `нет объекта ${r.site_id}`);
+		else if (sites[r.site_id].location_id !== r.location_id) push('rooms', rid, `объект ${r.site_id} в другой локации`);
 		for (const x of r.exits || []) if (!rooms[x]) push('rooms', rid, `выход в несуществующую комнату ${x}`);
 		const enc = r.encounter;
 		if (enc && srdLoaded) {
