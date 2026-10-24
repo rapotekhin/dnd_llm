@@ -6,6 +6,8 @@ extends PanelContainer
 ## column (`column`), above the chat; the text can be selected. The right mouse button pins what is under it: hovering
 ## others no longer changes the panel, the pinned control is lit; the right button on it again or the lock in the
 ## corner unpins, on another — pins that one.
+## v0.7.22.23 (the UI audit П4): the lock pins too — it shows whenever a text is up and pins the one shown, so the
+## right button can open acts elsewhere (the side panel's rows); on the rows of a description it still pins.
 
 var _title: Label
 var _body: RichTextLabel
@@ -13,6 +15,7 @@ var _lock: Button
 var _pinned := ""  # the title of the pinned text ("" — nothing pinned): kept across a rebuild of the rows
 var _pinned_body := ""
 var _lit: Control
+var _shown: Control  # whose text is up — the lock pins it
 
 
 func _init(min_size: Vector2 = Vector2(0, 180)) -> void:
@@ -33,11 +36,9 @@ func _init(min_size: Vector2 = Vector2(0, 180)) -> void:
 	head.add_child(_title)
 	_lock = Button.new()
 	_lock.name = "DetailsUnpin"
-	_lock.text = "DETAILS_UNPIN"
-	_lock.tooltip_text = "DETAILS_UNPIN_TIP"
 	_lock.flat = true
 	_lock.visible = false
-	_lock.pressed.connect(unpin)
+	_lock.pressed.connect(_on_lock)
 	head.add_child(_lock)
 	_body = RichTextLabel.new()
 	_body.name = "DetailsText"
@@ -50,6 +51,7 @@ func _init(min_size: Vector2 = Vector2(0, 180)) -> void:
 	_body.add_theme_color_override("default_color", UiTheme.MUTED)
 	col.add_child(_body)
 	show_text(TranslationServer.translate("DETAILS_HINT"), "")
+	_lock.visible = false  # the hint is nothing to pin
 
 
 ## The right column of a screen: this panel on top (a third of the height), `lower` (the chat, a summary) below.
@@ -85,6 +87,16 @@ func _put(title: String, body: String) -> void:
 	_title.text = title
 	_body.text = body
 	_body.scroll_to_line(0)
+	_lock.visible = true
+	_lock.text = "DETAILS_UNPIN" if not _pinned.is_empty() else "DETAILS_PIN"
+	_lock.tooltip_text = "DETAILS_UNPIN_TIP" if not _pinned.is_empty() else "DETAILS_PIN_TIP"
+
+
+func _on_lock() -> void:
+	if not _pinned.is_empty():
+		unpin()
+	else:
+		pin(_shown, _title.text, _body.text)
 
 
 func title() -> String:
@@ -106,14 +118,14 @@ func pin(control: Control, title_text: String, body_text: String) -> void:
 	_pinned_body = body_text
 	_put(title_text, body_text)
 	_light(control)
-	_lock.visible = true
 
 
 func unpin() -> void:
 	_unlight()
 	_pinned = ""
 	_pinned_body = ""
-	_lock.visible = false
+	_lock.text = "DETAILS_PIN"
+	_lock.tooltip_text = "DETAILS_PIN_TIP"
 
 
 func _light(control: Control) -> void:
@@ -132,10 +144,14 @@ func _unlight() -> void:
 func hook(control: Control, title_text: String, body_text: String) -> void:
 	if body_text.is_empty() and title_text.is_empty():
 		return
-	control.mouse_entered.connect(func() -> void: show_text(title_text, body_text))
-	control.focus_entered.connect(func() -> void: show_text(title_text, body_text))
+	var shown := func() -> void:
+		if _pinned.is_empty():
+			_shown = control
+		show_text(title_text, body_text)
+	control.mouse_entered.connect(shown)
+	control.focus_entered.connect(shown)
 	if control is BaseButton:
-		(control as BaseButton).pressed.connect(func() -> void: show_text(title_text, body_text))
+		(control as BaseButton).pressed.connect(shown)
 	control.gui_input.connect(func(ev: InputEvent) -> void:
 		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
 			if _pinned == title_text and _pinned_body == body_text:

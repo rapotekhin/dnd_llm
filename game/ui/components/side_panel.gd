@@ -2,6 +2,8 @@ class_name SidePanel
 extends PanelContainer
 ## Right panel of the game screen: the character (HP, AC, coins, inventory), where the player is,
 ## and the deterministic buttons the engine builds itself (ADR-0009 §4): exits and the NPCs of the room.
+## v0.7.22.23 (the UI audit С1, И2–И4, П4): a person or a creature is one row — the name talks, «▾» or the right
+## button opens the rest of its acts under it; the exits, «Осмотреться» and «Обыскать» stay pinned under the list.
 
 signal menu_requested
 signal sheet_requested
@@ -17,6 +19,10 @@ signal board_requested(prop_id: String)
 signal development_requested
 
 var _content: VBoxContainer
+var _scroll: ScrollContainer
+var _footer: VBoxContainer
+var _open := ""  # the row whose acts are open ("npc:<id>", "cr:<id>"), closed when the hero leaves the room
+var _open_room := ""
 
 
 func _ready() -> void:
@@ -28,10 +34,15 @@ func _ready() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(scroll)
+	_scroll = scroll
 	_content = VBoxContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.add_theme_constant_override("separation", 10)
 	scroll.add_child(_content)
+	_footer = VBoxContainer.new()
+	_footer.name = "SideFooter"
+	_footer.add_theme_constant_override("separation", 6)
+	col.add_child(_footer)
 	col.add_child(BackendStatus.new())
 	var tools := HBoxContainer.new()
 	tools.add_theme_constant_override("separation", 8)
@@ -71,28 +82,33 @@ func _on_backend(_s: int, _d: String) -> void:
 
 func _rebuild() -> void:
 	# Detach before freeing: a queued node keeps its name, and the rebuilt button would get renamed.
-	for c in _content.get_children():
-		_content.remove_child(c)
-		c.queue_free()
+	for box: Container in [_content, _footer]:
+		for c in box.get_children():
+			box.remove_child(c)
+			c.queue_free()
 	if not GameState.has_session():
 		return
 	var s := GameState.session
+	if s.room_id != _open_room:
+		_open = ""
+		_open_room = s.room_id
+	if not _open.is_empty():
+		_show_open.call_deferred()
 	var c := s.character
 	var items: Dictionary = Catalog.data["items"]
 	var world := GameState.world()
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 
 	_heading(str(c.get("name", "")))
-	_line(tr("SIDE_RACE_CLASS").format({"race": c.get("race_name", ""), "class": c.get("class_name", ""), "level": int(c.get("level", 1))}), true)
-	var hp := _line(tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]})
-		+ ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""), false)  # big test #19 (v0.7.22.3)
+	var hp := _line(tr("SIDE_HERO_LINE").format({"race": c.get("race_name", ""), "class": c.get("class_name", ""), "level": int(c.get("level", 1)),
+		"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}) + ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""), false)  # big test #19 (v0.7.22.3)
 	hp.name = "HeroHp"
 	if int(c["hp"]) * 2 <= int(c["max_hp"]):
 		hp.add_theme_color_override("font_color", UiTheme.BAD)
-	_line(tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}), false)
 	var next_xp := LevelUp.xp_for(Catalog.data, int(c.get("level", 1)) + 1)
-	if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data):
-		_line(tr("SIDE_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}), true)
+	var xp := tr("SIDE_HERO_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}) if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data) else ""
+	_line(" · ".join([Money.format(int(c["gold_cp"])), xp, tr("SIDE_HERO_TIME").format({"day": s.day, "part": TimeRules.part_name(s, Catalog.data),
+		"clock": TimeRules.clock(s)})].filter(func(x: String) -> bool: return not x.is_empty())), true)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
 		lv.name = "LevelUpButton"
@@ -103,7 +119,6 @@ func _rebuild() -> void:
 		var db := _button(tr("BTN_DEV_LEVEL").format({"name": DevelopmentRules.direction(Catalog.data, dev)["name"]}), development_requested.emit, true)
 		db.name = "DevelopmentButton"
 		db.theme_type_variation = UiTheme.ACCENT_BUTTON
-	_line(tr("SIDE_DAY_TIME").format({"day": s.day, "part": TimeRules.part_name(s, Catalog.data), "clock": TimeRules.clock(s)}), true)
 	if TimeRules.dark(s, Catalog.data):
 		_line(tr("SIDE_DARK"), true).add_theme_color_override("font_color", UiTheme.WARN)
 	var room := world.room(s.room_id)
@@ -118,44 +133,7 @@ func _rebuild() -> void:
 		if not npcs.is_empty():
 			_subheading("SIDE_PEOPLE")
 			for id: String in npcs:
-				var n := world.npc(id)
-				var refuses := SocialRules.refuses(s, Catalog.data, id)  # v0.7.15.3
-				var b := _button(tr("BTN_TALK_TO").format({"name": str(n.get("name", id)).get_slice(" ", 0)}), GameState.talk_to.bind(id, false), can_act and not refuses)
-				b.tooltip_text = tr("TALK_REFUSED") if refuses else "%s — %s" % [n.get("name", id), n.get("role", "")]
-				b.name = "Talk_" + id
-				# v0.7.22.16: the other acts with this NPC in one row under the talk — trade, pockets, attack
-				var row := HBoxContainer.new()
-				row.add_theme_constant_override("separation", 6)
-				_content.add_child(row)
-				if bool(n.get("trader", false)):
-					var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id, Catalog.data) or refuses
-					var t := _small(row, tr("BTN_TRADE_SHORT"), GameState.talk_to.bind(id, true), can_act and not closed)
-					t.name = "Trade_" + id
-					t.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else "TALK_REFUSED" if refuses else
-						"SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED") if closed else tr("BTN_TRADE_WITH").format({"name": n.get("name", id)})
-				var pk := _small(row, tr("BTN_POCKETS_SHORT"), pockets_requested.emit.bind(id), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
-				pk.name = "Pockets_" + id
-				pk.tooltip_text = tr("BTN_POCKETS").format({"name": n.get("name", id)})
-				var at := _small(row, tr("BTN_ATTACK_SHORT"), func() -> void:
-					var err := GameState.attack_npc(id)
-					if not err.is_empty():
-						EventBus.message.emit(tr(err)), can_act)
-				at.name = "Attack_" + id  # the fight at once, without the master
-				at.tooltip_text = tr("BTN_ATTACK_NPC").format({"name": n.get("name", id)})
-				var acts: Array = []  # v0.7.22.22 (#25): a follower by the buttons, as the prisoners
-				if s.followers.has(id):
-					acts = [["stay", "BTN_FOLLOWER_STAY"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
-				elif str(s.npc_at.get(id, "")) == s.room_id:
-					acts = [["lead", "BTN_FOLLOWER_LEAD"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
-				for fa: Array in acts:
-					var what: String = fa[0]
-					var fb := _small(row, tr(fa[1]), func() -> void:
-						var err := GameState.follower_act(id, what)
-						if not err.is_empty():
-							EventBus.message.emit(tr(err)), can_act)
-					fb.name = "Follower_%s_%s" % [what, id]
-					if tr(fa[1] + "_TIP") != fa[1] + "_TIP":
-						fb.tooltip_text = tr(fa[1] + "_TIP")
+				_npc_row(s, world, id, can_act)
 		if not s.summons.is_empty():  # v0.7.22.22: the creatures a spell called
 			_subheading("SIDE_WITH_YOU")
 			var texts := AllyRules.summon_lines(s, Catalog.data)
@@ -191,36 +169,7 @@ func _rebuild() -> void:
 		if not beaten.is_empty():
 			_subheading("SIDE_CREATURES")
 		for cr: Dictionary in beaten:
-			_line(CreatureRules.text(cr, Catalog.data), false)
-			var cid := str(cr["id"])
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 6)
-			_content.add_child(row)
-			var specs: Array = [["talk", "BTN_CREATURE_TALK"]] if str(cr["state"]) != "unconscious" else []  # v0.7.22.16: one knocked out does not talk
-			if not bool(cr.get("bound", false)) and str(cr["state"]) != "truce":
-				specs.append(["bind", "BTN_CREATURE_BIND"])
-			if bool(cr.get("bound", false)):
-				specs.append(["lead", "BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_CREATURE_LEAD"])
-			if not str(cr.get("npc_id", "")).is_empty() and not bool(cr.get("searched", false)):
-				specs.append(["search", "BTN_CREATURE_SEARCH"])  # v0.7.22.16: a knocked-out person's pockets
-			if CreatureRules.can(s, cid, "hand_over", Catalog.data).is_empty():
-				specs.append(["hand_over", "BTN_CREATURE_HAND_OVER"])  # v0.7.22.17: the law takes the prisoner
-			specs.append(["free", "BTN_CREATURE_FREE"])
-			specs.append(["finish", "BTN_CREATURE_FINISH"] if CreatureRules.helpless(cr) else ["attack", "BTN_CREATURE_ATTACK"])
-			for sp: Array in specs:
-				var what: String = sp[0]
-				var cb := Button.new()
-				cb.name = "Creature_%s_%s" % [what, cid]
-				cb.text = tr(sp[1])
-				cb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-				cb.disabled = not can_act
-				if what == "hand_over":
-					cb.tooltip_text = tr("CREATURE_HAND_OVER_TIP")
-				cb.pressed.connect(func() -> void:
-					var err := GameState.creature_act(cid, what)
-					if not err.is_empty():
-						EventBus.message.emit(tr(err)))
-				row.add_child(cb)
+			_creature_row(s, cr, can_act)
 		for qid: String in XpRules.quests_here(s, Catalog.data["world"]):
 			var q: Dictionary = XpRules.quests(Catalog.data["world"])[qid]
 			var qb := _button(tr("BTN_QUEST").format({"action": q["action"]}), func() -> void:
@@ -239,37 +188,6 @@ func _rebuild() -> void:
 					EventBus.message.emit(tr(err)), can_act)
 			cb.name = "QuestChoice_%s_%s" % [qid2, cid]
 			cb.theme_type_variation = UiTheme.ACCENT_BUTTON
-		_subheading("SIDE_EXITS")
-		var sneak := CheckButton.new()
-		sneak.name = "SneakToggle"
-		sneak.text = "BTN_SNEAK"
-		sneak.tooltip_text = "BTN_SNEAK_TIP"
-		sneak.button_pressed = s.sneaking
-		sneak.disabled = not can_act or s.sneak_noticed == s.room_id
-		if s.sneak_noticed == s.room_id:
-			sneak.tooltip_text = "SNEAK_NOTICED"
-		sneak.toggled.connect(func(on: bool) -> void:
-			var err := GameState.set_sneaking(on)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)))
-		_content.add_child(sneak)
-		var look_row := HBoxContainer.new()
-		look_row.add_theme_constant_override("separation", 8)
-		_content.add_child(look_row)
-		for spec: Array in [["LookButton", "BTN_LOOK", "perception"], ["SearchButton", "BTN_SEARCH", "investigation"]]:
-			var lb := Button.new()
-			lb.name = spec[0]
-			lb.text = tr(spec[1])
-			lb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			lb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			lb.disabled = not can_act
-			lb.tooltip_text = tr(spec[1] + "_TIP")
-			var skill: String = spec[2]
-			lb.pressed.connect(func() -> void:
-				var err := GameState.search_room(skill)
-				if not err.is_empty():
-					EventBus.message.emit(tr(err)))
-			look_row.add_child(lb)
 		# «Взаимодействие с местом» (v0.7.22.7, big test #17): every thing of the room in its own window — take one,
 		# open, look closer, «Забрать всё».
 		PropRules.ensure_wares(s, Catalog.data, s.room_id)  # the trader's wares (v0.7.22.8)
@@ -288,25 +206,7 @@ func _rebuild() -> void:
 				var n_orders := QuestGen.offered_by(s, "board:%s:%s" % [s.room_id, bpid]).size()
 				var bb := _button(tr("BTN_BOARD").format({"name": bp["name"], "n": n_orders}), board_requested.emit.bind(bpid), not GameState.is_busy())
 				bb.name = "Board_" + bpid
-		var trapped := {}
-		for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
-			trapped[ft["to"]] = ft["secret"]
-		for e: String in ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id):
-			if trapped.has(e):
-				var to := e
-				var by := _button(tr("BTN_TRAP_BYPASS").format({"room": world.room(e).get("name", e)}), func() -> void: _trap(to, false), can_act)
-				by.name = "Exit_" + e
-				by.tooltip_text = str(trapped[e]["text"]) + "
-" + tr("TRAP_BYPASS_TIP")
-				var dis := _button(tr("BTN_TRAP_DISARM"), func() -> void: _trap(to, true), can_act)
-				dis.name = "Disarm_" + e
-				dis.tooltip_text = str(trapped[e]["text"]) + "
-" + tr("TRAP_DISARM_TIP")
-				continue
-			var b := _button("→ " + str(world.room(e).get("name", e)), GameState.go.bind(e), can_act and not CrimeRules.held(s) and not EncounterRules.captive(s))
-			b.name = "Exit_" + e
-			if CrimeRules.held(s):
-				b.tooltip_text = tr("CRIME_HELD")
+		_exits(s, world, can_act)
 		# A show on a stage of the pack (v0.7.11): a Performance check for coins, an entertainer's free room.
 		if (world.room(s.room_id).get("tags", []) as Array).has("stage"):
 			var perform_why := BackgroundRules.can_perform(s, Catalog.data)
@@ -371,6 +271,244 @@ func _rebuild() -> void:
 			shown += 1
 	if inv.size() > shown:
 		_line(tr("SIDE_MORE_ITEMS").format({"n": inv.size() - shown}), true)
+
+
+## A person of the scene in one row (v0.7.22.23): the full name talks, «Торговать» for a trader, «▾» (or the right
+## button on the name) opens the rest under it — pockets, a follower's acts, attack.
+func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> void:
+	var n := world.npc(id)
+	var key := "npc:" + id
+	var refuses := SocialRules.refuses(s, Catalog.data, id)  # v0.7.15.3
+	var a := s.attitude(id)
+	var att := tr("ATTITUDE_0" if a == 0 else ("ATTITUDE_P%d" % a if a > 0 else "ATTITUDE_M%d" % -a))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_content.add_child(row)
+	var b := _row_button(row, str(n.get("name", id)), GameState.talk_to.bind(id, false), can_act and not refuses)
+	b.name = "Talk_" + id
+	b.tooltip_text = tr("TALK_REFUSED") if refuses else tr("SIDE_TALK_TIP").format({"name": n.get("name", id), "role": n.get("role", ""), "attitude": att})
+	if a <= -2:
+		b.add_theme_color_override("font_color", UiTheme.BAD)
+	elif a >= 2:
+		b.add_theme_color_override("font_color", UiTheme.OK)
+	_on_right(b, key)
+	if bool(n.get("trader", false)):
+		var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id, Catalog.data) or refuses
+		var tb := _small(row, tr("BTN_TRADE_SHORT"), GameState.talk_to.bind(id, true), can_act and not closed)
+		tb.name = "Trade_" + id
+		tb.size_flags_horizontal = Control.SIZE_SHRINK_END
+		tb.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else "TALK_REFUSED" if refuses else
+			"SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED") if closed else tr("BTN_TRADE_WITH").format({"name": n.get("name", id)})
+	_more(row, "More_" + id, key)
+	if _open != key:
+		return
+	var role := _line("%s · %s" % [n.get("role", ""), att], true)
+	role.name = "Role_" + id
+	var acts := _acts("Acts_" + id)
+	var pk := _flow(acts, tr("BTN_POCKETS_SHORT"), pockets_requested.emit.bind(id), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
+	pk.name = "Pockets_" + id
+	pk.tooltip_text = tr("BTN_POCKETS").format({"name": n.get("name", id)})
+	var follow: Array = []  # v0.7.22.22 (#25): a follower by the buttons, as the prisoners
+	if s.followers.has(id):
+		follow = [["stay", "BTN_FOLLOWER_STAY"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
+	elif str(s.npc_at.get(id, "")) == s.room_id:
+		follow = [["lead", "BTN_FOLLOWER_LEAD"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
+	for fa: Array in follow:
+		var what: String = fa[0]
+		var fb := _flow(acts, tr(fa[1]), func() -> void:
+			var err := GameState.follower_act(id, what)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act)
+		fb.name = "Follower_%s_%s" % [what, id]
+		if tr(fa[1] + "_TIP") != fa[1] + "_TIP":
+			fb.tooltip_text = tr(fa[1] + "_TIP")
+	var at := _flow(acts, tr("BTN_ATTACK_SHORT"), func() -> void:
+		var err := GameState.attack_npc(id)
+		if not err.is_empty():
+			EventBus.message.emit(tr(err)), can_act)
+	at.name = "Attack_" + id  # the fight at once, without the master: last and red, apart from the peaceful acts
+	at.tooltip_text = tr("BTN_ATTACK_NPC").format({"name": n.get("name", id)})
+	at.add_theme_color_override("font_color", UiTheme.BAD)
+
+
+## A creature a fight left (v0.7.22.11) in one row: its state, «▾» (or the right button) opens its acts.
+func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
+	var cid := str(cr["id"])
+	var key := "cr:" + cid
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_content.add_child(row)
+	var l := Label.new()
+	l.name = "CreatureLine_" + cid
+	l.text = CreatureRules.text(cr, Catalog.data)
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.add_child(l)
+	_on_right(l, key)
+	_more(row, "CreatureMore_" + cid, key)
+	if _open != key:
+		return
+	var specs: Array = [["talk", "BTN_CREATURE_TALK"]] if str(cr["state"]) != "unconscious" else []  # v0.7.22.16: one knocked out does not talk
+	if not bool(cr.get("bound", false)) and str(cr["state"]) != "truce":
+		specs.append(["bind", "BTN_CREATURE_BIND"])
+	if bool(cr.get("bound", false)):
+		specs.append(["lead", "BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_CREATURE_LEAD"])
+	if not str(cr.get("npc_id", "")).is_empty() and not bool(cr.get("searched", false)):
+		specs.append(["search", "BTN_CREATURE_SEARCH"])  # v0.7.22.16: a knocked-out person's pockets
+	if CreatureRules.can(s, cid, "hand_over", Catalog.data).is_empty():
+		specs.append(["hand_over", "BTN_CREATURE_HAND_OVER"])  # v0.7.22.17: the law takes the prisoner
+	specs.append(["free", "BTN_CREATURE_FREE"])
+	specs.append(["finish", "BTN_CREATURE_FINISH"] if CreatureRules.helpless(cr) else ["attack", "BTN_CREATURE_ATTACK"])
+	var acts := _acts("CreatureActs_" + cid)
+	for sp: Array in specs:
+		var what: String = sp[0]
+		var cb := _flow(acts, tr(sp[1]), func() -> void:
+			var err := GameState.creature_act(cid, what)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act)
+		cb.name = "Creature_%s_%s" % [what, cid]
+		if what == "hand_over":
+			cb.tooltip_text = tr("CREATURE_HAND_OVER_TIP")
+		if what in ["attack", "finish"]:
+			cb.add_theme_color_override("font_color", UiTheme.BAD)
+
+
+## The pinned part under the list (v0.7.22.23, the UI audit С1): sneaking, «Осмотреться» and «Обыскать» side by side,
+## the exits one to a row in the small font — never under the scroll.
+func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
+	var head := Label.new()
+	head.text = "SIDE_EXITS"
+	head.theme_type_variation = UiTheme.MUTED_LABEL
+	head.add_theme_color_override("font_color", UiTheme.ACCENT)
+	_footer.add_child(head)
+	var sneak := CheckButton.new()
+	sneak.name = "SneakToggle"
+	sneak.text = "BTN_SNEAK"
+	sneak.tooltip_text = "BTN_SNEAK_TIP"
+	sneak.button_pressed = s.sneaking
+	sneak.disabled = not can_act or s.sneak_noticed == s.room_id
+	if s.sneak_noticed == s.room_id:
+		sneak.tooltip_text = "SNEAK_NOTICED"
+	sneak.toggled.connect(func(on: bool) -> void:
+		var err := GameState.set_sneaking(on)
+		if not err.is_empty():
+			EventBus.message.emit(tr(err)))
+	_footer.add_child(sneak)
+	var looks := HBoxContainer.new()
+	looks.add_theme_constant_override("separation", 6)
+	_footer.add_child(looks)
+	for spec: Array in [["LookButton", "BTN_LOOK", "perception"], ["SearchButton", "BTN_SEARCH", "investigation"]]:
+		var skill: String = spec[2]
+		var lb := _row_button(looks, tr(spec[1]), func() -> void:
+			var err := GameState.search_room(skill)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act)
+		lb.name = spec[0]
+		lb.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lb.tooltip_text = tr(spec[1] + "_TIP")
+	var trapped := {}
+	for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
+		trapped[ft["to"]] = ft["secret"]
+	var shut := CrimeRules.held(s) or EncounterRules.captive(s)
+	for e: String in ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id):
+		var room_name := str(world.room(e).get("name", e))
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 6)
+		_footer.add_child(line)
+		if trapped.has(e):
+			var to := e
+			var by := _exit_button(line, tr("BTN_TRAP_BYPASS").format({"room": room_name}), func() -> void: _trap(to, false), can_act)
+			by.name = "Exit_" + e
+			by.tooltip_text = str(trapped[e]["text"]) + "\n" + tr("TRAP_BYPASS_TIP")
+			var dis := _exit_button(line, tr("BTN_TRAP_DISARM"), func() -> void: _trap(to, true), can_act)
+			dis.name = "Disarm_" + e
+			dis.tooltip_text = str(trapped[e]["text"]) + "\n" + tr("TRAP_DISARM_TIP")
+			continue
+		var b := _exit_button(line, "→ " + room_name, GameState.go.bind(e), can_act and not shut)
+		b.name = "Exit_" + e
+		b.tooltip_text = tr("CRIME_HELD") if CrimeRules.held(s) else room_name
+
+
+## A button that fills its place and cuts a long text with «…» (the whole one is in the tooltip).
+func _row_button(parent: Container, text: String, action: Callable, enabled: bool) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	b.clip_text = true
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(60, 0)
+	b.disabled = not enabled
+	b.pressed.connect(func() -> void: action.call())
+	parent.add_child(b)
+	return b
+
+
+## An exit: a row-filling button in the small font, a little lower than the others.
+func _exit_button(parent: Container, text: String, action: Callable, enabled: bool) -> Button:
+	var b := _row_button(parent, text, action, enabled)
+	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+	b.custom_minimum_size = Vector2(60, 34)
+	return b
+
+
+## The open acts of a row: buttons as wide as their text, wrapping.
+func _acts(node_name: String) -> HFlowContainer:
+	var acts := HFlowContainer.new()
+	acts.name = node_name
+	acts.add_theme_constant_override("h_separation", 6)
+	acts.add_theme_constant_override("v_separation", 6)
+	_content.add_child(acts)
+	return acts
+
+
+func _flow(parent: Container, text: String, action: Callable, enabled: bool) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	b.disabled = not enabled
+	b.pressed.connect(func() -> void: action.call())
+	parent.add_child(b)
+	return b
+
+
+## «▾» / «▴»: opens or closes the row's acts.
+func _more(row: HBoxContainer, node_name: String, key: String) -> void:
+	var m := Button.new()
+	m.name = node_name
+	m.text = "▴" if _open == key else "▾"
+	m.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	m.tooltip_text = tr("SIDE_MORE_TIP")
+	m.custom_minimum_size = Vector2(40, 0)
+	m.pressed.connect(_toggle.bind(key))
+	row.add_child(m)
+
+
+## The right button on a row opens its acts, as in BG3 (the UI audit П4).
+func _on_right(control: Control, key: String) -> void:
+	control.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
+			control.accept_event()
+			_toggle(key))
+
+
+## Opens a row (one at a time) or closes it; the panel is rebuilt after the click is done.
+func _toggle(key: String) -> void:
+	_open = "" if _open == key else key
+	_rebuild.call_deferred()
+
+
+## The opened acts may fall under a long footer: scroll them into view once laid out (after every rebuild while a row
+## is open — that row is where the player looks).
+func _show_open() -> void:
+	for i in 2:  # a flow of buttons settles its height a frame after it is laid out
+		await get_tree().process_frame
+	for n: Node in _content.get_children():
+		if n is HFlowContainer and is_instance_valid(n):
+			_scroll.ensure_control_visible(n as Control)
 
 
 func _trap(to: String, disarm: bool) -> void:

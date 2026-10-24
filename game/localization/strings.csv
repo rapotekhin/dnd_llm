@@ -98,7 +98,6 @@ BTN_STEAL,Стащить
 BTN_STEP_LEFT,← Шаг
 BTN_STEP_RIGHT,Шаг →
 BTN_TAKE_ALL,Забрать всё
-BTN_TALK_TO,Поговорить: {name}
 TALK_REFUSED,Враждебен к вам — не станет говорить
 BTN_TO_MENU,В меню
 BTN_TO_TALK,К разговору
@@ -318,7 +317,9 @@ DEATH_WHO,"{name} — {race}, {class}, {level} уровень"
 DETAILS_CANTRIP,Заговор
 DETAILS_CIRCLE,{n} круг
 DETAILS_CONCENTRATION,концентрация
-DETAILS_HINT,Наведите — здесь появится описание; правая кнопка мыши закрепит его
+DETAILS_HINT,Наведите — здесь появится описание; закрепить его — замок в углу или правая кнопка мыши
+DETAILS_PIN,Закрепить
+DETAILS_PIN_TIP,"Закрепить это описание: наведение на другое его не сменит"
 DETAILS_UNPIN,Закреплено ✕
 DETAILS_UNPIN_TIP,Открепить описание (или правая кнопка по закреплённому)
 DEV_SNAPSHOT,Снимок бага: {path}
@@ -683,15 +684,17 @@ SHORT_REST_UNTIL,Отдых займёт ровно час — закончит�
 SIDE_COINS,Монеты: {coins}
 SIDE_DARK,Темно: Внимательность с помехой — нужен факел или фонарь
 SIDE_DAY,День {day}
-SIDE_DAY_TIME,"День {day}, {part} ({clock})"
 SIDE_EXITS,Выходы
 SIDE_HP_AC,HP {hp}/{max} · КД {ac}
+SIDE_HERO_LINE,"{race}, {class} {level} ур. · HP {hp}/{max} · КД {ac}"
+SIDE_HERO_XP,опыт {xp}/{next}
+SIDE_HERO_TIME,"день {day}, {part} {clock}"
+SIDE_TALK_TIP,"Поговорить: {name} — {role}; отношение: {attitude}. Правая кнопка — другие действия"
+SIDE_MORE_TIP,"Другие действия: карманы, напасть… (или правая кнопка по имени)"
 SIDE_INVENTORY,Снаряжение
 SIDE_MORE_ITEMS,…и ещё предметов: {n} (в листе персонажа)
 SIDE_PEOPLE,Здесь
 SIDE_PLACE,Где вы
-SIDE_RACE_CLASS,"{race}, {class}, {level} ур."
-SIDE_XP,Опыт: {xp} / {next}
 SKILL_ACROBATICS,Акробатика
 SKILL_ANIMAL_HANDLING,Уход за животными
 SKILL_ARCANA,Магия

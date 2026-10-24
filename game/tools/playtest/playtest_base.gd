@@ -132,6 +132,14 @@ func press(button: BaseButton) -> void:
 	await frames(2)
 
 
+## Opens the acts of a row of the side panel (v0.7.22.23): «More_<npc>» or «CreatureMore_<creature>».
+func open_row(node_name: String) -> void:
+	var b := find(screen(), node_name) as BaseButton
+	if b != null and b.text != "▴":
+		await press(b)
+		await frames(2)
+
+
 ## Presses the control named `node_name` on the current screen; false if there is none or it is disabled.
 ## Screens that redraw on every change (creation) rebuild their controls, so look them up each time.
 func tap(node_name: String) -> bool:

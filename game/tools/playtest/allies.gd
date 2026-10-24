@@ -20,6 +20,7 @@ func run() -> void:
 	s.followers.append("npc_mercenary")
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	await open_row("More_npc_mercenary")  # v0.7.22.23: the acts under the name
 	var stay: Button = find(screen(), "Follower_stay_npc_mercenary")
 	if step("the follower's buttons", stay != null and find(screen(), "Follower_let_go_npc_mercenary") != null):
 		await shot("follower")

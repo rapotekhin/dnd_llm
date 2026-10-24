@@ -24,6 +24,7 @@ func run() -> void:
 	await frames(3)
 	var here := s.npcs_here(data["world"], s.room_id)
 	var first := "npc_serving" if here.has("npc_serving") else here[0]
+	await open_row("More_" + first)  # v0.7.22.23: the acts under the name
 	var attack: Button = find(screen(), "Attack_" + first)
 	if not step("the «Напасть» button by the NPC", attack != null and not attack.disabled, str(here)):
 		return
@@ -41,6 +42,7 @@ func run() -> void:
 	var c := _creature_of(s, first)
 	step("knocked out — a creature of the room, not a person of the scene", not c.is_empty() and not s.npcs_here(data["world"], s.room_id).has(first))
 	var game := screen()
+	await open_row("CreatureMore_" + str(c.get("id", "")))
 	step("search and finish buttons", find(game, "Creature_search_" + str(c.get("id", ""))) != null and find(game, "Creature_finish_" + str(c.get("id", ""))) != null)
 	step("no attack on the helpless", find(game, "Creature_attack_" + str(c.get("id", ""))) == null)
 	await shot("knocked_out")
@@ -78,6 +80,7 @@ func run() -> void:
 	await _knock_out(gs, s, data, CombatRules.fighter_of_npc(s, second))
 	var c2 := _creature_of(s, second)
 	if step("the second one knocked out", not c2.is_empty()):
+		await open_row("CreatureMore_" + str(c2["id"]))
 		await press(find(screen(), "Creature_finish_" + str(c2["id"])))
 		await frames(3)
 		step("finished off — a murder", s.dead_npcs.has(second) and s.crimes.any(func(cr: Dictionary) -> bool: return str(cr.get("kind")) == "murder"), _chat(s))

@@ -16,6 +16,7 @@ func run() -> void:
 	var s: GameSession = gs.session
 	step("info: the hall furnished", true, str(PropRules.room_props(s, s.room_id).map(func(p: Dictionary) -> String: return "%s%s" % [p["name"], " [%s]" % p["item_id"] if not str(p["item_id"]).is_empty() else ""])))
 	await shot("hall")
+	await open_row("More_npc_serving")  # v0.7.22.23: the acts under the name
 	var pk: Button = find(screen(), "Pockets_npc_serving")
 	if not step("pockets button of Mira", pk != null and not pk.disabled):
 		return

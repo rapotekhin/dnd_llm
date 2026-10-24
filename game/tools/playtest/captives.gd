@@ -72,6 +72,7 @@ func run() -> void:
 	var truce: Dictionary = CreatureRules.here(s, s.room_id).back()
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	await open_row("CreatureMore_" + str(truce["id"]))  # v0.7.22.23: the acts under the line
 	var talk: Button = find(screen(), "Creature_talk_" + str(truce["id"]))
 	if step("talk to the creature of the truce", talk != null and not talk.disabled and find(screen(), "Creature_bind_" + str(truce["id"])) == null):
 		await press(talk)
@@ -90,6 +91,7 @@ func run() -> void:
 	var gob: Dictionary = CreatureRules.here(s, s.room_id).back()
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	await open_row("CreatureMore_" + str(gob["id"]))
 	var bind: Button = find(screen(), "Creature_bind_" + str(gob["id"]))
 	if step("bind the goblin", bind != null and not bind.disabled):
 		await press(bind)
