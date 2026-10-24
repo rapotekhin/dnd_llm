@@ -18,6 +18,7 @@ from pydantic_ai.models import Model
 from pydantic_ai.settings import ModelSettings
 
 from . import prompts
+from .config import DEFAULT_PROVIDER
 from .llm.providers import PICKER, PINNED, min_tps
 from .protocol import (
     DcTier,
@@ -109,6 +110,10 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
             settings["openrouter_provider"].update({"only": picked, "allow_fallbacks": True})
             if min_tps() > 0:
                 settings["openrouter_provider"]["preferred_min_throughput"] = {"p50": min_tps()}
+        first = DEFAULT_PROVIDER.get(model.model_name)
+        if first:  # the server's provider first; the picked cheap ones only if it is down
+            order = [first] + [p for p in picked if p != first]
+            settings["openrouter_provider"].update({"order": order, "only": order, "allow_fallbacks": True})
     return settings  # type: ignore[return-value]
 
 
@@ -120,6 +125,9 @@ class TurnOutput(BaseModel):
     option_costs: list[int] = Field(default_factory=list, max_length=3, description=(
         "Цена каждого варианта в медных (мм), по порядку options: 0 — бесплатно. Вариант «Заплатить пять серебряных и выслушать» — 50. "
         "Движок спишет монеты, когда игрок выберет вариант."))
+    option_checks: list[str] = Field(default_factory=list, max_length=3, description=(
+        "Проверка каждого варианта по порядку options: «навык:сложность» (persuasion:medium, athletics:hard) — когда исход "
+        "варианта решает бросок, иначе пустая строка. Движок ставит Сл, показывает шанс и сам бросит, когда игрок выберет вариант."))
     effect_ids: list[str] = Field(default_factory=list, description="effect_id принятых движком эффектов, которые надо применить.")
     next_mode: Literal["exploration", "social", "trade", "combat"] | None = Field(
         default=None, description="Смена режима: social/trade — разговор/торговля с NPC (нужен npc_id), combat — игрок нападает на NPC сцены "

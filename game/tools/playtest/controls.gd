@@ -60,6 +60,25 @@ func run() -> void:
 	input.clear()
 	await _key(KEY_ESCAPE)
 
+	# An option with a check (v0.7.22.28): the tag, the chance, «2» picks it and the engine rolls first.
+	gs.submit("осматриваюсь")
+	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+	await frames(3)
+	var opt: Button = find(game, "Option_1")
+	step("the option with a check is tagged and numbered", opt != null and opt.text.begins_with("2. [Атлетика]"), opt.text if opt else "")
+	step("its tooltip has the engine's DC and chance", opt != null and opt.tooltip_text.contains("против Сл 15") and opt.tooltip_text.contains("шанс"),
+		opt.tooltip_text if opt else "")
+	await shot("option_check")
+	var checks := s.chat.filter(func(e: Dictionary) -> bool: return str(e["kind"]) == GameSession.KIND_CHECK).size()
+	await _key(KEY_2)
+	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+	var last: Array = s.chat.filter(func(e: Dictionary) -> bool: return str(e["kind"]) == GameSession.KIND_CHECK)
+	var new_ones := last.slice(checks)
+	step("«2» — the engine rolled Athletics before the master", new_ones.any(func(e: Dictionary) -> bool: return str(e.get("skill", "")) == "athletics"),
+		str(new_ones.map(func(e: Dictionary) -> String: return str(e.get("skill", "")))))
+	await frames(10)
+	await shot("option_rolled")
+
 	# The question before «Напасть».
 	saves.confirm_risky = true
 	var data: Dictionary = node("Catalog").data

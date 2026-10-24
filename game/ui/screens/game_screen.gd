@@ -269,6 +269,8 @@ func _input(event: InputEvent) -> void:
 				o.visible = false
 		else:
 			_pause.toggle()
+	elif input.has_focus() and input.text.is_empty() and open.is_empty() and _option_key(event) >= 0:  # 1–3 over an empty input
+		_hotkey(event, true)
 	elif input.has_focus() or _pause.visible or get_viewport().gui_get_focus_owner() is LineEdit:
 		return
 	elif _hotkey(event, open.is_empty()):
@@ -281,6 +283,13 @@ func _input(event: InputEvent) -> void:
 	else:
 		return
 	get_viewport().set_input_as_handled()
+
+
+func _option_key(event: InputEvent) -> int:
+	for i in 3:
+		if event.is_action_pressed("option_%d" % (i + 1)):
+			return i
+	return -1
 
 
 ## A key of the game screen; false — not one.
@@ -374,14 +383,22 @@ func _refresh() -> void:
 	for i in GameState.session.options.size():
 		var o := GameState.session.options[i]
 		var cost := GameState.session.option_costs[i] if i < GameState.session.option_costs.size() else 0
-		var b := _option_button(o + ((" (%s)" % Money.format(cost)) if cost > 0 else ""), func() -> void:
+		var pv := GameState.option_preview(i)
+		var tag := ("[%s] " % tr("SKILL_" + str(pv["skill"]).to_upper())) if not pv.is_empty() else ""
+		var b := _option_button("%d. %s%s%s" % [i + 1, tag, o, (" (%s)" % Money.format(cost)) if cost > 0 else ""], func() -> void:
 			_typed = false
 			var err := GameState.choose_option(i)
 			if not err.is_empty():
 				EventBus.message.emit(tr(err)), false)
 		b.disabled = not online or (cost > 0 and int(GameState.session.character["gold_cp"]) < cost)
-		if i < 3:
-			b.tooltip_text = Hotkeys.tip("", "option_%d" % (i + 1), SaveManager.keys)
+		b.name = "Option_%d" % i
+		var tip := ""
+		if not pv.is_empty():  # the engine's DC and chance (v0.7.22.28, П5)
+			tip = tr("OPTION_CHECK_TIP").format({"skill": tr("SKILL_" + str(pv["skill"]).to_upper()), "bonus": "%+d" % int(pv["bonus"]),
+				"dc": int(pv["dc"]), "chance": int(pv["chance"])}) + ((" (%s)" % pv["dc_reason"]) if not str(pv["dc_reason"]).is_empty() else "")
+		b.tooltip_text = Hotkeys.tip(tip, "option_%d" % (i + 1), SaveManager.keys) if i < 3 else tip
+		if not pv.is_empty():
+			b.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 
 
 func _option_button(text: String, action: Callable, translate: bool) -> Button:

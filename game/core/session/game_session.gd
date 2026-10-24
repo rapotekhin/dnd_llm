@@ -29,6 +29,8 @@ var chat: Array[Dictionary] = []
 var options: Array[String] = []
 ## The price of each option in copper (turn.result.option_costs, v0.6.5): taken when the player picks it.
 var option_costs: Array[int] = []
+## The check of each option, {skill, dc_tier} or {} (turn.result.option_checks, v0.7.22.28): the engine rolls it.
+var option_checks: Array = []
 var created_at: String = ""
 
 ## The world pack of this game and its version when the game started.
@@ -414,6 +416,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"chat": chat.slice(maxi(0, chat.size() - kept_chat)),
 		"options": options,
 		"option_costs": option_costs,
+		"option_checks": option_checks,
 		"created_at": created_at,
 		"world_id": world_id,
 		"world_version": world_version,
@@ -509,6 +512,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.options.append(str(o))
 	for c: Variant in d.get("option_costs", []):
 		s.option_costs.append(int(c))
+	for ch: Variant in d.get("option_checks", []):
+		s.option_checks.append(ch if ch is Dictionary else {})
 	s.created_at = str(d.get("created_at", ""))
 	s.world_id = str(d.get("world_id", ""))
 	s.world_version = str(d.get("world_version", ""))

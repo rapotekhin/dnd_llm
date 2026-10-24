@@ -6,9 +6,10 @@
 
 import asyncio
 import logging
+import re
 import time
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
+from typing import TypeVar, get_args
 
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UnexpectedModelBehavior, UsageLimitExceeded
 from pydantic_ai.models import Model
@@ -19,6 +20,8 @@ from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER, PINNED, pinned_for
 from .agents import RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
 from .protocol import (
+    DcTier,
+    OptionCheck,
     CoinsEffect,
     ConditionEffect,
     DamageEffect,
@@ -72,7 +75,8 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     return TurnResult(
         turn_id=params.turn_id,
         narration=f"Вы {outcome} что-то необычное ({check.total} против {check.dc}).",
-        options=["Осмотреться ещё раз"],
+        options=["Осмотреться ещё раз", "Взобраться на балку под потолком"],
+        option_checks=[None, OptionCheck(skill="athletics", dc_tier="medium")],
         check_ids=[check.check_id],
         effect_ids=effect_ids,
         usage=usage,
@@ -244,6 +248,15 @@ async def _short_turn(model: Model, params: TurnRequestParams, user_prompt: str,
     return router.to_turn_output(sr.output), usage, f"short: {why}"
 
 
+def _option_check(checks: list[str], i: int) -> OptionCheck | None:
+    """«persuasion:medium» of the master into an OptionCheck; a malformed one is dropped (the client checks the skill)."""
+    raw = checks[i].strip().lower() if i < len(checks) else ""
+    skill, _, tier = raw.partition(":")
+    if not re.fullmatch(r"[a-z_]+", skill) or tier not in get_args(DcTier):
+        return None
+    return OptionCheck(skill=skill, dc_tier=tier)  # type: ignore[arg-type]
+
+
 def _finish(session: Session, params: TurnRequestParams, model: str, out: TurnOutput, run_usage: RunUsage, billed: list[float],
             ctx: TurnContext, trace: dict, started: float, result: object | None) -> TurnResult:
     services = session.services
@@ -259,12 +272,14 @@ def _finish(session: Session, params: TurnRequestParams, model: str, out: TurnOu
     next_mode = None
     if out.next_mode and not (out.next_mode == params.mode and out.npc_id == params.npc_id):
         next_mode = NextMode(mode=out.next_mode, npc_id=out.npc_id if out.next_mode != "exploration" else None)
-    picked = [(o.strip(), out.option_costs[i] if i < len(out.option_costs) else 0) for i, o in enumerate(out.options) if o.strip()][:3]
+    picked = [(o.strip(), out.option_costs[i] if i < len(out.option_costs) else 0, _option_check(out.option_checks, i))
+              for i, o in enumerate(out.options) if o.strip()][:3]
     return TurnResult(
         turn_id=params.turn_id,
         narration=out.narration.strip(),
-        options=[o for o, _ in picked],
-        option_costs=[max(0, min(int(c), 100000)) for _, c in picked],
+        options=[o for o, _, _ in picked],
+        option_costs=[max(0, min(int(c), 100000)) for _, c, _ in picked],
+        option_checks=[ch for _, _, ch in picked] if any(ch for _, _, ch in picked) else [],
         effect_ids=[e for e in dict.fromkeys(out.effect_ids) if e in ctx.accepted],
         check_ids=ctx.check_ids,
         next_mode=next_mode,

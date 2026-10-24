@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.53.0"
+PROTOCOL_VERSION = "0.54.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -437,12 +437,22 @@ class Usage(_Out):
     model: str
 
 
+DcTier = Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"]
+
+
+class OptionCheck(_Out):
+    skill: str
+    dc_tier: DcTier
+
+
 class TurnResult(_Out):
     turn_id: str
     narration: str
     options: list[str] = Field(default_factory=list, max_length=3)
     # The price of each option in copper (0.10.0): the engine takes it when the player picks the option; 0 — free.
     option_costs: list[int] = Field(default_factory=list, max_length=3)
+    # The check of each option (0.54.0): the engine sets the DC, shows the chance and rolls when the player picks it.
+    option_checks: list[OptionCheck | None] = Field(default_factory=list, max_length=3)
     effect_ids: list[str] = Field(default_factory=list)
     check_ids: list[str] = Field(default_factory=list)
     next_mode: NextMode | None = None
@@ -839,7 +849,6 @@ class NpcAttitudeEffect(_Out):
 
 ConditionId = Literal["blinded", "charmed", "deafened", "exhaustion", "frightened", "grappled", "incapacitated",
                       "invisible", "paralyzed", "petrified", "poisoned", "prone", "restrained", "stunned", "unconscious"]
-DcTier = Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"]
 SaveAbility = Literal["str", "dex", "con", "int", "wis", "cha"]
 SaveTag = Literal["poison", "charm", "fear", "magic", "sleep", "disease"]
 ConditionDuration = Literal["round", "minute", "ten_minutes", "hour", "eight_hours", "short_rest", "long_rest",

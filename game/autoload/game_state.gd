@@ -1315,8 +1315,9 @@ func choose_option(index: int) -> String:
 		return "MSG_NO_MASTER"
 	var text := session.options[index]
 	var cost := session.option_costs[index] if index < session.option_costs.size() else 0
+	var check: Dictionary = option_check(index)
 	if cost <= 0:
-		return "" if submit(text) else "MSG_NO_MASTER"
+		return "" if submit(text, "", check) else "MSG_NO_MASTER"
 	if int(session.character["gold_cp"]) < cost:
 		return "MSG_NO_MONEY"
 	if is_busy() or not Backend.is_ready():
@@ -1326,7 +1327,33 @@ func choose_option(index: int) -> String:
 	_add(GameSession.effect_entry([paid]))
 	_log("События: " + paid)
 	EventBus.state_changed.emit()
-	return "" if submit(text, "[движок уже списал %s]" % Money.format(cost)) else "MSG_NO_MASTER"
+	return "" if submit(text, "[движок уже списал %s]" % Money.format(cost), check) else "MSG_NO_MASTER"
+
+
+## The check of a master's option (v0.7.22.28, П5): {skill, dc_tier} or {}.
+func option_check(index: int) -> Dictionary:
+	if session == null or index < 0 or index >= session.option_checks.size() or not session.option_checks[index] is Dictionary:
+		return {}
+	return session.option_checks[index]
+
+
+## What the engine would roll for an option: {skill, dc, bonus, chance (%), dc_reason}; {} — no check. The DC is the
+## engine's (the tier, or the listener's SRD template), the chance counts natural 1 and 20.
+func option_preview(index: int) -> Dictionary:
+	var check := option_check(index)
+	if check.is_empty():
+		return {}
+	var params := check.duplicate()
+	var dc := int(Catalog.rules()["dc_tiers"][str(check["dc_tier"])])
+	var by_npc := SocialRules.dc(session, Catalog.data, _listener_id(params), str(check["skill"]), str(check["dc_tier"]))
+	if not by_npc.is_empty():
+		dc = int(by_npc["dc"])
+	var bonus := CheckEngine.bonus_for(session.character, params) + DifficultyRules.bonus(session, Catalog.data)
+	var wins := 0
+	for nat in range(1, 21):
+		if nat == 20 or (nat != 1 and nat + bonus >= dc):
+			wins += 1
+	return {"skill": str(check["skill"]), "dc": dc, "bonus": bonus, "chance": wins * 5, "dc_reason": str(by_npc.get("reason", ""))}
 
 
 ## «Ждать» (v0.6.5): an hour or until a part of the day; not in a conversation or a fight. The master tells how the
@@ -1350,7 +1377,7 @@ func wait(target: String) -> String:
 
 ## Returns false when the input cannot be sent now (empty, a turn in flight, no master). `engine_note` goes to the
 ## master after the text (a paid option), never into the chat.
-func submit(text: String, engine_note: String = "") -> bool:
+func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> bool:
 	text = text.strip_edges()
 	var pinned := not attached.is_empty() and session != null and session.mode != GameSession.MODE_COMBAT
 	if session == null or (text.is_empty() and not pinned) or is_busy() or not Backend.is_ready():
@@ -1398,6 +1425,11 @@ func submit(text: String, engine_note: String = "") -> bool:
 			return attack_npc(target, op).is_empty()
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
+	if not check.is_empty() and session.mode != GameSession.MODE_COMBAT:  # a tagged option: the engine rolls first (v0.7.22.28)
+		var r := _engine_check(check.duplicate())
+		if not r.has("error"):
+			engine_note = ("%s [движок уже бросил для варианта: %s %d против Сл %d — %s%s]" % [engine_note, tr("SKILL_" + str(check["skill"]).to_upper()),
+				int(r["total"]), int(r["dc"]), "успех" if bool(r["success"]) else "провал", ", повтор без изменений" if bool(r.get("blocked", false)) else ""]).strip_edges()
 	_request("action", text + facts + ((" " + engine_note) if not engine_note.is_empty() else ""))
 	return true
 
@@ -2112,9 +2144,10 @@ func _add(entry: Dictionary) -> void:
 	EventBus.chat_appended.emit(entry)
 
 
-func _set_options(options: Array[String], costs: Array[int] = []) -> void:
+func _set_options(options: Array[String], costs: Array[int] = [], checks: Array = []) -> void:
 	session.options = options
 	session.option_costs = costs
+	session.option_checks = checks
 	EventBus.options_changed.emit(options)
 
 
@@ -2213,7 +2246,13 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 	var costs: Array[int] = []
 	for c: Variant in result.get("option_costs", []):
 		costs.append(maxi(0, int(c)))
-	_set_options(options, costs)
+	var checks: Array = []
+	var raw: Array = result.get("option_checks", []) if result.get("option_checks") is Array else []
+	for i in options.size():
+		var ch: Variant = raw[i] if i < raw.size() else null
+		var ok: bool = ch is Dictionary and Catalog.rules()["skills"].has(str(ch.get("skill", ""))) and Catalog.rules()["dc_tiers"].has(str(ch.get("dc_tier", "")))
+		checks.append({"skill": str(ch["skill"]), "dc_tier": str(ch["dc_tier"])} if ok else {})
+	_set_options(options, costs, checks)
 	_forget_gone_creature()
 
 	if s.mode == GameSession.MODE_COMBAT:

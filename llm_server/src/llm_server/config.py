@@ -37,6 +37,12 @@ PROVIDERS: dict[str, tuple[tuple[str, str], ...]] = {
                                 ("google-ai-studio/priority", "Google AI Studio (priority)")),
 }
 
+# The provider a model goes to first when the player pinned none (the author, 2026-10-24): left to the price picker,
+# DeepSeek went to OpenInference at five times Relace's price. Games, golden runs and playtests alike.
+DEFAULT_PROVIDER: dict[str, str] = {
+    "deepseek/deepseek-v4.1-flash-1017": "relace",
+}
+
 
 class ConfigError(RuntimeError):
     pass

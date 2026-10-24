@@ -315,6 +315,12 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
         fails.append(f"вариантов {count} < {o['min']}")
     if "max" in o and count > o["max"]:
         fails.append(f"вариантов {count} > {o['max']}")
+    if "checked_min" in o:  # v0.7.22.28: options the master tagged «skill:tier»
+        from .turns import _option_check
+        tags = out.get("option_checks", [])
+        checked = sum(1 for i in range(count) if _option_check(tags, i) is not None)
+        if checked < o["checked_min"]:
+            fails.append(f"вариантов с проверкой {checked} < {o['checked_min']} ({tags})")
     for pattern in o.get("must_not_match", []):
         for opt in out.get("options", []):
             if re.search(pattern, opt, re.IGNORECASE):
@@ -349,12 +355,18 @@ JUDGE_INSTRUCTIONS = (
 )
 
 
+def _tagged(out: dict[str, Any]) -> list[str]:
+    """The options as the player sees them: «[stealth:medium] Прокрасться…» when the master tagged a check (v0.7.22.28)."""
+    tags = out.get("option_checks", [])
+    return [f"[{tags[i]}] {o}" if i < len(tags) and tags[i] else o for i, o in enumerate(out.get("options", []))]
+
+
 async def judge(model: Model, sc: dict[str, Any], out: dict[str, Any], engine: MockEngine) -> list[Verdict]:
     agent = Agent(model, output_type=JudgeOutput, instructions=JUDGE_INSTRUCTIONS, model_settings=settings_for(model, {"temperature": 0}))
     prompt = (
         f"Ситуация: {sc.get('title')}\nВвод игрока: {sc.get('input') or '(нет: ' + sc.get('kind', '') + ')'}\n"
         f"Ответ движка на проверку (если была): {json.dumps(sc.get('engine', {}).get('check', {}), ensure_ascii=False)}\n\n"
-        f"Текст мастера:\n{out.get('narration', '')}\n\nВарианты: {out.get('options', [])}\n"
+        f"Текст мастера:\n{out.get('narration', '')}\n\nВарианты: {_tagged(out)}\n"
         f"Проверки: {json.dumps(engine.checks(), ensure_ascii=False)}\nЭффекты: {json.dumps(engine.effects(), ensure_ascii=False)}\n"
         f"Смена режима: {out.get('next_mode')}\nНедостающее понятие (заметка автору): {out.get('missing_concept')}\n\nКритерии:\n" + "\n".join(f"- {r}" for r in sc.get("rubric", []))
     )
@@ -446,11 +458,12 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     o.input_tokens, o.output_tokens = usage.input_tokens, usage.output_tokens
     price_in, price_out = prices.get(model_id, (0.0, 0.0))
     o.cost_usd = sum(billed) or (usage.input_tokens * price_in + usage.output_tokens * price_out) / 1e6
-    o.fails = check_expect(sc.get("expect", {}), {"narration": out.narration, "options": out.options, "next_mode": o.next_mode,
+    o.fails = check_expect(sc.get("expect", {}), {"narration": out.narration, "options": out.options, "option_checks": out.option_checks,
+                                                 "next_mode": o.next_mode,
                                                  "missing_concept": out.missing_concept}, engine, o.tools)
     if judge_model is not None and sc.get("rubric"):
         try:
-            o.verdicts = [v.model_dump() for v in await judge(judge_model, sc, {"narration": out.narration, "options": out.options,
+            o.verdicts = [v.model_dump() for v in await judge(judge_model, sc, {"narration": out.narration, "options": out.options, "option_checks": out.option_checks,
                                                                               "next_mode": o.next_mode, "missing_concept": out.missing_concept}, engine)]
         except Exception as exc:  # noqa: BLE001
             o.note = f"судья упал: {type(exc).__name__}"

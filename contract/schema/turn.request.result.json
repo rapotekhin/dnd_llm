@@ -32,6 +32,33 @@
       "title": "NextMode",
       "type": "object"
     },
+    "OptionCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "dc_tier": {
+          "enum": [
+            "very_easy",
+            "easy",
+            "medium",
+            "hard",
+            "very_hard",
+            "nearly_impossible"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        },
+        "skill": {
+          "title": "Skill",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill",
+        "dc_tier"
+      ],
+      "title": "OptionCheck",
+      "type": "object"
+    },
     "Usage": {
       "additionalProperties": false,
       "properties": {
@@ -97,6 +124,21 @@
         }
       ],
       "default": null
+    },
+    "option_checks": {
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/OptionCheck"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "maxItems": 3,
+      "title": "Option Checks",
+      "type": "array"
     },
     "option_costs": {
       "items": {

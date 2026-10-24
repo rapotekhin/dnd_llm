@@ -49,7 +49,7 @@ func run() -> void:
 	await shot("game_action_check")
 
 	if gs.session.options.size() > 0:
-		var opt := find_button_by_text(game, gs.session.options[0])
+		var opt := find(game, "Option_0")
 		if step("option button exists", opt != null):
 			await press(opt)
 			step("option turn finished", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))

@@ -226,7 +226,11 @@ def test_openrouter_takes_the_cheapest_provider(monkeypatch):
     from llm_server.agents import settings_for
 
     model = OpenRouterModel("deepseek/deepseek-v4.1-flash-1017", provider=OpenRouterProvider(api_key="test"))
-    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True}
+    # DeepSeek goes to Relace first (the author, 2026-10-24); the picked cheap ones only behind it
+    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True, "order": ["relace"],
+                                                        "only": ["relace"], "allow_fallbacks": True}
+    haiku = OpenRouterModel("anthropic/claude-haiku-5.5", provider=OpenRouterProvider(api_key="test"))
+    assert settings_for(haiku)["openrouter_provider"] == {"sort": "price", "require_parameters": True}
     monkeypatch.setenv("LLM_SERVER_PROVIDER_SORT", "off")
     assert "openrouter_provider" not in settings_for(model)
 
@@ -277,10 +281,11 @@ def test_the_picked_providers_go_into_the_request(monkeypatch):
     model = OpenRouterModel(model_id, provider=OpenRouterProvider(api_key="test"))
     monkeypatch.setitem(PICKER._ranked, model_id, [("a", "A"), ("b", "B"), ("c", "C"), ("d", "D")])
     monkeypatch.setenv("LLM_SERVER_MIN_TPS", "40")
-    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True, "only": ["a", "b", "c"],
-                                                        "allow_fallbacks": True, "preferred_min_throughput": {"p50": 40.0}}
+    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True, "only": ["relace", "a", "b", "c"],
+                                                        "order": ["relace", "a", "b", "c"], "allow_fallbacks": True,
+                                                        "preferred_min_throughput": {"p50": 40.0}}
     monkeypatch.setenv("LLM_SERVER_PROVIDER_SORT", "throughput")
-    assert "only" not in settings_for(model)["openrouter_provider"]
+    assert settings_for(model)["openrouter_provider"]["order"][0] == "relace"
 
 
 def test_a_pinned_provider_is_the_only_one(monkeypatch):
