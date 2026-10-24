@@ -173,6 +173,47 @@ static func open_edges(s: GameSession, data: Dictionary, room_id: String) -> Arr
 	return out
 
 
+## The locations where the master may grow a place (rules.world_gen.edge_reach): the hero's, the ones one exit away
+## and the ones the hero has been to — the author: a bakery «outside the town» asked of the innkeeper is built at the
+## North Gate, not only where the hero stands.
+static func reach_locations(s: GameSession, data: Dictionary) -> Array[String]:
+	var world := WorldView.new(data["world"])
+	var reach: Dictionary = cfg(data).get("edge_reach", {})
+	var here := world.location_id(s.room_id)
+	var out: Array[String] = [here]
+	var rooms: Dictionary = data["world"]["rooms"]
+	if bool(reach.get("neighbours", true)):
+		for rid: String in rooms:
+			if world.location_id(rid) != here:
+				continue
+			for x: Variant in rooms[rid].get("exits", []):
+				var loc := world.location_id(str(x))
+				if not loc.is_empty() and not out.has(loc):
+					out.append(loc)
+	if bool(reach.get("visited", true)):
+		for rid: String in s.visited:
+			var loc := world.location_id(rid)
+			if not loc.is_empty() and not out.has(loc):
+				out.append(loc)
+	return out
+
+
+## The open edges the master may build on now: [{room_id, room, location, edge, text, terrain, new_location}], the
+## hero's room first, then its location, then the rest.
+static func reach_edges(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	var world := WorldView.new(data["world"])
+	var locs := reach_locations(s, data)
+	var rooms: Array = data["world"]["rooms"].keys().filter(func(rid: String) -> bool: return locs.has(world.location_id(rid)))
+	rooms.sort_custom(func(a: String, b: String) -> bool:
+		return (a == s.room_id and b != s.room_id) or (a != s.room_id and b != s.room_id and locs.find(world.location_id(a)) < locs.find(world.location_id(b))))
+	var out: Array[Dictionary] = []
+	for rid: String in rooms:
+		for e: Dictionary in open_edges(s, data, rid):
+			out.append({"room_id": rid, "room": str(world.room(rid).get("name", rid)), "location": str(world.location(world.location_id(rid)).get("name", "")),
+				"edge": int(e["index"]), "text": str(e.get("text", "")), "terrain": e.get("terrain", []), "new_location": bool(e.get("new_location", false))})
+	return out
+
+
 ## Places of the world by a query (rooms and locations): [{room_id, name, location, source}].
 static func find_places(s: GameSession, data: Dictionary, query: String) -> Array[Dictionary]:
 	var world := WorldView.new(data["world"])
@@ -195,9 +236,13 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 	if not searched:
 		return {"reason": "сначала find_places: может, такое место уже есть"}
 	var world := WorldView.new(data["world"])
-	var edges := open_edges(s, data, s.room_id)
-	if edges.is_empty():
-		return {"reason": "отсюда пакет не позволяет дорисовывать мир (нет открытых краёв); места — только по выходам сцены"}
+	var at := str(spec.get("room_id", "")) if spec.get("room_id") != null and not str(spec.get("room_id", "")).is_empty() else s.room_id
+	var reach: Array = reach_edges(s, data).map(func(e: Dictionary) -> String: return str(e["room_id"]))
+	if not reach.has(at):
+		var known := reach_edges(s, data).map(func(e: Dictionary) -> String: return "%s [%s] край %d" % [e["room"], e["room_id"], int(e["edge"])])
+		return {"reason": ("у %s нет открытых краёв в досягаемости" % world.room(at).get("name", at)) +
+			("; края известного мира: %s — create_place с их room_id и edge" % "; ".join(known) if not known.is_empty() else "; места — только по выходам сцены")}
+	var edges := open_edges(s, data, at)
 	var idx := int(spec.get("edge", 0)) if spec.get("edge") != null else 0
 	var edge: Dictionary = {}
 	for e: Dictionary in edges:
@@ -213,7 +258,7 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		return {"reason": "в этой игре создано уже %d комнат — больше нельзя" % made.size()}
 	var new_loc := bool(spec.get("new_location", false))
 	if new_loc and not bool(edge.get("new_location", false)):
-		return {"reason": "с этого края — только продолжение %s, не новая локация" % world.location(world.location_id(s.room_id)).get("name", "")}
+		return {"reason": "с этого края — только продолжение %s, не новая локация" % world.location(world.location_id(at)).get("name", "")}
 	var terrain := str(spec.get("terrain", "")) if spec.get("terrain") != null else ""
 	if new_loc and not (edge.get("terrain", []) as Array).has(terrain):
 		return {"reason": "местность новой локации — из %s (связность мира пакета)" % ", ".join(edge.get("terrain", []))}
@@ -274,12 +319,13 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 					frontier.append(x)
 	if seen.size() < keys.size():
 		return {"reason": "все комнаты места должны быть связаны выходами с первой"}
-	var place := {"from": s.room_id, "edge": idx, "rooms": defs, "new_location": new_loc, "location": {}}
+	var place := {"from": at, "edge": idx, "rooms": defs, "new_location": new_loc, "location": {}}
 	if new_loc:
 		place["location"] = {"name": str(spec.get("name", "")).strip_edges().left(60), "description": str(spec.get("description", "")).left(400), "terrain": terrain}
 		if str(place["location"]["name"]).length() < 2:
 			return {"reason": "у новой локации нужно имя"}
-	return {"plan": {"place": place}, "summary": "Новое место: %s" % ", ".join(defs.map(func(d: Dictionary) -> String: return d["name"]))}
+	return {"plan": {"place": place}, "summary": "Новое место: %s%s" % [", ".join(defs.map(func(d: Dictionary) -> String: return d["name"])),
+		"" if at == s.room_id else " — у %s" % world.room(at).get("name", at)]}
 
 
 ## Makes the place: in the save and in this game's world. The id of its first room.

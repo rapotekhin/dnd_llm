@@ -188,7 +188,8 @@ class MockEngine:
             return {"found": data is not None, "data": data or {}}
         if method == "engine.find_places":  # v0.7.20.1
             return {"places": [{"room_id": p.get("id", ""), "name": p.get("name", ""), "location": p.get("location", "")}
-                               for p in self.engine.get("find_places", [])]}
+                               for p in self.engine.get("find_places", [])],
+                    "edges": self.engine.get("find_edges", [])}  # 0.48.0: the open edges of the known world
         if method == "engine.find_quests":  # v0.7.21
             return {"quests": [{"quest_id": q.get("id", ""), "title": q.get("title", ""), "giver": q.get("giver", ""),
                                 "status": q.get("status", "offered")} for q in self.engine.get("find_quests", [])]}

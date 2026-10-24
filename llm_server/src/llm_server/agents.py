@@ -388,15 +388,21 @@ async def find_quests(ctx: RunContext[TurnContext], query: str) -> str:
 
 
 async def find_places(ctx: RunContext[TurnContext], query: str) -> str:
-    """Найти места мира (комнаты и локации пакета и созданные в этой игре): query — название по-русски. Обязательно
-    перед create_place: может, такое место уже есть."""
+    """Найти места мира (комнаты и локации пакета и созданные в этой игре): query — название или локация по-русски.
+    Обязательно перед create_place: может, такое место уже есть. В ответе — и открытые края известного мира, где можно
+    дорисовать новое место (не только здесь)."""
     t = ctx.deps
     t.searched_places = True
     raw = await t.session.call_engine("engine.find_places", EngineFindPlacesParams(turn_id=t.params.turn_id, query=query))
-    found = EngineFindPlacesResult.model_validate(raw).places
-    if not found:
-        return "Ничего похожего. Если место нужно и в сцене есть открытый край — create_place."
-    return "\n".join(f"[{p.room_id}] {p.name} — {p.location}" for p in found)
+    r = EngineFindPlacesResult.model_validate(raw)
+    out = ["\n".join(f"[{p.room_id}] {p.name} — {p.location}" for p in r.places) if r.places else "Похожих мест нет."]
+    if r.edges:  # 0.48.0: where a new place may grow — this room, its location, the neighbours, where the hero has been
+        out.append("Открытые края, где можно дорисовать место (create_place с room_id и edge; герой туда не переходит):\n" + "\n".join(
+            f"[{e.room_id}] {e.room} ({e.location}), край {e.edge}: {e.text}; местность {', '.join(e.terrain)}"
+            f"{'; можно новую локацию' if e.new_location else ''}" for e in r.edges))
+    else:
+        out.append("Открытых краёв поблизости нет — новых мест не создать.")
+    return "\n\n".join(out)
 
 
 async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None = None,

@@ -384,7 +384,7 @@
     },
     "CreatePlaceEffect": {
       "additionalProperties": false,
-      "description": "A room or a small place (0.32.0) on an open edge of this room (`edge` — its index from scene.open_edges), only\nafter find_places in the same turn: 1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the\nedge allows it. The engine checks the schema, the links, the encounter budget and the limits.",
+      "description": "A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:\n1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —\nthe room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;\nempty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter\nbudget and the limits.",
       "properties": {
         "description": {
           "default": "",
@@ -412,6 +412,18 @@
           "default": false,
           "title": "New Location",
           "type": "boolean"
+        },
+        "room_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Room Id"
         },
         "rooms": {
           "items": {

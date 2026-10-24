@@ -271,6 +271,8 @@
 		}
 	},
 	"world_gen": {
+		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",
+		"edge_reach": {"neighbours": true, "visited": true},
 		"_doc": "People and places the master makes (v0.7.20, WorldGen): an NPC by the pack's schema — a template of people (npc_templates, CR at most max_cr), a race of the SRD, links to NPCs of the world (link_kinds), a trader with goods of the catalog (each at most stock_item_cap_cp) and purse_cp; at most max_per_location new people in a location and max_per_session in a game. A place (v0.7.20.1) — max_rooms rooms on an open edge of the pack, max_rooms_per_session in a game; its encounter within the hard XP budget of the level.",
 		"npc_templates": [
 			"commoner",

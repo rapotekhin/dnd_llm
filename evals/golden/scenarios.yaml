@@ -2101,6 +2101,24 @@ scenarios:
     rubric:
       - "Горм называет баню или банщика, и мастер в этом же ходе создаёт их (create_npc банщика/банщицы или create_place бани), а не только говорит о них словами"
 
+  - id: bakery_past_the_north_gate
+    title: "Пекарня «за городом»: спрошено в таверне, место — у Северных ворот (просьба автора, 2026-10-24)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, а где тут пекарня? Хлеба свежего хочу. Говорят, Хильда печёт где-то за Северными воротами?"
+    engine:
+      find_places: []
+      find_npcs: []
+      find_edges:
+        - {room_id: brod-square, room: "Рыночная площадь", location: "Ольховый Брод", edge: 0, text: "улочки и дворы вокруг площади — дома, лавки, мастерские", terrain: [grassland], new_location: false}
+        - {room_id: brod-gate, room: "Северные ворота", location: "Ольховый Брод", edge: 0, text: "поля и хутора за северными воротами", terrain: [grassland, hills], new_location: true}
+    expect:
+      effects: {required_kinds_any: [create_place], forbidden_kinds: [move, coins]}
+      tools_required: [find_places]
+    rubric:
+      - "Мастер создаёт пекарню эффектом create_place на крае у Северных ворот (room_id brod-gate), а не в таверне; Горм объясняет, как туда пройти, и герой никуда не переходит"
+
   - id: trader_made_as_trader
     title: "Новый кузнец — торговец с товаром (большой тест, v0.7.22.13)"
     category: concepts

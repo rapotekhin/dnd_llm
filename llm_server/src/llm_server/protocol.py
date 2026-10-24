@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.47.0"
+PROTOCOL_VERSION = "0.48.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -652,12 +652,15 @@ class NewRoom(_Out):
 
 
 class CreatePlaceEffect(_Out):
-    """A room or a small place (0.32.0) on an open edge of this room (`edge` — its index from scene.open_edges), only
-    after find_places in the same turn: 1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the
-    edge allows it. The engine checks the schema, the links, the encounter budget and the limits."""
+    """A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:
+    1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —
+    the room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;
+    empty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter
+    budget and the limits."""
 
     kind: Literal["create_place"] = "create_place"
     edge: int = Field(default=0, ge=0)
+    room_id: str | None = None
     rooms: list[NewRoom] = Field(min_length=1, max_length=4)
     new_location: bool = False
     name: str = ""
@@ -1118,8 +1121,21 @@ class FoundPlace(_In):
     source: str = "pack"
 
 
+class FoundEdge(_In):
+    """An open edge of the known world where a new place may grow (0.48.0)."""
+
+    room_id: str
+    room: str = ""
+    location: str = ""
+    edge: int = 0
+    text: str = ""
+    terrain: list[str] = Field(default_factory=list)
+    new_location: bool = False
+
+
 class EngineFindPlacesResult(_In):
     places: list[FoundPlace] = Field(default_factory=list)
+    edges: list[FoundEdge] = Field(default_factory=list)  # 0.48.0
 
 
 class FoundItem(_In):

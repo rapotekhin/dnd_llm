@@ -2472,7 +2472,8 @@ func handle_engine_find_places(params: Dictionary) -> Dictionary:
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")
 	effects.searched_places[busy_turn] = true
-	return {"places": WorldGen.find_places(session, Catalog.data, str(params.get("query", ""))).slice(0, 10)}
+	return {"places": WorldGen.find_places(session, Catalog.data, str(params.get("query", ""))).slice(0, 10),
+		"edges": WorldGen.reach_edges(session, Catalog.data).slice(0, 12)}  # where a new place may grow (the author, 2026-10-24)
 
 
 ## The master looks for a person in the world before making one (v0.7.20).

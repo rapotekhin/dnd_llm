@@ -1,5 +1,51 @@
 {
   "$defs": {
+    "FoundEdge": {
+      "description": "An open edge of the known world where a new place may grow (0.48.0).",
+      "properties": {
+        "edge": {
+          "default": 0,
+          "title": "Edge",
+          "type": "integer"
+        },
+        "location": {
+          "default": "",
+          "title": "Location",
+          "type": "string"
+        },
+        "new_location": {
+          "default": false,
+          "title": "New Location",
+          "type": "boolean"
+        },
+        "room": {
+          "default": "",
+          "title": "Room",
+          "type": "string"
+        },
+        "room_id": {
+          "title": "Room Id",
+          "type": "string"
+        },
+        "terrain": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Terrain",
+          "type": "array"
+        },
+        "text": {
+          "default": "",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "room_id"
+      ],
+      "title": "FoundEdge",
+      "type": "object"
+    },
     "FoundPlace": {
       "properties": {
         "location": {
@@ -30,6 +76,13 @@
     }
   },
   "properties": {
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/FoundEdge"
+      },
+      "title": "Edges",
+      "type": "array"
+    },
     "places": {
       "items": {
         "$ref": "#/$defs/FoundPlace"
