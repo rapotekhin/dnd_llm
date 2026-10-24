@@ -11,7 +11,7 @@ var confirm: Button
 
 
 ## The rules text of the hovered choice (v0.6.6).
-var _info: InfoBox
+var _info: DetailsPanel
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -43,8 +43,9 @@ func _ready() -> void:
 	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_box.add_theme_constant_override("separation", 8)
 	scroll.add_child(_box)
-	_info = InfoBox.new().as_column(560)
-	mid.add_child(_info)
+	_info = DetailsPanel.new(Vector2(0, 160))  # v0.7.22.21: the one description panel, over the chat
+	_info.show_text(tr("INFO_HINT"), "")
+	mid.add_child(_info.column(ChatView.new(), 520))
 	_error = Label.new()
 	_error.name = "LevelUpError"
 	_error.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -126,9 +127,8 @@ func _rebuild() -> void:
 	if bool(p["asi"]):
 		_asi(c)
 	var spells: Dictionary = data["spells"]
-	var spell_name := func(id: String) -> String:
-		var s: Dictionary = spells.get(id, {})
-		return "%s (%s)" % [s.get("name", id), tr("LVL_CANTRIP") if int(s.get("level", 0)) == 0 else "%d круг" % int(s.get("level", 0))]
+	var spell_name := func(id: String) -> String:  # the circle is the group's heading (v0.7.22.21)
+		return str(spells.get(id, {}).get("name", id))
 	if int(p["cantrips"]) > 0:
 		_choice_text(tr("LVL_CANTRIPS").format({"n": p["cantrips"]}), "cantrip", p["cantrip_list"], spell_name, int(p["cantrips"]),
 			picks.get("cantrips", []), func(sel: Array) -> void: picks["cantrips"] = sel)
@@ -178,16 +178,33 @@ func _choice(title_key: String, group: String, ids: Array, label: Callable, n: i
 func _choice_text(title: String, group: String, ids: Array, label: Callable, n: int, chosen: Array, on_change: Callable) -> void:
 	_box.add_child(HSeparator.new())
 	_text(title, "").add_theme_color_override("font_color", UiTheme.ACCENT)
-	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 16)
-	_box.add_child(flow)
-	for id: Variant in ids:
+	var spells: Dictionary = Catalog.data["spells"]
+	var all_spells := not ids.is_empty() and ids.all(func(x: Variant) -> bool: return spells.has(str(x)))
+	var order := ids.duplicate()
+	if all_spells:  # v0.7.22.21 (#20): spells by circle, framed by school
+		order.sort_custom(func(a: Variant, b: Variant) -> bool:
+			var la := int(spells[str(a)].get("level", 0))
+			var lb := int(spells[str(b)].get("level", 0))
+			return la < lb or (la == lb and str(spells[str(a)]["name"]) < str(spells[str(b)]["name"])))
+	var flow: HFlowContainer = null
+	var circle := -1
+	for id: Variant in order:
+		var lv := int(spells.get(str(id), {}).get("level", 0)) if all_spells else 0
+		if flow == null or (all_spells and lv != circle):
+			circle = lv
+			if all_spells:
+				_text(tr("DETAILS_CANTRIP") if lv == 0 else tr("DETAILS_CIRCLE").format({"n": lv}), UiTheme.MUTED_LABEL)
+			flow = HFlowContainer.new()
+			flow.add_theme_constant_override("h_separation", 16)
+			_box.add_child(flow)
 		var cb := CheckBox.new()
 		cb.name = "Pick_%s_%s" % [group, id]
 		cb.text = label.call(str(id))
 		cb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		cb.button_pressed = chosen.has(id)
 		InfoBox.hook(cb, _info, cb.text, _tip(str(id)))
+		if all_spells:
+			UiTheme.school_frame(cb, str(spells[str(id)].get("school_id", "")))
 		cb.toggled.connect(func(on: bool) -> void:
 			var sel := chosen.duplicate()
 			if on and not sel.has(id):

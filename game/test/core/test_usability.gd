@@ -34,12 +34,12 @@ func test_every_choice_of_creation_has_a_rules_text() -> void:
 
 
 func test_the_info_box_shows_the_hovered_choice() -> void:
-	var box := InfoBox.new()
+	var box := DetailsPanel.new()
 	var b := Button.new()
 	b.text = "Чемпион"
 	InfoBox.hook(b, box, b.text, "3 ур. — Улучшенный критический удар")
 	b.mouse_entered.emit()
-	assert_str(box.text()).contains("Улучшенный критический")
+	assert_str(box.body()).contains("Улучшенный критический")
 	box.free()
 	b.free()
 

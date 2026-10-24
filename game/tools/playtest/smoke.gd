@@ -44,7 +44,7 @@ func run() -> void:
 	step("input locked while the master thinks", gs.is_busy() and not game.get("input").editable)
 	var acted := await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 	step("action turn finished", acted)
-	step("engine.check card in chat", _count(gs, GameSession.KIND_CHECK) == 1 and find_all(game, "CheckCard").size() == 1)
+	step("engine.check card in chat", _count(gs, GameSession.KIND_CHECK) == 1 and find_all(game.get("chat"), "CheckCard").size() == 1)  # the main chat: the sheet and the level-up have their own (v0.7.22.21)
 	step("options shown", gs.session.options.size() > 0, str(gs.session.options))
 	await shot("game_action_check")
 

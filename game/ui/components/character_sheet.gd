@@ -11,6 +11,7 @@ signal bag_requested(bag_id: String)
 var _conc_armed := ""  # a concentration spell pressed once while another is held (v0.7.13.1)
 var _tabs: TabContainer
 var _picked_item := ""  # the item shown in the details panel of the gear tab (v0.7.7 fixes)
+var _details: DetailsPanel  # v0.7.22.21 (#2–#5): the one description panel of the sheet, over the chat
 
 
 func _ready() -> void:
@@ -21,12 +22,19 @@ func _ready() -> void:
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 80)
+		margin.add_theme_constant_override("margin_" + side, 40)
 	add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var split := HBoxContainer.new()
+	split.add_theme_constant_override("separation", 16)
+	margin.add_child(split)
 	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 12)
-	margin.add_child(col)
+	split.add_child(col)
+	_details = DetailsPanel.new(Vector2(0, 160))
+	_details.name = "ItemDetails"
+	split.add_child(_details.column(ChatView.new(), 460))
 	_tabs = TabContainer.new()
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(_tabs)
@@ -288,11 +296,23 @@ func _abilities_tab(c: Dictionary) -> Control:
 		if ids.is_empty():
 			continue
 		_text(box, tr("SHEET_SPELLS_" + list.to_upper()), UiTheme.MUTED_LABEL)
-		for id: Variant in ids:
+		var sorted := ids.duplicate()  # v0.7.22.21 (#20): by circle, then by name
+		sorted.sort_custom(func(a: Variant, b: Variant) -> bool:
+			var la := SpellRules.level_of(d, str(a))
+			var lb := SpellRules.level_of(d, str(b))
+			return la < lb or (la == lb and str(d["spells"].get(str(a), {}).get("name", a)) < str(d["spells"].get(str(b), {}).get("name", b))))
+		var circle := -1
+		for id: Variant in sorted:
 			var s: Dictionary = d["spells"].get(str(id), {})
-			_entry(box, "%s — %s, %s, %s" % [s.get("name", id), s.get("casting_time", ""), s.get("range", ""), s.get("duration", "")], str(s.get("desc", "")))
+			var lv := int(s.get("level", 0))
+			if lv != circle and list != "cantrips":
+				circle = lv
+				_text(box, tr("DETAILS_CANTRIP") if lv == 0 else tr("DETAILS_CIRCLE").format({"n": lv})).add_theme_color_override("font_color", UiTheme.MUTED)
+			var b := _entry(box, "%s — %s, %s" % [s.get("name", id), s.get("casting_time", ""), s.get("range", "")], DetailsPanel.spell_text(d, str(id)), str(s.get("name", id)))
+			UiTheme.school_frame(b, str(s.get("school_id", "")))
+			b.name = "Spell_" + str(id)
 			if list != "known" and ready_ids.has(str(id)):
-				_cast_row(box, c, str(id), 0 if list == "free" else int(s.get("level", 0)), can_act)
+				_cast_row(box, c, str(id), 0 if list == "free" else lv, can_act)
 	return box.get_parent()
 
 
@@ -348,10 +368,17 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 	parent.add_child(b)
 
 
-func _entry(parent: Control, title: String, body: String) -> void:
-	_text(parent, title).add_theme_color_override("font_color", UiTheme.ACCENT)
-	if not body.is_empty():
-		_text(parent, body, UiTheme.MUTED_LABEL)
+## A feature, a trait or a spell as one line: its text is in the description panel (hover; the right button pins it).
+func _entry(parent: Control, title: String, body: String, short_title: String = "") -> Button:
+	var b := Button.new()
+	b.text = title
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.add_theme_color_override("font_color", UiTheme.ACCENT)
+	parent.add_child(b)
+	_details.hook(b, short_title if not short_title.is_empty() else title, body)
+	return b
 
 
 func _gear_tab(c: Dictionary) -> Control:
@@ -363,10 +390,7 @@ func _gear_tab(c: Dictionary) -> Control:
 	list_scroll.name = "GearList"
 	list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root.add_child(list_scroll)
-	var details := DetailsPanel.new(Vector2(560, 0))
-	details.name = "ItemDetails"
-	details.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(details)
+	var details := _details
 	var s := GameState.session
 	var items: Dictionary = Catalog.data["items"]
 	var busy := GameState.is_busy()
@@ -501,7 +525,6 @@ func _item_button(row: Control, details: DetailsPanel, c: Dictionary, id: String
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if id == _picked_item:
 		b.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
-	b.pressed.connect(func() -> void:
-		_picked_item = id
-		details.show_text(ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), DetailsPanel.item_text(c, Catalog.data, GameState.session.items, id)))
+	b.pressed.connect(func() -> void: _picked_item = id)
+	details.hook(b, ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), DetailsPanel.item_text(c, Catalog.data, GameState.session.items, id))
 	row.add_child(b)

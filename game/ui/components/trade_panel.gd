@@ -40,9 +40,13 @@ func _ready() -> void:
 		margin.add_theme_constant_override("margin_" + side, 28)
 	add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var split := HBoxContainer.new()  # v0.7.22.21 (#4): the deal on the left, the description and the chat on the right
+	split.add_theme_constant_override("separation", 16)
+	margin.add_child(split)
 	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 12)
-	margin.add_child(col)
+	split.add_child(col)
 
 	# The head: the trader, the purses, the deal's state, back to the talk or away.
 	var head := HBoxContainer.new()
@@ -85,7 +89,7 @@ func _ready() -> void:
 	_stock = _list(cols, "TRADE_STOCK", 1.0)
 	var deal := PanelContainer.new()
 	deal.theme_type_variation = UiTheme.SIDE
-	deal.custom_minimum_size = Vector2(400, 0)
+	deal.custom_minimum_size = Vector2(300, 0)
 	cols.add_child(deal)
 	var dcol := VBoxContainer.new()
 	dcol.add_theme_constant_override("separation", 8)
@@ -129,11 +133,11 @@ func _ready() -> void:
 	deal_button.theme_type_variation = UiTheme.ACCENT_BUTTON
 	_yours = _list(cols, "TRADE_YOURS", 1.0)
 
-	_info = DetailsPanel.new(Vector2(0, 96))  # a thin strip, not half the window (the author)
+	_info = DetailsPanel.new(Vector2(0, 160))
 	_info.name = "TradeItemInfo"
-	_info.custom_minimum_size = Vector2(0, 96)
-	_info.size_flags_vertical = Control.SIZE_SHRINK_END
-	col.add_child(_info)
+	var chat := ChatView.new()  # the talk with the trader stays in view (the author)
+	chat.name = "TradeChat"
+	split.add_child(_info.column(chat, 420))
 
 	EventBus.state_changed.connect(_rebuild)
 	EventBus.turn_started.connect(func(_id: String) -> void: _rebuild())
@@ -202,6 +206,7 @@ func _rebuild() -> void:
 		_npc = s.npc_id
 		cart = {"buy": {}, "sell": {}}
 		_error.text = ""
+		_info.unpin()
 		_info.show_text(tr("TRADE_INFO_HINT"), "")
 	var data := Catalog.data
 	var m := TradeRules.merchant(s, data, _npc)
@@ -321,12 +326,8 @@ func _fill(box: VBoxContainer, lines: Array, side: String, prefix: String, empty
 		title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var item_name := str(line["name"])
-		var show := func() -> void:
-			var s := GameState.session
-			_info.show_text(item_name, DetailsPanel.item_text(s.character, Catalog.data, s.items, id))
-		title.pressed.connect(show)
-		title.mouse_entered.connect(show)
+		var s := GameState.session
+		_info.hook(title, str(line["name"]), DetailsPanel.item_text(s.character, Catalog.data, s.items, id))
 		row.add_child(title)
 		var price := _label(row, true)
 		price.text = Money.format(int(line["price_cp"]))

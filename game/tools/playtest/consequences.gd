@@ -126,7 +126,12 @@ func run() -> void:
 		await press(people)
 		await frames(3)
 		var box: Node = find(game, "JournalTab_people").get_parent().get_parent()
-		var text := " ".join(box.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text))
+		var text := ""  # v0.7.22.21: what a person remembers is in their card
+		for who: Node in box.find_children("Person_*", "Button", true, false):
+			await press(who as Button)
+			await frames(1)
+			var card: DetailsPanel = box.find_children("PersonCard", "PanelContainer", true, false)[0]
+			text += card.body() + " "
 		step("the people remember the murder", text.contains("помнит: день 1 — знает: Кейра убита героем"), text.left(200))
 		await shot("people")
 	await key(KEY_ESCAPE)

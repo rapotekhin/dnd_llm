@@ -1,64 +1,15 @@
 class_name InfoBox
-extends PanelContainer
-## The rules text of the choice under the mouse or just picked (roadmap v0.6.6, playtest-1: «I pick features
-## blindly by their names»): a box under a list of races, classes, features, spells, items. Tooltips stay too, but
-## this is always visible. The text can be selected and copied.
-
-var _title: Label
-var _body: RichTextLabel
+extends RefCounted
+## The rules texts of SRD choices — races, classes, subclasses, backgrounds (roadmap v0.6.6, playtest-1: «I pick
+## features blindly by their names»). Since v0.7.22.21 they show in the one description panel of the screen
+## (DetailsPanel); `hook` is kept for the screens that hook a choice to it.
 
 
-func _init(min_height: int = 130) -> void:
-	name = "InfoBox"
-	theme_type_variation = UiTheme.SIDE
-	custom_minimum_size = Vector2(0, min_height)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
-	add_child(col)
-	_title = Label.new()
-	_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_title.add_theme_color_override("font_color", UiTheme.ACCENT)
-	col.add_child(_title)
-	_body = RichTextLabel.new()
-	_body.name = "InfoText"
-	_body.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_body.fit_content = true
-	_body.scroll_active = false
-	_body.selection_enabled = true
-	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(_body)
-	show_text(tr("INFO_HINT"), "")
-
-
-## A column of its own beside a list (v0.7.22.5, big test #36): a fixed width, the text scrolls inside, the box does
-## not jump in size from one choice to another.
-func as_column(width: int) -> InfoBox:
-	custom_minimum_size = Vector2(width, 0)
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_body.fit_content = false
-	_body.scroll_active = true
-	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	(_body.get_parent() as Control).size_flags_vertical = Control.SIZE_EXPAND_FILL
-	return self
-
-
-func show_text(title: String, body: String) -> void:
-	_title.text = title
-	_body.text = body
-
-
-func text() -> String:
-	return _body.text
-
-
-## Shows `title` / `body` in `box` when `control` is hovered, focused or pressed.
-static func hook(control: Control, box: InfoBox, title: String, body: String) -> void:
+## Shows `title` / `body` in `box` when `control` is hovered, focused or pressed; the right button pins it.
+static func hook(control: Control, box: DetailsPanel, title: String, body: String) -> void:
 	if box == null or body.is_empty():
 		return
-	control.mouse_entered.connect(func() -> void: box.show_text(title, body))
-	control.focus_entered.connect(func() -> void: box.show_text(title, body))
-	if control is BaseButton:
-		(control as BaseButton).pressed.connect(func() -> void: box.show_text(title, body))
+	box.hook(control, title, body)
 
 
 # --- rules texts of SRD choices ------------------------------------------------------------------------

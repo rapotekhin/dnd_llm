@@ -127,8 +127,8 @@ func run() -> void:
 
 func _text_of(n: Node) -> String:
 	var out := ""
-	for l: Node in n.find_children("*", "Label", true, false):
-		out += (l as Label).text + "\n"
+	for l: Node in n.find_children("*", "Label", true, false) + n.find_children("*", "RichTextLabel", true, false):  # the panel's text is rich (v0.7.22.21)
+		out += str(l.get("text")) + "\n"
 	return out
 
 

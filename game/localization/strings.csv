@@ -318,7 +318,9 @@ DEATH_WHO,"{name} — {race}, {class}, {level} уровень"
 DETAILS_CANTRIP,Заговор
 DETAILS_CIRCLE,{n} круг
 DETAILS_CONCENTRATION,концентрация
-DETAILS_HINT,Выберите — здесь появится описание
+DETAILS_HINT,Наведите — здесь появится описание; правая кнопка мыши закрепит его
+DETAILS_UNPIN,Закреплено ✕
+DETAILS_UNPIN_TIP,Открепить описание (или правая кнопка по закреплённому)
 DEV_SNAPSHOT,Снимок бага: {path}
 DICE_D,к
 DM_STYLE_CLASSIC,Классический
@@ -357,7 +359,7 @@ HINT_IMMUNE,На эту цель заклинание не действует
 HINT_POOL,Пул хитов {min}–{max}: {cond} — сначала самые слабые
 HINT_SAVE,Провал спасброска {p}% · урон {min}–{max}
 HINT_SNEAK, · со Скрытой атакой
-INFO_HINT,Наведите на вариант — здесь появится его описание
+INFO_HINT,Наведите на вариант — здесь появится его описание; правая кнопка мыши закрепит его
 ITEM_AC,КД {n}
 ITEM_ARMOR_HEAVY,Тяжёлый доспех
 ITEM_ARMOR_LIGHT,Лёгкий доспех
@@ -481,6 +483,7 @@ JOURNAL_REMEMBERS,помнит: {fact}
 JOURNAL_EMPTY,"Пока пусто: записи появятся, когда вы осмотритесь и поговорите с людьми."
 JOURNAL_EMPTY_FOUND,Здесь появится найденное
 JOURNAL_EMPTY_PEOPLE,Здесь появятся итоги разговоров
+JOURNAL_PICK_PERSON,Наведите на имя — здесь будет карточка человека; клик или правая кнопка мыши закрепят её
 JOURNAL_EMPTY_PLACES,"Здесь появятся места, где вы побывали"
 JOURNAL_EMPTY_QUESTS,Заданий пока нет — их дают люди Марки
 JOURNAL_FOUND,Находки
@@ -785,7 +788,7 @@ TRADE_YOU_SELL,Вы продаёте
 TRADE_NOTHING_YET,—
 TRADE_SERVICES,Услуги
 TRADE_CART_EMPTY_SHORT,"Нажмите «+» у товара или своей вещи"
-TRADE_INFO_HINT,Наведите на вещь — здесь появится её описание
+TRADE_INFO_HINT,Наведите на вещь — здесь появится её описание; правая кнопка мыши закрепит его
 BTN_PLACE,Взаимодействие с местом ({n})
 JOURNAL_DEAD,мёртв(а)
 JOURNAL_GAVE,уже дал(а): {deal}

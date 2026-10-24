@@ -59,7 +59,8 @@ func run() -> void:
 		await press(take)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	step("the rope and the candle in the pack, the mug stays", int(c["inventory"].get("rope", 0)) >= 1
-		and PropRules.room_props(s, s.room_id).size() == 1, _effects_text(s).right(120))
+		and PropRules.room_props(s, s.room_id).filter(func(p: Dictionary) -> bool: return not p.has("wares")).size() == 1, "rope %d; left: %s" % [int(c["inventory"].get("rope", 0)),
+		", ".join(PropRules.room_props(s, s.room_id).map(func(p: Dictionary) -> String: return str(p["name"])))])
 
 	# The dwarf on the sheet.
 	await press(find(game, "SheetButton"))

@@ -20,8 +20,8 @@ var _next: Button
 var _start: Button
 
 
-## The rules text of the hovered choice (v0.6.6).
-var _info: InfoBox
+## The rules text of the hovered choice (v0.6.6); since v0.7.22.21 at the top of the right column, over the summary.
+var _info: DetailsPanel
 
 func _init(new_game_settings: Dictionary = {}) -> void:
 	settings = new_game_settings
@@ -64,8 +64,11 @@ func _ready() -> void:
 
 	var side := PanelContainer.new()
 	side.theme_type_variation = UiTheme.SIDE
-	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(side)
+	_info = DetailsPanel.new(Vector2(0, 160))
+	_info.show_text(tr("INFO_HINT"), "")
+	var right := _info.column(side, 0)
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(right)
 	var side_scroll := ScrollContainer.new()
 	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	side.add_child(side_scroll)
@@ -74,8 +77,6 @@ func _ready() -> void:
 	_summary.add_theme_constant_override("separation", 6)
 	side_scroll.add_child(_summary)
 
-	_info = InfoBox.new(110)
-	col.add_child(_info)
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 16)
 	col.add_child(bottom)
@@ -270,6 +271,8 @@ func _checks(parent: Control, picked: Array, options: Array, limit: int, on_chan
 		cb.name = "Check_" + str(o["id"])
 		if o.has("tooltip"):
 			InfoBox.hook(cb, _info, str(o["label"]), str(o["tooltip"]))
+		if o.has("school"):
+			UiTheme.school_frame(cb, str(o["school"]))  # v0.7.22.21 (#20)
 		var id: Variant = o["id"]
 		if fixed.has(id):
 			cb.button_pressed = true
@@ -529,7 +532,7 @@ func _spell_options(ids: Array) -> Array:
 	var out: Array = []
 	for id: Variant in ids:
 		var s: Dictionary = spells[str(id)]
-		out.append({"id": id, "label": str(s["name"]), "tooltip": "%s · %s · %s\n%s" % [s["school"], s["casting_time"], s["range"], s["desc"]]})
+		out.append({"id": id, "label": str(s["name"]), "tooltip": DetailsPanel.spell_text(data(), str(id)), "school": str(s.get("school_id", ""))})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return str(a["label"]) < str(b["label"]))
 	return out
 

@@ -137,6 +137,23 @@ static func build() -> Theme:
 	return t
 
 
+## The frame colour of a spell by its school (v0.7.22.21, #20): the eight schools of 5e, muted to the «dark book».
+const SCHOOL_COLORS := {
+	"abjuration": Color("#6f9fc0"), "conjuration": Color("#c99a4a"), "divination": Color("#b9b0d8"),
+	"enchantment": Color("#c77fa8"), "evocation": Color("#d0704f"), "illusion": Color("#8a7fc8"),
+	"necromancy": Color("#7fa07a"), "transmutation": Color("#c8b45a"),
+}
+
+
+## A spell's button framed in the colour of its school ("" — no frame).
+static func school_frame(b: Button, school_id: String) -> void:
+	if not SCHOOL_COLORS.has(school_id):
+		return
+	var c: Color = SCHOOL_COLORS[school_id]
+	b.add_theme_stylebox_override("normal", box(PANEL_RAISED, c.darkened(0.15), 2, 10, 4))
+	b.add_theme_stylebox_override("hover", box(PANEL_RAISED.lightened(0.08), c, 2, 10, 4))
+
+
 static func box(bg: Color, border: Color, border_width: int, margin: int, radius: int = 0) -> StyleBoxFlat:
 	var b := StyleBoxFlat.new()
 	b.bg_color = bg

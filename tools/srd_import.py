@@ -632,7 +632,7 @@ class Builder:
             school = s["school"]["index"]
             out[sid(s["index"])] = {
                 "name": ru["name"], "name_en": s["name"], "level": s["level"],
-                "school": GLOSSARY.get(f"school:{school}", school),
+                "school": GLOSSARY.get(f"school:{school}", school), "school_id": school,  # the frame colour of a spell (v0.7.22.21)
                 "casting_time": ru.get("casting_time", s["casting_time"]), "range": ru.get("range", s["range"]),
                 "duration": ru.get("duration", s["duration"]), "components": s.get("components", []),
                 "concentration": bool(s.get("concentration")), "ritual": bool(s.get("ritual")),

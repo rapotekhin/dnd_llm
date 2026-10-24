@@ -180,6 +180,7 @@ func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks:
 const TABS: Array[String] = ["quests", "places", "people", "found", "chronicle"]
 var _tab := "quests"
 var _folded := {}
+var _person_open := ""  # v0.7.22.21 (#18): the person whose card is open in the people tab
 
 
 func _draw_journal() -> void:
@@ -202,6 +203,9 @@ func _draw_journal() -> void:
 			_rebuild())
 		bar.add_child(b)
 	_box.add_child(HSeparator.new())
+	if _tab == "people":
+		_draw_people(s, w)
+		return
 	var groups := _groups(s, w)
 	if groups.is_empty():
 		_text(tr("JOURNAL_EMPTY_" + _tab.to_upper()), UiTheme.MUTED_LABEL)
@@ -295,6 +299,67 @@ func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
 			for d: int in days:
 				out.append({"title": tr("JOURNAL_DAY").format({"day": d}), "lines": by_day[d], "folded": d != days[0]})
 	return out
+
+
+## People (v0.7.22.21, the author's fixes check #18): a settlement → its names → the card of the one picked, in the
+## description panel on the right (hover shows, a click or the right button keeps it).
+func _draw_people(s: GameSession, w: WorldView) -> void:
+	var met := _met(s, w)
+	if met.is_empty():
+		_text(tr("JOURNAL_EMPTY_PEOPLE"), UiTheme.MUTED_LABEL)
+		return
+	var split := HBoxContainer.new()
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	split.add_theme_constant_override("separation", 16)
+	_box.add_child(split)
+	var names := VBoxContainer.new()
+	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	names.add_theme_constant_override("separation", 4)
+	split.add_child(names)
+	var card := DetailsPanel.new(Vector2(560, 360))
+	card.name = "PersonCard"
+	card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	card.show_text(tr("JOURNAL_PICK_PERSON"), "")
+	split.add_child(card)
+	var by_loc := {}
+	for npc: String in met:
+		var loc := w.location_id(_npc_room(w, npc))
+		if not by_loc.has(loc):
+			by_loc[loc] = []
+		(by_loc[loc] as Array).append(npc)
+	for loc: String in by_loc:
+		var key := "people|" + loc
+		var folded := bool(_folded.get(key, false))
+		var head := Button.new()
+		head.name = "JournalGroup_" + str(loc).md5_text().left(6)
+		head.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		head.flat = true
+		head.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		head.text = ("▸ " if folded else "▾ ") + "%s (%d)" % [str(w.location(loc).get("name", loc)) if not loc.is_empty() else tr("JOURNAL_ELSEWHERE"), (by_loc[loc] as Array).size()]
+		head.add_theme_color_override("font_color", UiTheme.ACCENT)
+		head.pressed.connect(func() -> void:
+			_folded[key] = not folded
+			_rebuild())
+		names.add_child(head)
+		if folded:
+			continue
+		for npc: String in by_loc[loc]:
+			var lines := _person(s, w, npc)
+			var who := Button.new()
+			who.name = "Person_" + npc
+			who.flat = true
+			who.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			who.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			who.text = "   " + str(w.npc(npc).get("name", npc)) + ("  ✝" if s.dead_npcs.has(npc) else "")
+			var title := str(w.npc(npc).get("name", npc))
+			var body := "\n".join(lines.map(func(l: String) -> String: return l.strip_edges()))
+			card.hook(who, title, body)
+			who.pressed.connect(func() -> void:
+				_person_open = npc
+				card.pin(who, title, body))
+			names.add_child(who)
+			if npc == _person_open:
+				card.pin(who, title, body)
 
 
 ## The NPCs the hero has met: talked to, remembered by, going along, or seen in a visited room.
