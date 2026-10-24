@@ -87,17 +87,16 @@ func test_the_master_grows_a_site_inside_a_location() -> void:
 	assert_array(w.exits("brod-square")).contains([w.site_entry(sid)])
 	assert_bool(w.is_public(rooms[1])).is_false()
 	assert_array(WorldGen.open_edges(s, d, "brod-square")).is_equal(WorldGen.open_edges(_hero("brod-square"), TestUtils.data(), "brod-square"))  # no edge spent
-	for i in 3:  # rules.world_gen.max_sites_inside a location
+	for i in 8:  # the world is endless: no limit of sites in a location (v0.7.22.26.2)
 		fx.searched_places["t-%d" % (i + 2)] = true
 		var more := spec.duplicate(true)
 		more["site"]["name"] = "Дом %d" % i
-		more["rooms"] = [{"key": "a", "name": "Сени %d" % i, "description": "Тесно."}]
+		more["rooms"] = [{"key": "a", "name": "Сени %d" % i, "description": "Тесно."}, {"key": "b", "name": "Горница %d" % i, "description": "Тепло.", "exits": ["a"]}]
+		more["rooms"][0]["exits"] = ["b"]
 		var ri := fx.validate(s, d, "t-%d" % (i + 2), more)
-		if i < int(d["rules"]["world_gen"]["max_sites_inside"]) - 1:
-			assert_bool(bool(ri["accepted"])).override_failure_message(str(ri)).is_true()
-			fx.apply(s, "t-%d" % (i + 2), [ri["effect_id"]])
-		else:
-			assert_str(str(ri["reason"])).contains("больше нельзя")
+		assert_bool(bool(ri["accepted"])).override_failure_message(str(ri)).is_true()
+		fx.apply(s, "t-%d" % (i + 2), [ri["effect_id"]])
+	assert_int((s.generated["rooms"] as Dictionary).size()).is_greater(12)  # past the old 12 rooms a game
 
 
 func test_the_map_is_nested_boxes() -> void:

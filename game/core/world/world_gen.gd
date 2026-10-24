@@ -11,7 +11,7 @@ extends RefCounted
 ## edges the pack marked (`open_edges` of a room).
 ## v0.7.22.24 (location → site → room): a made place is one site of its rooms (s.generated "sites"), named by the
 ## master or by its first room; `inside` grows a site within a location of reach without an open edge — the bathhouse
-## the innkeeper spoke of — entered from the room it is built at, rules.world_gen.max_sites_inside a location.
+## the innkeeper spoke of — entered from the room it is built at; v0.7.22.26.2: the world is endless — no limit of rooms or sites.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -281,8 +281,6 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 			return {"reason": "объект внутри локации строят у комнаты, куда герой может дойти: его локация, соседние, где он бывал"}
 		if bool(spec.get("new_location", false)):
 			return {"reason": "объект внутри локации — не новая локация"}
-		if _inside_count(s, loc_at) >= int(c.get("max_sites_inside", 3)):
-			return {"reason": "в %s уже создано %d объектов — больше нельзя" % [world.location(loc_at).get("name", loc_at), int(c.get("max_sites_inside", 3))]}
 	elif not reach.has(at):
 		var known := reach_edges(s, data).map(func(e: Dictionary) -> String: return "%s [%s] край %d" % [e["room"], e["room_id"], int(e["edge"])])
 		return {"reason": ("у %s нет открытых краёв в досягаемости" % world.room(at).get("name", at)) +
@@ -295,12 +293,9 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 			edge = e
 	if edge.is_empty():
 		return {"reason": "края %d здесь нет; есть: %s" % [idx, ", ".join(edges.map(func(e: Dictionary) -> String: return "%d — %s" % [e["index"], e["text"]]))]}
-	var made: Dictionary = generated(s).get("rooms", {})
 	var rooms: Array = spec.get("rooms", [])
 	if rooms.is_empty() or rooms.size() > int(c["max_rooms"]):
 		return {"reason": "место — от 1 до %d комнат" % int(c["max_rooms"])}
-	if made.size() + rooms.size() > int(c["max_rooms_per_session"]):
-		return {"reason": "в этой игре создано уже %d комнат — больше нельзя" % made.size()}
 	var new_loc := bool(spec.get("new_location", false))
 	if new_loc and not bool(edge.get("new_location", false)):
 		return {"reason": "с этого края — только продолжение %s, не новая локация" % world.location(world.location_id(at)).get("name", "")}
@@ -455,15 +450,6 @@ static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 	plan["site_id"] = sid
 	return first
 
-
-## The sites the master grew inside a location (not on an edge).
-static func _inside_count(s: GameSession, location: String) -> int:
-	var n := 0
-	for sid: String in generated(s).get("sites", {}):
-		var st: Dictionary = generated(s)["sites"][sid]
-		if bool(st.get("inside", false)) and str(st.get("location_id", "")) == location:
-			n += 1
-	return n
 
 
 static func _merge_places(w: Dictionary, gen: Dictionary) -> Dictionary:
