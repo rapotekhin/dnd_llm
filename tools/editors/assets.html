@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Редактор ассетов</title>
+<link rel="stylesheet" href="editors.css">
+</head>
+<body>
+<div id="app"></div>
+<script src="editor-core.js"></script>
+<script>
+'use strict';
+
+const D = 'game/data/';
+const SRD_FILES = ['spells', 'monsters', 'classes', 'races', 'backgrounds', 'misc'].map((n) => `${D}srd/${n}.json`);
+const RU = 'tools/srd/ru.json', PROMOTED = 'tools/srd/promoted.json', BG_SRC = 'tools/srd/backgrounds.json';
+// ru.json keys are "<kind>:<SRD index>", the index being the game id in kebab-case.
+const RU_KIND = { spells: 'spell', monsters: 'monster', features: 'feature', traits: 'trait', items: 'item', subraces: 'subrace', subclasses: 'subclass', classes: 'class', races: 'race' };
+// The same id in two collections: a spell and its engine effect, an item and its consumable rule.
+const TWINS = [['spells', 'spell_effects'], ['items', 'consumables'], ['items', 'tools'], ['backgrounds', 'rules_backgrounds'], ['conditions', 'condition_effects']];
+const ITEM_TYPES = { weapon: 'оружие', armor: 'доспех', gear: 'снаряжение', consumable: 'расходник', wondrous: 'чудесная вещь', treasure: 'ценность', quest: 'квестовая' };
+const price = (cp) => (cp == null ? '' : cp >= 100 ? `${cp / 100} зм` : cp >= 10 ? `${cp / 10} см` : `${cp} мм`);
+
+let extraItems = [];
+
+function ruKey(app, c, id, e) {
+	const ru = app.files.get(RU)?.data;
+	const kind = RU_KIND[c.id];
+	if (!ru || !kind) return null;
+	const guess = `${kind}:${id.replace(/_/g, '-')}`;
+	if (ru[guess]) return guess;
+	if (e?.name_en) for (const [k, v] of Object.entries(ru)) if (k.startsWith(kind + ':') && v.en === e.name_en) return k;
+	return null;
+}
+
+const app = new EditorApp({
+	key: 'assets',
+	title: 'Редактор ассетов',
+	showLinks: true,
+	welcome: `
+		<h2>Редактор ассетов</h2>
+		<p>Предметы, заклинания, классы и умения, расы, предыстории, монстры, состояния и разделы правил из <code>game/data</code>.</p>
+		<p><b>Открыть папку</b> — корень репозитория (лучше всего: тогда доступны и источники сборки <code>tools/srd</code>) или папка <code>game/data</code>.
+		Нужен Chrome или Edge: страница читает и пишет JSON на месте, сохраняя табы, порядок ключей и ручную разметку файла.</p>
+		<p>Без Chrome/Edge: <b>Открыть только для чтения</b> — выбрать папку <code>game/data</code>, правки скачаются файлами.
+		Или <code>python tools/editors/serve.py</code> — тогда страница сама откроет данные репозитория в любом браузере.</p>
+		<p class="muted">Файлы <code>game/data/srd/*.json</code> и каталог в <code>items.json</code> собирает <code>tools/srd_import.py build</code>: правка там живёт до следующей сборки. Страница подскажет, куда перенести правку навсегда.</p>`,
+
+	async load(app) {
+		app.colls = [];
+		for (const p of [`${D}items.json`, `${D}rules.json`, `${D}game.json`, ...SRD_FILES]) await app.readFile(p, { optional: true });
+		if (app.store.canWrite(RU)) {
+			for (const p of [RU, BG_SRC, PROMOTED]) await app.readFile(p, { optional: true });
+			const py = await app.store.read('tools/srd_import.py').catch(() => null);
+			extraItems = JSON.parse((py?.match(/^EXTRA_ITEMS = (\[.*\])/m)?.[1] || '[]').replace(/'/g, '"'));
+		}
+		if (!app.files.has(`${D}items.json`) && !app.files.has(`${D}srd/spells.json`)) throw new Error('в папке нет game/data');
+		const add = (c) => app.files.has(c.file) && app.addColl(c);
+		const S = (n) => `${D}srd/${n}.json`;
+
+		add({ id: 'items', group: 'Предметы', title: 'Каталог вещей', file: `${D}items.json`, at: ['catalog'], sorted: true, gen: 'items',
+			filterOrder: ['item_type', 'rarity', 'properties', 'attunement', 'weapon.category', 'weapon.damage_type', 'armor.category', 'value_cp', 'weight', 'stack', 'master', 'caster', 'tool'],
+			filterPaths: ['weapon.category', 'weapon.damage_type', 'weapon.range', 'armor.category'],
+			sub: (e) => [ITEM_TYPES[e.item_type] || e.item_type, e.rarity, price(e.value_cp), e.weight != null ? `${e.weight} фнт` : ''].filter(Boolean).join(' · '),
+			refs: [{ p: 'base', to: 'items' }, { p: 'properties.[]', to: 'item_props' }] });
+		add({ id: 'item_props', group: 'Предметы', title: 'Свойства вещей', file: `${D}items.json`, at: ['properties'],
+			note: 'Свойство вещи → очки редкости (rarity_by_points). Новое свойство движок должен уметь — иначе оно только надпись.' });
+		add({ id: 'items_sections', group: 'Предметы', title: 'Разделы items.json', file: `${D}items.json`, skip: ['catalog', 'properties'] });
+
+		add({ id: 'spells', group: 'Магия', title: 'Заклинания', file: S('spells'), gen: 'srd',
+			labels: { level: 'круг' },
+			filterOrder: ['level', 'school_id', 'classes', 'concentration', 'ritual', 'damage_type', 'attack', 'save.ability', 'subclasses', 'components', 'range_ft'],
+			filterPaths: ['save.ability'],
+			sub: (e) => `${e.level ? e.level + ' круг' : 'заговор'} · ${e.school} · ${e.casting_time}${e.concentration ? ' · концентрация' : ''}`,
+			refs: [{ p: 'classes.[]', to: 'classes' }, { p: 'subclasses.[]', to: 'subclasses' }] });
+		add({ id: 'spell_effects', group: 'Магия', title: 'Эффекты заклинаний (движок)', file: `${D}rules.json`, at: ['spell_effects'],
+			name: (e, id) => app.coll('spells')?.get(id)?.name || id });
+
+		add({ id: 'classes', group: 'Классы', title: 'Классы', file: S('classes'), at: ['classes'], gen: 'srd',
+			sub: (e) => `к${e.hit_die} · спасброски ${(e.saves || []).join(', ')}`,
+			refs: [{ p: 'subclasses.[]', to: 'subclasses' }, { p: 'levels.*.features.[]', to: 'features' }] });
+		add({ id: 'subclasses', group: 'Классы', title: 'Подклассы', file: S('classes'), at: ['subclasses'], gen: 'srd',
+			sub: (e) => `${app.coll('classes')?.get(e.class)?.name || e.class} · с ${e.level} ур.`,
+			refs: [{ p: 'class', to: 'classes' }, { p: 'features.*.[]', to: 'features' }] });
+		add({ id: 'features', group: 'Классы', title: 'Умения классов', file: S('classes'), at: ['features'], gen: 'srd',
+			filterOrder: ['class', 'level', 'subclass'],
+			sub: (e) => `${app.coll('classes')?.get(e.class)?.name || e.class || ''} · ${e.level} ур.${e.subclass ? ' · ' + e.subclass : ''}`,
+			refs: [{ p: 'class', to: 'classes' }, { p: 'subclass', to: 'subclasses' }, { p: 'parent', to: 'features' }] });
+		add({ id: 'resources', group: 'Классы', title: 'Ресурсы умений', file: `${D}rules.json`, at: ['resources'] });
+		add({ id: 'feature_spells', group: 'Классы', title: 'Заклинания от умений', file: `${D}rules.json`, at: ['feature_spells'] });
+
+		add({ id: 'races', group: 'Расы', title: 'Расы', file: S('races'), at: ['races'], gen: 'srd',
+			sub: (e) => `скорость ${e.speed} · ${Object.entries(e.ability_bonuses || {}).map(([k, v]) => `${k}+${v}`).join(' ')}`,
+			refs: [{ p: 'subraces.[]', to: 'subraces' }, { p: 'traits.[]', to: 'traits' }] });
+		add({ id: 'subraces', group: 'Расы', title: 'Подрасы', file: S('races'), at: ['subraces'], gen: 'srd',
+			refs: [{ p: 'race', to: 'races' }, { p: 'traits.[]', to: 'traits' }] });
+		add({ id: 'traits', group: 'Расы', title: 'Расовые черты', file: S('races'), at: ['traits'], gen: 'srd' });
+
+		add({ id: 'backgrounds', group: 'Предыстории', title: 'Предыстории', file: S('backgrounds'), gen: 'bg', sub: (e) => (e.skills || []).join(', ') });
+		add({ id: 'rules_backgrounds', group: 'Предыстории', title: 'Предыстории (движок)', file: `${D}rules.json`, at: ['backgrounds'],
+			name: (e, id) => app.coll('backgrounds')?.get(id)?.name || id });
+		add({ id: 'languages', group: 'Предыстории', title: 'Языки', file: S('misc'), at: ['languages'], gen: 'srd' });
+		add({ id: 'tools', group: 'Предыстории', title: 'Инструменты (движок)', file: `${D}rules.json`, at: ['tools'],
+			name: (e, id) => app.coll('items')?.get(id)?.name || id });
+
+		add({ id: 'monsters', group: 'Монстры', title: 'Монстры', file: S('monsters'), gen: 'srd',
+			filterOrder: ['type', 'size', 'cr', 'hp', 'ac', 'speed', 'fly', 'swim', 'darkvision', 'resistances', 'immunities', 'condition_immunities'],
+			sub: (e) => `${e.type} · ${e.size} · ПО ${e.cr} · КД ${e.ac} · ${e.hp} хитов` });
+
+		add({ id: 'conditions', group: 'Состояния', title: 'Состояния', file: `${D}rules.json`, at: ['conditions'] });
+		add({ id: 'condition_effects', group: 'Состояния', title: 'Состояния (механика)', file: `${D}rules.json`, at: ['condition_effects'] });
+		add({ id: 'consumables', group: 'Состояния', title: 'Расходники (механика)', file: `${D}rules.json`, at: ['consumables'],
+			name: (e, id) => app.coll('items')?.get(id)?.name || id });
+
+		add({ id: 'categories', group: 'Справочники', title: 'Категории вещей', file: S('misc'), at: ['categories'], gen: 'srd', refs: [{ p: 'items.[]', to: 'items' }] });
+		add({ id: 'damage_types', group: 'Справочники', title: 'Виды урона', file: S('misc'), at: ['damage_types'], gen: 'srd' });
+		add({ id: 'rules', group: 'Справочники', title: 'Все разделы rules.json', file: `${D}rules.json`,
+			note: 'Числа движка: DC, цены, торг, опыт, награды. Каждый раздел — одна запись; пояснение раздела в его поле _doc.' });
+		add({ id: 'game', group: 'Справочники', title: 'game.json', file: `${D}game.json` });
+
+		add({ id: 'ru', group: 'Источники сборки', title: 'tools/srd/ru.json', file: RU, sorted: true, src: true,
+			computed: { kind: (e, id) => id.split(':')[0] }, sub: (e) => e.en || '' });
+		add({ id: 'bg_src', group: 'Источники сборки', title: 'tools/srd/backgrounds.json', file: BG_SRC, src: true });
+		if (app.store.canWrite(PROMOTED)) {
+			await app.ensureFile(PROMOTED);
+			add({ id: 'promoted', group: 'Источники сборки', title: 'tools/srd/promoted.json', file: PROMOTED, sorted: true, src: true,
+				note: 'Вещи, которые сборка кладёт в каталог поверх SRD (их же переносит tools/promote_items.py).',
+				sub: (e) => [ITEM_TYPES[e.item_type] || e.item_type, e.rarity, price(e.value_cp)].filter(Boolean).join(' · '),
+				refs: [{ p: 'base', to: 'items' }, { p: 'properties.[]', to: 'item_props' }] });
+		}
+		for (const c of app.colls) {
+			const doc = c.container()?._doc;
+			if (doc && !c.note) c.note = doc;
+		}
+	},
+
+	banner(app, c, id, e) {
+		const root = app.store.canWrite(RU);
+		const need = root ? '' : '<p>Чтобы переносить правки в источники, откройте <b>корень репозитория</b>, а не <code>game/data</code>.</p>';
+		if (c.src) return `<p>Источник сборки. После правки пересоберите данные: <code>python tools/srd_import.py build</code>.</p>`;
+		if (c.gen === 'srd') {
+			const key = id != null && ruKey(app, c, id, e);
+			const ruLine = id == null ? '' : key ? `<p>Ключ в ru.json: <code>${key}</code> — кнопка «Название и описание → ru.json».</p>`
+				: RU_KIND[c.id] && root ? '<p>В ru.json этой записи нет: название, видимо, из глоссария в <code>tools/srd_import.py</code>.</p>' : '';
+			return `<p><b>Файл собирается.</b> <code>${c.file}</code> пишет <code>tools/srd_import.py build</code> из <code>tools/srd/source</code> (SRD) и <code>tools/srd/ru.json</code> (русские тексты): правка здесь пропадёт при следующей сборке.</p>
+				<p>Навсегда: название и описание — в <code>ru.json</code>; механику — в <code>tools/srd/source</code> или в <code>tools/srd_import.py</code>; числа движка — в <code>game/data/rules.json</code>.</p>${ruLine}${need}`;
+		}
+		if (c.gen === 'bg') return `<p><b>Файл собирается</b> из <code>tools/srd/backgrounds.json</code>: правьте там (кнопка «→ tools/srd/backgrounds.json» переносит запись целиком).</p>${need}`;
+		if (c.gen === 'items') {
+			if (id != null && extraItems.includes(id)) return '<p>Вещь из <code>EXTRA_ITEMS</code> в <code>tools/srd_import.py</code>: сборка оставит её такой, какой она в каталоге.</p>';
+			const pinned = id != null && app.files.get(PROMOTED)?.data?.[id];
+			return `<p><b>Каталог собирается</b> <code>tools/srd_import.py build</code>: правка здесь пропадёт при следующей сборке, если вещи нет в <code>tools/srd/promoted.json</code> (сборка кладёт её поверх SRD; магические вещи и свитки SRD сборка пишет позже и перекрывает).</p>
+				<p>${pinned ? 'Эта вещь уже в promoted.json — после правки нажмите «→ promoted.json» ещё раз.' : 'Новую вещь или свою версию вещи закрепите кнопкой «→ promoted.json»; название и описание вещи SRD — в ru.json.'}</p>${need}`;
+		}
+		return null;
+	},
+
+	actions(app, c, id, e) {
+		const out = [];
+		if (!app.store.canWrite(RU) || !e || typeof e !== 'object') return out;
+		const ru = app.files.get(RU)?.data;
+		const key = ru && ruKey(app, c, id, e);
+		if (key) out.push({ label: 'Название и описание → ru.json', title: `ключ ${key}`, run: () => {
+			const r = ru[key];
+			r.name = e.name;
+			if (typeof e.desc === 'string' && (e.desc || 'desc' in r)) r.desc = e.desc;
+			if (typeof e.description === 'string' && (e.description || 'desc' in r)) r.desc = e.description;
+			for (const f of ['casting_time', 'range', 'duration']) if (typeof e[f] === 'string' && (f in r || c.id === 'spells')) r[f] = e[f];
+			app.changed(app.coll('ru'), false);
+			app.toast(`ru.json: ${key} обновлён. Сохраните и запустите python tools/srd_import.py build.`);
+		} });
+		if (c.id === 'items' && app.files.has(PROMOTED)) out.push({ label: '→ promoted.json', title: 'Сборка положит вещь в каталог поверх SRD', run: () => {
+			const p = app.coll('promoted');
+			app.sortedInsert(p, p.container(), id, structuredClone(e));
+			app.files.get(PROMOTED).touched = true;
+			app.reindex(); app.renderNav(); app.updateDirty();
+			app.toast(`promoted.json: ${id} записан. Сохраните.`);
+		} });
+		if (c.id === 'backgrounds' && app.files.has(BG_SRC)) out.push({ label: '→ tools/srd/backgrounds.json', run: () => {
+			app.files.get(BG_SRC).data[id] = structuredClone(e);
+			app.files.get(BG_SRC).touched = true;
+			app.reindex(); app.updateDirty();
+			app.toast(`tools/srd/backgrounds.json: ${id} записан. Сохраните.`);
+		} });
+		return out;
+	},
+
+	extraLinks(app, c, id) {
+		const chips = [];
+		for (const [a, b] of TWINS) {
+			const other = c.id === a ? b : c.id === b ? a : null;
+			const t = other && app.coll(other);
+			if (t && t.get(id) !== undefined) chips.push(h('a', { class: 'chip', href: `#${other}/${encodeURIComponent(id)}` }, t.title));
+		}
+		const key = ruKey(app, c, id, c.get(id));
+		if (key && app.coll('ru')) chips.push(h('a', { class: 'chip', href: `#ru/${encodeURIComponent(key)}` }, `ru.json: ${key}`));
+		return chips.length ? [h('div', { class: 'linkrow' }, h('span', { class: 'muted' }, 'Та же запись:'), ...chips)] : [];
+	},
+
+	afterSave(done) {
+		return done.some((p) => p.startsWith('tools/srd/')) ? 'Источники сборки изменились: python tools/srd_import.py build' : '';
+	},
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Редактор мира</title>
+<link rel="stylesheet" href="editors.css">
+</head>
+<body>
+<div id="app"></div>
+<script src="editor-core.js"></script>
+<script>
+'use strict';
+
+const D = 'game/data/';
+const W = `${D}worlds/`;
+const SCHEMA = `${W}pack.schema.json`;
+// Keep in step with tools/validate_data.py.
+const ROOM_TAGS = ['temple', 'stage'];
+const NPC_TAGS = ['clergy', 'underworld', 'commoner', 'military'];
+const SERVICE_OPS = ['identify', 'lift_curse', 'enchant'];
+
+let pack = null; // {id, dir, pack, world, chars}
+
+const WHEN_REFS = (pre) => [
+	{ p: `${pre}**.talk`, to: 'npcs' }, { p: `${pre}**.room`, to: 'rooms' }, { p: `${pre}**.choice`, to: 'rooms' },
+	{ p: `${pre}**.item`, to: 'all_items' }, { p: `${pre}**.encounter`, to: 'encounters' }, { p: `${pre}**.secret`, to: 'room_secrets' },
+];
+
+const app = new EditorApp({
+	key: 'world',
+	title: 'Редактор мира',
+	showLinks: true,
+	welcome: `
+		<h2>Редактор мира</h2>
+		<p>Пакеты мира из <code>game/data/worlds/&lt;id&gt;/</code>: локации, комнаты (выходы, NPC, встречи с <code>enemies</code> / <code>allies</code> / <code>waves</code>, открытые края, тайны),
+		NPC, задания, предметы пакета, готовые персонажи и <code>pack.json</code>. Ссылки кликабельны, в «Связях» видно, кто ссылается на запись.</p>
+		<p><b>Открыть папку</b> — корень репозитория или <code>game/data</code> (тогда видны все пакеты и SRD для подсказок) либо папка одного пакета.
+		Нужен Chrome или Edge; без них — <b>Открыть только для чтения</b> (правки скачаются файлами) или <code>python tools/editors/serve.py</code>.</p>
+		<p>Страница проверяет пакет по <code>pack.schema.json</code> и ссылкам, как <code>tools/validate_data.py</code>. После правки всё равно запустите
+		<code>uv run --project llm_server python tools/validate_data.py</code>.</p>`,
+
+	async load(app) {
+		app.colls = [];
+		const ids = await app.store.list(`${D}worlds`);
+		const packs = [];
+		for (const id of ids) if (await app.store.read(`${W}${id}/pack.json`).catch(() => null)) packs.push(id);
+		if (!packs.length) throw new Error('не найдено ни одного пакета (game/data/worlds/<id>/pack.json)');
+		let want = null;
+		try { want = localStorage.getItem('btr-world-pack'); } catch { /* private window */ }
+		const id = packs.includes(want) ? want : packs.includes('frontier') ? 'frontier' : packs[0];
+		const dir = `${W}${id}/`;
+		const pf = await app.readFile(`${dir}pack.json`);
+		const wfile = `${dir}${pf.data.world || 'world.json'}`, cfile = `${dir}${pf.data.characters || 'characters.json'}`;
+		await app.readFile(wfile);
+		await app.readFile(cfile, { optional: true });
+		for (const p of [SCHEMA, `${D}items.json`, `${D}rules.json`, ...['monsters', 'races', 'classes', 'backgrounds', 'misc', 'spells'].map((n) => `${D}srd/${n}.json`)]) {
+			await app.readFile(p, { optional: true });
+		}
+		pack = { id, dir, file: `${dir}pack.json`, wfile, cfile };
+		packPicker(app, packs, id);
+
+		const world = () => app.files.get(wfile).data;
+		const srd = (n) => app.files.get(`${D}srd/${n}.json`)?.data;
+		const add = (c) => app.addColl(c);
+		const roomName = (rid) => world().rooms?.[rid]?.name || rid;
+		const roomOf = (nid) => Object.entries(world().rooms || {}).find(([, r]) => (r.npcs || []).includes(nid))?.[0];
+
+		add({ id: 'pack', group: 'Пакет', title: 'pack.json', file: pack.file, type: 'single', singleId: id,
+			name: (e) => e.name, labels: { lore: 'предыстория мира', tone: 'тон', magic: 'магия', dm_style: 'стиль мастера', content: 'контент', names: 'имена', rules: 'правила пакета' },
+			refs: [{ p: 'rules.races.[]', to: 'srd_races' }, { p: 'rules.classes.[]', to: 'srd_classes' }, { p: 'rules.backgrounds.[]', to: 'srd_backgrounds' },
+				{ p: 'rules.items_exclude.[]', to: 'all_items' }, { p: 'rules.rename.races.{}', to: 'srd_races' }, { p: 'rules.rename.classes.{}', to: 'srd_classes' },
+				{ p: 'rules.rename.backgrounds.{}', to: 'srd_backgrounds' }, { p: 'rules.rename.items.{}', to: 'all_items' }] });
+		add({ id: 'start', group: 'Пакет', title: 'Стартовая комната', file: wfile, at: ['start_room'], type: 'single', singleId: 'start_room',
+			name: (e) => `Старт: ${roomName(e)}`, refs: [{ p: '', to: 'rooms' }] });
+
+		add({ id: 'locations', group: 'Мир', title: 'Локации', file: wfile, at: ['locations'], idHint: 'латиница, например brod',
+			sub: (e) => [e.terrain, e.settlement ? 'поселение' : '', e.law ? 'закон: ' + (e.law.name || '') : ''].filter(Boolean).join(' · '),
+			filterOrder: ['terrain', 'settlement', 'indoor', 'lit', 'dark'],
+			refs: [{ p: 'law.guards.[]', to: 'npcs' }, { p: 'law.prison', to: 'rooms' }, { p: 'law.guard_monster', to: 'monsters' }] });
+		add({ id: 'rooms', group: 'Мир', title: 'Комнаты', file: wfile, at: ['rooms'], idHint: 'латиница через дефис, например brod-square',
+			sub: (e) => [world().locations?.[e.location_id]?.name || e.location_id, `выходов ${(e.exits || []).length}`, (e.npcs || []).length ? `NPC ${e.npcs.length}` : '',
+				e.encounter ? `⚔ ${e.encounter.id}` : '', (e.open_edges || []).length ? 'открытый край' : ''].filter(Boolean).join(' · '),
+			computed: { 'встреча': (e) => !!e.encounter, 'открытый край': (e) => !!(e.open_edges || []).length, 'тайны': (e) => !!(e.secrets || []).length, 'варианты': (e) => !!(e.variants || []).length },
+			filterOrder: ['location_id', '=встреча', '=тайны', '=открытый край', '=варианты', 'tags', 'indoor', 'dark'],
+			refs: [{ p: 'location_id', to: 'locations' }, { p: 'exits.[]', to: 'rooms' }, { p: 'npcs.[]', to: 'npcs' }, { p: 'closed_exits.{}', to: 'rooms' },
+				{ p: '**.monster', to: 'monsters' }, { p: '**.loot.items.{}', to: 'all_items' }, { p: 'secrets.[].trap.guards', to: 'rooms' },
+				{ p: 'variants.[].npcs.[]', to: 'npcs' }, ...WHEN_REFS('closed_exits.*.')] });
+		add({ id: 'npcs', group: 'Мир', title: 'NPC', file: wfile, at: ['npcs'], idHint: 'например npc_smith',
+			sub: (e, nid) => [e.role, e.race, roomOf(nid) ? '📍 ' + roomName(roomOf(nid)) : 'нигде не стоит', e.trader ? 'торговец' : ''].filter(Boolean).join(' · '),
+			computed: { 'комната': (e, nid) => roomOf(nid) || '' },
+			filterOrder: ['trader', '=комната', 'gender', 'race', 'monster', 'tags', 'services', 'wants', 'shuns'],
+			refs: [{ p: 'monster', to: 'monsters' }, { p: 'stock.{}', to: 'all_items' }, { p: 'stock.[]', to: 'all_items' }, { p: 'heir', to: 'npcs' },
+				{ p: 'schedule.[].room', to: 'rooms' }, { p: 'services.[]', to: 'services_all' }, { p: 'languages.[]', to: 'languages' },
+				{ p: 'secrets.[].reveals', to: 'room_secrets' }, { p: 'trade_variants.[].stock.{}', to: 'all_items' }, { p: 'trade_variants.[].remove.[]', to: 'all_items' }] });
+		add({ id: 'quests', group: 'Мир', title: 'Задания', file: wfile, at: ['quests'], idHint: 'например find_the_cart',
+			sub: (e) => [e.giver ? 'от ' + (world().npcs?.[e.giver]?.name || e.giver) : '', e.steps ? `шагов ${e.steps.length}` : 'без шагов', e.major ? 'опасное' : ''].filter(Boolean).join(' · '),
+			computed: { 'заказчик': (e) => e.giver || '', 'вид': (e) => (e.steps ? 'с шагами' : 'простое') },
+			filterOrder: ['=заказчик', '=вид', 'major'],
+			labels: { '=заказчик': 'заказчик' },
+			refs: [{ p: 'giver', to: 'npcs' }, { p: 'room', to: 'rooms' }, { p: 'offer_items.{}', to: 'all_items' }, ...WHEN_REFS('steps.'),
+				{ p: 'steps.[].items.{}', to: 'all_items' }, { p: 'steps.[].attitude.{}', to: 'npcs' },
+				{ p: 'steps.[].choices.[].items.{}', to: 'all_items' }, { p: 'steps.[].choices.[].attitude.{}', to: 'npcs' }] });
+		add({ id: 'pack_items', group: 'Мир', title: 'Предметы пакета', file: wfile, at: ['items'], idHint: 'например bruno_letter',
+			sub: (e) => [e.item_type, e.value_cp ? e.value_cp + ' мм' : ''].filter(Boolean).join(' · ') });
+		add({ id: 'services', group: 'Мир', title: 'Услуги пакета', file: wfile, at: ['services'],
+			note: `Свои услуги торговцев пакета: op — одна из ${SERVICE_OPS.join(', ')}; cost_cp; name. Общие услуги — в rules.json (item_rules.services).` });
+		if (app.files.has(cfile)) {
+			add({ id: 'presets', group: 'Персонажи', title: 'Готовые персонажи', file: cfile, at: ['presets'], type: 'array', idKey: 'id', idHint: 'например fighter_aira',
+				name: (e) => `${e.choices?.name || e.id}`, sub: (e) => `${srd('classes')?.classes?.[e.choices?.class]?.name || e.choices?.class} · ${srd('races')?.races?.[e.choices?.race]?.name || e.choices?.race} · ${e.summary || ''}`,
+				computed: { 'класс': (e) => e.choices?.class || '', 'раса': (e) => e.choices?.race || '', 'предыстория': (e) => e.choices?.background || '' },
+				filterOrder: ['=класс', '=раса', '=предыстория'],
+				refs: [{ p: 'choices.race', to: 'srd_races' }, { p: 'choices.subrace', to: 'srd_subraces' }, { p: 'choices.class', to: 'srd_classes' },
+					{ p: 'choices.subclass', to: 'srd_subclasses' }, { p: 'choices.background', to: 'srd_backgrounds' }, { p: 'choices.languages.[]', to: 'languages' },
+					{ p: 'choices.cantrips.[]', to: 'srd_spells' }, { p: 'choices.spells.[]', to: 'srd_spells' }, { p: 'choices.race_cantrips.[]', to: 'srd_spells' },
+					{ p: 'choices.equipment.[].picks.[]', to: 'all_items' }] });
+		}
+
+		// Lookups for references: hidden, read-only.
+		const look = (id, title, fn, name) => add({ id, title, hidden: true, readonly: true, container: fn, name });
+		look('monsters', 'Монстры SRD', () => srd('monsters') || {});
+		look('srd_races', 'Расы', () => srd('races')?.races || {});
+		look('srd_subraces', 'Подрасы', () => srd('races')?.subraces || {});
+		look('srd_classes', 'Классы', () => srd('classes')?.classes || {});
+		look('srd_subclasses', 'Подклассы', () => srd('classes')?.subclasses || {});
+		look('srd_backgrounds', 'Предыстории', () => srd('backgrounds') || {});
+		look('srd_spells', 'Заклинания', () => srd('spells') || {});
+		look('languages', 'Языки', () => ({ ...(srd('misc')?.languages || {}), ...Object.fromEntries(Object.entries(app.files.get(`${D}rules.json`)?.data?.languages?.secret || {}).map(([k, v]) => [k, { name: v }])) }));
+		look('all_items', 'Вещи', () => ({ ...(app.files.get(`${D}items.json`)?.data?.catalog || {}), ...(world().items || {}) }));
+		look('services_all', 'Услуги', () => ({ ...(app.files.get(`${D}rules.json`)?.data?.item_rules?.services || {}), ...(world().services || {}) }));
+		look('encounters', 'Встречи', () => {
+			const out = {};
+			for (const [rid, r] of Object.entries(world().rooms || {})) {
+				for (const enc of [r.encounter, ...(r.variants || []).map((v) => v.encounter)]) if (enc?.id) out[enc.id] = { name: `${enc.id} (${r.name})`, room: rid };
+			}
+			return out;
+		});
+		look('room_secrets', 'Тайны комнат', () => {
+			const out = {};
+			for (const [rid, r] of Object.entries(world().rooms || {})) for (const s of r.secrets || []) out[`${rid}:${s.id}`] = { name: `${r.name}: ${s.id}`, room: rid };
+			return out;
+		});
+	},
+
+	resolve(app, cid, id) {
+		if (cid === 'all_items' && app.coll('pack_items')?.get(id) !== undefined) return ['pack_items', id];
+		if (cid === 'encounters' || cid === 'room_secrets') return ['rooms', app.coll(cid).get(id)?.room ?? id];
+		return null;
+	},
+
+	newEntry(app, c, id) {
+		const firstLoc = Object.keys(app.coll('locations').container() || {})[0] || '';
+		const curRoom = app.cur?.id === 'rooms' && app.selected ? app.coll('rooms').get(app.selected) : null;
+		switch (c.id) {
+			case 'rooms': return { name: '', location_id: curRoom?.location_id || firstLoc, description: '', exits: [], npcs: [] };
+			case 'locations': return { name: '', description: '', terrain: '', lit: true };
+			case 'npcs': return { name: '', role: '', race: 'человек', gender: 'male', description: '', personality: '' };
+			case 'quests': return { title: '', description: '', giver: '', offer_text: '', steps: [{ text: '', when: { talk: '' }, action: '', done_text: '', reward_cp: 0 }] };
+			case 'pack_items': return { name: '', item_type: 'quest', weight: 0, value_cp: 0, description: '' };
+			case 'services': return { name: '', op: 'identify', cost_cp: 0 };
+			default: return undefined;
+		}
+	},
+
+	actions(app, c, id, e) {
+		if (c.id !== 'rooms') return [];
+		return [{ label: 'Выход в обе стороны…', title: 'Добавить выход отсюда и обратный выход оттуда', run: () => {
+			const to = (prompt('id комнаты, с которой связать в обе стороны:') || '').trim();
+			const rooms = c.container();
+			if (!to) return;
+			if (!rooms[to]) return app.toast(`Нет комнаты ${to}`);
+			if (!e.exits.includes(to)) e.exits.push(to);
+			if (!rooms[to].exits.includes(id)) rooms[to].exits.push(id);
+			app.changed(c, true);
+		} }];
+	},
+
+	extraLinks(app, c, id, e) {
+		if (c.id !== 'rooms' || !e?.exits) return [];
+		const rooms = c.container();
+		const oneWay = e.exits.filter((x) => rooms[x] && !(rooms[x].exits || []).includes(id));
+		return oneWay.length ? [h('div', { class: 'linkrow' }, h('span', { class: 'muted' }, 'Выход в одну сторону (обратного нет):'),
+			...oneWay.map((x) => h('a', { class: 'chip', href: `#rooms/${encodeURIComponent(x)}` }, rooms[x].name)))] : [];
+	},
+
+	validate(app) { return validatePack(app); },
+	onValidate(app) { problemsButton(app); },
+	afterSave() { return 'Проверьте пакет: uv run --project llm_server python tools/validate_data.py'; },
+});
+
+function packPicker(app, packs, id) {
+	const sel = h('select', { title: 'Пакет мира', onchange: async (e) => {
+		if (app.dirtyFiles().length && !confirm('Есть несохранённые правки. Переключить пакет и потерять их?')) { e.target.value = id; return; }
+		try { localStorage.setItem('btr-world-pack', e.target.value); } catch { /* private window */ }
+		location.hash = '';
+		await app.useStore(app.store, { force: true });
+	} }, packs.map((p) => h('option', { value: p, selected: p === id }, p)));
+	app.el.problems = h('button', { onclick: () => showProblems(app) }, 'Проверка');
+	app.el.extra.replaceChildren(h('span', { class: 'muted' }, 'пакет:'), sel, app.el.problems);
+	setTimeout(() => app.revalidate(), 0);
+}
+
+function problemsButton(app) {
+	const n = app.errors.length;
+	if (!app.el.problems) return;
+	app.el.problems.textContent = n ? `Проверка: ${n} ⚠` : 'Проверка: ок';
+	app.el.problems.classList.toggle('danger', !!n);
+}
+
+function showProblems(app) {
+	app.revalidate();
+	const box = h('div', { class: 'modal' });
+	const close = () => box.remove();
+	box.append(h('div', { class: 'modalbody' },
+		h('div', { class: 'entryhead' }, h('h2', {}, `Проверка пакета ${pack.id}`), h('span', { class: 'grow' }), h('button', { onclick: close }, 'Закрыть')),
+		h('p', { class: 'muted' }, 'Схема pack.schema.json и ссылки, как в tools/validate_data.py. Окончательная проверка — ', h('code', {}, 'uv run --project llm_server python tools/validate_data.py')),
+		app.errors.length ? h('ul', { class: 'problems' }, app.errors.map((x) => h('li', { onclick: () => { close(); app.go(x.coll, x.id); } }, x.msg))) : h('p', {}, 'Ошибок не найдено.')));
+	box.addEventListener('click', (e) => { if (e.target === box) close(); });
+	document.body.append(box);
+}
+
+// The schema plus the reference checks of tools/validate_data.py; each problem is tied to an entry to open.
+function validatePack(app) {
+	const errs = [];
+	const P = app.files.get(pack.file)?.data, Wd = app.files.get(pack.wfile)?.data, C = app.files.get(pack.cfile)?.data;
+	if (!P || !Wd) return errs;
+	const where = (doc, path) => {
+		if (doc === 'pack') return ['pack', pack.id];
+		if (doc === 'characters') return ['presets', C?.presets?.[path[1]]?.id ?? ''];
+		const map = { rooms: 'rooms', npcs: 'npcs', quests: 'quests', locations: 'locations', items: 'pack_items', services: 'services', start_room: 'start' };
+		return [map[path[0]] || 'start', path[0] === 'start_room' ? 'start_room' : path[1]];
+	};
+	const push = (coll, id, msg) => errs.push({ coll, id, msg });
+	const schema = app.files.get(SCHEMA)?.data;
+	if (schema) {
+		for (const [name, doc] of [['pack', P], ['world', Wd], ['characters', C]]) {
+			if (!doc) continue;
+			for (const e of schemaErrors({ ...schema, $ref: `#/$defs/${name}` }, doc)) {
+				const [coll, id] = where(name, e.path);
+				push(coll, id, `${name}.${e.msg}`);
+			}
+		}
+	}
+	const srd = (n) => app.files.get(`${D}srd/${n}.json`)?.data;
+	const has = (cid, id) => app.coll(cid)?.get(id) !== undefined;
+	const srdLoaded = !!srd('monsters');
+	const rooms = Wd.rooms || {}, npcs = Wd.npcs || {}, locs = Wd.locations || {};
+	const encIds = new Set(Object.values(rooms).map((r) => r.encounter?.id).filter(Boolean));
+	const itemOk = (x) => !srdLoaded || has('all_items', x);
+	const checkWhen = (w, coll, id, label, top) => {
+		if (!w || typeof w !== 'object') return;
+		const keys = Object.keys(w).filter((k) => k !== 'item');
+		if (keys.length !== 1) push(coll, id, `${label}: в when ровно одно условие (item — только к talk)`);
+		if (('talk' in w || 'choice' in w) && !top) push(coll, id, `${label}: talk и choice — только целым шагом задания`);
+		if (w.encounter && !encIds.has(w.encounter)) push(coll, id, `${label}: нет встречи ${w.encounter}`);
+		if (w.secret) {
+			const [rid, sec] = w.secret.split(':');
+			if (!(rooms[rid]?.secrets || []).some((s) => s.id === sec)) push(coll, id, `${label}: нет тайны ${w.secret}`);
+		}
+		if (w.room && !rooms[w.room]) push(coll, id, `${label}: нет комнаты ${w.room}`);
+		if (w.choice && !rooms[w.choice]) push(coll, id, `${label}: нет комнаты выбора ${w.choice}`);
+		if (w.talk && !npcs[w.talk]) push(coll, id, `${label}: нет NPC ${w.talk}`);
+		if (w.item && (!w.talk || !itemOk(w.item))) push(coll, id, `${label}: item — предмет каталога и только вместе с talk`);
+		for (const sub of [...(w.all || []), ...(w.any || [])]) checkWhen(sub, coll, id, label, false);
+	};
+	if (errs.length) return errs;
+
+	const rules = P.rules || {};
+	if (srdLoaded) {
+		for (const [kind, coll] of [['races', 'srd_races'], ['classes', 'srd_classes'], ['backgrounds', 'srd_backgrounds']]) {
+			for (const x of rules[kind] || []) if (!has(coll, x)) push('pack', pack.id, `pack.rules.${kind}: неизвестный id ${x}`);
+		}
+		for (const x of rules.items_exclude || []) if (!has('all_items', x)) push('pack', pack.id, `pack.rules.items_exclude: неизвестный предмет ${x}`);
+	}
+	if (!rooms[Wd.start_room]) push('start', 'start_room', `start_room: нет комнаты ${Wd.start_room}`);
+	const placed = new Map();
+	for (const [rid, r] of Object.entries(rooms)) {
+		if (!locs[r.location_id]) push('rooms', rid, `нет локации ${r.location_id}`);
+		for (const x of r.exits || []) if (!rooms[x]) push('rooms', rid, `выход в несуществующую комнату ${x}`);
+		const enc = r.encounter;
+		if (enc && srdLoaded) {
+			const foes = [...(enc.enemies || []), ...(enc.allies || []), ...(enc.waves || []).flatMap((w) => w.enemies || []), ...(enc.help?.enemies || [])];
+			for (const f of foes) if (!has('monsters', f.monster)) push('rooms', rid, `встреча ${enc.id}: нет монстра ${f.monster}`);
+			for (const x of Object.keys(enc.loot?.items || {})) if (!itemOk(x)) push('rooms', rid, `в добыче нет предмета ${x}`);
+		}
+		const secIds = (r.secrets || []).map((s) => s.id);
+		if (new Set(secIds).size !== secIds.length) push('rooms', rid, 'id тайн повторяются');
+		for (const s of r.secrets || []) {
+			for (const x of Object.keys(s.loot?.items || {})) if (!itemOk(x)) push('rooms', rid, `в тайнике ${s.id} нет предмета ${x}`);
+			if (s.trap && !(r.exits || []).includes(s.trap.guards)) push('rooms', rid, `ловушка ${s.id} стережёт не выход комнаты (${s.trap.guards})`);
+		}
+		for (const [to, lock] of Object.entries(r.closed_exits || {})) {
+			if (!(r.exits || []).includes(to)) push('rooms', rid, `closed_exits ${to} — не выход комнаты`);
+			checkWhen(lock.when, 'rooms', rid, `выход ${to}`, false);
+		}
+		for (const t of r.tags || []) if (!ROOM_TAGS.includes(t)) push('rooms', rid, `неизвестная метка ${t} (можно: ${ROOM_TAGS.join(', ')})`);
+		for (const v of r.variants || []) {
+			const allowed = ['if_flag', 'if_not_flag', 'description', 'npcs', 'hooks', 'encounter', 'safe'];
+			if (!('if_flag' in v || 'if_not_flag' in v) || Object.keys(v).some((k) => !allowed.includes(k))) push('rooms', rid, `вариант — if_flag или if_not_flag и только ${allowed.join(', ')}`);
+			for (const n of v.npcs || []) if (!npcs[n]) push('rooms', rid, `в варианте нет NPC ${n}`);
+			if (srdLoaded) for (const f of v.encounter?.enemies || []) if (!has('monsters', f.monster)) push('rooms', rid, `в варианте нет монстра ${f.monster}`);
+		}
+		for (const n of r.npcs || []) {
+			if (!npcs[n]) push('rooms', rid, `нет NPC ${n}`);
+			else if (placed.has(n)) push('npcs', n, `NPC стоит в двух комнатах: ${placed.get(n)} и ${rid}`);
+			placed.set(n, rid);
+		}
+	}
+	const services = app.coll('services_all');
+	for (const [sid, sv] of Object.entries(Wd.services || {})) {
+		if (!SERVICE_OPS.includes(sv.op) || !Number.isInteger(sv.cost_cp) || !sv.name) push('services', sid, `нужны op из ${SERVICE_OPS.join(', ')}, cost_cp, name`);
+		if (sv.op === 'enchant' && !(sv.property && sv.suffix)) push('services', sid, 'enchant — нужны property и suffix');
+	}
+	for (const [nid, n] of Object.entries(npcs)) {
+		const stock = Array.isArray(n.stock) ? n.stock : Object.keys(n.stock || {});
+		for (const x of stock) if (!itemOk(x)) push('npcs', nid, `в каталоге нет предмета ${x}`);
+		if (srdLoaded) for (const x of n.languages || []) if (!has('languages', x)) push('npcs', nid, `неизвестный язык ${x}`);
+		for (const x of n.tags || []) if (!NPC_TAGS.includes(x)) push('npcs', nid, `неизвестная метка ${x} (можно: ${NPC_TAGS.join(', ')})`);
+		if (app.files.has(`${D}rules.json`)) for (const x of n.services || []) if (services.get(x) === undefined) push('npcs', nid, `неизвестная услуга ${x}`);
+		if ((n.services || []).length && !n.trader) push('npcs', nid, 'услуги только у торговца (trader)');
+		if (n.monster && srdLoaded && !has('monsters', n.monster)) push('npcs', nid, `нет монстра-шаблона ${n.monster}`);
+		(n.trade_variants || []).forEach((tv, i) => {
+			const ok = ['if_flag', 'if_not_flag', 'price_pct', 'stock', 'remove', 'news'];
+			if (Object.keys(tv).some((k) => !ok.includes(k)) || !('if_flag' in tv || 'if_not_flag' in tv)) push('npcs', nid, `trade_variants[${i}]: ключи ${ok.join(', ')}`);
+			for (const x of [...Object.keys(tv.stock || {}), ...(tv.remove || [])]) if (!itemOk(x)) push('npcs', nid, `trade_variants[${i}]: нет предмета ${x}`);
+		});
+		for (const k of ['wants', 'shuns']) if (k in n && !(Array.isArray(n[k]) && n[k].every((x) => typeof x === 'string'))) push('npcs', nid, `${k} — список тегов`);
+		if (stock.length && !n.trader) push('npcs', nid, 'есть stock, но нет trader: true');
+		for (const sc of n.schedule || []) {
+			const hours = ['from', 'to'].every((k) => Number.isInteger(sc[k]) && sc[k] >= 0 && sc[k] <= 23);
+			if (!hours || (sc.room && !rooms[sc.room])) push('npcs', nid, 'schedule — from/to часы 0–23, room — комната пакета или пусто');
+		}
+		if (n.heir && (!npcs[n.heir] || n.heir === nid)) push('npcs', nid, 'наследник heir — другой NPC пакета');
+		for (const s of n.secrets || []) {
+			if (!(s.id && s.hint && s.text)) push('npcs', nid, `тайна ${s.id}: нужны id, hint, text`);
+			if (!Number.isInteger(s.dc ?? 0) || !Number.isInteger(s.attitude ?? 0)) push('npcs', nid, `тайна ${s.id}: dc и attitude — целые`);
+			if (s.reveals && app.coll('room_secrets').get(s.reveals) === undefined) push('npcs', nid, `тайна ${s.id}: reveals «комната:тайна» — нет ${s.reveals}`);
+		}
+	}
+	for (const [lid, l] of Object.entries(locs)) {
+		if ('settlement' in l && typeof l.settlement !== 'boolean') push('locations', lid, 'settlement — true / false');
+		if (!l.law) continue;
+		for (const g of l.law.guards || []) if (!npcs[g]) push('locations', lid, `страж ${g} — нет NPC`);
+		if (srdLoaded && !has('monsters', l.law.guard_monster || 'guard')) push('locations', lid, `нет монстра стражи ${l.law.guard_monster}`);
+	}
+	for (const [qid, q] of Object.entries(Wd.quests || {})) {
+		if ('major' in q && typeof q.major !== 'boolean') push('quests', qid, 'major — true / false');
+		(q.steps || []).forEach((st, i) => { if ('danger' in st && typeof st.danger !== 'boolean') push('quests', qid, `шаг ${i + 1}: danger — true / false`); });
+		if (!q.steps) {
+			const miss = ['room', 'action', 'xp', 'done_text'].filter((k) => !(k in q));
+			if (miss.length) push('quests', qid, `без шагов нужны ${miss.join(', ')}`);
+			else if (!rooms[q.room]) push('quests', qid, `нет комнаты ${q.room}`);
+			continue;
+		}
+		for (const x of Object.keys(q.offer_items || {})) if (!itemOk(x)) push('quests', qid, `в offer_items нет предмета ${x}`);
+		if (!npcs[q.giver]) push('quests', qid, `нет NPC-заказчика ${q.giver}`);
+		q.steps.forEach((st, i) => {
+			const label = `шаг ${i + 1}`;
+			const w = st.when || {};
+			checkWhen(w, 'quests', qid, label, true);
+			if ('parts' in st && (!w.all || st.parts.length !== w.all.length)) push('quests', qid, `${label}: parts — по одному названию на каждое условие all`);
+			if (('choice' in w) !== ('choices' in st)) push('quests', qid, `${label}: when.choice и choices — только вместе`);
+			for (const r of [st, ...(st.choices || [])]) {
+				for (const x of Object.keys(r.items || {})) if (!itemOk(x)) push('quests', qid, `${label}: в награде нет предмета ${x}`);
+				for (const x of Object.keys(r.attitude || {})) if (!npcs[x]) push('quests', qid, `${label}: нет NPC ${x}`);
+			}
+		});
+	}
+	const seen = new Set();
+	for (const p of C?.presets || []) {
+		const ch = p.choices || {};
+		if (seen.has(p.id)) push('presets', p.id, `id повторяется (${p.id})`);
+		seen.add(p.id);
+		if (!srdLoaded) continue;
+		for (const [kind, key, coll] of [['races', 'race', 'srd_races'], ['classes', 'class', 'srd_classes'], ['backgrounds', 'background', 'srd_backgrounds']]) {
+			const allowed = (rules[kind] || []).length ? rules[kind] : app.coll(coll).entries().map(([k]) => k);
+			if (!allowed.includes(ch[key])) push('presets', p.id, `${key} ${ch[key]} недоступен в пакете`);
+		}
+		if (ch.subrace && !has('srd_subraces', ch.subrace)) push('presets', p.id, `нет подрасы ${ch.subrace}`);
+		if (ch.subclass && !has('srd_subclasses', ch.subclass)) push('presets', p.id, `нет подкласса ${ch.subclass}`);
+	}
+	return errs;
+}
+</script>
+</body>
+</html>
