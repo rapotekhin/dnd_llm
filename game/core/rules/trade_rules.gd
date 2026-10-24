@@ -37,6 +37,7 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 		var stock: Dictionary = m["stock"]
 		for id: String in pack:
 			stock[id] = maxi(int(stock.get(id, 0)), int(pack[id]))
+		_day_extras(s, data["rules"], npc_id, npc, m, pack)
 		for id: String in mods["remove"]:
 			stock.erase(id)
 		m["purse_cp"] = maxi(int(m["purse_cp"]), int(npc.get("purse_cp", 0)))
@@ -44,9 +45,11 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 	return m
 
 
-## The pack stock as {item_id: qty}.
+## The pack stock as {item_id: qty}; none of its own — the stock of its shop kind (v0.7.22.26).
 static func pack_stock(npc: Dictionary, rules: Dictionary) -> Dictionary:
 	var raw: Variant = npc.get("stock", [])
+	if (raw is Array and (raw as Array).is_empty() or raw is Dictionary and (raw as Dictionary).is_empty()) and bool(npc.get("trader", false)):
+		raw = kinds(rules).get(kind_of(rules, npc), {}).get("stock", {})
 	var out := {}
 	if raw is Dictionary:
 		for id: String in raw:
@@ -55,6 +58,57 @@ static func pack_stock(npc: Dictionary, rules: Dictionary) -> Dictionary:
 		for id: Variant in raw:
 			out[str(id)] = int(rules["trade"]["default_stock_qty"])
 	return out
+
+
+# --- shop kinds (v0.7.22.26) --------------------------------------------------------------------------------------
+
+
+static func kinds(rules: Dictionary) -> Dictionary:
+	var out: Dictionary = (rules["trade"].get("kinds", {}) as Dictionary).duplicate()
+	out.erase("_doc")
+	return out
+
+
+## The trader's shop kind: its `trade_kind`, else the first kind with a word of its role; "" — none.
+static func kind_of(rules: Dictionary, npc: Dictionary) -> String:
+	var all := kinds(rules)
+	var own := str(npc.get("trade_kind", "")) if npc.get("trade_kind") != null else ""
+	if all.has(own):
+		return own
+	var role := str(npc.get("role", "")).to_lower()
+	for k: String in all:
+		if (all[k].get("words", []) as Array).any(func(w: Variant) -> bool: return role.contains(str(w))):
+			return k
+	return ""
+
+
+## "id — name" of every kind, for the master's refusals.
+static func kind_list(rules: Dictionary) -> String:
+	var all := kinds(rules)
+	return ", ".join(all.keys().map(func(k: String) -> String: return "%s (%s)" % [k, all[k].get("name", k)]))
+
+
+## The day's extra goods of the kind: yesterday's leftovers go, today's come, picked by the game's seed.
+static func _day_extras(s: GameSession, rules: Dictionary, npc_id: String, npc: Dictionary, m: Dictionary, pack: Dictionary) -> void:
+	var stock: Dictionary = m["stock"]
+	var old: Dictionary = m.get("extras", {})
+	for id: String in old:
+		if pack.has(id) or not stock.has(id):
+			continue
+		stock[id] = int(stock[id]) - mini(int(stock[id]), int(old[id]))
+		if int(stock[id]) <= 0:
+			stock.erase(id)
+	var x: Dictionary = kinds(rules).get(kind_of(rules, npc), {}).get("extras", {})
+	var pool: Array = (x.get("pool", []) as Array).filter(func(id: Variant) -> bool: return not pack.has(str(id)))
+	var qty: Array = x.get("qty", [1, 1])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("%d|%s|%d" % [s.game_seed, npc_id, s.day])
+	var got := {}
+	for i in mini(int(x.get("per_day", 0)), pool.size()):
+		var id := str(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
+		got[id] = rng.randi_range(int(qty[0]), int(qty[-1]))
+		stock[id] = int(stock.get(id, 0)) + int(got[id])
+	m["extras"] = got
 
 
 static func _pct(table: Dictionary, attitude: int) -> int:
@@ -161,8 +215,9 @@ static func demand_cfg(data: Dictionary) -> Dictionary:
 static func wants(data: Dictionary, npc_id: String) -> Array[String]:
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
 	var out: Array[String] = []
-	if npc.has("wants"):
-		for t: Variant in npc["wants"]:
+	var kind: Dictionary = kinds(data["rules"]).get(kind_of(data["rules"], npc), {})
+	if npc.has("wants") or kind.has("wants"):
+		for t: Variant in npc.get("wants", kind.get("wants", [])):
 			out.append(str(t))
 		return out
 	var stock := pack_stock(npc, data["rules"])

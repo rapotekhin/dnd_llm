@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.52.0"
+PROTOCOL_VERSION = "0.53.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -629,7 +629,8 @@ class NewNpc(_Out):
     """A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;
     `monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),
     `race` — an SRD race id, `room_id` — a room of this location (none — here) or «new:<key>» of this turn's create_place
-    (0.52.0), `trader` with `stock` of ids from find_items and `stock_new` — goods the master makes (0.52.0)."""
+    (0.52.0), `trader` with its shop kind `trade_kind` (0.53.0: the engine's goods of the kind, more each day; none — by
+    the role's words), `stock` of ids from find_items and `stock_new` — the master's extra goods, a bad one skipped."""
 
     name: str = Field(min_length=2, max_length=60)
     role: str = Field(min_length=2, max_length=60)
@@ -646,6 +647,8 @@ class NewNpc(_Out):
     monster: str = "commoner"
     room_id: str | None = None
     trader: bool = False
+    # 0.53.0: general, smith, bowyer, food, herbalist, temple, tailor, scribe, craftsman (rules.json trade.kinds)
+    trade_kind: str | None = None
     stock: list[str] = Field(default_factory=list, max_length=10)
     stock_new: list[GeneratedItem] = Field(default_factory=list, max_length=5)
     links: list[NpcLink] = Field(default_factory=list, max_length=5)

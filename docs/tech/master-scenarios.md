@@ -118,7 +118,7 @@
 ### Создать человека
 
 - **Когда:** игрок ищет того, кого в мире нет (пекаря, сапожника), или собеседник назвал человека, которого нет.
-- **Пайплайн:** `find_npcs(query)` → (нет) → `propose_effect(create_npc {npc: {name, role, race?, gender, age?, build?, height?, description, personality, monster, room_id?, trader?, stock?, stock_new?, links?}})`. Первый `find_npcs` хода приносит правила темы `people` (поля, значения, пример); облик — id или русское слово, иное выбирает движок; новый товар торговца — `stock_new` по схеме `give_item.item`, вещь библиотеки бэкенд переносит туда сам (v0.7.22.25.1).
+- **Пайплайн:** `find_npcs(query)` → (нет) → `propose_effect(create_npc {npc: {name, role, race?, gender, age?, build?, height?, description, personality, monster, room_id?, trader?, trade_kind?, stock?, stock_new?, links?}})`. Товар торговца даёт движок по виду лавки (`trade_kind` или по роли) и пополняет его каждый день; `stock` / `stock_new` — необязательная добавка мастера, плохое движок пропускает (v0.7.22.26). Первый `find_npcs` хода приносит правила темы `people` (поля, значения, пример); облик — id или русское слово, иное выбирает движок; новый товар торговца — `stock_new` по схеме `give_item.item`, вещь библиотеки бэкенд переносит туда сам (v0.7.22.25.1).
 - **Движок:** после `find_npcs`; один за ход; новое имя; комната этой локации; до 4 новых на локацию и 12 за игру; шаблон людей SRD с CR ≤ 3; облик — id из списков `rules.body` или выберет движок; торговец — товар из каталога ([WorldGen.plan_npc](../../game/core/world/world_gen.gd#L65)).
 - **Итог:** человек живёт как NPC пакета; с ним говорят и торгуют; автор может перенести его в пакет (`tools/promote_world.py`).
 - **Правила:** тема `people`.

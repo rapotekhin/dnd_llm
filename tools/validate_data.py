@@ -70,6 +70,13 @@ SERVICE_OPS = {"identify", "lift_curse", "enchant"}  # v0.7.16: the engine's ope
 NPC_TAGS = {"clergy", "underworld", "commoner", "military"}  # the people of the hero's past (rules.json backgrounds ties)
 
 
+def validate_kinds(ids: dict[str, set[str]]) -> list[str]:
+    """Every good of a shop kind (v0.7.22.26) is an item of the catalog."""
+    kinds = load(DATA / "rules.json")["trade"].get("kinds", {})
+    return [f"rules.json trade.kinds.{k}: нет предмета {x}" for k, v in kinds.items() if k != "_doc"
+            for x in [*v.get("stock", {}), *v.get("extras", {}).get("pool", [])] if x not in ids["items"]]
+
+
 def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     errors: list[str] = []
     try:
@@ -179,6 +186,9 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
                 errors.append(f"NPC {nid}: {key} — список тегов (item_type, magic, scroll, tool или теги вещей)")
         if npc.get("stock") and not npc.get("trader"):
             errors.append(f"NPC {nid}: есть stock, но нет trader: true")
+        kinds = {k for k in load(DATA / "rules.json")["trade"].get("kinds", {}) if k != "_doc"}
+        if npc.get("trade_kind") and npc["trade_kind"] not in kinds:  # v0.7.22.26: shop kinds of rules.json
+            errors.append(f"NPC {nid}: trade_kind — один из {', '.join(sorted(kinds))}")
         for sc in npc.get("schedule", []):  # v0.7.14.2: hours and a room ("" — away)
             if not all(isinstance(sc.get(k), int) and 0 <= sc[k] <= 23 for k in ("from", "to")) or (sc.get("room") and sc["room"] not in rooms):
                 errors.append(f"NPC {nid}: schedule — from/to часы 0–23, room — комната пакета или пусто")
@@ -252,6 +262,9 @@ def main(argv: list[str]) -> int:
     dirs = [Path(a) for a in argv] or sorted(d for d in WORLDS.iterdir() if d.is_dir())
     ids = known()
     failed = 0
+    for e in validate_kinds(ids):
+        print(f"FAIL {e}")
+        failed += 1
     for d in dirs:
         errors = validate_pack(d, ids)
         print(f"{'OK  ' if not errors else 'FAIL'} {d.name}")

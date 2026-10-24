@@ -126,34 +126,46 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 		links.append({"npc_id": other, "kind": kind})
 	def["links"] = links
 	var made_items := {}
+	var notes: Array[String] = []
 	if bool(spec.get("trader", false)):
-		var stock := {}
+		# v0.7.22.26: the goods come from the shop kind; the master's own are extras, a bad one is skipped, not refused
+		var kind := TradeRules.kind_of(data["rules"], {"trade_kind": spec.get("trade_kind"), "role": role})
+		if kind.is_empty():
+			return {"reason": "вид лавки trade_kind — один из: %s" % TradeRules.kind_list(data["rules"])}
+		var k: Dictionary = TradeRules.kinds(data["rules"])[kind]
+		var stock := TradeRules.pack_stock({"stock": k["stock"]}, data["rules"])
+		notes.append("лавка «%s»: %d товаров своих и каждый день новые" % [k.get("name", kind), stock.size()])
 		var goods: Array = []
-		for id: Variant in spec.get("stock", []):
+		for id: Variant in spec.get("stock", []) if spec.get("stock") is Array else []:
 			var item: Dictionary = ItemRules.def_of(data["items"], s.items, str(id))
 			if item.is_empty():
-				return {"reason": "товара %s нет ни в каталоге, ни в игре: id из find_items или новая вещь в stock_new" % id}
+				notes.append("не взят товар %s — его нет в каталоге" % id)
+				continue
 			goods.append([str(id), item])
-		for g: Variant in spec.get("stock_new", []) if spec.get("stock_new") is Array else []:  # goods the master makes
+		for g: Variant in spec.get("stock_new", []) if spec.get("stock_new") is Array else []:
 			if not (g is Dictionary):
-				return {"reason": "stock_new — вещи по схеме give_item.item"}
+				continue
 			var chk := ItemRules.check_generated(data["items"], g, int(s.character.get("level", 1)), data.get("spells", {}))
 			if not bool(chk["ok"]):
-				return {"reason": "новый товар «%s»: %s" % [g.get("name", ""), chk["reason"]]}
-			var gid := ItemRules.generated_id(chk["def"])
-			made_items[gid] = chk["def"]
-			goods.append([gid, chk["def"]])
+				notes.append("не взят новый товар «%s»: %s" % [g.get("name", ""), chk["reason"]])
+				continue
+			goods.append([ItemRules.generated_id(chk["def"]), chk["def"], true])
 		for g: Array in goods:
+			if stock.has(g[0]):
+				continue
 			if int(g[1].get("value_cp", 0)) > int(c["stock_item_cap_cp"]):
-				return {"reason": "%s слишком дорог для лавки нового торговца" % g[1].get("name", g[0])}
+				notes.append("не взят %s — слишком дорог для новой лавки" % g[1].get("name", g[0]))
+				continue
+			if g.size() > 2:
+				made_items[g[0]] = g[1]
 			stock[g[0]] = int(data["rules"]["trade"]["default_stock_qty"])
-		if stock.is_empty():
-			return {"reason": "у торговца нужен товар: stock — id из find_items, stock_new — новые вещи"}
 		def["trader"] = true
+		def["trade_kind"] = kind
 		def["stock"] = stock
-		def["purse_cp"] = int(c["purse_cp"])
+		def["purse_cp"] = int(k.get("purse_cp", c["purse_cp"]))
 	return {"plan": {"npc": def, "room": room, "items": made_items}, "summary": "Новый человек: %s — %s (%s)%s" % [def["name"], def["role"],
-		BodyRules.text(data, def, str(def["gender"])), "" if made_items.is_empty() else "; новый товар: " + ", ".join(made_items.values().map(func(d: Dictionary) -> String: return str(d["name"])))]}
+		BodyRules.text(data, def, str(def["gender"])), ("" if made_items.is_empty() else "; новый товар: " + ", ".join(made_items.values().map(func(d: Dictionary) -> String: return str(d["name"]))))
+		+ ("" if notes.is_empty() else "; " + "; ".join(notes))]}
 
 
 ## Makes the NPC: in the save and in this game's world. Its id.

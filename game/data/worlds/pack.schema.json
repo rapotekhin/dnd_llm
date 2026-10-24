@@ -351,6 +351,7 @@
 							"role": {"$ref": "#/$defs/nonempty"},
 							"gender": {"enum": ["male", "female", "other"]},
 							"trader": {"type": "boolean"},
+							"trade_kind": {"type": "string"},
 							"stock": {
 								"oneOf": [
 									{"$ref": "#/$defs/strings"},

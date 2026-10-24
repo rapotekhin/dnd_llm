@@ -95,7 +95,7 @@ const app = new EditorApp({
 		add({ id: 'npcs', group: 'Мир', title: 'NPC', file: wfile, at: ['npcs'], idHint: 'например npc_smith',
 			sub: (e, nid) => [e.role, e.race, roomOf(nid) ? '📍 ' + roomName(roomOf(nid)) : 'нигде не стоит', e.trader ? 'торговец' : ''].filter(Boolean).join(' · '),
 			computed: { 'комната': (e, nid) => roomOf(nid) || '' },
-			filterOrder: ['trader', '=комната', 'gender', 'race', 'monster', 'tags', 'services', 'wants', 'shuns'],
+			filterOrder: ['trader', 'trade_kind', '=комната', 'gender', 'race', 'monster', 'tags', 'services', 'wants', 'shuns'],
 			refs: [{ p: 'monster', to: 'monsters' }, { p: 'stock.{}', to: 'all_items' }, { p: 'stock.[]', to: 'all_items' }, { p: 'heir', to: 'npcs' },
 				{ p: 'schedule.[].room', to: 'rooms' }, { p: 'services.[]', to: 'services_all' }, { p: 'languages.[]', to: 'languages' },
 				{ p: 'secrets.[].reveals', to: 'room_secrets' }, { p: 'trade_variants.[].stock.{}', to: 'all_items' }, { p: 'trade_variants.[].remove.[]', to: 'all_items' }] });

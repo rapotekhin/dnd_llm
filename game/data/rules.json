@@ -486,6 +486,445 @@
 		"_doc": "Trade (v0.5.3): buy = value × attitude % × (1 − haggle %), rounded up; sell = value × sell_ratio × attitude sell % × (1 + haggle %), rounded down. Haggle: Persuasion or Deception vs DC by attitude; the margin picks the tier; a failure locks haggling with this merchant until the next day.",
 		"sell_ratio": 0.5,
 		"default_stock_qty": 5,
+		"kinds": {
+			"_doc": "Kinds of shops (v0.7.22.26): a trader's ready goods by its trade, so the master never makes them. A trader's kind — its `trade_kind` (pack or create_npc), else the first kind with a word of its role. `stock` — what it always has (a pack NPC's own stock goes first), `extras` — per_day more goods from `pool` each day (qty within the range), picked by the game's seed; `wants` — what it buys gladly when the NPC has none of its own; `purse_cp` — the purse of a made trader.",
+			"general": {
+				"name": "лавка",
+				"words": [
+					"лавоч",
+					"лавк",
+					"купец",
+					"купч",
+					"торговец",
+					"торговка",
+					"мелоч",
+					"старьёв"
+				],
+				"wants": [
+					"gear",
+					"tool"
+				],
+				"purse_cp": 8000,
+				"stock": {
+					"torch": 10,
+					"rope": 3,
+					"rations": 10,
+					"waterskin": 4,
+					"tinderbox": 4,
+					"candle": 10,
+					"sack": 5,
+					"bedroll": 2,
+					"backpack": 2,
+					"oil_flask": 4
+				},
+				"extras": {
+					"per_day": 3,
+					"qty": [
+						1,
+						3
+					],
+					"pool": [
+						"lantern",
+						"lamp",
+						"crowbar",
+						"chain_10_feet",
+						"grappling_hook",
+						"shovel",
+						"hammer",
+						"piton",
+						"soap",
+						"blanket",
+						"pot_iron",
+						"fishing_tackle",
+						"mess_kit",
+						"chalk_1_piece",
+						"string_10_feet",
+						"ball_bearings_bag_of_1000",
+						"caltrops",
+						"hunting_trap",
+						"manacles",
+						"lock",
+						"bell",
+						"signal_whistle",
+						"dice_set",
+						"playing_card_set"
+					]
+				}
+			},
+			"smith": {
+				"name": "кузница",
+				"words": [
+					"кузн",
+					"оружейн",
+					"бронник",
+					"латник"
+				],
+				"wants": [
+					"weapon",
+					"armor"
+				],
+				"purse_cp": 15000,
+				"stock": {
+					"dagger": 3,
+					"handaxe": 2,
+					"spear": 2,
+					"mace": 1,
+					"shortsword": 1,
+					"shield": 1,
+					"leather_armor": 1,
+					"spike_iron": 10,
+					"hammer": 2
+				},
+				"extras": {
+					"per_day": 2,
+					"qty": [
+						1,
+						1
+					],
+					"pool": [
+						"longsword",
+						"battleaxe",
+						"warhammer",
+						"light_hammer",
+						"sickle",
+						"javelin",
+						"war_pick",
+						"flail",
+						"morningstar",
+						"scimitar",
+						"greataxe",
+						"chain_shirt",
+						"ring_mail",
+						"scale_mail",
+						"chain_mail",
+						"hide_armor",
+						"studded_leather_armor",
+						"manacles",
+						"lock",
+						"chain_10_feet",
+						"crowbar"
+					]
+				}
+			},
+			"bowyer": {
+				"name": "лук и стрелы",
+				"words": [
+					"лучн",
+					"стрел",
+					"охотни",
+					"трапер",
+					"зверолов"
+				],
+				"wants": [
+					"weapon"
+				],
+				"purse_cp": 6000,
+				"stock": {
+					"arrows": 40,
+					"shortbow": 1,
+					"sling": 2,
+					"sling_bullet": 40,
+					"quiver": 2,
+					"javelin": 3
+				},
+				"extras": {
+					"per_day": 2,
+					"qty": [
+						1,
+						2
+					],
+					"pool": [
+						"longbow",
+						"crossbow_light",
+						"crossbow_bolt",
+						"case_crossbow_bolt",
+						"hunting_trap",
+						"dart",
+						"net",
+						"blowgun",
+						"blowgun_needle",
+						"leather_armor",
+						"hide_armor",
+						"whetstone"
+					]
+				}
+			},
+			"food": {
+				"name": "еда и питьё",
+				"words": [
+					"пекар",
+					"хлеб",
+					"булоч",
+					"трактир",
+					"таверн",
+					"корчм",
+					"харчев",
+					"кабат",
+					"повар",
+					"мясник",
+					"пивовар"
+				],
+				"wants": [
+					"consumable"
+				],
+				"purse_cp": 3000,
+				"stock": {
+					"bread": 20,
+					"rations": 10,
+					"ale": 20
+				},
+				"extras": {
+					"per_day": 2,
+					"qty": [
+						1,
+						3
+					],
+					"pool": [
+						"candle",
+						"flask_or_tankard",
+						"jug_or_pitcher",
+						"mess_kit",
+						"cooks_utensils",
+						"pot_iron",
+						"waterskin",
+						"soap",
+						"sack",
+						"basket",
+						"bucket",
+						"barrel",
+						"brewers_supplies"
+					]
+				}
+			},
+			"herbalist": {
+				"name": "травы и зелья",
+				"words": [
+					"трав",
+					"знахар",
+					"аптек",
+					"алхим",
+					"лекар",
+					"целител"
+				],
+				"wants": [
+					"consumable"
+				],
+				"purse_cp": 8000,
+				"stock": {
+					"healing_potion": 2,
+					"antitoxin": 2,
+					"healers_kit": 2,
+					"herbalism_kit": 1,
+					"vial": 3
+				},
+				"extras": {
+					"per_day": 2,
+					"qty": [
+						1,
+						2
+					],
+					"pool": [
+						"potion_of_climbing",
+						"potion_of_resistance_poison",
+						"acid_vial",
+						"alchemists_fire_flask",
+						"oil_flask",
+						"perfume_vial",
+						"soap",
+						"sprig_of_mistletoe",
+						"alchemists_supplies",
+						"bottle_glass",
+						"block_of_incense",
+						"healing_potion"
+					]
+				}
+			},
+			"temple": {
+				"name": "храм",
+				"words": [
+					"жрец",
+					"жриц",
+					"храм",
+					"монах",
+					"монахин",
+					"послуш",
+					"священ"
+				],
+				"wants": [
+					"magic",
+					"scroll"
+				],
+				"purse_cp": 4000,
+				"stock": {
+					"holy_water": 2,
+					"candle": 20,
+					"block_of_incense": 5,
+					"emblem": 1,
+					"amulet": 1
+				},
+				"extras": {
+					"per_day": 1,
+					"qty": [
+						1,
+						1
+					],
+					"pool": [
+						"spell_scroll_cure_wounds",
+						"spell_scroll_healing_word",
+						"spell_scroll_identify",
+						"spell_scroll_guiding_bolt",
+						"spell_scroll_sacred_flame",
+						"reliquary",
+						"censer",
+						"healers_kit",
+						"antitoxin",
+						"holy_water"
+					]
+				}
+			},
+			"tailor": {
+				"name": "одежда и кожа",
+				"words": [
+					"портн",
+					"швея",
+					"швец",
+					"ткач",
+					"кожевн",
+					"сапож",
+					"скорняк"
+				],
+				"wants": [
+					"armor",
+					"gear"
+				],
+				"purse_cp": 6000,
+				"stock": {
+					"clothes_common": 3,
+					"clothes_travelers": 2,
+					"pouch": 3,
+					"sack": 5,
+					"blanket": 2,
+					"padded_armor": 1,
+					"leather_armor": 1
+				},
+				"extras": {
+					"per_day": 2,
+					"qty": [
+						1,
+						2
+					],
+					"pool": [
+						"clothes_fine",
+						"clothes_costume",
+						"robes",
+						"backpack",
+						"quiver",
+						"waterskin",
+						"bedroll",
+						"tent_two_person",
+						"hide_armor",
+						"studded_leather_armor",
+						"weavers_tools",
+						"leatherworkers_tools",
+						"cobblers_tools"
+					]
+				}
+			},
+			"scribe": {
+				"name": "письмо и книги",
+				"words": [
+					"писар",
+					"книж",
+					"картограф",
+					"переписч",
+					"летопис"
+				],
+				"wants": [
+					"scroll",
+					"gear"
+				],
+				"purse_cp": 6000,
+				"stock": {
+					"paper_one_sheet": 10,
+					"parchment_one_sheet": 10,
+					"ink_1_ounce_bottle": 2,
+					"ink_pen": 5,
+					"sealing_wax": 5,
+					"candle": 10
+				},
+				"extras": {
+					"per_day": 2,
+					"qty": [
+						1,
+						1
+					],
+					"pool": [
+						"book",
+						"case_map_or_scroll",
+						"calligraphers_supplies",
+						"cartographers_tools",
+						"spellbook",
+						"magnifying_glass",
+						"spell_scroll_fire_bolt",
+						"spell_scroll_ray_of_frost",
+						"spell_scroll_magic_missile",
+						"spell_scroll_sleep",
+						"forgery_kit",
+						"hourglass"
+					]
+				}
+			},
+			"craftsman": {
+				"name": "мастерская",
+				"words": [
+					"плотн",
+					"столяр",
+					"гончар",
+					"камен",
+					"мастеров",
+					"жестян",
+					"бондар",
+					"лудильщ"
+				],
+				"wants": [
+					"tool",
+					"gear"
+				],
+				"purse_cp": 6000,
+				"stock": {
+					"carpenters_tools": 1,
+					"potters_tools": 1,
+					"hammer": 3,
+					"ladder_10_foot": 2,
+					"pole_10_foot": 3,
+					"bucket": 3,
+					"barrel": 2,
+					"chest": 1
+				},
+				"extras": {
+					"per_day": 2,
+					"qty": [
+						1,
+						2
+					],
+					"pool": [
+						"masons_tools",
+						"tinkers_tools",
+						"woodcarvers_tools",
+						"glassblowers_tools",
+						"lock",
+						"block_and_tackle",
+						"shovel",
+						"pick_miners",
+						"crowbar",
+						"basket",
+						"spike_iron",
+						"piton",
+						"hammer_sledge"
+					]
+				}
+			}
+		},
 		"buy_pct_by_attitude": {
 			"-3": 150,
 			"-2": 125,

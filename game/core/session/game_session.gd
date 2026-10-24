@@ -749,14 +749,11 @@ static func _normalized_merchant(m: Dictionary) -> Dictionary:
 	var out := m.duplicate(true)
 	for k: String in ["purse_cp", "day", "haggle_pct", "haggle_failed_day", "haggles", "haggle_day"]:
 		out[k] = int(out.get(k, 0))
-	var stock := {}
-	for id: String in out.get("stock", {}):
-		stock[id] = int(out["stock"][id])
-	out["stock"] = stock
-	var sold := {}
-	for id: String in out.get("sold", {}):
-		sold[id] = int(out["sold"][id])
-	out["sold"] = sold
+	for key: String in ["stock", "sold", "extras"]:  # extras — the day's goods of the shop kind (v0.7.22.26)
+		var qty := {}
+		for id: String in out.get(key, {}):
+			qty[id] = int(out[key][id])
+		out[key] = qty
 	if out.get("haggle_result") is Dictionary and not (out["haggle_result"] as Dictionary).is_empty():
 		_normalized(out["haggle_result"])
 	else:

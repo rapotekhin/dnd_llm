@@ -1259,7 +1259,7 @@
     },
     "NewNpc": {
       "additionalProperties": false,
-      "description": "A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;\n`monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),\n`race` — an SRD race id, `room_id` — a room of this location (none — here) or «new:<key>» of this turn's create_place\n(0.52.0), `trader` with `stock` of ids from find_items and `stock_new` — goods the master makes (0.52.0).",
+      "description": "A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;\n`monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),\n`race` — an SRD race id, `room_id` — a room of this location (none — here) or «new:<key>» of this turn's create_place\n(0.52.0), `trader` with its shop kind `trade_kind` (0.53.0: the engine's goods of the kind, more each day; none — by\nthe role's words), `stock` of ids from find_items and `stock_new` — the master's extra goods, a bad one skipped.",
       "properties": {
         "age": {
           "anyOf": [
@@ -1383,6 +1383,18 @@
           "maxItems": 5,
           "title": "Stock New",
           "type": "array"
+        },
+        "trade_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trade Kind"
         },
         "trader": {
           "default": false,
@@ -2212,6 +2224,18 @@
           "maxItems": 5,
           "title": "Stock New",
           "type": "array"
+        },
+        "trade_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trade Kind"
         },
         "trader": {
           "default": false,

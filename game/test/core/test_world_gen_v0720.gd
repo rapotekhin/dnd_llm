@@ -44,7 +44,7 @@ func test_the_engine_refuses_what_breaks_the_schema() -> void:
 	assert_str(str(_make({"name": "Гуннар Тяжёлая Рука", "role": "кузнец"})["reason"])).contains("уже есть")
 	assert_str(str(_make({"name": "Дракон", "role": "дракон", "monster": "young_red_dragon"}, "t-2")["reason"])).contains("не из людских")
 	assert_str(str(_make({"name": "Отшельник Два", "role": "отшельник", "room_id": "pushcha-glade"}, "t-3")["reason"])).contains("в этой локации")
-	assert_str(str(_make({"name": "Торгаш", "role": "торговец", "trader": true, "stock": ["plate_armor"]}, "t-4")["reason"])).contains("слишком дорог")
+	assert_str(str(_make({"name": "Меняла Сорока", "role": "меняла", "trader": true}, "t-4")["reason"])).contains("вид лавки")
 
 
 func test_a_made_person_survives_a_save() -> void:
