@@ -93,8 +93,6 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 	if not fresh and loc != world.location_id(s.room_id):
 		return {"reason": "новый человек — в этой локации (%s), а не в другой" % world.location(world.location_id(s.room_id)).get("name", "")}
 	var made: Dictionary = generated(s)["npcs"]
-	if made.size() >= int(c["max_per_session"]):
-		return {"reason": "в этой игре создано уже %d человек — больше нельзя" % made.size()}
 	var here := made.keys().filter(func(id: String) -> bool: return world.location_id(str(generated(s)["npc_rooms"].get(id, ""))) == loc)
 	if here.size() >= int(c["max_per_location"]):
 		return {"reason": "в %s уже %d новых людей — больше нельзя" % [world.location(loc).get("name", loc), here.size()]}
