@@ -65,7 +65,8 @@ static func find_npcs(s: GameSession, data: Dictionary, query: String) -> Array[
 
 
 ## Checks a `create_npc`: {plan, summary} or {reason}. `spec` — the schema of a pack NPC (NewNpc of the protocol).
-static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searched: bool) -> Dictionary:
+## `new_rooms` — {key: location id} of the place made in this turn: `room_id` «new:<key>» puts the person there.
+static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searched: bool, new_rooms: Dictionary = {}) -> Dictionary:
 	var c := cfg(data)
 	if not searched:
 		return {"reason": "сначала find_npcs: может, такой человек уже есть в мире"}
@@ -80,10 +81,16 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 	if role.is_empty():
 		return {"reason": "нужна роль: кто он (кузнец, стражник у ворот, путник)"}
 	var room := str(spec.get("room_id", "")) if spec.get("room_id") != null and not str(spec.get("room_id", "")).is_empty() else s.room_id
-	if not data["world"]["rooms"].has(room):
-		return {"reason": "нет комнаты %s" % room}
-	var loc := world.location_id(room)
-	if loc != world.location_id(s.room_id):
+	if not data["world"]["rooms"].has(room) and new_rooms.has(room):
+		room = "new:" + room  # the bare key of this turn's new room
+	var fresh := room.begins_with("new:")
+	if fresh and not new_rooms.has(room.trim_prefix("new:")):
+		return {"reason": "нет комнаты %s: «new:<key>» — комната места, созданного в этом ходе (%s)" % [room,
+			", ".join(new_rooms.keys().map(func(k: String) -> String: return "new:" + k)) if not new_rooms.is_empty() else "его нет — сначала create_place"]}
+	if not fresh and not data["world"]["rooms"].has(room):
+		return {"reason": "нет комнаты %s; новое место этого хода — «new:<key>» его комнаты" % room}
+	var loc := str(new_rooms[room.trim_prefix("new:")]) if fresh else world.location_id(room)
+	if not fresh and loc != world.location_id(s.room_id):
 		return {"reason": "новый человек — в этой локации (%s), а не в другой" % world.location(world.location_id(s.room_id)).get("name", "")}
 	var made: Dictionary = generated(s)["npcs"]
 	if made.size() >= int(c["max_per_session"]):
@@ -106,10 +113,8 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 		"monster": tpl, "tags": [], "generated": true}
 	if not race.is_empty():
 		def["race_id"] = race
-	var body := BodyRules.check(data, spec)  # v0.7.22.5: age, build, height
-	if body.has("reason"):
-		return {"reason": str(body["reason"])}
-	def.merge(body)
+	# v0.7.22.5: age, build, height — fixed now, so the summary tells the master what the engine picked
+	def.merge(BodyRules.make(data, str(def["gender"]), BodyRules.check(data, spec), "npc:" + name))
 	var links: Array = []
 	for l: Variant in spec.get("links", []):
 		if not (l is Dictionary):
@@ -120,21 +125,35 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 			return {"reason": "связь: npc_id из мира и kind из %s" % ", ".join(c["link_kinds"])}
 		links.append({"npc_id": other, "kind": kind})
 	def["links"] = links
+	var made_items := {}
 	if bool(spec.get("trader", false)):
 		var stock := {}
+		var goods: Array = []
 		for id: Variant in spec.get("stock", []):
-			var item: Dictionary = data["items"]["catalog"].get(str(id), {})
+			var item: Dictionary = ItemRules.def_of(data["items"], s.items, str(id))
 			if item.is_empty():
-				return {"reason": "товар %s — не из каталога (find_items)" % id}
-			if int(item.get("value_cp", 0)) > int(c["stock_item_cap_cp"]):
-				return {"reason": "%s слишком дорог для лавки нового торговца" % item.get("name", id)}
-			stock[str(id)] = int(data["rules"]["trade"]["default_stock_qty"])
+				return {"reason": "товара %s нет ни в каталоге, ни в игре: id из find_items или новая вещь в stock_new" % id}
+			goods.append([str(id), item])
+		for g: Variant in spec.get("stock_new", []) if spec.get("stock_new") is Array else []:  # goods the master makes
+			if not (g is Dictionary):
+				return {"reason": "stock_new — вещи по схеме give_item.item"}
+			var chk := ItemRules.check_generated(data["items"], g, int(s.character.get("level", 1)), data.get("spells", {}))
+			if not bool(chk["ok"]):
+				return {"reason": "новый товар «%s»: %s" % [g.get("name", ""), chk["reason"]]}
+			var gid := ItemRules.generated_id(chk["def"])
+			made_items[gid] = chk["def"]
+			goods.append([gid, chk["def"]])
+		for g: Array in goods:
+			if int(g[1].get("value_cp", 0)) > int(c["stock_item_cap_cp"]):
+				return {"reason": "%s слишком дорог для лавки нового торговца" % g[1].get("name", g[0])}
+			stock[g[0]] = int(data["rules"]["trade"]["default_stock_qty"])
 		if stock.is_empty():
-			return {"reason": "у торговца нужен товар (stock — id каталога)"}
+			return {"reason": "у торговца нужен товар: stock — id из find_items, stock_new — новые вещи"}
 		def["trader"] = true
 		def["stock"] = stock
 		def["purse_cp"] = int(c["purse_cp"])
-	return {"plan": {"npc": def, "room": room}, "summary": "Новый человек: %s — %s" % [def["name"], def["role"]]}
+	return {"plan": {"npc": def, "room": room, "items": made_items}, "summary": "Новый человек: %s — %s (%s)%s" % [def["name"], def["role"],
+		BodyRules.text(data, def, str(def["gender"])), "" if made_items.is_empty() else "; новый товар: " + ", ".join(made_items.values().map(func(d: Dictionary) -> String: return str(d["name"])))]}
 
 
 ## Makes the NPC: in the save and in this game's world. Its id.
@@ -144,6 +163,8 @@ static func apply_npc(s: GameSession, data: Dictionary, plan: Dictionary) -> Str
 	while data["world"]["npcs"].has("gen_npc_%d" % n):
 		n += 1
 	var id := "gen_npc_%d" % n
+	for iid: String in plan.get("items", {}):
+		s.items[iid] = (plan["items"][iid] as Dictionary).duplicate(true)
 	gen["npcs"][id] = (plan["npc"] as Dictionary).duplicate(true)
 	gen["npc_rooms"][id] = str(plan["room"])
 	data["world"] = merged_into(data["world"], id, plan["npc"], str(plan["room"]))
@@ -338,15 +359,15 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		"public": bool(site_spec.get("public", true)) if site_spec.get("public") != null else true}
 	var owner := str(site_spec.get("owner_id", "")) if site_spec.get("owner_id") != null else ""
 	if not owner.is_empty():
-		if not data["world"]["npcs"].has(owner):
-			return {"reason": "хозяин объекта %s — не человек мира (сначала create_npc)" % owner}
-		site["owner"] = owner
+		if owner != "new" and not data["world"]["npcs"].has(owner):
+			return {"reason": "хозяин объекта %s — не человек мира: id из find_npcs или «new» — человек create_npc этого хода" % owner}
+		site["owner"] = owner  # "new": the person create_npc makes in this turn (the engine links them on apply)
 	var place := {"from": at, "edge": idx, "rooms": defs, "new_location": new_loc, "location": {}, "site": site, "inside": inside}
 	if new_loc:
 		place["location"] = {"name": str(spec.get("name", "")).strip_edges().left(60), "description": str(spec.get("description", "")).left(400), "terrain": terrain}
 		if str(place["location"]["name"]).length() < 2:
 			return {"reason": "у новой локации нужно имя"}
-	return {"plan": {"place": place}, "summary": "Новое место: %s%s" % [", ".join(defs.map(func(d: Dictionary) -> String: return d["name"])),
+	return {"plan": {"place": place}, "summary": "Новое место: %s%s" % [", ".join(defs.map(func(d: Dictionary) -> String: return "%s [new:%s]" % [d["name"], d["key"]])),
 		"" if at == s.room_id else " — у %s" % world.room(at).get("name", at)]}
 
 
@@ -418,6 +439,8 @@ static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 	if int(place["edge"]) >= 0:
 		(gen["edges_used"] as Array).append("%s:%d" % [place["from"], int(place["edge"])])
 	data["world"] = _merge_places(data["world"], gen)
+	plan["ids"] = ids  # key -> room id, for the refs «new:<key>» of the same turn
+	plan["site_id"] = sid
 	return first
 
 

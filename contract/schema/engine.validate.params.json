@@ -1259,7 +1259,7 @@
     },
     "NewNpc": {
       "additionalProperties": false,
-      "description": "A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;\n`monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),\n`race` — an SRD race id, `room_id` — a room of this location (none — here), `trader` with `stock` of catalog ids.",
+      "description": "A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;\n`monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),\n`race` — an SRD race id, `room_id` — a room of this location (none — here) or «new:<key>» of this turn's create_place\n(0.52.0), `trader` with `stock` of ids from find_items and `stock_new` — goods the master makes (0.52.0).",
       "properties": {
         "age": {
           "anyOf": [
@@ -1374,6 +1374,14 @@
           },
           "maxItems": 10,
           "title": "Stock",
+          "type": "array"
+        },
+        "stock_new": {
+          "items": {
+            "$ref": "#/$defs/GeneratedItem"
+          },
+          "maxItems": 5,
+          "title": "Stock New",
           "type": "array"
         },
         "trader": {
@@ -1556,7 +1564,7 @@
     },
     "NewSite": {
       "additionalProperties": false,
-      "description": "The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of\nits kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an\nNPC of the world (made first by create_npc if new).",
+      "description": "The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of\nits kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an\nNPC of the world or «new» — the person create_npc makes in this turn (0.52.0).",
       "properties": {
         "description": {
           "default": "",
@@ -2195,6 +2203,14 @@
           },
           "maxItems": 10,
           "title": "Stock",
+          "type": "array"
+        },
+        "stock_new": {
+          "items": {
+            "$ref": "#/$defs/GeneratedItem"
+          },
+          "maxItems": 5,
+          "title": "Stock New",
           "type": "array"
         },
         "trader": {

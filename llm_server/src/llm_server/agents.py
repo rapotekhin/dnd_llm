@@ -169,6 +169,26 @@ def scene_npc(params: TurnRequestParams, npc_id: str | None) -> SceneNpc | None:
     return next((n for n in scene.npcs if n.npc_id == npc_id), None)
 
 
+def _with_topic(t: TurnContext, topic: str, text: str) -> str:
+    """A search before a creation answers with the topic's rules at once: a refusal «read rules first» cost a request."""
+    if topic in t.topics:
+        return text
+    t.topics.add(topic)
+    return f"{text}\n\nПравила темы «{topic}» (читать rules(\"{topic}\") уже не нужно):\n{prompts.topic_text(topic)}"
+
+
+def _library_stock(effect: CreateNpcEffect, library: ItemLibrary) -> CreateNpcEffect:
+    """Goods of the library (made in other games) go to `stock_new` by their schema: the engine knows only this game."""
+    npc = effect.npc
+    moved = [(i, item) for i in npc.stock if i.startswith("gen_") and (item := library.get(i)) is not None]
+    if not moved:
+        return effect
+    ids = {i for i, _ in moved}
+    npc = npc.model_copy(update={"stock": [i for i in npc.stock if i not in ids],
+                                 "stock_new": [*npc.stock_new, *(m for _, m in moved)][:5]})
+    return effect.model_copy(update={"npc": npc})
+
+
 # --- tools --------------------------------------------------------------------
 
 
@@ -262,6 +282,8 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     topic = prompts.topic_for(effect.kind)
     if topic and topic not in t.topics:
         return f"Отказ: сначала прочитай правила темы — rules(\"{topic}\"), потом предложи эффект снова."
+    if isinstance(effect, CreateNpcEffect) and t.library is not None:
+        effect = _library_stock(effect, t.library)
     if isinstance(effect, CreateQuestEffect) and not t.searched_quests:
         return "Отказ: перед созданием задания поищи похожие через find_quests."
     if isinstance(effect, CreateNpcEffect) and not t.searched_npcs:
@@ -270,6 +292,12 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         return "Отказ: перед созданием места поищи его через find_places."
     raw = await t.session.call_engine("engine.validate", EngineValidateParams(turn_id=t.params.turn_id, effect=effect))
     r = EngineValidateResult.model_validate(raw)
+    made = (t.library.get(effect.item_id) if not r.accepted and isinstance(effect, GiveItemEffect) and effect.item_id
+            and t.library is not None else None)
+    if made is not None:  # a thing of the library, not yet in this game: the engine makes it by its schema
+        effect = effect.model_copy(update={"item_id": None, "item": made})
+        raw = await t.session.call_engine("engine.validate", EngineValidateParams(turn_id=t.params.turn_id, effect=effect))
+        r = EngineValidateResult.model_validate(raw)
     if not r.accepted or not r.effect_id:
         return f"Отклонено движком: {r.reason or 'без причины'}. Перепиши описание с учётом отказа."
     t.accepted[r.effect_id] = r.summary
@@ -369,8 +397,8 @@ async def find_npcs(ctx: RunContext[TurnContext], query: str) -> str:
     raw = await t.session.call_engine("engine.find_npcs", EngineFindNpcsParams(turn_id=t.params.turn_id, query=query))
     found = EngineFindNpcsResult.model_validate(raw).npcs
     if not found:
-        return "Никого похожего. Если человек нужен по сцене или замыслу игрока — create_npc."
-    return "\n".join(f"[{n.npc_id}] {n.name} — {n.role}, {n.location}{' (мёртв)' if n.dead else ''}" for n in found)
+        return _with_topic(t, "people", "Никого похожего. Если человек нужен по сцене или замыслу игрока — create_npc.")
+    return _with_topic(t, "people", "\n".join(f"[{n.npc_id}] {n.name} — {n.role}, {n.location}{' (мёртв)' if n.dead else ''}" for n in found))
 
 
 async def find_quests(ctx: RunContext[TurnContext], query: str) -> str:
@@ -382,9 +410,10 @@ async def find_quests(ctx: RunContext[TurnContext], query: str) -> str:
     r = EngineFindQuestsResult.model_validate(raw)
     head = f"Созданных заданий открыто: {r.open_made} из {r.max_open}."
     if not r.quests:
-        return head + " Похожих нет. Если дело нужно — create_quest."
+        return _with_topic(t, "quests", head + " Похожих нет. Если дело нужно — create_quest.")
     status = {"offered": "предлагается", "taken": "взято", "done": "сделано", "failed": "провалено"}
-    return head + "\n" + "\n".join(f"[{q.quest_id}] «{q.title}» — {q.giver}, {status.get(q.status, q.status)}" for q in r.quests)
+    return _with_topic(t, "quests", head + "\n" + "\n".join(
+        f"[{q.quest_id}] «{q.title}» — {q.giver}, {status.get(q.status, q.status)}" for q in r.quests))
 
 
 async def find_places(ctx: RunContext[TurnContext], query: str) -> str:
@@ -401,8 +430,8 @@ async def find_places(ctx: RunContext[TurnContext], query: str) -> str:
             f"[{e.room_id}] {e.room} ({e.location}), край {e.edge}: {e.text}; местность {', '.join(e.terrain)}"
             f"{'; можно новую локацию' if e.new_location else ''}" for e in r.edges))
     else:
-        out.append("Открытых краёв поблизости нет — новых мест не создать.")
-    return "\n\n".join(out)
+        out.append("Открытых краёв поблизости нет — за пределами известного мест не создать; объект внутри локации можно (inside).")
+    return _with_topic(t, "places", "\n\n".join(out))
 
 
 async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None = None,

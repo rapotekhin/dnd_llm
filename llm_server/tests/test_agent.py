@@ -491,3 +491,32 @@ def test_a_malformed_effect_is_refused_and_the_turn_goes_on(data_dir):
     msg, calls, _ = play(data_dir, fn)
     assert msg["result"]["narration"] == "На доске ничего не разобрать." and calls == []
     assert "заверши ход словами" in last_tool_text(fn.state["prompts"][3])
+
+
+def test_a_search_brings_its_topic_and_a_library_good_goes_to_stock_new(data_dir):
+    # v0.7.22.25.1 (the author's trace): find_npcs answered without the rules, and create_npc was refused «read
+    # rules first»; a bread of the library was refused as «not of the catalog».
+    seen = []
+
+    def engine(method, params):
+        if method == "engine.find_npcs":
+            return {"npcs": []}
+        if method == "engine.validate":
+            seen.append(params["effect"])
+            return {"accepted": True, "effect_id": "e-3", "summary": "Новый человек: Сарра — пекарша"}
+        return default_engine(method, params)
+
+    fn = scripted(
+        ("find_npcs", {"query": "пекарша"}),
+        ("propose_effect", {"effect": {"kind": "create_npc", "npc": {"name": "Сарра", "role": "пекарша", "trader": True,
+                                                                     "stock": ["gen_bread", "rations"]}}}),
+        ("final", lambda m: {"narration": "Сарра вытирает руки о передник.", "effect_ids": ["e-3"]}),
+    )
+    services = make_services(data_dir, model_factory=lambda m: FunctionModel(fn, model_name=m), turn_handler="agent")
+    services.library.add("gen_bread", GeneratedItem(name="Краюха хлеба", item_type="consumable", rarity="common", value_cp=2))
+    msg, _, _ = play(data_dir, fn, engine, services=services)
+    assert "Правила темы «people»" in last_tool_text(fn.state["prompts"][1])
+    assert msg["result"]["effect_ids"] == ["e-3"]
+    npc = seen[0]["npc"]
+    assert npc["stock"] == ["rations"]
+    assert [i["name"] for i in npc["stock_new"]] == ["Краюха хлеба"]

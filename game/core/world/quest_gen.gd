@@ -426,7 +426,7 @@ static func _apply_content(s: GameSession, data: Dictionary, content: Dictionary
 				refs["enc:new:" + key] = str(enc["id"])
 	for n: Dictionary in content["npcs"]:
 		var room := str(refs.get(str(n["room"]), n["room"]))
-		refs["new:" + str(n["key"])] = WorldGen.apply_npc(s, data, {"npc": n["plan"]["npc"], "room": room})
+		refs["new:" + str(n["key"])] = WorldGen.apply_npc(s, data, {"npc": n["plan"]["npc"], "room": room, "items": n["plan"].get("items", {})})
 	var it: Dictionary = content["item"]
 	if not it.is_empty():
 		if not (it["def"] as Dictionary).is_empty():

@@ -22,6 +22,8 @@ var _data: Dictionary = {}
 
 ## Lines an applied effect adds after its summary (the owner of a taken thing reacts, v0.7.0).
 var _extra_lines: Array[String] = []
+## What this apply made: {"rooms": {key: id}, "site": id, "npc": id} — for the refs «new:<key>» (v0.7.22.25.1).
+var _made: Dictionary = {}
 ## The tiers of successful checks of each turn (v0.7.14.3): a nearly_impossible one caps the turn's rewards.
 var _won: Dictionary = {}
 ## NPCs won over this turn by a successful Persuasion, Deception or Intimidation (v0.7.15.2): turn_id → [npc_id].
@@ -117,7 +119,8 @@ func validate(s: GameSession, data: Dictionary, turn_id: String, effect: Diction
 ## Applies the listed reserves of `turn_id` in order, burns the rest. Returns the summaries shown to the player.
 func apply(s: GameSession, turn_id: String, ids: Array) -> Array[String]:
 	var lines: Array[String] = []
-	for id: Variant in ids:
+	_made = {}
+	for id: Variant in _ordered(ids):
 		var r: Dictionary = reserves.get(str(id), {})
 		if r.is_empty() or r["turn_id"] != turn_id:
 			continue
@@ -129,6 +132,7 @@ func apply(s: GameSession, turn_id: String, ids: Array) -> Array[String]:
 		lines.append(str(r["summary"]))
 		lines.append_array(_extra_lines)  # an owner's reaction to a taken thing (v0.7.0)
 	discard(turn_id)
+	_link_new_owner(s)
 	return lines
 
 
@@ -170,6 +174,13 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				if world.location_id(to) != world.location_id(s.room_id) or world.room(to).is_empty():
 					return {"reason": "стража держит героя: увести его можно только в комнату этой же округи (%s) — к капитану, в караулку; сам он не уйдёт" % world.location_id(s.room_id)}
 				return {"plan": {"room_id": to, "with": [], "escort": true}, "summary": "Под стражей: %s" % world.room(to).get("name", to)}
+			if not to.begins_with("new:") and world.room(to).is_empty() and _new_rooms(s, data, pending).has(to):
+				to = "new:" + to
+			if to.begins_with("new:"):  # into the place made in this turn at this room: only its first room
+				var place := _new_place(pending)
+				if place.is_empty() or str(place["from"]) != s.room_id or str(place["rooms"][0]["key"]) != to.trim_prefix("new:"):
+					return {"reason": "войти можно только в первую комнату места, созданного в этом ходе у этой комнаты (new:<её key>)"}
+				return {"plan": {"room_id": to, "with": []}, "summary": "Переход: %s" % place["rooms"][0]["name"]}
 			if not ExplorationRules.open_exits(s, data["world"], s.room_id).has(to):
 				return {"reason": "из этой комнаты нет выхода в %s" % to}
 			# v0.7.22.16: the master's move is checked as the exit button — the overload, a trap the hero found
@@ -326,7 +337,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 		"create_npc":  # a person the world lacks, by the pack's schema (v0.7.20)
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_npc"):
 				return {"reason": "один новый человек за ход"}
-			return WorldGen.plan_npc(s, data, e.get("npc", {}) if e.get("npc") is Dictionary else {}, searched_npcs.has(turn_id))
+			return WorldGen.plan_npc(s, data, e.get("npc", {}) if e.get("npc") is Dictionary else {}, searched_npcs.has(turn_id), _new_rooms(s, data, pending))
 		"drop_item":  # the hero leaves a thing (a bag with what is in it) in the room (v0.7.18.2)
 			return ContainerRules.plan_drop(s, data, str(e.get("item_id", "")), int(e.get("qty", 1)))
 		"prop_state":
@@ -767,7 +778,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		return
 	match kind:
 		"move":
-			s.room_id = plan["room_id"]
+			s.room_id = str(_made.get("rooms", {}).get(str(plan["room_id"]).trim_prefix("new:"), plan["room_id"])) if str(plan["room_id"]).begins_with("new:") else str(plan["room_id"])
 			if bool(plan.get("escort", false)):
 				s.arrest = s.room_id  # the hold goes along with the guard
 			for n: Variant in plan.get("with", []):
@@ -837,7 +848,11 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"drop_item":
 			ContainerRules.apply_drop(s, _data, plan)
 		"create_npc":
-			_extra_lines.append("[%s]" % WorldGen.apply_npc(s, _data, plan))
+			var room := str(plan["room"])
+			if room.begins_with("new:"):
+				room = str(_made.get("rooms", {}).get(room.trim_prefix("new:"), s.room_id))
+			_made["npc"] = WorldGen.apply_npc(s, _data, plan.merged({"room": room}, true))
+			_extra_lines.append("[%s]" % _made["npc"])
 		"create_quest":
 			var qid := QuestGen.apply_quest(s, _data, plan)
 			_extra_lines.append("[%s]" % qid)
@@ -847,6 +862,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 				_extra_lines.append_array(QuestRules.advance(s, _data))
 		"create_place":
 			_extra_lines.append("выход: [%s]" % WorldGen.apply_place(s, _data, plan))
+			_made["rooms"] = plan["ids"]
+			_made["site"] = plan["site_id"]
 		"door":
 			var a := str(plan["from"])
 			var b := str(plan["to"])
@@ -933,3 +950,47 @@ static func _duration(mins: int) -> String:
 		return "%d мин" % mins
 	return "%d ч%s" % [mins / 60, (" %d мин" % (mins % 60)) if mins % 60 > 0 else ""]
 
+
+
+## The place `create_place` made in this turn (pending), or {}.
+static func _new_place(pending: Array[Dictionary]) -> Dictionary:
+	for p: Dictionary in pending:
+		if p["kind"] == "create_place":
+			return p["plan"]["place"]
+	return {}
+
+
+## {key: location id} of the rooms of this turn's new place ("" — a new location).
+static func _new_rooms(s: GameSession, data: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var place := _new_place(pending)
+	var out := {}
+	if place.is_empty():
+		return out
+	var loc := "" if bool(place["new_location"]) else WorldView.new(data["world"]).location_id(str(place["from"]))
+	for r: Dictionary in place["rooms"]:
+		out[str(r["key"])] = loc
+	return out
+
+
+## The made place goes first, then its person, then the rest: «new:<key>» refs need their ids.
+func _ordered(ids: Array) -> Array:
+	var rank := func(id: Variant) -> int:
+		return {"create_place": 0, "create_npc": 1}.get(str(reserves.get(str(id), {}).get("kind", "")), 2)
+	var out: Array = []
+	for r: int in 3:
+		out.append_array(ids.filter(func(id: Variant) -> bool: return rank.call(id) == r))
+	return out
+
+
+## A site whose owner is «new» gets the person made in this turn, or no owner.
+func _link_new_owner(s: GameSession) -> void:
+	if not _made.has("site"):
+		return
+	var sid := str(_made["site"])
+	for site: Dictionary in [WorldGen.generated(s)["sites"].get(sid, {}), _data["world"].get("sites", {}).get(sid, {})]:
+		if str(site.get("owner", "")) != "new":
+			continue
+		if _made.has("npc"):
+			site["owner"] = str(_made["npc"])
+		else:
+			site.erase("owner")

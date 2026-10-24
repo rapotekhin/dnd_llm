@@ -255,6 +255,8 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
     e = expect.get("effects", {})
     if e.get("required_kinds_any") and not set(kinds) & set(e["required_kinds_any"]):
         fails.append(f"нет эффекта из {e['required_kinds_any']} (были {kinds})")
+    if e.get("required_kinds_all") and set(e["required_kinds_all"]) - set(kinds):
+        fails.append(f"нет эффектов {sorted(set(e['required_kinds_all']) - set(kinds))} (были {kinds})")
     if e.get("forbidden_kinds") and set(kinds) & set(e["forbidden_kinds"]):
         fails.append(f"запрещённые эффекты {sorted(set(kinds) & set(e['forbidden_kinds']))}")
     if "max_count" in e and len(effects) > e["max_count"]:

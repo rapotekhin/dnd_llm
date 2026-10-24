@@ -24,6 +24,24 @@ class ItemLibrary:
             with self.path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps({"item_id": item_id, **item.model_dump()}, ensure_ascii=False) + "\n")
 
+    def get(self, item_id: str) -> GeneratedItem | None:
+        try:
+            lines = self.path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return None
+        for line in lines:
+            try:
+                d = json.loads(line)
+            except ValueError:
+                continue
+            if d.get("item_id") == item_id:
+                d.pop("item_id")
+                try:
+                    return GeneratedItem.model_validate(d)
+                except ValueError:
+                    return None
+        return None
+
     def search(self, query: str, base: str | None = None, properties: list[str] | None = None, limit: int = 5) -> list[FoundItem]:
         """By words (v0.7.18): any word of the query, by its stem, in the name, the type or the properties; the best
         matches first."""

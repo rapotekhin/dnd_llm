@@ -50,7 +50,7 @@ scenarios:
 | `check.tool_in` | проверка с инструментом из списка (`tool`, v0.7.11) |
 | `check.contest_npc`, `check.contest_skill_in` | проверка с `target_id` этого NPC — состязание с ним считает движок по шаблону SRD (v0.7.15.1); `contest_skill_in` — для рубрики |
 | `max_checks` | не больше N проверок за ход |
-| `effects.required_kinds_any` / `forbidden_kinds` | среди предложенных эффектов есть хотя бы один из / нет ни одного из |
+| `effects.required_kinds_any` / `required_kinds_all` / `forbidden_kinds` | среди предложенных эффектов есть хотя бы один из / все из / нет ни одного из |
 | `effects.max_count`, `effects.coins_max` | число эффектов, сумма монет |
 | `effects.condition_save` (`save` / `save_or_player`), `condition_tag_in`, `condition_in` | состояние на героя (v0.7.8): с причиной; со спасброском (и тегом из списка) или по вине самого героя (`cause: player`); id состояния из списка |
 | `effects.damage_severity_in`, `effects.forbidden_fields` | ступень урона из списка; в эффекте нет полей (например, кубиков) |

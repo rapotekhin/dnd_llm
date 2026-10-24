@@ -42,7 +42,7 @@ log = logging.getLogger("llm_server.turns")
 
 T = TypeVar("T")
 # Model requests per turn: tool round trips plus output retries.
-TURN_USAGE_LIMITS = UsageLimits(request_limit=10)
+TURN_USAGE_LIMITS = UsageLimits(request_limit=12)  # a place, its person and the way in take ~8 (v0.7.22.25.1)
 RETRYABLE_HTTP = {408, 409, 425, 429, 500, 502, 503, 504}
 _sleep = asyncio.sleep  # tests replace it to skip the pauses
 

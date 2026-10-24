@@ -31,7 +31,7 @@ func test_lists_by_gender_and_grown_up_heroes() -> void:
 func test_a_set_body_stays() -> void:
 	var b := BodyRules.npc(data, "npc_x", {"gender": "male", "age": "child"})
 	assert_str(str(b["age"])).is_equal("child")
-	assert_str(str(BodyRules.check(data, {"build": "huge"}).get("reason", ""))).contains("build")
+	assert_dict(BodyRules.check(data, {"build": "huge"})).is_empty()  # v0.7.22.25.1: unknown — the engine picks
 	assert_dict(BodyRules.check(data, {"age": "teen", "height": "short"})).is_equal({"age": "teen", "height": "short"})
 
 

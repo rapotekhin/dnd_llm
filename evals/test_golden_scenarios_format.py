@@ -25,7 +25,7 @@ TOOLS = {"find_items", "create_item", "lookup_rule", "lookup_spell", "find_npcs"
 EXPECT_KEYS = {"check", "max_checks", "effects", "next_mode", "narration", "options",
                "tools_required", "tools_forbidden", "missing_concept"}
 CHECK_KEYS = {"required", "skill_in", "dc_tier_in", "contest_npc", "contest_skill_in", "tool_in"}
-EFFECT_KEYS = {"required_kinds_any", "forbidden_kinds", "max_count", "coins_max",
+EFFECT_KEYS = {"required_kinds_any", "required_kinds_all", "forbidden_kinds", "max_count", "coins_max",
                "damage_severity_in", "forbidden_fields", "condition_save", "condition_tag_in", "condition_in"}
 NARRATION_KEYS = {"must_match", "must_not_match", "max_sentences"}
 
@@ -72,7 +72,7 @@ def test_scenarios_are_well_formed(data: dict) -> None:
 
         effects = expect.get("effects", {})
         assert set(effects) <= EFFECT_KEYS, sid
-        for key in ("required_kinds_any", "forbidden_kinds"):
+        for key in ("required_kinds_any", "required_kinds_all", "forbidden_kinds"):
             assert set(effects.get(key, [])) <= EFFECT_KINDS, f"{sid}: {key}"
 
         for key in ("tools_required", "tools_forbidden"):

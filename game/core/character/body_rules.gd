@@ -88,14 +88,26 @@ static func npc_text(data: Dictionary, npc_id: String, n: Dictionary) -> String:
 	return text(data, npc(data, npc_id, n), str(n.get("gender", "other")))
 
 
-## Checks the body the master gave a new NPC: the ids of the lists, or {reason}.
+## The body the master gave a new NPC: an id of the list or its Russian word («пожилая», «полная, сутулая» — any word
+## of the text); what matches nothing is left for the engine to pick — a refusal cost the master its turn (v0.7.22.25.1).
 static func check(data: Dictionary, spec: Dictionary) -> Dictionary:
 	var out := {}
 	for key: String in KEYS:
-		var v := str(spec.get(key, "")) if spec.get(key) != null else ""
+		var v := str(spec.get(key, "")).to_lower().replace("ё", "е").strip_edges() if spec.get(key) != null else ""
 		if v.is_empty():
 			continue
-		if not options(data, key).has(v):
-			return {"reason": "%s — из %s" % [key, ", ".join(options(data, key).keys())]}
-		out[key] = v
+		if options(data, key).has(v):
+			out[key] = v
+			continue
+		var words := Array(v.replace(",", " ").split(" ", false))
+		for id: String in options(data, key):
+			var o: Dictionary = options(data, key)[id]
+			if ["male", "female"].any(func(g: String) -> bool: return _says(v, words, str(o.get(g, "")))):
+				out[key] = id
+				break
 	return out
+
+
+static func _says(text: String, words: Array, word: String) -> bool:
+	var w := word.to_lower().replace("ё", "е")
+	return not w.is_empty() and (words.has(w) or (w.contains(" ") and text.contains(w)))

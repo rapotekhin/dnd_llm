@@ -2180,6 +2180,28 @@ scenarios:
     rubric:
       - "Мастер создаёт пекарню эффектом create_place на крае у Северных ворот (room_id brod-gate), а не в таверне; Горм объясняет, как туда пройти, и герой никуда не переходит"
 
+  - id: walk_into_a_made_bakery
+    title: "«Иду к Сарре»: двор, его хозяйка и вход — одним ходом (трейс автора, v0.7.22.25.1)"
+    category: concepts
+    extends: tavern
+    input: "иду к Сарре"
+    snapshot:
+      scene:
+        room: {id: brod-square, name: "Рыночная площадь", description: "Лотки, телеги, колодец. За поворотом улицы тянет дымком из трубы с закопчённым боком — двор вдовы Сарры, пекарши."}
+        npcs:
+          - {id: npc_merchant, name: "Ферн Кривой", role: "торговец всякой всячиной", template: commoner, attitude: friendly, trader: true}
+    engine:
+      find_places: []
+      find_npcs: []
+      find_items: []
+      find_edges:
+        - {room_id: brod-square, room: "Рыночная площадь", location: "Ольховый Брод", edge: 0, text: "улочки и дворы вокруг площади — дома, лавки, мастерские", terrain: [grassland], new_location: false}
+    expect:
+      effects: {required_kinds_all: [create_place, move], forbidden_kinds: [coins]}
+      tools_required: [find_places]
+    rubric:
+      - "Мастер создаёт двор Сарры (create_place у рыночной площади), создаёт Сарру (create_npc, room_id «new:<key>» комнаты двора) и ведёт героя туда move в «new:<key>» первой комнаты — всё в этом ходе; рассказ — о приходе во двор"
+
   - id: trader_made_as_trader
     title: "Новый кузнец — торговец с товаром (большой тест, v0.7.22.13)"
     category: concepts
@@ -2194,7 +2216,7 @@ scenarios:
     expect:
       effects: {required_kinds_any: [create_npc]}
     rubric:
-      - "Мастер создаёт кузнеца эффектом create_npc с trader: true и товаром из каталога (stock), чтобы с ним можно было торговать"
+      - "Мастер создаёт кузнеца эффектом create_npc с trader: true и товаром, чтобы с ним можно было торговать: найденное find_items (молот, шлямбур) — в stock, чего в каталоге нет (подковы, гвозди) — новыми вещами stock_new"
 
   - id: absent_npc_does_not_answer
     title: "Обращение к NPC, которого нет в сцене, — он не отвечает (большой тест, v0.7.22.13)"

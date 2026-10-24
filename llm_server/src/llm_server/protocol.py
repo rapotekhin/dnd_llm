@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.51.0"
+PROTOCOL_VERSION = "0.52.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -519,7 +519,7 @@ class GeneratedItem(_Out):
 
 class MoveEffect(_Out):
     kind: Literal["move"] = "move"
-    room_id: str
+    room_id: str  # 0.52.0: or «new:<key>» — the first room of a place create_place made at this room in this turn
     npcs: list[str] = Field(default_factory=list)  # NPCs of the scene who go along (0.33.0): as npc_follow, checked by the engine
 
 
@@ -628,7 +628,8 @@ class NpcLink(_Out):
 class NewNpc(_Out):
     """A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;
     `monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),
-    `race` — an SRD race id, `room_id` — a room of this location (none — here), `trader` with `stock` of catalog ids."""
+    `race` — an SRD race id, `room_id` — a room of this location (none — here) or «new:<key>» of this turn's create_place
+    (0.52.0), `trader` with `stock` of ids from find_items and `stock_new` — goods the master makes (0.52.0)."""
 
     name: str = Field(min_length=2, max_length=60)
     role: str = Field(min_length=2, max_length=60)
@@ -636,7 +637,7 @@ class NewNpc(_Out):
     gender: Gender = "other"
     # 0.43.0: ids of the engine's lists — age: child, teen, young, adult, middle, elderly, old; build: skinny, thin,
     # slender, wiry, athletic, sturdy, stocky, curvy, plump, heavy; height: very_short, short, medium, tall, very_tall.
-    # None — the engine picks.
+    # 0.52.0: or their Russian word («пожилая»); None or an unknown word — the engine picks.
     age: str | None = None
     build: str | None = None
     height: str | None = None
@@ -646,6 +647,7 @@ class NewNpc(_Out):
     room_id: str | None = None
     trader: bool = False
     stock: list[str] = Field(default_factory=list, max_length=10)
+    stock_new: list[GeneratedItem] = Field(default_factory=list, max_length=5)
     links: list[NpcLink] = Field(default_factory=list, max_length=5)
 
 
@@ -685,7 +687,7 @@ class NewRoom(_Out):
 class NewSite(_Out):
     """The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of
     its kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an
-    NPC of the world (made first by create_npc if new)."""
+    NPC of the world or «new» — the person create_npc makes in this turn (0.52.0)."""
 
     name: str = Field(default="", max_length=60)
     description: str = Field(default="", max_length=400)
