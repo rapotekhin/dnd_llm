@@ -29,7 +29,8 @@
 ## Где игрок
 
 Локация: {{ scene.location_name }}. {{ scene.location_description }}
-Комната: {{ scene.room_name }} [{{ scene.room_id }}]. {{ scene.room_description }}
+{% if scene.site_name and scene.site_name != scene.room_name %}Объект: {{ scene.site_name }}{% if scene.site_owner %} (хозяин — {{ scene.site_owner }}){% endif %}.{% if scene.site_description %} {{ scene.site_description }}{% endif %}
+{% endif %}Комната: {{ scene.room_name }} [{{ scene.room_id }}]{% if scene.private %} — частная: посторонним сюда без спроса нельзя{% endif %}. {{ scene.room_description }}
 {% if scene.time_of_day %}Время суток: {{ scene.time_of_day }}.
 {% endif %}{% if scene.sneaking %}Игрок крадётся: движется тихо и осторожно.
 {% endif %}

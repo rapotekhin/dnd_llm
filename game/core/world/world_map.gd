@@ -2,11 +2,16 @@ class_name WorldMap
 extends RefCounted
 ## The map of the hero's world (roadmap v0.7.6, decisions of the author): what is known — visited rooms and the open
 ## exits out of them as «?» (unvisited, unnamed); where each room stands on the scheme — an automatic layout of the
-## whole pack graph, so places keep their spot as the map grows and nothing unknown leaks; the quest marks; the
-## route of a fast travel through visited rooms only.
+## whole pack, so places keep their spot as the map grows and nothing unknown leaks; the quest marks; the route of a
+## fast travel through visited rooms only. v0.7.22.24: the layout is nested boxes — locations, their sites, rooms.
 
-const TRAVEL_DEPTH := 1.8  # a step into another location, in steps inside one
-const MIN_ARC := 1.1  # the arc a room wants for itself, in steps
+const ROOM_CELL := Vector2(3.0, 1.9)  # a room's place in a site's box, in map units
+const TITLE_CHAR := 0.34  # about how wide a letter of a box's name is, in map units
+const SITE_PAD := 0.35
+const LOC_PAD := 0.6
+const TITLE_H := 0.7  # the band of a box's name
+const SITE_GAP := 0.5
+const LOC_GAP := 1.6
 static var _layouts: Dictionary = {}  # world key → {room id: Vector2 in 0..1}
 
 
@@ -125,74 +130,173 @@ static func npc_room(world: Dictionary, npc_id: String) -> String:
 	return ""
 
 
-## Where every room of the pack stands, 0..1 on both axes: a radial tree from the start room over every exit
-## (closed ones too) — each branch gets its own sector by the number of rooms in it, so branches never cross; a
-## step into another location is longer than a step inside one. Deterministic and cached per world: the same pack —
-## the same map, and a place keeps its spot as the map grows.
+## Where every room of the pack stands, 0..1 on both axes — the rooms of boxes() (v0.7.22.24).
 static func layout(world: Dictionary) -> Dictionary:
+	return boxes(world)["rooms"]
+
+
+## The map as nested boxes (v0.7.22.24, the author: a location is a frame, its sites are boxes in it, the rooms are
+## points in their site), 0..1 on the longer side: {"rooms": {id: Vector2}, "sites": {id: Rect2}, "locations": {id: Rect2},
+## "unit": one map unit in 0..1}.
+## Locations stand on a grid from the start one, each next to the one it is reached from; the sites of a location — on
+## a grid in the order the walk meets them; the rooms of a site — on a grid, the first met first. Deterministic and
+## cached per world: the same pack — the same map, a place keeps its spot as the map grows.
+static func boxes(world: Dictionary) -> Dictionary:
 	var ids: Array = world["rooms"].keys()
 	ids.sort()
-	var key := "%s|%d|%d" % [str(world.get("start_room", "")), ids.size(), hash(ids)]
+	var key := "%s|%d|%d|%d" % [str(world.get("start_room", "")), ids.size(), hash(ids), hash((world.get("sites", {}) as Dictionary).keys())]
 	if _layouts.has(key):
 		return _layouts[key]
-	var root := str(world.get("start_room", ids[0] if not ids.is_empty() else ""))
-	var children := {root: []}
-	var depth := {root: 0.0}
-	var queue: Array = [root]
-	while not queue.is_empty():
-		var r: String = queue.pop_front()
-		var exits: Array = (world["rooms"][r].get("exits", []) as Array).map(func(e: Variant) -> String: return str(e))
-		exits.sort()
-		for e: String in exits:
-			if depth.has(e) or not world["rooms"].has(e):
-				continue
-			var far := str(world["rooms"][e].get("location_id", "")) != str(world["rooms"][r].get("location_id", ""))
-			depth[e] = float(depth[r]) + (TRAVEL_DEPTH if far else 1.0)
-			children[e] = []
-			(children[r] as Array).append(e)
-			queue.append(e)
-	for r: String in ids:  # rooms no exit leads to hang off the root
-		if not depth.has(r):
-			depth[r] = 1.0
-			children[r] = []
-			(children[root] as Array).append(r)
-	var weight := {}
-	_weigh(root, children, weight)
-	var pos := {}
-	_place(root, 0.0, TAU, children, weight, depth, pos)
-	var lo := Vector2(INF, INF)
-	var hi := Vector2(-INF, -INF)
-	for r: String in ids:
-		lo = lo.min(pos[r])
-		hi = hi.max(pos[r])
-	var span := maxf(0.001, maxf(hi.x - lo.x, hi.y - lo.y))
-	var out := {}
-	for r: String in ids:
-		out[r] = (pos[r] - lo) / span
-	_layouts[key] = out
+	var w := WorldView.new(world)
+	var start := str(world.get("start_room", ids[0] if not ids.is_empty() else ""))
+	var loc_order: Array[String] = []
+	var site_order := {}  # location → [site]
+	var room_order := {}  # site → [room]
+	for r: String in _walk(world, start):
+		var loc := w.location_id(r)
+		var sid := w.site_id(r) if not w.site_id(r).is_empty() else "room:" + r
+		if not loc_order.has(loc):
+			loc_order.append(loc)
+			site_order[loc] = []
+		if not (site_order[loc] as Array).has(sid):
+			(site_order[loc] as Array).append(sid)
+			room_order[sid] = []
+		(room_order[sid] as Array).append(r)
+	var site_size := {}  # a site's box: its rooms on a grid
+	for sid: String in room_order:
+		var n: int = (room_order[sid] as Array).size()
+		var cols := ceili(sqrt(n))
+		var title := str(w.site(sid).get("name", "")).length() * TITLE_CHAR  # the name fits its box
+		site_size[sid] = Vector2(maxf(cols * ROOM_CELL.x, title), ceili(n / float(cols)) * ROOM_CELL.y) + Vector2(SITE_PAD * 2, SITE_PAD * 2 + TITLE_H)
+	var loc_size := {}
+	var site_at := {}  # site → its offset in the location's frame
+	for loc: String in loc_order:
+		var grid := _grid(site_order[loc], site_size, SITE_GAP)
+		for sid: String in grid["at"]:
+			site_at[sid] = (grid["at"][sid] as Vector2) + Vector2(LOC_PAD, LOC_PAD + TITLE_H)
+		loc_size[loc] = Vector2(maxf((grid["size"] as Vector2).x, str(w.location(loc).get("name", "")).length() * TITLE_CHAR * 1.2),
+			(grid["size"] as Vector2).y) + Vector2(LOC_PAD * 2, LOC_PAD * 2 + TITLE_H)
+	var cell := {}  # location → Vector2i: each next to the one it is reached from
+	var used := {}
+	for loc: String in loc_order:
+		var parent := _parent_location(world, w, loc, cell)
+		var at := Vector2i.ZERO if parent.is_empty() else _free_cell(cell[parent], used)
+		cell[loc] = at
+		used[at] = true
+	var lo := Vector2i(999, 999)
+	for loc: String in cell:
+		lo = Vector2i(mini(lo.x, cell[loc].x), mini(lo.y, cell[loc].y))
+	var col_w := {}
+	var row_h := {}
+	for loc: String in cell:
+		col_w[cell[loc].x] = maxf(float(col_w.get(cell[loc].x, 0.0)), (loc_size[loc] as Vector2).x)
+		row_h[cell[loc].y] = maxf(float(row_h.get(cell[loc].y, 0.0)), (loc_size[loc] as Vector2).y)
+	var out_locs := {}
+	var out_sites := {}
+	var out_rooms := {}
+	for loc: String in cell:
+		var x := 0.0
+		for c in range(lo.x, cell[loc].x):
+			x += float(col_w.get(c, 0.0)) + LOC_GAP
+		var y := 0.0
+		for rw in range(lo.y, cell[loc].y):
+			y += float(row_h.get(rw, 0.0)) + LOC_GAP
+		var origin := Vector2(x, y) + (Vector2(float(col_w[cell[loc].x]), float(row_h[cell[loc].y])) - (loc_size[loc] as Vector2)) / 2
+		out_locs[loc] = Rect2(origin, loc_size[loc])
+		for sid: String in site_order[loc]:
+			var sr := Rect2(origin + (site_at[sid] as Vector2), site_size[sid])
+			if not sid.begins_with("room:"):
+				out_sites[sid] = sr
+			var rooms: Array = room_order[sid]
+			var cols := ceili(sqrt(rooms.size()))
+			var spare := (sr.size.x - SITE_PAD * 2 - cols * ROOM_CELL.x) / 2  # a box wide for its name keeps its rooms in the middle
+			for i in rooms.size():
+				out_rooms[rooms[i]] = sr.position + Vector2(SITE_PAD + spare, SITE_PAD + TITLE_H) + Vector2((i % cols + 0.5) * ROOM_CELL.x, (i / cols + 0.5) * ROOM_CELL.y)
+	var top_left := Vector2(INF, INF)
+	for loc: String in out_locs:
+		top_left = top_left.min((out_locs[loc] as Rect2).position)
+	var span := 0.001
+	for loc: String in out_locs:
+		var end := (out_locs[loc] as Rect2).end - top_left
+		span = maxf(span, maxf(end.x, end.y))
+	var res := {"rooms": {}, "sites": {}, "locations": {}, "unit": 1.0 / span}
+	for r: String in out_rooms:
+		res["rooms"][r] = ((out_rooms[r] as Vector2) - top_left) / span
+	for sid: String in out_sites:
+		res["sites"][sid] = Rect2(((out_sites[sid] as Rect2).position - top_left) / span, (out_sites[sid] as Rect2).size / span)
+	for loc: String in out_locs:
+		res["locations"][loc] = Rect2(((out_locs[loc] as Rect2).position - top_left) / span, (out_locs[loc] as Rect2).size / span)
+	_layouts[key] = res
+	return res
+
+
+## Boxes of these sizes on a near-square grid, a column as wide and a row as tall as its biggest:
+## {"at": {id: offset}, "size": the whole}.
+static func _grid(list: Array, sizes: Dictionary, gap: float) -> Dictionary:
+	var cols := maxi(1, ceili(sqrt(list.size())))
+	var col_w: Array[float] = []
+	var row_h: Array[float] = []
+	for i in list.size():
+		while col_w.size() <= i % cols:
+			col_w.append(0.0)
+		while row_h.size() <= i / cols:
+			row_h.append(0.0)
+		col_w[i % cols] = maxf(col_w[i % cols], (sizes[list[i]] as Vector2).x)
+		row_h[i / cols] = maxf(row_h[i / cols], (sizes[list[i]] as Vector2).y)
+	var at := {}
+	for i in list.size():
+		var x := 0.0
+		for c in i % cols:
+			x += col_w[c] + gap
+		var y := 0.0
+		for rw in i / cols:
+			y += row_h[rw] + gap
+		at[list[i]] = Vector2(x, y)
+	var total := Vector2(gap * maxi(0, col_w.size() - 1), gap * maxi(0, row_h.size() - 1))
+	for v: float in col_w:
+		total.x += v
+	for v: float in row_h:
+		total.y += v
+	return {"at": at, "size": total}
+
+
+## Every room once, breadth first from `start` over all exits (closed ones too); the rooms no exit reaches last.
+static func _walk(world: Dictionary, start: String) -> Array[String]:
+	var out: Array[String] = []
+	if world["rooms"].has(start):
+		out.append(start)
+	var i := 0
+	while i < out.size():
+		for e: Variant in world["rooms"][out[i]].get("exits", []):
+			if world["rooms"].has(str(e)) and not out.has(str(e)):
+				out.append(str(e))
+		i += 1
+	var rest: Array = world["rooms"].keys()
+	rest.sort()
+	for r: String in rest:
+		if not out.has(r):
+			out.append(r)
 	return out
 
 
-## Rooms in the subtree of `r` (itself included).
-static func _weigh(r: String, children: Dictionary, weight: Dictionary) -> int:
-	var n := 1
-	for c: String in children[r]:
-		n += _weigh(c, children, weight)
-	weight[r] = n
-	return n
+## The placed location a room of `loc` is reached from ("" — none placed yet: it is the first).
+static func _parent_location(world: Dictionary, w: WorldView, loc: String, placed: Dictionary) -> String:
+	for r: String in world["rooms"]:
+		if w.location_id(r) != loc:
+			continue
+		for e: Variant in world["rooms"][r].get("exits", []):
+			var other := w.location_id(str(e))
+			if other != loc and placed.has(other):
+				return other
+	for other: String in placed:  # an island: next to the first one
+		return other
+	return ""
 
 
-static func _place(r: String, from: float, to: float, children: Dictionary, weight: Dictionary, depth: Dictionary, pos: Dictionary) -> void:
-	# A narrow sector is pushed out until its room has about a step of arc to itself (labels need the room).
-	var radius := float(depth[r])
-	if r != "" and to - from < TAU:
-		radius = clampf(MIN_ARC / maxf(0.001, to - from), radius, radius + 2.0)
-	pos[r] = Vector2.from_angle((from + to) / 2) * radius
-	var total := 0
-	for c: String in children[r]:
-		total += int(weight[c])
-	var at := from
-	for c: String in children[r]:
-		var share := (to - from) * int(weight[c]) / maxf(1.0, total)
-		_place(c, at, at + share, children, weight, depth, pos)
-		at += share
+## The nearest free grid cell around `at`: right, down, left, up, the corners, then a ring further.
+static func _free_cell(at: Vector2i, used: Dictionary) -> Vector2i:
+	for ring in range(1, 6):
+		for d: Vector2i in [Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]:
+			if not used.has(at + d * ring):
+				return at + d * ring
+	return at + Vector2i(used.size(), 0)

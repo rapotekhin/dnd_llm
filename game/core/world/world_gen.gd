@@ -9,6 +9,9 @@ extends RefCounted
 ## s.generated = {"npcs": {id: def}, "npc_rooms": {id: room_id}, "rooms": {id: def}, "locations": {id: def},
 ## "edge_exits": {pack room: [made room]}, "edges_used": ["room:edge"]}. Places (v0.7.20.1) grow only from the open
 ## edges the pack marked (`open_edges` of a room).
+## v0.7.22.24 (location → site → room): a made place is one site of its rooms (s.generated "sites"), named by the
+## master or by its first room; `inside` grows a site within a location of reach without an open edge — the bathhouse
+## the innkeeper spoke of — entered from the room it is built at, rules.world_gen.max_sites_inside a location.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -237,14 +240,23 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		return {"reason": "сначала find_places: может, такое место уже есть"}
 	var world := WorldView.new(data["world"])
 	var at := str(spec.get("room_id", "")) if spec.get("room_id") != null and not str(spec.get("room_id", "")).is_empty() else s.room_id
+	var inside := bool(spec.get("inside", false)) if spec.get("inside") != null else false
 	var reach: Array = reach_edges(s, data).map(func(e: Dictionary) -> String: return str(e["room_id"]))
-	if not reach.has(at):
+	if inside:
+		var loc_at := world.location_id(at)
+		if not world.room(at).has("location_id") or not reach_locations(s, data).has(loc_at):
+			return {"reason": "объект внутри локации строят у комнаты, куда герой может дойти: его локация, соседние, где он бывал"}
+		if bool(spec.get("new_location", false)):
+			return {"reason": "объект внутри локации — не новая локация"}
+		if _inside_count(s, loc_at) >= int(c.get("max_sites_inside", 3)):
+			return {"reason": "в %s уже создано %d объектов — больше нельзя" % [world.location(loc_at).get("name", loc_at), int(c.get("max_sites_inside", 3))]}
+	elif not reach.has(at):
 		var known := reach_edges(s, data).map(func(e: Dictionary) -> String: return "%s [%s] край %d" % [e["room"], e["room_id"], int(e["edge"])])
 		return {"reason": ("у %s нет открытых краёв в досягаемости" % world.room(at).get("name", at)) +
 			("; края известного мира: %s — create_place с их room_id и edge" % "; ".join(known) if not known.is_empty() else "; места — только по выходам сцены")}
 	var edges := open_edges(s, data, at)
-	var idx := int(spec.get("edge", 0)) if spec.get("edge") != null else 0
-	var edge: Dictionary = {}
+	var idx := -1 if inside else (int(spec.get("edge", 0)) if spec.get("edge") != null else 0)
+	var edge: Dictionary = {"new_location": false, "terrain": []} if inside else {}
 	for e: Dictionary in edges:
 		if int(e["index"]) == idx:
 			edge = e
@@ -303,6 +315,7 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 			enc = {"enemies": enemies, "loot": {"coins_cp": 0, "items": {}}}
 		defs.append({"key": key, "name": name.left(60), "description": str(r.get("description", "")).left(600),
 			"indoor": bool(r.get("indoor", false)), "dark": bool(r.get("dark", false)),
+			"public": bool(r.get("public", true)) if r.get("public") != null else true,
 			"hooks": (r.get("hooks", []) as Array).slice(0, 4).map(func(h: Variant) -> String: return str(h).left(160)),
 			"exits": (r.get("exits", []) as Array).map(func(x: Variant) -> String: return str(x)), "secrets": secrets, "encounter": enc})
 	# every room is reachable from the entry (the first one)
@@ -319,7 +332,16 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 					frontier.append(x)
 	if seen.size() < keys.size():
 		return {"reason": "все комнаты места должны быть связаны выходами с первой"}
-	var place := {"from": at, "edge": idx, "rooms": defs, "new_location": new_loc, "location": {}}
+	var site_spec: Dictionary = spec.get("site", {}) if spec.get("site") is Dictionary else {}
+	var site := {"name": str(site_spec.get("name", "")).strip_edges().left(60), "description": str(site_spec.get("description", "")).left(400),
+		"tags": (site_spec.get("tags", []) as Array).slice(0, 4).map(func(x: Variant) -> String: return str(x).left(24)),
+		"public": bool(site_spec.get("public", true)) if site_spec.get("public") != null else true}
+	var owner := str(site_spec.get("owner_id", "")) if site_spec.get("owner_id") != null else ""
+	if not owner.is_empty():
+		if not data["world"]["npcs"].has(owner):
+			return {"reason": "хозяин объекта %s — не человек мира (сначала create_npc)" % owner}
+		site["owner"] = owner
+	var place := {"from": at, "edge": idx, "rooms": defs, "new_location": new_loc, "location": {}, "site": site, "inside": inside}
 	if new_loc:
 		place["location"] = {"name": str(spec.get("name", "")).strip_edges().left(60), "description": str(spec.get("description", "")).left(400), "terrain": terrain}
 		if str(place["location"]["name"]).length() < 2:
@@ -368,21 +390,54 @@ static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 			room["indoor"] = true
 		if bool(d["dark"]):
 			room["dark"] = true
+		if not bool(d.get("public", true)):
+			room["public"] = false
 		if not (d["encounter"] as Dictionary).is_empty():
 			room["encounter"] = (d["encounter"] as Dictionary).duplicate(true)
 			room["encounter"]["id"] = id + "_enc"
 		gen["rooms"][id] = room
+	if not gen.has("sites"):
+		gen["sites"] = {}
+	var sn := 1
+	while data["world"].get("sites", {}).has("gen_site_%d" % sn) or gen["sites"].has("gen_site_%d" % sn):
+		sn += 1
+	var sid := "gen_site_%d" % sn
+	var site: Dictionary = (place.get("site", {}) as Dictionary).duplicate(true)
+	if str(site.get("name", "")).is_empty():
+		site["name"] = str(gen["rooms"][first]["name"])
+	site["location_id"] = loc
+	site["entry"] = first
+	if bool(place.get("inside", false)):
+		site["inside"] = true
+	gen["sites"][sid] = site
+	for d: Dictionary in place["rooms"]:
+		gen["rooms"][ids[d["key"]]]["site_id"] = sid
 	var edge_exits: Array = gen["edge_exits"].get(str(place["from"]), [])
 	edge_exits.append(first)
 	gen["edge_exits"][str(place["from"])] = edge_exits
-	(gen["edges_used"] as Array).append("%s:%d" % [place["from"], int(place["edge"])])
+	if int(place["edge"]) >= 0:
+		(gen["edges_used"] as Array).append("%s:%d" % [place["from"], int(place["edge"])])
 	data["world"] = _merge_places(data["world"], gen)
 	return first
+
+
+## The sites the master grew inside a location (not on an edge).
+static func _inside_count(s: GameSession, location: String) -> int:
+	var n := 0
+	for sid: String in generated(s).get("sites", {}):
+		var st: Dictionary = generated(s)["sites"][sid]
+		if bool(st.get("inside", false)) and str(st.get("location_id", "")) == location:
+			n += 1
+	return n
 
 
 static func _merge_places(w: Dictionary, gen: Dictionary) -> Dictionary:
 	for loc: String in gen.get("locations", {}):
 		w["locations"][loc] = (gen["locations"][loc] as Dictionary).duplicate(true)
+	if not w.has("sites"):
+		w["sites"] = {}
+	for sid: String in gen.get("sites", {}):
+		w["sites"][sid] = (gen["sites"][sid] as Dictionary).duplicate(true)
 	for rid: String in gen.get("rooms", {}):
 		w["rooms"][rid] = (gen["rooms"][rid] as Dictionary).duplicate(true)
 	for from: String in gen.get("edge_exits", {}):

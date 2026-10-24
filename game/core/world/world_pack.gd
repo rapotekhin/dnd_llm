@@ -140,9 +140,15 @@ static func _validate_rules(rules: Variant, base: Dictionary) -> Array[String]:
 
 static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 	var e: Array[String] = []
-	for key: String in ["locations", "rooms", "npcs"]:
+	for key: String in ["locations", "sites", "rooms", "npcs"]:
 		if not (w.get(key) is Dictionary):
 			return ["world.%s: объект" % key]
+	for sid: String in w["sites"]:  # v0.7.22.24: location → site → room
+		var st: Variant = w["sites"][sid]
+		if not (st is Dictionary) or str(st.get("name", "")).is_empty() or not w["locations"].has(str(st.get("location_id", ""))):
+			e.append("объект %s: нужны name и location_id из локаций пакета" % sid)
+		elif not str(st.get("owner", "")).is_empty() and not w["npcs"].has(str(st["owner"])):
+			e.append("объект %s: хозяин %s — не NPC пакета" % [sid, st["owner"]])
 	var rooms: Dictionary = w["rooms"]
 	if not rooms.has(str(w.get("start_room", ""))):
 		e.append("world.start_room: нет комнаты %s" % w.get("start_room"))
@@ -174,6 +180,11 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			e.append("комната %s: нет name" % id)
 		if not w["locations"].has(str(r.get("location_id", ""))):
 			e.append("комната %s: нет локации %s" % [id, r.get("location_id")])
+		var site: Variant = w["sites"].get(str(r.get("site_id", "")))
+		if not (site is Dictionary):
+			e.append("комната %s: нет объекта %s" % [id, r.get("site_id")])
+		elif str(site.get("location_id", "")) != str(r.get("location_id", "")):
+			e.append("комната %s: объект %s в другой локации" % [id, r["site_id"]])
 		for x: Variant in r.get("exits", []):
 			if not rooms.has(str(x)):
 				e.append("комната %s: выход в несуществующую %s" % [id, x])

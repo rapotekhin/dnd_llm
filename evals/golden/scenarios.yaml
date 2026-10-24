@@ -2128,6 +2128,22 @@ scenarios:
     rubric:
       - "Горм называет баню или банщика, и мастер в этом же ходе создаёт их (create_npc банщика/банщицы или create_place бани), а не только говорит о них словами"
 
+  - id: site_inside_bathhouse
+    title: "Баня у площади — объект внутри поселения, без открытого края (просьба автора, v0.7.22.24)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, мне сказали, у рыночной площади есть баня старой Гриды. Где именно? Хочу смыть дорожную пыль."
+    engine:
+      find_places: []
+      find_npcs: []
+      find_edges: []
+    expect:
+      effects: {required_kinds_any: [create_place], forbidden_kinds: [move, coins]}
+      tools_required: [find_places]
+    rubric:
+      - "Мастер создаёт баню эффектом create_place внутри этого поселения (inside: true, room_id — комната поселения, например рыночная площадь) как объект с именем (site.name) и комнатами; Горм объясняет, где она, и герой никуда не переходит"
+
   - id: bakery_past_the_north_gate
     title: "Пекарня «за городом»: спрошено в таверне, место — у Северных ворот (просьба автора, 2026-10-24)"
     category: concepts

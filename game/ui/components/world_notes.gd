@@ -96,16 +96,29 @@ func _draw_map() -> void:
 	canvas.name = "MapCanvas"
 	canvas.custom_minimum_size = Vector2(0, maxf(420.0, get_viewport_rect().size.y - 480.0))  # the overlay height without its header, legend and margins
 	canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	canvas.layout = WorldMap.layout(world)
+	var bx := WorldMap.boxes(world)  # v0.7.22.24: frames of locations, boxes of sites, rooms in them
+	canvas.layout = bx["rooms"]
+	canvas.unit = float(bx["unit"])
 	canvas.known = WorldMap.known(s, world)
+	canvas.focus = bx["locations"].get(w.location_id(s.room_id), Rect2())  # the view opens on the hero's location
 	canvas.marks = WorldMap.quest_marks(s, world)
 	canvas.here = s.room_id
 	canvas.selected = _selected if not _selected.is_empty() else s.room_id
 	canvas.zoom = _zoom
 	canvas.pan = _pan
 	for r: String in canvas.known["rooms"] + canvas.known["frontier"]:
-		canvas.names[r] = str(w.room(r).get("name", r))
-		canvas.locations[r] = str(w.location(w.location_id(r)).get("name", ""))
+		canvas.names[r] = w.room_short(r)
+		canvas.site_of[r] = w.site_id(r)
+	for r: String in canvas.known["rooms"]:  # a site or a location is drawn once the hero has been in it
+		var sid := w.site_id(r)
+		var loc := w.location_id(r)
+		if bx["sites"].has(sid):
+			canvas.site_boxes[sid] = bx["sites"][sid]
+			canvas.site_names[sid] = str(w.site(sid).get("name", sid))
+			canvas.single[sid] = w.site_rooms(sid).size() == 1
+		if bx["locations"].has(loc):
+			canvas.loc_boxes[loc] = bx["locations"][loc]
+			canvas.loc_names[loc] = str(w.location(loc).get("name", loc))
 	for z: Array in [["MapZoomIn", "+", 1.25], ["MapZoomOut", "−", 0.8]]:
 		var b := Button.new()
 		b.name = z[0]
@@ -134,16 +147,31 @@ func _draw_map() -> void:
 	_text(tr("MAP_LEGEND"), UiTheme.MUTED_LABEL)
 
 
-## What the picked room is and the fast travel there: «Идти сюда · N мин» or why not.
+## What the picked room is and the fast travel there: «Идти сюда · N мин» or why not. A picked site («site:<id>»,
+## v0.7.22.24) — its name, its known rooms and the way to its entry (or the nearest room of it the hero knows).
 func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks: Dictionary) -> void:
 	var s := GameState.session
 	var w := GameState.world()
+	if room_id.begins_with("site:"):
+		var sid := room_id.trim_prefix("site:")
+		_text(str(w.site(sid).get("name", sid)), UiTheme.HEADING).reparent(info)
+		_text(str(w.location(str(w.site(sid).get("location_id", ""))).get("name", "")), UiTheme.MUTED_LABEL).reparent(info)
+		if not str(w.site(sid).get("description", "")).is_empty():
+			_text(str(w.site(sid)["description"])).reparent(info)
+		var seen: Array = w.site_rooms(sid).filter(func(r: String) -> bool: return s.visited.has(r))
+		_text(tr("MAP_SITE_ROOMS").format({"list": ", ".join(seen.map(func(r: String) -> String: return w.room_short(r)))}), UiTheme.MUTED_LABEL).reparent(info)
+		if seen.has(s.room_id):
+			return
+		var to := w.site_entry(sid) if s.visited.has(w.site_entry(sid)) else str(seen[0]) if not seen.is_empty() else ""
+		if not to.is_empty():
+			_travel_button(info, to)
+		return
 	if (known["frontier"] as Array).has(room_id):
 		_text(tr("MAP_UNKNOWN"), UiTheme.HEADING).reparent(info)
 		_text(tr("MAP_UNKNOWN_HINT"), UiTheme.MUTED_LABEL).reparent(info)
 		return
 	_text(str(w.room(room_id).get("name", room_id)), UiTheme.HEADING).reparent(info)
-	_text(str(w.location(w.location_id(room_id)).get("name", "")), UiTheme.MUTED_LABEL).reparent(info)
+	_text(w.place_path(room_id), UiTheme.MUTED_LABEL).reparent(info)
 	for q: Variant in marks.get(room_id, []):
 		var ql := _text(tr("MAP_QUEST").format({"quest": str(q)}))
 		ql.add_theme_color_override("font_color", UiTheme.WARN)
@@ -153,6 +181,12 @@ func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks:
 			return str(w.room(e).get("name", e)) if s.visited.has(e) else "?")
 		_text(tr("MAP_HERE_EXITS").format({"list": ", ".join(exits)}), UiTheme.MUTED_LABEL).reparent(info)
 		return
+	_travel_button(info, room_id)
+
+
+## «Идти сюда · N шагов, M мин» to a visited room, or why not.
+func _travel_button(info: VBoxContainer, room_id: String) -> void:
+	var s := GameState.session
 	var path := WorldMap.route(s, Catalog.data["world"], s.room_id, room_id)
 	var go := Button.new()
 	go.name = "TravelButton"

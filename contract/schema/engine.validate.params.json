@@ -384,7 +384,7 @@
     },
     "CreatePlaceEffect": {
       "additionalProperties": false,
-      "description": "A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:\n1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —\nthe room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;\nempty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter\nbudget and the limits.",
+      "description": "A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:\n1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —\nthe room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;\nempty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter\nbudget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of\n`room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed.",
       "properties": {
         "description": {
           "default": "",
@@ -396,6 +396,11 @@
           "minimum": 0,
           "title": "Edge",
           "type": "integer"
+        },
+        "inside": {
+          "default": false,
+          "title": "Inside",
+          "type": "boolean"
         },
         "kind": {
           "const": "create_place",
@@ -433,6 +438,17 @@
           "minItems": 1,
           "title": "Rooms",
           "type": "array"
+        },
+        "site": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NewSite"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "terrain": {
           "default": "",
@@ -1448,6 +1464,11 @@
           "title": "Name",
           "type": "string"
         },
+        "public": {
+          "default": true,
+          "title": "Public",
+          "type": "boolean"
+        },
         "secrets": {
           "items": {
             "$ref": "#/$defs/NewSecret"
@@ -1500,6 +1521,51 @@
         "text"
       ],
       "title": "NewSecret",
+      "type": "object"
+    },
+    "NewSite": {
+      "additionalProperties": false,
+      "description": "The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of\nits kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an\nNPC of the world (made first by create_npc if new).",
+      "properties": {
+        "description": {
+          "default": "",
+          "maxLength": 400,
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "maxLength": 60,
+          "title": "Name",
+          "type": "string"
+        },
+        "owner_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner Id"
+        },
+        "public": {
+          "default": true,
+          "title": "Public",
+          "type": "boolean"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "title": "NewSite",
       "type": "object"
     },
     "NoteEffect": {

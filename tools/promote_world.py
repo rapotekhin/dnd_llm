@@ -153,8 +153,18 @@ def promote_place(world: dict, gen: dict, rid: str, new_id: str, ids: dict[str, 
     if loc in gen.get("locations", {}):
         ids[loc] = _free(world["locations"], slug(gen["locations"][loc].get("name", loc), "-"))
         world["locations"][ids[loc]] = _clean(gen["locations"][loc])
+    # v0.7.22.24: the place's site comes along; an old save's place without one becomes a site of its own
+    world.setdefault("sites", {})
+    sid = made[entry].get("site_id", "")
+    site = dict(gen.get("sites", {}).get(sid, {})) or {"name": made[entry].get("name", entry)}
+    site.pop("inside", None)
+    site["location_id"] = ids.get(made[entry].get("location_id", ""), made[entry].get("location_id", ""))
+    site["entry"] = ids[entry]
+    new_site = _free(world["sites"], ids[entry])
+    world["sites"][new_site] = _clean(site)
     for r in rooms:
         room = _clean(made[r])
+        room["site_id"] = new_site
         room["location_id"] = ids.get(room["location_id"], room["location_id"])
         room["exits"] = [ids.get(x, x) for x in room.get("exits", [])]
         room["npcs"] = []

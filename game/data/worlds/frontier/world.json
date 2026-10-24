@@ -205,6 +205,147 @@
 			"terrain": "underdark"
 		}
 	},
+	"sites": {
+		"brod-tavern": {
+			"name": "Таверна «Хромой олень»",
+			"location_id": "brod",
+			"description": "Двухэтажная таверна у рыночной площади: общий зал с очагом, кухня, погреб и комнаты наверху.",
+			"tags": [
+				"tavern"
+			],
+			"owner": "npc_innkeeper",
+			"public": true
+		},
+		"brod-square": {
+			"name": "Рыночная площадь",
+			"location_id": "brod",
+			"tags": [
+				"square",
+				"market"
+			],
+			"public": true
+		},
+		"brod-smithy": {
+			"name": "Кузница",
+			"location_id": "brod",
+			"tags": [
+				"smithy",
+				"shop"
+			],
+			"owner": "npc_smith",
+			"hours": {
+				"from": 8,
+				"to": 19
+			},
+			"public": true
+		},
+		"brod-herbalist": {
+			"name": "Лавка травницы",
+			"location_id": "brod",
+			"tags": [
+				"shop"
+			],
+			"owner": "npc_herbalist",
+			"hours": {
+				"from": 8,
+				"to": 19
+			},
+			"public": true
+		},
+		"brod-temple": {
+			"name": "Храм Светлой Матери",
+			"location_id": "brod",
+			"tags": [
+				"temple"
+			],
+			"owner": "npc_priestess",
+			"public": true
+		},
+		"brod-lockup": {
+			"name": "Холодная при воротах",
+			"location_id": "brod",
+			"tags": [
+				"prison"
+			],
+			"owner": "npc_captain",
+			"public": false
+		},
+		"brod-gate": {
+			"name": "Северные ворота",
+			"location_id": "brod",
+			"tags": [
+				"gate"
+			],
+			"public": true
+		},
+		"pushcha-edge": {
+			"name": "Опушка Пущи",
+			"location_id": "pushcha",
+			"tags": [
+				"wild"
+			],
+			"public": true
+		},
+		"pushcha-trail": {
+			"name": "Тропа лесорубов",
+			"location_id": "pushcha",
+			"tags": [
+				"wild"
+			],
+			"public": true
+		},
+		"pushcha-glade": {
+			"name": "Поляна с менгиром",
+			"location_id": "pushcha",
+			"tags": [
+				"wild"
+			],
+			"public": true
+		},
+		"pushcha-hollow": {
+			"name": "Тёмная лощина",
+			"location_id": "pushcha",
+			"tags": [
+				"wild"
+			],
+			"public": true
+		},
+		"outpost-road": {
+			"name": "Разбитая дорога к заставе",
+			"location_id": "outpost",
+			"tags": [
+				"wild"
+			],
+			"public": true
+		},
+		"pushcha-burrow": {
+			"name": "Пепельное логово",
+			"location_id": "pushcha",
+			"tags": [
+				"cave"
+			],
+			"public": true
+		},
+		"outpost-fort": {
+			"name": "Серая застава",
+			"location_id": "outpost",
+			"description": "Развалины пограничной заставы: двор с казармой, сторожевая башня и склеп под часовней.",
+			"tags": [
+				"ruin"
+			],
+			"public": true
+		},
+		"mine": {
+			"name": "Старая шахта",
+			"location_id": "mine",
+			"description": "Заброшенная шахта: вход у склона, главная галерея, затопленный штрек и глубокие выработки.",
+			"tags": [
+				"mine",
+				"cave"
+			],
+			"public": true
+		}
+	},
 	"rooms": {
 		"brod-tavern-hall": {
 			"name": "Таверна «Хромой олень» — общий зал",
@@ -236,7 +377,8 @@
 			],
 			"tags": [
 				"stage"
-			]
+			],
+			"site_id": "brod-tavern"
 		},
 		"brod-tavern-kitchen": {
 			"name": "Кухня таверны",
@@ -259,7 +401,9 @@
 					"dc": 13,
 					"text": "на новом засове свежие царапины, будто люк пытались открыть снизу"
 				}
-			]
+			],
+			"site_id": "brod-tavern",
+			"public": false
 		},
 		"brod-tavern-cellar": {
 			"name": "Погреб таверны",
@@ -287,7 +431,9 @@
 					"skill": "investigation"
 				}
 			],
-			"dark": true
+			"dark": true,
+			"site_id": "brod-tavern",
+			"public": false
 		},
 		"brod-tavern-upstairs": {
 			"name": "Комнаты наверху",
@@ -311,7 +457,8 @@
 			],
 			"safe": {
 				"rest_cost_cp": 50
-			}
+			},
+			"site_id": "brod-tavern"
 		},
 		"brod-square": {
 			"name": "Рыночная площадь",
@@ -350,7 +497,8 @@
 			"tags": [
 				"stage"
 			],
-			"thieves_sign": "на срубе колодца нацарапан воровской знак: «здесь берут краденое — спроси у лотка с амулетами»"
+			"thieves_sign": "на срубе колодца нацарапан воровской знак: «здесь берут краденое — спроси у лотка с амулетами»",
+			"site_id": "brod-square"
 		},
 		"brod-smithy": {
 			"name": "Кузница",
@@ -373,7 +521,8 @@
 					"text": "оплавленные края щита — след не огня, а чего-то едкого, вроде кислоты",
 					"skill": "investigation"
 				}
-			]
+			],
+			"site_id": "brod-smithy"
 		},
 		"brod-herbalist": {
 			"name": "Лавка травницы",
@@ -395,7 +544,8 @@
 					"dc": 14,
 					"text": "под прилавком — заказ на противоядия «для друзей с заставы», оплаченный старыми королевскими монетами"
 				}
-			]
+			],
+			"site_id": "brod-herbalist"
 		},
 		"brod-temple": {
 			"name": "Храм Светлой Матери",
@@ -424,7 +574,8 @@
 			},
 			"tags": [
 				"temple"
-			]
+			],
+			"site_id": "brod-temple"
 		},
 		"brod-lockup": {
 			"name": "Холодная при воротах",
@@ -441,7 +592,8 @@
 					"text": "под соломой на стене нацарапаны зарубки по дням и слова: «Кто служил у Ратмира — тот знает, где ключ от решётки: за третьим камнем снизу»",
 					"skill": "investigation"
 				}
-			]
+			],
+			"site_id": "brod-lockup"
 		},
 		"brod-gate": {
 			"name": "Северные ворота",
@@ -476,7 +628,8 @@
 					"dc": 14,
 					"text": "царапины на воротах шли снизу вверх: зверь стоял на задних лапах и был выше человека"
 				}
-			]
+			],
+			"site_id": "brod-gate"
 		},
 		"pushcha-edge": {
 			"name": "Опушка Пущи",
@@ -518,7 +671,8 @@
 					"if_flag": "menhir_restored",
 					"description": "Поле обрывается стеной елей, но меж стволов теперь светлее: туман отступил в глубь леса, и в ветвях снова перекликаются птицы."
 				}
-			]
+			],
+			"site_id": "pushcha-edge"
 		},
 		"pushcha-trail": {
 			"name": "Тропа лесорубов",
@@ -594,7 +748,8 @@
 						}
 					}
 				}
-			]
+			],
+			"site_id": "pushcha-trail"
 		},
 		"pushcha-glade": {
 			"name": "Поляна с менгиром",
@@ -639,7 +794,8 @@
 						"у пустой землянки — следы, уходящие в чащу"
 					]
 				}
-			]
+			],
+			"site_id": "pushcha-glade"
 		},
 		"pushcha-hollow": {
 			"name": "Тёмная лощина",
@@ -704,7 +860,8 @@
 					"if_flag": "menhir_power",
 					"description": "Сырая низина, где туман стал густым, как молоко, и тёплым, как дыхание. Мёртвые деревья стоят чёрными, будто обугленными заново."
 				}
-			]
+			],
+			"site_id": "pushcha-hollow"
 		},
 		"outpost-road": {
 			"name": "Разбитая дорога к заставе",
@@ -763,7 +920,8 @@
 					"coins_cp": 800,
 					"items": {}
 				}
-			}
+			},
+			"site_id": "outpost-road"
 		},
 		"outpost-yard": {
 			"name": "Двор Серой заставы",
@@ -819,7 +977,8 @@
 						"holy_water": 1
 					}
 				}
-			}
+			},
+			"site_id": "outpost-fort"
 		},
 		"outpost-tower": {
 			"name": "Обрушенная башня",
@@ -838,7 +997,8 @@
 					"dc": 14,
 					"text": "на верхней площадке свежий пепел сигнального костра — отсюда подают знаки в сторону лощины"
 				}
-			]
+			],
+			"site_id": "outpost-fort"
 		},
 		"outpost-crypt": {
 			"name": "Склеп под часовней",
@@ -892,7 +1052,8 @@
 					}
 				]
 			},
-			"dark": true
+			"dark": true,
+			"site_id": "outpost-fort"
 		},
 		"mine-entrance": {
 			"name": "Вход в шахту",
@@ -914,7 +1075,8 @@
 					"dc": 12,
 					"text": "на отодранных досках следы тех же когтей, что на северных воротах"
 				}
-			]
+			],
+			"site_id": "mine"
 		},
 		"mine-gallery": {
 			"name": "Главная штольня",
@@ -980,7 +1142,8 @@
 						"spell_scroll_web": 1
 					}
 				}
-			}
+			},
+			"site_id": "mine"
 		},
 		"mine-flooded": {
 			"name": "Затопленный штрек",
@@ -1004,7 +1167,8 @@
 						}
 					}
 				}
-			]
+			],
+			"site_id": "mine"
 		},
 		"mine-deep": {
 			"name": "Старая выработка",
@@ -1047,7 +1211,8 @@
 						"healing_potion": 1
 					}
 				}
-			}
+			},
+			"site_id": "mine"
 		},
 		"pushcha-burrow": {
 			"name": "Пепельное логово",
@@ -1134,7 +1299,8 @@
 					}
 				]
 			},
-			"dark": true
+			"dark": true,
+			"site_id": "pushcha-burrow"
 		}
 	},
 	"npcs": {

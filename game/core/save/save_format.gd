@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 41
+const SAVE_VERSION := 42
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -63,6 +63,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	38: _v38_to_v39,
 	39: _v39_to_v40,
 	40: _v40_to_v41,
+	41: _v41_to_v42,
 }
 
 
@@ -372,3 +373,31 @@ static func _v39_to_v40(data: Dictionary, _ctx: Dictionary) -> void:
 static func _v40_to_v41(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["summons"] = []
 	data["session"]["summon_counter"] = 0
+
+
+## v0.7.22.24: location → site → room. The pack's rooms get their sites from the pack; a place the master made is one
+## site of its rooms (the rooms of one place hang together by their exits).
+static func _v41_to_v42(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["trespass_warned"] = {}
+	var gen: Variant = data["session"].get("generated", {})
+	if not (gen is Dictionary) or not (gen as Dictionary).has("rooms"):
+		return
+	var rooms: Dictionary = gen["rooms"]
+	var sites: Dictionary = gen.get("sites", {})
+	var n := sites.size()
+	for rid: String in rooms:
+		if rooms[rid].has("site_id"):
+			continue
+		n += 1
+		var sid := "gen_site_%d" % n
+		sites[sid] = {"name": str(rooms[rid].get("name", rid)), "location_id": str(rooms[rid].get("location_id", "")), "entry": rid}
+		var group: Array = [rid]
+		var i := 0
+		while i < group.size():  # the whole place: made rooms linked by their exits
+			for x: Variant in rooms[group[i]].get("exits", []):
+				if rooms.has(str(x)) and not group.has(str(x)) and not rooms[str(x)].has("site_id"):
+					group.append(str(x))
+			i += 1
+		for r: Variant in group:
+			rooms[str(r)]["site_id"] = sid
+	gen["sites"] = sites

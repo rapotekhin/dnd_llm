@@ -81,7 +81,7 @@ def test_rule_topics_out_of_the_prompt_unless_the_scene_needs_them():
     assert "Новое место — только `create_place`" not in text
     s.scene.open_edges = ["[0] чаща по обе стороны просеки (forest)"]
     text = prompts.system_prompt("exploration", s, None)
-    assert "Новое место — только `create_place` на открытом краю" in text and "`places` —" not in text
+    assert "Новое место — только `create_place`." in text and "`places` —" not in text
     assert all(prompts.topic_text(k).strip() for k in prompts.TOPICS)
 
 

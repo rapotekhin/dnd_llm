@@ -57,6 +57,19 @@ static func on_assault(s: GameSession, data: Dictionary, npc_id: String, aware: 
 	return lines
 
 
+## Walking into a private room before eyes (v0.7.22.24, SiteRules): a light crime where there is law — known at
+## once, its wergild by `rules.crime.kinds.trespass`. Lines.
+static func on_trespass(s: GameSession, data: Dictionary, owner: String, room_id: String, witnesses: Array) -> Array[String]:
+	var world := WorldView.new(data["world"])
+	var loc := world.location_id(room_id)
+	if law(data, loc).is_empty():
+		return []
+	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": "trespass", "victim": owner, "room": room_id, "site": world.site_id(room_id),
+		"location": loc, "at": TimeRules.abs_minute(s), "witnesses": witnesses.filter(func(id: String) -> bool: return id != owner), "known": false, "settled": false}
+	s.crimes.append(crime)
+	return _known(s, data, crime)
+
+
 ## The victim of an unknown assault woke up or was let go: it tells. Lines.
 static func assault_known(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	for crime: Dictionary in s.crimes:
@@ -119,13 +132,22 @@ static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array
 	var world := WorldView.new(data["world"])
 	var what := str(kind_of(data, crime)["name"])
 	var victim := str(crime["victim"])
-	var lines: Array[String] = ["%s знает: %s — отношение хуже" % [world.location(loc).get("name", loc), what]]
+	var kind := kind_of(data, crime)
+	var lines: Array[String] = []
+	# v0.7.22.24: a kind may set its own echo — the location's attitude, the memory, a share of the reputation
+	var att := int(kind.get("known_attitude", -1 if _assault(crime) else int(cfg(data)["attitude"])))
+	if att != 0:
+		lines.append("%s знает: %s — отношение хуже" % [world.location(loc).get("name", loc), what])
 	for id: String in people_of(data, loc):
 		if not s.dead_npcs.has(id) and id != victim:
-			s.shift_attitude(id, int(cfg(data)["attitude"]) if not _assault(crime) else -1, data)
-			s.remember(id, ("знает: герой напал на %s" % _name(data, victim)) if _assault(crime) else
+			if att != 0:
+				s.shift_attitude(id, att, data)
+			s.remember(id, (str(kind["memory"]).format({"victim": _name(data, victim)})) if kind.has("memory") else
+				("знает: герой напал на %s" % _name(data, victim)) if _assault(crime) else
 				("знает: %s убит%s героем" % [_name(data, victim), _ending(data, victim)]))
-	lines.append_array(ReputationRules.add(s, data, loc, int(ReputationRules.cfg(data)["points"]["crime_known"]) / (2 if _assault(crime) else 1), what))  # v0.7.17
+	var share := int(kind.get("reputation_share", 2 if _assault(crime) else 1))
+	if share > 0:
+		lines.append_array(ReputationRules.add(s, data, loc, int(ReputationRules.cfg(data)["points"]["crime_known"]) / share, what))  # v0.7.17
 	if not law(data, loc).is_empty():
 		if not s.wanted.has(loc):
 			s.wanted[loc] = TimeRules.abs_minute(s)

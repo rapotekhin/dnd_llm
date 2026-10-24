@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.49.0"
+PROTOCOL_VERSION = "0.50.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -204,6 +204,10 @@ class Scene(_In):
     reputation: str = ""  # the hero's name in this settlement: «Ольховый Брод — свой (+1)» (0.24.0)
     open_edges: list[str] = Field(default_factory=list)  # where the pack lets the master draw new places (0.32.0)
     summons: list[str] = Field(default_factory=list)  # 0.49.0: creatures a spell called to go with the hero — «Волк 1 (Призыв зверей, до конца концентрации)»
+    site_name: str = ""  # 0.50.0: the site of the room (a building, a yard) — «Таверна «Хромой олень»»
+    site_description: str = ""
+    site_owner: str = ""  # its owner's name, if any
+    private: bool = False  # the room is not for anyone to walk into (a kitchen, a bedroom)
 
 
 class InventoryLine(_In):
@@ -660,10 +664,23 @@ class NewRoom(_Out):
     description: str = Field(default="", max_length=600)
     indoor: bool = False
     dark: bool = False
+    public: bool = True  # 0.50.0: false — a private room of the site (a kitchen, a bedroom): entering unasked is trespass
     hooks: list[str] = Field(default_factory=list, max_length=4)
     exits: list[str] = Field(default_factory=list)
     secrets: list[NewSecret] = Field(default_factory=list, max_length=3)
     encounter: NewEncounter | None = None
+
+
+class NewSite(_Out):
+    """The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of
+    its kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an
+    NPC of the world (made first by create_npc if new)."""
+
+    name: str = Field(default="", max_length=60)
+    description: str = Field(default="", max_length=400)
+    tags: list[str] = Field(default_factory=list, max_length=4)
+    public: bool = True
+    owner_id: str | None = None
 
 
 class CreatePlaceEffect(_Out):
@@ -671,7 +688,8 @@ class CreatePlaceEffect(_Out):
     1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —
     the room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;
     empty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter
-    budget and the limits."""
+    budget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of
+    `room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed."""
 
     kind: Literal["create_place"] = "create_place"
     edge: int = Field(default=0, ge=0)
@@ -681,6 +699,8 @@ class CreatePlaceEffect(_Out):
     name: str = ""
     description: str = ""
     terrain: str = ""
+    inside: bool = False
+    site: NewSite | None = None
 
 
 class CreateNpcEffect(_Out):

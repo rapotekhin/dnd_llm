@@ -26,7 +26,7 @@
 
 ## Сцена
 
-{% if scene %}{{ scene.location_name }} — {{ scene.room_name }}. {{ scene.room_description }}
+{% if scene %}{{ scene.location_name }}{% if scene.site_name and scene.site_name != scene.room_name %} — {{ scene.site_name }}{% endif %} — {{ scene.room_name }}{% if scene.private %} (частная комната){% endif %}. {{ scene.room_description }}
 {% if scene.time_of_day %}Сейчас: {{ scene.time_of_day }}. Держи это в каждой реплике: не путай ночь с днём и утро с вечером (ночью темно, люди спят, лавки закрыты).
 {% endif %}
 {% if scene.exits %}Выходы: {% for e in scene.exits %}{{ e.name }}{% if not loop.last %}, {% endif %}{% endfor %}.

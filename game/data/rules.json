@@ -295,6 +295,8 @@
 		"max_per_session": 12,
 		"max_rooms": 4,
 		"max_rooms_per_session": 12,
+		"_sites": "Sites (v0.7.22.24): a made place is one site of its rooms; inside a location of reach (no open edge — a bathhouse an NPC spoke of) at most max_sites_inside sites per location.",
+		"max_sites_inside": 3,
 		"link_kinds": [
 			"family",
 			"spouse",
@@ -871,6 +873,11 @@
 		"seized_container": "chest",
 		"seized_name": "Сундук с вашими вещами"
 	},
+	"sites": {
+		"_doc": "Sites (v0.7.22.24, SiteRules): a private room (`public` false of the room or its site) of a site with a living owner — entering it unasked before eyes: the owner trespass_attitude and a light crime `trespass` where there is law, once a day a site. Asked in: the owner goes with the hero or likes the hero from welcome_attitude.",
+		"welcome_attitude": 2,
+		"trespass_attitude": -1
+	},
 	"creatures": {
 		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay); a bound one stays and can be led.",
 		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120},
@@ -1022,9 +1029,10 @@
 		"stocks_days": 2,
 		"patrol_size": 2,
 		"kinds": {
-			"_doc": "Kinds of crimes (v0.7.22.16): severity — how much each adds to the sentence (a sentence by the sum), fine_cp — its wergild (murder — fine_cp above), name — in the lines.",
+			"_doc": "Kinds of crimes (v0.7.22.16): severity — how much each adds to the sentence (a sentence by the sum), fine_cp — its wergild (murder — fine_cp above), name — in the lines. v0.7.22.24: known_attitude — the location's attitude when it is known (0 — none; murder — `attitude` above, assault −1), reputation_share — the part of the crime_known points it costs (0 — none), memory — what the people remember ({victim}).",
 			"murder": {"severity": 1, "name": "убийство"},
-			"assault": {"severity": 0, "fine_cp": 1000, "name": "нападение"}
+			"assault": {"severity": 0, "fine_cp": 1000, "name": "нападение"},
+			"trespass": {"severity": 0, "fine_cp": 200, "name": "вторжение", "known_attitude": 0, "reputation_share": 0, "memory": "знает: герой без спроса вломился к {victim}"}
 		},
 		"sentences": [
 			{"severity": 0, "kind": "stocks", "days": 1, "name": "колодки"},

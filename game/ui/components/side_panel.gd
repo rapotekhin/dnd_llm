@@ -123,7 +123,7 @@ func _rebuild() -> void:
 		_line(tr("SIDE_DARK"), true).add_theme_color_override("font_color", UiTheme.WARN)
 	var room := world.room(s.room_id)
 	_subheading("SIDE_PLACE")
-	_line("%s — %s" % [world.location(world.location_id(s.room_id)).get("name", ""), room.get("name", s.room_id)], false)
+	_line(world.place_path(s.room_id), false).name = "PlacePath"  # v0.7.22.24: location › site › room
 	if not s.in_conversation() and CrimeRules.held(s):
 		_arrest(s, can_act)
 	if not s.in_conversation():
@@ -426,9 +426,15 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 			dis.name = "Disarm_" + e
 			dis.tooltip_text = str(trapped[e]["text"]) + "\n" + tr("TRAP_DISARM_TIP")
 			continue
-		var b := _exit_button(line, "→ " + room_name, GameState.go.bind(e), can_act and not shut)
+		var private := not world.is_public(e)  # v0.7.22.24: the player knows before the step
+		var b := _exit_button(line, "→ " + room_name + (tr("EXIT_PRIVATE") if private else ""), GameState.go.bind(e), can_act and not shut)
 		b.name = "Exit_" + e
 		b.tooltip_text = tr("CRIME_HELD") if CrimeRules.held(s) else room_name
+		var owner := str(world.site_of(e).get("owner", ""))
+		if private and not CrimeRules.held(s) and not owner.is_empty():
+			b.tooltip_text = "%s
+%s" % [room_name, tr("EXIT_PRIVATE_WELCOME" if SiteRules.unwelcome(s, Catalog.data, e).is_empty() else
+				"EXIT_PRIVATE_TIP").format({"owner": world.npc(owner).get("name", owner)})]
 
 
 ## A button that fills its place and cuts a long text with «…» (the whole one is in the tooltip).

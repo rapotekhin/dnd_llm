@@ -113,6 +113,8 @@ var captive: Dictionary = {}
 ## last spoke to (its master's replies go when it does).
 var foreign: Dictionary = {}
 var talk_creature: String = ""
+## v0.7.22.24 (SiteRules): the sites whose private room the hero was warned off {site_id: abs minute}.
+var trespass_warned: Dictionary = {}
 ## The day the master last described each room (v0.7.22.20, ExplorationRules.again_line): {room_id: day}.
 var described: Dictionary = {}
 var bodies: Dictionary = {}
@@ -475,6 +477,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"captive": captive,
 		"foreign": foreign,
 		"talk_creature": talk_creature,
+		"trespass_warned": trespass_warned,
 		"described": described,
 		"bodies": bodies,
 		"searched": searched,
@@ -601,6 +604,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 			by[owner] = int(d["foreign"][id][owner])
 		s.foreign[id] = by
 	s.talk_creature = str(d.get("talk_creature", ""))
+	for sid: String in d.get("trespass_warned", {}):
+		s.trespass_warned[sid] = int(d["trespass_warned"][sid])
 	for r: String in d.get("described", {}):
 		s.described[r] = int(d["described"][r])
 	var foe_lists: Array = [s.captive.get("foes", [])]

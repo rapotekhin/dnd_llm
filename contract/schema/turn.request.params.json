@@ -729,6 +729,11 @@
           "title": "Open Edges",
           "type": "array"
         },
+        "private": {
+          "default": false,
+          "title": "Private",
+          "type": "boolean"
+        },
         "props": {
           "items": {
             "$ref": "#/$defs/SceneProp"
@@ -752,6 +757,21 @@
         },
         "room_name": {
           "title": "Room Name",
+          "type": "string"
+        },
+        "site_description": {
+          "default": "",
+          "title": "Site Description",
+          "type": "string"
+        },
+        "site_name": {
+          "default": "",
+          "title": "Site Name",
+          "type": "string"
+        },
+        "site_owner": {
+          "default": "",
+          "title": "Site Owner",
           "type": "string"
         },
         "sneaking": {

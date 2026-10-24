@@ -105,9 +105,25 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     if world["start_room"] not in rooms:
         errors.append(f"world.start_room: нет комнаты {world['start_room']}")
     placed: set[str] = set()
+    sites = world.get("sites", {})
+    for sid, site in sites.items():  # v0.7.22.24: location → site → room
+        if site["location_id"] not in world["locations"]:
+            errors.append(f"объект {sid}: нет локации {site['location_id']}")
+        if site.get("owner") and site["owner"] not in npcs:
+            errors.append(f"объект {sid}: хозяин {site['owner']} — не NPC пакета")
+        members = [r for r, room in rooms.items() if room.get("site_id") == sid]
+        if not members:
+            errors.append(f"объект {sid}: ни одной комнаты")
+        if site.get("entry") and site["entry"] not in members:
+            errors.append(f"объект {sid}: вход {site['entry']} — не его комната")
     for rid, room in rooms.items():
         if room["location_id"] not in world["locations"]:
             errors.append(f"комната {rid}: нет локации {room['location_id']}")
+        site = sites.get(room.get("site_id", ""))
+        if site is None:
+            errors.append(f"комната {rid}: нет объекта {room.get('site_id')}")
+        elif site["location_id"] != room["location_id"]:
+            errors.append(f"комната {rid}: объект {room['site_id']} в другой локации")
         errors += [f"комната {rid}: выход в несуществующую {x}" for x in room["exits"] if x not in rooms]
         enc = room.get("encounter")
         if enc:

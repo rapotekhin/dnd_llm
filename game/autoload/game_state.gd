@@ -1407,6 +1407,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 		if not seen.is_empty():
 			lines.append(seen)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
+	lines.append_array(SiteRules.on_enter(session, Catalog.data, room_id))  # a private room unasked (v0.7.22.24)
 	CreatureRules.follow(session, from, room_id)  # a bound captive on the rope (v0.7.22.11)
 	var gone := PropRules.abandon(session, Catalog.data, room_id)  # big test #28 (v0.7.22.8)
 	if not gone.is_empty():

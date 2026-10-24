@@ -11,9 +11,9 @@
 | `game/core/rules/creature_rules.gd:59` | словарь id → русский текст в коде | служебное | слова состояний существа (перемирие, сдался, без сознания) для панели и мастера |
 | `game/core/rules/creature_rules.gd:95` | match по attack, finish, search, bind, lead, hand_over | понятие движка | действия с пленником — понятие «Пленник» (concepts.md): связать, вести, отдать страже, добить…; числа — rules.creatures (v0.7.22.17) |
 | `game/core/rules/creature_rules.gd:122` | match по bind, lead, free, hand_over, attack, finish, search | понятие движка | применение действий понятия «Пленник»; продажа и подарок — эффект мастера `owner` (v0.7.22.17) |
-| `game/core/rules/crime_rules.gd:223` | match по male, female | служебное | окончание по роду NPC (данные пакета) |
-| `game/core/rules/crime_rules.gd:466` | match по bribe, pay, stocks, resist | понятие движка | ответ страже — три исхода понятия «задержание» (вергельд, колодки, сопротивление); сумма и сроки — rules.json |
-| `game/core/rules/crime_rules.gd:537` | имя или описание вещи мира в коде | служебное | подпись тела убитого NPC на панели: «Тело: имя» |
+| `game/core/rules/crime_rules.gd:245` | match по male, female | служебное | окончание по роду NPC (данные пакета) |
+| `game/core/rules/crime_rules.gd:488` | match по bribe, pay, stocks, resist | понятие движка | ответ страже — три исхода понятия «задержание» (вергельд, колодки, сопротивление); сумма и сроки — rules.json |
+| `game/core/rules/crime_rules.gd:559` | имя или описание вещи мира в коде | служебное | подпись тела убитого NPC на панели: «Тело: имя» |
 | `game/core/rules/effect_engine.gd:162` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, cast… | понятие движка | виды эффектов — словарь понятий движка, который знает мастер (протокол); новый вид — новое понятие |
 | `game/core/rules/effect_engine.gd:477` | match по damage, condition | понятие движка | эффекты на врага в бою — те же понятия |
 | `game/core/rules/effect_engine.gd:729` | match по move, damage, heal, coins, give_item, take_item, npc_attitude, start_combat… | понятие движка | применение видов эффектов |
