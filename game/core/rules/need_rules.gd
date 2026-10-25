@@ -22,7 +22,7 @@ static func state(s: GameSession, data: Dictionary) -> Dictionary:
 	var c := s.character
 	if not (c.get("needs") is Dictionary) or (c["needs"] as Dictionary).is_empty():
 		var now := TimeRules.abs_minute(s)
-		c["needs"] = {"food": {"level": 100.0, "at": now}, "water": {"level": 100.0, "at": now}, "skin": capacity(c, data), "done": {}}
+		c["needs"] = {"food": {"level": 100.0, "at": now}, "water": {"level": 100.0, "at": now}, "skin": capacity(c, data), "skin_foul": false, "done": {}}
 	return c["needs"]
 
 
@@ -133,7 +133,9 @@ static func eat(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
 	var have := food_items(c, data)
 	var ids: Array = have.keys()
-	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return int(have[a]) < int(have[b]))
+	var foul: Dictionary = data["rules"].get("diseases", {}).get("foul_food", {})
+	ids.sort_custom(func(a: Variant, b: Variant) -> bool:  # foul food only when nothing else is left (v0.7.23.1)
+		return int(foul.has(a)) * 1000 + int(have[a]) < int(foul.has(b)) * 1000 + int(have[b]))
 	var v := value(s, data, "food")
 	var eaten: Array[String] = []
 	for id: Variant in ids:
@@ -142,7 +144,11 @@ static func eat(s: GameSession, data: Dictionary) -> Array[String]:
 			_take(c, str(id))
 			eaten.append(ItemRules.display_name(data["items"], s.items, str(id)))
 	set_value(s, data, "food", v)
-	return ["Поел: " + ", ".join(eaten), "Еда %d/100" % roundi(value(s, data, "food"))]
+	var lines: Array[String] = ["Поел: " + ", ".join(eaten), "Еда %d/100" % roundi(value(s, data, "food"))]
+	for id: Variant in ids:
+		if foul.has(id) and eaten.has(ItemRules.display_name(data["items"], s.items, str(id))):
+			lines.append_array(DiseaseRules.expose(s, data, str(foul[id]["disease"]), int(foul[id]["dc"]), "Дурная еда"))
+	return lines
 
 
 ## Waterskins the hero carries × rules.needs.water.skin_drinks.
@@ -167,6 +173,18 @@ static func water_here(s: GameSession, data: Dictionary) -> bool:
 	return false
 
 
+## Water here is foul (the room's tag `foul_water`, v0.7.23.1): a drink of it or of a skin filled here risks a disease.
+static func foul_here(s: GameSession, data: Dictionary) -> bool:
+	return (SceneRules.room(s, data["world"], s.room_id).get("tags", []) as Array).has("foul_water")
+
+
+static func _foul_drink(s: GameSession, data: Dictionary) -> Array[String]:
+	var fw: Dictionary = data["rules"].get("diseases", {}).get("foul_water", {})
+	if fw.is_empty():
+		return []
+	return DiseaseRules.expose(s, data, str(fw["disease"]), int(fw["dc"]), "Гнилая вода")
+
+
 static func can_drink(s: GameSession, data: Dictionary) -> String:
 	if not water_here(s, data) and drinks(s, data) <= 0:
 		return "NEED_NO_WATER"
@@ -189,6 +207,8 @@ static func drink(s: GameSession, data: Dictionary) -> Array[String]:
 	set_value(s, data, "water", v)
 	var lines: Array[String] = ["Напился" + (" из бурдюка (%d/%d)" % [drinks(s, data), capacity(s.character, data)] if from_skin > 0 else "")]
 	lines.append("Вода %d/100" % roundi(value(s, data, "water")))
+	if here and foul_here(s, data) or not here and bool(st.get("skin_foul", false)):
+		lines.append_array(_foul_drink(s, data))
 	return lines
 
 
@@ -204,6 +224,7 @@ static func can_fill(s: GameSession, data: Dictionary) -> String:
 
 static func fill(s: GameSession, data: Dictionary) -> Array[String]:
 	state(s, data)["skin"] = capacity(s.character, data)
+	state(s, data)["skin_foul"] = foul_here(s, data)
 	return ["Бурдюк полон (%d/%d)" % [drinks(s, data), capacity(s.character, data)]]
 
 
@@ -221,6 +242,8 @@ static func rest_meal(s: GameSession, data: Dictionary, camp_points: int, bed: b
 		set_value(s, data, "food", value(s, data, "food") + camp_points * float(cfg(data)["food"]["points"]))
 	if value(s, data, "water") < 100.0 and (water_here(s, data) or drinks(s, data) > 0):
 		var st := state(s, data)
+		if water_here(s, data) and foul_here(s, data) or not water_here(s, data) and bool(st.get("skin_foul", false)):
+			lines.append_array(_foul_drink(s, data))
 		var v := value(s, data, "water")
 		while v < 100.0 and (water_here(s, data) or drinks(s, data) > 0):
 			v += float(cfg(data)["water"]["drink"])

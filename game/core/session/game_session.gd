@@ -234,6 +234,15 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 			n[k] = {"level": float(n[k].get("level", 100.0)), "at": int(n[k].get("at", 0))}
 		n["skin"] = int(n.get("skin", 0))
 		n["done"] = _whole_numbers(n.get("done", {}))
+		n["skin_foul"] = bool(n.get("skin_foul", false))
+	if c.has("diseases"):  # v0.7.23.1: diseases still incubating
+		var sick: Array = []
+		for d: Variant in c["diseases"]:
+			if d is Dictionary:
+				sick.append({"id": str(d.get("id", "")), "onset": int(d.get("onset", 0))})
+		c["diseases"] = sick
+	if c.get("disease_met") is Dictionary:
+		c["disease_met"] = _whole_numbers(c["disease_met"])
 	c["concentration"] = str(c.get("concentration", ""))
 	c["concentration_ends"] = int(c.get("concentration_ends", -1))
 	c["prepared_day"] = int(c.get("prepared_day", 1))

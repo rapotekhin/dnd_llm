@@ -17,7 +17,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		var n := world.npc(id)
 		npcs.append({"npc_id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 			"body": BodyRules.npc_text(data, id, n),
-			"gender": n.get("gender", "other"), "description": n.get("description", ""),
+			"gender": n.get("gender", "other"), "description": str(n.get("description", "")) + _sick(s, data, n),
 			"personality": n.get("personality", ""), "attitude": s.attitude(id), "trader": bool(n.get("trader", false)),
 			"speaks": ", ".join(LanguageRules.npc(data, n).map(func(l: String) -> String: return LanguageRules.name_of(data, l).to_lower())),
 			"understands_hero": LanguageRules.npc_understands(s.character, data, n), "tie": BackgroundRules.tie_text(s.character, data, n),
@@ -200,3 +200,11 @@ static func _conditions(c: Dictionary, data: Dictionary) -> Array:
 	if ConditionRules.invisible(c, data) and not out.has("invisible"):
 		out.append("invisible")
 	return out
+
+
+## « Болен: хохочущая лихорадка, заразно.» — a sick NPC of the pack (v0.7.23.1).
+static func _sick(s: GameSession, data: Dictionary, n: Dictionary) -> String:
+	var d := DiseaseRules.def_of(s, data, str(n.get("sick", "")))
+	if d.is_empty():
+		return ""
+	return " Болен: %s%s." % [str(d.get("name", "")).to_lower(), ", заразно" if bool(d.get("contagious", false)) else ""]

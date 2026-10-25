@@ -711,6 +711,7 @@
 				"stock": {
 					"healing_potion": 2,
 					"antitoxin": 2,
+					"herbal_remedy": 3,
 					"healers_kit": 2,
 					"herbalism_kit": 1,
 					"vial": 3
@@ -1122,7 +1123,8 @@
 			},
 			"recharge": "long",
 			"on_use": {
-				"heal_amount": true
+				"heal_amount": true,
+				"cure_disease": 5
 			}
 		},
 		"divine_sense": {
@@ -1205,7 +1207,8 @@
 			],
 			"adv_tag": "poison",
 			"duration": "hour"
-		}
+		},
+		"herbal_remedy": {"cure": ["disease"], "power": "herbs"}
 	},
 	"condition_effects": {
 		"_doc": "What a condition does to engine checks (SRD; v0.7.8): checks | skills {id} | saves {ability} | senses {sight, hearing}: disadvantage | auto_fail. A sense comes with the master's check (a check that needs sight or hearing). Incapacitated and stunned heroes still make checks: the master decides whether they can try.",
@@ -1768,6 +1771,22 @@
 		"spells": {"invisibility": {"ends_on_attack": true}, "greater_invisibility": {"ends_on_attack": false}},
 		"passive_penalty": 5
 	},
+	"diseases": {
+		"_doc": "Diseases (v0.7.23.1, DiseaseRules): a disease is caught on a failed save (CON, tag disease — Divine Health, the Periapt of Health are immune), hidden for incubation_hours, then shows for `days` as one effect «Болезнь: …» with its symptoms — conditions, saves with disadvantage, max HP lost, a need dropped once (needs: {need: −points}) — and passes by itself. herbs: true — herbs and the herbalist cure it; magic (Lesser Restoration, the priestess, 5 points of Lay on Hands) cures any. contagious — a sick NPC (npc `sick` in the pack) passes it on at a meeting, once a day. Sources: a bite of a monster (`disease` in the attack's effect), water of a room tagged foul_water (drunk there or filled into the skin), foul food (foul_food: item → disease and DC, eaten last), the master's `disease` effect (a known one or made by `make` limits). A pack adds its own in world.json `diseases`.",
+		"catalog": {
+			"rot_fever": {"name": "Гнилая лихорадка", "line": "болен гнилой лихорадкой: жар, слабость, рана гноится", "incubation_hours": 24, "days": 5, "conditions": ["poisoned"], "max_hp": -4, "herbs": false, "contagious": false,
+				"text": "Жар, ломота и гноящийся укус. Отравлен: помеха на броски атаки и проверки; максимум хитов −4. Травы не помогают — только магия или время."},
+			"sewer_plague": {"name": "Чума нечистот", "line": "болен чумой нечистот: тошнит, мучит жажда", "incubation_hours": 36, "days": 3, "saves": {"con": "disadvantage"}, "needs": {"water": -40}, "herbs": true, "contagious": false,
+				"text": "Тошнота и озноб от гнилой воды или еды. Помеха на спасброски Телосложения, жажда сразу сильнее. Лечат травы, магия или время."},
+			"cackle_fever": {"name": "Хохочущая лихорадка", "line": "болен хохочущей лихорадкой: приступы безумного смеха", "incubation_hours": 24, "days": 4, "conditions": ["poisoned"], "saves": {"wis": "disadvantage"}, "herbs": true, "contagious": true,
+				"text": "Жар и приступы безумного смеха, заразна для тех, кто рядом. Отравлен; помеха на спасброски Мудрости. Лечат травы, магия или время."}
+		},
+		"save": "con",
+		"foul_water": {"disease": "sewer_plague", "dc": 11},
+		"foul_food": {},
+		"contagion_dc": 10,
+		"make": {"days": [1, 10], "incubation_hours": [0, 72], "conditions": ["poisoned", "blinded", "deafened"], "saves": ["str", "dex", "con", "int", "wis", "cha"], "max_hp": [-10, 0]}
+	},
 	"needs": {
 		"_doc": "Needs of the hero (v0.7.23, NeedRules): a scale 0–100 that empties over `hours` of the game clock from the last meal or drink and fills by eating (camp food points × points) or drinking (drink); `stages` by the value below `below` — a chip, the master's line and the checks they hamper (saves: ability → disadvantage); at 0 — a level of exhaustion each full day past grace_days (\"3+con\": 3 + CON modifier, at least 1). sleep is shown from the hours awake (hero_effects.exhaustion.awake_hours), its exhaustion stays the awake saves. Water: a waterskin holds skin_drinks drinks, filled where the room has the tag `water` or a thing whose name has one of water_words; drinking there is free. A bed in a settlement (an inn, a temple) feeds and waters (rest_meal). Switched by the game setting `needs` (on by default).",
 		"food": {"name": "Еда", "hours": 24, "points": 50, "grace_days": "3+con", "eat_minutes": 15, "stages": [
@@ -1836,10 +1855,12 @@
 		},
 		"spell_cures": {
 			"lesser_restoration": {
-				"remove": ["blinded", "deafened", "paralyzed", "poisoned"]
+				"remove": ["blinded", "deafened", "paralyzed", "poisoned"],
+				"cure": ["disease"]
 			},
 			"greater_restoration": {
 				"remove": ["charmed", "petrified"],
+				"cure": ["disease"],
 				"exhaustion": 1
 			},
 			"protection_from_poison": {
@@ -2129,6 +2150,8 @@
 			"identify": {"cost_cp": 2000, "op": "identify", "name": "Опознать вещи", "short": "опознание вещей"},
 			"meal": {"cost_cp": 30, "op": "meal", "name": "Поесть и попить", "short": "обед и питьё", "done": "сыт и напоен"},
 			"remove_curse": {"cost_cp": 9000, "op": "lift_curse", "name": "Снять проклятие", "short": "снятие проклятия"},
+			"cure_disease": {"cost_cp": 1500, "op": "cure_disease", "power": "magic", "name": "Исцелить болезнь", "short": "исцеление болезни", "done": "болезнь отступила"},
+			"herbal_cure": {"cost_cp": 300, "op": "cure_disease", "power": "herbs", "name": "Вылечить травами", "short": "лечение травами", "done": "отвар помог"},
 			"silver": {"cost_cp": 10000, "op": "enchant", "needs": "weapon", "property": "silvered", "suffix": "посеребрённый", "done": "посеребрено", "name": "Посеребрить оружие", "short": "серебрение оружия"}
 		}
 	},

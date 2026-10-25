@@ -199,6 +199,12 @@
 - **Движок:** спасбросок героя с чертами расы по `tag`; без спасброска — только когда герой сам навлёк это в своём ходе (`cause: player`: выпил, лёг спать); выводящее из строя вне боя — со сроком ([_plan_condition](../../game/core/rules/effect_engine.gd#L405)).
 - **Golden:** `condition_vial_of_poison`, `condition_ghost_fear`, `condition_let_them_bind`, `condition_doze_by_the_fire`.
 
+### Заразить героя болезнью (v0.7.23.1)
+
+- **Пайплайн:** `rules("conditions")` → `disease {disease, reason, save {ability: con, dc_tier}}`; новая болезнь по замыслу — ещё `days`, `incubation_hours`, `symptoms`, `weak_saves`, `herbs`, `contagious`, `text`.
+- **Движок:** спасбросок с тегом `disease`, инкубация по часам, потом чип «Болезнь: …» и симптомы; сводка болезнь не называет — мастер описывает лишь укус или дурной привкус. Укусы монстров, гнилую воду (`foul_water`), дурную еду и больных NPC (`sick`) движок считает сам. Лечение — заклинания, Наложение рук (`use_feature` с `amount` 5), услуги жрицы и травницы, отвар ([_plan_disease](../../game/core/rules/effect_engine.gd), [DiseaseRules](../../game/core/rules/disease_rules.gd)).
+- **Golden:** `disease_sewer_rat_bite`.
+
 ### Колдовство, умения, вещи
 
 | Как | Пайплайн |

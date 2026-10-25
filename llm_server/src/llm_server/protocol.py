@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.54.0"
+PROTOCOL_VERSION = "0.55.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -889,6 +889,24 @@ class ConditionEffect(_Out):
     target_id: str | None = None  # an enemy id in a fight (0.7.0)
 
 
+class DiseaseEffect(_Out):
+    """The hero catches a disease (0.55.0): a known one by id or Russian name, or a new one with `days` (then
+    incubation_hours, symptoms, weak_saves). The engine always rolls the save; the disease shows after its
+    incubation, so the summary does not name it."""
+
+    kind: Literal["disease"] = "disease"
+    disease: str = Field(min_length=2)  # id or name of a known disease, or the name of a new one
+    reason: str = Field(min_length=3)  # what infected: a bite, foul water, a sick man coughing
+    save: ConditionSave
+    days: int | None = Field(default=None, ge=1, le=10)  # only for a new disease
+    incubation_hours: int | None = Field(default=None, ge=0, le=72)
+    symptoms: list[ConditionId] = Field(default_factory=list, max_length=3)
+    weak_saves: list[SaveAbility] = Field(default_factory=list, max_length=2)  # saves with disadvantage while sick
+    herbs: bool = True  # herbs and a herbalist cure it; False — only magic or time
+    contagious: bool = False
+    text: str = ""  # how it shows, for the player's card
+
+
 class UseFeatureEffect(_Out):
     kind: Literal["use_feature"] = "use_feature"
     feature: str  # a feature with limited uses, by name as in the sheet
@@ -1059,7 +1077,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

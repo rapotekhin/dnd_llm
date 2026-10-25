@@ -54,7 +54,8 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 	if data["rules"].has("creatures"):
 		lines.append_array(CreatureRules.tick(s, data))  # the beaten foes left alone go (v0.7.22.11)
 	lines.append_array(_awake(s, data))
-	lines.append_array(NeedRules.tick(s, data))  # hunger and thirst past their grace (v0.7.23)
+	lines.append_array(NeedRules.tick(s, data))
+	lines.append_array(DiseaseRules.tick(s, data))  # hunger and thirst past their grace (v0.7.23)
 	lines.append_array(CrimeRules.spread(s, data))  # a hidden body is found (v0.7.14)
 	if data["rules"].has("doors"):
 		lines.append_array(DoorRules.tick(s, data))  # a burning door burns through (v0.7.22.25)

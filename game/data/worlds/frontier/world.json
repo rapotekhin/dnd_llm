@@ -541,7 +541,8 @@
 				"brod-square"
 			],
 			"npcs": [
-				"npc_herbalist"
+				"npc_herbalist",
+				"npc_sick_pilgrim"
 			],
 			"hooks": [
 				"на прилавке ящик с пустыми склянками, помеченными «для заставы»"
@@ -1179,7 +1180,11 @@
 					}
 				}
 			],
-			"site_id": "mine"
+			"site_id": "mine",
+			"tags": [
+				"water",
+				"foul_water"
+			]
 		},
 		"mine-deep": {
 			"name": "Старая выработка",
@@ -1563,7 +1568,8 @@
 				"antitoxin": 2,
 				"healers_kit": 2,
 				"potion_of_climbing": 2,
-				"potion_of_resistance_poison": 1
+				"potion_of_resistance_poison": 1,
+				"herbal_remedy": 3
 			},
 			"wants": [
 				"consumable"
@@ -1606,6 +1612,9 @@
 					"text": "Ведана продавала противоядия людям в капюшонах с заставы; они говорили о лазе под мёртвым дубом в Тёмной лощине, откуда тянет гарью",
 					"reveals": "pushcha-hollow:burrow"
 				}
+			],
+			"services": [
+				"herbal_cure"
 			]
 		},
 		"npc_priestess": {
@@ -1637,7 +1646,8 @@
 			],
 			"services": [
 				"identify",
-				"remove_curse"
+				"remove_curse",
+				"cure_disease"
 			]
 		},
 		"npc_captain": {
@@ -1696,6 +1706,26 @@
 					],
 					"text": "Дрогин признаётся: крепь в галерее подпилили задолго до обвала — обвал устроили нарочно, чтобы закрыть старую выработку",
 					"reveals": "mine-gallery:sabotage"
+				}
+			]
+		},
+		"npc_sick_pilgrim": {
+			"name": "Тодор",
+			"role": "больной паломник",
+			"race": "человек",
+			"gender": "male",
+			"description": "Худой паломник на табурете у прилавка, закутан в одеяло; то трясётся в ознобе, то заходится визгливым смехом.",
+			"personality": "кроткий, стыдится своей болезни; ждёт, пока травница сварит ему отвар, — на жрицу денег нет",
+			"monster": "commoner",
+			"tags": [
+				"commoner"
+			],
+			"sick": "cackle_fever",
+			"schedule": [
+				{
+					"from": 21,
+					"to": 7,
+					"room": ""
 				}
 			]
 		}

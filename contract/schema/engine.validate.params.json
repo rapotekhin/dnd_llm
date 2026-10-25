@@ -663,6 +663,122 @@
       "title": "DamageEffect",
       "type": "object"
     },
+    "DiseaseEffect": {
+      "additionalProperties": false,
+      "description": "The hero catches a disease (0.55.0): a known one by id or Russian name, or a new one with `days` (then\nincubation_hours, symptoms, weak_saves). The engine always rolls the save; the disease shows after its\nincubation, so the summary does not name it.",
+      "properties": {
+        "contagious": {
+          "default": false,
+          "title": "Contagious",
+          "type": "boolean"
+        },
+        "days": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Days"
+        },
+        "disease": {
+          "minLength": 2,
+          "title": "Disease",
+          "type": "string"
+        },
+        "herbs": {
+          "default": true,
+          "title": "Herbs",
+          "type": "boolean"
+        },
+        "incubation_hours": {
+          "anyOf": [
+            {
+              "maximum": 72,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Incubation Hours"
+        },
+        "kind": {
+          "const": "disease",
+          "default": "disease",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 3,
+          "title": "Reason",
+          "type": "string"
+        },
+        "save": {
+          "$ref": "#/$defs/ConditionSave"
+        },
+        "symptoms": {
+          "items": {
+            "enum": [
+              "blinded",
+              "charmed",
+              "deafened",
+              "exhaustion",
+              "frightened",
+              "grappled",
+              "incapacitated",
+              "invisible",
+              "paralyzed",
+              "petrified",
+              "poisoned",
+              "prone",
+              "restrained",
+              "stunned",
+              "unconscious"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Symptoms",
+          "type": "array"
+        },
+        "text": {
+          "default": "",
+          "title": "Text",
+          "type": "string"
+        },
+        "weak_saves": {
+          "items": {
+            "enum": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Weak Saves",
+          "type": "array"
+        }
+      },
+      "required": [
+        "disease",
+        "reason",
+        "save"
+      ],
+      "title": "DiseaseEffect",
+      "type": "object"
+    },
     "DoorEffect": {
       "additionalProperties": false,
       "description": "A door on the way to `to_room` from the hero's room (0.51.0): `unlock` / `lock` — its owner (the site's owner,\nhere or behind it) does it, or `unlock` after a passed Sleight of Hand this turn; `break` — after a passed Athletics\nthis turn. The engine knows the DC; breaking in before eyes is a trespass.",
@@ -2572,6 +2688,7 @@
           "crime_known": "#/$defs/CrimeKnownEffect",
           "crime_release": "#/$defs/CrimeReleaseEffect",
           "damage": "#/$defs/DamageEffect",
+          "disease": "#/$defs/DiseaseEffect",
           "door": "#/$defs/DoorEffect",
           "drop_item": "#/$defs/DropItemEffect",
           "equip": "#/$defs/EquipEffect",
@@ -2632,6 +2749,9 @@
         },
         {
           "$ref": "#/$defs/ConditionEffect"
+        },
+        {
+          "$ref": "#/$defs/DiseaseEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"

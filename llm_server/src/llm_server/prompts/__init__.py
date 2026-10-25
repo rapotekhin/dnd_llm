@@ -97,7 +97,7 @@ def render(name: str, **context: object) -> str:
 # `rules` when it needs them; the scene puts a topic in by itself when it is there (an open edge, a crime, a stranger).
 # key -> (the line of the index: when to read it, the effect kinds the engine accepts only after it is read or shown).
 TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
-    "conditions": ("состояния героя: яд, страх, сон, паралич, путы, истощение; проверки зрения и слуха (`condition`)", ("condition",)),
+    "conditions": ("состояния героя: яд, страх, сон, паралич, путы, истощение, болезни; проверки зрения и слуха (`condition`, `disease`)", ("condition", "disease")),
     "spells": ("что заклинание сделало в мире: иллюзии, разговор со зверьми и мёртвыми, гадание; заклинание на себя", ()),
     "pay": ("покупка у не-торговца, плата за услугу или сведения, платный вариант (`option_costs`), ночлег", ()),
     "theft": ("кража из карманов: как её отыграть", ()),

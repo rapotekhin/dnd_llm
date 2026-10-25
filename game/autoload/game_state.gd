@@ -78,6 +78,7 @@ func long_rest(supplies: Dictionary = {}) -> String:
 	TimeRules.after_long_rest(session, Catalog.data, began)
 	lines.append_array(ConditionRules.expire(session, Catalog.data))
 	lines.append_array(NeedRules.tick(session, Catalog.data))
+	lines.append_array(DiseaseRules.tick(session, Catalog.data))
 	CharacterRules.refresh(session.character, Catalog.data, session.items)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
@@ -1554,6 +1555,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	if not gone.is_empty():
 		lines.append("Того, что вы здесь оставили, уже нет: " + ", ".join(gone))
 	var found := ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
+	lines.append_array(DiseaseRules.contagion(session, Catalog.data))  # a sick NPC here (v0.7.23.1)
 	lines.append_array(ExplorationRules.take_caches(session, Catalog.data, room_id))
 	lines.append_array(QuestRules.advance(session, Catalog.data))
 	lines.append_array(CrimeRules.check_arrest(session, Catalog.data))  # the wanted hero meets the guard (v0.7.14)

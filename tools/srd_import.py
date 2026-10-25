@@ -87,7 +87,7 @@ ITEM_ALIASES = {
     "antitoxin-vial": "antitoxin", "holy-water-flask": "holy_water",
 }
 # Hand-made catalog items that are not SRD equipment (kept from the v0.4.x catalog).
-EXTRA_ITEMS = ["healing_potion", "ale", "bread", "silver_ring", "goodberry"]
+EXTRA_ITEMS = ["healing_potion", "ale", "bread", "silver_ring", "goodberry", "herbal_remedy"]
 # Engine properties (items.json "properties") and item types the SRD does not have, by game id.
 EXTRA_PROPERTIES = {"torch": ["light_source"], "lantern": ["light_source"], "lantern_bullseye": ["light_source"],
                     "candle": ["light_source"], "lamp": ["light_source"], "antitoxin": ["resist_poison"],
@@ -948,6 +948,8 @@ def monster_action(a: dict[str, Any], override: dict[str, Any] | None = None) ->
         fx.pop("save", None)
         fx.pop("damage", None)
     fx.update(override.get("effect", {}))
+    for k in override.get("drop", []):  # what the text parser read but the rider replaces (a disease, v0.7.23.1)
+        fx.pop(k, None)
     if fx:
         act["effect"] = fx
     use = a.get("usage") or {}

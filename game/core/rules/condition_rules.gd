@@ -96,6 +96,8 @@ static func left_text(s: GameSession, e: Dictionary) -> String:
 		if CombatRules.active(s) and r <= ROUNDS_PER_MINUTE:
 			return "%d р." % maxi(1, r)
 		var mins := ceili(r / float(ROUNDS_PER_MINUTE))
+		if mins > 48 * 60:  # a disease: «5 дн.», not «121 ч» (v0.7.23.1)
+			return "%d дн." % ceili(mins / 1440.0)
 		return TimeRules.span(maxi(1, mins))
 	match str(ends.get("rest", "")):
 		"short":
@@ -156,7 +158,7 @@ static func remove_effect(c: Dictionary, uid: int) -> void:
 		if int(e.get("uid", 0)) == uid:
 			list.erase(e)
 			for o: Dictionary in list.duplicate():
-				if str(o.get("with", "")) == str(e.get("condition", "")) and str(o.get("by", "")) == str(e.get("by", "")):
+				if not str(e.get("condition", "")).is_empty() and str(o.get("with", "")) == str(e.get("condition", "")) 						and str(o.get("by", "")) == str(e.get("by", "")):
 					list.erase(o)
 	_sync(c)
 
@@ -364,6 +366,8 @@ static func check_mods(c: Dictionary, data: Dictionary, params: Dictionary) -> D
 			(out[mode] as Array).append(str(id))
 	if not save.is_empty() and str(c.get("need_mods", {}).get(save, "")) == "disadvantage":  # a hungry or thirsty hero (v0.7.23)
 		(out["disadvantage"] as Array).append("need")
+	if not save.is_empty() and effects(c).any(func(e: Dictionary) -> bool: return str(e.get("saves", {}).get(save, "")) == "disadvantage"):
+		(out["disadvantage"] as Array).append("disease")  # a disease's weak saves (v0.7.23.1)
 	var lv := exhaustion(c)
 	if (lv >= 1 and not skill.is_empty()) or (lv >= 3 and not save.is_empty()):
 		(out["disadvantage"] as Array).append("exhaustion")
@@ -417,6 +421,9 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 	if int(spec.get("exhaustion", 0)) > 0 and exhaustion(c) > 0:
 		lines.append_array(add_exhaustion(s, data, -int(spec["exhaustion"]), ""))
 	for tag: Variant in spec.get("cure", []):  # a disease and the like: effects of that tag go (v0.7.12)
+		if str(tag) == "disease":  # herbs take only some, and the incubating ones go too (v0.7.23.1)
+			lines.append_array(DiseaseRules.cure(s, data, str(spec.get("power", "magic"))))
+			continue
 		for e: Dictionary in effects(c):
 			if str(e.get("tag", "")).split(",").has(str(tag)):
 				remove_effect(c, int(e.get("uid", -1)))
@@ -458,6 +465,8 @@ static func shown(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 		var id := str(e.get("condition", ""))
 		var title := name_of(data, id) if not id.is_empty() else str(e.get("source", {}).get("name", ""))
 		var text := str(data["rules"]["conditions"].get(id, "")) if not id.is_empty() else boon_text(data, e)
+		if e.has("disease"):
+			text = str(DiseaseRules.def_of(s, data, str(e["disease"])).get("text", ""))
 		if text.is_empty() and str(e.get("source", {}).get("kind", "")) == "spell":
 			text = SpellEffects.text(data, SpellEffects.spec(data, str(e["source"].get("id", ""))))
 		out.append({"condition": id, "name": title, "left": left_text(s, e), "source": str(e.get("source", {}).get("name", "")), "text": text})

@@ -491,7 +491,8 @@ static func services(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 		elif int(s.character.get("gold_cp", 0)) < cost:
 			why = "TRADE_ERR_NO_COINS"
 		elif targets(s, data, str(id)).is_empty():
-			why = "SERVICE_NOTHING"
+			var sick := str(def.get("op", "")) == "cure_disease" and not DiseaseRules.curable(s, data, "magic").is_empty()
+			why = "SERVICE_HERBS_CANNOT" if sick else "SERVICE_NOTHING"
 		out.append({"id": str(id), "cost_cp": cost, "why": why, "name": str(def.get("name", id))})
 	return out
 
@@ -510,6 +511,8 @@ static func targets(s: GameSession, data: Dictionary, id: String) -> Array[Strin
 			return ItemRules.unknown_ids(s.character)
 		"lift_curse":
 			return cursed_held(s, data)
+		"cure_disease":  # v0.7.23.1: a healer sees a disease even before it shows
+			return DiseaseRules.curable(s, data, str(def.get("power", "magic")))
 		"enchant":
 			return enchantable(s, data, def)
 		"meal":  # v0.7.23: only when the hero is hungry or thirsty
@@ -551,6 +554,8 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 			lines.append_array(ItemRules.identify(c, data, s.items))
 		"lift_curse":
 			lines.append_array(ItemRules.lift_curse(c, data, s.items))
+		"cure_disease":
+			lines.append_array(DiseaseRules.cure(s, data, str(sv.get("power", "magic"))))
 		"enchant":
 			var weapon := item if not item.is_empty() else enchantable(s, data, sv)[0]
 			var base := ItemRules.def_of(data["items"], s.items, weapon)

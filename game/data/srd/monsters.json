@@ -2905,7 +2905,14 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"master_effect": "болезнь: отравление до излечения и потеря максимума хитов раз в сутки — мастер ведёт её вне боя",
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 12
+					},
+					"disease": "rot_fever",
+					"tag": "disease"
+				},
 				"name": "Укус"
 			}
 		],
@@ -5894,7 +5901,14 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"master_effect": "болезнь: без лечения, кроме магии, и потеря максимума хитов раз в сутки — мастер ведёт её вне боя",
+				"effect": {
+					"save": {
+						"ability": "con",
+						"dc": 10
+					},
+					"disease": "rot_fever",
+					"tag": "disease"
+				},
 				"name": "Укус"
 			}
 		],

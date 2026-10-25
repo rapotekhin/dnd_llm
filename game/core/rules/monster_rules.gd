@@ -194,6 +194,8 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, a: Dic
 		ConditionRules.add_effect(c, {"condition": "", "max_hp": -dealt, "ends": {"rest": "long"}, "source": _source(f, a)})
 		CharacterRules.refresh(c, data, s.items)
 		lines.append("%s: максимум хитов −%d до долгого отдыха" % [c.get("name", ""), dealt])
+	if fx.has("disease"):  # it shows after its incubation, out of the fight (v0.7.23.1)
+		lines.append_array(DiseaseRules.contract(s, data, str(fx["disease"])))
 	var cond := str(fx.get("condition", ""))
 	if cond.is_empty() or int(c.get("hp", 0)) <= 0 and cond != "poisoned":
 		return
@@ -747,6 +749,8 @@ static func effect_text(data: Dictionary, a: Dictionary) -> String:
 		parts.append(t)
 	if bool(fx.get("drain", false)):
 		parts.append("высасывает максимум хитов (%s)" % sv)
+	if fx.has("disease"):
+		parts.append("заражает: %s (%s)" % [DiseaseRules.def_of(null, data, str(fx["disease"])).get("name", fx["disease"]), sv])
 	if a.has("master_effect"):
 		parts.append(str(a["master_effect"]).get_slice(" — ", 0))
 	if a.has("recharge"):

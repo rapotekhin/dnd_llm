@@ -103,6 +103,10 @@ static func use(c: Dictionary, data: Dictionary, id: String, amount: int, rng: R
 			heal += rng.randi_range(1, int(h[1]))
 	elif bool(on_use.get("heal_amount", false)):
 		heal = amount
+		var cost := int(on_use.get("cure_disease", 0))  # Lay on Hands: 5 points cure a disease first (v0.7.23.1)
+		if cost > 0 and amount >= cost and DiseaseRules.cure_all(c):
+			heal -= cost
+			lines.append("болезнь исцелена")
 	if heal > 0:
 		var before := int(c["hp"])
 		c["hp"] = mini(int(c["max_hp"]), before + heal)

@@ -65,8 +65,8 @@ def known() -> dict[str, set[str]]:
     }
 
 
-ROOM_TAGS = {"temple", "stage", "water"}  # v0.7.11: an acolyte's free rest, a show; v0.7.23: water to drink and fill
-SERVICE_OPS = {"identify", "lift_curse", "enchant", "meal"}  # v0.7.16: the engine's operations a service runs (rules.json items.services)
+ROOM_TAGS = {"temple", "stage", "water", "foul_water"}  # v0.7.11: an acolyte's free rest, a show; v0.7.23: water to drink and fill; v0.7.23.1: foul
+SERVICE_OPS = {"identify", "lift_curse", "enchant", "meal", "cure_disease"}  # v0.7.16: the engine's operations a service runs (rules.json items.services)
 NPC_TAGS = {"clergy", "underworld", "commoner", "military"}  # the people of the hero's past (rules.json backgrounds ties)
 
 
@@ -176,6 +176,9 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"NPC {nid}: услуги только у торговца (trader)")
         if npc.get("monster") and npc["monster"] not in ids["monsters"]:
             errors.append(f"NPC {nid}: нет монстра-шаблона {npc['monster']}")
+        diseases = set(load(DATA / "rules.json")["diseases"]["catalog"]) | set(world.get("diseases", {}))
+        if npc.get("sick") and npc["sick"] not in diseases:  # v0.7.23.1: a sick NPC passes its disease on
+            errors.append(f"NPC {nid}: sick — болезнь из {', '.join(sorted(diseases))}")
         for i, tv in enumerate(npc.get("trade_variants", [])):  # v0.7.17.2: the trader and the world's flags
             where = f"NPC {nid}, trade_variants[{i}]"
             if not (set(tv) <= {"if_flag", "if_not_flag", "price_pct", "stock", "remove", "news"}) or not ({"if_flag", "if_not_flag"} & set(tv)):

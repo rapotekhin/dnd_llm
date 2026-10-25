@@ -286,6 +286,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				"summary": "Заклинание: " + SpellRules.describe(data, chk["spell_id"], chk["slot"]) + (" — на себя" if on_self else "")}
 		"condition":
 			return _plan_condition(s, data, turn_id, e, pending)
+		"disease":
+			return _plan_disease(s, data, e, pending)
 		"use_feature":
 			var rid := FeatureUses.resolve(c, data, str(e.get("feature", "")))
 			var amount := int(e.get("amount", 1))
@@ -482,6 +484,45 @@ func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 			plan["save"] = {"ability": ab, "dc": dc, "tag": tag, "repeat": true}
 		return {"plan": plan, "summary": "%s (%s, %s) — спасбросок %s" % [title, dur_text, reason, r["text"]]}
 	return {"plan": plan, "summary": "%s (%s, %s)" % [title, dur_text, reason]}
+
+
+## A disease caught by the hero (v0.7.23.1): a known one by id or name, or a new one made within rules.diseases.make;
+## always with the engine's save (CON by default, tag disease). The summary does not name it: it shows later.
+func _plan_disease(s: GameSession, data: Dictionary, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var rules: Dictionary = data["rules"]
+	var c := s.character
+	var reason := str(e.get("reason", "")).strip_edges()
+	if reason.is_empty():
+		return {"reason": "у заражения нужна причина (reason): укус, гнилая вода, больной рядом"}
+	var sv: Variant = e.get("save")
+	if not (sv is Dictionary) or not (rules["saves"] as Array).has(str(sv.get("ability", ""))) or not (rules["dc_tiers"] as Dictionary).has(str(sv.get("dc_tier", ""))):
+		return {"reason": "заражение — всегда со спасброском движка: save {ability (обычно con), dc_tier из %s}" % ", ".join((rules["dc_tiers"] as Dictionary).keys())}
+	if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "disease"):
+		return {"reason": "одно заражение за ход"}
+	var key := str(e.get("disease", ""))
+	var id := DiseaseRules.find(s, data, key)
+	var made := {}
+	if id.is_empty():
+		if e.get("days") == null:
+			var names: Array[String] = []
+			for k: String in DiseaseRules.all(s, data):
+				names.append("%s (%s)" % [k, DiseaseRules.all(s, data)[k].get("name", k)])
+			return {"reason": "неизвестная болезнь «%s»; есть: %s. Новую — с days, incubation_hours и symptoms" % [key, ", ".join(names)]}
+		var m := DiseaseRules.make(data, key, e)
+		if m.has("reason"):
+			return {"reason": m["reason"]}
+		made = m["def"]
+		id = "gen_disease_%d" % (DiseaseRules.all(s, data).size() + 1)
+	if DiseaseRules.sick(c, id):
+		return {"reason": "герой уже болен этим — опиши без нового заражения"}
+	var immune := HeroDefense.immune(c, data, "", "disease")
+	if not immune.is_empty():
+		return {"plan": {"resisted": true}, "summary": "Зараза не берёт — %s" % immune}
+	var dc := int(rules["dc_tiers"][str(sv["dc_tier"])])
+	var r := HeroDefense.save(s, data, str(sv["ability"]), dc, "disease")
+	if bool(r["ok"]):
+		return {"plan": {"resisted": true}, "summary": "Зараза (%s): устоял — спасбросок %s" % [reason, r["text"]]}
+	return {"plan": {"disease": id, "made": made}, "summary": "Зараза (%s): провал — спасбросок %s" % [reason, r["text"]]}
 
 
 ## Effects on an enemy in a fight (the master's improvisation): damage by severity, a condition.
@@ -835,6 +876,16 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 				if plan.has(k):
 					fx[k] = plan[k]
 			_extra_lines.append_array(ConditionRules.impose(s, _data, fx))
+			CharacterRules.refresh(c, _data, s.items)
+		"disease":
+			if bool(plan.get("resisted", false)):
+				return
+			if not (plan["made"] as Dictionary).is_empty():
+				var gen := WorldGen.generated(s)
+				var made: Dictionary = gen.get("diseases", {})
+				made[str(plan["disease"])] = plan["made"]
+				gen["diseases"] = made
+			_extra_lines.append_array(DiseaseRules.contract(s, _data, str(plan["disease"])))
 			CharacterRules.refresh(c, _data, s.items)
 		"use_feature":
 			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
