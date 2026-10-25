@@ -49,4 +49,6 @@ func run() -> void:
 	step("the number is gone", find(screen(), "FxNumber") == null)
 	var queue := find(screen(), "Turn_" + CombatRules.current(s))
 	step("the turn queue as portraits, the current one first", queue != null and queue.get_index() == 1)
-	step("the hotbar numbers its buttons", (find(screen(), "Attack_main") as Button).text.begins_with("1 · "), (find(screen(), "Attack_main") as Button).text)
+	var atk := find(screen(), "Attack_main") as Button
+	step("the action buttons stay on tabs, without numbers in the text", atk != null and not atk.text.begins_with("1 · ")
+		and not screen().find_children("*", "TabContainer", true, false).is_empty(), atk.text if atk != null else "")

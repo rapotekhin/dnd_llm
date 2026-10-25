@@ -11,9 +11,7 @@ var _queue: HBoxContainer
 var _field: HBoxContainer
 var _portrait: VBoxContainer
 var _economy: HBoxContainer
-var _filters: HBoxContainer
-var _bar: HFlowContainer  # the hotbar: every action in one flow, the filter hides the rest (v0.7.22.30, П2)
-var _cats: Array = []  # [category key, first child index] while the bar is built
+var _tabs: TabContainer
 var _fx_layer: Control  # floating numbers over the field
 var _block: VBoxContainer  # the round's engine lines (Б6)
 var _block_round := -1
@@ -37,9 +35,8 @@ var _pending: Callable
 var _pending_check: Callable
 ## Callable(target_id) -> Dictionary: the hint of the pending action (CombatRules.attack_preview / cast_preview).
 var _pending_preview: Callable
-var _filter := "COMBAT_TAB_ALL"
+var _tab := 0
 const TEMP_HP := Color("#6f9fc8")
-const FILTERS: Array[String] = ["COMBAT_TAB_ALL", "COMBAT_TAB_WEAPONS", "COMBAT_TAB_SPELLS", "COMBAT_TAB_FEATURES", "COMBAT_TAB_ITEMS", "COMBAT_TAB_COMMON"]
 var _cast_circle := 0  # v0.7.22.19 (#19): the slot circle the player picked; 0 — the lowest that fits
 
 
@@ -94,33 +91,10 @@ func _ready() -> void:
 	_economy.name = "Economy"
 	_economy.add_theme_constant_override("separation", 14)
 	top.add_child(_economy)
-	_filters = HBoxContainer.new()
-	_filters.name = "ActionFilter"
-	_filters.add_theme_constant_override("separation", 4)
-	_filters.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_filters.alignment = BoxContainer.ALIGNMENT_END
-	top.add_child(_filters)
-	var group := ButtonGroup.new()
-	for key: String in FILTERS:
-		var fb := Button.new()
-		fb.name = "Filter_" + key.trim_prefix("COMBAT_TAB_").to_lower()
-		fb.text = key
-		fb.toggle_mode = true
-		fb.button_group = group
-		fb.flat = true
-		fb.button_pressed = key == _filter
-		fb.pressed.connect(func() -> void: set_filter(key))
-		_filters.add_child(fb)
-	var bar_scroll := ScrollContainer.new()
-	bar_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bar_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	mid.add_child(bar_scroll)
-	_bar = HFlowContainer.new()
-	_bar.name = "Hotbar"
-	_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_bar.add_theme_constant_override("h_separation", 10)
-	_bar.add_theme_constant_override("v_separation", 10)
-	bar_scroll.add_child(_bar)
+	_tabs = TabContainer.new()  # the author kept the tabs over a hotbar (v0.7.22.31.1)
+	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_tabs.tab_changed.connect(func(t: int) -> void: _tab = t)
+	mid.add_child(_tabs)
 	var right_btns := VBoxContainer.new()
 	right_btns.custom_minimum_size = Vector2(200, 0)
 	right_btns.add_theme_constant_override("separation", 10)
@@ -332,29 +306,31 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
-## The shown buttons of the hotbar in their order: the keys 1–0.
-func _tab_buttons() -> Array[BaseButton]:
+## The buttons of a tab (the open one by default) in their order: the keys 1–0.
+func _tab_buttons(page: Control = null) -> Array[BaseButton]:
 	var out: Array[BaseButton] = []
-	for b: Node in _bar.get_children():
-		if b is BaseButton and not (b is OptionButton) and (b as BaseButton).visible and out.size() < 10:
+	if page == null:
+		page = _tabs.get_current_tab_control()
+	if page == null:
+		return out
+	for b: Node in page.find_children("*", "BaseButton", true, false):
+		if (b as BaseButton).visible and out.size() < 10:
 			out.append(b as BaseButton)
 	return out
 
 
 func _number_actions() -> void:
-	var buttons := _tab_buttons()
-	for i in buttons.size():
-		buttons[i].tooltip_text = Hotkeys.tip(buttons[i].tooltip_text, "action_%d" % (i + 1), SaveManager.keys)
-		buttons[i].text = "%d · %s" % [(i + 1) % 10, tr(buttons[i].text)]
+	for page: Node in _tabs.get_children():
+		var buttons := _tab_buttons(page as Control)
+		for i in buttons.size():
+			buttons[i].tooltip_text = Hotkeys.tip(buttons[i].tooltip_text, "action_%d" % (i + 1), SaveManager.keys)
 
 
-## The hotbar's filter (a category key or COMBAT_TAB_ALL); the playtests call it too.
+## Opens the tab by its title key; the playtests call it too.
 func set_filter(key: String) -> void:
-	_filter = key
-	for fb: Node in _filters.get_children():
-		(fb as Button).set_pressed_no_signal(fb.name == "Filter_" + key.trim_prefix("COMBAT_TAB_").to_lower())
-	if GameState.has_session() and CombatRules.active(GameState.session):
-		_refresh()
+	for i in _tabs.get_tab_count():
+		if _tabs.get_tab_title(i) == tr(key):
+			_tabs.current_tab = i
 
 
 ## The focus to the next foe card that can be pressed now.
@@ -785,8 +761,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		el.text = spec[1]
 		el.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT if int(spec[2]) > 0 else UiTheme.MUTED.darkened(0.35))
 		_economy.add_child(el)
-	_clear(_bar)
-	_cats = []
+	_clear(_tabs)
 	var c := s.character
 	# Weapons.
 	var w := _tab_box("COMBAT_TAB_WEAPONS")
@@ -993,16 +968,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	surr.tooltip_text = tr(sw) if not sw.is_empty() and sw != "COMBAT_NOT_YOUR_TURN" else tr("COMBAT_SURRENDER_TIP")
 	surr.pressed.connect(func() -> void:  # v0.7.22.27: the fight ends in captivity
 		ConfirmBox.ask(self, tr("CONFIRM_SURRENDER_TITLE"), tr("CONFIRM_SURRENDER"), tr("COMBAT_DO_SURRENDER"), func() -> void: _do(GameState.combat_surrender())))
-	_cats.append(["", _bar.get_child_count()])
-	var have := {"COMBAT_TAB_ALL": true}
-	for i in range(_cats.size() - 1):
-		for j in range(int(_cats[i][1]), int(_cats[i + 1][1])):
-			var ch := _bar.get_child(j) as Control
-			if int(_cats[i + 1][1]) > int(_cats[i][1]):
-				have[_cats[i][0]] = true
-			ch.visible = _filter == "COMBAT_TAB_ALL" or _filter == _cats[i][0]
-	for fb: Node in _filters.get_children():  # a filter with nothing in it is not shown
-		fb.visible = have.has(FILTERS[fb.get_index()])
+	_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
 
 
 ## The picked circle when it fits the spell and has a slot left, else the lowest that fits.
@@ -1017,10 +983,17 @@ func _dmg_text(w: Dictionary) -> String:
 	return "%s%s" % [str(w["dice"]).replace("d", tr("DICE_D")), ("%+d" % b) if b != 0 else ""]
 
 
-## A category of the hotbar starts here; its buttons go into the one bar.
 func _tab_box(title: String) -> HFlowContainer:
-	_cats.append([title, _bar.get_child_count()])
-	return _bar
+	var scroll := ScrollContainer.new()
+	scroll.name = tr(title)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var flow := HFlowContainer.new()
+	flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	flow.add_theme_constant_override("h_separation", 10)
+	flow.add_theme_constant_override("v_separation", 10)
+	scroll.add_child(flow)
+	_tabs.add_child(scroll)
+	return flow
 
 
 func _button(parent: Control, node_name: String, text: String, enabled: bool) -> Button:

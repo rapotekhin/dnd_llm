@@ -1026,7 +1026,6 @@ COMBAT_LOOT_WEIGHT,"Будет {weight} / {cap} фнт"
 BTN_LOOT_TAKE,Взять
 BTN_LOOT_TAKEN,✓ Беру
 BTN_LOOT_FITS,"Взять всё, что унесу"
-COMBAT_TAB_ALL,Все
 COMBAT_ROLLS,"{fold} Броски раунда ({n})"
 CC_SUMMARY_EMPTY,"Здесь появится ваш герой: выберите готового или начните своего"
 TRADE_QTY_TIP,"Shift — по десять, Ctrl — всё сразу"
