@@ -6,41 +6,17 @@ extends Control
 
 var prop_id := ""
 var _box: VBoxContainer
+var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
-	add_child(dim)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var margin := MarginContainer.new()
-	for side in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 300)
-	for side in ["top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 100)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	margin.add_child(col)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(panel)
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	panel.add_child(scroll)
-	_box = VBoxContainer.new()
-	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_box.add_theme_constant_override("separation", 10)
-	scroll.add_child(_box)
-	var close := Button.new()
-	close.name = "CloseContainerButton"
-	close.text = "BTN_CLOSE"
-	close.custom_minimum_size = Vector2(0, 56)
-	close.pressed.connect(func() -> void: visible = false)
-	col.add_child(close)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame = ModalFrame.new("", 820.0)  # one window template (v0.7.22.29, С4)
+	add_child(frame)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.close_requested.connect(func() -> void: visible = false)
+	frame.close_x.name = "CloseContainerButton"
+	_box = frame.body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -91,7 +67,7 @@ func _rebuild() -> void:
 	var can_act := not GameState.is_busy()
 	var cap := float(ContainerRules.kind(data, str(p["container"]))["capacity_lb"])
 	var contents: Dictionary = p.get("contents", {})
-	_box.add_child(_label(str(p["name"]), UiTheme.HEADING))
+	frame.title.text = str(p["name"])
 	var owner := str(p.get("owner", ""))
 	var meta := tr("CONTAINER_LOAD").format({"w": _num(ContainerRules.weight(data, s.items, contents)), "cap": _num(cap)})
 	if not owner.is_empty():

@@ -15,35 +15,23 @@ var _details: DetailsPanel  # v0.7.22.21 (#2–#5): the one description panel of
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
-	add_child(dim)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 40)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The whole screen on an opaque backdrop: the side panel under it no longer shows through (v0.7.22.29, Л1)
+	var frame := ModalFrame.new(tr("BTN_CHARACTER_SHEET"), 0.0)
+	add_child(frame)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.close_requested.connect(func() -> void: visible = false)
+	frame.close_x.name = "CloseSheetButton"
 	var split := HBoxContainer.new()
 	split.add_theme_constant_override("separation", 16)
-	margin.add_child(split)
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 12)
-	split.add_child(col)
+	frame.fill_body(split)
+	_tabs = TabContainer.new()
+	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(_tabs)
 	_details = DetailsPanel.new(Vector2(0, 160))
 	_details.name = "ItemDetails"
 	split.add_child(_details.column(ChatView.new(), 460))
-	_tabs = TabContainer.new()
-	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(_tabs)
-	var close := Button.new()
-	close.name = "CloseSheetButton"
-	close.text = "BTN_CLOSE"
-	close.custom_minimum_size = Vector2(0, 56)
-	close.pressed.connect(func() -> void: visible = false)
-	col.add_child(close)
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 

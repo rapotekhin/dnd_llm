@@ -7,41 +7,17 @@ extends Control
 
 var prop_id := ""
 var _box: VBoxContainer
+var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
-	add_child(dim)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var margin := MarginContainer.new()
-	for side in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 300)
-	for side in ["top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 90)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	margin.add_child(col)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(panel)
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	panel.add_child(scroll)
-	_box = VBoxContainer.new()
-	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_box.add_theme_constant_override("separation", 10)
-	scroll.add_child(_box)
-	var close := Button.new()
-	close.name = "CloseBoardButton"
-	close.text = "BTN_CLOSE"
-	close.custom_minimum_size = Vector2(0, 56)
-	close.pressed.connect(func() -> void: visible = false)
-	col.add_child(close)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame = ModalFrame.new("", 900.0)  # one window template (v0.7.22.29, С4)
+	add_child(frame)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.close_requested.connect(func() -> void: visible = false)
+	frame.close_x.name = "CloseBoardButton"
+	_box = frame.body
 	EventBus.state_changed.connect(_rebuild)
 	EventBus.turn_finished.connect(func(_id: String, _ok: bool) -> void: _rebuild())
 	visibility_changed.connect(_rebuild)
@@ -93,7 +69,7 @@ func _rebuild() -> void:
 		visible = false
 		return
 	var can_act := Backend.is_ready() and not GameState.is_busy() and not s.in_conversation()
-	_label(str(p["name"]), UiTheme.HEADING)
+	frame.title.text = str(p["name"])
 	if not str(p.get("text", "")).is_empty():
 		_label(str(p["text"]), UiTheme.MUTED_LABEL)
 	var orders := QuestGen.offered_by(s, "board:%s:%s" % [s.room_id, prop_id])

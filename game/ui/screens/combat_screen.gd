@@ -20,8 +20,9 @@ var _retry: Button
 var input: LineEdit
 var send_button: Button
 var end_turn: Button
-var _results: PanelContainer
+var _results: ModalFrame
 var _results_box: VBoxContainer
+var _loot_take := {}  # item_id → taken, over the redraws of the results (v0.7.22.29, Б5)
 ## «Использовать?» — a choice of a feature or a reaction, as in Baldur's Gate 3 (v0.7.10).
 var _ask: PanelContainer
 var _conc_ask: Dictionary = {}  # v0.7.13.1: the «Прервать …?» question
@@ -149,16 +150,13 @@ func _ready() -> void:
 	send_button.pressed.connect(_send)
 	rcol.add_child(send_button)
 
-	_results = PanelContainer.new()
+	_results = ModalFrame.new("", 820.0)  # in the middle, one window template (v0.7.22.29, С4, Б5)
 	_results.name = "CombatResults"
-	_results.theme_type_variation = UiTheme.SIDE
 	_results.visible = false
+	_results.close_x.visible = false  # a fight ends by «Продолжить»
 	add_child(_results)
-	_results.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	_results.custom_minimum_size = Vector2(760, 0)
-	_results_box = VBoxContainer.new()
-	_results_box.add_theme_constant_override("separation", 10)
-	_results.add_child(_results_box)
+	_results.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_results_box = _results.body
 	_ask = PanelContainer.new()
 	_ask.name = "CombatAsk"
 	_ask.theme_type_variation = UiTheme.SIDE
@@ -938,38 +936,78 @@ func _draw_results(s: GameSession, data: Dictionary) -> void:
 	var show := not outcome.is_empty() and outcome != "dead" and bool(s.combat.get("narrated", false)) and not GameState.is_busy()
 	_results.visible = show
 	if not show:
+		_loot_take = {}
 		return
 	_clear(_results_box)
-	var t := Label.new()
-	t.text = tr("COMBAT_OUTCOME_" + outcome.to_upper())
-	t.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	t.theme_type_variation = UiTheme.HEADING
-	_results_box.add_child(t)
+	for b in _results.footer.get_children():
+		_results.footer.remove_child(b)
+		b.queue_free()
+	_results.title.text = tr("COMBAT_OUTCOME_" + outcome.to_upper())
 	if int(s.combat.get("xp", 0)) > 0:
 		_line(_results_box, tr("COMBAT_XP").format({"xp": int(s.combat["xp"])}))
 	if int(s.combat.get("coins_cp", 0)) > 0:
 		_line(_results_box, tr("COMBAT_COINS").format({"coins": Money.format(int(s.combat["coins_cp"]))}))
-	var picks: Array[CheckBox] = []
-	if not (s.combat.get("loot", []) as Array).is_empty():
+	var loot: Array = s.combat.get("loot", [])
+	if not loot.is_empty():
+		if _loot_take.is_empty():
+			_loot_take = _loot_that_fits(s, data, loot)
 		_line(_results_box, tr("COMBAT_LOOT")).add_theme_color_override("font_color", UiTheme.ACCENT)
-		for l: Dictionary in s.combat["loot"]:
-			var cb := CheckBox.new()
-			cb.name = "Loot_" + str(l["item_id"])
-			cb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			cb.text = "%s ×%d" % [ItemRules.display_name(data["items"], s.items, str(l["item_id"])), int(l["qty"])]
-			cb.set_meta("item_id", str(l["item_id"]))
-			cb.button_pressed = true
-			_results_box.add_child(cb)
-			picks.append(cb)
-	var go := Button.new()
-	go.name = "FinishCombat"
-	go.text = "BTN_CONTINUE"
-	go.theme_type_variation = UiTheme.ACCENT_BUTTON
-	go.custom_minimum_size = Vector2(0, 60)
-	go.pressed.connect(func() -> void:
+		var weight := CharacterRules.carried_weight(s.character, data, s.items)
+		for l: Dictionary in loot:
+			var id := str(l["item_id"])
+			var w := _loot_weight(s, data, l)
+			if bool(_loot_take.get(id, false)):
+				weight += w
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 12)
+			_results_box.add_child(row)
+			var name_l := _line(row, tr("COMBAT_LOOT_ROW").format({"name": ItemRules.display_name(data["items"], s.items, id), "qty": int(l["qty"]),
+				"weight": _lb(w)}))
+			name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var b := Button.new()
+			b.name = "Loot_" + id
+			b.toggle_mode = true
+			b.button_pressed = bool(_loot_take.get(id, false))
+			b.text = "BTN_LOOT_TAKEN" if b.button_pressed else "BTN_LOOT_TAKE"
+			b.custom_minimum_size = Vector2(150, 44)
+			b.toggled.connect(func(on: bool) -> void:
+				_loot_take[id] = on
+				_draw_results.call_deferred(GameState.session, Catalog.data))  # not under the pressed button
+			row.add_child(b)
+		var cap := CharacterRules.capacity(s.character, data)
+		var total := _line(_results_box, tr("COMBAT_LOOT_WEIGHT").format({"weight": _lb(weight), "cap": cap}))
+		total.name = "LootWeight"
+		total.add_theme_color_override("font_color", UiTheme.BAD if weight > cap else UiTheme.MUTED)
+		var all := _results.add_button("BTN_LOOT_FITS", func() -> void:
+			_loot_take = _loot_that_fits(GameState.session, Catalog.data, GameState.session.combat.get("loot", []))
+			_draw_results.call_deferred(GameState.session, Catalog.data))  # not under the pressed button
+		all.name = "LootFits"
+	var go := _results.add_button("BTN_CONTINUE", func() -> void:
 		var take: Array = []
-		for cb: CheckBox in picks:
-			if cb.button_pressed:
-				take.append(cb.get_meta("item_id"))
-		GameState.finish_combat(take))
-	_results_box.add_child(go)
+		for l: Dictionary in GameState.session.combat.get("loot", []):
+			if bool(_loot_take.get(str(l["item_id"]), false)):
+				take.append(str(l["item_id"]))
+		_loot_take = {}
+		GameState.finish_combat(take), true)
+	go.name = "FinishCombat"
+
+
+func _lb(w: float) -> String:
+	return str(roundi(w)) if is_equal_approx(w, roundf(w)) else String.num(w, 1)
+
+
+func _loot_weight(s: GameSession, data: Dictionary, l: Dictionary) -> float:
+	return float(ItemRules.def_of(data["items"], s.items, str(l["item_id"])).get("weight", 0)) * int(l.get("qty", 1))
+
+
+## «Взять всё, что унесу» (П12): the loot in its order as long as the hero can carry it.
+func _loot_that_fits(s: GameSession, data: Dictionary, loot: Array) -> Dictionary:
+	var out := {}
+	var weight := CharacterRules.carried_weight(s.character, data, s.items)
+	var cap := float(CharacterRules.capacity(s.character, data))
+	for l: Dictionary in loot:
+		var w := _loot_weight(s, data, l)
+		out[str(l["item_id"])] = weight + w <= cap
+		if weight + w <= cap:
+			weight += w
+	return out

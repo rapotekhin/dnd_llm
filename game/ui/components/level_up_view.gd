@@ -1,73 +1,41 @@
 class_name LevelUpView
 extends Control
+
+const WIDE := 1300.0
+const COMPACT := 620.0
 ## The level-up screen over the game (roadmap v0.5.4): what the next level brings (HP by the average, new
 ## features) and the picks it needs — subclass, feature options, expertise, ability increase, spells.
 ## Rules and checks are LevelUp's; «Подтвердить» calls GameState.level_up.
 
 var picks := {}
 var _box: VBoxContainer
-var _error: Label
 var confirm: Button
-
-
-## The rules text of the hovered choice (v0.6.6).
+var frame: ModalFrame
+## The rules text of the hovered choice (v0.6.6); hidden when the level has nothing to choose (О3).
 var _info: DetailsPanel
 
+
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
-	add_child(dim)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 100)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	margin.add_child(col)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame = ModalFrame.new("", WIDE)
+	add_child(frame)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.close_requested.connect(func() -> void: visible = false)
 	var mid := HBoxContainer.new()  # the choices on the left, what the picked one does on the right (big test #36)
-	mid.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	mid.add_theme_constant_override("separation", 12)
-	col.add_child(mid)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mid.add_child(panel)
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	panel.add_child(scroll)
+	mid.add_theme_constant_override("separation", 16)
+	frame.body.add_child(mid)
 	_box = VBoxContainer.new()
 	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_box.add_theme_constant_override("separation", 8)
-	scroll.add_child(_box)
-	_info = DetailsPanel.new(Vector2(0, 160))  # v0.7.22.21: the one description panel, over the chat
+	mid.add_child(_box)
+	_info = DetailsPanel.new(Vector2(480, 320))
+	_info.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_info.show_text(tr("INFO_HINT"), "")
-	mid.add_child(_info.column(ChatView.new(), 520))
-	_error = Label.new()
-	_error.name = "LevelUpError"
-	_error.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_error.add_theme_color_override("font_color", UiTheme.WARN)
-	col.add_child(_error)
-	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 12)
-	col.add_child(buttons)
-	var close := Button.new()
-	close.text = "BTN_LATER"
-	close.custom_minimum_size = Vector2(0, 56)
-	close.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	close.pressed.connect(func() -> void: visible = false)
-	buttons.add_child(close)
-	confirm = Button.new()
+	mid.add_child(_info)
+	frame.add_button("BTN_LATER", func() -> void: visible = false)
+	confirm = frame.add_button("BTN_LEVEL_UP_CONFIRM", _on_confirm, true)
 	confirm.name = "LevelUpConfirm"
-	confirm.text = "BTN_LEVEL_UP_CONFIRM"
-	confirm.theme_type_variation = UiTheme.ACCENT_BUTTON
-	confirm.custom_minimum_size = Vector2(0, 56)
-	confirm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	confirm.pressed.connect(_on_confirm)
-	buttons.add_child(confirm)
+	frame.note.name = "LevelUpError"
 	visibility_changed.connect(func() -> void:
 		if visible:
 			picks = {}
@@ -91,7 +59,11 @@ func _rebuild() -> void:
 		return
 	var p := LevelUp.plan(c, data, picks)
 	var feats: Dictionary = data["classes"]["features"]
-	_text(tr("LVL_TITLE").format({"level": p["level"], "class": c.get("class_name", "")}), UiTheme.HEADING)
+	var choices := bool(p["subclass"]) or not (p["options"] as Array).is_empty() or int(p["expertise"]) > 0 or bool(p["asi"]) \
+		or int(p["cantrips"]) > 0 or int(p["spells"]) > 0 or int(p["prepared"]) > 0
+	frame.set_width(WIDE if choices else COMPACT)  # a level with nothing to pick is a small window (О3)
+	_info.visible = choices
+	frame.title.text = tr("LVL_TITLE").format({"level": p["level"], "class": c.get("class_name", "")})
 	_text(tr("LVL_HP").format({"gain": p["hp_gain"]}), "")
 	var names: Array = (p["features"] as Array).map(func(f: String) -> String: return str(feats.get(f, {}).get("name", f)))
 	if not names.is_empty():
@@ -143,7 +115,7 @@ func _rebuild() -> void:
 			picks.get("prepared", []), func(sel: Array) -> void: picks["prepared"] = sel)
 
 	var errs := LevelUp.errors(c, data, _clean(p))
-	_error.text = tr(errs[0]) if not errs.is_empty() else ""
+	frame.set_note(tr(errs[0]) if not errs.is_empty() else "")
 	confirm.disabled = not errs.is_empty() or GameState.is_busy()
 
 
@@ -287,4 +259,4 @@ func _on_confirm() -> void:
 	if err.is_empty():
 		visible = false
 	else:
-		_error.text = tr(err)
+		frame.set_note(tr(err))

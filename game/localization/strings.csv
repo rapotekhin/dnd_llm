@@ -232,7 +232,7 @@ COMBAT_INCOMING,"{names}
 через {n} р."
 COMBAT_INSPECT_TIP,"Бонусное действие: проверка знаний по виду врага (Природа, Религия, Магия, Проницательность). Успех открывает хиты, КД, атаки и сопротивления таких врагов насовсем"
 COMBAT_ITEM_CANT,Этим сейчас не воспользоваться
-COMBAT_LOOT,"Добыча — отметьте, что взять:"
+COMBAT_LOOT,Добыча
 COMBAT_MELEE,вплотную
 COMBAT_MOVE,➜ Движение: {n}
 COMBAT_NONE,Боя нет
@@ -1016,3 +1016,11 @@ KEY_ACT_ACTION_8,Бой: кнопка 8
 KEY_ACT_ACTION_9,Бой: кнопка 9
 KEY_ACT_ACTION_10,Бой: кнопка 10
 OPTION_CHECK_TIP,"{skill} {bonus} против Сл {dc} — шанс {chance}%"
+SHORT_REST_FULL,"Здоровье полное: отдых вернёт только умения"
+SHORT_REST_EXPECT,≈ +{hp} HP
+PREP_COUNT,Выбрано {picked} из {n}
+COMBAT_LOOT_ROW,"{name} ×{qty} · {weight} фнт"
+COMBAT_LOOT_WEIGHT,"Будет {weight} / {cap} фнт"
+BTN_LOOT_TAKE,Взять
+BTN_LOOT_TAKEN,✓ Беру
+BTN_LOOT_FITS,"Взять всё, что унесу"

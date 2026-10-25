@@ -6,40 +6,16 @@ extends Control
 
 var npc_id := ""
 var _box: VBoxContainer
+var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
-	add_child(dim)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var margin := MarginContainer.new()
-	for side in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 360)
-	for side in ["top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 140)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	margin.add_child(col)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(panel)
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	panel.add_child(scroll)
-	_box = VBoxContainer.new()
-	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_box.add_theme_constant_override("separation", 10)
-	scroll.add_child(_box)
-	var close := Button.new()
-	close.text = "BTN_CLOSE"
-	close.custom_minimum_size = Vector2(0, 56)
-	close.pressed.connect(func() -> void: visible = false)
-	col.add_child(close)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame = ModalFrame.new("", 760.0)  # one window template (v0.7.22.29, С4)
+	add_child(frame)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.close_requested.connect(func() -> void: visible = false)
+	_box = frame.body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -70,7 +46,7 @@ func _rebuild() -> void:
 	var s := GameState.session
 	var data := Catalog.data
 	var who := str(GameState.world().npc(npc_id).get("name", npc_id))
-	_box.add_child(_label(tr("THEFT_TITLE").format({"name": who}), UiTheme.HEADING))
+	frame.title.text = tr("THEFT_TITLE").format({"name": who})
 	_box.add_child(_label(tr("THEFT_HINT"), UiTheme.MUTED_LABEL))
 	var why := TheftRules.can_steal(s, data, npc_id)
 	if not why.is_empty():

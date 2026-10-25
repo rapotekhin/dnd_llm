@@ -83,6 +83,20 @@ func run() -> void:
 		return
 	var finish: Button = find(screen(), "FinishCombat")
 	if step("results panel", finish != null and finish.is_visible_in_tree(), str(s.combat.get("loot", []))):
+		# The loot window (v0.7.22.29, Б5, П12): four plates are past the carrying capacity, «Взять всё, что унесу» leaves them.
+		(s.combat["loot"] as Array).append({"item_id": "plate_armor", "qty": 4})
+		node("EventBus").state_changed.emit()
+		await frames(3)
+		var fits: Button = find(screen(), "LootFits")
+		if step("loot: the «take what I can carry» button", fits != null):
+			await press(fits)
+			await frames(3)
+			var plate: Button = find(screen(), "Loot_plate_armor")
+			var weight: Label = find(screen(), "LootWeight")
+			step("loot: the plates left, the weight within the capacity", plate != null and not plate.button_pressed and weight != null,
+				weight.text if weight != null else "")
+			await shot("combat_loot")
+			finish = find(screen(), "FinishCombat")
 		var xp: int = s.character["xp"]
 		await press(finish)
 		step("back in the game", await wait_until(func() -> bool: return screen_is("GameScreen"), 10.0) and s.mode == GameSession.MODE_EXPLORATION,

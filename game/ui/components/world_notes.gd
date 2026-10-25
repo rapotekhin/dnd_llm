@@ -10,6 +10,7 @@ const JOURNAL := "journal"
 
 var kind: String
 var _box: VBoxContainer
+var frame: ModalFrame
 var _selected := ""  # the picked room on the map
 var _zoom := 1.0
 var _pan := Vector2.ZERO
@@ -20,36 +21,20 @@ func _init(view_kind: String) -> void:
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
-	add_child(dim)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 120)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	margin.add_child(col)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(panel)
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	panel.add_child(scroll)
-	_box = VBoxContainer.new()
-	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_box.add_theme_constant_override("separation", 8)
-	scroll.add_child(_box)
-	var close := Button.new()
-	close.text = "BTN_CLOSE"
-	close.custom_minimum_size = Vector2(0, 56)
-	close.pressed.connect(func() -> void: visible = false)
-	col.add_child(close)
-	visibility_changed.connect(_rebuild)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame = ModalFrame.new(tr("MAP_TITLE") if kind == MAP else tr("JOURNAL_TITLE"), 0.0)  # one window template (v0.7.22.29, С4)
+	frame.name = "NotesFrame"
+	add_child(frame)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.close_requested.connect(func() -> void: visible = false)
+	_box = frame.body
+	visibility_changed.connect(func() -> void:
+		if visible and kind == JOURNAL and GameState.has_session() and _count(GameState.session, GameState.world(), _tab) == 0:
+			for t: String in TABS:  # an empty tab hides that the others are not (К2)
+				if _count(GameState.session, GameState.world(), t) > 0:
+					_tab = t
+					break
+		_rebuild())
 	EventBus.state_changed.connect(_rebuild)
 
 
@@ -88,7 +73,6 @@ func _draw_map() -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	_box.add_child(head)
-	_text(tr("MAP_TITLE"), UiTheme.HEADING).reparent(head)
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 16)
 	_box.add_child(body)
@@ -220,14 +204,16 @@ var _person_open := ""  # v0.7.22.21 (#18): the person whose card is open in the
 func _draw_journal() -> void:
 	var s := GameState.session
 	var w := GameState.world()
-	_text(tr("JOURNAL_TITLE"), UiTheme.HEADING)
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 8)
 	_box.add_child(bar)
 	for t: String in TABS:
 		var b := Button.new()
 		b.name = "JournalTab_" + t
-		b.text = tr("JOURNAL_TAB_" + t.to_upper())
+		var n := _count(s, w, t)
+		b.text = tr("JOURNAL_TAB_" + t.to_upper()) + (" %d" % n if n > 0 else "")  # how much is there without opening it (К2)
+		if n == 0:
+			b.add_theme_color_override("font_color", UiTheme.MUTED)
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		b.toggle_mode = true
 		b.button_pressed = t == _tab
@@ -264,10 +250,20 @@ func _draw_journal() -> void:
 			_text("   " + line, UiTheme.MUTED_LABEL)
 
 
+## The entries of a tab: the people met, or the lines of its groups.
+func _count(s: GameSession, w: WorldView, tab: String) -> int:
+	if tab == "people":
+		return _met(s, w).size()
+	var n := 0
+	for g: Dictionary in _groups(s, w, tab):
+		n += (g["lines"] as Array).size()
+	return n
+
+
 ## The groups of the current tab: [{title, lines, folded?}], by location (quests: taken, then done — folded).
-func _groups(s: GameSession, w: WorldView) -> Array[Dictionary]:
+func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	match _tab:
+	match tab if not tab.is_empty() else _tab:
 		"quests":
 			var open: Array[String] = []
 			var done: Array[String] = []

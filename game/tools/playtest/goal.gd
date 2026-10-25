@@ -17,7 +17,7 @@ func run() -> void:
 	var game := screen()
 	await press(find(game, "SheetButton"))
 	await frames(3)
-	var sheet := find(game, "CloseSheetButton").get_parent().get_parent().get_parent()
+	var sheet := find(game, "CharacterSheet")
 	sheet.open_tab(3)
 	await frames(3)
 	var edit: LineEdit = find(game, "GoalEdit")

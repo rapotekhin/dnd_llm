@@ -90,6 +90,22 @@ func run() -> void:
 	step("the march calls for a save", _effects_text(s).contains("Марш 9 ч"), _effects_text(s).right(200))
 	step("info: exhaustion after the march", true, "%d, room %s, march %d min on day %d (day %d), mode %s" % [ConditionRules.exhaustion(c), s.room_id, s.march_minutes, s.march_day, s.day, s.mode])
 
+	# The short rest window (v0.7.22.29, О1): hit dice by «−/+» with the expected healing.
+	c["hp"] = maxi(1, int(c["max_hp"]) - 6)
+	var short: Control = find(game, "ShortRestView")
+	short.call("open")
+	await frames(3)
+	await press(find(short, "DicePlus"))
+	await frames(3)
+	var heal: Label = find(short, "DiceHeal")
+	step("short rest: «+» spends a hit die, the healing expected", (find(short, "HitDice") as Label).text == "1" and heal.text.contains("+"), heal.text)
+	await shot("short_rest_dice")
+	await press(find(short, "DiceMinus"))
+	await frames(3)
+	step("short rest: «−» back to none", (find(short, "HitDice") as Label).text == "0" and (find(short, "DiceHeal") as Label).text.is_empty())
+	short.visible = false
+	c["hp"] = int(c["max_hp"])
+
 	# A camp: food from the pack, exhaustion gone.
 	if ConditionRules.exhaustion(c) == 0:
 		ConditionRules.add_exhaustion(s, data, 2, "проверка")
