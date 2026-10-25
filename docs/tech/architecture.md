@@ -89,7 +89,7 @@ while running:
     clock.tick(60)
 ```
 
-Все переходы между экранами — через `_handle_screen_result()`. См. [design/ux/screens-flow.md](../design/ux/screens-flow.md).
+Все переходы между экранами прототипа — через `_handle_screen_result()`. Поток экранов Godot-клиента — [design/ux/screens-flow.md](../design/ux/screens-flow.md).
 
 ## Фоновые потоки
 
