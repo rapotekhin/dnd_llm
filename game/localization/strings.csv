@@ -561,7 +561,9 @@ MSG_TURN_TIMEOUT,Мастер не успел ответить. Мир не из
 MSG_WORLD_MISSING,Мир этого сохранения не найден: пакет удалён или содержит ошибки
 NG_DM_STYLE,Стиль мастера
 NG_LINES,Линии — этого в игре не будет вовсе (через запятую):
-NG_LIST_PLACEHOLDER,"например: пауки, пытки"
+NG_LINES_PLACEHOLDER,"например: пауки, пытки"
+NG_VEILS_PLACEHOLDER,"например: смерть детей, раны в подробностях"
+NG_WISHES_PLACEHOLDER,"например: интриги при дворе, древние руины, шутки спутника"
 NG_MOD,(мод)
 NG_PACK_BROKEN,Пакет с ошибками: {errors}
 NG_TITLE,Новая игра
@@ -1026,3 +1028,12 @@ BTN_LOOT_TAKEN,✓ Беру
 BTN_LOOT_FITS,"Взять всё, что унесу"
 COMBAT_TAB_ALL,Все
 COMBAT_ROLLS,"{fold} Броски раунда ({n})"
+CC_SUMMARY_EMPTY,"Здесь появится ваш герой: выберите готового или начните своего"
+TRADE_QTY_TIP,"Shift — по десять, Ctrl — всё сразу"
+TRADE_WANTED_TIP,Торговец берёт это охотно — цена выше обычной
+OPT_UI_SCALE,Размер интерфейса
+OPT_COMBAT_SPEED,Скорость боя
+OPT_COMBAT_SPEED_SLOW,Медленно
+OPT_COMBAT_SPEED_NORMAL,Обычно
+OPT_COMBAT_SPEED_FAST,Быстро
+OPT_COMBAT_SPEED_INSTANT,Сразу

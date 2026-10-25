@@ -53,7 +53,7 @@ func test_an_effect_runs_out_on_the_game_clock() -> void:
 	var c := s.character
 	ConditionRules.add_effect(c, {"condition": "poisoned", "ends": ConditionRules.ends_for(s, data, "hour"), "source": {"kind": "master", "name": "яд в кружке"}})
 	assert_bool(ConditionRules.has(c, "poisoned")).is_true()
-	assert_str(ConditionRules.shown(s, data)[0]["left"]).is_equal("1 ч 0 мин")
+	assert_str(ConditionRules.shown(s, data)[0]["left"]).is_equal("1 ч")
 	TimeRules.advance(s, data, 30)
 	assert_bool(ConditionRules.has(c, "poisoned")).is_true()
 	var lines := TimeRules.advance(s, data, 30)

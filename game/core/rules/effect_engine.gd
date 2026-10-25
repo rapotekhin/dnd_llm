@@ -946,9 +946,7 @@ static func _pending_taken(pending: Array[Dictionary], id: String) -> int:
 
 
 static func _duration(mins: int) -> String:
-	if mins < 60:
-		return "%d мин" % mins
-	return "%d ч%s" % [mins / 60, (" %d мин" % (mins % 60)) if mins % 60 > 0 else ""]
+	return TimeRules.span(mins)
 
 
 

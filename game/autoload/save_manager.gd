@@ -24,6 +24,11 @@ var reactions: String = "ask"
 var keys: Dictionary = {}
 ## Ask before an irreversible act (v0.7.22.27, UI audit С3): attacking a person, finishing off, surrendering, resisting.
 var confirm_risky: bool = true
+## The interface scale over the 1920×1080 base (v0.7.22.31, С6) and the pause between the fight's lines.
+var ui_scale: float = 1.0
+var combat_speed: String = "normal"
+const COMBAT_SPEEDS := {"slow": 1.0, "normal": 0.6, "fast": 0.25, "instant": 0.0}
+const UI_SCALES: Array[float] = [0.85, 1.0, 1.15, 1.3]
 
 
 func _ready() -> void:
@@ -150,6 +155,8 @@ func load_settings() -> void:
 		reactions = str(cfg.get_value("game", "reactions", "ask"))
 		keys = cfg.get_value("keys", "keys", {})
 		confirm_risky = bool(cfg.get_value("game", "confirm_risky", true))
+		ui_scale = float(cfg.get_value("display", "ui_scale", 1.0))
+		combat_speed = str(cfg.get_value("game", "combat_speed", "normal"))
 	Hotkeys.apply(keys)
 
 
@@ -161,11 +168,18 @@ func save_settings() -> void:
 	cfg.set_value("master", "providers", master_providers)
 	cfg.set_value("game", "reactions", reactions)
 	cfg.set_value("game", "confirm_risky", confirm_risky)
+	cfg.set_value("display", "ui_scale", ui_scale)
+	cfg.set_value("game", "combat_speed", combat_speed)
 	cfg.set_value("keys", "keys", keys)
 	cfg.save(settings_path)
 
 
+func combat_delay() -> float:
+	return float(COMBAT_SPEEDS.get(combat_speed, 0.6))
+
+
 func apply_settings() -> void:
+	get_window().content_scale_factor = clampf(ui_scale, 0.75, 1.5)
 	if DisplayServer.get_name() == "headless":
 		return
 	var m: Array = Catalog.game()["ui"]["min_resolution"]

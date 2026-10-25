@@ -168,6 +168,13 @@ static func minutes_until(s: GameSession, data: Dictionary, target: String) -> i
 	return 0
 
 
+## A span of time in words: «45 мин», «1 ч», «1 ч 20 мин» (v0.7.22.31, С5).
+static func span(minutes: int) -> String:
+	if minutes < 60:
+		return "%d мин" % minutes
+	return "%d ч%s" % [minutes / 60, (" %d мин" % (minutes % 60)) if minutes % 60 > 0 else ""]
+
+
 ## The clock after `minutes` («18:00»).
 static func clock_after(s: GameSession, minutes: int) -> String:
 	var m := posmod(s.minute + minutes, 1440)

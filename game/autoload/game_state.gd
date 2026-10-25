@@ -431,7 +431,7 @@ func _sleep_through() -> Array[String]:
 	if longest <= 0:
 		return []
 	var minutes := ceili(longest / float(ConditionRules.ROUNDS_PER_MINUTE))
-	var lines: Array[String] = ["Без чувств: %d мин" % minutes]
+	var lines: Array[String] = ["Без чувств: " + TimeRules.span(minutes)]
 	lines.append_array(TimeRules.advance(session, Catalog.data, minutes))
 	return lines
 
@@ -457,7 +457,7 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 	if session == null:
 		return
 	_end_conversation()
-	combat_delay = float(LaunchArgs.value("--combat-delay", str(combat_delay)))
+	combat_delay = float(LaunchArgs.value("--combat-delay", str(SaveManager.combat_delay())))
 	session.fight_on_load = {"foes": foes.duplicate(true), "source": source.duplicate(true)}
 	SaveManager.save_slot(COMBAT_SAVE, session)  # loading it starts this fight again (a lost fight is not skipped)
 	session.fight_on_load = {}
@@ -1581,7 +1581,7 @@ func travel(to: String) -> String:
 func _travel_line(names: Array[String], minute0: int, lines: Array[String]) -> void:
 	if names.size() < 2 and lines.is_empty():
 		return
-	var all: Array[String] = ["Путь: %s · %d мин" % [" → ".join(names), session.day * 1440 + session.minute - minute0]]
+	var all: Array[String] = ["Путь: %s · %s" % [" → ".join(names), TimeRules.span(session.day * 1440 + session.minute - minute0)]]
 	all.append_array(lines)
 	_add(GameSession.effect_entry(all))
 	_log("События: " + ", ".join(all))

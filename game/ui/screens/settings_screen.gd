@@ -185,7 +185,34 @@ func _display_tab() -> Control:
 		_apply_display())
 	row.add_child(_resolution)
 	box.add_child(row)
+	_options(box, "UiScale", "OPT_UI_SCALE", SaveManager.UI_SCALES.map(func(v: float) -> String: return "%d%%" % roundi(v * 100)),
+		SaveManager.UI_SCALES.find(SaveManager.ui_scale), func(i: int) -> void:
+			SaveManager.ui_scale = SaveManager.UI_SCALES[i]
+			_apply_display())
+	var speeds: Array = SaveManager.COMBAT_SPEEDS.keys()
+	_options(box, "CombatSpeed", "OPT_COMBAT_SPEED", speeds.map(func(k: String) -> String: return tr("OPT_COMBAT_SPEED_" + k.to_upper())),
+		speeds.find(SaveManager.combat_speed), func(i: int) -> void:
+			SaveManager.combat_speed = str(speeds[i])
+			GameState.combat_delay = SaveManager.combat_delay()
+			SaveManager.save_settings())
 	return box
+
+
+func _options(box: Control, node_name: String, label_key: String, items: Array, selected: int, on_pick: Callable) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	var lbl := Label.new()
+	lbl.text = label_key
+	row.add_child(lbl)
+	var ob := OptionButton.new()
+	ob.name = node_name
+	ob.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	for t: Variant in items:
+		ob.add_item(str(t))
+	ob.selected = maxi(0, selected)
+	ob.item_selected.connect(on_pick)
+	row.add_child(ob)
+	box.add_child(row)
 
 
 func _apply_display() -> void:

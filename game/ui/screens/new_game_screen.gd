@@ -178,7 +178,7 @@ func _list_field(parent: Control, key: String, label_key: String) -> void:
 	var edit := LineEdit.new()
 	edit.name = "Edit_" + key
 	edit.text = ", ".join(settings.get(key, []))
-	edit.placeholder_text = "NG_LIST_PLACEHOLDER"
+	edit.placeholder_text = "NG_%s_PLACEHOLDER" % key.to_upper()
 	edit.custom_minimum_size = Vector2(0, 52)
 	edit.text_changed.connect(func(t: String) -> void:
 		var items: Array = []

@@ -261,7 +261,8 @@ func _rebuild() -> void:
 			minus.text = "−"
 			minus.custom_minimum_size = Vector2(48, 40)
 			minus.disabled = not can_act
-			minus.pressed.connect(_change.bind(side, id, -1))
+			minus.tooltip_text = "TRADE_QTY_TIP"
+			minus.pressed.connect(func() -> void: _change(side, id, -_step()))
 			row.add_child(minus)
 		if not any:
 			_label(rows, true).text = tr("TRADE_NOTHING_YET")
@@ -331,13 +332,25 @@ func _fill(box: VBoxContainer, lines: Array, side: String, prefix: String, empty
 		row.add_child(title)
 		var price := _label(row, true)
 		price.text = Money.format(int(line["price_cp"]))
+		if bool(line.get("wanted", false)):  # bought gladly (v0.7.17.1)
+			price.add_theme_color_override("font_color", UiTheme.OK)
+			price.mouse_filter = Control.MOUSE_FILTER_STOP
+			price.tooltip_text = tr("TRADE_WANTED_TIP")
 		var plus := Button.new()
 		plus.name = prefix + id
 		plus.text = "+"
 		plus.custom_minimum_size = Vector2(52, 44)
 		plus.disabled = not can_act or left <= 0
-		plus.pressed.connect(_change.bind(side, id, 1))
+		plus.tooltip_text = "TRADE_QTY_TIP"
+		plus.pressed.connect(func() -> void: _change(side, id, mini(left, _step())))
 		row.add_child(plus)
+
+
+## Shift — ten at once, Ctrl — all of them (v0.7.22.31, Т1).
+static func _step() -> int:
+	if Input.is_key_pressed(KEY_CTRL):
+		return 1 << 20
+	return 10 if Input.is_key_pressed(KEY_SHIFT) else 1
 
 
 func _change(side: String, id: String, delta: int) -> void:

@@ -28,7 +28,7 @@ func run() -> void:
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var chips: Control = find(game, "EffectChips")
-	step("the poison chip over the input", chips != null and chips.visible and _text_of(chips).contains("Отравлен · 1 ч 0 мин"), _text_of(chips) if chips != null else "")
+	step("the poison chip over the input", chips != null and chips.visible and _text_of(chips).contains("Отравлен · 1 ч"), _text_of(chips) if chips != null else "")
 	var chip: Control = find(chips, "Chip_poisoned") if chips != null else null
 	step("its tooltip names the cause", chip != null and chip.tooltip_text.contains("яд в кружке"), chip.tooltip_text if chip != null else "")
 	await shot("poison_chip")

@@ -162,7 +162,7 @@ func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks:
 		ql.reparent(info)
 	if room_id == s.room_id:
 		var exits: Array = ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id).map(func(e: String) -> String:
-			return str(w.room(e).get("name", e)) if s.visited.has(e) else "?")
+			return w.room_short(e))
 		_text(tr("MAP_HERE_EXITS").format({"list": ", ".join(exits)}), UiTheme.MUTED_LABEL).reparent(info)
 		return
 	_travel_button(info, room_id)

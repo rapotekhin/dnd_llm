@@ -338,7 +338,7 @@ func _draw_start() -> void:
 		_redraw())
 	_body.add_child(own)
 	var grid := GridContainer.new()
-	grid.columns = 2
+	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	_body.add_child(grid)
@@ -691,6 +691,9 @@ func _draw_summary() -> void:
 	var lines: Array[String] = []
 	var r := CharacterBuilder.race(choices, d)
 	var k := CharacterBuilder.klass(choices, d)
+	if r.is_empty() and k.is_empty():  # nothing chosen yet: no «Без имени» with eight «8 (−1)»
+		_text(_summary, tr("CC_SUMMARY_EMPTY"), true).name = "SummaryEmpty"
+		return
 	_text(_summary, str(choices.get("name", "")) if not str(choices.get("name", "")).is_empty() else tr("CC_UNNAMED"))
 	var sub := CharacterBuilder.subrace(choices, d)
 	lines.append("%s, %s" % [sub.get("name", r.get("name", "—")), k.get("name", "—")])

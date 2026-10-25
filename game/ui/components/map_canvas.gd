@@ -249,18 +249,19 @@ func _title(font: Font, fs: int, text: String, box: Rect2, color: Color) -> void
 ## the site's name. Too small to read — only the hero's room and the picked one.
 func _draw_labels(font: Font, fs: int, rr: float) -> void:
 	var cell := WorldMap.ROOM_CELL.x * _pxu() - 6
-	for r: String in known["rooms"]:
-		if single.get(str(site_of.get(r, "")), false):
+	for r: String in known["rooms"] + known["frontier"]:
+		var unknown := not (known["rooms"] as Array).has(r)
+		if not unknown and single.get(str(site_of.get(r, "")), false):
 			continue
 		if cell < 50 and r != here and r != selected:
 			continue
-		var p := point(r)
+		var p: Vector2 = _drawn.get(r, point(r)) if unknown else point(r)
 		var lines := _wrap(font, str(names.get(r, r)), fs, maxf(cell, 60.0))
 		var y := p.y + rr + 3
 		for i in mini(lines.size(), 2):
 			var line := lines[i] if i == 0 or lines.size() <= 2 else _fit(font, lines[i] + "…", fs, maxf(cell, 60.0))
 			var lw := font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-			draw_string(font, Vector2(p.x - lw / 2, y + fs), line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.ACCENT_BRIGHT if r == here else UiTheme.TEXT)
+			draw_string(font, Vector2(p.x - lw / 2, y + fs), line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.ACCENT_BRIGHT if r == here else UiTheme.MUTED if unknown else UiTheme.TEXT)
 			y += fs + 3
 
 

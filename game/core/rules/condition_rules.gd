@@ -96,7 +96,7 @@ static func left_text(s: GameSession, e: Dictionary) -> String:
 		if CombatRules.active(s) and r <= ROUNDS_PER_MINUTE:
 			return "%d р." % maxi(1, r)
 		var mins := ceili(r / float(ROUNDS_PER_MINUTE))
-		return "%d ч %d мин" % [mins / 60, mins % 60] if mins >= 60 else "%d мин" % maxi(1, mins)
+		return TimeRules.span(maxi(1, mins))
 	match str(ends.get("rest", "")):
 		"short":
 			return "до короткого отдыха"
