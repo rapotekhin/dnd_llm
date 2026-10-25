@@ -1290,6 +1290,102 @@
       "title": "HealEffect",
       "type": "object"
     },
+    "JobEffect": {
+      "additionalProperties": false,
+      "description": "A job an NPC of the scene gives at the player's asking (0.58.0): «пойду переводчиком к караванщику». The engine\nchecks the employer is here, the hours, the DC tier and the pay by rules.jobs.make; the hero then hires and works\nshifts by the buttons («Работа» at the employer).",
+      "properties": {
+        "dc_tier": {
+          "enum": [
+            "very_easy",
+            "easy",
+            "medium",
+            "hard"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        },
+        "employer_id": {
+          "title": "Employer Id",
+          "type": "string"
+        },
+        "hours": {
+          "maximum": 10,
+          "minimum": 2,
+          "title": "Hours",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "job",
+          "default": "job",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "pay_cp": {
+          "minimum": 1,
+          "title": "Pay Cp",
+          "type": "integer"
+        },
+        "ranks": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ranks"
+        },
+        "requires_tool": {
+          "default": false,
+          "title": "Requires Tool",
+          "type": "boolean"
+        },
+        "skill": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill"
+        },
+        "tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool"
+        }
+      },
+      "required": [
+        "employer_id",
+        "name",
+        "hours",
+        "dc_tier",
+        "pay_cp"
+      ],
+      "title": "JobEffect",
+      "type": "object"
+    },
     "MoveEffect": {
       "additionalProperties": false,
       "properties": {
@@ -2825,6 +2921,7 @@
           "goal_assess": "#/$defs/GoalAssessEffect",
           "goal_hint": "#/$defs/GoalHintEffect",
           "heal": "#/$defs/HealEffect",
+          "job": "#/$defs/JobEffect",
           "move": "#/$defs/MoveEffect",
           "note": "#/$defs/NoteEffect",
           "npc_attitude": "#/$defs/NpcAttitudeEffect",
@@ -2883,6 +2980,9 @@
         },
         {
           "$ref": "#/$defs/RecipeEffect"
+        },
+        {
+          "$ref": "#/$defs/JobEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"

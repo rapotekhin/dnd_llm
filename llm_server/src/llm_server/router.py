@@ -21,7 +21,7 @@ from .agents import TurnOutput, scene_npc, settings_for
 from .protocol import TurnRequestParams
 
 # Turns that only retell what the engine did: the turn prompt says «эффектов не добавляй».
-SHORT_KINDS = {"rest", "deal", "haggle", "quest", "theft", "law", "wait", "trap", "combat_start", "combat_round", "death", "resume"}
+SHORT_KINDS = {"rest", "deal", "haggle", "quest", "theft", "law", "wait", "trap", "combat_start", "combat_round", "death", "resume", "shift"}
 
 ROUTER_SYSTEM = (
     "Ты — диспетчер хода в текстовой D&D. Реши, хватит ли мастеру короткого промпта (только рассказ, без правил игры) "

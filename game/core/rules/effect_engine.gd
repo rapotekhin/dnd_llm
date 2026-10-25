@@ -300,6 +300,13 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": made["reason"]}
 			return {"plan": made, "summary": "Рецепт: %s — %s, %d ч, Сл %d" % [CraftRules.recipe_name_of(s, data, made["def"], made.get("item", {})),
 				BackgroundRules.tool_name(data, str(made["def"]["tool"])), int(made["def"]["hours"]), int(made["def"]["dc"])]}
+		"job":  # v0.7.26: a job at an employer of the scene
+			var made := JobRules.make(s, data, e)
+			if made.has("reason"):
+				return {"reason": made["reason"]}
+			return {"plan": made, "summary": "Работа: %s у %s — %d ч, Сл %d, %s за смену" % [made["def"]["name"],
+				JobRules.npc_name(s, data, str(made["def"]["employer"])),
+				int(made["def"]["hours"]), int(made["def"]["dc"]), Money.format(int(made["def"]["pay_cp"]))]}
 		"use_feature":
 			var rid := FeatureUses.resolve(c, data, str(e.get("feature", "")))
 			var amount := int(e.get("amount", 1))
@@ -901,6 +908,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			CharacterRules.refresh(c, _data, s.items)
 		"recipe":
 			_extra_lines.append_array(CraftRules.apply_make(s, _data, plan))
+		"job":
+			_extra_lines.append_array(JobRules.apply_make(s, _data, plan))
 		"use_feature":
 			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
 		"use_item":

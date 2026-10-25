@@ -267,8 +267,46 @@
 						}
 					}
 				}
+			},
+			"work": {
+				"name": "Работа",
+				"sources": {"bad": 2, "poor": 4, "ok": 8, "great": 12, "promoted": 25},
+				"skills": {
+					"hard_worker": {"name": "Работяга", "level": 1, "desc": "+1 к проверкам смены.", "effect": {"shift_bonus": 1}},
+					"crowd_pleaser": {"name": "Любимец публики", "level": 1, "desc": "Чаевые за отличную смену вдвое больше.", "effect": {"tips_mult": 2}},
+					"quick_study": {"name": "Схватывает на лету", "level": 2, "desc": "Повышение после 4 хороших смен вместо 5.", "effect": {"promote_mult": 0.8}},
+					"reliable": {"name": "Надёжный", "level": 2, "desc": "Плохая смена не портит отношения нанимателя.", "effect": {"no_attitude_loss": true}},
+					"valued": {"name": "Ценный работник", "level": 3, "desc": "Плата за смену на 10% выше.", "effect": {"pay_pct": 110}},
+					"in_the_groove": {"name": "Втянулся", "level": 3, "desc": "Проверки смены с преимуществом.", "effect": {"shift_adv": true}},
+					"good_word": {"name": "Добрая слава", "level": 4, "desc": "Нанимают без проверки, если требования выполнены.", "effect": {"hire_auto": true}},
+					"steady_hand": {"name": "Твёрдая рука", "level": 4, "desc": "Ещё +1 к проверкам смены.", "needs": ["hard_worker"], "effect": {"shift_bonus": 2}},
+					"irreplaceable": {"name": "Незаменимый", "level": 5, "desc": "Плата за смену ещё на 20% выше.", "needs": ["valued"], "effect": {"pay_pct": 120}},
+					"mentor": {"name": "Наставник", "level": 5, "desc": "Повышение после 3 хороших смен.", "needs": ["quick_study"], "effect": {"promote_mult": 0.75}}
+				}
 			}
 		}
+	},
+	"jobs": {
+		"_doc": "Work (v0.7.26, JobRules): a job is data — the employer (an NPC), the check of a shift (`skill`, a carried `tool` helps; or a `tool` alone — its ability of craft.tools + proficiency), `hours` of a shift, `dc`, `pay_cp` a shift, `requires` (tool — proficiency in the job's tool, skill — proficiency in its skill, language, reputation — the least step in the employer's place) and `ranks` (names; the numbers by `ranks` here). Jobs of the pack (world.json `jobs`) and the master's (effect `job`, within `make`). Hired after `hire` — the skill against the employer by SocialRules.dc, a failure — again after `retry_days`. A shift goes only while the employer is in the room, any number a day: the check, the outcome by the margin (`outcomes`, the last whose `from` is reached) — the pay share, tips, the employer's attitude, a good one counts to the promotion after `promote_after` good shifts (attitude +1). A shift's event (`event_chance`, one of `events`) is narrated by the master. Experience — the direction `work` of rules.development.",
+		"ranks": [{"pay": 1.0, "dc": 0}, {"pay": 1.5, "dc": 2}, {"pay": 2.0, "dc": 4}],
+		"rank_names": ["новичок", "работник", "старший"],
+		"promote_after": 5,
+		"hire": {"skill": "persuasion", "tier": "medium", "retry_days": 1},
+		"outcomes": [
+			{"id": "bad", "from": -99, "name": "плохая смена", "pay": 0.5, "attitude": -1},
+			{"id": "poor", "from": -4, "name": "так себе смена", "pay": 0.75},
+			{"id": "ok", "from": 0, "name": "хорошая смена", "pay": 1.0, "good": true},
+			{"id": "great", "from": 5, "name": "отличная смена", "pay": 1.0, "tips": 0.25, "good": true}
+		],
+		"event_chance": 0.25,
+		"events": [
+			"кто-то из тех, кто есть в сцене, просит героя о мелкой услуге",
+			"кто-то пытается стащить товар или кошелёк — герой замечает",
+			"наниматель за работой разговорился о себе или о месте — только то, что есть в мире",
+			"мелкая неприятность за работой: разбитая посуда, упавший груз — без урона и денег",
+			"зашёл кто-то из людей сцены и заговорил с героем о его деле"
+		],
+		"make": {"hours": [2, 10], "dc_tiers": ["very_easy", "easy", "medium", "hard"], "pay_cp_hour": {"very_easy": 3, "easy": 4, "medium": 10, "hard": 25}}
 	},
 	"world_gen": {
 		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",

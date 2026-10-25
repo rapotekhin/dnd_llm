@@ -1792,5 +1792,105 @@
 			"description": "Свиток с печатью Ольхового Брода: капитан Ратмир поручает предъявителю дознание о пропавших.",
 			"text": "«Предъявитель сего действует по поручению стражи Ольхового Брода. Оказывать содействие. — Ратмир, капитан северных ворот»."
 		}
+	},
+	"jobs": {
+		"serve_tables": {
+			"employer": "npc_innkeeper",
+			"name": "Подавальщик в «Хромом олене»",
+			"skill": "persuasion",
+			"hours": 6,
+			"dc": 10,
+			"pay_cp": 20,
+			"ranks": [
+				"подавальщик",
+				"старший подавальщик",
+				"правая рука хозяина"
+			]
+		},
+		"kitchen_help": {
+			"employer": "npc_cook",
+			"name": "Помощник на кухне",
+			"tool": "cooks_utensils",
+			"hours": 6,
+			"dc": 10,
+			"pay_cp": 20,
+			"ranks": [
+				"поварёнок",
+				"помощник повара",
+				"второй повар"
+			]
+		},
+		"porter": {
+			"employer": "npc_merchant",
+			"name": "Грузчик у лавки",
+			"skill": "athletics",
+			"hours": 4,
+			"dc": 10,
+			"pay_cp": 15,
+			"ranks": [
+				"грузчик",
+				"старший грузчик",
+				"приказчик"
+			]
+		},
+		"smith_apprentice": {
+			"employer": "npc_smith",
+			"name": "Подмастерье кузнеца",
+			"tool": "smiths_tools",
+			"requires": {
+				"tool": true
+			},
+			"hours": 8,
+			"dc": 12,
+			"pay_cp": 100,
+			"ranks": [
+				"подмастерье",
+				"кузнец",
+				"мастер-кузнец"
+			]
+		},
+		"herb_helper": {
+			"employer": "npc_herbalist",
+			"name": "Помощник травницы",
+			"skill": "medicine",
+			"tool": "herbalism_kit",
+			"hours": 6,
+			"dc": 11,
+			"pay_cp": 40,
+			"ranks": [
+				"помощник",
+				"знаток трав",
+				"травник"
+			]
+		},
+		"watchman": {
+			"employer": "npc_captain",
+			"name": "Дозорный ополчения",
+			"skill": "perception",
+			"requires": {
+				"reputation": 0
+			},
+			"hours": 8,
+			"dc": 10,
+			"pay_cp": 30,
+			"ranks": [
+				"дозорный",
+				"десятник",
+				"сотник"
+			]
+		},
+		"temple_scribe": {
+			"employer": "npc_priestess",
+			"name": "Писарь при храме",
+			"skill": "religion",
+			"hours": 6,
+			"dc": 12,
+			"pay_cp": 50,
+			"ranks": [
+				"писарь",
+				"старший писарь",
+				"хранитель книг"
+			]
+		}
 	}
 }

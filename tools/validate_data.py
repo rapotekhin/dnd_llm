@@ -111,8 +111,20 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         if r.get("tool") not in craft["tools"] or (r.get("station") and r["station"] not in craft["stations"]):
             errors.append(f"рецепт {rid_}: tool из {sorted(craft['tools'])}, station из {sorted(craft['stations'])} или пусто")
         bad = [m for m in list(r.get("materials", {})) + [r.get("output")] if m not in items]
-        if bad or not isinstance(r.get("hours"), int) or not isinstance(r.get("dc"), int):
-            errors.append(f"рецепт {rid_}: нужны hours, dc, materials и output из каталога (неизвестно: {bad})")
+        if bad or not isinstance(r.get("hours", r.get("minutes")), int) or not isinstance(r.get("dc"), int):
+            errors.append(f"рецепт {rid_}: нужны hours или minutes, dc, materials и output из каталога (неизвестно: {bad})")
+    jobs_cfg = game_rules["jobs"]
+    for jid, j in world.get("jobs", {}).items():  # v0.7.26: work at the pack's NPCs
+        if j.get("employer") not in npcs or not j.get("name"):
+            errors.append(f"работа {jid}: employer — NPC пака, нужно name")
+        if not j.get("skill") and not j.get("tool"):
+            errors.append(f"работа {jid}: нужен skill или tool")
+        if j.get("tool") and j["tool"] not in craft["tools"]:
+            errors.append(f"работа {jid}: tool из {sorted(craft['tools'])}")
+        if not all(isinstance(j.get(k), int) for k in ("hours", "dc", "pay_cp")):
+            errors.append(f"работа {jid}: нужны hours, dc, pay_cp числами")
+        if "ranks" in j and len(j["ranks"]) != len(jobs_cfg["ranks"]):
+            errors.append(f"работа {jid}: ranks — {len(jobs_cfg['ranks'])} звания")
     services.pop("_doc", None)
     for sid, sv in world.get("services", {}).items():  # v0.7.16: a pack's own services — data over the engine's operations
         if sv.get("op") not in SERVICE_OPS or not isinstance(sv.get("cost_cp"), int) or not sv.get("name"):

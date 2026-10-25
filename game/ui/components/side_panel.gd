@@ -18,6 +18,7 @@ signal place_requested
 signal board_requested(prop_id: String)
 signal development_requested
 signal craft_requested
+signal job_requested(npc_id: String)  # v0.7.26
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -116,6 +117,7 @@ func _rebuild() -> void:
 	if NeedRules.on(s):
 		_needs(s, can_act)
 	_craft_row(s, can_act)
+	_work_row(s, can_act)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
 		lv.name = "LevelUpButton"
@@ -316,6 +318,10 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 	var pk := _flow(acts, tr("BTN_POCKETS_SHORT"), pockets_requested.emit.bind(id), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
 	pk.name = "Pockets_" + id
 	pk.tooltip_text = tr("BTN_POCKETS").format({"name": n.get("name", id)})
+	if not JobRules.of(s, Catalog.data, id).is_empty():  # v0.7.26
+		var jb := _flow(acts, tr("BTN_JOB"), job_requested.emit.bind(id), can_act)
+		jb.name = "Jobs_" + id
+		jb.tooltip_text = tr("BTN_JOB_TIP").format({"name": n.get("name", id)})
 	var follow: Array = []  # v0.7.22.22 (#25): a follower by the buttons, as the prisoners
 	if s.followers.has(id):
 		follow = [["stay", "BTN_FOLLOWER_STAY"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
@@ -567,6 +573,39 @@ func _craft_row(s: GameSession, can_act: bool) -> void:
 		gb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		gb.tooltip_text = tr(why) if not why.is_empty() else tr("GATHER_TIP").format({"time": TimeRules.span(int(g["minutes"])),
 			"skill": CraftRules.tr_skill(data, str(g["skill"])), "dc": int(g["dc"])})
+
+
+## Work (v0.7.26): a shift of each job whose employer is here, the employer's window by the right button.
+func _work_row(s: GameSession, can_act: bool) -> void:
+	var data := Catalog.data
+	var ids: Array[String] = []
+	for id: String in JobRules.state(s.character):
+		if JobRules.employer_here(s, data, id):
+			ids.append(id)
+	if ids.is_empty():
+		return
+	var acts := HFlowContainer.new()
+	acts.name = "WorkActs"
+	acts.add_theme_constant_override("h_separation", 6)
+	acts.add_theme_constant_override("v_separation", 6)
+	_content.add_child(acts)
+	for id: String in ids:
+		var j := JobRules.job(s, data, id)
+		var b := _row_button(acts, tr("BTN_WORK_SHIFT").format({"name": JobRules.rank_name(s, data, id, JobRules.rank(s.character, id))}), func() -> void:
+			var err := GameState.job_act("shift", id)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and JobRules.shift_why(s, data, id).is_empty())
+		b.name = "WorkShift_" + id
+		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.clip_text = false
+		b.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		b.tooltip_text = tr("BTN_WORK_SHIFT_TIP").format({"job": j.get("name", id), "time": TimeRules.span(JobRules.hours(s, data, id) * 60),
+			"chance": JobRules.shift_chance(s, data, id), "pay": Money.format(JobRules.pay(s, data, id))})
+		var npc := str(j.get("employer", ""))
+		b.gui_input.connect(func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
+				job_requested.emit(npc))
 
 
 func _need(act: String) -> void:

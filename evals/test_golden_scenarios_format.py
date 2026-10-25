@@ -16,11 +16,11 @@ yaml = pytest.importorskip("yaml")
 SCENARIOS_FILE = Path(__file__).resolve().parent / "golden" / "scenarios.yaml"
 
 MODES = {"exploration", "social", "trade", "combat"}
-KINDS = {"enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal"}
+KINDS = {"enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift"}
 NO_INPUT_KINDS = {"enter", "resume", "rest", "downed"}  # deal / haggle / quest carry the engine facts in input
 DC_TIERS = {"very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"}
 EFFECT_KINDS = {"give_item", "take_item", "coins", "damage", "heal", "condition", "cast", "use_feature", "use_item", "start_combat", "advance_time", "furnish", "take_prop", "prop_state",
-                "quest_update", "flag", "xp", "npc_attitude", "advance_time", "move", "note", "equip", "crime_known", "crime_release", "npc_discount", "npc_favor", "accept_quest", "reveal_secret", "reputation", "take_from", "put_in", "unlock", "drop_item", "create_npc", "create_place", "npc_follow", "create_quest", "goal_assess", "goal_hint", "owner", "door", "disease", "recipe"}
+                "quest_update", "flag", "xp", "npc_attitude", "advance_time", "move", "note", "equip", "crime_known", "crime_release", "npc_discount", "npc_favor", "accept_quest", "reveal_secret", "reputation", "take_from", "put_in", "unlock", "drop_item", "create_npc", "create_place", "npc_follow", "create_quest", "goal_assess", "goal_hint", "owner", "door", "disease", "recipe", "job"}
 TOOLS = {"find_items", "create_item", "lookup_rule", "lookup_spell", "find_npcs", "find_places", "find_quests"}
 EXPECT_KEYS = {"check", "max_checks", "effects", "next_mode", "narration", "options",
                "tools_required", "tools_forbidden", "missing_concept"}

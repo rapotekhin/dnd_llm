@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.57.0"
+PROTOCOL_VERSION = "0.58.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -134,7 +134,7 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # wait (0.10.0): the player waited by the button — the engine moved the time; `input` holds the lines.
 # theft (0.11.0): the player picked a pocket in the theft window — the engine rolled and applied it; `input` holds the lines.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
-                   "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal"]
+                   "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -271,6 +271,7 @@ class CharacterSheet(_In):
     tools: list[str] = Field(default_factory=list)  # tool proficiencies: «Воровские инструменты [thieves_tools]» (0.17.0)
     attuned: list[str] = Field(default_factory=list)  # magic items the hero is attuned to, Russian names (0.18.0)
     craft: str = ""  # 0.56.0: the recipes the hero knows and the work in hand («Ремесло (окно «Ремесло»): …»)
+    jobs: str = ""  # 0.58.0: where the hero works, the rank and shifts («Работа (кнопка «Смена» …): …»)
 
 
 class HistoryLine(_In):
@@ -931,6 +932,23 @@ class RecipeEffect(_Out):
     qty: int = Field(default=1, ge=1, le=20)
 
 
+class JobEffect(_Out):
+    """A job an NPC of the scene gives at the player's asking (0.58.0): «пойду переводчиком к караванщику». The engine
+    checks the employer is here, the hours, the DC tier and the pay by rules.jobs.make; the hero then hires and works
+    shifts by the buttons («Работа» at the employer)."""
+
+    kind: Literal["job"] = "job"
+    employer_id: str  # an NPC of the scene
+    name: str = Field(min_length=1, max_length=60)  # «Переводчик при караване»
+    skill: str | None = None  # the check of a shift: persuasion, athletics, perception…
+    tool: str | None = None  # or a tool (cooks_utensils, smiths_tools…); with a skill — it helps
+    requires_tool: bool = False  # proficiency in the tool is a must
+    hours: int = Field(ge=2, le=10)
+    dc_tier: Literal["very_easy", "easy", "medium", "hard"]
+    pay_cp: int = Field(ge=1)  # a shift at the first rank, within the engine's cap per hour
+    ranks: list[str] | None = None  # three names of ranks, from the first
+
+
 class UseFeatureEffect(_Out):
     kind: Literal["use_feature"] = "use_feature"
     feature: str  # a feature with limited uses, by name as in the sheet
@@ -1101,7 +1119,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

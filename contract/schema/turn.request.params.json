@@ -141,6 +141,11 @@
           "title": "Inventory",
           "type": "array"
         },
+        "jobs": {
+          "default": "",
+          "title": "Jobs",
+          "type": "string"
+        },
         "languages": {
           "items": {
             "type": "string"
@@ -1322,7 +1327,8 @@
         "wait",
         "theft",
         "law",
-        "goal"
+        "goal",
+        "shift"
       ],
       "title": "Kind",
       "type": "string"

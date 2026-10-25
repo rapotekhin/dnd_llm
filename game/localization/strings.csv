@@ -1113,3 +1113,30 @@ SERVICE_LEARNED,Этот рецепт ты уже знаешь
 SERVICE_NO_TOOL_PROF,Сначала нужно владеть инструментом этого ремесла
 ITEM_PROP_CRUDE,"грубая работа: оружие −1 к атаке, доспех −1 к КД"
 ITEM_PROP_MASTERWORK,"отличная работа: оружие +1 к атаке (не магия), доспех — без требования Силы и помехи Скрытности"
+JOB_TITLE,Работа
+JOB_TITLE_AT,Работа: {name}
+JOB_NONE,Работы здесь нет.
+JOB_TOOL_HELPS,помогает: {tool}
+JOB_META,Проверка смены: {check} · смена {time}
+JOB_PAY,Плата за смену: {list}
+JOB_REQUIRES,Нужно: {list}
+JOB_HIRE_CHANCE,"Разговор о найме: Убеждение, Сл {dc}, шанс {chance}%"
+BTN_JOB_HIRE,Наняться
+JOB_RANK,"Вы — {rank}, смен: {shifts}"
+JOB_TO_PROMOTE,хороших смен до повышения: {n}/{of}
+JOB_SHIFT_CHANCE,"Сл смены {dc}, шанс хорошей смены {chance}%"
+BTN_JOB_SHIFT,Отработать смену ({time})
+BTN_JOB_QUIT,Уволиться
+CONFIRM_JOB_QUIT_TITLE,Уйти с работы «{name}»?
+CONFIRM_JOB_QUIT,Звание и хорошие смены пропадут: наняться снова придётся с начала.
+BTN_JOB,Работа
+BTN_JOB_TIP,"Работа у {name}: наняться, смены, повышение"
+BTN_WORK_SHIFT,Смена: {name}
+BTN_WORK_SHIFT_TIP,"{job}: смена {time}, шанс хорошей смены {chance}%, плата {pay}. Правая кнопка — окно работы"
+JOB_NOT_NOW,Сейчас не до работы
+JOB_UNKNOWN,Такой работы нет
+JOB_HIRED,Вы уже здесь работаете
+JOB_EMPLOYER_AWAY,"Нанимателя сейчас нет на месте — смены идут, пока он здесь"
+JOB_REQUIREMENTS,Не выполнены требования работы
+JOB_TRIED,Сегодня уже отказали — попробуйте завтра
+JOB_NOT_HIRED,Вы здесь не работаете

@@ -146,6 +146,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"attuned": ItemRules.attuned(c).map(func(id: Variant) -> String: return ItemRules.display_name(items, s.items, str(id))),
 		"languages": LanguageRules.hero(c).map(func(l: String) -> String: return LanguageRules.name_of(data, l)),
 		"craft": CraftRules.snapshot(s, data),  # v0.7.24
+		"jobs": JobRules.text(s, data),  # v0.7.26
 		"tools": (c.get("tools", []) as Array).map(func(t: Variant) -> String:
 			return "%s [%s]%s" % [BackgroundRules.tool_name(data, str(t)), t, "" if int(c.get("inventory", {}).get(str(t), 0)) > 0 else " (нет с собой)"]),
 		"abilities": c.get("abilities", {}),

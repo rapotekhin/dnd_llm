@@ -1350,6 +1350,43 @@ func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
 	return ""
 
 
+## Work (v0.7.26): hire, a shift, quit — the engine decides; a shift's event goes to the master as a short turn.
+func job_act(what: String, id: String) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "JOB_NOT_NOW"
+	var data := Catalog.data
+	var lines: Array[String] = []
+	var event := ""
+	match what:
+		"hire":
+			var why := JobRules.hire_why(session, data, id)
+			if not why.is_empty():
+				return why
+			lines = JobRules.hire(session, data, id)
+		"shift":
+			var why := JobRules.shift_why(session, data, id)
+			if not why.is_empty():
+				return why
+			var w := CrimeRules.wait(session, data, JobRules.hours(session, data, id) * 60)  # the patrol may break the shift
+			lines = w["lines"]
+			var r := JobRules.shift(session, data, id, int(w["minutes"]))
+			lines.append_array(r["lines"])
+			event = str(r["event"])
+		"quit":
+			if not JobRules.hired(session.character, id):
+				return "JOB_NOT_HIRED"
+			lines = JobRules.quit(session, data, id)
+	if lines.is_empty():
+		return ""
+	CharacterRules.refresh(session.character, data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	if not event.is_empty() and Backend.is_ready():
+		_request("shift", "%s. Событие смены: %s" % ["; ".join(lines), event])
+	return ""
+
+
 func set_needs(on: bool) -> void:
 	if session != null:
 		session.settings["needs"] = on
