@@ -73,12 +73,12 @@ func _rebuild() -> void:
 	if not str(p.get("text", "")).is_empty():
 		_label(str(p["text"]), UiTheme.MUTED_LABEL)
 	var orders := QuestGen.offered_by(s, "board:%s:%s" % [s.room_id, prop_id])
+	var read_why := QuestGen.board_why_not(s, data, prop_id)
+	if QuestGen.board_unread(s, s.room_id, prop_id) or orders.is_empty():
+		_label(tr("BOARD_UNREAD_HINT" if QuestGen.board_unread(s, s.room_id, prop_id) else "BOARD_EMPTY"), UiTheme.MUTED_LABEL)
+		var rb := _button(_box, "BoardRead", tr("BTN_BOARD_READ"), can_act and read_why.is_empty(), func() -> String: return GameState.read_board(prop_id))
+		rb.tooltip_text = tr(read_why) if not read_why.is_empty() else ""
 	if orders.is_empty():
-		_label(tr("BOARD_EMPTY"), UiTheme.MUTED_LABEL)
-		var rb := _button(_box, "BoardRead", tr("BTN_BOARD_READ"), can_act and QuestGen.board_why_not(s, data, prop_id).is_empty(),
-			func() -> String: return GameState.read_board(prop_id))
-		var why := QuestGen.board_why_not(s, data, prop_id)
-		rb.tooltip_text = tr(why) if not why.is_empty() else ""
 		return
 	var room_left := int(QuestGen.cfg(data)["max_open"]) - QuestGen.open_made(s).size()
 	_label(tr("BOARD_LIMIT").format({"n": maxi(0, room_left)}), UiTheme.MUTED_LABEL)

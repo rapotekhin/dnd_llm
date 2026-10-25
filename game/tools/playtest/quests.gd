@@ -60,6 +60,11 @@ func run() -> void:
 	if f["accepted"]:
 		fx.apply(s, "t-pb", [f["effect_id"]])
 	var board := str(PropRules.room_props(s, s.room_id)[0]["id"])
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var bbtn: Button = find(game, "Board_" + board)  # the author, after v0.7.22.33: no «заказов 0» on a board never read
+	step("a board never read says so", bbtn != null and bbtn.text.contains("не осмотрена"), bbtn.text if bbtn else "")
+	QuestGen.mark_board_read(s, board)
 	fx.searched_quests["t-pb2"] = true
 	var o := fx.validate(s, data, "t-pb2", {"kind": "create_quest", "giver": "npc_smith", "board_prop_id": board,
 		"title": "Уголь для кузни", "scale": "trifle", "steps": [{"text": "Расспросить Миру об угольщике", "kind": "talk", "target": "npc_serving"}]})
@@ -74,6 +79,23 @@ func run() -> void:
 		await press(take_order)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	step("the order is taken", s.quests_active.has(order))
+	var fresh := int(QuestGen.board_state(s, s.room_id, board).get("fresh_day", 0))
+	step("taking an order rolls the board's refresh in 1d4 days", fresh - s.day >= 1 and fresh - s.day <= 4, "day %d → %d" % [s.day, fresh])
+	bbtn = find(game, "Board_" + board)
+	step("a read board shows its orders", bbtn != null and bbtn.text.contains("заказ"), bbtn.text if bbtn else "")
+	s.day = fresh
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	bbtn = find(game, "Board_" + board)
+	step("the board is unread again", bbtn != null and bbtn.text.contains("не осмотрена"), bbtn.text if bbtn else "")
+	if bbtn != null:
+		await press(bbtn)
+		await frames(4)
+		var rb: Button = find(game, "BoardRead")
+		step("its «Прочитать объявления» is active again", rb != null and not rb.disabled)
+		await shot("board_fresh")
+		(find(game, "CloseBoardButton") as Button).pressed.emit()
+		await frames(2)
 	# the hero's own deed: taken at once
 	fx.searched_quests["t-po"] = true
 	var d := fx.validate(s, data, "t-po", {"kind": "create_quest", "own": true, "title": "Кто травит колодцы", "scale": "ordinary",

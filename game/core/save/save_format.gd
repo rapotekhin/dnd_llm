@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 45
+const SAVE_VERSION := 46
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -67,6 +67,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	42: _v42_to_v43,
 	43: _v43_to_v44,
 	44: _v44_to_v45,
+	45: _v45_to_v46,
 }
 
 
@@ -419,3 +420,14 @@ static func _v43_to_v44(data: Dictionary, _ctx: Dictionary) -> void:
 ## v0.7.22.32: no quest is followed by hand yet — the last one taken is shown.
 static func _v44_to_v45(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["tracked_quest"] = ""
+
+
+## v0.7.22.33.1: a board read on a day becomes a state that fills again after an order is taken.
+static func _v45_to_v46(data: Dictionary, _ctx: Dictionary) -> void:
+	var gen: Variant = data["session"].get("generated")
+	if not (gen is Dictionary) or not ((gen as Dictionary).get("boards_read") is Dictionary):
+		return
+	var read: Dictionary = gen["boards_read"]
+	for k: String in read.keys():
+		if not (read[k] is Dictionary):
+			read[k] = {"read_day": int(read[k]), "fresh_day": 0}

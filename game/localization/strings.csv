@@ -768,9 +768,12 @@ SIDE_CREATURES,После боя
 SIDE_UNSEEN,Вас не заметили
 BTN_BOARD,"{name}: заказов {n}"
 BOARD_EMPTY,На доске пока ничего не разобрать
+BTN_BOARD_UNREAD,"{name}: не осмотрена"
+BTN_BOARD_NONE,"{name}: свежих заказов нет"
+BOARD_UNREAD_HINT,Вы ещё не читали свежие объявления
 BTN_BOARD_READ,Прочитать объявления
 BOARD_READ_SAY,Читаю объявления: {name}
-BOARD_READ_TODAY,Сегодня вы уже читали эту доску
+BOARD_READ_TODAY,Свежих объявлений пока нет — доску обновят позже
 BOARD_LIMIT,"Можно взять ещё: {n}"
 BOARD_ORDER_LINE,"Заказчик: {who} · награда: {reward}"
 BTN_BOARD_TAKE,Сорвать листок — взять заказ

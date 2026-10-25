@@ -37,19 +37,45 @@ static func is_board(data: Dictionary, p: Dictionary) -> bool:
 	return (cfg(data).get("board_words", []) as Array).any(func(w: Variant) -> bool: return name.contains(str(w)))
 
 
-## "" when the hero may read this empty board now (once a day), else a localization key.
+## A board's state (the author, after v0.7.22.33): {read_day, fresh_day}; {} — never read. `fresh_day` > 0 — the day
+## it fills again, rolled when an order is first taken off it (rules.quest_gen.board_refresh_days).
+static func board_state(s: GameSession, room_id: String, prop_id: String) -> Dictionary:
+	return WorldGen.generated(s).get("boards_read", {}).get("board:%s:%s" % [room_id, prop_id], {})
+
+
+## Not looked at yet, or filled again since: reading it puts new orders up.
+static func board_unread(s: GameSession, room_id: String, prop_id: String) -> bool:
+	var st := board_state(s, room_id, prop_id)
+	return st.is_empty() or (int(st.get("fresh_day", 0)) > 0 and s.day >= int(st["fresh_day"]))
+
+
+## "" when the hero may read this board now, else a localization key. A read board that stayed empty — again next day.
 static func board_why_not(s: GameSession, data: Dictionary, prop_id: String) -> String:
-	var key := "board:%s:%s" % [s.room_id, prop_id]
-	if int(WorldGen.generated(s).get("boards_read", {}).get(key, 0)) == s.day:
-		return "BOARD_READ_TODAY"
-	return ""
+	if board_unread(s, s.room_id, prop_id):
+		return ""
+	if offered_by(s, "board:%s:%s" % [s.room_id, prop_id]).is_empty() and int(board_state(s, s.room_id, prop_id).get("read_day", 0)) < s.day:
+		return ""
+	return "BOARD_READ_TODAY"
 
 
 static func mark_board_read(s: GameSession, prop_id: String) -> void:
 	var gen := WorldGen.generated(s)
 	var read: Dictionary = gen.get("boards_read", {})
-	read["board:%s:%s" % [s.room_id, prop_id]] = s.day
+	read["board:%s:%s" % [s.room_id, prop_id]] = {"read_day": s.day, "fresh_day": 0}
 	gen["boards_read"] = read
+
+
+## An order taken off a board: the first one starts its refresh in board_refresh_days (5e-style dice, "1d4").
+static func board_taken(s: GameSession, data: Dictionary, q: Dictionary) -> void:
+	if not q.has("board"):
+		return
+	var read: Dictionary = WorldGen.generated(s).get("boards_read", {})
+	var key := "board:%s:%s" % [q["board"]["room"], q["board"]["prop"]]
+	var st: Dictionary = read.get(key, {"read_day": s.day, "fresh_day": 0})
+	if int(st.get("fresh_day", 0)) <= s.day:
+		st["fresh_day"] = s.day + maxi(1, CombatRules.roll_dice(s.rng, str(cfg(data).get("board_refresh_days", "1d4"))))
+	read[key] = st
+	WorldGen.generated(s)["boards_read"] = read
 
 
 ## Made quests offered and not taken by this giver or on this board («board:<room>:<prop>»).

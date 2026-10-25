@@ -21,6 +21,7 @@ signal development_requested
 var _content: VBoxContainer
 var _scroll: ScrollContainer
 var _footer: VBoxContainer
+var _exit_list: VBoxContainer  # the exits scroll under the pinned look buttons: many ways must not push the panel up
 var _open := ""  # the row whose acts are open ("npc:<id>", "cr:<id>"), closed when the hero leaves the room
 var _open_room := ""
 
@@ -206,7 +207,8 @@ func _rebuild() -> void:
 			if QuestGen.is_board(Catalog.data, bp):
 				var bpid := str(bp["id"])
 				var n_orders := QuestGen.offered_by(s, "board:%s:%s" % [s.room_id, bpid]).size()
-				var bb := _button(tr("BTN_BOARD").format({"name": bp["name"], "n": n_orders}), board_requested.emit.bind(bpid), not GameState.is_busy())
+				var label := tr("BTN_BOARD_UNREAD") if QuestGen.board_unread(s, s.room_id, bpid) else tr("BTN_BOARD") if n_orders > 0 else tr("BTN_BOARD_NONE")
+				var bb := _button(label.format({"name": bp["name"], "n": n_orders}), board_requested.emit.bind(bpid), not GameState.is_busy())
 				bb.name = "Board_" + bpid
 		_exits(s, world, can_act)
 		# A show on a stage of the pack (v0.7.11): a Performance check for coins, an entertainer's free room.
@@ -418,6 +420,16 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		lb.name = spec[0]
 		lb.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lb.tooltip_text = tr(spec[1] + "_TIP")
+	var exits_scroll := ScrollContainer.new()
+	exits_scroll.name = "ExitsScroll"
+	exits_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_footer.add_child(exits_scroll)
+	_exit_list = VBoxContainer.new()
+	_exit_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_exit_list.add_theme_constant_override("separation", 6)
+	exits_scroll.add_child(_exit_list)
+	_exit_list.minimum_size_changed.connect(_fit_exits.bind(exits_scroll))
+	_fit_exits.call_deferred(exits_scroll)
 	var trapped := {}
 	for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
 		trapped[ft["to"]] = ft["secret"]
@@ -426,7 +438,7 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		var room_name := str(world.room(e).get("name", e))
 		var line := HBoxContainer.new()
 		line.add_theme_constant_override("separation", 6)
-		_footer.add_child(line)
+		_exit_list.add_child(line)
 		if trapped.has(e):
 			var to := e
 			var by := _exit_button(line, tr("BTN_TRAP_BYPASS").format({"room": room_name}), func() -> void: _trap(to, false), can_act)
@@ -457,6 +469,13 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 			b.tooltip_text = "%s
 %s" % [room_name, tr("EXIT_PRIVATE_WELCOME" if SiteRules.unwelcome(s, Catalog.data, e).is_empty() else
 				"EXIT_PRIVATE_TIP").format({"owner": world.npc(owner).get("name", owner)})]
+
+
+## The exits take their own height up to a third of the panel; past it they scroll.
+func _fit_exits(scroll: ScrollContainer) -> void:
+	if not is_instance_valid(scroll) or not is_instance_valid(_exit_list):
+		return
+	scroll.custom_minimum_size.y = minf(_exit_list.get_combined_minimum_size().y, maxf(160.0, size.y / 3.0))
 
 
 ## A button that fills its place and cuts a long text with «…» (the whole one is in the tooltip).
@@ -546,7 +565,7 @@ func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
 	acts.name = "DoorActs_" + to
 	acts.add_theme_constant_override("h_separation", 6)
 	acts.add_theme_constant_override("v_separation", 6)
-	_footer.add_child(acts)
+	_exit_list.add_child(acts)
 	var dcs := DoorRules.dcs(s, Catalog.data, s.room_id, to)
 	var d := DoorRules.def(Catalog.data, s.room_id, to)
 	var mat: Dictionary = DoorRules.cfg(Catalog.data)["materials"].get(str(d.get("material", "wood")), {})

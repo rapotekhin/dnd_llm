@@ -58,6 +58,29 @@ func run() -> void:
 		step("a picked site offers the way in", go != null and not go.disabled and go.text.contains("Идти"), go.text if go else "")
 		await shot("map_site_picked")
 
+	# Many ways out (the author, after v0.7.22.33): the exits scroll, the panel's buttons stay on screen.
+	var map_view: Control = find(screen(), "MapView")
+	if map_view != null:
+		map_view.visible = false
+	var room: Dictionary = data["world"]["rooms"]["brod-square"]
+	var exits_before: Array = (room["exits"] as Array).duplicate()
+	for r: String in data["world"]["rooms"]:
+		if room["exits"].size() >= 16:
+			break
+		if r != "brod-square" and not room["exits"].has(r):
+			room["exits"].append(r)
+	s.room_id = "brod-square"
+	node("EventBus").state_changed.emit()
+	await frames(6)
+	var ex: ScrollContainer = find(screen(), "ExitsScroll")
+	var side: Control = find(screen(), "SideFooter").get_parent().get_parent() if find(screen(), "SideFooter") != null else null
+	var sheet_b: Button = find(screen(), "SheetButton")
+	step("16 exits scroll in a third of the panel", ex != null and side != null and ex.size.y <= side.size.y / 3.0 + 1.0 and ex.get_v_scroll_bar().visible,
+		"%s of %s" % [ex.size if ex else Vector2.ZERO, side.size if side else Vector2.ZERO])
+	step("the sheet button stays on screen", sheet_b != null and sheet_b.get_global_rect().end.y <= sheet_b.get_viewport_rect().size.y)
+	await shot("many_exits")
+	room["exits"] = exits_before
+
 
 func _chat(s: GameSession) -> String:
 	var out: Array[String] = []

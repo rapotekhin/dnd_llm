@@ -660,6 +660,11 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 				_pending = Callable()
 				_do(str(act.call(id))))
 			box.add_child(card)
+			if card.has_node("FoeHp"):  # the text ends above the bar (the theme's boxes are known only in the tree)
+				for st: String in ["normal", "hover", "pressed", "disabled", "focus", "hover_pressed"]:
+					var sb := card.get_theme_stylebox(st).duplicate() as StyleBox
+					sb.content_margin_bottom = maxf(sb.content_margin_bottom, 0.0) + 18.0
+					card.add_theme_stylebox_override(st, sb)
 			if not conds.is_empty():  # the foe's conditions as small chips (Б1)
 				var cflow := HFlowContainer.new()
 				cflow.name = "FoeConds_" + id

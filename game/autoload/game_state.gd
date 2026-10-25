@@ -1683,12 +1683,16 @@ func read_board(prop_id: String) -> String:
 		return why
 	var p := PropRules.find(session, session.room_id, prop_id)
 	QuestGen.mark_board_read(session, prop_id)
+	var room_left := int(QuestGen.cfg(Catalog.data)["max_offered"]) - QuestGen.offered_by(session, "board:%s:%s" % [session.room_id, prop_id]).size()
+	if room_left <= 0:  # still full of old orders: nothing new fits, no master's turn
+		EventBus.state_changed.emit()
+		return ""
 	var text := tr("BOARD_READ_SAY").format({"name": p.get("name", prop_id)})
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
-	_request("action", text + (" [движок: на «%s» [%s] заказов ещё нет — повесь 1–%d настоящих заказа: сначала find_quests, потом create_quest с board_prop_id %s " +
+	_request("action", text + (" [движок: на «%s» [%s] есть место для новых заказов — повесь 1–%d настоящих заказа: сначала find_quests, потом create_quest с board_prop_id %s " +
 		"и заказчиком из этой округи; что написано в листках — это и есть эти задания, игрок возьмёт их кнопкой]") % [p.get("name", prop_id), prop_id,
-		int(QuestGen.cfg(Catalog.data)["max_offered"]), prop_id])
+		room_left, prop_id])
 	return ""
 
 

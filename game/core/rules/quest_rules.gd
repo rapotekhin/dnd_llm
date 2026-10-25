@@ -97,6 +97,7 @@ static func accept(s: GameSession, data: Dictionary, quest_id: String) -> Array[
 		s.character["inventory"][id] = int(s.character["inventory"].get(id, 0)) + int(given[id])
 		lines.append("Получено: %s" % ItemRules.display_name(data["items"], s.items, id))
 	lines.append_array(advance(s, data))
+	QuestGen.board_taken(s, data, q)
 	return lines
 
 
