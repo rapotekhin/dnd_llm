@@ -112,6 +112,28 @@ func shot(shot_name: String) -> void:
 	if image != null:
 		image.save_png(path)
 	_report.append("     shot %s" % path.get_file())
+	for o: String in overflows():
+		_report.append("     OVERFLOW " + o)
+
+
+## Visible controls that run past the window outside any scroll: text there cannot be scrolled to.
+func overflows() -> Array[String]:
+	var out: Array[String] = []
+	var view := root.get_visible_rect().grow(2.0)
+	var stack: Array[Node] = [current_scene]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is CanvasItem and not (n as CanvasItem).visible:
+			continue
+		if n is ScrollContainer or n is Window:
+			if n is Control and not view.encloses((n as Control).get_global_rect()):
+				out.append("%s %s" % [current_scene.get_path_to(n), (n as Control).get_global_rect()])
+			continue
+		if n is Control and (n as Control).size.y > 0 and not view.encloses((n as Control).get_global_rect()):
+			out.append("%s %s" % [current_scene.get_path_to(n), (n as Control).get_global_rect()])
+			continue
+		stack.append_array(n.get_children())
+	return out
 
 
 ## The first descendant of `from` named `node_name` (screens name their key controls).

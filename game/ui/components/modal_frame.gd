@@ -75,6 +75,7 @@ func _init(title_text: String = "", width: float = 640.0) -> void:
 	col.add_child(footer)
 	body.minimum_size_changed.connect(_refit)
 	resized.connect(_refit)
+	_panel.minimum_size_changed.connect(_refit)  # a panel grown past the screen on a first layout shrinks back
 	footer.visibility_changed.connect(_refit)
 	visibility_changed.connect(func() -> void:
 		if is_visible_in_tree():

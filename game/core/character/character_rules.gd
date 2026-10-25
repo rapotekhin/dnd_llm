@@ -368,10 +368,37 @@ static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary
 				return "EQUIP_HANDS_BUSY"
 			if str(eq.get("main_hand", "")) == id and int(c["inventory"][id]) < 2:
 				return "EQUIP_NOT_OWNED"
-		"main_hand":
-			if (def.get("properties", []) as Array).has("two_handed") and (not str(eq.get("shield", "")).is_empty() or not str(eq.get("off_hand", "")).is_empty()):
-				return "EQUIP_HANDS_BUSY"
+		"main_hand":  # a two-handed grip frees the other hand (hands_freed); a cursed thing there holds it
+			for sl: String in hands_freed(c, data, session_items, id, slot):
+				if ItemRules.held_by_curse(c, data, session_items, str(eq[sl])):
+					return "EQUIP_HANDS_BUSY"
 	return ""
+
+
+## The slots a weapon taken in both hands empties: the shield and the off hand. A two-handed weapon always,
+## a versatile one when `both` (5e: its bigger die).
+static func hands_freed(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, slot: String, both: bool = false) -> Array[String]:
+	var out: Array[String] = []
+	if slot != "main_hand":
+		return out
+	var w := ItemRules.def_of(data["items"], session_items, id)
+	if not ((w.get("properties", []) as Array).has("two_handed") or (both and (w.get("weapon", {}) as Dictionary).has("versatile"))):
+		return out
+	for sl: String in ["shield", "off_hand"]:
+		if not str(c.get("equipped", {}).get(sl, "")).is_empty():
+			out.append(sl)
+	return out
+
+
+## The weapon in the main hand is held in both: a two-handed one, or a versatile one with the other hand empty.
+static func two_hand_grip(c: Dictionary, data: Dictionary, session_items: Dictionary) -> bool:
+	var eq: Dictionary = c.get("equipped", {})
+	var id := str(eq.get("main_hand", ""))
+	if id.is_empty():
+		return false
+	var w := ItemRules.def_of(data["items"], session_items, id)
+	return _two_handed(data, session_items, id) or ((w.get("weapon", {}) as Dictionary).has("versatile")
+		and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty())
 
 
 ## Pounds the hero carries: everything in the pack, worn things too (v0.7.7).

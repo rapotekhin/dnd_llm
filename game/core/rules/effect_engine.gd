@@ -576,7 +576,10 @@ func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var why := CharacterRules.can_equip(c, data, s.items, id, slot)
 	if not why.is_empty():
 		return {"reason": "нельзя надеть %s в %s: %s" % [id, slot, tr(why)]}
-	return {"plan": {"slots": [slot], "item_id": id}, "summary": "Надето: %s" % ItemRules.display_name(data["items"], s.items, id)}
+	var freed := CharacterRules.hands_freed(c, data, s.items, id, slot)
+	if freed.has("shield") and CombatRules.active(s):
+		return {"reason": "двуручное в бою не взять со щитом — щит снимают целым действием"}
+	return {"plan": {"slots": [slot], "item_id": id, "freed": freed}, "summary": "Надето: %s" % ItemRules.display_name(data["items"], s.items, id)}
 
 
 ## Opening a locked container by words (v0.7.18.1): a key the hero carries, or a check of this turn that beat the lock
@@ -730,6 +733,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		var before: Dictionary = (s.character["equipped"] as Dictionary).duplicate()
 		for sl: Variant in plan["slots"]:
 			s.character["equipped"][str(sl)] = str(plan["item_id"])
+		for sl: Variant in plan.get("freed", []):  # a two-handed weapon empties the other hand
+			s.character["equipped"][str(sl)] = ""
 		if CombatRules.active(s):
 			if not str(plan["item_id"]).is_empty():
 				var econ := CombatRules.economy(s)

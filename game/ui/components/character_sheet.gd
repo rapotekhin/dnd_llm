@@ -497,7 +497,8 @@ func _gear_tab(c: Dictionary) -> Control:
 				continue
 			var why := CharacterRules.can_equip(c, Catalog.data, s.items, id, t)
 			var b := Button.new()
-			b.text = tr("BTN_EQUIP_" + t.to_upper())
+			var two := t == "main_hand" and (def.get("properties", []) as Array).has("two_handed")
+			b.text = tr("BTN_EQUIP_BOTH_HANDS" if two else "BTN_EQUIP_" + t.to_upper())
 			b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			b.name = "Equip_%s_%s" % [t, id]
 			b.disabled = busy or not why.is_empty()
@@ -529,9 +530,14 @@ func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: Str
 	row.add_theme_constant_override("separation", 8)
 	col.add_child(row)
 	var id := str(c["equipped"].get(slot, ""))
+	var grip := CharacterRules.two_hand_grip(c, Catalog.data, GameState.session.items)
 	if id.is_empty():
-		_text(row, "—", UiTheme.MUTED_LABEL)
+		var main := str(c["equipped"].get("main_hand", ""))
+		var held := slot == "off_hand" and grip
+		_text(row, tr("SLOT_HELD_BY").format({"name": ItemRules.display_name(Catalog.data["items"], GameState.session.items, main)}) if held else "—", UiTheme.MUTED_LABEL)
 		return
+	if slot == "main_hand" and grip:
+		head.text += " · " + tr("SLOT_GRIP_BOTH")
 	_item_button(row, details, c, id, ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), "Slot_" + slot)
 	var b := Button.new()
 	b.text = "BTN_UNEQUIP"
@@ -539,6 +545,18 @@ func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: Str
 	b.disabled = busy
 	b.pressed.connect(GameState.unequip.bind(slot))
 	row.add_child(b)
+	var w := ItemRules.def_of(Catalog.data["items"], GameState.session.items, id)
+	if slot == "main_hand" and not grip and (w.get("weapon", {}) as Dictionary).has("versatile"):
+		var both := Button.new()  # 5e versatile: the bigger die, the shield and the off hand go to the pack
+		both.name = "BothHands"
+		both.text = "BTN_BOTH_HANDS"
+		both.tooltip_text = tr("BOTH_HANDS_TIP").format({"dice": str(w["weapon"]["versatile"])})
+		both.disabled = busy
+		both.pressed.connect(func() -> void:
+			var err := GameState.equip(id, "main_hand", true)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
+		row.add_child(both)
 
 
 ## «Выбросить»: the thing (a bag — with what is in it) goes down in the room; the sheet stays open.

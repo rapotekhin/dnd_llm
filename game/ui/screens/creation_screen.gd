@@ -66,7 +66,7 @@ func _ready() -> void:
 	side.theme_type_variation = UiTheme.SIDE
 	_info = DetailsPanel.new(Vector2(0, 160))
 	_info.show_text(tr("INFO_HINT"), "")
-	var right := _info.column(side, 0)
+	var right := _info.column(side, 360)
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(right)
 	var side_scroll := ScrollContainer.new()
@@ -357,6 +357,7 @@ func _draw_start() -> void:
 		b.text = "%s — %s, %s" % [ch["name"], race, CharacterBuilder.klass(ch, d).get("name", "")]
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # a long name must not widen the grid past the window
 		b.tooltip_text = str(p.get("story", ""))
 		InfoBox.hook(b, _info, b.text, str(p.get("story", "")))
 		b.pressed.connect(func() -> void:
@@ -582,6 +583,10 @@ func _draw_equipment() -> void:
 			b.text = _alt_text(alts[a])
 			b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			b.toggle_mode = true
+			if b.text.length() > 60:  # a long kit wraps on a line of its own instead of widening the window
+				b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+				b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.name = "Equip_%d_%d" % [i, a]
 			b.button_pressed = int(picked[i]["alt"]) == a
 			b.pressed.connect(func() -> void:

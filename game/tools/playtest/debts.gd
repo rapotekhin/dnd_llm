@@ -45,6 +45,33 @@ func run() -> void:
 	step("taking the mail off takes 5 minutes", s.minute - minute == 5, "%d → %d" % [minute, s.minute])
 	step("info: the chat line", true, _last_effect(s))
 	await shot("sheet_unequipped")
+
+	# Both hands (a fix after v0.7.22.32): the longsword gripped in two, a greatsword frees the shield hand; the sheet scrolls.
+	var list: ScrollContainer = find(sheet, "GearList")
+	step("the gear tab scrolls", list != null and list.size.y < sheet.get_viewport_rect().size.y and list.get_v_scroll_bar().visible,
+		str(list.size) if list != null else "")
+	var both: Button = find(sheet, "BothHands")
+	if step("«Двумя руками» on the longsword with a shield", both != null and not both.disabled):
+		await press(both)
+		await frames(3)
+		step("the shield went to the pack", str(s.character["equipped"]["shield"]).is_empty() and CombatRules.weapon_profile(s.character, node("Catalog").data, s.items, "longsword")["dice"] == "1d10")
+		await shot("sheet_both_hands")
+	await press(find(sheet, "Equip_shield_shield"))
+	await frames(3)
+	s.character["inventory"]["greatsword"] = 1
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var great: Button = find(sheet, "Equip_main_hand_greatsword")
+	step("a greatsword goes «В обе руки»", great != null and not great.disabled and great.text == "В обе руки", great.text if great != null else "")
+	if great != null:
+		await press(great)
+		await frames(3)
+		step("the greatsword took the shield off", str(s.character["equipped"]["main_hand"]) == "greatsword" and str(s.character["equipped"]["shield"]).is_empty())
+		step("the off hand is held", _text_of(find(sheet, "SlotCard_off_hand")).contains("занята"), _text_of(find(sheet, "SlotCard_off_hand")))
+		await shot("sheet_greatsword")
+		s.character["equipped"]["main_hand"] = "longsword"  # the rest of the scenario fights with the longsword
+		s.character["equipped"]["shield"] = "shield"
+		CharacterRules.refresh(s.character, node("Catalog").data, s.items)
 	await press(find(sheet, "CloseSheetButton"))
 
 	# The smith's goods.

@@ -2051,11 +2051,12 @@ func cancel_turn() -> void:
 
 ## Puts an owned item into an equipment slot (CharacterRules.SLOTS). "" on success, else a localization key.
 ## Not while the master thinks: the snapshot of the turn in flight would no longer match.
-func equip(item_id: String, slot: String) -> String:
+func equip(item_id: String, slot: String, both: bool = false) -> String:
 	if session == null or is_busy():
 		return "EQUIP_BUSY"
 	var c := session.character
-	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot)) and session.mode == GameSession.MODE_COMBAT:
+	var freed := CharacterRules.hands_freed(c, Catalog.data, session.items, item_id, slot, both)
+	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot) or freed.has("shield")) and session.mode == GameSession.MODE_COMBAT:
 		return "EQUIP_IN_COMBAT"
 	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot)
 	if not why.is_empty():
@@ -2064,6 +2065,8 @@ func equip(item_id: String, slot: String) -> String:
 		return "ITEM_CURSED"
 	var before: Dictionary = (c["equipped"] as Dictionary).duplicate()
 	c["equipped"][slot] = item_id
+	for sl: String in freed:  # both hands on the weapon: the shield and the off hand go to the pack
+		c["equipped"][sl] = ""
 	if slot == "main_hand" and str(c["equipped"].get("off_hand", "")) == item_id and int(c["inventory"][item_id]) < 2:
 		c["equipped"]["off_hand"] = ""
 	for pair: Array in [["ring1", "ring2"], ["ring2", "ring1"]]:  # one ring cannot be on two fingers

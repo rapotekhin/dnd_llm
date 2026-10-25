@@ -1041,3 +1041,8 @@ QUEST_TRACK,"◆ {title}: {step}"
 QUEST_TRACK_TIP,Показать на карте
 QUEST_TRACKED,◆ Слежу
 BTN_TRACK,Следить
+BTN_EQUIP_BOTH_HANDS,В обе руки
+BTN_BOTH_HANDS,Двумя руками
+BOTH_HANDS_TIP,"Взять двумя руками: урон {dice}. Щит и вторая рука — в рюкзак"
+SLOT_GRIP_BOTH,двумя руками
+SLOT_HELD_BY,занята: {name}
