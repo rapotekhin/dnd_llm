@@ -11,6 +11,9 @@ signal bag_requested(bag_id: String)
 var _conc_armed := ""  # a concentration spell pressed once while another is held (v0.7.13.1)
 var _tabs: TabContainer
 var _picked_item := ""  # the item shown in the details panel of the gear tab (v0.7.7 fixes)
+const DOLL_LEFT: Array[String] = ["head", "eyes", "neck", "cloak", "armor", "hands"]
+const DOLL_RIGHT: Array[String] = ["main_hand", "off_hand", "shield", "ring1", "ring2", "feet"]
+
 var _details: DetailsPanel  # v0.7.22.21 (#2–#5): the one description panel of the sheet, over the chat
 
 
@@ -186,27 +189,34 @@ func _stats_tab(c: Dictionary) -> Control:
 		var b := int(w["bonus"])
 		_text(box, tr("SHEET_ATTACK").format({"name": w["name"], "hit": "%+d" % int(w["to_hit"]),
 			"dmg": str(w["dice"]).replace("d", tr("DICE_D")) + (("%+d" % b) if b != 0 else "")}))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 48)
-	box.add_child(row)
-	var abil := VBoxContainer.new()
-	abil.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(abil)
-	_text(abil, tr("SHEET_ABILITIES"), UiTheme.MUTED_LABEL)
-	for a: String in CharacterRules.ABILITIES:
-		var score := int(c["abilities"][a])
-		var prof := " ●" if (c.get("save_profs", []) as Array).has(a) else ""
-		_text(abil, tr("SHEET_ABILITY_ROW").format({"name": tr("ABILITY_" + a.to_upper()), "score": score,
-			"mod": "%+d" % CharacterRules.mod(score), "save": "%+d" % int(c["saves"][a])}) + prof)
-	var skills := VBoxContainer.new()
-	skills.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(skills)
-	_text(skills, tr("SHEET_SKILLS"), UiTheme.MUTED_LABEL)
+	_text(box, tr("SHEET_ABILITIES") + " · " + tr("SHEET_SKILLS"), UiTheme.MUTED_LABEL)
+	var grid := GridContainer.new()  # the skills under their abilities (v0.7.22.32, Л2, Л3)
+	grid.name = "AbilityGrid"
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 48)
+	grid.add_theme_constant_override("v_separation", 14)
+	box.add_child(grid)
 	var ids: Array = (d["rules"]["skills"] as Dictionary).keys()
 	ids.sort_custom(func(x: String, y: String) -> bool: return tr("SKILL_" + x.to_upper()) < tr("SKILL_" + y.to_upper()))
-	for s: String in ids:
-		var mark := " ●●" if (c.get("expertise", []) as Array).has(s) else (" ●" if (c.get("skill_profs", []) as Array).has(s) else "")
-		_text(skills, "%s %+d%s" % [tr("SKILL_" + s.to_upper()), int(c["skills"][s]), mark])
+	for a: String in CharacterRules.ABILITIES:
+		var col := VBoxContainer.new()
+		col.name = "Ability_" + a
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_theme_constant_override("separation", 2)
+		grid.add_child(col)
+		var score := int(c["abilities"][a])
+		var saved := (c.get("save_profs", []) as Array).has(a)
+		var head := _text(col, tr("SHEET_ABILITY_ROW").format({"name": tr("ABILITY_" + a.to_upper()), "score": score,
+			"mod": "%+d" % CharacterRules.mod(score), "save": "%+d" % int(c["saves"][a])}) + (" ●" if saved else ""))
+		head.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
+		for s: String in ids:
+			if str(d["rules"]["skills"][s]) != a:
+				continue
+			var expert := (c.get("expertise", []) as Array).has(s)
+			var prof := expert or (c.get("skill_profs", []) as Array).has(s)
+			var sl := _text(col, "    %s %+d%s" % [tr("SKILL_" + s.to_upper()), int(c["skills"][s]), " ●●" if expert else (" ●" if prof else "")])
+			sl.name = "Skill_" + s
+			sl.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT if expert else UiTheme.ACCENT if prof else UiTheme.MUTED)
 	var langs: Array = LanguageRules.hero(c).map(func(l: String) -> String: return LanguageRules.name_of(d, l))
 	var lang_line := _text(box, tr("SHEET_LANGUAGES").format({"list": ", ".join(langs)}), UiTheme.MUTED_LABEL)
 	lang_line.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -387,27 +397,39 @@ func _gear_tab(c: Dictionary) -> Control:
 	var items: Dictionary = Catalog.data["items"]
 	var busy := GameState.is_busy()
 	_text(box, tr("SHEET_EQUIPPED"), UiTheme.MUTED_LABEL)
-	for slot: String in CharacterRules.SLOTS:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		box.add_child(row)
-		var id := str(c["equipped"].get(slot, ""))
-		if id.is_empty():
-			_text(row, "%s: —" % tr("SLOT_" + slot.to_upper()))
-		else:
-			_item_button(row, details, c, id, "%s: %s" % [tr("SLOT_" + slot.to_upper()), ItemRules.display_name(items, s.items, id)], "Slot_" + slot)
-		if not id.is_empty():
-			var b := Button.new()
-			b.text = "BTN_UNEQUIP"
-			b.name = "Unequip_" + slot
-			b.disabled = busy
-			b.pressed.connect(GameState.unequip.bind(slot))
-			row.add_child(b)
+	var doll := HBoxContainer.new()  # the worn slots around a figure (v0.7.22.32, П8)
+	doll.name = "Doll"
+	doll.add_theme_constant_override("separation", 16)
+	box.add_child(doll)
+	for side: Array in [DOLL_LEFT, [], DOLL_RIGHT]:
+		if side.is_empty():
+			var fig := Figure.new()
+			fig.custom_minimum_size = Vector2(170, 0)
+			doll.add_child(fig)
+			continue
+		var col := VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_theme_constant_override("separation", 6)
+		doll.add_child(col)
+		for slot: String in side:
+			_slot_card(col, details, c, slot, busy)
 	box.add_child(HSeparator.new())
 	_text(box, tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}))
 	var weight := _text(box, tr("SHEET_WEIGHT").format({"n": int(ceilf(CharacterRules.carried_weight(c, Catalog.data, s.items))), "max": CharacterRules.capacity(c, Catalog.data)}),
 		UiTheme.MUTED_LABEL)
 	weight.name = "CarriedWeight"
+	var carry := CharacterRules.carried_weight(c, Catalog.data, s.items) / maxf(1.0, CharacterRules.capacity(c, Catalog.data))
+	var wbar := ProgressBar.new()  # П7
+	wbar.name = "WeightBar"
+	wbar.max_value = 1.0
+	wbar.step = 0.0
+	wbar.value = minf(carry, 1.0)
+	wbar.show_percentage = false
+	wbar.custom_minimum_size = Vector2(0, 10)
+	var wcol := UiTheme.OK if carry < 0.75 else UiTheme.WARN if carry <= 1.0 else UiTheme.BAD
+	wbar.add_theme_stylebox_override("fill", UiTheme.box(wcol, wcol, 0, 0, 3))
+	wbar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 3))
+	box.add_child(wbar)
 	var att_line := _text(box, tr("SHEET_ATTUNED").format({"n": ItemRules.attuned(c).size()}), UiTheme.MUTED_LABEL)  # v0.7.12
 	att_line.name = "AttunedCount"
 	if CharacterRules.overloaded(c, Catalog.data, s.items):
@@ -492,6 +514,33 @@ func _gear_tab(c: Dictionary) -> Control:
 	return root
 
 
+## A worn slot of the doll: its name, the thing in it (or «—») and «Снять».
+func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: String, busy: bool) -> void:
+	var card := PanelContainer.new()
+	card.name = "SlotCard_" + slot
+	card.theme_type_variation = UiTheme.CARD
+	parent.add_child(card)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	card.add_child(col)
+	var head := _text(col, tr("SLOT_" + slot.to_upper()), UiTheme.MUTED_LABEL)
+	head.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL - 2)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	col.add_child(row)
+	var id := str(c["equipped"].get(slot, ""))
+	if id.is_empty():
+		_text(row, "—", UiTheme.MUTED_LABEL)
+		return
+	_item_button(row, details, c, id, ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), "Slot_" + slot)
+	var b := Button.new()
+	b.text = "BTN_UNEQUIP"
+	b.name = "Unequip_" + slot
+	b.disabled = busy
+	b.pressed.connect(GameState.unequip.bind(slot))
+	row.add_child(b)
+
+
 ## «Выбросить»: the thing (a bag — with what is in it) goes down in the room; the sheet stays open.
 func _drop_button(row: Control, what: String, qty: int, node_name: String, text: String, busy: bool) -> void:
 	var b := Button.new()
@@ -520,3 +569,20 @@ func _item_button(row: Control, details: DetailsPanel, c: Dictionary, id: String
 	b.pressed.connect(func() -> void: _picked_item = id)
 	details.hook(b, ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), DetailsPanel.item_text(c, Catalog.data, GameState.session.items, id))
 	row.add_child(b)
+
+
+## A plain outline of a figure between the slots of the doll; a sprite can take its place.
+class Figure extends Control:
+	func _draw() -> void:
+		var k := minf(size.y / 400.0, size.x / 170.0)
+		var cx := size.x / 2.0
+		var top := maxf(0.0, (size.y - 400.0 * k) / 2.0)
+		var col := Color(UiTheme.BORDER, 0.9)
+		var p := func(x: float, y: float) -> Vector2: return Vector2(cx + x * k, top + y * k)
+		draw_arc(p.call(0, 44), 26 * k, 0, TAU, 32, col, 3.0, true)
+		draw_line(p.call(0, 70), p.call(0, 86), col, 3.0, true)
+		draw_polyline(PackedVector2Array([p.call(-46, 96), p.call(46, 96), p.call(36, 226), p.call(-36, 226), p.call(-46, 96)]), col, 3.0, true)
+		draw_line(p.call(-46, 96), p.call(-70, 222), col, 3.0, true)
+		draw_line(p.call(46, 96), p.call(70, 222), col, 3.0, true)
+		draw_line(p.call(-22, 226), p.call(-28, 380), col, 3.0, true)
+		draw_line(p.call(22, 226), p.call(28, 380), col, 3.0, true)

@@ -106,6 +106,17 @@ static func current(s: GameSession, world: Dictionary, quest_id: String) -> Dict
 	return q["steps"][i] if not q.is_empty() and i >= 0 and i < (q["steps"] as Array).size() else {}
 
 
+## The followed quest (П11): the player's pick while it is active, else the last one taken; "" — none.
+static func tracked(s: GameSession, world: Dictionary) -> String:
+	if s.quests_active.has(s.tracked_quest) and not current(s, world, s.tracked_quest).is_empty():
+		return s.tracked_quest
+	var ids: Array = s.quests_active.keys()
+	for i in range(ids.size() - 1, -1, -1):
+		if not current(s, world, str(ids[i])).is_empty():
+			return str(ids[i])
+	return ""
+
+
 ## A fact of the engine (a talk step is closed only by its button).
 static func met(s: GameSession, when: Dictionary) -> bool:
 	if when.has("encounter"):

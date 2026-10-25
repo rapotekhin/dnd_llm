@@ -145,7 +145,7 @@ static func compare(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 	if c.is_empty():
 		return ""
 	var def := ItemRules.def_of(data["items"], session_items, id)
-	var slot := CharacterRules.slot_for(def)
+	var slot := CharacterRules.slot_for(def, data)
 	var eq: Dictionary = c.get("equipped", {})
 	if slot.is_empty() or str(eq.get(slot, "")) == id:
 		return ""
@@ -157,6 +157,11 @@ static func compare(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 		var now := CharacterRules.armor_class(c, data, session_items)
 		var then := CharacterRules.armor_class(probe, data, session_items)
 		return TranslationServer.translate("ITEM_CMP_AC").format({"now": now, "then": then})
+	if slot != "main_hand":  # a ring, a cloak, boots: what it replaces
+		var worn := str(eq.get(slot, ""))
+		if worn.is_empty():
+			return ""
+		return TranslationServer.translate("ITEM_CMP_WORN").format({"name": ItemRules.display_name(data["items"], session_items, worn)})
 	var cur := CombatRules.weapon_profile(c, data, session_items, str(eq.get("main_hand", "")))
 	var probe := c.duplicate(true)
 	probe["equipped"]["main_hand"] = id

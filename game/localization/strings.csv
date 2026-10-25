@@ -1036,3 +1036,8 @@ OPT_COMBAT_SPEED_SLOW,Медленно
 OPT_COMBAT_SPEED_NORMAL,Обычно
 OPT_COMBAT_SPEED_FAST,Быстро
 OPT_COMBAT_SPEED_INSTANT,Сразу
+ITEM_CMP_WORN,Вместо надетого: {name}
+QUEST_TRACK,"◆ {title}: {step}"
+QUEST_TRACK_TIP,Показать на карте
+QUEST_TRACKED,◆ Слежу
+BTN_TRACK,Следить

@@ -21,6 +21,7 @@ var _level_up: LevelUpView
 var _short_rest: SmallDialog
 var _long_rest: SmallDialog
 var _chips: EffectChips
+var _track: Button  # the followed quest's step over the chat (v0.7.22.32)
 var _theft: TheftPanel
 var _container: ContainerPanel
 var _place: PlacePanel
@@ -83,6 +84,19 @@ func _ready() -> void:
 	leave_button.text = "BTN_LEAVE_CONVERSATION"
 	leave_button.pressed.connect(GameState.leave_conversation)
 	_mode_bar.add_child(leave_button)
+	_track = Button.new()
+	_track.name = "QuestTrack"
+	_track.flat = true
+	_track.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_track.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_track.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_track.add_theme_color_override("font_color", UiTheme.ACCENT)
+	_track.tooltip_text = "QUEST_TRACK_TIP"
+	_track.pressed.connect(func() -> void:
+		var qid := QuestRules.tracked(GameState.session, Catalog.data["world"])
+		var rooms := WorldMap.step_rooms(GameState.session, Catalog.data["world"], qid)
+		_map.open_at(rooms[0] if not rooms.is_empty() else ""))
+	left.add_child(_track)
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 20)
@@ -353,6 +367,11 @@ func _refresh() -> void:
 	send_button.disabled = not online or busy
 	var s := GameState.session if GameState.has_session() else null
 	_chips.refresh()
+	var qid := QuestRules.tracked(s, Catalog.data["world"]) if s != null else ""
+	_track.visible = not qid.is_empty()
+	if _track.visible:
+		_track.text = tr("QUEST_TRACK").format({"title": QuestRules.quest(Catalog.data["world"], qid).get("title", qid),
+			"step": QuestRules.step_text(s, Catalog.data["world"], qid)})
 	_mode_bar.visible = s != null and s.in_conversation()
 	trade_panel.visible = s != null and s.mode == GameSession.MODE_TRADE
 	if _mode_bar.visible:

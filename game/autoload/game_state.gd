@@ -119,6 +119,14 @@ func haggle() -> String:
 
 ## Switches a conversation with a trader between talk and the deal panel without a turn: the master's options
 ## stay as they are (B33), the next turn's snapshot carries the new mode.
+## Follow a quest: its step goes over the chat (v0.7.22.32, П11).
+func track_quest(quest_id: String) -> void:
+	if session == null:
+		return
+	session.tracked_quest = quest_id
+	EventBus.state_changed.emit()
+
+
 func set_trade(on: bool) -> bool:
 	if session == null or is_busy() or not session.in_conversation():
 		return false

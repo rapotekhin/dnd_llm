@@ -31,6 +31,8 @@ var options: Array[String] = []
 var option_costs: Array[int] = []
 ## The check of each option, {skill, dc_tier} or {} (turn.result.option_checks, v0.7.22.28): the engine rolls it.
 var option_checks: Array = []
+## The quest the player follows (v0.7.22.32, П11); "" — the last one taken.
+var tracked_quest := ""
 var created_at: String = ""
 
 ## The world pack of this game and its version when the game started.
@@ -417,6 +419,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"options": options,
 		"option_costs": option_costs,
 		"option_checks": option_checks,
+		"tracked_quest": tracked_quest,
 		"created_at": created_at,
 		"world_id": world_id,
 		"world_version": world_version,
@@ -512,6 +515,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.options.append(str(o))
 	for c: Variant in d.get("option_costs", []):
 		s.option_costs.append(int(c))
+	s.tracked_quest = str(d.get("tracked_quest", ""))
 	for ch: Variant in d.get("option_checks", []):
 		s.option_checks.append(ch if ch is Dictionary else {})
 	s.created_at = str(d.get("created_at", ""))

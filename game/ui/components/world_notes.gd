@@ -42,6 +42,13 @@ func open() -> void:
 	visible = true
 
 
+## The map on a room (the followed quest's step); "" — on the hero.
+func open_at(room_id: String) -> void:
+	_selected = room_id
+	visible = true
+	_rebuild()
+
+
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
@@ -77,6 +84,7 @@ func _draw_map() -> void:
 	body.add_theme_constant_override("separation", 16)
 	_box.add_child(body)
 	var canvas := MapCanvas.new()
+	canvas.clip_contents = true  # the drawing stays out of the info column
 	canvas.name = "MapCanvas"
 	canvas.custom_minimum_size = Vector2(0, maxf(420.0, get_viewport_rect().size.y - 480.0))  # the overlay height without its header, legend and margins
 	canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -246,8 +254,26 @@ func _draw_journal() -> void:
 		_box.add_child(head)
 		if folded:
 			continue
-		for line: String in g["lines"]:
-			_text("   " + line, UiTheme.MUTED_LABEL)
+		var ids: Array = g.get("ids", [])
+		var followed := QuestRules.tracked(s, Catalog.data["world"])
+		for i in (g["lines"] as Array).size():
+			var line_l := _text("   " + str(g["lines"][i]), UiTheme.MUTED_LABEL)
+			var qid := str(ids[i]) if i < ids.size() else ""
+			if qid.is_empty():
+				continue
+			var row := HBoxContainer.new()  # «Следить» beside a quest with a step (П11)
+			row.add_theme_constant_override("separation", 12)
+			_box.add_child(row)
+			line_l.reparent(row)
+			line_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var tb := Button.new()
+			tb.name = "Track_" + qid
+			tb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			tb.text = tr("QUEST_TRACKED") if qid == followed else tr("BTN_TRACK")
+			tb.disabled = qid == followed
+			tb.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			tb.pressed.connect(GameState.track_quest.bind(qid))
+			row.add_child(tb)
 
 
 ## The entries of a tab: the people met, or the lines of its groups.
@@ -266,6 +292,7 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 	match tab if not tab.is_empty() else _tab:
 		"quests":
 			var open: Array[String] = []
+			var open_ids: Array[String] = []
 			var done: Array[String] = []
 			for q: Dictionary in XpRules.quest_list(s, Catalog.data["world"]):
 				var line := ("%s — %s" % [q["title"], q["description"]]) if not str(q["description"]).is_empty() else str(q["title"])
@@ -277,8 +304,10 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 					done.append("✗ %s — %s" % [q["title"], tr("JOURNAL_FAILED")])
 					continue
 				(done if bool(q["done"]) else open).append(("✓ " if bool(q["done"]) else "• ") + line)
+				if not bool(q["done"]):
+					open_ids.append(str(q["id"]) if not str(q.get("step", "")).is_empty() else "")
 			if not open.is_empty():
-				out.append({"title": tr("JOURNAL_QUESTS_OPEN"), "lines": open})
+				out.append({"title": tr("JOURNAL_QUESTS_OPEN"), "lines": open, "ids": open_ids})
 			if not done.is_empty():
 				out.append({"title": tr("JOURNAL_QUESTS_DONE"), "lines": done, "folded": true})
 		"places":

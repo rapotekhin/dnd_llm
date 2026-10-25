@@ -33,6 +33,32 @@ func run() -> void:
 	step("quest taken", s.quests_active.has("drogin_amulet"), str(s.quests_active))
 	await shot("quest_taken")
 
+	# The followed quest (v0.7.22.32, П11): its step over the chat, «Следить» in the journal, a click opens the map.
+	var track: Button = find(screen(), "QuestTrack")
+	step("the quest's step over the chat", track != null and track.visible and track.text.contains("Амулет"), track.text if track != null else "")
+	QuestRules.accept(s, node("Catalog").data, "letter_to_ilva")
+	node("EventBus").state_changed.emit()
+	await frames(2)
+	step("the last taken is followed", track.text.contains(str(QuestRules.quest(node("Catalog").data["world"], "letter_to_ilva").get("title", ""))), track.text)
+	var journal: Control = find(screen(), "JournalView")
+	journal.call("open")
+	await frames(3)
+	var follow: Button = find(journal, "Track_drogin_amulet")
+	if step("«Следить» in the journal", follow != null and not follow.disabled):
+		await press(follow)
+		await frames(3)
+		await shot("journal_follow")
+		step("the picked quest is followed", s.tracked_quest == "drogin_amulet" and track.text.contains("Амулет"), track.text)
+	journal.visible = false
+	await press(track)
+	await frames(3)
+	var map_view: Control = find(screen(), "MapView")
+	step("a click on the step opens the map", map_view.visible)
+	await shot("track_map")
+	map_view.visible = false
+	s.quests_active.erase("letter_to_ilva")
+	node("EventBus").state_changed.emit()
+
 	s.encounters_done.append("gallery_kobolds")  # not a combat test
 	s.revealed["mine-gallery"] = ["deadfall"]  # as if the rogue's passive Perception noticed it
 	if not await _go(gs, "mine-gallery"):

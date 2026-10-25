@@ -102,6 +102,14 @@ static func quest_marks(s: GameSession, world: Dictionary) -> Dictionary:
 	return out
 
 
+## The known rooms (visited or behind a known exit) of a quest's current step: where the followed quest opens the map.
+static func step_rooms(s: GameSession, world: Dictionary, quest_id: String) -> Array[String]:
+	var rooms: Array[String] = []
+	_step_rooms(WorldView.new(world), world, QuestRules.current(s, world, quest_id).get("when", {}), rooms)
+	var frontier: Array = known(s, world)["frontier"]  # a room behind a known exit is shown on the map too
+	return rooms.filter(func(r: String) -> bool: return s.visited.has(r) or frontier.has(r))
+
+
 static func _step_rooms(w: WorldView, world: Dictionary, when: Dictionary, out: Array[String]) -> void:
 	for key: String in ["all", "any"]:
 		for sub: Variant in when.get(key, []):
