@@ -112,7 +112,8 @@ func _project(s: GameSession, data: Dictionary) -> void:
 
 
 func _where(s: GameSession, data: Dictionary, r: Dictionary) -> String:
-	var parts: Array[String] = [BackgroundRules.tool_name(data, CraftRules.tool_of(r))]
+	var tool := BackgroundRules.tool_name(data, CraftRules.tool_of(r))
+	var parts: Array[String] = [tr("CRAFT_SIMPLE") if CraftRules.simple(r) else tool]
 	if not str(r.get("station", "")).is_empty():
 		parts.append(CraftRules.station_name(data, str(r["station"])) + ("" if CraftRules.station_here(s, data, str(r["station"])) else " — " + tr("CRAFT_NOT_HERE")))
 	return " · ".join(parts)
@@ -138,7 +139,7 @@ func _recipes(s: GameSession, data: Dictionary) -> void:
 		_label(col, CraftRules.recipe_name(s, data, id) + (" ×%d" % qty if qty > 1 else ""))
 		var out_def := ItemRules.def_of(data["items"], s.items, str(r["output"]))
 		var kind := ItemInfo.kind_line(data, out_def)
-		var meta: Array[String] = [_where(s, data, r), TimeRules.span(int(r.get("hours", 1)) * 60),
+		var meta: Array[String] = [_where(s, data, r), TimeRules.span(CraftRules.minutes_of(r)),
 			tr("CRAFT_DC").format({"dc": int(r.get("dc", 10)), "chance": CraftRules.chance(s, data, id)})]
 		if not kind.is_empty():
 			meta.push_front(kind)

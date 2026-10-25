@@ -134,8 +134,9 @@ static func eat(s: GameSession, data: Dictionary) -> Array[String]:
 	var have := food_items(c, data)
 	var ids: Array = have.keys()
 	var foul: Dictionary = data["rules"].get("diseases", {}).get("foul_food", {})
-	ids.sort_custom(func(a: Variant, b: Variant) -> bool:  # foul food only when nothing else is left (v0.7.23.1)
-		return int(foul.has(a)) * 1000 + int(have[a]) < int(foul.has(b)) * 1000 + int(have[b]))
+	var key := func(id: Variant) -> int:  # foul food last (v0.7.23.1), what spoils first (v0.7.25)
+		return int(foul.has(id)) * 1000 + int(FoodRules.spoils_days(data, s.items, str(id)) <= 0) * 100 + int(have[id])
+	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return key.call(a) < key.call(b))
 	var v := value(s, data, "food")
 	var eaten: Array[String] = []
 	for id: Variant in ids:
@@ -145,6 +146,9 @@ static func eat(s: GameSession, data: Dictionary) -> Array[String]:
 			eaten.append(ItemRules.display_name(data["items"], s.items, str(id)))
 	set_value(s, data, "food", v)
 	var lines: Array[String] = ["Поел: " + ", ".join(eaten), "Еда %d/100" % roundi(value(s, data, "food"))]
+	for id: Variant in ids:  # a dish's water, temporary HP and boon, once a kind (v0.7.25)
+		if eaten.has(ItemRules.display_name(data["items"], s.items, str(id))):
+			lines.append_array(FoodRules.meal(s, data, str(id)))
 	for id: Variant in ids:
 		if foul.has(id) and eaten.has(ItemRules.display_name(data["items"], s.items, str(id))):
 			lines.append_array(DiseaseRules.expose(s, data, str(foul[id]["disease"]), int(foul[id]["dc"]), "Дурная еда"))

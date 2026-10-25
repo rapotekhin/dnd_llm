@@ -2851,6 +2851,8 @@ static func results(s: GameSession, data: Dictionary, encounter_loot: Dictionary
 			xp += int(m["xp"])
 		if str(f["status"]) == "dead" and CraftRules.hides(data, m) > 0:  # v0.7.24: the hide of a beast
 			loot["raw_hide"] = int(loot.get("raw_hide", 0)) + CraftRules.hides(data, m)
+		if str(f["status"]) == "dead" and CraftRules.meat(data, m) > 0:  # v0.7.25: meat for the fire
+			loot["raw_meat"] = int(loot.get("raw_meat", 0)) + CraftRules.meat(data, m)
 		if str(f["status"]) in ["dead", "surrendered", "unconscious"]:
 			for item: Variant in m.get("equipment", []):
 				if data["items"]["catalog"].has(str(item)):

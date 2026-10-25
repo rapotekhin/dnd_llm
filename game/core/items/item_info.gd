@@ -44,6 +44,8 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	elif str(def.get("item_type", "")) == "wondrous" and not (def.get("properties", []) as Array).is_empty() and not id.begins_with(ItemRules.UNKNOWN):
 		# big test #23: a worn kind works only worn (v0.7.22.9), a stone or a pearl — in the pack
 		out.append(_t("ITEM_WORN_TO_WORK" if not CharacterRules.wear_slot(def, data).is_empty() else "ITEM_WORKS_CARRIED"))
+	if int(def.get("spoils_days", 0)) > 0:
+		out.append(_t("ITEM_SPOILS").format({"n": int(def["spoils_days"])}))
 	if ItemRules.cursed(def):
 		out.append(_t("ITEM_CURSED_LINE"))
 	if bool(def.get("master", false)):
@@ -136,6 +138,17 @@ static func use_line(data: Dictionary, id: String, session_items: Dictionary = {
 		parts.append(_t("ITEM_USE_RESIST").format({"type": str(data["misc"]["damage_types"].get(str(fx["resist"]), fx["resist"]))}))
 	if fx.has("recover_slot"):
 		parts.append(_t("ITEM_USE_SLOT"))
+	if fx.has("meal"):  # a dish (v0.7.25)
+		var m: Dictionary = fx["meal"]
+		var food := int(data["rules"]["hero_effects"]["camp"]["food"].get(ItemRules.real_id(id), 0)) * int(data["rules"].get("needs", {}).get("food", {}).get("points", 0))
+		if food > 0:
+			parts.append(_t("ITEM_USE_FOOD").format({"n": food}))
+		if int(m.get("water", 0)) > 0:
+			parts.append(_t("ITEM_USE_WATER").format({"n": int(m["water"])}))
+		if int(m.get("temp_hp", 0)) > 0:
+			parts.append(_t("ITEM_USE_TEMP_HP").format({"n": int(m["temp_hp"])}))
+		if fx.has("adv_tag"):
+			parts.append(_t("ITEM_USE_ADV").format({"tag": HeroDefense.tag_name(str(fx["adv_tag"]))}))
 	return " · ".join(parts)
 
 

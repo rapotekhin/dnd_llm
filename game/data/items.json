@@ -4429,6 +4429,118 @@
 			"value_cp": 1000,
 			"stack": true,
 			"description": "Друидский фокусировочный предмет может быть веткой омелы или падуба, жезлом или посохом из тиса или другого особого дерева, посохом, выращенным из живого дерева, либо тотемом из перьев, меха, костей и зубов священных животных. Друид может использовать такой предмет как фокусировку для заклинаний."
+		},
+		"raw_meat": {
+			"name": "Сырое мясо",
+			"item_type": "gear",
+			"value_cp": 10,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"material": true,
+			"spoils_days": 2,
+			"description": "Кусок свежего мяса — с рынка или с добычи. Без огня есть нельзя, через пару дней портится."
+		},
+		"grain": {
+			"name": "Крупа",
+			"item_type": "gear",
+			"value_cp": 5,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"material": true,
+			"description": "Мешочек ячменя или пшена: основа каши и похлёбки, хранится долго."
+		},
+		"vegetables": {
+			"name": "Овощи",
+			"item_type": "gear",
+			"value_cp": 5,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"material": true,
+			"spoils_days": 5,
+			"description": "Репа, лук и морковь — на похлёбку и рагу."
+		},
+		"spices": {
+			"name": "Специи",
+			"item_type": "gear",
+			"value_cp": 30,
+			"weight": 0.1,
+			"properties": [],
+			"stack": true,
+			"material": true,
+			"description": "Соль, перец и сушёные травы для вкуса: без них рагу — просто варево."
+		},
+		"mushrooms": {
+			"name": "Лесные грибы",
+			"item_type": "gear",
+			"value_cp": 3,
+			"weight": 0.5,
+			"properties": [],
+			"stack": true,
+			"material": true,
+			"spoils_days": 3,
+			"description": "Горсть грибов из Пущи. Сырыми лучше не есть — сварить."
+		},
+		"berries": {
+			"name": "Лесные ягоды",
+			"item_type": "consumable",
+			"value_cp": 2,
+			"weight": 0.2,
+			"properties": [],
+			"stack": true,
+			"spoils_days": 2,
+			"description": "Горсть ягод, собранных в лесу: можно съесть сразу."
+		},
+		"roast_meat": {
+			"name": "Жареное мясо",
+			"item_type": "consumable",
+			"value_cp": 20,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"spoils_days": 2,
+			"description": "Мясо, зажаренное на огне: сытнее пайка, но долго не лежит."
+		},
+		"stew": {
+			"name": "Похлёбка",
+			"item_type": "consumable",
+			"value_cp": 15,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"spoils_days": 2,
+			"description": "Горячая похлёбка из крупы и овощей: и сытно, и утоляет жажду."
+		},
+		"hunters_stew": {
+			"name": "Охотничье рагу",
+			"item_type": "consumable",
+			"value_cp": 60,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"spoils_days": 2,
+			"description": "Густое рагу с мясом и специями: после него тело крепче, а силы — как после отдыха."
+		},
+		"mushroom_soup": {
+			"name": "Грибной суп на травах",
+			"item_type": "consumable",
+			"value_cp": 40,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"spoils_days": 2,
+			"description": "Суп из лесных грибов с горькими травами: очищает кровь и помогает телу бороться с ядом."
+		},
+		"spoiled_food": {
+			"name": "Испорченная еда",
+			"item_type": "consumable",
+			"value_cp": 0,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"description": "Еда, пролежавшая слишком долго: пахнет дурно. Съесть можно — но живот может не простить."
 		}
 	}
 }

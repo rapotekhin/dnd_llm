@@ -2493,7 +2493,8 @@
                 "forge",
                 "workbench",
                 "alchemy",
-                "hearth"
+                "hearth",
+                "fire"
               ],
               "type": "string"
             },

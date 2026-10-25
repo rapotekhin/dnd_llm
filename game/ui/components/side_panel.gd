@@ -540,9 +540,10 @@ func _craft_row(s: GameSession, can_act: bool) -> void:
 	var spots := CraftRules.gather_here(s, data)
 	if not craft and spots.is_empty():
 		return
-	var acts := HBoxContainer.new()
+	var acts := HFlowContainer.new()  # the gathering spots wrap rather than cut their names (v0.7.25)
 	acts.name = "CraftActs"
-	acts.add_theme_constant_override("separation", 6)
+	acts.add_theme_constant_override("h_separation", 6)
+	acts.add_theme_constant_override("v_separation", 6)
 	_content.add_child(acts)
 	if craft:
 		var p := CraftRules.project(s.character)
@@ -561,6 +562,8 @@ func _craft_row(s: GameSession, can_act: bool) -> void:
 				EventBus.message.emit(tr(err)), can_act and why.is_empty())
 		gb.name = "Gather_" + tag
 		gb.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		gb.clip_text = false
+		gb.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		gb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		gb.tooltip_text = tr(why) if not why.is_empty() else tr("GATHER_TIP").format({"time": TimeRules.span(int(g["minutes"])),
 			"skill": CraftRules.tr_skill(data, str(g["skill"])), "dc": int(g["dc"])})

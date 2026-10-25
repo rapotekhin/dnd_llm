@@ -1192,6 +1192,12 @@
 		"acid_vial": {"throw": {"range": 20, "improvised": true, "damage": ["2d6", "acid"]}},
 		"holy_water": {"throw": {"range": 20, "improvised": true, "damage": ["2d6", "radiant"], "types": ["undead", "fiend"]}},
 		"oil_flask": {"throw": {"range": 20, "improvised": true, "oiled": 5}},
+		"berries": {"meal": {}},
+		"roast_meat": {"meal": {}},
+		"stew": {"meal": {"water": 20}},
+		"hunters_stew": {"meal": {"water": 20, "temp_hp": 5}},
+		"mushroom_soup": {"meal": {"water": 20}, "adv_tag": "poison", "duration": "eight_hours"},
+		"spoiled_food": {"meal": {}},
 		"net": {"throw": {"range": 15, "weapon": true, "condition": "restrained", "escape_dc": 10, "max_size": "large"}},
 		"potion_of_greater_healing": {
 			"heal": [4, 4, 4]
@@ -1786,18 +1792,19 @@
 		},
 		"save": "con",
 		"foul_water": {"disease": "sewer_plague", "dc": 11},
-		"foul_food": {},
+		"foul_food": {"spoiled_food": {"disease": "sewer_plague", "dc": 10}},
 		"contagion_dc": 10,
 		"make": {"days": [1, 10], "incubation_hours": [0, 72], "conditions": ["poisoned", "blinded", "deafened"], "saves": ["str", "dex", "con", "int", "wis", "cha"], "max_hp": [-10, 0]}
 	},
 	"craft": {
-		"_doc": "Crafting (v0.7.24, CraftRules): a recipe is data — `tool` (the hero must be proficient and carry it), `station` (a room tag of `stations`, \"\" — anywhere), `hours` of work, `dc` of the craft check (d20 + the tool's ability of `tools` + proficiency + the game's difficulty), `materials` {item: qty} spent at the start, `output` × `qty`. Known: every recipe of a proficient tool without `learn`; a `learn` one — taught for pay (service op teach_recipe), from a carried book (item `teaches`) or made by the master (effect `recipe`). Work goes in shifts of `work_hours`, the progress kept in c.craft; a station in a room with its trader present costs `rent_cp_hour`. The check at the end sets the quality by the margin (`quality`, the last tier whose `from` is reached): the value ×`value`, a stack's qty ×`qty`, the `props` by the item type and the name suffix. `salvage` — an item with a recipe gives `share` of its materials back (floor, at least 1 of the first), `extra` for items without one; `hides` — raw hides from a dead beast by size, into the loot; `gather` — room tags where a button gets raw material (a check; `per_day` times a day per room); `make` — the limits of the master's recipes.",
+		"_doc": "Crafting (v0.7.24, CraftRules): a recipe is data — `tool` (the hero must be proficient and carry it), `station` (a room tag of `stations`, \"\" — anywhere), `hours` of work, `dc` of the craft check (d20 + the tool's ability of `tools` + proficiency + the game's difficulty), `materials` {item: qty} spent at the start, `output` × `qty`. Known: every recipe of a proficient tool without `learn`; a `learn` one — taught for pay (service op teach_recipe), from a carried book (item `teaches`) or made by the master (effect `recipe`). Work goes in shifts of `work_hours`, the progress kept in c.craft; a station in a room with its trader present costs `rent_cp_hour`. The check at the end sets the quality by the margin (`quality`, the last tier whose `from` is reached): the value ×`value`, a stack's qty ×`qty`, the `props` by the item type and the name suffix. `salvage` — an item with a recipe gives `share` of its materials back (floor, at least 1 of the first), `extra` for items without one; `hides` — raw hides from a dead beast by size, into the loot; `gather` — room tags where a button gets raw material (a check; `per_day` times a day per room); `make` — the limits of the master's recipes. Kitchen (v0.7.25): `minutes` instead of `hours`; a `simple` recipe is known to anyone and needs no tool in the pack (the proficiency adds only when proficient); a station's `tags` — the room tags that count, `wild` — anywhere outside a settlement (a campfire); `meat` — raw meat from a dead beast by size; a gather spot's `items` — one of them is found.",
 		"tools": {"smiths_tools": "str", "carpenters_tools": "str", "masons_tools": "str", "leatherworkers_tools": "dex", "woodcarvers_tools": "dex", "weavers_tools": "dex", "tinkers_tools": "dex", "herbalism_kit": "wis", "cooks_utensils": "wis", "alchemists_supplies": "int", "brewers_supplies": "int"},
 		"stations": {
 			"forge": {"name": "Горн и наковальня", "rent_cp_hour": 10},
 			"workbench": {"name": "Верстак", "rent_cp_hour": 5},
 			"alchemy": {"name": "Стол алхимика", "rent_cp_hour": 10},
-			"hearth": {"name": "Очаг", "rent_cp_hour": 0}
+			"hearth": {"name": "Очаг", "rent_cp_hour": 0},
+			"fire": {"name": "Огонь", "tags": ["hearth"], "wild": true, "rent_cp_hour": 0}
 		},
 		"work_hours": [1, 8],
 		"quality": [
@@ -1812,10 +1819,12 @@
 			"extra": {"battleaxe": {"iron_bar": 2}, "greataxe": {"iron_bar": 3}, "greatsword": {"iron_bar": 3}, "warhammer": {"iron_bar": 2}, "rapier": {"iron_bar": 1}, "scimitar": {"iron_bar": 1}, "sickle": {"iron_bar": 1}, "light_hammer": {"iron_bar": 1}, "war_pick": {"iron_bar": 1}, "morningstar": {"iron_bar": 2}, "flail": {"iron_bar": 1}, "ring_mail": {"iron_bar": 4}, "scale_mail": {"iron_bar": 5}, "chain_mail": {"iron_bar": 6}, "longbow": {"timber": 1}, "crossbow_light": {"timber": 1, "iron_bar": 1}}
 		},
 		"hides": {"tiny": 0, "small": 1, "medium": 1, "large": 2, "huge": 3},
+		"meat": {"tiny": 0, "small": 1, "medium": 2, "large": 4, "huge": 6},
 		"gather": {
 			"ore": {"name": "Добыть руду", "item": "iron_ore", "qty": [1, 3], "skill": "athletics", "tool": "", "dc": 10, "minutes": 120, "per_day": 2},
 			"herbs": {"name": "Собрать травы", "item": "herbs", "qty": [1, 4], "skill": "survival", "tool": "herbalism_kit", "dc": 10, "minutes": 60, "per_day": 2},
-			"timber": {"name": "Заготовить древесину", "item": "timber", "qty": [1, 2], "skill": "athletics", "tool": "", "dc": 8, "minutes": 120, "per_day": 3}
+			"timber": {"name": "Заготовить древесину", "item": "timber", "qty": [1, 2], "skill": "athletics", "tool": "", "dc": 8, "minutes": 120, "per_day": 3},
+			"forage": {"name": "Собрать грибы и ягоды", "items": ["mushrooms", "berries"], "qty": [1, 3], "skill": "survival", "tool": "", "dc": 10, "minutes": 60, "per_day": 2}
 		},
 		"make": {"hours": [1, 72], "dc_tiers": ["very_easy", "easy", "medium", "hard"], "materials_max": 4, "qty_max": 20, "labor_cp_hour": 25},
 		"recipes": {
@@ -1841,11 +1850,17 @@
 			"antitoxin": {"tool": "herbalism_kit", "station": "", "hours": 4, "dc": 13, "materials": {"herbs": 3, "vial": 1}, "output": "antitoxin", "qty": 1},
 			"healing_potion": {"tool": "herbalism_kit", "station": "", "hours": 8, "dc": 15, "materials": {"herbs": 4, "vial": 1}, "output": "healing_potion", "qty": 1, "learn": true},
 			"alchemists_fire": {"tool": "alchemists_supplies", "station": "alchemy", "hours": 8, "dc": 15, "materials": {"oil_flask": 1, "herbs": 2}, "output": "alchemists_fire_flask", "qty": 1},
-			"acid_vial": {"tool": "alchemists_supplies", "station": "alchemy", "hours": 8, "dc": 15, "materials": {"herbs": 3, "vial": 1}, "output": "acid_vial", "qty": 1}
+			"acid_vial": {"tool": "alchemists_supplies", "station": "alchemy", "hours": 8, "dc": 15, "materials": {"herbs": 3, "vial": 1}, "output": "acid_vial", "qty": 1},
+			"roast_meat": {"tool": "cooks_utensils", "simple": true, "station": "fire", "minutes": 30, "dc": 5, "materials": {"raw_meat": 1}, "output": "roast_meat", "qty": 1},
+			"stew": {"tool": "cooks_utensils", "simple": true, "station": "fire", "minutes": 60, "dc": 5, "materials": {"grain": 1, "vegetables": 1}, "output": "stew", "qty": 2},
+			"hunters_stew": {"tool": "cooks_utensils", "station": "fire", "minutes": 90, "dc": 12, "materials": {"raw_meat": 2, "vegetables": 1, "spices": 1}, "output": "hunters_stew", "qty": 2},
+			"mushroom_soup": {"tool": "cooks_utensils", "station": "fire", "minutes": 60, "dc": 13, "materials": {"mushrooms": 2, "herbs": 1}, "output": "mushroom_soup", "qty": 2},
+			"jerky": {"tool": "cooks_utensils", "station": "fire", "minutes": 120, "dc": 10, "materials": {"raw_meat": 2, "grain": 1}, "output": "rations", "qty": 2, "name": "Завялить мясо в пайки"}
 		}
 	},
 	"needs": {
-		"_doc": "Needs of the hero (v0.7.23, NeedRules): a scale 0–100 that empties over `hours` of the game clock from the last meal or drink and fills by eating (camp food points × points) or drinking (drink); `stages` by the value below `below` — a chip, the master's line and the checks they hamper (saves: ability → disadvantage); at 0 — a level of exhaustion each full day past grace_days (\"3+con\": 3 + CON modifier, at least 1). sleep is shown from the hours awake (hero_effects.exhaustion.awake_hours), its exhaustion stays the awake saves. Water: a waterskin holds skin_drinks drinks, filled where the room has the tag `water` or a thing whose name has one of water_words; drinking there is free. A bed in a settlement (an inn, a temple) feeds and waters (rest_meal). Switched by the game setting `needs` (on by default).",
+		"_doc": "Needs of the hero (v0.7.23, NeedRules): a scale 0–100 that empties over `hours` of the game clock from the last meal or drink and fills by eating (camp food points × points) or drinking (drink); `stages` by the value below `below` — a chip, the master's line and the checks they hamper (saves: ability → disadvantage); at 0 — a level of exhaustion each full day past grace_days (\"3+con\": 3 + CON modifier, at least 1). sleep is shown from the hours awake (hero_effects.exhaustion.awake_hours), its exhaustion stays the awake saves. Water: a waterskin holds skin_drinks drinks, filled where the room has the tag `water` or a thing whose name has one of water_words; drinking there is free. A bed in a settlement (an inn, a temple) feeds and waters (rest_meal). Switched by the game setting `needs` (on by default). Food spoils (v0.7.25, FoodRules): an item's `spoils_days` — a carried batch turns into `spoil_to` that many days after it was got; a dish's `meal` in consumables — water points and temp_hp on eating, its adv_tag a boon.",
+		"spoil_to": "spoiled_food",
 		"food": {"name": "Еда", "hours": 24, "points": 50, "grace_days": "3+con", "eat_minutes": 15, "stages": [
 			{"below": 50, "chip": "Голоден", "line": "голоден"},
 			{"below": 20, "chip": "Очень голоден", "line": "очень голоден — слабеет", "saves": {"con": "disadvantage"}},
@@ -1939,7 +1954,13 @@
 			"food": {
 			"goodberry": 1,
 				"rations": 2,
-				"bread": 1
+				"bread": 1,
+				"berries": 1,
+				"roast_meat": 2,
+				"stew": 2,
+				"hunters_stew": 2,
+				"mushroom_soup": 2,
+				"spoiled_food": 1
 			}
 		}
 	},

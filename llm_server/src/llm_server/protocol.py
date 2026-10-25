@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.56.0"
+PROTOCOL_VERSION = "0.57.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -922,7 +922,7 @@ class RecipeEffect(_Out):
     kind: Literal["recipe"] = "recipe"
     name: str = Field(default="", max_length=60)  # «Силок из верёвки»; empty — the output's name
     tool: str  # smiths_tools, leatherworkers_tools, woodcarvers_tools, carpenters_tools, herbalism_kit, alchemists_supplies, cooks_utensils, tinkers_tools…
-    station: Literal["forge", "workbench", "alchemy", "hearth"] | None = None  # None — anywhere
+    station: Literal["forge", "workbench", "alchemy", "hearth", "fire"] | None = None  # None — anywhere; fire — a hearth or a campfire
     hours: int = Field(ge=1, le=72)
     dc_tier: Literal["very_easy", "easy", "medium", "hard"]
     materials: list[RecipeMaterial] = Field(min_length=1, max_length=4)

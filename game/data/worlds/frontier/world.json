@@ -694,7 +694,8 @@
 			"site_id": "pushcha-edge",
 			"tags": [
 				"timber",
-				"herbs"
+				"herbs",
+				"forage"
 			]
 		},
 		"pushcha-trail": {
@@ -774,7 +775,8 @@
 			],
 			"site_id": "pushcha-trail",
 			"tags": [
-				"timber"
+				"timber",
+				"forage"
 			]
 		},
 		"pushcha-glade": {
@@ -823,7 +825,8 @@
 			],
 			"site_id": "pushcha-glade",
 			"tags": [
-				"herbs"
+				"herbs",
+				"forage"
 			]
 		},
 		"pushcha-hollow": {
@@ -1359,7 +1362,13 @@
 				"ale": 40,
 				"bread": 20,
 				"rations": 10,
-				"candle": 20
+				"candle": 20,
+				"raw_meat": 6,
+				"grain": 10,
+				"vegetables": 8,
+				"spices": 4,
+				"stew": 6,
+				"roast_meat": 4
 			},
 			"wants": [
 				"consumable"
@@ -1483,7 +1492,9 @@
 				"alchemists_fire_flask": 2,
 				"oil_flask": 6,
 				"acid_vial": 2,
-				"net": 1
+				"net": 1,
+				"grain": 10,
+				"spices": 4
 			},
 			"wants": [
 				"gear",

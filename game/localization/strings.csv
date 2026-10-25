@@ -442,6 +442,11 @@ ITEM_USE_HEAL,Лечит {dice} хитов
 ITEM_USE_REMOVE,Снимает: {list}
 ITEM_USE_RESIST,Сопротивление: {type} на час
 ITEM_USE_SLOT,Восстанавливает потраченную ячейку до 3 круга
+ITEM_USE_FOOD,сытость +{n}
+ITEM_USE_WATER,вода +{n}
+ITEM_USE_TEMP_HP,временные хиты {n}
+ITEM_USE_ADV,преимущество на спасброски: {tag}
+ITEM_SPOILS,Портится через {n} дн. после того как добыто или куплено
 ITEM_USE_SPELL,Заклинание «{spell}» ({n} круг) без ячейки
 ITEM_USE_THROW,Бросить во врага (вкладка «Предметы» в бою)
 ITEM_VERSATILE,двумя руками {dice}
@@ -1080,6 +1085,7 @@ CRAFT_IN_HAND,В работе
 CRAFT_LEFT,осталось {time}
 CRAFT_RENT,плата {cp} в час ({who})
 CRAFT_NOT_HERE,не здесь
+CRAFT_SIMPLE,простое блюдо — умеет любой
 CRAFT_RECIPES,Рецепты
 CRAFT_NO_RECIPES,Рецептов нет: их знают по владению инструментами ремесленника; редкие учат мастера за плату или книги
 CRAFT_DC,"Сл {dc}, шанс {chance}%"

@@ -523,6 +523,9 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 				"source": {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}}))
 		lines.append_array(HeroDefense.after_damage(s, data, int(adj["damage"])))
 		return lines
+	if s != null and fx.has("meal"):  # a dish (v0.7.25)
+		lines.append_array(FoodRules.eat_one(s, data, id))
+		return lines
 	if s != null and fx.has("invisible_minutes"):
 		var minutes := CombatRules.roll_dice(rng, str(fx["invisible_minutes"]))
 		ConditionRules.add_effect(c, {"condition": "invisible", "ends": {"at": ConditionRules.now(s) + minutes * 10},

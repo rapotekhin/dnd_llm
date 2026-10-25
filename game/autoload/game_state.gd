@@ -79,6 +79,7 @@ func long_rest(supplies: Dictionary = {}) -> String:
 	lines.append_array(ConditionRules.expire(session, Catalog.data))
 	lines.append_array(NeedRules.tick(session, Catalog.data))
 	lines.append_array(DiseaseRules.tick(session, Catalog.data))
+	lines.append_array(FoodRules.tick(session, Catalog.data))
 	CharacterRules.refresh(session.character, Catalog.data, session.items)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))

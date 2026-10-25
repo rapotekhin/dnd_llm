@@ -35,6 +35,16 @@ static func tool_of(r: Dictionary) -> String:
 	return str(r.get("tool", ""))
 
 
+## A simple recipe (v0.7.25, a roast, a stew): anyone knows it and cooks without the tool.
+static func simple(r: Dictionary) -> bool:
+	return bool(r.get("simple", false))
+
+
+## The work of a recipe in minutes: `minutes` (dishes) or `hours`.
+static func minutes_of(r: Dictionary) -> int:
+	return int(r["minutes"]) if r.has("minutes") else int(r.get("hours", 1)) * 60
+
+
 static func proficient(c: Dictionary, tool: String) -> bool:
 	return (c.get("tools", []) as Array).has(tool)
 
@@ -62,7 +72,7 @@ static func known(s: GameSession, data: Dictionary) -> Array[String]:
 	var recipes := all(s, data)
 	for id: String in recipes:
 		var r: Dictionary = recipes[id]
-		if not proficient(s.character, tool_of(r)):
+		if not simple(r) and not proficient(s.character, tool_of(r)):
 			continue
 		if bool(r.get("learn", false)) and not learned(s.character).has(id) and not books.has(id):
 			continue
@@ -74,8 +84,15 @@ static func station_name(data: Dictionary, station: String) -> String:
 	return str(cfg(data)["stations"].get(station, {}).get("name", station))
 
 
+## A station's `tags` count as it (v0.7.25), a `wild` one is anywhere outside a settlement (a campfire).
 static func station_here(s: GameSession, data: Dictionary, station: String) -> bool:
-	return station.is_empty() or (SceneRules.room(s, data["world"], s.room_id).get("tags", []) as Array).has(station)
+	if station.is_empty():
+		return true
+	var st: Dictionary = cfg(data)["stations"].get(station, {})
+	var tags: Array = SceneRules.room(s, data["world"], s.room_id).get("tags", [])
+	if tags.has(station) or (st.get("tags", []) as Array).any(func(t: Variant) -> bool: return tags.has(t)):
+		return true
+	return bool(st.get("wild", false)) and not ReputationRules.is_settlement(data, WorldView.new(data["world"]).location_id(s.room_id))
 
 
 ## The trader of the room who owns the station and takes rent per hour: {npc, cp} or {} (free).
@@ -107,7 +124,7 @@ static func why_not(s: GameSession, data: Dictionary, id: String) -> String:
 		return "CRAFT_UNKNOWN"
 	if not project(s.character).is_empty():
 		return "CRAFT_BUSY"
-	if int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
+	if not simple(r) and int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
 		return "CRAFT_NO_TOOL"
 	if not station_here(s, data, str(r.get("station", ""))):
 		return "CRAFT_NO_STATION"
@@ -129,8 +146,8 @@ static func start(s: GameSession, data: Dictionary, id: String) -> Array[String]
 		for i in n:
 			ItemRules._remove_one(s.character, m)
 		spent.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, m), n])
-	s.character["craft"] = {"recipe": id, "done": 0, "total": int(r.get("hours", 1)) * 60}
-	return ["Начата работа: %s (%s); ушло: %s" % [recipe_name(s, data, id), TimeRules.span(int(r.get("hours", 1)) * 60), ", ".join(spent)]]
+	s.character["craft"] = {"recipe": id, "done": 0, "total": minutes_of(r)}
+	return ["Начата работа: %s (%s); ушло: %s" % [recipe_name(s, data, id), TimeRules.span(minutes_of(r)), ", ".join(spent)]]
 
 
 ## "" when a shift of work may go here, else a localization key.
@@ -139,7 +156,7 @@ static func can_work(s: GameSession, data: Dictionary) -> String:
 	if p.is_empty():
 		return "CRAFT_NO_PROJECT"
 	var r := recipe(s, data, str(p["recipe"]))
-	if int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
+	if not simple(r) and int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
 		return "CRAFT_NO_TOOL"
 	if not station_here(s, data, str(r.get("station", ""))):
 		return "CRAFT_NO_STATION"
@@ -186,11 +203,11 @@ static func progress(c: Dictionary) -> int:
 	return 0 if p.is_empty() else int(100.0 * int(p["done"]) / maxf(1.0, float(p["total"])))
 
 
-## The bonus of the craft check with `tool`: its ability, the proficiency, the game's difficulty.
+## The bonus of the craft check with `tool`: its ability, the proficiency (when proficient), the game's difficulty.
 static func bonus(s: GameSession, data: Dictionary, tool: String) -> int:
 	var ab := str(cfg(data)["tools"].get(tool, "int"))
-	return CharacterRules.mod(int(s.character.get("abilities", {}).get(ab, 10))) + CharacterRules.prof_bonus(s.character, data) \
-		+ DifficultyRules.bonus(s, data)
+	var prof := CharacterRules.prof_bonus(s.character, data) if proficient(s.character, tool) else 0
+	return CharacterRules.mod(int(s.character.get("abilities", {}).get(ab, 10))) + prof + DifficultyRules.bonus(s, data)
 
 
 ## The chance in % of at least the normal quality (a margin of the normal tier).
@@ -309,8 +326,9 @@ static func salvageable(s: GameSession, data: Dictionary) -> Array[String]:
 	for id: String in s.character.get("inventory", {}):
 		if worn.has(id) or salvage_yield(s, data, id).is_empty() or ItemRules.held_by_curse(s.character, data, s.items, id):
 			continue
-		if bool(ItemRules.def_of(data["items"], s.items, id).get("material", false)) or ContainerRules.is_carried_kind(data, id):
-			continue  # raw stuff stays raw; a bag may hold things
+		var d := ItemRules.def_of(data["items"], s.items, id)
+		if bool(d.get("material", false)) or str(d.get("item_type", "")) == "consumable" or ContainerRules.is_carried_kind(data, id):
+			continue  # raw stuff stays raw; a dish or a potion is not taken apart; a bag may hold things
 		out.append(id)
 	return out
 
@@ -334,6 +352,13 @@ static func hides(data: Dictionary, monster: Dictionary) -> int:
 	if str(monster.get("type", "")) != "beast":
 		return 0
 	return int(cfg(data)["hides"].get(str(monster.get("size", "medium")), 0))
+
+
+## Raw meat from a dead beast by its size (v0.7.25).
+static func meat(data: Dictionary, monster: Dictionary) -> int:
+	if str(monster.get("type", "")) != "beast":
+		return 0
+	return int(cfg(data).get("meat", {}).get(str(monster.get("size", "medium")), 0))
 
 
 # --- gathering ----------------------------------------------------------------------------------------------------
@@ -390,10 +415,12 @@ static func gather(s: GameSession, data: Dictionary, tag: String) -> Array[Strin
 		lines.append("Ничего толкового не нашлось")
 		return lines
 	var qty := s.rng.randi_range(int(g["qty"][0]), int(g["qty"][1]))
+	var pool: Array = g.get("items", [g.get("item", "")])
+	var item := str(pool[s.rng.randi_range(0, pool.size() - 1)])
 	var inv: Dictionary = s.character["inventory"]
-	inv[str(g["item"])] = int(inv.get(str(g["item"]), 0)) + qty
+	inv[item] = int(inv.get(item, 0)) + qty
 	CharacterRules.refresh(s.character, data, s.items)
-	lines.append("Добыто: %s ×%d" % [ItemRules.display_name(data["items"], s.items, str(g["item"])), qty])
+	lines.append("Добыто: %s ×%d" % [ItemRules.display_name(data["items"], s.items, item), qty])
 	return lines
 
 
