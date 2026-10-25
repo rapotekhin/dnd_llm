@@ -264,11 +264,7 @@ func _learn(c: Dictionary, ids: Array) -> void:
 
 
 func _tab(cs: Control, key: String) -> void:
-	for t: Node in cs.find_children("*", "TabContainer", true, false):
-		var tabs := t as TabContainer
-		for i in tabs.get_tab_count():
-			if tabs.get_tab_title(i) == tr(key):
-				tabs.current_tab = i
+	cs.call("set_filter", key)
 
 
 func _my_turn(gs: Node, s: GameSession) -> bool:

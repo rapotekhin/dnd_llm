@@ -133,11 +133,7 @@ func _gear_tab(sheet: Control) -> void:
 
 
 func _items_tab(cs: Control) -> void:
-	for t: Node in cs.find_children("*", "TabContainer", true, false):
-		var tabs := t as TabContainer
-		for i in tabs.get_tab_count():
-			if tabs.get_tab_title(i) == tr("COMBAT_TAB_ITEMS"):
-				tabs.current_tab = i
+	cs.call("set_filter", "COMBAT_TAB_ITEMS")
 
 
 func _tail(n: int) -> String:

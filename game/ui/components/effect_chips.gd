@@ -5,6 +5,9 @@ extends HFlowContainer
 ## does. Data — ConditionRules.shown; call refresh() after a state change.
 
 
+var compact := false  ## small chips with the name only; the time and the cause go to the meta for a panel (v0.7.22.30)
+
+
 func _init() -> void:
 	name = "EffectChips"
 	add_theme_constant_override("h_separation", 8)
@@ -34,6 +37,12 @@ func refresh() -> void:
 		var l := Label.new()
 		l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		l.text = "%s · %s" % [e["name"], e["left"]]
+		if compact:
+			chip.set_meta("title", str(e["name"]))
+			chip.set_meta("about", "%s\n%s" % [e["left"], chip.tooltip_text])
+			chip.tooltip_text = ""
+			l.text = str(e["name"])
+			l.add_theme_font_size_override("font_size", 16)
 		var cond := str(e["condition"])
 		l.add_theme_color_override("font_color", UiTheme.ACCENT if cond.is_empty() else UiTheme.MUTED if cond == "concentration" else UiTheme.WARN)
 		chip.add_child(l)

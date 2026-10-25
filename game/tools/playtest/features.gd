@@ -61,10 +61,7 @@ func run() -> void:
 	cs = screen()
 	var breath: Button = find(cs, "Feat_breath")
 	step("the breath is a button of the features tab", breath != null, breath.tooltip_text if breath != null else "")
-	var tabs: TabContainer = cs.find_children("*", "TabContainer", true, false)[0]
-	for i in tabs.get_tab_count():
-		if tabs.get_tab_title(i) == tr("COMBAT_TAB_FEATURES"):
-			tabs.current_tab = i
+	cs.call("set_filter", "COMBAT_TAB_FEATURES")
 	await frames(2)
 	await shot("features_tab")
 

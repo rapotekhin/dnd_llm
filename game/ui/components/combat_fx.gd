@@ -32,6 +32,29 @@ static func play(node: Control, kind: String) -> void:
 			_flash(node, VIOLET, 0.45)
 
 
+## A number over the chip that rises and fades (v0.7.22.30, П9): «−6» red, «+4» green. `host` is a free-placed layer
+## over the screen, so the number does not shove the chip's container.
+static func number(host: Control, node: Control, amount: int) -> void:
+	if host == null or node == null or not is_instance_valid(node) or not node.is_inside_tree() or amount == 0:
+		return
+	var l := Label.new()
+	l.name = "FxNumber"
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	l.text = ("+%d" if amount > 0 else "−%d") % absi(amount)
+	l.add_theme_font_size_override("font_size", 40)
+	l.add_theme_color_override("font_color", GREEN if amount > 0 else RED)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	l.add_theme_constant_override("outline_size", 8)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	host.add_child(l)
+	var at := node.get_global_rect()
+	l.global_position = Vector2(at.get_center().x - 24, at.position.y - 44)
+	var tw := l.create_tween()
+	tw.tween_property(l, "position:y", l.position.y - 56, 0.9).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(l, "modulate:a", 0.0, 0.9).set_delay(0.35)
+	tw.tween_callback(l.queue_free)
+
+
 ## A lasting look of a state, set on every redraw: hidden — grey in a haze; "" — as is.
 static func look(node: Control, state: String) -> void:
 	if node == null:

@@ -35,3 +35,18 @@ func run() -> void:
 	var me := find(screen(), "Foe_" + CombatRules.PLAYER) as Control
 	step("the hidden hero is grey", me != null and me.modulate.a < 0.9, str(me.modulate) if me != null else "")
 	await shot("hidden")
+
+	# Floating numbers (v0.7.22.30, П9): the foe loses HP — «−5» rises over its chip and goes.
+	CombatRules.player(s)["hidden"] = false
+	var f := CombatRules.fighter(s, foe)
+	f["hp"] = int(f["hp"]) - 5
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var num := find(screen(), "FxNumber") as Label
+	step("a damage number over the foe", num != null and num.text == "−5", num.text if num != null else "")
+	await shot("number")
+	await wait_until(func() -> bool: return find(screen(), "FxNumber") == null, 3.0)
+	step("the number is gone", find(screen(), "FxNumber") == null)
+	var queue := find(screen(), "Turn_" + CombatRules.current(s))
+	step("the turn queue as portraits, the current one first", queue != null and queue.get_index() == 1)
+	step("the hotbar numbers its buttons", (find(screen(), "Attack_main") as Button).text.begins_with("1 · "), (find(screen(), "Attack_main") as Button).text)

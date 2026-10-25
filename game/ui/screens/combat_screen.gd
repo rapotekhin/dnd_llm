@@ -10,8 +10,13 @@ var _details: DetailsPanel  # v0.7.7 fixes: what a spell, feature, item or foe i
 var _queue: HBoxContainer
 var _field: HBoxContainer
 var _portrait: VBoxContainer
-var _economy: Label
-var _tabs: TabContainer
+var _economy: HBoxContainer
+var _filters: HBoxContainer
+var _bar: HFlowContainer  # the hotbar: every action in one flow, the filter hides the rest (v0.7.22.30, П2)
+var _cats: Array = []  # [category key, first child index] while the bar is built
+var _fx_layer: Control  # floating numbers over the field
+var _block: VBoxContainer  # the round's engine lines (Б6)
+var _block_round := -1
 var _hint: Label
 var _log_box: VBoxContainer
 var _log_scroll: ScrollContainer
@@ -32,7 +37,9 @@ var _pending: Callable
 var _pending_check: Callable
 ## Callable(target_id) -> Dictionary: the hint of the pending action (CombatRules.attack_preview / cast_preview).
 var _pending_preview: Callable
-var _tab := 0
+var _filter := "COMBAT_TAB_ALL"
+const TEMP_HP := Color("#6f9fc8")
+const FILTERS: Array[String] = ["COMBAT_TAB_ALL", "COMBAT_TAB_WEAPONS", "COMBAT_TAB_SPELLS", "COMBAT_TAB_FEATURES", "COMBAT_TAB_ITEMS", "COMBAT_TAB_COMMON"]
 var _cast_circle := 0  # v0.7.22.19 (#19): the slot circle the player picked; 0 — the lowest that fits
 
 
@@ -68,7 +75,7 @@ func _ready() -> void:
 
 	var bottom := PanelContainer.new()
 	bottom.theme_type_variation = UiTheme.SIDE
-	bottom.custom_minimum_size = Vector2(0, 300)
+	bottom.custom_minimum_size = Vector2(0, 340)  # the hotbar's rows over the field's empty height (Б1)
 	left.add_child(bottom)
 	var brow := HBoxContainer.new()
 	brow.add_theme_constant_override("separation", 18)
@@ -80,14 +87,40 @@ func _ready() -> void:
 	var mid := VBoxContainer.new()
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brow.add_child(mid)
-	_economy = Label.new()
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 24)
+	mid.add_child(top)
+	_economy = HBoxContainer.new()
 	_economy.name = "Economy"
-	_economy.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	mid.add_child(_economy)
-	_tabs = TabContainer.new()
-	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tabs.tab_changed.connect(func(t: int) -> void: _tab = t)
-	mid.add_child(_tabs)
+	_economy.add_theme_constant_override("separation", 14)
+	top.add_child(_economy)
+	_filters = HBoxContainer.new()
+	_filters.name = "ActionFilter"
+	_filters.add_theme_constant_override("separation", 4)
+	_filters.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_filters.alignment = BoxContainer.ALIGNMENT_END
+	top.add_child(_filters)
+	var group := ButtonGroup.new()
+	for key: String in FILTERS:
+		var fb := Button.new()
+		fb.name = "Filter_" + key.trim_prefix("COMBAT_TAB_").to_lower()
+		fb.text = key
+		fb.toggle_mode = true
+		fb.button_group = group
+		fb.flat = true
+		fb.button_pressed = key == _filter
+		fb.pressed.connect(func() -> void: set_filter(key))
+		_filters.add_child(fb)
+	var bar_scroll := ScrollContainer.new()
+	bar_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bar_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	mid.add_child(bar_scroll)
+	_bar = HFlowContainer.new()
+	_bar.name = "Hotbar"
+	_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_bar.add_theme_constant_override("h_separation", 10)
+	_bar.add_theme_constant_override("v_separation", 10)
+	bar_scroll.add_child(_bar)
 	var right_btns := VBoxContainer.new()
 	right_btns.custom_minimum_size = Vector2(200, 0)
 	right_btns.add_theme_constant_override("separation", 10)
@@ -150,6 +183,11 @@ func _ready() -> void:
 	send_button.pressed.connect(_send)
 	rcol.add_child(send_button)
 
+	_fx_layer = Control.new()
+	_fx_layer.name = "FxLayer"
+	_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_fx_layer)
+	_fx_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_results = ModalFrame.new("", 820.0)  # in the middle, one window template (v0.7.22.29, С4, Б5)
 	_results.name = "CombatResults"
 	_results.visible = false
@@ -197,13 +235,71 @@ func _add_log(text: String, master: bool) -> void:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.theme_type_variation = UiTheme.DM_TEXT if master else UiTheme.MUTED_LABEL
-	_log_box.add_child(l)
+	if master:
+		_log_box.add_child(l)
+	else:
+		var hit := _roll_color(text)
+		if hit != Color.TRANSPARENT:
+			l.add_theme_color_override("font_color", hit)
+		_round_block().get_node("Lines").add_child(l)
+		_count_block()
 	while _log_box.get_child_count() > 120:
 		var old := _log_box.get_child(0)
 		_log_box.remove_child(old)
 		old.queue_free()
 	await get_tree().process_frame
 	_log_scroll.scroll_vertical = int(_log_scroll.get_v_scroll_bar().max_value)
+
+
+## «Броски раунда ▸» (Б6): the engine's lines of a round in one block under a fold; a new round or the master's
+## words start the next block and fold the old one.
+func _round_block() -> VBoxContainer:
+	var rnd := int(GameState.session.combat.get("round", 1)) if GameState.has_session() else 0
+	var last := _log_box.get_child(_log_box.get_child_count() - 1) if _log_box.get_child_count() > 0 else null
+	if _block != null and is_instance_valid(_block) and last == _block and rnd == _block_round:
+		return _block
+	if _block != null and is_instance_valid(_block):
+		_fold(_block, true)
+	_block = VBoxContainer.new()
+	_block.name = "Rolls_%d" % rnd
+	_block_round = rnd
+	var head := Button.new()
+	head.name = "Head"
+	head.flat = true
+	head.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	head.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	head.add_theme_color_override("font_color", UiTheme.MUTED)
+	_block.add_child(head)
+	var lines := VBoxContainer.new()
+	lines.name = "Lines"
+	lines.add_theme_constant_override("separation", 4)
+	_block.add_child(lines)
+	var block := _block
+	head.pressed.connect(func() -> void: _fold(block, lines.visible))
+	_log_box.add_child(_block)
+	return _block
+
+
+func _fold(block: VBoxContainer, folded: bool) -> void:
+	block.get_node("Lines").visible = not folded
+	block.set_meta("folded", folded)
+	_count_block(block)
+
+
+func _count_block(block: VBoxContainer = null) -> void:
+	if block == null:
+		block = _block
+	var n := block.get_node("Lines").get_child_count()
+	(block.get_node("Head") as Button).text = tr("COMBAT_ROLLS").format({"n": n, "fold": "▸" if bool(block.get_meta("folded", false)) else "▾"})
+
+
+## A hit is red (the damage), a miss is grey; other lines keep the muted colour.
+static func _roll_color(text: String) -> Color:
+	if text.contains("— промах") or text.contains("— провал"):
+		return UiTheme.MUTED.darkened(0.25)
+	if text.contains("— попадание") or text.contains("критическ"):
+		return UiTheme.BAD
+	return Color.TRANSPARENT
 
 
 ## v0.7.22.27 (as in BG3), outside the input: Space ends the turn, 1–0 press the buttons of the open tab, Tab picks
@@ -236,24 +332,29 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
-## The buttons of a tab (the open one by default) in their order: the keys 1–0.
-func _tab_buttons(page: Control = null) -> Array[BaseButton]:
+## The shown buttons of the hotbar in their order: the keys 1–0.
+func _tab_buttons() -> Array[BaseButton]:
 	var out: Array[BaseButton] = []
-	if page == null:
-		page = _tabs.get_current_tab_control()
-	if page == null:
-		return out
-	for b: Node in page.find_children("*", "BaseButton", true, false):
-		if (b as BaseButton).visible and out.size() < 10:
+	for b: Node in _bar.get_children():
+		if b is BaseButton and not (b is OptionButton) and (b as BaseButton).visible and out.size() < 10:
 			out.append(b as BaseButton)
 	return out
 
 
 func _number_actions() -> void:
-	for page: Node in _tabs.get_children():
-		var buttons := _tab_buttons(page as Control)
-		for i in buttons.size():
-			buttons[i].tooltip_text = Hotkeys.tip(buttons[i].tooltip_text, "action_%d" % (i + 1), SaveManager.keys)
+	var buttons := _tab_buttons()
+	for i in buttons.size():
+		buttons[i].tooltip_text = Hotkeys.tip(buttons[i].tooltip_text, "action_%d" % (i + 1), SaveManager.keys)
+		buttons[i].text = "%d · %s" % [(i + 1) % 10, tr(buttons[i].text)]
+
+
+## The hotbar's filter (a category key or COMBAT_TAB_ALL); the playtests call it too.
+func set_filter(key: String) -> void:
+	_filter = key
+	for fb: Node in _filters.get_children():
+		(fb as Button).set_pressed_no_signal(fb.name == "Filter_" + key.trim_prefix("COMBAT_TAB_").to_lower())
+	if GameState.has_session() and CombatRules.active(GameState.session):
+		_refresh()
 
 
 ## The focus to the next foe card that can be pressed now.
@@ -349,11 +450,24 @@ func _play_fx(s: GameSession) -> void:
 			list.append("down")
 		if not list.is_empty():
 			kinds[id] = list
+	var deltas := {}
+	for id: String in snap:
+		if _last_fx.has(id) and int(snap[id]["hp"]) != int(_last_fx[id]["hp"]):
+			deltas[id] = int(snap[id]["hp"]) - int(_last_fx[id]["hp"])
 	_last_fx = snap
+	if not deltas.is_empty():
+		_numbers(deltas)
 	for who: String in kinds:
 		var node := _field.find_child("Foe_" + who, true, false) as Control
 		for k: Variant in kinds[who]:
 			CombatFx.play(node, str(k))
+
+
+## After the redraw is laid out: «−6» over the chip that lost HP, «+4» over the one healed (П9).
+func _numbers(deltas: Dictionary) -> void:
+	await get_tree().process_frame
+	for id: String in deltas:
+		CombatFx.number(_fx_layer, _field.find_child("Foe_" + id, true, false) as Control, int(deltas[id]))
 
 
 func _base_hint(mine: bool) -> String:
@@ -384,14 +498,65 @@ func _preview_text(pv: Dictionary) -> String:
 	return t
 
 
+## The queue as portraits (Б4, П3): the current one larger and first, then the order; the colour of the frame is the
+## side (foes red). No sprites yet — the first letter.
 func _draw_queue(s: GameSession) -> void:
 	_clear(_queue)
 	var cur := CombatRules.current(s)
 	_chip(_queue, tr("COMBAT_ROUND").format({"n": int(s.combat.get("round", 1))}), false, true)
-	for id: String in s.combat.get("order", []):
+	var order: Array = s.combat.get("order", [])
+	var at := maxi(0, order.find(cur))
+	for k in order.size():
+		var id := str(order[(at + k) % order.size()])
 		var f := CombatRules.fighter(s, id)
-		var gone := str(f.get("status", "active")) != "active"
-		_chip(_queue, str(f["name"]), id == cur, gone)
+		if str(f.get("status", "active")) == "gone":
+			continue
+		_face(id, f, id == cur, str(f.get("status", "active")) != "active")
+
+
+func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
+	var side := str(f.get("side", "enemy"))
+	var col := UiTheme.ACCENT_BRIGHT if side == "player" else UiTheme.OK if side == "ally" else UiTheme.BAD
+	var p := PanelContainer.new()
+	p.name = "Turn_" + id
+	p.tooltip_text = str(f["name"])
+	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_RAISED if now else UiTheme.PANEL, col if not out else UiTheme.MUTED, 3 if now else 2, 4, 8))
+	p.custom_minimum_size = Vector2(64, 64) if now else Vector2(46, 46)
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var l := Label.new()
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	var nm := str(f["name"])
+	var tail := nm.get_slice(" ", nm.get_slice_count(" ") - 1)
+	l.text = nm.left(1).to_upper() + (tail if tail.is_valid_int() else "")  # «В1», «В2» for the numbered ones
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", 32 if now else 22)
+	l.add_theme_color_override("font_color", UiTheme.MUTED if out else col)
+	p.add_child(l)
+	_queue.add_child(p)
+	if now:
+		var name_l := Label.new()
+		name_l.name = "TurnName"
+		name_l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		name_l.text = str(f["name"])
+		name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		name_l.add_theme_color_override("font_color", col)
+		_queue.add_child(name_l)
+
+
+## An HP bar: green, yellow, red by the share left (Б2).
+static func _hp_bar(value: int, most: int, height: float = 14.0) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.max_value = maxi(1, most)
+	bar.value = clampi(value, 0, most)
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, height)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var share := float(value) / maxf(1.0, most)
+	var col := UiTheme.OK if share > 0.5 else UiTheme.WARN if share > 0.25 else UiTheme.BAD
+	bar.add_theme_stylebox_override("fill", UiTheme.box(col, col, 0, 0, 3))
+	bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 3))
+	return bar
 
 
 func _chip(parent: Control, text: String, now: bool, dim: bool) -> void:
@@ -473,11 +638,20 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 				CombatFx.look(card, "hidden")
 			card.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			card.custom_minimum_size = Vector2(0, 76)
+			card.custom_minimum_size = Vector2(0, 104)
 			var conds: Array = CombatRules.foe_conditions(data, f)
 			if bool(f.get("surprised", false)):
 				conds.append(tr("COMBAT_FOE_SURPRISED"))
-			card.text = "%s\n%s%s" % [f["name"], tr(CombatRules.health_key(f)), ("\n" + ", ".join(conds)) if not conds.is_empty() else ""]
+			card.text = "%s\n%s" % [f["name"], tr(CombatRules.health_key(f))]
+			if str(f.get("status")) == "active":
+				var fbar := _hp_bar(int(f["hp"]), int(f["max_hp"]), 8.0)
+				fbar.name = "FoeHp"
+				card.add_child(fbar)
+				fbar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+				fbar.offset_left = 10
+				fbar.offset_right = -10
+				fbar.offset_top = -16
+				fbar.offset_bottom = -8
 			card.tooltip_text = ""  # what the foe is — in the details panel only (big test #35, v0.7.22.5)
 			var lore := CombatRules.monster_card(s, data, f)
 			var about := lore if not lore.is_empty() else tr("COMBAT_FOE_UNKNOWN")
@@ -510,6 +684,20 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 				_pending = Callable()
 				_do(str(act.call(id))))
 			box.add_child(card)
+			if not conds.is_empty():  # the foe's conditions as small chips (Б1)
+				var cflow := HFlowContainer.new()
+				cflow.name = "FoeConds_" + id
+				cflow.add_theme_constant_override("h_separation", 4)
+				cflow.add_theme_constant_override("v_separation", 4)
+				for cn: Variant in conds:
+					var cl := Label.new()
+					cl.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+					cl.text = str(cn)
+					cl.add_theme_font_size_override("font_size", 15)
+					cl.add_theme_color_override("font_color", UiTheme.WARN)
+					cl.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.PANEL_RAISED, UiTheme.BORDER, 1, 3, 4))
+					cflow.add_child(cl)
+				box.add_child(cflow)
 		for w: Dictionary in s.combat.get("incoming", []):
 			if int(w["col"]) != col:
 				continue
@@ -531,12 +719,25 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 	name_l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	name_l.theme_type_variation = UiTheme.HEADING
 	_portrait.add_child(name_l)
-	var bar := ProgressBar.new()
-	bar.max_value = int(c["max_hp"])
-	bar.value = int(c["hp"])
-	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(0, 14)
-	_portrait.add_child(bar)
+	var bars := HBoxContainer.new()
+	bars.name = "HeroHp"
+	bars.add_theme_constant_override("separation", 2)
+	_portrait.add_child(bars)
+	var bar := _hp_bar(int(c["hp"]), int(c["max_hp"]))
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.size_flags_stretch_ratio = maxf(1.0, int(c["max_hp"]))
+	bars.add_child(bar)
+	if int(c.get("temp_hp", 0)) > 0:  # the temporary hits: a blue piece of their own
+		var tb := ProgressBar.new()
+		tb.name = "TempHp"
+		tb.max_value = 1
+		tb.value = 1
+		tb.show_percentage = false
+		tb.custom_minimum_size = Vector2(0, 14)
+		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tb.size_flags_stretch_ratio = float(c["temp_hp"])
+		tb.add_theme_stylebox_override("fill", UiTheme.box(TEMP_HP, TEMP_HP, 0, 0, 3))
+		bars.add_child(tb)
 	_line(_portrait, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}) \
 		+ ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""))
 	if c.has("wild_shape"):  # v0.7.10
@@ -545,8 +746,13 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 	if bool(s.combat.get("reckless", false)):
 		_line(_portrait, tr("COMBAT_RECKLESS")).add_theme_color_override("font_color", UiTheme.BAD)
 	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
+	chips.compact = true  # small, the description in the panel (Б3)
 	_portrait.add_child(chips)
 	chips.refresh()
+	for chip: Node in chips.get_children():
+		var title := str(chip.get_meta("title", ""))
+		var about := str(chip.get_meta("about", ""))
+		(chip as Control).mouse_entered.connect(func() -> void: _details.show_text(title, about))
 	if bool(s.combat.get("raging", false)):
 		_line(_portrait, tr("COMBAT_RAGING")).add_theme_color_override("font_color", UiTheme.BAD)
 	if bool(CombatRules.player(s).get("hidden", false)):
@@ -569,10 +775,18 @@ func _line(parent: Control, text: String) -> Label:
 
 func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	var e := CombatRules.economy(s)
-	var mark := func(n: int, ch: String, key: String) -> String: return ("%s %s" % [ch, tr(key)]) if n > 0 else ("○ " + tr(key))
-	_economy.text = "  ".join([mark.call(int(e.get("action", 0)) + int(e.get("attacks", 0)), "●", "COMBAT_ACTION"),
-		mark.call(int(e.get("bonus", 0)), "▲", "COMBAT_BONUS"), tr("COMBAT_MOVE").format({"n": int(e.get("move", 0))})])
-	_clear(_tabs)
+	_clear(_economy)
+	for spec: Array in [["EcoAction", "● " + tr("COMBAT_ACTION"), int(e.get("action", 0)) + int(e.get("attacks", 0))],
+			["EcoBonus", "▲ " + tr("COMBAT_BONUS"), int(e.get("bonus", 0))],
+			["EcoMove", tr("COMBAT_MOVE").format({"n": int(e.get("move", 0))}), int(e.get("move", 0))]]:
+		var el := Label.new()
+		el.name = spec[0]
+		el.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		el.text = spec[1]
+		el.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT if int(spec[2]) > 0 else UiTheme.MUTED.darkened(0.35))
+		_economy.add_child(el)
+	_clear(_bar)
+	_cats = []
 	var c := s.character
 	# Weapons.
 	var w := _tab_box("COMBAT_TAB_WEAPONS")
@@ -779,7 +993,16 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	surr.tooltip_text = tr(sw) if not sw.is_empty() and sw != "COMBAT_NOT_YOUR_TURN" else tr("COMBAT_SURRENDER_TIP")
 	surr.pressed.connect(func() -> void:  # v0.7.22.27: the fight ends in captivity
 		ConfirmBox.ask(self, tr("CONFIRM_SURRENDER_TITLE"), tr("CONFIRM_SURRENDER"), tr("COMBAT_DO_SURRENDER"), func() -> void: _do(GameState.combat_surrender())))
-	_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
+	_cats.append(["", _bar.get_child_count()])
+	var have := {"COMBAT_TAB_ALL": true}
+	for i in range(_cats.size() - 1):
+		for j in range(int(_cats[i][1]), int(_cats[i + 1][1])):
+			var ch := _bar.get_child(j) as Control
+			if int(_cats[i + 1][1]) > int(_cats[i][1]):
+				have[_cats[i][0]] = true
+			ch.visible = _filter == "COMBAT_TAB_ALL" or _filter == _cats[i][0]
+	for fb: Node in _filters.get_children():  # a filter with nothing in it is not shown
+		fb.visible = have.has(FILTERS[fb.get_index()])
 
 
 ## The picked circle when it fits the spell and has a slot left, else the lowest that fits.
@@ -794,17 +1017,10 @@ func _dmg_text(w: Dictionary) -> String:
 	return "%s%s" % [str(w["dice"]).replace("d", tr("DICE_D")), ("%+d" % b) if b != 0 else ""]
 
 
+## A category of the hotbar starts here; its buttons go into the one bar.
 func _tab_box(title: String) -> HFlowContainer:
-	var scroll := ScrollContainer.new()
-	scroll.name = tr(title)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var flow := HFlowContainer.new()
-	flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	flow.add_theme_constant_override("h_separation", 10)
-	flow.add_theme_constant_override("v_separation", 10)
-	scroll.add_child(flow)
-	_tabs.add_child(scroll)
-	return flow
+	_cats.append([title, _bar.get_child_count()])
+	return _bar
 
 
 func _button(parent: Control, node_name: String, text: String, enabled: bool) -> Button:

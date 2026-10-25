@@ -112,6 +112,6 @@ func _text_of(n: Node) -> String:
 	if n == null:
 		return ""
 	var out := ""
-	for l: Node in n.find_children("*", "Label", true, false):
-		out += (l as Label).text + "\n"
+	for l: Node in n.find_children("*", "Label", true, false) + n.find_children("*", "RichTextLabel", true, false):
+		out += str(l.get("text")) + "\n"
 	return out
