@@ -288,6 +288,18 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return _plan_condition(s, data, turn_id, e, pending)
 		"disease":
 			return _plan_disease(s, data, e, pending)
+		"recipe":  # v0.7.24: the master's recipe, learned by the hero
+			var spec := e.duplicate()
+			var mats := {}
+			for m: Variant in e.get("materials", []):
+				if m is Dictionary:
+					mats[str(m.get("item_id", ""))] = int(mats.get(str(m.get("item_id", "")), 0)) + int(m.get("qty", 1))
+			spec["materials"] = mats
+			var made := CraftRules.make(s, data, spec)
+			if made.has("reason"):
+				return {"reason": made["reason"]}
+			return {"plan": made, "summary": "Рецепт: %s — %s, %d ч, Сл %d" % [CraftRules.recipe_name_of(s, data, made["def"], made.get("item", {})),
+				BackgroundRules.tool_name(data, str(made["def"]["tool"])), int(made["def"]["hours"]), int(made["def"]["dc"])]}
 		"use_feature":
 			var rid := FeatureUses.resolve(c, data, str(e.get("feature", "")))
 			var amount := int(e.get("amount", 1))
@@ -887,6 +899,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 				gen["diseases"] = made
 			_extra_lines.append_array(DiseaseRules.contract(s, _data, str(plan["disease"])))
 			CharacterRules.refresh(c, _data, s.items)
+		"recipe":
+			_extra_lines.append_array(CraftRules.apply_make(s, _data, plan))
 		"use_feature":
 			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
 		"use_item":

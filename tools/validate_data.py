@@ -66,7 +66,7 @@ def known() -> dict[str, set[str]]:
 
 
 ROOM_TAGS = {"temple", "stage", "water", "foul_water"}  # v0.7.11: an acolyte's free rest, a show; v0.7.23: water to drink and fill; v0.7.23.1: foul
-SERVICE_OPS = {"identify", "lift_curse", "enchant", "meal", "cure_disease"}  # v0.7.16: the engine's operations a service runs (rules.json items.services)
+SERVICE_OPS = {"identify", "lift_curse", "enchant", "meal", "cure_disease", "teach_recipe"}  # v0.7.16: the engine's operations a service runs (rules.json items.services)
 NPC_TAGS = {"clergy", "underworld", "commoner", "military"}  # the people of the hero's past (rules.json backgrounds ties)
 
 
@@ -102,13 +102,26 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     items = (ids["items"] - set(rules.get("items_exclude", []))) | set(world.get("items", {}))
 
     rooms, npcs = world["rooms"], world["npcs"]
-    services = {**json.loads((ROOT / "game" / "data" / "rules.json").read_text(encoding="utf-8"))["item_rules"]["services"], **world.get("services", {})}
+    game_rules = json.loads((ROOT / "game" / "data" / "rules.json").read_text(encoding="utf-8"))
+    services = {**game_rules["item_rules"]["services"], **world.get("services", {})}
+    craft = game_rules["craft"]
+    room_tags = ROOM_TAGS | set(craft["stations"]) | set(craft["gather"])  # v0.7.24: workplaces and gathering spots
+    recipes = {**craft["recipes"], **world.get("recipes", {})}
+    for rid_, r in world.get("recipes", {}).items():  # v0.7.24: a pack's own recipes
+        if r.get("tool") not in craft["tools"] or (r.get("station") and r["station"] not in craft["stations"]):
+            errors.append(f"рецепт {rid_}: tool из {sorted(craft['tools'])}, station из {sorted(craft['stations'])} или пусто")
+        bad = [m for m in list(r.get("materials", {})) + [r.get("output")] if m not in items]
+        if bad or not isinstance(r.get("hours"), int) or not isinstance(r.get("dc"), int):
+            errors.append(f"рецепт {rid_}: нужны hours, dc, materials и output из каталога (неизвестно: {bad})")
     services.pop("_doc", None)
     for sid, sv in world.get("services", {}).items():  # v0.7.16: a pack's own services — data over the engine's operations
         if sv.get("op") not in SERVICE_OPS or not isinstance(sv.get("cost_cp"), int) or not sv.get("name"):
             errors.append(f"услуга {sid}: нужны op из {sorted(SERVICE_OPS)}, cost_cp, name")
         if sv.get("op") == "enchant" and not (sv.get("property") and sv.get("suffix")):
             errors.append(f"услуга {sid}: enchant — нужны property и suffix")
+    for sid, sv in services.items():
+        if sv.get("op") == "teach_recipe" and sv.get("recipe") not in recipes:
+            errors.append(f"услуга {sid}: teach_recipe — рецепта {sv.get('recipe')} нет")
     if world["start_room"] not in rooms:
         errors.append(f"world.start_room: нет комнаты {world['start_room']}")
     placed: set[str] = set()
@@ -153,7 +166,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         secret_ids = [sec["id"] for sec in room.get("secrets", [])]
         if len(secret_ids) != len(set(secret_ids)):
             errors.append(f"комната {rid}: id секретов повторяются")
-        errors += [f"комната {rid}: неизвестная метка {t}" for t in room.get("tags", []) if t not in ROOM_TAGS]
+        errors += [f"комната {rid}: неизвестная метка {t}" for t in room.get("tags", []) if t not in room_tags]
         for v in room.get("variants", []):  # v0.7.14.1: the room by the world's flags
             keys = {"if_flag", "if_not_flag", "description", "npcs", "hooks", "encounter", "safe"}
             if not ("if_flag" in v or "if_not_flag" in v) or set(v) - keys:

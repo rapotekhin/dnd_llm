@@ -1307,6 +1307,48 @@ func need_act(act: String) -> String:
 	return ""
 
 
+## Crafting (v0.7.24): the acts go without the master, the time passes by the engine. "" or a localization key.
+func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "CRAFT_NOT_NOW"
+	var data := Catalog.data
+	var lines: Array[String] = []
+	match what:
+		"start":
+			var why := CraftRules.why_not(session, data, arg)
+			if not why.is_empty():
+				return why
+			lines = CraftRules.start(session, data, arg)
+		"work":
+			var why := CraftRules.can_work(session, data)
+			if not why.is_empty():
+				return why
+			var mins := CraftRules.shift_minutes(session, data, hours)
+			var w := CrimeRules.wait(session, data, mins)  # the patrol may break the work (v0.7.22.18)
+			lines = w["lines"]
+			lines.append_array(CraftRules.worked(session, data, int(w["minutes"])))
+		"abandon":
+			lines = CraftRules.abandon(session, data)
+		"salvage":
+			if not CraftRules.salvageable(session, data).has(arg):
+				return "CRAFT_NO_SALVAGE"
+			lines = CraftRules.salvage(session, data, arg)
+			lines.append_array(TimeRules.advance(session, data, int(CraftRules.cfg(data)["salvage"]["minutes"])))
+		"gather":
+			var why := CraftRules.gather_why(session, data, arg)
+			if not why.is_empty():
+				return why
+			lines = CraftRules.gather(session, data, arg)
+			lines.append_array(CrimeRules.wait(session, data, int(CraftRules.cfg(data)["gather"][arg]["minutes"]))["lines"])
+	if lines.is_empty():
+		return ""
+	CharacterRules.refresh(session.character, data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	return ""
+
+
 func set_needs(on: bool) -> void:
 	if session != null:
 		session.settings["needs"] = on

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.55.0"
+PROTOCOL_VERSION = "0.56.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -270,6 +270,7 @@ class CharacterSheet(_In):
     languages: list[str] = Field(default_factory=list)  # the hero's languages, Russian, secret ones included (0.17.0)
     tools: list[str] = Field(default_factory=list)  # tool proficiencies: «Воровские инструменты [thieves_tools]» (0.17.0)
     attuned: list[str] = Field(default_factory=list)  # magic items the hero is attuned to, Russian names (0.18.0)
+    craft: str = ""  # 0.56.0: the recipes the hero knows and the work in hand («Ремесло (окно «Ремесло»): …»)
 
 
 class HistoryLine(_In):
@@ -499,6 +500,7 @@ ItemProperty = Literal[
     "resist_force", "resist_lightning", "resist_acid", "resist_necrotic", "checks_plus1", "ranged_damage_plus2",
     "spell_attack_plus1", "speed_30", "perception_advantage", "investigation_advantage", "darkvision", "wound_closure",
     "immune_disease", "understand_all", "missile_snaring", "carry_plus_500", "str_19", "int_19", "mithral", "no_crit",
+    "crude", "masterwork",  # 0.56.0: the make of a crafted thing (−1 / +1 to attack; armor −1 AC / no Str and stealth trouble)
 ]
 
 
@@ -907,6 +909,28 @@ class DiseaseEffect(_Out):
     text: str = ""  # how it shows, for the player's card
 
 
+class RecipeMaterial(_Out):
+    item_id: str  # a catalog or library item (find_items)
+    qty: int = Field(default=1, ge=1, le=10)
+
+
+class RecipeEffect(_Out):
+    """A recipe the hero learns from the player's words (0.56.0): «сделаю силок из верёвки». The engine checks the tool
+    (the hero must be proficient), the station, hours and DC tier by rules.craft.make, and that the output is worth no
+    more than its materials and labour; the hero then makes it in the «Ремесло» window (time, the check, the quality)."""
+
+    kind: Literal["recipe"] = "recipe"
+    name: str = Field(default="", max_length=60)  # «Силок из верёвки»; empty — the output's name
+    tool: str  # smiths_tools, leatherworkers_tools, woodcarvers_tools, carpenters_tools, herbalism_kit, alchemists_supplies, cooks_utensils, tinkers_tools…
+    station: Literal["forge", "workbench", "alchemy", "hearth"] | None = None  # None — anywhere
+    hours: int = Field(ge=1, le=72)
+    dc_tier: Literal["very_easy", "easy", "medium", "hard"]
+    materials: list[RecipeMaterial] = Field(min_length=1, max_length=4)
+    output_id: str | None = None  # a catalog or library item
+    output: GeneratedItem | None = None  # or a new one (as give_item.item)
+    qty: int = Field(default=1, ge=1, le=20)
+
+
 class UseFeatureEffect(_Out):
     kind: Literal["use_feature"] = "use_feature"
     feature: str  # a feature with limited uses, by name as in the sheet
@@ -1077,7 +1101,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

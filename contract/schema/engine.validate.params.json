@@ -1023,7 +1023,9 @@
               "str_19",
               "int_19",
               "mithral",
-              "no_crit"
+              "no_crit",
+              "crude",
+              "masterwork"
             ],
             "type": "string"
           },
@@ -2413,6 +2415,130 @@
       "title": "QuestPlace",
       "type": "object"
     },
+    "RecipeEffect": {
+      "additionalProperties": false,
+      "description": "A recipe the hero learns from the player's words (0.56.0): «сделаю силок из верёвки». The engine checks the tool\n(the hero must be proficient), the station, hours and DC tier by rules.craft.make, and that the output is worth no\nmore than its materials and labour; the hero then makes it in the «Ремесло» window (time, the check, the quality).",
+      "properties": {
+        "dc_tier": {
+          "enum": [
+            "very_easy",
+            "easy",
+            "medium",
+            "hard"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        },
+        "hours": {
+          "maximum": 72,
+          "minimum": 1,
+          "title": "Hours",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "recipe",
+          "default": "recipe",
+          "title": "Kind",
+          "type": "string"
+        },
+        "materials": {
+          "items": {
+            "$ref": "#/$defs/RecipeMaterial"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Materials",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "maxLength": 60,
+          "title": "Name",
+          "type": "string"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "output_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Id"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        },
+        "station": {
+          "anyOf": [
+            {
+              "enum": [
+                "forge",
+                "workbench",
+                "alchemy",
+                "hearth"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Station"
+        },
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "hours",
+        "dc_tier",
+        "materials"
+      ],
+      "title": "RecipeEffect",
+      "type": "object"
+    },
+    "RecipeMaterial": {
+      "additionalProperties": false,
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "item_id"
+      ],
+      "title": "RecipeMaterial",
+      "type": "object"
+    },
     "ReputationEffect": {
       "additionalProperties": false,
       "description": "The settlement learned of a deed of the hero (0.24.0): `delta` −3…+3 points of its reputation, once a turn,\nwith the deed and who knows of it in `reason`. Quests, murders, thefts the engine counts itself.",
@@ -2707,6 +2833,7 @@
           "owner": "#/$defs/OwnerEffect",
           "prop_state": "#/$defs/PropStateEffect",
           "put_in": "#/$defs/PutInEffect",
+          "recipe": "#/$defs/RecipeEffect",
           "reputation": "#/$defs/ReputationEffect",
           "reveal_secret": "#/$defs/RevealSecretEffect",
           "start_combat": "#/$defs/StartCombatEffect",
@@ -2752,6 +2879,9 @@
         },
         {
           "$ref": "#/$defs/DiseaseEffect"
+        },
+        {
+          "$ref": "#/$defs/RecipeEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"

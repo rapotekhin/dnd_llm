@@ -63,7 +63,9 @@
           "str_19",
           "int_19",
           "mithral",
-          "no_crit"
+          "no_crit",
+          "crude",
+          "masterwork"
         ],
         "type": "string"
       },

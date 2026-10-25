@@ -513,7 +513,9 @@
 					"sack": 5,
 					"bedroll": 2,
 					"backpack": 2,
-					"oil_flask": 4
+					"oil_flask": 4,
+					"timber": 6,
+					"leather": 3
 				},
 				"extras": {
 					"per_day": 3,
@@ -714,7 +716,8 @@
 					"herbal_remedy": 3,
 					"healers_kit": 2,
 					"herbalism_kit": 1,
-					"vial": 3
+					"vial": 3,
+					"herbs": 6
 				},
 				"extras": {
 					"per_day": 2,
@@ -1787,6 +1790,60 @@
 		"contagion_dc": 10,
 		"make": {"days": [1, 10], "incubation_hours": [0, 72], "conditions": ["poisoned", "blinded", "deafened"], "saves": ["str", "dex", "con", "int", "wis", "cha"], "max_hp": [-10, 0]}
 	},
+	"craft": {
+		"_doc": "Crafting (v0.7.24, CraftRules): a recipe is data — `tool` (the hero must be proficient and carry it), `station` (a room tag of `stations`, \"\" — anywhere), `hours` of work, `dc` of the craft check (d20 + the tool's ability of `tools` + proficiency + the game's difficulty), `materials` {item: qty} spent at the start, `output` × `qty`. Known: every recipe of a proficient tool without `learn`; a `learn` one — taught for pay (service op teach_recipe), from a carried book (item `teaches`) or made by the master (effect `recipe`). Work goes in shifts of `work_hours`, the progress kept in c.craft; a station in a room with its trader present costs `rent_cp_hour`. The check at the end sets the quality by the margin (`quality`, the last tier whose `from` is reached): the value ×`value`, a stack's qty ×`qty`, the `props` by the item type and the name suffix. `salvage` — an item with a recipe gives `share` of its materials back (floor, at least 1 of the first), `extra` for items without one; `hides` — raw hides from a dead beast by size, into the loot; `gather` — room tags where a button gets raw material (a check; `per_day` times a day per room); `make` — the limits of the master's recipes.",
+		"tools": {"smiths_tools": "str", "carpenters_tools": "str", "masons_tools": "str", "leatherworkers_tools": "dex", "woodcarvers_tools": "dex", "weavers_tools": "dex", "tinkers_tools": "dex", "herbalism_kit": "wis", "cooks_utensils": "wis", "alchemists_supplies": "int", "brewers_supplies": "int"},
+		"stations": {
+			"forge": {"name": "Горн и наковальня", "rent_cp_hour": 10},
+			"workbench": {"name": "Верстак", "rent_cp_hour": 5},
+			"alchemy": {"name": "Стол алхимика", "rent_cp_hour": 10},
+			"hearth": {"name": "Очаг", "rent_cp_hour": 0}
+		},
+		"work_hours": [1, 8],
+		"quality": [
+			{"id": "poor", "from": -99, "name": "грубая работа", "value": 0.5, "qty": 0.5, "props": {"weapon": ["crude"], "armor": ["crude"]}},
+			{"id": "normal", "from": -4, "name": "", "value": 1.0, "qty": 1.0},
+			{"id": "good", "from": 5, "name": "добротная работа", "value": 1.5, "qty": 1.5},
+			{"id": "excellent", "from": 10, "name": "отличная работа", "value": 2.0, "qty": 2.0, "props": {"weapon": ["masterwork"], "armor": ["masterwork"]}}
+		],
+		"salvage": {
+			"minutes": 60,
+			"share": 0.5,
+			"extra": {"battleaxe": {"iron_bar": 2}, "greataxe": {"iron_bar": 3}, "greatsword": {"iron_bar": 3}, "warhammer": {"iron_bar": 2}, "rapier": {"iron_bar": 1}, "scimitar": {"iron_bar": 1}, "sickle": {"iron_bar": 1}, "light_hammer": {"iron_bar": 1}, "war_pick": {"iron_bar": 1}, "morningstar": {"iron_bar": 2}, "flail": {"iron_bar": 1}, "ring_mail": {"iron_bar": 4}, "scale_mail": {"iron_bar": 5}, "chain_mail": {"iron_bar": 6}, "longbow": {"timber": 1}, "crossbow_light": {"timber": 1, "iron_bar": 1}}
+		},
+		"hides": {"tiny": 0, "small": 1, "medium": 1, "large": 2, "huge": 3},
+		"gather": {
+			"ore": {"name": "Добыть руду", "item": "iron_ore", "qty": [1, 3], "skill": "athletics", "tool": "", "dc": 10, "minutes": 120, "per_day": 2},
+			"herbs": {"name": "Собрать травы", "item": "herbs", "qty": [1, 4], "skill": "survival", "tool": "herbalism_kit", "dc": 10, "minutes": 60, "per_day": 2},
+			"timber": {"name": "Заготовить древесину", "item": "timber", "qty": [1, 2], "skill": "athletics", "tool": "", "dc": 8, "minutes": 120, "per_day": 3}
+		},
+		"make": {"hours": [1, 72], "dc_tiers": ["very_easy", "easy", "medium", "hard"], "materials_max": 4, "qty_max": 20, "labor_cp_hour": 25},
+		"recipes": {
+			"smelt_iron": {"tool": "smiths_tools", "station": "forge", "hours": 2, "dc": 10, "materials": {"iron_ore": 3}, "output": "iron_bar", "qty": 1, "name": "Выплавить железо"},
+			"dagger": {"tool": "smiths_tools", "station": "forge", "hours": 4, "dc": 10, "materials": {"iron_bar": 1}, "output": "dagger", "qty": 1},
+			"spear": {"tool": "smiths_tools", "station": "forge", "hours": 4, "dc": 10, "materials": {"iron_bar": 1, "timber": 1}, "output": "spear", "qty": 1},
+			"handaxe": {"tool": "smiths_tools", "station": "forge", "hours": 6, "dc": 11, "materials": {"iron_bar": 1, "timber": 1}, "output": "handaxe", "qty": 1},
+			"mace": {"tool": "smiths_tools", "station": "forge", "hours": 8, "dc": 12, "materials": {"iron_bar": 2}, "output": "mace", "qty": 1},
+			"shortsword": {"tool": "smiths_tools", "station": "forge", "hours": 10, "dc": 12, "materials": {"iron_bar": 2}, "output": "shortsword", "qty": 1},
+			"longsword": {"tool": "smiths_tools", "station": "forge", "hours": 16, "dc": 14, "materials": {"iron_bar": 3}, "output": "longsword", "qty": 1, "learn": true},
+			"chain_shirt": {"tool": "smiths_tools", "station": "forge", "hours": 72, "dc": 14, "materials": {"iron_bar": 6}, "output": "chain_shirt", "qty": 1, "learn": true},
+			"tan_hide": {"tool": "leatherworkers_tools", "station": "", "hours": 4, "dc": 10, "materials": {"raw_hide": 1}, "output": "leather", "qty": 1, "name": "Выделать кожу"},
+			"backpack": {"tool": "leatherworkers_tools", "station": "", "hours": 4, "dc": 8, "materials": {"leather": 1}, "output": "backpack", "qty": 1},
+			"hide_armor": {"tool": "leatherworkers_tools", "station": "", "hours": 12, "dc": 10, "materials": {"raw_hide": 3}, "output": "hide_armor", "qty": 1},
+			"leather_armor": {"tool": "leatherworkers_tools", "station": "", "hours": 24, "dc": 12, "materials": {"leather": 3}, "output": "leather_armor", "qty": 1},
+			"studded_leather_armor": {"tool": "leatherworkers_tools", "station": "", "hours": 40, "dc": 14, "materials": {"leather": 3, "iron_bar": 1}, "output": "studded_leather_armor", "qty": 1, "learn": true},
+			"shield": {"tool": "carpenters_tools", "station": "workbench", "hours": 8, "dc": 12, "materials": {"timber": 2, "iron_bar": 1}, "output": "shield", "qty": 1},
+			"club": {"tool": "woodcarvers_tools", "station": "", "hours": 1, "dc": 5, "materials": {"timber": 1}, "output": "club", "qty": 1},
+			"quarterstaff": {"tool": "woodcarvers_tools", "station": "", "hours": 2, "dc": 8, "materials": {"timber": 1}, "output": "quarterstaff", "qty": 1},
+			"arrows": {"tool": "woodcarvers_tools", "station": "", "hours": 2, "dc": 10, "materials": {"timber": 1}, "output": "arrows", "qty": 20},
+			"shortbow": {"tool": "woodcarvers_tools", "station": "", "hours": 12, "dc": 13, "materials": {"timber": 2}, "output": "shortbow", "qty": 1},
+			"herbal_remedy": {"tool": "herbalism_kit", "station": "", "hours": 2, "dc": 10, "materials": {"herbs": 2}, "output": "herbal_remedy", "qty": 1},
+			"antitoxin": {"tool": "herbalism_kit", "station": "", "hours": 4, "dc": 13, "materials": {"herbs": 3, "vial": 1}, "output": "antitoxin", "qty": 1},
+			"healing_potion": {"tool": "herbalism_kit", "station": "", "hours": 8, "dc": 15, "materials": {"herbs": 4, "vial": 1}, "output": "healing_potion", "qty": 1, "learn": true},
+			"alchemists_fire": {"tool": "alchemists_supplies", "station": "alchemy", "hours": 8, "dc": 15, "materials": {"oil_flask": 1, "herbs": 2}, "output": "alchemists_fire_flask", "qty": 1},
+			"acid_vial": {"tool": "alchemists_supplies", "station": "alchemy", "hours": 8, "dc": 15, "materials": {"herbs": 3, "vial": 1}, "output": "acid_vial", "qty": 1}
+		}
+	},
 	"needs": {
 		"_doc": "Needs of the hero (v0.7.23, NeedRules): a scale 0–100 that empties over `hours` of the game clock from the last meal or drink and fills by eating (camp food points × points) or drinking (drink); `stages` by the value below `below` — a chip, the master's line and the checks they hamper (saves: ability → disadvantage); at 0 — a level of exhaustion each full day past grace_days (\"3+con\": 3 + CON modifier, at least 1). sleep is shown from the hours awake (hero_effects.exhaustion.awake_hours), its exhaustion stays the awake saves. Water: a waterskin holds skin_drinks drinks, filled where the room has the tag `water` or a thing whose name has one of water_words; drinking there is free. A bed in a settlement (an inn, a temple) feeds and waters (rest_meal). Switched by the game setting `needs` (on by default).",
 		"food": {"name": "Еда", "hours": 24, "points": 50, "grace_days": "3+con", "eat_minutes": 15, "stages": [
@@ -2146,13 +2203,17 @@
 		"rarity_order": ["common", "uncommon", "rare", "very_rare", "legendary", "artifact"],
 		"unknown_suffix": ", свойства неизвестны",
 		"services": {
-			"_doc": "Services of NPCs (NPC `services` in the pack; a pack may add its own in world.json `services`), v0.7.16 by pillar 6 — a service is data over an operation of the engine (`op`): identify — every unknown item the hero carries; lift_curse — the cursed items come off (they stay cursed); enchant — one carried item of `needs` (weapon | armor | any) from the catalog gets `property` from the item properties and the name «… (`suffix`)», its value + the cost. `name` — the button, `short` — for the lines and the master, `done` — the line of the result. Silver: PHB 100 gp.",
+			"_doc": "Services of NPCs (NPC `services` in the pack; a pack may add its own in world.json `services`), v0.7.16 by pillar 6 — a service is data over an operation of the engine (`op`): identify — every unknown item the hero carries; lift_curse — the cursed items come off (they stay cursed); enchant — one carried item of `needs` (weapon | armor | any) from the catalog gets `property` from the item properties and the name «… (`suffix`)», its value + the cost; teach_recipe (v0.7.24) — the hero learns `recipe` (needs the proficiency of its tool). `name` — the button, `short` — for the lines and the master, `done` — the line of the result. Silver: PHB 100 gp.",
 			"identify": {"cost_cp": 2000, "op": "identify", "name": "Опознать вещи", "short": "опознание вещей"},
 			"meal": {"cost_cp": 30, "op": "meal", "name": "Поесть и попить", "short": "обед и питьё", "done": "сыт и напоен"},
 			"remove_curse": {"cost_cp": 9000, "op": "lift_curse", "name": "Снять проклятие", "short": "снятие проклятия"},
 			"cure_disease": {"cost_cp": 1500, "op": "cure_disease", "power": "magic", "name": "Исцелить болезнь", "short": "исцеление болезни", "done": "болезнь отступила"},
 			"herbal_cure": {"cost_cp": 300, "op": "cure_disease", "power": "herbs", "name": "Вылечить травами", "short": "лечение травами", "done": "отвар помог"},
-			"silver": {"cost_cp": 10000, "op": "enchant", "needs": "weapon", "property": "silvered", "suffix": "посеребрённый", "done": "посеребрено", "name": "Посеребрить оружие", "short": "серебрение оружия"}
+			"silver": {"cost_cp": 10000, "op": "enchant", "needs": "weapon", "property": "silvered", "suffix": "посеребрённый", "done": "посеребрено", "name": "Посеребрить оружие", "short": "серебрение оружия"},
+			"teach_longsword": {"cost_cp": 2000, "op": "teach_recipe", "recipe": "longsword", "name": "Научиться ковать длинный меч", "short": "урок: длинный меч", "done": "рецепт выучен"},
+			"teach_chain_shirt": {"cost_cp": 3000, "op": "teach_recipe", "recipe": "chain_shirt", "name": "Научиться плести кольчугу", "short": "урок: кольчужная рубаха", "done": "рецепт выучен"},
+			"teach_studded_leather": {"cost_cp": 2000, "op": "teach_recipe", "recipe": "studded_leather_armor", "name": "Научиться клепать кожаный доспех", "short": "урок: клёпаный доспех", "done": "рецепт выучен"},
+			"teach_healing_potion": {"cost_cp": 2500, "op": "teach_recipe", "recipe": "healing_potion", "name": "Научиться варить зелье лечения", "short": "урок: зелье лечения", "done": "рецепт выучен"}
 		}
 	},
 	"spell_effects": {

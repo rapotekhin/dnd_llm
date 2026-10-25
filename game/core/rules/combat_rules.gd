@@ -460,7 +460,7 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	if w.has("versatile") and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty() and not offhand:
 		dice = str(w["versatile"])
 	var magic := ItemRules.plus(def, ["magic_plus"])  # a +N weapon (v0.6.3)
-	to_hit += magic
+	to_hit += magic + CraftRules.quality_mod(def)
 	bonus += magic
 	var rng: Array = w.get("reach_ft", [])
 	if rng.is_empty() and props.has("thrown"):
@@ -2849,6 +2849,8 @@ static func results(s: GameSession, data: Dictionary, encounter_loot: Dictionary
 		var m := _monster(data, f)
 		if str(f["status"]) != "active" and not bool(f.get("no_xp", false)):
 			xp += int(m["xp"])
+		if str(f["status"]) == "dead" and CraftRules.hides(data, m) > 0:  # v0.7.24: the hide of a beast
+			loot["raw_hide"] = int(loot.get("raw_hide", 0)) + CraftRules.hides(data, m)
 		if str(f["status"]) in ["dead", "surrendered", "unconscious"]:
 			for item: Variant in m.get("equipment", []):
 				if data["items"]["catalog"].has(str(item)):

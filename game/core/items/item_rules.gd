@@ -41,7 +41,8 @@ static func def_of(items_data: Dictionary, session_items: Dictionary, id: String
 			if not props.has(p):
 				props.append(p)
 		d["properties"] = props
-	if (d.get("properties", []) as Array).has("mithral") and d.has("armor"):  # no Strength need, no stealth trouble
+	var props: Array = d.get("properties", [])
+	if (props.has("mithral") or props.has("masterwork")) and d.has("armor"):  # no Strength need, no stealth trouble
 		var a: Dictionary = (d["armor"] as Dictionary).duplicate()
 		a["str_min"] = 0
 		a["stealth_disadvantage"] = false

@@ -493,6 +493,8 @@ static func services(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 		elif targets(s, data, str(id)).is_empty():
 			var sick := str(def.get("op", "")) == "cure_disease" and not DiseaseRules.curable(s, data, "magic").is_empty()
 			why = "SERVICE_HERBS_CANNOT" if sick else "SERVICE_NOTHING"
+			if str(def.get("op", "")) == "teach_recipe":
+				why = CraftRules.teach_why(s, data, def)
 		out.append({"id": str(id), "cost_cp": cost, "why": why, "name": str(def.get("name", id))})
 	return out
 
@@ -515,6 +517,8 @@ static func targets(s: GameSession, data: Dictionary, id: String) -> Array[Strin
 			return DiseaseRules.curable(s, data, str(def.get("power", "magic")))
 		"enchant":
 			return enchantable(s, data, def)
+		"teach_recipe":  # v0.7.24
+			return CraftRules.teachable(s, data, def)
 		"meal":  # v0.7.23: only when the hero is hungry or thirsty
 			var hungry := NeedRules.on(s) and (NeedRules.value(s, data, "food") < 75.0 or NeedRules.value(s, data, "water") < 75.0)
 			return ["meal"] if hungry else []
@@ -556,6 +560,8 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 			lines.append_array(ItemRules.lift_curse(c, data, s.items))
 		"cure_disease":
 			lines.append_array(DiseaseRules.cure(s, data, str(sv.get("power", "magic"))))
+		"teach_recipe":
+			lines.append_array(CraftRules.learn(s, data, str(sv["recipe"])))
 		"enchant":
 			var weapon := item if not item.is_empty() else enchantable(s, data, sv)[0]
 			var base := ItemRules.def_of(data["items"], s.items, weapon)

@@ -17,6 +17,7 @@ signal container_requested(prop_id: String)
 signal place_requested
 signal board_requested(prop_id: String)
 signal development_requested
+signal craft_requested
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -114,6 +115,7 @@ func _rebuild() -> void:
 		"clock": TimeRules.clock(s)})].filter(func(x: String) -> bool: return not x.is_empty())), true)
 	if NeedRules.on(s):
 		_needs(s, can_act)
+	_craft_row(s, can_act)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
 		lv.name = "LevelUpButton"
@@ -528,6 +530,40 @@ func _needs(s: GameSession, can_act: bool) -> void:
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		b.tooltip_text = tr(spec[1] + "_TIP")
+
+
+## Crafting (v0.7.24): «Ремесло» when the hero knows a recipe, has work begun or a thing to break down; the room's
+## gathering spots as buttons. No row when there is nothing of it.
+func _craft_row(s: GameSession, can_act: bool) -> void:
+	var data := Catalog.data
+	var craft := not CraftRules.known(s, data).is_empty() or not CraftRules.project(s.character).is_empty()
+	var spots := CraftRules.gather_here(s, data)
+	if not craft and spots.is_empty():
+		return
+	var acts := HBoxContainer.new()
+	acts.name = "CraftActs"
+	acts.add_theme_constant_override("separation", 6)
+	_content.add_child(acts)
+	if craft:
+		var p := CraftRules.project(s.character)
+		var label := tr("BTN_CRAFT") if p.is_empty() else tr("BTN_CRAFT_WORK").format({"n": CraftRules.progress(s.character)})
+		var cb := _row_button(acts, label, craft_requested.emit, not GameState.is_busy())
+		cb.name = "CraftButton"
+		cb.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		cb.tooltip_text = tr("BTN_CRAFT_TIP")
+	for tag: String in spots:
+		var g: Dictionary = CraftRules.cfg(data)["gather"][tag]
+		var why := CraftRules.gather_why(s, data, tag)
+		var gb := _row_button(acts, str(g["name"]), func() -> void:
+			var err := GameState.craft_act("gather", tag)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and why.is_empty())
+		gb.name = "Gather_" + tag
+		gb.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		gb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		gb.tooltip_text = tr(why) if not why.is_empty() else tr("GATHER_TIP").format({"time": TimeRules.span(int(g["minutes"])),
+			"skill": CraftRules.tr_skill(data, str(g["skill"])), "dc": int(g["dc"])})
 
 
 func _need(act: String) -> void:

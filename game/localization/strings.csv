@@ -1069,3 +1069,41 @@ OPT_NEEDS,"Нужды: еда, вода, сон"
 SHEET_NEEDS,Нужды
 
 SERVICE_HERBS_CANNOT,"Травы эту болезнь не берут — нужна магия: жрица или «Малое восстановление»"
+BTN_CRAFT,Ремесло
+BTN_CRAFT_WORK,Ремесло · {n}%
+BTN_CRAFT_TIP,"Окно ремесла: рецепты, работа и разбор вещей на сырьё"
+GATHER_TIP,"{time}, проверка: {skill}, Сл {dc}"
+GATHER_NONE,Здесь этого не добыть
+GATHER_SPENT,Здесь на сегодня всё выбрано — приходи завтра
+CRAFT_TITLE,Ремесло
+CRAFT_IN_HAND,В работе
+CRAFT_LEFT,осталось {time}
+CRAFT_RENT,плата {cp} в час ({who})
+CRAFT_NOT_HERE,не здесь
+CRAFT_RECIPES,Рецепты
+CRAFT_NO_RECIPES,Рецептов нет: их знают по владению инструментами ремесленника; редкие учат мастера за плату или книги
+CRAFT_DC,"Сл {dc}, шанс {chance}%"
+CRAFT_MATERIALS,Сырьё: {list}
+CRAFT_SALVAGE,Разобрать на сырьё
+CRAFT_SALVAGE_HINT,"Вещь ломается насовсем, взамен — часть сырья; {time} на каждую"
+BTN_CRAFT_START,Начать
+BTN_CRAFT_SHIFT,Работать {time}
+BTN_CRAFT_ABANDON,Бросить
+BTN_SALVAGE,Разобрать
+CONFIRM_CRAFT_ABANDON_TITLE,Бросить работу?
+CONFIRM_CRAFT_ABANDON,Сырьё уже ушло в дело — его не вернуть.
+CONFIRM_SALVAGE_TITLE,Разобрать: {name}?
+CONFIRM_SALVAGE,"Вещь пропадёт насовсем, останется только сырьё."
+CRAFT_NOT_NOW,Сейчас не до ремесла
+CRAFT_UNKNOWN,Этот рецепт тебе не знаком
+CRAFT_BUSY,Сначала закончи или брось начатую работу
+CRAFT_NO_TOOL,Нет нужного инструмента
+CRAFT_NO_STATION,Здесь нет нужного места для работы
+CRAFT_NO_MATERIALS,Не хватает сырья
+CRAFT_NO_PROJECT,Нет начатой работы
+CRAFT_NO_RENT,Нечем заплатить за место
+CRAFT_NO_SALVAGE,Это не разобрать: сними вещь или выбери другую
+SERVICE_LEARNED,Этот рецепт ты уже знаешь
+SERVICE_NO_TOOL_PROF,Сначала нужно владеть инструментом этого ремесла
+ITEM_PROP_CRUDE,"грубая работа: оружие −1 к атаке, доспех −1 к КД"
+ITEM_PROP_MASTERWORK,"отличная работа: оружие +1 к атаке (не магия), доспех — без требования Силы и помехи Скрытности"

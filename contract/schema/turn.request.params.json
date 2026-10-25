@@ -72,6 +72,11 @@
           "title": "Conditions",
           "type": "array"
         },
+        "craft": {
+          "default": "",
+          "title": "Craft",
+          "type": "string"
+        },
         "development": {
           "items": {
             "type": "string"

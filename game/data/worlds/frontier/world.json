@@ -410,7 +410,10 @@
 				}
 			],
 			"site_id": "brod-tavern",
-			"public": false
+			"public": false,
+			"tags": [
+				"hearth"
+			]
 		},
 		"brod-tavern-cellar": {
 			"name": "Погреб таверны",
@@ -530,7 +533,11 @@
 					"skill": "investigation"
 				}
 			],
-			"site_id": "brod-smithy"
+			"site_id": "brod-smithy",
+			"tags": [
+				"forge",
+				"workbench"
+			]
 		},
 		"brod-herbalist": {
 			"name": "Лавка травницы",
@@ -554,7 +561,10 @@
 					"text": "под прилавком — заказ на противоядия «для друзей с заставы», оплаченный старыми королевскими монетами"
 				}
 			],
-			"site_id": "brod-herbalist"
+			"site_id": "brod-herbalist",
+			"tags": [
+				"alchemy"
+			]
 		},
 		"brod-temple": {
 			"name": "Храм Светлой Матери",
@@ -681,7 +691,11 @@
 					"description": "Поле обрывается стеной елей, но меж стволов теперь светлее: туман отступил в глубь леса, и в ветвях снова перекликаются птицы."
 				}
 			],
-			"site_id": "pushcha-edge"
+			"site_id": "pushcha-edge",
+			"tags": [
+				"timber",
+				"herbs"
+			]
 		},
 		"pushcha-trail": {
 			"name": "Тропа лесорубов",
@@ -758,7 +772,10 @@
 					}
 				}
 			],
-			"site_id": "pushcha-trail"
+			"site_id": "pushcha-trail",
+			"tags": [
+				"timber"
+			]
 		},
 		"pushcha-glade": {
 			"name": "Поляна с менгиром",
@@ -804,7 +821,10 @@
 					]
 				}
 			],
-			"site_id": "pushcha-glade"
+			"site_id": "pushcha-glade",
+			"tags": [
+				"herbs"
+			]
 		},
 		"pushcha-hollow": {
 			"name": "Тёмная лощина",
@@ -1155,7 +1175,10 @@
 					}
 				}
 			},
-			"site_id": "mine"
+			"site_id": "mine",
+			"tags": [
+				"ore"
+			]
 		},
 		"mine-flooded": {
 			"name": "Затопленный штрек",
@@ -1228,7 +1251,10 @@
 					}
 				}
 			},
-			"site_id": "mine"
+			"site_id": "mine",
+			"tags": [
+				"ore"
+			]
 		},
 		"pushcha-burrow": {
 			"name": "Пепельное логово",
@@ -1512,7 +1538,8 @@
 				"chain_shirt": 1,
 				"arrows": 60,
 				"crossbow_bolt": 40,
-				"sling_bullet": 40
+				"sling_bullet": 40,
+				"iron_bar": 8
 			},
 			"wants": [
 				"weapon",
@@ -1539,7 +1566,10 @@
 				"commoner"
 			],
 			"services": [
-				"silver"
+				"silver",
+				"teach_longsword",
+				"teach_chain_shirt",
+				"teach_studded_leather"
 			],
 			"schedule": [
 				{
@@ -1569,7 +1599,10 @@
 				"healers_kit": 2,
 				"potion_of_climbing": 2,
 				"potion_of_resistance_poison": 1,
-				"herbal_remedy": 3
+				"herbal_remedy": 3,
+				"herbs": 8,
+				"vial": 4,
+				"herbalist_notes": 1
 			},
 			"wants": [
 				"consumable"
@@ -1614,7 +1647,8 @@
 				}
 			],
 			"services": [
-				"herbal_cure"
+				"herbal_cure",
+				"teach_healing_potion"
 			]
 		},
 		"npc_priestess": {

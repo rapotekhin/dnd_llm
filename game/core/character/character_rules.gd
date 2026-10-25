@@ -121,6 +121,7 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 	# Magic (v0.6.3): +N armor and shields, carried wondrous items (Cloak of Protection).
 	ac += ItemRules.plus(item_def(c, data, session_items, "armor"), ["ac_plus", "magic_plus"])
 	ac += ItemRules.plus(item_def(c, data, session_items, "shield"), ["ac_plus", "magic_plus"])
+	ac += mini(0, CraftRules.quality_mod(item_def(c, data, session_items, "armor"))) + mini(0, CraftRules.quality_mod(item_def(c, data, session_items, "shield")))
 	for d: Dictionary in carried(c, data, session_items):
 		ac += ItemRules.plus(d, ["ac_plus"])
 	return SpellEffects.armor_class(c, ac, armor.is_empty(), dex)  # Mage Armor, Shield of Faith, Barkskin (v0.7.13.2)

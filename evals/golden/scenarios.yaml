@@ -1213,6 +1213,34 @@ scenarios:
       - "Заражение проведено эффектом disease со спасброском, а не одними словами"
       - "Болезнь не названа и не описана как уже начавшаяся: героиня лишь чувствует укус, ранку, дурное предчувствие"
 
+  - id: craft_new_recipe_snare
+    title: "Силок из верёвки — новый рецепт эффектом recipe, вещь делается в окне ремесла"
+    category: rules
+    extends: tavern
+    input: "У меня есть моток верёвки и инструменты резчика. Хочу сделать силки на зайцев — придумаю, как их сплести, и потом наделаю в дорогу."
+    engine:
+      validate:
+        - {kind: recipe, status: accept, summary: "Рецепт: Силок — Инструменты резчика по дереву, 2 ч, Сл 10"}
+      find_items:
+        - {id: rope, name: "Верёвка (15 м)", base: null, rarity: common}
+        - {id: hunting_trap, name: "Охотничий капкан", base: null, rarity: common}
+    snapshot:
+      character:
+        name: "Айра"
+        gender: female
+        class: fighter
+        level: 2
+        hp: {current: 20, max: 20}
+        ac: 16
+        tools: ["Инструменты резчика по дереву [woodcarvers_tools]"]
+        craft: "Ремесло (окно «Ремесло»): Дубинка, Боевой посох, Стрелы, Короткий лук"
+        inventory: [{item_id: rope, name: "Верёвка (15 м)", qty: 1}, {item_id: woodcarvers_tools, name: "Инструменты резчика по дереву", qty: 1}]
+    expect:
+      effects: {required_kinds_any: [recipe], forbidden_kinds: [give_item]}
+    rubric:
+      - "Новый рецепт проведён эффектом recipe с инструментом героини и верёвкой как материалом"
+      - "Готовые силки не выданы эффектом и не описаны как уже сделанные: героиня придумала способ, делать — в окне «Ремесло»"
+
   - id: condition_ghost_fear
     title: "Вопль призрака — страх со спасброском Мудрости"
     category: rules

@@ -138,6 +138,8 @@ static func _outcome(s: GameSession, data: Dictionary, service: String, item: St
 			return ItemRules.lift_curse(c, data, s.items)
 		"cure_disease":
 			return ["исцеление болезни"]
+		"teach_recipe":
+			return ["урок ремесла: %s" % CraftRules.recipe_name(s, data, str(sv.get("recipe", "")))]
 		"enchant":
 			var thing := item if not item.is_empty() else TradeRules.targets(s, data, service)[0]
 			return ["%s: %s" % [sv.get("done", "готово"), ItemRules.display_name(data["items"], s.items, thing)]]
