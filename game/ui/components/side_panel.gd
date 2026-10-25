@@ -112,6 +112,8 @@ func _rebuild() -> void:
 	var xp := tr("SIDE_HERO_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}) if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data) else ""
 	_line(" · ".join([Money.format(int(c["gold_cp"])), xp, tr("SIDE_HERO_TIME").format({"day": s.day, "part": TimeRules.part_name(s, Catalog.data),
 		"clock": TimeRules.clock(s)})].filter(func(x: String) -> bool: return not x.is_empty())), true)
+	if NeedRules.on(s):
+		_needs(s, can_act)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
 		lv.name = "LevelUpButton"
@@ -469,6 +471,69 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 			b.tooltip_text = "%s
 %s" % [room_name, tr("EXIT_PRIVATE_WELCOME" if SiteRules.unwelcome(s, Catalog.data, e).is_empty() else
 				"EXIT_PRIVATE_TIP").format({"owner": world.npc(owner).get("name", owner)})]
+
+
+## Food, water, sleep as three small bars under the hero (v0.7.23), «Поесть» and «Попить» beside them.
+func _needs(s: GameSession, can_act: bool) -> void:
+	var data := Catalog.data
+	var row := HBoxContainer.new()
+	row.name = "Needs"
+	row.add_theme_constant_override("separation", 10)
+	_content.add_child(row)
+	for need: String in NeedRules.KINDS:
+		var v := NeedRules.value(s, data, need)
+		var st := NeedRules.stage(s, data, need)
+		var col := VBoxContainer.new()
+		col.name = "Need_" + need
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_theme_constant_override("separation", 2)
+		col.mouse_filter = Control.MOUSE_FILTER_STOP
+		col.tooltip_text = "%s %d/100%s" % [NeedRules.cfg(data)[need]["name"], roundi(v), (" — " + str(st["chip"])) if not st.is_empty() else ""]
+		row.add_child(col)
+		var l := Label.new()
+		l.text = str(st.get("chip", NeedRules.cfg(data)[need]["name"]))
+		l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		l.theme_type_variation = UiTheme.MUTED_LABEL
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		if not st.is_empty():
+			l.add_theme_color_override("font_color", UiTheme.WARN if v >= 20.0 else UiTheme.BAD)
+		col.add_child(l)
+		var bar := ProgressBar.new()
+		bar.max_value = 100.0
+		bar.value = v
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(0, 6)
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var fill_col := UiTheme.OK if v >= 50.0 else UiTheme.WARN if v >= 20.0 else UiTheme.BAD
+		bar.add_theme_stylebox_override("fill", UiTheme.box(fill_col, fill_col, 0, 0, 2))
+		bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 2))
+		col.add_child(bar)
+	# Only the acts that do good now: the row takes no height when there is nothing to do.
+	var specs: Array = []
+	if NeedRules.can_eat(s, data).is_empty():
+		specs.append(["EatButton", "BTN_EAT", "eat"])
+	if NeedRules.can_drink(s, data).is_empty():
+		specs.append(["DrinkButton", "BTN_DRINK", "drink"])
+	if NeedRules.can_fill(s, data).is_empty():
+		specs.append(["FillWater", "BTN_FILL_WATER", "fill"])
+	if specs.is_empty():
+		return
+	var acts := HBoxContainer.new()
+	acts.add_theme_constant_override("separation", 6)
+	_content.add_child(acts)
+	for spec: Array in specs:
+		var b := _row_button(acts, tr(spec[1]), _need.bind(spec[2]), can_act)
+		b.name = spec[0]
+		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		b.tooltip_text = tr(spec[1] + "_TIP")
+
+
+func _need(act: String) -> void:
+	var err := GameState.need_act(act)
+	if not err.is_empty():
+		EventBus.message.emit(tr(err))
 
 
 ## The exits take their own height up to a third of the panel; past it they scroll.

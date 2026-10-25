@@ -512,6 +512,9 @@ static func targets(s: GameSession, data: Dictionary, id: String) -> Array[Strin
 			return cursed_held(s, data)
 		"enchant":
 			return enchantable(s, data, def)
+		"meal":  # v0.7.23: only when the hero is hungry or thirsty
+			var hungry := NeedRules.on(s) and (NeedRules.value(s, data, "food") < 75.0 or NeedRules.value(s, data, "water") < 75.0)
+			return ["meal"] if hungry else []
 	return []
 
 
@@ -542,6 +545,8 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 	c["gold_cp"] = int(c["gold_cp"]) - cost
 	var lines: Array[String] = ["Услуга даром" if free else "Услуга: −%s" % Money.format(cost)]
 	match str(sv["op"]):
+		"meal":
+			lines.append_array(NeedRules.meal(s, data))
 		"identify":
 			lines.append_array(ItemRules.identify(c, data, s.items))
 		"lift_curse":

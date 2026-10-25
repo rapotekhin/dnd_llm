@@ -77,6 +77,7 @@ func long_rest(supplies: Dictionary = {}) -> String:
 	var lines := ExplorationRules.long_rest(session, Catalog.data, supplies)
 	TimeRules.after_long_rest(session, Catalog.data, began)
 	lines.append_array(ConditionRules.expire(session, Catalog.data))
+	lines.append_array(NeedRules.tick(session, Catalog.data))
 	CharacterRules.refresh(session.character, Catalog.data, session.items)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
@@ -1283,6 +1284,35 @@ func _hero_roll(params: Dictionary, bonus: int) -> Dictionary:
 	if extra != 0 and not result.has("error"):
 		result["difficulty_note"] = DifficultyRules.note(session, Catalog.data)
 	return result
+
+
+## Eat, drink, fill the waterskins (v0.7.23): the engine's own acts, no master's turn; they take a few minutes.
+## "" or a localization key.
+func need_act(act: String) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+		return "NEED_BUSY"
+	var data := Catalog.data
+	var why := NeedRules.can_eat(session, data) if act == "eat" else NeedRules.can_drink(session, data) if act == "drink" else NeedRules.can_fill(session, data)
+	if not why.is_empty():
+		return why
+	var lines := NeedRules.eat(session, data) if act == "eat" else NeedRules.drink(session, data) if act == "drink" else NeedRules.fill(session, data)
+	var cfg := NeedRules.cfg(data)
+	var minutes := int(cfg["food"]["eat_minutes"]) if act == "eat" else int(cfg["water"]["drink_minutes" if act == "drink" else "fill_minutes"])
+	lines.append_array(TimeRules.advance(session, data, minutes))
+	CharacterRules.refresh(session.character, data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	return ""
+
+
+func set_needs(on: bool) -> void:
+	if session != null:
+		session.settings["needs"] = on
+		if on:  # the needs start full again: no hunger for the days they were off
+			session.character.erase("needs")
+		NeedRules.tick(session, Catalog.data)
+		EventBus.state_changed.emit()
 
 
 func set_difficulty(id: String) -> void:

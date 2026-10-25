@@ -1768,6 +1768,25 @@
 		"spells": {"invisibility": {"ends_on_attack": true}, "greater_invisibility": {"ends_on_attack": false}},
 		"passive_penalty": 5
 	},
+	"needs": {
+		"_doc": "Needs of the hero (v0.7.23, NeedRules): a scale 0–100 that empties over `hours` of the game clock from the last meal or drink and fills by eating (camp food points × points) or drinking (drink); `stages` by the value below `below` — a chip, the master's line and the checks they hamper (saves: ability → disadvantage); at 0 — a level of exhaustion each full day past grace_days (\"3+con\": 3 + CON modifier, at least 1). sleep is shown from the hours awake (hero_effects.exhaustion.awake_hours), its exhaustion stays the awake saves. Water: a waterskin holds skin_drinks drinks, filled where the room has the tag `water` or a thing whose name has one of water_words; drinking there is free. A bed in a settlement (an inn, a temple) feeds and waters (rest_meal). Switched by the game setting `needs` (on by default).",
+		"food": {"name": "Еда", "hours": 24, "points": 50, "grace_days": "3+con", "eat_minutes": 15, "stages": [
+			{"below": 50, "chip": "Голоден", "line": "голоден"},
+			{"below": 20, "chip": "Очень голоден", "line": "очень голоден — слабеет", "saves": {"con": "disadvantage"}},
+			{"below": 1, "chip": "Голодает", "line": "голодает", "saves": {"con": "disadvantage"}}
+		]},
+		"water": {"name": "Вода", "hours": 24, "drink": 50, "grace_days": "1", "drink_minutes": 5, "fill_minutes": 10, "skin": "waterskin", "skin_drinks": 2, "stages": [
+			{"below": 50, "chip": "Хочет пить", "line": "хочет пить"},
+			{"below": 20, "chip": "Мучит жажда", "line": "мучит жажда", "saves": {"con": "disadvantage"}},
+			{"below": 1, "chip": "Обезвожен", "line": "обезвожен", "saves": {"con": "disadvantage"}}
+		]},
+		"sleep": {"name": "Сон", "stages": [
+			{"below": 34, "chip": "Хочет спать", "line": "хочет спать"},
+			{"below": 1, "chip": "Валится с ног", "line": "валится с ног без сна"}
+		]},
+		"water_words": ["колод", "ручей", "ручь", "родник", "источник", "бочка с водой", "водопой", "фонтан"],
+		"rest_meal": true
+	},
 	"hero_effects": {
 		"_doc": "Effects on the hero (v0.7.8): a condition or a boon with its source, duration, save and concentration. Durations are in rounds (10 a minute) of the game clock: round, minute, ten_minutes, hour, eight_hours; or short_rest / long_rest / until_removed. A save names its tag (save_tags): race traits give advantage against it (trait_saves) or immunity (trait_immune). Damage to the hero: resistances of race traits (trait_resist; damage_resistance — the draconic ancestry), of Rage, of items (item_resist), of effects; petrified — resistance to all. spell_cures: what a spell cast on the hero lifts (remove), how much exhaustion it takes away, and the boon it leaves (adv_tag, resist, duration). exhaustion: forced march — each hour of travel past march_hours a day, a CON save DC march_dc + hours past; a day awake — each awake_hours without a long rest, a CON save DC awake_dc + awake_dc_step per day before; a long rest takes all exhaustion away (decision of the author, ADR-0010). camp: a long rest outside an inn costs `need` points of food (food: item → points).",
 		"durations": {
@@ -2108,6 +2127,7 @@
 		"services": {
 			"_doc": "Services of NPCs (NPC `services` in the pack; a pack may add its own in world.json `services`), v0.7.16 by pillar 6 — a service is data over an operation of the engine (`op`): identify — every unknown item the hero carries; lift_curse — the cursed items come off (they stay cursed); enchant — one carried item of `needs` (weapon | armor | any) from the catalog gets `property` from the item properties and the name «… (`suffix`)», its value + the cost. `name` — the button, `short` — for the lines and the master, `done` — the line of the result. Silver: PHB 100 gp.",
 			"identify": {"cost_cp": 2000, "op": "identify", "name": "Опознать вещи", "short": "опознание вещей"},
+			"meal": {"cost_cp": 30, "op": "meal", "name": "Поесть и попить", "short": "обед и питьё", "done": "сыт и напоен"},
 			"remove_curse": {"cost_cp": 9000, "op": "lift_curse", "name": "Снять проклятие", "short": "снятие проклятия"},
 			"silver": {"cost_cp": 10000, "op": "enchant", "needs": "weapon", "property": "silvered", "suffix": "посеребрённый", "done": "посеребрено", "name": "Посеребрить оружие", "short": "серебрение оружия"}
 		}

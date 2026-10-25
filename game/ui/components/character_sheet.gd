@@ -189,6 +189,14 @@ func _stats_tab(c: Dictionary) -> Control:
 		var b := int(w["bonus"])
 		_text(box, tr("SHEET_ATTACK").format({"name": w["name"], "hit": "%+d" % int(w["to_hit"]),
 			"dmg": str(w["dice"]).replace("d", tr("DICE_D")) + (("%+d" % b) if b != 0 else "")}))
+	if NeedRules.on(GameState.session):  # v0.7.23: the needs with their stage
+		var parts: Array[String] = []
+		for need: String in NeedRules.KINDS:
+			var st := NeedRules.stage(GameState.session, d, need)
+			parts.append("%s %d/100%s" % [NeedRules.cfg(d)[need]["name"], roundi(NeedRules.value(GameState.session, d, need)),
+				(" — " + str(st["chip"])) if not st.is_empty() else ""])
+		var nl := _text(box, tr("SHEET_NEEDS") + ": " + " · ".join(parts), UiTheme.MUTED_LABEL)
+		nl.name = "SheetNeeds"
 	_text(box, tr("SHEET_ABILITIES") + " · " + tr("SHEET_SKILLS"), UiTheme.MUTED_LABEL)
 	var grid := GridContainer.new()  # the skills under their abilities (v0.7.22.32, Л2, Л3)
 	grid.name = "AbilityGrid"

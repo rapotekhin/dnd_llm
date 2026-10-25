@@ -361,6 +361,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 		c["gold_cp"] = int(c["gold_cp"]) - cost
 		lines.append("−" + Money.format(cost))
 	var eaten: Array[String] = []
+	var meal_points := camp_need(data) if supplies.has("forage") else camp_points(data, supplies)
 	if supplies.has("forage"):
 		c["foraged_day"] = s.day
 		lines.append("еду нашёл сам — ягоды, коренья, силки")
@@ -377,6 +378,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 		eaten.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), n])
 	if not eaten.is_empty():
 		lines.append("съедено: " + ", ".join(eaten))
+	lines.append_array(NeedRules.rest_meal(s, data, meal_points, meal_points == 0 and supplies.is_empty()))
 	c["hp"] = int(c.get("max_hp", c.get("hp", 1)))
 	lines.append("HP %d/%d" % [c["hp"], c["max_hp"]])
 	c["slots_used"] = [0, 0, 0, 0, 0]

@@ -127,6 +127,14 @@ func _redraw() -> void:
 
 	# «Одна жизнь» comes with the roguelike loop (M5): until then every game is «История» (v0.7.7).
 
+	var needs := CheckButton.new()  # v0.7.23: hunger, thirst, sleep
+	needs.name = "NeedsToggle"
+	needs.text = "NG_NEEDS"
+	needs.button_pressed = bool(settings.get("needs", true))
+	needs.toggled.connect(func(on: bool) -> void: settings["needs"] = on)
+	_form.add_child(needs)
+	_text(_form, tr("NG_NEEDS_HINT"), true)
+
 	_label(_form, "NG_VIOLENCE", UiTheme.MUTED_LABEL)
 	_choice(_form, "violence", WorldPack.VIOLENCE, "VIOLENCE_")
 	_list_field(_form, "lines", "NG_LINES")

@@ -130,6 +130,8 @@ static func _outcome(s: GameSession, data: Dictionary, service: String, item: St
 	var c: Dictionary = s.character.duplicate(true)
 	var sv := TradeRules.service_def(data, service)
 	match str(sv.get("op", "")):
+		"meal":
+			return ["Сыт и напоен"]
 		"identify":
 			return ItemRules.identify(c, data, s.items.duplicate(true))
 		"lift_curse":

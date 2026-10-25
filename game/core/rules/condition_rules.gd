@@ -362,6 +362,8 @@ static func check_mods(c: Dictionary, data: Dictionary, params: Dictionary) -> D
 		var mode := "auto_fail" if modes.has("auto_fail") else "disadvantage" if modes.has("disadvantage") else ""
 		if not mode.is_empty() and not (out[mode] as Array).has(str(id)):
 			(out[mode] as Array).append(str(id))
+	if not save.is_empty() and str(c.get("need_mods", {}).get(save, "")) == "disadvantage":  # a hungry or thirsty hero (v0.7.23)
+		(out["disadvantage"] as Array).append("need")
 	var lv := exhaustion(c)
 	if (lv >= 1 and not skill.is_empty()) or (lv >= 3 and not save.is_empty()):
 		(out["disadvantage"] as Array).append("exhaustion")

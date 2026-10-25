@@ -314,6 +314,12 @@ func _master_tab() -> Control:
 		diff.selected = levels.find(DifficultyRules.level(GameState.session, Catalog.data))
 		diff.item_selected.connect(func(i: int) -> void: GameState.set_difficulty(str(levels[i])))
 		box.add_child(diff)
+		var needs := CheckButton.new()  # v0.7.23
+		needs.name = "NeedsOption"
+		needs.text = "OPT_NEEDS"
+		needs.button_pressed = NeedRules.on(GameState.session)
+		needs.toggled.connect(GameState.set_needs)
+		box.add_child(needs)
 	return scroll
 
 

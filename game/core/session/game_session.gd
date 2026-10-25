@@ -228,6 +228,12 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 	if c.get("wild_shape") is Dictionary:
 		c["wild_shape"] = _whole_numbers(c["wild_shape"])
 	c["exhaustion"] = int(c.get("exhaustion", 0))
+	if c.get("needs") is Dictionary and not (c["needs"] as Dictionary).is_empty():  # v0.7.23: the levels stay fractions
+		var n: Dictionary = c["needs"]
+		for k: String in ["food", "water"]:
+			n[k] = {"level": float(n[k].get("level", 100.0)), "at": int(n[k].get("at", 0))}
+		n["skin"] = int(n.get("skin", 0))
+		n["done"] = _whole_numbers(n.get("done", {}))
 	c["concentration"] = str(c.get("concentration", ""))
 	c["concentration_ends"] = int(c.get("concentration_ends", -1))
 	c["prepared_day"] = int(c.get("prepared_day", 1))

@@ -502,7 +502,8 @@
 				}
 			],
 			"tags": [
-				"stage"
+				"stage",
+				"water"
 			],
 			"thieves_sign": "на срубе колодца нацарапан воровской знак: «здесь берут краденое — спроси у лотка с амулетами»",
 			"site_id": "brod-square"
@@ -985,7 +986,10 @@
 					}
 				}
 			},
-			"site_id": "outpost-fort"
+			"site_id": "outpost-fort",
+			"tags": [
+				"water"
+			]
 		},
 		"outpost-tower": {
 			"name": "Обрушенная башня",
@@ -1337,6 +1341,9 @@
 			"monster": "commoner",
 			"tags": [
 				"commoner"
+			],
+			"services": [
+				"meal"
 			]
 		},
 		"npc_serving": {
