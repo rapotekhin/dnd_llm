@@ -102,7 +102,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		if not here.has(to):
 			return {"reason": "NPC %s нет в этой комнате: продают и отдают тем, кто здесь" % to}
 		var price := maxi(0, int(e.get("price_cp", 0)) if e.get("price_cp") != null else 0)
-		if price > 0 and thinking(data, c) and not bool(cfg(data).get("slavery", false)):
+		if price > 0 and thinking(data, c) and not PropertyRules.slavery(s, data) and not bool(cfg(data).get("slavery", false)):
 			return {"reason": "%s разумен: продать его — рабство, а в этом мире его нет; отдать страже — кнопка игрока" % c["name"]}
 		var cap := price_cap(data, c)
 		if price > cap:

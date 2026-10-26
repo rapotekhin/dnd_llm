@@ -2219,6 +2219,79 @@
       "title": "PropStateEffect",
       "type": "object"
     },
+    "PropertyEffect": {
+      "additionalProperties": false,
+      "description": "A place the player wants to buy and the world lacks on sale (0.59.0): «куплю дом у реки». A site of this location\n(or `new` — the one create_place made in this turn) on sale by a seller of the scene (or `new` — the person\ncreate_npc made); the price and the income within rules.property.make. The hero buys it by the button and gets the\ndeed at the registry — the engine's acts.",
+      "properties": {
+        "income_cp_day": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Income Cp Day"
+        },
+        "kind": {
+          "const": "property",
+          "default": "property",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "place_kind": {
+          "enum": [
+            "house",
+            "land",
+            "mill",
+            "shop",
+            "workshop",
+            "farm",
+            "stable",
+            "tavern"
+          ],
+          "title": "Place Kind",
+          "type": "string"
+        },
+        "price_cp": {
+          "minimum": 1,
+          "title": "Price Cp",
+          "type": "integer"
+        },
+        "seller_id": {
+          "title": "Seller Id",
+          "type": "string"
+        },
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "site_id",
+        "seller_id",
+        "place_kind",
+        "price_cp"
+      ],
+      "title": "PropertyEffect",
+      "type": "object"
+    },
     "PutInEffect": {
       "additionalProperties": false,
       "description": "The hero puts a thing of their own into a container of the room (0.28.0), within its capacity.",
@@ -2930,6 +3003,7 @@
           "npc_follow": "#/$defs/NpcFollowEffect",
           "owner": "#/$defs/OwnerEffect",
           "prop_state": "#/$defs/PropStateEffect",
+          "property": "#/$defs/PropertyEffect",
           "put_in": "#/$defs/PutInEffect",
           "recipe": "#/$defs/RecipeEffect",
           "reputation": "#/$defs/ReputationEffect",
@@ -2983,6 +3057,9 @@
         },
         {
           "$ref": "#/$defs/JobEffect"
+        },
+        {
+          "$ref": "#/$defs/PropertyEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"

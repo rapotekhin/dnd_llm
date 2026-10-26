@@ -344,6 +344,47 @@
 				"cave"
 			],
 			"public": true
+		},
+		"brod-townhall": {
+			"name": "Ратуша",
+			"location_id": "brod",
+			"description": "Каменный дом с крыльцом на площади: здесь пишут купчие, берут пошлины и налоги.",
+			"tags": [
+				"registry"
+			],
+			"owner": "npc_clerk",
+			"hours": {
+				"from": 8,
+				"to": 18
+			},
+			"public": true
+		},
+		"brod-river-house": {
+			"name": "Дом у реки",
+			"location_id": "brod",
+			"description": "Пустой бревенчатый дом у Ольшанки: хозяин ушёл в Пущу и не вернулся, городок продаёт дом за долги.",
+			"tags": [
+				"house"
+			],
+			"public": false
+		},
+		"brod-mill": {
+			"name": "Старая мельница",
+			"location_id": "brod",
+			"description": "Водяная мельница на Ольшанке за воротами: колесо стоит с войны, жернова целы.",
+			"tags": [
+				"mill"
+			],
+			"public": false
+		},
+		"brod-plot": {
+			"name": "Участок за огородами",
+			"location_id": "brod",
+			"description": "Пустой участок у северных ворот: межевые колья, бурьян и старый колодец.",
+			"tags": [
+				"land"
+			],
+			"public": true
 		}
 	},
 	"rooms": {
@@ -479,7 +520,9 @@
 				"brod-smithy",
 				"brod-herbalist",
 				"brod-temple",
-				"brod-gate"
+				"brod-gate",
+				"brod-townhall",
+				"brod-river-yard"
 			],
 			"open_edges": [
 				{
@@ -623,7 +666,9 @@
 				"pushcha-edge",
 				"outpost-road",
 				"mine-entrance",
-				"brod-lockup"
+				"brod-lockup",
+				"brod-mill",
+				"brod-plot"
 			],
 			"open_edges": [
 				{
@@ -636,7 +681,8 @@
 				}
 			],
 			"npcs": [
-				"npc_captain"
+				"npc_captain",
+				"npc_drover"
 			],
 			"hooks": [
 				"на воротах свежие царапины, глубокие, как от когтей"
@@ -1346,6 +1392,116 @@
 			},
 			"dark": true,
 			"site_id": "pushcha-burrow"
+		},
+		"brod-townhall": {
+			"name": "Ратуша",
+			"indoor": true,
+			"location_id": "brod",
+			"description": "Низкая палата с конторкой и шкафами свитков. Пахнет сургучом; на стене — план городка с межами.",
+			"exits": [
+				"brod-square"
+			],
+			"npcs": [
+				"npc_clerk"
+			],
+			"hooks": [
+				"на стене план городка: три участка обведены углём — «продаётся»"
+			],
+			"secrets": [
+				{
+					"id": "ledger",
+					"dc": 13,
+					"text": "в раскрытой книге налогов — пометка писаря: «мельница — долг прежнего хозяина не взыскан, сам пропал у заставы»"
+				}
+			],
+			"site_id": "brod-townhall"
+		},
+		"brod-river-yard": {
+			"name": "Двор у реки",
+			"location_id": "brod",
+			"description": "Заросший двор с покосившимся забором; мостки спускаются к воде, у сарая гниёт лодка.",
+			"exits": [
+				"brod-square",
+				"brod-river-house"
+			],
+			"npcs": [],
+			"hooks": [
+				"на двери дома прибита бумага ратуши: «продаётся»"
+			],
+			"secrets": [
+				{
+					"id": "boat",
+					"dc": 12,
+					"text": "в гнилой лодке под сетью — моток крепкой верёвки и весло с вырезанным знаком лесорубов"
+				}
+			],
+			"site_id": "brod-river-house",
+			"tags": [
+				"water"
+			]
+		},
+		"brod-river-house": {
+			"name": "Горница дома у реки",
+			"indoor": true,
+			"location_id": "brod",
+			"description": "Пустая горница с печью: лавки вдоль стен, паутина в углах, на полу — следы от вывезенной мебели.",
+			"exits": [
+				"brod-river-yard"
+			],
+			"npcs": [],
+			"hooks": [],
+			"secrets": [
+				{
+					"id": "stash",
+					"dc": 13,
+					"text": "под половицей у печи — тайник прежнего хозяина: пустой, только обрывок карты Пущи"
+				}
+			],
+			"site_id": "brod-river-house",
+			"public": false
+		},
+		"brod-mill": {
+			"name": "Старая мельница",
+			"indoor": true,
+			"location_id": "brod",
+			"description": "Пыльный зал с жерновами, мешками из-под зерна и окном на застывшее колесо.",
+			"exits": [
+				"brod-gate"
+			],
+			"npcs": [],
+			"hooks": [
+				"колесо заклинило бревном, принесённым паводком"
+			],
+			"secrets": [
+				{
+					"id": "sacks",
+					"dc": 14,
+					"text": "за жерновами в мешке — старые королевские монеты, мелочь: кто-то прятал здесь плату с заставы"
+				}
+			],
+			"site_id": "brod-mill",
+			"public": false
+		},
+		"brod-plot": {
+			"name": "Участок за огородами",
+			"location_id": "brod",
+			"description": "Ровный участок в бурьяне за последними огородами: межевые колья, старый колодец со срубом.",
+			"exits": [
+				"brod-gate"
+			],
+			"npcs": [],
+			"hooks": [],
+			"secrets": [
+				{
+					"id": "well",
+					"dc": 13,
+					"text": "в срубе колодца нацарапано: «вода чистая, копал Тихон» — писарь когда-то сам хотел здесь строиться"
+				}
+			],
+			"site_id": "brod-plot",
+			"tags": [
+				"water"
+			]
 		}
 	},
 	"npcs": {
@@ -1773,6 +1929,51 @@
 					"room": ""
 				}
 			]
+		},
+		"npc_clerk": {
+			"name": "Тихон Перо",
+			"role": "писарь ратуши",
+			"race": "человек",
+			"gender": "male",
+			"description": "Сутулый писарь в чернильных нарукавниках, перо за ухом, очки на шнурке.",
+			"personality": "педантичный, любит порядок в бумагах больше, чем людей; взяток не берёт, но любит, когда его хвалят",
+			"monster": "commoner",
+			"tags": [
+				"commoner",
+				"registry"
+			],
+			"schedule": [
+				{
+					"from": 18,
+					"to": 8,
+					"room": ""
+				}
+			]
+		},
+		"npc_drover": {
+			"name": "Остап",
+			"role": "барышник",
+			"race": "человек",
+			"gender": "male",
+			"description": "Коренастый мужик в овчинном тулупе, кнут за поясом, пахнет конским потом.",
+			"personality": "балагур, божится через слово, цену держит крепко; к скотине добрее, чем к людям",
+			"monster": "commoner",
+			"tags": [
+				"commoner"
+			],
+			"animals": [
+				"riding_horse",
+				"mule",
+				"mastiff",
+				"goat"
+			],
+			"schedule": [
+				{
+					"from": 19,
+					"to": 8,
+					"room": ""
+				}
+			]
 		}
 	},
 	"items": {
@@ -1891,6 +2092,31 @@
 				"старший писарь",
 				"хранитель книг"
 			]
+		}
+	},
+	"properties": {
+		"river_house": {
+			"site": "brod-river-house",
+			"name": "Дом у реки",
+			"kind": "house",
+			"seller": "npc_clerk",
+			"price_cp": 3000,
+			"condition": 70
+		},
+		"old_mill": {
+			"site": "brod-mill",
+			"name": "Старая мельница",
+			"kind": "mill",
+			"seller": "npc_clerk",
+			"price_cp": 6000,
+			"condition": 40
+		},
+		"plot": {
+			"site": "brod-plot",
+			"name": "Участок за огородами",
+			"kind": "land",
+			"seller": "npc_clerk",
+			"price_cp": 1000
 		}
 	}
 }

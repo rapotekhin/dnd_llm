@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.58.0"
+PROTOCOL_VERSION = "0.59.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -272,6 +272,7 @@ class CharacterSheet(_In):
     attuned: list[str] = Field(default_factory=list)  # magic items the hero is attuned to, Russian names (0.18.0)
     craft: str = ""  # 0.56.0: the recipes the hero knows and the work in hand («Ремесло (окно «Ремесло»): …»)
     jobs: str = ""  # 0.58.0: where the hero works, the rank and shifts («Работа (кнопка «Смена» …): …»)
+    property: str = ""  # 0.59.0: the hero's places and beasts, what is on sale here («Имущество (…): …»)
 
 
 class HistoryLine(_In):
@@ -932,6 +933,21 @@ class RecipeEffect(_Out):
     qty: int = Field(default=1, ge=1, le=20)
 
 
+class PropertyEffect(_Out):
+    """A place the player wants to buy and the world lacks on sale (0.59.0): «куплю дом у реки». A site of this location
+    (or `new` — the one create_place made in this turn) on sale by a seller of the scene (or `new` — the person
+    create_npc made); the price and the income within rules.property.make. The hero buys it by the button and gets the
+    deed at the registry — the engine's acts."""
+
+    kind: Literal["property"] = "property"
+    site_id: str  # "here" (the hero's site), a room or site id of this location, or "new"
+    seller_id: str  # an NPC of the scene or "new"
+    place_kind: Literal["house", "land", "mill", "shop", "workshop", "farm", "stable", "tavern"]
+    name: str | None = Field(default=None, max_length=60)
+    price_cp: int = Field(ge=1)
+    income_cp_day: int | None = Field(default=None, ge=0)
+
+
 class JobEffect(_Out):
     """A job an NPC of the scene gives at the player's asking (0.58.0): «пойду переводчиком к караванщику». The engine
     checks the employer is here, the hours, the DC tier and the pay by rules.jobs.make; the hero then hires and works
@@ -1119,7 +1135,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

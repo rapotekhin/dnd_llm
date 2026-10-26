@@ -20,6 +20,7 @@ var layout: Dictionary = {}  # room id → Vector2 0..1
 var site_boxes: Dictionary = {}  # site id → Rect2 0..1 (the known ones)
 var loc_boxes: Dictionary = {}  # location id → Rect2 0..1 (the known ones)
 var site_names: Dictionary = {}
+var own_sites: Dictionary = {}  # site id → true: the hero's property (v0.7.27)
 var loc_names: Dictionary = {}
 var single: Dictionary = {}  # site id → true when it is one room: its name is the room's
 var site_of: Dictionary = {}  # room id → site id
@@ -200,7 +201,7 @@ func _draw() -> void:
 		var r := tx_rect(site_boxes[sid])
 		var lit := sid == here_site or selected == "site:" + sid
 		draw_rect(r, UiTheme.PANEL_RAISED)
-		draw_rect(r, UiTheme.ACCENT_BRIGHT if lit else UiTheme.BORDER, false, 2.0 if lit else 1.5)
+		draw_rect(r, UiTheme.ACCENT_BRIGHT if lit else UiTheme.OK if own_sites.has(sid) else UiTheme.BORDER, false, 2.0 if lit or own_sites.has(sid) else 1.5)
 		_title(font, _fs(WorldMap.TITLE_H, 0.75, 11, UiTheme.SIZE_SMALL), str(site_names.get(sid, sid)), r, UiTheme.ACCENT_BRIGHT if sid == here_site else UiTheme.TEXT)
 	_drawn = {}
 	for r: String in known["rooms"]:

@@ -90,7 +90,7 @@ ITEM_ALIASES = {
 EXTRA_ITEMS = ["healing_potion", "ale", "bread", "silver_ring", "goodberry", "herbal_remedy",
                "iron_ore", "iron_bar", "raw_hide", "leather", "timber", "herbs", "herbalist_notes",
                "raw_meat", "grain", "vegetables", "spices", "mushrooms", "berries", "roast_meat", "stew",
-               "hunters_stew", "mushroom_soup", "spoiled_food"]
+               "hunters_stew", "mushroom_soup", "spoiled_food", "goat_milk"]
 # Engine properties (items.json "properties") and item types the SRD does not have, by game id.
 EXTRA_PROPERTIES = {"torch": ["light_source"], "lantern": ["light_source"], "lantern_bullseye": ["light_source"],
                     "candle": ["light_source"], "lamp": ["light_source"], "antitoxin": ["resist_poison"],

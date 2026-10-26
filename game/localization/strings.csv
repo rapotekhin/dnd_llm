@@ -1140,3 +1140,74 @@ JOB_EMPLOYER_AWAY,"Нанимателя сейчас нет на месте — 
 JOB_REQUIREMENTS,Не выполнены требования работы
 JOB_TRIED,Сегодня уже отказали — попробуйте завтра
 JOB_NOT_HIRED,Вы здесь не работаете
+PROPERTY_TITLE,Имущество
+PROPERTY_TITLE_AT,Продаётся: {name}
+PROPERTY_ANIMALS_AT,Животные: {name}
+PROPERTY_NONE_ON_SALE,Сейчас ничего не продаётся.
+PROPERTY_NONE_OWNED,"У вас пока нет своего места. Места на продажу — у продавцов: в ратуше, у хозяев."
+PROPERTY_KIND,{kind}
+PROPERTY_INCOME,доход {money} в день с работником
+PROPERTY_COND,состояние {n}%
+PROPERTY_BUILDABLE,можно строиться
+PROPERTY_PRICE,Цена {price} · купчая в ратуше — {fee} · налог {tax} в неделю
+PROPERTY_DEED_HINT,"Куплено без бумаги: место ваше лишь на словах, его могут оспорить. С купчей — налог {tax} в неделю."
+PROPERTY_FEED,корм {money} в день
+PROPERTY_HAS_DEED,с купчей
+PROPERTY_NO_DEED,без купчей — оформите в ратуше
+PROPERTY_TILL,в кассе {money}
+PROPERTY_DEBT,долг по налогу {money}
+PROPERTY_WORKER,"Работник: {name}, {wage} в день"
+PROPERTY_SERF,"Подневольный работник: {name}, за еду"
+PROPERTY_PENDING,{name} (готово в день {day})
+PROPERTY_UPGRADES,Обустроено: {list}
+PROPERTY_GO_THERE,Делами места займитесь на месте.
+PROPERTY_ANIMALS,Животные: {list}
+PROPERTY_ANIMAL_WITH_YOU,с вами
+PROPERTY_SHIFT_TIP,"{skill} против Сл {dc}, шанс хорошей работы {chance}%; выручка — сразу вам"
+BTN_PROPERTY,Имущество
+BTN_PROPERTY_HERE,Имущество: {name}
+BTN_PROPERTY_TIP,"Ваши места и животные: купчая, касса, работники, обустройство"
+BTN_PROPERTY_SALE_TIP,Что продаёт {name}
+BTN_ANIMALS,Животные
+BTN_PROPERTY_BUY,Купить — {price}
+BTN_PROPERTY_DEED,Оформить купчую — {fee}
+BTN_PROPERTY_COLLECT,Забрать выручку
+BTN_PROPERTY_SHIFT,Поработать ({time})
+BTN_PROPERTY_HIRE,"Нанять: {role}, {wage} в день"
+BTN_PROPERTY_SERF,Приставить к работе: {name}
+BTN_PROPERTY_FIRE,Рассчитать работника
+BTN_PROPERTY_REPAIR,"Починить — {cost}, {time}"
+BTN_PROPERTY_BUILD,"Построить: {name} — {price}, {days} дн."
+BTN_PROPERTY_UPGRADE,"{name} — {price}, {days} дн."
+BTN_ANIMAL_LEAD,Взять с собой
+BTN_ANIMAL_RELEASE,Отпустить
+CONFIRM_ANIMAL_RELEASE_TITLE,Отпустить: {name}?
+CONFIRM_ANIMAL_RELEASE,"Животное уйдёт насовсем, деньги за него не вернуть."
+PROPERTY_NOT_NOW,Сейчас не до этого
+PROPERTY_UNKNOWN,Такого места нет
+PROPERTY_OWNED,Это уже ваше
+PROPERTY_SELLER_AWAY,Продавца здесь нет
+PROPERTY_NO_MONEY,Не хватает денег
+PROPERTY_NOT_YOURS,Это не ваше
+PROPERTY_DEED_DONE,Купчая уже есть
+PROPERTY_NO_REGISTRY,Купчую пишут в ратуше — у писаря
+PROPERTY_NOT_HERE,Это делают на месте
+PROPERTY_TILL_EMPTY,В кассе пусто
+PROPERTY_NO_INCOME,Это место дохода не приносит
+PROPERTY_SHIFT_DONE,Сегодня вы здесь уже работали
+PROPERTY_WHOLE,Чинить нечего
+PROPERTY_NO_WORK,Здесь некому работать
+PROPERTY_HAS_WORKER,Работник уже есть
+PROPERTY_NO_WORKER,Работника нет
+PROPERTY_NO_SLAVERY,В этом мире нет крепостных и рабов
+PROPERTY_NOT_A_SERF,Это не ваш пленник
+PROPERTY_NO_UPGRADE,Этого здесь не устроить
+PROPERTY_UPGRADE_HAS,Уже есть или строится
+PROPERTY_NEEDS_ROOF,Нужна крыша — сначала постройте дом
+PROPERTY_NOT_LAND,Строятся только на своей земле
+PROPERTY_BUILDING,Стройка уже идёт
+PROPERTY_NO_ANIMAL,Такого животного нет
+NG_SLAVERY,Крепостные и рабы
+NG_SLAVERY_HINT,Жёсткий мир: пленника-человека можно продать или приставить к работе в своём имуществе. По умолчанию выключено.
+MAP_OWN_SUFFIX, (ваше)
+SIDE_ANIMALS,Ваши животные

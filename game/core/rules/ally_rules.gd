@@ -34,6 +34,8 @@ static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 		var mon := str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
 		if data["monsters"].has(mon):
 			out.append({"monster": mon, "name": str(n.get("name", id)), "npc_id": id, "ally": "follower"})
+	if data["rules"].has("property"):
+		out.append_array(PropertyRules.fighting(s, data))  # v0.7.27: an own dog
 	return out
 
 
@@ -121,6 +123,13 @@ static func after_fight(s: GameSession) -> Array[String]:
 		var f := CombatRules.fighter(s, id)
 		if not str(f.get("summon_id", "")).is_empty():
 			hp[str(f["summon_id"])] = int(f["hp"]) if str(f["status"]) == "active" else 0
+		elif not str(f.get("creature_id", "")).is_empty():  # v0.7.27: an own beast keeps its wounds or is lost
+			var cr := CreatureRules.find(s, s.room_id, str(f["creature_id"]))
+			if str(f["status"]) == "active":
+				cr["hp"] = int(f["hp"])
+			elif not cr.is_empty():
+				lines.append("%s погиб в бою" % cr["name"])
+				PropertyRules._remove_creature(s, str(f["creature_id"]))
 		elif str(f.get("status")) == "down":
 			lines.append("%s приходит в себя" % f["name"])
 	var kept: Array[Dictionary] = []

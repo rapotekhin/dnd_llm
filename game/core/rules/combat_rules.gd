@@ -271,7 +271,7 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: in
 				fighters[id]["no_xp"] = true
 			if bool(spec.get("law", false)):  # the law's guard: its captive is held, not bound (v0.7.22.17)
 				fighters[id]["law"] = true
-			for k: String in ["ally", "summon_id", "spell"]:  # v0.7.22.22: whose ally and from where
+			for k: String in ["ally", "summon_id", "spell", "creature_id"]:  # v0.7.22.22: whose ally and from where
 				if spec.has(k):
 					fighters[id][k] = str(spec[k])
 			if bool(spec.get("helper", false)):

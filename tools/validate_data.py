@@ -67,7 +67,7 @@ def known() -> dict[str, set[str]]:
 
 ROOM_TAGS = {"temple", "stage", "water", "foul_water"}  # v0.7.11: an acolyte's free rest, a show; v0.7.23: water to drink and fill; v0.7.23.1: foul
 SERVICE_OPS = {"identify", "lift_curse", "enchant", "meal", "cure_disease", "teach_recipe"}  # v0.7.16: the engine's operations a service runs (rules.json items.services)
-NPC_TAGS = {"clergy", "underworld", "commoner", "military"}  # the people of the hero's past (rules.json backgrounds ties)
+NPC_TAGS = {"clergy", "underworld", "commoner", "military", "registry"}  # the people of the hero's past (rules.json backgrounds ties); registry — v0.7.27
 
 
 def validate_kinds(ids: dict[str, set[str]]) -> list[str]:
@@ -125,6 +125,16 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"работа {jid}: нужны hours, dc, pay_cp числами")
         if "ranks" in j and len(j["ranks"]) != len(jobs_cfg["ranks"]):
             errors.append(f"работа {jid}: ranks — {len(jobs_cfg['ranks'])} звания")
+    prop_cfg = game_rules["property"]
+    for pid, pr in world.get("properties", {}).items():  # v0.7.27: places on sale
+        if pr.get("site") not in world.get("sites", {}) or pr.get("seller") not in npcs or not pr.get("name"):
+            errors.append(f"имущество {pid}: site — объект пака, seller — NPC пака, нужно name")
+        if pr.get("kind") not in prop_cfg["kinds"] or not isinstance(pr.get("price_cp"), int):
+            errors.append(f"имущество {pid}: kind из {sorted(prop_cfg['kinds'])}, price_cp числом")
+    for nid, n in npcs.items():
+        bad = [m for m in n.get("animals", []) if m not in prop_cfg["animals"]]
+        if bad:
+            errors.append(f"NPC {nid}: животные {bad} — не из rules.property.animals")
     services.pop("_doc", None)
     for sid, sv in world.get("services", {}).items():  # v0.7.16: a pack's own services — data over the engine's operations
         if sv.get("op") not in SERVICE_OPS or not isinstance(sv.get("cost_cp"), int) or not sv.get("name"):

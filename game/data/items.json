@@ -4541,6 +4541,16 @@
 			"properties": [],
 			"stack": true,
 			"description": "Еда, пролежавшая слишком долго: пахнет дурно. Съесть можно — но живот может не простить."
+		},
+		"goat_milk": {
+			"name": "Козье молоко",
+			"item_type": "consumable",
+			"value_cp": 3,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"spoils_days": 2,
+			"description": "Кувшин парного козьего молока: утоляет жажду и немного голод, через пару дней скисает."
 		}
 	}
 }

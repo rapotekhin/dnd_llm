@@ -56,7 +56,7 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String) -> Ar
 
 
 static func state_word(state: String) -> String:
-	return {"truce": "перемирие", "surrendered": "сдался", "unconscious": "без сознания"}.get(state, state)
+	return {"truce": "перемирие", "surrendered": "сдался", "unconscious": "без сознания", "tame": "ваше животное"}.get(state, state)
 
 
 ## «Гоблин 2 — сдался, связан, идёт с героем» — for the side panel and the master.
@@ -65,9 +65,11 @@ static func text(c: Dictionary, data: Dictionary) -> String:
 	if bool(c.get("bound", false)):
 		bits.append("связан")
 	if bool(c.get("led", false)):
-		bits.append("идёт с героем на привязи")
-	if not str(c.get("owner", "")).is_empty():
+		bits.append("идёт с героем" if str(c["state"]) == "tame" else "идёт с героем на привязи")
+	if not str(c.get("owner", "")).is_empty() and str(c["state"]) != "tame":
 		bits.append(OwnerRules.owner_word(data, str(c["owner"])))
+	if not str(c.get("serf", "")).is_empty():
+		bits.append("приставлен к работе")
 	return "%s — %s" % [c["name"], ", ".join(bits)]
 
 
@@ -106,7 +108,7 @@ static func can(s: GameSession, id: String, what: String, data: Dictionary = {})
 			if bool(c.get("bound", false)) or str(c["state"]) == "truce":
 				return "CREATURE_CANNOT_BIND"
 		"lead":
-			if not bool(c.get("bound", false)):
+			if not bool(c.get("bound", false)) and str(c["state"]) != "tame":  # v0.7.27: an own beast
 				return "CREATURE_NOT_BOUND"
 		"hand_over":
 			if not bool(c.get("bound", false)) or foreign(c) or not str(c.get("npc_id", "")).is_empty():

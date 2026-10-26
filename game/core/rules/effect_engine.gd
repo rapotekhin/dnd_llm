@@ -307,6 +307,12 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return {"plan": made, "summary": "Работа: %s у %s — %d ч, Сл %d, %s за смену" % [made["def"]["name"],
 				JobRules.npc_name(s, data, str(made["def"]["employer"])),
 				int(made["def"]["hours"]), int(made["def"]["dc"]), Money.format(int(made["def"]["pay_cp"]))]}
+		"property":  # v0.7.27: a place of the location on sale by a seller of the scene
+			var made := PropertyRules.make(s, data, e)
+			if made.has("reason"):
+				return {"reason": made["reason"]}
+			return {"plan": made, "summary": "Продаётся: %s (%s) за %s%s" % [made["def"]["name"], PropertyRules.cfg(data)["kinds"][made["def"]["kind"]]["name"],
+				Money.format(int(made["def"]["price_cp"])), ", доход %s в день" % Money.format(int(made["def"]["income_cp_day"])) if made["def"].has("income_cp_day") else ""]}
 		"use_feature":
 			var rid := FeatureUses.resolve(c, data, str(e.get("feature", "")))
 			var amount := int(e.get("amount", 1))
@@ -910,6 +916,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(CraftRules.apply_make(s, _data, plan))
 		"job":
 			_extra_lines.append_array(JobRules.apply_make(s, _data, plan))
+		"property":
+			_extra_lines.append_array(PropertyRules.apply_make(s, _data, plan, str(_made.get("site", "")), str(_made.get("npc", ""))))
 		"use_feature":
 			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
 		"use_item":

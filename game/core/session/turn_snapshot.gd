@@ -37,7 +37,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"location_name": loc.get("name", loc_id), "location_description": loc.get("description", ""),
 			"room_id": s.room_id, "room_name": room.get("name", s.room_id), "room_description": room.get("description", ""),
 			"site_name": str(world.site_of(s.room_id).get("name", "")), "site_description": str(world.site_of(s.room_id).get("description", "")),
-			"site_owner": str(world.npc(str(world.site_of(s.room_id).get("owner", ""))).get("name", "")), "private": not world.is_public(s.room_id),  # v0.7.22.24
+			"site_owner": "герой (его имущество)" if str(world.site_of(s.room_id).get("owner", "")) == OwnerRules.HERO else str(world.npc(str(world.site_of(s.room_id).get("owner", ""))).get("name", "")), "private": not world.is_public(s.room_id),  # v0.7.22.24
 			"exits": exits, "npcs": npcs, "hooks": hooks(s, data, room), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
 			"props": _props(s, data),
@@ -147,6 +147,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"languages": LanguageRules.hero(c).map(func(l: String) -> String: return LanguageRules.name_of(data, l)),
 		"craft": CraftRules.snapshot(s, data),  # v0.7.24
 		"jobs": JobRules.text(s, data),  # v0.7.26
+		"property": PropertyRules.text(s, data),  # v0.7.27
 		"tools": (c.get("tools", []) as Array).map(func(t: Variant) -> String:
 			return "%s [%s]%s" % [BackgroundRules.tool_name(data, str(t)), t, "" if int(c.get("inventory", {}).get(str(t), 0)) > 0 else " (нет с собой)"]),
 		"abilities": c.get("abilities", {}),

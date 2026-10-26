@@ -57,6 +57,7 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 	lines.append_array(NeedRules.tick(s, data))
 	lines.append_array(DiseaseRules.tick(s, data))  # hunger and thirst past their grace (v0.7.23)
 	lines.append_array(FoodRules.tick(s, data))  # food spoils (v0.7.25)
+	lines.append_array(PropertyRules.tick(s, data))  # income, wages, decay, tax, beasts fed (v0.7.27)
 	lines.append_array(CrimeRules.spread(s, data))  # a hidden body is found (v0.7.14)
 	if data["rules"].has("doors"):
 		lines.append_array(DoorRules.tick(s, data))  # a burning door burns through (v0.7.22.25)
@@ -92,6 +93,7 @@ static func on_move(s: GameSession, data: Dictionary, from: String, to: String) 
 	var minutes := int(cfg(data)["move_minutes" if same else "travel_minutes"])
 	if not same:
 		minutes = BackgroundRules.travel_minutes(s, data, minutes, to)  # an outlander's Wanderer (v0.7.11)
+		minutes = roundi(minutes * minf(PropertyRules.travel_mult(s, data, from), PropertyRules.travel_mult(s, data, to)))  # riding (v0.7.27)
 	var lines := advance(s, data, minutes)
 	lines.append_array(march(s, data, minutes))
 	return lines

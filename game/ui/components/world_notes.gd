@@ -107,6 +107,9 @@ func _draw_map() -> void:
 		if bx["sites"].has(sid):
 			canvas.site_boxes[sid] = bx["sites"][sid]
 			canvas.site_names[sid] = str(w.site(sid).get("name", sid))
+			if str(w.site(sid).get("owner", "")) == OwnerRules.HERO:  # v0.7.27: the hero's own
+				canvas.site_names[sid] += tr("MAP_OWN_SUFFIX")
+				canvas.own_sites[sid] = true
 			canvas.single[sid] = w.site_rooms(sid).size() == 1
 		if bx["locations"].has(loc):
 			canvas.loc_boxes[loc] = bx["locations"][loc]
@@ -190,7 +193,7 @@ func _travel_button(info: VBoxContainer, room_id: String) -> void:
 		go.text = tr("TRAVEL_NO_ROUTE")
 		go.disabled = true
 	else:
-		go.text = tr("BTN_TRAVEL").format({"steps": path.size(), "min": WorldMap.minutes(Catalog.data, s.room_id, path)})
+		go.text = tr("BTN_TRAVEL").format({"steps": path.size(), "min": WorldMap.minutes(Catalog.data, s.room_id, path, PropertyRules.travel_mult(s, Catalog.data, s.room_id))})
 		go.disabled = GameState.is_busy() or not Backend.is_ready() or s.mode == GameSession.MODE_COMBAT
 		go.pressed.connect(func() -> void:
 			var err := GameState.travel(room_id)

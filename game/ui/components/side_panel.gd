@@ -19,6 +19,7 @@ signal board_requested(prop_id: String)
 signal development_requested
 signal craft_requested
 signal job_requested(npc_id: String)  # v0.7.26
+signal property_requested(mode: String, npc_id: String)  # v0.7.27
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -118,6 +119,7 @@ func _rebuild() -> void:
 		_needs(s, can_act)
 	_craft_row(s, can_act)
 	_work_row(s, can_act)
+	_property_row(s)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
 		lv.name = "LevelUpButton"
@@ -174,10 +176,16 @@ func _rebuild() -> void:
 				if not err.is_empty():
 					EventBus.message.emit(tr(err)), can_act)
 			bb.name = "Body_" + bid
-		var beaten := CreatureRules.here(s, s.room_id)  # v0.7.22.11: the foes a fight left here
+		var here := CreatureRules.here(s, s.room_id)  # v0.7.22.11: the foes a fight left here
+		var beasts := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) == PropertyRules.TAME)
+		var beaten := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) != PropertyRules.TAME)
 		if not beaten.is_empty():
 			_subheading("SIDE_CREATURES")
 		for cr: Dictionary in beaten:
+			_creature_row(s, cr, can_act)
+		if not beasts.is_empty():  # v0.7.27: the hero's own animals
+			_subheading("SIDE_ANIMALS")
+		for cr: Dictionary in beasts:
 			_creature_row(s, cr, can_act)
 		for qid: String in XpRules.quests_here(s, Catalog.data["world"]):
 			var q: Dictionary = XpRules.quests(Catalog.data["world"])[qid]
@@ -322,6 +330,14 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var jb := _flow(acts, tr("BTN_JOB"), job_requested.emit.bind(id), can_act)
 		jb.name = "Jobs_" + id
 		jb.tooltip_text = tr("BTN_JOB_TIP").format({"name": n.get("name", id)})
+	var undeeded := PropertyRules.is_registry(Catalog.data, id) and PropertyRules.state(s.character).values().any(func(p: Dictionary) -> bool: return not bool(p.get("deed", false)))
+	if not PropertyRules.of_seller(s, Catalog.data, id).is_empty() or undeeded:  # v0.7.27
+		var sb := _flow(acts, tr("BTN_PROPERTY"), property_requested.emit.bind("seller", id), can_act)
+		sb.name = "PropertySale_" + id
+		sb.tooltip_text = tr("BTN_PROPERTY_SALE_TIP").format({"name": n.get("name", id)})
+	if not PropertyRules.animals_of(Catalog.data, id).is_empty():
+		var ab := _flow(acts, tr("BTN_ANIMALS"), property_requested.emit.bind("animals", id), can_act)
+		ab.name = "Animals_" + id
 	var follow: Array = []  # v0.7.22.22 (#25): a follower by the buttons, as the prisoners
 	if s.followers.has(id):
 		follow = [["stay", "BTN_FOLLOWER_STAY"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
@@ -365,6 +381,9 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	_on_right(l, key)
 	_more(row, "CreatureMore_" + cid, key)
 	if _open != key:
+		return
+	if str(cr["state"]) == PropertyRules.TAME:  # v0.7.27: an own beast goes along or stays, or is let go
+		_animal_acts(s, cr, can_act)
 		return
 	var specs: Array = [["talk", "BTN_CREATURE_TALK"]] if str(cr["state"]) != "unconscious" else []  # v0.7.22.16: one knocked out does not talk
 	if not bool(cr.get("bound", false)) and str(cr["state"]) != "truce":
@@ -606,6 +625,43 @@ func _work_row(s: GameSession, can_act: bool) -> void:
 		b.gui_input.connect(func(e: InputEvent) -> void:
 			if e is InputEventMouseButton and e.pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
 				job_requested.emit(npc))
+
+
+func _animal_acts(_s: GameSession, cr: Dictionary, can_act: bool) -> void:
+	var cid := str(cr["id"])
+	var acts := _acts("CreatureActs_" + cid)
+	var lb := _flow(acts, tr("BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_ANIMAL_LEAD"), func() -> void:
+		var err := GameState.creature_act(cid, "lead")
+		if not err.is_empty():
+			EventBus.message.emit(tr(err)), can_act)
+	lb.name = "Creature_lead_" + cid
+	var name := str(cr.get("name", cid))
+	var rb := _flow(acts, tr("BTN_ANIMAL_RELEASE"), func() -> void:
+		ConfirmBox.ask(self, tr("CONFIRM_ANIMAL_RELEASE_TITLE").format({"name": name}), tr("CONFIRM_ANIMAL_RELEASE"), tr("BTN_ANIMAL_RELEASE"), func() -> void:
+			var err := GameState.property_act("release", cid)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err))), can_act)
+	rb.name = "Creature_release_" + cid
+	rb.add_theme_color_override("font_color", UiTheme.BAD)
+
+
+## Property (v0.7.27): «Имущество» when the hero owns a place or a beast; the window of the hero's places.
+func _property_row(s: GameSession) -> void:
+	if PropertyRules.state(s.character).is_empty() and PropertyRules.animals(s).is_empty():
+		return
+	var acts := HFlowContainer.new()
+	acts.name = "PropertyActs"
+	acts.add_theme_constant_override("h_separation", 6)
+	_content.add_child(acts)
+	var here := PropertyRules.here(s, Catalog.data)
+	var label := tr("BTN_PROPERTY") if here.is_empty() else tr("BTN_PROPERTY_HERE").format({"name": PropertyRules.name_of(s, Catalog.data, here)})
+	var b := _row_button(acts, label, property_requested.emit.bind("mine", ""), not GameState.is_busy())
+	b.name = "PropertyButton"
+	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.clip_text = false
+	b.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+	b.tooltip_text = tr("BTN_PROPERTY_TIP")
 
 
 func _need(act: String) -> void:

@@ -72,13 +72,13 @@ static func blocked(s: GameSession, world: Dictionary, room_id: String, to: Stri
 
 
 ## Minutes of a route by the time rules: a step inside a location, a step into another one.
-static func minutes(data: Dictionary, from: String, path: Array[String]) -> int:
+static func minutes(data: Dictionary, from: String, path: Array[String], mult: float = 1.0) -> int:
 	var w := WorldView.new(data["world"])
 	var cfg: Dictionary = data["rules"]["time"]
 	var total := 0
 	var at := from
 	for r: String in path:
-		total += int(cfg["move_minutes"] if w.location_id(at) == w.location_id(r) else cfg["travel_minutes"])
+		total += int(cfg["move_minutes"]) if w.location_id(at) == w.location_id(r) else roundi(int(cfg["travel_minutes"]) * mult)
 		at = r
 	return total
 

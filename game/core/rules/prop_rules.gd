@@ -26,9 +26,11 @@ static func room_props(s: GameSession, room_id: String) -> Array[Dictionary]:
 
 
 ## What the hero dropped in this room and left longer than rules.props.abandon_hours is gone (v0.7.22.8, big test
-## #28: someone took it). Called on entering the room. The names gone.
+## #28: someone took it), except in the hero's own place (v0.7.27). Called on entering the room. The names gone.
 static func abandon(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
 	var gone: Array[String] = []
+	if PropertyRules.owned(s.character, PropertyRules.at(s, data, room_id)):
+		return gone
 	var limit := int(cfg(data).get("abandon_hours", 24)) * 60
 	for p: Dictionary in room_props(s, room_id):
 		if bool(p.get("dropped", false)) and TimeRules.abs_minute(s) - int(p.get("dropped_at", TimeRules.abs_minute(s))) >= limit:

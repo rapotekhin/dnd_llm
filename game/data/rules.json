@@ -308,6 +308,55 @@
 		],
 		"make": {"hours": [2, 10], "dc_tiers": ["very_easy", "easy", "medium", "hard"], "pay_cp_hour": {"very_easy": 3, "easy": 4, "medium": 10, "hard": 25}}
 	},
+	"property": {
+		"_doc": "Property (v0.7.27, PropertyRules): a property is a site (location → site → room) on sale — the pack's `properties`, the master's (effect `property`) or built on own land. Bought from its seller (an NPC), it is the hero's de facto; the deed (`registry` — an NPC tagged registry, the fee `fee_pct` of the price) makes it de jure. Without a deed: no tax, but past `dispute.grace_days` each week a `dispute.chance` that the town takes it back. With one: a tax of `tax.pct` of the price every `tax.every_days`, from the till, else a debt; a debt of `tax.seize_weeks` weeks — seized. `kinds`: what the place is — `income_cp_day` (with a worker or the hero's own shift), the shift's `skill` and `hours`, the worker's `role` and `wage_cp_day`, `buildable` (land). `decay_per_day` of the condition (100 → 0; a worker keeps it at `decay_worker`), the income × condition below `worn_below`; repair `repair_pct` of the price per 100 points, an hour per `repair_points_hour`. `upgrades` — what a place gains (`station` tag, `rest`, `storage`, `income_pct`, `private`, `feed_mult`, `decay_mult`), its price and days; `build` — buildings on land: rooms, kind, price, days. `animals` — beasts bought (an SRD template): price, feed a day, `travel_mult` while led, `fights` (an ally), `produce` a day at an own place; unfed `starve_days` — gone. `serfs` (only while the world allows slavery): an owned prisoner put to work — no wage, its food. `make` — the limits of the master's properties.",
+		"registry": {"tag": "registry", "fee_pct": 5},
+		"tax": {"every_days": 7, "pct": 1, "seize_weeks": 4},
+		"dispute": {"grace_days": 7, "chance": 0.25},
+		"decay_per_day": 2.0,
+		"decay_worker": 0.5,
+		"worn_below": 50,
+		"repair_pct": 20,
+		"repair_points_hour": 10,
+		"kinds": {
+			"house": {"name": "дом"},
+			"land": {"name": "земля", "buildable": true, "decay": false},
+			"mill": {"name": "мельница", "income_cp_day": 50, "skill": "athletics", "hours": 8, "role": "подручный мельника", "wage_cp_day": 15},
+			"shop": {"name": "лавка", "income_cp_day": 40, "skill": "persuasion", "hours": 8, "role": "приказчик", "wage_cp_day": 15},
+			"workshop": {"name": "мастерская", "income_cp_day": 30, "skill": "athletics", "hours": 8, "role": "подмастерье", "wage_cp_day": 12},
+			"farm": {"name": "хутор", "income_cp_day": 30, "skill": "animal_handling", "hours": 8, "role": "работник", "wage_cp_day": 10},
+			"stable": {"name": "конюшня", "income_cp_day": 20, "skill": "animal_handling", "hours": 6, "role": "конюх", "wage_cp_day": 10},
+			"tavern": {"name": "таверна", "income_cp_day": 60, "skill": "persuasion", "hours": 8, "role": "половой", "wage_cp_day": 15}
+		},
+		"upgrades": {
+			"bed": {"name": "Кровать", "price_cp": 300, "days": 1, "gives": {"rest": true}, "indoor": true, "text": "Долгий отдых дома даром"},
+			"chest": {"name": "Сундук", "price_cp": 200, "days": 1, "gives": {"storage": true}, "text": "Сундук для своих вещей"},
+			"hearth": {"name": "Очаг", "price_cp": 500, "days": 2, "gives": {"station": "hearth"}, "indoor": true, "text": "Готовить блюда"},
+			"workbench": {"name": "Верстак", "price_cp": 400, "days": 1, "gives": {"station": "workbench"}, "text": "Ремесло за верстаком без платы"},
+			"forge": {"name": "Горн и наковальня", "price_cp": 2000, "days": 4, "gives": {"station": "forge"}, "text": "Кузнечное ремесло без платы"},
+			"alchemy": {"name": "Стол алхимика", "price_cp": 1500, "days": 3, "gives": {"station": "alchemy"}, "indoor": true, "text": "Алхимия без платы"},
+			"counter": {"name": "Прилавок и вывеска", "price_cp": 600, "days": 2, "gives": {"income_pct": 25}, "income": true, "text": "Доход +25%"},
+			"lock": {"name": "Крепкая дверь с замком", "price_cp": 300, "days": 1, "gives": {"private": true}, "text": "Чужим входить нельзя"},
+			"stall": {"name": "Стойло", "price_cp": 500, "days": 2, "gives": {"feed_mult": 0.5}, "text": "Корм для животных здесь вдвое дешевле"},
+			"porch": {"name": "Крыльцо и ограда", "price_cp": 400, "days": 2, "gives": {"decay_mult": 0.5}, "text": "Место ветшает вдвое медленнее"}
+		},
+		"build": {
+			"house": {"name": "Дом", "kind": "house", "price_cp": 2000, "days": 5, "rooms": [{"name": "Горница", "description": "Светлая горница с печью и лавками вдоль стен — свой угол.", "indoor": true}]},
+			"workshop": {"name": "Мастерская", "kind": "workshop", "price_cp": 2500, "days": 7, "rooms": [{"name": "Мастерская", "description": "Просторный сруб с широкими воротами и верстаком у окна.", "indoor": true, "tags": ["workbench"]}]},
+			"shop": {"name": "Лавка", "kind": "shop", "price_cp": 3000, "days": 7, "rooms": [{"name": "Лавка", "description": "Лавка с прилавком и полками под товар, дверь на улицу.", "indoor": true}]},
+			"stable": {"name": "Конюшня", "kind": "stable", "price_cp": 800, "days": 3, "rooms": [{"name": "Конюшня", "description": "Тёплая конюшня с яслями и сеновалом.", "indoor": true}]}
+		},
+		"animals": {
+			"riding_horse": {"price_cp": 7500, "feed_cp_day": 5, "travel_mult": 0.5, "text": "Верхом дорога между местами вдвое короче"},
+			"draft_horse": {"price_cp": 5000, "feed_cp_day": 5, "travel_mult": 0.75, "text": "Дорога на четверть короче"},
+			"mule": {"price_cp": 800, "feed_cp_day": 5, "travel_mult": 0.75, "text": "Дорога на четверть короче"},
+			"mastiff": {"price_cp": 2500, "feed_cp_day": 2, "fights": true, "text": "Идёт с вами — и в бой"},
+			"goat": {"price_cp": 100, "feed_cp_day": 2, "produce": {"goat_milk": 1}, "text": "Даёт молоко у вас дома"}
+		},
+		"starve_days": 3,
+		"serfs": {"feed_cp_day": 5, "escape_chance_day": 0.05},
+		"make": {"price_cp": [300, 20000], "income_day_pct": 1.0, "max_rooms": 4}
+	},
 	"world_gen": {
 		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",
 		"edge_reach": {"neighbours": true, "visited": true},
@@ -1233,6 +1282,7 @@
 		"berries": {"meal": {}},
 		"roast_meat": {"meal": {}},
 		"stew": {"meal": {"water": 20}},
+		"goat_milk": {"meal": {"water": 30}},
 		"hunters_stew": {"meal": {"water": 20, "temp_hp": 5}},
 		"mushroom_soup": {"meal": {"water": 20}, "adv_tag": "poison", "duration": "eight_hours"},
 		"spoiled_food": {"meal": {}},
@@ -1993,6 +2043,7 @@
 			"goodberry": 1,
 				"rations": 2,
 				"bread": 1,
+				"goat_milk": 1,
 				"berries": 1,
 				"roast_meat": 2,
 				"stew": 2,

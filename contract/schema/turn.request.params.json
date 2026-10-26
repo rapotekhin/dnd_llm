@@ -166,6 +166,11 @@
           "title": "Name",
           "type": "string"
         },
+        "property": {
+          "default": "",
+          "title": "Property",
+          "type": "string"
+        },
         "race": {
           "default": "",
           "title": "Race",

@@ -1387,6 +1387,61 @@ func job_act(what: String, id: String) -> String:
 	return ""
 
 
+## Property (v0.7.27): buy, deed, collect, shift, worker, serf, upgrade, build, repair, animal, release — the
+## engine's acts by the buttons of the property window. "" or a localization key.
+func property_act(what: String, id: String, arg: String = "") -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "PROPERTY_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var why := ""
+	match what:
+		"buy": why = PropertyRules.buy_why(s, data, id)
+		"deed": why = PropertyRules.deed_why(s, data, id)
+		"collect": why = PropertyRules.collect_why(s, data, id)
+		"shift": why = PropertyRules.shift_why(s, data, id)
+		"hire": why = PropertyRules.worker_why(s, data, id)
+		"fire": why = PropertyRules.fire_why(s, data, id)
+		"serf": why = PropertyRules.serf_why(s, data, id, arg)
+		"upgrade": why = PropertyRules.upgrade_why(s, data, id, arg)
+		"build": why = PropertyRules.build_why(s, data, id, arg)
+		"repair": why = PropertyRules.repair_why(s, data, id)
+		"animal": why = PropertyRules.animal_why(s, data, id, arg)
+		"release": why = "" if not CreatureRules.find(s, s.room_id, id).is_empty() else "CREATURE_NONE"
+		_: why = "PROPERTY_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	match what:
+		"buy": lines = PropertyRules.buy(s, data, id)
+		"deed": lines = PropertyRules.deed(s, data, id)
+		"collect": lines = PropertyRules.collect(s, data, id)
+		"shift", "repair":
+			var hours := PropertyRules.shift_hours(s, data, id) if what == "shift" else PropertyRules.repair_hours(s, data, id)
+			var w := CrimeRules.wait(s, data, hours * 60)  # the patrol may break the work
+			lines = w["lines"]
+			if PropertyRules.owned(s.character, id):
+				lines.append_array(PropertyRules.shift(s, data, id, int(w["minutes"])) if what == "shift" else PropertyRules.repair(s, data, id, int(w["minutes"])))
+		"hire": lines = PropertyRules.hire_worker(s, data, id)
+		"fire": lines = PropertyRules.fire(s, data, id)
+		"serf": lines = PropertyRules.set_serf(s, data, id, arg)
+		"upgrade": lines = PropertyRules.upgrade(s, data, id, arg)
+		"build": lines = PropertyRules.build(s, data, id, arg)
+		"animal": lines = PropertyRules.buy_animal(s, data, id, arg)
+		"release":
+			var cr := CreatureRules.find(s, s.room_id, id)
+			PropertyRules._remove_creature(s, id)
+			lines = ["%s отпущен на волю" % cr.get("name", id)]
+	if lines.is_empty():
+		return ""
+	CharacterRules.refresh(s.character, data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	return ""
+
+
 func set_needs(on: bool) -> void:
 	if session != null:
 		session.settings["needs"] = on

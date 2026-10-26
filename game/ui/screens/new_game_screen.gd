@@ -135,6 +135,14 @@ func _redraw() -> void:
 	_form.add_child(needs)
 	_text(_form, tr("NG_NEEDS_HINT"), true)
 
+	var slaves := CheckButton.new()  # v0.7.27: a hard world, off by default
+	slaves.name = "SlaveryToggle"
+	slaves.text = "NG_SLAVERY"
+	slaves.button_pressed = bool(settings.get("slavery", false))
+	slaves.toggled.connect(func(on: bool) -> void: settings["slavery"] = on)
+	_form.add_child(slaves)
+	_text(_form, tr("NG_SLAVERY_HINT"), true)
+
 	_label(_form, "NG_VIOLENCE", UiTheme.MUTED_LABEL)
 	_choice(_form, "violence", WorldPack.VIOLENCE, "VIOLENCE_")
 	_list_field(_form, "lines", "NG_LINES")
