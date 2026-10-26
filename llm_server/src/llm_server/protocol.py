@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.60.0"
+PROTOCOL_VERSION = "0.61.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -274,6 +274,7 @@ class CharacterSheet(_In):
     jobs: str = ""  # 0.58.0: where the hero works, the rank and shifts («Работа (кнопка «Смена» …): …»)
     property: str = ""  # 0.59.0: the hero's places and beasts, what is on sale here («Имущество (…): …»)
     bank: str = ""  # 0.60.0: the hero's deposits, loans and vaults, the banks of the scene («Банк (…): …»)
+    shop: str = ""  # 0.61.0: the hero's charters, shelves and merchant's name, the suppliers of the scene («Своя торговля (…): …»)
 
 
 class HistoryLine(_In):
@@ -934,6 +935,17 @@ class RecipeEffect(_Out):
     qty: int = Field(default=1, ge=1, le=20)
 
 
+class SupplierEffect(_Out):
+    """A wholesale supplier the world lacks (0.61.0): «Ведана, продашь мне травы оптом для моей лавки?». A scene NPC
+    sells lots to a hero with the trade charter at `pct` of the value — its own goods or `goods` (catalog ids). The
+    lots are bought by the «Опт» button — the engine's act."""
+
+    kind: Literal["supplier"] = "supplier"
+    npc_id: str  # an NPC of the scene
+    goods: list[str] = Field(default_factory=list, max_length=12)
+    pct: int | None = Field(default=None, ge=1, le=100)
+
+
 class BankEffect(_Out):
     """A lender the world lacks (0.60.0): «Горм, ты ведь ссужаешь под залог?». A scene NPC (or `new` — the person
     create_npc made in this turn) takes deposits, lends against a collateral or keeps a vault; rates within
@@ -1150,7 +1162,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

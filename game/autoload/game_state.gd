@@ -1442,6 +1442,50 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 	return ""
 
 
+## Own trade (v0.7.29): put / take (vid, arg — the item, amount — qty), price (arg — the item, amount ±1), collect,
+## shift (vid); charter, rent (npc, amount — days); wholesale (npc, arg — the item). "" or a localization key.
+func shop_act(what: String, id: String, arg: String = "", amount: int = 0) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "PROPERTY_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var why := ""
+	match what:
+		"put": why = ShopRules.put_why(s, data, id, arg)
+		"take": why = ShopRules.take_why(s, data, id, arg)
+		"price": why = ShopRules.price_step_why(s, data, id, arg, amount)
+		"collect": why = ShopRules.collect_why(s, data, id)
+		"shift": why = ShopRules.shift_why(s, data, id)
+		"charter": why = ShopRules.charter_why(s, data, id)
+		"rent": why = ShopRules.rent_why(s, data, id, amount)
+		"wholesale": why = ShopRules.wholesale_why(s, data, id, arg)
+		_: why = "PROPERTY_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	match what:
+		"put": lines = ShopRules.put(s, data, id, arg, maxi(1, amount))
+		"take": lines = ShopRules.take(s, data, id, arg)
+		"price":
+			ShopRules.price_step(s, data, id, arg, amount)
+			EventBus.state_changed.emit()
+			return ""
+		"collect": lines = ShopRules.collect(s, data, id)
+		"shift":
+			var w := CrimeRules.wait(s, data, ShopRules.shift_hours(data) * 60)  # the patrol may break the trade
+			lines = w["lines"]
+			lines.append_array(ShopRules.shift(s, data, id, int(w["minutes"])))
+		"charter": lines = ShopRules.charter(s, data, id)
+		"rent": lines = ShopRules.rent(s, data, id, amount)
+		"wholesale": lines = ShopRules.wholesale(s, data, id, arg)
+	CharacterRules.refresh(s.character, data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	return ""
+
+
 ## The bank (v0.7.28): deposit (arg — the term, amount), withdraw (arg — the contract), loan (arg — «kind:id» of the
 ## collateral, days), repay, put / take (arg — an item; none — coins by amount). "" or a localization key.
 func bank_act(what: String, npc_id: String, arg: String = "", amount: int = 0, days: int = 0) -> String:

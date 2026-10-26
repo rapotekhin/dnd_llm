@@ -207,6 +207,11 @@
           "default": null,
           "title": "Reward Left Cp"
         },
+        "shop": {
+          "default": "",
+          "title": "Shop",
+          "type": "string"
+        },
         "skill_proficiencies": {
           "items": {
             "type": "string"

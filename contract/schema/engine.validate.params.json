@@ -2897,6 +2897,49 @@
       "title": "StartCombatEffect",
       "type": "object"
     },
+    "SupplierEffect": {
+      "additionalProperties": false,
+      "description": "A wholesale supplier the world lacks (0.61.0): «Ведана, продашь мне травы оптом для моей лавки?». A scene NPC\nsells lots to a hero with the trade charter at `pct` of the value — its own goods or `goods` (catalog ids). The\nlots are bought by the «Опт» button — the engine's act.",
+      "properties": {
+        "goods": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Goods",
+          "type": "array"
+        },
+        "kind": {
+          "const": "supplier",
+          "default": "supplier",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pct"
+        }
+      },
+      "required": [
+        "npc_id"
+      ],
+      "title": "SupplierEffect",
+      "type": "object"
+    },
     "TakeFromEffect": {
       "additionalProperties": false,
       "description": "The hero takes a thing out of a container of the room (0.28.0); someone else's before its owner — a theft.",
@@ -3099,6 +3142,7 @@
           "reputation": "#/$defs/ReputationEffect",
           "reveal_secret": "#/$defs/RevealSecretEffect",
           "start_combat": "#/$defs/StartCombatEffect",
+          "supplier": "#/$defs/SupplierEffect",
           "take_from": "#/$defs/TakeFromEffect",
           "take_item": "#/$defs/TakeItemEffect",
           "take_prop": "#/$defs/TakePropEffect",
@@ -3153,6 +3197,9 @@
         },
         {
           "$ref": "#/$defs/BankEffect"
+        },
+        {
+          "$ref": "#/$defs/SupplierEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"

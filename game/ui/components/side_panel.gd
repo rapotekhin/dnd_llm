@@ -21,6 +21,7 @@ signal craft_requested
 signal job_requested(npc_id: String)  # v0.7.26
 signal property_requested(mode: String, npc_id: String)  # v0.7.27
 signal bank_requested(npc_id: String)  # v0.7.28
+signal shop_requested(mode: String, id: String)  # v0.7.29
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -336,6 +337,14 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var sb := _flow(acts, tr("BTN_PROPERTY"), property_requested.emit.bind("seller", id), can_act)
 		sb.name = "PropertySale_" + id
 		sb.tooltip_text = tr("BTN_PROPERTY_SALE_TIP").format({"name": n.get("name", id)})
+	if PropertyRules.is_registry(Catalog.data, id) and Catalog.data["rules"].has("shop"):  # v0.7.29: the charter and the stalls
+		var tb := _flow(acts, tr("BTN_SHOP_REGISTRY"), shop_requested.emit.bind("registry", id), can_act)
+		tb.name = "ShopRegistry_" + id
+		tb.tooltip_text = tr("BTN_SHOP_REGISTRY_TIP")
+	if ShopRules.is_supplier(s, Catalog.data, id):
+		var wb := _flow(acts, tr("BTN_WHOLESALE"), shop_requested.emit.bind("supplier", id), can_act)
+		wb.name = "Wholesale_" + id
+		wb.tooltip_text = tr("BTN_WHOLESALE_TIP").format({"name": n.get("name", id)})
 	if BankRules.is_bank(s, Catalog.data, id):  # v0.7.28
 		var bb := _flow(acts, tr("BTN_BANK"), bank_requested.emit.bind(id), can_act)
 		bb.name = "Bank_" + id
@@ -652,12 +661,21 @@ func _animal_acts(_s: GameSession, cr: Dictionary, can_act: bool) -> void:
 
 ## Property (v0.7.27): «Имущество» when the hero owns a place or a beast; the window of the hero's places.
 func _property_row(s: GameSession) -> void:
-	if PropertyRules.state(s.character).is_empty() and PropertyRules.animals(s).is_empty():
+	var venue := ShopRules.here(s, Catalog.data)  # v0.7.29
+	if PropertyRules.state(s.character).is_empty() and PropertyRules.animals(s).is_empty() and venue.is_empty():
 		return
 	var acts := HFlowContainer.new()
 	acts.name = "PropertyActs"
 	acts.add_theme_constant_override("h_separation", 6)
 	_content.add_child(acts)
+	if not venue.is_empty():
+		var sb := _row_button(acts, tr("BTN_SHOP"), shop_requested.emit.bind("venue", venue), not GameState.is_busy())
+		sb.name = "ShopButton"
+		sb.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		sb.tooltip_text = tr("BTN_SHOP_TIP")
+	if PropertyRules.state(s.character).is_empty() and PropertyRules.animals(s).is_empty():
+		return
 	var here := PropertyRules.here(s, Catalog.data)
 	var label := tr("BTN_PROPERTY") if here.is_empty() else tr("BTN_PROPERTY_HERE").format({"name": PropertyRules.name_of(s, Catalog.data, here)})
 	var b := _row_button(acts, label, property_requested.emit.bind("mine", ""), not GameState.is_busy())

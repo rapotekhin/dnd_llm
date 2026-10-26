@@ -126,6 +126,8 @@ static func _gives(s: GameSession, data: Dictionary, id: String, key: String, ba
 
 ## The income of a day with a worker: the kind's (or the place's own) × the upgrades × the condition when worn.
 static func income_day(s: GameSession, data: Dictionary, id: String) -> int:
+	if data["rules"].has("shop") and ShopRules.active(s, id):  # a shelf of goods earns by sales instead (v0.7.29)
+		return 0
 	var base := int(prop(s, data, id).get("income_cp_day", kind(s, data, id).get("income_cp_day", 0)))
 	if base <= 0:
 		return 0
@@ -375,6 +377,8 @@ static func collect(s: GameSession, data: Dictionary, id: String) -> Array[Strin
 static func shift_why(s: GameSession, data: Dictionary, id: String) -> String:
 	if not owned(s.character, id) or here(s, data) != id:
 		return "PROPERTY_NOT_HERE"
+	if data["rules"].has("shop") and ShopRules.active(s, id):
+		return "PROPERTY_SHOP_SHIFT"
 	if income_day(s, data, id) <= 0:
 		return "PROPERTY_NO_INCOME"
 	if int(state(s.character)[id].get("shift_day", -1)) == s.day:

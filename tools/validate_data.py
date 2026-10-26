@@ -65,7 +65,7 @@ def known() -> dict[str, set[str]]:
     }
 
 
-ROOM_TAGS = {"temple", "stage", "water", "foul_water"}  # v0.7.11: an acolyte's free rest, a show; v0.7.23: water to drink and fill; v0.7.23.1: foul
+ROOM_TAGS = {"temple", "stage", "water", "foul_water", "market"}  # v0.7.29: a market for stalls; v0.7.11: an acolyte's free rest, a show; v0.7.23: water to drink and fill; v0.7.23.1: foul
 SERVICE_OPS = {"identify", "lift_curse", "enchant", "meal", "cure_disease", "teach_recipe"}  # v0.7.16: the engine's operations a service runs (rules.json items.services)
 NPC_TAGS = {"clergy", "underworld", "commoner", "military", "registry", "bank"}  # the people of the hero's past (rules.json backgrounds ties); registry — v0.7.27, bank — v0.7.28
 

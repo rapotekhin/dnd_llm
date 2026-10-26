@@ -370,6 +370,28 @@
 		"debt_crime": "debt",
 		"make": {"loan_rate_pct_week": [2.0, 10.0], "deposit_rate_pct_week": [0.0, 1.0], "ltv_pct": [20, 70]}
 	},
+	"shop": {
+		"_doc": "Own trade (v0.7.29, ShopRules): a venue is the hero's place of a kind in `venues` (or with an upgrade that gives income_pct, the counter) or a stall rented at a room with `stall.room_tag` from the registry. The hero puts own things on the venue's shelf and sets the price as a percent of the value (price_pct). Each day a venue with a worker (or a serf) sells to `visitors` buyers: each picks a thing on the shelf (weight × competition — a pack trader of the location sells the same thing — or × scarce otherwise; a tavern's guests pick only food and drink) and buys it with the chance by the price ratio (buy_chance: [ratio, chance] points, linear); the takings go to the venue's till less the tax. The hero's own shift (`shift`) — a check of `skill` against `dc_tier`, its outcome (jobs.outcomes) × shift visitors, the takings to the purse. A charter (`charter`, from the registry for fee_cp) makes the trade lawful (tax_pct of the takings) and opens wholesale at the suppliers (NPC `wholesale` or the master's `supplier`: pct of the value, lots); without it the guard fines (fine_chance a day, fine_cp). The merchant's reputation of a location (`reputation`) grows by fair sales and good things, falls by dear sales and crude ones, and scales the visitors. A tavern's lodging: with an upgrade that gives rest, lodgers_share of the guests pay lodging_cp.",
+		"venues": {
+			"shop": {"name": "лавка", "visitors": 8},
+			"workshop": {"name": "мастерская", "visitors": 4},
+			"tavern": {"name": "таверна", "visitors": 10, "tavern": true},
+			"stall": {"name": "прилавок на рынке", "visitors": 6},
+			"counter": {"name": "прилавок", "visitors": 4}
+		},
+		"stall": {"room_tag": "market", "rent_cp_day": 20, "days": [1, 7]},
+		"price_pct": {"min": 50, "max": 200, "step": 10, "default": 100},
+		"buy_chance": [[0.5, 0.95], [0.8, 0.8], [1.0, 0.6], [1.2, 0.35], [1.5, 0.12], [2.0, 0.02]],
+		"competition": 0.6,
+		"scarce": 1.3,
+		"shift": {"hours": 4, "skill": "persuasion", "dc_tier": "medium", "visitors": 6},
+		"charter": {"fee_cp": 1000, "tax_pct": 5, "fine_chance": 0.15, "fine_cp": 200},
+		"wholesale": {"pct": 60, "lot": 5},
+		"reputation": {"fair_ratio": 1.1, "dear_ratio": 1.4, "fair": 0.25, "dear": -1.0, "quality": {"crude": -1.0, "masterwork": 1.0}, "min": -50, "max": 50, "visitors_per_point": 0.01,
+			"words": [[-50, "обдирала"], [-15, "не в чести"], [-5, "так себе"], [5, "честный торговец"], [15, "добрая слава"], [30, "лучшая лавка в округе"]]},
+		"tavern": {"drinks": ["ale"], "lodging_cp": 50, "lodgers_share": 0.3},
+		"make": {"pct": [40, 90], "max_goods": 12}
+	},
 	"world_gen": {
 		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",
 		"edge_reach": {"neighbours": true, "visited": true},

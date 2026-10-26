@@ -1250,3 +1250,55 @@ BANK_OVERDUE,Сначала погасите просроченный долг
 BANK_NO_COLLATERAL,Этого заложить нельзя
 BANK_OWED,Сначала уплатите за ячейку
 BANK_NO_ITEM,Такой вещи нет
+BTN_SHOP,Лавка
+BTN_SHOP_TIP,"Ваш прилавок: товар, цены, выручка, торговать самому"
+BTN_SHOP_REGISTRY,Торговля
+BTN_SHOP_REGISTRY_TIP,Торговая грамота и прилавок на рынке
+BTN_WHOLESALE,Опт
+BTN_WHOLESALE_TIP,Купить у {name} оптом — нужна торговая грамота
+SHOP_TITLE,Лавка
+SHOP_TITLE_AT,Лавка: {name}
+SHOP_TITLE_REGISTRY,Торговля: {name}
+SHOP_TITLE_SUPPLIER,Опт: {name}
+SHOP_HAS_CHARTER,грамота есть
+SHOP_NO_CHARTER,без грамоты — стража может оштрафовать
+SHOP_REP,слава торговца: {word}
+SHOP_STALL_UNTIL,прилавок до дня {day}
+SHOP_STAFFED,торгует работник
+SHOP_UNSTAFFED,без работника продаёт только ваша смена
+SHOP_TILL,В кассе: {money}
+BTN_SHOP_COLLECT,Забрать выручку
+SHOP_LAST,За прошлые дни (до дня {day}): {money}
+SHOP_SHIFT_HINT,"Встать за прилавок самому: {hours} ч, Убеждение, шанс удачной торговли {chance}%"
+BTN_SHOP_SHIFT,Торговать
+SHOP_SHELF,На прилавке
+SHOP_SHELF_EMPTY,Прилавок пуст — выставьте свои вещи ниже
+SHOP_SHELF_ROW,{item} ×{qty} · {price} ({pct}% от цены {value})
+BTN_SHOP_CHEAPER,Дешевле на 10%
+BTN_SHOP_DEARER,Дороже на 10%
+BTN_SHOP_TAKE,Снять
+SHOP_YOURS,Выставить на продажу
+BTN_SHOP_PUT_ONE,Выставить
+BTN_SHOP_PUT_ALL,Все {n}
+SHOP_NOTHING_TO_PUT,Выставить нечего
+SHOP_CHARTER_HINT,"Торговая грамота: торговать законно, опт у поставщиков; пошлина {fee}, налог {tax}% с выручки"
+BTN_SHOP_CHARTER,Получить грамоту за {fee}
+SHOP_NO_MARKET,Рынка с прилавками здесь нет
+SHOP_STALL_HINT,"Прилавок: {place}, {rent} в день"
+BTN_SHOP_RENT,Снять на {days} за {money}
+SHOP_NEED_CHARTER,Оптом продают только торговцам с грамотой — её дают у писаря
+SHOP_SUPPLY_ROW,{item} · {price} за штуку (в лавке {value})
+BTN_SHOP_LOT,Купить ×{n} за {money}
+SHOP_NO_VENUE,Здесь нет вашей лавки
+SHOP_NOT_HERE,Это делается на месте
+SHOP_NO_ITEM,Такой вещи нет
+SHOP_TAVERN_FOOD,В таверне продают только еду и питьё
+SHOP_PRICE_LIMIT,Дальше цену менять нельзя
+SHOP_NO_CASH,Касса пуста
+SHOP_STALL_LAPSED,Срок аренды прилавка вышел
+SHOP_EMPTY,Прилавок пуст
+SHOP_DONE_TODAY,Сегодня вы уже торговали
+SHOP_NO_SERVICE,Здесь так не делают
+SHOP_HAS_CHARTER_ERR,Грамота уже есть
+SHOP_NO_MONEY,Не хватает денег
+PROPERTY_SHOP_SHIFT,Здесь торгуют — смена в окне «Лавка»
