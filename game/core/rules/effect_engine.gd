@@ -313,6 +313,11 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": made["reason"]}
 			return {"plan": made, "summary": "Продаётся: %s (%s) за %s%s" % [made["def"]["name"], PropertyRules.cfg(data)["kinds"][made["def"]["kind"]]["name"],
 				Money.format(int(made["def"]["price_cp"])), ", доход %s в день" % Money.format(int(made["def"]["income_cp_day"])) if made["def"].has("income_cp_day") else ""]}
+		"bank":  # v0.7.28: a scene NPC becomes a lender
+			var lender := BankRules.make(s, data, e)
+			if lender.has("reason"):
+				return {"reason": lender["reason"]}
+			return lender
 		"use_feature":
 			var rid := FeatureUses.resolve(c, data, str(e.get("feature", "")))
 			var amount := int(e.get("amount", 1))
@@ -918,6 +923,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(JobRules.apply_make(s, _data, plan))
 		"property":
 			_extra_lines.append_array(PropertyRules.apply_make(s, _data, plan, str(_made.get("site", "")), str(_made.get("npc", ""))))
+		"bank":
+			_extra_lines.append_array(BankRules.apply_make(s, _data, plan, str(_made.get("npc", ""))))
 		"use_feature":
 			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
 		"use_item":

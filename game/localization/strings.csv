@@ -1211,3 +1211,42 @@ NG_SLAVERY,Крепостные и рабы
 NG_SLAVERY_HINT,Жёсткий мир: пленника-человека можно продать или приставить к работе в своём имуществе. По умолчанию выключено.
 MAP_OWN_SUFFIX, (ваше)
 SIDE_ANIMALS,Ваши животные
+BTN_BANK,Банк
+BTN_BANK_TIP,"Вклады, кредит под залог и ячейка у {name}"
+BANK_TITLE,Банк
+BANK_TITLE_AT,Банк: {name}
+BANK_PURSE,В кошельке: {money}
+BANK_GP, зм
+BANK_DEPOSITS,Вклады
+BANK_DEPOSIT_ROW,Вклад {term}: {money} · {rate}
+BANK_UNTIL,до дня {day}
+BTN_BANK_WITHDRAW,Забрать {money}
+BTN_BANK_WITHDRAW_EARLY,Забрать досрочно {money}
+BANK_DEPOSIT_NEW,"Новый вклад, от {min}:"
+BTN_BANK_DEPOSIT,Положить {term} ({rate})
+BANK_LOANS,Кредит под залог ({rate})
+BANK_LOAN_ROW,"Долг {money} — вернуть до дня {day}, залог: {what}"
+BANK_OVERDUE_MARK,просрочен
+BTN_BANK_REPAY,Погасить {money}
+BANK_LOAN_TERM,Срок кредита:
+BANK_DAYS,{n} дн.
+BANK_NO_COLLATERAL_HINT,Заложить нечего: нужен дом или земля с купчей или вещь дороже {min}
+BANK_PLEDGE_ROW,"{what} — оценка {value}, дадут {max}"
+BTN_BANK_LOAN,Заложить за {money}
+BANK_VAULT,Ячейка ({fee} в неделю)
+BANK_VAULT_OWED,"Долг за ячейку: {money} — возьмут, когда будете забирать"
+BANK_VAULT_COINS,Монеты в ячейке: {money}
+BTN_BANK_PUT,Положить
+BTN_BANK_TAKE,Забрать
+BANK_VAULT_YOURS,Ваши вещи:
+BANK_VAULT_NOTHING,Положить нечего
+BANK_NO_SERVICE,Здесь так не делают
+BANK_NOT_HERE,Хозяина банка нет на месте
+BANK_TOO_LITTLE,Сумма слишком мала
+BANK_NO_MONEY,Не хватает денег
+BANK_NO_CONTRACT,Такого договора нет
+BANK_REFUSED,После прошлого долга здесь в долг не дают
+BANK_OVERDUE,Сначала погасите просроченный долг
+BANK_NO_COLLATERAL,Этого заложить нельзя
+BANK_OWED,Сначала уплатите за ячейку
+BANK_NO_ITEM,Такой вещи нет

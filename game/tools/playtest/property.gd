@@ -66,6 +66,7 @@ func run() -> void:
 	win.visible = false
 	node("EventBus").state_changed.emit()
 	await frames(2)
+	s.rested_at = TimeRules.abs_minute(s) + 4 * 1440  # the skip is not days without sleep
 	s.chat.append(GameSession.effect_entry(TimeRules.advance(s, data, 4 * 1440)))
 	node("EventBus").state_changed.emit()
 	await frames(3)

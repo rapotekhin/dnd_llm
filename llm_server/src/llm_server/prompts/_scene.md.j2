@@ -24,7 +24,8 @@
 {% endif %}{% if character.development %}Мирное развитие (уровни и навыки ведёт движок): {{ character.development | join("; ") }}.{% endif %}{% if character.craft %}
 {{ character.craft }}.{% endif %}{% if character.jobs %}
 {{ character.jobs }}.{% endif %}{% if character.property %}
-{{ character.property }}.{% endif %}{% if character.goal %}
+{{ character.property }}.{% endif %}{% if character.bank %}
+{{ character.bank }}.{% endif %}{% if character.goal %}
 Жизненная цель героя (его мысли — NPC о ней не знают): {{ character.goal }}.
 {% endif %}
 {% endif %}

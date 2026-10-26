@@ -43,6 +43,11 @@
           "title": "Bags",
           "type": "array"
         },
+        "bank": {
+          "default": "",
+          "title": "Bank",
+          "type": "string"
+        },
         "body": {
           "default": "",
           "title": "Body",

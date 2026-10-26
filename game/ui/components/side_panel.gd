@@ -20,6 +20,7 @@ signal development_requested
 signal craft_requested
 signal job_requested(npc_id: String)  # v0.7.26
 signal property_requested(mode: String, npc_id: String)  # v0.7.27
+signal bank_requested(npc_id: String)  # v0.7.28
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -335,6 +336,10 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var sb := _flow(acts, tr("BTN_PROPERTY"), property_requested.emit.bind("seller", id), can_act)
 		sb.name = "PropertySale_" + id
 		sb.tooltip_text = tr("BTN_PROPERTY_SALE_TIP").format({"name": n.get("name", id)})
+	if BankRules.is_bank(s, Catalog.data, id):  # v0.7.28
+		var bb := _flow(acts, tr("BTN_BANK"), bank_requested.emit.bind(id), can_act)
+		bb.name = "Bank_" + id
+		bb.tooltip_text = tr("BTN_BANK_TIP").format({"name": n.get("name", id)})
 	if not PropertyRules.animals_of(Catalog.data, id).is_empty():
 		var ab := _flow(acts, tr("BTN_ANIMALS"), property_requested.emit.bind("animals", id), can_act)
 		ab.name = "Animals_" + id

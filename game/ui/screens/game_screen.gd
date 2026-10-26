@@ -29,6 +29,7 @@ var _board: BoardPanel
 var _craft: CraftPanel
 var _jobs: JobPanel
 var _property: PropertyPanel
+var _bank: BankPanel
 var _prepare: SmallDialog
 var _mode_bar: HBoxContainer
 var _mode_label: Label
@@ -177,6 +178,7 @@ func _ready() -> void:
 	side.craft_requested.connect(func() -> void: _craft.open())  # v0.7.24
 	side.job_requested.connect(func(npc: String) -> void: _jobs.open(npc))  # v0.7.26
 	side.property_requested.connect(func(mode: String, npc: String) -> void: _property.open(mode, npc))  # v0.7.27
+	side.bank_requested.connect(func(npc: String) -> void: _bank.open(npc))  # v0.7.28
 	row.add_child(side)
 
 	_sheet = CharacterSheet.new()
@@ -247,6 +249,11 @@ func _ready() -> void:
 	_property.visible = false
 	add_child(_property)
 	_property.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_bank = BankPanel.new()  # v0.7.28
+	_bank.name = "BankView"
+	_bank.visible = false
+	add_child(_bank)
+	_bank.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_sheet.bag_requested.connect(func(bag: String) -> void: _container.open(bag))  # v0.7.18.2
 	_sheet.prepare_requested.connect(func() -> void:
 		_sheet.visible = false
@@ -277,7 +284,7 @@ func _ready() -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property]
+	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank]
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.

@@ -205,6 +205,11 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 70. Протокол 0.60.0 (v0.7.28)
+
+- **Эффект `bank`** — ростовщик, которого нет в мире, по просьбе игрока: `npc_id` (NPC сцены или `new`), `services` (`deposit`, `loan`, `vault`, хотя бы одно), `name`, `loan_rate_pct_week`, `deposit_rate_pct_week`, `ltv_pct` в пределах `rules.bank.make`. Движок только делает NPC банком; вклады, кредит и ячейка — кнопки окна «Банк».
+- **Снимок:** `character.bank` — вклады, долги (срок, залог, просрочка, розыск), ячейки героя и банки сцены с условиями.
+
 ### 69. Протокол 0.59.0 (v0.7.27)
 
 - **Эффект `property`** — место на продажу, которого нет в мире, по просьбе игрока: `site_id` (`here`, id комнаты этой локации или `new` — объект `create_place` этого хода), `seller_id` (NPC сцены или `new`), `place_kind` (house, land, mill, shop, workshop, farm, stable, tavern), `name`, `price_cp`, `income_cp_day` в пределах `rules.property.make`. Движок только выставляет место у продавца; покупка, купчая и остальное — кнопки окна «Имущество». Поле названо `place_kind`, а не `kind`: `kind` — дискриминатор эффектов.

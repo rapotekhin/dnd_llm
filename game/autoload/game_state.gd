@@ -1442,6 +1442,41 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 	return ""
 
 
+## The bank (v0.7.28): deposit (arg — the term, amount), withdraw (arg — the contract), loan (arg — «kind:id» of the
+## collateral, days), repay, put / take (arg — an item; none — coins by amount). "" or a localization key.
+func bank_act(what: String, npc_id: String, arg: String = "", amount: int = 0, days: int = 0) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "PROPERTY_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var col := arg.split(":", true, 1)
+	var why := ""
+	match what:
+		"deposit": why = BankRules.deposit_why(s, data, npc_id, arg, amount)
+		"withdraw": why = BankRules.withdraw_why(s, data, arg)
+		"loan": why = BankRules.loan_why(s, data, npc_id, col[0], col[1] if col.size() > 1 else "", days)
+		"repay": why = BankRules.repay_why(s, data, arg)
+		"put": why = BankRules.vault_why(s, data, npc_id, "in", arg, amount)
+		"take": why = BankRules.vault_why(s, data, npc_id, "out", arg, amount)
+		_: why = "PROPERTY_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	match what:
+		"deposit": lines = BankRules.deposit(s, data, npc_id, arg, amount)
+		"withdraw": lines = BankRules.withdraw(s, data, arg)
+		"loan": lines = BankRules.loan(s, data, npc_id, col[0], col[1], days)
+		"repay": lines = BankRules.repay(s, data, arg)
+		"put": lines = BankRules.vault_move(s, data, npc_id, "in", arg, amount)
+		"take": lines = BankRules.vault_move(s, data, npc_id, "out", arg, amount)
+	CharacterRules.refresh(s.character, data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	return ""
+
+
 func set_needs(on: bool) -> void:
 	if session != null:
 		session.settings["needs"] = on

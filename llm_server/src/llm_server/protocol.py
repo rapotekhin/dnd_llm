@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.59.0"
+PROTOCOL_VERSION = "0.60.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -273,6 +273,7 @@ class CharacterSheet(_In):
     craft: str = ""  # 0.56.0: the recipes the hero knows and the work in hand («Ремесло (окно «Ремесло»): …»)
     jobs: str = ""  # 0.58.0: where the hero works, the rank and shifts («Работа (кнопка «Смена» …): …»)
     property: str = ""  # 0.59.0: the hero's places and beasts, what is on sale here («Имущество (…): …»)
+    bank: str = ""  # 0.60.0: the hero's deposits, loans and vaults, the banks of the scene («Банк (…): …»)
 
 
 class HistoryLine(_In):
@@ -933,6 +934,20 @@ class RecipeEffect(_Out):
     qty: int = Field(default=1, ge=1, le=20)
 
 
+class BankEffect(_Out):
+    """A lender the world lacks (0.60.0): «Горм, ты ведь ссужаешь под залог?». A scene NPC (or `new` — the person
+    create_npc made in this turn) takes deposits, lends against a collateral or keeps a vault; rates within
+    rules.bank.make. Deposits, loans and the vault are the buttons of the «Банк» window — the engine's acts."""
+
+    kind: Literal["bank"] = "bank"
+    npc_id: str  # an NPC of the scene or "new"
+    services: list[Literal["deposit", "loan", "vault"]] = Field(min_length=1, max_length=3)
+    name: str | None = Field(default=None, max_length=60)
+    loan_rate_pct_week: float | None = Field(default=None, ge=0)
+    deposit_rate_pct_week: float | None = Field(default=None, ge=0)
+    ltv_pct: int | None = Field(default=None, ge=0, le=100)
+
+
 class PropertyEffect(_Out):
     """A place the player wants to buy and the world lacks on sale (0.59.0): «куплю дом у реки». A site of this location
     (or `new` — the one create_place made in this turn) on sale by a seller of the scene (or `new` — the person
@@ -1135,7 +1150,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

@@ -357,6 +357,19 @@
 		"serfs": {"feed_cp_day": 5, "escape_chance_day": 0.05},
 		"make": {"price_cp": [300, 20000], "income_day_pct": 1.0, "max_rooms": 4}
 	},
+	"bank": {
+		"_doc": "Bank (v0.7.28, BankRules): a financial contract is an engine concept — a deposit or a loan between the hero and a bank NPC (the pack's tag `bank` with optional `bank` terms on the NPC, or the master's effect `bank`), with the sum, the weekly rate, the term and the collateral. Interest by game days on the balance. A deposit: demand (taken any day) or a term one (early — without interest; after the term at the demand rate). A loan only against a collateral: a property with a deed (its value × ltv_pct.property) or a thing given in pawn (its price × ltv_pct.item, from item_min_cp); overdue — penalty_pct_day a day, after grace_days the collateral goes to the bank; a loan whose property was lost meanwhile — the debt becomes the crime `debt` of the bank's location (its wergild is the debt), and this bank lends no more. A vault keeps coins and things (safe from captivity and thieves) for fee_cp_week while not empty; unpaid fees are owed and paid before anything is taken. make — the limits of the master's lender.",
+		"tag": "bank",
+		"services": ["deposit", "loan", "vault"],
+		"deposit": {"min_cp": 500, "terms": {
+			"demand": {"name": "до востребования", "days": 0, "rate_pct_week": 0.25},
+			"month": {"name": "на 4 недели", "days": 28, "rate_pct_week": 1.0}
+		}},
+		"loan": {"min_cp": 500, "rate_pct_week": 3.0, "terms_days": [14, 28, 56], "ltv_pct": {"property": 60, "item": 50}, "item_min_cp": 1000, "penalty_pct_day": 1.0, "grace_days": 14},
+		"vault": {"fee_cp_week": 50},
+		"debt_crime": "debt",
+		"make": {"loan_rate_pct_week": [2.0, 10.0], "deposit_rate_pct_week": [0.0, 1.0], "ltv_pct": [20, 70]}
+	},
 	"world_gen": {
 		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",
 		"edge_reach": {"neighbours": true, "visited": true},
@@ -1582,7 +1595,8 @@
 			"_doc": "Kinds of crimes (v0.7.22.16): severity — how much each adds to the sentence (a sentence by the sum), fine_cp — its wergild (murder — fine_cp above), name — in the lines. v0.7.22.24: known_attitude — the location's attitude when it is known (0 — none; murder — `attitude` above, assault −1), reputation_share — the part of the crime_known points it costs (0 — none), memory — what the people remember ({victim}).",
 			"murder": {"severity": 1, "name": "убийство"},
 			"assault": {"severity": 0, "fine_cp": 1000, "name": "нападение"},
-			"trespass": {"severity": 0, "fine_cp": 200, "name": "вторжение", "known_attitude": 0, "reputation_share": 0, "memory": "знает: герой без спроса вломился к {victim}"}
+			"trespass": {"severity": 0, "fine_cp": 200, "name": "вторжение", "known_attitude": 0, "reputation_share": 0, "memory": "знает: герой без спроса вломился к {victim}"},
+			"debt": {"severity": 0, "name": "неуплата долга", "known_attitude": 0, "reputation_share": 2, "memory": "знает: герой не вернул долг {victim}"}
 		},
 		"sentences": [
 			{"severity": 0, "kind": "stocks", "days": 1, "name": "колодки"},

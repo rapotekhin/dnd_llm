@@ -70,6 +70,34 @@ static func on_trespass(s: GameSession, data: Dictionary, owner: String, room_id
 	return _known(s, data, crime)
 
 
+## A loan whose collateral is gone ran past its grace (v0.7.28, BankRules): the crime `debt` against the creditor in
+## the bank's location, known at once; its wergild is the debt itself. Returns [crime id, lines...].
+static func on_debt(s: GameSession, data: Dictionary, creditor: String, loc: String, amount_cp: int) -> Array[String]:
+	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": str(data["rules"].get("bank", {}).get("debt_crime", "debt")), "victim": creditor,
+		"room": "", "location": loc, "at": TimeRules.abs_minute(s), "witnesses": [], "known": false, "settled": false, "fine_cp": amount_cp}
+	s.crimes.append(crime)
+	var out: Array[String] = [str(crime["id"])]
+	out.append_array(_known(s, data, crime))
+	return out
+
+
+## One crime closed outside the law's hold (v0.7.28: the debt paid at the bank); the location's wanted goes when no
+## other open crime is left there. Lines.
+static func settle_one(s: GameSession, data: Dictionary, crime_id: String) -> Array[String]:
+	for crime: Dictionary in s.crimes:
+		if str(crime["id"]) != crime_id or bool(crime["settled"]):
+			continue
+		crime["settled"] = true
+		var loc := str(crime["location"])
+		if _open(s, loc).is_empty() and s.wanted.has(loc):
+			s.wanted.erase(loc)
+			s.let_go.erase(loc)
+			if not s.arrest.is_empty() and WorldView.new(data["world"]).location_id(s.arrest) == loc:
+				s.arrest = ""
+			return ["Вы больше не в розыске: %s" % WorldView.new(data["world"]).location(loc).get("name", loc)]
+	return []
+
+
 ## The victim of an unknown assault woke up or was let go: it tells. Lines.
 static func assault_known(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	for crime: Dictionary in s.crimes:
@@ -368,6 +396,9 @@ static func held(s: GameSession) -> bool:
 static func fine(s: GameSession, data: Dictionary, loc: String) -> int:
 	var total := 0
 	for crime: Dictionary in _open(s, loc):
+		if crime.has("fine_cp"):  # a debt's wergild is the debt (v0.7.28)
+			total += int(crime["fine_cp"])
+			continue
 		var tags: Array = WorldView.new(data["world"]).npc(str(crime["victim"])).get("tags", [])
 		var notable := tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(t))
 		total += int(kind_of(data, crime).get("fine_cp", cfg(data)["fine_cp"])) * (int(cfg(data)["notable_mult"]) if notable else 1)

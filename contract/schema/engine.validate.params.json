@@ -49,6 +49,95 @@
       "title": "AdvanceTimeEffect",
       "type": "object"
     },
+    "BankEffect": {
+      "additionalProperties": false,
+      "description": "A lender the world lacks (0.60.0): «Горм, ты ведь ссужаешь под залог?». A scene NPC (or `new` — the person\ncreate_npc made in this turn) takes deposits, lends against a collateral or keeps a vault; rates within\nrules.bank.make. Deposits, loans and the vault are the buttons of the «Банк» window — the engine's acts.",
+      "properties": {
+        "deposit_rate_pct_week": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deposit Rate Pct Week"
+        },
+        "kind": {
+          "const": "bank",
+          "default": "bank",
+          "title": "Kind",
+          "type": "string"
+        },
+        "loan_rate_pct_week": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Loan Rate Pct Week"
+        },
+        "ltv_pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ltv Pct"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "services": {
+          "items": {
+            "enum": [
+              "deposit",
+              "loan",
+              "vault"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "title": "Services",
+          "type": "array"
+        }
+      },
+      "required": [
+        "npc_id",
+        "services"
+      ],
+      "title": "BankEffect",
+      "type": "object"
+    },
     "CastEffect": {
       "additionalProperties": false,
       "description": "The player casts a spell (0.6.0): the engine checks it is ready and spends the slot.",
@@ -2975,6 +3064,7 @@
         "mapping": {
           "accept_quest": "#/$defs/AcceptQuestEffect",
           "advance_time": "#/$defs/AdvanceTimeEffect",
+          "bank": "#/$defs/BankEffect",
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
@@ -3060,6 +3150,9 @@
         },
         {
           "$ref": "#/$defs/PropertyEffect"
+        },
+        {
+          "$ref": "#/$defs/BankEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"
