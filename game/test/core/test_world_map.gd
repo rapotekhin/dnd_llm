@@ -23,8 +23,8 @@ func test_known_rooms_and_the_unknown_behind_open_exits() -> void:
 	var k := WorldMap.known(s, data["world"])
 	assert_array(k["rooms"]).contains_exactly(["brod-tavern-hall", "brod-square"])
 	assert_array(k["frontier"]).contains_exactly_in_any_order(["brod-tavern-kitchen", "brod-tavern-upstairs", "brod-smithy",
-		"brod-herbalist", "brod-temple", "brod-gate", "brod-townhall", "brod-river-yard"])
-	assert_int((k["edges"] as Array).size()).is_equal(9)  # hall–square once, 2 from the hall, 6 from the square
+		"brod-herbalist", "brod-temple", "brod-gate", "brod-townhall", "brod-river-yard", "brod-school-hall"])
+	assert_int((k["edges"] as Array).size()).is_equal(10)  # hall–square once, 2 from the hall, 7 from the square
 
 
 func test_a_shut_way_is_not_on_the_map() -> void:

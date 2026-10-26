@@ -1410,6 +1410,50 @@ scenarios:
       - "Мастер не выдумывает продажи и выручку: нет эффекта coins, итог торговли оставлен кнопке «Торговать» в окне «Лавка» (в характере или отсылкой)"
       - "Сцена у прилавка живая: площадь, прохожие, может быть Ферн-конкурент, — без чисел выручки"
 
+  - id: study_new_course
+    title: "Попросить кузнеца научить ковать — эффект course без навыка словами"
+    category: rules
+    extends: tavern
+    input: "Горм, научи меня кузнечному делу. Заплачу за науку — буду приходить к тебе каждый день."
+    snapshot:
+      scene:
+        room: {id: room_smithy, name: "Кузница", description: "Жаркая кузница: горн, наковальня, на стене клещи и молоты."}
+        exits:
+          - {id: room_square, name: "Рыночная площадь"}
+        npcs:
+          - {id: npc_smith, name: "Горм", role: "кузнец", template: commoner, attitude: friendly}
+      character:
+        gold_cp: 5000
+    engine:
+      validate:
+        - {kind: course, status: accept, summary: "Курс — Горм: «Кузнечное дело», 5 занятий"}
+    expect:
+      effects: {required_kinds_any: [course], forbidden_kinds: [coins, give_item, take_item]}
+    rubric:
+      - "Горм берёт ученика эффектом course: npc_id кузнеца, teach_kind tool и teach_id smiths_tools (или близкий по смыслу), разумные lessons и fee_cp"
+      - "Мастер не выдаёт владение инструментом и не берёт плату словами: запись и занятия — кнопкой «Учёба»"
+
+  - id: study_lesson_by_button
+    title: "Пойти на занятие в училище — кнопкой «Учёба», без выученного словами"
+    category: rules
+    extends: tavern
+    input: "Сажусь на скамью и слушаю урок магистра — учу эльфийский."
+    snapshot:
+      scene:
+        room: {id: room_school, name: "Классная палата", description: "Длинная палата со скамьями и аспидной доской; на полках книги."}
+        exits:
+          - {id: room_square, name: "Рыночная площадь"}
+        npcs:
+          - {id: npc_teacher, name: "Аверкий Строгов", role: "магистр училища", template: commoner, attitude: indifferent}
+      character:
+        gold_cp: 2000
+        study: "Учёба (окно «Учёба» у учителя, занятия — кнопкой): принят в Училище Ольхового Брода; курс «Эльфийская речь» — язык: Эльфийский, 2/6, пропусков 0; здесь: Аверкий Строгов учит «Эльфийская речь» (язык: Эльфийский)"
+    expect:
+      effects: {forbidden_kinds: [coins, give_item, take_item]}
+    rubric:
+      - "Мастер не даёт язык и не двигает прогресс словами: занятие оставлено кнопке «Учёба» (в характере или отсылкой)"
+      - "Урок живой: магистр, доска, руны, однокашники — без итогов проверки и чисел прогресса от себя"
+
   - id: condition_ghost_fear
     title: "Вопль призрака — страх со спасброском Мудрости"
     category: rules

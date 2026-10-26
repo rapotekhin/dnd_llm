@@ -188,6 +188,20 @@ static func create(new_seed: int, now: String, start_room: String, new_character
 
 
 ## JSON brings numbers back as floats: the counters, scores and quantities of a character become ints again.
+## JSON gives back every number as a float: the whole ones become ints again, deep.
+static func _whole(v: Variant) -> Variant:
+	if v is float and float(v) == floorf(v):
+		return int(v)
+	if v is Array:
+		return (v as Array).map(func(x: Variant) -> Variant: return _whole(x))
+	if v is Dictionary:
+		var out := {}
+		for k: Variant in v:
+			out[k] = _whole(v[k])
+		return out
+	return v
+
+
 static func normalized_character(t: Dictionary) -> Dictionary:
 	var c := t.duplicate(true)
 	for k: String in ["level", "xp", "hp", "max_hp", "ac", "gold_cp", "hit_dice_used", "prof_bonus", "speed",
@@ -213,6 +227,9 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 			contents[it] = int(c["bags"][id]["contents"][it])
 		bags[id] = {"kind": str(c["bags"][id].get("kind", "")), "contents": contents}
 	c["bags"] = bags
+	for k: String in ["fresh", "study"]:  # v0.7.25 food batches, v0.7.30 study: whole numbers only
+		if c.has(k):
+			c[k] = _whole(c[k])
 	c["conditions"] = c.get("conditions", [])
 	var body := {}  # v0.7.22.5: age, build, height — ids of rules.body
 	for k: String in c.get("body", {}):

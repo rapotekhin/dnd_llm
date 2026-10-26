@@ -257,6 +257,11 @@
           "title": "Spells",
           "type": "array"
         },
+        "study": {
+          "default": "",
+          "title": "Study",
+          "type": "string"
+        },
         "tools": {
           "items": {
             "type": "string"

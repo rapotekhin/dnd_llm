@@ -313,6 +313,11 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": made["reason"]}
 			return {"plan": made, "summary": "Продаётся: %s (%s) за %s%s" % [made["def"]["name"], PropertyRules.cfg(data)["kinds"][made["def"]["kind"]]["name"],
 				Money.format(int(made["def"]["price_cp"])), ", доход %s в день" % Money.format(int(made["def"]["income_cp_day"])) if made["def"].has("income_cp_day") else ""]}
+		"course":  # v0.7.30: a scene NPC teaches a course
+			var co := StudyRules.make(s, data, e)
+			if co.has("reason"):
+				return {"reason": co["reason"]}
+			return co
 		"supplier":  # v0.7.29: a scene NPC sells wholesale to a charter holder
 			var sup := ShopRules.make(s, data, e)
 			if sup.has("reason"):
@@ -928,6 +933,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(JobRules.apply_make(s, _data, plan))
 		"property":
 			_extra_lines.append_array(PropertyRules.apply_make(s, _data, plan, str(_made.get("site", "")), str(_made.get("npc", ""))))
+		"course":
+			_extra_lines.append_array(StudyRules.apply_make(s, _data, plan))
 		"supplier":
 			_extra_lines.append_array(ShopRules.apply_make(s, _data, plan))
 		"bank":

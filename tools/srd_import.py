@@ -88,7 +88,7 @@ ITEM_ALIASES = {
 }
 # Hand-made catalog items that are not SRD equipment (kept from the v0.4.x catalog).
 EXTRA_ITEMS = ["healing_potion", "ale", "bread", "silver_ring", "goodberry", "herbal_remedy",
-               "iron_ore", "iron_bar", "raw_hide", "leather", "timber", "herbs", "herbalist_notes",
+               "iron_ore", "iron_bar", "raw_hide", "leather", "timber", "herbs", "herbalist_notes", "elvish_primer", "field_medic_manual",
                "raw_meat", "grain", "vegetables", "spices", "mushrooms", "berries", "roast_meat", "stew",
                "hunters_stew", "mushroom_soup", "spoiled_food", "goat_milk"]
 # Engine properties (items.json "properties") and item types the SRD does not have, by game id.

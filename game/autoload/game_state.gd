@@ -1486,6 +1486,38 @@ func shop_act(what: String, id: String, arg: String = "", amount: int = 0) -> St
 	return ""
 
 
+## Study (v0.7.30): exam (id — a school), enroll, lesson, drop (id — a course). "" or a localization key.
+func study_act(what: String, id: String) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "PROPERTY_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var why := ""
+	match what:
+		"exam": why = StudyRules.exam_why(s, data, id)
+		"enroll": why = StudyRules.enroll_why(s, data, id)
+		"lesson": why = StudyRules.lesson_why(s, data, id)
+		"drop": why = "" if StudyRules.enrolled(s.character, id) else "STUDY_NOT_ENROLLED"
+		_: why = "PROPERTY_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	match what:
+		"exam": lines = StudyRules.exam(s, data, id)
+		"enroll": lines = StudyRules.enroll(s, data, id)
+		"lesson":
+			var w := CrimeRules.wait(s, data, StudyRules.lesson_hours(data) * 60)  # the patrol may break the lesson
+			lines = w["lines"]
+			lines.append_array(StudyRules.lesson(s, data, id, int(w["minutes"])))
+		"drop": lines = StudyRules.drop(s, data, id)
+	CharacterRules.refresh(s.character, data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	return ""
+
+
 ## The bank (v0.7.28): deposit (arg — the term, amount), withdraw (arg — the contract), loan (arg — «kind:id» of the
 ## collateral, days), repay, put / take (arg — an item; none — coins by amount). "" or a localization key.
 func bank_act(what: String, npc_id: String, arg: String = "", amount: int = 0, days: int = 0) -> String:

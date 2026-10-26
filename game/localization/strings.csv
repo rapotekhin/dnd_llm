@@ -1302,3 +1302,44 @@ SHOP_NO_SERVICE,Здесь так не делают
 SHOP_HAS_CHARTER_ERR,Грамота уже есть
 SHOP_NO_MONEY,Не хватает денег
 PROPERTY_SHOP_SHIFT,Здесь торгуют — смена в окне «Лавка»
+BTN_STUDY,Учёба
+BTN_STUDY_TIP,"{name}: экзамен, курсы, запись и занятия"
+BTN_STUDY_MINE,Учёба
+BTN_STUDY_MINE_TIP,Ваши курсы и книги — занятие здесь и сейчас
+STUDY_TITLE,Учёба
+STUDY_TITLE_AT,Учёба: {name}
+STUDY_ADMITTED,Вы уже приняты
+STUDY_ADMITTED_STIPEND,Вы приняты со стипендией — курсы здесь бесплатно
+STUDY_EXAM_HINT,"Вступительный экзамен: {skill}, Сл {dc}, шанс {chance}%. Блестящий ответ — стипендия"
+BTN_STUDY_EXAM,Сдать экзамен
+STUDY_COURSES,Курсы
+STUDY_FINISHED,окончен
+STUDY_PROGRESS,занятий {done}/{need}
+STUDY_MISSES,пропусков {n}
+STUDY_LESSONS,занятий: {n}
+STUDY_FEE,плата {money}
+STUDY_FREE,бесплатно
+STUDY_TEACHER,учитель: {name}
+STUDY_LESSON_HINT,"занятие {hours} ч, шанс {chance}%"
+STUDY_NEEDS,Нужно: {list}
+BTN_STUDY_READ,Читать
+BTN_STUDY_LESSON,Занятие
+BTN_STUDY_ENROLL,Записаться
+BTN_STUDY_DROP,Бросить
+STUDY_MY_COURSES,Ваши курсы
+STUDY_BOOKS,Книги для самоучки
+STUDY_DONE_LIST,Окончено
+STUDY_NOTHING,Вы нигде не учитесь. Учителя — кнопка «Учёба» в их действиях
+STUDY_UNKNOWN,Такого курса нет
+STUDY_BANNED,Вас отчислили — вернуться пока нельзя
+STUDY_TEACHER_AWAY,Учителя здесь нет
+STUDY_TRIED,Экзамен не сдан — попробуйте через несколько дней
+STUDY_DONE,Курс уже окончен
+STUDY_ENROLLED,Вы уже записаны
+STUDY_BOOK,Это курс по книге — просто читайте её
+STUDY_NEED_EXAM,Сначала сдайте вступительный экзамен у главы училища
+STUDY_REQUIREMENTS,Не выполнены требования курса
+STUDY_NO_MONEY,Не хватает денег на учёбу
+STUDY_NO_BOOK,Книги при вас нет
+STUDY_NOT_ENROLLED,Вы не записаны на этот курс
+STUDY_DONE_TODAY,Сегодня занятие уже было — приходите завтра

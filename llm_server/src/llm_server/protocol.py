@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.61.0"
+PROTOCOL_VERSION = "0.62.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -275,6 +275,7 @@ class CharacterSheet(_In):
     property: str = ""  # 0.59.0: the hero's places and beasts, what is on sale here («Имущество (…): …»)
     bank: str = ""  # 0.60.0: the hero's deposits, loans and vaults, the banks of the scene («Банк (…): …»)
     shop: str = ""  # 0.61.0: the hero's charters, shelves and merchant's name, the suppliers of the scene («Своя торговля (…): …»)
+    study: str = ""  # 0.62.0: the hero's schools, courses with progress and misses, the teachers of the scene («Учёба (…): …»)
 
 
 class HistoryLine(_In):
@@ -935,6 +936,22 @@ class RecipeEffect(_Out):
     qty: int = Field(default=1, ge=1, le=20)
 
 
+class CourseEffect(_Out):
+    """A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». A scene NPC teaches: `teach_kind`
+    (skill, tool, language, spell up to the 2nd circle, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the
+    check of a lesson `skill`, `dc_tier`. No class experience. Enrolment and lessons are the «Учёба» window's buttons."""
+
+    kind: Literal["course"] = "course"
+    npc_id: str  # an NPC of the scene
+    name: str = Field(max_length=60)
+    teach_kind: Literal["skill", "tool", "language", "spell", "recipe"]
+    teach_id: str
+    lessons: int = Field(default=4, ge=1, le=20)
+    fee_cp: int = Field(default=0, ge=0)
+    skill: str | None = None
+    dc_tier: Literal["easy", "medium", "hard"] = "medium"
+
+
 class SupplierEffect(_Out):
     """A wholesale supplier the world lacks (0.61.0): «Ведана, продашь мне травы оптом для моей лавки?». A scene NPC
     sells lots to a hero with the trade charter at `pct` of the value — its own goods or `goods` (catalog ids). The
@@ -1162,7 +1179,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

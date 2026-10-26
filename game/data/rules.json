@@ -283,6 +283,22 @@
 					"irreplaceable": {"name": "Незаменимый", "level": 5, "desc": "Плата за смену ещё на 20% выше.", "needs": ["valued"], "effect": {"pay_pct": 120}},
 					"mentor": {"name": "Наставник", "level": 5, "desc": "Повышение после 3 хороших смен.", "needs": ["quick_study"], "effect": {"promote_mult": 0.75}}
 				}
+			},
+			"study": {
+				"name": "Учёность",
+				"sources": {"bad": 2, "ok": 6, "great": 10, "graduate": 40},
+				"skills": {
+					"diligent": {"name": "Прилежный", "level": 1, "desc": "+1 к проверкам занятий.", "effect": {"lesson_bonus": 1}},
+					"frugal": {"name": "Бережливый студент", "level": 1, "desc": "Учёба на 10% дешевле.", "effect": {"fee_pct": 90}},
+					"bookworm": {"name": "Книжник", "level": 2, "desc": "+2 к проверкам, когда учитесь по книге.", "effect": {"book_bonus": 2}},
+					"free_listener": {"name": "Вольный слушатель", "level": 2, "desc": "Ещё один пропуск до отчисления.", "effect": {"misses_add": 1}},
+					"quick_mind": {"name": "Быстрый ум", "level": 3, "desc": "Блестящее занятие — уже с запасом 3, а не 5.", "effect": {"great_from": 3}},
+					"focused": {"name": "Сосредоточенный", "level": 3, "desc": "Проверки занятий с преимуществом.", "effect": {"lesson_adv": true}},
+					"top_student": {"name": "Отличник", "level": 4, "desc": "Ещё +1 к проверкам занятий.", "needs": ["diligent"], "effect": {"lesson_bonus": 2}},
+					"crash_course": {"name": "Ускоренный курс", "level": 4, "desc": "Курс короче на одно занятие.", "effect": {"lessons_minus": 1}},
+					"scholar": {"name": "Учёный", "level": 5, "desc": "Учёба на 25% дешевле.", "needs": ["frugal"], "effect": {"fee_pct": 75}},
+					"autodidact": {"name": "Самоучка", "level": 5, "desc": "По книгам — с преимуществом.", "needs": ["bookworm"], "effect": {"book_adv": true}}
+				}
 			}
 		}
 	},
@@ -391,6 +407,21 @@
 			"words": [[-50, "обдирала"], [-15, "не в чести"], [-5, "так себе"], [5, "честный торговец"], [15, "добрая слава"], [30, "лучшая лавка в округе"]]},
 		"tavern": {"drinks": ["ale"], "lodging_cp": 50, "lodgers_share": 0.3},
 		"make": {"pct": [40, 90], "max_goods": 12}
+	},
+	"study": {
+		"_doc": "Study (v0.7.30, StudyRules): a course is data — `teaches` {kind: skill | tool | language | spell | recipe | xp, id}, `lessons` (progress points to finish), the check of a lesson (`skill` or `ability`) against `dc`, `fee_cp` for the whole course, `xp` — class experience at the end (pack courses only), `requires` {level, classes}. A course is taught by a `teacher` (an NPC; the lesson goes while it is here, once a day, `lesson.hours`) or read from a `book` (an item the hero carries; no teacher, no fee, no misses). A course of a `school` needs the school's entrance `exam` (a check; a failure — again in `exam.retry_days`; a margin of `exam.stipend_margin` — a stipend: the school's courses for free); its end gives a diploma (a document item, jobs may require it). The school's `dorm` room — a free bed and a chest while the hero studies there. A gap of more than `gap_days` without a lesson is a miss; more than `misses_max` misses or a crime in the school's location — expelled, the school closed for `readmit_days`. Outcomes of a lesson by the margin (`outcomes`, the last whose `from` is reached): progress points and the direction «Учёность». `make` — the limits of the master's course (no class experience).",
+		"lesson": {"hours": 2},
+		"outcomes": [
+			{"from": -99, "id": "bad", "name": "занятие не далось", "progress": 0},
+			{"from": 0, "id": "ok", "name": "занятие усвоено", "progress": 1},
+			{"from": 5, "id": "great", "name": "блестящий ответ", "progress": 2}
+		],
+		"gap_days": 3,
+		"misses_max": 2,
+		"readmit_days": 14,
+		"exam": {"retry_days": 3, "stipend_margin": 5},
+		"kinds": {"skill": "навык", "tool": "инструмент", "language": "язык", "spell": "заклинание", "recipe": "рецепт", "xp": "опыт"},
+		"make": {"kinds": ["skill", "tool", "language", "spell", "recipe"], "lessons": [2, 10], "dc_tiers": ["easy", "medium", "hard"], "fee_cp_lesson": [0, 500], "max_spell_level": 2}
 	},
 	"world_gen": {
 		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",

@@ -62,12 +62,13 @@ def known() -> dict[str, set[str]]:
         "items": set(load(DATA / "items.json")["catalog"]),
         "monsters": set(load(DATA / "srd" / "monsters.json")),
         "languages": set(load(DATA / "srd" / "misc.json")["languages"]) | set(load(DATA / "rules.json")["languages"]["secret"]),
+        "spells": set(load(DATA / "srd" / "spells.json")),
     }
 
 
 ROOM_TAGS = {"temple", "stage", "water", "foul_water", "market"}  # v0.7.29: a market for stalls; v0.7.11: an acolyte's free rest, a show; v0.7.23: water to drink and fill; v0.7.23.1: foul
 SERVICE_OPS = {"identify", "lift_curse", "enchant", "meal", "cure_disease", "teach_recipe"}  # v0.7.16: the engine's operations a service runs (rules.json items.services)
-NPC_TAGS = {"clergy", "underworld", "commoner", "military", "registry", "bank"}  # the people of the hero's past (rules.json backgrounds ties); registry — v0.7.27, bank — v0.7.28
+NPC_TAGS = {"clergy", "underworld", "commoner", "military", "registry", "bank", "school"}  # the people of the hero's past (rules.json backgrounds ties); registry — v0.7.27, bank — v0.7.28
 
 
 def validate_kinds(ids: dict[str, set[str]]) -> list[str]:
@@ -131,6 +132,37 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"имущество {pid}: site — объект пака, seller — NPC пака, нужно name")
         if pr.get("kind") not in prop_cfg["kinds"] or not isinstance(pr.get("price_cp"), int):
             errors.append(f"имущество {pid}: kind из {sorted(prop_cfg['kinds'])}, price_cp числом")
+    schools = world.get("schools", {})
+    for sc_id, sc in schools.items():  # v0.7.30: schools and courses
+        if sc.get("head") not in npcs or sc.get("site") not in world.get("sites", {}) or not sc.get("name"):
+            errors.append(f"училище {sc_id}: head — NPC пака, site — объект пака, нужно name")
+        if sc.get("dorm") and sc["dorm"] not in rooms:
+            errors.append(f"училище {sc_id}: dorm — комната пака")
+        ex = sc.get("exam", {})
+        if ex and (ex.get("skill") not in game_rules["skills"] or not isinstance(ex.get("dc"), int)):
+            errors.append(f"училище {sc_id}: exam — skill из навыков и dc числом")
+    for cid, co in world.get("courses", {}).items():
+        t = co.get("teaches", {})
+        kind, tid = t.get("kind"), t.get("id")
+        known_ids = {"skill": set(game_rules["skills"]), "tool": set(craft["tools"]), "language": ids["languages"],
+                     "spell": ids["spells"], "recipe": set(recipes)}
+        if kind not in game_rules["study"]["kinds"] or (kind != "xp" and tid not in known_ids.get(kind, set())):
+            errors.append(f"курс {cid}: teaches — kind из {sorted(game_rules['study']['kinds'])} и известный id ({tid})")
+        if bool(co.get("teacher")) == bool(co.get("book")):
+            errors.append(f"курс {cid}: нужен teacher (NPC) или book (вещь), одно из двух")
+        if co.get("teacher") and co["teacher"] not in npcs:
+            errors.append(f"курс {cid}: teacher — NPC пака")
+        if co.get("book") and co["book"] not in items:
+            errors.append(f"курс {cid}: book — вещь каталога")
+        if co.get("school") and co["school"] not in schools:
+            errors.append(f"курс {cid}: school — училище пака")
+        if not co.get("name") or not isinstance(co.get("lessons"), int) or not isinstance(co.get("dc"), int):
+            errors.append(f"курс {cid}: нужны name, lessons и dc числами")
+        if co.get("skill", "") not in game_rules["skills"] and co.get("ability") not in ("str", "dex", "con", "int", "wis", "cha"):
+            errors.append(f"курс {cid}: проверка — skill из навыков или ability")
+    for jid, j in world.get("jobs", {}).items():
+        if "diploma" in j.get("requires", {}) and j["requires"]["diploma"] not in world.get("courses", {}):
+            errors.append(f"работа {jid}: requires.diploma — курс пака")
     for nid, n in npcs.items():
         bad = [m for m in n.get("animals", []) if m not in prop_cfg["animals"]]
         if bad:

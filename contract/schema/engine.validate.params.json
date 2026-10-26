@@ -451,6 +451,85 @@
       "title": "ContentSpec",
       "type": "object"
     },
+    "CourseEffect": {
+      "additionalProperties": false,
+      "description": "A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». A scene NPC teaches: `teach_kind`\n(skill, tool, language, spell up to the 2nd circle, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the\ncheck of a lesson `skill`, `dc_tier`. No class experience. Enrolment and lessons are the «Учёба» window's buttons.",
+      "properties": {
+        "dc_tier": {
+          "default": "medium",
+          "enum": [
+            "easy",
+            "medium",
+            "hard"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        },
+        "fee_cp": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Fee Cp",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "course",
+          "default": "course",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lessons": {
+          "default": 4,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Lessons",
+          "type": "integer"
+        },
+        "name": {
+          "maxLength": 60,
+          "title": "Name",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "skill": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill"
+        },
+        "teach_id": {
+          "title": "Teach Id",
+          "type": "string"
+        },
+        "teach_kind": {
+          "enum": [
+            "skill",
+            "tool",
+            "language",
+            "spell",
+            "recipe"
+          ],
+          "title": "Teach Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "name",
+        "teach_kind",
+        "teach_id"
+      ],
+      "title": "CourseEffect",
+      "type": "object"
+    },
     "CreateNpcEffect": {
       "additionalProperties": false,
       "description": "Makes a person the world lacks (0.31.0) — only after find_npcs in the same turn; the engine checks the schema,\nthe limits and the duplicates; the person lives in this game like one of the pack.",
@@ -3111,6 +3190,7 @@
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
+          "course": "#/$defs/CourseEffect",
           "create_npc": "#/$defs/CreateNpcEffect",
           "create_place": "#/$defs/CreatePlaceEffect",
           "create_quest": "#/$defs/CreateQuestEffect",
@@ -3200,6 +3280,9 @@
         },
         {
           "$ref": "#/$defs/SupplierEffect"
+        },
+        {
+          "$ref": "#/$defs/CourseEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"

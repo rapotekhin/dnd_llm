@@ -108,6 +108,8 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 	if req.has("language"):
 		var lang := str(req["language"])
 		out.append({"text": "язык: " + LanguageRules.name_of(data, lang), "ok": LanguageRules.hero(c).has(lang)})
+	if req.has("diploma"):  # v0.7.30
+		out.append({"text": "грамота выпускника: " + StudyRules.name_of(s, data, str(req["diploma"])), "ok": StudyRules.has_diploma(c, str(req["diploma"]))})
 	if req.has("reputation"):
 		var loc := ReputationRules.home_of(data, str(j.get("employer", "")))
 		out.append({"text": "слава в поселении не ниже «%s»" % ReputationRules.word(data, int(req["reputation"])),

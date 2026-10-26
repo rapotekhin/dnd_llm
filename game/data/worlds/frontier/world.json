@@ -385,6 +385,20 @@
 				"land"
 			],
 			"public": true
+		},
+		"brod-school": {
+			"name": "Училище",
+			"location_id": "brod",
+			"description": "Двухэтажный бревенчатый дом за ратушей: внизу классная палата с длинными скамьями, наверху — каморки учеников.",
+			"tags": [
+				"school"
+			],
+			"owner": "npc_teacher",
+			"hours": {
+				"from": 8,
+				"to": 18
+			},
+			"public": true
 		}
 	},
 	"rooms": {
@@ -522,7 +536,8 @@
 				"brod-temple",
 				"brod-gate",
 				"brod-townhall",
-				"brod-river-yard"
+				"brod-river-yard",
+				"brod-school-hall"
 			],
 			"open_edges": [
 				{
@@ -1529,6 +1544,58 @@
 				}
 			],
 			"site_id": "brod-townhall"
+		},
+		"brod-school-hall": {
+			"name": "Классная палата",
+			"indoor": true,
+			"location_id": "brod",
+			"description": "Длинная палата с низкими скамьями и аспидной доской во всю стену. На полках — книги в кожаных переплётах, на кафедре — песочные часы.",
+			"exits": [
+				"brod-square",
+				"brod-school-dorm"
+			],
+			"npcs": [
+				"npc_teacher"
+			],
+			"hooks": [
+				"на доске мелом выведены руны и рядом их перевод — кто-то не дописал урок",
+				"на полке у окна — книги, магистр продаёт лишние"
+			],
+			"secrets": [
+				{
+					"id": "old_map",
+					"dc": 13,
+					"skill": "investigation",
+					"text": "между страниц старого атласа — карта Пущи с крестом у лощины и подписью «не ходить»"
+				}
+			],
+			"site_id": "brod-school"
+		},
+		"brod-school-dorm": {
+			"name": "Каморки учеников",
+			"indoor": true,
+			"location_id": "brod",
+			"description": "Узкий коридор под крышей, дощатые каморки с топчанами. Пахнет свечным салом и чернилами.",
+			"exits": [
+				"brod-school-hall"
+			],
+			"npcs": [],
+			"hooks": [
+				"на двери одной каморки нацарапано: «зубрить, зубрить, зубрить»"
+			],
+			"safe": {
+				"rest_cost_cp": 0
+			},
+			"site_id": "brod-school",
+			"public": false,
+			"secrets": [
+				{
+					"id": "crib",
+					"dc": 12,
+					"skill": "investigation",
+					"text": "под половицей в крайней каморке — шпаргалка с эльфийскими рунами и их переводом, кто-то готовился к уроку"
+				}
+			]
 		}
 	},
 	"npcs": {
@@ -2024,6 +2091,33 @@
 					"room": ""
 				}
 			]
+		},
+		"npc_teacher": {
+			"name": "Аверкий Строгов",
+			"role": "магистр училища",
+			"race": "человек",
+			"gender": "male",
+			"description": "Сухой старик в потёртой мантии, с указкой из ясеня и чернильным пятном на носу.",
+			"personality": "строгий, но справедливый; ценит прилежание выше таланта; рад любому, кто хочет учиться, и не прощает лени",
+			"trader": true,
+			"trade_kind": "scribe",
+			"stock": {
+				"elvish_primer": 1,
+				"field_medic_manual": 1,
+				"book": 2
+			},
+			"monster": "commoner",
+			"tags": [
+				"commoner",
+				"school"
+			],
+			"schedule": [
+				{
+					"from": 18,
+					"to": 8,
+					"room": ""
+				}
+			]
 		}
 	},
 	"items": {
@@ -2142,6 +2236,22 @@
 				"старший писарь",
 				"хранитель книг"
 			]
+		},
+		"town_scribe": {
+			"employer": "npc_clerk",
+			"name": "Переписчик в ратуше",
+			"skill": "history",
+			"hours": 6,
+			"dc": 12,
+			"pay_cp": 45,
+			"requires": {
+				"diploma": "letters"
+			},
+			"ranks": [
+				"переписчик",
+				"старший переписчик",
+				"помощник писаря"
+			]
 		}
 	},
 	"properties": {
@@ -2167,6 +2277,139 @@
 			"kind": "land",
 			"seller": "npc_clerk",
 			"price_cp": 1000
+		}
+	},
+	"schools": {
+		"brod_school": {
+			"name": "Училище Ольхового Брода",
+			"site": "brod-school",
+			"head": "npc_teacher",
+			"exam": {
+				"skill": "history",
+				"dc": 10
+			},
+			"dorm": "brod-school-dorm"
+		}
+	},
+	"courses": {
+		"letters": {
+			"name": "Грамота и летописи",
+			"school": "brod_school",
+			"teacher": "npc_teacher",
+			"teaches": {
+				"kind": "skill",
+				"id": "history"
+			},
+			"lessons": 4,
+			"skill": "history",
+			"dc": 10,
+			"fee_cp": 400,
+			"xp": 50
+		},
+		"elvish": {
+			"name": "Эльфийская речь",
+			"school": "brod_school",
+			"teacher": "npc_teacher",
+			"teaches": {
+				"kind": "language",
+				"id": "elvish"
+			},
+			"lessons": 6,
+			"ability": "int",
+			"dc": 12,
+			"fee_cp": 800,
+			"xp": 75
+		},
+		"arcane_signs": {
+			"name": "Тайные знаки",
+			"school": "brod_school",
+			"teacher": "npc_teacher",
+			"teaches": {
+				"kind": "spell",
+				"id": "detect_magic"
+			},
+			"lessons": 5,
+			"skill": "arcana",
+			"dc": 13,
+			"fee_cp": 1500,
+			"xp": 75
+		},
+		"herbalism": {
+			"name": "Травничество",
+			"school": "brod_school",
+			"teacher": "npc_herbalist",
+			"teaches": {
+				"kind": "tool",
+				"id": "herbalism_kit"
+			},
+			"lessons": 5,
+			"skill": "nature",
+			"dc": 12,
+			"fee_cp": 1000,
+			"xp": 75
+		},
+		"healing_brew": {
+			"name": "Зелье лечения",
+			"school": "brod_school",
+			"teacher": "npc_herbalist",
+			"teaches": {
+				"kind": "recipe",
+				"id": "healing_potion"
+			},
+			"lessons": 3,
+			"skill": "medicine",
+			"dc": 12,
+			"fee_cp": 1500,
+			"xp": 50
+		},
+		"medicine": {
+			"name": "Врачевание",
+			"school": "brod_school",
+			"teacher": "npc_priestess",
+			"teaches": {
+				"kind": "skill",
+				"id": "medicine"
+			},
+			"lessons": 4,
+			"skill": "medicine",
+			"dc": 10,
+			"fee_cp": 500,
+			"xp": 50
+		},
+		"drill": {
+			"name": "Ратное дело",
+			"school": "brod_school",
+			"teacher": "npc_captain",
+			"teaches": {
+				"kind": "xp"
+			},
+			"lessons": 5,
+			"skill": "athletics",
+			"dc": 12,
+			"fee_cp": 1000,
+			"xp": 150
+		},
+		"elvish_book": {
+			"name": "Эльфийская речь по азбуке",
+			"book": "elvish_primer",
+			"teaches": {
+				"kind": "language",
+				"id": "elvish"
+			},
+			"lessons": 10,
+			"ability": "int",
+			"dc": 13
+		},
+		"medic_book": {
+			"name": "Полевое врачевание по наставлению",
+			"book": "field_medic_manual",
+			"teaches": {
+				"kind": "skill",
+				"id": "medicine"
+			},
+			"lessons": 8,
+			"skill": "medicine",
+			"dc": 12
 		}
 	}
 }

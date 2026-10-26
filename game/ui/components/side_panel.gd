@@ -22,6 +22,7 @@ signal job_requested(npc_id: String)  # v0.7.26
 signal property_requested(mode: String, npc_id: String)  # v0.7.27
 signal bank_requested(npc_id: String)  # v0.7.28
 signal shop_requested(mode: String, id: String)  # v0.7.29
+signal study_requested(npc_id: String)  # v0.7.30: "" — the hero's own courses
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -121,6 +122,7 @@ func _rebuild() -> void:
 		_needs(s, can_act)
 	_craft_row(s, can_act)
 	_work_row(s, can_act)
+	_study_row(s, can_act)
 	_property_row(s)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
@@ -345,6 +347,10 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var wb := _flow(acts, tr("BTN_WHOLESALE"), shop_requested.emit.bind("supplier", id), can_act)
 		wb.name = "Wholesale_" + id
 		wb.tooltip_text = tr("BTN_WHOLESALE_TIP").format({"name": n.get("name", id)})
+	if StudyRules.is_teacher(s, Catalog.data, id):  # v0.7.30
+		var lb := _flow(acts, tr("BTN_STUDY"), study_requested.emit.bind(id), can_act)
+		lb.name = "Study_" + id
+		lb.tooltip_text = tr("BTN_STUDY_TIP").format({"name": n.get("name", id)})
 	if BankRules.is_bank(s, Catalog.data, id):  # v0.7.28
 		var bb := _flow(acts, tr("BTN_BANK"), bank_requested.emit.bind(id), can_act)
 		bb.name = "Bank_" + id
@@ -657,6 +663,25 @@ func _animal_acts(_s: GameSession, cr: Dictionary, can_act: bool) -> void:
 				EventBus.message.emit(tr(err))), can_act)
 	rb.name = "Creature_release_" + cid
 	rb.add_theme_color_override("font_color", UiTheme.BAD)
+
+
+## Study (v0.7.30): «Учёба» when a lesson may go here — a teacher of the hero's course is here or a study book is carried.
+func _study_row(s: GameSession, can_act: bool) -> void:
+	var data := Catalog.data
+	var ready := not StudyRules.books(s, data).is_empty()
+	for id: String in StudyRules.view(s.character)["courses"]:
+		if StudyRules.here(s, data, str(StudyRules.course(s, data, id).get("teacher", ""))):
+			ready = true
+	if not ready:
+		return
+	var acts := HFlowContainer.new()
+	acts.name = "StudyActs"
+	_content.add_child(acts)
+	var b := _row_button(acts, tr("BTN_STUDY_MINE"), study_requested.emit.bind(""), can_act)
+	b.name = "StudyButton"
+	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+	b.tooltip_text = tr("BTN_STUDY_MINE_TIP")
 
 
 ## Property (v0.7.27): «Имущество» when the hero owns a place or a beast; the window of the hero's places.
