@@ -113,6 +113,11 @@
           "title": "Exhaustion",
           "type": "integer"
         },
+        "family": {
+          "default": "",
+          "title": "Family",
+          "type": "string"
+        },
         "features": {
           "items": {
             "type": "string"

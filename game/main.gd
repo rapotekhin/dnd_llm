@@ -54,7 +54,7 @@ func _go(screen: String, args: Dictionary) -> void:
 		"new_game":
 			next = NewGameScreen.new()
 		"creation":
-			next = CreationScreen.new(args.get("settings", {}))
+			next = CreationScreen.new(args.get("settings", {}), args.get("heir", {}))
 		"slots":
 			next = SlotsScreen.new(str(args.get("mode", SlotsScreen.MODE_LOAD)), str(args.get("back", "menu")))
 		"settings":

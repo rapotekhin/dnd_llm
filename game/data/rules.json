@@ -463,6 +463,20 @@
 		},
 		"make": {"kinds": ["friend", "mentor"], "genders": ["male", "female", "other", "any"]}
 	},
+	"family": {
+		"_doc": "Family (v0.7.32, FamilyRules): a proposal to the partner of a romance at its top step, a wedding at an officiant (an NPC with a tag of `officiants`) with a home of the hero (an owned place whose upgrades give `rest`); the spouse sleeps at home in `home_hours`. Children: a try at home with the spouse once a day by `conceive.chance` when one of the two can bear, birth after `conceive.days`; a year of a child is `days_per_year` game days, `stages` by years. Upkeep a day per person from the home's till, then the purse; unpaid — hunger: the spouse's bond falls, after `hunger.leave_days` the spouse leaves. The spouse and the grown children bring `help_cp` to the till. An adult child is the heir: the hero dead — play on as the heir, `heir.keep` of the character passes to it.",
+		"propose_at": 110,
+		"officiants": {"clergy": {"name": "венчание в храме", "fee_cp": 1000}, "registry": {"name": "запись в книге ратуши", "fee_cp": 500}},
+		"home_hours": [20, 7],
+		"conceive": {"chance": 0.5, "days": 27, "bears": ["female"]},
+		"days_per_year": 10,
+		"stages": [{"years": 0, "id": "infant", "name": "младенец"}, {"years": 3, "id": "child", "name": "ребёнок"}, {"years": 12, "id": "teen", "name": "подросток"}, {"years": 16, "id": "adult", "name": "взрослый"}],
+		"upkeep_cp": {"spouse": 15, "infant": 5, "child": 8, "teen": 12, "adult": 15},
+		"help_cp": {"spouse": 25, "teen": 10, "adult": 20},
+		"hunger": {"bond": -3, "leave_days": 7},
+		"names": {"male": ["Ратибор", "Мирон", "Всеслав", "Ждан", "Олег", "Светозар", "Яромир", "Добрыня"], "female": ["Лада", "Весна", "Злата", "Милана", "Любава", "Ярослава", "Дарина", "Снежана"]},
+		"heir": {"keep": ["property", "bank", "shop"]}
+	},
 	"world_gen": {
 		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",
 		"edge_reach": {"neighbours": true, "visited": true},

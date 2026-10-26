@@ -1380,3 +1380,39 @@ BOND_NOT_CLOSE,Прятать героя станет только друг
 BOND_NOT_WANTED,Героя здесь не ищут
 BOND_HELD,Не сейчас: стража рядом или идёт бой
 BOND_HIDE_COOLDOWN,Этот друг уже прятал героя — не чаще раза в три дня
+BTN_FAMILY,Семья
+BTN_FAMILY_TIP,"Супруг, дети, содержание дома, наследник"
+FAMILY_TITLE,Семья
+BTN_FAMILY_PROPOSE,Сделать предложение
+BTN_WEDDING,Свадьба
+BTN_WEDDING_TIP,Обвенчаться или записать брак — {money}
+BTN_PLAY_HEIR,Играть наследником: {name}
+FAMILY_ENGAGED_TO,Помолвка: {name}
+FAMILY_WEDDING_HINT,Свадьба — кнопка «Свадьба» у жрицы или у писаря ратуши; нужен свой дом с кроватью
+FAMILY_SPOUSE,Супруг
+FAMILY_SPOUSE_LINE,"{name} — в браке с дня {day}, дом: {home}"
+FAMILY_HOME_HOURS,"Дома с {from}:00 до {to}:00, днём — при своём деле"
+FAMILY_EXPECTING_LINE,Вы ждёте ребёнка: роды через {days} дн.
+BTN_FAMILY_CHILD,Завести ребёнка
+BTN_FAMILY_CHILD_TIP,"Ночь вдвоём дома — может, будет ребёнок"
+FAMILY_CHILDREN,Дети
+FAMILY_HEIR,наследник
+FAMILY_YEARS,лет: {n}
+FAMILY_NEW_NAME,новое имя
+BTN_FAMILY_RENAME,Назвать
+FAMILY_ECONOMY,Содержание семьи — {upkeep} в день из кассы дома или кошелька; помощь семьи — {help} в день в кассу
+FAMILY_HUNGRY,Семья голодает уже {n} дн.: не хватает денег на еду
+FAMILY_MARRIED,Герой уже в браке
+FAMILY_ENGAGED,Вы уже помолвлены
+FAMILY_NOT_YET,Предложение — когда вы пара (близость {at})
+FAMILY_NO_HOME,Нужен свой дом с кроватью
+FAMILY_NO_OFFICIANT,Свадьбу ведут жрец или писарь ратуши
+FAMILY_NOT_ENGAGED,Сначала — предложение и согласие
+FAMILY_NOT_MARRIED,Сначала — свадьба
+FAMILY_NOT_TOGETHER,Нужно быть дома вдвоём с супругом
+FAMILY_NO_BEARER,Вдвоём вам не родить ребёнка
+FAMILY_EXPECTING,Вы уже ждёте ребёнка
+FAMILY_TRIED_TODAY,Сегодня уже пробовали
+FAMILY_BAD_NAME,Нужно имя
+FAMILY_NO_DIVORCE,С супругом не расстаются кнопкой
+FAMILY_SPOUSE_F,Супруга

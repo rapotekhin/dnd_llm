@@ -336,6 +336,8 @@ static func confess(s: GameSession, data: Dictionary, npc_id: String) -> Array[S
 static func break_why(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	if kind(s.character, npc_id) != "romance":
 		return "BOND_NO_ROMANCE"
+	if FamilyRules.spouse(s) == npc_id or FamilyRules.engaged(s) == npc_id:
+		return "FAMILY_NO_DIVORCE"  # v0.7.32
 	return ""
 
 

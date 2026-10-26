@@ -41,7 +41,7 @@ static func npcs(s: GameSession, world: Dictionary, room_id: String) -> Array[St
 		if (at == null or str(at) == room_id) and not FollowRules.placed(s, str(n)):
 			out.append(str(n))
 	for id: String in all:
-		if all[id].has("schedule") and not out.has(id) and not FollowRules.placed(s, id) and str(scheduled(s, world, id)) == room_id:
+		if (all[id].has("schedule") or FamilyRules.home_at(s, id) != null) and not out.has(id) and not FollowRules.placed(s, id) and str(scheduled(s, world, id)) == room_id:
 			out.append(id)
 	for id: String in s.npc_at:
 		if str(s.npc_at[id]) == room_id and all.has(id) and not out.has(id):
@@ -56,6 +56,9 @@ static func npcs(s: GameSession, world: Dictionary, room_id: String) -> Array[St
 ## Where the NPC's `schedule` [{from, to, room}] (hours; to < from wraps past midnight; room "" — away, at home)
 ## puts it at this hour; null when no entry holds — it stands in its pack room.
 static func scheduled(s: GameSession, world: Dictionary, npc_id: String) -> Variant:
+	var home: Variant = FamilyRules.home_at(s, npc_id)  # v0.7.32: the spouse sleeps at the hero's home
+	if home != null:
+		return home
 	var hour := s.minute / 60
 	for e: Dictionary in world.get("npcs", {}).get(npc_id, {}).get("schedule", []):
 		var a := int(e["from"])
@@ -74,7 +77,10 @@ static func absent(s: GameSession, world: Dictionary, room_id: String) -> Array[
 		if at == null or str(at) == room_id or s.dead_npcs.has(id) or FollowRules.placed(s, id):
 			continue
 		var back := 0
-		for e: Dictionary in world["npcs"][id]["schedule"]:
+		if FamilyRules.home_at(s, id) != null:
+			out.append("%s — дома, вернётся к %d:00" % [world["npcs"][id].get("name", id), int(FamilyRules.view(s.character).get("hours", [20, 7])[1])])
+			continue
+		for e: Dictionary in world["npcs"][id].get("schedule", []):
 			var a := int(e["from"])
 			var b := int(e["to"])
 			var hour := s.minute / 60

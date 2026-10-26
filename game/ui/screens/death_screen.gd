@@ -64,6 +64,17 @@ func _ready() -> void:
 		if not err.is_empty():
 			EventBus.message.emit(tr(err)))
 	buttons.add_child(load)
+	if s != null and not FamilyRules.heir(s, Catalog.data).is_empty():  # v0.7.32: the family goes on
+		var heir := Button.new()
+		heir.name = "HeirButton"
+		heir.text = tr("BTN_PLAY_HEIR").format({"name": BondRules.npc_name(s, Catalog.data, FamilyRules.heir(s, Catalog.data))})
+		heir.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		heir.theme_type_variation = UiTheme.ACCENT_BUTTON
+		heir.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		heir.custom_minimum_size = Vector2(0, 64)
+		heir.pressed.connect(func() -> void:
+			EventBus.navigate.emit("creation", {"settings": s.settings, "heir": FamilyRules.heir_choices(s, Catalog.data)}))
+		buttons.add_child(heir)
 	var menu := Button.new()
 	menu.name = "ToMenu"
 	menu.text = "BTN_TO_MENU"

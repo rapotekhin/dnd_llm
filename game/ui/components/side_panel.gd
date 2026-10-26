@@ -24,6 +24,7 @@ signal bank_requested(npc_id: String)  # v0.7.28
 signal shop_requested(mode: String, id: String)  # v0.7.29
 signal study_requested(npc_id: String)  # v0.7.30: "" — the hero's own courses
 signal bond_requested(npc_id: String)  # v0.7.31
+signal family_requested  # v0.7.32
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -124,6 +125,7 @@ func _rebuild() -> void:
 	_craft_row(s, can_act)
 	_work_row(s, can_act)
 	_study_row(s, can_act)
+	_family_row(s, can_act)
 	_property_row(s)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
@@ -353,6 +355,14 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var lb := _flow(acts, tr("BTN_STUDY"), study_requested.emit.bind(id), can_act)
 		lb.name = "Study_" + id
 		lb.tooltip_text = tr("BTN_STUDY_TIP").format({"name": n.get("name", id)})
+	if not FamilyRules.engaged(s).is_empty() and not FamilyRules.officiant(s, Catalog.data, id).is_empty():  # v0.7.32
+		var why := FamilyRules.wedding_why(s, Catalog.data, id)
+		var wd := _flow(acts, tr("BTN_WEDDING"), func() -> void:
+			var err := GameState.family_act("wedding", id)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and why.is_empty())
+		wd.name = "Wedding_" + id
+		wd.tooltip_text = tr(why) if not why.is_empty() else tr("BTN_WEDDING_TIP").format({"money": Money.format(FamilyRules.fee(Catalog.data, FamilyRules.officiant(s, Catalog.data, id)))})
 	var bo := _flow(acts, tr("BTN_BOND"), bond_requested.emit.bind(id), can_act)  # v0.7.31
 	bo.name = "Bond_" + id
 	bo.tooltip_text = tr("BTN_BOND_TIP").format({"name": n.get("name", id)})
@@ -687,6 +697,21 @@ func _study_row(s: GameSession, can_act: bool) -> void:
 	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	b.tooltip_text = tr("BTN_STUDY_MINE_TIP")
+
+
+## Family (v0.7.32): «Семья» when the hero is engaged, married or has kin.
+func _family_row(s: GameSession, can_act: bool) -> void:
+	var f := FamilyRules.view(s.character)
+	if FamilyRules.engaged(s).is_empty() and FamilyRules.spouse(s).is_empty() and FamilyRules.children(s).is_empty() and (f.get("kin", []) as Array).is_empty():
+		return
+	var acts := HFlowContainer.new()
+	acts.name = "FamilyActs"
+	_content.add_child(acts)
+	var b := _row_button(acts, tr("BTN_FAMILY"), family_requested.emit, can_act)
+	b.name = "FamilyButton"
+	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+	b.tooltip_text = tr("BTN_FAMILY_TIP")
 
 
 ## Property (v0.7.27): «Имущество» when the hero owns a place or a beast; the window of the hero's places.

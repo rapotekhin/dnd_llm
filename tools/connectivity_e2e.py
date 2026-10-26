@@ -44,8 +44,13 @@ def wait_http(url: str, timeout: float, context: ssl.SSLContext | None = None) -
 
 
 def port_busy(port: int) -> bool:
+    # A bind, not a connect: Windows may reserve a port range (WinError 10013) that nobody listens on.
     with socket.socket() as sock:
-        return sock.connect_ex(("127.0.0.1", port)) == 0
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            return True
+        return False
 
 
 def stop_server(proc: subprocess.Popen) -> None:

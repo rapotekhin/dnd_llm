@@ -34,7 +34,7 @@ def main() -> int:
         print(f"Godot not found: {godot} (set GODOT)")
         return 2
     port = PORT
-    while port_busy(port) and port < PORT + 20:
+    while port_busy(port) and port < PORT + 300:
         port += 1  # the player's own llm_server may hold 8765: the playtest takes the next free port
     if port_busy(port):
         print(f"ports {PORT}–{port} are busy: stop a running llm_server first")

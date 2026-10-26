@@ -23,8 +23,15 @@ var _start: Button
 ## The rules text of the hovered choice (v0.6.6); since v0.7.22.21 at the top of the right column, over the summary.
 var _info: DetailsPanel
 
-func _init(new_game_settings: Dictionary = {}) -> void:
+## v0.7.32: the heir of a dead hero — its name, gender and race given, the start goes on the same game.
+var heir := false
+
+
+func _init(new_game_settings: Dictionary = {}, heir_choices: Dictionary = {}) -> void:
 	settings = new_game_settings
+	if not heir_choices.is_empty():
+		heir = true
+		choices.merge(heir_choices, true)
 
 
 func _ready() -> void:
@@ -94,6 +101,8 @@ func _ready() -> void:
 	_start = _button(bottom, "CC_START", _finish)
 	_start.name = "StartButton"
 	_start.theme_type_variation = UiTheme.ACCENT_BUTTON
+	if heir and _steps().size() > 1:  # the heir has no ready-made characters to pick
+		step = _steps()[1]
 	_redraw()
 
 
@@ -138,7 +147,7 @@ func _move(delta: int) -> void:
 func _finish() -> void:
 	if not CharacterBuilder.complete(choices, data()):
 		return
-	GameEntry.enter({"kind": "new", "character": CharacterBuilder.build(choices, data()), "settings": settings})
+	GameEntry.enter({"kind": "heir" if heir else "new", "character": CharacterBuilder.build(choices, data()), "settings": settings})
 
 
 ## A callback that stores a multi-pick (Array) into choices[key].

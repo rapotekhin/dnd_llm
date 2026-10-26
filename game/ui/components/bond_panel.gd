@@ -119,7 +119,19 @@ func _romance(s: GameSession, data: Dictionary) -> void:
 			"chance": BondRules.confess_chance(s, data, _npc)})
 	_label(_box, text, UiTheme.MUTED_LABEL).name = "BondRomance"
 	_box.add_child(row)
-	if BondRules.kind(c, _npc) == "romance":
+	if BondRules.kind(c, _npc) == "romance" and FamilyRules.spouse(s) != _npc and FamilyRules.engaged(s) != _npc:  # v0.7.32
+		var pr := Button.new()
+		pr.name = "Propose_" + _npc
+		pr.text = tr("BTN_FAMILY_PROPOSE")
+		var pw := FamilyRules.propose_why(s, data, _npc)
+		pr.disabled = not pw.is_empty() or GameState.is_busy()
+		pr.tooltip_text = tr(pw).format({"at": int(FamilyRules.cfg(data)["propose_at"])}) if not pw.is_empty() else ""
+		pr.pressed.connect(func() -> void:
+			var err := GameState.family_act("propose", _npc)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
+		row.add_child(pr)
+	if BondRules.kind(c, _npc) == "romance" and FamilyRules.spouse(s) != _npc:
 		var b := _button(row, "Break_" + _npc, tr("BTN_BOND_BREAK"), BondRules.break_why(s, data, _npc), "break")
 		b.add_theme_color_override("font_color", UiTheme.BAD)
 	elif closed.is_empty():

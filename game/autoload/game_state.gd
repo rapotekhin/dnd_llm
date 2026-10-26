@@ -1487,6 +1487,63 @@ func shop_act(what: String, id: String, arg: String = "", amount: int = 0) -> St
 
 
 ## Study (v0.7.30): exam (id — a school), enroll, lesson, drop (id — a course). "" or a localization key.
+## Family (v0.7.32): propose (id — the partner), wedding (id — the officiant), child, rename (id — the child, arg — the
+## name). "" or a localization key.
+func family_act(what: String, id: String = "", arg: String = "") -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+		return "PROPERTY_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var why := ""
+	match what:
+		"propose": why = FamilyRules.propose_why(s, data, id)
+		"wedding": why = FamilyRules.wedding_why(s, data, id)
+		"child": why = FamilyRules.child_why(s, data)
+		"rename": why = "" if FamilyRules.children(s).has(id) and not arg.strip_edges().is_empty() else "FAMILY_BAD_NAME"
+		_: why = "PROPERTY_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	match what:
+		"propose": lines = FamilyRules.propose(s, data, id)
+		"wedding": lines = FamilyRules.wedding(s, data, id)
+		"child": lines = FamilyRules.try_child(s, data)
+		"rename": lines = FamilyRules.rename(s, data, id, arg)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	return ""
+
+
+## The hero died and an adult child goes on (v0.7.32): the heir's character takes the dead hero's place in the same
+## game — its coins, things, places and family; the world and what it knows stay.
+func continue_as_heir(character: Dictionary) -> void:
+	var s := session
+	if s == null or character.is_empty() or FamilyRules.heir(s, Catalog.data).is_empty():
+		EventBus.navigate.emit("menu", {})
+		return
+	var old := str(s.character.get("name", ""))
+	var lines := FamilyRules.inherit(s, Catalog.data, character)
+	s.character = character
+	s.combat = {}
+	s.mode = GameSession.MODE_EXPLORATION
+	s.npc_id = ""
+	s.pending_fight = []
+	s.followers = []
+	s.wanted = {}
+	s.arrest = ""
+	s.let_go = {}
+	s.sneaking = false
+	var home := str(FamilyRules.view(character).get("home_room", ""))
+	if not home.is_empty():
+		s.room_id = home
+	start(s)
+	_add(GameSession.effect_entry(lines))
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	_request("enter", "%s погиб(ла). Дальше играет наследник — %s: просыпается дома, род продолжается." % [old, character.get("name", "")])
+
+
 ## Bonds (v0.7.31): gift (item — the thing), confess, break, hide. Allowed in a talk too. "" or a localization key.
 func bond_act(what: String, npc_id: String, item: String = "") -> String:
 	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:

@@ -16,6 +16,8 @@ static func perform(action: Dictionary) -> void:
 	match str(action.get("kind", "")):
 		"new":
 			GameState.new_game(action.get("character", {}), action.get("settings", {}))
+		"heir":  # v0.7.32
+			GameState.continue_as_heir(action.get("character", {}))
 		"load":
 			var err := GameState.load_from(str(action.get("slot", "")))
 			if not err.is_empty():

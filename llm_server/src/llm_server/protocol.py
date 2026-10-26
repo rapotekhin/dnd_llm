@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.63.0"
+PROTOCOL_VERSION = "0.64.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -277,6 +277,7 @@ class CharacterSheet(_In):
     shop: str = ""  # 0.61.0: the hero's charters, shelves and merchant's name, the suppliers of the scene («Своя торговля (…): …»)
     study: str = ""  # 0.62.0: the hero's schools, courses with progress and misses, the teachers of the scene («Учёба (…): …»)
     bonds: str = ""  # 0.63.0: the hero's bonds with NPCs (kind, step, points, perks) and the romance of the scene's people
+    family: str = ""  # 0.64.0: the engagement, the spouse and the home's hours, the children by age, upkeep, the heir
 
 
 class HistoryLine(_In):
