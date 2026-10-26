@@ -698,6 +698,369 @@
 			]
 		}
 	},
+	"office": {
+		"_doc": "Offices (v0.7.34, the author: city service, the army, power over a settlement, the temple; appointed on conditions, promoted, elected or bought; decisions instead of shifts; bribes and removal). An office (OfficeRules) — world.json `offices`: {name, kind, location, room, chief (an NPC or \"\" for an election), ways (appoint, election, buy), price_cp, requires, interview, cases (kinds below), ranks [{name, at, pay_cp a week}], start_rank, town, projects}. Each day `cases_per_day` cases of its kinds wait at its room; an option is a check (`check` skill, `tier` → ok / fail) or plain `effects`: merit, rep (the settlement), pocket_cp, treasury_cp and discontent (the town), suspicion, attitude (the petitioner), flag. Suspicion falls by `suspicion_decay` a day; at `inquiry_at` — an inquiry (`inquiry` check): passed — halved, failed — removed and the crime `crime` known. Away `absent_days` — merit lost, `remove_absent_days` — removed. A town (`town`): treasury and discontent by days with the tax level; at `remove_at` the people remove the headman; projects take days and set a world flag.",
+		"cases_per_day": 2,
+		"case_minutes": 60,
+		"absent_days": 5,
+		"absent_merit": -5,
+		"remove_absent_days": 12,
+		"reapply_days": 30,
+		"suspicion_decay": 3,
+		"inquiry_at": 100,
+		"inquiry": {
+			"skill": "deception",
+			"tier": "hard"
+		},
+		"crime": "corruption",
+		"election": {
+			"skill": "persuasion",
+			"dc": 20,
+			"per_rep": 3,
+			"fee_cp": 1000,
+			"retry_days": 30
+		},
+		"buy": {
+			"suspicion": 40
+		},
+		"interview": {
+			"skill": "persuasion",
+			"tier": "medium",
+			"retry_days": 1
+		},
+		"town": {
+			"treasury_cp": 20000,
+			"taxes": {
+				"low": {
+					"name": "низкая",
+					"income_cp": 300,
+					"discontent": -3
+				},
+				"normal": {
+					"name": "обычная",
+					"income_cp": 600,
+					"discontent": 0
+				},
+				"high": {
+					"name": "высокая",
+					"income_cp": 1000,
+					"discontent": 4
+				}
+			},
+			"decay": 1,
+			"remove_at": 100
+		},
+		"suspicion_words": [
+			{
+				"at": 0,
+				"name": "тихо"
+			},
+			{
+				"at": 30,
+				"name": "шепчутся"
+			},
+			{
+				"at": 60,
+				"name": "косятся"
+			},
+			{
+				"at": 85,
+				"name": "вот-вот спросят"
+			}
+		],
+		"discontent_words": [
+			{
+				"at": 0,
+				"name": "довольны"
+			},
+			{
+				"at": 30,
+				"name": "ворчат"
+			},
+			{
+				"at": 60,
+				"name": "ропщут"
+			},
+			{
+				"at": 85,
+				"name": "на грани бунта"
+			}
+		],
+		"cases": {
+			"record": {
+				"name": "прошение",
+				"titles": [
+					"{who} просит заверить купчую на огород",
+					"{who} просит записать долг соседа",
+					"{who} несёт жалобу на межу"
+				],
+				"options": [
+					{
+						"id": "honest",
+						"name": "Разобрать по закону",
+						"check": {
+							"skill": "investigation",
+							"tier": "medium"
+						},
+						"ok": {
+							"merit": 3
+						},
+						"fail": {
+							"merit": -1,
+							"attitude": -1
+						}
+					},
+					{
+						"id": "refuse",
+						"name": "Отказать",
+						"effects": {
+							"attitude": -1
+						}
+					},
+					{
+						"id": "bribe",
+						"name": "Взять мзду",
+						"effects": {
+							"pocket_cp": 300,
+							"suspicion": 20,
+							"attitude": 1
+						}
+					}
+				]
+			},
+			"tax": {
+				"name": "подать",
+				"titles": [
+					"{who} не внёс подать за месяц",
+					"двор, где живёт {who}, задолжал подать",
+					"{who} прячет от подати мешки зерна"
+				],
+				"options": [
+					{
+						"id": "collect",
+						"name": "Взыскать сполна",
+						"check": {
+							"skill": "intimidation",
+							"tier": "medium"
+						},
+						"ok": {
+							"merit": 3,
+							"treasury_cp": 500,
+							"attitude": -1
+						},
+						"fail": {
+							"merit": -1
+						}
+					},
+					{
+						"id": "defer",
+						"name": "Отсрочить",
+						"effects": {
+							"attitude": 1,
+							"rep": 1,
+							"merit": -1
+						}
+					},
+					{
+						"id": "squeeze",
+						"name": "Прижать сверх подати",
+						"effects": {
+							"pocket_cp": 400,
+							"suspicion": 25,
+							"attitude": -2
+						}
+					}
+				]
+			},
+			"trial": {
+				"name": "суд",
+				"titles": [
+					"{who} обвиняют в краже кур",
+					"{who} подрался у трактира",
+					"{who} задолжал купцу и не платит"
+				],
+				"options": [
+					{
+						"id": "acquit",
+						"name": "Разобраться и оправдать",
+						"check": {
+							"skill": "insight",
+							"tier": "medium"
+						},
+						"ok": {
+							"merit": 3,
+							"rep": 1,
+							"attitude": 2
+						},
+						"fail": {
+							"merit": -2,
+							"rep": -1
+						}
+					},
+					{
+						"id": "fine",
+						"name": "Штраф",
+						"effects": {
+							"treasury_cp": 300,
+							"merit": 2,
+							"attitude": -1
+						}
+					},
+					{
+						"id": "stocks",
+						"name": "В колодки",
+						"effects": {
+							"merit": 1,
+							"attitude": -2
+						}
+					},
+					{
+						"id": "bribe",
+						"name": "Взять мзду и отпустить",
+						"effects": {
+							"pocket_cp": 500,
+							"suspicion": 25,
+							"attitude": 2
+						}
+					}
+				]
+			},
+			"order": {
+				"name": "приказ",
+				"titles": [
+					"Дозор у Северных ворот",
+					"Учения ополчения на берегу",
+					"Разведка дороги к заставе"
+				],
+				"options": [
+					{
+						"id": "carry",
+						"name": "Исполнить самому",
+						"check": {
+							"skill": "athletics",
+							"tier": "medium"
+						},
+						"ok": {
+							"merit": 4
+						},
+						"fail": {
+							"merit": -1
+						}
+					},
+					{
+						"id": "delegate",
+						"name": "Поручить людям",
+						"effects": {
+							"merit": 1
+						}
+					},
+					{
+						"id": "bribe",
+						"name": "Пропустить обоз за мзду",
+						"effects": {
+							"pocket_cp": 250,
+							"suspicion": 20
+						}
+					}
+				]
+			},
+			"council": {
+				"name": "сход",
+				"titles": [
+					"{who} просит починить мост",
+					"Сход спорит о выпасе у реки",
+					"{who} просит снизить подать"
+				],
+				"options": [
+					{
+						"id": "grant",
+						"name": "Уважить из казны",
+						"effects": {
+							"treasury_cp": -1000,
+							"discontent": -10,
+							"rep": 1,
+							"merit": 2
+						}
+					},
+					{
+						"id": "speech",
+						"name": "Убедить сход",
+						"check": {
+							"skill": "persuasion",
+							"tier": "medium"
+						},
+						"ok": {
+							"discontent": -8,
+							"merit": 3
+						},
+						"fail": {
+							"discontent": 8
+						}
+					},
+					{
+						"id": "refuse",
+						"name": "Отказать",
+						"effects": {
+							"discontent": 5,
+							"attitude": -1
+						}
+					},
+					{
+						"id": "bribe",
+						"name": "Взять с просителя",
+						"effects": {
+							"pocket_cp": 500,
+							"suspicion": 25,
+							"discontent": 5
+						}
+					}
+				]
+			},
+			"rite": {
+				"name": "служба",
+				"titles": [
+					"Утренняя служба",
+					"{who} просит отпеть родича",
+					"{who} просит благословить новый дом"
+				],
+				"options": [
+					{
+						"id": "serve",
+						"name": "Отслужить",
+						"check": {
+							"skill": "religion",
+							"tier": "medium"
+						},
+						"ok": {
+							"merit": 3,
+							"rep": 1
+						},
+						"fail": {
+							"merit": -1
+						}
+					},
+					{
+						"id": "alms",
+						"name": "Раздать милостыню",
+						"effects": {
+							"treasury_cp": -300,
+							"rep": 1,
+							"attitude": 2,
+							"merit": 1
+						}
+					},
+					{
+						"id": "skim",
+						"name": "Взять из кружки для бедных",
+						"effects": {
+							"pocket_cp": 300,
+							"suspicion": 25
+						}
+					}
+				]
+			}
+		}
+	},
 	"world_gen": {
 		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",
 		"edge_reach": {"neighbours": true, "visited": true},
@@ -1924,7 +2287,7 @@
 			"murder": {"severity": 1, "name": "убийство"},
 			"assault": {"severity": 0, "fine_cp": 1000, "name": "нападение"},
 			"trespass": {"severity": 0, "fine_cp": 200, "name": "вторжение", "known_attitude": 0, "reputation_share": 0, "memory": "знает: герой без спроса вломился к {victim}"},
-			"burglary": {"severity": 0, "fine_cp": 1500, "name": "кража со взломом", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой обокрал {victim}"}, "robbery": {"severity": 1, "fine_cp": 2000, "name": "грабёж", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой грабил на дороге"}, "smuggling": {"severity": 0, "fine_cp": 1000, "name": "контрабанда", "known_attitude": 0, "reputation_share": 1, "memory": "знает: герой провозил контрабанду"}, "debt": {"severity": 0, "name": "неуплата долга", "known_attitude": 0, "reputation_share": 2, "memory": "знает: герой не вернул долг {victim}"}
+			"burglary": {"severity": 0, "fine_cp": 1500, "name": "кража со взломом", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой обокрал {victim}"}, "robbery": {"severity": 1, "fine_cp": 2000, "name": "грабёж", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой грабил на дороге"}, "smuggling": {"severity": 0, "fine_cp": 1000, "name": "контрабанда", "known_attitude": 0, "reputation_share": 1, "memory": "знает: герой провозил контрабанду"}, "corruption": {"severity": 0, "fine_cp": 2000, "name": "мздоимство", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой брал мзду на службе"}, "debt": {"severity": 0, "name": "неуплата долга", "known_attitude": 0, "reputation_share": 2, "memory": "знает: герой не вернул долг {victim}"}
 		},
 		"sentences": [
 			{"severity": 0, "kind": "stocks", "days": 1, "name": "колодки"},

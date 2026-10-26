@@ -36,6 +36,7 @@ var _bond: BondPanel
 var _family: FamilyPanel
 var _heists: HeistPanel
 var _org: OrgPanel
+var _office: OfficePanel
 var _prepare: SmallDialog
 var _mode_bar: HBoxContainer
 var _mode_label: Label
@@ -191,6 +192,7 @@ func _ready() -> void:
 	side.family_requested.connect(func() -> void: _family.open())  # v0.7.32
 	side.heist_requested.connect(func() -> void: _heists.open())  # v0.7.33
 	side.org_requested.connect(func(org: String) -> void: _org.open(org))
+	side.office_requested.connect(func(chief: String) -> void: _office.open(chief))  # v0.7.34
 	row.add_child(side)
 
 	_sheet = CharacterSheet.new()
@@ -296,6 +298,11 @@ func _ready() -> void:
 	_org.visible = false
 	add_child(_org)
 	_org.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_office = OfficePanel.new()  # v0.7.34
+	_office.name = "OfficeView"
+	_office.visible = false
+	add_child(_office)
+	_office.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_sheet.bag_requested.connect(func(bag: String) -> void: _container.open(bag))  # v0.7.18.2
 	_sheet.prepare_requested.connect(func() -> void:
 		_sheet.visible = false
@@ -326,7 +333,7 @@ func _ready() -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _family, _heists, _org]
+	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _family, _heists, _org, _office]
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.

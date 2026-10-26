@@ -27,6 +27,7 @@ signal bond_requested(npc_id: String)  # v0.7.31
 signal family_requested  # v0.7.32
 signal heist_requested  # v0.7.33
 signal org_requested(org_id: String)  # v0.7.33
+signal office_requested(chief: String)  # v0.7.34
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -129,6 +130,7 @@ func _rebuild() -> void:
 	_study_row(s, can_act)
 	_family_row(s, can_act)
 	_underworld_row(s, can_act)
+	_office_row(s, can_act)
 	_property_row(s)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
@@ -366,6 +368,10 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 				EventBus.message.emit(tr(err)), can_act and why.is_empty())
 		wd.name = "Wedding_" + id
 		wd.tooltip_text = tr(why) if not why.is_empty() else tr("BTN_WEDDING_TIP").format({"money": Money.format(FamilyRules.fee(Catalog.data, FamilyRules.officiant(s, Catalog.data, id)))})
+	if Catalog.data["rules"].has("office") and not OfficeRules.of_chief(Catalog.data, id).is_empty():  # v0.7.34
+		var fb := _flow(acts, tr("BTN_OFFICES"), office_requested.emit.bind(id), can_act)
+		fb.name = "Office_" + id
+		fb.tooltip_text = tr("BTN_OFFICES_TIP")
 	if Catalog.data["rules"].has("underworld"):  # v0.7.33
 		for org: String in OrgRules.of_head(s, Catalog.data, id):
 			var ob := _flow(acts, tr("BTN_ORG"), org_requested.emit.bind(org), can_act)
@@ -755,6 +761,22 @@ func _underworld_row(s: GameSession, can_act: bool) -> void:
 		o.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		o.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		o.tooltip_text = tr("BTN_ORG_TIP")
+
+
+## Offices (v0.7.34): «Служба» while the hero holds one or the room holds an election.
+func _office_row(s: GameSession, can_act: bool) -> void:
+	if not Catalog.data["rules"].has("office"):
+		return
+	if OfficeRules.held(s.character).is_empty() and OfficeRules.of_room(Catalog.data, s.room_id).is_empty():
+		return
+	var acts := HFlowContainer.new()
+	acts.name = "OfficeActs"
+	_content.add_child(acts)
+	var b := _row_button(acts, tr("BTN_OFFICE"), office_requested.emit.bind(""), can_act)
+	b.name = "OfficeButton"
+	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+	b.tooltip_text = tr("BTN_OFFICE_TIP")
 
 
 ## Property (v0.7.27): «Имущество» when the hero owns a place or a beast; the window of the hero's places.

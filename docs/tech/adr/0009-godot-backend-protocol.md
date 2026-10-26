@@ -205,6 +205,11 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 76. Протокол 0.66.0 (v0.7.34)
+
+- **Снимок:** `character.office` — должности героя (ступень, заслуги, шёпот о мзде), у старосты — казна, настроение народа и подать; кто в сцене даёт места и где выбирают. Нового эффекта нет (выбор автора: должности — из пакета): назначение, выборы, покупка, дела дня, подать и стройки — кнопки движка; тема `rules("office")`.
+- **Golden:** `office_ask_by_button`, `office_bribe_in_court`.
+
 ### 75. Протокол 0.65.0 (v0.7.33)
 
 - **Эффект `heist`** — преступное дело по замыслу игрока или от NPC: `heist_kind` (burglary, robbery, smuggling), `name`, `target_room`, `victim_npc` или `victim_name`, `giver_npc`, `org_id`, `loot_cp`, `items`, `reward_cp`, `cargo`, `dc_tier`, `text`; добыча — в пределах `rules.underworld.make_heist` по уровню. Дело сразу взято героем; подготовка и само дело — кнопки окна «Дела», бросает движок.

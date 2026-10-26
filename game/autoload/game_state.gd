@@ -1593,6 +1593,49 @@ func org_act(what: String, id: String, arg: String = "") -> String:
 	return ""
 
 
+## The hero's offices (v0.7.34): appoint / elect / buy / leave (id — the office), decide (arg — "<case>:<option>"), tax
+## (arg — the level), build (arg — the project). A decision takes the case's time (the patrol may break it off).
+func office_act(what: String, id: String, arg: String = "") -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "PROPERTY_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var idx := int(arg.get_slice(":", 0)) if what == "decide" else -1
+	var opt := arg.get_slice(":", 1) if what == "decide" else ""
+	var why := ""
+	match what:
+		"appoint": why = OfficeRules.appoint_why(s, data, id)
+		"elect": why = OfficeRules.elect_why(s, data, id)
+		"buy": why = OfficeRules.buy_why(s, data, id)
+		"leave": why = "" if OfficeRules.holds(s.character, id) else "OFFICE_NOT_HELD"
+		"decide": why = OfficeRules.decide_why(s, data, id, idx, opt)
+		"tax": why = OfficeRules.tax_why(s, data, id, arg)
+		"build": why = OfficeRules.build_why(s, data, id, arg)
+		_: why = "PROPERTY_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	match what:
+		"appoint": lines = OfficeRules.appoint(s, data, id)
+		"elect": lines = OfficeRules.elect(s, data, id)
+		"buy": lines = OfficeRules.buy(s, data, id)
+		"leave": lines = OfficeRules.leave(s, data, id)
+		"decide":
+			var need := int(OfficeRules.cfg(data)["case_minutes"])
+			var w := CrimeRules.wait(s, data, need)
+			lines = w["lines"]
+			if int(w["minutes"]) >= need:
+				lines.append_array(OfficeRules.decide(s, data, id, idx, opt))
+		"tax": lines = OfficeRules.set_tax(s, data, id, arg)
+		"build": lines = OfficeRules.build(s, data, id, arg)
+	CharacterRules.refresh(s.character, data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	return ""
+
+
 ## The hero died and an adult child goes on (v0.7.32): the heir's character takes the dead hero's place in the same
 ## game — its coins, things, places and family; the world and what it knows stay.
 func continue_as_heir(character: Dictionary) -> void:

@@ -154,6 +154,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"bonds": BondRules.text(s, data),  # v0.7.31
 		"family": FamilyRules.text(s, data),  # v0.7.32
 		"underworld": _underworld(s, data),  # v0.7.33
+		"office": OfficeRules.text(s, data),  # v0.7.34
 		"tools": (c.get("tools", []) as Array).map(func(t: Variant) -> String:
 			return "%s [%s]%s" % [BackgroundRules.tool_name(data, str(t)), t, "" if int(c.get("inventory", {}).get(str(t), 0)) > 0 else " (нет с собой)"]),
 		"abilities": c.get("abilities", {}),

@@ -1477,3 +1477,42 @@ CONFIRM_ORG_LEAVE_TITLE,Уйти из «{name}»?
 CONFIRM_ORG_LEAVE,"Ступень и очки пропадут, вернуться можно не раньше чем через месяц."
 CONFIRM_HEIST_GIVE_UP_TITLE,Бросить «{name}»?
 CONFIRM_HEIST_GIVE_UP,Дело пропадёт; дело братства засчитается провалом.
+OFFICE_TITLE,Служба
+OFFICE_NONE,Здесь нет должностей для вас.
+OFFICE_STATUS,Заслуги {merit}{next} · жалованье {pay} в неделю · о мзде: {talk}
+OFFICE_NEXT, (следующая ступень с {at})
+OFFICE_GO_THERE,Дела ждут на месте службы: {place}
+OFFICE_BRIBE_TIP,Деньги в карман — но о вас начнут шептаться
+OFFICE_TOWN,Казна {treasury} · народ {mood} ({n} из 100)
+OFFICE_TAX,Подать:
+OFFICE_TAX_TIP,"В казну {income} в день, недовольство {mood} в день"
+OFFICE_BUILT_ON,стройка до дня {day}
+OFFICE_BUILT_DONE,готово
+OFFICE_OFFER_PAY,С должности {rank}: {pay} в неделю
+OFFICE_BUY_TIP,"Место за мзду: без условий, но шептаться начнут сразу"
+OFFICE_ELECT_TIP,Сход: угощение {fee} и речь — Убеждение против славы в поселении
+OFFICE_UNKNOWN,Такой должности нет
+OFFICE_HELD,Вы уже на этой должности
+OFFICE_AWAY,"Того, кто даёт место, нет рядом"
+OFFICE_REMOVED,После снятия так скоро назад не берут
+OFFICE_NOT_THIS_WAY,Так это место не получить
+OFFICE_REQUIREMENTS,Не все условия выполнены
+OFFICE_TRIED,Сегодня уже просили — завтра снова
+OFFICE_ELECTION_SOON,Следующий сход ещё не скоро
+OFFICE_NOT_HELD,Вы не на этой должности
+OFFICE_NOT_THERE,Это решают на месте службы
+OFFICE_CASE_DONE,Это дело уже решено
+OFFICE_NO_TREASURY,В казне не хватает денег
+OFFICE_TAX_SAME,Подать уже такая
+OFFICE_BUILT,Это уже строится или построено
+BTN_OFFICE,Служба
+BTN_OFFICE_TIP,"Ваши должности: дела дня, жалованье, казна"
+BTN_OFFICES,Должности
+BTN_OFFICES_TIP,"Места, которые даёт этот человек"
+BTN_OFFICE_APPOINT,Просить место ({chance}%)
+BTN_OFFICE_ELECT,Выдвинуться на сходе ({chance}%)
+BTN_OFFICE_BUY,Купить место ({price})
+BTN_OFFICE_BUILD,Строить
+BTN_OFFICE_LEAVE,Оставить службу
+CONFIRM_OFFICE_LEAVE_TITLE,Оставить «{name}»?
+CONFIRM_OFFICE_LEAVE,Должность и жалованье пропадут; вернуться можно не раньше чем через месяц.

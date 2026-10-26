@@ -190,6 +190,25 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         lo, hi = uw["orgs"]["cut_pct"]
         if not lo <= o.get("cut_pct", 0) <= hi:
             errors.append(f"организация {oid}: cut_pct от {lo} до {hi}")
+    of_cfg = game_rules["office"]
+    for oid, o in world.get("offices", {}).items():  # v0.7.34: offices
+        if not o.get("name") or o.get("room") not in rooms or o.get("location") not in world.get("locations", {}):
+            errors.append(f"должность {oid}: нужны name, room — комната пака, location — локация пака")
+        if o.get("chief") and o["chief"] not in npcs:
+            errors.append(f"должность {oid}: chief — NPC пака или пусто для выборов")
+        ways = o.get("ways", [])
+        if not ways or set(ways) - {"appoint", "election", "buy"} or ("appoint" in ways and not o.get("chief")):
+            errors.append(f"должность {oid}: ways из appoint, election, buy; appoint — только с chief")
+        if "buy" in ways and not isinstance(o.get("price_cp"), int):
+            errors.append(f"должность {oid}: buy — нужен price_cp")
+        bad = [k for k in o.get("cases", []) if k not in of_cfg["cases"]]
+        if bad or not o.get("cases"):
+            errors.append(f"должность {oid}: cases из {sorted(k for k in of_cfg['cases'])} ({bad})")
+        if not o.get("ranks") or not all(isinstance(r.get("at"), int) and isinstance(r.get("pay_cp"), int) and r.get("name") for r in o["ranks"]):
+            errors.append(f"должность {oid}: ranks — [{{name, at, pay_cp}}]")
+        req = o.get("requires", {})
+        if set(req) - {"reputation", "diploma", "skill", "served", "bond"} or (req.get("bond") and req["bond"].get("npc") not in npcs)                 or (req.get("diploma") and req["diploma"] not in world.get("courses", {})):
+            errors.append(f"должность {oid}: requires — reputation, diploma (курс пака), skill, served, bond {{npc, at}}")
     for nid, n in npcs.items():
         if "fence" in n and not (isinstance(n["fence"].get("buy_pct"), int) and 0 < n["fence"]["buy_pct"] <= 100):
             errors.append(f"NPC {nid}: fence.buy_pct — число 1–100")

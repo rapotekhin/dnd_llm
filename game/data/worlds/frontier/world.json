@@ -721,7 +721,16 @@
 					"text": "царапины на воротах шли снизу вверх: зверь стоял на задних лапах и был выше человека"
 				}
 			],
-			"site_id": "brod-gate"
+			"site_id": "brod-gate",
+			"variants": [
+				{
+					"if_flag": "brod_palisade",
+					"hooks": [
+						"на воротах свежие царапины, глубокие, как от когтей",
+						"новый частокол из свежих брёвен тянется от ворот к реке"
+					]
+				}
+			]
 		},
 		"pushcha-edge": {
 			"name": "Опушка Пущи",
@@ -1467,6 +1476,15 @@
 			"site_id": "brod-river-house",
 			"tags": [
 				"water"
+			],
+			"variants": [
+				{
+					"if_flag": "brod_bridge",
+					"hooks": [
+						"на двери дома прибита бумага ратуши: «продаётся»",
+						"через брод перекинут новый мост на дубовых сваях"
+					]
+				}
 			]
 		},
 		"brod-river-house": {
@@ -2745,6 +2763,215 @@
 			"dc_tier": "medium",
 			"reward_cp": 2000,
 			"text": "Два бочонка заречного вина без пошлины — пронести мимо ополчения у Северных ворот."
+		}
+	},
+	"offices": {
+		"brod_scribe": {
+			"name": "Писарь при ратуше",
+			"kind": "registry",
+			"location": "brod",
+			"room": "brod-townhall",
+			"chief": "npc_clerk",
+			"ways": [
+				"appoint",
+				"buy"
+			],
+			"price_cp": 3000,
+			"requires": {
+				"diploma": "letters"
+			},
+			"cases": [
+				"record"
+			],
+			"ranks": [
+				{
+					"name": "младший писарь",
+					"at": 0,
+					"pay_cp": 500
+				},
+				{
+					"name": "старший писарь",
+					"at": 40,
+					"pay_cp": 800
+				}
+			],
+			"text": "Купчие, долги, жалобы на межи — у конторки Тихона Пера."
+		},
+		"brod_collector": {
+			"name": "Сборщик податей",
+			"kind": "tax",
+			"location": "brod",
+			"room": "brod-townhall",
+			"chief": "npc_clerk",
+			"ways": [
+				"appoint",
+				"buy"
+			],
+			"price_cp": 4000,
+			"requires": {
+				"reputation": 1
+			},
+			"interview": true,
+			"cases": [
+				"tax"
+			],
+			"ranks": [
+				{
+					"name": "сборщик",
+					"at": 0,
+					"pay_cp": 700
+				},
+				{
+					"name": "старший сборщик",
+					"at": 40,
+					"pay_cp": 1000
+				}
+			],
+			"text": "Подати с дворов Брода — в казну ратуши."
+		},
+		"brod_judge": {
+			"name": "Судья Брода",
+			"kind": "judge",
+			"location": "brod",
+			"room": "brod-townhall",
+			"chief": "npc_captain",
+			"ways": [
+				"appoint",
+				"buy"
+			],
+			"price_cp": 10000,
+			"requires": {
+				"reputation": 1,
+				"served": 30
+			},
+			"cases": [
+				"trial"
+			],
+			"ranks": [
+				{
+					"name": "судья",
+					"at": 0,
+					"pay_cp": 1500
+				}
+			],
+			"text": "Кражи, драки, долги — суд в ратуше по закону Брода."
+		},
+		"brod_militia": {
+			"name": "Ополчение Брода",
+			"kind": "military",
+			"location": "brod",
+			"room": "brod-gate",
+			"chief": "npc_captain",
+			"ways": [
+				"appoint"
+			],
+			"requires": {},
+			"interview": {
+				"skill": "athletics",
+				"tier": "medium"
+			},
+			"start_rank": {
+				"soldier": 1
+			},
+			"cases": [
+				"order"
+			],
+			"ranks": [
+				{
+					"name": "ополченец",
+					"at": 0,
+					"pay_cp": 400
+				},
+				{
+					"name": "десятник",
+					"at": 30,
+					"pay_cp": 700
+				},
+				{
+					"name": "сотник",
+					"at": 80,
+					"pay_cp": 1200
+				}
+			],
+			"text": "Дозоры, учения и разведка дороги к заставе под началом капитана Ведды."
+		},
+		"brod_headman": {
+			"name": "Староста Ольхового Брода",
+			"kind": "headman",
+			"location": "brod",
+			"room": "brod-townhall",
+			"chief": "",
+			"ways": [
+				"election",
+				"buy"
+			],
+			"price_cp": 20000,
+			"requires": {
+				"reputation": 2
+			},
+			"cases": [
+				"council"
+			],
+			"town": true,
+			"ranks": [
+				{
+					"name": "староста",
+					"at": 0,
+					"pay_cp": 1000
+				}
+			],
+			"projects": [
+				{
+					"id": "palisade",
+					"name": "Частокол у Северных ворот",
+					"cost_cp": 8000,
+					"days": 5,
+					"flag": "brod_palisade",
+					"discontent": -15
+				},
+				{
+					"id": "bridge",
+					"name": "Новый мост через брод",
+					"cost_cp": 6000,
+					"days": 4,
+					"flag": "brod_bridge",
+					"discontent": -10
+				}
+			],
+			"text": "Казна, подати, сход и стройки Брода. Старосту выбирает сход — или покупают."
+		},
+		"brod_abbot": {
+			"name": "Служба при храме",
+			"kind": "temple",
+			"location": "brod",
+			"room": "brod-temple",
+			"chief": "npc_priestess",
+			"ways": [
+				"appoint"
+			],
+			"requires": {
+				"skill": "religion",
+				"bond": {
+					"npc": "npc_priestess",
+					"at": 40
+				}
+			},
+			"cases": [
+				"rite"
+			],
+			"ranks": [
+				{
+					"name": "служка",
+					"at": 0,
+					"pay_cp": 300
+				},
+				{
+					"name": "настоятель",
+					"at": 40,
+					"pay_cp": 900
+				}
+			],
+			"text": "Службы, отпевания, милостыня — при сестре Илве."
 		}
 	}
 }
