@@ -477,6 +477,227 @@
 		"names": {"male": ["Ратибор", "Мирон", "Всеслав", "Ждан", "Олег", "Светозар", "Яромир", "Добрыня"], "female": ["Лада", "Весна", "Злата", "Милана", "Любава", "Ярослава", "Дарина", "Снежана"]},
 		"heir": {"keep": ["property", "bank", "shop"]}
 	},
+	"underworld": {
+		"_doc": "The underworld (v0.7.33, the author: burglary, robbery, smuggling; a fence of the pack and the master's; an organization with a trial, ranks, jobs and a cut, a hideout, founded by the hero; the guard never learns of membership). A criminal job (HeistRules) — `kinds`: where and when the act is, its check (`act` skills or tool, the better one), preparations (`steps`, each once a day, a success gives `prep_bonus` to the act), what a failure brings (`fail`: crime, seized, fight) and the crime the victim reports (`crime`), `trace_chance` — a plain success leaves a trace: the crime is known. `outcomes` by the margin. A fence (FenceRules) buys stolen goods at `fence.buy_pct` of the value (honest traders of the owner's location refuse them) and sells `fence.stock` to those who know it: a criminal background's contact, a member of its organization, the master's `fence` with reveal. Organizations (OrgRules): ranks by points, a trial job, a cut of the loot owed to the head, unpaid past `owe_days` — expelled and the head an enemy; the hideout — rest, the guard does not look there. The hero founds one for `found_fee_cp` in an owned place; friends (bond `recruit_bond`) join and bring `member_income_cp` a day into its till, each caught by `member_caught_chance` a day.",
+		"kinds": {
+			"burglary": {
+				"name": "кража со взломом",
+				"hours": [
+					22,
+					5
+				],
+				"act": {
+					"tool": "thieves_tools",
+					"skills": [
+						"stealth",
+						"sleight_of_hand"
+					]
+				},
+				"steps": [
+					{
+						"id": "scout",
+						"name": "Разведать",
+						"skill": "investigation",
+						"minutes": 60,
+						"at": "target",
+						"text": "высмотреть замки, хозяев и их часы"
+					},
+					{
+						"id": "tools",
+						"name": "Достать отмычки",
+						"item": "thieves_tools",
+						"text": "воровские инструменты при себе"
+					}
+				],
+				"crime": "burglary",
+				"fail": "caught",
+				"act_minutes": 60,
+				"mark_owner": true
+			},
+			"robbery": {
+				"name": "грабёж",
+				"hours": [
+					6,
+					20
+				],
+				"act": {
+					"skills": [
+						"intimidation"
+					]
+				},
+				"steps": [
+					{
+						"id": "ambush",
+						"name": "Устроить засаду",
+						"skill": "stealth",
+						"minutes": 60,
+						"at": "target",
+						"text": "залечь у дороги, отрезать путь"
+					},
+					{
+						"id": "mask",
+						"name": "Скрыть лицо",
+						"skill": "deception",
+						"minutes": 30,
+						"text": "маска и чужой голос — не узнают"
+					}
+				],
+				"crime": "robbery",
+				"fail": "fight",
+				"act_minutes": 20,
+				"mark_owner": false,
+				"mask_step": "mask"
+			},
+			"smuggling": {
+				"name": "контрабанда",
+				"hours": [
+					0,
+					24
+				],
+				"act": {
+					"skills": [
+						"deception",
+						"sleight_of_hand"
+					]
+				},
+				"steps": [
+					{
+						"id": "hide",
+						"name": "Спрятать груз",
+						"skill": "sleight_of_hand",
+						"minutes": 30,
+						"text": "двойное дно, тюки с сеном сверху"
+					},
+					{
+						"id": "watch",
+						"name": "Высмотреть стражу",
+						"skill": "insight",
+						"minutes": 60,
+						"at": "target",
+						"text": "кто сегодня у ворот и как досматривает"
+					}
+				],
+				"crime": "smuggling",
+				"fail": "seized",
+				"act_minutes": 20,
+				"mark_owner": false,
+				"cargo": true
+			}
+		},
+		"prep_bonus": 2,
+		"trace_chance": 0.25,
+		"outcomes": [
+			{
+				"from": -99,
+				"id": "fail",
+				"name": "провал"
+			},
+			{
+				"from": 0,
+				"id": "done",
+				"name": "удача"
+			},
+			{
+				"from": 5,
+				"id": "clean",
+				"name": "чисто"
+			}
+		],
+		"rep": {
+			"done": 10,
+			"clean": 15,
+			"fail": -5
+		},
+		"fight_monster": "bandit",
+		"fence": {
+			"buy_pct": 40,
+			"buy_pct_member": 50,
+			"stock": {
+				"thieves_tools": 2,
+				"poison_basic_vial": 3,
+				"poisoners_kit": 1,
+				"caltrops": 2,
+				"ball_bearings_bag_of_1000": 2,
+				"disguise_kit": 1,
+				"forgery_kit": 1
+			}
+		},
+		"make_heist": {
+			"loot_cp_by_level": [
+				0,
+				3000,
+				5000,
+				8000,
+				12000,
+				20000
+			],
+			"reward_cp_by_level": [
+				0,
+				2000,
+				3000,
+				5000,
+				8000,
+				12000
+			],
+			"dc_tiers": [
+				"easy",
+				"medium",
+				"hard"
+			],
+			"max_items": 2,
+			"max_item_cp": 5000
+		},
+		"make_fence": {
+			"buy_pct": [
+				25,
+				50
+			]
+		},
+		"orgs": {
+			"default_ranks": [
+				{
+					"name": "новичок",
+					"at": 0
+				},
+				{
+					"name": "свой",
+					"at": 30
+				},
+				{
+					"name": "мастер дела",
+					"at": 80
+				},
+				{
+					"name": "правая рука",
+					"at": 150
+				}
+			],
+			"cut_pct": [
+				10,
+				40
+			],
+			"owe_days": 7,
+			"expel_bond": -60,
+			"rejoin_days": 30,
+			"perks": {
+				"rest": 0,
+				"hide": 1,
+				"fence_member": 1
+			},
+			"found_fee_cp": 2000,
+			"recruit_bond": 30,
+			"max_members": 6,
+			"member_income_cp": 30,
+			"member_caught_chance": 0.03,
+			"law_tags": [
+				"military",
+				"clergy",
+				"registry",
+				"bank",
+				"school"
+			]
+		}
+	},
 	"world_gen": {
 		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",
 		"edge_reach": {"neighbours": true, "visited": true},
@@ -1703,7 +1924,7 @@
 			"murder": {"severity": 1, "name": "убийство"},
 			"assault": {"severity": 0, "fine_cp": 1000, "name": "нападение"},
 			"trespass": {"severity": 0, "fine_cp": 200, "name": "вторжение", "known_attitude": 0, "reputation_share": 0, "memory": "знает: герой без спроса вломился к {victim}"},
-			"debt": {"severity": 0, "name": "неуплата долга", "known_attitude": 0, "reputation_share": 2, "memory": "знает: герой не вернул долг {victim}"}
+			"burglary": {"severity": 0, "fine_cp": 1500, "name": "кража со взломом", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой обокрал {victim}"}, "robbery": {"severity": 1, "fine_cp": 2000, "name": "грабёж", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой грабил на дороге"}, "smuggling": {"severity": 0, "fine_cp": 1000, "name": "контрабанда", "known_attitude": 0, "reputation_share": 1, "memory": "знает: герой провозил контрабанду"}, "debt": {"severity": 0, "name": "неуплата долга", "known_attitude": 0, "reputation_share": 2, "memory": "знает: герой не вернул долг {victim}"}
 		},
 		"sentences": [
 			{"severity": 0, "kind": "stocks", "days": 1, "name": "колодки"},

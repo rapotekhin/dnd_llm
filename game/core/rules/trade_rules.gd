@@ -42,6 +42,7 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 			stock.erase(id)
 		m["purse_cp"] = maxi(int(m["purse_cp"]), int(npc.get("purse_cp", 0)))
 		m["day"] = s.day
+	FenceRules.restock(s, data, npc_id, m)  # v0.7.33: a fence's goods for those who know it
 	return m
 
 
@@ -147,7 +148,10 @@ static func sell_price(s: GameSession, data: Dictionary, npc_id: String, item_id
 ## What the merchant pays for `qty` of an item: each unit sells a little cheaper (the market fills, v0.7.17.1).
 static func sell_total(s: GameSession, data: Dictionary, npc_id: String, item_id: String, qty: int) -> int:
 	var total := 0
-	for i in qty:
+	var hot := mini(qty, FenceRules.stolen_qty(s, item_id)) if FenceRules.known(s, data, npc_id) else 0  # v0.7.33: a fence's price
+	for i in hot:
+		total += FenceRules.unit_price(s, data, npc_id, item_id)
+	for i in qty - hot:
 		total += _sell_unit(s, data, npc_id, item_id, i)
 	return total
 
@@ -290,6 +294,8 @@ static func quote(s: GameSession, data: Dictionary, npc_id: String, cart: Dictio
 			return _fail(out, "TRADE_ERR_NO_ITEM", {"item": ItemRules.display_name(items, s.items, id)})
 		if sellable(s, id, data) - OwnerRules.held_of(s, id, npc_id) < qty:  # v0.7.22.17: it knows its own thing
 			return _fail(out, "TRADE_ERR_THEIR_OWN", {"item": ItemRules.display_name(items, s.items, id)})
+		if sellable(s, id, data) - FenceRules.recognized(s, data, npc_id, id) < qty:  # v0.7.33: it knows a stolen thing
+			return _fail(out, "TRADE_ERR_STOLEN", {"item": ItemRules.display_name(items, s.items, id)})
 		var price := sell_total(s, data, npc_id, id, qty)
 		if price <= 0:
 			return _fail(out, "TRADE_ERR_WORTHLESS", {"item": ItemRules.display_name(items, s.items, id)})

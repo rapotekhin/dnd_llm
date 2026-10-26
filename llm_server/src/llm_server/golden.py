@@ -133,7 +133,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "ac": ch.get("ac", 10), "conditions": ch.get("conditions", []), "skills": ch.get("skills", {}),
                 "saves": ch.get("saves", {}), "features": ch.get("features", []), "gold_cp": ch.get("gold_cp", 1000),
                 **{k: ch[k] for k in ("cantrips", "spells", "spell_slots", "spell_save_dc", "resources", "equipped", "inventory",
-                                      "background", "background_feature", "languages", "tools", "attuned", "reward_left_cp", "bags", "development", "goal", "craft", "jobs", "property", "bank", "shop", "study", "bonds", "family",
+                                      "background", "background_feature", "languages", "tools", "attuned", "reward_left_cp", "bags", "development", "goal", "craft", "jobs", "property", "bank", "shop", "study", "bonds", "family", "underworld",
                                       "race", "body") if k in ch},
             },
             "history": history,

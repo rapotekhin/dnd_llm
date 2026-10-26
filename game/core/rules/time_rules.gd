@@ -58,6 +58,7 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 	lines.append_array(DiseaseRules.tick(s, data))  # hunger and thirst past their grace (v0.7.23)
 	lines.append_array(FoodRules.tick(s, data))  # food spoils (v0.7.25)
 	lines.append_array(FamilyRules.tick(s, data))  # births, growth, the help into the till before its tax (v0.7.32)
+	lines.append_array(OrgRules.tick(s, data))  # unpaid cuts, the own band's income (v0.7.33)
 	lines.append_array(PropertyRules.tick(s, data))  # income, wages, decay, tax, beasts fed (v0.7.27)
 	lines.append_array(BankRules.tick(s, data))  # interest, overdue loans, vault fees (v0.7.28)
 	lines.append_array(ShopRules.tick(s, data))  # the shelves sell by days (v0.7.29)

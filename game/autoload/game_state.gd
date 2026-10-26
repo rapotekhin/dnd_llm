@@ -1516,6 +1516,83 @@ func family_act(what: String, id: String = "", arg: String = "") -> String:
 	return ""
 
 
+## Criminal jobs (v0.7.33): take (a job of the world), step (arg — the preparation), act, give_up. "" or a key.
+func heist_act(what: String, id: String, arg: String = "") -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "PROPERTY_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var why := ""
+	match what:
+		"step": why = HeistRules.step_why(s, data, id, arg)
+		"act": why = HeistRules.act_why(s, data, id)
+		"give_up": why = "" if HeistRules.status(s.character, id) == "active" else "HEIST_NOT_ACTIVE"
+		_: why = "PROPERTY_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	var fight: Array = []
+	match what:
+		"step":
+			var need := HeistRules.step_minutes(s, data, id, arg)
+			var w := CrimeRules.wait(s, data, need)  # the patrol may break it off
+			lines = w["lines"]
+			if int(w["minutes"]) >= need:
+				lines.append_array(HeistRules.step(s, data, id, arg))
+		"act":
+			var need := HeistRules.act_minutes(s, data, id)
+			var w := CrimeRules.wait(s, data, need)
+			lines = w["lines"]
+			if int(w["minutes"]) >= need:
+				var r := HeistRules.act(s, data, id)
+				lines.append_array(r["lines"])
+				fight = r["fight"]
+		"give_up": lines = HeistRules.give_up(s, data, id)
+	CharacterRules.refresh(s.character, data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	if not fight.is_empty():
+		s.pending_fight = fight
+		_start_pending_fight()
+	return ""
+
+
+## Organizations (v0.7.33): join, leave, pay, take (arg — a job), found (arg — the name, id — the place), recruit
+## (id — the NPC). "" or a localization key.
+func org_act(what: String, id: String, arg: String = "") -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+		return "PROPERTY_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var why := ""
+	match what:
+		"join": why = OrgRules.join_why(s, data, id)
+		"leave": why = "" if OrgRules.member(s.character, id) or OrgRules.candidate(s.character, id) else "ORG_NONE"
+		"pay": why = OrgRules.pay_why(s, data, id)
+		"take": why = OrgRules.take_why(s, data, id, arg)
+		"found": why = OrgRules.found_why(s, data, arg, id)
+		"recruit": why = OrgRules.recruit_why(s, data, id)
+		_: why = "PROPERTY_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	match what:
+		"join": lines = OrgRules.join(s, data, id)
+		"leave": lines = OrgRules.leave(s, data, id)
+		"pay": lines = OrgRules.pay(s, data, id)
+		"take": lines = HeistRules.take(s, data, arg)
+		"found": lines = OrgRules.found(s, data, arg, id)
+		"recruit": lines = OrgRules.recruit(s, data, id)
+	CharacterRules.refresh(s.character, data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	return ""
+
+
 ## The hero died and an adult child goes on (v0.7.32): the heir's character takes the dead hero's place in the same
 ## game — its coins, things, places and family; the world and what it knows stay.
 func continue_as_heir(character: Dictionary) -> void:

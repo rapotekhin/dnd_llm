@@ -1416,3 +1416,64 @@ FAMILY_TRIED_TODAY,Сегодня уже пробовали
 FAMILY_BAD_NAME,Нужно имя
 FAMILY_NO_DIVORCE,С супругом не расстаются кнопкой
 FAMILY_SPOUSE_F,Супруга
+HEIST_TITLE,Дела
+HEIST_NONE_ACTIVE,Сейчас у вас нет дел.
+HEIST_ANY_HOUR,в любой час
+HEIST_HOURS,с {from}:00 до {to}:00
+HEIST_WHERE,"Где: {place}, {when}"
+HEIST_VICTIM,чьё: {name}
+HEIST_NONE,Такого дела нет
+HEIST_TAKEN,Это дело уже взято или его нет в предложениях
+HEIST_NOT_ACTIVE,Дело не идёт
+HEIST_STEP_DONE,Уже готово
+HEIST_STEP_TODAY,Сегодня уже пробовали — завтра снова
+HEIST_NO_ITEM,Нужной вещи нет при себе
+HEIST_NOT_THERE,Это делается на месте дела
+HEIST_NOT_NOW,Не тот час для этого дела
+HEIST_WATCHED,Хозяин рядом и смотрит — не сейчас
+HEIST_NO_CARGO,Груза при себе нет
+BTN_HEISTS,Дела
+BTN_HEISTS_TIP,Тёмные дела: подготовка и само дело
+BTN_HEIST_GIVE_UP,Бросить
+BTN_HEIST_ACT,Сделать дело ({chance}%)
+BTN_HEIST_ACT_TIP,Займёт {min} мин; подготовка даёт бонус к проверке
+ORG_TITLE,Братство
+ORG_HEAD,Глава: {name}
+ORG_RANK,"Вы — {rank}, очки {points}{next}"
+ORG_NEXT,", следующая ступень с {at}"
+ORG_OWED,"Доля к отдаче: {cp}, дней осталось: {days}"
+ORG_JOBS,Дела от братства
+ORG_TRIAL,"Испытание: «{job}» — сделайте его, и вас примут"
+ORG_JOIN_HINT,"Свои берут долю {cut}% со всего. Взамен — дела, укрытие и скупщик."
+ORG_OWN_LINE,"Ваше братство, логово — «{place}». Стража о нём не знает."
+ORG_MEMBERS,Люди: {names}. Доход: {income} в день в кассу логова
+ORG_RECRUIT_HINT,Позвать можно друга (связь от {at}) — кнопка «В братство» у человека
+ORG_FOUND_TITLE,Основать своё братство
+ORG_FOUND_HINT,"Логово — в вашем месте, на обзаведение {fee}."
+ORG_FOUND_NAME,Название
+ORG_NONE,Такого братства нет
+ORG_MEMBER,Уже свой
+ORG_TRIAL_ACTIVE,Сначала — испытание
+ORG_EXPELLED,Изгнанных так скоро назад не берут
+ORG_NOTHING_OWED,Долга нет
+ORG_HAS_OWN,Своё братство у вас уже есть
+ORG_NO_PLACE,Логово — только в вашем месте
+ORG_BAD_NAME,Дайте братству имя
+ORG_FULL,Братство полно
+ORG_NOT_FOR_HIM,Этот человек на такое не пойдёт
+ORG_NOT_CLOSE,Нужна связь от {at} — человек ещё не так близок
+BTN_ORG,Братство
+BTN_ORG_TIP,"Ваше братство: ранг, доля, дела"
+BTN_ORG_HEAD_TIP,"{org}: вступить, дела, доля"
+BTN_ORG_JOIN,Вступить
+BTN_ORG_PAY,Отдать долю
+BTN_ORG_TAKE,Взять
+BTN_ORG_LEAVE,Уйти
+BTN_ORG_FOUND,Основать
+BTN_RECRUIT,В братство
+BTN_RECRUIT_TIP,Позвать в своё братство
+TRADE_ERR_STOLEN,«Это же краденое!» — {item} здесь узнают и не возьмут
+CONFIRM_ORG_LEAVE_TITLE,Уйти из «{name}»?
+CONFIRM_ORG_LEAVE,"Ступень и очки пропадут, вернуться можно не раньше чем через месяц."
+CONFIRM_HEIST_GIVE_UP_TITLE,Бросить «{name}»?
+CONFIRM_HEIST_GIVE_UP,Дело пропадёт; дело братства засчитается провалом.

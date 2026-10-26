@@ -323,6 +323,12 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if bo.has("reason"):
 				return {"reason": bo["reason"]}
 			return bo
+		"fence", "heist", "org":  # v0.7.33: the underworld — a fence, a criminal job, an organization
+			var uk := str(e["kind"])
+			var uw: Dictionary = FenceRules.make(s, data, e) if uk == "fence" else HeistRules.make(s, data, e) if uk == "heist" else OrgRules.make(s, data, e)
+			if uw.has("reason"):
+				return {"reason": uw["reason"]}
+			return uw
 		"supplier":  # v0.7.29: a scene NPC sells wholesale to a charter holder
 			var sup := ShopRules.make(s, data, e)
 			if sup.has("reason"):
@@ -942,6 +948,12 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(StudyRules.apply_make(s, _data, plan))
 		"supplier":
 			_extra_lines.append_array(ShopRules.apply_make(s, _data, plan))
+		"fence":
+			_extra_lines.append_array(FenceRules.apply_make(s, _data, plan))
+		"heist":
+			_extra_lines.append_array(HeistRules.apply_make(s, _data, plan))
+		"org":
+			_extra_lines.append_array(OrgRules.apply_make(s, _data, plan))
 		"bond":
 			_extra_lines.append_array(BondRules.apply_make(s, _data, plan))
 		"bank":

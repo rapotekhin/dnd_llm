@@ -1133,6 +1133,41 @@
       "title": "EquipEffect",
       "type": "object"
     },
+    "FenceEffect": {
+      "additionalProperties": false,
+      "description": "A fence the world lacks (0.65.0): «Горм, возьмёшь колечко, о котором лучше не спрашивать?». A trader of the\nscene buys stolen goods at `buy_pct` of the value (25–50) and sells thieves' goods to the hero; a fence of the pack\nthat decided to trust the hero — `buy_pct` omitted. Selling is the trade window — the engine's act.",
+      "properties": {
+        "buy_pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Buy Pct"
+        },
+        "kind": {
+          "const": "fence",
+          "default": "fence",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id"
+      ],
+      "title": "FenceEffect",
+      "type": "object"
+    },
     "FlagEffect": {
       "additionalProperties": false,
       "properties": {
@@ -1535,6 +1570,129 @@
         "reason"
       ],
       "title": "HealEffect",
+      "type": "object"
+    },
+    "HeistEffect": {
+      "additionalProperties": false,
+      "description": "A criminal job from the player's plan or an NPC's offer (0.65.0): «обнесу склад торговца ночью», «Сыч, есть\nдело?». `heist_kind` burglary (a place at night, `victim_npc` its owner), robbery (on a road by day, `victim_name`)\nor smuggling (`cargo` — catalog ids carried past `target_room`); the loot and reward within the level's caps. The\njob is the hero's at once; the preparations and the act are the buttons of the «Дела» window — the engine rolls.",
+      "properties": {
+        "cargo": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Cargo",
+          "type": "array"
+        },
+        "dc_tier": {
+          "default": "medium",
+          "enum": [
+            "easy",
+            "medium",
+            "hard"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        },
+        "giver_npc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Giver Npc"
+        },
+        "heist_kind": {
+          "enum": [
+            "burglary",
+            "robbery",
+            "smuggling"
+          ],
+          "title": "Heist Kind",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Items",
+          "type": "array"
+        },
+        "kind": {
+          "const": "heist",
+          "default": "heist",
+          "title": "Kind",
+          "type": "string"
+        },
+        "loot_cp": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Loot Cp",
+          "type": "integer"
+        },
+        "name": {
+          "maxLength": 60,
+          "title": "Name",
+          "type": "string"
+        },
+        "org_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Org Id"
+        },
+        "reward_cp": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Reward Cp",
+          "type": "integer"
+        },
+        "target_room": {
+          "title": "Target Room",
+          "type": "string"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Text",
+          "type": "string"
+        },
+        "victim_name": {
+          "default": "",
+          "maxLength": 60,
+          "title": "Victim Name",
+          "type": "string"
+        },
+        "victim_npc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Victim Npc"
+        }
+      },
+      "required": [
+        "heist_kind",
+        "name",
+        "target_room"
+      ],
+      "title": "HeistEffect",
       "type": "object"
     },
     "JobEffect": {
@@ -2281,6 +2439,56 @@
         "kind"
       ],
       "title": "NpcLink",
+      "type": "object"
+    },
+    "OrgEffect": {
+      "additionalProperties": false,
+      "description": "An organization the world lacks (0.65.0): a thieves' band, a smugglers' ring, a guild around an NPC of the scene\nas its head; the hideout is the scene when it is private. Joining, ranks, the cut and jobs are the buttons of the\n«Братство» window.",
+      "properties": {
+        "cut_pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cut Pct"
+        },
+        "kind": {
+          "const": "org",
+          "default": "org",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 40,
+          "title": "Name",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "org_kind": {
+          "default": "criminal",
+          "enum": [
+            "criminal",
+            "guild"
+          ],
+          "title": "Org Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "name"
+      ],
+      "title": "OrgEffect",
       "type": "object"
     },
     "OwnerEffect": {
@@ -3281,12 +3489,14 @@
           "door": "#/$defs/DoorEffect",
           "drop_item": "#/$defs/DropItemEffect",
           "equip": "#/$defs/EquipEffect",
+          "fence": "#/$defs/FenceEffect",
           "flag": "#/$defs/FlagEffect",
           "furnish": "#/$defs/FurnishEffect",
           "give_item": "#/$defs/GiveItemEffect",
           "goal_assess": "#/$defs/GoalAssessEffect",
           "goal_hint": "#/$defs/GoalHintEffect",
           "heal": "#/$defs/HealEffect",
+          "heist": "#/$defs/HeistEffect",
           "job": "#/$defs/JobEffect",
           "move": "#/$defs/MoveEffect",
           "note": "#/$defs/NoteEffect",
@@ -3294,6 +3504,7 @@
           "npc_discount": "#/$defs/NpcDiscountEffect",
           "npc_favor": "#/$defs/NpcFavorEffect",
           "npc_follow": "#/$defs/NpcFollowEffect",
+          "org": "#/$defs/OrgEffect",
           "owner": "#/$defs/OwnerEffect",
           "prop_state": "#/$defs/PropStateEffect",
           "property": "#/$defs/PropertyEffect",
@@ -3366,6 +3577,15 @@
         },
         {
           "$ref": "#/$defs/BondEffect"
+        },
+        {
+          "$ref": "#/$defs/FenceEffect"
+        },
+        {
+          "$ref": "#/$defs/HeistEffect"
+        },
+        {
+          "$ref": "#/$defs/OrgEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"

@@ -81,6 +81,15 @@ static func on_debt(s: GameSession, data: Dictionary, creditor: String, loc: Str
 	return out
 
 
+## A criminal job seen or traced (v0.7.33, HeistRules): its crime of `kind` known at once in `loc` (where the law
+## looks for it), the victim — an NPC or "". Lines.
+static func on_job(s: GameSession, data: Dictionary, kind: String, victim: String, room_id: String, loc: String) -> Array[String]:
+	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": kind, "victim": victim, "room": room_id, "location": loc,
+		"at": TimeRules.abs_minute(s), "witnesses": [], "known": false, "settled": false}
+	s.crimes.append(crime)
+	return _known(s, data, crime)
+
+
 ## One crime closed outside the law's hold (v0.7.28: the debt paid at the bank); the location's wanted goes when no
 ## other open crime is left there. Lines.
 static func settle_one(s: GameSession, data: Dictionary, crime_id: String) -> Array[String]:
@@ -309,6 +318,8 @@ static func check_arrest(s: GameSession, data: Dictionary) -> Array[String]:
 	var now := TimeRules.abs_minute(s)
 	if now < int(s.let_go.get(loc, -1)):
 		return []  # just let go or fought free: the guard does not come back at once (big test #6)
+	if data["rules"].has("underworld") and not OrgRules.hideout_of(s, data, s.room_id, "hide").is_empty():
+		return []  # v0.7.33: the guard does not know the hideout
 	var l := law(data, loc)
 	var guards := s.npcs_here(world.world, s.room_id).filter(func(id: String) -> bool: return (l.get("guards", []) as Array).has(id))
 	var patrol := now - int(s.wanted[loc]) >= int(cfg(data)["search_minutes"]) \

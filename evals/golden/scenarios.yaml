@@ -1541,6 +1541,38 @@ scenarios:
       - "Лада ведёт себя как пятилетний ребёнок, Мира — как жена героя (реплика, жест или поведение): сцена семьи по строке «Семья»"
       - "Монеты за семью не списаны и не выданы; новые дети и родня не придуманы"
 
+  - id: underworld_heist_plan
+    title: "Игрок задумал ночную кражу у трактирщика — эффект heist, без добычи словами"
+    category: rules
+    extends: tavern
+    input: "Шепчу себе: этой ночью, когда Горм уснёт, вскрою его погреб и вынесу кассу. Решено."
+    engine:
+      validate:
+        - {kind: heist, status: accept, summary: "Дело: «Касса Горма» — кража со взломом, Таверна — погреб"}
+    expect:
+      effects: {required_kinds_any: [heist], forbidden_kinds: [coins, give_item, take_item, crime_known]}
+    rubric:
+      - "Мастер оформляет замысел делом эффектом heist: heist_kind burglary, victim_npc — Горм, target_room — комната мира, loot_cp скромный"
+      - "Касса не вынесена и кража не случилась в рассказе: подготовка и само дело — кнопки окна «Дела»"
+
+  - id: underworld_fence_by_trade
+    title: "Продать краденое знакомому скупщику — окно торговли, без денег словами"
+    category: rules
+    extends: tavern
+    input: "Ферн, глянь колечко с печаткой. Откуда — не спрашивай. Сколько дашь?"
+    snapshot:
+      scene:
+        room: {id: room_square, name: "Площадь Брода", description: "Рыночная площадь у колодца, лотки под навесами."}
+        npcs:
+          - {id: npc_merchant, name: "Ферн Кривой", role: "торговец", template: commoner, attitude: friendly}
+      character:
+        underworld: "Ферн Кривой — скупщик: краденое за 40%; у героя краденое: Перстень с печаткой"
+    expect:
+      effects: {forbidden_kinds: [coins, take_item, give_item, fence]}
+    rubric:
+      - "Ферн отвечает как скупщик (понимающе, без лишних вопросов) и называет или подразумевает цену около 40% — сделка в окне «Торговать»"
+      - "Мастер не забирает перстень и не выдаёт монеты словами или эффектами"
+
   - id: condition_ghost_fear
     title: "Вопль призрака — страх со спасброском Мудрости"
     category: rules

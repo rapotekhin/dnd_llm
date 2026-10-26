@@ -25,6 +25,8 @@ signal shop_requested(mode: String, id: String)  # v0.7.29
 signal study_requested(npc_id: String)  # v0.7.30: "" — the hero's own courses
 signal bond_requested(npc_id: String)  # v0.7.31
 signal family_requested  # v0.7.32
+signal heist_requested  # v0.7.33
+signal org_requested(org_id: String)  # v0.7.33
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -126,6 +128,7 @@ func _rebuild() -> void:
 	_work_row(s, can_act)
 	_study_row(s, can_act)
 	_family_row(s, can_act)
+	_underworld_row(s, can_act)
 	_property_row(s)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
@@ -363,6 +366,19 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 				EventBus.message.emit(tr(err)), can_act and why.is_empty())
 		wd.name = "Wedding_" + id
 		wd.tooltip_text = tr(why) if not why.is_empty() else tr("BTN_WEDDING_TIP").format({"money": Money.format(FamilyRules.fee(Catalog.data, FamilyRules.officiant(s, Catalog.data, id)))})
+	if Catalog.data["rules"].has("underworld"):  # v0.7.33
+		for org: String in OrgRules.of_head(s, Catalog.data, id):
+			var ob := _flow(acts, tr("BTN_ORG"), org_requested.emit.bind(org), can_act)
+			ob.name = "Org_" + id
+			ob.tooltip_text = tr("BTN_ORG_HEAD_TIP").format({"org": OrgRules.org_name(s, Catalog.data, org)})
+		var rw := OrgRules.recruit_why(s, Catalog.data, id)
+		if not OrgRules.own(s, Catalog.data).is_empty() and not rw in ["ORG_NOT_FOR_HIM", "ORG_MEMBER"]:
+			var rb := _flow(acts, tr("BTN_RECRUIT"), func() -> void:
+				var err := GameState.org_act("recruit", id)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)), can_act and rw.is_empty())
+			rb.name = "Recruit_" + id
+			rb.tooltip_text = tr(rw).format({"at": int(OrgRules.cfg(Catalog.data)["recruit_bond"])}) if not rw.is_empty() else tr("BTN_RECRUIT_TIP")
 	var bo := _flow(acts, tr("BTN_BOND"), bond_requested.emit.bind(id), can_act)  # v0.7.31
 	bo.name = "Bond_" + id
 	bo.tooltip_text = tr("BTN_BOND_TIP").format({"name": n.get("name", id)})
@@ -712,6 +728,33 @@ func _family_row(s: GameSession, can_act: bool) -> void:
 	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	b.tooltip_text = tr("BTN_FAMILY_TIP")
+
+
+## The underworld (v0.7.33): «Дела» while a criminal job is on, «Братство» for the hero's organizations (or to found one
+## once the hero owns a place and has done a job).
+func _underworld_row(s: GameSession, can_act: bool) -> void:
+	if not Catalog.data["rules"].has("underworld"):
+		return
+	var mine := OrgRules.mine(s, Catalog.data)
+	var done := HeistRules.view(s.character).values().any(func(h: Dictionary) -> bool: return str(h.get("status", "")) == "done")
+	var founding := not (s.character.get("property", {}) as Dictionary).is_empty() and done
+	if HeistRules.active(s.character).is_empty() and mine.is_empty() and not founding:
+		return
+	var acts := HFlowContainer.new()
+	acts.name = "UnderworldActs"
+	_content.add_child(acts)
+	if not HeistRules.active(s.character).is_empty():
+		var h := _row_button(acts, tr("BTN_HEISTS"), heist_requested.emit, can_act)
+		h.name = "HeistButton"
+		h.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		h.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		h.tooltip_text = tr("BTN_HEISTS_TIP")
+	if not mine.is_empty() or founding:
+		var o := _row_button(acts, tr("BTN_ORG"), org_requested.emit.bind(mine[0] if not mine.is_empty() else ""), can_act)
+		o.name = "OrgButton"
+		o.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		o.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		o.tooltip_text = tr("BTN_ORG_TIP")
 
 
 ## Property (v0.7.27): «Имущество» when the hero owns a place or a beast; the window of the hero's places.

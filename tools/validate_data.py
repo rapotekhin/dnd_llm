@@ -163,6 +163,36 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     for jid, j in world.get("jobs", {}).items():
         if "diploma" in j.get("requires", {}) and j["requires"]["diploma"] not in world.get("courses", {}):
             errors.append(f"работа {jid}: requires.diploma — курс пака")
+    uw = game_rules["underworld"]
+    heists = world.get("heists", {})
+    for hid, h in heists.items():  # v0.7.33: criminal jobs
+        if h.get("kind") not in uw["kinds"] or h.get("target") not in rooms or not h.get("name"):
+            errors.append(f"дело {hid}: kind из {sorted(uw['kinds'])}, target — комната пака, нужно name")
+        if h.get("victim") and h["victim"] not in npcs:
+            errors.append(f"дело {hid}: victim — NPC пака")
+        bad = [x for x in list(h.get("items", {})) + list(h.get("cargo", {})) if x not in items]
+        if bad or h.get("dc_tier", "medium") not in uw["make_heist"]["dc_tiers"]:
+            errors.append(f"дело {hid}: items и cargo — вещи каталога ({bad}), dc_tier из {uw['make_heist']['dc_tiers']}")
+        if uw["kinds"].get(h.get("kind"), {}).get("cargo") and not h.get("cargo"):
+            errors.append(f"дело {hid}: контрабанде нужен cargo")
+        if h.get("law_location") and h["law_location"] not in world.get("locations", {}):
+            errors.append(f"дело {hid}: law_location — локация пака")
+    for oid, o in world.get("orgs", {}).items():  # v0.7.33: organizations
+        if o.get("head") not in npcs or not o.get("name"):
+            errors.append(f"организация {oid}: head — NPC пака, нужно name")
+        if o.get("hideout") and o["hideout"] not in world.get("sites", {}):
+            errors.append(f"организация {oid}: hideout — объект пака")
+        if o.get("fence") and "fence" not in npcs.get(o["fence"], {}):
+            errors.append(f"организация {oid}: fence — NPC пака с fence")
+        bad = [x for x in o.get("heists", []) + ([o["trial"]] if o.get("trial") else []) if x not in heists]
+        if bad:
+            errors.append(f"организация {oid}: heists и trial — дела пака ({bad})")
+        lo, hi = uw["orgs"]["cut_pct"]
+        if not lo <= o.get("cut_pct", 0) <= hi:
+            errors.append(f"организация {oid}: cut_pct от {lo} до {hi}")
+    for nid, n in npcs.items():
+        if "fence" in n and not (isinstance(n["fence"].get("buy_pct"), int) and 0 < n["fence"]["buy_pct"] <= 100):
+            errors.append(f"NPC {nid}: fence.buy_pct — число 1–100")
     for nid, n in npcs.items():
         bad = [m for m in n.get("animals", []) if m not in prop_cfg["animals"]]
         if bad:

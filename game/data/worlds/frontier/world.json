@@ -399,6 +399,16 @@
 				"to": 18
 			},
 			"public": true
+		},
+		"brod-den": {
+			"name": "Логово под мельницей",
+			"location_id": "brod",
+			"description": "Подвал под старой мельницей: сырые своды, лаз к реке, стол под фонарём и тюки краденого.",
+			"tags": [
+				"hideout"
+			],
+			"owner": "npc_guildhead",
+			"public": false
 		}
 	},
 	"rooms": {
@@ -1485,7 +1495,8 @@
 			"location_id": "brod",
 			"description": "Пыльный зал с жерновами, мешками из-под зерна и окном на застывшее колесо.",
 			"exits": [
-				"brod-gate"
+				"brod-gate",
+				"brod-den"
 			],
 			"npcs": [],
 			"hooks": [
@@ -1594,6 +1605,31 @@
 					"dc": 12,
 					"skill": "investigation",
 					"text": "под половицей в крайней каморке — шпаргалка с эльфийскими рунами и их переводом, кто-то готовился к уроку"
+				}
+			]
+		},
+		"brod-den": {
+			"name": "Логово под мельницей",
+			"indoor": true,
+			"location_id": "brod",
+			"site_id": "brod-den",
+			"public": false,
+			"description": "Под жерновами — люк и лестница в сырой подвал. Фонарь над столом, тюки под рогожей, лаз к реке, откуда тянет холодом.",
+			"exits": [
+				"brod-mill"
+			],
+			"npcs": [
+				"npc_guildhead"
+			],
+			"hooks": [
+				"на столе — кости и мелочь чужих кошельков",
+				"из лаза к реке тянет холодом и тиной"
+			],
+			"secrets": [
+				{
+					"id": "ledger",
+					"dc": 15,
+					"text": "Под половицей у стола — засаленная книжица Сыча: кто сколько принёс и кому из стражи у Северных ворот заплачено"
 				}
 			]
 		}
@@ -1856,6 +1892,9 @@
 				"genders": [
 					"female"
 				]
+			},
+			"fence": {
+				"buy_pct": 40
 			}
 		},
 		"npc_smith": {
@@ -2320,6 +2359,31 @@
 				"open": false,
 				"why": "вдовец, весь в учениках"
 			}
+		},
+		"npc_guildhead": {
+			"name": "Сыч",
+			"role": "глава Ночных крыс",
+			"race": "человек",
+			"gender": "male",
+			"age": "middle",
+			"build": "thin",
+			"description": "Немолодой человек в сером, с цепкими глазами и тихим голосом; на пальцах — следы старых ожогов.",
+			"personality": "говорит мало и вполголоса, ценит слово и долю; предателей не прощает",
+			"monster": "spy",
+			"tags": [
+				"underworld"
+			],
+			"likes": [
+				"jewelry",
+				"games"
+			],
+			"dislikes": [
+				"holy"
+			],
+			"romance": {
+				"open": false,
+				"why": "делу не мешают сердечные дела"
+			}
 		}
 	},
 	"items": {
@@ -2338,6 +2402,14 @@
 			"value_cp": 0,
 			"description": "Свиток с печатью Ольхового Брода: капитан Ратмир поручает предъявителю дознание о пропавших.",
 			"text": "«Предъявитель сего действует по поручению стражи Ольхового Брода. Оказывать содействие. — Ратмир, капитан северных ворот»."
+		},
+		"contraband_cask": {
+			"name": "Бочонок заречного вина",
+			"item_type": "gear",
+			"weight": 20,
+			"value_cp": 800,
+			"description": "Пузатый бочонок без клейма — пошлину за него никто не платил.",
+			"text": "Сургуч сбит, клейма нет: такой бочонок у ворот лучше не показывать."
 		}
 	},
 	"jobs": {
@@ -2612,6 +2684,67 @@
 			"lessons": 8,
 			"skill": "medicine",
 			"dc": 12
+		}
+	},
+	"orgs": {
+		"night_rats": {
+			"name": "Ночные крысы",
+			"kind": "criminal",
+			"head": "npc_guildhead",
+			"hideout": "brod-den",
+			"fence": "npc_merchant",
+			"cut_pct": 20,
+			"trial": "heist_townhall",
+			"heists": [
+				"heist_townhall",
+				"heist_convoy",
+				"heist_casks"
+			],
+			"description": "Воры и скупщики Ольхового Брода: держат лаз под мельницей и долю со всего, что уходит из города тайком."
+		}
+	},
+	"heists": {
+		"heist_townhall": {
+			"kind": "burglary",
+			"name": "Ночь в ратуше",
+			"giver": "npc_guildhead",
+			"org": "night_rats",
+			"target": "brod-townhall",
+			"victim": "npc_clerk",
+			"dc_tier": "medium",
+			"loot_cp": 1500,
+			"items": {
+				"signet_ring": 1
+			},
+			"text": "У писаря в конторке — подати за неделю и его печатка. Ночью в ратуше никого: дверь, замок, конторка."
+		},
+		"heist_convoy": {
+			"kind": "robbery",
+			"name": "Обоз на дороге к заставе",
+			"giver": "npc_guildhead",
+			"org": "night_rats",
+			"target": "outpost-road",
+			"victim_name": "возчик с обозом",
+			"dc_tier": "medium",
+			"loot_cp": 2500,
+			"items": {
+				"silver_ring": 1
+			},
+			"text": "Днём на разбитой дороге к заставе проходит обоз с жалованьем. Возчик один — напугать, взять кошель и уйти.",
+			"law_location": "brod"
+		},
+		"heist_casks": {
+			"kind": "smuggling",
+			"name": "Бочонки через ворота",
+			"giver": "npc_guildhead",
+			"org": "night_rats",
+			"target": "brod-gate",
+			"cargo": {
+				"contraband_cask": 2
+			},
+			"dc_tier": "medium",
+			"reward_cp": 2000,
+			"text": "Два бочонка заречного вина без пошлины — пронести мимо ополчения у Северных ворот."
 		}
 	}
 }

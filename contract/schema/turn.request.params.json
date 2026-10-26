@@ -278,6 +278,11 @@
           },
           "title": "Tools",
           "type": "array"
+        },
+        "underworld": {
+          "default": "",
+          "title": "Underworld",
+          "type": "string"
         }
       },
       "required": [

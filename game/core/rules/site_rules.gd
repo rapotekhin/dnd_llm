@@ -22,7 +22,8 @@ static func unwelcome(s: GameSession, data: Dictionary, room_id: String) -> Stri
 	var owner := str(world.site_of(room_id).get("owner", ""))
 	if owner.is_empty() or owner == OwnerRules.HERO or s.dead_npcs.has(owner) or s.followers.has(owner):  # v0.7.27: own place
 		return ""
-	if s.attitude(owner) >= int(cfg(data)["welcome_attitude"]) or StudyRules.student_room(s, data, room_id):  # v0.7.30: own dorm
+	if s.attitude(owner) >= int(cfg(data)["welcome_attitude"]) or StudyRules.student_room(s, data, room_id) \
+			or not OrgRules.hideout_of(s, data, room_id).is_empty():  # v0.7.30: own dorm; v0.7.33: own hideout
 		return ""
 	return owner
 

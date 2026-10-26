@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.64.0"
+PROTOCOL_VERSION = "0.65.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -278,6 +278,7 @@ class CharacterSheet(_In):
     study: str = ""  # 0.62.0: the hero's schools, courses with progress and misses, the teachers of the scene («Учёба (…): …»)
     bonds: str = ""  # 0.63.0: the hero's bonds with NPCs (kind, step, points, perks) and the romance of the scene's people
     family: str = ""  # 0.64.0: the engagement, the spouse and the home's hours, the children by age, upkeep, the heir
+    underworld: str = ""  # 0.65.0: known fences and stolen goods, the hero's criminal jobs, organizations and ranks
 
 
 class HistoryLine(_In):
@@ -970,6 +971,50 @@ class BondEffect(_Out):
     dislikes: list[str] = Field(default_factory=list, max_length=6)
 
 
+class FenceEffect(_Out):
+    """A fence the world lacks (0.65.0): «Горм, возьмёшь колечко, о котором лучше не спрашивать?». A trader of the
+    scene buys stolen goods at `buy_pct` of the value (25–50) and sells thieves' goods to the hero; a fence of the pack
+    that decided to trust the hero — `buy_pct` omitted. Selling is the trade window — the engine's act."""
+
+    kind: Literal["fence"] = "fence"
+    npc_id: str  # a trader of the scene
+    buy_pct: int | None = Field(default=None, ge=1, le=100)
+
+
+class HeistEffect(_Out):
+    """A criminal job from the player's plan or an NPC's offer (0.65.0): «обнесу склад торговца ночью», «Сыч, есть
+    дело?». `heist_kind` burglary (a place at night, `victim_npc` its owner), robbery (on a road by day, `victim_name`)
+    or smuggling (`cargo` — catalog ids carried past `target_room`); the loot and reward within the level's caps. The
+    job is the hero's at once; the preparations and the act are the buttons of the «Дела» window — the engine rolls."""
+
+    kind: Literal["heist"] = "heist"
+    heist_kind: Literal["burglary", "robbery", "smuggling"]
+    name: str = Field(max_length=60)
+    target_room: str  # a room of the world where the act is
+    victim_npc: str | None = None
+    victim_name: str = Field(default="", max_length=60)
+    giver_npc: str | None = None  # an NPC of the scene who gives the job
+    org_id: str | None = None  # the organization the job is for
+    loot_cp: int = Field(default=0, ge=0)
+    items: list[str] = Field(default_factory=list, max_length=2)
+    reward_cp: int = Field(default=0, ge=0)
+    cargo: list[str] = Field(default_factory=list, max_length=4)
+    dc_tier: Literal["easy", "medium", "hard"] = "medium"
+    text: str = Field(default="", max_length=300)
+
+
+class OrgEffect(_Out):
+    """An organization the world lacks (0.65.0): a thieves' band, a smugglers' ring, a guild around an NPC of the scene
+    as its head; the hideout is the scene when it is private. Joining, ranks, the cut and jobs are the buttons of the
+    «Братство» window."""
+
+    kind: Literal["org"] = "org"
+    npc_id: str  # the head, an NPC of the scene
+    name: str = Field(max_length=40)
+    org_kind: Literal["criminal", "guild"] = "criminal"
+    cut_pct: int | None = Field(default=None, ge=1, le=100)
+
+
 class SupplierEffect(_Out):
     """A wholesale supplier the world lacks (0.61.0): «Ведана, продашь мне травы оптом для моей лавки?». A scene NPC
     sells lots to a hero with the trade charter at `pct` of the value — its own goods or `goods` (catalog ids). The
@@ -1197,7 +1242,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect
