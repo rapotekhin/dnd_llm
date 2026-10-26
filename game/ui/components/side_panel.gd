@@ -23,6 +23,7 @@ signal property_requested(mode: String, npc_id: String)  # v0.7.27
 signal bank_requested(npc_id: String)  # v0.7.28
 signal shop_requested(mode: String, id: String)  # v0.7.29
 signal study_requested(npc_id: String)  # v0.7.30: "" — the hero's own courses
+signal bond_requested(npc_id: String)  # v0.7.31
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -324,7 +325,8 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 	_more(row, "More_" + id, key)
 	if _open != key:
 		return
-	var role := _line("%s · %s" % [n.get("role", ""), att], true)
+	var bw := BondRules.word(s.character, Catalog.data, id)  # v0.7.31
+	var role := _line("%s · %s%s" % [n.get("role", ""), att, (" · " + bw) if not bw.is_empty() else ""], true)
 	role.name = "Role_" + id
 	var acts := _acts("Acts_" + id)
 	var pk := _flow(acts, tr("BTN_POCKETS_SHORT"), pockets_requested.emit.bind(id), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
@@ -351,6 +353,9 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var lb := _flow(acts, tr("BTN_STUDY"), study_requested.emit.bind(id), can_act)
 		lb.name = "Study_" + id
 		lb.tooltip_text = tr("BTN_STUDY_TIP").format({"name": n.get("name", id)})
+	var bo := _flow(acts, tr("BTN_BOND"), bond_requested.emit.bind(id), can_act)  # v0.7.31
+	bo.name = "Bond_" + id
+	bo.tooltip_text = tr("BTN_BOND_TIP").format({"name": n.get("name", id)})
 	if BankRules.is_bank(s, Catalog.data, id):  # v0.7.28
 		var bb := _flow(acts, tr("BTN_BANK"), bank_requested.emit.bind(id), can_act)
 		bb.name = "Bank_" + id

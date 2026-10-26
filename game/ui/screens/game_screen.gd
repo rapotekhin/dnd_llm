@@ -32,6 +32,7 @@ var _property: PropertyPanel
 var _bank: BankPanel
 var _shop: ShopPanel
 var _study: StudyPanel
+var _bond: BondPanel
 var _prepare: SmallDialog
 var _mode_bar: HBoxContainer
 var _mode_label: Label
@@ -183,6 +184,7 @@ func _ready() -> void:
 	side.bank_requested.connect(func(npc: String) -> void: _bank.open(npc))  # v0.7.28
 	side.shop_requested.connect(func(mode: String, id: String) -> void: _shop.open(mode, id))  # v0.7.29
 	side.study_requested.connect(func(npc: String) -> void: _study.open(npc))  # v0.7.30
+	side.bond_requested.connect(func(npc: String) -> void: _bond.open(npc))  # v0.7.31
 	row.add_child(side)
 
 	_sheet = CharacterSheet.new()
@@ -268,6 +270,11 @@ func _ready() -> void:
 	_study.visible = false
 	add_child(_study)
 	_study.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_bond = BondPanel.new()  # v0.7.31
+	_bond.name = "BondView"
+	_bond.visible = false
+	add_child(_bond)
+	_bond.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_sheet.bag_requested.connect(func(bag: String) -> void: _container.open(bag))  # v0.7.18.2
 	_sheet.prepare_requested.connect(func() -> void:
 		_sheet.visible = false
@@ -298,7 +305,7 @@ func _ready() -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study]
+	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond]
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
@@ -425,6 +432,9 @@ func _refresh() -> void:
 		_partner_line.text = tr("PARTNER_LINE").format({"role": npc.get("role", ""), "race": npc.get("race", ""),
 			"body": BodyRules.npc_text(Catalog.data, s.npc_id, npc),
 			"attitude": tr("ATTITUDE_" + ("M%d" % -att if att < 0 else "P%d" % att if att > 0 else "0"))})
+		var bw := BondRules.word(s.character, Catalog.data, s.npc_id)  # v0.7.31
+		if not bw.is_empty():
+			_partner_line.text += " · " + bw
 		trade_toggle.visible = GameState.world().is_trader(s.npc_id)
 		trade_toggle.text = tr("BTN_TO_TALK" if s.mode == GameSession.MODE_TRADE else "BTN_TO_TRADE")
 		trade_toggle.disabled = busy or (s.mode != GameSession.MODE_TRADE and TimeRules.shops_closed(s, Catalog.data))

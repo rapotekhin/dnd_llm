@@ -251,6 +251,14 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             if not (set(tv) <= {"if_flag", "if_not_flag", "price_pct", "stock", "remove", "news"}) or not ({"if_flag", "if_not_flag"} & set(tv)):
                 errors.append(f"{where}: ключи if_flag / if_not_flag, price_pct, stock, remove, news")
             errors += [f"{where}: нет предмета {x}" for x in list(tv.get("stock", {})) + list(tv.get("remove", [])) if x not in items]
+        tastes = set(game_rules["bonds"]["tastes"])  # v0.7.31: a taste group or a catalog item
+        for key in ("likes", "dislikes"):
+            errors += [f"NPC {nid}: {key} — группа из {', '.join(sorted(tastes))} или предмет каталога, не {x}"
+                       for x in npc.get(key, []) if x not in tastes and x not in items]
+        rom = npc.get("romance")
+        if rom is not None and not (isinstance(rom, dict) and isinstance(rom.get("open"), bool)
+                                    and set(rom.get("genders", [])) <= set(game_rules["bonds"]["make"]["genders"])):
+            errors.append(f"NPC {nid}: romance — {{open: bool, genders: [male|female|other|any], why?}}")
         for key in ("wants", "shuns"):  # v0.7.17.1: demand by trade tags
             if key in npc and not (isinstance(npc[key], list) and all(isinstance(x, str) for x in npc[key])):
                 errors.append(f"NPC {nid}: {key} — список тегов (item_type, magic, scroll, tool или теги вещей)")

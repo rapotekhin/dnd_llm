@@ -1487,6 +1487,35 @@ func shop_act(what: String, id: String, arg: String = "", amount: int = 0) -> St
 
 
 ## Study (v0.7.30): exam (id — a school), enroll, lesson, drop (id — a course). "" or a localization key.
+## Bonds (v0.7.31): gift (item — the thing), confess, break, hide. Allowed in a talk too. "" or a localization key.
+func bond_act(what: String, npc_id: String, item: String = "") -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+		return "PROPERTY_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var why := ""
+	match what:
+		"gift": why = BondRules.gift_why(s, data, npc_id, item)
+		"confess": why = BondRules.confess_why(s, data, npc_id)
+		"break": why = BondRules.break_why(s, data, npc_id)
+		"hide": why = BondRules.hide_why(s, data, npc_id)
+		_: why = "PROPERTY_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	match what:
+		"gift": lines = BondRules.gift(s, data, npc_id, item)
+		"confess": lines = BondRules.confess(s, data, npc_id)
+		"break": lines = BondRules.break_off(s, data, npc_id)
+		"hide": lines = BondRules.hide(s, data, npc_id)
+	CharacterRules.refresh(s.character, data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	return ""
+
+
 func study_act(what: String, id: String) -> String:
 	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
 		return "PROPERTY_NOT_NOW"

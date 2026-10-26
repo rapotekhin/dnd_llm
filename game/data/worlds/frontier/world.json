@@ -1635,7 +1635,20 @@
 			"services": [
 				"meal"
 			],
-			"wholesale": {}
+			"wholesale": {},
+			"likes": [
+				"drink",
+				"food"
+			],
+			"dislikes": [
+				"weapons"
+			],
+			"romance": {
+				"open": true,
+				"genders": [
+					"female"
+				]
+			}
 		},
 		"npc_serving": {
 			"name": "Мира",
@@ -1654,7 +1667,22 @@
 					"to": 6,
 					"room": "brod-tavern-upstairs"
 				}
-			]
+			],
+			"likes": [
+				"jewelry",
+				"finery",
+				"music"
+			],
+			"dislikes": [
+				"herbs"
+			],
+			"romance": {
+				"open": true,
+				"genders": [
+					"male",
+					"female"
+				]
+			}
 		},
 		"npc_veteran": {
 			"name": "Старый Орвин",
@@ -1680,7 +1708,18 @@
 					"text": "Орвин вспоминает: коменданта заставы похоронили в склепе под часовней, в нише со знаком пламени — если он поднялся, то оттуда",
 					"reveals": "outpost-crypt:niche"
 				}
-			]
+			],
+			"likes": [
+				"drink",
+				"weapons"
+			],
+			"dislikes": [
+				"magic"
+			],
+			"romance": {
+				"open": false,
+				"why": "старик живёт памятью о заставе"
+			}
 		},
 		"npc_mercenary": {
 			"name": "Кейра",
@@ -1692,7 +1731,20 @@
 			"monster": "scout",
 			"tags": [
 				"military"
-			]
+			],
+			"likes": [
+				"weapons",
+				"tools"
+			],
+			"dislikes": [
+				"finery"
+			],
+			"romance": {
+				"open": true,
+				"genders": [
+					"male"
+				]
+			}
 		},
 		"npc_cook": {
 			"name": "Тук",
@@ -1719,7 +1771,18 @@
 					"text": "Тук признаётся: ночами в погребе скребётся что-то из-за дальних бочек — там старый лаз контрабандистов к реке; он заставил его бочками и поставил засов",
 					"reveals": "brod-tavern-cellar:tunnel"
 				}
-			]
+			],
+			"likes": [
+				"food",
+				"herbs"
+			],
+			"dislikes": [
+				"weapons"
+			],
+			"romance": {
+				"open": false,
+				"why": "женат"
+			}
 		},
 		"npc_merchant": {
 			"name": "Ферн Кривой",
@@ -1779,7 +1842,21 @@
 					"room": ""
 				}
 			],
-			"wholesale": {}
+			"wholesale": {},
+			"likes": [
+				"jewelry",
+				"magic",
+				"games"
+			],
+			"dislikes": [
+				"holy"
+			],
+			"romance": {
+				"open": true,
+				"genders": [
+					"female"
+				]
+			}
 		},
 		"npc_smith": {
 			"name": "Гуннар Тяжёлая Рука",
@@ -1846,7 +1923,18 @@
 					"room": ""
 				}
 			],
-			"wholesale": {}
+			"wholesale": {},
+			"likes": [
+				"tools",
+				"drink"
+			],
+			"dislikes": [
+				"finery"
+			],
+			"romance": {
+				"open": false,
+				"why": "вдовец, верен памяти жены"
+			}
 		},
 		"npc_herbalist": {
 			"name": "Ведана",
@@ -1913,7 +2001,20 @@
 			"services": [
 				"herbal_cure",
 				"teach_healing_potion"
-			]
+			],
+			"likes": [
+				"herbs",
+				"books"
+			],
+			"dislikes": [
+				"drink"
+			],
+			"romance": {
+				"open": true,
+				"genders": [
+					"male"
+				]
+			}
 		},
 		"npc_priestess": {
 			"name": "Сестра Илва",
@@ -1946,7 +2047,18 @@
 				"identify",
 				"remove_curse",
 				"cure_disease"
-			]
+			],
+			"likes": [
+				"holy",
+				"books"
+			],
+			"dislikes": [
+				"weapons"
+			],
+			"romance": {
+				"open": false,
+				"why": "обет служения"
+			}
 		},
 		"npc_captain": {
 			"name": "Капитан Ратмир",
@@ -1966,7 +2078,18 @@
 					"to": 21,
 					"room": "brod-tavern-hall"
 				}
-			]
+			],
+			"likes": [
+				"weapons",
+				"drink"
+			],
+			"dislikes": [
+				"jewelry"
+			],
+			"romance": {
+				"open": false,
+				"why": "женат, семья ждёт его в столице"
+			}
 		},
 		"npc_hermit": {
 			"name": "Мох",
@@ -1978,7 +2101,19 @@
 			"monster": "druid",
 			"tags": [
 				"commoner"
-			]
+			],
+			"likes": [
+				"herbs",
+				"food"
+			],
+			"dislikes": [
+				"weapons",
+				"jewelry"
+			],
+			"romance": {
+				"open": false,
+				"why": "отшельник"
+			}
 		},
 		"npc_prospector": {
 			"name": "Дрогин",
@@ -2005,7 +2140,18 @@
 					"text": "Дрогин признаётся: крепь в галерее подпилили задолго до обвала — обвал устроили нарочно, чтобы закрыть старую выработку",
 					"reveals": "mine-gallery:sabotage"
 				}
-			]
+			],
+			"likes": [
+				"tools",
+				"drink"
+			],
+			"dislikes": [
+				"books"
+			],
+			"romance": {
+				"open": false,
+				"why": "думает только о жиле"
+			}
 		},
 		"npc_sick_pilgrim": {
 			"name": "Тодор",
@@ -2025,7 +2171,18 @@
 					"to": 7,
 					"room": ""
 				}
-			]
+			],
+			"likes": [
+				"holy",
+				"food"
+			],
+			"dislikes": [
+				"drink"
+			],
+			"romance": {
+				"open": false,
+				"why": "паломник по обету"
+			}
 		},
 		"npc_clerk": {
 			"name": "Тихон Перо",
@@ -2045,7 +2202,20 @@
 					"to": 8,
 					"room": ""
 				}
-			]
+			],
+			"likes": [
+				"books"
+			],
+			"dislikes": [
+				"drink",
+				"games"
+			],
+			"romance": {
+				"open": true,
+				"genders": [
+					"female"
+				]
+			}
 		},
 		"npc_drover": {
 			"name": "Остап",
@@ -2070,7 +2240,18 @@
 					"to": 8,
 					"room": ""
 				}
-			]
+			],
+			"likes": [
+				"drink",
+				"food"
+			],
+			"dislikes": [
+				"books"
+			],
+			"romance": {
+				"open": false,
+				"why": "женат"
+			}
 		},
 		"npc_changer": {
 			"name": "Ефим Весов",
@@ -2090,7 +2271,17 @@
 					"to": 8,
 					"room": ""
 				}
-			]
+			],
+			"likes": [
+				"jewelry"
+			],
+			"dislikes": [
+				"music"
+			],
+			"romance": {
+				"open": false,
+				"why": "женат"
+			}
 		},
 		"npc_teacher": {
 			"name": "Аверкий Строгов",
@@ -2117,7 +2308,18 @@
 					"to": 8,
 					"room": ""
 				}
-			]
+			],
+			"likes": [
+				"books"
+			],
+			"dislikes": [
+				"drink",
+				"games"
+			],
+			"romance": {
+				"open": false,
+				"why": "вдовец, весь в учениках"
+			}
 		}
 	},
 	"items": {

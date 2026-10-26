@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.62.0"
+PROTOCOL_VERSION = "0.63.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -276,6 +276,7 @@ class CharacterSheet(_In):
     bank: str = ""  # 0.60.0: the hero's deposits, loans and vaults, the banks of the scene («Банк (…): …»)
     shop: str = ""  # 0.61.0: the hero's charters, shelves and merchant's name, the suppliers of the scene («Своя торговля (…): …»)
     study: str = ""  # 0.62.0: the hero's schools, courses with progress and misses, the teachers of the scene («Учёба (…): …»)
+    bonds: str = ""  # 0.63.0: the hero's bonds with NPCs (kind, step, points, perks) and the romance of the scene's people
 
 
 class HistoryLine(_In):
@@ -952,6 +953,22 @@ class CourseEffect(_Out):
     dc_tier: Literal["easy", "medium", "hard"] = "medium"
 
 
+class BondEffect(_Out):
+    """A scene that moved a bond (0.63.0): a heart-to-heart, a shared danger, a slight. `delta` ±10 at most, once a day
+    per NPC, with the `reason`; `kind` mentor when the NPC took the hero under its wing (romance only by the player's
+    «Признаться» button). For an NPC the master made — `romance` {open, genders, why} and `likes` / `dislikes` (taste
+    groups of the rules or catalog ids). Gifts and deeds move the bond by the engine."""
+
+    kind: Literal["bond"] = "bond"
+    npc_id: str  # an NPC of the scene
+    delta: int = Field(default=0, ge=-10, le=10)
+    reason: str = Field(default="", max_length=80)
+    bond_kind: Literal["friend", "mentor"] | None = None
+    romance: dict | None = None
+    likes: list[str] = Field(default_factory=list, max_length=6)
+    dislikes: list[str] = Field(default_factory=list, max_length=6)
+
+
 class SupplierEffect(_Out):
     """A wholesale supplier the world lacks (0.61.0): «Ведана, продашь мне травы оптом для моей лавки?». A scene NPC
     sells lots to a hero with the trade charter at `pct` of the value — its own goods or `goods` (catalog ids). The
@@ -1179,7 +1196,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

@@ -173,6 +173,8 @@ static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array
 			s.remember(id, (str(kind["memory"]).format({"victim": _name(data, victim)})) if kind.has("memory") else
 				("знает: герой напал на %s" % _name(data, victim)) if _assault(crime) else
 				("знает: %s убит%s героем" % [_name(data, victim), _ending(data, victim)]))
+	if _assault(crime):
+		lines.append_array(BondRules.on_deed(s, data, victim, "assault", "нападение"))  # v0.7.31
 	var share := int(kind.get("reputation_share", 2 if _assault(crime) else 1))
 	if share > 0:
 		lines.append_array(ReputationRules.add(s, data, loc, int(ReputationRules.cfg(data)["points"]["crime_known"]) / share, what))  # v0.7.17
@@ -294,7 +296,7 @@ static func shunned_by(s: GameSession, data: Dictionary, npc_id: String) -> bool
 	for rid: String in rooms:
 		if (rooms[rid].get("npcs", []) as Array).has(npc_id):
 			loc = str(rooms[rid].get("location_id", ""))
-	return s.wanted.has(loc)
+	return s.wanted.has(loc) and not BondRules.close(s, data, npc_id)  # v0.7.31: a close friend serves the wanted
 
 
 ## The guard holds the hero in this room: a guard NPC of the law is here, or a patrol finds the hero after
@@ -395,14 +397,17 @@ static func held(s: GameSession) -> bool:
 ## The wergild for the unsettled known crimes of the location: fine_cp each, ×notable_mult for notable victims.
 static func fine(s: GameSession, data: Dictionary, loc: String) -> int:
 	var total := 0
+	var debts := 0
 	for crime: Dictionary in _open(s, loc):
 		if crime.has("fine_cp"):  # a debt's wergild is the debt (v0.7.28)
-			total += int(crime["fine_cp"])
+			debts += int(crime["fine_cp"])
 			continue
 		var tags: Array = WorldView.new(data["world"]).npc(str(crime["victim"])).get("tags", [])
 		var notable := tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(t))
 		total += int(kind_of(data, crime).get("fine_cp", cfg(data)["fine_cp"])) * (int(cfg(data)["notable_mult"]) if notable else 1)
-	return total
+	if not BondRules.intercessor(s, data, loc).is_empty():  # v0.7.31: a friend of the law speaks for the hero
+		total = total * int(BondRules.cfg(data)["perks"]["intercede"]["fine_pct"]) / 100
+	return total + debts
 
 
 ## The weight of the open crimes of the location for the sentence and the talk (v0.7.22.16): the sum of their kinds.
@@ -434,6 +439,8 @@ static func sentence(s: GameSession, data: Dictionary, loc: String) -> Dictionar
 		if tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(t)):
 			severity += 1
 			break
+	if not BondRules.intercessor(s, data, loc).is_empty():
+		severity -= int(BondRules.cfg(data)["perks"]["intercede"]["severity"])
 	var out: Dictionary = cfg(data)["sentences"][0]
 	for sn: Dictionary in cfg(data)["sentences"]:
 		if severity >= int(sn["severity"]):

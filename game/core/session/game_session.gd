@@ -227,7 +227,7 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 			contents[it] = int(c["bags"][id]["contents"][it])
 		bags[id] = {"kind": str(c["bags"][id].get("kind", "")), "contents": contents}
 	c["bags"] = bags
-	for k: String in ["fresh", "study"]:  # v0.7.25 food batches, v0.7.30 study: whole numbers only
+	for k: String in ["fresh", "study", "bonds"]:  # v0.7.25 food batches, v0.7.30 study, v0.7.31 bonds: whole numbers only
 		if c.has(k):
 			c[k] = _whole(c[k])
 	c["conditions"] = c.get("conditions", [])

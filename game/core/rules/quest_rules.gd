@@ -303,6 +303,7 @@ static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -
 		lines.append("Задание выполнено: %s" % q["title"])
 		lines.append_array(ReputationRules.add(s, data, ReputationRules.home_of(data, giver),
 			int(ReputationRules.cfg(data)["points"]["quest_done"]), "задание «%s»" % q["title"]))  # v0.7.17
+		lines.append_array(BondRules.on_deed(s, data, giver, "quest_done", "задание"))  # v0.7.31
 	else:
 		s.quests_active[quest_id] = i + 1
 		lines.append("Цель: %s" % q["steps"][i + 1]["text"])

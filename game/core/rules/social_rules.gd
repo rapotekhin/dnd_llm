@@ -173,7 +173,7 @@ static func deal_text(s: GameSession, data: Dictionary, npc_id: String) -> Strin
 
 ## The NPC will not talk or trade with the hero (attitude at rules.social.thresholds.refuse_at or below).
 static func refuses(s: GameSession, data: Dictionary, npc_id: String) -> bool:
-	return s.attitude(npc_id) <= int(cfg(data)["thresholds"]["refuse_at"])
+	return s.attitude(npc_id) <= int(cfg(data)["thresholds"]["refuse_at"]) or BondRules.enemy(s.character, data, npc_id)  # v0.7.31
 
 
 ## The NPC offers help by itself (attitude at eager_at or above).

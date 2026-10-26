@@ -267,6 +267,8 @@ static func rest_place(world: Dictionary, room_id: String, s: GameSession = null
 	var room: Dictionary = SceneRules.room(s, world, room_id)  # a variant may make it safe (v0.7.14.1)
 	var free := s != null and not data.is_empty() and BackgroundRules.free_rest(s, data, room)
 	var safe: Variant = room.get("safe")
+	if s != null and not data.is_empty() and not BondRules.host(s, data, room_id).is_empty():  # v0.7.31: a friend's bed
+		return {"cost_cp": 0, "free": true, "host": BondRules.host(s, data, room_id)}
 	if not (safe is Dictionary):
 		return {"cost_cp": 0, "free": true} if free and (room.get("tags", []) as Array).has("temple") else {}
 	return {"cost_cp": 0 if free else int(safe.get("rest_cost_cp", 0)), "free": free}

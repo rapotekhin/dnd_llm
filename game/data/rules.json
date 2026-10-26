@@ -423,6 +423,46 @@
 		"kinds": {"skill": "навык", "tool": "инструмент", "language": "язык", "spell": "заклинание", "recipe": "рецепт", "xp": "опыт"},
 		"make": {"kinds": ["skill", "tool", "language", "spell", "recipe"], "lessons": [2, 10], "dc_tiers": ["easy", "medium", "hard"], "fee_cp_lesson": [0, 500], "max_spell_level": 2}
 	},
+	"bonds": {
+		"_doc": "Bonds with NPCs (v0.7.31, BondRules): points per NPC in range; the kind (friend, romance after a confession, mentor after a course) names the steps, points below zero — a rival, an enemy. Points come from gifts by taste (one a day), the master's scenes (`bond`, ±scene.max_delta once a day) and the engine's deeds; perks go by points whatever the kind.",
+		"range": [-100, 150],
+		"kinds": {
+			"friend": {"name": "дружба", "steps": [{"at": 10, "name": "знакомый"}, {"at": 30, "name": "приятель"}, {"at": 60, "name": "друг"}, {"at": 100, "name": "близкий друг"}]},
+			"romance": {"name": "романтика", "steps": [{"at": 0, "name": "ухаживание"}, {"at": 70, "name": "влюблённость"}, {"at": 110, "name": "пара"}]},
+			"mentor": {"name": "наставничество", "steps": [{"at": 0, "name": "учитель"}, {"at": 40, "name": "наставник"}, {"at": 80, "name": "старший друг"}]}
+		},
+		"hostile": [{"at": -20, "name": "соперник"}, {"at": -60, "name": "враг"}],
+		"gift": {"liked": 10, "disliked": -8, "attitude_liked": 1, "neutral": [{"value_cp": 0, "points": 1}, {"value_cp": 100, "points": 2}, {"value_cp": 1000, "points": 4}, {"value_cp": 5000, "points": 6}]},
+		"deeds": {"quest_done": 10, "theft_caught": -15, "assault": -40, "graduate": 20},
+		"scene": {"max_delta": 10},
+		"confess": {"at": 40, "skill": "persuasion", "tier": "medium", "success": 10, "fail": -10, "cooldown_days": 7},
+		"break": {"points": -30},
+		"romance": {"closed_tags": ["clergy"]},
+		"perks": {
+			"discount": [{"at": 30, "pct": 5}, {"at": 60, "pct": 10}, {"at": 100, "pct": 15}],
+			"service_pct": [{"at": 30, "pct": 80}, {"at": 60, "pct": 50}, {"at": 100, "pct": 0}],
+			"lodge_at": 60,
+			"hide": {"at": 60, "minutes": 720, "cooldown_days": 3},
+			"intercede": {"at": 60, "tags": ["military", "registry", "clergy", "bank", "school"], "fine_pct": 50, "severity": 1},
+			"mentor_fee": [{"at": 0, "pct": 90}, {"at": 40, "pct": 75}, {"at": 80, "pct": 50}],
+			"rival_buy_pct": 115
+		},
+		"tastes": {
+			"food": {"name": "еда", "food": true},
+			"drink": {"name": "выпивка", "ids": ["ale", "goat_milk"]},
+			"books": {"name": "книги", "ids": ["book", "elvish_primer", "field_medic_manual", "herbalist_notes", "spellbook", "paper_one_sheet", "ink_1_ounce_bottle"]},
+			"jewelry": {"name": "украшения", "ids": ["amulet", "silver_ring", "signet_ring", "crystal", "mirror_steel"], "types": ["treasure"]},
+			"finery": {"name": "наряды и духи", "ids": ["clothes_fine", "clothes_costume", "perfume_vial", "soap"]},
+			"music": {"name": "музыка", "ids": ["lute", "lyre", "flute", "pan_flute", "drum", "dulcimer", "bagpipes", "shawm", "horn"]},
+			"weapons": {"name": "оружие", "types": ["weapon"]},
+			"tools": {"name": "инструменты", "has": "tool"},
+			"herbs": {"name": "травы", "ids": ["herbs", "herbal_remedy", "herbalism_kit", "sprig_of_mistletoe", "goodberry"]},
+			"holy": {"name": "святыни", "ids": ["holy_water", "block_of_incense", "censer", "reliquary", "emblem"]},
+			"magic": {"name": "магия", "types": ["wondrous"]},
+			"games": {"name": "игры", "ids": ["dice_set", "playing_card_set"]}
+		},
+		"make": {"kinds": ["friend", "mentor"], "genders": ["male", "female", "other", "any"]}
+	},
 	"world_gen": {
 		"_reach": "Where the master may grow a place (v0.7.22.22-pre, the author): on an open edge of any room of the hero's location, of the locations one exit away from it and of every location the hero has been to — not only of the room the hero stands in. find_places lists these edges; create_place names its room (`room_id`). The hero does not go there by it.",
 		"edge_reach": {"neighbours": true, "visited": true},

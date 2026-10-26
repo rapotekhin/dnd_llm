@@ -318,6 +318,11 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if co.has("reason"):
 				return {"reason": co["reason"]}
 			return co
+		"bond":  # v0.7.31: a scene moved the bond with an NPC of the scene
+			var bo := BondRules.make(s, data, e)
+			if bo.has("reason"):
+				return {"reason": bo["reason"]}
+			return bo
 		"supplier":  # v0.7.29: a scene NPC sells wholesale to a charter holder
 			var sup := ShopRules.make(s, data, e)
 			if sup.has("reason"):
@@ -937,6 +942,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(StudyRules.apply_make(s, _data, plan))
 		"supplier":
 			_extra_lines.append_array(ShopRules.apply_make(s, _data, plan))
+		"bond":
+			_extra_lines.append_array(BondRules.apply_make(s, _data, plan))
 		"bank":
 			_extra_lines.append_array(BankRules.apply_make(s, _data, plan, str(_made.get("npc", ""))))
 		"use_feature":

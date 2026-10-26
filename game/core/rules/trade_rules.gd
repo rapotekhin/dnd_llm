@@ -134,6 +134,7 @@ static func buy_price(s: GameSession, data: Dictionary, npc_id: String, item_id:
 	var off := SocialRules.discount(s, npc_id)  # a discount by words (v0.7.15.2)
 	if off > 0:
 		price = ceili(price * (100 - off) / 100.0)
+	price = ceili(price * BondRules.buy_pct(s, data, npc_id) / 100.0)  # v0.7.31: a friend's discount, a rival's markup
 	price = ceili(price * float(DevelopmentRules.effect(s.character, data, "trade", "buy_pct", 100.0)) / 100.0)  # v0.7.19.1
 	return maxi(1, price)
 
@@ -484,7 +485,7 @@ static func services(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 		var def := service_def(data, str(id))
 		if def.is_empty():
 			continue
-		var cost := int(def["cost_cp"])
+		var cost := BondRules.service_cost(s, data, npc_id, int(def["cost_cp"]))  # v0.7.31
 		var why := ""
 		if CrimeRules.shunned_by(s, data, npc_id):  # v0.7.22.18 (#30): a murderer gets no service either
 			why = "SHOP_CLOSED_WANTED"
@@ -548,7 +549,7 @@ static func enchantable(s: GameSession, data: Dictionary, def: Dictionary) -> Ar
 static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: String, item: String = "", free: bool = false) -> Array[String]:
 	var c := s.character
 	var sv := service_def(data, id)
-	var cost := 0 if free else int(sv["cost_cp"])
+	var cost := 0 if free else BondRules.service_cost(s, data, npc_id, int(sv["cost_cp"]))
 	c["gold_cp"] = int(c["gold_cp"]) - cost
 	var lines: Array[String] = ["Услуга даром" if free else "Услуга: −%s" % Money.format(cost)]
 	match str(sv["op"]):

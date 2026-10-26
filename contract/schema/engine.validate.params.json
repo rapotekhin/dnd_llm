@@ -138,6 +138,85 @@
       "title": "BankEffect",
       "type": "object"
     },
+    "BondEffect": {
+      "additionalProperties": false,
+      "description": "A scene that moved a bond (0.63.0): a heart-to-heart, a shared danger, a slight. `delta` ±10 at most, once a day\nper NPC, with the `reason`; `kind` mentor when the NPC took the hero under its wing (romance only by the player's\n«Признаться» button). For an NPC the master made — `romance` {open, genders, why} and `likes` / `dislikes` (taste\ngroups of the rules or catalog ids). Gifts and deeds move the bond by the engine.",
+      "properties": {
+        "bond_kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "friend",
+                "mentor"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bond Kind"
+        },
+        "delta": {
+          "default": 0,
+          "maximum": 10,
+          "minimum": -10,
+          "title": "Delta",
+          "type": "integer"
+        },
+        "dislikes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Dislikes",
+          "type": "array"
+        },
+        "kind": {
+          "const": "bond",
+          "default": "bond",
+          "title": "Kind",
+          "type": "string"
+        },
+        "likes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Likes",
+          "type": "array"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "reason": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Reason",
+          "type": "string"
+        },
+        "romance": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Romance"
+        }
+      },
+      "required": [
+        "npc_id"
+      ],
+      "title": "BondEffect",
+      "type": "object"
+    },
     "CastEffect": {
       "additionalProperties": false,
       "description": "The player casts a spell (0.6.0): the engine checks it is ready and spends the slot.",
@@ -3187,6 +3266,7 @@
           "accept_quest": "#/$defs/AcceptQuestEffect",
           "advance_time": "#/$defs/AdvanceTimeEffect",
           "bank": "#/$defs/BankEffect",
+          "bond": "#/$defs/BondEffect",
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
@@ -3283,6 +3363,9 @@
         },
         {
           "$ref": "#/$defs/CourseEffect"
+        },
+        {
+          "$ref": "#/$defs/BondEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"

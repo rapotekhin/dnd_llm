@@ -1343,3 +1343,40 @@ STUDY_NO_MONEY,Не хватает денег на учёбу
 STUDY_NO_BOOK,Книги при вас нет
 STUDY_NOT_ENROLLED,Вы не записаны на этот курс
 STUDY_DONE_TODAY,Сегодня занятие уже было — приходите завтра
+BTN_BOND,Связь
+BTN_BOND_TIP,"Связь с {name}: близость, подарки, признание"
+BOND_TITLE,Связь
+BOND_TITLE_AT,Связь: {name}
+BOND_NO_STEP,без ступени
+BOND_POINTS,близость {n}
+BOND_GIVES,Что даёт: {list}
+BOND_GIVES_NOTHING,"Пока ничего: близость растёт от подарков по вкусу, сделанных для человека дел и добрых разговоров"
+BOND_LIKES,Любит: {list}
+BOND_DISLIKES,Не любит: {list}
+BOND_TASTES_UNKNOWN,Вкусы пока неизвестны — узнаются по подаркам
+BOND_ROMANCE_ON,Роман: вы вместе
+BOND_ROMANCE_CLOSED_WHY,Роман невозможен: {why}
+BOND_CONFESS_HINT,"Признаться можно с близости {at}: Убеждение, Сл {dc}, шанс {chance}%"
+BTN_BOND_CONFESS,Признаться
+BTN_BOND_BREAK,Расстаться
+BTN_BOND_HIDE,Укрыться
+BTN_BOND_HIDE_TIP,Друг спрячет героя: стража не найдёт его в этой местности полдня
+BOND_GIFT_HEADING,Подарить
+BTN_BOND_GIFT,Подарить
+BOND_TASTE_LIKED,по душе
+BOND_TASTE_DISLIKED,не по душе
+BOND_NOT_HERE,Человека нет рядом
+BOND_IN_COMBAT,Не в бою
+BOND_REFUSES,Не хочет иметь с героем дела
+BOND_GIFT_TODAY,Сегодня подарок уже был — следующий завтра
+BOND_GIFT_NONE,Нечего подарить: вещи на себе и проклятые не дарят
+BOND_ROMANCE_ALREADY,Вы уже вместе
+BOND_ROMANCE_CLOSED,Роман с этим человеком невозможен
+BOND_HAS_PARTNER,У героя уже есть пара — сначала расстаться
+BOND_TOO_EARLY,Рано: нужна близость побольше
+BOND_CONFESS_COOLDOWN,После отказа нужно подождать неделю
+BOND_NO_ROMANCE,Романа нет
+BOND_NOT_CLOSE,Прятать героя станет только друг
+BOND_NOT_WANTED,Героя здесь не ищут
+BOND_HELD,Не сейчас: стража рядом или идёт бой
+BOND_HIDE_COOLDOWN,Этот друг уже прятал героя — не чаще раза в три дня

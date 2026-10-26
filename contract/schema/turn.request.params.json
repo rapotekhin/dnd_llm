@@ -53,6 +53,11 @@
           "title": "Body",
           "type": "string"
         },
+        "bonds": {
+          "default": "",
+          "title": "Bonds",
+          "type": "string"
+        },
         "cantrips": {
           "items": {
             "type": "string"

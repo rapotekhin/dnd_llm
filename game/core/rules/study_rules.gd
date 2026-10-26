@@ -265,7 +265,9 @@ static func fee(s: GameSession, data: Dictionary, id: String) -> int:
 	var sid := str(co.get("school", ""))
 	if not sid.is_empty() and bool(school_state(s.character).get(sid, {}).get("stipend", false)):
 		return 0
-	return roundi(int(co.get("fee_cp", 0)) * float(DevelopmentRules.effect(s.character, data, "study", "fee_pct", 100.0)) / 100.0)
+	var who := str(co.get("teacher", school(data, sid).get("head", "") if not sid.is_empty() else ""))
+	return roundi(int(co.get("fee_cp", 0)) * float(DevelopmentRules.effect(s.character, data, "study", "fee_pct", 100.0)) / 100.0
+		* BondRules.mentor_fee_pct(s, data, who) / 100.0)  # v0.7.31: a mentor asks less
 
 
 static func lessons_needed(s: GameSession, data: Dictionary, id: String) -> int:
@@ -471,6 +473,8 @@ static func graduate(s: GameSession, data: Dictionary, id: String) -> Array[Stri
 		s.items[doc["id"]] = doc
 		ItemRules.found(c, data, s.items, doc["id"], 1)
 		lines.append("Грамота выпускника — в вещах")
+	if co.has("teacher"):
+		lines.append_array(BondRules.mentor(s, data, str(co["teacher"])))  # v0.7.31
 	view(c)["courses"].erase(id)
 	(view(c)["done"] as Array).append(id)
 	lines.append_array(_dorm_close(s, data, sid))
