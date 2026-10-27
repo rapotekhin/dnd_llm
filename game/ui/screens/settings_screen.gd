@@ -17,6 +17,9 @@ var _ca: LineEdit
 var _check_status: Label
 var _model: OptionButton
 var _provider: OptionButton
+var _images_on: CheckBox  # v0.7.35: the brush
+var _image_model: OptionButton
+var _image_ids: Array[String] = []
 var _provider_tags: Array = []
 var _provider_sort: OptionButton
 ## The provider list's orders (v0.7.34.1): «ours» — the server's picks for «Авто» first, then the server's ranking.
@@ -292,8 +295,9 @@ func _master_tab() -> Control:
 	_provider.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_provider.item_selected.connect(_on_provider_selected)
 	box.add_child(_provider)
-	_fill_models()
 	_budget_row(box)
+	_images_row(box)
+	_fill_models()
 	var rx_label := Label.new()  # v0.7.10: reactions in a fight, as in Baldur's Gate 3
 	rx_label.text = "OPT_REACTIONS"
 	rx_label.theme_type_variation = UiTheme.MUTED_LABEL
@@ -341,6 +345,54 @@ func _master_tab() -> Control:
 		needs.toggled.connect(GameState.set_needs)
 		box.add_child(needs)
 	return scroll
+
+
+## The brush (v0.7.35): on or off, and the image model with its price per image; the images count in the day's limit.
+func _images_row(box: VBoxContainer) -> void:
+	var label := Label.new()
+	label.text = "OPT_IMAGES"
+	label.theme_type_variation = UiTheme.MUTED_LABEL
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(label)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	box.add_child(row)
+	_images_on = CheckBox.new()
+	_images_on.name = "ImagesOn"
+	_images_on.text = "OPT_IMAGES_ON"
+	_images_on.button_pressed = SaveManager.images_on
+	_images_on.toggled.connect(func(on: bool) -> void:
+		SaveManager.images_on = on
+		SaveManager.save_settings()
+		_image_model.disabled = not on or _image_ids.size() < 2)
+	row.add_child(_images_on)
+	_image_model = OptionButton.new()
+	_image_model.name = "ImageModelOption"
+	_image_model.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_image_model.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_image_model.item_selected.connect(func(i: int) -> void:
+		SaveManager.image_model = _image_ids[i]
+		SaveManager.save_settings())
+	row.add_child(_image_model)
+
+
+func _fill_image_models() -> void:
+	if _image_model == null:
+		return
+	_image_model.clear()
+	_image_ids = []
+	var default_id := Backend.default_image_model()
+	for m: Variant in Backend.image_models():
+		if m is Dictionary:
+			var id := str(m.get("id", ""))
+			_image_ids.append("" if id == default_id else id)
+			_image_model.add_item(tr("OPT_IMAGE_MODEL").format({"name": m.get("name", id), "price": "%.3f" % float(m.get("usd_per_image", 0))})
+				+ (tr("OPT_IMAGE_MODEL_DEFAULT") if id == default_id else ""))
+	if _image_ids.is_empty():
+		_image_ids.append("")
+		_image_model.add_item(tr("OPT_IMAGES_NONE"))
+	_image_model.selected = maxi(0, _image_ids.find(SaveManager.image_model))
+	_image_model.disabled = not SaveManager.images_on or _image_ids.size() < 2
 
 
 ## The server's daily spending limit (v0.7.3): spent today of the limit, the limit in dollars or «без лимита».
@@ -429,6 +481,7 @@ func _fill_models() -> void:
 	_model.selected = _model_ids.find(SaveManager.master_model)
 	_model.disabled = Backend.models().is_empty()
 	_fill_providers()
+	_fill_image_models()
 
 
 ## The providers of the chosen model (session.hello): «Авто» — the server picks the cheapest fast one and may change it.

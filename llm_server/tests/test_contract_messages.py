@@ -81,10 +81,10 @@ def test_every_effect_kind_is_in_the_contract(effect):
     validate("engine.validate.params", {"turn_id": "t-1", "effect": effect})
 
 
-def test_message_over_one_megabyte_closes_the_socket():
+def test_message_over_the_limit_closes_the_socket():
     with TestClient(create_app(make_settings())) as c, c.websocket_connect("/ws", headers=AUTH) as ws:
         hello(ws)
-        ws.send_text(json.dumps({"jsonrpc": "2.0", "id": "g-2", "method": "turn.request", "params": {"input": "x" * (1024 * 1024)}}))
+        ws.send_text(json.dumps({"jsonrpc": "2.0", "id": "g-2", "method": "turn.request", "params": {"input": "x" * (8 * 1024 * 1024)}}))
         with pytest.raises(WebSocketDisconnect) as exc:
             ws.receive_json()
     assert exc.value.code == 1009

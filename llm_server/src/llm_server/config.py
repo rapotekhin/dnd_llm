@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from . import REPO_ROOT
 
-MAX_MESSAGE_BYTES = 1024 * 1024  # ADR-0009 §2
+MAX_MESSAGE_BYTES = 8 * 1024 * 1024  # ADR-0009 §2; 8 MB since 0.71.0: an image comes as base64
 
 DEFAULT_MODEL = "deepseek/deepseek-v4.1-flash-1017"  # ADR-0011, since v0.7.3
 # The whitelist the player can pick from in the game settings; the server owner pays, so the server decides.
@@ -42,6 +42,31 @@ PROVIDERS: dict[str, tuple[tuple[str, str], ...]] = {
 # turn, with the cache and each provider's own bills (llm/providers.py).
 
 
+
+@dataclass(frozen=True)
+class ImageModel:
+    """A model that draws an event's frame (v0.7.35). `backend` — who draws: "openrouter" (`url` empty) or, later, an
+    own endpoint such as AUTOMATIC1111 at `url`; `template` — prompts/images/<template>.md.j2, how this family wants
+    its prompt written; `usd_per_image` — the estimate until our own bills say better."""
+
+    id: str
+    name: str
+    template: str
+    usd_per_image: float
+    backend: str = "openrouter"
+    url: str = ""
+
+
+# Prices of our first frames (2026-10-27); the server learns the real ones from its bills.
+IMAGE_MODELS: tuple[ImageModel, ...] = (
+    ImageModel("recraft/recraft-v4.1-flash", "Recraft V4.1 Flash", "recraft", 0.0072),
+    ImageModel("recraft/recraft-v4.1", "Recraft V4.1", "recraft", 0.04),
+    ImageModel("black-forest-labs/flux-3-image-klein", "FLUX 3 Klein", "flux", 0.0091),
+    ImageModel("black-forest-labs/flux.2-pro", "FLUX.2 Pro", "flux", 0.045),
+)
+DEFAULT_IMAGE_MODEL = "recraft/recraft-v4.1-flash"
+
+
 class ConfigError(RuntimeError):
     pass
 
@@ -69,6 +94,8 @@ class Settings:
     langfuse: bool = False
     router: bool = True  # v0.7.20.4: a turn of words only goes with the short prompt; LLM_SERVER_ROUTER=0 — always the full one
     trace: bool = True  # the model side of play sessions in data_dir/traces (v0.7.1); LLM_SERVER_TRACE=0 turns it off
+    image_models: tuple[ImageModel, ...] = IMAGE_MODELS  # LLM_SERVER_IMAGES=0 — none, the brush is hidden (v0.7.35)
+    image_model: str = DEFAULT_IMAGE_MODEL
 
     @classmethod
     def from_env(cls, load_env_file: bool = True) -> "Settings":
@@ -112,8 +139,19 @@ class Settings:
             router=os.environ.get("LLM_SERVER_ROUTER", "1").strip() not in ("0", "false", "no", ""),
             trace=os.environ.get("LLM_SERVER_TRACE", "1").strip() not in ("0", "false", "no", ""),
             langfuse=os.environ.get("LANGFUSE_ENABLED") == "1",
+            image_models=_image_models(),
+            image_model=os.environ.get("LLM_SERVER_IMAGE_MODEL", DEFAULT_IMAGE_MODEL),
         )
 
     def __repr__(self) -> str:
         # Never let the token or the OpenRouter key reach logs or tracebacks.
         return f"Settings(host={self.host!r}, port={self.port}, handler={self.turn_handler!r}, model={self.model!r}, token=***)"
+
+
+def _image_models() -> tuple[ImageModel, ...]:
+    """LLM_SERVER_IMAGES=0 — none; LLM_SERVER_A1111_URL — an own AUTOMATIC1111 among them (the `sd` template)."""
+    if os.environ.get("LLM_SERVER_IMAGES", "1").strip() in ("0", "false", "no", ""):
+        return ()
+    url = os.environ.get("LLM_SERVER_A1111_URL", "").strip()
+    own = (ImageModel("a1111", "Stable Diffusion (свой сервер)", "sd", 0.0, backend="a1111", url=url),) if url else ()
+    return IMAGE_MODELS + own

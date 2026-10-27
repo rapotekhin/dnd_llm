@@ -67,7 +67,7 @@ const app = new EditorApp({
 		const roomOf = (nid) => Object.entries(world().rooms || {}).find(([, r]) => (r.npcs || []).includes(nid))?.[0];
 
 		add({ id: 'pack', group: 'Пакет', title: 'pack.json', file: pack.file, type: 'single', singleId: id,
-			name: (e) => e.name, labels: { lore: 'предыстория мира', tone: 'тон', magic: 'магия', dm_style: 'стиль мастера', content: 'контент', names: 'имена', rules: 'правила пакета' },
+			name: (e) => e.name, labels: { lore: 'предыстория мира', tone: 'тон', magic: 'магия', dm_style: 'стиль мастера', image_style: 'стиль картинок (англ.)', content: 'контент', names: 'имена', rules: 'правила пакета' },
 			refs: [{ p: 'rules.races.[]', to: 'srd_races' }, { p: 'rules.classes.[]', to: 'srd_classes' }, { p: 'rules.backgrounds.[]', to: 'srd_backgrounds' },
 				{ p: 'rules.items_exclude.[]', to: 'all_items' }, { p: 'rules.rename.races.{}', to: 'srd_races' }, { p: 'rules.rename.classes.{}', to: 'srd_classes' },
 				{ p: 'rules.rename.backgrounds.{}', to: 'srd_backgrounds' }, { p: 'rules.rename.items.{}', to: 'all_items' }] });

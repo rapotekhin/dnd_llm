@@ -9,7 +9,7 @@ signal closed(code: int, reason: String)
 ## Every raw message on the wire: direction ">" sent, "<" received (for ProtocolLog).
 signal traffic(direction: String, text: String)
 
-const MAX_MESSAGE_BYTES := 1024 * 1024
+const MAX_MESSAGE_BYTES := 8 * 1024 * 1024  # an image comes as base64 (0.71.0)
 const ERR_METHOD_NOT_FOUND := -32601
 const ERR_INVALID_PARAMS := -32602
 const ERR_INTERNAL := -32603

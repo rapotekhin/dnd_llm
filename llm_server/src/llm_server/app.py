@@ -10,7 +10,7 @@ from fastapi.responses import PlainTextResponse
 from . import __version__
 from .config import Settings
 from .services import Services
-from .session import Session, SummaryHandler, TurnHandler, TurnSlots
+from .session import ImageHandler, Session, SummaryHandler, TurnHandler, TurnSlots
 
 log = logging.getLogger("llm_server")
 
@@ -20,8 +20,10 @@ def create_app(
     services: Services | None = None,
     turn_handler: TurnHandler | None = None,
     summary_handler: SummaryHandler | None = None,
+    image_handler: ImageHandler | None = None,
     load_prices: bool = False,
 ) -> FastAPI:
+    from .images import agent_image, stub_image
     from .turns import agent_summary, agent_turn, stub_summary, stub_turn
 
     if services is None:
@@ -34,6 +36,7 @@ def create_app(
     use_agent = services.model_factory is not None
     turn_handler = turn_handler or (agent_turn if use_agent else stub_turn)
     summary_handler = summary_handler or (agent_summary if use_agent else stub_summary)
+    image_handler = image_handler or (agent_image if use_agent else stub_image)
     slots = TurnSlots(settings.max_concurrent_turns)
 
     @asynccontextmanager
@@ -59,7 +62,7 @@ def create_app(
             return
         await ws.accept()
         log.info("connected %s", ws.client.host if ws.client else "?")
-        await Session(ws, services, slots, turn_handler, summary_handler).run()
+        await Session(ws, services, slots, turn_handler, summary_handler, image_handler).run()
         log.info("disconnected")
 
     return app

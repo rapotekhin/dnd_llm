@@ -20,6 +20,8 @@ from .protocol import (
     ErrorCode,
     HelloParams,
     HelloResult,
+    ImageParams,
+    ImageResult,
     Limits,
     OkResult,
     StatusResult,
@@ -69,6 +71,7 @@ class EngineCallError(Exception):
 
 TurnHandler = Callable[["Session", TurnRequestParams], Awaitable[TurnResult]]
 SummaryHandler = Callable[["Session", SummaryParams], Awaitable[SummaryResult]]
+ImageHandler = Callable[["Session", ImageParams], Awaitable[ImageResult]]
 
 
 class TurnSlots:
@@ -90,13 +93,14 @@ class TurnSlots:
 
 class Session:
     def __init__(self, ws: WebSocket, services: "Services", slots: TurnSlots, turn_handler: TurnHandler,
-                 summary_handler: SummaryHandler):
+                 summary_handler: SummaryHandler, image_handler: ImageHandler | None = None):
         self.ws = ws
         self.services = services
         self.settings = services.settings
         self.slots = slots
         self.turn_handler = turn_handler
         self.summary_handler = summary_handler
+        self.image_handler = image_handler
         self.initialized = False
         self.closed = False
         self._send_lock = asyncio.Lock()
@@ -203,6 +207,11 @@ class Session:
         if method == "summary.request":
             # Runs alongside a turn (ADR-0009 §2); it does not take a turn slot.
             return await self.summary_handler(self, _parse(SummaryParams, params))
+        if method == "image.request":
+            # Beside a turn like a summary (0.71.0): the player may draw while the master answers.
+            if self.image_handler is None:
+                raise RpcError(ErrorCode.METHOD_NOT_FOUND)
+            return await self.image_handler(self, _parse(ImageParams, params))
         raise RpcError(ErrorCode.METHOD_NOT_FOUND)
 
     def _on_response(self, msg: dict[str, Any]) -> None:
@@ -224,6 +233,7 @@ class Session:
             )
         self.initialized = True
         s = self.settings
+        images = self.services.images
         return HelloResult(
             protocol_version=PROTOCOL_VERSION,
             server_version=__version__,
@@ -235,6 +245,8 @@ class Session:
                 engine_timeout_s=s.engine_timeout,
                 hello_timeout_s=s.hello_timeout,
             ),
+            image_model=images.default if images else "",
+            image_models=images.infos() if images else [],
         )
 
     def _status(self) -> StatusResult:

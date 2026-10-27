@@ -15,6 +15,11 @@
 		"client_timeout_s": 185.0,
 		"summary_timeout_s": 60.0
 	},
+	"images": {
+		"_doc": "The brush (v0.7.35): how long to wait for a frame and how wide the kept file is.",
+		"timeout_s": 150.0,
+		"max_width": 1600
+	},
 	"keys": {
 		"_doc": "Hotkeys (v0.7.22.27, as in BG3): action → [key, where]; where — game (the game screen, outside the input field), combat (the fight screen, outside its input), any. A key is a Godot key name (OS.find_keycode_from_string), by the physical place on the keyboard so the Russian layout works; the player rebinds them in the settings (settings.cfg [keys]).",
 		"pause_menu": ["Escape", "any"],

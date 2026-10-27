@@ -62,6 +62,7 @@
 				"tone": {"$ref": "#/$defs/nonempty"},
 				"magic": {"type": "string"},
 				"dm_style": {"enum": ["classic", "literary", "dry", "ironic"]},
+				"image_style": {"type": "string", "description": "The style of the brush's images in English (v0.7.35): one line for the whole world"},
 				"content": {
 					"type": "object",
 					"required": ["violence"],

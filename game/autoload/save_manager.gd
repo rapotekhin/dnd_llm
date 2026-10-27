@@ -29,6 +29,9 @@ var confirm_risky: bool = true
 ## The interface scale over the 1920×1080 base (v0.7.22.31, С6) and the pause between the fight's lines.
 var ui_scale: float = 1.0
 var combat_speed: String = "normal"
+## The brush (v0.7.35): off — no button; the image model picked from the server list, "" — the server's default.
+var images_on: bool = true
+var image_model: String = ""
 const COMBAT_SPEEDS := {"slow": 1.0, "normal": 0.6, "fast": 0.25, "instant": 0.0}
 const UI_SCALES: Array[float] = [0.85, 1.0, 1.15, 1.3]
 
@@ -160,6 +163,8 @@ func load_settings() -> void:
 		confirm_risky = bool(cfg.get_value("game", "confirm_risky", true))
 		ui_scale = float(cfg.get_value("display", "ui_scale", 1.0))
 		combat_speed = str(cfg.get_value("game", "combat_speed", "normal"))
+		images_on = bool(cfg.get_value("images", "on", true))
+		image_model = str(cfg.get_value("images", "model", ""))
 	Hotkeys.apply(keys)
 
 
@@ -174,6 +179,8 @@ func save_settings() -> void:
 	cfg.set_value("game", "confirm_risky", confirm_risky)
 	cfg.set_value("display", "ui_scale", ui_scale)
 	cfg.set_value("game", "combat_speed", combat_speed)
+	cfg.set_value("images", "on", images_on)
+	cfg.set_value("images", "model", image_model)
 	cfg.set_value("keys", "keys", keys)
 	cfg.save(settings_path)
 
@@ -216,6 +223,13 @@ func available_resolutions() -> Array[Vector2i]:
 func offered(model_id: String) -> bool:
 	var models: Array = Backend.models()
 	return models.is_empty() or models.any(func(m: Variant) -> bool: return m is Dictionary and str(m.get("id", "")) == model_id)
+
+
+## The image model for image.request (v0.7.35), and the master's model that writes the frame's prompt.
+func image_params(params: Dictionary) -> Dictionary:
+	if Backend.image_models().any(func(m: Variant) -> bool: return m is Dictionary and str(m.get("id", "")) == image_model):
+		params["image_model"] = image_model
+	return master_params(params)
 
 
 ## The master's model and pinned provider for turn.request and summary.request (v0.7.20.5).

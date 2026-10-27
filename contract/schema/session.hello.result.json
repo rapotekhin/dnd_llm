@@ -1,5 +1,30 @@
 {
   "$defs": {
+    "ImageModelInfo": {
+      "additionalProperties": false,
+      "description": "A model that draws the frame of an event (0.71.0); the price — what our images cost, or the estimate.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "usd_per_image": {
+          "default": 0.0,
+          "title": "Usd Per Image",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "ImageModelInfo",
+      "type": "object"
+    },
     "Limits": {
       "additionalProperties": false,
       "properties": {
@@ -147,6 +172,18 @@
   },
   "additionalProperties": false,
   "properties": {
+    "image_model": {
+      "default": "",
+      "title": "Image Model",
+      "type": "string"
+    },
+    "image_models": {
+      "items": {
+        "$ref": "#/$defs/ImageModelInfo"
+      },
+      "title": "Image Models",
+      "type": "array"
+    },
     "limits": {
       "$ref": "#/$defs/Limits"
     },

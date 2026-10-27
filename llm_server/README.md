@@ -39,6 +39,9 @@ uv run python -m llm_server.contract     # перевыгрузить contract/s
 | `LLM_SERVER_HOST` / `PORT` | `127.0.0.1` / `8765` | |
 | `LLM_SERVER_TURN_TIMEOUT` / `ENGINE_TIMEOUT` / `HELLO_TIMEOUT` | 180 / 10 / 10 с | ход ждёт медленного провайдера до 3 минут (v0.7.14.5, было 90); клиент ждёт на 5 с дольше (`game.json` `turn.client_timeout_s`) |
 | `LLM_SERVER_MAX_TURNS` | 1 | одновременных ходов на сервер |
+| `LLM_SERVER_IMAGES` | `1` | картинки событий (v0.7.35): `0` — сервер не рисует, кисточки в игре нет. Модели — `config.IMAGE_MODELS`: Recraft V4.1 Flash (по умолчанию, ~$0.007), Recraft V4.1, FLUX 3 Klein (~$0.009), FLUX.2 Pro (~$0.045); цена в настройках — по нашим счетам (`var/image_prices.json`) |
+| `LLM_SERVER_IMAGE_MODEL` | `recraft/recraft-v4.1-flash` | модель картинок по умолчанию |
+| `LLM_SERVER_A1111_URL` | — | свой AUTOMATIC1111 (`http://host:7860`): добавляет модель `a1111` с шаблоном `sd` (теги и negative prompt) |
 | `LANGFUSE_ENABLED` | — | `1` + ключи `LANGFUSE_*` — трейсы всех запусков агента |
 
 ## Устройство
@@ -50,6 +53,7 @@ uv run python -m llm_server.contract     # перевыгрузить contract/s
 | `agents.py` | агент хода: инструменты `request_check`, `propose_effect`, `lookup`, `find_items` → `engine.*`; проверка вывода |
 | `turns.py` | обработчики хода и сводки: модель из белого списка, бюджет, повторы OpenRouter (не после обращения к движку), учёт расходов |
 | `prompts/*.md.j2` | промпты Jinja2 (строгий режим): правила, сцена, режимы `exploration` / `social` / `trade`, ход, сводка |
+| `images.py` | картинка события (v0.7.35): агент пишет промпт по шаблону семейства (`prompts/images/<template>.md.j2`: блок `instructions` — как писать, блок `prompt` — где стиль), бэкенд рисует — OpenRouter `/api/v1/images` или свой AUTOMATIC1111; цены по счетам. Новая модель — строка `ImageModel` в `config.py`; новое семейство — шаблон; новый сервер — `backend` и функция в `draw` |
 | `llm/` | каталог моделей с ценами OpenRouter, фабрика моделей, дневной бюджет, библиотека созданных предметов |
 | `app.py`, `__main__.py` | FastAPI, проверка токена, запуск, проверка ключа, Langfuse |
 

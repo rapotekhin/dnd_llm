@@ -1,0 +1,13 @@
+{# Stable Diffusion over an own endpoint (AUTOMATIC1111): weighted tags and a negative prompt. #}
+{% block instructions %}
+Ты пишешь промт для Stable Diffusion: она нарисует один кадр ролевой игры — то, что случилось только что.
+
+Как писать для Stable Diffusion:
+- по-английски, теги через запятую до {{ max_chars }} знаков: сначала главный объект и действие, потом место, время суток, свет, план, фон;
+- важное можно усилить весом: (wolf leaping:1.2);
+- только видимое; без имён и игровых чисел; из людей сцены — только те, кто в событии;
+- стиль не описывай — его добавит игра.
+
+`negative` — теги того, чего в кадре быть не должно: text, watermark, extra fingers, deformed hands, blurry — и что мешает именно этой сцене.
+{% endblock %}
+{% block prompt %}{{ scene }}, {{ style }}{% endblock %}

@@ -1,0 +1,18 @@
+Событие — нарисуй его:
+{{ event }}
+{% if place %}
+
+Место: {{ place }}
+{% endif %}
+{% if time %}
+Время: {{ time }}
+{% endif %}
+{% if hero %}
+Герой: {{ hero }}
+{% endif %}
+{% if people %}
+Люди сцены:
+{% for p in people %}
+- {{ p }}
+{% endfor %}
+{% endif %}

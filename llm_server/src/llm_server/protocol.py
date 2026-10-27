@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.70.0"
+PROTOCOL_VERSION = "0.71.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -111,12 +111,22 @@ class Budget(_Out):
     spent_today_usd: float
 
 
+class ImageModelInfo(_Out):
+    """A model that draws the frame of an event (0.71.0); the price — what our images cost, or the estimate."""
+
+    id: str
+    name: str
+    usd_per_image: float = 0.0
+
+
 class HelloResult(_Out):
     protocol_version: str
     server_version: str
     model: str  # the server default
     models: list[ModelInfo] = Field(default_factory=list)  # what the player may pick (server whitelist)
     limits: Limits
+    image_model: str = ""  # the default image model; "" — the server draws nothing (0.71.0)
+    image_models: list[ImageModelInfo] = Field(default_factory=list)
 
 
 class SetBudgetParams(_In):
@@ -500,6 +510,31 @@ class SummaryParams(_In):
 class SummaryResult(_Out):
     summary: str
     usage: Usage
+
+
+# --- image.* (0.71.0) -----------------------------------------------------------
+
+
+class ImageParams(_In):
+    """The frame of the last event: what happened and what the scene looks like, in the game's words."""
+
+    event: str = Field(min_length=1, max_length=4000)
+    place: str = ""  # the place's name and description
+    time: str = ""  # «вечер, 19:40»
+    hero: str = ""  # the hero's looks: race, build, gear
+    people: list[str] = Field(default_factory=list, max_length=8)  # who is in the scene, with their looks
+    style: str = ""  # the world pack's image_style
+    image_model: str | None = None
+    model: str | None = None  # the text model that writes the prompt
+    provider: str | None = None
+    aspect: Literal["16:9", "3:2", "4:3", "1:1"] = "16:9"
+
+
+class ImageResult(_Out):
+    mime: str  # image/png, image/jpeg, image/webp
+    data_b64: str
+    prompt: str  # what the image model was given
+    usage: Usage  # the prompt and the image together
 
 
 # --- effects (ADR-0008 §3) ------------------------------------------------------
@@ -1435,6 +1470,8 @@ CONTRACT_MODELS: dict[str, type[BaseModel]] = {
     "turn.cancel.result": OkResult,
     "summary.request.params": SummaryParams,
     "summary.request.result": SummaryResult,
+    "image.request.params": ImageParams,
+    "image.request.result": ImageResult,
     "engine.check.params": EngineCheckParams,
     "engine.check.result": EngineCheckResult,
     "engine.validate.params": EngineValidateParams,

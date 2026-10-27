@@ -1,0 +1,91 @@
+{
+  "description": "The frame of the last event: what happened and what the scene looks like, in the game's words.",
+  "properties": {
+    "aspect": {
+      "default": "16:9",
+      "enum": [
+        "16:9",
+        "3:2",
+        "4:3",
+        "1:1"
+      ],
+      "title": "Aspect",
+      "type": "string"
+    },
+    "event": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Event",
+      "type": "string"
+    },
+    "hero": {
+      "default": "",
+      "title": "Hero",
+      "type": "string"
+    },
+    "image_model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Image Model"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model"
+    },
+    "people": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8,
+      "title": "People",
+      "type": "array"
+    },
+    "place": {
+      "default": "",
+      "title": "Place",
+      "type": "string"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Provider"
+    },
+    "style": {
+      "default": "",
+      "title": "Style",
+      "type": "string"
+    },
+    "time": {
+      "default": "",
+      "title": "Time",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event"
+  ],
+  "title": "ImageParams",
+  "type": "object"
+}

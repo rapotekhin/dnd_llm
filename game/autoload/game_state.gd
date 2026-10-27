@@ -7,6 +7,7 @@ extends Node
 var session: GameSession
 ## turn_id of the turn in flight, "" when idle.
 var busy_turn: String = ""
+var drawing := false  ## the brush waits for a frame (v0.7.35)
 var effects := EffectEngine.new()
 
 ## Enemy turns of a fight are being played out (with a pause per line).
@@ -2867,6 +2868,40 @@ func _maybe_summarize_location() -> void:
 	var events := session.location_log.duplicate()
 	session.location_log.clear()
 	_summarize("location", str(world().location(loc).get("name", loc)), "location:" + loc, events)
+
+
+## The brush (v0.7.35): the last event's image — drawn once, opened again afterwards. Beside a turn, like a summary.
+func draw_image() -> void:
+	if session == null or drawing:
+		return
+	var i := ImageFrame.event_index(session)
+	if i < 0:
+		return
+	var entry: Dictionary = session.chat[i]
+	if FileAccess.file_exists(ImageFrame.image_of(entry)):
+		EventBus.image_drawn.emit(entry)
+		return
+	var s := session
+	var params := SaveManager.image_params(ImageFrame.params(s, Catalog.data, i))
+	drawing = true
+	EventBus.image_busy.emit(true)
+	var cfg: Dictionary = Catalog.game()["images"]
+	var call := await Backend.request("image.request", params, float(cfg["timeout_s"]))
+	drawing = false
+	EventBus.image_busy.emit(false)
+	if session != s:
+		return
+	if call.is_error():
+		EventBus.message.emit(tr(_error_key(call.reason())))
+		return
+	var img := ImageFrame.decode(str(call.result.get("mime", "")), str(call.result.get("data_b64", "")), int(cfg["max_width"]))
+	var path := ImageFrame.file_path(SaveManager.profile_dir, s, i)
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	if img == null or img.save_webp(path, true, 0.85) != OK:
+		EventBus.message.emit(tr("MSG_IMAGE_FAILED"))
+		return
+	entry["image"] = path
+	EventBus.image_drawn.emit(entry)
 
 
 func _summarize(kind: String, subject: String, key: String, events: Array) -> void:

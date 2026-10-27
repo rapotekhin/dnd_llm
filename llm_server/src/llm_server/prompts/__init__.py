@@ -263,3 +263,25 @@ def turn_prompt(mode: str, kind: str, player_input: str, snap: Snapshot, npc: Sc
 
 def summary_prompt(kind: str, subject_id: str, previous: str, events: list[str]) -> str:
     return render("summary.md.j2", kind=kind, subject_id=subject_id, previous=previous, events=events)
+
+
+DEFAULT_IMAGE_STYLE = "book illustration, ink and watercolor, muted earthy palette, dark fantasy"
+
+
+def image_instructions(template: str, max_chars: int) -> str:
+    """How the image family `template` wants its prompt written (prompts/images/<template>.md.j2, v0.7.35)."""
+    return _block(f"images/{template}.md.j2", "instructions", max_chars=max_chars)
+
+
+def image_frame(event: str, place: str, time: str, hero: str, people: list[str]) -> str:
+    return render("images/_frame.md.j2", event=event, place=place, time=time, hero=hero, people=people)
+
+
+def image_prompt(template: str, scene: str, style: str) -> str:
+    """The prompt the image model gets: the agent's scene and the world's style, in the family's order."""
+    return _block(f"images/{template}.md.j2", "prompt", scene=scene.strip().rstrip("."), style=(style or DEFAULT_IMAGE_STYLE).strip().rstrip(".")).strip()
+
+
+def _block(name: str, block: str, **context: object) -> str:
+    t = _env.get_template(name)
+    return "".join(t.blocks[block](t.new_context(context))).strip() + "\n"

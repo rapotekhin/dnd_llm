@@ -84,6 +84,15 @@ func models() -> Array:
 	return client.server_info.get("models", []) if client != null else []
 
 
+## The image models of the brush (0.71.0): [{id, name, usd_per_image}]; empty — the server draws nothing.
+func image_models() -> Array:
+	return client.server_info.get("image_models", []) if client != null else []
+
+
+func default_image_model() -> String:
+	return str(client.server_info.get("image_model", "")) if client != null else ""
+
+
 func default_model() -> String:
 	return str(client.server_info.get("model", "")) if client != null else ""
 

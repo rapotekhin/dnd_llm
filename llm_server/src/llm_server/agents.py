@@ -532,6 +532,19 @@ def build_summary_agent(model: Model, kind: str) -> Agent[None, SummaryOutput]:
                  instructions="Ты пишешь краткие записи по-русски для памяти мастера игры.", name=f"summary_{kind}")
 
 
+class ImagePrompt(BaseModel):
+    """The frame of an event for an image model (v0.7.35): the scene in English, and what to keep out of it."""
+
+    scene: str = Field(min_length=10, max_length=1500)
+    negative: str = Field(default="", max_length=500)
+
+
+def build_image_agent(model: Model, instructions: str) -> Agent[None, ImagePrompt]:
+    # Reasoning off: a frame needs no thinking, and DeepSeek would spend the seconds the player waits.
+    return Agent(model, output_type=ImagePrompt, retries=2, name="image_prompt", instructions=instructions,
+                 model_settings=no_thinking(settings_for(model, {"temperature": 0.7, "max_tokens": 700})))
+
+
 def is_entry(params: TurnRequestParams) -> bool:
     """A turn of walking in: its own short prompt and tools (v0.7.34.3)."""
     return params.kind == "enter" and params.mode == "exploration"

@@ -5,6 +5,9 @@ signal session_started
 signal session_closed
 ## A chat entry was appended to the current session (GameSession.chat).
 signal chat_appended(entry: Dictionary)
+## The brush (v0.7.35): an event got its image (or it is opened again); a frame is being drawn.
+signal image_drawn(entry: Dictionary)
+signal image_busy(busy: bool)
 ## Turn lifecycle: busy while the master thinks; options for the buttons under the chat.
 signal turn_started(turn_id: String)
 signal turn_finished(turn_id: String, ok: bool)

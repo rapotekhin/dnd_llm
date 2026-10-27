@@ -9,6 +9,8 @@ extends Control
 var chat: ChatView
 var input: LineEdit
 var send_button: Button
+var brush: BrushButton  # v0.7.35: the last event drawn
+var _image: ImageCard
 var _options: HFlowContainer
 var _thinking: Label
 var _cancel: Button
@@ -161,6 +163,9 @@ func _ready() -> void:
 	send_button.custom_minimum_size = Vector2(180, 60)
 	send_button.pressed.connect(_send)
 	input_row.add_child(send_button)
+	brush = BrushButton.new()
+	brush.pressed.connect(GameState.draw_image)
+	input_row.add_child(brush)
 	# What is pinned: a chip under the input, out of the chat.
 	_attach_chip = HBoxContainer.new()
 	_attach_chip.name = "AttachChip"
@@ -314,6 +319,17 @@ func _ready() -> void:
 	add_child(_level_up)
 	_level_up.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
+	_image = ImageCard.new()
+	_image.name = "ImageView"
+	_image.visible = false
+	add_child(_image)
+	_image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	chat.image_requested.connect(_open_image)
+	EventBus.image_drawn.connect(func(entry: Dictionary) -> void: _open_image(ImageFrame.image_of(entry)))
+	EventBus.image_busy.connect(func(b: bool) -> void:
+		brush.busy = b
+		_refresh())
+
 	_pause = PauseMenu.new()
 	_pause.visible = false
 	add_child(_pause)
@@ -333,7 +349,7 @@ func _ready() -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _family, _heists, _org, _office]
+	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _family, _heists, _org, _office, _image]
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
@@ -428,6 +444,11 @@ func _on_backend_state_changed(_state: int, _detail: String) -> void:
 	_refresh()
 
 
+func _open_image(path: String) -> void:
+	if not _image.open(path):
+		EventBus.message.emit(tr("MSG_IMAGE_GONE"))
+
+
 func _send() -> void:
 	if GameState.submit(input.text):
 		_typed = true
@@ -442,6 +463,10 @@ func _refresh() -> void:
 	_offline_banner.visible = not online
 	input.editable = online and not busy
 	send_button.disabled = not online or busy
+	var s0 := GameState.session if GameState.has_session() else null
+	brush.visible = SaveManager.images_on and not Backend.image_models().is_empty()
+	brush.disabled = not online or GameState.drawing or s0 == null or ImageFrame.event_index(s0) < 0
+	brush.tooltip_text = "BTN_DRAW_EVENT_BUSY" if GameState.drawing else "BTN_DRAW_EVENT"
 	var s := GameState.session if GameState.has_session() else null
 	_chips.refresh()
 	var qid := QuestRules.tracked(s, Catalog.data["world"]) if s != null else ""
