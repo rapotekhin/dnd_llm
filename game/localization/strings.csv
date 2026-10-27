@@ -1543,7 +1543,7 @@ OPT_IMAGE_MODEL,{name} — ≈${price} за картинку
 OPT_IMAGE_MODEL_FREE,{name} — бесплатно
 OPT_IMAGE_MODEL_DEFAULT," (по умолчанию)"
 OPT_IMAGES_NONE,Сервер не рисует картинки
-OPT_IMAGE_PROMPT,"Добавка в начало каждого промта — теги качества, Лора; пусто — без добавки"
+OPT_IMAGE_PROMPT,"Добавка в конец каждого промта — теги качества, Лора; пусто — без добавки"
 OPT_IMAGE_NEGATIVE,Негативный промт — чего на картинке быть не должно
 OPT_IMAGE_NEGATIVE_ONLY,"Только этот негатив, без тегов мастера"
 OPT_IMAGE_PROMPTS_RESET,Как у модели

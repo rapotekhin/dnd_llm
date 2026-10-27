@@ -85,11 +85,14 @@ DEFAULT_IMAGE_MODEL = "recraft/recraft-v4.1-flash"
 SD_MODELS: tuple[ImageModel, ...] = (
     ImageModel("sd:amix-illustrious", "A-Mix Illustrious (свой сервер)", "illustrious", 0.0, backend="a1111",
                checkpoint="aMixIllustrious_aMix.safetensors", side=1024,
-               txt2img={"sampler_name": "Euler a", "steps": 20, "cfg_scale": 6,
+               # v0.7.38.2: the author's pick — a square frame, 32 steps, no hires pass (it trebles the wait)
+               txt2img={"sampler_name": "Euler a", "steps": 32, "cfg_scale": 6, "width": 1024, "height": 1024,
                         "override_settings": {"CLIP_stop_at_last_layers": 2, "forge_additional_modules": []}},
-               prompt_add="masterpiece, best quality, very aesthetic, detailed, depth of field, adult, aged up, <lora:rimixO:0.65>",
+               prompt_add="masterwork, masterpiece, best quality, detailed, depth of field, high detail, very aesthetic, 8k, "
+                          "dynamic pose, dynamic angle, adult, aged up, dynamic lighting, lighting, <lora:rimixO:1.2>",
                negative_add="lowres, worst quality, low quality, bad anatomy, bad hands, extra digits, jpeg artifacts, "
-                            "signature, watermark, text, logo, artist name, patreon username, censored, nsfw, nude, loli, child"),
+                            "signature, watermark, text, logo, artist name, patreon username, censored, nsfw, nude, loli, child, "
+                            "furry, anthro"),
 )
 DEFAULT_A1111_URL = "http://127.0.0.1:7860"
 

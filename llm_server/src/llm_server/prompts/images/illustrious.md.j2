@@ -1,16 +1,24 @@
-{# Illustrious (SDXL tuned on Danbooru) over an own Forge: booru tags; quality tags, the LoRA and the base negative are the player's additions (ImageModel.prompt_add / negative_add). #}
+{# Illustrious (SDXL tuned on Danbooru) over an own Forge, written as the author's rimixO frames: the sketch prefix, then plain booru tags in a tagger's order; quality tags and the LoRA are the player's addition at the end (ImageModel.prompt_add). The world's prose style is left out: it fights the LoRA (v0.7.38.2). #}
 {% block instructions %}
 Ты пишешь промт для модели Illustrious (Stable Diffusion XL, обученная на тегах Danbooru): она нарисует один кадр ролевой игры — то, что случилось только что.
 
-Как писать для Illustrious:
-- по-английски, теги Danbooru через запятую до {{ max_chars }} знаков, нижним регистром;
-- первым — кто в кадре: `1boy`, `1girl`, `2boys`, `1boy, 1girl`, `solo`, а без людей — `no humans`; люди — взрослые;
-- затем у каждого — облик и одежда тегами (`short hair`, `beard`, `chainmail`, `hooded cloak`), действие (`swinging sword`, `holding mug`), поза и взгляд;
-- затем место, предметы, время суток, свет и погода (`tavern`, `fireplace`, `night`, `candlelight`, `rain`), план и ракурс (`cowboy shot`, `wide shot`, `from side`);
-- важное можно усилить весом: (wolf leaping:1.2);
-- только видимое; без имён и игровых чисел; из людей сцены — только те, кто в событии;
-- качество и стиль не пиши — их добавит игра.
+Пиши так, как размечает картинку теггер Danbooru: только короткие теги по-английски, нижним регистром, через запятую, 25–45 тегов, до {{ max_chars }} знаков. Без фраз, без предложений, без весов в скобках. Порядок:
+1. кто в кадре: `1girl`, `1boy`, `2boys`, `1boy, 1girl`, `multiple boys`; `solo` — только если в кадре один человек и больше никого, ни зверя, ни чудовища; зверь — следом (см. ниже); без людей — `no humans`;
+2. у каждого — волосы, глаза, борода, уши (`long hair`, `brown hair`, `green eyes`, `beard`, `pointy ears`, `elf`), одежда и вещи (`hooded cloak`, `leather armor`, `chainmail`, `robe`, `apron`, `sword`, `staff`, `mug`), украшения;
+3. поза, действие, взгляд и лицо: `standing`, `sitting`, `holding sword`, `fighting stance`, `running`, `looking at viewer`, `looking back`, `from behind`, `smile`, `closed mouth`, `angry`;
+4. место и что вокруг: `outdoors` или `indoors`, `forest`, `tree`, `grass`, `tavern`, `wooden table`, `fireplace`, `stone wall`, `ruins`, `road`;
+5. небо, время и свет: `sky`, `cloud`, `sunset`, `night`, `moon`, `fog`, `rain`, `candlelight`, `fire`;
+6. план: `upper body`, `cowboy shot`, `full body`, `from side`, `from above`, `blurry background`.
 
-`negative` — несколько тегов того, что мешает именно этой сцене (лишние люди, не то время суток); общие — плохие руки, текст, водяные знаки — игра добавит сама.
+Зверь или чудовище — сразу после счёта людей простым тегом, с тегом `animal` или `monster` и тегом схватки, иначе модель срастит его с человеком в оборотня: `1boy, wolf, animal, man fighting wolf, …`, `1girl, giant spider, monster, …`, `2boys, goblin, monster, …`; его облик — дальше (`grey wolf`, `wolf leaping`, `fangs`); без `feral` и `quadruped`; тогда в `negative` — `werewolf, animal ears, kemonomimi`.
+
+Так выглядят хорошие промты этой модели (только теги сцены):
+- `1girl, solo, short hair, brown hair, brown eyes, standing, weapon, outdoors, sky, japanese clothes, looking back, sword, hair flower, kimono, from behind, tree, sash, petals, katana, sheath, cherry blossoms`
+- `1girl, solo, long hair, brown hair, dress, sitting, outdoors, sky, cloud, white dress, tree, sunset, sun, swing`
+- `1boy, solo, short hair, black hair, beard, hooded cloak, leather armor, holding sword, standing, outdoors, forest, tree, fog, night, moon, from side, cowboy shot`
+
+Только видимое; без имён и игровых чисел; из людей сцены — только те, кто в событии; люди — взрослые. Стиль, качество и Лору не пиши — их добавит игра.
+
+`negative` — несколько тегов того, что мешает именно этой сцене (`crowd`, `daylight`, `werewolf, animal ears`); общие — плохие руки, текст, водяные знаки — игра добавит сама.
 {% endblock %}
-{% block prompt %}{{ scene }}, {{ style }}{% endblock %}
+{% block prompt %}(monochrome:0.75), (Sketch art, line art, drawn), {{ scene }}{% endblock %}

@@ -204,8 +204,9 @@ def test_a_checkpoint_model_loads_its_file_with_its_settings():
 
     def handler(req: httpx.Request) -> httpx.Response:
         body = __import__("json").loads(req.content)
-        assert (body["width"], body["height"]) == (1344, 768)  # SDXL's megapixel at 16:9
-        assert (body["sampler_name"], body["steps"], body["cfg_scale"]) == ("Euler a", 20, 6)
+        assert (body["width"], body["height"]) == (1024, 1024)  # the model's own size wins over the aspect
+        assert (body["sampler_name"], body["steps"], body["cfg_scale"]) == ("Euler a", 32, 6)
+        assert "enable_hr" not in body
         assert body["override_settings"] == {"CLIP_stop_at_last_layers": 2, "forge_additional_modules": [], "sd_model_checkpoint": spec.checkpoint}
         assert body["override_settings_restore_afterwards"] is False
         return httpx.Response(200, json={"images": ["iVBO"]})
@@ -214,7 +215,7 @@ def test_a_checkpoint_model_loads_its_file_with_its_settings():
     assert "sd_model_checkpoint" not in SD_MODELS[0].txt2img["override_settings"]  # the config is not touched
 
 
-def test_the_players_additions_go_before_the_prompt_and_into_the_negative():
+def test_the_players_additions_go_after_the_scene_and_into_the_negative():
     """v0.7.37: the model's own by default, the player's from the settings, the negative with the agent's or alone."""
     from llm_server.config import SD_MODELS
     from llm_server.images import compose
@@ -222,15 +223,22 @@ def test_the_players_additions_go_before_the_prompt_and_into_the_negative():
 
     amix = SD_MODELS[0]
     p = prompts.image_prompt("illustrious", "1boy, wolf, forest.", "book illustration")
-    assert p == "1boy, wolf, forest, book illustration"
+    assert p == "(monochrome:0.75), (Sketch art, line art, drawn), 1boy, wolf, forest"  # no prose style (v0.7.38.2)
     prompt, neg = compose(amix, ImageParams(event="x"), p, "crowd, daylight")
-    assert prompt.startswith("masterpiece, best quality") and "<lora:rimixO:0.65>, 1boy, wolf" in prompt
-    assert neg.startswith("lowres, worst quality") and neg.endswith("child, crowd, daylight")
+    assert prompt.startswith(p + ", masterwork, masterpiece") and prompt.endswith("<lora:rimixO:1.2>")
+    assert neg.startswith("lowres, worst quality") and neg.endswith("anthro, crowd, daylight")
     own = ImageParams(event="x", prompt_add="ink, <lora:other:1>,", negative_add="blurry", negative_only=True)
-    assert compose(amix, own, p, "crowd") == ("ink, <lora:other:1>, 1boy, wolf, forest, book illustration", "blurry")
+    assert compose(amix, own, p, "crowd") == (p + ", ink, <lora:other:1>", "blurry")
     assert compose(amix, ImageParams(event="x", prompt_add="", negative_add=""), p, "crowd") == (p, "crowd")
-    assert compose(RECRAFT, ImageParams(event="x", prompt_add="cinematic", negative_add="blurry"), p, "crowd") == ("cinematic, " + p, "")
+    assert compose(RECRAFT, ImageParams(event="x", prompt_add="cinematic", negative_add="blurry"), p, "crowd") == (p + ", cinematic", "")
     assert "Danbooru" in prompts.image_instructions("illustrious", 700)
+
+
+def test_solo_goes_when_a_beast_is_in_the_frame():
+    from llm_server.images import booru_scene
+
+    assert booru_scene("1boy, solo, wolf, animal, sword, forest") == "1boy, wolf, animal, sword, forest"
+    assert booru_scene("1girl, solo, dress, swing") == "1girl, solo, dress, swing"
 
 
 def test_hello_offers_each_models_additions():
@@ -238,5 +246,5 @@ def test_hello_offers_each_models_additions():
     from llm_server.images import ImageCatalog
 
     info = {m.id: m for m in ImageCatalog((RECRAFT, *SD_MODELS), RECRAFT.id, ImagePrices(None)).infos()}
-    assert info["sd:amix-illustrious"].negative and "<lora:rimixO:0.65>" in info["sd:amix-illustrious"].prompt_add
+    assert info["sd:amix-illustrious"].negative and "<lora:rimixO:1.2>" in info["sd:amix-illustrious"].prompt_add
     assert not info[RECRAFT.id].negative and info[RECRAFT.id].prompt_add == ""

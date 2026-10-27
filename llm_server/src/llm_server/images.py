@@ -163,13 +163,21 @@ async def _a1111(c: httpx.AsyncClient, spec: ImageModel, prompt: str, negative: 
 
 
 def compose(spec: ImageModel, params: ImageParams, prompt: str, negative: str) -> tuple[str, str]:
-    """The player's additions (v0.7.37): before the prompt, and the negative — with the agent's tags or alone."""
+    """The player's additions (v0.7.37): after the scene (v0.7.38.2, as booru prompts go), and the negative — with
+    the agent's tags or alone."""
     add = spec.prompt_add if params.prompt_add is None else params.prompt_add
     neg = spec.negative_add if params.negative_add is None else params.negative_add
-    joined = ", ".join(x for x in (_tags(add), _tags(prompt)) if x)
+    joined = ", ".join(x for x in (_tags(prompt), _tags(add)) if x)
     if not spec.negative:
         return joined, ""
     return joined, ", ".join(x for x in (_tags(neg), "" if params.negative_only else _tags(negative)) if x)
+
+
+def booru_scene(scene: str) -> str:
+    """`solo` beside a beast makes Illustrious grow them into one werewolf: the agent writes it anyway (v0.7.38.2)."""
+    tags = [t.strip() for t in scene.split(",") if t.strip()]
+    beast = any(t in ("animal", "monster") or "feral" in t for t in tags)
+    return ", ".join(t for t in tags if not (beast and t == "solo"))
 
 
 def _tags(text: str) -> str:
@@ -226,7 +234,8 @@ async def _agent_image(session: "Session", params: ImageParams) -> ImageResult:
     finally:
         REQUEST_COSTS.reset(token)
     text_usage = _usage(session, model, result.usage, billed)
-    prompt, negative = compose(spec, params, prompts.image_prompt(spec.template, result.output.scene, params.style),
+    scene = booru_scene(result.output.scene) if spec.template == "illustrious" else result.output.scene
+    prompt, negative = compose(spec, params, prompts.image_prompt(spec.template, scene, params.style),
                                result.output.negative)
     try:
         drawn = await draw(spec, prompt, negative, params.aspect, services.settings.openrouter_api_key)

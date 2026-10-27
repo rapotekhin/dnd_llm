@@ -25,7 +25,7 @@ func run() -> void:
 	models.select(own)
 	models.item_selected.emit(own)
 	await frames(3)
-	step("A-Mix starts from its own additions with the LoRA", prompt.text.contains("<lora:rimixO:0.65>") and negative.is_visible_in_tree()
+	step("A-Mix starts from its own additions with the LoRA", prompt.text.contains("<lora:rimixO:1.2>") and negative.is_visible_in_tree()
 		and negative.text.begins_with("lowres"), prompt.text)
 	var scroll: Node = prompt
 	while scroll != null and not scroll is ScrollContainer:
