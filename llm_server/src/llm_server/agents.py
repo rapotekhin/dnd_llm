@@ -158,6 +158,7 @@ class TurnContext:
     empty_gives: int = 0  # give_item with neither item_id nor item
     bad_effects: int = 0  # effects refused for their shape this turn (v0.7.21.2)
     topics: set[str] = field(default_factory=set)  # rule topics the master has: in the prompt or read with `rules` (v0.7.20.4)
+    made_npcs: list[str] = field(default_factory=list)  # create_npc accepted this turn: in the world only after the turn
 
     def __post_init__(self) -> None:
         self.topics |= set(prompts.auto_topics(self.params.mode, self.params.snapshot))
@@ -314,6 +315,8 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         return f"Отклонено движком: {r.reason or 'без причины'}. Перепиши описание с учётом отказа."
     t.accepted[r.effect_id] = r.summary
     t.proposed.add(key)
+    if isinstance(effect, CreateNpcEffect):
+        t.made_npcs.append(effect.npc.name)
     if isinstance(effect, GiveItemEffect) and effect.item is not None and t.library is not None and r.item_id:
         t.library.add(r.item_id, effect.item)
     hint = " Что заклинание сделало в мире — по правилам rules(\"spells\")." if effect.kind == "cast" and "spells" not in t.topics else ""
@@ -417,9 +420,13 @@ async def find_npcs(ctx: RunContext[TurnContext], query: str) -> str:
     t.searched_npcs = True
     raw = await t.session.call_engine("engine.find_npcs", EngineFindNpcsParams(turn_id=t.params.turn_id, query=query))
     found = EngineFindNpcsResult.model_validate(raw).npcs
+    # v0.7.38.1 (the author's trace): a board quest's giver made by create_npc was not found here, the master went
+    # round in circles until the token limit; such a giver goes in the quest's own new_npcs
+    made = (f"\n\nСозданные в этом ходу ({', '.join(t.made_npcs)}) появятся в мире после хода: искать их и давать им "
+            "задание этим ходом нельзя; заказчик-новичок — в new_npcs самого create_quest (giver new:<key>).") if t.made_npcs else ""
     if not found:
-        return _with_topic(t, "people", "Никого похожего. Если человек нужен по сцене или замыслу игрока — create_npc.")
-    return _with_topic(t, "people", "\n".join(f"[{n.npc_id}] {n.name} — {n.role}, {n.location}{' (мёртв)' if n.dead else ''}" for n in found))
+        return _with_topic(t, "people", "Никого похожего. Если человек нужен по сцене или замыслу игрока — create_npc." + made)
+    return _with_topic(t, "people", "\n".join(f"[{n.npc_id}] {n.name} — {n.role}, {n.location}{' (мёртв)' if n.dead else ''}" for n in found) + made)
 
 
 async def find_quests(ctx: RunContext[TurnContext], query: str) -> str:

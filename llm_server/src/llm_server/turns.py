@@ -11,6 +11,7 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import TypeVar, get_args
 
+from pydantic_ai import capture_run_messages
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UnexpectedModelBehavior, UsageLimitExceeded
 from pydantic_ai.models import Model
 from pydantic_ai.usage import RunUsage, UsageLimits
@@ -178,17 +179,17 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
     async def attempt():
         nonlocal ctx, agent
         ctx = TurnContext(session, params, services.library)
-        try:
-            return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
-        except UnexpectedModelBehavior as exc:
-            # Out of output tokens (v0.7.4: the fight start in the burrow failed at 1500): once more with room to
-            # spare, while the engine is untouched — the player sees no error.
-            if "token limit" not in str(exc).lower() or ctx.check_ids or ctx.accepted:
-                raise
-            log.warning("turn %s ran out of output tokens, retrying with %d", params.turn_id, RETRY_MAX_TOKENS)
-            agent = build_turn_agent(services.model_factory(model), system, RETRY_MAX_TOKENS, entry=is_entry(params))
-            ctx = TurnContext(session, params, services.library)
-            return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
+        with capture_run_messages() as messages:
+            try:
+                return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
+            except UnexpectedModelBehavior as exc:
+                if "token limit" not in str(exc).lower():
+                    raise
+        # Out of output tokens (v0.7.4: the fight start in the burrow failed at 1500): go on from where it stopped
+        # with room to spare — the turn's checks and accepted effects stay (v0.7.38.1: a board quest failed so).
+        log.warning("turn %s ran out of output tokens, going on with %d", params.turn_id, RETRY_MAX_TOKENS)
+        agent = build_turn_agent(services.model_factory(model), system, RETRY_MAX_TOKENS, entry=is_entry(params))
+        return await agent.run(None, message_history=messages, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
 
     started = time.monotonic()
     trace = {"what": "turn", "turn_id": params.turn_id, "mode": params.mode, "kind": params.kind, "input": params.input,

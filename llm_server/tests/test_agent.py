@@ -410,6 +410,36 @@ def test_a_turn_out_of_output_tokens_is_tried_again_with_more(data_dir):
     assert seen[-1] == 6000
 
 
+def test_out_of_tokens_after_an_accepted_effect_goes_on_from_there(data_dir):
+    """v0.7.38.1 (the author's trace): the board quest failed — create_npc was accepted, then the token limit; now the
+    turn goes on with the effect kept, and find_npcs tells that the new person is in the world only after the turn."""
+    seen = []
+    npc = {"kind": "create_npc", "npc": {"name": "Демьян", "role": "староста", "description": "Старик с ключами.",
+                                         "personality": "Медлителен.", "monster": "commoner", "room_id": "brod-square"}}
+
+    async def fn(messages, info):
+        seen.append(info.model_settings.get("max_tokens") if info.model_settings else None)
+        n = len(seen)
+        if n == 1:
+            return ModelResponse(parts=[ToolCallPart("find_npcs", {"query": "староста"})])
+        if n == 2:
+            return ModelResponse(parts=[ToolCallPart("propose_effect", {"effect": json.dumps(npc, ensure_ascii=False)})])
+        if n == 3:
+            return ModelResponse(parts=[ToolCallPart("find_npcs", {"query": "Демьян"})])
+        if n == 4:
+            raise UnexpectedModelBehavior("Model token limit (2500) exceeded before any response was generated.")
+        assert "появятся в мире после хода" in last_tool_text(messages)  # the history went on, nothing redone
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"narration": "Староста кивает.", "effect_ids": ["e-1"]})])
+
+    def engine(method, params):
+        return {"engine.find_npcs": {"npcs": []}}.get(method) or default_engine(method, params)
+
+    msg, calls, _ = play(data_dir, fn, engine)
+    assert msg["result"]["effect_ids"] == ["e-1"] and msg["result"]["narration"] == "Староста кивает."
+    assert [c["method"] for c in calls].count("engine.validate") == 1
+    assert seen[-1] == 6000
+
+
 
 def test_the_library_finds_items_by_words(tmp_path):
     # v0.7.18: any word of the query by its stem — «серебряный кинжал» finds «Кинжал инея».

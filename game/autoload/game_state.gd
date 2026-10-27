@@ -2230,8 +2230,8 @@ func read_board(prop_id: String) -> String:
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
 	_request("action", text + (" [движок: на «%s» [%s] есть место для новых заказов — повесь 1–%d настоящих заказа: сначала find_quests, потом create_quest с board_prop_id %s " +
-		"и заказчиком из этой округи; что написано в листках — это и есть эти задания, игрок возьмёт их кнопкой]") % [p.get("name", prop_id), prop_id,
-		room_left, prop_id])
+		"и заказчиком из этой округи — живым человеком из find_npcs или новым в new_npcs самого create_quest (giver new:<key>), без отдельного create_npc; " +
+		"что написано в листках — это и есть эти задания, игрок возьмёт их кнопкой]") % [p.get("name", prop_id), prop_id, room_left, prop_id])
 	return ""
 
 
