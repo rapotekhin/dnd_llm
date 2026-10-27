@@ -17,6 +17,8 @@ DEFAULT_MODELS = (
     "anthropic/claude-haiku-5.5",
     "qwen/qwen3.8-27b",  # Qwen3.8 Omni Flash left (v0.7.21): its only provider has no forced tool_choice — every turn failed
     "google/gemini-3.8-flash",
+    # the author's request of 2026-10-26, not run on the goldens yet
+    "z-ai/glm-5.3-flash",
     # free (v0.7.20.2, the author's request): OpenRouter's free router and free models — limited by requests a day
     "openrouter/free",
     "nvidia/nemotron-3.5-super-vl:free",
@@ -37,11 +39,8 @@ PROVIDERS: dict[str, tuple[tuple[str, str], ...]] = {
                                 ("google-ai-studio/priority", "Google AI Studio (priority)")),
 }
 
-# The provider a model goes to first when the player pinned none (the author, 2026-10-24): left to the price picker,
-# DeepSeek went to OpenInference at five times Relace's price. Games, golden runs and playtests alike.
-DEFAULT_PROVIDER: dict[str, str] = {
-    "deepseek/deepseek-v4.1-flash-1017": "relace",
-}
+# No provider is pinned first (v0.7.34.1, was Relace from 2026-10-24): the picker ranks them by the real cost of our
+# turn, with the cache and each provider's own bills (llm/providers.py).
 
 
 class ConfigError(RuntimeError):

@@ -18,6 +18,9 @@ var _check_status: Label
 var _model: OptionButton
 var _provider: OptionButton
 var _provider_tags: Array = []
+var _provider_sort: OptionButton
+## The provider list's orders (v0.7.34.1): «ours» — the server's picks for «Авто» first, then the server's ranking.
+const PROVIDER_SORTS := ["ours", "cost", "speed", "uptime", "name"]
 var _budget_edit: LineEdit
 var _budget_off: CheckBox
 var _budget_status: Label
@@ -266,9 +269,26 @@ func _master_tab() -> Control:
 	var provider_label := Label.new()  # v0.7.20.5: the provider pinned by hand
 	provider_label.text = "OPT_PROVIDER"
 	provider_label.theme_type_variation = UiTheme.MUTED_LABEL
+	provider_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(provider_label)
+	var sort_row := HBoxContainer.new()
+	var sort_label := Label.new()
+	sort_label.text = "OPT_PROVIDER_SORT"
+	sort_label.theme_type_variation = UiTheme.MUTED_LABEL
+	sort_row.add_child(sort_label)
+	_provider_sort = OptionButton.new()
+	_provider_sort.name = "ProviderSortOption"
+	_provider_sort.fit_to_longest_item = false
+	for key: String in PROVIDER_SORTS:
+		_provider_sort.add_item("OPT_PROVIDER_SORT_" + key.to_upper())
+	_provider_sort.selected = maxi(0, PROVIDER_SORTS.find(SaveManager.provider_sort))
+	_provider_sort.item_selected.connect(_on_provider_sort_selected)
+	sort_row.add_child(_provider_sort)
+	box.add_child(sort_row)
 	_provider = OptionButton.new()
 	_provider.name = "ProviderOption"
+	_provider.fit_to_longest_item = false  # v0.7.34.1: rows with prices are long, the popup shows them whole
+	_provider.clip_text = true
 	_provider.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_provider.item_selected.connect(_on_provider_selected)
 	box.add_child(_provider)
@@ -418,12 +438,90 @@ func _fill_providers() -> void:
 	var id := SaveManager.master_model if not SaveManager.master_model.is_empty() else Backend.default_model()
 	for m: Variant in Backend.models():
 		if m is Dictionary and str(m.get("id", "")) == id:
-			for p: Variant in m.get("providers", []):
+			for p: Variant in sort_providers(m.get("providers", []), SaveManager.provider_sort):
 				_provider_tags.append(str(p.get("tag", "")))
-				_provider.add_item(str(p.get("name", p.get("tag", ""))))
+				_provider.add_item(provider_text(p))
+				_provider.set_item_tooltip(_provider.item_count - 1, provider_tooltip(p))
 	var pinned := str(SaveManager.master_providers.get(SaveManager.master_model, ""))
 	_provider.selected = maxi(0, _provider_tags.find(pinned))
 	_provider.disabled = _provider_tags.size() < 2
+
+
+## One row of the provider list (v0.7.34.1): the name with its tag, the cost of 1000 turns and our measured speed.
+static func provider_text(p: Dictionary) -> String:
+	var name := str(p.get("name", p.get("tag", "")))
+	var tag := str(p.get("tag", ""))
+	if not tag.is_empty() and tag.to_lower() != name.to_lower():
+		name += " (%s)" % tag
+	var cost := float(p.get("usd_per_1000_turns", 0))
+	if cost <= 0:  # an old server or the config's short list: the name alone
+		return name
+	var tps := float(p.get("tokens_per_s", 0))
+	var speed: String = TranslationServer.translate("OPT_PROVIDER_SPEED") % roundi(tps) if tps > 0 else TranslationServer.translate("OPT_PROVIDER_SPEED_NONE")
+	var text: String = TranslationServer.translate("OPT_PROVIDER_ITEM") % [name, cost, speed]
+	if bool(p.get("picked", false)):
+		text += TranslationServer.translate("OPT_PROVIDER_PICKED")
+	return text
+
+
+## The row's tooltip: the prices per million tokens, our bills, uptime and quantization.
+static func provider_tooltip(p: Dictionary) -> String:
+	if float(p.get("usd_per_1000_turns", 0)) <= 0:
+		return ""
+	var cache: Variant = p.get("cache_usd_per_mtok")
+	var lines := [TranslationServer.translate("OPT_PROVIDER_TIP_PRICES") % [float(p.get("input_usd_per_mtok", 0)), float(p.get("output_usd_per_mtok", 0)),
+		("$%.4f" % float(cache)) if cache != null else TranslationServer.translate("OPT_PROVIDER_TIP_NO_CACHE")]]
+	var factor := float(p.get("bill_factor", 1.0))
+	if absf(factor - 1.0) >= 0.15:
+		lines.append(TranslationServer.translate("OPT_PROVIDER_TIP_BILLS") % factor)
+	var uptime: Variant = p.get("uptime")
+	if uptime != null:
+		lines.append(TranslationServer.translate("OPT_PROVIDER_TIP_UPTIME") % float(uptime))
+	if not str(p.get("quantization", "")).is_empty() and str(p.get("quantization", "")) != "unknown":
+		lines.append(TranslationServer.translate("OPT_PROVIDER_TIP_QUANT") % str(p.get("quantization", "")))
+	return "\n".join(lines)
+
+
+## The providers in the order the player chose; the server's order (its ranking) breaks ties.
+static func sort_providers(list: Array, key: String) -> Array:
+	var rows := []
+	for i in list.size():
+		if list[i] is Dictionary:
+			rows.append({"p": list[i], "i": i})
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var pa: Dictionary = a["p"]
+		var pb: Dictionary = b["p"]
+		if key == "name":
+			var na := str(pa.get("name", "")).to_lower()
+			var nb := str(pb.get("name", "")).to_lower()
+			if na != nb:
+				return na < nb
+		var x := _sort_value(pa, key)
+		var y := _sort_value(pb, key)
+		return x < y if x != y else int(a["i"]) < int(b["i"]))
+	return rows.map(func(r: Dictionary) -> Dictionary: return r["p"])
+
+
+## Smaller comes first; unknown values go last.
+static func _sort_value(p: Dictionary, key: String) -> float:
+	match key:
+		"ours":
+			return 0.0 if bool(p.get("picked", false)) else 1.0
+		"cost":
+			var cost := float(p.get("usd_per_1000_turns", 0))
+			return cost if cost > 0 else INF
+		"speed":
+			var tps := float(p.get("tokens_per_s", 0))
+			return -tps if tps > 0 else INF
+		"uptime":
+			return -float(p["uptime"]) if p.get("uptime") != null else INF
+	return 0.0
+
+
+func _on_provider_sort_selected(i: int) -> void:
+	SaveManager.provider_sort = PROVIDER_SORTS[i]
+	SaveManager.save_settings()
+	_fill_providers()
 
 
 func _on_provider_selected(i: int) -> void:

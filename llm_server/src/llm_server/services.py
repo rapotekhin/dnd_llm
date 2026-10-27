@@ -6,6 +6,7 @@ from .config import Settings
 from .llm.budget import DailyBudget
 from .llm.catalog import ModelCatalog, ModelFactory
 from .llm.library import ItemLibrary
+from .llm.providers import PICKER
 from .trace import TraceWriter
 
 
@@ -20,6 +21,7 @@ class Services:
 
     @classmethod
     def create(cls, settings: Settings, model_factory: ModelFactory | None = None) -> "Services":
+        PICKER.bind(settings.data_dir / "provider_bills.json")
         return cls(
             settings=settings,
             models=ModelCatalog(settings.models, settings.model),

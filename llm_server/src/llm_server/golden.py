@@ -396,6 +396,7 @@ class Outcome:
     cost_usd: float = 0.0
     note: str = ""
     route: str = ""  # --route: the router's way (v0.7.20.4)
+    provider: str = ""  # who answered the last request (v0.7.34.1, for tools/provider_cost.py)
 
 
 class _ShortResult:
@@ -456,6 +457,8 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     o.tools = [p.tool_name for m in result.all_messages() for p in getattr(m, "parts", []) if isinstance(p, ToolCallPart)]
     usage = result.usage if short is not None else before + result.usage
     o.input_tokens, o.output_tokens = usage.input_tokens, usage.output_tokens
+    from .turns import _served_by
+    o.provider = _served_by(result)
     price_in, price_out = prices.get(model_id, (0.0, 0.0))
     o.cost_usd = sum(billed) or (usage.input_tokens * price_in + usage.output_tokens * price_out) / 1e6
     o.fails = check_expect(sc.get("expect", {}), {"narration": out.narration, "options": out.options, "option_checks": out.option_checks,
@@ -522,6 +525,7 @@ async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, re
     if not key:
         sys.exit("OPENROUTER_API_KEY is not set (env or the root .env)")
     make = openrouter_factory(key)
+    PICKER.bind(Path(os.environ.get("LLM_SERVER_DATA_DIR", str(REPO_ROOT / "llm_server" / "var"))) / "provider_bills.json")
     catalog = ModelCatalog(tuple(dict.fromkeys([model_id, *([judge_id] if judge_id else [])])), model_id)
     await catalog.load_prices()
     prices = {i.id: (i.input_usd_per_mtok, i.output_usd_per_mtok) for i in catalog.infos()}

@@ -40,6 +40,7 @@ def create_app(
     async def lifespan(_app: FastAPI):
         if load_prices:
             await services.models.load_prices()
+            await services.models.load_providers()
         yield
 
     app = FastAPI(title="Between the Rolls LLM backend", version=__version__, docs_url=None, redoc_url=None,

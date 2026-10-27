@@ -18,7 +18,6 @@ from pydantic_ai.models import Model
 from pydantic_ai.settings import ModelSettings
 
 from . import prompts
-from .config import DEFAULT_PROVIDER
 from .llm.providers import PICKER, PINNED, min_tps
 from .protocol import (
     DcTier,
@@ -90,7 +89,8 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
     cheapest provider of the model that supports every parameter of the request is taken (v0.7.4, the author's
     wish); LLM_SERVER_PROVIDER_SORT = price (default) | throughput | latency | off. With price, v0.7.14.4: only the
     `LLM_SERVER_PROVIDER_TOP` cheapest providers (llm.providers.PICKER, refreshed before a turn), and those slower than
-    `LLM_SERVER_MIN_TPS` tokens/s go last — the cheapest fast one of them serves."""
+    `LLM_SERVER_MIN_TPS` tokens/s go last — the cheapest fast one of them serves. v0.7.34.1: the cheapest by the real
+    cost of our turn (cache, the providers' bills), no provider pinned first."""
     settings: dict = dict(base)
     if "qwen/" in model.model_name or "nvidia/nemotron" in model.model_name:
         # v0.7.20.2: Nemotron thinks the whole max_tokens away before answering — the same switch
@@ -110,10 +110,6 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
             settings["openrouter_provider"].update({"only": picked, "allow_fallbacks": True})
             if min_tps() > 0:
                 settings["openrouter_provider"]["preferred_min_throughput"] = {"p50": min_tps()}
-        first = DEFAULT_PROVIDER.get(model.model_name)
-        if first:  # the server's provider first; the picked cheap ones only if it is down
-            order = [first] + [p for p in picked if p != first]
-            settings["openrouter_provider"].update({"order": order, "only": order, "allow_fallbacks": True})
     return settings  # type: ignore[return-value]
 
 
@@ -317,11 +313,10 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     return f"Принято: effect_id={r.effect_id}. {r.summary}{hint}"
 
 
-# Google rejects the whole request when a tool's schema is too complex (v0.7.21: all 33 effect kinds in one union —
-# Gemini 3.8 Flash failed every turn with «invalid argument»). For such models `propose_effect` takes a plain object, its
-# description lists every kind with its fields, and the effect is checked here against the same schema. A JSON string,
-# not an object: an object without a schema came from Gemini flattened («props_1_name»).
-LOOSE_EFFECT_MODELS = ("google/",)
+# `propose_effect` takes the effect as a JSON string for every model: its description lists every kind with its fields
+# (~9k characters instead of the ~51k JSON schema of the union) and the effect is checked here against the same schema.
+# Gemini needed it from v0.7.21 (a too complex schema, a flattened object); DeepSeek did as well with half the input on
+# the golden subset (2026-10-26, docs/tech/prompt-experiments-2026-10-26.md).
 _EFFECT = TypeAdapter(Effect)
 
 
@@ -373,9 +368,7 @@ DC_TIERS: tuple[str, ...] = typing_get_args(DcTier)
 EFFECT_RETRIES = 4  # a big effect (a quest with its people and place) is often mistyped once or twice (v0.7.21.2 goldens)
 
 
-def propose_effect_tool(model: Model) -> Tool:
-    if not model.model_name.startswith(LOOSE_EFFECT_MODELS):
-        return Tool(propose_effect, max_retries=EFFECT_RETRIES)
+def propose_effect_tool() -> Tool:
     return Tool(propose_effect_loose, name="propose_effect", max_retries=EFFECT_RETRIES,
                 description=(propose_effect.__doc__ or "") + "\nЭффект — JSON-объект строкой, с полем kind; виды и поля (? — необязательное): " + _effect_kinds())
 
@@ -470,7 +463,7 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -
         output_type=TurnOutput,
         deps_type=TurnContext,
         instructions=system,
-        tools=[Tool(request_check, max_retries=EFFECT_RETRIES), propose_effect_tool(model), rules, lookup, find_items, find_npcs, find_places, find_quests],
+        tools=[Tool(request_check, max_retries=EFFECT_RETRIES), propose_effect_tool(), rules, lookup, find_items, find_npcs, find_places, find_quests],
         retries=2,
         model_settings=settings_for(model, base),
     )

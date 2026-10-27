@@ -1,7 +1,7 @@
-{% if character %}
+{% if character +%}
 ## Персонаж игрока
 
-{{ character.name }} — {{ hero_gender(character.gender) }}, {{ character.race }} {{ character.class_name }}, {{ character.level }} уровень{% if character.body %} ({{ character.body }}){% endif %}{% if character.background %}, {{ character.background | lower }}{% endif %}. HP {{ character.hp }}/{{ character.max_hp }}, КД {{ character.ac }}, скорость {{ character.speed }} футов, монеты: {{ coins }}.{% if reward_left %} Награды от тебя (монеты и вещи вне заданий) до долгого отдыха — ещё на {{ reward_left }}.{% endif %}
+{{ character.name }} — {{ hero_gender(character.gender) }}, {{ character.race }} {{ character.class_name }}, {{ character.level }} уровень{% if character.body %} ({{ character.body }}){% endif %}{% if character.background %}, {{ character.background | lower }}{% endif %}. HP {{ character.hp }}/{{ character.max_hp }}, КД {{ character.ac }}, скорость {{ character.speed }} футов, монеты: {{ coins }}.{% if reward_left %} Награды от тебя (монеты и вещи вне заданий) до долгого отдыха — ещё на {{ reward_left }}.{% endif +%}
 {% if character.backstory %}История персонажа: {{ character.backstory }}
 {% endif %}{% if character.abilities %}Характеристики: {% for k, v in character.abilities.items() %}{{ ability_name(k) }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if character.effects %}Состояния и эффекты: {{ character.effects | join("; ") }} (их влияние на проверки и бой движок учитывает сам).
@@ -13,29 +13,29 @@
 {% endif %}{% if character.background_feature %}Умение предыстории — {{ character.background_feature }}.
 {% endif %}{% if character.resources %}Умения с ограниченными использованиями: {% for r in character.resources %}{{ r.name }} {{ r.left }}/{{ r.max }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if character.concentration %}Концентрация: {{ character.concentration }}.
-{% endif %}{% if character.skills %}Бонусы навыков: {% for k, v in character.skills.items() %}{{ k }} {{ "%+d" | format(v) }}{% if k in character.skill_proficiencies %}*{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% if character.skill_proficiencies %} (* — владеет){% endif %}.
+{% endif %}{% if character.skills %}Владеет навыками: {{ character.skill_proficiencies | join(", ") or "нет" }} (броски считает движок).
 {% endif %}{% if character.features %}Умения: {{ character.features | join(", ") }}.
 {% endif %}{% if character.spell_save_dc %}Заклинатель: Сл спасброска {{ character.spell_save_dc }}{% for s in character.spell_slots %}{% if loop.first %}; ячейки: {% endif %}{{ s.level }} круг {{ s.left }}/{{ s.max }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% if character.cantrips %}Заговоры: {{ character.cantrips | join(", ") }}.
 {% endif %}{% if character.spells %}Заклинания: {{ character.spells | join(", ") }}.
 {% endif %}{% endif %}{% if character.equipped %}Надето и в руках (слот: предмет [id]): {{ character.equipped | join(", ") }}.
-{% endif %}{% if character.inventory %}При себе (под рукой): {% for i in character.inventory %}{{ i.name }}{% if i.qty > 1 %} ×{{ i.qty }}{% endif %} [{{ i.item_id }}]{% if not loop.last %}, {% endif %}{% endfor %}.
+{% endif %}{% if character.inventory %}При себе (под рукой, кроме надетого): {% for i in character.inventory if ("[" ~ i.item_id ~ "]") not in (character.equipped | join(" ")) %}{{ i.name }}{% if i.qty > 1 %} ×{{ i.qty }}{% endif %} [{{ i.item_id }}]{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if character.bags %}Сумки (что внутри — не под рукой): {{ character.bags | join("; ") }}.
-{% endif %}{% if character.development %}Мирное развитие (уровни и навыки ведёт движок): {{ character.development | join("; ") }}.{% endif %}{% if character.craft %}
-{{ character.craft }}.{% endif %}{% if character.jobs %}
-{{ character.jobs }}.{% endif %}{% if character.property %}
-{{ character.property }}.{% endif %}{% if character.bank %}
-{{ character.bank }}.{% endif %}{% if character.shop %}
-{{ character.shop }}.{% endif %}{% if character.study %}
-{{ character.study }}.{% endif %}{% if character.bonds %}
-Связи: {{ character.bonds }}.{% endif %}{% if character.family %}
-{{ character.family }}.{% endif %}{% if character.underworld %}
-{{ character.underworld }}.{% endif %}{% if character.office %}
-{{ character.office }}.{% endif %}{% if character.goal %}
+{% endif %}{% if character.development %}Мирное развитие (уровни и навыки ведёт движок): {{ character.development | join("; ") }}.{% endif %}{% if character.craft +%}
+{{ character.craft }}.{% endif %}{% if character.jobs +%}
+{{ character.jobs }}.{% endif %}{% if character.property +%}
+{{ character.property }}.{% endif %}{% if character.bank +%}
+{{ character.bank }}.{% endif %}{% if character.shop +%}
+{{ character.shop }}.{% endif %}{% if character.study +%}
+{{ character.study }}.{% endif %}{% if character.bonds +%}
+Связи: {{ character.bonds }}.{% endif %}{% if character.family +%}
+{{ character.family }}.{% endif %}{% if character.underworld +%}
+{{ character.underworld }}.{% endif %}{% if character.office +%}
+{{ character.office }}.{% endif %}{% if character.goal +%}
 Жизненная цель героя (его мысли — NPC о ней не знают): {{ character.goal }}.
 {% endif %}
 {% endif %}
-{% if scene %}
+{% if scene +%}
 ## Где игрок
 
 Локация: {{ scene.location_name }}. {{ scene.location_description }}
@@ -45,19 +45,19 @@
 {% endif %}{% if scene.sneaking %}Игрок крадётся: движется тихо и осторожно.
 {% endif %}
 Выходы (для эффекта `move`):
-{% for e in scene.exits %}- {{ e.name }} [{{ e.room_id }}]{% if e.door %} — {{ e.door }}{% endif %}
+{% for e in scene.exits %}- {{ e.name }} [{{ e.room_id }}]{% if e.door %} — {{ e.door }}{% endif +%}
 {% else %}- нет
 {% endfor %}
 NPC здесь:
-{% for n in scene.npcs %}- {{ n.name }} [{{ n.npc_id }}] — {{ n.role }}{% if n.race %}, {{ n.race }}{% endif %}{% if n.body %} ({{ n.body }}){% endif %}{% if n.trader %}; торговец{% endif %}; отношение к игроку: {{ attitude_word(n.attitude) }}.{% if n.speaks %} Говорит: {{ n.speaks }}{% if not n.understands_hero %} — героя НЕ понимает{% endif %}.{% endif %}{% if n.tie %} Связь с прошлым героя: {{ n.tie }}.{% endif %}{% if n.description %} {{ n.description }}{% endif %}{% if n.refuses %} Враждебен: говорить и торговать с героем не станет.{% elif n.eager %} Близкий друг героя: сам предлагает помощь по своей роли и услугам.{% endif %}{% if n.services %} Услуги: {{ n.services | join(", ") }}.{% endif %}{% if n.deal %} Уже дал(а) герою: {{ n.deal }}.{% endif %}{% if n.follows %} Идёт с героем.{% endif %}{% if n.under %} Сейчас под чарами героя ({{ n.under }}): чары действуют — относится к герою как к доброму знакомому и охотно помогает в разумных пределах.{% endif %}{% if n.memory %}
-  Помнит о герое: {{ n.memory | join("; ") }}.{% endif %}{% if n.secrets %}
-  Скрывает (саму тайну ты не знаешь — только намёк; не выдумывай её): {{ n.secrets | join("; ") }}.{% endif %}
+{% for n in scene.npcs %}- {{ n.name }} [{{ n.npc_id }}] — {{ n.role }}{% if n.race %}, {{ n.race }}{% endif %}{% if n.body %} ({{ n.body }}){% endif %}{% if n.trader %}; торговец{% endif %}; отношение к игроку: {{ attitude_word(n.attitude) }}.{% if n.speaks %} Говорит: {{ n.speaks }}{% if not n.understands_hero %} — героя НЕ понимает{% endif %}.{% endif %}{% if n.tie %} Связь с прошлым героя: {{ n.tie }}.{% endif %}{% if n.description %} {{ n.description }}{% endif %}{% if n.refuses %} Враждебен: говорить и торговать с героем не станет.{% elif n.eager %} Близкий друг героя: сам предлагает помощь по своей роли и услугам.{% endif %}{% if n.services %} Услуги: {{ n.services | join(", ") }}.{% endif %}{% if n.deal %} Уже дал(а) герою: {{ n.deal }}.{% endif %}{% if n.follows %} Идёт с героем.{% endif %}{% if n.under %} Сейчас под чарами героя ({{ n.under }}): чары действуют — относится к герою как к доброму знакомому и охотно помогает в разумных пределах.{% endif %}{% if n.memory +%}
+  Помнит о герое: {{ n.memory | join("; ") }}.{% endif %}{% if n.secrets +%}
+  Скрывает (саму тайну ты не знаешь — только намёк; не выдумывай её): {{ n.secrets | join("; ") }}.{% endif +%}
 {% else %}{% if not scene.creatures %}- никого
 {% endif %}{% endfor %}{% for c in scene.summons %}- {{ c }} — призван заклинанием героя, идёт с ним, в бою на его стороне; отпускает игрок кнопкой
 {% endfor %}{% for c in scene.creatures %}- {{ c }} — живой, здесь, в сцене после боя: отвечает, если с ним говорят; связан — только если так написано (связать, отпустить, вести — кнопки игрока)
 {% endfor %}
 {% if scene.props %}Вокруг (только это и описывай):
-{% for p in scene.props %}- {{ p.name }} [{{ p.prop_id }}]{% if p.state %} ({{ {"open": "открыто", "closed": "закрыто", "broken": "сломано", "burned": "сожжено", "moved": "сдвинуто"}.get(p.state, p.state) }}){% endif %}{% if p.owner %}, хозяин: {{ p.owner }}{% endif %}{% if p.portable %}, можно взять{% endif %}.{% if p.description %} {{ p.description }}{% endif %}{% if p.text %} Написано: «{{ p.text }}»{% endif %}{% if p.container %} Это {{ p.container }}{% if p.locked %}, заперт{% endif %}; внутри: {{ p.contents or "пусто" }}.{% endif %}
+{% for p in scene.props %}- {{ p.name }} [{{ p.prop_id }}]{% if p.state %} ({{ {"open": "открыто", "closed": "закрыто", "broken": "сломано", "burned": "сожжено", "moved": "сдвинуто"}.get(p.state, p.state) }}){% endif %}{% if p.owner %}, хозяин: {{ p.owner }}{% endif %}{% if p.portable %}, можно взять{% endif %}.{% if p.description %} {{ p.description }}{% endif %}{% if p.text %} Написано: «{{ p.text }}»{% endif %}{% if p.container %} Это {{ p.container }}{% if p.locked %}, заперт{% endif %}; внутри: {{ p.contents or "пусто" }}.{% endif +%}
 {% endfor %}
 {% endif %}{% if scene.hooks %}Зацепки: {{ scene.hooks | join("; ") }}.
 {% endif %}{% if scene.found %}Игрок уже заметил или нашёл (это факты, их можно описывать): {{ scene.found | join("; ") }}.
@@ -70,23 +70,23 @@ NPC здесь:
 {% endif %}
 {% endif %}
 {% set taken = quests | rejectattr("offered_by") | list %}{% set offered = quests | selectattr("offered_by") | list %}
-{% if taken %}
+{% if taken +%}
 ## Задания игрока
 
-{% for q in taken %}- {{ q.title }}{% if q.done %} (выполнено){% endif %}: {{ q.description }}{% if q.step %} Сейчас: {{ q.step }}.{% endif %}
+{% for q in taken %}- {{ q.title }}{% if q.done %} (выполнено){% endif %}: {{ q.description }}{% if q.step %} Сейчас: {{ q.step }}.{% endif +%}
 {% endfor %}
 Выполняет задание сам игрок (движок отмечает и даёт награду); ты не объявляешь задание выполненным и не даёшь за него опыт или награду сам.
 
 {% endif %}
-{% if offered %}
+{% if offered +%}
 ## Задания, которые здесь можно получить
 
-{% for q in offered %}- {{ q.offered_by }} — «{{ q.title }}» [{{ q.id }}]: {{ q.description }}{% if q.offer_items %} Вещь задания: {{ q.offer_items | join(", ") }} — когда {{ q.offered_by }} вручает её игроку в рассказе, в этом же ходе обязательно `give_item` с этим id: без эффекта вещи у игрока не будет и задание не начнётся.{% endif %}
+{% for q in offered %}- {{ q.offered_by }} — «{{ q.title }}» [{{ q.id }}]: {{ q.description }}{% if q.offer_items %} Вещь задания: {{ q.offer_items | join(", ") }} — когда {{ q.offered_by }} вручает её игроку в рассказе, в этом же ходе обязательно `give_item` с этим id: без эффекта вещи у игрока не будет и задание не начнётся.{% endif +%}
 {% endfor %}
 Это работа, которая у этих NPC действительно есть. Игрок спрашивает о работе, деле, помощи или слухах — NPC сам рассказывает о своём задании в характере и предлагает взять; не говори, что заданий нет. Игрок берёт его кнопкой «Взять задание» или словами. Вопрос о работе или слухах — ещё не согласие. Если игрок прямо согласился («давай письмо», «берусь», «я в деле») и у задания есть «Вещь задания» — в этом же ходе отдай её эффектом `give_item` с её `item_id`, и движок сам оформит задание; у задания без вещи — эффект `accept_quest` с его id в квадратных скобках. Награду не обещай сверх описания и не выдавай сам. Вещь задания адресату («отдаю письмо Илве») — `take_item`: движок сам закроет шаг и даст награду.
 
 {% endif %}
-{% if crimes %}
+{% if crimes +%}
 ## Преступления героя
 
 {% for d in crimes.deeds %}- {{ d }}
@@ -94,7 +94,7 @@ NPC здесь:
 {% elif crimes.wanted %}Герой в розыске в этой округе: торговцы не торгуют, комнату не сдают, услуг не оказывают (даже даром), работы не дают, стража ищет.
 {% endif %}
 {% endif %}
-{% if summaries %}
+{% if summaries +%}
 ## Что было раньше
 
 {% for key, text in summaries.items() %}- {{ summary_title(key) }}: {{ text }}

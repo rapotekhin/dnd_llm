@@ -23,7 +23,7 @@ def test_exploration_prompt():
     assert "Кухня таверны [brod-tavern-kitchen]" in text  # exits with ids for `move`
     assert "10 зм" in text
     assert "женском роде" in text
-    assert "Сил 16" in text and "athletics +5*" in text and "(* — владеет)" in text
+    assert "Сил 16" in text and "Владеет навыками: athletics" in text and "athletics +5" not in text  # the engine rolls (2026-10-26)
     assert "Надето и в руках (слот: предмет [id]): armor: Кольчуга [chain_mail], shield: Щит [shield]" in text
     assert "Заклинатель" not in text
     assert "## Мир: Сумеречная Марка" in text and "Пепельный Князь" in text
@@ -226,9 +226,8 @@ def test_openrouter_takes_the_cheapest_provider(monkeypatch):
     from llm_server.agents import settings_for
 
     model = OpenRouterModel("deepseek/deepseek-v4.1-flash-1017", provider=OpenRouterProvider(api_key="test"))
-    # DeepSeek goes to Relace first (the author, 2026-10-24); the picked cheap ones only behind it
-    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True, "order": ["relace"],
-                                                        "only": ["relace"], "allow_fallbacks": True}
+    # v0.7.34.1: no provider pinned first; with nothing picked yet, plain price sorting
+    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True}
     haiku = OpenRouterModel("anthropic/claude-haiku-5.5", provider=OpenRouterProvider(api_key="test"))
     assert settings_for(haiku)["openrouter_provider"] == {"sort": "price", "require_parameters": True}
     monkeypatch.setenv("LLM_SERVER_PROVIDER_SORT", "off")
@@ -249,9 +248,49 @@ def test_no_temperature_for_claude_on_openrouter():
     assert deepseek["temperature"] == 0.8
 
 
-def _endpoint(tag: str, prompt: float, completion: float, uptime: float = 100, tools: bool = True) -> dict:
-    return {"tag": tag, "pricing": {"prompt": str(prompt / 1e6), "completion": str(completion / 1e6)}, "uptime_last_30m": uptime,
+def _endpoint(tag: str, prompt: float, completion: float, uptime: float = 100, tools: bool = True, cache: float | None = None,
+              name: str = "") -> dict:
+    pricing = {"prompt": str(prompt / 1e6), "completion": str(completion / 1e6)}
+    if cache is not None:
+        pricing["input_cache_read"] = str(cache / 1e6)
+    return {"tag": tag, "provider_name": name or tag, "pricing": pricing, "uptime_last_30m": uptime,
             "supported_parameters": ["tools", "tool_choice", "temperature"] if tools else ["temperature"]}
+
+
+def test_the_cache_price_counts_in_the_ranking(monkeypatch):
+    # v0.7.34.1: most of our input is cached — a dear input with a cheap cache beats a cheap input without one
+    from llm_server.llm.providers import cheapest
+
+    monkeypatch.setenv("LLM_SERVER_CACHE_SHARE", "0.7")
+    endpoints = [_endpoint("no-cache", 0.05, 0.5), _endpoint("cached", 0.07, 0.5, cache=0.008)]
+    assert cheapest(endpoints, 2) == ["cached", "no-cache"]
+    monkeypatch.setenv("LLM_SERVER_CACHE_SHARE", "0")
+    assert cheapest(endpoints, 2) == ["no-cache", "cached"]
+
+
+def test_a_provider_billing_over_its_list_price_falls_back(tmp_path):
+    # v0.7.34.1: OpenInference billed us 4.8× its list price — our own bills move it behind the honest ones, across restarts
+    from llm_server.llm.providers import ProviderPicker
+
+    endpoints = [_endpoint("open-inference/fp4", 0.02, 0.022, cache=0.0085, name="OpenInference"),
+                 _endpoint("relace", 0.07, 0.5, cache=0.008, name="Relace"),
+                 _endpoint("sail", 0.101, 0.15, cache=0.0067, name="Sail")]
+    picker = ProviderPicker()
+    picker.bind(tmp_path / "bills.json")
+    picker._endpoints["m"] = endpoints
+    picker._rank("m")
+    assert picker.providers("m")[0] == "open-inference/fp4"
+    for _ in range(2):
+        picker.observe_bill("m", "OpenInference", 40_000, 0, 2_000, 0.004)
+    assert picker.providers("m")[0] == "open-inference/fp4"  # two bills say little
+    picker.observe_bill("m", "OpenInference", 40_000, 0, 2_000, 0.004)
+    assert picker.factors()["OpenInference"] > 4 and picker.providers("m")[-1] == "open-inference/fp4"
+    picker.observe_bill("m", "Unknown", 40_000, 0, 2_000, 0.01)  # not an endpoint of the model: ignored
+    again = ProviderPicker()
+    again.bind(tmp_path / "bills.json")
+    again._endpoints["m"] = endpoints
+    again._rank("m")
+    assert again.providers("m")[-1] == "open-inference/fp4" and "Unknown" not in again.factors()
 
 
 def test_the_three_cheapest_providers_with_tools_that_are_up():
@@ -281,11 +320,10 @@ def test_the_picked_providers_go_into_the_request(monkeypatch):
     model = OpenRouterModel(model_id, provider=OpenRouterProvider(api_key="test"))
     monkeypatch.setitem(PICKER._ranked, model_id, [("a", "A"), ("b", "B"), ("c", "C"), ("d", "D")])
     monkeypatch.setenv("LLM_SERVER_MIN_TPS", "40")
-    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True, "only": ["relace", "a", "b", "c"],
-                                                        "order": ["relace", "a", "b", "c"], "allow_fallbacks": True,
-                                                        "preferred_min_throughput": {"p50": 40.0}}
+    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True, "only": ["a", "b", "c"],
+                                                        "allow_fallbacks": True, "preferred_min_throughput": {"p50": 40.0}}
     monkeypatch.setenv("LLM_SERVER_PROVIDER_SORT", "throughput")
-    assert settings_for(model)["openrouter_provider"]["order"][0] == "relace"
+    assert settings_for(model)["openrouter_provider"] == {"sort": "throughput", "require_parameters": True}
 
 
 def test_a_pinned_provider_is_the_only_one(monkeypatch):
@@ -397,3 +435,28 @@ def test_the_daily_budget_counts_what_openrouter_billed(tmp_path):
     usage = _usage(S, "deepseek/deepseek-v4.1-flash-1017", RunUsage(input_tokens=30000, output_tokens=500), billed)
     assert usage.cost_usd == 0.0042
     assert abs(S.services.budget.spent_today() - 0.0042) < 1e-9
+
+
+def test_the_settings_list_shows_every_provider_with_its_prices_and_speed(tmp_path, monkeypatch):
+    # v0.7.34.1: the player may pin any provider of the model, seeing its cost per 1000 turns and our measured speed
+    from llm_server.llm import catalog as catalog_module
+    from llm_server.llm.providers import ProviderPicker, pinned_for
+
+    picker = ProviderPicker()
+    picker.bind(tmp_path / "bills.json")
+    picker._endpoints["m/x"] = [_endpoint("cheap", 0.02, 0.03, cache=0.01, name="Cheap"),
+                                _endpoint("dear", 0.3, 1.2, cache=0.006, name="Dear"),
+                                _endpoint("no-tools", 0.01, 0.01, tools=False, name="NoTools")]
+    picker._rank("m/x")
+    picker.observe("Dear", 600, 10.0)
+    monkeypatch.setattr(catalog_module, "PICKER", picker)
+    info = ModelCatalog(("m/x",), "m/x").infos()[0]
+    assert [p.tag for p in info.providers] == ["cheap", "dear"]
+    cheap, dear = info.providers
+    assert cheap.picked and cheap.input_usd_per_mtok == 0.02 and cheap.cache_usd_per_mtok == 0.01 and cheap.tokens_per_s == 0
+    assert dear.tokens_per_s == 60.0 and dear.usd_per_1000_turns > cheap.usd_per_1000_turns
+    again = ProviderPicker()
+    again.bind(tmp_path / "bills.json")
+    assert again.speed("Dear") == 60.0  # the speed survives a restart
+    monkeypatch.setattr("llm_server.llm.providers.PICKER", picker)
+    assert pinned_for("m/x", "dear") == "dear" and pinned_for("m/x", "no-tools") is None

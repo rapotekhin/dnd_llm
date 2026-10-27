@@ -64,15 +64,74 @@
     },
     "ProviderInfo": {
       "additionalProperties": false,
-      "description": "An OpenRouter provider the player may pin the model to (0.35.0).",
+      "description": "An OpenRouter provider the player may pin the model to (0.35.0); every one of the model with its prices and our\nmeasured speed (0.67.0).",
       "properties": {
+        "bill_factor": {
+          "default": 1.0,
+          "title": "Bill Factor",
+          "type": "number"
+        },
+        "cache_usd_per_mtok": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cache Usd Per Mtok"
+        },
+        "input_usd_per_mtok": {
+          "default": 0.0,
+          "title": "Input Usd Per Mtok",
+          "type": "number"
+        },
         "name": {
           "title": "Name",
+          "type": "string"
+        },
+        "output_usd_per_mtok": {
+          "default": 0.0,
+          "title": "Output Usd Per Mtok",
+          "type": "number"
+        },
+        "picked": {
+          "default": false,
+          "title": "Picked",
+          "type": "boolean"
+        },
+        "quantization": {
+          "default": "",
+          "title": "Quantization",
           "type": "string"
         },
         "tag": {
           "title": "Tag",
           "type": "string"
+        },
+        "tokens_per_s": {
+          "default": 0.0,
+          "title": "Tokens Per S",
+          "type": "number"
+        },
+        "uptime": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uptime"
+        },
+        "usd_per_1000_turns": {
+          "default": 0.0,
+          "title": "Usd Per 1000 Turns",
+          "type": "number"
         }
       },
       "required": [

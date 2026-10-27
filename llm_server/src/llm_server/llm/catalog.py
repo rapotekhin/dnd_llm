@@ -1,5 +1,6 @@
 """Models the player may pick: names and prices from the OpenRouter catalog, fetched once at start."""
 
+import asyncio
 import logging
 import time
 from collections.abc import Callable
@@ -36,7 +37,17 @@ class ModelCatalog:
         self._info: dict[str, ModelInfo] = {m: ModelInfo(id=m, name=m, providers=_providers(m)) for m in allowed}
 
     def infos(self) -> list[ModelInfo]:
-        return [self._info[m] for m in self.allowed]
+        """With every provider of a paid model once OpenRouter's list is loaded (v0.7.34.1), else the config's few."""
+        out = []
+        for m in self.allowed:
+            info, found = self._info[m], PICKER.infos(m)
+            out.append(info.model_copy(update={"providers": [ProviderInfo(**p) for p in found]}) if found else info)
+        return out
+
+    async def load_providers(self) -> None:
+        """The providers of every paid model, for the settings list before the first turn."""
+        paid = [m for m in self.allowed if not m.endswith(":free") and m != "openrouter/free"]
+        await asyncio.gather(*(PICKER.refresh(m) for m in paid))
 
     def resolve(self, requested: str | None) -> str | None:
         """The model id to use, or None when the player asked for one outside the whitelist."""
@@ -83,13 +94,17 @@ class TimedModel(WrapperModel):
         started = time.monotonic()
         response = await self.wrapped.request(messages, model_settings, model_request_parameters)
         details = response.provider_details or {}
-        PICKER.observe(str(details.get("downstream_provider", "")), int(response.usage.output_tokens or 0), time.monotonic() - started)
+        served, usage = str(details.get("downstream_provider", "")), response.usage
+        PICKER.observe(served, int(usage.output_tokens or 0), time.monotonic() - started)
+        try:
+            cost = float(details.get("cost") or 0)
+        except (TypeError, ValueError):
+            cost = 0.0
+        PICKER.observe_bill(self.wrapped.model_name, served, int(usage.input_tokens or 0), int(usage.cache_read_tokens or 0),
+                            int(usage.output_tokens or 0), cost)
         costs = REQUEST_COSTS.get()
         if costs is not None:
-            try:
-                costs.append(float(details.get("cost") or 0))
-            except (TypeError, ValueError):
-                costs.append(0.0)
+            costs.append(cost)
         return response
 
 

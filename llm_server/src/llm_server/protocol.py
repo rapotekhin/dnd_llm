@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.66.0"
+PROTOCOL_VERSION = "0.67.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -82,10 +82,20 @@ class Limits(_Out):
 
 
 class ProviderInfo(_Out):
-    """An OpenRouter provider the player may pin the model to (0.35.0)."""
+    """An OpenRouter provider the player may pin the model to (0.35.0); every one of the model with its prices and our
+    measured speed (0.67.0)."""
 
     tag: str
     name: str
+    input_usd_per_mtok: float = 0.0
+    output_usd_per_mtok: float = 0.0
+    cache_usd_per_mtok: float | None = None  # None — no cache price
+    usd_per_1000_turns: float = 0.0  # a typical turn of ours, with the cache and our bills; 0 — not known
+    bill_factor: float = 1.0  # billed ÷ list price over our last days
+    tokens_per_s: float = 0.0  # median of our own requests; 0 — not measured
+    uptime: float | None = None  # % of the last day
+    quantization: str = ""
+    picked: bool = False  # among the server's picks for «Авто» now
 
 
 class ModelInfo(_Out):

@@ -17,6 +17,8 @@ var resolution: Vector2i = Vector2i(1600, 900)
 var master_model: String = ""
 ## The OpenRouter provider pinned for a model (v0.7.20.5): model id ("" — the server's default) → provider tag.
 var master_providers: Dictionary = {}
+## How the settings sort the provider list (v0.7.34.1): SettingsScreen.PROVIDER_SORTS key.
+var provider_sort := "ours"
 ## Reactions and choices of the hero's features in a fight (v0.7.10, as in Baldur's Gate 3): "ask" — a window
 ## «Использовать?»; "always" — the engine uses them; "never".
 var reactions: String = "ask"
@@ -152,6 +154,7 @@ func load_settings() -> void:
 		resolution = cfg.get_value("display", "resolution", resolution)
 		master_model = str(cfg.get_value("master", "model", ""))
 		master_providers = cfg.get_value("master", "providers", {})
+		provider_sort = str(cfg.get_value("master", "provider_sort", "ours"))
 		reactions = str(cfg.get_value("game", "reactions", "ask"))
 		keys = cfg.get_value("keys", "keys", {})
 		confirm_risky = bool(cfg.get_value("game", "confirm_risky", true))
@@ -166,6 +169,7 @@ func save_settings() -> void:
 	cfg.set_value("display", "resolution", resolution)
 	cfg.set_value("master", "model", master_model)
 	cfg.set_value("master", "providers", master_providers)
+	cfg.set_value("master", "provider_sort", provider_sort)
 	cfg.set_value("game", "reactions", reactions)
 	cfg.set_value("game", "confirm_risky", confirm_risky)
 	cfg.set_value("display", "ui_scale", ui_scale)

@@ -28,7 +28,7 @@ def test_a_full_turn_matches_the_contract(data_dir):
         ("lookup", {"kind": "npc", "id": INNKEEPER}),
         ("find_items", {"query": "эль"}),
         ("request_check", {"skill": "persuasion", "dc_tier": "easy", "reason": "скидка", "target_id": INNKEEPER}),
-        ("propose_effect", {"effect": {"kind": "coins", "delta_cp": -4, "reason": "эль"}}),
+        ("propose_effect", {"effect": json.dumps({"kind": "coins", "delta_cp": -4, "reason": "эль"}, ensure_ascii=False)}),
         ("final", lambda m: {"narration": "Борик наливает.", "options": ["Выпить"], "effect_ids": [effect_id(m)],
                              "next_mode": "social", "npc_id": INNKEEPER}),
     )

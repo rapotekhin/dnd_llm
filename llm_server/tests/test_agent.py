@@ -1,6 +1,7 @@
 """The turn agent end to end over a real WebSocket: a scripted FunctionModel plays the LLM, the test plays
 Godot and answers engine.* calls (ADR-0008, ADR-0009). No network, no money."""
 
+import json
 import re
 
 from fastapi.testclient import TestClient
@@ -42,6 +43,8 @@ def scripted(*steps, raise_first: Exception | None = None):
         state["n"] += 1
         if callable(args):
             args = args(messages)
+        if name == "propose_effect" and isinstance(args.get("effect"), dict):
+            args = {**args, "effect": json.dumps(args["effect"], ensure_ascii=False)}  # the tool takes a JSON string
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name if name == "final" else name, args)])
 
     fn.state = state  # type: ignore[attr-defined]
