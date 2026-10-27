@@ -108,12 +108,29 @@ async def own_image_models(url: str, client: httpx.AsyncClient | None = None) ->
         log.info("no own image server at %s: %s", url, str(exc)[:120])
         return ()
     found = []
+    paths = await _module_paths(url, client) if any(m.modules for m in SD_MODELS) else {}
     for m in SD_MODELS:
         # A title is "<folder>/<file> [hash]"; the folder and the hash differ from server to server.
         title = next((t for t in titles if t.split(" [")[0].replace("\\", "/").rsplit("/", 1)[-1] == m.checkpoint), "")
-        if title:
-            found.append(replace(m, url=url, checkpoint=title))
+        if not title or not all(n in paths for n in m.modules):
+            continue
+        txt2img = m.txt2img
+        if m.modules:
+            settings = {**txt2img.get("override_settings", {}), "forge_additional_modules": [paths[n] for n in m.modules]}
+            txt2img = {**txt2img, "override_settings": settings}
+        found.append(replace(m, url=url, checkpoint=title, txt2img=txt2img))
     return (ImageModel("a1111", "Stable Diffusion (свой сервер)", "sd", 0.0, backend="a1111", url=url), *found)
+
+
+async def _module_paths(url: str, client: httpx.AsyncClient) -> dict[str, str]:
+    """Forge's VAE and text encoder files: their name → the path its `forge_additional_modules` wants."""
+    try:
+        resp = await client.get(url + "/sdapi/v1/sd-modules")
+        resp.raise_for_status()
+        return {str(m["model_name"]): str(m["filename"]) for m in resp.json()}
+    except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+        log.info("no modules at %s: %s", url, str(exc)[:120])
+        return {}
 
 
 async def draw(spec: ImageModel, prompt: str, negative: str, aspect: str, api_key: str,
@@ -234,7 +251,7 @@ async def _agent_image(session: "Session", params: ImageParams) -> ImageResult:
     finally:
         REQUEST_COSTS.reset(token)
     text_usage = _usage(session, model, result.usage, billed)
-    scene = booru_scene(result.output.scene) if spec.template == "illustrious" else result.output.scene
+    scene = booru_scene(result.output.scene) if spec.template in ("illustrious", "anima") else result.output.scene
     prompt, negative = compose(spec, params, prompts.image_prompt(spec.template, scene, params.style),
                                result.output.negative)
     try:

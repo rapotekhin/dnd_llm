@@ -66,6 +66,9 @@ class ImageModel:
     checkpoint: str = ""
     side: int = 768
     txt2img: dict = field(default_factory=dict, hash=False)
+    # Module files the checkpoint needs (v0.7.38.4: Anima's Qwen VAE and text encoder) by name; the server finds their
+    # paths on Forge and leaves the model out when one is missing.
+    modules: tuple[str, ...] = ()
 
     @property
     def negative(self) -> bool:
@@ -93,6 +96,17 @@ SD_MODELS: tuple[ImageModel, ...] = (
                negative_add="lowres, worst quality, low quality, bad anatomy, bad hands, extra digits, jpeg artifacts, "
                             "signature, watermark, text, logo, artist name, patreon username, censored, nsfw, nude, loli, child, "
                             "furry, anthro"),
+    # v0.7.38.4: the Ri-mix author's Forge settings, a portrait frame; the author's quality LoRAs
+    ImageModel("sd:rimix-anima", "Ri-mix Anima (свой сервер)", "anima", 0.0, backend="a1111",
+               checkpoint="riMixIllustriousAnima_riMixAnima.safetensors", side=1024,
+               modules=("qwen_image_vae.safetensors", "qwen_3_06b_base.safetensors"),
+               txt2img={"sampler_name": "Euler a", "steps": 20, "cfg_scale": 6, "width": 768, "height": 1152},
+               prompt_add="masterwork, masterpiece, best quality, high quality, absurdres, highres, detailed, depth of field, "
+                          "high detail, very aesthetic, safe, adult, aged up, "
+                          "<lora:anima-base-1-masterpiece-v51:0.8> <lora:anima-highres-aesthetic-boost:0.8>",
+               negative_add="worst quality, low quality, score_1, score_2, score_3, artist name, (lowres:1.2), "
+                            "(bad anatomy:1.4), bad hands, multiple views, jpeg artifacts, patreon logo, patreon username, "
+                            "web address, signature, watermark, nsfw, explicit, nude, loli, child"),
 )
 DEFAULT_A1111_URL = "http://127.0.0.1:7860"
 

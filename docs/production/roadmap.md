@@ -835,6 +835,13 @@ M0–M2 и закрытые версии M3 — в [closed_roadmap.md](closed_ro
 - [ ] Своя модель на AUTOMATIC1111 проверена только на заглушке — нужен живой сервер
 - [ ] Один облик героя и NPC от картинки к картинке — нужна модель с образцом (`input_references`)
 
+### v0.7.38.4 — Ri-mix Anima на своём Forge (просьба автора, 2026-10-27)
+
+- [x] **Модель `sd:rimix-anima`:** файл `riMixIllustriousAnima_riMixAnima.safetensors`, Euler a, 20 шагов, CFG 6, 768×1152 (настройки автора Ri-mix для Forge); добавка — теги качества кадров автора, `safe` и Лоры `anima-base-1-masterpiece-v51`, `anima-highres-aesthetic-boost` по 0.8; негатив — рекомендованный Anima с `nsfw, explicit`
+- [x] **Модули модели по имени:** у `ImageModel` — `modules` (VAE и текстовый энкодер Qwen); сервер при подключении игры спрашивает `/sdapi/v1/sd-modules` и ставит их пути в `forge_additional_modules` того же запроса, что и файл модели; без модуля модель не предлагается. A-Mix по-прежнему сбрасывает модули — переключение в обе стороны без чёрного кадра
+- [x] **Шаблон `anima`:** приставка `(flat color, no lineart, no outline, Flat vector)`, теги в порядке теггера, затем одно-два английских предложения «кто что делает» — Anima читает и теги, и фразы; с ними волк в бою отдельно от героя
+- Проверка: pytest `test_anima_comes_with_its_modules_found_on_forge` (148 всего); живой прогон агента и Forge — бой с волком и таверна, переключение Anima → A-Mix → Anima (`build/forge/`)
+
 ### v0.7.38.3 — Ответ агента картинок в логе OpenRouter (просьба автора, 2026-10-27)
 
 - [x] **`PromptedOutput(ImagePrompt)`:** схема ответа — в инструкции, модель отвечает JSON-текстом, а не инструментом `final_result`; в журнале OpenRouter он виден в Output. Готовый промпт для SDXL (с приставкой, добавкой и без `solo` у зверя) по-прежнему только в трейсе сервера (`"what": "image"`)

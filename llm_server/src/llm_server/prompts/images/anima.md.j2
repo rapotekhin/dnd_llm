@@ -1,0 +1,22 @@
+{# Anima (Cosmos 2B with a Qwen text encoder) over an own Forge, written as the Ri-mix author's frames: the flat-colour prefix, booru tags, then a sentence or two of who does what — Anima reads both; quality and safety tags are the player's addition at the end (ImageModel.prompt_add, v0.7.38.4). #}
+{% block instructions %}
+Ты пишешь промт для модели Anima (аниме и иллюстрация; понимает и теги Danbooru, и английские фразы): она нарисует один кадр ролевой игры — то, что случилось только что.
+
+Пиши по-английски, до {{ max_chars }} знаков, в две части:
+1. Теги Danbooru нижним регистром через запятую, 20–40 тегов, в порядке теггера:
+   - кто в кадре: `1girl`, `1boy`, `2boys`, `1boy, 1girl`, `multiple boys`; `solo` — только если в кадре один человек и больше никого; без людей — `no humans`;
+   - зверь или чудовище — сразу следом простым тегом с `animal` или `monster`: `1boy, wolf, animal, …`, `1girl, giant spider, monster, …`;
+   - у каждого — волосы, глаза, борода, уши (`long hair`, `brown hair`, `green eyes`, `beard`, `pointy ears`, `elf`), одежда и вещи (`hooded cloak`, `leather armor`, `robe`, `apron`, `sword`, `staff`, `mug`);
+   - поза, действие, взгляд и лицо (`standing`, `sitting`, `holding sword`, `fighting stance`, `looking at viewer`, `smile`, `angry`);
+   - место и что вокруг (`outdoors` или `indoors`, `forest`, `tree`, `tavern`, `wooden table`, `fireplace`, `ruins`), небо, время и свет (`sky`, `sunset`, `night`, `moon`, `fog`, `rain`, `candlelight`), план (`upper body`, `cowboy shot`, `full body`, `from side`).
+2. Через точку — одно-два английских предложения о главном: кто что делает и с кем, где кто стоит. Например: `A bearded warrior in a hooded cloak swings his sword at a grey wolf leaping at him from behind a spruce. Misty forest path at dusk.` — так модель не путает, кто есть кто.
+
+Так выглядят хорошие промты этой модели (только сцена):
+- `1girl, solo, long hair, brown hair, dress, sitting, outdoors, sky, cloud, white dress, tree, sunset, sun, swing. A young woman in a white dress sits on a wooden swing under a tree at sunset.`
+- `1girl, solo, hooded robe, holding book, casting spell, ice, snow, blizzard, outdoors, ruins, from side. A Nord mage in a hooded wizard robe walks past an ancient tomb in a blizzard, ice shards coming out of her free hand.`
+
+Без весов в скобках; только видимое; без имён и игровых чисел; из людей сцены — только те, кто в событии; люди — взрослые. Стиль, качество и теги безопасности не пиши — их добавит игра.
+
+`negative` — несколько тегов того, что мешает именно этой сцене (`crowd`, `daylight`, `werewolf, animal ears`); общие — плохое качество, текст, водяные знаки — игра добавит сама.
+{% endblock %}
+{% block prompt %}(flat color, no lineart, no outline, Flat vector), {{ scene }}{% endblock %}

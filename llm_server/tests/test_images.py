@@ -153,8 +153,11 @@ def test_an_own_forge_offers_the_checkpoints_it_has():
     from llm_server.images import own_image_models
 
     def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/sdapi/v1/sd-modules":
+            return httpx.Response(200, json=[{"model_name": "qwen_image_vae.safetensors", "filename": "/f/VAE/qwen_image_vae.safetensors"}])
         assert req.url.path == "/sdapi/v1/sd-models"
         return httpx.Response(200, json=[{"title": "Anima/other.safetensors [6bbb]"},
+                                         {"title": "Anima/riMixIllustriousAnima_riMixAnima.safetensors [91cf]"},
                                          {"title": "Illustration/aMixIllustrious_aMix.safetensors"}])
 
     def down(req: httpx.Request) -> httpx.Response:
@@ -168,6 +171,29 @@ def test_an_own_forge_offers_the_checkpoints_it_has():
     assert [m.id for m in own] == ["a1111", "sd:amix-illustrious"]
     assert own[1].checkpoint == "Illustration/aMixIllustrious_aMix.safetensors" and own[1].url == "http://127.0.0.1:7860"
     assert asyncio.run(ask(down)) == ()
+
+
+def test_anima_comes_with_its_modules_found_on_forge():
+    """v0.7.38.4: the Qwen VAE and text encoder by name → Forge's paths; without one of them no Anima."""
+    from llm_server.images import own_image_models
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/sdapi/v1/sd-modules":
+            return httpx.Response(200, json=[{"model_name": "qwen_image_vae.safetensors", "filename": "/f/VAE/qwen_image_vae.safetensors"},
+                                             {"model_name": "qwen_3_06b_base.safetensors", "filename": "/f/te/qwen_3_06b_base.safetensors"}])
+        return httpx.Response(200, json=[{"title": "Anima/riMixIllustriousAnima_riMixAnima.safetensors [91cf]"}])
+
+    async def ask():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+            return await own_image_models("http://127.0.0.1:7860", c)
+
+    anima = asyncio.run(ask())[1]
+    assert anima.id == "sd:rimix-anima" and anima.template == "anima"
+    assert anima.txt2img["override_settings"]["forge_additional_modules"] == ["/f/VAE/qwen_image_vae.safetensors", "/f/te/qwen_3_06b_base.safetensors"]
+    assert (anima.txt2img["sampler_name"], anima.txt2img["cfg_scale"]) == ("Euler a", 6)
+    p = prompts.image_prompt("anima", "1boy, wolf, animal. A man fights a wolf.", "ink")
+    assert p == "(flat color, no lineart, no outline, Flat vector), 1boy, wolf, animal. A man fights a wolf"
+    assert "Anima" in prompts.image_instructions("anima", 700)
 
 
 def test_every_hello_asks_the_own_server_again(tmp_path, monkeypatch):
