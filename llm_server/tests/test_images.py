@@ -5,7 +5,7 @@ import base64
 
 import httpx
 from fastapi.testclient import TestClient
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from llm_server import images, prompts
@@ -69,7 +69,8 @@ def test_the_agent_writes_the_frame_and_the_image_is_paid(data_dir, monkeypatch)
 
     def fn(messages, info: AgentInfo) -> ModelResponse:
         seen["instructions"] = messages[0].instructions
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"scene": "A grey wolf bites the rim of a round shield.", "negative": ""})])
+        assert not info.output_tools  # JSON in the text: visible in the OpenRouter log (v0.7.38.3)
+        return ModelResponse(parts=[TextPart('{"scene": "A grey wolf bites the rim of a round shield.", "negative": ""}')])
 
     async def fake_draw(spec, prompt, negative, aspect, api_key, client=None):
         seen.update(spec=spec.id, prompt=prompt, aspect=aspect)

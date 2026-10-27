@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 from typing import get_args as typing_get_args
 
 from pydantic import BaseModel, BeforeValidator, Field, TypeAdapter, ValidationError
-from pydantic_ai import Agent, ModelRetry, RunContext, Tool
+from pydantic_ai import Agent, ModelRetry, PromptedOutput, RunContext, Tool
 from pydantic_ai.models import Model
 from pydantic_ai.settings import ModelSettings
 
@@ -554,7 +554,8 @@ class ImagePrompt(BaseModel):
 
 def build_image_agent(model: Model, instructions: str) -> Agent[None, ImagePrompt]:
     # Reasoning off: a frame needs no thinking, and DeepSeek would spend the seconds the player waits.
-    return Agent(model, output_type=ImagePrompt, retries=2, name="image_prompt", instructions=instructions,
+    # JSON in the text, not an output tool: the author reads the tags in the OpenRouter log (v0.7.38.3).
+    return Agent(model, output_type=PromptedOutput(ImagePrompt), retries=2, name="image_prompt", instructions=instructions,
                  model_settings=no_thinking(settings_for(model, {"temperature": 0.7, "max_tokens": 700})))
 
 
