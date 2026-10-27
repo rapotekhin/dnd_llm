@@ -464,7 +464,8 @@ func _gear_tab(c: Dictionary) -> Control:
 		row.add_theme_constant_override("separation", 12)
 		box.add_child(row)
 		var qty := int(c["inventory"][id])
-		_item_button(row, details, c, id, "%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else ""], "Item_" + id)
+		var water := VesselRules.summary(c, Catalog.data, id)  # v0.7.34.6: what each vessel holds
+		_item_button(row, details, c, id, "%s%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else "", " (%s)" % water if not water.is_empty() else ""], "Item_" + id)
 		if not ItemRules.consumable(Catalog.data, id, GameState.session.items).is_empty():
 			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
 		var free := ContainerRules.droppable(s, Catalog.data, id)  # big test #10 (v0.7.22.2)

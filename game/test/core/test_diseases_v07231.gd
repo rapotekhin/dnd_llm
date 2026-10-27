@@ -118,11 +118,13 @@ func test_foul_water_and_a_filled_skin_risk_the_plague() -> void:
 	assert_bool(NeedRules.water_here(s, data)).is_true()
 	assert_bool(NeedRules.foul_here(s, data)).is_true()
 	s.character["inventory"]["waterskin"] = 1
+	s.character["vessels"] = {}
 	NeedRules.fill(s, data)
-	assert_bool(bool(NeedRules.state(s, data)["skin_foul"])).is_true()
+	assert_bool(bool(VesselRules.carried(s.character, data)[0]["foul"])).is_true()
 	s.room_id = "brod-square"
+	assert_str(NeedRules.can_fill(s, data)).is_empty()  # the foul water is poured out for the clean
 	NeedRules.fill(s, data)
-	assert_bool(bool(NeedRules.state(s, data)["skin_foul"])).is_false()
+	assert_bool(bool(VesselRules.carried(s.character, data)[0]["foul"])).is_false()
 
 
 func test_a_sick_pilgrim_passes_it_on_once_a_day() -> void:

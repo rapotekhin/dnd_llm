@@ -1168,6 +1168,32 @@
       "title": "FenceEffect",
       "type": "object"
     },
+    "FillEffect": {
+      "additionalProperties": false,
+      "description": "The hero draws water into the vessels it carries (0.70.0): a waterskin, a flask, a jug, a bucket; `item_id` —\none kind only, empty — all. The engine checks the water here (the room's tag, a thing with `source`, a well or a\nstream of the room) and fills each to its volume.",
+      "properties": {
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "kind": {
+          "const": "fill",
+          "default": "fill",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "FillEffect",
+      "type": "object"
+    },
     "FlagEffect": {
       "additionalProperties": false,
       "properties": {
@@ -2639,6 +2665,22 @@
           "default": null,
           "title": "Owner"
         },
+        "source": {
+          "anyOf": [
+            {
+              "enum": [
+                "water",
+                "foul_water"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
         "text": {
           "default": "",
           "maxLength": 800,
@@ -3504,6 +3546,7 @@
           "drop_item": "#/$defs/DropItemEffect",
           "equip": "#/$defs/EquipEffect",
           "fence": "#/$defs/FenceEffect",
+          "fill": "#/$defs/FillEffect",
           "flag": "#/$defs/FlagEffect",
           "furnish": "#/$defs/FurnishEffect",
           "give_item": "#/$defs/GiveItemEffect",
@@ -3660,6 +3703,9 @@
         },
         {
           "$ref": "#/$defs/DropItemEffect"
+        },
+        {
+          "$ref": "#/$defs/FillEffect"
         },
         {
           "$ref": "#/$defs/CreateNpcEffect"

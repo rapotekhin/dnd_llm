@@ -606,6 +606,45 @@ scenarios:
     rubric:
       - "Мастер проводит take_prop для p3 и описывает, как свеча оказывается у игрока"
 
+  - id: fill_waterskin_at_stream
+    title: "Набрать воды словами у ручья — эффект fill"
+    category: world
+    extends: tavern
+    mode: exploration
+    input: "Спускаюсь к ручью и наполняю бурдюк и флягу — путь до Пущи неблизкий."
+    snapshot:
+      scene:
+        room_id: trail-ford
+        name: "Брод через ручей"
+        description: "Тропа спускается к мелкому ручью, по камням можно перейти на тот берег."
+        npcs: []
+        props:
+          - {prop_id: p1, name: "Ручей", description: "Холодная прозрачная вода бежит по камням", source: water}
+          - {prop_id: p2, name: "Поваленная ольха", description: "Лежит поперёк берега"}
+      character:
+        inventory: [{item_id: waterskin, name: "Бурдюк (пусто)", qty: 1}, {item_id: flask_or_tankard, name: "Фляга или кружка (вода 0/1)", qty: 1}]
+    expect:
+      effects: {required_kinds_any: [fill], forbidden_kinds: [give_item]}
+    rubric:
+      - "Мастер проводит fill (все ёмкости или каждую) и описывает, как герой набирает воду из ручья; воду не выдаёт предметом"
+
+  - id: no_water_no_fill
+    title: "Набрать воды там, где её нет — без fill"
+    category: world
+    extends: tavern
+    mode: exploration
+    input: "Наполняю бурдюк водой."
+    snapshot:
+      character:
+        inventory: [{item_id: waterskin, name: "Бурдюк (пусто)", qty: 1}]
+    engine:
+      validate:
+        - {kind: fill, status: reject, reason: "здесь нет воды: ни тега комнаты, ни вещи-источника (колодец, ручей, река — вещь обстановки с source)"}
+    expect:
+      effects: {forbidden_kinds: [give_item]}
+    rubric:
+      - "В таверне без колодца или бочки с водой мастер не наполняет бурдюк в рассказе: воды здесь нет или её надо попросить у хозяина"
+
   - id: cast_spell_words
     title: "Колдовство словами — эффект cast, а не бесплатная магия"
     category: magic

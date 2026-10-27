@@ -75,6 +75,8 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 		out.append({"prop_id": p["id"], "name": p["name"], "description": p.get("description", ""), "state": p.get("state", ""),
 			"owner": p.get("owner") if not str(p.get("owner", "")).is_empty() else null, "portable": not str(p.get("item_id", "")).is_empty(),
 			"text": p.get("text", "")})
+		if p.has("source"):
+			out[-1]["source"] = p["source"]
 		if ContainerRules.is_container(p):  # v0.7.18.1
 			var row: Dictionary = out[-1]
 			row["container"] = ContainerRules.kind_name(data, str(p["container"]))
@@ -123,6 +125,8 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			return {"reason": "хозяин %s — не NPC этой комнаты" % owner}
 		var prop := {"name": str(spec["name"]).strip_edges().left(60), "description": str(spec.get("description", "")).left(240),
 			"item_id": item, "owner": owner, "text": str(spec.get("text", "")).left(800), "state": ""}
+		if str(spec.get("source", "")) in ["water", "foul_water"]:  # water is drawn here (v0.7.34.6)
+			prop["source"] = str(spec["source"])
 		var box := ContainerRules.plan_spec(s, data, spec)
 		if box.has("reason"):
 			return {"reason": box["reason"]}

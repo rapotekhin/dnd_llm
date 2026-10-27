@@ -3,7 +3,7 @@ extends RefCounted
 ## Needs of the hero (roadmap v0.7.23, rules.needs): food and water empty over the game clock from the last meal or
 ## drink, sleep is read from the hours awake. A low need is a stage (a chip, a line for the master, hampered saves);
 ## an empty one past its grace days gives a level of exhaustion each day. Kept in c["needs"]:
-## {food: {level, at}, water: {level, at}, skin: drinks in the waterskins, done: {need: exhaustion levels given}}.
+## {food: {level, at}, water: {level, at}, done: {need: exhaustion levels given}}; the water carried — VesselRules.
 
 const KINDS: Array[String] = ["food", "water", "sleep"]
 
@@ -22,7 +22,7 @@ static func state(s: GameSession, data: Dictionary) -> Dictionary:
 	var c := s.character
 	if not (c.get("needs") is Dictionary) or (c["needs"] as Dictionary).is_empty():
 		var now := TimeRules.abs_minute(s)
-		c["needs"] = {"food": {"level": 100.0, "at": now}, "water": {"level": 100.0, "at": now}, "skin": capacity(c, data), "skin_foul": false, "done": {}}
+		c["needs"] = {"food": {"level": 100.0, "at": now}, "water": {"level": 100.0, "at": now}, "done": {}}
 	return c["needs"]
 
 
@@ -155,31 +155,39 @@ static func eat(s: GameSession, data: Dictionary) -> Array[String]:
 	return lines
 
 
-## Waterskins the hero carries × rules.needs.water.skin_drinks.
-static func capacity(c: Dictionary, data: Dictionary) -> int:
-	var w: Dictionary = cfg(data)["water"]
-	return int(c.get("inventory", {}).get(str(w["skin"]), 0)) * int(w["skin_drinks"])
+## Pints the hero's vessels hold in all (v0.7.34.6).
+static func capacity(c: Dictionary, data: Dictionary) -> float:
+	return VesselRules.room(c, data) + VesselRules.pints(c, data)
 
 
-static func drinks(s: GameSession, data: Dictionary) -> int:
-	return mini(int(state(s, data).get("skin", 0)), capacity(s.character, data))
+static func drinks(s: GameSession, data: Dictionary) -> float:
+	return VesselRules.pints(s.character, data)
 
 
-## Water here: the room's tag `water`, or a thing of the room named by rules.needs.water_words (a well, a stream).
+## Water here: the room's tag `water` or `foul_water`, a thing of the room with `source` (v0.7.34.6, the master's
+## river), or one named by rules.needs.water_words (a well, a stream).
 static func water_here(s: GameSession, data: Dictionary) -> bool:
-	if (SceneRules.room(s, data["world"], s.room_id).get("tags", []) as Array).has("water"):
+	var tags: Array = SceneRules.room(s, data["world"], s.room_id).get("tags", [])
+	if tags.has("water") or tags.has("foul_water"):
 		return true
 	var words: Array = cfg(data).get("water_words", [])
 	for p: Dictionary in PropRules.room_props(s, s.room_id):
 		var name := str(p.get("name", "")).to_lower()
-		if words.any(func(w: Variant) -> bool: return name.contains(str(w))):
+		if p.has("source") or words.any(func(w: Variant) -> bool: return name.contains(str(w))):
 			return true
 	return false
 
 
-## Water here is foul (the room's tag `foul_water`, v0.7.23.1): a drink of it or of a skin filled here risks a disease.
+## Water here is foul (the room's tag `foul_water`, v0.7.23.1, or only a source thing of foul water): a drink of it or
+## of a vessel filled here risks a disease.
 static func foul_here(s: GameSession, data: Dictionary) -> bool:
-	return (SceneRules.room(s, data["world"], s.room_id).get("tags", []) as Array).has("foul_water")
+	var tags: Array = SceneRules.room(s, data["world"], s.room_id).get("tags", [])
+	if tags.has("foul_water"):
+		return true
+	if tags.has("water"):
+		return false
+	var src: Array = PropRules.room_props(s, s.room_id).map(func(p: Dictionary) -> String: return str(p.get("source", "")))
+	return src.has("foul_water") and not src.has("water")
 
 
 static func _foul_drink(s: GameSession, data: Dictionary) -> Array[String]:
@@ -190,7 +198,7 @@ static func _foul_drink(s: GameSession, data: Dictionary) -> Array[String]:
 
 
 static func can_drink(s: GameSession, data: Dictionary) -> String:
-	if not water_here(s, data) and drinks(s, data) <= 0:
+	if not water_here(s, data) and drinks(s, data) <= 0.0:
 		return "NEED_NO_WATER"
 	if value(s, data, "water") >= 75.0:
 		return "NEED_NOT_THIRSTY"
@@ -199,37 +207,45 @@ static func can_drink(s: GameSession, data: Dictionary) -> String:
 
 ## Drinks from the source here (free) or from the waterskins until 75+. Lines.
 static func drink(s: GameSession, data: Dictionary) -> Array[String]:
-	var st := state(s, data)
-	var v := value(s, data, "water")
-	var from_skin := 0
 	var here := water_here(s, data)
-	while v < 75.0 and (here or drinks(s, data) > 0):
-		v += float(cfg(data)["water"]["drink"])
-		if not here:
-			st["skin"] = drinks(s, data) - 1
-			from_skin += 1
-	set_value(s, data, "water", v)
-	var lines: Array[String] = ["Напился" + (" из бурдюка (%d/%d)" % [drinks(s, data), capacity(s.character, data)] if from_skin > 0 else "")]
+	var r := _sip(s, data, 75.0, here)
+	var lines: Array[String] = ["Напился" + ("" if here else " из ёмкостей (осталось %s пинт)" % VesselRules.num(drinks(s, data)))]
 	lines.append("Вода %d/100" % roundi(value(s, data, "water")))
-	if here and foul_here(s, data) or not here and bool(st.get("skin_foul", false)):
+	if bool(r["foul"]):
 		lines.append_array(_foul_drink(s, data))
 	return lines
 
 
-static func can_fill(s: GameSession, data: Dictionary) -> String:
-	if capacity(s.character, data) <= 0:
+## Drinks up to `upto`: from the source here by whole drinks, else from the vessels (a pint gives drink / drink_pints).
+static func _sip(s: GameSession, data: Dictionary, upto: float, here: bool) -> Dictionary:
+	var w: Dictionary = cfg(data)["water"]
+	var v := value(s, data, "water")
+	if here:
+		set_value(s, data, "water", minf(100.0, v + ceilf(maxf(0.0, upto - v) / float(w["drink"])) * float(w["drink"])))
+		return {"foul": foul_here(s, data)}
+	var per_pint := float(w["drink"]) / float(w.get("drink_pints", 2))
+	var got := VesselRules.take(s.character, data, maxf(0.0, upto - v) / per_pint)
+	set_value(s, data, "water", v + float(got["pints"]) * per_pint)
+	return {"foul": bool(got["foul"])}
+
+
+## `only` — one kind of vessel (the master's `fill` with an item_id).
+static func can_fill(s: GameSession, data: Dictionary, only := "") -> String:
+	if VesselRules.carried(s.character, data).filter(func(v: Dictionary) -> bool: return only.is_empty() or v["id"] == only).is_empty():
 		return "NEED_NO_SKIN"
 	if not water_here(s, data):
 		return "NEED_NO_SOURCE"
-	if drinks(s, data) >= capacity(s.character, data):
+	if VesselRules.to_fill(s.character, data, foul_here(s, data), only).is_empty():
 		return "NEED_SKIN_FULL"
 	return ""
 
 
-static func fill(s: GameSession, data: Dictionary) -> Array[String]:
-	state(s, data)["skin"] = capacity(s.character, data)
-	state(s, data)["skin_foul"] = foul_here(s, data)
-	return ["Бурдюк полон (%d/%d)" % [drinks(s, data), capacity(s.character, data)]]
+static func fill(s: GameSession, data: Dictionary, only := "") -> Array[String]:
+	var foul := foul_here(s, data)
+	VesselRules.fill(s.character, data, foul, only)
+	var lines: Array[String] = ["Набрал воды" + (" — гнилой" if foul else "")]
+	lines.append_array(VesselRules.lines(s.character, data, s.items, only))
+	return lines
 
 
 ## A long rest's meal: a bed in a settlement feeds and waters; a camp eats its `points` of food and drinks from the
@@ -244,16 +260,9 @@ static func rest_meal(s: GameSession, data: Dictionary, camp_points: int, bed: b
 		return ["ужин и вода — с ночлегом"]
 	if camp_points > 0:
 		set_value(s, data, "food", value(s, data, "food") + camp_points * float(cfg(data)["food"]["points"]))
-	if value(s, data, "water") < 100.0 and (water_here(s, data) or drinks(s, data) > 0):
-		var st := state(s, data)
-		if water_here(s, data) and foul_here(s, data) or not water_here(s, data) and bool(st.get("skin_foul", false)):
+	if value(s, data, "water") < 100.0 and (water_here(s, data) or drinks(s, data) > 0.0):
+		if bool(_sip(s, data, 100.0, water_here(s, data))["foul"]):
 			lines.append_array(_foul_drink(s, data))
-		var v := value(s, data, "water")
-		while v < 100.0 and (water_here(s, data) or drinks(s, data) > 0):
-			v += float(cfg(data)["water"]["drink"])
-			if not water_here(s, data):
-				st["skin"] = drinks(s, data) - 1
-		set_value(s, data, "water", v)
 	lines.append("еда %d, вода %d" % [roundi(value(s, data, "food")), roundi(value(s, data, "water"))])
 	return lines
 

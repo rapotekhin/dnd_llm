@@ -57,7 +57,7 @@ NPC здесь:
 {% endfor %}{% for c in scene.creatures %}- {{ c }} — живой, здесь, в сцене после боя: отвечает, если с ним говорят; связан — только если так написано (связать, отпустить, вести — кнопки игрока)
 {% endfor %}
 {% if scene.props %}Вокруг (только это и описывай):
-{% for p in scene.props %}- {{ p.name }} [{{ p.prop_id }}]{% if p.state %} ({{ {"open": "открыто", "closed": "закрыто", "broken": "сломано", "burned": "сожжено", "moved": "сдвинуто"}.get(p.state, p.state) }}){% endif %}{% if p.owner %}, хозяин: {{ p.owner }}{% endif %}{% if p.portable %}, можно взять{% endif %}.{% if p.description %} {{ p.description }}{% endif %}{% if p.text %} Написано: «{{ p.text }}»{% endif %}{% if p.container %} Это {{ p.container }}{% if p.locked %}, заперт{% endif %}; внутри: {{ p.contents or "пусто" }}.{% endif +%}
+{% for p in scene.props %}- {{ p.name }} [{{ p.prop_id }}]{% if p.state %} ({{ {"open": "открыто", "closed": "закрыто", "broken": "сломано", "burned": "сожжено", "moved": "сдвинуто"}.get(p.state, p.state) }}){% endif %}{% if p.owner %}, хозяин: {{ p.owner }}{% endif %}{% if p.portable %}, можно взять{% endif %}{% if p.source %}, {{ "источник гнилой воды" if p.source == "foul_water" else "источник воды" }}{% endif %}.{% if p.description %} {{ p.description }}{% endif %}{% if p.text %} Написано: «{{ p.text }}»{% endif %}{% if p.container %} Это {{ p.container }}{% if p.locked %}, заперт{% endif %}; внутри: {{ p.contents or "пусто" }}.{% endif +%}
 {% endfor %}
 {% endif %}{% if scene.hooks %}Зацепки: {{ scene.hooks | join("; ") }}.
 {% endif %}{% if scene.found %}Игрок уже заметил или нашёл (это факты, их можно описывать): {{ scene.found | join("; ") }}.

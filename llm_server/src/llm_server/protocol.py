@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.69.0"
+PROTOCOL_VERSION = "0.70.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -191,6 +191,7 @@ class SceneProp(_In):
     container: str = ""  # 0.28.0: a container — its kind («сундук», «шкаф»); its contents below
     locked: bool = False  # 0.28.0: locked — a key, thieves' tools or force (effect unlock)
     contents: str = ""  # 0.28.0: «Кинжал ×2 [dagger], Свеча [candle]» — what lies inside
+    source: str = ""  # 0.70.0: water | foul_water — water is drawn here
 
 
 class Scene(_In):
@@ -605,6 +606,7 @@ class PropSpec(_Out):
     contents: Annotated[list[ContentSpec], AfterValidator(lambda v: v[:10])] = Field(default_factory=list)
     lock: Literal["simple", "good", "masterwork"] | None = None  # 0.28.0: locked, and how well
     key: str | None = None  # 0.28.0: the item_id of the key that opens it
+    source: Literal["water", "foul_water"] | None = None  # 0.70.0: water can be drawn here (a well, a stream, a river)
 
 
 class FurnishEffect(_Out):
@@ -842,6 +844,15 @@ class DropItemEffect(_Out):
     kind: Literal["drop_item"] = "drop_item"
     item_id: str
     qty: int = Field(default=1, ge=1, le=99)
+
+
+class FillEffect(_Out):
+    """The hero draws water into the vessels it carries (0.70.0): a waterskin, a flask, a jug, a bucket; `item_id` —
+    one kind only, empty — all. The engine checks the water here (the room's tag, a thing with `source`, a well or a
+    stream of the room) and fills each to its volume."""
+
+    kind: Literal["fill"] = "fill"
+    item_id: str | None = None
 
 
 class TakePropEffect(_Out):
@@ -1260,7 +1271,7 @@ Effect = Annotated[
     | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
-    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect
+    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect
     | OwnerEffect | DoorEffect,
     Field(discriminator="kind"),
 ]

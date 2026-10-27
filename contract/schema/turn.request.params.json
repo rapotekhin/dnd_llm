@@ -1027,6 +1027,11 @@
           "title": "Prop Id",
           "type": "string"
         },
+        "source": {
+          "default": "",
+          "title": "Source",
+          "type": "string"
+        },
         "state": {
           "default": "",
           "title": "State",

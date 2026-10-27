@@ -2655,14 +2655,14 @@
 		}
 	},
 	"needs": {
-		"_doc": "Needs of the hero (v0.7.23, NeedRules): a scale 0–100 that empties over `hours` of the game clock from the last meal or drink and fills by eating (camp food points × points) or drinking (drink); `stages` by the value below `below` — a chip, the master's line and the checks they hamper (saves: ability → disadvantage); at 0 — a level of exhaustion each full day past grace_days (\"3+con\": 3 + CON modifier, at least 1). sleep is shown from the hours awake (hero_effects.exhaustion.awake_hours), its exhaustion stays the awake saves. Water: a waterskin holds skin_drinks drinks, filled where the room has the tag `water` or a thing whose name has one of water_words; drinking there is free. A bed in a settlement (an inn, a temple) feeds and waters (rest_meal). Switched by the game setting `needs` (on by default). Food spoils (v0.7.25, FoodRules): an item's `spoils_days` — a carried batch turns into `spoil_to` that many days after it was got; a dish's `meal` in consumables — water points and temp_hp on eating, its adv_tag a boon.",
+		"_doc": "Needs of the hero (v0.7.23, NeedRules): a scale 0–100 that empties over `hours` of the game clock from the last meal or drink and fills by eating (camp food points × points) or drinking (drink); `stages` by the value below `below` — a chip, the master's line and the checks they hamper (saves: ability → disadvantage); at 0 — a level of exhaustion each full day past grace_days (\"3+con\": 3 + CON modifier, at least 1). sleep is shown from the hours awake (hero_effects.exhaustion.awake_hours), its exhaustion stays the awake saves. Water (v0.7.34.6, VesselRules): each vessel of `vessels` (catalog id → pints it holds, `weight` empty if the catalog gives it full) keeps its own pints of water and whether they are foul; a drink takes drink_pints, water weighs lb_per_pint. Filled where the room has the tag `water` (`foul_water` — foul), a thing of the room with `source` (water | foul_water), or a thing whose name has one of water_words; drinking there is free. A bed in a settlement (an inn, a temple) feeds and waters (rest_meal). Switched by the game setting `needs` (on by default). Food spoils (v0.7.25, FoodRules): an item's `spoils_days` — a carried batch turns into `spoil_to` that many days after it was got; a dish's `meal` in consumables — water points and temp_hp on eating, its adv_tag a boon.",
 		"spoil_to": "spoiled_food",
 		"food": {"name": "Еда", "hours": 24, "points": 50, "grace_days": "3+con", "eat_minutes": 15, "stages": [
 			{"below": 50, "chip": "Голоден", "line": "голоден"},
 			{"below": 20, "chip": "Очень голоден", "line": "очень голоден — слабеет", "saves": {"con": "disadvantage"}},
 			{"below": 1, "chip": "Голодает", "line": "голодает", "saves": {"con": "disadvantage"}}
 		]},
-		"water": {"name": "Вода", "hours": 24, "drink": 50, "grace_days": "1", "drink_minutes": 5, "fill_minutes": 10, "skin": "waterskin", "skin_drinks": 2, "stages": [
+		"water": {"name": "Вода", "hours": 24, "drink": 50, "grace_days": "1", "drink_minutes": 5, "fill_minutes": 10, "drink_pints": 2, "lb_per_pint": 1, "vessels": {"waterskin": {"pints": 4, "weight": 1}, "flask_or_tankard": {"pints": 1}, "empty_flask": {"pints": 1}, "bottle_glass": {"pints": 1.5}, "jug_or_pitcher": {"pints": 8}, "bucket": {"pints": 24}, "barrel": {"pints": 320}}, "stages": [
 			{"below": 50, "chip": "Хочет пить", "line": "хочет пить"},
 			{"below": 20, "chip": "Мучит жажда", "line": "мучит жажда", "saves": {"con": "disadvantage"}},
 			{"below": 1, "chip": "Обезвожен", "line": "обезвожен", "saves": {"con": "disadvantage"}}
@@ -2671,7 +2671,7 @@
 			{"below": 34, "chip": "Хочет спать", "line": "хочет спать"},
 			{"below": 1, "chip": "Валится с ног", "line": "валится с ног без сна"}
 		]},
-		"water_words": ["колод", "ручей", "ручь", "родник", "источник", "бочка с водой", "водопой", "фонтан"],
+		"water_words": ["колод", "ручей", "ручь", "родник", "источник", "бочка с водой", "водопой", "фонтан", "река", "реки", "озер", "пруд"],
 		"rest_meal": true
 	},
 	"hero_effects": {

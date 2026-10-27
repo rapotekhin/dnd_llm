@@ -393,6 +393,15 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return WorldGen.plan_npc(s, data, e.get("npc", {}) if e.get("npc") is Dictionary else {}, searched_npcs.has(turn_id), _new_rooms(s, data, pending))
 		"drop_item":  # the hero leaves a thing (a bag with what is in it) in the room (v0.7.18.2)
 			return ContainerRules.plan_drop(s, data, str(e.get("item_id", "")), int(e.get("qty", 1)))
+		"fill":  # water into the hero's vessels by words (v0.7.34.6)
+			var only := str(e.get("item_id", "")) if e.get("item_id") != null else ""
+			var why := NeedRules.can_fill(s, data, only)
+			if not why.is_empty():
+				return {"reason": {"NEED_NO_SKIN": "у героя нет такой ёмкости (бурдюк, фляга, кувшин, ведро)", "NEED_NO_SOURCE":
+					"здесь нет воды: ни тега комнаты, ни вещи-источника (колодец, ручей, река — вещь обстановки с source)",
+					"NEED_SKIN_FULL": "ёмкости уже полны"}.get(why, why)}
+			return {"plan": {"only": only}, "summary": "Набрать воды: %s" % ", ".join(VesselRules.to_fill(s.character, data, NeedRules.foul_here(s, data), only)
+				.map(func(v: Dictionary) -> String: return ItemRules.display_name(data["items"], s.items, v["id"])))}
 		"prop_state":
 			return PropRules.plan_state(s, e)
 		"advance_time":
@@ -974,6 +983,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			ContainerRules.apply_put(s, _data, plan)
 		"drop_item":
 			ContainerRules.apply_drop(s, _data, plan)
+		"fill":
+			_extra_lines.append_array(NeedRules.fill(s, _data, str(plan["only"])))
+			_extra_lines.append_array(TimeRules.advance(s, _data, int(NeedRules.cfg(_data)["water"]["fill_minutes"])))
 		"create_npc":
 			var room := str(plan["room"])
 			if room.begins_with("new:"):

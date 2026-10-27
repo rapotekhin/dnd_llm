@@ -109,6 +109,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
                ("npc_discount", "npc_favor", "reveal_secret", "npc_follow", "reputation")),
     "goals": ("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", ()),
     "equip": ("надеть, снять, раздеться (`equip`)", ("equip",)),
+    "water": ("набрать воды в бурдюк, флягу, кувшин, ведро из колодца, ручья, реки (`fill`)", ("fill",)),
     "invisible": ("невидимый герой", ()),
     "people": ("новый человек (`create_npc`)", ("create_npc",)),
     "quests": ("новое задание: NPC просит о помощи, игрок ищет работу (`create_quest`)", ("create_quest",)),
@@ -134,6 +135,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
 
 # Topics of a scene, not of a conversation: out of the index while the hero talks (still readable by `rules`).
 SCENE_TOPICS = {"places", "containers", "doors", "equip", "tools", "invisible"}
+WATER_WORDS = re.compile(r"вод[аыуе]|набра|набер|наполн|зачерп|бурдюк|фляг|кувшин|ведр", re.IGNORECASE)
 BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
 
 
@@ -177,6 +179,8 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("background")
     if scene and (any(p.container for p in scene.props) or character and character.bags) and mentions(said, CONTAINER_WORDS, scene):
         out.append("containers")
+    if mentions(said, WATER_WORDS):  # v0.7.34.6: water drawn by words
+        out.append("water")
     if scene and any(e.door for e in scene.exits):  # v0.7.22.25
         out.append("doors")
     if scene and scene.creatures:  # the prisoners, a truce, the hero's captors (v0.7.22.17)

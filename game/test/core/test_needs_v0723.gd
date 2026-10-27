@@ -83,7 +83,7 @@ func test_eating_takes_the_cheapest_food_first() -> void:
 func test_drinking_from_the_skin_and_filling_it_at_a_source() -> void:
 	var s := _session()
 	s.character["inventory"]["waterskin"] = 1
-	NeedRules.state(s, data)["skin"] = 0
+	s.character["vessels"] = {}
 	NeedRules.set_value(s, data, "water", 20.0)
 	s.room_id = "brod-gate"
 	assert_bool(NeedRules.water_here(s, data)).is_false()
@@ -92,11 +92,11 @@ func test_drinking_from_the_skin_and_filling_it_at_a_source() -> void:
 	s.room_id = "brod-square"
 	assert_bool(NeedRules.water_here(s, data)).is_true()
 	NeedRules.fill(s, data)
-	assert_int(NeedRules.drinks(s, data)).is_equal(NeedRules.capacity(s.character, data))
+	assert_float(NeedRules.drinks(s, data)).is_equal(NeedRules.capacity(s.character, data))
 	s.room_id = "brod-gate"
 	NeedRules.drink(s, data)
 	assert_float(NeedRules.value(s, data, "water")).is_greater_equal(75.0)
-	assert_int(NeedRules.drinks(s, data)).is_less(NeedRules.capacity(s.character, data))
+	assert_float(NeedRules.drinks(s, data)).is_less(NeedRules.capacity(s.character, data))
 
 
 func test_a_bed_feeds_and_a_camp_eats_its_supplies() -> void:
@@ -109,7 +109,7 @@ func test_a_bed_feeds_and_a_camp_eats_its_supplies() -> void:
 	NeedRules.set_value(s, data, "food", 10.0)
 	NeedRules.set_value(s, data, "water", 10.0)
 	s.room_id = "brod-gate"
-	NeedRules.state(s, data)["skin"] = 0
+	s.character["vessels"] = {}
 	NeedRules.rest_meal(s, data, 1, false)
 	assert_float(NeedRules.value(s, data, "food")).is_equal_approx(60.0, 0.5)
 	assert_float(NeedRules.value(s, data, "water")).is_equal_approx(10.0, 0.5)  # no source, no skin

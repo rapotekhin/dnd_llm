@@ -249,9 +249,9 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		var n: Dictionary = c["needs"]
 		for k: String in ["food", "water"]:
 			n[k] = {"level": float(n[k].get("level", 100.0)), "at": int(n[k].get("at", 0))}
-		n["skin"] = int(n.get("skin", 0))
+		if n.has("skin"):  # the old pool of drinks, poured into the vessels by VesselRules (v0.7.34.6)
+			n["skin"] = int(n["skin"])
 		n["done"] = _whole_numbers(n.get("done", {}))
-		n["skin_foul"] = bool(n.get("skin_foul", false))
 	if c.has("diseases"):  # v0.7.23.1: diseases still incubating
 		var sick: Array = []
 		for d: Variant in c["diseases"]:

@@ -29,7 +29,7 @@ func run() -> void:
 	TimeRules.advance(s, data, 14 * 60)
 	s.character["inventory"]["rations"] = 2
 	s.character["inventory"]["waterskin"] = 1
-	NeedRules.state(s, data)["skin"] = 0
+	s.character["vessels"] = {}
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var shown := NeedRules.shown(s, data).map(func(n: Dictionary) -> String: return str(n["chip"]))
