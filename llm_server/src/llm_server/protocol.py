@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.71.0"
+PROTOCOL_VERSION = "0.72.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1339,6 +1339,7 @@ class EngineCheckResult(_In):
     blocked: bool = False
     revealed: list[str] = Field(default_factory=list)  # hidden things this successful search found (0.3.0)
     note: str = ""  # engine facts for the master, e.g. the outcome of a haggle (0.4.0)
+    rolled_as: str = ""  # 0.72.0: the player pinned this skill or ability — the engine rolled it instead of the asked one
 
 
 class EngineValidateParams(_Out):

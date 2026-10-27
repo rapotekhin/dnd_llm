@@ -107,7 +107,7 @@ func run() -> void:
 	for sub: Node in pin.get_popup().get_children():
 		if sub is PopupMenu:
 			subs.append("%s %d" % [sub.name, (sub as PopupMenu).item_count])
-	step("three submenus with things in them", subs.size() == 3 and not ", ".join(subs).contains(" 0"), ", ".join(subs))
+	step("four submenus with things in them (v0.7.36: the check)", subs.size() == 4 and not ", ".join(subs).contains(" 0"), ", ".join(subs))
 	# Second Wind pinned to the words: one turn.
 	s.character["hp"] = int(s.character["max_hp"]) - 6
 	gs.attach("feature", "second_wind")

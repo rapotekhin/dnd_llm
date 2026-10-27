@@ -14,8 +14,11 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 		return {"error": "unknown dc_tier: %s" % tier}
 	var skill := str(params.get("skill", "")) if params.get("skill") != null else ""
 	var save := str(params.get("save", "")) if params.get("save") != null else ""
-	if skill.is_empty() == save.is_empty():
+	var ability := str(params.get("ability", ""))  # a bare ability check, the player's pick (v0.7.36)
+	if [skill, save, ability].filter(func(x: String) -> bool: return not x.is_empty()).size() != 1:
 		return {"error": "exactly one of skill or save is required"}
+	if not ability.is_empty() and not (rules["saves"] as Array).has(ability):
+		return {"error": "unknown ability: %s" % ability}
 	if not skill.is_empty() and not (rules["skills"] as Dictionary).has(skill):
 		return {"error": "unknown skill: %s" % skill}
 	if not save.is_empty() and not (rules["saves"] as Array).has(save):
@@ -60,9 +63,11 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 
 
 ## The character's total bonus for engine.check params: skill bonus or save bonus from the sheet.
-static func bonus_for(character: Dictionary, params: Dictionary) -> int:
+static func bonus_for(character: Dictionary, params: Dictionary, data: Dictionary = {}) -> int:
 	var skill := str(params.get("skill", "")) if params.get("skill") != null else ""
 	if not skill.is_empty():
 		return int(character.get("skills", {}).get(skill, 0))
+	if not str(params.get("ability", "")).is_empty():
+		return CharacterRules.ability_check_bonus(character, data, str(params["ability"]))
 	var save := str(params.get("save", "")) if params.get("save") != null else ""
 	return int(character.get("saves", {}).get(save, 0))

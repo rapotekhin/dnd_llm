@@ -351,12 +351,15 @@ static func check_mods(c: Dictionary, data: Dictionary, params: Dictionary) -> D
 	var skill := str(params.get("skill", "")) if params.get("skill") != null else ""
 	var save := str(params.get("save", "")) if params.get("save") != null else ""
 	var sense := str(params.get("sense", "")) if params.get("sense") != null else ""
+	var ability := str(params.get("ability", ""))  # v0.7.36: an ability check is a check
 	var table: Dictionary = data["rules"].get("condition_effects", {})
 	for id: Variant in c.get("conditions", []):
 		var fx: Dictionary = table.get(str(id), {})
 		var modes: Array[String] = []
 		if not skill.is_empty():
 			modes.append(str(fx.get("skills", {}).get(skill, fx.get("checks", ""))))
+		elif not ability.is_empty():
+			modes.append(str(fx.get("checks", "")))
 		elif not save.is_empty():
 			modes.append(str(fx.get("saves", {}).get(save, "")))
 		if not sense.is_empty():
@@ -369,7 +372,7 @@ static func check_mods(c: Dictionary, data: Dictionary, params: Dictionary) -> D
 	if not save.is_empty() and effects(c).any(func(e: Dictionary) -> bool: return str(e.get("saves", {}).get(save, "")) == "disadvantage"):
 		(out["disadvantage"] as Array).append("disease")  # a disease's weak saves (v0.7.23.1)
 	var lv := exhaustion(c)
-	if (lv >= 1 and not skill.is_empty()) or (lv >= 3 and not save.is_empty()):
+	if (lv >= 1 and not (skill + ability).is_empty()) or (lv >= 3 and not save.is_empty()):
 		(out["disadvantage"] as Array).append("exhaustion")
 	return out
 

@@ -68,6 +68,14 @@ static func skill_bonus(c: Dictionary, data: Dictionary, skill: String) -> int:
 	return bonus
 
 
+## A bare ability check (5e: «Сила» to force a door): the modifier, half proficiency with Jack of All Trades.
+static func ability_check_bonus(c: Dictionary, data: Dictionary, ab: String) -> int:
+	var bonus := mod(ability(c, ab))
+	if has_feature(c, "jack_of_all_trades") and not data.is_empty():
+		bonus += prof_bonus(c, data) / 2
+	return bonus
+
+
 static func save_bonus(c: Dictionary, data: Dictionary, save: String) -> int:
 	var bonus := mod(ability(c, save))
 	if (c.get("save_profs", []) as Array).has(save):

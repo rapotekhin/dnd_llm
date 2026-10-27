@@ -49,6 +49,7 @@ var trade_panel: TradePanel
 var _attach_menu: MenuButton  # v0.7.7: a spell, feature or consumable pinned to the message
 var _attach_chip: HBoxContainer
 var _attach_choices: Array[Dictionary] = []
+var _check_choices: Array[Dictionary] = []
 var _typed := true  # the last turn came from the input: its focus comes back after the turn (v0.7.22.27)
 
 
@@ -560,6 +561,18 @@ func _fill_attach_menu() -> void:
 			sub.add_item(tr("ATTACH_NOTHING"), -1)
 			sub.set_item_disabled(0, true)
 		pop.add_submenu_node_item(tr(str(group[0])), sub)
+	var checks := PopupMenu.new()  # v0.7.36: the check the player picks, not the master
+	checks.name = "AttachSub_ATTACH_GROUP_CHECK"
+	_check_choices = GameState.check_choices()
+	checks.id_pressed.connect(func(i: int) -> void:
+		GameState.pin_check(str(_check_choices[i]["kind"]), str(_check_choices[i]["id"]))
+		input.grab_focus())
+	for i in _check_choices.size():
+		var ch: Dictionary = _check_choices[i]
+		if i > 0 and ch["kind"] == "ability" and _check_choices[i - 1]["kind"] == "skill":
+			checks.add_separator(tr("ATTACH_CHECK_ABILITIES"))
+		checks.add_item(("• " if bool(ch["prof"]) else "   ") + GameState.check_label(ch), i)
+	pop.add_submenu_node_item(tr("ATTACH_GROUP_CHECK"), checks)
 
 
 func _on_attach_picked(index: int) -> void:
@@ -571,6 +584,28 @@ func _on_attach_picked(index: int) -> void:
 	input.grab_focus()
 
 
+## The pinned check (v0.7.36): «Проверка: Атлетика +5» and «✕».
+func _check_chip() -> void:
+	var pin := GameState.pinned_check
+	for ch: Dictionary in GameState.check_choices():
+		if pin.get(str(ch["kind"])) == ch["id"]:
+			var label := Label.new()
+			label.name = "CheckPinName"
+			label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			label.text = tr("ATTACH_CHECK_PINNED").format({"name": GameState.check_label(ch)})
+			label.tooltip_text = "ATTACH_CHECK_TIP"
+			label.mouse_filter = Control.MOUSE_FILTER_PASS
+			label.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
+			_attach_chip.add_child(label)
+			var drop := Button.new()
+			drop.name = "CheckPinRemove"
+			drop.text = "✕"
+			drop.tooltip_text = "ATTACH_REMOVE"
+			drop.pressed.connect(GameState.unpin_check)
+			_attach_chip.add_child(drop)
+			input.placeholder_text = tr("PLACEHOLDER_CHECK_PINNED")
+
+
 ## The chip of the pinned thing: its name, the slot circle (spells), the target (an NPC here or none), «✕».
 func _refresh_attach(s: GameSession, busy: bool, online: bool) -> void:
 	for c in _attach_chip.get_children():
@@ -579,6 +614,8 @@ func _refresh_attach(s: GameSession, busy: bool, online: bool) -> void:
 	var usable := s != null and s.mode != GameSession.MODE_COMBAT
 	_attach_menu.visible = usable
 	_attach_menu.disabled = busy or not online
+	if usable and not GameState.pinned_check.is_empty():
+		_check_chip()
 	var a := GameState.attached
 	if not usable or a.is_empty():
 		return

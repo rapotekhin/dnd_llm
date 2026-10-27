@@ -33,6 +33,11 @@
       "title": "Revealed",
       "type": "array"
     },
+    "rolled_as": {
+      "default": "",
+      "title": "Rolled As",
+      "type": "string"
+    },
     "rolls": {
       "items": {
         "type": "integer"

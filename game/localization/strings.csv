@@ -1542,3 +1542,9 @@ OPT_IMAGES_ON,Включены
 OPT_IMAGE_MODEL,{name} — ≈${price} за картинку
 OPT_IMAGE_MODEL_DEFAULT," (по умолчанию)"
 OPT_IMAGES_NONE,Сервер не рисует картинки
+ATTACH_GROUP_CHECK,Навык проверки
+ATTACH_CHECK_ABILITIES,Просто характеристика
+ATTACH_CHECK_PINNED,Проверка: {name}
+ATTACH_CHECK_TIP,"Мастер решает, нужна ли проверка и какой она сложности, но бросок пойдёт этим навыком. • — навык, которым герой владеет"
+PLACEHOLDER_CHECK_PINNED,"Что вы делаете? Проверка — выбранным навыком"
+CHECK_PIN_NEEDS_WORDS,"Напишите, что герой делает — навык проверки идёт вместе со словами."

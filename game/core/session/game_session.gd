@@ -392,6 +392,7 @@ static func check_entry(params: Dictionary, result: Dictionary) -> Dictionary:
 	e["kind"] = KIND_CHECK
 	e["skill"] = str(params.get("skill", ""))
 	e["save"] = str(params.get("save", ""))
+	e["ability"] = str(params.get("ability", ""))
 	if params.get("advantage_reason") != null and not str(params["advantage_reason"]).is_empty():
 		e["advantage_reason"] = str(params["advantage_reason"])
 	return e

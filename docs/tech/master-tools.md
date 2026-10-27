@@ -60,6 +60,7 @@
 | Повтор той же проверки без перемен | Без броска: прежний итог, `blocked: true` (новый довод `argument`, заклинание, отношение — перемена) | [ExplorationRules.locked](../../game/core/rules/exploration_rules.gd#L51), `state_key` |
 | Ловкость рук против NPC сцены (`target_id`) | Кража: движок выдаёт монеты или NPC замечает; итог — в `note` | `_theft`, [TheftRules](../../game/core/rules/theft_rules.gd) |
 | Успешный поиск | Скрытое этой комнаты (`revealed`), тайники, продвижение заданий; в разговоре — тайны NPC по проверке | [ExplorationRules.active_reveal](../../game/core/rules/exploration_rules.gd#L125), `SocialRules.reveal_by_check` |
+| Игрок сам выбрал навык (v0.7.36, ✦ → «Навык проверки») | Каждая проверка хода, кроме спасброска, бросается этим навыком или просто характеристикой (`ability`: модификатор, Мастер на все руки — половина владения), что бы ни просил мастер; в ответе `rolled_as` — название, мастеру: «бросок по выбору игрока» | `GameState._forced_skill`, [CharacterRules.ability_check_bonus](../../game/core/character/character_rules.gd) |
 | Любая проверка | Бонус героя, состояния, темнота, инструменты, черты расы, вещи, заклинания-баффы, Вдохновение барда | [CheckEngine.bonus_for](../../game/core/rules/check_engine.gd#L63), `ConditionRules.check_mods` |
 
 Успешная социальная проверка «склоняет» NPC на этот ход: от него становятся возможны скидка, услуга, `npc_follow`, `crime_release` (`EffectEngine.note_check`).

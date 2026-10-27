@@ -71,7 +71,7 @@ func _ready() -> void:
 
 func text_for(e: Dictionary) -> String:
 	var skill := str(e.get("skill", ""))
-	var what := tr("SKILL_" + skill.to_upper()) if not skill.is_empty() else tr("SAVE_" + str(e.get("save", "")).to_upper())
+	var what := tr("SKILL_" + skill.to_upper()) if not skill.is_empty() else tr("ABILITY_" + str(e["ability"]).to_upper()) 		if not str(e.get("ability", "")).is_empty() else tr("SAVE_" + str(e.get("save", "")).to_upper())
 	var rolls: Array = e.get("rolls", [])
 	var dice := str(int(e.get("nat", 0))) if rolls.size() <= 1 else "%s→%d" % [", ".join(rolls.map(func(r: Variant) -> String: return str(int(r)))), int(e.get("nat", 0))]
 	return tr("CHECK_LINE").format({

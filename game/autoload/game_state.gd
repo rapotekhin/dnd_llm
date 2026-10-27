@@ -22,6 +22,10 @@ var _last_input: String = ""
 ## request): {kind, id, slot, target} or {}. The engine spends it when the message goes, and the master gets the
 ## cast and the player's intent in one turn. Not saved.
 var attached: Dictionary = {}
+## The check the player picked for the next message (v0.7.36): {skill} or {ability}; the engine rolls every check of
+## that turn by it, whatever skill the master asks for. `_forced` — the one of the turn sent ({…, input, turn}).
+var pinned_check: Dictionary = {}
+var _forced: Dictionary = {}
 ## The character before an attached spend: back if that turn fails to reach the master (the slot is returned).
 var _refund: Dictionary = {}
 var _refund_what: Dictionary = {}  # the attachment spent then
@@ -280,6 +284,43 @@ func attach(kind: String, id: String, slot: int = 0, target: String = "") -> voi
 func detach() -> void:
 	attached = {}
 	EventBus.state_changed.emit()
+
+
+func pin_check(kind: String, id: String) -> void:
+	pinned_check = {kind: id}
+	EventBus.state_changed.emit()
+
+
+func unpin_check() -> void:
+	pinned_check = {}
+	EventBus.state_changed.emit()
+
+
+## The checks the player may pin: skills by name, then bare abilities — [{kind skill|ability, id, name, bonus, prof}].
+func check_choices() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if session == null:
+		return out
+	var c := session.character
+	for id: String in Catalog.rules()["skills"]:
+		out.append({"kind": "skill", "id": id, "name": tr("SKILL_" + id.to_upper()), "bonus": int(c.get("skills", {}).get(id, 0)),
+			"prof": (c.get("skill_profs", []) as Array).has(id) or (c.get("expertise", []) as Array).has(id)})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return str(a["name"]) < str(b["name"]))
+	for ab: Variant in Catalog.rules()["saves"]:
+		out.append({"kind": "ability", "id": str(ab), "name": tr("ABILITY_" + str(ab).to_upper()),
+			"bonus": CharacterRules.ability_check_bonus(c, Catalog.data, str(ab)), "prof": false})
+	return out
+
+
+## «Атлетика +5» for the menu and the chip.
+static func check_label(ch: Dictionary) -> String:
+	return "%s %+d" % [ch["name"], int(ch["bonus"])]
+
+
+## The master's note for a pinned check, after the player's words.
+func _pinned_note(pin: Dictionary) -> String:
+	var what := tr("SKILL_" + str(pin["skill"]).to_upper()) if pin.has("skill") else tr("ABILITY_" + str(pin["ability"]).to_upper())
+	return " [Игрок сам выбрал проверку: %s. Если действию нужна проверка — проси request_check; движок бросит её этим, какой бы навык ты ни указал. Не нужна — не проси.]" % what
 
 
 ## What can be pinned now (v0.7.7 fixes: everything, not only spells): [{kind, id, name, slots [circles], off}].
@@ -1873,7 +1914,10 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 	text = text.strip_edges()
 	var pinned := not attached.is_empty() and session != null and session.mode != GameSession.MODE_COMBAT
 	if session == null or (text.is_empty() and not pinned) or is_busy() or not Backend.is_ready():
+		if session != null and text.is_empty() and not pinned_check.is_empty() and not is_busy():
+			EventBus.message.emit(tr("CHECK_PIN_NEEDS_WORDS"))
 		return false
+	var pin := pinned_check if session.mode != GameSession.MODE_COMBAT and not text.is_empty() else {}
 	var hostile := pinned and _hostile_attach(attached)  # v0.7.22.16: a blow or a hostile spell at an NPC — the fight
 	if pinned and text.is_empty() and not hostile:  # the attachment alone: a cast as from the sheet
 		var why := _use_alone(attached)
@@ -1917,6 +1961,12 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 			return attack_npc(target, op).is_empty()
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
+	_forced = {}
+	if not pin.is_empty():  # v0.7.36: the player's own check — the engine holds the master to it
+		pinned_check = {}
+		facts += _pinned_note(pin)
+		_forced = pin.duplicate()
+		_forced["fresh"] = true
 	if not check.is_empty() and session.mode != GameSession.MODE_COMBAT:  # a tagged option: the engine rolls first (v0.7.22.28)
 		var r := _engine_check(check.duplicate())
 		if not r.has("error"):
@@ -2669,6 +2719,10 @@ func _request(kind: String, input: String) -> void:
 		effects.player_turns[turn_id] = true
 	_last_input = input
 	busy_turn = turn_id
+	if bool(_forced.get("fresh", false)):
+		_forced.merge({"fresh": false, "input": input, "turn": turn_id}, true)
+	elif not _forced.is_empty():
+		_forced["turn"] = turn_id if kind == "action" and str(_forced.get("input", "")) == input else ""  # a retry keeps it
 	_set_options([])
 	EventBus.turn_started.emit(turn_id)
 	var params := {
@@ -2946,11 +3000,26 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 		var parley := _parley_check(params)
 		_combat_log(parley["lines"])
 		return parley["result"]
+	var forced := _forced_skill(params)
 	var result := _engine_check(params)
+	if not forced.is_empty() and not result.has("error"):
+		result["rolled_as"] = forced
 	var won_over := _listener_id(params) if ["persuasion", "deception", "intimidation"].has(str(params.get("skill", ""))) and not bool(result.get("blocked", false)) else ""
 	effects.note_check(str(params.get("turn_id", "")), str(params.get("dc_tier", "")), bool(result.get("success", false)), won_over)
 	effects.note_roll(str(params.get("turn_id", "")), str(params.get("skill", "")), int(result.get("total", 0)), bool(result.get("success", false)))
 	return result
+
+
+## v0.7.36: a check (not a save) of the turn with the player's pinned skill or ability is rolled by it; its name, or "".
+func _forced_skill(params: Dictionary) -> String:
+	if _forced.is_empty() or str(_forced.get("turn", "")) != str(params.get("turn_id", "")) or params.get("save") != null and not str(params["save"]).is_empty():
+		return ""
+	if _forced.has("skill"):
+		params["skill"] = _forced["skill"]
+		return tr("SKILL_" + str(_forced["skill"]).to_upper())
+	params.erase("skill")
+	params["ability"] = _forced["ability"]
+	return tr("ABILITY_" + str(_forced["ability"]).to_upper())
 
 
 ## An engine check (the master's request_check or a button of the client): DC by tier, conditions and darkness,
@@ -2996,7 +3065,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		var thing := CharacterRules.carried_with(session.character, Catalog.data, session.items, str(by_item[skill_id]))
 		if not thing.is_empty():
 			params["advantage_reason"] = thing
-	var skill_ab := str(Catalog.rules()["skills"].get(skill_id, ""))
+	var skill_ab := str(Catalog.rules()["skills"].get(skill_id, params.get("ability", "")))
 	for e: Dictionary in SpellEffects.hero_effects(session.character, "ability_adv"):  # Enhance Ability (v0.7.13.3)
 		if str(e["ability_adv"]) == skill_ab and str(params.get("advantage_reason", "")).is_empty():
 			params["advantage_reason"] = str(e.get("source", {}).get("name", ""))
@@ -3023,7 +3092,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		var spell_die := SpellEffects.hero_die(session, Catalog.data, "check")  # Guidance (v0.7.13.1)
 		if not str(spell_die["note"]).is_empty():
 			_add(GameSession.effect_entry(["Проверка: " + str(spell_die["note"])]))
-		var bonus := CheckEngine.bonus_for(session.character, params) + _terrain_bonus(params) + int(tool_fx["bonus"]) + int(spell_die["bonus"])
+		var bonus := CheckEngine.bonus_for(session.character, params, Catalog.data) + _terrain_bonus(params) + int(tool_fx["bonus"]) + int(spell_die["bonus"])
 		result = _hero_roll(params, bonus)
 		if result.has("error"):
 			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))

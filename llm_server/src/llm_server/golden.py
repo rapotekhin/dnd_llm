@@ -182,7 +182,7 @@ class MockEngine:
             return {"check_id": f"c-{self._n}", "rolls": d20 or [max(1, int(c.get("total", 10)) - int(c.get("bonus", 0)))],
                     "bonus": c.get("bonus", 0), "total": c.get("total", 10), "dc": c.get("dc", 15),
                     "success": bool(c.get("success")), "nat": nat or 0, "blocked": bool(c.get("blocked")),
-                    "note": c.get("note", ""), "revealed": list(c.get("revealed") or [])}
+                    "note": c.get("note", ""), "revealed": list(c.get("revealed") or []), "rolled_as": c.get("rolled_as", "")}
         if method == "engine.validate":
             rule = self.engine.get("validate", "accept")
             kind = p["effect"]["kind"]
