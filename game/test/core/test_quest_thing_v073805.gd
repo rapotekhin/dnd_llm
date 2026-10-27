@@ -67,3 +67,11 @@ func test_every_tool_of_the_catalog_is_sold_somewhere() -> void:
 			missing.append(id)
 	assert_array(missing).is_empty()
 	assert_int(int(TradeRules.pack_stock(data["world"]["npcs"]["npc_smith"], data["rules"]).get("smiths_tools", 0))).is_greater(0)
+
+
+func test_goods_new_to_the_pack_reach_a_shelf_restocked_today() -> void:
+	s.merchants["npc_smith"] = {"purse_cp": 100, "day": s.day, "stock": {"dagger": 4}, "sold": {}, "haggle_pct": 0,
+		"haggle_failed_day": 0, "haggle_result": {}, "haggles": 0, "haggle_day": 0}  # an older build's restock today
+	assert_int(int(TradeRules.merchant(s, data, "npc_smith")["stock"].get("smiths_tools", 0))).is_greater(0)
+	s.merchants["npc_smith"]["stock"].erase("smiths_tools")  # bought out: not back before tomorrow
+	assert_int(int(TradeRules.merchant(s, data, "npc_smith")["stock"].get("smiths_tools", 0))).is_equal(0)

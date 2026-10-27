@@ -42,8 +42,25 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 			stock.erase(id)
 		m["purse_cp"] = maxi(int(m["purse_cp"]), int(npc.get("purse_cp", 0)))
 		m["day"] = s.day
+		m["pack_ids"] = pack.keys()
+	elif not s.dead_npcs.has(npc_id):
+		_new_pack_goods(s, data, npc_id, npc, m)
 	FenceRules.restock(s, data, npc_id, m)  # v0.7.33: a fence's goods for those who know it
 	return m
+
+
+## Goods the pack gained after today's restock (a newer build) reach the shelf now, not tomorrow (v0.7.38.6).
+static func _new_pack_goods(s: GameSession, data: Dictionary, npc_id: String, npc: Dictionary, m: Dictionary) -> void:
+	var pack := pack_stock(npc, data["rules"])
+	var mods := variant(s, data, npc_id)
+	for id: String in mods["stock"]:
+		pack[id] = int(mods["stock"][id])
+	var stock: Dictionary = m["stock"]
+	var seen: Array = m.get("pack_ids", stock.keys())  # saves before v0.7.38.6: what is on the shelf
+	for id: String in pack:
+		if not seen.has(id) and not (mods["remove"] as Array).has(id):
+			stock[id] = maxi(int(stock.get(id, 0)), int(pack[id]))
+	m["pack_ids"] = pack.keys()
 
 
 ## The pack stock as {item_id: qty}; none of its own — the stock of its shop kind (v0.7.22.26).
