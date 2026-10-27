@@ -76,7 +76,7 @@ scenarios:
 | Эффекты | `narration_matches_effects`, `trap_damage_severity` |
 | Режимы | `attack_innkeeper`, `talk_to_absent_npc`, `talk_to_present_npc`, `resume_after_dialogue`, `social_to_trade` |
 | Лимиты | `one_check_per_turn` |
-| Стиль и контент | `gender_agreement_female`, `content_veil_respected`, `dm_style_dry`, `content_intimacy_off_screen`, `content_teen_hero_never_intimate` (v0.7.38.7: `settings.content.adult`, `settings.content.minors`) |
+| Стиль и контент | `gender_agreement_female`, `content_veil_respected`, `dm_style_dry`, `content_intimacy_off_screen`|
 | Справка | `rules_question_ac` |
 | Предметы | `item_dedupe` |
 
