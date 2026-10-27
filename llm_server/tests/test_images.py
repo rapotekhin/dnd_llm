@@ -190,7 +190,7 @@ def test_anima_comes_with_its_modules_found_on_forge():
     anima = asyncio.run(ask())[1]
     assert anima.id == "sd:rimix-anima" and anima.template == "anima"
     assert anima.txt2img["override_settings"]["forge_additional_modules"] == ["/f/VAE/qwen_image_vae.safetensors", "/f/te/qwen_3_06b_base.safetensors"]
-    assert (anima.txt2img["sampler_name"], anima.txt2img["cfg_scale"]) == ("Euler a", 6)
+    assert (anima.txt2img["sampler_name"], anima.txt2img["cfg_scale"], anima.txt2img["distilled_cfg_scale"]) == ("Euler a", 6, 3.5)
     p = prompts.image_prompt("anima", "1boy, wolf, animal. A man fights a wolf.", "ink")
     assert p == "(flat color, no lineart, no outline, Flat vector), 1boy, wolf, animal. A man fights a wolf"
     assert "Anima" in prompts.image_instructions("anima", 700)
@@ -253,10 +253,11 @@ def test_the_players_additions_go_after_the_scene_and_into_the_negative():
     assert p == "(monochrome:0.75), (Sketch art, line art, drawn), 1boy, wolf, forest"  # no prose style (v0.7.38.2)
     prompt, neg = compose(amix, ImageParams(event="x"), p, "crowd, daylight")
     assert prompt.startswith(p + ", masterwork, masterpiece") and prompt.endswith("<lora:rimixO:1.2>")
-    assert neg.startswith("lowres, worst quality") and neg.endswith("anthro, crowd, daylight")
+    assert neg.startswith("lowres, worst quality") and neg.endswith("anthro, crowd, daylight, explicit, shota")
     own = ImageParams(event="x", prompt_add="ink, <lora:other:1>,", negative_add="blurry", negative_only=True)
-    assert compose(amix, own, p, "crowd") == (p + ", ink, <lora:other:1>", "blurry")
-    assert compose(amix, ImageParams(event="x", prompt_add="", negative_add=""), p, "crowd") == (p, "crowd")
+    safe = "nsfw, explicit, nude, loli, shota, child"  # the server's, whatever the player wrote (v0.7.38.7)
+    assert compose(amix, own, p, "crowd") == (p + ", ink, <lora:other:1>", "blurry, " + safe)
+    assert compose(amix, ImageParams(event="x", prompt_add="", negative_add=""), p, "crowd") == (p, "crowd, " + safe)
     assert compose(RECRAFT, ImageParams(event="x", prompt_add="cinematic", negative_add="blurry"), p, "crowd") == (p + ", cinematic", "")
     assert "Danbooru" in prompts.image_instructions("illustrious", 700)
 
@@ -275,3 +276,48 @@ def test_hello_offers_each_models_additions():
     info = {m.id: m for m in ImageCatalog((RECRAFT, *SD_MODELS), RECRAFT.id, ImagePrices(None)).infos()}
     assert info["sd:amix-illustrious"].negative and "<lora:rimixO:1.2>" in info["sd:amix-illustrious"].prompt_add
     assert not info[RECRAFT.id].negative and info[RECRAFT.id].prompt_add == ""
+
+
+def test_the_frame_says_who_is_a_woman_and_who_a_man():
+    from llm_server import prompts
+
+    frame = prompts.image_frame("Мира смеётся.", "", "", "Урга, Полуорк, женщина, молодая; варвар; Секира",
+                                ["Мира — полуэльфийка, женщина, зрелая; Острая на язык", "Бруно — человек, мужчина; трактирщик"])
+    assert "Урга — герой (в рассказе — «ты»): woman → girl" in frame
+    assert "- Мира: woman → girl" in frame and "- Бруно: man → boy" in frame
+    assert "Кто есть кто" not in prompts.image_frame("Тихо.", "", "", "Айра, человек; воин", [])
+
+
+def test_18_plus_lifts_the_safety_tags_only_without_children_or_teens():
+    """v0.7.38.7: 18+ drops `safe` and the nsfw negative; a child or a teen in the frame keeps them, and the minor
+    tags stay in the negative always."""
+    from llm_server.config import SD_MODELS
+    from llm_server.images import adult_frame, compose
+    from llm_server.protocol import ImageParams
+
+    anima = next(m for m in SD_MODELS if m.id == "sd:rimix-anima")
+    adult = ImageParams(event="x", adult=True, hero="Айра, человек, женщина, молодая; воин")
+    prompt, neg = compose(anima, adult, "2girls", "crowd")
+    assert adult_frame(adult) and ", safe," not in prompt and "adult, aged up" in prompt
+    assert "nsfw" not in neg and "nude" not in neg and all(t in neg for t in ("loli", "shota", "child"))
+    for p in (ImageParams(event="x"),
+              ImageParams(event="x", adult=True, minors=["Урга"]),
+              ImageParams(event="x", adult=True, hero="Урга, Полуорк, женщина, подросток; варвар"),
+              ImageParams(event="x", adult=True, people=["Лёшка — человек, мужчина, ребёнок; сын мельника"])):
+        prompt, neg = compose(anima, p, "2girls", "crowd")
+        assert not adult_frame(p) and ", safe," in prompt and all(t in neg for t in ("nsfw", "explicit", "nude", "loli", "child"))
+    assert "18+" in prompts.image_instructions("anima", 900, adult=True)
+    assert "18+" not in prompts.image_instructions("anima", 900) and "без тегов наготы" in prompts.image_instructions("anima", 900)
+
+
+def test_the_master_is_told_the_18_plus_rule_and_the_children_and_teens():
+    """v0.7.38.7: off — intimacy off screen; on — openly for adults; children and teens never, whatever the setting."""
+    from llm_server.protocol import WorldInfo
+
+    off = prompts.intimacy_rule(WorldInfo())
+    assert "за кадр" in off and "Дети" not in off
+    on = prompts.intimacy_rule(WorldInfo(adult=True))
+    assert "прямо" in on and "уходят за кадр" not in on
+    teen = prompts.intimacy_rule(WorldInfo(adult=True, minors=["Урга (герой)"]))
+    assert "Урга (герой)" in teen and "ни близости" in teen
+

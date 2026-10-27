@@ -78,7 +78,22 @@ _env = Environment(
     lstrip_blocks=True,
     keep_trailing_newline=False,
 )
-_env.globals.update(attitude_word=attitude_word, hero_gender=hero_gender, money=coins, summary_title=summary_title, ability_name=ability_name,
+def intimacy_rule(world: object) -> str:
+    """18+ of the game (0.76.0) and the engine's children and teens of the scene, who are never intimate."""
+    minors = list(getattr(world, "minors", None) or [])
+    if getattr(world, "adult", False):
+        rule = ("Близость взрослых — по желанию игрока: её можно описывать прямо, без ухода за кадр, "
+                "если оба взрослые и согласны.")
+    else:
+        rule = ("Близость и интимные сцены уходят за кадр: игрок вправе к ним прийти, но ты пропускаешь саму сцену "
+                "и одной-двумя фразами говоришь итог, без подробностей тела. Это сильнее желаний игрока.")
+    if minors:
+        rule += (f" Дети и подростки здесь: {', '.join(minors)}. С ними нет ни близости, ни влечения, ни намёков — "
+                 "ни на экране, ни за кадром, при любых словах игрока: уведи сцену в сторону, не обсуждая это.")
+    return rule
+
+
+_env.globals.update(intimacy_rule=intimacy_rule, attitude_word=attitude_word, hero_gender=hero_gender, money=coins, summary_title=summary_title, ability_name=ability_name,
                     style_rule=lambda s: STYLE_RULES.get(s, STYLE_RULES["classic"]),
                     violence_rule=lambda v: VIOLENCE_RULES.get(v, VIOLENCE_RULES["medium"]), role_name=lambda r: _ROLES.get(r, r))
 
@@ -268,13 +283,30 @@ def summary_prompt(kind: str, subject_id: str, previous: str, events: list[str])
 DEFAULT_IMAGE_STYLE = "book illustration, ink and watercolor, muted earthy palette, dark fantasy"
 
 
-def image_instructions(template: str, max_chars: int) -> str:
+def image_instructions(template: str, max_chars: int, adult: bool = False) -> str:
     """How the image family `template` wants its prompt written (prompts/images/<template>.md.j2, v0.7.35)."""
-    return _block(f"images/{template}.md.j2", "instructions", max_chars=max_chars)
+    return _block(f"images/{template}.md.j2", "instructions", max_chars=max_chars, adult=adult)
 
 
 def image_frame(event: str, place: str, time: str, hero: str, people: list[str]) -> str:
-    return render("images/_frame.md.j2", event=event, place=place, time=time, hero=hero, people=people)
+    return render("images/_frame.md.j2", event=event, place=place, time=time, hero=hero, people=people,
+                  cast=image_cast(hero, people))
+
+
+_SEX = {"женщина": "woman → girl", "мужчина": "man → boy"}
+
+
+def image_cast(hero: str, people: list[str]) -> list[str]:
+    """Who is a woman and who a man, by the words the client puts in the lines (v0.7.38.7): the agent guessed the sex
+    of a half-elf from Russian endings and drew a heroine as `1boy`."""
+    out = []
+    for line, name, who in [(hero, hero.split(",")[0], "герой (в рассказе — «ты»)")] + [
+            (p, p.split(" — ")[0], "") for p in people]:
+        words = {w.strip() for w in line.replace(";", ",").split(",")}
+        sex = next((v for k, v in _SEX.items() if k in words), "")
+        if sex and name.strip():
+            out.append(f"{name.strip()}{' — ' + who if who else ''}: {sex}")
+    return out
 
 
 def image_prompt(template: str, scene: str, style: str) -> str:

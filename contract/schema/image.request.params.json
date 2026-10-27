@@ -1,6 +1,11 @@
 {
   "description": "The frame of the last event: what happened and what the scene looks like, in the game's words.",
   "properties": {
+    "adult": {
+      "default": false,
+      "title": "Adult",
+      "type": "boolean"
+    },
     "aspect": {
       "default": "16:9",
       "enum": [
@@ -34,6 +39,13 @@
       ],
       "default": null,
       "title": "Image Model"
+    },
+    "minors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Minors",
+      "type": "array"
     },
     "model": {
       "anyOf": [

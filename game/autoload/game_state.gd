@@ -1805,6 +1805,13 @@ func bank_act(what: String, npc_id: String, arg: String = "", amount: int = 0, d
 	return ""
 
 
+## 18+ of this game (v0.7.38.7): the master's intimate scenes and the images; never with a child or a teen.
+func set_adult(on: bool) -> void:
+	if session != null:
+		session.settings["adult"] = on
+		EventBus.state_changed.emit()
+
+
 func set_needs(on: bool) -> void:
 	if session != null:
 		session.settings["needs"] = on

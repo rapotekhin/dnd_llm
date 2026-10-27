@@ -16,3 +16,10 @@
 - {{ p }}
 {% endfor %}
 {% endif %}
+{% if cast %}
+
+Кто есть кто:
+{% for c in cast %}
+- {{ c }}
+{% endfor %}
+{% endif %}

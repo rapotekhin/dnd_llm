@@ -363,7 +363,7 @@ static func apply_rules(base: Dictionary, b: Dictionary) -> Dictionary:
 static func default_settings(p: Dictionary) -> Dictionary:
 	var content: Dictionary = p.get("content", {})
 	return {"world": str(p.get("id", "")), "dm_style": str(p.get("dm_style", "classic")), "difficulty": "normal", "death_mode": "story", "needs": bool(p.get("needs", true)),
-		"slavery": bool(p.get("rules", {}).get("slavery", false)),
+		"slavery": bool(p.get("rules", {}).get("slavery", false)), "adult": false,
 		"violence": str(content.get("violence", "medium")), "lines": (content.get("lines", []) as Array).duplicate(),
 		"veils": (content.get("veils", []) as Array).duplicate(), "wishes": (content.get("wishes", []) as Array).duplicate()}
 

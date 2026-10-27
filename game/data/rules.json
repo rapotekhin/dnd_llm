@@ -2097,8 +2097,8 @@
 	"body": {
 		"_doc": "Age, build and height of the hero and the NPCs (v0.7.22.5, BodyRules, the author's choice: words, not numbers): the engine picks each by `weight` (the hero — by `hero_weight`), its own word for men and women; an id without a female or male word is not offered to that gender. A child and a teenager (weight 0) come only when a pack or the master sets them. v0.7.22.15: the player may choose each word at the creation of the hero — any of its gender's list but those with `hero: false`; what is not chosen the engine picks.",
 		"age": {
-			"child": {"male": "ребёнок", "female": "ребёнок", "weight": 0, "hero": false},
-			"teen": {"male": "подросток", "female": "подросток", "weight": 0},
+			"child": {"male": "ребёнок", "female": "ребёнок", "weight": 0, "hero": false, "minor": true},
+			"teen": {"male": "подросток", "female": "подросток", "weight": 0, "minor": true},
 			"young": {"male": "молодой", "female": "молодая", "weight": 3, "hero_weight": 4},
 			"adult": {"male": "зрелый", "female": "зрелая", "weight": 3, "hero_weight": 3},
 			"middle": {"male": "средних лет", "female": "средних лет", "weight": 3, "hero_weight": 2},

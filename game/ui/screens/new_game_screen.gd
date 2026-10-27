@@ -143,6 +143,14 @@ func _redraw() -> void:
 	_form.add_child(slaves)
 	_text(_form, tr("NG_SLAVERY_HINT"), true)
 
+	var adult := CheckButton.new()  # v0.7.38.7: off by default
+	adult.name = "AdultToggle"
+	adult.text = "NG_ADULT"
+	adult.button_pressed = bool(settings.get("adult", false))
+	adult.toggled.connect(func(on: bool) -> void: settings["adult"] = on)
+	_form.add_child(adult)
+	_text(_form, tr("NG_ADULT_HINT"), true)
+
 	_label(_form, "NG_VIOLENCE", UiTheme.MUTED_LABEL)
 	_choice(_form, "violence", WorldPack.VIOLENCE, "VIOLENCE_")
 	_list_field(_form, "lines", "NG_LINES")

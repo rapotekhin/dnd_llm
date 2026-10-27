@@ -1,22 +1,121 @@
-{# Anima (Cosmos 2B with a Qwen text encoder) over an own Forge, written as the Ri-mix author's frames: the flat-colour prefix, booru tags, then a sentence or two of who does what — Anima reads both; quality and safety tags are the player's addition at the end (ImageModel.prompt_add, v0.7.38.4). #}
+{# Anima (Cosmos 2B with a Qwen text encoder) over an own Forge, written as the Ri-mix author's frames: the flat-colour prefix, booru tags, then a sentence or two of who does what — Anima reads both; quality and safety tags are the player's addition at the end (ImageModel.prompt_add, v0.7.38.4). The people's sex comes from «Кто есть кто» (v0.7.38.7). #}
 {% block instructions %}
 Ты пишешь промт для модели Anima (аниме и иллюстрация; понимает и теги Danbooru, и английские фразы): она нарисует один кадр ролевой игры — то, что случилось только что.
 
+## Как читать событие
+
+- Рассказ мастера идёт от второго лица: «ты» — это герой из строки «Герой». Строки «Герой: …» в начале события — слова и действия игрока.
+- Нарисуй один миг — самый зримый в событии: удар, жест, взгляд, находку, встречу. Не пересказывай всё; что было раньше или будет потом — не рисуй.
+- В кадре только те, кто в этом мгновении на виду: герой, если он действует или его видно, и люди из «Люди сцены», которых событие называет. Остальных не добавляй. Того, кого только слышно (шорох за дверью, голос из погреба), в кадре нет — его можно показать знаком: закрытая дверь, тень, люк.
+- Облик бери из строк: раса, телосложение, рост, одежда, оружие. Эльф и полуэльф — `pointy ears`; полуорк и орк — `tusks`, `green skin` или `grey skin`; дварф — `beard`, `short`; полурослик — `short`, `barefoot`; тифлинг — `horns`, `tail`; драконорождённый — `dragon`, `scales`, `reptile`. Чего нет в строках — не выдумывай броских примет.
+
+## Пол и счёт людей — самое важное
+
+Пол каждого человека дан в «Кто есть кто»: `woman → girl`, `man → boy`. Счёт людей в первом теге — только по нему, не по окончаниям слов и не по догадке:
+- одна женщина — `1girl`; один мужчина — `1boy`;
+- две женщины — `2girls`; двое мужчин — `2boys`; три и больше — `multiple girls` или `multiple boys`;
+- женщина и мужчина — `1girl, 1boy`; две женщины и мужчина — `2girls, 1boy`; и так далее;
+- один человек и больше никого (ни людей, ни зверя) — ещё и `solo`;
+- людей нет — `no humans`.
+
+В английских фразах — те же люди: женщина — `woman`, мужчина — `man`, и местоимения `she` / `he` по ним же. Героиня-женщина — всегда `woman` и `she`, даже если она варвар в доспехах; герой-мужчина — `man` и `he`. Называй людей по облику, а не по имени: `the tall half-orc woman`, `the slender half-elf woman with a dark braid`, `the grey-bearded dwarf`.
+
+{% if adult %}Игра разрешила 18+: близость и нагота взрослых допустимы, если они есть в событии, — пиши их так же, как остальное: теги и фраза о том, кто что делает. Люди — только взрослые.{% else %}Тегов отношений, романтики и тела нет: без `yuri`, `yaoi`, `hetero`, `couple`, `kiss`, `romance`, без тегов наготы и белья. Близкие сцены рисуй сдержанно: двое рядом, взгляд, рука в руке, свеча — одетые люди.{% endif %}
+
+## Формат
+
 Пиши по-английски, до {{ max_chars }} знаков, в две части:
-1. Теги Danbooru нижним регистром через запятую, 20–40 тегов, в порядке теггера:
-   - кто в кадре: `1girl`, `1boy`, `2boys`, `1boy, 1girl`, `multiple boys`; `solo` — только если в кадре один человек и больше никого; без людей — `no humans`;
-   - зверь или чудовище — сразу следом простым тегом с `animal` или `monster`: `1boy, wolf, animal, …`, `1girl, giant spider, monster, …`;
-   - у каждого — волосы, глаза, борода, уши (`long hair`, `brown hair`, `green eyes`, `beard`, `pointy ears`, `elf`), одежда и вещи (`hooded cloak`, `leather armor`, `robe`, `apron`, `sword`, `staff`, `mug`);
-   - поза, действие, взгляд и лицо (`standing`, `sitting`, `holding sword`, `fighting stance`, `looking at viewer`, `smile`, `angry`);
-   - место и что вокруг (`outdoors` или `indoors`, `forest`, `tree`, `tavern`, `wooden table`, `fireplace`, `ruins`), небо, время и свет (`sky`, `sunset`, `night`, `moon`, `fog`, `rain`, `candlelight`), план (`upper body`, `cowboy shot`, `full body`, `from side`).
-2. Через точку — одно-два английских предложения о главном: кто что делает и с кем, где кто стоит. Например: `A bearded warrior in a hooded cloak swings his sword at a grey wolf leaping at him from behind a spruce. Misty forest path at dusk.` — так модель не путает, кто есть кто.
+1. Теги Danbooru нижним регистром, 20–40 тегов, в порядке теггера, разделены только запятыми — без точек с запятой и скобок между людьми:
+   - кто в кадре (счёт людей по правилам выше); `solo` — никогда, если в кадре есть зверь или чудовище;
+   - зверь или чудовище — сразу следом простым тегом с `animal` или `monster`: `1boy, wolf, animal, …`, `1girl, giant spider, monster, …`; без `feral` и `quadruped`;
+   - у каждого — волосы, глаза, борода, уши (`long hair`, `brown hair`, `green eyes`, `beard`, `pointy ears`), одежда и вещи (`hooded cloak`, `leather armor`, `chainmail`, `robe`, `apron`, `sword`, `staff`, `mug`);
+   - поза, действие, взгляд и лицо (`standing`, `sitting`, `kneeling`, `holding sword`, `fighting stance`, `running`, `looking at another`, `looking at viewer`, `smile`, `angry`, `surprised`, `worried`);
+   - место и что вокруг (`outdoors` или `indoors`, `forest`, `tree`, `tavern`, `wooden table`, `fireplace`, `stone wall`, `ruins`, `road`, `river`), небо, время и свет (`sky`, `sunset`, `night`, `moon`, `fog`, `rain`, `snow`, `candlelight`, `torchlight`, `dark`), план (`upper body`, `cowboy shot`, `full body`, `wide shot`, `from side`, `from above`, `from below`).
+2. Через точку — английские предложения о главном: кто что делает и с кем, где кто стоит, откуда свет.
 
-Так выглядят хорошие промты этой модели (только сцена):
-- `1girl, solo, long hair, brown hair, dress, sitting, outdoors, sky, cloud, white dress, tree, sunset, sun, swing. A young woman in a white dress sits on a wooden swing under a tree at sunset.`
-- `1girl, solo, hooded robe, holding book, casting spell, ice, snow, blizzard, outdoors, ruins, from side. A Nord mage in a hooded wizard robe walks past an ancient tomb in a blizzard, ice shards coming out of her free hand.`
+Когда людей двое и больше, приметы каждого пишутся только во фразах, а не в тегах: теги одного списка модель размазывает на всех — фартук служанки достаётся и воительнице, клыки полуорка вырастают у эльфийки. Тогда в тегах — счёт людей, общая поза, место, свет и план (`2girls, standing, talking, indoors, hallway, candlelight, night, cowboy shot`), а дальше по человеку на фразу, слева направо: `On the left, a tall muscular half-orc woman with grey-green skin and small tusks, in dark leather armor. On the right, a short slender half-elf woman with fair skin and a dark braid, in a plain dress and an apron.` — и последней фразой, что они делают вместе. Отличия пиши прямо: `fair skin, no tusks`. У одного человека со зверем или без — приметы и в тегах, как в образцах.
 
-Без весов в скобках; только видимое; без имён и игровых чисел; из людей сцены — только те, кто в событии; люди — взрослые. Стиль, качество и теги безопасности не пиши — их добавит игра.
+Без весов в скобках; только видимое; без имён, игровых чисел и названий мест; люди — взрослые. Стиль, качество и теги безопасности не пиши — их добавит игра.
 
-`negative` — несколько тегов того, что мешает именно этой сцене (`crowd`, `daylight`, `werewolf, animal ears`); общие — плохое качество, текст, водяные знаки — игра добавит сама.
+`negative` — несколько тегов того, что мешает именно этой сцене (`crowd`, `daylight`, `werewolf, animal ears`, `1boy` для сцены двух женщин, `armor` для сцены в ночной рубахе); общие — плохое качество, текст, водяные знаки — игра добавит сама.
+
+## Примеры
+
+Каждый пример: что дано → что написать (`scene`; `negative`).
+
+**Один человек**
+
+1. Героиня — человек, женщина, молодая; плут; читает записку при свече в комнате таверны.
+   `1girl, solo, short hair, red hair, freckles, hooded cloak, leather armor, holding paper, reading, sitting, wooden chair, indoors, bedroom, wooden wall, candle, candlelight, night, dark, upper body, from side. A young red-haired woman in a hooded cloak reads a crumpled note by a single candle in a narrow inn room.`; `daylight, crowd, 1boy`
+2. Герой — дварф, мужчина, пожилой; воин; бьёт молотом по наковальне в кузнице.
+   `1boy, solo, dwarf, old man, short, long beard, grey beard, braided beard, bald, apron, muscular, holding hammer, hammering, anvil, sparks, indoors, forge, fire, glowing metal, smoke, cowboy shot, from side. An old grey-bearded dwarf in a leather apron strikes a glowing blade on an anvil, sparks flying in the red light of the forge.`; `outdoors, daylight, 1girl`
+3. Героиня — эльф, женщина; волшебница; творит заклинание огня в подземелье.
+   `1girl, solo, elf, pointy ears, long hair, silver hair, green eyes, robe, hooded robe, holding staff, casting spell, fire, fireball, outstretched hand, serious, indoors, dungeon, stone wall, stone floor, dark, glowing, full body, from below. A silver-haired elf woman in a hooded robe hurls a ball of fire from her outstretched hand down a dark stone corridor.`; `daylight, outdoors, 1boy`
+4. Герой — полурослик, мужчина; плут; крадётся по крыше ночью.
+   `1boy, solo, halfling, short, curly hair, brown hair, barefoot, dark cloak, hood up, dagger, sneaking, crouching, rooftop, outdoors, town, night, moon, full moon, cloud, dark, from above, full body. A small barefoot halfling man in a dark hooded cloak creeps along a moonlit roof, dagger in hand.`; `daylight, crowd, 1girl`
+5. Героиня — полуорк, женщина, высокая, спортивная; варвар; стоит на краю обрыва над лесом на рассвете.
+   `1girl, solo, half-orc, tusks, grey skin, tall, muscular female, long hair, black hair, braid, fur cloak, leather armor, greataxe, holding axe, standing, looking afar, wind, outdoors, cliff, forest, mountain, sunrise, sky, cloud, wide shot, from behind. A tall muscular half-orc woman in a fur cloak stands on a cliff edge with a greataxe on her shoulder, looking over a misty forest at sunrise.`; `1boy, crowd, night`
+6. Герой — тифлинг, мужчина; колдун; держит светящуюся книгу в библиотеке.
+   `1boy, solo, tiefling, horns, tail, red skin, black hair, yellow eyes, coat, holding book, open book, glowing book, magic, bookshelf, library, indoors, candlelight, dark, upper body. A red-skinned tiefling man with curled horns holds an open book whose pages glow violet among dark shelves.`; `outdoors, daylight, 1girl`
+7. Героиня — человек, женщина; жрица; молится у алтаря в храме.
+   `1girl, solo, long hair, blonde hair, closed eyes, white robe, holy symbol, necklace, kneeling, praying, hands together, altar, candles, indoors, church, stained glass, light rays, cowboy shot, from side. A blonde woman in a white robe kneels in prayer before a candlelit altar, coloured light falling from a stained-glass window.`; `crowd, night, 1boy`
+
+**Двое и больше людей**
+
+8. Героиня — человек, женщина; торгуется с трактирщиком (человек, мужчина, полный) у стойки.
+   `1girl, 1boy, standing, counter, bar, talking, looking at another, smile, indoors, tavern, barrel, wooden wall, fireplace, warm lighting, cowboy shot, from side. On the left, a young woman with short brown hair in a travel cloak, leaning on the counter. On the right, a stout bald man with a mustache in an apron, holding a mug. She haggles with the innkeeper across the counter of a warm tavern.`; `crowd, outdoors, 2boys`
+9. Героиня — полуорк, женщина; разговаривает с полуэльфийкой, женщиной с тёмной косой, в коридоре таверны ночью.
+   `2girls, standing, looking at another, talking, worried, indoors, hallway, wooden floor, door, candle, candlelight, night, dark, cowboy shot, from side. On the left, a tall muscular half-orc woman with grey-green skin, small tusks and a long black braid, in dark leather armor, a greataxe on her back. On the right, a short slender half-elf woman with fair skin, no tusks, pointy ears and a dark braid, in a plain dress and a white apron, holding folded linen. They whisper to each other in a narrow candlelit inn hallway at night.`; `1boy, daylight, crowd`
+10. Герой — человек, мужчина; кузнец (дварф, мужчина) показывает ему новый меч.
+   `2boys, standing, looking at sword, indoors, forge, anvil, fire, tools on wall, cowboy shot. On the left, a broad dwarf man with a braided red beard in a leather apron, holding out a fresh sword. On the right, a tall dark-haired human man in leather armor, reaching for it. The smith shows the new blade beside the glowing forge.`; `1girl, outdoors, crowd`
+11. Героиня — эльф, женщина; стражник (человек, мужчина) преграждает ей путь у ворот.
+   `1girl, 1boy, standing, blocking, gate, wooden palisade, outdoors, town, dusk, torch, torchlight, cowboy shot, from side. On the left, a blonde elf woman with pointy ears in a green cloak, a bow and a quiver on her back. On the right, a stern guard man in a helmet and chainmail, holding a spear across the gate. He bars her way at dusk.`; `crowd, night, 2girls`
+12. Героиня — человек, женщина; лечит раненого (человек, мужчина) в лесу; рядом жрица (человек, женщина).
+   `2girls, 1boy, kneeling, lying, on ground, injured, bandages, blood, healing, magic, glowing hands, outdoors, forest, tree, grass, dusk, wide shot. In the middle, a wounded man lies on his back in the grass, his arm bandaged. On the left, a brown-haired woman in leather armor kneels and presses a bandage to his wound. On the right, a priestess in a white robe and hood lays her glowing hands on his chest.`; `crowd, daylight, city`
+13. Герой — человек, мужчина; за столом в таверне с тремя другими людьми (двое мужчин и женщина) играют в кости.
+   `1girl, 3boys, multiple boys, sitting, table, wooden table, dice, playing dice, mug, beer, coin, laughing, indoors, tavern, candlelight, fireplace, cowboy shot, from above. Four people sit around a tavern table: a dark-haired man in leather armor throws the dice, a bald old man and a young red-haired man laugh, and a woman with a long braid leans in over the coins.`; `outdoors, daylight, solo`
+14. Героиня — гном, женщина; спорит с наставником (человек, мужчина, пожилой, маг) над картой.
+   `1girl, 1boy, table, map, pointing, arguing, indoors, study, bookshelf, candle, upper body. On the left, a tiny gnome woman with big eyes, goggles on her forehead and messy brown hair, jabbing her finger at a map. On the right, an old human man with a long white beard in a wizard hat and robe, frowning. They argue over the map on the table.`; `outdoors, crowd`
+15. Герой — человек, мужчина; провожает девушку (человек, женщина) до дома — они идут рядом под дождём.
+   `1girl, 1boy, walking, side by side, outdoors, street, cobblestone, house, rain, night, lantern, light, full body, from behind. On the left, a man with short black hair in a dark coat. On the right, a woman with long brown hair in a hooded cloak over a dress. They walk side by side down a rainy cobbled street under a lantern.`; `daylight, crowd`
+
+**Звери и чудовища**
+
+16. Герой — человек, мужчина, крепкий; воин; рубит волка, что прыгает из-за ели, сумерки.
+   `1boy, wolf, animal, man fighting wolf, short hair, black hair, beard, muscular, leather armor, hooded cloak, long sword, holding sword, swinging, fighting stance, grey wolf, wolf leaping, fangs, outdoors, forest, spruce, path, dusk, fog, cowboy shot, from side. A sturdy bearded man in a hooded cloak swings his long sword at a grey wolf leaping at him from behind a spruce on a misty forest path at dusk.`; `werewolf, animal ears, kemonomimi, furry, 1girl`
+17. Героиня — эльф, женщина; стреляет из лука в гигантского паука в пещере.
+   `1girl, giant spider, monster, elf, pointy ears, long hair, white hair, archer, bow, aiming, arrow, drawing bow, spider web, cave, dark, torchlight, rock, glowing eyes, full body, from side. An elf archer woman draws her bow at a giant spider crawling down its web in a dark torchlit cave.`; `spider girl, arachne, 1boy`
+18. Героиня — полуорк, женщина; варвар; держит гоблина за шиворот над землёй.
+   `1girl, goblin, monster, half-orc, tusks, grey skin, muscular female, black hair, fur cloak, lifting, holding by collar, angry, goblin, green skin, small, scared, outdoors, camp, campfire, night, cowboy shot. A muscular half-orc woman lifts a squealing small green goblin by the collar in front of a campfire at night.`; `crowd, daylight, 1boy`
+19. Герой — человек, мужчина; верхом на лошади на дороге.
+   `1boy, horse, animal, riding, horseback riding, hooded cloak, leather armor, sword at hip, outdoors, road, dirt road, field, grass, sky, cloud, sunset, wide shot, from side. A cloaked man rides a brown horse down a dirt road through open fields at sunset.`; `centaur, crowd, night`
+20. Героиня — человек, женщина; друидка; гладит оленя в лесной поляне.
+   `1girl, deer, animal, long hair, green hair, flower wreath, robe, leaf, petting, smile, kneeling, outdoors, forest, clearing, grass, flowers, sunlight, light rays, full body. A green-haired woman in a leafy robe kneels in a sunlit forest clearing and strokes a deer's neck.`; `night, crowd, 1boy`
+21. Герой — драконорождённый, мужчина; паладин; стоит перед драконом.
+   `1boy, dragon, monster, dragonborn, scales, reptile, armor, plate armor, shield, holding sword, fighting stance, red dragon, huge, wings, fire, breathing fire, ruins, cave, from below, wide shot. A scaled dragonborn knight in plate armor raises his shield as a huge red dragon spreads its wings and breathes fire in a ruined cavern.`; `1girl, crowd, daylight`
+22. Героиня — человек, женщина; против нежити (скелеты) в склепе.
+   `1girl, skeleton, monster, multiple skeletons, undead, short hair, white hair, chainmail, holding mace, shield, fighting stance, crypt, tomb, coffin, stone wall, dark, torchlight, glowing eyes, cowboy shot, from side. A white-haired woman in chainmail swings a mace at skeletons rising from open coffins in a torchlit crypt.`; `1boy, daylight, outdoors`
+
+**Места без людей**
+
+23. Затопленный штрек шахты, никого.
+   `no humans, mine, mine shaft, tunnel, wooden beam, rail, mine cart, flooded, water, reflection, dark, lantern, rock, scenery, wide shot. A flooded mine tunnel with rotten wooden beams and a half-sunk cart, a single lantern reflected in black water.`; `1girl, 1boy, daylight`
+24. Найденный тайник: сундук под половицей.
+   `no humans, treasure chest, open chest, gold coin, jewelry, floorboard, wooden floor, indoors, dark, candlelight, close-up, from above. An open chest full of coins and rings lies in a hollow under a lifted floorboard, lit by a candle.`; `1girl, 1boy, outdoors`
+25. Руины заставы под снегом.
+   `no humans, ruins, fort, wall, broken wall, tower, collapsed, snow, snowing, winter, outdoors, sky, grey sky, fog, scenery, wide shot. The broken walls and a collapsed tower of a frontier fort under falling snow and grey sky.`; `1girl, 1boy, summer`
+26. Ночной рынок с фонарями, без лиц крупно.
+   `no humans, market, stall, lantern, paper lantern, street, cobblestone, town, night, light, scenery, wide shot. Rows of empty market stalls hung with glowing lanterns on a cobbled town square at night.`; `daylight, 1girl`
+
+**Мгновение, которое легко нарисовать не так**
+
+27. Событие: героиня (человек, женщина) слушает, как под полом что-то скребётся; в кадре только она.
+   `1girl, solo, long hair, black hair, nightgown, sitting, on bed, listening, looking down, surprised, worried, indoors, bedroom, wooden floor, floorboard, candle, candlelight, night, dark, cowboy shot. A black-haired woman in a nightgown sits up on her bed and stares at the floorboards, listening to a scraping from below by candlelight.`; `1boy, monster, daylight`
+28. Событие: герой (человек, мужчина) открывает дверь и видит пустую комнату, хотя ждал засаду.
+   `1boy, solo, short hair, brown hair, leather armor, holding sword, opening door, doorway, empty room, looking ahead, tense, indoors, dark, dust, light from doorway, from behind, cowboy shot. A man with a drawn sword pushes open a door onto an empty dusty room, light spilling past him.`; `crowd, monster, 1girl`
+29. Событие: героиня (полуэльф, женщина) отдаёт старосте (человек, мужчина, пожилой) найденный амулет.
+   `1girl, 1boy, giving, hand out, amulet, smile, indoors, town hall, wooden table, window, daylight, upper body, from side. On the left, a half-elf woman with pointy ears and long auburn hair in a travel cloak, holding out an amulet. On the right, an old man with grey hair and a grey beard in a coat, reaching for it. She hands the found amulet to the headman across the table.`; `crowd, night, 2girls`
+30. Событие: героиня-полуорк и подруга (полуэльфийка, женщина) сидят рядом на кровати и смеются — тёплая сцена.
+   `2girls, sitting, on bed, side by side, laughing, smile, looking at another, indoors, bedroom, wooden wall, candle, candlelight, night, upper body. On the left, a muscular half-orc woman with grey-green skin, small lower tusks and loose black hair, in a linen shirt. On the right, a slender half-elf woman with fair skin, no tusks, pointy ears and a dark braid, in a simple dress. They sit side by side on a bed, laughing together by candlelight.`; `1boy, daylight, crowd`
 {% endblock %}
 {% block prompt %}(flat color, no lineart, no outline, Flat vector), {{ scene }}{% endblock %}

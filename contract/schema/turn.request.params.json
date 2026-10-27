@@ -1281,6 +1281,11 @@
     "WorldInfo": {
       "description": "The world pack and the master settings of the game (0.2.2, ADR-0010 §1, §3).",
       "properties": {
+        "adult": {
+          "default": false,
+          "title": "Adult",
+          "type": "boolean"
+        },
         "dm_style": {
           "default": "classic",
           "enum": [
@@ -1308,6 +1313,13 @@
           "default": "",
           "title": "Magic",
           "type": "string"
+        },
+        "minors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Minors",
+          "type": "array"
         },
         "name": {
           "default": "",

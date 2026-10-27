@@ -29,6 +29,7 @@ log = logging.getLogger("llm_server.images")
 
 OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images"  # every image model; FLUX refuses chat/completions
 PROMPT_CHARS = 700  # Recraft cuts its prompt at 1000 characters; the agent overshoots and the style goes in front
+TEMPLATE_CHARS = {"anima": 900}  # its tags and a sentence or two; the Qwen encoder takes a long text (v0.7.38.7)
 
 
 class ImageError(Exception):
@@ -179,15 +180,39 @@ async def _a1111(c: httpx.AsyncClient, spec: ImageModel, prompt: str, negative: 
     return Drawn("image/png", str(images[0]))
 
 
+SAFE_TAGS = ("safe",)  # lifted by 18+
+NSFW_NEG = ("nsfw", "explicit", "nude")  # in the negative unless 18+
+MINOR_NEG = ("loli", "shota", "child")  # in the negative always
+
+
+def adult_frame(params: ImageParams) -> bool:
+    """18+ only when the game allows it and no child or teen is in the frame: by the engine's list and by the
+    age words of the lines themselves (v0.7.38.7)."""
+    lines = " ".join([params.hero, *params.people]).lower()
+    return params.adult and not params.minors and not any(w in lines for w in ("подрост", "ребён", "ребен", "дитя"))
+
+
 def compose(spec: ImageModel, params: ImageParams, prompt: str, negative: str) -> tuple[str, str]:
     """The player's additions (v0.7.37): after the scene (v0.7.38.2, as booru prompts go), and the negative — with
-    the agent's tags or alone."""
+    the agent's tags or alone. The safety tags are the server's, whatever the player wrote (v0.7.38.7)."""
+    adult = adult_frame(params)
     add = spec.prompt_add if params.prompt_add is None else params.prompt_add
     neg = spec.negative_add if params.negative_add is None else params.negative_add
+    if adult:
+        add = _without(add, SAFE_TAGS)
     joined = ", ".join(x for x in (_tags(prompt), _tags(add)) if x)
     if not spec.negative:
         return joined, ""
-    return joined, ", ".join(x for x in (_tags(neg), "" if params.negative_only else _tags(negative)) if x)
+    neg = ", ".join(x for x in (_tags(neg), "" if params.negative_only else _tags(negative)) if x)
+    if adult:
+        neg = _without(neg, NSFW_NEG)
+    must = MINOR_NEG if adult else NSFW_NEG + MINOR_NEG
+    have = {t.strip().lower() for t in neg.split(",")}
+    return joined, ", ".join(x for x in (neg, ", ".join(t for t in must if t not in have)) if x)
+
+
+def _without(text: str, tags: tuple[str, ...]) -> str:
+    return ", ".join(t.strip() for t in text.split(",") if t.strip() and t.strip().lower() not in tags)
 
 
 def booru_scene(scene: str) -> str:
@@ -239,7 +264,8 @@ async def _agent_image(session: "Session", params: ImageParams) -> ImageResult:
     spec = _spec(session, params)
     model = _model_id(session, params.model)  # also refuses when the day's budget is spent
     await _pick_providers(services.model_factory(model))
-    agent = build_image_agent(services.model_factory(model), prompts.image_instructions(spec.template, PROMPT_CHARS))
+    agent = build_image_agent(services.model_factory(model), prompts.image_instructions(spec.template, TEMPLATE_CHARS.get(spec.template, PROMPT_CHARS),
+                                                                                        adult_frame(params)))
     frame = prompts.image_frame(params.event, params.place, params.time, params.hero, params.people)
     billed: list[float] = []
     token = REQUEST_COSTS.set(billed)

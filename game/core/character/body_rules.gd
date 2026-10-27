@@ -84,6 +84,11 @@ static func npc(data: Dictionary, npc_id: String, n: Dictionary) -> Dictionary:
 	return make(data, str(n.get("gender", "other")), n, "npc:" + npc_id)
 
 
+## A child or a teen by the age's `minor` (v0.7.38.7): no intimacy with them, whatever the 18+ setting says.
+static func minor(data: Dictionary, b: Dictionary) -> bool:
+	return bool(options(data, "age").get(str(b.get("age", "")), {}).get("minor", false))
+
+
 static func npc_text(data: Dictionary, npc_id: String, n: Dictionary) -> String:
 	return text(data, npc(data, npc_id, n), str(n.get("gender", "other")))
 

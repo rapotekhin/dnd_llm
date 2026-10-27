@@ -43,6 +43,8 @@ func test_the_params_carry_the_place_the_hour_the_hero_and_the_named_people() ->
 	assert_str(str(p["hero"])).starts_with(str(s.character["name"]))
 	assert_int((p["people"] as Array).size()).is_equal(1)
 	assert_str(str(p["people"][0])).starts_with(npc_name)
+	var sex := str(ImageFrame.GENDER.get(str(world.npc(here[0]).get("gender", "")), "мужчина"))  # v0.7.38.7: the sex in words
+	assert_str(str(p["people"][0])).contains(", %s," % sex)
 	assert_str(str(p["style"])).contains("book illustration")
 
 

@@ -348,6 +348,12 @@ func _master_tab() -> Control:
 		needs.button_pressed = NeedRules.on(GameState.session)
 		needs.toggled.connect(GameState.set_needs)
 		box.add_child(needs)
+		var adult := CheckButton.new()  # v0.7.38.7
+		adult.name = "AdultOption"
+		adult.text = "OPT_ADULT"
+		adult.button_pressed = bool(GameState.session.settings.get("adult", false))
+		adult.toggled.connect(GameState.set_adult)
+		box.add_child(adult)
 	return scroll
 
 

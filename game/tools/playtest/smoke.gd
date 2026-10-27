@@ -268,6 +268,12 @@ func _budget_settings() -> void:
 	await press(find(screen(), "BudgetSave"))
 	step("budget set to " + want, await wait_until(func() -> bool: return status.text.contains("$" + want), 10.0), status.text)
 	await shot("settings_budget")
+	var adult: CheckButton = find(screen(), "AdultOption")  # v0.7.38.7: 18+ of this game, off by default
+	if adult != null:
+		adult.button_pressed = true
+	step("18+ toggled in the settings", adult != null and bool(node("GameState").session.settings.get("adult", false)), "")
+	if adult != null:
+		adult.button_pressed = false
 
 
 ## The world inspection commands of the dev console (~): room, quests, items, npc, rooms, state.

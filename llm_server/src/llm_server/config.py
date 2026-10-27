@@ -100,7 +100,8 @@ SD_MODELS: tuple[ImageModel, ...] = (
     ImageModel("sd:rimix-anima", "Ri-mix Anima (свой сервер)", "anima", 0.0, backend="a1111",
                checkpoint="riMixIllustriousAnima_riMixAnima.safetensors", side=1024,
                modules=("qwen_image_vae.safetensors", "qwen_3_06b_base.safetensors"),
-               txt2img={"sampler_name": "Euler a", "steps": 20, "cfg_scale": 6, "width": 768, "height": 1152},
+               txt2img={"sampler_name": "Euler a", "steps": 20, "cfg_scale": 6, "width": 768, "height": 1152,
+                        "distilled_cfg_scale": 3.5},  # Forge's «Shift»: the API default, pinned (v0.7.38.7)
                prompt_add="masterwork, masterpiece, best quality, high quality, absurdres, highres, detailed, depth of field, "
                           "high detail, very aesthetic, safe, adult, aged up, "
                           "<lora:anima-base-1-masterpiece-v51:0.8> <lora:anima-highres-aesthetic-boost:0.8>",

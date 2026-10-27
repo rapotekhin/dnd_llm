@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.75.0"
+PROTOCOL_VERSION = "0.76.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -332,6 +332,8 @@ class WorldInfo(_In):
     lines: list[str] = Field(default_factory=list)  # never in the game
     veils: list[str] = Field(default_factory=list)  # may happen, off screen
     wishes: list[str] = Field(default_factory=list)  # what the player wants to meet in the game (0.12.0)
+    adult: bool = False  # 0.76.0: 18+ — intimacy of adults told openly, else off screen
+    minors: list[str] = Field(default_factory=list)  # 0.76.0: the hero and the people here who are children or teens
 
 
 class TradeLine(_In):
@@ -536,6 +538,8 @@ class ImageParams(_In):
     prompt_add: str | None = Field(default=None, max_length=2000)
     negative_add: str | None = Field(default=None, max_length=2000)
     negative_only: bool = False
+    adult: bool = False  # 0.76.0: 18+ of the game; no effect while `minors` is not empty
+    minors: list[str] = Field(default_factory=list)  # the hero or the people in the frame who are children or teens
 
 
 class ImageResult(_Out):

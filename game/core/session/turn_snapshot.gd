@@ -108,7 +108,23 @@ static func world_info(s: GameSession, data: Dictionary) -> Dictionary:
 	var st := s.settings if not s.settings.is_empty() else WorldPack.default_settings(p)
 	return {"name": str(p.get("name", "")), "lore": str(p.get("lore", "")), "tone": str(p.get("tone", "")),
 		"magic": str(p.get("magic", "")), "dm_style": str(st.get("dm_style", "classic")),
-		"violence": str(st.get("violence", "medium")), "lines": st.get("lines", []), "veils": st.get("veils", []), "wishes": st.get("wishes", [])}
+		"violence": str(st.get("violence", "medium")), "lines": st.get("lines", []), "veils": st.get("veils", []), "wishes": st.get("wishes", []),
+		"adult": bool(st.get("adult", false)), "minors": minors(s, data)}
+
+
+## The hero and the people here who are children or teens (v0.7.38.7): the master never makes them intimate.
+static func minors(s: GameSession, data: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	if not data.has("rules") or not data["rules"].has("body"):
+		return out
+	if BodyRules.minor(data, s.character.get("body", {})):
+		out.append("%s (герой)" % str(s.character.get("name", "")))
+	var world := WorldView.new(data["world"])
+	for id: String in s.npcs_here(world.world, s.room_id):
+		var n := world.npc(id)
+		if BodyRules.minor(data, BodyRules.npc(data, id, n)):
+			out.append(str(n.get("name", id)))
+	return out
 
 
 ## The sheet in final numbers (ADR-0009 §4): the master never computes bonuses. Features and spells go by name;
