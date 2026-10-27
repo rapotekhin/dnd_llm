@@ -29,7 +29,7 @@ log = logging.getLogger("llm_server.images")
 
 OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images"  # every image model; FLUX refuses chat/completions
 PROMPT_CHARS = 700  # Recraft cuts its prompt at 1000 characters; the agent overshoots and the style goes in front
-TEMPLATE_CHARS = {"anima": 900}  # its tags and a sentence or two; the Qwen encoder takes a long text (v0.7.38.7)
+TEMPLATE_CHARS = {"anima": 1800}  # its tags and a sentence or two; the Qwen encoder takes a long text (v0.7.38.7)
 
 
 class ImageError(Exception):
@@ -182,8 +182,6 @@ async def _a1111(c: httpx.AsyncClient, spec: ImageModel, prompt: str, negative: 
 
 SAFE_TAGS = ("safe",)  # lifted by 18+
 NSFW_NEG = ("nsfw", "explicit", "nude")  # in the negative unless 18+
-MINOR_NEG = ()  # in the negative always
-
 
 def adult_frame(params: ImageParams) -> bool:
     """18+ only when the game allows it."""
@@ -204,9 +202,7 @@ def compose(spec: ImageModel, params: ImageParams, prompt: str, negative: str) -
     neg = ", ".join(x for x in (_tags(neg), "" if params.negative_only else _tags(negative)) if x)
     if adult:
         neg = _without(neg, NSFW_NEG)
-    must = MINOR_NEG if adult else NSFW_NEG + MINOR_NEG
-    have = {t.strip().lower() for t in neg.split(",")}
-    return joined, ", ".join(x for x in (neg, ", ".join(t for t in must if t not in have)) if x)
+    return joined, ", ".join(x for x in (neg) if x)
 
 
 def _without(text: str, tags: tuple[str, ...]) -> str:
