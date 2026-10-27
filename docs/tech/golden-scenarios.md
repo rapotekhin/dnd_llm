@@ -55,6 +55,7 @@ scenarios:
 | `effects.condition_save` (`save` / `save_or_player`), `condition_tag_in`, `condition_in` | состояние на героя (v0.7.8): с причиной; со спасброском (и тегом из списка) или по вине самого героя (`cause: player`); id состояния из списка |
 | `effects.damage_severity_in`, `effects.forbidden_fields` | ступень урона из списка; в эффекте нет полей (например, кубиков) |
 | `effects.required_fields` | у какого-то эффекта есть поле по пути с точками и оно истинно (`quest_item.from_giver`) |
+| `effects.field_in` | `{путь: [значения]}` — у какого-то эффекта поле по пути с точками равно одному из значений (`quest_item.skill: [survival, nature]`) |
 | `next_mode` | `null` — смены режима нет; `{mode, npc_id?}` — предложена эта смена |
 | `narration.must_match` / `must_not_match` | регулярные выражения по тексту |
 | `narration.max_sentences` | не больше N предложений |

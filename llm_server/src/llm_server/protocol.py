@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.74.0"
+PROTOCOL_VERSION = "0.75.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -824,8 +824,9 @@ class QuestPlace(_Out):
 
 class QuestItem(_Out):
     """The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);
-    `hint` — where it lies, found by a check of `dc_tier`. `from_giver` (0.69.0) — the giver hands it over when the
-    quest is taken (a parcel to carry): no `room` or `hint`."""
+    `hint` — where it lies, found by a check of `dc_tier` with `skill` (0.75.0: a plant in the wild — survival or
+    nature; Investigation finds it too). `from_giver` (0.69.0) — the giver hands it over when the quest is taken
+    (a parcel to carry): no `room` or `hint`."""
 
     item_id: str | None = None
     item: GeneratedItem | None = None
@@ -833,6 +834,7 @@ class QuestItem(_Out):
     room: str = ""
     hint: str = ""
     dc_tier: Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"] = "medium"
+    skill: Literal["perception", "investigation", "survival", "nature", "arcana", "religion", "history"] = "perception"
 
 
 class NewQuestStep(_Out):

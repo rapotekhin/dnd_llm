@@ -313,8 +313,12 @@ static func _plan_content(s: GameSession, data: Dictionary, spec: Dictionary, de
 		var tier := str(qi.get("dc_tier", "medium"))
 		if not (data["rules"]["dc_tiers"] as Dictionary).has(tier) or str(qi.get("hint", "")).length() < 5:
 			return {"reason": "вещь задания: hint (где она спрятана, по-русски) и dc_tier из %s" % ", ".join((data["rules"]["dc_tiers"] as Dictionary).keys())}
+		var skill := str(qi.get("skill", "perception")) if qi.get("skill") != null else "perception"
+		var skills: Array = data["rules"]["quest_gen"].get("hide_skills", ["perception", "investigation"])
+		if not skills.has(skill):
+			return {"reason": "вещь задания: skill — навык, которым её находят: %s" % ", ".join(skills)}
 		out["item"] = {"id": id, "def": def, "room": room, "text": str(qi["hint"]).left(240), "dc": int(data["rules"]["dc_tiers"][tier]),
-			"name": item_name}
+			"name": item_name, "skill": skill}
 	return out
 
 
@@ -489,7 +493,7 @@ static func _apply_content(s: GameSession, data: Dictionary, content: Dictionary
 		if bool(it.get("given", false)):
 			return refs
 		var room := str(refs.get(str(it["room"]), it["room"]))
-		var sec := {"id": "q_" + quest_id, "dc": int(it["dc"]), "text": it["text"], "skill": "perception",
+		var sec := {"id": "q_" + quest_id, "dc": int(it["dc"]), "text": it["text"], "skill": str(it.get("skill", "perception")),
 			"loot": {"items": {str(it["id"]): 1}}}
 		if not gen.has("room_secrets"):
 			gen["room_secrets"] = {}

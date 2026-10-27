@@ -752,6 +752,22 @@ func _plan_quest_give(s: GameSession, data: Dictionary, id: String) -> Dictionar
 			return {"reason": "это вещь задания «%s», она уже выдана по заданию — второй раз её не дают" % q["title"]}
 		return {"reason": "это вещь задания «%s»: её даёт %s вместе с заданием — игрок берёт его кнопкой «Взять задание» у него" % [q["title"],
 			WorldView.new(world).npc(str(q.get("giver", ""))).get("name", q.get("giver", ""))]}
+	return _plan_hidden_give(s, world, id)
+
+
+## A thing lying in a hiding place not yet found (a quest's thing, a cache) comes only from finding it: given by
+## words it skipped the quest's «find» step (v0.7.38.5, the author's white root).
+func _plan_hidden_give(s: GameSession, world: Dictionary, id: String) -> Dictionary:
+	for rid: String in world["rooms"]:
+		for sec: Dictionary in ExplorationRules.secrets(world, rid):
+			if not (sec.get("loot", {}).get("items", {}) as Dictionary).has(id) or (s.revealed.get(rid, []) as Array).has(sec["id"]):
+				continue
+			var skill := str(sec.get("skill", "perception"))
+			var how := "request_check %s или investigation" % skill if skill != "investigation" else "request_check investigation"
+			var where := str(world["rooms"][rid].get("name", rid))
+			if rid != s.room_id:
+				return {"reason": "эта вещь спрятана в «%s» — её находят там проверкой (%s), а не give_item" % [where, how]}
+			return {"reason": "эта вещь спрятана здесь, в тайнике — её даёт успешная проверка поиска (%s) против его сложности, а не give_item; проверка уже провалена или не та — расскажи, что не нашёл" % how}
 	return {}
 
 

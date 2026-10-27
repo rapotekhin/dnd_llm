@@ -1114,6 +1114,8 @@
 		"board_refresh_days": "1d4",
 		"_board": "v0.7.22.13 (big test #30, #31): a thing of the room whose name has one of board_words is a notice board — a window of its orders; reading an unread one is a master's turn that puts its orders up; the first order taken off it rolls board_refresh_days, after which it is unread again (an empty read board — again next day).",
 		"max_steps": 4,
+		"hide_skills": ["perception", "investigation", "survival", "nature", "arcana", "religion", "history"],
+		"_hide_skills": "v0.7.38.5: the skills a quest's hidden thing may be found by (QuestItem.skill); Investigation finds any of them too",
 		"max_new_npcs": 2,
 		"quest_depth": 2,
 		"scales": {
@@ -1315,6 +1317,16 @@
 						3
 					],
 					"pool": [
+						"lute",
+						"flute",
+						"drum",
+						"lyre",
+						"horn",
+						"pan_flute",
+						"bagpipes",
+						"dulcimer",
+						"shawm",
+						"viol",
 						"lantern",
 						"lamp",
 						"crowbar",
@@ -1356,6 +1368,7 @@
 				],
 				"purse_cp": 15000,
 				"stock": {
+					"smiths_tools": 2,
 					"dagger": 3,
 					"handaxe": 2,
 					"spear": 2,
@@ -1652,6 +1665,8 @@
 						1
 					],
 					"pool": [
+						"navigators_tools",
+						"painters_supplies",
 						"book",
 						"case_map_or_scroll",
 						"calligraphers_supplies",
@@ -1701,6 +1716,7 @@
 						2
 					],
 					"pool": [
+						"jewelers_tools",
 						"masons_tools",
 						"tinkers_tools",
 						"woodcarvers_tools",

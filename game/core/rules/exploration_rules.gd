@@ -121,11 +121,10 @@ static func enter_room(s: GameSession, world: Dictionary, room_id: String, penal
 
 
 ## A successful search check finds the room's secrets with DC ≤ total: Perception finds what can be noticed,
-## Investigation (a thorough search) finds that too and also mechanisms and caches. Returns their texts.
+## Investigation (a thorough search) finds that too and also mechanisms and caches; a quest's thing hidden for
+## another skill (v0.7.38.5: a root in black water — Survival) is found by that skill too. Returns their texts.
 static func active_reveal(s: GameSession, world: Dictionary, skill: String, total: int) -> Array[String]:
 	var out: Array[String] = []
-	if not SEARCH_SKILLS.has(skill):
-		return out
 	for sec: Dictionary in secrets(world, s.room_id):
 		var needs := str(sec.get("skill", "perception"))
 		if (needs == skill or skill == "investigation") and total >= int(sec["dc"]) and _reveal(s, s.room_id, sec):

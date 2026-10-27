@@ -2835,7 +2835,7 @@
     },
     "QuestItem": {
       "additionalProperties": false,
-      "description": "The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);\n`hint` — where it lies, found by a check of `dc_tier`. `from_giver` (0.69.0) — the giver hands it over when the\nquest is taken (a parcel to carry): no `room` or `hint`.",
+      "description": "The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);\n`hint` — where it lies, found by a check of `dc_tier` with `skill` (0.75.0: a plant in the wild — survival or\nnature; Investigation finds it too). `from_giver` (0.69.0) — the giver hands it over when the quest is taken\n(a parcel to carry): no `room` or `hint`.",
       "properties": {
         "dc_tier": {
           "default": "medium",
@@ -2886,6 +2886,20 @@
         "room": {
           "default": "",
           "title": "Room",
+          "type": "string"
+        },
+        "skill": {
+          "default": "perception",
+          "enum": [
+            "perception",
+            "investigation",
+            "survival",
+            "nature",
+            "arcana",
+            "religion",
+            "history"
+          ],
+          "title": "Skill",
           "type": "string"
         }
       },

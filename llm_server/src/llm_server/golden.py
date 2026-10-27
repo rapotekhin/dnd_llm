@@ -283,6 +283,10 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
     for f in e.get("required_fields", []):  # v0.7.34.5: a dotted path with a true value, e.g. quest_item.from_giver
         if not any(_path(x, f) for x in effects):
             fails.append(f"нет поля {f} в эффектах")
+    for f, allowed in (e.get("field_in") or {}).items():  # v0.7.38.5: a dotted path whose value is one of these
+        got = [_path(x, f) for x in effects if _path(x, f) is not None]
+        if not any(v in allowed for v in got):
+            fails.append(f"{f} = {got or 'нет'}, нужно из {allowed}")
     if e.get("condition_save"):  # v0.7.8: a condition on the hero by the rules — a reason, a save with a tag, or the hero's own cause
         mine = [x for x in effects if x["kind"] == "condition" and x.get("on", True) and not x.get("target_id")]
         for x in mine:

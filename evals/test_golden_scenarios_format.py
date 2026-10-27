@@ -26,7 +26,7 @@ EXPECT_KEYS = {"check", "max_checks", "effects", "next_mode", "narration", "opti
                "tools_required", "tools_forbidden", "missing_concept"}
 CHECK_KEYS = {"required", "skill_in", "dc_tier_in", "contest_npc", "contest_skill_in", "tool_in"}
 EFFECT_KEYS = {"required_kinds_any", "required_kinds_all", "forbidden_kinds", "max_count", "coins_max",
-               "damage_severity_in", "forbidden_fields", "required_fields", "condition_save", "condition_tag_in", "condition_in"}
+               "damage_severity_in", "forbidden_fields", "required_fields", "field_in", "condition_save", "condition_tag_in", "condition_in"}
 NARRATION_KEYS = {"must_match", "must_not_match", "max_sentences"}
 
 

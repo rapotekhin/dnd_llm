@@ -2806,6 +2806,25 @@ scenarios:
     rubric:
       - "Мастер создаёт задание create_quest, которое приносит своё кольцо (quest_item: новая вещь или из каталога, спрятана в погребе с подсказкой) и шаг найти его (find item); вернуть кольцо Горму — шаг talk с item_id item или его добавит движок (возвращение к заказчику с вещью задания); кольцо не выдаётся сразу словами"
 
+  - id: quest_thing_found_by_survival
+    title: "Растение в дикой местности — вещь задания с навыком поиска Выживание или Природа (v0.7.38.5)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, ты говорил, жене нужен болотный бело-корень от лихорадки, а растёт он только на Тропе лесорубов в топи? Давай я схожу — что заплатишь?"
+    engine:
+      find_quests: []
+      find_items: []
+      find_places:
+        - {id: pushcha-trail, name: "Тропа лесорубов", location: "Пуща"}
+      validate:
+        - {kind: create_quest, summary: "Новое задание: «Бело-корень» от Горм (пустяк); с ним: Бело-корень"}
+    expect:
+      effects: {required_kinds_any: [create_quest], field_in: {quest_item.skill: [survival, nature]}}
+      tools_required: [find_quests]
+    rubric:
+      - "Мастер создаёт задание, где корень спрятан на Тропе лесорубов (quest_item.room) с подсказкой и навыком поиска survival или nature, шаг find item; корень не выдаётся словами или give_item"
+
   - id: quest_parcel_to_carry
     title: "«Отнести» — посылка от заказчика (quest_item.from_giver) и шаг, где её отдают"
     category: concepts

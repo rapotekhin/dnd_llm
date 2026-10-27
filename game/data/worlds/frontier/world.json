@@ -1925,6 +1925,7 @@
 			"trader": true,
 			"trade_kind": "smith",
 			"stock": {
+				"smiths_tools": 1,
 				"dagger": 4,
 				"shortsword": 2,
 				"longsword": 1,
