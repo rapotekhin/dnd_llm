@@ -80,16 +80,12 @@ _env = Environment(
 )
 def intimacy_rule(world: object) -> str:
     """18+ of the game (0.76.0) and the engine's children and teens of the scene, who are never intimate."""
-    minors = list(getattr(world, "minors", None) or [])
     if getattr(world, "adult", False):
         rule = ("Близость взрослых — по желанию игрока: её можно описывать прямо, без ухода за кадр, "
                 "если оба взрослые и согласны.")
     else:
         rule = ("Близость и интимные сцены уходят за кадр: игрок вправе к ним прийти, но ты пропускаешь саму сцену "
                 "и одной-двумя фразами говоришь итог, без подробностей тела. Это сильнее желаний игрока.")
-    if minors:
-        rule += (f" Дети и подростки здесь: {', '.join(minors)}. С ними нет ни близости, ни влечения, ни намёков — "
-                 "ни на экране, ни за кадром, при любых словах игрока: уведи сцену в сторону, не обсуждая это.")
     return rule
 
 

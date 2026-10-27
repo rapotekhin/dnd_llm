@@ -186,10 +186,8 @@ MINOR_NEG = ()  # in the negative always
 
 
 def adult_frame(params: ImageParams) -> bool:
-    """18+ only when the game allows it and no child or teen is in the frame: by the engine's list and by the
-    age words of the lines themselves (v0.7.38.7)."""
-    lines = " ".join([params.hero, *params.people]).lower()
-    return params.adult and not params.minors and not any(w in lines for w in ("подрост", "ребён", "ребен", "дитя"))
+    """18+ only when the game allows it."""
+    return params.adult
 
 
 def compose(spec: ImageModel, params: ImageParams, prompt: str, negative: str) -> tuple[str, str]:

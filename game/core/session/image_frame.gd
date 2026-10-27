@@ -44,9 +44,6 @@ static func params(s: GameSession, data: Dictionary, index: int) -> Dictionary:
 	var loc := world.location(world.location_id(s.room_id))
 	var event := event_text(s, index)
 	var people: Array[String] = []
-	var minors: Array[String] = []
-	if BodyRules.minor(data, s.character.get("body", {})):
-		minors.append(str(s.character.get("name", "")))
 	for id: String in s.npcs_here(world.world, s.room_id):
 		var n := world.npc(id)
 		var name := str(n.get("name", id))
@@ -54,8 +51,6 @@ static func params(s: GameSession, data: Dictionary, index: int) -> Dictionary:
 			var sex := str(GENDER.get(str(n.get("gender", "")), ""))
 			var looks := ", ".join([str(n.get("race", "")), sex, BodyRules.npc_text(data, id, n)].filter(func(x: String) -> bool: return not x.is_empty()))
 			people.append("%s — %s; %s" % [name, looks, str(n.get("description", "")).left(300)])
-			if BodyRules.minor(data, BodyRules.npc(data, id, n)):
-				minors.append(name)
 	return {
 		"event": event,
 		"place": "%s, %s: %s" % [loc.get("name", ""), room.get("name", s.room_id), str(room.get("description", "")).left(600)],
@@ -64,7 +59,6 @@ static func params(s: GameSession, data: Dictionary, index: int) -> Dictionary:
 		"people": people,
 		"style": str(data.get("pack", {}).get("image_style", "")),
 		"adult": bool(s.settings.get("adult", false)),  # v0.7.38.7: 18+ only with no child or teen in the frame
-		"minors": minors,
 	}
 
 

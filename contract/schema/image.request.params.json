@@ -40,13 +40,6 @@
       "default": null,
       "title": "Image Model"
     },
-    "minors": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Minors",
-      "type": "array"
-    },
     "model": {
       "anyOf": [
         {

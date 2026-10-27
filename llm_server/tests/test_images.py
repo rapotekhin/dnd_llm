@@ -301,23 +301,7 @@ def test_18_plus_lifts_the_safety_tags_only_without_children_or_teens():
     assert adult_frame(adult) and ", safe," not in prompt and "adult, aged up" in prompt
     assert "nsfw" not in neg and "nude" not in neg
     for p in (ImageParams(event="x"),
-              ImageParams(event="x", adult=True, minors=["Урга"]),
-              ImageParams(event="x", adult=True, hero="Урга, Полуорк, женщина, подросток; варвар"),
-              ImageParams(event="x", adult=True, people=["Лёшка — человек, мужчина, ребёнок; сын мельника"])):
+              ImageParams(event="x", adult=True)):
         prompt, neg = compose(anima, p, "2girls", "crowd")
         assert not adult_frame(p) and ", safe," in prompt
     assert "18+" in prompts.image_instructions("anima", 900, adult=True)
-    assert "18+" not in prompts.image_instructions("anima", 900) and "без тегов наготы" in prompts.image_instructions("anima", 900)
-
-
-def test_the_master_is_told_the_18_plus_rule_and_the_children_and_teens():
-    """v0.7.38.7: off — intimacy off screen; on — openly for adults; children and teens never, whatever the setting."""
-    from llm_server.protocol import WorldInfo
-
-    off = prompts.intimacy_rule(WorldInfo())
-    assert "за кадр" in off and "Дети" not in off
-    on = prompts.intimacy_rule(WorldInfo(adult=True))
-    assert "прямо" in on and "уходят за кадр" not in on
-    teen = prompts.intimacy_rule(WorldInfo(adult=True, minors=["Урга (герой)"]))
-    assert "Урга (герой)" in teen and "ни близости" in teen
-

@@ -1314,13 +1314,6 @@
           "title": "Magic",
           "type": "string"
         },
-        "minors": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Minors",
-          "type": "array"
-        },
         "name": {
           "default": "",
           "title": "Name",
