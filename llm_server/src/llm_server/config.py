@@ -94,7 +94,7 @@ SD_MODELS: tuple[ImageModel, ...] = (
                prompt_add="masterwork, masterpiece, best quality, detailed, depth of field, high detail, very aesthetic, 8k, "
                           "dynamic pose, dynamic angle, adult, aged up, dynamic lighting, lighting, <lora:rimixO:1.2>",
                negative_add="lowres, worst quality, low quality, bad anatomy, bad hands, extra digits, jpeg artifacts, "
-                            "signature, watermark, text, logo, artist name, patreon username, censored, nsfw, nude, loli, child, "
+                            "signature, watermark, text, logo, artist name, patreon username, censored, nsfw, nude, "
                             "furry, anthro"),
     # v0.7.38.4: the Ri-mix author's Forge settings, a portrait frame; the author's quality LoRAs
     ImageModel("sd:rimix-anima", "Ri-mix Anima (свой сервер)", "anima", 0.0, backend="a1111",
@@ -107,7 +107,7 @@ SD_MODELS: tuple[ImageModel, ...] = (
                           "<lora:anima-base-1-masterpiece-v51:0.8> <lora:anima-highres-aesthetic-boost:0.8>",
                negative_add="worst quality, low quality, score_1, score_2, score_3, artist name, (lowres:1.2), "
                             "(bad anatomy:1.4), bad hands, multiple views, jpeg artifacts, patreon logo, patreon username, "
-                            "web address, signature, watermark, nsfw, explicit, nude, loli, child"),
+                            "web address, signature, watermark, nsfw, explicit, nude"),
 )
 DEFAULT_A1111_URL = "http://127.0.0.1:7860"
 

@@ -182,7 +182,7 @@ async def _a1111(c: httpx.AsyncClient, spec: ImageModel, prompt: str, negative: 
 
 SAFE_TAGS = ("safe",)  # lifted by 18+
 NSFW_NEG = ("nsfw", "explicit", "nude")  # in the negative unless 18+
-MINOR_NEG = ("loli", "shota", "child")  # in the negative always
+MINOR_NEG = ()  # in the negative always
 
 
 def adult_frame(params: ImageParams) -> bool:

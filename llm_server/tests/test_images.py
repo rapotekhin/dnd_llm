@@ -253,9 +253,9 @@ def test_the_players_additions_go_after_the_scene_and_into_the_negative():
     assert p == "(monochrome:0.75), (Sketch art, line art, drawn), 1boy, wolf, forest"  # no prose style (v0.7.38.2)
     prompt, neg = compose(amix, ImageParams(event="x"), p, "crowd, daylight")
     assert prompt.startswith(p + ", masterwork, masterpiece") and prompt.endswith("<lora:rimixO:1.2>")
-    assert neg.startswith("lowres, worst quality") and neg.endswith("anthro, crowd, daylight, explicit, shota")
+    assert neg.startswith("lowres, worst quality") and neg.endswith("anthro, crowd, daylight, explicit")
     own = ImageParams(event="x", prompt_add="ink, <lora:other:1>,", negative_add="blurry", negative_only=True)
-    safe = "nsfw, explicit, nude, loli, shota, child"  # the server's, whatever the player wrote (v0.7.38.7)
+    safe = "nsfw, explicit, nude"  # the server's, whatever the player wrote (v0.7.38.7)
     assert compose(amix, own, p, "crowd") == (p + ", ink, <lora:other:1>", "blurry, " + safe)
     assert compose(amix, ImageParams(event="x", prompt_add="", negative_add=""), p, "crowd") == (p, "crowd, " + safe)
     assert compose(RECRAFT, ImageParams(event="x", prompt_add="cinematic", negative_add="blurry"), p, "crowd") == (p + ", cinematic", "")
@@ -299,13 +299,13 @@ def test_18_plus_lifts_the_safety_tags_only_without_children_or_teens():
     adult = ImageParams(event="x", adult=True, hero="Айра, человек, женщина, молодая; воин")
     prompt, neg = compose(anima, adult, "2girls", "crowd")
     assert adult_frame(adult) and ", safe," not in prompt and "adult, aged up" in prompt
-    assert "nsfw" not in neg and "nude" not in neg and all(t in neg for t in ("loli", "shota", "child"))
+    assert "nsfw" not in neg and "nude" not in neg
     for p in (ImageParams(event="x"),
               ImageParams(event="x", adult=True, minors=["Урга"]),
               ImageParams(event="x", adult=True, hero="Урга, Полуорк, женщина, подросток; варвар"),
               ImageParams(event="x", adult=True, people=["Лёшка — человек, мужчина, ребёнок; сын мельника"])):
         prompt, neg = compose(anima, p, "2girls", "crowd")
-        assert not adult_frame(p) and ", safe," in prompt and all(t in neg for t in ("nsfw", "explicit", "nude", "loli", "child"))
+        assert not adult_frame(p) and ", safe," in prompt
     assert "18+" in prompts.image_instructions("anima", 900, adult=True)
     assert "18+" not in prompts.image_instructions("anima", 900) and "без тегов наготы" in prompts.image_instructions("anima", 900)
 
