@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.67.0"
+PROTOCOL_VERSION = "0.69.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -596,6 +596,7 @@ class PropSpec(_Out):
     name: str = Field(min_length=1, max_length=60)
     description: str = Field(default="", max_length=240)
     item_id: str | None = None  # portable: an item of the catalog (find it with find_items first)
+    item: GeneratedItem | None = None  # 0.68.0: portable, made by the master when the catalog lacks it
     owner: str | None = None  # npc_id of the scene who owns it
     text: str = Field(default="", max_length=800)  # what is written in it (a book, a note, a sign)
     container: str | None = None  # 0.28.0: a container kind (rules.containers: chest, barrel, basket, sack, cabinet, crate…)
@@ -778,18 +779,21 @@ class QuestPlace(_Out):
 
 class QuestItem(_Out):
     """The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);
-    `hint` — where it lies, found by a check of `dc_tier`."""
+    `hint` — where it lies, found by a check of `dc_tier`. `from_giver` (0.69.0) — the giver hands it over when the
+    quest is taken (a parcel to carry): no `room` or `hint`."""
 
     item_id: str | None = None
     item: GeneratedItem | None = None
-    room: str
-    hint: str
+    from_giver: bool = False
+    room: str = ""
+    hint: str = ""
     dc_tier: Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"] = "medium"
 
 
 class NewQuestStep(_Out):
     """A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),
-    `visit` — a room id the hero has not been to, `find` — «room:secret» of the world, `fight` — an encounter id.
+    `visit` — a room id the hero comes to (`item_id` — a thing left there, 0.69.0), `find` — «room:secret» of the
+    world, `fight` — an encounter id.
     What the quest brings (0.37.0): `target` «new:<key>» — its new person or room (fight — the encounter of that room),
     `find` with `target` «item» and `item_id` «item» — its thing."""
 
@@ -828,7 +832,7 @@ class CreateQuestEffect(_Out):
 
     new_npcs: list[QuestNpc] = Field(default_factory=list)  # 0.37.0: up to 2 people the quest brings
     new_place: QuestPlace | None = None  # 0.37.0: a place on an open edge of this room, as create_place
-    quest_item: QuestItem | None = None  # 0.37.0: the quest's thing in a hiding place
+    quest_item: QuestItem | None = None  # 0.37.0: the quest's thing in a hiding place; 0.69.0: or from the giver
 
 
 class DropItemEffect(_Out):

@@ -380,5 +380,5 @@ static func _when_ok(when: Variant, top: bool) -> bool:
 		return top
 	if k in ["all", "any"]:
 		return when[k] is Array and not (when[k] as Array).is_empty() and (when[k] as Array).all(func(w: Variant) -> bool: return _when_ok(w, false))
-	return k in ["encounter", "secret", "room", "flag"]
+	return k in ["encounter", "secret", "room", "arrive", "flag"]
 

@@ -2767,6 +2767,25 @@ scenarios:
     rubric:
       - "Мастер создаёт задание create_quest, которое приносит своё кольцо (quest_item: новая вещь или из каталога, спрятана в погребе с подсказкой) и шаг найти его (find item); вернуть кольцо Горму — шаг talk с item_id item или его добавит движок (возвращение к заказчику с вещью задания); кольцо не выдаётся сразу словами"
 
+  - id: quest_parcel_to_carry
+    title: "«Отнести» — посылка от заказчика (quest_item.from_giver) и шаг, где её отдают"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, ты говорил, лесорубам на Тропе нужен новый клин для колки, а тебе отлучиться некогда. Давай я отнесу — что заплатишь?"
+    engine:
+      find_quests: []
+      find_items: []
+      find_places:
+        - {id: pushcha-trail, name: "Тропа лесорубов", location: "Пуща"}
+      validate:
+        - {kind: create_quest, summary: "Новое задание: «Клин для лесорубов» от Горм (пустяк); с ним: Клин для колки"}
+    expect:
+      effects: {required_kinds_any: [create_quest], required_fields: [quest_item.from_giver]}
+      tools_required: [find_quests]
+    rubric:
+      - "Мастер создаёт задание, в котором Горм вручает клин при взятии (quest_item с from_giver) и шаг отдачи: visit на Тропу лесорубов или talk лесорубу с item_id item — не просто «дойти»; клин не выдаётся словами или give_item"
+
   - id: quest_board_order
     title: "Ищет работу у доски — заказ create_quest с board_prop_id"
     category: concepts

@@ -104,8 +104,14 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 		if not (spec is Dictionary) or str(spec.get("name", "")).strip_edges().is_empty():
 			return {"reason": "у каждой вещи нужно имя"}
 		var item := str(spec.get("item_id", "")) if spec.get("item_id") != null else ""
+		if spec.get("item") != null and spec["item"] is Dictionary:  # a portable thing the catalog lacks (v0.7.34.4)
+			var chk := ItemRules.check_generated(data["items"], spec["item"], int(s.character.get("level", 1)), data.get("spells", {}))
+			if not bool(chk["ok"]):
+				return {"reason": "%s: %s" % [spec["name"], chk["reason"]]}
+			item = ItemRules.generated_id(chk["def"])
+			made[item] = chk["def"]
 		if not item.is_empty():
-			var def := ItemRules.def_of(data["items"], s.items, item)
+			var def: Dictionary = made[item] if made.has(item) else ItemRules.def_of(data["items"], s.items, item)
 			if def.is_empty():
 				return {"reason": "нет такого предмета %s — найди его через find_items" % item}
 			var value := int(def.get("value_cp", 0))

@@ -18,7 +18,7 @@ from pydantic_ai.usage import RunUsage, UsageLimits
 from . import prompts, router
 from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER, PINNED, pinned_for
-from .agents import RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_summary_agent, build_turn_agent, scene_npc, system_prompt_for, turn_user_prompt
+from .agents import RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_summary_agent, build_turn_agent, is_entry, scene_npc, system_prompt_for, turn_user_prompt
 from .protocol import (
     DcTier,
     OptionCheck,
@@ -171,7 +171,7 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
         raise RpcError(ErrorCode.INVALID_PARAMS, f"mode {params.mode} needs npc_id of an NPC in the scene")
     system = system_prompt_for(params)
     await _pick_providers(services.model_factory(model))
-    agent = build_turn_agent(services.model_factory(model), system)
+    agent = build_turn_agent(services.model_factory(model), system, entry=is_entry(params))
     user_prompt = turn_user_prompt(params)
     ctx = TurnContext(session, params, services.library)
 
@@ -186,7 +186,7 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
             if "token limit" not in str(exc).lower() or ctx.check_ids or ctx.accepted:
                 raise
             log.warning("turn %s ran out of output tokens, retrying with %d", params.turn_id, RETRY_MAX_TOKENS)
-            agent = build_turn_agent(services.model_factory(model), system, RETRY_MAX_TOKENS)
+            agent = build_turn_agent(services.model_factory(model), system, RETRY_MAX_TOKENS, entry=is_entry(params))
             ctx = TurnContext(session, params, services.library)
             return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
 

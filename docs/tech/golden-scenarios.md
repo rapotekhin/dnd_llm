@@ -54,6 +54,7 @@ scenarios:
 | `effects.max_count`, `effects.coins_max` | число эффектов, сумма монет |
 | `effects.condition_save` (`save` / `save_or_player`), `condition_tag_in`, `condition_in` | состояние на героя (v0.7.8): с причиной; со спасброском (и тегом из списка) или по вине самого героя (`cause: player`); id состояния из списка |
 | `effects.damage_severity_in`, `effects.forbidden_fields` | ступень урона из списка; в эффекте нет полей (например, кубиков) |
+| `effects.required_fields` | у какого-то эффекта есть поле по пути с точками и оно истинно (`quest_item.from_giver`) |
 | `next_mode` | `null` — смены режима нет; `{mode, npc_id?}` — предложена эта смена |
 | `narration.must_match` / `must_not_match` | регулярные выражения по тексту |
 | `narration.max_sentences` | не больше N предложений |

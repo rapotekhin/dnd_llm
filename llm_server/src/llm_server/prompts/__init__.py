@@ -137,7 +137,25 @@ SCENE_TOPICS = {"places", "containers", "doors", "equip", "tools", "invisible"}
 BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
 
 
-def auto_topics(mode: str, snap: Snapshot) -> list[str]:
+# Containers and new places come whole only when the player's words touch them (v0.7.34.3): a chest stood in 23 of 31
+# full turns of the author's trace, an open edge in 11. Otherwise the index has them, and the gate hands their rules.
+CONTAINER_WORDS = re.compile(r"сунду|ящик|шкаф|бочк|бочон|корзин|мешок|мешк|сумк|рюкзак|кошел|ларец|ларц|шкатул|тайник|"
+                             r"достать|достаю|достан|вынуть|выну|полож|кладу|убра|убер|спрят|отпер|отопр|вскр|ключ|оставл|остав|"
+                             r"брос|товар|продаж|запас|внутр|содерж", re.IGNORECASE)
+PLACE_WORDS = re.compile(r"постро|строит|стройк|основ|заложи|новое место|найти мест|ищу мест|разведа|за город|за околиц|"
+                         r"лавк|мастерск|дом|избу|хижин|баню|пекарн|кузниц|таверн|трактир|харчевн|лагер|стоянк|тропу|дорогу|сверн|свора|вглубь|чащ|что там|"
+                         r"исследу", re.IGNORECASE)
+
+
+def mentions(said: str, words: re.Pattern[str], scene: object = None) -> bool:
+    """The player's words name the topic: its words or (for containers) a container of the scene by name."""
+    if words.search(said):
+        return True
+    props = getattr(scene, "props", None) or []
+    return any(w[:5].lower() in said.lower() for p in props if p.container for w in p.name.split() if len(w) >= 4)
+
+
+def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
     """Topics the scene needs now: they go into the system prompt whole."""
     scene, character = snap.scene, snap.character
     out: list[str] = []
@@ -147,7 +165,7 @@ def auto_topics(mode: str, snap: Snapshot) -> list[str]:
         out.append("conditions")
     if mode in ("social", "trade"):
         out.append("social")
-    if scene and scene.open_edges:
+    if scene and scene.open_edges and mentions(said, PLACE_WORDS):
         out.append("places")
     if snap.crimes:
         out.append("crime")
@@ -157,7 +175,7 @@ def auto_topics(mode: str, snap: Snapshot) -> list[str]:
         out.append("languages")
     if scene and any(n.tie for n in scene.npcs):
         out.append("background")
-    if scene and any(p.container for p in scene.props):
+    if scene and (any(p.container for p in scene.props) or character and character.bags) and mentions(said, CONTAINER_WORDS, scene):
         out.append("containers")
     if scene and any(e.door for e in scene.exits):  # v0.7.22.25
         out.append("doors")
@@ -177,7 +195,7 @@ def topic_text(key: str) -> str:
     return render(f"topics/{key}.md.j2")
 
 
-def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE) -> str:
+def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE, said: str = "") -> str:
     character: CharacterSheet | None = snap.character
     if snap.world is not None and snap.world.tone:
         tone = snap.world.tone
@@ -196,8 +214,9 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
         "limits": snap.limits,
         "tone": tone,
         "gender_rule": gender_rule(character.gender if character else "other"),
+        "entry": False,
     }
-    shown = auto_topics(mode, snap)
+    shown = auto_topics(mode, snap, said)
     context["auto_topics"] = shown
     scene_only = SCENE_TOPICS if mode in ("social", "trade") else set()  # a conversation does not search or carry
     context["topic_index"] = [(k, v[0]) for k, v in TOPICS.items() if k not in shown and k not in scene_only]
@@ -208,6 +227,18 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
     if npc is None:
         raise ValueError(f"mode {mode} needs an NPC")
     return render(f"{mode}.md.j2", npc=npc, npc_gender_rule=npc_gender_rule(npc.gender), **context)
+
+
+def entry_prompt(snap: Snapshot, tone: str = DEFAULT_TONE) -> str:
+    """The entry turn's own prompt (v0.7.34.3): the player only came in — the room furnished and told, nothing else.
+    No hero sheet, no rules of play: half the full turns of the author's trace were these, at ~30k characters each."""
+    if snap.world is not None and snap.world.tone:
+        tone = snap.world.tone
+    character = snap.character
+    return render("enter.md.j2", mode="exploration", entry=True, scene=snap.scene, world=snap.world, character=None,
+                  quests=snap.quests, crimes=snap.crimes, summaries=snap.summaries, limits=snap.limits, tone=tone,
+                  reward_left=coins(character.reward_left_cp) if character and character.reward_left_cp is not None else "",
+                  gender_rule=gender_rule(character.gender if character else "other"))
 
 
 def short_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE) -> str:

@@ -1009,6 +1009,8 @@ def build() -> None:
     promoted = ROOT / "tools" / "srd" / "promoted.json"  # items the author moved from the master's library (v0.7.18.3)
     if promoted.exists():
         items.update(json.loads(promoted.read_text(encoding="utf-8")))
+    mundane = json.loads((ROOT / "tools" / "srd" / "mundane.json").read_text(encoding="utf-8"))  # everyday things (v0.7.34.4)
+    items.update({k: v for k, v in mundane.items() if not k.startswith("_")})
     items.update(b.magic_items(items))
     races = b.races()
     classes = b.classes()

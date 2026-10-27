@@ -29,6 +29,7 @@
 				"encounter": {"type": "string"},
 				"secret": {"type": "string", "pattern": "^[^:]+:[^:]+$"},
 				"room": {"type": "string"},
+				"arrive": {"type": "string"},
 				"flag": {"type": "string"},
 				"talk": {"type": "string"},
 				"item": {"type": "string"},

@@ -382,6 +382,7 @@ def test_cast_and_condition_effects_reach_the_engine(data_dir):
 
 def test_an_effect_of_a_topic_waits_for_its_rules(data_dir):
     # v0.7.20.4: the rules of a topic left the system prompt; its effect is refused until the master reads them
+    # (v0.7.34.3: the refusal carries them)
     fn = scripted(
         ("propose_effect", {"effect": {"kind": "equip", "slot": "armor"}}),
         ("rules", {"topic": "equip"}),
@@ -391,8 +392,7 @@ def test_an_effect_of_a_topic_waits_for_its_rules(data_dir):
     msg, calls, _ = play(data_dir, fn)
     assert [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"] == ["equip"]
     texts = [last_tool_text(p) for p in fn.state["prompts"][1:3]]
-    assert 'rules(\\"equip\\")' in texts[0] or 'rules("equip")' in texts[0]
-    assert "Снаряжение — эффектом `equip`" in texts[1]
+    assert all("Снаряжение — эффектом `equip`" in t for t in texts)
 
 
 def test_a_turn_out_of_output_tokens_is_tried_again_with_more(data_dir):
@@ -523,3 +523,57 @@ def test_a_search_brings_its_topic_and_a_library_good_goes_to_stock_new(data_dir
     npc = seen[0]["npc"]
     assert npc["stock"] == ["rations"]
     assert [i["name"] for i in npc["stock_new"]] == ["Краюха хлеба"]
+
+
+def test_the_entry_turn_takes_only_the_furnishing_and_notes(data_dir):
+    # v0.7.34.3, the author's trace t-10: walking into the square brought a gift, a flag and the trader's favour
+    seen = {}
+    fn = scripted(
+        ("propose_effect", {"effect": {"kind": "give_item", "item_id": "dagger"}}),
+        ("propose_effect", {"effect": {"kind": "note", "text": "Герой пришёл в таверну"}}),
+        ("final", lambda m: {"narration": "Таверна шумит.", "effect_ids": [effect_id(m)]}),
+    )
+    snapshot = tavern_snapshot()
+    snapshot["scene"]["furnish"] = True
+
+    async def watched(messages, info):
+        seen["tools"] = sorted(t.name for t in info.function_tools)
+        return await fn(messages, info)
+
+    msg, calls, _ = play(data_dir, watched, kind="enter", input="", snapshot=snapshot)
+    assert seen["tools"] == ["find_items", "propose_effect"]
+    assert "только вошёл" in last_tool_text(fn.state["prompts"][1])
+    assert [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"] == ["note"]
+    assert msg["result"]["effect_ids"] == ["e-1"]
+
+
+def test_a_topic_refusal_brings_the_topics_rules(data_dir):
+    # v0.7.34.3: no extra `rules` call — the refusal carries them and the next proposal goes through
+    fn = scripted(
+        ("propose_effect", {"effect": {"kind": "npc_follow", "npc_id": "npc_guard"}}),
+        ("propose_effect", {"effect": {"kind": "npc_follow", "npc_id": "npc_guard"}}),
+        ("final", lambda m: {"narration": "Ведда идёт с тобой.", "effect_ids": [effect_id(m)]}),
+    )
+    msg, calls, _ = play(data_dir, fn, input="зову Ведду с собой")
+    refusal = last_tool_text(fn.state["prompts"][1])
+    assert refusal.startswith("Отказ: эффект темы «social»") and "npc_follow" in refusal
+    assert len([c for c in calls if c["method"] == "engine.validate"]) == 1
+    assert msg["result"]["effect_ids"] == ["e-1"]
+
+
+def test_the_item_search_ends_after_one_wave_and_the_entry_turn_does_not_think(data_dir):
+    # v0.7.34.4, the author's trace t-17: 30 find_items and 116 s for one room
+    seen = {}
+    fn = scripted(*([("find_items", {"query": "грабли"})] * 7),
+                  ("final", {"narration": "Огород зарос бурьяном."}))
+
+    async def watched(messages, info):
+        seen["settings"] = info.model_settings
+        return await fn(messages, info)
+
+    snapshot = tavern_snapshot()
+    snapshot["scene"]["furnish"] = True
+    play(data_dir, watched, kind="enter", input="", snapshot=snapshot)
+    assert "Ничего похожего — не ищи это снова" in last_tool_text(fn.state["prompts"][1])
+    assert "поиск вещей на этот ход исчерпан" in last_tool_text(fn.state["prompts"][7])
+    assert seen["settings"]["openrouter_reasoning"] == {"enabled": False}

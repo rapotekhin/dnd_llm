@@ -212,8 +212,8 @@ def promote_quest(world: dict, gen: dict, items: dict, qid: str, new_id: str, id
     npcs: list[str] = [str(q.get("giver", ""))]
     for st in steps:
         w = st.get("when", {})
-        if w.get("room"):
-            rooms.append(str(w["room"]))
+        if w.get("room") or w.get("arrive"):
+            rooms.append(str(w.get("room") or w["arrive"]))
         if w.get("encounter"):
             rooms.append(str(w["encounter"]).removesuffix("_enc"))
         if w.get("secret"):
@@ -281,9 +281,11 @@ def _quest_into(world: dict, gen: dict, q: dict, qid: str, new_id: str, ids: dic
     quest["description"] = quest.get("description") or quest["title"]
     if quest.get("board"):
         quest["board"]["room"] = ids.get(quest["board"]["room"], quest["board"]["room"])
+    if quest.get("offer_items"):  # the parcel its giver hands over (v0.7.34.5)
+        quest["offer_items"] = {item(i): n for i, n in quest["offer_items"].items()}
     for st in quest["steps"]:
         w = st["when"]
-        for k in ("talk", "room"):
+        for k in ("talk", "room", "arrive"):
             if k in w:
                 w[k] = ids.get(w[k], w[k])
         if "encounter" in w:

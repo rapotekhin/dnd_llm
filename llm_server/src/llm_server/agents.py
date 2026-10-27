@@ -150,6 +150,7 @@ class TurnContext:
     check_ids: list[str] = field(default_factory=list)
     accepted: dict[str, str] = field(default_factory=dict)  # effect_id -> summary
     searched_items: bool = False
+    item_searches: int = 0  # find_items this turn (v0.7.34.4: past FIND_ITEMS_MAX the master makes the thing)
     searched_npcs: bool = False  # find_npcs this turn (v0.7.20: before create_npc)
     searched_places: bool = False  # find_places this turn (v0.7.20.1: before create_place)
     searched_quests: bool = False  # find_quests this turn (v0.7.21: before create_quest)
@@ -270,6 +271,9 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         except ValidationError as exc:
             return _schema_refusal(t, exc)
     # DeepSeek sometimes repeats one effect or an empty give_item many times in a row (v0.7.4 goldens): stop it early
+    if t.params.kind in ENTRY_KINDS and effect.kind not in ENTRY_EFFECTS:
+        return ("Отклонено движком: игрок только вошёл и ещё ничего не сделал — в этом ходе мир не меняется "
+                f"(можно лишь {', '.join(sorted(ENTRY_EFFECTS))}). Опиши место без подарков, монет и перемен.")
     key = effect.model_dump_json()
     if key in t.proposed:
         return "Отказ: этот эффект уже принят в этом ходе — не повторяй его; если всё нужное сделано, заверши ход."
@@ -285,8 +289,9 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         if effect.item is not None and not t.searched_items:
             return "Отказ: перед созданием нового предмета найди похожие через find_items."
     topic = prompts.topic_for(effect.kind)
-    if topic and topic not in t.topics:
-        return f"Отказ: сначала прочитай правила темы — rules(\"{topic}\"), потом предложи эффект снова."
+    if topic and topic not in t.topics:  # the rules come with the refusal: no extra call (v0.7.34.3)
+        t.topics.add(topic)
+        return f"Отказ: эффект темы «{topic}» — по её правилам. Вот они:\n{prompts.topic_text(topic)}\nПредложи эффект снова по ним."
     if isinstance(effect, CreateNpcEffect) and t.library is not None:
         effect = _library_stock(effect, t.library)
     if isinstance(effect, CreateQuestEffect) and not t.searched_quests:
@@ -341,11 +346,13 @@ def _shape(ann: Any, depth: int = 0) -> str:
     return getattr(ann, "__name__", "…") if depth else ""
 
 
-def _effect_kinds() -> str:
+def _effect_kinds(only: set[str] | None = None) -> str:
     import typing
 
     lines = []
     for cls in typing.get_args(typing.get_args(Effect)[0]):
+        if only is not None and cls.model_fields["kind"].default not in only:
+            continue
         fields = []
         for n, f in cls.model_fields.items():
             if n == "kind":
@@ -364,13 +371,23 @@ async def propose_effect_loose(ctx: RunContext[TurnContext], effect: str) -> str
     return await propose_effect(ctx, checked)
 
 
+# The entry turn wandered in searches: 30 find_items, 116 s (the author's trace 2026-10-27, t-17) — one wave of
+# parallel calls, then the master makes what is missing.
+FIND_ITEMS_MAX = 6
+
+# The entry turn (v0.7.34.3, the author's trace t-10: a gift and a flag on walking into the square): the player did
+# nothing yet — only the room's furnishing and the master's memory.
+ENTRY_KINDS = {"enter", "resume"}
+ENTRY_EFFECTS = {"furnish", "note"}
+
 DC_TIERS: tuple[str, ...] = typing_get_args(DcTier)
 EFFECT_RETRIES = 4  # a big effect (a quest with its people and place) is often mistyped once or twice (v0.7.21.2 goldens)
 
 
-def propose_effect_tool() -> Tool:
+def propose_effect_tool(only: set[str] | None = None) -> Tool:
+    head = (propose_effect.__doc__ or "") if only is None else "Предложить движку последствие: он проверит и зарезервирует его; верни effect_id в effect_ids итога."
     return Tool(propose_effect_loose, name="propose_effect", max_retries=EFFECT_RETRIES,
-                description=(propose_effect.__doc__ or "") + "\nЭффект — JSON-объект строкой, с полем kind; виды и поля (? — необязательное): " + _effect_kinds())
+                description=head + "\nЭффект — JSON-объект строкой, с полем kind; виды и поля (? — необязательное): " + _effect_kinds(only))
 
 
 RuleTopic = Literal[tuple(prompts.TOPICS)]  # type: ignore[valid-type]
@@ -442,13 +459,18 @@ async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None 
     base — id базового предмета, properties — нужные свойства."""
     t = ctx.deps
     t.searched_items = True
+    t.item_searches += 1
+    if t.item_searches > FIND_ITEMS_MAX:
+        return ("Отказ: поиск вещей на этот ход исчерпан — больше не ищи. Чего не нашлось, создай сам: переносную — поле "
+                "`item` (у вещи обстановки, в `contents`, в `give_item`), неподвижную — просто вещь обстановки без `item_id`.")
     raw = await t.session.call_engine("engine.find_items", EngineFindItemsParams(
         turn_id=t.params.turn_id, query=query, base=base, properties=properties or []))
     found = EngineFindItemsResult.model_validate(raw).items
     if t.library is not None:
         found += t.library.search(query, base, list(properties or []))
     if not found:
-        return "Ничего похожего. Можно создать новый предмет через give_item.item."
+        return ("Ничего похожего — не ищи это снова. Переносную вещь создай сам: поле `item` (у вещи обстановки, в `contents`, "
+                "в `give_item`); неподвижную (мебель, очаг) опиши вещью обстановки без `item_id`.")
     return "\n".join(f"[{i.item_id}] {i.name} — {i.item_type}, {i.rarity}, {i.value_cp} мм, свойства: {', '.join(i.properties) or 'нет'} ({i.source})"
                      for i in found[:8])
 
@@ -456,16 +478,26 @@ async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None 
 # --- agents ---------------------------------------------------------------------
 
 
-def build_turn_agent(model: Model, system: str, max_tokens: int | None = None) -> Agent[TurnContext, TurnOutput]:
+def no_thinking(settings: ModelSettings) -> ModelSettings:
+    """Reasoning off: a short request needs none — DeepSeek thought the router's whole budget away (v0.7.21 `--route`
+    goldens) and the entry turn's last answer for 40 s (v0.7.34.4, the author's trace t-17)."""
+    out = dict(settings)
+    out["openrouter_reasoning"] = {"enabled": False}
+    return out  # type: ignore[return-value]
+
+
+def build_turn_agent(model: Model, system: str, max_tokens: int | None = None, entry: bool = False) -> Agent[TurnContext, TurnOutput]:
     base: ModelSettings = {**MODEL_SETTINGS, "max_tokens": max_tokens} if max_tokens else MODEL_SETTINGS  # type: ignore[typeddict-item]
+    settings = settings_for(model, base)
     agent: Agent[TurnContext, TurnOutput] = Agent(
         model,
         output_type=TurnOutput,
         deps_type=TurnContext,
         instructions=system,
-        tools=[Tool(request_check, max_retries=EFFECT_RETRIES), propose_effect_tool(), rules, lookup, find_items, find_npcs, find_places, find_quests],
+        tools=([propose_effect_tool(ENTRY_EFFECTS), find_items] if entry else
+               [Tool(request_check, max_retries=EFFECT_RETRIES), propose_effect_tool(), rules, lookup, find_items, find_npcs, find_places, find_quests]),
         retries=2,
-        model_settings=settings_for(model, base),
+        model_settings=no_thinking(settings) if entry else settings,
     )
 
     @agent.output_validator
@@ -500,8 +532,15 @@ def build_summary_agent(model: Model, kind: str) -> Agent[None, SummaryOutput]:
                  instructions="Ты пишешь краткие записи по-русски для памяти мастера игры.", name=f"summary_{kind}")
 
 
+def is_entry(params: TurnRequestParams) -> bool:
+    """A turn of walking in: its own short prompt and tools (v0.7.34.3)."""
+    return params.kind == "enter" and params.mode == "exploration"
+
+
 def system_prompt_for(params: TurnRequestParams) -> str:
-    return prompts.system_prompt(params.mode, params.snapshot, scene_npc(params, params.npc_id))
+    if is_entry(params):
+        return prompts.entry_prompt(params.snapshot)
+    return prompts.system_prompt(params.mode, params.snapshot, scene_npc(params, params.npc_id), said=params.input)
 
 
 def turn_user_prompt(params: TurnRequestParams) -> str:

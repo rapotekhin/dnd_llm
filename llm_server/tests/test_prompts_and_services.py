@@ -6,7 +6,7 @@ from jinja2 import UndefinedError
 from llm_server import REPO_ROOT, prompts
 from llm_server.llm.budget import DailyBudget
 from llm_server.llm.catalog import ModelCatalog
-from llm_server.protocol import ItemProperty, Snapshot
+from llm_server.protocol import ItemProperty, SceneProp, Snapshot
 
 from conftest import tavern_snapshot
 
@@ -80,7 +80,7 @@ def test_rule_topics_out_of_the_prompt_unless_the_scene_needs_them():
     assert "Снаряжение — эффектом `equip`" not in text and "`equip` — надеть, снять" in text
     assert "Новое место — только `create_place`" not in text
     s.scene.open_edges = ["[0] чаща по обе стороны просеки (forest)"]
-    text = prompts.system_prompt("exploration", s, None)
+    text = prompts.system_prompt("exploration", s, None, said="сворачиваю в чащу")  # v0.7.34.3: by the player's words
     assert "Новое место — только `create_place`." in text and "`places` —" not in text
     assert all(prompts.topic_text(k).strip() for k in prompts.TOPICS)
 
@@ -460,3 +460,30 @@ def test_the_settings_list_shows_every_provider_with_its_prices_and_speed(tmp_pa
     assert again.speed("Dear") == 60.0  # the speed survives a restart
     monkeypatch.setattr("llm_server.llm.providers.PICKER", picker)
     assert pinned_for("m/x", "dear") == "dear" and pinned_for("m/x", "no-tools") is None
+
+
+def test_the_entry_prompt_is_the_room_and_its_furnishing_only():
+    # v0.7.34.3: half the full turns of the author's trace were walking into a new room, at ~30k characters each
+    s = snap()
+    s.scene.furnish = True
+    text = prompts.entry_prompt(s)
+    assert "## Ход входа" in text and "предложи `furnish`" in text and "`container`" in text
+    assert "только `furnish` и `note`" in text
+    assert "## Как устроена игра" not in text and "## Персонаж игрока" not in text and "Не переспрашивай" not in text
+    assert "Таверна «Хромой олень» — общий зал [brod-tavern-hall]" in text and "женском роде" in text
+    assert len(text) < len(prompts.system_prompt("exploration", s, None)) / 3
+    s.scene.furnish = False
+    assert "предложи `furnish`" not in prompts.entry_prompt(s) and "только `note`" in prompts.entry_prompt(s)
+
+
+def test_containers_and_places_come_whole_only_by_the_players_words():
+    s = snap()
+    s.scene.props = [SceneProp(prop_id="p1", name="Окованный сундук", container="сундук")]
+    s.scene.open_edges = ["на север — пустошь"]
+    assert "containers" not in prompts.auto_topics("exploration", s, "осматриваю зал")
+    assert "places" not in prompts.auto_topics("exploration", s, "осматриваю зал")
+    assert "containers" in prompts.auto_topics("exploration", s, "открываю окованный")  # the prop by name
+    assert "containers" in prompts.auto_topics("exploration", s, "достаю верёвку")
+    assert "places" in prompts.auto_topics("exploration", s, "хочу построить дом на пустоши")
+    text = prompts.system_prompt("exploration", s, None, said="осматриваю зал")
+    assert "`containers` —" in text and "`places` —" in text  # in the index instead

@@ -184,6 +184,7 @@ func test_an_own_deed_is_taken_at_once_without_a_giver() -> void:
 	assert_int((q["steps"] as Array).size()).is_equal(1)  # no way back to anyone
 	assert_int(int(q["steps"][0]["reward_cp"])).is_equal(0)
 	var gold := int(s.character["gold_cp"])
+	s.room_id = "brod-tavern-cellar"  # v0.7.34.4: a visit step closes on arriving
 	s.visited.append("brod-tavern-cellar")
 	QuestRules.advance(s, data)
 	assert_bool(s.quests_done.has(qid)).is_true()
@@ -199,3 +200,21 @@ func test_at_most_three_made_quests_taken() -> void:
 	assert_bool(bool(_make(offer, "t-8")["accepted"])).is_true()  # offering is fine
 	var qid := str(QuestGen.offered_by(s, "npc_innkeeper")[0])
 	assert_str(QuestGen.can_take(s, data, qid)).is_equal("QUEST_TOO_MANY")
+
+
+func test_a_visit_step_may_lead_where_the_hero_has_been_and_closes_on_arriving() -> void:
+	# v0.7.34.4, the author's trace: both orders on the smithy board were refused — the hero had been at the gate
+	s.visited.append_array(["brod-gate", "brod-square"])
+	var deed := {"own": true, "title": "Проводить обоз", "scale": "trifle", "description": "Обоз Ферна уходит на закате.",
+		"steps": [{"text": "Проводить обоз до Северных ворот", "kind": "visit", "target": "brod-gate"}]}
+	var r := _make(deed)
+	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
+	var qid := str(s.generated["quests"].keys()[0])
+	QuestRules.advance(s, data)
+	assert_bool(s.quests_active.has(qid)).is_true()  # been there before — not done yet
+	s.room_id = "brod-gate"
+	QuestRules.advance(s, data)
+	assert_bool(s.quests_done.has(qid)).is_true()
+	var here := {"own": true, "title": "Осмотреться", "scale": "trifle", "description": "Тут.",
+		"steps": [{"text": "Осмотреть ворота", "kind": "visit", "target": "brod-gate"}]}
+	assert_str(str(_make(here, "t-2")["reason"])).contains("уже здесь")

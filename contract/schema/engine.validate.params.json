@@ -2030,7 +2030,7 @@
     },
     "NewQuestStep": {
       "additionalProperties": false,
-      "description": "A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),\n`visit` — a room id the hero has not been to, `find` — «room:secret» of the world, `fight` — an encounter id.\nWhat the quest brings (0.37.0): `target` «new:<key>» — its new person or room (fight — the encounter of that room),\n`find` with `target` «item» and `item_id` «item» — its thing.",
+      "description": "A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),\n`visit` — a room id the hero comes to (`item_id` — a thing left there, 0.69.0), `find` — «room:secret» of the\nworld, `fight` — an encounter id.\nWhat the quest brings (0.37.0): `target` «new:<key>» — its new person or room (fight — the encounter of that room),\n`find` with `target` «item» and `item_id` «item» — its thing.",
       "properties": {
         "danger": {
           "default": false,
@@ -2569,6 +2569,17 @@
           "title": "Description",
           "type": "string"
         },
+        "item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "item_id": {
           "anyOf": [
             {
@@ -2782,7 +2793,7 @@
     },
     "QuestItem": {
       "additionalProperties": false,
-      "description": "The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);\n`hint` — where it lies, found by a check of `dc_tier`.",
+      "description": "The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);\n`hint` — where it lies, found by a check of `dc_tier`. `from_giver` (0.69.0) — the giver hands it over when the\nquest is taken (a parcel to carry): no `room` or `hint`.",
       "properties": {
         "dc_tier": {
           "default": "medium",
@@ -2797,7 +2808,13 @@
           "title": "Dc Tier",
           "type": "string"
         },
+        "from_giver": {
+          "default": false,
+          "title": "From Giver",
+          "type": "boolean"
+        },
         "hint": {
+          "default": "",
           "title": "Hint",
           "type": "string"
         },
@@ -2825,14 +2842,11 @@
           "title": "Item Id"
         },
         "room": {
+          "default": "",
           "title": "Room",
           "type": "string"
         }
       },
-      "required": [
-        "room",
-        "hint"
-      ],
       "title": "QuestItem",
       "type": "object"
     },

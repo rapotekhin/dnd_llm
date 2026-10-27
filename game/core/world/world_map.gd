@@ -115,8 +115,8 @@ static func _step_rooms(w: WorldView, world: Dictionary, when: Dictionary, out: 
 		for sub: Variant in when.get(key, []):
 			_step_rooms(w, world, sub, out)
 	var room := ""
-	if when.has("room"):
-		room = str(when["room"])
+	if when.has("room") or when.has("arrive"):
+		room = str(when.get("room", when.get("arrive", "")))
 	elif when.has("choice"):
 		room = str(when["choice"])
 	elif when.has("secret"):

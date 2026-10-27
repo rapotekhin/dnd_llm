@@ -17,7 +17,7 @@ from pydantic_ai import Agent
 from pydantic_ai.models import Model
 
 from . import prompts
-from .agents import TurnOutput, scene_npc, settings_for
+from .agents import TurnOutput, no_thinking, scene_npc, settings_for
 from .protocol import TurnRequestParams
 
 # Turns that only retell what the engine did: the turn prompt says «эффектов не добавляй».
@@ -71,19 +71,12 @@ def router_prompt(params: TurnRequestParams) -> str:
 
 def build_router_agent(model: Model) -> Agent[None, RouteOutput]:
     return Agent(model, output_type=RouteOutput, instructions=ROUTER_SYSTEM, retries=1, name="router",
-                 model_settings=_no_thinking(settings_for(model, {"temperature": 0.0, "max_tokens": 600})))
+                 model_settings=no_thinking(settings_for(model, {"temperature": 0.0, "max_tokens": 600})))
 
 
 def build_short_agent(model: Model, system: str) -> Agent[None, ShortOutput]:
     return Agent(model, output_type=ShortOutput, instructions=system, retries=1, name="short_turn",
-                 model_settings=_no_thinking(settings_for(model, {"temperature": 0.8, "max_tokens": 2000})))
-
-
-def _no_thinking(settings: dict) -> dict:
-    """A short request needs no reasoning: DeepSeek thought the router's whole budget away (v0.7.21 `--route` goldens)."""
-    settings = dict(settings)
-    settings["openrouter_reasoning"] = {"enabled": False}
-    return settings
+                 model_settings=no_thinking(settings_for(model, {"temperature": 0.8, "max_tokens": 2000})))
 
 
 def short_system(params: TurnRequestParams) -> str:

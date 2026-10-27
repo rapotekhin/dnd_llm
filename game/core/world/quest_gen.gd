@@ -187,6 +187,8 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		if st.has("reason"):
 			return st
 		danger = danger or bool(st.get("danger", false)) or (st["when"] as Dictionary).has("encounter")
+		if steps.is_empty() and str(st["when"].get("arrive", "")) == s.room_id:
+			return {"reason": "шаг «%s»: герой уже здесь — первый шаг закрылся бы сразу" % st["text"]}
 		steps.append(st)
 	var last: Dictionary = steps[-1]
 	var who := _name(data, giver, content)
@@ -194,6 +196,9 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		last = {"text": "Вернуться к %s" % who, "when": {"talk": giver}, "action": "Рассказать %s" % who}
 		steps.append(last)
 	var handed := steps.any(func(st: Dictionary) -> bool: return str(st["when"].get("item", "")) == "item")
+	var given := bool(content["item"].get("given", false))
+	if given and not handed:  # a parcel back to its sender is no errand (the wedge of the author's trace 2026-10-27)
+		return {"reason": "вещь от заказчика: нужен шаг, где герой её отдаёт — talk (кому) или visit (куда) с item_id «item»"}
 	if not (content["item"] as Dictionary).is_empty() and not handed and str(last["when"].get("talk", "")) == giver:
 		last["when"]["item"] = "item"  # the quest's thing goes back to the giver
 		last["text"] = "Отдать %s: %s" % [who, content["item"]["name"]]
@@ -222,6 +227,8 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		"offer_text": str(spec.get("offer_text", "")).left(300), "steps": steps, "generated": true, "scale": scale, "depth": depth}
 	if scale == "major":
 		q["major"] = true
+	if given:
+		q["offer_items"] = {"item": 1}  # the ref becomes the item's id in apply_quest
 	if own:
 		q["own"] = true
 	if for_goal:
@@ -291,6 +298,12 @@ static func _plan_content(s: GameSession, data: Dictionary, spec: Dictionary, de
 			id = ItemRules.generated_id(def)
 		elif ItemRules.def_of(data["items"], s.items, id).is_empty():
 			return {"reason": "вещь задания: нет предмета %s — find_items или новая `item`" % id}
+		var item_name := str((def if not def.is_empty() else ItemRules.def_of(data["items"], s.items, id)).get("name", id))
+		if bool(qi.get("from_giver", false)):  # a parcel the giver hands over on taking (v0.7.34.5)
+			if bool(spec.get("own", false)):
+				return {"reason": "вещь задания: у своего дела нет заказчика, который её вручит"}
+			out["item"] = {"id": id, "def": def, "name": item_name, "given": true}
+			return out
 		var room := str(qi.get("room", ""))
 		if room.begins_with("new:"):
 			if not (out["room_keys"] as Array).has(room.trim_prefix("new:")):
@@ -301,7 +314,7 @@ static func _plan_content(s: GameSession, data: Dictionary, spec: Dictionary, de
 		if not (data["rules"]["dc_tiers"] as Dictionary).has(tier) or str(qi.get("hint", "")).length() < 5:
 			return {"reason": "вещь задания: hint (где она спрятана, по-русски) и dc_tier из %s" % ", ".join((data["rules"]["dc_tiers"] as Dictionary).keys())}
 		out["item"] = {"id": id, "def": def, "room": room, "text": str(qi["hint"]).left(240), "dc": int(data["rules"]["dc_tiers"][tier]),
-			"name": str((def if not def.is_empty() else ItemRules.def_of(data["items"], s.items, id)).get("name", id))}
+			"name": item_name}
 	return out
 
 
@@ -317,7 +330,7 @@ static func _step(s: GameSession, data: Dictionary, r: Dictionary, content: Dict
 		st["danger"] = true
 	var item_ref := str(r.get("item_id", "")) if r.get("item_id") != null else ""
 	if target.begins_with("new:") or target == "item" or item_ref == "item":  # what the quest brings (batch 2)
-		return _new_step(st, r, target, item_ref, content)
+		return _new_step(data, st, r, target, item_ref, content)
 	match str(r.get("kind", "")):
 		"talk":
 			if not data["world"]["npcs"].has(target) or s.dead_npcs.has(target):
@@ -333,9 +346,11 @@ static func _step(s: GameSession, data: Dictionary, r: Dictionary, content: Dict
 		"visit":
 			if not data["world"]["rooms"].has(target):
 				return {"reason": "шаг «%s»: нет места %s (find_places)" % [text, target]}
-			if s.visited.has(target):
-				return {"reason": "шаг «%s»: герой уже был в %s — шаг закрылся бы сразу" % [text, world.room(target).get("name", target)]}
-			st["when"] = {"room": target}
+			st["when"] = {"arrive": target}  # came there on this step, not ever been (v0.7.34.4: the board refused known places)
+			if not item_ref.is_empty():  # left there on arriving (v0.7.34.5)
+				if not data["items"]["catalog"].has(item_ref):
+					return {"reason": "шаг «%s»: вещь %s — id каталога (find_items) или «item»" % [text, item_ref]}
+				st["when"]["item"] = item_ref
 		"find":
 			var room := target.get_slice(":", 0)
 			var sid := target.get_slice(":", 1)
@@ -360,7 +375,7 @@ static func _step(s: GameSession, data: Dictionary, r: Dictionary, content: Dict
 
 
 ## A step on what the quest brings: its `when` keeps refs (`new:<key>`, `item`) that `apply_quest` turns into ids.
-static func _new_step(st: Dictionary, r: Dictionary, target: String, item_ref: String, content: Dictionary) -> Dictionary:
+static func _new_step(data: Dictionary, st: Dictionary, r: Dictionary, target: String, item_ref: String, content: Dictionary) -> Dictionary:
 	var key := target.trim_prefix("new:")
 	var has_item := not (content.get("item", {}) as Dictionary).is_empty()
 	if item_ref == "item" and not has_item:
@@ -369,13 +384,22 @@ static func _new_step(st: Dictionary, r: Dictionary, target: String, item_ref: S
 		"talk":
 			if target.begins_with("new:") and not (content.get("npc_keys", []) as Array).has(key):
 				return {"reason": "шаг «%s»: нет нового человека %s" % [st["text"], target]}
+			if not target.begins_with("new:") and not data["world"]["npcs"].has(target):
+				return {"reason": "шаг «%s»: нет NPC %s (find_npcs)" % [st["text"], target]}
 			st["when"] = {"talk": target}
 			if not item_ref.is_empty():
 				st["when"]["item"] = item_ref
 		"visit":
-			if not (content.get("room_keys", []) as Array).has(key):
-				return {"reason": "шаг «%s»: нет комнаты %s в новом месте" % [st["text"], target]}
-			st["when"] = {"room": target}
+			if target.begins_with("new:"):
+				if not (content.get("room_keys", []) as Array).has(key):
+					return {"reason": "шаг «%s»: нет комнаты %s в новом месте" % [st["text"], target]}
+				st["when"] = {"room": target}
+			elif data["world"]["rooms"].has(target):
+				st["when"] = {"arrive": target}
+			else:
+				return {"reason": "шаг «%s»: нет места %s (find_places)" % [st["text"], target]}
+			if not item_ref.is_empty():
+				st["when"]["item"] = item_ref
 		"fight":
 			var rooms: Array = content.get("place", {}).get("place", {}).get("rooms", [])
 			if not rooms.any(func(rm: Dictionary) -> bool: return str(rm["key"]) == key and not (rm["encounter"] as Dictionary).is_empty()):
@@ -383,6 +407,8 @@ static func _new_step(st: Dictionary, r: Dictionary, target: String, item_ref: S
 			st["when"] = {"encounter": target}
 			st["danger"] = true
 		"find":
+			if bool(content["item"].get("given", false)):
+				return {"reason": "шаг «%s»: вещь от заказчика у героя с самого начала — её не ищут" % st["text"]}
 			if target != "item" or not has_item:
 				return {"reason": "шаг «%s»: найти можно вещь задания (target item) или тайну мира «комната:id»" % st["text"]}
 			st["when"] = {"secret": "item"}
@@ -398,6 +424,8 @@ static func apply_quest(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 	var q: Dictionary = (plan["quest"] as Dictionary).duplicate(true)
 	if refs.has(str(q["giver"])):  # the customer the order brings
 		q["giver"] = refs[str(q["giver"])]
+	if q.has("offer_items"):
+		q["offer_items"] = {str(refs["item"]): 1}
 	for st: Dictionary in q["steps"]:
 		if st.has("attitude"):
 			var att := {}
@@ -409,7 +437,7 @@ static func apply_quest(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 			w["encounter"] = refs["enc:" + str(w["encounter"])]
 		if w.has("secret") and str(w["secret"]) == "item":
 			w["secret"] = refs["secret:item"]
-		for k: String in ["talk", "room", "item"]:
+		for k: String in ["talk", "room", "arrive", "item"]:
 			if w.has(k) and refs.has(str(w[k])):
 				w[k] = refs[str(w[k])]
 		if w.has("talk") and not st.has("action"):
@@ -457,6 +485,9 @@ static func _apply_content(s: GameSession, data: Dictionary, content: Dictionary
 	if not it.is_empty():
 		if not (it["def"] as Dictionary).is_empty():
 			s.items[str(it["id"])] = it["def"]
+		refs["item"] = str(it["id"])
+		if bool(it.get("given", false)):
+			return refs
 		var room := str(refs.get(str(it["room"]), it["room"]))
 		var sec := {"id": "q_" + quest_id, "dc": int(it["dc"]), "text": it["text"], "skill": "perception",
 			"loot": {"items": {str(it["id"]): 1}}}

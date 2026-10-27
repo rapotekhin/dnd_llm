@@ -27,7 +27,7 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
     errors: list[str] = []
     keys = set(w) - {"item"}
     if len(keys) != 1:
-        return [f"{where}: в when ровно одно условие (item — только к talk)"]
+        return [f"{where}: в when ровно одно условие (item — только к talk или arrive)"]
     if ("talk" in w or "choice" in w) and not top:
         errors.append(f"{where}: talk и choice — только целым шагом задания")
     if "encounter" in w and w["encounter"] not in {r.get("encounter", {}).get("id") for r in rooms.values()}:
@@ -36,14 +36,15 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
         rid, sec = w["secret"].split(":")
         if sec not in [x["id"] for x in rooms.get(rid, {}).get("secrets", [])]:
             errors.append(f"{where}: нет секрета {w['secret']}")
-    if "room" in w and w["room"] not in rooms:
-        errors.append(f"{where}: нет комнаты {w['room']}")
+    for k in ("room", "arrive"):  # arrive (v0.7.34.4): the hero is there now — a promoted quest of the master
+        if k in w and w[k] not in rooms:
+            errors.append(f"{where}: нет комнаты {w[k]}")
     if "choice" in w and w["choice"] not in rooms:
         errors.append(f"{where}: нет комнаты выбора {w['choice']}")
     if "talk" in w and w["talk"] not in npcs:
         errors.append(f"{where}: нет NPC {w['talk']}")
-    if "item" in w and ("talk" not in w or w["item"] not in items):
-        errors.append(f"{where}: item — предмет каталога и только вместе с talk")
+    if "item" in w and (not ({"talk", "arrive"} & set(w)) or w["item"] not in items or not top):
+        errors.append(f"{where}: item — предмет каталога и только вместе с talk или arrive шага задания")
     for sub_w in w.get("all", []) + w.get("any", []):
         errors += check_when(sub_w, where, rooms, npcs, items, top=False)
     return errors

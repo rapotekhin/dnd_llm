@@ -3,6 +3,7 @@ extends RefCounted
 ## Quests with steps (roadmap v0.6.3, decision of the author). A pack quest with `giver` and `steps` is taken at the
 ## giver's button; a step is closed only by a fact of the engine named in its `when`:
 ##   {"encounter": id} — the encounter is fought, {"secret": "room:secret"} — found, {"room": id} — visited,
+##   {"arrive": id} — the hero is there now; with "item"?: id the thing is brought and left there (v0.7.34.5),
 ##   {"flag": id} — set in the world, {"talk": npc_id, "item"?: id} — a button at that NPC (`action`), the item is
 ##   handed over; {"all": [...]} / {"any": [...]} of facts (v0.6.4) — `parts` names the facts of "all", each part
 ##   is announced when done, in any order; {"choice": room_id} — buttons in that room, one per `choices` entry
@@ -120,6 +121,8 @@ static func tracked(s: GameSession, world: Dictionary) -> String:
 
 ## A fact of the engine (a talk step is closed only by its button).
 static func met(s: GameSession, when: Dictionary) -> bool:
+	if when.has("item") and not when.has("talk") and int(s.character.get("inventory", {}).get(str(when["item"]), 0)) <= 0:
+		return false  # a thing left at a place (v0.7.34.5): the hero has to bring it
 	if when.has("encounter"):
 		return s.encounters_done.has(str(when["encounter"]))
 	if when.has("secret"):
@@ -127,6 +130,8 @@ static func met(s: GameSession, when: Dictionary) -> bool:
 		return (s.revealed.get(key.get_slice(":", 0), []) as Array).has(key.get_slice(":", 1))
 	if when.has("room"):
 		return s.visited.has(str(when["room"]))
+	if when.has("arrive"):  # the master's quests (v0.7.34.4): the hero is there now, whatever was before
+		return s.room_id == str(when["arrive"])
 	if when.has("flag"):
 		return s.flags.has(str(when["flag"]))
 	if when.has("all"):
@@ -155,6 +160,8 @@ static func advance(s: GameSession, data: Dictionary) -> Array[String]:
 			lines.append_array(_announce_parts(s, data["world"], id, step))
 			if not met(s, step["when"]):
 				break
+			if step["when"].has("item"):
+				_hand_over(s, data, str(step["when"]["item"]), lines, "Оставлено")
 			lines.append_array(_complete_step(s, data, id))
 	return lines
 
@@ -278,14 +285,18 @@ static func talk(s: GameSession, data: Dictionary, quest_id: String) -> Array[St
 	var lines: Array[String] = []
 	var item := str(when.get("item", ""))
 	if not item.is_empty():
-		var inv: Dictionary = s.character["inventory"]
-		inv[item] = int(inv.get(item, 0)) - 1
-		if int(inv[item]) <= 0:
-			inv.erase(item)
-		lines.append("Отдано: %s" % ItemRules.display_name(data["items"], s.items, item))
+		_hand_over(s, data, item, lines, "Отдано")
 	lines.append_array(_complete_step(s, data, quest_id))
 	lines.append_array(advance(s, data))
 	return lines
+
+
+static func _hand_over(s: GameSession, data: Dictionary, item: String, lines: Array[String], verb: String) -> void:
+	var inv: Dictionary = s.character["inventory"]
+	inv[item] = int(inv.get(item, 0)) - 1
+	if int(inv[item]) <= 0:
+		inv.erase(item)
+	lines.append("%s: %s" % [verb, ItemRules.display_name(data["items"], s.items, item)])
 
 
 static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -> Array[String]:

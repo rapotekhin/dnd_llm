@@ -314,7 +314,9 @@ static func display_name(items_data: Dictionary, session_items: Dictionary, id: 
 ## Catalog + session items matching a free-text query (Russian name or id), a base id and required properties.
 static func find(items_data: Dictionary, session_items: Dictionary, query: String, base: String, properties: Array) -> Array[Dictionary]:
 	var q := query.to_lower().strip_edges()
+	var stems := word_stems(q)
 	var out: Array[Dictionary] = []
+	var loose: Array[Dictionary] = []  # a word of the query, not the whole of it: after the exact hits (v0.7.34.4)
 	var pools: Array[Dictionary] = [items_data["catalog"], session_items]
 	for pool: Dictionary in pools:
 		for id: String in pool:
@@ -324,11 +326,23 @@ static func find(items_data: Dictionary, session_items: Dictionary, query: Strin
 			var hit := q.is_empty() or q in name_l or q in id or q == str(d.get("item_type", ""))
 			if not base.is_empty() and (id == base or str(d.get("base", "")) == base):
 				hit = true
-			if not hit or not properties.all(func(p: Variant) -> bool: return props.has(p)):
+			var near := not hit and (stems.size() > 1 and stems.any(func(w: String) -> bool: return w in name_l)
+				or q.length() >= 4 and q in str(d.get("description", "")).to_lower())
+			if not (hit or near) or not properties.all(func(p: Variant) -> bool: return props.has(p)):
 				continue
-			out.append({"item_id": id, "name": d.get("name", id), "item_type": d.get("item_type", ""),
+			(out if hit else loose).append({"item_id": id, "name": d.get("name", id), "item_type": d.get("item_type", ""),
 				"rarity": d.get("rarity", "common"), "value_cp": int(d.get("value_cp", 0)), "properties": props,
 				"source": "catalog" if pool == items_data["catalog"] else "session"})
+	out.append_array(loose)
+	return out
+
+
+## The first five letters of each word of three letters or more: «кувшин глиняный» finds «Кувшин».
+static func word_stems(q: String) -> Array[String]:
+	var out: Array[String] = []
+	for w: String in q.split(" ", false):
+		if w.length() >= 3:
+			out.append(w.left(5))
 	return out
 
 

@@ -32,8 +32,8 @@ from pydantic_ai.models import Model
 
 from . import REPO_ROOT
 from .llm.catalog import REQUEST_COSTS
-from .llm.providers import PICKER
-from .agents import RETRY_MAX_TOKENS, TurnContext, build_turn_agent, settings_for, system_prompt_for, turn_user_prompt
+from .llm.providers import PICKER, PINNED
+from .agents import RETRY_MAX_TOKENS, TurnContext, build_turn_agent, is_entry, settings_for, system_prompt_for, turn_user_prompt
 from .protocol import TurnRequestParams
 
 SCENARIOS = REPO_ROOT / "evals" / "golden" / "scenarios.yaml"
@@ -229,6 +229,12 @@ def sentences(text: str) -> int:
     return len([s for s in re.split(r"[.!?…]+", text) if s.strip()])
 
 
+def _path(x: Any, dotted: str) -> Any:
+    for k in dotted.split("."):
+        x = x.get(k) if isinstance(x, dict) else None
+    return x
+
+
 def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine, tools: list[str]) -> list[str]:
     """Failed hard checks as human-readable strings ([] = all passed)."""
     fails: list[str] = []
@@ -273,6 +279,9 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
     for f in e.get("forbidden_fields", []):
         if any(f in x for x in effects):
             fails.append(f"поле {f} в эффекте")
+    for f in e.get("required_fields", []):  # v0.7.34.5: a dotted path with a true value, e.g. quest_item.from_giver
+        if not any(_path(x, f) for x in effects):
+            fails.append(f"нет поля {f} в эффектах")
     if e.get("condition_save"):  # v0.7.8: a condition on the hero by the rules — a reason, a save with a tag, or the hero's own cause
         mine = [x for x in effects if x["kind"] == "condition" and x.get("on", True) and not x.get("target_id")]
         for x in mine:
@@ -421,7 +430,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]
     if getattr(model, "system", "") == "openrouter":  # the same providers as the game (v0.7.14.4)
         await PICKER.refresh(model.model_name)
-    agent = build_turn_agent(model, system_prompt_for(params))
+    agent = build_turn_agent(model, system_prompt_for(params), entry=is_entry(params))
     started = time.monotonic()
     billed: list[float] = []  # what OpenRouter charged for each request (v0.7.14.5)
     token = REQUEST_COSTS.set(billed)
@@ -439,7 +448,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
             except UnexpectedModelBehavior as exc:  # as the game does: once more with room to spare (turns.py)
                 if "token limit" not in str(exc).lower() or engine.checks() or engine.effects():  # searches do not count, as in turns.py
                     raise
-                agent = build_turn_agent(model, system_prompt_for(params), RETRY_MAX_TOKENS)
+                agent = build_turn_agent(model, system_prompt_for(params), RETRY_MAX_TOKENS, entry=is_entry(params))
                 ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]
                 result = await agent.run(turn_user_prompt(params), deps=ctx)
     except Exception as exc:  # noqa: BLE001 — a failed model run is a result, not a crash of the runner
@@ -513,7 +522,7 @@ def report_markdown(model_id: str, judge_id: str | None, outcomes: list[Outcome]
 
 
 async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, repeat: int = 1,
-                  route: bool = False) -> tuple[list[Outcome], Path]:
+                  route: bool = False, provider: str = "") -> tuple[list[Outcome], Path]:
     import os
 
     from dotenv import load_dotenv
@@ -529,6 +538,8 @@ async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, re
     catalog = ModelCatalog(tuple(dict.fromkeys([model_id, *([judge_id] if judge_id else [])])), model_id)
     await catalog.load_prices()
     prices = {i.id: (i.input_usd_per_mtok, i.output_usd_per_mtok) for i in catalog.infos()}
+    if provider:  # one provider for runs to compare (v0.7.34.3): the picker's choice drifts between them
+        PINNED.set(provider)
     model = make(model_id)
     judge_model = make(judge_id) if judge_id else None
     outcomes = []
@@ -562,12 +573,15 @@ def main() -> None:
     parser.add_argument("--only", default="", help="comma-separated scenario ids")
     parser.add_argument("--route", action="store_true", help="the game's way: the router and the short prompt (v0.7.20.4)")
     parser.add_argument("--repeat", type=int, default=1, help="run every scenario N times (models are not deterministic)")
+    parser.add_argument("--provider", default="", help="pin the OpenRouter provider tag (e.g. relace); needs --no-judge")
     opts = parser.parse_args()
+    if opts.provider and not opts.no_judge:
+        parser.error("--provider pins every request, the judge's as well: run it with --no-judge")
     from .config import DEFAULT_MODEL
 
     model_id = opts.model or os.environ.get("LLM_SERVER_MODEL") or DEFAULT_MODEL
     only = {s.strip() for s in opts.only.split(",") if s.strip()} or None
-    outcomes, md = asyncio.run(run_all(model_id, None if opts.no_judge else opts.judge, only, opts.repeat, opts.route))
+    outcomes, md = asyncio.run(run_all(model_id, None if opts.no_judge else opts.judge, only, opts.repeat, opts.route, opts.provider))
     print(f"\nreport: {md}")
     sys.exit(1 if any(o.status in ("fail", "error") for o in outcomes) else 0)
 
