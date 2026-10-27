@@ -1412,6 +1412,11 @@
       "default": null,
       "title": "Npc Id"
     },
+    "pinned_check": {
+      "default": "",
+      "title": "Pinned Check",
+      "type": "string"
+    },
     "provider": {
       "anyOf": [
         {

@@ -55,6 +55,21 @@ class ImageModel:
     usd_per_image: float
     backend: str = "openrouter"
     url: str = ""
+    # The player's settings start from these (v0.7.37): put before every prompt (quality tags, a LoRA) and the
+    # negative prompt; `negative` — the backend takes a negative prompt at all.
+    prompt_add: str = ""
+    negative_add: str = ""
+    # An own server (v0.7.37): the checkpoint it loads for this model (its title there), the canvas's side at 1:1
+    # (768 — SD 1.5, 1024 — SDXL) and the txt2img fields the checkpoint's author recommends.
+    # Forge builds the model from the checkpoint and `forge_additional_modules`: Anima's Qwen VAE on an SDXL
+    # checkpoint draws black, so an SDXL model clears them in the same request as its checkpoint.
+    checkpoint: str = ""
+    side: int = 768
+    txt2img: dict = field(default_factory=dict, hash=False)
+
+    @property
+    def negative(self) -> bool:
+        return self.backend == "a1111"
 
 
 # Prices of our first frames (2026-10-27); the server learns the real ones from its bills.
@@ -65,6 +80,18 @@ IMAGE_MODELS: tuple[ImageModel, ...] = (
     ImageModel("black-forest-labs/flux.2-pro", "FLUX.2 Pro", "flux", 0.045),
 )
 DEFAULT_IMAGE_MODEL = "recraft/recraft-v4.1-flash"
+
+# Checkpoints of an own AUTOMATIC1111 / Forge, offered when the server has the file (`checkpoint` — its file name).
+SD_MODELS: tuple[ImageModel, ...] = (
+    ImageModel("sd:amix-illustrious", "A-Mix Illustrious (свой сервер)", "illustrious", 0.0, backend="a1111",
+               checkpoint="aMixIllustrious_aMix.safetensors", side=1024,
+               txt2img={"sampler_name": "Euler a", "steps": 20, "cfg_scale": 6,
+                        "override_settings": {"CLIP_stop_at_last_layers": 2, "forge_additional_modules": []}},
+               prompt_add="masterpiece, best quality, very aesthetic, detailed, depth of field, adult, aged up, <lora:rimixO:0.65>",
+               negative_add="lowres, worst quality, low quality, bad anatomy, bad hands, extra digits, jpeg artifacts, "
+                            "signature, watermark, text, logo, artist name, patreon username, censored, nsfw, nude, loli, child"),
+)
+DEFAULT_A1111_URL = "http://127.0.0.1:7860"
 
 
 class ConfigError(RuntimeError):
@@ -96,6 +123,7 @@ class Settings:
     trace: bool = True  # the model side of play sessions in data_dir/traces (v0.7.1); LLM_SERVER_TRACE=0 turns it off
     image_models: tuple[ImageModel, ...] = IMAGE_MODELS  # LLM_SERVER_IMAGES=0 — none, the brush is hidden (v0.7.35)
     image_model: str = DEFAULT_IMAGE_MODEL
+    a1111_url: str = ""  # an own AUTOMATIC1111 / Forge, asked for its models at every hello (v0.7.37); "" — none
 
     @classmethod
     def from_env(cls, load_env_file: bool = True) -> "Settings":
@@ -140,6 +168,7 @@ class Settings:
             trace=os.environ.get("LLM_SERVER_TRACE", "1").strip() not in ("0", "false", "no", ""),
             langfuse=os.environ.get("LANGFUSE_ENABLED") == "1",
             image_models=_image_models(),
+            a1111_url=_a1111_url(),
             image_model=os.environ.get("LLM_SERVER_IMAGE_MODEL", DEFAULT_IMAGE_MODEL),
         )
 
@@ -148,10 +177,15 @@ class Settings:
         return f"Settings(host={self.host!r}, port={self.port}, handler={self.turn_handler!r}, model={self.model!r}, token=***)"
 
 
+def _images_on() -> bool:
+    return os.environ.get("LLM_SERVER_IMAGES", "1").strip() not in ("0", "false", "no", "")
+
+
 def _image_models() -> tuple[ImageModel, ...]:
-    """LLM_SERVER_IMAGES=0 — none; LLM_SERVER_A1111_URL — an own AUTOMATIC1111 among them (the `sd` template)."""
-    if os.environ.get("LLM_SERVER_IMAGES", "1").strip() in ("0", "false", "no", ""):
-        return ()
-    url = os.environ.get("LLM_SERVER_A1111_URL", "").strip()
-    own = (ImageModel("a1111", "Stable Diffusion (свой сервер)", "sd", 0.0, backend="a1111", url=url),) if url else ()
-    return IMAGE_MODELS + own
+    """LLM_SERVER_IMAGES=0 — none, the brush is hidden."""
+    return IMAGE_MODELS if _images_on() else ()
+
+
+def _a1111_url() -> str:
+    """LLM_SERVER_A1111_URL, the default — the local Forge; empty — none."""
+    return os.environ.get("LLM_SERVER_A1111_URL", DEFAULT_A1111_URL).strip().rstrip("/") if _images_on() else ""

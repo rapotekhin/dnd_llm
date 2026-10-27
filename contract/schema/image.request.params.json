@@ -47,6 +47,24 @@
       "default": null,
       "title": "Model"
     },
+    "negative_add": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Negative Add"
+    },
+    "negative_only": {
+      "default": false,
+      "title": "Negative Only",
+      "type": "boolean"
+    },
     "people": {
       "items": {
         "type": "string"
@@ -59,6 +77,19 @@
       "default": "",
       "title": "Place",
       "type": "string"
+    },
+    "prompt_add": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Prompt Add"
     },
     "provider": {
       "anyOf": [

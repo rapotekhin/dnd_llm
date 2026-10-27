@@ -8,7 +8,7 @@ import logging
 import struct
 import threading
 import zlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,7 +16,7 @@ import httpx
 
 from . import prompts
 from .agents import build_image_agent
-from .config import ImageModel
+from .config import SD_MODELS, ImageModel
 from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PINNED, pinned_for
 from .protocol import ErrorCode, ImageModelInfo, ImageParams, ImageResult, Usage
@@ -29,7 +29,6 @@ log = logging.getLogger("llm_server.images")
 
 OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images"  # every image model; FLUX refuses chat/completions
 PROMPT_CHARS = 700  # Recraft cuts its prompt at 1000 characters; the agent overshoots and the style goes in front
-_SIZES = {"16:9": (1024, 576), "3:2": (960, 640), "4:3": (896, 672), "1:1": (768, 768)}  # an own endpoint's canvas
 
 
 class ImageError(Exception):
@@ -72,16 +71,49 @@ class ImagePrices:
 
 
 class ImageCatalog:
-    def __init__(self, models: tuple[ImageModel, ...], default: str, prices: ImagePrices):
+    """The models of the config, and those of an own server at `own_url` as it answers at the latest hello."""
+
+    def __init__(self, models: tuple[ImageModel, ...], default: str, prices: ImagePrices, own_url: str = ""):
+        self.base = models
         self.models = {m.id: m for m in models}
+        self.wanted = default  # may be an own server's model, offered only while it answers
         self.default = default if default in self.models else next(iter(self.models), "")
         self.prices = prices
+        self.own_url = own_url
+
+    async def refresh(self) -> None:
+        if self.own_url:
+            own = await own_image_models(self.own_url)
+            self.models = {m.id: m for m in (*self.base, *own)}
+            self.default = self.wanted if self.wanted in self.models else next(iter(self.models), "")
 
     def infos(self) -> list[ImageModelInfo]:
-        return [ImageModelInfo(id=m.id, name=m.name, usd_per_image=self.prices.price(m)) for m in self.models.values()]
+        return [ImageModelInfo(id=m.id, name=m.name, usd_per_image=self.prices.price(m), prompt_add=m.prompt_add,
+                               negative_add=m.negative_add, negative=m.negative) for m in self.models.values()]
 
     def resolve(self, requested: str | None) -> ImageModel | None:
         return self.models.get(requested or self.default)
+
+
+async def own_image_models(url: str, client: httpx.AsyncClient | None = None) -> tuple[ImageModel, ...]:
+    """The own server's models: its current checkpoint and the SD_MODELS it has; nothing when it does not answer."""
+    try:
+        if client is None:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(5, connect=2)) as c:
+                return await own_image_models(url, c)
+        resp = await client.get(url + "/sdapi/v1/sd-models")
+        resp.raise_for_status()
+        titles = [str(m.get("title", "")) for m in resp.json()]
+    except (httpx.HTTPError, ValueError, AttributeError) as exc:
+        log.info("no own image server at %s: %s", url, str(exc)[:120])
+        return ()
+    found = []
+    for m in SD_MODELS:
+        # A title is "<folder>/<file> [hash]"; the folder and the hash differ from server to server.
+        title = next((t for t in titles if t.split(" [")[0].replace("\\", "/").rsplit("/", 1)[-1] == m.checkpoint), "")
+        if title:
+            found.append(replace(m, url=url, checkpoint=title))
+    return (ImageModel("a1111", "Stable Diffusion (свой сервер)", "sd", 0.0, backend="a1111", url=url), *found)
 
 
 async def draw(spec: ImageModel, prompt: str, negative: str, aspect: str, api_key: str,
@@ -116,9 +148,12 @@ async def _openrouter(c: httpx.AsyncClient, spec: ImageModel, prompt: str, aspec
 
 
 async def _a1111(c: httpx.AsyncClient, spec: ImageModel, prompt: str, negative: str, aspect: str) -> Drawn:
-    w, h = _SIZES.get(aspect, _SIZES["16:9"])
-    resp = await c.post(spec.url.rstrip("/") + "/sdapi/v1/txt2img",
-                        json={"prompt": prompt, "negative_prompt": negative, "width": w, "height": h, "steps": 25})
+    w, h = canvas(aspect, spec.side)
+    body = {"prompt": prompt, "negative_prompt": negative, "width": w, "height": h, "steps": 25, **spec.txt2img}
+    if spec.checkpoint:
+        body["override_settings"] = {**body.get("override_settings", {}), "sd_model_checkpoint": spec.checkpoint}
+        body["override_settings_restore_afterwards"] = False  # restoring reloads a checkpoint on every frame
+    resp = await c.post(spec.url.rstrip("/") + "/sdapi/v1/txt2img", json=body, timeout=httpx.Timeout(300, connect=20))
     if resp.status_code != 200:
         raise ImageError(f"{spec.url} HTTP {resp.status_code}")
     images = resp.json().get("images") or []
@@ -127,13 +162,38 @@ async def _a1111(c: httpx.AsyncClient, spec: ImageModel, prompt: str, negative: 
     return Drawn("image/png", str(images[0]))
 
 
+def compose(spec: ImageModel, params: ImageParams, prompt: str, negative: str) -> tuple[str, str]:
+    """The player's additions (v0.7.37): before the prompt, and the negative — with the agent's tags or alone."""
+    add = spec.prompt_add if params.prompt_add is None else params.prompt_add
+    neg = spec.negative_add if params.negative_add is None else params.negative_add
+    joined = ", ".join(x for x in (_tags(add), _tags(prompt)) if x)
+    if not spec.negative:
+        return joined, ""
+    return joined, ", ".join(x for x in (_tags(neg), "" if params.negative_only else _tags(negative)) if x)
+
+
+def _tags(text: str) -> str:
+    return text.strip().strip(",").strip()
+
+
+def canvas(aspect: str, side: int) -> tuple[int, int]:
+    """The own server's width and height: the area of side², the aspect kept, multiples of 64."""
+    try:
+        a, b = (float(x) for x in aspect.split(":"))
+    except ValueError:
+        a, b = 16.0, 9.0
+    r = (a / b) ** 0.5
+    return max(64, round(side * r / 64) * 64), max(64, round(side / r / 64) * 64)
+
+
 # --- handlers -------------------------------------------------------------------
 
 
 async def stub_image(session: "Session", params: ImageParams) -> ImageResult:
     spec = _spec(session, params)
+    prompt, _ = compose(spec, params, prompts.image_prompt(spec.template, params.event[:200], params.style), "")
     return ImageResult(mime="image/png", data_b64=base64.b64encode(_png(16, 9, (92, 74, 56))).decode(),
-                       prompt=prompts.image_prompt(spec.template, params.event[:200], params.style), usage=Usage(model="stub"))
+                       prompt=prompt, usage=Usage(model="stub"))
 
 
 async def agent_image(session: "Session", params: ImageParams) -> ImageResult:
@@ -166,9 +226,10 @@ async def _agent_image(session: "Session", params: ImageParams) -> ImageResult:
     finally:
         REQUEST_COSTS.reset(token)
     text_usage = _usage(session, model, result.usage, billed)
-    prompt = prompts.image_prompt(spec.template, result.output.scene, params.style)
+    prompt, negative = compose(spec, params, prompts.image_prompt(spec.template, result.output.scene, params.style),
+                               result.output.negative)
     try:
-        drawn = await draw(spec, prompt, result.output.negative, params.aspect, services.settings.openrouter_api_key)
+        drawn = await draw(spec, prompt, negative, params.aspect, services.settings.openrouter_api_key)
     except (ImageError, httpx.HTTPError) as exc:
         log.warning("image %s failed: %s", spec.id, str(exc)[:300])
         raise RpcError(ErrorCode.LLM_UNAVAILABLE, f"image: {str(exc)[:160]}") from None
@@ -177,7 +238,7 @@ async def _agent_image(session: "Session", params: ImageParams) -> ImageResult:
     usage = text_usage.model_copy(update={"cost_usd": round(text_usage.cost_usd + drawn.cost_usd, 6), "model": f"{model} + {spec.id}"})
     if services.trace:
         services.trace.write({"what": "image", "image_model": spec.id, "frame": frame, "prompt": prompt,
-                              "negative": result.output.negative, "image_usd": drawn.cost_usd, "mime": drawn.mime,
+                              "negative": negative, "image_usd": drawn.cost_usd, "mime": drawn.mime,
                               "bytes": len(drawn.data_b64) * 3 // 4, "usage": usage.model_dump(mode="json")})
     return ImageResult(mime=drawn.mime, data_b64=drawn.data_b64, prompt=prompt, usage=usage)
 

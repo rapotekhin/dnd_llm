@@ -577,3 +577,19 @@ def test_the_item_search_ends_after_one_wave_and_the_entry_turn_does_not_think(d
     assert "Ничего похожего — не ищи это снова" in last_tool_text(fn.state["prompts"][1])
     assert "поиск вещей на этот ход исчерпан" in last_tool_text(fn.state["prompts"][7])
     assert seen["settings"]["openrouter_reasoning"] == {"enabled": False}
+
+
+def test_a_pinned_check_is_never_skipped(data_dir):
+    """v0.7.38: the player pinned a skill — a turn without request_check goes back to the master; the tier is its call."""
+    fn = scripted(
+        ("final", {"narration": "Мира качает головой: «Нет»."}),
+        ("request_check", {"skill": "persuasion", "dc_tier": "nearly_impossible", "reason": "уговорить после отказа"}),
+        ("final", {"narration": "Мира стоит на своём."}),
+    )
+    msg, calls, _ = play(data_dir, fn, input="сделай это [Игрок сам выбрал проверку: Убеждение.]", pinned_check="Убеждение")
+    assert msg["result"]["narration"] == "Мира стоит на своём." and msg["result"]["check_ids"] == ["c-1"]
+    assert calls[0]["params"]["dc_tier"] == "nearly_impossible"
+    assert "«Убеждение» — она обязательна" in last_tool_text(fn.state["prompts"][1])
+    fn = scripted(("final", {"narration": "Ты осматриваешь зал."}))
+    msg, calls, _ = play(data_dir, fn)  # without a pin a turn needs no check
+    assert msg["result"]["check_ids"] == [] and calls == []

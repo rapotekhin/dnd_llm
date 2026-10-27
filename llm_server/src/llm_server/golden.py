@@ -108,6 +108,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         "mode": mode,
         "kind": sc.get("kind", "action"),
         "input": sc.get("input") or "",
+        "pinned_check": sc.get("pinned_check", ""),  # v0.7.38
         "npc_id": npcs[0]["npc_id"] if mode in ("social", "trade") and npcs else None,
         "snapshot": {
             "world": world,

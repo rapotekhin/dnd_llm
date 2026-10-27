@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.72.0"
+PROTOCOL_VERSION = "0.74.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -117,6 +117,9 @@ class ImageModelInfo(_Out):
     id: str
     name: str
     usd_per_image: float = 0.0
+    prompt_add: str = ""  # 0.73.0: the defaults of the player's additions
+    negative_add: str = ""
+    negative: bool = False  # the model takes a negative prompt
 
 
 class HelloResult(_Out):
@@ -449,6 +452,7 @@ class TurnRequestParams(_In):
     npc_id: str | None = None  # the conversation partner in social / trade
     model: str | None = None  # the player's pick from HelloResult.models; None = server default
     provider: str | None = None  # the provider the player pinned, a tag of ModelInfo.providers; None = the server picks (0.35.0)
+    pinned_check: str = ""  # 0.74.0: the skill the player pinned, by name — the turn may not end without request_check
     snapshot: Snapshot = Field(default_factory=Snapshot)
 
 
@@ -528,6 +532,10 @@ class ImageParams(_In):
     model: str | None = None  # the text model that writes the prompt
     provider: str | None = None
     aspect: Literal["16:9", "3:2", "4:3", "1:1"] = "16:9"
+    # 0.73.0, the player's settings: None — the model's own; `negative_only` — the agent's negative tags dropped.
+    prompt_add: str | None = Field(default=None, max_length=2000)
+    negative_add: str | None = Field(default=None, max_length=2000)
+    negative_only: bool = False
 
 
 class ImageResult(_Out):

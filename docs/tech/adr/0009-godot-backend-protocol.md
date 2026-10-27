@@ -44,10 +44,10 @@ Godot                                     llm_server
 |---|---|---|
 | `session.hello` | `protocol_version`, `client_version` | `protocol_version`, `server_version`, `model`, `limits` (размер сообщения, таймауты, лимиты хода) |
 | `session.status` | — | `model`, `server_version`, дневной лимит и потрачено сегодня |
-| `turn.request` | `turn_id`, `mode`, `kind`, `input`, `snapshot` | `turn.result` (ниже) |
+| `turn.request` | `turn_id`, `mode`, `kind`, `input`, `pinned_check`, `snapshot` | `turn.result` (ниже) |
 | `turn.cancel` | `turn_id` | `ok`; активный `turn.request` завершается ошибкой `turn_cancelled` |
 | `summary.request` | `kind`, `subject_id`, `previous`, `events` | `summary`, `usage` |
-| `image.request` | `event`, `place`, `time`, `hero`, `people`, `style`, `image_model`, `aspect` | `mime`, `data_b64`, `prompt`, `usage` (0.71.0) |
+| `image.request` | `event`, `place`, `time`, `hero`, `people`, `style`, `image_model`, `aspect`, `prompt_add`, `negative_add`, `negative_only` | `mime`, `data_b64`, `prompt`, `usage` (0.71.0; добавки — 0.73.0) |
 
 - **`mode`** = `exploration` | `social` | `trade` (позже `combat`). У каждого режима свои промпты и набор инструментов, но общий контракт хода.
 - **`kind`** = `enter` (вход в комнату, описание сцены) | `resume` (возврат из диалога/торговли) | `action` (ввод игрока). У `enter` и `resume` поле `input` пустое.
@@ -205,6 +205,14 @@ Godot                                     llm_server
 - **Режим `combat`** и виды хода **`combat_start`** (движок начал бой: кто где, инициатива), **`combat_round`** (строки движка за раунд, в конце — «Итог боя»), **`death`** (гибель героя: последние строки и путь героя — эпитафия). В бою `kind = action` — импровизация игрока, стоит его действия.
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
+
+### 84. Протокол 0.74.0 (v0.7.38)
+
+- **`turn.request.pinned_check`** — название навыка или характеристики, которые игрок сам выбрал к словам (пусто — нет). Ход без `request_check` сервер возвращает мастеру: проверка обязательна, мастер выбирает только сложность. В бою не действует.
+
+### 83. Протокол 0.73.0 (v0.7.37)
+
+- **Добавки игрока к промпту картинки.** `image.request`: `prompt_add` — в начало каждого промпта (теги качества, Лора), `negative_add` — в негативный промпт, `negative_only` — негатив только из настроек, без тегов агента; `null` — добавки самой модели. `session.hello` → `image_models[]`: `prompt_add`, `negative_add` — добавки модели по умолчанию, `negative` — берёт ли модель негативный промпт (OpenRouter — нет). Модели своего Forge в `image_models` — по его ответу на этом `session.hello`.
 
 ### 82. Протокол 0.72.0 (v0.7.36)
 

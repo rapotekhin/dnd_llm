@@ -12,6 +12,21 @@
           "title": "Name",
           "type": "string"
         },
+        "negative": {
+          "default": false,
+          "title": "Negative",
+          "type": "boolean"
+        },
+        "negative_add": {
+          "default": "",
+          "title": "Negative Add",
+          "type": "string"
+        },
+        "prompt_add": {
+          "default": "",
+          "title": "Prompt Add",
+          "type": "string"
+        },
         "usd_per_image": {
           "default": 0.0,
           "title": "Usd Per Image",

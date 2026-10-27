@@ -507,6 +507,10 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None, e
         t = ctx.deps
         if not out.narration.strip():
             raise ModelRetry("narration не может быть пустым.")
+        if t.params.pinned_check and not t.check_ids and t.params.mode != "combat":
+            raise ModelRetry(f"Игрок сам выбрал проверку «{t.params.pinned_check}» — она обязательна: вызови request_check "
+                             "(движок бросит этим навыком) со сложностью по действию — при твёрдом отказе NPC или почти "
+                             "невозможном деле nearly_impossible — и опиши итог по броску.")
         if out.changes and not out.effect_ids and t.accepted:
             # v0.7.20: the model proposed the effects (the engine accepted them) and forgot to list them — they are this
             # turn's, take them all instead of a retry the model tends to repeat until the turn fails

@@ -145,3 +145,98 @@ def test_prices_are_learned_from_the_bills(tmp_path):
     prices.observe(RECRAFT.id, 0.006)
     prices.observe(RECRAFT.id, 0.008)
     assert ImagePrices(path).price(RECRAFT) == 0.007
+
+
+def test_an_own_forge_offers_the_checkpoints_it_has():
+    """v0.7.37: SD_MODELS by file name, whatever the folder and the hash; a silent server offers nothing."""
+    from llm_server.images import own_image_models
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert req.url.path == "/sdapi/v1/sd-models"
+        return httpx.Response(200, json=[{"title": "Anima/other.safetensors [6bbb]"},
+                                         {"title": "Illustration/aMixIllustrious_aMix.safetensors"}])
+
+    def down(req: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused")
+
+    async def ask(h):
+        async with httpx.AsyncClient(transport=httpx.MockTransport(h)) as c:
+            return await own_image_models("http://127.0.0.1:7860", c)
+
+    own = asyncio.run(ask(handler))
+    assert [m.id for m in own] == ["a1111", "sd:amix-illustrious"]
+    assert own[1].checkpoint == "Illustration/aMixIllustrious_aMix.safetensors" and own[1].url == "http://127.0.0.1:7860"
+    assert asyncio.run(ask(down)) == ()
+
+
+def test_every_hello_asks_the_own_server_again(tmp_path, monkeypatch):
+    """v0.7.37: Forge started after the server shows up at the next connection, and goes when it stops."""
+    from llm_server.config import SD_MODELS
+
+    answer: list[tuple] = [()]
+
+    async def fake_own(url, client=None):
+        assert url == "http://127.0.0.1:7860"
+        return answer[0]
+
+    monkeypatch.setattr(images, "own_image_models", fake_own)
+    services = make_services(tmp_path, a1111_url="http://127.0.0.1:7860", image_model="sd:amix-illustrious")
+    seen: list[str] = []
+
+    def ids() -> list[str]:
+        with TestClient(create_app(services.settings, services=services)) as c, c.websocket_connect("/ws", headers=AUTH) as ws:
+            result = hello(ws)["result"]
+            seen.append(result["image_model"])
+            return [m["id"] for m in result["image_models"]]
+
+    assert "sd:amix-illustrious" not in ids()
+    answer[0] = (SD_MODELS[0],)
+    assert ids()[-1] == "sd:amix-illustrious"
+    answer[0] = ()
+    assert "sd:amix-illustrious" not in ids()
+    assert seen == ["recraft/recraft-v4.1-flash", "sd:amix-illustrious", "recraft/recraft-v4.1-flash"]  # the wanted default while it answers
+
+
+def test_a_checkpoint_model_loads_its_file_with_its_settings():
+    from llm_server.config import SD_MODELS
+
+    spec = __import__("dataclasses").replace(SD_MODELS[0], url="http://127.0.0.1:7860", checkpoint="Illustration/aMixIllustrious_aMix.safetensors")
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        body = __import__("json").loads(req.content)
+        assert (body["width"], body["height"]) == (1344, 768)  # SDXL's megapixel at 16:9
+        assert (body["sampler_name"], body["steps"], body["cfg_scale"]) == ("Euler a", 20, 6)
+        assert body["override_settings"] == {"CLIP_stop_at_last_layers": 2, "forge_additional_modules": [], "sd_model_checkpoint": spec.checkpoint}
+        assert body["override_settings_restore_afterwards"] is False
+        return httpx.Response(200, json={"images": ["iVBO"]})
+
+    assert _run(spec, handler).data_b64 == "iVBO"
+    assert "sd_model_checkpoint" not in SD_MODELS[0].txt2img["override_settings"]  # the config is not touched
+
+
+def test_the_players_additions_go_before_the_prompt_and_into_the_negative():
+    """v0.7.37: the model's own by default, the player's from the settings, the negative with the agent's or alone."""
+    from llm_server.config import SD_MODELS
+    from llm_server.images import compose
+    from llm_server.protocol import ImageParams
+
+    amix = SD_MODELS[0]
+    p = prompts.image_prompt("illustrious", "1boy, wolf, forest.", "book illustration")
+    assert p == "1boy, wolf, forest, book illustration"
+    prompt, neg = compose(amix, ImageParams(event="x"), p, "crowd, daylight")
+    assert prompt.startswith("masterpiece, best quality") and "<lora:rimixO:0.65>, 1boy, wolf" in prompt
+    assert neg.startswith("lowres, worst quality") and neg.endswith("child, crowd, daylight")
+    own = ImageParams(event="x", prompt_add="ink, <lora:other:1>,", negative_add="blurry", negative_only=True)
+    assert compose(amix, own, p, "crowd") == ("ink, <lora:other:1>, 1boy, wolf, forest, book illustration", "blurry")
+    assert compose(amix, ImageParams(event="x", prompt_add="", negative_add=""), p, "crowd") == (p, "crowd")
+    assert compose(RECRAFT, ImageParams(event="x", prompt_add="cinematic", negative_add="blurry"), p, "crowd") == ("cinematic, " + p, "")
+    assert "Danbooru" in prompts.image_instructions("illustrious", 700)
+
+
+def test_hello_offers_each_models_additions():
+    from llm_server.config import SD_MODELS
+    from llm_server.images import ImageCatalog
+
+    info = {m.id: m for m in ImageCatalog((RECRAFT, *SD_MODELS), RECRAFT.id, ImagePrices(None)).infos()}
+    assert info["sd:amix-illustrious"].negative and "<lora:rimixO:0.65>" in info["sd:amix-illustrious"].prompt_add
+    assert not info[RECRAFT.id].negative and info[RECRAFT.id].prompt_add == ""

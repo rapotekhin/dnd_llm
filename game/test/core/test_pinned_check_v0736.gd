@@ -63,3 +63,12 @@ func test_another_turn_is_not_bound() -> void:
 	var r := GameState.handle_engine_check({"turn_id": "t-1", "skill": "perception", "dc_tier": "easy"})
 	assert_bool(r.has("rolled_as")).is_false()
 	assert_str(str(s.chat[-1]["skill"])).is_equal("perception")
+
+
+func test_the_note_makes_the_check_mandatory_and_names_the_pin() -> void:
+	# v0.7.38: the master picks only the tier; the server gets the name to hold it to a roll
+	assert_str(GameState._pin_name({"skill": "persuasion"})).is_equal("Убеждение")
+	assert_str(GameState._pin_name({"ability": "str"})).is_equal("Сила")
+	var note := GameState._pinned_note({"skill": "persuasion"})
+	assert_str(note).contains("Убеждение").contains("обязательна").contains("nearly_impossible")
+	assert_str(note).not_contains("Не нужна")

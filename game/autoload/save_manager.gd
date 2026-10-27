@@ -32,6 +32,8 @@ var combat_speed: String = "normal"
 ## The brush (v0.7.35): off — no button; the image model picked from the server list, "" — the server's default.
 var images_on: bool = true
 var image_model: String = ""
+## The player's additions to a model's prompt (v0.7.37): id → {prompt, negative, only}; absent — the model's own.
+var image_prompts: Dictionary = {}
 const COMBAT_SPEEDS := {"slow": 1.0, "normal": 0.6, "fast": 0.25, "instant": 0.0}
 const UI_SCALES: Array[float] = [0.85, 1.0, 1.15, 1.3]
 
@@ -165,6 +167,7 @@ func load_settings() -> void:
 		combat_speed = str(cfg.get_value("game", "combat_speed", "normal"))
 		images_on = bool(cfg.get_value("images", "on", true))
 		image_model = str(cfg.get_value("images", "model", ""))
+		image_prompts = cfg.get_value("images", "prompts", {})
 	Hotkeys.apply(keys)
 
 
@@ -181,6 +184,7 @@ func save_settings() -> void:
 	cfg.set_value("game", "combat_speed", combat_speed)
 	cfg.set_value("images", "on", images_on)
 	cfg.set_value("images", "model", image_model)
+	cfg.set_value("images", "prompts", image_prompts)
 	cfg.set_value("keys", "keys", keys)
 	cfg.save(settings_path)
 
@@ -227,9 +231,26 @@ func offered(model_id: String) -> bool:
 
 ## The image model for image.request (v0.7.35), and the master's model that writes the frame's prompt.
 func image_params(params: Dictionary) -> Dictionary:
-	if Backend.image_models().any(func(m: Variant) -> bool: return m is Dictionary and str(m.get("id", "")) == image_model):
+	if not image_model_info(image_model).is_empty():
 		params["image_model"] = image_model
+	var own: Variant = image_prompts.get(current_image_model(), null)
+	if own is Dictionary:
+		params["prompt_add"] = str(own.get("prompt", ""))
+		params["negative_add"] = str(own.get("negative", ""))
+		params["negative_only"] = bool(own.get("only", false))
 	return master_params(params)
+
+
+## The image model the brush draws with: the picked one while the server offers it, else the server's default.
+func current_image_model() -> String:
+	return image_model if not image_model_info(image_model).is_empty() else Backend.default_image_model()
+
+
+func image_model_info(id: String) -> Dictionary:
+	for m: Variant in Backend.image_models():
+		if m is Dictionary and not id.is_empty() and str(m.get("id", "")) == id:
+			return m
+	return {}
 
 
 ## The master's model and pinned provider for turn.request and summary.request (v0.7.20.5).

@@ -41,7 +41,7 @@ uv run python -m llm_server.contract     # перевыгрузить contract/s
 | `LLM_SERVER_MAX_TURNS` | 1 | одновременных ходов на сервер |
 | `LLM_SERVER_IMAGES` | `1` | картинки событий (v0.7.35): `0` — сервер не рисует, кисточки в игре нет. Модели — `config.IMAGE_MODELS`: Recraft V4.1 Flash (по умолчанию, ~$0.007), Recraft V4.1, FLUX 3 Klein (~$0.009), FLUX.2 Pro (~$0.045); цена в настройках — по нашим счетам (`var/image_prices.json`) |
 | `LLM_SERVER_IMAGE_MODEL` | `recraft/recraft-v4.1-flash` | модель картинок по умолчанию |
-| `LLM_SERVER_A1111_URL` | — | свой AUTOMATIC1111 (`http://host:7860`): добавляет модель `a1111` с шаблоном `sd` (теги и negative prompt) |
+| `LLM_SERVER_A1111_URL` | `http://127.0.0.1:7860` | свой AUTOMATIC1111 или Forge; пусто — без него. Сервер спрашивает его модели при каждом подключении игры: добавляет `a1111` (текущая модель Forge, шаблон `sd`) и модели из `config.SD_MODELS`, чей файл там есть — A-Mix Illustrious с Лорой rimixO (v0.7.37). Модель переключается в Forge на каждом кадре и там остаётся (с пустыми `forge_additional_modules` — иначе модули пресета Anima рисуют SDXL чёрным). `LLM_SERVER_IMAGE_MODEL=sd:amix-illustrious` — своя модель по умолчанию, пока Forge отвечает |
 | `LANGFUSE_ENABLED` | — | `1` + ключи `LANGFUSE_*` — трейсы всех запусков агента |
 
 ## Устройство
@@ -53,7 +53,7 @@ uv run python -m llm_server.contract     # перевыгрузить contract/s
 | `agents.py` | агент хода: инструменты `request_check`, `propose_effect`, `lookup`, `find_items` → `engine.*`; проверка вывода |
 | `turns.py` | обработчики хода и сводки: модель из белого списка, бюджет, повторы OpenRouter (не после обращения к движку), учёт расходов |
 | `prompts/*.md.j2` | промпты Jinja2 (строгий режим): правила, сцена, режимы `exploration` / `social` / `trade`, ход, сводка |
-| `images.py` | картинка события (v0.7.35): агент пишет промпт по шаблону семейства (`prompts/images/<template>.md.j2`: блок `instructions` — как писать, блок `prompt` — где стиль), бэкенд рисует — OpenRouter `/api/v1/images` или свой AUTOMATIC1111; цены по счетам. Новая модель — строка `ImageModel` в `config.py`; новое семейство — шаблон; новый сервер — `backend` и функция в `draw` |
+| `images.py` | картинка события (v0.7.35): агент пишет промпт по шаблону семейства (`prompts/images/<template>.md.j2`: блок `instructions` — как писать, блок `prompt` — где стиль), бэкенд рисует — OpenRouter `/api/v1/images` или свой AUTOMATIC1111; цены по счетам. Новая модель — строка `ImageModel` в `config.py` (своя модель Forge — в `SD_MODELS`: файл, размер холста, txt2img автора, добавки к промпту и негативу по умолчанию — v0.7.37); новое семейство — шаблон; новый сервер — `backend` и функция в `draw` |
 | `llm/` | каталог моделей с ценами OpenRouter, фабрика моделей, дневной бюджет, библиотека созданных предметов |
 | `app.py`, `__main__.py` | FastAPI, проверка токена, запуск, проверка ключа, Langfuse |
 

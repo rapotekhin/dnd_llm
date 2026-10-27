@@ -20,6 +20,10 @@ var _provider: OptionButton
 var _images_on: CheckBox  # v0.7.35: the brush
 var _image_model: OptionButton
 var _image_ids: Array[String] = []
+var _image_extra: VBoxContainer  # v0.7.37: the additions to the prompt and the negative
+var _image_prompt: TextEdit
+var _image_negative: TextEdit
+var _image_negative_only: CheckBox
 var _provider_tags: Array = []
 var _provider_sort: OptionButton
 ## The provider list's orders (v0.7.34.1): «ours» — the server's picks for «Авто» first, then the server's ranking.
@@ -364,7 +368,8 @@ func _images_row(box: VBoxContainer) -> void:
 	_images_on.toggled.connect(func(on: bool) -> void:
 		SaveManager.images_on = on
 		SaveManager.save_settings()
-		_image_model.disabled = not on or _image_ids.size() < 2)
+		_image_model.disabled = not on or _image_ids.size() < 2
+		_fill_image_extra())
 	row.add_child(_images_on)
 	_image_model = OptionButton.new()
 	_image_model.name = "ImageModelOption"
@@ -372,8 +377,80 @@ func _images_row(box: VBoxContainer) -> void:
 	_image_model.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_image_model.item_selected.connect(func(i: int) -> void:
 		SaveManager.image_model = _image_ids[i]
-		SaveManager.save_settings())
+		SaveManager.save_settings()
+		_fill_image_extra())
 	row.add_child(_image_model)
+	_image_extra_box(box)
+
+
+## The player's additions to the picked model's prompt (v0.7.37): before every prompt, and the negative — with the
+## master's tags or alone; they start from the model's own, «Как у модели» returns to them.
+func _image_extra_box(box: VBoxContainer) -> void:
+	_image_extra = VBoxContainer.new()
+	_image_extra.name = "ImageExtra"
+	box.add_child(_image_extra)
+	_image_prompt = _image_text(tr("OPT_IMAGE_PROMPT"), "ImagePromptAdd")
+	_image_negative = _image_text(tr("OPT_IMAGE_NEGATIVE"), "ImageNegativeAdd")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	_image_extra.add_child(row)
+	_image_negative_only = CheckBox.new()
+	_image_negative_only.name = "ImageNegativeOnly"
+	_image_negative_only.text = "OPT_IMAGE_NEGATIVE_ONLY"
+	_image_negative_only.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_image_negative_only.toggled.connect(func(_on: bool) -> void: _save_image_extra())
+	row.add_child(_image_negative_only)
+	var reset := Button.new()
+	reset.name = "ImagePromptsReset"
+	reset.text = "OPT_IMAGE_PROMPTS_RESET"
+	reset.pressed.connect(func() -> void:
+		SaveManager.image_prompts.erase(SaveManager.current_image_model())
+		SaveManager.save_settings()
+		_fill_image_extra())
+	row.add_child(reset)
+
+
+func _image_text(caption: String, node_name: String) -> TextEdit:
+	var label := Label.new()
+	label.text = caption
+	label.name = node_name + "Label"
+	label.theme_type_variation = UiTheme.MUTED_LABEL
+	_image_extra.add_child(label)
+	var edit := TextEdit.new()
+	edit.name = node_name
+	edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	edit.custom_minimum_size = Vector2(0, 84)  # three lines of tags
+	edit.text_changed.connect(_save_image_extra)
+	_image_extra.add_child(edit)
+	return edit
+
+
+func _fill_image_extra() -> void:
+	if _image_extra == null:
+		return
+	var id := SaveManager.current_image_model()
+	var info := SaveManager.image_model_info(id)
+	_image_extra.visible = SaveManager.images_on and not info.is_empty()
+	var own: Dictionary = SaveManager.image_prompts.get(id, {})
+	var neg := bool(info.get("negative", false))
+	for n: Node in [_image_prompt, _image_negative, _image_negative_only]:
+		n.set_block_signals(true)
+	_image_prompt.text = str(own.get("prompt", info.get("prompt_add", "")))
+	_image_negative.text = str(own.get("negative", info.get("negative_add", "")))
+	_image_negative_only.button_pressed = bool(own.get("only", false))
+	for n: Node in [_image_prompt, _image_negative, _image_negative_only]:
+		n.set_block_signals(false)
+	for n: String in ["ImageNegativeAdd", "ImageNegativeAddLabel", "ImageNegativeOnly"]:
+		(_image_extra.find_child(n, true, false) as Control).visible = neg
+
+
+func _save_image_extra() -> void:
+	var id := SaveManager.current_image_model()
+	if id.is_empty():
+		return
+	SaveManager.image_prompts[id] = {"prompt": _image_prompt.text.strip_edges(), "negative": _image_negative.text.strip_edges(),
+		"only": _image_negative_only.button_pressed}
+	SaveManager.save_settings()
 
 
 func _fill_image_models() -> void:
@@ -386,13 +463,16 @@ func _fill_image_models() -> void:
 		if m is Dictionary:
 			var id := str(m.get("id", ""))
 			_image_ids.append("" if id == default_id else id)
-			_image_model.add_item(tr("OPT_IMAGE_MODEL").format({"name": m.get("name", id), "price": "%.3f" % float(m.get("usd_per_image", 0))})
+			var price := float(m.get("usd_per_image", 0))
+			_image_model.add_item((tr("OPT_IMAGE_MODEL").format({"name": m.get("name", id), "price": "%.3f" % price}) if price > 0
+				else tr("OPT_IMAGE_MODEL_FREE").format({"name": m.get("name", id)}))
 				+ (tr("OPT_IMAGE_MODEL_DEFAULT") if id == default_id else ""))
 	if _image_ids.is_empty():
 		_image_ids.append("")
 		_image_model.add_item(tr("OPT_IMAGES_NONE"))
 	_image_model.selected = maxi(0, _image_ids.find(SaveManager.image_model))
 	_image_model.disabled = not SaveManager.images_on or _image_ids.size() < 2
+	_fill_image_extra()
 
 
 ## The server's daily spending limit (v0.7.3): spent today of the limit, the limit in dollars or «без лимита».

@@ -35,5 +35,6 @@ class Services:
             library=ItemLibrary(settings.data_dir / "items" / "library.jsonl"),
             model_factory=model_factory,
             trace=TraceWriter(settings.data_dir / "traces", settings.trace),
-            images=ImageCatalog(settings.image_models, settings.image_model, ImagePrices(settings.data_dir / "image_prices.json")),
+            images=ImageCatalog(settings.image_models, settings.image_model, ImagePrices(settings.data_dir / "image_prices.json"),
+                                settings.a1111_url),
         )

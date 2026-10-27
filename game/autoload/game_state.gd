@@ -319,8 +319,12 @@ static func check_label(ch: Dictionary) -> String:
 
 ## The master's note for a pinned check, after the player's words.
 func _pinned_note(pin: Dictionary) -> String:
-	var what := tr("SKILL_" + str(pin["skill"]).to_upper()) if pin.has("skill") else tr("ABILITY_" + str(pin["ability"]).to_upper())
-	return " [Игрок сам выбрал проверку: %s. Если действию нужна проверка — проси request_check; движок бросит её этим, какой бы навык ты ни указал. Не нужна — не проси.]" % what
+	return " [Игрок сам выбрал проверку: %s. Проверка обязательна — вызови request_check; движок бросит её этим, какой бы навык ты ни указал. Ты выбираешь только сложность: чем невозможнее действие или твёрже отказ NPC, тем выше, вплоть до nearly_impossible. Согласие NPC на близость кубиком не решается: успех смягчает отказ, но согласием не становится.]" % _pin_name(pin)
+
+
+static func _pin_name(pin: Dictionary) -> String:
+	return TranslationServer.translate("SKILL_" + str(pin["skill"]).to_upper()) if pin.has("skill") \
+		else TranslationServer.translate("ABILITY_" + str(pin["ability"]).to_upper())
 
 
 ## What can be pinned now (v0.7.7 fixes: everything, not only spells): [{kind, id, name, slots [circles], off}].
@@ -2734,6 +2738,8 @@ func _request(kind: String, input: String) -> void:
 	}
 	if s.in_conversation():
 		params["npc_id"] = s.npc_id
+	if not _forced.is_empty() and str(_forced.get("turn", "")) == turn_id:
+		params["pinned_check"] = _pin_name(_forced)  # v0.7.38: the server holds the master to a roll
 	SaveManager.master_params(params)
 	var call := await Backend.request("turn.request", params, float(Catalog.game()["turn"]["client_timeout_s"]))
 	if session != s or busy_turn != turn_id:

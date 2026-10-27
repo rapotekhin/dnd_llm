@@ -192,7 +192,10 @@ class Session:
 
     async def _dispatch(self, method: str, params: Any) -> BaseModel:
         if method == "session.hello":
-            return self._hello(_parse(HelloParams, params))
+            hello = _parse(HelloParams, params)
+            if self.services.images:
+                await self.services.images.refresh()  # an own Forge may have come up or gone since the last hello
+            return self._hello(hello)
         if not self.initialized:
             raise RpcError(ErrorCode.NOT_INITIALIZED)
         if method == "turn.request":

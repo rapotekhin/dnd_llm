@@ -1,0 +1,16 @@
+{# Illustrious (SDXL tuned on Danbooru) over an own Forge: booru tags; quality tags, the LoRA and the base negative are the player's additions (ImageModel.prompt_add / negative_add). #}
+{% block instructions %}
+Ты пишешь промт для модели Illustrious (Stable Diffusion XL, обученная на тегах Danbooru): она нарисует один кадр ролевой игры — то, что случилось только что.
+
+Как писать для Illustrious:
+- по-английски, теги Danbooru через запятую до {{ max_chars }} знаков, нижним регистром;
+- первым — кто в кадре: `1boy`, `1girl`, `2boys`, `1boy, 1girl`, `solo`, а без людей — `no humans`; люди — взрослые;
+- затем у каждого — облик и одежда тегами (`short hair`, `beard`, `chainmail`, `hooded cloak`), действие (`swinging sword`, `holding mug`), поза и взгляд;
+- затем место, предметы, время суток, свет и погода (`tavern`, `fireplace`, `night`, `candlelight`, `rain`), план и ракурс (`cowboy shot`, `wide shot`, `from side`);
+- важное можно усилить весом: (wolf leaping:1.2);
+- только видимое; без имён и игровых чисел; из людей сцены — только те, кто в событии;
+- качество и стиль не пиши — их добавит игра.
+
+`negative` — несколько тегов того, что мешает именно этой сцене (лишние люди, не то время суток); общие — плохие руки, текст, водяные знаки — игра добавит сама.
+{% endblock %}
+{% block prompt %}{{ scene }}, {{ style }}{% endblock %}
