@@ -17,8 +17,7 @@ DEFAULT_MODELS = (
     "anthropic/claude-haiku-5.5",
     "qwen/qwen3.8-27b",  # Qwen3.8 Omni Flash left (v0.7.21): its only provider has no forced tool_choice — every turn failed
     "google/gemini-3.8-flash",
-    # the author's request of 2026-10-26, not run on the goldens yet
-    "z-ai/glm-5.3-flash",
+    # z-ai/glm-5.3-flash left (v0.7.34.2): 81.5% on the goldens against DeepSeek's 89.6%, 4.7× dearer (docs/tech/model-comparison-2026-10-26.md)
     # free (v0.7.20.2, the author's request): OpenRouter's free router and free models — limited by requests a day
     "openrouter/free",
     "nvidia/nemotron-3.5-super-vl:free",

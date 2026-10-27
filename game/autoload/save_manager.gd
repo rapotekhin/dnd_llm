@@ -212,8 +212,17 @@ func available_resolutions() -> Array[Vector2i]:
 	return out
 
 
+## Whether the server offers the model; true until its list is known (no session.hello yet).
+func offered(model_id: String) -> bool:
+	var models: Array = Backend.models()
+	return models.is_empty() or models.any(func(m: Variant) -> bool: return m is Dictionary and str(m.get("id", "")) == model_id)
+
+
 ## The master's model and pinned provider for turn.request and summary.request (v0.7.20.5).
 func master_params(params: Dictionary) -> Dictionary:
+	if not master_model.is_empty() and not offered(master_model):
+		master_model = ""  # v0.7.34.2: the server dropped it (GLM-5.3-Flash) — its default, not a failed turn
+		save_settings()
 	if not master_model.is_empty():
 		params["model"] = master_model
 	var provider := str(master_providers.get(master_model, ""))

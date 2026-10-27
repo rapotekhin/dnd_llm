@@ -413,6 +413,9 @@ func _save_budget() -> void:
 func _fill_models() -> void:
 	_model.clear()
 	_model_ids = [""]
+	if not SaveManager.master_model.is_empty() and not SaveManager.offered(SaveManager.master_model):
+		SaveManager.master_model = ""  # the server no longer offers it: back to its default
+		SaveManager.save_settings()
 	var default_name := Backend.default_model()
 	_model.add_item(tr("OPT_MODEL_DEFAULT").format({"model": default_name if not default_name.is_empty() else "—"}))
 	for m: Variant in Backend.models():

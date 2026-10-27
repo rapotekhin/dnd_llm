@@ -9,7 +9,7 @@ same ranking, corrected by our bills) and checks each request's bill in the trac
     python tools/provider_cost.py --source golden                  # the newest golden report of the model
     python tools/provider_cost.py --since 2026-10-20 --cache 0.5   # own cached share instead of the estimate
     python tools/provider_cost.py --seed-bills                     # the traces' bills and speeds into the server's provider_bills.json
-    python tools/provider_cost.py --model z-ai/glm-5.3-flash --md build/provider_cost.md
+    python tools/provider_cost.py --model google/gemini-3.8-flash --md build/provider_cost.md
 """
 
 from __future__ import annotations
