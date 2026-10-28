@@ -252,8 +252,12 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 				lines.append("Груз нашли и забрали")
 				lines.append_array(_crime(s, data, id))
 			_:
-				lines.append("Вас заметили")
-				lines.append_array(_crime(s, data, id))
+				var eyes := _eyes(s, data, id)
+				if eyes.is_empty():  # v0.7.39.2: nobody here at this hour — a failure, not a crime
+					lines.append("Дело сорвалось — но вокруг никого, никто вас не видел")
+				else:
+					lines.append("Вас заметили: %s" % ", ".join(eyes))
+					lines.append_array(_crime(s, data, id))
 		lines.append_array(OrgRules.on_heist(s, data, id, "fail", 0))
 		return {"lines": lines, "fight": fight}
 	_rw(c)[id]["status"] = "done"
@@ -271,13 +275,32 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 		lines.append("Взято: %s%s" % [ItemRules.display_name(data["items"], s.items, item), " ×%d" % int(items[item]) if int(items[item]) > 1 else ""])
 	var seen := str(o["id"]) == "done" and s.rng.randf() < float(cfg(data)["trace_chance"])
 	var mask := str(k.get("mask_step", ""))
-	if not mask.is_empty() and not step_ok(c, id, mask):
-		seen = true
-	if seen:
-		lines.append("Остался след — вас узнают")
-		lines.append_array(_crime(s, data, id))
+	var unmasked := not mask.is_empty() and not step_ok(c, id, mask)
+	if seen or unmasked:
+		var eyes := _eyes(s, data, id)  # v0.7.39.2: only those who are there see the hero
+		if not eyes.is_empty():
+			lines.append("%s: %s — вас узнают" % ["Вас видели без маски" if unmasked else "Вас запомнили", ", ".join(eyes)])
+			lines.append_array(_crime(s, data, id))
 	lines.append_array(OrgRules.on_heist(s, data, id, str(o["id"]), got))
 	return {"lines": lines, "fight": fight}
+
+
+## Who sees the act (v0.7.39.2, the author: seen with nobody around): a kind with `seen_by` "room" — the NPCs in the
+## target room at this hour and, where there is law, its patrol by `crime.patrol_chance`; any other `seen_by` — those
+## the act is done to by name (the drovers, the gate's guard). Names.
+static func _eyes(s: GameSession, data: Dictionary, id: String) -> Array[String]:
+	var d := def(s, data, id)
+	var by := str(kind(data, str(d["kind"])).get("seen_by", "свидетели"))
+	if by != "room":
+		return [by]
+	var world := WorldView.new(data["world"])
+	var out: Array[String] = []
+	for n: String in s.npcs_here(world.world, str(d["target"])):
+		out.append(str(world.npc(n).get("name", n)))
+	var l := CrimeRules.law(data, world.location_id(str(d["target"])))
+	if not l.is_empty() and s.rng.randf() < float(CrimeRules.cfg(data)["patrol_chance"]):
+		out.append(str(l.get("patrol", "Патруль стражи")))
+	return out
 
 
 ## The job's crime is known where the law looks for it. Lines.

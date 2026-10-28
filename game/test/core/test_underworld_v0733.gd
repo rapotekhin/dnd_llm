@@ -77,8 +77,13 @@ func test_a_burglary_brings_the_victims_things_and_a_failure_is_a_known_crime() 
 	var s: GameSession = won["s"]
 	assert_int(int(s.character["gold_cp"])).is_greater_equal(100000 + 1500)
 	assert_int(int(OwnerRules.foreign(s).get("signet_ring", {}).get("npc_clerk", 0))).is_equal(1)
+	data["rules"]["crime"]["patrol_chance"] = 0.0  # v0.7.39.2: nobody in the townhall at night — a failure, no crime
+	var alone: GameSession = _act_until(true, _burglar)["s"]
+	assert_array(alone.crimes).is_empty()
+	data["rules"]["crime"]["patrol_chance"] = 1.0  # the patrol passes by
 	var lost := _act_until(true, _burglar)
 	var f: GameSession = lost["s"]
+	assert_str(" ".join(lost["r"]["lines"])).contains("Патруль ополчения")
 	assert_bool(f.crimes.any(func(c: Dictionary) -> bool: return str(c["kind"]) == "burglary" and bool(c["known"]))).is_true()
 	assert_bool(f.wanted.has("brod")).is_true()
 

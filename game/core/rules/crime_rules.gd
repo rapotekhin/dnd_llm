@@ -97,6 +97,7 @@ static func settle_one(s: GameSession, data: Dictionary, crime_id: String) -> Ar
 		if str(crime["id"]) != crime_id or bool(crime["settled"]):
 			continue
 		crime["settled"] = true
+		_rewarn(s, crime)
 		var loc := str(crime["location"])
 		if _open(s, loc).is_empty() and s.wanted.has(loc):
 			s.wanted.erase(loc)
@@ -582,6 +583,7 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 static func _settle(s: GameSession, data: Dictionary, loc: String) -> Array[String]:
 	for crime: Dictionary in _open(s, loc):
 		crime["settled"] = true
+		_rewarn(s, crime)
 	s.wanted.erase(loc)
 	s.let_go.erase(loc)
 	s.arrest = ""
@@ -595,6 +597,13 @@ static func _settle(s: GameSession, data: Dictionary, loc: String) -> Array[Stri
 	if back != 0:
 		lines.append_array(ReputationRules.add(s, data, loc, back, "вина искуплена"))  # v0.7.17
 	return lines
+
+
+## A punished trespass starts the count anew (v0.7.39.2, the author: arrested at every entry after the second): the
+## next walk in unasked is a warning again.
+static func _rewarn(s: GameSession, crime: Dictionary) -> void:
+	if str(crime.get("kind", "")) == "trespass":
+		s.trespass_warned.erase(str(crime.get("site", "")))
 
 
 # --- the body -----------------------------------------------------------------------------------------------

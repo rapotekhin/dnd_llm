@@ -1105,6 +1105,7 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 	if how in ["pick", "force", "hit", "torch"] or (how == "spell" and str(data["rules"]["spell_effects"].get(spell_id, {}).get("door", "")) != "lock"):
 		var seen := DoorRules.witnesses(session, data, from, to)
 		if not seen.is_empty():
+			lines.append("Видели: " + ", ".join(seen.map(func(id: String) -> String: return str(world().npc(id).get("name", id)))))  # v0.7.39.2
 			lines.append_array(CrimeRules.on_trespass(session, data, SiteRules.unwelcome(session, data, to), to, seen))
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
@@ -1638,6 +1639,7 @@ func org_act(what: String, id: String, arg: String = "") -> String:
 		"take": why = OrgRules.take_why(s, data, id, arg)
 		"found": why = OrgRules.found_why(s, data, arg, id)
 		"recruit": why = OrgRules.recruit_why(s, data, id)
+		"entry": why = OrgRules.entry_why(s, data, id)
 		_: why = "PROPERTY_NOT_NOW"
 	if not why.is_empty():
 		return why
@@ -1649,6 +1651,7 @@ func org_act(what: String, id: String, arg: String = "") -> String:
 		"take": lines = HeistRules.take(s, data, arg)
 		"found": lines = OrgRules.found(s, data, arg, id)
 		"recruit": lines = OrgRules.recruit(s, data, id)
+		"entry": lines = OrgRules.pay_entry(s, data, id)
 	CharacterRules.refresh(s.character, data, s.items)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
@@ -1726,6 +1729,23 @@ func continue_as_heir(character: Dictionary) -> void:
 	_add(GameSession.effect_entry(lines))
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
 	_request("enter", "%s погиб(ла). Дальше играет наследник — %s: просыпается дома, род продолжается." % [old, character.get("name", "")])
+
+
+## «Попросить впустить» (v0.7.39.2): Persuasion against the owner of a private site. Allowed in a talk too. "" or a key.
+func permit_ask(npc_id: String) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+		return "PROPERTY_NOT_NOW"
+	if not session.npcs_here(world().world, session.room_id).has(npc_id):
+		return "PROPERTY_NOT_NOW"
+	var why := SiteRules.ask_why(session, Catalog.data, npc_id)
+	if not why.is_empty():
+		return why
+	var lines := SiteRules.ask(session, Catalog.data, npc_id)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	return ""
 
 
 ## Bonds (v0.7.31): gift (item — the thing), confess, break, hide. Allowed in a talk too. "" or a localization key.
@@ -2046,6 +2066,9 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 	if not lines.is_empty():
 		_add(GameSession.effect_entry(lines))
 	EventBus.state_changed.emit()
+	if not session.pending_fight.is_empty():  # v0.7.39.2: an organization's guards on a stranger in its hideout
+		_start_pending_fight()
+		return
 	if _live_encounter(room_id):
 		var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id)["encounter"]
 		var meet := EncounterRules.meet(session, Catalog.data, room_id, from, enc)  # not a fight from the doorway (v0.7.22.12)
@@ -2138,11 +2161,14 @@ func travel(to: String) -> String:
 		for f: String in _step(to_room, lines):
 			lines.append("Замечено: " + f)
 		names.append(str(world().room(to_room).get("name", to_room)))
-		if ConditionRules.dead(session.character) or CrimeRules.held(session):
+		if ConditionRules.dead(session.character) or CrimeRules.held(session) or not session.pending_fight.is_empty():
 			break
 	_travel_line(names, minute0, lines)
 	_set_options([])  # the old room's replies do not follow the hero (big test #34, v0.7.22.5)
 	EventBus.state_changed.emit()
+	if not session.pending_fight.is_empty():  # v0.7.39.2: a hideout's guards on the way
+		_start_pending_fight()
+		return ""
 	if _exhaustion_death():
 		return ""
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)

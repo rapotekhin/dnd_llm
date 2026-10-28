@@ -518,6 +518,7 @@
 		"kinds": {
 			"burglary": {
 				"name": "кража со взломом",
+				"seen_by": "room",
 				"hours": [
 					22,
 					5
@@ -552,6 +553,7 @@
 			},
 			"robbery": {
 				"name": "грабёж",
+				"seen_by": "обозники",
 				"hours": [
 					6,
 					20
@@ -586,6 +588,7 @@
 			},
 			"smuggling": {
 				"name": "контрабанда",
+				"seen_by": "стража у ворот",
 				"hours": [
 					0,
 					24
@@ -2186,7 +2189,8 @@
 	"sites": {
 		"_doc": "Sites (v0.7.22.24, SiteRules): a private room (`public` false of the room or its site) of a site with a living owner — entering it unasked before eyes: the owner trespass_attitude and a light crime `trespass` where there is law, once a day a site. Asked in: the owner goes with the hero or likes the hero from welcome_attitude.",
 		"welcome_attitude": 2,
-		"trespass_attitude": -1
+		"trespass_attitude": -1,
+		"permit": {"_doc": "The owner's leave (v0.7.39.2, SiteRules.ask / grant): «Попросить впустить» — a check of `skill` against the owner (SocialRules.dc at `tier`), a failure — again tomorrow; the master's `permit` and an organization's paid entry give it too. It lasts while the owner's attitude is not below min_attitude (the author: until a quarrel).", "skill": "persuasion", "tier": "medium", "min_attitude": 0}
 	},
 	"creatures": {
 		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay); a bound one stays and can be led.",

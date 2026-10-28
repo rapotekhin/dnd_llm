@@ -2308,6 +2308,21 @@ scenarios:
     rubric:
       - "Ведда соглашается пойти с героем, и мастер оформляет это эффектом npc_follow с её npc_id (не только словами); если герой уходит в погреб — она там вместе с ним"
 
+  - id: permit_owner_lets_in
+    title: "Хозяин разрешил заходить к себе — permit, иначе вход останется вторжением"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Горм, можно я буду заходить к тебе на кухню? Помогу с котлами, если надо, и ничего не трону."
+    engine:
+      check: {d20: [15], bonus: 3, total: 18, dc: 13, success: true, nat: 15, blocked: false}
+      validate:
+        - {kind: permit, summary: "Горм впускает героя"}
+    expect:
+      effects: {required_kinds_any: [permit], forbidden_kinds: [coins, give_item]}
+    rubric:
+      - "Горм соглашается пускать героя на кухню, и мастер оформляет это эффектом permit с его npc_id (не только словами); без лишних наград"
+
   - id: npc_goes_along_on_move
     title: "Уговорил NPC пойти вместе и сразу идёт — move с npcs"
     category: social

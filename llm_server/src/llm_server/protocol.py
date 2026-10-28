@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.77.0"
+PROTOCOL_VERSION = "0.78.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1029,6 +1029,16 @@ class CourseEffect(_Out):
     dc_tier: Literal["easy", "medium", "hard"] = "medium"
 
 
+class PermitEffect(_Out):
+    """The owner of the scene lets the hero into its private places by words (0.78.0): «заходи, когда хочешь». The
+    engine checks the NPC is here and owns a place closed to the hero; `site_id` — one place, empty — all of them. The
+    leave lasts until a quarrel."""
+
+    kind: Literal["permit"] = "permit"
+    npc_id: str  # an NPC of the scene, the owner
+    site_id: str | None = None
+
+
 class BondEffect(_Out):
     """A scene that moved a bond (0.63.0): a heart-to-heart, a shared danger, a slight. `delta` ±10 at most, once a day
     per NPC, with the `reason`; `kind` mentor when the NPC took the hero under its wing (romance only by the player's
@@ -1316,7 +1326,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | PermitEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

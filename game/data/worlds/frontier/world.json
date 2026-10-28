@@ -2843,6 +2843,8 @@
 			"kind": "criminal",
 			"head": "npc_guildhead",
 			"hideout": "brod-den",
+			"entry_cp": 50,
+			"guards": [{"monster": "thug", "count": 2, "name": "Громила «Крыс»"}],
 			"fence": "npc_merchant",
 			"cut_pct": 20,
 			"trial": "heist_townhall",

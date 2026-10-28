@@ -2579,6 +2579,39 @@
       "title": "OwnerEffect",
       "type": "object"
     },
+    "PermitEffect": {
+      "additionalProperties": false,
+      "description": "The owner of the scene lets the hero into its private places by words (0.78.0): «заходи, когда хочешь». The\nengine checks the NPC is here and owns a place closed to the hero; `site_id` — one place, empty — all of them. The\nleave lasts until a quarrel.",
+      "properties": {
+        "kind": {
+          "const": "permit",
+          "default": "permit",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "site_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Site Id"
+        }
+      },
+      "required": [
+        "npc_id"
+      ],
+      "title": "PermitEffect",
+      "type": "object"
+    },
     "PropSpec": {
       "additionalProperties": false,
       "description": "A thing to put in the room when it is furnished (0.11.0).",
@@ -3590,6 +3623,7 @@
           "npc_follow": "#/$defs/NpcFollowEffect",
           "org": "#/$defs/OrgEffect",
           "owner": "#/$defs/OwnerEffect",
+          "permit": "#/$defs/PermitEffect",
           "prop_state": "#/$defs/PropStateEffect",
           "property": "#/$defs/PropertyEffect",
           "put_in": "#/$defs/PutInEffect",
@@ -3661,6 +3695,9 @@
         },
         {
           "$ref": "#/$defs/BondEffect"
+        },
+        {
+          "$ref": "#/$defs/PermitEffect"
         },
         {
           "$ref": "#/$defs/FenceEffect"

@@ -361,6 +361,15 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var lb := _flow(acts, tr("BTN_STUDY"), study_requested.emit.bind(id), can_act)
 		lb.name = "Study_" + id
 		lb.tooltip_text = tr("BTN_STUDY_TIP").format({"name": n.get("name", id)})
+	if not SiteRules.closed_to_hero(s, Catalog.data, id).is_empty():  # v0.7.39.2: the owner's leave
+		var pw := SiteRules.ask_why(s, Catalog.data, id)
+		var pb := _flow(acts, tr("BTN_PERMIT"), func() -> void:
+			var err := GameState.permit_ask(id)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and pw.is_empty())
+		pb.name = "Permit_" + id
+		pb.tooltip_text = tr(pw) if not pw.is_empty() else tr("BTN_PERMIT_TIP").format({"dc": SiteRules.ask_dc(s, Catalog.data, id),
+			"chance": SiteRules.ask_chance(s, Catalog.data, id)})
 	if not FamilyRules.engaged(s).is_empty() and not FamilyRules.officiant(s, Catalog.data, id).is_empty():  # v0.7.32
 		var why := FamilyRules.wedding_why(s, Catalog.data, id)
 		var wd := _flow(acts, tr("BTN_WEDDING"), func() -> void:
@@ -745,11 +754,24 @@ func _underworld_row(s: GameSession, can_act: bool) -> void:
 	var mine := OrgRules.mine(s, Catalog.data)
 	var done := HeistRules.view(s.character).values().any(func(h: Dictionary) -> bool: return str(h.get("status", "")) == "done")
 	var founding := not (s.character.get("property", {}) as Dictionary).is_empty() and done
-	if HeistRules.active(s.character).is_empty() and mine.is_empty() and not founding:
+	var entry := OrgRules.entry_here(s, Catalog.data)  # v0.7.39.2: a hideout's door here, paid to walk in
+	var ew := OrgRules.entry_why(s, Catalog.data, entry) if not entry.is_empty() else "ORG_NO_ENTRY"
+	if ew in ["ORG_NO_ENTRY", "ORG_ENTRY_OPEN"]:
+		entry = ""
+	if HeistRules.active(s.character).is_empty() and mine.is_empty() and not founding and entry.is_empty():
 		return
 	var acts := HFlowContainer.new()
 	acts.name = "UnderworldActs"
 	_content.add_child(acts)
+	if not entry.is_empty():
+		var eb := _row_button(acts, tr("BTN_ORG_ENTRY").format({"money": Money.format(int(OrgRules.def(s, Catalog.data, entry)["entry_cp"]))}), func() -> void:
+			var err := GameState.org_act("entry", entry)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and ew.is_empty())
+		eb.name = "OrgEntry_" + entry
+		eb.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		eb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		eb.tooltip_text = tr(ew) if not ew.is_empty() else tr("BTN_ORG_ENTRY_TIP").format({"org": OrgRules.org_name(s, Catalog.data, entry)})
 	if not HeistRules.active(s.character).is_empty():
 		var h := _row_button(acts, tr("BTN_HEISTS"), heist_requested.emit, can_act)
 		h.name = "HeistButton"

@@ -327,6 +327,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if co.has("reason"):
 				return {"reason": co["reason"]}
 			return co
+		"permit":  # v0.7.39.2: the owner lets the hero into its private places by words
+			return SiteRules.make(s, data, e)
 		"bond":  # v0.7.31: a scene moved the bond with an NPC of the scene
 			var bo := BondRules.make(s, data, e)
 			if bo.has("reason"):
@@ -992,6 +994,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(OrgRules.apply_make(s, _data, plan))
 		"bond":
 			_extra_lines.append_array(BondRules.apply_make(s, _data, plan))
+		"permit":
+			_extra_lines.append_array(SiteRules.grant(s, _data, str(plan["npc_id"]), str(plan["site_id"])))
 		"bank":
 			_extra_lines.append_array(BankRules.apply_make(s, _data, plan, str(_made.get("npc", ""))))
 		"use_feature":

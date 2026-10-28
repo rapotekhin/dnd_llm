@@ -119,6 +119,10 @@ var foreign: Dictionary = {}
 var talk_creature: String = ""
 ## v0.7.22.24 (SiteRules): the sites whose private room the hero was warned off {site_id: abs minute}.
 var trespass_warned: Dictionary = {}
+## v0.7.39.2 (SiteRules): the owner's leave to walk into its private sites {site_id: owner} — kept until a quarrel;
+## the day the hero last asked each owner in vain {npc_id: day}.
+var permits: Dictionary = {}
+var permit_asked: Dictionary = {}
 ## v0.7.22.25 (DoorRules): the doors' state {"a|b": {locked, unlocked_until, broken, hp, effects, arcane_by_hero}}.
 var doors: Dictionary = {}
 ## The day the master last described each room (v0.7.22.20, ExplorationRules.again_line): {room_id: day}.
@@ -527,6 +531,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"foreign": foreign,
 		"talk_creature": talk_creature,
 		"trespass_warned": trespass_warned,
+		"permits": permits,
+		"permit_asked": permit_asked,
 		"doors": doors,
 		"described": described,
 		"bodies": bodies,
@@ -668,6 +674,10 @@ static func from_dict(d: Dictionary) -> GameSession:
 					e[f] = int(e[f])
 	for sid: String in d.get("trespass_warned", {}):
 		s.trespass_warned[sid] = int(d["trespass_warned"][sid])
+	for sid: String in d.get("permits", {}):
+		s.permits[sid] = str(d["permits"][sid])
+	for n: String in d.get("permit_asked", {}):
+		s.permit_asked[n] = int(d["permit_asked"][n])
 	for r: String in d.get("described", {}):
 		s.described[r] = int(d["described"][r])
 	var foe_lists: Array = [s.captive.get("foes", [])]

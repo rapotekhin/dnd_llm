@@ -163,6 +163,84 @@ static func hideout_of(s: GameSession, data: Dictionary, room_id: String, perk_n
 	return ""
 
 
+## The organization whose hideout `site_id` is, the hero's or not ("" — none). v0.7.39.2
+static func hideout_org(s: GameSession, data: Dictionary, site_id: String) -> String:
+	if site_id.is_empty():
+		return ""
+	for id: String in all(s, data):
+		if hideout_site(s, data, id) == site_id:
+			return id
+	return ""
+
+
+## The organization whose hideout the hero may pay to walk into from this room — the hideout itself or a room with
+## a way into it ("" — none). v0.7.39.2
+static func entry_here(s: GameSession, data: Dictionary) -> String:
+	var world := WorldView.new(data["world"])
+	var rooms: Array[String] = [s.room_id]
+	for e: Variant in world.room(s.room_id).get("exits", []):
+		rooms.append(str(e.get("to", "")) if e is Dictionary else str(e))
+	for r: String in rooms:
+		var id := hideout_org(s, data, world.site_id(r))
+		if not id.is_empty() and def(s, data, id).has("entry_cp"):
+			return id
+	return ""
+
+
+## Why the hero cannot pay the hideout's entry ("" — may).
+static func entry_why(s: GameSession, data: Dictionary, id: String) -> String:
+	var d := def(s, data, id)
+	if not d.has("entry_cp"):
+		return "ORG_NO_ENTRY"
+	if member(s.character, id) or SiteRules.permitted(s, data, hideout_site(s, data, id)):
+		return "ORG_ENTRY_OPEN"
+	if view(s.character).get(id, {}).has("expelled_day"):
+		return "ORG_ENTRY_REFUSED"
+	if int(s.character.get("gold_cp", 0)) < int(d["entry_cp"]):
+		return "MSG_NO_MONEY"
+	return ""
+
+
+## The entry paid: the head's leave to walk into the hideout until a quarrel (SiteRules.grant). Lines.
+static func pay_entry(s: GameSession, data: Dictionary, id: String) -> Array[String]:
+	var d := def(s, data, id)
+	var fee := int(d["entry_cp"])
+	s.character["gold_cp"] = int(s.character.get("gold_cp", 0)) - fee
+	var lines: Array[String] = ["%s: вход оплачен — %s" % [org_name(s, data, id), Money.format(fee)]]
+	lines.append_array(SiteRules.grant(s, data, str(d.get("head", "")), hideout_site(s, data, id)))
+	return lines
+
+
+## A stranger in the hideout before eyes (SiteRules.on_enter): the organization answers, not the law — the first time
+## a warning, then its `guards` fall on the hero (s.pending_fight); the head thinks worse each time. Lines.
+static func on_trespass(s: GameSession, data: Dictionary, id: String, site_id: String, who: String) -> Array[String]:
+	var d := def(s, data, id)
+	var head := str(d.get("head", ""))
+	if not head.is_empty() and head != OwnerRules.HERO:
+		s.shift_attitude(head, int(SiteRules.cfg(data)["trespass_attitude"]), data)
+		s.remember(head, "герой без спроса влез в наше логово")
+	var fee := " — вход за плату: %s" % Money.format(int(d["entry_cp"])) if d.has("entry_cp") else ""
+	if not s.trespass_warned.has(site_id):
+		s.trespass_warned[site_id] = TimeRules.abs_minute(s)
+		return ["%s: «Чужим тут не место%s. Уходи — второй раз так не отпустим»" % [who, fee]]
+	var foes: Array = []
+	for g: Dictionary in d.get("guards", []):
+		for i in int(g.get("count", 1)):
+			var foe := {"monster": str(g["monster"]), "col": 0}
+			if g.has("name"):
+				foe["name"] = str(g["name"])
+			foes.append(foe)
+	if foes.is_empty():
+		return ["%s: «Опять ты? Пошёл вон!»" % who]
+	s.pending_fight = foes
+	var names := {}
+	for f: Dictionary in foes:
+		var n := str(f.get("name", data["monsters"].get(str(f["monster"]), {}).get("name", f["monster"])))
+		names[n] = int(names.get(n, 0)) + 1
+	return ["%s: «Предупреждали!» — на вас бросаются: %s" % [who, ", ".join(names.keys().map(func(n: String) -> String:
+		return n + (" ×%d" % int(names[n]) if int(names[n]) > 1 else "")))]]
+
+
 ## The organizations the fence works for that the hero belongs to.
 static func fencing_for(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	var out: Array[String] = []

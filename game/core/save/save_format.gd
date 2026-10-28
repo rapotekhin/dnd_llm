@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 48
+const SAVE_VERSION := 49
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -70,6 +70,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	45: _v45_to_v46,
 	46: _v46_to_v47,
 	47: _v47_to_v48,
+	48: _v48_to_v49,
 }
 
 
@@ -448,3 +449,9 @@ static func _v47_to_v48(data: Dictionary, _ctx: Dictionary) -> void:
 	for n: Variant in sv.get("followers", []):
 		fed[str(n)] = {"at": now, "hungry": 0}
 	sv["follower_fed"] = fed
+
+
+## v0.7.39.2: the owners' leave to walk in — none given yet.
+static func _v48_to_v49(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["permits"] = {}
+	data["session"]["permit_asked"] = {}
