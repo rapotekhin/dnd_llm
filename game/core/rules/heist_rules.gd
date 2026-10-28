@@ -65,6 +65,71 @@ static func victim_name(s: GameSession, data: Dictionary, id: String) -> String:
 	return BondRules.npc_name(s, data, str(d["victim"])) if not str(d.get("victim", "")).is_empty() else str(d.get("victim_name", ""))
 
 
+## The jobs the hero still follows (v0.7.39.3): active ones and done ones whose loot is not sold or cut not paid.
+static func followed(s: GameSession, data: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for id: String in view(s.character):
+		if status(s.character, id) == "active" or (status(s.character, id) == "done" and (_unsold(s, data, id) or _owed(s, data, id) > 0)):
+			out.append(id)
+	return out
+
+
+static func _unsold(s: GameSession, data: Dictionary, id: String) -> bool:
+	var inv: Dictionary = s.character.get("inventory", {})
+	return (def(s, data, id).get("items", {}) as Dictionary).keys().any(func(k: String) -> bool: return int(inv.get(k, 0)) > 0)
+
+
+static func _owed(s: GameSession, data: Dictionary, id: String) -> int:
+	var org := str(def(s, data, id).get("org", ""))
+	return int(OrgRules.view(s.character).get(org, {}).get("owed_cp", 0)) if not org.is_empty() else 0
+
+
+## The job as a path in order (v0.7.39.3, the author: «Ночь в ратуше» unclear): the preparations with where to do each,
+## where and when, the act, selling the loot and the cut. [{title, text, state: done | now | todo}] — the first
+## undone of the required steps is «now»; the preparations are optional (+prep_bonus each).
+static func path(s: GameSession, data: Dictionary, id: String) -> Array[Dictionary]:
+	var d := def(s, data, id)
+	var c := s.character
+	var st := status(c, id)
+	var acted := st != "active"
+	var out: Array[Dictionary] = []
+	var prep_lines: Array[String] = []
+	for p: Dictionary in steps(s, data, id):
+		var how := ""
+		if p.has("item"):
+			var hint := FenceRules.tool_hint(s, data, str(p["item"]))
+			how = "при себе%s" % (": " + hint if not hint.is_empty() and int(c.get("inventory", {}).get(str(p["item"]), 0)) == 0 else "")
+		elif str(p.get("at", "")) == "target":
+			how = "на месте: %s, %s" % [target_name(s, data, id), CraftRules.tr_skill(data, str(p.get("skill", "")))]
+		prep_lines.append("%s %s — %s" % ["✓" if step_ok(c, id, str(p["id"])) else "·", p["name"], how])
+	if not prep_lines.is_empty():
+		out.append({"title": "Подготовка — по желанию, +%d к делу за шаг" % int(cfg(data)["prep_bonus"]), "text": "
+".join(prep_lines),
+			"state": "done" if acted or prep(s, data, id) == prep_lines.size() * int(cfg(data)["prep_bonus"]) else "todo"})
+	var h: Array = d.get("hours", kind(data, str(d["kind"]))["hours"])
+	var where := "вы на месте" if s.room_id == str(d["target"]) else "идите туда"
+	var when := "сейчас самое время" if in_hours(s, data, id) else "ждите %02d:00" % int(h[0])
+	out.append({"title": "Прийти: %s, с %02d:00 до %02d:00" % [target_name(s, data, id), int(h[0]), int(h[1])],
+		"text": "%s · %s" % [where, when], "state": "done" if acted or (s.room_id == str(d["target"]) and in_hours(s, data, id)) else "todo"})
+	out.append({"title": "Само дело: «%s»" % d["name"], "text": str(d.get("text", "")),
+		"state": "done" if st == "done" else "failed" if st == "failed" else "todo"})
+	if not (d.get("items", {}) as Dictionary).is_empty():
+		var fence := str(OrgRules.def(s, data, str(d.get("org", ""))).get("fence", ""))
+		var to := "скупщику %s (%s)" % [BondRules.npc_name(s, data, fence), FenceRules.where(s, data, fence)] if not fence.is_empty() else "скупщику краденого"
+		out.append({"title": "Сбыть добычу %s" % to, "text": "честный торговец краденое узнает и не возьмёт",
+			"state": "done" if st == "done" and not _unsold(s, data, id) else "todo"})
+	if not str(d.get("org", "")).is_empty() and int(OrgRules.def(s, data, str(d["org"])).get("cut_pct", 0)) > 0:
+		out.append({"title": "Отдать долю: %s — %d%%" % [OrgRules.head_name(s, data, str(d["org"])), int(OrgRules.def(s, data, str(d["org"]))["cut_pct"])],
+			"text": "с денег дела, за %d дн." % int(OrgRules.cfg(data)["owe_days"]),
+			"state": "done" if st == "done" and _owed(s, data, id) == 0 else "todo"})
+	for i in out.size():  # the first undone step after the optional preparations
+		if i > 0 or prep_lines.is_empty():
+			if str(out[i]["state"]) == "todo":
+				out[i]["state"] = "now"
+				break
+	return out
+
+
 # --- taking -------------------------------------------------------------------------------------------------------
 
 
@@ -81,6 +146,11 @@ static func take(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var d := def(s, data, id)
 	_rw(s.character)[id] = {"taken": s.day, "steps": {}, "status": "active"}
 	var lines: Array[String] = ["Дело: «%s» — %s, %s" % [d["name"], kind(data, str(d["kind"]))["name"], target_name(s, data, id)]]
+	var fence := str(OrgRules.def(s, data, str(d.get("org", ""))).get("fence", ""))
+	if not fence.is_empty() and FenceRules.is_fence(s, data, fence):  # v0.7.39.2: the giver names its fence — picks and the loot
+		FenceRules.reveal(s, fence)
+		lines.append("%s: «Отмычки и сбыт — у %s, %s. Скажи, что от меня»" % [OrgRules.head_name(s, data, str(d["org"])),
+			BondRules.npc_name(s, data, fence), FenceRules.where(s, data, fence)])
 	var cargo: Dictionary = d.get("cargo", {})
 	for item: String in cargo:
 		ItemRules.found(s.character, data, s.items, item, int(cargo[item]))

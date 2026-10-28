@@ -309,6 +309,22 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 				(done if bool(q["done"]) else open).append(("✓ " if bool(q["done"]) else "• ") + line)
 				if not bool(q["done"]):
 					open_ids.append(str(q["id"]) if not str(q.get("step", "")).is_empty() else "")
+			var following := HeistRules.followed(s, Catalog.data)
+			for hid: String in HeistRules.view(s.character):  # a criminal job is a quest too (v0.7.39.3, the author)
+				var hd := HeistRules.def(s, Catalog.data, hid)
+				var title := "%s «%s»" % [tr("JOURNAL_HEIST"), hd.get("name", hid)]
+				if HeistRules.status(s.character, hid) == "failed":
+					done.append("✗ %s — %s" % [title, tr("JOURNAL_FAILED")])
+				elif not following.has(hid):
+					done.append("✓ " + title)
+				else:
+					var hl := "• " + title
+					for p: Dictionary in HeistRules.path(s, Catalog.data, hid):
+						var mark: String = {"done": "✓", "now": "→", "failed": "✗"}.get(str(p["state"]), "·")
+						hl += "
+      %s %s" % [mark, p["title"]]
+					open.append(hl)
+					open_ids.append("")
 			if not open.is_empty():
 				out.append({"title": tr("JOURNAL_QUESTS_OPEN"), "lines": open, "ids": open_ids})
 			if not done.is_empty():

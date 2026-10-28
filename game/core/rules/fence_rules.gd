@@ -138,3 +138,28 @@ static func text(s: GameSession, data: Dictionary) -> String:
 	if not stolen.is_empty():
 		parts.append("у героя краденое: " + ", ".join(stolen))
 	return "; ".join(parts)
+
+
+## Where the fence trades, in words (v0.7.39.3): its room's name.
+static func where(s: GameSession, data: Dictionary, npc_id: String) -> String:
+	var w := WorldView.new(data["world"])
+	var room := str(s.npc_at.get(npc_id, BondRules.npc_def(s, data, npc_id).get("room_id", "")))
+	return str(w.room(room).get("name", room)).to_lower() if not room.is_empty() else "в городе"
+
+
+## Where to get a thing the hero lacks (v0.7.39.3, the author: no picks to be found): the fences the hero knows that
+## sell it and the recipe that makes it. "" — nowhere known.
+static func tool_hint(s: GameSession, data: Dictionary, item_id: String) -> String:
+	var ways: Array[String] = []
+	if (cfg(data)["fence"]["stock"] as Dictionary).has(item_id):
+		for id: String in data["world"]["npcs"]:
+			if known(s, data, id):
+				ways.append("у скупщика %s (%s)" % [BondRules.npc_name(s, data, id), where(s, data, id)])
+	var r: Dictionary = data["rules"].get("craft", {}).get("recipes", {}).get(item_id, {})
+	if not r.is_empty():
+		var at := CraftRules.station_name(data, str(r["station"])).to_lower() if not str(r.get("station", "")).is_empty() else ""
+		ways.append("сделать самому%s%s" % [" у: " + at if not at.is_empty() else "",
+			" (%s)" % BackgroundRules.tool_name(data, str(r["tool"])).to_lower() if not str(r.get("tool", "")).is_empty() else ""])
+	if ways.is_empty():
+		return ""
+	return " или ".join(ways)

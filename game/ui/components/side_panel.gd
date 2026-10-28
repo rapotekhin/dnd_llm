@@ -758,7 +758,8 @@ func _underworld_row(s: GameSession, can_act: bool) -> void:
 	var ew := OrgRules.entry_why(s, Catalog.data, entry) if not entry.is_empty() else "ORG_NO_ENTRY"
 	if ew in ["ORG_NO_ENTRY", "ORG_ENTRY_OPEN"]:
 		entry = ""
-	if HeistRules.active(s.character).is_empty() and mine.is_empty() and not founding and entry.is_empty():
+	var jobs := HeistRules.followed(s, Catalog.data)  # v0.7.39.3: a done job stays until sold and paid
+	if jobs.is_empty() and mine.is_empty() and not founding and entry.is_empty():
 		return
 	var acts := HFlowContainer.new()
 	acts.name = "UnderworldActs"
@@ -772,7 +773,7 @@ func _underworld_row(s: GameSession, can_act: bool) -> void:
 		eb.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		eb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		eb.tooltip_text = tr(ew) if not ew.is_empty() else tr("BTN_ORG_ENTRY_TIP").format({"org": OrgRules.org_name(s, Catalog.data, entry)})
-	if not HeistRules.active(s.character).is_empty():
+	if not jobs.is_empty():
 		var h := _row_button(acts, tr("BTN_HEISTS"), heist_requested.emit, can_act)
 		h.name = "HeistButton"
 		h.alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -955,6 +956,17 @@ func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
 		btn.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		btn.tooltip_text = tr("DOOR_WAY_%s_TIP" % how.to_upper()).format({"dc": dcs.get(how, 0), "ac": int(mat.get("ac", 15)),
 			"hp": DoorRules.hp(s, Catalog.data, s.room_id, to), "max": DoorRules.max_hp(Catalog.data, d)})
+	if ways.any(func(w: Dictionary) -> bool: return str(w["how"]) == "force") and not ways.any(func(w: Dictionary) -> bool: return str(w["how"]) == "pick"):
+		var pb := _flow(acts, tr("DOOR_WAY_PICK"), func() -> void: pass, false)  # v0.7.39.3: seen, grey without the tools
+		pb.name = "DoorWay_pick"
+		pb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		pb.tooltip_text = _no_picks(s)
+
+
+## Why «Взломать» is grey: no thieves' tools, and where to get them (v0.7.39.3).
+func _no_picks(s: GameSession) -> String:
+	var hint := FenceRules.tool_hint(s, Catalog.data, "thieves_tools")
+	return tr("PICK_NO_TOOLS") + ("" if hint.is_empty() else ": " + hint)
 
 
 func _trap(to: String, disarm: bool) -> void:

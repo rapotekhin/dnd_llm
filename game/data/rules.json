@@ -2696,6 +2696,7 @@
 		"recipes": {
 			"smelt_iron": {"tool": "smiths_tools", "station": "forge", "hours": 2, "dc": 10, "materials": {"iron_ore": 3}, "output": "iron_bar", "qty": 1, "name": "Выплавить железо"},
 			"dagger": {"tool": "smiths_tools", "station": "forge", "hours": 4, "dc": 10, "materials": {"iron_bar": 1}, "output": "dagger", "qty": 1},
+			"thieves_tools": {"tool": "smiths_tools", "station": "forge", "hours": 6, "dc": 13, "materials": {"iron_bar": 1, "leather": 1}, "output": "thieves_tools", "qty": 1},
 			"spear": {"tool": "smiths_tools", "station": "forge", "hours": 4, "dc": 10, "materials": {"iron_bar": 1, "timber": 1}, "output": "spear", "qty": 1},
 			"handaxe": {"tool": "smiths_tools", "station": "forge", "hours": 6, "dc": 11, "materials": {"iron_bar": 1, "timber": 1}, "output": "handaxe", "qty": 1},
 			"mace": {"tool": "smiths_tools", "station": "forge", "hours": 8, "dc": 12, "materials": {"iron_bar": 2}, "output": "mace", "qty": 1},

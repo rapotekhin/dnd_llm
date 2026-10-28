@@ -38,7 +38,7 @@ func _label(text: String, variation: String = "") -> Label:
 	return l
 
 
-func _row_button(row: HBoxContainer, node_name: String, text: String, enabled: bool, action: Callable) -> void:
+func _row_button(row: HBoxContainer, node_name: String, text: String, enabled: bool, action: Callable) -> Button:
 	var b := Button.new()
 	b.name = node_name
 	b.text = text
@@ -49,6 +49,7 @@ func _row_button(row: HBoxContainer, node_name: String, text: String, enabled: b
 		if not err.is_empty():
 			EventBus.message.emit(tr(err)))
 	row.add_child(b)
+	return b
 
 
 func _rebuild() -> void:
@@ -84,10 +85,15 @@ func _rebuild() -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		_box.add_child(row)
-		for how: String in ContainerRules.ways(s, data, p):
+		var ways := ContainerRules.ways(s, data, p)
+		for how: String in ways:
 			var h := how
 			_row_button(row, "Unlock_" + how, tr("BTN_UNLOCK_" + how.to_upper()), can_act and Backend.is_ready(),
 				func() -> String: return GameState.container_unlock(prop_id, h))
+		if not ways.has("pick"):  # v0.7.39.3: «Взломать» seen, grey without the tools
+			var hint := FenceRules.tool_hint(s, data, "thieves_tools")
+			var pb := _row_button(row, "Unlock_pick", tr("BTN_UNLOCK_PICK"), false, func() -> String: return "")
+			pb.tooltip_text = tr("PICK_NO_TOOLS") + ("" if hint.is_empty() else ": " + hint)
 		return
 	_box.add_child(_label(tr("CONTAINER_INSIDE"), UiTheme.MUTED_LABEL))
 	if contents.is_empty():

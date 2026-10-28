@@ -41,7 +41,7 @@ func run() -> void:
 	await shot("org_trial")
 	org.visible = false
 
-	ItemRules.found(c, data, s.items, "thieves_tools", 1)
+	step("Сыч names his fence for the picks", _last_effects(s).contains("Отмычки и сбыт — у"), _last_effects(s))
 	_go(s, "brod-townhall", 23)
 	await frames(3)
 	var hb: Button = find(screen(), "HeistButton")
@@ -51,6 +51,25 @@ func run() -> void:
 	await press(hb)
 	await frames(4)
 	var hv: Control = find(screen(), "HeistView")
+	step("the job as steps, the picks' fence named", _texts(hv).contains("1.") and _texts(hv).contains("у скупщика"), _texts(hv))  # v0.7.39.3
+	await shot("heist_path")
+	hv.visible = false
+	var dw: Button = find(screen(), "DoorWay_pick")
+	if dw != null:
+		step("«Взломать» grey without the tools, where to get them", dw.disabled and dw.tooltip_text.contains("воровские инструменты"), dw.tooltip_text)
+	_go(s, "brod-square", 12)
+	await frames(3)
+	var pick := TradeRules.quote(s, data, "npc_merchant", {"buy": {"thieves_tools": 1}})
+	step("Fern sells picks to a candidate", str(pick["error"]).is_empty(), str(pick))
+	if str(pick["error"]).is_empty():
+		TradeRules.execute(s, data, "npc_merchant", {"buy": {"thieves_tools": 1}})
+	else:
+		ItemRules.found(c, data, s.items, "thieves_tools", 1)
+	_go(s, "brod-townhall", 23)
+	await frames(3)
+	await press(find(screen(), "HeistButton"))
+	await frames(4)
+	hv = find(screen(), "HeistView")
 	await press(find(hv, "Step_heist_townhall_tools"))
 	await frames(3)
 	await press(find(hv, "Step_heist_townhall_scout"))
@@ -62,8 +81,22 @@ func run() -> void:
 	step("the townhall robbed", HeistRules.status(c, "heist_townhall") == "done", _last_effects(s))
 	step("the trial passed — one of the Rats", OrgRules.member(c, "night_rats"))
 	step("the clerk's signet is stolen", int(OwnerRules.foreign(s).get("signet_ring", {}).get("npc_clerk", 0)) == 1)
+	var sell: Label = find(hv, "HeistStep_heist_townhall_4")
 	await shot("heist_done")
+	step("next: sell the loot", sell != null and sell.text.begins_with("→") and sell.text.contains("Сбыть"), sell.text if sell != null else _texts(hv))
 	hv.visible = false
+	var game := screen()
+	await press(find(game, "JournalButton"))
+	await frames(3)
+	var jt: Button = find(game, "JournalTab_quests")
+	if jt != null:
+		await press(jt)
+		await frames(3)
+	var jv: Control = find(game, "JournalView")
+	step("the job in the journal as a quest", jv != null and _texts(jv).contains("Дело «Ночь в ратуше»") and _texts(jv).contains("→ Сбыть"), _texts(jv).left(400) if jv != null else "")  # v0.7.39.3
+	await shot("journal_heist")
+	if jv != null:
+		jv.visible = false
 
 	_go(s, "brod-smithy", 12)
 	await frames(3)
@@ -88,6 +121,7 @@ func run() -> void:
 	await press(find(org, "OrgPay_night_rats"))
 	await frames(3)
 	step("the cut paid", int(OrgRules.view(c)["night_rats"]["owed_cp"]) == 0, _last_effects(s))
+
 	await press(find(org, "OrgTake_heist_convoy"))
 	await frames(3)
 	await press(find(org, "OrgTake_heist_casks"))
@@ -156,6 +190,10 @@ func run() -> void:
 	await press(find(screen(), "OrgButton"))
 	await frames(4)
 	await shot("own_band")
+
+
+func _texts(n: Node) -> String:
+	return " ".join(n.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text))
 
 
 func _go(s: GameSession, room: String, hour: int) -> void:

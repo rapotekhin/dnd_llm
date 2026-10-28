@@ -461,7 +461,7 @@ BTN_OPEN_CONTAINER,Открыть: {name}
 BTN_TAKE_OUT,Взять
 BTN_PUT_IN,Положить
 BTN_UNLOCK_KEY,Открыть ключом
-BTN_UNLOCK_PICK,Вскрыть отмычками
+BTN_UNLOCK_PICK,Взломать
 BTN_UNLOCK_FORCE,Выбить
 CONTAINER_LOAD,"Внутри {w} из {cap} фнт"
 CONTAINER_OWNER,"хозяин: {name}"
@@ -497,6 +497,7 @@ JOURNAL_PEOPLE,Разговоры
 JOURNAL_PLACES,Места
 JOURNAL_QUESTS,Задания
 JOURNAL_QUESTS_DONE,Выполнено
+JOURNAL_HEIST,Дело
 JOURNAL_QUESTS_OPEN,В работе
 JOURNAL_STEP,Сейчас: {step}
 JOURNAL_TAB_FOUND,Находки
@@ -712,7 +713,8 @@ DOOR_LABEL_BURNING, · горит
 DOOR_LABEL_BROKEN, · дверь выбита
 DOOR_WAY_KEY,Ключ
 DOOR_WAY_KEY_TIP,Отпереть своим ключом
-DOOR_WAY_PICK,Отмычки
+DOOR_WAY_PICK,Взломать
+PICK_NO_TOOLS,Нужны воровские инструменты
 DOOR_WAY_PICK_TIP,"Ловкость рук с воровскими инструментами, СЛ {dc}. На глазах у хозяев — вторжение"
 DOOR_WAY_FORCE,Выбить
 DOOR_WAY_FORCE_TIP,"Атлетика, СЛ {dc}: дверь будет сломана. На глазах у хозяев — вторжение"

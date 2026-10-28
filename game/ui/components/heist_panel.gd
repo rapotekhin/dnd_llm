@@ -59,7 +59,7 @@ func _rebuild() -> void:
 	frame.clear_body()
 	var s := GameState.session
 	var data := Catalog.data
-	var list := HeistRules.active(s.character)
+	var list := HeistRules.followed(s, data)  # v0.7.39.3: done jobs stay while the loot is unsold or the cut owed
 	if list.is_empty():
 		_label(_box, tr("HEIST_NONE_ACTIVE"), UiTheme.MUTED_LABEL)
 		return
@@ -69,21 +69,27 @@ func _rebuild() -> void:
 		if _box.get_child_count() > 0:
 			_box.add_child(HSeparator.new())
 		_label(_box, "«%s» — %s" % [d["name"], k["name"]]).add_theme_color_override("font_color", UiTheme.ACCENT)
-		var h: Array = k.get("hours", [0, 24])
-		var when := tr("HEIST_ANY_HOUR") if int(h[0]) == 0 and int(h[1]) == 24 else tr("HEIST_HOURS").format({"from": int(h[0]), "to": int(h[1])})
-		var info := tr("HEIST_WHERE").format({"place": HeistRules.target_name(s, data, id), "when": when})
 		if not HeistRules.victim_name(s, data, id).is_empty():
-			info += " · " + tr("HEIST_VICTIM").format({"name": HeistRules.victim_name(s, data, id)})
-		_label(_box, info).name = "HeistInfo_" + id
-		if not str(d.get("text", "")).is_empty():
-			_label(_box, str(d["text"]), UiTheme.MUTED_LABEL)
+			_label(_box, tr("HEIST_VICTIM").format({"name": HeistRules.victim_name(s, data, id)}), UiTheme.MUTED_LABEL)
+		var n := 0
+		for p: Dictionary in HeistRules.path(s, data, id):  # v0.7.39.3: the job as numbered steps
+			n += 1
+			var st := str(p["state"])
+			var mark: String = {"done": "✓", "now": "→", "failed": "✗"}.get(st, "%d." % n)
+			var t := _label(_box, "%s %s" % [mark, p["title"]], "" if st in ["now", "todo"] else UiTheme.MUTED_LABEL)
+			t.name = "HeistStep_%s_%d" % [id, n]
+			if st == "now":
+				t.add_theme_color_override("font_color", UiTheme.ACCENT)
+			if not str(p["text"]).is_empty():
+				_label(_box, str(p["text"]), UiTheme.MUTED_LABEL)
+		if HeistRules.status(s.character, id) != "active":
+			continue
 		for st: Dictionary in HeistRules.steps(s, data, id):
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 10)
 			_box.add_child(row)
 			var sid := str(st["id"])
 			var ok := HeistRules.step_ok(s.character, id, sid)
-			_label(row, ("✓ " if ok else "· ") + "%s — %s" % [st["name"], st.get("text", "")], "" if ok else UiTheme.MUTED_LABEL)
 			if not ok:
 				var text := str(st["name"])
 				if st.has("skill"):
