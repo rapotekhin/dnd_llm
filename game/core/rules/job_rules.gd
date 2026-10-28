@@ -4,6 +4,9 @@ extends RefCounted
 ## ranks. The pack's jobs (world.json `jobs`) and the master's (effect `job`). Hired after a check against the
 ## employer; a shift goes only while the employer is here: the check sets the pay, the tips, the attitude and counts
 ## good shifts to a promotion. The hero keeps c["jobs"] {id: {rank, good, shifts}} and c["jobs_tried"] {id: day}.
+## A job of an organization (v0.7.39.1): `requires.org` {id, rank} — a member of that rank; a good shift adds the
+## organization's points (rules.underworld.orgs.job_points). `caught` {crime, room} — a bad shift is a crime known
+## to the law (a pickpocket caught); `fight` {chance, foes} — a shift may end in a fight (bandits at a convoy).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -110,6 +113,12 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 		out.append({"text": "язык: " + LanguageRules.name_of(data, lang), "ok": LanguageRules.hero(c).has(lang)})
 	if req.has("diploma"):  # v0.7.30
 		out.append({"text": "грамота выпускника: " + StudyRules.name_of(s, data, str(req["diploma"])), "ok": StudyRules.has_diploma(c, str(req["diploma"]))})
+	if req.has("org"):  # v0.7.39.1
+		var org := str(req["org"].get("id", ""))
+		var need := int(req["org"].get("rank", 0))
+		var rank_word := str(OrgRules.ranks(s, data, org)[clampi(need, 0, OrgRules.ranks(s, data, org).size() - 1)]["name"])
+		out.append({"text": "член «%s»%s" % [OrgRules.org_name(s, data, org), (", ступень от «%s»" % rank_word) if need > 0 else ""],
+			"ok": OrgRules.member(c, org) and OrgRules.rank(s, data, org) >= need})
 	if req.has("reputation"):
 		var loc := ReputationRules.home_of(data, str(j.get("employer", "")))
 		out.append({"text": "слава в поселении не ниже «%s»" % ReputationRules.word(data, int(req["reputation"])),
@@ -194,10 +203,16 @@ static func quit(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 
 ## "" when a shift may go now, else a localization key.
 static func shift_why(s: GameSession, data: Dictionary, id: String) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	if not hired(s.character, id):
 		return "JOB_NOT_HIRED"
 	if not employer_here(s, data, id):
 		return "JOB_EMPLOYER_AWAY"
+	var org: Dictionary = job(s, data, id).get("requires", {}).get("org", {})
+	if not org.is_empty() and not OrgRules.member(s.character, str(org.get("id", ""))):
+		return "JOB_NOT_MEMBER"  # left or expelled: the organization's work is not the hero's any more
 	return ""
 
 
@@ -234,7 +249,7 @@ static func outcome_for(data: Dictionary, margin: int) -> Dictionary:
 
 
 ## A shift worked for `minutes` (the time already passed). A shift broken off pays its share without a check.
-## {lines, event} — `event` for the master or "".
+## {lines, event, fight} — `event` for the master or "", `fight` — the foes of a shift that ends in a fight.
 static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) -> Dictionary:
 	var c := s.character
 	var j := job(s, data, id)
@@ -245,7 +260,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 		var part := roundi(pay(s, data, id) * float(minutes) / float(full))
 		c["gold_cp"] = int(c.get("gold_cp", 0)) + part
 		lines.append("Смена прервана: %s" % Money.format(part))
-		return {"lines": lines, "event": ""}
+		return {"lines": lines, "event": "", "fight": []}
 	var ch := _check(s, data, id)
 	var mods := ConditionRules.check_mods(c, data, {"skill": str(j.get("skill", "craft"))})
 	var dis := not (mods["disadvantage"] as Array).is_empty()
@@ -275,11 +290,34 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 			s.shift_attitude(employer, 1, data)
 			lines.append("Повышение: %s — %s за смену" % [rank_name(s, data, id, int(st["rank"])), Money.format(pay(s, data, id))])
 			lines.append_array(DevelopmentRules.add_xp(c, data, "work", int(dev.get("promoted", 0))))
+	lines.append_array(_org_points(s, data, id, bool(o.get("good", false))))
+	var caught: Dictionary = j.get("caught", {})
+	if not caught.is_empty() and str(o["id"]) == "bad":
+		var room := str(caught.get("room", s.room_id))
+		lines.append("Попался — крик «держи вора!»")
+		lines.append_array(CrimeRules.on_job(s, data, str(caught["crime"]), "", room, WorldView.new(data["world"]).location_id(room)))
+	var fight: Array = []
+	var f: Dictionary = j.get("fight", {})
+	if not f.is_empty() and s.rng.randf() < float(f.get("chance", 0.0)):
+		for i in (f.get("foes", []) as Array).size():
+			var foe: Dictionary = (f["foes"][i] as Dictionary).duplicate()
+			foe["col"] = int(foe.get("col", 0))
+			fight.append(foe)
+		lines.append(str(f.get("line", "На смене — нападение!")))
 	var event := ""
 	var events: Array = j.get("events", cfg(data)["events"])
-	if not events.is_empty() and s.rng.randf() < float(cfg(data)["event_chance"]):
+	if fight.is_empty() and not events.is_empty() and s.rng.randf() < float(cfg(data)["event_chance"]):
 		event = str(events[s.rng.randi_range(0, events.size() - 1)])
-	return {"lines": lines, "event": event}
+	return {"lines": lines, "event": event, "fight": fight}
+
+
+## A good shift of an organization's job counts to the hero's standing there.
+static func _org_points(s: GameSession, data: Dictionary, id: String, good: bool) -> Array[String]:
+	var org := str(job(s, data, id).get("requires", {}).get("org", {}).get("id", ""))
+	if org.is_empty() or not OrgRules.member(s.character, org):
+		return []
+	var pts: Dictionary = OrgRules.cfg(data).get("job_points", {})
+	return OrgRules.add_points(s, data, org, int(pts.get("good" if good else "bad", 0)))
 
 
 ## For the master: «Работа (…): Подавальщик в «Хромом олене» — подавальщик, наниматель Бруно Хмель, смен 3».

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.76.0"
+PROTOCOL_VERSION = "0.77.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -618,6 +618,7 @@ class CoinsEffect(_Out):
     kind: Literal["coins"] = "coins"
     delta_cp: int  # + reward, - payment
     reason: str
+    settles: Literal["tax"] | None = None  # 0.77.0: a payment that pays off a debt of the hero — "tax", the property tax
 
 
 class GiveItemEffect(_Out):

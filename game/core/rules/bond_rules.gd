@@ -220,6 +220,13 @@ static func gift(s: GameSession, data: Dictionary, npc_id: String, item_id: Stri
 	var pts := gift_points(s, data, npc_id, item_id)
 	var t := taste_of(s, data, npc_id, item_id)
 	ItemRules._remove_one(c, item_id)
+	var remedy: Dictionary = data["rules"].get("consumables", {}).get(item_id, {})
+	if (remedy.get("cure", []) as Array).has("disease") and not DiseaseRules.npc_disease(s, data, npc_id).is_empty():
+		_rw(c, npc_id)["gift_day"] = s.day  # a sick NPC takes the remedy at once (v0.7.39)
+		s.shift_attitude(npc_id, int(cfg(data)["gift"]["attitude_liked"]), data)
+		var cured: Array[String] = ["Подарок — %s: «%s»" % [who, name]]
+		cured.append_array(DiseaseRules.cure_npc(s, data, npc_id, str(remedy.get("power", "magic"))))
+		return cured
 	var pockets := TheftRules.pockets(s, data, npc_id)
 	var e := {"id": "g%d" % (pockets.size() + 1), "name": name, "item_id": item_id, "cp": 0, "qty": 1, "worn": false}
 	e["dc"] = TheftRules.dc(s, data, npc_id, e)

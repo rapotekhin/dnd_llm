@@ -11,8 +11,16 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["craft"]
 
 
-## Every recipe the game knows: the rules', the pack's (world.json `recipes`), the master's made ones.
+## Every recipe the game knows: the rules', the pack's (world.json `recipes`), the master's made ones, and the
+## template recipes the hero may see now (v0.7.39.1).
 static func all(s: GameSession, data: Dictionary) -> Dictionary:
+	var out := _plain(s, data)
+	if s != null:
+		out.merge(templated(s, data), true)
+	return out
+
+
+static func _plain(s: GameSession, data: Dictionary) -> Dictionary:
 	var out: Dictionary = (cfg(data)["recipes"] as Dictionary).duplicate()
 	out.merge(data["world"].get("recipes", {}), true)
 	if s != null:
@@ -21,7 +29,182 @@ static func all(s: GameSession, data: Dictionary) -> Dictionary:
 
 
 static func recipe(s: GameSession, data: Dictionary, id: String) -> Dictionary:
-	return all(s, data).get(id, {})
+	if id.begins_with(TPL):
+		var parts := id.split(":")
+		return template_recipe(s, data, parts[1], parts[2] if parts.size() > 2 else "", parts[3] if parts.size() > 3 else "")
+	return _plain(s, data).get(id, {})
+
+
+# --- skills of the peaceful directions (v0.7.39.1) ----------------------------------------------------------------
+
+
+## The direction a recipe grows: `dir`, «Артефакция» for a template, «Ремесло» otherwise.
+static func dir_of(r: Dictionary) -> String:
+	return str(r.get("dir", "craft"))
+
+
+## The skills a recipe asks that the hero has not taken: [«Ковка одноручного оружия»].
+static func skills_missing(c: Dictionary, data: Dictionary, r: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for need: Variant in r.get("skills", []):
+		var bits := str(need).split(":")
+		if bits.size() < 2 or DevelopmentRules.skills(c, bits[0]).has(bits[1]):
+			continue
+		var d := DevelopmentRules.direction(data, bits[0])
+		out.append("%s (%s)" % [str(d.get("skills", {}).get(bits[1], {}).get("name", bits[1])), str(d.get("name", bits[0]))])
+	return out
+
+
+static func _fx(c: Dictionary, data: Dictionary, r: Dictionary, key: String, default: Variant) -> Variant:
+	return DevelopmentRules.effect(c, data, dir_of(r), key, default)
+
+
+## The minutes of the work for this hero: the recipe's, faster by the direction's skills.
+static func work_minutes(c: Dictionary, data: Dictionary, r: Dictionary) -> int:
+	return maxi(1, roundi(minutes_of(r) * float(_fx(c, data, r, "hours_mult", 1.0))))
+
+
+## The experience of a finished recipe in its direction: hours × per_hour + the output's gold × per_gp, up to max.
+static func xp_for(s: GameSession, data: Dictionary, r: Dictionary) -> int:
+	var src: Dictionary = DevelopmentRules.direction(data, dir_of(r)).get("sources", {})
+	var gp := int(ItemRules.def_of(data["items"], s.items, str(r.get("output", ""))).get("value_cp", 0)) * int(r.get("qty", 1)) / 100
+	var xp := minutes_of(r) * float(src.get("per_hour", 0)) / 60.0 + gp * float(src.get("per_gp", 0))
+	return mini(int(src.get("max", 0)), maxi(1, roundi(xp)))
+
+
+# --- templates: «Артефакция» (v0.7.39.1) ---------------------------------------------------------------------------
+
+
+const TPL := "tpl:"
+
+
+static func _templates(data: Dictionary) -> Dictionary:
+	return cfg(data).get("templates", {})
+
+
+## A catalog item fits a template's `match`: its type, a property, an id prefix, a scroll, a plain weapon.
+static func _fits(data: Dictionary, t: Dictionary, item_id: String) -> bool:
+	var d: Dictionary = data["items"]["catalog"].get(item_id, {})
+	if d.is_empty() or bool(d.get("master", false)):
+		return false
+	var m: Dictionary = t.get("match", {})
+	if m.has("item_type") and str(d.get("item_type", "")) != str(m["item_type"]):
+		return false
+	if m.has("prop") and not (d.get("properties", []) as Array).has(str(m["prop"])):
+		return false
+	if m.has("prefix") and not item_id.begins_with(str(m["prefix"])):
+		return false
+	if bool(m.get("scroll", false)) and not bool(d.get("use", {}).get("scroll", false)):
+		return false
+	if bool(m.get("plain", false)) and (not d.has("weapon") or d.has("rarity") or d.has("base")):
+		return false
+	if not bool(m.get("plain", false)) and not cfg(data)["by_rarity"].has(str(d.get("rarity", ""))):
+		return false
+	if bool(t.get("from_base", false)) and str(d.get("base", "")).is_empty():
+		return false
+	return bool(t.get("from_self", false)) or not _made_by_plain(data, item_id)  # a new thing is made of a plain one
+
+
+## A thing an ordinary recipe already makes (the healing potion) is no template's.
+static func _made_by_plain(data: Dictionary, item_id: String) -> bool:
+	for r: Dictionary in (cfg(data)["recipes"] as Dictionary).values():
+		if str(r.get("output", "")) == item_id:
+			return true
+	return false
+
+
+## The ordinary recipe of a thing (one at a time): its tool, station and skills a template takes over.
+static func _base_recipe(s: GameSession, data: Dictionary, item_id: String) -> Dictionary:
+	for r: Dictionary in _plain(s, data).values():
+		if str(r.get("output", "")) == item_id and int(r.get("qty", 1)) == 1:
+			return r
+	return {}
+
+
+## A template's recipe for `item_id` (and the variant of `from_self`): {} when it does not fit.
+static func template_recipe(s: GameSession, data: Dictionary, tid: String, item_id: String, variant: String = "") -> Dictionary:
+	var t: Dictionary = _templates(data).get(tid, {})
+	if t.is_empty() or not _fits(data, t, item_id):
+		return {}
+	var catalog: Dictionary = data["items"]["catalog"]
+	var d: Dictionary = catalog[item_id]
+	var base := item_id if bool(t.get("from_self", false)) else str(d.get("base", ""))
+	var br := _base_recipe(s, data, base) if not base.is_empty() else {}
+	var rarity := str(t.get("rarity", d.get("rarity", "common")))
+	var by: Dictionary = cfg(data)["by_rarity"].get(rarity, {})
+	var c: Dictionary = s.character if s != null else {}
+	var r := {"dir": "artifice", "template": tid, "dc": int(by.get("dc", 12)), "hours": int(by.get("hours", 8)), "output": item_id, "qty": 1}
+	r["tool"] = str(br.get("tool", t.get("tool_default", ""))) if str(t.get("tool", "")) == "$base" else str(t.get("tool", ""))
+	r["station"] = str(br.get("station", t.get("station_default", ""))) if str(t.get("station", "")) == "$base" else str(t.get("station", ""))
+	if t.has("check"):
+		r["check"] = str(t["check"])
+	var skills: Array = (t.get("skills", []) as Array).duplicate()
+	for sk: Variant in br.get("skills", []):
+		if not skills.has(sk):
+			skills.append(sk)
+	r["skills"] = skills
+	var mats: Dictionary = (t.get("materials", {}) as Dictionary).duplicate()
+	if not base.is_empty():
+		mats[base] = int(mats.get(base, 0)) + 1
+	var dust := int(ceil(int(by.get("dust", 0)) * float(DevelopmentRules.effect(c, data, "artifice", "dust_mult", 1.0))))
+	if dust > 0:
+		mats[str(cfg(data)["dust"])] = dust
+	r["materials"] = mats
+	if bool(t.get("learn", false)):
+		r["learn"] = true
+	if bool(t.get("from_self", false)):
+		var variants: Dictionary = t.get("variants", {})
+		if not variants.has(variant):
+			return {}
+		var base_def := ItemRules.def_of(data["items"], {}, item_id)
+		var props: Array = (base_def.get("properties", []) as Array).duplicate()
+		props.append(variant)
+		var def := {"name": "%s (%s)" % [base_def.get("name", item_id), variants[variant]], "item_type": str(base_def.get("item_type", "weapon")),
+			"base": item_id, "rarity": rarity, "value_cp": int(t.get("value_cp", 0)), "properties": props,
+			"description": str(base_def.get("description", "")), "generated": true}
+		r["output"] = ItemRules.generated_id(def)
+		r["output_def"] = def
+		r["name"] = str(def["name"])
+	else:
+		r["name"] = str(d.get("name", item_id))
+	return r
+
+
+## The template recipes shown now: of a base the hero carries, a spell it knows, a learned formula, or any for a
+## template without a base — only when the hero has the template's own skills (a learned formula always).
+static func templated(s: GameSession, data: Dictionary) -> Dictionary:
+	var out := {}
+	var c := s.character
+	var inv: Dictionary = c.get("inventory", {})
+	var catalog: Dictionary = data["items"]["catalog"]
+	var formulas: Array = learned(c).duplicate()
+	formulas.append_array(from_books(s, data))
+	for f: Variant in formulas:
+		var parts := str(f).split(":")
+		if str(f).begins_with(TPL) and parts.size() >= 3:
+			var r := template_recipe(s, data, parts[1], parts[2], parts[3] if parts.size() > 3 else "")
+			if not r.is_empty():
+				out[str(f)] = r
+	for tid: String in _templates(data):
+		var t: Dictionary = _templates(data)[tid]
+		if bool(t.get("learn", false)) or not skills_missing(c, data, {"skills": t.get("skills", [])}).is_empty():
+			continue
+		if bool(t.get("from_self", false)):
+			for id: String in inv:
+				for v: String in t.get("variants", {}):
+					var r := template_recipe(s, data, tid, id, v)
+					if not r.is_empty():
+						out["%s%s:%s:%s" % [TPL, tid, id, v]] = r
+			continue
+		for id: String in catalog:
+			if not _fits(data, t, id):
+				continue
+			if bool(t.get("from_base", false)) and int(inv.get(str(catalog[id]["base"]), 0)) <= 0:
+				continue
+			if bool(t.get("spell_known", false)) and not StudyRules._knows_spell(c, str(catalog[id].get("use", {}).get("spell", ""))):
+				continue
+			out["%s%s:%s" % [TPL, tid, id]] = template_recipe(s, data, tid, id)
+	return out
 
 
 static func recipe_name(s: GameSession, data: Dictionary, id: String) -> String:
@@ -49,6 +232,11 @@ static func proficient(c: Dictionary, tool: String) -> bool:
 	return (c.get("tools", []) as Array).has(tool)
 
 
+## The recipe needs its tool in hand: not a simple dish, not a tool-less template (a scroll, a wondrous thing).
+static func needs_tool(r: Dictionary) -> bool:
+	return not simple(r) and not tool_of(r).is_empty()
+
+
 static func learned(c: Dictionary) -> Array:
 	if not (c.get("recipes") is Array):
 		c["recipes"] = []
@@ -72,7 +260,7 @@ static func known(s: GameSession, data: Dictionary) -> Array[String]:
 	var recipes := all(s, data)
 	for id: String in recipes:
 		var r: Dictionary = recipes[id]
-		if not simple(r) and not proficient(s.character, tool_of(r)):
+		if needs_tool(r) and not proficient(s.character, tool_of(r)):
 			continue
 		if bool(r.get("learn", false)) and not learned(s.character).has(id) and not books.has(id):
 			continue
@@ -97,7 +285,8 @@ static func station_here(s: GameSession, data: Dictionary, station: String) -> b
 
 ## The trader of the room who owns the station and takes rent per hour: {npc, cp} or {} (free).
 static func rent(s: GameSession, data: Dictionary, station: String) -> Dictionary:
-	var cp := int(cfg(data)["stations"].get(station, {}).get("rent_cp_hour", 0))
+	var pct := float(DevelopmentRules.effect(s.character, data, "craft", "rent_pct", 100.0))
+	var cp := roundi(int(cfg(data)["stations"].get(station, {}).get("rent_cp_hour", 0)) * pct / 100.0)
 	if station.is_empty() or cp <= 0:
 		return {}
 	for npc_id: String in SceneRules.npcs(s, data["world"], s.room_id):
@@ -119,12 +308,17 @@ static func missing(s: GameSession, r: Dictionary) -> Dictionary:
 
 ## "" when the recipe can be started here, else a localization key.
 static func why_not(s: GameSession, data: Dictionary, id: String) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	var r := recipe(s, data, id)
 	if r.is_empty() or not known(s, data).has(id):
 		return "CRAFT_UNKNOWN"
 	if not project(s.character).is_empty():
 		return "CRAFT_BUSY"
-	if not simple(r) and int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
+	if not skills_missing(s.character, data, r).is_empty():
+		return "CRAFT_NO_SKILL"
+	if needs_tool(r) and int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
 		return "CRAFT_NO_TOOL"
 	if not station_here(s, data, str(r.get("station", ""))):
 		return "CRAFT_NO_STATION"
@@ -146,17 +340,23 @@ static func start(s: GameSession, data: Dictionary, id: String) -> Array[String]
 		for i in n:
 			ItemRules._remove_one(s.character, m)
 		spent.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, m), n])
-	s.character["craft"] = {"recipe": id, "done": 0, "total": minutes_of(r)}
-	return ["Начата работа: %s (%s); ушло: %s" % [recipe_name(s, data, id), TimeRules.span(minutes_of(r)), ", ".join(spent)]]
+	var total := work_minutes(s.character, data, r)
+	if r.has("output_def"):  # a new thing of a template (an elemental blade): known to the session from the start
+		s.items[str(r["output"])] = r["output_def"]
+	s.character["craft"] = {"recipe": id, "done": 0, "total": total}
+	return ["Начата работа: %s (%s); ушло: %s" % [recipe_name(s, data, id), TimeRules.span(total), ", ".join(spent)]]
 
 
 ## "" when a shift of work may go here, else a localization key.
 static func can_work(s: GameSession, data: Dictionary) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	var p := project(s.character)
 	if p.is_empty():
 		return "CRAFT_NO_PROJECT"
 	var r := recipe(s, data, str(p["recipe"]))
-	if not simple(r) and int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
+	if needs_tool(r) and int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
 		return "CRAFT_NO_TOOL"
 	if not station_here(s, data, str(r.get("station", ""))):
 		return "CRAFT_NO_STATION"
@@ -210,15 +410,33 @@ static func bonus(s: GameSession, data: Dictionary, tool: String) -> int:
 	return CharacterRules.mod(int(s.character.get("abilities", {}).get(ab, 10))) + prof + DifficultyRules.bonus(s, data)
 
 
+## The bonus of a recipe's check: its tool's, or a tool-less template's skill (`check`), with the direction's skills.
+static func recipe_bonus(s: GameSession, data: Dictionary, r: Dictionary) -> int:
+	var extra := int(_fx(s.character, data, r, "quality_bonus", 0.0))
+	if tool_of(r).is_empty() and r.has("check"):
+		return CheckEngine.bonus_for(s.character, {"skill": str(r["check"])}) + DifficultyRules.bonus(s, data) + extra
+	return bonus(s, data, tool_of(r)) + extra
+
+
+## The label of a recipe's check: the tool or the skill.
+static func check_label(data: Dictionary, r: Dictionary) -> String:
+	if tool_of(r).is_empty() and r.has("check"):
+		return tr_skill(data, str(r["check"]))
+	return BackgroundRules.tool_name(data, tool_of(r))
+
+
 ## The chance in % of at least the normal quality (a margin of the normal tier).
 static func chance(s: GameSession, data: Dictionary, id: String) -> int:
 	var r := recipe(s, data, id)
 	var need := int(r.get("dc", 10)) + int(tier_by_id(data, "normal").get("from", 0))
 	var wins := 0
 	for nat in range(1, 21):
-		if nat == 20 or (nat != 1 and nat + bonus(s, data, tool_of(r)) >= need):
+		if nat == 20 or (nat != 1 and nat + recipe_bonus(s, data, r) >= need):
 			wins += 1
-	return wins * 5
+	var p := wins / 20.0
+	if bool(_fx(s.character, data, r, "quality_adv", false)):
+		p = 1.0 - (1.0 - p) * (1.0 - p)
+	return roundi(p * 100.0)
 
 
 static func tier_by_id(data: Dictionary, id: String) -> Dictionary:
@@ -243,23 +461,28 @@ static func finish(s: GameSession, data: Dictionary) -> Array[String]:
 	var p := project(c)
 	var id := str(p["recipe"])
 	var r := recipe(s, data, id)
-	var tool := tool_of(r)
 	var mods := ConditionRules.check_mods(c, data, {"skill": "craft"})
-	var rolls := FeatureRules.hero_d20(s, false, not (mods["disadvantage"] as Array).is_empty())
-	var nat: int = rolls.min()
-	var total := nat + bonus(s, data, tool)
+	var adv := bool(_fx(c, data, r, "quality_adv", false))
+	var dis := not (mods["disadvantage"] as Array).is_empty()
+	var rolls := FeatureRules.hero_d20(s, adv, dis)
+	var nat: int = rolls.max() if adv and not dis else rolls.min()
+	var total := nat + recipe_bonus(s, data, r)
 	var dc := int(r.get("dc", 10))
 	var margin := 10 if nat == 20 else -10 if nat == 1 else total - dc
 	var tier := tier_for(data, margin)
 	c.erase("craft")
+	if r.has("output_def") and not s.items.has(str(r["output"])):
+		s.items[str(r["output"])] = r["output_def"]
 	var made := make_output(s, data, str(r["output"]), int(r.get("qty", 1)), tier)
 	var inv: Dictionary = c["inventory"]
 	inv[str(made["id"])] = int(inv.get(str(made["id"]), 0)) + int(made["qty"])
 	CharacterRules.refresh(c, data, s.items)
 	var made_as := str(tier["name"]) if not str(tier["name"]).is_empty() else "обычная работа"
-	var line := "%s: %d + %d = %d против Сл %d — %s" % [BackgroundRules.tool_name(data, tool), nat, total - nat, total, dc, made_as]
+	var line := "%s: %d + %d = %d против Сл %d — %s" % [check_label(data, r), nat, total - nat, total, dc, made_as]
 	var what := ItemRules.display_name(data["items"], s.items, str(made["id"]))
-	return [line, "Готово: %s%s" % [what, " ×%d" % int(made["qty"]) if int(made["qty"]) > 1 else ""]]
+	var lines: Array[String] = [line, "Готово: %s%s" % [what, " ×%d" % int(made["qty"]) if int(made["qty"]) > 1 else ""]]
+	lines.append_array(DevelopmentRules.add_xp(c, data, dir_of(r), xp_for(s, data, r)))
+	return lines
 
 
 ## The output of `tier`: a stack changes its qty; a single thing of another quality is a thing of the session with
@@ -295,19 +518,39 @@ static func abandon(s: GameSession, data: Dictionary) -> Array[String]:
 # --- salvage ------------------------------------------------------------------------------------------------------
 
 
-## The materials a thing gives back: a recipe's `share` (floor, at least 1 of the first) or salvage.extra. {} — none.
+## The materials a thing gives back: a recipe's `share` (floor, at least 1 of the first; «Бережливый» — all) or
+## salvage.extra; a magic thing adds arcane dust by its rarity (v0.7.39.1). {} — none.
 static func salvage_yield(s: GameSession, data: Dictionary, item_id: String) -> Dictionary:
 	var def := ItemRules.def_of(data["items"], s.items, item_id)
-	var base := str(def.get("base", "")) if not str(def.get("base", "")).is_empty() else item_id
+	var base := _root_base(data, s, item_id)
+	var out := _base_yield(s, data, base)
+	var dust := magic_dust(s, data, item_id)
+	if dust > 0:
+		var key := str(cfg(data)["dust"])
+		out[key] = int(out.get(key, 0)) + dust
+	return out if not def.is_empty() else {}
+
+
+## The mundane thing under a made or magic one: a +1 sword's, an elemental blade's, a fine dagger's base.
+static func _root_base(data: Dictionary, s: GameSession, item_id: String) -> String:
+	var id := item_id
+	for i in 3:
+		var d := ItemRules.def_of(data["items"], s.items, id)
+		if str(d.get("base", "")).is_empty():
+			return id
+		id = str(d["base"])
+	return id
+
+
+static func _base_yield(s: GameSession, data: Dictionary, base: String) -> Dictionary:
 	var sv: Dictionary = cfg(data)["salvage"]
-	var recipes := all(s, data)
-	for rid: String in recipes:
-		var r: Dictionary = recipes[rid]
+	var share := float(DevelopmentRules.effect(s.character, data, "craft", "salvage_share", float(sv["share"])))
+	for r: Dictionary in _plain(s, data).values():
 		if str(r.get("output", "")) != base or int(r.get("qty", 1)) != 1:
 			continue
 		var out := {}
 		for m: String in r.get("materials", {}):
-			var n := int(floor(int(r["materials"][m]) * float(sv["share"])))
+			var n := int(floor(int(r["materials"][m]) * share))
 			if n > 0:
 				out[m] = n
 		if out.is_empty() and not (r.get("materials", {}) as Dictionary).is_empty():
@@ -317,6 +560,17 @@ static func salvage_yield(s: GameSession, data: Dictionary, item_id: String) -> 
 	for m: String in sv["extra"].get(base, {}):
 		extra[m] = int(sv["extra"][base][m])
 	return extra
+
+
+## The arcane dust of a magic thing (a rarity of salvage.dust; the catalog's own or a made thing's), 0 — none.
+static func magic_dust(s: GameSession, data: Dictionary, item_id: String) -> int:
+	var id := ItemRules.real_id(item_id)
+	var raw: Dictionary = data["items"]["catalog"].get(id, s.items.get(id, {}))
+	var rarity := str(raw.get("rarity", ""))
+	var magic_props := (raw.get("properties", []) as Array).filter(func(p: Variant) -> bool: return not ["masterwork", "crude"].has(str(p)))
+	if rarity.is_empty() or (rarity == "common" and magic_props.is_empty()):  # a mundane thing, a fine or crude make
+		return 0
+	return int(cfg(data)["salvage"].get("dust", {}).get(rarity, 0))
 
 
 ## The hero's things that can be broken down (not worn or in hand, not raw material, not a bag).
@@ -337,6 +591,7 @@ static func salvageable(s: GameSession, data: Dictionary) -> Array[String]:
 static func salvage(s: GameSession, data: Dictionary, item_id: String) -> Array[String]:
 	var got := salvage_yield(s, data, item_id)
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
+	var magic := magic_dust(s, data, item_id) > 0
 	ItemRules._remove_one(s.character, item_id)
 	var inv: Dictionary = s.character["inventory"]
 	var parts: Array[String] = []
@@ -344,7 +599,10 @@ static func salvage(s: GameSession, data: Dictionary, item_id: String) -> Array[
 		inv[m] = int(inv.get(m, 0)) + int(got[m])
 		parts.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, m), int(got[m])])
 	CharacterRules.refresh(s.character, data, s.items)
-	return ["Разобрано: %s → %s" % [name, ", ".join(parts)]]
+	var lines: Array[String] = ["Разобрано: %s → %s" % [name, ", ".join(parts)]]
+	if magic:
+		lines.append_array(DevelopmentRules.add_xp(s.character, data, "artifice", int(DevelopmentRules.direction(data, "artifice").get("sources", {}).get("salvage", 0))))
+	return lines
 
 
 ## Raw hides of a dead beast (into the fight's loot): by its size, rules.craft.hides.
@@ -382,6 +640,9 @@ static func _gathered(s: GameSession) -> Dictionary:
 
 ## "" or a localization key: the spot is spent for today.
 static func gather_why(s: GameSession, data: Dictionary, tag: String) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	var g: Dictionary = cfg(data)["gather"].get(tag, {})
 	if g.is_empty() or not gather_here(s, data).has(tag):
 		return "GATHER_NONE"
@@ -435,7 +696,7 @@ static func tr_skill(_data: Dictionary, skill: String) -> String:
 static func teachable(s: GameSession, data: Dictionary, sv: Dictionary) -> Array[String]:
 	var id := str(sv.get("recipe", ""))
 	var r := recipe(s, data, id)
-	if r.is_empty() or not proficient(s.character, tool_of(r)) or learned(s.character).has(id):
+	if r.is_empty() or (needs_tool(r) and not proficient(s.character, tool_of(r))) or learned(s.character).has(id):
 		return []
 	return [id]
 

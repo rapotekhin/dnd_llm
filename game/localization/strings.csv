@@ -797,6 +797,9 @@ CAPTIVE_SAY_ESCAPE_SLEIGHT,Пытаюсь выскользнуть из пут
 CAPTIVE_SAY_TALK,Уговариваю их меня отпустить
 CAPTIVE_HELD,Вы связаны — сначала освободитесь
 CAPTIVE_NOT,Вы не в плену
+UNFREE_RESTRAINED,Вы связаны — сначала освободитесь
+UNFREE_CAPTIVE,Вы в плену — сначала вырвитесь на свободу
+UNFREE_HELD,Вы под стражей — сначала ответьте страже
 BTN_CREATURE_BIND,Связать
 BTN_CREATURE_FREE,Отпустить
 BTN_CREATURE_LEAD,Вести с собой
@@ -1120,6 +1123,10 @@ CRAFT_NOT_NOW,Сейчас не до ремесла
 CRAFT_UNKNOWN,Этот рецепт тебе не знаком
 CRAFT_BUSY,Сначала закончи или брось начатую работу
 CRAFT_NO_TOOL,Нет нужного инструмента
+JOB_NOT_MEMBER,"Это работа для своих, а вы больше не с ними"
+CRAFT_NO_SKILL,Нужен навык мирного развития — выберите его в листе персонажа, «Развитие»
+CRAFT_NEEDS_SKILLS,Навык: {list}
+CRAFT_CHECK_SKILL,проверка: {skill}
 CRAFT_NO_STATION,Здесь нет нужного места для работы
 CRAFT_NO_MATERIALS,Не хватает сырья
 CRAFT_NO_PROJECT,Нет начатой работы
@@ -1188,6 +1195,7 @@ BTN_ANIMALS,Животные
 BTN_PROPERTY_BUY,Купить — {price}
 BTN_PROPERTY_DEED,Оформить купчую — {fee}
 BTN_PROPERTY_COLLECT,Забрать выручку
+BTN_PROPERTY_TAX,Уплатить налог
 BTN_PROPERTY_SHIFT,Поработать ({time})
 BTN_PROPERTY_HIRE,"Нанять: {role}, {wage} в день"
 BTN_PROPERTY_SERF,Приставить к работе: {name}
@@ -1209,6 +1217,8 @@ PROPERTY_DEED_DONE,Купчая уже есть
 PROPERTY_NO_REGISTRY,Купчую пишут в ратуше — у писаря
 PROPERTY_NOT_HERE,Это делают на месте
 PROPERTY_TILL_EMPTY,В кассе пусто
+PROPERTY_NO_DEBT,Долга по налогу нет
+PROPERTY_TAX_WHERE,Налог платят на месте или у писаря в ратуше
 PROPERTY_NO_INCOME,Это место дохода не приносит
 PROPERTY_SHIFT_DONE,Сегодня вы здесь уже работали
 PROPERTY_WHOLE,Чинить нечего
@@ -1353,6 +1363,7 @@ STUDY_BANNED,Вас отчислили — вернуться пока нель�
 STUDY_TEACHER_AWAY,Учителя здесь нет
 STUDY_TRIED,Экзамен не сдан — попробуйте через несколько дней
 STUDY_DONE,Курс уже окончен
+STUDY_KNOWN,Уже изучено — курс не нужен
 STUDY_ENROLLED,Вы уже записаны
 STUDY_BOOK,Это курс по книге — просто читайте её
 STUDY_NEED_EXAM,Сначала сдайте вступительный экзамен у главы училища
@@ -1461,6 +1472,8 @@ ORG_RANK,"Вы — {rank}, очки {points}{next}"
 ORG_NEXT,", следующая ступень с {at}"
 ORG_OWED,"Доля к отдаче: {cp}, дней осталось: {days}"
 ORG_JOBS,Дела от братства
+ORG_WORK,"Работа для своих: {list} — наймитесь у главы, кнопка «Работа»"
+ORG_JOIN_HINT_WORK,"Своим глава даёт работу — её нанимают кнопкой «Работа» у него."
 ORG_TRIAL,"Испытание: «{job}» — сделайте его, и вас примут"
 ORG_JOIN_HINT,"Свои берут долю {cut}% со всего. Взамен — дела, укрытие и скупщик."
 ORG_OWN_LINE,"Ваше братство, логово — «{place}». Стража о нём не знает."

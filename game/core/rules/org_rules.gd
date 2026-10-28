@@ -105,6 +105,37 @@ static func org_name(s: GameSession, data: Dictionary, id: String) -> String:
 	return str(def(s, data, id).get("name", id))
 
 
+## What the organization is called in the lines: its `word` (v0.7.39.1: «артель»), a band by default — in the
+## cases the lines use: {nom, gen, dat, prep}.
+static func word(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+	var w: Variant = def(s, data, id).get("word")
+	if w is Dictionary:
+		return w
+	return {"nom": "братство", "gen": "братства", "dat": "братству", "prep": "братстве", "acc": "братство"}
+
+
+## The jobs (JobRules) that ask a membership of the organization (v0.7.39.1).
+static func jobs_of(s: GameSession, data: Dictionary, id: String) -> Array[String]:
+	var out: Array[String] = []
+	var jobs := JobRules.all(s, data)
+	for j: String in jobs:
+		if str(jobs[j].get("requires", {}).get("org", {}).get("id", "")) == id:
+			out.append(j)
+	return out
+
+
+## Points of standing moved by a deed outside the jobs of HeistRules (a shift of the organization's work). Lines.
+static func add_points(s: GameSession, data: Dictionary, id: String, pts: int) -> Array[String]:
+	if pts == 0 or not member(s.character, id):
+		return []
+	var st := _st(s.character, id)
+	var before := rank(s, data, id)
+	st["points"] = maxi(0, int(st.get("points", 0)) + pts)
+	if rank(s, data, id) > before:
+		return ["%s «%s»: вы теперь — %s" % [str(word(s, data, id)["nom"]).capitalize(), org_name(s, data, id), rank_name(s, data, id)]]
+	return []
+
+
 static func head_name(s: GameSession, data: Dictionary, id: String) -> String:
 	var h := str(def(s, data, id).get("head", ""))
 	return "вы" if h == OwnerRules.HERO else BondRules.npc_name(s, data, h)
@@ -186,8 +217,12 @@ static func _accept(s: GameSession, data: Dictionary, id: String) -> Array[Strin
 	var st := _st(s.character, id)
 	st["joined"] = s.day
 	st.erase("candidate")
-	s.remember(str(def(s, data, id)["head"]), "принял героя в братство «%s»" % org_name(s, data, id))
-	return ["Вы приняты в братство «%s»: %s, доля с дел — %d%%" % [org_name(s, data, id), rank_name(s, data, id), int(def(s, data, id).get("cut_pct", 0))]]
+	var w := word(s, data, id)
+	s.remember(str(def(s, data, id)["head"]), "принял героя в %s «%s»" % [w["acc"], org_name(s, data, id)])
+	var cut := int(def(s, data, id).get("cut_pct", 0))
+	var lines: Array[String] = ["Вы приняты в %s «%s»: %s%s" % [w["acc"], org_name(s, data, id), rank_name(s, data, id),
+		(", доля с дел — %d%%" % cut) if not (def(s, data, id).get("heists", []) as Array).is_empty() else ""]]
+	return lines
 
 
 static func leave(s: GameSession, data: Dictionary, id: String) -> Array[String]:
@@ -195,7 +230,7 @@ static func leave(s: GameSession, data: Dictionary, id: String) -> Array[String]
 	st.erase("joined")
 	st.erase("candidate")
 	st["expelled_day"] = s.day
-	return ["Вы ушли из братства «%s»" % org_name(s, data, id)]
+	return ["Вы ушли из %s «%s»" % [word(s, data, id)["gen"], org_name(s, data, id)]]
 
 
 ## The jobs the organization offers the hero now.
@@ -243,7 +278,7 @@ static func on_heist(s: GameSession, data: Dictionary, heist: String, outcome: S
 		st["owed_cp"] = int(st.get("owed_cp", 0)) + cut
 		lines.append("Доля братству «%s»: %s — отдать главе за %d дн." % [org_name(s, data, id), Money.format(cut), int(cfg(data)["owe_days"])])
 	if rank(s, data, id) > before:
-		lines.append("Братство «%s»: вы теперь — %s" % [org_name(s, data, id), rank_name(s, data, id)])
+		lines.append("%s «%s»: вы теперь — %s" % [str(word(s, data, id)["nom"]).capitalize(), org_name(s, data, id), rank_name(s, data, id)])
 	return lines
 
 

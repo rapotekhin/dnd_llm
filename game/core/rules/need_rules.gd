@@ -267,6 +267,18 @@ static func rest_meal(s: GameSession, data: Dictionary, camp_points: int, bed: b
 	return lines
 
 
+## After the night of a long rest (v0.7.39): the rest's meal was eaten at `began` (an absolute minute), but it counts
+## as the breakfast — food and water filled by it stand as they were at waking, not emptied by the hours of sleep.
+static func woke(s: GameSession, data: Dictionary, began: int) -> void:
+	if not on(s) or not data["rules"].has("needs"):
+		return
+	var st := state(s, data)
+	for need: String in ["food", "water"]:
+		if int(st[need]["at"]) >= began:
+			st[need]["at"] = TimeRules.abs_minute(s)
+	_refresh_mods(s, data)
+
+
 ## A paid meal (the service `meal`): fed and watered.
 static func meal(s: GameSession, data: Dictionary) -> Array[String]:
 	set_value(s, data, "food", 100.0)

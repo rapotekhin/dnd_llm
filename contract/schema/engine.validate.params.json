@@ -273,6 +273,19 @@
         "reason": {
           "title": "Reason",
           "type": "string"
+        },
+        "settles": {
+          "anyOf": [
+            {
+              "const": "tax",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Settles"
         }
       },
       "required": [

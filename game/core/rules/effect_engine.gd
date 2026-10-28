@@ -232,6 +232,15 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": "награда больше бюджета для %d уровня (до %s)" % [level, Money.format(_reward_cap(rules, level))]}
 			if delta > 0 and delta > reward_left(s, data, turn_id, pending):
 				return {"reason": _over_budget(s, data, turn_id, pending)}
+			if str(e.get("settles", "")) == "tax":  # the tax debt paid by words (v0.7.39)
+				var debt := PropertyRules.tax_debt(c)
+				if delta > 0 or debt <= 0:
+					return {"reason": "у героя нет долга по налогу" if debt <= 0 else "уплата налога — монеты с минусом"}
+				if -delta > debt:
+					return {"reason": "долг по налогу всего %s" % Money.format(debt)}
+				if PropertyRules.registry_here(s, data).is_empty() and PropertyRules.here(s, data).is_empty():
+					return {"reason": "налог принимает писарь ратуши или его платят на месте"}
+				return {"plan": {"delta": delta, "reward": 0, "settles": "tax"}, "summary": "налог −" + Money.format(-delta)}
 			return {"plan": {"delta": delta, "reward": maxi(0, delta)}, "summary": ("+" if delta > 0 else "") + Money.format(delta)}
 		"give_item":
 			var given := _plan_quest_give(s, data, str(e.get("item_id", "")) if e.get("item_id") != null else "")
@@ -913,6 +922,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			c["hp"] = mini(int(c["max_hp"]), int(c["hp"]) + int(plan["amount"]))
 		"coins":
 			c["gold_cp"] = int(c["gold_cp"]) + int(plan["delta"])
+			if str(plan.get("settles", "")) == "tax":
+				_extra_lines.append_array(PropertyRules.settle_tax(s, _data, -int(plan["delta"])))
 		"give_item":
 			if plan.has("def"):
 				s.items[plan["item_id"]] = plan["def"]

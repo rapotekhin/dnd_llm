@@ -346,6 +346,8 @@ static func apply_rules(base: Dictionary, b: Dictionary) -> Dictionary:
 		var def: Dictionary = (own[id] as Dictionary).duplicate(true)
 		def["pack_item"] = true
 		catalog[id] = def
+		if def.has("food"):  # a dish of the pack's own kitchen (v0.7.39.1): its points feed the hero and the camp
+			d["rules"]["hero_effects"]["camp"]["food"][id] = int(def["food"])
 	var rename: Dictionary = rules.get("rename", {})
 	for kind: String in rename:
 		var pool := _known(d, kind)

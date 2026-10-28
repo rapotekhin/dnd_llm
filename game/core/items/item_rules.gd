@@ -130,7 +130,13 @@ static func identify(c: Dictionary, data: Dictionary, session_items: Dictionary,
 			used[real] = used[key]
 			used.erase(key)
 		lines.append("опознано: %s" % display_name(data["items"], session_items, real))
+	if not lines.is_empty():  # «Артефакция» learns from the things it sees through (v0.7.39.1)
+		lines.append_array(DevelopmentRules.add_xp(c, data, "artifice", lines.size() * _artifice_xp(data, "identify")))
 	return lines
+
+
+static func _artifice_xp(data: Dictionary, source: String) -> int:
+	return int(DevelopmentRules.direction(data, "artifice").get("sources", {}).get(source, 0))
 
 
 # --- attunement (v0.7.12) --------------------------------------------------------------------------
@@ -182,6 +188,7 @@ static func attune(c: Dictionary, data: Dictionary, session_items: Dictionary, i
 	lines.append("настройка: %s" % d.get("name", real))
 	if cursed(d):
 		lines.append("вещь проклята — снять её теперь нельзя")
+	lines.append_array(DevelopmentRules.add_xp(c, data, "artifice", _artifice_xp(data, "attune")))
 	return lines
 
 

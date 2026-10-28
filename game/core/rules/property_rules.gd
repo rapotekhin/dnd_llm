@@ -374,7 +374,59 @@ static func collect(s: GameSession, data: Dictionary, id: String) -> Array[Strin
 	return ["Из %s забрано: %s" % [name_of(s, data, id), ", ".join(parts)]]
 
 
+## The tax debt (v0.7.39): paid by the button at the place or at the registry clerk, or by the master's `coins`
+## with `settles: "tax"` (`settle_tax`). "" when it can be paid now, else a localization key.
+static func pay_tax_why(s: GameSession, data: Dictionary, id: String) -> String:
+	if not owned(s.character, id):
+		return "PROPERTY_NOT_YOURS"
+	if int(state(s.character)[id].get("debt", 0)) <= 0:
+		return "PROPERTY_NO_DEBT"
+	if here(s, data) != id and registry_here(s, data).is_empty():
+		return "PROPERTY_TAX_WHERE"
+	return "PROPERTY_NO_MONEY" if int(s.character.get("gold_cp", 0)) <= 0 else ""
+
+
+## As much of the debt as the purse holds. Lines.
+static func pay_tax(s: GameSession, data: Dictionary, id: String) -> Array[String]:
+	var st: Dictionary = state(s.character)[id]
+	var pay := mini(int(st["debt"]), int(s.character.get("gold_cp", 0)))
+	s.character["gold_cp"] = int(s.character.get("gold_cp", 0)) - pay
+	return _pay_debt(s, data, id, pay)
+
+
+static func _pay_debt(s: GameSession, data: Dictionary, id: String, pay: int) -> Array[String]:
+	var st: Dictionary = state(s.character)[id]
+	st["debt"] = int(st["debt"]) - pay
+	var left := int(st["debt"])
+	return ["%s: налог уплачен — %s%s" % [name_of(s, data, id), Money.format(pay),
+		", долг ещё %s" % Money.format(left) if left > 0 else ", долга больше нет"]]
+
+
+## The tax debt of all the hero's places (the master's `coins` with `settles: "tax"` pays it).
+static func tax_debt(c: Dictionary) -> int:
+	var total := 0
+	for id: String in state(c):
+		total += int(state(c)[id].get("debt", 0))
+	return total
+
+
+## `amount` paid towards the tax debts, the oldest place first; the coins themselves are taken by the caller. Lines.
+static func settle_tax(s: GameSession, data: Dictionary, amount: int) -> Array[String]:
+	var lines: Array[String] = []
+	for id: String in state(s.character):
+		var st: Dictionary = state(s.character)[id]
+		var pay := mini(amount, int(st.get("debt", 0)))
+		if pay <= 0:
+			continue
+		lines.append_array(_pay_debt(s, data, id, pay))
+		amount -= pay
+	return lines
+
+
 static func shift_why(s: GameSession, data: Dictionary, id: String) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	if not owned(s.character, id) or here(s, data) != id:
 		return "PROPERTY_NOT_HERE"
 	if data["rules"].has("shop") and ShopRules.active(s, id):
@@ -824,6 +876,8 @@ static func text(s: GameSession, data: Dictionary) -> String:
 			bits.append("работник %s" % npc_name(data, str(st["worker"])))
 		elif not str(st.get("serf", "")).is_empty():
 			bits.append("подневольный %s" % _serf(s, id).get("name", ""))
+		if int(st.get("debt", 0)) > 0:
+			bits.append("долг по налогу %s" % Money.format(int(st["debt"])))
 		if not (st.get("upgrades", []) as Array).is_empty():
 			bits.append("есть: " + ", ".join((st["upgrades"] as Array).map(func(u: Variant) -> String: return str(cfg(data)["upgrades"].get(str(u), {}).get("name", u)))))
 		parts.append("%s (%s) — %s" % [name_of(s, data, id), kind(s, data, id).get("name", ""), ", ".join(bits)])

@@ -17,7 +17,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		var n := world.npc(id)
 		npcs.append({"npc_id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 			"body": BodyRules.npc_text(data, id, n),
-			"gender": n.get("gender", "other"), "description": str(n.get("description", "")) + _sick(s, data, n),
+			"gender": n.get("gender", "other"), "description": str(n.get("description", "")) + _sick(s, data, id, n) + _hungry(s, id),
 			"personality": n.get("personality", ""), "attitude": s.attitude(id), "trader": bool(n.get("trader", false)),
 			"speaks": ", ".join(LanguageRules.npc(data, n).map(func(l: String) -> String: return LanguageRules.name_of(data, l).to_lower())),
 			"understands_hero": LanguageRules.npc_understands(s.character, data, n), "tie": BackgroundRules.tie_text(s.character, data, n),
@@ -216,11 +216,17 @@ static func _conditions(c: Dictionary, data: Dictionary) -> Array:
 	return out
 
 
-## « Болен: хохочущая лихорадка, заразно.» — a sick NPC of the pack (v0.7.23.1).
-static func _sick(s: GameSession, data: Dictionary, n: Dictionary) -> String:
-	var d := DiseaseRules.def_of(s, data, str(n.get("sick", "")))
+## A follower the hero has not fed (v0.7.39.1): the master sees its hunger.
+static func _hungry(s: GameSession, id: String) -> String:
+	var n := int(s.follower_fed.get(id, {}).get("hungry", 0))
+	return " Голоден: %d дн. без еды от героя." % n if n > 0 and s.followers.has(id) else ""
+
+
+## « Болен: хохочущая лихорадка, заразно.» — a sick NPC (v0.7.23.1); its course ends (v0.7.39): « Уже здоров…».
+static func _sick(s: GameSession, data: Dictionary, id: String, n: Dictionary) -> String:
+	var d := DiseaseRules.def_of(s, data, DiseaseRules.npc_disease(s, data, id))
 	if d.is_empty():
-		return ""
+		return " Уже здоров: болезнь прошла, описание выше — о прошлом." if not str(n.get("sick", "")).is_empty() else ""
 	return " Болен: %s%s." % [str(d.get("name", "")).to_lower(), ", заразно" if bool(d.get("contagious", false)) else ""]
 
 

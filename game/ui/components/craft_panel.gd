@@ -112,7 +112,7 @@ func _project(s: GameSession, data: Dictionary) -> void:
 
 
 func _where(s: GameSession, data: Dictionary, r: Dictionary) -> String:
-	var tool := BackgroundRules.tool_name(data, CraftRules.tool_of(r))
+	var tool := BackgroundRules.tool_name(data, CraftRules.tool_of(r)) if CraftRules.needs_tool(r) 		else tr("CRAFT_CHECK_SKILL").format({"skill": CraftRules.check_label(data, r)})
 	var parts: Array[String] = [tr("CRAFT_SIMPLE") if CraftRules.simple(r) else tool]
 	if not str(r.get("station", "")).is_empty():
 		parts.append(CraftRules.station_name(data, str(r["station"])) + ("" if CraftRules.station_here(s, data, str(r["station"])) else " — " + tr("CRAFT_NOT_HERE")))
@@ -128,7 +128,7 @@ func _recipes(s: GameSession, data: Dictionary) -> void:
 	for id: String in ids:
 		var r := CraftRules.recipe(s, data, id)
 		var row := HBoxContainer.new()
-		row.name = "Recipe_" + id
+		row.name = "Recipe_" + id.validate_node_name()  # a template id has «:»
 		row.add_theme_constant_override("separation", 10)
 		_box.add_child(row)
 		var col := VBoxContainer.new()
@@ -139,7 +139,7 @@ func _recipes(s: GameSession, data: Dictionary) -> void:
 		_label(col, CraftRules.recipe_name(s, data, id) + (" ×%d" % qty if qty > 1 else ""))
 		var out_def := ItemRules.def_of(data["items"], s.items, str(r["output"]))
 		var kind := ItemInfo.kind_line(data, out_def)
-		var meta: Array[String] = [_where(s, data, r), TimeRules.span(CraftRules.minutes_of(r)),
+		var meta: Array[String] = [_where(s, data, r), TimeRules.span(CraftRules.work_minutes(s.character, data, r)),
 			tr("CRAFT_DC").format({"dc": int(r.get("dc", 10)), "chance": CraftRules.chance(s, data, id)})]
 		if not kind.is_empty():
 			meta.push_front(kind)
@@ -151,7 +151,10 @@ func _recipes(s: GameSession, data: Dictionary) -> void:
 		var ml := _label(col, tr("CRAFT_MATERIALS").format({"list": ", ".join(mats)}), UiTheme.MUTED_LABEL)
 		if not CraftRules.missing(s, r).is_empty():
 			ml.add_theme_color_override("font_color", UiTheme.WARN)
-		_button(row, "CraftStart_" + id, tr("BTN_CRAFT_START"), CraftRules.why_not(s, data, id), GameState.craft_act.bind("start", id, 1))
+		var lacks := CraftRules.skills_missing(s.character, data, r)
+		if not lacks.is_empty():
+			_label(col, tr("CRAFT_NEEDS_SKILLS").format({"list": ", ".join(lacks)}), UiTheme.MUTED_LABEL).add_theme_color_override("font_color", UiTheme.WARN)
+		_button(row, "CraftStart_" + id.validate_node_name(), tr("BTN_CRAFT_START"), CraftRules.why_not(s, data, id), GameState.craft_act.bind("start", id, 1))
 
 
 func _salvage(s: GameSession, data: Dictionary) -> void:

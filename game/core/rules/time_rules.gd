@@ -55,6 +55,7 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 		lines.append_array(CreatureRules.tick(s, data))  # the beaten foes left alone go (v0.7.22.11)
 	lines.append_array(_awake(s, data))
 	lines.append_array(NeedRules.tick(s, data))
+	lines.append_array(FollowRules.meals(s, data))  # followers eat from the hero's things (v0.7.39.1)
 	lines.append_array(DiseaseRules.tick(s, data))  # hunger and thirst past their grace (v0.7.23)
 	lines.append_array(FoodRules.tick(s, data))  # food spoils (v0.7.25)
 	lines.append_array(FamilyRules.tick(s, data))  # births, growth, the help into the till before its tax (v0.7.32)

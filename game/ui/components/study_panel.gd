@@ -109,8 +109,11 @@ func _course(s: GameSession, data: Dictionary, id: String, _at_teacher: bool) ->
 	head.name = "Course_" + id
 	var bits: Array[String] = []
 	var st: Dictionary = StudyRules.view(c)["courses"].get(id, {})
+	var known := st.is_empty() and not StudyRules.done(c, id) and StudyRules.known_already(s, data, id)
 	if StudyRules.done(c, id):
 		bits.append(tr("STUDY_FINISHED"))
+	elif known:
+		bits.append(tr("STUDY_KNOWN"))
 	elif not st.is_empty():
 		bits.append(tr("STUDY_PROGRESS").format({"done": int(st["progress"]), "need": StudyRules.lessons_needed(s, data, id)}))
 		if str(co.get("book", "")).is_empty():
@@ -122,10 +125,10 @@ func _course(s: GameSession, data: Dictionary, id: String, _at_teacher: bool) ->
 			bits.append(tr("STUDY_FEE").format({"money": Money.format(f)}) if f > 0 else tr("STUDY_FREE"))
 	if str(co.get("teacher", "")) != _npc and not str(co.get("teacher", "")).is_empty():
 		bits.append(tr("STUDY_TEACHER").format({"name": StudyRules.npc_name(s, data, str(co["teacher"]))}))
-	if not StudyRules.done(c, id):
+	if not StudyRules.done(c, id) and not known:
 		bits.append(tr("STUDY_LESSON_HINT").format({"hours": StudyRules.lesson_hours(data), "chance": StudyRules.lesson_chance(s, data, id)}))
 	_label(_box, " · ".join(bits), UiTheme.MUTED_LABEL)
-	if StudyRules.done(c, id):
+	if StudyRules.done(c, id) or known:
 		return
 	var bad := StudyRules.requirements(s, data, id).filter(func(r: Dictionary) -> bool: return not bool(r["ok"]))
 	if not bad.is_empty() and st.is_empty():
@@ -152,7 +155,7 @@ func _mine(s: GameSession, data: Dictionary) -> void:
 			if str(StudyRules.course(s, data, id).get("book", "")).is_empty():
 				_course(s, data, id, false)
 				any = true
-	var books := StudyRules.books(s, data).filter(func(id: String) -> bool: return not StudyRules.done(c, id))
+	var books := StudyRules.books(s, data).filter(func(id: String) -> bool: return not StudyRules.done(c, id) and not StudyRules.known_already(s, data, id))
 	if not books.is_empty():
 		_heading(tr("STUDY_BOOKS"))
 		for id: String in books:

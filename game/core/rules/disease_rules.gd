@@ -92,7 +92,49 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		if now >= int(d.get("onset", 0)):
 			incubating(c).erase(d)
 			lines.append_array(_show(s, data, str(d["id"])))
+	_npc_tick(s, data)
 	return lines
+
+
+# --- sick NPCs (v0.7.39) ------------------------------------------------------------------------------------------
+
+
+## The disease an NPC has now: its own course in the session, else the pack's `sick`. "" — healthy.
+static func npc_disease(s: GameSession, data: Dictionary, npc_id: String) -> String:
+	if s.npc_sick.has(npc_id):
+		return str(s.npc_sick[npc_id].get("id", ""))
+	return str(data["world"]["npcs"].get(npc_id, {}).get("sick", ""))
+
+
+## A pack's sick NPC starts its course (the disease's `days` from now); a course run out heals it. Silent: the hero
+## sees a healthy NPC when they meet.
+static func _npc_tick(s: GameSession, data: Dictionary) -> void:
+	for npc_id: String in data["world"]["npcs"]:
+		var id := str(data["world"]["npcs"][npc_id].get("sick", ""))
+		if not id.is_empty() and not s.npc_sick.has(npc_id):
+			s.npc_sick[npc_id] = {"id": id, "until": s.day + maxi(1, int(def_of(s, data, id).get("days", 1)))}
+	for npc_id: String in s.npc_sick:
+		var ns: Dictionary = s.npc_sick[npc_id]
+		if not str(ns.get("id", "")).is_empty() and s.day >= int(ns.get("until", 0)):
+			ns["id"] = ""
+
+
+## Whether `power` ("magic" — any, "herbs" — those marked `herbs`) cures the NPC's disease.
+static func npc_curable(s: GameSession, data: Dictionary, npc_id: String, power: String) -> bool:
+	var id := npc_disease(s, data, npc_id)
+	return not id.is_empty() and (power == "magic" or bool(def_of(s, data, id).get("herbs", false)))
+
+
+## The hero cures a sick NPC: a spell cast at them, a remedy given. Lines.
+static func cure_npc(s: GameSession, data: Dictionary, npc_id: String, power: String) -> Array[String]:
+	var id := npc_disease(s, data, npc_id)
+	if id.is_empty():
+		return []
+	var who := str(WorldView.new(data["world"]).npc(npc_id).get("name", npc_id))
+	if not npc_curable(s, data, npc_id, power):
+		return ["%s: травы не берут — %s" % [who, def_of(s, data, id).get("name", id)]]
+	s.npc_sick[npc_id] = {"id": "", "until": s.day}
+	return ["%s исцелён: %s" % [who, def_of(s, data, id).get("name", id)]]
 
 
 static func _show(s: GameSession, data: Dictionary, id: String) -> Array[String]:
@@ -167,7 +209,7 @@ static func contagion(s: GameSession, data: Dictionary) -> Array[String]:
 	var met: Dictionary = s.character.get("disease_met", {})
 	for npc_id: String in SceneRules.npcs(s, data["world"], s.room_id):
 		var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
-		var id := str(npc.get("sick", ""))
+		var id := npc_disease(s, data, npc_id)
 		if id.is_empty() or not bool(def_of(s, data, id).get("contagious", false)) or int(met.get(npc_id, 0)) == s.day:
 			continue
 		met[npc_id] = s.day

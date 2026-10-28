@@ -1824,6 +1824,16 @@
 			"value_cp": 2,
 			"stack": true
 		},
+		"arcane_dust": {
+			"name": "Чародейская пыль",
+			"item_type": "gear",
+			"value_cp": 2500,
+			"weight": 0,
+			"properties": [],
+			"stack": true,
+			"material": true,
+			"description": "Мерцающая серая пыль, что остаётся от разобранной магической вещи. Без неё не зачаровать ни клинка, ни свитка: чары держатся на ней."
+		},
 		"iron_bar": {
 			"name": "Брусок железа",
 			"item_type": "gear",

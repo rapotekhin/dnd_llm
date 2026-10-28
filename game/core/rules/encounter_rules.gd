@@ -203,6 +203,18 @@ static func captive(s: GameSession) -> bool:
 	return not s.captive.is_empty() and str(s.captive.get("room", "")) == s.room_id
 
 
+## "" when the hero is free to work, cook, study or take a shift (v0.7.39), else why not: bound, a captive, held by
+## the guard — even unbound.
+static func unfree_why(s: GameSession) -> String:
+	if ConditionRules.has(s.character, "restrained"):
+		return "UNFREE_RESTRAINED"
+	if captive(s):
+		return "UNFREE_CAPTIVE"
+	if CrimeRules.held(s):
+		return "UNFREE_HELD"
+	return ""
+
+
 ## "" when the hero can try this way out now (escape_athletics, escape_sleight, talk), else a localization key.
 static func can_escape(s: GameSession, data: Dictionary, how: String) -> String:
 	if not captive(s):

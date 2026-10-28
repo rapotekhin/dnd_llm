@@ -79,8 +79,11 @@ func long_rest(supplies: Dictionary = {}) -> String:
 	if not why.is_empty():
 		return why
 	var began := session.minute
+	var began_abs := TimeRules.abs_minute(session)
 	var lines := ExplorationRules.long_rest(session, Catalog.data, supplies)
 	TimeRules.after_long_rest(session, Catalog.data, began)
+	NeedRules.woke(session, Catalog.data, began_abs)
+	FollowRules.rested(session)  # their meal counts as the breakfast too
 	lines.append_array(ConditionRules.expire(session, Catalog.data))
 	lines.append_array(NeedRules.tick(session, Catalog.data))
 	lines.append_array(DiseaseRules.tick(session, Catalog.data))
@@ -229,7 +232,14 @@ func _spend(what: Dictionary) -> Dictionary:
 				". Движок уже потратил ячейку — не вызывай cast сам; опиши, как это выглядит и что происходит."
 			if lines.size() > 1:  # what the engine did with the spell (v0.7.13.8: found traps, light, the hero's numbers)
 				facts += " Движок: %s — опиши это, ничего не добавляя." % ", ".join(lines.slice(1))
-			var npc_try := SpellEffects.npc_save(session, Catalog.data, str(chk["spell_id"]), world().npc(str(what.get("target", ""))))
+			var target := str(what.get("target", ""))
+			var cure: Dictionary = Catalog.data["rules"]["hero_effects"]["spell_cures"].get(str(chk["spell_id"]), {})
+			if not target.is_empty() and (cure.get("cure", []) as Array).has("disease"):  # a sick NPC healed (v0.7.39)
+				var healed := DiseaseRules.cure_npc(session, Catalog.data, target, "magic")
+				lines.append_array(healed)
+				if not healed.is_empty():
+					facts += " Движок: %s — опиши это." % ", ".join(healed)
+			var npc_try := SpellEffects.npc_save(session, Catalog.data, str(chk["spell_id"]), world().npc(target))
 			if not npc_try.is_empty():  # Suggestion, Charm Person… (v0.7.13.7): the engine rolls the NPC's save
 				lines.append(str(npc_try["line"]))
 				if bool(npc_try["ok"]):
@@ -1403,6 +1413,7 @@ func job_act(what: String, id: String) -> String:
 	var data := Catalog.data
 	var lines: Array[String] = []
 	var event := ""
+	var fight: Array = []
 	match what:
 		"hire":
 			var why := JobRules.hire_why(session, data, id)
@@ -1418,6 +1429,7 @@ func job_act(what: String, id: String) -> String:
 			var r := JobRules.shift(session, data, id, int(w["minutes"]))
 			lines.append_array(r["lines"])
 			event = str(r["event"])
+			fight = r["fight"]
 		"quit":
 			if not JobRules.hired(session.character, id):
 				return "JOB_NOT_HIRED"
@@ -1428,6 +1440,10 @@ func job_act(what: String, id: String) -> String:
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
+	if not fight.is_empty():  # bandits at the convoy (v0.7.39.1)
+		session.pending_fight = fight
+		_start_pending_fight()
+		return ""
 	if not event.is_empty() and Backend.is_ready():
 		_request("shift", "%s. Событие смены: %s" % ["; ".join(lines), event])
 	return ""
@@ -1445,6 +1461,7 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 		"buy": why = PropertyRules.buy_why(s, data, id)
 		"deed": why = PropertyRules.deed_why(s, data, id)
 		"collect": why = PropertyRules.collect_why(s, data, id)
+		"tax": why = PropertyRules.pay_tax_why(s, data, id)
 		"shift": why = PropertyRules.shift_why(s, data, id)
 		"hire": why = PropertyRules.worker_why(s, data, id)
 		"fire": why = PropertyRules.fire_why(s, data, id)
@@ -1462,6 +1479,7 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 		"buy": lines = PropertyRules.buy(s, data, id)
 		"deed": lines = PropertyRules.deed(s, data, id)
 		"collect": lines = PropertyRules.collect(s, data, id)
+		"tax": lines = PropertyRules.pay_tax(s, data, id)
 		"shift", "repair":
 			var hours := PropertyRules.shift_hours(s, data, id) if what == "shift" else PropertyRules.repair_hours(s, data, id)
 			var w := CrimeRules.wait(s, data, hours * 60)  # the patrol may break the work

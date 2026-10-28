@@ -90,7 +90,7 @@ func point(room_id: String) -> Vector2:
 ## Where a «?» is drawn: its spot, or — off the canvas — where the line to it from `from` meets the canvas edge.
 func _edge_point(r: String, from: String) -> Vector2:
 	var p := point(r)
-	var area := Rect2(Vector2(PAD, PAD) / 2, size - Vector2(PAD, PAD))
+	var area := Rect2(Vector2(PAD, PAD) / 2, (size - Vector2(PAD, PAD)).max(Vector2.ZERO))  # not laid out yet: no size
 	if area.has_point(p) or from.is_empty():
 		return p
 	var a := point(from)

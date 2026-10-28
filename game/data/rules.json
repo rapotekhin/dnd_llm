@@ -178,7 +178,9 @@
 					"deal_xp_per_gp": 1,
 					"deal_xp_max": 25,
 					"haggle_won": 10,
-					"haggle_lost": 3
+					"haggle_lost": 3,
+					"shift_xp_per_gp": 1,
+					"shift_xp_max": 25
 				},
 				"skills": {
 					"appraiser": {
@@ -298,6 +300,40 @@
 					"crash_course": {"name": "Ускоренный курс", "level": 4, "desc": "Курс короче на одно занятие.", "effect": {"lessons_minus": 1}},
 					"scholar": {"name": "Учёный", "level": 5, "desc": "Учёба на 25% дешевле.", "needs": ["frugal"], "effect": {"fee_pct": 75}},
 					"autodidact": {"name": "Самоучка", "level": 5, "desc": "По книгам — с преимуществом.", "needs": ["bookworm"], "effect": {"book_adv": true}}
+				}
+			},
+			"craft": {
+				"name": "Ремесло",
+				"_doc": "v0.7.39.1: experience for a finished recipe of the direction — hours × per_hour + the output's gold × per_gp, at most `max`; a recipe's `skills` [\"craft:id\"] — the skills it needs. Effects: quality_bonus (the quality check), quality_adv, hours_mult (the work), salvage_share (instead of craft.salvage.share), rent_pct (a station's rent).",
+				"sources": {"per_hour": 2, "per_gp": 1, "max": 40},
+				"skills": {
+					"weaponsmith": {"name": "Ковка одноручного оружия", "level": 1, "desc": "Открывает воинское оружие: короткий и длинный меч.", "effect": {}},
+					"leather_armor": {"name": "Выделка доспеха", "level": 1, "desc": "Открывает доспех из шкур и клёпаный кожаный.", "effect": {}},
+					"herbal_alchemy": {"name": "Травная алхимия", "level": 1, "desc": "Открывает зелье лечения.", "effect": {}},
+					"steady": {"name": "Твёрдая рука", "level": 1, "desc": "+1 к проверке качества.", "effect": {"quality_bonus": 1}},
+					"armorsmith": {"name": "Доспехи из стали", "level": 2, "desc": "Открывает кольчужную рубаху.", "effect": {}},
+					"thrifty": {"name": "Бережливый", "level": 2, "desc": "Разбор возвращает всё сырьё рецепта.", "effect": {"salvage_share": 1.0}},
+					"brisk": {"name": "Сноровка", "level": 3, "desc": "Работа идёт на четверть быстрее.", "effect": {"hours_mult": 0.75}},
+					"master_eye": {"name": "Глаз мастера", "level": 3, "desc": "Ещё +1 к проверке качества.", "needs": ["steady"], "effect": {"quality_bonus": 2}},
+					"guild_friend": {"name": "Свой в мастерских", "level": 4, "desc": "Чужая станция — вдвое дешевле.", "effect": {"rent_pct": 50}},
+					"guild_master": {"name": "Мастер цеха", "level": 5, "desc": "Проверка качества с преимуществом.", "needs": ["master_eye"], "effect": {"quality_adv": true}}
+				}
+			},
+			"artifice": {
+				"name": "Артефакция",
+				"_doc": "v0.7.39.1: experience for a finished recipe of the direction (per_hour, max), for an item identified (`identify`), attuned (`attune`), a magic item broken into arcane dust (`salvage`) and a course that teaches it (teaches kind dev). Effects: quality_bonus, quality_adv, hours_mult, dust_mult (the dust a template recipe asks).",
+				"sources": {"per_hour": 1, "per_gp": 0, "max": 60, "identify": 10, "attune": 5, "salvage": 15},
+				"skills": {
+					"enchant_weapon": {"name": "Зачарование оружия", "level": 1, "desc": "Оружие +1 из обычного и чародейской пыли.", "effect": {}},
+					"scribe": {"name": "Начертание свитков", "level": 1, "desc": "Свиток заклинания, которое вы знаете.", "effect": {}},
+					"potions": {"name": "Зельеварение", "level": 1, "desc": "Магические зелья (нужен набор алхимика).", "effect": {}},
+					"arcane_sense": {"name": "Чутьё на чары", "level": 1, "desc": "+2 к проверке артефакции.", "effect": {"quality_bonus": 2}},
+					"elemental": {"name": "Стихийная кромка", "level": 2, "desc": "Огненное, ледяное или грозовое оружие.", "needs": ["enchant_weapon"], "effect": {}},
+					"dust_saver": {"name": "Скупой на пыль", "level": 2, "desc": "Чародейской пыли уходит на четверть меньше.", "effect": {"dust_mult": 0.75}},
+					"enchant_armor": {"name": "Зачарование доспеха", "level": 3, "desc": "Доспех и щит +1.", "effect": {}},
+					"wondrous": {"name": "Чудесные вещи", "level": 3, "desc": "Чудесные вещи по формуле — из книги, урока или от мастера.", "effect": {}},
+					"quick_runes": {"name": "Быстрые чары", "level": 4, "desc": "Работа идёт на треть быстрее.", "effect": {"hours_mult": 0.67}},
+					"master_artificer": {"name": "Мастер-артефактор", "level": 5, "desc": "Проверка артефакции с преимуществом.", "needs": ["arcane_sense"], "effect": {"quality_adv": true}}
 				}
 			}
 		}
@@ -420,7 +456,7 @@
 		"misses_max": 2,
 		"readmit_days": 14,
 		"exam": {"retry_days": 3, "stipend_margin": 5},
-		"kinds": {"skill": "навык", "tool": "инструмент", "language": "язык", "spell": "заклинание", "recipe": "рецепт", "xp": "опыт"},
+		"kinds": {"skill": "навык", "tool": "инструмент", "language": "язык", "spell": "заклинание", "recipe": "рецепт", "xp": "опыт", "dev": "мирное развитие"},
 		"make": {"kinds": ["skill", "tool", "language", "spell", "recipe"], "lessons": [2, 10], "dc_tiers": ["easy", "medium", "hard"], "fee_cp_lesson": [0, 500], "max_spell_level": 2}
 	},
 	"bonds": {
@@ -688,7 +724,7 @@
 			"recruit_bond": 30,
 			"max_members": 6,
 			"member_income_cp": 30,
-			"member_caught_chance": 0.03,
+			"member_caught_chance": 0.03, "job_points": {"good": 3, "bad": -1},
 			"law_tags": [
 				"military",
 				"clergy",
@@ -1135,9 +1171,10 @@
 		}
 	},
 	"followers": {
-		"_doc": "NPCs who go with the hero (v0.7.20.3, FollowRules): the effect npc_follow — to one with an attitude of at least min_attitude or won over by a check this turn; at most max at once.",
+		"_doc": "NPCs who go with the hero (v0.7.20.3, FollowRules): the effect npc_follow — to one with an attitude of at least min_attitude or won over by a check this turn; at most max at once. v0.7.39.1: with the needs on a follower eats a portion of the hero's food a day; unfed — attitude −1 a day, after hungry_days it goes home; a long rest feeds it.",
 		"min_attitude": 2,
-		"max": 3
+		"max": 3,
+		"hungry_days": 2
 	},
 	"allies": {
 		"_doc": "Allies in a fight (v0.7.22.22, AllyRules): fighters on the hero's side under the engine's AI — followers who join (not against the law's guard or the people of their own location), a pack encounter's `allies`, summoned creatures. summons — a spell → {monster, count, minutes (absent — until let go), helper (does not attack: the Help action, the hero's next attack at that foe with advantage)}; a concentration spell's creatures go when it ends. Followers at 0 HP fall unconscious and come to after the fight; a summoned one at 0 HP vanishes.",
@@ -2305,6 +2342,7 @@
 			"_doc": "Kinds of crimes (v0.7.22.16): severity — how much each adds to the sentence (a sentence by the sum), fine_cp — its wergild (murder — fine_cp above), name — in the lines. v0.7.22.24: known_attitude — the location's attitude when it is known (0 — none; murder — `attitude` above, assault −1), reputation_share — the part of the crime_known points it costs (0 — none), memory — what the people remember ({victim}).",
 			"murder": {"severity": 1, "name": "убийство"},
 			"assault": {"severity": 0, "fine_cp": 1000, "name": "нападение"},
+			"pickpocket": {"severity": 0, "fine_cp": 500, "name": "карманная кража", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой шарил по чужим карманам"},
 			"trespass": {"severity": 0, "fine_cp": 200, "name": "вторжение", "known_attitude": 0, "reputation_share": 0, "memory": "знает: герой без спроса вломился к {victim}"},
 			"burglary": {"severity": 0, "fine_cp": 1500, "name": "кража со взломом", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой обокрал {victim}"}, "robbery": {"severity": 1, "fine_cp": 2000, "name": "грабёж", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой грабил на дороге"}, "smuggling": {"severity": 0, "fine_cp": 1000, "name": "контрабанда", "known_attitude": 0, "reputation_share": 1, "memory": "знает: герой провозил контрабанду"}, "corruption": {"severity": 0, "fine_cp": 2000, "name": "мздоимство", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой брал мзду на службе"}, "debt": {"severity": 0, "name": "неуплата долга", "known_attitude": 0, "reputation_share": 2, "memory": "знает: герой не вернул долг {victim}"}
 		},
@@ -2628,6 +2666,7 @@
 		"salvage": {
 			"minutes": 60,
 			"share": 0.5,
+			"dust": {"common": 1, "uncommon": 4, "rare": 10},
 			"extra": {"battleaxe": {"iron_bar": 2}, "greataxe": {"iron_bar": 3}, "greatsword": {"iron_bar": 3}, "warhammer": {"iron_bar": 2}, "rapier": {"iron_bar": 1}, "scimitar": {"iron_bar": 1}, "sickle": {"iron_bar": 1}, "light_hammer": {"iron_bar": 1}, "war_pick": {"iron_bar": 1}, "morningstar": {"iron_bar": 2}, "flail": {"iron_bar": 1}, "ring_mail": {"iron_bar": 4}, "scale_mail": {"iron_bar": 5}, "chain_mail": {"iron_bar": 6}, "longbow": {"timber": 1}, "crossbow_light": {"timber": 1, "iron_bar": 1}}
 		},
 		"hides": {"tiny": 0, "small": 1, "medium": 1, "large": 2, "huge": 3},
@@ -2639,20 +2678,31 @@
 			"forage": {"name": "Собрать грибы и ягоды", "items": ["mushrooms", "berries"], "qty": [1, 3], "skill": "survival", "tool": "", "dc": 10, "minutes": 60, "per_day": 2}
 		},
 		"make": {"hours": [1, 72], "dc_tiers": ["very_easy", "easy", "medium", "hard"], "materials_max": 4, "qty_max": 20, "labor_cp_hour": 25},
+		"dust": "arcane_dust",
+		"templates_doc": "v0.7.39.1, the direction «Артефакция»: a template makes a recipe of a catalog item (`match`: item_type, prop, prefix, scroll, plain) — id tpl:<template>:<item>[:<variant>]. from_base — the item's `base` is a material (shown while the hero carries it); from_self — the plain item itself is the material and the output a new thing with a `variants` property (its name suffix); spell_known — a scroll of a spell the hero knows; learn — only a learned formula (a lesson, a book, the master). tool / station \"$base\" — those of the base's own recipe (or *_default); its skills are asked too. `check` — the skill of a tool-less check. by_rarity — the dust (× the skill's dust_mult), the hours and the DC by the output's rarity. A template is listed only when the hero has its `skills` (a learned formula always).",
+		"by_rarity": {"common": {"dust": 2, "hours": 8, "dc": 12}, "uncommon": {"dust": 8, "hours": 40, "dc": 15}, "rare": {"dust": 20, "hours": 80, "dc": 18}},
+		"templates": {
+			"enchant_weapon": {"match": {"item_type": "weapon", "prop": "magic_plus1"}, "from_base": true, "tool": "$base", "tool_default": "smiths_tools", "station": "$base", "station_default": "forge", "materials": {}, "skills": ["artifice:enchant_weapon"]},
+			"enchant_armor": {"match": {"item_type": "armor", "prop": "ac_plus1"}, "from_base": true, "tool": "$base", "tool_default": "smiths_tools", "station": "$base", "station_default": "forge", "materials": {}, "skills": ["artifice:enchant_armor"]},
+			"elemental": {"match": {"item_type": "weapon", "plain": true}, "from_self": true, "variants": {"fire_damage": "огненный", "cold_damage": "ледяной", "lightning_damage": "грозовой"}, "rarity": "uncommon", "value_cp": 50000, "tool": "$base", "tool_default": "smiths_tools", "station": "$base", "station_default": "forge", "materials": {}, "skills": ["artifice:elemental"]},
+			"scroll": {"match": {"scroll": true}, "spell_known": true, "tool": "", "check": "arcana", "station": "", "materials": {"parchment_one_sheet": 1, "ink_1_ounce_bottle": 1}, "skills": ["artifice:scribe"]},
+			"potion": {"match": {"item_type": "consumable", "prefix": "potion_"}, "tool": "alchemists_supplies", "station": "alchemy", "materials": {"herbs": 2, "vial": 1}, "skills": ["artifice:potions"]},
+			"wondrous": {"match": {"item_type": "wondrous"}, "learn": true, "tool": "", "check": "arcana", "station": "", "materials": {}, "skills": ["artifice:wondrous"]}
+		},
 		"recipes": {
 			"smelt_iron": {"tool": "smiths_tools", "station": "forge", "hours": 2, "dc": 10, "materials": {"iron_ore": 3}, "output": "iron_bar", "qty": 1, "name": "Выплавить железо"},
 			"dagger": {"tool": "smiths_tools", "station": "forge", "hours": 4, "dc": 10, "materials": {"iron_bar": 1}, "output": "dagger", "qty": 1},
 			"spear": {"tool": "smiths_tools", "station": "forge", "hours": 4, "dc": 10, "materials": {"iron_bar": 1, "timber": 1}, "output": "spear", "qty": 1},
 			"handaxe": {"tool": "smiths_tools", "station": "forge", "hours": 6, "dc": 11, "materials": {"iron_bar": 1, "timber": 1}, "output": "handaxe", "qty": 1},
 			"mace": {"tool": "smiths_tools", "station": "forge", "hours": 8, "dc": 12, "materials": {"iron_bar": 2}, "output": "mace", "qty": 1},
-			"shortsword": {"tool": "smiths_tools", "station": "forge", "hours": 10, "dc": 12, "materials": {"iron_bar": 2}, "output": "shortsword", "qty": 1},
-			"longsword": {"tool": "smiths_tools", "station": "forge", "hours": 16, "dc": 14, "materials": {"iron_bar": 3}, "output": "longsword", "qty": 1, "learn": true},
-			"chain_shirt": {"tool": "smiths_tools", "station": "forge", "hours": 72, "dc": 14, "materials": {"iron_bar": 6}, "output": "chain_shirt", "qty": 1, "learn": true},
+			"shortsword": {"tool": "smiths_tools", "station": "forge", "hours": 10, "dc": 12, "materials": {"iron_bar": 2}, "output": "shortsword", "qty": 1, "skills": ["craft:weaponsmith"]},
+			"longsword": {"tool": "smiths_tools", "station": "forge", "hours": 16, "dc": 14, "materials": {"iron_bar": 3}, "output": "longsword", "qty": 1, "learn": true, "skills": ["craft:weaponsmith"]},
+			"chain_shirt": {"tool": "smiths_tools", "station": "forge", "hours": 72, "dc": 14, "materials": {"iron_bar": 6}, "output": "chain_shirt", "qty": 1, "learn": true, "skills": ["craft:armorsmith"]},
 			"tan_hide": {"tool": "leatherworkers_tools", "station": "", "hours": 4, "dc": 10, "materials": {"raw_hide": 1}, "output": "leather", "qty": 1, "name": "Выделать кожу"},
 			"backpack": {"tool": "leatherworkers_tools", "station": "", "hours": 4, "dc": 8, "materials": {"leather": 1}, "output": "backpack", "qty": 1},
-			"hide_armor": {"tool": "leatherworkers_tools", "station": "", "hours": 12, "dc": 10, "materials": {"raw_hide": 3}, "output": "hide_armor", "qty": 1},
+			"hide_armor": {"tool": "leatherworkers_tools", "station": "", "hours": 12, "dc": 10, "materials": {"raw_hide": 3}, "output": "hide_armor", "qty": 1, "skills": ["craft:leather_armor"]},
 			"leather_armor": {"tool": "leatherworkers_tools", "station": "", "hours": 24, "dc": 12, "materials": {"leather": 3}, "output": "leather_armor", "qty": 1},
-			"studded_leather_armor": {"tool": "leatherworkers_tools", "station": "", "hours": 40, "dc": 14, "materials": {"leather": 3, "iron_bar": 1}, "output": "studded_leather_armor", "qty": 1, "learn": true},
+			"studded_leather_armor": {"tool": "leatherworkers_tools", "station": "", "hours": 40, "dc": 14, "materials": {"leather": 3, "iron_bar": 1}, "output": "studded_leather_armor", "qty": 1, "learn": true, "skills": ["craft:leather_armor"]},
 			"shield": {"tool": "carpenters_tools", "station": "workbench", "hours": 8, "dc": 12, "materials": {"timber": 2, "iron_bar": 1}, "output": "shield", "qty": 1},
 			"club": {"tool": "woodcarvers_tools", "station": "", "hours": 1, "dc": 5, "materials": {"timber": 1}, "output": "club", "qty": 1},
 			"quarterstaff": {"tool": "woodcarvers_tools", "station": "", "hours": 2, "dc": 8, "materials": {"timber": 1}, "output": "quarterstaff", "qty": 1},
@@ -2660,7 +2710,7 @@
 			"shortbow": {"tool": "woodcarvers_tools", "station": "", "hours": 12, "dc": 13, "materials": {"timber": 2}, "output": "shortbow", "qty": 1},
 			"herbal_remedy": {"tool": "herbalism_kit", "station": "", "hours": 2, "dc": 10, "materials": {"herbs": 2}, "output": "herbal_remedy", "qty": 1},
 			"antitoxin": {"tool": "herbalism_kit", "station": "", "hours": 4, "dc": 13, "materials": {"herbs": 3, "vial": 1}, "output": "antitoxin", "qty": 1},
-			"healing_potion": {"tool": "herbalism_kit", "station": "", "hours": 8, "dc": 15, "materials": {"herbs": 4, "vial": 1}, "output": "healing_potion", "qty": 1, "learn": true},
+			"healing_potion": {"tool": "herbalism_kit", "station": "", "hours": 8, "dc": 15, "materials": {"herbs": 4, "vial": 1}, "output": "healing_potion", "qty": 1, "learn": true, "skills": ["craft:herbal_alchemy"]},
 			"alchemists_fire": {"tool": "alchemists_supplies", "station": "alchemy", "hours": 8, "dc": 15, "materials": {"oil_flask": 1, "herbs": 2}, "output": "alchemists_fire_flask", "qty": 1},
 			"acid_vial": {"tool": "alchemists_supplies", "station": "alchemy", "hours": 8, "dc": 15, "materials": {"herbs": 3, "vial": 1}, "output": "acid_vial", "qty": 1},
 			"roast_meat": {"tool": "cooks_utensils", "simple": true, "station": "fire", "minutes": 30, "dc": 5, "materials": {"raw_meat": 1}, "output": "roast_meat", "qty": 1},

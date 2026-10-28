@@ -1687,7 +1687,9 @@
 				"commoner"
 			],
 			"services": [
-				"meal"
+				"meal",
+				"teach_sbiten",
+				"teach_pushcha_pie"
 			],
 			"wholesale": {},
 			"likes": [
@@ -2353,7 +2355,9 @@
 			"stock": {
 				"elvish_primer": 1,
 				"field_medic_manual": 1,
-				"book": 2
+				"book": 2,
+				"arcane_dust": 6,
+				"wondrous_formulary": 1
 			},
 			"monster": "commoner",
 			"tags": [
@@ -2377,7 +2381,10 @@
 			"romance": {
 				"open": false,
 				"why": "вдовец, весь в учениках"
-			}
+			},
+			"services": [
+				"teach_cloak_of_protection"
+			]
 		},
 		"npc_guildhead": {
 			"name": "Сыч",
@@ -2429,6 +2436,50 @@
 			"value_cp": 800,
 			"description": "Пузатый бочонок без клейма — пошлину за него никто не платил.",
 			"text": "Сургуч сбит, клейма нет: такой бочонок у ворот лучше не показывать."
+		},
+		"wondrous_formulary": {
+			"name": "Свод чудесных вещей",
+			"item_type": "gear",
+			"weight": 3,
+			"value_cp": 15000,
+			"teaches": [
+				"tpl:wondrous:cloak_of_protection",
+				"tpl:wondrous:boots_of_elvenkind",
+				"tpl:wondrous:bag_of_holding"
+			],
+			"description": "Толстый том в окованном переплёте: формулы плаща защиты, эльфийских сапог и бездонной сумки. Пока книга при вас и взят навык «Чудесные вещи» — вы знаете, как их сделать."
+		},
+		"pushcha_pie": {
+			"name": "Пущанский грибной пирог",
+			"item_type": "consumable",
+			"weight": 1,
+			"value_cp": 40,
+			"properties": [],
+			"stack": true,
+			"spoils_days": 4,
+			"food": 3,
+			"use": {
+				"meal": {
+					"temp_hp": 3
+				}
+			},
+			"description": "Пирог с лесными грибами и пряностями, как пекут в Броде к ярмарке: сытный, а после него и рана легче."
+		},
+		"sbiten": {
+			"name": "Медовый сбитень",
+			"item_type": "consumable",
+			"weight": 1,
+			"value_cp": 15,
+			"properties": [],
+			"stack": true,
+			"spoils_days": 3,
+			"food": 1,
+			"use": {
+				"meal": {
+					"water": 40
+				}
+			},
+			"description": "Горячий отвар на ягодах и пряностях — греет в дороге и утоляет жажду."
 		}
 	},
 	"jobs": {
@@ -2544,6 +2595,72 @@
 				"переписчик",
 				"старший переписчик",
 				"помощник писаря"
+			]
+		},
+		"pickpocket": {
+			"employer": "npc_guildhead",
+			"name": "Карманник на торгу",
+			"skill": "sleight_of_hand",
+			"requires": {
+				"org": {
+					"id": "night_rats",
+					"rank": 0
+				}
+			},
+			"hours": 4,
+			"dc": 13,
+			"pay_cp": 60,
+			"ranks": [
+				"карманник",
+				"ловкач",
+				"первая рука"
+			],
+			"caught": {
+				"crime": "pickpocket",
+				"room": "brod-square"
+			},
+			"events": [
+				"в толпе мелькнул стражник — пришлось уходить дворами",
+				"кошель оказался пуст, зато в нём записка",
+				"другой карманник положил глаз на тот же кошель"
+			]
+		},
+		"caravan_guard": {
+			"employer": "npc_drover",
+			"name": "Охранник обоза",
+			"skill": "perception",
+			"requires": {
+				"org": {
+					"id": "drovers",
+					"rank": 0
+				}
+			},
+			"hours": 8,
+			"dc": 12,
+			"pay_cp": 90,
+			"ranks": [
+				"охранник",
+				"старший охранник",
+				"старшой обоза"
+			],
+			"fight": {
+				"chance": 0.25,
+				"line": "На обоз нападают разбойники!",
+				"foes": [
+					{
+						"monster": "bandit",
+						"name": "Разбойник"
+					},
+					{
+						"monster": "bandit",
+						"name": "Разбойник"
+					}
+				]
+			},
+			"events": [
+				"у телеги слетело колесо — обоз стоит до темноты",
+				"возчик клянётся, что видел в кустах волчьи глаза",
+				"встречный обоз рассказывает о заставе"
 			]
 		}
 	},
@@ -2703,6 +2820,21 @@
 			"lessons": 8,
 			"skill": "medicine",
 			"dc": 12
+		},
+		"artifice_basics": {
+			"name": "Основы артефакции",
+			"school": "brod_school",
+			"teacher": "npc_teacher",
+			"teaches": {
+				"kind": "dev",
+				"id": "artifice",
+				"xp": 60
+			},
+			"lessons": 4,
+			"skill": "arcana",
+			"dc": 13,
+			"fee_cp": 1500,
+			"xp": 50
 		}
 	},
 	"orgs": {
@@ -2720,6 +2852,39 @@
 				"heist_casks"
 			],
 			"description": "Воры и скупщики Ольхового Брода: держат лаз под мельницей и долю со всего, что уходит из города тайком."
+		},
+		"drovers": {
+			"name": "Обозная артель",
+			"kind": "guild",
+			"head": "npc_drover",
+			"cut_pct": 10,
+			"heists": [],
+			"word": {
+				"nom": "артель",
+				"gen": "артели",
+				"dat": "артели",
+				"prep": "артели",
+				"acc": "артель"
+			},
+			"ranks": [
+				{
+					"name": "возчик",
+					"at": 0
+				},
+				{
+					"name": "охранник",
+					"at": 30
+				},
+				{
+					"name": "старшой обоза",
+					"at": 80
+				},
+				{
+					"name": "голова артели",
+					"at": 150
+				}
+			],
+			"description": "Остап собирает возчиков и охрану для обозов из Брода к заставе и дальше. Своим — работа при обозах."
 		}
 	},
 	"heists": {
@@ -2973,6 +3138,61 @@
 				}
 			],
 			"text": "Службы, отпевания, милостыня — при сестре Илве."
+		}
+	},
+	"recipes": {
+		"pushcha_pie": {
+			"tool": "cooks_utensils",
+			"station": "fire",
+			"minutes": 90,
+			"dc": 12,
+			"materials": {
+				"grain": 1,
+				"mushrooms": 2,
+				"spices": 1
+			},
+			"output": "pushcha_pie",
+			"qty": 2,
+			"learn": true
+		},
+		"sbiten": {
+			"tool": "cooks_utensils",
+			"station": "fire",
+			"minutes": 30,
+			"dc": 10,
+			"materials": {
+				"berries": 2,
+				"spices": 1
+			},
+			"output": "sbiten",
+			"qty": 2,
+			"learn": true
+		}
+	},
+	"services": {
+		"teach_pushcha_pie": {
+			"cost_cp": 300,
+			"op": "teach_recipe",
+			"recipe": "pushcha_pie",
+			"name": "Научиться печь пущанский пирог (рецепт Тука)",
+			"short": "урок: пущанский пирог",
+			"done": "рецепт выучен"
+		},
+		"teach_sbiten": {
+			"cost_cp": 150,
+			"op": "teach_recipe",
+			"recipe": "sbiten",
+			"name": "Научиться варить сбитень",
+			"short": "урок: сбитень",
+			"done": "рецепт выучен"
+		},
+		"teach_cloak_of_protection": {
+			"cost_cp": 5000,
+			"op": "teach_recipe",
+			"recipe": "tpl:wondrous:cloak_of_protection",
+			"name": "Выучить формулу плаща защиты",
+			"short": "урок: формула плаща защиты",
+			"done": "формула выучена"
 		}
 	}
 }

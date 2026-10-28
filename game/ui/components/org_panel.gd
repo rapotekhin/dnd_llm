@@ -24,6 +24,7 @@ func _ready() -> void:
 ## `org_id` "" — the hero's organizations, or founding one.
 func open(org_id: String = "") -> void:
 	_org = org_id
+	frame.title.text = tr("ORG_TITLE") if org_id.is_empty() else str(OrgRules.word(GameState.session, Catalog.data, org_id)["nom"]).capitalize()
 	visible = true
 	_rebuild()
 
@@ -108,6 +109,10 @@ func _org_block(s: GameSession, data: Dictionary, id: String) -> void:
 			var left := int(OrgRules.cfg(data)["owe_days"]) - (s.day - int(st.get("owed_day", s.day)))
 			_label(orow, tr("ORG_OWED").format({"cp": Money.format(int(st["owed_cp"])), "days": maxi(0, left)})).name = "OrgOwed"
 			_act(orow, "OrgPay_" + id, tr("BTN_ORG_PAY"), OrgRules.pay_why(s, data, id), "pay", id)
+		var work := OrgRules.jobs_of(s, data, id)
+		if not work.is_empty():  # v0.7.39.1: the organization's work is hired at its head (the «Работа» button)
+			_label(_box, tr("ORG_WORK").format({"list": ", ".join(work.map(func(j: String) -> String: return str(JobRules.job(s, data, j).get("name", j))))}),
+				UiTheme.MUTED_LABEL).name = "OrgWork"
 		var offers := OrgRules.offered(s, data, id)
 		if not offers.is_empty():
 			_label(_box, tr("ORG_JOBS")).add_theme_color_override("font_color", UiTheme.ACCENT)
@@ -125,7 +130,8 @@ func _org_block(s: GameSession, data: Dictionary, id: String) -> void:
 	elif OrgRules.candidate(s.character, id):
 		_label(_box, tr("ORG_TRIAL").format({"job": HeistRules.def(s, data, str(d.get("trial", ""))).get("name", "")})).name = "OrgTrial"
 	else:
-		_label(_box, tr("ORG_JOIN_HINT").format({"cut": int(d.get("cut_pct", 0))}), UiTheme.MUTED_LABEL)
+		var hint := tr("ORG_JOIN_HINT").format({"cut": int(d.get("cut_pct", 0))}) if not (d.get("heists", []) as Array).is_empty() else tr("ORG_JOIN_HINT_WORK")
+		_label(_box, hint, UiTheme.MUTED_LABEL)
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_END
 		_box.add_child(row)

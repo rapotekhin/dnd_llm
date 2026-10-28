@@ -121,6 +121,7 @@ static func teaches_text(s: GameSession, data: Dictionary, id: String) -> String
 		"language": return "%s: %s" % [label, LanguageRules.name_of(data, what)]
 		"spell": return "%s: %s" % [label, str(data["spells"].get(what, {}).get("name", what))]
 		"recipe": return "%s: %s" % [label, CraftRules.recipe_name(s, data, what)]
+		"dev": return "%s: %s +%d" % [label, str(DevelopmentRules.direction(data, what).get("name", what)), int(t.get("xp", 0))]
 	return "%s: %d" % [label, int(course(s, data, id).get("xp", 0))]
 
 
@@ -175,9 +176,30 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 			out.append({"text": "заклинание ещё не известно", "ok": not _knows_spell(c, what)})
 		"recipe":
 			var r := CraftRules.recipe(s, data, what)
-			out.append({"text": "владение: " + BackgroundRules.tool_name(data, CraftRules.tool_of(r)), "ok": CraftRules.simple(r) or CraftRules.proficient(c, CraftRules.tool_of(r))})
-			out.append({"text": "рецепт ещё не выучен", "ok": not CraftRules.learned(c).has(what)})
+			if CraftRules.needs_tool(r):
+				out.append({"text": "владение: " + BackgroundRules.tool_name(data, CraftRules.tool_of(r)), "ok": CraftRules.proficient(c, CraftRules.tool_of(r))})
+			out.append({"text": "рецепт ещё не известен", "ok": not CraftRules.known(s, data).has(what)})
 	return out
+
+
+## The hero already has what the course teaches (v0.7.39): a skill, a tool, a language, a spell or a recipe known
+## some other way — a recipe without `learn` by the tool's proficiency. Such a course is shown as learned, not begun.
+static func known_already(s: GameSession, data: Dictionary, id: String) -> bool:
+	var c := s.character
+	var t: Dictionary = course(s, data, id).get("teaches", {})
+	var what := str(t.get("id", ""))
+	match str(t.get("kind", "")):
+		"skill":
+			return (c.get("skill_profs", []) as Array).has(what) or CharacterRules.has_feature(c, "skill_prof_" + what)
+		"tool":
+			return CraftRules.proficient(c, what)
+		"language":
+			return LanguageRules.hero(c).has(what)
+		"spell":
+			return _knows_spell(c, what)
+		"recipe":
+			return CraftRules.known(s, data).has(what)
+	return false
 
 
 static func _ok(s: GameSession, data: Dictionary, id: String) -> bool:
@@ -210,6 +232,9 @@ static func school_state(c: Dictionary) -> Dictionary:
 
 ## "" when the hero may sit the school's entrance exam now, else a localization key.
 static func exam_why(s: GameSession, data: Dictionary, sid: String) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	var sc := school(data, sid)
 	if sc.is_empty():
 		return "STUDY_UNKNOWN"
@@ -276,6 +301,9 @@ static func lessons_needed(s: GameSession, data: Dictionary, id: String) -> int:
 
 ## "" when the hero may enrol on the course now, else a localization key.
 static func enroll_why(s: GameSession, data: Dictionary, id: String) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	var co := course(s, data, id)
 	if co.is_empty():
 		return "STUDY_UNKNOWN"
@@ -283,6 +311,8 @@ static func enroll_why(s: GameSession, data: Dictionary, id: String) -> String:
 		return "STUDY_DONE"
 	if enrolled(s.character, id):
 		return "STUDY_ENROLLED"
+	if known_already(s, data, id):
+		return "STUDY_KNOWN"
 	if not str(co.get("book", "")).is_empty():
 		return "STUDY_BOOK"
 	var sid := str(co.get("school", ""))
@@ -329,11 +359,16 @@ static func _book_course(s: GameSession, data: Dictionary, id: String) -> bool:
 
 ## "" when a lesson (or a reading) may go now, else a localization key.
 static func lesson_why(s: GameSession, data: Dictionary, id: String) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	var co := course(s, data, id)
 	if co.is_empty():
 		return "STUDY_UNKNOWN"
 	if done(s.character, id):
 		return "STUDY_DONE"
+	if not enrolled(s.character, id) and not view(s.character)["courses"].has(id) and known_already(s, data, id):
+		return "STUDY_KNOWN"
 	if _book_course(s, data, id):
 		if not books(s, data).has(id):
 			return "STUDY_NO_BOOK"
@@ -451,6 +486,8 @@ static func grant(s: GameSession, data: Dictionary, id: String) -> Array[String]
 			c["spells"] = sp
 		"recipe":
 			CraftRules.learn(s, data, what)
+		"dev":  # the experience of a peaceful direction (v0.7.39.1: «Основы артефакции»)
+			return DevelopmentRules.add_xp(c, data, what, int(t.get("xp", 0)))
 		_:
 			return []
 	CharacterRules.refresh(c, data, s.items)

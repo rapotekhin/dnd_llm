@@ -33,6 +33,7 @@ var _content: VBoxContainer
 var _scroll: ScrollContainer
 var _footer: VBoxContainer
 var _exit_list: VBoxContainer  # the exits scroll under the pinned look buttons: many ways must not push the panel up
+const EXIT_ROWS := 4  # the exits' fixed height in rows (v0.7.39)
 var _open := ""  # the row whose acts are open ("npc:<id>", "cr:<id>"), closed when the hero leaves the room
 var _open_room := ""
 
@@ -374,7 +375,7 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		fb.tooltip_text = tr("BTN_OFFICES_TIP")
 	if Catalog.data["rules"].has("underworld"):  # v0.7.33
 		for org: String in OrgRules.of_head(s, Catalog.data, id):
-			var ob := _flow(acts, tr("BTN_ORG"), org_requested.emit.bind(org), can_act)
+			var ob := _flow(acts, str(OrgRules.word(s, Catalog.data, org)["nom"]).capitalize(), org_requested.emit.bind(org), can_act)
 			ob.name = "Org_" + id
 			ob.tooltip_text = tr("BTN_ORG_HEAD_TIP").format({"org": OrgRules.org_name(s, Catalog.data, org)})
 		var rw := OrgRules.recruit_why(s, Catalog.data, id)
@@ -756,7 +757,8 @@ func _underworld_row(s: GameSession, can_act: bool) -> void:
 		h.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		h.tooltip_text = tr("BTN_HEISTS_TIP")
 	if not mine.is_empty() or founding:
-		var o := _row_button(acts, tr("BTN_ORG"), org_requested.emit.bind(mine[0] if not mine.is_empty() else ""), can_act)
+		var label := tr("BTN_ORG") if mine.size() != 1 else str(OrgRules.word(s, Catalog.data, str(mine[0]))["nom"]).capitalize()  # v0.7.39.1: «Артель»
+		var o := _row_button(acts, label, org_requested.emit.bind(mine[0] if not mine.is_empty() else ""), can_act)
 		o.name = "OrgButton"
 		o.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		o.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
@@ -813,11 +815,17 @@ func _need(act: String) -> void:
 		EventBus.message.emit(tr(err))
 
 
-## The exits take their own height up to a third of the panel; past it they scroll.
+## The exits have a fixed height of EXIT_ROWS rows whatever their number (v0.7.39: the panel grew with a room of many
+## ways); the rest scroll by the wheel.
 func _fit_exits(scroll: ScrollContainer) -> void:
 	if not is_instance_valid(scroll) or not is_instance_valid(_exit_list):
 		return
-	scroll.custom_minimum_size.y = minf(_exit_list.get_combined_minimum_size().y, maxf(160.0, size.y / 3.0))
+	var row := 0.0
+	for line: Node in _exit_list.get_children():
+		row = maxf(row, (line as Control).get_combined_minimum_size().y)
+	if row <= 0.0:
+		row = 28.0
+	scroll.custom_minimum_size.y = row * EXIT_ROWS + float(_exit_list.get_theme_constant("separation")) * (EXIT_ROWS - 1)
 
 
 ## A button that fills its place and cuts a long text with «…» (the whole one is in the tooltip).

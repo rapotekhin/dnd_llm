@@ -323,6 +323,9 @@ static func _after_tax(s: GameSession, data: Dictionary, loc: String, revenue: i
 
 
 static func shift_why(s: GameSession, data: Dictionary, vid: String) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	var why := _reach(s, data, vid)
 	if not why.is_empty():
 		return why
@@ -378,6 +381,9 @@ static func shift(s: GameSession, data: Dictionary, vid: String, minutes: int) -
 		lines.append("Покупателей на ваш товар не нашлось")
 	else:
 		lines.append("Продано: %s — выручка %s%s" % [_sold_text(s, data, r["sold"]), Money.format(t[0]), " (налог %s)" % Money.format(t[1]) if t[1] > 0 else ""])
+		var src: Dictionary = DevelopmentRules.direction(data, "trade").get("sources", {})  # the hero's own counter (v0.7.39)
+		var xp := mini(int(src.get("shift_xp_max", 0)), int(r["revenue"]) / 100 * int(src.get("shift_xp_per_gp", 0)))
+		lines.append_array(DevelopmentRules.add_xp(c, data, "trade", xp))
 	lines.append_array(_fine(s, data, loc))
 	return lines
 

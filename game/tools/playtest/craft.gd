@@ -47,6 +47,12 @@ func run() -> void:
 	step("a dagger forged in one shift", daggers.size() == 1 and CraftRules.project(c).is_empty(), _last_effects(s))
 	await shot("dagger_done")
 
+	var sword: Button = find(win, "CraftStart_shortsword")  # v0.7.39.1: a martial weapon asks a skill of «Ремесло»
+	step("the shortsword asks the forging skill", sword != null and sword.disabled and CraftRules.why_not(s, data, "shortsword") == "CRAFT_NO_SKILL")
+	await shot("sword_locked")
+	(DevelopmentRules.state(c, "craft")["skills"] as Array).append("weaponsmith")  # the pick of a level, as in the sheet
+	node("EventBus").state_changed.emit()
+	await frames(4)
 	await press(find(win, "CraftStart_shortsword"))
 	await frames(3)
 	await press(find(win, "CraftWork_1"))

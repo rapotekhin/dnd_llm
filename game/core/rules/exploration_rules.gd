@@ -382,6 +382,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	if not eaten.is_empty():
 		lines.append("съедено: " + ", ".join(eaten))
 	lines.append_array(NeedRules.rest_meal(s, data, meal_points, meal_points == 0 and supplies.is_empty()))
+	FollowRules.rested(s)  # the followers eat and drink with the hero (v0.7.39.1)
 	c["hp"] = int(c.get("max_hp", c.get("hp", 1)))
 	lines.append("HP %d/%d" % [c["hp"], c["max_hp"]])
 	c["slots_used"] = [0, 0, 0, 0, 0]

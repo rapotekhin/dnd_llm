@@ -118,12 +118,17 @@
 						"required": ["name", "item_type", "description"],
 						"properties": {
 							"name": {"$ref": "#/$defs/nonempty"},
-							"item_type": {"enum": ["quest", "gear"]},
+							"item_type": {"enum": ["quest", "gear", "consumable"]},
 							"description": {"$ref": "#/$defs/nonempty"},
 							"text": {"type": "string"},
 							"weight": {"type": "number", "minimum": 0},
 							"value_cp": {"type": "integer", "minimum": 0},
-							"properties": {"$ref": "#/$defs/strings"}
+							"properties": {"$ref": "#/$defs/strings"},
+							"stack": {"type": "boolean"},
+							"spoils_days": {"type": "integer", "minimum": 1},
+							"food": {"type": "integer", "minimum": 1},
+							"use": {"type": "object"},
+							"teaches": {"$ref": "#/$defs/strings"}
 						},
 						"additionalProperties": false
 					}

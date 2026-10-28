@@ -153,6 +153,9 @@ var npc_memory: Dictionary = {}
 ## its last free service.
 var discounts: Dictionary = {}
 var favors: Dictionary = {}
+## A sick NPC's disease (v0.7.39, DiseaseRules): npc_id → {id, until} — it passes on the day `until`; id "" — healed.
+## The pack's `sick` NPCs enter it on the first day tick.
+var npc_sick: Dictionary = {}
 ## Reputation in settlements (v0.7.17, ReputationRules): location_id → points; the attitude of the people not dealt
 ## with yet by it: npc_id → attitude (recomputed when the reputation changes).
 var reputation: Dictionary = {}
@@ -163,6 +166,8 @@ var generated: Dictionary = {}
 ## NPCs who go with the hero (v0.7.20.3, FollowRules) and those left in a room other than their own: npc_id → room.
 var followers: Array[String] = []
 var npc_at: Dictionary = {}
+## A follower's last meal (v0.7.39.1, FollowRules.meals): npc_id → {at: the absolute minute, hungry: days unfed}.
+var follower_fed: Dictionary = {}
 ## Creatures a spell called to go with the hero (v0.7.22.22, AllyRules): [{id, spell, monster, name, until, concentration,
 ## hp, helper}]; `until` — the absolute minute they go, −1 until let go.
 var summons: Array[Dictionary] = []
@@ -497,9 +502,11 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"npc_memory": npc_memory,
 		"discounts": discounts,
 		"favors": favors,
+		"npc_sick": npc_sick,
 		"secrets_told": secrets_told,
 		"generated": generated,
 		"followers": followers,
+		"follower_fed": follower_fed,
 		"npc_at": npc_at,
 		"summons": summons,
 		"summon_counter": summon_counter,
@@ -697,12 +704,20 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.discounts[id] = {"pct": int(dsc.get("pct", 0)), "until_day": int(dsc.get("until_day", 0))}
 	for id: String in d.get("favors", {}):
 		s.favors[id] = int(d["favors"][id])
+	for id: String in d.get("npc_sick", {}):
+		var ns: Variant = d["npc_sick"][id]
+		if ns is Dictionary:
+			s.npc_sick[id] = {"id": str(ns.get("id", "")), "until": int(ns.get("until", 0))}
 	for k: Variant in d.get("secrets_told", []):
 		s.secrets_told.append(str(k))
 	if d.get("generated") is Dictionary:
 		s.generated = (d["generated"] as Dictionary).duplicate(true)
 	for n: Variant in d.get("followers", []):
 		s.followers.append(str(n))
+	for id: String in d.get("follower_fed", {}):
+		var ff: Variant = d["follower_fed"][id]
+		if ff is Dictionary:
+			s.follower_fed[id] = {"at": int(ff.get("at", 0)), "hungry": int(ff.get("hungry", 0))}
 	for k: String in d.get("npc_at", {}):
 		s.npc_at[k] = str(d["npc_at"][k])
 	for m: Variant in d.get("summons", []):

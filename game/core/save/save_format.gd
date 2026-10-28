@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 46
+const SAVE_VERSION := 48
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -68,6 +68,8 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	43: _v43_to_v44,
 	44: _v44_to_v45,
 	45: _v45_to_v46,
+	46: _v46_to_v47,
+	47: _v47_to_v48,
 }
 
 
@@ -431,3 +433,18 @@ static func _v45_to_v46(data: Dictionary, _ctx: Dictionary) -> void:
 	for k: String in read.keys():
 		if not (read[k] is Dictionary):
 			read[k] = {"read_day": int(read[k]), "fresh_day": 0}
+
+
+## v0.7.39: a sick NPC's disease runs its course — none started yet.
+static func _v46_to_v47(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["npc_sick"] = {}
+
+
+## v0.7.39.1: followers eat from the hero's things — those already following start fed when the game loads.
+static func _v47_to_v48(data: Dictionary, _ctx: Dictionary) -> void:
+	var sv: Dictionary = data["session"]
+	var now := (int(sv.get("day", 1)) - 1) * 1440 + int(sv.get("minute", 0))  # TimeRules.abs_minute
+	var fed := {}
+	for n: Variant in sv.get("followers", []):
+		fed[str(n)] = {"at": now, "hungry": 0}
+	sv["follower_fed"] = fed

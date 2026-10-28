@@ -347,6 +347,9 @@ static func option(data: Dictionary, kind: String, opt: String) -> Dictionary:
 
 
 static func decide_why(s: GameSession, data: Dictionary, id: String, idx: int, opt: String) -> String:
+	var unfree := EncounterRules.unfree_why(s)
+	if not unfree.is_empty():
+		return unfree
 	if not holds(s.character, id):
 		return "OFFICE_NOT_HELD"
 	if s.room_id != str(def(data, id).get("room", "")):

@@ -109,6 +109,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     craft = game_rules["craft"]
     room_tags = ROOM_TAGS | set(craft["stations"]) | set(craft["gather"])  # v0.7.24: workplaces and gathering spots
     recipes = {**craft["recipes"], **world.get("recipes", {})}
+    for tid in craft.get("templates", {}):  # v0.7.39.1: a formula of a template — tpl:<template>:<item>
+        recipes.update({f"tpl:{tid}:{i}": {} for i in items})
     for rid_, r in world.get("recipes", {}).items():  # v0.7.24: a pack's own recipes
         if r.get("tool") not in craft["tools"] or (r.get("station") and r["station"] not in craft["stations"]):
             errors.append(f"рецепт {rid_}: tool из {sorted(craft['tools'])}, station из {sorted(craft['stations'])} или пусто")
@@ -146,7 +148,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         t = co.get("teaches", {})
         kind, tid = t.get("kind"), t.get("id")
         known_ids = {"skill": set(game_rules["skills"]), "tool": set(craft["tools"]), "language": ids["languages"],
-                     "spell": ids["spells"], "recipe": set(recipes)}
+                     "spell": ids["spells"], "recipe": set(recipes), "dev": set(game_rules["development"]["directions"])}
         if kind not in game_rules["study"]["kinds"] or (kind != "xp" and tid not in known_ids.get(kind, set())):
             errors.append(f"курс {cid}: teaches — kind из {sorted(game_rules['study']['kinds'])} и известный id ({tid})")
         if bool(co.get("teacher")) == bool(co.get("book")):
@@ -164,6 +166,14 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     for jid, j in world.get("jobs", {}).items():
         if "diploma" in j.get("requires", {}) and j["requires"]["diploma"] not in world.get("courses", {}):
             errors.append(f"работа {jid}: requires.diploma — курс пака")
+        org = j.get("requires", {}).get("org")  # v0.7.39.1: the work of an organization
+        if org is not None and org.get("id") not in world.get("orgs", {}):
+            errors.append(f"работа {jid}: requires.org.id — организация пака")
+        if j.get("caught") and (j["caught"].get("crime") not in game_rules["crime"]["kinds"] or j["caught"].get("room", next(iter(rooms))) not in rooms):
+            errors.append(f"работа {jid}: caught — crime из rules.crime.kinds, room — комната пака")
+        foes = j.get("fight", {}).get("foes", [])
+        if j.get("fight") and (not foes or any(f.get("monster") not in ids["monsters"] for f in foes)):
+            errors.append(f"работа {jid}: fight.foes — монстры SRD")
     uw = game_rules["underworld"]
     heists = world.get("heists", {})
     for hid, h in heists.items():  # v0.7.33: criminal jobs

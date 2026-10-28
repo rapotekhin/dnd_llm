@@ -77,14 +77,19 @@ func _rebuild() -> void:
 			frame.title.text = tr("PROPERTY_TITLE_AT").format({"name": who})
 			var ids := PropertyRules.of_seller(s, data, _npc)
 			var deeds: Array[String] = []
+			var debts: Array[String] = []
 			if PropertyRules.is_registry(data, _npc):
 				for id: String in PropertyRules.state(s.character):
 					if not bool(PropertyRules.state(s.character)[id].get("deed", false)):
 						deeds.append(id)
-			if ids.is_empty() and deeds.is_empty():
+					if int(PropertyRules.state(s.character)[id].get("debt", 0)) > 0:
+						debts.append(id)
+			if ids.is_empty() and deeds.is_empty() and debts.is_empty():
 				_label(_box, tr("PROPERTY_NONE_ON_SALE"), UiTheme.MUTED_LABEL)
 			for id: String in deeds:
 				_deed_row(s, data, id)
+			for id: String in debts:
+				_tax_row(s, data, id)
 			for id: String in ids:
 				_sale_row(s, data, id)
 		"animals":
@@ -162,6 +167,13 @@ func _deed_row(s: GameSession, data: Dictionary, id: String) -> void:
 		PropertyRules.deed_why(s, data, id), _act("deed", id))
 
 
+func _tax_row(s: GameSession, data: Dictionary, id: String) -> void:
+	var parts := _row(id + "_tax")
+	_title(parts[0], PropertyRules.name_of(s, data, id))
+	_label(parts[0], tr("PROPERTY_DEBT").format({"money": Money.format(int(PropertyRules.state(s.character)[id]["debt"]))})).add_theme_color_override("font_color", UiTheme.WARN)
+	_button(parts[1], "PropertyTax_" + id, tr("BTN_PROPERTY_TAX"), PropertyRules.pay_tax_why(s, data, id), _act("tax", id))
+
+
 func _animal_row(s: GameSession, data: Dictionary, m: String) -> void:
 	var parts := _row(m)
 	var a := PropertyRules.animal_cfg(data, m)
@@ -205,6 +217,8 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 		ups.append(tr("PROPERTY_PENDING").format({"name": PropertyRules.cfg(data)["build"][str(b["id"])]["name"], "day": int(b["ready"])}))
 	if not ups.is_empty():
 		_label(col, tr("PROPERTY_UPGRADES").format({"list": ", ".join(ups)}), UiTheme.MUTED_LABEL)
+	if int(st.get("debt", 0)) > 0:
+		_button(buttons, "PropertyTax_" + id, tr("BTN_PROPERTY_TAX"), PropertyRules.pay_tax_why(s, data, id), _act("tax", id))
 	if not here:
 		_label(col, tr("PROPERTY_GO_THERE"), UiTheme.MUTED_LABEL)
 		return
