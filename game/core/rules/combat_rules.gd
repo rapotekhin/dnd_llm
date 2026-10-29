@@ -181,7 +181,11 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 		"next_id": 0, "incoming": [], "help": (source.get("help", {}) as Dictionary).duplicate(true), "parley_tried": [],
 		"parley_ok": 0, "parley_fail": 0, "parley_hard": str(source.get("parley", "")) == "hard"}
 	_add_foes(s, data, foes)
-	_add_foes(s, data, AllyRules.joining(s, data, foes) + (source.get("allies", []) as Array) + AllyRules.summon_specs(s), 99, "ally")
+	if source.get("arena") is Dictionary:  # v0.7.45: a bout one to one by the arena's rule
+		s.combat["arena"] = (source["arena"] as Dictionary).duplicate(true)
+		s.combat["nonlethal"] = ArenaRules.yield_bout(s)
+	else:
+		_add_foes(s, data, AllyRules.joining(s, data, foes) + (source.get("allies", []) as Array) + AllyRules.summon_specs(s), 99, "ally")
 	for w: Dictionary in source.get("waves", []):
 		add_incoming(s, data, w.get("enemies", []), int(w.get("round", 2)), str(w.get("side", "right")))
 	# Initiative: d20 + DEX; ties — the higher DEX, then the player.
@@ -904,8 +908,8 @@ static func _hurt_enemy(s: GameSession, data: Dictionary, t: Dictionary, dmg: in
 		if bool(t["timers"][cond].get("wake", false)) and int(t["hp"]) > 0:
 			_remove_condition(t, cond)
 			lines.append("%s приходит в себя от удара" % t["name"] if cond == "unconscious" else "%s: %s проходит от удара" % [t["name"], cond_name(data, cond)])
-	if int(t["hp"]) == 0 and by_hero and bool(s.combat.get("nonlethal", false)) and bool(s.combat.get("melee_strike", false)):
-		t["status"] = "unconscious"  # 5e: a melee blow at 0 HP may knock out instead of killing (v0.7.22.11, big test #44)
+	if int(t["hp"]) == 0 and by_hero and (ArenaRules.yield_bout(s) or bool(s.combat.get("nonlethal", false)) and bool(s.combat.get("melee_strike", false))):
+		t["status"] = "unconscious"  # v0.7.45: in a bout to surrender any blow only knocks out  # 5e: a melee blow at 0 HP may knock out instead of killing (v0.7.22.11, big test #44)
 		lines.append("%s оглушён и падает без сознания" % t["name"])
 		return
 	if int(t["hp"]) == 0:
@@ -1678,6 +1682,8 @@ static func can_move(s: GameSession, data: Dictionary, dir: int) -> String:
 		return "COMBAT_NO_MOVE"
 	if absi(dir) != 1:
 		return "COMBAT_BAD_MOVE"
+	if s.combat.has("arena") and absi(int(player(s)["col"]) + dir) > edge(data):
+		return "COMBAT_ARENA_RING"
 	var src := fear_source(s)
 	if not src.is_empty() and absi(int(player(s)["col"]) + dir - int(src["col"])) < absi(int(player(s)["col"]) - int(src["col"])):
 		return "COMBAT_FRIGHTENED"
@@ -2005,7 +2011,7 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 				func(x: Variant) -> bool: return ConditionRules.INCAPACITATING.has(str(x))).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower()))])
 			lines.append_array(ConditionRules.end_of_turn(s, data))
 			if _held_for_good(s):
-				s.combat["outcome"] = "captured" if enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))) else "dead"
+				s.combat["outcome"] = "arena_lost" if s.combat.has("arena") else "captured" if enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))) else "dead"
 				lines.append("%s не может больше сражаться" % s.character["name"])
 		else:
 			return lines
@@ -2149,6 +2155,12 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 		if _monster_save(s, data, f, "dex", 10):
 			f.erase("burning")
 			lines.append("%s сбивает пламя" % f["name"])
+	if s.combat.has("arena"):  # v0.7.45: no flight from the ring; a bout to surrender ends when a side gives up
+		if ArenaRules.yield_bout(s) and int(f["hp"]) * 100 <= int(f["max_hp"]) * int(ArenaRules.cfg(data)["yield_hp_pct"]):
+			f["status"] = "surrendered"
+			lines.append("%s поднимает руку — сдаётся" % f["name"])
+			return
+		f["morale"] = true
 	# Morale: once, at half HP or less.
 	if not bool(f.get("morale", false)) and int(f["hp"]) * 2 <= int(f["max_hp"]):
 		f["morale"] = true
@@ -2578,6 +2590,11 @@ static func _hurt_player(s: GameSession, data: Dictionary, dmg: int, crit: bool,
 	dmg = FeatureRules.hurt_shape(s, data, dmg, lines)  # a beast form takes it first
 	if dmg <= 0:
 		return
+	if ArenaRules.yield_bout(s) and int(c["hp"]) - dmg <= 0:  # v0.7.45: the manager stops the bout
+		c["hp"] = 0
+		s.combat["outcome"] = "arena_lost"
+		lines.append("%s падает — распорядитель останавливает бой" % c["name"])
+		return
 	var ds: Dictionary = s.combat["death_saves"]
 	if int(c["hp"]) <= 0:
 		ds["fail"] = int(ds["fail"]) + (2 if crit else 1)
@@ -2806,7 +2823,10 @@ static func _check_end(s: GameSession, data: Dictionary, lines: Array[String]) -
 		return
 	var ds: Dictionary = s.combat["death_saves"]
 	if int(s.character["hp"]) <= 0 and bool(ds.get("stable", false)) and allies(s).is_empty():
-		if enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
+		if s.combat.has("arena"):  # v0.7.45: the blood pit — the winner finishes the downed
+			s.combat["outcome"] = "dead"
+			lines.append("%s лежит на песке ямы — победитель добивает его" % s.character["name"])
+		elif enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
 			s.combat["outcome"] = "captured"
 			lines.append("%s остаётся лежать — враги берут его живым" % s.character["name"])
 		else:  # v0.7.9: beasts leave a still body
@@ -2818,6 +2838,8 @@ static func _check_end(s: GameSession, data: Dictionary, lines: Array[String]) -
 static func can_surrender(s: GameSession, data: Dictionary) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
+	if s.combat.has("arena"):  # v0.7.45: a bout to surrender may be given up, the blood pit may not
+		return "" if ArenaRules.yield_bout(s) else "COMBAT_NO_SURRENDER_PIT"
 	if not enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
 		return "COMBAT_NO_SURRENDER"
 	return ""
@@ -2825,6 +2847,9 @@ static func can_surrender(s: GameSession, data: Dictionary) -> String:
 
 ## The hero throws down the weapon: the fight ends at once — the captive of the foes (or held by the law). Lines.
 static func surrender(s: GameSession) -> Array[String]:
+	if s.combat.has("arena"):  # v0.7.45: the bout is lost, nobody takes the hero
+		s.combat["outcome"] = "arena_lost"
+		return ["%s поднимает руку — сдаётся" % s.character.get("name", "")]
 	s.combat["outcome"] = "captured"
 	s.combat["surrendered"] = true
 	return ["%s бросает оружие и сдаётся" % s.character.get("name", "")]

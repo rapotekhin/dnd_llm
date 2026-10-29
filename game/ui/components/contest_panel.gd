@@ -94,6 +94,16 @@ func _setup(s: GameSession, data: Dictionary) -> void:
 		_rebuild.call_deferred())
 	_box.add_child(kinds_box)
 	var k := ContestRules.kind(data, _kind)
+	if ContestRules.is_bout(data, _kind):  # v0.7.45: a duel — the engine's estimate of the fight
+		var mon := str(data["world"]["npcs"].get(_npc, {}).get("monster", CombatRules.cfg(data)["default_npc_monster"]))
+		var ho := ArenaRules.hero_odds(s, data, "", mon)
+		_label(_box, tr("CONTEST_BOUT").format({"p": roundi(float(ho["p"]) * 100)})).name = "ContestOdds"
+	else:
+		_odds(s, data, k)
+	_stakes(s, data)
+
+
+func _odds(s: GameSession, data: Dictionary, k: Dictionary) -> void:
 	var o := ContestRules.odds(s, data, _npc, _kind)
 	var odds := _label(_box, tr("CONTEST_ODDS").format({"hero": "%+d" % int(o["hero"]), "npc": "%+d" % int(o["npc"]),
 		"p": int(o["chance"]), "wins": int(k.get("wins", 1))}))
@@ -103,6 +113,9 @@ func _setup(s: GameSession, data: Dictionary) -> void:
 		_label(_box, tr("CONTEST_CHEAT_ODDS").format({"skill": tr("SKILL_" + str(k["cheat"]).to_upper()), "p": int(co["chance"])}), UiTheme.MUTED_LABEL)
 	if not str(k.get("lose", {}).get("condition", "")).is_empty():
 		_label(_box, tr("CONTEST_LOSE").format({"what": ConditionRules.name_of(data, str(k["lose"]["condition"]))}), UiTheme.MUTED_LABEL)
+
+
+func _stakes(s: GameSession, data: Dictionary) -> void:
 	var stakes := ContestRules.stakes(s, data, _npc)
 	_stake = clampi(_stake, 0, stakes.size() - 1)
 	var stake_box := OptionButton.new()

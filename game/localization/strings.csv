@@ -1670,3 +1670,31 @@ JOURNAL_TODAY,Сегодня: {date}
 JOURNAL_FESTIVALS,Праздники впереди
 JOURNAL_MONTHS,Месяцы года
 JOURNAL_EMPTY_CALENDAR,У этого мира нет календаря — дни считаются по порядку
+ARENA_TITLE,Арена
+ARENA_RULE,"Правило: бой {rule} — {text}"
+ARENA_ENLIST_HINT,"Запись в бойцы стоит {fee}: бой в день против соперника своего ранга, приз за победу, ранг растёт победами"
+BTN_ARENA_ENLIST,Записаться в бойцы
+ARENA_RANK,"Ваш ранг: {rank} · побед {wins}, поражений {losses}"
+ARENA_BOUT_HEAD,Ваш бой сегодня
+ARENA_OPPONENT,"Соперник: {name} — {hp} ОЗ, КД {ac}; приз за победу {prize}"
+ARENA_ODDS,"Распорядитель даёт вам {house}% — ставка на себя ×{mult}"
+ARENA_ODDS_TRUE,"(на ваш глаз — {p}%)"
+ARENA_BET_SELF,Ставка на себя
+BTN_ARENA_FIGHT,На бой
+CONFIRM_PIT_TITLE,Кровавая яма
+CONFIRM_PIT,"Бой с {name} до смерти: сдаться нельзя, упавшего добивают. Точно?"
+ARENA_TOURNEY_HEAD,"Турнир: {name}"
+ARENA_TOURNEY,"{bouts} боя подряд, соперник сильнее с каждым боем; проиграл — выбыл. Пройдено боёв: {round}. Чемпиону: {prize} и {item}"
+BTN_ARENA_TOURNEY,Биться в турнире
+ARENA_CARD_HEAD,Бой дня — ставки
+ARENA_CARD,"{a} против {b}: распорядитель даёт первому {pa}% — ×{ma} на первого, ×{mb} на второго"
+BTN_ARENA_INSIGHT,Присмотреться
+BTN_ARENA_INSIGHT_TIP,"Проницательность, Сл {dc}: увидеть настоящие шансы бойцов"
+BTN_ARENA_BET,"На «{name}»"
+BTN_ARENA,Арена
+BTN_ARENA_TIP,"{name}: запись в бойцы, бой дня, ставки"
+COMBAT_NONLETHAL_ARENA,Бой до сдачи: удары только оглушают
+COMBAT_OUTCOME_ARENA_LOST,Бой проигран
+COMBAT_NO_SURRENDER_PIT,В кровавой яме не сдаются
+COMBAT_ARENA_RING,Из круга не уйти — бой идёт до конца
+CONTEST_BOUT,"Поединок до сдачи: шанс по оценке движка — около {p}%"

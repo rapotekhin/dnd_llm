@@ -132,6 +132,9 @@ static func text(s: GameSession, data: Dictionary, room_id: String) -> String:
 		bits.append("есть: " + ", ".join(i["upgrades"]))
 	if not str(i["hours"]).is_empty():
 		bits.append("часы " + str(i["hours"]))
+	var arena := ArenaRules.text(s, data, sid)  # v0.7.45
+	if not arena.is_empty():
+		bits.append(arena)
 	var f: Array = i["facts"]
 	if not f.is_empty():
 		bits.append("было: " + "; ".join(f.slice(maxi(0, f.size() - 3))))

@@ -3,6 +3,8 @@ extends SceneTree
 ## with a simple policy (heal at half HP with a potion or Second Wind, step to the nearest foe, attack, end the turn).
 ##   godot --headless --path game -s res://tools/balance_sim.gd -- <encounter_id> <level> <fights> [preset_id]
 ## <encounter_id> may be «foes:wolf*2+bandit» — a quest's fight by its foes (v0.7.39.6: the tiers of quest_gen).
+## «arena» (v0.7.45) — the ladder of rules.arena.ranks: every hero against every opponent of every rank in a bout
+## to surrender, the win rate by rank beside the engine's own estimate.
 ## Prints the win rate and the average HP left per hero; with a preset id also the log of its first fight.
 ## Not a test: numbers for the game author.
 
@@ -14,6 +16,10 @@ func _init() -> void:
 	var fights := int(args[2]) if args.size() > 2 else 100
 	var only := args[3] if args.size() > 3 else ""
 	var data := TestUtils.data()
+	if enc_id == "arena":
+		_arena(data, level, fights, only)
+		quit()
+		return
 	var enc := {}
 	if enc_id.begins_with("foes:"):
 		var foes: Array = []
@@ -37,26 +43,10 @@ func _init() -> void:
 		var hp_left := 0
 		for i in fights:
 			var s := TestUtils.new_session(1000 + i)
-			s.character = GameSession.normalized_character(CharacterBuilder.build_preset(p, data))
-			CharacterRules.refresh(s.character, data)
-			while int(s.character["level"]) < level:
-				s.character["xp"] = LevelUp.xp_for(data, int(s.character["level"]) + 1)
-				LevelUp.apply(s.character, data, LevelUp.default_picks(s.character, data))
-				CharacterRules.refresh(s.character, data)
-			s.character["hp"] = int(s.character["max_hp"])
+			_hero(s, data, p, level)
 			CombatRules.start(s, data, enc["enemies"], {"waves": enc.get("waves", []), "help": enc.get("help", {}), "ambush": enc.get("ambush", false),
 				"allies": [] if OS.get_environment("BALANCE_NO_ALLIES") == "1" else enc.get("allies", [])})
-			var guard := 0
-			var log: Array[String] = []
-			while str(s.combat["outcome"]).is_empty() and guard < 400:
-				guard += 1
-				if CombatRules.player_can_act(s):
-					log.append_array(_turn(s, data))
-					log.append_array(CombatRules.after_player_action(s, data))
-					if str(s.combat["outcome"]).is_empty():
-						log.append_array(CombatRules.end_player_turn(s, data))
-				else:
-					log.append_array(CombatRules.next_actor(s, data))
+			var log := _play(s, data)
 			if not only.is_empty() and i == 0:
 				print("
 ".join(log))
@@ -68,6 +58,59 @@ func _init() -> void:
 		print("%-16s L%d  wins %3d%%  HP left after a win %4.1f" % [p["id"], level, wins * 100 / fights, float(hp_left) / maxi(1, wins)])
 	print("all: %d%% of %d fights won — %s at level %d" % [total_wins * 100 / total, total, enc_id, level])
 	quit()
+
+
+func _hero(s: GameSession, data: Dictionary, p: Dictionary, level: int) -> void:
+	s.character = GameSession.normalized_character(CharacterBuilder.build_preset(p, data))
+	CharacterRules.refresh(s.character, data)
+	while int(s.character["level"]) < level:
+		s.character["xp"] = LevelUp.xp_for(data, int(s.character["level"]) + 1)
+		LevelUp.apply(s.character, data, LevelUp.default_picks(s.character, data))
+		CharacterRules.refresh(s.character, data)
+	s.character["hp"] = int(s.character["max_hp"])
+
+
+func _play(s: GameSession, data: Dictionary) -> Array[String]:
+	var guard := 0
+	var log: Array[String] = []
+	while str(s.combat["outcome"]).is_empty() and guard < 400:
+		guard += 1
+		if CombatRules.player_can_act(s):
+			log.append_array(_turn(s, data))
+			log.append_array(CombatRules.after_player_action(s, data))
+			if str(s.combat["outcome"]).is_empty():
+				log.append_array(CombatRules.end_player_turn(s, data))
+		else:
+			log.append_array(CombatRules.next_actor(s, data))
+	return log
+
+
+## The arena's ladder: per rank, every hero's win rate in bouts to surrender and the engine's estimate (v0.7.45).
+func _arena(data: Dictionary, level: int, fights: int, only: String) -> void:
+	var ranks: Array = ArenaRules.ranks(data)
+	for ri in ranks.size():
+		var all_w := 0
+		var all_n := 0
+		for p: Dictionary in data["presets"]:
+			if not only.is_empty() and p["id"] != only:
+				continue
+			var wins := 0
+			var n := 0
+			var est := 0.0
+			for m: Variant in ranks[ri]["foes"]:
+				for i in fights:
+					var s := TestUtils.new_session(2000 + i)
+					_hero(s, data, p, level)
+					est += float(ArenaRules.hero_odds(s, data, "", str(m))["p"])
+					CombatRules.start(s, data, [{"monster": str(m), "name": str(m)}], {"arena": {"kind": "rank", "rule": "yield", "site": "sim"}})
+					_play(s, data)
+					n += 1
+					if str(s.combat["outcome"]) == "victory":
+						wins += 1
+			all_w += wins
+			all_n += n
+			print("%-12s %-16s L%d  wins %3d%%  estimate %3d%%" % [ranks[ri]["name"], p["id"], level, wins * 100 / n, roundi(est * 100 / n)])
+		print("%s: %d%% of %d bouts won at level %d" % [ranks[ri]["name"], all_w * 100 / maxi(1, all_n), all_n, level])
 
 
 func _turn(s: GameSession, data: Dictionary) -> Array[String]:

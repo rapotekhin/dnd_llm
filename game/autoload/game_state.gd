@@ -1164,8 +1164,79 @@ func contest_start(npc_id: String, kind: String, stake_i: int, cp: int) -> Strin
 	lines.assign(r["lines"])
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
+	if ContestRules.is_bout(Catalog.data, kind):  # v0.7.45: a duel is a fight to surrender, not rounds of dice
+		var d := ContestRules.duel(session, Catalog.data)
+		var dl: Array[String] = []
+		dl.assign(d["lines"])
+		_add(GameSession.effect_entry(dl))
+		start_combat(d["foes"], d["source"])
+		return ""
 	EventBus.state_changed.emit()
 	return ""
+
+
+# --- the arena (v0.7.45, ArenaRules) ----------------------------------------------------------------------------
+
+
+## Enlists the hero as a fighter of the arena `sid`. "" or the reason.
+func arena_enlist(sid: String) -> String:
+	if session == null or is_busy():
+		return tr("WAIT_BUSY")
+	var why := ArenaRules.enlist_why(session, Catalog.data, sid)
+	if not why.is_empty():
+		return why
+	_effect_lines(ArenaRules.enlist(session, Catalog.data, sid))
+	return ""
+
+
+## The bout of the day (`bet_cp` on oneself) or the tournament's next one: the fight starts. "" or the reason.
+func arena_bout(sid: String, bet_cp: int, tourney: bool = false) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return tr("WAIT_BUSY")
+	var r := ArenaRules.tourney_bout(session, Catalog.data, sid) if tourney else ArenaRules.bout(session, Catalog.data, sid, bet_cp)
+	if r.has("reason"):
+		return str(r["reason"])
+	var lines: Array[String] = []
+	lines.assign(r["lines"])
+	_add(GameSession.effect_entry(lines))
+	start_combat(r["foes"], r["source"])
+	return ""
+
+
+## Insight on the fighters of the day: the check card, the true estimate on success. "" or the reason.
+func arena_insight(sid: String) -> String:
+	if session == null or is_busy():
+		return tr("WAIT_BUSY")
+	var why := ArenaRules.insight_why(session, Catalog.data, sid)
+	if not why.is_empty():
+		return why
+	var params := ArenaRules.insight_params(Catalog.data)
+	var result := _hero_roll(params, CheckEngine.bonus_for(session.character, params, Catalog.data))
+	if result.has("error"):
+		return str(result["error"])
+	_add(GameSession.check_entry(params, result))
+	_effect_lines(ArenaRules.set_insight(session, Catalog.data, sid, bool(result["success"])))
+	return ""
+
+
+## A bet on a fighter of the day's card: the engine plays the bout out, the master tells it. "" or the reason.
+func arena_bet(sid: String, side: String, cp: int) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return tr("WAIT_BUSY")
+	var r := ArenaRules.bet(session, Catalog.data, sid, side, cp)
+	if r.has("reason"):
+		return str(r["reason"])
+	var lines: Array[String] = []
+	lines.assign(r["lines"])
+	_effect_lines(lines)
+	_request("contest", "ставка на арене «%s»: %s" % [ArenaRules.site_name(Catalog.data, sid), "; ".join(lines)])
+	return ""
+
+
+func _effect_lines(lines: Array[String]) -> void:
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
 
 
 ## One round of the contest going: the NPC rolls by its template, the hero by the kind's check (or its cheat skill
@@ -1328,6 +1399,8 @@ func _combat_outcome() -> void:
 			if str(enc.get("id", "")) == enc_id and not enc_id.is_empty():
 				enc_loot = enc.get("loot", {})
 		CombatRules.results(s, Catalog.data, enc_loot)
+		if s.combat.has("arena"):  # v0.7.45: the opponent's gear stays its own
+			s.combat["loot"] = []
 		var xp_lines := XpRules.award(s.character, Catalog.data, int(s.combat["xp"]), "бой")
 		_combat_log(xp_lines)
 	var log: Array = s.combat.get("log", [])
@@ -1373,11 +1446,16 @@ func finish_combat(take: Array = []) -> void:
 			lines.append("+%d опыта" % int(s.combat["xp"]))
 		if not str(s.combat.get("encounter", "")).is_empty():
 			s.encounters_done.append(str(s.combat["encounter"]))
-	if outcome in ["victory", "truce"]:
+	var arena: Dictionary = s.combat.get("arena", {})
+	if not arena.is_empty():  # v0.7.45: a bout — the prize, the bet, the rank; nobody stays beaten in the room, no crime
+		lines.append_array(ArenaRules.after_bout(s, Catalog.data, arena, outcome == "victory"))
+	elif outcome in ["victory", "truce"]:
 		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id))  # the beaten stay in the room (v0.7.22.11)
 	lines.append_array(AllyRules.after_fight(s))  # v0.7.22.22: the fallen followers come to, the summoned keep their wounds
 	var by_law := outcome == "captured" and CombatRules.law_captors(s)
-	if by_law:  # v0.7.22.17: the guard holds the hero, as at an arrest
+	if not arena.is_empty():
+		pass
+	elif by_law:  # v0.7.22.17: the guard holds the hero, as at an arrest
 		lines.append_array(CrimeRules.held_after_fight(s, Catalog.data))
 	elif outcome == "captured":  # v0.7.22.12: bound in their place, not a won fight
 		var foes: Array = []
@@ -1387,7 +1465,7 @@ func finish_combat(take: Array = []) -> void:
 				foes.append({"monster": str(f["monster"]), "name": str(f["name"]), "count": 1, "hp": int(f["hp"]), "no_xp": bool(f.get("no_xp", false))})
 		lines.append_array(EncounterRules.capture(s, foes, str(s.combat.get("encounter", "")), str(s.combat.get("room_from", ""))))
 		lines.append_array(EncounterRules.seize(s, Catalog.data))  # v0.7.22.17, #15
-	for id: String in CombatRules.enemies(s, false):
+	for id: String in CombatRules.enemies(s, false) if arena.is_empty() else []:
 		var f := CombatRules.fighter(s, id)
 		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():  # the body, quests, a murder (v0.7.14)
 			lines.append_array(CrimeRules.on_death(s, Catalog.data, str(f["npc_id"]), bool(f.get("by_hero", false)), s.room_id))

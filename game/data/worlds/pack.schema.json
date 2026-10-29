@@ -222,7 +222,10 @@
 							"owner": {"type": "string"},
 							"hours": {"type": "object", "required": ["from", "to"], "properties": {"from": {"type": "integer", "minimum": 0, "maximum": 23}, "to": {"type": "integer", "minimum": 0, "maximum": 24}}, "additionalProperties": false},
 							"public": {"type": "boolean"},
-							"entry": {"type": "string"}
+							"entry": {"type": "string"},
+							"kind": {"type": "string"},
+							"staff": {"type": "array", "items": {"type": "object", "required": ["npc", "role"], "properties": {"npc": {"type": "string"}, "role": {"$ref": "#/$defs/nonempty"}}, "additionalProperties": false}},
+							"arena": {"type": "object", "properties": {"rule": {"enum": ["yield", "death"]}}, "additionalProperties": false}
 						},
 						"additionalProperties": false
 					}

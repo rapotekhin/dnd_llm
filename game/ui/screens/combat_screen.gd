@@ -796,6 +796,9 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	nl.text = "COMBAT_NONLETHAL"
 	nl.tooltip_text = "COMBAT_NONLETHAL_TIP"
 	nl.button_pressed = bool(s.combat.get("nonlethal", false))
+	if ArenaRules.yield_bout(s):  # v0.7.45: a bout to surrender — only knocking out
+		nl.disabled = true
+		nl.tooltip_text = "COMBAT_NONLETHAL_ARENA"
 	nl.toggled.connect(func(on: bool) -> void: GameState.combat_nonlethal(on))
 	w.add_child(nl)
 	var off := str(c.get("equipped", {}).get("off_hand", ""))

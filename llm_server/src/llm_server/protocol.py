@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.88.0"
+PROTOCOL_VERSION = "0.89.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1269,11 +1269,12 @@ class NewContestKind(_Out):
 class ContestEffect(_Out):
     """An NPC of the scene sits down to a game with the hero (0.84.0): dice, cards, arm wrestling, drinking, a song,
     riddles — `game`, or `new_kind`. The engine opens the contest window: the stake, the rounds, cheating and the
-    outcome are the engine's."""
+    outcome are the engine's. `bout` (0.89.0) — a duel by challenge: a fight to surrender with the NPC by the
+    arena's way, the stake to the winner."""
 
     kind: Literal["contest"] = "contest"
     npc_id: str
-    game: str | None = None  # dice | cards | arm | drinking | song | riddles, or a made kind's id
+    game: str | None = None  # dice | cards | arm | drinking | song | riddles | bout, or a made kind's id
     new_kind: NewContestKind | None = None
 
 

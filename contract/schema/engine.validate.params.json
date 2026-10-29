@@ -967,7 +967,7 @@
     },
     "ContestEffect": {
       "additionalProperties": false,
-      "description": "An NPC of the scene sits down to a game with the hero (0.84.0): dice, cards, arm wrestling, drinking, a song,\nriddles — `game`, or `new_kind`. The engine opens the contest window: the stake, the rounds, cheating and the\noutcome are the engine's.",
+      "description": "An NPC of the scene sits down to a game with the hero (0.84.0): dice, cards, arm wrestling, drinking, a song,\nriddles — `game`, or `new_kind`. The engine opens the contest window: the stake, the rounds, cheating and the\noutcome are the engine's. `bout` (0.89.0) — a duel by challenge: a fight to surrender with the NPC by the\narena's way, the stake to the winner.",
       "properties": {
         "game": {
           "anyOf": [

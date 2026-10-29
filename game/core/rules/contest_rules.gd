@@ -10,6 +10,8 @@ extends RefCounted
 ## its pockets, its leave to walk in (SiteRules permits), a secret (SocialRules) — against the hero's coins of its
 ## worth; both stakes are on the table from the start. The game lives in `c.contest`; the games of the day with each
 ## NPC in `c.contests_day` {npc: {day, n, won, caught}}. The master offers a game by the effect `contest`.
+## A kind with `bout` (v0.7.45) is a duel: no rounds of dice — a fight to surrender with the NPC's template by the
+## arena's way (ArenaRules), its end settles the stake (settle).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -240,6 +242,29 @@ static func forfeit(s: GameSession, data: Dictionary) -> Array[String]:
 	if state(s).is_empty():
 		return []
 	return ["Герой сдаётся"] + _finish(s, data, false)
+
+
+## Whether a kind is a duel by the arena's way (v0.7.45).
+static func is_bout(data: Dictionary, kind_id: String) -> bool:
+	return bool(kind(data, kind_id).get("bout", false))
+
+
+## The duel's fight for GameState.start_combat (the game going is a `bout`): {foes, source, lines}.
+static func duel(s: GameSession, data: Dictionary) -> Dictionary:
+	var st := state(s)
+	var npc := str(st["npc"])
+	var n: Dictionary = data["world"]["npcs"].get(npc, {})
+	var who := BondRules.npc_name(s, data, npc)
+	var mon := str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
+	return {"foes": [{"monster": mon, "name": who}], "source": {"arena": {"kind": "duel", "rule": "yield", "npc": npc, "foe": who}, "room_from": s.room_id},
+		"lines": ["Поединок до сдачи с %s" % who]}
+
+
+## The end of a duel: the stake goes to the winner. Lines.
+static func settle(s: GameSession, data: Dictionary, won: bool) -> Array[String]:
+	if state(s).is_empty():
+		return []
+	return _finish(s, data, won)
 
 
 static func _finish(s: GameSession, data: Dictionary, won: bool) -> Array[String]:

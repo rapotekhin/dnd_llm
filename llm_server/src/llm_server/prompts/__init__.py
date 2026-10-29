@@ -140,7 +140,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "wilds": ("охота и рыбалка, угодья, браконьерство; зверь ушёл или вернулся, рыба пропала, новые угодья (`wilds`)", ("wilds",)),
     "calendar": ("дата и праздники: когда ярмарка, праздник идёт, срок к празднику; свой праздник по причине (`festival`)", ("festival",)),
     "pets": ("питомец героя и приручение: дикий зверь в сцене, имя, близость (`bond` с creature_id), помощь, разведка; бездомный зверь по причине (`beast`)", ("beast",)),
-    "games": ("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; своя игра (`contest`)", ("contest",)),
+    "games": ("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; поединок по вызову; арена и ставки на бои; своя игра (`contest`)", ("contest",)),
     "world_edits": ("правка готового места: у человека или в сундуке появилась или пропала вещь по причине в мире (`world_item`); новая вещь в обставленной комнате (`furnish` с `cause`)", ("world_item",)),
     "containers": ("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`take_from`, `put_in`, `unlock`, `drop_item`)",
                    ("take_from", "put_in", "unlock", "drop_item")),
@@ -157,6 +157,8 @@ MOUNT_WORDS = re.compile(r"конь|коня|кобыл|лошад|мул|осл
                          re.IGNORECASE)  # v0.7.42
 FESTIVAL_WORDS = re.compile(r"праздн|ярмар|дожин|гулянь|торговый день|свадьб|пир[ау ]|поминк|календар|какое число|какой день|месяц",
                             re.IGNORECASE)  # v0.7.44
+BOUT_WORDS = re.compile(r"поедин|дуэл|вызыва|вызов|сразимся|сразиться|помахаться|на кулак|до первой крови|до сдачи|арен|бойцов|кровав[аую]+ ям|турнир|ставк",
+                        re.IGNORECASE)  # v0.7.45
 WILDS_WORDS = re.compile(r"охот|рыб|удочк|удить|сеть|сети|дич|зверь|звер[яюи]|олен|выслеж|капкан|силк|кабан|заяц|зайц|улов|клюёт|клюет|браконь",
                          re.IGNORECASE)  # v0.7.41
 
@@ -209,6 +211,8 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("calendar")
     if scene and any("приручить" in c or "питомец героя" in c for c in scene.creatures):  # v0.7.43: a beast to tame or a pet here
         out.append("pets")
+    if scene and mentions(said, BOUT_WORDS):  # v0.7.45: a duel by challenge, the arena, a bet on a bout
+        out.append("games")
     if scene and scene.wilds and mentions(said, WILDS_WORDS):  # v0.7.41: a hunt or the grounds changed by words
         out.append("wilds")
     if scene and any(e.door for e in scene.exits):  # v0.7.22.25

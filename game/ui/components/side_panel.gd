@@ -31,6 +31,7 @@ signal heist_requested  # v0.7.33
 signal org_requested(org_id: String)  # v0.7.33
 signal office_requested(chief: String)  # v0.7.34
 signal pet_requested(creature_id: String)  # v0.7.43
+signal arena_requested(site_id: String)  # v0.7.45
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -418,6 +419,11 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var cb := _flow(acts, tr("BTN_CONTEST"), contest_requested.emit.bind(id), can_act and cw.is_empty())
 		cb.name = "Contest_" + id
 		cb.tooltip_text = cw if not cw.is_empty() else tr("BTN_CONTEST_TIP").format({"name": n.get("name", id)})
+	var arena_site := ArenaRules.of_manager(Catalog.data, id)  # v0.7.45
+	if not arena_site.is_empty():
+		var ar := _flow(acts, tr("BTN_ARENA"), arena_requested.emit.bind(arena_site), can_act)
+		ar.name = "Arena_" + id
+		ar.tooltip_text = tr("BTN_ARENA_TIP").format({"name": ArenaRules.site_name(Catalog.data, arena_site)})
 	var bo := _flow(acts, tr("BTN_BOND"), bond_requested.emit.bind(id), can_act)  # v0.7.31
 	bo.name = "Bond_" + id
 	bo.tooltip_text = tr("BTN_BOND_TIP").format({"name": n.get("name", id)})

@@ -90,6 +90,9 @@ def check_calendar(cal, world, npcs, rooms) -> list[str]:
         tr = f.get("trade", {})
         if set(tr) - {"buy_pct", "sell_pct", "tags"}:
             errors.append(f"{where}: trade — buy_pct, sell_pct, tags")
+        t = f.get("tournament")
+        if t is not None and "arena" not in world.get("sites", {}).get(t.get("site"), {}):  # v0.7.45
+            errors.append(f"{where}: tournament.site — арена (место с arena)")
     return errors
 
 def load(path: Path) -> dict:
@@ -294,6 +297,11 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"объект {sid}: ни одной комнаты")
         if site.get("entry") and site["entry"] not in members:
             errors.append(f"объект {sid}: вход {site['entry']} — не его комната")
+        for h in site.get("staff", []):
+            if h["npc"] not in npcs:
+                errors.append(f"объект {sid}: штат {h['npc']} — не NPC пакета")
+        if "arena" in site and not (site.get("owner") or site.get("staff")):  # v0.7.45: the arena's manager
+            errors.append(f"объект {sid}: у арены нужен распорядитель (staff) или хозяин")
     for rid, room in rooms.items():
         if room["location_id"] not in world["locations"]:
             errors.append(f"комната {rid}: нет локации {room['location_id']}")
