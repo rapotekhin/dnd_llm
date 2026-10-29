@@ -52,6 +52,22 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
 
 
 
+def check_weather(world, rules) -> list[str]:
+    """v0.7.46: the pack's weather tables — kinds of rules.json weather.kinds, seasons of the calendar, positive weights."""
+    errors: list[str] = []
+    kinds = set(rules.get("kinds", {}))
+    seasons = set(world.get("calendar", {}).get("seasons", {})) | {"_default"}
+    for terrain, by_season in world.get("weather", {}).get("terrain", {}).items():
+        for season, table in by_season.items():
+            where = f"world.weather.terrain.{terrain}.{season}"
+            if season not in seasons:
+                errors.append(f"{where}: сезон не из календаря ({', '.join(sorted(seasons))})")
+            errors += [f"{where}: нет вида погоды {k} в rules.json weather.kinds" for k in table if k not in kinds]
+            if not table or any(not isinstance(v, int) or v < 0 for v in table.values()) or sum(table.values()) <= 0:
+                errors.append(f"{where}: веса — целые ≥ 0, хотя бы один > 0")
+    return errors
+
+
 def check_calendar(cal, world, npcs, rooms) -> list[str]:
     """v0.7.44: the pack's calendar — months, the week, festivals by a month day, a day of every month or a weekday."""
     if cal is None:
@@ -440,6 +456,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
                 errors += [f"{where}: нет NPC {x}" for x in r.get("attitude", {}) if x not in npcs]
 
     errors += check_calendar(world.get("calendar"), world, npcs, rooms)
+    errors += check_weather(world, load(DATA / "rules.json").get("weather", {}))
 
     seen: set[str] = set()
     for p in chars["presets"]:

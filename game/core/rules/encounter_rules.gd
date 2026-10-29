@@ -39,7 +39,7 @@ static func meet(s: GameSession, data: Dictionary, room_id: String, from: String
 	if not s.sneaking and not unseen:
 		return {"lurk": false, "line": "", "stealth": -1}
 	var roll := CombatRules.stealth_roll(s, data)
-	var need := best_passive(data, enc["enemies"]) - ConditionRules.unseen_penalty(s.character, data)
+	var need := best_passive(data, enc["enemies"]) - WeatherRules.unseen(s, data)
 	var names := ", ".join((enc["enemies"] as Array).map(func(e: Dictionary) -> String: return str(e.get("name", e["monster"]))))
 	if int(roll["total"]) < need:
 		return {"lurk": false, "line": "", "stealth": int(roll["total"])}

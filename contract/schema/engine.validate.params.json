@@ -2076,6 +2076,7 @@
               "saves_plus1",
               "stealth_advantage",
               "light_source",
+              "warm",
               "healing",
               "cursed",
               "resist_force",
@@ -5214,6 +5215,62 @@
       "title": "UseItemEffect",
       "type": "object"
     },
+    "WeatherEffect": {
+      "additionalProperties": false,
+      "description": "Magic or a miracle changes the weather of a location for hours (0.90.0): Control Weather, a druid's rite, a\npriestess's prayer answered. The engine keeps the kind (`weather`) over the location for `hours` (within\nrules.weather.magic.max_hours) with its consequences — fog and a downpour blind archers and watchers, snow slows\nthe way, the cold calls for warmth; then the day's weather comes back. Not for the weather of the day itself:\nthat is the engine's, given in the scene.",
+      "properties": {
+        "cause": {
+          "maxLength": 160,
+          "minLength": 8,
+          "title": "Cause",
+          "type": "string"
+        },
+        "hours": {
+          "maximum": 24,
+          "minimum": 1,
+          "title": "Hours",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "weather",
+          "default": "weather",
+          "title": "Kind",
+          "type": "string"
+        },
+        "location_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location Id"
+        },
+        "weather": {
+          "enum": [
+            "clear",
+            "rain",
+            "downpour",
+            "fog",
+            "snow",
+            "heat",
+            "frost"
+          ],
+          "title": "Weather",
+          "type": "string"
+        }
+      },
+      "required": [
+        "weather",
+        "hours",
+        "cause"
+      ],
+      "title": "WeatherEffect",
+      "type": "object"
+    },
     "WildsEffect": {
       "additionalProperties": false,
       "description": "Hunting grounds or fishing waters changed for a cause in the world (0.85.0): `deplete` — the beasts left or were\nbeaten out, the fish gone; `restore` — they are back; `add` — a room gets a ground it lacked (not indoors). The\ncatch, its check and the stock's regrowth are the engine's.",
@@ -5417,6 +5474,7 @@
           "upgrade": "#/$defs/UpgradeEffect",
           "use_feature": "#/$defs/UseFeatureEffect",
           "use_item": "#/$defs/UseItemEffect",
+          "weather": "#/$defs/WeatherEffect",
           "wilds": "#/$defs/WildsEffect",
           "world_item": "#/$defs/WorldItemEffect"
         },
@@ -5488,6 +5546,9 @@
         },
         {
           "$ref": "#/$defs/FestivalEffect"
+        },
+        {
+          "$ref": "#/$defs/WeatherEffect"
         },
         {
           "$ref": "#/$defs/PermitEffect"

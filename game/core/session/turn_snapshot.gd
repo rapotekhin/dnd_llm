@@ -54,6 +54,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"time_of_day": "%s%s, %s%s" % [(CalendarRules.text(data["world"], s.day) + " (" + CalendarRules.season_text(data["world"], s.day) + "), ") if CalendarRules.on(data["world"]) else "",
 				TimeRules.part_name(s, data), TimeRules.clock(s), ", темно" if TimeRules.dark(s, data) else ""],  # v0.7.44: the date
 			"calendar": CalendarRules.snapshot(s, data, data["world"]),  # v0.7.44: festivals on and near
+			"weather": WeatherRules.text(s, data),  # v0.7.46
 		},
 		"world": world_info(s, data),
 		"character": character_sheet(s, data),

@@ -29,6 +29,7 @@
 {% if scene %}{{ scene.location_name }}{% if scene.site_name and scene.site_name != scene.room_name %} — {{ scene.site_name }}{% endif %} — {{ scene.room_name }}{% if scene.private %} (частная комната){% endif %}. {{ scene.room_description }}
 {% if scene.time_of_day %}Сейчас: {{ scene.time_of_day }}. Держи это в каждой реплике: не путай ночь с днём и утро с вечером (ночью темно, люди спят, лавки закрыты).
 {% endif %}{% if scene.calendar %}Праздники (по календарю; других дат не выдумывай): {{ scene.calendar | join("; ") }}.
+{% endif %}{% if scene.weather %}Погода (движок; другой не выдумывай): {{ scene.weather }}.
 {% endif %}{% if scene.notes %}Помнишь о прошлом (это было — не противоречь): {{ scene.notes[-6:] | join("; ") }}.
 {% endif %}Ответ называет день праздника, ярмарки, свадьбы или пира, которых нет в строке «Праздники», — верни `need_full: true`: их нужно поставить в календарь эффектом.
 

@@ -294,7 +294,7 @@ ITEM_PROPS = {
     "silvered": ("engine", "снимает сопротивление «не посеребрённому»; кузнец серебрит за 100 зм (v0.7.12)"),
     "magic_plus1": ("engine", "атака и урон"), "magic_plus2": ("engine", "атака и урон"),
     "magic_plus3": ("engine", "атака и урон"), "ac_plus1": ("engine", "КД"), "ac_plus2": ("engine", "КД"), "saves_plus1": ("engine", "спасброски"),
-    "stealth_advantage": ("engine", "Скрытность"), "light_source": ("engine", "ночь"), "healing": ("engine", "зелья лечения"),
+    "stealth_advantage": ("engine", "Скрытность"), "light_source": ("engine", "ночь"), "warm": ("engine", "погода"), "healing": ("engine", "зелья лечения"),
     **{f"{t}_damage": ("engine", "+1к6 этого типа при попадании оружием (v0.7.12)") for t in ["fire", "cold", "lightning", "radiant", "necrotic", "poison"]},
     "resist_fire": ("engine", "сопротивление огню, пока вещь надета или при себе (v0.7.8)"), "resist_cold": ("engine", "сопротивление холоду (v0.7.8)"),
     "resist_poison": ("engine", "сопротивление яду (v0.7.8)"),

@@ -31,6 +31,7 @@
 				"room": {"type": "string"},
 				"arrive": {"type": "string"},
 				"flag": {"type": "string"},
+				"not_flag": {"type": "string"},
 				"talk": {"type": "string"},
 				"item": {"type": "string"},
 				"qty": {"type": "integer", "minimum": 1},

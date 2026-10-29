@@ -193,7 +193,7 @@ func _travel_button(info: VBoxContainer, room_id: String) -> void:
 		go.text = tr("TRAVEL_NO_ROUTE")
 		go.disabled = true
 	else:
-		go.text = tr("BTN_TRAVEL").format({"steps": path.size(), "min": WorldMap.minutes(Catalog.data, s.room_id, path, PropertyRules.travel_mult(s, Catalog.data, s.room_id))})
+		go.text = tr("BTN_TRAVEL").format({"steps": path.size(), "min": WorldMap.minutes(Catalog.data, s.room_id, path, PropertyRules.travel_mult(s, Catalog.data, s.room_id) * WeatherRules.travel_mult(s, Catalog.data, s.room_id, path[-1]))})
 		go.disabled = GameState.is_busy() or not Backend.is_ready() or s.mode == GameSession.MODE_COMBAT
 		go.pressed.connect(func() -> void:
 			var err := GameState.travel(room_id)

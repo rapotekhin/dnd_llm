@@ -352,6 +352,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return TradeRules.make_stock(s, data, e)
 		"festival":  # v0.7.44: the master's feast or fair, for a cause
 			return CalendarRules.plan_festival(s, data, e)
+		"weather":  # v0.7.46: magic or a miracle over the weather, for hours
+			return WeatherRules.plan(s, data, e)
 		"beast":  # v0.7.43: a wild beast to tame in the scene, for a cause
 			if not PetRules.on(data):
 				return {"reason": "питомцев в этих правилах нет"}
@@ -1035,6 +1037,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(PetRules.apply_beast(s, _data, plan))
 		"festival":
 			_extra_lines.append_array(CalendarRules.apply_festival(s, _data, plan))
+		"weather":
+			_extra_lines.append_array(WeatherRules.apply(s, _data, plan))
 		"stock":
 			_extra_lines.append_array(MountRules.apply_stock(s, _data, plan) if plan.has("animal") else TradeRules.apply_stock(s, _data, plan))
 		"permit":

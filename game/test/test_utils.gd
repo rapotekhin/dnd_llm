@@ -49,6 +49,7 @@ static func new_session(seed_value: int = 42) -> GameSession:
 	var s := GameSession.create(seed_value, "2026-10-18T12:00:00", str(d["world"]["start_room"]), CharacterBuilder.build_preset(d["presets"][0], d))
 	s.world_id = "frontier"
 	s.settings = WorldPack.default_settings(d["pack"])
+	s.settings["weather"] = false  # the day's weather would move old numbers (v0.7.46); its own tests turn it on
 	return s
 
 

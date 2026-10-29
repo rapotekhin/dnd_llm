@@ -65,6 +65,7 @@ NPC здесь:
 {% endif %}{% if scene.open_edges and not entry %}Открытые края мира (здесь можно дорисовать новое место — `create_place` с этим `edge`): {{ scene.open_edges | join("; ") }}.
 {% endif %}{% if scene.wilds %}Угодья здесь (охоту и рыбалку ведёт кнопка на панели — часы, проверка Выживания и добычу считает движок): {{ scene.wilds | join("; ") }}.
 {% endif %}{% if scene.calendar %}Праздники (по календарю движка; других дат не выдумывай): {{ scene.calendar | join("; ") }}.
+{% endif %}{% if scene.weather %}Погода (движок; описывай её, другой не выдумывай): {{ scene.weather }}.
 {% endif %}{% if scene.reputation %}Слава героя здесь: {{ scene.reputation }} — так к нему относятся незнакомые люди и торговцы.
 {% endif %}{% if scene.chronicle %}Хроника — что уже случилось, по порядку (факты движка; не проводи их снова эффектами): {{ scene.chronicle | join("; ") }}.
 {% endif %}{% if scene.notes %}Помнишь о прошлом: {{ scene.notes | join("; ") }}.

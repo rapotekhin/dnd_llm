@@ -131,13 +131,13 @@ static func immune(c: Dictionary, data: Dictionary, cond: String, tag: String) -
 ## A saving throw of the hero by the engine: the sheet's bonus, conditions (auto-fail of STR / DEX when paralysed,
 ## disadvantage of DEX when restrained), exhaustion 3+, advantages of the tag. Natural 20 / 1 succeed / fail.
 ## {"ok", "total", "text"} — «Тел 14 против Сл 13, с преимуществом (Стойкость дварфа) — успех».
-static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag: String = "") -> Dictionary:
+static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag: String = "", dis_extra := false) -> Dictionary:
 	var c := s.character
 	var mods := ConditionRules.check_mods(c, data, {"save": ability})
 	var bonus := int(c.get("saves", {}).get(ability, 0))
 	var adv_why := save_advantages(c, data, ability, tag, CombatRules.active(s) and bool(s.combat.get("raging", false)))
 	var adv := not adv_why.is_empty()
-	var dis := not (mods["disadvantage"] as Array).is_empty()
+	var dis := not (mods["disadvantage"] as Array).is_empty() or dis_extra  # heavy armour in the heat (v0.7.46)
 	var rolls := FeatureRules.hero_d20(s, adv, dis)  # Lucky (v0.7.10)
 	var nat: int = rolls.max() if adv and not dis else rolls.min() if dis and not adv else rolls[0]
 	var die := SpellEffects.hero_die(s, data, "save")  # Bless, Resistance (v0.7.13.1)

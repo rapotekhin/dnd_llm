@@ -1664,6 +1664,9 @@ PET_SCOUT_TIRED,На сегодня он налетался
 PET_SCOUT_NO_WAY,Туда отсюда не долететь
 SIDE_WILD,Звери
 SIDE_FESTIVAL_ON,"идёт, {left}"
+SIDE_WEATHER,"Погода: {name}"
+EXIT_SHUT,не пройти
+SIDE_WEATHER_ROOF," (вы под крышей)"
 SIDE_FESTIVAL_IN,через {in} {days}
 JOURNAL_TAB_CALENDAR,Календарь
 JOURNAL_TODAY,Сегодня: {date}

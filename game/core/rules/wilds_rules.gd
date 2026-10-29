@@ -207,7 +207,10 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 	if ok:
 		var per := clampi(1 + (nat + b - dc) / int(c["units_per_margin"]), 1, int(c["max_per_try"]))
 		var tries := maxi(1, hours / int(d["hours_per_try"]))
-		var units := mini(left, per * tries)
+		var pct := WeatherRules.wilds_pct(s, data, k)  # rain brings the fish, snow shows the tracks (v0.7.46)
+		var units := mini(left, maxi(0 if pct <= 0 else 1, per * tries * pct / 100))
+		if pct != 100:
+			lines.append("Погода: %s — улов %s" % [WeatherRules.kind_name(data, WeatherRules.here(s, data)), "лучше" if pct > 100 else "хуже"])
 		var got := {}
 		var spent := 0
 		for i in units:

@@ -144,6 +144,18 @@ static func open_exits(s: GameSession, world: Dictionary, room_id: String) -> Ar
 	return out
 
 
+## The known ways a state of the world shuts now (a closed exit by `not_flag` — a ford a downpour flooded, v0.7.46):
+## [{to, text}]. The ways a search must find stay unseen.
+static func shut_exits(s: GameSession, world: Dictionary, room_id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var closed: Dictionary = world["rooms"].get(room_id, {}).get("closed_exits", {})
+	for to: String in closed:
+		var when: Dictionary = closed[to].get("when", {})
+		if when.has("not_flag") and not QuestRules.met(s, when):
+			out.append({"to": to, "text": str(closed[to].get("text", ""))})
+	return out
+
+
 # --- traps and caches (v0.6.3) ---------------------------------------------------------------------
 
 
@@ -371,6 +383,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	if cost > 0:
 		c["gold_cp"] = int(c["gold_cp"]) - cost
 		lines.append("−" + Money.format(cost))
+	var camp_supplies := supplies.duplicate()
 	var eaten: Array[String] = []
 	var meal_points := camp_need(data) if supplies.has("forage") else camp_points(data, supplies)
 	if supplies.has("forage"):
@@ -402,6 +415,8 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	FeatureUses.recharge_all(c, data, "long")
 	lines.append_array(_rest_ends(c, data, "long"))
 	lines.append_array(ItemRules.dawn(c, data, s.items, s.rng))  # charges come back at dawn (v0.7.12)
+	if not camp_supplies.is_empty():
+		lines.append_array(WeatherRules.camp(s, data))  # a downpour soaks the camp, the cold and the heat (v0.7.46)
 	s.short_rests = 0
 	s.reward_spent = 0  # a new budget of the master's rewards (v0.7.14.3)
 	s.magic_given = 0  # and of its magic things (v0.7.22.2)

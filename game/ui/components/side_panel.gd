@@ -128,6 +128,7 @@ func _rebuild() -> void:
 	var xp := tr("SIDE_HERO_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}) if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data) else ""
 	_line(" · ".join([Money.format(int(c["gold_cp"])), xp, tr("SIDE_HERO_TIME").format({"day": CalendarRules.text(world.world, s.day), "part": TimeRules.part_name(s, Catalog.data),
 		"clock": TimeRules.clock(s)})].filter(func(x: String) -> bool: return not x.is_empty())), true).name = "HeroTime"
+	_weather_line(s)
 	_festival_line(s, world)
 	if NeedRules.on(s):
 		_needs(s, can_act)
@@ -604,6 +605,10 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 			b.tooltip_text = "%s
 %s" % [room_name, tr("EXIT_PRIVATE_WELCOME" if SiteRules.unwelcome(s, Catalog.data, e).is_empty() else
 				"EXIT_PRIVATE_TIP").format({"owner": world.npc(owner).get("name", owner)})]
+	for w: Dictionary in ExplorationRules.shut_exits(s, Catalog.data["world"], s.room_id):  # a flooded ford, greyed with why (v0.7.46)
+		var b := _exit_button(_exit_list, "→ %s (%s)" % [world.room(str(w["to"])).get("name", w["to"]), tr("EXIT_SHUT")], func() -> void: pass, false)
+		b.name = "Exit_" + str(w["to"])
+		b.tooltip_text = str(w["text"])
 
 
 ## Food, water, sleep as three small bars under the hero (v0.7.23), «Поесть» and «Попить» beside them.
@@ -1050,6 +1055,17 @@ func _subheading(key: String) -> void:
 	l.theme_type_variation = UiTheme.MUTED_LABEL
 	l.add_theme_color_override("font_color", UiTheme.ACCENT)
 	_content.add_child(l)
+
+
+## The weather under the date (v0.7.46): «Погода: ливень», what it means and what guards the hero in the hint.
+func _weather_line(s: GameSession) -> void:
+	var k := WeatherRules.at(s, Catalog.data, WorldView.new(Catalog.data["world"]).location_id(s.room_id))
+	if k.is_empty():
+		return
+	var l := _line(tr("SIDE_WEATHER").format({"name": WeatherRules.kind_name(Catalog.data, k)}) + (tr("SIDE_WEATHER_ROOF") if WeatherRules.sheltered(s, Catalog.data) else ""), true)
+	l.name = "WeatherLine"
+	l.mouse_filter = Control.MOUSE_FILTER_STOP
+	l.tooltip_text = "\n".join(WeatherRules.effects(s, Catalog.data, k))
 
 
 ## The nearest festival under the date (v0.7.44): «★ Бродская ярмарка — через 5 дней»; all near ones in the hint.

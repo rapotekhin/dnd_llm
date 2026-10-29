@@ -26,6 +26,7 @@
 		"saves_plus1": 2,
 		"stealth_advantage": 2,
 		"light_source": 0,
+		"warm": 0,
 		"healing": 1,
 		"cursed": -1,
 		"resist_force": 3,

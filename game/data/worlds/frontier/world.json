@@ -146,6 +146,67 @@
 			}
 		}
 	},
+	"weather": {
+		"_doc": "Погода пакета (v0.7.46): по terrain локации и сезону календаря — веса видов (rules.json weather.kinds). Локация indoor или terrain без таблицы — без погоды.",
+		"terrain": {
+			"grassland": {
+				"spring": {
+					"clear": 40,
+					"rain": 30,
+					"downpour": 10,
+					"fog": 20
+				},
+				"summer": {
+					"clear": 50,
+					"rain": 15,
+					"downpour": 10,
+					"fog": 5,
+					"heat": 20
+				},
+				"autumn": {
+					"clear": 30,
+					"rain": 30,
+					"downpour": 15,
+					"fog": 20,
+					"frost": 5
+				},
+				"winter": {
+					"clear": 25,
+					"snow": 35,
+					"frost": 30,
+					"fog": 10
+				}
+			},
+			"forest": {
+				"spring": {
+					"clear": 35,
+					"rain": 30,
+					"downpour": 10,
+					"fog": 25
+				},
+				"summer": {
+					"clear": 45,
+					"rain": 20,
+					"downpour": 15,
+					"fog": 10,
+					"heat": 10
+				},
+				"autumn": {
+					"clear": 25,
+					"rain": 30,
+					"downpour": 15,
+					"fog": 25,
+					"frost": 5
+				},
+				"winter": {
+					"clear": 20,
+					"snow": 40,
+					"frost": 25,
+					"fog": 15
+				}
+			}
+		}
+	},
 	"quests": {
 		"letter_to_ilva": {
 			"title": "Письмо для Илвы",
@@ -1132,6 +1193,13 @@
 							"items": {}
 						}
 					}
+				},
+				{
+					"if_flag": "weather_downpour_pushcha",
+					"hooks": [
+						"ручей у брода вздулся от ливня и ревёт — к поляне не перейти",
+						"следы ведут с тропы вглубь, к лощине"
+					]
 				}
 			],
 			"site_id": "pushcha-trail",
@@ -1140,7 +1208,15 @@
 				"game",
 				"timber",
 				"forage"
-			]
+			],
+			"closed_exits": {
+				"pushcha-glade": {
+					"when": {
+						"not_flag": "weather_downpour_pushcha"
+					},
+					"text": "брод через ручей к поляне залило ливнем: вода по грудь, течение валит с ног — ждать, пока спадёт"
+				}
+			}
 		},
 		"pushcha-glade": {
 			"name": "Поляна с менгиром",
@@ -1183,6 +1259,13 @@
 					"hooks": [
 						"на расколотом менгире не осталось ни одного знака",
 						"у пустой землянки — следы, уходящие в чащу"
+					]
+				},
+				{
+					"if_flag": "weather_downpour_pushcha",
+					"hooks": [
+						"знаки на менгире недавно кто-то пытался стесать",
+						"ручей за спиной вздулся — назад только по поваленному стволу выше по течению"
 					]
 				}
 			],
@@ -1778,6 +1861,13 @@
 						"на двери дома прибита бумага ратуши: «продаётся»",
 						"через брод перекинут новый мост на дубовых сваях"
 					]
+				},
+				{
+					"if_flag": "weather_downpour_brod",
+					"hooks": [
+						"на двери дома прибита бумага ратуши: «продаётся»",
+						"река вздулась и мутна — рыба ушла на дно"
+					]
 				}
 			]
 		},
@@ -2159,7 +2249,10 @@
 				"acid_vial": 2,
 				"net": 1,
 				"grain": 10,
-				"spices": 4
+				"spices": 4,
+				"winter_clothes": 2,
+				"tent_two_person": 1,
+				"blanket": 3
 			},
 			"wants": [
 				"gear",
@@ -2870,6 +2963,16 @@
 				}
 			},
 			"description": "Горячий отвар на ягодах и пряностях — греет в дороге и утоляет жажду."
+		},
+		"winter_clothes": {
+			"name": "Тёплая одежда",
+			"item_type": "gear",
+			"weight": 5,
+			"value_cp": 500,
+			"properties": [
+				"warm"
+			],
+			"description": "Овчинный тулуп, меховая шапка и рукавицы: в мороз и снег ночь под открытым небом не так страшна."
 		}
 	},
 	"jobs": {

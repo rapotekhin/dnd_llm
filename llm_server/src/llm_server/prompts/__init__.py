@@ -139,6 +139,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "background": ("предыстория героя и связь NPC с его прошлым", ()),
     "wilds": ("охота и рыбалка, угодья, браконьерство; зверь ушёл или вернулся, рыба пропала, новые угодья (`wilds`)", ("wilds",)),
     "calendar": ("дата и праздники: когда ярмарка, праздник идёт, срок к празднику; свой праздник по причине (`festival`)", ("festival",)),
+    "weather": ("погода: ливень, туман, снег, зной, мороз и что они значат; чары или чудо меняют погоду на часы (`weather`)", ("weather",)),
     "pets": ("питомец героя и приручение: дикий зверь в сцене, имя, близость (`bond` с creature_id), помощь, разведка; бездомный зверь по причине (`beast`)", ("beast",)),
     "games": ("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; поединок по вызову; арена и ставки на бои; своя игра (`contest`)", ("contest",)),
     "world_edits": ("правка готового места: у человека или в сундуке появилась или пропала вещь по причине в мире (`world_item`); новая вещь в обставленной комнате (`furnish` с `cause`)", ("world_item",)),
@@ -155,6 +156,8 @@ WATER_WORDS = re.compile(r"вод[аыуе]|набра|набер|наполн|�
 BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
 MOUNT_WORDS = re.compile(r"конь|коня|кобыл|лошад|мул|осл|верблюд|вьюк|навьюч|телег|фургон|повозк|запряч|упряж|верхом|скакун|аренд|напрокат",
                          re.IGNORECASE)  # v0.7.42
+WEATHER_WORDS = re.compile(r"погод|дожд|ливн|ливен|туман|снег|метел|вьюг|мороз|холод|зно[йя]|жар[аы]|небо|тучи|ветер|гроз",
+                           re.IGNORECASE)
 FESTIVAL_WORDS = re.compile(r"праздн|ярмар|дожин|гулянь|торговый день|свадьб|пир[ау ]|поминк|календар|какое число|какой день|месяц",
                             re.IGNORECASE)  # v0.7.44
 BOUT_WORDS = re.compile(r"поедин|дуэл|вызыва|вызов|сразимся|сразиться|помахаться|на кулак|до первой крови|до сдачи|арен|бойцов|кровав[аую]+ ям|турнир|ставк",
@@ -209,6 +212,8 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("property")
     if scene and mentions(said, FESTIVAL_WORDS):  # v0.7.44: a date, a fair, a feast by words
         out.append("calendar")
+    if scene and mentions(said, WEATHER_WORDS):  # v0.7.46: the weather by words, magic over it
+        out.append("weather")
     if scene and any("приручить" in c or "питомец героя" in c for c in scene.creatures):  # v0.7.43: a beast to tame or a pet here
         out.append("pets")
     if scene and mentions(said, BOUT_WORDS):  # v0.7.45: a duel by challenge, the arena, a bet on a bout

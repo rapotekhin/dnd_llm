@@ -67,6 +67,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	PetRules.seed(s, Catalog.data, s.room_id)  # the start room's wild beasts (v0.7.43)
 	start(s)
 	CalendarRules.sync(s, Catalog.data["world"])  # a festival on the first day (v0.7.44)
+	WeatherRules.sync(s, Catalog.data)  # the first day's weather (v0.7.46)
 	_request("enter", "")
 
 
@@ -84,6 +85,8 @@ func long_rest(supplies: Dictionary = {}) -> String:
 	var began_abs := TimeRules.abs_minute(session)
 	var lines := ExplorationRules.long_rest(session, Catalog.data, supplies)
 	TimeRules.after_long_rest(session, Catalog.data, began)
+	lines.append_array(CalendarRules.sync(session, Catalog.data["world"]))
+	lines.append_array(WeatherRules.sync(session, Catalog.data))  # the morning's weather (v0.7.46)
 	NeedRules.woke(session, Catalog.data, began_abs)
 	FollowRules.rested(session)  # their meal counts as the breakfast too
 	lines.append_array(ConditionRules.expire(session, Catalog.data))
@@ -1335,7 +1338,7 @@ func _sneak_past_people(room_id: String) -> String:
 	var who := ""
 	for id: String in npcs:
 		var m: Dictionary = Catalog.data["monsters"].get(str(world().npc(id).get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])), {})
-		var pp := int(m.get("passive_perception", 10)) - ConditionRules.unseen_penalty(session.character, Catalog.data)
+		var pp := int(m.get("passive_perception", 10)) - WeatherRules.unseen(session, Catalog.data)
 		if pp >= best:
 			best = pp
 			who = str(world().npc(id).get("name", id))
@@ -2122,6 +2125,7 @@ func start(s: GameSession) -> void:
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 	CalendarRules.sync(s, Catalog.data["world"])  # v0.7.44: the festivals' flags by the date of a save
+	WeatherRules.sync(s, Catalog.data)  # v0.7.46: and the weather's
 	session = s
 	busy_turn = ""
 	_last_kind = ""
@@ -3357,6 +3361,8 @@ func _engine_check(params: Dictionary) -> Dictionary:
 	var dis: Array = (mods["disadvantage"] as Array).map(cond_name)
 	if str(params.get("skill", "")) == "perception" and TimeRules.dark(session, Catalog.data):
 		dis.append("темнота")
+	elif str(params.get("skill", "")) == "perception" and not WeatherRules.obscure_why(session, Catalog.data).is_empty():
+		dis.append(WeatherRules.obscure_why(session, Catalog.data))  # fog, a downpour (v0.7.46)
 	params["disadvantage_reason"] = ", ".join(dis)
 	params["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
 	params["reroll_ones"] = CharacterRules.has_trait(session.character, "lucky")  # v0.7.10

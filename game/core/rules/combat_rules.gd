@@ -342,7 +342,7 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 		var seen: Array[String] = []
 		for id: String in foes:
 			var f := fighter(s, id)
-			if int(roll["total"]) >= monster_passive(data, f) - ConditionRules.unseen_penalty(s.character, data):
+			if int(roll["total"]) >= monster_passive(data, f) - WeatherRules.unseen(s, data):
 				f["surprised"] = true
 				unseen.append(str(f["name"]))
 			else:
@@ -741,6 +741,9 @@ static func hero_attack_dis(s: GameSession, data: Dictionary, t: Dictionary) -> 
 		dis.append("истощение")
 	if _has(t, "invisible") and not SpellEffects.has(c, "see_invisible") and not t.has("outlined"):  # See Invisibility, Faerie Fire
 		dis.append("цель невидима")
+	var wx := WeatherRules.obscure_why(s, data)
+	if not wx.is_empty() and t.has("col") and cols_between(player(s), t) > 0:  # a ranged attack in fog or a downpour (v0.7.46)
+		dis.append(wx)
 	return dis
 
 
@@ -1661,7 +1664,7 @@ static func player_hide(s: GameSession, data: Dictionary) -> Array[String]:
 	var roll := stealth_roll(s, data)
 	var best := 0
 	for id: String in enemies(s):
-		best = maxi(best, monster_passive(data, fighter(s, id)) - ConditionRules.unseen_penalty(s.character, data))
+		best = maxi(best, monster_passive(data, fighter(s, id)) - WeatherRules.unseen(s, data))
 	var ok := int(roll["total"]) >= best
 	if ok:
 		player(s)["hidden"] = true
@@ -2407,7 +2410,8 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		or (ConditionRules.invisible(c, data) and not _has(f, "invisible")) or (ranged_use and ConditionRules.has(c, "prone")) \
 		or ["blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x)) or not (tm["dis"] as Array).is_empty() \
 		or bool(f.get("mocked", false)) or bool(f.get("chilled", false)) or not SpellEffects.attack_dis(s, data, f).is_empty() \
-		or f.has("cursed_dis") or SpellEffects.obscured(s, int(f["col"])) != SpellEffects.obscured(s, int(p["col"]))
+		or f.has("cursed_dis") or SpellEffects.obscured(s, int(f["col"])) != SpellEffects.obscured(s, int(p["col"])) \
+		or (ranged_use and not WeatherRules.obscure_why(s, data).is_empty())
 	f.erase("mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
 	if bool(p.get("blinked", false)):  # Blink (v0.7.13.3)
 		lines.append("%s бьёт в пустоту — героя нет на этом плане" % f["name"])
@@ -2767,7 +2771,7 @@ static func _creature_attack(s: GameSession, data: Dictionary, f: Dictionary, a:
 	var adv := incapacitated(t) or (_has(t, "prone") and not ranged_use) or _has(t, "restrained") or _has(t, "blinded") or _has(f, "invisible")
 	var dis := (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) or (str(a.get("kind")) == "ranged" and d == 0) \
 		or ["poisoned", "blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x)) \
-		or (ranged_use and _has(t, "prone")) or bool(t.get("dodging", false))
+		or (ranged_use and _has(t, "prone")) or bool(t.get("dodging", false)) or (ranged_use and not WeatherRules.obscure_why(s, data).is_empty())
 	var rolls := _d20(s.rng, adv, dis)
 	var nat := _nat(rolls, adv, dis)
 	var total := nat + int(a.get("to_hit", 0))

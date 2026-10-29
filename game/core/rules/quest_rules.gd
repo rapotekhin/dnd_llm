@@ -151,6 +151,8 @@ static func met(s: GameSession, when: Dictionary) -> bool:
 		return s.room_id == str(when["arrive"])
 	if when.has("flag"):
 		return s.flags.has(str(when["flag"]))
+	if when.has("not_flag"):  # v0.7.46: a ford open while it is not flooded
+		return not s.flags.has(str(when["not_flag"]))
 	if when.has("all"):
 		return (when["all"] as Array).all(func(w: Dictionary) -> bool: return met(s, w))
 	if when.has("any"):

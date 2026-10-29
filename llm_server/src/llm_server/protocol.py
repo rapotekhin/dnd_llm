@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.89.0"
+PROTOCOL_VERSION = "0.90.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -234,6 +234,7 @@ class Scene(_In):
     open_edges: list[str] = Field(default_factory=list)  # where the pack lets the master draw new places (0.32.0)
     wilds: list[str] = Field(default_factory=list)  # 0.85.0: hunting grounds and fishing waters here with their stock
     calendar: list[str] = Field(default_factory=list)  # 0.88.0: festivals on now and near: «Дожинки (Ольховый Брод) — через 9 дней, 12 Жатвеня: …»
+    weather: str = ""  # 0.90.0: the location's weather by the engine: «ливень — стеной льёт…; герой под крышей»
     summons: list[str] = Field(default_factory=list)  # 0.49.0: creatures a spell called to go with the hero — «Волк 1 (Призыв зверей, до конца концентрации)»
     site_name: str = ""  # 0.50.0: the site of the room (a building, a yard) — «Таверна «Хромой олень»»
     site_description: str = ""
@@ -566,7 +567,7 @@ ItemProperty = Literal[
     "silvered", "magic_plus1", "magic_plus2", "magic_plus3",
     "fire_damage", "cold_damage", "lightning_damage", "radiant_damage", "necrotic_damage", "poison_damage",
     "resist_fire", "resist_cold", "resist_poison", "ac_plus1", "ac_plus2", "saves_plus1", "stealth_advantage",
-    "light_source", "healing", "cursed",
+    "light_source", "warm", "healing", "cursed",
     # v0.7.12 (0.18.0): every property the engine now resolves
     "resist_force", "resist_lightning", "resist_acid", "resist_necrotic", "checks_plus1", "ranged_damage_plus2",
     "spell_attack_plus1", "speed_30", "perception_advantage", "investigation_advantage", "darkvision", "wound_closure",
@@ -1302,6 +1303,20 @@ class BeastEffect(_Out):
     room_id: str | None = None  # empty — the hero's room
 
 
+class WeatherEffect(_Out):
+    """Magic or a miracle changes the weather of a location for hours (0.90.0): Control Weather, a druid's rite, a
+    priestess's prayer answered. The engine keeps the kind (`weather`) over the location for `hours` (within
+    rules.weather.magic.max_hours) with its consequences — fog and a downpour blind archers and watchers, snow slows
+    the way, the cold calls for warmth; then the day's weather comes back. Not for the weather of the day itself:
+    that is the engine's, given in the scene."""
+
+    kind: Literal["weather"] = "weather"
+    weather: Literal["clear", "rain", "downpour", "fog", "snow", "heat", "frost"]
+    hours: int = Field(ge=1, le=24)
+    cause: str = Field(min_length=8, max_length=160)  # the spell or the miracle: «молитва сестры Илвы о ясном небе»
+    location_id: str | None = None  # empty — the hero's location
+
+
 class FestivalEffect(_Out):
     """A feast or a fair of the master's own for a cause in the world (0.88.0): a wedding feast, a fair the headman
     announced, a wake. The engine puts it on the calendar — it starts in `starts_in` days and lasts `days` (within
@@ -1691,7 +1706,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

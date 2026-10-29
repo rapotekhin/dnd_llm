@@ -47,6 +47,7 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 		s.day += 1
 		lines.append("Наступил день %d%s" % [s.day, (" — " + CalendarRules.text(data["world"], s.day)) if CalendarRules.on(data["world"]) else ""])
 		lines.append_array(CalendarRules.sync(s, data["world"]))  # festivals begin and end (v0.7.44)
+	lines.append_array(WeatherRules.sync(s, data))  # a new day's weather, the master's magic runs out (v0.7.46)
 	if part(s, data) != before:
 		lines.append("Время суток: %s" % part_name(s, data))
 	lines.append_array(ConditionRules.expire(s, data))
@@ -102,8 +103,15 @@ static func on_move(s: GameSession, data: Dictionary, from: String, to: String) 
 	if not same:
 		minutes = BackgroundRules.travel_minutes(s, data, minutes, to)  # an outlander's Wanderer (v0.7.11)
 		minutes = roundi(minutes * minf(PropertyRules.travel_mult(s, data, from), PropertyRules.travel_mult(s, data, to)))  # riding (v0.7.27)
-	var lines := advance(s, data, minutes)
+	var wm := 1.0 if same else WeatherRules.travel_mult(s, data, from, to)
+	var lines: Array[String] = []
+	if wm > 1.0:  # mud and snow (v0.7.46)
+		minutes = roundi(minutes * wm)
+		lines.append("Дорога тяжела — %s: путь ×%s" % [WeatherRules.way_why(s, data, from, to), str(wm).trim_suffix(".0")])
+	lines.append_array(advance(s, data, minutes))
 	lines.append_array(march(s, data, minutes))
+	if not same:
+		lines.append_array(WeatherRules.on_way(s, data))  # the heat by day
 	return lines
 
 
@@ -167,7 +175,7 @@ static func dark(s: GameSession, data: Dictionary) -> bool:
 
 ## Passive Perception lost now: sneaking (−5) and darkness (disadvantage = −5).
 static func passive_penalty(s: GameSession, data: Dictionary) -> int:
-	return (ExplorationRules.SNEAK_PASSIVE_PENALTY if s.sneaking else 0) + (5 if dark(s, data) else 0)
+	return (ExplorationRules.SNEAK_PASSIVE_PENALTY if s.sneaking else 0) + (5 if dark(s, data) else WeatherRules.passive(s, data))  # fog, a downpour (v0.7.46)
 
 
 ## Minutes until `target`: "hour" — 60, a part id — its next start (a full day when it is starting right now).

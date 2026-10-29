@@ -131,6 +131,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "open_edges": scene.get("open_edges", []),
                 "wilds": scene.get("wilds", []),  # hunting grounds and fishing waters (0.85.0)
                 "calendar": scene.get("calendar", []),  # festivals on and near (0.88.0)
+                "weather": scene.get("weather", ""),  # the location's weather (0.90.0)
             },
             "character": {
                 "name": ch.get("name", ""), "gender": ch.get("gender", "other"), "class_name": ch.get("class", ""),
