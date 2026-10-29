@@ -55,8 +55,11 @@ static func home_of(data: Dictionary, npc_id: String) -> String:
 
 
 ## Adds points in `loc` (a settlement; elsewhere nothing). Lines: «Ольховый Брод: о вас говорят хорошо — свой».
-static func add(s: GameSession, data: Dictionary, loc: String, delta: int, why: String) -> Array[String]:
+## v0.7.47: the deed goes on as a rumour (`spread`) — the neighbours learn of it only when it arrives.
+static func add(s: GameSession, data: Dictionary, loc: String, delta: int, why: String, spread: bool = true) -> Array[String]:
 	var lines: Array[String] = []
+	if spread and delta != 0:
+		RumorRules.on_fame(s, data, loc, delta, why)
 	if delta == 0 or not is_settlement(data, loc):
 		return lines
 	var before := step(s, data, loc)

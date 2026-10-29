@@ -52,6 +52,31 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
 
 
 
+def check_rumors(world, rooms) -> list[str]:
+    """v0.7.47: the pack's own rumours — a text, a weight 1–3, an origin location, a tip's room and secret of the world."""
+    errors: list[str] = []
+    locs = set(world.get("locations", {}))
+    for rid, r in world.get("rumors", {}).items():
+        where = f"world.rumors.{rid}"
+        if len(str(r.get("text", "")).strip()) < 10:
+            errors.append(f"{where}: text — от 10 знаков")
+        if r.get("weight", 1) not in (1, 2, 3):
+            errors.append(f"{where}: weight — 1, 2 или 3")
+        if r.get("origin") not in locs:
+            errors.append(f"{where}: origin — локация пакета")
+        room = r.get("target_room", "")
+        if room and room not in rooms:
+            errors.append(f"{where}: нет комнаты {room}")
+        sec = r.get("target_secret", "")
+        if sec:
+            s_room, _, s_id = sec.partition(":")
+            if s_room != room or s_id not in {x.get("id") for x in rooms.get(room, {}).get("secrets", [])}:
+                errors.append(f"{where}: target_secret — «комната:id» тайны в target_room")
+    for law_loc, loc in world.get("locations", {}).items():
+        errors += [f"world.locations.{law_loc}.law.reach: нет локации {x}" for x in loc.get("law", {}).get("reach", []) if x not in locs]
+    return errors
+
+
 def check_weather(world, rules) -> list[str]:
     """v0.7.46: the pack's weather tables — kinds of rules.json weather.kinds, seasons of the calendar, positive weights."""
     errors: list[str] = []
@@ -457,6 +482,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
 
     errors += check_calendar(world.get("calendar"), world, npcs, rooms)
     errors += check_weather(world, load(DATA / "rules.json").get("weather", {}))
+    errors += check_rumors(world, rooms)
 
     seen: set[str] = set()
     for p in chars["presets"]:

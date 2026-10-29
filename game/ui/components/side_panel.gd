@@ -420,6 +420,14 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var cb := _flow(acts, tr("BTN_CONTEST"), contest_requested.emit.bind(id), can_act and cw.is_empty())
 		cb.name = "Contest_" + id
 		cb.tooltip_text = cw if not cw.is_empty() else tr("BTN_CONTEST_TIP").format({"name": n.get("name", id)})
+	if RumorRules.on(Catalog.data):  # v0.7.47: what they say around here
+		var rw := RumorRules.ask_why(s, Catalog.data, id)
+		var rb := _flow(acts, tr("BTN_RUMORS"), func() -> void:
+			var err := GameState.rumor_ask(id)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and rw.is_empty())
+		rb.name = "Rumors_" + id
+		rb.tooltip_text = tr(rw) if not rw.is_empty() else tr("BTN_RUMORS_TIP").format({"name": n.get("name", id)})
 	var arena_site := ArenaRules.of_manager(Catalog.data, id)  # v0.7.45
 	if not arena_site.is_empty():
 		var ar := _flow(acts, tr("BTN_ARENA"), arena_requested.emit.bind(arena_site), can_act)

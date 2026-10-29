@@ -68,6 +68,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	start(s)
 	CalendarRules.sync(s, Catalog.data["world"])  # a festival on the first day (v0.7.44)
 	WeatherRules.sync(s, Catalog.data)  # the first day's weather (v0.7.46)
+	RumorRules.seed(s, Catalog.data)  # the pack's talk (v0.7.47)
 	_request("enter", "")
 
 
@@ -87,6 +88,7 @@ func long_rest(supplies: Dictionary = {}) -> String:
 	TimeRules.after_long_rest(session, Catalog.data, began)
 	lines.append_array(CalendarRules.sync(session, Catalog.data["world"]))
 	lines.append_array(WeatherRules.sync(session, Catalog.data))  # the morning's weather (v0.7.46)
+	lines.append_array(RumorRules.tick(session, Catalog.data))  # rumours went on overnight (v0.7.47)
 	NeedRules.woke(session, Catalog.data, began_abs)
 	FollowRules.rested(session)  # their meal counts as the breakfast too
 	lines.append_array(ConditionRules.expire(session, Catalog.data))
@@ -445,6 +447,27 @@ func buy_service(id: String) -> String:
 		_quiet_lines(TradeRules.buy_service(session, Catalog.data, session.npc_id, id, weapon))
 		return ""
 	return "SERVICE_NOTHING"
+
+
+## «Слухи» at an NPC (v0.7.47): what it knows and the hero has not heard, without the master. "" or a localization key.
+func rumor_ask(npc_id: String) -> String:
+	if session == null or is_busy():
+		return "EQUIP_BUSY"
+	var why := RumorRules.ask_why(session, Catalog.data, npc_id)
+	if not why.is_empty():
+		return why
+	_quiet_lines(RumorRules.ask(session, Catalog.data, npc_id))
+	return ""
+
+
+## The board read (v0.7.47): its notices go to the journal, a notice with a place onto the map.
+func read_notices() -> void:
+	if session == null:
+		return
+	var ids := RumorRules.notices(session, Catalog.data).filter(func(r: Dictionary) -> bool:
+		return not RumorRules.heard(session, str(r["id"]))).map(func(r: Dictionary) -> String: return str(r["id"]))
+	if not ids.is_empty():
+		_quiet_lines(RumorRules.hear(session, Catalog.data, ids, "доска"))
 
 
 ## The name of the spell the hero concentrates on that this one would break (v0.7.13.1), or "".
@@ -2126,6 +2149,7 @@ func start(s: GameSession) -> void:
 	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 	CalendarRules.sync(s, Catalog.data["world"])  # v0.7.44: the festivals' flags by the date of a save
 	WeatherRules.sync(s, Catalog.data)  # v0.7.46: and the weather's
+	RumorRules.seed(s, Catalog.data)  # v0.7.47: the pack's talk in an older save
 	session = s
 	busy_turn = ""
 	_last_kind = ""
@@ -2362,6 +2386,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	if not gone.is_empty():
 		lines.append("Того, что вы здесь оставили, уже нет: " + ", ".join(gone))
 	var found := ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
+	lines.append_array(RumorRules.on_enter(session, Catalog.data, room_id))  # a heard tip checked (v0.7.47)
 	lines.append_array(DiseaseRules.contagion(session, Catalog.data))  # a sick NPC here (v0.7.23.1)
 	lines.append_array(ExplorationRules.take_caches(session, Catalog.data, room_id))
 	lines.append_array(QuestRules.advance(session, Catalog.data))

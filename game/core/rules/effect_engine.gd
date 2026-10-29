@@ -354,6 +354,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return CalendarRules.plan_festival(s, data, e)
 		"weather":  # v0.7.46: magic or a miracle over the weather, for hours
 			return WeatherRules.plan(s, data, e)
+		"rumor":  # v0.7.47: a rumour spread, told by an NPC or refuted
+			return RumorRules.plan(s, data, e, pending)
 		"beast":  # v0.7.43: a wild beast to tame in the scene, for a cause
 			if not PetRules.on(data):
 				return {"reason": "питомцев в этих правилах нет"}
@@ -1039,6 +1041,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(CalendarRules.apply_festival(s, _data, plan))
 		"weather":
 			_extra_lines.append_array(WeatherRules.apply(s, _data, plan))
+		"rumor":
+			_extra_lines.append_array(RumorRules.apply(s, _data, plan))
 		"stock":
 			_extra_lines.append_array(MountRules.apply_stock(s, _data, plan) if plan.has("animal") else TradeRules.apply_stock(s, _data, plan))
 		"permit":
@@ -1083,7 +1087,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"quest_act":
 			_extra_lines.append_array(QuestGen.apply_act(s, _data, plan))
 		"create_place":
-			_extra_lines.append("выход: [%s]" % WorldGen.apply_place(s, _data, plan))
+			var entry := WorldGen.apply_place(s, _data, plan)
+			_extra_lines.append("выход: [%s]" % entry)
+			RumorRules.on_place(s, _data, entry)  # v0.7.47: the neighbours talk of it
 			_made["rooms"] = plan["ids"]
 			_made["site"] = plan["site_id"]
 		"door":

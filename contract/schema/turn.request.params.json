@@ -821,6 +821,13 @@
           "title": "Room Name",
           "type": "string"
         },
+        "rumors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rumors",
+          "type": "array"
+        },
         "site_description": {
           "default": "",
           "title": "Site Description",

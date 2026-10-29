@@ -3326,6 +3326,7 @@
 			"_doc": "Services of NPCs (NPC `services` in the pack; a pack may add its own in world.json `services`), v0.7.16 by pillar 6 — a service is data over an operation of the engine (`op`): identify — every unknown item the hero carries; lift_curse — the cursed items come off (they stay cursed); enchant — one carried item of `needs` (weapon | armor | any) from the catalog gets `property` from the item properties and the name «… (`suffix`)», its value + the cost; teach_recipe (v0.7.24) — the hero learns `recipe` (needs the proficiency of its tool). `name` — the button, `short` — for the lines and the master, `done` — the line of the result. Silver: PHB 100 gp.",
 			"identify": {"cost_cp": 2000, "op": "identify", "name": "Опознать вещи", "short": "опознание вещей"},
 			"meal": {"cost_cp": 30, "op": "meal", "name": "Поесть и попить", "short": "обед и питьё", "done": "сыт и напоен"},
+			"rumor": {"cost_cp": 20, "op": "rumor", "name": "Купить слух", "short": "слух за монету", "done": "слух рассказан"},
 			"remove_curse": {"cost_cp": 9000, "op": "lift_curse", "name": "Снять проклятие", "short": "снятие проклятия"},
 			"cure_disease": {"cost_cp": 1500, "op": "cure_disease", "power": "magic", "name": "Исцелить болезнь", "short": "исцеление болезни", "done": "болезнь отступила"},
 			"herbal_cure": {"cost_cp": 300, "op": "cure_disease", "power": "herbs", "name": "Вылечить травами", "short": "лечение травами", "done": "отвар помог"},
@@ -3468,6 +3469,20 @@
 			"travel_mult_by_speed": [[60, 0.5], [40, 0.75], [0, 1.0]],
 			"per_day": 2
 		}
+	},
+	"rumors": {
+		"_doc": "Rumours (v0.7.47, RumorRules): a fact of the world spreads from its location along the map's roads — a location `hops` away hears it on day + hops × days_per_hop[weight]; a true one fades after life_days[weight], a lie lives until refuted. The people of a place know the rumours of weight ≥ plain_min_weight (a `gossip` NPC — all); asked once a day per NPC: `tells` (a gossip — `gossip_tells`), not by an NPC of attitude ≤ hostile_at. The fame: a reputation change of |delta| ≥ fame.min spreads, weight +1 at each of fame.weight_at, share_pct of the points land in every other location; the master's fame × master_step. crime_weight — by the crime's kind.",
+		"days_per_hop": {"1": 3, "2": 2, "3": 1},
+		"life_days": {"1": 10, "2": 20, "3": 40},
+		"weight_names": {"1": "пустяк", "2": "заметный", "3": "важный"},
+		"plain_min_weight": 2,
+		"ask": {"tells": 1, "gossip_tells": 2, "hostile_at": -2},
+		"fame": {"min": 5, "weight_at": [10, 20], "share_pct": 50, "master_step": 3},
+		"master_fame_max": 3,
+		"crime_weight": {"murder": 3, "assault": 2, "_default": 2},
+		"death_weight": 2,
+		"place_weight": 1,
+		"snapshot_max": 6
 	},
 	"weather": {
 		"_doc": "Погода (v0.7.46, WeatherRules): состояние локации по дням — пакет world.json `weather` даёт таблицы по terrain локации и сезону календаря (вес каждого вида); локация `indoor` или без таблицы — без погоды. Каждый новый день — бросок, вчерашняя погода держится с шансом stay_pct. Последствия — по виду: obscure — помеха дальним атакам и Внимательности, пассивная Внимательность стражи −passive (крадущимся легче); travel_mult — переход между локациями дольше (грязь, снег); camp.fire_out — костёр гаснет, лагерь мокнет: спасбросок Тел camp.soak_dc, провал — HP наутро только до половины и кости хитов не вернулись (укрытие — палатка shelter_items или комната под крышей); exposure — нужда в тепле (cold) или в тени и воде (heat): ночь в лагере без защиты — спасбросок Тел exposure.dc, провал — уровень истощения по 5e; зной ещё раз в день в пути днём. Защита: shelter (крыша, палатка), warm (вещь со свойством warm или из warm_items), fire (трутница из fire_items, если костёр не гасит ливень), water (пинта в сосуде или вода рядом), resist (сопротивление урону вида). hunt_pct / fish_pct — улов охоты и рыбалки в процентах. Флаг мира weather_<вид>_<локация> — для вариантов комнат и closed_exits (брод залило). Мастер меняет погоду эффектом `weather` на magic.max_hours часов с причиной (Власть над погодой, чудо).",

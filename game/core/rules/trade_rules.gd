@@ -547,6 +547,8 @@ static func targets(s: GameSession, data: Dictionary, id: String) -> Array[Strin
 			return enchantable(s, data, def)
 		"teach_recipe":  # v0.7.24
 			return CraftRules.teachable(s, data, def)
+		"rumor":  # v0.7.47: a rumour of the place the hero has not heard
+			return RumorRules.for_sale(s, data)
 		"meal":  # v0.7.23: only when the hero is hungry or thirsty
 			var hungry := NeedRules.on(s) and (NeedRules.value(s, data, "food") < 75.0 or NeedRules.value(s, data, "water") < 75.0)
 			return ["meal"] if hungry else []
@@ -582,6 +584,8 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 	match str(sv["op"]):
 		"meal":
 			lines.append_array(NeedRules.meal(s, data))
+		"rumor":
+			lines.append_array(RumorRules.sell(s, data, npc_id))
 		"identify":
 			lines.append_array(ItemRules.identify(c, data, s.items))
 		"lift_curse":

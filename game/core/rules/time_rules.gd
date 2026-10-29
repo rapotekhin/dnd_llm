@@ -68,6 +68,7 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 	lines.append_array(ShopRules.tick(s, data))  # the shelves sell by days (v0.7.29)
 	lines.append_array(StudyRules.tick(s, data))  # misses and expulsions (v0.7.30)
 	lines.append_array(CrimeRules.spread(s, data))  # a hidden body is found (v0.7.14)
+	lines.append_array(RumorRules.tick(s, data))  # rumours reach the neighbours with the fame and the wanted (v0.7.47)
 	if data["rules"].has("doors"):
 		lines.append_array(DoorRules.tick(s, data))  # a burning door burns through (v0.7.22.25)
 	return lines

@@ -4615,6 +4615,100 @@
       "title": "RevealSecretEffect",
       "type": "object"
     },
+    "RumorEffect": {
+      "additionalProperties": false,
+      "description": "A rumour (0.91.0). `spread` — the hero's or an NPC's words go round from here: `text` (what they say),\n`importance` 1–3 (a trifle … the talk of the town; it travels faster), `truth` (false — a lie: it lives until\nrefuted), `notice` (put up on the board), `fame` −3…+3 (the hero's name in it), `target_room` (a room of the world\nit points at — a tip). `tell` — the hero heard the rumours `rumor_ids` of the line «Слухи здесь» (all told this turn\nin one effect): they go into the hero's journal, a tip onto the map. `refute` — the lie `rumor_id` shown up. Which settlement hears a rumour\nand when, and what it carries (the fame, the wanted), is the engine's.",
+      "properties": {
+        "fame": {
+          "default": 0,
+          "maximum": 3,
+          "minimum": -3,
+          "title": "Fame",
+          "type": "integer"
+        },
+        "importance": {
+          "default": 1,
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Importance",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "rumor",
+          "default": "rumor",
+          "title": "Kind",
+          "type": "string"
+        },
+        "notice": {
+          "default": false,
+          "title": "Notice",
+          "type": "boolean"
+        },
+        "op": {
+          "enum": [
+            "spread",
+            "tell",
+            "refute"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "rumor_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rumor Id"
+        },
+        "rumor_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Rumor Ids",
+          "type": "array"
+        },
+        "target_room": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Room"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "truth": {
+          "default": true,
+          "title": "Truth",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "RumorEffect",
+      "type": "object"
+    },
     "SiteHours": {
       "additionalProperties": false,
       "description": "When the object is open (0.80.0), hours 0–24.",
@@ -5464,6 +5558,7 @@
           "recipe": "#/$defs/RecipeEffect",
           "reputation": "#/$defs/ReputationEffect",
           "reveal_secret": "#/$defs/RevealSecretEffect",
+          "rumor": "#/$defs/RumorEffect",
           "start_combat": "#/$defs/StartCombatEffect",
           "stock": "#/$defs/StockEffect",
           "supplier": "#/$defs/SupplierEffect",
@@ -5549,6 +5644,9 @@
         },
         {
           "$ref": "#/$defs/WeatherEffect"
+        },
+        {
+          "$ref": "#/$defs/RumorEffect"
         },
         {
           "$ref": "#/$defs/PermitEffect"

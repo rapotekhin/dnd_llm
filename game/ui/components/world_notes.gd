@@ -94,6 +94,9 @@ func _draw_map() -> void:
 	canvas.known = WorldMap.known(s, world)
 	canvas.focus = bx["locations"].get(w.location_id(s.room_id), Rect2())  # the view opens on the hero's location
 	canvas.marks = WorldMap.quest_marks(s, world)
+	for r: String in RumorRules.marks(s, Catalog.data):  # v0.7.47: a heard tip marks its room too
+		if not canvas.marks.has(r):
+			canvas.marks[r] = []
 	canvas.here = s.room_id
 	canvas.selected = _selected if not _selected.is_empty() else s.room_id
 	canvas.zoom = _zoom
@@ -171,6 +174,11 @@ func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks:
 		var ql := _text(tr("MAP_QUEST").format({"quest": str(q)}))
 		ql.add_theme_color_override("font_color", UiTheme.WARN)
 		ql.reparent(info)
+	for t: Variant in RumorRules.marks(s, Catalog.data).get(room_id, []):  # v0.7.47
+		var rl := _text(tr("MAP_RUMOR").format({"text": str(t)}))
+		rl.name = "MapRumor"
+		rl.add_theme_color_override("font_color", UiTheme.WARN)
+		rl.reparent(info)
 	if room_id == s.room_id:
 		var exits: Array = ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id).map(func(e: String) -> String:
 			return w.room_short(e))
@@ -206,7 +214,7 @@ func _travel_button(info: VBoxContainer, room_id: String) -> void:
 
 
 ## Journal tabs (v0.6.6, playtest-1): quests, places, conversations, finds; inside — groups by location that fold.
-const TABS: Array[String] = ["quests", "places", "people", "found", "chronicle", "calendar"]
+const TABS: Array[String] = ["quests", "places", "people", "found", "rumors", "chronicle", "calendar"]
 var _tab := "quests"
 var _folded := {}
 var _person_open := ""  # v0.7.22.21 (#18): the person whose card is open in the people tab
@@ -285,6 +293,8 @@ func _count(s: GameSession, w: WorldView, tab: String) -> int:
 		return _met(s, w).size()
 	if tab == "calendar":  # v0.7.44: the festivals on now
 		return CalendarRules.active(s, w.world).size()
+	if tab == "rumors":  # v0.7.47: the tips and the heard ones, not the checked
+		return RumorRules.count(s, Catalog.data)
 	var n := 0
 	for g: Dictionary in _groups(s, w, tab):
 		n += (g["lines"] as Array).size()
@@ -381,6 +391,8 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 				if CalendarRules.on(w.world):  # v0.7.44: the date beside the day's number
 					title += " — " + CalendarRules.text(w.world, d)
 				out.append({"title": title, "lines": by_day[d], "folded": d != days[0]})
+		"rumors":  # v0.7.47: the tips to check, the heard rumours, the checked ones
+			return RumorRules.groups(s, Catalog.data)
 		"calendar":  # v0.7.44: today, the festivals on and ahead, the months of the year
 			if not CalendarRules.on(w.world):
 				return out

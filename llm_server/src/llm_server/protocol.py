@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.90.0"
+PROTOCOL_VERSION = "0.91.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -235,6 +235,7 @@ class Scene(_In):
     wilds: list[str] = Field(default_factory=list)  # 0.85.0: hunting grounds and fishing waters here with their stock
     calendar: list[str] = Field(default_factory=list)  # 0.88.0: festivals on now and near: «Дожинки (Ольховый Брод) — через 9 дней, 12 Жатвеня: …»
     weather: str = ""  # 0.90.0: the location's weather by the engine: «ливень — стеной льёт…; герой под крышей»
+    rumors: list[str] = Field(default_factory=list)  # 0.91.0: what the NPC or the place knows: «[mill_coins] на старой мельнице… (заметный; герой уже слышал)»
     summons: list[str] = Field(default_factory=list)  # 0.49.0: creatures a spell called to go with the hero — «Волк 1 (Призыв зверей, до конца концентрации)»
     site_name: str = ""  # 0.50.0: the site of the room (a building, a yard) — «Таверна «Хромой олень»»
     site_description: str = ""
@@ -1317,6 +1318,26 @@ class WeatherEffect(_Out):
     location_id: str | None = None  # empty — the hero's location
 
 
+class RumorEffect(_Out):
+    """A rumour (0.91.0). `spread` — the hero's or an NPC's words go round from here: `text` (what they say),
+    `importance` 1–3 (a trifle … the talk of the town; it travels faster), `truth` (false — a lie: it lives until
+    refuted), `notice` (put up on the board), `fame` −3…+3 (the hero's name in it), `target_room` (a room of the world
+    it points at — a tip). `tell` — the hero heard the rumours `rumor_ids` of the line «Слухи здесь» (all told this turn
+    in one effect): they go into the hero's journal, a tip onto the map. `refute` — the lie `rumor_id` shown up. Which settlement hears a rumour
+    and when, and what it carries (the fame, the wanted), is the engine's."""
+
+    kind: Literal["rumor"] = "rumor"
+    op: Literal["spread", "tell", "refute"]
+    text: str | None = None  # spread: «говорят, чужак в одиночку прогнал волков от брода»
+    importance: int = Field(default=1, ge=1, le=3)
+    truth: bool = True
+    notice: bool = False
+    fame: int = Field(default=0, ge=-3, le=3)
+    target_room: str | None = None
+    rumor_ids: list[str] = Field(default_factory=list, max_length=6)  # tell: the ids in square brackets, every one told
+    rumor_id: str | None = None  # refute: the id in square brackets
+
+
 class FestivalEffect(_Out):
     """A feast or a fair of the master's own for a cause in the world (0.88.0): a wedding feast, a fair the headman
     announced, a wake. The engine puts it on the calendar — it starts in `starts_in` days and lasts `days` (within
@@ -1706,7 +1727,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

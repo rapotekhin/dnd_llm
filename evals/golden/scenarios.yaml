@@ -3914,3 +3914,62 @@ scenarios:
       effects: {required_kinds_any: [weather], forbidden_kinds: [coins, give_item, condition]}
     rubric:
       - "Мастер даёт эффект weather: ясно (clear), часы в пределах полудня (от 4 до 12), причина — рог героя; описывает, как тучи расходятся и ливень стихает; не обещает ясной погоды дольше срока чар"
+
+  - id: rumors_what_the_town_says
+    title: "«Что говорят в городе?» — только слухи места, рассказанные эффектом rumor"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, что нового? О чём в Сером Устье болтают?"
+    snapshot:
+      scene:
+        rumors:
+          - "[mill_coins] на старой мельнице кто-то по ночам прячет монеты — где-то за жерновами (заметный)"
+          - "[harbor_ghost] в порту по ночам видели огни на затонувшей барже (пустяк)"
+    engine:
+      validate:
+        - {kind: rumor, status: accept, summary: "Слух рассказан"}
+    expect:
+      effects: {required_kinds_any: [rumor], forbidden_kinds: [create_npc, create_quest, create_place, coins, give_item]}
+    rubric:
+      - "Горм пересказывает слухи только из строки «Слухи здесь» (монеты на мельнице, огни на барже) и все рассказанные отмечает эффектом rumor с op tell и их rumor_ids; не выдумывает других слухов, пропавших, заказчиков и наград"
+      - "Подаёт их как молву («говорят», «болтают»), не утверждает, что это правда, и не обещает, что монеты там точно есть"
+
+  - id: rumors_hero_spreads_a_lie
+    title: "Герой пускает ложный слух — эффект rumor spread с truth: false"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, слыхал? Говорят, сержант Ведда тайком берёт мзду с контрабандистов в порту. Расскажи это всем, кто зайдёт, — пусть знают. (Это враньё, но Горму знать не надо.)"
+    snapshot:
+      scene:
+        rumors:
+          - "[mill_coins] на старой мельнице кто-то по ночам прячет монеты — где-то за жерновами (заметный)"
+    engine:
+      check: {d20: [16], bonus: 1, total: 17, dc: 12, success: true, nat: null, blocked: false}
+      validate:
+        - {kind: rumor, status: accept, summary: "Пошёл слух: сержант Ведда берёт мзду"}
+    expect:
+      effects: {required_kinds_any: [rumor], forbidden_kinds: [create_npc, crime_known, coins]}
+    rubric:
+      - "Мастер даёт эффект rumor с op spread: текст о мзде сержанта Ведды, truth: false (герой сам назвал это враньём); importance 1–2; может перед этим спросить проверку Обмана — она удачна"
+      - "Горм верит и обещает передать; мастер не говорит, что весь город уже знает: куда и когда дойдёт слух, решает движок"
+
+  - id: rumors_overheard_in_the_hall
+    title: "Прислушаться к разговорам в зале — подслушанные слухи места ложатся в журнал (rumor tell)"
+    category: concepts
+    extends: tavern
+    input: "Сажусь у очага и прислушиваюсь к разговорам за столами."
+    snapshot:
+      scene:
+        rumors:
+          - "[tower_fire] пастухи божатся, что на башне старой заставы по ночам горит огонь (заметный)"
+          - "[miners_missing] пропали шахтёры старой шахты: семьи ждут вестей (заметный; объявление)"
+    engine:
+      check: {d20: [14], bonus: 3, total: 17, dc: 10, success: true, nat: null, blocked: false}
+      validate:
+        - {kind: rumor, status: accept, summary: "Слух рассказан"}
+    expect:
+      effects: {required_kinds_any: [rumor], forbidden_kinds: [create_npc, create_quest, coins, give_item]}
+    rubric:
+      - "Герой подслушивает только слухи из строки «Слухи здесь» (огонь на башне заставы, пропавшие шахтёры) и все услышанные отмечает эффектом rumor с op tell и их rumor_ids; других слухов, людей и наград не выдумывает"

@@ -144,6 +144,7 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: 
 	s.body_at[npc_id] = TimeRules.abs_minute(s)  # buried some days later (v0.7.22.10)
 	lines.append_array(QuestRules.on_death(s, data, npc_id))
 	if not by_hero:
+		RumorRules.on_death(s, data, npc_id, room_id)  # v0.7.47
 		return lines
 	var witnesses := s.npcs_here(world.world, room_id).filter(func(id: String) -> bool: return id != npc_id)
 	if ConditionRules.invisible(s.character, data):
@@ -186,8 +187,10 @@ static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array
 	if _assault(crime):
 		lines.append_array(BondRules.on_deed(s, data, victim, "assault", "нападение"))  # v0.7.31
 	var share := int(kind.get("reputation_share", 2 if _assault(crime) else 1))
+	var delta := int(ReputationRules.cfg(data)["points"]["crime_known"]) / share if share > 0 else 0
 	if share > 0:
-		lines.append_array(ReputationRules.add(s, data, loc, int(ReputationRules.cfg(data)["points"]["crime_known"]) / share, what))  # v0.7.17
+		lines.append_array(ReputationRules.add(s, data, loc, delta, what, false))  # v0.7.17
+	RumorRules.on_crime(s, data, crime, delta)  # v0.7.47: the news, the blame and the wanted go on to the neighbours
 	if not law(data, loc).is_empty():
 		if not s.wanted.has(loc):
 			s.wanted[loc] = TimeRules.abs_minute(s)

@@ -55,6 +55,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 				TimeRules.part_name(s, data), TimeRules.clock(s), ", темно" if TimeRules.dark(s, data) else ""],  # v0.7.44: the date
 			"calendar": CalendarRules.snapshot(s, data, data["world"]),  # v0.7.44: festivals on and near
 			"weather": WeatherRules.text(s, data),  # v0.7.46
+			"rumors": RumorRules.snapshot(s, data),  # v0.7.47
 		},
 		"world": world_info(s, data),
 		"character": character_sheet(s, data),

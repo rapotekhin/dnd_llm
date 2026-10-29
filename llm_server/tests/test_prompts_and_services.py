@@ -487,3 +487,22 @@ def test_containers_and_places_come_whole_only_by_the_players_words():
     assert "places" in prompts.auto_topics("exploration", s, "хочу построить дом на пустоши")
     text = prompts.system_prompt("exploration", s, None, said="осматриваю зал")
     assert "`containers` —" in text and "`places` —" in text  # in the index instead
+
+
+def test_rumors_of_the_place_in_the_prompt_and_the_router():
+    # v0.7.47: «Слухи здесь» from the engine; the words bring the topic; a rumour told needs the full prompt (an effect)
+    from llm_server import router
+    from llm_server.protocol import TurnRequestParams
+    s = snap()
+    s.scene.rumors = ["[mill_coins] на старой мельнице кто-то прячет монеты (заметный)"]
+    text = prompts.system_prompt("social", s, s.scene.npcs[0], said="что говорят в городе?")
+    assert "Слухи здесь" in text and "[mill_coins]" in text and "`rumor_ids`" in text
+    assert "rumors" not in prompts.auto_topics("social", s, "добрый вечер")
+    params = TurnRequestParams.model_validate({"turn_id": "t-1", "kind": "action", "mode": "social", "npc_id": INNKEEPER,
+                                               "input": "Что нового слышно?", "snapshot": s.model_dump()})
+    assert router.by_kind(params) == "full"
+    params.input = "Добрый вечер, Бруно"
+    assert router.by_kind(params) == ""
+    params.input = "Что нового слышно?"
+    params.snapshot.scene.rumors = ["[mill_coins] на старой мельнице кто-то прячет монеты (заметный; герой уже слышал)"]
+    assert router.by_kind(params) == ""  # nothing new to tell: the router decides
