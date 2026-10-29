@@ -31,6 +31,7 @@ signal heist_requested  # v0.7.33
 signal org_requested(org_id: String)  # v0.7.33
 signal office_requested(chief: String)  # v0.7.34
 signal pet_requested(creature_id: String)  # v0.7.43
+signal letter_requested(npc_id: String)  # v0.7.48
 signal arena_requested(site_id: String)  # v0.7.45
 
 var _content: VBoxContainer
@@ -428,6 +429,10 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 				EventBus.message.emit(tr(err)), can_act and rw.is_empty())
 		rb.name = "Rumors_" + id
 		rb.tooltip_text = tr(rw) if not rw.is_empty() else tr("BTN_RUMORS_TIP").format({"name": n.get("name", id)})
+	if not LetterRules.ways_of(Catalog.data, id).is_empty():  # v0.7.48: a person with a post sends letters
+		var lb := _flow(acts, tr("BTN_LETTER"), letter_requested.emit.bind(id), can_act)
+		lb.name = "Letter_" + id
+		lb.tooltip_text = tr("BTN_LETTER_TIP").format({"name": n.get("name", id)})
 	var arena_site := ArenaRules.of_manager(Catalog.data, id)  # v0.7.45
 	if not arena_site.is_empty():
 		var ar := _flow(acts, tr("BTN_ARENA"), arena_requested.emit.bind(arena_site), can_act)

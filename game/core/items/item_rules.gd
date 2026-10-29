@@ -398,6 +398,8 @@ static func check_generated(items_data: Dictionary, item: Dictionary, level: int
 	}
 	if not str(item.get("text", "")).strip_edges().is_empty():  # what is written on it (a letter, a diary), v0.7.18
 		def["text"] = str(item["text"]).strip_edges().left(1000)
+	if not str(item.get("evidence", "")).is_empty():  # a letter or a ledger that shows an NPC's crime (v0.7.48, LetterRules)
+		def["evidence"] = str(item["evidence"])
 	if use.has("use"):
 		def["use"] = use["use"]
 		if use.has("charges"):

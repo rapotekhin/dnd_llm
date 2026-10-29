@@ -68,7 +68,10 @@ static func on_enter(s: GameSession, data: Dictionary, room_id: String) -> Array
 ## The owner let the hero in and they have not quarrelled since (attitude not below `permit.min_attitude`).
 static func permitted(s: GameSession, data: Dictionary, site_id: String) -> bool:
 	var owner := str(s.permits.get(site_id, ""))
-	return not owner.is_empty() and s.attitude(owner) >= int(cfg(data)["permit"]["min_attitude"])
+	if not owner.is_empty() and s.attitude(owner) >= int(cfg(data)["permit"]["min_attitude"]):
+		return true
+	var by := str(WorldView.new(data["world"]).site(site_id).get("owner", ""))  # v0.7.48: the owner's recommendation lets one in
+	return not by.is_empty() and not LetterRules.recommender(s, data, [by]).is_empty() and s.attitude(by) >= int(cfg(data)["permit"]["min_attitude"])
 
 
 ## The private sites of `npc_id` the hero may not walk in yet.

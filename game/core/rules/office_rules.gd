@@ -128,9 +128,14 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 	var req: Dictionary = d.get("requires", {})
 	var loc := str(d.get("location", ""))
 	var out: Array[Dictionary] = []
+	# v0.7.48: a recommendation of the chief or a person of standing stands for the standing (rules.letters.recommend.waives)
+	var rec := LetterRules.recommender(s, data, [str(d.get("chief", ""))], true)
+	var waives: Array = LetterRules.cfg(data).get("recommend", {}).get("waives", [])
 	if req.has("reputation"):
-		out.append({"text": "слава в поселении не ниже «%s»" % ReputationRules.word(data, int(req["reputation"])),
-			"ok": ReputationRules.step(s, data, loc) >= int(req["reputation"])})
+		var ok := ReputationRules.step(s, data, loc) >= int(req["reputation"])
+		var by_letter := not ok and not rec.is_empty() and waives.has("reputation")
+		out.append({"text": "слава в поселении не ниже «%s»%s" % [ReputationRules.word(data, int(req["reputation"])), (" — рекомендация: " + rec) if by_letter else ""],
+			"ok": ok or by_letter})
 	if req.has("diploma"):
 		out.append({"text": "грамота выпускника: " + StudyRules.name_of(s, data, str(req["diploma"])), "ok": StudyRules.has_diploma(c, str(req["diploma"]))})
 	if req.has("skill"):
@@ -139,8 +144,10 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 		out.append({"text": "заслуги на службе здесь: %d из %d" % [served(c, data, loc), int(req["served"])], "ok": served(c, data, loc) >= int(req["served"])})
 	if req.has("bond"):
 		var b: Dictionary = req["bond"]
-		out.append({"text": "близость с %s от %d" % [BondRules.npc_name(s, data, str(b["npc"])), int(b["at"])],
-			"ok": BondRules.points(c, str(b["npc"])) >= int(b["at"])})
+		var ok := BondRules.points(c, str(b["npc"])) >= int(b["at"])
+		var by_letter := not ok and not rec.is_empty() and waives.has("bond")
+		out.append({"text": "близость с %s от %d%s" % [BondRules.npc_name(s, data, str(b["npc"])), int(b["at"]), (" — рекомендация: " + rec) if by_letter else ""],
+			"ok": ok or by_letter})
 	return out
 
 

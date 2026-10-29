@@ -2172,7 +2172,21 @@
 					"female"
 				]
 			},
-			"gossip": true
+			"gossip": true,
+			"secrets": [
+				{
+					"id": "fern_casks",
+					"hint": "видела что-то ночью у мельницы — про Ферна",
+					"dc": 14,
+					"attitude": 2,
+					"skills": [
+						"persuasion",
+						"insight"
+					],
+					"text": "Ферн Кривой по ночам принимает с реки бочонки мимо пошлины — Мира сама видела лодку у старой мельницы",
+					"crime_of": "npc_merchant"
+				}
+			]
 		},
 		"npc_veteran": {
 			"name": "Старый Орвин",
@@ -2363,7 +2377,10 @@
 			"fence": {
 				"buy_pct": 40
 			},
-			"gossip": true
+			"gossip": true,
+			"carries": [
+				"fern_tally"
+			]
 		},
 		"npc_smith": {
 			"name": "Гуннар Тяжёлая Рука",
@@ -2723,7 +2740,10 @@
 				"genders": [
 					"female"
 				]
-			}
+			},
+			"post": [
+				"post"
+			]
 		},
 		"npc_drover": {
 			"name": "Остап",
@@ -2763,7 +2783,10 @@
 			"romance": {
 				"open": false,
 				"why": "женат"
-			}
+			},
+			"post": [
+				"courier"
+			]
 		},
 		"npc_changer": {
 			"name": "Ефим Весов",
@@ -3024,6 +3047,15 @@
 				"warm"
 			],
 			"description": "Овчинный тулуп, меховая шапка и рукавицы: в мороз и снег ночь под открытым небом не так страшна."
+		},
+		"fern_tally": {
+			"name": "Засаленная записка Ферна",
+			"item_type": "quest",
+			"weight": 0,
+			"value_cp": 0,
+			"description": "Сложенный вчетверо клочок с цифрами и пометками рукой Ферна Кривого.",
+			"text": "«Лодка с Пущи — у мельницы, после второй стражи. Шесть бочонков, пошлину мимо ворот. Ратуше — ни слова. — Ф.»",
+			"evidence": "npc_merchant"
 		}
 	},
 	"jobs": {

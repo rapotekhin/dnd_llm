@@ -214,7 +214,7 @@ func _travel_button(info: VBoxContainer, room_id: String) -> void:
 
 
 ## Journal tabs (v0.6.6, playtest-1): quests, places, conversations, finds; inside — groups by location that fold.
-const TABS: Array[String] = ["quests", "places", "people", "found", "rumors", "chronicle", "calendar"]
+const TABS: Array[String] = ["quests", "places", "people", "found", "rumors", "letters", "chronicle", "calendar"]
 var _tab := "quests"
 var _folded := {}
 var _person_open := ""  # v0.7.22.21 (#18): the person whose card is open in the people tab
@@ -295,6 +295,8 @@ func _count(s: GameSession, w: WorldView, tab: String) -> int:
 		return CalendarRules.active(s, w.world).size()
 	if tab == "rumors":  # v0.7.47: the tips and the heard ones, not the checked
 		return RumorRules.count(s, Catalog.data)
+	if tab == "letters":  # v0.7.48: what we wait for, the helpers on their way
+		return LetterRules.count(s, Catalog.data)
 	var n := 0
 	for g: Dictionary in _groups(s, w, tab):
 		n += (g["lines"] as Array).size()
@@ -393,6 +395,8 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 				out.append({"title": title, "lines": by_day[d], "folded": d != days[0]})
 		"rumors":  # v0.7.47: the tips to check, the heard rumours, the checked ones
 			return RumorRules.groups(s, Catalog.data)
+		"letters":  # v0.7.48: the helpers on their way, what we wait for, the answers, the lost
+			return LetterRules.groups(s, Catalog.data)
 		"calendar":  # v0.7.44: today, the festivals on and ahead, the months of the year
 			if not CalendarRules.on(w.world):
 				return out

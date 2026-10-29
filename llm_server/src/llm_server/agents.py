@@ -285,6 +285,9 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
             effect = _EFFECT.validate_python(effect)
         except ValidationError as exc:
             return _schema_refusal(t, exc)
+    if (effect.kind == "letter_reply") != (t.params.kind == "letter") and effect.kind != "note":  # v0.7.48: the answer to a letter
+        return ("Отказ: в ответе на письмо — только letter_reply (и note)." if t.params.kind == "letter" else
+                "Отказ: letter_reply — только в ответе на письмо героя.")
     if (effect.kind == "quest_act") != (t.params.kind == "quest_act"):  # v0.7.39.6: the designer builds acts, only acts
         return ("Отказ: в ходе сценария — только quest_act." if t.params.kind == "quest_act" else
                 "Отказ: акт задания собирает сценарист, когда герой до него дойдёт; новое задание — create_quest.")

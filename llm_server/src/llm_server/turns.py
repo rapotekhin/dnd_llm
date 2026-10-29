@@ -31,6 +31,7 @@ from .protocol import (
     EngineValidateParams,
     EngineValidateResult,
     ActStep,
+    LetterReplyEffect,
     QuestActEffect,
     HealEffect,
     EngineCheckParams,
@@ -58,6 +59,8 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     usage = Usage(model="stub")
     if params.kind == "quest_act":
         return await _stub_act(session, params, usage)
+    if params.kind == "letter":
+        return await _stub_letter(session, params, usage)
     if params.kind in ("deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death", "law"):
         return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
     if params.kind != "action":
@@ -106,6 +109,20 @@ async def _stub_act(session: Session, params: TurnRequestParams, usage: Usage) -
     if not v.accepted or not v.effect_id:
         return TurnResult(turn_id=params.turn_id, narration=f"Сценарий не собран: {v.reason}", usage=usage)
     return TurnResult(turn_id=params.turn_id, narration="Дело движется дальше.", effect_ids=[v.effect_id], usage=usage)
+
+
+async def _stub_letter(session: Session, params: TurnRequestParams, usage: Usage) -> TurnResult:
+    """The stub answer to a letter (v0.7.48): yes where the engine allows it, else no, else words only."""
+    m = re.match(r"\[letter:([^\]]+)\]", params.input)
+    if m is None:
+        return TurnResult(turn_id=params.turn_id, narration="Ответа нет.", usage=usage)
+    for answer in ("yes", "no"):
+        v = EngineValidateResult.model_validate(await session.call_engine(
+            "engine.validate", EngineValidateParams(turn_id=params.turn_id, effect=LetterReplyEffect(letter_id=m.group(1), answer=answer))))
+        if v.accepted and v.effect_id:
+            return TurnResult(turn_id=params.turn_id, narration=f"Получил твоё письмо. Ответ: {'да' if answer == 'yes' else 'нет'}.",
+                              effect_ids=[v.effect_id], usage=usage)
+    return TurnResult(turn_id=params.turn_id, narration="Получил твоё письмо — спасибо, что написал.", usage=usage)
 
 
 STUB_EFFECTS: list[Effect | None] = [  # by turn number; the first turns stay plain (protocol tests rely on that)

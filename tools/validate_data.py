@@ -77,6 +77,22 @@ def check_rumors(world, rooms) -> list[str]:
     return errors
 
 
+def check_letters(world, rules) -> list[str]:
+    """v0.7.48: an NPC's `post` — ways of rules.letters; a secret's `crime_of` and an item's `evidence` — NPCs of the pack."""
+    errors: list[str] = []
+    npcs = world.get("npcs", {})
+    ways = rules.get("ways", {})
+    for nid, n in npcs.items():
+        errors += [f"world.npcs.{nid}.post: нет способа {w} в rules.letters.ways" for w in n.get("post", []) if w not in ways]
+        for sec in n.get("secrets", []):
+            if sec.get("crime_of") and sec["crime_of"] not in npcs:
+                errors.append(f"world.npcs.{nid}.secrets.{sec.get('id')}: crime_of — NPC пакета")
+    for iid, it in world.get("items", {}).items():
+        if it.get("evidence") and it["evidence"] not in npcs:
+            errors.append(f"world.items.{iid}: evidence — NPC пакета")
+    return errors
+
+
 def check_weather(world, rules) -> list[str]:
     """v0.7.46: the pack's weather tables — kinds of rules.json weather.kinds, seasons of the calendar, positive weights."""
     errors: list[str] = []
@@ -483,6 +499,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     errors += check_calendar(world.get("calendar"), world, npcs, rooms)
     errors += check_weather(world, load(DATA / "rules.json").get("weather", {}))
     errors += check_rumors(world, rooms)
+    errors += check_letters(world, load(DATA / "rules.json").get("letters", {}))
 
     seen: set[str] = set()
     for p in chars["presets"]:

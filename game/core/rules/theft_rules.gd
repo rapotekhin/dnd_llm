@@ -16,7 +16,7 @@ static func _template(data: Dictionary, npc: Dictionary) -> String:
 	return str(npc.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
 
 
-## The NPC's pockets, filled on the first look: [{id, name, item_id, cp, qty, worn, dc}].
+## The NPC's pockets, filled on the first look: [{id, name, item_id, cp, qty, worn, dc}]; its `carries` always.
 static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
 	if s.pockets.has(npc_id):
 		return s.pockets[npc_id]
@@ -27,6 +27,9 @@ static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
 	var cp := CombatRules.roll_dice(s.rng, str(spec["coins_dice"])) * int(spec["unit_cp"])
 	if cp > 0:
 		out.append({"name": "Кошель", "item_id": "", "cp": cp, "qty": 1, "worn": false})
+	for id: Variant in npc.get("carries", []):  # v0.7.48: what it always has on it — a letter, a ledger
+		if data["items"]["catalog"].has(str(id)):
+			out.append({"name": ItemRules.display_name(data["items"], s.items, str(id)), "item_id": str(id), "cp": 0, "qty": 1, "worn": false})
 	var pool: Array = npc.get("pockets", spec.get("items", []))
 	var n := mini(pool.size(), int(spec.get("item_count", 2)))
 	var picked: Array = pool.duplicate()

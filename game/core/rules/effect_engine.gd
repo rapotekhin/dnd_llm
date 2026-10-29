@@ -356,6 +356,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return WeatherRules.plan(s, data, e)
 		"rumor":  # v0.7.47: a rumour spread, told by an NPC or refuted
 			return RumorRules.plan(s, data, e, pending)
+		"letter_reply":  # v0.7.48: the person's yes or no to the hero's letter, by the engine's verdict
+			return LetterRules.plan(s, data, e, pending)
 		"beast":  # v0.7.43: a wild beast to tame in the scene, for a cause
 			if not PetRules.on(data):
 				return {"reason": "питомцев в этих правилах нет"}
@@ -1043,6 +1045,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(WeatherRules.apply(s, _data, plan))
 		"rumor":
 			_extra_lines.append_array(RumorRules.apply(s, _data, plan))
+		"letter_reply":
+			_extra_lines.append_array(LetterRules.apply(s, _data, plan))
 		"stock":
 			_extra_lines.append_array(MountRules.apply_stock(s, _data, plan) if plan.has("animal") else TradeRules.apply_stock(s, _data, plan))
 		"permit":

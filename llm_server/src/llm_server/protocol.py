@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.91.0"
+PROTOCOL_VERSION = "0.92.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -158,9 +158,11 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # theft (0.11.0): the player picked a pocket in the theft window — the engine rolled and applied it; `input` holds the lines.
 # quest_act (0.81.0): an act of a taken quest opened — the designer builds it (`quest_act`); `input` holds the engine's frame.
 # contest (0.84.0): a game with an NPC ended in the contest window — the engine rolled and applied it; `input` holds the lines.
+# letter (0.92.0): a letter of the hero reached its person and the reply day came — the master writes the person's
+# answer (`narration` is the letter); `input` holds the engine's frame «[letter:<id>] …» with the verdict.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
                    "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift", "quest_act",
-                   "contest"]
+                   "contest", "letter"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -600,6 +602,7 @@ class GeneratedItem(_Out):
     description: str = ""
     use: GeneratedUse | None = None  # 0.27.0: a wand, a scroll, a potion
     text: str = ""  # 0.27.0: what is written in it — a letter, a diary, an inscription (a thing without mechanics is fine)
+    evidence: str | None = None  # 0.92.0: the npc_id whose crime this thing shows (a smuggler's tally, an intercepted letter)
 
 
 class MoveEffect(_Out):
@@ -1318,6 +1321,16 @@ class WeatherEffect(_Out):
     location_id: str | None = None  # empty — the hero's location
 
 
+class LetterReplyEffect(_Out):
+    """The person's answer to the hero's letter (0.92.0), only in a `letter` turn and only when the engine's verdict
+    leaves a choice: `yes` — it comes to help or gives the recommendation (the engine does it), `no` — it refuses. When
+    the verdict says it cannot, only `no`."""
+
+    kind: Literal["letter_reply"] = "letter_reply"
+    letter_id: str  # the id of «[letter:<id>]»
+    answer: Literal["yes", "no"]
+
+
 class RumorEffect(_Out):
     """A rumour (0.91.0). `spread` — the hero's or an NPC's words go round from here: `text` (what they say),
     `importance` 1–3 (a trifle … the talk of the town; it travels faster), `truth` (false — a lie: it lives until
@@ -1727,7 +1740,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | LetterReplyEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

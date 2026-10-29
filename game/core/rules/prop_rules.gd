@@ -32,7 +32,7 @@ static func abandon(s: GameSession, data: Dictionary, room_id: String) -> Array[
 		return gone
 	var limit := int(cfg(data).get("abandon_hours", 24)) * 60
 	for p: Dictionary in room_props(s, room_id):
-		if bool(p.get("dropped", false)) and TimeRules.abs_minute(s) - int(p.get("dropped_at", TimeRules.abs_minute(s))) >= limit:
+		if bool(p.get("dropped", false)) and not bool(p.get("lost", false)) and TimeRules.abs_minute(s) - int(p.get("dropped_at", TimeRules.abs_minute(s))) >= limit:
 			p["state"] = "taken"
 			gone.append(str(p["name"]))
 	return gone

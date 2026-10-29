@@ -296,7 +296,10 @@ static func exam(s: GameSession, data: Dictionary, sid: String) -> Array[String]
 	var ex: Dictionary = sc.get("exam", {})
 	var lines: Array[String] = []
 	var margin := 0
-	if not ex.is_empty():
+	var rec := LetterRules.recommender(s, data, [str(sc.get("head", ""))], true)  # v0.7.48: a recommendation lets one in without the exam
+	if not ex.is_empty() and not rec.is_empty():
+		lines.append("%s — без экзамена: рекомендация %s" % [sc["name"], rec])
+	elif not ex.is_empty():
 		var nat := s.rng.randi_range(1, 20)
 		var parts := RollParts.skill(s, data, str(ex["skill"]))
 		var total := nat + RollParts.sum(parts)

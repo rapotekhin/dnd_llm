@@ -123,6 +123,7 @@
 							"item_type": {"enum": ["quest", "gear", "consumable"]},
 							"description": {"$ref": "#/$defs/nonempty"},
 							"text": {"type": "string"},
+							"evidence": {"type": "string"},
 							"weight": {"type": "number", "minimum": 0},
 							"value_cp": {"type": "integer", "minimum": 0},
 							"properties": {"$ref": "#/$defs/strings"},

@@ -40,6 +40,7 @@ var _contest: ContestPanel  # v0.7.40
 var _arena: ArenaPanel  # v0.7.45
 var _family: FamilyPanel
 var _pet: PetPanel  # v0.7.43
+var _letter: LetterPanel  # v0.7.48
 var _heists: HeistPanel
 var _org: OrgPanel
 var _office: OfficePanel
@@ -206,6 +207,7 @@ func _ready() -> void:
 	side.arena_requested.connect(func(sid: String) -> void: _arena.open(sid))  # v0.7.45
 	side.family_requested.connect(func() -> void: _family.open())  # v0.7.32
 	side.pet_requested.connect(func(id: String) -> void: _pet.open(id))  # v0.7.43
+	side.letter_requested.connect(func(id: String) -> void: _letter.open(id))  # v0.7.48
 	side.heist_requested.connect(func() -> void: _heists.open())  # v0.7.33
 	side.org_requested.connect(func(org: String) -> void: _org.open(org))
 	side.office_requested.connect(func(chief: String) -> void: _office.open(chief))  # v0.7.34
@@ -311,6 +313,11 @@ func _ready() -> void:
 	_arena.visible = false
 	add_child(_arena)
 	_arena.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_letter = LetterPanel.new()  # v0.7.48
+	_letter.name = "LetterView"
+	_letter.visible = false
+	add_child(_letter)
+	_letter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_pet = PetPanel.new()  # v0.7.43
 	_pet.name = "PetView"
 	_pet.visible = false

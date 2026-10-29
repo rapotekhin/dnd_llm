@@ -2031,6 +2031,18 @@
           "title": "Description",
           "type": "string"
         },
+        "evidence": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence"
+        },
         "item_type": {
           "enum": [
             "weapon",
@@ -2582,6 +2594,36 @@
         "pay_cp"
       ],
       "title": "JobEffect",
+      "type": "object"
+    },
+    "LetterReplyEffect": {
+      "additionalProperties": false,
+      "description": "The person's answer to the hero's letter (0.92.0), only in a `letter` turn and only when the engine's verdict\nleaves a choice: `yes` — it comes to help or gives the recommendation (the engine does it), `no` — it refuses. When\nthe verdict says it cannot, only `no`.",
+      "properties": {
+        "answer": {
+          "enum": [
+            "yes",
+            "no"
+          ],
+          "title": "Answer",
+          "type": "string"
+        },
+        "kind": {
+          "const": "letter_reply",
+          "default": "letter_reply",
+          "title": "Kind",
+          "type": "string"
+        },
+        "letter_id": {
+          "title": "Letter Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "letter_id",
+        "answer"
+      ],
+      "title": "LetterReplyEffect",
       "type": "object"
     },
     "MoveEffect": {
@@ -5542,6 +5584,7 @@
           "heal": "#/$defs/HealEffect",
           "heist": "#/$defs/HeistEffect",
           "job": "#/$defs/JobEffect",
+          "letter_reply": "#/$defs/LetterReplyEffect",
           "move": "#/$defs/MoveEffect",
           "note": "#/$defs/NoteEffect",
           "npc_attitude": "#/$defs/NpcAttitudeEffect",
@@ -5647,6 +5690,9 @@
         },
         {
           "$ref": "#/$defs/RumorEffect"
+        },
+        {
+          "$ref": "#/$defs/LetterReplyEffect"
         },
         {
           "$ref": "#/$defs/PermitEffect"

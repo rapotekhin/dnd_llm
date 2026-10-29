@@ -2571,7 +2571,7 @@
 			"assault": {"severity": 0, "fine_cp": 1000, "name": "нападение"},
 			"pickpocket": {"severity": 0, "fine_cp": 500, "name": "карманная кража", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой шарил по чужим карманам"},
 			"trespass": {"severity": 0, "fine_cp": 200, "name": "вторжение", "known_attitude": 0, "reputation_share": 0, "memory": "знает: герой без спроса вломился к {victim}"},
-			"burglary": {"severity": 0, "fine_cp": 1500, "name": "кража со взломом", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой обокрал {victim}"}, "robbery": {"severity": 1, "fine_cp": 2000, "name": "грабёж", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой грабил на дороге"}, "smuggling": {"severity": 0, "fine_cp": 1000, "name": "контрабанда", "known_attitude": 0, "reputation_share": 1, "memory": "знает: герой провозил контрабанду"}, "corruption": {"severity": 0, "fine_cp": 2000, "name": "мздоимство", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой брал мзду на службе"}, "poaching": {"severity": 0, "fine_cp": 800, "name": "браконьерство", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой бил зверя в угодьях {victim}"}, "debt": {"severity": 0, "name": "неуплата долга", "known_attitude": 0, "reputation_share": 2, "memory": "знает: герой не вернул долг {victim}"}
+			"burglary": {"severity": 0, "fine_cp": 1500, "name": "кража со взломом", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой обокрал {victim}"}, "robbery": {"severity": 1, "fine_cp": 2000, "name": "грабёж", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой грабил на дороге"}, "smuggling": {"severity": 0, "fine_cp": 1000, "name": "контрабанда", "known_attitude": 0, "reputation_share": 1, "memory": "знает: герой провозил контрабанду"}, "corruption": {"severity": 0, "fine_cp": 2000, "name": "мздоимство", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой брал мзду на службе"}, "poaching": {"severity": 0, "fine_cp": 800, "name": "браконьерство", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой бил зверя в угодьях {victim}"}, "debt": {"severity": 0, "name": "неуплата долга", "known_attitude": 0, "reputation_share": 2, "memory": "знает: герой не вернул долг {victim}"}, "false_report": {"severity": 0, "fine_cp": 500, "name": "ложный донос", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой оклеветал {victim} перед стражей"}
 		},
 		"sentences": [
 			{"severity": 0, "kind": "stocks", "days": 1, "name": "колодки"},
@@ -3483,6 +3483,30 @@
 		"death_weight": 2,
 		"place_weight": 1,
 		"snapshot_max": 6
+	},
+	"letters": {
+		"_doc": "Letters (v0.7.48, LetterRules): the hero writes to a met NPC at a person with `post` (the ways it sends by). A way: base_cp + per_hop_cp × hops of the map's roads; days = max(min_days, hops × days_per_hop), the reply comes back as long again (the same location — the next day); lose_pct per wild location on the route (no law), at most risk_max_pct: a lost letter lies with its text (lost_item) in a room of the first wild place. A purpose: `does` — what the engine does (closeness — bond points once in cooldown_days; ally — the NPC walks to the hero's place in days_per_hop per hop, waits wait_days and joins at the hero's coming; arrest — the law's guard reads a denunciation: evidence (an item with `evidence`, a told secret with `crime_of`) puts the NPC under guard in arrest_days for jail_days, no evidence on a guilty one — no case, an innocent one — the hero's crime false_report; recommendation — a letter item with `recommends` from a person of standing: notable_tags, an office's chief, a school's head, a site's owner); `choice` — the master answers `letter_reply` yes or no by the engine's verdict; min_bond / family / mentor / law — who can do it. recommend.waives — office requirements a recommendation stands for; family — the spouse worries after silence_days away from home with no letter, every every_days a bond loss.",
+		"ways": {
+			"post": {"name": "почтой", "base_cp": 10, "per_hop_cp": 10, "days_per_hop": 2, "min_days": 1, "lose_pct": 15},
+			"courier": {"name": "с гонцом", "base_cp": 100, "per_hop_cp": 50, "days_per_hop": 1, "min_days": 0, "lose_pct": 5}
+		},
+		"purposes": {
+			"ties": {"name": "весточка", "hint": "письмо близким и знакомым: близость растёт, семья не тревожится", "does": "closeness", "bond": 4, "cooldown_days": 7},
+			"help": {"name": "просьба о помощи", "hint": "друг или семья придёт к месту, что вы назовёте, и пойдёт с вами", "does": "ally", "choice": true, "min_bond": 60, "family": true, "days_per_hop": 1, "wait_days": 3},
+			"denounce": {"name": "донос", "hint": "страже — о чужом преступлении; без улик дела не будет, ложный донос — преступление", "does": "arrest", "law": true, "arrest_days": 1, "jail_days": 30},
+			"recommend": {"name": "просьба о рекомендации", "hint": "человек с положением поручится за вас: должность, школа, закрытое место", "does": "recommendation", "choice": true, "min_bond": 30, "mentor": true}
+		},
+		"notable_tags": ["clergy", "military", "registry", "school", "bank"],
+		"recommend": {"waives": ["reputation", "bond"]},
+		"family": {"silence_days": 10, "every_days": 3, "bond": -5},
+		"lost_item": {"name": "Письмо — адресат: {to}", "description": "Размокшее письмо в грязи у дороги — гонец его так и не донёс."},
+		"text_min": 5,
+		"text_max": 600,
+		"write_minutes": 20,
+		"risk_max_pct": 60,
+		"silent_after_days": 2,
+		"memory_max": 5,
+		"arrest_rumor_weight": 2
 	},
 	"weather": {
 		"_doc": "Погода (v0.7.46, WeatherRules): состояние локации по дням — пакет world.json `weather` даёт таблицы по terrain локации и сезону календаря (вес каждого вида); локация `indoor` или без таблицы — без погоды. Каждый новый день — бросок, вчерашняя погода держится с шансом stay_pct. Последствия — по виду: obscure — помеха дальним атакам и Внимательности, пассивная Внимательность стражи −passive (крадущимся легче); travel_mult — переход между локациями дольше (грязь, снег); camp.fire_out — костёр гаснет, лагерь мокнет: спасбросок Тел camp.soak_dc, провал — HP наутро только до половины и кости хитов не вернулись (укрытие — палатка shelter_items или комната под крышей); exposure — нужда в тепле (cold) или в тени и воде (heat): ночь в лагере без защиты — спасбросок Тел exposure.dc, провал — уровень истощения по 5e; зной ещё раз в день в пути днём. Защита: shelter (крыша, палатка), warm (вещь со свойством warm или из warm_items), fire (трутница из fire_items, если костёр не гасит ливень), water (пинта в сосуде или вода рядом), resist (сопротивление урону вида). hunt_pct / fish_pct — улов охоты и рыбалки в процентах. Флаг мира weather_<вид>_<локация> — для вариантов комнат и closed_exits (брод залило). Мастер меняет погоду эффектом `weather` на magic.max_hours часов с причиной (Власть над погодой, чудо).",

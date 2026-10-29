@@ -81,6 +81,15 @@ static func on_debt(s: GameSession, data: Dictionary, creditor: String, loc: Str
 	return out
 
 
+## A false denunciation (v0.7.48, LetterRules): the law of `loc` read a letter against an innocent `victim` — the
+## hero's crime, known there at once. Lines.
+static func on_false_report(s: GameSession, data: Dictionary, victim: String, loc: String) -> Array[String]:
+	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": "false_report", "victim": victim, "room": "", "location": loc,
+		"at": TimeRules.abs_minute(s), "witnesses": [], "known": false, "settled": false}
+	s.crimes.append(crime)
+	return _known(s, data, crime)
+
+
 ## A criminal job seen or traced (v0.7.33, HeistRules): its crime of `kind` known at once in `loc` (where the law
 ## looks for it), the victim — an NPC or "". Lines.
 static func on_job(s: GameSession, data: Dictionary, kind: String, victim: String, room_id: String, loc: String) -> Array[String]:

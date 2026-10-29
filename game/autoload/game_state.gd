@@ -18,6 +18,7 @@ const COMBAT_SAVE := "autosave_combat"
 
 var _last_kind: String = ""
 var _last_input: String = ""
+var _letter_tried: String = ""  # the letter whose reply turn ran last (v0.7.48)
 ## The spell, feature or consumable pinned to the next message at the input field (roadmap v0.7.7, the author's
 ## request): {kind, id, slot, target} or {}. The engine spends it when the message goes, and the master gets the
 ## cast and the player's intent in one turn. Not saved.
@@ -457,6 +458,18 @@ func rumor_ask(npc_id: String) -> String:
 	if not why.is_empty():
 		return why
 	_quiet_lines(RumorRules.ask(session, Catalog.data, npc_id))
+	return ""
+
+
+## «Письмо» at a person with a post (v0.7.48): the letter goes, the master answers on its reply day. "" or why not.
+func send_letter(poster: String, to: String, purpose: String, text: String, way: String, extra: Dictionary = {}) -> String:
+	if session == null or is_busy():
+		return "EQUIP_BUSY"
+	var why := LetterRules.send_why(session, Catalog.data, poster, to, purpose, text, way, extra)
+	if not why.is_empty():
+		return why
+	_quiet_lines(LetterRules.send(session, Catalog.data, poster, to, purpose, text, way, extra))
+	_after_turn(session, "")
 	return ""
 
 
@@ -2387,6 +2400,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 		lines.append("Того, что вы здесь оставили, уже нет: " + ", ".join(gone))
 	var found := ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
 	lines.append_array(RumorRules.on_enter(session, Catalog.data, room_id))  # a heard tip checked (v0.7.47)
+	lines.append_array(LetterRules.on_enter(session, Catalog.data, room_id))  # a helper called by letter waits here (v0.7.48)
 	lines.append_array(DiseaseRules.contagion(session, Catalog.data))  # a sick NPC here (v0.7.23.1)
 	lines.append_array(ExplorationRules.take_caches(session, Catalog.data, room_id))
 	lines.append_array(QuestRules.advance(session, Catalog.data))
@@ -3065,12 +3079,12 @@ func _request(kind: String, input: String) -> void:
 	EventBus.turn_started.emit(turn_id)
 	var params := {
 		"turn_id": turn_id,
-		"mode": GameSession.MODE_EXPLORATION if kind == "quest_act" else s.mode,  # the designer builds, nobody speaks
+		"mode": GameSession.MODE_EXPLORATION if kind in ["quest_act", "letter"] else s.mode,  # the designer builds, nobody speaks
 		"kind": kind,
 		"input": input,
 		"snapshot": TurnSnapshot.build(s, Catalog.data, int(Catalog.game()["chat"]["history_chars"])),
 	}
-	if s.in_conversation() and kind != "quest_act":
+	if s.in_conversation() and not kind in ["quest_act", "letter"]:
 		params["npc_id"] = s.npc_id
 	if not _forced.is_empty() and str(_forced.get("turn", "")) == turn_id:
 		params["pinned_check"] = _pin_name(_forced)  # v0.7.38: the server holds the master to a roll
@@ -3118,23 +3132,42 @@ func _request(kind: String, input: String) -> void:
 			EventBus.navigate.emit("death", {"epitaph": str(call.result.get("narration", ""))})
 		else:
 			_combat_continue()
-	elif kind != "quest_act":
-		_build_next_act(s)
+	else:
+		_after_turn(s, kind)
+
+
+## After a turn: a quest's act to build, else a letter's reply that is due (v0.7.48) — one master turn each.
+func _after_turn(s: GameSession, kind: String) -> void:
+	if kind != "quest_act" and _build_next_act(s):
+		return
+	_answer_letter(s, kind)
 
 
 ## A taken quest waits for its next act (v0.7.39.6): the designer's turn builds it after the turn that opened it; a
 ## failed build is tried again after the next turn, not in a loop.
-func _build_next_act(s: GameSession) -> void:
+func _build_next_act(s: GameSession) -> bool:
 	var waiting := QuestRules.awaiting(s, Catalog.data["world"])
 	if waiting.is_empty() or not Backend.is_ready() or is_busy():
-		return
+		return false
 	_add(GameSession.system_entry("QUEST_ACT_BUILDING"))
 	_request("quest_act", QuestGen.act_frame(s, Catalog.data, waiting[0]))
+	return true
+
+
+## A letter's reply day came (v0.7.48): the master writes the person's answer in a turn of its own.
+func _answer_letter(s: GameSession, after: String) -> void:
+	var id := LetterRules.due(s, Catalog.data)
+	if id.is_empty() or not Backend.is_ready() or is_busy() or s.mode == GameSession.MODE_COMBAT or (after == "letter" and id == _letter_tried):
+		return  # an answer the engine could not take is not asked again in a loop
+	_letter_tried = id
+	_request("letter", LetterRules.frame(s, Catalog.data, id))
 
 
 ## Shows the narration, applies listed reserves, handles next_mode. Returns the follow-up turn kind or "".
 func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kind: String = "") -> String:
 	var text := str(result.get("narration", ""))
+	if turn_kind == "letter":  # v0.7.48: the narration is the person's letter
+		return _letter_answered(s, turn_id, result, text)
 	if s.in_conversation() and turn_kind != "quest_act":
 		_add(GameSession.npc_entry(s.npc_id, str(world().npc(s.npc_id).get("name", s.npc_id)), text, turn_id))
 	else:
@@ -3243,6 +3276,19 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 			return ""
 		_begin_conversation(npc_id, mode)
 		return "enter"
+	return ""
+
+
+func _letter_answered(s: GameSession, turn_id: String, result: Dictionary, text: String) -> String:
+	var id := _last_input.get_slice("]", 0).get_slice(":", 1)
+	var to := str(LetterRules.get_letter(s, id).get("to", ""))
+	var lines := effects.apply(s, turn_id, result.get("effect_ids", []))
+	lines.append_array(LetterRules.answered(s, Catalog.data, id, text))
+	_add(GameSession.npc_entry(to, tr("LETTER_FROM").format({"name": world().npc(to).get("name", to)}), text, turn_id))
+	_log("Письмо от %s: %s" % [world().npc(to).get("name", to), text])
+	if not lines.is_empty():
+		_add(GameSession.effect_entry(lines))
+		_log("События: " + ", ".join(lines))
 	return ""
 
 

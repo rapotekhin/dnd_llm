@@ -206,6 +206,12 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 102. Протокол 0.92.0 (v0.7.48)
+
+- **`TurnKind` `letter`** — ответ на письмо героя: `input` — кадр движка «[letter:<id>] …» с вердиктом; `narration` — письмо NPC; клиент показывает его репликой «Имя — письмо». Режим — exploration, без `npc_id`.
+- **`LetterReplyEffect`** (`kind: "letter_reply"`) {`letter_id`, `answer`: yes | no} — только в ходе `letter`, и там из эффектов — только он и `note` (`agents.py`).
+- **`GeneratedItem.evidence`** — npc_id, чьё преступление показывает вещь (улика для доноса).
+
 ### 101. Протокол 0.91.0 (v0.7.47)
 
 - **`SceneSnapshot.rumors: list[str]`** — слухи места или собеседника от движка: «[id] текст (заметный; объявление; герой уже слышал)»; правда не передаётся.
