@@ -390,10 +390,11 @@ static func buy_pct(s: GameSession, data: Dictionary, npc_id: String) -> int:
 
 ## What a service of this NPC costs a friend.
 static func service_cost(s: GameSession, data: Dictionary, npc_id: String, cost: int) -> int:
+	var faith := 100 - FaithRules.discount_pct(s, data, npc_id)  # v0.7.49: a priest of the hero's god
 	if entry(s.character, npc_id).is_empty():
-		return cost
+		return ceili(cost * faith / 100.0)
 	var pct := _tier(cfg(data)["perks"]["service_pct"], points(s.character, npc_id), "pct", 100)
-	return ceili(cost * pct / 100.0)
+	return ceili(cost * pct / 100.0 * faith / 100.0)
 
 
 ## Close enough to give a bed, to hide, to serve the wanted hero.

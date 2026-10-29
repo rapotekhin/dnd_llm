@@ -94,6 +94,7 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 			s.caught_by[npc_id] = s.day
 			lines.append("%s замечает руку в кармане" % who)
 			lines.append_array(react(s, data, npc_id))
+			lines.append_array(FaithRules.deed(s, data, "pickpocket"))  # v0.7.49
 			return lines
 		list.erase(e)
 		if int(e.get("cp", 0)) > 0:
@@ -107,6 +108,7 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 				var gone: Dictionary = s.disarmed.get(npc_id, {})  # big test #3 (v0.7.22.8): not in its hands in a fight
 				gone[id] = s.day
 				s.disarmed[npc_id] = gone
+		lines.append_array(FaithRules.deed(s, data, "pickpocket"))  # v0.7.49: unseen, still a theft
 		return lines
 	return lines
 

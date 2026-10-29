@@ -206,6 +206,12 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 103. Протокол 0.93.0 (v0.7.49)
+
+- **`SceneSnapshot.shrine: str`** — святилище комнаты: бог, его текст и заповедь, положение героя там; **`SceneNpc.god: str`** — вера NPC («вера: Чонтия (Светлая Мать), одной веры с героем»); **`CharacterSheet.faith: str`** — бог и благосклонность героя, обеты, нарушенное.
+- **`VowEffect`** (`kind: "vow"`) {`vow` — id `rules.faith.vows`, `cause`} — обет по словам героя (`FaithRules.plan_vow`).
+- **`GodEffect`** (`kind: "god"`) {`shrine_name`, `god_id`? | `new` {`name`, `title`, `domains`, `text`, `commandment`, `forbids`, `enemies`}, `cause`} — святилище в комнате сцены (`FaithRules.plan_god`).
+
 ### 102. Протокол 0.92.0 (v0.7.48)
 
 - **`TurnKind` `letter`** — ответ на письмо героя: `input` — кадр движка «[letter:<id>] …» с вердиктом; `narration` — письмо NPC; клиент показывает его репликой «Имя — письмо». Режим — exploration, без `npc_id`.

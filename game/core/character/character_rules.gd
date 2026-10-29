@@ -296,8 +296,8 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	var ab := spell_ability(c, data)
 	c["spell_ability"] = ab
 	if not ab.is_empty():
-		c["spell_dc"] = 8 + int(c["prof_bonus"]) + mod(ability(c, ab))
-		c["spell_attack"] = int(c["prof_bonus"]) + mod(ability(c, ab)) + (1 if item_prop(c, "spell_attack_plus1") else 0)
+		c["spell_dc"] = 8 + int(c["prof_bonus"]) + mod(ability(c, ab)) + FaithRules.lapse(c, data, "spell_dc")  # v0.7.49
+		c["spell_attack"] = int(c["prof_bonus"]) + mod(ability(c, ab)) + (1 if item_prop(c, "spell_attack_plus1") else 0) + FaithRules.lapse(c, data, "spell_attack")
 	else:
 		c.erase("spell_dc")
 		c.erase("spell_attack")

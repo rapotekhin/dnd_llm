@@ -68,6 +68,7 @@ static func sheet(c: Dictionary, data: Dictionary, kind: String, id: String, ses
 	if kind == "skill":
 		for e: Dictionary in SpellEffects.hero_effects(c, "skill_bonus"):  # Pass without Trace (v0.7.13.3)
 			add(out, str(e.get("source", {}).get("name", "заклинание")), int(e["skill_bonus"].get(id, 0)))
+	out.append_array(FaithRules.gift_parts(c, data, kind, id))  # v0.7.49: a kept vow's gift
 	return out
 
 

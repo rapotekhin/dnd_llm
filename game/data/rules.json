@@ -3484,6 +3484,37 @@
 		"place_weight": 1,
 		"snapshot_max": 6
 	},
+	"faith": {
+		"_doc": "Faith and the temple (v0.7.49, FaithRules): the gods are the pack's data (world.json `gods`: name, title, domains, `forbids` — the deeds of its commandments, `enemies`, `festivals`); a room's `shrine` {god, name} is where the faith is served; an NPC's `god` — whom it serves (a priest of the hero's god gives the discount, a desecrator is refused). The hero's faith is c.faith {god, favor {god: n}, vows [{id, since, broken}], lapsed (a day or -1), served {god: day}, donated {god: [day, n]}, blessed {god: day}, converted}. A deed is a fact of the engine: a crime kind (rules.crime.kinds), `check:<skill>` (any check of that skill, passed or not), `rob_dead` (a body searched), or a group of `deeds` (theft — the kinds listed, crime — any crime kind). A vow breaks on its `forbids`, its `gift` (skills / saves {id or * : plus}) goes from the sheet until the atonement; the hero's god's commandment broken — favor + commandment_favor, the blessing gone, and a cleric or a paladin (`lapse.classes`) lapses: spell_dc and spell_attack down until the atonement. A deed in a shrine's room of `desecration.deeds` — that god's favor to desecration.favor (its priests refuse). Favor: a service once in service.every_days (×festival_mult on the god's festival), a donation (cost_cp for favor, per_day times a day); `steps` by favor — the name, the discount on the services of the god's priests, the blessing (once a day at a shrine: the die on `on`, until the long rest, not with the spell `same_as`), shelter (a free bed at the shrine). convert — another god at its shrine: the cost, a cooldown, the old god's favor kept. atone — at a shrine of the hero's god (or any, without one): cost_cp per broken thing, minutes. `make` — the master's god: the deeds it may forbid.",
+		"requires_god": ["cleric", "paladin"],
+		"favor": {"min": -100, "max": 100},
+		"steps": [
+			{"at": -100, "name": "осквернитель", "refuse": true},
+			{"at": 0, "name": "без связи с храмом"},
+			{"at": 10, "name": "прихожанин", "discount_pct": 10},
+			{"at": 30, "name": "верный", "discount_pct": 20, "blessing": true},
+			{"at": 60, "name": "избранник", "discount_pct": 40, "blessing": true, "shelter": true}
+		],
+		"service": {"minutes": 60, "favor": 10, "every_days": 7, "festival_mult": 2},
+		"donation": {"cost_cp": 500, "favor": 5, "per_day": 2},
+		"blessing": {"name": "Благословение храма", "die": "1d4", "on": ["attack", "save"], "same_as": "bless", "every_days": 1},
+		"convert": {"cost_cp": 2500, "cooldown_days": 30, "minutes": 60},
+		"atone": {"cost_cp": 2500, "minutes": 120},
+		"commandment_favor": -20,
+		"lapse": {"classes": ["cleric", "paladin"], "spell_dc": -2, "spell_attack": -2},
+		"desecration": {"deeds": ["murder", "assault", "pickpocket", "burglary", "robbery"], "favor": -100},
+		"deeds": {"theft": ["pickpocket", "burglary", "robbery"], "crime": ["*"]},
+		"deed_names": {"check:deception": "ложь (Обман)", "check:intimidation": "угрозы (Запугивание)", "rob_dead": "обыск мёртвого", "theft": "кража", "crime": "любое преступление"},
+		"vows_max": 2,
+		"vows": {
+			"truth": {"name": "Слово правды", "forbids": ["check:deception"], "gift": {"skills": {"persuasion": 2}}, "text": "не лгать: ни одной проверки Обмана — +2 к Убеждению"},
+			"meek": {"name": "Тихое слово", "forbids": ["check:intimidation"], "gift": {"saves": {"wis": 1}}, "text": "не угрожать: ни одной проверки Запугивания — +1 к спасброскам Мудрости"},
+			"no_blood": {"name": "Без крови", "forbids": ["murder"], "gift": {"saves": {"*": 1}}, "text": "не убивать людей — +1 ко всем спасброскам"},
+			"clean_hands": {"name": "Чистые руки", "forbids": ["theft"], "gift": {"skills": {"insight": 2}}, "text": "не красть, даже незаметно — +2 к Проницательности"},
+			"law": {"name": "Под законом", "forbids": ["crime"], "gift": {"skills": {"persuasion": 1, "insight": 1, "intimidation": 1}}, "text": "ни одного преступления — +1 к Убеждению, Проницательности и Запугиванию"}
+		},
+		"make": {"forbids": ["murder", "assault", "pickpocket", "burglary", "robbery", "smuggling", "poaching", "debt", "false_report", "rob_dead", "check:deception", "check:intimidation", "theft", "crime"]}
+	},
 	"letters": {
 		"_doc": "Letters (v0.7.48, LetterRules): the hero writes to a met NPC at a person with `post` (the ways it sends by). A way: base_cp + per_hop_cp × hops of the map's roads; days = max(min_days, hops × days_per_hop), the reply comes back as long again (the same location — the next day); lose_pct per wild location on the route (no law), at most risk_max_pct: a lost letter lies with its text (lost_item) in a room of the first wild place. A purpose: `does` — what the engine does (closeness — bond points once in cooldown_days; ally — the NPC walks to the hero's place in days_per_hop per hop, waits wait_days and joins at the hero's coming; arrest — the law's guard reads a denunciation: evidence (an item with `evidence`, a told secret with `crime_of`) puts the NPC under guard in arrest_days for jail_days, no evidence on a guilty one — no case, an innocent one — the hero's crime false_report; recommendation — a letter item with `recommends` from a person of standing: notable_tags, an office's chief, a school's head, a site's owner); `choice` — the master answers `letter_reply` yes or no by the engine's verdict; min_bond / family / mentor / law — who can do it. recommend.waives — office requirements a recommendation stands for; family — the spouse worries after silence_days away from home with no letter, every every_days a bond loss.",
 		"ways": {

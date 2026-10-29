@@ -8,7 +8,8 @@ extends RefCounted
 ##   base_abilities {str..cha} (point buy), ability_choice [abilities for a racial +1 choice],
 ##   skills [class skills], extra_skills [race skill choice], expertise [skills],
 ##   options {feature/trait id: [chosen option ids]}, cantrips, spells, race_cantrips,
-##   equipment [{"alt": int, "picks": [item ids]} per class choice], languages, story (optional backstory text).
+##   equipment [{"alt": int, "picks": [item ids]} per class choice], languages, story (optional backstory text),
+##   god (v0.7.49: a god of the pack, required by rules.faith.requires_god).
 
 const STEP_RACE := "race"
 const STEP_SUBRACE := "subrace"
@@ -29,7 +30,7 @@ static func empty_choices() -> Dictionary:
 		base[a] = 8
 	return {"name": "", "gender": "male", "race": "", "subrace": "", "class": "", "subclass": "", "background": "",
 		"base_abilities": base, "ability_choice": [], "skills": [], "extra_skills": [], "expertise": [], "options": {},
-		"cantrips": [], "spells": [], "race_cantrips": [], "equipment": [], "languages": []}
+		"cantrips": [], "spells": [], "race_cantrips": [], "equipment": [], "languages": [], "god": ""}
 
 
 # --- what is offered -----------------------------------------------------------------
@@ -323,7 +324,26 @@ static func errors(ch: Dictionary, data: Dictionary, step: String) -> Array[Stri
 				out.append("CC_ERR_NAME")
 			if not _picked_ok(ch.get("languages", []), {"choose": language_count(ch, data), "from": language_options(ch, data)}):
 				out.append("CC_ERR_LANGUAGES")
+			var god := str(ch.get("god", ""))
+			if (god.is_empty() and needs_god(ch, data)) or (not god.is_empty() and not god_ids(data).has(god)):
+				out.append("CC_ERR_GOD")
 	return out
+
+
+## The gods of the pack a hero may follow (v0.7.49): [id].
+static func god_ids(data: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	if not data.has("world") or not data["rules"].has("faith"):
+		return out
+	for id: String in data["world"].get("gods", {}):
+		if not id.begins_with("_"):
+			out.append(id)
+	return out
+
+
+## A cleric or a paladin serves a god (rules.faith.requires_god).
+static func needs_god(ch: Dictionary, data: Dictionary) -> bool:
+	return not god_ids(data).is_empty() and (data["rules"]["faith"].get("requires_god", []) as Array).has(str(ch.get("class", "")))
 
 
 ## All steps done: the character can be built.
@@ -460,6 +480,8 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 		_add_item(inv, str(e["id"]), int(e["qty"]))
 	c["inventory"] = inv
 	c["gold_cp"] = int(background(ch, data).get("gold_cp", 0))
+	if god_ids(data).has(str(ch.get("god", ""))):
+		FaithRules.start(c, str(ch["god"]))  # v0.7.49
 	CharacterRules.auto_equip(c, data)
 	c.erase("hp")
 	CharacterRules.refresh(c, data)
@@ -531,6 +553,8 @@ static func random_choices(data: Dictionary, rng: RandomNumberGenerator) -> Dict
 		eq.append({"alt": alt, "picks": picks})
 	ch["equipment"] = eq
 	ch["languages"] = _sample(rng, language_options(ch, data), language_count(ch, data))
+	if needs_god(ch, data):
+		ch["god"] = _pick(rng, god_ids(data))
 	ch["gender"] = _pick(rng, ["male", "female"])
 	ch["name"] = _pick(rng, data.get("names", data["game"]["creation"]["names"])[ch["gender"]])
 	return ch

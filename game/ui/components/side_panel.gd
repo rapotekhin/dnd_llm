@@ -32,6 +32,7 @@ signal org_requested(org_id: String)  # v0.7.33
 signal office_requested(chief: String)  # v0.7.34
 signal pet_requested(creature_id: String)  # v0.7.43
 signal letter_requested(npc_id: String)  # v0.7.48
+signal faith_requested  # v0.7.49
 signal arena_requested(site_id: String)  # v0.7.45
 
 var _content: VBoxContainer
@@ -139,6 +140,7 @@ func _rebuild() -> void:
 	_family_row(s, can_act)
 	_underworld_row(s, can_act)
 	_office_row(s, can_act)
+	_faith_row(s, can_act)
 	_property_row(s)
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
@@ -881,6 +883,23 @@ func _office_row(s: GameSession, can_act: bool) -> void:
 	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	b.tooltip_text = tr("BTN_OFFICE_TIP")
+
+
+## Faith (v0.7.49): «Святилище: бог» in a room with a shrine.
+func _faith_row(s: GameSession, can_act: bool) -> void:
+	if not FaithRules.on(Catalog.data) or s.in_conversation():
+		return
+	var sh := FaithRules.shrine(s, Catalog.data, s.room_id)
+	if sh.is_empty():
+		return
+	var acts := HFlowContainer.new()
+	acts.name = "FaithRow"
+	_content.add_child(acts)
+	var b := _row_button(acts, tr("BTN_FAITH").format({"god": FaithRules.god_name(s, Catalog.data, str(sh["god"]))}), faith_requested.emit, can_act)
+	b.name = "FaithButton"
+	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+	b.tooltip_text = tr("BTN_FAITH_TIP").format({"name": sh.get("name", "")})
 
 
 ## Property (v0.7.27): «Имущество» when the hero owns a place or a beast; the window of the hero's places.

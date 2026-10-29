@@ -91,12 +91,37 @@ func _goal_section(box: VBoxContainer, c: Dictionary) -> void:
 	row.add_child(clear)
 
 
+## Faith (v0.7.49): the god and the favor, the vows with their gifts, what waits for the atonement.
+func _faith_section(box: VBoxContainer, c: Dictionary) -> void:
+	var s := GameState.session
+	var data := Catalog.data
+	if not FaithRules.on(data):
+		return
+	_text(box, tr("FAITH_SHEET_TITLE"), UiTheme.HEADING)
+	var mine := FaithRules.hero_god(c)
+	var l := _text(box, tr("FAITH_SHEET_GOD").format({"god": FaithRules.god_name(s, data, mine, true), "step": FaithRules.step_of(c, data, mine).get("name", ""),
+		"favor": FaithRules.favor(c, mine), "law": FaithRules.god(s, data, mine).get("commandment", "")}) if not mine.is_empty() else tr("FAITH_SHEET_NO_GOD"))
+	l.name = "FaithSheetGod"
+	for v: Dictionary in FaithRules.vows(c):
+		var d := FaithRules.vow(data, str(v["id"]))
+		_text(box, "• %s — %s%s" % [d.get("name", v["id"]), d.get("text", ""), tr("FAITH_SHEET_BROKEN") if int(v.get("broken", -1)) >= 0 else ""])
+	if FaithRules.lapsed(c):
+		_text(box, tr("FAITH_SHEET_LAPSED"), UiTheme.MUTED_LABEL)
+	var known := FaithRules.shrines_known(s, data)
+	if not known.is_empty():
+		var where: Array[String] = []
+		for gid: String in known:
+			where.append("%s — %s" % [FaithRules.god_name(s, data, gid), ", ".join((known[gid] as Array).map(func(r: Variant) -> String: return str(GameState.world().room(str(r)).get("name", r))))])
+		_text(box, tr("FAITH_SHEET_SHRINES").format({"list": "; ".join(where)}), UiTheme.MUTED_LABEL)
+
+
 ## Peaceful development (v0.7.19.1): each direction — its level and experience, the skills taken, and on a level not
 ## yet paid — the skills to pick from, like the class's level-up.
 func _development_tab(c: Dictionary) -> Control:
 	var box := _page("SHEET_TAB_DEV")
 	var data := Catalog.data
 	_goal_section(box, c)  # v0.7.22
+	_faith_section(box, c)  # v0.7.49
 	_text(box, tr("DEV_HINT"), UiTheme.MUTED_LABEL)
 	for dir: String in DevelopmentRules.cfg(data)["directions"]:
 		var d := DevelopmentRules.direction(data, dir)

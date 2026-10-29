@@ -113,6 +113,11 @@
           "title": "Exhaustion",
           "type": "integer"
         },
+        "faith": {
+          "default": "",
+          "title": "Faith",
+          "type": "string"
+        },
         "family": {
           "default": "",
           "title": "Family",
@@ -828,6 +833,11 @@
           "title": "Rumors",
           "type": "array"
         },
+        "shrine": {
+          "default": "",
+          "title": "Shrine",
+          "type": "string"
+        },
         "site_description": {
           "default": "",
           "title": "Site Description",
@@ -928,6 +938,11 @@
             "other"
           ],
           "title": "Gender",
+          "type": "string"
+        },
+        "god": {
+          "default": "",
+          "title": "God",
           "type": "string"
         },
         "memory": {

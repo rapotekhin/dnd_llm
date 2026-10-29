@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.92.0"
+PROTOCOL_VERSION = "0.93.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -195,6 +195,7 @@ class SceneNpc(_In):
     follows: bool = False  # goes with the hero from room to room (0.33.0)
     under: str = ""  # 0.42.0: the hero's spells on it and until when — «Очарование личности — до 10:35»
     animals: list[str] = Field(default_factory=list)  # 0.86.0: a dealer's beasts and vehicles — «Мул [mule] 8 зм»
+    god: str = ""  # 0.93.0: whom it serves — «вера: Чонтия (Светлая Мать), одной веры с героем»
 
 
 class SceneProp(_In):
@@ -238,6 +239,7 @@ class Scene(_In):
     calendar: list[str] = Field(default_factory=list)  # 0.88.0: festivals on now and near: «Дожинки (Ольховый Брод) — через 9 дней, 12 Жатвеня: …»
     weather: str = ""  # 0.90.0: the location's weather by the engine: «ливень — стеной льёт…; герой под крышей»
     rumors: list[str] = Field(default_factory=list)  # 0.91.0: what the NPC or the place knows: «[mill_coins] на старой мельнице… (заметный; герой уже слышал)»
+    shrine: str = ""  # 0.93.0: the shrine of the room — its god, the commandment, the hero's standing there
     summons: list[str] = Field(default_factory=list)  # 0.49.0: creatures a spell called to go with the hero — «Волк 1 (Призыв зверей, до конца концентрации)»
     site_name: str = ""  # 0.50.0: the site of the room (a building, a yard) — «Таверна «Хромой олень»»
     site_description: str = ""
@@ -314,6 +316,7 @@ class CharacterSheet(_In):
     family: str = ""  # 0.64.0: the engagement, the spouse and the home's hours, the children by age, upkeep, the heir
     underworld: str = ""  # 0.65.0: known fences and stolen goods, the hero's criminal jobs, organizations and ranks
     office: str = ""  # 0.66.0: the hero's offices (rank, merit, whispers about bribes, a town's treasury and mood), offices on offer
+    faith: str = ""  # 0.93.0: the hero's god and favor, the vows with their gifts, what is broken
 
 
 class HistoryLine(_In):
@@ -1331,6 +1334,38 @@ class LetterReplyEffect(_Out):
     answer: Literal["yes", "no"]
 
 
+class VowEffect(_Out):
+    """The hero swears a vow by words (0.93.0): only a vow of rules.faith.vows — `truth` (no Deception), `meek` (no
+    Intimidation), `no_blood` (no murder), `clean_hands` (no theft), `law` (no crime). The engine gives its gift and
+    breaks it by facts; there are no other vows (a fast, no meat — story only, no effect)."""
+
+    kind: Literal["vow"] = "vow"
+    vow: str = Field(min_length=2, max_length=30)  # an id of rules.faith.vows (the topic `faith` lists them)
+    cause: str = Field(min_length=4, max_length=160)  # the oath in the hero's words: «клянусь у алтаря больше не лгать»
+
+
+class NewGod(_Out):
+    name: str = Field(min_length=2, max_length=40)
+    title: str = Field(default="", max_length=60)
+    domains: list[str] = Field(default_factory=list, max_length=3)
+    text: str = Field(default="", max_length=200)  # who it is: «дух брода, которому рыбаки оставляют первую рыбу»
+    commandment: str = Field(default="", max_length=120)
+    forbids: list[str] = Field(default_factory=list, max_length=3)  # deeds of rules.faith.make.forbids
+    enemies: list[str] = Field(default_factory=list, max_length=3)  # gods of the pack
+
+
+class GodEffect(_Out):
+    """A shrine in the hero's room (0.93.0): to a god of the pack (`god_id`) or a new one (`new`) — a local spirit, a
+    forgotten cult, an idol the hero found or set up. The engine keeps the shrine: a service, donations, vows, the
+    faith taken there by the buttons. Not for a shrine the scene already has."""
+
+    kind: Literal["god"] = "god"
+    shrine_name: str = Field(min_length=3, max_length=80)  # what it looks like: «камень с вырезанным ликом»
+    god_id: str | None = None
+    new: NewGod | None = None
+    cause: str = Field(min_length=4, max_length=160)
+
+
 class RumorEffect(_Out):
     """A rumour (0.91.0). `spread` — the hero's or an NPC's words go round from here: `text` (what they say),
     `importance` 1–3 (a trifle … the talk of the town; it travels faster), `truth` (false — a lie: it lives until
@@ -1740,7 +1775,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | LetterReplyEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | LetterReplyEffect | VowEffect | GodEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

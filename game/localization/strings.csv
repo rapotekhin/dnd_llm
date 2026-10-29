@@ -1728,3 +1728,57 @@ LETTER_NOBODY,"Писать некому: вы ещё ни с кем не зна
 LETTER_NO_LAW,"Донос пишут страже, а стражи вы ещё не знаете"
 MAP_RUMOR,Слух: {text}
 BOARD_NOTICES,Объявления
+FAITH_TITLE,Святилище
+FAITH_NO_SHRINE,Здесь нет святилища
+FAITH_REFUSED,Вы осквернили святыню этого бога — его слуги вам отказывают
+FAITH_SERVED,Вы уже были на службе этого бога на этой неделе
+FAITH_NO_MONEY,Не хватает монет
+FAITH_DONATED,Храм уже принял сегодня ваши пожертвования
+FAITH_FAVOR_MAX,Благосклонность и так наивысшая
+FAITH_NOT_YOUR_GOD,Это святилище не вашего бога
+FAITH_LAPSED,Вы нарушили заповедь — сначала искупление
+FAITH_LOW_FAVOR,Благословение дают верным: нужна благосклонность выше
+FAITH_BLESSED,Сегодня вас уже благословили
+FAITH_NO_VOW,Такого обета нет
+FAITH_VOW_TAKEN,Этот обет вы уже дали
+FAITH_VOWS_MAX,Больше обетов дать нельзя
+FAITH_NOTHING_BROKEN,Искупать нечего
+FAITH_ALREADY,Это уже ваш бог
+FAITH_CONVERT_SOON,Вы недавно сменили веру — ещё рано
+FAITH_GOD_TEXT,{text}. Сферы: {domains}. Заповедь: {law}.
+FAITH_STANDING,Благосклонность: {step} ({favor}).
+FAITH_NO_GOD,Вы не следуете ни одному богу.
+FAITH_OTHER_GOD,Ваш бог — {god}.
+FAITH_FESTIVAL,Сегодня праздник «{name}»: служба зачтётся вдвойне
+BTN_FAITH_SERVICE,Служба ({min})
+FAITH_SERVICE_TIP,"Благосклонность +{favor}, раз в {days} дн."
+BTN_FAITH_DONATE,Пожертвовать {money}
+FAITH_DONATE_TIP,Благосклонность +{favor}
+BTN_FAITH_BLESS,Благословение
+FAITH_BLESS_TIP,+к4 к атакам и спасброскам до долгого отдыха; не вместе с заклинанием «Благословение»
+BTN_FAITH_ATONE,Искупление ({money})
+BTN_FAITH_TAKE,Принять веру: {god}
+BTN_FAITH_CONVERT,Сменить веру: {god} ({money})
+FAITH_CONVERT_TIP,Ваш бог станет этим; благосклонность прежнего останется
+FAITH_GIVES_DISCOUNT,скидка у жрецов {pct}%
+FAITH_GIVES_BLESSING,благословение
+FAITH_GIVES_SHELTER,ночлег при святилище
+FAITH_STEPS,Ступени благосклонности: {steps}
+FAITH_VOWS,Обеты (не больше {n}): нарушенный теряет дар до искупления
+FAITH_VOW_BROKEN,нарушен
+FAITH_VOW_KEPT,держите
+BTN_FAITH_VOW,Дать обет
+BTN_FAITH,Святилище: {god}
+BTN_FAITH_TIP,"{name}: служба, пожертвование, благословение, обеты"
+FAITH_SHEET_TITLE,Вера
+FAITH_SHEET_GOD,{god} — {step} ({favor}). Заповедь: {law}
+FAITH_SHEET_NO_GOD,Вы не следуете ни одному богу. Веру принимают в святилище.
+FAITH_SHEET_BROKEN," — нарушен, нужен путь к святилищу"
+FAITH_SHEET_LAPSED,"Заповедь нарушена: заклинания слабее, пока не искупите у святилища своего бога"
+FAITH_SHEET_SHRINES,Святилища: {list}
+CC_ERR_GOD,Жрецу и паладину нужен бог
+CC_GOD,Бог (по желанию)
+CC_GOD_NEED,Бог — жрец и паладин служат богу
+CC_GOD_NONE,Без бога
+CC_GOD_PICK,Выберите бога
+CC_GOD_TEXT,{text}. Заповедь: {law}

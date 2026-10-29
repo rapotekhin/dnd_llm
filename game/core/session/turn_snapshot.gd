@@ -25,7 +25,8 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"services": (n.get("services", []) as Array).map(func(x: Variant) -> String: return "%s [%s]" % [SocialRules.tr_service(data, str(x)), x]),
 			"deal": SocialRules.deal_text(s, data, id),
 			"secrets": SocialRules.secret_hints(s, data, id), "refuses": SocialRules.refuses(s, data, id), "eager": SocialRules.eager(s, data, id),
-			"follows": s.followers.has(id), "under": SpellEffects.npc_spell_text(s, id), "animals": _animals(data, id)})
+			"follows": s.followers.has(id), "under": SpellEffects.npc_spell_text(s, id), "animals": _animals(data, id),
+			"god": FaithRules.npc_text(s, data, id)})  # v0.7.49
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
 		summaries["location"] = s.summaries["location:" + loc_id]
@@ -56,6 +57,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"calendar": CalendarRules.snapshot(s, data, data["world"]),  # v0.7.44: festivals on and near
 			"weather": WeatherRules.text(s, data),  # v0.7.46
 			"rumors": RumorRules.snapshot(s, data),  # v0.7.47
+			"shrine": FaithRules.scene_text(s, data),  # v0.7.49
 		},
 		"world": world_info(s, data),
 		"character": character_sheet(s, data),
@@ -164,6 +166,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"family": FamilyRules.text(s, data),  # v0.7.32
 		"underworld": _underworld(s, data),  # v0.7.33
 		"office": OfficeRules.text(s, data),  # v0.7.34
+		"faith": FaithRules.text(s, data),  # v0.7.49
 		"tools": (c.get("tools", []) as Array).map(func(t: Variant) -> String:
 			return "%s [%s]%s" % [BackgroundRules.tool_name(data, str(t)), t, "" if int(c.get("inventory", {}).get(str(t), 0)) > 0 else " (нет с собой)"]),
 		"abilities": c.get("abilities", {}),

@@ -339,6 +339,7 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 		lines.append_array(OrgRules.on_heist(s, data, id, "fail", 0))
 		return {"lines": lines, "fight": fight}
 	_rw(c)[id]["status"] = "done"
+	lines.append_array(FaithRules.deed(s, data, str(kind(data, str(d["kind"])).get("crime", "")), str(d["target"])))  # v0.7.49
 	var got := int(d.get("loot_cp", 0)) + int(d.get("reward_cp", 0))
 	c["gold_cp"] = int(c.get("gold_cp", 0)) + got
 	if got > 0:

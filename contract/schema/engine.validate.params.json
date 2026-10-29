@@ -2347,6 +2347,59 @@
       "title": "GoalHintEffect",
       "type": "object"
     },
+    "GodEffect": {
+      "additionalProperties": false,
+      "description": "A shrine in the hero's room (0.93.0): to a god of the pack (`god_id`) or a new one (`new`) — a local spirit, a\nforgotten cult, an idol the hero found or set up. The engine keeps the shrine: a service, donations, vows, the\nfaith taken there by the buttons. Not for a shrine the scene already has.",
+      "properties": {
+        "cause": {
+          "maxLength": 160,
+          "minLength": 4,
+          "title": "Cause",
+          "type": "string"
+        },
+        "god_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "God Id"
+        },
+        "kind": {
+          "const": "god",
+          "default": "god",
+          "title": "Kind",
+          "type": "string"
+        },
+        "new": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NewGod"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "shrine_name": {
+          "maxLength": 80,
+          "minLength": 3,
+          "title": "Shrine Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shrine_name",
+        "cause"
+      ],
+      "title": "GodEffect",
+      "type": "object"
+    },
     "HealEffect": {
       "additionalProperties": false,
       "properties": {
@@ -2805,6 +2858,64 @@
         "monster"
       ],
       "title": "NewEnemy",
+      "type": "object"
+    },
+    "NewGod": {
+      "additionalProperties": false,
+      "properties": {
+        "commandment": {
+          "default": "",
+          "maxLength": 120,
+          "title": "Commandment",
+          "type": "string"
+        },
+        "domains": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Domains",
+          "type": "array"
+        },
+        "enemies": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Enemies",
+          "type": "array"
+        },
+        "forbids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Forbids",
+          "type": "array"
+        },
+        "name": {
+          "maxLength": 40,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Text",
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "maxLength": 60,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "NewGod",
       "type": "object"
     },
     "NewNpc": {
@@ -5351,6 +5462,36 @@
       "title": "UseItemEffect",
       "type": "object"
     },
+    "VowEffect": {
+      "additionalProperties": false,
+      "description": "The hero swears a vow by words (0.93.0): only a vow of rules.faith.vows — `truth` (no Deception), `meek` (no\nIntimidation), `no_blood` (no murder), `clean_hands` (no theft), `law` (no crime). The engine gives its gift and\nbreaks it by facts; there are no other vows (a fast, no meat — story only, no effect).",
+      "properties": {
+        "cause": {
+          "maxLength": 160,
+          "minLength": 4,
+          "title": "Cause",
+          "type": "string"
+        },
+        "kind": {
+          "const": "vow",
+          "default": "vow",
+          "title": "Kind",
+          "type": "string"
+        },
+        "vow": {
+          "maxLength": 30,
+          "minLength": 2,
+          "title": "Vow",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vow",
+        "cause"
+      ],
+      "title": "VowEffect",
+      "type": "object"
+    },
     "WeatherEffect": {
       "additionalProperties": false,
       "description": "Magic or a miracle changes the weather of a location for hours (0.90.0): Control Weather, a druid's rite, a\npriestess's prayer answered. The engine keeps the kind (`weather`) over the location for `hours` (within\nrules.weather.magic.max_hours) with its consequences — fog and a downpour blind archers and watchers, snow slows\nthe way, the cold calls for warmth; then the day's weather comes back. Not for the weather of the day itself:\nthat is the engine's, given in the scene.",
@@ -5581,6 +5722,7 @@
           "give_item": "#/$defs/GiveItemEffect",
           "goal_assess": "#/$defs/GoalAssessEffect",
           "goal_hint": "#/$defs/GoalHintEffect",
+          "god": "#/$defs/GodEffect",
           "heal": "#/$defs/HealEffect",
           "heist": "#/$defs/HeistEffect",
           "job": "#/$defs/JobEffect",
@@ -5612,6 +5754,7 @@
           "upgrade": "#/$defs/UpgradeEffect",
           "use_feature": "#/$defs/UseFeatureEffect",
           "use_item": "#/$defs/UseItemEffect",
+          "vow": "#/$defs/VowEffect",
           "weather": "#/$defs/WeatherEffect",
           "wilds": "#/$defs/WildsEffect",
           "world_item": "#/$defs/WorldItemEffect"
@@ -5693,6 +5836,12 @@
         },
         {
           "$ref": "#/$defs/LetterReplyEffect"
+        },
+        {
+          "$ref": "#/$defs/VowEffect"
+        },
+        {
+          "$ref": "#/$defs/GodEffect"
         },
         {
           "$ref": "#/$defs/PermitEffect"

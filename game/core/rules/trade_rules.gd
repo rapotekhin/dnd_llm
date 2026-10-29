@@ -516,6 +516,8 @@ static func services(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 		var why := ""
 		if CrimeRules.shunned_by(s, data, npc_id):  # v0.7.22.18 (#30): a murderer gets no service either
 			why = "SHOP_CLOSED_WANTED"
+		elif not FaithRules.refuses(s, data, npc_id).is_empty():  # v0.7.49: a desecrator
+			why = "FAITH_REFUSED"
 		elif int(s.character.get("gold_cp", 0)) < cost:
 			why = "TRADE_ERR_NO_COINS"
 		elif targets(s, data, str(id)).is_empty():

@@ -46,7 +46,7 @@
 			"summary": "Дварф-жрец Светлой Матери, лечил шахтёров до обвала",
 			"story": "Бранко служил при храме Светлой Матери и спускался в «Глубокую жилу» лечить шахтёров. В день обвала он вытащил троих, но двоих не нашли. Он уверен, что они живы где-то за завалом, и ищет способ туда пройти.",
 			"choices": {
-				"name": "Бранко", "gender": "male", "race": "dwarf", "subrace": "hill_dwarf", "class": "cleric", "subclass": "life", "background": "acolyte",
+				"name": "Бранко", "god": "chauntea", "gender": "male", "race": "dwarf", "subrace": "hill_dwarf", "class": "cleric", "subclass": "life", "background": "acolyte",
 				"base_abilities": {"str": 13, "dex": 12, "con": 14, "int": 8, "wis": 15, "cha": 10},
 				"ability_choice": [], "skills": ["medicine", "history"], "extra_skills": [], "expertise": [], "options": {},
 				"cantrips": ["sacred_flame", "guidance", "spare_the_dying"], "spells": ["shield_of_faith", "guiding_bolt", "sanctuary", "command"], "race_cantrips": [],
@@ -72,7 +72,7 @@
 			"summary": "Последний из монастыря, сгоревшего в войне",
 			"story": "Монастырь Тихого Ручья стоял за Пущей, пока его не сожгли войска Пепельного Князя. Тарас был тогда послушником и выжил, спрятавшись в колодце. Он вернулся, чтобы найти уцелевшие свитки настоятеля — говорят, их унесли на Серую заставу.",
 			"choices": {
-				"name": "Тарас", "gender": "male", "race": "human", "subrace": "", "class": "monk", "subclass": "", "background": "acolyte",
+				"name": "Тарас", "god": "silvanus", "gender": "male", "race": "human", "subrace": "", "class": "monk", "subclass": "", "background": "acolyte",
 				"base_abilities": {"str": 12, "dex": 15, "con": 13, "int": 10, "wis": 14, "cha": 8},
 				"ability_choice": [], "skills": ["acrobatics", "stealth"], "extra_skills": [], "expertise": [], "options": {},
 				"cantrips": [], "spells": [], "race_cantrips": [],
@@ -85,7 +85,7 @@
 			"summary": "Драконорождённый наёмник, давший клятву у стен павшей заставы",
 			"story": "Гордей пришёл в Марку наёмником в последний год войны и опоздал к Серой заставе на одну ночь. Над пепелищем он поклялся Светлой Матери защищать тех, кого оставили, и с тех пор не уезжает из Брода, хотя многие косятся на его чешую.",
 			"choices": {
-				"name": "Гордей", "gender": "male", "race": "dragonborn", "subrace": "", "class": "paladin", "subclass": "", "background": "soldier",
+				"name": "Гордей", "god": "tyr", "gender": "male", "race": "dragonborn", "subrace": "", "class": "paladin", "subclass": "", "background": "soldier",
 				"base_abilities": {"str": 15, "dex": 10, "con": 13, "int": 8, "wis": 12, "cha": 14},
 				"ability_choice": [], "skills": ["persuasion", "religion"], "extra_skills": [], "expertise": [],
 				"options": {"draconic_ancestry": ["draconic_ancestry_gold"]},
@@ -112,7 +112,7 @@
 			"summary": "Тифлинг-вор, бежавший из-за реки от долгов",
 			"story": "Дамир задолжал не тем людям за рекой и сбежал в Марку, где его никто не знает. Ферн Кривой иногда даёт ему работу «без вопросов», а недавно предложил хорошие деньги за то, чтобы забрать что-то из склепа Серой заставы.",
 			"choices": {
-				"name": "Дамир", "gender": "male", "race": "tiefling", "subrace": "", "class": "rogue", "subclass": "", "background": "criminal",
+				"name": "Дамир", "god": "mask", "gender": "male", "race": "tiefling", "subrace": "", "class": "rogue", "subclass": "", "background": "criminal",
 				"base_abilities": {"str": 8, "dex": 15, "con": 14, "int": 10, "wis": 12, "cha": 13},
 				"ability_choice": [], "skills": ["sleight_of_hand", "perception", "acrobatics", "investigation"], "extra_skills": [],
 				"expertise": ["stealth", "sleight_of_hand"], "options": {},

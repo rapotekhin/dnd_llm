@@ -102,6 +102,7 @@ static func roll(s: GameSession, data: Dictionary, skill: String, dc: int, dis: 
 	var parts := RollParts.skill(s, data, skill)
 	var total := nat + RollParts.sum(parts)
 	RollParts.note(s, TranslationServer.translate("SKILL_" + skill.to_upper()), rolls, nat, parts, total - nat, dc)
+	s.faith_lines.append_array(FaithRules.deed(s, data, "check:" + skill))  # v0.7.49
 	var ok := nat == 20 or (nat != 1 and total >= dc)
 	var skill_name := TranslationServer.translate("SKILL_" + skill.to_upper())
 	return {"total": total, "ok": ok, "line": "%s %d против Сл %d%s — %s" % [skill_name, total, dc, " (помеха: без общего языка — жесты и оружие)" if dis else "", "успех" if ok else "провал"]}

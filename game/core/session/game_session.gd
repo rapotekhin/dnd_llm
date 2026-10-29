@@ -131,6 +131,8 @@ var bodies: Dictionary = {}
 ## The rolls of the rules since the last chat line of effects (RollParts.note, v0.7.39.5): not saved, the next
 ## effect line takes them for its hover.
 var roll_notes: Array[Dictionary] = []
+## Lines of the faith (FaithRules.deed) from a roll inside a turn (v0.7.49): not saved, the next chat line takes them.
+var faith_lines: Array[String] = []
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
 ## The chronicle (v0.7.14.4): every line of the engine in the chat with its day, minute and room

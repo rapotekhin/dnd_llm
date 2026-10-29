@@ -290,6 +290,8 @@ static func rest_place(world: Dictionary, room_id: String, s: GameSession = null
 		return {"cost_cp": 0, "free": true}  # v0.7.33: the hideout's cots
 	if s != null and not data.is_empty() and not BondRules.host(s, data, room_id).is_empty():  # v0.7.31: a friend's bed
 		return {"cost_cp": 0, "free": true, "host": BondRules.host(s, data, room_id)}
+	if s != null and not data.is_empty() and FaithRules.shelter(s, data, room_id):  # v0.7.49: the shrine's bed
+		return {"cost_cp": 0, "free": true}
 	if not (safe is Dictionary):
 		return {"cost_cp": 0, "free": true} if free and (room.get("tags", []) as Array).has("temple") else {}
 	return {"cost_cp": 0 if free else int(safe.get("rest_cost_cp", 0)), "free": free}

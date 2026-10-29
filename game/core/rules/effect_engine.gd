@@ -358,6 +358,10 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return RumorRules.plan(s, data, e, pending)
 		"letter_reply":  # v0.7.48: the person's yes or no to the hero's letter, by the engine's verdict
 			return LetterRules.plan(s, data, e, pending)
+		"vow":  # v0.7.49: the hero swears a vow of the list by words
+			return FaithRules.plan_vow(s, data, e)
+		"god":  # v0.7.49: a shrine here to a god of the pack or a new one
+			return FaithRules.plan_god(s, data, e)
 		"beast":  # v0.7.43: a wild beast to tame in the scene, for a cause
 			if not PetRules.on(data):
 				return {"reason": "питомцев в этих правилах нет"}
@@ -1047,6 +1051,10 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(RumorRules.apply(s, _data, plan))
 		"letter_reply":
 			_extra_lines.append_array(LetterRules.apply(s, _data, plan))
+		"vow":
+			_extra_lines.append_array(FaithRules.apply_vow(s, _data, plan))
+		"god":
+			_extra_lines.append_array(FaithRules.apply_god(s, _data, plan))
 		"stock":
 			_extra_lines.append_array(MountRules.apply_stock(s, _data, plan) if plan.has("animal") else TradeRules.apply_stock(s, _data, plan))
 		"permit":

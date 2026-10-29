@@ -84,7 +84,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         description += " На виду: " + "; ".join(names) + "."
     npcs = [{"npc_id": n["id"], "name": n["name"], "role": n.get("role", ""), "trader": bool(n.get("trader", False)),
              "attitude": ATTITUDE.get(str(n.get("attitude", "indifferent")), 0),
-             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie", "memory", "services", "deal", "secrets", "refuses", "eager", "follows", "under", "body", "animals") if k in n}} for n in scene.get("npcs", [])]
+             **{k: n[k] for k in ("race", "speaks", "understands_hero", "tie", "memory", "services", "deal", "secrets", "refuses", "eager", "follows", "under", "body", "animals", "god") if k in n}} for n in scene.get("npcs", [])]
     ch = snap.get("character", {})
     hp = ch.get("hp", {})
     history = []
@@ -133,6 +133,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "calendar": scene.get("calendar", []),  # festivals on and near (0.88.0)
                 "weather": scene.get("weather", ""),  # the location's weather (0.90.0)
                 "rumors": scene.get("rumors", []),  # what the place or the NPC knows (0.91.0)
+                "shrine": scene.get("shrine", ""),  # the shrine of the room (0.93.0)
             },
             "character": {
                 "name": ch.get("name", ""), "gender": ch.get("gender", "other"), "class_name": ch.get("class", ""),
@@ -140,7 +141,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "ac": ch.get("ac", 10), "conditions": ch.get("conditions", []), "skills": ch.get("skills", {}),
                 "saves": ch.get("saves", {}), "features": ch.get("features", []), "gold_cp": ch.get("gold_cp", 1000),
                 **{k: ch[k] for k in ("cantrips", "spells", "spell_slots", "spell_save_dc", "resources", "equipped", "inventory",
-                                      "background", "background_feature", "languages", "tools", "attuned", "reward_left_cp", "bags", "development", "goal", "craft", "jobs", "property", "bank", "shop", "study", "bonds", "family", "underworld", "office",
+                                      "background", "background_feature", "languages", "tools", "attuned", "reward_left_cp", "bags", "development", "goal", "craft", "jobs", "property", "bank", "shop", "study", "bonds", "family", "underworld", "office", "faith",
                                       "race", "body") if k in ch},
             },
             "history": history,

@@ -291,6 +291,9 @@ static func hero_die(s: GameSession, data: Dictionary, kind: String) -> Dictiona
 	for e: Dictionary in ConditionRules.effects(c).duplicate():
 		if not e.has("die") or not (e.get("on", []) as Array).has(kind):
 			continue
+		var same := str(e.get("same_as", ""))  # v0.7.49: the temple's blessing is Bless — not twice
+		if not same.is_empty() and ConditionRules.effects(c).any(func(o: Dictionary) -> bool: return str(o.get("source", {}).get("id", "")) == same):
+			continue
 		var n := CombatRules.roll_dice(s.rng, str(e["die"]))
 		total += n
 		notes.append("+%d (%s)" % [n, e.get("source", {}).get("name", "")])

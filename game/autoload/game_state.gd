@@ -473,6 +473,56 @@ func send_letter(poster: String, to: String, purpose: String, text: String, way:
 	return ""
 
 
+## The shrine's acts (v0.7.49): service, donate, bless, vow (`arg` — its id), atone, convert. The engine's own, no
+## master's turn; the time passes by rules.faith. "" or a localization key.
+func faith_act(what: String, arg: String = "") -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+		return "EQUIP_BUSY"
+	var data := Catalog.data
+	var cfg := FaithRules.cfg(data)
+	var why := ""
+	match what:
+		"service":
+			why = FaithRules.service_why(session, data)
+		"donate":
+			why = FaithRules.donate_why(session, data)
+		"bless":
+			why = FaithRules.bless_why(session, data)
+		"vow":
+			why = FaithRules.vow_why(session, data, arg)
+		"atone":
+			why = FaithRules.atone_why(session, data)
+		"convert":
+			why = FaithRules.convert_why(session, data)
+		_:
+			return "FAITH_NO_SHRINE"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	var minutes := 0
+	match what:
+		"service":
+			lines = FaithRules.service(session, data)
+			minutes = int(cfg["service"]["minutes"])
+		"donate":
+			lines = FaithRules.donate(session, data)
+		"bless":
+			lines = FaithRules.bless(session, data)
+		"vow":
+			lines = FaithRules.take_vow(session, data, arg)
+		"atone":
+			lines = FaithRules.atone(session, data)
+			minutes = int(cfg["atone"]["minutes"])
+		"convert":
+			lines = FaithRules.convert(session, data)
+			minutes = int(cfg["convert"]["minutes"])
+	if minutes > 0:
+		lines.append_array(TimeRules.advance(session, data, minutes))
+	CharacterRules.refresh(session.character, data, session.items)
+	_quiet_lines(lines)
+	return ""
+
+
 ## The board read (v0.7.47): its notices go to the journal, a notice with a place onto the map.
 func read_notices() -> void:
 	if session == null:
@@ -1547,6 +1597,8 @@ func _hero_roll(params: Dictionary, bonus: int, parts: Array[Dictionary] = []) -
 		var all := parts.duplicate() if not parts.is_empty() else RollParts.of_params(session.character, Catalog.data, params, session.items)
 		RollParts.difficulty(session, Catalog.data, all)
 		result["parts"] = RollParts.fit(all, bonus + extra)
+		if params.get("skill") != null and not str(params.get("skill", "")).is_empty():  # v0.7.49: a lie breaks a vow
+			session.faith_lines.append_array(FaithRules.deed(session, Catalog.data, "check:" + str(params["skill"])))
 	return result
 
 
@@ -3042,8 +3094,15 @@ func _add(entry: Dictionary) -> void:
 	if not session.roll_notes.is_empty() and str(entry.get("kind", "")) == GameSession.KIND_EFFECT:  # v0.7.39.5
 		entry["rolls"] = session.roll_notes.duplicate()
 		session.roll_notes.clear()
+	if not session.faith_lines.is_empty() and str(entry.get("kind", "")) == GameSession.KIND_EFFECT:  # v0.7.49: a vow broken by a roll
+		(entry["lines"] as Array).append_array(session.faith_lines)
+		session.faith_lines.clear()
 	session.append(entry)
 	EventBus.chat_appended.emit(entry)
+	if not session.faith_lines.is_empty():
+		var faith := session.faith_lines.duplicate()
+		session.faith_lines.clear()
+		_add(GameSession.effect_entry(faith))
 
 
 func _set_options(options: Array[String], costs: Array[int] = [], checks: Array = []) -> void:

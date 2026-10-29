@@ -140,6 +140,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "wilds": ("охота и рыбалка, угодья, браконьерство; зверь ушёл или вернулся, рыба пропала, новые угодья (`wilds`)", ("wilds",)),
     "calendar": ("дата и праздники: когда ярмарка, праздник идёт, срок к празднику; свой праздник по причине (`festival`)", ("festival",)),
     "weather": ("погода: ливень, туман, снег, зной, мороз и что они значат; чары или чудо меняют погоду на часы (`weather`)", ("weather",)),
+    "faith": ("вера: боги, святилища, молитва, обет, заповедь, осквернение; обет по словам героя (`vow`), новое святилище (`god`)", ("vow", "god")),
     "rumors": ("слухи: что говорят в округе, пересказ слуха NPC, слух о герое или пущенный героем, ложь и её опровержение (`rumor`)", ("rumor",)),
     "pets": ("питомец героя и приручение: дикий зверь в сцене, имя, близость (`bond` с creature_id), помощь, разведка; бездомный зверь по причине (`beast`)", ("beast",)),
     "games": ("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; поединок по вызову; арена и ставки на бои; своя игра (`contest`)", ("contest",)),
@@ -161,6 +162,8 @@ WEATHER_WORDS = re.compile(r"погод|дожд|ливн|ливен|туман|
                            re.IGNORECASE)
 RUMOR_WORDS = re.compile(r"слух|слыха|слышн|прислуш|подслуш|о ч[её]м говор|болтовн|говорят|что нового|новост|сплет|болтают|судачат|толкуют|пустить|распуст|наводк|объявлен",
                          re.IGNORECASE)  # v0.7.47
+FAITH_WORDS = re.compile(r"бог[аиу ]|богин|бож|молит|молюсь|помол|обет|клян|присяг|храм|алтар|святил|святын|жриц|жрец|вер[уыа] |вера$|обращ|"
+                         r"благослов|искуп|скверн|заповед|идол|капищ|чонти|сильванус|тир[ау ]|вокин|маск[еуи]|келемвор", re.IGNORECASE)  # v0.7.49
 FESTIVAL_WORDS = re.compile(r"праздн|ярмар|дожин|гулянь|торговый день|свадьб|пир[ау ]|поминк|календар|какое число|какой день|месяц",
                             re.IGNORECASE)  # v0.7.44
 BOUT_WORDS = re.compile(r"поедин|дуэл|вызыва|вызов|сразимся|сразиться|помахаться|на кулак|до первой крови|до сдачи|арен|бойцов|кровав[аую]+ ям|турнир|ставк",
@@ -219,6 +222,8 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("weather")
     if scene and mentions(said, RUMOR_WORDS):  # v0.7.47: what they say, a rumour told or spread
         out.append("rumors")
+    if scene and mentions(said, FAITH_WORDS):  # v0.7.49: a prayer, a vow, a shrine by words
+        out.append("faith")
     if scene and any("приручить" in c or "питомец героя" in c for c in scene.creatures):  # v0.7.43: a beast to tame or a pet here
         out.append("pets")
     if scene and mentions(said, BOUT_WORDS):  # v0.7.45: a duel by challenge, the arena, a bet on a bout

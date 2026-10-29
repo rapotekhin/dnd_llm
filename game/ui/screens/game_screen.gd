@@ -41,6 +41,7 @@ var _arena: ArenaPanel  # v0.7.45
 var _family: FamilyPanel
 var _pet: PetPanel  # v0.7.43
 var _letter: LetterPanel  # v0.7.48
+var _faith: FaithPanel  # v0.7.49
 var _heists: HeistPanel
 var _org: OrgPanel
 var _office: OfficePanel
@@ -208,6 +209,7 @@ func _ready() -> void:
 	side.family_requested.connect(func() -> void: _family.open())  # v0.7.32
 	side.pet_requested.connect(func(id: String) -> void: _pet.open(id))  # v0.7.43
 	side.letter_requested.connect(func(id: String) -> void: _letter.open(id))  # v0.7.48
+	side.faith_requested.connect(func() -> void: _faith.open())  # v0.7.49
 	side.heist_requested.connect(func() -> void: _heists.open())  # v0.7.33
 	side.org_requested.connect(func(org: String) -> void: _org.open(org))
 	side.office_requested.connect(func(chief: String) -> void: _office.open(chief))  # v0.7.34
@@ -318,6 +320,11 @@ func _ready() -> void:
 	_letter.visible = false
 	add_child(_letter)
 	_letter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_faith = FaithPanel.new()  # v0.7.49
+	_faith.name = "FaithView"
+	_faith.visible = false
+	add_child(_faith)
+	_faith.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_pet = PetPanel.new()  # v0.7.43
 	_pet.name = "PetView"
 	_pet.visible = false

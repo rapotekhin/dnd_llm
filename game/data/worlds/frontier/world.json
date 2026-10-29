@@ -722,6 +722,113 @@
 			"public": false
 		}
 	},
+	"gods": {
+		"_doc": "Gods of the Mark (v0.7.49, the author: the gods of the Forgotten Realms): FaithRules. forbids — the deeds of the commandment (rules.faith), enemies — gods whose faith is hostile, festivals — the calendar's festivals of the god (a service counts double).",
+		"chauntea": {
+			"name": "Чонтия",
+			"title": "Светлая Мать",
+			"domains": [
+				"жизнь",
+				"урожай"
+			],
+			"text": "богиня земли, урожая и очага; её храм в Броде лечит всех, кто пришёл с миром",
+			"forbids": [
+				"murder"
+			],
+			"commandment": "не отнимать жизнь",
+			"enemies": [],
+			"festivals": [
+				"harvest"
+			]
+		},
+		"silvanus": {
+			"name": "Сильванус",
+			"title": "Отец Дуб",
+			"domains": [
+				"природа"
+			],
+			"text": "хозяин дикой чащи; его менгир в Пуще старше Брода",
+			"forbids": [
+				"poaching"
+			],
+			"commandment": "не брать зверя и рыбы в чужих угодьях",
+			"enemies": [],
+			"festivals": []
+		},
+		"tyr": {
+			"name": "Тир",
+			"title": "Слепой Судья",
+			"domains": [
+				"порядок",
+				"война"
+			],
+			"text": "бог закона и справедливости; его знак висит в ратуше над столом судьи",
+			"forbids": [
+				"check:deception",
+				"false_report"
+			],
+			"commandment": "не лгать и не лжесвидетельствовать",
+			"enemies": [
+				"mask"
+			],
+			"festivals": [
+				"tourney"
+			]
+		},
+		"waukeen": {
+			"name": "Вокин",
+			"title": "Подруга Торговцев",
+			"domains": [
+				"знание",
+				"обман"
+			],
+			"text": "богиня торговли и звонкой монеты; меняла держит её алтарь в своей палате",
+			"forbids": [
+				"debt",
+				"robbery"
+			],
+			"commandment": "платить долги и не грабить на дорогах",
+			"enemies": [
+				"mask"
+			],
+			"festivals": [
+				"market_day",
+				"fair"
+			]
+		},
+		"mask": {
+			"name": "Маска",
+			"title": "Повелитель Теней",
+			"domains": [
+				"обман"
+			],
+			"text": "бог воров и тайн; Ночные Крысы зажигают ему свечу в логове",
+			"forbids": [
+				"false_report",
+				"murder"
+			],
+			"commandment": "не выдавать своих и не лить крови ради кражи",
+			"enemies": [
+				"tyr",
+				"waukeen"
+			],
+			"festivals": []
+		},
+		"kelemvor": {
+			"name": "Келемвор",
+			"title": "Судья Мёртвых",
+			"domains": [
+				"смерть"
+			],
+			"text": "бог смерти, что приходит в свой срок; часовня на заставе стоит над его склепом",
+			"forbids": [
+				"rob_dead"
+			],
+			"commandment": "не грабить мёртвых",
+			"enemies": [],
+			"festivals": []
+		}
+	},
 	"rooms": {
 		"brod-tavern-hall": {
 			"name": "Таверна «Хромой олень» — общий зал",
@@ -990,7 +1097,11 @@
 			"tags": [
 				"temple"
 			],
-			"site_id": "brod-temple"
+			"site_id": "brod-temple",
+			"shrine": {
+				"god": "chauntea",
+				"name": "алтарь Светлой Матери"
+			}
 		},
 		"brod-lockup": {
 			"name": "Холодная при воротах",
@@ -1323,7 +1434,11 @@
 			],
 			"beasts": [
 				"raven"
-			]
+			],
+			"shrine": {
+				"god": "silvanus",
+				"name": "менгир Отца Дуба"
+			}
 		},
 		"pushcha-hollow": {
 			"name": "Тёмная лощина",
@@ -1588,7 +1703,11 @@
 				]
 			},
 			"dark": true,
-			"site_id": "outpost-fort"
+			"site_id": "outpost-fort",
+			"shrine": {
+				"god": "kelemvor",
+				"name": "плита Келемвора"
+			}
 		},
 		"mine-entrance": {
 			"name": "Вход в шахту",
@@ -1874,7 +1993,11 @@
 					"text": "в раскрытой книге налогов — пометка писаря: «мельница — долг прежнего хозяина не взыскан, сам пропал у заставы»"
 				}
 			],
-			"site_id": "brod-townhall"
+			"site_id": "brod-townhall",
+			"shrine": {
+				"god": "tyr",
+				"name": "знак Слепого Судьи"
+			}
 		},
 		"brod-river-yard": {
 			"name": "Двор у реки",
@@ -2002,7 +2125,11 @@
 					"text": "в книге закладов — давний заклад мельника: серебряная чаша, срок вышел, чаша так и не выкуплена"
 				}
 			],
-			"site_id": "brod-townhall"
+			"site_id": "brod-townhall",
+			"shrine": {
+				"god": "waukeen",
+				"name": "алтарь Вокин"
+			}
 		},
 		"brod-school-hall": {
 			"name": "Классная палата",
@@ -2079,7 +2206,11 @@
 					"dc": 15,
 					"text": "Под половицей у стола — засаленная книжица Сыча: кто сколько принёс и кому из стражи у Северных ворот заплачено"
 				}
-			]
+			],
+			"shrine": {
+				"god": "mask",
+				"name": "свеча Маски"
+			}
 		}
 	},
 	"npcs": {
@@ -2137,7 +2268,8 @@
 					"female"
 				]
 			},
-			"gossip": true
+			"gossip": true,
+			"god": "chauntea"
 		},
 		"npc_serving": {
 			"name": "Мира",
@@ -2380,7 +2512,8 @@
 			"gossip": true,
 			"carries": [
 				"fern_tally"
-			]
+			],
+			"god": "waukeen"
 		},
 		"npc_smith": {
 			"name": "Гуннар Тяжёлая Рука",
@@ -2583,7 +2716,8 @@
 			"romance": {
 				"open": false,
 				"why": "обет служения"
-			}
+			},
+			"god": "chauntea"
 		},
 		"npc_captain": {
 			"name": "Капитан Ратмир",
@@ -2614,7 +2748,8 @@
 			"romance": {
 				"open": false,
 				"why": "женат, семья ждёт его в столице"
-			}
+			},
+			"god": "tyr"
 		},
 		"npc_hermit": {
 			"name": "Мох",
@@ -2638,7 +2773,8 @@
 			"romance": {
 				"open": false,
 				"why": "отшельник"
-			}
+			},
+			"god": "silvanus"
 		},
 		"npc_prospector": {
 			"name": "Дрогин",
@@ -2743,7 +2879,8 @@
 			},
 			"post": [
 				"post"
-			]
+			],
+			"god": "tyr"
 		},
 		"npc_drover": {
 			"name": "Остап",
@@ -2816,7 +2953,8 @@
 			"romance": {
 				"open": false,
 				"why": "женат"
-			}
+			},
+			"god": "waukeen"
 		},
 		"npc_teacher": {
 			"name": "Аверкий Строгов",
@@ -2884,7 +3022,8 @@
 			"romance": {
 				"open": false,
 				"why": "делу не мешают сердечные дела"
-			}
+			},
+			"god": "mask"
 		},
 		"npc_pedlar": {
 			"name": "Яким Коробейник",

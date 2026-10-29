@@ -93,6 +93,40 @@ def check_letters(world, rules) -> list[str]:
     return errors
 
 
+def check_faith(world, rules, crime_kinds, presets) -> list[str]:
+    """v0.7.49: the gods — forbids of known deeds, enemies and festivals of the pack; a room's `shrine` and an NPC's
+    `god` — gods of the pack; a preset's god too, and a cleric or a paladin has one."""
+    errors: list[str] = []
+    gods = {k: v for k, v in world.get("gods", {}).items() if not k.startswith("_")}
+    if not gods:
+        return errors
+    deeds = set(crime_kinds) | set(rules.get("deeds", {})) | {"rob_dead", "check:deception", "check:intimidation"}
+    festivals = set(world.get("calendar", {}).get("festivals", {}))
+    for gid, g in gods.items():
+        where = f"world.gods.{gid}"
+        if not g.get("name"):
+            errors.append(f"{where}: нет name")
+        errors += [f"{where}.forbids: неизвестное деяние {x}" for x in g.get("forbids", []) if x not in deeds]
+        errors += [f"{where}.enemies: нет бога {x}" for x in g.get("enemies", []) if x not in gods]
+        errors += [f"{where}.festivals: нет праздника {x}" for x in g.get("festivals", []) if x not in festivals]
+    for rid, r in world.get("rooms", {}).items():
+        if r.get("shrine") and r["shrine"].get("god") not in gods:
+            errors.append(f"world.rooms.{rid}.shrine: нет бога {r['shrine'].get('god')}")
+    for nid, n in world.get("npcs", {}).items():
+        if n.get("god") and n["god"] not in gods:
+            errors.append(f"world.npcs.{nid}.god: нет бога {n['god']}")
+    for vid, v in rules.get("vows", {}).items():
+        errors += [f"rules.faith.vows.{vid}: неизвестное деяние {x}" for x in v.get("forbids", []) if x not in deeds]
+    need = set(rules.get("requires_god", []))
+    for p in presets:
+        ch = p.get("choices", {})
+        if ch.get("god") and ch["god"] not in gods:
+            errors.append(f"characters.{p.get('id')}: нет бога {ch['god']}")
+        if ch.get("class") in need and not ch.get("god"):
+            errors.append(f"characters.{p.get('id')}: жрецу и паладину нужен god")
+    return errors
+
+
 def check_weather(world, rules) -> list[str]:
     """v0.7.46: the pack's weather tables — kinds of rules.json weather.kinds, seasons of the calendar, positive weights."""
     errors: list[str] = []
@@ -500,6 +534,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     errors += check_weather(world, load(DATA / "rules.json").get("weather", {}))
     errors += check_rumors(world, rooms)
     errors += check_letters(world, load(DATA / "rules.json").get("letters", {}))
+    rules_all = load(DATA / "rules.json")
+    errors += check_faith(world, rules_all.get("faith", {}), [k for k in rules_all["crime"]["kinds"] if not k.startswith("_")], chars["presets"])
 
     seen: set[str] = set()
     for p in chars["presets"]:

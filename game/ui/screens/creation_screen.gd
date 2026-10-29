@@ -647,6 +647,7 @@ func _draw_details() -> void:
 	_body.add_child(name_edit)
 	_radio(_body, "gender", [{"id": "male", "label": tr("CC_GENDER_MALE")}, {"id": "female", "label": tr("CC_GENDER_FEMALE")}], 2)
 	_draw_body_picks()
+	_draw_god()
 	_text(_body, tr("CC_STORY"), true)
 	var story := TextEdit.new()
 	story.name = "StoryEdit"
@@ -662,6 +663,32 @@ func _draw_details() -> void:
 		var langs: Dictionary = data()["misc"]["languages"]
 		var opts: Array = CharacterBuilder.language_options(choices, data()).map(func(l: String) -> Dictionary: return {"id": l, "label": langs[l]["name"]})
 		_checks(_body, choices["languages"], opts, n, _setter("languages"))
+
+
+## The hero's god (v0.7.49): a god of the pack, or none when the class does not need one; its commandment under.
+func _draw_god() -> void:
+	var ids := CharacterBuilder.god_ids(data())
+	if ids.is_empty():
+		return
+	var need := CharacterBuilder.needs_god(choices, data())
+	_text(_body, tr("CC_GOD_NEED") if need else tr("CC_GOD"), true)
+	var gods: Dictionary = data()["world"]["gods"]
+	var ob := OptionButton.new()
+	ob.name = "GodPick"
+	ob.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	ob.custom_minimum_size = Vector2(0, 44)
+	ob.add_item(tr("CC_GOD_NONE") if not need else tr("CC_GOD_PICK"))
+	for id: String in ids:
+		var g: Dictionary = gods[id]
+		ob.add_item("%s (%s) — %s" % [g["name"], g.get("title", ""), ", ".join(g.get("domains", []))])
+	ob.selected = ids.find(str(choices.get("god", ""))) + 1
+	ob.item_selected.connect(func(idx: int) -> void:
+		choices["god"] = "" if idx == 0 else ids[idx - 1]
+		_redraw())
+	_body.add_child(ob)
+	var god := str(choices.get("god", ""))
+	if gods.has(god):
+		_text(_body, tr("CC_GOD_TEXT").format({"text": gods[god].get("text", ""), "law": gods[god].get("commandment", "")}), true).name = "GodText"
 
 
 ## Age, build and height (v0.7.22.15): a list of the gender's words each; «Подберёт движок» leaves it to the engine.
