@@ -24,6 +24,7 @@ signal bank_requested(npc_id: String)  # v0.7.28
 signal shop_requested(mode: String, id: String)  # v0.7.29
 signal study_requested(npc_id: String)  # v0.7.30: "" — the hero's own courses
 signal bond_requested(npc_id: String)  # v0.7.31
+signal contest_requested(npc_id: String)  # v0.7.40
 signal family_requested  # v0.7.32
 signal heist_requested  # v0.7.33
 signal org_requested(org_id: String)  # v0.7.33
@@ -403,6 +404,12 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 					EventBus.message.emit(tr(err)), can_act and rw.is_empty())
 			rb.name = "Recruit_" + id
 			rb.tooltip_text = tr(rw).format({"at": int(OrgRules.cfg(Catalog.data)["recruit_bond"])}) if not rw.is_empty() else tr("BTN_RECRUIT_TIP")
+	if Catalog.data["rules"].has("contests"):  # v0.7.40
+		var playing := str(ContestRules.state(s).get("npc", "")) == id
+		var cw := "" if playing else ContestRules.why_not(s, Catalog.data, id)
+		var cb := _flow(acts, tr("BTN_CONTEST"), contest_requested.emit.bind(id), can_act and cw.is_empty())
+		cb.name = "Contest_" + id
+		cb.tooltip_text = cw if not cw.is_empty() else tr("BTN_CONTEST_TIP").format({"name": n.get("name", id)})
 	var bo := _flow(acts, tr("BTN_BOND"), bond_requested.emit.bind(id), can_act)  # v0.7.31
 	bo.name = "Bond_" + id
 	bo.tooltip_text = tr("BTN_BOND_TIP").format({"name": n.get("name", id)})

@@ -213,6 +213,12 @@ Godot                                     llm_server
 - **Эффект `world_item`** {`op`: `give` | `take`, `npc_id` | `prop_id`, `item_id` | `item`, `qty`, `cause`} — вещь человека или контейнера комнаты меняется по причине в мире.
 - **`furnish.cause`** — новые вещи в уже обставленной комнате.
 
+### 94. Протокол 0.84.0 (v0.7.40)
+
+- **Эффект `contest`** {`npc_id`, `game` | `new_kind`: `NewContestKind` {`name`, `check`: `ContestCheck` {`skill` | `ability` | `save`}, `npc_check`, `wins`, `lose_condition`, `cheat`}} — NPC сцены садится играть с героем; клиент открывает окно «Состязание» на конце хода. Поле игры — `game`: `kind` у эффекта уже занято видом эффекта.
+- **Вид хода `contest`** — игра кончилась в окне; `input` — строки движка (короткий путь).
+- **Отказ движка в `engine.check`** с кодом `INVALID_PARAMS` (неизвестный навык и т. п.) возвращается мастеру отказом в инструменте, а не срывает ход (с v0.7.39.8).
+
 ### 92. Протокол 0.82.0 (v0.7.39.7)
 
 - **Метод `engine.find_teachers`** {`turn_id`, `kind`: `skill` | `tool` | `language` | `spell` | `recipe`, `what` — id или русское название} → {`what` — id движка, `teachers` [`FoundTeacher` {`npc_id`, `name`, `role`, `teaches`, `place`, `here`, `course`}], `reason`} — кто из живых людей мира учит этому (`TeachRules`: шаблон SRD, вид лавки, своё `teaches`), сцена и локация героя первыми. Инструмент мастера и сценариста `find_teachers`.

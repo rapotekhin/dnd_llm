@@ -1150,6 +1150,83 @@ func steal(npc_id: String, entry_id: String) -> String:
 	return ""
 
 
+## A contest (v0.7.40): sits down to play `kind` with `npc_id` for the stake `stake_i` (`cp` — the coins of a coins
+## stake). "" or the reason.
+func contest_start(npc_id: String, kind: String, stake_i: int, cp: int) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return tr("WAIT_BUSY")
+	var r := ContestRules.start(session, Catalog.data, npc_id, kind, stake_i, cp)
+	if r.has("reason"):
+		return str(r["reason"])
+	var lines: Array[String] = []
+	lines.assign(r["lines"])
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	return ""
+
+
+## One round of the contest going: the NPC rolls by its template, the hero by the kind's check (or its cheat skill
+## against the NPC's watch); the card shows the hero's roll against the NPC's total. The end asks the master to tell
+## it. "" or the reason.
+func contest_round(cheat: bool) -> String:
+	if session == null or is_busy() or not Backend.is_ready():
+		return tr("WAIT_BUSY")
+	var st := ContestRules.state(session)
+	if st.is_empty():
+		return "игры нет"
+	var npc := str(st["npc"])
+	if not session.npcs_here(world().world, session.room_id).has(npc):
+		return "%s ушёл из-за стола" % world().npc(npc).get("name", npc)
+	var k := ContestRules.kind(Catalog.data, str(st["kind"]))
+	if cheat and str(k.get("cheat", "")).is_empty():
+		return "в этой игре не сжульничать"
+	var foe := ContestRules.npc_roll(session, Catalog.data, cheat)
+	var params := ContestRules.hero_params(Catalog.data, k, cheat)
+	params["dc"] = int(foe["total"])
+	params["target_id"] = npc
+	var mods := ConditionRules.check_mods(session.character, Catalog.data, params)
+	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
+	params["disadvantage_reason"] = ", ".join((mods["disadvantage"] as Array).map(cond_name))
+	params["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
+	var skill_id := str(params.get("skill", ""))
+	var tool_fx := BackgroundRules.tool_check(session.character, Catalog.data, str(params.get("tool", "")), skill_id)
+	if not str(tool_fx["advantage"]).is_empty():
+		params["advantage_reason"] = tool_fx["advantage"]
+	var parts := RollParts.of_params(session.character, Catalog.data, params, session.items)
+	RollParts.add(parts, str(tool_fx["note"]), int(tool_fx["bonus"]))
+	var result := _hero_roll(params, CheckEngine.bonus_for(session.character, params, Catalog.data) + int(tool_fx["bonus"]), parts)
+	if result.has("error"):
+		return str(result["error"])
+	var total := int(result["total"])
+	if int(result["nat"]) == 20:
+		total = maxi(total, int(foe["total"]) + 1)  # house rule (ADR-0008 §2): a natural 20 wins, a natural 1 loses
+	elif int(result["nat"]) == 1 or not str(params["auto_fail_reason"]).is_empty():
+		total = mini(total, int(foe["total"]) - 1)
+	result["success"] = total > int(foe["total"])
+	_add(GameSession.check_entry(params, result))
+	var lines := ContestRules.round(session, Catalog.data, total, int(foe["total"]), cheat)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	if ContestRules.state(session).is_empty():
+		_request("contest", "%s с %s: %s" % [k.get("name", ""), world().npc(npc).get("name", npc), "; ".join(lines)])
+	return ""
+
+
+## Gives the contest going up: the NPC takes the stake. "" or the reason.
+func contest_forfeit() -> String:
+	if session == null or is_busy():
+		return tr("WAIT_BUSY")
+	var lines := ContestRules.forfeit(session, Catalog.data)
+	if lines.is_empty():
+		return "игры нет"
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	return ""
+
+
 ## The «Красться» toggle of exploration (v0.6.2): entering a room with an encounter the engine rolls Stealth for
 ## surprise; passive Perception for hidden things is 5 lower while sneaking (PHB).
 ## Among people (v0.6.5, playtest-1) it is a Stealth roll against the best passive Perception of the NPCs here: a

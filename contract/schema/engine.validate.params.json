@@ -864,6 +864,94 @@
       "title": "ContentSpec",
       "type": "object"
     },
+    "ContestCheck": {
+      "additionalProperties": false,
+      "description": "One check of a game: exactly one of `skill` (a 5e skill id), `ability` or `save` (str … cha).",
+      "properties": {
+        "ability": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ability"
+        },
+        "save": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Save"
+        },
+        "skill": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill"
+        }
+      },
+      "title": "ContestCheck",
+      "type": "object"
+    },
+    "ContestEffect": {
+      "additionalProperties": false,
+      "description": "An NPC of the scene sits down to a game with the hero (0.84.0): dice, cards, arm wrestling, drinking, a song,\nriddles — `game`, or `new_kind`. The engine opens the contest window: the stake, the rounds, cheating and the\noutcome are the engine's.",
+      "properties": {
+        "game": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Game"
+        },
+        "kind": {
+          "const": "contest",
+          "default": "contest",
+          "title": "Kind",
+          "type": "string"
+        },
+        "new_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NewContestKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id"
+      ],
+      "title": "ContestEffect",
+      "type": "object"
+    },
     "CourseEffect": {
       "additionalProperties": false,
       "description": "A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». `teach_kind` (skill, tool, language,\nspell, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the check of a lesson `skill`, `dc_tier`. No class\nexperience. Enrolment and lessons are the «Учёба» window's buttons. 0.79.0: a recipe course's `teach_id` may be a\ncatalog item — the game's recipe of it, or the course's `recipe`. 0.82.0: the teacher is an NPC of the scene or a\nliving teacher of the world from find_teachers (the course waits for the hero there); a spell — only by a teacher\nwho can (its template), its lessons, price and the attitude from the 3rd circle by the engine; `requires` — more\nconditions.",
@@ -2371,6 +2459,65 @@
         "room_id"
       ],
       "title": "MoveEffect",
+      "type": "object"
+    },
+    "NewContestKind": {
+      "additionalProperties": false,
+      "description": "A game of the master's own (0.84.0): its name, the check of each side, rounds to win, the loser's condition,\nthe skill of cheating.",
+      "properties": {
+        "cheat": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cheat"
+        },
+        "check": {
+          "$ref": "#/$defs/ContestCheck"
+        },
+        "lose_condition": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lose Condition"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "npc_check": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContestCheck"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wins": {
+          "default": 2,
+          "title": "Wins",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "check"
+      ],
+      "title": "NewContestKind",
       "type": "object"
     },
     "NewEdge": {
@@ -4988,6 +5135,7 @@
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
+          "contest": "#/$defs/ContestEffect",
           "course": "#/$defs/CourseEffect",
           "create_npc": "#/$defs/CreateNpcEffect",
           "create_place": "#/$defs/CreatePlaceEffect",
@@ -5093,6 +5241,9 @@
         },
         {
           "$ref": "#/$defs/BondEffect"
+        },
+        {
+          "$ref": "#/$defs/ContestEffect"
         },
         {
           "$ref": "#/$defs/PermitEffect"

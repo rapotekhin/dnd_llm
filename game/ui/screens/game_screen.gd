@@ -35,6 +35,7 @@ var _bank: BankPanel
 var _shop: ShopPanel
 var _study: StudyPanel
 var _bond: BondPanel
+var _contest: ContestPanel  # v0.7.40
 var _family: FamilyPanel
 var _heists: HeistPanel
 var _org: OrgPanel
@@ -195,6 +196,7 @@ func _ready() -> void:
 	side.shop_requested.connect(func(mode: String, id: String) -> void: _shop.open(mode, id))  # v0.7.29
 	side.study_requested.connect(func(npc: String) -> void: _study.open(npc))  # v0.7.30
 	side.bond_requested.connect(func(npc: String) -> void: _bond.open(npc))  # v0.7.31
+	side.contest_requested.connect(func(npc: String) -> void: _contest.open(npc))  # v0.7.40
 	side.family_requested.connect(func() -> void: _family.open())  # v0.7.32
 	side.heist_requested.connect(func() -> void: _heists.open())  # v0.7.33
 	side.org_requested.connect(func(org: String) -> void: _org.open(org))
@@ -289,6 +291,11 @@ func _ready() -> void:
 	_bond.visible = false
 	add_child(_bond)
 	_bond.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_contest = ContestPanel.new()  # v0.7.40
+	_contest.name = "ContestView"
+	_contest.visible = false
+	add_child(_contest)
+	_contest.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_family = FamilyPanel.new()  # v0.7.32
 	_family.name = "FamilyView"
 	_family.visible = false
@@ -350,7 +357,7 @@ func _ready() -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _family, _heists, _org, _office, _image]
+	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _family, _heists, _org, _office, _image]
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
@@ -433,6 +440,11 @@ func _on_turn_started(_turn_id: String) -> void:
 
 func _on_turn_finished(_turn_id: String, _ok: bool) -> void:
 	_refresh()
+	var offer: Dictionary = GameState.session.character.get("contest_offer", {}) if GameState.has_session() else {}
+	if not offer.is_empty():  # v0.7.40: the master's NPC offered a game
+		GameState.session.character.erase("contest_offer")
+		_contest.open(str(offer["npc"]), str(offer["kind"]))
+		return
 	if Backend.is_ready() and _typed and not _pause.visible and _overlays().all(func(o: Control) -> bool: return not o.visible):
 		input.grab_focus()
 

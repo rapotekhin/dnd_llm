@@ -3617,3 +3617,32 @@ scenarios:
       effects: {required_kinds_any: [world_item], forbidden_kinds: [give_item, take_from, coins]}
     rubric:
       - "Факелы уходят из сундука Горма эффектом world_item (op take, prop_id p5, item_id факела, qty 2, cause — Горм отнёс их в погреб); герою факелы не достаются"
+
+  - id: contest_dice_with_npc
+    title: "Сыграть в кости с NPC — contest, исход решает движок, а не монеты мастера"
+    category: social
+    extends: tavern
+    mode: social
+    input: "Горм, а сыграем в кости? Вечер длинный, а у меня в кошеле позвякивает."
+    engine:
+      validate:
+        - {kind: contest, summary: "Горм зовёт сыграть: Кости (окно «Состязание»)"}
+    expect:
+      max_checks: 0
+      effects: {required_kinds_any: [contest], forbidden_kinds: [coins, give_item, take_item]}
+    rubric:
+      - "Горм соглашается сыграть, и мастер оформляет игру эффектом contest с его npc_id и game dice; кто выиграл и сколько монет ушло — не описывает"
+
+  - id: contest_own_game
+    title: "Своя игра на спор — contest с new_kind по навыку 5e"
+    category: social
+    extends: tavern
+    input: "Ведда, спорим на серебряк, что я метну нож в ту мишень на стене точнее тебя? До трёх попаданий."
+    engine:
+      validate:
+        - {kind: contest, summary: "Ведда зовёт сыграть: Метание ножей (окно «Состязание»)"}
+    expect:
+      max_checks: 0
+      effects: {required_kinds_any: [contest], forbidden_kinds: [coins, damage]}
+    rubric:
+      - "Ведда принимает спор, и мастер даёт contest с её npc_id: своя игра new_kind с проверкой по навыку или характеристике 5e (ловкость рук, ловкость), не выдумывая результата бросков"

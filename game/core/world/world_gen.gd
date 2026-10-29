@@ -31,7 +31,7 @@ static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
 		if not w.has("quests"):
 			w["quests"] = {}
 		w["quests"][id] = (gen["quests"][id] as Dictionary).duplicate(true)
-	for bucket: String in ["place_kinds", "place_upgrades", "stations"]:  # v0.7.39.8: the master's kinds, upgrades, stations
+	for bucket: String in ["place_kinds", "place_upgrades", "stations", "contest_kinds"]:  # v0.7.39.8: the master's kinds, upgrades, stations; v0.7.40: games
 		for id: String in gen.get(bucket, {}):
 			if not w.has(bucket):
 				w[bucket] = {}

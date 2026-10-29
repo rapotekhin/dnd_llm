@@ -152,7 +152,10 @@ static func reaction_kind(data: Dictionary, npc_id: String) -> String:
 	return str(r.get(_template(data, npc), r["_default"]))
 
 
-static func react(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
+## `memory` (with %s for the NPC's gender ending), `rep_key`, `deed` and `why` name the caught act — a theft by default,
+## cheating at a game (v0.7.40).
+static func react(s: GameSession, data: Dictionary, npc_id: String, memory: String = "поймал%s героя на краже из своих карманов",
+		rep_key: String = "theft_caught", deed: String = "theft_caught", why: String = "кража") -> Array[String]:
 	var world := WorldView.new(data["world"])
 	var npc := world.npc(npc_id)
 	var who := str(npc.get("name", npc_id))
@@ -162,10 +165,10 @@ static func react(s: GameSession, data: Dictionary, npc_id: String) -> Array[Str
 		lines.append("%s хватается за кошель и озирается — вора не видно" % who)
 		return lines
 	s.shift_attitude(npc_id, int(cfg(data)["caught_attitude"]), data)
-	s.remember(npc_id, "поймал%s героя на краже из своих карманов" % CrimeRules._ending(data, npc_id))
+	s.remember(npc_id, memory % CrimeRules._ending(data, npc_id))
 	lines.append("%s: отношение хуже" % who)
-	lines.append_array(ReputationRules.add(s, data, world.location_id(s.room_id), int(ReputationRules.cfg(data)["points"]["theft_caught"]), "кража"))  # v0.7.17
-	lines.append_array(BondRules.on_deed(s, data, npc_id, "theft_caught", "кража"))  # v0.7.31
+	lines.append_array(ReputationRules.add(s, data, world.location_id(s.room_id), int(ReputationRules.cfg(data)["points"].get(rep_key, 0)), why))  # v0.7.17
+	lines.append_array(BondRules.on_deed(s, data, npc_id, deed, why))  # v0.7.31
 	match reaction_kind(data, npc_id):
 		"fight":
 			s.pending_fight = [{"monster": _template(data, npc), "name": who, "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0}]

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.83.0"
+PROTOCOL_VERSION = "0.84.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -157,8 +157,10 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # wait (0.10.0): the player waited by the button — the engine moved the time; `input` holds the lines.
 # theft (0.11.0): the player picked a pocket in the theft window — the engine rolled and applied it; `input` holds the lines.
 # quest_act (0.81.0): an act of a taken quest opened — the designer builds it (`quest_act`); `input` holds the engine's frame.
+# contest (0.84.0): a game with an NPC ended in the contest window — the engine rolled and applied it; `input` holds the lines.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
-                   "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift", "quest_act"]
+                   "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift", "quest_act",
+                   "contest"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -1236,6 +1238,37 @@ class PermitEffect(_Out):
     site_id: str | None = None
 
 
+class ContestCheck(_Out):
+    """One check of a game: exactly one of `skill` (a 5e skill id), `ability` or `save` (str … cha)."""
+
+    skill: str | None = None
+    ability: str | None = None
+    save: str | None = None
+
+
+class NewContestKind(_Out):
+    """A game of the master's own (0.84.0): its name, the check of each side, rounds to win, the loser's condition,
+    the skill of cheating."""
+
+    name: str
+    check: ContestCheck
+    npc_check: ContestCheck | None = None  # when the NPC rolls another check
+    wins: int = 2  # rounds to win, 1–5
+    lose_condition: str | None = None  # poisoned | prone
+    cheat: str | None = None  # a skill of cheating; none — no cheating
+
+
+class ContestEffect(_Out):
+    """An NPC of the scene sits down to a game with the hero (0.84.0): dice, cards, arm wrestling, drinking, a song,
+    riddles — `game`, or `new_kind`. The engine opens the contest window: the stake, the rounds, cheating and the
+    outcome are the engine's."""
+
+    kind: Literal["contest"] = "contest"
+    npc_id: str
+    game: str | None = None  # dice | cards | arm | drinking | song | riddles, or a made kind's id
+    new_kind: NewContestKind | None = None
+
+
 class BondEffect(_Out):
     """A scene that moved a bond (0.63.0): a heart-to-heart, a shared danger, a slight. `delta` ±10 at most, once a day
     per NPC, with the `reason`; `kind` mentor when the NPC took the hero under its wing (romance only by the player's
@@ -1606,7 +1639,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

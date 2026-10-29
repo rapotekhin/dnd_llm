@@ -490,7 +490,7 @@
 		},
 		"hostile": [{"at": -20, "name": "соперник"}, {"at": -60, "name": "враг"}],
 		"gift": {"liked": 10, "disliked": -8, "attitude_liked": 1, "neutral": [{"value_cp": 0, "points": 1}, {"value_cp": 100, "points": 2}, {"value_cp": 1000, "points": 4}, {"value_cp": 5000, "points": 6}]},
-		"deeds": {"quest_done": 10, "theft_caught": -15, "assault": -40, "graduate": 20},
+		"deeds": {"quest_done": 10, "theft_caught": -15, "assault": -40, "graduate": 20, "contest_played": 2, "contest_cheat": -15},
 		"scene": {"max_delta": 10},
 		"confess": {"at": 40, "skill": "persuasion", "tier": "medium", "success": 10, "fail": -10, "cooldown_days": 7},
 		"break": {"points": -30},
@@ -1410,7 +1410,7 @@
 		"_doc": "Reputation in a settlement (v0.7.17, ReputationRules): points of the hero in a pack location with settlement: true; thresholds → steps −3…+3 (names); points by the engine's facts; master_max — the master's effect for a deed the place learned of; prices of every trader of the place (buy_pct the hero pays, sell_pct the trader pays) and the attitude of the people not dealt with yet (stranger_attitude).",
 		"thresholds": [5, 15, 30],
 		"names": {"-3": "изгой", "-2": "дурная слава", "-1": "чужак с душком", "0": "чужак", "1": "свой", "2": "уважаемый", "3": "герой"},
-		"points": {"quest_done": 6, "crime_known": -20, "crime_settled": 0, "theft_caught": -4},
+		"points": {"quest_done": 6, "crime_known": -20, "crime_settled": 0, "theft_caught": -4, "contest_won": 1, "contest_cheat": -4},
 		"master_max": 3,
 		"buy_pct": {"-3": 130, "-2": 115, "-1": 105, "0": 100, "1": 97, "2": 93, "3": 90},
 		"sell_pct": {"-3": 75, "-2": 85, "-1": 95, "0": 100, "1": 103, "2": 107, "3": 110},
@@ -3407,5 +3407,21 @@
 		"detect_magic": {"reveal": "magic"},
 		"knock": {"knock": true, "door": "unlock"},
 		"arcane_lock": {"door": "lock"}
+	},
+	"contests": {
+		"_doc": "Contests (v0.7.40, ContestRules): a game of the hero with an NPC of the scene for a stake. A kind — `check` of each side ({skill} | {ability} | {save}; `npc_check` when the NPC rolls another), `tool` (a gaming set: proficiency adds, as for any check), `wins` — rounds to win, `lose` — what the loser of the whole game gets ({condition, ends}), `cheat` — the skill of cheating (none — no cheating), its opposite `cheat_against`. A round: both roll, the higher total takes it, a tie — nobody. Cheating: the hero's cheat skill against the NPC's roll of `cheat_against`; higher — the round is the hero's, else caught: the stake is lost and the NPC reacts as to a caught theft. A stake: coins (`stake.min_cp` … `stake.max_cp_level` × level, no more than the NPC's purse) or a thing of the NPC (`things`: an item of its pockets up to `item_cap_cp`, its leave to walk in — `permit_cp`, a secret — `secret_cp`) against the hero's coins of its worth. `per_npc_day` games with one NPC a day; `min_attitude` — who plays at all. `make` — the bounds of the master's own kind.",
+		"kinds": {
+			"dice": {"name": "Кости", "check": {"ability": "dex"}, "tool": "dice_set", "wins": 2, "cheat": "sleight_of_hand", "cheat_against": "perception"},
+			"cards": {"name": "Карты", "check": {"ability": "wis"}, "tool": "playing_card_set", "wins": 2, "cheat": "deception", "cheat_against": "insight"},
+			"arm": {"name": "Армрестлинг", "check": {"skill": "athletics"}, "wins": 2},
+			"drinking": {"name": "Кто кого перепьёт", "check": {"save": "con"}, "wins": 3, "lose": {"condition": "poisoned", "ends": "long_rest"}, "cheat": "sleight_of_hand", "cheat_against": "perception"},
+			"song": {"name": "Кто кого перепоёт", "check": {"skill": "performance"}, "wins": 1},
+			"riddles": {"name": "Загадки", "check": {"ability": "int"}, "wins": 2}
+		},
+		"stake": {"min_cp": 10, "max_cp_level": 500},
+		"things": {"item_cap_cp": 2500, "permit_cp": 200, "secret_cp": 300},
+		"per_npc_day": 3,
+		"min_attitude": -1,
+		"make": {"wins": [1, 5], "conditions": ["poisoned", "prone"]}
 	}
 }

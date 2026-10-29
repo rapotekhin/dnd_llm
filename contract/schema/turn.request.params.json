@@ -1379,7 +1379,8 @@
         "law",
         "goal",
         "shift",
-        "quest_act"
+        "quest_act",
+        "contest"
       ],
       "title": "Kind",
       "type": "string"

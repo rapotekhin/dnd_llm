@@ -1596,3 +1596,20 @@ QUEST_DIFFICULTY_LINE,"Сложность: {name} · актов: {acts}"
 CONFIRM_QUEST_DEADLY_TITLE,Взять «{title}»?
 CONFIRM_QUEST_DEADLY,"Почти невозможное задание: бои на пределе сил героя, главарь в финале. Герой может погибнуть."
 BTN_QUEST_TAKE_DEADLY,Взять всё равно
+BTN_CONTEST,Сыграть
+BTN_CONTEST_TIP,"Сыграть с {name} на ставку: кости, карты, армрестлинг…"
+CONTEST_TITLE,Состязание
+CONTEST_TITLE_AT,Состязание: {name}
+CONTEST_HINT,"Оба бросают за раунд, больший итог берёт раунд. Кто первым наберёт нужные победы, забирает ставку."
+CONTEST_ODDS,"Ваш бонус {hero} против {npc} — раунд ваш с шансом ~{p}%, игра до {wins} побед"
+CONTEST_CHEAT_ODDS,"Жульничать можно: {skill} против его глаз, ~{p}% не попасться"
+CONTEST_LOSE,Проигравшего ждёт: {what}
+CONTEST_COINS,Ставка
+CONTEST_GOLD,У вас {money}
+CONTEST_SCORE,"Счёт {hero} : {npc} ({name}), до {wins} побед"
+CONTEST_ROUND_ODDS,"Раунд: ваш {hero} против {npc}, шанс ~{p}%"
+CONTEST_CHEAT_TIP,"Раунд жульничеством: {skill}, ~{p}% не попасться; пойманный теряет ставку"
+BTN_CONTEST_PLAY,Сыграть
+BTN_CONTEST_ROLL,Бросить
+BTN_CONTEST_CHEAT,Жульничать
+BTN_CONTEST_FORFEIT,Сдаться
