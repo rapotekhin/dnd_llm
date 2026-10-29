@@ -1829,6 +1829,98 @@
       "title": "FenceEffect",
       "type": "object"
     },
+    "FestivalEffect": {
+      "additionalProperties": false,
+      "description": "A feast or a fair of the master's own for a cause in the world (0.88.0): a wedding feast, a fair the headman\nannounced, a wake. The engine puts it on the calendar — it starts in `starts_in` days and lasts `days` (within\nrules.calendar.make); the traders of the location sell at `buy_pct` and buy at `sell_pct` (100 — as usual) while it\nis on, `tags` limits that to items of those trade tags (\"food\" — food). One of the master's at a time in a location.\nThe pack's festivals are the calendar's, not effects.",
+      "properties": {
+        "buy_pct": {
+          "anyOf": [
+            {
+              "maximum": 150,
+              "minimum": 50,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Buy Pct"
+        },
+        "cause": {
+          "maxLength": 160,
+          "minLength": 8,
+          "title": "Cause",
+          "type": "string"
+        },
+        "days": {
+          "default": 1,
+          "maximum": 7,
+          "minimum": 1,
+          "title": "Days",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "festival",
+          "default": "festival",
+          "title": "Kind",
+          "type": "string"
+        },
+        "location_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location Id"
+        },
+        "name": {
+          "maxLength": 40,
+          "minLength": 3,
+          "title": "Name",
+          "type": "string"
+        },
+        "sell_pct": {
+          "anyOf": [
+            {
+              "maximum": 150,
+              "minimum": 50,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sell Pct"
+        },
+        "starts_in": {
+          "default": 0,
+          "maximum": 60,
+          "minimum": 0,
+          "title": "Starts In",
+          "type": "integer"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "cause"
+      ],
+      "title": "FestivalEffect",
+      "type": "object"
+    },
     "FillEffect": {
       "additionalProperties": false,
       "description": "The hero draws water into the vessels it carries (0.70.0): a waterskin, a flask, a jug, a bucket; `item_id` —\none kind only, empty — all. The engine checks the water here (the room's tag, a thing with `source`, a well or a\nstream of the room) and fills each to its volume.",
@@ -5289,6 +5381,7 @@
           "drop_item": "#/$defs/DropItemEffect",
           "equip": "#/$defs/EquipEffect",
           "fence": "#/$defs/FenceEffect",
+          "festival": "#/$defs/FestivalEffect",
           "fill": "#/$defs/FillEffect",
           "flag": "#/$defs/FlagEffect",
           "furnish": "#/$defs/FurnishEffect",
@@ -5392,6 +5485,9 @@
         },
         {
           "$ref": "#/$defs/BeastEffect"
+        },
+        {
+          "$ref": "#/$defs/FestivalEffect"
         },
         {
           "$ref": "#/$defs/PermitEffect"

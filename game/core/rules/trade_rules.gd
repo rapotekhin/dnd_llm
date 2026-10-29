@@ -151,7 +151,7 @@ static func buy_price(s: GameSession, data: Dictionary, npc_id: String, item_id:
 		return 0
 	var haggle := int(merchant(s, data, npc_id)["haggle_pct"])
 	var price := ceili(value * _pct(t["buy_pct_by_attitude"], s.attitude(npc_id)) * (100 - haggle) / 10000.0 * ReputationRules.price_pct(s, data, npc_id, "buy") / 100.0
-		* int(variant(s, data, npc_id)["price_pct"]) / 100.0)
+		* int(variant(s, data, npc_id)["price_pct"]) / 100.0 * CalendarRules.price_pct(s, data, item_id, "buy"))  # v0.7.44: a festival
 	var off := SocialRules.discount(s, npc_id)  # a discount by words (v0.7.15.2)
 	if off > 0:
 		price = ceili(price * (100 - off) / 100.0)
@@ -192,6 +192,7 @@ static func _sell_unit(s: GameSession, data: Dictionary, npc_id: String, item_id
 	var v := value * float(t["sell_ratio"]) * (float(d["wanted"]) if want == "wants" else other) * fill
 	v *= _pct(t["sell_pct_by_attitude"], s.attitude(npc_id)) / 100.0 * ReputationRules.price_pct(s, data, npc_id, "sell") / 100.0
 	v *= (100 + int(m["haggle_pct"])) / 100.0 * float(DevelopmentRules.effect(c, data, "trade", "sell_pct", 100.0)) / 100.0
+	v *= CalendarRules.price_pct(s, data, item_id, "sell")  # v0.7.44: the fair pays more
 	var top := maxf(float(d["max_ratio"]), float(DevelopmentRules.effect(c, data, "trade", "max_ratio", 0.0)))
 	return floori(clampf(v, value * float(d["min_ratio"]), value * top))
 

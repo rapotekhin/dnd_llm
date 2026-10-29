@@ -206,6 +206,11 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 98. Протокол 0.88.0 (v0.7.44)
+
+- **`Scene.calendar`** — праздники идущие и ближние строками («Дожинки (Ольховый Брод) — через 9 дней, 12 Жатвеня: …»); дата — в начале `time_of_day`.
+- **`FestivalEffect`** (`kind: "festival"`) — праздник мастера: `name`, `cause`, `location_id`, `starts_in`, `days`, `buy_pct`, `sell_pct`, `tags`.
+
 ### 97. Протокол 0.87.0 (v0.7.43)
 
 - **`BeastEffect`** (`kind: "beast"`) — мастер приводит в сцену дикого зверя SRD, которого можно приручить: `monster`, `cause` (8–160 зн.), `room_id`.

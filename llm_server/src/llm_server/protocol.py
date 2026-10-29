@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.87.0"
+PROTOCOL_VERSION = "0.88.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -233,6 +233,7 @@ class Scene(_In):
     reputation: str = ""  # the hero's name in this settlement: «Ольховый Брод — свой (+1)» (0.24.0)
     open_edges: list[str] = Field(default_factory=list)  # where the pack lets the master draw new places (0.32.0)
     wilds: list[str] = Field(default_factory=list)  # 0.85.0: hunting grounds and fishing waters here with their stock
+    calendar: list[str] = Field(default_factory=list)  # 0.88.0: festivals on now and near: «Дожинки (Ольховый Брод) — через 9 дней, 12 Жатвеня: …»
     summons: list[str] = Field(default_factory=list)  # 0.49.0: creatures a spell called to go with the hero — «Волк 1 (Призыв зверей, до конца концентрации)»
     site_name: str = ""  # 0.50.0: the site of the room (a building, a yard) — «Таверна «Хромой олень»»
     site_description: str = ""
@@ -1300,6 +1301,24 @@ class BeastEffect(_Out):
     room_id: str | None = None  # empty — the hero's room
 
 
+class FestivalEffect(_Out):
+    """A feast or a fair of the master's own for a cause in the world (0.88.0): a wedding feast, a fair the headman
+    announced, a wake. The engine puts it on the calendar — it starts in `starts_in` days and lasts `days` (within
+    rules.calendar.make); the traders of the location sell at `buy_pct` and buy at `sell_pct` (100 — as usual) while it
+    is on, `tags` limits that to items of those trade tags ("food" — food). One of the master's at a time in a location.
+    The pack's festivals are the calendar's, not effects."""
+
+    kind: Literal["festival"] = "festival"
+    name: str = Field(min_length=3, max_length=40)  # how people call it: «Свадьба кузнеца»
+    cause: str = Field(min_length=8, max_length=160)
+    location_id: str | None = None  # empty — the hero's location
+    starts_in: int = Field(default=0, ge=0, le=60)  # days from today
+    days: int = Field(default=1, ge=1, le=7)
+    buy_pct: int | None = Field(default=None, ge=50, le=150)  # what the hero pays at the location's traders, % of usual
+    sell_pct: int | None = Field(default=None, ge=50, le=150)  # what they pay him, % of usual
+    tags: list[str] = Field(default_factory=list, max_length=4)  # trade tags the prices touch: food, weapon, catch…
+
+
 class BondEffect(_Out):
     """A scene that moved a bond (0.63.0): a heart-to-heart, a shared danger, a slight. `delta` ±10 at most, once a day
     per NPC, with the `reason`; `kind` mentor when the NPC took the hero under its wing (romance only by the player's
@@ -1671,7 +1690,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

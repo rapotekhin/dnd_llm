@@ -47,7 +47,7 @@ static func offers_here(s: GameSession, world: Dictionary) -> Array[String]:
 	for id: String in all:
 		var giver := stand_in(s, world, str(all[id].get("giver", "")))
 		var at_board: bool = all[id].has("board") and str(all[id]["board"]["room"]) == s.room_id  # an order on a board (v0.7.21.2)
-		if (here.has(giver) or at_board) and not s.quests_active.has(id) and not s.quests_done.has(id) and not s.quests_failed.has(id) 				and not s.wanted.has(WorldView.new(world).location_id(s.room_id)):
+		if (here.has(giver) or at_board) and not s.quests_active.has(id) and not s.quests_done.has(id) and not s.quests_failed.has(id) 				and not s.wanted.has(WorldView.new(world).location_id(s.room_id)) and CalendarRules.quest_open(s, world, all[id]):  # v0.7.44
 			out.append(id)
 	return out
 

@@ -1,5 +1,133 @@
 {
 	"start_room": "brod-tavern-hall",
+	"calendar": {
+		"_doc": "Календарь Марки (v0.7.44): восемь месяцев по четырнадцать дней, неделя из семи дней; праздники повторяются — month + day раз в год, day — каждый месяц, weekday — каждую неделю.",
+		"start": {
+			"month": "zhatven",
+			"day": 3,
+			"weekday": 3,
+			"year": 412
+		},
+		"week": [
+			"день Торга",
+			"день Кузни",
+			"день Пашни",
+			"день Пряжи",
+			"день Ловов",
+			"Банный день",
+			"Святой день"
+		],
+		"seasons": {
+			"winter": "зима",
+			"spring": "весна",
+			"summer": "лето",
+			"autumn": "осень"
+		},
+		"months": [
+			{
+				"id": "snezhen",
+				"name": "Снежень",
+				"of": "Снежня",
+				"days": 14,
+				"season": "winter"
+			},
+			{
+				"id": "ledyan",
+				"name": "Ледянь",
+				"of": "Ледяня",
+				"days": 14,
+				"season": "winter"
+			},
+			{
+				"id": "tayan",
+				"name": "Таянь",
+				"of": "Таяня",
+				"days": 14,
+				"season": "spring"
+			},
+			{
+				"id": "tsveten",
+				"name": "Цветень",
+				"of": "Цветня",
+				"days": 14,
+				"season": "spring"
+			},
+			{
+				"id": "traven",
+				"name": "Травень",
+				"of": "Травня",
+				"days": 14,
+				"season": "summer"
+			},
+			{
+				"id": "zhatven",
+				"name": "Жатвень",
+				"of": "Жатвеня",
+				"days": 14,
+				"season": "summer"
+			},
+			{
+				"id": "listopad",
+				"name": "Листопад",
+				"of": "Листопада",
+				"days": 14,
+				"season": "autumn"
+			},
+			{
+				"id": "gruden",
+				"name": "Грудень",
+				"of": "Грудня",
+				"days": 14,
+				"season": "autumn"
+			}
+		],
+		"festivals": {
+			"market_day": {
+				"name": "Торговый день",
+				"weekday": 0,
+				"days": 1,
+				"location": "brod",
+				"trade": {
+					"sell_pct": 110
+				},
+				"text": "в день Торга в Броде съезжаются окрестные хутора: добычу и товар берут на десятую часть дороже"
+			},
+			"fair": {
+				"name": "Бродская ярмарка",
+				"day": 8,
+				"days": 3,
+				"location": "brod",
+				"flags": [
+					"fair"
+				],
+				"guests": {
+					"npc_pedlar": "brod-square"
+				},
+				"trade": {
+					"buy_pct": 90,
+					"sell_pct": 120
+				},
+				"text": "каждый месяц три дня на площади торгуют приезжие; заезжий коробейник Яким везёт редкие вещи с юга; продать можно на пятую часть дороже, купить — на десятую дешевле"
+			},
+			"harvest": {
+				"name": "Дожинки",
+				"month": "zhatven",
+				"day": 12,
+				"days": 2,
+				"location": "brod",
+				"flags": [
+					"harvest_feast"
+				],
+				"trade": {
+					"buy_pct": 70,
+					"tags": [
+						"food"
+					]
+				},
+				"text": "праздник последнего снопа: в «Хромом олене» гулянье, еда в Броде на треть дешевле, Бруно ищет мяса к общему столу"
+			}
+		}
+	},
 	"quests": {
 		"letter_to_ilva": {
 			"title": "Письмо для Илвы",
@@ -166,6 +294,26 @@
 			"offer_items": {
 				"brod_writ": 1
 			}
+		},
+		"harvest_table": {
+			"title": "Мясо к Дожинкам",
+			"description": "К общему столу на Дожинки Бруно не хватает мяса: хутора едят за троих.",
+			"giver": "npc_innkeeper",
+			"festival": "harvest",
+			"offer_text": "Бруно вытирает лоб: «Дожинки, а мяса на стол не хватит. Принеси три куска сырого — заплачу как следует, и за стол посажу первым».",
+			"steps": [
+				{
+					"text": "Принести Бруно три куска сырого мяса",
+					"when": {
+						"talk": "npc_innkeeper",
+						"item": "raw_meat",
+						"qty": 3
+					},
+					"action": "Отдать Бруно мясо",
+					"done_text": "Бруно сгребает мясо и кричит на кухню; через час на столе дымится жаркое, и хутора поднимают кружки за охотника.",
+					"reward_cp": 600
+				}
+			]
 		}
 	},
 	"locations": {
@@ -444,7 +592,15 @@
 				"stage"
 			],
 			"site_id": "brod-tavern",
-			"beasts": ["cat"]
+			"beasts": [
+				"cat"
+			],
+			"variants": [
+				{
+					"if_flag": "harvest_feast",
+					"description": "Дожинки: зал убран снопами и венками из колосьев, столы сдвинуты в один длинный, пахнет пирогами и жареным мясом. Хутора гуляют, играет волынка, Бруно сбивается с ног."
+				}
+			]
 		},
 		"brod-tavern-kitchen": {
 			"name": "Кухня таверны",
@@ -580,7 +736,13 @@
 				"market"
 			],
 			"thieves_sign": "на срубе колодца нацарапан воровской знак: «здесь берут краденое — спроси у лотка с амулетами»",
-			"site_id": "brod-square"
+			"site_id": "brod-square",
+			"variants": [
+				{
+					"if_flag": "fair",
+					"description": "Ярмарка: площадь заставлена возами и палатками, пахнет мёдом и дёгтем, гудит толпа. Приезжие торгуют с телег, у колодца пляшут под дудку, меж рядов снуёт коробейник с колокольчиками."
+				}
+			]
 		},
 		"brod-smithy": {
 			"name": "Кузница",
@@ -916,7 +1078,9 @@
 				"herbs",
 				"forage"
 			],
-			"beasts": ["raven"]
+			"beasts": [
+				"raven"
+			]
 		},
 		"pushcha-hollow": {
 			"name": "Тёмная лощина",
@@ -1043,7 +1207,10 @@
 				}
 			},
 			"site_id": "outpost-road",
-			"tags": ["mounts", "road"]
+			"tags": [
+				"mounts",
+				"road"
+			]
 		},
 		"outpost-yard": {
 			"name": "Двор Серой заставы",
@@ -1202,7 +1369,10 @@
 				}
 			],
 			"site_id": "mine",
-			"tags": ["mounts", "road"]
+			"tags": [
+				"mounts",
+				"road"
+			]
 		},
 		"mine-gallery": {
 			"name": "Главная штольня",
@@ -1895,6 +2065,15 @@
 						"rations": 20
 					},
 					"news": "лес успокоился, караваны снова пошли через Пущу — у Ферна товара много и цены ниже"
+				},
+				{
+					"if_flag": "fair",
+					"stock": {
+						"rope": 6,
+						"lantern": 4,
+						"spices": 8
+					},
+					"news": "на ярмарке у Ферна товара вдвое: телеги с юга пришли"
 				}
 			],
 			"purse_cp": 15000,
@@ -2299,7 +2478,10 @@
 			"tags": [
 				"commoner"
 			],
-			"vehicles": ["cart", "wagon"],
+			"vehicles": [
+				"cart",
+				"wagon"
+			],
 			"animals": [
 				"riding_horse",
 				"mule",
@@ -2422,6 +2604,36 @@
 				"open": false,
 				"why": "делу не мешают сердечные дела"
 			}
+		},
+		"npc_pedlar": {
+			"name": "Яким Коробейник",
+			"role": "заезжий коробейник",
+			"race": "человек",
+			"gender": "male",
+			"description": "Сухой загорелый человек с коробом за спиной, в пёстром кафтане с южной вышивкой; на шее связка медных колокольчиков.",
+			"personality": "балагур и хитрец, хвалит свой товар без меры, но слово держит; любит байки о дальних землях",
+			"trader": true,
+			"trade_kind": "craftsman",
+			"stock": {
+				"spyglass": 1,
+				"magnifying_glass": 1,
+				"hourglass": 2,
+				"lute": 1,
+				"pan_flute": 1,
+				"signet_ring": 2,
+				"soap": 6
+			},
+			"wants": [
+				"treasure",
+				"wondrous",
+				"hide"
+			],
+			"purse_cp": 30000,
+			"monster": "commoner",
+			"likes": [
+				"jewelry",
+				"games"
+			]
 		}
 	},
 	"items": {
@@ -2856,7 +3068,13 @@
 			"head": "npc_guildhead",
 			"hideout": "brod-den",
 			"entry_cp": 50,
-			"guards": [{"monster": "thug", "count": 2, "name": "Громила «Крыс»"}],
+			"guards": [
+				{
+					"monster": "thug",
+					"count": 2,
+					"name": "Громила «Крыс»"
+				}
+			],
 			"fence": "npc_merchant",
 			"cut_pct": 20,
 			"trial": "heist_townhall",

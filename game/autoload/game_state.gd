@@ -66,6 +66,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	BackgroundRules.apply_ties(s, Catalog.data)  # the people of the hero's past (v0.7.11)
 	PetRules.seed(s, Catalog.data, s.room_id)  # the start room's wild beasts (v0.7.43)
 	start(s)
+	CalendarRules.sync(s, Catalog.data["world"])  # a festival on the first day (v0.7.44)
 	_request("enter", "")
 
 
@@ -2042,6 +2043,7 @@ func start(s: GameSession) -> void:
 	PropertyRules.upgrade_legacy(s, Catalog.data)  # v0.7.39.5: stalls and counters as objects
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
+	CalendarRules.sync(s, Catalog.data["world"])  # v0.7.44: the festivals' flags by the date of a save
 	session = s
 	busy_turn = ""
 	_last_kind = ""

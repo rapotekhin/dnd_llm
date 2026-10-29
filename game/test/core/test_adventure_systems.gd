@@ -119,7 +119,7 @@ func test_steps_done_before_taking_close_at_once_and_the_snapshot_shows_the_step
 	var snap := TurnSnapshot.build(s, data, 4000)
 	var q: Array = snap["quests"].filter(func(x: Dictionary) -> bool: return x["id"] == "drogin_amulet")
 	assert_str(q[0]["step"]).contains("Отдать")
-	assert_str(snap["scene"]["time_of_day"]).is_equal("утро, 08:00")
+	assert_str(snap["scene"]["time_of_day"]).ends_with("утро, 08:00")  # v0.7.44: the date before it
 
 
 # --- traps and caches -----------------------------------------------------------------------------

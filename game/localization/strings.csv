@@ -699,7 +699,7 @@ SIDE_EXITS,Выходы
 SIDE_HP_AC,HP {hp}/{max} · КД {ac}
 SIDE_HERO_LINE,"{race}, {class} {level} ур. · HP {hp}/{max} · КД {ac}"
 SIDE_HERO_XP,опыт {xp}/{next}
-SIDE_HERO_TIME,"день {day}, {part} {clock}"
+SIDE_HERO_TIME,"{day}, {part} {clock}"
 SIDE_TALK_TIP,"Поговорить: {name} — {role}; отношение: {attitude}. Правая кнопка — другие действия"
 EXIT_PRIVATE, · частная
 EXIT_PRIVATE_TIP,"Частная комната (хозяин — {owner}): войти без спроса — сначала предупреждение, потом вторжение"
@@ -1663,3 +1663,10 @@ PET_NO_SCOUT,Он не летает
 PET_SCOUT_TIRED,На сегодня он налетался
 PET_SCOUT_NO_WAY,Туда отсюда не долететь
 SIDE_WILD,Звери
+SIDE_FESTIVAL_ON,"идёт, {left}"
+SIDE_FESTIVAL_IN,через {in} {days}
+JOURNAL_TAB_CALENDAR,Календарь
+JOURNAL_TODAY,Сегодня: {date}
+JOURNAL_FESTIVALS,Праздники впереди
+JOURNAL_MONTHS,Месяцы года
+JOURNAL_EMPTY_CALENDAR,У этого мира нет календаря — дни считаются по порядку

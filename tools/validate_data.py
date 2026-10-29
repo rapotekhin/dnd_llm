@@ -25,7 +25,7 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
     """A quest or exit condition: one fact (encounter, secret, room, flag), a button (talk with an item, choice —
     only on a quest step), or all / any of facts."""
     errors: list[str] = []
-    keys = set(w) - {"item"}
+    keys = set(w) - {"item", "qty"}  # v0.7.44: qty of the item handed over
     if len(keys) != 1:
         return [f"{where}: в when ровно одно условие (item — только к talk или arrive)"]
     if ("talk" in w or "choice" in w) and not top:
@@ -50,6 +50,47 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
         errors += check_when(sub_w, where, rooms, npcs, items, top=False)
     return errors
 
+
+
+def check_calendar(cal, world, npcs, rooms) -> list[str]:
+    """v0.7.44: the pack's calendar — months, the week, festivals by a month day, a day of every month or a weekday."""
+    if cal is None:
+        return []
+    errors: list[str] = []
+    months = cal.get("months", [])
+    mids = [m.get("id") for m in months]
+    if not months or any(not isinstance(m.get("days"), int) or m["days"] < 1 or not m.get("name") for m in months):
+        errors.append("календарь: months — [{id, name, of?, days > 0, season?}]")
+    if len(set(mids)) != len(mids):
+        errors.append("календарь: id месяцев повторяются")
+    week = cal.get("week", [])
+    start = cal.get("start", {})
+    if start.get("month", mids[0] if mids else None) not in mids:
+        errors.append(f"календарь: start.month {start.get('month')} — нет такого месяца")
+    for fid, f in cal.get("festivals", {}).items():
+        where = f"календарь, праздник {fid}"
+        if not f.get("name") or not isinstance(f.get("days", 1), int) or f.get("days", 1) < 1:
+            errors.append(f"{where}: нужны name и days ≥ 1")
+        if "weekday" in f:
+            if not week or not (0 <= f["weekday"] < len(week)):
+                errors.append(f"{where}: weekday — номер дня недели")
+        elif "day" not in f:
+            errors.append(f"{where}: когда — weekday, day или month + day")
+        if "month" in f and f["month"] not in mids:
+            errors.append(f"{where}: нет месяца {f['month']}")
+        if "day" in f and "month" in f and f["month"] in mids and not (1 <= f["day"] <= months[mids.index(f["month"])]["days"]):
+            errors.append(f"{where}: day вне месяца")
+        if f.get("location") not in world["locations"]:
+            errors.append(f"{where}: нет локации {f.get('location')}")
+        for n, r in f.get("guests", {}).items():
+            if n not in npcs:
+                errors.append(f"{where}: гость {n} — нет NPC")
+            if r not in rooms:
+                errors.append(f"{where}: гость {n} — нет комнаты {r}")
+        tr = f.get("trade", {})
+        if set(tr) - {"buy_pct", "sell_pct", "tags"}:
+            errors.append(f"{where}: trade — buy_pct, sell_pct, tags")
+    return errors
 
 def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -374,6 +415,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
                 errors.append(f"задание {qid}: нет комнаты {q['room']}")
             continue
         errors += [f"задание {qid}: в offer_items нет предмета {x}" for x in q.get("offer_items", {}) if x not in items]
+        if "festival" in q and q["festival"] not in world.get("calendar", {}).get("festivals", {}):  # v0.7.44
+            errors.append(f"задание {qid}: festival {q['festival']} — нет такого праздника в календаре")
         if q.get("giver") not in npcs:
             errors.append(f"задание {qid}: нет NPC-заказчика {q.get('giver')}")
         for i, st in enumerate(q["steps"]):
@@ -387,6 +430,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             for r in [st] + st.get("choices", []):
                 errors += [f"{where}: в награде нет предмета {x}" for x in r.get("items", {}) if x not in items]
                 errors += [f"{where}: нет NPC {x}" for x in r.get("attitude", {}) if x not in npcs]
+
+    errors += check_calendar(world.get("calendar"), world, npcs, rooms)
 
     seen: set[str] = set()
     for p in chars["presets"]:

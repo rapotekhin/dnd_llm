@@ -700,6 +700,13 @@
     },
     "Scene": {
       "properties": {
+        "calendar": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Calendar",
+          "type": "array"
+        },
         "chronicle": {
           "items": {
             "type": "string"

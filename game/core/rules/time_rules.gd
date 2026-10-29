@@ -45,7 +45,8 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 	while s.minute >= 1440:
 		s.minute -= 1440
 		s.day += 1
-		lines.append("Наступил день %d" % s.day)
+		lines.append("Наступил день %d%s" % [s.day, (" — " + CalendarRules.text(data["world"], s.day)) if CalendarRules.on(data["world"]) else ""])
+		lines.append_array(CalendarRules.sync(s, data["world"]))  # festivals begin and end (v0.7.44)
 	if part(s, data) != before:
 		lines.append("Время суток: %s" % part_name(s, data))
 	lines.append_array(ConditionRules.expire(s, data))

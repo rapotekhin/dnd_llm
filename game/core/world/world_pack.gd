@@ -374,7 +374,7 @@ static func default_settings(p: Dictionary) -> Dictionary:
 static func _when_ok(when: Variant, top: bool) -> bool:
 	if not (when is Dictionary):
 		return false
-	var keys: Array = (when as Dictionary).keys().filter(func(k: String) -> bool: return k != "item")
+	var keys: Array = (when as Dictionary).keys().filter(func(k: String) -> bool: return k != "item" and k != "qty")  # v0.7.44: qty
 	if keys.size() != 1:
 		return false
 	var k := str(keys[0])

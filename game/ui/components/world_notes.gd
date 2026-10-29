@@ -206,7 +206,7 @@ func _travel_button(info: VBoxContainer, room_id: String) -> void:
 
 
 ## Journal tabs (v0.6.6, playtest-1): quests, places, conversations, finds; inside — groups by location that fold.
-const TABS: Array[String] = ["quests", "places", "people", "found", "chronicle"]
+const TABS: Array[String] = ["quests", "places", "people", "found", "chronicle", "calendar"]
 var _tab := "quests"
 var _folded := {}
 var _person_open := ""  # v0.7.22.21 (#18): the person whose card is open in the people tab
@@ -283,6 +283,8 @@ func _draw_journal() -> void:
 func _count(s: GameSession, w: WorldView, tab: String) -> int:
 	if tab == "people":
 		return _met(s, w).size()
+	if tab == "calendar":  # v0.7.44: the festivals on now
+		return CalendarRules.active(s, w.world).size()
 	var n := 0
 	for g: Dictionary in _groups(s, w, tab):
 		n += (g["lines"] as Array).size()
@@ -375,7 +377,25 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 			days.sort()
 			days.reverse()
 			for d: int in days:
-				out.append({"title": tr("JOURNAL_DAY").format({"day": d}), "lines": by_day[d], "folded": d != days[0]})
+				var title := tr("JOURNAL_DAY").format({"day": d})
+				if CalendarRules.on(w.world):  # v0.7.44: the date beside the day's number
+					title += " — " + CalendarRules.text(w.world, d)
+				out.append({"title": title, "lines": by_day[d], "folded": d != days[0]})
+		"calendar":  # v0.7.44: today, the festivals on and ahead, the months of the year
+			if not CalendarRules.on(w.world):
+				return out
+			var today: Array[String] = [CalendarRules.season_text(w.world, s.day)]
+			var near: Array[String] = []
+			for e: Dictionary in CalendarRules.upcoming(s, Catalog.data, w.world, CalendarRules.year_days(w.world)):
+				(today if bool(e["on"]) else near).append("★ " + CalendarRules.line(w.world, e, true))
+			out.append({"title": tr("JOURNAL_TODAY").format({"date": CalendarRules.text(w.world, s.day)}), "lines": today})
+			if not near.is_empty():
+				out.append({"title": tr("JOURNAL_FESTIVALS"), "lines": near})
+			var months: Array[String] = []
+			for m: Dictionary in CalendarRules.cal(w.world)["months"]:
+				months.append("%s — %s, %d %s" % [m["name"], CalendarRules.cal(w.world).get("seasons", {}).get(str(m.get("season", "")), ""),
+					int(m["days"]), CalendarRules._plural(int(m["days"]))])
+			out.append({"title": tr("JOURNAL_MONTHS"), "lines": months, "folded": true})
 	return out
 
 

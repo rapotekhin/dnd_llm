@@ -125,8 +125,9 @@ func _rebuild() -> void:
 		hp.add_theme_color_override("font_color", UiTheme.BAD)
 	var next_xp := LevelUp.xp_for(Catalog.data, int(c.get("level", 1)) + 1)
 	var xp := tr("SIDE_HERO_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}) if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data) else ""
-	_line(" · ".join([Money.format(int(c["gold_cp"])), xp, tr("SIDE_HERO_TIME").format({"day": s.day, "part": TimeRules.part_name(s, Catalog.data),
-		"clock": TimeRules.clock(s)})].filter(func(x: String) -> bool: return not x.is_empty())), true)
+	_line(" · ".join([Money.format(int(c["gold_cp"])), xp, tr("SIDE_HERO_TIME").format({"day": CalendarRules.text(world.world, s.day), "part": TimeRules.part_name(s, Catalog.data),
+		"clock": TimeRules.clock(s)})].filter(func(x: String) -> bool: return not x.is_empty())), true).name = "HeroTime"
+	_festival_line(s, world)
 	if NeedRules.on(s):
 		_needs(s, can_act)
 	_craft_row(s, can_act)
@@ -1043,6 +1044,22 @@ func _subheading(key: String) -> void:
 	l.theme_type_variation = UiTheme.MUTED_LABEL
 	l.add_theme_color_override("font_color", UiTheme.ACCENT)
 	_content.add_child(l)
+
+
+## The nearest festival under the date (v0.7.44): «★ Бродская ярмарка — через 5 дней»; all near ones in the hint.
+func _festival_line(s: GameSession, world: WorldView) -> void:
+	var near := CalendarRules.upcoming(s, Catalog.data, world.world)
+	if near.is_empty():
+		return
+	var e: Dictionary = near[0]
+	var when := tr("SIDE_FESTIVAL_ON").format({"left": CalendarRules.days_word(int(e["left"]))}) if bool(e["on"]) \
+		else tr("SIDE_FESTIVAL_IN").format({"in": int(e["in"]), "days": CalendarRules._plural(int(e["in"]))})
+	var l := _line("★ %s — %s" % [e["name"], when], not bool(e["on"]))
+	l.name = "FestivalLine"
+	if bool(e["on"]):
+		l.add_theme_color_override("font_color", UiTheme.ACCENT)
+	l.mouse_filter = Control.MOUSE_FILTER_STOP
+	l.tooltip_text = "\n".join(near.map(func(x: Dictionary) -> String: return CalendarRules.line(world.world, x, true)))
 
 
 func _line(text: String, muted: bool) -> Label:

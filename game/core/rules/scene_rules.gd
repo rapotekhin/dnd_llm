@@ -49,6 +49,9 @@ static func npcs(s: GameSession, world: Dictionary, room_id: String) -> Array[St
 	for id: String in s.npc_at:
 		if str(s.npc_at[id]) == room_id and all.has(id) and not out.has(id):
 			out.append(id)
+	for id: String in CalendarRules.guests(s, world, room_id):  # v0.7.44: a festival's guests
+		if all.has(id) and not out.has(id) and not FollowRules.placed(s, id):
+			out.append(id)
 	if room_id == s.room_id:
 		for id: String in s.followers:
 			if all.has(id) and not out.has(id):
