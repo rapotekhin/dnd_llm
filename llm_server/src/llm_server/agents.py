@@ -28,6 +28,8 @@ from .protocol import (
     EngineFindNpcsParams,
     EngineFindQuestsParams,
     EngineFindQuestsResult,
+    EngineFindTeachersParams,
+    EngineFindTeachersResult,
     CreateQuestEffect,
     EngineFindPlacesParams,
     EngineFindPlacesResult,
@@ -448,6 +450,30 @@ async def find_quests(ctx: RunContext[TurnContext], query: str) -> str:
         f"[{q.quest_id}] «{q.title}» — {q.giver}, {status.get(q.status, q.status)}" for q in r.quests))
 
 
+async def find_teachers(ctx: RunContext[TurnContext], kind: Literal["skill", "tool", "language", "spell", "recipe"], what: str) -> str:
+    """Кто в мире учит этому: kind — spell | recipe | tool | skill | language, what — id или русское название
+    («Огненный шар», «секира»). Обязательно, когда игрок спрашивает, у кого научиться, и перед курсом заклинания или
+    курсом у учителя не из сцены."""
+    t = ctx.deps
+    raw = await t.session.call_engine("engine.find_teachers", EngineFindTeachersParams(turn_id=t.params.turn_id, kind=kind, what=what))
+    r = EngineFindTeachersResult.model_validate(raw)
+    if r.reason:
+        return r.reason
+    if not r.teachers:
+        return _with_topic(t, "study", f"Никто в мире не учит {what} [{r.what}]. Не отсылай словами к выдуманному учителю и не "
+                           "создавай место или человека просто так: дай задание найти учителя — create_quest (своё дело own: "
+                           "true или от NPC сцены, кто слышал о таком), учителя приведёт сценарист в акте задания с курсом (teaches).")
+    lines = []
+    for x in r.teachers:
+        state = "здесь" if x.here else f"не здесь: {x.place}"
+        course = (f"; курс уже есть [{x.course}] — просто укажи на него" if x.course
+                  else f"; курса ещё нет — course {{npc_id: {x.npc_id}, teach_kind: {kind}, teach_id: {r.what}}}")
+        lines.append(f"[{x.npc_id}] {x.name} — {x.role} ({state}); учит: {x.teaches}{course}")
+    return _with_topic(t, "study", f"Учат {what} [{r.what}]:\n" + "\n".join(lines) +
+                       "\nВ рассказе назови игроку ближайшего учителя и где его найти — это и есть ответ на вопрос; задание не "
+                       "нужно. Занятия, плату и условия курса заклинания ставит движок — в рассказе только то, что вернул course.")
+
+
 async def find_places(ctx: RunContext[TurnContext], query: str) -> str:
     """Найти места мира (комнаты и локации пакета и созданные в этой игре): query — название или локация по-русски.
     Обязательно перед create_place: может, такое место уже есть. В ответе — и открытые края известного мира, где можно
@@ -508,7 +534,7 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None, e
         deps_type=TurnContext,
         instructions=system,
         tools=([propose_effect_tool(ENTRY_EFFECTS), find_items] if entry else
-               [Tool(request_check, max_retries=EFFECT_RETRIES), propose_effect_tool(), rules, lookup, find_items, find_npcs, find_places, find_quests]),
+               [Tool(request_check, max_retries=EFFECT_RETRIES), propose_effect_tool(), rules, lookup, find_items, find_npcs, find_places, find_quests, find_teachers]),
         retries=2,
         model_settings=no_thinking(settings) if entry else settings,
     )
@@ -549,7 +575,7 @@ def is_quest_act(params: TurnRequestParams) -> bool:
     return params.kind == "quest_act"
 
 
-DESIGNER_MAX_TOKENS = 6000  # a whole act in one effect: steps, people, places, fights
+DESIGNER_MAX_TOKENS = 8000  # a whole act in one effect: steps, people, places, fights
 
 
 def build_designer_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput]:
@@ -560,7 +586,7 @@ def build_designer_agent(model: Model, system: str) -> Agent[TurnContext, TurnOu
         output_type=TurnOutput,
         deps_type=TurnContext,
         instructions=system,
-        tools=[propose_effect_tool({"quest_act"}), lookup, find_items, find_npcs, find_places],
+        tools=[propose_effect_tool({"quest_act"}), lookup, find_items, find_npcs, find_places, find_teachers],
         retries=2,
         model_settings=settings_for(model, {**MODEL_SETTINGS, "temperature": 0.7, "max_tokens": DESIGNER_MAX_TOKENS}),  # type: ignore[typeddict-item]
         name="quest_designer",

@@ -28,6 +28,7 @@ BACKGROUNDS = ROOT / "tools" / "srd" / "backgrounds.json"
 MAX_LEVEL = 5
 MAX_SPELL_LEVEL = 3
 MAX_MONSTER_CR = 3  # the combat of v0.6.x: levels 1–5
+NPC_TEMPLATES = {"mage", "archmage"}  # v0.7.39.7: teachers of the higher circles — people of the world, not foes of levels 1–5
 ABILITIES = ["str", "dex", "con", "int", "wis", "cha"]
 
 # --- glossary: core terms by hand, always wins over ru.json -------------------------------------------
@@ -651,7 +652,7 @@ class Builder:
         items = {sid(e["index"]) for e in all_of("equipment")}
         out = {}
         for m in all_of("monsters"):
-            if m["challenge_rating"] > MAX_MONSTER_CR:
+            if m["challenge_rating"] > MAX_MONSTER_CR and m["index"] not in NPC_TEMPLATES:
                 continue
             ru = self.tr(f"monster:{m['index']}", m["name"])
             abilities = {a[:3]: m[a] for a in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")}

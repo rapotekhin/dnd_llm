@@ -258,6 +258,90 @@
       "title": "ActStep",
       "type": "object"
     },
+    "ActTeach": {
+      "additionalProperties": false,
+      "description": "The course an act opens at the teacher the hero looks for (0.82.0): `npc` — «new:<key>» of the act's people or\nan NPC of the world, with a talk step to it in the act; the rest as in the effect `course`. The course opens when\nthe hero reaches the teacher.",
+      "properties": {
+        "dc_tier": {
+          "default": "medium",
+          "enum": [
+            "easy",
+            "medium",
+            "hard"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        },
+        "fee_cp": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Fee Cp",
+          "type": "integer"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "skill",
+            "tool",
+            "language",
+            "spell",
+            "recipe"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "lessons": {
+          "default": 4,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Lessons",
+          "type": "integer"
+        },
+        "name": {
+          "maxLength": 60,
+          "title": "Name",
+          "type": "string"
+        },
+        "npc": {
+          "title": "Npc",
+          "type": "string"
+        },
+        "recipe": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CourseRecipe"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "skill": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill"
+        }
+      },
+      "required": [
+        "npc",
+        "kind",
+        "id",
+        "name"
+      ],
+      "title": "ActTeach",
+      "type": "object"
+    },
     "AdvanceTimeEffect": {
       "additionalProperties": false,
       "description": "The player spends time in the scene (0.10.0): waits, sleeps rough, works — the engine moves the clock within its\nlimit; not in combat.",
@@ -782,7 +866,7 @@
     },
     "CourseEffect": {
       "additionalProperties": false,
-      "description": "A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». A scene NPC teaches: `teach_kind`\n(skill, tool, language, spell up to the 2nd circle, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the\ncheck of a lesson `skill`, `dc_tier`. No class experience. Enrolment and lessons are the «Учёба» window's buttons.\n0.79.0: a recipe course's `teach_id` may be a catalog item — the game's recipe of it, or the course's `recipe`.",
+      "description": "A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». `teach_kind` (skill, tool, language,\nspell, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the check of a lesson `skill`, `dc_tier`. No class\nexperience. Enrolment and lessons are the «Учёба» window's buttons. 0.79.0: a recipe course's `teach_id` may be a\ncatalog item — the game's recipe of it, or the course's `recipe`. 0.82.0: the teacher is an NPC of the scene or a\nliving teacher of the world from find_teachers (the course waits for the hero there); a spell — only by a teacher\nwho can (its template), its lessons, price and the attitude from the 3rd circle by the engine; `requires` — more\nconditions.",
       "properties": {
         "dc_tier": {
           "default": "medium",
@@ -826,6 +910,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/CourseRecipe"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "requires": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CourseRequires"
             },
             {
               "type": "null"
@@ -966,6 +1061,40 @@
         "materials"
       ],
       "title": "CourseRecipe",
+      "type": "object"
+    },
+    "CourseRequires": {
+      "additionalProperties": false,
+      "description": "The master's conditions of a course (0.82.0): the teacher's attitude (−3…3) and a quest of the world done.",
+      "properties": {
+        "attitude": {
+          "anyOf": [
+            {
+              "maximum": 3,
+              "minimum": -3,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attitude"
+        },
+        "quest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quest"
+        }
+      },
+      "title": "CourseRequires",
       "type": "object"
     },
     "CreateNpcEffect": {
@@ -2453,6 +2582,17 @@
           "title": "Stock New",
           "type": "array"
         },
+        "teaches": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NpcTeaches"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "trade_kind": {
           "anyOf": [
             {
@@ -2912,6 +3052,43 @@
         "kind"
       ],
       "title": "NpcLink",
+      "type": "object"
+    },
+    "NpcTeaches": {
+      "additionalProperties": false,
+      "description": "What a made person teaches beside its trade (0.82.0): `tools` and `skills` of the engine, `languages` «own» — the\nones it speaks. Spells are taught only by the template (`monster`: mage, archmage, priest, acolyte, druid).",
+      "properties": {
+        "languages": {
+          "anyOf": [
+            {
+              "const": "own",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Languages"
+        },
+        "skills": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Skills",
+          "type": "array"
+        },
+        "tools": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Tools",
+          "type": "array"
+        }
+      },
+      "title": "NpcTeaches",
       "type": "object"
     },
     "OrgEffect": {
@@ -3408,6 +3585,17 @@
           "minItems": 1,
           "title": "Steps",
           "type": "array"
+        },
+        "teaches": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActTeach"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -3704,6 +3892,17 @@
           "maxItems": 5,
           "title": "Stock New",
           "type": "array"
+        },
+        "teaches": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NpcTeaches"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "trade_kind": {
           "anyOf": [

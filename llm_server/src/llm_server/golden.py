@@ -208,6 +208,11 @@ class MockEngine:
         if method == "engine.find_quests":  # v0.7.21
             return {"quests": [{"quest_id": q.get("id", ""), "title": q.get("title", ""), "giver": q.get("giver", ""),
                                 "status": q.get("status", "offered")} for q in self.engine.get("find_quests", [])]}
+        if method == "engine.find_teachers":  # v0.7.39.7: the scenario's teachers of the thing, none by default
+            return {"what": self.engine.get("teach_what", p.get("what", "")), "teachers": [
+                {"npc_id": x.get("id", ""), "name": x.get("name", ""), "role": x.get("role", ""), "teaches": x.get("teaches", ""),
+                 "place": x.get("place", ""), "here": bool(x.get("here", False)), "course": x.get("course", "")}
+                for x in self.engine.get("find_teachers", [])]}
         if method == "engine.find_npcs":  # v0.7.20
             return {"npcs": [{"npc_id": n.get("id", ""), "name": n.get("name", ""), "role": n.get("role", ""), "location": n.get("location", "")}
                              for n in self.engine.get("find_npcs", [])]}

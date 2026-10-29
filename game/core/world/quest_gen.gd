@@ -449,6 +449,11 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 		for st: Dictionary in steps:
 			if (st["when"] as Dictionary).has("choice"):
 				st["choices"] = choices
+	var teach := {}
+	if spec.get("teaches") is Dictionary and not (spec["teaches"] as Dictionary).is_empty():
+		teach = _plan_teach(s, data, spec["teaches"], content, steps, qid, str(q["title"]))
+		if teach.has("reason"):
+			return teach
 	var giver := str(q.get("giver", ""))
 	var own := bool(q.get("own", false))
 	if last and not own and str(steps[-1]["when"].get("talk", "")) != giver:  # the quest ends where it began
@@ -487,9 +492,45 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	brings.append_array((content["npcs"] as Array).map(func(x: Dictionary) -> String: return str(x["plan"]["npc"]["name"])))
 	brings.append_array((content["items"] as Array).map(func(x: Dictionary) -> String: return str(x["name"])))
 	brings.append_array((content["encounters"] as Array).map(func(x: Dictionary) -> String: return "бой: " + ", ".join((x["enemies"] as Array).map(func(f: Dictionary) -> String: return "%s ×%d" % [f["name"], f["count"]]))))
-	return {"plan": {"quest_id": qid, "act": n, "steps": steps, "content": content, "fights": fights, "made": raw.size(), "share": share},
+	if not teach.is_empty():
+		brings.append("курс у учителя: %s" % teach["summary"])
+	return {"plan": {"quest_id": qid, "act": n, "steps": steps, "content": content, "fights": fights, "made": raw.size(), "share": share,
+		"teach": teach.get("spec", {})},
 		"summary": "«%s», акт %d «%s»: %s%s" % [q["title"], n + 1, q["acts"][n]["title"], "; ".join(steps.map(func(st: Dictionary) -> String: return str(st["text"]))),
 			("; с ним: " + "; ".join(brings)) if not brings.is_empty() else ""]}
+
+
+## The course an act opens at the teacher the hero is sent to find (v0.7.39.7): `teaches` {npc — «new:<key>» of the
+## act's people or an NPC of the world, kind, id, name, lessons, fee_cp, skill, dc_tier, recipe} — the fields of the
+## effect `course`. A talk step with the teacher sets the quest's flag the course waits for, so it opens when the hero
+## reaches the teacher. {spec, summary} or {reason}.
+static func _plan_teach(s: GameSession, data: Dictionary, t: Dictionary, content: Dictionary, steps: Array, qid: String, title: String) -> Dictionary:
+	var ref := _str(t, "npc")
+	var def := {}
+	if ref.begins_with("new:"):
+		var x: Array = (content["npcs"] as Array).filter(func(p: Dictionary) -> bool: return "new:" + str(p["key"]) == ref)
+		if x.is_empty():
+			return {"reason": "teaches.npc: нет нового человека %s в new_npcs акта" % ref}
+		def = x[0]["plan"]["npc"]
+	elif BondRules.npc_def(s, data, ref).is_empty() or s.dead_npcs.has(ref):
+		return {"reason": "teaches.npc — «new:<key>» человека акта или живой NPC мира (%s нет)" % ref}
+	var step: Dictionary = {}
+	for st: Dictionary in steps:
+		if str(st["when"].get("talk", "")) == ref:
+			step = st
+	if step.is_empty():
+		return {"reason": "учитель %s: нужен шаг talk с target %s — на нём откроется курс" % [ref, ref]}
+	var flag := qid + "_teach"
+	var spec := {"npc_id": ref, "name": t.get("name", ""), "teach_kind": t.get("kind", ""), "teach_id": t.get("id", ""),
+		"lessons": t.get("lessons", 4) if t.get("lessons") != null else 4, "fee_cp": t.get("fee_cp", 0) if t.get("fee_cp") != null else 0,
+		"skill": t.get("skill"), "dc_tier": t.get("dc_tier", "medium") if t.get("dc_tier") != null else "medium", "recipe": t.get("recipe"),
+		"requires": {"flag": flag, "flag_text": "«%s»: учитель найден" % title}}
+	var chk := StudyRules.make(s, data, spec, def)
+	if chk.has("reason"):
+		return {"reason": "курс учителя (teaches): " + str(chk["reason"])}
+	step["flag"] = flag
+	var d: Dictionary = chk["plan"]["def"]
+	return {"spec": spec, "summary": "«%s», %d занятий, %s" % [d["name"], int(d["lessons"]), Money.format(int(d["fee_cp"])) if int(d["fee_cp"]) > 0 else "бесплатно"]}
 
 
 ## What the act brings: {places, room_keys, new_rooms, npcs, npc_keys, items, item_keys, encounters, enc_keys} or {reason}.
@@ -940,6 +981,13 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 			var who := str(WorldView.new(data["world"]).npc(str(w["talk"])).get("name", w["talk"]))
 			st["action"] = ("Отдать %s: %s" % [who, ItemRules.display_name(data["items"], s.items, str(w["item"]))]) if w.has("item") else "Поговорить: %s" % who
 	(q["steps"] as Array).append_array(steps)
+	var teach: Dictionary = plan.get("teach", {})
+	if not teach.is_empty():  # v0.7.39.7: the teacher's course, open once the hero reaches the teacher
+		var t := teach.duplicate(true)
+		t["npc_id"] = str(refs.get(str(t["npc_id"]), t["npc_id"]))
+		var made := StudyRules.make(s, data, t)
+		if made.has("plan"):
+			StudyRules.apply_make(s, data, made["plan"])
 	q["built"] = int(q.get("built", 0)) + 1
 	q["fights"] = int(q.get("fights", 0)) + int(plan["fights"])
 	q["made_steps"] = int(q.get("made_steps", 0)) + int(plan["made"])

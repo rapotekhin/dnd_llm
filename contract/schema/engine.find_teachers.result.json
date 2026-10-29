@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "FoundTeacher": {
+      "properties": {
+        "course": {
+          "default": "",
+          "title": "Course",
+          "type": "string"
+        },
+        "here": {
+          "default": false,
+          "title": "Here",
+          "type": "boolean"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "place": {
+          "default": "",
+          "title": "Place",
+          "type": "string"
+        },
+        "role": {
+          "default": "",
+          "title": "Role",
+          "type": "string"
+        },
+        "teaches": {
+          "default": "",
+          "title": "Teaches",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "name"
+      ],
+      "title": "FoundTeacher",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    },
+    "teachers": {
+      "items": {
+        "$ref": "#/$defs/FoundTeacher"
+      },
+      "title": "Teachers",
+      "type": "array"
+    },
+    "what": {
+      "default": "",
+      "title": "What",
+      "type": "string"
+    }
+  },
+  "title": "EngineFindTeachersResult",
+  "type": "object"
+}

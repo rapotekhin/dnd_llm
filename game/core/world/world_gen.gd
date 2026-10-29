@@ -106,7 +106,7 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 	var tpl := str(spec.get("monster", "commoner")) if spec.get("monster") != null else "commoner"
 	if not (c["npc_templates"] as Array).has(tpl):
 		return {"reason": "шаблон %s не из людских: %s" % [tpl, ", ".join(c["npc_templates"])]}
-	if float(data["monsters"].get(tpl, {}).get("cr", 0)) > float(c["max_cr"]):
+	if float(data["monsters"].get(tpl, {}).get("cr", 0)) > float(c["max_cr"]) and not (c.get("max_cr_except", []) as Array).has(tpl):  # a mage teaches, not fights
 		return {"reason": "шаблон %s слишком силён для нового человека" % tpl}
 	var race := str(spec.get("race", "")) if spec.get("race") != null else ""
 	var races: Dictionary = data["races"]["races"]
@@ -130,6 +130,24 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 			return {"reason": "связь: npc_id из мира и kind из %s" % ", ".join(c["link_kinds"])}
 		links.append({"npc_id": other, "kind": kind})
 	def["links"] = links
+	var teaches: Variant = spec.get("teaches")
+	if teaches is Dictionary and not (teaches as Dictionary).is_empty():  # v0.7.39.7: what it teaches beside its trade
+		var t := {}
+		for k: String in ["tools", "skills"]:
+			var known: Dictionary = CraftRules.cfg(data)["tools"] if k == "tools" else data["rules"]["skills"]
+			var ids: Array = []
+			for x: Variant in teaches.get(k, []) if teaches.get(k) is Array else []:
+				if not known.has(str(x)):
+					return {"reason": "teaches.%s — из %s" % [k, ", ".join(known.keys())]}
+				ids.append(str(x))
+			if not ids.is_empty():
+				t[k] = ids
+		if str(teaches.get("languages", "")) == "own":
+			t["languages"] = "own"
+		if teaches.get("spells") != null:
+			return {"reason": "teaches: заклинаниям учит шаблон (monster: mage — волшебник до 5 круга, archmage — выше, priest — жрец до 3, druid), не поле"}
+		if not t.is_empty():
+			def["teaches"] = t
 	var made_items := {}
 	var notes: Array[String] = []
 	if bool(spec.get("trader", false)):

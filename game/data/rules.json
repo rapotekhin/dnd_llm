@@ -456,7 +456,27 @@
 		"readmit_days": 14,
 		"exam": {"retry_days": 3, "stipend_margin": 5},
 		"kinds": {"skill": "навык", "tool": "инструмент", "language": "язык", "spell": "заклинание", "recipe": "рецепт", "xp": "опыт", "dev": "мирное развитие"},
-		"make": {"kinds": ["skill", "tool", "language", "spell", "recipe"], "lessons": [2, 10], "dc_tiers": ["easy", "medium", "hard"], "fee_cp_lesson": [0, 500], "max_spell_level": 2}
+		"make": {"kinds": ["skill", "tool", "language", "spell", "recipe"], "lessons": [2, 10], "dc_tiers": ["easy", "medium", "hard"], "fee_cp_lesson": [0, 500]},
+		"teachers": {
+			"_doc": "Teachers (v0.7.39.7, TeachRules): who in the world may teach what. An NPC teaches by its own `teaches` {spells: {classes, max}, tools, skills, languages ([] or \"own\" — the ones it speaks), recipe_max_cp} merged with its SRD template (`templates`: the spell lists it teaches; the circle — the template's slots) and its trade kind (`trades`). Spells are taught only by such a teacher, up to its circle; a spell course costs `spell_fee_cp_lesson` × circle a lesson and lasts at least `spell_lessons_per_circle` × circle lessons; from circle `attitude_from_circle` the teacher asks attitude `attitude_min`. A recipe — by a teacher of its tool, its output worth at most `recipe_max_cp`. `find_max` — how many teachers the master's search answers, the nearest first.",
+			"templates": {"mage": ["wizard", "sorcerer"], "archmage": ["wizard", "sorcerer"], "priest": ["cleric"], "acolyte": ["cleric"], "cult_fanatic": ["cleric"], "druid": ["druid"]},
+			"trades": {
+				"smith": {"tools": ["smiths_tools"], "skills": ["athletics"]},
+				"bowyer": {"tools": ["woodcarvers_tools"], "skills": ["survival"]},
+				"food": {"tools": ["cooks_utensils", "brewers_supplies"]},
+				"herbalist": {"tools": ["herbalism_kit", "alchemists_supplies"], "skills": ["nature", "medicine"]},
+				"tailor": {"tools": ["weavers_tools", "leatherworkers_tools"]},
+				"craftsman": {"tools": ["carpenters_tools", "masons_tools", "tinkers_tools"]},
+				"temple": {"skills": ["religion", "medicine"]},
+				"scribe": {"skills": ["history"], "languages": "own"}
+			},
+			"spell_fee_cp_lesson": 5000,
+			"spell_lessons_per_circle": 2,
+			"attitude_from_circle": 3,
+			"attitude_min": 1,
+			"recipe_max_cp": 50000,
+			"find_max": 5
+		}
 	},
 	"bonds": {
 		"_doc": "Bonds with NPCs (v0.7.31, BondRules): points per NPC in range; the kind (friend, romance after a confession, mentor after a course) names the steps, points below zero — a rival, an enemy. Points come from gifts by taste (one a day), the master's scenes (`bond`, ±scene.max_delta once a day) and the engine's deeds; perks go by points whatever the kind.",
@@ -1117,9 +1137,13 @@
 			"priest",
 			"druid",
 			"veteran",
-			"knight"
+			"knight",
+			"mage",
+			"archmage"
 		],
 		"max_cr": 3,
+		"max_cr_except": ["mage", "archmage"],
+		"_teaches": "v0.7.39.7: a made person may `teaches` {tools, skills, languages: \"own\"} — what it can teach beside its trade; spells only by its template (rules.study.teachers.templates): a mage, a priest.",
 		"max_per_location": 4,
 		"max_rooms": 12,
 		"_places": "v0.7.39.4: a place grows in one turn up to max_rooms rooms in its `sites`, with up to place_npcs_max people; a made room keeps up to 2 `open_edges` of its own (terrains of `terrains`) and the world goes on from it; an edge is not used up — roads fork. A location made with people or a settlement holds people_cap made NPCs (else max_per_location). `settlements` — what a hamlet, village or town always has: rooms [min, max], `needs` — site tags of which each must be there (one of the words), people at least, `law` — the guard of the town (`guard` — the law of the location, a new NPC with the template guard joins it).",

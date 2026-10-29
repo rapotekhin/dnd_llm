@@ -206,6 +206,13 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 92. Протокол 0.82.0 (v0.7.39.7)
+
+- **Метод `engine.find_teachers`** {`turn_id`, `kind`: `skill` | `tool` | `language` | `spell` | `recipe`, `what` — id или русское название} → {`what` — id движка, `teachers` [`FoundTeacher` {`npc_id`, `name`, `role`, `teaches`, `place`, `here`, `course`}], `reason`} — кто из живых людей мира учит этому (`TeachRules`: шаблон SRD, вид лавки, своё `teaches`), сцена и локация героя первыми. Инструмент мастера и сценариста `find_teachers`.
+- **`course.npc_id`** — NPC сцены или учитель мира из `find_teachers` (курс ждёт героя у него); **`course.requires`** [`CourseRequires` {`attitude` −3…3, `quest`}]. Заклинанию учит только учитель с его кругом; занятия, плату и отношение с 3-го круга ставит движок.
+- **`NewNpc.teaches`** [`NpcTeaches` {`tools`, `skills`, `languages`: `own`}] — чему учит созданный человек сверх ремесла; заклинаниям — только шаблон (`mage`, `archmage` — теперь в людских шаблонах мастера).
+- **`quest_act.teaches`** [`ActTeach` {`npc` — `new:<key>` или NPC мира, `kind`, `id`, `name`, `lessons`, `fee_cp`, `skill`, `dc_tier`, `recipe`}] — курс у учителя, которого ищет задание; шаг `talk` к нему ставит флаг задания, по которому курс открывается.
+
 ### 91. Протокол 0.81.0 (v0.7.39.6)
 
 - **`create_quest` — каркас:** `difficulty` (`easy` | `medium` | `hard` | `deadly`), `acts` [`QuestAct` {`title`, `goal`}] (1–4), `villain`, `finale`; убраны `scale`, `steps`, `reward_item_id`, `new_place`, `quest_item`; `new_npcs` — только новый заказчик заказа на доске. Награду и опыт по сложности и уровню героя ставит движок.

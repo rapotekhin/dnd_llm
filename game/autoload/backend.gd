@@ -52,6 +52,7 @@ func connect_with(cfg: BackendConfig) -> void:
 	client.peer.register_handler("engine.find_npcs", GameState.handle_engine_find_npcs)  # v0.7.20
 	client.peer.register_handler("engine.find_quests", GameState.handle_engine_find_quests)  # v0.7.21
 	client.peer.register_handler("engine.find_places", GameState.handle_engine_find_places)  # v0.7.20.1
+	client.peer.register_handler("engine.find_teachers", GameState.handle_engine_find_teachers)  # v0.7.39.7
 	client.state_changed.connect(_on_state_changed)
 	client.start()
 

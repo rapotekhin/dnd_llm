@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.81.0"
+PROTOCOL_VERSION = "0.82.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -706,6 +706,15 @@ class NpcLink(_Out):
     kind: Literal["family", "spouse", "parent", "child", "friend", "rival", "master", "servant", "colleague"]
 
 
+class NpcTeaches(_Out):
+    """What a made person teaches beside its trade (0.82.0): `tools` and `skills` of the engine, `languages` «own» — the
+    ones it speaks. Spells are taught only by the template (`monster`: mage, archmage, priest, acolyte, druid)."""
+
+    tools: list[str] = Field(default_factory=list, max_length=4)
+    skills: list[str] = Field(default_factory=list, max_length=4)
+    languages: Literal["own"] | None = None
+
+
 class NewNpc(_Out):
     """A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;
     `monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),
@@ -733,6 +742,7 @@ class NewNpc(_Out):
     stock: list[str] = Field(default_factory=list, max_length=10)
     stock_new: list[GeneratedItem] = Field(default_factory=list, max_length=5)
     links: list[NpcLink] = Field(default_factory=list, max_length=5)
+    teaches: NpcTeaches | None = None  # 0.82.0
 
 
 class NewSecret(_Out):
@@ -1007,6 +1017,7 @@ class QuestActEffect(_Out):
     encounters: list[ActEncounter] = Field(default_factory=list, max_length=4)
     choices: list[ActChoice] = Field(default_factory=list, max_length=3)
     reward_item_id: str | None = None
+    teaches: "ActTeach | None" = None  # 0.82.0: the course at the teacher the hero was sent to find
 
 
 class DropItemEffect(_Out):
@@ -1153,14 +1164,24 @@ class CourseRecipe(_Out):
     qty: int = Field(default=1, ge=1, le=20)
 
 
+class CourseRequires(_Out):
+    """The master's conditions of a course (0.82.0): the teacher's attitude (−3…3) and a quest of the world done."""
+
+    attitude: int | None = Field(default=None, ge=-3, le=3)
+    quest: str | None = None
+
+
 class CourseEffect(_Out):
-    """A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». A scene NPC teaches: `teach_kind`
-    (skill, tool, language, spell up to the 2nd circle, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the
-    check of a lesson `skill`, `dc_tier`. No class experience. Enrolment and lessons are the «Учёба» window's buttons.
-    0.79.0: a recipe course's `teach_id` may be a catalog item — the game's recipe of it, or the course's `recipe`."""
+    """A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». `teach_kind` (skill, tool, language,
+    spell, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the check of a lesson `skill`, `dc_tier`. No class
+    experience. Enrolment and lessons are the «Учёба» window's buttons. 0.79.0: a recipe course's `teach_id` may be a
+    catalog item — the game's recipe of it, or the course's `recipe`. 0.82.0: the teacher is an NPC of the scene or a
+    living teacher of the world from find_teachers (the course waits for the hero there); a spell — only by a teacher
+    who can (its template), its lessons, price and the attitude from the 3rd circle by the engine; `requires` — more
+    conditions."""
 
     kind: Literal["course"] = "course"
-    npc_id: str  # an NPC of the scene
+    npc_id: str  # an NPC of the scene or a teacher from find_teachers
     name: str = Field(max_length=60)
     teach_kind: Literal["skill", "tool", "language", "spell", "recipe"]
     teach_id: str
@@ -1169,6 +1190,26 @@ class CourseEffect(_Out):
     skill: str | None = None
     dc_tier: Literal["easy", "medium", "hard"] = "medium"
     recipe: CourseRecipe | None = None
+    requires: CourseRequires | None = None  # 0.82.0
+
+
+class ActTeach(_Out):
+    """The course an act opens at the teacher the hero looks for (0.82.0): `npc` — «new:<key>» of the act's people or
+    an NPC of the world, with a talk step to it in the act; the rest as in the effect `course`. The course opens when
+    the hero reaches the teacher."""
+
+    npc: str
+    kind: Literal["skill", "tool", "language", "spell", "recipe"]
+    id: str
+    name: str = Field(max_length=60)
+    lessons: int = Field(default=4, ge=1, le=20)
+    fee_cp: int = Field(default=0, ge=0)
+    skill: str | None = None
+    dc_tier: Literal["easy", "medium", "hard"] = "medium"
+    recipe: CourseRecipe | None = None
+
+
+QuestActEffect.model_rebuild()  # its `teaches` is ActTeach, defined after it
 
 
 class StockEffect(_Out):
@@ -1573,6 +1614,30 @@ class EngineFindNpcsResult(_In):
     npcs: list[FoundNpc] = Field(default_factory=list)
 
 
+class EngineFindTeachersParams(_Out):
+    """Who of the world teaches a thing (0.82.0): `kind` and `what` — an id or a Russian name."""
+
+    turn_id: str
+    kind: Literal["skill", "tool", "language", "spell", "recipe"]
+    what: str
+
+
+class FoundTeacher(_In):
+    npc_id: str
+    name: str
+    role: str = ""
+    teaches: str = ""
+    place: str = ""
+    here: bool = False
+    course: str = ""  # the course of it the teacher already has
+
+
+class EngineFindTeachersResult(_In):
+    what: str = ""  # the engine's id of the thing
+    teachers: list[FoundTeacher] = Field(default_factory=list)
+    reason: str = ""  # the thing is unknown
+
+
 class EngineFindQuestsParams(_Out):
     turn_id: str
     query: str
@@ -1663,4 +1728,6 @@ CONTRACT_MODELS: dict[str, type[BaseModel]] = {
     "engine.find_npcs.result": EngineFindNpcsResult,
     "engine.find_places.params": EngineFindPlacesParams,
     "engine.find_places.result": EngineFindPlacesResult,
+    "engine.find_teachers.params": EngineFindTeachersParams,
+    "engine.find_teachers.result": EngineFindTeachersResult,
 }

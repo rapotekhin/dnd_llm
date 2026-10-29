@@ -2116,6 +2116,14 @@
 		"en": "Acolyte",
 		"name": "Послушник"
 	},
+	"monster:archmage": {
+		"en": "Archmage",
+		"name": "Архимаг"
+	},
+	"monster:mage": {
+		"en": "Mage",
+		"name": "Маг"
+	},
 	"monster:animated-armor": {
 		"en": "Animated Armor",
 		"name": "Оживлённый доспех"

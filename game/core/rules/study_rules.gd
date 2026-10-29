@@ -86,6 +86,26 @@ static func offered_by(s: GameSession, data: Dictionary, npc_id: String) -> Arra
 	return out
 
 
+## The master's courses waiting for the hero at teachers out of the scene (v0.7.39.7): not begun, not finished, not
+## known some other way, the teacher alive.
+static func waiting(s: GameSession, data: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	var all := courses(s, data)
+	var c := s.character
+	for id: String in all:
+		var who := str(all[id].get("teacher", ""))
+		if bool(all[id].get("generated", false)) and not who.is_empty() and not here(s, data, who) and not s.dead_npcs.has(who) 				and not enrolled(c, id) and not done(c, id) and not known_already(s, data, id):
+			out.append(id)
+	return out
+
+
+## Where a course's teacher is, in words: «Ольховый Брод · Мельница» ("" — unknown).
+static func where(s: GameSession, data: Dictionary, id: String) -> String:
+	var who := str(course(s, data, id).get("teacher", ""))
+	var room := str(s.npc_at.get(who, ReputationRules.home_room(data, who)))
+	return WorldView.new(data["world"]).place_path(room) if not room.is_empty() else ""
+
+
 static func is_teacher(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 	return not of_teacher(s, data, npc_id).is_empty() or not headed_by(data, npc_id).is_empty()
 
@@ -156,6 +176,16 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 	if req.has("classes"):
 		out.append({"text": "класс: " + ", ".join(req["classes"]), "ok": (req["classes"] as Array).has(str(c.get("class", "")))})
 	var teacher := str(co.get("teacher", ""))
+	if req.has("attitude"):  # v0.7.39.7: the teacher's attitude, a quest done, a fact of the world
+		var a := int(req["attitude"])
+		var word := TranslationServer.translate("ATTITUDE_0" if a == 0 else ("ATTITUDE_P%d" % a if a > 0 else "ATTITUDE_M%d" % -a))
+		out.append({"text": "отношение учителя не хуже: %s" % word, "ok": s.attitude(teacher) >= a})
+	if req.has("quest"):
+		var qid := str(req["quest"])
+		out.append({"text": "сделано задание «%s»" % data["world"].get("quests", {}).get(qid, {}).get("title", qid), "ok": s.quests_done.has(qid)})
+	if req.has("flag"):
+		var ft := str(req.get("flag_text", ""))
+		out.append({"text": ft if not ft.is_empty() else "условие учителя", "ok": s.flags.has(str(req["flag"]))})
 	var n := WorldView.new(data["world"]).npc(teacher)
 	if not n.is_empty() and not LanguageRules.npc_understands(c, data, n):
 		out.append({"text": "общий язык с учителем", "ok": false})
@@ -661,22 +691,35 @@ static func text(s: GameSession, data: Dictionary) -> String:
 			teach.append("%s учит «%s» (%s)" % [npc_name(s, data, npc), name_of(s, data, id), teaches_text(s, data, id)])
 	if not teach.is_empty():
 		parts.append("здесь: " + "; ".join(teach))
+	var away: Array[String] = []
+	for id: String in waiting(s, data):
+		away.append("«%s» у %s (%s)" % [name_of(s, data, id), npc_name(s, data, str(course(s, data, id)["teacher"])), where(s, data, id)])
+	if not away.is_empty():
+		parts.append("ждут героя: " + "; ".join(away))
 	return ("Учёба (окно «Учёба» у учителя, занятия — кнопкой): " + "; ".join(parts)) if not parts.is_empty() else ""
 
 
 # --- the master's courses -----------------------------------------------------------------------------------------
 
 
-## A course the master makes at a teacher of the scene: checked against rules.study.make. {plan, summary} or {reason}.
-static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
+## A course the master makes: checked against rules.study.make. The teacher is an NPC of the scene or (v0.7.39.7) a
+## living teacher of the world the master points to — the course waits for the hero there; a spell, and anything at a
+## teacher away, only by TeachRules (its template, trade, `teaches`). A spell course's lessons, fee and the teacher's
+## attitude are the engine's; `requires` {attitude, quest, flag, flag_text} — the master's conditions. {plan, summary}
+## or {reason}. `teacher_def` — the definition of a person a quest's act is about to bring (a check before it is made).
+static func make(s: GameSession, data: Dictionary, spec: Dictionary, teacher_def: Dictionary = {}) -> Dictionary:
 	var m: Dictionary = cfg(data)["make"]
 	var who := str(spec.get("npc_id", ""))
-	if not here(s, data, who):
-		return {"reason": "%s не в сцене — учит только тот, кто здесь" % who}
+	var away := teacher_def.is_empty() and not here(s, data, who)
+	if away and (BondRules.npc_def(s, data, who).is_empty() or s.dead_npcs.has(who)):
+		return {"reason": "%s — нет такого живого NPC в мире: учитель — NPC сцены или найденный find_teachers" % who}
 	var kind := str(spec.get("teach_kind", ""))
 	if not (m["kinds"] as Array).has(kind):
 		return {"reason": "teach_kind — из %s (опыта мастер не даёт)" % ", ".join(m["kinds"])}
 	var what := str(spec.get("teach_id", ""))
+	var named := TeachRules.resolve(s, data, kind, what)  # v0.7.39.7: «Огненный шар» is fireball
+	if not named.is_empty():
+		what = named
 	var recipe := {}
 	if kind == "recipe" and CraftRules.recipe(s, data, what).is_empty():
 		var made := _course_recipe(s, data, what, spec.get("recipe"))
@@ -689,19 +732,32 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 		"skill": ok = data["rules"]["skills"].has(what)
 		"tool": ok = CraftRules.cfg(data)["tools"].has(what)
 		"language": ok = data["misc"]["languages"].has(what)
-		"spell": ok = data["spells"].has(what) and int(data["spells"][what]["level"]) <= int(m["max_spell_level"])
+		"spell": ok = data["spells"].has(what)
 		"recipe": ok = not recipe.is_empty() or not CraftRules.recipe(s, data, what).is_empty()
 	if not ok:
-		return {"reason": _unknown_why(data, kind, what, int(m["max_spell_level"]))}
+		return {"reason": _unknown_why(data, kind, what)}
+	if kind == "spell" or away or not teacher_def.is_empty():  # v0.7.39.7: a spell or a teacher away — only by what the teacher can teach
+		var r_def: Dictionary = recipe.get("def", {})
+		var why := TeachRules.why_not_def(s, data, teacher_def, kind, what, r_def) if not teacher_def.is_empty() else TeachRules.why_not(s, data, who, kind, what, r_def)
+		if not why.is_empty():
+			return {"reason": why + ". Кто учит — find_teachers"}
 	var n := int(spec.get("lessons", 4))
 	if n < int(m["lessons"][0]) or n > int(m["lessons"][1]):
 		return {"reason": "lessons — от %d до %d" % [m["lessons"][0], m["lessons"][1]]}
+	var circle := int(data["spells"][what]["level"]) if kind == "spell" else -1
+	if circle > 0:
+		n = mini(TeachRules.spell_lessons(data, circle, n), int(m["lessons"][1]))
 	var tier := str(spec.get("dc_tier", "medium"))
 	if not (m["dc_tiers"] as Array).has(tier):
 		return {"reason": "dc_tier — из %s" % ", ".join(m["dc_tiers"])}
 	var f := int(spec.get("fee_cp", 0))
-	if f < int(m["fee_cp_lesson"][0]) * n or f > int(m["fee_cp_lesson"][1]) * n:
+	if circle > 0:
+		f = TeachRules.spell_fee(data, circle, n, f)
+	elif f < int(m["fee_cp_lesson"][0]) * n or f > int(m["fee_cp_lesson"][1]) * n:
 		return {"reason": "fee_cp — от %s до %s за %d занятий" % [Money.format(int(m["fee_cp_lesson"][0]) * n), Money.format(int(m["fee_cp_lesson"][1]) * n), n]}
+	var req := _make_requires(s, data, spec.get("requires"), circle)
+	if req.has("reason"):
+		return req
 	var skill := str(spec.get("skill", "")) if spec.get("skill") != null else ""
 	if skill.is_empty():
 		skill = what if kind == "skill" else "history"
@@ -715,7 +771,36 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 		return {"reason": "%s уже учит этому — кнопка «Учёба» в его действиях" % npc_name(s, data, who)}
 	var def := {"name": name, "teacher": who, "teaches": {"kind": kind, "id": what}, "lessons": n, "skill": skill,
 		"dc": int(data["rules"]["dc_tiers"][tier]), "fee_cp": f, "generated": true}
-	return {"plan": {"id": id, "def": def, "recipe": recipe}, "summary": "Курс — %s: «%s», %d занятий" % [npc_name(s, data, who), name, n]}
+	if not (req["requires"] as Dictionary).is_empty():
+		def["requires"] = req["requires"]
+	var where := (", ждёт у учителя: " + WorldView.new(data["world"]).place_path(str(s.npc_at.get(who, ReputationRules.home_room(data, who))))) if away else ""
+	return {"plan": {"id": id, "def": def, "recipe": recipe}, "summary": "Курс — %s: «%s», %d занятий, %s%s" % [npc_name(s, data, who), name, n,
+		Money.format(f) if f > 0 else "бесплатно", where]}
+
+
+## The conditions of a master's course: its `requires` checked, and the teacher's attitude a spell's circle asks
+## (TeachRules). {requires} or {reason}.
+static func _make_requires(s: GameSession, data: Dictionary, spec: Variant, circle: int) -> Dictionary:
+	var out := {}
+	var r: Dictionary = spec if spec is Dictionary else {}
+	if r.get("attitude") != null:
+		var b := GameSession.attitude_bounds(data)
+		var a := int(r["attitude"])
+		if a < b.x or a > b.y:
+			return {"reason": "requires.attitude — от %d до %d" % [b.x, b.y]}
+		out["attitude"] = a
+	var need := TeachRules.spell_attitude(data, circle)
+	if need > int(out.get("attitude", -99)):
+		out["attitude"] = need
+	if not str(r.get("quest", "") if r.get("quest") != null else "").is_empty():
+		var q := str(r["quest"])
+		if not data["world"].get("quests", {}).has(q):
+			return {"reason": "requires.quest — id задания мира (%s нет)" % q}
+		out["quest"] = q
+	if not str(r.get("flag", "") if r.get("flag") != null else "").is_empty():
+		out["flag"] = str(r["flag"])
+		out["flag_text"] = str(r.get("flag_text", "") if r.get("flag_text") != null else "").strip_edges().left(80)
+	return {"requires": out}
 
 
 ## The recipe a course teaches by an item (v0.7.39.4): the game's recipe of that item, else the course's own `recipe`
@@ -739,10 +824,10 @@ static func _course_recipe(s: GameSession, data: Dictionary, item_id: String, sp
 	return {"id": str(made["id"]), "plan": made}
 
 
-static func _unknown_why(data: Dictionary, kind: String, what: String, max_spell: int) -> String:
+static func _unknown_why(data: Dictionary, kind: String, what: String) -> String:
 	match kind:
 		"spell":
-			return "заклинания %s нет или оно выше %d круга" % [what, max_spell]
+			return "заклинания %s нет" % what
 		"skill":
 			return "навыка %s нет; можно: %s" % [what, ", ".join(data["rules"]["skills"].keys())]
 		"tool":

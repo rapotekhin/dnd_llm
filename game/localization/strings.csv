@@ -1354,6 +1354,8 @@ STUDY_LESSONS,занятий: {n}
 STUDY_FEE,плата {money}
 STUDY_FREE,бесплатно
 STUDY_TEACHER,учитель: {name}
+STUDY_WAITING,Где учиться
+STUDY_WHERE,учитель ждёт: {place}
 STUDY_LESSON_HINT,"занятие {hours} ч, шанс {chance}%"
 STUDY_NEEDS,Нужно: {list}
 BTN_STUDY_READ,Читать

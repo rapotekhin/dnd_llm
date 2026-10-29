@@ -3349,6 +3349,20 @@ func handle_engine_find_npcs(params: Dictionary) -> Dictionary:
 	return {"npcs": WorldGen.find_npcs(session, Catalog.data, str(params.get("query", ""))).slice(0, 10)}
 
 
+## Who of the world teaches a thing (v0.7.39.7): a teacher to point to, or none — a quest to find one.
+func handle_engine_find_teachers(params: Dictionary) -> Dictionary:
+	if not _active(params):
+		return JsonRpcPeer.fail(-32041, "no such active turn")
+	var kind := str(params.get("kind", ""))
+	var what := TeachRules.resolve(session, Catalog.data, kind, str(params.get("what", "")))
+	if what.is_empty():
+		return {"what": "", "teachers": [], "reason": "Движок не знает «%s» (%s): назови id или точное русское название" % [params.get("what", ""), kind]}
+	var out: Array = []
+	for x: Dictionary in TeachRules.find(session, Catalog.data, kind, what):
+		out.append({"npc_id": x["id"], "name": x["name"], "role": x["role"], "teaches": x["teaches"], "place": x["place"], "here": x["here"], "course": x["course"]})
+	return {"what": what, "teachers": out}
+
+
 func handle_engine_find_quests(params: Dictionary) -> Dictionary:  # v0.7.21
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")

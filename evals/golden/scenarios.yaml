@@ -3366,3 +3366,167 @@ scenarios:
     rubric:
       - "v0.7.39.4 (приёмка автора): деревня — одним create_place с new_location: несколько комнат (улица, трактир или корчма, дома) в своих объектах (sites), её люди в npcs (корчмарь-торговец с trade_kind и ещё кто-то), хозяева зданий — new:<key>"
       - "У деревни есть открытый край дальше (open_edges); стража — через settlement village или law"
+
+  - id: teacher_fireball_none_quest
+    title: "«У кого выучить Огненный шар?» — учителя нет: задание его найти, не место без дела (просьба автора, v0.7.39.7)"
+    category: concepts
+    extends: tavern
+    input: "Горм, а у кого в городе можно выучить «Огненный шар»? Я давно хочу освоить это заклинание."
+    snapshot:
+      character:
+        name: "Ялика"
+        gender: female
+        class: wizard
+        level: 5
+        hp: {current: 28, max: 28}
+        ac: 12
+        gold_cp: 120000
+        spells: ["Волшебная стрела", "Щит", "Огненный снаряд"]
+        features: ["Магическое восстановление", "Школа воплощения"]
+    engine:
+      find_quests: []
+      validate:
+        - {kind: create_quest, summary: "Задание «Учитель огня» — простое, своё дело или от Горма"}
+    expect:
+      effects: {required_kinds_any: [create_quest], forbidden_kinds: [create_place, create_npc, course, give_item]}
+      tools_required: [find_teachers]
+    rubric:
+      - "Мастер ищет учителя find_teachers; учителя нет — даёт задание найти его (create_quest: своё дело или от Горма, кто слышал о чародее), не создаёт место или человека без задания и не отсылает к выдуманному учителю словами"
+      - "Горм в характере: о маге-огневике он только слышал, точно не знает"
+
+  - id: teacher_fireball_found_course
+    title: "«У кого выучить Огненный шар?» — маг в мире есть: указать на него и курс у него, без задания (v0.7.39.7)"
+    category: concepts
+    extends: tavern
+    input: "Горм, а у кого в городе можно выучить «Огненный шар»? Я давно хочу освоить это заклинание."
+    snapshot:
+      character:
+        name: "Ялика"
+        gender: female
+        class: wizard
+        level: 5
+        hp: {current: 28, max: 28}
+        ac: 12
+        gold_cp: 120000
+        spells: ["Волшебная стрела", "Щит", "Огненный снаряд"]
+        features: ["Магическое восстановление", "Школа воплощения"]
+    engine:
+      find_teachers:
+        - {id: npc_orest, name: "Ведун Орест", role: "волшебник", teaches: "заклинания (wizard, sorcerer) до 5 круга", place: "Серое Устье · Башня у маяка", here: false, course: ""}
+      teach_what: fireball
+      validate:
+        - {kind: course, summary: "Курс — Ведун Орест: «Огненный шар», 6 занятий, 900 зм, ждёт у учителя: Серое Устье · Башня у маяка"}
+    expect:
+      effects: {required_kinds_any: [course], forbidden_kinds: [create_quest, create_place, create_npc, give_item]}
+      tools_required: [find_teachers]
+    rubric:
+      - "Мастер находит учителя find_teachers и в рассказе называет Ореста и башню у маяка; заводит курс эффектом course с npc_id npc_orest, teach_kind spell и teach_id fireball (или «Огненный шар» — движок узнаёт название); задания не даёт"
+      - "Цену и число занятий в рассказе мастер не выдумывает: либо не называет, либо как в ответе движка (900 зм, 6 занятий); lessons и fee_cp в эффекте не важны — их ставит движок"
+
+  - id: teacher_asked_directly
+    title: "Спросить самого мага «научишь Огненному шару?» — «да, у меня» и курс (v0.7.39.7)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Мастер Орест, вы ведь знаете «Огненный шар»? Научите меня — я заплачу, сколько скажете."
+    snapshot:
+      scene:
+        room: {id: room_tower, name: "Башня у маяка", description: "Круглая комната, полки свитков, на столе — медная астролябия."}
+        exits:
+          - {id: room_market, name: "Рыночная площадь"}
+        npcs:
+          - {id: npc_orest, name: "Ведун Орест", role: "волшебник", template: mage, attitude: friendly}
+      character:
+        name: "Ялика"
+        gender: female
+        class: wizard
+        level: 5
+        hp: {current: 28, max: 28}
+        ac: 12
+        gold_cp: 120000
+        spells: ["Волшебная стрела", "Щит", "Огненный снаряд"]
+    npc_id: npc_orest
+    engine:
+      find_teachers:
+        - {id: npc_orest, name: "Ведун Орест", role: "волшебник", teaches: "заклинания (wizard, sorcerer) до 5 круга", place: "Серое Устье · Башня у маяка", here: true, course: ""}
+      teach_what: fireball
+      validate:
+        - {kind: course, summary: "Курс — Ведун Орест: «Огненный шар», 6 занятий, 900 зм"}
+    expect:
+      effects: {required_kinds_any: [course], forbidden_kinds: [create_quest, create_place, give_item, coins]}
+    rubric:
+      - "Орест соглашается учить сам («у меня и научишься») — эффект course с npc_id npc_orest, teach_kind spell, teach_id fireball (или его русское название — движок узнаёт); без задания; цену, если называет, — как в ответе движка (900 зм, 6 занятий)"
+      - "Заклинание не выдаётся словами: запись и занятия — кнопкой «Учёба»"
+
+  - id: teacher_recipe_found
+    title: "«У кого научиться варить зелье лечения?» — травница в мире: указать на неё и курс рецепта (v0.7.39.7)"
+    category: concepts
+    extends: tavern
+    input: "Горм, а кто тут умеет варить зелья лечения? Хочу научиться сам."
+    snapshot:
+      character:
+        tools: ["Набор травника [herbalism_kit]"]
+        gold_cp: 5000
+    engine:
+      find_teachers:
+        - {id: npc_vetla, name: "Ветла", role: "травница", teaches: "ремесло и его рецепты: Набор травника, Инструменты алхимика; навыки: Природа, Медицина", place: "Серое Устье · Лавка травницы", here: false, course: ""}
+      teach_what: healing_potion
+      validate:
+        - {kind: course, summary: "Курс — Ветла: «Зелье лечения», 4 занятий, 20 зм, ждёт у учителя: Серое Устье · Лавка травницы"}
+    expect:
+      effects: {required_kinds_any: [course], forbidden_kinds: [create_quest, create_place, create_npc, give_item, recipe]}
+      tools_required: [find_teachers]
+    rubric:
+      - "Мастер ищет find_teachers (kind recipe) и в рассказе называет травницу Ветлу и её лавку; курс эффектом course с npc_id npc_vetla, teach_kind recipe и teach_id зелья лечения (id каталога или вещь с recipe); рецепт сразу не выдаёт"
+
+  - id: teacher_recipe_none_quest
+    title: "«У кого научиться ковать мифриловый доспех?» — никто не учит: задание найти мастера (v0.7.39.7)"
+    category: concepts
+    extends: tavern
+    input: "Горм, где мне найти мастера, который научит ковать мифриловые доспехи?"
+    snapshot:
+      character:
+        tools: ["Инструменты кузнеца [smiths_tools]"]
+        gold_cp: 5000
+    engine:
+      find_quests: []
+      validate:
+        - {kind: create_quest, summary: "Задание «Мастер мифрила» — среднее"}
+    expect:
+      effects: {required_kinds_any: [create_quest], forbidden_kinds: [create_place, create_npc, course, recipe]}
+      tools_required: [find_teachers]
+    rubric:
+      - "Мастер ищет find_teachers; такого мастера нет — даёт задание найти его (create_quest), без нового места или человека вне задания и без курса у случайного кузнеца"
+
+  - id: quest_act_teacher
+    title: "Акт задания «найти учителя»: сценарист приводит мага и курс teaches на шаге talk (v0.7.39.7)"
+    category: concepts
+    extends: tavern
+    kind: quest_act
+    input: |
+      [quest gen_quest_3 | act 1 | own | here room_tavern_hall | near room_market]
+      Задание «Учитель огня» — простое. Найти волшебника, который учит «Огненному шару»: говорят, он живёт где-то за рынком.
+      Своё дело героя.
+      Акты:
+      1. «Поиски чародея» — Найти волшебника и попроситься в ученики ← СОБРАТЬ СЕЙЧАС
+      Рамка акта 1 из 1: шагов на всё задание осталось 1–2 (в акте 1–2), боёв осталось 0–1 — в этом последнем акте добери до минимума.
+      Бой задания — «easy»: опыт врагов 1–50 на бой (уровень героя 5).
+      Герой: Ялика, wizard 5 ур., ОЗ 28/28.
+      Герой сейчас: Зал таверны «Хромой Ворон» [room_tavern_hall].
+      Места, где герой бывал: [room_tavern_hall] Зал таверны «Хромой Ворон» (Серое Устье) — люди; [room_market] Рыночная площадь (Серое Устье) — люди
+    snapshot:
+      character:
+        name: "Ялика"
+        gender: female
+        class: wizard
+        level: 5
+        hp: {current: 28, max: 28}
+    engine:
+      find_items: []
+      find_npcs: []
+      validate:
+        - {kind: quest_act, summary: "«Учитель огня», акт 1 «Поиски чародея» · Цель: Расспросить на рынке; с ним: Ведун Орест; курс у учителя: «Огненный шар», 6 занятий, 900 зм"}
+    expect:
+      effects: {required_kinds_all: [quest_act], forbidden_kinds: [create_quest, course, create_place], required_fields: [teaches.npc]}
+    rubric:
+      - "Сценарист приводит учителя в акте: новый человек с шаблоном mage в new_npcs, шаг talk к нему (new:<key>) и teaches {npc: new:<key>, kind: spell, id: fireball (или «Огненный шар» — движок узнаёт название), name}; курса отдельным эффектом и места без шагов нет"

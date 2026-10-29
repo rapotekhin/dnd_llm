@@ -125,6 +125,9 @@ func _course(s: GameSession, data: Dictionary, id: String, _at_teacher: bool) ->
 			bits.append(tr("STUDY_FEE").format({"money": Money.format(f)}) if f > 0 else tr("STUDY_FREE"))
 	if str(co.get("teacher", "")) != _npc and not str(co.get("teacher", "")).is_empty():
 		bits.append(tr("STUDY_TEACHER").format({"name": StudyRules.npc_name(s, data, str(co["teacher"]))}))
+		var at := StudyRules.where(s, data, id)
+		if st.is_empty() and not at.is_empty() and not StudyRules.here(s, data, str(co["teacher"])):
+			bits.append(tr("STUDY_WHERE").format({"place": at}))
 	if not StudyRules.done(c, id) and not known:
 		bits.append(tr("STUDY_LESSON_HINT").format({"hours": StudyRules.lesson_hours(data), "chance": StudyRules.lesson_chance(s, data, id)}))
 	_label(_box, " · ".join(bits), UiTheme.MUTED_LABEL)
@@ -159,6 +162,12 @@ func _mine(s: GameSession, data: Dictionary) -> void:
 	if not books.is_empty():
 		_heading(tr("STUDY_BOOKS"))
 		for id: String in books:
+			_course(s, data, id, false)
+			any = true
+	var waiting := StudyRules.waiting(s, data)
+	if not waiting.is_empty():  # v0.7.39.7: courses the master pointed to, at teachers elsewhere
+		_heading(tr("STUDY_WAITING"))
+		for id: String in waiting:
 			_course(s, data, id, false)
 			any = true
 	var done: Array = StudyRules.view(c)["done"]

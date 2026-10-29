@@ -333,6 +333,211 @@
 		"languages": "",
 		"reactions": []
 	},
+	"archmage": {
+		"name": "Архимаг",
+		"name_en": "Archmage",
+		"size": "medium",
+		"type": "humanoid",
+		"cr": 12,
+		"xp": 8400,
+		"ac": 12,
+		"hp": 99,
+		"hit_dice": "18d8",
+		"speed": 30,
+		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
+		"abilities": {
+			"str": 10,
+			"dex": 14,
+			"con": 12,
+			"int": 20,
+			"wis": 15,
+			"cha": 16
+		},
+		"prof": 4,
+		"saves": {
+			"int": 9,
+			"wis": 6
+		},
+		"skills": {
+			"arcana": 13,
+			"history": 13
+		},
+		"passive_perception": 12,
+		"resistances": [
+			"damage from spells",
+			"bludgeoning, piercing, and slashing from nonmagical attacks (from stoneskin)"
+		],
+		"immunities": [],
+		"vulnerabilities": [],
+		"condition_immunities": [],
+		"actions": [
+			{
+				"name_en": "Dagger",
+				"damage": [
+					{
+						"dice": "1d4+2",
+						"type": "piercing"
+					}
+				],
+				"to_hit": 6,
+				"kind": "melee",
+				"reach": 5,
+				"range": [
+					20,
+					60
+				],
+				"name": "Кинжал"
+			}
+		],
+		"multiattack": [],
+		"traits": [
+			{
+				"id": "magic_resistance",
+				"name": "Магическая стойкость",
+				"desc": "Сатир имеет преимущество на спасброски от заклинаний и других магических эффектов."
+			},
+			{
+				"id": "spellcasting",
+				"name": "Накладывание заклинаний",
+				"desc": "Жрец — заклинатель 5-го уровня. Его характеристика заклинаний — Мудрость (Сл спасброска от заклинаний 13, +5 к броскам атаки заклинаниями). Подготовлены заговоры (без ограничений): свет, священный огонь, чудотворство; 1-й уровень (4 ячейки): лечение ран, направляющий удар, убежище; 2-й уровень (3 ячейки): малое восстановление, духовное оружие; 3-й уровень (2 ячейки): рассеивание магии, духовные стражи."
+			}
+		],
+		"equipment": [
+			"dagger"
+		],
+		"languages": "any six languages",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 17,
+			"attack": 9,
+			"ability": "int",
+			"level": 18,
+			"slots": {
+				"1": 4,
+				"2": 3,
+				"3": 3,
+				"4": 3,
+				"5": 3,
+				"6": 1,
+				"7": 1,
+				"8": 1,
+				"9": 1
+			},
+			"spells": [
+				{
+					"id": "disguise_self",
+					"level": 1
+				},
+				{
+					"id": "invisibility",
+					"level": 2
+				},
+				{
+					"id": "fire_bolt",
+					"level": 0
+				},
+				{
+					"id": "light",
+					"level": 0
+				},
+				{
+					"id": "mage_hand",
+					"level": 0
+				},
+				{
+					"id": "prestidigitation",
+					"level": 0
+				},
+				{
+					"id": "shocking_grasp",
+					"level": 0
+				},
+				{
+					"id": "detect_magic",
+					"level": 1
+				},
+				{
+					"id": "identify",
+					"level": 1
+				},
+				{
+					"id": "mage_armor",
+					"level": 1
+				},
+				{
+					"id": "magic_missile",
+					"level": 1
+				},
+				{
+					"id": "detect_thoughts",
+					"level": 2
+				},
+				{
+					"id": "mirror_image",
+					"level": 2
+				},
+				{
+					"id": "misty_step",
+					"level": 2
+				},
+				{
+					"id": "counterspell",
+					"level": 3
+				},
+				{
+					"id": "fly",
+					"level": 3
+				},
+				{
+					"id": "lightning_bolt",
+					"level": 3
+				},
+				{
+					"id": "banishment",
+					"level": 4
+				},
+				{
+					"id": "fire_shield",
+					"level": 4
+				},
+				{
+					"id": "stoneskin",
+					"level": 4
+				},
+				{
+					"id": "cone_of_cold",
+					"level": 5
+				},
+				{
+					"id": "scrying",
+					"level": 5
+				},
+				{
+					"id": "wall_of_force",
+					"level": 5
+				},
+				{
+					"id": "globe_of_invulnerability",
+					"level": 6
+				},
+				{
+					"id": "teleport",
+					"level": 7
+				},
+				{
+					"id": "mind_blank",
+					"level": 8
+				},
+				{
+					"id": "time_stop",
+					"level": 9
+				}
+			],
+			"innate": false
+		}
+	},
 	"awakened_shrub": {
 		"name": "Пробуждённый кустарник",
 		"name_en": "Awakened Shrub",
@@ -9114,6 +9319,155 @@
 		],
 		"languages": "Draconic",
 		"reactions": []
+	},
+	"mage": {
+		"name": "Маг",
+		"name_en": "Mage",
+		"size": "medium",
+		"type": "humanoid",
+		"cr": 6,
+		"xp": 2300,
+		"ac": 12,
+		"hp": 40,
+		"hit_dice": "9d8",
+		"speed": 30,
+		"fly": 0,
+		"swim": 0,
+		"darkvision": 0,
+		"abilities": {
+			"str": 9,
+			"dex": 14,
+			"con": 11,
+			"int": 17,
+			"wis": 12,
+			"cha": 11
+		},
+		"prof": 3,
+		"saves": {
+			"int": 6,
+			"wis": 4
+		},
+		"skills": {
+			"arcana": 6,
+			"history": 6
+		},
+		"passive_perception": 11,
+		"resistances": [],
+		"immunities": [],
+		"vulnerabilities": [],
+		"condition_immunities": [],
+		"actions": [
+			{
+				"name_en": "Dagger",
+				"damage": [
+					{
+						"dice": "1d4+2",
+						"type": "piercing"
+					}
+				],
+				"to_hit": 5,
+				"kind": "melee",
+				"reach": 5,
+				"range": [
+					20,
+					60
+				],
+				"name": "Кинжал"
+			}
+		],
+		"multiattack": [],
+		"traits": [
+			{
+				"id": "spellcasting",
+				"name": "Накладывание заклинаний",
+				"desc": "Жрец — заклинатель 5-го уровня. Его характеристика заклинаний — Мудрость (Сл спасброска от заклинаний 13, +5 к броскам атаки заклинаниями). Подготовлены заговоры (без ограничений): свет, священный огонь, чудотворство; 1-й уровень (4 ячейки): лечение ран, направляющий удар, убежище; 2-й уровень (3 ячейки): малое восстановление, духовное оружие; 3-й уровень (2 ячейки): рассеивание магии, духовные стражи."
+			}
+		],
+		"equipment": [
+			"dagger"
+		],
+		"languages": "any four languages",
+		"reactions": [],
+		"spellcasting": {
+			"dc": 14,
+			"attack": 6,
+			"ability": "int",
+			"level": 9,
+			"slots": {
+				"1": 4,
+				"2": 3,
+				"3": 3,
+				"4": 3,
+				"5": 1
+			},
+			"spells": [
+				{
+					"id": "fire_bolt",
+					"level": 0
+				},
+				{
+					"id": "light",
+					"level": 0
+				},
+				{
+					"id": "mage_hand",
+					"level": 0
+				},
+				{
+					"id": "prestidigitation",
+					"level": 0
+				},
+				{
+					"id": "detect_magic",
+					"level": 1
+				},
+				{
+					"id": "mage_armor",
+					"level": 1
+				},
+				{
+					"id": "magic_missile",
+					"level": 1
+				},
+				{
+					"id": "shield",
+					"level": 1
+				},
+				{
+					"id": "misty_step",
+					"level": 2
+				},
+				{
+					"id": "suggestion",
+					"level": 2
+				},
+				{
+					"id": "counterspell",
+					"level": 3
+				},
+				{
+					"id": "fireball",
+					"level": 3
+				},
+				{
+					"id": "fly",
+					"level": 3
+				},
+				{
+					"id": "greater_invisibility",
+					"level": 4
+				},
+				{
+					"id": "ice_storm",
+					"level": 4
+				},
+				{
+					"id": "cone_of_cold",
+					"level": 5
+				}
+			],
+			"innate": false
+		}
 	},
 	"magma_mephit": {
 		"name": "Магматический мефит",

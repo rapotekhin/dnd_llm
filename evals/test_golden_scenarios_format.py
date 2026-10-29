@@ -21,7 +21,7 @@ NO_INPUT_KINDS = {"enter", "resume", "rest", "downed"}  # deal / haggle / quest 
 DC_TIERS = {"very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"}
 EFFECT_KINDS = {"give_item", "take_item", "coins", "damage", "heal", "condition", "cast", "use_feature", "use_item", "start_combat", "advance_time", "furnish", "take_prop", "prop_state",
                 "quest_update", "flag", "xp", "npc_attitude", "advance_time", "move", "note", "equip", "crime_known", "crime_release", "npc_discount", "npc_favor", "accept_quest", "reveal_secret", "reputation", "take_from", "put_in", "unlock", "drop_item", "fill", "create_npc", "create_place", "npc_follow", "create_quest", "quest_act", "goal_assess", "goal_hint", "owner", "door", "disease", "recipe", "job", "property", "bank", "supplier", "course", "bond", "fence", "heist", "org", "permit", "stock"}
-TOOLS = {"find_items", "create_item", "lookup_rule", "lookup_spell", "find_npcs", "find_places", "find_quests"}
+TOOLS = {"find_items", "create_item", "lookup_rule", "lookup_spell", "find_npcs", "find_places", "find_quests", "find_teachers"}
 EXPECT_KEYS = {"check", "max_checks", "effects", "next_mode", "narration", "options",
                "tools_required", "tools_forbidden", "missing_concept"}
 CHECK_KEYS = {"required", "skill_in", "dc_tier_in", "contest_npc", "contest_skill_in", "tool_in"}

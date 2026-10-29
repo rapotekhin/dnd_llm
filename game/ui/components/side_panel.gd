@@ -720,10 +720,11 @@ func _animal_acts(_s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	rb.add_theme_color_override("font_color", UiTheme.BAD)
 
 
-## Study (v0.7.30): «Учёба» when a lesson may go here — a teacher of the hero's course is here or a study book is carried.
+## Study (v0.7.30): «Учёба» when a lesson may go here — a teacher of the hero's course is here or a study book is carried;
+## v0.7.39.7 — or a course the master pointed to waits at a teacher elsewhere (where to go).
 func _study_row(s: GameSession, can_act: bool) -> void:
 	var data := Catalog.data
-	var ready := not StudyRules.books(s, data).is_empty()
+	var ready := not StudyRules.books(s, data).is_empty() or not StudyRules.waiting(s, data).is_empty()
 	for id: String in StudyRules.view(s.character)["courses"]:
 		if StudyRules.here(s, data, str(StudyRules.course(s, data, id).get("teacher", ""))):
 			ready = true
