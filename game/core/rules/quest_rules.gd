@@ -138,7 +138,7 @@ static func tracked(s: GameSession, world: Dictionary) -> String:
 
 ## A fact of the engine (a talk step is closed only by its button).
 static func met(s: GameSession, when: Dictionary) -> bool:
-	if when.has("item") and not when.has("talk") and int(s.character.get("inventory", {}).get(str(when["item"]), 0)) <= 0:
+	if when.has("item") and not when.has("talk") and int(s.character.get("inventory", {}).get(str(when["item"]), 0)) < int(when.get("qty", 1)):
 		return false  # a thing left at a place (v0.7.34.5): the hero has to bring it
 	if when.has("encounter"):
 		return s.encounters_done.has(str(when["encounter"]))
@@ -179,7 +179,7 @@ static func advance(s: GameSession, data: Dictionary) -> Array[String]:
 			if not (met(s, step["when"]) or all_done) or (step.has("needs") and not met(s, step["needs"])):  # a part done stays done: a place left behind (v0.7.39.6)
 				break
 			if step["when"].has("item"):
-				_hand_over(s, data, str(step["when"]["item"]), lines, "Оставлено")
+				_hand_over(s, data, str(step["when"]["item"]), lines, "Оставлено", int(step["when"].get("qty", 1)))
 			lines.append_array(_complete_step(s, data, id))
 	return lines
 
@@ -288,7 +288,7 @@ static func talks_here(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 			continue  # the hero does not know enough yet (v0.7.39.6)
 		if when.has("talk") and here.has(to):
 			out.append({"quest_id": id, "action": str(step.get("action", step["text"])), "npc_id": to,
-				"item": str(when.get("item", ""))})
+				"item": str(when.get("item", "")), "qty": int(when.get("qty", 1))})
 	return out
 
 
@@ -296,7 +296,7 @@ static func talks_here(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 static func can_talk(s: GameSession, world: Dictionary, quest_id: String) -> String:
 	for t: Dictionary in talks_here(s, world):
 		if t["quest_id"] == quest_id:
-			if not str(t["item"]).is_empty() and int(s.character.get("inventory", {}).get(t["item"], 0)) <= 0:
+			if not str(t["item"]).is_empty() and int(s.character.get("inventory", {}).get(t["item"], 0)) < int(t["qty"]):
 				return "QUEST_NEEDS_ITEM"
 			return "QUEST_IN_CONVERSATION" if s.in_conversation() and s.npc_id != t["npc_id"] else ""
 	return "QUEST_WRONG_PLACE"
@@ -308,18 +308,18 @@ static func talk(s: GameSession, data: Dictionary, quest_id: String) -> Array[St
 	var lines: Array[String] = []
 	var item := str(when.get("item", ""))
 	if not item.is_empty():
-		_hand_over(s, data, item, lines, "Отдано")
+		_hand_over(s, data, item, lines, "Отдано", int(when.get("qty", 1)))
 	lines.append_array(_complete_step(s, data, quest_id))
 	lines.append_array(advance(s, data))
 	return lines
 
 
-static func _hand_over(s: GameSession, data: Dictionary, item: String, lines: Array[String], verb: String) -> void:
+static func _hand_over(s: GameSession, data: Dictionary, item: String, lines: Array[String], verb: String, qty: int = 1) -> void:
 	var inv: Dictionary = s.character["inventory"]
-	inv[item] = int(inv.get(item, 0)) - 1
+	inv[item] = int(inv.get(item, 0)) - qty
 	if int(inv[item]) <= 0:
 		inv.erase(item)
-	lines.append("%s: %s" % [verb, ItemRules.display_name(data["items"], s.items, item)])
+	lines.append("%s: %s%s" % [verb, ItemRules.display_name(data["items"], s.items, item), " ×%d" % qty if qty > 1 else ""])
 
 
 static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -> Array[String]:

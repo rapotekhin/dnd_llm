@@ -1493,6 +1493,34 @@ func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
 	return ""
 
 
+## Hunting or fishing (v0.7.41): `hours` at the room's ground of `kind` (WildsRules) — the time passes first (the
+## patrol may cut it), then the check and the catch; a big beast or a predator starts a fight.
+func wilds_act(kind: String, hours: int) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "CRAFT_NOT_NOW"
+	var data := Catalog.data
+	var why := WildsRules.why_not(session, data, kind)
+	if not why.is_empty():
+		return why
+	var span: Array = WildsRules.kind(data, kind)["hours"]
+	var w := CrimeRules.wait(session, data, clampi(hours, int(span[0]), int(span[1])) * 60)
+	var lines: Array[String] = w["lines"]
+	var spent := int(w["minutes"]) / 60
+	var fight: Array = []
+	if spent > 0:
+		var r := WildsRules.go(session, data, kind, spent)
+		lines.append_array(r["lines"])
+		fight = r["fight"]
+	CharacterRules.refresh(session.character, data, session.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	if not fight.is_empty():
+		session.pending_fight = fight
+		_start_pending_fight()
+	EventBus.state_changed.emit()
+	return ""
+
+
 ## Work (v0.7.26): hire, a shift, quit — the engine decides; a shift's event goes to the master as a short turn.
 func job_act(what: String, id: String) -> String:
 	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():

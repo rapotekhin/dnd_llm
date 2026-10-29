@@ -18,6 +18,7 @@ signal place_requested
 signal board_requested(prop_id: String)
 signal development_requested
 signal craft_requested
+signal wilds_requested(kind: String)  # v0.7.41
 signal job_requested(npc_id: String)  # v0.7.26
 signal property_requested(mode: String, npc_id: String)  # v0.7.27
 signal bank_requested(npc_id: String)  # v0.7.28
@@ -640,12 +641,13 @@ func _needs(s: GameSession, can_act: bool) -> void:
 
 
 ## Crafting (v0.7.24): «Ремесло» when the hero knows a recipe, has work begun or a thing to break down; the room's
-## gathering spots as buttons. No row when there is nothing of it.
+## gathering spots as buttons; v0.7.41: its hunting grounds and fishing waters. No row when there is nothing of it.
 func _craft_row(s: GameSession, can_act: bool) -> void:
 	var data := Catalog.data
 	var craft := not CraftRules.known(s, data).is_empty() or not CraftRules.project(s.character).is_empty()
 	var spots := CraftRules.gather_here(s, data)
-	if not craft and spots.is_empty():
+	var grounds := WildsRules.here(s, data)
+	if not craft and spots.is_empty() and grounds.is_empty():
 		return
 	var acts := HFlowContainer.new()  # the gathering spots wrap rather than cut their names (v0.7.25)
 	acts.name = "CraftActs"
@@ -674,6 +676,17 @@ func _craft_row(s: GameSession, can_act: bool) -> void:
 		gb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		gb.tooltip_text = tr(why) if not why.is_empty() else tr("GATHER_TIP").format({"time": TimeRules.span(int(g["minutes"])),
 			"skill": CraftRules.tr_skill(data, str(g["skill"])), "dc": int(g["dc"])})
+	for k: String in grounds:
+		var wd := WildsRules.kind(data, k)
+		var wwhy := WildsRules.why_not(s, data, k)
+		var wb := _row_button(acts, str(wd["act"]), wilds_requested.emit.bind(k), can_act and wwhy.is_empty())
+		wb.name = "Wilds_" + k
+		wb.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		wb.clip_text = false
+		wb.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		wb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		wb.tooltip_text = wwhy if not wwhy.is_empty() else tr("WILDS_TIP").format({"skill": CraftRules.tr_skill(data, str(wd["skill"])),
+			"dc": int(wd["dc"]), "n": WildsRules.stock(s, data, k)})
 
 
 ## Work (v0.7.26): a shift of each job whose employer is here, the employer's window by the right button.

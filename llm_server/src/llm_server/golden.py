@@ -129,6 +129,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "chronicle": scene.get("chronicle", []),
                 "reputation": scene.get("reputation", ""),
                 "open_edges": scene.get("open_edges", []),
+                "wilds": scene.get("wilds", []),  # hunting grounds and fishing waters (0.85.0)
             },
             "character": {
                 "name": ch.get("name", ""), "gender": ch.get("gender", "other"), "class_name": ch.get("class", ""),

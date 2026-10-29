@@ -22,6 +22,7 @@ var _journal: WorldNotes
 var _level_up: LevelUpView
 var _short_rest: SmallDialog
 var _long_rest: SmallDialog
+var _wilds: SmallDialog  # v0.7.41
 var _chips: EffectChips
 var _track: Button  # the followed quest's step over the chat (v0.7.22.32)
 var _theft: TheftPanel
@@ -190,6 +191,9 @@ func _ready() -> void:
 	side.board_requested.connect(func(prop: String) -> void: _board.open(prop))  # v0.7.22.13
 	side.development_requested.connect(func() -> void: _sheet.open_tab(3))  # v0.7.19.1
 	side.craft_requested.connect(func() -> void: _craft.open())  # v0.7.24
+	side.wilds_requested.connect(func(k: String) -> void:  # v0.7.41
+		_wilds.ground = k
+		_wilds.open())
 	side.job_requested.connect(func(npc: String) -> void: _jobs.open(npc))  # v0.7.26
 	side.property_requested.connect(func(mode: String, npc: String) -> void: _property.open(mode, npc))  # v0.7.27
 	side.bank_requested.connect(func(npc: String) -> void: _bank.open(npc))  # v0.7.28
@@ -223,7 +227,9 @@ func _ready() -> void:
 	_prepare.name = "PrepareView"
 	_long_rest = SmallDialog.new(SmallDialog.LONG_REST)
 	_long_rest.name = "LongRestView"
-	for v: SmallDialog in [_short_rest, _prepare, _long_rest]:
+	_wilds = SmallDialog.new(SmallDialog.WILDS)
+	_wilds.name = "WildsView"
+	for v: SmallDialog in [_short_rest, _prepare, _long_rest, _wilds]:
 		v.visible = false
 		add_child(v)
 		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -357,7 +363,7 @@ func _ready() -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _family, _heists, _org, _office, _image]
+	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _family, _heists, _org, _office, _image]
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.

@@ -845,6 +845,13 @@
           "default": "",
           "title": "Time Of Day",
           "type": "string"
+        },
+        "wilds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Wilds",
+          "type": "array"
         }
       },
       "required": [

@@ -137,6 +137,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "shop": ("своя торговля: прилавок, лавка, грамота, опт; поставщик, которого нет (`supplier`)", ("supplier",)),
     "jobs": ("работа за плату: игрок просит работу, которой нет у нанимателя сцены (`job`)", ("job",)),
     "background": ("предыстория героя и связь NPC с его прошлым", ()),
+    "wilds": ("охота и рыбалка, угодья, браконьерство; зверь ушёл или вернулся, рыба пропала, новые угодья (`wilds`)", ("wilds",)),
     "games": ("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; своя игра (`contest`)", ("contest",)),
     "world_edits": ("правка готового места: у человека или в сундуке появилась или пропала вещь по причине в мире (`world_item`); новая вещь в обставленной комнате (`furnish` с `cause`)", ("world_item",)),
     "containers": ("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`take_from`, `put_in`, `unlock`, `drop_item`)",
@@ -150,6 +151,8 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
 SCENE_TOPICS = {"places", "containers", "doors", "equip", "tools", "invisible"}
 WATER_WORDS = re.compile(r"вод[аыуе]|набра|набер|наполн|зачерп|бурдюк|фляг|кувшин|ведр", re.IGNORECASE)
 BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
+WILDS_WORDS = re.compile(r"охот|рыб|удочк|удить|сеть|сети|дич|зверь|звер[яюи]|олен|выслеж|капкан|силк|кабан|заяц|зайц|улов|клюёт|клюет|браконь",
+                         re.IGNORECASE)  # v0.7.41
 
 
 # Containers and new places come whole only when the player's words touch them (v0.7.34.3): a chest stood in 23 of 31
@@ -194,6 +197,8 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("containers")
     if mentions(said, WATER_WORDS):  # v0.7.34.6: water drawn by words
         out.append("water")
+    if scene and scene.wilds and mentions(said, WILDS_WORDS):  # v0.7.41: a hunt or the grounds changed by words
+        out.append("wilds")
     if scene and any(e.door for e in scene.exits):  # v0.7.22.25
         out.append("doors")
     if scene and scene.creatures:  # the prisoners, a truce, the hero's captors (v0.7.22.17)

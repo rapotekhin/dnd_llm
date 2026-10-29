@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.84.0"
+PROTOCOL_VERSION = "0.85.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -231,6 +231,7 @@ class Scene(_In):
     chronicle: list[str] = Field(default_factory=list)  # the last facts of the engine: «день 2, 09:12, Таверна — …» (0.19.0)
     reputation: str = ""  # the hero's name in this settlement: «Ольховый Брод — свой (+1)» (0.24.0)
     open_edges: list[str] = Field(default_factory=list)  # where the pack lets the master draw new places (0.32.0)
+    wilds: list[str] = Field(default_factory=list)  # 0.85.0: hunting grounds and fishing waters here with their stock
     summons: list[str] = Field(default_factory=list)  # 0.49.0: creatures a spell called to go with the hero — «Волк 1 (Призыв зверей, до конца концентрации)»
     site_name: str = ""  # 0.50.0: the site of the room (a building, a yard) — «Таверна «Хромой олень»»
     site_description: str = ""
@@ -793,6 +794,8 @@ class NewRoom(_Out):
     encounter: NewEncounter | None = None
     site: str = ""
     open_edges: list[NewEdge] = Field(default_factory=list, max_length=2)
+    wilds: list[Literal["game", "fish"]] = Field(default_factory=list, max_length=2)  # 0.85.0: hunting / fishing here
+    wilds_owner: str = ""  # 0.85.0: an NPC of the world whose grounds these are — hunting without its leave is poaching
 
 
 class SiteStaff(_Out):
@@ -943,12 +946,13 @@ class ActStep(_Out):
     of the act's things, an earlier act's or a catalog id), `visit` (`item_id` — left there), `find`, `fight` as in
     ActFact; `all` / `any` — 2–4 `parts` in any order (all) or one of them (any); `choice` — the finale's choice in a
     room (`target`), its options in the act's `choices`. `needs` — knowledge the step waits for (`needs_text` — what
-    the hero lacks)."""
+    the hero lacks). 0.85.0: `item_qty` — how many of a catalog `item_id` to hand over (an order of three hides)."""
 
     text: str
     kind: Literal["talk", "visit", "find", "fight", "all", "any", "choice"]
     target: str = ""
     item_id: str | None = None
+    item_qty: int = Field(default=1, ge=1, le=12)
     parts: list[ActFact] = Field(default_factory=list, max_length=4)
     needs: ActFact | None = None
     needs_text: str = ""
@@ -1267,6 +1271,18 @@ class ContestEffect(_Out):
     npc_id: str
     game: str | None = None  # dice | cards | arm | drinking | song | riddles, or a made kind's id
     new_kind: NewContestKind | None = None
+
+
+class WildsEffect(_Out):
+    """Hunting grounds or fishing waters changed for a cause in the world (0.85.0): `deplete` — the beasts left or were
+    beaten out, the fish gone; `restore` — they are back; `add` — a room gets a ground it lacked (not indoors). The
+    catch, its check and the stock's regrowth are the engine's."""
+
+    kind: Literal["wilds"] = "wilds"
+    ground: Literal["game", "fish"]
+    op: Literal["deplete", "restore", "add"]
+    cause: str = Field(min_length=8, max_length=160)
+    room_id: str | None = None  # empty — the hero's room
 
 
 class BondEffect(_Out):
@@ -1639,7 +1655,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

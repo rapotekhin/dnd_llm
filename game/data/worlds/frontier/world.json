@@ -775,6 +775,7 @@
 			],
 			"site_id": "pushcha-edge",
 			"tags": [
+				"game",
 				"timber",
 				"herbs",
 				"forage"
@@ -857,6 +858,7 @@
 			],
 			"site_id": "pushcha-trail",
 			"tags": [
+				"game",
 				"timber",
 				"forage"
 			]
@@ -907,6 +909,7 @@
 			],
 			"site_id": "pushcha-glade",
 			"tags": [
+				"game",
 				"herbs",
 				"forage"
 			]
@@ -1475,6 +1478,7 @@
 			],
 			"site_id": "brod-river-house",
 			"tags": [
+				"fish",
 				"water"
 			],
 			"variants": [
@@ -1675,6 +1679,7 @@
 				"roast_meat": 4
 			},
 			"wants": [
+				"catch",
 				"consumable"
 			],
 			"shuns": [

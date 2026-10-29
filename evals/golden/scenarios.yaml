@@ -3646,3 +3646,66 @@ scenarios:
       effects: {required_kinds_any: [contest], forbidden_kinds: [coins, damage]}
     rubric:
       - "Ведда принимает спор, и мастер даёт contest с её npc_id: своя игра new_kind с проверкой по навыку или характеристике 5e (ловкость рук, ловкость), не выдумывая результата бросков"
+
+  - id: wilds_hunt_by_words
+    title: "Охота словами — кнопка «Охотиться», добычу считает движок"
+    category: concepts
+    extends: tavern
+    input: "Иду выслеживать оленя вдоль ручья — к вечеру хочу принести мяса."
+    snapshot:
+      scene:
+        location: {id: pushcha, name: "Сумеречная Пуща", type: forest}
+        room: {id: pushcha-edge, name: "Опушка Пущи", description: "Старые ели, звериные тропы уходят в чащу."}
+        exits:
+          - {id: pushcha-trail, name: "Тропа лесорубов"}
+        npcs: []
+        wilds: ["Охота (кнопка «Охотиться»): запас 6 из 6"]
+    expect:
+      max_checks: 0
+      effects: {forbidden_kinds: [give_item, start_combat, advance_time]}
+    rubric:
+      - "Мастер говорит, что охота — кнопка «Охотиться» на панели, и описывает, как герой выходит на звериную тропу; мяса, дичи или боя со зверем сам не выдаёт и исхода охоты не придумывает"
+
+  - id: wilds_river_poisoned
+    title: "Герой травит рыбу в реке — wilds deplete с причиной"
+    category: concepts
+    extends: tavern
+    input: "Выливаю в реку весь бочонок дёгтя у самых мостков — пусть рыба тут передохнет."
+    snapshot:
+      scene:
+        location: {id: brod, name: "Ольховый Брод", type: town}
+        room: {id: brod-river-yard, name: "Двор у реки", description: "Мостки над медленной рекой, сохнут сети."}
+        exits:
+          - {id: brod-square, name: "Рыночная площадь"}
+        npcs: []
+        wilds: ["Рыбалка (кнопка «Рыбачить»): запас 10 из 10"]
+      character:
+        inventory:
+          - {item_id: tar_keg, name: "Бочонок дёгтя", qty: 1}
+    engine:
+      validate:
+        - {kind: wilds, summary: "Рыбалка: опустели (дёготь в реке)"}
+    expect:
+      effects: {required_kinds_any: [wilds]}
+    rubric:
+      - "Мастер даёт wilds с ground fish, op deplete и причиной (дёготь в реке): рыба у мостков пропала; не описывает это одними словами без эффекта"
+
+  - id: wilds_lake_place
+    title: "Лесное озеро на краю — create_place с угодьями fish"
+    category: concepts
+    extends: tavern
+    input: "Сворачиваю с просеки к лесному озеру — лесорубы говорили, там щука берёт."
+    snapshot:
+      scene:
+        location: {id: pushcha, name: "Сумеречная Пуща", type: forest}
+        room: {id: pushcha-trail, name: "Тропа лесорубов", description: "Старая просека, заросшая папоротником."}
+        npcs: []
+        open_edges: ["[0] чаща по обе стороны просеки, тропка к воде (forest)"]
+    engine:
+      find_places: []
+      find_edges: []
+    expect:
+      effects: {required_kinds_any: [create_place]}
+      tools_required: [find_places]
+    rubric:
+      - "Мастер создаёт место create_place на крае 0, и у комнаты озера (под открытым небом) есть угодья wilds с fish — рыбалка там пойдёт кнопкой"

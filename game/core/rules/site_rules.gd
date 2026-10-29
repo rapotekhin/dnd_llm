@@ -130,15 +130,17 @@ static func ask(s: GameSession, data: Dictionary, npc_id: String) -> Array[Strin
 
 
 ## The owner's leave (the ask, the master's `permit`, an organization's paid entry): `site_id` or every private site
-## of the owner. Lines.
+## of the owner; v0.7.41: its hunting grounds too (a room id — WildsRules.closed_grounds). Lines.
 static func grant(s: GameSession, data: Dictionary, npc_id: String, site_id: String = "") -> Array[String]:
 	var sites: Array[String] = closed_to_hero(s, data, npc_id)
+	sites.append_array(WildsRules.closed_grounds(s, data, npc_id))
 	if not site_id.is_empty():
 		sites = [site_id]
 	if sites.is_empty():
 		return []
 	var world := WorldView.new(data["world"])
-	var names := ", ".join(sites.map(func(sid: String) -> String: return str(world.site(sid).get("name", sid))))
+	var names := ", ".join(sites.map(func(sid: String) -> String:
+		return str(world.site(sid).get("name", world.room(sid).get("name", sid)))))
 	for sid: String in sites:
 		s.permits[sid] = npc_id
 	s.permit_asked.erase(npc_id)
@@ -153,6 +155,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	if not s.npcs_here(data["world"], s.room_id).has(who):
 		return {"reason": "%s не в сцене — впустить может только хозяин, который здесь" % who}
 	var closed := closed_to_hero(s, data, who)
+	closed.append_array(WildsRules.closed_grounds(s, data, who))  # v0.7.41: leave to hunt in its grounds
 	if closed.is_empty():
 		return {"reason": "у %s нет мест, закрытых для героя: впускать некуда" % BondRules.npc_name(s, data, who)}
 	var site := str(spec.get("site_id", "")) if spec.get("site_id") != null else ""

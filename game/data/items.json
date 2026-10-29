@@ -2951,6 +2951,7 @@
 			"properties": [],
 			"stack": true,
 			"material": true,
+			"tags": ["hide"],
 			"description": "Снятая со зверя шкура. Кожевник выделает из неё кожу или сошьёт шкурную броню."
 		},
 		"reliquary": {
@@ -4467,6 +4468,7 @@
 			"stack": true,
 			"material": true,
 			"spoils_days": 2,
+			"tags": ["catch"],
 			"description": "Кусок свежего мяса — с рынка или с добычи. Без огня есть нельзя, через пару дней портится."
 		},
 		"grain": {
@@ -5016,6 +5018,7 @@
 			"properties": [],
 			"stack": true,
 			"spoils_days": 2,
+			"tags": ["catch"],
 			"description": "Утренний улов: окунь и лещ, пока не уснувшие толком."
 		},
 		"silver_bar": {

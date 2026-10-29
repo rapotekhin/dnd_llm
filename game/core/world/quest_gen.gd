@@ -839,6 +839,11 @@ static func _act_step(s: GameSession, data: Dictionary, r: Dictionary, content: 
 			if f.has("reason"):
 				return {"reason": "шаг «%s»: %s" % [text, f["reason"]]}
 			st["when"] = f["when"]
+			var n := clampi(int(r.get("item_qty", 1)) if r.get("item_qty") != null else 1, 1, 12)
+			if n > 1 and (st["when"] as Dictionary).has("item"):  # v0.7.41: an order of several (three hides, ten fish)
+				if not data["items"]["catalog"].has(str(st["when"]["item"])):
+					return {"reason": "шаг «%s»: item_qty — только для вещи каталога (не своей вещи задания)" % text}
+				st["when"]["qty"] = n
 			if bool(f.get("danger", false)):
 				st["danger"] = true
 	if bool(r.get("danger", false)):

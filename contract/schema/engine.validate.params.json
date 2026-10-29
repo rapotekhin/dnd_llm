@@ -185,7 +185,7 @@
     },
     "ActStep": {
       "additionalProperties": false,
-      "description": "A step of an act (0.81.0): `talk` — `target` an NPC id or «new:<key>» (`item_id` — a thing to hand over: a key\nof the act's things, an earlier act's or a catalog id), `visit` (`item_id` — left there), `find`, `fight` as in\nActFact; `all` / `any` — 2–4 `parts` in any order (all) or one of them (any); `choice` — the finale's choice in a\nroom (`target`), its options in the act's `choices`. `needs` — knowledge the step waits for (`needs_text` — what\nthe hero lacks).",
+      "description": "A step of an act (0.81.0): `talk` — `target` an NPC id or «new:<key>» (`item_id` — a thing to hand over: a key\nof the act's things, an earlier act's or a catalog id), `visit` (`item_id` — left there), `find`, `fight` as in\nActFact; `all` / `any` — 2–4 `parts` in any order (all) or one of them (any); `choice` — the finale's choice in a\nroom (`target`), its options in the act's `choices`. `needs` — knowledge the step waits for (`needs_text` — what\nthe hero lacks). 0.85.0: `item_qty` — how many of a catalog `item_id` to hand over (an order of three hides).",
       "properties": {
         "danger": {
           "default": false,
@@ -203,6 +203,13 @@
           ],
           "default": null,
           "title": "Item Id"
+        },
+        "item_qty": {
+          "default": 1,
+          "maximum": 12,
+          "minimum": 1,
+          "title": "Item Qty",
+          "type": "integer"
         },
         "kind": {
           "enum": [
@@ -2937,6 +2944,23 @@
           "default": "",
           "title": "Site",
           "type": "string"
+        },
+        "wilds": {
+          "items": {
+            "enum": [
+              "game",
+              "fish"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Wilds",
+          "type": "array"
+        },
+        "wilds_owner": {
+          "default": "",
+          "title": "Wilds Owner",
+          "type": "string"
         }
       },
       "required": [
@@ -5036,6 +5060,60 @@
       "title": "UseItemEffect",
       "type": "object"
     },
+    "WildsEffect": {
+      "additionalProperties": false,
+      "description": "Hunting grounds or fishing waters changed for a cause in the world (0.85.0): `deplete` — the beasts left or were\nbeaten out, the fish gone; `restore` — they are back; `add` — a room gets a ground it lacked (not indoors). The\ncatch, its check and the stock's regrowth are the engine's.",
+      "properties": {
+        "cause": {
+          "maxLength": 160,
+          "minLength": 8,
+          "title": "Cause",
+          "type": "string"
+        },
+        "ground": {
+          "enum": [
+            "game",
+            "fish"
+          ],
+          "title": "Ground",
+          "type": "string"
+        },
+        "kind": {
+          "const": "wilds",
+          "default": "wilds",
+          "title": "Kind",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "deplete",
+            "restore",
+            "add"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "room_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Room Id"
+        }
+      },
+      "required": [
+        "ground",
+        "op",
+        "cause"
+      ],
+      "title": "WildsEffect",
+      "type": "object"
+    },
     "WorldItemEffect": {
       "additionalProperties": false,
       "description": "The master moves a thing of the world with a cause (0.83.0): a person got or lost a thing, a room's chest\nfilled or emptied — not the hero's own things (those are give_item / take_item and the hero's acts).",
@@ -5183,6 +5261,7 @@
           "upgrade": "#/$defs/UpgradeEffect",
           "use_feature": "#/$defs/UseFeatureEffect",
           "use_item": "#/$defs/UseItemEffect",
+          "wilds": "#/$defs/WildsEffect",
           "world_item": "#/$defs/WorldItemEffect"
         },
         "propertyName": "kind"
@@ -5244,6 +5323,9 @@
         },
         {
           "$ref": "#/$defs/ContestEffect"
+        },
+        {
+          "$ref": "#/$defs/WildsEffect"
         },
         {
           "$ref": "#/$defs/PermitEffect"

@@ -1613,3 +1613,11 @@ BTN_CONTEST_PLAY,Сыграть
 BTN_CONTEST_ROLL,Бросить
 BTN_CONTEST_CHEAT,Жульничать
 BTN_CONTEST_FORFEIT,Сдаться
+BTN_WILDS_CONFIRM,Идти
+WILDS_TIP,"Проверка: {skill}, Сл {dc}. Запас угодий: {n}"
+WILDS_CHECK,"Проверка: {skill} {bonus} против Сл {dc}; каждые 5 сверх Сл — больше добычи"
+WILDS_ADV,С собой {item} — преимущество
+WILDS_DIS,"Без снастей — помеха (удочка, сеть)"
+WILDS_STOCK,Запас угодий: {n} из {max} — отрастает по дням
+WILDS_POACH,"Это угодья: {owner}. Без позволения — браконьерство"
+WILDS_UNTIL,Вернётесь к {clock}

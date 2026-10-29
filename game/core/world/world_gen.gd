@@ -382,12 +382,24 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 				"new_location": bool(ed.get("new_location", true)) if ed.get("new_location") != null else true})
 		if room_edges.size() > 2:
 			return {"reason": "у комнаты %s — не больше 2 краёв" % key}
+		var grounds: Array = []  # v0.7.41: hunting grounds or fishing waters of the room
+		for gk: Variant in r.get("wilds", []) if r.get("wilds") is Array else []:
+			if not data["rules"].get("wilds", {}).get("kinds", {}).has(str(gk)):
+				return {"reason": "комната %s: wilds — из %s" % [key, ", ".join(data["rules"].get("wilds", {}).get("kinds", {}).keys())]}
+			if bool(r.get("indoor", false)):
+				return {"reason": "комната %s: угодья — не под крышей" % key}
+			if not grounds.has(str(gk)):
+				grounds.append(str(gk))
+		var wowner := str(r.get("wilds_owner", "")) if r.get("wilds_owner") != null else ""
+		if not wowner.is_empty() and not data["world"]["npcs"].has(wowner):
+			return {"reason": "комната %s: wilds_owner — NPC мира, чьи это угодья" % key}
 		defs.append({"key": key, "name": name.left(60), "description": str(r.get("description", "")).left(600),
 			"site": str(r.get("site", "")) if r.get("site") != null else "", "open_edges": room_edges,
 			"indoor": bool(r.get("indoor", false)), "dark": bool(r.get("dark", false)),
 			"public": bool(r.get("public", true)) if r.get("public") != null else true,
 			"hooks": (r.get("hooks", []) as Array).slice(0, 4).map(func(h: Variant) -> String: return str(h).left(160)),
-			"exits": (r.get("exits", []) as Array).map(func(x: Variant) -> String: return str(x)), "secrets": secrets, "encounter": enc})
+			"exits": (r.get("exits", []) as Array).map(func(x: Variant) -> String: return str(x)), "secrets": secrets, "encounter": enc,
+			"wilds": grounds, "wilds_owner": wowner})
 	# every room is reachable from the entry (the first one)
 	var seen: Array = [keys[0]]
 	var frontier: Array = [keys[0]]
@@ -599,6 +611,10 @@ static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 			room["encounter"]["id"] = id + "_enc"
 		if not (d.get("open_edges", []) as Array).is_empty():
 			room["open_edges"] = (d["open_edges"] as Array).duplicate(true)
+		if not (d.get("wilds", []) as Array).is_empty():
+			room["tags"] = (d["wilds"] as Array).duplicate()
+			if not str(d.get("wilds_owner", "")).is_empty():
+				room["wilds_owner"] = str(d["wilds_owner"])
 		gen["rooms"][id] = room
 	if not gen.has("sites"):
 		gen["sites"] = {}

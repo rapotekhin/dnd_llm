@@ -109,6 +109,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     services = {**game_rules["item_rules"]["services"], **world.get("services", {})}
     craft = game_rules["craft"]
     room_tags = ROOM_TAGS | set(craft["stations"]) | set(craft["gather"])  # v0.7.24: workplaces and gathering spots
+    room_tags |= set(game_rules.get("wilds", {}).get("kinds", {}))  # v0.7.41: hunting grounds and fishing waters
     recipes = {**craft["recipes"], **world.get("recipes", {})}
     for tid in craft.get("templates", {}):  # v0.7.39.1: a formula of a template — tpl:<template>:<item>
         recipes.update({f"tpl:{tid}:{i}": {} for i in items})
@@ -282,6 +283,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         if len(secret_ids) != len(set(secret_ids)):
             errors.append(f"комната {rid}: id секретов повторяются")
         errors += [f"комната {rid}: неизвестная метка {t}" for t in room.get("tags", []) if t not in room_tags]
+        if room.get("wilds_owner") and room["wilds_owner"] not in npcs:  # v0.7.41: whose grounds these are
+            errors.append(f"комната {rid}: wilds_owner {room['wilds_owner']} — нет такого NPC")
         for v in room.get("variants", []):  # v0.7.14.1: the room by the world's flags; v0.7.39.6: or while a quest is taken
             keys = {"vid", "if_flag", "if_not_flag", "if_quest", "description", "npcs", "hooks", "encounter", "safe"}
             if not ("if_flag" in v or "if_not_flag" in v or "if_quest" in v) or set(v) - keys:

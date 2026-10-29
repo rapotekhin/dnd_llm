@@ -4,11 +4,13 @@ extends Control
 ## spells of the day and (v0.7.8) the long rest — a room at the inn, or a camp with food picked from the pack.
 ## Rules are ExplorationRules / SpellRules; the dialog only collects the choice. One window template since
 ## v0.7.22.29 (ModalFrame, С4): the short rest «−/+» with the expected healing (О1), the preparation by circle with
-## a counter and the spell's text on the right (О2).
+## a counter and the spell's text on the right (О2). v0.7.41: hunting or fishing — the hours by «−/+» with the ground's
+## stock, the check and the gear.
 
 const SHORT_REST := "short_rest"
 const PREPARE := "prepare"
 const LONG_REST := "long_rest"
+const WILDS := "wilds"
 
 var kind: String
 var picks: Array = []
@@ -16,6 +18,9 @@ var picks: Array = []
 var supplies: Dictionary = {}
 ## Hit dice to spend on a short rest.
 var dice: int = 0
+## The ground of a hunt or a fishing (rules.wilds.kinds) and its hours.
+var ground: String = ""
+var hours: int = 2
 var confirm: Button
 var frame: ModalFrame
 var _box: VBoxContainer
@@ -28,7 +33,7 @@ func _init(dialog_kind: String) -> void:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.new("", {SHORT_REST: 600.0, LONG_REST: 720.0}.get(kind, 1100.0))
+	frame = ModalFrame.new("", {SHORT_REST: 600.0, LONG_REST: 720.0, WILDS: 600.0}.get(kind, 1100.0))
 	add_child(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.close_requested.connect(func() -> void: visible = false)
@@ -46,7 +51,7 @@ func _ready() -> void:
 		_details.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		split.add_child(_details)
 	frame.add_button("BTN_CANCEL", func() -> void: visible = false)
-	confirm = frame.add_button({SHORT_REST: "BTN_REST_CONFIRM", LONG_REST: "BTN_CAMP_CONFIRM"}.get(kind, "BTN_PREP_CONFIRM"), _on_confirm, true)
+	confirm = frame.add_button({SHORT_REST: "BTN_REST_CONFIRM", LONG_REST: "BTN_CAMP_CONFIRM", WILDS: "BTN_WILDS_CONFIRM"}.get(kind, "BTN_PREP_CONFIRM"), _on_confirm, true)
 	confirm.name = "DialogConfirm"
 	visibility_changed.connect(func() -> void:
 		if visible and GameState.has_session():
@@ -87,6 +92,8 @@ func _rebuild() -> void:
 	var data := Catalog.data
 	if kind == SHORT_REST:
 		_short_rest(s, c, data)
+	elif kind == WILDS:
+		_wilds(s, data)
 	elif kind == LONG_REST:
 		_long_rest(s, data)
 	else:
@@ -129,6 +136,44 @@ func _short_rest(s: GameSession, c: Dictionary, data: Dictionary) -> void:
 	_text(tr("SHORT_REST_UNTIL").format({"clock": TimeRules.clock_after(s, int(TimeRules.cfg(data)["short_rest_minutes"]))}))
 	_text(tr("SHORT_REST_HINT").format({"left": int(data["rules"]["rest"]["short_rests_per_day"]) - s.short_rests}), UiTheme.MUTED_LABEL)
 	confirm.disabled = GameState.is_busy()
+
+
+## Hunting or fishing (v0.7.41): «−/+» over the hours, the stock left, the check and what the gear gives.
+func _wilds(s: GameSession, data: Dictionary) -> void:
+	var d := WildsRules.kind(data, ground)
+	frame.title.text = str(d.get("name", ""))
+	if d.is_empty():
+		confirm.disabled = true
+		return
+	var span: Array = d["hours"]
+	hours = clampi(hours, int(span[0]), int(span[1]))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	_box.add_child(row)
+	row.add_child(_step_button("HoursMinus", "−", hours <= int(span[0]), func() -> void: hours = maxi(int(span[0]), hours - 1)))
+	var count := Label.new()
+	count.name = "WildsHours"
+	count.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	count.theme_type_variation = UiTheme.HEADING
+	count.custom_minimum_size = Vector2(96, 0)
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	count.text = TimeRules.span(hours * 60)
+	row.add_child(count)
+	row.add_child(_step_button("HoursPlus", "+", hours >= int(span[1]), func() -> void: hours = mini(int(span[1]), hours + 1)))
+	_text(tr("WILDS_CHECK").format({"skill": CraftRules.tr_skill(data, str(d["skill"])), "dc": int(d["dc"]),
+		"bonus": "%+d" % (int(s.character.get("skills", {}).get(str(d["skill"]), 0)) + DifficultyRules.bonus(s, data))}))
+	var g := WildsRules.gear(s, data, ground)
+	if not str(g["adv"]).is_empty():
+		_text(tr("WILDS_ADV").format({"item": g["adv"]}), UiTheme.MUTED_LABEL)
+	if not str(g["dis"]).is_empty():
+		_text(tr("WILDS_DIS"), UiTheme.MUTED_LABEL)
+	_text(tr("WILDS_STOCK").format({"n": WildsRules.stock(s, data, ground), "max": int(d["stock"])}))
+	if WildsRules.poaching(s, data):
+		_text(tr("WILDS_POACH").format({"owner": BondRules.npc_name(s, data, WildsRules.owner(s, data))}), UiTheme.MUTED_LABEL)
+	_text(tr("WILDS_UNTIL").format({"clock": TimeRules.clock_after(s, hours * 60)}))
+	var why := WildsRules.why_not(s, data, ground)
+	frame.set_note(why)
+	confirm.disabled = not why.is_empty() or GameState.is_busy()
 
 
 func _step_button(node_name: String, text: String, off: bool, change: Callable) -> Button:
@@ -263,5 +308,7 @@ func _on_confirm() -> void:
 		_done(GameState.long_rest(supplies))
 	elif kind == SHORT_REST:
 		_done(GameState.short_rest(dice))
+	elif kind == WILDS:
+		_done(GameState.wilds_act(ground, hours))
 	else:
 		_done(GameState.prepare_spells(picks))

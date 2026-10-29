@@ -46,6 +46,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"summons": AllyRules.summon_lines(s, data),  # v0.7.22.22
 			"chronicle": s.chronicle_tail(data["world"], 12),
 			"reputation": ReputationRules.text(s, data, loc_id),
+			"wilds": WildsRules.lines(s, data),  # v0.7.41
 			"open_edges": WorldGen.open_edges(s, data, s.room_id).map(func(e: Dictionary) -> String:
 				return "[%d] %s (%s%s)" % [e["index"], e["text"], ", ".join(e.get("terrain", [])), "; можно новую локацию" if bool(e.get("new_location", false)) else ""]),
 			"notes": s.notes.slice(-12).map(func(n: Dictionary) -> String: return "день %d, %s — %s" % [int(n["day"]), world.room(str(n["room"])).get("name", n["room"]), n["text"]]),
