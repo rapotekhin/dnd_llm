@@ -167,3 +167,56 @@ def test_a_thing_with_mechanics_waits_for_the_catalog(tmp_path):
     before = (worlds / "frontier" / "world.json").read_bytes()
     assert "promote_items" in promote_world.promote(["autosave:gen_quest_1"], user, worlds)[0]
     assert (worlds / "frontier" / "world.json").read_bytes() == before
+
+
+ACTS_GEN = {
+    "npcs": {}, "npc_rooms": {},
+    "rooms": {"gen_room_1": {"name": "Логово Хорта", "location_id": "pushcha", "description": "Нора под корнями.", "exits": ["pushcha-edge"],
+                             "npcs": [], "hooks": [], "secrets": [], "generated": True,
+                             "encounter": {"id": "gen_quest_1_new_den", "quest": "gen_quest_1", "boss": True,
+                                           "enemies": [{"monster": "gnoll", "count": 1, "name": "Хорт", "desc": "", "col": 3}],
+                                           "loot": {"coins_cp": 0, "items": {}}}}},
+    "edge_exits": {"pushcha-edge": ["gen_room_1"]},
+    "edges_used": ["pushcha-edge:0"],
+    "room_variants": {
+        "outpost-tower": [{"vid": "gen_quest_1_watch", "if_quest": "gen_quest_1", "encounter": {"id": "gen_quest_1_watch", "quest": "gen_quest_1",
+                           "enemies": [{"monster": "wolf", "count": 1, "name": "Волк", "desc": "", "col": 3}], "loot": {"coins_cp": 0, "items": {}}}}],
+        "gen_room_1": [{"vid": "gen_quest_1_spare", "if_flag": "gen_quest_1_spare", "description": "Пустая нора, кости и тишина."}]},
+    "quests": {"gen_quest_1": {
+        "title": "Пепельная стая", "description": "Гноллы режут скот.", "giver": "npc_innkeeper", "offer_text": "Найди вожака.", "generated": True,
+        "difficulty": "hard", "acts": [{"title": "Следы", "goal": "Проверить башню"}, {"title": "Логово", "goal": "Решить судьбу вожака"}],
+        "built": 2, "fights": 2, "made_steps": 3, "xp_paid": 300, "items": {}, "depth": 0, "steps": [
+            {"text": "Отбить башню", "when": {"encounter": "gen_quest_1_watch"}, "act": 0},
+            {"text": "Одолеть Хорта", "when": {"encounter": "gen_quest_1_new_den"}, "act": 1},
+            {"text": "Решить судьбу логова", "when": {"choice": "gen_room_1"}, "act": 1, "choices": [
+                {"id": "spare", "action": "Пощадить щенков", "done_text": "Щенки уползли.", "flag": "gen_quest_1_spare", "attitude": {"npc_innkeeper": 1}},
+                {"id": "burn", "action": "Сжечь логово", "done_text": "Нора горит до утра.", "flag": "gen_quest_1_burn"}]},
+            {"text": "Вернуться к Бруно", "when": {"talk": "npc_innkeeper"}, "act": 1, "reward_cp": 7500, "xp": 150}]}},
+}
+
+
+def test_a_quest_by_acts_comes_with_its_variants_lair_and_choice(tmp_path):
+    user, worlds = _setup(tmp_path)
+    (user / "saves" / "autosave.json").write_text(json.dumps({"session": {"world_id": "frontier", "generated": ACTS_GEN, "items": {}}},
+                                                             ensure_ascii=False), encoding="utf-8")
+    lines = promote_world.promote(["autosave:gen_quest_1=quest_ash_pack"], user, worlds)
+    assert not any(line.startswith("✗") for line in lines), lines
+    w = _world(worlds)
+    q = w["quests"]["quest_ash_pack"]
+    den = next(r for r, d in w["rooms"].items() if d["name"] == "Логово Хорта")
+    assert q["steps"][0]["when"] == {"encounter": "quest_ash_pack_watch"}
+    assert q["steps"][1]["when"] == {"encounter": f"{den}_enc"}
+    assert q["steps"][2]["when"] == {"choice": den} and q["steps"][2]["choices"][0]["flag"] == "quest_ash_pack_spare"
+    assert "xp_paid" not in q and q["built"] == 2
+    tower = w["rooms"]["outpost-tower"]["variants"]
+    assert {"vid": "quest_ash_pack_watch", "if_quest": "quest_ash_pack"}.items() <= next(v for v in tower if v["vid"] == "quest_ash_pack_watch").items()
+    assert any(v.get("if_flag") == "quest_ash_pack_spare" for v in w["rooms"][den]["variants"])
+
+
+def test_a_quest_by_acts_waits_for_its_last_act(tmp_path):
+    user, worlds = _setup(tmp_path)
+    gen = json.loads(json.dumps(ACTS_GEN))
+    gen["quests"]["gen_quest_1"]["built"] = 1
+    (user / "saves" / "autosave.json").write_text(json.dumps({"session": {"world_id": "frontier", "generated": gen, "items": {}}},
+                                                             ensure_ascii=False), encoding="utf-8")
+    assert "актов 1 из 2" in promote_world.promote(["autosave:gen_quest_1"], user, worlds)[0]

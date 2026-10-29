@@ -19,7 +19,8 @@ from pydantic_ai.usage import RunUsage, UsageLimits
 from . import prompts, router
 from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER, PINNED, pinned_for
-from .agents import RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_summary_agent, build_turn_agent, is_entry, scene_npc, system_prompt_for, turn_user_prompt
+from .agents import (RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_designer_agent, build_summary_agent, build_turn_agent, is_entry,
+                     is_quest_act, scene_npc, system_prompt_for, turn_user_prompt)
 from .protocol import (
     DcTier,
     OptionCheck,
@@ -29,6 +30,8 @@ from .protocol import (
     Effect,
     EngineValidateParams,
     EngineValidateResult,
+    ActStep,
+    QuestActEffect,
     HealEffect,
     EngineCheckParams,
     EngineCheckResult,
@@ -53,6 +56,8 @@ _sleep = asyncio.sleep  # tests replace it to skip the pauses
 
 async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
     usage = Usage(model="stub")
+    if params.kind == "quest_act":
+        return await _stub_act(session, params, usage)
     if params.kind in ("deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death", "law"):
         return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
     if params.kind != "action":
@@ -82,6 +87,25 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         effect_ids=effect_ids,
         usage=usage,
     )
+
+
+_FRAME_HEAD = re.compile(r"^\[quest (\S+) \| act (\d+) \| giver (\S*) \| here (\S*) \| near (\S*)\]")
+
+
+async def _stub_act(session: Session, params: TurnRequestParams, usage: Usage) -> TurnResult:
+    """The stub designer (v0.7.39.6): one talk with the giver (one's own deed — a walk to the next place), by the
+    frame's first line; enough for an easy quest of the bot and the playtests."""
+    m = _FRAME_HEAD.match(params.input)
+    if m is None:
+        return TurnResult(turn_id=params.turn_id, narration="Сценарий не собран.", usage=usage)
+    quest_id, act, giver, _here, near = m.groups()
+    step = ActStep(text="Доложить заказчику", kind="talk", target=giver) if giver else ActStep(text="Осмотреть окрестности", kind="visit", target=near)
+    effect = QuestActEffect(quest_id=quest_id, act=int(act), steps=[step])
+    v = EngineValidateResult.model_validate(await session.call_engine(
+        "engine.validate", EngineValidateParams(turn_id=params.turn_id, effect=effect)))
+    if not v.accepted or not v.effect_id:
+        return TurnResult(turn_id=params.turn_id, narration=f"Сценарий не собран: {v.reason}", usage=usage)
+    return TurnResult(turn_id=params.turn_id, narration="Дело движется дальше.", effect_ids=[v.effect_id], usage=usage)
 
 
 STUB_EFFECTS: list[Effect | None] = [  # by turn number; the first turns stay plain (protocol tests rely on that)
@@ -172,7 +196,9 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
         raise RpcError(ErrorCode.INVALID_PARAMS, f"mode {params.mode} needs npc_id of an NPC in the scene")
     system = system_prompt_for(params)
     await _pick_providers(services.model_factory(model))
-    agent = build_turn_agent(services.model_factory(model), system, entry=is_entry(params))
+    designer = is_quest_act(params)
+    agent = (build_designer_agent(services.model_factory(model), system) if designer else
+             build_turn_agent(services.model_factory(model), system, entry=is_entry(params)))
     user_prompt = turn_user_prompt(params)
     ctx = TurnContext(session, params, services.library)
 
@@ -188,7 +214,8 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
         # Out of output tokens (v0.7.4: the fight start in the burrow failed at 1500): go on from where it stopped
         # with room to spare — the turn's checks and accepted effects stay (v0.7.38.1: a board quest failed so).
         log.warning("turn %s ran out of output tokens, going on with %d", params.turn_id, RETRY_MAX_TOKENS)
-        agent = build_turn_agent(services.model_factory(model), system, RETRY_MAX_TOKENS, entry=is_entry(params))
+        if not designer:
+            agent = build_turn_agent(services.model_factory(model), system, RETRY_MAX_TOKENS, entry=is_entry(params))
         return await agent.run(None, message_history=messages, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
 
     started = time.monotonic()
@@ -198,7 +225,7 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
     token = REQUEST_COSTS.set(billed)
     before = RunUsage()  # the router and a short attempt, paid on top of the full run (v0.7.20.4)
     try:
-        if not services.settings.router:
+        if not services.settings.router or designer:
             raise _NoRouter
         short, before, trace["route"] = await _short_turn(services.model_factory(model), params, user_prompt, trace)
     except _NoRouter:

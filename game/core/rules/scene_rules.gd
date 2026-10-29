@@ -3,6 +3,7 @@ extends RefCounted
 ## The room as the world is now (roadmap v0.7.14.1): a pack room may carry `variants` [{if_flag | if_not_flag,
 ## description?, npcs?, hooks?, encounter?, safe?}] — every variant whose flag condition holds overrides those keys,
 ## in order. The menhir's choice darkens or lights the Pushcha this way, and whoever left a room is gone from it.
+## v0.7.39.6: `if_quest` — while that quest is taken (a quest's fight in a known room, QuestGen.apply_act).
 ## NPCs keep hours too (`schedule`, v0.7.14.2): the trader goes home at night, the captain drinks in the tavern.
 
 const KEYS := ["description", "npcs", "hooks", "encounter", "safe"]
@@ -12,6 +13,8 @@ static func matches(s: GameSession, v: Dictionary) -> bool:
 	if v.has("if_flag") and not s.flags.has(str(v["if_flag"])):
 		return false
 	if v.has("if_not_flag") and s.flags.has(str(v["if_not_flag"])):
+		return false
+	if v.has("if_quest") and not s.quests_active.has(str(v["if_quest"])):
 		return false
 	return true
 

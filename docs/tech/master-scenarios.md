@@ -321,12 +321,23 @@
 ### Создать задание
 
 - **Когда:** NPC сцены просит о помощи, игрок ищет работу, читает доску, задумывает своё дело.
-- **Пайплайн:** `rules("quests")` (у доски — уже в промпте) → `find_quests(query)` → (нет похожего) → `create_quest {giver | board_prop_id | own, title, offer_text, scale, steps[1–4], new_npcs?, new_place?, quest_item?, reward_item_id?}`.
-- **Шаги:** `talk` (NPC, `item_id` — что отдать), `visit` (комната, куда герой придёт на этом шаге; `item_id` — что там оставить), `find` (тайна мира или вещь задания), `fight` (встреча); то, что приносит задание, — `new:<key>`.
-- **Доставка:** «отнести», «передать» — вещь задания: посылка `quest_item {item_id | item, from_giver: true}` (заказчик вручает при взятии, как письмо Бруно) и шаг отдачи `talk` или `visit` с `item_id` «item»; без шага отдачи движок посылку не примет, искать её нельзя.
-- **Движок:** после `find_quests`; одно за ход; заказчик — NPC сцены, для доски — живой человек мира или новый; своё дело — без заказчика, берётся сразу; не в розыске; до 3 открытых созданных; награду ставит движок по `scale` и уровню, опыт класса — только за опасное ([QuestGen.plan_quest](../../game/core/world/quest_gen.gd#L97)).
-- **Итог:** задание предложено (кнопка «Взять задание» у заказчика), шаги — в журнале; возвращение к заказчику движок добавит сам.
-- **Golden:** `quest_npc_gives_work`, `quest_existing_not_made_again`, `quest_brings_its_thing`, `quest_parcel_to_carry`, `quest_board_order`, `quest_own_deed`.
+- **Пайплайн:** `rules("quests")` (у доски — уже в промпте) → `find_quests(query)` → (нет похожего) → `create_quest {giver | board_prop_id | own, title, offer_text, difficulty, acts[1–4] {title, goal}, villain?, finale?, follows?, new_npcs? (заказчик доски)}` — каркас (v0.7.39.6).
+- **Сложность:** `easy` — поручение в один акт, `medium` — 1–2 акта и бой, `hard` — 2–3 акта, главарь и выбор в финале, `deadly` — 3–4 акта с боями на пределе сил, как «Пепел над Маркой»; взять почти невозможное — «Точно?» (кнопка у заказчика, у доски и «Взять все»).
+- **Движок:** после `find_quests`; одно за ход; заказчик — NPC сцены, для доски — живой человек мира или новый; своё дело — без заказчика, берётся сразу; не в розыске; до 3 открытых созданных; награда — монеты и опыт по сложности и уровню героя, расположение заказчика ([QuestGen.plan_quest](../../game/core/world/quest_gen.gd#L180)).
+- **Итог:** задание предложено (кнопка «Взять задание» с строкой сложности), в журнале — цель первого акта; шагов ещё нет.
+- **Golden:** `quest_npc_gives_work`, `quest_existing_not_made_again`, `quest_hard_skeleton`, `quest_board_order`, `quest_board_read_new_giver`, `quest_own_deed`.
+
+### Акт задания
+
+- **Когда:** задание взято (акт 1) или герой закрыл последний шаг акта, а следующего ещё нет: после хода игрока клиент шлёт ход `kind: quest_act`, во входе — рамка движка ([QuestGen.act_frame](../../game/core/world/quest_gen.gd#L307)): акты, что уже сделано, летопись, сколько шагов и боёв осталось, опыт врагов на бой, места героя, открытые края, враги SRD по силам ([GameState._build_next_act](../../game/autoload/game_state.gd#L2865)). В чате — «Мастер готовит продолжение задания…».
+- **Кто:** сценарист — свой агент ([build_designer_agent](../../llm_server/src/llm_server/agents.py#L555)) со своим промптом `quest_act.md.j2`: `find_npcs`, `find_places`, `find_items`, `lookup` и один `quest_act`; отказ движка — исправить только его причину.
+- **Пайплайн:** `quest_act {quest_id, act, steps[1–5], new_npcs?, new_places?, items?, encounters?, choices?, reward_item_id?}`.
+- **Шаги:** `talk`, `visit`, `find`, `fight`, `all` / `any` из частей, `choice`; `needs` — знание как ключ (без найденной улики шаг не закроется, `needs_text` — чего не хватает); посылка `from_giver` — в первом акте, заказчик вручает при взятии.
+- **Бои:** `ambush` (бьют первыми), `guard` (стерегут вещь или пленника), `target` (враг с именем), `boss` — главарь последнего акта; в безлюдной комнате мира (вариант комнаты, пока задание взято) или в логове — новом месте на открытом крае.
+- **Финал:** шаг `choice` с 2–3 путями: флаг `<квест>_<id>`, расположение людей, перемена места (вариант комнаты по флагу), вещь за путь; возвращение к заказчику и награду движок добавляет сам.
+- **Движок:** [QuestGen.plan_act](../../game/core/world/quest_gen.gd#L386) — всё, что в строке `quest_act` [master-tools](master-tools.md#задания-и-цель); стаб-сценарист — разговор с заказчиком (своё дело — приход в соседнее место).
+- **Вещь задания словами:** «ищу кольцо в погребе» — `request_check` поиска; найденное движок кладёт герою сам, без `give_item` (`quest_thing_searched_by_words`).
+- **Golden:** `quest_act_thing_hidden`, `quest_act_plant_by_survival`, `quest_act_parcel_to_carry`, `quest_act_middle_with_ambush`, `quest_act_finale_boss_and_choice`.
 
 ### Жизненная цель героя
 

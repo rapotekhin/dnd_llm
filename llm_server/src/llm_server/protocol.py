@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.80.0"
+PROTOCOL_VERSION = "0.81.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -156,8 +156,9 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # `input` holds the engine lines. trap (0.9.0): the player disarmed a found trap (or it went off); the engine lines.
 # wait (0.10.0): the player waited by the button — the engine moved the time; `input` holds the lines.
 # theft (0.11.0): the player picked a pocket in the theft window — the engine rolled and applied it; `input` holds the lines.
+# quest_act (0.81.0): an act of a taken quest opened — the designer builds it (`quest_act`); `input` holds the engine's frame.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
-                   "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift"]
+                   "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift", "quest_act"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -749,6 +750,7 @@ class NewEnemy(_Out):
 
 class NewEncounter(_Out):
     enemies: list[NewEnemy] = Field(min_length=1, max_length=4)
+    boss: bool = False  # 0.81.0: in a quest act's place — its leader (the last act of a hard or deadly quest)
 
 
 class NewEdge(_Out):
@@ -859,23 +861,13 @@ class QuestNpc(NewNpc):
 CreatePlaceEffect.model_rebuild()  # its `npcs` are QuestNpc, defined after it
 
 
-class QuestPlace(_Out):
-    """The place a quest brings (0.37.0): the fields of create_place."""
-
-    edge: int = Field(default=0, ge=0)
-    rooms: list[NewRoom] = Field(min_length=1, max_length=4)
-    new_location: bool = False
-    name: str = ""
-    description: str = ""
-    terrain: str = ""
-
-
 class QuestItem(_Out):
-    """The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);
-    `hint` — where it lies, found by a check of `dc_tier` with `skill` (0.75.0: a plant in the wild — survival or
-    nature; Investigation finds it too). `from_giver` (0.69.0) — the giver hands it over when the quest is taken
-    (a parcel to carry): no `room` or `hint`."""
+    """A thing of a quest's act (0.37.0; 0.81.0 — with `key`): a catalog `item_id` or a new `item`, hidden in `room`
+    (an id or «new:<room key>»); `hint` — where it lies, found by a check of `dc_tier` with `skill` (0.75.0: a plant in
+    the wild — survival or nature; Investigation finds it too). `from_giver` (0.69.0) — the giver hands it over when
+    the quest is taken (only in the first act): no `room` or `hint`. Steps name it by `key`."""
 
+    key: str = Field(min_length=1, max_length=20)
     item_id: str | None = None
     item: GeneratedItem | None = None
     from_giver: bool = False
@@ -885,36 +877,33 @@ class QuestItem(_Out):
     skill: Literal["perception", "investigation", "survival", "nature", "arcana", "religion", "history"] = "perception"
 
 
-class NewQuestStep(_Out):
-    """A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),
-    `visit` — a room id the hero comes to (`item_id` — a thing left there, 0.69.0), `find` — «room:secret» of the
-    world, `fight` — an encounter id.
-    What the quest brings (0.37.0): `target` «new:<key>» — its new person or room (fight — the encounter of that room),
-    `find` with `target` «item» and `item_id` «item» — its thing."""
+class QuestAct(_Out):
+    """An act of a quest's skeleton (0.81.0): its name and what the hero does in it, one sentence."""
 
-    text: str
-    kind: Literal["talk", "visit", "find", "fight"]
-    target: str
-    item_id: str | None = None
-    danger: bool = False
+    title: str = Field(min_length=3, max_length=60)
+    goal: str = Field(min_length=5, max_length=200)
 
 
 class CreateQuestEffect(_Out):
-    """A quest from a giver of the scene (0.36.0) — only after find_quests in the same turn. The master names the scale,
-    the engine sets the reward (coins, class XP for the dangerous, the giver's goodwill) and adds the way back to the
-    giver; the quest is offered at once and lives like a pack quest."""
+    """A quest's skeleton (0.81.0) — only after find_quests in the same turn. The master names the difficulty and the
+    acts; the engine sets the reward by the difficulty and the hero's level, the acts are built by the designer when
+    each opens (the first — on taking). Offered at once, it lives like a pack quest."""
 
     kind: Literal["create_quest"] = "create_quest"
     giver: str = ""  # an NPC of the scene; on a board — anyone alive or «new:<key>»; empty for one's own deed (0.38.0)
     board_prop_id: str | None = None  # 0.38.0: an order on a board — a thing of the room that offers it
     for_goal: bool = False  # 0.40.0: the quest for the hero's life goal — past its threshold and after enough hints
-    own: bool = False  # 0.38.0: the player's own deed — no giver, taken at once, pays only class XP for the dangerous
+    own: bool = False  # 0.38.0: the player's own deed — no giver, taken at once
     title: str
     description: str = ""
     offer_text: str = ""
-    scale: Literal["trifle", "ordinary", "major"]
-    steps: list[NewQuestStep] = Field(min_length=1, max_length=4)
-    reward_item_id: str | None = None
+    difficulty: Literal["easy", "medium", "hard", "deadly"]
+    acts: list[QuestAct] = Field(min_length=1, max_length=4)
+    villain: str = ""  # who stands behind it, if anyone
+    finale: str = ""  # what is decided at the end (a choice for hard and deadly)
+    follows: str | None = None  # a done quest this one goes on from
+    new_npcs: list[QuestNpc] = Field(default_factory=list, max_length=1)  # only a new customer of a board order
+
     @model_validator(mode="after")
     def _giver_or_own(self) -> "CreateQuestEffect":
         # the model left the customer out of a board order (v0.7.21.2 goldens): said at once, before the engine
@@ -925,9 +914,99 @@ class CreateQuestEffect(_Out):
                              "добавь его в new_npcs (name, role, key) и укажи giver «new:<key>»; своё дело без заказчика — own: true")
         return self
 
-    new_npcs: list[QuestNpc] = Field(default_factory=list)  # 0.37.0: up to 2 people the quest brings
-    new_place: QuestPlace | None = None  # 0.37.0: a place on an open edge of this room, as create_place
-    quest_item: QuestItem | None = None  # 0.37.0: the quest's thing in a hiding place; 0.69.0: or from the giver
+
+class ActFact(_Out):
+    """A fact of the engine (0.81.0): `visit` — a room id or «new:<room key>», `find` — «room:secret» of the world or
+    the `key` of a hidden thing of the act, `fight` — the `key` of a fight of the act («new:<room key>» for a room of a
+    new place with its `encounter`) or a live encounter of the world."""
+
+    text: str = ""
+    kind: Literal["visit", "find", "fight"]
+    target: str
+
+
+class ActStep(_Out):
+    """A step of an act (0.81.0): `talk` — `target` an NPC id or «new:<key>» (`item_id` — a thing to hand over: a key
+    of the act's things, an earlier act's or a catalog id), `visit` (`item_id` — left there), `find`, `fight` as in
+    ActFact; `all` / `any` — 2–4 `parts` in any order (all) or one of them (any); `choice` — the finale's choice in a
+    room (`target`), its options in the act's `choices`. `needs` — knowledge the step waits for (`needs_text` — what
+    the hero lacks)."""
+
+    text: str
+    kind: Literal["talk", "visit", "find", "fight", "all", "any", "choice"]
+    target: str = ""
+    item_id: str | None = None
+    parts: list[ActFact] = Field(default_factory=list, max_length=4)
+    needs: ActFact | None = None
+    needs_text: str = ""
+    danger: bool = False
+
+
+class ActEncounter(_Out):
+    """A fight of an act (0.81.0) in a known room with no live encounter and no people, or in a room of the act's new
+    place («new:<key>»): `ambush` — the foes strike first, `guard` — they keep a thing or a person, `target` — a named
+    foe to beat or take alive; `boss` — the leader of the last act of a hard or deadly quest. The engine checks the
+    foes' XP by the quest's difficulty."""
+
+    key: str = Field(min_length=1, max_length=20)
+    room: str
+    kind: Literal["ambush", "guard", "target"]
+    enemies: list[NewEnemy] = Field(min_length=1, max_length=4)
+    boss: bool = False
+    text: str = Field(default="", max_length=200)
+
+
+class ActChange(_Out):
+    """How a place looks after a choice of the finale (0.81.0)."""
+
+    room_id: str
+    description: str = Field(min_length=10, max_length=600)
+
+
+class ActChoice(_Out):
+    """An option of the finale's choice (0.81.0): its button, what came of it, the attitude of people (−2…+2), how places
+    changed, a catalog thing as its reward (no dearer than half the quest's coins). The engine sets its world flag."""
+
+    id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,19}$")
+    action: str = Field(min_length=3, max_length=80)
+    done_text: str = Field(min_length=10, max_length=400)
+    attitude: dict[str, int] = Field(default_factory=dict)
+    changes: list[ActChange] = Field(default_factory=list, max_length=2)
+    reward_item_id: str | None = None
+
+
+class QuestActPlace(_Out):
+    """A place an act brings (0.81.0): the fields of create_place without its people (they go to the act's
+    `new_npcs`); a room's `encounter` is a fight of the act (a lair), named in a step as «new:<room key>»; a room may
+    `boss` — its leader (last act of a hard or deadly quest)."""
+
+    room_id: str | None = None
+    edge: int = Field(default=0, ge=0)
+    rooms: list[NewRoom] = Field(min_length=1, max_length=4)
+    new_location: bool = False
+    name: str = ""
+    description: str = ""
+    terrain: str = ""
+    inside: bool = False
+    site: NewSite | None = None
+
+
+class QuestActEffect(_Out):
+    """The act of a quest that opened (0.81.0) — only in the designer's turn: its steps (1–5) on the engine's facts and
+    what they need — new people, places, things and fights; the finale's `choices` and a `reward_item_id` only in the
+    last act. The engine checks each part by the quest's difficulty, adds the way back to the giver after the last act,
+    sets the reward."""
+
+    kind: Literal["quest_act"] = "quest_act"
+    quest_id: str
+    act: int = Field(ge=1, le=4)
+    steps: list[ActStep] = Field(min_length=1, max_length=5)
+    new_npcs: list[QuestNpc] = Field(default_factory=list, max_length=3)
+    new_places: list[QuestActPlace] = Field(default_factory=list, max_length=2)
+    items: list[QuestItem] = Field(default_factory=list, max_length=3)
+    encounters: list[ActEncounter] = Field(default_factory=list, max_length=4)
+    choices: list[ActChoice] = Field(default_factory=list, max_length=3)
+    reward_item_id: str | None = None
 
 
 class DropItemEffect(_Out):
@@ -1406,7 +1485,7 @@ Effect = Annotated[
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect
-    | OwnerEffect | DoorEffect,
+    | OwnerEffect | DoorEffect | QuestActEffect,
     Field(discriminator="kind"),
 ]
 

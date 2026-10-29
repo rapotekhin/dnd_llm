@@ -204,6 +204,8 @@ def promote_quest(world: dict, gen: dict, items: dict, qid: str, new_id: str, id
         return [f"✗ {qid}: своё дело игрока — без заказчика его в пакете никто не предложит"]
     if any(str(x.get("title", "")).lower() == str(q.get("title", "")).lower() for x in world.get("quests", {}).values()):
         return [f"✗ {qid}: «{q.get('title')}» уже есть в пакете"]
+    if q.get("acts") and int(q.get("built", 0)) < len(q["acts"]):  # v0.7.39.6: the next act is built only in its game
+        return [f"✗ {qid}: собрано актов {int(q.get('built', 0))} из {len(q['acts'])} — доиграйте задание до последнего акта"]
     lines: list[str] = []
     steps = q.get("steps", [])
     made_rooms, made_npcs = gen.get("rooms", {}), gen.get("npcs", {})
@@ -211,16 +213,21 @@ def promote_quest(world: dict, gen: dict, items: dict, qid: str, new_id: str, id
     rooms: list[str] = []
     npcs: list[str] = [str(q.get("giver", ""))]
     for st in steps:
-        w = st.get("when", {})
-        if w.get("room") or w.get("arrive"):
-            rooms.append(str(w.get("room") or w["arrive"]))
-        if w.get("encounter"):
-            rooms.append(str(w["encounter"]).removesuffix("_enc"))
-        if w.get("secret"):
-            rooms.append(str(w["secret"]).split(":")[0])
-        if w.get("talk"):
-            npcs.append(str(w["talk"]))
+        for w in _facts(st.get("when", {})) + _facts(st.get("needs", {})):
+            if w.get("room") or w.get("arrive") or w.get("choice"):
+                rooms.append(str(w.get("room") or w.get("arrive") or w["choice"]))
+            if w.get("encounter"):
+                rooms.append(_encounter_room(gen, str(w["encounter"])))
+            if w.get("secret"):
+                rooms.append(str(w["secret"]).split(":")[0])
+            if w.get("talk"):
+                npcs.append(str(w["talk"]))
         npcs += list(st.get("attitude", {}))
+        for c in st.get("choices", []):
+            npcs += list(c.get("attitude", {}))
+    for room, variants in gen.get("room_variants", {}).items():  # an ambush in a known room, a place changed by a choice
+        if any(_mine(qid, v) for v in variants):
+            rooms.append(room)
     if q.get("board"):
         rooms.append(str(q["board"]["room"]))
     rooms += [str(gen.get("npc_rooms", {}).get(n, "")) for n in npcs if n in made_npcs]
@@ -273,10 +280,56 @@ def promote_quest(world: dict, gen: dict, items: dict, qid: str, new_id: str, id
         return [f"✗ {qid}: {exc}"]
 
 
+def _facts(w: dict) -> list[dict]:
+    """A step's fact and the parts of its all / any."""
+    return [w] + [p for k in ("all", "any") for p in w.get(k, [])]
+
+
+def _encounter_room(gen: dict, enc: str) -> str:
+    """The room of an encounter: a made room that holds it, a room whose quest variant holds it, or the old «<room>_enc»."""
+    for r, room in gen.get("rooms", {}).items():
+        if room.get("encounter", {}).get("id") == enc:
+            return r
+    for r, variants in gen.get("room_variants", {}).items():
+        if any(v.get("encounter", {}).get("id") == enc for v in variants):
+            return r
+    return enc.removesuffix("_enc")
+
+
+def _mine(qid: str, v: dict) -> bool:
+    """A room variant the quest made (v0.7.39.6): its fight while taken, or a change by its choice's flag."""
+    return v.get("if_quest") == qid or str(v.get("if_flag", "")).startswith(qid + "_")
+
+
+def _renamed(s: str, qid: str, new_id: str) -> str:
+    return new_id + s[len(qid):] if s.startswith(qid + "_") else s
+
+
 def _quest_into(world: dict, gen: dict, q: dict, qid: str, new_id: str, ids: dict[str, str], item, lines: list[str]) -> list[str]:
     quest = _clean(q)
-    for k in ("depth", "scale", "own"):
+    for k in ("depth", "scale", "own", "fights", "made_steps", "xp_paid", "items"):
         quest.pop(k, None)
+    encounters: dict[str, str] = {}  # the quest's encounter ids → the pack's
+    for r, room in gen.get("rooms", {}).items():
+        enc = room.get("encounter", {}).get("id", "")
+        if enc and r in ids:
+            encounters[enc] = ids[r] + "_enc"
+            world["rooms"][ids[r]].get("encounter", {}).pop("quest", None)
+    for room, variants in gen.get("room_variants", {}).items():
+        for v in variants:
+            if not _mine(qid, v):
+                continue
+            v = json.loads(json.dumps(v))
+            v["vid"] = _renamed(str(v.get("vid", "")), qid, new_id)
+            if "if_quest" in v:
+                v["if_quest"] = new_id
+            if "if_flag" in v:
+                v["if_flag"] = _renamed(str(v["if_flag"]), qid, new_id)
+            if v.get("encounter"):
+                old = str(v["encounter"]["id"])
+                v["encounter"]["id"] = encounters[old] = _renamed(old, qid, new_id)
+                v["encounter"]["quest"] = new_id
+            world["rooms"][ids.get(room, room)].setdefault("variants", []).append(v)
     quest["giver"] = ids.get(quest["giver"], quest["giver"])
     quest["description"] = quest.get("description") or quest["title"]
     if quest.get("board"):
@@ -284,26 +337,40 @@ def _quest_into(world: dict, gen: dict, q: dict, qid: str, new_id: str, ids: dic
     if quest.get("offer_items"):  # the parcel its giver hands over (v0.7.34.5)
         quest["offer_items"] = {item(i): n for i, n in quest["offer_items"].items()}
     for st in quest["steps"]:
-        w = st["when"]
-        for k in ("talk", "room", "arrive"):
-            if k in w:
-                w[k] = ids.get(w[k], w[k])
-        if "encounter" in w:
-            room = w["encounter"].removesuffix("_enc")
-            w["encounter"] = ids[room] + "_enc" if room in ids else w["encounter"]
-        if "item" in w:
-            w["item"] = item(w["item"])
-        if "secret" in w:
-            room, _, sid = w["secret"].partition(":")
-            if sid == "q_" + qid:  # the hiding place of the quest's thing
-                sec = next((dict(x) for x in gen.get("room_secrets", {}).get(room, []) if x.get("id") == sid), None)
-                if sec is None:
-                    return [f"✗ {qid}: в сейве нет тайника {w['secret']}"]
-                sec["id"] = "q_" + new_id
-                sec["loot"] = {"items": {item(i): n for i, n in sec.get("loot", {}).get("items", {}).items()}}
-                world["rooms"][ids.get(room, room)].setdefault("secrets", []).append(sec)
-                sid = sec["id"]
-            w["secret"] = f"{ids.get(room, room)}:{sid}"
+        st.pop("act", None)  # the act a step was built in — the save's bookkeeping
+        for w in _facts(st["when"]) + _facts(st.get("needs", {})):
+            for k in ("talk", "room", "arrive", "choice"):
+                if k in w:
+                    w[k] = ids.get(w[k], w[k])
+            if "encounter" in w:
+                room = w["encounter"].removesuffix("_enc")
+                w["encounter"] = encounters.get(w["encounter"]) or (ids[room] + "_enc" if room in ids else w["encounter"])
+            if "item" in w:
+                w["item"] = item(w["item"])
+            if "flag" in w:
+                w["flag"] = _renamed(str(w["flag"]), qid, new_id)
+            if "secret" in w:
+                room, _, sid = w["secret"].partition(":")
+                if sid == "q_" + qid or sid.startswith(f"q_{qid}_"):  # the hiding place of the quest's thing (by acts: q_<quest>_<key>)
+                    found = gen.get("room_secrets", {}).get(room, []) + gen.get("rooms", {}).get(room, {}).get("secrets", [])
+                    sec = next((dict(x) for x in found if x.get("id") == sid), None)
+                    if sec is None:
+                        return [f"✗ {qid}: в сейве нет тайника {w['secret']}"]
+                    sec["id"] = "q_" + new_id + sid[len("q_" + qid):]
+                    sec["loot"] = {"items": {item(i): n for i, n in sec.get("loot", {}).get("items", {}).items()}}
+                    secrets = world["rooms"][ids.get(room, room)].setdefault("secrets", [])
+                    secrets[:] = [x for x in secrets if x.get("id") != sid]  # a made room came with it under the old id
+                    secrets.append(sec)
+                    sid = sec["id"]
+                w["secret"] = f"{ids.get(room, room)}:{sid}"
+        for c in st.get("choices", []):  # the finale's choice (v0.7.39.6): its flag, the people, its thing
+            if c.get("flag"):
+                c["flag"] = _renamed(str(c["flag"]), qid, new_id)
+            c["attitude"] = {ids.get(k, k): v for k, v in c.get("attitude", {}).items()}
+            if not c["attitude"]:
+                c.pop("attitude")
+            if c.get("items"):
+                c["items"] = {item(i): n for i, n in c["items"].items()}
         st["attitude"] = {ids.get(k, k): v for k, v in st.get("attitude", {}).items()}
         if not st["attitude"]:
             st.pop("attitude")

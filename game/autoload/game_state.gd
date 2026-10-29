@@ -2299,6 +2299,7 @@ func read_board(prop_id: String) -> String:
 	_log("Игрок: " + text)
 	_request("action", text + (" [движок: на «%s» [%s] есть место для новых заказов — повесь 1–%d настоящих заказа: сначала find_quests, потом create_quest с board_prop_id %s " +
 		"и заказчиком из этой округи — живым человеком из find_npcs или новым в new_npcs самого create_quest (giver new:<key>), без отдельного create_npc; " +
+		"каждый заказ — каркас: сложность (лучше разная: простое, среднее, сложное) и акты с целями, без шагов; " +
 		"что написано в листках — это и есть эти задания, игрок возьмёт их кнопкой]") % [p.get("name", prop_id), prop_id, room_left, prop_id])
 	return ""
 
@@ -2802,12 +2803,12 @@ func _request(kind: String, input: String) -> void:
 	EventBus.turn_started.emit(turn_id)
 	var params := {
 		"turn_id": turn_id,
-		"mode": s.mode,
+		"mode": GameSession.MODE_EXPLORATION if kind == "quest_act" else s.mode,  # the designer builds, nobody speaks
 		"kind": kind,
 		"input": input,
 		"snapshot": TurnSnapshot.build(s, Catalog.data, int(Catalog.game()["chat"]["history_chars"])),
 	}
-	if s.in_conversation():
+	if s.in_conversation() and kind != "quest_act":
 		params["npc_id"] = s.npc_id
 	if not _forced.is_empty() and str(_forced.get("turn", "")) == turn_id:
 		params["pinned_check"] = _pin_name(_forced)  # v0.7.38: the server holds the master to a roll
@@ -2855,12 +2856,24 @@ func _request(kind: String, input: String) -> void:
 			EventBus.navigate.emit("death", {"epitaph": str(call.result.get("narration", ""))})
 		else:
 			_combat_continue()
+	elif kind != "quest_act":
+		_build_next_act(s)
+
+
+## A taken quest waits for its next act (v0.7.39.6): the designer's turn builds it after the turn that opened it; a
+## failed build is tried again after the next turn, not in a loop.
+func _build_next_act(s: GameSession) -> void:
+	var waiting := QuestRules.awaiting(s, Catalog.data["world"])
+	if waiting.is_empty() or not Backend.is_ready() or is_busy():
+		return
+	_add(GameSession.system_entry("QUEST_ACT_BUILDING"))
+	_request("quest_act", QuestGen.act_frame(s, Catalog.data, waiting[0]))
 
 
 ## Shows the narration, applies listed reserves, handles next_mode. Returns the follow-up turn kind or "".
 func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kind: String = "") -> String:
 	var text := str(result.get("narration", ""))
-	if s.in_conversation():
+	if s.in_conversation() and turn_kind != "quest_act":
 		_add(GameSession.npc_entry(s.npc_id, str(world().npc(s.npc_id).get("name", s.npc_id)), text, turn_id))
 	else:
 		_add(GameSession.dm_entry(text, turn_id))

@@ -30,7 +30,8 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
         return [f"{where}: в when ровно одно условие (item — только к talk или arrive)"]
     if ("talk" in w or "choice" in w) and not top:
         errors.append(f"{where}: talk и choice — только целым шагом задания")
-    if "encounter" in w and w["encounter"] not in {r.get("encounter", {}).get("id") for r in rooms.values()}:
+    if "encounter" in w and w["encounter"] not in {r.get("encounter", {}).get("id") for r in rooms.values()} | {
+            v.get("encounter", {}).get("id") for r in rooms.values() for v in r.get("variants", [])}:  # a quest's fight lives in a variant (v0.7.39.6)
         errors.append(f"{where}: нет встречи {w['encounter']}")
     if "secret" in w:
         rid, sec = w["secret"].split(":")
@@ -281,10 +282,12 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         if len(secret_ids) != len(set(secret_ids)):
             errors.append(f"комната {rid}: id секретов повторяются")
         errors += [f"комната {rid}: неизвестная метка {t}" for t in room.get("tags", []) if t not in room_tags]
-        for v in room.get("variants", []):  # v0.7.14.1: the room by the world's flags
-            keys = {"if_flag", "if_not_flag", "description", "npcs", "hooks", "encounter", "safe"}
-            if not ("if_flag" in v or "if_not_flag" in v) or set(v) - keys:
-                errors.append(f"комната {rid}: вариант — if_flag или if_not_flag и только {', '.join(sorted(keys))}")
+        for v in room.get("variants", []):  # v0.7.14.1: the room by the world's flags; v0.7.39.6: or while a quest is taken
+            keys = {"vid", "if_flag", "if_not_flag", "if_quest", "description", "npcs", "hooks", "encounter", "safe"}
+            if not ("if_flag" in v or "if_not_flag" in v or "if_quest" in v) or set(v) - keys:
+                errors.append(f"комната {rid}: вариант — if_flag, if_not_flag или if_quest и только {', '.join(sorted(keys))}")
+            if "if_quest" in v and v["if_quest"] not in world.get("quests", {}):
+                errors.append(f"комната {rid}: вариант ждёт неизвестного задания {v['if_quest']}")
             errors += [f"комната {rid}: в варианте нет NPC {n}" for n in v.get("npcs", []) if n not in npcs]
             errors += [f"комната {rid}: в варианте нет монстра {f.get('monster')}" for f in v.get("encounter", {}).get("enemies", [])
                        if f.get("monster") not in ids["monsters"]]

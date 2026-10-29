@@ -2,6 +2,7 @@ extends SceneTree
 ## Balance of pack encounters on the engine alone: every ready-made hero at a level fights an encounter many times
 ## with a simple policy (heal at half HP with a potion or Second Wind, step to the nearest foe, attack, end the turn).
 ##   godot --headless --path game -s res://tools/balance_sim.gd -- <encounter_id> <level> <fights> [preset_id]
+## <encounter_id> may be «foes:wolf*2+bandit» — a quest's fight by its foes (v0.7.39.6: the tiers of quest_gen).
 ## Prints the win rate and the average HP left per hero; with a preset id also the log of its first fight.
 ## Not a test: numbers for the game author.
 
@@ -14,6 +15,11 @@ func _init() -> void:
 	var only := args[3] if args.size() > 3 else ""
 	var data := TestUtils.data()
 	var enc := {}
+	if enc_id.begins_with("foes:"):
+		var foes: Array = []
+		for part: String in enc_id.trim_prefix("foes:").split("+"):
+			foes.append({"monster": part.get_slice("*", 0), "count": int(part.get_slice("*", 1)) if part.contains("*") else 1})
+		enc = {"id": "sim", "enemies": foes}
 	for rid: String in data["world"]["rooms"]:
 		var e: Dictionary = data["world"]["rooms"][rid].get("encounter", {})
 		if str(e.get("id", "")) == enc_id:

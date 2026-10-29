@@ -33,7 +33,8 @@ from pydantic_ai.models import Model
 from . import REPO_ROOT
 from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER, PINNED
-from .agents import RETRY_MAX_TOKENS, TurnContext, build_turn_agent, is_entry, settings_for, system_prompt_for, turn_user_prompt
+from .agents import (RETRY_MAX_TOKENS, TurnContext, build_designer_agent, build_turn_agent, is_entry, is_quest_act, settings_for,
+                     system_prompt_for, turn_user_prompt)
 from .protocol import TurnRequestParams
 
 SCENARIOS = REPO_ROOT / "evals" / "golden" / "scenarios.yaml"
@@ -231,10 +232,13 @@ def sentences(text: str) -> int:
     return len([s for s in re.split(r"[.!?…]+", text) if s.strip()])
 
 
-def _path(x: Any, dotted: str) -> Any:
+def _paths(x: Any, dotted: str) -> list[Any]:
+    """Values at a dotted path; a list on the way is walked into (v0.7.39.6: `items.from_giver` of a quest act)."""
+    xs = [x]
     for k in dotted.split("."):
-        x = x.get(k) if isinstance(x, dict) else None
-    return x
+        xs = [y for v in xs for y in (v if isinstance(v, list) else [v])]
+        xs = [v.get(k) for v in xs if isinstance(v, dict) and v.get(k) is not None]
+    return xs
 
 
 def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine, tools: list[str]) -> list[str]:
@@ -282,10 +286,10 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
         if any(f in x for x in effects):
             fails.append(f"поле {f} в эффекте")
     for f in e.get("required_fields", []):  # v0.7.34.5: a dotted path with a true value, e.g. quest_item.from_giver
-        if not any(_path(x, f) for x in effects):
+        if not any(v for x in effects for v in _paths(x, f)):
             fails.append(f"нет поля {f} в эффектах")
     for f, allowed in (e.get("field_in") or {}).items():  # v0.7.38.5: a dotted path whose value is one of these
-        got = [_path(x, f) for x in effects if _path(x, f) is not None]
+        got = [v for x in effects for v in _paths(x, f)]
         if not any(v in allowed for v in got):
             fails.append(f"{f} = {got or 'нет'}, нужно из {allowed}")
     if e.get("condition_save"):  # v0.7.8: a condition on the hero by the rules — a reason, a save with a tag, or the hero's own cause
@@ -436,14 +440,16 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]
     if getattr(model, "system", "") == "openrouter":  # the same providers as the game (v0.7.14.4)
         await PICKER.refresh(model.model_name)
-    agent = build_turn_agent(model, system_prompt_for(params), entry=is_entry(params))
+    designer = is_quest_act(params)  # v0.7.39.6: the act of a quest is built by the designer, as in turns.py
+    agent = (build_designer_agent(model, system_prompt_for(params)) if designer else
+             build_turn_agent(model, system_prompt_for(params), entry=is_entry(params)))
     started = time.monotonic()
     billed: list[float] = []  # what OpenRouter charged for each request (v0.7.14.5)
     token = REQUEST_COSTS.set(billed)
     short = None
     before = RunUsage()
     try:
-        if route:  # v0.7.20.4: the way of the game — the router, the short prompt, the full one when needed
+        if route and not designer:  # v0.7.20.4: the way of the game — the router, the short prompt, the full one when needed
             from .turns import _short_turn
             short, before, o.route = await _short_turn(model, params, turn_user_prompt(params), {})
         if short is not None:
@@ -452,7 +458,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
             try:
                 result = await agent.run(turn_user_prompt(params), deps=ctx)
             except UnexpectedModelBehavior as exc:  # as the game does: once more with room to spare (turns.py)
-                if "token limit" not in str(exc).lower() or engine.checks() or engine.effects():  # searches do not count, as in turns.py
+                if designer or "token limit" not in str(exc).lower() or engine.checks() or engine.effects():  # searches do not count, as in turns.py
                     raise
                 agent = build_turn_agent(model, system_prompt_for(params), RETRY_MAX_TOKENS, entry=is_entry(params))
                 ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]

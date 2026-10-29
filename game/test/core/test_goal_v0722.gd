@@ -67,8 +67,8 @@ func test_past_the_threshold_hints_come_first_then_the_quest() -> void:
 	GoalRules.write(c, "Убить тролля")
 	_assess({"scale": "hard"})  # level 3 of the class, two hints before the quest
 	assert_str(str(_assess_kind({"kind": "goal_hint"}, "t-2")["reason"])).contains("ещё не по силам")
-	var quest := {"kind": "create_quest", "giver": "npc_innkeeper", "title": "След тролля", "scale": "major", "for_goal": true,
-		"steps": [{"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"}]}
+	var quest := {"kind": "create_quest", "giver": "npc_innkeeper", "title": "След тролля", "difficulty": "hard", "for_goal": true,
+		"acts": [{"title": "Слухи", "goal": "Расспросить Миру о тролле"}, {"title": "Логово", "goal": "Найти и одолеть тролля"}]}
 	fx.searched_quests["t-3"] = true
 	assert_str(str(_assess_kind(quest, "t-3")["reason"])).contains("ещё не по силам")
 	c["level"] = 3

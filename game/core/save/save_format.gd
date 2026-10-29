@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 50
+const SAVE_VERSION := 51
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -72,6 +72,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	47: _v47_to_v48,
 	48: _v48_to_v49,
 	49: _v49_to_v50,
+	50: _v50_to_v51,
 }
 
 
@@ -474,3 +475,16 @@ static func _v49_to_v50(data: Dictionary, _ctx: Dictionary) -> void:
 		st.erase("worker")
 		st.erase("serf")
 		st["staff"] = staff
+
+
+## v0.7.39.6: a made quest's scale is its difficulty (trifle → easy, ordinary → medium, major → hard); its steps stay,
+## it has no acts to wait for.
+static func _v50_to_v51(data: Dictionary, _ctx: Dictionary) -> void:
+	var gen: Variant = data["session"].get("generated", {})
+	if not (gen is Dictionary):
+		return
+	var by := {"trifle": "easy", "ordinary": "medium", "major": "hard"}
+	for q: Variant in (gen.get("quests", {}) as Dictionary).values():
+		if q is Dictionary and q.has("scale"):
+			q["difficulty"] = str(by.get(str(q["scale"]), "medium"))
+			q.erase("scale")

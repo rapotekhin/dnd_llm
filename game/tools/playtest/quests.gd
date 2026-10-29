@@ -1,7 +1,8 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Quests playtest (python tools/godot_playtest.py --scenario quests), v0.7.21: a quest the master makes from Bruno —
-## its «Взять задание» button, the step at Mira, the way back to Bruno, the reward and the journal; an order on the
-## tavern's board taken at the board (v0.7.21.2) and the hero's own deed.
+## its «Взять задание» button, the act the designer builds on taking (v0.7.39.6; the stub — a talk with the giver),
+## its steps, the way back to Bruno, the reward and the journal; an order on the tavern's board taken at the board
+## (v0.7.21.2) and the hero's own deed.
 
 
 func run() -> void:
@@ -22,9 +23,9 @@ func run() -> void:
 	var fx: EffectEngine = gs.effects
 	fx.searched_quests["t-pq"] = true
 	var r := fx.validate(s, data, "t-pq", {"kind": "create_quest", "giver": "npc_innkeeper", "title": "Должок служанки",
-		"scale": "trifle", "description": "Бруно просит узнать у Миры, куда делись два бочонка.",
+		"difficulty": "easy", "description": "Бруно просит узнать у Миры, куда делись два бочонка.",
 		"offer_text": "Спроси Миру про бочонки — она что-то темнит.",
-		"steps": [{"text": "Расспросить Миру о бочонках", "kind": "talk", "target": "npc_serving"}]})
+		"acts": [{"title": "Бочонки", "goal": "Выяснить, куда делись два бочонка"}]})
 	if not step("the quest is accepted by the engine", bool(r["accepted"]), str(r)):
 		return
 	fx.apply(s, "t-pq", [r["effect_id"]])
@@ -38,15 +39,36 @@ func run() -> void:
 	await press(take)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	step("the quest is taken", s.quests_active.has(qid))
-	var talk: Button = find(game, "QuestStep_" + qid)
-	if step("the step at Mira", talk != null and not talk.disabled):
-		await press(talk)
-		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
-	await frames(3)
-	var back: Button = find(game, "QuestStep_" + qid)
+	step("the designer built its act on taking", await wait_until(func() -> bool:
+		return int(QuestRules.quest(data["world"], qid).get("built", 0)) == 1 and not gs.is_busy(), 60.0),
+		str(QuestRules.quest(data["world"], qid).get("steps", [])))
 	var gold := int(s.character["gold_cp"])
-	if step("the way back to Bruno", back != null and not back.disabled):
-		await press(back)
+	for i in 6:  # the act's steps by their buttons; a fight the real designer adds is won by the engine's fact
+		await frames(3)
+		if s.quests_done.has(qid):
+			break
+		var cur := QuestRules.current(s, data["world"], qid)
+		var w: Dictionary = cur.get("when", {})
+		var facts: Array = [w] + (w.get("all", []) as Array) + (w.get("any", []) as Array)
+		var fought := false
+		for f: Dictionary in facts:  # a fight or a search the real designer adds: the engine's fact, as the fight or the search would
+			if f.has("encounter"):
+				s.encounters_done.append(str(f["encounter"]))
+				fought = true
+			if f.has("secret"):
+				var room := str(f["secret"]).get_slice(":", 0)
+				var found: Array = s.revealed.get(room, [])
+				found.append(str(f["secret"]).get_slice(":", 1))
+				s.revealed[room] = found
+				fought = true
+		if fought:
+			QuestRules.advance(s, data)
+			node("EventBus").state_changed.emit()
+			continue
+		var talk: Button = find(game, "QuestStep_" + qid)
+		if talk == null or talk.disabled:
+			break
+		await press(talk)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	step("the quest is done and paid by the table", s.quests_done.has(qid) and int(s.character["gold_cp"]) - gold == 500,
 		"%s, +%d" % [s.quests_done, int(s.character["gold_cp"]) - gold])
@@ -59,7 +81,10 @@ func run() -> void:
 	var f := fx.validate(s, data, "t-pb", {"kind": "furnish", "props": [{"name": "Доска объявлений", "text": "Заказы Брода"}]})
 	if f["accepted"]:
 		fx.apply(s, "t-pb", [f["effect_id"]])
-	var board := str(PropRules.room_props(s, s.room_id)[0]["id"])
+	var board := ""
+	for p: Dictionary in PropRules.room_props(s, s.room_id):  # the real master may have furnished the hall before
+		if str(p.get("name", "")) == "Доска объявлений":
+			board = str(p["id"])
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var bbtn: Button = find(game, "Board_" + board)  # the author, after v0.7.22.33: no «заказов 0» on a board never read
@@ -67,7 +92,7 @@ func run() -> void:
 	QuestGen.mark_board_read(s, board)
 	fx.searched_quests["t-pb2"] = true
 	var o := fx.validate(s, data, "t-pb2", {"kind": "create_quest", "giver": "npc_smith", "board_prop_id": board,
-		"title": "Уголь для кузни", "scale": "trifle", "steps": [{"text": "Расспросить Миру об угольщике", "kind": "talk", "target": "npc_serving"}]})
+		"title": "Уголь для кузни", "difficulty": "easy", "acts": [{"title": "Угольщик", "goal": "Найти угольщика и привезти уголь"}]})
 	if not step("the board order is accepted", bool(o["accepted"]), str(o)):
 		return
 	fx.apply(s, "t-pb2", [o["effect_id"]])
@@ -98,8 +123,8 @@ func run() -> void:
 		await frames(2)
 	# the hero's own deed: taken at once
 	fx.searched_quests["t-po"] = true
-	var d := fx.validate(s, data, "t-po", {"kind": "create_quest", "own": true, "title": "Кто травит колодцы", "scale": "ordinary",
-		"steps": [{"text": "Осмотреть погреб таверны", "kind": "visit", "target": "brod-tavern-cellar"}]})
+	var d := fx.validate(s, data, "t-po", {"kind": "create_quest", "own": true, "title": "Кто травит колодцы", "difficulty": "medium",
+		"acts": [{"title": "Колодцы", "goal": "Осмотреть колодцы и найти, кто их травит"}]})
 	if step("the own deed is accepted", bool(d["accepted"]), str(d)):
 		fx.apply(s, "t-po", [d["effect_id"]])
 		var deed := str(s.generated["quests"].keys()[-1])

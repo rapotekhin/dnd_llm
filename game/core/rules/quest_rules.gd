@@ -12,6 +12,8 @@ extends RefCounted
 ## `attitude` {npc_id: delta}) and may set a world `flag`. State: s.quests_active {quest_id: step index},
 ## s.quest_parts {quest_id: [announced part indexes]}, s.quests_done.
 ## One-button quests without steps (v0.5.4) stay in XpRules.
+## v0.7.39.6: a made quest by acts (`acts`, `built`) grows its steps act by act (QuestGen.apply_act): past its last
+## built step it waits for the next act (`awaiting`), the designer's turn builds it; `needs` holds any step.
 
 
 static func stepped(world: Dictionary) -> Dictionary:
@@ -92,7 +94,8 @@ static func accept(s: GameSession, data: Dictionary, quest_id: String) -> Array[
 	var q := quest(data["world"], quest_id)
 	s.quests_active[quest_id] = 0
 	s.remember(stand_in(s, data["world"], str(q.get("giver", ""))), "герой взял задание «%s»" % q["title"])
-	var lines: Array[String] = ["Новое задание: %s" % q["title"], "Цель: %s" % q["steps"][0]["text"]]
+	var first: String = str(q["steps"][0]["text"]) if not (q["steps"] as Array).is_empty() else str(q["acts"][0]["goal"])
+	var lines: Array[String] = ["Новое задание: %s" % q["title"], "Цель: %s" % first]
 	var given: Dictionary = q.get("offer_items", {})  # what the giver hands over (v0.6.5: the letter, the writ)
 	for id: String in given:
 		s.character["inventory"][id] = int(s.character["inventory"].get(id, 0)) + int(given[id])
@@ -100,6 +103,20 @@ static func accept(s: GameSession, data: Dictionary, quest_id: String) -> Array[
 	lines.append_array(advance(s, data))
 	QuestGen.board_taken(s, data, q)
 	return lines
+
+
+## Taken quests by acts that wait for their next act: every built step done, an act left (v0.7.39.6).
+static func awaiting(s: GameSession, world: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for id: String in s.quests_active:
+		if waits(s, world, id):
+			out.append(id)
+	return out
+
+
+static func waits(s: GameSession, world: Dictionary, quest_id: String) -> bool:
+	var q := quest(world, quest_id)
+	return q.has("acts") and s.quests_active.has(quest_id) and int(s.quests_active[quest_id]) >= (q["steps"] as Array).size() 		and int(q.get("built", 0)) < (q["acts"] as Array).size()
 
 
 static func current(s: GameSession, world: Dictionary, quest_id: String) -> Dictionary:
@@ -110,11 +127,11 @@ static func current(s: GameSession, world: Dictionary, quest_id: String) -> Dict
 
 ## The followed quest (П11): the player's pick while it is active, else the last one taken; "" — none.
 static func tracked(s: GameSession, world: Dictionary) -> String:
-	if s.quests_active.has(s.tracked_quest) and not current(s, world, s.tracked_quest).is_empty():
+	if s.quests_active.has(s.tracked_quest) and (not current(s, world, s.tracked_quest).is_empty() or waits(s, world, s.tracked_quest)):
 		return s.tracked_quest
 	var ids: Array = s.quests_active.keys()
 	for i in range(ids.size() - 1, -1, -1):
-		if not current(s, world, str(ids[i])).is_empty():
+		if not current(s, world, str(ids[i])).is_empty() or waits(s, world, str(ids[i])):
 			return str(ids[i])
 	return ""
 
@@ -158,7 +175,8 @@ static func advance(s: GameSession, data: Dictionary) -> Array[String]:
 			if step.is_empty() or _by_button(step["when"]):
 				break
 			lines.append_array(_announce_parts(s, data["world"], id, step))
-			if not met(s, step["when"]):
+			var all_done: bool = step["when"].has("all") and (s.quest_parts.get(id, []) as Array).size() >= (step["when"]["all"] as Array).size()
+			if not (met(s, step["when"]) or all_done) or (step.has("needs") and not met(s, step["needs"])):  # a part done stays done: a place left behind (v0.7.39.6)
 				break
 			if step["when"].has("item"):
 				_hand_over(s, data, str(step["when"]["item"]), lines, "Оставлено")
@@ -202,6 +220,9 @@ static func history(s: GameSession, world: Dictionary, quest_id: String) -> Arra
 static func step_text(s: GameSession, world: Dictionary, quest_id: String) -> String:
 	var step := current(s, world, quest_id)
 	if step.is_empty():
+		if waits(s, world, quest_id):
+			var q := quest(world, quest_id)
+			return "%s — мастер готовит продолжение" % q["acts"][int(q.get("built", 0))]["goal"]
 		return ""
 	var text := str(step["text"])
 	if step.has("needs") and not met(s, step["needs"]) and not str(step.get("needs_text", "")).is_empty():
@@ -263,6 +284,8 @@ static func talks_here(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 		var step := current(s, world, id)
 		var when: Dictionary = step.get("when", {})
 		var to := stand_in(s, world, str(when.get("talk", "")))
+		if step.has("needs") and not met(s, step["needs"]):
+			continue  # the hero does not know enough yet (v0.7.39.6)
 		if when.has("talk") and here.has(to):
 			out.append({"quest_id": id, "action": str(step.get("action", step["text"])), "npc_id": to,
 				"item": str(when.get("item", ""))})
@@ -306,6 +329,11 @@ static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -
 	var lines: Array[String] = ["«%s»: %s — сделано" % [q["title"], step["text"]]]
 	_reward(s, data, step, lines, dangerous(q, step))
 	s.quest_parts.erase(quest_id)
+	if i + 1 >= (q["steps"] as Array).size() and q.has("acts") and int(q.get("built", 0)) < (q["acts"] as Array).size():
+		s.quests_active[quest_id] = i + 1  # the next act is built by the designer's turn (v0.7.39.6)
+		lines.append("«%s»: акт «%s» пройден" % [q["title"], q["acts"][int(q["built"]) - 1]["title"]])
+		lines.append("Дальше: %s" % q["acts"][int(q["built"])]["goal"])
+		return lines
 	if i + 1 >= (q["steps"] as Array).size():
 		s.quests_active.erase(quest_id)
 		s.quests_done.append(quest_id)

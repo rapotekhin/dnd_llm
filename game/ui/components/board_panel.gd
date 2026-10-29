@@ -87,11 +87,36 @@ func _rebuild() -> void:
 		_box.add_child(HSeparator.new())
 		_label(str(q["title"]))
 		_label(str(q.get("description", "")), UiTheme.MUTED_LABEL)
-		var steps: Array = q.get("steps", [])
-		var cp := int(steps[-1].get("reward_cp", 0)) if not steps.is_empty() else 0
-		_label(tr("BOARD_ORDER_LINE").format({"who": world.npc(str(q.get("giver", ""))).get("name", "—"), "reward": Money.format(cp)}), UiTheme.MUTED_LABEL)
+		_label(tr("BOARD_ORDER_LINE").format({"who": world.npc(str(q.get("giver", ""))).get("name", "—"), "reward": Money.format(QuestGen.reward_cp(q))}), UiTheme.MUTED_LABEL)
+		if not QuestGen.difficulty_line(data, q).is_empty():
+			_label(QuestGen.difficulty_line(data, q), UiTheme.MUTED_LABEL)
 		var why := QuestGen.can_take(s, data, qid)
-		var tb := _button(_box, "BoardTake_" + qid, tr("BTN_BOARD_TAKE"), can_act and why.is_empty(), GameState.accept_quest.bind(qid))
+		var tb := _button(_box, "BoardTake_" + qid, tr("BTN_BOARD_TAKE"), can_act and why.is_empty(), func() -> String: return _take(qid, q))
 		tb.tooltip_text = tr(why) if not why.is_empty() else ""
 	_box.add_child(HSeparator.new())
-	_button(_box, "BoardTakeAll", tr("BTN_BOARD_TAKE_ALL"), can_act and room_left > 0, func() -> String: return GameState.take_board_all(orders))
+	_button(_box, "BoardTakeAll", tr("BTN_BOARD_TAKE_ALL"), can_act and room_left > 0, func() -> String: return _take_all(orders))
+
+
+## The near-impossible asks «Точно?» first (v0.7.39.6).
+## All orders at once: a deadly one among them asks first, as its own button does (v0.7.39.6).
+func _take_all(orders: Array) -> String:
+	var deadly := orders.filter(func(qid: Variant) -> bool: return QuestGen.warns(Catalog.data, QuestRules.quest(Catalog.data["world"], str(qid))))
+	if deadly.is_empty():
+		return GameState.take_board_all(orders)
+	ConfirmBox.ask(self, tr("CONFIRM_QUEST_DEADLY_TITLE").format({"title": QuestRules.quest(Catalog.data["world"], str(deadly[0]))["title"]}),
+		tr("CONFIRM_QUEST_DEADLY"), tr("BTN_QUEST_TAKE_DEADLY"), func() -> void:
+			var err := GameState.take_board_all(orders)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
+	return ""
+
+
+func _take(qid: String, q: Dictionary) -> String:
+	if not QuestGen.warns(Catalog.data, q):
+		return GameState.accept_quest(qid)
+	ConfirmBox.ask(self, tr("CONFIRM_QUEST_DEADLY_TITLE").format({"title": q["title"]}), tr("CONFIRM_QUEST_DEADLY"), tr("BTN_QUEST_TAKE_DEADLY"),
+		func() -> void:
+			var err := GameState.accept_quest(qid)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
+	return ""

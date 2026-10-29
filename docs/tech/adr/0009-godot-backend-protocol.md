@@ -206,6 +206,12 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 91. Протокол 0.81.0 (v0.7.39.6)
+
+- **`create_quest` — каркас:** `difficulty` (`easy` | `medium` | `hard` | `deadly`), `acts` [`QuestAct` {`title`, `goal`}] (1–4), `villain`, `finale`; убраны `scale`, `steps`, `reward_item_id`, `new_place`, `quest_item`; `new_npcs` — только новый заказчик заказа на доске. Награду и опыт по сложности и уровню героя ставит движок.
+- **Вид хода `quest_act`:** акт взятого задания открылся — клиент шлёт ход с рамкой движка во `input` (режим `exploration`, без `npc_id`); его ведёт сценарист (свой агент и промпт), который отвечает одним эффектом **`quest_act`** {`quest_id`, `act`, `steps` [`ActStep`: `talk` | `visit` | `find` | `fight` | `all` | `any` | `choice`, `parts` [`ActFact`], `needs`, `needs_text`], `new_npcs`, `new_places` [`QuestActPlace`], `items` [`QuestItem` с `key`], `encounters` [`ActEncounter` {`key`, `room`, `kind`: `ambush` | `guard` | `target`, `enemies`, `boss`}], `choices` [`ActChoice` {`id`, `action`, `done_text`, `attitude`, `changes` [`ActChange`], `reward_item_id`}], `reward_item_id`}. Вне этого хода `quest_act` отклоняется, в нём — всё, кроме `quest_act`.
+- **`NewEncounter.boss`** — главарь в комнате нового места акта.
+
 ### 90. Протокол 0.80.0 (v0.7.39.5)
 
 - **Объект в `create_place`:** `NewSite` получил `kind` (вид из `rules.property.kinds` — места штата по ролям, доход, торговля; неверный — движок называет верные), `owner_role`, `staff` [`SiteStaff` {`npc_id` — человек мира или `new:<key>` людей места, `role`}], `upgrades` (id из `property.upgrades`), `hours` [`SiteHours` {`opens` 0–23, `closes` 1–24}]. Один шаблон объекта для пакета, мастера и героя (`ObjectRules`); работа героя у NPC — место в штате объекта хозяина. Объект на продажу — по-прежнему эффект `property` с `site_id: "new"`.

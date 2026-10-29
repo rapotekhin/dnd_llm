@@ -256,6 +256,11 @@ def entry_prompt(snap: Snapshot, tone: str = DEFAULT_TONE) -> str:
                   gender_rule=gender_rule(character.gender if character else "other"))
 
 
+def quest_act_prompt(snap: Snapshot) -> str:
+    """The designer's prompt (v0.7.39.6): builds the act of a taken quest that opened; the engine's frame is the input."""
+    return render("quest_act.md.j2", world=snap.world)
+
+
 def short_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE) -> str:
     """The short system prompt of the router (v0.7.20.4): only words, the scene in brief."""
     if snap.world is not None and snap.world.tone:

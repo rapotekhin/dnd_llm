@@ -1589,3 +1589,8 @@ OBJECT_UPGRADES,"Есть: {list}"
 OBJECT_HOURS,"Открыто {hours}"
 OBJECT_PRIVATE,Частное место
 OBJECT_FACTS,"Было: {list}"
+QUEST_ACT_BUILDING,Мастер готовит продолжение задания…
+QUEST_DIFFICULTY_LINE,"Сложность: {name} · актов: {acts}"
+CONFIRM_QUEST_DEADLY_TITLE,Взять «{title}»?
+CONFIRM_QUEST_DEADLY,"Почти невозможное задание: бои на пределе сил героя, главарь в финале. Герой может погибнуть."
+BTN_QUEST_TAKE_DEADLY,Взять всё равно

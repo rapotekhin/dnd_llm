@@ -397,6 +397,10 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_quest"):
 				return {"reason": "одно новое задание за ход"}
 			return QuestGen.plan_quest(s, data, e, searched_quests.has(turn_id))
+		"quest_act":  # the designer builds the act that opened (v0.7.39.6)
+			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "quest_act"):
+				return {"reason": "один акт за ход"}
+			return QuestGen.plan_act(s, data, e)
 		"create_npc":  # a person the world lacks, by the pack's schema (v0.7.20)
 			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_npc"):
 				return {"reason": "один новый человек за ход"}
@@ -1027,10 +1031,11 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"create_quest":
 			var qid := QuestGen.apply_quest(s, _data, plan)
 			_extra_lines.append("[%s]" % qid)
-			if bool(plan["quest"].get("own", false)):  # one's own deed is taken at once (v0.7.21.2)
+			if bool(plan["quest"].get("own", false)):  # one's own deed is taken at once (v0.7.21.2); its first act comes next
 				s.quests_active[qid] = 0
-				_extra_lines.append("Своё дело: %s · Цель: %s" % [plan["quest"]["title"], plan["quest"]["steps"][0]["text"]])
-				_extra_lines.append_array(QuestRules.advance(s, _data))
+				_extra_lines.append("Своё дело: %s · Цель: %s" % [plan["quest"]["title"], plan["quest"]["acts"][0]["goal"]])
+		"quest_act":
+			_extra_lines.append_array(QuestGen.apply_act(s, _data, plan))
 		"create_place":
 			_extra_lines.append("выход: [%s]" % WorldGen.apply_place(s, _data, plan))
 			_made["rooms"] = plan["ids"]

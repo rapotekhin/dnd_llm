@@ -72,7 +72,8 @@ static func find_npcs(s: GameSession, data: Dictionary, query: String) -> Array[
 
 ## Checks a `create_npc`: {plan, summary} or {reason}. `spec` — the schema of a pack NPC (NewNpc of the protocol).
 ## `new_rooms` — {key: location id} of the place made in this turn: `room_id` «new:<key>» puts the person there.
-static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searched: bool, new_rooms: Dictionary = {}) -> Dictionary:
+## `any_loc` (v0.7.39.6) — a person of a quest's act may live in any known place, not only in the hero's location.
+static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searched: bool, new_rooms: Dictionary = {}, any_loc: bool = false) -> Dictionary:
 	var c := cfg(data)
 	if not searched:
 		return {"reason": "сначала find_npcs: может, такой человек уже есть в мире"}
@@ -96,7 +97,7 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 	if not fresh and not data["world"]["rooms"].has(room):
 		return {"reason": "нет комнаты %s; новое место этого хода — «new:<key>» его комнаты" % room}
 	var loc := str(new_rooms[room.trim_prefix("new:")]) if fresh else world.location_id(room)
-	if not fresh and loc != world.location_id(s.room_id):
+	if not fresh and not any_loc and loc != world.location_id(s.room_id):
 		return {"reason": "новый человек — в этой локации (%s), а не в другой" % world.location(world.location_id(s.room_id)).get("name", "")}
 	var made: Dictionary = generated(s)["npcs"]
 	var here := made.keys().filter(func(id: String) -> bool: return world.location_id(str(generated(s)["npc_rooms"].get(id, ""))) == loc)
@@ -667,4 +668,12 @@ static func _merge_places(w: Dictionary, gen: Dictionary) -> Dictionary:
 			if not secrets.any(func(x: Dictionary) -> bool: return str(x.get("id", "")) == str(sec["id"])):
 				secrets.append(sec.duplicate(true))
 		w["rooms"][rid]["secrets"] = secrets
+	for rid: String in gen.get("room_variants", {}):  # v0.7.39.6: a quest's fight in a known room, a choice's change
+		if not w["rooms"].has(rid):
+			continue
+		var variants: Array = (w["rooms"][rid].get("variants", []) as Array).duplicate(true)
+		for v: Dictionary in gen["room_variants"][rid]:
+			if not variants.any(func(x: Dictionary) -> bool: return str(x.get("vid", "")) == str(v.get("vid", "")) and not str(v.get("vid", "")).is_empty()):
+				variants.append(v.duplicate(true))
+		w["rooms"][rid]["variants"] = variants
 	return w

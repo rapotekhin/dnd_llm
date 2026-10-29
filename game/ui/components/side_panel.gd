@@ -1104,12 +1104,19 @@ func _quest_buttons(s: GameSession, can_act: bool, only_npc: String) -> void:
 		var q := QuestRules.quest(world, qid)
 		if not only_npc.is_empty() and str(q.get("giver", "")) != only_npc:
 			continue
-		var ab := _button(tr("BTN_QUEST_TAKE").format({"title": q["title"]}), func() -> void:
+		var take := func() -> void:
 			var err := GameState.accept_quest(qid)
 			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act)
+				EventBus.message.emit(tr(err))
+		var ab := _button(tr("BTN_QUEST_TAKE").format({"title": q["title"]}), func() -> void:
+			if QuestGen.warns(Catalog.data, q):  # the near-impossible asks first (v0.7.39.6)
+				ConfirmBox.ask(self, tr("CONFIRM_QUEST_DEADLY_TITLE").format({"title": q["title"]}), tr("CONFIRM_QUEST_DEADLY"), tr("BTN_QUEST_TAKE_DEADLY"), take)
+			else:
+				take.call(), can_act)
 		ab.name = "QuestTake_" + qid
-		ab.tooltip_text = str(q.get("description", ""))
+		var line := QuestGen.difficulty_line(Catalog.data, q)
+		ab.tooltip_text = str(q.get("description", "")) + ("
+" + line if not line.is_empty() else "")
 		ab.theme_type_variation = UiTheme.ACCENT_BUTTON
 	for t: Dictionary in QuestRules.talks_here(s, world):
 		if not only_npc.is_empty() and str(t["npc_id"]) != only_npc:

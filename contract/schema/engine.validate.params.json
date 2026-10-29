@@ -21,6 +21,243 @@
       "title": "AcceptQuestEffect",
       "type": "object"
     },
+    "ActChange": {
+      "additionalProperties": false,
+      "description": "How a place looks after a choice of the finale (0.81.0).",
+      "properties": {
+        "description": {
+          "maxLength": 600,
+          "minLength": 10,
+          "title": "Description",
+          "type": "string"
+        },
+        "room_id": {
+          "title": "Room Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "room_id",
+        "description"
+      ],
+      "title": "ActChange",
+      "type": "object"
+    },
+    "ActChoice": {
+      "additionalProperties": false,
+      "description": "An option of the finale's choice (0.81.0): its button, what came of it, the attitude of people (−2…+2), how places\nchanged, a catalog thing as its reward (no dearer than half the quest's coins). The engine sets its world flag.",
+      "properties": {
+        "action": {
+          "maxLength": 80,
+          "minLength": 3,
+          "title": "Action",
+          "type": "string"
+        },
+        "attitude": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Attitude",
+          "type": "object"
+        },
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/ActChange"
+          },
+          "maxItems": 2,
+          "title": "Changes",
+          "type": "array"
+        },
+        "done_text": {
+          "maxLength": 400,
+          "minLength": 10,
+          "title": "Done Text",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,19}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "reward_item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reward Item Id"
+        }
+      },
+      "required": [
+        "id",
+        "action",
+        "done_text"
+      ],
+      "title": "ActChoice",
+      "type": "object"
+    },
+    "ActEncounter": {
+      "additionalProperties": false,
+      "description": "A fight of an act (0.81.0) in a known room with no live encounter and no people, or in a room of the act's new\nplace («new:<key>»): `ambush` — the foes strike first, `guard` — they keep a thing or a person, `target` — a named\nfoe to beat or take alive; `boss` — the leader of the last act of a hard or deadly quest. The engine checks the\nfoes' XP by the quest's difficulty.",
+      "properties": {
+        "boss": {
+          "default": false,
+          "title": "Boss",
+          "type": "boolean"
+        },
+        "enemies": {
+          "items": {
+            "$ref": "#/$defs/NewEnemy"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Enemies",
+          "type": "array"
+        },
+        "key": {
+          "maxLength": 20,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "ambush",
+            "guard",
+            "target"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "room": {
+          "title": "Room",
+          "type": "string"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "room",
+        "kind",
+        "enemies"
+      ],
+      "title": "ActEncounter",
+      "type": "object"
+    },
+    "ActFact": {
+      "additionalProperties": false,
+      "description": "A fact of the engine (0.81.0): `visit` — a room id or «new:<room key>», `find` — «room:secret» of the world or\nthe `key` of a hidden thing of the act, `fight` — the `key` of a fight of the act («new:<room key>» for a room of a\nnew place with its `encounter`) or a live encounter of the world.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "visit",
+            "find",
+            "fight"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "text": {
+          "default": "",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "target"
+      ],
+      "title": "ActFact",
+      "type": "object"
+    },
+    "ActStep": {
+      "additionalProperties": false,
+      "description": "A step of an act (0.81.0): `talk` — `target` an NPC id or «new:<key>» (`item_id` — a thing to hand over: a key\nof the act's things, an earlier act's or a catalog id), `visit` (`item_id` — left there), `find`, `fight` as in\nActFact; `all` / `any` — 2–4 `parts` in any order (all) or one of them (any); `choice` — the finale's choice in a\nroom (`target`), its options in the act's `choices`. `needs` — knowledge the step waits for (`needs_text` — what\nthe hero lacks).",
+      "properties": {
+        "danger": {
+          "default": false,
+          "title": "Danger",
+          "type": "boolean"
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "kind": {
+          "enum": [
+            "talk",
+            "visit",
+            "find",
+            "fight",
+            "all",
+            "any",
+            "choice"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "needs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActFact"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "needs_text": {
+          "default": "",
+          "title": "Needs Text",
+          "type": "string"
+        },
+        "parts": {
+          "items": {
+            "$ref": "#/$defs/ActFact"
+          },
+          "maxItems": 4,
+          "title": "Parts",
+          "type": "array"
+        },
+        "target": {
+          "default": "",
+          "title": "Target",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "kind"
+      ],
+      "title": "ActStep",
+      "type": "object"
+    },
     "AdvanceTimeEffect": {
       "additionalProperties": false,
       "description": "The player spends time in the scene (0.10.0): waits, sleeps rough, works — the engine moves the clock within its\nlimit; not in combat.",
@@ -871,8 +1108,17 @@
     },
     "CreateQuestEffect": {
       "additionalProperties": false,
-      "description": "A quest from a giver of the scene (0.36.0) — only after find_quests in the same turn. The master names the scale,\nthe engine sets the reward (coins, class XP for the dangerous, the giver's goodwill) and adds the way back to the\ngiver; the quest is offered at once and lives like a pack quest.",
+      "description": "A quest's skeleton (0.81.0) — only after find_quests in the same turn. The master names the difficulty and the\nacts; the engine sets the reward by the difficulty and the hero's level, the acts are built by the designer when\neach opens (the first — on taking). Offered at once, it lives like a pack quest.",
       "properties": {
+        "acts": {
+          "items": {
+            "$ref": "#/$defs/QuestAct"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Acts",
+          "type": "array"
+        },
         "board_prop_id": {
           "anyOf": [
             {
@@ -889,6 +1135,33 @@
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "difficulty": {
+          "enum": [
+            "easy",
+            "medium",
+            "hard",
+            "deadly"
+          ],
+          "title": "Difficulty",
+          "type": "string"
+        },
+        "finale": {
+          "default": "",
+          "title": "Finale",
+          "type": "string"
+        },
+        "follows": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Follows"
         },
         "for_goal": {
           "default": false,
@@ -910,19 +1183,9 @@
           "items": {
             "$ref": "#/$defs/QuestNpc"
           },
+          "maxItems": 1,
           "title": "New Npcs",
           "type": "array"
-        },
-        "new_place": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/QuestPlace"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
         },
         "offer_text": {
           "default": "",
@@ -934,56 +1197,20 @@
           "title": "Own",
           "type": "boolean"
         },
-        "quest_item": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/QuestItem"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "reward_item_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Reward Item Id"
-        },
-        "scale": {
-          "enum": [
-            "trifle",
-            "ordinary",
-            "major"
-          ],
-          "title": "Scale",
-          "type": "string"
-        },
-        "steps": {
-          "items": {
-            "$ref": "#/$defs/NewQuestStep"
-          },
-          "maxItems": 4,
-          "minItems": 1,
-          "title": "Steps",
-          "type": "array"
-        },
         "title": {
           "title": "Title",
+          "type": "string"
+        },
+        "villain": {
+          "default": "",
+          "title": "Villain",
           "type": "string"
         }
       },
       "required": [
         "title",
-        "scale",
-        "steps"
+        "difficulty",
+        "acts"
       ],
       "title": "CreateQuestEffect",
       "type": "object"
@@ -2039,6 +2266,11 @@
     "NewEncounter": {
       "additionalProperties": false,
       "properties": {
+        "boss": {
+          "default": false,
+          "title": "Boss",
+          "type": "boolean"
+        },
         "enemies": {
           "items": {
             "$ref": "#/$defs/NewEnemy"
@@ -2244,54 +2476,6 @@
         "role"
       ],
       "title": "NewNpc",
-      "type": "object"
-    },
-    "NewQuestStep": {
-      "additionalProperties": false,
-      "description": "A step of a made quest (0.36.0): an engine fact. `talk` — `target` an NPC id (`item_id` — a thing to hand over),\n`visit` — a room id the hero comes to (`item_id` — a thing left there, 0.69.0), `find` — «room:secret» of the\nworld, `fight` — an encounter id.\nWhat the quest brings (0.37.0): `target` «new:<key>» — its new person or room (fight — the encounter of that room),\n`find` with `target` «item» and `item_id` «item» — its thing.",
-      "properties": {
-        "danger": {
-          "default": false,
-          "title": "Danger",
-          "type": "boolean"
-        },
-        "item_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Item Id"
-        },
-        "kind": {
-          "enum": [
-            "talk",
-            "visit",
-            "find",
-            "fight"
-          ],
-          "title": "Kind",
-          "type": "string"
-        },
-        "target": {
-          "title": "Target",
-          "type": "string"
-        },
-        "text": {
-          "title": "Text",
-          "type": "string"
-        }
-      },
-      "required": [
-        "text",
-        "kind",
-        "target"
-      ],
-      "title": "NewQuestStep",
       "type": "object"
     },
     "NewRoom": {
@@ -3120,9 +3304,197 @@
       "title": "PutInEffect",
       "type": "object"
     },
+    "QuestAct": {
+      "additionalProperties": false,
+      "description": "An act of a quest's skeleton (0.81.0): its name and what the hero does in it, one sentence.",
+      "properties": {
+        "goal": {
+          "maxLength": 200,
+          "minLength": 5,
+          "title": "Goal",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 60,
+          "minLength": 3,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "goal"
+      ],
+      "title": "QuestAct",
+      "type": "object"
+    },
+    "QuestActEffect": {
+      "additionalProperties": false,
+      "description": "The act of a quest that opened (0.81.0) — only in the designer's turn: its steps (1–5) on the engine's facts and\nwhat they need — new people, places, things and fights; the finale's `choices` and a `reward_item_id` only in the\nlast act. The engine checks each part by the quest's difficulty, adds the way back to the giver after the last act,\nsets the reward.",
+      "properties": {
+        "act": {
+          "maximum": 4,
+          "minimum": 1,
+          "title": "Act",
+          "type": "integer"
+        },
+        "choices": {
+          "items": {
+            "$ref": "#/$defs/ActChoice"
+          },
+          "maxItems": 3,
+          "title": "Choices",
+          "type": "array"
+        },
+        "encounters": {
+          "items": {
+            "$ref": "#/$defs/ActEncounter"
+          },
+          "maxItems": 4,
+          "title": "Encounters",
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/QuestItem"
+          },
+          "maxItems": 3,
+          "title": "Items",
+          "type": "array"
+        },
+        "kind": {
+          "const": "quest_act",
+          "default": "quest_act",
+          "title": "Kind",
+          "type": "string"
+        },
+        "new_npcs": {
+          "items": {
+            "$ref": "#/$defs/QuestNpc"
+          },
+          "maxItems": 3,
+          "title": "New Npcs",
+          "type": "array"
+        },
+        "new_places": {
+          "items": {
+            "$ref": "#/$defs/QuestActPlace"
+          },
+          "maxItems": 2,
+          "title": "New Places",
+          "type": "array"
+        },
+        "quest_id": {
+          "title": "Quest Id",
+          "type": "string"
+        },
+        "reward_item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reward Item Id"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/ActStep"
+          },
+          "maxItems": 5,
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "quest_id",
+        "act",
+        "steps"
+      ],
+      "title": "QuestActEffect",
+      "type": "object"
+    },
+    "QuestActPlace": {
+      "additionalProperties": false,
+      "description": "A place an act brings (0.81.0): the fields of create_place without its people (they go to the act's\n`new_npcs`); a room's `encounter` is a fight of the act (a lair), named in a step as «new:<room key>»; a room may\n`boss` — its leader (last act of a hard or deadly quest).",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "edge": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Edge",
+          "type": "integer"
+        },
+        "inside": {
+          "default": false,
+          "title": "Inside",
+          "type": "boolean"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "new_location": {
+          "default": false,
+          "title": "New Location",
+          "type": "boolean"
+        },
+        "room_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Room Id"
+        },
+        "rooms": {
+          "items": {
+            "$ref": "#/$defs/NewRoom"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Rooms",
+          "type": "array"
+        },
+        "site": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NewSite"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "terrain": {
+          "default": "",
+          "title": "Terrain",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rooms"
+      ],
+      "title": "QuestActPlace",
+      "type": "object"
+    },
     "QuestItem": {
       "additionalProperties": false,
-      "description": "The quest's thing (0.37.0): a catalog `item_id` or a new `item`, hidden in `room` (an id or «new:<room key>»);\n`hint` — where it lies, found by a check of `dc_tier` with `skill` (0.75.0: a plant in the wild — survival or\nnature; Investigation finds it too). `from_giver` (0.69.0) — the giver hands it over when the quest is taken\n(a parcel to carry): no `room` or `hint`.",
+      "description": "A thing of a quest's act (0.37.0; 0.81.0 — with `key`): a catalog `item_id` or a new `item`, hidden in `room`\n(an id or «new:<room key>»); `hint` — where it lies, found by a check of `dc_tier` with `skill` (0.75.0: a plant in\nthe wild — survival or nature; Investigation finds it too). `from_giver` (0.69.0) — the giver hands it over when\nthe quest is taken (only in the first act): no `room` or `hint`. Steps name it by `key`.",
       "properties": {
         "dc_tier": {
           "default": "medium",
@@ -3170,6 +3542,12 @@
           "default": null,
           "title": "Item Id"
         },
+        "key": {
+          "maxLength": 20,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
         "room": {
           "default": "",
           "title": "Room",
@@ -3190,6 +3568,9 @@
           "type": "string"
         }
       },
+      "required": [
+        "key"
+      ],
       "title": "QuestItem",
       "type": "object"
     },
@@ -3348,52 +3729,6 @@
         "key"
       ],
       "title": "QuestNpc",
-      "type": "object"
-    },
-    "QuestPlace": {
-      "additionalProperties": false,
-      "description": "The place a quest brings (0.37.0): the fields of create_place.",
-      "properties": {
-        "description": {
-          "default": "",
-          "title": "Description",
-          "type": "string"
-        },
-        "edge": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Edge",
-          "type": "integer"
-        },
-        "name": {
-          "default": "",
-          "title": "Name",
-          "type": "string"
-        },
-        "new_location": {
-          "default": false,
-          "title": "New Location",
-          "type": "boolean"
-        },
-        "rooms": {
-          "items": {
-            "$ref": "#/$defs/NewRoom"
-          },
-          "maxItems": 4,
-          "minItems": 1,
-          "title": "Rooms",
-          "type": "array"
-        },
-        "terrain": {
-          "default": "",
-          "title": "Terrain",
-          "type": "string"
-        }
-      },
-      "required": [
-        "rooms"
-      ],
-      "title": "QuestPlace",
       "type": "object"
     },
     "RecipeEffect": {
@@ -3964,6 +4299,7 @@
           "prop_state": "#/$defs/PropStateEffect",
           "property": "#/$defs/PropertyEffect",
           "put_in": "#/$defs/PutInEffect",
+          "quest_act": "#/$defs/QuestActEffect",
           "recipe": "#/$defs/RecipeEffect",
           "reputation": "#/$defs/ReputationEffect",
           "reveal_secret": "#/$defs/RevealSecretEffect",
@@ -4135,6 +4471,9 @@
         },
         {
           "$ref": "#/$defs/DoorEffect"
+        },
+        {
+          "$ref": "#/$defs/QuestActEffect"
         }
       ],
       "title": "Effect"

@@ -1155,21 +1155,203 @@
 		"max_level": 5
 	},
 	"quest_gen": {
-		"_doc": "Quests the master makes (v0.7.21, QuestGen): from a giver of the scene, 1..max_steps steps (talk, visit, find, fight) on what the world has, plus a return to the giver; at most max_open made quests taken at once and max_offered offered by one giver or board. Batch 2: a quest brings up to max_new_npcs new people, a place on an open edge and its thing in a hiding place; a person a quest made gives quests while its depth is below quest_depth. The reward by scale and the hero's level (1..5): reward_cp, class xp (only when a step is dangerous or the quest major), the giver's attitude.",
+		"_doc": "Quests the master makes (v0.7.21, QuestGen; v0.7.39.6 — by acts, see _difficulties): from a giver of the scene, 1..max_steps steps (talk, visit, find, fight) on what the world has, plus a return to the giver; at most max_open made quests taken at once and max_offered offered by one giver or board. Batch 2: a quest brings up to max_new_npcs new people, a place on an open edge and its thing in a hiding place; a person a quest made gives quests while its depth is below quest_depth. The reward by scale and the hero's level (1..5): reward_cp, class xp (only when a step is dangerous or the quest major), the giver's attitude.",
 		"max_open": 3,
 		"max_offered": 3,
 		"board_words": ["доск", "объявлен", "листк", "столб с"],
 		"board_refresh_days": "1d4",
 		"_board": "v0.7.22.13 (big test #30, #31): a thing of the room whose name has one of board_words is a notice board — a window of its orders; reading an unread one is a master's turn that puts its orders up; the first order taken off it rolls board_refresh_days, after which it is unread again (an empty read board — again next day).",
-		"max_steps": 4,
+		"max_steps": 9,
 		"hide_skills": ["perception", "investigation", "survival", "nature", "arcana", "religion", "history"],
 		"_hide_skills": "v0.7.38.5: the skills a quest's hidden thing may be found by (QuestItem.skill); Investigation finds any of them too",
 		"max_new_npcs": 2,
 		"quest_depth": 2,
-		"scales": {
-			"trifle": {"name": "пустяк", "reward_cp": [500, 700, 1000, 1500, 2000], "xp": [50, 75, 100, 150, 200], "attitude": 1},
-			"ordinary": {"name": "обычное дело", "reward_cp": [2500, 3500, 5000, 7500, 10000], "xp": [150, 225, 300, 450, 600], "attitude": 1},
-			"major": {"name": "важное дело", "reward_cp": [7500, 10000, 15000, 22500, 30000], "xp": [300, 450, 600, 900, 1200], "attitude": 2}
+		"_difficulties": "v0.7.39.6 (the author): the difficulty of a quest — its acts and steps, its fights and their difficulty by the DMG (encounter_xp of the level, raw XP of the foes; a fight of the difficulty holds between half and the whole of its budget, the boss of the last act — up to the next one), a choice in the finale, a sequel; the reward by the hero's level (1..5) at the quest's making: reward_cp at its end, xp shared by the acts (class XP only for the dangerous or a major one), the giver's attitude. `warn` — «Точно?» before taking it.",
+		"difficulties": {
+			"easy": {
+				"name": "простое",
+				"acts": [
+					1,
+					1
+				],
+				"steps": [
+					1,
+					2
+				],
+				"fights": [
+					0,
+					1
+				],
+				"fight": "easy",
+				"boss": false,
+				"choice": false,
+				"major": false,
+				"reward_cp": [
+					500,
+					700,
+					1000,
+					1500,
+					2000
+				],
+				"xp": [
+					50,
+					75,
+					100,
+					150,
+					200
+				],
+				"attitude": 1
+			},
+			"medium": {
+				"name": "среднее",
+				"acts": [
+					1,
+					2
+				],
+				"steps": [
+					2,
+					4
+				],
+				"fights": [
+					1,
+					2
+				],
+				"fight": "medium",
+				"boss": false,
+				"choice": false,
+				"major": false,
+				"reward_cp": [
+					2500,
+					3500,
+					5000,
+					7500,
+					10000
+				],
+				"xp": [
+					150,
+					225,
+					300,
+					450,
+					600
+				],
+				"attitude": 1
+			},
+			"hard": {
+				"name": "сложное",
+				"acts": [
+					2,
+					3
+				],
+				"steps": [
+					4,
+					6
+				],
+				"fights": [
+					2,
+					4
+				],
+				"fight": "hard",
+				"boss": true,
+				"choice": true,
+				"major": true,
+				"reward_cp": [
+					7500,
+					10000,
+					15000,
+					22500,
+					30000
+				],
+				"xp": [
+					300,
+					450,
+					600,
+					900,
+					1200
+				],
+				"attitude": 2
+			},
+			"deadly": {
+				"name": "почти невозможное",
+				"acts": [
+					3,
+					4
+				],
+				"steps": [
+					6,
+					9
+				],
+				"fights": [
+					4,
+					6
+				],
+				"fight": "deadly",
+				"boss": true,
+				"choice": true,
+				"major": true,
+				"warn": true,
+				"reward_cp": [
+					15000,
+					20000,
+					30000,
+					45000,
+					60000
+				],
+				"xp": [
+					600,
+					900,
+					1200,
+					1800,
+					2400
+				],
+				"attitude": 2
+			}
+		},
+		"_encounter_xp": "The DMG thresholds of an encounter for one hero by level 1..5 (raw XP of the foes, as xp_budget_hard): easy, medium, hard, deadly.",
+		"encounter_xp": {
+			"easy": [
+				25,
+				50,
+				75,
+				125,
+				250
+			],
+			"medium": [
+				50,
+				100,
+				150,
+				250,
+				500
+			],
+			"hard": [
+				75,
+				150,
+				225,
+				375,
+				750
+			],
+			"deadly": [
+				100,
+				200,
+				400,
+				500,
+				1100
+			]
+		},
+		"tier_order": [
+			"easy",
+			"medium",
+			"hard",
+			"deadly"
+		],
+		"act_max": {
+			"npcs": 3,
+			"places": 2,
+			"items": 3,
+			"encounters": 4,
+			"steps": 5,
+			"parts": 4,
+			"choices": 3,
+			"changes": 2
 		}
 	},
 	"difficulty": {

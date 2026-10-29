@@ -14,16 +14,29 @@ func before_test() -> void:
 	fx = EffectEngine.new()
 
 
-func _root_quest(skill: Variant) -> String:
+func _root_act(skill: Variant) -> Dictionary:
 	fx.searched_quests["t-1"] = true
-	var qi := {"item_id": "lute", "room": "brod-tavern-cellar", "hint": "В чёрной воде у бочек", "dc_tier": "easy"}
-	if skill != null:
-		qi["skill"] = skill
-	var r := fx.validate(s, data, "t-1", {"kind": "create_quest", "giver": "npc_innkeeper", "title": "Корень", "scale": "trifle",
-		"quest_item": qi, "steps": [{"text": "Достать корень в погребе", "kind": "find", "target": "item"}]})
+	var r := fx.validate(s, data, "t-1", {"kind": "create_quest", "giver": "npc_innkeeper", "title": "Корень", "difficulty": "easy",
+		"acts": [{"title": "Корень", "goal": "Достать белый корень"}]})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t-1", [r["effect_id"]])
-	return str(s.generated["quests"].keys()[0])
+	var id := str(s.generated["quests"].keys()[0])
+	QuestRules.accept(s, data, id)
+	var qi := {"key": "root", "item_id": "lute", "room": "brod-tavern-cellar", "hint": "В чёрной воде у бочек", "dc_tier": "easy"}
+	if skill != null:
+		qi["skill"] = skill
+	var a := fx.validate(s, data, "t-2", {"kind": "quest_act", "quest_id": id, "act": 1, "items": [qi],
+		"steps": [{"text": "Достать корень в погребе", "kind": "find", "target": "root"}]})
+	if bool(a["accepted"]):
+		fx.apply(s, "t-2", [a["effect_id"]])
+	a["quest_id"] = id
+	return a
+
+
+func _root_quest(skill: Variant) -> String:
+	var a := _root_act(skill)
+	assert_bool(bool(a["accepted"])).override_failure_message(str(a)).is_true()
+	return "%s_root" % str(a["quest_id"])
 
 
 func test_a_thing_hidden_for_survival_is_found_by_survival_and_investigation() -> void:
@@ -40,11 +53,7 @@ func test_a_thing_hidden_for_survival_is_found_by_survival_and_investigation() -
 
 
 func test_a_wrong_skill_for_the_thing_is_refused() -> void:
-	fx.searched_quests["t-1"] = true
-	var r := fx.validate(s, data, "t-1", {"kind": "create_quest", "giver": "npc_innkeeper", "title": "Корень", "scale": "trifle",
-		"quest_item": {"item_id": "lute", "room": "brod-tavern-cellar", "hint": "В чёрной воде", "dc_tier": "easy", "skill": "athletics"},
-		"steps": [{"text": "Достать корень", "kind": "find", "target": "item"}]})
-	assert_str(str(r["reason"])).contains("survival")
+	assert_str(str(_root_act("athletics")["reason"])).contains("survival")
 
 
 func test_the_hidden_thing_is_not_given_by_words_until_found() -> void:

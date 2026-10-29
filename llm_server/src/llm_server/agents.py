@@ -274,6 +274,9 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
             effect = _EFFECT.validate_python(effect)
         except ValidationError as exc:
             return _schema_refusal(t, exc)
+    if (effect.kind == "quest_act") != (t.params.kind == "quest_act"):  # v0.7.39.6: the designer builds acts, only acts
+        return ("Отказ: в ходе сценария — только quest_act." if t.params.kind == "quest_act" else
+                "Отказ: акт задания собирает сценарист, когда герой до него дойдёт; новое задание — create_quest.")
     # DeepSeek sometimes repeats one effect or an empty give_item many times in a row (v0.7.4 goldens): stop it early
     if t.params.kind in ENTRY_KINDS and effect.kind not in ENTRY_EFFECTS:
         return ("Отклонено движком: игрок только вошёл и ещё ничего не сделал — в этом ходе мир не меняется "
@@ -293,7 +296,7 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         if effect.item is not None and not t.searched_items:
             return "Отказ: перед созданием нового предмета найди похожие через find_items."
     topic = prompts.topic_for(effect.kind)
-    if topic and topic not in t.topics:  # the rules come with the refusal: no extra call (v0.7.34.3)
+    if topic and topic not in t.topics and t.params.kind != "quest_act":  # the rules come with the refusal: no extra call (v0.7.34.3)
         t.topics.add(topic)
         return f"Отказ: эффект темы «{topic}» — по её правилам. Вот они:\n{prompts.topic_text(topic)}\nПредложи эффект снова по ним."
     if isinstance(effect, CreateNpcEffect) and t.library is not None:
@@ -541,6 +544,42 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None, e
     return agent
 
 
+def is_quest_act(params: TurnRequestParams) -> bool:
+    """The designer's turn (v0.7.39.6): an act of a taken quest opened."""
+    return params.kind == "quest_act"
+
+
+DESIGNER_MAX_TOKENS = 6000  # a whole act in one effect: steps, people, places, fights
+
+
+def build_designer_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput]:
+    """The quest designer (v0.7.39.6): builds the act that opened by the engine's frame, one `quest_act`; it searches
+    the world (people, places, things, rules of the SRD) and fixes what the engine refuses, part by part."""
+    agent: Agent[TurnContext, TurnOutput] = Agent(
+        model,
+        output_type=TurnOutput,
+        deps_type=TurnContext,
+        instructions=system,
+        tools=[propose_effect_tool({"quest_act"}), lookup, find_items, find_npcs, find_places],
+        retries=2,
+        model_settings=settings_for(model, {**MODEL_SETTINGS, "temperature": 0.7, "max_tokens": DESIGNER_MAX_TOKENS}),  # type: ignore[typeddict-item]
+        name="quest_designer",
+    )
+
+    @agent.output_validator
+    def _validate(ctx: RunContext[TurnContext], out: TurnOutput) -> TurnOutput:
+        t = ctx.deps
+        if not t.accepted:
+            raise ModelRetry("Акт не собран: предложи quest_act через propose_effect и исправь то, в чём движок отказал.")
+        out.effect_ids = list(t.accepted)
+        out.options, out.option_costs, out.option_checks, out.next_mode, out.npc_id, out.changes = [], [], [], None, None, []
+        if not out.narration.strip():
+            out.narration = "Дело движется дальше."
+        return out
+
+    return agent
+
+
 def build_summary_agent(model: Model, kind: str) -> Agent[None, SummaryOutput]:
     return Agent(model, output_type=SummaryOutput, retries=2, model_settings=settings_for(model, {"temperature": 0.3, "max_tokens": 400}),
                  instructions="Ты пишешь краткие записи по-русски для памяти мастера игры.", name=f"summary_{kind}")
@@ -566,10 +605,14 @@ def is_entry(params: TurnRequestParams) -> bool:
 
 
 def system_prompt_for(params: TurnRequestParams) -> str:
+    if is_quest_act(params):
+        return prompts.quest_act_prompt(params.snapshot)
     if is_entry(params):
         return prompts.entry_prompt(params.snapshot)
     return prompts.system_prompt(params.mode, params.snapshot, scene_npc(params, params.npc_id), said=params.input)
 
 
 def turn_user_prompt(params: TurnRequestParams) -> str:
+    if is_quest_act(params):
+        return params.input  # the engine's frame of the act
     return prompts.turn_prompt(params.mode, params.kind, params.input, params.snapshot, scene_npc(params, params.npc_id))
