@@ -38,6 +38,7 @@ var _study: StudyPanel
 var _bond: BondPanel
 var _contest: ContestPanel  # v0.7.40
 var _family: FamilyPanel
+var _pet: PetPanel  # v0.7.43
 var _heists: HeistPanel
 var _org: OrgPanel
 var _office: OfficePanel
@@ -202,6 +203,7 @@ func _ready() -> void:
 	side.bond_requested.connect(func(npc: String) -> void: _bond.open(npc))  # v0.7.31
 	side.contest_requested.connect(func(npc: String) -> void: _contest.open(npc))  # v0.7.40
 	side.family_requested.connect(func() -> void: _family.open())  # v0.7.32
+	side.pet_requested.connect(func(id: String) -> void: _pet.open(id))  # v0.7.43
 	side.heist_requested.connect(func() -> void: _heists.open())  # v0.7.33
 	side.org_requested.connect(func(org: String) -> void: _org.open(org))
 	side.office_requested.connect(func(chief: String) -> void: _office.open(chief))  # v0.7.34
@@ -302,6 +304,11 @@ func _ready() -> void:
 	_contest.visible = false
 	add_child(_contest)
 	_contest.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_pet = PetPanel.new()  # v0.7.43
+	_pet.name = "PetView"
+	_pet.visible = false
+	add_child(_pet)
+	_pet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_family = FamilyPanel.new()  # v0.7.32
 	_family.name = "FamilyView"
 	_family.visible = false
@@ -363,7 +370,7 @@ func _ready() -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _family, _heists, _org, _office, _image]
+	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _family, _pet, _heists, _org, _office, _image]
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.

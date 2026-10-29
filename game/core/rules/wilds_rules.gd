@@ -182,6 +182,9 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 	var skill := str(d["skill"])
 	var g := gear(s, data, k)
 	var mods := ConditionRules.check_mods(s.character, data, {"skill": skill})
+	var pet := PetRules.helper(s, data, skill)  # v0.7.43: a dog on the trail
+	if str(g["adv"]).is_empty() and not pet.is_empty():
+		g["adv"] = pet
 	var adv := not str(g["adv"]).is_empty()
 	var dis := not str(g["dis"]).is_empty() or not (mods["disadvantage"] as Array).is_empty()
 	var rolls := FeatureRules.hero_d20(s, adv, dis)

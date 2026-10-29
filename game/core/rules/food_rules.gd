@@ -67,7 +67,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var now := TimeRules.abs_minute(s)
 	var names: Array[String] = []
 	for id: String in fresh.keys():
-		var limit := spoils_days(data, s.items, id) * 1440
+		var limit := roundi(spoils_days(data, s.items, id) * 1440 * PetRules.spoil_mult(s, data))  # v0.7.43: a cat beside
 		var batches: Array = fresh[id]
 		var gone := 0
 		while not batches.is_empty() and now - int(batches[0][0]) >= limit:

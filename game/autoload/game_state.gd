@@ -64,6 +64,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	s.settings = settings.duplicate(true)
 	s.settings["world"] = Catalog.active_world
 	BackgroundRules.apply_ties(s, Catalog.data)  # the people of the hero's past (v0.7.11)
+	PetRules.seed(s, Catalog.data, s.room_id)  # the start room's wild beasts (v0.7.43)
 	start(s)
 	_request("enter", "")
 
@@ -1521,6 +1522,44 @@ func wilds_act(kind: String, hours: int) -> String:
 	return ""
 
 
+## Pets (v0.7.43): tame (id — a creature of the room, arg — a thing of its taste or ""), feed (arg — the thing),
+## scout (arg — a room behind an exit), rename (arg — the name). The engine decides; "" or a localization key.
+func pet_act(what: String, id: String, arg: String = "") -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "PET_NOT_NOW"
+	var data := Catalog.data
+	var s := session
+	var why := ""
+	match what:
+		"tame": why = PetRules.tame_why(s, data, id)
+		"feed": why = PetRules.feed_why(s, data, id, arg)
+		"scout": why = PetRules.scout_why(s, data, id, arg)
+		"rename": why = PetRules.pet_why(s, id) if not arg.strip_edges().is_empty() else "PET_BAD_NAME"
+		_: why = "PET_NOT_NOW"
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	match what:
+		"tame":
+			var w := CrimeRules.wait(s, data, int(PetRules.cfg(data)["tame_minutes"]))
+			lines.append_array(w["lines"])
+			if not PetRules.tame_why(s, data, id).is_empty() and PetRules.tame_why(s, data, id) != "PET_TRIED_TODAY":
+				lines.append("Пока вы подбирались, зверь ушёл")
+			else:
+				lines.append_array(PetRules.tame(s, data, id, arg)["lines"])
+		"feed": lines = PetRules.feed(s, data, id, arg)
+		"scout":
+			lines.append_array(TimeRules.advance(s, data, int(PetRules.cfg(data)["scout"]["minutes"])))
+			lines.append_array(PetRules.scout(s, data, id, arg))
+		"rename": lines = PetRules.rename(s, id, arg)
+	CharacterRules.refresh(s.character, data, s.items)
+	_add(GameSession.effect_entry(lines))
+	_log("События: " + ", ".join(lines))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	return ""
+
+
 ## Work (v0.7.26): hire, a shift, quit — the engine decides; a shift's event goes to the master as a short turn.
 func job_act(what: String, id: String) -> String:
 	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
@@ -2234,6 +2273,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
 	lines.append_array(SiteRules.on_enter(session, Catalog.data, room_id))  # a private room unasked (v0.7.22.24)
 	CreatureRules.follow(session, from, room_id)  # a bound captive on the rope (v0.7.22.11)
+	PetRules.seed(session, Catalog.data, room_id)  # the pack's wild beasts to tame (v0.7.43)
 	var gone := PropRules.abandon(session, Catalog.data, room_id)  # big test #28 (v0.7.22.8)
 	if not gone.is_empty():
 		lines.append("Того, что вы здесь оставили, уже нет: " + ", ".join(gone))
@@ -3056,6 +3096,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 	if s.room_id != room_before:
 		var waits := MountRules.on_move(s, Catalog.data, room_before, s.room_id)  # v0.7.42
 		CreatureRules.follow(s, room_before, s.room_id)  # v0.7.22.11
+		PetRules.seed(s, Catalog.data, s.room_id)  # v0.7.43
 		var moved := TimeRules.on_move(s, Catalog.data, room_before, s.room_id)
 		moved.append_array(waits)
 		ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id, TimeRules.passive_penalty(s, Catalog.data))
@@ -3277,6 +3318,9 @@ func _engine_check(params: Dictionary) -> Dictionary:
 	for e: Dictionary in ConditionRules.effects(session.character):
 		if (str(e.get("check_adv", "")) == skill_id or (bool(e.get("enlarged", false)) and skill_id == "athletics")) and not skill_id.is_empty() 				and str(params.get("advantage_reason", "")).is_empty():
 			params["advantage_reason"] = str(e.get("source", {}).get("name", "зелье"))
+	var pet := PetRules.helper(session, Catalog.data, skill_id)  # v0.7.43: a dog's nose, a hawk's eye
+	if not pet.is_empty() and str(params.get("advantage_reason", "")).is_empty():
+		params["advantage_reason"] = pet
 	var room := session.room_id
 	var result: Dictionary
 	var listener_id := _listener_id(params)

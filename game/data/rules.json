@@ -3412,6 +3412,34 @@
 		"knock": {"knock": true, "door": "unlock"},
 		"arcane_lock": {"door": "lock"}
 	},
+	"pets": {
+		"_doc": "Питомцы (v0.7.43, PetRules). Приручить можно зверя SRD (type beast) размером до max_size и CR до max_cr: дикого в комнате (метка комнаты пакета `beasts`, эффект мастера `beast`) или побеждённого (перемирие, сдался). Проверка skill против Сл dc: base + CR × per_cr + state по состоянию; угощение его вкуса (eats → tastes) — преимущество; провал на flee_margin и больше — убегает, иначе завтра снова. Что даёт — из шаблона SRD: help_traits — черты острых чувств → преимущество на эти навыки, пока питомец рядом (близость не меньше close.help_from); fights — от min_size и min_cr дерётся рядом; scout — летает быстрее min_fly: per_day раз в день облетает непройденный выход — комната видна на карте с опасностью; kinds — поверх выведенного (кот — spoil_mult: еда в вещах героя хранится дольше). Корм — feed_cp_day по размеру, сперва вещь его вкуса из вещей героя; близость — кормление с руки (close.feed, раз в день) и сцена мастера (`bond` с creature_id, до close.scene_max); голод терпит property.starve_days и день на каждые close.stay_per близости. make.per_day — зверей мастера в день.",
+		"skill": "animal_handling",
+		"max_size": "medium",
+		"max_cr": 0.5,
+		"dc": {"base": 10, "per_cr": 8, "state": {"wild": 2, "truce": 0, "surrendered": -2}},
+		"flee_margin": 5,
+		"help_traits": {"keen_smell": ["perception", "survival"], "keen_hearing_and_smell": ["perception", "survival"], "keen_sight": ["perception"], "keen_hearing_and_sight": ["perception"]},
+		"fights": {"min_size": "small", "min_cr": 0.125},
+		"scout": {"min_fly": 30, "minutes": 30, "per_day": 2},
+		"eats_default": ["meat"],
+		"tastes": {
+			"meat": {"name": "мясо", "ids": ["raw_meat", "roast_meat", "meat", "rations"]},
+			"fish": {"name": "рыба", "ids": ["fresh_fish", "dried_fish", "fish"]},
+			"grain": {"name": "зерно и хлеб", "ids": ["grain", "bread"]},
+			"milk": {"name": "молоко и сыр", "ids": ["goat_milk", "cheese"]}
+		},
+		"feed_cp_day": {"tiny": 1, "small": 2, "medium": 3},
+		"close": {"max": 10, "feed": 1, "help_from": 1, "stay_per": 3, "scene_max": 2},
+		"tame_minutes": 30,
+		"kinds": {
+			"cat": {"spoil_mult": 2.0, "eats": ["fish", "meat", "milk"]},
+			"raven": {"eats": ["meat", "grain"]},
+			"goat": {"eats": ["grain"]},
+			"pony": {"eats": ["grain"]}
+		},
+		"make": {"per_day": 2}
+	},
 	"mounts": {
 		"_doc": "Ездовые и вьючные (v0.7.42, MountRules). Животное героя с `pack` (property.animals) несёт вьюк: ёмкость по 5e — Сила × 15 × size_mult размера (burden — на размер больше), вещи вьюка не в весе героя. Повозка (vehicles) запрягается в животное с `pull` не меньше своего и едет с ним: свой контейнер `capacity_lb`. Куда нельзя: комната под крышей (indoor) без метки `stable` / `mounts`, метка `no_mounts`, местность из no_mount_terrains без `mounts`; повозка — ещё и только по местности cart_terrains или с меткой `road`. Животное, что не прошло, ждёт у входа и снова идёт с героем, когда он вернётся. Без присмотра вне своего места: корма нет (голод → уходит через property.starve_days), и каждый день steal_pct_day — уведут вместе с вьюком. Аренда у барышника — rent_pct_day цены в день на rent_days, по сроку животное уходит к хозяину; продажа своего — sell_pct цены. make — что мастер может поставить барышнику (`stock` с `animal`): зверь SRD этих размеров и CR, цена по размеру, путь по скорости.",
 		"size_mult": {"tiny": 0.25, "small": 0.5, "medium": 1, "large": 2, "huge": 4, "gargantuan": 8},

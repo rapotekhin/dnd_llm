@@ -1634,3 +1634,32 @@ MOUNT_NOT_SELLABLE,Это животное здесь не продать
 MOUNT_LOADED,Сначала разгрузите вьюк и повозку
 MOUNT_NO_VEHICLE,Повозок у него нет
 MOUNT_NO_PULLER,"Не во что запрячь: нужно ваше животное рядом, что потянет повозку"
+PET_TITLE,Питомец
+PET_TAME_TITLE,Приручить: {name}
+PET_WILL_GIVE,Если приручить: {what}
+PET_TAME_CHECK,"{skill} {bonus} против Сл {dc}; угощение его вкуса — с преимуществом. Провал — завтра снова, сильный провал — зверь убежит."
+PET_EATS,Ест: {what}
+BTN_PET_TAME,Приручить
+BTN_PET_TAME_WITH,Угостить: {food}
+BTN_PET_TAME_OPEN,Приручить…
+BTN_PET_OPEN,Питомец
+PET_NEW_NAME,Новое имя
+BTN_PET_RENAME,Назвать
+PET_NO_FOOD,"Нечем кормить с руки — нет еды его вкуса. Без неё он ест, что купите в дороге."
+BTN_PET_FEED,Покормить: {food}
+PET_SCOUT_HINT,"Разведка: питомец облетит место за выходом, где вы ещё не были, — оно появится на карте вместе с тем, кто там."
+PET_SCOUT_NONE,Все выходы отсюда уже знакомы.
+BTN_PET_SCOUT,Разведать
+PET_GONE,Зверя здесь больше нет.
+PET_HUNGRY_SHORT,голоден
+PET_NOT_NOW,Не сейчас
+PET_NOT_TAMEABLE,Этого зверя не приручить
+PET_FOREIGN,Это чужое животное
+PET_TRIED_TODAY,Сегодня он уже не подпустит — завтра
+PET_BAD_NAME,Напишите имя
+PET_NOT_ITS_FOOD,Это он не ест
+PET_FED_TODAY,Сегодня он уже ел с руки
+PET_NO_SCOUT,Он не летает
+PET_SCOUT_TIRED,На сегодня он налетался
+PET_SCOUT_NO_WAY,Туда отсюда не долететь
+SIDE_WILD,Звери

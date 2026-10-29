@@ -3749,3 +3749,59 @@ scenarios:
       effects: {required_kinds_any: [stock], forbidden_kinds: [give_item, coins]}
     rubric:
       - "Мастер подтверждает верблюда эффектом stock с npc_id Остапа и animal camel — купить его можно кнопкой «Животные»; верблюда не выдаёт сразу и денег не списывает"
+
+  - id: pet_tame_by_words
+    title: "Приручить словами — кнопка «Приручить…», исход решает движок"
+    category: concepts
+    extends: tavern
+    input: "Присаживаюсь на корточки и тихо подзываю кошку, протягиваю ей кусочек мяса."
+    snapshot:
+      scene:
+        location: {id: brod, name: "Ольховый Брод", type: town}
+        room: {id: brod-tavern-hall, name: "Таверна «Хромой олень» — общий зал", description: "Низкий зал, у очага рыжая кошка вылизывает лапу."}
+        creatures: ["Кошка — дикий, не нападает [c3] — можно приручить (кнопка «Приручить»)"]
+      character:
+        inventory:
+          - {item_id: raw_meat, name: "Сырое мясо", qty: 2}
+    expect:
+      max_checks: 0
+      effects: {forbidden_kinds: [take_item, give_item, owner, bond, npc_follow]}
+    rubric:
+      - "Мастер описывает, как кошка настораживается или тянется к мясу, и не решает сам, приручена ли она (это кнопка «Приручить…» — назвать её можно, но не обязательно); не забирает мясо и не делает её питомцем эффектом"
+
+  - id: pet_bond_scene
+    title: "Ночь с раненым псом — bond питомцу с creature_id"
+    category: concepts
+    extends: tavern
+    input: "Всю ночь сижу у костра с Буяном: вытаскиваю у него из лапы шип, промываю и перевязываю, он засыпает, положив голову мне на колени."
+    snapshot:
+      scene:
+        location: {id: pushcha, name: "Сумеречная Пуща", type: forest}
+        room: {id: pushcha-edge, name: "Опушка Пущи", description: "Старые ели, тлеет костёр."}
+        npcs: []
+        creatures: ["Буян — ваше животное, идёт с героем [c4] — питомец героя: Буян (Мастиф) — близость 3 из 10; помогает: Внимательность, Выживание; дерётся рядом"]
+    engine:
+      validate:
+        - {kind: bond, status: accept, summary: "Буян: близость +2 (вытащил шип и выходил)"}
+    expect:
+      effects: {required_kinds_any: [bond], forbidden_kinds: [heal, coins, give_item]}
+    rubric:
+      - "Мастер даёт bond с creature_id c4 (не npc_id), delta 1–2 и причиной из сцены; играет пса живым существом"
+
+  - id: pet_stray_beast
+    title: "Бездомный пёс у ворот — beast с причиной"
+    category: concepts
+    extends: tavern
+    input: "У ворот, говорят, третий день скулит бездомный пёс — иду посмотреть, может, возьму его себе."
+    snapshot:
+      scene:
+        location: {id: brod, name: "Ольховый Брод", type: town}
+        room: {id: brod-gate, name: "Северные ворота", description: "Бревенчатые ворота, у коновязи барышник с лошадьми."}
+        npcs: []
+    engine:
+      validate:
+        - {kind: beast, status: accept, summary: "Здесь: Мастиф — можно приручить"}
+    expect:
+      effects: {required_kinds_any: [beast], forbidden_kinds: [give_item, owner, start_combat]}
+    rubric:
+      - "Мастер даёт beast со зверем SRD (mastiff или похожий пёс) и причиной — откуда пёс у ворот; приручение оставляет кнопке, питомцем его сам не делает"

@@ -30,6 +30,7 @@ signal family_requested  # v0.7.32
 signal heist_requested  # v0.7.33
 signal org_requested(org_id: String)  # v0.7.33
 signal office_requested(chief: String)  # v0.7.34
+signal pet_requested(creature_id: String)  # v0.7.43
 
 var _content: VBoxContainer
 var _scroll: ScrollContainer
@@ -193,10 +194,15 @@ func _rebuild() -> void:
 			bb.name = "Body_" + bid
 		var here := CreatureRules.here(s, s.room_id)  # v0.7.22.11: the foes a fight left here
 		var beasts := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) == PropertyRules.TAME)
-		var beaten := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) != PropertyRules.TAME)
+		var beaten := here.filter(func(cr: Dictionary) -> bool: return not str(cr["state"]) in [PropertyRules.TAME, PetRules.WILD])
+		var wild := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) == PetRules.WILD)
 		if not beaten.is_empty():
 			_subheading("SIDE_CREATURES")
 		for cr: Dictionary in beaten:
+			_creature_row(s, cr, can_act)
+		if not wild.is_empty():  # v0.7.43: wild beasts to tame
+			_subheading("SIDE_WILD")
+		for cr: Dictionary in wild:
 			_creature_row(s, cr, can_act)
 		if not beasts.is_empty():  # v0.7.27: the hero's own animals
 			_subheading("SIDE_ANIMALS")
@@ -456,6 +462,8 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	var l := Label.new()
 	l.name = "CreatureLine_" + cid
 	l.text = CreatureRules.text(cr, Catalog.data)
+	if bool(cr.get("pet", false)) and int(cr.get("hungry", 0)) > 0:
+		l.text += " · " + tr("PET_HUNGRY_SHORT")  # v0.7.43
 	if str(cr["state"]) == PropertyRules.TAME and MountRules.on(Catalog.data) and not MountRules.load_text(s, Catalog.data, cr).is_empty():
 		l.text += " (%s)" % MountRules.load_text(s, Catalog.data, cr)  # v0.7.42: its pack, its cart
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -470,8 +478,10 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	if str(cr["state"]) == PropertyRules.TAME:  # v0.7.27: an own beast goes along or stays, or is let go
 		_animal_acts(s, cr, can_act)
 		return
-	var specs: Array = [["talk", "BTN_CREATURE_TALK"]] if str(cr["state"]) != "unconscious" else []  # v0.7.22.16: one knocked out does not talk
-	if not bool(cr.get("bound", false)) and str(cr["state"]) != "truce":
+	var specs: Array = [["talk", "BTN_CREATURE_TALK"]] if not str(cr["state"]) in ["unconscious", PetRules.WILD] else []  # v0.7.22.16: one knocked out does not talk
+	if PetRules.tameable(Catalog.data, str(cr["monster"])) and str(cr.get("npc_id", "")).is_empty() and str(cr["state"]) in [PetRules.WILD, "truce", "surrendered"]:
+		specs.push_front(["tame", "BTN_PET_TAME_OPEN"])  # v0.7.43: the taming window
+	if not bool(cr.get("bound", false)) and not str(cr["state"]) in ["truce", PetRules.WILD]:
 		specs.append(["bind", "BTN_CREATURE_BIND"])
 	if bool(cr.get("bound", false)):
 		specs.append(["lead", "BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_CREATURE_LEAD"])
@@ -479,12 +489,16 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 		specs.append(["search", "BTN_CREATURE_SEARCH"])  # v0.7.22.16: a knocked-out person's pockets
 	if CreatureRules.can(s, cid, "hand_over", Catalog.data).is_empty():
 		specs.append(["hand_over", "BTN_CREATURE_HAND_OVER"])  # v0.7.22.17: the law takes the prisoner
-	specs.append(["free", "BTN_CREATURE_FREE"])
+	if str(cr["state"]) != PetRules.WILD:
+		specs.append(["free", "BTN_CREATURE_FREE"])
 	specs.append(["finish", "BTN_CREATURE_FINISH"] if CreatureRules.helpless(cr) else ["attack", "BTN_CREATURE_ATTACK"])
 	var acts := _acts("CreatureActs_" + cid)
 	for sp: Array in specs:
 		var what: String = sp[0]
 		var run := func() -> void:
+			if what == "tame":
+				pet_requested.emit(cid)
+				return
 			var err := GameState.creature_act(cid, what)
 			if not err.is_empty():
 				EventBus.message.emit(tr(err))
@@ -733,6 +747,9 @@ func _animal_acts(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 				continue
 			var pb := _flow(acts, tr(spec[1]), container_requested.emit.bind(str(spec[0]) + cid), can_act)
 			pb.name = "Mount_%s%s" % [str(spec[0]).trim_suffix(":"), cid]
+	if bool(cr.get("pet", false)):  # v0.7.43: its name, feeding, scouting
+		var petb := _flow(acts, tr("BTN_PET_OPEN"), pet_requested.emit.bind(cid), can_act)
+		petb.name = "Pet_" + cid
 	var lb := _flow(acts, tr("BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_ANIMAL_LEAD"), func() -> void:
 		var err := GameState.creature_act(cid, "lead")
 		if not err.is_empty():

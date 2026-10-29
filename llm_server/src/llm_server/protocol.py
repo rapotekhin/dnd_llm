@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.86.0"
+PROTOCOL_VERSION = "0.87.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1288,6 +1288,18 @@ class WildsEffect(_Out):
     room_id: str | None = None  # empty — the hero's room
 
 
+class BeastEffect(_Out):
+    """A wild beast to tame appears in the hero's scene for a cause in the world (0.87.0): a stray dog at the gate, a
+    hawk chick fallen from the nest, a cat in the barn. An SRD beast (`type: beast`) of the size and CR of
+    rules.pets; it does not attack — the player tames it by the «Приручить» button (the check, the treat and what the
+    pet gives are the engine's)."""
+
+    kind: Literal["beast"] = "beast"
+    monster: str  # an SRD beast id: cat, mastiff, hawk, raven, owl, goat, pony, wolf…
+    cause: str = Field(min_length=8, max_length=160)
+    room_id: str | None = None  # empty — the hero's room
+
+
 class BondEffect(_Out):
     """A scene that moved a bond (0.63.0): a heart-to-heart, a shared danger, a slight. `delta` ±10 at most, once a day
     per NPC, with the `reason`; `kind` mentor when the NPC took the hero under its wing (romance only by the player's
@@ -1295,7 +1307,8 @@ class BondEffect(_Out):
     groups of the rules or catalog ids). Gifts and deeds move the bond by the engine."""
 
     kind: Literal["bond"] = "bond"
-    npc_id: str  # an NPC of the scene
+    npc_id: str = ""  # an NPC of the scene
+    creature_id: str | None = None  # 0.87.0: or the hero's pet of the scene (its [c..] id): closeness ±2 a day, with reason
     delta: int = Field(default=0, ge=-10, le=10)
     reason: str = Field(default="", max_length=80)
     bond_kind: Literal["friend", "mentor"] | None = None
@@ -1658,7 +1671,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

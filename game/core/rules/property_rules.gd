@@ -1020,7 +1020,8 @@ static func _days(n: int) -> String:
 
 
 static func animal_cfg(data: Dictionary, monster: String) -> Dictionary:
-	return cfg(data)["animals"].get(monster, data["world"].get("animal_kinds", {}).get(monster, {}))  # v0.7.42: the master's beasts
+	var own: Dictionary = cfg(data)["animals"].get(monster, data["world"].get("animal_kinds", {}).get(monster, {}))  # v0.7.42: the master's beasts
+	return own if not own.is_empty() else PetRules.kind(data, monster)  # v0.7.43: a tamed beast
 
 
 ## Animals an NPC sells: [monster id].
@@ -1052,6 +1053,9 @@ static func buy_animal(s: GameSession, data: Dictionary, npc_id: String, monster
 	s.creature_counter += 1
 	var cr := {"id": "c%d" % s.creature_counter, "name": str(m["name"]), "monster": monster, "state": TAME, "bound": false, "led": true,
 		"owner": OwnerRules.HERO, "since": TimeRules.abs_minute(s), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "xp_given": true, "fed_day": s.day}
+	var pk := PetRules.kind(data, monster)  # v0.7.43: a dog bought is a pet of the hero
+	if not pk.is_empty() and not bool(a.get("pack", false)) and (bool(pk["fights"]) or bool(pk["scout"]) or not (pk["help"] as Array).is_empty() or float(pk["spoil_mult"]) > 1.0):
+		cr.merge({"pet": true, "close": 1})
 	var list: Array = s.creatures.get(s.room_id, [])
 	list.append(cr)
 	s.creatures[s.room_id] = list
@@ -1090,7 +1094,9 @@ static func _animals(s: GameSession, data: Dictionary) -> Array[String]:
 			cr["fed_day"] = int(cr.get("fed_day", s.day)) + 1
 			var feed := roundi(int(a.get("feed_cp_day", 0)) * (_gives(s, data, pid, "feed_mult", 1.0) if not pid.is_empty() else 1.0))
 			var st: Dictionary = state(s.character).get(pid, {})
-			if not pid.is_empty() and int(st.get("cash", 0)) >= feed:
+			if PetRules.eat(s, data, cr):  # v0.7.43: a pet beside the hero eats of his things first
+				pass
+			elif not pid.is_empty() and int(st.get("cash", 0)) >= feed:
 				st["cash"] = int(st["cash"]) - feed
 			elif int(s.character.get("gold_cp", 0)) >= feed and MountRules.fed_by_purse(s, data, cr):  # v0.7.42: left alone — no feed
 				s.character["gold_cp"] = int(s.character["gold_cp"]) - feed
@@ -1103,7 +1109,7 @@ static func _animals(s: GameSession, data: Dictionary) -> Array[String]:
 				for item: String in a.get("produce", {}):
 					stock[item] = int(stock.get(item, 0)) + int(a["produce"][item])
 				st["stock"] = stock
-		if int(cr.get("hungry", 0)) >= int(cfg(data)["starve_days"]):
+		if int(cr.get("hungry", 0)) >= PetRules.starve_days(data, cr):  # v0.7.43: a close pet bears longer
 			lines.append("%s убежал — его не кормили" % cr["name"])
 			_remove_creature(s, str(cr["id"]))
 	return lines
@@ -1162,6 +1168,8 @@ static func text(s: GameSession, data: Dictionary) -> String:
 	for cr: Dictionary in animals(s):
 		var where := "с героем" if bool(cr.get("led", false)) else ("ждёт у входа: " if bool(cr.get("waiting", false)) else "") + WorldView.new(data["world"]).room_short(room_of(s, str(cr["id"])))
 		var load := MountRules.load_text(s, data, cr) if MountRules.on(data) else ""  # v0.7.42
+		if bool(cr.get("pet", false)):  # v0.7.43
+			load = "питомец [%s]: %s" % [cr["id"], PetRules.text(data, cr)]
 		beasts.append("%s (%s%s)" % [cr["name"], where, "; " + load if not load.is_empty() else ""])
 	var stolen: Array[String] = []
 	for st: Dictionary in s.character.get("stolen_animals", []):  # v0.7.42: a quest to get it back is the master's

@@ -236,7 +236,7 @@ static func sellable(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 	if PropertyRules.animals_of(data, npc_id).is_empty():
 		return out
 	for cr: Dictionary in beasts(s, s.room_id):
-		if not cr.has("rent_until") and not PropertyRules.animal_cfg(data, str(cr["monster"])).is_empty():
+		if not cr.has("rent_until") and not bool(cr.get("pet", false)) and int(PropertyRules.animal_cfg(data, str(cr["monster"])).get("price_cp", 0)) > 0:
 			out.append(cr)
 	return out
 

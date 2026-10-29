@@ -206,6 +206,11 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 97. Протокол 0.87.0 (v0.7.43)
+
+- **`BeastEffect`** (`kind: "beast"`) — мастер приводит в сцену дикого зверя SRD, которого можно приручить: `monster`, `cause` (8–160 зн.), `room_id`.
+- **`BondEffect.creature_id`** — сцена с питомцем героя вместо NPC; `npc_id` теперь необязателен (одно из двух).
+
 ### 96. Протокол 0.86.0 (v0.7.42)
 
 - **`StockEffect.animal`** — зверь SRD (id), которого мастер ставит барышнику сцены вместо вещи: вид движок берёт из `property.animals` или выводит из SRD по `mounts.make`. `item_id` / `item` тогда не нужны.

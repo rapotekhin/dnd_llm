@@ -350,7 +350,13 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 					return {"reason": "ездовых животных в этих правилах нет"}
 				return MountRules.plan_stock(s, data, e)
 			return TradeRules.make_stock(s, data, e)
+		"beast":  # v0.7.43: a wild beast to tame in the scene, for a cause
+			if not PetRules.on(data):
+				return {"reason": "питомцев в этих правилах нет"}
+			return PetRules.plan_beast(s, data, e)
 		"bond":  # v0.7.31: a scene moved the bond with an NPC of the scene
+			if e.get("creature_id") != null and not str(e.get("creature_id", "")).is_empty():  # v0.7.43: a scene with a pet
+				return PetRules.plan_bond(s, data, e)
 			var bo := BondRules.make(s, data, e)
 			if bo.has("reason"):
 				return {"reason": bo["reason"]}
@@ -1022,7 +1028,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"org":
 			_extra_lines.append_array(OrgRules.apply_make(s, _data, plan))
 		"bond":
-			_extra_lines.append_array(BondRules.apply_make(s, _data, plan))
+			_extra_lines.append_array(PetRules.apply_bond(s, _data, plan) if plan.has("creature_id") else BondRules.apply_make(s, _data, plan))
+		"beast":
+			_extra_lines.append_array(PetRules.apply_beast(s, _data, plan))
 		"stock":
 			_extra_lines.append_array(MountRules.apply_stock(s, _data, plan) if plan.has("animal") else TradeRules.apply_stock(s, _data, plan))
 		"permit":

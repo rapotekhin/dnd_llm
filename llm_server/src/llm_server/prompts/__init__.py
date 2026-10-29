@@ -138,6 +138,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "jobs": ("работа за плату: игрок просит работу, которой нет у нанимателя сцены (`job`)", ("job",)),
     "background": ("предыстория героя и связь NPC с его прошлым", ()),
     "wilds": ("охота и рыбалка, угодья, браконьерство; зверь ушёл или вернулся, рыба пропала, новые угодья (`wilds`)", ("wilds",)),
+    "pets": ("питомец героя и приручение: дикий зверь в сцене, имя, близость (`bond` с creature_id), помощь, разведка; бездомный зверь по причине (`beast`)", ("beast",)),
     "games": ("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; своя игра (`contest`)", ("contest",)),
     "world_edits": ("правка готового места: у человека или в сундуке появилась или пропала вещь по причине в мире (`world_item`); новая вещь в обставленной комнате (`furnish` с `cause`)", ("world_item",)),
     "containers": ("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`take_from`, `put_in`, `unlock`, `drop_item`)",
@@ -201,6 +202,8 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("water")
     if scene and any(n.animals for n in scene.npcs) and mentions(said, MOUNT_WORDS):  # v0.7.42: a dealer by words
         out.append("property")
+    if scene and any("приручить" in c or "питомец героя" in c for c in scene.creatures):  # v0.7.43: a beast to tame or a pet here
+        out.append("pets")
     if scene and scene.wilds and mentions(said, WILDS_WORDS):  # v0.7.41: a hunt or the grounds changed by words
         out.append("wilds")
     if scene and any(e.door for e in scene.exits):  # v0.7.22.25

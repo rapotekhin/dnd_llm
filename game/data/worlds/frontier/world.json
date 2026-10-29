@@ -443,7 +443,8 @@
 			"tags": [
 				"stage"
 			],
-			"site_id": "brod-tavern"
+			"site_id": "brod-tavern",
+			"beasts": ["cat"]
 		},
 		"brod-tavern-kitchen": {
 			"name": "Кухня таверны",
@@ -914,7 +915,8 @@
 				"game",
 				"herbs",
 				"forage"
-			]
+			],
+			"beasts": ["raven"]
 		},
 		"pushcha-hollow": {
 			"name": "Тёмная лощина",

@@ -56,7 +56,7 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String) -> Ar
 
 
 static func state_word(state: String) -> String:
-	return {"truce": "перемирие", "surrendered": "сдался", "unconscious": "без сознания", "tame": "ваше животное"}.get(state, state)
+	return {"truce": "перемирие", "surrendered": "сдался", "unconscious": "без сознания", "tame": "ваше животное", "wild": "дикий, не нападает"}.get(state, state)
 
 
 ## «Гоблин 2 — сдался, связан, идёт с героем» — for the side panel and the master.
@@ -270,5 +270,10 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
 	var out: Array[String] = []
 	for c: Dictionary in here(s, room_id):
-		out.append("%s [%s]%s" % [text(c, data), c["id"], " — не пленник: свободен, не связан, при оружии, говорит на равных" if str(c["state"]) == "truce" else ""])
+		var extra := " — не пленник: свободен, не связан, при оружии, говорит на равных" if str(c["state"]) == "truce" else ""
+		if bool(c.get("pet", false)):  # v0.7.43
+			extra = " — питомец героя: " + PetRules.text(data, c)
+		elif PetRules.tameable(data, str(c["monster"])) and str(c["state"]) in ["wild", "truce", "surrendered"]:
+			extra += " — можно приручить (кнопка «Приручить»)"
+		out.append("%s [%s]%s" % [text(c, data), c["id"], extra])
 	return out
