@@ -36,11 +36,12 @@ func run() -> void:
 	await frames(3)
 	await press(find(win, "StallRent_7"))
 	await frames(4)
-	step("the charter and the stall", ShopRules.has_charter(s, "brod") and ShopRules.stall_open(s, ShopRules.STALL + "brod-square"), _last_effects(s))
+	var vid := PropertyRules.rented(s, node("Catalog").data, "stall", "brod")
+	step("the charter and the stall — an object of its own", ShopRules.has_charter(s, "brod") and not vid.is_empty(), _last_effects(s))
 	await shot("registry")
 	win.visible = false
 
-	s.room_id = "brod-square"
+	s.room_id = ShopRules.room_of(s, node("Catalog").data, vid)
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var shop: Button = find(screen(), "ShopButton")
@@ -53,7 +54,6 @@ func run() -> void:
 	await frames(3)
 	await press(find(win, "PriceDown_silver_ring"))
 	await frames(3)
-	var vid := ShopRules.STALL + "brod-square"
 	step("six rings on the shelf at 90%", int(ShopRules.venue(c, vid)["stock"].get("silver_ring", 0)) == 6 and ShopRules.price_pct(s, node("Catalog").data, vid, "silver_ring") == 90)
 	await shot("shelf")
 	var gold := int(c["gold_cp"])
@@ -63,6 +63,9 @@ func run() -> void:
 	await shot("after_shift")
 	win.visible = false
 
+	s.room_id = ReputationRules.home_room(node("Catalog").data, "npc_merchant")
+	node("EventBus").state_changed.emit()
+	await frames(3)
 	await open_row("More_npc_merchant")
 	var ws: Button = find(screen(), "Wholesale_npc_merchant")
 	if step("«Опт» at Fern", ws != null):

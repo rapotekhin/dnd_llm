@@ -268,7 +268,9 @@ static func exam(s: GameSession, data: Dictionary, sid: String) -> Array[String]
 	var margin := 0
 	if not ex.is_empty():
 		var nat := s.rng.randi_range(1, 20)
-		var total := nat + CheckEngine.bonus_for(s.character, {"skill": str(ex["skill"])}) + DifficultyRules.bonus(s, data)
+		var parts := RollParts.skill(s, data, str(ex["skill"]))
+		var total := nat + RollParts.sum(parts)
+		RollParts.note(s, "%s — экзамен" % sc["name"], [nat], nat, parts, total - nat, int(ex["dc"]))
 		margin = 5 if nat == 20 else -5 if nat == 1 else total - int(ex["dc"])
 		lines.append("%s — экзамен: %s %d против Сл %d — %s" % [sc["name"], CraftRules.tr_skill(data, str(ex["skill"])), total, int(ex["dc"]),
 			"сдан" if margin >= 0 else "не сдан"])
@@ -388,21 +390,27 @@ static func lesson_hours(data: Dictionary) -> int:
 	return int(cfg(data)["lesson"]["hours"])
 
 
-## The check of a lesson: {bonus, adv, label}.
+## The check of a lesson: {bonus, parts, adv, label}.
 static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	var co := course(s, data, id)
 	var c := s.character
-	var bonus := int(DevelopmentRules.effect(c, data, "study", "lesson_bonus", 0.0)) + DifficultyRules.bonus(s, data)
 	var adv := bool(DevelopmentRules.effect(c, data, "study", "lesson_adv", false))
-	if _book_course(s, data, id):
-		bonus += int(DevelopmentRules.effect(c, data, "study", "book_bonus", 0.0))
-		adv = adv or bool(DevelopmentRules.effect(c, data, "study", "book_adv", false))
+	var parts: Array[Dictionary] = []
+	var label := ""
 	if co.has("ability"):
 		var ab := str(co["ability"])
-		return {"bonus": bonus + CharacterRules.mod(int(c.get("abilities", {}).get(ab, 10))), "adv": adv,
-			"label": TranslationServer.translate("ABILITY_" + ab.to_upper())}
-	var skill := str(co.get("skill", "history"))
-	return {"bonus": bonus + CheckEngine.bonus_for(c, {"skill": skill}), "adv": adv, "label": CraftRules.tr_skill(data, skill)}
+		parts = [RollParts.part(RollParts.ability_name(ab), CharacterRules.mod(CharacterRules.ability(c, ab)))]
+		RollParts.difficulty(s, data, parts)
+		label = RollParts.ability_name(ab)
+	else:
+		var skill := str(co.get("skill", "history"))
+		parts = RollParts.skill(s, data, skill)
+		label = CraftRules.tr_skill(data, skill)
+	RollParts.development(c, data, "study", "lesson_bonus", parts)
+	if _book_course(s, data, id):
+		RollParts.development(c, data, "study", "book_bonus", parts)
+		adv = adv or bool(DevelopmentRules.effect(c, data, "study", "book_adv", false))
+	return {"bonus": RollParts.sum(parts), "parts": parts, "adv": adv, "label": label}
 
 
 static func lesson_chance(s: GameSession, data: Dictionary, id: String) -> int:
@@ -440,6 +448,7 @@ static func lesson(s: GameSession, data: Dictionary, id: String, minutes: int) -
 	var nat: int = rolls.max() if bool(ch["adv"]) and not dis else rolls.min() if dis and not bool(ch["adv"]) else rolls[0]
 	var dc := int(co.get("dc", 10))
 	var total := nat + int(ch["bonus"])
+	RollParts.note(s, name_of(s, data, id), rolls, nat, ch["parts"], int(ch["bonus"]), dc)
 	var margin := 5 if nat == 20 else -5 if nat == 1 else total - dc
 	var o := outcome_for(s, data, margin)
 	st["progress"] = int(st["progress"]) + int(o.get("progress", 0))

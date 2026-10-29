@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.79.0"
+PROTOCOL_VERSION = "0.80.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -780,6 +780,20 @@ class NewRoom(_Out):
     open_edges: list[NewEdge] = Field(default_factory=list, max_length=2)
 
 
+class SiteStaff(_Out):
+    """A person of an object's staff (0.80.0): an NPC of the world, «new:<key>» of the place's people or «new»."""
+
+    npc_id: str
+    role: str = Field(max_length=40)
+
+
+class SiteHours(_Out):
+    """When the object is open (0.80.0), hours 0–24."""
+
+    opens: int = Field(ge=0, le=23)
+    closes: int = Field(ge=1, le=24)
+
+
 class NewSite(_Out):
     """The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of
     its kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an
@@ -791,6 +805,13 @@ class NewSite(_Out):
     public: bool = True
     owner_id: str | None = None  # 0.79.0: or «new:<key>» — a person of the place's `npcs`
     key: str = ""  # 0.79.0: among `sites` — what its rooms name in `site`
+    # 0.80.0 — the object (one template for the pack's, the master's and the hero's): its kind of rules.property
+    # (staff places, income, trade), the owner's role, its people with roles, upgrades, hours; on sale — `property`
+    kind: str | None = Field(default=None, max_length=24)
+    owner_role: str | None = Field(default=None, max_length=40)
+    staff: list[SiteStaff] = Field(default_factory=list, max_length=12)
+    upgrades: list[str] = Field(default_factory=list, max_length=8)
+    hours: SiteHours | None = None
 
 
 class CreatePlaceEffect(_Out):
@@ -1188,7 +1209,7 @@ class PropertyEffect(_Out):
     kind: Literal["property"] = "property"
     site_id: str  # "here" (the hero's site), a room or site id of this location, or "new"
     seller_id: str  # an NPC of the scene or "new"
-    place_kind: Literal["house", "land", "mill", "shop", "workshop", "farm", "stable", "tavern"]
+    place_kind: str = Field(max_length=24)  # 0.80.0: a kind of rules.property.kinds, checked by the engine
     name: str | None = Field(default=None, max_length=60)
     price_cp: int = Field(ge=1)
     income_cp_day: int | None = Field(default=None, ge=0)

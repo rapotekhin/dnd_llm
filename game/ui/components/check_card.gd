@@ -13,6 +13,7 @@ func _init(check_entry: Dictionary) -> void:
 func _ready() -> void:
 	theme_type_variation = UiTheme.CARD
 	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	tooltip_text = breakdown(entry)  # every part of the bonus on hover (v0.7.39.5)
 	var col := VBoxContainer.new()
 	add_child(col)
 	var line := Label.new()
@@ -67,6 +68,13 @@ func _ready() -> void:
 		adv.theme_type_variation = UiTheme.MUTED_LABEL
 		adv.text = tr("CHECK_ADVANTAGE").format({"reason": reason})
 		col.add_child(adv)
+
+
+## The roll's breakdown: the dice, each labelled part, the total against the DC ("" for an old entry without parts).
+static func breakdown(e: Dictionary) -> String:
+	if not e.has("parts"):
+		return ""
+	return RollParts.text({"rolls": e.get("rolls", []), "nat": e.get("nat", 0), "parts": e["parts"], "total": e.get("total", 0), "dc": e.get("dc", 0)})
 
 
 func text_for(e: Dictionary) -> String:

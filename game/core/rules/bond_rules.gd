@@ -323,6 +323,7 @@ static func confess(s: GameSession, data: Dictionary, npc_id: String) -> Array[S
 	var nat: int = rolls.min() if dis else rolls[0]
 	var b := _bonus(s, data)
 	var dc := confess_dc(s, data, npc_id)
+	RollParts.note(s, "Признание", rolls, nat, RollParts.skill(s, data, str(k["skill"])), b, dc)
 	var ok := nat == 20 or (nat != 1 and nat + b >= dc)
 	var e := _rw(c, npc_id)
 	e["confess_day"] = s.day

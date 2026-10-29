@@ -166,6 +166,10 @@ func _act() -> String:
 			var after := JSON.stringify(gs.session.to_dict(500))
 			if before != after:
 				counts["save_mismatch"] = int(counts.get("save_mismatch", 0)) + 1
+				for pair: Array in [["before", before], ["after", after]]:  # both sides for a diff
+					var f := FileAccess.open(ProjectSettings.globalize_path("res://") + "../build/playtest/bot_mismatch_%s.json" % pair[0], FileAccess.WRITE)
+					if f != null:
+						f.store_string(str(pair[1]).replace(",\"", ",\n\""))  # a key a line, for diff
 				var at := 0
 				while at < mini(before.length(), after.length()) and before[at] == after[at]:
 					at += 1
@@ -239,6 +243,8 @@ func _invariants() -> String:
 			return "quest %s at a bad step %s" % [q, s.quests_active[q]]
 	if int(c["gold_cp"]) < 0:
 		return "coins %d" % c["gold_cp"]
+	if RollParts.unlabeled > 0:  # v0.7.39.5: every part of a roll has its name
+		return "%d rolls with an unlabeled part" % RollParts.unlabeled
 	for id: String in c["inventory"]:
 		if int(c["inventory"][id]) <= 0:
 			return "inventory %s ×%d" % [id, c["inventory"][id]]

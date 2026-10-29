@@ -307,6 +307,7 @@ static func stealth_roll(s: GameSession, data: Dictionary) -> Dictionary:
 		note = " (с помехой: %s)" % ", ".join(why)
 	elif adv and not dis:
 		note = " (с преимуществом: %s)" % boots
+	RollParts.note(s, TranslationServer.translate("SKILL_STEALTH"), rolls, nat, RollParts.cached(c, data, "skill", "stealth", s.items), int(c.get("skills", {}).get("stealth", 0)))
 	return {"total": nat + int(c.get("skills", {}).get("stealth", 0)), "nat": nat, "note": note}
 
 
@@ -434,7 +435,7 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	var martial := FeatureRules.martial_die(c, data)
 	if weapon_id.is_empty():
 		var umod := maxi(str_mod, dex_mod) if not martial.is_empty() else str_mod
-		return {"name": "Безоружный удар", "to_hit": umod + prof, "dice": martial if not martial.is_empty() else "1", "bonus": umod,
+		return {"name": "Безоружный удар", "to_hit": umod + prof, "hit_parts": [RollParts.part(RollParts.ability_name("str" if umod == str_mod else "dex"), umod), RollParts.part("владение", prof)], "dice": martial if not martial.is_empty() else "1", "bonus": umod,
 			"type": "bludgeoning", "melee": true, "range": [], "light": false, "id": "", "magical": false, "silvered": false,
 			"crit_min": FeatureRules.crit_min(c), "str_based": umod == str_mod}
 	var def := ItemRules.def_of(data["items"], session_items, weapon_id)
@@ -446,6 +447,8 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	var profs: Array = c.get("weapon_profs", [])
 	var proficient := profs.has(str(w.get("category", ""))) or profs.has(weapon_id) or (FeatureRules.pact_blade(c) and not ranged)
 	var to_hit := mod + (prof if proficient else 0)
+	var hit_parts: Array[Dictionary] = [RollParts.part(RollParts.ability_name("dex" if mod == dex_mod and mod != str_mod else "str"), mod)]
+	RollParts.add(hit_parts, "владение оружием", prof if proficient else 0)
 	var dice := str(w.get("damage", "1d4"))
 	if monk and CombatRules.dice_range(martial)[1] > CombatRules.dice_range(dice)[1]:
 		dice = martial
@@ -455,12 +458,15 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 		bonus = mini(0, mod)
 	if ranged and _has_style(c, "archery"):
 		to_hit += 2
+		RollParts.add(hit_parts, "боевой стиль: стрельба", 2)
 	if not ranged and not props.has("two_handed") and str(eq.get("off_hand", "")).is_empty() and _has_style(c, "dueling"):
 		bonus += 2
 	if w.has("versatile") and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty() and not offhand:
 		dice = str(w["versatile"])
 	var magic := ItemRules.plus(def, ["magic_plus"])  # a +N weapon (v0.6.3)
 	to_hit += magic + CraftRules.quality_mod(def)
+	RollParts.add(hit_parts, "магия оружия", magic)
+	RollParts.add(hit_parts, "качество работы", CraftRules.quality_mod(def))
 	bonus += magic
 	var rng: Array = w.get("reach_ft", [])
 	if rng.is_empty() and props.has("thrown"):
@@ -472,7 +478,7 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	if ranged and CharacterRules.item_prop(c, "ranged_damage_plus2") and kind in ["longbow", "shortbow"]:
 		bonus += 2  # Bracers of Archery (v0.7.12)
 	var ammo := str(ItemRules.cfg(data)["ammo"].get(ItemRules.real_id(weapon_id), ItemRules.cfg(data)["ammo"].get(kind, ""))) if props.has("ammunition") else ""
-	return SpellEffects.weapon(c, {"name": str(def.get("name", weapon_id)), "to_hit": to_hit, "dice": dice, "bonus": bonus,
+	return SpellEffects.weapon(c, {"name": str(def.get("name", weapon_id)), "to_hit": to_hit, "hit_parts": hit_parts, "dice": dice, "bonus": bonus,
 		"type": str(w.get("damage_type", "bludgeoning")), "melee": not ranged, "range": rng, "light": props.has("light"), "id": weapon_id,
 		"magical": magic > 0 or str(def.get("rarity", "common")) not in ["common", ""], "silvered": props.has("silvered"), "ammo": ammo,
 		"heavy": props.has("heavy"), "reach": props.has("reach"),

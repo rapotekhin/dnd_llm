@@ -2,6 +2,7 @@ class_name PlacePanel
 extends Control
 ## «Взаимодействие с местом» (roadmap v0.7.22.7, big test #17): every thing of the room in one window — take one,
 ## open a container, look closer — and «Забрать всё» on top; the bodies to search. Built like the container window.
+## v0.7.39.5: on top — the object the room belongs to (ObjectRules): its kind, owner, staff, upgrades, hours, chronicle.
 
 signal container_requested(prop_id: String)
 
@@ -53,6 +54,38 @@ func _button(row: Control, node_name: String, text: String, enabled: bool, actio
 	return b
 
 
+## The object card: «Кузница (мастерская) · хозяин Горан» and its staff, upgrades, hours and chronicle.
+func _object(s: GameSession, data: Dictionary) -> void:
+	var sid := GameState.world().site_id(s.room_id)
+	if sid.is_empty():
+		return
+	var i := ObjectRules.info(s, data, sid)
+	var card := VBoxContainer.new()
+	card.name = "ObjectCard"
+	_box.add_child(card)
+	var head := str(i["name"]) + ((" (%s)" % i["kind"]) if not str(i["kind"]).is_empty() else "")
+	if not str(i["owner"]).is_empty():
+		head += " · " + tr("PLACE_OWNER").format({"name": i["owner"]})
+	var h := _label(head)  # under the window's title: the object, not a second title
+	h.add_theme_color_override("font_color", UiTheme.ACCENT)
+	card.add_child(h)
+	var bits: Array[String] = []
+	var people: Array = (i["staff"] as Array).filter(func(x: Dictionary) -> bool: return str(x["source"]) != "owner")
+	if not people.is_empty():
+		bits.append(tr("OBJECT_STAFF").format({"list": ", ".join(people.map(func(x: Dictionary) -> String: return "%s — %s" % [x["name"], x["role"]]))}))
+	if not (i["upgrades"] as Array).is_empty():
+		bits.append(tr("OBJECT_UPGRADES").format({"list": ", ".join(i["upgrades"])}))
+	if not str(i["hours"]).is_empty():
+		bits.append(tr("OBJECT_HOURS").format({"hours": i["hours"]}))
+	if not bool(i["public"]):
+		bits.append(tr("OBJECT_PRIVATE"))
+	for b: String in bits:
+		card.add_child(_label(b, UiTheme.MUTED_LABEL))
+	var f: Array = i["facts"]
+	if not f.is_empty():
+		card.add_child(_label(tr("OBJECT_FACTS").format({"list": "; ".join(f.slice(maxi(0, f.size() - 3)))}), UiTheme.MUTED_LABEL))
+
+
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
@@ -64,6 +97,7 @@ func _rebuild() -> void:
 	PropRules.ensure_wares(s, data, s.room_id)  # the trader's wares (v0.7.22.8)
 	var can_act := Backend.is_ready() and not GameState.is_busy() and not s.in_conversation() and not CombatRules.active(s)
 	frame.title.text = str(GameState.world().room(s.room_id).get("name", s.room_id))
+	_object(s, data)
 	var takeable: Array = PropRules.take_all_plan(s, data)["take"]
 	var top := HBoxContainer.new()
 	_box.add_child(top)

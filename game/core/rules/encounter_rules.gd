@@ -95,10 +95,13 @@ static func parley_dc(data: Dictionary, enemies: Array, hard: bool) -> int:
 
 ## A roll of the hero's skill against `dc` (the game's difficulty counts). {total, ok, line}.
 static func roll(s: GameSession, data: Dictionary, skill: String, dc: int, dis: bool = false) -> Dictionary:
-	var nat := s.rng.randi_range(1, 20)
+	var rolls: Array[int] = [s.rng.randi_range(1, 20)]
 	if dis:
-		nat = mini(nat, s.rng.randi_range(1, 20))
-	var total := nat + CheckEngine.bonus_for(s.character, {"skill": skill}) + DifficultyRules.bonus(s, data)
+		rolls.append(s.rng.randi_range(1, 20))
+	var nat: int = rolls.min()
+	var parts := RollParts.skill(s, data, skill)
+	var total := nat + RollParts.sum(parts)
+	RollParts.note(s, TranslationServer.translate("SKILL_" + skill.to_upper()), rolls, nat, parts, total - nat, dc)
 	var ok := nat == 20 or (nat != 1 and total >= dc)
 	var skill_name := TranslationServer.translate("SKILL_" + skill.to_upper())
 	return {"total": total, "ok": ok, "line": "%s %d против Сл %d%s — %s" % [skill_name, total, dc, " (помеха: без общего языка — жесты и оружие)" if dis else "", "успех" if ok else "провал"]}

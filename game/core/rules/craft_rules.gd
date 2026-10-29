@@ -405,17 +405,22 @@ static func progress(c: Dictionary) -> int:
 
 ## The bonus of the craft check with `tool`: its ability, the proficiency (when proficient), the game's difficulty.
 static func bonus(s: GameSession, data: Dictionary, tool: String) -> int:
-	var ab := str(cfg(data)["tools"].get(tool, "int"))
-	var prof := CharacterRules.prof_bonus(s.character, data) if proficient(s.character, tool) else 0
-	return CharacterRules.mod(int(s.character.get("abilities", {}).get(ab, 10))) + prof + DifficultyRules.bonus(s, data)
+	return RollParts.sum(bonus_parts(s, data, tool))
+
+
+static func bonus_parts(s: GameSession, data: Dictionary, tool: String) -> Array[Dictionary]:
+	return RollParts.tool(s, data, tool, str(cfg(data)["tools"].get(tool, "int")))
 
 
 ## The bonus of a recipe's check: its tool's, or a tool-less template's skill (`check`), with the direction's skills.
 static func recipe_bonus(s: GameSession, data: Dictionary, r: Dictionary) -> int:
-	var extra := int(_fx(s.character, data, r, "quality_bonus", 0.0))
-	if tool_of(r).is_empty() and r.has("check"):
-		return CheckEngine.bonus_for(s.character, {"skill": str(r["check"])}) + DifficultyRules.bonus(s, data) + extra
-	return bonus(s, data, tool_of(r)) + extra
+	return RollParts.sum(recipe_parts(s, data, r))
+
+
+static func recipe_parts(s: GameSession, data: Dictionary, r: Dictionary) -> Array[Dictionary]:
+	var out := RollParts.skill(s, data, str(r["check"])) if tool_of(r).is_empty() and r.has("check") else bonus_parts(s, data, tool_of(r))
+	RollParts.development(s.character, data, dir_of(r), "quality_bonus", out)
+	return out
 
 
 ## The label of a recipe's check: the tool or the skill.
@@ -466,8 +471,10 @@ static func finish(s: GameSession, data: Dictionary) -> Array[String]:
 	var dis := not (mods["disadvantage"] as Array).is_empty()
 	var rolls := FeatureRules.hero_d20(s, adv, dis)
 	var nat: int = rolls.max() if adv and not dis else rolls.min()
-	var total := nat + recipe_bonus(s, data, r)
+	var parts := recipe_parts(s, data, r)
+	var total := nat + RollParts.sum(parts)
 	var dc := int(r.get("dc", 10))
+	RollParts.note(s, check_label(data, r), rolls, nat, parts, total - nat, dc)
 	var margin := 10 if nat == 20 else -10 if nat == 1 else total - dc
 	var tier := tier_for(data, margin)
 	c.erase("craft")
@@ -670,6 +677,9 @@ static func gather(s: GameSession, data: Dictionary, tag: String) -> Array[Strin
 	var nat: int = rolls.max() if adv and not dis else rolls.min() if dis and not adv else rolls[0]
 	var b := int(s.character.get("skills", {}).get(skill, 0)) + int(t["bonus"]) + DifficultyRules.bonus(s, data)
 	var dc := int(g["dc"])
+	var parts := RollParts.skill(s, data, skill)
+	RollParts.add(parts, str(t["note"]), int(t["bonus"]))
+	RollParts.note(s, str(g["name"]), rolls, nat, parts, b, dc)
 	var ok := nat == 20 or (nat != 1 and nat + b >= dc)
 	var lines: Array[String] = ["%s: %s %d + %d = %d против Сл %d — %s" % [g["name"], tr_skill(data, skill), nat, b, nat + b, dc, "успех" if ok else "провал"]]
 	if not ok:

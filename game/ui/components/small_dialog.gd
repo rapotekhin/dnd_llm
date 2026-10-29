@@ -204,6 +204,7 @@ func _long_rest(s: GameSession, data: Dictionary) -> void:
 		inn.name = "RestInn"
 		inn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		inn.text = tr("BTN_LONG_REST_COST").format({"cost": Money.format(cost)}) if cost > 0 \
+			else tr("BTN_OWN_BED") if bool(place.get("own", false)) \
 			else tr("BTN_LONG_REST_FREE") if bool(place.get("free", false)) else tr("BTN_LONG_REST")
 		inn.custom_minimum_size = Vector2(0, 56)
 		inn.theme_type_variation = UiTheme.ACCENT_BUTTON

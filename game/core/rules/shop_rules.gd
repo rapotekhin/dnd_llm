@@ -1,14 +1,13 @@
 class_name ShopRules
 extends RefCounted
-## Own trade (roadmap v0.7.29): a venue is the hero's place of a trading kind (rules.shop.venues, or with a counter)
-## or a stall rented at a market room from the registry. The hero puts own things on its shelf at a price (a percent
-## of the value); buyers come by days while a worker or a serf stands there, and on the hero's own shifts. A charter
-## of the location (from the registry) makes it lawful — a tax on the takings, wholesale at the suppliers; without it
-## the guard fines. The merchant's reputation of a location scales the buyers. State: c["shop"] {venues: {vid: {stock,
-## prices, cash, last_day, last}}, stalls: {room: until_day}, charters: {loc: day}, rep: {loc: float}}; a property's
-## vid is its id, a stall's — "stall:<room>". Every act is a button (GameState.shop_act).
-
-const STALL := "stall:"
+## Own trade (roadmap v0.7.29): a venue is the hero's object (ObjectRules, PropertyRules) of a trading kind — its kind
+## has `trade` {visitors, tavern}: a shop, a workshop, a tavern, a market stall rented at the registry, the counter of a
+## house (v0.7.39.5: each an object of its own). The hero puts own things on its shelf at a price (a percent of the
+## value); buyers come by days while its staff stands there (more hands — more buyers, PropertyRules.staff_mult), and on
+## the hero's own shifts. A charter of the location (from the registry) makes it lawful — a tax on the takings,
+## wholesale at the suppliers; without it the guard fines. The merchant's reputation of a location scales the buyers.
+## State: c["shop"] {venues: {vid: {stock, prices, cash, last_day, last}}, charters: {loc: day}, rep: {loc: float}};
+## a venue's id is its property id. Every act is a button (GameState.shop_act).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -17,12 +16,12 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 static func state(c: Dictionary) -> Dictionary:
 	if not c.has("shop"):
-		c["shop"] = {"venues": {}, "stalls": {}, "charters": {}, "rep": {}}
+		c["shop"] = {"venues": {}, "charters": {}, "rep": {}}
 	return c["shop"]
 
 
 static func _part(c: Dictionary, key: String) -> Dictionary:
-	return c["shop"][key] if c.has("shop") else {}
+	return c["shop"].get(key, {}) if c.has("shop") else {}
 
 
 static func venue(c: Dictionary, vid: String) -> Dictionary:
@@ -35,30 +34,15 @@ static func venue(c: Dictionary, vid: String) -> Dictionary:
 # --- venues ---------------------------------------------------------------------------------------------------------
 
 
-static func is_stall(vid: String) -> bool:
-	return vid.begins_with(STALL)
-
-
-## The venue kind of a hero's place: its kind in rules.shop.venues, "counter" with an income upgrade, "" — none.
-static func place_kind(s: GameSession, data: Dictionary, prop_id: String) -> String:
-	if not data["rules"].has("shop") or not PropertyRules.owned(s.character, prop_id):
-		return ""
-	var k := PropertyRules.kind_id(s, data, prop_id)
-	if cfg(data)["venues"].has(k) and k != "stall" and k != "counter":
-		return k
-	return "counter" if PropertyRules._gives(s, data, prop_id, "income_pct", 0.0) > 0.0 else ""
-
-
-static func kind_of(s: GameSession, data: Dictionary, vid: String) -> String:
-	return "stall" if is_stall(vid) else place_kind(s, data, vid)
-
-
+## The trade of a hero's object: its kind's `trade` ({} — it does not trade).
 static func kind_cfg(s: GameSession, data: Dictionary, vid: String) -> Dictionary:
-	return cfg(data)["venues"].get(kind_of(s, data, vid), {})
+	if not data["rules"].has("shop") or not PropertyRules.owned(s.character, vid):
+		return {}
+	return PropertyRules.kind(s, data, vid).get("trade", {})
 
 
 static func room_of(s: GameSession, data: Dictionary, vid: String) -> String:
-	return vid.trim_prefix(STALL) if is_stall(vid) else PropertyRules.main_room(s, data, vid)
+	return PropertyRules.main_room(s, data, vid)
 
 
 static func loc_of(s: GameSession, data: Dictionary, vid: String) -> String:
@@ -66,42 +50,31 @@ static func loc_of(s: GameSession, data: Dictionary, vid: String) -> String:
 
 
 static func name_of(s: GameSession, data: Dictionary, vid: String) -> String:
-	if is_stall(vid):
-		return "%s (%s)" % [cfg(data)["venues"]["stall"]["name"], WorldView.new(data["world"]).room_short(room_of(s, data, vid))]
 	return PropertyRules.name_of(s, data, vid)
 
 
-## The hero's venues: trading places and stalls ever rented (a lapsed stall keeps its shelf until taken back).
+## The hero's venues: the objects of trading kinds (a lapsed stall keeps its shelf until taken back).
 static func venues(s: GameSession, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	if not data["rules"].has("shop"):
 		return out
 	for id: String in PropertyRules.state(s.character):
-		if not place_kind(s, data, id).is_empty():
+		if not kind_cfg(s, data, id).is_empty():
 			out.append(id)
-	for room: String in _part(s.character, "stalls"):
-		out.append(STALL + room)
 	return out
 
 
 ## The hero's venue in this room ("" — none).
 static func here(s: GameSession, data: Dictionary) -> String:
 	for vid: String in venues(s, data):
-		if room_of(s, data, vid) == s.room_id or (not is_stall(vid) and vid == PropertyRules.here(s, data)):
+		if room_of(s, data, vid) == s.room_id or vid == PropertyRules.here(s, data):
 			return vid
 	return ""
 
 
-static func stall_open(s: GameSession, vid: String) -> bool:
-	return is_stall(vid) and int(_part(s.character, "stalls").get(vid.trim_prefix(STALL), 0)) >= s.day
-
-
-## Who sells there by days: a worker or a serf of the place; a stall — nobody but the hero.
-static func staffed(s: GameSession, vid: String) -> bool:
-	if is_stall(vid):
-		return false
-	var st: Dictionary = PropertyRules.state(s.character).get(vid, {})
-	return not str(st.get("worker", "")).is_empty() or not str(st.get("serf", "")).is_empty()
+## Who sells there by days: the staff of the object, while a rented one is rented.
+static func staffed(s: GameSession, vid: String, day: int = -1) -> bool:
+	return not PropertyRules.staff(s, vid).is_empty() and not PropertyRules.lapsed(s, vid, day)
 
 
 ## A venue with goods on its shelf: its place earns by sales, not by the flat income.
@@ -257,8 +230,7 @@ static func _rivals(s: GameSession, data: Dictionary, loc: String) -> Dictionary
 
 static func visitors(s: GameSession, data: Dictionary, vid: String, base: int) -> int:
 	var mult := clampf(1.0 + rep(s, loc_of(s, data, vid)) * float(cfg(data)["reputation"]["visitors_per_point"]), 0.5, 1.5)
-	if not is_stall(vid):
-		mult *= 1.0 + PropertyRules._gives(s, data, vid, "income_pct", 0.0) / 100.0
+	mult *= 1.0 + PropertyRules._gives(s, data, vid, "income_pct", 0.0) / 100.0
 	return maxi(1, roundi(base * mult))
 
 
@@ -329,7 +301,7 @@ static func shift_why(s: GameSession, data: Dictionary, vid: String) -> String:
 	var why := _reach(s, data, vid)
 	if not why.is_empty():
 		return why
-	if is_stall(vid) and not stall_open(s, vid):
+	if PropertyRules.lapsed(s, vid):
 		return "SHOP_STALL_LAPSED"
 	if not active(s, vid):
 		return "SHOP_EMPTY"
@@ -369,6 +341,7 @@ static func shift(s: GameSession, data: Dictionary, vid: String, minutes: int) -
 		var rolls := FeatureRules.hero_d20(s, false, dis)
 		var nat: int = rolls.min() if dis else rolls[0]
 		var b := _shift_bonus(s, data)
+		RollParts.note(s, name_of(s, data, vid), rolls, nat, RollParts.skill(s, data, skill), b, shift_dc(data))
 		var margin := 5 if nat == 20 else -5 if nat == 1 else nat + b - shift_dc(data)
 		var o := JobRules.outcome_for(data, margin)
 		base = roundi(base * (float(o.get("pay", 1.0)) + float(o.get("tips", 0.0)) * 2.0))
@@ -412,11 +385,11 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		var days := 0
 		while int(v["last_day"]) < s.day:
 			v["last_day"] = int(v["last_day"]) + 1
-			if not staffed(s, vid) or not PropertyRules.owned(s.character, vid):
+			if not PropertyRules.owned(s.character, vid) or not staffed(s, vid, int(v["last_day"])):
 				continue
 			days += 1
 			var k := kind_cfg(s, data, vid)
-			var r := sell_round(s, data, vid, visitors(s, data, vid, int(k.get("visitors", 0))))
+			var r := sell_round(s, data, vid, roundi(visitors(s, data, vid, int(k.get("visitors", 0))) * PropertyRules.staff_mult(data, PropertyRules.staff(s, vid).size())))
 			var rev := int(r["revenue"])
 			if bool(k.get("tavern", false)) and PropertyRules._gives(s, data, vid, "rest", 0.0) > 0.0:  # beds to let
 				var tc: Dictionary = cfg(data)["tavern"]
@@ -452,14 +425,6 @@ static func _days_text(n: int) -> String:
 # --- the registry: the charter and the stalls -----------------------------------------------------------------------
 
 
-static func market_room(data: Dictionary, loc: String) -> String:
-	for id: String in data["world"]["rooms"]:
-		var r: Dictionary = data["world"]["rooms"][id]
-		if str(r.get("location_id", "")) == loc and (r.get("tags", []) as Array).has(str(cfg(data)["stall"]["room_tag"])):
-			return id
-	return ""
-
-
 static func _registry_here(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	if not data["rules"].has("shop") or not PropertyRules.is_registry(data, npc_id):
 		return "SHOP_NO_SERVICE"
@@ -486,27 +451,6 @@ static func charter(s: GameSession, data: Dictionary, _npc_id: String) -> Array[
 	s.items[doc["id"]] = doc
 	ItemRules.found(s.character, data, s.items, doc["id"], 1)
 	return ["Торговая грамота: %s — пошлина %s, налог %d%% с выручки; опт у поставщиков открыт" % [lname, Money.format(fee), int(cfg(data)["charter"]["tax_pct"])]]
-
-
-static func rent_why(s: GameSession, data: Dictionary, npc_id: String, days: int) -> String:
-	var why := _registry_here(s, data, npc_id)
-	if not why.is_empty():
-		return why
-	if market_room(data, WorldView.new(data["world"]).location_id(s.room_id)).is_empty():
-		return "SHOP_NO_MARKET"
-	if not (cfg(data)["stall"]["days"] as Array).any(func(d: Variant) -> bool: return int(d) == days):
-		return "SHOP_NO_SERVICE"
-	return "SHOP_NO_MONEY" if int(s.character.get("gold_cp", 0)) < days * int(cfg(data)["stall"]["rent_cp_day"]) else ""
-
-
-static func rent(s: GameSession, data: Dictionary, _npc_id: String, days: int) -> Array[String]:
-	var room := market_room(data, WorldView.new(data["world"]).location_id(s.room_id))
-	var cost := days * int(cfg(data)["stall"]["rent_cp_day"])
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - cost
-	var stalls: Dictionary = state(s.character)["stalls"]
-	stalls[room] = maxi(int(stalls.get(room, 0)), s.day - 1) + days
-	venue(s.character, STALL + room)
-	return ["Прилавок: %s — до дня %d, %s" % [WorldView.new(data["world"]).room_short(room), int(stalls[room]), Money.format(cost)]]
 
 
 # --- suppliers ------------------------------------------------------------------------------------------------------

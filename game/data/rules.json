@@ -370,15 +370,20 @@
 		"worn_below": 50,
 		"repair_pct": 20,
 		"repair_points_hour": 10,
+		"staff_extra_pct": 50,
 		"kinds": {
-			"house": {"name": "дом"},
+			"house": {"name": "дом", "staff": [{"role": "слуга", "wage_cp_day": 8, "max": 2}]},
 			"land": {"name": "земля", "buildable": true, "decay": false},
-			"mill": {"name": "мельница", "income_cp_day": 50, "skill": "athletics", "hours": 8, "role": "подручный мельника", "wage_cp_day": 15},
-			"shop": {"name": "лавка", "income_cp_day": 40, "skill": "persuasion", "hours": 8, "role": "приказчик", "wage_cp_day": 15},
-			"workshop": {"name": "мастерская", "income_cp_day": 30, "skill": "athletics", "hours": 8, "role": "подмастерье", "wage_cp_day": 12},
-			"farm": {"name": "хутор", "income_cp_day": 30, "skill": "animal_handling", "hours": 8, "role": "работник", "wage_cp_day": 10},
-			"stable": {"name": "конюшня", "income_cp_day": 20, "skill": "animal_handling", "hours": 6, "role": "конюх", "wage_cp_day": 10},
-			"tavern": {"name": "таверна", "income_cp_day": 60, "skill": "persuasion", "hours": 8, "role": "половой", "wage_cp_day": 15}
+			"mill": {"name": "мельница", "income_cp_day": 50, "skill": "athletics", "hours": 8, "staff": [{"role": "подручный мельника", "wage_cp_day": 15, "max": 2}]},
+			"shop": {"name": "лавка", "income_cp_day": 40, "skill": "persuasion", "hours": 8, "staff": [{"role": "приказчик", "wage_cp_day": 15, "max": 2}], "trade": {"visitors": 8}},
+			"workshop": {"name": "мастерская", "income_cp_day": 30, "skill": "athletics", "hours": 8, "staff": [{"role": "подмастерье", "wage_cp_day": 12, "max": 2}], "trade": {"visitors": 4}},
+			"farm": {"name": "хутор", "income_cp_day": 30, "skill": "animal_handling", "hours": 8, "staff": [{"role": "работник", "wage_cp_day": 10, "max": 3}]},
+			"stable": {"name": "конюшня", "income_cp_day": 20, "skill": "animal_handling", "hours": 6, "staff": [{"role": "конюх", "wage_cp_day": 10, "max": 2}]},
+			"tavern": {"name": "таверна", "income_cp_day": 60, "skill": "persuasion", "hours": 8, "staff": [{"role": "половой", "wage_cp_day": 15, "max": 2}, {"role": "кухарка", "wage_cp_day": 12, "max": 1}], "trade": {"visitors": 10, "tavern": true}},
+			"stall": {"name": "прилавок на рынке", "decay": false, "staff": [{"role": "продавец", "wage_cp_day": 15, "max": 1}], "trade": {"visitors": 6},
+				"rent": {"tag": "market", "cp_day": 20, "days": [1, 7]}, "room": {"name": "Ваш прилавок", "description": "Дощатый прилавок под навесом в рыночном ряду."}},
+			"counter": {"name": "лавка при доме", "staff": [{"role": "продавец", "wage_cp_day": 15, "max": 1}], "trade": {"visitors": 4},
+				"room": {"name": "Лавка при доме", "description": "Пристройка с прилавком и вывеской, дверь на улицу.", "indoor": true}}
 		},
 		"upgrades": {
 			"bed": {"name": "Кровать", "price_cp": 300, "days": 1, "gives": {"rest": true}, "indoor": true, "text": "Долгий отдых дома даром"},
@@ -387,7 +392,9 @@
 			"workbench": {"name": "Верстак", "price_cp": 400, "days": 1, "gives": {"station": "workbench"}, "text": "Ремесло за верстаком без платы"},
 			"forge": {"name": "Горн и наковальня", "price_cp": 2000, "days": 4, "gives": {"station": "forge"}, "text": "Кузнечное ремесло без платы"},
 			"alchemy": {"name": "Стол алхимика", "price_cp": 1500, "days": 3, "gives": {"station": "alchemy"}, "indoor": true, "text": "Алхимия без платы"},
-			"counter": {"name": "Прилавок и вывеска", "price_cp": 600, "days": 2, "gives": {"income_pct": 25}, "income": true, "text": "Доход +25%"},
+			"counter": {"name": "Прилавок и вывеска", "price_cp": 600, "days": 2, "gives": {"object": "counter"}, "kinds": ["house"], "text": "Лавка при доме — свой объект: полка, продавец, выручка"},
+			"sign": {"name": "Вывеска", "price_cp": 300, "days": 1, "gives": {"income_pct": 25}, "income": true, "text": "Доход и покупателей +25%"},
+			"shelves": {"name": "Второй прилавок", "price_cp": 400, "days": 1, "gives": {"staff_max": 1}, "trade": true, "text": "Ещё одно место продавца"},
 			"lock": {"name": "Крепкая дверь с замком", "price_cp": 300, "days": 1, "gives": {"private": true}, "text": "Чужим входить нельзя"},
 			"stall": {"name": "Стойло", "price_cp": 500, "days": 2, "gives": {"feed_mult": 0.5}, "text": "Корм для животных здесь вдвое дешевле"},
 			"porch": {"name": "Крыльцо и ограда", "price_cp": 400, "days": 2, "gives": {"decay_mult": 0.5}, "text": "Место ветшает вдвое медленнее"}
@@ -424,14 +431,6 @@
 	},
 	"shop": {
 		"_doc": "Own trade (v0.7.29, ShopRules): a venue is the hero's place of a kind in `venues` (or with an upgrade that gives income_pct, the counter) or a stall rented at a room with `stall.room_tag` from the registry. The hero puts own things on the venue's shelf and sets the price as a percent of the value (price_pct). Each day a venue with a worker (or a serf) sells to `visitors` buyers: each picks a thing on the shelf (weight × competition — a pack trader of the location sells the same thing — or × scarce otherwise; a tavern's guests pick only food and drink) and buys it with the chance by the price ratio (buy_chance: [ratio, chance] points, linear); the takings go to the venue's till less the tax. The hero's own shift (`shift`) — a check of `skill` against `dc_tier`, its outcome (jobs.outcomes) × shift visitors, the takings to the purse. A charter (`charter`, from the registry for fee_cp) makes the trade lawful (tax_pct of the takings) and opens wholesale at the suppliers (NPC `wholesale` or the master's `supplier`: pct of the value, lots); without it the guard fines (fine_chance a day, fine_cp). The merchant's reputation of a location (`reputation`) grows by fair sales and good things, falls by dear sales and crude ones, and scales the visitors. A tavern's lodging: with an upgrade that gives rest, lodgers_share of the guests pay lodging_cp.",
-		"venues": {
-			"shop": {"name": "лавка", "visitors": 8},
-			"workshop": {"name": "мастерская", "visitors": 4},
-			"tavern": {"name": "таверна", "visitors": 10, "tavern": true},
-			"stall": {"name": "прилавок на рынке", "visitors": 6},
-			"counter": {"name": "прилавок", "visitors": 4}
-		},
-		"stall": {"room_tag": "market", "rent_cp_day": 20, "days": [1, 7]},
 		"price_pct": {"min": 50, "max": 200, "step": 10, "default": 100},
 		"buy_chance": [[0.5, 0.95], [0.8, 0.8], [1.0, 0.6], [1.2, 0.35], [1.5, 0.12], [2.0, 0.02]],
 		"competition": 0.6,

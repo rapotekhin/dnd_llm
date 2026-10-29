@@ -96,15 +96,23 @@ func _venue(s: GameSession, data: Dictionary) -> void:
 	var loc := ShopRules.loc_of(s, data, _id)
 	var bits: Array[String] = [tr("SHOP_HAS_CHARTER") if ShopRules.has_charter(s, loc) else tr("SHOP_NO_CHARTER"),
 		tr("SHOP_REP").format({"word": ShopRules.rep_word(data, ShopRules.rep(s, loc))})]
-	if ShopRules.is_stall(_id):
-		bits.append(tr("SHOP_STALL_UNTIL").format({"day": int(ShopRules.state(s.character)["stalls"].get(ShopRules.room_of(s, data, _id), 0))}))
-	elif ShopRules.staffed(s, _id):
-		bits.append(tr("SHOP_STAFFED"))
-	else:
-		bits.append(tr("SHOP_UNSTAFFED"))
+	var st: Dictionary = PropertyRules.state(s.character).get(_id, {})
+	if st.has("rent_until"):
+		bits.append(tr("SHOP_STALL_UNTIL").format({"day": int(st["rent_until"])}))
 	var info := _label(_box, " · ".join(bits), UiTheme.MUTED_LABEL)
 	if not ShopRules.has_charter(s, loc):
 		info.add_theme_color_override("font_color", UiTheme.WARN)
+	_label(_box, tr("SHOP_STAFFED") if ShopRules.staffed(s, _id) else tr("SHOP_UNSTAFFED"), UiTheme.MUTED_LABEL)
+	for h: Dictionary in PropertyRules.staff(s, _id):  # the object's staff (v0.7.39.5)
+		var who := str(h.get("npc", h.get("cid", "")))
+		var hr := _row("Hand_" + who.validate_node_name(), tr("PROPERTY_SERF" if bool(h.get("serf", false)) else "PROPERTY_WORKER").format({
+			"name": PropertyRules.hand_name(s, data, h), "role": h.get("role", ""), "wage": Money.format(int(h.get("wage", 0)))}))
+		_button(hr, "ShopFire_" + who.validate_node_name(), tr("BTN_PROPERTY_FIRE"), PropertyRules.fire_why(s, data, _id, who), _act("fire", _id, who))
+	for p: Dictionary in PropertyRules.places(s, data, _id):
+		if int(p["taken"]) < int(p["max"]):
+			var pr := _row("ShopPlace_" + str(p["role"]).validate_node_name(), "", UiTheme.MUTED_LABEL)
+			_button(pr, "ShopHire_" + str(p["role"]).validate_node_name(), tr("BTN_PROPERTY_HIRE").format({"role": p["role"], "wage": Money.format(int(p["wage"])),
+				"taken": int(p["taken"]), "max": int(p["max"])}), PropertyRules.worker_why(s, data, _id, str(p["role"])), _act("hire", _id, str(p["role"])))
 	var v := ShopRules.venue(s.character, _id)
 	var till := _row("ShopTill", tr("SHOP_TILL").format({"money": Money.format(int(v["cash"]))}))
 	_button(till, "ShopCollect", tr("BTN_SHOP_COLLECT"), ShopRules.collect_why(s, data, _id), _act("collect", _id))
@@ -151,21 +159,24 @@ func _registry(s: GameSession, data: Dictionary) -> void:
 		+ (" · " + tr("SHOP_HAS_CHARTER") if held else ""))
 	_button(ch, "CharterBuy", tr("BTN_SHOP_CHARTER").format({"fee": Money.format(int(sc["charter"]["fee_cp"]))}), ShopRules.charter_why(s, data, _id), _act("charter", _id))
 	_box.add_child(HSeparator.new())
-	var room := ShopRules.market_room(data, GameState.world().location_id(s.room_id))
+	var loc := GameState.world().location_id(s.room_id)
+	var room := PropertyRules.rent_room(data, "stall", loc)
 	if room.is_empty():
 		_label(_box, tr("SHOP_NO_MARKET"), UiTheme.MUTED_LABEL)
 		return
-	var until := int(ShopRules.state(s.character)["stalls"].get(room, 0))
-	_label(_box, tr("SHOP_STALL_HINT").format({"place": GameState.world().room_short(room), "rent": Money.format(int(sc["stall"]["rent_cp_day"]))})
+	var rent: Dictionary = PropertyRules.kind_cfg(data, "stall")["rent"]  # the stall — an object rented (v0.7.39.5)
+	var mine := PropertyRules.rented(s, data, "stall", loc)
+	var until := int(PropertyRules.state(s.character)[mine]["rent_until"]) if not mine.is_empty() else 0
+	_label(_box, tr("SHOP_STALL_HINT").format({"place": GameState.world().room_short(room), "rent": Money.format(int(rent["cp_day"]))})
 		+ (" · " + tr("SHOP_STALL_UNTIL").format({"day": until}) if until >= s.day else ""))
 	var stall := HBoxContainer.new()
 	stall.name = "StallRow"
 	stall.alignment = BoxContainer.ALIGNMENT_END
 	stall.add_theme_constant_override("separation", 10)
 	_box.add_child(stall)
-	for d: Variant in sc["stall"]["days"]:
-		_button(stall, "StallRent_%d" % int(d), tr("BTN_SHOP_RENT").format({"days": tr("BANK_DAYS").format({"n": int(d)}), "money": Money.format(int(d) * int(sc["stall"]["rent_cp_day"]))}),
-			ShopRules.rent_why(s, data, _id, int(d)), _act("rent", _id, "", int(d)))
+	for d: Variant in rent["days"]:
+		_button(stall, "StallRent_%d" % int(d), tr("BTN_SHOP_RENT").format({"days": tr("BANK_DAYS").format({"n": int(d)}), "money": Money.format(int(d) * int(rent["cp_day"]))}),
+			PropertyRules.rent_why(s, data, _id, "stall", int(d)), _act("rent", _id, "stall", int(d)))
 
 
 func _supplier(s: GameSession, data: Dictionary) -> void:

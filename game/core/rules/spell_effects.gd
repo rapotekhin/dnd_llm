@@ -287,18 +287,20 @@ static func hero_die(s: GameSession, data: Dictionary, kind: String) -> Dictiona
 	var c := s.character
 	var total := 0
 	var notes: Array[String] = []
+	var parts: Array[Dictionary] = []  # for the roll's breakdown (v0.7.39.5)
 	for e: Dictionary in ConditionRules.effects(c).duplicate():
 		if not e.has("die") or not (e.get("on", []) as Array).has(kind):
 			continue
 		var n := CombatRules.roll_dice(s.rng, str(e["die"]))
 		total += n
 		notes.append("+%d (%s)" % [n, e.get("source", {}).get("name", "")])
+		parts.append(RollParts.part("%s (%s)" % [e.get("source", {}).get("name", ""), str(e["die"]).replace("d", "к")], n))
 		if bool(e.get("once", false)):
 			ConditionRules.remove_effect(c, int(e.get("uid", 0)))
 			if str(c.get("concentration", "")) == str(e.get("source", {}).get("id", "")):
 				c["concentration"] = ""
 				c["concentration_ends"] = -1
-	return {"bonus": total, "note": " ".join(notes)}
+	return {"bonus": total, "note": " ".join(notes), "parts": parts}
 
 
 ## True Strike: the hero's next attack roll has advantage; the effect goes with that roll. True when it was there.
@@ -401,6 +403,10 @@ static func weapon(c: Dictionary, w: Dictionary, kind: String) -> Dictionary:
 			if ab > old:
 				out["to_hit"] = int(out["to_hit"]) - old + ab
 				out["bonus"] = int(out["bonus"]) - old + ab
+				var parts: Array[Dictionary] = []
+				parts.assign(out.get("hit_parts", []))
+				parts.append(RollParts.part("%s: %s вместо Силы" % [e.get("source", {}).get("name", ""), RollParts.ability_name(str(c.get("spell_ability", "wis")))], ab - old))
+				out["hit_parts"] = parts
 			if CombatRules.dice_range(str(out["dice"]))[1] < 8:
 				out["dice"] = "1d8"
 			out["magical"] = true
@@ -408,6 +414,10 @@ static func weapon(c: Dictionary, w: Dictionary, kind: String) -> Dictionary:
 		if not str(c.get("equipped", {}).get("main_hand", "")).is_empty() and kind != "":
 			out = out.duplicate()
 			out["to_hit"] = int(out["to_hit"]) + int(e["weapon_plus"])
+			var plus: Array[Dictionary] = []
+			plus.assign(out.get("hit_parts", []))
+			plus.append(RollParts.part(str(e.get("source", {}).get("name", "заклинание")), int(e["weapon_plus"])))
+			out["hit_parts"] = plus
 			out["bonus"] = int(out["bonus"]) + int(e["weapon_plus"])
 			out["magical"] = true
 	return out
@@ -966,6 +976,8 @@ static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc: Di
 	var roll := s.rng.randi_range(1, 20)
 	var dc := int(s.character.get("spell_dc", 10))
 	var saved := roll + bonus >= dc
+	var save_parts: Array[Dictionary] = [RollParts.part("спасбросок %s (%s)" % [CombatRules.ab_name(ab), name], bonus)]
+	RollParts.note(s, "%s: %s" % [spell["name"], name], [roll], roll, save_parts, bonus, dc)
 	return {"ok": not saved, "line": "%s: %s — спасбросок %s %d против Сл %d — %s" % [spell["name"], name, CombatRules.ab_name(ab), roll + bonus, dc,
 		"устоял" if saved else "поддался"]}
 

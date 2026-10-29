@@ -460,6 +460,49 @@ static func _site_of(data: Dictionary, st: Dictionary, npc_keys: Array) -> Dicti
 		elif owner != "new" and not data["world"]["npcs"].has(owner):
 			return {"reason": "хозяин объекта %s — не человек мира: id из find_npcs, «new:<key>» человека места или «new» — create_npc этого хода" % owner}
 		site["owner"] = owner  # "new" / "new:<key>": linked on apply
+	return _object_of(data, st, npc_keys, site)
+
+
+## v0.7.39.5 — the object of a site (ObjectRules): its kind, owner's role, staff, upgrades and hours, checked
+## against rules.property; people as the owner — a world NPC, «new» or «new:<key>».
+static func _object_of(data: Dictionary, st: Dictionary, npc_keys: Array, site: Dictionary) -> Dictionary:
+	if not data["rules"].has("property"):
+		return site
+	var pc: Dictionary = data["rules"]["property"]
+	var who_ok := func(ref: String) -> bool:
+		return (ref.begins_with("new:") and npc_keys.has(ref.trim_prefix("new:"))) or ref == "new" or data["world"]["npcs"].has(ref)
+	var k := str(st.get("kind", "")) if st.get("kind") != null else ""
+	if not k.is_empty():
+		if not pc["kinds"].has(k):
+			return {"reason": "kind объекта — из %s" % ", ".join(pc["kinds"].keys())}
+		site["kind"] = k
+	if st.get("owner_role") != null and not str(st["owner_role"]).strip_edges().is_empty():
+		site["owner_role"] = str(st["owner_role"]).strip_edges().left(40)
+	var staff: Array = []
+	for h: Variant in st.get("staff", []) if st.get("staff") is Array else []:
+		var ref := str((h as Dictionary).get("npc_id", ""))
+		if not who_ok.call(ref):
+			return {"reason": "штат объекта: %s — не человек мира и не «new:<key>» человека места" % ref}
+		var role := str((h as Dictionary).get("role", "")).strip_edges().left(40)
+		if role.is_empty():
+			return {"reason": "у человека штата %s нужна role" % ref}
+		staff.append({"npc": ref, "role": role})
+	if not staff.is_empty():
+		site["staff"] = staff
+	var ups: Array = []
+	for u: Variant in st.get("upgrades", []) if st.get("upgrades") is Array else []:
+		if not pc["upgrades"].has(str(u)):
+			return {"reason": "улучшение %s — из %s" % [u, ", ".join(pc["upgrades"].keys())]}
+		ups.append(str(u))
+	if not ups.is_empty():
+		site["upgrades"] = ups
+	var h: Variant = st.get("hours")
+	if h is Dictionary:
+		var a := int((h as Dictionary).get("opens", -1))
+		var b := int((h as Dictionary).get("closes", -1))
+		if a < 0 or a > 23 or b < 1 or b > 24 or a == b:
+			return {"reason": "hours объекта — {opens, closes}, часы от 0 до 24"}
+		site["hours"] = {"from": a, "to": b}
 	return site
 
 
@@ -577,10 +620,14 @@ static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 	for n: Dictionary in place.get("npcs", []):
 		npc_ids[str(n["key"])] = apply_npc(s, data, {"npc": n["plan"]["npc"], "room": str(ids.get(str(n["room"]), first)), "items": n["plan"].get("items", {})})
 	for key: String in site_ids:
-		var owner := str(gen["sites"][site_ids[key]].get("owner", ""))
+		var gs: Dictionary = gen["sites"][site_ids[key]]
+		var owner := str(gs.get("owner", ""))
 		if owner.begins_with("new:"):
-			gen["sites"][site_ids[key]]["owner"] = str(npc_ids.get(owner.trim_prefix("new:"), ""))
-			data["world"]["sites"][site_ids[key]]["owner"] = gen["sites"][site_ids[key]]["owner"]
+			gs["owner"] = str(npc_ids.get(owner.trim_prefix("new:"), ""))
+		for h: Dictionary in gs.get("staff", []):  # v0.7.39.5: the object's people
+			if str(h["npc"]).begins_with("new:"):
+				h["npc"] = str(npc_ids.get(str(h["npc"]).trim_prefix("new:"), ""))
+		data["world"]["sites"][site_ids[key]] = gs.duplicate(true)
 	if bool(place.get("law", false)) and bool(place["new_location"]):
 		var law: Dictionary = (cfg(data)["guard"] as Dictionary).duplicate(true)
 		law["name"] = "стража: %s" % place["location"]["name"]

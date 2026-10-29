@@ -7,6 +7,7 @@ extends RefCounted
 ## A job of an organization (v0.7.39.1): `requires.org` {id, rank} — a member of that rank; a good shift adds the
 ## organization's points (rules.underworld.orgs.job_points). `caught` {crime, room} — a bad shift is a crime known
 ## to the law (a pickpocket caught); `fight` {chance, foes} — a shift may end in a fight (bandits at a convoy).
+## v0.7.39.5: a job is a place in the staff of an object (ObjectRules) — its `site`, else the object the employer lives in.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -50,6 +51,14 @@ static func rank(c: Dictionary, id: String) -> int:
 
 static func employer_name(s: GameSession, data: Dictionary, id: String) -> String:
 	return npc_name(s, data, str(job(s, data, id).get("employer", "")))
+
+
+## The object the job is a place of (v0.7.39.5): its `site`, else the site of the employer's home room.
+static func site_of(s: GameSession, data: Dictionary, id: String) -> String:
+	var j := job(s, data, id)
+	if not str(j.get("site", "")).is_empty():
+		return str(j["site"])
+	return WorldView.new(data["world"]).site_id(ReputationRules.home_room(data, str(j.get("employer", ""))))
 
 
 ## A pack's or a made NPC's name.
@@ -220,19 +229,26 @@ static func hours(s: GameSession, data: Dictionary, id: String) -> int:
 	return int(job(s, data, id).get("hours", 4))
 
 
-## The check of a shift: {bonus, adv, label}.
+## The check of a shift: {bonus, parts, adv, label}.
 static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	var j := job(s, data, id)
 	var c := s.character
 	var skill := str(j.get("skill", ""))
 	var tool := str(j.get("tool", ""))
-	var extra := int(DevelopmentRules.effect(c, data, "work", "shift_bonus", 0.0))
 	var adv := bool(DevelopmentRules.effect(c, data, "work", "shift_adv", false))
+	var parts: Array[Dictionary] = []
+	var label := ""
 	if skill.is_empty():
-		return {"bonus": CraftRules.bonus(s, data, tool) + extra, "adv": adv, "label": BackgroundRules.tool_name(data, tool)}
-	var t := BackgroundRules.tool_check(c, data, tool, skill)
-	return {"bonus": CheckEngine.bonus_for(c, {"skill": skill}) + int(t["bonus"]) + DifficultyRules.bonus(s, data) + extra,
-		"adv": adv or not str(t["advantage"]).is_empty(), "label": CraftRules.tr_skill(data, skill)}
+		parts = CraftRules.bonus_parts(s, data, tool)
+		label = BackgroundRules.tool_name(data, tool)
+	else:
+		var t := BackgroundRules.tool_check(c, data, tool, skill)
+		parts = RollParts.skill(s, data, skill)
+		RollParts.add(parts, str(t["note"]), int(t["bonus"]))
+		adv = adv or not str(t["advantage"]).is_empty()
+		label = CraftRules.tr_skill(data, skill)
+	RollParts.development(c, data, "work", "shift_bonus", parts)
+	return {"bonus": RollParts.sum(parts), "parts": parts, "adv": adv, "label": label}
 
 
 static func shift_chance(s: GameSession, data: Dictionary, id: String) -> int:
@@ -268,6 +284,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 	var nat: int = rolls.max() if bool(ch["adv"]) and not dis else rolls.min() if dis and not bool(ch["adv"]) else rolls[0]
 	var d := dc(s, data, id)
 	var total := nat + int(ch["bonus"])
+	RollParts.note(s, str(j.get("name", id)), rolls, nat, ch["parts"], int(ch["bonus"]), d)
 	var margin := 5 if nat == 20 else -5 if nat == 1 else total - d
 	var o := outcome_for(data, margin)
 	var got := roundi(pay(s, data, id) * float(o.get("pay", 1.0)))

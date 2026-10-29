@@ -2691,6 +2691,39 @@ scenarios:
     rubric:
       - "Мастер создаёт пекарню эффектом create_place там, где ей быть по смыслу мира (у площади внутри поселения или за Северными воротами — его выбор, догадка игрока не обязательна), но не в самой таверне; что говорит Горм о том, где пекарня и как туда пройти, совпадает с построенным; герой никуда не переходит"
 
+  - id: object_mill_with_its_people
+    title: "Мельница с хозяином и работниками — объект движка: вид, штат по ролям (просьба автора, v0.7.39.5)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, а мельница тут есть? Кто там хозяин и сколько у него работников — хочу знать, к кому идти наниматься."
+    engine:
+      find_places: []
+      find_npcs: []
+      find_edges:
+        - {room_id: brod-gate, room: "Северные ворота", location: "Ольховый Брод", edge: 0, text: "поля и хутора за северными воротами, река", terrain: [grassland, hills], new_location: true}
+    expect:
+      effects: {required_kinds_any: [create_place], forbidden_kinds: [move, coins]}
+      tools_required: [find_places]
+    rubric:
+      - "Мастер создаёт мельницу эффектом create_place как объект движка: у её site есть kind «mill», хозяин (owner_id — созданный в этом же эффекте NPC) и штат staff — работники по ролям (npc_id «new:<key>» людей этого же места); сколько работников назвал Горм, столько их и в штате"
+
+  - id: object_house_for_sale
+    title: "Дом на продажу — объект create_place и его продажа property (просьба автора, v0.7.39.5)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, не знаешь, продаёт ли кто в округе дом? Устал по трактирам ночевать, хочу своё жильё."
+    engine:
+      find_places: []
+      find_npcs: []
+      find_edges:
+        - {room_id: brod-square, room: "Рыночная площадь", location: "Ольховый Брод", edge: 0, text: "улочки и дворы вокруг площади — дома, лавки, мастерские", terrain: [grassland], new_location: false}
+    expect:
+      effects: {forbidden_kinds: [coins, move]}
+    rubric:
+      - "Горм направляет к писарю в ратушу (места продаются там) или мастер создаёт дом (create_place с kind «house») и выставляет его на продажу эффектом property (site_id «new», продавец — его хозяин, цена в разумных пределах); продавец назван, и герой ничего не покупает словами в этом ходе"
+
   - id: walk_into_a_made_bakery
     title: "«Иду к Сарре»: двор, его хозяйка и вход — одним ходом (трейс автора, v0.7.22.25.1)"
     category: concepts

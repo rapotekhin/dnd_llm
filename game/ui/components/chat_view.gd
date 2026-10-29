@@ -48,7 +48,9 @@ func _add(e: Dictionary) -> void:
 			_list.add_child(_text("%s — %s" % [e.get("name", ""), without_name(str(e.get("text", "")), str(e.get("name", "")))], UiTheme.NPC_TEXT))
 			_link(e)
 		GameSession.KIND_EFFECT:
-			_list.add_child(_text(" · ".join(e.get("lines", [])), UiTheme.EFFECT_TEXT))
+			var l := _text(" · ".join(e.get("lines", [])), UiTheme.EFFECT_TEXT)
+			l.tooltip_text = RollParts.entry_text(e)  # the rolls of the line on hover (v0.7.39.5)
+			_list.add_child(l)
 		GameSession.KIND_CHECK:
 			_list.add_child(CheckCard.new(e))
 		GameSession.KIND_SYSTEM:

@@ -52,9 +52,9 @@ func test_a_course_of_what_the_hero_knows_is_learned_already() -> void:
 
 func test_own_shop_shift_grows_trade_by_revenue() -> void:
 	var s := _hero()
-	ShopRules.rent(s, data, "npc_clerk", 7)
-	s.room_id = "brod-square"
-	var vid := ShopRules.STALL + "brod-square"
+	PropertyRules.rent(s, data, "npc_clerk", "stall", 7)
+	var vid := PropertyRules.rented(s, data, "stall", "brod")
+	s.room_id = ShopRules.room_of(s, data, vid)
 	s.character["inventory"]["silver_ring"] = 10
 	ShopRules.put(s, data, vid, "silver_ring", 10)
 	for i in 5:

@@ -8,9 +8,13 @@ extends RefCounted
 ## of the hero (state `tame`), fed each day; while the world allows slavery an owned prisoner may be put to work.
 ## The author's answers: sale in the pack and by the master, building on land, a clerk with the deed, workers and own
 ## shifts, tax and decay, upgrades, the window and the map, animals, serfs (a world setting, off by default).
+## v0.7.39.5 (the author: «лавка — это объект»): the hero's place is an object (ObjectRules) of a kind — its staff
+## places by roles (rules.property.kinds[k].staff, `max` each, more by upgrades with `staff_max`), any number of hands,
+## each a person of the object paid each day; a trading kind (`trade`) has a shelf (ShopRules); a market stall is an
+## object of the kind `stall` rented at the registry (`rent`), the counter of a house — an object of its own (`counter`).
 ##
 ## c["property"] = {id: {deed, since, cond, cash, debt, stock: {item: qty}, upgrades: [..], pending: [{up, ready}],
-## building: {id, ready}, kind, worker, serf, last_day, tax_day, shift_day}}.
+## building: {id, ready}, kind, staff: [{npc | cid, role, wage, serf}], rent_until, last_day, tax_day, shift_day}}.
 
 const TAME := "tame"
 
@@ -83,6 +87,12 @@ static func at(s: GameSession, data: Dictionary, room_id: String) -> String:
 static func here(s: GameSession, data: Dictionary) -> String:
 	var id := at(s, data, s.room_id)
 	return id if owned(s.character, id) else ""
+
+
+## The hero's own place with a bed (an upgrade that gives rest) the room belongs to, "" — none (v0.7.39.5).
+static func bed_at(s: GameSession, data: Dictionary, room_id: String) -> String:
+	var id := at(s, data, room_id)
+	return id if owned(s.character, id) and _gives(s, data, id, "rest", 0.0) > 0.0 else ""
 
 
 static func price(s: GameSession, data: Dictionary, id: String) -> int:
@@ -206,14 +216,19 @@ static func buy(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var c := s.character
 	var p := prop(s, data, id)
 	c["gold_cp"] = int(c["gold_cp"]) - price(s, data, id)
-	state(c)[id] = {"deed": false, "since": s.day, "cond": float(p.get("condition", 100)), "cash": 0, "debt": 0, "stock": {},
-		"upgrades": [], "pending": [], "building": {}, "worker": "", "serf": "", "last_day": s.day, "tax_day": s.day, "shift_day": -1}
+	state(c)[id] = _fresh(s, float(p.get("condition", 100)))
 	_patch(s, data, "sites", str(p["site"]), "owner", OwnerRules.HERO)
+	ObjectRules.note(s, str(p["site"]), "куплен героем у %s" % npc_name(data, seller(s, data, id)))
 	var who := seller(s, data, id)
 	s.remember(who, "продал герою %s" % name_of(s, data, id))
 	var lines: Array[String] = ["Куплено: %s за %s — продавец %s" % [name_of(s, data, id), Money.format(price(s, data, id)), npc_name(data, who)]]
 	lines.append("Без купчей место ваше лишь на словах — оформите бумагу в ратуше (пошлина %s)" % Money.format(deed_fee(s, data, id)))
 	return lines
+
+
+static func _fresh(s: GameSession, cond: float) -> Dictionary:
+	return {"deed": false, "since": s.day, "cond": cond, "cash": 0, "debt": 0, "stock": {}, "upgrades": [], "pending": [], "building": {},
+		"staff": [], "last_day": s.day, "tax_day": s.day, "shift_day": -1}
 
 
 static func deed_why(s: GameSession, data: Dictionary, id: String) -> String:
@@ -249,8 +264,10 @@ static func deed(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 ## The place is lost (seized, disputed): the seller's again. Lines.
 static func _lose(s: GameSession, data: Dictionary, id: String, why: String) -> Array[String]:
 	var st: Dictionary = state(s.character)[id]
-	_fire(s, data, id)
+	for h: Dictionary in staff(s, id).duplicate():
+		_fire(s, data, id, h)
 	state(s.character).erase(id)
+	ObjectRules.note(s, str(prop(s, data, id).get("site", "")), "отобран у героя: %s" % why)
 	_patch(s, data, "sites", str(prop(s, data, id).get("site", "")), "owner", seller(s, data, id))
 	return ["%s больше не ваше: %s%s" % [name_of(s, data, id), why, "" if int(st.get("cash", 0)) <= 0 else "; выручка в кассе пропала"]]
 
@@ -296,32 +313,39 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int) -> Dict
 	var b: Dictionary = st.get("building", {})
 	if not b.is_empty() and int(b["ready"]) <= day:
 		lines.append_array(_finish_build(s, data, id, str(b["id"])))
-	var serf := _serf(s, id)
-	if not serf.is_empty() and s.rng.randf() < float(cf["serfs"]["escape_chance_day"]):
-		lines.append("%s сбежал из %s" % [serf["name"], name_of(s, data, id)])
-		_remove_creature(s, str(serf["id"]))
-		st["serf"] = ""
-		serf = {}
-	var hand := not str(st.get("worker", "")).is_empty() or not serf.is_empty()
+	for h: Dictionary in staff(s, id).duplicate():
+		if bool(h.get("serf", false)) and s.rng.randf() < float(cf["serfs"]["escape_chance_day"]):
+			lines.append("%s сбежал из %s" % [hand_name(s, data, h), name_of(s, data, id)])
+			_remove_creature(s, str(h["cid"]))
+			(st["staff"] as Array).erase(h)
+	if lapsed(s, id, day):  # a rented object past its term: the hands go, nothing works
+		for h: Dictionary in staff(s, id).duplicate():
+			lines.append("%s ушёл из %s: срок аренды вышел" % [hand_name(s, data, h), name_of(s, data, id)])
+			_fire(s, data, id, h)
+	var hands := staff(s, id).size()
 	if bool(kind(s, data, id).get("decay", true)):
-		var rate := float(cf["decay_worker"] if hand else cf["decay_per_day"]) * _gives(s, data, id, "decay_mult", 1.0)
+		var rate := float(cf["decay_worker"] if hands > 0 else cf["decay_per_day"]) * _gives(s, data, id, "decay_mult", 1.0)
 		st["cond"] = clampf(float(st.get("cond", 100.0)) - rate, 0.0, 100.0)
-	var income := income_day(s, data, id) if hand else 0
+	var income := roundi(income_day(s, data, id) * staff_mult(data, hands)) if hands > 0 else 0
 	st["cash"] = int(st.get("cash", 0)) + income
 	var wages := 0
-	if not str(st.get("worker", "")).is_empty():
-		wages = int(kind(s, data, id).get("wage_cp_day", 0))
-	elif not serf.is_empty():
-		wages = int(cf["serfs"]["feed_cp_day"])
+	for h: Dictionary in staff(s, id):
+		wages += int(cf["serfs"]["feed_cp_day"]) if bool(h.get("serf", false)) else int(h.get("wage", 0))
 	if wages > 0:
 		var from_till := mini(wages, int(st["cash"]))
 		st["cash"] = int(st["cash"]) - from_till
 		var rest := wages - from_till
 		if rest > 0 and int(c.get("gold_cp", 0)) >= rest:
 			c["gold_cp"] = int(c["gold_cp"]) - rest
-		elif rest > 0 and not str(st.get("worker", "")).is_empty():
-			lines.append("%s ушёл из %s: нечем платить" % [npc_name(data, str(st["worker"])), name_of(s, data, id)])
-			_fire(s, data, id)
+		elif rest > 0:  # the hired go, the last hired first, until the rest is paid
+			for h: Dictionary in staff(s, id).duplicate():
+				if rest <= 0:
+					break
+				if bool(h.get("serf", false)):
+					continue
+				lines.append("%s ушёл из %s: нечем платить" % [hand_name(s, data, h), name_of(s, data, id)])
+				rest -= int(h.get("wage", 0))
+				_fire(s, data, id, h)
 	if bool(st.get("deed", false)):
 		if day - int(st.get("tax_day", day)) >= int(cf["tax"]["every_days"]):
 			st["tax_day"] = day
@@ -472,6 +496,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 	var nat: int = rolls.min() if dis else rolls[0]
 	var b := _shift_bonus(s, data, id)
 	var total := nat + b
+	RollParts.note(s, name_of(s, data, id), rolls, nat, RollParts.skill(s, data, skill), b, shift_dc(data))
 	var margin := 5 if nat == 20 else -5 if nat == 1 else total - shift_dc(data)
 	var o := JobRules.outcome_for(data, margin)
 	var got := roundi(day * (float(o.get("pay", 1.0)) + float(o.get("tips", 0.0))))
@@ -513,72 +538,144 @@ static func repair(s: GameSession, data: Dictionary, id: String, minutes: int) -
 # --- workers and serfs ----------------------------------------------------------------------------------------------
 
 
-static func worker_why(s: GameSession, data: Dictionary, id: String) -> String:
+## The hands of the hero's object: [{npc | cid, role, wage, serf}] (v0.7.39.5).
+static func staff(s: GameSession, id: String) -> Array:
+	var st: Dictionary = state(s.character).get(id, {})
+	if not (st.get("staff") is Array):
+		if st.is_empty():
+			return []
+		st["staff"] = []
+	return st["staff"]
+
+
+## The places of the object by roles: [{role, wage, max, taken}] — its kind's, more by upgrades (`staff_max` adds to
+## the first role).
+static func places(s: GameSession, data: Dictionary, id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for p: Dictionary in kind(s, data, id).get("staff", []):
+		out.append({"role": str(p["role"]), "wage": int(p.get("wage_cp_day", 0)), "max": int(p.get("max", 1)), "taken": 0})
+	if not out.is_empty():
+		out[0]["max"] = int(out[0]["max"]) + roundi(_gives(s, data, id, "staff_max", 0.0))
+	for h: Dictionary in staff(s, id):
+		for p: Dictionary in out:
+			if str(p["role"]) == str(h.get("role", "")):
+				p["taken"] = int(p["taken"]) + 1
+	return out
+
+
+static func _place(s: GameSession, data: Dictionary, id: String, role: String) -> Dictionary:
+	for p: Dictionary in places(s, data, id):
+		if str(p["role"]) == role:
+			return p
+	return {}
+
+
+## Each hand past the first adds rules.property.staff_extra_pct of the base (income, buyers).
+static func staff_mult(data: Dictionary, hands: int) -> float:
+	return 1.0 + maxi(0, hands - 1) * float(cfg(data).get("staff_extra_pct", 0)) / 100.0
+
+
+static func hand_name(s: GameSession, data: Dictionary, h: Dictionary) -> String:
+	if bool(h.get("serf", false)):
+		var cr := _creature(s, str(h.get("cid", "")))
+		return str(cr.get("name", "подневольный"))
+	return npc_name(data, str(h.get("npc", "")))
+
+
+## A rented object (a stall) past its term on `day` (default today).
+static func lapsed(s: GameSession, id: String, day: int = -1) -> bool:
+	var st: Dictionary = state(s.character).get(id, {})
+	return st.has("rent_until") and int(st["rent_until"]) < (s.day if day < 0 else day)
+
+
+static func worker_why(s: GameSession, data: Dictionary, id: String, role: String = "") -> String:
 	if not owned(s.character, id) or here(s, data) != id:
 		return "PROPERTY_NOT_HERE"
-	if str(kind(s, data, id).get("role", "")).is_empty():
+	var p := _place(s, data, id, role) if not role.is_empty() else (places(s, data, id)[0] if not places(s, data, id).is_empty() else {})
+	if p.is_empty():
 		return "PROPERTY_NO_WORK"
-	var st: Dictionary = state(s.character)[id]
-	if not str(st.get("worker", "")).is_empty() or not str(st.get("serf", "")).is_empty():
+	if lapsed(s, id):
+		return "SHOP_STALL_LAPSED"
+	if int(p["taken"]) >= int(p["max"]):
 		return "PROPERTY_HAS_WORKER"
-	if int(s.character.get("gold_cp", 0)) < int(kind(s, data, id).get("wage_cp_day", 0)):
+	if int(s.character.get("gold_cp", 0)) < int(p["wage"]):
 		return "PROPERTY_NO_MONEY"
 	return ""
 
 
 ## A worker of the place: a person the engine makes from the pack's names, living in the place, paid each day.
-static func hire_worker(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	var k := kind(s, data, id)
+static func hire_worker(s: GameSession, data: Dictionary, id: String, role: String = "") -> Array[String]:
+	var p := _place(s, data, id, role) if not role.is_empty() else places(s, data, id)[0]
+	var hand := make_hand(s, data, str(p["role"]), main_room(s, data, id), name_of(s, data, id))
+	if hand.has("reason"):
+		return ["Работника не найти: %s" % hand["reason"]]
+	var wage := int(p["wage"])
+	s.character["gold_cp"] = int(s.character["gold_cp"]) - wage
+	staff(s, id).append({"npc": str(hand["npc"]), "role": str(p["role"]), "wage": wage, "since": s.day})
+	ObjectRules.note(s, str(prop(s, data, id).get("site", "")), "нанят %s — %s" % [hand["name"], p["role"]])
+	return ["Нанят %s — %s («%s»), %s в день (первый день уплачен)" % [hand["name"], p["role"], name_of(s, data, id), Money.format(wage)]]
+
+
+## A hired hand: a person the engine makes from the pack's names in the room. {npc, name} or {reason}.
+static func make_hand(s: GameSession, data: Dictionary, role: String, room: String, place: String) -> Dictionary:
 	var gender := "male" if s.rng.randf() < 0.5 else "female"
 	var names: Array = data.get("pack", {}).get("names", {}).get(gender, [])
 	var taken: Array = data["world"]["npcs"].values().map(func(n: Dictionary) -> String: return str(n.get("name", "")))
 	var free: Array = names.filter(func(n: Variant) -> bool: return not taken.has(str(n)))
 	var name := str(free[s.rng.randi_range(0, free.size() - 1)]) if not free.is_empty() else ("Работник" if gender == "male" else "Работница")
-	var plan := WorldGen.plan_npc(s, data, {"name": name, "role": str(k["role"]), "room_id": main_room(s, data, id), "gender": gender,
-		"description": "%s в %s" % [str(k["role"]).capitalize(), name_of(s, data, id)], "personality": "работящий, держится за место"}, true)
+	var plan := WorldGen.plan_npc(s, data, {"name": name, "role": role, "room_id": room, "gender": gender,
+		"description": "%s в %s" % [_upper_first(role), place], "personality": "работящий, держится за место"}, true)
 	if plan.has("reason"):
-		return ["Работника не найти: %s" % plan["reason"]]
+		return {"reason": str(plan["reason"])}
 	var npc := WorldGen.apply_npc(s, data, plan["plan"])
 	s.shift_attitude(npc, 1, data)
-	var wage := int(k.get("wage_cp_day", 0))
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - wage
-	state(s.character)[id]["worker"] = npc
-	return ["Нанят %s — %s в %s, %s в день (первый день уплачен)" % [name, k["role"], name_of(s, data, id), Money.format(wage)]]
+	return {"npc": npc, "name": name}
 
 
-static func fire_why(s: GameSession, data: Dictionary, id: String) -> String:
+## A hired hand leaves the world: out of its room, no room of its own.
+static func dismiss_hand(s: GameSession, data: Dictionary, npc: String) -> void:
+	var gen := WorldGen.generated(s)
+	var room := str(gen.get("npc_rooms", {}).get(npc, ""))
+	if data["world"]["rooms"].has(room):
+		(data["world"]["rooms"][room].get("npcs", []) as Array).erase(npc)
+	if gen.get("npc_rooms", {}).has(npc):
+		gen["npc_rooms"][npc] = ""
+
+
+## The hand of the object by its person (an NPC id or a creature id), {} — none.
+static func hand_of(s: GameSession, id: String, who: String) -> Dictionary:
+	for h: Dictionary in staff(s, id):
+		if str(h.get("npc", h.get("cid", ""))) == who:
+			return h
+	return {}
+
+
+static func fire_why(s: GameSession, _data: Dictionary, id: String, who: String = "") -> String:
 	if not owned(s.character, id):
 		return "PROPERTY_NOT_YOURS"
-	var st: Dictionary = state(s.character)[id]
-	return "" if not str(st.get("worker", "")).is_empty() or not str(st.get("serf", "")).is_empty() else "PROPERTY_NO_WORKER"
+	if who.is_empty():
+		return "" if not staff(s, id).is_empty() else "PROPERTY_NO_WORKER"
+	return "" if not hand_of(s, id, who).is_empty() else "PROPERTY_NO_WORKER"
 
 
-static func fire(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	var st: Dictionary = state(s.character)[id]
-	var who := npc_name(data, str(st["worker"])) if not str(st.get("worker", "")).is_empty() else str(_serf(s, id).get("name", ""))
-	_fire(s, data, id)
-	return ["%s больше не работает в %s" % [who, name_of(s, data, id)]]
+## Lets a hand go (`who` empty — the last hired).
+static func fire(s: GameSession, data: Dictionary, id: String, who: String = "") -> Array[String]:
+	var h: Dictionary = hand_of(s, id, who) if not who.is_empty() else staff(s, id)[staff(s, id).size() - 1]
+	var name := hand_name(s, data, h)
+	_fire(s, data, id, h)
+	ObjectRules.note(s, str(prop(s, data, id).get("site", "")), "%s больше не работает здесь" % name)
+	return ["%s больше не работает в %s" % [name, name_of(s, data, id)]]
 
 
-static func _fire(s: GameSession, data: Dictionary, id: String) -> void:
-	var st: Dictionary = state(s.character)[id]
-	var npc := str(st.get("worker", ""))
-	if not npc.is_empty():
-		var gen := WorldGen.generated(s)
-		var room := str(gen.get("npc_rooms", {}).get(npc, ""))
-		if data["world"]["rooms"].has(room):
-			(data["world"]["rooms"][room].get("npcs", []) as Array).erase(npc)
-		if gen.get("npc_rooms", {}).has(npc):
-			gen["npc_rooms"][npc] = ""
-	var serf := _serf(s, id)
-	if not serf.is_empty():
-		serf.erase("serf")
-	st["worker"] = ""
-	st["serf"] = ""
+static func _fire(s: GameSession, data: Dictionary, id: String, h: Dictionary) -> void:
+	if bool(h.get("serf", false)):
+		_creature(s, str(h.get("cid", ""))).erase("serf")
+	elif not str(h.get("npc", "")).is_empty():
+		dismiss_hand(s, data, str(h["npc"]))
+	staff(s, id).erase(h)
 
 
-static func _serf(s: GameSession, id: String) -> Dictionary:
-	var cid := str(state(s.character).get(id, {}).get("serf", ""))
+static func _creature(s: GameSession, cid: String) -> Dictionary:
 	if cid.is_empty():
 		return {}
 	for room: String in s.creatures:
@@ -607,10 +704,10 @@ static func serf_why(s: GameSession, data: Dictionary, id: String, cid: String) 
 	var cr := CreatureRules.find(s, s.room_id, cid)
 	if cr.is_empty() or not bool(cr.get("bound", false)) or str(cr.get("owner", "")) != OwnerRules.HERO or not OwnerRules.thinking(data, cr):
 		return "PROPERTY_NOT_A_SERF"
-	if str(kind(s, data, id).get("role", "")).is_empty():
+	var free := places(s, data, id).filter(func(p: Dictionary) -> bool: return int(p["taken"]) < int(p["max"]))
+	if places(s, data, id).is_empty():
 		return "PROPERTY_NO_WORK"
-	var st: Dictionary = state(s.character)[id]
-	if not str(st.get("worker", "")).is_empty() or not str(st.get("serf", "")).is_empty():
+	if free.is_empty():
 		return "PROPERTY_HAS_WORKER"
 	return ""
 
@@ -619,8 +716,9 @@ static func set_serf(s: GameSession, data: Dictionary, id: String, cid: String) 
 	var cr := CreatureRules.find(s, s.room_id, cid)
 	cr["serf"] = id
 	cr["led"] = false
-	state(s.character)[id]["serf"] = cid
-	return ["%s приставлен к работе в %s — без платы, за еду" % [cr["name"], name_of(s, data, id)]]
+	var p: Dictionary = places(s, data, id).filter(func(x: Dictionary) -> bool: return int(x["taken"]) < int(x["max"]))[0]
+	staff(s, id).append({"cid": cid, "role": str(p["role"]), "wage": 0, "serf": true, "since": s.day})
+	return ["%s приставлен к работе в %s — %s, без платы, за еду" % [cr["name"], name_of(s, data, id), p["role"]]]
 
 
 # --- upgrades and building ------------------------------------------------------------------------------------------
@@ -631,9 +729,16 @@ static func upgrades_for(s: GameSession, data: Dictionary, id: String) -> Array[
 	var out: Array[String] = []
 	if bool(kind(s, data, id).get("buildable", false)):
 		return out
+	var k := kind(s, data, id)
 	for up: String in cfg(data)["upgrades"]:
 		var u: Dictionary = cfg(data)["upgrades"][up]
-		if bool(u.get("income", false)) and int(kind(s, data, id).get("income_cp_day", 0)) <= 0:
+		if u.has("kinds") and not (u["kinds"] as Array).has(kind_id(s, data, id)):
+			continue
+		if bool(u.get("income", false)) and int(k.get("income_cp_day", 0)) <= 0 and not k.has("trade"):
+			continue
+		if bool(u.get("trade", false)) and not k.has("trade"):
+			continue
+		if (k.get("staff", []) as Array).is_empty() and u.get("gives", {}).has("staff_max"):
 			continue
 		out.append(up)
 	return out
@@ -681,12 +786,17 @@ static func _apply_upgrade(s: GameSession, data: Dictionary, id: String, up: Str
 		_patch(s, data, "rooms", room, "safe", {"rest_cost_cp": 0})
 	if bool(g.get("private", false)):
 		_patch(s, data, "sites", str(prop(s, data, id)["site"]), "public", false)
+	if g.has("object"):  # v0.7.39.5: a counter — a trading object of its own beside the house
+		(state(s.character)[id]["upgrades"] as Array).append(up)
+		var made := new_object(s, data, str(g["object"]), room, "%s: %s" % [name_of(s, data, id), str(kind_cfg(data, str(g["object"])).get("name", ""))])
+		return ["%s: готово «%s» — %s (новое место: %s)" % [name_of(s, data, id), u["name"], u.get("text", ""), name_of(s, data, made)]]
 	if bool(g.get("storage", false)):
 		var list: Array = s.props.get(room, [])
 		list.append({"id": "chest_" + id, "name": "Ваш сундук", "description": "Крепкий сундук с вашим замком.", "item_id": "",
 			"owner": "", "text": "", "state": "", "container": "chest", "contents": {}, "mine": true})
 		s.props[room] = list
 	(state(s.character)[id]["upgrades"] as Array).append(up)
+	ObjectRules.note(s, str(prop(s, data, id).get("site", "")), "готово «%s»" % u["name"])
 	return ["%s: готово «%s» — %s" % [name_of(s, data, id), u["name"], u.get("text", "")]]
 
 
@@ -741,6 +851,136 @@ static func _finish_build(s: GameSession, data: Dictionary, id: String, b: Strin
 	st["kind"] = str(bc["kind"])
 	st["cond"] = 100.0
 	return ["%s: построено «%s»" % [name_of(s, data, id), bc["name"]]]
+
+
+# --- objects the engine makes: a counter, a rented stall (v0.7.39.5) ---------------------------------------------
+
+
+static func kind_cfg(data: Dictionary, k: String) -> Dictionary:
+	return cfg(data)["kinds"].get(k, {})
+
+
+## A new object of the hero of `kind` beside `anchor` (a room): its own site and room (rules.property.kinds[k].room),
+## its way from the anchor, the hero's state. Its id.
+static func new_object(s: GameSession, data: Dictionary, k: String, anchor: String, name: String) -> String:
+	var gen := WorldGen.generated(s)
+	for key: String in ["rooms", "sites", "edge_exits", "properties"]:
+		if not gen.has(key):
+			gen[key] = {}
+	var w := WorldView.new(data["world"])
+	var spec: Dictionary = kind_cfg(data, k).get("room", {})
+	var n := 1
+	while data["world"]["rooms"].has("gen_room_%d" % n) or gen["rooms"].has("gen_room_%d" % n):
+		n += 1
+	var rid := "gen_room_%d" % n
+	var sn := 1
+	while data["world"].get("sites", {}).has("gen_site_%d" % sn) or gen["sites"].has("gen_site_%d" % sn):
+		sn += 1
+	var sid := "gen_site_%d" % sn
+	var room := {"name": str(spec.get("name", name)), "location_id": w.location_id(anchor), "description": str(spec.get("description", "")),
+		"exits": [anchor], "npcs": [], "hooks": [], "secrets": [], "generated": true, "site_id": sid}
+	if bool(spec.get("indoor", false)):
+		room["indoor"] = true
+	gen["rooms"][rid] = room
+	gen["sites"][sid] = {"name": name, "location_id": w.location_id(anchor), "entry": rid, "owner": OwnerRules.HERO, "kind": k, "public": true}
+	var exits: Array = gen["edge_exits"].get(anchor, [])
+	exits.append(rid)
+	gen["edge_exits"][anchor] = exits
+	var id := "gen_p_" + sid
+	gen["properties"][id] = {"site": sid, "name": name, "kind": k, "seller": "", "price_cp": 0, "generated": true}
+	data["world"]["rooms"][rid] = room.duplicate(true)
+	if not data["world"].has("sites"):
+		data["world"]["sites"] = {}
+	data["world"]["sites"][sid] = (gen["sites"][sid] as Dictionary).duplicate(true)
+	(data["world"]["rooms"][anchor]["exits"] as Array).append(rid)
+	state(s.character)[id] = _fresh(s, 100.0)
+	state(s.character)[id]["kind"] = k
+	ObjectRules.note(s, sid, "открыт героем")
+	return id
+
+
+## The hero's rented object of `kind` in the location ("" — none).
+static func rented(s: GameSession, data: Dictionary, k: String, loc: String) -> String:
+	for id: String in state(s.character):
+		if kind_id(s, data, id) == k and state(s.character)[id].has("rent_until") \
+				and WorldView.new(data["world"]).location_id(main_room(s, data, id)) == loc:
+			return id
+	return ""
+
+
+## The room of the location an object of `kind` is rented at (its `rent.tag`), "" — none.
+static func rent_room(data: Dictionary, k: String, loc: String) -> String:
+	var tag := str(kind_cfg(data, k).get("rent", {}).get("tag", ""))
+	for id: String in data["world"]["rooms"]:
+		var r: Dictionary = data["world"]["rooms"][id]
+		if not tag.is_empty() and str(r.get("location_id", "")) == loc and (r.get("tags", []) as Array).has(tag) and not bool(r.get("generated", false)):
+			return id
+	return ""
+
+
+## Renting an object (a market stall) at the registry clerk for `days`. "" or a localization key.
+static func rent_why(s: GameSession, data: Dictionary, npc_id: String, k: String, days: int) -> String:
+	if not is_registry(data, npc_id) or not _present(s, data, npc_id):
+		return "SHOP_NOT_HERE"
+	var rent: Dictionary = kind_cfg(data, k).get("rent", {})
+	if rent.is_empty():
+		return "SHOP_NO_SERVICE"
+	if rent_room(data, k, WorldView.new(data["world"]).location_id(s.room_id)).is_empty():
+		return "SHOP_NO_MARKET"
+	if not (rent["days"] as Array).any(func(d: Variant) -> bool: return int(d) == days):
+		return "SHOP_NO_SERVICE"
+	return "SHOP_NO_MONEY" if int(s.character.get("gold_cp", 0)) < days * int(rent["cp_day"]) else ""
+
+
+static func rent(s: GameSession, data: Dictionary, _npc_id: String, k: String, days: int) -> Array[String]:
+	var loc := WorldView.new(data["world"]).location_id(s.room_id)
+	var cost := days * int(kind_cfg(data, k)["rent"]["cp_day"])
+	s.character["gold_cp"] = int(s.character["gold_cp"]) - cost
+	var id := rented(s, data, k, loc)
+	if id.is_empty():
+		var room := rent_room(data, k, loc)
+		id = new_object(s, data, k, room, "%s (%s)" % [_upper_first(str(kind_cfg(data, k).get("name", k))), WorldView.new(data["world"]).room_short(room)])
+		state(s.character)[id]["rent_until"] = s.day - 1
+	var st: Dictionary = state(s.character)[id]
+	st["rent_until"] = maxi(int(st["rent_until"]), s.day - 1) + days
+	return ["%s — снято до дня %d, %s" % [name_of(s, data, id), int(st["rent_until"]), Money.format(cost)]]
+
+
+## Saves before v0.7.39.5: a stall rented at a market room and a house with the counter become objects of their own,
+## their shelves moved with them. Once, on load.
+static func upgrade_legacy(s: GameSession, data: Dictionary) -> void:
+	if not data["rules"].has("property"):
+		return
+	var shop: Dictionary = s.character.get("shop", {})
+	for room: String in (shop.get("stalls", {}) as Dictionary).keys():
+		var loc := WorldView.new(data["world"]).location_id(room)
+		var id := rented(s, data, "stall", loc)
+		if id.is_empty():
+			id = new_object(s, data, "stall", room, "%s (%s)" % [_upper_first(str(kind_cfg(data, "stall").get("name", ""))), WorldView.new(data["world"]).room_short(room)])
+		state(s.character)[id]["rent_until"] = int(shop["stalls"][room])
+		var venues: Dictionary = shop.get("venues", {})
+		if venues.has("stall:" + room):
+			venues[id] = venues["stall:" + room]
+			venues.erase("stall:" + room)
+	shop.erase("stalls")
+	for id: String in state(s.character):  # a staff migrated from one worker: its role and wage by the kind
+		for h: Dictionary in staff(s, id):
+			if str(h.get("role", "")).is_empty() and not places(s, data, id).is_empty():
+				h["role"] = str(places(s, data, id)[0]["role"])
+				h["wage"] = 0 if bool(h.get("serf", false)) else int(places(s, data, id)[0]["wage"])
+	for id: String in state(s.character).keys():
+		if kind_id(s, data, id) == "house" and has_upgrade(s.character, id, "counter"):
+			var made := false
+			for other: String in state(s.character):
+				made = made or (prop(s, data, other).get("generated", false) and kind_id(s, data, other) == "counter" \
+					and (WorldView.new(data["world"]).room(main_room(s, data, other)).get("exits", []) as Array).has(main_room(s, data, id)))
+			if made:
+				continue
+			var counter := new_object(s, data, "counter", main_room(s, data, id), "%s: %s" % [name_of(s, data, id), str(kind_cfg(data, "counter").get("name", ""))])
+			var venues: Dictionary = shop.get("venues", {})
+			if venues.has(id):
+				venues[counter] = venues[id]
+				venues.erase(id)
 
 
 static func _days(n: int) -> String:
@@ -872,10 +1112,10 @@ static func text(s: GameSession, data: Dictionary) -> String:
 		var bits: Array[String] = ["с купчей" if bool(st.get("deed", false)) else "без купчей"]
 		if bool(kind(s, data, id).get("decay", true)):
 			bits.append("состояние %d%%" % int(st.get("cond", 100)))
-		if not str(st.get("worker", "")).is_empty():
-			bits.append("работник %s" % npc_name(data, str(st["worker"])))
-		elif not str(st.get("serf", "")).is_empty():
-			bits.append("подневольный %s" % _serf(s, id).get("name", ""))
+		if not staff(s, id).is_empty():
+			bits.append("штат: " + ", ".join(staff(s, id).map(func(h: Dictionary) -> String: return "%s (%s)" % [hand_name(s, data, h), h.get("role", "")])))
+		if st.has("rent_until"):
+			bits.append("снято до дня %d" % int(st["rent_until"]))
 		if int(st.get("debt", 0)) > 0:
 			bits.append("долг по налогу %s" % Money.format(int(st["debt"])))
 		if not (st.get("upgrades", []) as Array).is_empty():
@@ -920,7 +1160,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	if inc > cap:
 		return {"reason": "income_cp_day не больше %s в день при такой цене" % Money.format(cap)}
 	if inc > 0 and int(cfg(data)["kinds"][k].get("income_cp_day", 0)) <= 0:
-		return {"reason": "у места вида %s нет дохода — возьми mill, shop, workshop, farm, stable или tavern" % k}
+		return {"reason": "у места вида %s нет дохода — возьми вид с доходом: %s" % [k, ", ".join(cfg(data)["kinds"].keys().filter(func(x: String) -> bool: return int(cfg(data)["kinds"][x].get("income_cp_day", 0)) > 0))]}
 	var w := WorldView.new(data["world"])
 	if site == "here":  # the site the hero stands in
 		site = w.site_id(s.room_id)
@@ -965,3 +1205,7 @@ static func apply_make(s: GameSession, _data: Dictionary, plan: Dictionary, made
 	props[str(plan["id"])] = def
 	gen["properties"] = props
 	return ["Продаётся: %s за %s — кнопка «Имущество» у продавца" % [def["name"], Money.format(int(def["price_cp"]))]]
+
+
+static func _upper_first(t: String) -> String:
+	return t.left(1).to_upper() + t.substr(1)

@@ -128,6 +128,9 @@ var doors: Dictionary = {}
 ## The day the master last described each room (v0.7.22.20, ExplorationRules.again_line): {room_id: day}.
 var described: Dictionary = {}
 var bodies: Dictionary = {}
+## The rolls of the rules since the last chat line of effects (RollParts.note, v0.7.39.5): not saved, the next
+## effect line takes them for its hover.
+var roll_notes: Array[Dictionary] = []
 var searched: Array[String] = []
 var quests_failed: Array[String] = []
 ## The chronicle (v0.7.14.4): every line of the engine in the chat with its day, minute and room
@@ -635,7 +638,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.caught_by[n] = int(d["caught_by"][n])
 	for e: Variant in d.get("crimes", []):
 		if e is Dictionary:
-			var cr := (e as Dictionary).duplicate(true)
+			var cr := _whole_numbers((e as Dictionary).duplicate(true))  # at, known_at, the sentence's days
 			cr["at"] = int(cr.get("at", 0))
 			cr["witnesses"] = (cr.get("witnesses", []) as Array).map(func(x: Variant) -> String: return str(x))
 			s.crimes.append(cr)
@@ -817,6 +820,8 @@ static func _normalized_merchant(m: Dictionary) -> Dictionary:
 	var out := m.duplicate(true)
 	for k: String in ["purse_cp", "day", "haggle_pct", "haggle_failed_day", "haggles", "haggle_day"]:
 		out[k] = int(out.get(k, 0))
+	if out.has("fence_day"):  # the fence's restock (v0.7.33)
+		out["fence_day"] = int(out["fence_day"])
 	for key: String in ["stock", "sold", "extras"]:  # extras — the day's goods of the shop kind (v0.7.22.26)
 		var qty := {}
 		for id: String in out.get(key, {}):
@@ -831,8 +836,12 @@ static func _normalized_merchant(m: Dictionary) -> Dictionary:
 
 ## JSON brings every number back as float; check cards keep ints so a loaded session equals the saved one.
 static func _normalized(e: Dictionary) -> Dictionary:
+	if str(e.get("kind", KIND_CHECK)) == KIND_EFFECT and e.get("rolls") is Array:  # a line's rolls (v0.7.39.5)
+		e["rolls"] = (e["rolls"] as Array).map(func(r: Variant) -> Variant: return _normalized(r) if r is Dictionary else r)
 	if str(e.get("kind", KIND_CHECK)) != KIND_CHECK:
 		return e
+	if e.get("parts") is Array:  # the roll's breakdown (v0.7.39.5)
+		e["parts"] = (e["parts"] as Array).map(func(p: Variant) -> Variant: return _whole_numbers(p) if p is Dictionary else p)
 	for k: String in ["bonus", "total", "dc", "nat", "haggle_pct"]:
 		if e.has(k):
 			e[k] = int(e[k])

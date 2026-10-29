@@ -202,11 +202,20 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 	var dl := _label(col, " · ".join(bits), UiTheme.MUTED_LABEL)
 	if not bool(st.get("deed", false)) or int(st.get("debt", 0)) > 0:
 		dl.add_theme_color_override("font_color", UiTheme.WARN)
-	var worker := str(st.get("worker", ""))
-	if not worker.is_empty():
-		_label(col, tr("PROPERTY_WORKER").format({"name": PropertyRules.npc_name(data, worker), "wage": Money.format(int(k.get("wage_cp_day", 0)))}))
-	elif not str(st.get("serf", "")).is_empty():
-		_label(col, tr("PROPERTY_SERF").format({"name": PropertyRules._serf(s, id).get("name", "")}))
+	if st.has("rent_until"):
+		var rl := _label(col, tr("PROPERTY_RENT_UNTIL").format({"day": int(st["rent_until"])}), UiTheme.MUTED_LABEL)
+		if PropertyRules.lapsed(s, id):
+			rl.add_theme_color_override("font_color", UiTheme.WARN)
+	for h: Dictionary in PropertyRules.staff(s, id):  # the staff (v0.7.39.5): each person with the role
+		var who := str(h.get("npc", h.get("cid", "")))
+		var hr := HBoxContainer.new()
+		hr.name = "Hand_" + who.validate_node_name()
+		hr.add_theme_constant_override("separation", 8)
+		col.add_child(hr)
+		_label(hr, tr("PROPERTY_SERF" if bool(h.get("serf", false)) else "PROPERTY_WORKER").format({"name": PropertyRules.hand_name(s, data, h),
+			"role": h.get("role", ""), "wage": Money.format(int(h.get("wage", 0)))}))
+		if here:
+			_offer(hr, "PropertyFire_" + who.validate_node_name(), tr("BTN_PROPERTY_FIRE"), PropertyRules.fire_why(s, data, id, who), _act("fire", id, who))
 	var ups: Array[String] = []
 	for u: Variant in st.get("upgrades", []):
 		ups.append(str(PropertyRules.cfg(data)["upgrades"].get(str(u), {}).get("name", u)))
@@ -228,15 +237,9 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 			PropertyRules.shift_why(s, data, id), _act("shift", id))
 		sb.tooltip_text = tr("PROPERTY_SHIFT_TIP").format({"skill": CraftRules.tr_skill(data, str(k.get("skill", "athletics"))),
 			"dc": PropertyRules.shift_dc(data), "chance": PropertyRules.shift_chance(s, data, id)}) if sb.tooltip_text.is_empty() else sb.tooltip_text
-	if not str(k.get("role", "")).is_empty():
-		if worker.is_empty() and str(st.get("serf", "")).is_empty():
-			_button(buttons, "PropertyHire_" + id, tr("BTN_PROPERTY_HIRE").format({"role": k["role"], "wage": Money.format(int(k.get("wage_cp_day", 0)))}),
-				PropertyRules.worker_why(s, data, id), _act("hire", id))
-			for cr: Dictionary in CreatureRules.here(s, s.room_id):
-				if PropertyRules.serf_why(s, data, id, str(cr["id"])).is_empty():
-					_button(buttons, "PropertySerf_" + str(cr["id"]), tr("BTN_PROPERTY_SERF").format({"name": cr["name"]}), "", _act("serf", id, str(cr["id"])))
-		else:
-			_button(buttons, "PropertyFire_" + id, tr("BTN_PROPERTY_FIRE"), PropertyRules.fire_why(s, data, id), _act("fire", id))
+	for cr: Dictionary in CreatureRules.here(s, s.room_id):
+		if PropertyRules.serf_why(s, data, id, str(cr["id"])).is_empty():
+			_button(buttons, "PropertySerf_" + str(cr["id"]), tr("BTN_PROPERTY_SERF").format({"name": cr["name"]}), "", _act("serf", id, str(cr["id"])))
 	if bool(k.get("decay", true)) and float(st.get("cond", 100.0)) < 100.0:
 		var lost := 100.0 - float(st.get("cond", 100.0))
 		_button(buttons, "PropertyRepair_" + id, tr("BTN_PROPERTY_REPAIR").format({"cost": Money.format(PropertyRules.repair_cost(s, data, id, lost)),
@@ -245,6 +248,11 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 	offers.name = "PropertyOffers_" + id
 	offers.add_theme_constant_override("separation", 4)
 	col.add_child(offers)
+	for p: Dictionary in PropertyRules.places(s, data, id):  # a hire per role while its places are free
+		if int(p["taken"]) < int(p["max"]):
+			_offer(offers, "PropertyHire_" + str(p["role"]).validate_node_name(), tr("BTN_PROPERTY_HIRE").format({"role": p["role"],
+				"wage": Money.format(int(p["wage"])), "taken": int(p["taken"]), "max": int(p["max"])}), PropertyRules.worker_why(s, data, id, str(p["role"])),
+				_act("hire", id, str(p["role"])))
 	if bool(k.get("buildable", false)):
 		for bid: String in PropertyRules.cfg(data)["build"]:
 			var bc: Dictionary = PropertyRules.cfg(data)["build"][bid]

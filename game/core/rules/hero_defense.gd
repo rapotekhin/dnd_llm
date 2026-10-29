@@ -142,6 +142,9 @@ static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag
 	var nat: int = rolls.max() if adv and not dis else rolls.min() if dis and not adv else rolls[0]
 	var die := SpellEffects.hero_die(s, data, "save")  # Bless, Resistance (v0.7.13.1)
 	var total := nat + bonus + int(die["bonus"]) + DifficultyRules.bonus(s, data)  # the game's difficulty (v0.7.20.4)
+	var parts := RollParts.cached(c, data, "save", ability, s.items)
+	parts.append_array(die["parts"])
+	RollParts.difficulty(s, data, parts)
 	var ok := nat == 20 or (nat != 1 and total >= dc)
 	var note := (" " + str(die["note"])) if not str(die["note"]).is_empty() else ""
 	if DifficultyRules.bonus(s, data) != 0:
@@ -151,7 +154,8 @@ static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag
 		if insp > 0:
 			total += insp
 			ok = total >= dc
-			note = ", вдохновение +%d" % insp
+			note += ", вдохновение +%d" % insp
+			RollParts.add(parts, "вдохновение барда", insp)
 	if not (mods["auto_fail"] as Array).is_empty():
 		ok = false
 		note += ", автопровал: " + ", ".join((mods["auto_fail"] as Array).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower()))
@@ -160,6 +164,7 @@ static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag
 	elif dis and not adv:
 		note += ", с помехой (%s)" % ", ".join((mods["disadvantage"] as Array).map(func(x: Variant) -> String:
 			return "истощение" if str(x) == "exhaustion" else ConditionRules.name_of(data, str(x)).to_lower()))
+	RollParts.note(s, "Спасбросок: " + CombatRules.ab_name(ability), rolls, nat, parts, total - nat, dc)
 	return {"ok": ok, "total": total, "nat": nat,
 		"text": "%s %d против Сл %d%s — %s" % [CombatRules.ab_name(ability), total, dc, note, "успех" if ok else "провал"]}
 

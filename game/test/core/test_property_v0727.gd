@@ -91,7 +91,7 @@ func test_a_worker_brings_the_mills_income() -> void:
 	assert_int(PropertyRules.income_day(s, data, "old_mill")).is_equal(20)  # worn: 50 × 40%
 	assert_str(PropertyRules.worker_why(s, data, "old_mill")).is_empty()
 	PropertyRules.hire_worker(s, data, "old_mill")
-	var worker := str(PropertyRules.state(s.character)["old_mill"]["worker"])
+	var worker := str(PropertyRules.staff(s, "old_mill")[0]["npc"])
 	assert_array(SceneRules.npcs(s, data["world"], s.room_id)).contains([worker])
 	_days(s, 1)
 	assert_int(int(PropertyRules.state(s.character)["old_mill"]["cash"])).is_equal(20 - 15)
@@ -132,7 +132,7 @@ func test_a_forge_and_a_chest_at_home() -> void:
 	_days(s, 4)
 	assert_array(WorldView.new(data["world"]).room(s.room_id).get("tags", [])).contains(["forge"])
 	assert_bool((s.props.get(s.room_id, []) as Array).any(func(p: Dictionary) -> bool: return ContainerRules.is_container(p))).is_true()
-	assert_str(PropertyRules.upgrade_why(s, data, "river_house", "counter")).is_equal("PROPERTY_NO_UPGRADE")  # a house earns nothing
+	assert_str(PropertyRules.upgrade_why(s, data, "river_house", "sign")).is_equal("PROPERTY_NO_UPGRADE")  # a house earns nothing
 
 
 func test_a_house_built_on_the_plot() -> void:

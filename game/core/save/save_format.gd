@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 49
+const SAVE_VERSION := 50
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -71,6 +71,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	46: _v46_to_v47,
 	47: _v47_to_v48,
 	48: _v48_to_v49,
+	49: _v49_to_v50,
 }
 
 
@@ -455,3 +456,21 @@ static func _v47_to_v48(data: Dictionary, _ctx: Dictionary) -> void:
 static func _v48_to_v49(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["permits"] = {}
 	data["session"]["permit_asked"] = {}
+
+
+## v0.7.39.5: a place's one worker or serf is its staff list; the role and the wage come from the kind on load
+## (PropertyRules.upgrade_legacy).
+static func _v49_to_v50(data: Dictionary, _ctx: Dictionary) -> void:
+	var props: Variant = data["session"].get("character", {}).get("property", {})
+	if not (props is Dictionary):
+		return
+	for id: String in props:
+		var st: Dictionary = props[id]
+		var staff: Array = []
+		if not str(st.get("worker", "")).is_empty():
+			staff.append({"npc": str(st["worker"]), "role": "", "wage": 0, "since": int(st.get("since", 1))})
+		if not str(st.get("serf", "")).is_empty():
+			staff.append({"cid": str(st["serf"]), "role": "", "wage": 0, "serf": true, "since": int(st.get("since", 1))})
+		st.erase("worker")
+		st.erase("serf")
+		st["staff"] = staff

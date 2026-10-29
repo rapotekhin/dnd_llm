@@ -2434,10 +2434,34 @@
           "title": "Description",
           "type": "string"
         },
+        "hours": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SiteHours"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "key": {
           "default": "",
           "title": "Key",
           "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "maxLength": 24,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
         },
         "name": {
           "default": "",
@@ -2457,10 +2481,31 @@
           "default": null,
           "title": "Owner Id"
         },
+        "owner_role": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner Role"
+        },
         "public": {
           "default": true,
           "title": "Public",
           "type": "boolean"
+        },
+        "staff": {
+          "items": {
+            "$ref": "#/$defs/SiteStaff"
+          },
+          "maxItems": 12,
+          "title": "Staff",
+          "type": "array"
         },
         "tags": {
           "items": {
@@ -2468,6 +2513,14 @@
           },
           "maxItems": 4,
           "title": "Tags",
+          "type": "array"
+        },
+        "upgrades": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Upgrades",
           "type": "array"
         }
       },
@@ -3007,16 +3060,7 @@
           "title": "Name"
         },
         "place_kind": {
-          "enum": [
-            "house",
-            "land",
-            "mill",
-            "shop",
-            "workshop",
-            "farm",
-            "stable",
-            "tavern"
-          ],
+          "maxLength": 24,
           "title": "Place Kind",
           "type": "string"
         },
@@ -3529,6 +3573,51 @@
         "secret_id"
       ],
       "title": "RevealSecretEffect",
+      "type": "object"
+    },
+    "SiteHours": {
+      "additionalProperties": false,
+      "description": "When the object is open (0.80.0), hours 0–24.",
+      "properties": {
+        "closes": {
+          "maximum": 24,
+          "minimum": 1,
+          "title": "Closes",
+          "type": "integer"
+        },
+        "opens": {
+          "maximum": 23,
+          "minimum": 0,
+          "title": "Opens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "opens",
+        "closes"
+      ],
+      "title": "SiteHours",
+      "type": "object"
+    },
+    "SiteStaff": {
+      "additionalProperties": false,
+      "description": "A person of an object's staff (0.80.0): an NPC of the world, «new:<key>» of the place's people or «new».",
+      "properties": {
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "role": {
+          "maxLength": 40,
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "role"
+      ],
+      "title": "SiteStaff",
       "type": "object"
     },
     "StartCombatEffect": {

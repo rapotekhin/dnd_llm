@@ -151,7 +151,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"languages": LanguageRules.hero(c).map(func(l: String) -> String: return LanguageRules.name_of(data, l)),
 		"craft": CraftRules.snapshot(s, data),  # v0.7.24
 		"jobs": JobRules.text(s, data),  # v0.7.26
-		"property": PropertyRules.text(s, data),  # v0.7.27
+		"property": ". ".join([PropertyRules.text(s, data), ObjectRules.text(s, data, s.room_id)].filter(func(x: String) -> bool: return not x.is_empty())),  # v0.7.27; the object here (v0.7.39.5)
 		"bank": BankRules.text(s, data),  # v0.7.28
 		"shop": ShopRules.text(s, data),  # v0.7.29
 		"study": StudyRules.text(s, data),  # v0.7.30

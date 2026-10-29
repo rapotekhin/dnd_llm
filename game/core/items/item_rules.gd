@@ -580,6 +580,8 @@ static func _spell_use(c: Dictionary, data: Dictionary, session_items: Dictionar
 	var lines: Array[String] = []
 	if bool(fx.get("scroll", false)):
 		var read := read_scroll(c, data, sp_id, int(fx.get("level", 1)), rng)
+		if s != null and read.has("roll"):
+			RollParts.note(s, "Свиток", [read["roll"]], int(read["roll"]), read["parts"], int(read["bonus"]), int(read["dc"]))
 		lines.append(str(read["line"]))
 		if not bool(read["ok"]):
 			return lines
@@ -617,5 +619,5 @@ static func read_scroll(c: Dictionary, data: Dictionary, spell_id: String, level
 	var bonus := int(c.get("skills", {}).get("arcana", 0))
 	var roll := rng.randi_range(1, 20)
 	var ok := roll + bonus >= dc
-	return {"ok": ok, "line": "Магия %d + %d = %d против Сл %d — %s" % [roll, bonus, roll + bonus, dc,
+	return {"ok": ok, "roll": roll, "bonus": bonus, "dc": dc, "parts": RollParts.cached(c, data, "skill", "arcana"), "line": "Магия %d + %d = %d против Сл %d — %s" % [roll, bonus, roll + bonus, dc,
 		("свиток прочитан: " + name) if ok else "слова не даются, свиток рассыпается впустую"]}

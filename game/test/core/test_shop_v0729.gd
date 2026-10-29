@@ -20,20 +20,23 @@ func _hero(room: String = "brod-townhall") -> GameSession:
 	return s
 
 
+## The stall — an object rented at the town hall (v0.7.39.5): the hero stands at it.
 func _stall(s: GameSession) -> String:
-	ShopRules.rent(s, data, "npc_clerk", 7)
-	s.room_id = "brod-square"
-	return ShopRules.STALL + "brod-square"
+	PropertyRules.rent(s, data, "npc_clerk", "stall", 7)
+	var vid := PropertyRules.rented(s, data, "stall", "brod")
+	s.room_id = ShopRules.room_of(s, data, vid)
+	return vid
 
 
 func test_a_stall_is_rented_at_the_town_hall() -> void:
 	var s := _hero()
-	assert_str(ShopRules.rent_why(s, data, "npc_clerk", 7)).is_empty()
-	assert_str(ShopRules.rent_why(s, data, "npc_clerk", 3)).is_equal("SHOP_NO_SERVICE")
+	assert_str(PropertyRules.rent_why(s, data, "npc_clerk", "stall", 7)).is_empty()
+	assert_str(PropertyRules.rent_why(s, data, "npc_clerk", "stall", 3)).is_equal("SHOP_NO_SERVICE")
 	var vid := _stall(s)
 	assert_int(int(s.character["gold_cp"])).is_equal(100000 - 140)
 	assert_str(ShopRules.here(s, data)).is_equal(vid)
-	assert_bool(ShopRules.stall_open(s, vid)).is_true()
+	assert_bool(PropertyRules.lapsed(s, vid)).is_false()
+	assert_str(WorldView.new(data["world"]).site_id(s.room_id)).is_not_empty()
 	assert_str(ShopRules.shift_why(s, data, vid)).is_equal("SHOP_EMPTY")
 
 

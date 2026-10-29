@@ -263,6 +263,14 @@ func _rebuild() -> void:
 		# The long rest (v0.7.8): the inn's room or a camp with food — chosen in the dialog.
 		var inn_ok := ExplorationRules.can_rest(s, Catalog.data["world"], Catalog.data).is_empty()
 		var camp_why := ExplorationRules.can_camp(s, Catalog.data)
+		if bool(ExplorationRules.rest_place(Catalog.data["world"], s.room_id, s, Catalog.data).get("own", false)):  # v0.7.39.5
+			var sleep := func() -> void:
+				var err := GameState.long_rest()
+				if not err.is_empty():
+					EventBus.message.emit(tr(err))
+			var bed := _button(tr("BTN_OWN_BED"), sleep, can_act and inn_ok)
+			bed.name = "OwnBedButton"
+			bed.tooltip_text = tr("OWN_BED_TIP")
 		var rest := _button(tr("BTN_LONG_REST_OPEN"), long_rest_requested.emit, can_act)
 		rest.name = "RestButton"
 		rest.disabled = not can_act or (not inn_ok and not camp_why.is_empty())

@@ -217,6 +217,7 @@ static func hit(s: GameSession, data: Dictionary, a: String, b: String) -> Array
 	var w := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
 	var d20 := s.rng.randi_range(1, 20)
 	var total := d20 + int(w["to_hit"])
+	RollParts.note(s, "Удар по двери", [d20], d20, _hit_parts(w), int(w["to_hit"]), int(mat.get("ac", 15)))
 	if d20 != 20 and (d20 == 1 or total < int(mat.get("ac", 15))):
 		return ["%s: удар по двери — %d против КД %d, без толку" % [w["name"], total, int(mat.get("ac", 15))]]
 	var dmg := maxi(1, CombatRules.roll_dice(s.rng, str(w["dice"]), d20 == 20) + int(w["bonus"]))
@@ -284,3 +285,9 @@ static func witnesses(s: GameSession, data: Dictionary, a: String, b: String) ->
 	var seen: Array[String] = s.npcs_here(w.world, s.room_id)
 	seen.append_array(s.npcs_here(w.world, into))
 	return seen
+
+
+static func _hit_parts(w: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	out.assign(w.get("hit_parts", []))
+	return out

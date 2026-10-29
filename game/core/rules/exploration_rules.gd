@@ -200,13 +200,19 @@ static func disarm_trap(s: GameSession, room_id: String, sec: Dictionary) -> voi
 
 
 ## The bonus to disarm: Sleight of Hand, or DEX + proficiency with thieves' tools; without the tools in the pack —
-## disadvantage. {bonus, disadvantage_reason}.
-static func disarm_bonus(c: Dictionary) -> Dictionary:
+## disadvantage. {bonus, disadvantage_reason, parts} — `parts` for the roll's breakdown when `data` is given.
+static func disarm_bonus(c: Dictionary, data: Dictionary = {}) -> Dictionary:
 	var bonus := int(c.get("skills", {}).get("sleight_of_hand", 0))
 	var has_tools := int(c.get("inventory", {}).get("thieves_tools", 0)) > 0
+	var parts: Array[Dictionary] = []
+	if not data.is_empty():
+		parts = RollParts.cached(c, data, "skill", "sleight_of_hand")
 	if has_tools and (c.get("tools", []) as Array).has("thieves_tools"):
-		bonus = maxi(bonus, CharacterRules.mod(CharacterRules.ability(c, "dex")) + int(c.get("prof_bonus", 2)))
-	return {"bonus": bonus, "disadvantage_reason": "" if has_tools else "нет воровских инструментов"}
+		var dex := CharacterRules.mod(CharacterRules.ability(c, "dex"))
+		if dex + int(c.get("prof_bonus", 2)) > bonus:
+			bonus = dex + int(c.get("prof_bonus", 2))
+			parts = [RollParts.part(RollParts.ability_name("dex"), dex), RollParts.part("владение воровскими инструментами", int(c.get("prof_bonus", 2)))]
+	return {"bonus": bonus, "disadvantage_reason": "" if has_tools else "нет воровских инструментов", "parts": parts}
 
 
 ## Caches found in this room and not emptied yet give their loot. Lines.
@@ -266,6 +272,8 @@ static func rest_place(world: Dictionary, room_id: String, s: GameSession = null
 	var room: Dictionary = SceneRules.room(s, world, room_id)  # a variant may make it safe (v0.7.14.1)
 	var free := s != null and not data.is_empty() and BackgroundRules.free_rest(s, data, room)
 	var safe: Variant = room.get("safe")
+	if s != null and not data.is_empty() and data["rules"].has("property") and not PropertyRules.bed_at(s, data, room_id).is_empty():
+		return {"cost_cp": 0, "free": true, "own": true}  # v0.7.39.5: one's own bed, in any room of the place
 	if s != null and not data.is_empty() and data["rules"].has("underworld") and not OrgRules.hideout_of(s, data, room_id, "rest").is_empty():
 		return {"cost_cp": 0, "free": true}  # v0.7.33: the hideout's cots
 	if s != null and not data.is_empty() and not BondRules.host(s, data, room_id).is_empty():  # v0.7.31: a friend's bed

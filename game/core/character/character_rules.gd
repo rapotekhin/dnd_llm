@@ -68,12 +68,12 @@ static func skill_bonus(c: Dictionary, data: Dictionary, skill: String) -> int:
 	return bonus
 
 
-## A bare ability check (5e: «Сила» to force a door): the modifier, half proficiency with Jack of All Trades.
+## A bare ability check (5e: «Сила» to force a door): the modifier, half proficiency with Jack of All Trades, the
+## Stone of Good Luck — the sum of its parts (RollParts).
 static func ability_check_bonus(c: Dictionary, data: Dictionary, ab: String) -> int:
-	var bonus := mod(ability(c, ab))
-	if has_feature(c, "jack_of_all_trades") and not data.is_empty():
-		bonus += prof_bonus(c, data) / 2
-	return bonus
+	if data.is_empty():
+		return mod(ability(c, ab))
+	return RollParts.sum(RollParts.sheet(c, data, "ability", ab))
 
 
 static func save_bonus(c: Dictionary, data: Dictionary, save: String) -> int:
@@ -280,20 +280,15 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	c["max_hp"] = maxi(1, max_hp(c, data) / (2 if int(c.get("exhaustion", 0)) >= 4 else 1) + drained)  # exhaustion 4 halves it (v0.7.8)
 	c["hp"] = clampi(int(c.get("hp", c["max_hp"])), 0, int(c["max_hp"]))
 	c["ac"] = armor_class(c, data, session_items)
+	# The sheet's numbers are the sums of their parts (v0.7.39.5): the ability, proficiency, items (the Stone of Good
+	# Luck, v0.7.12; a Cloak of Protection), spells (Pass without Trace, v0.7.13.3) — the breakdown on hover shows them.
 	var skills := {}
-	var check_plus := 1 if item_prop(c, "checks_plus1") else 0  # Stone of Good Luck (v0.7.12)
 	for id: String in data["rules"]["skills"]:
-		skills[id] = skill_bonus(c, data, id) + check_plus
-	for e: Dictionary in SpellEffects.hero_effects(c, "skill_bonus"):  # Pass without Trace (v0.7.13.3)
-		for k: Variant in e["skill_bonus"]:
-			skills[str(k)] = int(skills.get(str(k), 0)) + int(e["skill_bonus"][k])
+		skills[id] = RollParts.sum(RollParts.sheet(c, data, "skill", id, session_items))
 	c["skills"] = skills
 	var saves := {}
-	var save_plus := 0
-	for d: Dictionary in carried(c, data, session_items):
-		save_plus += ItemRules.plus(d, ["saves_plus"])
 	for id: String in ABILITIES:
-		saves[id] = save_bonus(c, data, id) + save_plus
+		saves[id] = RollParts.sum(RollParts.sheet(c, data, "save", id, session_items))
 	c["saves"] = saves
 	c["speed"] = speed(c, data)
 	c["passive_perception"] = 10 + int(skills["perception"])

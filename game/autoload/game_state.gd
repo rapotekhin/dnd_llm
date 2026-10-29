@@ -1030,11 +1030,13 @@ func container_unlock(prop_id: String, how: String) -> String:
 		var need := ContainerRules.lock_check(Catalog.data, p, how)
 		var params := {"skill": need["skill"], "dc_tier": "medium", "dc": int(need["dc"]), "target_id": prop_id}
 		var bonus := CheckEngine.bonus_for(session.character, params)
+		var parts: Array[Dictionary] = []
 		if how == "pick":
-			var db := ExplorationRules.disarm_bonus(session.character)
+			var db := ExplorationRules.disarm_bonus(session.character, Catalog.data)
 			bonus = int(db["bonus"])
+			parts = db["parts"]
 			params["disadvantage_reason"] = str(db["disadvantage_reason"])
-		var result := _hero_roll(params, bonus)
+		var result := _hero_roll(params, bonus, parts)
 		_add(GameSession.check_entry(params, result))
 		TimeRules.advance(session, Catalog.data, int(ContainerRules.cfg(Catalog.data).get("minutes", 1)))
 		if not bool(result["success"]):
@@ -1071,11 +1073,13 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 			var dc := int(DoorRules.dcs(session, data, from, to)[how])
 			var params := {"skill": "sleight_of_hand" if how == "pick" else "athletics", "dc_tier": "medium", "dc": dc, "target_id": to}
 			var bonus := CheckEngine.bonus_for(session.character, params)
+			var parts: Array[Dictionary] = []
 			if how == "pick":
-				var db := ExplorationRules.disarm_bonus(session.character)
+				var db := ExplorationRules.disarm_bonus(session.character, Catalog.data)
 				bonus = int(db["bonus"])
+				parts = db["parts"]
 				params["disadvantage_reason"] = str(db["disadvantage_reason"])
-			var result := _hero_roll(params, bonus)
+			var result := _hero_roll(params, bonus, parts)
 			_add(GameSession.check_entry(params, result))
 			if not bool(result["success"]):
 				lines.append("Замок не поддался" if how == "pick" else "Дверь выдержала")
@@ -1337,11 +1341,16 @@ func finish_combat(take: Array = []) -> void:
 
 ## Changes the master style of the running game (settings screen); kept in the save.
 ## A check of the hero by the engine with the game's difficulty (v0.7.20.4): its bonus is in the total and on the card.
-func _hero_roll(params: Dictionary, bonus: int) -> Dictionary:
+## `parts` — the bonus's labelled parts (v0.7.39.5), the sheet's by the params when empty; the card shows them on hover.
+func _hero_roll(params: Dictionary, bonus: int, parts: Array[Dictionary] = []) -> Dictionary:
 	var extra := DifficultyRules.bonus(session, Catalog.data)
 	var result := CheckEngine.roll(Catalog.rules(), session.rng, params, bonus + extra, session.next_check_id())
-	if extra != 0 and not result.has("error"):
-		result["difficulty_note"] = DifficultyRules.note(session, Catalog.data)
+	if not result.has("error"):
+		if extra != 0:
+			result["difficulty_note"] = DifficultyRules.note(session, Catalog.data)
+		var all := parts.duplicate() if not parts.is_empty() else RollParts.of_params(session.character, Catalog.data, params, session.items)
+		RollParts.difficulty(session, Catalog.data, all)
+		result["parts"] = RollParts.fit(all, bonus + extra)
 	return result
 
 
@@ -1464,8 +1473,8 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 		"collect": why = PropertyRules.collect_why(s, data, id)
 		"tax": why = PropertyRules.pay_tax_why(s, data, id)
 		"shift": why = PropertyRules.shift_why(s, data, id)
-		"hire": why = PropertyRules.worker_why(s, data, id)
-		"fire": why = PropertyRules.fire_why(s, data, id)
+		"hire": why = PropertyRules.worker_why(s, data, id, arg)  # arg — the role (v0.7.39.5)
+		"fire": why = PropertyRules.fire_why(s, data, id, arg)  # arg — the person
 		"serf": why = PropertyRules.serf_why(s, data, id, arg)
 		"upgrade": why = PropertyRules.upgrade_why(s, data, id, arg)
 		"build": why = PropertyRules.build_why(s, data, id, arg)
@@ -1487,8 +1496,8 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 			lines = w["lines"]
 			if PropertyRules.owned(s.character, id):
 				lines.append_array(PropertyRules.shift(s, data, id, int(w["minutes"])) if what == "shift" else PropertyRules.repair(s, data, id, int(w["minutes"])))
-		"hire": lines = PropertyRules.hire_worker(s, data, id)
-		"fire": lines = PropertyRules.fire(s, data, id)
+		"hire": lines = PropertyRules.hire_worker(s, data, id, arg)
+		"fire": lines = PropertyRules.fire(s, data, id, arg)
 		"serf": lines = PropertyRules.set_serf(s, data, id, arg)
 		"upgrade": lines = PropertyRules.upgrade(s, data, id, arg)
 		"build": lines = PropertyRules.build(s, data, id, arg)
@@ -1508,7 +1517,8 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 
 
 ## Own trade (v0.7.29): put / take (vid, arg — the item, amount — qty), price (arg — the item, amount ±1), collect,
-## shift (vid); charter, rent (npc, amount — days); wholesale (npc, arg — the item). "" or a localization key.
+## shift, hire (arg — the role), fire (arg — the person) (vid); charter, rent (npc, arg — the kind, amount — days);
+## wholesale (npc, arg — the item). "" or a localization key.
 func shop_act(what: String, id: String, arg: String = "", amount: int = 0) -> String:
 	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
 		return "PROPERTY_NOT_NOW"
@@ -1522,8 +1532,10 @@ func shop_act(what: String, id: String, arg: String = "", amount: int = 0) -> St
 		"collect": why = ShopRules.collect_why(s, data, id)
 		"shift": why = ShopRules.shift_why(s, data, id)
 		"charter": why = ShopRules.charter_why(s, data, id)
-		"rent": why = ShopRules.rent_why(s, data, id, amount)
+		"rent": why = PropertyRules.rent_why(s, data, id, arg if not arg.is_empty() else "stall", amount)
 		"wholesale": why = ShopRules.wholesale_why(s, data, id, arg)
+		"hire": why = PropertyRules.worker_why(s, data, id, arg)
+		"fire": why = PropertyRules.fire_why(s, data, id, arg)
 		_: why = "PROPERTY_NOT_NOW"
 	if not why.is_empty():
 		return why
@@ -1541,8 +1553,10 @@ func shop_act(what: String, id: String, arg: String = "", amount: int = 0) -> St
 			lines = w["lines"]
 			lines.append_array(ShopRules.shift(s, data, id, int(w["minutes"])))
 		"charter": lines = ShopRules.charter(s, data, id)
-		"rent": lines = ShopRules.rent(s, data, id, amount)
+		"rent": lines = PropertyRules.rent(s, data, id, arg if not arg.is_empty() else "stall", amount)
 		"wholesale": lines = ShopRules.wholesale(s, data, id, arg)
+		"hire": lines = PropertyRules.hire_worker(s, data, id, arg)
+		"fire": lines = PropertyRules.fire(s, data, id, arg)
 	CharacterRules.refresh(s.character, data, s.items)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
@@ -1874,6 +1888,7 @@ func start(s: GameSession) -> void:
 	# v0.7.20: this game's world — the pack's with what the master made in it (a copy; the pack is never touched)
 	var pack: Dictionary = Catalog.bundle(Catalog.active_world).get("world", Catalog.data["world"])
 	Catalog.data["world"] = WorldGen.merged(pack, s.generated)
+	PropertyRules.upgrade_legacy(s, Catalog.data)  # v0.7.39.5: stalls and counters as objects
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 	session = s
@@ -2212,11 +2227,13 @@ func trap_action(to: String, disarm: bool) -> String:
 	var params := {"skill": "sleight_of_hand" if disarm else "acrobatics", "dc_tier": "medium", "dc": int(t["disarm_dc"]),
 		"target_id": str(trap["id"])}
 	var bonus := CheckEngine.bonus_for(session.character, params)
+	var parts: Array[Dictionary] = []
 	if disarm:
-		var db := ExplorationRules.disarm_bonus(session.character)
+		var db := ExplorationRules.disarm_bonus(session.character, Catalog.data)
 		bonus = int(db["bonus"])
+		parts = db["parts"]
 		params["disadvantage_reason"] = str(db["disadvantage_reason"])
-	var result := _hero_roll(params, bonus)
+	var result := _hero_roll(params, bonus, parts)
 	_add(GameSession.check_entry(params, result))
 	var lines: Array[String] = []
 	if bool(result["success"]):
@@ -2745,6 +2762,9 @@ func _restart_fight(fight: Dictionary) -> void:
 
 
 func _add(entry: Dictionary) -> void:
+	if not session.roll_notes.is_empty() and str(entry.get("kind", "")) == GameSession.KIND_EFFECT:  # v0.7.39.5
+		entry["rolls"] = session.roll_notes.duplicate()
+		session.roll_notes.clear()
 	session.append(entry)
 	EventBus.chat_appended.emit(entry)
 
@@ -3150,7 +3170,11 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		if not str(spell_die["note"]).is_empty():
 			_add(GameSession.effect_entry(["Проверка: " + str(spell_die["note"])]))
 		var bonus := CheckEngine.bonus_for(session.character, params, Catalog.data) + _terrain_bonus(params) + int(tool_fx["bonus"]) + int(spell_die["bonus"])
-		result = _hero_roll(params, bonus)
+		var parts := RollParts.of_params(session.character, Catalog.data, params, session.items)
+		RollParts.add(parts, "исследователь природы", _terrain_bonus(params))
+		RollParts.add(parts, str(tool_fx["note"]), int(tool_fx["bonus"]))
+		parts.append_array(spell_die["parts"])
+		result = _hero_roll(params, bonus, parts)
 		if result.has("error"):
 			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
 		if not bool(result["success"]) and int(result["nat"]) != 1 and str(params.get("auto_fail_reason", "")).is_empty():

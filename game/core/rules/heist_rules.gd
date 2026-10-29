@@ -223,6 +223,7 @@ static func step(s: GameSession, data: Dictionary, id: String, step_id: String) 
 	var skill := str(st["skill"])
 	var nat := s.rng.randi_range(1, 20)
 	var total := nat + _bonus(s, data, skill)
+	RollParts.note(s, str(st["name"]), [nat], nat, RollParts.skill(s, data, skill), total - nat, dc(s, data, id))
 	var ok := nat == 20 or (nat != 1 and total >= dc(s, data, id))
 	rec[step_id] = {"day": s.day, "ok": ok}
 	return ["«%s»: %s — %s %d против Сл %d — %s" % [def(s, data, id)["name"], st["name"], CraftRules.tr_skill(data, skill), total, dc(s, data, id),
@@ -268,14 +269,18 @@ static func act_why(s: GameSession, data: Dictionary, id: String) -> String:
 ## The act's check: the better of the kind's skills and its tool. {bonus, label}
 static func act_check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	var a: Dictionary = kind(data, str(def(s, data, id)["kind"]))["act"]
-	var best := {"bonus": -99, "label": ""}
+	var best := {"bonus": -99, "label": "", "parts": []}
 	for skill: Variant in a.get("skills", []):
 		var b := _bonus(s, data, str(skill))
 		if b > int(best["bonus"]):
-			best = {"bonus": b, "label": CraftRules.tr_skill(data, str(skill))}
+			best = {"bonus": b, "label": CraftRules.tr_skill(data, str(skill)), "parts": RollParts.skill(s, data, str(skill))}
 	var tool := str(a.get("tool", ""))
 	if not tool.is_empty() and int(s.character.get("inventory", {}).get(tool, 0)) > 0 and CraftRules.bonus(s, data, tool) > int(best["bonus"]):
-		best = {"bonus": CraftRules.bonus(s, data, tool), "label": BackgroundRules.tool_name(data, tool)}
+		best = {"bonus": CraftRules.bonus(s, data, tool), "label": BackgroundRules.tool_name(data, tool), "parts": CraftRules.bonus_parts(s, data, tool)}
+	var parts: Array[Dictionary] = []
+	parts.assign(best["parts"])
+	RollParts.add(parts, "подготовка", prep(s, data, id))
+	best["parts"] = parts
 	best["bonus"] = int(best["bonus"]) + prep(s, data, id)
 	return best
 
@@ -304,6 +309,9 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	var ch := act_check(s, data, id)
 	var nat := s.rng.randi_range(1, 20)
 	var total := nat + int(ch["bonus"])
+	var act_parts: Array[Dictionary] = []
+	act_parts.assign(ch["parts"])
+	RollParts.note(s, str(d["name"]), [nat], nat, act_parts, int(ch["bonus"]), dc(s, data, id))
 	var margin := 5 if nat == 20 else -5 if nat == 1 else total - dc(s, data, id)
 	var o := outcome_for(data, margin)
 	var lines: Array[String] = ["«%s»: %s %d против Сл %d — %s" % [d["name"], ch["label"], total, dc(s, data, id), o["name"]]]

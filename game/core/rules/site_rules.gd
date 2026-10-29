@@ -116,6 +116,7 @@ static func ask(s: GameSession, data: Dictionary, npc_id: String) -> Array[Strin
 	var nat: int = rolls.min() if dis else rolls[0]
 	var b := ask_bonus(s, data)
 	var dc := ask_dc(s, data, npc_id)
+	RollParts.note(s, "Просьба впустить", rolls, nat, RollParts.skill(s, data, skill), b, dc)
 	var ok := nat == 20 or (nat != 1 and nat + b >= dc)
 	var who := BondRules.npc_name(s, data, npc_id)
 	var lines: Array[String] = ["Просьба впустить — %s: %s %d %s %d = %d против Сл %d — %s" % [who, CraftRules.tr_skill(data, skill), nat,

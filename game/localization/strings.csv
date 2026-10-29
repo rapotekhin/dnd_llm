@@ -69,6 +69,8 @@ BTN_LONG_REST,Снять комнату
 BTN_LONG_REST_COST,Снять комнату ({cost})
 BTN_LONG_REST_FREE,Отдохнуть бесплатно
 BTN_LONG_REST_OPEN,Долгий отдых…
+BTN_OWN_BED,Спать в своей постели
+OWN_BED_TIP,Долгий отдых дома: бесплатно и без лагеря
 BTN_LOOK,Осмотреться
 BTN_LOOK_TIP,"Проверка Внимательности по этой комнате: заметить то, что на виду. Повтор без перемен — прежний итог"
 BTN_MAP,Карта
@@ -1181,8 +1183,8 @@ PROPERTY_HAS_DEED,с купчей
 PROPERTY_NO_DEED,без купчей — оформите в ратуше
 PROPERTY_TILL,в кассе {money}
 PROPERTY_DEBT,долг по налогу {money}
-PROPERTY_WORKER,"Работник: {name}, {wage} в день"
-PROPERTY_SERF,"Подневольный работник: {name}, за еду"
+PROPERTY_WORKER,"{role}: {name}, {wage} в день"
+PROPERTY_SERF,"{role}: {name}, подневольный, за еду"
 PROPERTY_PENDING,{name} (готово в день {day})
 PROPERTY_UPGRADES,Обустроено: {list}
 PROPERTY_GO_THERE,Делами места займитесь на месте.
@@ -1199,9 +1201,10 @@ BTN_PROPERTY_DEED,Оформить купчую — {fee}
 BTN_PROPERTY_COLLECT,Забрать выручку
 BTN_PROPERTY_TAX,Уплатить налог
 BTN_PROPERTY_SHIFT,Поработать ({time})
-BTN_PROPERTY_HIRE,"Нанять: {role}, {wage} в день"
+BTN_PROPERTY_HIRE,"Нанять: {role}, {wage} в день ({taken}/{max})"
 BTN_PROPERTY_SERF,Приставить к работе: {name}
-BTN_PROPERTY_FIRE,Рассчитать работника
+BTN_PROPERTY_FIRE,Рассчитать
+PROPERTY_RENT_UNTIL,"Снято до дня {day}"
 BTN_PROPERTY_REPAIR,"Починить — {cost}, {time}"
 BTN_PROPERTY_BUILD,"Построить: {name} — {price}, {days} дн."
 BTN_PROPERTY_UPGRADE,"{name} — {price}, {days} дн."
@@ -1294,8 +1297,9 @@ SHOP_HAS_CHARTER,грамота есть
 SHOP_NO_CHARTER,без грамоты — стража может оштрафовать
 SHOP_REP,слава торговца: {word}
 SHOP_STALL_UNTIL,прилавок до дня {day}
-SHOP_STAFFED,торгует работник
+SHOP_STAFFED,торгует работник — покупатели каждый день
 SHOP_UNSTAFFED,без работника продаёт только ваша смена
+SHOP_STALL_LAPSED,Срок прилавка вышел — снимите его снова в ратуше
 SHOP_TILL,В кассе: {money}
 BTN_SHOP_COLLECT,Забрать выручку
 SHOP_LAST,За прошлые дни (до дня {day}): {money}
@@ -1580,3 +1584,8 @@ ATTACH_CHECK_PINNED,Проверка: {name}
 ATTACH_CHECK_TIP,"Мастер решает, нужна ли проверка и какой она сложности, но бросок пойдёт этим навыком. • — навык, которым герой владеет"
 PLACEHOLDER_CHECK_PINNED,"Что вы делаете? Проверка — выбранным навыком"
 CHECK_PIN_NEEDS_WORDS,"Напишите, что герой делает — навык проверки идёт вместе со словами."
+OBJECT_STAFF,"Штат: {list}"
+OBJECT_UPGRADES,"Есть: {list}"
+OBJECT_HOURS,"Открыто {hours}"
+OBJECT_PRIVATE,Частное место
+OBJECT_FACTS,"Было: {list}"
