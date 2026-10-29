@@ -1122,7 +1122,17 @@
 		],
 		"max_cr": 3,
 		"max_per_location": 4,
-		"max_rooms": 4,
+		"max_rooms": 12,
+		"_places": "v0.7.39.4: a place grows in one turn up to max_rooms rooms in its `sites`, with up to place_npcs_max people; a made room keeps up to 2 `open_edges` of its own (terrains of `terrains`) and the world goes on from it; an edge is not used up — roads fork. A location made with people or a settlement holds people_cap made NPCs (else max_per_location). `settlements` — what a hamlet, village or town always has: rooms [min, max], `needs` — site tags of which each must be there (one of the words), people at least, `law` — the guard of the town (`guard` — the law of the location, a new NPC with the template guard joins it).",
+		"place_npcs_max": 8,
+		"people_cap": 12,
+		"terrains": ["grassland", "hills", "forest", "underdark", "mountains", "swamp", "coast", "desert", "arctic"],
+		"settlements": {
+			"hamlet": {"name": "хутор", "rooms": [1, 4], "needs": [["home", "farm"]], "people": 1, "law": false},
+			"village": {"name": "деревня", "rooms": [3, 8], "needs": [["tavern", "inn"], ["home", "farm", "townhall"]], "people": 2, "law": true},
+			"town": {"name": "городок", "rooms": [5, 12], "needs": [["tavern", "inn"], ["shop", "smithy", "market"], ["temple", "townhall"]], "people": 3, "law": true}
+		},
+		"guard": {"guard_monster": "guard", "guard_name": "Стражник", "guard_desc": "Стражник с копьём и щитом.", "patrol": "Патруль стражи"},
 		"_sites": "Sites (v0.7.22.24): a made place is one site of its rooms; inside a location of reach (no open edge — a bathhouse an NPC spoke of); the world is endless — no limit of made rooms or sites (v0.7.22.26.2).",
 		"link_kinds": [
 			"family",
@@ -1317,6 +1327,7 @@
 		"_doc": "Trade (v0.5.3): buy = value × attitude % × (1 − haggle %), rounded up; sell = value × sell_ratio × attitude sell % × (1 + haggle %), rounded down. Haggle: Persuasion or Deception vs DC by attitude; the margin picks the tier; a failure locks haggling with this merchant until the next day.",
 		"sell_ratio": 0.5,
 		"default_stock_qty": 5,
+		"stock_make": {"_doc": "v0.7.39.4, the master's effect `stock`: a thing the player asks a trader of the scene for and the shelf lacks — a catalog item or a new one, up to qty_max, at most per_day things a day per trader; magic by the hero's level.", "qty_max": 5, "per_day": 3},
 		"kinds": {
 			"_doc": "Kinds of shops (v0.7.22.26): a trader's ready goods by its trade, so the master never makes them. A trader's kind — its `trade_kind` (pack or create_npc), else the first kind with a word of its role. `stock` — what it always has (a pack NPC's own stock goes first), `extras` — per_day more goods from `pool` each day (qty within the range), picked by the game's seed; `wants` — what it buys gladly when the NPC has none of its own; `purse_cp` — the purse of a made trader.",
 			"general": {
@@ -2681,7 +2692,12 @@
 			"timber": {"name": "Заготовить древесину", "item": "timber", "qty": [1, 2], "skill": "athletics", "tool": "", "dc": 8, "minutes": 120, "per_day": 3},
 			"forage": {"name": "Собрать грибы и ягоды", "items": ["mushrooms", "berries"], "qty": [1, 3], "skill": "survival", "tool": "", "dc": 10, "minutes": 60, "per_day": 2}
 		},
-		"make": {"hours": [1, 72], "dc_tiers": ["very_easy", "easy", "medium", "hard"], "materials_max": 4, "qty_max": 20, "labor_cp_hour": 25},
+		"make": {"_doc": "v0.7.39.4: any item may get a recipe — the work pays what the materials do not, by 5e (5 gp a day of 8 hours): hours = max(the master's, (the output's value − the materials') / labor_cp_hour), up to hours[1]; `skills` — the «Ремесло» skills a recipe of this tool and item asks (the first match), as the pack's.", "hours": [1, 3000], "dc_tiers": ["very_easy", "easy", "medium", "hard"], "materials_max": 4, "qty_max": 20, "labor_cp_hour": 62,
+			"skills": [
+				{"match": {"item_type": "weapon", "category": ["martial"]}, "skills": ["craft:weaponsmith"]},
+				{"match": {"tool": "leatherworkers_tools", "item_type": "armor", "category": ["medium", "light"]}, "skills": ["craft:leather_armor"]},
+				{"match": {"item_type": "armor", "category": ["medium", "heavy"]}, "skills": ["craft:armorsmith"]}
+			]},
 		"dust": "arcane_dust",
 		"templates_doc": "v0.7.39.1, the direction «Артефакция»: a template makes a recipe of a catalog item (`match`: item_type, prop, prefix, scroll, plain) — id tpl:<template>:<item>[:<variant>]. from_base — the item's `base` is a material (shown while the hero carries it); from_self — the plain item itself is the material and the output a new thing with a `variants` property (its name suffix); spell_known — a scroll of a spell the hero knows; learn — only a learned formula (a lesson, a book, the master). tool / station \"$base\" — those of the base's own recipe (or *_default); its skills are asked too. `check` — the skill of a tool-less check. by_rarity — the dust (× the skill's dust_mult), the hours and the DC by the output's rarity. A template is listed only when the hero has its `skills` (a learned formula always).",
 		"by_rarity": {"common": {"dust": 2, "hours": 8, "dc": 12}, "uncommon": {"dust": 8, "hours": 40, "dc": 15}, "rare": {"dust": 20, "hours": 80, "dc": 18}},

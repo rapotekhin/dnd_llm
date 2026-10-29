@@ -298,13 +298,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 		"disease":
 			return _plan_disease(s, data, e, pending)
 		"recipe":  # v0.7.24: the master's recipe, learned by the hero
-			var spec := e.duplicate()
-			var mats := {}
-			for m: Variant in e.get("materials", []):
-				if m is Dictionary:
-					mats[str(m.get("item_id", ""))] = int(mats.get(str(m.get("item_id", "")), 0)) + int(m.get("qty", 1))
-			spec["materials"] = mats
-			var made := CraftRules.make(s, data, spec)
+			var made := CraftRules.make(s, data, CraftRules.spec_of(e))
 			if made.has("reason"):
 				return {"reason": made["reason"]}
 			return {"plan": made, "summary": "Рецепт: %s — %s, %d ч, Сл %d" % [CraftRules.recipe_name_of(s, data, made["def"], made.get("item", {})),
@@ -323,12 +317,17 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			return {"plan": made, "summary": "Продаётся: %s (%s) за %s%s" % [made["def"]["name"], PropertyRules.cfg(data)["kinds"][made["def"]["kind"]]["name"],
 				Money.format(int(made["def"]["price_cp"])), ", доход %s в день" % Money.format(int(made["def"]["income_cp_day"])) if made["def"].has("income_cp_day") else ""]}
 		"course":  # v0.7.30: a scene NPC teaches a course
-			var co := StudyRules.make(s, data, e)
+			var ce := e.duplicate()
+			if ce.get("recipe") is Dictionary:
+				ce["recipe"] = CraftRules.spec_of(ce["recipe"])
+			var co := StudyRules.make(s, data, ce)
 			if co.has("reason"):
 				return {"reason": co["reason"]}
 			return co
 		"permit":  # v0.7.39.2: the owner lets the hero into its private places by words
 			return SiteRules.make(s, data, e)
+		"stock":  # v0.7.39.4: a thing the shelf of a scene trader lacks
+			return TradeRules.make_stock(s, data, e)
 		"bond":  # v0.7.31: a scene moved the bond with an NPC of the scene
 			var bo := BondRules.make(s, data, e)
 			if bo.has("reason"):
@@ -994,6 +993,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(OrgRules.apply_make(s, _data, plan))
 		"bond":
 			_extra_lines.append_array(BondRules.apply_make(s, _data, plan))
+		"stock":
+			_extra_lines.append_array(TradeRules.apply_stock(s, _data, plan))
 		"permit":
 			_extra_lines.append_array(SiteRules.grant(s, _data, str(plan["npc_id"]), str(plan["site_id"])))
 		"bank":

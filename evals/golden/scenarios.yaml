@@ -3058,3 +3058,126 @@ scenarios:
       tools_required: [find_quests]
     rubric:
       - "v0.7.38.1 (трейс автора): мастер вешает заказ create_quest с board_prop_id p1; нового заказчика (старосту, купца) даёт в new_npcs самого задания с giver new:<key>, а не отдельным create_npc"
+
+  - id: trade_stock_missing_thing
+    title: "Вещи ремесла нет в товаре — эффект stock, а не отказ или выдача словами"
+    category: trade
+    extends: tavern
+    mode: trade
+    input: "Горм, а секиры у тебя нет? Мне нужна тяжёлая, двуручная — заплачу сколько скажешь."
+    snapshot:
+      scene:
+        room: {id: room_smithy, name: "Кузница", description: "Жаркая кузница: горн, наковальня, на стене клещи и молоты."}
+        npcs:
+          - {id: npc_smith, name: "Горм", role: "кузнец", template: commoner, attitude: friendly}
+      trade:
+        npc_id: npc_smith
+        purse_cp: 15000
+        stock:
+          - {item_id: dagger, name: "Кинжал", qty: 3, price_cp: 200}
+          - {item_id: longsword, name: "Длинный меч", qty: 1, price_cp: 1500}
+    engine:
+      find_items:
+        - {id: greataxe, name: "Секира", base: null, rarity: common}
+      validate:
+        - {kind: stock, status: accept, summary: "Товар у Горм: Секира × 1"}
+    expect:
+      effects: {required_kinds_any: [stock], forbidden_kinds: [give_item, coins, take_item]}
+      tools_required: [find_items]
+    rubric:
+      - "v0.7.39.4 (приёмка автора): кузнец кладёт секиру в товар эффектом stock (npc_id кузнеца, item_id greataxe) — её можно купить в торговле; не отказывает и не отдаёт её словами"
+
+  - id: craft_recipe_greataxe
+    title: "Рецепт дорогой вещи — эффект recipe, часы считает движок"
+    category: rules
+    extends: tavern
+    input: "Хочу выковать себе секиру. Железа у меня четыре прутка и полено на рукоять — придумаю, как её сделать."
+    snapshot:
+      scene:
+        room: {id: room_smithy, name: "Кузница", description: "Горн, наковальня, никого — кузнец пустил героя поработать."}
+        npcs: []
+      character:
+        tools: ["Инструменты кузнеца [smiths_tools]"]
+        craft: "Ремесло (окно «Ремесло»): Кинжал, Копьё, Ручной топор"
+        inventory: [{item_id: iron_bar, name: "Железный пруток", qty: 4}, {item_id: timber, name: "Полено", qty: 1}, {item_id: smiths_tools, name: "Инструменты кузнеца", qty: 1}]
+    engine:
+      find_items:
+        - {id: greataxe, name: "Секира", base: null, rarity: common}
+        - {id: iron_bar, name: "Железный пруток", base: null, rarity: common}
+      validate:
+        - {kind: recipe, status: accept, summary: "Рецепт: Секира — Инструменты кузнеца, 45 ч, Сл 13"}
+    expect:
+      effects: {required_kinds_any: [recipe], forbidden_kinds: [give_item]}
+    rubric:
+      - "Мастер даёт рецепт секиры эффектом recipe (smiths_tools, станция forge, материалы — железо и дерево, output_id greataxe); не отказывает из-за цены и не выдаёт готовую секиру"
+      - "Рассказ — о том, как герой придумал способ, а не о сделанной вещи; работа — в окне «Ремесло»"
+
+  - id: study_course_recipe_by_item
+    title: "Научи ковать секиру — course с teach_kind recipe и teach_id вещи"
+    category: rules
+    extends: tavern
+    input: "Горм, научи меня ковать секиру. Заплачу, сколько скажешь."
+    snapshot:
+      scene:
+        room: {id: room_smithy, name: "Кузница", description: "Жаркая кузница: горн, наковальня, на стене клещи и молоты."}
+        npcs:
+          - {id: npc_smith, name: "Горм", role: "кузнец", template: commoner, attitude: friendly}
+      character:
+        gold_cp: 5000
+        tools: ["Инструменты кузнеца [smiths_tools]"]
+    engine:
+      find_items:
+        - {id: greataxe, name: "Секира", base: null, rarity: common}
+      validate:
+        - {kind: course, status: accept, summary: "Курс — Горм: «Ковка секиры», 4 занятий"}
+    expect:
+      effects: {required_kinds_any: [course], forbidden_kinds: [coins, give_item, recipe]}
+    rubric:
+      - "v0.7.39.4: Горм берёт ученика эффектом course с teach_kind recipe и teach_id greataxe (вещь каталога), при нужде с recipe (инструмент, станция, материалы)"
+
+  - id: place_road_on_from_made
+    title: "Дальше от созданного места — по его открытому краю, новая локация"
+    category: concepts
+    extends: tavern
+    input: "Иду дальше по выжженной дороге — ищу, куда она выведет. Может, к какому-нибудь городу."
+    snapshot:
+      scene:
+        location: {id: gen_loc_1, name: "Выжженная дорога", type: forest}
+        room: {id: gen_room_4, name: "Стан обозников", description: "Брошенный стан у дороги: черепки, обгорелая телега."}
+        npcs: []
+        open_edges: ["[0] дорога дальше на восток, через гарь к холмам (forest, hills; можно новую локацию)"]
+    engine:
+      find_places: []
+      find_edges:
+        - {room_id: gen_room_4, room: "Стан обозников", location: "Выжженная дорога", edge: 0, text: "дорога дальше на восток, через гарь к холмам", terrain: [forest, hills], new_location: true}
+      validate:
+        - {kind: create_place, status: accept, summary: "Новое место: Развилка у холмов [new:fork]"}
+    expect:
+      effects: {required_kinds_any: [create_place]}
+      tools_required: [find_places]
+    rubric:
+      - "Мастер продолжает мир create_place с room_id gen_room_4 и edge 0 (новая локация с местностью края), и у нового места — свой открытый край дальше (open_edges), а не тупик словами «дороги нет»"
+
+  - id: place_settlement_village
+    title: "Найти деревню — поселение одним create_place: здания, люди, край дальше"
+    category: concepts
+    extends: tavern
+    input: "Выхожу за Северные ворота и иду полями на север — ищу деревню, где можно заночевать и купить еды."
+    snapshot:
+      scene:
+        location: {id: brod, name: "Ольховый Брод", type: grassland}
+        room: {id: brod-gate, name: "Северные ворота", description: "Бревенчатые ворота, за ними поля и хутора."}
+        npcs: []
+        open_edges: ["[0] поля и хутора за северными воротами (grassland, hills; можно новую локацию)"]
+    engine:
+      find_places: []
+      find_edges:
+        - {room_id: brod-gate, room: "Северные ворота", location: "Ольховый Брод", edge: 0, text: "поля и хутора за северными воротами", terrain: [grassland, hills], new_location: true}
+      validate:
+        - {kind: create_place, status: accept, summary: "Новое место: Улица Ракитного [new:street], Корчма [new:inn]; люди: Явдоха — корчмарка [new:host]; деревня, со стражей"}
+    expect:
+      effects: {required_kinds_any: [create_place]}
+      tools_required: [find_places]
+    rubric:
+      - "v0.7.39.4 (приёмка автора): деревня — одним create_place с new_location: несколько комнат (улица, трактир или корчма, дома) в своих объектах (sites), её люди в npcs (корчмарь-торговец с trade_kind и ещё кто-то), хозяева зданий — new:<key>"
+      - "У деревни есть открытый край дальше (open_edges); стража — через settlement village или law"

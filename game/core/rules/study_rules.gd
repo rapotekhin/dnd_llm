@@ -668,15 +668,22 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	if not (m["kinds"] as Array).has(kind):
 		return {"reason": "teach_kind — из %s (опыта мастер не даёт)" % ", ".join(m["kinds"])}
 	var what := str(spec.get("teach_id", ""))
+	var recipe := {}
+	if kind == "recipe" and CraftRules.recipe(s, data, what).is_empty():
+		var made := _course_recipe(s, data, what, spec.get("recipe"))
+		if made.has("reason"):
+			return made
+		what = str(made.get("id", what))
+		recipe = made.get("plan", {})
 	var ok := false
 	match kind:
 		"skill": ok = data["rules"]["skills"].has(what)
 		"tool": ok = CraftRules.cfg(data)["tools"].has(what)
 		"language": ok = data["misc"]["languages"].has(what)
 		"spell": ok = data["spells"].has(what) and int(data["spells"][what]["level"]) <= int(m["max_spell_level"])
-		"recipe": ok = not CraftRules.recipe(s, data, what).is_empty()
+		"recipe": ok = not recipe.is_empty() or not CraftRules.recipe(s, data, what).is_empty()
 	if not ok:
-		return {"reason": "teach_id %s для %s неизвестен движку (заклинание — до %d круга)" % [what, kind, int(m["max_spell_level"])]}
+		return {"reason": _unknown_why(data, kind, what, int(m["max_spell_level"]))}
 	var n := int(spec.get("lessons", 4))
 	if n < int(m["lessons"][0]) or n > int(m["lessons"][1]):
 		return {"reason": "lessons — от %d до %d" % [m["lessons"][0], m["lessons"][1]]}
@@ -699,7 +706,41 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 		return {"reason": "%s уже учит этому — кнопка «Учёба» в его действиях" % npc_name(s, data, who)}
 	var def := {"name": name, "teacher": who, "teaches": {"kind": kind, "id": what}, "lessons": n, "skill": skill,
 		"dc": int(data["rules"]["dc_tiers"][tier]), "fee_cp": f, "generated": true}
-	return {"plan": {"id": id, "def": def}, "summary": "Курс — %s: «%s», %d занятий" % [npc_name(s, data, who), name, n]}
+	return {"plan": {"id": id, "def": def, "recipe": recipe}, "summary": "Курс — %s: «%s», %d занятий" % [npc_name(s, data, who), name, n]}
+
+
+## The recipe a course teaches by an item (v0.7.39.4): the game's recipe of that item, else the course's own `recipe`
+## spec (as the effect `recipe`, its output the item) made by CraftRules.make without the hero's proficiency.
+## {id} | {id, plan} | {reason}.
+static func _course_recipe(s: GameSession, data: Dictionary, item_id: String, spec: Variant) -> Dictionary:
+	var known := CraftRules.for_item(s, data, item_id)
+	if not known.is_empty():
+		return {"id": known}
+	if ItemRules.def_of(data["items"], s.items, item_id).is_empty() and not (spec is Dictionary):
+		return {"reason": "рецепта %s нет, и такой вещи нет в каталоге: teach_id — рецепт или вещь каталога (find_items)" % item_id}
+	if not (spec is Dictionary):
+		return {"reason": "у вещи %s нет рецепта в игре — добавь курсу recipe (инструмент, станция, материалы, часы, как в эффекте recipe), выход — эта вещь" % item_id}
+	var r: Dictionary = (spec as Dictionary).duplicate()
+	if str(r.get("output_id", "")).is_empty() and not (r.get("output") is Dictionary):
+		r["output_id"] = item_id
+	r["for_course"] = true
+	var made := CraftRules.make(s, data, r)
+	if made.has("reason"):
+		return {"reason": "recipe курса: " + str(made["reason"])}
+	return {"id": str(made["id"]), "plan": made}
+
+
+static func _unknown_why(data: Dictionary, kind: String, what: String, max_spell: int) -> String:
+	match kind:
+		"spell":
+			return "заклинания %s нет или оно выше %d круга" % [what, max_spell]
+		"skill":
+			return "навыка %s нет; можно: %s" % [what, ", ".join(data["rules"]["skills"].keys())]
+		"tool":
+			return "инструмента %s движок не знает; можно: %s" % [what, ", ".join(CraftRules.cfg(data)["tools"].keys())]
+		"language":
+			return "языка %s нет" % what
+	return "рецепта %s нет — teach_id рецепт или вещь каталога" % what
 
 
 static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
@@ -707,4 +748,11 @@ static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	var all: Dictionary = gen.get("courses", {})
 	all[str(plan["id"])] = (plan["def"] as Dictionary).duplicate(true)
 	gen["courses"] = all
+	var r: Dictionary = plan.get("recipe", {})
+	if not r.is_empty():  # the course's own recipe: known to the game, learned only by the course
+		if not (gen.get("recipes") is Dictionary):
+			gen["recipes"] = {}
+		gen["recipes"][str(r["id"])] = r["def"]
+		if not (r.get("item", {}) as Dictionary).is_empty():
+			s.items[str(r["def"]["output"])] = r["item"]
 	return ["%s берёт учеников: «%s» — кнопка «Учёба» в его действиях" % [npc_name(s, data, str(plan["def"]["teacher"])), plan["def"]["name"]]]

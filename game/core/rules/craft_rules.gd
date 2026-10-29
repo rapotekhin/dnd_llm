@@ -714,14 +714,12 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	var tool := str(spec.get("tool", ""))
 	if not cfg(data)["tools"].has(tool):
 		return {"reason": "инструмент %s движку неизвестен; можно: %s" % [tool, ", ".join(cfg(data)["tools"].keys())]}
-	if not proficient(s.character, tool):
+	if not proficient(s.character, tool) and not bool(spec.get("for_course", false)):
 		return {"reason": "герой не владеет: %s — такой рецепт ему не по руке" % BackgroundRules.tool_name(data, tool)}
 	var station := str(spec.get("station", "")) if spec.get("station") != null else ""
 	if not station.is_empty() and not cfg(data)["stations"].has(station):
 		return {"reason": "станции %s нет; можно: %s или без станции" % [station, ", ".join(cfg(data)["stations"].keys())]}
-	var hours := int(spec.get("hours", 1))
-	if hours < int(m["hours"][0]) or hours > int(m["hours"][1]):
-		return {"reason": "hours — от %d до %d" % [m["hours"][0], m["hours"][1]]}
+	var hours := maxi(int(spec.get("hours", 1)), int(m["hours"][0]))
 	var tier := str(spec.get("dc_tier", "medium"))
 	if not (m["dc_tiers"] as Array).has(tier):
 		return {"reason": "dc_tier — из %s" % ", ".join(m["dc_tiers"])}
@@ -753,19 +751,62 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 		var why := ItemRules.rarity_ok(data, od, int(s.character.get("level", 1)))
 		if not why.is_empty():
 			return {"reason": why}
-	var out_cp := int((item if not item.is_empty() else ItemRules.def_of(data["items"], s.items, out_id)).get("value_cp", 0)) * qty
-	var cap := mats_cp + hours * int(m["labor_cp_hour"])
-	if out_cp > cap:
-		return {"reason": "выход дороже сырья и труда (%s > %s): больше материалов или часов" % [Money.format(out_cp), Money.format(cap)]}
+	var out_def := item if not item.is_empty() else ItemRules.def_of(data["items"], s.items, out_id)
+	hours = maxi(hours, labor_hours(data, int(out_def.get("value_cp", 0)) * qty, mats_cp))
+	if hours > int(m["hours"][1]):
+		return {"reason": "такая работа — %d ч, больше %d: дороже материалы (сейчас на %s) или меньше qty" % [hours, int(m["hours"][1]), Money.format(mats_cp)]}
 	var name := str(spec.get("name", "")).strip_edges().left(60)
 	var def := {"tool": tool, "station": station, "hours": hours, "dc": int(data["rules"]["dc_tiers"][tier]), "materials": mats.duplicate(),
 		"output": out_id, "qty": qty, "learn": true, "generated": true}
+	var skills := skills_for(data, tool, out_def)
+	if not skills.is_empty():
+		def["skills"] = skills
 	if not name.is_empty():
 		def["name"] = name
 	var id := "gen_r_" + ("%s|%s|%s" % [tool, out_id, JSON.stringify(mats)]).md5_text().left(8)
-	if learned(s.character).has(id):
+	if learned(s.character).has(id) and not bool(spec.get("for_course", false)):
 		return {"reason": "этот рецепт герой уже знает"}
 	return {"id": id, "def": def, "item": item}
+
+
+## A recipe spec of the protocol: `materials` [{item_id, qty}] as {item: qty}.
+static func spec_of(e: Dictionary) -> Dictionary:
+	var spec := e.duplicate()
+	var mats := {}
+	for m: Variant in e.get("materials", []):
+		if m is Dictionary:
+			mats[str(m.get("item_id", ""))] = int(mats.get(str(m.get("item_id", "")), 0)) + int(m.get("qty", 1))
+	spec["materials"] = mats
+	return spec
+
+
+## The hours the work pays for an output the materials do not (v0.7.39.4, 5e: 5 gp a day of 8 hours).
+static func labor_hours(data: Dictionary, out_cp: int, mats_cp: int) -> int:
+	return ceili(float(maxi(0, out_cp - mats_cp)) / float(cfg(data)["make"]["labor_cp_hour"]))
+
+
+## The «Ремесло» skills a recipe of this tool and output asks, by rules.craft.make.skills (the first match).
+static func skills_for(data: Dictionary, tool: String, item: Dictionary) -> Array:
+	for rule: Dictionary in cfg(data)["make"].get("skills", []):
+		var m: Dictionary = rule["match"]
+		if m.has("tool") and str(m["tool"]) != tool:
+			continue
+		if m.has("item_type") and str(item.get("item_type", "")) != str(m["item_type"]):
+			continue
+		var cat := str(item.get(str(item.get("item_type", "")), {}).get("category", "")) if item.get(str(item.get("item_type", ""))) is Dictionary else ""
+		if m.has("category") and not (m["category"] as Array).has(cat):
+			continue
+		return (rule["skills"] as Array).duplicate()
+	return []
+
+
+## A recipe of the game that makes this item (the first), "" — none (v0.7.39.4: a course teaches it by the item).
+static func for_item(s: GameSession, data: Dictionary, item_id: String) -> String:
+	var plain := _plain(s, data)
+	for id: String in plain:
+		if str(plain[id].get("output", "")) == item_id:
+			return id
+	return ""
 
 
 ## The name of a recipe not stored yet (the master's, before it is applied).

@@ -30,7 +30,7 @@ func test_a_bakery_at_the_north_gate_from_the_tavern() -> void:
 	var first := WorldGen.apply_place(s, data, r["plan"])
 	assert_str(s.room_id).is_equal("brod-tavern-hall")  # the hero does not go there
 	assert_array(ExplorationRules.open_exits(s, data["world"], "brod-gate")).contains([first])
-	assert_array(WorldGen.reach_edges(s, data).filter(func(e: Dictionary) -> bool: return str(e["room_id"]) == "brod-gate")).is_empty()  # the edge is used
+	assert_array(WorldGen.reach_edges(s, data).filter(func(e: Dictionary) -> bool: return str(e["room_id"]) == "brod-gate")).has_size(1)  # v0.7.39.4: roads fork
 
 
 func test_no_room_id_and_no_edge_here_names_the_known_ones() -> void:

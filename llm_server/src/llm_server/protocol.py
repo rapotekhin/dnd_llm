@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.78.0"
+PROTOCOL_VERSION = "0.79.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -751,9 +751,20 @@ class NewEncounter(_Out):
     enemies: list[NewEnemy] = Field(min_length=1, max_length=4)
 
 
+class NewEdge(_Out):
+    """An open edge of a made room (0.79.0): where the world may grow on from it — «дорога дальше на север»;
+    `terrain` — of what lies there (grassland, hills, forest, underdark, mountains, swamp, coast, desert, arctic),
+    `new_location` — a new location may start there."""
+
+    text: str = Field(min_length=3, max_length=160)
+    terrain: list[str] = Field(min_length=1, max_length=3)
+    new_location: bool = True
+
+
 class NewRoom(_Out):
     """A room of a new place (0.32.0) by the schema of a pack room; `exits` — keys of rooms of the same place (only the
-    first room leads back to the world)."""
+    first room leads back to the world). 0.79.0: `site` — the key of its site among `sites` (empty — the place's
+    `site`), `open_edges` — where the world goes on from it."""
 
     key: str = Field(min_length=1, max_length=20)
     name: str = Field(min_length=2, max_length=60)
@@ -765,6 +776,8 @@ class NewRoom(_Out):
     exits: list[str] = Field(default_factory=list)
     secrets: list[NewSecret] = Field(default_factory=list, max_length=3)
     encounter: NewEncounter | None = None
+    site: str = ""
+    open_edges: list[NewEdge] = Field(default_factory=list, max_length=2)
 
 
 class NewSite(_Out):
@@ -776,7 +789,8 @@ class NewSite(_Out):
     description: str = Field(default="", max_length=400)
     tags: list[str] = Field(default_factory=list, max_length=4)
     public: bool = True
-    owner_id: str | None = None
+    owner_id: str | None = None  # 0.79.0: or «new:<key>» — a person of the place's `npcs`
+    key: str = ""  # 0.79.0: among `sites` — what its rooms name in `site`
 
 
 class CreatePlaceEffect(_Out):
@@ -785,18 +799,25 @@ class CreatePlaceEffect(_Out):
     the room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;
     empty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter
     budget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of
-    `room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed."""
+    `room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed. 0.79.0: a settlement in one
+    turn — up to 12 rooms, `sites` with keys its rooms name, `npcs` — its people (as create_npc, with `key`, a room
+    «new:<room key>»), `law` — a guard keeps the peace, `settlement` — hamlet | village | town: the engine checks what
+    such a place always has (rules.world_gen.settlements) and gives it its guard."""
 
     kind: Literal["create_place"] = "create_place"
     edge: int = Field(default=0, ge=0)
     room_id: str | None = None
-    rooms: list[NewRoom] = Field(min_length=1, max_length=4)
+    rooms: list[NewRoom] = Field(min_length=1, max_length=12)
     new_location: bool = False
     name: str = ""
     description: str = ""
     terrain: str = ""
     inside: bool = False
     site: NewSite | None = None
+    sites: list[NewSite] = Field(default_factory=list, max_length=8)
+    npcs: list["QuestNpc"] = Field(default_factory=list, max_length=8)
+    law: bool = False
+    settlement: Literal["hamlet", "village", "town"] | None = None
 
 
 class CreateNpcEffect(_Out):
@@ -812,6 +833,9 @@ class QuestNpc(NewNpc):
     `room_id` may be «new:<room key>» of the quest's new place."""
 
     key: str
+
+
+CreatePlaceEffect.model_rebuild()  # its `npcs` are QuestNpc, defined after it
 
 
 class QuestPlace(_Out):
@@ -998,14 +1022,15 @@ class RecipeMaterial(_Out):
 
 class RecipeEffect(_Out):
     """A recipe the hero learns from the player's words (0.56.0): «сделаю силок из верёвки». The engine checks the tool
-    (the hero must be proficient), the station, hours and DC tier by rules.craft.make, and that the output is worth no
-    more than its materials and labour; the hero then makes it in the «Ремесло» window (time, the check, the quality)."""
+    (the hero must be proficient), the station and DC tier by rules.craft.make; 0.79.0: any item may be the output —
+    the work pays what the materials do not (5e: 5 gp a day of 8 hours), so the engine raises `hours` to that; the hero
+    then makes it in the «Ремесло» window (time, the check, the quality)."""
 
     kind: Literal["recipe"] = "recipe"
     name: str = Field(default="", max_length=60)  # «Силок из верёвки»; empty — the output's name
     tool: str  # smiths_tools, leatherworkers_tools, woodcarvers_tools, carpenters_tools, herbalism_kit, alchemists_supplies, cooks_utensils, tinkers_tools…
     station: Literal["forge", "workbench", "alchemy", "hearth", "fire"] | None = None  # None — anywhere; fire — a hearth or a campfire
-    hours: int = Field(ge=1, le=72)
+    hours: int = Field(default=1, ge=1, le=3000)  # at least; the engine adds what the output's value asks
     dc_tier: Literal["very_easy", "easy", "medium", "hard"]
     materials: list[RecipeMaterial] = Field(min_length=1, max_length=4)
     output_id: str | None = None  # a catalog or library item
@@ -1013,10 +1038,26 @@ class RecipeEffect(_Out):
     qty: int = Field(default=1, ge=1, le=20)
 
 
+class CourseRecipe(_Out):
+    """The recipe a course teaches when the game has none for its item (0.79.0): the fields of the effect `recipe`;
+    the output is the course's `teach_id` unless given."""
+
+    name: str = Field(default="", max_length=60)
+    tool: str
+    station: Literal["forge", "workbench", "alchemy", "hearth", "fire"] | None = None
+    hours: int = Field(default=1, ge=1, le=3000)
+    dc_tier: Literal["very_easy", "easy", "medium", "hard"] = "medium"
+    materials: list[RecipeMaterial] = Field(min_length=1, max_length=4)
+    output_id: str | None = None
+    output: GeneratedItem | None = None
+    qty: int = Field(default=1, ge=1, le=20)
+
+
 class CourseEffect(_Out):
     """A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». A scene NPC teaches: `teach_kind`
     (skill, tool, language, spell up to the 2nd circle, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the
-    check of a lesson `skill`, `dc_tier`. No class experience. Enrolment and lessons are the «Учёба» window's buttons."""
+    check of a lesson `skill`, `dc_tier`. No class experience. Enrolment and lessons are the «Учёба» window's buttons.
+    0.79.0: a recipe course's `teach_id` may be a catalog item — the game's recipe of it, or the course's `recipe`."""
 
     kind: Literal["course"] = "course"
     npc_id: str  # an NPC of the scene
@@ -1027,6 +1068,20 @@ class CourseEffect(_Out):
     fee_cp: int = Field(default=0, ge=0)
     skill: str | None = None
     dc_tier: Literal["easy", "medium", "hard"] = "medium"
+    recipe: CourseRecipe | None = None
+
+
+class StockEffect(_Out):
+    """A thing the player asks a trader of the scene for and its shelf lacks (0.79.0): «есть у тебя набор травника?».
+    A catalog `item_id` (find_items first) or a new `item`; the engine checks the trader is here, the thing is not on
+    the shelf yet, its rarity by the hero's level and rules.trade.stock_make (qty, things a day). The player buys it
+    by the «Торговать» button at the engine's price."""
+
+    kind: Literal["stock"] = "stock"
+    npc_id: str  # a trader of the scene
+    item_id: str | None = None
+    item: GeneratedItem | None = None
+    qty: int = Field(default=1, ge=1, le=5)
 
 
 class PermitEffect(_Out):
@@ -1326,7 +1381,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | PermitEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

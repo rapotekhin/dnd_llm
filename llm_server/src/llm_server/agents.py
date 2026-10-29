@@ -264,7 +264,8 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     ограниченными использованиями), use_item (выпить зелье и т. п.), advance_time (прошло время),
     furnish (обставить комнату при первом входе), take_prop (взять вещь комнаты), prop_state (вещь открыта,
     сломана, сожжена, сдвинута), note (память о событии короткой фразой по-русски), equip (игрок надевает или
-    снимает снаряжение: slot, item_id или пусто; slot=all — раздеться); create_npc, create_place, create_quest,
+    снимает снаряжение: slot, item_id или пусто; slot=all — раздеться), stock (торговцу сцены — вещь его ремесла, которой
+    нет в товаре); create_npc, create_place, create_quest,
     door, owner и другие — по своей теме правил (все виды и поля — в схеме effect).
     Движок проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы он применился."""
     t = ctx.deps

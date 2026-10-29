@@ -100,7 +100,7 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 		return {"reason": "новый человек — в этой локации (%s), а не в другой" % world.location(world.location_id(s.room_id)).get("name", "")}
 	var made: Dictionary = generated(s)["npcs"]
 	var here := made.keys().filter(func(id: String) -> bool: return world.location_id(str(generated(s)["npc_rooms"].get(id, ""))) == loc)
-	if here.size() >= int(c["max_per_location"]):
+	if here.size() >= int(world.location(loc).get("people_cap", c["max_per_location"])):
 		return {"reason": "в %s уже %d новых людей — больше нельзя" % [world.location(loc).get("name", loc), here.size()]}
 	var tpl := str(spec.get("monster", "commoner")) if spec.get("monster") != null else "commoner"
 	if not (c["npc_templates"] as Array).has(tpl):
@@ -200,13 +200,15 @@ static func merged_into(world: Dictionary, id: String, def: Dictionary, room: St
 # --- places (v0.7.20.1) -------------------------------------------------------------------------------------------
 
 
-## The open edges of a room: where the pack lets the master draw the world on ([{text, terrain: [..], new_location,
-## index}]); one used already is gone.
+## The open edges of a room: where the pack — or the master on a place it made (v0.7.39.4) — lets the world grow on
+## ([{text, terrain: [..], new_location, index}]). An edge is not used up (roads fork); "edges_used" of older saves
+## counts only while rules.world_gen.edges_once.
 static func open_edges(s: GameSession, data: Dictionary, room_id: String) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var edges: Array = data["world"]["rooms"].get(room_id, {}).get("open_edges", [])
+	var once := bool(cfg(data).get("edges_once", false))
 	for i in edges.size():
-		if not (generated(s).get("edges_used", []) as Array).has("%s:%d" % [room_id, i]):
+		if not once or not (generated(s).get("edges_used", []) as Array).has("%s:%d" % [room_id, i]):
 			var e: Dictionary = (edges[i] as Dictionary).duplicate()
 			e["index"] = i
 			out.append(e)
@@ -345,7 +347,19 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 			if xp > cap:
 				return {"reason": "встреча в %s не по силам %d уровню: %d опыта врагов при пределе %d" % [name, int(s.character.get("level", 1)), xp, cap]}
 			enc = {"enemies": enemies, "loot": {"coins_cp": 0, "items": {}}}
+		var room_edges: Array = []
+		for ed: Variant in r.get("open_edges", []) if r.get("open_edges") is Array else []:
+			if not (ed is Dictionary) or str(ed.get("text", "")).strip_edges().length() < 3:
+				return {"reason": "край комнаты %s: text — куда ведёт" % key}
+			var terr: Array = (ed.get("terrain", []) as Array).map(func(t: Variant) -> String: return str(t))
+			if terr.is_empty() or terr.any(func(t: String) -> bool: return not (c["terrains"] as Array).has(t)):
+				return {"reason": "край комнаты %s: terrain — из %s" % [key, ", ".join(c["terrains"])]}
+			room_edges.append({"text": str(ed["text"]).strip_edges().left(160), "terrain": terr,
+				"new_location": bool(ed.get("new_location", true)) if ed.get("new_location") != null else true})
+		if room_edges.size() > 2:
+			return {"reason": "у комнаты %s — не больше 2 краёв" % key}
 		defs.append({"key": key, "name": name.left(60), "description": str(r.get("description", "")).left(600),
+			"site": str(r.get("site", "")) if r.get("site") != null else "", "open_edges": room_edges,
 			"indoor": bool(r.get("indoor", false)), "dark": bool(r.get("dark", false)),
 			"public": bool(r.get("public", true)) if r.get("public") != null else true,
 			"hooks": (r.get("hooks", []) as Array).slice(0, 4).map(func(h: Variant) -> String: return str(h).left(160)),
@@ -364,22 +378,112 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 					frontier.append(x)
 	if seen.size() < keys.size():
 		return {"reason": "все комнаты места должны быть связаны выходами с первой"}
+	# v0.7.39.4: the place's people, made with it («new:<key>»)
+	var new_rooms := {}
+	for k: Variant in keys:
+		new_rooms[str(k)] = "" if new_loc else world.location_id(at)
+	var people: Array = []
+	var npc_keys: Array = []
+	var specs: Array = spec.get("npcs", []) if spec.get("npcs") is Array else []
+	if specs.size() > int(c["place_npcs_max"]):
+		return {"reason": "людей места — не больше %d за ход" % int(c["place_npcs_max"])}
+	for n: Variant in specs:
+		if not (n is Dictionary):
+			return {"reason": "человек места — объект схемы create_npc с key"}
+		var nk := str(n.get("key", ""))
+		if nk.is_empty() or npc_keys.has(nk) or keys.has(nk):
+			return {"reason": "у каждого человека места свой key, не как у комнат"}
+		npc_keys.append(nk)
+		var spec_n := (n as Dictionary).duplicate(true)
+		var room_n := str(spec_n.get("room_id", "")) if spec_n.get("room_id") != null else ""
+		if not room_n.begins_with("new:"):
+			room_n = "new:" + (room_n if keys.has(room_n) else str(keys[0]))
+		spec_n["room_id"] = room_n
+		var nname := str(spec_n.get("name", "")).strip_edges().to_lower()
+		if people.any(func(p: Dictionary) -> bool: return str(p["plan"]["npc"]["name"]).to_lower() == nname):
+			return {"reason": "два человека места с одним именем: %s" % spec_n.get("name", "")}
+		var p := plan_npc(s, data, spec_n, true, new_rooms)
+		if p.has("reason"):
+			return {"reason": "человек места %s: %s" % [nk, p["reason"]]}
+		people.append({"key": nk, "plan": p["plan"], "room": room_n.trim_prefix("new:")})
+	# the sites: the place's `site` and the keyed `sites` its rooms name
 	var site_spec: Dictionary = spec.get("site", {}) if spec.get("site") is Dictionary else {}
-	var site := {"name": str(site_spec.get("name", "")).strip_edges().left(60), "description": str(site_spec.get("description", "")).left(400),
-		"tags": (site_spec.get("tags", []) as Array).slice(0, 4).map(func(x: Variant) -> String: return str(x).left(24)),
-		"public": bool(site_spec.get("public", true)) if site_spec.get("public") != null else true}
-	var owner := str(site_spec.get("owner_id", "")) if site_spec.get("owner_id") != null else ""
-	if not owner.is_empty():
-		if owner != "new" and not data["world"]["npcs"].has(owner):
-			return {"reason": "хозяин объекта %s — не человек мира: id из find_npcs или «new» — человек create_npc этого хода" % owner}
-		site["owner"] = owner  # "new": the person create_npc makes in this turn (the engine links them on apply)
-	var place := {"from": at, "edge": idx, "rooms": defs, "new_location": new_loc, "location": {}, "site": site, "inside": inside}
+	var sites := {}
+	var main := _site_of(data, site_spec, npc_keys)
+	if main.has("reason"):
+		return main
+	for st: Variant in spec.get("sites", []) if spec.get("sites") is Array else []:
+		if not (st is Dictionary) or str(st.get("key", "")).is_empty() or sites.has(str(st["key"])):
+			return {"reason": "у каждого объекта из sites свой key — его называют комнаты в site"}
+		var made := _site_of(data, st, npc_keys)
+		if made.has("reason"):
+			return made
+		sites[str(st["key"])] = made
+	for d: Dictionary in defs:
+		if not str(d["site"]).is_empty() and not sites.has(str(d["site"])):
+			return {"reason": "комната %s: объекта %s нет в sites (%s)" % [d["key"], d["site"], ", ".join(sites.keys())]}
+	var kind := str(spec.get("settlement", "")) if spec.get("settlement") != null else ""
+	var law := bool(spec.get("law", false)) if spec.get("law") != null else false
+	if not kind.is_empty():
+		var why := _settlement_why(c, kind, defs, sites, main, people, new_loc)
+		if not why.is_empty():
+			return {"reason": why}
+		law = law or bool(c["settlements"][kind].get("law", false))
+	if law and not new_loc:
+		return {"reason": "law — у новой локации: в этой уже свой закон или его нет по пакету"}
+	var place := {"from": at, "edge": idx, "rooms": defs, "new_location": new_loc, "location": {}, "site": main, "sites": sites, "inside": inside,
+		"npcs": people, "law": law, "settlement": kind}
 	if new_loc:
 		place["location"] = {"name": str(spec.get("name", "")).strip_edges().left(60), "description": str(spec.get("description", "")).left(400), "terrain": terrain}
 		if str(place["location"]["name"]).length() < 2:
 			return {"reason": "у новой локации нужно имя"}
-	return {"plan": {"place": place}, "summary": "Новое место: %s%s" % [", ".join(defs.map(func(d: Dictionary) -> String: return "%s [new:%s]" % [d["name"], d["key"]])),
-		"" if at == s.room_id else " — у %s" % world.room(at).get("name", at)]}
+	var extra := ""
+	if not people.is_empty():
+		extra += "; люди: " + ", ".join(people.map(func(p: Dictionary) -> String: return "%s — %s [new:%s]" % [p["plan"]["npc"]["name"], p["plan"]["npc"]["role"], p["key"]]))
+	if not kind.is_empty():
+		extra += "; %s%s" % [c["settlements"][kind]["name"], ", со стражей" if law else ""]
+	return {"plan": {"place": place}, "summary": "Новое место: %s%s%s" % [", ".join(defs.map(func(d: Dictionary) -> String: return "%s [new:%s]" % [d["name"], d["key"]])),
+		"" if at == s.room_id else " — у %s" % world.room(at).get("name", at), extra]}
+
+
+## A site of a spec (NewSite): {name, description, tags, public, owner?} | {reason}. The owner — an NPC of the world,
+## «new» (create_npc of this turn) or «new:<key>» of the place's people.
+static func _site_of(data: Dictionary, st: Dictionary, npc_keys: Array) -> Dictionary:
+	var site := {"name": str(st.get("name", "")).strip_edges().left(60), "description": str(st.get("description", "")).left(400),
+		"tags": (st.get("tags", []) as Array).slice(0, 4).map(func(x: Variant) -> String: return str(x).left(24)),
+		"public": bool(st.get("public", true)) if st.get("public") != null else true}
+	var owner := str(st.get("owner_id", "")) if st.get("owner_id") != null else ""
+	if not owner.is_empty():
+		if owner.begins_with("new:"):
+			if not npc_keys.has(owner.trim_prefix("new:")):
+				return {"reason": "хозяин объекта %s — нет такого человека в npcs места" % owner}
+		elif owner != "new" and not data["world"]["npcs"].has(owner):
+			return {"reason": "хозяин объекта %s — не человек мира: id из find_npcs, «new:<key>» человека места или «new» — create_npc этого хода" % owner}
+		site["owner"] = owner  # "new" / "new:<key>": linked on apply
+	return site
+
+
+## What a settlement of this kind lacks (rules.world_gen.settlements), "" — nothing.
+static func _settlement_why(c: Dictionary, kind: String, defs: Array, sites: Dictionary, main: Dictionary, people: Array, new_loc: bool) -> String:
+	if not c["settlements"].has(kind):
+		return "settlement — из %s" % ", ".join(c["settlements"].keys())
+	var k: Dictionary = c["settlements"][kind]
+	if not new_loc:
+		return "%s — новая локация (new_location на крае, что это позволяет)" % k["name"]
+	if defs.size() < int(k["rooms"][0]) or defs.size() > int(k["rooms"][1]):
+		return "%s — от %d до %d комнат" % [k["name"], int(k["rooms"][0]), int(k["rooms"][1])]
+	var tags: Array = (main.get("tags", []) as Array).duplicate()
+	for sk: String in sites:
+		tags.append_array(sites[sk].get("tags", []))
+	var lacks: Array[String] = []
+	for group: Variant in k["needs"]:
+		if not (group as Array).any(func(t: Variant) -> bool: return tags.has(str(t))):
+			lacks.append(" или ".join(group))
+	if not lacks.is_empty():
+		return "в %s всегда есть: %s — объект с таким тегом в sites" % [k["name"], "; ".join(lacks)]
+	if people.size() < int(k["people"]):
+		return "в %s нужны люди — не меньше %d в npcs (хозяева, торговцы, староста)" % [k["name"], int(k["people"])]
+	return ""
 
 
 ## Makes the place: in the save and in this game's world. The id of its first room.
@@ -427,31 +531,66 @@ static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 		if not (d["encounter"] as Dictionary).is_empty():
 			room["encounter"] = (d["encounter"] as Dictionary).duplicate(true)
 			room["encounter"]["id"] = id + "_enc"
+		if not (d.get("open_edges", []) as Array).is_empty():
+			room["open_edges"] = (d["open_edges"] as Array).duplicate(true)
 		gen["rooms"][id] = room
 	if not gen.has("sites"):
 		gen["sites"] = {}
-	var sn := 1
-	while data["world"].get("sites", {}).has("gen_site_%d" % sn) or gen["sites"].has("gen_site_%d" % sn):
-		sn += 1
-	var sid := "gen_site_%d" % sn
-	var site: Dictionary = (place.get("site", {}) as Dictionary).duplicate(true)
-	if str(site.get("name", "")).is_empty():
-		site["name"] = str(gen["rooms"][first]["name"])
-	site["location_id"] = loc
-	site["entry"] = first
-	if bool(place.get("inside", false)):
-		site["inside"] = true
-	gen["sites"][sid] = site
-	for d: Dictionary in place["rooms"]:
-		gen["rooms"][ids[d["key"]]]["site_id"] = sid
+	# the place's own site holds the rooms that name no other; the keyed ones — theirs (v0.7.39.4)
+	var site_ids := {}
+	var keyed: Dictionary = place.get("sites", {})
+	var sid := ""
+	for key: Variant in [""] + keyed.keys():
+		var members: Array = (place["rooms"] as Array).filter(func(d: Dictionary) -> bool: return str(d.get("site", "")) == str(key))
+		if members.is_empty():
+			continue
+		var sn := 1
+		while data["world"].get("sites", {}).has("gen_site_%d" % sn) or gen["sites"].has("gen_site_%d" % sn):
+			sn += 1
+		var this_id := "gen_site_%d" % sn
+		var site: Dictionary = ((place.get("site", {}) if str(key).is_empty() else keyed[key]) as Dictionary).duplicate(true)
+		var entry: String = ids[members[0]["key"]]
+		if str(site.get("name", "")).is_empty():
+			site["name"] = str(gen["rooms"][entry]["name"])
+		site["location_id"] = loc
+		site["entry"] = entry
+		if bool(place.get("inside", false)):
+			site["inside"] = true
+		gen["sites"][this_id] = site
+		site_ids[str(key)] = this_id
+		for d: Dictionary in members:
+			gen["rooms"][ids[d["key"]]]["site_id"] = this_id
+		if gen["rooms"][first].get("site_id", "") == this_id:
+			sid = this_id
 	var edge_exits: Array = gen["edge_exits"].get(str(place["from"]), [])
 	edge_exits.append(first)
 	gen["edge_exits"][str(place["from"])] = edge_exits
-	if int(place["edge"]) >= 0:
-		(gen["edges_used"] as Array).append("%s:%d" % [place["from"], int(place["edge"])])
+	if bool(place["new_location"]) and (bool(place.get("law", false)) or not (place.get("npcs", []) as Array).is_empty()):
+		gen["locations"][loc]["people_cap"] = int(cfg(data)["people_cap"])
+	if bool(place["new_location"]) and (not str(place.get("settlement", "")).is_empty() or bool(place.get("law", false))):
+		gen["locations"][loc]["settlement"] = true  # people live here: reputation, the outskirts of a settlement
+		if not str(place.get("settlement", "")).is_empty():
+			gen["locations"][loc]["settlement_kind"] = str(place["settlement"])
 	data["world"] = _merge_places(data["world"], gen)
+	# the place's people, then the owners and the guard that name them
+	var npc_ids := {}
+	for n: Dictionary in place.get("npcs", []):
+		npc_ids[str(n["key"])] = apply_npc(s, data, {"npc": n["plan"]["npc"], "room": str(ids.get(str(n["room"]), first)), "items": n["plan"].get("items", {})})
+	for key: String in site_ids:
+		var owner := str(gen["sites"][site_ids[key]].get("owner", ""))
+		if owner.begins_with("new:"):
+			gen["sites"][site_ids[key]]["owner"] = str(npc_ids.get(owner.trim_prefix("new:"), ""))
+			data["world"]["sites"][site_ids[key]]["owner"] = gen["sites"][site_ids[key]]["owner"]
+	if bool(place.get("law", false)) and bool(place["new_location"]):
+		var law: Dictionary = (cfg(data)["guard"] as Dictionary).duplicate(true)
+		law["name"] = "стража: %s" % place["location"]["name"]
+		law["guards"] = npc_ids.values().filter(func(id: String) -> bool: return str(data["world"]["npcs"].get(id, {}).get("monster", "")) == "guard")
+		law["prison"] = ""
+		gen["locations"][loc]["law"] = law
+		data["world"]["locations"][loc]["law"] = law.duplicate(true)
 	plan["ids"] = ids  # key -> room id, for the refs «new:<key>» of the same turn
 	plan["site_id"] = sid
+	plan["npc_ids"] = npc_ids
 	return first
 
 

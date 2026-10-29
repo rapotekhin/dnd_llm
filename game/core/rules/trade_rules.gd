@@ -63,12 +63,15 @@ static func _new_pack_goods(s: GameSession, data: Dictionary, npc_id: String, np
 	m["pack_ids"] = pack.keys()
 
 
-## The pack stock as {item_id: qty}; none of its own — the stock of its shop kind (v0.7.22.26).
+## The pack stock as {item_id: qty}: the stock of its shop kind (v0.7.22.26) under its own — v0.7.39.4: the kind's
+## goods are always there (the herbalist's kit at a herbalist with goods of her own), its own count goes first.
 static func pack_stock(npc: Dictionary, rules: Dictionary) -> Dictionary:
 	var raw: Variant = npc.get("stock", [])
-	if (raw is Array and (raw as Array).is_empty() or raw is Dictionary and (raw as Dictionary).is_empty()) and bool(npc.get("trader", false)):
-		raw = kinds(rules).get(kind_of(rules, npc), {}).get("stock", {})
 	var out := {}
+	if bool(npc.get("trader", false)):
+		var base: Dictionary = kinds(rules).get(kind_of(rules, npc), {}).get("stock", {})
+		for id: String in base:
+			out[id] = int(base[id])
 	if raw is Dictionary:
 		for id: String in raw:
 			out[id] = int(raw[id])
@@ -609,3 +612,59 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 			lines.append("%s: %s" % [sv.get("done", "готово"), def["name"]])
 	CharacterRules.refresh(c, data, s.items)
 	return lines
+
+
+# --- the master's goods on a trader's shelf (v0.7.39.4) -----------------------------------------------------------
+
+
+## The effect `stock`: a thing the player asks a trader of the scene for and the shelf lacks. {plan, summary} | {reason}.
+static func make_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
+	var m: Dictionary = data["rules"]["trade"]["stock_make"]
+	var who := str(spec.get("npc_id", ""))
+	var world := WorldView.new(data["world"])
+	if not s.npcs_here(data["world"], s.room_id).has(who) or s.dead_npcs.has(who):
+		return {"reason": "%s не в сцене — товар кладут только торговцу, который здесь" % who}
+	if not world.is_trader(who):
+		return {"reason": "%s не торговец — продаёт только торговец (create_npc с trader)" % who}
+	var shelf := merchant(s, data, who)
+	if int(shelf.get("master_day", -1)) == s.day and int(shelf.get("master_today", 0)) >= int(m["per_day"]):
+		return {"reason": "сегодня у %s уже %d новых товаров — завтра" % [world.npc(who).get("name", who), int(m["per_day"])]}
+	var qty := clampi(int(spec.get("qty", 1)), 1, int(m["qty_max"]))
+	var id := str(spec.get("item_id", "")) if spec.get("item_id") != null else ""
+	var item := {}
+	if id.is_empty():
+		var gen: Variant = spec.get("item")
+		if not (gen is Dictionary):
+			return {"reason": "нужен item_id (вещь каталога, find_items) или item (новая вещь)"}
+		var chk := ItemRules.check_generated(data["items"], gen, int(s.character.get("level", 1)), data.get("spells", {}))
+		if not bool(chk["ok"]):
+			return {"reason": str(chk["reason"])}
+		item = chk["def"]
+		id = ItemRules.generated_id(item)
+	else:
+		var d := ItemRules.def_of(data["items"], s.items, id)
+		if d.is_empty():
+			return {"reason": "вещи %s нет в каталоге — find_items или item" % id}
+		var why := ItemRules.rarity_ok(data, d, int(s.character.get("level", 1)))
+		if not why.is_empty():
+			return {"reason": why}
+	if int(shelf["stock"].get(id, 0)) > 0:
+		return {"reason": "%s уже есть у торговца — кнопка «Торговать»" % ItemRules.display_name(data["items"], s.items, id)}
+	var name := str(item.get("name", "")) if not item.is_empty() else ItemRules.display_name(data["items"], s.items, id)
+	return {"plan": {"npc_id": who, "item_id": id, "item": item, "qty": qty},
+		"summary": "Товар у %s: %s × %d" % [world.npc(who).get("name", who), name, qty]}
+
+
+static func apply_stock(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
+	var who := str(plan["npc_id"])
+	var id := str(plan["item_id"])
+	if not (plan.get("item", {}) as Dictionary).is_empty():
+		s.items[id] = plan["item"]
+	var shelf := merchant(s, data, who)
+	shelf["stock"][id] = int(shelf["stock"].get(id, 0)) + int(plan["qty"])
+	if int(shelf.get("master_day", -1)) != s.day:
+		shelf["master_day"] = s.day
+		shelf["master_today"] = 0
+	shelf["master_today"] = int(shelf["master_today"]) + 1
+	return ["У %s в продаже: %s × %d" % [WorldView.new(data["world"]).npc(who).get("name", who),
+		ItemRules.display_name(data["items"], s.items, id), int(plan["qty"])]]

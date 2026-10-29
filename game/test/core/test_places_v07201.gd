@@ -51,7 +51,7 @@ func test_a_place_grows_from_the_trail() -> void:
 	var second := str(room["exits"][0])
 	assert_bool(bool(data["world"]["rooms"][second]["dark"])).is_true()
 	assert_str(str(data["world"]["rooms"][second]["encounter"]["enemies"][0]["monster"])).is_equal("wolf")
-	assert_array(WorldGen.open_edges(s, data, "pushcha-trail")).is_empty()  # the edge is used
+	assert_array(WorldGen.open_edges(s, data, "pushcha-trail")).has_size(1)  # v0.7.39.4: an edge is not used up
 	assert_str(str(WorldGen.find_places(s, data, "бурелом")[0]["source"])).is_equal("made")
 
 

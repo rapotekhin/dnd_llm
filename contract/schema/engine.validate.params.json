@@ -545,7 +545,7 @@
     },
     "CourseEffect": {
       "additionalProperties": false,
-      "description": "A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». A scene NPC teaches: `teach_kind`\n(skill, tool, language, spell up to the 2nd circle, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the\ncheck of a lesson `skill`, `dc_tier`. No class experience. Enrolment and lessons are the «Учёба» window's buttons.",
+      "description": "A course the world lacks (0.62.0): «Горм, научи меня ковать — я заплачу». A scene NPC teaches: `teach_kind`\n(skill, tool, language, spell up to the 2nd circle, recipe) and `teach_id`, `lessons`, `fee_cp` for the course, the\ncheck of a lesson `skill`, `dc_tier`. No class experience. Enrolment and lessons are the «Учёба» window's buttons.\n0.79.0: a recipe course's `teach_id` may be a catalog item — the game's recipe of it, or the course's `recipe`.",
       "properties": {
         "dc_tier": {
           "default": "medium",
@@ -585,6 +585,17 @@
           "title": "Npc Id",
           "type": "string"
         },
+        "recipe": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CourseRecipe"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "skill": {
           "anyOf": [
             {
@@ -622,6 +633,104 @@
       "title": "CourseEffect",
       "type": "object"
     },
+    "CourseRecipe": {
+      "additionalProperties": false,
+      "description": "The recipe a course teaches when the game has none for its item (0.79.0): the fields of the effect `recipe`;\nthe output is the course's `teach_id` unless given.",
+      "properties": {
+        "dc_tier": {
+          "default": "medium",
+          "enum": [
+            "very_easy",
+            "easy",
+            "medium",
+            "hard"
+          ],
+          "title": "Dc Tier",
+          "type": "string"
+        },
+        "hours": {
+          "default": 1,
+          "maximum": 3000,
+          "minimum": 1,
+          "title": "Hours",
+          "type": "integer"
+        },
+        "materials": {
+          "items": {
+            "$ref": "#/$defs/RecipeMaterial"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Materials",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "maxLength": 60,
+          "title": "Name",
+          "type": "string"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "output_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Id"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        },
+        "station": {
+          "anyOf": [
+            {
+              "enum": [
+                "forge",
+                "workbench",
+                "alchemy",
+                "hearth",
+                "fire"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Station"
+        },
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "materials"
+      ],
+      "title": "CourseRecipe",
+      "type": "object"
+    },
     "CreateNpcEffect": {
       "additionalProperties": false,
       "description": "Makes a person the world lacks (0.31.0) — only after find_npcs in the same turn; the engine checks the schema,\nthe limits and the duplicates; the person lives in this game like one of the pack.",
@@ -644,7 +753,7 @@
     },
     "CreatePlaceEffect": {
       "additionalProperties": false,
-      "description": "A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:\n1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —\nthe room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;\nempty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter\nbudget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of\n`room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed.",
+      "description": "A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:\n1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —\nthe room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;\nempty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter\nbudget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of\n`room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed. 0.79.0: a settlement in one\nturn — up to 12 rooms, `sites` with keys its rooms name, `npcs` — its people (as create_npc, with `key`, a room\n«new:<room key>»), `law` — a guard keeps the peace, `settlement` — hamlet | village | town: the engine checks what\nsuch a place always has (rules.world_gen.settlements) and gives it its guard.",
       "properties": {
         "description": {
           "default": "",
@@ -668,6 +777,11 @@
           "title": "Kind",
           "type": "string"
         },
+        "law": {
+          "default": false,
+          "title": "Law",
+          "type": "boolean"
+        },
         "name": {
           "default": "",
           "title": "Name",
@@ -677,6 +791,14 @@
           "default": false,
           "title": "New Location",
           "type": "boolean"
+        },
+        "npcs": {
+          "items": {
+            "$ref": "#/$defs/QuestNpc"
+          },
+          "maxItems": 8,
+          "title": "Npcs",
+          "type": "array"
         },
         "room_id": {
           "anyOf": [
@@ -694,10 +816,27 @@
           "items": {
             "$ref": "#/$defs/NewRoom"
           },
-          "maxItems": 4,
+          "maxItems": 12,
           "minItems": 1,
           "title": "Rooms",
           "type": "array"
+        },
+        "settlement": {
+          "anyOf": [
+            {
+              "enum": [
+                "hamlet",
+                "village",
+                "town"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Settlement"
         },
         "site": {
           "anyOf": [
@@ -709,6 +848,14 @@
             }
           ],
           "default": null
+        },
+        "sites": {
+          "items": {
+            "$ref": "#/$defs/NewSite"
+          },
+          "maxItems": 8,
+          "title": "Sites",
+          "type": "array"
         },
         "terrain": {
           "default": "",
@@ -1857,6 +2004,38 @@
       "title": "MoveEffect",
       "type": "object"
     },
+    "NewEdge": {
+      "additionalProperties": false,
+      "description": "An open edge of a made room (0.79.0): where the world may grow on from it — «дорога дальше на север»;\n`terrain` — of what lies there (grassland, hills, forest, underdark, mountains, swamp, coast, desert, arctic),\n`new_location` — a new location may start there.",
+      "properties": {
+        "new_location": {
+          "default": true,
+          "title": "New Location",
+          "type": "boolean"
+        },
+        "terrain": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "title": "Terrain",
+          "type": "array"
+        },
+        "text": {
+          "maxLength": 160,
+          "minLength": 3,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "terrain"
+      ],
+      "title": "NewEdge",
+      "type": "object"
+    },
     "NewEncounter": {
       "additionalProperties": false,
       "properties": {
@@ -2117,7 +2296,7 @@
     },
     "NewRoom": {
       "additionalProperties": false,
-      "description": "A room of a new place (0.32.0) by the schema of a pack room; `exits` — keys of rooms of the same place (only the\nfirst room leads back to the world).",
+      "description": "A room of a new place (0.32.0) by the schema of a pack room; `exits` — keys of rooms of the same place (only the\nfirst room leads back to the world). 0.79.0: `site` — the key of its site among `sites` (empty — the place's\n`site`), `open_edges` — where the world goes on from it.",
       "properties": {
         "dark": {
           "default": false,
@@ -2173,6 +2352,14 @@
           "title": "Name",
           "type": "string"
         },
+        "open_edges": {
+          "items": {
+            "$ref": "#/$defs/NewEdge"
+          },
+          "maxItems": 2,
+          "title": "Open Edges",
+          "type": "array"
+        },
         "public": {
           "default": true,
           "title": "Public",
@@ -2185,6 +2372,11 @@
           "maxItems": 3,
           "title": "Secrets",
           "type": "array"
+        },
+        "site": {
+          "default": "",
+          "title": "Site",
+          "type": "string"
         }
       },
       "required": [
@@ -2240,6 +2432,11 @@
           "default": "",
           "maxLength": 400,
           "title": "Description",
+          "type": "string"
+        },
+        "key": {
+          "default": "",
+          "title": "Key",
           "type": "string"
         },
         "name": {
@@ -3157,7 +3354,7 @@
     },
     "RecipeEffect": {
       "additionalProperties": false,
-      "description": "A recipe the hero learns from the player's words (0.56.0): «сделаю силок из верёвки». The engine checks the tool\n(the hero must be proficient), the station, hours and DC tier by rules.craft.make, and that the output is worth no\nmore than its materials and labour; the hero then makes it in the «Ремесло» window (time, the check, the quality).",
+      "description": "A recipe the hero learns from the player's words (0.56.0): «сделаю силок из верёвки». The engine checks the tool\n(the hero must be proficient), the station and DC tier by rules.craft.make; 0.79.0: any item may be the output —\nthe work pays what the materials do not (5e: 5 gp a day of 8 hours), so the engine raises `hours` to that; the hero\nthen makes it in the «Ремесло» window (time, the check, the quality).",
       "properties": {
         "dc_tier": {
           "enum": [
@@ -3170,7 +3367,8 @@
           "type": "string"
         },
         "hours": {
-          "maximum": 72,
+          "default": 1,
+          "maximum": 3000,
           "minimum": 1,
           "title": "Hours",
           "type": "integer"
@@ -3252,7 +3450,6 @@
       },
       "required": [
         "tool",
-        "hours",
         "dc_tier",
         "materials"
       ],
@@ -3377,6 +3574,57 @@
         "enemies"
       ],
       "title": "StartCombatEffect",
+      "type": "object"
+    },
+    "StockEffect": {
+      "additionalProperties": false,
+      "description": "A thing the player asks a trader of the scene for and its shelf lacks (0.79.0): «есть у тебя набор травника?».\nA catalog `item_id` (find_items first) or a new `item`; the engine checks the trader is here, the thing is not on\nthe shelf yet, its rarity by the hero's level and rules.trade.stock_make (qty, things a day). The player buys it\nby the «Торговать» button at the engine's price.",
+      "properties": {
+        "item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "kind": {
+          "const": "stock",
+          "default": "stock",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "npc_id"
+      ],
+      "title": "StockEffect",
       "type": "object"
     },
     "SupplierEffect": {
@@ -3631,6 +3879,7 @@
           "reputation": "#/$defs/ReputationEffect",
           "reveal_secret": "#/$defs/RevealSecretEffect",
           "start_combat": "#/$defs/StartCombatEffect",
+          "stock": "#/$defs/StockEffect",
           "supplier": "#/$defs/SupplierEffect",
           "take_from": "#/$defs/TakeFromEffect",
           "take_item": "#/$defs/TakeItemEffect",
@@ -3698,6 +3947,9 @@
         },
         {
           "$ref": "#/$defs/PermitEffect"
+        },
+        {
+          "$ref": "#/$defs/StockEffect"
         },
         {
           "$ref": "#/$defs/FenceEffect"
