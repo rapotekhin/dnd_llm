@@ -403,13 +403,13 @@
 			"house": {"name": "Дом", "kind": "house", "price_cp": 2000, "days": 5, "rooms": [{"name": "Горница", "description": "Светлая горница с печью и лавками вдоль стен — свой угол.", "indoor": true}]},
 			"workshop": {"name": "Мастерская", "kind": "workshop", "price_cp": 2500, "days": 7, "rooms": [{"name": "Мастерская", "description": "Просторный сруб с широкими воротами и верстаком у окна.", "indoor": true, "tags": ["workbench"]}]},
 			"shop": {"name": "Лавка", "kind": "shop", "price_cp": 3000, "days": 7, "rooms": [{"name": "Лавка", "description": "Лавка с прилавком и полками под товар, дверь на улицу.", "indoor": true}]},
-			"stable": {"name": "Конюшня", "kind": "stable", "price_cp": 800, "days": 3, "rooms": [{"name": "Конюшня", "description": "Тёплая конюшня с яслями и сеновалом.", "indoor": true}]}
+			"stable": {"name": "Конюшня", "kind": "stable", "price_cp": 800, "days": 3, "rooms": [{"name": "Конюшня", "description": "Тёплая конюшня с яслями и сеновалом.", "indoor": true, "tags": ["stable"]}]}
 		},
 		"animals": {
-			"riding_horse": {"price_cp": 7500, "feed_cp_day": 5, "travel_mult": 0.5, "text": "Верхом дорога между местами вдвое короче"},
-			"draft_horse": {"price_cp": 5000, "feed_cp_day": 5, "travel_mult": 0.75, "text": "Дорога на четверть короче"},
-			"mule": {"price_cp": 800, "feed_cp_day": 5, "travel_mult": 0.75, "text": "Дорога на четверть короче"},
-			"mastiff": {"price_cp": 2500, "feed_cp_day": 2, "fights": true, "text": "Идёт с вами — и в бой"},
+			"riding_horse": {"price_cp": 7500, "feed_cp_day": 5, "travel_mult": 0.5, "text": "Верхом дорога между местами вдвое короче", "pack": true, "pull": 1},
+			"draft_horse": {"price_cp": 5000, "feed_cp_day": 5, "travel_mult": 0.75, "text": "Дорога на четверть короче", "pack": true, "pull": 2},
+			"mule": {"price_cp": 800, "feed_cp_day": 5, "travel_mult": 0.75, "text": "Дорога на четверть короче", "pack": true, "pull": 1, "burden": true},
+			"mastiff": {"price_cp": 2500, "feed_cp_day": 2, "fights": true, "text": "Идёт с вами — и в бой", "anywhere": true},
 			"goat": {"price_cp": 100, "feed_cp_day": 2, "produce": {"goat_milk": 1}, "text": "Даёт молоко у вас дома"}
 		},
 		"starve_days": 3,
@@ -3411,6 +3411,29 @@
 		"detect_magic": {"reveal": "magic"},
 		"knock": {"knock": true, "door": "unlock"},
 		"arcane_lock": {"door": "lock"}
+	},
+	"mounts": {
+		"_doc": "Ездовые и вьючные (v0.7.42, MountRules). Животное героя с `pack` (property.animals) несёт вьюк: ёмкость по 5e — Сила × 15 × size_mult размера (burden — на размер больше), вещи вьюка не в весе героя. Повозка (vehicles) запрягается в животное с `pull` не меньше своего и едет с ним: свой контейнер `capacity_lb`. Куда нельзя: комната под крышей (indoor) без метки `stable` / `mounts`, метка `no_mounts`, местность из no_mount_terrains без `mounts`; повозка — ещё и только по местности cart_terrains или с меткой `road`. Животное, что не прошло, ждёт у входа и снова идёт с героем, когда он вернётся. Без присмотра вне своего места: корма нет (голод → уходит через property.starve_days), и каждый день steal_pct_day — уведут вместе с вьюком. Аренда у барышника — rent_pct_day цены в день на rent_days, по сроку животное уходит к хозяину; продажа своего — sell_pct цены. make — что мастер может поставить барышнику (`stock` с `animal`): зверь SRD этих размеров и CR, цена по размеру, путь по скорости.",
+		"size_mult": {"tiny": 0.25, "small": 0.5, "medium": 1, "large": 2, "huge": 4, "gargantuan": 8},
+		"size_up": {"tiny": "small", "small": "medium", "medium": "large", "large": "huge", "huge": "gargantuan"},
+		"vehicles": {
+			"cart": {"name": "Телега", "capacity_lb": 800, "pull": 1, "price_cp": 1500},
+			"wagon": {"name": "Фургон", "capacity_lb": 2000, "pull": 2, "price_cp": 3500}
+		},
+		"no_mount_terrains": ["underdark"],
+		"cart_terrains": ["grassland", "hills", "coast", "desert", "arctic"],
+		"steal_pct_day": 15,
+		"rent_pct_day": 4,
+		"rent_days": [1, 14],
+		"sell_pct": 50,
+		"make": {
+			"sizes": ["medium", "large", "huge"],
+			"max_cr": 1,
+			"price_cp": {"medium": 1000, "large": 6000, "huge": 20000},
+			"feed_cp_day": {"medium": 3, "large": 5, "huge": 15},
+			"travel_mult_by_speed": [[60, 0.5], [40, 0.75], [0, 1.0]],
+			"per_day": 2
+		}
 	},
 	"wilds": {
 		"_doc": "Угодья (v0.7.41): комната с тегом вида (game, fish) — запас зверя или рыбы; улов тратит запас, он отрастает по regen_per_day до stock. Проверка skill против dc, сверх Сл каждые units_per_margin — ещё единица (до max_per_try за попытку), попыток — часы / hours_per_try. gear_adv — преимущество, без gear_needed — помеха. Дичь — по terrain локации: yield сразу, monster — мясо и шкуры по размеру, fight — бой. Провал — хищник с шансом predator_pct (на 1 — всегда). Чужие угодья (wilds_owner комнаты или хозяин места) без позволения — poach.crime, замечено при людях или с шансом seen_pct.",

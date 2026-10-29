@@ -864,6 +864,13 @@
     },
     "SceneNpc": {
       "properties": {
+        "animals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Animals",
+          "type": "array"
+        },
         "attitude": {
           "default": 0,
           "title": "Attitude",

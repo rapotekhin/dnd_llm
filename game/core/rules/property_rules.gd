@@ -314,6 +314,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		if days > 0 and owned(s.character, id) and (got > 0 or paid > 0):
 			lines.append("%s: выручка %s%s" % [name_of(s, data, id), Money.format(got), (", жалованье %s" % Money.format(paid)) if paid > 0 else ""])
 	lines.append_array(_animals(s, data))
+	lines.append_array(MountRules.day(s, data))  # v0.7.42: a rent's end, a beast stolen
 	return lines
 
 
@@ -1019,14 +1020,14 @@ static func _days(n: int) -> String:
 
 
 static func animal_cfg(data: Dictionary, monster: String) -> Dictionary:
-	return cfg(data)["animals"].get(monster, {})
+	return cfg(data)["animals"].get(monster, data["world"].get("animal_kinds", {}).get(monster, {}))  # v0.7.42: the master's beasts
 
 
 ## Animals an NPC sells: [monster id].
 static func animals_of(data: Dictionary, npc_id: String) -> Array[String]:
 	var out: Array[String] = []
 	for m: Variant in WorldView.new(data["world"]).npc(npc_id).get("animals", []):
-		if cfg(data)["animals"].has(str(m)) and data["monsters"].has(str(m)):
+		if not animal_cfg(data, str(m)).is_empty() and data["monsters"].has(str(m)):
 			out.append(str(m))
 	return out
 
@@ -1043,10 +1044,11 @@ static func animal_why(s: GameSession, data: Dictionary, npc_id: String, monster
 	return ""
 
 
-static func buy_animal(s: GameSession, data: Dictionary, npc_id: String, monster: String) -> Array[String]:
+## `price` (v0.7.42) — what is paid instead of the full price (a rent).
+static func buy_animal(s: GameSession, data: Dictionary, npc_id: String, monster: String, price: int = -1) -> Array[String]:
 	var a := animal_cfg(data, monster)
 	var m: Dictionary = data["monsters"][monster]
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - int(a["price_cp"])
+	s.character["gold_cp"] = int(s.character["gold_cp"]) - (int(a["price_cp"]) if price < 0 else price)
 	s.creature_counter += 1
 	var cr := {"id": "c%d" % s.creature_counter, "name": str(m["name"]), "monster": monster, "state": TAME, "bound": false, "led": true,
 		"owner": OwnerRules.HERO, "since": TimeRules.abs_minute(s), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "xp_given": true, "fed_day": s.day}
@@ -1090,7 +1092,7 @@ static func _animals(s: GameSession, data: Dictionary) -> Array[String]:
 			var st: Dictionary = state(s.character).get(pid, {})
 			if not pid.is_empty() and int(st.get("cash", 0)) >= feed:
 				st["cash"] = int(st["cash"]) - feed
-			elif int(s.character.get("gold_cp", 0)) >= feed:
+			elif int(s.character.get("gold_cp", 0)) >= feed and MountRules.fed_by_purse(s, data, cr):  # v0.7.42: left alone — no feed
 				s.character["gold_cp"] = int(s.character["gold_cp"]) - feed
 			else:
 				cr["hungry"] = int(cr.get("hungry", 0)) + 1
@@ -1158,7 +1160,13 @@ static func text(s: GameSession, data: Dictionary) -> String:
 		sale.append("%s — %s, продаёт %s" % [name_of(s, data, id), Money.format(price(s, data, id)), npc_name(data, seller(s, data, id))])
 	var beasts: Array[String] = []
 	for cr: Dictionary in animals(s):
-		beasts.append("%s (%s)" % [cr["name"], "с героем" if bool(cr.get("led", false)) else WorldView.new(data["world"]).room_short(room_of(s, str(cr["id"])))])
+		var where := "с героем" if bool(cr.get("led", false)) else ("ждёт у входа: " if bool(cr.get("waiting", false)) else "") + WorldView.new(data["world"]).room_short(room_of(s, str(cr["id"])))
+		var load := MountRules.load_text(s, data, cr) if MountRules.on(data) else ""  # v0.7.42
+		beasts.append("%s (%s%s)" % [cr["name"], where, "; " + load if not load.is_empty() else ""])
+	var stolen: Array[String] = []
+	for st: Dictionary in s.character.get("stolen_animals", []):  # v0.7.42: a quest to get it back is the master's
+		stolen.append("%s — увели в день %d у %s%s" % [st["name"], int(st["day"]), WorldView.new(data["world"]).room_short(str(st["room"])),
+			", с грузом: " + str(st["load"]) if not str(st.get("load", "")).is_empty() else ""])
 	var out: Array[String] = []
 	if not parts.is_empty():
 		out.append("Имущество (окно «Имущество» на панели): " + "; ".join(parts))
@@ -1166,6 +1174,8 @@ static func text(s: GameSession, data: Dictionary) -> String:
 		out.append("Продаётся здесь (кнопка «Имущество» у продавца): " + "; ".join(sale))
 	if not beasts.is_empty():
 		out.append("Животные героя: " + ", ".join(beasts))
+	if not stolen.is_empty():
+		out.append("Украдены у героя (вора можно искать — задание мастера): " + "; ".join(stolen.slice(-3)))
 	return ". ".join(out)
 
 

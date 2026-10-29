@@ -775,6 +775,7 @@
 			],
 			"site_id": "pushcha-edge",
 			"tags": [
+				"road",
 				"game",
 				"timber",
 				"herbs",
@@ -858,6 +859,7 @@
 			],
 			"site_id": "pushcha-trail",
 			"tags": [
+				"road",
 				"game",
 				"timber",
 				"forage"
@@ -1038,7 +1040,8 @@
 					"items": {}
 				}
 			},
-			"site_id": "outpost-road"
+			"site_id": "outpost-road",
+			"tags": ["mounts", "road"]
 		},
 		"outpost-yard": {
 			"name": "Двор Серой заставы",
@@ -1196,7 +1199,8 @@
 					"text": "на отодранных досках следы тех же когтей, что на северных воротах"
 				}
 			],
-			"site_id": "mine"
+			"site_id": "mine",
+			"tags": ["mounts", "road"]
 		},
 		"mine-gallery": {
 			"name": "Главная штольня",
@@ -2293,6 +2297,7 @@
 			"tags": [
 				"commoner"
 			],
+			"vehicles": ["cart", "wagon"],
 			"animals": [
 				"riding_horse",
 				"mule",

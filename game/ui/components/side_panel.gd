@@ -456,6 +456,8 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	var l := Label.new()
 	l.name = "CreatureLine_" + cid
 	l.text = CreatureRules.text(cr, Catalog.data)
+	if str(cr["state"]) == PropertyRules.TAME and MountRules.on(Catalog.data) and not MountRules.load_text(s, Catalog.data, cr).is_empty():
+		l.text += " (%s)" % MountRules.load_text(s, Catalog.data, cr)  # v0.7.42: its pack, its cart
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -722,9 +724,15 @@ func _work_row(s: GameSession, can_act: bool) -> void:
 				job_requested.emit(npc))
 
 
-func _animal_acts(_s: GameSession, cr: Dictionary, can_act: bool) -> void:
+func _animal_acts(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	var cid := str(cr["id"])
 	var acts := _acts("CreatureActs_" + cid)
+	if MountRules.on(Catalog.data):  # v0.7.42: the pack and the cart open as containers
+		for spec: Array in [[MountRules.PACK, "BTN_MOUNT_PACK"], [MountRules.CART, "BTN_MOUNT_CART"]]:
+			if MountRules.container(s, Catalog.data, str(spec[0]) + cid).is_empty():
+				continue
+			var pb := _flow(acts, tr(spec[1]), container_requested.emit.bind(str(spec[0]) + cid), can_act)
+			pb.name = "Mount_%s%s" % [str(spec[0]).trim_suffix(":"), cid]
 	var lb := _flow(acts, tr("BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_ANIMAL_LEAD"), func() -> void:
 		var err := GameState.creature_act(cid, "lead")
 		if not err.is_empty():

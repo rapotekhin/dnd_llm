@@ -345,6 +345,10 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": "угодий в этих правилах нет"}
 			return WildsRules.plan(s, data, e)
 		"stock":  # v0.7.39.4: a thing the shelf of a scene trader lacks
+			if e.get("animal") != null and not str(e.get("animal", "")).is_empty():  # v0.7.42: a beast at a dealer
+				if not MountRules.on(data):
+					return {"reason": "ездовых животных в этих правилах нет"}
+				return MountRules.plan_stock(s, data, e)
 			return TradeRules.make_stock(s, data, e)
 		"bond":  # v0.7.31: a scene moved the bond with an NPC of the scene
 			var bo := BondRules.make(s, data, e)
@@ -1020,7 +1024,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"bond":
 			_extra_lines.append_array(BondRules.apply_make(s, _data, plan))
 		"stock":
-			_extra_lines.append_array(TradeRules.apply_stock(s, _data, plan))
+			_extra_lines.append_array(MountRules.apply_stock(s, _data, plan) if plan.has("animal") else TradeRules.apply_stock(s, _data, plan))
 		"permit":
 			_extra_lines.append_array(SiteRules.grant(s, _data, str(plan["npc_id"]), str(plan["site_id"])))
 		"contest":

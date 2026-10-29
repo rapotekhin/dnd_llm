@@ -110,6 +110,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     craft = game_rules["craft"]
     room_tags = ROOM_TAGS | set(craft["stations"]) | set(craft["gather"])  # v0.7.24: workplaces and gathering spots
     room_tags |= set(game_rules.get("wilds", {}).get("kinds", {}))  # v0.7.41: hunting grounds and fishing waters
+    room_tags |= {"no_mounts", "mounts", "road", "stable"}  # v0.7.42: where beasts and carts go
     recipes = {**craft["recipes"], **world.get("recipes", {})}
     for tid in craft.get("templates", {}):  # v0.7.39.1: a formula of a template — tpl:<template>:<item>
         recipes.update({f"tpl:{tid}:{i}": {} for i in items})
@@ -304,6 +305,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         errors += [f"NPC {nid}: в каталоге нет предмета {x}" for x in npc.get("stock", []) if x not in items]
         errors += [f"NPC {nid}: неизвестный язык {x}" for x in npc.get("languages", []) if x not in ids["languages"]]
         errors += [f"NPC {nid}: неизвестная метка {x}" for x in npc.get("tags", []) if x not in NPC_TAGS]
+        errors += [f"NPC {nid}: неизвестная повозка {v}" for v in npc.get("vehicles", []) if v not in game_rules.get("mounts", {}).get("vehicles", {})]  # v0.7.42
         errors += [f"NPC {nid}: неизвестная услуга {x}" for x in npc.get("services", []) if x not in services]
         if npc.get("services") and not npc.get("trader"):
             errors.append(f"NPC {nid}: услуги только у торговца (trader)")

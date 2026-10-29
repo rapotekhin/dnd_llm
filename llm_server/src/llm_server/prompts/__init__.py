@@ -127,7 +127,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "languages": ("NPC не понимает героя; языки", ()),
     "tools": ("действие инструментом: замок, травы, подделка, грим (`request_check` с `tool`)", ()),
     "craft": ("ремесло и готовка: герой куёт, шьёт, мастерит, варит зелье, жарит мясо, варит похлёбку; новый рецепт из слов игрока (`recipe`)", ("recipe",)),
-    "property": ("имущество: купить дом, землю, мельницу, лавку; купчая; место, которого нет в продаже (`property`); свои места, работники, животные; свой вид места — школа, причал (`new_kind`); улучшение своего места по просьбе — станок, лодка, библиотека (`upgrade`)", ("property", "upgrade")),
+    "property": ("имущество: купить дом, землю, мельницу, лавку; купчая; место, которого нет в продаже (`property`); свои места, работники, животные; свой вид места — школа, причал (`new_kind`); улучшение своего места по просьбе — станок, лодка, библиотека (`upgrade`); конь, мул, вьюк, телега, аренда у барышника; новый зверь у барышника (`stock` с `animal`)", ("property", "upgrade")),
     "bank": ("деньги в долг и на хранение: вклад, кредит под залог, ячейка; ростовщик, которого нет (`bank`)", ("bank",)),
     "study": ("учёба: училище, курсы, экзамен, книги; «у кого научиться» — `find_teachers`, курс у учителя (`course`)", ("course",)),
     "bonds": ("дружба, романтика, соперничество, наставник: близость, подарки, признание; сцена, что сблизила (`bond`)", ("bond",)),
@@ -151,6 +151,8 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
 SCENE_TOPICS = {"places", "containers", "doors", "equip", "tools", "invisible"}
 WATER_WORDS = re.compile(r"вод[аыуе]|набра|набер|наполн|зачерп|бурдюк|фляг|кувшин|ведр", re.IGNORECASE)
 BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
+MOUNT_WORDS = re.compile(r"конь|коня|кобыл|лошад|мул|осл|верблюд|вьюк|навьюч|телег|фургон|повозк|запряч|упряж|верхом|скакун|аренд|напрокат",
+                         re.IGNORECASE)  # v0.7.42
 WILDS_WORDS = re.compile(r"охот|рыб|удочк|удить|сеть|сети|дич|зверь|звер[яюи]|олен|выслеж|капкан|силк|кабан|заяц|зайц|улов|клюёт|клюет|браконь",
                          re.IGNORECASE)  # v0.7.41
 
@@ -197,6 +199,8 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("containers")
     if mentions(said, WATER_WORDS):  # v0.7.34.6: water drawn by words
         out.append("water")
+    if scene and any(n.animals for n in scene.npcs) and mentions(said, MOUNT_WORDS):  # v0.7.42: a dealer by words
+        out.append("property")
     if scene and scene.wilds and mentions(said, WILDS_WORDS):  # v0.7.41: a hunt or the grounds changed by words
         out.append("wilds")
     if scene and any(e.door for e in scene.exits):  # v0.7.22.25

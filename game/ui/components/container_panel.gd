@@ -66,7 +66,7 @@ func _rebuild() -> void:
 		return
 	var is_bag := ContainerRules.bags(s.character).has(prop_id)
 	var can_act := not GameState.is_busy()
-	var cap := float(ContainerRules.kind(data, str(p["container"]))["capacity_lb"])
+	var cap := float(p["capacity_lb"]) if p.has("capacity_lb") else float(ContainerRules.kind(data, str(p["container"]))["capacity_lb"])  # v0.7.42: a pack, a cart
 	var contents: Dictionary = p.get("contents", {})
 	frame.title.text = str(p["name"])
 	var owner := str(p.get("owner", ""))

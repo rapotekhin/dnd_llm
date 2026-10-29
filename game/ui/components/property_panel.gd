@@ -9,6 +9,7 @@ var _box: VBoxContainer
 var frame: ModalFrame
 var _npc := ""
 var _mode := "mine"
+var _rent_days := 3  # v0.7.42: the days of a beast's rent
 
 
 func _ready() -> void:
@@ -94,8 +95,15 @@ func _rebuild() -> void:
 				_sale_row(s, data, id)
 		"animals":
 			frame.title.text = tr("PROPERTY_ANIMALS_AT").format({"name": who})
+			if MountRules.on(data):  # v0.7.42: the days of a rent by «−/+»
+				_rent_row(data)
 			for m: String in PropertyRules.animals_of(data, _npc):
 				_animal_row(s, data, m)
+			if MountRules.on(data):  # v0.7.42: carts, and the hero's own beasts bought back
+				for v: String in MountRules.vehicles_of(data, _npc):
+					_vehicle_row(s, data, v)
+				for cr: Dictionary in MountRules.sellable(s, data, _npc):
+					_sell_animal_row(s, data, cr)
 		_:
 			frame.title.text = tr("PROPERTY_TITLE")
 			var mine := PropertyRules.state(s.character).keys()
@@ -181,6 +189,53 @@ func _animal_row(s: GameSession, data: Dictionary, m: String) -> void:
 	_label(parts[0], "%s · %s" % [str(a.get("text", "")), tr("PROPERTY_FEED").format({"money": Money.format(int(a["feed_cp_day"]))})], UiTheme.MUTED_LABEL)
 	_button(parts[1], "AnimalBuy_" + m, tr("BTN_PROPERTY_BUY").format({"price": Money.format(int(a["price_cp"]))}),
 		PropertyRules.animal_why(s, data, _npc, m), _act("animal", _npc, m))
+	if not MountRules.on(data):
+		return
+	var cap := MountRules.capacity(data, {"monster": m})
+	if cap > 0:
+		_label(parts[0], tr("MOUNT_CARRIES").format({"lb": roundi(cap), "pull": int(a.get("pull", 0))}), UiTheme.MUTED_LABEL)
+	var days := _rent_days
+	_button(parts[1], "AnimalRent_" + m, tr("BTN_MOUNT_RENT").format({"days": days, "price": Money.format(MountRules.rent_price(data, m, days))}),
+		MountRules.rent_why(s, data, _npc, m, days), _act("rent", _npc, "%s:%d" % [m, days]))
+
+
+func _rent_row(data: Dictionary) -> void:
+	var span: Array = MountRules.cfg(data)["rent_days"]
+	var row := HBoxContainer.new()
+	row.name = "RentDays"
+	row.add_theme_constant_override("separation", 8)
+	_box.add_child(row)
+	var l := _label(row, tr("MOUNT_RENT_DAYS_LABEL").format({"days": _rent_days}))
+	l.name = "RentDaysLabel"
+	for spec: Array in [["RentMinus", "−", -1], ["RentPlus", "+", 1]]:
+		var b := Button.new()
+		b.name = spec[0]
+		b.text = spec[1]
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.custom_minimum_size = Vector2(44, 0)
+		var step := int(spec[2])
+		b.disabled = (step < 0 and _rent_days <= int(span[0])) or (step > 0 and _rent_days >= int(span[1]))
+		b.pressed.connect(func() -> void:
+			_rent_days = clampi(_rent_days + step, int(span[0]), int(span[1]))
+			_rebuild.call_deferred())
+		row.add_child(b)
+
+
+func _vehicle_row(s: GameSession, data: Dictionary, v: String) -> void:
+	var parts := _row(v)
+	var d := MountRules.vehicle(data, v)
+	_title(parts[0], str(d["name"]))
+	_label(parts[0], tr("MOUNT_VEHICLE").format({"lb": int(d["capacity_lb"]), "pull": int(d["pull"])}), UiTheme.MUTED_LABEL)
+	_button(parts[1], "VehicleBuy_" + v, tr("BTN_PROPERTY_BUY").format({"price": Money.format(int(d["price_cp"]))}),
+		MountRules.vehicle_why(s, data, _npc, v), _act("vehicle", _npc, v))
+
+
+func _sell_animal_row(s: GameSession, data: Dictionary, cr: Dictionary) -> void:
+	var cid := str(cr["id"])
+	var parts := _row("own_" + cid)
+	_title(parts[0], tr("MOUNT_YOURS").format({"name": cr["name"]}))
+	_button(parts[1], "AnimalSell_" + cid, tr("BTN_MOUNT_SELL").format({"price": Money.format(MountRules.sell_price(data, cr))}),
+		MountRules.sell_why(s, data, _npc, cid), _act("sell_animal", _npc, cid))
 
 
 func _own(s: GameSession, data: Dictionary, id: String) -> void:

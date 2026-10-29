@@ -3709,3 +3709,43 @@ scenarios:
       tools_required: [find_places]
     rubric:
       - "Мастер создаёт место create_place на крае 0, и у комнаты озера (под открытым небом) есть угодья wilds с fish — рыбалка там пойдёт кнопкой"
+
+  - id: mount_buy_by_words
+    title: "Мул словами у барышника — кнопки «Животные» и «Вьюк», не монеты мастера"
+    category: concepts
+    extends: tavern
+    input: "Остап, продай мне мула покрепче — навьючу на него руду из шахты, сам столько не унесу."
+    snapshot:
+      scene:
+        location: {id: brod, name: "Ольховый Брод", type: town}
+        room: {id: brod-gate, name: "Северные ворота", description: "Бревенчатые ворота, у коновязи барышник с лошадьми."}
+        exits:
+          - {id: mine-entrance, name: "Вход в шахту"}
+        npcs:
+          - {id: npc_drover, name: "Остап", role: "барышник", template: commoner, attitude: friendly,
+             animals: ["Верховая лошадь [riding_horse] 75 зм", "Тяжеловоз [draft_horse] 50 зм", "Мул [mule] 8 зм", "Мастиф [mastiff] 25 зм", "Коза [goat] 1 зм", "Телега 15 зм", "Фургон 35 зм"]}
+    expect:
+      max_checks: 0
+      effects: {forbidden_kinds: [coins, give_item, take_item, create_npc]}
+    rubric:
+      - "Остап охотно продаёт мула; цена — только та, что в его строке сцены (8 зм), или мастер отсылает к кнопке «Животные»; денег не списывает, мула не выдаёт эффектом и stock на мула (он уже продаётся) не ставит"
+
+  - id: mount_dealer_camel
+    title: "Караван оставил барышнику верблюда — stock с animal"
+    category: concepts
+    extends: tavern
+    input: "Остап, говорят, вчера степной караван продал тебе верблюда. Покажешь? Если он крепкий — возьму."
+    snapshot:
+      scene:
+        location: {id: brod, name: "Ольховый Брод", type: town}
+        room: {id: brod-gate, name: "Северные ворота", description: "Бревенчатые ворота, у коновязи барышник с лошадьми."}
+        npcs:
+          - {id: npc_drover, name: "Остап", role: "барышник", template: commoner, attitude: friendly,
+             animals: ["Верховая лошадь [riding_horse] 75 зм", "Тяжеловоз [draft_horse] 50 зм", "Мул [mule] 8 зм", "Мастиф [mastiff] 25 зм", "Коза [goat] 1 зм", "Телега 15 зм", "Фургон 35 зм"]}
+    engine:
+      validate:
+        - {kind: stock, status: accept, summary: "Остап продаёт: Верблюд (60 зм)"}
+    expect:
+      effects: {required_kinds_any: [stock], forbidden_kinds: [give_item, coins]}
+    rubric:
+      - "Мастер подтверждает верблюда эффектом stock с npc_id Остапа и animal camel — купить его можно кнопкой «Животные»; верблюда не выдаёт сразу и денег не списывает"

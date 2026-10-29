@@ -4593,8 +4593,20 @@
     },
     "StockEffect": {
       "additionalProperties": false,
-      "description": "A thing the player asks a trader of the scene for and its shelf lacks (0.79.0): «есть у тебя набор травника?».\nA catalog `item_id` (find_items first) or a new `item`; the engine checks the trader is here, the thing is not on\nthe shelf yet, its rarity by the hero's level and rules.trade.stock_make (qty, things a day). The player buys it\nby the «Торговать» button at the engine's price.",
+      "description": "A thing the player asks a trader of the scene for and its shelf lacks (0.79.0): «есть у тебя набор травника?».\nA catalog `item_id` (find_items first) or a new `item`; the engine checks the trader is here, the thing is not on\nthe shelf yet, its rarity by the hero's level and rules.trade.stock_make (qty, things a day). The player buys it\nby the «Торговать» button at the engine's price. 0.86.0: `animal` — an SRD beast id a dealer of the scene now sells\n(a camel, a pony): its price, the way it shortens and its pack the engine derives; bought in the «Животные» window.",
       "properties": {
+        "animal": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Animal"
+        },
         "item": {
           "anyOf": [
             {

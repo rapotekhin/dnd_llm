@@ -106,7 +106,12 @@ static func closed_why(p: Dictionary) -> String:
 
 
 ## A container by id: a thing of this room or a bag of the hero ({} — none). Bags carry their name and kind.
+## v0.7.42: «pack:<id>» / «cart:<id>» — the pack or the vehicle of the hero's beast here (MountRules), with its
+## `capacity_lb`.
 static func target(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+	var mount := MountRules.container(s, data, id)
+	if not mount.is_empty():
+		return mount
 	var bag: Dictionary = bags(s.character).get(id, {})
 	if not bag.is_empty():
 		bag["name"] = bag_name(data, s.character, id)
@@ -167,7 +172,7 @@ static func plan_put(s: GameSession, data: Dictionary, prop_id: String, item_id:
 	if bags(s.character).has(prop_id) and is_carried_kind(data, item_id):
 		return {"reason": "сумку в сумку не кладут"}  # v0.7.22.9
 	var add := float(ItemRules.def_of(data["items"], s.items, item_id).get("weight", 0)) * qty
-	var cap := float(kind(data, str(p["container"]))["capacity_lb"])
+	var cap := float(p["capacity_lb"]) if p.has("capacity_lb") else float(kind(data, str(p["container"]))["capacity_lb"])
 	if weight(data, s.items, p.get("contents", {})) + add > cap:
 		return {"reason": "в %s не влезет: ёмкость %s фнт" % [p["name"], cap]}
 	return {"plan": {"room": s.room_id, "into": prop_id, "item_id": item_id, "qty": qty},

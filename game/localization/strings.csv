@@ -1621,3 +1621,16 @@ WILDS_DIS,"Без снастей — помеха (удочка, сеть)"
 WILDS_STOCK,Запас угодий: {n} из {max} — отрастает по дням
 WILDS_POACH,"Это угодья: {owner}. Без позволения — браконьерство"
 WILDS_UNTIL,Вернётесь к {clock}
+BTN_MOUNT_PACK,Вьюк
+BTN_MOUNT_CART,Повозка
+BTN_MOUNT_RENT,Аренда на {days} дн. — {price}
+BTN_MOUNT_SELL,Продать за {price}
+MOUNT_RENT_DAYS_LABEL,Аренда: {days} дн.
+MOUNT_RENT_DAYS,Столько дней не сдают
+MOUNT_CARRIES,"Вьюк до {lb} фнт, тянет повозку: {pull}"
+MOUNT_VEHICLE,"Везёт до {lb} фнт; нужна упряжка силой {pull} (мул, лошадь — 1, тяжеловоз — 2)"
+MOUNT_YOURS,Ваш: {name}
+MOUNT_NOT_SELLABLE,Это животное здесь не продать
+MOUNT_LOADED,Сначала разгрузите вьюк и повозку
+MOUNT_NO_VEHICLE,Повозок у него нет
+MOUNT_NO_PULLER,"Не во что запрячь: нужно ваше животное рядом, что потянет повозку"

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.85.0"
+PROTOCOL_VERSION = "0.86.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -192,6 +192,7 @@ class SceneNpc(_In):
     eager: bool = False  # a close friend: offers help by itself (0.22.0)
     follows: bool = False  # goes with the hero from room to room (0.33.0)
     under: str = ""  # 0.42.0: the hero's spells on it and until when — «Очарование личности — до 10:35»
+    animals: list[str] = Field(default_factory=list)  # 0.86.0: a dealer's beasts and vehicles — «Мул [mule] 8 зм»
 
 
 class SceneProp(_In):
@@ -1223,13 +1224,15 @@ class StockEffect(_Out):
     """A thing the player asks a trader of the scene for and its shelf lacks (0.79.0): «есть у тебя набор травника?».
     A catalog `item_id` (find_items first) or a new `item`; the engine checks the trader is here, the thing is not on
     the shelf yet, its rarity by the hero's level and rules.trade.stock_make (qty, things a day). The player buys it
-    by the «Торговать» button at the engine's price."""
+    by the «Торговать» button at the engine's price. 0.86.0: `animal` — an SRD beast id a dealer of the scene now sells
+    (a camel, a pony): its price, the way it shortens and its pack the engine derives; bought in the «Животные» window."""
 
     kind: Literal["stock"] = "stock"
-    npc_id: str  # a trader of the scene
+    npc_id: str  # a trader of the scene, or for `animal` — any seller of the scene
     item_id: str | None = None
     item: GeneratedItem | None = None
     qty: int = Field(default=1, ge=1, le=5)
+    animal: str | None = None
 
 
 class PermitEffect(_Out):

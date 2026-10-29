@@ -1585,6 +1585,9 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 		"build": why = PropertyRules.build_why(s, data, id, arg)
 		"repair": why = PropertyRules.repair_why(s, data, id)
 		"animal": why = PropertyRules.animal_why(s, data, id, arg)
+		"rent": why = MountRules.rent_why(s, data, id, arg.get_slice(":", 0), int(arg.get_slice(":", 1)))  # v0.7.42: arg «monster:days»
+		"sell_animal": why = MountRules.sell_why(s, data, id, arg)
+		"vehicle": why = MountRules.vehicle_why(s, data, id, arg)
 		"release": why = "" if not CreatureRules.find(s, s.room_id, id).is_empty() else "CREATURE_NONE"
 		_: why = "PROPERTY_NOT_NOW"
 	if not why.is_empty():
@@ -1607,8 +1610,12 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 		"upgrade": lines = PropertyRules.upgrade(s, data, id, arg)
 		"build": lines = PropertyRules.build(s, data, id, arg)
 		"animal": lines = PropertyRules.buy_animal(s, data, id, arg)
+		"rent": lines = MountRules.rent(s, data, id, arg.get_slice(":", 0), int(arg.get_slice(":", 1)))
+		"sell_animal": lines = MountRules.sell(s, data, id, arg)
+		"vehicle": lines = MountRules.buy_vehicle(s, data, id, arg)
 		"release":
 			var cr := CreatureRules.find(s, s.room_id, id)
+			MountRules._unload(s, data, cr)  # v0.7.42: the pack comes off first
 			PropertyRules._remove_creature(s, id)
 			lines = ["%s отпущен на волю" % cr.get("name", id)]
 	if lines.is_empty():
@@ -2223,6 +2230,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 		var seen := _sneak_past_people(room_id)
 		if not seen.is_empty():
 			lines.append(seen)
+	lines.append_array(MountRules.on_move(session, Catalog.data, from, room_id))  # a beast waits where it cannot go (v0.7.42)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
 	lines.append_array(SiteRules.on_enter(session, Catalog.data, room_id))  # a private room unasked (v0.7.22.24)
 	CreatureRules.follow(session, from, room_id)  # a bound captive on the rope (v0.7.22.11)
@@ -3046,8 +3054,10 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 		_move_to.call_deferred(to, steps, false)
 		return ""
 	if s.room_id != room_before:
+		var waits := MountRules.on_move(s, Catalog.data, room_before, s.room_id)  # v0.7.42
 		CreatureRules.follow(s, room_before, s.room_id)  # v0.7.22.11
 		var moved := TimeRules.on_move(s, Catalog.data, room_before, s.room_id)
+		moved.append_array(waits)
 		ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id, TimeRules.passive_penalty(s, Catalog.data))
 		moved.append_array(ExplorationRules.take_caches(s, Catalog.data, s.room_id))
 		moved.append_array(QuestRules.advance(s, Catalog.data))

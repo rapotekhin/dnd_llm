@@ -25,7 +25,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"services": (n.get("services", []) as Array).map(func(x: Variant) -> String: return "%s [%s]" % [SocialRules.tr_service(data, str(x)), x]),
 			"deal": SocialRules.deal_text(s, data, id),
 			"secrets": SocialRules.secret_hints(s, data, id), "refuses": SocialRules.refuses(s, data, id), "eager": SocialRules.eager(s, data, id),
-			"follows": s.followers.has(id), "under": SpellEffects.npc_spell_text(s, id)})
+			"follows": s.followers.has(id), "under": SpellEffects.npc_spell_text(s, id), "animals": _animals(data, id)})
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
 		summaries["location"] = s.summaries["location:" + loc_id]
@@ -224,6 +224,18 @@ static func _hungry(s: GameSession, id: String) -> String:
 
 
 ## « Болен: хохочущая лихорадка, заразно.» — a sick NPC (v0.7.23.1); its course ends (v0.7.39): « Уже здоров…».
+
+## A dealer's beasts and vehicles for the master (v0.7.42): «Мул [mule] 8 зм».
+static func _animals(data: Dictionary, id: String) -> Array:
+	var out: Array = []
+	if not data["rules"].has("property"):
+		return out
+	for m: String in PropertyRules.animals_of(data, id):
+		out.append("%s [%s] %s" % [data["monsters"][m].get("name", m), m, Money.format(int(PropertyRules.animal_cfg(data, m)["price_cp"]))])
+	if MountRules.on(data):
+		for v: String in MountRules.vehicles_of(data, id):
+			out.append("%s %s" % [MountRules.vehicle(data, v)["name"], Money.format(int(MountRules.vehicle(data, v)["price_cp"]))])
+	return out
 static func _sick(s: GameSession, data: Dictionary, id: String, n: Dictionary) -> String:
 	var d := DiseaseRules.def_of(s, data, DiseaseRules.npc_disease(s, data, id))
 	if d.is_empty():

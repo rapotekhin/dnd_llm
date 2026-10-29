@@ -31,7 +31,7 @@ static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
 		if not w.has("quests"):
 			w["quests"] = {}
 		w["quests"][id] = (gen["quests"][id] as Dictionary).duplicate(true)
-	for bucket: String in ["place_kinds", "place_upgrades", "stations", "contest_kinds"]:  # v0.7.39.8: the master's kinds, upgrades, stations; v0.7.40: games
+	for bucket: String in ["place_kinds", "place_upgrades", "stations", "contest_kinds", "animal_kinds"]:  # v0.7.39.8: the master's kinds, upgrades, stations; v0.7.40: games; v0.7.42: beasts
 		for id: String in gen.get(bucket, {}):
 			if not w.has(bucket):
 				w[bucket] = {}
@@ -44,6 +44,9 @@ static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
 			if not list.has(id):
 				list.append(id)
 			w["rooms"][room]["npcs"] = list
+	for id: String in gen.get("npc_patch", {}):  # v0.7.42: a dealer's new beasts
+		if w["npcs"].has(id):
+			w["npcs"][id].merge(gen["npc_patch"][id], true)
 	return w
 
 
