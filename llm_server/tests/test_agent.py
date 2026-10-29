@@ -623,3 +623,17 @@ def test_a_pinned_check_is_never_skipped(data_dir):
     fn = scripted(("final", {"narration": "Ты осматриваешь зал."}))
     msg, calls, _ = play(data_dir, fn)  # without a pin a turn needs no check
     assert msg["result"]["check_ids"] == [] and calls == []
+
+
+
+def test_engine_refusing_check_values_is_a_refusal_not_a_failed_turn(data_dir):
+    def engine(method, params):
+        return {"error": {"code": -32602, "message": "unknown skill: listening"}}
+
+    def told(messages):
+        returns = [p.content for m in messages for p in getattr(m, "parts", []) if isinstance(p, ToolReturnPart)]
+        return {"narration": str(returns[-1])}
+
+    msg, _, _ = play(data_dir, scripted(("request_check", {"skill": "perception", "dc_tier": "easy", "reason": "a"}),
+                                        ("final", told)), engine)
+    assert msg["result"]["narration"].startswith("Отказ движка: unknown skill")

@@ -11,6 +11,17 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["craft"]
 
 
+## The stations: the engine's (rules.craft.stations) and the world's own — a station the master made with an upgrade
+## (world.stations {id: {name, tools, rent_cp_hour}}, v0.7.39.8).
+static func stations(data: Dictionary) -> Dictionary:
+	var own: Dictionary = data["world"].get("stations", {})
+	if own.is_empty():
+		return cfg(data)["stations"]
+	var out: Dictionary = (cfg(data)["stations"] as Dictionary).duplicate()
+	out.merge(own)
+	return out
+
+
 ## Every recipe the game knows: the rules', the pack's (world.json `recipes`), the master's made ones, and the
 ## template recipes the hero may see now (v0.7.39.1).
 static func all(s: GameSession, data: Dictionary) -> Dictionary:
@@ -269,14 +280,14 @@ static func known(s: GameSession, data: Dictionary) -> Array[String]:
 
 
 static func station_name(data: Dictionary, station: String) -> String:
-	return str(cfg(data)["stations"].get(station, {}).get("name", station))
+	return str(stations(data).get(station, {}).get("name", station))
 
 
 ## A station's `tags` count as it (v0.7.25), a `wild` one is anywhere outside a settlement (a campfire).
 static func station_here(s: GameSession, data: Dictionary, station: String) -> bool:
 	if station.is_empty():
 		return true
-	var st: Dictionary = cfg(data)["stations"].get(station, {})
+	var st: Dictionary = stations(data).get(station, {})
 	var tags: Array = SceneRules.room(s, data["world"], s.room_id).get("tags", [])
 	if tags.has(station) or (st.get("tags", []) as Array).any(func(t: Variant) -> bool: return tags.has(t)):
 		return true
@@ -286,7 +297,7 @@ static func station_here(s: GameSession, data: Dictionary, station: String) -> b
 ## The trader of the room who owns the station and takes rent per hour: {npc, cp} or {} (free).
 static func rent(s: GameSession, data: Dictionary, station: String) -> Dictionary:
 	var pct := float(DevelopmentRules.effect(s.character, data, "craft", "rent_pct", 100.0))
-	var cp := roundi(int(cfg(data)["stations"].get(station, {}).get("rent_cp_hour", 0)) * pct / 100.0)
+	var cp := roundi(int(stations(data).get(station, {}).get("rent_cp_hour", 0)) * pct / 100.0)
 	if station.is_empty() or cp <= 0:
 		return {}
 	for npc_id: String in SceneRules.npcs(s, data["world"], s.room_id):
@@ -727,8 +738,8 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	if not proficient(s.character, tool) and not bool(spec.get("for_course", false)):
 		return {"reason": "герой не владеет: %s — такой рецепт ему не по руке" % BackgroundRules.tool_name(data, tool)}
 	var station := str(spec.get("station", "")) if spec.get("station") != null else ""
-	if not station.is_empty() and not cfg(data)["stations"].has(station):
-		return {"reason": "станции %s нет; можно: %s или без станции" % [station, ", ".join(cfg(data)["stations"].keys())]}
+	if not station.is_empty() and not stations(data).has(station):
+		return {"reason": "станции %s нет; можно: %s или без станции" % [station, ", ".join(stations(data).keys())]}
 	var hours := maxi(int(spec.get("hours", 1)), int(m["hours"][0]))
 	var tier := str(spec.get("dc_tier", "medium"))
 	if not (m["dc_tiers"] as Array).has(tier):

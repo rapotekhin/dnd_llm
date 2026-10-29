@@ -206,6 +206,13 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 93. Протокол 0.83.0 (v0.7.39.8)
+
+- **`property.new_kind`** [`NewPlaceKind` {`name`, `income_cp_day`, `skill`, `hours`, `staff` [`StaffPlace` {`role`, `wage_cp_day`, `max`}], `visitors`, `upgrades` [`NewUpgrade`]}] — вид места мастера; `place_kind` теперь необязателен (одно из двух). Вид и его улучшения движок хранит в мире игры (`s.generated.place_kinds`, `place_upgrades`, `stations` → `world.*`).
+- **Эффект `upgrade`** {`place_id` (`here`), `name`, `text`, `indoor`, `gives`: `UpgradeGives` {`rest`, `storage`, `private`, `station`, `station_new` [`NewStation` {`name`, `tools`}], `income_pct`, `staff_max`, `decay_mult`, `feed_mult`, `produce` [`ProduceRow` {`item_id`, `qty`}], `produce_pct`, `lesson_bonus`}} — улучшение места героя по просьбе; цену и дни ставит движок.
+- **Эффект `world_item`** {`op`: `give` | `take`, `npc_id` | `prop_id`, `item_id` | `item`, `qty`, `cause`} — вещь человека или контейнера комнаты меняется по причине в мире.
+- **`furnish.cause`** — новые вещи в уже обставленной комнате.
+
 ### 92. Протокол 0.82.0 (v0.7.39.7)
 
 - **Метод `engine.find_teachers`** {`turn_id`, `kind`: `skill` | `tool` | `language` | `spell` | `recipe`, `what` — id или русское название} → {`what` — id движка, `teachers` [`FoundTeacher` {`npc_id`, `name`, `role`, `teaches`, `place`, `here`, `course`}], `reason`} — кто из живых людей мира учит этому (`TeachRules`: шаблон SRD, вид лавки, своё `teaches`), сцена и локация героя первыми. Инструмент мастера и сценариста `find_teachers`.

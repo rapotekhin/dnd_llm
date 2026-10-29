@@ -3530,3 +3530,90 @@ scenarios:
       effects: {required_kinds_all: [quest_act], forbidden_kinds: [create_quest, course, create_place], required_fields: [teaches.npc]}
     rubric:
       - "Сценарист приводит учителя в акте: новый человек с шаблоном mage в new_npcs, шаг talk к нему (new:<key>) и teaches {npc: new:<key>, kind: spell, id: fireball (или «Огненный шар» — движок узнаёт название), name}; курса отдельным эффектом и места без шагов нет"
+
+  - id: upgrade_jeweler_bench
+    title: "«Поставлю у себя станок ювелира» — эффект upgrade своему месту, не обстановка и не подарок (просьба автора, v0.7.39.8)"
+    category: concepts
+    extends: tavern
+    input: "Хочу поставить у себя в горнице станок ювелира — буду делать кольца на продажу. Что для этого нужно?"
+    snapshot:
+      scene:
+        location: {id: loc_greymouth, name: "Серое Устье", type: town}
+        room: {id: room_river_house, name: "Дом у реки — горница", description: "Тёплая горница героя: печь, стол у окна, широкая кровать."}
+        exits:
+          - {id: room_market, name: "Рыночная площадь"}
+        npcs: []
+        props:
+          - {prop_id: p1, name: "Печь", description: "Беленая, с лежанкой"}
+          - {prop_id: p2, name: "Стол у окна", description: "Дубовый, светлый"}
+      character:
+        tools: ["Инструменты ювелира [jewelers_tools]"]
+        gold_cp: 8000
+        property: "Имущество (окно «Имущество» на панели): Дом у реки (дом) — с купчей, состояние 95%, есть: Кровать"
+    engine:
+      validate:
+        - {kind: upgrade, summary: "Улучшение для «Дом у реки»: Станок ювелира — 15 зм, 3 дня работы"}
+    expect:
+      effects: {required_kinds_any: [upgrade], forbidden_kinds: [furnish, give_item, coins, recipe]}
+    rubric:
+      - "Мастер предлагает улучшение эффектом upgrade: станок ювелира с новой станцией (station_new с инструментом jewelers_tools); станок не ставится словами и не появляется в обстановке"
+      - "Цену и срок мастер не выдумывает сверх ответа движка (15 зм, 3 дня); заказ — кнопкой в окне «Имущество»"
+
+  - id: property_new_kind_school
+    title: "«Продай флигель — открою школу» — свой вид места new_kind со своими улучшениями (v0.7.39.8)"
+    category: concepts
+    extends: tavern
+    input: "Горм, продай мне пустой флигель за таверной. Открою там школу для детей рыбаков — буду учить грамоте и счёту."
+    snapshot:
+      summaries: {location: "", npcs: {npc_innkeeper: "Горм говорил герою, что флигель за таверной пустует с прошлой зимы и он бы его продал"}}
+      character:
+        gold_cp: 30000
+    engine:
+      validate:
+        - {kind: create_place, summary: "Объект «Флигель за таверной» внутри Серого Устья"}
+        - {kind: property, summary: "Продаётся: Флигель за таверной (школа) за 120 зм, доход 40 мм в день"}
+    expect:
+      effects: {required_kinds_any: [property], forbidden_kinds: [coins, give_item, course], required_fields: [new_kind.name]}
+    rubric:
+      - "Флигель выставлен на продажу эффектом property с new_kind «школа»: учитель в staff с жалованьем, доход с работником, 2–4 своих улучшения с разными gives (например, класс — staff_max или income_pct, библиотека — lesson_bonus, общежитие — rest)"
+      - "Мастер не говорит, что школа уже открыта и флигель уже героя: покупка — кнопкой «Имущество» у Горма"
+
+  - id: furnish_add_with_cause
+    title: "Новая бочка у стойки — furnish с cause в обставленной комнате, не вещь из воздуха (v0.7.39.8)"
+    category: world
+    extends: tavern
+    input: "Помогаю Горму закатить с телеги новую бочку эля и поставить её у стойки."
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p1, name: "Доска объявлений", description: "Листки на ржавых гвоздях у двери"}
+          - {prop_id: p2, name: "Оловянная кружка", description: "Стоит на стойке рядом с Гормом", owner: npc_innkeeper, portable: true}
+          - {prop_id: p3, name: "Очаг", description: "Большой, с закопчённой решёткой"}
+    engine:
+      validate:
+        - {kind: furnish, summary: "Добавлено в комнату (Горм привёз бочку эля): Бочка эля"}
+    expect:
+      effects: {required_kinds_any: [furnish], forbidden_kinds: [give_item, coins, take_item], required_fields: [cause]}
+    rubric:
+      - "Бочка появляется в комнате эффектом furnish с cause (Горм привёз, герой помог закатить), хозяин бочки — Горм; другие вещи комнаты не переобставлены"
+
+  - id: world_item_chest_npc
+    title: "Горм достаёт факелы из своего сундука и несёт в погреб — world_item из контейнера, не героя (v0.7.39.8)"
+    category: world
+    extends: tavern
+    input: "Горм, ты же сам просил помочь с бочками в погребе — а там темно. Достань из своего сундука факелы и снеси их вниз, а я следом."
+    snapshot:
+      summaries: {location: "", npcs: {npc_innkeeper: "Горм попросил героя помочь перетаскать бочки в погребе и обещал за это ужин"}}
+      scene:
+        npcs:
+          - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", template: commoner, attitude: friendly}
+        props:
+          - {prop_id: p1, name: "Очаг", description: "Большой, с закопчённой решёткой"}
+          - {prop_id: p5, name: "Сундук Горма", description: "Окованный сундук за стойкой", owner: npc_innkeeper, container: "сундук", locked: false, contents: "Факел ×2, Верёвка"}
+    engine:
+      validate:
+        - {kind: world_item, summary: "Сундук Горма — убрано: Факел ×2 (Горм отнёс факелы в погреб)"}
+    expect:
+      effects: {required_kinds_any: [world_item], forbidden_kinds: [give_item, take_from, coins]}
+    rubric:
+      - "Факелы уходят из сундука Горма эффектом world_item (op take, prop_id p5, item_id факела, qty 2, cause — Горм отнёс их в погреб); герою факелы не достаются"

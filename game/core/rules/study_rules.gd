@@ -437,6 +437,9 @@ static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 		parts = RollParts.skill(s, data, skill)
 		label = CraftRules.tr_skill(data, skill)
 	RollParts.development(c, data, "study", "lesson_bonus", parts)
+	var own := PropertyRules.here(s, data) if data["rules"].has("property") else ""
+	if not own.is_empty() and PropertyRules.bonus(s, data, own, "lesson_bonus") != 0:  # v0.7.39.8: a library at the hero's place
+		parts.append(RollParts.part(PropertyRules.name_of(s, data, own), PropertyRules.bonus(s, data, own, "lesson_bonus")))
 	if _book_course(s, data, id):
 		RollParts.development(c, data, "study", "book_bonus", parts)
 		adv = adv or bool(DevelopmentRules.effect(c, data, "study", "book_adv", false))

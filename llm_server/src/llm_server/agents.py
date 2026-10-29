@@ -237,9 +237,18 @@ async def request_check(
     if (skill is None) == (save is None):
         # a refusal, not ModelRetry: three of those failed the whole turn (v0.7.22.16, the author's trace)
         return "Отказ: укажи ровно одно — skill (навык) или save (спасбросок) — и вызови снова; или заверши ход без проверки."
-    raw = await t.session.call_engine("engine.check", EngineCheckParams(
-        turn_id=t.params.turn_id, skill=skill, save=save, dc_tier=dc_tier, target_id=target_id,
-        advantage_reason=advantage_reason, sense=sense, tool=tool, argument=argument))
+    from .protocol import ErrorCode
+    from .session import RpcError  # local: session imports this module
+    try:
+        raw = await t.session.call_engine("engine.check", EngineCheckParams(
+            turn_id=t.params.turn_id, skill=skill, save=save, dc_tier=dc_tier, target_id=target_id,
+            advantage_reason=advantage_reason, sense=sense, tool=tool, argument=argument))
+    except RpcError as err:
+        if err.code != ErrorCode.ENGINE_ERROR or err.engine_code != ErrorCode.INVALID_PARAMS:
+            raise
+        # the engine refused the check's values (an unknown skill…): a refusal the model can mend, not a failed turn
+        # (v0.7.39.8, live playtest: ENGINE_ERROR lost the whole turn)
+        return f"Отказ движка: {err}. Поправь skill / save по списку навыков и спасбросков и вызови снова; или заверши ход без проверки."
     r = EngineCheckResult.model_validate(raw)
     t.check_ids.append(r.check_id)
     if r.note:
@@ -264,11 +273,11 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     cast (игрок колдует: spell, slot_level, on_self — на себя), condition (наложить/снять состояние: reason,
     save {ability, dc_tier}, tag, duration, cause, by, repeat_save, ends_on_damage), use_feature (умение с
     ограниченными использованиями), use_item (выпить зелье и т. п.), advance_time (прошло время),
-    furnish (обставить комнату при первом входе), take_prop (взять вещь комнаты), prop_state (вещь открыта,
+    furnish (обставить комнату при первом входе; в обставленную — только с cause), take_prop (взять вещь комнаты), prop_state (вещь открыта,
     сломана, сожжена, сдвинута), note (память о событии короткой фразой по-русски), equip (игрок надевает или
     снимает снаряжение: slot, item_id или пусто; slot=all — раздеться), stock (торговцу сцены — вещь его ремесла, которой
     нет в товаре); create_npc, create_place, create_quest,
-    door, owner и другие — по своей теме правил (все виды и поля — в схеме effect).
+    door, owner, upgrade (улучшение своего места), world_item (вещь NPC или контейнера по причине в мире) и другие — по своей теме правил (все виды и поля — в схеме effect).
     Движок проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы он применился."""
     t = ctx.deps
     if isinstance(effect, dict):

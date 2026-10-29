@@ -5008,6 +5008,25 @@
 			"spoils_days": 30,
 			"description": "Связка вяленой речной рыбы."
 		},
+		"fresh_fish": {
+			"name": "Свежая рыба",
+			"item_type": "consumable",
+			"value_cp": 3,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"spoils_days": 2,
+			"description": "Утренний улов: окунь и лещ, пока не уснувшие толком."
+		},
+		"silver_bar": {
+			"name": "Брусок серебра",
+			"item_type": "gear",
+			"value_cp": 500,
+			"weight": 1,
+			"properties": [],
+			"stack": true,
+			"description": "Литой брусок чистого серебра — ювелиру на кольца и подвески."
+		},
 		"honey_jar": {
 			"name": "Горшочек мёда",
 			"item_type": "gear",

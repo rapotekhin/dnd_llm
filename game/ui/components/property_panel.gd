@@ -139,7 +139,7 @@ func _sale_row(s: GameSession, data: Dictionary, id: String) -> void:
 	var parts := _row(id)
 	var col: Control = parts[0]
 	var p := PropertyRules.prop(s, data, id)
-	var k: Dictionary = PropertyRules.cfg(data)["kinds"].get(str(p.get("kind", "")), {})
+	var k: Dictionary = PropertyRules.kinds(data).get(str(p.get("kind", "")), {})
 	_title(col, str(p.get("name", id)))
 	var site := GameState.world().site(str(p.get("site", "")))
 	if not str(site.get("description", "")).is_empty():
@@ -218,9 +218,9 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 			_offer(hr, "PropertyFire_" + who.validate_node_name(), tr("BTN_PROPERTY_FIRE"), PropertyRules.fire_why(s, data, id, who), _act("fire", id, who))
 	var ups: Array[String] = []
 	for u: Variant in st.get("upgrades", []):
-		ups.append(str(PropertyRules.cfg(data)["upgrades"].get(str(u), {}).get("name", u)))
+		ups.append(str(PropertyRules.ups(data).get(str(u), {}).get("name", u)))
 	for pd: Dictionary in st.get("pending", []):
-		ups.append(tr("PROPERTY_PENDING").format({"name": PropertyRules.cfg(data)["upgrades"][str(pd["up"])]["name"], "day": int(pd["ready"])}))
+		ups.append(tr("PROPERTY_PENDING").format({"name": PropertyRules.ups(data)[str(pd["up"])]["name"], "day": int(pd["ready"])}))
 	var b: Dictionary = st.get("building", {})
 	if not b.is_empty():
 		ups.append(tr("PROPERTY_PENDING").format({"name": PropertyRules.cfg(data)["build"][str(b["id"])]["name"], "day": int(b["ready"])}))
@@ -261,7 +261,7 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 	for up: String in PropertyRules.upgrades_for(s, data, id):
 		if PropertyRules.has_upgrade(s.character, id, up) or not PropertyRules.pending(s.character, id, up).is_empty():
 			continue
-		var u: Dictionary = PropertyRules.cfg(data)["upgrades"][up]
+		var u: Dictionary = PropertyRules.ups(data)[up]
 		var ob := _offer(offers, "PropertyUpgrade_" + up, tr("BTN_PROPERTY_UPGRADE").format({"name": u["name"], "price": Money.format(int(u["price_cp"])),
 			"days": int(u.get("days", 0))}), PropertyRules.upgrade_why(s, data, id, up), _act("upgrade", id, up))
 		if ob.tooltip_text.is_empty():

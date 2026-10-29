@@ -51,6 +51,7 @@ class RpcError(Exception):
     def __init__(self, code: ErrorCode, message: str | None = None):
         super().__init__(message or code.name.lower())
         self.code = code
+        self.engine_code: int | None = None  # the engine's own error code of an ENGINE_ERROR
 
     def to_json(self) -> dict[str, Any]:
         reason = self.code.name.lower()
@@ -309,7 +310,9 @@ class Session:
             raise RpcError(ErrorCode.ENGINE_TIMEOUT) from None
         except EngineCallError as err:
             log.info("%s id=%s -> engine error %s", method, call_id, err.error.get("code"))
-            raise RpcError(ErrorCode.ENGINE_ERROR, str(err)) from None
+            failed = RpcError(ErrorCode.ENGINE_ERROR, str(err))
+            failed.engine_code = err.error.get("code")  # INVALID_PARAMS — the engine refused the values, not a crash
+            raise failed from None
         finally:
             self._pending.pop(call_id, None)
         log.info("%s id=%s ok (%.0f ms)", method, call_id, _ms(started))

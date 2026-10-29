@@ -31,6 +31,11 @@ static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
 		if not w.has("quests"):
 			w["quests"] = {}
 		w["quests"][id] = (gen["quests"][id] as Dictionary).duplicate(true)
+	for bucket: String in ["place_kinds", "place_upgrades", "stations"]:  # v0.7.39.8: the master's kinds, upgrades, stations
+		for id: String in gen.get(bucket, {}):
+			if not w.has(bucket):
+				w[bucket] = {}
+			w[bucket][id] = (gen[bucket][id] as Dictionary).duplicate(true)
 	for id: String in gen.get("npcs", {}):
 		w["npcs"][id] = (gen["npcs"][id] as Dictionary).duplicate(true)
 		var room := str(gen.get("npc_rooms", {}).get(id, ""))
@@ -487,13 +492,12 @@ static func _site_of(data: Dictionary, st: Dictionary, npc_keys: Array) -> Dicti
 static func _object_of(data: Dictionary, st: Dictionary, npc_keys: Array, site: Dictionary) -> Dictionary:
 	if not data["rules"].has("property"):
 		return site
-	var pc: Dictionary = data["rules"]["property"]
 	var who_ok := func(ref: String) -> bool:
 		return (ref.begins_with("new:") and npc_keys.has(ref.trim_prefix("new:"))) or ref == "new" or data["world"]["npcs"].has(ref)
 	var k := str(st.get("kind", "")) if st.get("kind") != null else ""
 	if not k.is_empty():
-		if not pc["kinds"].has(k):
-			return {"reason": "kind объекта — из %s" % ", ".join(pc["kinds"].keys())}
+		if not PropertyRules.kinds(data).has(k):
+			return {"reason": "kind объекта — из %s" % ", ".join(PropertyRules.kinds(data).keys())}
 		site["kind"] = k
 	if st.get("owner_role") != null and not str(st["owner_role"]).strip_edges().is_empty():
 		site["owner_role"] = str(st["owner_role"]).strip_edges().left(40)
@@ -510,8 +514,8 @@ static func _object_of(data: Dictionary, st: Dictionary, npc_keys: Array, site: 
 		site["staff"] = staff
 	var ups: Array = []
 	for u: Variant in st.get("upgrades", []) if st.get("upgrades") is Array else []:
-		if not pc["upgrades"].has(str(u)):
-			return {"reason": "улучшение %s — из %s" % [u, ", ".join(pc["upgrades"].keys())]}
+		if not PropertyRules.ups(data).has(str(u)):
+			return {"reason": "улучшение %s — из %s" % [u, ", ".join(PropertyRules.ups(data).keys())]}
 		ups.append(str(u))
 	if not ups.is_empty():
 		site["upgrades"] = ups

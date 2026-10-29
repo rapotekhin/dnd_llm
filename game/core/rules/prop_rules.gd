@@ -12,8 +12,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 
 static func needs_furnish(s: GameSession, room_id: String) -> bool:
-	return not s.props.has(room_id) or (s.props[room_id] as Array).all(func(p: Dictionary) -> bool:
-		return bool(p.get("dropped", false)) or p.has("wares") or bool(p.get("seized", false)))  # the hero's things and a trader's wares are no furnishing
+	return not s.props.has(room_id) or (s.props[room_id] as Array).all(func(p: Dictionary) -> bool: return not furnished(p))
 
 
 ## The things still in the room (a taken one is gone).
@@ -85,20 +84,27 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 	return out
 
 
-## Checks a `furnish` effect: {"plan": {room, props}, "summary"} or {"reason"}.
+## Checks a `furnish` effect: {"plan": {room, props, add}, "summary"} or {"reason"}. A furnished room takes more only
+## with a `cause` in the world (v0.7.39.8: a thing brought, built, left) — within the same caps, the room's things
+## counted.
 static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var room := s.room_id
-	if not needs_furnish(s, room):
-		return {"reason": "комната уже обставлена — описывай вещи из списка «Вокруг»"}
+	var cause := str(e.get("cause", "")).strip_edges() if e.get("cause") != null else ""
+	var add := not needs_furnish(s, room)
+	if add and cause.length() < 8:
+		return {"reason": "комната уже обставлена — описывай вещи из списка «Вокруг»; добавить вещь можно только с cause — что в мире её принесло (купили, построили, оставили)"}
 	var specs: Array = e.get("props", [])
 	var cap := int(cfg(data)["max_per_room"])
-	if specs.is_empty() or specs.size() > cap:
-		return {"reason": "обстановка — от 1 до %d вещей" % cap}
+	var had: Array = room_props(s, room).filter(func(p: Dictionary) -> bool: return furnished(p)) if add else []
+	if specs.is_empty() or specs.size() + had.size() > cap:
+		return {"reason": "обстановка — от 1 до %d вещей в комнате (уже %d)" % [cap, had.size()]}
 	var level := str(int(s.character.get("level", 1)))
 	var value_cap := int(cfg(data)["room_value_cap_cp"].get(level, cfg(data)["room_value_cap_cp"]["5"]))
 	var item_cap := int(cfg(data)["item_value_cap_cp"])
 	var here := s.npcs_here(WorldView.new(data["world"]).world, room)
 	var total := 0
+	for p: Dictionary in had:
+		total += int(ItemRules.def_of(data["items"], s.items, str(p.get("item_id", ""))).get("value_cp", 0)) if not str(p.get("item_id", "")).is_empty() else 0
 	var gift := 0  # what nobody owns inside the containers: the master's gift (v0.7.18.1)
 	var made := {}
 	var props: Array = []
@@ -141,20 +147,34 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 		return {"reason": "переносные вещи комнаты стоят %d мм при пределе %d для %s уровня — убери дорогое" % [total, value_cap, level]}
 	if gift > EffectEngine.budget_left(s, data):
 		return {"reason": "ничейное в контейнерах стоит %d мм — больше, чем мастер может дать до долгого отдыха (%d мм); положи меньше или дай им хозяина" % [gift, EffectEngine.budget_left(s, data)]}
-	return {"plan": {"room": room, "props": props, "made": made, "reward": gift},
-		"summary": "Обстановка: " + ", ".join(props.map(func(p: Dictionary) -> String: return p["name"]))}
+	return {"plan": {"room": room, "props": props, "made": made, "reward": gift, "add": add, "cause": cause},
+		"summary": ("Добавлено в комнату (%s): " % cause if add else "Обстановка: ") + ", ".join(props.map(func(p: Dictionary) -> String: return p["name"]))}
+
+
+## A thing of the room's furnishing, not the hero's dropped one, a seized one or a trader's wares.
+static func furnished(p: Dictionary) -> bool:
+	return not (bool(p.get("dropped", false)) or p.has("wares") or bool(p.get("seized", false)))
 
 
 static func apply_furnish(s: GameSession, plan: Dictionary) -> void:
 	s.items.merge(plan.get("made", {}))  # things the master made inside the containers (v0.7.18.1)
-	var list: Array = []
+	var old: Array = s.props.get(str(plan["room"]), [])
 	var n := 0
+	if bool(plan.get("add", false)):  # v0.7.39.8: more things in a furnished room, numbered on
+		for p: Dictionary in old:
+			var pid := str(p.get("id", ""))
+			if pid.begins_with("p") and pid.substr(1).is_valid_int():
+				n = maxi(n, int(pid.substr(1)))
+	var list: Array = []
 	for p: Dictionary in plan["props"]:
 		n += 1
 		var prop := p.duplicate()
 		prop["id"] = "p%d" % n
 		list.append(prop)
-	list.append_array(s.props.get(str(plan["room"]), []))  # what the hero dropped and a trader's wares stay, after (v0.7.18.2)
+	if bool(plan.get("add", false)):
+		s.props[str(plan["room"])] = old + list
+		return
+	list.append_array(old)  # what the hero dropped and a trader's wares stay, after (v0.7.18.2)
 	s.props[str(plan["room"])] = list
 
 

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.82.0"
+PROTOCOL_VERSION = "0.83.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -662,6 +662,7 @@ class FurnishEffect(_Out):
 
     kind: Literal["furnish"] = "furnish"
     props: Annotated[list[PropSpec], AfterValidator(lambda v: v[:10])] = Field(min_length=1)  # at most 10; no maxItems (Gemini)
+    cause: str | None = Field(default=None, max_length=160)  # 0.83.0: more things in a furnished room — what brought them
 
 
 class TakeFromEffect(_Out):
@@ -1320,19 +1321,102 @@ class BankEffect(_Out):
     ltv_pct: int | None = Field(default=None, ge=0, le=100)
 
 
+class NewStation(_Out):
+    """A crafting station an upgrade brings (0.83.0): «станок ювелира» for the jeweler's tools."""
+
+    name: str = Field(min_length=3, max_length=40)
+    tools: list[str] = Field(min_length=1)  # tools of rules.craft.tools (jewelers_tools, smiths_tools…)
+
+
+class ProduceRow(_Out):
+    item_id: str  # a catalog item (find_items), cheap and not magic
+    qty: int = Field(ge=1, le=10)  # a day
+
+
+class UpgradeGives(_Out):
+    """What an upgrade gives — only what the engine runs (0.83.0); the engine sets the price and the days by it."""
+
+    rest: bool | None = None  # a bed: the long rest free
+    storage: bool | None = None  # a chest of the hero
+    private: bool | None = None  # a lock: strangers keep out
+    station: str | None = None  # a known station (forge, workbench, alchemy, hearth…)
+    station_new: NewStation | None = None  # a new station with its tools
+    income_pct: int | None = Field(default=None, ge=1, le=50)  # the place's income +%
+    staff_max: int | None = Field(default=None, ge=1, le=2)  # more hands (a teacher, a fisher)
+    decay_mult: float | None = Field(default=None, ge=0.5, le=0.9)
+    feed_mult: float | None = Field(default=None, ge=0.5, le=0.9)
+    produce: list[ProduceRow] | None = None  # goods into the place's stock each day the hands work
+    produce_pct: int | None = Field(default=None, ge=1, le=100)  # the produce +%
+    lesson_bonus: int | None = Field(default=None, ge=1, le=2)  # to lesson checks at the place
+
+
+class NewUpgrade(_Out):
+    name: str = Field(min_length=3, max_length=40)  # «Лодка», «Библиотека»
+    text: str | None = Field(default=None, max_length=120)  # what it does, for the window
+    indoor: bool = False  # needs a roof
+    gives: UpgradeGives
+
+
+class StaffPlace(_Out):
+    role: str = Field(min_length=2, max_length=30)  # «учитель», «рыбак»
+    wage_cp_day: int = Field(ge=1)
+    max: int = Field(default=1, ge=1, le=4)
+
+
+class NewPlaceKind(_Out):
+    """A kind of place the master makes (0.83.0): a school, a fishing pier — its income, shift skill, staff by roles,
+    buyers and its own upgrades (2–6), checked against rules.property.kind_make."""
+
+    name: str = Field(min_length=3, max_length=40)  # lower case: «школа», «рыбацкий причал»
+    income_cp_day: int = Field(default=0, ge=0)  # with hands at work
+    skill: str | None = None  # the hero's own shift: a skill of rules.skills (needed with income)
+    hours: int | None = Field(default=None, ge=1, le=12)
+    staff: list[StaffPlace] = Field(default_factory=list)
+    visitors: int | None = Field(default=None, ge=0)  # buyers a day of a shelf of goods (a trading place)
+    upgrades: list[NewUpgrade] = Field(default_factory=list)
+
+
 class PropertyEffect(_Out):
     """A place the player wants to buy and the world lacks on sale (0.59.0): «куплю дом у реки». A site of this location
     (or `new` — the one create_place made in this turn) on sale by a seller of the scene (or `new` — the person
     create_npc made); the price and the income within rules.property.make. The hero buys it by the button and gets the
-    deed at the registry — the engine's acts."""
+    deed at the registry — the engine's acts. A place of a kind the engine lacks (a school, a pier) — `new_kind`
+    (0.83.0)."""
 
     kind: Literal["property"] = "property"
     site_id: str  # "here" (the hero's site), a room or site id of this location, or "new"
     seller_id: str  # an NPC of the scene or "new"
-    place_kind: str = Field(max_length=24)  # 0.80.0: a kind of rules.property.kinds, checked by the engine
+    place_kind: str | None = Field(default=None, max_length=24)  # 0.80.0: a kind of rules.property.kinds, checked by the engine
+    new_kind: NewPlaceKind | None = None  # 0.83.0: or a kind of the master's own
     name: str | None = Field(default=None, max_length=60)
     price_cp: int = Field(ge=1)
     income_cp_day: int | None = Field(default=None, ge=0)
+
+
+class UpgradeEffect(_Out):
+    """An upgrade the player asks for at its own place (0.83.0): «хочу поставить сюда станок ювелира». The engine sets
+    its price and days by what it gives; the hero orders it by the button in «Имущество» and waits for the work."""
+
+    kind: Literal["upgrade"] = "upgrade"
+    place_id: str = "here"  # the hero's place it stands in, or the id of its place
+    name: str = Field(min_length=3, max_length=40)
+    text: str | None = Field(default=None, max_length=120)
+    indoor: bool = False
+    gives: UpgradeGives
+
+
+class WorldItemEffect(_Out):
+    """The master moves a thing of the world with a cause (0.83.0): a person got or lost a thing, a room's chest
+    filled or emptied — not the hero's own things (those are give_item / take_item and the hero's acts)."""
+
+    kind: Literal["world_item"] = "world_item"
+    op: Literal["give", "take"]
+    npc_id: str | None = None  # a person of the world (its pockets)
+    prop_id: str | None = None  # or a container of the hero's room
+    item_id: str | None = None
+    item: GeneratedItem | None = None  # give: a new thing (after engine.find_items)
+    qty: int = Field(default=1, ge=1, le=20)
+    cause: str = Field(min_length=8, max_length=160)  # what in the world did it
 
 
 class JobEffect(_Out):
@@ -1526,7 +1610,7 @@ Effect = Annotated[
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect
-    | OwnerEffect | DoorEffect | QuestActEffect,
+    | OwnerEffect | DoorEffect | QuestActEffect | UpgradeEffect | WorldItemEffect,
     Field(discriminator="kind"),
 ]
 

@@ -52,6 +52,8 @@
 	"apples": {"name": "Яблоки", "item_type": "consumable", "value_cp": 1, "weight": 0.5, "properties": [], "stack": true, "spoils_days": 10, "description": "Пара крепких яблок из сада: можно съесть сразу."},
 	"cheese": {"name": "Головка сыра", "item_type": "consumable", "value_cp": 10, "weight": 1, "properties": [], "stack": true, "spoils_days": 20, "description": "Твёрдый козий сыр, хорошо лежит в дороге."},
 	"dried_fish": {"name": "Вяленая рыба", "item_type": "consumable", "value_cp": 5, "weight": 0.5, "properties": [], "stack": true, "spoils_days": 30, "description": "Связка вяленой речной рыбы."},
+	"fresh_fish": {"name": "Свежая рыба", "item_type": "consumable", "value_cp": 3, "weight": 1, "properties": [], "stack": true, "spoils_days": 2, "description": "Утренний улов: окунь и лещ, пока не уснувшие толком."},
+	"silver_bar": {"name": "Брусок серебра", "item_type": "gear", "value_cp": 500, "weight": 1, "properties": [], "stack": true, "description": "Литой брусок чистого серебра — ювелиру на кольца и подвески."},
 	"honey_jar": {"name": "Горшочек мёда", "item_type": "gear", "value_cp": 20, "weight": 1, "properties": [], "stack": true},
 	"chalice": {"name": "Чаша", "item_type": "gear", "value_cp": 20, "weight": 1, "properties": [], "stack": true, "description": "Медная или глиняная чаша — для воды, вина или обряда."},
 	"teacup": {"name": "Чашка", "item_type": "gear", "value_cp": 1, "weight": 0.5, "properties": [], "stack": true},

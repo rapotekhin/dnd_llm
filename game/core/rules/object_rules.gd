@@ -21,10 +21,10 @@ static func kind_id(s: GameSession, data: Dictionary, sid: String) -> String:
 	if not pid.is_empty() and PropertyRules.owned(s.character, pid):
 		return PropertyRules.kind_id(s, data, pid)
 	var site := WorldView.new(data["world"]).site(sid)
-	if PropertyRules.cfg(data)["kinds"].has(str(site.get("kind", ""))):
+	if PropertyRules.kinds(data).has(str(site.get("kind", ""))):
 		return str(site["kind"])
 	for t: Variant in site.get("tags", []):
-		if PropertyRules.cfg(data)["kinds"].has(str(t)):
+		if PropertyRules.kinds(data).has(str(t)):
 			return str(t)
 	return ""
 
@@ -73,7 +73,7 @@ static func upgrades(s: GameSession, data: Dictionary, sid: String) -> Array[Str
 	var out: Array[String] = []
 	if not data["rules"].has("property"):
 		return out
-	var ups: Dictionary = PropertyRules.cfg(data)["upgrades"]
+	var ups: Dictionary = PropertyRules.ups(data)
 	var ids: Array = (WorldView.new(data["world"]).site(sid).get("upgrades", []) as Array).duplicate()
 	var pid := property_of(s, data, sid)
 	if not pid.is_empty():

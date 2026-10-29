@@ -314,8 +314,18 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var made := PropertyRules.make(s, data, e)
 			if made.has("reason"):
 				return {"reason": made["reason"]}
-			return {"plan": made, "summary": "Продаётся: %s (%s) за %s%s" % [made["def"]["name"], PropertyRules.cfg(data)["kinds"][made["def"]["kind"]]["name"],
+			return {"plan": made, "summary": "Продаётся: %s (%s) за %s%s" % [made["def"]["name"], (made["made"]["def"] if made.has("made") else PropertyRules.kinds(data)[made["def"]["kind"]])["name"],
 				Money.format(int(made["def"]["price_cp"])), ", доход %s в день" % Money.format(int(made["def"]["income_cp_day"])) if made["def"].has("income_cp_day") else ""]}
+		"upgrade":  # v0.7.39.8: an upgrade asked at the hero's place, priced by the engine
+			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "upgrade"):
+				return {"reason": "одно новое улучшение за ход"}
+			var up := PropertyRules.plan_asked(s, data, e)
+			if up.has("reason"):
+				return {"reason": up["reason"]}
+			return {"plan": up, "summary": "Улучшение для «%s»: %s — %s, %s работы" % [PropertyRules.name_of(s, data, str(up["place"])), up["def"]["name"],
+				Money.format(int(up["def"]["price_cp"])), PropertyRules._days(int(up["def"]["days"]))]}
+		"world_item":  # v0.7.39.8: the master moves a thing of a person or a room's container, with a cause
+			return WorldItemRules.plan(s, data, e)
 		"course":  # v0.7.30: a scene NPC teaches a course
 			var ce := e.duplicate()
 			if ce.get("recipe") is Dictionary:
@@ -985,6 +995,10 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(JobRules.apply_make(s, _data, plan))
 		"property":
 			_extra_lines.append_array(PropertyRules.apply_make(s, _data, plan, str(_made.get("site", "")), str(_made.get("npc", ""))))
+		"upgrade":
+			_extra_lines.append_array(PropertyRules.apply_asked(s, _data, plan))
+		"world_item":
+			_extra_lines.append_array(WorldItemRules.apply(s, _data, plan))
 		"course":
 			_extra_lines.append_array(StudyRules.apply_make(s, _data, plan))
 		"supplier":
