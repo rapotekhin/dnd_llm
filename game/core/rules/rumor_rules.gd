@@ -396,7 +396,7 @@ static func snapshot(s: GameSession, data: Dictionary) -> Array[String]:
 		known_at(s, data, _loc(data, s.room_id)).filter(func(r: Dictionary) -> bool: return int(r["weight"]) >= int(cfg(data)["plain_min_weight"]))
 	var names: Dictionary = cfg(data)["weight_names"]
 	for r: Dictionary in list.slice(0, int(cfg(data)["snapshot_max"])):
-		var tags: Array[String] = [str(names[str(r["weight"])])]
+		var tags: Array[String] = [str(names[str(int(r["weight"]))])]
 		if bool(r.get("notice", false)):
 			tags.append("объявление")
 		if heard(s, str(r["id"])):

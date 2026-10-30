@@ -210,3 +210,11 @@ func test_the_snapshot_holds_the_place_rumours_only() -> void:
 	assert_str(" ".join(RumorRules.snapshot(s, data))).not_contains("[far]")  # not arrived yet
 	assert_bool(far["arrive"].has("brod")).is_true()
 	assert_bool(TurnSnapshot.build(s, data, 2000)["scene"].has("rumors")).is_true()
+
+
+func test_the_snapshot_after_a_load_reads_the_weight_as_a_number() -> void:
+	var s := _session()
+	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))  # the weight comes back as 2.0
+	back.mode = GameSession.MODE_SOCIAL
+	back.npc_id = "npc_innkeeper"
+	assert_str(" ".join(RumorRules.snapshot(back, data))).contains("[mill_coins]")
