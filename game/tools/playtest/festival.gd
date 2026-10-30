@@ -27,8 +27,8 @@ func run() -> void:
 	var time_l: Label = find(screen(), "HeroTime")
 	step("the date on the panel", time_l != null and time_l.text.contains("3 Жатвеня, день Пряжи"), time_l.text if time_l != null else "")
 	var fest: Label = find(screen(), "FestivalLine")
-	step("the market day ahead on the panel", fest != null and fest.text.contains("Торговый день — через 4 дня"), fest.text if fest != null else "")
-	await shot("market_day")
+	step("the fair ahead on the panel", fest != null and fest.text.contains("Бродская ярмарка — через 5 дней"), fest.text if fest != null else "")
+	await shot("fair_ahead")
 
 	await _go(gs, SQUARE)
 	var sell_usual := TradeRules.sell_price(s, data, "npc_merchant", "longsword")

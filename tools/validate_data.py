@@ -169,6 +169,10 @@ def check_calendar(cal, world, npcs, rooms) -> list[str]:
             errors.append(f"{where}: когда — weekday, day или month + day")
         if "month" in f and f["month"] not in mids:
             errors.append(f"{where}: нет месяца {f['month']}")
+        if "every" in f and (not isinstance(f["every"], int) or f["every"] < 1 or "month" in f):  # v0.7.49.1
+            errors.append(f"{where}: every — целое ≥ 1, только у праздника по дню месяца или дню недели")
+        if "phase" in f and (not isinstance(f["phase"], int) or not 0 <= f["phase"] < f.get("every", 1)):
+            errors.append(f"{where}: phase — от 0 до every − 1")
         if "day" in f and "month" in f and f["month"] in mids and not (1 <= f["day"] <= months[mids.index(f["month"])]["days"]):
             errors.append(f"{where}: day вне месяца")
         if f.get("location") not in world["locations"]:

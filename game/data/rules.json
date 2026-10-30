@@ -1193,7 +1193,7 @@
 		"_hide_skills": "v0.7.38.5: the skills a quest's hidden thing may be found by (QuestItem.skill); Investigation finds any of them too",
 		"max_new_npcs": 2,
 		"quest_depth": 2,
-		"_difficulties": "v0.7.39.6 (the author): the difficulty of a quest — its acts and steps, its fights and their difficulty by the DMG (encounter_xp of the level, raw XP of the foes; a fight of the difficulty holds between half and the whole of its budget, the boss of the last act — up to the next one), a choice in the finale, a sequel; the reward by the hero's level (1..5) at the quest's making: reward_cp at its end, xp shared by the acts (class XP only for the dangerous or a major one), the giver's attitude. `warn` — «Точно?» before taking it.",
+		"_difficulties": "v0.7.39.6 (the author): the difficulty of a quest — its acts and steps, its fights and their difficulty by the DMG (encounter_xp of the level, raw XP of the foes; a fight of the difficulty holds between half and the whole of its budget, the boss of the last act — up to the next one), a choice in the finale, a sequel; the reward by the hero's level (1..5) at the quest's making: reward_cp at its end, xp shared by the acts (class XP only for the dangerous or a major one), the giver's attitude. `warn` — «Точно?» before taking it. v0.7.49.1: an act before the last leaves a step for each act after it; the last act may go past the total steps up to act_max.last_steps (the ending always has room) and has at least one fight (its boss).",
 		"difficulties": {
 			"easy": {
 				"name": "простое",
@@ -1376,6 +1376,7 @@
 			"items": 3,
 			"encounters": 4,
 			"steps": 5,
+			"last_steps": 3,
 			"parts": 4,
 			"choices": 3,
 			"changes": 2

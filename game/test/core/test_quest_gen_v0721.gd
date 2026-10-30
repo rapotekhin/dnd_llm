@@ -181,6 +181,34 @@ func test_a_hard_quest_by_acts_with_parts_a_lair_its_boss_and_the_choice() -> vo
 	assert_bool(s.quests_done.has(id)).is_true()
 
 
+func test_an_early_act_leaves_steps_for_the_last_and_the_last_may_go_past_the_total() -> void:  # v0.7.49.1
+	var id := _taken(_skeleton("medium", 2, "Муж с лесосеки"))  # medium: 2–4 steps in all
+	assert_str(QuestGen.act_frame(s, data, id)).contains("шагов в акте 1–3")
+	var visit := func(room: String) -> Dictionary: return {"text": "Дойти: " + room, "kind": "visit", "target": room}
+	var act1 := {"quest_id": id, "act": 1, "steps": [visit.call("mine-flooded"), visit.call("outpost-road"),
+		visit.call("pushcha-trail"), {"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"}]}
+	assert_str(str(_act(act1)["reason"])).contains("не больше 3 шагов")
+	(act1["steps"] as Array).remove_at(2)
+	var r := _act(act1)
+	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
+	for room: String in ["mine-flooded", "outpost-road"]:
+		s.room_id = room
+		s.visited.append(room)
+		QuestRules.advance(s, data)
+	s.room_id = "brod-tavern-hall"
+	QuestRules.talk(s, data, id)
+	assert_array(QuestRules.awaiting(s, data["world"])).contains([id])
+	assert_str(QuestGen.act_frame(s, data, id)).contains("последнего акта").contains("шагов в акте 1–3").contains("боёв 1–2")
+	var act2 := {"quest_id": id, "act": 2, "encounters": [_wolf_at("pushcha-edge")], "steps": [
+		{"text": "Отбиться от волка", "kind": "fight", "target": "pack"}, visit.call("outpost-tower"),
+		{"text": "Рассказать Мире", "kind": "talk", "target": "npc_serving"}, visit.call("mine-entrance")]}
+	assert_str(str(_act(act2)["reason"])).contains("не больше 3 шагов")
+	(act2["steps"] as Array).pop_back()
+	r = _act(act2)  # 3 + 3 steps — past the 4 of a medium quest, but the ending has its room
+	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
+	assert_int(int(QuestRules.quest(data["world"], id)["made_steps"])).is_equal(6)
+
+
 func test_a_boss_and_a_choice_belong_to_the_last_act() -> void:
 	var id := _taken(_skeleton("hard", 2))
 	var boss := {"key": "lead", "room": "outpost-tower", "kind": "target", "boss": true, "enemies": [{"monster": "gnoll", "name": "Хорт"}]}

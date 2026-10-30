@@ -3,7 +3,8 @@ extends RefCounted
 ## The calendar and festivals (roadmap v0.7.44). A pack's `calendar` {start {month, day, weekday}, week [day names],
 ## seasons {id: name}, months [{id, name, of, days, season}], festivals {id: {name, month?, day?, weekday?, days,
 ## location, flags, guests {npc: room}, trade {buy_pct, sell_pct, tags}, text}}} turns the game's day count into a
-## date. A festival recurs: `month` + `day` — once a year, `day` alone — every month, `weekday` — every week. While it
+## date. A festival recurs: `month` + `day` — once a year, `day` alone — every month, `weekday` — every week; `every` N
+## (v0.7.49.1) thins a monthly or weekly one to every N-th month or week, `phase` picks which of them. While it
 ## is on, its `flags` are world flags (rooms' and traders' variants, pack quests with `festival`), its `guests` stand
 ## in their rooms (SceneRules.npcs), and the traders of its location sell and buy at its `trade` percents (TradeRules);
 ## when it ends the flags it set are taken off. The master's `festival` effect adds one of its own — a feast, a fair
@@ -54,8 +55,11 @@ static func date(world: Dictionary, game_day: int) -> Dictionary:
 		rest -= int(months[mi]["days"])
 		mi += 1
 	var week: Array = c.get("week", [])
+	var abs_day := year * len + posmod(offset, len)
 	return {"year": year, "month": mi, "day": rest + 1, "season": str(months[mi].get("season", "")),
-		"weekday": posmod(int(start.get("weekday", 0)) + game_day - 1, maxi(1, week.size()))}
+		"weekday": posmod(int(start.get("weekday", 0)) + game_day - 1, maxi(1, week.size())),
+		"week_n": floori(float(abs_day - posmod(int(start.get("weekday", 0)) + game_day - 1, maxi(1, week.size()))) / maxi(1, week.size())),
+		"month_n": year * months.size() + mi}
 
 
 ## «3 Жатвеня, день Торга» — the date of a game day in words; «день N» without a calendar.
@@ -80,8 +84,11 @@ static func season_text(world: Dictionary, game_day: int) -> String:
 ## Does a pack festival start on this game day?
 static func _starts(world: Dictionary, f: Dictionary, game_day: int) -> bool:
 	var d := date(world, game_day)
+	var every := maxi(1, int(f.get("every", 1)))
 	if f.has("weekday"):
-		return int(d["weekday"]) == int(f["weekday"])
+		return int(d["weekday"]) == int(f["weekday"]) and posmod(int(d["week_n"]), every) == posmod(int(f.get("phase", 0)), every)
+	if not f.has("month") and posmod(int(d["month_n"]), every) != posmod(int(f.get("phase", 0)), every):
+		return false
 	if f.has("month") and str(cal(world)["months"][int(d["month"])]["id"]) != str(f["month"]):
 		return false
 	return f.has("day") and int(d["day"]) == int(f["day"])

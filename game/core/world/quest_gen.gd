@@ -340,13 +340,17 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String) -> Str
 	var facts := s.chronicle_tail(data["world"], 8)
 	if not facts.is_empty():
 		out.append("Летопись (последнее): " + "; ".join(facts))
-	var steps_left := [maxi(0, int(d["steps"][0]) - int(q.get("made_steps", 0))), int(d["steps"][1]) - int(q.get("made_steps", 0))]
-	var fights_left := [maxi(0, int(d["fights"][0]) - int(q.get("fights", 0))), int(d["fights"][1]) - int(q.get("fights", 0))]
+	var steps_cap := act_steps_cap(data, q, d, n)
+	var fights_cap := act_fights_cap(q, d, last)
+	var steps_min := maxi(1, int(d["steps"][0]) - int(q.get("made_steps", 0))) if last else 1
+	var fights_min := maxi(0, int(d["fights"][0]) - int(q.get("fights", 0))) if last else 0
 	var tier := str(d["fight"])
 	var floor_tier := tier_step(data, tier, -1)
-	out.append("Рамка акта %d из %d: шагов на всё задание осталось %d–%d (в акте 1–%d), боёв осталось %d–%d%s." % [n + 1, acts.size(),
-		steps_left[0] if last else 1, steps_left[1], mini(int(cfg(data)["act_max"]["steps"]), steps_left[1]), fights_left[0] if last else 0, fights_left[1],
-		" — в этом последнем акте добери до минимума" if last else ""])
+	if last:
+		out.append("Рамка последнего акта %d из %d: шагов в акте %d–%d — сколько нужно, чтобы довести задание до конца; боёв %d–%d." % [n + 1, acts.size(),
+			steps_min, steps_cap, fights_min, fights_cap])
+	else:
+		out.append("Рамка акта %d из %d: шагов в акте 1–%d (по шагу оставлено на каждый следующий акт), боёв 0–%d." % [n + 1, acts.size(), steps_cap, fights_cap])
 	out.append("Бой задания — «%s»: опыт врагов %d–%d на бой (уровень героя %d)%s." % [tier, tier_xp(data, floor_tier, level) + 1 if not floor_tier.is_empty() else 1,
 		tier_xp(data, tier, level), level, ("; главарь (boss) в последнем акте — до %d" % tier_xp(data, tier_step(data, tier, 1) if not tier_step(data, tier, 1).is_empty() else tier, level)) if bool(d["boss"]) else ""])
 	if last and bool(d["choice"]):
@@ -382,6 +386,24 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String) -> Str
 	return "\n".join(out)
 
 
+## How many steps act `n` may have (v0.7.49.1): an act before the last leaves one step for each act after it within the
+## difficulty's total; the last act finishes the quest and may go past the total: what is left of it, but at least
+## act_max.last_steps (the earlier acts spent it all — the ending still needs its steps), never past act_max.steps.
+static func act_steps_cap(data: Dictionary, q: Dictionary, d: Dictionary, n: int) -> int:
+	var mx: Dictionary = cfg(data)["act_max"]
+	var left := int(d["steps"][1]) - int(q.get("made_steps", 0))
+	var later := (q["acts"] as Array).size() - n - 1
+	if later <= 0:
+		return clampi(left, int(mx.get("last_steps", 3)), int(mx["steps"]))
+	return clampi(left - later, 1, int(mx["steps"]))
+
+
+## How many fights an act may have: what is left of the difficulty's total, and one at least in the last act (its boss).
+static func act_fights_cap(q: Dictionary, d: Dictionary, last: bool) -> int:
+	var left := maxi(0, int(d["fights"][1]) - int(q.get("fights", 0)))
+	return maxi(left, 1) if last else left
+
+
 ## Checks a `quest_act`: {plan, summary} or {reason}.
 static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
 	var mx: Dictionary = cfg(data)["act_max"]
@@ -403,8 +425,9 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	if raw.is_empty() or raw.size() > int(mx["steps"]):
 		return {"reason": "шагов в акте — от 1 до %d" % int(mx["steps"])}
 	var made := int(q.get("made_steps", 0)) + raw.size()
-	if made > int(d["steps"][1]):
-		return {"reason": "у «%s» задания всего не больше %d шагов, с этими — %d" % [d["name"], int(d["steps"][1]), made]}
+	var cap := act_steps_cap(data, q, d, n)
+	if raw.size() > cap:
+		return {"reason": "у «%s» задания в этом акте не больше %d шагов (по шагу оставлено на каждый следующий акт), сейчас %d" % [d["name"], cap, raw.size()]}
 	if last and made < int(d["steps"][0]):
 		return {"reason": "у «%s» задания всего не меньше %d шагов — в последнем акте их нужно больше (сейчас %d)" % [d["name"], int(d["steps"][0]), made]}
 	var steps: Array = []
@@ -436,8 +459,8 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 			return {"reason": "вещь %s не нужна ни одному шагу — find (спрятанная) или item_id в talk / visit" % it["key"]}
 	var fights := used.filter(func(u: String) -> bool: return u.begins_with("enc:") or u.begins_with("pack:")).size()
 	var total := int(q.get("fights", 0)) + fights
-	if total > int(d["fights"][1]):
-		return {"reason": "боёв у «%s» задания — не больше %d, с этим актом %d" % [d["name"], int(d["fights"][1]), total]}
+	if fights > act_fights_cap(q, d, last):
+		return {"reason": "боёв у «%s» задания в этом акте — не больше %d, сейчас %d" % [d["name"], act_fights_cap(q, d, last), fights]}
 	if last and total < int(d["fights"][0]):
 		return {"reason": "боёв у «%s» задания — не меньше %d: в последнем акте добавь бой (encounters и шаг fight), сейчас %d" % [d["name"], int(d["fights"][0]), total]}
 	var choices: Array = []

@@ -50,6 +50,20 @@ func test_the_fair_sets_its_flags_for_its_days_and_takes_them_off() -> void:
 	assert_array(SceneRules.npcs(s, data["world"], "brod-square")).not_contains(["npc_pedlar"])
 
 
+func test_the_fair_and_the_market_day_take_turns_about_every_two_weeks() -> void:  # v0.7.49.1: not every week
+	var w: Dictionary = data["world"]
+	var fs: Dictionary = w["calendar"]["festivals"]
+	var starts: Array[int] = []
+	for day in range(1, CalendarRules.year_days(w) + 1):
+		for id: String in ["fair", "market_day"]:
+			if CalendarRules.began(w, fs[id], day) == day:
+				starts.append(day)
+	assert_int(starts.size()).is_equal(8)  # four fairs and four market days in a year of 112 days
+	for i in range(1, starts.size()):
+		assert_int(starts[i] - starts[i - 1]).is_between(12, 16)
+	assert_int(CalendarRules.next_start(w, fs["fair"], 6)).is_equal(6 + 28)
+
+
 func test_a_flag_of_the_world_is_not_taken_off_by_the_calendar() -> void:
 	var s := _session(5)
 	s.flags.append("fair")  # set by something else before the fair
@@ -86,9 +100,8 @@ func test_the_panel_and_the_master_see_the_nearest_festivals() -> void:
 	var s := _session(2)
 	var near := CalendarRules.upcoming(s, data, data["world"])
 	assert_bool(near.is_empty()).is_false()
-	assert_str(str(near[0]["name"])).is_equal("Торговый день")
-	assert_int(int(near[0]["in"])).is_equal(3)
-	assert_str(str(near[1]["name"])).is_equal("Бродская ярмарка")
+	assert_str(str(near[0]["name"])).is_equal("Бродская ярмарка")
+	assert_int(int(near[0]["in"])).is_equal(4)
 	var snap := TurnSnapshot.build(s, data, 2000)
 	assert_str(str(snap["scene"]["time_of_day"])).contains("Жатвеня")
 	assert_str(" ".join(snap["scene"]["calendar"])).contains("Дожинки")
