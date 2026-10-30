@@ -206,6 +206,10 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 105. Протокол 0.95.0 (v0.7.50)
+
+Фракции: эффект `faction` (`create` или `faction_id` с `delta` и `why`), обязательное поле `faction` у `NewNpc`, `NewEncounter`, `ActEncounter`; `scene.factions` — строки «имя (id, вид): ступень».
+
 ### 104. Протокол 0.94.0 (v0.7.49.3)
 
 - **`ActFact.defeat`, `ActStep.defeat: bool | None`** — бой шага акта: `true` — только победить, `false` — достаточно пройти (прокрасться мимо незамеченным и выйти другим путём), не задано — по виду боя (цель, логово, главарь — победить; охрана, засада — можно пройти). В факте шага движок пишет `defeat: true`, проход — `s.encounters_passed`.

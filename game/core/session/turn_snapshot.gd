@@ -57,6 +57,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"calendar": CalendarRules.snapshot(s, data, data["world"]),  # v0.7.44: festivals on and near
 			"weather": WeatherRules.text(s, data),  # v0.7.46
 			"rumors": RumorRules.snapshot(s, data),  # v0.7.47
+			"factions": FactionRules.snapshot(s, data, s.room_id),  # v0.7.50
 			"shrine": FaithRules.scene_text(s, data),  # v0.7.49
 		},
 		"world": world_info(s, data),

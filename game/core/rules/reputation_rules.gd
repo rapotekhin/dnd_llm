@@ -83,6 +83,9 @@ static func refresh(s: GameSession, data: Dictionary) -> void:
 			var a := int(table[str(step(s, data, loc))])
 			if a != 0:
 				s.attitude_base[id] = a
+		var f := FactionRules.attitude_bonus(s, data, id)  # v0.7.50
+		if f != 0:
+			s.attitude_base[id] = int(s.attitude_base.get(id, 0)) + f
 
 
 ## The price percent of the trader's place: `side` "buy" (the hero pays) or "sell" (the trader pays).

@@ -174,6 +174,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String, memory: Stri
 	lines.append("%s: отношение хуже" % who)
 	lines.append_array(ReputationRules.add(s, data, world.location_id(s.room_id), int(ReputationRules.cfg(data)["points"].get(rep_key, 0)), why))  # v0.7.17
 	lines.append_array(BondRules.on_deed(s, data, npc_id, deed, why))  # v0.7.31
+	lines.append_array(FactionRules.on_crime(s, data, npc_id, "theft"))  # v0.7.50
 	match reaction_kind(data, npc_id):
 		"fight":
 			s.pending_fight = [{"monster": _template(data, npc), "name": who, "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0}]

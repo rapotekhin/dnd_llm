@@ -244,6 +244,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     items = (ids["items"] - set(rules.get("items_exclude", []))) | set(world.get("items", {}))
 
     rooms, npcs = world["rooms"], world["npcs"]
+    factions = set(world.get("factions", {})) | set(world.get("orgs", {}))  # v0.7.50: an org is a faction
+    errors += [f"NPC {k}: нет фракции {n.get('faction')}" for k, n in npcs.items() if n.get("faction") not in factions]
     game_rules = json.loads((ROOT / "game" / "data" / "rules.json").read_text(encoding="utf-8"))
     services = {**game_rules["item_rules"]["services"], **world.get("services", {})}
     craft = game_rules["craft"]
@@ -409,6 +411,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         errors += [f"комната {rid}: зверь {b} — не монстр SRD" for b in room.get("beasts", []) if b not in ids["monsters"]]  # v0.7.43: wild ones to tame
         enc = room.get("encounter")
         if enc:
+            if enc.get("faction", next(iter(factions), None)) not in factions:  # v0.7.50: every foe is somebody's
+                errors.append(f"комната {rid}: встреча {enc['id']} — нет фракции {enc.get('faction')}")
             foes = enc["enemies"] + [e for w in enc.get("waves", []) for e in w["enemies"]] + enc.get("help", {}).get("enemies", [])
             errors += [f"комната {rid}: встреча {enc['id']} — нет монстра {e['monster']}" for e in foes if e["monster"] not in ids["monsters"]]
             errors += [f"комната {rid}: в добыче нет предмета {x}" for x in enc.get("loot", {}).get("items", {}) if x not in items]

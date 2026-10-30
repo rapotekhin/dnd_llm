@@ -30,6 +30,9 @@ static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 	for id: String in s.followers:
 		if foe_npcs.has(id) or (foe_homes.has(home_location(world, id)) and not home_location(world, id).is_empty()):
 			continue  # not against the hero's own victim, nor against its own people
+		var own := FactionRules.of_npc(s, data, id)
+		if foes.any(func(f: Variant) -> bool: return f is Dictionary and not own.is_empty() and FactionRules.of_foe(data, {}, f) == own):
+			continue  # nor against its own faction (v0.7.50)
 		var n := world.npc(id)
 		var mon := str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
 		if data["monsters"].has(mon):

@@ -2122,6 +2122,45 @@ scenarios:
     rubric:
       - "Ферн забирает пленника, чтобы свести к страже: передача проведена эффектом owner на c2 (с наградой или даром), монеты отдельно не начисляются; это не продажа в рабство"
 
+  - id: faction_new_npc_has_one
+    title: "Новый человек — с фракцией: житель Брода из списка, а не новая (v0.7.50)"
+    category: world
+    extends: tavern
+    input: "Бруно, а кто в городе печёт хлеб? Как его найти?"
+    snapshot:
+      scene:
+        factions: ["Жители Ольхового Брода (brod_folk, settlement): нейтрально", "Вольный люд Марки (wild_folk, people): нейтрально"]
+    expect:
+      effects: {required_kinds_any: [create_npc, create_place]}
+    rubric:
+      - "У созданного человека поле faction — brod_folk, новая фракция не заведена"
+
+  - id: faction_guards_of_the_house
+    title: "Стража чародея — его фракция, а не дикие звери (находка автора, v0.7.50)"
+    category: world
+    extends: tavern
+    input: "Ищу дорогу к башне чародея Велемира за рекой. Мне говорили, там есть сторожевые мастифы и заколдованные мечи. Эй, Бруно, покажи, где она!"
+    snapshot:
+      scene:
+        factions: ["Жители Ольхового Брода (brod_folk, settlement): нейтрально", "Дикие звери (wild_beasts, beasts): нейтрально"]
+    rubric:
+      - "Если мастер создаёт башню с боем или стражей, у боя указана фракция дома чародея, а не wild_beasts; если ничего не создаёт, мастер просто отвечает словами и это тоже верно"
+
+  - id: faction_standing_for_a_deed
+    title: "Поступок, о котором узнала фракция, — эффект faction с причиной (v0.7.50)"
+    category: world
+    extends: tavern
+    input: "Говорю Сычу: я вытащил ваших двоих из-под ареста ополчения, вот они, живые. Пусть крысы это запомнят."
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_guildhead, name: "Сыч", role: "глава Ночных крыс", template: thug, attitude: neutral}
+        factions: ["Ночные крысы (night_rats, org): нейтрально"]
+    expect:
+      effects: {forbidden_kinds: [coins, give_item]}
+    rubric:
+      - "Мастер признаёт поступок и повышает отношение эффектом faction (faction_id night_rats, delta положительный, why), либо честно требует проверки или доказательств; союз словами не объявлен"
+
   - id: truce_not_a_prisoner
     title: "Перемирие — не плен: с существом говорят на равных (проверка исправлений #10, v0.7.22.17)"
     category: consequences

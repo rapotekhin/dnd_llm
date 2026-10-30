@@ -133,6 +133,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "calendar": scene.get("calendar", []),  # festivals on and near (0.88.0)
                 "weather": scene.get("weather", ""),  # the location's weather (0.90.0)
                 "rumors": scene.get("rumors", []),  # what the place or the NPC knows (0.91.0)
+                "factions": scene.get("factions", []),  # 0.95.0
                 "shrine": scene.get("shrine", ""),  # the shrine of the room (0.93.0)
             },
             "character": {

@@ -192,7 +192,7 @@ static func entry_why(s: GameSession, data: Dictionary, id: String) -> String:
 	var d := def(s, data, id)
 	if not d.has("entry_cp"):
 		return "ORG_NO_ENTRY"
-	if member(s.character, id) or SiteRules.permitted(s, data, hideout_site(s, data, id)):
+	if member(s.character, id) or SiteRules.permitted(s, data, hideout_site(s, data, id)) or FactionRules.friendly(s, data, id):  # v0.7.50: friends walk in
 		return "ORG_ENTRY_OPEN"
 	if view(s.character).get(id, {}).has("expelled_day"):
 		return "ORG_ENTRY_REFUSED"

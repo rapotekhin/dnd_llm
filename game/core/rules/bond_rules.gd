@@ -114,6 +114,7 @@ static func add(s: GameSession, data: Dictionary, npc_id: String, delta: int, wh
 	var after := word(c, data, npc_id)
 	if after != before and not after.is_empty():
 		lines.append("%s: связь — %s" % [who, after])
+	lines.append_array(FactionRules.on_bond(s, data, npc_id, delta))  # v0.7.50
 	return lines
 
 

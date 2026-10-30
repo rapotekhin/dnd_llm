@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.94.0"
+PROTOCOL_VERSION = "0.95.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -238,6 +238,7 @@ class Scene(_In):
     wilds: list[str] = Field(default_factory=list)  # 0.85.0: hunting grounds and fishing waters here with their stock
     calendar: list[str] = Field(default_factory=list)  # 0.88.0: festivals on now and near: «Дожинки (Ольховый Брод) — через 9 дней, 12 Жатвеня: …»
     weather: str = ""  # 0.90.0: the location's weather by the engine: «ливень — стеной льёт…; герой под крышей»
+    factions: list[str] = Field(default_factory=list)  # 0.95.0: of the people here and those the hero met: «Культ Пепла (ash_cult, cult): враг»
     rumors: list[str] = Field(default_factory=list)  # 0.91.0: what the NPC or the place knows: «[mill_coins] на старой мельнице… (заметный; герой уже слышал)»
     shrine: str = ""  # 0.93.0: the shrine of the room — its god, the commandment, the hero's standing there
     summons: list[str] = Field(default_factory=list)  # 0.49.0: creatures a spell called to go with the hero — «Волк 1 (Призыв зверей, до конца концентрации)»
@@ -746,6 +747,8 @@ class NewNpc(_Out):
     age: str | None = None
     build: str | None = None
     height: str | None = None
+    # 0.95.0: every person has one: an id from the scene's «Фракции», or a name — a new name makes a new local faction
+    faction: str = Field(min_length=2, max_length=40)
     description: str = Field(default="", max_length=300)
     personality: str = Field(default="", max_length=300)
     monster: str = "commoner"
@@ -774,6 +777,7 @@ class NewEnemy(_Out):
 
 class NewEncounter(_Out):
     enemies: list[NewEnemy] = Field(min_length=1, max_length=4)
+    faction: str = Field(min_length=2, max_length=40)  # 0.95.0: whose they are: an id or a name, a guard's — its master's
     boss: bool = False  # 0.81.0: in a quest act's place — its leader (the last act of a hard or deadly quest)
 
 
@@ -983,6 +987,7 @@ class ActEncounter(_Out):
     room: str
     kind: Literal["ambush", "guard", "target"]
     enemies: list[NewEnemy] = Field(min_length=1, max_length=4)
+    faction: str = Field(min_length=2, max_length=40)  # 0.95.0: as in NewEncounter
     boss: bool = False
     text: str = Field(default="", max_length=200)
 
@@ -1457,6 +1462,28 @@ class HeistEffect(_Out):
     text: str = Field(default="", max_length=300)
 
 
+class NewFaction(_Out):
+    """A faction the world lacks (0.95.0): `scope` here — this location's, global — the whole world's; `hostile` — its
+    foes attack strangers."""
+
+    name: str = Field(min_length=2, max_length=40)
+    kind: Literal["people", "beasts", "monsters", "undead", "org", "cult", "household"] = "people"
+    scope: Literal["here", "global"] = "here"
+    description: str = Field(default="", max_length=240)
+    hostile: bool = True
+
+
+class FactionEffect(_Out):
+    """A faction made (`create`), or the hero's standing with one moved for a deed its people learned of (0.95.0):
+    `faction_id`, `delta` within ±10, `why`; once a day per faction. Gifts, crimes, quests, bonds count by themselves."""
+
+    kind: Literal["faction"] = "faction"
+    create: NewFaction | None = None
+    faction_id: str | None = None
+    delta: int = Field(default=0, ge=-10, le=10)
+    why: str = Field(default="", max_length=80)
+
+
 class OrgEffect(_Out):
     """An organization the world lacks (0.65.0): a thieves' band, a smugglers' ring, a guild around an NPC of the scene
     as its head; the hideout is the scene when it is private. Joining, ranks, the cut and jobs are the buttons of the
@@ -1779,7 +1806,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | LetterReplyEffect | VowEffect | GodEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | LetterReplyEffect | VowEffect | GodEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | FactionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

@@ -1393,6 +1393,28 @@
 			"hard": {"name": "Сложная", "check_bonus": -5}
 		}
 	},
+	"factions": {
+		"_doc": "Factions (v0.7.50, FactionRules): every NPC and foe belongs to one. Steps by the standing −100…100 (`attitude` — what a stranger of the faction starts with); friendly and up — its foes keep the peace, its private places open (not of the kinds in no_private), an org's hideout is free; enemy — its people do not talk. `sources` — points by the engine's facts (a crime is counted by its kind once known), bond_share of a bond's change goes to the member's faction (head_factor for its head), a settlement's faction is its reputation (settlement_scale points of standing to one point). by_type — the faction of a foe without one by its SRD type; folk — of a person whose place has no settlement. calm — «Успокоить» beasts by Animal Handling. master_max — the master's `faction` once a day.",
+		"steps": [
+			{"id": "enemy", "at": -100, "name": "враг", "attitude": -2},
+			{"id": "unfriendly", "at": -49, "name": "неприязнь", "attitude": -1},
+			{"id": "neutral", "at": -10, "name": "нейтрально", "attitude": 0},
+			{"id": "friendly", "at": 25, "name": "приязнь", "attitude": 1},
+			{"id": "allied", "at": 60, "name": "союзник", "attitude": 2}
+		],
+		"sources": {"murder": -40, "assault": -15, "theft": -15, "fight": -5, "quest_done": 10, "calm": 10, "tame": 15, "hunt": -3},
+		"bond_share": 0.5,
+		"head_factor": 2,
+		"settlement_scale": 5,
+		"by_type": {"beast": "wild_beasts", "undead": "the_dead"},
+		"folk": "wild_folk",
+		"no_private": ["settlement", "beasts"],
+		"no_fight_minus": ["beasts", "undead", "monsters"],
+		"kinds": ["people", "settlement", "beasts", "monsters", "undead", "org", "cult", "household"],
+		"calm": {"base_dc": 10, "per_cr": 2},
+		"master_max": 10,
+		"why_kept": 4
+	},
 	"followers": {
 		"_doc": "NPCs who go with the hero (v0.7.20.3, FollowRules): the effect npc_follow — to one with an attitude of at least min_attitude or won over by a check this turn; at most max at once. v0.7.39.1: with the needs on a follower eats a portion of the hero's food a day; unfed — attitude −1 a day, after hungry_days it goes home; a long rest feeds it.",
 		"min_attitude": 2,
@@ -2856,7 +2878,7 @@
 		"reinforce_delay": 1,
 		"parley": {
 			"_doc": "Parley in a fight (v0.6.2; a challenge since v0.7.5): every try costs the action and rolls Intimidation or Persuasion against DC = base_dc + the best WIS save of intelligent foes + per_cr × the highest CR among them + per_defeated for every foe out of the fight + per_bloodied for every foe below half HP + hard (an encounter of the pack with \"parley\": \"hard\" — finales, fanatics), not below min_dc. `successes` before `failures` win: the skill of the deciding success sets the outcome (Intimidation — surrender or flight, Persuasion — truce); `failures` — they will not listen until the end of the fight.",
-			"skills": ["intimidation", "persuasion"],
+			"skills": ["intimidation", "persuasion", "animal_handling"],
 			"base_dc": 12,
 			"per_cr": 1,
 			"per_defeated": -2,

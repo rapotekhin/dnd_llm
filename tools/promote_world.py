@@ -116,6 +116,15 @@ def _free(taken: dict, want: str) -> str:
     return out
 
 
+def faction_of(world: dict, gen: dict, fid: str) -> str:
+    """A faction of the master comes with whoever belongs to it; a person made before factions — the free folk."""
+    made = gen.get("factions", {})
+    if fid in made:
+        world.setdefault("factions", {}).setdefault(fid, {k: v for k, v in made[fid].items() if k != "generated"})
+        return fid
+    return fid or "wild_folk"
+
+
 def promote_npc(world: dict, gen: dict, nid: str, new_id: str, ids: dict[str, str]) -> str:
     d = gen["npcs"][nid]
     room = ids.get(gen.get("npc_rooms", {}).get(nid, ""), gen.get("npc_rooms", {}).get(nid, ""))
@@ -126,6 +135,7 @@ def promote_npc(world: dict, gen: dict, nid: str, new_id: str, ids: dict[str, st
     new_id = _free(world["npcs"], new_id or "npc_" + slug(d.get("name", nid)))
     ids[nid] = new_id
     npc = _clean(d)
+    npc["faction"] = faction_of(world, gen, str(npc.get("faction", "")))
     npc["links"] = [dict(l, npc_id=ids.get(l["npc_id"], l["npc_id"])) for l in npc.get("links", [])
                     if ids.get(l["npc_id"], l["npc_id"]) in world["npcs"]]
     if not npc["links"]:
@@ -170,6 +180,8 @@ def promote_place(world: dict, gen: dict, rid: str, new_id: str, ids: dict[str, 
         room["npcs"] = []
         if room.get("encounter"):
             room["encounter"]["id"] = ids[r] + "_enc"
+            if room["encounter"].get("faction"):
+                room["encounter"]["faction"] = faction_of(world, gen, room["encounter"]["faction"])
         world["rooms"][ids[r]] = room
     world["rooms"][origin].setdefault("exits", []).append(ids[entry])
     edges = world["rooms"][origin].get("open_edges", [])

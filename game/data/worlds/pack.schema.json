@@ -110,8 +110,26 @@
 		},
 		"world": {
 			"type": "object",
-			"required": ["start_room", "locations", "sites", "rooms", "npcs"],
+			"required": ["start_room", "locations", "sites", "rooms", "npcs", "factions"],
 			"properties": {
+				"factions": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"required": ["name", "kind", "scope"],
+						"properties": {
+							"name": {"$ref": "#/$defs/nonempty"},
+							"kind": {"enum": ["people", "settlement", "beasts", "monsters", "undead", "org", "cult", "household"]},
+							"scope": {"type": ["string", "array"]},
+							"location": {"type": "string"},
+							"hostile": {"type": "boolean"},
+							"friendable": {"type": "boolean"},
+							"start": {"type": "integer"},
+							"description": {"type": "string"}
+						},
+						"additionalProperties": false
+					}
+				},
 				"start_room": {"type": "string"},
 				"items": {
 					"type": "object",
@@ -315,6 +333,7 @@
 								"properties": {
 									"id": {"$ref": "#/$defs/nonempty"},
 									"enemies": {"$ref": "#/$defs/foes"},
+									"faction": {"$ref": "#/$defs/nonempty"},
 									"ambush": {"type": "boolean"},
 									"boss": {"type": "boolean"},
 									"parley": {"enum": ["hard"]},
@@ -366,10 +385,11 @@
 					"type": "object",
 					"additionalProperties": {
 						"type": "object",
-						"required": ["name", "role", "gender"],
+						"required": ["name", "role", "gender", "faction"],
 						"properties": {
 							"name": {"$ref": "#/$defs/nonempty"},
 							"role": {"$ref": "#/$defs/nonempty"},
+							"faction": {"$ref": "#/$defs/nonempty"},
 							"gender": {"enum": ["male", "female", "other"]},
 							"trader": {"type": "boolean"},
 							"trade_kind": {"type": "string"},

@@ -1785,3 +1785,9 @@ CC_GOD_NEED,Бог — жрец и паладин служат богу
 CC_GOD_NONE,Без бога
 CC_GOD_PICK,Выберите бога
 CC_GOD_TEXT,{text}. Заповедь: {law}
+JOURNAL_TAB_FACTIONS,Фракции
+JOURNAL_FACTION_MEMBERS,"Знакомые: {names}"
+BTN_ENCOUNTER_CALM,"Успокоить (Уход за животными, Сл {dc})"
+ENCOUNTER_PARLEY_SAY_ANIMAL_HANDLING,"Медленно выхожу, не глядя зверям в глаза, и успокаиваю их"
+COMBAT_PARLEY_TIP_ANIMAL_HANDLING,"Действие. Как переговоры: нужно 3 успеха раньше 2 провалов. Звери отступают, дикие звери начинают считать вас своим"
+COMBAT_FOE_FACTION,"Фракция: {name}"

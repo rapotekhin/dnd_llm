@@ -711,7 +711,7 @@ static func _plan_encounter(data: Dictionary, e: Dictionary, tier: String, level
 		return {"reason": "бой %s не по силам: %d опыта врагов при пределе %d (бой «%s», уровень %d)" % [key, xp, cap, tier, level]}
 	if xp <= floor:
 		return {"reason": "бой %s слишком лёгкий для этой сложности: %d опыта врагов, нужно больше %d" % [key, xp, floor]}
-	return {"enemies": enemies, "xp": xp, "boss": boss, "loot": {"coins_cp": 0, "items": {}}}
+	return {"enemies": enemies, "xp": xp, "boss": boss, "loot": {"coins_cp": 0, "items": {}}, "faction": _str(e, "faction")}
 
 
 ## The act's thing: {key, id, def, name, given} or hidden {…, room, text, dc, skill}; or {reason}.
@@ -985,7 +985,8 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 		var foes: Array = (e["enemies"] as Array).duplicate(true)
 		for f: Dictionary in foes:
 			f.erase("named")
-		var enc := {"id": "%s_%s" % [qid, str(e["key"]).replace(":", "_")], "enemies": foes, "loot": e["loot"], "quest": qid}
+		var enc := {"id": "%s_%s" % [qid, str(e["key"]).replace(":", "_")], "enemies": foes, "loot": e["loot"], "quest": qid,
+			"faction": FactionRules.ensure(s, data, str(e.get("faction", "")), "monsters", true)}  # v0.7.50
 		if bool(e.get("ambush", false)):
 			enc["ambush"] = true
 		if bool(e.get("boss", false)):

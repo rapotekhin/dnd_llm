@@ -68,6 +68,8 @@ var encounters_done: Array[String] = []
 ## Encounters the hero slipped past unseen — out of the room by another way than in (v0.7.49.3): a quest's
 ## «пройти стражу» is done, the foes still there.
 var encounters_passed: Array[String] = []
+var encounters_peace: Array[String] = []  # met as friends (v0.7.50)
+var factions: Dictionary = {}  # the hero's standing: {id: {pts, met_day, rest, why, master_day}} (v0.7.50)
 var dead_npcs: Array[String] = []
 ## The «Красться» toggle of exploration (v0.6.2).
 var sneaking: bool = false
@@ -496,6 +498,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"combat": combat,
 		"encounters_done": encounters_done,
 		"encounters_passed": encounters_passed,
+		"encounters_peace": encounters_peace,
+		"factions": factions,
 		"dead_npcs": dead_npcs,
 		"sneaking": sneaking,
 		"minute": minute,
@@ -604,6 +608,9 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.encounters_done.append(str(e))
 	for e: Variant in d.get("encounters_passed", []):
 		s.encounters_passed.append(str(e))
+	for e: Variant in d.get("encounters_peace", []):
+		s.encounters_peace.append(str(e))
+	s.factions = (d.get("factions", {}) as Dictionary).duplicate(true)
 	for n: Variant in d.get("dead_npcs", []):
 		s.dead_npcs.append(str(n))
 	s.sneaking = bool(d.get("sneaking", false))

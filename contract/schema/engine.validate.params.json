@@ -118,6 +118,12 @@
           "title": "Enemies",
           "type": "array"
         },
+        "faction": {
+          "maxLength": 40,
+          "minLength": 2,
+          "title": "Faction",
+          "type": "string"
+        },
         "key": {
           "maxLength": 20,
           "minLength": 1,
@@ -148,7 +154,8 @@
         "key",
         "room",
         "kind",
-        "enemies"
+        "enemies",
+        "faction"
       ],
       "title": "ActEncounter",
       "type": "object"
@@ -1818,6 +1825,56 @@
       "title": "EquipEffect",
       "type": "object"
     },
+    "FactionEffect": {
+      "additionalProperties": false,
+      "description": "A faction made (`create`), or the hero's standing with one moved for a deed its people learned of (0.95.0):\n`faction_id`, `delta` within ±10, `why`; once a day per faction. Gifts, crimes, quests, bonds count by themselves.",
+      "properties": {
+        "create": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NewFaction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "delta": {
+          "default": 0,
+          "maximum": 10,
+          "minimum": -10,
+          "title": "Delta",
+          "type": "integer"
+        },
+        "faction_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Faction Id"
+        },
+        "kind": {
+          "const": "faction",
+          "default": "faction",
+          "title": "Kind",
+          "type": "string"
+        },
+        "why": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Why",
+          "type": "string"
+        }
+      },
+      "title": "FactionEffect",
+      "type": "object"
+    },
     "FenceEffect": {
       "additionalProperties": false,
       "description": "A fence the world lacks (0.65.0): «Горм, возьмёшь колечко, о котором лучше не спрашивать?». A trader of the\nscene buys stolen goods at `buy_pct` of the value (25–50) and sells thieves' goods to the hero; a fence of the pack\nthat decided to trust the hero — `buy_pct` omitted. Selling is the trade window — the engine's act.",
@@ -2837,10 +2894,17 @@
           "minItems": 1,
           "title": "Enemies",
           "type": "array"
+        },
+        "faction": {
+          "maxLength": 40,
+          "minLength": 2,
+          "title": "Faction",
+          "type": "string"
         }
       },
       "required": [
-        "enemies"
+        "enemies",
+        "faction"
       ],
       "title": "NewEncounter",
       "type": "object"
@@ -2882,6 +2946,57 @@
         "monster"
       ],
       "title": "NewEnemy",
+      "type": "object"
+    },
+    "NewFaction": {
+      "additionalProperties": false,
+      "description": "A faction the world lacks (0.95.0): `scope` here — this location's, global — the whole world's; `hostile` — its\nfoes attack strangers.",
+      "properties": {
+        "description": {
+          "default": "",
+          "maxLength": 240,
+          "title": "Description",
+          "type": "string"
+        },
+        "hostile": {
+          "default": true,
+          "title": "Hostile",
+          "type": "boolean"
+        },
+        "kind": {
+          "default": "people",
+          "enum": [
+            "people",
+            "beasts",
+            "monsters",
+            "undead",
+            "org",
+            "cult",
+            "household"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 40,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "scope": {
+          "default": "here",
+          "enum": [
+            "here",
+            "global"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "NewFaction",
       "type": "object"
     },
     "NewGod": {
@@ -2974,6 +3089,12 @@
           "default": "",
           "maxLength": 300,
           "title": "Description",
+          "type": "string"
+        },
+        "faction": {
+          "maxLength": 40,
+          "minLength": 2,
+          "title": "Faction",
           "type": "string"
         },
         "gender": {
@@ -3100,7 +3221,8 @@
       },
       "required": [
         "name",
-        "role"
+        "role",
+        "faction"
       ],
       "title": "NewNpc",
       "type": "object"
@@ -4479,6 +4601,12 @@
           "title": "Description",
           "type": "string"
         },
+        "faction": {
+          "maxLength": 40,
+          "minLength": 2,
+          "title": "Faction",
+          "type": "string"
+        },
         "gender": {
           "default": "other",
           "enum": [
@@ -4608,6 +4736,7 @@
       "required": [
         "name",
         "role",
+        "faction",
         "key"
       ],
       "title": "QuestNpc",
@@ -5738,6 +5867,7 @@
           "door": "#/$defs/DoorEffect",
           "drop_item": "#/$defs/DropItemEffect",
           "equip": "#/$defs/EquipEffect",
+          "faction": "#/$defs/FactionEffect",
           "fence": "#/$defs/FenceEffect",
           "festival": "#/$defs/FestivalEffect",
           "fill": "#/$defs/FillEffect",
@@ -5881,6 +6011,9 @@
         },
         {
           "$ref": "#/$defs/OrgEffect"
+        },
+        {
+          "$ref": "#/$defs/FactionEffect"
         },
         {
           "$ref": "#/$defs/UseFeatureEffect"

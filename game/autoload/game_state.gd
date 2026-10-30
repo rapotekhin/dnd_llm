@@ -1561,6 +1561,7 @@ func finish_combat(take: Array = []) -> void:
 			s.character["ammo_left"] = {"room": s.room_id, "items": back}
 		if int(s.combat.get("xp", 0)) > 0:
 			lines.append("+%d опыта" % int(s.combat["xp"]))
+		lines.append_array(FactionRules.after_fight(s, Catalog.data))  # v0.7.50
 		if not str(s.combat.get("encounter", "")).is_empty():
 			s.encounters_done.append(str(s.combat["encounter"]))
 	var arena: Dictionary = s.combat.get("arena", {})
@@ -2439,7 +2440,7 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 	if _live_encounter(room_id):
 		var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id)["encounter"]
 		var meet := EncounterRules.meet(session, Catalog.data, room_id, from, enc)  # not a fight from the doorway (v0.7.22.12)
-		if bool(meet["lurk"]):
+		if bool(meet.get("peace", false)) or bool(meet["lurk"]):
 			_add(GameSession.effect_entry([str(meet["line"])]))
 			EventBus.state_changed.emit()
 			_request("enter", "\n".join(lines.slice(1) + [str(meet["line"])]))
@@ -2493,7 +2494,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 
 func _live_encounter(room_id: String) -> bool:
 	var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id).get("encounter", {})  # by the flags (v0.7.14.1)
-	return not enc.is_empty() and not session.encounters_done.has(str(enc["id"]))
+	return not enc.is_empty() and not session.encounters_done.has(str(enc["id"])) and not session.encounters_peace.has(str(enc["id"]))
 
 
 ## «Идти сюда» on the map (roadmap v0.7.6, decisions of the author): a fast travel to a visited room along known

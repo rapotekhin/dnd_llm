@@ -1,0 +1,325 @@
+{
+	"game_version": "0.7.39.5",
+	"meta": {
+		"character": "Айра",
+		"created_at": "2026-10-18T12:00:00",
+		"day": 1,
+		"level": 1,
+		"preview": "Ничего необычного.",
+		"room_id": "brod-tavern-hall",
+		"turns": 2,
+		"world_id": "frontier"
+	},
+	"save_version": 52,
+	"saved_at": "2026-10-18T12:00:00",
+	"session": {
+		"arrest": "",
+		"arrest_tried": [],
+		"attitude_base": {},
+		"attitudes": {},
+		"awake_saves": 0,
+		"bodies": {},
+		"body_at": {},
+		"caches_taken": [],
+		"captive": {},
+		"caught_by": {},
+		"character": {
+			"abilities": {
+				"cha": 11,
+				"con": 15,
+				"dex": 14,
+				"int": 9,
+				"str": 16,
+				"wis": 13
+			},
+			"ability_floor": {},
+			"ac": 19,
+			"armor_profs": [
+				"light",
+				"medium",
+				"heavy",
+				"shield"
+			],
+			"attuned": [],
+			"background": "soldier",
+			"bags": {
+				"bag1": {
+					"contents": {},
+					"kind": "backpack"
+				},
+				"bag2": {
+					"contents": {},
+					"kind": "pouch"
+				}
+			},
+			"body": {
+				"age": "young",
+				"build": "athletic",
+				"height": "medium"
+			},
+			"charges_used": {},
+			"class": "fighter",
+			"class_name": "Воин",
+			"concentration": "",
+			"concentration_ends": -1,
+			"conditions": [],
+			"development": {},
+			"effects": [],
+			"equipped": {
+				"armor": "chain_mail",
+				"main_hand": "longsword",
+				"off_hand": "",
+				"shield": "shield"
+			},
+			"exhaustion": 0,
+			"expertise": [],
+			"features": [
+				"fighter_fighting_style",
+				"second_wind",
+				"fighter_fighting_style_defense"
+			],
+			"gender": "female",
+			"gold_cp": 1000,
+			"hit_dice_used": 0,
+			"hp": 12,
+			"inventory": {
+				"backpack": 1,
+				"bedroll": 1,
+				"chain_mail": 1,
+				"clothes_common": 1,
+				"dice_set": 1,
+				"handaxe": 2,
+				"longsword": 1,
+				"mess_kit": 1,
+				"pouch": 1,
+				"rations": 10,
+				"rope": 1,
+				"shield": 1,
+				"tinderbox": 1,
+				"torch": 10,
+				"waterskin": 1
+			},
+			"item_props": [
+				"versatile"
+			],
+			"languages": [
+				"common",
+				"dwarvish"
+			],
+			"level": 1,
+			"max_hp": 12,
+			"name": "Айра",
+			"next_effect": 1,
+			"passive_perception": 13,
+			"prepared_day": 1,
+			"prof_bonus": 2,
+			"race": "human",
+			"race_name": "Человек",
+			"resources_used": {},
+			"save_profs": [
+				"str",
+				"con"
+			],
+			"saves": {
+				"cha": 0,
+				"con": 4,
+				"dex": 2,
+				"int": -1,
+				"str": 5,
+				"wis": 1
+			},
+			"skill_profs": [
+				"athletics",
+				"intimidation",
+				"perception",
+				"survival"
+			],
+			"skills": {
+				"acrobatics": 2,
+				"animal_handling": 1,
+				"arcana": -1,
+				"athletics": 5,
+				"deception": 0,
+				"history": -1,
+				"insight": 1,
+				"intimidation": 2,
+				"investigation": -1,
+				"medicine": 1,
+				"nature": -1,
+				"perception": 3,
+				"performance": 0,
+				"persuasion": 0,
+				"religion": -1,
+				"sleight_of_hand": 2,
+				"stealth": 2,
+				"survival": 3
+			},
+			"slots_max": [
+				0,
+				0,
+				0,
+				0,
+				0
+			],
+			"slots_used": [
+				0,
+				0,
+				0,
+				0,
+				0
+			],
+			"speed": 30,
+			"spell_ability": "",
+			"spells": {
+				"always": [],
+				"cantrips": [],
+				"known": [],
+				"prepared": []
+			},
+			"story": "Айра стояла на стене Серой заставы в ту ночь, когда пришёл огонь Пепельного Князя, и была среди немногих, кто ушёл живым. Десять лет она нанималась охранять караваны за рекой, но слухи об огнях на руинах заставы привели её обратно в Ольховый Брод.",
+			"subclass": "",
+			"subrace": "",
+			"temp_hp": 0,
+			"tools": [
+				"dice_set"
+			],
+			"traits": [],
+			"weapon_profs": [
+				"simple",
+				"martial"
+			],
+			"xp": 0
+		},
+		"chat": [
+			{
+				"kind": "dm",
+				"text": "Таверна «Пьяный гусь».",
+				"turn_id": "t-1"
+			},
+			{
+				"kind": "player",
+				"text": "осматриваюсь"
+			},
+			{
+				"ability": "",
+				"blocked": false,
+				"bonus": 0,
+				"check_id": "c-1",
+				"dc": 15,
+				"kind": "check",
+				"nat": 12,
+				"rolls": [
+					12
+				],
+				"save": "",
+				"skill": "perception",
+				"success": false,
+				"total": 12
+			},
+			{
+				"kind": "dm",
+				"text": "Ничего необычного.",
+				"turn_id": "t-2"
+			}
+		],
+		"check_counter": 1,
+		"chronicle": [],
+		"combat": {},
+		"created_at": "2026-10-18T12:00:00",
+		"creature_counter": 0,
+		"creatures": {},
+		"crimes": [],
+		"day": 1,
+		"dead_npcs": [],
+		"described": {},
+		"dialogue_log": [],
+		"disarmed": {},
+		"discounts": {},
+		"doors": {},
+		"effect_counter": 0,
+		"encounters_done": [],
+		"encounters_passed": [],
+		"favors": {},
+		"fight_on_load": {},
+		"flags": [],
+		"follower_fed": {},
+		"followers": [],
+		"foreign": {},
+		"generated": {},
+		"items": {},
+		"known_monsters": [],
+		"let_go": {},
+		"location_log": [],
+		"locks": {},
+		"lurking": {},
+		"magic_given": 0,
+		"march_day": 1,
+		"march_minutes": 0,
+		"merchants": {},
+		"minute": 480,
+		"mode": "exploration",
+		"notes": [],
+		"npc_at": {},
+		"npc_id": "",
+		"npc_memory": {},
+		"npc_sick": {},
+		"npc_spells": {},
+		"option_checks": [],
+		"option_costs": [],
+		"options": [
+			"Подойти к стойке"
+		],
+		"permit_asked": {},
+		"permits": {},
+		"pickpocketed": {},
+		"pockets": {},
+		"props": {},
+		"quest_parts": {},
+		"quests_active": {},
+		"quests_done": [],
+		"quests_failed": [],
+		"reputation": {},
+		"rested_at": 480,
+		"revealed": {},
+		"reward_spent": 0,
+		"rng_state": "708718527385777908",
+		"room_id": "brod-tavern-hall",
+		"searched": [],
+		"secrets_told": [],
+		"seed": 42,
+		"settings": {
+			"adult": false,
+			"death_mode": "story",
+			"difficulty": "normal",
+			"dm_style": "classic",
+			"lines": [],
+			"needs": true,
+			"slavery": false,
+			"veils": [
+				"пытки",
+				"насилие над детьми"
+			],
+			"violence": "medium",
+			"wishes": [],
+			"world": "frontier"
+		},
+		"shop_closed": {},
+		"short_rests": 0,
+		"sneak_noticed": "",
+		"sneaking": false,
+		"summaries": {},
+		"summon_counter": 0,
+		"summons": [],
+		"talk_creature": "",
+		"tracked_quest": "",
+		"traps": {},
+		"trespass_warned": {},
+		"turn_counter": 2,
+		"visited": [],
+		"wanted": {},
+		"world_id": "frontier",
+		"world_version": "",
+		"factions": {},
+		"encounters_peace": []
+	}
+}

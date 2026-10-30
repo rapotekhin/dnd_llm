@@ -374,6 +374,11 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if bo.has("reason"):
 				return {"reason": bo["reason"]}
 			return bo
+		"faction":  # v0.7.50
+			var fa := FactionRules.make(s, data, e)
+			if fa.has("reason"):
+				return {"reason": fa["reason"]}
+			return fa
 		"fence", "heist", "org":  # v0.7.33: the underworld — a fence, a criminal job, an organization
 			var uk := str(e["kind"])
 			var uw: Dictionary = FenceRules.make(s, data, e) if uk == "fence" else HeistRules.make(s, data, e) if uk == "heist" else OrgRules.make(s, data, e)
@@ -1040,6 +1045,8 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(HeistRules.apply_make(s, _data, plan))
 		"org":
 			_extra_lines.append_array(OrgRules.apply_make(s, _data, plan))
+		"faction":
+			_extra_lines.append_array(FactionRules.apply_make(s, _data, plan))
 		"bond":
 			_extra_lines.append_array(PetRules.apply_bond(s, _data, plan) if plan.has("creature_id") else BondRules.apply_make(s, _data, plan))
 		"beast":

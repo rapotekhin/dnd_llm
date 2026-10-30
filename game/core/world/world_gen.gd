@@ -194,6 +194,9 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 		def["trade_kind"] = kind
 		def["stock"] = stock
 		def["purse_cp"] = int(k.get("purse_cp", c["purse_cp"]))
+	def["faction"] = FactionRules.ensure(s, data, str(spec.get("faction", "")), "people", false)  # v0.7.50: the folk of the place when none is named
+	if str(def["faction"]).is_empty():
+		def["faction"] = FactionRules.folk_of(s, data, loc)
 	return {"plan": {"npc": def, "room": room, "items": made_items}, "summary": "Новый человек: %s — %s (%s)%s" % [def["name"], def["role"],
 		BodyRules.text(data, def, str(def["gender"])), ("" if made_items.is_empty() else "; новый товар: " + ", ".join(made_items.values().map(func(d: Dictionary) -> String: return str(d["name"]))))
 		+ ("" if notes.is_empty() else "; " + "; ".join(notes))]}
@@ -373,7 +376,7 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 				enemies.append({"monster": mid, "count": n, "name": str(f.get("name", data["monsters"][mid]["name"])), "desc": str(f.get("desc", "")).left(200), "col": 3})
 			if xp > cap:
 				return {"reason": "встреча в %s не по силам %d уровню: %d опыта врагов при пределе %d" % [name, int(s.character.get("level", 1)), xp, cap]}
-			enc = {"enemies": enemies, "loot": {"coins_cp": 0, "items": {}}}
+			enc = {"enemies": enemies, "loot": {"coins_cp": 0, "items": {}}, "faction": FactionRules.ensure(s, data, str(r["encounter"].get("faction", "")), "monsters", true)}  # v0.7.50
 		var room_edges: Array = []
 		for ed: Variant in r.get("open_edges", []) if r.get("open_edges") is Array else []:
 			if not (ed is Dictionary) or str(ed.get("text", "")).strip_edges().length() < 3:

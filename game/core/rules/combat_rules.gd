@@ -2993,7 +2993,10 @@ static func is_parley_skill(data: Dictionary, skill: String) -> bool:
 static func can_parley(s: GameSession, data: Dictionary, skill: String) -> String:
 	if not is_parley_skill(data, skill):
 		return "COMBAT_NO_PARLEY"
-	if not enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
+	if skill == "animal_handling":  # v0.7.50: only beasts are calmed
+		if not enemies(s).any(func(id: String) -> bool: return str(_monster(data, fighter(s, id)).get("type", "")) == "beast"):
+			return "COMBAT_NO_PARLEY"
+	elif not enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
 		return "COMBAT_NO_PARLEY"
 	if skill == "persuasion" and not parley_understood(s, data):
 		return "COMBAT_NO_LANGUAGE"  # v0.7.11: nobody understands the hero's words
@@ -3034,6 +3037,14 @@ static func parley_apply(s: GameSession, data: Dictionary, skill: String, succes
 		lines.append("Враги колеблются (%s)" % parley_progress(s, data))
 		return lines
 	var pcol := int(player(s)["col"])
+	if skill == "animal_handling":  # v0.7.50: the beasts stop; the friendship of beasts grows from here
+		for id: String in enemies(s):
+			var f := fighter(s, id)
+			if str(_monster(data, f).get("type", "")) == "beast":
+				f["status"] = "truce"
+				lines.append("%s отступает и успокаивается" % f["name"])
+		lines.append_array(FactionRules.on_source(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "calm", "звери успокоены"))
+		return lines
 	for id: String in enemies(s):
 		var f := fighter(s, id)
 		if not _intelligent(data, f):

@@ -214,7 +214,7 @@ func _travel_button(info: VBoxContainer, room_id: String) -> void:
 
 
 ## Journal tabs (v0.6.6, playtest-1): quests, places, conversations, finds; inside — groups by location that fold.
-const TABS: Array[String] = ["quests", "places", "people", "found", "rumors", "letters", "chronicle", "calendar"]
+const TABS: Array[String] = ["quests", "places", "people", "factions", "found", "rumors", "letters", "chronicle", "calendar"]
 var _tab := "quests"
 var _folded := {}
 var _person_open := ""  # v0.7.22.21 (#18): the person whose card is open in the people tab
@@ -291,6 +291,8 @@ func _draw_journal() -> void:
 func _count(s: GameSession, w: WorldView, tab: String) -> int:
 	if tab == "people":
 		return _met(s, w).size()
+	if tab == "factions":  # v0.7.50
+		return FactionRules.met(s, Catalog.data).size()
 	if tab == "calendar":  # v0.7.44: the festivals on now
 		return CalendarRules.active(s, w.world).size()
 	if tab == "rumors":  # v0.7.47: the tips and the heard ones, not the checked
@@ -356,6 +358,15 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 			for loc: String in by_loc:
 				var rep := ReputationRules.text(s, Catalog.data, loc)  # v0.7.17
 				out.append({"title": rep if not rep.is_empty() else str(w.location(loc).get("name", loc)), "lines": by_loc[loc]})
+		"factions":  # v0.7.50: who the hero has met and how they stand
+			for c: Dictionary in FactionRules.met(s, Catalog.data, _met(s, w)):
+				var lines: Array = []
+				if not str(c["description"]).is_empty():
+					lines.append(str(c["description"]))
+				if not (c["members"] as Array).is_empty():
+					lines.append(tr("JOURNAL_FACTION_MEMBERS").format({"names": ", ".join(c["members"])}))
+				lines.append_array(c["why"])
+				out.append({"title": "%s — %s" % [c["name"], c["step"]], "lines": lines})
 		"people":  # everyone met (v0.7.22.7, big test #2): attitude, looks, what they gave, their quests, what they remember
 			var by_loc := {}
 			for npc: String in _met(s, w):
@@ -504,6 +515,9 @@ func _person(s: GameSession, w: WorldView, npc: String) -> Array[String]:
 	var bw := BondRules.word(s.character, data, npc)  # v0.7.31
 	if not bw.is_empty():
 		head += " · " + bw
+	var fa := FactionRules.def(s, data, FactionRules.of_npc(s, data, npc))  # v0.7.50
+	if not fa.is_empty():
+		head += " · " + str(fa["name"])
 	if s.dead_npcs.has(npc):
 		head += " · " + tr("JOURNAL_DEAD")
 	var out: Array[String] = [head]

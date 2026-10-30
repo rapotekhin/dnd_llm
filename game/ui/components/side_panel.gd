@@ -1165,6 +1165,8 @@ func _meeting(s: GameSession, can_act: bool) -> void:
 			["Encounter_persuasion", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_PERSUASION")}), why, func() -> String: return GameState.encounter_parley("persuasion")],
 			["Encounter_intimidation", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_INTIMIDATION")}),
 				EncounterRules.talkable(s, data, enc.get("enemies", []), "intimidation"), func() -> String: return GameState.encounter_parley("intimidation")]]
+		if EncounterRules.all_beasts(data, enc.get("enemies", [])):  # v0.7.50
+			specs.append(["Encounter_calm", tr("BTN_ENCOUNTER_CALM").format({"dc": EncounterRules.calm_dc(data, enc["enemies"])}), "", func() -> String: return GameState.encounter_parley("animal_handling")])
 	elif EncounterRules.captive(s):
 		_subheading("SIDE_CAPTIVE")
 		for e: Dictionary in s.captive.get("foes", []):

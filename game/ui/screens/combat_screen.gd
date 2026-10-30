@@ -636,6 +636,11 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			card.tooltip_text = ""  # what the foe is — in the details panel only (big test #35, v0.7.22.5)
 			var lore := CombatRules.monster_card(s, data, f)
 			var about := lore if not lore.is_empty() else tr("COMBAT_FOE_UNKNOWN")
+			var fa := FactionRules.def(s, data, FactionRules.of_foe(data, SceneRules.room(s, data["world"], s.room_id).get("encounter", {}), f))  # v0.7.50
+			if not fa.is_empty():
+				about += "
+
+" + tr("COMBAT_FOE_FACTION").format({"name": fa["name"]})
 			if not str(f.get("desc", "")).is_empty():
 				about += "\n\n" + str(f["desc"])
 			var foe_name := str(f["name"])

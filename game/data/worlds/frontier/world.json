@@ -1320,6 +1320,7 @@
 			],
 			"encounter": {
 				"id": "trail_wolves",
+				"faction": "wild_beasts",
 				"enemies": [
 					{
 						"monster": "wolf",
@@ -1340,6 +1341,7 @@
 					"description": "Старая просека, заросшая папоротником. Брошенная телега перевёрнута, вокруг клочья шерсти: волки, осмелевшие после того, как пал менгир, ходят здесь стаей.",
 					"encounter": {
 						"id": "trail_wolves_dark",
+						"faction": "wild_beasts",
 						"enemies": [
 							{
 								"monster": "wolf",
@@ -1466,6 +1468,7 @@
 			],
 			"encounter": {
 				"id": "hollow_spiders",
+				"faction": "wild_beasts",
 				"ambush": true,
 				"enemies": [
 					{
@@ -1542,6 +1545,7 @@
 			],
 			"encounter": {
 				"id": "road_watch",
+				"faction": "ash_cult",
 				"ambush": true,
 				"enemies": [
 					{
@@ -1614,6 +1618,7 @@
 			],
 			"encounter": {
 				"id": "yard_dead",
+				"faction": "the_dead",
 				"enemies": [
 					{
 						"monster": "skeleton",
@@ -1677,6 +1682,7 @@
 			],
 			"encounter": {
 				"id": "crypt_commandant",
+				"faction": "the_dead",
 				"enemies": [
 					{
 						"monster": "ghoul",
@@ -1788,6 +1794,7 @@
 			],
 			"encounter": {
 				"id": "gallery_kobolds",
+				"faction": "mine_kobolds",
 				"ambush": true,
 				"enemies": [
 					{
@@ -1865,6 +1872,7 @@
 			],
 			"encounter": {
 				"id": "deep_ghoul",
+				"faction": "the_dead",
 				"enemies": [
 					{
 						"monster": "ghoul",
@@ -1916,6 +1924,7 @@
 			],
 			"encounter": {
 				"id": "burrow_priest",
+				"faction": "ash_cult",
 				"parley": "hard",
 				"allies": [
 					{
@@ -2219,6 +2228,7 @@
 	},
 	"npcs": {
 		"npc_innkeeper": {
+			"faction": "brod_folk",
 			"name": "Бруно Хмель",
 			"role": "хозяин таверны",
 			"race": "человек",
@@ -2276,6 +2286,7 @@
 			"god": "chauntea"
 		},
 		"npc_serving": {
+			"faction": "brod_folk",
 			"name": "Мира",
 			"role": "подавальщица",
 			"race": "полуэльфийка",
@@ -2325,6 +2336,7 @@
 			]
 		},
 		"npc_veteran": {
+			"faction": "brod_folk",
 			"name": "Старый Орвин",
 			"role": "ветеран Серой заставы",
 			"race": "человек",
@@ -2363,6 +2375,7 @@
 			"gossip": true
 		},
 		"npc_mercenary": {
+			"faction": "brod_folk",
 			"name": "Кейра",
 			"role": "наёмница",
 			"race": "человек",
@@ -2388,6 +2401,7 @@
 			}
 		},
 		"npc_cook": {
+			"faction": "brod_folk",
 			"name": "Тук",
 			"role": "повар",
 			"race": "полурослик",
@@ -2426,6 +2440,7 @@
 			}
 		},
 		"npc_merchant": {
+			"faction": "night_rats",
 			"name": "Ферн Кривой",
 			"role": "торговец всякой всячиной",
 			"race": "человек",
@@ -2520,6 +2535,7 @@
 			"god": "waukeen"
 		},
 		"npc_smith": {
+			"faction": "brod_folk",
 			"name": "Гуннар Тяжёлая Рука",
 			"role": "кузнец",
 			"race": "дварф",
@@ -2599,6 +2615,7 @@
 			}
 		},
 		"npc_herbalist": {
+			"faction": "brod_folk",
 			"name": "Ведана",
 			"role": "травница",
 			"race": "гномка",
@@ -2679,6 +2696,7 @@
 			}
 		},
 		"npc_priestess": {
+			"faction": "brod_folk",
 			"name": "Сестра Илва",
 			"role": "жрица Светлой Матери",
 			"race": "человек",
@@ -2724,6 +2742,7 @@
 			"god": "chauntea"
 		},
 		"npc_captain": {
+			"faction": "brod_folk",
 			"name": "Капитан Ратмир",
 			"heir": "npc_veteran",
 			"role": "капитан ополчения",
@@ -2756,6 +2775,7 @@
 			"god": "tyr"
 		},
 		"npc_hermit": {
+			"faction": "wild_folk",
 			"name": "Мох",
 			"role": "лесной отшельник",
 			"race": "полуэльф",
@@ -2781,6 +2801,7 @@
 			"god": "silvanus"
 		},
 		"npc_prospector": {
+			"faction": "wild_folk",
 			"name": "Дрогин",
 			"role": "старатель",
 			"race": "дварф",
@@ -2819,6 +2840,7 @@
 			}
 		},
 		"npc_sick_pilgrim": {
+			"faction": "wild_folk",
 			"name": "Тодор",
 			"role": "больной паломник",
 			"race": "человек",
@@ -2850,6 +2872,7 @@
 			}
 		},
 		"npc_clerk": {
+			"faction": "brod_folk",
 			"name": "Тихон Перо",
 			"role": "писарь ратуши",
 			"race": "человек",
@@ -2887,6 +2910,7 @@
 			"god": "tyr"
 		},
 		"npc_drover": {
+			"faction": "drovers",
 			"name": "Остап",
 			"role": "барышник",
 			"race": "человек",
@@ -2930,6 +2954,7 @@
 			]
 		},
 		"npc_changer": {
+			"faction": "brod_folk",
 			"name": "Ефим Весов",
 			"role": "меняла при ратуше",
 			"race": "человек",
@@ -2961,6 +2986,7 @@
 			"god": "waukeen"
 		},
 		"npc_teacher": {
+			"faction": "brod_folk",
 			"name": "Аверкий Строгов",
 			"role": "магистр училища",
 			"race": "человек",
@@ -3004,6 +3030,7 @@
 			]
 		},
 		"npc_guildhead": {
+			"faction": "night_rats",
 			"name": "Сыч",
 			"role": "глава Ночных крыс",
 			"race": "человек",
@@ -3030,6 +3057,7 @@
 			"god": "mask"
 		},
 		"npc_pedlar": {
+			"faction": "wild_folk",
 			"name": "Яким Коробейник",
 			"role": "заезжий коробейник",
 			"race": "человек",
@@ -3060,6 +3088,7 @@
 			]
 		},
 		"npc_arena_master": {
+			"faction": "brod_folk",
 			"name": "Гордей Кулак",
 			"role": "распорядитель бойцового круга",
 			"race": "человек",
@@ -3086,6 +3115,7 @@
 			}
 		},
 		"npc_pit_master": {
+			"faction": "night_rats",
 			"name": "Щерба",
 			"role": "хозяин кровавой ямы",
 			"race": "полуорк",
@@ -3555,6 +3585,56 @@
 			"fee_cp": 1500,
 			"xp": 50
 		}
+	},
+	"factions": {
+	  "wild_beasts": {
+	    "name": "Дикие звери",
+	    "kind": "beasts",
+	    "scope": "global",
+	    "hostile": true,
+	    "description": "Все звери леса и дорог: кто им друг, того они не трогают."
+	  },
+	  "the_dead": {
+	    "name": "Неупокоенные",
+	    "kind": "undead",
+	    "scope": "global",
+	    "hostile": true,
+	    "friendable": false,
+	    "description": "Мертвецы Марки. С ними не договориться."
+	  },
+	  "brod_folk": {
+	    "name": "Жители Ольхового Брода",
+	    "kind": "settlement",
+	    "scope": [
+	      "brod"
+	    ],
+	    "location": "brod",
+	    "hostile": false,
+	    "description": "Горожане, ремесленники и ополчение Брода."
+	  },
+	  "wild_folk": {
+	    "name": "Вольный люд Марки",
+	    "kind": "people",
+	    "scope": "global",
+	    "hostile": false,
+	    "description": "Отшельники, старатели, паломники и коробейники вне городских стен."
+	  },
+	  "ash_cult": {
+	    "name": "Культ Пепла",
+	    "kind": "cult",
+	    "scope": "global",
+	    "hostile": true,
+	    "description": "Сектанты и их наёмники: те, кто жжёт Марку."
+	  },
+	  "mine_kobolds": {
+	    "name": "Кобольды рудника",
+	    "kind": "monsters",
+	    "scope": [
+	      "mine"
+	    ],
+	    "hostile": true,
+	    "description": "Копатели, засевшие в штольнях старого рудника."
+	  }
 	},
 	"orgs": {
 		"night_rats": {

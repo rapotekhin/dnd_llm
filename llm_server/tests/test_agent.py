@@ -414,7 +414,7 @@ def test_out_of_tokens_after_an_accepted_effect_goes_on_from_there(data_dir):
     """v0.7.38.1 (the author's trace): the board quest failed — create_npc was accepted, then the token limit; now the
     turn goes on with the effect kept, and find_npcs tells that the new person is in the world only after the turn."""
     seen = []
-    npc = {"kind": "create_npc", "npc": {"name": "Демьян", "role": "староста", "description": "Старик с ключами.",
+    npc = {"kind": "create_npc", "npc": {"name": "Демьян", "role": "староста", "faction": "brod_folk", "description": "Старик с ключами.",
                                          "personality": "Медлителен.", "monster": "commoner", "room_id": "brod-square"}}
 
     async def fn(messages, info):
@@ -541,7 +541,7 @@ def test_a_search_brings_its_topic_and_a_library_good_goes_to_stock_new(data_dir
 
     fn = scripted(
         ("find_npcs", {"query": "пекарша"}),
-        ("propose_effect", {"effect": {"kind": "create_npc", "npc": {"name": "Сарра", "role": "пекарша", "trader": True,
+        ("propose_effect", {"effect": {"kind": "create_npc", "npc": {"name": "Сарра", "role": "пекарша", "faction": "brod_folk", "trader": True,
                                                                      "stock": ["gen_bread", "rations"]}}}),
         ("final", lambda m: {"narration": "Сарра вытирает руки о передник.", "effect_ids": ["e-3"]}),
     )

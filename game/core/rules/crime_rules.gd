@@ -178,6 +178,7 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: 
 
 ## The crime becomes known in its location: attitudes, and the hero is wanted where there is law. Lines.
 static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array[String]:
+	FactionRules.on_crime(s, data, str(crime["victim"]), str(crime["kind"]))  # v0.7.50
 	crime["known"] = true
 	crime["known_at"] = TimeRules.abs_minute(s)
 	var loc := str(crime["location"])

@@ -1,6 +1,13 @@
 class_name MainMenu
 extends Control
-## Title screen: continue the latest save, new game, load, settings, quit; master status in the corner.
+## Title screen: continue the latest save, new game, load, settings, quit; master status in the corner, the project's
+## pages as icons at the bottom.
+
+const LINKS: Array[Dictionary] = [
+	{"id": "subscribestar", "name": "SubscribeStar", "url": "https://subscribestar.adult/between-the-rolls"},
+	{"id": "itch", "name": "itch.io", "url": "https://rapotekhin.itch.io/between-the-rolls"},
+	{"id": "discord", "name": "Discord", "url": "https://discord.gg/vmpFtkChY"},
+]
 
 
 func _ready() -> void:
@@ -47,6 +54,30 @@ func _ready() -> void:
 	add_child(version)
 	version.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 32)
 	version.grow_vertical = Control.GROW_DIRECTION_BEGIN
+
+	var links := HBoxContainer.new()
+	links.name = "Links"
+	links.add_theme_constant_override("separation", 20)
+	add_child(links)
+	for l: Dictionary in LINKS:
+		links.add_child(_link(l))
+	links.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 32)
+	links.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	links.grow_vertical = Control.GROW_DIRECTION_BEGIN
+
+
+## An icon of a page of the project: the click opens it in the browser.
+func _link(l: Dictionary) -> TextureButton:
+	var b := TextureButton.new()
+	b.name = "Link_%s" % l["id"]
+	b.texture_normal = load("res://assets/links/%s.png" % l["id"])
+	b.ignore_texture_size = true
+	b.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	b.custom_minimum_size = Vector2(44, 44)
+	b.tooltip_text = str(l["name"])
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.pressed.connect(func() -> void: OS.shell_open(str(l["url"])))
+	return b
 
 
 func _button(parent: Control, key: String, action: Callable) -> Button:

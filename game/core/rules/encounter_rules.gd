@@ -36,6 +36,10 @@ static func best_passive(data: Dictionary, enemies: Array) -> int:
 
 ## On entering a room with a live encounter: {lurk: bool, line, stealth (−1 — not rolled)}.
 static func meet(s: GameSession, data: Dictionary, room_id: String, from: String, enc: Dictionary) -> Dictionary:
+	if FactionRules.peaceful(s, data, enc):  # v0.7.50: friends do not fight
+		return {"lurk": false, "peace": true, "stealth": -1, "line": FactionRules.keep_peace(s, data, room_id, enc)}
+	for e: Dictionary in enc["enemies"]:
+		FactionRules.meet(s, data, FactionRules.of_foe(data, enc, e))
 	if bool(enc.get("ambush", false)):
 		return {"lurk": false, "line": "", "stealth": -1}
 	var unseen := ConditionRules.invisible(s.character, data)
@@ -77,6 +81,8 @@ static func lurking_encounter(s: GameSession, data: Dictionary, room_id: String)
 ## The foes of an encounter that think, and whether one of them understands the hero. A threat needs no common tongue
 ## (v0.7.22.19, #9): gestures and a blade say it — with disadvantage (`mute`).
 static func talkable(s: GameSession, data: Dictionary, enemies: Array, skill: String = "persuasion") -> String:
+	if skill == "animal_handling":  # v0.7.50: beasts are calmed, not talked to
+		return "" if all_beasts(data, enemies) else "COMBAT_NO_PARLEY"
 	var thinking := enemies.filter(func(e: Dictionary) -> bool:
 		return int(_monster(data, e).get("abilities", {}).get("int", 1)) >= int(CombatRules.cfg(data)["intelligent_int"]))
 	if thinking.is_empty():
@@ -84,6 +90,23 @@ static func talkable(s: GameSession, data: Dictionary, enemies: Array, skill: St
 	if skill != "intimidation" and mute(s, data, enemies):
 		return "COMBAT_NO_LANGUAGE"
 	return ""
+
+
+## Every foe is a beast: «Успокоить» by Animal Handling.
+static func all_beasts(data: Dictionary, enemies: Array) -> bool:
+	return not enemies.is_empty() and enemies.all(func(e: Dictionary) -> bool: return str(_monster(data, e).get("type", "")) == "beast")
+
+
+## The DC of calming beasts (rules.factions.calm): base + the strongest's WIS modifier + per_cr × the highest CR.
+static func calm_dc(data: Dictionary, enemies: Array) -> int:
+	var c: Dictionary = FactionRules.cfg(data)["calm"]
+	var wis := -5
+	var cr := 0.0
+	for e: Dictionary in enemies:
+		var m := _monster(data, e)
+		wis = maxi(wis, CharacterRules.mod(int(m.get("abilities", {}).get("wis", 10))))
+		cr = maxf(cr, float(m.get("cr", 0)))
+	return int(c["base_dc"]) + wis + int(c["per_cr"]) * int(ceil(cr))
 
 
 ## Nobody of the thinking foes understands the hero.
@@ -143,17 +166,22 @@ static func as_creatures(s: GameSession, room_id: String, enemies: Array, state:
 ## Talking to the lurking foes before a fight. {lines, fight: bool}: a success — a truce (Persuasion) or they go
 ## (Intimidation), the encounter is over; a failure — the fight, they know where the hero is.
 static func parley(s: GameSession, data: Dictionary, room_id: String, enc: Dictionary, skill: String) -> Dictionary:
-	var dc := parley_dc(data, enc["enemies"], str(enc.get("parley", "")) == "hard")
+	var calm := skill == "animal_handling"
+	var dc := calm_dc(data, enc["enemies"]) if calm else parley_dc(data, enc["enemies"], str(enc.get("parley", "")) == "hard")
 	var r := roll(s, data, skill, dc, skill == "intimidation" and mute(s, data, enc["enemies"]))
 	var lines: Array[String] = [str(r["line"])]
 	s.lurking.erase(room_id)
 	if not bool(r["ok"]):
-		lines.append("Слова не помогли — они хватаются за оружие")
+		lines.append("Звери скалятся — не вышло" if calm else "Слова не помогли — они хватаются за оружие")
 		return {"lines": lines, "fight": true}
 	if not str(enc.get("id", "")).is_empty():
 		s.encounters_done.append(str(enc["id"]))
 	if skill == "intimidation":
 		lines.append("Угроза подействовала — они уходят прочь")
+	elif calm:  # v0.7.50: the friendship of beasts grows from here
+		as_creatures(s, room_id, enc["enemies"], "truce")
+		lines.append("Звери успокоились и не трогают вас")
+		lines.append_array(FactionRules.on_source(s, data, FactionRules.of_foe(data, enc, enc["enemies"][0]), "calm", "звери успокоены"))
 	else:
 		as_creatures(s, room_id, enc["enemies"], "truce")
 		lines.append("Удалось договориться — перемирие")
