@@ -1,6 +1,6 @@
 # Аудит по столпу 6
 
-Генерируется: `python tools/concepts_audit.py`. Столп — [«Движок — конструктор, а не список»](../vision/pillars.md#6-движок--конструктор-а-не-список); реестр понятий — [concepts.md](../design/concepts.md); план — [роадмап v0.7.16](roadmap.md#v0716--аудит-по-столпу-6-движок-конструктор). Ищет закрытые перечни случаев в коде вне правил 5e (они — столп 2) и в промптах мастера; решение по каждой находке — в `DECISIONS` инструмента.
+Генерируется: `python tools/concepts_audit.py`. Столп — [«Движок — конструктор, а не список»](../vision/pillars.md#6-движок--конструктор-а-не-список); реестр понятий — [concepts.md](../design/concepts.md); план — [роадмап v0.7.16](closed_roadmap.md#v0716--аудит-по-столпу-6-движок-конструктор). Ищет закрытые перечни случаев в коде вне правил 5e (они — столп 2) и в промптах мастера; решение по каждой находке — в `DECISIONS` инструмента.
 
 Находок: 30 — понятие движка 16, **пробел до инструмента** 1, правило 5e 2, служебное 9, сделано 2.
 Правила 5e вне аудита (столп 2): background_rules.gd, character_builder.gd, character_rules.gd, combat_rules.gd, condition_rules.gd, feature_rules.gd, feature_uses.gd, hero_defense.gd, language_rules.gd, level_up.gd, monster_rules.gd, spell_effects.gd, spell_rules.gd.
