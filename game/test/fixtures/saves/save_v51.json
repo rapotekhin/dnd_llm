@@ -238,6 +238,7 @@
 		"doors": {},
 		"effect_counter": 0,
 		"encounters_done": [],
+		"encounters_passed": [],
 		"favors": {},
 		"fight_on_load": {},
 		"flags": [],

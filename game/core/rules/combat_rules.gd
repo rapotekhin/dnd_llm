@@ -2175,9 +2175,9 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 				return
 			f["fleeing"] = true
 			lines.append("%s дрогнул и пытается бежать" % f["name"])
-	var steps := _move_cols(int(m.get("speed", 30)) - int(f.get("slowed", 0)), data)
+	var steps := _move_cols(MonsterRules.move_speed(m) - int(f.get("slowed", 0)), data)  # flying counts (v0.7.49.3)
 	if (SpellEffects.slowed(s, f) or f.has("slowed_spell")) and steps > 0:  # a slowing zone or Slow: half the way
-		steps = maxi(1, steps / 2) if int(m.get("speed", 30)) >= 60 else 0 if s.rng.randi_range(0, 1) == 0 else 1
+		steps = maxi(1, steps / 2) if MonsterRules.move_speed(m) >= 60 else 0 if s.rng.randi_range(0, 1) == 0 else 1
 	if _has(f, "restrained") or _has(f, "grappled"):
 		steps = 0
 	if bool(f.get("fleeing", false)):
@@ -2708,7 +2708,7 @@ static func _reaches(data: Dictionary, f: Dictionary, t: Dictionary, ranged: Dic
 ## a move, then the full attack; out of reach after the move — Dash.
 static func _creature_turn(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, lines: Array[String]) -> void:
 	var m := _monster(data, f)
-	var steps := _move_cols(int(m.get("speed", 30)) - int(f.get("slowed", 0)), data)
+	var steps := _move_cols(MonsterRules.move_speed(m) - int(f.get("slowed", 0)), data)
 	if _has(f, "restrained") or _has(f, "grappled") or _has(f, "frightened"):
 		steps = 0
 	var melee := _pick_plain(data, f, "melee")
@@ -3184,7 +3184,7 @@ static func monster_card(s: GameSession, data: Dictionary, f: Dictionary) -> Str
 		return ""
 	var m := _monster(data, f)
 	var dtypes: Dictionary = data["misc"]["damage_types"]
-	var lines: Array[String] = ["%s · HP %d/%d · КД %d · скорость %d фт" % [m["name"], int(f["hp"]), int(f["max_hp"]), int(m["ac"]), int(m.get("speed", 30))]]
+	var lines: Array[String] = ["%s · HP %d/%d · КД %d · скорость %s" % [m["name"], int(f["hp"]), int(f["max_hp"]), int(m["ac"]), MonsterRules.speed_text(m)]]
 	for a: Dictionary in m["actions"]:
 		var dmg: Array[String] = []
 		for d: Dictionary in a.get("damage", []):

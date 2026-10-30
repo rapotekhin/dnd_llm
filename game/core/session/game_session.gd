@@ -65,6 +65,9 @@ var merchants: Dictionary = {}
 var combat: Dictionary = {}
 ## Encounters of the pack already fought (CombatRules) and NPCs killed in a fight.
 var encounters_done: Array[String] = []
+## Encounters the hero slipped past unseen — out of the room by another way than in (v0.7.49.3): a quest's
+## «пройти стражу» is done, the foes still there.
+var encounters_passed: Array[String] = []
 var dead_npcs: Array[String] = []
 ## The «Красться» toggle of exploration (v0.6.2).
 var sneaking: bool = false
@@ -492,6 +495,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"awake_saves": awake_saves,
 		"combat": combat,
 		"encounters_done": encounters_done,
+		"encounters_passed": encounters_passed,
 		"dead_npcs": dead_npcs,
 		"sneaking": sneaking,
 		"minute": minute,
@@ -598,6 +602,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.combat = _normalized_combat(d.get("combat", {}))
 	for e: Variant in d.get("encounters_done", []):
 		s.encounters_done.append(str(e))
+	for e: Variant in d.get("encounters_passed", []):
+		s.encounters_passed.append(str(e))
 	for n: Variant in d.get("dead_npcs", []):
 		s.dead_npcs.append(str(n))
 	s.sneaking = bool(d.get("sneaking", false))

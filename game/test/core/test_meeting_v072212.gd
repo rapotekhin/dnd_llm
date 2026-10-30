@@ -45,6 +45,22 @@ func test_sneaking_unseen_no_fight() -> void:
 	assert_bool(bool(EncounterRules.meet(s, data, "r1", "r0", _wolves())["lurk"])).is_false()
 
 
+func test_slipping_past_unseen_passes_the_encounter_back_the_way_in_does_not() -> void:
+	var s := _hero()
+	s.sneaking = true
+	s.character["skills"]["stealth"] = 40
+	EncounterRules.meet(s, data, "r1", "r0", _wolves())
+	assert_str(EncounterRules.slip_past(s, "r1", "r0")).is_empty()  # turned back — not past them
+	assert_bool(QuestRules.met(s, {"encounter": "test_wolves"})).is_false()
+	assert_str(EncounterRules.slip_past(s, "r1", "r2")).contains("незамеченными")
+	assert_bool(QuestRules.met(s, {"encounter": "test_wolves", "defeat": true})).is_false()  # the step asks them beaten
+	assert_bool(QuestRules.met(s, {"all": [{"encounter": "test_wolves"}]})).is_true()
+	assert_bool(s.encounters_done.has("test_wolves")).is_false()  # the wolves are still there, not beaten
+	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
+	assert_bool(back.encounters_passed.has("test_wolves")).is_true()
+	assert_str(EncounterRules.slip_past(s, "r5", "r2")).is_empty()  # no foes lurk there
+
+
 func test_an_ambush_strikes_anyway() -> void:
 	var s := _hero()
 	s.sneaking = true

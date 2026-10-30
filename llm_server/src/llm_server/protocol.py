@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.93.0"
+PROTOCOL_VERSION = "0.94.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -944,11 +944,14 @@ class CreateQuestEffect(_Out):
 class ActFact(_Out):
     """A fact of the engine (0.81.0): `visit` — a room id or «new:<room key>», `find` — «room:secret» of the world or
     the `key` of a hidden thing of the act, `fight` — the `key` of a fight of the act («new:<room key>» for a room of a
-    new place with its `encounter`) or a live encounter of the world."""
+    new place with its `encounter`) or a live encounter of the world. 0.94.0: a fight is beaten or slipped past
+    unseen; `defeat` true — only beaten, false — passing is enough, unsaid — by the fight's kind (a target, a lair or
+    a boss is to be beaten)."""
 
     text: str = ""
     kind: Literal["visit", "find", "fight"]
     target: str
+    defeat: bool | None = None
 
 
 class ActStep(_Out):
@@ -967,6 +970,7 @@ class ActStep(_Out):
     needs: ActFact | None = None
     needs_text: str = ""
     danger: bool = False
+    defeat: bool | None = None  # 0.94.0: a `fight` step — only beaten (true) or passing unseen is enough (false)
 
 
 class ActEncounter(_Out):

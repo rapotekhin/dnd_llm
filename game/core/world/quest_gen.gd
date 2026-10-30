@@ -751,7 +751,9 @@ static func _plan_item(s: GameSession, data: Dictionary, qi: Dictionary, content
 
 ## A fact of the engine for a step, a part or a need: {when, danger?} or {reason}. Kinds visit, find, fight (and talk
 ## for a whole step). `used` collects the refs it names.
-static func _fact(s: GameSession, data: Dictionary, kind: String, target: String, item: String, content: Dictionary, q: Dictionary, used: Array) -> Dictionary:
+## v0.7.49.3: a fight — beaten, or slipped past unseen (EncounterRules.slip_past); `defeat` (the designer's, or by the
+## fight's kind when unsaid: a named target, a lair or a boss) — only beaten.
+static func _fact(s: GameSession, data: Dictionary, kind: String, target: String, item: String, content: Dictionary, q: Dictionary, used: Array, defeat: Variant = null) -> Dictionary:
 	var world := WorldView.new(data["world"])
 	var w := {}
 	match kind:
@@ -789,6 +791,9 @@ static func _fact(s: GameSession, data: Dictionary, kind: String, target: String
 		"fight":
 			if (content["enc_keys"] as Array).has(target):
 				w = {"encounter": "enc:" + target}
+				var enc: Dictionary = (content["encounters"] as Array).filter(func(x: Dictionary) -> bool: return str(x["key"]) == target)[0]
+				if bool(defeat) if defeat != null else (str(enc.get("kind", "")) in ["target", "lair"] or bool(enc.get("boss", false))):
+					w["defeat"] = true
 				if not used.has("enc:" + target):
 					used.append("enc:" + target)
 			else:
@@ -799,6 +804,8 @@ static func _fact(s: GameSession, data: Dictionary, kind: String, target: String
 				if not found or s.encounters_done.has(target):
 					return {"reason": "нет непобеждённой встречи %s: key боя акта (encounters или комната места с encounter) или встреча мира" % target}
 				w = {"encounter": target}
+				if bool(defeat):
+					w["defeat"] = true
 				if not used.has("pack:" + target):
 					used.append("pack:" + target)
 			return {"when": w, "danger": true}
@@ -838,7 +845,7 @@ static func _act_step(s: GameSession, data: Dictionary, r: Dictionary, content: 
 			for p: Variant in parts:
 				if not (p is Dictionary) or not _str(p, "kind") in ["visit", "find", "fight"] or _str(p, "text").strip_edges().length() < 3:
 					return {"reason": "шаг «%s»: часть — text и kind visit, find или fight (разговор — отдельным шагом)" % text}
-				var f := _fact(s, data, _str(p, "kind"), _str(p, "target"), "", content, q, used)
+				var f := _fact(s, data, _str(p, "kind"), _str(p, "target"), "", content, q, used, p.get("defeat"))
 				if f.has("reason"):
 					return {"reason": "шаг «%s», часть «%s»: %s" % [text, _str(p, "text"), f["reason"]]}
 				facts.append(f["when"])
@@ -858,7 +865,7 @@ static func _act_step(s: GameSession, data: Dictionary, r: Dictionary, content: 
 				return {"reason": "шаг «%s»: выбор делается в комнате — id места или new:<key>" % text}
 			st["when"] = {"choice": target}
 		_:
-			var f := _fact(s, data, kind, target, _str(r, "item_id"), content, q, used)
+			var f := _fact(s, data, kind, target, _str(r, "item_id"), content, q, used, r.get("defeat"))
 			if f.has("reason"):
 				return {"reason": "шаг «%s»: %s" % [text, f["reason"]]}
 			st["when"] = f["when"]
@@ -875,7 +882,7 @@ static func _act_step(s: GameSession, data: Dictionary, r: Dictionary, content: 
 		var nd: Dictionary = r["needs"]
 		if not _str(nd, "kind") in ["visit", "find", "fight"]:
 			return {"reason": "шаг «%s»: needs — {kind: find|visit|fight, target}" % text}
-		var f := _fact(s, data, _str(nd, "kind"), _str(nd, "target"), "", content, q, used)
+		var f := _fact(s, data, _str(nd, "kind"), _str(nd, "target"), "", content, q, used, nd.get("defeat"))
 		if f.has("reason"):
 			return {"reason": "шаг «%s», needs: %s" % [text, f["reason"]]}
 		st["needs"] = f["when"]

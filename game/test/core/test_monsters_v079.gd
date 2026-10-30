@@ -68,6 +68,13 @@ func test_the_import_keeps_the_effects() -> void:
 	assert_str(str(data["monsters"]["ghoul"]["languages"])).contains("Common")
 
 
+func test_a_flying_sword_moves_by_its_fly() -> void:  # SRD: speed 0 ft, fly 50 ft (hover) — v0.7.49.3
+	var sword: Dictionary = data["monsters"]["flying_sword"]
+	assert_int(MonsterRules.move_speed(sword)).is_equal(50)
+	assert_str(MonsterRules.speed_text(sword)).is_equal("0 фт, полёт 50 фт")
+	assert_int(MonsterRules.move_speed(data["monsters"]["wolf"])).is_equal(40)
+
+
 func test_a_wolf_bite_knocks_the_hero_down() -> void:
 	var s := _session()
 	var f := _fight(s, "wolf")

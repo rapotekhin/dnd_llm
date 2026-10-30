@@ -2,7 +2,7 @@ class_name QuestRules
 extends RefCounted
 ## Quests with steps (roadmap v0.6.3, decision of the author). A pack quest with `giver` and `steps` is taken at the
 ## giver's button; a step is closed only by a fact of the engine named in its `when`:
-##   {"encounter": id} — the encounter is fought, {"secret": "room:secret"} — found, {"room": id} — visited,
+##   {"encounter": id} — the encounter is fought, talked down or slipped past (v0.7.49.3; `defeat` — only fought), {"secret": "room:secret"} — found, {"room": id} — visited,
 ##   {"arrive": id} — the hero is there now; with "item"?: id the thing is brought and left there (v0.7.34.5),
 ##   {"flag": id} — set in the world, {"talk": npc_id, "item"?: id} — a button at that NPC (`action`), the item is
 ##   handed over; {"all": [...]} / {"any": [...]} of facts (v0.6.4) — `parts` names the facts of "all", each part
@@ -141,7 +141,7 @@ static func met(s: GameSession, when: Dictionary) -> bool:
 	if when.has("item") and not when.has("talk") and int(s.character.get("inventory", {}).get(str(when["item"]), 0)) < int(when.get("qty", 1)):
 		return false  # a thing left at a place (v0.7.34.5): the hero has to bring it
 	if when.has("encounter"):
-		return s.encounters_done.has(str(when["encounter"]))
+		return s.encounters_done.has(str(when["encounter"])) or (not bool(when.get("defeat", false)) and s.encounters_passed.has(str(when["encounter"])))
 	if when.has("secret"):
 		var key := str(when["secret"])
 		return (s.revealed.get(key.get_slice(":", 0), []) as Array).has(key.get_slice(":", 1))

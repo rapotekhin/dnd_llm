@@ -141,6 +141,7 @@ func test_a_hard_quest_by_acts_with_parts_a_lair_its_boss_and_the_choice() -> vo
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	var q := QuestRules.quest(data["world"], id)
 	assert_int(int(q["steps"][1]["xp"])).is_equal(150)  # hard, level 1: 300 by two acts
+	assert_bool(q["steps"][0]["when"]["all"][1].has("defeat")).is_false()  # a guard may be slipped past (v0.7.49.3)
 	s.room_id = "mine-flooded"
 	s.visited.append("mine-flooded")
 	assert_array(QuestRules.advance(s, data)).contains(["«Пепельная стая»: штрек — сделано"])
@@ -165,6 +166,8 @@ func test_a_hard_quest_by_acts_with_parts_a_lair_its_boss_and_the_choice() -> vo
 	q = QuestRules.quest(data["world"], id)
 	var den := str(s.generated["rooms"].keys()[-1])
 	assert_bool(bool(data["world"]["rooms"][den]["encounter"].get("boss", false))).is_true()
+	var hort: Array = (q["steps"] as Array).filter(func(st: Dictionary) -> bool: return (st["when"] as Dictionary).has("encounter"))
+	assert_bool(bool(hort[0]["when"].get("defeat", false))).is_true()  # a lair is to be beaten
 	var tail: Dictionary = q["steps"][-1]
 	assert_dict(tail["when"]).is_equal({"talk": "npc_innkeeper"})
 	assert_int(int(tail["xp"])).is_equal(150)

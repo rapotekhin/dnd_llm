@@ -155,8 +155,20 @@
     },
     "ActFact": {
       "additionalProperties": false,
-      "description": "A fact of the engine (0.81.0): `visit` — a room id or «new:<room key>», `find` — «room:secret» of the world or\nthe `key` of a hidden thing of the act, `fight` — the `key` of a fight of the act («new:<room key>» for a room of a\nnew place with its `encounter`) or a live encounter of the world.",
+      "description": "A fact of the engine (0.81.0): `visit` — a room id or «new:<room key>», `find` — «room:secret» of the world or\nthe `key` of a hidden thing of the act, `fight` — the `key` of a fight of the act («new:<room key>» for a room of a\nnew place with its `encounter`) or a live encounter of the world. 0.94.0: a fight is beaten or slipped past\nunseen; `defeat` true — only beaten, false — passing is enough, unsaid — by the fight's kind (a target, a lair or\na boss is to be beaten).",
       "properties": {
+        "defeat": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Defeat"
+        },
         "kind": {
           "enum": [
             "visit",
@@ -191,6 +203,18 @@
           "default": false,
           "title": "Danger",
           "type": "boolean"
+        },
+        "defeat": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Defeat"
         },
         "item_id": {
           "anyOf": [

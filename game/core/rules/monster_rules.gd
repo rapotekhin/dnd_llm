@@ -768,3 +768,14 @@ static func sees_in_dark(data: Dictionary, f: Dictionary) -> bool:
 ## The monster flies (a fly speed in the SRD): it reaches a flying hero (v0.7.13.3).
 static func flies(data: Dictionary, f: Dictionary) -> bool:
 	return int(monster(data, f).get("fly", 0)) > 0
+
+
+## The way a monster covers in a turn on the field: the walk or, if faster, the fly (a Flying Sword: 0 ft, fly 50 ft).
+static func move_speed(m: Dictionary) -> int:
+	return maxi(int(m.get("speed", 30)), int(m.get("fly", 0)))
+
+
+## «0 фт, полёт 50 фт» for a card.
+static func speed_text(m: Dictionary) -> String:
+	var fly := int(m.get("fly", 0))
+	return "%d фт" % int(m.get("speed", 30)) + (", полёт %d фт" % fly if fly > 0 else "")

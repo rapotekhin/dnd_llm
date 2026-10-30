@@ -2437,6 +2437,9 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	var from := session.room_id
 	if session.sneak_noticed != room_id:
 		session.sneak_noticed = ""  # a new room: people there have not seen the player sneak yet
+	var past := EncounterRules.slip_past(session, from, room_id)  # a quest's «пройти стражу» (v0.7.49.3)
+	if not past.is_empty():
+		lines.append(past)
 	session.lurking.erase(from)  # the unaware foes are left behind (v0.7.22.12)
 	if session.sneaking:
 		var seen := _sneak_past_people(room_id)

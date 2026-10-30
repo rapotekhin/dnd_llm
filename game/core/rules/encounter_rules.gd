@@ -12,6 +12,9 @@ extends RefCounted
 ## the captors round (the parley DC). Free — the captors lurk, unaware, as at a meeting.
 ## v0.7.22.17 (#12, #15): «Сдаться» makes the hero a captive at once; the captors take the hero's things into a
 ## container of the room (`seize`) — taken back from it once free; the hero bound reaches into no container.
+## v0.7.49.3: out of the room of the unaware foes by another way than in — the hero slipped past them
+## (s.encounters_passed): a quest's fight step is done unless it says `defeat`; out by the way in — only turned back.
+## A dead end is never passed.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -46,6 +49,16 @@ static func meet(s: GameSession, data: Dictionary, room_id: String, from: String
 	s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from}
 	return {"lurk": true, "stealth": int(roll["total"]),
 		"line": "%s крадётся: Скрытность %d%s — героя не замечают: %s" % [s.character.get("name", ""), int(roll["total"]), roll["note"], names]}
+
+
+## The hero leaves `from` for `to`: past the unaware foes of an encounter there, if not back the way in. The line or "".
+static func slip_past(s: GameSession, from: String, to: String) -> String:
+	var lk := lurking(s, from)
+	var id := str(lk.get("encounter", ""))
+	if id.is_empty() or str(lk.get("from", "")) == to or s.encounters_passed.has(id):
+		return ""
+	s.encounters_passed.append(id)
+	return "Вы прошли мимо незамеченными — стража позади"
 
 
 static func lurking(s: GameSession, room_id: String) -> Dictionary:
