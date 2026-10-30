@@ -31,10 +31,15 @@ static func open_made(s: GameSession) -> Array[String]:
 	return out
 
 
-## A notice board (v0.7.22.13): a thing of the room whose name has one of rules.quest_gen.board_words.
+## A notice board (v0.7.22.13): a thing of the room whose name starts with one of rules.quest_gen.board_words or has
+## one of board_anywhere, and none of board_not (v0.7.50.1: a knife on a cutting board is no board).
 static func is_board(data: Dictionary, p: Dictionary) -> bool:
 	var name := str(p.get("name", "")).to_lower()
-	return (cfg(data).get("board_words", []) as Array).any(func(w: Variant) -> bool: return name.contains(str(w)))
+	var has_word := func(w: Variant) -> bool: return name.contains(str(w))
+	if (cfg(data).get("board_not", []) as Array).any(has_word):
+		return false
+	return (cfg(data).get("board_anywhere", []) as Array).any(has_word) \
+		or (cfg(data).get("board_words", []) as Array).any(func(w: Variant) -> bool: return name.begins_with(str(w)))
 
 
 ## A board's state (the author, after v0.7.22.33): {read_day, fresh_day}; {} — never read. `fresh_day` > 0 — the day
@@ -878,6 +883,11 @@ static func _act_step(s: GameSession, data: Dictionary, r: Dictionary, content: 
 				st["when"]["qty"] = n
 			if bool(f.get("danger", false)):
 				st["danger"] = true
+			if bool(r.get("cure", false)):  # v0.7.50.1: the step ends the NPC's illness
+				var sick := str(st["when"].get("talk", ""))
+				if DiseaseRules.npc_disease(s, data, sick).is_empty():
+					return {"reason": "шаг «%s»: cure — только у разговора с больным человеком" % text}
+				st["cure_npc"] = sick
 	if bool(r.get("danger", false)):
 		st["danger"] = true
 	if r.get("needs") is Dictionary:  # knowledge as a key: the step waits for it (v0.7.22.13 for choices; v0.7.39.6 for any)

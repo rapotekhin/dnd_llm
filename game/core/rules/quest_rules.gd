@@ -374,6 +374,8 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 	var flag := str(r.get("flag", ""))
 	if not flag.is_empty() and not s.flags.has(flag):
 		s.flags.append(flag)
+	if r.has("cure_npc"):  # v0.7.50.1: the quest's remedy works, whatever the illness
+		lines.append_array(DiseaseRules.cure_npc(s, data, str(r["cure_npc"]), "magic"))
 	var cp := int(r.get("reward_cp", 0))
 	if cp > 0:
 		c["gold_cp"] = int(c.get("gold_cp", 0)) + cp

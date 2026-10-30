@@ -40,3 +40,4 @@ ADR — это короткая запись о **значимом архите�
 - [0009-godot-backend-protocol.md](0009-godot-backend-protocol.md) — протокол Godot ↔ бэкенд: подключение, методы, транзакция хода, ошибки, кассеты
 - [0010-game-decisions-worlds-tone-combat-death.md](0010-game-decisions-worlds-tone-combat-death.md) — игровые решения: вселенные-пакеты, свой регион, стиль ГМ, зоны в бою, режимы смерти
 - [0011-default-master-model.md](0011-default-master-model.md) — модель мастера по умолчанию Claude Haiku 5.5: сравнение с Qwen 3.8 Omni Flash, Qwen 3.8 27B и Gemini 3.8 Flash на «золотых» сценариях
+- [0012-unified-models.md](0012-unified-models.md) — единые модели: одна запись с частями вместо хранилищ и классов, шаблоны в данных, сейвы этапа не переносим

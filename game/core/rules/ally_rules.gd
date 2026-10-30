@@ -36,7 +36,16 @@ static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 		var n := world.npc(id)
 		var mon := str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
 		if data["monsters"].has(mon):
-			out.append({"monster": mon, "name": str(n.get("name", id)), "npc_id": id, "ally": "follower"})
+			var spec := {"monster": mon, "name": str(n.get("name", id)), "npc_id": id, "ally": "follower"}
+			if s.npc_hp.has(id):  # v0.7.50.1: the wounds of the last fight
+				spec["hp"] = int(s.npc_hp[id])
+			out.append(spec)
+	for c: Dictionary in CreatureRules.here(s, s.room_id):
+		if bool(c.get("ally", false)) and not foes.any(func(f: Variant) -> bool: return f is Dictionary and FactionRules.of_foe(data, {}, f) == str(c.get("faction", ""))):
+			var spec := {"monster": str(c["monster"]), "name": str(c["name"]), "ally": "follower", "creature_id": str(c["id"])}  # v0.7.50.1
+			if c.has("hp"):
+				spec["hp"] = int(c["hp"])
+			out.append(spec)
 	if data["rules"].has("property"):
 		out.append_array(PropertyRules.fighting(s, data))  # v0.7.27: an own dog
 	return out
@@ -118,6 +127,56 @@ static func dismiss(s: GameSession, summon_id: String) -> String:
 	return "ALLY_NOT_HERE"
 
 
+## An NPC's hit points now: its wounds, or the template's full ones (v0.7.50.1). {hp, max}.
+static func npc_health(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary:
+	var mon := str(WorldView.new(data["world"]).npc(npc_id).get("monster", CombatRules.cfg(data)["default_npc_monster"]))
+	var full := int(data["monsters"].get(mon, {}).get("hp", 1))
+	return {"hp": mini(full, int(s.npc_hp.get(npc_id, full))), "max": full}
+
+
+## A spell cast at an NPC out of a fight (v0.7.50.1): a heal now, or a boon that it carries into a fight until it ends.
+static func cast_on_npc(s: GameSession, data: Dictionary, spell_id: String, slot: int, npc_id: String) -> Array[String]:
+	var who := str(WorldView.new(data["world"]).npc(npc_id).get("name", npc_id))
+	var spell: Dictionary = data["spells"][spell_id]
+	var invisible := (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell_id)
+	if SpellEffects.spec(data, spell_id).is_empty() and not invisible:
+		var h := npc_health(s, data, npc_id)
+		var after := mini(int(h["max"]), int(h["hp"]) + CombatRules.heal_roll(s, data, spell_id, slot))
+		s.npc_hp.erase(npc_id)
+		if after < int(h["max"]):
+			s.npc_hp[npc_id] = after
+		return ["%s: +%d HP" % [who, after - int(h["hp"])]]
+	var rounds := ConditionRules.spell_rounds(data, spell_id)
+	var buffs: Array = s.npc_buffs.get(npc_id, [])
+	buffs = buffs.filter(func(b: Dictionary) -> bool: return str(b["spell"]) != spell_id)
+	buffs.append({"spell": spell_id, "slot": slot, "ends": ConditionRules.now(s) + rounds if rounds > 0 else -1})
+	s.npc_buffs[npc_id] = buffs
+	return ["%s: %s" % [who, spell["name"]]]
+
+
+## The spells on the followers go into the fight with them.
+static func buffs_into_fight(s: GameSession, data: Dictionary) -> void:
+	var now := ConditionRules.now(s)
+	for id: String in CombatRules.allies(s, false):
+		var f := CombatRules.fighter(s, id)
+		for b: Dictionary in s.npc_buffs.get(str(f.get("npc_id", "")), []):
+			if int(b["ends"]) < 0 or int(b["ends"]) > now:
+				SpellEffects.on_friend(s, data, str(b["spell"]), int(b["slot"]), f, [] as Array[String])
+
+
+## The concentration on the spell ended: it leaves the NPCs.
+static func drop_buffs(s: GameSession, spell_id: String) -> void:
+	for id: String in s.npc_buffs.keys():
+		s.npc_buffs[id] = (s.npc_buffs[id] as Array).filter(func(b: Dictionary) -> bool: return str(b["spell"]) != spell_id)
+		if (s.npc_buffs[id] as Array).is_empty():
+			s.npc_buffs.erase(id)
+
+
+## A long rest heals the wounded NPCs.
+static func rest(s: GameSession) -> void:
+	s.npc_hp.clear()
+
+
 ## After the fight: the summoned keep their wounds (the fallen are gone); the followers who fell come to. Lines.
 static func after_fight(s: GameSession) -> Array[String]:
 	var lines: Array[String] = []
@@ -130,11 +189,19 @@ static func after_fight(s: GameSession) -> Array[String]:
 			var cr := CreatureRules.find(s, s.room_id, str(f["creature_id"]))
 			if str(f["status"]) == "active":
 				cr["hp"] = int(f["hp"])
+			elif bool(cr.get("ally", false)):  # v0.7.50.1: one who came along falls and comes to
+				cr["hp"] = 1
+				lines.append("%s приходит в себя" % f["name"])
 			elif not cr.is_empty():
 				lines.append("%s погиб в бою" % cr["name"])
 				PropertyRules._remove_creature(s, str(f["creature_id"]))
-		elif str(f.get("status")) == "down":
-			lines.append("%s приходит в себя" % f["name"])
+		else:
+			if str(f.get("status")) == "down":
+				lines.append("%s приходит в себя" % f["name"])
+			if not str(f.get("npc_id", "")).is_empty():  # v0.7.50.1: a follower keeps its wounds
+				s.npc_hp[str(f["npc_id"])] = maxi(1, int(f["hp"]))
+				if int(f["hp"]) >= int(f["max_hp"]):
+					s.npc_hp.erase(str(f["npc_id"]))
 	var kept: Array[Dictionary] = []
 	for m: Dictionary in s.summons:
 		if not hp.has(str(m["id"])):

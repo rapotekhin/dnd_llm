@@ -206,6 +206,11 @@
       "additionalProperties": false,
       "description": "A step of an act (0.81.0): `talk` — `target` an NPC id or «new:<key>» (`item_id` — a thing to hand over: a key\nof the act's things, an earlier act's or a catalog id), `visit` (`item_id` — left there), `find`, `fight` as in\nActFact; `all` / `any` — 2–4 `parts` in any order (all) or one of them (any); `choice` — the finale's choice in a\nroom (`target`), its options in the act's `choices`. `needs` — knowledge the step waits for (`needs_text` — what\nthe hero lacks). 0.85.0: `item_qty` — how many of a catalog `item_id` to hand over (an order of three hides).",
       "properties": {
+        "cure": {
+          "default": false,
+          "title": "Cure",
+          "type": "boolean"
+        },
         "danger": {
           "default": false,
           "title": "Danger",

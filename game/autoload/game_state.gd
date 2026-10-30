@@ -219,6 +219,23 @@ func _use_alone(what: Dictionary) -> String:
 	return ""
 
 
+const SELF_TARGET := "self"
+
+
+## Who a spell of the hero's side lands on: the ids picked ({SELF_TARGET} — the hero), at most its number of targets.
+func _friend_targets(what: Dictionary, spell_id: String) -> Array[String]:
+	var out: Array[String] = []
+	if str(what.get("kind", "")) != "spell" or not SpellEffects.picks_side(Catalog.data, spell_id) in ["friend", "any"]:
+		return out
+	var picked: Array = what.get("targets", [])
+	if picked.is_empty() and not str(what.get("target", "")).is_empty():
+		picked = [what["target"]]
+	var n := SpellEffects.picks_count(Catalog.data, spell_id, int(what.get("slot", 0)))
+	for id: Variant in picked.slice(0, n):
+		out.append(str(id))
+	return out
+
+
 ## A spell, a feature use or a consumable checked and spent by the engine (v0.7.7: shared by the sheet buttons and
 ## the attachment at the input field): {"lines", "facts"} or {"reason"}. `what`: {kind spell|feature|item, id,
 ## slot (spells, 0 = the lowest fitting), target (an NPC id of the scene, optional)}.
@@ -232,7 +249,14 @@ func _spend(what: Dictionary) -> Dictionary:
 			var chk := SpellRules.check(c, Catalog.data, id, int(what.get("slot", 0)))
 			if chk.has("reason"):
 				return {"reason": str(chk["reason"])}
-			lines = SpellRules.cast(c, Catalog.data, chk["spell_id"], int(chk["slot"]), session, str(what.get("target", "")).is_empty())
+			var friends := _friend_targets(what, str(chk["spell_id"]))  # v0.7.50.1: the NPCs and the hero picked for it
+			lines = SpellRules.cast(c, Catalog.data, chk["spell_id"], int(chk["slot"]), session,
+				str(what.get("target", "")).is_empty() and friends.is_empty() or friends.has(SELF_TARGET))
+			for npc: String in friends:
+				if npc != SELF_TARGET:
+					lines.append_array(AllyRules.cast_on_npc(session, Catalog.data, str(chk["spell_id"]), int(chk["slot"]), npc))
+			if not friends.is_empty() and not friends.has(SELF_TARGET) and (Catalog.data["rules"]["invisibility"]["spells"] as Dictionary).has(str(chk["spell_id"])):
+				c["invisible_others"] = true
 			lines.append_array(AllyRules.expire(session))  # a new concentration lets the old summons go (v0.7.22.22)
 			lines.append_array(AllyRules.summon(session, Catalog.data, str(chk["spell_id"])))
 			what["spent_slot"] = int(chk["slot"])

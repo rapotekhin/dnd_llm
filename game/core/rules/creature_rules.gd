@@ -46,6 +46,9 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String) -> Ar
 		var c := {"id": "c%d" % s.creature_counter, "name": str(f["name"]), "monster": str(f["monster"]), "state": state,
 			"bound": false, "led": false, "since": TimeRules.abs_minute(s), "hp": int(f.get("hp", 1)), "max_hp": int(f.get("max_hp", 1)),
 			"xp_given": not bool(f.get("no_xp", false)) and str(s.combat.get("outcome", "")) in ["victory", "truce"]}
+		if s.combat.has("parley_won") and state != "unconscious":  # v0.7.50.1: beaten by words — they stay and no longer fight
+			c["kept"] = true
+			c["faction"] = FactionRules.of_foe(data, SceneRules.room(s, data["world"], room_id).get("encounter", {}), f)
 		if not npc.is_empty():
 			c["npc_id"] = npc
 		list.append(c)
@@ -65,7 +68,7 @@ static func text(c: Dictionary, data: Dictionary) -> String:
 	if bool(c.get("bound", false)):
 		bits.append("связан")
 	if bool(c.get("led", false)):
-		bits.append("идёт с героем" if str(c["state"]) == "tame" else "идёт с героем на привязи")
+		bits.append("идёт с героем" if str(c["state"]) == "tame" or bool(c.get("ally", false)) else "идёт с героем на привязи")
 	if not str(c.get("owner", "")).is_empty() and str(c["state"]) != "tame":
 		bits.append(OwnerRules.owner_word(data, str(c["owner"])))
 	if not str(c.get("serf", "")).is_empty():
@@ -81,6 +84,16 @@ static func captive(c: Dictionary) -> bool:
 ## Someone else's: an NPC owns it — leading it away or letting it go is a theft.
 static func foreign(c: Dictionary) -> bool:
 	return not str(c.get("owner", "")).is_empty() and str(c["owner"]) != OwnerRules.HERO
+
+
+## Beaten by words (v0.7.50.1): stays in the room and may go with the hero, fighting beside.
+static func joinable(c: Dictionary) -> bool:
+	return bool(c.get("kept", false)) and not bool(c.get("bound", false))
+
+
+## How many go with the hero by their own will: NPCs and the creatures beaten by words.
+static func companions(s: GameSession) -> int:
+	return s.followers.size() + here(s, s.room_id).filter(func(c: Dictionary) -> bool: return bool(c.get("ally", false))).size()
 
 
 ## Helpless: knocked out or bound — finished off without a fight.
@@ -110,6 +123,11 @@ static func can(s: GameSession, id: String, what: String, data: Dictionary = {})
 		"lead":
 			if not bool(c.get("bound", false)) and str(c["state"]) != "tame":  # v0.7.27: an own beast
 				return "CREATURE_NOT_BOUND"
+		"join":
+			if not joinable(c):
+				return "CREATURE_CANNOT_JOIN"
+			if not bool(c.get("ally", false)) and not data.is_empty() and companions(s) >= int(FollowRules.cfg(data)["max"]):
+				return "CREATURE_TOO_MANY"
 		"hand_over":
 			if not bool(c.get("bound", false)) or foreign(c) or not str(c.get("npc_id", "")).is_empty():
 				return "CREATURE_NOT_YOUR_PRISONER"
@@ -125,7 +143,16 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 		"bind":
 			c["bound"] = true
 			c["owner"] = OwnerRules.HERO
+			c.erase("ally")
+			c["led"] = false
 			return ["%s связан — ваш пленник" % c["name"]]
+		"join":
+			var going := not bool(c.get("ally", false))
+			c["led"] = going
+			c.erase("ally")
+			if going:
+				c["ally"] = true
+			return ["%s %s" % [c["name"], "идёт с вами" if going else "остаётся здесь"]]
 		"lead":
 			var lines: Array[String] = _taken_from_owner(s, data, c)
 			c["led"] = not bool(c.get("led", false))
@@ -253,7 +280,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		var keep: Array = []
 		for c: Dictionary in s.creatures[room]:
 			var limit := int(leave.get(str(c["state"]), 0))
-			if bool(c.get("bound", false)) or limit <= 0 or now - int(c["since"]) < limit:
+			if bool(c.get("bound", false)) or bool(c.get("kept", false)) or limit <= 0 or now - int(c["since"]) < limit:
 				keep.append(c)
 				continue
 			if room == s.room_id:
@@ -271,6 +298,8 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 	var out: Array[String] = []
 	for c: Dictionary in here(s, room_id):
 		var extra := " — не пленник: свободен, не связан, при оружии, говорит на равных" if str(c["state"]) == "truce" else ""
+		if bool(c.get("kept", false)) and str(c["state"]) != "truce":
+			extra = " — запуган, больше не враждебен" + ("" if bool(c.get("bound", false)) else ", не связан")
 		if bool(c.get("pet", false)):  # v0.7.43
 			extra = " — питомец героя: " + PetRules.text(data, c)
 		elif PetRules.tameable(data, str(c["monster"])) and str(c["state"]) in ["wild", "truce", "surrendered"]:

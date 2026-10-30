@@ -17,7 +17,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		var n := world.npc(id)
 		npcs.append({"npc_id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 			"body": BodyRules.npc_text(data, id, n),
-			"gender": n.get("gender", "other"), "description": str(n.get("description", "")) + _sick(s, data, id, n) + _hungry(s, id),
+			"gender": n.get("gender", "other"), "description": str(n.get("description", "")) + _sick(s, data, id, n) + _hungry(s, id) + _wounds(s, data, id),
 			"personality": n.get("personality", ""), "attitude": s.attitude(id), "trader": bool(n.get("trader", false)),
 			"speaks": ", ".join(LanguageRules.npc(data, n).map(func(l: String) -> String: return LanguageRules.name_of(data, l).to_lower())),
 			"understands_hero": LanguageRules.npc_understands(s.character, data, n), "tie": BackgroundRules.tie_text(s.character, data, n),
@@ -226,6 +226,13 @@ static func _conditions(c: Dictionary, data: Dictionary) -> Array:
 
 
 ## A follower the hero has not fed (v0.7.39.1): the master sees its hunger.
+static func _wounds(s: GameSession, data: Dictionary, id: String) -> String:
+	if not s.npc_hp.has(id):
+		return ""
+	var h := AllyRules.npc_health(s, data, id)
+	return " Ранен: %d из %d хитов." % [int(h["hp"]), int(h["max"])]
+
+
 static func _hungry(s: GameSession, id: String) -> String:
 	var n := int(s.follower_fed.get(id, {}).get("hungry", 0))
 	return " Голоден: %d дн. без еды от героя." % n if n > 0 and s.followers.has(id) else ""

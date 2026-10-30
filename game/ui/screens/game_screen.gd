@@ -652,6 +652,28 @@ func _check_chip() -> void:
 			input.placeholder_text = tr("PLACEHOLDER_CHECK_PINNED")
 
 
+## The boxes of the targets of a pinned spell: the hero and the NPCs here, no more than `limit` ticked.
+func _attach_boxes(npcs: Array, limit: int) -> void:
+	var a := GameState.attached
+	var picked: Array = a.get("targets", [])
+	for id: String in [GameState.SELF_TARGET] + npcs:
+		var box := CheckBox.new()
+		box.name = "AttachPick_" + id
+		box.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		box.text = tr("ATTACH_SELF") if id == GameState.SELF_TARGET else str(GameState.world().npc(id).get("name", id))
+		box.button_pressed = picked.has(id)
+		box.disabled = not picked.has(id) and picked.size() >= limit
+		box.toggled.connect(func(on: bool) -> void:
+			var now: Array = GameState.attached.get("targets", [])
+			if on and not now.has(id):
+				now.append(id)
+			elif not on:
+				now.erase(id)
+			GameState.attached["targets"] = now
+			EventBus.state_changed.emit())
+		_attach_chip.add_child(box)
+
+
 ## The chip of the pinned thing: its name, the slot circle (spells), the target (an NPC here or none), «✕».
 func _refresh_attach(s: GameSession, busy: bool, online: bool) -> void:
 	for c in _attach_chip.get_children():
@@ -689,7 +711,11 @@ func _refresh_attach(s: GameSession, busy: bool, online: bool) -> void:
 			GameState.attached["slot"] = pick.get_item_id(i))
 		_attach_chip.add_child(pick)
 	var npcs := s.npcs_here(GameState.world().world, s.room_id)
-	if not npcs.is_empty():
+	var many := str(a["kind"]) == "spell" and SpellEffects.picks_side(Catalog.data, str(a["id"])) in ["friend", "any"] \
+		and SpellEffects.picks_count(Catalog.data, str(a["id"]), int(a.get("slot", 0))) > 1
+	if many and not npcs.is_empty():  # v0.7.50.1: several targets — boxes; none ticked is the hero
+		_attach_boxes(npcs, SpellEffects.picks_count(Catalog.data, str(a["id"]), int(a.get("slot", 0))))
+	elif not npcs.is_empty():
 		var who := OptionButton.new()
 		who.name = "AttachTarget"
 		who.add_item(tr("ATTACH_NO_TARGET"))

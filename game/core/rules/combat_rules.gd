@@ -186,6 +186,7 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 		s.combat["nonlethal"] = ArenaRules.yield_bout(s)
 	else:
 		_add_foes(s, data, AllyRules.joining(s, data, foes) + (source.get("allies", []) as Array) + AllyRules.summon_specs(s), 99, "ally")
+		AllyRules.buffs_into_fight(s, data)
 	for w: Dictionary in source.get("waves", []):
 		add_incoming(s, data, w.get("enemies", []), int(w.get("round", 2)), str(w.get("side", "right")))
 	# Initiative: d20 + DEX; ties — the higher DEX, then the player.
@@ -903,7 +904,7 @@ static func _resist(data: Dictionary, t: Dictionary, dtype: String, dmg: int, ma
 		return false
 	if has.call("immunities"):
 		return 0
-	if has.call("resistances"):
+	if has.call("resistances") or (t.get("resist_fx", []) as Array).has(dtype):  # the spells on an ally (v0.7.50.1)
 		return dmg / 2
 	if has.call("vulnerabilities"):
 		return dmg * 2
@@ -971,7 +972,7 @@ static func npc_unaware(s: GameSession, data: Dictionary, npc_id: String) -> boo
 
 
 static func is_engine_spell(data: Dictionary, spell_id: String) -> bool:
-	return (cfg(data)["engine_spells"] as Array).has(spell_id) or cfg(data)["condition_spells"].has(spell_id) 		or not SpellEffects.spec(data, spell_id).is_empty()  # the buffs and curses of v0.7.13 resolve in the engine too
+	return (cfg(data)["engine_spells"] as Array).has(spell_id) or cfg(data)["condition_spells"].has(spell_id) or cfg(data)["spell_targets"].has(spell_id) 		or not SpellEffects.spec(data, spell_id).is_empty()  # the buffs and curses of v0.7.13 resolve in the engine too
 
 
 static func _has(f: Dictionary, cond: String) -> bool:
@@ -1021,12 +1022,14 @@ static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, 
 	var name := str(sp["name"])
 	var targets: Array[Dictionary] = []
 	if bool(spec.get("area", false)) or sp.has("area"):
-		var col := int(player(s)["col"]) if int(sp.get("range_ft", 0)) == 0 else int(target["col"])
-		for id: String in enemies(s):
-			if int(fighter(s, id)["col"]) == col:
-				targets.append(fighter(s, id))
+		targets = area_targets(s, data, sp, target)
 	else:
 		targets.append(target)
+	var dc_on_hero := int(c.get("spell_dc", 10))
+	if targets.any(func(t: Dictionary) -> bool: return str(t["id"]) == PLAYER):  # friendly fire (v0.7.50.1)
+		targets = targets.filter(func(t: Dictionary) -> bool: return str(t["id"]) != PLAYER)
+		if not spec.has("pool") or int(c.get("hp", 0)) <= 10:
+			MonsterRules._cast_condition_on_hero(s, data, player(s), spell_id, slot, spec, dc_on_hero, lines)
 	var conds: Array = spec["conditions"]
 	var timer := {"rounds": int(spec.get("rounds", 10)) * (2 if str(s.combat.get("meta_now", "")) == "extended_spell" else 1), "spell": spell_id, "wake": bool(spec.get("ends_on_damage", false)),
 		"save": str(sp["save"]["ability"]) if bool(spec.get("repeat_save", false)) and sp.has("save") else "", "dc": int(c.get("spell_dc", 10))}
@@ -1119,7 +1122,10 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String) -> Arr
 		if str(a.get("spell", "")) == spell_id and bool(data["spells"].get(spell_id, {}).get("concentration", false)):
 			a["status"] = "gone"
 			lines.append("%s исчезает — концентрация прервана" % a["name"])
-	if spell_id == "haste":  # v0.7.13.3: a wave of lethargy
+	var on_others := allies(s, false).any(func(id: String) -> bool: return fighter(s, id).has("lethargy")) \
+		or s.npc_buffs.values().any(func(l: Array) -> bool: return l.any(func(x: Dictionary) -> bool: return str(x["spell"]) == spell_id))  # v0.7.50.1
+	AllyRules.drop_buffs(s, spell_id)
+	if spell_id == "haste" and not on_others:  # v0.7.13.3: a wave of lethargy
 		s.character["lethargy"] = true
 		lines.append("Ускорение кончилось — на ход накатывает вялость")
 	for id: String in enemies(s):
@@ -1155,6 +1161,9 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 		return "COMBAT_REACTION_SPELL"  # Shield, Counterspell: cast in the window of a foe's turn (v0.7.13.7)
 	if (sp.get("components", []) as Array).has("V") and SpellEffects.silenced(s, int(player(s)["col"])):
 		return "COMBAT_SILENCED"  # v0.7.13.6
+	if not target_id.is_empty() and (SpellEffects.picks_side(data, spell_id) == "friend"
+			or (SpellEffects.picks_side(data, spell_id) == "any" and str(fighter(s, target_id).get("side")) != "enemy")):
+		return _can_friend(s, data, spell_id, target_id)
 	if sp.has("heal_at_slot") or target_id.is_empty():
 		return ""
 	var t := fighter(s, target_id)
@@ -1165,6 +1174,17 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 	if absi(shown_col(t) - int(player(s)["col"])) > range_cols(data, spell_range(s, data, spell_id)):
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
+
+
+## "" when a spell of the hero's side may land on `target_id`: the hero, or an ally in range; a fallen one only for a heal.
+static func _can_friend(s: GameSession, data: Dictionary, spell_id: String, target_id: String) -> String:
+	if target_id == PLAYER:
+		return ""
+	var t := fighter(s, target_id)
+	var fallen_ok := str(t.get("status")) == "down" and SpellEffects.spec(data, spell_id).is_empty()
+	if t.is_empty() or str(t.get("side")) != "ally" or not (str(t.get("status")) == "active" or fallen_ok):
+		return "COMBAT_BAD_TARGET"
+	return "COMBAT_OUT_OF_RANGE" if cols_between(player(s), t) > range_cols(data, spell_range(s, data, spell_id)) else ""
 
 
 ## A spell's range for the hero: Eldritch Spear (300 ft for Eldritch Blast), Distant Spell (double).
@@ -1348,10 +1368,22 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 	s.combat["meta_now"] = meta
 	var chk := SpellRules.check(c, data, spell_id, slot)
 	var held := str(c.get("concentration", ""))
-	var lines: Array[String] = SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]), s, target_id.is_empty())
+	var lines: Array[String] = SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]), s, target_id in ["", PLAYER])
 	slot = int(chk["slot"])
 	if held != str(c.get("concentration", "")):
 		lines.append_array(end_spell(s, data, held))
+	if not SpellEffects.picks(data, spell_id).is_empty():  # v0.7.50.1: the first target; the others picked as darts
+		_start_picks(s, data, spell_id, slot, target_id)
+		if SpellEffects.picks_side(data, spell_id) == "any" and str(fighter(s, target_id).get("side")) == "enemy":
+			SpellEffects.reduce_foe(s, data, spell_id, fighter(s, target_id), lines)
+			return lines
+		if SpellEffects.picks_side(data, spell_id) != "foe":
+			if not target_id in ["", PLAYER]:
+				if (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell_id):
+					c["invisible_others"] = true  # the concentration holds an ally's, not the hero's
+				SpellEffects.on_friend(s, data, spell_id, slot, fighter(s, target_id), lines)
+				return lines
+			target_id = ""
 	if not AllyRules.summon_spec(data, spell_id).is_empty():  # v0.7.22.22: the summoned fight on the hero's side
 		lines.append_array(AllyRules.summon(s, data, spell_id))
 		return lines
@@ -1382,13 +1414,7 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 	var level := int(c.get("level", 1))
 	var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "int"))))
 	if sp.has("heal_at_slot"):
-		var heal_expr := str(sp["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
-		var heal := max_dice(heal_expr, ab) if SpellEffects.max_heal(c) else roll_dice(s.rng, heal_expr, false, ab)
-		if FeatureRules.has(c, "disciple_of_life") and slot > 0:
-			heal += 2 + slot  # Disciple of Life
-		var before := int(c["hp"])
-		c["hp"] = mini(int(c["max_hp"]), before + heal)
-		lines.append("+%d HP" % (int(c["hp"]) - before))
+		_heal_hero(s, data, spell_id, slot, lines)
 		return lines
 	if not is_engine_spell(data, spell_id) or target_id.is_empty():
 		return lines
@@ -1401,11 +1427,6 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 	var targets: Array[Dictionary] = [t]
 	if sp.has("area"):
 		targets = area_targets(s, data, sp, t)
-	elif spell_id == "acid_splash":  # v0.7.13: a second creature within 5 ft of the first
-		for id: String in enemies(s):
-			if id != str(t["id"]) and int(fighter(s, id)["col"]) == int(t["col"]):
-				targets.append(fighter(s, id))
-				break
 	var multi: Dictionary = cfg(data)["multi"].get(spell_id, {})
 	var count := 1
 	if multi.has("base"):
@@ -1430,14 +1451,19 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 			for tg: Dictionary in targets:
 				if str(tg.get("status")) != "active":
 					continue
-				var ok := _monster_save(s, data, tg, str(sp["save"]["ability"]), int(c.get("spell_dc", 10)), ["magic"], str(s.combat.get("meta_now", "")) == "heightened_spell")
+				var hero := str(tg["id"]) == PLAYER  # friendly fire (v0.7.50.1)
+				var save_ab := str(sp["save"]["ability"])
+				var dc := int(c.get("spell_dc", 10))
+				var ok := bool(HeroDefense.save(s, data, save_ab, dc, "magic")["ok"]) if hero else _monster_save(s, data, tg, save_ab, dc, ["magic"], str(s.combat.get("meta_now", "")) == "heightened_spell")
 				var dmg := dmg_full / 2 if ok and str(sp["save"]["success"]) == "half" else (0 if ok else dmg_full)
-				dmg = _resist(data, tg, dtype, dmg)
-				lines.append("%s: %s — спасбросок %s против Сл %d %s, %d (%s)" % [name, tg["name"], ab_name(str(sp["save"]["ability"])),
-					int(c.get("spell_dc", 10)), "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
+				dmg = int(HeroDefense.adjust(s, data, dtype, dmg)["damage"]) if hero else _resist(data, tg, dtype, dmg)
+				lines.append("%s: %s — спасбросок %s против Сл %d %s, %d (%s)" % [name, str(c.get("name", "")) if hero else tg["name"], ab_name(save_ab),
+					dc, "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
+				_caught_friend(s, data, tg)
 				if dmg > 0:
-					_hurt_enemy(s, data, tg, dmg, lines)
-				_spell_rider(s, data, spell_id, slot, tg, not ok, lines)
+					_hurt_any(s, data, tg, dmg, lines)
+				if not hero:
+					_spell_rider(s, data, spell_id, slot, tg, not ok, lines)
 	return lines
 
 
@@ -1471,7 +1497,76 @@ static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int,
 		lines.append("Отталкивающий заряд: %s отброшен на 30 фт" % t["name"])
 
 
-## The darts or rays left of the spell just cast (v0.7.22.4): {spell, slot, left, last} or {}.
+## What a healing spell gives at this slot.
+static func heal_roll(s: GameSession, data: Dictionary, spell_id: String, slot: int) -> int:
+	var c := s.character
+	var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "int"))))
+	var heal_expr := str(data["spells"][spell_id]["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
+	var heal := max_dice(heal_expr, ab) if SpellEffects.max_heal(c) else roll_dice(s.rng, heal_expr, false, ab)
+	if FeatureRules.has(c, "disciple_of_life") and slot > 0:
+		heal += 2 + slot  # Disciple of Life
+	return heal
+
+
+static func _heal_hero(s: GameSession, data: Dictionary, spell_id: String, slot: int, lines: Array[String]) -> void:
+	var c := s.character
+	var before := int(c["hp"])
+	c["hp"] = mini(int(c["max_hp"]), before + heal_roll(s, data, spell_id, slot))
+	lines.append("+%d HP" % (int(c["hp"]) - before))
+
+
+## The targets left to pick after the first (v0.7.50.1): a volley with `picks`, none when nobody is left to pick.
+static func _start_picks(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> void:
+	var left := SpellEffects.picks_count(data, spell_id, slot) - 1
+	if left <= 0:
+		return
+	var first := PLAYER if target_id.is_empty() else target_id
+	s.combat["volley"] = {"spell": spell_id, "slot": slot, "left": left, "last": first, "picks": [first]}
+	if not _can_pick_more(s, data):
+		s.combat.erase("volley")
+
+
+static func _can_pick_more(s: GameSession, data: Dictionary) -> bool:
+	var ids: Array[String] = enemies(s)
+	if SpellEffects.picks_side(data, str(volley(s)["spell"])) == "friend":
+		ids = allies(s, false)
+		ids.append(PLAYER)
+	return ids.any(func(id: String) -> bool: return can_volley(s, data, id).is_empty())
+
+
+## The spell of a volley with `picks` lands on the next chosen target.
+static func _pick_shot(s: GameSession, data: Dictionary, v: Dictionary, target_id: String, lines: Array[String]) -> void:
+	var spell_id := str(v["spell"])
+	var slot := int(v["slot"])
+	(v["picks"] as Array).append(target_id)
+	if SpellEffects.picks_side(data, spell_id) == "friend":
+		if target_id != PLAYER:
+			SpellEffects.on_friend(s, data, spell_id, slot, fighter(s, target_id), lines)
+		elif SpellEffects.self_spell(data, spell_id):
+			lines.append_array(SpellEffects.apply_self(s, data, spell_id, slot))
+		elif (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell_id):
+			s.character.erase("invisible_others")
+		else:
+			_heal_hero(s, data, spell_id, slot, lines)
+	elif cfg(data)["condition_spells"].has(spell_id):
+		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
+	elif not SpellEffects.curse(data, spell_id).is_empty():
+		SpellEffects.cast_curse(s, data, spell_id, slot, fighter(s, target_id), lines)
+	elif SpellEffects.foe_spell(data, spell_id):
+		SpellEffects.curse_foes(s, data, spell_id, slot, fighter(s, target_id), lines)
+	else:  # the second creature of Acid Splash
+		var sp: Dictionary = data["spells"][spell_id]
+		var t := fighter(s, target_id)
+		var dtype := str(sp.get("damage_type", ""))
+		var ok := _monster_save(s, data, t, str(sp["save"]["ability"]), int(s.character.get("spell_dc", 10)), ["magic"])
+		var dmg := 0 if ok else _resist(data, t, dtype, roll_dice(s.rng, _empowered(s, _spell_dice(sp, slot, int(s.character.get("level", 1))))))
+		lines.append("%s: %s — спасбросок %s %s, %d (%s)" % [sp["name"], t["name"], ab_name(str(sp["save"]["ability"])), "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
+		if dmg > 0:
+			_hurt_enemy(s, data, t, dmg, lines)
+
+
+## The darts or rays left of the spell just cast (v0.7.22.4): {spell, slot, left, last} or {}; with `picks` (v0.7.50.1)
+## — the chosen targets of a spell of rules.combat.spell_targets, each one once.
 static func volley(s: GameSession) -> Dictionary:
 	return s.combat.get("volley", {}) if s.combat.get("volley") is Dictionary else {}
 
@@ -1481,9 +1576,16 @@ static func can_volley(s: GameSession, data: Dictionary, target_id: String) -> S
 	var v := volley(s)
 	if v.is_empty() or not is_player_turn(s):
 		return "COMBAT_NO_VOLLEY"
+	if v.has("picks"):
+		if (v["picks"] as Array).has(target_id):
+			return "COMBAT_PICKED"
+		if SpellEffects.picks_side(data, str(v["spell"])) == "friend":
+			return _can_friend(s, data, str(v["spell"]), target_id)
 	var t := fighter(s, target_id)
-	if t.is_empty() or str(t.get("status")) != "active":
+	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
 		return "COMBAT_BAD_TARGET"
+	if bool(SpellEffects.picks(data, str(v["spell"])).get("near", false)) and v.has("picks") and int(t["col"]) != int(fighter(s, str(v["picks"][0]))["col"]):
+		return "COMBAT_OUT_OF_RANGE"
 	var sp: Dictionary = data["spells"][str(v["spell"])]
 	if cols_between(player(s), t) > range_cols(data, int(sp.get("range_ft", 0))):
 		return "COMBAT_OUT_OF_RANGE"
@@ -1496,10 +1598,13 @@ static func volley_shot(s: GameSession, data: Dictionary, target_id: String) -> 
 	var lines: Array[String] = []
 	var sp: Dictionary = data["spells"][str(v["spell"])]
 	var t := fighter(s, target_id)
-	_bolt(s, data, str(v["spell"]), int(v["slot"]), t, _spell_dice(sp, int(v["slot"]), int(s.character.get("level", 1))), lines)
+	if v.has("picks"):
+		_pick_shot(s, data, v, target_id, lines)
+	else:
+		_bolt(s, data, str(v["spell"]), int(v["slot"]), t, _spell_dice(sp, int(v["slot"]), int(s.character.get("level", 1))), lines)
 	v["left"] = int(v["left"]) - 1
 	v["last"] = target_id
-	if int(v["left"]) <= 0 or enemies(s).is_empty():
+	if int(v["left"]) <= 0 or enemies(s).is_empty() or (v.has("picks") and not _can_pick_more(s, data)):
 		s.combat.erase("volley")
 	return lines
 
@@ -1509,6 +1614,9 @@ static func volley_flush(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	while not volley(s).is_empty():
 		var v := volley(s)
+		if v.has("picks"):  # chosen targets are not picked for the hero
+			s.combat.erase("volley")
+			break
 		var to := str(v["last"])
 		if not can_volley(s, data, to).is_empty():
 			to = ""
@@ -1525,24 +1633,69 @@ static func volley_flush(s: GameSession, data: Dictionary) -> Array[String]:
 
 ## Who an area spell covers (v0.7.13): a cone, a cube or a sphere — one column (the hero's for those from self, the
 ## target's otherwise); a line (Lightning Bolt, 100 ft) — every column from the hero towards the target within it.
+## v0.7.50.1 (friendly fire, rules.combat.friendly_fire): an area does not pick sides — allies in it are caught, and the
+## hero too, unless the area starts at the hero (a cone, a line, a cube from self).
 static func area_targets(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var me := int(player(s)["col"])
 	var area: Dictionary = sp.get("area", {})
+	var field: Array[String] = enemies(s)
+	if bool(cfg(data)["friendly_fire"]["on"]):
+		field.append_array(allies(s))
+		if str(area.get("type", "")) != "line" and int(sp.get("range_ft", 0)) != 0:
+			field.append(PLAYER)
 	if str(area.get("type", "")) == "line":
 		var dir := signi(int(t["col"]) - me)
 		var reach := int(area.get("size", 30)) / int(cfg(data)["col_ft"])
-		for id: String in enemies(s):
+		for id: String in field:
 			var col := int(fighter(s, id)["col"])
 			var along := (col - me) * dir if dir != 0 else (0 if col == me else -1)
 			if along >= 0 and along <= reach and (dir != 0 or col == me):
 				out.append(fighter(s, id))
 		return out
 	var col := me if int(sp.get("range_ft", 0)) == 0 else int(t["col"])
-	for id: String in enemies(s):
+	for id: String in field:
 		if int(fighter(s, id)["col"]) == col:
 			out.append(fighter(s, id))
 	return out
+
+
+## A monster's breath or burst also catches the hero's allies within its area (friendly fire, v0.7.50.1).
+static func _area_on_allies(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, lines: Array[String]) -> void:
+	var area: Dictionary = a.get("effect", {}).get("area", {})
+	if area.is_empty() or (a["damage"] as Array).is_empty() or not bool(cfg(data)["friendly_fire"]["on"]):
+		return
+	var sv: Dictionary = a["save"]
+	for id: String in allies(s):
+		var t := fighter(s, id)
+		if cols_between(f, t) > range_cols(data, int(area.get("ft", 5))):
+			continue
+		var ok := _monster_save(s, data, t, str(sv["ability"]), int(sv["dc"]), [])
+		var dmg := 0
+		for d: Dictionary in a["damage"]:
+			var part := roll_dice(s.rng, str(d["dice"]))
+			dmg += _resist(data, t, str(d.get("type", "")), part / 2 if ok and str(sv["success"]) == "half" else (0 if ok else part))
+		lines.append("%s — %s: %s, спасбросок %s, %d урона" % [f["name"], a["name"], t["name"], "успех" if ok else "провал", dmg])
+		if dmg > 0:
+			_hurt_ally(s, t, dmg, lines)
+
+
+## Damage to anyone on the field, by its side.
+static func _hurt_any(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, lines: Array[String], dtype: String = "") -> void:
+	if str(t["id"]) == PLAYER:
+		_hurt_player(s, data, dmg, false, lines)
+	elif str(t.get("side")) == "ally":
+		_hurt_ally(s, t, dmg, lines)
+	else:
+		_hurt_enemy(s, data, t, dmg, lines, dtype)
+
+
+## A follower caught in the hero's area thinks worse of the hero.
+static func _caught_friend(s: GameSession, data: Dictionary, t: Dictionary) -> void:
+	var npc := str(t.get("npc_id", ""))
+	if str(t.get("side")) == "ally" and not npc.is_empty():
+		s.shift_attitude(npc, int(cfg(data)["friendly_fire"]["attitude"]), data)
+		s.remember(npc, "герой задел меня своим заклинанием в бою")
 
 
 ## The riders of the engine's spells by 5e (v0.7.13): what lasts after the hit or the failed save.
@@ -1618,7 +1771,7 @@ static func _monster_save(s: GameSession, data: Dictionary, t: Dictionary, ab: S
 	var m: Dictionary = data["monsters"][t["monster"]]
 	var bonus := int(m["saves"].get(ab, CharacterRules.mod(int(m["abilities"].get(ab, 10)))))
 	var roll := s.rng.randi_range(1, 20)
-	var adv := MonsterRules.save_advantage(data, t, ab, tags)
+	var adv := MonsterRules.save_advantage(data, t, ab, tags) or SpellEffects.boon_save_adv(t, ab)  # v0.7.50.1
 	if adv and not disadv:
 		roll = maxi(roll, s.rng.randi_range(1, 20))
 	elif disadv and not adv:  # Heightened Spell (v0.7.10)
@@ -1626,6 +1779,7 @@ static func _monster_save(s: GameSession, data: Dictionary, t: Dictionary, ab: S
 	if ab in ["str", "dex"] and _target_disabled(t) and not (t["conditions"] as Array).has("prone"):
 		return false
 	bonus -= int(SpellEffects.foe_die(s, t)["minus"])  # Bane (v0.7.13.1)
+	bonus += int(SpellEffects.friend_die(s, t, "save")["plus"])  # Bless on an ally (v0.7.50.1)
 	return roll != 1 and (roll == 20 or roll + bonus >= dc)
 
 
@@ -2419,6 +2573,7 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 			_hurt_player(s, data, dmg, false, lines)
 		if not bool(r["ok"]) and a.has("effect"):
 			MonsterRules.apply_effect(s, data, f, a, dmg, lines, {"ok": false, "dc": int(sv["dc"]), "total": int(r["total"])})
+		_area_on_allies(s, data, f, a, lines)
 		return
 	var d := cols_between(f, p)
 	var ranged_use := d > 0
@@ -2497,6 +2652,8 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	if f.has("enfeebled") and str(a.get("kind")) in ["melee", "ranged"]:  # Ray of Enfeeblement (v0.7.13.6)
 		dmg /= 2
 		notes.append("ослаблен")
+	if f.has("reduced"):  # Reduce on the foe (v0.7.50.1)
+		dmg = maxi(1, dmg - roll_dice(s.rng, "1d4"))
 	var ctx := {"foe": str(f["id"]), "action": str(a.get("name_en", "")), "line": line, "crit": crit, "dmg": dmg, "types": types, "notes": notes,
 		"prone": extra["prone"], "hit": true, "total": total, "ac": ac, "nat20": nat == 20}
 	f["last_total"] = total  # for the labels of the reaction spells (v0.7.13.7)
@@ -2691,6 +2848,13 @@ static func _foe_target(s: GameSession, f: Dictionary) -> String:
 ## An ally's turn: a helper (a familiar) distracts the foe nearest the hero — the hero's next attack at it has
 ## advantage (the Help action); the rest go for the nearest foe in sight.
 static func _ally_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	if f.has("lethargy"):  # Haste ended on it (v0.7.50.1)
+		f.erase("lethargy")
+		lines.append("%s едва двигается — Ускорение кончилось" % f["name"])
+		return
+	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # friendly fire (v0.7.50.1): a zone burns allies too
+	if str(f.get("status")) != "active":
+		return
 	var p := player(s)
 	var target := {}
 	var dist := 9999
@@ -2713,6 +2877,8 @@ static func _ally_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 		lines.append("%s кружит у %s и отвлекает — следующая атака героя по нему с преимуществом" % [f["name"], target["name"]])
 		return
 	_creature_turn(s, data, f, target, lines)
+	if SpellEffects.boon(f, "haste") != null and str(target.get("status")) == "active":  # Haste's action (v0.7.50.1)
+		_creature_turn(s, data, f, target, lines)
 
 
 ## A plain attack of a creature of the kind (the best to-hit with damage; a thrown weapon not thrown yet). {} when none.
@@ -2738,11 +2904,16 @@ static func _reaches(data: Dictionary, f: Dictionary, t: Dictionary, ranged: Dic
 ## a move, then the full attack; out of reach after the move — Dash.
 static func _creature_turn(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, lines: Array[String]) -> void:
 	var m := _monster(data, f)
-	var steps := _move_cols(MonsterRules.move_speed(m) - int(f.get("slowed", 0)), data)
+	var steps := _move_cols(MonsterRules.move_speed(m) - int(f.get("slowed", 0)) + int(f.get("speed_fx", 0)), data)
 	if _has(f, "restrained") or _has(f, "grappled") or _has(f, "frightened"):
 		steps = 0
 	var melee := _pick_plain(data, f, "melee")
 	var ranged := _pick_plain(data, f, "ranged")
+	if SpellEffects.boon(t, "flying") != null and not MonsterRules.flies(data, f):  # Fly on an ally (v0.7.50.1)
+		melee = {}
+		if ranged.is_empty():
+			lines.append("%s не достаёт летящего %s" % [f["name"], t["name"]])
+			return
 	if cols_between(f, t) == 0 and not melee.is_empty():
 		_creature_full(s, data, f, melee, t, lines)
 		return
@@ -2798,16 +2969,21 @@ static func _creature_attack(s: GameSession, data: Dictionary, f: Dictionary, a:
 		gone.append(str(a.get("name_en", "")))
 		f["thrown"] = gone
 	f["hidden"] = false
+	if SpellEffects.ally_sanctuary(s, data, f, t, lines):
+		return
 	var adv := incapacitated(t) or (_has(t, "prone") and not ranged_use) or _has(t, "restrained") or _has(t, "blinded") or _has(f, "invisible")
-	var dis := (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) or (str(a.get("kind")) == "ranged" and d == 0) \
+	SpellEffects.end_on_attack(f)
+	var dis := SpellEffects.warded(data, f, t) or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) or (str(a.get("kind")) == "ranged" and d == 0) \
 		or ["poisoned", "blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x)) \
 		or (ranged_use and _has(t, "prone")) or bool(t.get("dodging", false)) or (ranged_use and not WeatherRules.obscure_why(s, data).is_empty())
 	var rolls := _d20(s.rng, adv, dis)
 	var nat := _nat(rolls, adv, dis)
-	var total := nat + int(a.get("to_hit", 0))
+	var blessed := SpellEffects.friend_die(s, f, "attack")  # Bless on an ally (v0.7.50.1)
+	var plus := int(SpellEffects.boon(f, "weapon_plus", 0))  # Magic Weapon on an ally
+	var total := nat + int(a.get("to_hit", 0)) + int(blessed["plus"]) + plus
 	var hit := nat == 20 or (nat != 1 and total >= int(t["ac"]))
 	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
-	var line := "%s — %s по %s: %d + %d = %d против КД %d%s" % [f["name"], a["name"], t["name"], nat, int(a.get("to_hit", 0)), total, int(t["ac"]), mark]
+	var line := "%s — %s по %s: %d + %d%s = %d против КД %d%s" % [f["name"], a["name"], t["name"], nat, int(a.get("to_hit", 0)), blessed["note"], total, int(t["ac"]), mark]
 	if not hit:
 		lines.append(line + " — промах")
 		fx(s, str(t["id"]), "dodge")
@@ -2822,6 +2998,9 @@ static func _creature_attack(s: GameSession, data: Dictionary, f: Dictionary, a:
 		if dtype.is_empty():
 			dtype = str(dd["type"])
 		types.append(str(dtypes.get(str(dd["type"]), dd["type"])))
+	dmg += plus + (roll_dice(s.rng, "1d4", crit) if SpellEffects.boon(f, "enlarged") != null else 0)
+	if f.has("reduced"):
+		dmg = maxi(1, dmg - roll_dice(s.rng, "1d4"))
 	lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)" % [dmg, ", ".join(types)])
 	if crit:
 		fx(s, str(t["id"]), "crit")
@@ -2833,7 +3012,9 @@ static func _creature_attack(s: GameSession, data: Dictionary, f: Dictionary, a:
 
 ## Damage to an ally: 0 HP — a follower or a pack ally falls unconscious («down»), a summoned creature vanishes.
 static func _hurt_ally(s: GameSession, t: Dictionary, dmg: int, lines: Array[String]) -> void:
-	t["hp"] = maxi(0, int(t["hp"]) - dmg)
+	var soaked := mini(dmg, int(t.get("temp_hp", 0)))  # Heroism on an ally (v0.7.50.1)
+	t["temp_hp"] = int(t.get("temp_hp", 0)) - soaked
+	t["hp"] = maxi(0, int(t["hp"]) - (dmg - soaked))
 	if int(t["hp"]) > 0:
 		return
 	if str(t.get("ally", "")) == "summon":
@@ -3019,7 +3200,7 @@ static func parley_progress(s: GameSession, data: Dictionary) -> String:
 
 
 ## One try of the parley challenge (v0.7.5): `successes` before `failures` win; the skill of the deciding success sets
-## the outcome — Intimidation: intelligent foes next to the player surrender, the rest flee; Persuasion: truce. Beasts
+## the outcome — Intimidation: intelligent foes surrender; Persuasion: truce; either way they stay (v0.7.50.1). Beasts
 ## fight on. Lines.
 static func parley_apply(s: GameSession, data: Dictionary, skill: String, success: bool) -> Array[String]:
 	var p: Dictionary = cfg(data)["parley"]
@@ -3036,7 +3217,6 @@ static func parley_apply(s: GameSession, data: Dictionary, skill: String, succes
 	if int(s.combat["parley_ok"]) < int(p.get("successes", 3)):
 		lines.append("Враги колеблются (%s)" % parley_progress(s, data))
 		return lines
-	var pcol := int(player(s)["col"])
 	if skill == "animal_handling":  # v0.7.50: the beasts stop; the friendship of beasts grows from here
 		for id: String in enemies(s):
 			var f := fighter(s, id)
@@ -3045,17 +3225,14 @@ static func parley_apply(s: GameSession, data: Dictionary, skill: String, succes
 				lines.append("%s отступает и успокаивается" % f["name"])
 		lines.append_array(FactionRules.on_source(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "calm", "звери успокоены"))
 		return lines
+	s.combat["parley_won"] = skill  # v0.7.50.1: they stay, the faction respects the hero (FactionRules.after_fight)
 	for id: String in enemies(s):
 		var f := fighter(s, id)
 		if not _intelligent(data, f):
 			continue
 		if skill == "intimidation":
-			if int(f["col"]) == pcol:
-				f["status"] = "surrendered"
-				lines.append("%s бросает оружие и сдаётся" % f["name"])
-			else:
-				f["status"] = "fled"
-				lines.append("%s бежит с поля боя" % f["name"])
+			f["status"] = "surrendered"
+			lines.append("%s бросает оружие и сдаётся" % f["name"])
 		else:
 			f["status"] = "truce"
 			lines.append("%s опускает оружие" % f["name"])

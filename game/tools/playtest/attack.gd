@@ -48,7 +48,7 @@ func run() -> void:
 	await shot("knocked_out")
 	await press(find(game, "Creature_search_" + str(c.get("id", ""))))
 	await frames(3)
-	step("searched", _chat(s).contains("Обыскан"), _chat(s))
+	step("searched", " ".join((s.chat.back() as Dictionary).get("lines", [])).contains("Обыскан"), _chat(s))
 	var woke := TimeRules.advance(s, data, 120)
 	node("EventBus").state_changed.emit()
 	await frames(3)

@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.95.0"
+PROTOCOL_VERSION = "0.96.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -975,6 +975,7 @@ class ActStep(_Out):
     needs_text: str = ""
     danger: bool = False
     defeat: bool | None = None  # 0.94.0: a `fight` step — only beaten (true) or passing unseen is enough (false)
+    cure: bool = False  # 0.96.0: a `talk` step with a sick NPC: closing it ends the illness
 
 
 class ActEncounter(_Out):

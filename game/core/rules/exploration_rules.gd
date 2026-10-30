@@ -382,6 +382,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	var c := s.character
 	var cost := int(rest_place(data["world"], s.room_id, s, data).get("cost_cp", 0)) if supplies.is_empty() else 0
 	var lines: Array[String] = ["Долгий отдых" if supplies.is_empty() else "Долгий отдых в лагере"]
+	AllyRules.rest(s)
 	if cost > 0:
 		c["gold_cp"] = int(c["gold_cp"]) - cost
 		lines.append("−" + Money.format(cost))

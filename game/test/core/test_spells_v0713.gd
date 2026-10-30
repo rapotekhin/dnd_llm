@@ -225,6 +225,7 @@ func test_acid_splash_takes_a_second_neighbour() -> void:
 	_learn(s, "acid_splash")
 	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
 	var lines := CombatRules.player_cast(s, data, "acid_splash", 0, str(foes[0]["id"]))
+	lines.append_array(CombatRules.volley_shot(s, data, str(foes[1]["id"])))  # v0.7.50.1: the second is chosen
 	assert_int(lines.filter(func(l: String) -> bool: return l.contains("спасбросок")).size()).override_failure_message(" · ".join(lines)).is_equal(2)
 
 
@@ -284,9 +285,10 @@ func test_guidance_is_one_roll() -> void:
 func test_bane_takes_a_d4_from_foes() -> void:
 	var s := _hero("cleric_branko")
 	_learn(s, "bane")
-	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 2}])
+	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
 	s.character["spell_dc"] = 30  # they fail
 	var lines := CombatRules.player_cast(s, data, "bane", 1, str(foes[0]["id"]))
+	lines.append_array(CombatRules.volley_shot(s, data, str(foes[1]["id"])))  # picked one by one (v0.7.50.1)
 	assert_bool(foes.all(func(f: Dictionary) -> bool: return f.has("minus_die"))).override_failure_message(" · ".join(lines)).is_true()
 	var out := ConditionRules.end_concentration(s, data, "проверка")
 	assert_bool(foes.any(func(f: Dictionary) -> bool: return f.has("minus_die"))).is_false()

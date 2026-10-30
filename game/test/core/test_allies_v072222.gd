@@ -152,9 +152,9 @@ func test_sneak_attack_beside_an_ally() -> void:
 	assert_str(CombatRules._sneak_dice(s, data, w, false, false, wolf)).is_empty()
 
 
-func test_the_burrow_brings_two_allies() -> void:
+func test_the_burrow_brings_no_allies_of_its_own() -> void:  # v0.7.50.1: the hero gathers them in town
 	var enc: Dictionary = data["world"]["rooms"]["pushcha-burrow"]["encounter"]
-	assert_array(enc.get("allies", []) as Array).has_size(2)
+	assert_array(enc.get("allies", []) as Array).is_empty()
 	assert_array(WorldPack.validate(WorldPack.load_bundle("res://data/worlds/frontier", "builtin"), TestUtils.base())).is_empty()
 
 

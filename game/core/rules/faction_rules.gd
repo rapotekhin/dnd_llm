@@ -143,6 +143,32 @@ static func on_source(s: GameSession, data: Dictionary, id: String, source: Stri
 	return add(s, data, id, int(cfg(data)["sources"].get(source, 0)), why)
 
 
+## Foes beaten by words, Persuasion or Intimidation alike (v0.7.50.1, the author): the faction respects the hero and
+## the word goes round the location — its other members meet the hero as if crept upon. Lines.
+static func won_by_word(s: GameSession, data: Dictionary, id: String, room_id: String, why: String) -> Array[String]:
+	if not has(s, data, id):
+		return []
+	var e: Dictionary = s.factions.get(id, {"pts": int(def(s, data, id).get("start", 0))})
+	var word: Array = e.get("word", [])
+	var loc := WorldView.new(data["world"]).location_id(room_id)
+	if not word.has(loc):
+		word.append(loc)
+	e["word"] = word
+	s.factions[id] = e
+	return on_source(s, data, id, "parley", why)
+
+
+## Whether every foe of the encounter has heard of the hero here, or walks with one of its own beside the hero.
+static func word_out(s: GameSession, data: Dictionary, room_id: String, enc: Dictionary) -> bool:
+	var foes: Array = enc.get("enemies", [])
+	var loc := WorldView.new(data["world"]).location_id(room_id)
+	var led: Array = CreatureRules.here(s, s.room_id).filter(func(c: Dictionary) -> bool: return bool(c.get("ally", false)))
+	return not foes.is_empty() and foes.all(func(e: Dictionary) -> bool:
+		var id := of_foe(data, enc, e)
+		return not id.is_empty() and ((s.factions.get(id, {}).get("word", []) as Array).has(loc)
+			or led.any(func(c: Dictionary) -> bool: return str(c.get("faction", "")) == id)))
+
+
 ## A share of a bond's change goes to the member's faction; its head counts more. Lines.
 static func on_bond(s: GameSession, data: Dictionary, npc_id: String, delta: int) -> Array[String]:
 	var id := of_npc(s, data, npc_id)
@@ -167,15 +193,24 @@ static func after_fight(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var seen: Array[String] = []
 	var enc: Dictionary = SceneRules.room(s, data["world"], s.room_id).get("encounter", {})
+	var word := str(s.combat.get("parley_won", ""))
 	for fid: String in CombatRules.enemies(s, false):
-		var id := of_foe(data, enc, CombatRules.fighter(s, fid))
-		if id.is_empty() or seen.has(id) or (cfg(data)["no_fight_minus"] as Array).has(str(def(s, data, id).get("kind", ""))):
+		var f := CombatRules.fighter(s, fid)
+		var id := of_foe(data, enc, f)
+		if id.is_empty() or seen.has(id):
 			continue
 		seen.append(id)
-		lines.append_array(on_source(s, data, id, "fight", "бой"))
+		if not word.is_empty() and str(f["status"]) in ["truce", "surrendered"]:
+			lines.append_array(won_by_word(s, data, id, s.room_id, word_why(word)))
+		elif not (cfg(data)["no_fight_minus"] as Array).has(str(def(s, data, id).get("kind", ""))):
+			lines.append_array(on_source(s, data, id, "fight", "бой"))
 	if str(s.combat.get("encounter", "")).is_empty() and s.encounters_peace.has(str(enc.get("id", ""))) and not s.encounters_done.has(str(enc["id"])):
 		s.encounters_done.append(str(enc["id"]))
 	return lines
+
+
+static func word_why(skill: String) -> String:
+	return "вас боятся и уважают" if skill == "intimidation" else "договорились словами"
 
 
 ## Whether the foes of an encounter let the hero be: each is of a friendly faction, or of one that attacks only

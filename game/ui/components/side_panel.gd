@@ -508,6 +508,8 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 		specs.append(["bind", "BTN_CREATURE_BIND"])
 	if bool(cr.get("bound", false)):
 		specs.append(["lead", "BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_CREATURE_LEAD"])
+	if CreatureRules.joinable(cr):  # v0.7.50.1: beaten by words — may come along
+		specs.append(["join", "BTN_CREATURE_STAY" if bool(cr.get("ally", false)) else "BTN_CREATURE_JOIN"])
 	if not str(cr.get("npc_id", "")).is_empty() and not bool(cr.get("searched", false)):
 		specs.append(["search", "BTN_CREATURE_SEARCH"])  # v0.7.22.16: a knocked-out person's pockets
 	if CreatureRules.can(s, cid, "hand_over", Catalog.data).is_empty():
@@ -1157,7 +1159,7 @@ func _meeting(s: GameSession, can_act: bool) -> void:
 	var specs: Array = []
 	if not EncounterRules.lurking(s, s.room_id).is_empty():
 		var enc := EncounterRules.lurking_encounter(s, data, s.room_id)
-		_subheading("SIDE_UNSEEN")
+		_subheading("SIDE_WORD" if bool(EncounterRules.lurking(s, s.room_id).get("word", false)) else "SIDE_UNSEEN")  # v0.7.50.1
 		for e: Dictionary in enc.get("enemies", []):
 			_line("%s ×%d" % [e.get("name", e["monster"]), int(e.get("count", 1))], false)
 		var why := EncounterRules.talkable(s, data, enc.get("enemies", []))

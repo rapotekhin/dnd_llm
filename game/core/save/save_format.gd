@@ -14,7 +14,7 @@ extends RefCounted
 ## v8 (0.6.0): feature uses, condition ends, concentration, prepared day, short rests today.
 ## v9 (0.6.1): the fight in progress, encounters fought, NPCs killed.
 
-const SAVE_VERSION := 52
+const SAVE_VERSION := 53
 ## The oldest version that still loads (through MIGRATIONS).
 const MIN_VERSION := 3
 
@@ -74,6 +74,7 @@ static var MIGRATIONS: Dictionary[int, Callable] = {
 	49: _v49_to_v50,
 	50: _v50_to_v51,
 	51: _v51_to_v52,
+	52: _v52_to_v53,
 }
 
 
@@ -481,6 +482,11 @@ static func _v49_to_v50(data: Dictionary, _ctx: Dictionary) -> void:
 ## v0.7.39.6: a made quest's scale is its difficulty (trifle → easy, ordinary → medium, major → hard); its steps stay,
 ## it has no acts to wait for.
 ## v0.7.50: factions: no standing yet; the people made before them are of their location's folk (FactionRules.of_npc).
+static func _v52_to_v53(data: Dictionary, _ctx: Dictionary) -> void:
+	data["session"]["npc_hp"] = {}
+	data["session"]["npc_buffs"] = {}
+
+
 static func _v51_to_v52(data: Dictionary, _ctx: Dictionary) -> void:
 	data["session"]["factions"] = {}
 	data["session"]["encounters_peace"] = []

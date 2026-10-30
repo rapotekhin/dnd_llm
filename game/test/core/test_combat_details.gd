@@ -252,7 +252,7 @@ func test_intimidation_makes_foes_surrender_or_flee_and_the_fight_is_won() -> vo
 	CombatRules.parley_apply(s, data, "persuasion", true)
 	var lines := CombatRules.parley_apply(s, data, "intimidation", true)  # the deciding success sets the outcome
 	assert_str(CombatRules.fighter(s, "e1")["status"]).is_equal("surrendered")
-	assert_str(CombatRules.fighter(s, "e2")["status"]).is_equal("fled")
+	assert_str(CombatRules.fighter(s, "e2")["status"]).is_equal("surrendered")  # v0.7.50.1: nobody runs off
 	assert_str(CombatRules.fighter(s, "e3")["status"]).is_equal("active")  # the beast fights on
 	assert_int(lines.size()).is_equal(2)
 	CombatRules.fighter(s, "e3")["status"] = "dead"

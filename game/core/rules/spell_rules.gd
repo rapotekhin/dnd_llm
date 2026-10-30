@@ -92,6 +92,7 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 				if bool(e.get("concentration", false)) and str(e.get("source", {}).get("id", "")) == prev:
 					ConditionRules.remove_effect(c, int(e.get("uid", 0)))
 		c["concentration"] = spell_id
+		c.erase("invisible_others")  # v0.7.50.1: on whom Invisibility lies — set by the caster of the target
 		var rounds := ConditionRules.spell_rounds(data, spell_id)
 		c["concentration_ends"] = ConditionRules.now(session) + rounds if session != null and rounds >= 0 else -1
 		lines.append("концентрация")

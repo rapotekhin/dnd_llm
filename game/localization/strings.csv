@@ -267,6 +267,9 @@ COMBAT_PARLEY_TRIED,Так уже пробовали в этом бою
 COMBAT_PARLEY_REFUSED,Враги больше не станут слушать — только бой
 COMBAT_PARLEY_PROGRESS,"Сейчас: {progress}"
 COMBAT_PICK_TARGET,"Выберите цель — подсвечены те, кого можно достать"
+ATTACH_SELF,Себя
+COMBAT_PICK_FRIEND,Выбрать
+COMBAT_PICKED,Эта цель уже выбрана
 COMBAT_PRONE,Вы лежите — сначала встаньте
 COMBAT_RAGE_ARMOR,В тяжёлом доспехе ярость не берёт
 COMBAT_RAGING,Ярость
@@ -778,6 +781,7 @@ SLOT_AT_WILL,по желанию
 HEALTH_KNOCKED_OUT,без сознания
 SIDE_CREATURES,После боя
 SIDE_UNSEEN,Вас не заметили
+SIDE_WORD,Ждут ваших слов
 BTN_BOARD,"{name}: заказов {n}"
 BOARD_EMPTY,На доске пока ничего не разобрать
 BTN_BOARD_UNREAD,"{name}: не осмотрена"
@@ -809,6 +813,7 @@ UNFREE_CAPTIVE,Вы в плену — сначала вырвитесь на с�
 UNFREE_HELD,Вы под стражей — сначала ответьте страже
 BTN_CREATURE_BIND,Связать
 BTN_CREATURE_FREE,Отпустить
+BTN_CREATURE_JOIN,Взять с собой
 BTN_CREATURE_LEAD,Вести с собой
 BTN_CREATURE_STAY,Оставить здесь
 BTN_CREATURE_TALK,Заговорить
@@ -1791,3 +1796,5 @@ BTN_ENCOUNTER_CALM,"Успокоить (Уход за животными, Сл {
 ENCOUNTER_PARLEY_SAY_ANIMAL_HANDLING,"Медленно выхожу, не глядя зверям в глаза, и успокаиваю их"
 COMBAT_PARLEY_TIP_ANIMAL_HANDLING,"Действие. Как переговоры: нужно 3 успеха раньше 2 провалов. Звери отступают, дикие звери начинают считать вас своим"
 COMBAT_FOE_FACTION,"Фракция: {name}"
+CREATURE_CANNOT_JOIN,Этот с вами не пойдёт
+CREATURE_TOO_MANY,С вами идёт слишком много спутников

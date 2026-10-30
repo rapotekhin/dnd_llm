@@ -589,6 +589,7 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			chip.add_child(me)
 			if bool(CombatRules.player(s).get("hidden", false)):
 				CombatFx.look(chip, "hidden")
+			_friend_pick(s, data, box, CombatRules.PLAYER, mine)
 		for id: String in CombatRules.allies(s, false):  # v0.7.22.22: the hero's side, not a target of the buttons
 			var a := CombatRules.fighter(s, id)
 			if int(a["col"]) != col or str(a["status"]) == "gone":
@@ -609,6 +610,7 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 				("\n\n" + str(a["desc"]) if not str(a.get("desc", "")).is_empty() else "")
 			al.mouse_entered.connect(func() -> void: _details.show_text(ally_name, ally_about))
 			ally.add_child(al)
+			_friend_pick(s, data, box, id, mine)
 		for id: String in s.combat.get("order", []):
 			var f := CombatRules.fighter(s, id)
 			if str(f.get("side")) != "enemy" or CombatRules.shown_col(f) != col:
@@ -755,6 +757,23 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 		_line(_portrait, tr("COMBAT_DEATH_SAVES").format({"ok": int(ds.get("ok", 0)), "fail": int(ds.get("fail", 0))})).add_theme_color_override("font_color", UiTheme.BAD)
 
 
+## The button that picks the hero or an ally for an armed spell of the hero's side (v0.7.50.1).
+func _friend_pick(s: GameSession, data: Dictionary, box: Control, id: String, mine: bool) -> void:
+	var vol := CombatRules.volley(s)
+	var spell := str(vol.get("spell", "")) if _pending_name == "Volley" else _pending_name.trim_prefix("Cast_")
+	if not _pending.is_valid() or not SpellEffects.picks_side(data, spell) in ["friend", "any"]:
+		return
+	box.add_theme_constant_override("separation", 2)  # a column of three friends and their buttons still fits
+	var why := str(_pending_check.call(id))
+	var b := _button(box, "Pick_" + id, tr("COMBAT_PICK_FRIEND"), mine and why.is_empty())
+	if not why.is_empty():
+		b.tooltip_text = tr(why)
+	b.pressed.connect(func() -> void:
+		var act := _pending
+		_pending = Callable()
+		_do(str(act.call(id))))
+
+
 func _line(parent: Control, text: String) -> Label:
 	var l := Label.new()
 	l.text = text
@@ -854,7 +873,10 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			if lv > 0 and slot == 0 and not free:
 				_disabled(sp, label)
 				continue
-			if spell.has("heal_at_slot") or SpellEffects.self_spell(data, id) or int(spell.get("range_ft", 0)) == 0 and not spell.has("area") 					or not AllyRules.summon_spec(data, id).is_empty():
+			var side := SpellEffects.picks_side(data, id)  # v0.7.50.1: a choice of friends, or of either side
+			var friends := side == "any" or (side == "friend" and not CombatRules.allies(s, false).is_empty())
+			var alone := side == "friend" and not friends
+			if alone or not friends and spell.has("heal_at_slot") or not friends and SpellEffects.self_spell(data, id) or int(spell.get("range_ft", 0)) == 0 and not spell.has("area") 					or not AllyRules.summon_spec(data, id).is_empty():
 				var b := _button(sp, "Cast_" + id, label, mine)
 				_details.hook(b, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
 				b.pressed.connect(func() -> void: _do(_conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, ""))))

@@ -49,7 +49,7 @@ func run() -> void:
 	s.encounters_done.append("burrow_priest")
 	s.character["hp"] = 200
 	s.character["max_hp"] = 200
-	gs.start_combat(enc["enemies"], {"encounter": "burrow_priest", "room_from": "pushcha-glade", "allies": enc["allies"], "parley": "hard"})
+	gs.start_combat(enc["enemies"], {"encounter": "burrow_priest", "room_from": "pushcha-glade", "allies": [{"monster": "scout", "name": "Ждан из ополчения"}, {"monster": "guard", "name": "Влада из ополчения"}], "parley": "hard"})
 	if not step("the burrow fight", await wait_until(func() -> bool:
 			return screen_is("CombatScreen") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
 		return
@@ -58,6 +58,9 @@ func run() -> void:
 	step("four allies: the militia, the follower, the owl", ids.size() == 4, str(ids.map(func(id: String) -> String: return CombatRules.fighter(s, id)["name"])))
 	step("their chips on the field", ids.all(func(id: String) -> bool: return find(screen(), "Foe_" + id) != null))
 	await shot("burrow")
+	var names: Array = ids.map(func(id: String) -> String: return str(CombatRules.fighter(s, id)["name"]))
+	var said: Array[String] = []  # the fight may end within the rounds: its log goes with it
+	node("EventBus").combat_lines.connect(func(l: Array[String]) -> void: said.append_array(l))
 	for i in 3:
 		var end: Button = find(screen(), "EndTurnButton")
 		if end == null or not str(s.combat.get("outcome", "")).is_empty():
@@ -65,6 +68,7 @@ func run() -> void:
 		await press(end)
 		await wait_until(func() -> bool: return (CombatRules.is_player_turn(s) or not str(s.combat.get("outcome", "")).is_empty()) and not gs.is_busy(), 120.0)
 		await frames(3)
-	var log := "\n".join(s.combat.get("log", []))
-	step("the allies strike on their own", ids.any(func(id: String) -> bool: return log.contains(str(CombatRules.fighter(s, id)["name"]) + " —")), log.right(600))
+	var log := "
+".join(said)
+	step("the allies strike on their own", names.any(func(n: String) -> bool: return said.any(func(l: String) -> bool: return l.begins_with(n))), log.right(600))
 	await shot("rounds")

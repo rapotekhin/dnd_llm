@@ -69,6 +69,10 @@ var encounters_done: Array[String] = []
 ## «пройти стражу» is done, the foes still there.
 var encounters_passed: Array[String] = []
 var encounters_peace: Array[String] = []  # met as friends (v0.7.50)
+## v0.7.50.1 (AllyRules): an NPC's wounds between fights {npc_id: hp}, full when absent; the spells that lie on it
+## {npc_id: [{spell, slot, ends}]}, `ends` — the game clock, -1 until the concentration ends.
+var npc_hp: Dictionary = {}
+var npc_buffs: Dictionary = {}
 var factions: Dictionary = {}  # the hero's standing: {id: {pts, met_day, rest, why, master_day}} (v0.7.50)
 var dead_npcs: Array[String] = []
 ## The «Красться» toggle of exploration (v0.6.2).
@@ -499,6 +503,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"encounters_done": encounters_done,
 		"encounters_passed": encounters_passed,
 		"encounters_peace": encounters_peace,
+		"npc_hp": npc_hp,
+		"npc_buffs": npc_buffs,
 		"factions": factions,
 		"dead_npcs": dead_npcs,
 		"sneaking": sneaking,
@@ -611,6 +617,13 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for e: Variant in d.get("encounters_peace", []):
 		s.encounters_peace.append(str(e))
 	s.factions = (d.get("factions", {}) as Dictionary).duplicate(true)
+	for id: String in d.get("npc_hp", {}):
+		s.npc_hp[id] = int(d["npc_hp"][id])
+	for id: String in d.get("npc_buffs", {}):
+		var buffs: Array = []
+		for b: Dictionary in d["npc_buffs"][id]:
+			buffs.append({"spell": str(b["spell"]), "slot": int(b["slot"]), "ends": int(b["ends"])})
+		s.npc_buffs[id] = buffs
 	for n: Variant in d.get("dead_npcs", []):
 		s.dead_npcs.append(str(n))
 	s.sneaking = bool(d.get("sneaking", false))

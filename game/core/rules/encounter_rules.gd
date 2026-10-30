@@ -40,6 +40,9 @@ static func meet(s: GameSession, data: Dictionary, room_id: String, from: String
 		return {"lurk": false, "peace": true, "stealth": -1, "line": FactionRules.keep_peace(s, data, room_id, enc)}
 	for e: Dictionary in enc["enemies"]:
 		FactionRules.meet(s, data, FactionRules.of_foe(data, enc, e))
+	if FactionRules.word_out(s, data, room_id, enc):  # v0.7.50.1: they heard of the hero: strike first, or talk
+		s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from, "word": true}
+		return {"lurk": true, "stealth": -1, "line": "Они уже слышали о вас и ждут, что вы скажете: %s" % _names(enc)}
 	if bool(enc.get("ambush", false)):
 		return {"lurk": false, "line": "", "stealth": -1}
 	var unseen := ConditionRules.invisible(s.character, data)
@@ -47,12 +50,16 @@ static func meet(s: GameSession, data: Dictionary, room_id: String, from: String
 		return {"lurk": false, "line": "", "stealth": -1}
 	var roll := CombatRules.stealth_roll(s, data)
 	var need := best_passive(data, enc["enemies"]) - WeatherRules.unseen(s, data)
-	var names := ", ".join((enc["enemies"] as Array).map(func(e: Dictionary) -> String: return str(e.get("name", e["monster"]))))
+	var names := _names(enc)
 	if int(roll["total"]) < need:
 		return {"lurk": false, "line": "", "stealth": int(roll["total"])}
 	s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from}
 	return {"lurk": true, "stealth": int(roll["total"]),
 		"line": "%s крадётся: Скрытность %d%s — героя не замечают: %s" % [s.character.get("name", ""), int(roll["total"]), roll["note"], names]}
+
+
+static func _names(enc: Dictionary) -> String:
+	return ", ".join((enc["enemies"] as Array).map(func(e: Dictionary) -> String: return str(e.get("name", e["monster"]))))
 
 
 ## The hero leaves `from` for `to`: past the unaware foes of an encounter there, if not back the way in. The line or "".
@@ -62,7 +69,7 @@ static func slip_past(s: GameSession, from: String, to: String) -> String:
 	if id.is_empty() or str(lk.get("from", "")) == to or s.encounters_passed.has(id):
 		return ""
 	s.encounters_passed.append(id)
-	return "Вы прошли мимо незамеченными — стража позади"
+	return "Вас пропускают" if bool(lk.get("word", false)) else "Вы прошли мимо незамеченными — стража позади"
 
 
 static func lurking(s: GameSession, room_id: String) -> Dictionary:
@@ -151,20 +158,23 @@ static func roll(s: GameSession, data: Dictionary, skill: String, dc: int, dis: 
 	return {"total": total, "ok": ok, "line": "%s %d против Сл %d%s — %s" % [skill_name, total, dc, " (помеха: без общего языка — жесты и оружие)" if dis else "", "успех" if ok else "провал"]}
 
 
-## The foes of the encounter as creatures of the room (a truce), one per head.
-static func as_creatures(s: GameSession, room_id: String, enemies: Array, state: String) -> void:
+## The foes of the encounter as creatures of the room (a truce), one per head; `extra` — what each one carries.
+static func as_creatures(s: GameSession, room_id: String, enemies: Array, state: String, extra: Dictionary = {}) -> void:
 	var list: Array = s.creatures.get(room_id, [])
 	for e: Dictionary in enemies:
 		for i in int(e.get("count", 1)):
 			s.creature_counter += 1
 			var name := str(e.get("name", e["monster"])) + (" %d" % (i + 1) if int(e.get("count", 1)) > 1 else "")
-			list.append({"id": "c%d" % s.creature_counter, "name": name, "monster": str(e["monster"]), "state": state,
-				"bound": false, "led": false, "since": TimeRules.abs_minute(s)})
+			var c := {"id": "c%d" % s.creature_counter, "name": name, "monster": str(e["monster"]), "state": state,
+				"bound": false, "led": false, "since": TimeRules.abs_minute(s)}
+			c.merge(extra)
+			list.append(c)
 	s.creatures[room_id] = list
 
 
-## Talking to the lurking foes before a fight. {lines, fight: bool}: a success — a truce (Persuasion) or they go
-## (Intimidation), the encounter is over; a failure — the fight, they know where the hero is.
+## Talking to the lurking foes before a fight. {lines, fight: bool}: a success — they stay as a truce (Persuasion) or
+## cowed (Intimidation), the faction respects the hero (v0.7.50.1), the encounter is over; a failure — the fight, they
+## know where the hero is.
 static func parley(s: GameSession, data: Dictionary, room_id: String, enc: Dictionary, skill: String) -> Dictionary:
 	var calm := skill == "animal_handling"
 	var dc := calm_dc(data, enc["enemies"]) if calm else parley_dc(data, enc["enemies"], str(enc.get("parley", "")) == "hard")
@@ -176,15 +186,20 @@ static func parley(s: GameSession, data: Dictionary, room_id: String, enc: Dicti
 		return {"lines": lines, "fight": true}
 	if not str(enc.get("id", "")).is_empty():
 		s.encounters_done.append(str(enc["id"]))
+	var id := FactionRules.of_foe(data, enc, enc["enemies"][0])
+	var stay := {"kept": true, "faction": id}
 	if skill == "intimidation":
-		lines.append("Угроза подействовала — они уходят прочь")
+		as_creatures(s, room_id, enc["enemies"], "surrendered", stay)
+		lines.append("Угроза подействовала — они складывают оружие и не тронут вас")
+		lines.append_array(FactionRules.won_by_word(s, data, id, room_id, FactionRules.word_why(skill)))
 	elif calm:  # v0.7.50: the friendship of beasts grows from here
 		as_creatures(s, room_id, enc["enemies"], "truce")
 		lines.append("Звери успокоились и не трогают вас")
 		lines.append_array(FactionRules.on_source(s, data, FactionRules.of_foe(data, enc, enc["enemies"][0]), "calm", "звери успокоены"))
 	else:
-		as_creatures(s, room_id, enc["enemies"], "truce")
+		as_creatures(s, room_id, enc["enemies"], "truce", stay)
 		lines.append("Удалось договориться — перемирие")
+		lines.append_array(FactionRules.won_by_word(s, data, id, room_id, FactionRules.word_why(skill)))
 	return {"lines": lines, "fight": false}
 
 

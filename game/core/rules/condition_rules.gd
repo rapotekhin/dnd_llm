@@ -384,7 +384,7 @@ static func check_mods(c: Dictionary, data: Dictionary, params: Dictionary) -> D
 static func invisible(c: Dictionary, data: Dictionary) -> bool:
 	if has(c, "invisible"):
 		return true
-	return (data["rules"].get("invisibility", {}).get("spells", {}) as Dictionary).has(str(c.get("concentration", "")))
+	return (data["rules"].get("invisibility", {}).get("spells", {}) as Dictionary).has(str(c.get("concentration", ""))) and not c.has("invisible_others")
 
 
 ## −passive Perception for those who would see the hero (5e disadvantage on a passive check), 0 when visible.
