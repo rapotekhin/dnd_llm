@@ -41,6 +41,7 @@ static func abandon(s: GameSession, data: Dictionary, room_id: String) -> Array[
 ## The trader's wares (v0.7.22.8, big test #4: the goods of a killed smith were nowhere): a container «Товары: …» in
 ## the trader's own room whose contents ARE its stock (TradeRules.merchant) — a deal, a theft and a death all show in
 ## it; taking from it before the trader is a theft. Made and linked anew whenever the room is looked at.
+## v0.7.49.4: under the lock of its kind (`lock`); opened or broken, the trader locks it again the next day.
 static func ensure_wares(s: GameSession, data: Dictionary, room_id: String) -> void:
 	for npc_id: Variant in data["world"]["rooms"].get(room_id, {}).get("npcs", []):
 		var n: Dictionary = data["world"]["npcs"].get(str(npc_id), {})
@@ -57,7 +58,27 @@ static func ensure_wares(s: GameSession, data: Dictionary, room_id: String) -> v
 				"item_id": "", "owner": str(npc_id), "text": "", "state": "", "container": "wares", "wares": str(npc_id)}
 			list.append(p)
 			s.props[room_id] = list
+		_lock_wares(s, data, p)
 		p["contents"] = TradeRules.merchant(s, data, str(npc_id))["stock"]
+
+
+static func _lock_wares(s: GameSession, data: Dictionary, p: Dictionary) -> void:
+	var c: Dictionary = data["rules"]["containers"]
+	var quality := str(c["kinds"]["wares"].get("lock", ""))
+	if quality.is_empty():
+		return
+	if not p.has("lock_dc"):  # a shop of an older save, or a new one
+		p["lock_dc"] = int(c["lock_dc"][quality])
+		p["locked"] = true
+		return
+	if bool(p.get("locked", false)):
+		p.erase("open_day")
+	elif not p.has("open_day"):
+		p["open_day"] = s.day
+	elif int(p["open_day"]) < s.day:  # the trader's morning: locked again, a broken lock mended
+		p["locked"] = true
+		p["state"] = ""
+		p.erase("open_day")
 
 
 static func find(s: GameSession, room_id: String, prop_id: String) -> Dictionary:

@@ -200,6 +200,11 @@ func _stats_tab(c: Dictionary) -> Control:
 	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
 	box.add_child(chips)
 	chips.refresh()
+	var boons := CharacterRules.item_boons(c, d, GameState.session.items)  # what the worn things give (v0.7.49.4)
+	if not boons.is_empty():
+		_text(box, tr("SHEET_ITEM_BOONS") + "
+" + "
+".join(boons.map(func(b: String) -> String: return "    " + b))).name = "SheetItemBoons"
 	var resist := HeroDefense.resistances(GameState.session, d)
 	if not resist.is_empty():
 		_text(box, tr("SHEET_RESIST").format({"list": ", ".join(resist.keys().map(func(t: Variant) -> String:

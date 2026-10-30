@@ -1067,6 +1067,34 @@ func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> S
 	return ""
 
 
+## «Взять всё» in a container's window (v0.7.49.4, the author's finding): every thing of it whole, one after another,
+## until the hero can carry no more; one engine line, and one master turn when the container is someone else's.
+func container_take_all(prop_id: String) -> String:
+	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var p := ContainerRules.target(session, Catalog.data, prop_id)
+	var lines: Array[String] = []
+	var owner := ""
+	for id: String in (p.get("contents", {}) as Dictionary).keys():
+		var r := ContainerRules.plan_take(session, Catalog.data, prop_id, id, int(p["contents"][id]))
+		if r.has("reason"):
+			EventBus.message.emit(str(r["reason"]))
+			break
+		lines.append(str(r["summary"]))
+		lines.append_array(ContainerRules.apply_take(session, Catalog.data, r["plan"]))
+		owner = str(r["plan"].get("owner", ""))
+	if lines.is_empty():
+		return ""
+	if not owner.is_empty():  # caught: the master narrates the owner
+		_add(GameSession.effect_entry(lines))
+		_log("События: " + ", ".join(lines))
+		EventBus.state_changed.emit()
+		_request("action", "Беру всё из чужого %s [движок: %s]" % [PropRules.find(session, session.room_id, prop_id).get("name", ""), " · ".join(lines)])
+		return ""
+	_quiet_lines(lines)
+	return ""
+
+
 ## Picks a skill of a peaceful direction for a level reached (v0.7.19.1), no master turn. "" or a localization key.
 func pick_development(dir: String, skill: String) -> String:
 	if session == null or is_busy():
@@ -3569,11 +3597,14 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		if result.has("error"):
 			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
 		if not bool(result["success"]) and int(result["nat"]) != 1 and str(params.get("auto_fail_reason", "")).is_empty():
+			var insp_die := FeatureRules.inspiration_die(session.character)
 			var insp := FeatureRules.use_inspiration(session)  # Bardic Inspiration on a failed check (v0.7.10)
 			if insp > 0:
 				result["total"] = int(result["total"]) + insp
 				result["bonus"] = int(result["bonus"]) + insp
 				result["success"] = int(result["total"]) >= int(result["dc"])
+				if result.get("parts") is Array:  # seen in the breakdown (v0.7.49.4)
+					(result["parts"] as Array).append({"label": "Вдохновение барда (к%d)" % insp_die, "value": insp})
 		ExplorationRules.lock(session, params, room, result, state)
 		var mark := _theft_target(params)
 		if not mark.is_empty():

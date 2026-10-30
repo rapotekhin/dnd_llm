@@ -67,6 +67,11 @@ static func xp_of(data: Dictionary, c: Dictionary) -> int:
 	return int(data["monsters"].get(str(c.get("monster", "")), {}).get("xp", 0))
 
 
+## What the law pays for a thinking prisoner (the guard's button, an NPC who takes it to the guard): bounty_cp_per_xp × its XP.
+static func bounty_cap(data: Dictionary, c: Dictionary) -> int:
+	return int(cfg(data)["bounty_cp_per_xp"]) * maxi(1, xp_of(data, c))
+
+
 ## The most an NPC pays for the creature: sale_cp_per_xp × its XP.
 static func price_cap(data: Dictionary, c: Dictionary) -> int:
 	return int(cfg(data)["sale_cp_per_xp"]) * maxi(1, xp_of(data, c))
@@ -82,7 +87,8 @@ static func owner_word(data: Dictionary, owner: String) -> String:
 
 
 ## Checks the master's `owner`: {creature_id | item_id, owner_id, price_cp}. A creature here of the hero's goes to an
-## NPC of the scene (a sale with a price — only a beast while slavery is off) or free (owner_id ""); a thing of an
+## NPC of the scene (a sale with a price — only a beast while slavery is off; a thinking one is handed over for the
+## law's bounty at most, v0.7.49.4: the NPC takes it to the guard) or free (owner_id ""); a thing of an
 ## NPC the hero carries becomes the hero's (owner_id "hero") — its owner gives it up here. {plan, summary} or {reason}.
 static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var world := WorldView.new(data["world"])
@@ -102,16 +108,16 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		if not here.has(to):
 			return {"reason": "NPC %s нет в этой комнате: продают и отдают тем, кто здесь" % to}
 		var price := maxi(0, int(e.get("price_cp", 0)) if e.get("price_cp") != null else 0)
-		if price > 0 and thinking(data, c) and not PropertyRules.slavery(s, data) and not bool(cfg(data).get("slavery", false)):
-			return {"reason": "%s разумен: продать его — рабство, а в этом мире его нет; отдать страже — кнопка игрока" % c["name"]}
-		var cap := price_cap(data, c)
+		var bounty := price > 0 and thinking(data, c) and not PropertyRules.slavery(s, data) and not bool(cfg(data).get("slavery", false))
+		var cap := bounty_cap(data, c) if bounty else price_cap(data, c)
 		if price > cap:
-			return {"reason": "за %s дадут не больше %s" % [c["name"], Money.format(cap)]}
+			return {"reason": ("%s разумен: его не продают (рабства нет), а передают, чтобы свели к страже, — награда за поимку не больше %s" if bounty
+				else "за %s дадут не больше %s") % [c["name"], Money.format(cap)]}
 		var npc := world.npc(to)
 		if price > 0 and bool(npc.get("trader", false)) and price > int(TradeRules.merchant(s, data, to)["purse_cp"]):
 			return {"reason": "у %s нет столько денег: в кошельке %s" % [npc.get("name", to), Money.format(int(TradeRules.merchant(s, data, to)["purse_cp"]))]}
 		return {"plan": {"creature": cid, "to": to, "price": price},
-			"summary": "%s теперь у %s%s" % [c["name"], npc.get("name", to), " за %s" % Money.format(price) if price > 0 else ""]}
+			"summary": "%s теперь у %s%s" % [c["name"], npc.get("name", to), (" — награда за поимку %s" if bounty else " за %s") % Money.format(price) if price > 0 else ""]}
 	var item := str(e.get("item_id", "")) if e.get("item_id") != null else ""
 	if item.is_empty():
 		return {"reason": "нужен creature_id существа сцены или item_id вещи героя"}

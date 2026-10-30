@@ -153,8 +153,9 @@
 			"cabinet": {"name": "шкаф", "capacity_lb": 200, "lockable": true},
 			"crate": {"name": "ящик", "capacity_lb": 100},
 			"strongbox": {"name": "окованный ларец", "capacity_lb": 20, "lockable": true},
-			"wares": {"name": "товары", "capacity_lb": 5000}
+			"wares": {"name": "товары", "capacity_lb": 5000, "lockable": true, "lock": "good"}
 		},
+		"_wares_lock": "v0.7.49.4 (the author's finding): a trader's goods are under lock (`lock` — a quality of lock_dc): to steal them the lock is picked or forced first; the trader locks them again — and mends a broken lock — the next day.",
 		"lock_dc": {"simple": 10, "good": 15, "masterwork": 20},
 		"bag_weight_share": 0.5,
 		"worn_bags": {"big": 1, "small": 2},
@@ -2421,12 +2422,39 @@
 		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120},
 		"_v07_22_16": "A creature keeps hp and xp_given (fought again — its wounds, no XP twice); the helpless (unconscious or bound) is finished off without a fight. A pack NPC knocked out lies as a creature with its npc_id; waking or let go it goes home with woken_attitude and the assault is known (crime kind `assault`).",
 		"woken_attitude": -3,
-		"_v07_22_17": "The prisoner's branch (v0.7.22.17, docs/design/concepts.md «Пленник»): a bound one is the hero's (owner `hero`, OwnerRules). Handed to the law's guard — bounty_cp_per_xp × its XP and hand_over_reputation in the settlement; executed (finished off bound) before NPCs — execute_attitude for each who sees; sold (the master's `owner` with price_cp) — at most sale_cp_per_xp × its XP and the buyer's purse; a thinking one is not sold while slavery is off (v0.7.27 makes it a setting of the world).",
+		"_v07_22_17": "The prisoner's branch (v0.7.22.17, docs/design/concepts.md «Пленник»): a bound one is the hero's (owner `hero`, OwnerRules). Handed to the law's guard — bounty_cp_per_xp × its XP and hand_over_reputation in the settlement; executed (finished off bound) before NPCs — execute_attitude for each who sees; sold (the master's `owner` with price_cp) — at most sale_cp_per_xp × its XP and the buyer's purse; a thinking one is not sold while slavery is off (v0.7.27 makes it a setting of the world); v0.7.49.4 — it is handed over to an NPC of the scene for the law's bounty at most (bounty_cp_per_xp × its XP): the NPC takes it to the guard.",
 		"bounty_cp_per_xp": 10,
 		"hand_over_reputation": 1,
 		"execute_attitude": -1,
 		"sale_cp_per_xp": 50,
 		"slavery": false
+	},
+	"item_props": {
+		"_doc": "v0.7.49.4 (the author's finding): what a property of a thing that works now gives, in words for the sheet's «От вещей» — a worn or carried wondrous item, an equipped weapon or armour. A property not named here (finesse, heavy, reach…) is a weapon's own and stays on its card.",
+		"names": {
+			"ac_plus1": "КД +1",
+			"magic_plus1": "магическое +1",
+			"carry_plus_500": "переносимый вес +500 фунтов",
+			"checks_plus1": "проверки +1",
+			"saves_plus1": "спасброски +1",
+			"darkvision": "тёмное зрение 60 фт",
+			"immune_disease": "невосприимчивость к болезням",
+			"int_19": "Интеллект 19",
+			"str_19": "Сила 19",
+			"investigation_advantage": "преимущество на Анализ",
+			"perception_advantage": "преимущество на Внимательность",
+			"stealth_advantage": "преимущество на Скрытность",
+			"light_source": "источник света",
+			"missile_snaring": "ловит снаряды",
+			"no_crit": "критические попадания по вам — обычные",
+			"ranged_damage_plus2": "урон дальнобойным оружием +2",
+			"resist_cold": "сопротивление холоду",
+			"resist_force": "сопротивление урону силовым полем",
+			"speed_30": "скорость +30 фт",
+			"spell_attack_plus1": "атака заклинанием +1",
+			"understand_all": "понимает любой язык",
+			"wound_closure": "стабилизация при 0 HP, лечение кубами хитов вдвое"
+		}
 	},
 	"wear_slots": {
 		"_doc": "Slots of worn things (v0.7.22.9, big test #24): a wondrous item goes to the slot of its `look` (or its own `slot`; a made one — by the first word of its name); it works only worn. Without a slot (a stone, a pearl, a wand) it works carried.",

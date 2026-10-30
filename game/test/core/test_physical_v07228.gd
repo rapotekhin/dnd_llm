@@ -39,11 +39,20 @@ func test_the_wares_lie_in_the_shop() -> void:
 	assert_int(int(w["contents"].get("longsword", 0))).is_equal(int(stock.get("longsword", 0)))
 	stock["longsword"] = int(stock["longsword"]) - 1  # sold
 	assert_int(int(PropRules.find(s, s.room_id, "w_npc_smith")["contents"]["longsword"])).is_equal(int(stock["longsword"]))
+	assert_bool(bool(w["locked"])).is_true()  # under the lock: picked or forced first (v0.7.49.4)
+	assert_dict(ContainerRules.plan_take(s, data, "w_npc_smith", "dagger", 1)).contains_keys(["reason"])
+	ContainerRules.unlock(w, "force")
 	var r := ContainerRules.plan_take(s, data, "w_npc_smith", "dagger", 1)  # taken from the shelf
 	assert_bool(r.has("plan")).override_failure_message(str(r)).is_true()
 	var before := int(stock.get("dagger", 0))
 	ContainerRules.apply_take(s, data, r["plan"])
 	assert_int(int(TradeRules.merchant(s, data, "npc_smith")["stock"].get("dagger", 0))).is_equal(before - 1)
+	PropRules.ensure_wares(s, data, s.room_id)
+	assert_bool(bool(w["locked"])).is_false()  # still open today
+	s.day += 1
+	PropRules.ensure_wares(s, data, s.room_id)
+	assert_bool(bool(w["locked"])).is_true()  # the smith locks it again in the morning, the lock mended
+	assert_str(str(w["state"])).is_empty()
 
 
 func test_a_dead_traders_wares_stay_and_do_not_restock() -> void:

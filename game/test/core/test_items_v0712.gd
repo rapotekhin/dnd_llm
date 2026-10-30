@@ -323,3 +323,25 @@ func test_old_saves_keep_the_cloak_working() -> void:
 	var v19 := {"save_version": 19, "session": {"character": {"inventory": {"cloak_of_protection": 1}}}}
 	SaveFormat._v19_to_v20(v19, {})
 	assert_array(v19["session"]["character"]["attuned"]).contains_exactly(["cloak_of_protection"])
+
+
+func test_the_sheet_says_what_worn_goggles_give() -> void:  # the author's finding (v0.7.49.4)
+	var s := _hero("bard_yas")
+	s.character["inventory"]["goggles_of_night"] = 1
+	assert_array(CharacterRules.item_boons(s.character, data, s.items)).is_empty()  # in the pack, not worn
+	s.character["equipped"]["eyes"] = "goggles_of_night"
+	CharacterRules.refresh(s.character, data, s.items)
+	assert_array(CharacterRules.item_boons(s.character, data, s.items)).contains(["Очки ночного видения: тёмное зрение 60 фт"])
+
+
+func test_an_attack_line_of_the_fight_has_its_breakdown() -> void:  # the author's finding (v0.7.49.4)
+	var s := _hero("bard_yas")
+	var f := _fight(s, "goblin")
+	var w := CombatRules.weapon_profile(s.character, data, s.items, "rapier")
+	var lines: Array[String] = []
+	CombatRules._attack(s, data, "Ясь", "Рапира", int(w["to_hit"]), false, false, f, "1d8", 2, "piercing", lines, "", false, w)
+	var tip := CombatRules.tip_for(s, lines[0])
+	assert_str(tip).contains("к20")
+	assert_str(tip).contains("против КД")
+	assert_str(tip).contains("Ловкость")
+	assert_str(tip).not_contains("прочие бонусы")

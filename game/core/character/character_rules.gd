@@ -153,6 +153,25 @@ static func carried(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	return out
 
 
+## What the things that work now give the hero, for the sheet (v0.7.49.4): «Очки ночного видения: тёмное зрение 60 фт»
+## — each thing with the properties rules.item_props names.
+static func item_boons(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[String]:
+	var names: Dictionary = data["rules"]["item_props"]["names"]
+	var out: Array[String] = []
+	var defs := carried(c, data, session_items)
+	for slot: String in SLOTS:
+		var id := str(c.get("equipped", {}).get(slot, ""))
+		if not WEAR_SLOTS.has(slot) and not id.is_empty():
+			var d := ItemRules.def_of(data["items"], session_items, id)
+			if ItemRules.active(c, d, id):
+				defs.append(d)
+	for d: Dictionary in defs:
+		var what: Array = (d.get("properties", []) as Array).filter(func(p: Variant) -> bool: return names.has(str(p))).map(func(p: Variant) -> String: return str(names[str(p)]))
+		if not what.is_empty():
+			out.append("%s: %s" % [d.get("name", ""), ", ".join(what)])
+	return out
+
+
 ## Properties of the things that work now: carried wondrous items and the equipped gear (v0.7.12).
 static func active_props(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array:
 	var out: Array = []

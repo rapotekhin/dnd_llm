@@ -271,7 +271,8 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 	var who := str(giver_npc["npc"]["name"]) if not giver_npc.is_empty() else str(world.npc(giver).get("name", giver))
 	var from := "своё дело" if own else ("заказ на доске, заказчик %s" % who) if not board.is_empty() else "от %s" % who
 	return {"plan": {"quest": q, "giver_npc": giver_npc}, "summary": "Новое задание: «%s» — %s (%s, актов %d: %s). Подробности акта соберёт мастер, когда герой его откроет" % [
-		q["title"], from, d["name"], acts.size(), "; ".join(acts.map(func(a: Dictionary) -> String: return a["title"]))]}
+		q["title"], from, d["name"], acts.size(), "; ".join(acts.map(func(a: Dictionary) -> String: return a["title"]))],
+		"line": "Новое задание: «%s» — %s" % [q["title"], from]}  # the player sees no acts ahead (v0.7.49.4)
 
 
 ## Makes the skeleton: in the save and in this game's world; offered by its giver at once. Its id.
@@ -520,7 +521,8 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	return {"plan": {"quest_id": qid, "act": n, "steps": steps, "content": content, "fights": fights, "made": raw.size(), "share": share,
 		"teach": teach.get("spec", {})},
 		"summary": "«%s», акт %d «%s»: %s%s" % [q["title"], n + 1, q["acts"][n]["title"], "; ".join(steps.map(func(st: Dictionary) -> String: return str(st["text"]))),
-			("; с ним: " + "; ".join(brings)) if not brings.is_empty() else ""]}
+			("; с ним: " + "; ".join(brings)) if not brings.is_empty() else ""],
+		"line": "«%s»: акт %d «%s»" % [q["title"], n + 1, q["acts"][n]["title"]]}  # steps, foes and rewards stay the master's (v0.7.49.4)
 
 
 ## The course an act opens at the teacher the hero is sent to find (v0.7.39.7): `teaches` {npc — «new:<key>» of the

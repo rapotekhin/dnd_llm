@@ -209,6 +209,11 @@ func _add_log(text: String, master: bool) -> void:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.theme_type_variation = UiTheme.DM_TEXT if master else UiTheme.MUTED_LABEL
+	if not master and GameState.has_session():  # the roll's breakdown on hover (v0.7.49.4)
+		var tip := CombatRules.tip_for(GameState.session, text)
+		if not tip.is_empty():
+			l.tooltip_text = tip
+			l.mouse_filter = Control.MOUSE_FILTER_STOP
 	if master:
 		_log_box.add_child(l)
 	else:

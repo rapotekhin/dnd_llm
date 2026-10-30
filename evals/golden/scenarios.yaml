@@ -2106,6 +2106,22 @@ scenarios:
     rubric:
       - "Ферн торгуется или соглашается, сделка проведена одним эффектом owner на волка c2 с ценой; монеты отдельно не начисляются"
 
+  - id: hand_a_bandit_to_a_merchant
+    title: "Разумного пленника не продают, а передают NPC за награду — эффект owner, без coins (находка автора, v0.7.49.4)"
+    category: consequences
+    extends: tavern
+    input: "Ферн, забирай душегуба, сведёшь его к капитану. Восемь серебром за хлопоты — и он твой."
+    snapshot:
+      scene:
+        room: {id: brod-square, name: "Рыночная площадь", description: "Лотки, телеги, у колодца толпятся люди."}
+        npcs:
+          - {id: npc_merchant, name: "Ферн Кривой", role: "торговец всякой всячиной", template: commoner, attitude: friendly, trader: true}
+        creatures: ["Бандит 2 [c2] — сдался, связан, идёт с героем на привязи, ваш пленник"]
+    expect:
+      effects: {required_kinds_any: [owner], forbidden_kinds: [coins, give_item, take_item]}
+    rubric:
+      - "Ферн забирает пленника, чтобы свести к страже: передача проведена эффектом owner на c2 (с наградой или даром), монеты отдельно не начисляются; это не продажа в рабство"
+
   - id: truce_not_a_prisoner
     title: "Перемирие — не плен: с существом говорят на равных (проверка исправлений #10, v0.7.22.17)"
     category: consequences

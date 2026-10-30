@@ -95,9 +95,14 @@ func _rebuild() -> void:
 			var pb := _row_button(row, "Unlock_pick", tr("BTN_UNLOCK_PICK"), false, func() -> String: return "")
 			pb.tooltip_text = tr("PICK_NO_TOOLS") + ("" if hint.is_empty() else ": " + hint)
 		return
-	_box.add_child(_label(tr("CONTAINER_INSIDE"), UiTheme.MUTED_LABEL))
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	_box.add_child(head)
+	head.add_child(_label(tr("CONTAINER_INSIDE"), UiTheme.MUTED_LABEL))
 	if contents.is_empty():
 		_box.add_child(_label(tr("CONTAINER_EMPTY"), UiTheme.MUTED_LABEL))
+	else:  # v0.7.49.4: everything at once
+		_row_button(head, "TakeAll", tr("BTN_TAKE_ALL_CONTAINER"), can_act, func() -> String: return GameState.container_take_all(prop_id))
 	for id: String in contents:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
@@ -105,6 +110,9 @@ func _rebuild() -> void:
 		row.add_child(_label("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), int(contents[id])]))
 		var iid := id
 		_row_button(row, "TakeOut_" + id, tr("BTN_TAKE_OUT"), can_act, func() -> String: return GameState.container_move(prop_id, iid, 1, true))
+		if int(contents[id]) > 1:  # the whole stack (v0.7.49.4)
+			var n := int(contents[id])
+			_row_button(row, "TakeStack_" + id, tr("BTN_TAKE_STACK"), can_act, func() -> String: return GameState.container_move(prop_id, iid, n, true))
 	_box.add_child(_label(tr("CONTAINER_YOURS"), UiTheme.MUTED_LABEL))
 	for id: String in s.character.get("inventory", {}):
 		var free := TradeRules.sellable(s, id, data)

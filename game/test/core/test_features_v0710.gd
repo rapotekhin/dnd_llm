@@ -230,6 +230,17 @@ func test_inspiration_is_added_to_a_failed_save() -> void:
 	assert_int(FeatureRules.inspiration_die(s.character)).is_equal(0)  # spent on the failure
 
 
+func test_inspiration_on_an_engine_roll_with_its_part() -> void:  # a parley before a fight, an escape (v0.7.49.4)
+	var s := _hero("bard_yas")
+	FeatureUses.use(s.character, data, "bardic_inspiration", 1, s.rng)
+	s.character["skills"]["persuasion"] = -40  # fails whatever the die
+	s.rng.seed = 7
+	EncounterRules.roll(s, data, "persuasion", 15)
+	assert_int(FeatureRules.inspiration_die(s.character)).is_equal(0)  # spent on the failure
+	var labels := (s.roll_notes[-1]["parts"] as Array).map(func(p: Dictionary) -> String: return str(p["label"]))
+	assert_array(labels).contains(["Вдохновение барда (к6)"])
+
+
 func test_song_of_rest() -> void:
 	var s := _hero("bard_yas", 2)
 	s.character["hp"] = 1

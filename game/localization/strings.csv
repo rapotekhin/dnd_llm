@@ -461,6 +461,8 @@ JOURNAL_ELSEWHERE,В пути
 ITEM_WRITTEN,"Написано: «{text}»"
 BTN_OPEN_CONTAINER,Открыть: {name}
 BTN_TAKE_OUT,Взять
+BTN_TAKE_STACK,Взять все
+BTN_TAKE_ALL_CONTAINER,Взять всё
 BTN_PUT_IN,Положить
 BTN_UNLOCK_KEY,Открыть ключом
 BTN_UNLOCK_PICK,Взломать
@@ -671,6 +673,7 @@ SHEET_LINE,"{race}, {class}, {level} уровень · {background}"
 SHEET_PASSIVE,пассивная Внимательность {n}
 SHEET_PROF_SPEED,Бонус мастерства +{prof} · скорость {speed} футов
 SHEET_RESIST,Сопротивление урону: {list}
+SHEET_ITEM_BOONS,От вещей:
 SHEET_RESOURCE,{name}: {left} из {max} (восстановление: {rest})
 SHEET_RESOURCES,Умения с ограниченными использованиями
 SHEET_SKILLS,"Навыки (● — владение, ●● — компетентность)"

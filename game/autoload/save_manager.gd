@@ -1,6 +1,7 @@
 extends Node
 ## Save slots (JSON, docs/tech/save-format.md) and display settings (settings.cfg).
-## `--profile=<name>` keeps saves, settings and logs apart in user://profiles/<name>/ (agent checks use "agent").
+## `--profile=<name>` keeps saves, settings and logs apart in user://profiles/<name>/ (agent checks use "agent",
+## the gdUnit run "gdunit" by itself).
 
 const AUTOSAVE := "autosave"
 const QUICKSAVE := "quicksave"  # F5 / F9 (v0.7.22.27)
@@ -40,6 +41,8 @@ const UI_SCALES: Array[float] = [0.85, 1.0, 1.15, 1.3]
 
 func _ready() -> void:
 	profile = LaunchArgs.value("--profile", "preview" if LaunchArgs.has("--preview") else "")  # a preview never touches real saves
+	if profile.is_empty() and Array(OS.get_cmdline_args()).any(func(a: String) -> bool: return a.contains("gdUnit4")):
+		profile = "gdunit"  # the test run never writes over the author's autosave (v0.7.49.4)
 	if not profile.is_empty():
 		profile_dir = "user://profiles/" + profile
 		save_dir = profile_dir + "/saves"

@@ -109,7 +109,8 @@ func validate(s: GameSession, data: Dictionary, turn_id: String, effect: Diction
 	if res.has("reason"):
 		return _reject(str(res["reason"]))
 	var id := s.next_effect_id()
-	reserves[id] = {"turn_id": turn_id, "kind": str(effect.get("kind", "")), "plan": res["plan"], "summary": res["summary"]}
+	reserves[id] = {"turn_id": turn_id, "kind": str(effect.get("kind", "")), "plan": res["plan"], "summary": res["summary"],
+		"line": str(res.get("line", res["summary"]))}  # the player's line may say less than the master's summary (v0.7.49.4)
 	var out := {"accepted": true, "effect_id": id, "summary": res["summary"]}
 	if res["plan"].has("new_item_id"):
 		out["item_id"] = res["plan"]["new_item_id"]
@@ -129,7 +130,7 @@ func apply(s: GameSession, turn_id: String, ids: Array) -> Array[String]:
 		if bool(r["plan"].get("magic", false)):
 			s.magic_given += 1
 		_apply_one(s, r["kind"], r["plan"])
-		lines.append(str(r["summary"]))
+		lines.append(str(r.get("line", r["summary"])))
 		lines.append_array(_extra_lines)  # an owner's reaction to a taken thing (v0.7.0)
 	discard(turn_id)
 	_link_new_owner(s)

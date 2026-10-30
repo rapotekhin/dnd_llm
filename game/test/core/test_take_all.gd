@@ -43,3 +43,14 @@ func test_too_heavy_stays() -> void:
 	var plan := PropRules.take_all_plan(s, data)
 	assert_array(plan["take"]).is_empty()
 	assert_array(plan["left"]).is_not_empty()
+
+
+func test_a_chest_emptied_at_once() -> void:  # «Взять всё» in a container's window (v0.7.49.4)
+	var s := TestUtils.new_session()
+	s.props[s.room_id] = [{"id": "ch", "name": "Сундук", "item_id": "", "owner": "", "state": "", "container": "chest",
+		"contents": {"candle": 3, "rope": 1}}]
+	GameState.session = s
+	assert_str(GameState.container_take_all("ch")).is_empty()
+	assert_dict(PropRules.find(s, s.room_id, "ch")["contents"]).is_empty()
+	assert_int(int(s.character["inventory"].get("candle", 0))).is_greater_equal(3)
+	assert_int(int(s.character["inventory"].get("rope", 0))).is_greater_equal(1)

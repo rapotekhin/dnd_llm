@@ -814,12 +814,21 @@ static func _attack(s: GameSession, data: Dictionary, who: String, what: String,
 	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
 	var line := "%s — %s по %s: %d%s%d = %d против КД %d%s%s" % [who, what, t["name"], nat, " + " if to_hit >= 0 else " − ", absi(to_hit), total, int(t["ac"]), mark,
 		(" [%s]" % die["note"]) if not str(die["note"]).is_empty() else ""]
+	var hit_parts: Array[Dictionary] = []  # the hover of the line (v0.7.49.4, the author's finding)
+	hit_parts.assign(w.get("hit_parts", []))
+	hit_parts.append_array(die.get("parts", []))
+	if RollParts.sum(hit_parts) != to_hit:
+		hit_parts.append(RollParts.part("прочие бонусы атаки", to_hit - RollParts.sum(hit_parts)))
 	if not hit and nat != 1:
+		var insp_die := FeatureRules.inspiration_die(s.character)
 		var insp := FeatureRules.use_inspiration(s)
 		if insp > 0:
 			total += insp
 			hit = total >= int(t["ac"])
 			line += " + вдохновение %d = %d" % [insp, total]
+			hit_parts.append(RollParts.part("Вдохновение барда (к%d)" % insp_die, insp))
+	var tip := RollParts.text({"what": what, "rolls": rolls, "nat": nat, "parts": hit_parts, "total": total}) + " против КД %d" % int(t["ac"])
+	line_tip(s, line, tip)
 	if not hit:
 		lines.append(line + " — промах")
 		fx(s, str(t["id"]), "dodge")
@@ -834,11 +843,32 @@ static func _attack(s: GameSession, data: Dictionary, who: String, what: String,
 	var dmg := maxi(1, (_roll_gwf(s.rng, dice, crit) if bool(w.get("gwf", false)) else roll_dice(s.rng, dice, crit)) + bonus)
 	if not extra_dice.is_empty():
 		dmg += roll_dice(s.rng, extra_dice, crit)
+	var rolled := dmg
 	dmg = _resist(data, t, dtype, dmg, bool(w.get("magical", true)) or w.is_empty(), bool(w.get("silvered", false)))
+	line_tip(s, line, tip + "
+
+Урон: %s%s%s = %d%s" % [str(dice).replace("d", "к"), ("%+d" % bonus) if bonus != 0 else "",
+		(" + " + extra_dice.replace("d", "к") + " Скрытая атака") if not extra_dice.is_empty() else "", rolled,
+		(" (крит: кости дважды)" if crit else "") + ((" → %d у цели (сопротивление или уязвимость)" % dmg) if dmg != rolled else "")])
 	lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, str(data["misc"]["damage_types"].get(dtype, dtype)),
 		", Скрытая атака" if not extra_dice.is_empty() else ""])
 	_hurt_enemy(s, data, t, dmg, lines, dtype, crit)
 	return {"hit": true, "damage": dmg, "crit": crit}
+
+
+## The hover text of a line of the fight's log (v0.7.49.4): kept with the fight under the line's start, found by
+## CombatScreen for a log line that begins with it.
+static func line_tip(s: GameSession, line: String, tip: String) -> void:
+	var tips: Dictionary = s.combat.get("tips", {})
+	tips[line] = tip
+	s.combat["tips"] = tips
+
+
+static func tip_for(s: GameSession, text: String) -> String:
+	for line: String in s.combat.get("tips", {}):
+		if text.begins_with(line):
+			return str(s.combat["tips"][line])
+	return ""
 
 
 ## Great Weapon Fighting: damage dice of 1 or 2 are rolled again, once.
