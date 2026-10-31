@@ -93,7 +93,7 @@ static func performed(s: GameSession, data: Dictionary, total: int, success: boo
 		return ["публика осталась равнодушной"]
 	var pay: Dictionary = data["rules"]["backgrounds"]["_perform"]
 	var cp := int(pay["great_cp"]) if total >= int(pay["great_total"]) else int(pay["good_cp"])
-	c["gold_cp"] = int(c.get("gold_cp", 0)) + cp
+	Ledger.add(s, cp, "background:performed")
 	var lines: Array[String] = ["+" + Money.format(cp)]
 	if bool(spec(c, data).get("stage_lodging", false)):
 		c["free_rest_day"] = s.day

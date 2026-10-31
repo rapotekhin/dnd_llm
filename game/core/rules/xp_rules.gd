@@ -64,7 +64,7 @@ static func complete(s: GameSession, data: Dictionary, quest_id: String) -> Arra
 	var lines: Array[String] = ["Задание выполнено: %s" % q["title"]]
 	var cp := int(q.get("reward_cp", 0))
 	if cp > 0:
-		s.character["gold_cp"] = int(s.character.get("gold_cp", 0)) + cp
+		Ledger.add(s, cp, "xp:complete")
 		lines.append("+" + Money.format(cp))
 	if QuestRules.dangerous(q, q):  # v0.7.19: class experience only for the dangerous
 		lines.append_array(award(s.character, data, int(q.get("xp", 0)), "задание"))

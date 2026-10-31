@@ -81,7 +81,7 @@ func _rebuild() -> void:
 				for id: String in PropertyRules.state(s.character):
 					if not bool(PropertyRules.state(s.character)[id].get("deed", false)):
 						deeds.append(id)
-					if int(PropertyRules.state(s.character)[id].get("debt", 0)) > 0:
+					if Ledger.owed(s, "tax:" + id) > 0:
 						debts.append(id)
 			if ids.is_empty() and deeds.is_empty() and debts.is_empty():
 				_label(_box, tr("PROPERTY_NONE_ON_SALE"), UiTheme.MUTED_LABEL)
@@ -176,7 +176,7 @@ func _deed_row(s: GameSession, data: Dictionary, id: String) -> void:
 func _tax_row(s: GameSession, data: Dictionary, id: String) -> void:
 	var parts := _row(id + "_tax")
 	_title(parts[0], PropertyRules.name_of(s, data, id))
-	_label(parts[0], tr("PROPERTY_DEBT").format({"money": Money.format(int(PropertyRules.state(s.character)[id]["debt"]))})).theme_type_variation = UiTheme.WARN_LABEL
+	_label(parts[0], tr("PROPERTY_DEBT").format({"money": Money.format(Ledger.owed(s, "tax:" + id))})).theme_type_variation = UiTheme.WARN_LABEL
 	_button(parts[1], "PropertyTax_" + id, tr("BTN_PROPERTY_TAX"), PropertyRules.pay_tax_why(s, data, id), _act("tax", id))
 
 
@@ -250,13 +250,14 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 	if PropertyRules.income_day(s, data, id) > 0:
 		bits.append(tr("PROPERTY_INCOME").format({"money": Money.format(PropertyRules.income_day(s, data, id))}))
 	bits.append(tr("PROPERTY_TILL").format({"money": Money.format(int(st.get("cash", 0)))}))
-	if int(st.get("debt", 0)) > 0:
-		bits.append(tr("PROPERTY_DEBT").format({"money": Money.format(int(st["debt"]))}))
+	var debt := Ledger.owed(s, "tax:" + id)
+	if debt > 0:
+		bits.append(tr("PROPERTY_DEBT").format({"money": Money.format(debt)}))
 	var dl := _label(col, " · ".join(bits), UiTheme.MUTED_LABEL)
-	if not bool(st.get("deed", false)) or int(st.get("debt", 0)) > 0:
+	if not bool(st.get("deed", false)) or debt > 0:
 		dl.add_theme_color_override("font_color", UiTheme.WARN)
-	if st.has("rent_until"):
-		var rl := _label(col, tr("PROPERTY_RENT_UNTIL").format({"day": int(st["rent_until"])}), UiTheme.MUTED_LABEL)
+	if st.has("rent_day"):
+		var rl := _label(col, tr("PROPERTY_RENT_UNTIL").format({"day": int(st["rent_day"])}), UiTheme.MUTED_LABEL)
 		if PropertyRules.lapsed(s, id):
 			rl.add_theme_color_override("font_color", UiTheme.WARN)
 	for h: Dictionary in PropertyRules.staff(s, id):  # the staff (v0.7.39.5): each person with the role
@@ -279,7 +280,7 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 		ups.append(tr("PROPERTY_PENDING").format({"name": PropertyRules.cfg(data)["build"][str(b["id"])]["name"], "day": int(b["ready"])}))
 	if not ups.is_empty():
 		_label(col, tr("PROPERTY_UPGRADES").format({"list": ", ".join(ups)}), UiTheme.MUTED_LABEL)
-	if int(st.get("debt", 0)) > 0:
+	if debt > 0:
 		_button(buttons, "PropertyTax_" + id, tr("BTN_PROPERTY_TAX"), PropertyRules.pay_tax_why(s, data, id), _act("tax", id))
 	if not here:
 		_label(col, tr("PROPERTY_GO_THERE"), UiTheme.MUTED_LABEL)

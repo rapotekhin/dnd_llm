@@ -130,7 +130,7 @@ static func wedding(s: GameSession, data: Dictionary, npc_id: String) -> Array[S
 	var f := _rw(c)
 	var k := officiant(s, data, npc_id)
 	var who := str(f["engaged"])
-	c["gold_cp"] = int(c["gold_cp"]) - fee(data, k)
+	Ledger.add(s, -fee(data, k), "family:wedding")
 	var h := home(s, data)
 	f["spouse"] = who
 	f["married_day"] = s.day
@@ -201,12 +201,7 @@ static func years(s: GameSession, data: Dictionary, npc_id: String) -> int:
 
 
 static func stage(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary:
-	var y := years(s, data, npc_id)
-	var out: Dictionary = cfg(data)["stages"][0]
-	for st: Dictionary in cfg(data)["stages"]:
-		if y >= int(st["years"]):
-			out = st
-	return out
+	return Scale.step(cfg(data)["stages"], years(s, data, npc_id), "years", cfg(data)["stages"][0])
 
 
 static func _role(data: Dictionary, gender: String, st: Dictionary) -> String:
@@ -324,7 +319,7 @@ static func _day(s: GameSession, data: Dictionary, day: int) -> Array[String]:
 	var till: Dictionary = owned.get(str(f.get("home", "")), {})
 	var c := s.character
 	if till.is_empty():
-		c["gold_cp"] = int(c["gold_cp"]) + help(s, data)
+		Ledger.add(s, help(s, data), "family:day")
 	else:
 		till["cash"] = int(till.get("cash", 0)) + help(s, data)
 	var need := upkeep(s, data)
@@ -335,7 +330,7 @@ static func _day(s: GameSession, data: Dictionary, day: int) -> Array[String]:
 		till["cash"] = int(till["cash"]) - from_till
 	var rest := need - from_till
 	if rest <= int(c.get("gold_cp", 0)):
-		c["gold_cp"] = int(c["gold_cp"]) - rest
+		Ledger.add(s, -rest, "family:day")
 		f["hungry"] = 0
 		return lines
 	f["hungry"] = int(f.get("hungry", 0)) + 1
@@ -390,6 +385,10 @@ static func inherit(s: GameSession, data: Dictionary, heir_c: Dictionary) -> Arr
 		var v: Variant = old.get(str(k))
 		if v is Dictionary:
 			heir_c[str(k)] = (v as Dictionary).duplicate(true)
+	var debts: Dictionary = heir_c.get("debts", {})
+	for key: String in debts.keys():
+		if key.begins_with("cut:"):
+			debts.erase(key)  # the band's cut went with the hero
 	var kin: Array = []
 	if not spouse(s).is_empty():
 		kin.append({"npc": spouse(s), "rel": "мать" if str(BondRules.npc_def(s, data, spouse(s)).get("gender", "")) == "female" else "отец"})

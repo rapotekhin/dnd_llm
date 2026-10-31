@@ -100,7 +100,7 @@ func test_the_tax_is_paid_from_the_shops_till() -> void:
 	s.character["gold_cp"] = 0
 	ShopRules.venue(s.character, "river_house")["cash"] = 1000
 	TimeRules.advance(s, data, 7 * 1440)
-	assert_int(int(PropertyRules.state(s.character)["river_house"].get("debt", 0))).is_equal(0)
+	assert_int(Ledger.owed(s, "tax:river_house")).is_equal(0)
 	assert_int(int(ShopRules.venue(s.character, "river_house")["cash"])).is_equal(970)
 
 

@@ -68,13 +68,13 @@ func test_the_tax_debt_is_paid_at_the_clerk() -> void:
 	var s := _hero()
 	PropertyRules.buy(s, data, "river_house")
 	assert_str(PropertyRules.pay_tax_why(s, data, "river_house")).is_equal("PROPERTY_NO_DEBT")
-	PropertyRules.state(s.character)["river_house"]["debt"] = 500
+	Ledger.owe(s, "tax:river_house", "tax", 500, "")
 	assert_str(PropertyRules.pay_tax_why(s, data, "river_house")).is_empty()
 	var gold := int(s.character["gold_cp"])
 	PropertyRules.pay_tax(s, data, "river_house")
-	assert_int(int(PropertyRules.state(s.character)["river_house"]["debt"])).is_equal(0)
+	assert_int(Ledger.owed(s, "tax:river_house")).is_equal(0)
 	assert_int(int(s.character["gold_cp"])).is_equal(gold - 500)
-	PropertyRules.state(s.character)["river_house"]["debt"] = 500
+	Ledger.owe(s, "tax:river_house", "tax", 500, "")
 	s.room_id = "brod-square"  # neither the place nor the clerk
 	assert_str(PropertyRules.pay_tax_why(s, data, "river_house")).is_equal("PROPERTY_TAX_WHERE")
 
@@ -82,7 +82,7 @@ func test_the_tax_debt_is_paid_at_the_clerk() -> void:
 func test_the_master_takes_the_tax_by_words() -> void:
 	var s := _hero()
 	PropertyRules.buy(s, data, "river_house")
-	PropertyRules.state(s.character)["river_house"]["debt"] = 500
+	Ledger.owe(s, "tax:river_house", "tax", 500, "")
 	var engine := EffectEngine.new()
 	var over := engine.validate(s, data, "t-1", {"kind": "coins", "delta_cp": -900, "reason": "налог", "settles": "tax"})
 	assert_bool(bool(over["accepted"])).is_false()
@@ -90,7 +90,7 @@ func test_the_master_takes_the_tax_by_words() -> void:
 	assert_bool(bool(r["accepted"])).is_true()
 	var gold := int(s.character["gold_cp"])
 	var lines := engine.apply(s, "t-1", [r["effect_id"]])
-	assert_int(int(PropertyRules.state(s.character)["river_house"]["debt"])).is_equal(200)
+	assert_int(Ledger.owed(s, "tax:river_house")).is_equal(200)
 	assert_int(int(s.character["gold_cp"])).is_equal(gold - 300)
 	assert_str("\n".join(lines)).contains("долг ещё")
 
@@ -100,8 +100,8 @@ func test_a_sick_npc_gets_well() -> void:
 	assert_str(DiseaseRules.npc_disease(s, data, "npc_sick_pilgrim")).is_equal("cackle_fever")
 	DiseaseRules.tick(s, data)
 	var until := int(s.npc_sick["npc_sick_pilgrim"]["until"])
-	assert_int(until).is_greater(s.day)
-	s.day = until
+	assert_int(until).is_greater(s.clock)
+	s.clock = until
 	DiseaseRules.tick(s, data)
 	assert_str(DiseaseRules.npc_disease(s, data, "npc_sick_pilgrim")).is_empty()
 	var back := GameSession.from_dict(s.to_dict(10))  # kept in the save

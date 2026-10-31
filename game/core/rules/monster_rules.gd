@@ -420,7 +420,7 @@ static func end_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Arr
 	if CombatRules.cols_between(f, CombatRules.player(s)) == 0:
 		return
 	var m := monster(data, f)
-	var stealth := s.rng.randi_range(1, 20) + int(m.get("skills", {}).get("stealth", CharacterRules.mod(int(m["abilities"].get("dex", 10)))))
+	var stealth := Roll.d20(s.rng) + int(m.get("skills", {}).get("stealth", CharacterRules.mod(int(m["abilities"].get("dex", 10)))))
 	if stealth >= int(s.character.get("passive_perception", 10)):
 		f["hidden"] = true
 		lines.append("%s прячется (%s)" % [f["name"], trait_of(data, f, "nimble_escape")["name"]])
@@ -614,8 +614,8 @@ static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary
 		var dis := (bool(p.get("dodging", false)) and not ConditionRules.incapacitated(c)) or ConditionRules.invisible(c, data) \
 			or (str(sp["attack"]) == "ranged" and CombatRules.cols_between(f, p) == 0)
 		var adv := ["paralyzed", "stunned", "unconscious", "restrained", "petrified", "blinded"].any(func(x: String) -> bool: return ConditionRules.has(c, x))
-		var rolls := CombatRules._d20(s.rng, adv, dis)
-		var nat := CombatRules._nat(rolls, adv, dis)
+		var rolls := Roll.dice(s.rng, adv, dis)
+		var nat := Roll.kept(rolls, adv, dis)
 		var to_hit := int(sc.get("attack", 0))
 		var hit := nat == 20 or (nat != 1 and nat + to_hit >= int(c.get("ac", 10)))
 		var line := "%s колдует «%s»: %d + %d = %d против КД %d" % [f["name"], name, nat, to_hit, nat + to_hit, int(c.get("ac", 10))]

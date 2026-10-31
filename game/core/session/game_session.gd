@@ -57,7 +57,13 @@ var revealed: Dictionary = {}
 ## Rooms the player has been to, in order (the map).
 var visited: Array[String] = []
 ## Days since the start; a long rest starts the next one.
-var day: int = 1
+## The clock (v0.7.60): minutes since midnight of the first day. `day` and `minute` are its two views.
+var clock: int = 480
+var day: int:
+	get:
+		return clock / 1440 + 1
+	set(v):
+		clock = (v - 1) * 1440 + clock % 1440
 ## npc_id → merchant state (TradeRules): purse_cp, stock {item_id: qty}, day of the last restock, haggle_pct of
 ## the current visit, haggle_failed_day, haggle_result. Created from the pack on the first trade.
 var merchants: Dictionary = {}
@@ -78,7 +84,11 @@ var dead_npcs: Array[String] = []
 ## The «Красться» toggle of exploration (v0.6.2).
 var sneaking: bool = false
 ## Minutes since midnight (TimeRules, v0.6.3); a new game starts in the morning.
-var minute: int = 480
+var minute: int:
+	get:
+		return clock % 1440
+	set(v):
+		clock += v - clock % 1440
 ## Quests with steps taken: {quest_id: step index} (QuestRules, v0.6.3).
 var quests_active: Dictionary = {}
 ## Parts of "all" steps already announced: {quest_id: [index]} (QuestRules, v0.6.4).
@@ -148,6 +158,8 @@ var quests_failed: Array[String] = []
 ## [{day, minute, room, text}], the newest CHRONICLE_MAX — the journal's «Хроника» and the master's memory.
 const CHRONICLE_MAX := 400
 var chronicle: Array[Dictionary] = []
+## The account book (Ledger, v0.7.60): the last changes of the hero's coins [{at, cp, why}].
+var ledger: Array[Dictionary] = []
 ## What the master gave (cp of coins and things) since the last long rest (EffectEngine, v0.7.14.3).
 var reward_spent: int = 0
 var magic_given: int = 0  # magic things the master gave since the long rest (v0.7.22.2)
@@ -250,7 +262,7 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 			contents[it] = int(c["bags"][id]["contents"][it])
 		bags[id] = {"kind": str(c["bags"][id].get("kind", "")), "contents": contents}
 	c["bags"] = bags
-	for k: String in ["fresh", "study", "bonds", "family", "heists", "orgs", "offices", "towns", "faith"]:  # v0.7.25 food batches, v0.7.30 study, v0.7.31 bonds: whole numbers only
+	for k: String in ["fresh", "study", "bonds", "family", "heists", "orgs", "offices", "towns", "faith", "debts"]:  # v0.7.25 food batches, v0.7.30 study, v0.7.31 bonds: whole numbers only
 		if c.has(k):
 			c[k] = _whole(c[k])
 	c["conditions"] = c.get("conditions", [])
@@ -560,6 +572,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"reward_spent": reward_spent,
 		"magic_given": magic_given,
 		"chronicle": chronicle,
+		"ledger": ledger,
 		"dialogue_log": dialogue_log,
 		"location_log": location_log,
 	}
@@ -734,6 +747,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.quests_failed.append(str(q))
 	s.reward_spent = int(d.get("reward_spent", 0))
 	s.magic_given = int(d.get("magic_given", 0))
+	s.ledger.assign(_whole(d.get("ledger", [])))
 	for e: Variant in d.get("chronicle", []):
 		if e is Dictionary:
 			s.chronicle.append({"day": int(e.get("day", 1)), "minute": int(e.get("minute", 0)), "room": str(e.get("room", "")), "text": str(e.get("text", ""))})

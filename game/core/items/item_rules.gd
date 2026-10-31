@@ -258,7 +258,7 @@ static func spend_charge(c: Dictionary, data: Dictionary, session_items: Diction
 	var left := charges_left(c, d, id)
 	var lines: Array[String] = ["зарядов: %d из %d" % [left, charges_all(c, d, id)]]
 	var empty := left % charges_max(d) == 0  # one copy of the stack is spent
-	if empty and bool(d.get("charges", {}).get("crumble", false)) and rng.randi_range(1, 20) == 1:
+	if empty and bool(d.get("charges", {}).get("crumble", false)) and Roll.d20(rng) == 1:
 		_spent_copy(c, used, id, charges_max(d))
 		lines.append("%s рассыпается в пыль" % d.get("name", id))
 	elif empty and not d.get("charges", {}).has("regain"):
@@ -600,9 +600,7 @@ static func _spell_use(c: Dictionary, data: Dictionary, session_items: Dictionar
 	var sp: Dictionary = data["spells"].get(sp_id, {})
 	var lines: Array[String] = []
 	if bool(fx.get("scroll", false)):
-		var read := read_scroll(c, data, sp_id, int(fx.get("level", 1)), rng)
-		if s != null and read.has("roll"):
-			RollParts.note(s, "Свиток", [read["roll"]], int(read["roll"]), read["parts"], int(read["bonus"]), int(read["dc"]))
+		var read := read_scroll(s, data, sp_id, int(fx.get("level", 1)))
 		lines.append(str(read["line"]))
 		if not bool(read["ok"]):
 			return lines
@@ -630,15 +628,15 @@ static func scroll_numbers(data: Dictionary, level: int) -> Array:
 
 ## Reading a scroll: {"ok", "line"}. A spell of the hero's class list and within the slots they have — no check;
 ## otherwise Arcana DC 10 + circle, a failure wastes the scroll.
-static func read_scroll(c: Dictionary, data: Dictionary, spell_id: String, level: int, rng: RandomNumberGenerator) -> Dictionary:
+static func read_scroll(s: GameSession, data: Dictionary, spell_id: String, level: int) -> Dictionary:
+	var c := s.character
 	var sp: Dictionary = data["spells"].get(spell_id, {})
 	var name := str(sp.get("name", spell_id))
 	var own := (sp.get("classes", []) as Array).has(str(c.get("class", ""))) and (level == 0 or int(c.get("slots_max", [0, 0, 0, 0, 0])[maxi(0, level - 1)]) > 0)
 	if own:
 		return {"ok": true, "line": "свиток прочитан: %s" % name}
 	var dc := 10 + level
-	var bonus := int(c.get("skills", {}).get("arcana", 0))
-	var roll := rng.randi_range(1, 20)
-	var ok := roll + bonus >= dc
-	return {"ok": ok, "roll": roll, "bonus": bonus, "dc": dc, "parts": RollParts.cached(c, data, "skill", "arcana"), "line": "Магия %d + %d = %d против Сл %d — %s" % [roll, bonus, roll + bonus, dc,
+	var r := Roll.hero(s, data, {"what": "Свиток", "skill": "arcana", "dc": dc})
+	var ok := bool(r["ok"])
+	return {"ok": ok, "line": "Магия %d + %d против Сл %d: %s" % [int(r["nat"]), int(r["bonus"]), dc,
 		("свиток прочитан: " + name) if ok else "слова не даются, свиток рассыпается впустую"]}

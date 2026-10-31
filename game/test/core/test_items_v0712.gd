@@ -194,10 +194,8 @@ func test_potion_of_climbing_gives_advantage_on_athletics() -> void:
 
 
 func test_a_scroll_of_the_own_class_reads_without_a_check() -> void:
-	var c := _hero("cleric_branko").character
-	assert_bool(bool(ItemRules.read_scroll(c, data, "cure_wounds", 1, RandomNumberGenerator.new())["ok"])).is_true()
-	var fighter := _hero("fighter_aira").character
-	var line := str(ItemRules.read_scroll(fighter, data, "cure_wounds", 1, RandomNumberGenerator.new())["line"])
+	assert_bool(bool(ItemRules.read_scroll(_hero("cleric_branko"), data, "cure_wounds", 1)["ok"])).is_true()
+	var line := str(ItemRules.read_scroll(_hero("fighter_aira"), data, "cure_wounds", 1)["line"])
 	assert_str(line).contains("Сл 11")
 
 

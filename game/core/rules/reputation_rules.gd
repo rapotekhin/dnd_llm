@@ -22,14 +22,7 @@ static func points(s: GameSession, loc: String) -> int:
 
 ## −3…+3 by the thresholds of the points.
 static func step(s: GameSession, data: Dictionary, loc: String) -> int:
-	var p := points(s, loc)
-	var out := 0
-	for t: Variant in cfg(data)["thresholds"]:
-		if p >= int(t):
-			out += 1
-		elif p <= -int(t):
-			out -= 1
-	return out
+	return Scale.signed(cfg(data)["thresholds"], points(s, loc))
 
 
 static func word(data: Dictionary, st: int) -> String:

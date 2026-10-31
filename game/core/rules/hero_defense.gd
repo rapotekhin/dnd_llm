@@ -138,24 +138,24 @@ static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag
 	var adv_why := save_advantages(c, data, ability, tag, CombatRules.active(s) and bool(s.combat.get("raging", false)))
 	var adv := not adv_why.is_empty()
 	var dis := not (mods["disadvantage"] as Array).is_empty() or dis_extra  # heavy armour in the heat (v0.7.46)
-	var rolls := FeatureRules.hero_d20(s, adv, dis)  # Lucky (v0.7.10)
-	var nat: int = rolls.max() if adv and not dis else rolls.min() if dis and not adv else rolls[0]
+	var rolls := Roll.hero_dice(s, adv, dis)  # Lucky (v0.7.10)
+	var nat := Roll.kept(rolls, adv, dis)
 	var die := SpellEffects.hero_die(s, data, "save")  # Bless, Resistance (v0.7.13.1)
 	var total := nat + bonus + int(die["bonus"]) + DifficultyRules.bonus(s, data)  # the game's difficulty (v0.7.20.4)
 	var parts := RollParts.cached(c, data, "save", ability, s.items)
 	parts.append_array(die["parts"])
 	RollParts.difficulty(s, data, parts)
-	var ok := nat == 20 or (nat != 1 and total >= dc)
+	var ok := Roll.succeeds(nat, total, dc)
 	var note := (" " + str(die["note"])) if not str(die["note"]).is_empty() else ""
 	if DifficultyRules.bonus(s, data) != 0:
 		note += ", " + DifficultyRules.note(s, data)
 	if not ok and nat != 1 and (mods["auto_fail"] as Array).is_empty():
-		var insp := FeatureRules.use_inspiration(s)  # Bardic Inspiration on a failed save
-		if insp > 0:
-			total += insp
+		var insp := Roll.inspire(s)  # Bardic Inspiration on a failed save
+		if int(insp["value"]) > 0:
+			total += int(insp["value"])
 			ok = total >= dc
-			note += ", вдохновение +%d" % insp
-			RollParts.add(parts, "вдохновение барда", insp)
+			note += ", вдохновение +%d" % int(insp["value"])
+			RollParts.add(parts, str(insp["label"]), int(insp["value"]))
 	if not (mods["auto_fail"] as Array).is_empty():
 		ok = false
 		note += ", автопровал: " + ", ".join((mods["auto_fail"] as Array).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower()))

@@ -134,7 +134,7 @@ static func _new(s: GameSession, data: Dictionary, kind: String, npc_id: String,
 static func deposit(s: GameSession, data: Dictionary, npc_id: String, term: String, amount: int) -> Array[String]:
 	var t: Dictionary = cfg(data)["deposit"]["terms"][term]
 	var rate := float(terms(s, data, npc_id)["deposit_rates"][term])
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - amount
+	Ledger.add(s, -amount, "bank:deposit")
 	var k := _new(s, data, DEPOSIT, npc_id, amount, rate, int(t["days"]))
 	k["term"] = term
 	return ["%s: вклад %s %s, %s%s" % [npc_name(data, npc_id), Money.format(amount), t["name"], rate_text(rate),
@@ -161,7 +161,7 @@ static func withdraw(s: GameSession, data: Dictionary, cid: String) -> Array[Str
 	var k := contract(s.character, cid)
 	var sum := payout(s, k)
 	var was_early := early(s, k)
-	s.character["gold_cp"] = int(s.character.get("gold_cp", 0)) + sum
+	Ledger.add(s, sum, "bank:withdraw")
 	k["state"] = "closed"
 	return ["%s: вклад забран — %s%s" % [npc_name(data, str(k["bank"])), Money.format(sum), " — досрочно, без процентов" if was_early else ""]]
 
@@ -226,7 +226,7 @@ static func loan(s: GameSession, data: Dictionary, npc_id: String, ckind: String
 		inv[cid] = int(inv.get(cid, 0)) - 1
 		if int(inv[cid]) <= 0:
 			inv.erase(cid)
-	s.character["gold_cp"] = int(s.character.get("gold_cp", 0)) + amount
+	Ledger.add(s, amount, "bank:loan")
 	return ["%s: кредит %s под залог — %s, %s, вернуть до дня %d" % [npc_name(data, npc_id), Money.format(amount), o["name"],
 		rate_text(float(k["rate"])), int(k["due"])]]
 
@@ -242,7 +242,7 @@ static func repay_why(s: GameSession, data: Dictionary, cid: String) -> String:
 
 static func repay(s: GameSession, data: Dictionary, cid: String) -> Array[String]:
 	var k := contract(s.character, cid)
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - int(k["balance"])
+	Ledger.add(s, -int(k["balance"]), "bank:repay")
 	var lines: Array[String] = ["%s: долг погашен — %s" % [npc_name(data, str(k["bank"])), Money.format(int(k["balance"]))]]
 	lines.append_array(_release(s, data, k))
 	if str(k["state"]) == WANTED:
@@ -272,7 +272,7 @@ static func _release(s: GameSession, data: Dictionary, k: Dictionary) -> Array[S
 static func vault(c: Dictionary, npc_id: String) -> Dictionary:
 	var v: Dictionary = state(c)["vaults"]
 	if not v.has(npc_id):
-		v[npc_id] = {"coins": 0, "contents": {}, "fee_day": 0, "owed": 0}
+		v[npc_id] = {"coins": 0, "contents": {}, "fee_day": 0}
 	return v[npc_id]
 
 
@@ -288,7 +288,7 @@ static func vault_why(s: GameSession, data: Dictionary, npc_id: String, dir: Str
 		return why
 	var v := vault(s.character, npc_id)
 	var gold := int(s.character.get("gold_cp", 0))
-	if dir == "out" and int(v["owed"]) > gold + int(v["coins"]):
+	if dir == "out" and Ledger.owed(s, "vault:" + npc_id) > gold + int(v["coins"]):
 		return "BANK_OWED"
 	if item_id.is_empty():
 		if amount <= 0:
@@ -307,17 +307,18 @@ static func vault_move(s: GameSession, data: Dictionary, npc_id: String, dir: St
 	var v := vault(s.character, npc_id)
 	var c := s.character
 	var lines: Array[String] = []
-	if dir == "out" and int(v["owed"]) > 0:
-		var from_vault := mini(int(v["coins"]), int(v["owed"]))
+	var owed := Ledger.owed(s, "vault:" + npc_id)
+	if dir == "out" and owed > 0:
+		var from_vault := mini(int(v["coins"]), owed)
 		v["coins"] = int(v["coins"]) - from_vault
-		c["gold_cp"] = int(c.get("gold_cp", 0)) - (int(v["owed"]) - from_vault)
-		lines.append("Уплачен долг за ячейку: %s" % Money.format(int(v["owed"])))
-		v["owed"] = 0
+		Ledger.add(s, -(owed - from_vault), "bank:vault_move")
+		lines.append("Уплачен долг за ячейку: %s" % Money.format(owed))
+		Ledger.forgive(s, "vault:" + npc_id)
 	if vault_empty(c, npc_id) and dir == "in":
 		v["fee_day"] = s.day
 	if item_id.is_empty():
 		var sum := mini(amount, int(v["coins"])) if dir == "out" else amount
-		c["gold_cp"] = int(c.get("gold_cp", 0)) + (sum if dir == "out" else -sum)
+		Ledger.add(s, sum if dir == "out" else -sum, "bank:vault_move")
 		v["coins"] = int(v["coins"]) + (-sum if dir == "out" else sum)
 		lines.append("%s: %s" % ["Взято из ячейки" if dir == "out" else "Положено в ячейку", Money.format(sum)])
 		return lines
@@ -363,9 +364,9 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 			if int(v["coins"]) >= fee:
 				v["coins"] = int(v["coins"]) - fee
 			else:
-				if int(v["owed"]) == 0:
+				if Ledger.owed(s, "vault:" + npc_id) == 0:
 					lines.append("%s: плата за ячейку не внесена — долг возьмут, когда придёте" % npc_name(data, npc_id))
-				v["owed"] = int(v["owed"]) + fee
+				Ledger.owe(s, "vault:" + npc_id, "vault", fee, npc_id)
 	return lines
 
 

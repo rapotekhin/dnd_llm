@@ -129,15 +129,11 @@ static func tame(s: GameSession, data: Dictionary, cid: String, food: String) ->
 	var given := not food.is_empty() and foods(s, data, str(cr["monster"])).has(food)
 	if given:
 		ItemRules._remove_one(s.character, food)
-	var mods := ConditionRules.check_mods(s.character, data, {"skill": skill})
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls := FeatureRules.hero_d20(s, given, dis)
-	var nat: int = rolls.max() if given and not dis else rolls.min() if dis and not given else rolls[0]
-	var b := int(s.character.get("skills", {}).get(skill, 0)) + DifficultyRules.bonus(s, data)
 	var d := dc(data, cr)
-	var parts := RollParts.skill(s, data, skill)
-	RollParts.note(s, "Приручение", rolls, nat, parts, b, d)
-	var ok := nat == 20 or (nat != 1 and nat + b >= d)
+	var r := Roll.hero(s, data, {"what": "Приручение", "skill": skill, "dc": d, "adv": given})
+	var nat := int(r["nat"])
+	var b := int(r["bonus"])
+	var ok := bool(r["ok"])
 	var lines: Array[String] = ["Приручение: %s %d + %d = %d против Сл %d%s — %s" % [CraftRules.tr_skill(data, skill), nat, b, nat + b, d,
 		" (угощение: %s)" % ItemRules.display_name(data["items"], s.items, food) if given else "", "успех" if ok else "провал"]]
 	cr["tame_day"] = s.day

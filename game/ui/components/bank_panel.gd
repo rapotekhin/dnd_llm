@@ -169,9 +169,9 @@ func _loans(s: GameSession, data: Dictionary, mine: Array[Dictionary]) -> void:
 
 func _vault(s: GameSession, data: Dictionary, gold: int) -> void:
 	_heading(tr("BANK_VAULT").format({"fee": Money.format(int(BankRules.cfg(data)["vault"]["fee_cp_week"]))}))
-	var v: Dictionary = BankRules.state(s.character)["vaults"].get(_npc, {"coins": 0, "contents": {}, "owed": 0})
-	if int(v.get("owed", 0)) > 0:
-		_label(_box, tr("BANK_VAULT_OWED").format({"money": Money.format(int(v["owed"]))})).theme_type_variation = UiTheme.WARN_LABEL
+	var v: Dictionary = BankRules.state(s.character)["vaults"].get(_npc, {"coins": 0, "contents": {}})
+	if Ledger.owed(s, "vault:" + _npc) > 0:
+		_label(_box, tr("BANK_VAULT_OWED").format({"money": Money.format(Ledger.owed(s, "vault:" + _npc))})).theme_type_variation = UiTheme.WARN_LABEL
 	var coins := _row("VaultCoins", tr("BANK_VAULT_COINS").format({"money": Money.format(int(v.get("coins", 0)))}))
 	_spin(coins, "VaultAmount", _coins_gp, maxi(gold, int(v.get("coins", 0))) / 100, func(n: int) -> void: _coins_gp = n)
 	_button(coins, "VaultCoinsIn", tr("BTN_BANK_PUT"), BankRules.vault_why(s, data, _npc, "in", "", _coins_gp * 100), _act("put", "", _coins_gp * 100))

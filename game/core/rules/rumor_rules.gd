@@ -89,7 +89,7 @@ static func add(s: GameSession, data: Dictionary, r: Dictionary) -> Dictionary:
 		r["day"] = s.day
 	r["truth"] = bool(r.get("truth", true))
 	if not r.has("until"):
-		r["until"] = int(r["day"]) + int(cfg(data)["life_days"][str(w)]) if bool(r["truth"]) else -1  # a lie lives until refuted
+		r["until"] = TimeRules.day_start(int(r["day"]) + int(cfg(data)["life_days"][str(w)]) + 1) if bool(r["truth"]) else -1  # a lie lives until refuted
 	var per := int(cfg(data)["days_per_hop"][str(w)])
 	var arrive := {}
 	var h := hops(data, str(r["origin"]))
@@ -116,12 +116,12 @@ static func seed(s: GameSession, data: Dictionary) -> void:
 		var r := {"id": id, "text": str(p["text"]), "weight": int(p.get("weight", 1)), "origin": str(p["origin"]),
 			"day": s.day - int(p.get("ago", 0)), "truth": bool(p.get("truth", true)), "notice": bool(p.get("notice", false)),
 			"target_room": str(p.get("target_room", "")), "target_secret": str(p.get("target_secret", "")), "source": "pack"}
-		r["until"] = (int(r["day"]) + int(p["days"])) if p.has("days") else -1  # the pack's talk lasts until checked
+		r["until"] = TimeRules.day_start(int(r["day"]) + int(p["days"]) + 1) if p.has("days") else -1  # the pack's talk lasts until checked
 		add(s, data, r)
 
 
 static func alive(s: GameSession, r: Dictionary) -> bool:
-	return not bool(r.get("refuted", false)) and (int(r.get("until", -1)) < 0 or s.day <= int(r["until"]))
+	return not bool(r.get("refuted", false)) and (int(r.get("until", -1)) < 0 or s.clock < int(r["until"]))
 
 
 static func arrived(s: GameSession, r: Dictionary, loc: String) -> bool:
@@ -261,11 +261,7 @@ static func _land(s: GameSession, data: Dictionary, r: Dictionary, loc: String) 
 static func on_fame(s: GameSession, data: Dictionary, loc: String, delta: int, why: String, crime_id: String = "") -> void:
 	if not on(data) or loc.is_empty() or (absi(delta) < int(cfg(data)["fame"]["min"]) and crime_id.is_empty()):
 		return
-	var steps: Array = cfg(data)["fame"]["weight_at"]
-	var w := 1
-	for t: Variant in steps:
-		if absi(delta) >= int(t):
-			w += 1
+	var w := 1 + Scale.signed(cfg(data)["fame"]["weight_at"], absi(delta))
 	var hero := str(s.character.get("name", "чужак"))
 	add(s, data, {"text": "о чужаке по имени %s говорят %s: %s" % [hero, "хорошее" if delta > 0 else "дурное", why], "weight": w,
 		"origin": loc, "fame": delta, "crime": crime_id, "source": "fame"})

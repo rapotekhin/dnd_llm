@@ -106,21 +106,18 @@ static func ask_bonus(s: GameSession, data: Dictionary) -> int:
 
 
 static func ask_chance(s: GameSession, data: Dictionary, npc_id: String) -> int:
-	return JobRules._chance(ask_bonus(s, data), ask_dc(s, data, npc_id), false)
+	return Roll.chance(ask_bonus(s, data), ask_dc(s, data, npc_id), false)
 
 
 ## «Попросить впустить»: Persuasion against the owner; yes — all its private sites open until a quarrel, no — again
 ## tomorrow. Lines.
 static func ask(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	var skill := str(cfg(data)["permit"]["skill"])
-	var mods := ConditionRules.check_mods(s.character, data, {"skill": skill})
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls := FeatureRules.hero_d20(s, false, dis)
-	var nat: int = rolls.min() if dis else rolls[0]
-	var b := ask_bonus(s, data)
 	var dc := ask_dc(s, data, npc_id)
-	RollParts.note(s, "Просьба впустить", rolls, nat, RollParts.skill(s, data, skill), b, dc)
-	var ok := nat == 20 or (nat != 1 and nat + b >= dc)
+	var r := Roll.hero(s, data, {"what": "Просьба впустить", "skill": skill, "dc": dc})
+	var nat := int(r["nat"])
+	var b := int(r["bonus"])
+	var ok := bool(r["ok"])
 	var who := BondRules.npc_name(s, data, npc_id)
 	var lines: Array[String] = ["Просьба впустить — %s: %s %d %s %d = %d против Сл %d — %s" % [who, CraftRules.tr_skill(data, skill), nat,
 		"−" if b < 0 else "+", absi(b), nat + b, dc, "согласие" if ok else "отказ"]]

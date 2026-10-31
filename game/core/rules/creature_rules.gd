@@ -180,7 +180,7 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 		"hand_over":  # the law takes the prisoner: a bounty by its XP, the settlement thinks better of the hero
 			(s.creatures[s.room_id] as Array).erase(c)
 			var cp := int(cfg(data)["bounty_cp_per_xp"]) * OwnerRules.xp_of(data, c)
-			s.character["gold_cp"] = int(s.character["gold_cp"]) + cp
+			Ledger.add(s, cp, "creature:act")
 			var loc := WorldView.new(data["world"]).location_id(s.room_id)
 			var law := CrimeRules.law(data, loc)
 			var lines: Array[String] = ["%s передан: %s%s" % [c["name"], law.get("name", "стража"), ", награда +" + Money.format(cp) if cp > 0 else ""]]
@@ -243,7 +243,7 @@ static func _search(s: GameSession, data: Dictionary, npc_id: String, name: Stri
 	var got: Array[String] = []
 	for e: Dictionary in TheftRules.pockets(s, data, npc_id):
 		if int(e.get("cp", 0)) > 0:
-			s.character["gold_cp"] = int(s.character["gold_cp"]) + int(e["cp"])
+			Ledger.add(s, int(e["cp"]), "creature:search")
 			got.append(Money.format(int(e["cp"])))
 		elif not str(e.get("item_id", "")).is_empty() and not bool(e.get("worn", false)):
 			OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, str(e["item_id"]), int(e.get("qty", 1))), int(e.get("qty", 1)), npc_id)

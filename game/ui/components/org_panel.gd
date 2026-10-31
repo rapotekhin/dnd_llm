@@ -101,11 +101,11 @@ func _org_block(s: GameSession, data: Dictionary, id: String) -> void:
 		var nx := OrgRules.next_at(s, data, id)
 		_label(_box, tr("ORG_RANK").format({"rank": OrgRules.rank_name(s, data, id), "points": int(st.get("points", 0)),
 			"next": tr("ORG_NEXT").format({"at": nx}) if nx > 0 else ""})).name = "OrgRank"
-		if int(st.get("owed_cp", 0)) > 0:
+		if Ledger.owed(s, "cut:" + id) > 0:
 			var orow := HBoxContainer.new()
 			_box.add_child(orow)
-			var left := int(OrgRules.cfg(data)["owe_days"]) - (s.day - int(st.get("owed_day", s.day)))
-			_label(orow, tr("ORG_OWED").format({"cp": Money.format(int(st["owed_cp"])), "days": maxi(0, left)})).name = "OrgOwed"
+			var left := int(OrgRules.cfg(data)["owe_days"]) - (s.day - Ledger.since(s, "cut:" + id))
+			_label(orow, tr("ORG_OWED").format({"cp": Money.format(Ledger.owed(s, "cut:" + id)), "days": maxi(0, left)})).name = "OrgOwed"
 			_act(orow, "OrgPay_" + id, tr("BTN_ORG_PAY"), OrgRules.pay_why(s, data, id), "pay", id)
 		var work := OrgRules.jobs_of(s, data, id)
 		if not work.is_empty():  # v0.7.39.1: the organization's work is hired at its head (the «Работа» button)

@@ -145,19 +145,29 @@ static func _value(s: GameSession, data: Dictionary, item_id: String) -> int:
 
 ## What the player pays for one item now.
 static func buy_price(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> int:
+	return int(buy_quote(s, data, npc_id, item_id)["cp"])
+
+
+## The price of one item with its labelled modifiers: Price's quote and `cp`, 0 for a thing worth nothing.
+static func buy_quote(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> Dictionary:
 	var t: Dictionary = data["rules"]["trade"]
-	var value := _value(s, data, item_id)
-	if value <= 0:
-		return 0
-	var haggle := int(merchant(s, data, npc_id)["haggle_pct"])
-	var price := ceili(value * _pct(t["buy_pct_by_attitude"], s.attitude(npc_id)) * (100 - haggle) / 10000.0 * ReputationRules.price_pct(s, data, npc_id, "buy") / 100.0
-		* int(variant(s, data, npc_id)["price_pct"]) / 100.0 * CalendarRules.price_pct(s, data, item_id, "buy"))  # v0.7.44: a festival
-	var off := SocialRules.discount(s, npc_id)  # a discount by words (v0.7.15.2)
-	if off > 0:
-		price = ceili(price * (100 - off) / 100.0)
-	price = ceili(price * BondRules.buy_pct(s, data, npc_id) / 100.0)  # v0.7.31: a friend's discount, a rival's markup
-	price = ceili(price * float(DevelopmentRules.effect(s.character, data, "trade", "buy_pct", 100.0)) / 100.0)  # v0.7.19.1
-	return maxi(1, price)
+	var q := Price.start(_value(s, data, item_id))
+	if int(q["base"]) <= 0:
+		q["cp"] = 0
+		return q
+	Price.mod(q, "отношение торговца", _pct(t["buy_pct_by_attitude"], s.attitude(npc_id)))
+	Price.mod(q, "торг", 100 - int(merchant(s, data, npc_id)["haggle_pct"]))
+	Price.mod(q, "репутация", ReputationRules.price_pct(s, data, npc_id, "buy"))
+	Price.mod(q, "дела в мире", int(variant(s, data, npc_id)["price_pct"]))
+	Price.mod(q, "праздник", CalendarRules.price_pct(s, data, item_id, "buy") * 100.0)  # v0.7.44
+	Price.ceil_now(q)
+	Price.mod(q, "скидка на словах", 100 - SocialRules.discount(s, npc_id))  # v0.7.15.2
+	Price.ceil_now(q)
+	Price.mod(q, "дружба или соперничество", BondRules.buy_pct(s, data, npc_id))  # v0.7.31
+	Price.ceil_now(q)
+	Price.mod(q, "навык торговли", float(DevelopmentRules.effect(s.character, data, "trade", "buy_pct", 100.0)))  # v0.7.19.1
+	q["cp"] = Price.ceiled(q, 1)
+	return q
 
 
 ## What the merchant pays for one item of the player now; 0 = it will not buy it or it is worth nothing.
@@ -177,24 +187,36 @@ static func sell_total(s: GameSession, data: Dictionary, npc_id: String, item_id
 
 
 static func _sell_unit(s: GameSession, data: Dictionary, npc_id: String, item_id: String, more: int) -> int:
+	return int(sell_quote(s, data, npc_id, item_id, more)["cp"])
+
+
+## What the merchant pays for one more item past `more` sold in this deal, with the labels; cp 0 — it will not buy.
+static func sell_quote(s: GameSession, data: Dictionary, npc_id: String, item_id: String, more: int = 0) -> Dictionary:
 	var t: Dictionary = data["rules"]["trade"]
 	var d := demand_cfg(data)
 	var want := demand(s, data, npc_id, item_id)
-	var value := _value(s, data, item_id)
+	var q := Price.start(_value(s, data, item_id))
+	var value := int(q["base"])
 	if want == "shuns" or value <= 0:
-		return 0
+		q["cp"] = 0
+		return q
 	var m := merchant(s, data, npc_id)
 	var c := s.character  # the hero's trade skills (v0.7.19.1)
 	var sold := int((m["sold"] as Dictionary).get(ItemRules.real_id(item_id), 0)) + more
 	var step := float(d["saturation_step"]) * float(DevelopmentRules.effect(c, data, "trade", "saturation_mult", 1.0))
-	var fill := maxf(float(d["saturation_floor"]), 1.0 - step * sold)
 	var other := minf(1.0, float(d["other"]) * float(DevelopmentRules.effect(c, data, "trade", "other_mult", 1.0)))
-	var v := value * float(t["sell_ratio"]) * (float(d["wanted"]) if want == "wants" else other) * fill
-	v *= _pct(t["sell_pct_by_attitude"], s.attitude(npc_id)) / 100.0 * ReputationRules.price_pct(s, data, npc_id, "sell") / 100.0
-	v *= (100 + int(m["haggle_pct"])) / 100.0 * float(DevelopmentRules.effect(c, data, "trade", "sell_pct", 100.0)) / 100.0
-	v *= CalendarRules.price_pct(s, data, item_id, "sell")  # v0.7.44: the fair pays more
+	Price.mod(q, "цена скупки", float(t["sell_ratio"]) * 100.0)
+	Price.mod(q, "спрос" if want == "wants" else "товар не по его части", (float(d["wanted"]) if want == "wants" else other) * 100.0)
+	Price.mod(q, "рынок насыщен", maxf(float(d["saturation_floor"]), 1.0 - step * sold) * 100.0)
+	Price.mod(q, "отношение торговца", _pct(t["sell_pct_by_attitude"], s.attitude(npc_id)))
+	Price.mod(q, "репутация", ReputationRules.price_pct(s, data, npc_id, "sell"))
+	Price.mod(q, "торг", 100 + int(m["haggle_pct"]))
+	Price.mod(q, "навык торговли", float(DevelopmentRules.effect(c, data, "trade", "sell_pct", 100.0)))
+	Price.mod(q, "праздник", CalendarRules.price_pct(s, data, item_id, "sell") * 100.0)  # v0.7.44: the fair pays more
 	var top := maxf(float(d["max_ratio"]), float(DevelopmentRules.effect(c, data, "trade", "max_ratio", 0.0)))
-	return floori(clampf(v, value * float(d["min_ratio"]), value * top))
+	Price.clamp_to(q, value * float(d["min_ratio"]), value * top, "предел цены у торговца")
+	q["cp"] = Price.floored(q)
+	return q
 
 
 # --- the trader and the world (v0.7.17.2) ----------------------------------------------------------------------
@@ -372,7 +394,7 @@ static func execute(s: GameSession, data: Dictionary, npc_id: String, cart: Dict
 		else:
 			inv.erase(id)
 	var net := int(q["net_cp"])
-	c["gold_cp"] = int(c["gold_cp"]) - net
+	Ledger.add(s, -net, "trade:execute")
 	m["purse_cp"] = int(m["purse_cp"]) + net
 	if int(m["haggle_pct"]) > 0:  # the haggle was for this deal (v0.7.17.2)
 		m["haggle_pct"] = 0
@@ -450,11 +472,9 @@ static func apply_haggle(s: GameSession, data: Dictionary, npc_id: String, resul
 		DevelopmentRules.add_xp(s.character, data, "trade", int(src.get("haggle_lost", 0)))
 		return 0
 	var margin := int(result["total"]) - int(result["dc"])
-	var pct := 0
-	for tier: Array in data["rules"]["trade"]["haggle_tiers"]:
-		if margin >= int(tier[0]):
-			pct = int(tier[1])
-	pct = maxi(pct, int(data["rules"]["trade"]["haggle_tiers"][0][1]))  # a natural 20 under the DC still wins
+	var tiers: Array = data["rules"]["trade"]["haggle_tiers"]
+	var hit := Scale.row(tiers, margin)
+	var pct := maxi(int(hit[1]) if not hit.is_empty() else 0, int(tiers[0][1]))  # a natural 20 under the DC still wins
 	pct += int(DevelopmentRules.effect(s.character, data, "trade", "haggle_plus", 0))  # «Мастер торга» (v0.7.19.1)
 	DevelopmentRules.add_xp(s.character, data, "trade", int(src.get("haggle_won", 0)))
 	m["haggle_pct"] = pct
@@ -581,7 +601,7 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 	var c := s.character
 	var sv := service_def(data, id)
 	var cost := 0 if free else BondRules.service_cost(s, data, npc_id, int(sv["cost_cp"]))
-	c["gold_cp"] = int(c["gold_cp"]) - cost
+	Ledger.add(s, -cost, "trade:buy_service")
 	var lines: Array[String] = ["Услуга даром" if free else "Услуга: −%s" % Money.format(cost)]
 	match str(sv["op"]):
 		"meal":

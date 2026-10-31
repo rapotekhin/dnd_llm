@@ -81,7 +81,7 @@ static func _unsold(s: GameSession, data: Dictionary, id: String) -> bool:
 
 static func _owed(s: GameSession, data: Dictionary, id: String) -> int:
 	var org := str(def(s, data, id).get("org", ""))
-	return int(OrgRules.view(s.character).get(org, {}).get("owed_cp", 0)) if not org.is_empty() else 0
+	return Ledger.owed(s, "cut:" + org) if not org.is_empty() else 0
 
 
 ## The job as a path in order (v0.7.39.3, the author: «Ночь в ратуше» unclear): the preparations with where to do each,
@@ -206,7 +206,7 @@ static func step_chance(s: GameSession, data: Dictionary, id: String, step_id: S
 	var st := step_def(s, data, id, step_id)
 	if st.has("item"):
 		return 100
-	return JobRules._chance(_bonus(s, data, str(st["skill"])), dc(s, data, id), false)
+	return Roll.chance(_bonus(s, data, str(st["skill"])), dc(s, data, id), false)
 
 
 static func step_minutes(s: GameSession, data: Dictionary, id: String, step_id: String) -> int:
@@ -221,10 +221,9 @@ static func step(s: GameSession, data: Dictionary, id: String, step_id: String) 
 		rec[step_id] = {"day": s.day, "ok": true}
 		return ["«%s»: %s — готово" % [def(s, data, id)["name"], st["name"]]]
 	var skill := str(st["skill"])
-	var nat := s.rng.randi_range(1, 20)
-	var total := nat + _bonus(s, data, skill)
-	RollParts.note(s, str(st["name"]), [nat], nat, RollParts.skill(s, data, skill), total - nat, dc(s, data, id))
-	var ok := nat == 20 or (nat != 1 and total >= dc(s, data, id))
+	var r := Roll.hero(s, data, {"what": str(st["name"]), "skill": skill, "dc": dc(s, data, id)})
+	var total := int(r["total"])
+	var ok := bool(r["ok"])
 	rec[step_id] = {"day": s.day, "ok": ok}
 	return ["«%s»: %s — %s %d против Сл %d — %s" % [def(s, data, id)["name"], st["name"], CraftRules.tr_skill(data, skill), total, dc(s, data, id),
 		"удалось: +%d к делу" % int(cfg(data)["prep_bonus"]) if ok else "не вышло, завтра снова"]]
@@ -273,7 +272,7 @@ static func act_check(s: GameSession, data: Dictionary, id: String) -> Dictionar
 	for skill: Variant in a.get("skills", []):
 		var b := _bonus(s, data, str(skill))
 		if b > int(best["bonus"]):
-			best = {"bonus": b, "label": CraftRules.tr_skill(data, str(skill)), "parts": RollParts.skill(s, data, str(skill))}
+			best = {"bonus": b, "skill": str(skill), "label": CraftRules.tr_skill(data, str(skill)), "parts": RollParts.skill(s, data, str(skill))}
 	var tool := str(a.get("tool", ""))
 	if not tool.is_empty() and int(s.character.get("inventory", {}).get(tool, 0)) > 0 and CraftRules.bonus(s, data, tool) > int(best["bonus"]):
 		best = {"bonus": CraftRules.bonus(s, data, tool), "label": BackgroundRules.tool_name(data, tool), "parts": CraftRules.bonus_parts(s, data, tool)}
@@ -286,7 +285,7 @@ static func act_check(s: GameSession, data: Dictionary, id: String) -> Dictionar
 
 
 static func act_chance(s: GameSession, data: Dictionary, id: String) -> int:
-	return JobRules._chance(int(act_check(s, data, id)["bonus"]), dc(s, data, id), false)
+	return Roll.chance(int(act_check(s, data, id)["bonus"]), dc(s, data, id), false)
 
 
 static func act_minutes(s: GameSession, data: Dictionary, id: String) -> int:
@@ -294,11 +293,7 @@ static func act_minutes(s: GameSession, data: Dictionary, id: String) -> int:
 
 
 static func outcome_for(data: Dictionary, margin: int) -> Dictionary:
-	var out: Dictionary = cfg(data)["outcomes"][0]
-	for o: Dictionary in cfg(data)["outcomes"]:
-		if margin >= int(o["from"]):
-			out = o
-	return out
+	return Scale.step(cfg(data)["outcomes"], margin, "from", cfg(data)["outcomes"][0])
 
 
 ## The act (act_why first; its time already passed): {lines, fight: [foes]}.
@@ -307,13 +302,9 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	var k := kind(data, str(d["kind"]))
 	var c := s.character
 	var ch := act_check(s, data, id)
-	var nat := s.rng.randi_range(1, 20)
-	var total := nat + int(ch["bonus"])
-	var act_parts: Array[Dictionary] = []
-	act_parts.assign(ch["parts"])
-	RollParts.note(s, str(d["name"]), [nat], nat, act_parts, int(ch["bonus"]), dc(s, data, id))
-	var margin := 5 if nat == 20 else -5 if nat == 1 else total - dc(s, data, id)
-	var o := outcome_for(data, margin)
+	var r := Roll.hero(s, data, {"what": str(d["name"]), "skill": ch.get("skill", ""), "parts": ch["parts"], "bonus": ch["bonus"], "dc": dc(s, data, id)})
+	var total := int(r["total"])
+	var o := outcome_for(data, int(r["margin"]))
 	var lines: Array[String] = ["«%s»: %s %d против Сл %d — %s" % [d["name"], ch["label"], total, dc(s, data, id), o["name"]]]
 	var fight: Array = []
 	if str(o["id"]) == "fail":
@@ -341,7 +332,7 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	_rw(c)[id]["status"] = "done"
 	lines.append_array(FaithRules.deed(s, data, str(kind(data, str(d["kind"])).get("crime", "")), str(d["target"])))  # v0.7.49
 	var got := int(d.get("loot_cp", 0)) + int(d.get("reward_cp", 0))
-	c["gold_cp"] = int(c.get("gold_cp", 0)) + got
+	Ledger.add(s, got, "heist:act")
 	if got > 0:
 		lines.append("Добыча: %s" % Money.format(got))
 	var cargo: Dictionary = d.get("cargo", {})

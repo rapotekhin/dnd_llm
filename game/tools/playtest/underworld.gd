@@ -120,7 +120,7 @@ func run() -> void:
 	await shot("org_owed")
 	await press(find(org, "OrgPay_night_rats"))
 	await frames(3)
-	step("the cut paid", int(OrgRules.view(c)["night_rats"]["owed_cp"]) == 0, _last_effects(s))
+	step("the cut paid", Ledger.owed(s, "cut:night_rats") == 0, _last_effects(s))
 
 	await press(find(org, "OrgTake_heist_convoy"))
 	await frames(3)

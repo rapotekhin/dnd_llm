@@ -106,7 +106,7 @@ static func _left_text(minutes: int) -> String:
 
 
 ## Summoned creatures whose time ran out or whose concentration ended go. Lines.
-static func expire(s: GameSession) -> Array[String]:
+static func expire(s: GameSession, _data: Dictionary = {}) -> Array[String]:
 	var lines: Array[String] = []
 	var now := TimeRules.abs_minute(s)
 	var conc := str(s.character.get("concentration", ""))

@@ -378,7 +378,7 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 		lines.append_array(DiseaseRules.cure_npc(s, data, str(r["cure_npc"]), "magic"))
 	var cp := int(r.get("reward_cp", 0))
 	if cp > 0:
-		c["gold_cp"] = int(c.get("gold_cp", 0)) + cp
+		Ledger.add(s, cp, "quest:reward")
 		lines.append("+" + Money.format(cp))
 	var items: Dictionary = r.get("items", {})
 	for id: String in items:

@@ -6,6 +6,9 @@ extends RefCounted
 ## light source in the pack has disadvantage on Perception (passive −5). The master sees the part in the scene.
 
 
+static var _hooks: Array[Dictionary] = []
+
+
 static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["time"]
 
@@ -41,12 +44,13 @@ static func is_night(s: GameSession, data: Dictionary) -> bool:
 static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[String]:
 	var lines: Array[String] = []
 	var before := part(s, data)
-	s.minute += maxi(0, minutes)
-	while s.minute >= 1440:
-		s.minute -= 1440
-		s.day += 1
+	var left := maxi(0, minutes)
+	while left >= 1440 - s.minute:  # a day at a time: a festival begins and ends on its own day
+		left -= 1440 - s.minute
+		s.clock += 1440 - s.minute
 		lines.append("Наступил день %d%s" % [s.day, (" — " + CalendarRules.text(data["world"], s.day)) if CalendarRules.on(data["world"]) else ""])
 		lines.append_array(CalendarRules.sync(s, data["world"]))  # festivals begin and end (v0.7.44)
+	s.clock += left
 	lines.append_array(WeatherRules.sync(s, data))  # a new day's weather, the master's magic runs out (v0.7.46)
 	if part(s, data) != before:
 		lines.append("Время суток: %s" % part_name(s, data))
@@ -54,37 +58,57 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 	return lines
 
 
-## What passing time does to the world; a long rest moves the clock itself and calls this in the morning.
+## What passing time does to the world, in its order: the one list of what happens as the clock runs (v0.7.60). `rules` —
+## the section of rules.json a hook needs. A rule that wants time adds a line here.
+static func registry() -> Array[Dictionary]:
+	if _hooks.is_empty():
+		_hooks = [
+			{"id": "conditions", "run": ConditionRules.expire},
+			{"id": "charms", "run": SpellEffects.npc_expire},  # Charm Person on an NPC ends (v0.7.22.3)
+			{"id": "summoned", "run": AllyRules.expire},  # the summoned go when their time is out (v0.7.22.22)
+			{"id": "creatures", "run": CreatureRules.tick, "rules": "creatures"},  # the beaten foes left alone go (v0.7.22.11)
+			{"id": "awake", "run": _awake},
+			{"id": "needs", "run": NeedRules.tick},
+			{"id": "follower_meals", "run": FollowRules.meals},  # followers eat from the hero's things (v0.7.39.1)
+			{"id": "diseases", "run": DiseaseRules.tick},  # hunger and thirst past their grace (v0.7.23)
+			{"id": "food", "run": FoodRules.tick},  # food spoils (v0.7.25)
+			{"id": "family", "run": FamilyRules.tick},  # births, growth, the help into the till before its tax (v0.7.32)
+			{"id": "orgs", "run": OrgRules.tick},  # unpaid cuts, the own band's income (v0.7.33)
+			{"id": "offices", "run": OfficeRules.tick},  # wages, inquiries, absence, towns (v0.7.34)
+			{"id": "property", "run": PropertyRules.tick},  # income, wages, decay, tax, beasts fed (v0.7.27)
+			{"id": "bank", "run": BankRules.tick},  # interest, overdue loans, vault fees (v0.7.28)
+			{"id": "shops", "run": ShopRules.tick},  # the shelves sell by days (v0.7.29)
+			{"id": "study", "run": StudyRules.tick},  # misses and expulsions (v0.7.30)
+			{"id": "crime", "run": CrimeRules.spread},  # a hidden body is found (v0.7.14)
+			{"id": "rumors", "run": RumorRules.tick},  # rumours reach the neighbours with the fame and the wanted (v0.7.47)
+			{"id": "letters", "run": LetterRules.tick},  # letters delivered or lost, helpers come, the arrested taken (v0.7.48)
+			{"id": "doors", "run": DoorRules.tick, "rules": "doors"},  # a burning door burns through (v0.7.22.25)
+		]
+	return _hooks
+
+
+## A long rest moves the clock itself and calls this in the morning.
 static func hooks(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
-	lines.append_array(ConditionRules.expire(s, data))
-	lines.append_array(SpellEffects.npc_expire(s, data))  # Charm Person on an NPC ends (v0.7.22.3)
-	lines.append_array(AllyRules.expire(s))  # the summoned go when their time is out (v0.7.22.22)
-	if data["rules"].has("creatures"):
-		lines.append_array(CreatureRules.tick(s, data))  # the beaten foes left alone go (v0.7.22.11)
-	lines.append_array(_awake(s, data))
-	lines.append_array(NeedRules.tick(s, data))
-	lines.append_array(FollowRules.meals(s, data))  # followers eat from the hero's things (v0.7.39.1)
-	lines.append_array(DiseaseRules.tick(s, data))  # hunger and thirst past their grace (v0.7.23)
-	lines.append_array(FoodRules.tick(s, data))  # food spoils (v0.7.25)
-	lines.append_array(FamilyRules.tick(s, data))  # births, growth, the help into the till before its tax (v0.7.32)
-	lines.append_array(OrgRules.tick(s, data))  # unpaid cuts, the own band's income (v0.7.33)
-	lines.append_array(OfficeRules.tick(s, data))  # wages, inquiries, absence, towns (v0.7.34)
-	lines.append_array(PropertyRules.tick(s, data))  # income, wages, decay, tax, beasts fed (v0.7.27)
-	lines.append_array(BankRules.tick(s, data))  # interest, overdue loans, vault fees (v0.7.28)
-	lines.append_array(ShopRules.tick(s, data))  # the shelves sell by days (v0.7.29)
-	lines.append_array(StudyRules.tick(s, data))  # misses and expulsions (v0.7.30)
-	lines.append_array(CrimeRules.spread(s, data))  # a hidden body is found (v0.7.14)
-	lines.append_array(RumorRules.tick(s, data))  # rumours reach the neighbours with the fame and the wanted (v0.7.47)
-	lines.append_array(LetterRules.tick(s, data))  # letters delivered or lost, helpers come, the arrested taken (v0.7.48)
-	if data["rules"].has("doors"):
-		lines.append_array(DoorRules.tick(s, data))  # a burning door burns through (v0.7.22.25)
+	for h: Dictionary in registry():
+		if not h.has("rules") or data["rules"].has(str(h["rules"])):
+			lines.append_array((h["run"] as Callable).call(s, data))
 	return lines
 
 
 ## The absolute minute of the game clock (since the first day's midnight).
 static func abs_minute(s: GameSession) -> int:
-	return (s.day - 1) * 1440 + s.minute
+	return s.clock
+
+
+## The first minute of a day: a term in days as a moment of `until`.
+static func day_start(day: int) -> int:
+	return (day - 1) * 1440
+
+
+## The day of an absolute minute.
+static func day_of(minute: int) -> int:
+	return minute / 1440 + 1
 
 
 ## Each full rules.hero_effects.exhaustion.awake_hours without a long rest: a CON save, DC awake_dc + awake_dc_step

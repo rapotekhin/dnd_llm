@@ -234,7 +234,7 @@ static func enlist_why(s: GameSession, data: Dictionary, sid: String) -> String:
 
 static func enlist(s: GameSession, data: Dictionary, sid: String) -> Array[String]:
 	var fee := int(cfg(data)["fee_cp"])
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - fee
+	Ledger.add(s, -fee, "arena:enlist")
 	_rec_new(s, sid)
 	ObjectRules.note(s, sid, "%s записался в бойцы" % s.character.get("name", ""))
 	return ["%s: вы в списке бойцов (−%s), ранг — %s; правило — %s" % [site_name(data, sid), Money.format(fee), rank_name(data, 0),
@@ -264,7 +264,7 @@ static func bout(s: GameSession, data: Dictionary, sid: String, bet_cp: int = 0)
 		return {"reason": bw}
 	var opp := opponent(s, data, sid)
 	var o := hero_odds(s, data, sid, str(opp["monster"]))
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - bet_cp
+	Ledger.add(s, -bet_cp, "arena:bout")
 	_rec_new(s, sid)["day"] = s.day
 	var src := {"site": sid, "kind": "rank", "rule": rule(data, sid), "rank": int(opp["rank"]), "bet": bet_cp, "mult": float(o["mult"]),
 		"foe": str(opp["name"])}
@@ -323,11 +323,11 @@ static func after_bout(s: GameSession, data: Dictionary, a: Dictionary, won: boo
 		return lines
 	var i := int(a.get("rank", 0))
 	var prize := int(int(ranks(data)[i]["prize_cp"]) * int(rc.get("prize_pct", 100)) / 100)
-	s.character["gold_cp"] = int(s.character["gold_cp"]) + prize
+	Ledger.add(s, prize, "arena:after_bout")
 	lines.append("Победа на арене: приз %s" % Money.format(prize))
 	if int(a.get("bet", 0)) > 0:
 		var pay := roundi(int(a["bet"]) * float(a.get("mult", 1.0)))
-		s.character["gold_cp"] = int(s.character["gold_cp"]) + pay
+		Ledger.add(s, pay, "arena:after_bout")
 		lines.append("Ставка на себя: +%s" % Money.format(pay))
 	r["wins"] = int(r.get("wins", 0)) + 1
 	r["rank_wins"] = int(r.get("rank_wins", 0)) + 1
@@ -413,7 +413,7 @@ static func bet(s: GameSession, data: Dictionary, sid: String, side: String, cp:
 	if not why.is_empty():
 		return {"reason": why}
 	var c := card(s, data, sid)
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - cp
+	Ledger.add(s, -cp, "arena:bet")
 	var bets: Dictionary = s.character.get("arena_bets", {})
 	bets[sid] = s.day
 	s.character["arena_bets"] = bets
@@ -424,7 +424,7 @@ static func bet(s: GameSession, data: Dictionary, sid: String, side: String, cp:
 		lines.append(l.replace("{a}", names["a"]).replace("{b}", names["b"]))
 	if str(sim["winner"]) == side:
 		var pay := roundi(cp * float(c["mult_" + side]))
-		s.character["gold_cp"] = int(s.character["gold_cp"]) + pay
+		Ledger.add(s, pay, "arena:bet")
 		lines.append("Ставка сыграла: +%s" % Money.format(pay))
 	else:
 		lines.append("Ставка проиграна: −%s" % Money.format(cp))
@@ -440,15 +440,15 @@ static func simulate(data: Dictionary, rng: RandomNumberGenerator, ma: String, m
 	var hp := {"a": int(ms["a"]["hp"]), "b": int(ms["b"]["hp"])}
 	var max_rounds := int(cfg(data)["sim_rounds"])
 	var yield_pct := int(cfg(data)["yield_hp_pct"])
-	var ia := rng.randi_range(1, 20) + CharacterRules.mod(int(ms["a"]["abilities"].get("dex", 10)))
-	var ib := rng.randi_range(1, 20) + CharacterRules.mod(int(ms["b"]["abilities"].get("dex", 10)))
+	var ia := Roll.d20(rng) + CharacterRules.mod(int(ms["a"]["abilities"].get("dex", 10)))
+	var ib := Roll.d20(rng) + CharacterRules.mod(int(ms["b"]["abilities"].get("dex", 10)))
 	var order := ["a", "b"] if ia >= ib else ["b", "a"]
 	var dealt := {"a": 0, "b": 0}
 	for rnd in range(1, max_rounds + 1):
 		for who: String in order:
 			var foe := "b" if who == "a" else "a"
 			for a: Dictionary in attacks(data, ma if who == "a" else mb):
-				var nat := rng.randi_range(1, 20)
+				var nat := Roll.d20(rng)
 				if nat == 1 or (nat != 20 and nat + int(a.get("to_hit", 0)) < int(ms[foe]["ac"])):
 					continue
 				var dmg := 0
@@ -536,7 +536,7 @@ static func _tourney_after(s: GameSession, data: Dictionary, a: Dictionary, won:
 		return lines
 	st["done"] = true
 	var cp := int(t.get("prize_cp", 0))
-	s.character["gold_cp"] = int(s.character["gold_cp"]) + cp
+	Ledger.add(s, cp, "arena:tourney_after")
 	lines.append("Победитель турнира «%s»! Приз %s" % [t.get("name", ""), Money.format(cp)])
 	var item := str(t.get("prize_item", ""))
 	if not item.is_empty() and data["items"]["catalog"].has(item):

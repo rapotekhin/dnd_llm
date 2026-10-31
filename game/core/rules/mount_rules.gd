@@ -9,7 +9,7 @@ extends RefCounted
 ## a vehicle — also off the roads) it waits at the entrance (`waiting`) and goes on with the hero when he comes back.
 ## Left alone away from an own place it is not fed and may be stolen with its load (`steal_pct_day`); the stolen ones
 ## are remembered in c["stolen_animals"] for the master's quest. A dealer (an NPC with `animals`) rents a beast for
-## days (`rent_until`, it goes back by itself), buys the hero's own and sells vehicles (its `vehicles`). The master
+## days (`rent_day`, it goes back by itself), buys the hero's own and sells vehicles (its `vehicles`). The master
 ## puts a beast at a dealer by `stock` with `animal`: an SRD beast whose kind the engine derives (price by size, the
 ## way by speed, the pack by Strength).
 
@@ -87,8 +87,8 @@ static func load_text(s: GameSession, data: Dictionary, cr: Dictionary) -> Strin
 	if cr.get("cart") is Dictionary:
 		var v := vehicle(data, str(cr["cart"]["vehicle"]))
 		bits.append("%s %s из %s фнт" % [str(v.get("name", "")).to_lower(), _lb(ContainerRules.weight(data, s.items, cr["cart"]["contents"])), _lb(float(v.get("capacity_lb", 0)))])
-	if cr.has("rent_until"):
-		bits.append("в аренде до дня %d" % int(cr["rent_until"]))
+	if cr.has("rent_day"):
+		bits.append("в аренде до дня %d" % int(cr["rent_day"]))
 	return "; ".join(bits)
 
 
@@ -160,7 +160,7 @@ static func day(s: GameSession, data: Dictionary) -> Array[String]:
 		return lines
 	for cr: Dictionary in PropertyRules.animals(s):
 		var room := PropertyRules.room_of(s, str(cr["id"]))
-		if cr.has("rent_until") and s.day > int(cr["rent_until"]):
+		if cr.has("rent_day") and s.day > int(cr["rent_day"]):
 			if bool(cr.get("led", false)) and room == s.room_id:
 				_unload(s, data, cr)
 			lines.append("%s — срок аренды вышел, животное ушло к хозяину (%s)" % [cr["name"], PropertyRules.npc_name(data, str(cr.get("rent_from", "")))])
@@ -205,7 +205,7 @@ static func fed_by_purse(s: GameSession, data: Dictionary, cr: Dictionary) -> bo
 
 
 static func rent_price(data: Dictionary, monster: String, days: int) -> int:
-	return maxi(1, roundi(int(PropertyRules.animal_cfg(data, monster).get("price_cp", 0)) * float(cfg(data)["rent_pct_day"]) / 100.0) * days)
+	return maxi(1, Price.share(int(PropertyRules.animal_cfg(data, monster).get("price_cp", 0)), float(cfg(data)["rent_pct_day"])) * days)
 
 
 static func rent_why(s: GameSession, data: Dictionary, npc_id: String, monster: String, days: int) -> String:
@@ -224,10 +224,10 @@ static func rent(s: GameSession, data: Dictionary, npc_id: String, monster: Stri
 	var price := rent_price(data, monster, days)
 	PropertyRules.buy_animal(s, data, npc_id, monster, price)
 	var cr: Dictionary = CreatureRules.here(s, s.room_id).back()
-	cr["rent_until"] = s.day + days - 1
+	cr["rent_day"] = s.day + days - 1
 	cr["rent_from"] = npc_id
-	s.remember(npc_id, "сдал герою в аренду: %s до дня %d" % [cr["name"], int(cr["rent_until"])])
-	return ["Взято в аренду: %s на %d дн. за %s — вернётся к хозяину сам после дня %d" % [cr["name"], days, Money.format(price), int(cr["rent_until"])]]
+	s.remember(npc_id, "сдал герою в аренду: %s до дня %d" % [cr["name"], int(cr["rent_day"])])
+	return ["Взято в аренду: %s на %d дн. за %s — вернётся к хозяину сам после дня %d" % [cr["name"], days, Money.format(price), int(cr["rent_day"])]]
 
 
 ## The hero's beasts here a dealer would buy: own ones (not rented).
@@ -236,7 +236,7 @@ static func sellable(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 	if PropertyRules.animals_of(data, npc_id).is_empty():
 		return out
 	for cr: Dictionary in beasts(s, s.room_id):
-		if not cr.has("rent_until") and not bool(cr.get("pet", false)) and int(PropertyRules.animal_cfg(data, str(cr["monster"])).get("price_cp", 0)) > 0:
+		if not cr.has("rent_day") and not bool(cr.get("pet", false)) and int(PropertyRules.animal_cfg(data, str(cr["monster"])).get("price_cp", 0)) > 0:
 			out.append(cr)
 	return out
 
@@ -245,7 +245,7 @@ static func sell_price(data: Dictionary, cr: Dictionary) -> int:
 	var p := int(PropertyRules.animal_cfg(data, str(cr["monster"])).get("price_cp", 0))
 	if cr.get("cart") is Dictionary:
 		p += int(vehicle(data, str(cr["cart"]["vehicle"])).get("price_cp", 0))
-	return roundi(p * float(cfg(data)["sell_pct"]) / 100.0)
+	return Price.share(p, float(cfg(data)["sell_pct"]))
 
 
 static func sell_why(s: GameSession, data: Dictionary, npc_id: String, cid: String) -> String:
@@ -262,7 +262,7 @@ static func sell_why(s: GameSession, data: Dictionary, npc_id: String, cid: Stri
 static func sell(s: GameSession, data: Dictionary, npc_id: String, cid: String) -> Array[String]:
 	var cr := _beast(s, cid)
 	var price := sell_price(data, cr)
-	s.character["gold_cp"] = int(s.character["gold_cp"]) + price
+	Ledger.add(s, price, "mount:sell")
 	PropertyRules._remove_creature(s, cid)
 	s.remember(npc_id, "купил у героя: %s" % cr["name"])
 	return ["Продано %s: %s за %s" % [PropertyRules.npc_name(data, npc_id), cr["name"], Money.format(price)]]
@@ -299,7 +299,7 @@ static func vehicle_why(s: GameSession, data: Dictionary, npc_id: String, vid: S
 static func buy_vehicle(s: GameSession, data: Dictionary, npc_id: String, vid: String) -> Array[String]:
 	var v := vehicle(data, vid)
 	var cr := puller(s, data, vid)
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - int(v["price_cp"])
+	Ledger.add(s, -int(v["price_cp"]), "mount:buy_vehicle")
 	cr["cart"] = {"vehicle": vid, "contents": {}}
 	s.remember(npc_id, "продал герою: %s" % v["name"])
 	return ["Куплено: %s за %s — упряжка: %s, везёт до %s фнт" % [v["name"], Money.format(int(v["price_cp"])), cr["name"], _lb(float(v["capacity_lb"]))]]

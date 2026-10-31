@@ -234,7 +234,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			if delta > 0 and delta > reward_left(s, data, turn_id, pending):
 				return {"reason": _over_budget(s, data, turn_id, pending)}
 			if str(e.get("settles", "")) == "tax":  # the tax debt paid by words (v0.7.39)
-				var debt := PropertyRules.tax_debt(c)
+				var debt := PropertyRules.tax_debt(s)
 				if delta > 0 or debt <= 0:
 					return {"reason": "у героя нет долга по налогу" if debt <= 0 else "уплата налога — монеты с минусом"}
 				if -delta > debt:
@@ -972,7 +972,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"heal":
 			c["hp"] = mini(int(c["max_hp"]), int(c["hp"]) + int(plan["amount"]))
 		"coins":
-			c["gold_cp"] = int(c["gold_cp"]) + int(plan["delta"])
+			Ledger.add(s, int(plan["delta"]), "effect_engine:apply_one")
 			if str(plan.get("settles", "")) == "tax":
 				_extra_lines.append_array(PropertyRules.settle_tax(s, _data, -int(plan["delta"])))
 		"give_item":

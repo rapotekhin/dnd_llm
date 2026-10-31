@@ -44,21 +44,6 @@ static func ab_mod(c: Dictionary, ab: String) -> int:
 # --- rolls ---------------------------------------------------------------------------------------
 
 
-## Lucky (halfling): a natural 1 on a d20 of the hero is rolled again, once. Returns the roll and the note.
-static func lucky(s: GameSession, roll: int) -> int:
-	if roll == 1 and CharacterRules.has_trait(s.character, "lucky"):
-		return s.rng.randi_range(1, 20)
-	return roll
-
-
-## The hero's d20s with advantage / disadvantage and Lucky.
-static func hero_d20(s: GameSession, adv: bool, dis: bool) -> Array[int]:
-	var rolls: Array[int] = [lucky(s, s.rng.randi_range(1, 20))]
-	if adv != dis:
-		rolls.append(lucky(s, s.rng.randi_range(1, 20)))
-	return rolls
-
-
 ## Bardic Inspiration the hero keeps (a house rule: in a solo game the bard inspires themself): the die, 0 when none.
 static func inspiration_die(c: Dictionary) -> int:
 	for e: Dictionary in ConditionRules.effects(c):

@@ -108,7 +108,7 @@ func test_an_old_save_keeps_its_worker_and_stall() -> void:
 	assert_str(str(PropertyRules.staff(s, "old_mill")[0]["role"])).is_equal("подручный мельника")
 	assert_int(int(PropertyRules.staff(s, "old_mill")[0]["wage"])).is_equal(15)
 	var vid := PropertyRules.rented(s, data, "stall", "brod")
-	assert_int(int(PropertyRules.state(s.character)[vid]["rent_until"])).is_equal(s.day + 3)
+	assert_int(int(PropertyRules.state(s.character)[vid]["rent_day"])).is_equal(s.day + 3)
 	assert_int(int(ShopRules.venue(s.character, vid)["stock"]["silver_ring"])).is_equal(2)
 	assert_bool(s.character["shop"].has("stalls")).is_false()
 

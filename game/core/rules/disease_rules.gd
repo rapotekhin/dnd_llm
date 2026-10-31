@@ -112,10 +112,10 @@ static func _npc_tick(s: GameSession, data: Dictionary) -> void:
 	for npc_id: String in data["world"]["npcs"]:
 		var id := str(data["world"]["npcs"][npc_id].get("sick", ""))
 		if not id.is_empty() and not s.npc_sick.has(npc_id):
-			s.npc_sick[npc_id] = {"id": id, "until": s.day + maxi(1, int(def_of(s, data, id).get("days", 1)))}
+			s.npc_sick[npc_id] = {"id": id, "until": TimeRules.day_start(s.day + maxi(1, int(def_of(s, data, id).get("days", 1))))}
 	for npc_id: String in s.npc_sick:
 		var ns: Dictionary = s.npc_sick[npc_id]
-		if not str(ns.get("id", "")).is_empty() and s.day >= int(ns.get("until", 0)):
+		if not str(ns.get("id", "")).is_empty() and s.clock >= int(ns.get("until", 0)):
 			ns["id"] = ""
 
 
@@ -133,7 +133,7 @@ static func cure_npc(s: GameSession, data: Dictionary, npc_id: String, power: St
 	var who := str(WorldView.new(data["world"]).npc(npc_id).get("name", npc_id))
 	if not npc_curable(s, data, npc_id, power):
 		return ["%s: травы не берут — %s" % [who, def_of(s, data, id).get("name", id)]]
-	s.npc_sick[npc_id] = {"id": "", "until": s.day}
+	s.npc_sick[npc_id] = {"id": "", "until": s.clock}
 	return ["%s исцелён: %s" % [who, def_of(s, data, id).get("name", id)]]
 
 

@@ -68,7 +68,7 @@ func test_tax_debt_and_seizure() -> void:
 	PropertyRules.deed(s, data, "river_house")
 	s.character["gold_cp"] = 0
 	_days(s, 7)
-	assert_int(int(PropertyRules.state(s.character)["river_house"]["debt"])).is_equal(30)
+	assert_int(Ledger.owed(s, "tax:river_house")).is_equal(30)
 	var lines := _days(s, 21)
 	assert_bool(PropertyRules.owned(s.character, "river_house")).is_false()
 	assert_str(" ".join(lines)).contains("за долги")

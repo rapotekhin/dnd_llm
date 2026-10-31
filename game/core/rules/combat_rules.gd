@@ -151,19 +151,6 @@ static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = fal
 	return total
 
 
-static func _d20(rng: RandomNumberGenerator, adv: bool, dis: bool) -> Array[int]:
-	var rolls: Array[int] = [rng.randi_range(1, 20)]
-	if adv != dis:
-		rolls.append(rng.randi_range(1, 20))
-	return rolls
-
-
-static func _nat(rolls: Array[int], adv: bool, dis: bool) -> int:
-	if rolls.size() == 1:
-		return rolls[0]
-	return rolls.max() if adv and not dis else rolls.min()
-
-
 # --- setup ----------------------------------------------------------------------------------------
 
 
@@ -193,7 +180,7 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 	var inits := []
 	for id: String in fighters:
 		var dex := _dex_of(s, data, id)
-		var roll := s.rng.randi_range(1, 20) + dex
+		var roll := Roll.d20(s.rng) + dex
 		fighters[id]["init"] = roll
 		inits.append([roll, dex, 1 if id == PLAYER else 0, id])
 	inits.sort_custom(func(a: Array, b: Array) -> bool: return a.slice(0, 3) > b.slice(0, 3))
@@ -309,8 +296,8 @@ static func stealth_roll(s: GameSession, data: Dictionary) -> Dictionary:
 		why.append("состояние")
 	var boots := CharacterRules.carried_with(c, data, s.items, "stealth_advantage")
 	var adv := not boots.is_empty()
-	var rolls := _d20(s.rng, adv, dis)
-	var nat := _nat(rolls, adv, dis)
+	var rolls := Roll.hero_dice(s, adv, dis)
+	var nat := Roll.kept(rolls, adv, dis)
 	var note := ""
 	if dis and not adv:
 		note = " (с помехой: %s)" % ", ".join(why)
@@ -365,7 +352,7 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 		var passive := int(s.character.get("passive_perception", 10))
 		var all_hidden := true
 		for id: String in foes:
-			if s.rng.randi_range(1, 20) + _monster_stealth(data, fighter(s, id)) < passive:
+			if Roll.d20(s.rng) + _monster_stealth(data, fighter(s, id)) < passive:
 				all_hidden = false
 		if all_hidden:
 			player(s)["surprised"] = true
@@ -808,8 +795,8 @@ static func _attack(s: GameSession, data: Dictionary, who: String, what: String,
 		dice: String, bonus: int, dtype: String, lines: Array[String], extra_dice: String = "", auto_crit: bool = false, w: Dictionary = {}) -> Dictionary:
 	if SpellEffects.take_next_attack_adv(s.character):  # True Strike (v0.7.13.1)
 		adv = true
-	var rolls := FeatureRules.hero_d20(s, adv, dis)  # the hero's roll: Lucky (v0.7.10)
-	var nat := _nat(rolls, adv, dis)
+	var rolls := Roll.hero_dice(s, adv, dis)  # the hero's roll: Lucky (v0.7.10)
+	var nat := Roll.kept(rolls, adv, dis)
 	t.erase("guided")  # Guiding Bolt's light goes with the first attack roll (v0.7.13)
 	var die := SpellEffects.hero_die(s, data, "attack")  # Bless (v0.7.13.1)
 	to_hit += int(die["bonus"])
@@ -825,13 +812,12 @@ static func _attack(s: GameSession, data: Dictionary, who: String, what: String,
 	if RollParts.sum(hit_parts) != to_hit:
 		hit_parts.append(RollParts.part("прочие бонусы атаки", to_hit - RollParts.sum(hit_parts)))
 	if not hit and nat != 1:
-		var insp_die := FeatureRules.inspiration_die(s.character)
-		var insp := FeatureRules.use_inspiration(s)
-		if insp > 0:
-			total += insp
+		var insp := Roll.inspire(s)
+		if int(insp["value"]) > 0:
+			total += int(insp["value"])
 			hit = total >= int(t["ac"])
-			line += " + вдохновение %d = %d" % [insp, total]
-			hit_parts.append(RollParts.part("Вдохновение барда (к%d)" % insp_die, insp))
+			line += " + вдохновение %d = %d" % [int(insp["value"]), total]
+			hit_parts.append(RollParts.part(str(insp["label"]), int(insp["value"])))
 	var tip := RollParts.text({"what": what, "rolls": rolls, "nat": nat, "parts": hit_parts, "total": total}) + " против КД %d" % int(t["ac"])
 	line_tip(s, line, tip)
 	if not hit:
@@ -1246,8 +1232,8 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 	var adv := not (mods["adv"] as Array).is_empty()
 	var dis := not (mods["dis"] as Array).is_empty()
 	var lines: Array[String] = []
-	var rolls := FeatureRules.hero_d20(s, adv, dis)
-	var nat := _nat(rolls, adv, dis)
+	var rolls := Roll.hero_dice(s, adv, dis)
+	var nat := Roll.kept(rolls, adv, dis)
 	var total := nat + to_hit
 	var hit := nat == 20 or (nat != 1 and total >= int(t["ac"]))
 	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
@@ -1313,7 +1299,7 @@ static func item_spell(s: GameSession, data: Dictionary, item_id: String, target
 	var lines: Array[String] = ["%s: %s" % [c["name"], name]]
 	lines.append_array(ItemRules.consume(c, data, s.items, item_id, s.rng))
 	if bool(fx.get("scroll", false)):
-		var read := ItemRules.read_scroll(c, data, sp_id, level, s.rng)
+		var read := ItemRules.read_scroll(s, data, sp_id, level)
 		lines.append(str(read["line"]))
 		if not bool(read["ok"]):
 			economy(s)["action"] = int(economy(s)["action"]) - 1
@@ -1774,12 +1760,8 @@ static func _spell_dice(sp: Dictionary, slot: int, level: int) -> String:
 static func _monster_save(s: GameSession, data: Dictionary, t: Dictionary, ab: String, dc: int, tags: Array = [], disadv: bool = false) -> bool:
 	var m: Dictionary = data["monsters"][t["monster"]]
 	var bonus := int(m["saves"].get(ab, CharacterRules.mod(int(m["abilities"].get(ab, 10)))))
-	var roll := s.rng.randi_range(1, 20)
 	var adv := MonsterRules.save_advantage(data, t, ab, tags) or SpellEffects.boon_save_adv(t, ab)  # v0.7.50.1
-	if adv and not disadv:
-		roll = maxi(roll, s.rng.randi_range(1, 20))
-	elif disadv and not adv:  # Heightened Spell (v0.7.10)
-		roll = mini(roll, s.rng.randi_range(1, 20))
+	var roll := Roll.kept(Roll.dice(s.rng, adv, disadv), adv, disadv)  # disadvantage: Heightened Spell (v0.7.10)
 	if ab in ["str", "dex"] and _target_disabled(t) and not (t["conditions"] as Array).has("prone"):
 		return false
 	bonus -= int(SpellEffects.foe_die(s, t)["minus"])  # Bane (v0.7.13.1)
@@ -1940,7 +1922,7 @@ static func escape(s: GameSession, data: Dictionary) -> Array[String]:
 	var skill := "athletics" if int(c["skills"].get("athletics", 0)) >= int(c["skills"].get("acrobatics", 0)) else "acrobatics"
 	var mods := ConditionRules.check_mods(c, data, {"skill": skill})
 	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var mine := _nat(_d20(s.rng, false, dis), false, dis) + int(c["skills"].get(skill, 0))
+	var mine := Roll.kept(Roll.hero_dice(s, false, dis), false, dis) + int(c["skills"].get(skill, 0))
 	var dc := int(hold.get("escape_dc", 0))
 	var against := "Сл %d" % dc
 	if dc <= 0:
@@ -1949,7 +1931,7 @@ static func escape(s: GameSession, data: Dictionary) -> Array[String]:
 			g = fighter(s, fighter_of_npc(s, str(hold.get("by", ""))))
 		var m: Dictionary = _monster(data, g) if not g.is_empty() else {}
 		var bonus := int(m.get("skills", {}).get("athletics", CharacterRules.mod(int(m.get("abilities", {}).get("str", 10))))) if not m.is_empty() else 0
-		dc = s.rng.randi_range(1, 20) + bonus
+		dc = Roll.d20(s.rng) + bonus
 		against = "%d (%s)" % [dc, g.get("name", "хватка")]
 	var ok := (mods["auto_fail"] as Array).is_empty() and mine >= dc
 	var what := ConditionRules.name_of(data, str(hold.get("condition", ""))).to_lower()
@@ -2039,14 +2021,14 @@ static func grapple(s: GameSession, data: Dictionary, target_id: String, shove: 
 	var lines: Array[String] = []
 	lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))
 	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls := _d20(s.rng, false, dis)
-	var mine := _nat(rolls, false, dis) + int(c.get("skills", {}).get("athletics", 0))
+	var rolls := Roll.hero_dice(s, false, dis)
+	var mine := Roll.kept(rolls, false, dis) + int(c.get("skills", {}).get("athletics", 0))
 	var m := _monster(data, t)
 	var sk: Dictionary = m.get("skills", {})
 	var ab: Dictionary = m.get("abilities", {})
 	var theirs_bonus := maxi(int(sk.get("athletics", CharacterRules.mod(int(ab.get("str", 10))))), int(sk.get("acrobatics", CharacterRules.mod(int(ab.get("dex", 10))))))
 	var auto_lose := incapacitated(t)  # a foe that cannot act does not resist (5e: it fails Str / Dex)
-	var theirs := 0 if auto_lose else s.rng.randi_range(1, 20) + theirs_bonus
+	var theirs := 0 if auto_lose else Roll.d20(s.rng) + theirs_bonus
 	var won := not (mods["auto_fail"] as Array).size() > 0 and mine >= theirs
 	var what := "толкает, чтобы сбить с ног" if shove else "пытается схватить"
 	lines.append("%s %s %s: Атлетика %d против %d — %s" % [c.get("name", ""), what, t["name"], mine, theirs, "успех" if won else "не выходит"])
@@ -2095,7 +2077,7 @@ static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = volley_flush(s, data)  # darts left fly at the last target (v0.7.22.4)
 	lines.append_array(ConditionRules.end_of_turn(s, data))
 	if SpellEffects.has(s.character, "blink"):  # Blink (v0.7.13.3)
-		var r := s.rng.randi_range(1, 20)
+		var r := Roll.d20(s.rng)
 		if r >= 11:
 			player(s)["blinked"] = true
 			lines.append("Мерцание: %d — %s исчезает в эфире до своего хода" % [r, s.character["name"]])
@@ -2176,7 +2158,7 @@ static func _arrivals(s: GameSession, data: Dictionary, lines: Array[String]) ->
 ## A newcomer rolls initiative and takes its place in the order (called at the start of a round, turn 0).
 static func _insert_initiative(s: GameSession, data: Dictionary, id: String) -> void:
 	var f := fighter(s, id)
-	f["init"] = s.rng.randi_range(1, 20) + _dex_of(s, data, id)
+	f["init"] = Roll.d20(s.rng) + _dex_of(s, data, id)
 	var order: Array = s.combat["order"]
 	var at := order.size()
 	for i in order.size():
@@ -2278,9 +2260,8 @@ static func _death_save(s: GameSession, data: Dictionary, lines: Array[String]) 
 		ds["stable"] = true
 		lines.append("%s стабилизируется — Амулет закрытия ран" % s.character["name"])
 		return
-	var roll := s.rng.randi_range(1, 20)
-	if not SpellEffects.hero_effects(s.character, "death_adv").is_empty():  # Beacon of Hope (v0.7.13.2)
-		roll = maxi(roll, s.rng.randi_range(1, 20))
+	var beacon := not SpellEffects.hero_effects(s.character, "death_adv").is_empty()  # Beacon of Hope (v0.7.13.2)
+	var roll := Roll.kept(Roll.hero_dice(s, beacon, false), beacon, false)
 	if roll == 20:
 		s.character["hp"] = 1
 		ConditionRules.remove(s.character, "unconscious")
@@ -2356,7 +2337,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	if not bool(f.get("morale", false)) and int(f["hp"]) * 2 <= int(f["max_hp"]):
 		f["morale"] = true
 		var wis := int(m["saves"].get("wis", CharacterRules.mod(int(m["abilities"].get("wis", 10)))))
-		if s.rng.randi_range(1, 20) + wis < int(cfg(data)["morale_dc"]):
+		if Roll.d20(s.rng) + wis < int(cfg(data)["morale_dc"]):
 			if _intelligent(data, f) and int(f["col"]) == int(p["col"]):
 				f["status"] = "surrendered"
 				lines.append("%s бросает оружие и сдаётся" % f["name"])
@@ -2612,8 +2593,8 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	if not held.is_empty():
 		lines.append(held)
 		return
-	var rolls := _d20(s.rng, adv, dis)
-	var nat := _nat(rolls, adv, dis)
+	var rolls := Roll.dice(s.rng, adv, dis)
+	var nat := Roll.kept(rolls, adv, dis)
 	var bane := SpellEffects.foe_die(s, f)  # Bane (v0.7.13.1)
 	var total := nat + int(a.get("to_hit", 0)) - int(bane["minus"])
 	var ac := int(c.get("ac", 10))
@@ -2980,8 +2961,8 @@ static func _creature_attack(s: GameSession, data: Dictionary, f: Dictionary, a:
 	var dis := SpellEffects.warded(data, f, t) or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) or (str(a.get("kind")) == "ranged" and d == 0) \
 		or ["poisoned", "blinded", "restrained", "frightened", "prone"].any(func(x: String) -> bool: return _has(f, x)) \
 		or (ranged_use and _has(t, "prone")) or bool(t.get("dodging", false)) or (ranged_use and not WeatherRules.obscure_why(s, data).is_empty())
-	var rolls := _d20(s.rng, adv, dis)
-	var nat := _nat(rolls, adv, dis)
+	var rolls := Roll.dice(s.rng, adv, dis)
+	var nat := Roll.kept(rolls, adv, dis)
 	var blessed := SpellEffects.friend_die(s, f, "attack")  # Bless on an ally (v0.7.50.1)
 	var plus := int(SpellEffects.boon(f, "weapon_plus", 0))  # Magic Weapon on an ally
 	var total := nat + int(a.get("to_hit", 0)) + int(blessed["plus"]) + plus
@@ -3248,13 +3229,7 @@ static func parley_apply(s: GameSession, data: Dictionary, skill: String, succes
 
 ## Percent to hit with a d20 + to_hit against AC (natural 1 misses, 20 hits), with advantage or disadvantage.
 static func hit_chance(to_hit: int, ac: int, adv: bool, dis: bool) -> int:
-	var need := clampi(ac - to_hit, 2, 20)
-	var p := (21 - need) / 20.0
-	if adv and not dis:
-		p = 1.0 - (1.0 - p) * (1.0 - p)
-	elif dis and not adv:
-		p = p * p
-	return roundi(p * 100.0)
+	return Roll.chance(to_hit, ac, adv, dis)
 
 
 ## [min, max] of a dice expression like "2d6+3".
@@ -3391,9 +3366,9 @@ static func player_inspect(s: GameSession, data: Dictionary, target_id: String) 
 	var skill := lore_skill(data, t)
 	var dc := lore_dc(data, t)
 	var favored := FeatureRules.has(s.character, "favored_enemy_" + str(_monster(data, t).get("type", "")))  # Favored Enemy (v0.7.10)
-	var roll := _nat(FeatureRules.hero_d20(s, favored, false), favored, false)
-	var total := roll + int(s.character.get("skills", {}).get(skill, 0)) + DifficultyRules.bonus(s, data)  # v0.7.20.4
-	var ok := roll != 1 and (roll == 20 or total >= dc)
+	var r := Roll.hero(s, data, {"what": "Присмотреться", "skill": skill, "dc": dc, "adv": favored})
+	var total := int(r["total"])
+	var ok := bool(r["ok"])
 	if ok:
 		s.known_monsters.append(str(t["monster"]))
 	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], t["name"], TranslationServer.translate("SKILL_" + skill.to_upper()),

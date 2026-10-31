@@ -60,7 +60,7 @@ func run() -> void:
 	await press(find(win, "AnimalRent_riding_horse"))
 	await frames(4)
 	var horse: Dictionary = PropertyRules.animals(s).back()
-	step("a horse rented till a day", str(horse.get("monster", "")) == "riding_horse" and horse.has("rent_until"), _last_effects(s))
+	step("a horse rented till a day", str(horse.get("monster", "")) == "riding_horse" and horse.has("rent_day"), _last_effects(s))
 	await press(find(win, "VehicleBuy_cart"))
 	await frames(4)
 	var hitched := PropertyRules.animals(s).filter(func(cr: Dictionary) -> bool: return cr.get("cart") is Dictionary)

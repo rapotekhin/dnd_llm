@@ -239,7 +239,7 @@ static func take_caches(s: GameSession, data: Dictionary, room_id: String) -> Ar
 		var loot: Dictionary = sec["loot"]
 		var got: Array[String] = []
 		if int(loot.get("coins_cp", 0)) > 0:
-			c["gold_cp"] = int(c.get("gold_cp", 0)) + int(loot["coins_cp"])
+			Ledger.add(s, int(loot["coins_cp"]), "exploration:take_caches")
 			got.append(Money.format(int(loot["coins_cp"])))
 		var items: Dictionary = loot.get("items", {})
 		for id: String in items:
@@ -384,7 +384,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	var lines: Array[String] = ["Долгий отдых" if supplies.is_empty() else "Долгий отдых в лагере"]
 	AllyRules.rest(s)
 	if cost > 0:
-		c["gold_cp"] = int(c["gold_cp"]) - cost
+		Ledger.add(s, -cost, "exploration:long_rest")
 		lines.append("−" + Money.format(cost))
 	var camp_supplies := supplies.duplicate()
 	var eaten: Array[String] = []

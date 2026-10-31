@@ -75,12 +75,7 @@ static func _step_at(data: Dictionary, step_id: String) -> int:
 
 ## The step of the standing: {id, at, name}.
 static func step(s: GameSession, data: Dictionary, id: String) -> Dictionary:
-	var pts := points(s, data, id)
-	var out: Dictionary = cfg(data)["steps"][0]
-	for st: Dictionary in cfg(data)["steps"]:
-		if pts >= int(st["at"]):
-			out = st
-	return out
+	return Scale.step(cfg(data)["steps"], points(s, data, id), "at", cfg(data)["steps"][0])
 
 
 static func friendly(s: GameSession, data: Dictionary, id: String) -> bool:

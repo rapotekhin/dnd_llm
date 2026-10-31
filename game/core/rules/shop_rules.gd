@@ -104,7 +104,7 @@ static func price_pct(s: GameSession, data: Dictionary, vid: String, item_id: St
 
 
 static func price(s: GameSession, data: Dictionary, vid: String, item_id: String) -> int:
-	return maxi(1, roundi(value(s, data, item_id) * price_pct(s, data, vid, item_id) / 100.0))
+	return Price.share(value(s, data, item_id), price_pct(s, data, vid, item_id), 1)
 
 
 static func is_food(data: Dictionary, item_id: String) -> bool:
@@ -185,7 +185,7 @@ static func collect(s: GameSession, _data: Dictionary, vid: String) -> Array[Str
 	var v := venue(s.character, vid)
 	var sum := int(v["cash"])
 	v["cash"] = 0
-	s.character["gold_cp"] = int(s.character.get("gold_cp", 0)) + sum
+	Ledger.add(s, sum, "shop:collect")
 	return ["Выручка забрана: %s" % Money.format(sum)]
 
 
@@ -201,11 +201,9 @@ static func rep(s: GameSession, loc: String) -> float:
 
 
 static func rep_word(data: Dictionary, r: float) -> String:
-	var out := ""
-	for w: Array in cfg(data)["reputation"]["words"]:
-		if r >= float(w[0]):
-			out = str(w[1])
-	return out if not out.is_empty() else str(cfg(data)["reputation"]["words"][0][1])
+	var words: Array = cfg(data)["reputation"]["words"]
+	var w := Scale.row(words, r)
+	return str(w[1] if not w.is_empty() else words[0][1])
 
 
 static func _rep_add(s: GameSession, data: Dictionary, loc: String, d: float) -> void:
@@ -330,7 +328,7 @@ static func shift_dc(data: Dictionary) -> int:
 
 
 static func shift_chance(s: GameSession, data: Dictionary) -> int:
-	return JobRules._chance(_shift_bonus(s, data), shift_dc(data), false)
+	return Roll.chance(_shift_bonus(s, data), shift_dc(data), false)
 
 
 ## The hero behind the counter (the time passed): a check, its outcome × the shift's buyers, the takings to the purse.
@@ -345,20 +343,16 @@ static func shift(s: GameSession, data: Dictionary, vid: String, minutes: int) -
 		lines.append("Торговля прервана")
 	else:
 		var skill := str(sc["skill"])
-		var mods := ConditionRules.check_mods(c, data, {"skill": skill})
-		var dis := not (mods["disadvantage"] as Array).is_empty()
-		var rolls := FeatureRules.hero_d20(s, false, dis)
-		var nat: int = rolls.min() if dis else rolls[0]
-		var b := _shift_bonus(s, data)
-		RollParts.note(s, name_of(s, data, vid), rolls, nat, RollParts.skill(s, data, skill), b, shift_dc(data))
-		var margin := 5 if nat == 20 else -5 if nat == 1 else nat + b - shift_dc(data)
-		var o := JobRules.outcome_for(data, margin)
+		var ro := Roll.hero(s, data, {"what": name_of(s, data, vid), "skill": skill, "dc": shift_dc(data)})
+		var nat := int(ro["nat"])
+		var b := int(ro["bonus"])
+		var o := JobRules.outcome_for(data, int(ro["margin"]))
 		base = roundi(base * (float(o.get("pay", 1.0)) + float(o.get("tips", 0.0)) * 2.0))
 		lines.append("%s: %s %d + %d = %d против Сл %d — %s" % [name_of(s, data, vid), CraftRules.tr_skill(data, skill), nat, b, nat + b, shift_dc(data), o["name"]])
 	var r := sell_round(s, data, vid, base)
 	var loc := loc_of(s, data, vid)
 	var t := _after_tax(s, data, loc, int(r["revenue"]))
-	c["gold_cp"] = int(c.get("gold_cp", 0)) + t[0]
+	Ledger.add(s, t[0], "shop:shift")
 	if (r["sold"] as Dictionary).is_empty():
 		lines.append("Покупателей на ваш товар не нашлось")
 	else:
@@ -376,7 +370,7 @@ static func _fine(s: GameSession, data: Dictionary, loc: String) -> Array[String
 	if has_charter(s, loc) or CrimeRules.law(data, loc).is_empty() or s.rng.randf() >= float(ch["fine_chance"]):
 		return []
 	var fine := mini(int(ch["fine_cp"]), int(s.character.get("gold_cp", 0)))
-	s.character["gold_cp"] = int(s.character.get("gold_cp", 0)) - fine
+	Ledger.add(s, -fine, "shop:fine")
 	return ["Стража: торговля без грамоты — штраф %s" % Money.format(fine)]
 
 
@@ -452,7 +446,7 @@ static func charter_why(s: GameSession, data: Dictionary, npc_id: String) -> Str
 static func charter(s: GameSession, data: Dictionary, _npc_id: String) -> Array[String]:
 	var loc := WorldView.new(data["world"]).location_id(s.room_id)
 	var fee := int(cfg(data)["charter"]["fee_cp"])
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - fee
+	Ledger.add(s, -fee, "shop:charter")
 	state(s.character)["charters"][loc] = s.day
 	var lname := str(WorldView.new(data["world"]).location(loc).get("name", loc))
 	var doc := {"id": "gen_charter_" + loc, "name": "Торговая грамота: %s" % lname, "item_type": "gear", "value_cp": 0, "weight": 0,
@@ -488,7 +482,7 @@ static func goods(s: GameSession, data: Dictionary, npc_id: String) -> Array[Str
 
 
 static func wholesale_price(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> int:
-	return maxi(1, ceili(value(s, data, item_id) * int(_supply(s, data, npc_id).get("pct", cfg(data)["wholesale"]["pct"])) / 100.0))
+	return Price.ceiled(Price.mod(Price.start(value(s, data, item_id)), "опт", int(_supply(s, data, npc_id).get("pct", cfg(data)["wholesale"]["pct"]))), 1)
 
 
 static func lot(data: Dictionary) -> int:
@@ -507,7 +501,7 @@ static func wholesale_why(s: GameSession, data: Dictionary, npc_id: String, item
 
 static func wholesale(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> Array[String]:
 	var cost := wholesale_price(s, data, npc_id, item_id) * lot(data)
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - cost
+	Ledger.add(s, -cost, "shop:wholesale")
 	ItemRules.found(s.character, data, s.items, item_id, lot(data))
 	return ["Опт: %s ×%d — %s (%s)" % [ItemRules.display_name(data["items"], s.items, item_id), lot(data), Money.format(cost), WorldView.new(data["world"]).npc(npc_id).get("name", npc_id)]]
 

@@ -296,8 +296,7 @@ static func station_here(s: GameSession, data: Dictionary, station: String) -> b
 
 ## The trader of the room who owns the station and takes rent per hour: {npc, cp} or {} (free).
 static func rent(s: GameSession, data: Dictionary, station: String) -> Dictionary:
-	var pct := float(DevelopmentRules.effect(s.character, data, "craft", "rent_pct", 100.0))
-	var cp := roundi(int(stations(data).get(station, {}).get("rent_cp_hour", 0)) * pct / 100.0)
+	var cp := Price.share(int(stations(data).get(station, {}).get("rent_cp_hour", 0)), float(DevelopmentRules.effect(s.character, data, "craft", "rent_pct", 100.0)))
 	if station.is_empty() or cp <= 0:
 		return {}
 	for npc_id: String in SceneRules.npcs(s, data["world"], s.room_id):
@@ -399,7 +398,7 @@ static func worked(s: GameSession, data: Dictionary, minutes: int) -> Array[Stri
 	var rent_now := rent(s, data, str(r.get("station", "")))
 	if not rent_now.is_empty() and minutes > 0:
 		var cp := int(ceil(minutes / 60.0)) * int(rent_now["cp"])
-		s.character["gold_cp"] = int(s.character["gold_cp"]) - cp
+		Ledger.add(s, -cp, "craft:worked")
 		lines.append("Плата за %s: −%s" % [station_name(data, str(r["station"])).to_lower(), Money.format(cp)])
 	p["done"] = int(p["done"]) + minutes
 	if int(p["done"]) >= int(p["total"]):
@@ -445,14 +444,7 @@ static func check_label(data: Dictionary, r: Dictionary) -> String:
 static func chance(s: GameSession, data: Dictionary, id: String) -> int:
 	var r := recipe(s, data, id)
 	var need := int(r.get("dc", 10)) + int(tier_by_id(data, "normal").get("from", 0))
-	var wins := 0
-	for nat in range(1, 21):
-		if nat == 20 or (nat != 1 and nat + recipe_bonus(s, data, r) >= need):
-			wins += 1
-	var p := wins / 20.0
-	if bool(_fx(s.character, data, r, "quality_adv", false)):
-		p = 1.0 - (1.0 - p) * (1.0 - p)
-	return roundi(p * 100.0)
+	return Roll.chance(recipe_bonus(s, data, r), need, bool(_fx(s.character, data, r, "quality_adv", false)))
 
 
 static func tier_by_id(data: Dictionary, id: String) -> Dictionary:
@@ -464,11 +456,7 @@ static func tier_by_id(data: Dictionary, id: String) -> Dictionary:
 
 ## The tier of a margin (the total minus the DC): the last one whose `from` is reached.
 static func tier_for(data: Dictionary, margin: int) -> Dictionary:
-	var out: Dictionary = cfg(data)["quality"][0]
-	for t: Dictionary in cfg(data)["quality"]:
-		if margin >= int(t["from"]):
-			out = t
-	return out
+	return Scale.step(cfg(data)["quality"], margin, "from", cfg(data)["quality"][0])
 
 
 ## The check at the end of the work and the thing it makes. Lines.
@@ -477,17 +465,12 @@ static func finish(s: GameSession, data: Dictionary) -> Array[String]:
 	var p := project(c)
 	var id := str(p["recipe"])
 	var r := recipe(s, data, id)
-	var mods := ConditionRules.check_mods(c, data, {"skill": "craft"})
-	var adv := bool(_fx(c, data, r, "quality_adv", false))
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls := FeatureRules.hero_d20(s, adv, dis)
-	var nat: int = rolls.max() if adv and not dis else rolls.min()
-	var parts := recipe_parts(s, data, r)
-	var total := nat + RollParts.sum(parts)
 	var dc := int(r.get("dc", 10))
-	RollParts.note(s, check_label(data, r), rolls, nat, parts, total - nat, dc)
-	var margin := 10 if nat == 20 else -10 if nat == 1 else total - dc
-	var tier := tier_for(data, margin)
+	var ro := Roll.hero(s, data, {"what": check_label(data, r), "skill": "craft", "parts": recipe_parts(s, data, r), "dc": dc,
+		"adv": bool(_fx(c, data, r, "quality_adv", false)), "crit": 10})
+	var nat := int(ro["nat"])
+	var total := int(ro["total"])
+	var tier := tier_for(data, int(ro["margin"]))
 	c.erase("craft")
 	if r.has("output_def") and not s.items.has(str(r["output"])):
 		s.items[str(r["output"])] = r["output_def"]
@@ -681,17 +664,13 @@ static func gather(s: GameSession, data: Dictionary, tag: String) -> Array[Strin
 	_gathered(s)[key] = rec
 	var skill := str(g["skill"])
 	var t := BackgroundRules.tool_check(s.character, data, str(g.get("tool", "")), skill)
-	var mods := ConditionRules.check_mods(s.character, data, {"skill": skill})
-	var adv := not str(t["advantage"]).is_empty()
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls := FeatureRules.hero_d20(s, adv, dis)
-	var nat: int = rolls.max() if adv and not dis else rolls.min() if dis and not adv else rolls[0]
-	var b := int(s.character.get("skills", {}).get(skill, 0)) + int(t["bonus"]) + DifficultyRules.bonus(s, data)
 	var dc := int(g["dc"])
 	var parts := RollParts.skill(s, data, skill)
 	RollParts.add(parts, str(t["note"]), int(t["bonus"]))
-	RollParts.note(s, str(g["name"]), rolls, nat, parts, b, dc)
-	var ok := nat == 20 or (nat != 1 and nat + b >= dc)
+	var ro := Roll.hero(s, data, {"what": str(g["name"]), "skill": skill, "parts": parts, "dc": dc, "adv": not str(t["advantage"]).is_empty()})
+	var nat := int(ro["nat"])
+	var b := int(ro["bonus"])
+	var ok := bool(ro["ok"])
 	var lines: Array[String] = ["%s: %s %d + %d = %d против Сл %d — %s" % [g["name"], tr_skill(data, skill), nat, b, nat + b, dc, "успех" if ok else "провал"]]
 	if not ok:
 		lines.append("Ничего толкового не нашлось")

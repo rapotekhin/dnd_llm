@@ -98,7 +98,7 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 			return lines
 		list.erase(e)
 		if int(e.get("cp", 0)) > 0:
-			s.character["gold_cp"] = int(s.character["gold_cp"]) + int(e["cp"])
+			Ledger.add(s, int(e["cp"]), "theft:steal")
 			lines.append("%s — украдено: %s" % [who, Money.format(int(e["cp"]))])
 		else:
 			var id := str(e["item_id"])
@@ -143,7 +143,7 @@ static func take_purse(s: GameSession, data: Dictionary, npc_id: String) -> int:
 		if int(e.get("cp", 0)) > 0:
 			var cp := int(e["cp"])
 			(s.pockets[npc_id] as Array).erase(e)
-			s.character["gold_cp"] = int(s.character["gold_cp"]) + cp
+			Ledger.add(s, cp, "theft:take_purse")
 			return cp
 	return 0
 
@@ -185,7 +185,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String, memory: Stri
 		_:
 			var fine := int(cfg(data)["fine_cp"])
 			if int(s.character["gold_cp"]) >= fine:
-				s.character["gold_cp"] = int(s.character["gold_cp"]) - fine
+				Ledger.add(s, -fine, "theft:react")
 				lines.append("%s зовёт стражу — штраф %s" % [who, Money.format(fine)])
 			else:
 				var law := CrimeRules.law(data, world.location_id(s.room_id))  # v0.7.16: the guard of the place's law

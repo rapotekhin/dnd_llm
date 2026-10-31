@@ -189,7 +189,7 @@ static func start(s: GameSession, data: Dictionary, npc_id: String, kind_id: Str
 		cp = int(stake["cp"])
 	if int(s.character["gold_cp"]) < cp:
 		return {"reason": "у героя нет %s на ставку" % Money.format(cp)}
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - cp
+	Ledger.add(s, -cp, "contest:start")
 	if str(stake["kind"]) == "coins":
 		_purse_add(s, data, npc_id, -cp)
 	var rec := _day(s, npc_id)
@@ -205,7 +205,7 @@ static func npc_roll(s: GameSession, data: Dictionary, cheat: bool = false) -> D
 	var k := kind(data, str(st["kind"]))
 	var check: Dictionary = {"skill": str(k.get("cheat_against", "insight"))} if cheat else k.get("npc_check", k.get("check", {}))
 	var b := npc_bonus(data, str(st["npc"]), check, "" if cheat else str(k.get("tool", "")))
-	var nat := s.rng.randi_range(1, 20)
+	var nat := Roll.d20(s.rng)
 	return {"total": nat + int(b["bonus"]), "nat": nat, "bonus": int(b["bonus"])}
 
 
@@ -279,10 +279,10 @@ static func _finish(s: GameSession, data: Dictionary, won: bool) -> Array[String
 	s.character.erase("contest")
 	var rec := _day(s, npc)
 	if won:
-		s.character["gold_cp"] = int(s.character["gold_cp"]) + cp
+		Ledger.add(s, cp, "contest:finish")
 		match str(stake["kind"]):
 			"coins":
-				s.character["gold_cp"] = int(s.character["gold_cp"]) + cp
+				Ledger.add(s, cp, "contest:finish")
 				lines.append("Победа: +%s" % Money.format(cp))
 			"item":
 				for e: Dictionary in TheftRules.pockets(s, data, npc).duplicate():

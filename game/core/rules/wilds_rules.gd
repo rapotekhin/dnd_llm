@@ -181,19 +181,15 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 	var c := cfg(data)
 	var skill := str(d["skill"])
 	var g := gear(s, data, k)
-	var mods := ConditionRules.check_mods(s.character, data, {"skill": skill})
 	var pet := PetRules.helper(s, data, skill)  # v0.7.43: a dog on the trail
 	if str(g["adv"]).is_empty() and not pet.is_empty():
 		g["adv"] = pet
 	var adv := not str(g["adv"]).is_empty()
-	var dis := not str(g["dis"]).is_empty() or not (mods["disadvantage"] as Array).is_empty()
-	var rolls := FeatureRules.hero_d20(s, adv, dis)
-	var nat: int = rolls.max() if adv and not dis else rolls.min() if dis and not adv else rolls[0]
-	var b := int(s.character.get("skills", {}).get(skill, 0)) + DifficultyRules.bonus(s, data)
 	var dc := int(d["dc"])
-	var parts := RollParts.skill(s, data, skill)
-	RollParts.note(s, str(d["name"]), rolls, nat, parts, b, dc)
-	var ok := nat == 20 or (nat != 1 and nat + b >= dc)
+	var r := Roll.hero(s, data, {"what": str(d["name"]), "skill": skill, "dc": dc, "adv": adv, "dis": not str(g["dis"]).is_empty()})
+	var nat := int(r["nat"])
+	var b := int(r["bonus"])
+	var ok := bool(r["ok"])
 	var out := {"lines": [] as Array[String], "fight": [], "crime": false}
 	var lines: Array[String] = out["lines"]
 	var how: Array[String] = []

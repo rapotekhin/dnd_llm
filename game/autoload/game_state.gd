@@ -1566,7 +1566,7 @@ func finish_combat(take: Array = []) -> void:
 	if outcome in ["victory", "truce"]:
 		var cp := int(s.combat.get("coins_cp", 0))
 		if cp > 0:
-			s.character["gold_cp"] = int(s.character["gold_cp"]) + cp
+			Ledger.add(session, cp, "game_state:finish_combat")
 			lines.append("+" + Money.format(cp))
 		for l: Dictionary in s.combat.get("loot", []):
 			if take.has(str(l["item_id"])):
@@ -2297,7 +2297,7 @@ func choose_option(index: int) -> String:
 		return "MSG_NO_MONEY"
 	if is_busy() or not Backend.is_ready():
 		return "MSG_NO_MASTER"
-	session.character["gold_cp"] = int(session.character["gold_cp"]) - cost
+	Ledger.add(session, -cost, "game_state:choose_option")
 	var paid := "−" + Money.format(cost)
 	_add(GameSession.effect_entry([paid]))
 	_log("События: " + paid)
@@ -3623,14 +3623,13 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		if result.has("error"):
 			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
 		if not bool(result["success"]) and int(result["nat"]) != 1 and str(params.get("auto_fail_reason", "")).is_empty():
-			var insp_die := FeatureRules.inspiration_die(session.character)
-			var insp := FeatureRules.use_inspiration(session)  # Bardic Inspiration on a failed check (v0.7.10)
-			if insp > 0:
-				result["total"] = int(result["total"]) + insp
-				result["bonus"] = int(result["bonus"]) + insp
+			var insp := Roll.inspire(session)  # Bardic Inspiration on a failed check (v0.7.10)
+			if int(insp["value"]) > 0:
+				result["total"] = int(result["total"]) + int(insp["value"])
+				result["bonus"] = int(result["bonus"]) + int(insp["value"])
 				result["success"] = int(result["total"]) >= int(result["dc"])
 				if result.get("parts") is Array:  # seen in the breakdown (v0.7.49.4)
-					(result["parts"] as Array).append({"label": "Вдохновение барда (к%d)" % insp_die, "value": insp})
+					(result["parts"] as Array).append(RollParts.part(str(insp["label"]), int(insp["value"])))
 		ExplorationRules.lock(session, params, room, result, state)
 		var mark := _theft_target(params)
 		if not mark.is_empty():

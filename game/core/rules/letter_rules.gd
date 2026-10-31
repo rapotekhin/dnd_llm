@@ -212,7 +212,7 @@ static func send(s: GameSession, data: Dictionary, poster: String, to: String, p
 		"risk": int(q["risk"]), "sent_day": s.day, "sent_loc": _loc(data, s.room_id), "deliver_day": s.day + int(q["days"]),
 		"reply_day": s.day + int(q["days"]) * 2 + (0 if int(q["days"]) > 0 else 1), "status": "en_route", "room": str(extra.get("room", "")),
 		"about": str(extra.get("about", "")), "evidence": "", "verdict": "", "can": false, "decision": "", "reply": "", "outcome": []}
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - int(q["cost"])
+	Ledger.add(s, -int(q["cost"]), "letter:send")
 	var lines: Array[String] = []
 	if str(purpose(data, pid).get("does", "")) == "arrest":  # the evidence the hero carries goes with the letter
 		var item := _evidence_item(s, data, str(l["about"]))
@@ -439,7 +439,7 @@ static func answered(s: GameSession, data: Dictionary, id: String, text: String)
 			var room := str(l["room"])
 			var path := route(data, npc_loc(s, data, str(l["to"])), _loc(data, room))
 			var arrive := s.day + maxi(1, (path.size() - 1) * int(p["days_per_hop"]))
-			l["ally"] = {"npc": str(l["to"]), "room": room, "arrive": arrive, "until": arrive + int(p["wait_days"]), "state": "road"}
+			l["ally"] = {"npc": str(l["to"]), "room": room, "arrive": arrive, "until": TimeRules.day_start(arrive + int(p["wait_days"]) + 1), "state": "road"}
 			s.npc_at[str(l["to"])] = ""  # on the road: nowhere in the world
 			lines.append("%s придёт: «%s», к %d-му дню, и будет ждать до %d-го" % [who, _room_name(data, room), arrive, arrive + int(p["wait_days"])])
 		"recommendation":
@@ -465,7 +465,7 @@ static func _ally_day(s: GameSession, data: Dictionary, l: Dictionary) -> Array[
 		s.npc_at[npc] = str(a["room"])
 		if s.room_id == str(a["room"]):
 			lines.append_array(_join(s, data, l))
-	elif str(a["state"]) == "waits" and s.day > int(a["until"]):
+	elif str(a["state"]) == "waits" and s.clock >= int(a["until"]):
 		a["state"] = "gone"
 		s.npc_at.erase(npc)
 		if s.room_id == str(a["room"]):
@@ -503,7 +503,7 @@ static func _arrest(s: GameSession, data: Dictionary, l: Dictionary, here: Strin
 	if s.dead_npcs.has(npc) or prison.is_empty():
 		return []
 	FollowRules.apply(s, {"follow_npc": npc, "on": false, "room": prison})
-	a["until"] = s.day + int(purpose(data, str(l["purpose"]))["jail_days"])
+	a["until"] = TimeRules.day_start(s.day + int(purpose(data, str(l["purpose"]))["jail_days"]) + 1)
 	s.remember(npc, "знает: герой донёс на него страже")
 	s.attitudes[npc] = mini(s.attitude(npc), int(SocialRules.cfg(data)["thresholds"]["refuse_at"]))
 	var what := "%s взят(а) под стражу по доносу" % _name(s, data, npc)
@@ -514,7 +514,7 @@ static func _arrest(s: GameSession, data: Dictionary, l: Dictionary, here: Strin
 static func jailed(s: GameSession, npc_id: String) -> bool:
 	for l: Dictionary in _state(s)["list"].values():
 		var a: Dictionary = l.get("arrest", {})
-		if str(a.get("npc", "")) == npc_id and bool(a.get("done", false)) and a.has("until") and s.day <= int(a["until"]):
+		if str(a.get("npc", "")) == npc_id and bool(a.get("done", false)) and a.has("until") and s.clock < int(a["until"]):
 			return true
 	return false
 
@@ -523,7 +523,7 @@ static func _jail_days(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	for l: Dictionary in _state(s)["list"].values():
 		var a: Dictionary = l.get("arrest", {})
-		if a.has("until") and not bool(a.get("freed", false)) and s.day > int(a["until"]):
+		if a.has("until") and not bool(a.get("freed", false)) and s.clock >= int(a["until"]):
 			a["freed"] = true
 			s.npc_at.erase(str(a["npc"]))
 			if _loc(data, s.room_id) == str(a["loc"]):
@@ -635,7 +635,7 @@ static func groups(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 		if l.has("ally") and str(l["ally"]["state"]) in ["road", "waits"]:
 			var a: Dictionary = l["ally"]
 			allies.append("%s %s «%s» %s" % [_name(s, data, str(a["npc"])), "ждёт у" if str(a["state"]) == "waits" else "идёт к",
-				_room_name(data, str(a["room"])), "до %d-го дня" % int(a["until"]) if str(a["state"]) == "waits" else "к %d-му дню" % int(a["arrive"])])
+				_room_name(data, str(a["room"])), "до %d-го дня" % (TimeRules.day_of(int(a["until"])) - 1) if str(a["state"]) == "waits" else "к %d-му дню" % int(a["arrive"])])
 	var out: Array[Dictionary] = []
 	if not allies.is_empty():
 		out.append({"title": "Идут на помощь", "lines": allies})

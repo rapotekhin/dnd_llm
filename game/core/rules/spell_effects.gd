@@ -283,7 +283,7 @@ static func against_attack(s: GameSession, data: Dictionary, f: Dictionary, tota
 		if n <= 0:
 			continue
 		var need: int = {3: 6, 2: 8, 1: 11}.get(n, 11)
-		if s.rng.randi_range(1, 20) >= need:
+		if Roll.d20(s.rng) >= need:
 			var image_ac := 10 + CharacterRules.mod(CharacterRules.ability(c, "dex"))
 			if total >= image_ac:
 				e["images"] = n - 1
@@ -1085,9 +1085,11 @@ static func counter(s: GameSession, data: Dictionary, f: Dictionary, spell_id: S
 	if circle <= slot:
 		lines.append("%s: Контрзаклинание — «%s» срывается" % [c.get("name", ""), name])
 		return true
-	var roll := s.rng.randi_range(1, 20) + CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "int"))))
-	var ok := roll >= 10 + circle
-	lines.append("%s: Контрзаклинание — проверка %d против Сл %d — %s" % [c.get("name", ""), roll, 10 + circle, "«%s» срывается" % name if ok else "не вышло"])
+	var ab := str(c.get("spell_ability", "int"))
+	var r := Roll.hero(s, data, {"what": "Контрзаклинание", "ability": ab, "dc": 10 + circle,
+		"parts": [RollParts.part(RollParts.ability_name(ab), CharacterRules.mod(CharacterRules.ability(c, ab)))]})
+	var ok := bool(r["ok"])
+	lines.append("%s: Контрзаклинание — проверка %d против Сл %d — %s" % [c.get("name", ""), int(r["total"]), 10 + circle, "«%s» срывается" % name if ok else "не вышло"])
 	return ok
 
 
@@ -1121,7 +1123,7 @@ static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc: Di
 		return {"ok": false, "line": "%s: на %s не действует" % [spell["name"], name]}
 	var ab := str(spell.get("save", {}).get("ability", "wis"))
 	var bonus := int(tmpl.get("saves", {}).get(ab, CharacterRules.mod(int(tmpl.get("abilities", {}).get(ab, 10)))))
-	var roll := s.rng.randi_range(1, 20)
+	var roll := Roll.d20(s.rng)
 	var dc := int(s.character.get("spell_dc", 10))
 	var saved := roll + bonus >= dc
 	var save_parts: Array[Dictionary] = [RollParts.part("спасбросок %s (%s)" % [CombatRules.ab_name(ab), name], bonus)]

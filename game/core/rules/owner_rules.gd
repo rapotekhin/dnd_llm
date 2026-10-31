@@ -213,7 +213,7 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 	var lines: Array[String] = []
 	var price := int(p.get("price", 0))
 	if price > 0:
-		s.character["gold_cp"] = int(s.character["gold_cp"]) + price
+		Ledger.add(s, price, "owner:apply")
 		if bool(WorldView.new(data["world"]).npc(to).get("trader", false)):
 			var m := TradeRules.merchant(s, data, to)
 			m["purse_cp"] = int(m["purse_cp"]) - price

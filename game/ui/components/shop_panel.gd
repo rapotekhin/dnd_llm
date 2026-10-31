@@ -95,8 +95,8 @@ func _venue(s: GameSession, data: Dictionary) -> void:
 	var bits: Array[String] = [tr("SHOP_HAS_CHARTER") if ShopRules.has_charter(s, loc) else tr("SHOP_NO_CHARTER"),
 		tr("SHOP_REP").format({"word": ShopRules.rep_word(data, ShopRules.rep(s, loc))})]
 	var st: Dictionary = PropertyRules.state(s.character).get(_id, {})
-	if st.has("rent_until"):
-		bits.append(tr("SHOP_STALL_UNTIL").format({"day": int(st["rent_until"])}))
+	if st.has("rent_day"):
+		bits.append(tr("SHOP_STALL_UNTIL").format({"day": int(st["rent_day"])}))
 	var info := _label(_box, " · ".join(bits), UiTheme.MUTED_LABEL)
 	if not ShopRules.has_charter(s, loc):
 		info.add_theme_color_override("font_color", UiTheme.WARN)
@@ -164,7 +164,7 @@ func _registry(s: GameSession, data: Dictionary) -> void:
 		return
 	var rent: Dictionary = PropertyRules.kind_cfg(data, "stall")["rent"]  # the stall — an object rented (v0.7.39.5)
 	var mine := PropertyRules.rented(s, data, "stall", loc)
-	var until := int(PropertyRules.state(s.character)[mine]["rent_until"]) if not mine.is_empty() else 0
+	var until := int(PropertyRules.state(s.character)[mine]["rent_day"]) if not mine.is_empty() else 0
 	_label(_box, tr("SHOP_STALL_HINT").format({"place": GameState.world().room_short(room), "rent": Money.format(int(rent["cp_day"]))})
 		+ (" · " + tr("SHOP_STALL_UNTIL").format({"day": until}) if until >= s.day else ""))
 	var stall := HBoxContainer.new()

@@ -130,10 +130,10 @@ func test_the_vault_keeps_things_and_takes_a_fee() -> void:
 	_days(s, 21)
 	var v := BankRules.vault(s.character, "npc_changer")
 	assert_int(int(v["coins"])).is_equal(0)
-	assert_int(int(v["owed"])).is_equal(50)
+	assert_int(Ledger.owed(s, "vault:npc_changer")).is_equal(50)
 	assert_str(BankRules.vault_why(s, data, "npc_changer", "out", "silver_ring", 0)).is_empty()
 	BankRules.vault_move(s, data, "npc_changer", "out", "silver_ring", 0)
-	assert_int(int(v["owed"])).is_equal(0)
+	assert_int(Ledger.owed(s, "vault:npc_changer")).is_equal(0)
 	assert_int(int(s.character["inventory"]["silver_ring"])).is_equal(1)
 
 

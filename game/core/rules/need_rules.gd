@@ -45,12 +45,7 @@ static func set_value(s: GameSession, data: Dictionary, need: String, v: float) 
 
 ## The stage the need is in now ({} — fine): the lowest of rules.needs.<need>.stages it is below.
 static func stage(s: GameSession, data: Dictionary, need: String) -> Dictionary:
-	var v := value(s, data, need)
-	var out := {}
-	for st: Dictionary in cfg(data)[need]["stages"]:
-		if v < float(st["below"]):
-			out = st
-	return out
+	return Scale.below(cfg(data)[need]["stages"], value(s, data, need))
 
 
 ## The needs that show now: [{need, chip, line}] for the panel chips and the master's effects.

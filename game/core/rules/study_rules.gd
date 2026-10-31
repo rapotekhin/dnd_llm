@@ -287,7 +287,7 @@ static func exam_chance(s: GameSession, data: Dictionary, sid: String) -> int:
 	if ex.is_empty():
 		return 100
 	var b := CheckEngine.bonus_for(s.character, {"skill": str(ex["skill"])}) + DifficultyRules.bonus(s, data)
-	return JobRules._chance(b, int(ex["dc"]), false)
+	return Roll.chance(b, int(ex["dc"]), false)
 
 
 ## The entrance exam (exam_why first). Lines.
@@ -300,11 +300,9 @@ static func exam(s: GameSession, data: Dictionary, sid: String) -> Array[String]
 	if not ex.is_empty() and not rec.is_empty():
 		lines.append("%s — без экзамена: рекомендация %s" % [sc["name"], rec])
 	elif not ex.is_empty():
-		var nat := s.rng.randi_range(1, 20)
-		var parts := RollParts.skill(s, data, str(ex["skill"]))
-		var total := nat + RollParts.sum(parts)
-		RollParts.note(s, "%s — экзамен" % sc["name"], [nat], nat, parts, total - nat, int(ex["dc"]))
-		margin = 5 if nat == 20 else -5 if nat == 1 else total - int(ex["dc"])
+		var r := Roll.hero(s, data, {"what": "%s — экзамен" % sc["name"], "skill": str(ex["skill"]), "dc": int(ex["dc"])})
+		var total := int(r["total"])
+		margin = int(r["margin"])
 		lines.append("%s — экзамен: %s %d против Сл %d — %s" % [sc["name"], CraftRules.tr_skill(data, str(ex["skill"])), total, int(ex["dc"]),
 			"сдан" if margin >= 0 else "не сдан"])
 		if margin < 0:
@@ -326,8 +324,9 @@ static func fee(s: GameSession, data: Dictionary, id: String) -> int:
 	if not sid.is_empty() and bool(school_state(s.character).get(sid, {}).get("stipend", false)):
 		return 0
 	var who := str(co.get("teacher", school(data, sid).get("head", "") if not sid.is_empty() else ""))
-	return roundi(int(co.get("fee_cp", 0)) * float(DevelopmentRules.effect(s.character, data, "study", "fee_pct", 100.0)) / 100.0
-		* BondRules.mentor_fee_pct(s, data, who) / 100.0)  # v0.7.31: a mentor asks less
+	var q := Price.start(int(co.get("fee_cp", 0)))
+	Price.mod(q, "навык учёбы", float(DevelopmentRules.effect(s.character, data, "study", "fee_pct", 100.0)))
+	return Price.rounded(Price.mod(q, "наставник", BondRules.mentor_fee_pct(s, data, who)))  # v0.7.31: a mentor asks less
 
 
 static func lessons_needed(s: GameSession, data: Dictionary, id: String) -> int:
@@ -369,7 +368,7 @@ static func enroll_why(s: GameSession, data: Dictionary, id: String) -> String:
 static func enroll(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var c := s.character
 	var f := fee(s, data, id)
-	c["gold_cp"] = int(c.get("gold_cp", 0)) - f
+	Ledger.add(s, -f, "study:enroll")
 	var lines: Array[String] = ["Записаны на курс «%s» (%s) — %s, занятий %d%s" % [name_of(s, data, id), npc_name(s, data, str(course(s, data, id)["teacher"])),
 		teaches_text(s, data, id), lessons_needed(s, data, id), (", плата " + Money.format(f)) if f > 0 else ""]]
 	lines.append_array(_dorm_open(s, data, str(course(s, data, id).get("school", ""))))
@@ -451,18 +450,13 @@ static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 
 static func lesson_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	var ch := _check(s, data, id)
-	return JobRules._chance(int(ch["bonus"]), int(course(s, data, id).get("dc", 10)), bool(ch["adv"]))
+	return Roll.chance(int(ch["bonus"]), int(course(s, data, id).get("dc", 10)), bool(ch["adv"]))
 
 
 static func outcome_for(s: GameSession, data: Dictionary, margin: int) -> Dictionary:
-	var out: Dictionary = cfg(data)["outcomes"][0]
-	for o: Dictionary in cfg(data)["outcomes"]:
-		var from := int(o["from"])
-		if str(o["id"]) == "great":
-			from = int(DevelopmentRules.effect(s.character, data, "study", "great_from", float(from)))
-		if margin >= from:
-			out = o
-	return out
+	var steps: Array = (cfg(data)["outcomes"] as Array).map(func(o: Dictionary) -> Dictionary:
+		return o if str(o["id"]) != "great" else o.merged({"from": DevelopmentRules.effect(s.character, data, "study", "great_from", float(o["from"]))}, true))
+	return Scale.step(steps, margin, "from", steps[0])
 
 
 ## A lesson of `minutes` (the time already passed); a lesson broken off counts nothing. Lines.
@@ -478,15 +472,12 @@ static func lesson(s: GameSession, data: Dictionary, id: String, minutes: int) -
 	st["lesson_day"] = s.day
 	st["last"] = s.day
 	var ch := _check(s, data, id)
-	var mods := ConditionRules.check_mods(c, data, {"skill": str(co.get("skill", "history"))})
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls := FeatureRules.hero_d20(s, bool(ch["adv"]), dis)
-	var nat: int = rolls.max() if bool(ch["adv"]) and not dis else rolls.min() if dis and not bool(ch["adv"]) else rolls[0]
 	var dc := int(co.get("dc", 10))
-	var total := nat + int(ch["bonus"])
-	RollParts.note(s, name_of(s, data, id), rolls, nat, ch["parts"], int(ch["bonus"]), dc)
-	var margin := 5 if nat == 20 else -5 if nat == 1 else total - dc
-	var o := outcome_for(s, data, margin)
+	var r := Roll.hero(s, data, {"what": name_of(s, data, id), "skill": str(co.get("skill", "history")), "parts": ch["parts"], "bonus": ch["bonus"],
+		"dc": dc, "adv": ch["adv"]})
+	var nat := int(r["nat"])
+	var total := int(r["total"])
+	var o := outcome_for(s, data, int(r["margin"]))
 	st["progress"] = int(st["progress"]) + int(o.get("progress", 0))
 	var need := lessons_needed(s, data, id)
 	var lines: Array[String] = ["%s: %s %d %s %d = %d против Сл %d — %s (%d/%d)" % [name_of(s, data, id), ch["label"], nat, "−" if total < nat else "+", absi(total - nat), total, dc,

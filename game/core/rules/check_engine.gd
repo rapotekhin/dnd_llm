@@ -25,21 +25,15 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 		return {"error": "unknown save: %s" % save}
 
 	var lucky := bool(params.get("reroll_ones", false))  # a halfling's Lucky (v0.7.10)
-	var d20 := func() -> int:
-		var r := rng.randi_range(1, 20)
-		return rng.randi_range(1, 20) if r == 1 and lucky else r
-	var rolls: Array[int] = [d20.call()]
 	# The LLM may suggest a situational advantage, but only with a reason that the card shows. Disadvantage comes
 	# from the engine (conditions, ConditionRules); both cancel out (5e).
 	var adv := params.get("advantage_reason") != null and not str(params.get("advantage_reason", "")).is_empty()
 	var dis := not str(params.get("disadvantage_reason", "")).is_empty()
-	if adv != dis:
-		rolls.append(d20.call())
-	var nat: int = rolls.max() if adv or not dis else rolls.min()
+	var rolls := Roll.dice(rng, adv, dis, lucky)
+	var nat := Roll.kept(rolls, adv, dis)
 	var dc := int(params["dc"]) if params.has("dc") else int(tiers[tier])
 	var total := nat + bonus
-	# House rule (ADR-0008 §2): natural 20 / 1 always succeed / fail, skill checks included.
-	var success := nat == 20 or (nat != 1 and total >= dc)
+	var success := Roll.succeeds(nat, total, dc)
 	var auto_fail := str(params.get("auto_fail_reason", ""))
 	if not auto_fail.is_empty():
 		success = false

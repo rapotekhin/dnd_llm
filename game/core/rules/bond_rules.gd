@@ -59,16 +59,8 @@ static func here(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 ## The step of the bond: {name, at, hostile} or {} under the first step.
 static func step(c: Dictionary, data: Dictionary, npc_id: String) -> Dictionary:
 	var p := points(c, npc_id)
-	var out := {}
-	if p < 0:
-		for h: Dictionary in cfg(data)["hostile"]:
-			if p <= int(h["at"]):
-				out = {"name": str(h["name"]), "at": int(h["at"]), "hostile": true}
-		return out
-	for st: Dictionary in cfg(data)["kinds"][kind(c, npc_id)]["steps"]:
-		if p >= int(st["at"]):
-			out = {"name": str(st["name"]), "at": int(st["at"]), "hostile": false}
-	return out
+	var st := Scale.below(cfg(data)["hostile"], p, "at", true) if p < 0 else Scale.step(cfg(data)["kinds"][kind(c, npc_id)]["steps"], p)
+	return {} if st.is_empty() else {"name": str(st["name"]), "at": int(st["at"]), "hostile": p < 0}
 
 
 static func word(c: Dictionary, data: Dictionary, npc_id: String) -> String:
@@ -80,10 +72,7 @@ static func next_at(c: Dictionary, data: Dictionary, npc_id: String) -> int:
 	var p := points(c, npc_id)
 	if p < 0:
 		return 0
-	for st: Dictionary in cfg(data)["kinds"][kind(c, npc_id)]["steps"]:
-		if int(st["at"]) > p:
-			return int(st["at"])
-	return -1
+	return Scale.next(cfg(data)["kinds"][kind(c, npc_id)]["steps"], p)
 
 
 static func enemy(c: Dictionary, data: Dictionary, npc_id: String) -> bool:
@@ -310,7 +299,7 @@ static func _bonus(s: GameSession, data: Dictionary) -> int:
 
 
 static func confess_chance(s: GameSession, data: Dictionary, npc_id: String) -> int:
-	return JobRules._chance(_bonus(s, data), confess_dc(s, data, npc_id), false)
+	return Roll.chance(_bonus(s, data), confess_dc(s, data, npc_id), false)
 
 
 ## A confession: a Persuasion check against the NPC; yes — a romance, no — a step back and a wait. Lines.
@@ -318,14 +307,11 @@ static func confess(s: GameSession, data: Dictionary, npc_id: String) -> Array[S
 	var c := s.character
 	var k: Dictionary = cfg(data)["confess"]
 	var who := npc_name(s, data, npc_id)
-	var mods := ConditionRules.check_mods(c, data, {"skill": str(k["skill"])})
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls := FeatureRules.hero_d20(s, false, dis)
-	var nat: int = rolls.min() if dis else rolls[0]
-	var b := _bonus(s, data)
 	var dc := confess_dc(s, data, npc_id)
-	RollParts.note(s, "Признание", rolls, nat, RollParts.skill(s, data, str(k["skill"])), b, dc)
-	var ok := nat == 20 or (nat != 1 and nat + b >= dc)
+	var r := Roll.hero(s, data, {"what": "Признание", "skill": str(k["skill"]), "dc": dc})
+	var nat := int(r["nat"])
+	var b := int(r["bonus"])
+	var ok := bool(r["ok"])
 	var e := _rw(c, npc_id)
 	e["confess_day"] = s.day
 	var lines: Array[String] = ["Признание — %s: Убеждение %d %s %d = %d против Сл %d — %s" % [who, nat, "−" if b < 0 else "+", absi(b), nat + b, dc,
@@ -364,11 +350,7 @@ static func break_off(s: GameSession, data: Dictionary, npc_id: String) -> Array
 
 
 static func _tier(table: Array, p: int, key: String, none: int) -> int:
-	var out := none
-	for row: Dictionary in table:
-		if p >= int(row["at"]):
-			out = int(row[key])
-	return out
+	return int(Scale.step(table, p).get(key, none))
 
 
 static func _alive(s: GameSession, npc_id: String) -> bool:
@@ -393,9 +375,9 @@ static func buy_pct(s: GameSession, data: Dictionary, npc_id: String) -> int:
 static func service_cost(s: GameSession, data: Dictionary, npc_id: String, cost: int) -> int:
 	var faith := 100 - FaithRules.discount_pct(s, data, npc_id)  # v0.7.49: a priest of the hero's god
 	if entry(s.character, npc_id).is_empty():
-		return ceili(cost * faith / 100.0)
+		return Price.ceiled(Price.mod(Price.start(cost), "вера", faith))
 	var pct := _tier(cfg(data)["perks"]["service_pct"], points(s.character, npc_id), "pct", 100)
-	return ceili(cost * pct / 100.0 * faith / 100.0)
+	return Price.ceiled(Price.mod(Price.mod(Price.start(cost), "дружба", pct), "вера", faith))
 
 
 ## Close enough to give a bed, to hide, to serve the wanted hero.

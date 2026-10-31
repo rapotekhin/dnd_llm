@@ -125,7 +125,7 @@ func test_the_night_rats_trial_cut_and_expulsion() -> void:
 	assert_str(HeistRules.status(s.character, "heist_townhall")).is_equal("active")
 	OrgRules.on_heist(s, data, "heist_townhall", "done", 1500)
 	assert_bool(OrgRules.member(s.character, "night_rats")).is_true()
-	assert_int(int(OrgRules.view(s.character)["night_rats"]["owed_cp"])).is_equal(300)
+	assert_int(Ledger.owed(s, "cut:night_rats")).is_equal(300)
 	assert_bool(FenceRules.known(s, data, "npc_merchant")).is_true()
 	assert_bool(OrgRules.offered(s, data, "night_rats").has("heist_convoy")).is_true()
 	OrgRules.pay(s, data, "night_rats")

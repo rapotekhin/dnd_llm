@@ -534,7 +534,7 @@
 		"help_cp": {"spouse": 25, "teen": 10, "adult": 20},
 		"hunger": {"bond": -3, "leave_days": 7},
 		"names": {"male": ["Ратибор", "Мирон", "Всеслав", "Ждан", "Олег", "Светозар", "Яромир", "Добрыня"], "female": ["Лада", "Весна", "Злата", "Милана", "Любава", "Ярослава", "Дарина", "Снежана"]},
-		"heir": {"keep": ["property", "bank", "shop"]}
+		"heir": {"keep": ["property", "bank", "shop", "debts"]}
 	},
 	"underworld": {
 		"_doc": "The underworld (v0.7.33, the author: burglary, robbery, smuggling; a fence of the pack and the master's; an organization with a trial, ranks, jobs and a cut, a hideout, founded by the hero; the guard never learns of membership). A criminal job (HeistRules) — `kinds`: where and when the act is, its check (`act` skills or tool, the better one), preparations (`steps`, each once a day, a success gives `prep_bonus` to the act), what a failure brings (`fail`: crime, seized, fight) and the crime the victim reports (`crime`), `trace_chance` — a plain success leaves a trace: the crime is known. `outcomes` by the margin. A fence (FenceRules) buys stolen goods at `fence.buy_pct` of the value (honest traders of the owner's location refuse them) and sells `fence.stock` to those who know it: a criminal background's contact, a member of its organization, the master's `fence` with reveal. Organizations (OrgRules): ranks by points, a trial job, a cut of the loot owed to the head, unpaid past `owe_days` — expelled and the head an enemy; the hideout — rest, the guard does not look there. The hero founds one for `found_fee_cp` in an owned place; friends (bond `recruit_bond`) join and bring `member_income_cp` a day into its till, each caught by `member_caught_chance` a day.",

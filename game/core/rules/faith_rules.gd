@@ -116,11 +116,7 @@ static func add_favor(c: Dictionary, data: Dictionary, god_id: String, n: int) -
 
 ## The step of favor: the last of rules.faith.steps whose `at` is reached.
 static func step(data: Dictionary, n: int) -> Dictionary:
-	var out: Dictionary = {}
-	for st: Dictionary in cfg(data)["steps"]:
-		if n >= int(st["at"]):
-			out = st
-	return out
+	return Scale.step(cfg(data)["steps"], n)
 
 
 static func step_of(c: Dictionary, data: Dictionary, god_id: String) -> Dictionary:
@@ -320,7 +316,7 @@ static func donate_why(s: GameSession, data: Dictionary) -> String:
 static func donate(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
 	var gid := str(_here(s, data)["god"])
-	c["gold_cp"] = int(c["gold_cp"]) - _cp(data, "donation")
+	Ledger.add(s, -_cp(data, "donation"), "faith:donate")
 	var d: Array = view(c).get("donated", {}).get(gid, [-1, 0])
 	_rw(c)["donated"][gid] = [s.day, (int(d[1]) if int(d[0]) == s.day else 0) + 1]
 	var n := int(cfg(data)["donation"]["favor"])
@@ -405,7 +401,7 @@ static func atone_why(s: GameSession, data: Dictionary) -> String:
 static func atone(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
 	var what := broken(c, data)
-	c["gold_cp"] = int(c["gold_cp"]) - atone_cost(c, data)
+	Ledger.add(s, -atone_cost(c, data), "faith:atone")
 	var f := _rw(c)
 	for v: Dictionary in f["vows"]:
 		if int(v.get("broken", -1)) >= 0:
@@ -444,7 +440,7 @@ static func convert(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
 	var gid := str(_here(s, data)["god"])
 	var old := hero_god(c)
-	c["gold_cp"] = int(c["gold_cp"]) - convert_cost(c, data)
+	Ledger.add(s, -convert_cost(c, data), "faith:convert")
 	var f := _rw(c)
 	f["god"] = gid
 	f["converted"] = s.day

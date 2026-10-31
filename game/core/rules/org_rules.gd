@@ -33,7 +33,7 @@ static func _st(c: Dictionary, id: String) -> Dictionary:
 	if not (c.get("orgs") is Dictionary):
 		c["orgs"] = {}
 	if not c["orgs"].has(id):
-		c["orgs"][id] = {"points": 0, "owed_cp": 0}
+		c["orgs"][id] = {"points": 0}
 	return c["orgs"][id]
 
 
@@ -75,12 +75,7 @@ static func ranks(s: GameSession, data: Dictionary, id: String) -> Array:
 
 static func rank(s: GameSession, data: Dictionary, id: String) -> int:
 	var pts := int(view(s.character).get(id, {}).get("points", 0))
-	var r := 0
-	var list := ranks(s, data, id)
-	for i in list.size():
-		if pts >= int(list[i]["at"]):
-			r = i
-	return r
+	return Scale.index(ranks(s, data, id), pts)
 
 
 static func rank_name(s: GameSession, data: Dictionary, id: String) -> String:
@@ -205,7 +200,7 @@ static func entry_why(s: GameSession, data: Dictionary, id: String) -> String:
 static func pay_entry(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var d := def(s, data, id)
 	var fee := int(d["entry_cp"])
-	s.character["gold_cp"] = int(s.character.get("gold_cp", 0)) - fee
+	Ledger.add(s, -fee, "org:pay_entry")
 	var lines: Array[String] = ["%s: вход оплачен — %s" % [org_name(s, data, id), Money.format(fee)]]
 	lines.append_array(SiteRules.grant(s, data, str(d.get("head", "")), hideout_site(s, data, id)))
 	return lines
@@ -351,9 +346,7 @@ static func on_heist(s: GameSession, data: Dictionary, heist: String, outcome: S
 	st["points"] = maxi(0, int(st.get("points", 0)) + int(data["rules"]["underworld"]["rep"].get(outcome, 0)))
 	var cut := money_cp * int(def(s, data, id).get("cut_pct", 0)) / 100
 	if cut > 0:
-		if int(st.get("owed_cp", 0)) == 0:
-			st["owed_day"] = s.day
-		st["owed_cp"] = int(st.get("owed_cp", 0)) + cut
+		Ledger.owe(s, "cut:" + id, "cut", cut, str(def(s, data, id).get("head", "")))
 		lines.append("Доля братству «%s»: %s — отдать главе за %d дн." % [org_name(s, data, id), Money.format(cut), int(cfg(data)["owe_days"])])
 	if rank(s, data, id) > before:
 		lines.append("%s «%s»: вы теперь — %s" % [str(word(s, data, id)["nom"]).capitalize(), org_name(s, data, id), rank_name(s, data, id)])
@@ -361,7 +354,7 @@ static func on_heist(s: GameSession, data: Dictionary, heist: String, outcome: S
 
 
 static func pay_why(s: GameSession, data: Dictionary, id: String) -> String:
-	var owed := int(view(s.character).get(id, {}).get("owed_cp", 0))
+	var owed := Ledger.owed(s, "cut:" + id)
 	if owed <= 0:
 		return "ORG_NOTHING_OWED"
 	if not BondRules.here(s, data, str(def(s, data, id).get("head", ""))):
@@ -372,11 +365,9 @@ static func pay_why(s: GameSession, data: Dictionary, id: String) -> String:
 
 
 static func pay(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	var st := _st(s.character, id)
-	var owed := int(st["owed_cp"])
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - owed
-	st["owed_cp"] = 0
-	st.erase("owed_day")
+	var owed := Ledger.owed(s, "cut:" + id)
+	Ledger.add(s, -owed, "org:pay")
+	Ledger.forgive(s, "cut:" + id)
 	return ["Доля отдана главе (%s): %s" % [head_name(s, data, id), Money.format(owed)]]
 
 
@@ -409,7 +400,7 @@ static func found(s: GameSession, data: Dictionary, name: String, place: String)
 	var nm := name.strip_edges().left(40)
 	orgs["own"] = {"name": nm, "kind": "criminal", "head": OwnerRules.HERO, "place": place, "members": [], "cut_pct": 0, "generated": true}
 	gen["orgs"] = orgs
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - int(cfg(data)["found_fee_cp"])
+	Ledger.add(s, -int(cfg(data)["found_fee_cp"]), "org:found")
 	return ["Основано братство «%s» — логово в «%s», %s на обзаведение" % [nm, PropertyRules.name_of(s, data, place), Money.format(int(cfg(data)["found_fee_cp"]))],
 		"Зовите друзей в братство — кнопка «В братство» у NPC"]
 
@@ -459,10 +450,10 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
 	for id: String in view(c):
 		var st: Dictionary = view(c)[id]
-		if member(c, id) and int(st.get("owed_cp", 0)) > 0 and s.day - int(st.get("owed_day", s.day)) > int(cfg(data)["owe_days"]):
+		if member(c, id) and Ledger.owed(s, "cut:" + id) > 0 and s.day - Ledger.since(s, "cut:" + id) > int(cfg(data)["owe_days"]):
 			st.erase("joined")
 			st["expelled_day"] = s.day
-			st["owed_cp"] = 0
+			Ledger.forgive(s, "cut:" + id)
 			var head := str(def(s, data, id).get("head", ""))
 			lines.append("Братство «%s» изгоняет вас: доля не отдана" % org_name(s, data, id))
 			lines.append_array(BondRules.add(s, data, head, int(cfg(data)["expel_bond"]), "не отдал долю"))
@@ -533,7 +524,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 			parts.append("«%s» — испытание у %s" % [org_name(s, data, id), head_name(s, data, id)])
 		else:
 			parts.append("«%s» — %s (%d очков)%s" % [org_name(s, data, id), rank_name(s, data, id), int(st.get("points", 0)),
-				", должен долю %s" % Money.format(int(st["owed_cp"])) if int(st.get("owed_cp", 0)) > 0 else ""])
+				", должен долю %s" % Money.format(Ledger.owed(s, "cut:" + id)) if Ledger.owed(s, "cut:" + id) > 0 else ""])
 	for npc: String in SceneRules.npcs(s, data["world"], s.room_id):
 		for id: String in of_head(s, data, npc):
 			if not mine(s, data).has(id):

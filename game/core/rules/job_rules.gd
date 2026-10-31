@@ -172,16 +172,7 @@ static func hire_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	if hire_auto(s, data):
 		return 100
 	var b := CheckEngine.bonus_for(s.character, {"skill": str(cfg(data)["hire"]["skill"])}) + DifficultyRules.bonus(s, data)
-	return _chance(b, hire_dc(s, data, id), false)
-
-
-static func _chance(b: int, need: int, adv: bool) -> int:
-	var wins := 0
-	for nat in range(1, 21):
-		if nat == 20 or (nat != 1 and nat + b >= need):
-			wins += 1
-	var p := wins / 20.0
-	return roundi((1.0 - (1.0 - p) * (1.0 - p) if adv else p) * 100.0)
+	return Roll.chance(b, hire_dc(s, data, id), false)
 
 
 ## The interview (hire_why first). Lines.
@@ -253,15 +244,11 @@ static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 
 static func shift_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	var ch := _check(s, data, id)
-	return _chance(int(ch["bonus"]), dc(s, data, id), bool(ch["adv"]))
+	return Roll.chance(int(ch["bonus"]), dc(s, data, id), bool(ch["adv"]))
 
 
 static func outcome_for(data: Dictionary, margin: int) -> Dictionary:
-	var out: Dictionary = cfg(data)["outcomes"][0]
-	for o: Dictionary in cfg(data)["outcomes"]:
-		if margin >= int(o["from"]):
-			out = o
-	return out
+	return Scale.step(cfg(data)["outcomes"], margin, "from", cfg(data)["outcomes"][0])
 
 
 ## A shift worked for `minutes` (the time already passed). A shift broken off pays its share without a check.
@@ -274,22 +261,19 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 	var lines: Array[String] = []
 	if minutes < full:
 		var part := roundi(pay(s, data, id) * float(minutes) / float(full))
-		c["gold_cp"] = int(c.get("gold_cp", 0)) + part
+		Ledger.add(s, part, "job:shift")
 		lines.append("Смена прервана: %s" % Money.format(part))
 		return {"lines": lines, "event": "", "fight": []}
 	var ch := _check(s, data, id)
-	var mods := ConditionRules.check_mods(c, data, {"skill": str(j.get("skill", "craft"))})
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls := FeatureRules.hero_d20(s, bool(ch["adv"]), dis)
-	var nat: int = rolls.max() if bool(ch["adv"]) and not dis else rolls.min() if dis and not bool(ch["adv"]) else rolls[0]
 	var d := dc(s, data, id)
-	var total := nat + int(ch["bonus"])
-	RollParts.note(s, str(j.get("name", id)), rolls, nat, ch["parts"], int(ch["bonus"]), d)
-	var margin := 5 if nat == 20 else -5 if nat == 1 else total - d
-	var o := outcome_for(data, margin)
+	var r := Roll.hero(s, data, {"what": str(j.get("name", id)), "skill": str(j.get("skill", "craft")), "parts": ch["parts"], "bonus": ch["bonus"],
+		"dc": d, "adv": ch["adv"]})
+	var nat := int(r["nat"])
+	var total := int(r["total"])
+	var o := outcome_for(data, int(r["margin"]))
 	var got := roundi(pay(s, data, id) * float(o.get("pay", 1.0)))
 	var tips := roundi(pay(s, data, id) * float(o.get("tips", 0.0)) * float(DevelopmentRules.effect(c, data, "work", "tips_mult", 1.0)))
-	c["gold_cp"] = int(c.get("gold_cp", 0)) + got + tips
+	Ledger.add(s, got + tips, "job:shift")
 	st["shifts"] = int(st.get("shifts", 0)) + 1
 	lines.append("%s: %s %d + %d = %d против Сл %d — %s" % [j.get("name", id), ch["label"], nat, total - nat, total, d, o["name"]])
 	lines.append("Плата: %s%s" % [Money.format(got), (", чаевые %s" % Money.format(tips)) if tips > 0 else ""])

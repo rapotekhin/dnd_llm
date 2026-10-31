@@ -31,12 +31,7 @@ static func xp(c: Dictionary, dir: String) -> int:
 
 ## The level by the experience: 0 … the last threshold of rules.development.xp.
 static func level(c: Dictionary, data: Dictionary, dir: String) -> int:
-	var lvl := 0
-	var table: Array = cfg(data)["xp"]
-	for i in table.size():
-		if xp(c, dir) >= int(table[i]):
-			lvl = i
-	return lvl
+	return Scale.index(cfg(data)["xp"], xp(c, dir))
 
 
 ## The experience the next level needs (-1 — the top).

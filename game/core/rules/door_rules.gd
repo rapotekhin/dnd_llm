@@ -215,12 +215,10 @@ static func hit(s: GameSession, data: Dictionary, a: String, b: String) -> Array
 	var c := s.character
 	var mat: Dictionary = cfg(data)["materials"].get(str(def(data, a, b).get("material", "wood")), {})
 	var w := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
-	var d20 := s.rng.randi_range(1, 20)
-	var total := d20 + int(w["to_hit"])
-	RollParts.note(s, "Удар по двери", [d20], d20, _hit_parts(w), int(w["to_hit"]), int(mat.get("ac", 15)))
-	if d20 != 20 and (d20 == 1 or total < int(mat.get("ac", 15))):
-		return ["%s: удар по двери — %d против КД %d, без толку" % [w["name"], total, int(mat.get("ac", 15))]]
-	var dmg := maxi(1, CombatRules.roll_dice(s.rng, str(w["dice"]), d20 == 20) + int(w["bonus"]))
+	var r := Roll.hero(s, data, {"what": "Удар по двери", "parts": _hit_parts(w), "bonus": w["to_hit"], "dc": int(mat.get("ac", 15))})
+	if not bool(r["ok"]):
+		return ["%s: удар по двери — %d против КД %d, без толку" % [w["name"], int(r["total"]), int(mat.get("ac", 15))]]
+	var dmg := maxi(1, CombatRules.roll_dice(s.rng, str(w["dice"]), int(r["nat"]) == 20) + int(w["bonus"]))
 	if hurt(s, data, a, b, dmg):
 		return ["%s: %d урона — дверь разбита" % [w["name"], dmg]]
 	return ["%s: %d урона — двери осталось %d из %d" % [w["name"], dmg, hp(s, data, a, b), max_hp(data, def(data, a, b))]]

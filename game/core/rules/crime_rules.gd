@@ -232,7 +232,7 @@ static func spread(s: GameSession, data: Dictionary) -> Array[String]:
 		while int(crime.get("searched_days", 0)) < days and not bool(crime["known"]):
 			crime["searched_days"] = int(crime.get("searched_days", 0)) + 1
 			var dc := int(crime["hide_dc"]) + int(h["day_step"]) * int(crime["searched_days"])
-			if s.rng.randi_range(1, 20) + int(h["search_bonus"]) >= dc:
+			if Roll.d20(s.rng) + int(h["search_bonus"]) >= dc:
 				lines.append("Нашли спрятанное тело: %s" % _name(data, str(crime["victim"])))
 				lines.append_array(_known(s, data, crime))
 	lines.append_array(bury(s, data))
@@ -556,13 +556,13 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 	match how:
 		"bribe":
 			var bcp := bribe(s, data, loc)
-			s.character["gold_cp"] = int(s.character["gold_cp"]) - bcp
+			Ledger.add(s, -bcp, "crime:answer")
 			s.arrest_tried.append("bribe")
 			lines.append("Взятка: −%s" % Money.format(bcp))
 			lines.append_array(let_go(s, data, "Стража смотрит в сторону — но розыск не снят"))
 		"pay":
 			var cp := fine(s, data, loc)
-			s.character["gold_cp"] = int(s.character["gold_cp"]) - cp
+			Ledger.add(s, -cp, "crime:answer")
 			lines.append("Вергельд уплачен: −%s" % Money.format(cp))
 			lines.append_array(_settle(s, data, loc))
 		"stocks":  # the sentence by severity (v0.7.22.10): prison or hard labour, the hero wakes in the law's prison
@@ -643,7 +643,7 @@ static func search_body(s: GameSession, data: Dictionary, npc_id: String) -> Arr
 	var got: Array[String] = []
 	for e: Dictionary in TheftRules.pockets(s, data, npc_id):
 		if int(e.get("cp", 0)) > 0:
-			c["gold_cp"] = int(c["gold_cp"]) + int(e["cp"])
+			Ledger.add(s, int(e["cp"]), "crime:search_body")
 			got.append(Money.format(int(e["cp"])))
 		elif not str(e.get("item_id", "")).is_empty():
 			ItemRules.found(c, data, s.items, str(e["item_id"]), int(e.get("qty", 1)))

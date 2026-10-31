@@ -55,12 +55,7 @@ static func merit(c: Dictionary, id: String) -> int:
 
 
 static func rank(c: Dictionary, data: Dictionary, id: String) -> int:
-	var r := 0
-	var list: Array = def(data, id).get("ranks", [])
-	for i in list.size():
-		if merit(c, id) >= int(list[i]["at"]):
-			r = maxi(r, i)
-	return maxi(r, int(view(c).get(id, {}).get("start_rank", 0)))
+	return maxi(Scale.index(def(data, id).get("ranks", []), merit(c, id)), int(view(c).get(id, {}).get("start_rank", 0)))
 
 
 static func rank_name(c: Dictionary, data: Dictionary, id: String) -> String:
@@ -80,11 +75,7 @@ static func pay(c: Dictionary, data: Dictionary, id: String) -> int:
 
 
 static func _word(list: Array, v: int) -> String:
-	var out := ""
-	for w: Dictionary in list:
-		if v >= int(w["at"]):
-			out = str(w["name"])
-	return out
+	return str(Scale.step(list, v).get("name", ""))
 
 
 static func suspicion_word(c: Dictionary, data: Dictionary, id: String) -> String:
@@ -201,7 +192,7 @@ static func appoint_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	var iv := interview(data, id)
 	if iv.is_empty():
 		return 100
-	return JobRules._chance(CheckEngine.bonus_for(s.character, {"skill": iv["skill"]}) + DifficultyRules.bonus(s, data), int(iv["dc"]), false)
+	return Roll.chance(CheckEngine.bonus_for(s.character, {"skill": iv["skill"]}) + DifficultyRules.bonus(s, data), int(iv["dc"]), false)
 
 
 ## Asked for the office at its chief (appoint_why first). Lines.
@@ -260,13 +251,13 @@ static func elect_why(s: GameSession, data: Dictionary, id: String) -> String:
 
 static func elect_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	var b := CheckEngine.bonus_for(s.character, {"skill": str(cfg(data)["election"]["skill"])}) + DifficultyRules.bonus(s, data)
-	return JobRules._chance(b, election_dc(s, data, id), false)
+	return Roll.chance(b, election_dc(s, data, id), false)
 
 
 ## The election: the fee for the feast and the speech, a check against the reputation. Lines.
 static func elect(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var e: Dictionary = cfg(data)["election"]
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - int(e["fee_cp"])
+	Ledger.add(s, -int(e["fee_cp"]), "office:elect")
 	_st(s.character, id)["election_day"] = s.day
 	var r := EncounterRules.roll(s, data, str(e["skill"]), election_dc(s, data, id))
 	var lines: Array[String] = ["Сход выбирает: %s — угощение %s, речь: %s" % [name_of(data, id), Money.format(int(e["fee_cp"])), r["line"]]]
@@ -291,7 +282,7 @@ static func buy_why(s: GameSession, data: Dictionary, id: String) -> String:
 ## The office bought with a bribe: no conditions, but whispers from the first day. Lines.
 static func buy(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var price := int(def(data, id).get("price_cp", 0))
-	s.character["gold_cp"] = int(s.character["gold_cp"]) - price
+	Ledger.add(s, -price, "office:buy")
 	var lines := _take(s, data, id, "куплено за %s" % Money.format(price))
 	_st(s.character, id)["suspicion"] = int(_st(s.character, id).get("suspicion", 0)) + int(cfg(data)["buy"]["suspicion"])
 	lines.append("О купленном месте шепчутся")
@@ -378,7 +369,7 @@ static func option_chance(s: GameSession, data: Dictionary, o: Dictionary) -> in
 		return 100
 	var ch: Dictionary = o["check"]
 	var b := CheckEngine.bonus_for(s.character, {"skill": str(ch["skill"])}) + DifficultyRules.bonus(s, data)
-	return JobRules._chance(b, int(data["rules"]["dc_tiers"][str(ch.get("tier", "medium"))]), false)
+	return Roll.chance(b, int(data["rules"]["dc_tiers"][str(ch.get("tier", "medium"))]), false)
 
 
 ## One decision (decide_why first; its time already passed). Lines.
@@ -411,7 +402,7 @@ static func _apply(s: GameSession, data: Dictionary, id: String, who: String, fx
 		if rank(c, data, id) > before:
 			lines.append("%s: вы теперь — %s, жалованье %s в неделю" % [name_of(data, id), rank_name(c, data, id), Money.format(pay(c, data, id))])
 	if int(fx.get("pocket_cp", 0)) > 0:
-		c["gold_cp"] = int(c.get("gold_cp", 0)) + int(fx["pocket_cp"])
+		Ledger.add(s, int(fx["pocket_cp"]), "office:apply")
 		lines.append("В карман: %s" % Money.format(int(fx["pocket_cp"])))
 	if fx.has("suspicion"):
 		st["suspicion"] = int(st.get("suspicion", 0)) + int(fx["suspicion"])
@@ -528,7 +519,7 @@ static func _day(s: GameSession, data: Dictionary, id: String, st: Dictionary, d
 	var lines: Array[String] = []
 	var c := s.character
 	if (day - int(st["since"])) % 7 == 0:
-		c["gold_cp"] = int(c.get("gold_cp", 0)) + pay(c, data, id)
+		Ledger.add(s, pay(c, data, id), "office:day")
 		lines.append("%s: жалованье за неделю — %s" % [name_of(data, id), Money.format(pay(c, data, id))])
 	st["suspicion"] = maxi(0, int(st.get("suspicion", 0)) - int(cfg(data)["suspicion_decay"]))
 	if int(st["suspicion"]) >= int(cfg(data)["inquiry_at"]):

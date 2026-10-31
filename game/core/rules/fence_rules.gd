@@ -75,7 +75,7 @@ static func home_location(data: Dictionary, npc_id: String) -> String:
 
 ## What a known fence pays for one stolen unit.
 static func unit_price(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> int:
-	return int(ItemRules.def_of(data["items"], s.items, item_id).get("value_cp", 0)) * buy_pct(s, data, npc_id) / 100
+	return Price.floored(Price.mod(Price.start(int(ItemRules.def_of(data["items"], s.items, item_id).get("value_cp", 0))), "скупщик", buy_pct(s, data, npc_id)))
 
 
 ## The fence's own goods join its stock once a day for those who know it.
