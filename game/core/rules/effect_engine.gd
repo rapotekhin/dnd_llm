@@ -153,7 +153,7 @@ func _made_ids(e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var e := _made_ids(raw, pending)
 	for k: String in ["condition", "teach_id", "item_id", "reward_item_id"]:
-		if str(e.get(k, "")).begins_with("new:") and (k in ["condition", "teach_id"] or str(e[k]).begins_with("new:book:")):
+		if str(e.get(k, "")).begins_with("new:") and (k in ["condition", "teach_id"] or str(e[k]).begins_with("new:book:") or str(e[k]).begins_with("new:scroll:")):
 			return {"reason": "%s: этого ещё не собрали — сначала эффект make с таким key в этом же ходе" % e[k]}
 	var rules: Dictionary = data["rules"]
 	var items: Dictionary = data["items"]
@@ -310,7 +310,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, p
 		"condition":
 			return _plan_condition(s, data, turn_id, e, pending)
 		"make":  # v0.7.63: a status, a skill or a trait of parts, priced by the engine
-			return MakeRules.plan(s, data, e)
+			return MakeRules.plan(s, data, e, pending)
 		"guise":  # v0.7.63: the look a spell laid, a faction's face
 			return Guise.plan(s, data, e, pending)
 		"disease":
@@ -319,6 +319,9 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, p
 			var made := CraftRules.make(s, data, CraftRules.spec_of(e))
 			if made.has("reason"):
 				return {"reason": made["reason"]}
+			var title := str(e.get("book", "")).strip_edges().left(60) if e.get("book") != null else ""
+			if not title.is_empty():  # v0.7.64: a book of it, for a reward or a find; known while it is carried
+				CraftRules.bound(s, made, title, str(e.get("key", "")))
 			return {"plan": made, "summary": "Рецепт: %s — %s, %d ч, Сл %d" % [CraftRules.recipe_name_of(s, data, made["def"], made.get("item", {})),
 				BackgroundRules.tool_name(data, str(made["def"]["tool"])), int(made["def"]["hours"]), int(made["def"]["dc"])]}
 		"job":  # v0.7.26: a job at an employer of the scene
@@ -1013,11 +1016,9 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			else:
 				s.pending_fight = plan["foes"]
 		"cast":
-			SpellRules.cast(c, _data, plan["spell_id"], int(plan["slot"]), s)
-			var cure: Dictionary = _data["rules"]["hero_effects"]["spell_cures"].get(str(plan["spell_id"]), {})
-			if bool(plan.get("on_self", false)) and not cure.is_empty():
-				_extra_lines.append_array(ConditionRules.cure(s, _data, cure, {"kind": "spell", "id": str(plan["spell_id"]),
-					"name": SpellRules.s_name(_data, str(plan["spell_id"]))}))
+			var cast := SpellRules.cast(c, _data, plan["spell_id"], int(plan["slot"]), s, bool(plan.get("on_self", false)))
+			if bool(plan.get("on_self", false)):
+				_extra_lines.append_array(cast.slice(1))  # what landed on the hero; the master tells the cast itself
 		"condition":
 			if bool(plan.get("resisted", false)):
 				return

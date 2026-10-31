@@ -823,7 +823,22 @@ static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	gen["recipes"][str(plan["id"])] = plan["def"]
 	if not (plan.get("item", {}) as Dictionary).is_empty():
 		s.items[str(plan["def"]["output"])] = plan["item"]
+	if plan.has("book"):
+		s.items[str(plan["book"]["id"])] = plan["book"]["item"]
+		return []
 	return learn(s, data, str(plan["id"]))
+
+
+## A recipe bound in a book (v0.7.64): not learned, known while the book is carried. `new:book:<key>` gives it.
+static func bound(s: GameSession, made: Dictionary, title: String, key: String) -> void:
+	var id := "gen_book_" + str(made["id"]).md5_text().left(8)
+	made["def"]["learn"] = true
+	made["key"] = key
+	made["book"] = {"id": id, "item": {"name": title, "item_type": "gear", "value_cp": 2500, "weight": 1, "properties": [],
+		"description": "Рецепт: " + str(made["def"].get("name", "")), "generated": true, "teaches": [str(made["id"])]}}
+	s.items[id] = made["book"]["item"]
+	if not (made.get("item", {}) as Dictionary).is_empty():
+		s.items[str(made["def"]["output"])] = made["item"]
 
 
 ## For the master's snapshot: what the hero can craft, the project. "" — no craft at all.

@@ -332,7 +332,8 @@
             "language",
             "spell",
             "recipe",
-            "trait"
+            "trait",
+            "ability"
           ],
           "title": "Kind",
           "type": "string"
@@ -1140,7 +1141,8 @@
             "language",
             "spell",
             "recipe",
-            "trait"
+            "trait",
+            "ability"
           ],
           "title": "Teach Kind",
           "type": "string"
@@ -2811,7 +2813,7 @@
     },
     "MakeEffect": {
       "additionalProperties": false,
-      "description": "The master builds what neither the data nor 5e has (0.97.0): a status or a passive trait of `parts`, a skill of\nan `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the\nhero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a\ntrait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `give_item`\nitem_id «new:book:<key>». What the parts do not cover is not made: say so in the story, fill `missing_concept`.",
+      "description": "The master builds what neither the data nor 5e has (0.97.0): a status or a passive trait of `parts`, a skill of\nan `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the\nhero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a\ntrait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `give_item`\nitem_id «new:book:<key>». 0.98.0: a spell and an ability with charges of the action's parts (rules.make.act): the\nengine sets the circle, it is not asked. What the parts do not cover is not made: say so in the story, fill\n`missing_concept`.",
       "properties": {
         "ability": {
           "anyOf": [
@@ -2868,9 +2870,22 @@
           "items": {
             "$ref": "#/$defs/MakePart"
           },
-          "maxItems": 6,
+          "maxItems": 10,
           "title": "Parts",
           "type": "array"
+        },
+        "scroll": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scroll"
         },
         "text": {
           "maxLength": 300,
@@ -2882,7 +2897,9 @@
           "enum": [
             "status",
             "skill",
-            "trait"
+            "trait",
+            "spell",
+            "ability"
           ],
           "title": "What",
           "type": "string"
@@ -4932,6 +4949,19 @@
       "additionalProperties": false,
       "description": "A recipe the hero learns from the player's words (0.56.0): «сделаю силок из верёвки». The engine checks the tool\n(the hero must be proficient), the station and DC tier by rules.craft.make; 0.79.0: any item may be the output —\nthe work pays what the materials do not (5e: 5 gp a day of 8 hours), so the engine raises `hours` to that; the hero\nthen makes it in the «Ремесло» window (time, the check, the quality).",
       "properties": {
+        "book": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Book"
+        },
         "dc_tier": {
           "enum": [
             "very_easy",
@@ -4948,6 +4978,12 @@
           "minimum": 1,
           "title": "Hours",
           "type": "integer"
+        },
+        "key": {
+          "default": "",
+          "maxLength": 30,
+          "title": "Key",
+          "type": "string"
         },
         "kind": {
           "const": "recipe",

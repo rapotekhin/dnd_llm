@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.97.0"
+PROTOCOL_VERSION = "0.98.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1150,16 +1150,19 @@ class MakeEffect(_Out):
     an `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the
     hero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a
     trait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `give_item`
-    item_id «new:book:<key>». What the parts do not cover is not made: say so in the story, fill `missing_concept`."""
+    item_id «new:book:<key>». 0.98.0: a spell and an ability with charges of the action's parts (rules.make.act): the
+    engine sets the circle, it is not asked. What the parts do not cover is not made: say so in the story, fill
+    `missing_concept`."""
 
     kind: Literal["make"] = "make"
-    what: Literal["status", "skill", "trait"]
+    what: Literal["status", "skill", "trait", "spell", "ability"]
     key: str = Field(min_length=2, max_length=30)
     name: str = Field(min_length=2, max_length=40)
     text: str = Field(min_length=5, max_length=300)  # what it does, for the player's card
-    parts: list[MakePart] = Field(default_factory=list, max_length=6)
-    ability: SaveAbility | None = None  # a skill's ability
-    book: str | None = Field(default=None, max_length=60)  # a skill's or a trait's book: its title
+    parts: list[MakePart] = Field(default_factory=list, max_length=10)
+    ability: SaveAbility | None = None  # a skill's or an ability's characteristic
+    book: str | None = Field(default=None, max_length=60)  # a book of a skill, a trait, a spell or an ability: its title
+    scroll: str | None = Field(default=None, max_length=60)  # 0.98.0: a spell's scroll, «new:scroll:<key>»: its title
 
 
 class GuiseEffect(_Out):
@@ -1211,6 +1214,8 @@ class RecipeEffect(_Out):
     output_id: str | None = None  # a catalog or library item
     output: GeneratedItem | None = None  # or a new one (as give_item.item)
     qty: int = Field(default=1, ge=1, le=20)
+    book: str | None = Field(default=None, max_length=60)  # 0.98.0: not learned now: a book, «new:book:<key>»
+    key: str = Field(default="", max_length=30)  # the link of the book
 
 
 class CourseRecipe(_Out):
@@ -1247,7 +1252,7 @@ class CourseEffect(_Out):
     kind: Literal["course"] = "course"
     npc_id: str  # an NPC of the scene or a teacher from find_teachers
     name: str = Field(max_length=60)
-    teach_kind: Literal["skill", "tool", "language", "spell", "recipe", "trait"]
+    teach_kind: Literal["skill", "tool", "language", "spell", "recipe", "trait", "ability"]
     teach_id: str
     lessons: int = Field(default=4, ge=1, le=20)
     fee_cp: int = Field(default=0, ge=0)
@@ -1263,7 +1268,7 @@ class ActTeach(_Out):
     the hero reaches the teacher."""
 
     npc: str
-    kind: Literal["skill", "tool", "language", "spell", "recipe", "trait"]
+    kind: Literal["skill", "tool", "language", "spell", "recipe", "trait", "ability"]
     id: str
     name: str = Field(max_length=60)
     lessons: int = Field(default=4, ge=1, le=20)

@@ -139,7 +139,7 @@ static func teaches_text(s: GameSession, data: Dictionary, id: String) -> String
 		"skill": return "%s: %s" % [label, CraftRules.tr_skill(data, what)]
 		"tool": return "%s: %s" % [label, BackgroundRules.tool_name(data, what)]
 		"language": return "%s: %s" % [label, LanguageRules.name_of(data, what)]
-		"spell": return "%s: %s" % [label, str(data["spells"].get(what, {}).get("name", what))]
+		"spell", "ability": return "%s: %s" % [label, str(data["spells"].get(what, {}).get("name", what))]
 		"recipe": return "%s: %s" % [label, CraftRules.recipe_name(s, data, what)]
 		"dev": return "%s: %s +%d" % [label, str(DevelopmentRules.direction(data, what).get("name", what)), int(t.get("xp", 0))]
 	return "%s: %d" % [label, int(course(s, data, id).get("xp", 0))]
@@ -203,9 +203,11 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 		"spell":
 			var sp: Dictionary = data["spells"].get(what, {})
 			var lv := int(sp.get("level", 9))
-			out.append({"text": "заклинатель класса из списка заклинания", "ok": _max_circle(c) >= 0 and (sp.get("classes", []) as Array).has(str(c.get("class", "")))})
+			out.append({"text": "заклинатель класса из списка заклинания", "ok": _max_circle(c) >= 0 and (bool(sp.get("generated", false)) or (sp.get("classes", []) as Array).has(str(c.get("class", ""))))})
 			out.append({"text": "круг %d доступен" % lv, "ok": lv <= maxi(0, _max_circle(c))})
 			out.append({"text": "заклинание ещё не известно", "ok": not _knows_spell(c, what)})
+		"ability":
+			out.append({"text": "этой способности ещё нет", "ok": not _knows_spell(c, what)})
 		"recipe":
 			var r := CraftRules.recipe(s, data, what)
 			if CraftRules.needs_tool(r):
@@ -229,7 +231,7 @@ static func known_already(s: GameSession, data: Dictionary, id: String) -> bool:
 			return CraftRules.proficient(c, what)
 		"language":
 			return LanguageRules.hero(c).has(what)
-		"spell":
+		"spell", "ability":
 			return _knows_spell(c, what)
 		"recipe":
 			return CraftRules.known(s, data).has(what)
@@ -519,7 +521,7 @@ static func grant(s: GameSession, data: Dictionary, id: String) -> Array[String]
 			if not langs.has(what):
 				langs.append(what)
 			c["languages"] = langs
-		"spell":
+		"spell", "ability":
 			var sp: Dictionary = c.get("spells", {})
 			var always: Array = sp.get("always", [])
 			if not always.has(what):
@@ -737,6 +739,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary, teacher_def
 		"tool": ok = CraftRules.cfg(data)["tools"].has(what)
 		"language": ok = data["misc"]["languages"].has(what)
 		"spell": ok = data["spells"].has(what)
+		"ability": ok = MakeRules.is_ability(data, what)
 		"trait": ok = MakeRules.is_trait(data, what)
 		"recipe": ok = not recipe.is_empty() or not CraftRules.recipe(s, data, what).is_empty()
 	if not ok:

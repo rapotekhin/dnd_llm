@@ -168,7 +168,7 @@ func test_vicious_mockery_hampers_the_next_attack() -> void:
 	var s := _hero("bard_yas")
 	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
 	var lines: Array[String] = []
-	CombatRules._spell_rider(s, data, "vicious_mockery", 0, f, true, lines)
+	ActionRules.riders(s, data, "vicious_mockery", 0, f, true, lines)
 	assert_bool(CombatRules._has(f, "mocked")).is_true()
 	f["col"] = 0
 	var turn: Array[String] = []
@@ -181,7 +181,7 @@ func test_ray_of_frost_slows_until_the_hero_turn() -> void:
 	var s := _hero("wizard_yalika")
 	var f := _fight(s, [{"monster": "goblin", "col": 2}])[0]
 	var lines: Array[String] = []
-	CombatRules._spell_rider(s, data, "ray_of_frost", 0, f, true, lines)
+	ActionRules.riders(s, data, "ray_of_frost", 0, f, true, lines)
 	assert_int(int(f["slowed"])).is_equal(10)
 	CombatRules._begin_turn(s, data, lines)
 	assert_bool(f.has("slowed")).is_false()
@@ -192,7 +192,7 @@ func test_shocking_grasp_against_metal_and_no_reaction() -> void:
 	var f := _fight(s, [{"monster": "knight", "col": 0}])[0]
 	assert_bool(CombatRules._metal_armor(data, f)).is_true()
 	var lines: Array[String] = []
-	CombatRules._spell_rider(s, data, "shocking_grasp", 0, f, true, lines)
+	ActionRules.riders(s, data, "shocking_grasp", 0, f, true, lines)
 	assert_bool(bool(f["reacted"])).is_true()
 
 
@@ -200,13 +200,13 @@ func test_acid_arrow_burns_later_and_splashes_on_a_miss() -> void:
 	var s := _hero("wizard_yalika")
 	var f := _fight(s, [{"monster": "ogre", "col": 2}])[0]
 	var lines: Array[String] = []
-	CombatRules._spell_rider(s, data, "acid_arrow", 2, f, true, lines)
+	ActionRules.riders(s, data, "acid_arrow", 2, f, true, lines)
 	assert_str(str(f["acid"])).is_equal("2d4")
 	var hp := int(f["hp"])
 	CombatRules._end_actor(s, data, f, lines)
 	assert_int(int(f["hp"])).is_less(hp)
 	hp = int(f["hp"])
-	CombatRules._spell_rider(s, data, "acid_arrow", 2, f, false, lines)
+	ActionRules.riders(s, data, "acid_arrow", 2, f, false, lines)
 	assert_int(int(f["hp"])).is_less_equal(hp)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("брызги"))).is_true()
 
@@ -774,7 +774,7 @@ func test_hellish_rebuke_burns_the_attacker() -> void:
 	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
 	var hp := int(f["hp"])
 	var lines: Array[String] = []
-	SpellEffects.rebuke(s, data, f, 1, lines)
+	SpellEffects.rebuke(s, data, f, "hellish_rebuke", 1, lines)
 	assert_int(int(f["hp"])).override_failure_message(" · ".join(lines)).is_less(hp)
 
 

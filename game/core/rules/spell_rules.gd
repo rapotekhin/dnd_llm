@@ -57,6 +57,9 @@ static func check(c: Dictionary, data: Dictionary, name: String, slot: int, pend
 	if id.is_empty():
 		return {"reason": "«%s» не подготовлено у персонажа — он не может его сотворить" % sname}
 	var lv := level_of(data, id)
+	var stock := str(data["spells"][id].get("stock", ""))
+	if not stock.is_empty() and Stock.left(c, data, stock) - int(pending.get(stock, 0)) <= 0:
+		return {"reason": "«%s»: заряды кончились — %s" % [sname, "нужен короткий отдых" if Stock.recharge(c, data, stock) == "short" else "нужен долгий отдых"]}
 	if lv == 0 or is_free(c, id):
 		return {"spell_id": id, "slot": 0}
 	if slot == 0:
@@ -73,12 +76,15 @@ static func check(c: Dictionary, data: Dictionary, name: String, slot: int, pend
 ## Spends the slot (check first) and keeps concentration. With the session (v0.7.8) the concentration gets its end
 ## by the spell's duration on the game clock, and a spell cast on the hero (`on_self`) lifts what it cures
 ## (rules.hero_effects.spell_cures). Returns the chat lines.
-static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, session: GameSession = null, on_self: bool = false) -> Array[String]:
+static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, session: GameSession = null, on_self: bool = false, paid: bool = false) -> Array[String]:
 	var s: Dictionary = data["spells"][spell_id]
 	var line := "Заклинание: %s" % s["name"]
-	if slot > 0:
+	if slot > 0 and not paid:  # a scroll or a wand pays for itself
 		Stock.spend(c, "slot_%d" % slot)
 		line += " (ячейка %d круга, осталось %d)" % [slot, slots_left(c, slot)]
+	if s.has("stock"):  # an ability the master built spends its own charges
+		Stock.spend(c, str(s["stock"]))
+		line += " (зарядов %d)" % Stock.left(c, data, str(s["stock"]))
 	var lines: Array[String] = [line]
 	if not (data["rules"].get("invisibility", {}).get("spells", {}) as Dictionary).has(spell_id):
 		lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))  # a spell gives the caster away (v0.7.5)
@@ -122,7 +128,7 @@ static func heal_self(c: Dictionary, data: Dictionary, spell_id: String, slot: i
 	var sp: Dictionary = data["spells"].get(spell_id, {})
 	if not sp.has("heal_at_slot"):
 		return []
-	var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "wis"))))
+	var ab := CharacterRules.mod(CharacterRules.ability(c, str(sp.get("ability", c.get("spell_ability", "wis")))))
 	var expr := str(sp["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
 	var heal := CombatRules.max_dice(expr, ab) if SpellEffects.max_heal(c) else CombatRules.roll_dice(rng, expr, false, ab)
 	if CharacterRules.has_feature(c, "disciple_of_life") and slot > 0:
