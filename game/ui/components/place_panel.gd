@@ -1,23 +1,21 @@
 class_name PlacePanel
-extends Control
+extends ModalFrame
 ## «Взаимодействие с местом» (roadmap v0.7.22.7, big test #17): every thing of the room in one window — take one,
 ## open a container, look closer — and «Забрать всё» on top; the bodies to search. Built like the container window.
 ## v0.7.39.5: on top — the object the room belongs to (ObjectRules): its kind, owner, staff, upgrades, hours, chronicle.
 
+const SCENE := "res://ui/components/place_panel.tscn"
+
 signal container_requested(prop_id: String)
 
 var _box: VBoxContainer
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make("", 900.0)  # one window template (v0.7.22.29, С4)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "ClosePlaceButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "ClosePlaceButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -96,7 +94,7 @@ func _rebuild() -> void:
 	var data := Catalog.data
 	PropRules.ensure_wares(s, data, s.room_id)  # the trader's wares (v0.7.22.8)
 	var can_act := Backend.is_ready() and not GameState.is_busy() and not s.in_conversation() and not CombatRules.active(s)
-	frame.title.text = str(GameState.world().room(s.room_id).get("name", s.room_id))
+	title.text = str(GameState.world().room(s.room_id).get("name", s.room_id))
 	_object(s, data)
 	var takeable: Array = PropRules.take_all_plan(s, data)["take"]
 	var top := HBoxContainer.new()
@@ -136,13 +134,13 @@ func _rebuild() -> void:
 			t.tooltip_text = take_why if not take_why.is_empty() else (tr("PLACE_TAKE_OWNED") if not owner.is_empty() else "")
 		_button(row, "Look_" + pid, tr("BTN_LOOK_AT"), can_act, func() -> String:
 			return "" if GameState.submit(tr("PLACE_LOOK_SAY").format({"name": p["name"]})) else "WAIT_BUSY")
-	for body: Dictionary in bodies:
+	for corpse: Dictionary in bodies:
 		_box.add_child(HSeparator.new())
 		var row := HBoxContainer.new()
 		_box.add_child(row)
-		row.add_child(_label(str(body["name"]) + (" · " + tr("PLACE_SEARCHED") if bool(body["searched"]) else "")))
-		var bid := str(body["npc_id"])
-		if not bool(body["searched"]):
+		row.add_child(_label(str(corpse["name"]) + (" · " + tr("PLACE_SEARCHED") if bool(corpse["searched"]) else "")))
+		var bid := str(corpse["npc_id"])
+		if not bool(corpse["searched"]):
 			_button(row, "PlaceBody_" + bid, tr("BTN_SEARCH_SHORT"), can_act, GameState.search_body.bind(bid))
 		if CrimeRules.can_hide(s, data, bid).is_empty():  # v0.7.22.10: a secret murder — hide the body
 			var hb := _button(row, "HideBody_" + bid, tr("BTN_HIDE_BODY"), can_act, GameState.hide_body.bind(bid))

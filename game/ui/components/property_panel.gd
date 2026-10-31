@@ -1,25 +1,23 @@
 class_name PropertyPanel
-extends Control
+extends ModalFrame
 ## The property window (roadmap v0.7.27): at a seller — its places on sale and the price; at the registry — the deed
 ## for what the hero bought; at a dealer — animals; from the panel — the hero's own places: the deed, the condition,
 ## the till, the worker, upgrades and building, and the acts of the place while the hero is in it. Every act is
 ## GameState.property_act: the engine decides.
 
+const SCENE := "res://ui/components/property_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 var _npc := ""
 var _mode := "mine"
 var _rent_days := 3  # v0.7.42: the days of a beast's rent
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("PROPERTY_TITLE"), 860.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "ClosePropertyButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "ClosePropertyButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -75,7 +73,7 @@ func _rebuild() -> void:
 	var who := str(GameState.world().npc(_npc).get("name", _npc))
 	match _mode:
 		"seller":
-			frame.title.text = tr("PROPERTY_TITLE_AT").format({"name": who})
+			title.text = tr("PROPERTY_TITLE_AT").format({"name": who})
 			var ids := PropertyRules.of_seller(s, data, _npc)
 			var deeds: Array[String] = []
 			var debts: Array[String] = []
@@ -94,7 +92,7 @@ func _rebuild() -> void:
 			for id: String in ids:
 				_sale_row(s, data, id)
 		"animals":
-			frame.title.text = tr("PROPERTY_ANIMALS_AT").format({"name": who})
+			title.text = tr("PROPERTY_ANIMALS_AT").format({"name": who})
 			if MountRules.on(data):  # v0.7.42: the days of a rent by «−/+»
 				_rent_row(data)
 			for m: String in PropertyRules.animals_of(data, _npc):
@@ -105,7 +103,7 @@ func _rebuild() -> void:
 				for cr: Dictionary in MountRules.sellable(s, data, _npc):
 					_sell_animal_row(s, data, cr)
 		_:
-			frame.title.text = tr("PROPERTY_TITLE")
+			title.text = tr("PROPERTY_TITLE")
 			var mine := PropertyRules.state(s.character).keys()
 			if mine.is_empty():
 				_label(_box, tr("PROPERTY_NONE_OWNED"), UiTheme.MUTED_LABEL)
@@ -178,7 +176,7 @@ func _deed_row(s: GameSession, data: Dictionary, id: String) -> void:
 func _tax_row(s: GameSession, data: Dictionary, id: String) -> void:
 	var parts := _row(id + "_tax")
 	_title(parts[0], PropertyRules.name_of(s, data, id))
-	_label(parts[0], tr("PROPERTY_DEBT").format({"money": Money.format(int(PropertyRules.state(s.character)[id]["debt"]))})).add_theme_color_override("font_color", UiTheme.WARN)
+	_label(parts[0], tr("PROPERTY_DEBT").format({"money": Money.format(int(PropertyRules.state(s.character)[id]["debt"]))})).theme_type_variation = UiTheme.WARN_LABEL
 	_button(parts[1], "PropertyTax_" + id, tr("BTN_PROPERTY_TAX"), PropertyRules.pay_tax_why(s, data, id), _act("tax", id))
 
 

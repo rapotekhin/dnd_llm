@@ -1,0 +1,82 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://ui/components/modal_frame.tscn" id="1"]
+[ext_resource type="Script" path="res://ui/components/world_notes.gd" id="2"]
+
+[node name="WorldNotes" instance=ExtResource("1")]
+script = ExtResource("2")
+width = 0.0
+kind = "map"
+
+[node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
+text = "MAP_TITLE"
+
+[node name="SampleText" parent="ModalPanel/Col/ModalScroll/ModalBody" index="0"]
+visible = false
+
+[node name="SampleButton" parent="ModalPanel/Col/ModalFooter" index="0"]
+visible = false
+
+[node name="MapHead" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="1"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MapZoomIn" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/MapHead"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(48, 44)
+text = "+"
+
+[node name="MapZoomOut" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/MapHead"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(48, 44)
+text = "−"
+
+[node name="MapReset" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/MapHead"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "MAP_RESET"
+
+[node name="MapBody" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="2"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="SampleCanvas" type="PanelContainer" parent="ModalPanel/Col/ModalScroll/ModalBody/MapBody" groups=["editor_sample"]]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 420)
+size_flags_horizontal = 3
+theme_type_variation = &"SidePanel"
+
+[node name="SampleCanvasText" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/MapBody/SampleCanvas"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Здесь игра рисует схему мест"
+
+[node name="MapPlace" type="VBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody/MapBody"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(400, 0)
+theme_override_constants/separation = 10
+
+[node name="SampleName" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/MapBody/MapPlace" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Площадь Брода"
+autowrap_mode = 3
+theme_type_variation = &"HeadingLabel"
+
+[node name="SamplePath" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/MapBody/MapPlace" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Брод · Сумеречная Марка"
+autowrap_mode = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="MapLegend" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody" index="3"]
+layout_mode = 2
+text = "MAP_LEGEND"
+autowrap_mode = 3
+size_flags_horizontal = 3
+theme_type_variation = &"MutedLabel"

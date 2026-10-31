@@ -1,22 +1,20 @@
 class_name StudyPanel
-extends Control
+extends ModalFrame
 ## The study window (roadmap v0.7.30): at a teacher — the school's entrance exam (its head) and the courses it teaches;
 ## "" — the hero's courses with their progress and misses, the study books it carries and the finished courses. Every
 ## act is GameState.study_act: the engine decides.
 
+const SCENE := "res://ui/components/study_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 var _npc := ""
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("STUDY_TITLE"), 820.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseStudyButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseStudyButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -40,7 +38,7 @@ func _label(parent: Control, text: String, variation: String = "") -> Label:
 
 
 func _heading(text: String) -> void:
-	_label(_box, text).add_theme_color_override("font_color", UiTheme.ACCENT)
+	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
 
 
 func _buttons(node_name: String) -> HBoxContainer:
@@ -70,7 +68,7 @@ func _button(parent: Control, node_name: String, text: String, why: String, what
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	frame.clear_body()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	_label(_box, tr("BANK_PURSE").format({"money": Money.format(int(s.character.get("gold_cp", 0)))}), UiTheme.MUTED_LABEL)
@@ -81,7 +79,7 @@ func _rebuild() -> void:
 
 
 func _teacher(s: GameSession, data: Dictionary) -> void:
-	frame.title.text = tr("STUDY_TITLE_AT").format({"name": StudyRules.npc_name(s, data, _npc)})
+	title.text = tr("STUDY_TITLE_AT").format({"name": StudyRules.npc_name(s, data, _npc)})
 	for sid: String in StudyRules.headed_by(data, _npc):
 		var sc := StudyRules.school(data, sid)
 		_heading(str(sc["name"]))
@@ -149,7 +147,7 @@ func _course(s: GameSession, data: Dictionary, id: String, _at_teacher: bool) ->
 
 
 func _mine(s: GameSession, data: Dictionary) -> void:
-	frame.title.text = tr("STUDY_TITLE")
+	title.text = tr("STUDY_TITLE")
 	var c := s.character
 	var any := false
 	if not (StudyRules.view(c)["courses"] as Dictionary).is_empty():

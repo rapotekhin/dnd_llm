@@ -1,22 +1,20 @@
 class_name JobPanel
-extends Control
+extends ModalFrame
 ## The work window (roadmap v0.7.26): the jobs of one employer — the check of a shift, its hours and pay by rank, what
 ## the job asks; hire after an interview, a shift while the employer is here, the way to a promotion, quitting. Every
 ## act is GameState.job_act: the engine decides, the master narrates only a shift's event.
 
+const SCENE := "res://ui/components/job_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 var _npc := ""
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("JOB_TITLE"), 820.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseJobButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseJobButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -63,7 +61,7 @@ func _rebuild() -> void:
 		c.queue_free()
 	var s := GameState.session
 	var data := Catalog.data
-	frame.title.text = tr("JOB_TITLE_AT").format({"name": GameState.world().npc(_npc).get("name", _npc)})
+	title.text = tr("JOB_TITLE_AT").format({"name": GameState.world().npc(_npc).get("name", _npc)})
 	var ids := JobRules.of(s, data, _npc)
 	if ids.is_empty():
 		_label(_box, tr("JOB_NONE"), UiTheme.MUTED_LABEL)
@@ -84,8 +82,8 @@ func _job(s: GameSession, data: Dictionary, id: String) -> void:
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 2)
 	row.add_child(col)
-	var title := _label(col, str(j.get("name", id)))
-	title.add_theme_color_override("font_color", UiTheme.ACCENT)
+	var job_name := _label(col, str(j.get("name", id)))
+	job_name.add_theme_color_override("font_color", UiTheme.ACCENT)
 	var check := CraftRules.tr_skill(data, str(j["skill"])) if j.has("skill") else BackgroundRules.tool_name(data, str(j.get("tool", "")))
 	if j.has("skill") and j.has("tool"):
 		check += " (" + tr("JOB_TOOL_HELPS").format({"tool": BackgroundRules.tool_name(data, str(j["tool"]))}) + ")"

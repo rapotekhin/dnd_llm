@@ -1,5 +1,5 @@
 class_name SmallDialog
-extends Control
+extends ModalFrame
 ## Small overlays of v0.6.0 over the game screen: the short rest (how many hit dice to spend), the prepared
 ## spells of the day and (v0.7.8) the long rest — a room at the inn, or a camp with food picked from the pack.
 ## Rules are ExplorationRules / SpellRules; the dialog only collects the choice. One window template since
@@ -11,8 +11,13 @@ const SHORT_REST := "short_rest"
 const PREPARE := "prepare"
 const LONG_REST := "long_rest"
 const WILDS := "wilds"
+const SCENES := {
+	SHORT_REST: "res://ui/components/small_dialog_short_rest.tscn", PREPARE: "res://ui/components/small_dialog_prepare.tscn",
+	LONG_REST: "res://ui/components/small_dialog_long_rest.tscn", WILDS: "res://ui/components/small_dialog_wilds.tscn",
+}
 
-var kind: String
+@export var kind := ""
+
 var picks: Array = []
 ## The food picked for a camp: {item_id: qty}.
 var supplies: Dictionary = {}
@@ -22,37 +27,35 @@ var dice: int = 0
 var ground: String = ""
 var hours: int = 2
 var confirm: Button
-var frame: ModalFrame
 var _box: VBoxContainer
 var _details: DetailsPanel
 
 
-func _init(dialog_kind: String) -> void:
-	kind = dialog_kind
+static func create(dialog_kind: String) -> SmallDialog:
+	return UiScenes.open(SCENES[dialog_kind]) as SmallDialog
+
+
+func required() -> Dictionary:
+	var nodes := super()
+	nodes.merge({"%DialogCancel": "Button", "%DialogConfirm": "Button"})
+	if kind == PREPARE:
+		nodes["%PrepBox"] = "VBoxContainer"
+	return nodes
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make("", {SHORT_REST: 600.0, LONG_REST: 720.0, WILDS: 600.0}.get(kind, 1100.0))
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	_box = body
 	if kind == PREPARE:
-		var split := HBoxContainer.new()
-		split.add_theme_constant_override("separation", 16)
-		frame.body.add_child(split)
-		_box = VBoxContainer.new()
-		_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_box.add_theme_constant_override("separation", 10)
-		split.add_child(_box)
+		_box = UiScenes.need(self, "%PrepBox")
 		_details = DetailsPanel.new(Vector2(400, 320))
 		_details.name = "PrepDetails"
 		_details.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		split.add_child(_details)
-	frame.add_button("BTN_CANCEL", func() -> void: visible = false)
-	confirm = frame.add_button({SHORT_REST: "BTN_REST_CONFIRM", LONG_REST: "BTN_CAMP_CONFIRM", WILDS: "BTN_WILDS_CONFIRM"}.get(kind, "BTN_PREP_CONFIRM"), _on_confirm, true)
-	confirm.name = "DialogConfirm"
+		_box.get_parent().add_child(_details)
+	(UiScenes.need(self, "%DialogCancel") as Button).pressed.connect(func() -> void: visible = false)
+	confirm = UiScenes.need(self, "%DialogConfirm")
+	confirm.pressed.connect(_on_confirm)
 	visibility_changed.connect(func() -> void:
 		if visible and GameState.has_session():
 			var c := GameState.session.character
@@ -86,7 +89,7 @@ func _rebuild() -> void:
 	for ch in _box.get_children():
 		_box.remove_child(ch)
 		ch.queue_free()
-	frame.set_note("")
+	set_note("")
 	var s := GameState.session
 	var c := s.character
 	var data := Catalog.data
@@ -102,7 +105,7 @@ func _rebuild() -> void:
 
 ## The short rest (О1): «−/+» over the hit dice with the expected healing; at full HP only the features come back.
 func _short_rest(s: GameSession, c: Dictionary, data: Dictionary) -> void:
-	frame.title.text = tr("SHORT_REST_TITLE")
+	title.text = tr("SHORT_REST_TITLE")
 	_text(tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}))
 	var left := ExplorationRules.hit_dice_left(c)
 	var die := int(CharacterRules.class_def(c, data).get("hit_die", 8))
@@ -141,7 +144,7 @@ func _short_rest(s: GameSession, c: Dictionary, data: Dictionary) -> void:
 ## Hunting or fishing (v0.7.41): «−/+» over the hours, the stock left, the check and what the gear gives.
 func _wilds(s: GameSession, data: Dictionary) -> void:
 	var d := WildsRules.kind(data, ground)
-	frame.title.text = str(d.get("name", ""))
+	title.text = str(d.get("name", ""))
 	if d.is_empty():
 		confirm.disabled = true
 		return
@@ -172,7 +175,7 @@ func _wilds(s: GameSession, data: Dictionary) -> void:
 		_text(tr("WILDS_POACH").format({"owner": BondRules.npc_name(s, data, WildsRules.owner(s, data))}), UiTheme.MUTED_LABEL)
 	_text(tr("WILDS_UNTIL").format({"clock": TimeRules.clock_after(s, hours * 60)}))
 	var why := WildsRules.why_not(s, data, ground)
-	frame.set_note(why)
+	set_note(why)
 	confirm.disabled = not why.is_empty() or GameState.is_busy()
 
 
@@ -194,7 +197,7 @@ func _prepare(s: GameSession, c: Dictionary, data: Dictionary) -> void:
 	var p := SpellRules.prepare_pool(c, data)
 	var n := mini(int(p["count"]), (p["pool"] as Array).size())
 	picks = picks.filter(func(id: Variant) -> bool: return (p["pool"] as Array).has(id))
-	frame.title.text = tr("PREP_TITLE").format({"n": n})
+	title.text = tr("PREP_TITLE").format({"n": n})
 	var count := _text(tr("PREP_COUNT").format({"picked": picks.size(), "n": n}), UiTheme.HEADING)
 	count.name = "PrepCount"
 	count.add_theme_color_override("font_color", UiTheme.OK if picks.size() == n else UiTheme.ACCENT_BRIGHT)
@@ -215,7 +218,7 @@ func _prepare(s: GameSession, c: Dictionary, data: Dictionary) -> void:
 		for id: String in by_level[lv]:
 			flow.add_child(_prep_box(id, n, data))
 	var err := SpellRules.prepare_error(c, data, s.day, picks)
-	frame.set_note(tr(err) if not err.is_empty() and picks.size() == n else "")
+	set_note(tr(err) if not err.is_empty() and picks.size() == n else "")
 	confirm.disabled = not err.is_empty() or GameState.is_busy()
 
 
@@ -240,7 +243,7 @@ func _prep_box(id: String, n: int, data: Dictionary) -> CheckBox:
 ## The long rest (v0.7.8): an inn's room for its price when there is one here; a camp for food from the pack.
 func _long_rest(s: GameSession, data: Dictionary) -> void:
 	var c := s.character
-	frame.title.text = tr("LONG_REST_TITLE")
+	title.text = tr("LONG_REST_TITLE")
 	_text(tr("LONG_REST_GIVES").format({"clock": "%02d:00" % (int(TimeRules.cfg(data)["wake_minute"]) / 60)}), UiTheme.MUTED_LABEL)
 	var place := ExplorationRules.rest_place(data["world"], s.room_id, s, data)
 	if not place.is_empty():
@@ -292,7 +295,7 @@ func _long_rest(s: GameSession, data: Dictionary) -> void:
 		row.add_child(spin)
 	_text(tr("LONG_REST_POINTS").format({"have": ExplorationRules.camp_points(data, supplies), "need": ExplorationRules.camp_need(data)}))
 	var err := ExplorationRules.camp_error(s, data, supplies)
-	frame.set_note(tr(err) if not err.is_empty() else "")
+	set_note(tr(err) if not err.is_empty() else "")
 	confirm.disabled = not err.is_empty() or GameState.is_busy()
 
 
@@ -300,7 +303,7 @@ func _done(err: String) -> void:
 	if err.is_empty():
 		visible = false
 	else:
-		frame.set_note(tr(err))
+		set_note(tr(err))
 
 
 func _on_confirm() -> void:

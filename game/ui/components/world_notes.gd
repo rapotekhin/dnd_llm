@@ -1,5 +1,5 @@
 class_name WorldNotes
-extends Control
+extends ModalFrame
 ## Map and journal over the game screen (roadmap v0.5.2). Map (v0.7.6): the scheme of visited places and the «?»
 ## behind their exits (MapCanvas), the picked place, its quests and the fast travel there. Journal: quests,
 ## location and conversation summaries, found secrets.
@@ -7,27 +7,49 @@ extends Control
 
 const MAP := "map"
 const JOURNAL := "journal"
+const SCENES := {MAP: "res://ui/components/world_notes_map.tscn", JOURNAL: "res://ui/components/world_notes_journal.tscn"}
 
-var kind: String
+@export var kind := ""
+
 var _box: VBoxContainer
-var frame: ModalFrame
 var _selected := ""  # the picked room on the map
 var _zoom := 1.0
 var _pan := Vector2.ZERO
+var _canvas: MapCanvas
+var _map_body: HBoxContainer
 
 
-func _init(view_kind: String) -> void:
-	kind = view_kind
+static func create(view_kind: String) -> WorldNotes:
+	return UiScenes.open(SCENES[view_kind]) as WorldNotes
+
+
+func required() -> Dictionary:
+	var nodes := super()
+	if kind == MAP:
+		nodes.merge({"%MapZoomIn": "Button", "%MapZoomOut": "Button", "%MapReset": "Button", "%MapBody": "HBoxContainer",
+			"%MapPlace": "VBoxContainer"})
+	else:
+		nodes["%JournalBox"] = "VBoxContainer"
+		for t: String in TABS:
+			nodes["%JournalTab_" + t] = "Button"
+	return nodes
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("MAP_TITLE") if kind == MAP else tr("JOURNAL_TITLE"), 0.0)  # one window template (v0.7.22.29, С4)
-	frame.name = "NotesFrame"
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	if kind == MAP:
+		_box = UiScenes.need(self, "%MapPlace")
+		_map_body = UiScenes.need(self, "%MapBody")
+		(UiScenes.need(self, "%MapZoomIn") as Button).pressed.connect(func() -> void: _canvas.set_zoom(_canvas.zoom * 1.25, _canvas.size / 2))
+		(UiScenes.need(self, "%MapZoomOut") as Button).pressed.connect(func() -> void: _canvas.set_zoom(_canvas.zoom * 0.8, _canvas.size / 2))
+		(UiScenes.need(self, "%MapReset") as Button).pressed.connect(func() -> void: _canvas.reset_view())
+	else:
+		_box = UiScenes.need(self, "%JournalBox")
+		for t: String in TABS:
+			(UiScenes.need(self, "%JournalTab_" + t) as Button).pressed.connect(func() -> void:
+				_tab = t
+				_rebuild())
 	visibility_changed.connect(func() -> void:
 		if visible and kind == JOURNAL and GameState.has_session() and _count(GameState.session, GameState.world(), _tab) == 0:
 			for t: String in TABS:  # an empty tab hides that the others are not (К2)
@@ -77,13 +99,11 @@ func _draw_map() -> void:
 	var s := GameState.session
 	var w := GameState.world()
 	var world: Dictionary = Catalog.data["world"]
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 12)
-	_box.add_child(head)
-	var body := HBoxContainer.new()
-	body.add_theme_constant_override("separation", 16)
-	_box.add_child(body)
+	if _canvas != null:
+		_map_body.remove_child(_canvas)
+		_canvas.queue_free()
 	var canvas := MapCanvas.new()
+	_canvas = canvas
 	canvas.clip_contents = true  # the drawing stays out of the info column
 	canvas.name = "MapCanvas"
 	canvas.custom_minimum_size = Vector2(0, maxf(420.0, get_viewport_rect().size.y - 480.0))  # the overlay height without its header, legend and margins
@@ -117,32 +137,15 @@ func _draw_map() -> void:
 		if bx["locations"].has(loc):
 			canvas.loc_boxes[loc] = bx["locations"][loc]
 			canvas.loc_names[loc] = str(w.location(loc).get("name", loc))
-	for z: Array in [["MapZoomIn", "+", 1.25], ["MapZoomOut", "−", 0.8]]:
-		var b := Button.new()
-		b.name = z[0]
-		b.text = z[1]
-		b.custom_minimum_size = Vector2(48, 44)
-		b.pressed.connect(func() -> void: canvas.set_zoom(canvas.zoom * float(z[2]), canvas.size / 2))
-		head.add_child(b)
-	var reset := Button.new()
-	reset.name = "MapReset"
-	reset.text = "MAP_RESET"
-	reset.pressed.connect(canvas.reset_view)
-	head.add_child(reset)
-	body.add_child(canvas)
+	_map_body.add_child(canvas)
+	_map_body.move_child(canvas, 0)
 	canvas.view_changed.connect(func(z: float, p: Vector2) -> void:
 		_zoom = z
 		_pan = p)
 	canvas.picked.connect(func(r: String) -> void:
 		_selected = r
 		_rebuild())
-	var info := VBoxContainer.new()
-	info.name = "MapPlace"
-	info.custom_minimum_size = Vector2(400, 0)
-	info.add_theme_constant_override("separation", 10)
-	body.add_child(info)
-	_draw_place(info, canvas.selected, canvas.known, canvas.marks)
-	_text(tr("MAP_LEGEND"), UiTheme.MUTED_LABEL)
+	_draw_place(_box, canvas.selected, canvas.known, canvas.marks)
 
 
 ## What the picked room is and the fast travel there: «Идти сюда · N мин» or why not. A picked site («site:<id>»,
@@ -152,12 +155,12 @@ func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks:
 	var w := GameState.world()
 	if room_id.begins_with("site:"):
 		var sid := room_id.trim_prefix("site:")
-		_text(str(w.site(sid).get("name", sid)), UiTheme.HEADING).reparent(info)
-		_text(str(w.location(str(w.site(sid).get("location_id", ""))).get("name", "")), UiTheme.MUTED_LABEL).reparent(info)
+		_text(str(w.site(sid).get("name", sid)), UiTheme.HEADING)
+		_text(str(w.location(str(w.site(sid).get("location_id", ""))).get("name", "")), UiTheme.MUTED_LABEL)
 		if not str(w.site(sid).get("description", "")).is_empty():
-			_text(str(w.site(sid)["description"])).reparent(info)
+			_text(str(w.site(sid)["description"]))
 		var seen: Array = w.site_rooms(sid).filter(func(r: String) -> bool: return s.visited.has(r))
-		_text(tr("MAP_SITE_ROOMS").format({"list": ", ".join(seen.map(func(r: String) -> String: return w.room_short(r)))}), UiTheme.MUTED_LABEL).reparent(info)
+		_text(tr("MAP_SITE_ROOMS").format({"list": ", ".join(seen.map(func(r: String) -> String: return w.room_short(r)))}), UiTheme.MUTED_LABEL)
 		if seen.has(s.room_id):
 			return
 		var to := w.site_entry(sid) if s.visited.has(w.site_entry(sid)) else str(seen[0]) if not seen.is_empty() else ""
@@ -165,24 +168,22 @@ func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks:
 			_travel_button(info, to)
 		return
 	if (known["frontier"] as Array).has(room_id):
-		_text(tr("MAP_UNKNOWN"), UiTheme.HEADING).reparent(info)
-		_text(tr("MAP_UNKNOWN_HINT"), UiTheme.MUTED_LABEL).reparent(info)
+		_text(tr("MAP_UNKNOWN"), UiTheme.HEADING)
+		_text(tr("MAP_UNKNOWN_HINT"), UiTheme.MUTED_LABEL)
 		return
-	_text(str(w.room(room_id).get("name", room_id)), UiTheme.HEADING).reparent(info)
-	_text(w.place_path(room_id), UiTheme.MUTED_LABEL).reparent(info)
+	_text(str(w.room(room_id).get("name", room_id)), UiTheme.HEADING)
+	_text(w.place_path(room_id), UiTheme.MUTED_LABEL)
 	for q: Variant in marks.get(room_id, []):
 		var ql := _text(tr("MAP_QUEST").format({"quest": str(q)}))
 		ql.add_theme_color_override("font_color", UiTheme.WARN)
-		ql.reparent(info)
 	for t: Variant in RumorRules.marks(s, Catalog.data).get(room_id, []):  # v0.7.47
 		var rl := _text(tr("MAP_RUMOR").format({"text": str(t)}))
 		rl.name = "MapRumor"
 		rl.add_theme_color_override("font_color", UiTheme.WARN)
-		rl.reparent(info)
 	if room_id == s.room_id:
 		var exits: Array = ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id).map(func(e: String) -> String:
 			return w.room_short(e))
-		_text(tr("MAP_HERE_EXITS").format({"list": ", ".join(exits)}), UiTheme.MUTED_LABEL).reparent(info)
+		_text(tr("MAP_HERE_EXITS").format({"list": ", ".join(exits)}), UiTheme.MUTED_LABEL)
 		return
 	_travel_button(info, room_id)
 
@@ -223,25 +224,14 @@ var _person_open := ""  # v0.7.22.21 (#18): the person whose card is open in the
 func _draw_journal() -> void:
 	var s := GameState.session
 	var w := GameState.world()
-	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 8)
-	_box.add_child(bar)
 	for t: String in TABS:
-		var b := Button.new()
-		b.name = "JournalTab_" + t
+		var b: Button = UiScenes.need(self, "%JournalTab_" + t)
 		var n := _count(s, w, t)
 		b.text = tr("JOURNAL_TAB_" + t.to_upper()) + (" %d" % n if n > 0 else "")  # how much is there without opening it (К2)
+		b.remove_theme_color_override("font_color")
 		if n == 0:
 			b.add_theme_color_override("font_color", UiTheme.MUTED)
-		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		b.toggle_mode = true
 		b.button_pressed = t == _tab
-		b.custom_minimum_size = Vector2(0, 48)
-		b.pressed.connect(func() -> void:
-			_tab = t
-			_rebuild())
-		bar.add_child(b)
-	_box.add_child(HSeparator.new())
 	if _tab == "people":
 		_draw_people(s, w)
 		return

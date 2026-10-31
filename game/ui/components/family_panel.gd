@@ -1,21 +1,19 @@
 class_name FamilyPanel
-extends Control
+extends ModalFrame
 ## The family window (roadmap v0.7.32): the engagement or the spouse and the home, the children with their age and
 ## stage (a name changed here), the expected child, the upkeep and the help of a day, the heir. Acts — a child at
 ## home with the spouse, a new name; every act is GameState.family_act: the engine decides.
 
+const SCENE := "res://ui/components/family_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("FAMILY_TITLE"), 720.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseFamilyButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseFamilyButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -38,7 +36,7 @@ func _label(parent: Control, text: String, variation: String = "") -> Label:
 
 
 func _heading(text: String) -> void:
-	_label(_box, text).add_theme_color_override("font_color", UiTheme.ACCENT)
+	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
 
 
 func _act(parent: Control, node_name: String, text: String, why: String, what: String, id: String = "", arg: Callable = Callable()) -> Button:
@@ -60,7 +58,7 @@ func _act(parent: Control, node_name: String, text: String, why: String, what: S
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	frame.clear_body()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	var f := FamilyRules.view(s.character)
@@ -109,4 +107,4 @@ func _rebuild() -> void:
 		var l := _label(_box, tr("FAMILY_ECONOMY").format({"upkeep": Money.format(FamilyRules.upkeep(s, data)), "help": Money.format(FamilyRules.help(s, data))}), UiTheme.MUTED_LABEL)
 		l.name = "FamilyEconomy"
 	if int(f.get("hungry", 0)) > 0:
-		_label(_box, tr("FAMILY_HUNGRY").format({"n": int(f["hungry"])})).add_theme_color_override("font_color", UiTheme.BAD)
+		_label(_box, tr("FAMILY_HUNGRY").format({"n": int(f["hungry"])})).theme_type_variation = UiTheme.BAD_LABEL

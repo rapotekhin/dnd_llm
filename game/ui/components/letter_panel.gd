@@ -1,9 +1,11 @@
 class_name LetterPanel
-extends Control
+extends ModalFrame
 ## The letter window (roadmap v0.7.48), opened by «Письмо» at a person with a post: to whom (the people the hero
 ## met, not here), the purpose with its hint, where to come (a helper) or on whom (a denunciation, with the evidence
 ## the hero has), the text, the way with its price, days and risk. «Отправить» is GameState.send_letter: the engine
 ## checks and sends; the master answers on the reply day.
+
+const SCENE := "res://ui/components/letter_panel.tscn"
 
 var poster := ""
 var _to := ""
@@ -13,18 +15,14 @@ var _room := ""
 var _about := ""
 var _text := ""
 var _box: VBoxContainer
-var frame: ModalFrame
 var _send: Button
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("LETTER_TITLE"), 720.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseLetterButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseLetterButton"
+	_box = body
 	visibility_changed.connect(_rebuild)
 
 
@@ -79,15 +77,15 @@ func _refresh_send() -> void:
 	var why := LetterRules.send_why(GameState.session, Catalog.data, poster, _to, _purpose, _text, _way, _extra())
 	_send.disabled = not why.is_empty() or GameState.is_busy()
 	_send.tooltip_text = why
-	frame.set_note(why)
+	set_note(why)
 
 
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	frame.clear_body()
-	for b in frame.footer.get_children():
-		frame.footer.remove_child(b)
+	clear_body()
+	for b in footer.get_children():
+		footer.remove_child(b)
 		b.queue_free()
 	var s := GameState.session
 	var data := Catalog.data
@@ -156,7 +154,7 @@ func _rebuild() -> void:
 		way_texts.append(tr("LETTER_WAY").format({"way": LetterRules.cfg(data)["ways"][way]["name"], "cost": Money.format(int(q.get("cost", 0))),
 			"days": int(q.get("days", 0)), "risk": int(q.get("risk", 0))}) if not q.is_empty() else str(LetterRules.cfg(data)["ways"][way]["name"]))
 	_pick("LetterWay", tr("LETTER_WAY_CAPTION"), ways, way_texts, _way, func(id: String) -> void: _way = id)
-	_send = frame.add_button(tr("BTN_LETTER_SEND"), func() -> void:
+	_send = add_button(tr("BTN_LETTER_SEND"), func() -> void:
 		var err := GameState.send_letter(poster, _to, _purpose, _text, _way, _extra())
 		if not err.is_empty():
 			EventBus.message.emit(tr(err))

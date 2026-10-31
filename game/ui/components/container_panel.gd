@@ -1,22 +1,20 @@
 class_name ContainerPanel
-extends Control
+extends ModalFrame
 ## The contents window (roadmap v0.7.18.1): what lies in a container of the room — take each thing or put the hero's
 ## own in, within its capacity; a locked one shows the ways to open it (a key, thieves' tools, force). Built like the
 ## pockets window (TheftPanel).
 
+const SCENE := "res://ui/components/container_panel.tscn"
+
 var prop_id := ""
 var _box: VBoxContainer
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make("", 820.0)  # one window template (v0.7.22.29, С4)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseContainerButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseContainerButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -68,7 +66,7 @@ func _rebuild() -> void:
 	var can_act := not GameState.is_busy()
 	var cap := float(p["capacity_lb"]) if p.has("capacity_lb") else float(ContainerRules.kind(data, str(p["container"]))["capacity_lb"])  # v0.7.42: a pack, a cart
 	var contents: Dictionary = p.get("contents", {})
-	frame.title.text = str(p["name"])
+	title.text = str(p["name"])
 	var owner := str(p.get("owner", ""))
 	var meta := tr("CONTAINER_LOAD").format({"w": _num(ContainerRules.weight(data, s.items, contents)), "cap": _num(cap)})
 	if not owner.is_empty():

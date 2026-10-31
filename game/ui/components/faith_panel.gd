@@ -1,21 +1,19 @@
 class_name FaithPanel
-extends Control
+extends ModalFrame
 ## The shrine window (roadmap v0.7.49), opened by «Святилище» in a room with a shrine: whose it is and its
 ## commandment, the hero's faith and favor, the acts (a service, a donation, the blessing, the atonement, taking the
 ## faith) and the vows with their gifts. Every act is GameState.faith_act: the engine checks and does it.
 
+const SCENE := "res://ui/components/faith_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("FAITH_TITLE"), 720.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseFaithButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseFaithButton"
+	_box = body
 	visibility_changed.connect(_rebuild)
 	EventBus.state_changed.connect(func() -> void:
 		if visible:
@@ -58,7 +56,7 @@ func _act(parent: Control, node_name: String, text: String, what: String, why: S
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	frame.clear_body()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	var c := s.character

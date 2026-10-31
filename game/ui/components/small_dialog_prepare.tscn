@@ -1,0 +1,90 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://ui/components/modal_frame.tscn" id="1"]
+[ext_resource type="Script" path="res://ui/components/small_dialog.gd" id="2"]
+
+[node name="SmallDialog" instance=ExtResource("1")]
+script = ExtResource("2")
+width = 1100.0
+kind = "prepare"
+
+[node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
+auto_translate_mode = 2
+text = "Заклинания дня: 2 из 4"
+
+[node name="SampleText" parent="ModalPanel/Col/ModalScroll/ModalBody" index="0"]
+visible = false
+
+[node name="SampleButton" parent="ModalPanel/Col/ModalFooter" index="0"]
+visible = false
+
+[node name="PrepSplit" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="1"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PrepBox" type="VBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="Sample1" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit/PrepBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Первый круг"
+autowrap_mode = 3
+
+[node name="Sample2" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit/PrepBox" groups=["editor_sample"]]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit/PrepBox/Sample2"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Щит веры"
+autowrap_mode = 3
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit/PrepBox/Sample2"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Выбрать"
+
+[node name="Sample3" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit/PrepBox" groups=["editor_sample"]]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit/PrepBox/Sample3"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Лечение ран"
+autowrap_mode = 3
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit/PrepBox/Sample3"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Выбрать"
+
+[node name="SampleDetails" type="PanelContainer" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit" groups=["editor_sample"]]
+layout_mode = 2
+custom_minimum_size = Vector2(400, 320)
+size_flags_vertical = 0
+theme_type_variation = &"SidePanel"
+
+[node name="SampleDetailsText" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/PrepSplit/SampleDetails"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Здесь игра ставит панель описания"
+autowrap_mode = 3
+
+[node name="DialogCancel" type="Button" parent="ModalPanel/Col/ModalFooter" index="1"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 52)
+text = "BTN_CANCEL"
+
+[node name="DialogConfirm" type="Button" parent="ModalPanel/Col/ModalFooter" index="2"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 52)
+text = "BTN_PREP_CONFIRM"
+theme_type_variation = &"AccentButton"

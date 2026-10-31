@@ -1,0 +1,333 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/components/trade_panel.gd" id="1"]
+
+[node name="TradePanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="TradeBg" type="ColorRect" parent="."]
+layout_mode = 1
+color = Color(0.09019608, 0.07450981, 0.05882353, 1)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TradeMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 28
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Split" type="HBoxContainer" parent="TradeMargin"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Col" type="VBoxContainer" parent="TradeMargin/Split"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Head" type="HBoxContainer" parent="TradeMargin/Split/Col"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Who" type="VBoxContainer" parent="TradeMargin/Split/Col/Head"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TradeTitle" type="Label" parent="TradeMargin/Split/Col/Head/Who"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Бруно"
+theme_type_variation = &"HeadingLabel"
+
+[node name="TradePartner" type="Label" parent="TradeMargin/Split/Col/Head/Who"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "трактирщик, человек"
+theme_type_variation = &"MutedLabel"
+
+[node name="TradeToTalk" type="Button" parent="TradeMargin/Split/Col/Head"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+text = "BTN_TO_TALK"
+
+[node name="TradeLeave" type="Button" parent="TradeMargin/Split/Col/Head"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+text = "BTN_LEAVE_CONVERSATION"
+
+[node name="Purses" type="HBoxContainer" parent="TradeMargin/Split/Col"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="TradePurse" type="Label" parent="TradeMargin/Split/Col/Purses"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "У торговца 120 зм"
+theme_type_variation = &"MutedLabel"
+
+[node name="TradeCoins" type="Label" parent="TradeMargin/Split/Col/Purses"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "У вас 40 зм"
+
+[node name="DealState" type="Label" parent="TradeMargin/Split/Col/Purses"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "торг: скидка 10%"
+size_flags_horizontal = 3
+autowrap_mode = 3
+theme_type_variation = &"BrightLabel"
+
+[node name="Cols" type="HBoxContainer" parent="TradeMargin/Split/Col"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="StockPanel" type="PanelContainer" parent="TradeMargin/Split/Col/Cols"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SidePanel"
+
+[node name="StockCol" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel"]
+layout_mode = 2
+
+[node name="StockHead" type="Label" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol"]
+layout_mode = 2
+text = "TRADE_STOCK"
+theme_type_variation = &"CaptionLabel"
+
+[node name="StockScroll" type="ScrollContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="TradeStock" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="Sample1" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock" groups=["editor_sample"]]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample1"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Верёвка, 1 зм"
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample1"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "+"
+
+[node name="Sample2" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock" groups=["editor_sample"]]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample2"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Факел, 1 см"
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample2"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "+"
+
+[node name="Sample3" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock" groups=["editor_sample"]]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample3"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Паёк, 5 см"
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample3"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "+"
+
+[node name="DealPanel" type="PanelContainer" parent="TradeMargin/Split/Col/Cols"]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 0)
+theme_type_variation = &"SidePanel"
+
+[node name="DealCol" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DealScroll" type="ScrollContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="DealBox" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="BuyHead" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+layout_mode = 2
+text = "TRADE_YOU_BUY"
+theme_type_variation = &"CaptionLabel"
+
+[node name="TradeBuyRows" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SampleBuy" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox/TradeBuyRows" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Верёвка ×1"
+theme_type_variation = &"MutedLabel"
+
+[node name="SellHead" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+layout_mode = 2
+text = "TRADE_YOU_SELL"
+theme_type_variation = &"CaptionLabel"
+
+[node name="TradeSellRows" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SampleSell" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox/TradeSellRows" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Пока ничего"
+theme_type_variation = &"MutedLabel"
+
+[node name="TradeServices" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TradeTotal" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "К оплате 1 зм"
+autowrap_mode = 3
+
+[node name="TradeError" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Здесь причина, почему сделка не проходит"
+autowrap_mode = 3
+theme_type_variation = &"WarnLabel"
+
+[node name="HaggleButton" type="Button" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 56)
+size_flags_horizontal = 3
+text = "Торговаться (Убеждение)"
+
+[node name="Row" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ClearCartButton" type="Button" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+size_flags_horizontal = 3
+text = "BTN_CLEAR_CART"
+
+[node name="DealButton" type="Button" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+size_flags_horizontal = 3
+text = "BTN_DEAL"
+theme_type_variation = &"AccentButton"
+
+[node name="YoursPanel" type="PanelContainer" parent="TradeMargin/Split/Col/Cols"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SidePanel"
+
+[node name="YoursCol" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel"]
+layout_mode = 2
+
+[node name="YoursHead" type="Label" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol"]
+layout_mode = 2
+text = "TRADE_YOURS"
+theme_type_variation = &"CaptionLabel"
+
+[node name="YoursScroll" type="ScrollContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="TradeYours" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="Sample1" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours" groups=["editor_sample"]]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours/Sample1"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Кинжал, 1 зм"
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours/Sample1"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "+"
+
+[node name="Sample2" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours" groups=["editor_sample"]]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours/Sample2"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Шкура волка, 5 см"
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours/Sample2"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "+"
+
+[node name="SampleDetails" type="PanelContainer" parent="TradeMargin/Split" groups=["editor_sample"]]
+layout_mode = 2
+custom_minimum_size = Vector2(420, 0)
+theme_type_variation = &"SidePanel"
+
+[node name="SampleDetailsText" type="Label" parent="TradeMargin/Split/SampleDetails"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Здесь игра ставит панель описания и чат"
+autowrap_mode = 3

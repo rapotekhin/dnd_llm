@@ -6,7 +6,7 @@ extends ModalFrame
 
 signal answered(yes: bool)
 
-const BOX_SCENE := "res://ui/components/confirm_box.tscn"
+const SCENE := "res://ui/components/confirm_box.tscn"
 
 var never: CheckBox
 var yes: Button
@@ -18,7 +18,7 @@ static func ask(host: Node, title_text: String, body_text: String, yes_label: St
 	if not SaveManager.confirm_risky:
 		go.call()
 		return null
-	var box := UiScenes.open(BOX_SCENE) as ConfirmBox
+	var box := UiScenes.open(SCENE) as ConfirmBox
 	box.setup(title_text, 640.0)
 	box.fill(body_text, yes_label)
 	box.answered.connect(func(ok: bool) -> void:

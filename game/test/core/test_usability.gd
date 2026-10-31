@@ -63,7 +63,7 @@ func test_the_journal_groups_by_tab_and_location() -> void:
 	s.visited.append_array(["brod-square", "pushcha-edge"])
 	s.summaries["dialogue:npc_innkeeper"] = "Бруно рассказал о пропавших."
 	s.room_id = "brod-tavern-hall"
-	var notes := WorldNotes.new(WorldNotes.JOURNAL)
+	var notes := WorldNotes.create(WorldNotes.JOURNAL)
 	notes._tab = "places"
 	var places := notes._groups(s, GameState.world())
 	assert_array(places.map(func(g: Dictionary) -> String: return g["title"])).contains(["Сумеречная Пуща"])

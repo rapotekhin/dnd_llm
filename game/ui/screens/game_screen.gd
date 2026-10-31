@@ -215,48 +215,48 @@ func _ready() -> void:
 	side.office_requested.connect(func(chief: String) -> void: _office.open(chief))  # v0.7.34
 	row.add_child(side)
 
-	_sheet = CharacterSheet.new()
+	_sheet = UiScenes.open(CharacterSheet.SCENE) as CharacterSheet
 	_sheet.name = "CharacterSheet"
 	_sheet.visible = false
 	add_child(_sheet)
 	_sheet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_map = WorldNotes.new(WorldNotes.MAP)
+	_map = WorldNotes.create(WorldNotes.MAP)
 	_map.name = "MapView"
-	_journal = WorldNotes.new(WorldNotes.JOURNAL)
+	_journal = WorldNotes.create(WorldNotes.JOURNAL)
 	_journal.name = "JournalView"
 	for v: WorldNotes in [_map, _journal]:
 		v.visible = false
 		add_child(v)
 		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	_short_rest = SmallDialog.new(SmallDialog.SHORT_REST)
+	_short_rest = SmallDialog.create(SmallDialog.SHORT_REST)
 	_short_rest.name = "ShortRestView"
-	_prepare = SmallDialog.new(SmallDialog.PREPARE)
+	_prepare = SmallDialog.create(SmallDialog.PREPARE)
 	_prepare.name = "PrepareView"
-	_long_rest = SmallDialog.new(SmallDialog.LONG_REST)
+	_long_rest = SmallDialog.create(SmallDialog.LONG_REST)
 	_long_rest.name = "LongRestView"
-	_wilds = SmallDialog.new(SmallDialog.WILDS)
+	_wilds = SmallDialog.create(SmallDialog.WILDS)
 	_wilds.name = "WildsView"
 	for v: SmallDialog in [_short_rest, _prepare, _long_rest, _wilds]:
 		v.visible = false
 		add_child(v)
 		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_theft = TheftPanel.new()
+	_theft = UiScenes.open(TheftPanel.SCENE) as TheftPanel
 	_theft.name = "TheftView"
 	_theft.visible = false
 	add_child(_theft)
 	_theft.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_container = ContainerPanel.new()  # v0.7.18.1
+	_container = UiScenes.open(ContainerPanel.SCENE) as ContainerPanel  # v0.7.18.1
 	_container.name = "ContainerView"
 	_container.visible = false
 	add_child(_container)
 	_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	trade_panel = TradePanel.new()  # a screen of its own over everything (v0.7.22.10, the author: «как в BG3»)
+	trade_panel = UiScenes.open(TradePanel.SCENE) as TradePanel  # a screen of its own over everything (v0.7.22.10, the author: «как в BG3»)
 	trade_panel.name = "TradePanel"
 	trade_panel.visible = false
 	add_child(trade_panel)
 	trade_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_place = PlacePanel.new()  # v0.7.22.7: the things of the room
+	_place = UiScenes.open(PlacePanel.SCENE) as PlacePanel  # v0.7.22.7: the things of the room
 	_place.name = "PlaceView"
 	_place.visible = false
 	add_child(_place)
@@ -265,87 +265,87 @@ func _ready() -> void:
 		_place.visible = false
 		_container.open(prop))
 	move_child(_container, -1)  # the container opens over the place window
-	_board = BoardPanel.new()  # v0.7.22.13: a notice board's orders
+	_board = UiScenes.open(BoardPanel.SCENE) as BoardPanel  # v0.7.22.13: a notice board's orders
 	_board.name = "BoardView"
 	_board.visible = false
 	add_child(_board)
 	_board.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_craft = CraftPanel.new()  # v0.7.24
+	_craft = UiScenes.open(CraftPanel.SCENE) as CraftPanel  # v0.7.24
 	_craft.name = "CraftView"
 	_craft.visible = false
 	add_child(_craft)
 	_craft.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_jobs = JobPanel.new()  # v0.7.26
+	_jobs = UiScenes.open(JobPanel.SCENE) as JobPanel  # v0.7.26
 	_jobs.name = "JobView"
 	_jobs.visible = false
 	add_child(_jobs)
 	_jobs.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_property = PropertyPanel.new()  # v0.7.27
+	_property = UiScenes.open(PropertyPanel.SCENE) as PropertyPanel  # v0.7.27
 	_property.name = "PropertyView"
 	_property.visible = false
 	add_child(_property)
 	_property.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_bank = BankPanel.new()  # v0.7.28
+	_bank = UiScenes.open(BankPanel.SCENE) as BankPanel  # v0.7.28
 	_bank.name = "BankView"
 	_bank.visible = false
 	add_child(_bank)
 	_bank.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_shop = ShopPanel.new()  # v0.7.29
+	_shop = UiScenes.open(ShopPanel.SCENE) as ShopPanel  # v0.7.29
 	_shop.name = "ShopView"
 	_shop.visible = false
 	add_child(_shop)
 	_shop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_study = StudyPanel.new()  # v0.7.30
+	_study = UiScenes.open(StudyPanel.SCENE) as StudyPanel  # v0.7.30
 	_study.name = "StudyView"
 	_study.visible = false
 	add_child(_study)
 	_study.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_bond = BondPanel.new()  # v0.7.31
+	_bond = UiScenes.open(BondPanel.SCENE) as BondPanel  # v0.7.31
 	_bond.name = "BondView"
 	_bond.visible = false
 	add_child(_bond)
 	_bond.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_contest = ContestPanel.new()  # v0.7.40
+	_contest = UiScenes.open(ContestPanel.SCENE) as ContestPanel  # v0.7.40
 	_contest.name = "ContestView"
 	_contest.visible = false
 	add_child(_contest)
 	_contest.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_arena = ArenaPanel.new()  # v0.7.45
+	_arena = UiScenes.open(ArenaPanel.SCENE) as ArenaPanel  # v0.7.45
 	_arena.name = "ArenaView"
 	_arena.visible = false
 	add_child(_arena)
 	_arena.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_letter = LetterPanel.new()  # v0.7.48
+	_letter = UiScenes.open(LetterPanel.SCENE) as LetterPanel  # v0.7.48
 	_letter.name = "LetterView"
 	_letter.visible = false
 	add_child(_letter)
 	_letter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_faith = FaithPanel.new()  # v0.7.49
+	_faith = UiScenes.open(FaithPanel.SCENE) as FaithPanel  # v0.7.49
 	_faith.name = "FaithView"
 	_faith.visible = false
 	add_child(_faith)
 	_faith.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_pet = PetPanel.new()  # v0.7.43
+	_pet = UiScenes.open(PetPanel.SCENE) as PetPanel  # v0.7.43
 	_pet.name = "PetView"
 	_pet.visible = false
 	add_child(_pet)
 	_pet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_family = FamilyPanel.new()  # v0.7.32
+	_family = UiScenes.open(FamilyPanel.SCENE) as FamilyPanel  # v0.7.32
 	_family.name = "FamilyView"
 	_family.visible = false
 	add_child(_family)
 	_family.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_heists = HeistPanel.new()  # v0.7.33
+	_heists = UiScenes.open(HeistPanel.SCENE) as HeistPanel  # v0.7.33
 	_heists.name = "HeistView"
 	_heists.visible = false
 	add_child(_heists)
 	_heists.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_org = OrgPanel.new()
+	_org = UiScenes.open(OrgPanel.SCENE) as OrgPanel
 	_org.name = "OrgView"
 	_org.visible = false
 	add_child(_org)
 	_org.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_office = OfficePanel.new()  # v0.7.34
+	_office = UiScenes.open(OfficePanel.SCENE) as OfficePanel  # v0.7.34
 	_office.name = "OfficeView"
 	_office.visible = false
 	add_child(_office)
@@ -361,7 +361,7 @@ func _ready() -> void:
 	add_child(_level_up)
 	_level_up.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	_image = ImageCard.new()
+	_image = UiScenes.open(ImageCard.SCENE) as ImageCard
 	_image.name = "ImageView"
 	_image.visible = false
 	add_child(_image)
@@ -372,7 +372,7 @@ func _ready() -> void:
 		brush.busy = b
 		_refresh())
 
-	_pause = PauseMenu.new()
+	_pause = UiScenes.open(PauseMenu.SCENE) as PauseMenu
 	_pause.visible = false
 	add_child(_pause)
 	_pause.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

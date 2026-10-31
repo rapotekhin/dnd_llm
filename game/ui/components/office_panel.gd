@@ -1,23 +1,21 @@
 class_name OfficePanel
-extends Control
+extends ModalFrame
 ## The office window (roadmap v0.7.34): the hero's offices — rank, merit, wage, the whispers about bribes, today's
 ## cases with their options; a town for the headman — treasury, discontent, the tax, projects. Below — the offices
 ## on offer here (at the chief or the election's room): conditions, asking, the election, buying. Every act is
 ## GameState.office_act: the engine decides.
 
+const SCENE := "res://ui/components/office_panel.tscn"
+
 var _box: VBoxContainer
 var _chief := ""
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("OFFICE_TITLE"), 760.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseOfficeButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseOfficeButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -42,7 +40,7 @@ func _label(parent: Control, text: String, variation: String = "") -> Label:
 
 
 func _heading(text: String) -> void:
-	_label(_box, text).add_theme_color_override("font_color", UiTheme.ACCENT)
+	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
 
 
 func _act(parent: Control, node_name: String, text: String, why: String, what: String, id: String, arg: String = "") -> Button:
@@ -77,7 +75,7 @@ func _sep() -> void:
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	frame.clear_body()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	for id: String in OfficeRules.held(s.character):

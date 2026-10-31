@@ -10,7 +10,7 @@ func test_the_digest_holds_what_a_playtest_review_needs() -> void:
 
 
 func test_a_control_is_traced_with_its_screen() -> void:
-	var panel := TheftPanel.new()
+	var panel := UiScenes.open(TheftPanel.SCENE) as TheftPanel
 	var b := Button.new()
 	panel.add_child(b)
 	assert_str(Trace._screen_of(b)).is_equal("TheftPanel")

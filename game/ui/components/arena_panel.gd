@@ -1,25 +1,23 @@
 class_name ArenaPanel
-extends Control
+extends ModalFrame
 ## The arena window (roadmap v0.7.45), opened at its manager: the arena's rule, the hero's rank and wins; enlisting;
 ## the bout of the day — the opponent, the engine's estimate, the prize and a bet on oneself («Точно?» before the blood
 ## pit); the bout of two fighters to bet on — the house's odds, Insight for the true estimate; a festival's
 ## tournament. Every act is GameState.arena_*: the engine decides.
 
+const SCENE := "res://ui/components/arena_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 var _site := ""
 var _bet_self := 0
 var _bet_card := 0
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("ARENA_TITLE"), 760.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseArenaButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseArenaButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -43,11 +41,11 @@ func _label(parent: Control, text: String, variation: String = "") -> Label:
 
 
 func _head(text: String) -> void:
-	_label(_box, text).add_theme_color_override("font_color", UiTheme.ACCENT)
+	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
 
 
 func _act(err: String) -> void:
-	frame.set_note(err)
+	set_note(err)
 	if not err.is_empty():
 		EventBus.message.emit(err)
 
@@ -81,13 +79,13 @@ func _spin(parent: Control, name: String, value: int, max_cp: int, on_change: Ca
 func _rebuild() -> void:
 	if not visible or not GameState.has_session() or _site.is_empty():
 		return
-	frame.clear_body()
-	for b in frame.footer.get_children():
-		frame.footer.remove_child(b)
+	clear_body()
+	for b in footer.get_children():
+		footer.remove_child(b)
 		b.queue_free()
 	var s := GameState.session
 	var data := Catalog.data
-	frame.title.text = ArenaRules.site_name(data, _site)
+	title.text = ArenaRules.site_name(data, _site)
 	var rc := ArenaRules.rule_cfg(data, _site)
 	var rule := _label(_box, tr("ARENA_RULE").format({"rule": str(rc["name"]), "text": str(rc["text"])}))
 	rule.name = "ArenaRule"

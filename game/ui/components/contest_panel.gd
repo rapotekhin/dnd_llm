@@ -1,11 +1,12 @@
 class_name ContestPanel
-extends Control
+extends ModalFrame
 ## The contest window (roadmap v0.7.40): a game with an NPC of the scene for a stake. Before the game — the kind with
 ## both bonuses and the chance of a round, the stake (coins or a thing of the NPC); during it — the score and the
 ## rounds rolled one by one, honestly or cheating, or given up. Every act is GameState.contest_*: the engine decides.
 
+const SCENE := "res://ui/components/contest_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 var _npc := ""
 var _kind := ""
 var _stake := 0
@@ -13,13 +14,10 @@ var _cp := 0
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("CONTEST_TITLE"), 720.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseContestButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseContestButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -47,25 +45,25 @@ func _label(parent: Control, text: String, variation: String = "") -> Label:
 
 
 func _act(err: String) -> void:
-	frame.set_note(err)
+	set_note(err)
 	if not err.is_empty():
 		EventBus.message.emit(err)
 
 
 func _clear_footer() -> void:
-	for b in frame.footer.get_children():
-		frame.footer.remove_child(b)
+	for b in footer.get_children():
+		footer.remove_child(b)
 		b.queue_free()
 
 
 func _rebuild() -> void:
 	if not visible or not GameState.has_session() or _npc.is_empty():
 		return
-	frame.clear_body()
+	clear_body()
 	_clear_footer()
 	var s := GameState.session
 	var data := Catalog.data
-	frame.title.text = tr("CONTEST_TITLE_AT").format({"name": BondRules.npc_name(s, data, _npc)})
+	title.text = tr("CONTEST_TITLE_AT").format({"name": BondRules.npc_name(s, data, _npc)})
 	var st := ContestRules.state(s)
 	if not st.is_empty():
 		_game(s, data, st)
@@ -144,7 +142,7 @@ func _stakes(s: GameSession, data: Dictionary) -> void:
 		spin.value_changed.connect(func(v: float) -> void: _cp = roundi(v * 100))
 		row.add_child(spin)
 	_label(_box, tr("CONTEST_GOLD").format({"money": Money.format(gold)}), UiTheme.MUTED_LABEL)
-	var play := frame.add_button(tr("BTN_CONTEST_PLAY"), func() -> void:
+	var play := add_button(tr("BTN_CONTEST_PLAY"), func() -> void:
 		_act(GameState.contest_start(_npc, _kind, _stake, _cp)), true)
 	play.name = "ContestPlay"
 	play.disabled = GameState.is_busy() or not Backend.is_ready()
@@ -161,15 +159,15 @@ func _game(s: GameSession, data: Dictionary, st: Dictionary) -> void:
 	var o := ContestRules.odds(s, data, str(st["npc"]), str(st["kind"]))
 	_label(_box, tr("CONTEST_ROUND_ODDS").format({"hero": "%+d" % int(o["hero"]), "npc": "%+d" % int(o["npc"]), "p": int(o["chance"])}), UiTheme.MUTED_LABEL)
 	var busy := GameState.is_busy() or not Backend.is_ready()
-	var give := frame.add_button(tr("BTN_CONTEST_FORFEIT"), func() -> void: _act(GameState.contest_forfeit()))
+	var give := add_button(tr("BTN_CONTEST_FORFEIT"), func() -> void: _act(GameState.contest_forfeit()))
 	give.name = "ContestForfeit"
 	give.disabled = busy
 	if not str(k.get("cheat", "")).is_empty():
 		var co := ContestRules.odds(s, data, str(st["npc"]), str(st["kind"]), true)
-		var cheat := frame.add_button(tr("BTN_CONTEST_CHEAT"), func() -> void: _act(GameState.contest_round(true)))
+		var cheat := add_button(tr("BTN_CONTEST_CHEAT"), func() -> void: _act(GameState.contest_round(true)))
 		cheat.name = "ContestCheat"
 		cheat.disabled = busy
 		cheat.tooltip_text = tr("CONTEST_CHEAT_TIP").format({"skill": tr("SKILL_" + str(k["cheat"]).to_upper()), "p": int(co["chance"])})
-	var roll := frame.add_button(tr("BTN_CONTEST_ROLL"), func() -> void: _act(GameState.contest_round(false)), true)
+	var roll := add_button(tr("BTN_CONTEST_ROLL"), func() -> void: _act(GameState.contest_round(false)), true)
 	roll.name = "ContestRoll"
 	roll.disabled = busy

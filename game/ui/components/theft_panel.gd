@@ -1,21 +1,19 @@
 class_name TheftPanel
-extends Control
+extends ModalFrame
 ## The pockets window (roadmap v0.7.0, like in BG3): what the NPC carries — the purse, small things, worn weapons —
 ## each with its DC and the chance by the player's Sleight of Hand. «Стащить» rolls it (GameState.steal); a failure
 ## closes the window: the NPC noticed.
 
+const SCENE := "res://ui/components/theft_panel.tscn"
+
 var npc_id := ""
 var _box: VBoxContainer
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make("", 760.0)  # one window template (v0.7.22.29, С4)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -46,7 +44,7 @@ func _rebuild() -> void:
 	var s := GameState.session
 	var data := Catalog.data
 	var who := str(GameState.world().npc(npc_id).get("name", npc_id))
-	frame.title.text = tr("THEFT_TITLE").format({"name": who})
+	title.text = tr("THEFT_TITLE").format({"name": who})
 	_box.add_child(_label(tr("THEFT_HINT"), UiTheme.MUTED_LABEL))
 	var why := TheftRules.can_steal(s, data, npc_id)
 	if not why.is_empty():

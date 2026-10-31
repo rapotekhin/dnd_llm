@@ -32,8 +32,16 @@ func test_examples_never_reach_the_game() -> void:
 			assert_bool(node.is_in_group(UiScenes.SAMPLE_GROUP)).override_failure_message(node.name).is_false()
 
 
+func test_a_window_takes_its_title_and_width_from_the_scene() -> void:
+	var window: FaithPanel = auto_free(UiScenes.open(FaithPanel.SCENE))
+	add_child(window)
+	assert_float(window.width).is_equal(720.0)
+	assert_str(window.title.text).is_equal("FAITH_TITLE")
+	assert_str(window.close_x.name).is_equal("CloseFaithButton")
+
+
 func test_a_lost_node_is_a_stand_in() -> void:
-	var frame: ModalFrame = auto_free(UiScenes.open(ModalFrame.SCENE))
+	var frame: ModalFrame = auto_free(UiScenes.open(ModalFrame.FRAME_SCENE))
 	var lost := frame.get_node("%ModalTitle")
 	lost.get_parent().remove_child(lost)
 	lost.free()

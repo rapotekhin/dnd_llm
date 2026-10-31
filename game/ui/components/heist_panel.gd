@@ -1,21 +1,19 @@
 class_name HeistPanel
-extends Control
+extends ModalFrame
 ## The jobs window (roadmap v0.7.33): the hero's criminal jobs in progress — the target, the hours, the victim, the
 ## loot; the preparations with their chance (each once a day) and the act itself. Every act is GameState.heist_act:
 ## the engine decides.
 
+const SCENE := "res://ui/components/heist_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("HEIST_TITLE"), 720.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseHeistButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseHeistButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -56,7 +54,7 @@ func _act(parent: Control, node_name: String, text: String, why: String, what: S
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	frame.clear_body()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	var list := HeistRules.followed(s, data)  # v0.7.39.3: done jobs stay while the loot is unsold or the cut owed
@@ -68,7 +66,7 @@ func _rebuild() -> void:
 		var k := HeistRules.kind(data, str(d["kind"]))
 		if _box.get_child_count() > 0:
 			_box.add_child(HSeparator.new())
-		_label(_box, "«%s» — %s" % [d["name"], k["name"]]).add_theme_color_override("font_color", UiTheme.ACCENT)
+		_label(_box, "«%s» — %s" % [d["name"], k["name"]]).theme_type_variation = UiTheme.ACCENT_LABEL
 		if not HeistRules.victim_name(s, data, id).is_empty():
 			_label(_box, tr("HEIST_VICTIM").format({"name": HeistRules.victim_name(s, data, id)}), UiTheme.MUTED_LABEL)
 		var n := 0

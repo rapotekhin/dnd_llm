@@ -1,21 +1,19 @@
 class_name CraftPanel
-extends Control
+extends ModalFrame
 ## The craft window (roadmap v0.7.24): the work in hand with its progress and the shifts, the recipes the hero knows —
 ## the tool, the station, the time, the DC and the chance, the materials had and needed — and the things that can be
 ## broken into materials. Every act is GameState.craft_act: the engine passes the time, no master turn.
 
+const SCENE := "res://ui/components/craft_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("CRAFT_TITLE"), 900.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseCraftButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseCraftButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 

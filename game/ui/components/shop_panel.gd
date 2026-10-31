@@ -1,23 +1,21 @@
 class_name ShopPanel
-extends Control
+extends ModalFrame
 ## The own trade window (roadmap v0.7.29): "venue" — the hero's shelf in a place or at a stall: the goods with their
 ## prices (−/+), the till, the hero's shift and what to put out; "registry" — the charter and a stall at the market;
 ## "supplier" — wholesale lots. Every act is GameState.shop_act: the engine decides.
 
+const SCENE := "res://ui/components/shop_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 var _mode := "venue"
 var _id := ""
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("SHOP_TITLE"), 860.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseShopButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseShopButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -42,7 +40,7 @@ func _label(parent: Control, text: String, variation: String = "") -> Label:
 
 
 func _heading(text: String) -> void:
-	_label(_box, text).add_theme_color_override("font_color", UiTheme.ACCENT)
+	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
 
 
 func _row(node_name: String, text: String, variation: String = "") -> HBoxContainer:
@@ -81,7 +79,7 @@ func _item(s: GameSession, id: String) -> String:
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	frame.clear_body()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	_label(_box, tr("BANK_PURSE").format({"money": Money.format(int(s.character.get("gold_cp", 0)))}), UiTheme.MUTED_LABEL)
@@ -92,7 +90,7 @@ func _rebuild() -> void:
 
 
 func _venue(s: GameSession, data: Dictionary) -> void:
-	frame.title.text = tr("SHOP_TITLE_AT").format({"name": ShopRules.name_of(s, data, _id)})
+	title.text = tr("SHOP_TITLE_AT").format({"name": ShopRules.name_of(s, data, _id)})
 	var loc := ShopRules.loc_of(s, data, _id)
 	var bits: Array[String] = [tr("SHOP_HAS_CHARTER") if ShopRules.has_charter(s, loc) else tr("SHOP_NO_CHARTER"),
 		tr("SHOP_REP").format({"word": ShopRules.rep_word(data, ShopRules.rep(s, loc))})]
@@ -152,7 +150,7 @@ func _venue(s: GameSession, data: Dictionary) -> void:
 
 
 func _registry(s: GameSession, data: Dictionary) -> void:
-	frame.title.text = tr("SHOP_TITLE_REGISTRY").format({"name": PropertyRules.npc_name(data, _id)})
+	title.text = tr("SHOP_TITLE_REGISTRY").format({"name": PropertyRules.npc_name(data, _id)})
 	var sc: Dictionary = ShopRules.cfg(data)
 	var held := ShopRules.has_charter(s, GameState.world().location_id(s.room_id))
 	var ch := _row("CharterRow", tr("SHOP_CHARTER_HINT").format({"fee": Money.format(int(sc["charter"]["fee_cp"])), "tax": int(sc["charter"]["tax_pct"])})
@@ -180,9 +178,9 @@ func _registry(s: GameSession, data: Dictionary) -> void:
 
 
 func _supplier(s: GameSession, data: Dictionary) -> void:
-	frame.title.text = tr("SHOP_TITLE_SUPPLIER").format({"name": PropertyRules.npc_name(data, _id)})
+	title.text = tr("SHOP_TITLE_SUPPLIER").format({"name": PropertyRules.npc_name(data, _id)})
 	if not ShopRules.has_charter(s, GameState.world().location_id(s.room_id)):
-		_label(_box, tr("SHOP_NEED_CHARTER")).add_theme_color_override("font_color", UiTheme.WARN)
+		_label(_box, tr("SHOP_NEED_CHARTER")).theme_type_variation = UiTheme.WARN_LABEL
 	var lot := ShopRules.lot(data)
 	for id: String in ShopRules.goods(s, data, _id):
 		var p := ShopRules.wholesale_price(s, data, _id, id)

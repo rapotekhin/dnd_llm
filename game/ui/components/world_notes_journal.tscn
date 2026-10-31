@@ -1,0 +1,123 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://ui/components/modal_frame.tscn" id="1"]
+[ext_resource type="Script" path="res://ui/components/world_notes.gd" id="2"]
+
+[node name="WorldNotes" instance=ExtResource("1")]
+script = ExtResource("2")
+width = 0.0
+kind = "journal"
+
+[node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
+text = "JOURNAL_TITLE"
+
+[node name="SampleText" parent="ModalPanel/Col/ModalScroll/ModalBody" index="0"]
+visible = false
+
+[node name="SampleButton" parent="ModalPanel/Col/ModalFooter" index="0"]
+visible = false
+
+[node name="JournalBar" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="1"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="JournalTab_quests" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBar"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 48)
+toggle_mode = true
+text = "quests"
+
+[node name="JournalTab_places" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBar"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 48)
+toggle_mode = true
+text = "places"
+
+[node name="JournalTab_people" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBar"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 48)
+toggle_mode = true
+text = "people"
+
+[node name="JournalTab_factions" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBar"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 48)
+toggle_mode = true
+text = "factions"
+
+[node name="JournalTab_found" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBar"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 48)
+toggle_mode = true
+text = "found"
+
+[node name="JournalTab_rumors" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBar"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 48)
+toggle_mode = true
+text = "rumors"
+
+[node name="JournalTab_letters" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBar"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 48)
+toggle_mode = true
+text = "letters"
+
+[node name="JournalTab_chronicle" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBar"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 48)
+toggle_mode = true
+text = "chronicle"
+
+[node name="JournalTab_calendar" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBar"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 48)
+toggle_mode = true
+text = "calendar"
+
+[node name="JournalSep" type="HSeparator" parent="ModalPanel/Col/ModalScroll/ModalBody" index="2"]
+layout_mode = 2
+
+[node name="JournalBox" type="VBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="3"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="SampleGroup" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "▾ Сумеречная Марка (2)"
+theme_type_variation = &"AccentLabel"
+
+[node name="SampleLine1" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "   Письмо Ильве — отнести письмо на заставу"
+autowrap_mode = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="SampleLine2" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/JournalBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "   Волки на просеке — расспросить лесорубов"
+autowrap_mode = 3
+theme_type_variation = &"MutedLabel"

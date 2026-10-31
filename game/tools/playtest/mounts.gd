@@ -103,6 +103,8 @@ func run() -> void:
 	# The forest: the road ends at the trail, the cart stays, the horse goes on.
 	await _go(gs, "pushcha-edge")
 	await _go(gs, "pushcha-trail")
+	WeatherRules._state(s)["by_loc"]["pushcha"] = "clear"  # a downpour of the day shuts the ford (v0.7.46)
+	WeatherRules._flags(s, data)
 	await _go(gs, "pushcha-glade")
 	step("the cart stops off the road", PropertyRules.room_of(s, mid) == "pushcha-trail", _last_effects(s))
 	step("the horse goes on", PropertyRules.room_of(s, str(horse["id"])) == "pushcha-glade")

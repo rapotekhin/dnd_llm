@@ -45,6 +45,7 @@ const WARN_LABEL := "WarnLabel"
 const BAD_LABEL := "BadLabel"
 const OK_LABEL := "OkLabel"
 const SMALL_LABEL := "SmallLabel"
+const CAPTION_LABEL := "CaptionLabel"  # a small accent caption over a list
 ## Suffix of the RichTextLabel twins of the chat variations: DmText + Rich (v0.6.6).
 const RICH := "Rich"
 ## Colours of the chat markup: names of people and places, direct speech.

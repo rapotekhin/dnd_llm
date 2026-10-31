@@ -1,5 +1,5 @@
 class_name CharacterSheet
-extends Control
+extends ModalFrame
 ## The character sheet over the game screen (roadmap v0.5.0): abilities, saves and skills; features, traits
 ## and spells; equipment with equip / unequip. Numbers come from the derived cache (CharacterRules.refresh).
 ## v0.6.0: «Использовать» for features with limited uses and consumables, «Колдовать» with a slot choice,
@@ -7,6 +7,9 @@ extends Control
 
 signal prepare_requested
 signal bag_requested(bag_id: String)
+
+const SCENE := "res://ui/components/character_sheet.tscn"
+const TAB_TITLES: Array[String] = ["SHEET_TAB_STATS", "SHEET_TAB_FEATURES", "SHEET_TAB_GEAR", "SHEET_TAB_DEV"]
 
 var _conc_armed := ""  # a concentration spell pressed once while another is held (v0.7.13.1)
 var _tabs: TabContainer
@@ -17,21 +20,26 @@ const DOLL_RIGHT: Array[String] = ["main_hand", "off_hand", "shield", "ring1", "
 var _details: DetailsPanel  # v0.7.22.21 (#2–#5): the one description panel of the sheet, over the chat
 
 
+func required() -> Dictionary:
+	var nodes := super()
+	nodes.merge({
+		"%SheetSplit": "HBoxContainer", "%SheetTabs": "TabContainer", "%StatsBox": "VBoxContainer",
+		"%FeaturesBox": "VBoxContainer", "%DevBox": "VBoxContainer", "%DollLeft": "VBoxContainer",
+		"%DollRight": "VBoxContainer", "%GearCoins": "Label", "%CarriedWeight": "Label", "%WeightBar": "ProgressBar",
+		"%AttunedCount": "Label", "%GearRows": "VBoxContainer",
+	})
+	return nodes
+
+
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# The whole screen on an opaque backdrop: the side panel under it no longer shows through (v0.7.22.29, Л1)
-	var frame := ModalFrame.make(tr("BTN_CHARACTER_SHEET"), 0.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseSheetButton"
-	var split := HBoxContainer.new()
-	split.add_theme_constant_override("separation", 16)
-	frame.fill_body(split)
-	_tabs = TabContainer.new()
-	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	split.add_child(_tabs)
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseSheetButton"
+	var split: HBoxContainer = UiScenes.need(self, "%SheetSplit")
+	fill_body(split)  # the tabs scroll themselves, the whole screen on an opaque backdrop (v0.7.22.29, Л1)
+	_tabs = UiScenes.need(self, "%SheetTabs")
+	for i in TAB_TITLES.size():
+		_tabs.set_tab_title(i, tr(TAB_TITLES[i]))
 	_details = DetailsPanel.new(Vector2(0, 160))
 	_details.name = "ItemDetails"
 	split.add_child(_details.column(ChatView.new(), 460))
@@ -46,16 +54,11 @@ func open() -> void:
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	var current := _tabs.current_tab
-	for c in _tabs.get_children():
-		_tabs.remove_child(c)
-		c.queue_free()
 	var c := GameState.session.character
-	_tabs.add_child(_stats_tab(c))
-	_tabs.add_child(_abilities_tab(c))
-	_tabs.add_child(_gear_tab(c))
-	_tabs.add_child(_development_tab(c))  # v0.7.19.1
-	_tabs.current_tab = clampi(current, 0, 3)
+	_stats_tab(c)
+	_abilities_tab(c)
+	_gear_tab(c)
+	_development_tab(c)  # v0.7.19.1
 
 
 ## The life goal (v0.7.22): the player's own words, the master's assessment, a field to change or clear it.
@@ -117,8 +120,8 @@ func _faith_section(box: VBoxContainer, c: Dictionary) -> void:
 
 ## Peaceful development (v0.7.19.1): each direction — its level and experience, the skills taken, and on a level not
 ## yet paid — the skills to pick from, like the class's level-up.
-func _development_tab(c: Dictionary) -> Control:
-	var box := _page("SHEET_TAB_DEV")
+func _development_tab(c: Dictionary) -> void:
+	var box := _page("%DevBox")
 	var data := Catalog.data
 	_goal_section(box, c)  # v0.7.22
 	_faith_section(box, c)  # v0.7.49
@@ -151,7 +154,6 @@ func _development_tab(c: Dictionary) -> Control:
 				if not err.is_empty():
 					EventBus.message.emit(tr(err)))
 			row.add_child(b)
-	return box.get_parent()
 
 
 func current_tab() -> int:
@@ -164,14 +166,12 @@ func open_tab(i: int) -> void:
 	_tabs.current_tab = i
 
 
-func _page(title_key: String) -> VBoxContainer:
-	var scroll := ScrollContainer.new()
-	scroll.name = tr(title_key)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var box := VBoxContainer.new()
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 8)
-	scroll.add_child(box)
+## The box of a page, emptied for its rows.
+func _page(path: String) -> VBoxContainer:
+	var box: VBoxContainer = UiScenes.need(self, path)
+	for ch in box.get_children():
+		box.remove_child(ch)
+		ch.queue_free()
 	return box
 
 
@@ -187,8 +187,8 @@ func _text(parent: Control, text: String, variation: String = "") -> Label:
 	return l
 
 
-func _stats_tab(c: Dictionary) -> Control:
-	var box := _page("SHEET_TAB_STATS")
+func _stats_tab(c: Dictionary) -> void:
+	var box := _page("%StatsBox")
 	var d := Catalog.data
 	var sub: Dictionary = d["classes"]["subclasses"].get(str(c.get("subclass", "")), {})
 	_text(box, str(c["name"]), UiTheme.HEADING)
@@ -264,11 +264,10 @@ func _stats_tab(c: Dictionary) -> Control:
 		var tool_line := _text(box, tr("SHEET_TOOLS").format({"list": ", ".join(tools)}), UiTheme.MUTED_LABEL)
 		tool_line.mouse_filter = Control.MOUSE_FILTER_STOP
 		tool_line.tooltip_text = tr("SHEET_TOOLS_TIP")
-	return box.get_parent()
 
 
-func _abilities_tab(c: Dictionary) -> Control:
-	var box := _page("SHEET_TAB_FEATURES")
+func _abilities_tab(c: Dictionary) -> void:
+	var box := _page("%FeaturesBox")
 	var d := Catalog.data
 	var feats: Dictionary = d["classes"]["features"]
 	var traits: Dictionary = d["races"]["traits"]
@@ -304,7 +303,7 @@ func _abilities_tab(c: Dictionary) -> Control:
 				continue
 			_action(row, "Use_" + str(r["id"]), "BTN_USE", can_act and int(r["left"]) > 0, GameState.use_feature.bind(str(r["id"])))
 	if str(c.get("spell_ability", "")).is_empty():
-		return box.get_parent()
+		return
 	box.add_child(HSeparator.new())
 	_text(box, tr("SHEET_SPELLCASTING").format({"ability": tr("ABILITY_" + str(c["spell_ability"]).to_upper()),
 		"dc": c.get("spell_dc", 0), "attack": "%+d" % int(c.get("spell_attack", 0))}))
@@ -353,7 +352,6 @@ func _abilities_tab(c: Dictionary) -> Control:
 			b.name = "Spell_" + str(id)
 			if list != "known" and ready_ids.has(str(id)):
 				_cast_row(box, c, str(id), 0 if list == "free" else lv, can_act)
-	return box.get_parent()
 
 
 ## «Колдовать» with the slot circle to spend (the lowest fitting one first).
@@ -421,55 +419,27 @@ func _entry(parent: Control, title: String, body: String, short_title: String = 
 	return b
 
 
-func _gear_tab(c: Dictionary) -> Control:
-	var box := _page("SHEET_TAB_GEAR")
-	var list_scroll := box.get_parent()
-	var root := HBoxContainer.new()
-	root.name = list_scroll.name
-	root.add_theme_constant_override("separation", 16)
-	list_scroll.name = "GearList"
-	list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root.add_child(list_scroll)
+func _gear_tab(c: Dictionary) -> void:
+	var box := _page("%GearRows")
 	var details := _details
 	var s := GameState.session
 	var items: Dictionary = Catalog.data["items"]
 	var busy := GameState.is_busy()
-	_text(box, tr("SHEET_EQUIPPED"), UiTheme.MUTED_LABEL)
-	var doll := HBoxContainer.new()  # the worn slots around a figure (v0.7.22.32, П8)
-	doll.name = "Doll"
-	doll.add_theme_constant_override("separation", 16)
-	box.add_child(doll)
-	for side: Array in [DOLL_LEFT, [], DOLL_RIGHT]:
-		if side.is_empty():
-			var fig := Figure.new()
-			fig.custom_minimum_size = Vector2(170, 0)
-			doll.add_child(fig)
-			continue
-		var col := VBoxContainer.new()
-		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		col.add_theme_constant_override("separation", 6)
-		doll.add_child(col)
-		for slot: String in side:
+	for side: String in ["%DollLeft", "%DollRight"]:  # the worn slots around a figure (v0.7.22.32, П8)
+		var col := _page(side)
+		for slot: String in DOLL_LEFT if side == "%DollLeft" else DOLL_RIGHT:
 			_slot_card(col, details, c, slot, busy)
-	box.add_child(HSeparator.new())
-	_text(box, tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))}))
-	var weight := _text(box, tr("SHEET_WEIGHT").format({"n": int(ceilf(CharacterRules.carried_weight(c, Catalog.data, s.items))), "max": CharacterRules.capacity(c, Catalog.data)}),
-		UiTheme.MUTED_LABEL)
-	weight.name = "CarriedWeight"
+	(UiScenes.need(self, "%GearCoins") as Label).text = tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))})
+	var weight: Label = UiScenes.need(self, "%CarriedWeight")
+	weight.text = tr("SHEET_WEIGHT").format({"n": int(ceilf(CharacterRules.carried_weight(c, Catalog.data, s.items))), "max": CharacterRules.capacity(c, Catalog.data)})
+	weight.remove_theme_color_override("font_color")
 	var carry := CharacterRules.carried_weight(c, Catalog.data, s.items) / maxf(1.0, CharacterRules.capacity(c, Catalog.data))
-	var wbar := ProgressBar.new()  # П7
-	wbar.name = "WeightBar"
-	wbar.max_value = 1.0
-	wbar.step = 0.0
+	var wbar: ProgressBar = UiScenes.need(self, "%WeightBar")  # П7
 	wbar.value = minf(carry, 1.0)
-	wbar.show_percentage = false
-	wbar.custom_minimum_size = Vector2(0, 10)
 	var wcol := UiTheme.OK if carry < 0.75 else UiTheme.WARN if carry <= 1.0 else UiTheme.BAD
 	wbar.add_theme_stylebox_override("fill", UiTheme.box(wcol, wcol, 0, 0, 3))
 	wbar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 3))
-	box.add_child(wbar)
-	var att_line := _text(box, tr("SHEET_ATTUNED").format({"n": ItemRules.attuned(c).size()}), UiTheme.MUTED_LABEL)  # v0.7.12
-	att_line.name = "AttunedCount"
+	(UiScenes.need(self, "%AttunedCount") as Label).text = tr("SHEET_ATTUNED").format({"n": ItemRules.attuned(c).size()})  # v0.7.12
 	if CharacterRules.overloaded(c, Catalog.data, s.items):
 		weight.text += " — " + tr("TOO_HEAVY")
 		weight.add_theme_color_override("font_color", UiTheme.WARN)
@@ -551,7 +521,6 @@ func _gear_tab(c: Dictionary) -> Control:
 	var shown := _picked_item if (c.get("inventory", {}) as Dictionary).has(_picked_item) else ""
 	if not shown.is_empty():
 		details.show_text(ItemRules.display_name(items, s.items, shown), DetailsPanel.item_text(c, Catalog.data, s.items, shown))
-	return root
 
 
 ## A worn slot of the doll: its name, the thing in it (or «—») and «Снять».
@@ -626,20 +595,3 @@ func _item_button(row: Control, details: DetailsPanel, c: Dictionary, id: String
 	b.pressed.connect(func() -> void: _picked_item = id)
 	details.hook(b, ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), DetailsPanel.item_text(c, Catalog.data, GameState.session.items, id))
 	row.add_child(b)
-
-
-## A plain outline of a figure between the slots of the doll; a sprite can take its place.
-class Figure extends Control:
-	func _draw() -> void:
-		var k := minf(size.y / 400.0, size.x / 170.0)
-		var cx := size.x / 2.0
-		var top := maxf(0.0, (size.y - 400.0 * k) / 2.0)
-		var col := Color(UiTheme.BORDER, 0.9)
-		var p := func(x: float, y: float) -> Vector2: return Vector2(cx + x * k, top + y * k)
-		draw_arc(p.call(0, 44), 26 * k, 0, TAU, 32, col, 3.0, true)
-		draw_line(p.call(0, 70), p.call(0, 86), col, 3.0, true)
-		draw_polyline(PackedVector2Array([p.call(-46, 96), p.call(46, 96), p.call(36, 226), p.call(-36, 226), p.call(-46, 96)]), col, 3.0, true)
-		draw_line(p.call(-46, 96), p.call(-70, 222), col, 3.0, true)
-		draw_line(p.call(46, 96), p.call(70, 222), col, 3.0, true)
-		draw_line(p.call(-22, 226), p.call(-28, 380), col, 3.0, true)
-		draw_line(p.call(22, 226), p.call(28, 380), col, 3.0, true)

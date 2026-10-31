@@ -1,0 +1,68 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://ui/components/modal_frame.tscn" id="1"]
+[ext_resource type="Script" path="res://ui/components/small_dialog.gd" id="2"]
+
+[node name="SmallDialog" instance=ExtResource("1")]
+script = ExtResource("2")
+width = 720.0
+kind = "long_rest"
+
+[node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
+auto_translate_mode = 2
+text = "Долгий отдых"
+
+[node name="SampleText" parent="ModalPanel/Col/ModalScroll/ModalBody" index="0"]
+visible = false
+
+[node name="SampleButton" parent="ModalPanel/Col/ModalFooter" index="0"]
+visible = false
+
+[node name="Sample1" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody" index="1" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Лагерь: нужна еда на день"
+autowrap_mode = 3
+
+[node name="Sample2" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="2" groups=["editor_sample"]]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample2"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Паёк, в сумке 3"
+autowrap_mode = 3
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample2"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "+"
+
+[node name="Sample3" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="3" groups=["editor_sample"]]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample3"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Вяленое мясо, в сумке 1"
+autowrap_mode = 3
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample3"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "+"
+
+[node name="DialogCancel" type="Button" parent="ModalPanel/Col/ModalFooter" index="1"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 52)
+text = "BTN_CANCEL"
+
+[node name="DialogConfirm" type="Button" parent="ModalPanel/Col/ModalFooter" index="2"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 52)
+text = "BTN_CAMP_CONFIRM"
+theme_type_variation = &"AccentButton"

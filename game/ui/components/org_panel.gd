@@ -1,22 +1,20 @@
 class_name OrgPanel
-extends Control
+extends ModalFrame
 ## The organization window (roadmap v0.7.33): joining at the head, the rank and points, the cut owed, the jobs on
 ## offer; for the hero's own band — its place, members and their income; founding one in an owned place. Every act is
 ## GameState.org_act: the engine decides.
 
+const SCENE := "res://ui/components/org_panel.tscn"
+
 var _box: VBoxContainer
 var _org := ""
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("ORG_TITLE"), 720.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseOrgButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseOrgButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -24,7 +22,7 @@ func _ready() -> void:
 ## `org_id` "" — the hero's organizations, or founding one.
 func open(org_id: String = "") -> void:
 	_org = org_id
-	frame.title.text = tr("ORG_TITLE") if org_id.is_empty() else str(OrgRules.word(GameState.session, Catalog.data, org_id)["nom"]).capitalize()
+	title.text = tr("ORG_TITLE") if org_id.is_empty() else str(OrgRules.word(GameState.session, Catalog.data, org_id)["nom"]).capitalize()
 	visible = true
 	_rebuild()
 
@@ -64,7 +62,7 @@ func _act(parent: Control, node_name: String, text: String, why: String, what: S
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	frame.clear_body()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	var list: Array[String] = []
@@ -85,7 +83,7 @@ func _rebuild() -> void:
 
 func _org_block(s: GameSession, data: Dictionary, id: String) -> void:
 	var d := OrgRules.def(s, data, id)
-	_label(_box, OrgRules.org_name(s, data, id)).add_theme_color_override("font_color", UiTheme.ACCENT)
+	_label(_box, OrgRules.org_name(s, data, id)).theme_type_variation = UiTheme.ACCENT_LABEL
 	if not str(d.get("description", "")).is_empty():
 		_label(_box, str(d["description"]), UiTheme.MUTED_LABEL)
 	if str(d.get("head", "")) == OwnerRules.HERO:
@@ -115,7 +113,7 @@ func _org_block(s: GameSession, data: Dictionary, id: String) -> void:
 				UiTheme.MUTED_LABEL).name = "OrgWork"
 		var offers := OrgRules.offered(s, data, id)
 		if not offers.is_empty():
-			_label(_box, tr("ORG_JOBS")).add_theme_color_override("font_color", UiTheme.ACCENT)
+			_label(_box, tr("ORG_JOBS")).theme_type_variation = UiTheme.ACCENT_LABEL
 		for h: String in offers:
 			var hd := HeistRules.def(s, data, h)
 			var hrow := HBoxContainer.new()
@@ -139,7 +137,7 @@ func _org_block(s: GameSession, data: Dictionary, id: String) -> void:
 
 
 func _found_block(s: GameSession, data: Dictionary) -> void:
-	_label(_box, tr("ORG_FOUND_TITLE")).add_theme_color_override("font_color", UiTheme.ACCENT)
+	_label(_box, tr("ORG_FOUND_TITLE")).theme_type_variation = UiTheme.ACCENT_LABEL
 	_label(_box, tr("ORG_FOUND_HINT").format({"fee": Money.format(int(OrgRules.cfg(data)["found_fee_cp"]))}), UiTheme.MUTED_LABEL)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)

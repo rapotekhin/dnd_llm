@@ -4,7 +4,7 @@ extends ModalFrame
 ## features) and the picks it needs — subclass, feature options, expertise, ability increase, spells.
 ## Rules and checks are LevelUp's; «Подтвердить» calls GameState.level_up.
 
-const VIEW_SCENE := "res://ui/components/level_up_view.tscn"
+const SCENE := "res://ui/components/level_up_view.tscn"
 const WIDE := 1300.0
 const COMPACT := 620.0
 
@@ -16,7 +16,7 @@ var _info: DetailsPanel
 
 
 static func create() -> LevelUpView:
-	var view := UiScenes.open(VIEW_SCENE) as LevelUpView
+	var view := UiScenes.open(SCENE) as LevelUpView
 	view.setup("", WIDE)
 	view.bind()
 	return view

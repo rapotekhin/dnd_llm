@@ -1,23 +1,21 @@
 class_name BoardPanel
-extends Control
+extends ModalFrame
 ## A notice board as a window of its own (roadmap v0.7.22.13, big test #30, #31): the orders on it are real quests
 ## of the engine (QuestGen, made by the master on this board) — each with its customer and reward; take one, or all
 ## that fit under the limit of taken quests. A board with nothing on it yet — «Прочитать объявления»: a turn of the
 ## master, who puts its orders up (`create_quest` with this `board_prop_id`).
 
+const SCENE := "res://ui/components/board_panel.tscn"
+
 var prop_id := ""
 var _box: VBoxContainer
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make("", 900.0)  # one window template (v0.7.22.29, С4)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseBoardButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseBoardButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	EventBus.turn_finished.connect(func(_id: String, _ok: bool) -> void: _rebuild())
 	visibility_changed.connect(_rebuild)
@@ -70,7 +68,7 @@ func _rebuild() -> void:
 		visible = false
 		return
 	var can_act := Backend.is_ready() and not GameState.is_busy() and not s.in_conversation()
-	frame.title.text = str(p["name"])
+	title.text = str(p["name"])
 	if not str(p.get("text", "")).is_empty():
 		_label(str(p["text"]), UiTheme.MUTED_LABEL)
 	_notices(s, data, world.world)

@@ -1,0 +1,254 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://ui/components/modal_frame.tscn" id="1"]
+[ext_resource type="Script" path="res://ui/components/character_sheet.gd" id="2"]
+[ext_resource type="Script" path="res://ui/components/doll_figure.gd" id="3"]
+
+[node name="CharacterSheet" instance=ExtResource("1")]
+script = ExtResource("2")
+width = 0.0
+
+[node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
+text = "BTN_CHARACTER_SHEET"
+
+[node name="SampleText" parent="ModalPanel/Col/ModalScroll/ModalBody" index="0"]
+visible = false
+
+[node name="SampleButton" parent="ModalPanel/Col/ModalFooter" index="0"]
+visible = false
+
+[node name="ModalScroll" parent="ModalPanel/Col" index="1"]
+visible = false
+
+[node name="SheetSplit" type="HBoxContainer" parent="ModalPanel/Col" index="2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="SheetTabs" type="TabContainer" parent="ModalPanel/Col/SheetSplit"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="StatsPage" type="ScrollContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_index = 0
+
+[node name="StatsBox" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/StatsPage"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Sample1" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/StatsPage/StatsBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Айра"
+autowrap_mode = 3
+theme_type_variation = &"HeadingLabel"
+
+[node name="Sample2" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/StatsPage/StatsBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "человек, воин 1 уровня, солдат"
+autowrap_mode = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="Sample3" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/StatsPage/StatsBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "ОЗ 12/12, КД 16"
+autowrap_mode = 3
+
+[node name="Sample4" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/StatsPage/StatsBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Характеристики · Навыки"
+autowrap_mode = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="FeaturesPage" type="ScrollContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_index = 1
+visible = false
+
+[node name="FeaturesBox" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/FeaturesPage"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Sample1" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/FeaturesPage/FeaturesBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Боевой стиль"
+autowrap_mode = 3
+
+[node name="Sample2" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/FeaturesPage/FeaturesBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Второе дыхание"
+autowrap_mode = 3
+
+[node name="Sample3" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/FeaturesPage/FeaturesBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Кости хитов: 1 из 1"
+autowrap_mode = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="GearList" type="ScrollContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+visible = false
+metadata/_tab_index = 2
+
+[node name="GearBox" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="EquippedHead" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+layout_mode = 2
+text = "SHEET_EQUIPPED"
+autowrap_mode = 3
+size_flags_horizontal = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="Doll" type="HBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="DollLeft" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/Doll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="SampleHead" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/Doll/DollLeft" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Голова: пусто"
+
+[node name="DollFigure" type="Control" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/Doll"]
+layout_mode = 2
+custom_minimum_size = Vector2(170, 0)
+script = ExtResource("3")
+
+[node name="DollRight" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/Doll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="SampleHand" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/Doll/DollRight" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Правая рука: длинный меч"
+
+[node name="GearSep" type="HSeparator" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+layout_mode = 2
+
+[node name="GearCoins" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Монеты: 12 зм"
+autowrap_mode = 3
+size_flags_horizontal = 3
+
+[node name="CarriedWeight" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Вес: 24 из 150 фнт"
+autowrap_mode = 3
+size_flags_horizontal = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="WeightBar" type="ProgressBar" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 10)
+max_value = 1.0
+step = 0.0
+value = 0.2
+show_percentage = false
+
+[node name="AttunedCount" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Настроено: 0 из 3"
+autowrap_mode = 3
+size_flags_horizontal = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="GearRows" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SampleRow" type="HBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/GearRows" groups=["editor_sample"]]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Text" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/GearRows/SampleRow"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Кинжал ×2"
+size_flags_horizontal = 3
+
+[node name="Act" type="Button" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/GearRows/SampleRow"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Выбросить"
+
+[node name="DevPage" type="ScrollContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_index = 3
+visible = false
+
+[node name="DevBox" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/DevPage"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Sample1" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/DevPage/DevBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Цель жизни"
+autowrap_mode = 3
+theme_type_variation = &"HeadingLabel"
+
+[node name="Sample2" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/DevPage/DevBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Подсказка: своими словами, чего хочет герой"
+autowrap_mode = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="Sample3" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/DevPage/DevBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Торговля: уровень 1"
+autowrap_mode = 3
+theme_type_variation = &"HeadingLabel"
+
+[node name="SampleDetails" type="PanelContainer" parent="ModalPanel/Col/SheetSplit" groups=["editor_sample"]]
+layout_mode = 2
+custom_minimum_size = Vector2(460, 0)
+theme_type_variation = &"SidePanel"
+
+[node name="SampleDetailsText" type="Label" parent="ModalPanel/Col/SheetSplit/SampleDetails"]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Здесь игра ставит панель описания и чат"
+autowrap_mode = 3

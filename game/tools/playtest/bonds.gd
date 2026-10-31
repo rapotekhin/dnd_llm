@@ -52,6 +52,7 @@ func run() -> void:
 			break
 		c["bonds"]["npc_serving"]["confess_day"] = -999
 		c["bonds"]["npc_serving"]["points"] = 45
+		c["skills"]["persuasion"] = 40  # the gift refreshed the sheet
 		node("EventBus").state_changed.emit()
 		await frames(2)
 		await press(find(win, "Confess_npc_serving"))

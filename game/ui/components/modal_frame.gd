@@ -3,12 +3,15 @@ extends Control
 ## One window template (v0.7.22.29, UI audit С4; a scene since v0.7.51): a dimmed backdrop, a panel in the middle with
 ## the title and «✕» in the corner, the body and the buttons on the right at the bottom. The height follows the content
 ## up to most of the screen, then the body scrolls. `width` 0 — the whole screen but a margin (the sheet, the map).
-## Windows are made by `make`, or inherit the scene.
+## Windows inherit the scene (their width is in the Inspector) or are made by `make`; a window with a `_ready` of its own
+## calls `super()` first.
 
 signal close_requested
 
-const SCENE := "res://ui/components/modal_frame.tscn"
+const FRAME_SCENE := "res://ui/components/modal_frame.tscn"
 const MARGIN := 24
+
+@export var width := 640.0  ## the panel in pixels; 0 — the whole screen but a margin (the sheet, the map)
 
 var title: Label
 var close_x: Button
@@ -17,13 +20,12 @@ var note: Label  ## an error or a hint over the buttons
 var footer: HBoxContainer
 var _scroll: ScrollContainer
 var _panel: PanelContainer
-var _width: float
 var _queued := false
 
 
-static func make(title_text: String = "", width: float = 640.0) -> ModalFrame:
-	var frame := UiScenes.open(SCENE) as ModalFrame
-	frame.setup(title_text, width)
+static func make(title_text: String = "", panel_width: float = 640.0) -> ModalFrame:
+	var frame := UiScenes.open(FRAME_SCENE) as ModalFrame
+	frame.setup(title_text, panel_width)
 	return frame
 
 
@@ -35,14 +37,23 @@ func required() -> Dictionary:
 	}
 
 
-func setup(title_text: String, width: float) -> void:
-	_width = width
+func _ready() -> void:
+	if body == null:  # an inherited window: the title and the width are the scene's
+		_bind()
+
+
+func setup(title_text: String, panel_width: float) -> void:
+	width = panel_width
+	_bind()
+	title.text = title_text
+
+
+func _bind() -> void:
 	var dim: ColorRect = UiScenes.need(self, "%ModalDim")
 	if width <= 0.0:
 		dim.color = Color(UiTheme.BG, 0.94)  # a full window hides what is under it (Л1)
 	_panel = UiScenes.need(self, "%ModalPanel")
 	title = UiScenes.need(self, "%ModalTitle")
-	title.text = title_text
 	close_x = UiScenes.need(self, "%CloseX")
 	close_x.pressed.connect(func() -> void: close_requested.emit())
 	_scroll = UiScenes.need(self, "%ModalScroll")
@@ -61,22 +72,24 @@ func setup(title_text: String, width: float) -> void:
 			_refit())
 
 
-## A body that fills the window (a TabContainer of its own): no outer scroll, the whole height.
+## A body that fills the window (a TabContainer of its own): no outer scroll, the whole height. A scene keeps `content`
+## beside ModalScroll.
 func fill_body(content: Control) -> void:
 	body.minimum_size_changed.disconnect(_refit)
 	_scroll.get_parent().remove_child(_scroll)
 	_scroll.queue_free()  # the old body goes with it
 	var col := note.get_parent()
-	col.add_child(content)
+	if content.get_parent() != col:
+		col.add_child(content)
 	col.move_child(content, 1)
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll = null
 	_fit()
 
 
-func set_width(width: float) -> void:
-	if width != _width:
-		_width = width
+func set_width(panel_width: float) -> void:
+	if panel_width != width:
+		width = panel_width
 		_refit()
 
 
@@ -114,8 +127,8 @@ func _fit() -> void:
 	_queued = false
 	if size.y <= 0.0:
 		return
-	var full := _width <= 0.0
-	var w := size.x - 2 * MARGIN if full else minf(_width, size.x - 2 * MARGIN)
+	var full := width <= 0.0
+	var w := size.x - 2 * MARGIN if full else minf(width, size.x - 2 * MARGIN)
 	var cap := size.y - 2 * MARGIN
 	if full:
 		_panel.size = Vector2(w, cap)

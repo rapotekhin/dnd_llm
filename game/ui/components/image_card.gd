@@ -1,25 +1,24 @@
 class_name ImageCard
-extends Control
+extends ModalFrame
 ## The image of an event (v0.7.35): one window with the picture, closed by «✕» or Esc (the game screen's overlays);
 ## the file stays with the event.
 
-var frame: ModalFrame
+const SCENE := "res://ui/components/image_card.tscn"
+
 var picture: TextureRect
 
 
+func required() -> Dictionary:
+	var nodes := super()
+	nodes["%ImagePicture"] = "TextureRect"
+	return nodes
+
+
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make("IMAGE_TITLE", 1500.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseImageButton"
-	picture = TextureRect.new()
-	picture.name = "ImagePicture"
-	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	picture.custom_minimum_size = Vector2(1440, 810)
-	frame.body.add_child(picture)
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseImageButton"
+	picture = UiScenes.need(self, "%ImagePicture")
 
 
 ## Shows the file; false — it is gone (a cleared folder).

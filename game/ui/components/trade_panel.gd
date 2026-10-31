@@ -6,6 +6,8 @@ extends Control
 ## a thin strip at the bottom. The engine (TradeRules via GameState.deal / haggle) checks and makes the deal; the
 ## master narrates it in the chat behind.
 
+const SCENE := "res://ui/components/trade_panel.tscn"
+
 ## {"buy": {item_id: qty}, "sell": {item_id: qty}}
 var cart := {"buy": {}, "sell": {}}
 var _npc := ""
@@ -29,115 +31,49 @@ var _leave: Button
 var _info: DetailsPanel  # what the picked item is (a click on its name), a thin strip at the bottom
 
 
+func required() -> Dictionary:
+	return {
+		"%Split": "HBoxContainer", "%TradeTitle": "Label", "%TradePartner": "Label", "%TradePurse": "Label",
+		"%TradeCoins": "Label", "%DealState": "Label", "%TradeStock": "VBoxContainer", "%TradeYours": "VBoxContainer",
+		"%TradeBuyRows": "VBoxContainer", "%TradeSellRows": "VBoxContainer", "%TradeServices": "VBoxContainer",
+		"%TradeTotal": "Label", "%TradeError": "Label", "%HaggleButton": "Button", "%ClearCartButton": "Button",
+		"%DealButton": "Button", "%TradeToTalk": "Button", "%TradeLeave": "Button",
+	}
+
+
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var bg := ColorRect.new()
-	bg.color = UiTheme.BG
-	add_child(bg)
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 28)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var split := HBoxContainer.new()  # v0.7.22.21 (#4): the deal on the left, the description and the chat on the right
-	split.add_theme_constant_override("separation", 16)
-	margin.add_child(split)
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 12)
-	split.add_child(col)
-
-	# The head: the trader, the purses, the deal's state, back to the talk or away.
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 16)
-	col.add_child(head)
-	var who := VBoxContainer.new()
-	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(who)
-	_title = _label(who, false)
-	_title.theme_type_variation = UiTheme.HEADING
-	_partner = _label(who, true)
-	_to_talk = Button.new()
-	_to_talk.name = "TradeToTalk"
-	_to_talk.text = "BTN_TO_TALK"
-	_to_talk.custom_minimum_size = Vector2(0, 52)
+	_title = UiScenes.need(self, "%TradeTitle")
+	_partner = UiScenes.need(self, "%TradePartner")
+	_purse = UiScenes.need(self, "%TradePurse")
+	_coins = UiScenes.need(self, "%TradeCoins")
+	_haggle_state = UiScenes.need(self, "%DealState")
+	_stock = UiScenes.need(self, "%TradeStock")
+	_yours = UiScenes.need(self, "%TradeYours")
+	_buy_rows = UiScenes.need(self, "%TradeBuyRows")
+	_sell_rows = UiScenes.need(self, "%TradeSellRows")
+	_services = UiScenes.need(self, "%TradeServices")
+	_total = UiScenes.need(self, "%TradeTotal")
+	_error = UiScenes.need(self, "%TradeError")
+	_error.text = ""
+	_to_talk = UiScenes.need(self, "%TradeToTalk")
 	_to_talk.pressed.connect(func() -> void: GameState.set_trade(false))
-	head.add_child(_to_talk)
-	_leave = Button.new()
-	_leave.name = "TradeLeave"
-	_leave.text = "BTN_LEAVE_CONVERSATION"
-	_leave.custom_minimum_size = Vector2(0, 52)
+	_leave = UiScenes.need(self, "%TradeLeave")
 	_leave.pressed.connect(GameState.leave_conversation)
-	head.add_child(_leave)
-	var purses := HBoxContainer.new()
-	purses.add_theme_constant_override("separation", 24)
-	col.add_child(purses)
-	_purse = _label(purses, true)
-	_coins = _label(purses, false)
-	_haggle_state = _label(purses, false)
-	_haggle_state.name = "DealState"
-	_haggle_state.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_haggle_state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_haggle_state.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
-
-	# The three columns: the goods, the deal, the hero's things.
-	var cols := HBoxContainer.new()
-	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	cols.add_theme_constant_override("separation", 16)
-	col.add_child(cols)
-	_stock = _list(cols, "TRADE_STOCK", 1.0)
-	var deal := PanelContainer.new()
-	deal.theme_type_variation = UiTheme.SIDE
-	deal.custom_minimum_size = Vector2(300, 0)
-	cols.add_child(deal)
-	var dcol := VBoxContainer.new()
-	dcol.add_theme_constant_override("separation", 8)
-	deal.add_child(dcol)
-	var dscroll := ScrollContainer.new()
-	dscroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	dscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	dcol.add_child(dscroll)
-	var dbox := VBoxContainer.new()
-	dbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dbox.add_theme_constant_override("separation", 6)
-	dscroll.add_child(dbox)
-	_heading(dbox, "TRADE_YOU_BUY")
-	_buy_rows = VBoxContainer.new()
-	dbox.add_child(_buy_rows)
-	_heading(dbox, "TRADE_YOU_SELL")
-	_sell_rows = VBoxContainer.new()
-	dbox.add_child(_sell_rows)
-	_services = VBoxContainer.new()  # v0.7.12: identify, remove a curse, silver a weapon
-	_services.name = "TradeServices"
-	_services.add_theme_constant_override("separation", 6)
-	dbox.add_child(_services)
-	_total = _label(dcol, false)
-	_total.name = "TradeTotal"
-	_total.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_error = _label(dcol, false)
-	_error.name = "TradeError"
-	_error.add_theme_color_override("font_color", UiTheme.WARN)
-	_error.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	haggle_button = _action(dcol, "HaggleButton", _on_haggle)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	dcol.add_child(row)
-	_clear = _action(row, "ClearCartButton", func() -> void:
+	haggle_button = UiScenes.need(self, "%HaggleButton")
+	haggle_button.pressed.connect(_on_haggle)
+	_clear = UiScenes.need(self, "%ClearCartButton")
+	_clear.pressed.connect(func() -> void:
 		cart = {"buy": {}, "sell": {}}
 		_error.text = ""
 		_rebuild())
-	_clear.text = "BTN_CLEAR_CART"
-	deal_button = _action(row, "DealButton", _on_deal)
-	deal_button.text = "BTN_DEAL"
-	deal_button.theme_type_variation = UiTheme.ACCENT_BUTTON
-	_yours = _list(cols, "TRADE_YOURS", 1.0)
+	deal_button = UiScenes.need(self, "%DealButton")
+	deal_button.pressed.connect(_on_deal)
 
 	_info = DetailsPanel.new(Vector2(0, 160))
 	_info.name = "TradeItemInfo"
 	var chat := ChatView.new()  # the talk with the trader stays in view (the author)
 	chat.name = "TradeChat"
-	split.add_child(_info.column(chat, 420))
+	UiScenes.need(self, "%Split").add_child(_info.column(chat, 420))
 
 	EventBus.state_changed.connect(_rebuild)
 	EventBus.turn_started.connect(func(_id: String) -> void: _rebuild())
@@ -159,39 +95,8 @@ func _label(parent: Control, muted: bool) -> Label:
 func _heading(parent: Control, key: String) -> void:
 	var t := Label.new()
 	t.text = key
-	t.theme_type_variation = UiTheme.MUTED_LABEL
-	t.add_theme_color_override("font_color", UiTheme.ACCENT)
+	t.theme_type_variation = UiTheme.CAPTION_LABEL
 	parent.add_child(t)
-
-
-func _list(parent: Control, title: String, ratio: float) -> VBoxContainer:
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_stretch_ratio = ratio
-	parent.add_child(panel)
-	var box := VBoxContainer.new()
-	panel.add_child(box)
-	_heading(box, title)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	box.add_child(scroll)
-	var rows := VBoxContainer.new()
-	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rows.add_theme_constant_override("separation", 6)
-	scroll.add_child(rows)
-	return rows
-
-
-func _action(parent: Control, node_name: String, action: Callable) -> Button:
-	var b := Button.new()
-	b.name = node_name
-	b.custom_minimum_size = Vector2(0, 56)
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.pressed.connect(action)
-	parent.add_child(b)
-	return b
 
 
 func _active() -> bool:

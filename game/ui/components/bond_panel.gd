@@ -1,22 +1,20 @@
 class_name BondPanel
-extends Control
+extends ModalFrame
 ## The bond window (roadmap v0.7.31): the step and the closeness with an NPC, what it gives, the tastes learned from
 ## gifts, the romance; acts — a gift from the hero's things, a confession, breaking up, hiding from the guard. Every
 ## act is GameState.bond_act: the engine decides.
 
+const SCENE := "res://ui/components/bond_panel.tscn"
+
 var _box: VBoxContainer
-var frame: ModalFrame
 var _npc := ""
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("BOND_TITLE"), 720.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "CloseBondButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "CloseBondButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -40,7 +38,7 @@ func _label(parent: Control, text: String, variation: String = "") -> Label:
 
 
 func _heading(text: String) -> void:
-	_label(_box, text).add_theme_color_override("font_color", UiTheme.ACCENT)
+	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
 
 
 func _button(parent: Control, node_name: String, text: String, why: String, what: String, item: String = "") -> Button:
@@ -62,12 +60,12 @@ func _button(parent: Control, node_name: String, text: String, why: String, what
 func _rebuild() -> void:
 	if not visible or not GameState.has_session() or _npc.is_empty():
 		return
-	frame.clear_body()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	var c := s.character
 	var who := BondRules.npc_name(s, data, _npc)
-	frame.title.text = tr("BOND_TITLE_AT").format({"name": who})
+	title.text = tr("BOND_TITLE_AT").format({"name": who})
 	var cfg := BondRules.cfg(data)
 	var p := BondRules.points(c, _npc)
 	var w := BondRules.word(c, data, _npc)
@@ -158,15 +156,15 @@ func _gifts(s: GameSession, data: Dictionary) -> void:
 		_box.add_child(row)
 		var name := ItemRules.display_name(data["items"], s.items, id)
 		var qty := int(s.character["inventory"][id])
-		var note := ""
+		var taste := ""
 		var t := BondRules.taste_of(s, data, _npc, id)
 		if t["taste"] == "liked" and (k["likes"] as Array).has(t["by"]):
-			note = " — " + tr("BOND_TASTE_LIKED")
+			taste = " — " + tr("BOND_TASTE_LIKED")
 		elif t["taste"] == "disliked" and (k["dislikes"] as Array).has(t["by"]):
-			note = " — " + tr("BOND_TASTE_DISLIKED")
-		var l := _label(row, "%s%s%s" % [name, " ×%d" % qty if qty > 1 else "", note])
-		if note.ends_with(tr("BOND_TASTE_LIKED")):
+			taste = " — " + tr("BOND_TASTE_DISLIKED")
+		var l := _label(row, "%s%s%s" % [name, " ×%d" % qty if qty > 1 else "", taste])
+		if taste.ends_with(tr("BOND_TASTE_LIKED")):
 			l.add_theme_color_override("font_color", UiTheme.OK)
-		elif not note.is_empty():
+		elif not taste.is_empty():
 			l.add_theme_color_override("font_color", UiTheme.WARN)
 		_button(row, "Gift_" + id, tr("BTN_BOND_GIFT"), why, "gift", id)

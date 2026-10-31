@@ -1,22 +1,20 @@
 class_name PetPanel
-extends Control
+extends ModalFrame
 ## The pet window (roadmap v0.7.43): a wild or beaten beast — the taming with its DC and the hero's bonus, by hand or
 ## with a treat of its taste (advantage); the hero's pet — its name, closeness, what it gives, feeding by hand and the
 ## scouting of an exit not yet walked. Every act is GameState.pet_act: the engine decides.
 
+const SCENE := "res://ui/components/pet_panel.tscn"
+
 var cid := ""
 var _box: VBoxContainer
-var frame: ModalFrame
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make(tr("PET_TITLE"), 640.0)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	frame.close_x.name = "ClosePetButton"
-	_box = frame.body
+	super()
+	close_requested.connect(func() -> void: visible = false)
+	close_x.name = "ClosePetButton"
+	_box = body
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -65,7 +63,7 @@ func _act(parent: Control, node_name: String, text: String, why: String, what: S
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	frame.clear_body()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	var cr := CreatureRules.find(s, s.room_id, cid)
@@ -74,7 +72,7 @@ func _rebuild() -> void:
 		return
 	var items: Dictionary = data["items"]
 	if not bool(cr.get("pet", false)):
-		frame.title.text = tr("PET_TAME_TITLE").format({"name": cr["name"]})
+		title.text = tr("PET_TAME_TITLE").format({"name": cr["name"]})
 		var k := PetRules.kind(data, str(cr["monster"]))
 		_label(_box, tr("PET_WILL_GIVE").format({"what": k.get("text", "")}))
 		var skill := str(PetRules.cfg(data)["skill"])
@@ -90,7 +88,7 @@ func _rebuild() -> void:
 			var f := food
 			_act(row, "PetTame_" + food, tr("BTN_PET_TAME_WITH").format({"food": ItemRules.display_name(items, s.items, food)}), why, "tame", func() -> String: return f)
 		return
-	frame.title.text = tr("PET_TITLE")
+	title.text = tr("PET_TITLE")
 	_label(_box, PetRules.text(data, cr)).name = "PetInfo"
 	var name_row := _row()
 	var edit := LineEdit.new()
