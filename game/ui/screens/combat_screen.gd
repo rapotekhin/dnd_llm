@@ -162,7 +162,7 @@ func _ready() -> void:
 	_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_fx_layer)
 	_fx_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_results = ModalFrame.new("", 820.0)  # in the middle, one window template (v0.7.22.29, С4, Б5)
+	_results = ModalFrame.make("", 820.0)  # in the middle, one window template (v0.7.22.29, С4, Б5)
 	_results.name = "CombatResults"
 	_results.visible = false
 	_results.close_x.visible = false  # a fight ends by «Продолжить»

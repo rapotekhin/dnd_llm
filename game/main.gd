@@ -1,11 +1,10 @@
 extends Control
-## Entry point and the only scene: owns the theme and swaps screens on EventBus.navigate.
+## Entry point: swaps screens on EventBus.navigate.
 
 var _screen: Control
 
 
 func _ready() -> void:
-	theme = UiTheme.build()
 	var bg := Panel.new()
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
@@ -15,7 +14,6 @@ func _ready() -> void:
 	add_child(overlay)
 	var toast_box := Control.new()
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	toast_box.theme = theme
 	overlay.add_child(toast_box)
 	toast_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var toast := Toast.new()
@@ -44,7 +42,7 @@ func _go(screen: String, args: Dictionary) -> void:
 	var next: Control
 	match screen:
 		"menu":
-			next = MainMenu.new()
+			next = UiScenes.open(MainMenu.SCENE)
 		"game":
 			next = CombatScreen.new() if GameState.has_session() and CombatRules.active(GameState.session) else GameScreen.new()
 		"combat":

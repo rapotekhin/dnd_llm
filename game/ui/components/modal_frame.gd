@@ -1,11 +1,13 @@
 class_name ModalFrame
 extends Control
-## One window template (v0.7.22.29, UI audit С4): a dimmed backdrop, a panel in the middle with the title and «✕» in the
-## corner, the body and the buttons on the right at the bottom. The height follows the content up to most of the
-## screen, then the body scrolls. `width` 0 — the whole screen but a margin (the sheet, the map).
+## One window template (v0.7.22.29, UI audit С4; a scene since v0.7.51): a dimmed backdrop, a panel in the middle with
+## the title and «✕» in the corner, the body and the buttons on the right at the bottom. The height follows the content
+## up to most of the screen, then the body scrolls. `width` 0 — the whole screen but a margin (the sheet, the map).
+## Windows are made by `make`, or inherit the scene.
 
 signal close_requested
 
+const SCENE := "res://ui/components/modal_frame.tscn"
 const MARGIN := 24
 
 var title: Label
@@ -16,63 +18,40 @@ var footer: HBoxContainer
 var _scroll: ScrollContainer
 var _panel: PanelContainer
 var _width: float
-var _title_text: String
 var _queued := false
 
 
-func _init(title_text: String = "", width: float = 640.0) -> void:
-	_title_text = title_text
+static func make(title_text: String = "", width: float = 640.0) -> ModalFrame:
+	var frame := UiScenes.open(SCENE) as ModalFrame
+	frame.setup(title_text, width)
+	return frame
+
+
+func required() -> Dictionary:
+	return {
+		"%ModalDim": "ColorRect", "%ModalPanel": "PanelContainer", "%ModalTitle": "Label", "%CloseX": "Button",
+		"%ModalScroll": "ScrollContainer", "%ModalBody": "VBoxContainer", "%ModalNote": "Label",
+		"%ModalFooter": "HBoxContainer",
+	}
+
+
+func setup(title_text: String, width: float) -> void:
 	_width = width
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = Color(UiTheme.BG, 0.94) if width <= 0.0 else Color(0, 0, 0, 0.6)  # a full window hides what is under it (Л1)
-	add_child(dim)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_panel = PanelContainer.new()
-	_panel.theme_type_variation = UiTheme.SIDE
-	add_child(_panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	_panel.add_child(col)
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 12)
-	col.add_child(head)
-	title = Label.new()
-	title.theme_type_variation = UiTheme.HEADING
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var dim: ColorRect = UiScenes.need(self, "%ModalDim")
+	if width <= 0.0:
+		dim.color = Color(UiTheme.BG, 0.94)  # a full window hides what is under it (Л1)
+	_panel = UiScenes.need(self, "%ModalPanel")
+	title = UiScenes.need(self, "%ModalTitle")
 	title.text = title_text
-	head.add_child(title)
-	close_x = Button.new()
-	close_x.name = "CloseX"
-	close_x.text = "✕"
-	close_x.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	close_x.tooltip_text = "BTN_CLOSE"
-	close_x.flat = true
-	close_x.custom_minimum_size = Vector2(48, 48)
+	close_x = UiScenes.need(self, "%CloseX")
 	close_x.pressed.connect(func() -> void: close_requested.emit())
-	head.add_child(close_x)
-	_scroll = ScrollContainer.new()
-	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(_scroll)
-	body = VBoxContainer.new()
-	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 10)
-	_scroll.add_child(body)
-	note = Label.new()
-	note.name = "ModalNote"
+	_scroll = UiScenes.need(self, "%ModalScroll")
+	body = UiScenes.need(self, "%ModalBody")
+	note = UiScenes.need(self, "%ModalNote")
 	note.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.add_theme_color_override("font_color", UiTheme.WARN)
 	note.visible = false
-	col.add_child(note)
-	footer = HBoxContainer.new()
-	footer.name = "ModalFooter"
-	footer.alignment = BoxContainer.ALIGNMENT_END
-	footer.add_theme_constant_override("separation", 12)
-	footer.visible = false  # until a button: a window without buttons has no empty strip
-	col.add_child(footer)
+	footer = UiScenes.need(self, "%ModalFooter")
+	footer.visible = footer.get_child_count() > 0  # a window without buttons has no empty strip
 	body.minimum_size_changed.connect(_refit)
 	resized.connect(_refit)
 	_panel.minimum_size_changed.connect(_refit)  # a panel grown past the screen on a first layout shrinks back

@@ -22,7 +22,7 @@ func _init(view_kind: String) -> void:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.new(tr("MAP_TITLE") if kind == MAP else tr("JOURNAL_TITLE"), 0.0)  # one window template (v0.7.22.29, С4)
+	frame = ModalFrame.make(tr("MAP_TITLE") if kind == MAP else tr("JOURNAL_TITLE"), 0.0)  # one window template (v0.7.22.29, С4)
 	frame.name = "NotesFrame"
 	add_child(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

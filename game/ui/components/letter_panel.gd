@@ -19,7 +19,7 @@ var _send: Button
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.new(tr("LETTER_TITLE"), 720.0)
+	frame = ModalFrame.make(tr("LETTER_TITLE"), 720.0)
 	add_child(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.close_requested.connect(func() -> void: visible = false)

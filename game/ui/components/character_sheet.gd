@@ -20,7 +20,7 @@ var _details: DetailsPanel  # v0.7.22.21 (#2–#5): the one description panel of
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# The whole screen on an opaque backdrop: the side panel under it no longer shows through (v0.7.22.29, Л1)
-	var frame := ModalFrame.new(tr("BTN_CHARACTER_SHEET"), 0.0)
+	var frame := ModalFrame.make(tr("BTN_CHARACTER_SHEET"), 0.0)
 	add_child(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.close_requested.connect(func() -> void: visible = false)

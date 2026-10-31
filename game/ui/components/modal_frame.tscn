@@ -1,0 +1,98 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/components/modal_frame.gd" id="1"]
+
+[node name="ModalFrame" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="ModalDim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="ModalPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -200.0
+offset_right = 320.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"SidePanel"
+
+[node name="Col" type="VBoxContainer" parent="ModalPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Head" type="HBoxContainer" parent="ModalPanel/Col"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ModalTitle" type="Label" parent="ModalPanel/Col/Head"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HeadingLabel"
+text = "UI_SAMPLE_TITLE"
+autowrap_mode = 3
+
+[node name="CloseX" type="Button" parent="ModalPanel/Col/Head"]
+unique_name_in_owner = true
+auto_translate_mode = 2
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+tooltip_text = "BTN_CLOSE"
+text = "✕"
+flat = true
+
+[node name="ModalScroll" type="ScrollContainer" parent="ModalPanel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ModalBody" type="VBoxContainer" parent="ModalPanel/Col/ModalScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="SampleText" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody" groups=["editor_sample"]]
+layout_mode = 2
+text = "UI_SAMPLE_TEXT"
+autowrap_mode = 3
+
+[node name="ModalNote" type="Label" parent="ModalPanel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"WarnLabel"
+text = "UI_SAMPLE_NOTE"
+autowrap_mode = 3
+
+[node name="ModalFooter" type="HBoxContainer" parent="ModalPanel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="SampleButton" type="Button" parent="ModalPanel/Col/ModalFooter" groups=["editor_sample"]]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+text = "UI_SAMPLE_BUTTON"

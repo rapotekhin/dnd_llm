@@ -21,7 +21,6 @@ func _ready() -> void:
 	add_child(_layer)
 	var root_ui := Control.new()
 	root_ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root_ui.theme = UiTheme.build()
 	_layer.add_child(root_ui)
 	root_ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_overlay = DevOverlay.new()

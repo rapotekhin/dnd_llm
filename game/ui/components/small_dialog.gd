@@ -33,7 +33,7 @@ func _init(dialog_kind: String) -> void:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.new("", {SHORT_REST: 600.0, LONG_REST: 720.0, WILDS: 600.0}.get(kind, 1100.0))
+	frame = ModalFrame.make("", {SHORT_REST: 600.0, LONG_REST: 720.0, WILDS: 600.0}.get(kind, 1100.0))
 	add_child(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.close_requested.connect(func() -> void: visible = false)

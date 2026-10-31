@@ -11,7 +11,7 @@ var frame: ModalFrame
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.new("", 760.0)  # one window template (v0.7.22.29, С4)
+	frame = ModalFrame.make("", 760.0)  # one window template (v0.7.22.29, С4)
 	add_child(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.close_requested.connect(func() -> void: visible = false)

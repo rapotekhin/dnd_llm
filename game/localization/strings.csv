@@ -1798,3 +1798,7 @@ COMBAT_PARLEY_TIP_ANIMAL_HANDLING,"Действие. Как переговоры
 COMBAT_FOE_FACTION,"Фракция: {name}"
 CREATURE_CANNOT_JOIN,Этот с вами не пойдёт
 CREATURE_TOO_MANY,С вами идёт слишком много спутников
+UI_SAMPLE_TITLE,Заголовок окна
+UI_SAMPLE_TEXT,"Здесь содержимое окна: его строки игра ставит сама."
+UI_SAMPLE_NOTE,Подсказка или ошибка над кнопками
+UI_SAMPLE_BUTTON,Кнопка

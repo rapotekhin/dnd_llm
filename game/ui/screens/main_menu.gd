@@ -1,8 +1,9 @@
 class_name MainMenu
 extends Control
-## Title screen: continue the latest save, new game, load, settings, quit; master status in the corner, the project's
-## pages as icons at the bottom.
+## Title screen (a scene since v0.7.51): continue the latest save, new game, load, settings, quit; master status in the
+## corner, the project's pages as icons at the bottom.
 
+const SCENE := "res://ui/screens/main_menu.tscn"
 const LINKS: Array[Dictionary] = [
 	{"id": "subscribestar", "name": "SubscribeStar", "url": "https://subscribestar.adult/between-the-rolls"},
 	{"id": "itch", "name": "itch.io", "url": "https://rapotekhin.itch.io/between-the-rolls"},
@@ -10,89 +11,38 @@ const LINKS: Array[Dictionary] = [
 ]
 
 
-func _ready() -> void:
-	var center := CenterContainer.new()
-	add_child(center)
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 18)
-	col.custom_minimum_size = Vector2(520, 0)
-	center.add_child(col)
-
-	var title := Label.new()
-	title.text = "GAME_TITLE"
-	title.theme_type_variation = UiTheme.TITLE
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(title)
-	var subtitle := Label.new()
-	subtitle.text = "GAME_SUBTITLE"
-	subtitle.theme_type_variation = UiTheme.MUTED_LABEL
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(subtitle)
-	col.add_child(_spacer(36))
-
-	var latest := SaveManager.latest_slot()
-	if not latest.is_empty():
-		var cont := _button(col, "BTN_CONTINUE", func() -> void: GameEntry.enter({"kind": "load", "slot": latest}))
-		cont.theme_type_variation = UiTheme.ACCENT_BUTTON
-		cont.name = "ContinueButton"
-		cont.tooltip_text = _slot_hint(latest)
-	_button(col, "BTN_NEW_GAME", func() -> void: EventBus.navigate.emit("new_game", {})).name = "NewGameButton"
-	_button(col, "BTN_LOAD", func() -> void: EventBus.navigate.emit("slots", {"mode": SlotsScreen.MODE_LOAD, "back": "menu"}))
-	_button(col, "BTN_SETTINGS", func() -> void: EventBus.navigate.emit("settings", {"back": "menu"}))
-	_button(col, "BTN_QUIT", func() -> void: get_tree().quit())
-
-	var status := BackendStatus.new()
-	add_child(status)
-	status.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 32)
-	status.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	status.grow_vertical = Control.GROW_DIRECTION_BEGIN
-
-	var version := Label.new()
-	version.text = "v%s" % ProjectSettings.get_setting("application/config/version", "")
-	version.theme_type_variation = UiTheme.MUTED_LABEL
-	add_child(version)
-	version.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 32)
-	version.grow_vertical = Control.GROW_DIRECTION_BEGIN
-
-	var links := HBoxContainer.new()
-	links.name = "Links"
-	links.add_theme_constant_override("separation", 20)
-	add_child(links)
+func required() -> Dictionary:
+	var nodes := {
+		"%ContinueButton": "Button", "%NewGameButton": "Button", "%LoadButton": "Button", "%SettingsButton": "Button",
+		"%QuitButton": "Button", "%VersionLabel": "Label",
+	}
 	for l: Dictionary in LINKS:
-		links.add_child(_link(l))
-	links.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 32)
-	links.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	links.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		nodes["%%Link_%s" % l["id"]] = "TextureButton"
+	return nodes
 
 
-## An icon of a page of the project: the click opens it in the browser.
-func _link(l: Dictionary) -> TextureButton:
-	var b := TextureButton.new()
-	b.name = "Link_%s" % l["id"]
-	b.texture_normal = load("res://assets/links/%s.png" % l["id"])
-	b.ignore_texture_size = true
-	b.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-	b.custom_minimum_size = Vector2(44, 44)
-	b.tooltip_text = str(l["name"])
-	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	b.pressed.connect(func() -> void: OS.shell_open(str(l["url"])))
-	return b
+func _ready() -> void:
+	var latest := SaveManager.latest_slot()
+	var cont: Button = UiScenes.need(self, "%ContinueButton")
+	cont.visible = not latest.is_empty()
+	if cont.visible:
+		cont.tooltip_text = _slot_hint(latest)
+		cont.pressed.connect(func() -> void: GameEntry.enter({"kind": "load", "slot": latest}))
+	_on_press("%NewGameButton", func() -> void: EventBus.navigate.emit("new_game", {}))
+	_on_press("%LoadButton", func() -> void: EventBus.navigate.emit("slots", {"mode": SlotsScreen.MODE_LOAD, "back": "menu"}))
+	_on_press("%SettingsButton", func() -> void: EventBus.navigate.emit("settings", {"back": "menu"}))
+	_on_press("%QuitButton", func() -> void: get_tree().quit())
+	var version: Label = UiScenes.need(self, "%VersionLabel")
+	version.text = "v%s" % ProjectSettings.get_setting("application/config/version", "")
+	for l: Dictionary in LINKS:
+		var b: TextureButton = UiScenes.need(self, "%%Link_%s" % l["id"])
+		b.tooltip_text = str(l["name"])
+		b.pressed.connect(func() -> void: OS.shell_open(str(l["url"])))
 
 
-func _button(parent: Control, key: String, action: Callable) -> Button:
-	var b := Button.new()
-	b.text = key
-	b.custom_minimum_size = Vector2(0, 64)
+func _on_press(path: String, action: Callable) -> void:
+	var b: Button = UiScenes.need(self, path)
 	b.pressed.connect(action)
-	parent.add_child(b)
-	return b
-
-
-func _spacer(h: int) -> Control:
-	var c := Control.new()
-	c.custom_minimum_size = Vector2(0, h)
-	return c
 
 
 func _slot_hint(slot: String) -> String:

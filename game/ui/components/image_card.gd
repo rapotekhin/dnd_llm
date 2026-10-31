@@ -9,7 +9,7 @@ var picture: TextureRect
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.new("IMAGE_TITLE", 1500.0)
+	frame = ModalFrame.make("IMAGE_TITLE", 1500.0)
 	add_child(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.close_requested.connect(func() -> void: visible = false)

@@ -1,7 +1,8 @@
 class_name UiTheme
 extends RefCounted
 ## «Dark book» theme (docs/design/art-style.md): warm dark paper, light serif text for the master,
-## sans for the interface, old-gold accent. Every color and font of the UI comes from here.
+## sans for the interface, old-gold accent. The theme itself is `ui/theme/game_theme.tres`, the project's theme, edited in
+## the editor (v0.7.51); here are the names of its variations and the colours of what is still built in code.
 
 const BG := Color("#17130f")
 const PANEL := Color("#211b16")
@@ -37,104 +38,18 @@ const HEADING := "HeadingLabel"
 const CARD := "CardPanel"  # PanelContainer: check cards
 const SIDE := "SidePanel"  # PanelContainer: side panel / dialogs
 const ACCENT_BUTTON := "AccentButton"
+const DANGER_BUTTON := "DangerButton"  # an irreversible act
+const ACCENT_LABEL := "AccentLabel"
+const BRIGHT_LABEL := "BrightLabel"
+const WARN_LABEL := "WarnLabel"
+const BAD_LABEL := "BadLabel"
+const OK_LABEL := "OkLabel"
+const SMALL_LABEL := "SmallLabel"
 ## Suffix of the RichTextLabel twins of the chat variations: DmText + Rich (v0.6.6).
 const RICH := "Rich"
 ## Colours of the chat markup: names of people and places, direct speech.
 const NAME_COLOR := Color("#e6c47e")
 const SPEECH_COLOR := Color("#cfd8b8")
-
-
-static func build() -> Theme:
-	var t := Theme.new()
-	t.default_font = font(FONT_UI, 450)
-	t.default_font_size = SIZE_UI
-
-	t.set_stylebox("panel", "Panel", box(BG, Color.TRANSPARENT, 0, 0))
-	t.set_stylebox("panel", "PanelContainer", box(PANEL, BORDER, 1, 16))
-	t.set_type_variation(SIDE, "PanelContainer")
-	t.set_stylebox("panel", SIDE, box(PANEL, BORDER, 1, 24))
-	t.set_type_variation(CARD, "PanelContainer")
-	t.set_stylebox("panel", CARD, box(PANEL_RAISED, BORDER, 1, 12, 6))
-
-	t.set_color("font_color", "Label", TEXT)
-	for v: Array in [
-		[DM_TEXT, font(FONT_SERIF, 400), SIZE_BODY, TEXT],
-		[PLAYER_TEXT, font(FONT_SERIF_ITALIC, 400), SIZE_BODY, ACCENT],
-		[SYSTEM_TEXT, font(FONT_UI, 400), SIZE_SMALL, MUTED],
-		[NPC_TEXT, font(FONT_SERIF, 400), SIZE_BODY, Color("#d9c9a8")],
-		[EFFECT_TEXT, font(FONT_UI, 600), SIZE_SMALL, OK],
-		[MUTED_LABEL, font(FONT_UI, 400), SIZE_SMALL, MUTED],
-		[TITLE, font(FONT_SERIF, 600), SIZE_TITLE, ACCENT_BRIGHT],
-		[HEADING, font(FONT_SERIF, 600), SIZE_HEADING, ACCENT],
-	]:
-		t.set_type_variation(v[0], "Label")
-		t.set_font("font", v[0], v[1])
-		t.set_font_size("font_size", v[0], v[2])
-		t.set_color("font_color", v[0], v[3])
-	t.set_constant("line_spacing", DM_TEXT, 6)
-	# The same looks for the chat's RichTextLabels (v0.6.6): selectable text, bold key words, names and speech in colour.
-	for v: Array in [
-		[DM_TEXT, FONT_SERIF, SIZE_BODY, TEXT],
-		[PLAYER_TEXT, FONT_SERIF_ITALIC, SIZE_BODY, ACCENT],
-		[SYSTEM_TEXT, FONT_UI, SIZE_SMALL, MUTED],
-		[NPC_TEXT, FONT_SERIF, SIZE_BODY, Color("#d9c9a8")],
-		[EFFECT_TEXT, FONT_UI, SIZE_SMALL, OK],
-	]:
-		var rich: String = str(v[0]) + RICH
-		t.set_type_variation(rich, "RichTextLabel")
-		t.set_font("normal_font", rich, font(v[1], 600 if v[0] == EFFECT_TEXT else 400))
-		t.set_font("bold_font", rich, font(v[1], 700))
-		t.set_font("italics_font", rich, font(FONT_SERIF_ITALIC, 400))
-		for k: String in ["normal_font_size", "bold_font_size", "italics_font_size"]:
-			t.set_font_size(k, rich, v[2])
-		t.set_color("default_color", rich, v[3])
-		t.set_color("selection_color", rich, ACCENT.darkened(0.55))
-		t.set_constant("line_separation", rich, 6 if v[0] == DM_TEXT else 2)
-
-	for type: String in ["Button", "OptionButton"]:
-		t.set_stylebox("normal", type, box(PANEL_RAISED, BORDER, 1, 10, 4))
-		t.set_stylebox("hover", type, box(PANEL_RAISED.lightened(0.08), ACCENT, 1, 10, 4))
-		t.set_stylebox("pressed", type, box(PANEL_RAISED.darkened(0.2), ACCENT, 1, 10, 4))
-		t.set_stylebox("hover_pressed", type, box(PANEL_RAISED.darkened(0.2), ACCENT, 1, 10, 4))
-		t.set_stylebox("disabled", type, box(PANEL, PANEL_RAISED, 1, 10, 4))
-		t.set_stylebox("focus", type, box(Color.TRANSPARENT, ACCENT.darkened(0.3), 1, 10, 4))
-		t.set_color("font_color", type, TEXT)
-		t.set_color("font_hover_color", type, ACCENT_BRIGHT)
-		t.set_color("font_pressed_color", type, ACCENT)
-		t.set_color("font_disabled_color", type, MUTED.darkened(0.3))
-	t.set_type_variation(ACCENT_BUTTON, "Button")
-	t.set_stylebox("normal", ACCENT_BUTTON, box(ACCENT.darkened(0.55), ACCENT, 1, 10, 4))
-	t.set_font("font", ACCENT_BUTTON, font(FONT_UI, 600))
-
-	for type: String in ["LineEdit", "TextEdit"]:
-		t.set_stylebox("normal", type, box(BG, BORDER, 1, 12, 4))
-		t.set_stylebox("focus", type, box(BG, ACCENT, 1, 12, 4))
-		t.set_stylebox("read_only", type, box(PANEL, BORDER, 1, 12, 4))
-		t.set_color("font_color", type, TEXT)
-		t.set_color("font_placeholder_color", type, MUTED.darkened(0.2))
-		t.set_color("caret_color", type, ACCENT)
-		t.set_color("selection_color", type, ACCENT.darkened(0.5))
-
-	t.set_color("font_color", "CheckBox", TEXT)
-	t.set_color("font_hover_color", "CheckBox", ACCENT_BRIGHT)
-	t.set_color("font_pressed_color", "CheckBox", ACCENT_BRIGHT)
-	t.set_color("font_hover_pressed_color", "CheckBox", ACCENT_BRIGHT)
-	t.set_color("font_disabled_color", "CheckBox", MUTED.darkened(0.2))
-	t.set_stylebox("pressed", "CheckBox", box(ACCENT.darkened(0.6), ACCENT.darkened(0.2), 1, 6, 4))
-	t.set_stylebox("hover_pressed", "CheckBox", box(ACCENT.darkened(0.55), ACCENT, 1, 6, 4))
-	t.set_stylebox("panel", "TabContainer", box(PANEL, BORDER, 1, 20))
-	t.set_stylebox("tab_selected", "TabContainer", box(PANEL, ACCENT, 1, 12, 4))
-	t.set_stylebox("tab_unselected", "TabContainer", box(BG, BORDER, 1, 12, 4))
-	t.set_stylebox("tab_hovered", "TabContainer", box(PANEL_RAISED, ACCENT, 1, 12, 4))
-	t.set_color("font_selected_color", "TabContainer", ACCENT_BRIGHT)
-	t.set_color("font_unselected_color", "TabContainer", MUTED)
-	t.set_stylebox("panel", "PopupMenu", box(PANEL_RAISED, BORDER, 1, 8))
-	t.set_color("font_color", "PopupMenu", TEXT)
-	t.set_color("font_hover_color", "PopupMenu", ACCENT_BRIGHT)
-	t.set_stylebox("hover", "PopupMenu", box(ACCENT.darkened(0.6), Color.TRANSPARENT, 0, 4))
-	t.set_stylebox("panel", "TooltipPanel", box(PANEL_RAISED, BORDER, 1, 8))
-	t.set_color("font_color", "TooltipLabel", TEXT)
-	return t
 
 
 ## The frame colour of a spell by its school (v0.7.22.21, #20): the eight schools of 5e, muted to the «dark book».

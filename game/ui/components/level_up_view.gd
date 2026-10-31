@@ -17,7 +17,7 @@ var _info: DetailsPanel
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.new("", WIDE)
+	frame = ModalFrame.make("", WIDE)
 	add_child(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.close_requested.connect(func() -> void: visible = false)

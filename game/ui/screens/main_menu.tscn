@@ -1,0 +1,153 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/main_menu.gd" id="1"]
+[ext_resource type="Script" path="res://ui/components/backend_status.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/links/subscribestar.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/links/itch.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/links/discord.png" id="5"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Col" type="VBoxContainer" parent="Center"]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="Center/Col"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "GAME_TITLE"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Center/Col"]
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+text = "GAME_SUBTITLE"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="Center/Col"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+
+[node name="ContinueButton" type="Button" parent="Center/Col"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_type_variation = &"AccentButton"
+text = "BTN_CONTINUE"
+
+[node name="NewGameButton" type="Button" parent="Center/Col"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+text = "BTN_NEW_GAME"
+
+[node name="LoadButton" type="Button" parent="Center/Col"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+text = "BTN_LOAD"
+
+[node name="SettingsButton" type="Button" parent="Center/Col"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+text = "BTN_SETTINGS"
+
+[node name="QuitButton" type="Button" parent="Center/Col"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+text = "BTN_QUIT"
+
+[node name="BackendStatus" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -32.0
+offset_top = -32.0
+offset_right = -32.0
+offset_bottom = -32.0
+grow_horizontal = 0
+grow_vertical = 0
+script = ExtResource("2")
+
+[node name="SampleStatus" type="Label" parent="BackendStatus" groups=["editor_sample"]]
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+text = "BACKEND_READY"
+
+[node name="VersionLabel" type="Label" parent="."]
+unique_name_in_owner = true
+auto_translate_mode = 2
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = -32.0
+offset_right = 32.0
+offset_bottom = -32.0
+grow_vertical = 0
+theme_type_variation = &"MutedLabel"
+text = "v0.0.0"
+
+[node name="Links" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -86.0
+offset_top = -76.0
+offset_right = 86.0
+offset_bottom = -32.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 20
+
+[node name="Link_subscribestar" type="TextureButton" parent="Links"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("3")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="Link_itch" type="TextureButton" parent="Links"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("4")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="Link_discord" type="TextureButton" parent="Links"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("5")
+ignore_texture_size = true
+stretch_mode = 5

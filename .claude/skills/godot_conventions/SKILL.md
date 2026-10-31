@@ -19,7 +19,7 @@ description: Use this skill when writing or modifying GDScript (.gd), scenes (.t
 1. **Прочитай** [godot-client.md](../../../docs/tech/godot-client.md) и дизайн системы в `docs/design/systems/` (через `docs_lookup`). Для правил 5e — [ADR-0008](../../../docs/tech/adr/0008-engine-decides-llm-narrates.md): движок решает, ЛЛМ описывает.
 2. **Выбери слой:**
    - правило, формула, состояние → `game/core/<домен>/` (`RefCounted`, без нод)
-   - отображение и ввод → `game/ui/` (экраны собираются кодом, без `.tscn`)
+   - отображение и ввод → `game/ui/` (экраны и окна — сцены `.tscn`, скрипт только заполняет их; строки списков — кодом; [ADR-0013](../../../docs/tech/adr/0013-ui-in-scenes.md))
    - глобальное → `game/autoload/`
    - числа и контент → `game/data/*.json` или SRD-данные, не код
 3. **Напиши код**, пройди чеклист.
@@ -37,7 +37,8 @@ description: Use this skill when writing or modifying GDScript (.gd), scenes (.t
 - [ ] Текст игрока — ключ в `text` или `tr("KEY")`, ключ добавлен в `strings.csv`; текст модели и игрока — с `auto_translate_mode = DISABLED`
 - [ ] Экраны не знают друг о друге: переходы через `EventBus.navigate`, вход в игру через `GameEntry`
 - [ ] Подписки экранов на `EventBus` — методами, не лямбдами (экраны пересоздаются, шина живёт всегда)
-- [ ] Цвета и шрифты — из `UiTheme`, не по месту
+- [ ] Цвета и шрифты — варианты темы `ui/theme/game_theme.tres`, в коде — имена и цвета из `UiTheme`, не по месту
+- [ ] Новая сцена: `required()` со всеми нужными узлами, узлы через `UiScenes.need`, открытие через `UiScenes.open`, примерные строки в группе `editor_sample`, имена узлов для плейтестов сохранены
 - [ ] Новое правило в `core/` — тест в `game/test/`; все наборы gdUnit4 зелёные
 - [ ] Никакого токена в логах, снимках, `describe()` и аргументах командной строки
 - [ ] Комментарии короткие, только «почему»

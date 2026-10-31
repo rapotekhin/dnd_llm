@@ -14,7 +14,7 @@ var _rent_days := 3  # v0.7.42: the days of a beast's rent
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.new(tr("PROPERTY_TITLE"), 860.0)
+	frame = ModalFrame.make(tr("PROPERTY_TITLE"), 860.0)
 	add_child(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.close_requested.connect(func() -> void: visible = false)

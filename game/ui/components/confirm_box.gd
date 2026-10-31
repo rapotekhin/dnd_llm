@@ -1,33 +1,26 @@
 class_name ConfirmBox
-extends Control
-## «Точно?» before an irreversible act (v0.7.22.27, UI audit С3): attacking a person, finishing off, surrendering,
-## resisting the guard. «Больше не показывать» (off by default) turns the questions off; the settings bring them
-## back (SaveManager.confirm_risky).
+extends ModalFrame
+## «Точно?» before an irreversible act (v0.7.22.27, UI audit С3; the first window inheriting the frame's scene, v0.7.51):
+## attacking a person, finishing off, surrendering, resisting the guard. «Больше не показывать» (off by default) turns
+## the questions off; the settings bring them back (SaveManager.confirm_risky). «✕» and Esc are «no».
 
 signal answered(yes: bool)
 
-var title_text: String
-var body_text: String
-var yes_text: String
+const BOX_SCENE := "res://ui/components/confirm_box.tscn"
+
 var never: CheckBox
 var yes: Button
-
-
-func _init(title: String, body: String, yes_label: String) -> void:
-	title_text = title
-	body_text = body
-	yes_text = yes_label
+var _no: Button
 
 
 ## Runs `go` at once when the questions are off (null), else after «yes» in the box it returns.
-static func ask(host: Node, title: String, body: String, yes_label: String, go: Callable) -> ConfirmBox:
+static func ask(host: Node, title_text: String, body_text: String, yes_label: String, go: Callable) -> ConfirmBox:
 	if not SaveManager.confirm_risky:
 		go.call()
 		return null
-	var box := ConfirmBox.new(title, body, yes_label)
-	box.name = "ConfirmBox"
-	var scene := host.get_tree().current_scene as Control
-	box.theme = scene.theme if scene != null and scene.theme != null else UiTheme.build()  # the window root has no theme
+	var box := UiScenes.open(BOX_SCENE) as ConfirmBox
+	box.setup(title_text, 640.0)
+	box.fill(body_text, yes_label)
 	box.answered.connect(func(ok: bool) -> void:
 		if ok:
 			go.call())
@@ -36,58 +29,30 @@ static func ask(host: Node, title: String, body: String, yes_label: String, go: 
 	return box
 
 
-func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	z_index = 100
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
-	add_child(dim)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var center := CenterContainer.new()
-	add_child(center)
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.custom_minimum_size = Vector2(640, 0)
-	center.add_child(panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 16)
-	panel.add_child(col)
-	var title := Label.new()
+func required() -> Dictionary:
+	var nodes := super()
+	nodes.merge({"%ConfirmText": "Label", "%NeverAsk": "CheckBox", "%ConfirmNo": "Button", "%ConfirmYes": "Button"})
+	return nodes
+
+
+## The texts are the game's own, already translated, with names in them.
+func fill(body_text: String, yes_label: String) -> void:
 	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	title.theme_type_variation = UiTheme.HEADING
-	title.text = title_text
-	col.add_child(title)
-	var body := Label.new()
-	body.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.custom_minimum_size = Vector2(600, 0)
-	body.text = body_text
-	col.add_child(body)
-	never = CheckBox.new()
-	never.name = "NeverAsk"
-	never.text = "CONFIRM_NEVER"
-	never.button_pressed = false
-	col.add_child(never)
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_END
-	row.add_theme_constant_override("separation", 12)
-	col.add_child(row)
-	var no := Button.new()
-	no.name = "ConfirmNo"
-	no.text = "BTN_CANCEL"
-	no.custom_minimum_size = Vector2(180, 56)
-	no.pressed.connect(_answer.bind(false))
-	row.add_child(no)
-	yes = Button.new()
-	yes.name = "ConfirmYes"
+	var text: Label = UiScenes.need(self, "%ConfirmText")
+	text.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	text.text = body_text
+	never = UiScenes.need(self, "%NeverAsk")
+	_no = UiScenes.need(self, "%ConfirmNo")
+	_no.pressed.connect(_answer.bind(false))
+	yes = UiScenes.need(self, "%ConfirmYes")
 	yes.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	yes.text = yes_text
-	yes.custom_minimum_size = Vector2(220, 56)
-	yes.add_theme_color_override("font_color", UiTheme.BAD)
+	yes.text = yes_label
 	yes.pressed.connect(_answer.bind(true))
-	row.add_child(yes)
-	no.grab_focus.call_deferred()  # Enter must not do the irreversible thing by accident
+	close_requested.connect(_answer.bind(false))
+
+
+func _ready() -> void:
+	_no.grab_focus.call_deferred()  # Enter must not do the irreversible thing by accident
 
 
 func _input(event: InputEvent) -> void:
