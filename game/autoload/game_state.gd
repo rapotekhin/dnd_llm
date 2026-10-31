@@ -1385,7 +1385,7 @@ func _waited(minutes: int, work: Callable, whole := false) -> Array:
 
 
 func _refresh() -> void:
-	_refresh()
+	CharacterRules.refresh(session.character, Catalog.data, session.items)
 
 
 ## One round of the contest going: the NPC rolls by its template, the hero by the kind's check (or its cheat skill
@@ -2889,7 +2889,8 @@ func _gear_changed(before: Dictionary) -> void:
 					lines.append("Надето: " + ItemRules.display_name(Catalog.data["items"], session.items, now))
 		lines.append("Переодевание: %d мин" % minutes)
 		lines.append_array(TimeRules.advance(session, Catalog.data, minutes))
-		_effect_lines(lines)
+		_told(lines)
+	EventBus.state_changed.emit()
 
 
 func save_to(slot: String) -> bool:

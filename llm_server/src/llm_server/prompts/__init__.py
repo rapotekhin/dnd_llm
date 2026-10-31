@@ -109,7 +109,7 @@ def render(name: str, **context: object) -> str:
 # `rules` when it needs them; the scene puts a topic in by itself when it is there (an open edge, a crime, a stranger).
 # key -> (the line of the index: when to read it, the effect kinds the engine accepts only after it is read or shown).
 TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
-    "conditions": ("состояния героя: яд, страх, сон, паралич, путы, истощение, болезни; проверки зрения и слуха (`condition`, `disease`)", ("condition", "disease")),
+    "conditions": ("состояния героя: яд, страх, сон, паралич, путы, истощение, болезни; проверки зрения и слуха (`condition`, `disease`)", ("condition",)),
     "spells": ("что заклинание сделало в мире: иллюзии, разговор со зверьми и мёртвыми, гадание; заклинание на себя", ()),
     "pay": ("покупка у не-торговца, плата за услугу или сведения, платный вариант (`option_costs`), ночлег", ()),
     "theft": ("кража из карманов: как её отыграть", ()),
@@ -143,7 +143,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "weather": ("погода: ливень, туман, снег, зной, мороз и что они значат; чары или чудо меняют погоду на часы (`weather`)", ("weather",)),
     "faith": ("вера: боги, святилища, молитва, обет, заповедь, осквернение; обет по словам героя (`vow`), новое святилище (`create:god`)", ("vow", "create:god")),
     "guise": ("чужой облик: маскировка, кем выглядит герой, за кого его принимают", ("guise",)),
-    "make": ("нового нет в данных и в 5e: мастер собирает статус, навык или черту из частей (`make`): проклятие, благословение места, редкое умение наставника", ("make",)),
+    "make": ("нового нет в данных и в 5e: мастер собирает из частей (`make`) статус, навык, черту, заклинание, способность с зарядами, свойство вещи: проклятие, благословение места, редкое умение наставника, неведомое заклинание, свиток или трактат о нём", ("make",)),
     "factions": ("фракции: новая фракция, чьи это люди и стража, отношение за поступок (`create:faction`)", ("create:faction", "shift:standing")),
     "rumors": ("слухи: что говорят в округе, пересказ слуха NPC, слух о герое или пущенный героем, ложь и её опровержение (`rumor`)", ("rumor",)),
     "pets": ("питомец героя и приручение: дикий зверь в сцене, имя, близость (`shift:bond` с creature_id), помощь, разведка; бездомный зверь по причине (`create:beast`)", ("create:beast",)),
@@ -177,8 +177,12 @@ WILDS_WORDS = re.compile(r"охот|рыб|удочк|удить|сеть|сет
                          re.IGNORECASE)  # v0.7.41
 
 
-MAKE_WORDS = re.compile(r"проклят|проклин|порч|сглаз|морок|благослов|заговор[её]н|зачарован|научи|обучи|выучи|наставник",
+MAKE_WORDS = re.compile(r"проклят|проклин|порч|сглаз|морок|благослов|заговор[её]н|зачарован|научи|обучи|выучи|наставник|"
+                        r"свит[оке]|трактат|манускрипт|фолиант|гримуар|неведом|хочу уметь|перенять",
                         re.IGNORECASE)  # v0.7.63: what the data has not, built of parts
+BANK_WORDS = re.compile(r"ссуд|заём|заем|займ|в долг|залог|ростовщ|кредит|вклад|одолж", re.IGNORECASE)  # v0.7.70.1
+UNDERWORLD_WORDS = re.compile(r"взлом|обчист|ограб|обнес|контрабанд|скупщик|краден|вынести|вынесу|кассу", re.IGNORECASE)  # v0.7.70.1
+JOB_WORDS = re.compile(r"работ|наймусь|нанять|найми|вышибал|устроиться", re.IGNORECASE)  # v0.7.70.1
 
 
 # Containers and new places come whole only when the player's words touch them (v0.7.34.3): a chest stood in 23 of 31
@@ -197,6 +201,12 @@ def mentions(said: str, words: re.Pattern[str], scene: object = None) -> bool:
         return True
     props = getattr(scene, "props", None) or []
     return any(w[:5].lower() in said.lower() for p in props if p.container for w in p.name.split() if len(w) >= 4)
+
+
+def names_a_faction(said: str, scene: object) -> bool:
+    """The player's words name a faction of the frame: «Ночные крысы (night_rats, org): нейтрально»."""
+    low = said.lower()
+    return any(w[:5].lower() in low for line in getattr(scene, "factions", None) or [] for w in line.partition("(")[0].split() if len(w) >= 4)
 
 
 def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
@@ -235,6 +245,14 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("rumors")
     if scene and mentions(said, MAKE_WORDS):  # v0.7.63: a curse, a blessing, a rare skill by words
         out.append("make")
+    if scene and mentions(said, BANK_WORDS):  # v0.7.70.1: the goldens — a folded effect's topic comes by the player's words
+        out.append("bank")
+    if scene and mentions(said, UNDERWORLD_WORDS):
+        out.append("underworld")
+    if scene and mentions(said, JOB_WORDS):
+        out.append("jobs")
+    if names_a_faction(said, scene):
+        out.append("factions")
     if scene and mentions(said, FAITH_WORDS):  # v0.7.49: a prayer, a vow, a shrine by words
         out.append("faith")
     if scene and any("приручить" in c or "питомец героя" in c for c in scene.creatures):  # v0.7.43: a beast to tame or a pet here

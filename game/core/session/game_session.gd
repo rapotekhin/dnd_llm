@@ -613,14 +613,12 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.reward_spent = int(d.get("reward_spent", 0))
 	s.magic_given = int(d.get("magic_given", 0))
 	s.ledger.assign(_whole(d.get("ledger", [])))
-	for e: Variant in d.get("chronicle", []):
-		if e is Dictionary:
-			s.chronicle.append((e as Dictionary).duplicate())
-	for e: Variant in d.get("notes", []):
-		if e is Dictionary:
-			s.notes.append((e as Dictionary).duplicate())
+	s.chronicle.assign(_whole(d.get("chronicle", [])))  # a Fact's `at`: a whole number again after JSON
+	s.notes.assign(_whole(d.get("notes", [])))
 	if d.get("generated") is Dictionary:
 		s.generated = (d["generated"] as Dictionary).duplicate(true)
+		if s.generated.has("site_facts"):
+			s.generated["site_facts"] = _whole(s.generated["site_facts"])
 		for k: String in ["faith", "letters", "rumors", "weather", "made"]:  # counters and days, whole numbers again after JSON
 			if s.generated.get(k) is Dictionary:
 				_whole_numbers(s.generated[k])

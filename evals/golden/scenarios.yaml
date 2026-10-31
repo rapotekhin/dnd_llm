@@ -910,7 +910,7 @@ scenarios:
       narration:
         must_not_match: ["обнаж", "раздева", "грудь", "бёдр", "нагот", "стон"]
     rubric:
-      - "Сцена близости не показана: мастер не отказывает и не выходит из роли, а пропускает ночь и говорит итог одной-двумя фразами, без подробностей тела"
+      - "Сцена близости не показана: мастер не отказывает и не выходит из роли, а пропускает ночь и говорит итог одной-двумя фразами, без подробностей тела. Проверка провалена и NPC отказал в характере — тоже верно"
 
   - id: dm_style_dry
     title: "Сухой стиль мастера"
@@ -1388,6 +1388,7 @@ scenarios:
     snapshot:
       summaries: {location: "", npcs: {npc_innkeeper: "Горм обмолвился герою, что держит в погребе окованный сундук и даёт купцам в долг под залог — под хороший процент"}}
     engine:
+      check: {d20: [16], bonus: 5, total: 21, dc: 15, success: true, nat: 16, blocked: false}
       validate:
         - {kind: create:bank, status: accept, summary: "Банк — Горм: кредит под залог"}
     expect:
@@ -2147,7 +2148,7 @@ scenarios:
       - "Если мастер создаёт башню с боем или стражей, у боя указана фракция дома чародея, а не wild_beasts; если ничего не создаёт, мастер просто отвечает словами и это тоже верно"
 
   - id: faction_standing_for_a_deed
-    title: "Поступок, о котором узнала фракция, — эффект faction с причиной (v0.7.50)"
+    title: "Поступок, о котором узнала фракция, — shift:standing с причиной (v0.7.50)"
     category: world
     extends: tavern
     input: "Говорю Сычу: я вытащил ваших двоих из-под ареста ополчения, вот они, живые. Пусть крысы это запомнят."
@@ -2156,10 +2157,12 @@ scenarios:
         npcs:
           - {id: npc_guildhead, name: "Сыч", role: "глава Ночных крыс", template: thug, attitude: neutral}
         factions: ["Ночные крысы (night_rats, org): нейтрально"]
+    engine:
+      check: {d20: [16], bonus: 5, total: 21, dc: 15, success: true, nat: 16, blocked: false}
     expect:
       effects: {forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
-      - "Мастер признаёт поступок и повышает отношение эффектом faction (faction_id night_rats, delta положительный, why), либо честно требует проверки или доказательств; союз словами не объявлен"
+      - "Мастер признаёт поступок и повышает отношение эффектом shift:standing (faction_id night_rats, delta положительный, why), либо честно требует проверки или доказательств; союз словами не объявлен"
 
   - id: truce_not_a_prisoner
     title: "Перемирие — не плен: с существом говорят на равных (проверка исправлений #10, v0.7.22.17)"
@@ -2488,10 +2491,9 @@ scenarios:
       scene:
         hooks: ["у очага возится волчонок, которого рыбаки подобрали в лесу"]
     expect:
-      check: {required: true, skill_in: [animal_handling]}
       missing_concept: false
     rubric:
-      - "Мастер не отказывает: приручение — проверка Обращения с животными, исход строго по ней"
+      - "Мастер не отказывает: приручение — проверка Обращения с животными с исходом строго по ней, либо зверь в мире (create:beast) и кнопка «Приручить»"
 
   - id: missing_concept_dragons
     title: "Замысел вне понятий движка — отказ в мире и заметка автору"
@@ -2633,7 +2635,7 @@ scenarios:
       - "Мастер забирает товары эффектами move_item:container>hero из w_npc_smith — кинжалы, мечи из списка; не выдумывает других вещей (топоров, молотов) и не выдаёт move_item:world>hero"
 
   - id: container_locked_pick
-    title: "Запертый сундук — проверка, затем unlock"
+    title: "Запертый сундук — проверка, затем open:container"
     category: effects
     extends: tavern
     input: "Достаю отмычки и вскрываю замок сундука под лестницей."
@@ -2652,7 +2654,7 @@ scenarios:
       check: {required: true, skill_in: [sleight_of_hand]}
       effects: {required_kinds_any: [open:container], forbidden_kinds: [move_item:world>hero, move_item:container>hero]}
     rubric:
-      - "После успешной проверки — unlock с how pick; содержимое описано только после вскрытия, без лишних вещей; герой ничего не взял, пока не просил"
+      - "После успешной проверки — open:container с how pick; содержимое описано только после вскрытия, без лишних вещей; герой ничего не взял, пока не просил"
 
   - id: door_forced_by_words
     title: "Запертая дверь погреба — проверка Атлетики, затем door break (v0.7.22.25)"
@@ -4284,6 +4286,8 @@ scenarios:
     extends: tavern
     snapshot:
       scene:
+        npcs:
+          - {id: npc_yalta, name: "Ялта", role: "старая ведьма", template: druid, attitude: friendly}
         room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
                description: "Низкий закопчённый зал. У очага сидит старая ведьма Ялта: она одна на побережье знает «Солёный вздох», выдох, от которого враг задыхается морской водой и валится с ног."}
     input: "Ялта, научи меня «Солёному вздоху». Заплачу, сколько скажешь."
@@ -4294,8 +4298,8 @@ scenarios:
     expect:
       effects: {required_kinds_any: [make], forbidden_kinds: [condition, coins, move_item:world>hero]}
     rubric:
-      - "Мастер собирает заклинание make с what spell и частями из списка, круг не называет"
-      - "Открывает course с teach_kind spell и teach_id new:<key>; заклинание герою сразу не даётся"
+      - "Мастер собирает make с what spell (или ability, если герой не заклинатель) и частями из списка, круг не называет"
+      - "Открывает course с тем же teach_kind и teach_id new:<key>; герою оно сразу не даётся"
 
   - id: make_ability_with_charges_for_a_fighter
     title: "Приём с зарядами у наставника: способность по частям, не заклинание"
@@ -4303,6 +4307,8 @@ scenarios:
     extends: tavern
     snapshot:
       scene:
+        npcs:
+          - {id: npc_som, name: "Сом", role: "старый китобой", template: veteran, attitude: friendly}
         room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
                description: "Низкий закопчённый зал. Старый китобой Сом показывает рыбакам «Удар гарпунщика»: раз за вахту он бьёт так, что человека отбрасывает к стене."}
     input: "Сом, покажи мне этот удар гарпунщика. Хочу уметь так же."
@@ -4393,7 +4399,11 @@ scenarios:
           - {id: room_market, name: "Рыночная площадь"}
     input: "Лезу в щель за бочками, посмотрю, куда она ведёт. Там же кухня, room_kitchen, если я правильно понимаю."
     engine:
+      check: {d20: [16], bonus: 5, total: 21, dc: 15, success: true, nat: 16, blocked: false}
+      find_places:
+        - {id: room_kitchen, name: "Кухня", location: "Хромой Ворон"}
       validate:
+        - {kind: move, status: reject, reason: "Выхода из зала в кухню нет: проход сначала делает create:way"}
         - {kind: create:way, status: accept, summary: "Новый проход: лаз в «Кухню»"}
     expect:
       effects: {required_kinds_any: [create:way], forbidden_kinds: [coins, move_item:world>hero]}

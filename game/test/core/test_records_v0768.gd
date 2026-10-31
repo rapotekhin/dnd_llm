@@ -134,3 +134,14 @@ func test_a_rumour_heard_is_known() -> void:
 	RumorRules.hear(s, data, [r["id"]])
 	assert_bool(RumorRules.heard(s, str(r["id"]))).is_true()
 	assert_array(Knows.all(s, Knows.RUMOR)).contains([str(r["id"])])
+
+
+func test_a_fact_keeps_its_whole_minute_through_a_save() -> void:
+	var s := TestUtils.new_session()
+	s.append(GameSession.effect_entry(["Что-то случилось"]))
+	s.notes.append(Fact.of(s, "заметка", s.room_id))
+	s.generated["site_facts"] = {"x": [Fact.of(s, "у места", s.room_id)]}
+	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
+	assert_int(typeof(back.chronicle[-1]["at"])).is_equal(TYPE_INT)
+	assert_int(typeof(back.notes[-1]["at"])).is_equal(TYPE_INT)
+	assert_int(typeof(back.generated["site_facts"]["x"][0]["at"])).is_equal(TYPE_INT)

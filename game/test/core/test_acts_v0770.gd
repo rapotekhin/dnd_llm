@@ -35,3 +35,29 @@ func test_the_rule_s_refusal_comes_back_and_nothing_is_told() -> void:
 	assert_str(GameState.office_act("leave", "no_office")).is_equal("OFFICE_NOT_HELD")
 	assert_str(GameState.heist_act("give_up", "no_heist")).is_equal("HEIST_NOT_ACTIVE")
 	assert_int(GameState.session.chat.size()).is_equal(said)
+
+
+func test_a_done_act_tells_its_lines() -> void:
+	var said := GameState.session.chat.size()
+	var err := GameState._act("x", {"x": [func() -> String: return "", func() -> Array: return ["дело сделано"]]})
+	assert_str(err).is_empty()
+	assert_int(GameState.session.chat.size()).is_equal(said + 1)
+	assert_str(" ".join(GameState.session.chat[-1]["lines"])).is_equal("дело сделано")
+
+
+func test_waited_work_gets_the_minutes_or_does_not_start() -> void:
+	var got: Array = []
+	var lines: Array = GameState._waited(30, func(m: int) -> Array:
+		got.append(m)
+		return ["готово"])
+	assert_array(got).is_equal([30])
+	assert_bool(lines.has("готово")).is_true()
+
+
+func test_a_change_of_gear_without_minutes_redraws_the_sheet() -> void:
+	var drawn := [0]
+	var count := func() -> void: drawn[0] += 1
+	EventBus.state_changed.connect(count)
+	GameState._gear_changed((GameState.session.character["equipped"] as Dictionary).duplicate())
+	EventBus.state_changed.disconnect(count)
+	assert_int(drawn[0]).is_equal(1)

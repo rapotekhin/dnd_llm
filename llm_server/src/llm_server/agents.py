@@ -281,12 +281,13 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     """Предложить движку последствие: он проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы оно применилось.
     Имя `create:npc` значит {"kind": "create", "what": "npc", …}. Вещь двигает один move_item: откуда `source` и куда `target`
     — hero, world, room, container, npc; имя `move_item:world>hero` значит source world, target hero. world>hero — герой
-    получил, hero>world — у героя больше нет, room>hero — взял вещь комнаты, container>hero и hero>container — из контейнера
+    получил, hero>world — у героя больше нет, room>hero — взял вещь из «Вокруг» по её prop_id (нет в списке — world>hero), `item` — только новая вещь при source world, container>hero и hero>container — из контейнера
     и в него, hero>room — оставил; world>npc, npc>world, world>container, container>world — вещь чужая, в мире, с `cause`.
     cast — игрок колдует; use:feature — умение с ограниченными использованиями, use:item — выпить зелье и т. п.; furnish —
-    обставить комнату при первом входе, в обставленную только с cause; prop_state — вещь открыта, сломана, сожжена, сдвинута;
+    обставить комнату при первом входе, в обставленную только с cause; prop_state — вещь открыта, сломана, сожжена, сдвинута; горит прямо сейчас — status burning, state burned — уже сгорела;
     note — память о событии короткой фразой по-русски; create:stock — торговцу сцены вещь его ремесла, которой нет в товаре.
-    Эффекты темы — по её правилам, поля там же."""
+    Вид с темой: сначала rules(тема), затем эффект в этом же ходе; поля там же. Просьбу, на которую есть такой вид (ростовщик,
+    работа, дело, новое понятие, отношение фракции), не закрывай одними словами."""
     t = ctx.deps
     if isinstance(effect, dict):
         try:
@@ -366,11 +367,12 @@ def _effect_kinds(only: set[str] | None = None) -> str:
             if kind in only:
                 lines.append(effect_line(cls))
         elif prompts.topic_for(tag):
-            folded.setdefault(kind, []).append(tag.partition(":")[2])
+            what = tag.partition(":")[2]
+            folded.setdefault(kind, []).append(f"{what}→{prompts.topic_for(tag)}" if what else prompts.topic_for(tag))
         else:
             lines.append(effect_line(cls))
     for kind, whats in folded.items():
-        lines.append(f"{kind}(what: {'|'.join(whats)}; поля — в теме rules)" if any(whats) else f"{kind}(поля — в теме rules)")
+        lines.append(f"{kind}(what→тема: {', '.join(whats)})" if "→" in whats[0] else f"{kind}(поля — в теме {whats[0]})")
     text = "; ".join(lines)
     return f"{text}. item: {item_shape()}" if "item?: item" in text else text
 

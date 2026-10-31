@@ -196,6 +196,8 @@ class MockEngine:
             rule = self.engine.get("validate", "accept")
             kind = effect_tag(p["effect"])
             summary = kind
+            if kind == "move_item:room>hero" and p["effect"].get("prop_id") not in [q.get("prop_id") for q in self.scene.get("props", [])]:
+                return {"accepted": False, "reason": "Такой вещи в «Вокруг» нет: новая вещь — move_item:world>hero"}  # as PropRules.plan_take
             if isinstance(rule, list):
                 for r in rule:
                     if r.get("kind") == kind and r.get("status") == "reject":

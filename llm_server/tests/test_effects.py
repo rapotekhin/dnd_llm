@@ -3,8 +3,13 @@
 import re
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from llm_server import agents, prompts
-from llm_server.protocol import class_tag, effect_classes, effect_tag
+from llm_server.protocol import MOVE_PAIRS, MoveItemEffect, class_tag, effect_classes, effect_tag
+
+ITEM = {"name": "Письмо", "item_type": "gear", "rarity": "common", "value_cp": 0}
 
 ENGINE = Path(__file__).parents[2] / "game" / "core" / "rules" / "effect_engine.gd"
 
@@ -44,6 +49,21 @@ def test_every_name_of_a_topic_is_an_effect():
 def test_a_topics_fields_come_with_its_rules_not_in_every_turn():
     assert "item_id" in prompts.topic_text("containers") and "prop_id" in prompts.topic_text("containers")
     text = agents._effect_kinds()
-    assert "create(what: " in text and "поля — в теме rules" in text
+    assert "create(what→тема: " in text and "bank→bank" in text and "поля — в теме " in text
     assert "teach_kind" not in text  # a course's fields wait for its topic
     assert len(text) < 7000
+
+
+def test_a_thing_moves_only_by_a_real_way() -> None:
+    for bad, why in (({"source": "container", "target": "npc", "prop_id": "p1", "item_id": "torch"}, "пути"),
+                     ({"source": "container", "target": "hero", "prop_id": "p1", "item": ITEM}, "`item`"),
+                     ({"source": "room", "target": "hero"}, "prop_id"),
+                     ({"source": "container", "target": "hero", "prop_id": "p1"}, "item_id")):
+        with pytest.raises(ValidationError, match=why):
+            MoveItemEffect.model_validate({"kind": "move_item", **bad})
+    MoveItemEffect.model_validate({"kind": "move_item", "source": "world", "target": "hero", "item": ITEM})
+    MoveItemEffect.model_validate({"kind": "move_item", "source": "room", "target": "hero", "prop_id": "p1"})
+
+
+def test_the_ways_of_a_thing_are_the_engine_s_rows() -> None:
+    assert {f"move_item:{p}" for p in MOVE_PAIRS} == {r for r in _rows() if r.startswith("move_item:")}

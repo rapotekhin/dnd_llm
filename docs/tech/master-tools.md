@@ -78,7 +78,9 @@
 | `crime`, `goal`, `use`, `open` | `open:door` | known, release; assess, hint; feature, item; container, door |
 | `move_item` — откуда `source` и куда `target` | `move_item:world>hero` | world>hero, hero>world, room>hero, container>hero, hero>container, hero>room, world>npc, npc>world, world>container, container>world |
 
-Описание инструмента называет семейства и их `what`, а поля эффекта приходят вместе с его темой (`prompts.topic_fields`).
+Описание инструмента называет семейства и у каждого `what` его тему (`bank→bank`), а поля эффекта приходят вместе с темой (`prompts.topic_fields`). Модель идёт за темой не всегда: голдены v0.7.69 показали ростовщика и дело, закрытые одними словами. Поэтому тема такого эффекта ещё и приходит сама по словам игрока (`prompts.auto_topics`: `bank`, `underworld`, `jobs`, `make`, фракция, названная по имени). Новому эффекту из темы нужны свои слова. `disease` в тему не свёрнут: мастер даёт его сам, без просьбы игрока.
+
+`move_item` проверяет схема (`MoveItemEffect._a_real_move`, отказ с подсказкой приходит модели в этом же ходе): путь из `MOVE_PAIRS` (это те же строки таблицы движка, их сверяет тест), `item` только при `source: world`, вещь комнаты — с `prop_id`, контейнер — с `prop_id`, из контейнера — с `item_id`.
 
 Схемы — классы `*Effect` в [protocol.py](../../llm_server/src/llm_server/protocol.py) (объединение `Effect`, [строка 983](../../llm_server/src/llm_server/protocol.py)). Проверка и применение — строка таблицы [EffectEngine._table](../../game/core/rules/effect_engine.gd). Колонка «Тема» — тема `rules(...)`, без которой бэкенд эффект не отправит.
 

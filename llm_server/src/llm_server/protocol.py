@@ -642,6 +642,10 @@ class CoinsEffect(_Out):
     settles: Literal["tax"] | None = None  # 0.77.0: a payment that pays off a debt of the hero — "tax", the property tax
 
 
+MOVE_PAIRS = ("world>hero", "hero>world", "room>hero", "container>hero", "hero>container", "hero>room",
+              "world>npc", "npc>world", "world>container", "container>world")
+
+
 class MoveItemEffect(_Out):
     """A thing moves from `source` to `target` (0.101.0): the hero, `world` (nowhere in particular: a gift, a thing used
     up), `room` (a portable thing of the hero's room, `prop_id`), `container` (a container of the room, `prop_id`), `npc`
@@ -660,6 +664,23 @@ class MoveItemEffect(_Out):
     npc_id: str | None = None
     qty: int = Field(default=1, ge=1, le=99)
     cause: str | None = Field(default=None, max_length=160)  # what in the world did it (world>npc and the like)
+
+    @model_validator(mode="after")
+    def _a_real_move(self) -> "MoveItemEffect":
+        # The goldens of v0.7.69: `source` and `target` let the model say what the old names could not — a new thing
+        # taken from a chest, a thing of the room that is not there. The answer teaches it the way within the turn.
+        pair = f"{self.source}>{self.target}"
+        if pair not in MOVE_PAIRS:
+            raise ValueError(f"пути {pair} нет, есть только: {', '.join(MOVE_PAIRS)}")
+        if self.item is not None and self.source != "world":
+            raise ValueError("`item` — только новая вещь из мира (source world); что уже есть — `item_id` или `prop_id`")
+        if self.source == "room" and not self.prop_id:
+            raise ValueError("вещь комнаты — её `prop_id` из «Вокруг»; вещи нет в списке — world>hero")
+        if "container" in (self.source, self.target) and not self.prop_id:
+            raise ValueError("контейнер — его `prop_id`")
+        if self.source == "container" and not self.item_id:
+            raise ValueError("из контейнера — `item_id` вещи из его содержимого")
+        return self
 
 
 class ContentSpec(_Out):
