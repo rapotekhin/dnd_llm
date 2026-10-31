@@ -97,6 +97,8 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 			"text": p.get("text", "")})
 		if p.has("source"):
 			out[-1]["source"] = p["source"]
+		if (p.get("conditions", []) as Array).size() > 0:  # v0.7.65
+			out[-1]["state"] = ", ".join((p["conditions"] as Array).map(func(c: Variant) -> String: return str(data["rules"]["condition_effects"][str(c)]["name"])))
 		if ContainerRules.is_container(p):  # v0.7.18.1
 			var row: Dictionary = out[-1]
 			row["container"] = ContainerRules.kind_name(data, str(p["container"]))
@@ -154,6 +156,11 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			"item_id": item, "owner": owner, "text": str(spec.get("text", "")).left(800), "state": ""}
 		if str(spec.get("source", "")) in ["water", "foul_water"]:  # water is drawn here (v0.7.34.6)
 			prop["source"] = str(spec["source"])
+		var shape := str(spec.get("body", "")) if spec.get("body") != null else ""
+		if not shape.is_empty():  # v0.7.65: what it does on the map
+			if not (ThingRules.cfg(data)["bodies"] as Dictionary).has(shape):
+				return {"reason": "body — из %s" % ", ".join((ThingRules.cfg(data)["bodies"] as Dictionary).keys())}
+			prop["body"] = shape
 		var box := ContainerRules.plan_spec(s, data, spec)
 		if box.has("reason"):
 			return {"reason": box["reason"]}
@@ -249,11 +256,15 @@ static func take_all(s: GameSession, data: Dictionary) -> Array[String]:
 	return names
 
 
-static func plan_state(s: GameSession, e: Dictionary) -> Dictionary:
+static func plan_state(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var p := find(s, s.room_id, str(e.get("prop_id", "")))
 	if p.is_empty():
 		return {"reason": "в комнате нет вещи %s" % e.get("prop_id", "")}
+	if e.get("damage") != null or e.get("status") != null:  # v0.7.65: the body of the thing, by the engine
+		return ThingRules.plan(s, data, p, e)
 	var state := str(e.get("state", ""))
+	if state in ["broken", "burned"] and ThingRules.guarded(s, data, p):
+		return {"reason": "%s нужна заданию: она уцелеет, скажи об этом в истории" % p["name"]}
 	if not state in ["open", "closed", "broken", "burned", "moved"]:
 		return {"reason": "состояние — open, closed, broken, burned или moved"}
 	if state == "open" and bool(p.get("locked", false)):  # v0.7.18.1
@@ -272,20 +283,24 @@ static func apply_take(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	p["state"] = "taken"
 	var item := str(p["item_id"])
 	var key := ItemRules.found(s.character, data, s.items, item)
+	if p.has("self"):
+		Thing.lay(s.character, key, [p["self"]])
+		p.erase("self")
 	OwnerRules.mark(s, key, 1, str(p.get("owner", "")))
-	OwnerRules.restore(s, p, key, item, 1)
-	FoodRules.taken(s, p, item, key, 1)
 	if ContainerRules.is_carried_kind(data, item):  # a bag comes with what is in it (v0.7.18.2)
-		ContainerRules.pick_up(s, data, item, p.get("contents", {}))
-		for id: String in p.get("contents", {}):
-			OwnerRules.mark(s, id, int(p["contents"][id]), str(p.get("owner", "")))
-			OwnerRules.restore(s, p, id, id, int(p["contents"][id]))
+		ContainerRules.pick_up(s, data, item, p)
 	if not str(plan.get("owner", "")).is_empty():
 		lines.append_array(TheftRules.react(s, data, str(plan["owner"])))
 	return lines
 
 
-static func apply_state(s: GameSession, plan: Dictionary) -> void:
+static func apply_state(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
+	if plan.has("cause"):
+		return ThingRules.apply(s, data, plan)
 	var p := find(s, str(plan["room"]), str(plan["prop"]))
-	if not p.is_empty():
-		p["state"] = str(plan["state"])
+	if p.is_empty():
+		return []
+	if str(plan["state"]) in ["broken", "burned"]:
+		return ThingRules.ruin(s, data, str(plan["room"]), p, str(plan["state"]))
+	p["state"] = str(plan["state"])
+	return []

@@ -82,7 +82,7 @@ static func registry() -> Array[Dictionary]:
 			{"id": "crime", "run": CrimeRules.spread},  # a hidden body is found (v0.7.14)
 			{"id": "rumors", "run": RumorRules.tick},  # rumours reach the neighbours with the fame and the wanted (v0.7.47)
 			{"id": "letters", "run": LetterRules.tick},  # letters delivered or lost, helpers come, the arrested taken (v0.7.48)
-			{"id": "doors", "run": DoorRules.tick, "rules": "doors"},  # a burning door burns through (v0.7.22.25)
+			{"id": "things", "run": ThingRules.tick, "rules": "things"},  # fire takes doors and things, spreads, dies in the rain (v0.7.65)
 		]
 	return _hooks
 

@@ -12,9 +12,11 @@ extends RefCounted
 ## lives in, so nothing else in the engine knows who made them: the row in `spells`, its status, its riders. The circle
 ## comes out of the sum and is not asked; an ability is a spell of no circle that spends its own stock. To the hero: a
 ## course, a book, a scroll (`new:scroll:<key>`), a quest's reward.
+## v0.7.65: a property of a thing, of the tokens the engine reads (rules.make.property); it is priced by those tokens, and
+## the artificer who learned it lays it on a thing (the template `imbue`), or the master's own item carries it.
 
 const PREFIX := "gen_"
-const IDS := {"status": "st", "skill": "sk", "trait": "tr", "spell": "sp", "ability": "ab"}
+const IDS := {"status": "st", "skill": "sk", "trait": "tr", "spell": "sp", "ability": "ab", "property": "pr"}
 const ACTS: Array[String] = ["spell", "ability"]
 
 
@@ -32,6 +34,10 @@ static func install(data: Dictionary, gen: Dictionary) -> void:
 			if id.begins_with(PREFIX):
 				(rules[table] as Dictionary).erase(id)
 	var tables := _tables(data)
+	if not data["items"].has("built"):
+		data["items"]["built"] = {}
+	tables["built"] = data["items"]["built"]
+	tables["properties"] = data["items"]["properties"]
 	for name: String in tables:
 		for id: String in (tables[name] as Dictionary).keys():
 			if id.begins_with(PREFIX):
@@ -48,6 +54,12 @@ static func _put(data: Dictionary, id: String, def: Dictionary) -> void:
 	if not rules.has("made"):
 		rules["made"] = {}
 	rules["made"][id] = def
+	if str(def["what"]) == "property":
+		if not data["items"].has("built"):
+			data["items"]["built"] = {}
+		data["items"]["built"][id] = {"tokens": def["tokens"], "name": str(def["name"])}
+		data["items"]["properties"][id] = int(def["points"])
+		return
 	if ACTS.has(str(def["what"])):
 		var tables := _tables(data)
 		for name: String in tables:
@@ -100,6 +112,50 @@ static func resolve(pending: Array[Dictionary], value: String) -> String:
 				return str(p["plan"]["id"])
 			return str(p["plan"][of]["id"]) if p["plan"].has(of) else value
 	return value
+
+
+## A master's item with `new:<key>` among its properties: the real ids.
+static func resolved_item(item: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	if not (item.get("properties", []) as Array).any(func(p: Variant) -> bool: return str(p).begins_with("new:")):
+		return item
+	var out := item.duplicate()
+	out["properties"] = (item["properties"] as Array).map(func(p: Variant) -> String: return resolve(pending, str(p)))
+	return out
+
+
+## A property of parts: {tokens, on, points, tier, rarity} or {reason}. Its price is the price of what it adds.
+static func _property(s: GameSession, data: Dictionary, name: String, parts: Variant) -> Dictionary:
+	var table: Dictionary = cfg(data)["property"]["parts"]
+	if not (parts is Array) or (parts as Array).is_empty():
+		return {"reason": "нужны parts: из чего собрано; есть: %s" % ", ".join(table.keys())}
+	var costs: Dictionary = data["items"]["properties"]
+	var tokens: Array = []
+	var on := ""
+	var points := 0
+	for p: Variant in parts:
+		var id := str((p as Dictionary).get("part", ""))
+		if not table.has(id):
+			return {"reason": "части %s нет; есть: %s" % [id, ", ".join(table.keys())]}
+		var spec: Dictionary = table[id]
+		var value := str(p.get("value", "")) if p.get("value") != null else ""
+		var amount := int(p.get("amount", 0)) if p.get("amount") != null else 0
+		var why := _valid(data, spec, id, value, amount)
+		if not why.is_empty():
+			return {"reason": why}
+		var token := str(spec["token"]) % value if spec.has("of") else (str(spec["token"]) % amount if spec.has("number") else str(spec["token"]))
+		if not costs.has(token):
+			return {"reason": "%s — такого свойства движок не читает" % token}
+		var part_on := str(spec.get("on", ""))
+		if not part_on.is_empty() and not on.is_empty() and part_on != on:
+			return {"reason": "одна вещь — либо оружие, либо доспех"}
+		on = part_on if not part_on.is_empty() else on
+		tokens.append(token)
+		points += int(costs[token])
+	var rarity := ItemRules.rarity_for_points(data["items"], points)
+	var level := int(s.character.get("level", 1))
+	if level < int(data["items"]["rarity_min_level"][rarity]):
+		return {"reason": "«%s» — редкость %s: %d очков, это от %d уровня героя, а герой %d" % [name, rarity, points, int(data["items"]["rarity_min_level"][rarity]), level]}
+	return {"tokens": tokens, "on": on, "points": points, "tier": rarity, "rarity": rarity}
 
 
 ## What the parts cost and do: {points, harm, boon, row, fx} or {reason}.
@@ -227,6 +283,12 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary, pending: Array
 			return {"reason": "ability навыка — из %s" % ", ".join(data["rules"]["saves"])}
 		def["ability"] = ab
 		summary = "Новый навык: %s" % name
+	elif what == "property":
+		var built := _property(s, data, name, e.get("parts", []))
+		if built.has("reason"):
+			return built
+		def.merge(built)
+		summary = "Новое свойство: «%s» (%d очк., %s)" % [name, int(def["points"]), def["rarity"]]
 	elif ACTS.has(what):
 		var built := _acted(s, data, what, id, name, text, e, pending)
 		if built.has("reason"):
@@ -282,6 +344,9 @@ static func _book(data: Dictionary, id: String, def: Dictionary, title: String) 
 	var b: Dictionary = cfg(data)["book"]
 	var item_id := "gen_book_" + id.md5_text().left(8)
 	var kind := str(def["what"])
+	if kind == "property":  # known while it is carried, as a recipe's book
+		return {"id": item_id, "item": {"name": title, "item_type": "gear", "value_cp": int(b["value_cp"]), "weight": 1, "properties": [],
+			"description": str(def["text"]), "generated": true, "teaches": [CraftRules.imbue_formula(id)]}}
 	var skill := str(cfg(data)["act"]["book_skill"]) if ACTS.has(kind) else str(b["skill"])
 	return {"id": item_id, "course": "gen_c_" + item_id.md5_text().left(8),
 		"item": {"name": title, "item_type": "gear", "value_cp": int(b["value_cp"]), "weight": 1, "properties": [],
@@ -473,9 +538,11 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 		s.items[str(p["scroll"]["id"])] = p["scroll"]["item"]
 	if p.has("book"):
 		var book: Dictionary = p["book"]
-		var all: Dictionary = gen.get("courses", {})
-		all[str(book["course"])] = (book["def"] as Dictionary).duplicate(true)
-		gen["courses"] = all
+		s.items[str(book["id"])] = book["item"]
+		if book.has("course"):
+			var all: Dictionary = gen.get("courses", {})
+			all[str(book["course"])] = (book["def"] as Dictionary).duplicate(true)
+			gen["courses"] = all
 	CharacterRules.refresh(s.character, data, s.items)
 	return []
 
@@ -496,9 +563,13 @@ static func is_ability(data: Dictionary, id: String) -> bool:
 	return str(def_of(data, id).get("what", "")) == "ability"
 
 
+static func is_property(data: Dictionary, id: String) -> bool:
+	return str(def_of(data, id).get("what", "")) == "property"
+
+
 ## For the master: what was made in this game and can be used again.
 static func text(s: GameSession, data: Dictionary) -> String:
-	var names := {"status": "статус", "skill": "навык", "trait": "черта", "spell": "заклинание", "ability": "способность"}
+	var names := {"status": "статус", "skill": "навык", "trait": "черта", "spell": "заклинание", "ability": "способность", "property": "свойство вещи"}
 	var parts: Array[String] = []
 	var made: Dictionary = s.generated.get("made", {})
 	for id: String in made:

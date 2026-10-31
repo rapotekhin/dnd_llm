@@ -115,9 +115,7 @@ var arrest_tried: Array[String] = []
 ## {room, foes, encounter, from} ({} — free).
 var lurking: Dictionary = {}
 var captive: Dictionary = {}
-## v0.7.22.17 (OwnerRules): what the hero carries of someone else's {item_id: {owner: qty}}; the creature the hero
-## last spoke to (its master's replies go when it does).
-var foreign: Dictionary = {}
+## v0.7.22.17: the creature the hero last spoke to (its master's replies go when it does).
 var talk_creature: String = ""
 ## v0.7.22.24 (SiteRules): the sites whose private room the hero was warned off {site_id: abs minute}.
 var trespass_warned: Dictionary = {}
@@ -224,8 +222,10 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		for it: String in c["bags"][id].get("contents", {}):
 			contents[it] = int(c["bags"][id]["contents"][it])
 		bags[id] = {"kind": str(c["bags"][id].get("kind", "")), "contents": contents}
+		if c["bags"][id].has("copies"):
+			bags[id]["copies"] = _whole(c["bags"][id]["copies"])
 	c["bags"] = bags
-	for k: String in ["fresh", "study", "bonds", "family", "heists", "orgs", "offices", "towns", "faith", "debts"]:  # v0.7.25 food batches, v0.7.30 study, v0.7.31 bonds: whole numbers only
+	for k: String in ["copies", "study", "bonds", "family", "heists", "orgs", "offices", "towns", "faith", "debts"]:  # v0.7.25 food batches, v0.7.30 study, v0.7.31 bonds: whole numbers only
 		if c.has(k):
 			c[k] = _whole(c[k])
 	c["conditions"] = c.get("conditions", [])
@@ -245,8 +245,6 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		var n: Dictionary = c["needs"]
 		for k: String in ["food", "water"]:
 			n[k] = {"level": float(n[k].get("level", 100.0)), "at": int(n[k].get("at", 0))}
-		if n.has("skin"):  # the old pool of drinks, poured into the vessels by VesselRules (v0.7.34.6)
-			n["skin"] = int(n["skin"])
 		n["done"] = _whole_numbers(n.get("done", {}))
 	if c.has("diseases"):  # v0.7.23.1: diseases still incubating
 		var sick: Array = []
@@ -260,10 +258,6 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 	c["concentration_ends"] = int(c.get("concentration_ends", -1))
 	c["prepared_day"] = int(c.get("prepared_day", 1))
 	c["attuned"] = (c.get("attuned", []) as Array).map(func(v: Variant) -> String: return str(v))  # v0.7.12
-	var used := {}
-	for id: Variant in c.get("charges_used", {}):
-		used[str(id)] = int(c["charges_used"][id])
-	c["charges_used"] = used
 	if c.get("ammo_left") is Dictionary:
 		c["ammo_left"] = _whole_numbers(c["ammo_left"])
 	return c
@@ -501,7 +495,6 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"arrest_tried": arrest_tried,
 		"lurking": lurking,
 		"captive": captive,
-		"foreign": foreign,
 		"talk_creature": talk_creature,
 		"trespass_warned": trespass_warned,
 		"permits": permits,
@@ -614,21 +607,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.arrest_tried.append(str(how))
 	s.lurking = (d.get("lurking", {}) as Dictionary).duplicate(true)
 	s.captive = (d.get("captive", {}) as Dictionary).duplicate(true)
-	for id: String in d.get("foreign", {}):
-		var by := {}
-		for owner: String in d["foreign"][id]:
-			by[owner] = int(d["foreign"][id][owner])
-		s.foreign[id] = by
 	s.talk_creature = str(d.get("talk_creature", ""))
-	s.doors = (d.get("doors", {}) as Dictionary).duplicate(true)
-	for k: String in s.doors:
-		for f: String in ["hp", "unlocked_until"]:
-			if s.doors[k].has(f):
-				s.doors[k][f] = int(s.doors[k][f])
-		for e: Variant in s.doors[k].get("effects", []):
-			for f: String in ["until", "at"]:
-				if e is Dictionary and e.has(f):
-					e[f] = int(e[f])
+	s.doors = _whole(d.get("doors", {}))
 	for sid: String in d.get("trespass_warned", {}):
 		s.trespass_warned[sid] = int(d["trespass_warned"][sid])
 	for sid: String in d.get("permits", {}):

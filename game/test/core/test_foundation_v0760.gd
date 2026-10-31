@@ -172,7 +172,7 @@ func test_a_hook_without_its_rules_is_skipped() -> void:
 	var s := _session()
 	var no_doors := data.duplicate()
 	no_doors["rules"] = (data["rules"] as Dictionary).duplicate()
-	(no_doors["rules"] as Dictionary).erase("doors")
+	(no_doors["rules"] as Dictionary).erase("things")
 	assert_array(TimeRules.hooks(s, no_doors)).is_empty()
 
 

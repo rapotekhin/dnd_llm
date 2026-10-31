@@ -206,6 +206,10 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 109. Протокол 0.99.0 (v0.7.65)
+
+Эффект `make`: `what` ещё `property` (свойство вещи из частей `rules.make.property`). Эффект `prop_state`: `state` необязателен, новые `damage`, `damage_type`, `status`, `cause` — тело вещи считает движок. `PropSpec.body` — что вещь делает на карте. Свойства вещи мастера принимают `new:<key>`.
+
 ### 108. Протокол 0.98.0 (v0.7.64)
 
 Эффект `make`: `what` ещё spell | ability, `scroll` (название свитка), части действия из `rules.make.act`, до 10 частей; `new:scroll:<key>`. `CourseEffect.teach_kind` и `ActTeach.kind` — ещё `ability`. Эффект `recipe`: `book`, `key` — книга рецепта вместо сразу выученного.

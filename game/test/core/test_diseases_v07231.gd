@@ -118,7 +118,7 @@ func test_foul_water_and_a_filled_skin_risk_the_plague() -> void:
 	assert_bool(NeedRules.water_here(s, data)).is_true()
 	assert_bool(NeedRules.foul_here(s, data)).is_true()
 	s.character["inventory"]["waterskin"] = 1
-	s.character["vessels"] = {}
+	VesselRules.drain(s.character)
 	NeedRules.fill(s, data)
 	assert_bool(bool(VesselRules.carried(s.character, data)[0]["foul"])).is_true()
 	s.room_id = "brod-square"

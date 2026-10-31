@@ -727,6 +727,8 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary, teacher_def
 	if not named.is_empty():
 		what = named
 	var recipe := {}
+	if kind == "recipe" and MakeRules.is_property(data, what):
+		what = CraftRules.imbue_formula(what)
 	if kind == "recipe" and CraftRules.recipe(s, data, what).is_empty():
 		var made := _course_recipe(s, data, what, spec.get("recipe"))
 		if made.has("reason"):

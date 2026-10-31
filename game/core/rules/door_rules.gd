@@ -4,7 +4,7 @@ extends RefCounted
 ## have a door: one the pack names (a room's `doors` {to: {material, lock, key, locked}}) or the way into a site with
 ## hours (its entrance, a door by default). Its state lives in s.doors {"a|b": {...}}: unlocked until, locked by the
 ## hero or the master, broken, its HP and effects with a cause and a time (burning, an arcane lock, knocked open). A
-## door outside its site's hours is locked. It opens by a key, thieves' tools (Sleight of Hand), force (Athletics — it
+## door outside its site's hours is locked. Its body, material and statuses are ThingRules' (v0.7.65). It opens by a key, thieves' tools (Sleight of Hand), force (Athletics — it
 ## breaks), blows of a weapon (its AC and HP), Knock; Arcane Lock locks it harder; fire burns a wooden one through.
 ## Forcing, hacking or burning a way into a closed or private site before eyes is a trespass at once.
 
@@ -51,22 +51,20 @@ static func hours(s: GameSession, data: Dictionary, site_id: String) -> Dictiona
 static func _st(s: GameSession, a: String, b: String) -> Dictionary:
 	var k := key(a, b)
 	if not s.doors.has(k):
-		s.doors[k] = {"effects": []}
+		s.doors[k] = {}
 	return s.doors[k]
 
 
 static func max_hp(data: Dictionary, d: Dictionary) -> int:
-	return int(cfg(data)["materials"].get(str(d.get("material", "wood")), {}).get("hp", 18))
+	return int(ThingRules.material(data, d).get("door_hp", 18))
 
 
 static func hp(s: GameSession, data: Dictionary, a: String, b: String) -> int:
-	return int(s.doors.get(key(a, b), {}).get("hp", max_hp(data, def(data, a, b))))
+	return maxi(0, max_hp(data, def(data, a, b)) - int(s.doors.get(key(a, b), {}).get("dmg", 0)))
 
 
 static func has_effect(s: GameSession, a: String, b: String, kind: String) -> bool:
-	var now := TimeRules.abs_minute(s)
-	return (s.doors.get(key(a, b), {}).get("effects", []) as Array).any(func(e: Dictionary) -> bool:
-		return str(e["kind"]) == kind and (int(e.get("until", -1)) < 0 or int(e["until"]) > now))
+	return ThingRules.has(s, s.doors.get(key(a, b), {}), kind)
 
 
 ## "" — the hero passes from `a` to `b`; else why not (a localization key): DOOR_BURNING, DOOR_ARCANE, DOOR_LOCKED,
@@ -114,7 +112,7 @@ static func describe(s: GameSession, data: Dictionary, a: String, b: String) -> 
 	var d := def(data, a, b)
 	if d.is_empty():
 		return ""
-	var bits: Array[String] = ["дверь (%s)" % str(cfg(data)["materials"].get(str(d.get("material", "wood")), {}).get("name", d.get("material", "")))]
+	var bits: Array[String] = ["дверь (%s)" % str(ThingRules.material(data, d).get("name", d.get("material", "")))]
 	var why := blocked(s, data, a, b)
 	if bool(s.doors.get(key(a, b), {}).get("broken", false)):
 		bits.append("выбита")
@@ -135,12 +133,11 @@ static func describe(s: GameSession, data: Dictionary, a: String, b: String) -> 
 ## The DC to pick the lock (Sleight of Hand) and to force the door (Athletics); an arcane lock adds its own.
 static func dcs(s: GameSession, data: Dictionary, a: String, b: String) -> Dictionary:
 	var d := def(data, a, b)
-	var pick := int(data["rules"]["containers"]["lock_dc"].get(str(d.get("lock", "simple")), 10))
-	var force := pick + int(data["rules"]["containers"]["force_dc_plus"]) + int(cfg(data)["materials"].get(str(d.get("material", "wood")), {}).get("force_plus", 0))
+	var out := ThingRules.lock_dcs(data, int(data["rules"]["containers"]["lock_dc"].get(str(d.get("lock", "simple")), 10)), d)
 	if has_effect(s, a, b, "arcane_lock") and not has_effect(s, a, b, "knocked"):
-		pick += int(cfg(data)["arcane_plus"])
-		force += int(cfg(data)["arcane_plus"])
-	return {"pick": pick, "force": force}
+		out["pick"] = int(out["pick"]) + int(cfg(data)["arcane_plus"])
+		out["force"] = int(out["force"]) + int(cfg(data)["arcane_plus"])
+	return out
 
 
 ## The ways the hero has with this door now: [{how, spell?, item?}] — key, pick, force, hit (a weapon in hand), the
@@ -163,7 +160,7 @@ static func ways(s: GameSession, data: Dictionary, a: String, b: String) -> Arra
 	var broken := bool(s.doors.get(key(a, b), {}).get("broken", false))
 	if shut and not str(c.get("equipped", {}).get("main_hand", "")).is_empty():
 		out.append({"how": "hit"})
-	var burns := bool(cfg(data)["materials"].get(str(d.get("material", "wood")), {}).get("burns", false))
+	var burns := ThingRules.burns(s, data, s.doors.get(key(a, b), {}), d)
 	for id: Variant in SpellRules.ready(c):
 		var sp: Dictionary = data["rules"]["spell_effects"].get(str(id), {})
 		var door := str(sp.get("door", ""))
@@ -197,14 +194,12 @@ static func lock(s: GameSession, a: String, b: String) -> void:
 static func break_down(s: GameSession, a: String, b: String) -> void:
 	var st := _st(s, a, b)
 	st["broken"] = true
-	st["hp"] = 0
 
 
 ## A blow of `damage` at the door: its HP goes down, at 0 it is broken. True when it broke.
 static func hurt(s: GameSession, data: Dictionary, a: String, b: String, damage: int) -> bool:
-	var st := _st(s, a, b)
-	st["hp"] = maxi(0, hp(s, data, a, b) - damage)
-	if int(st["hp"]) == 0:
+	var d := def(data, a, b)
+	if bool(ThingRules.hurt(data, _st(s, a, b), d.merged({"hp": max_hp(data, d)}), damage)["broke"]):
 		break_down(s, a, b)
 		return true
 	return false
@@ -213,7 +208,7 @@ static func hurt(s: GameSession, data: Dictionary, a: String, b: String, damage:
 ## A blow of the weapon in hand at the door: an attack against the material's AC, damage off its HP. Lines.
 static func hit(s: GameSession, data: Dictionary, a: String, b: String) -> Array[String]:
 	var c := s.character
-	var mat: Dictionary = cfg(data)["materials"].get(str(def(data, a, b).get("material", "wood")), {})
+	var mat := ThingRules.material(data, def(data, a, b))
 	var w := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
 	var r := Roll.hero(s, data, {"what": "Удар по двери", "parts": _hit_parts(w), "bonus": w["to_hit"], "dc": int(mat.get("ac", 15))})
 	if not bool(r["ok"]):
@@ -226,9 +221,7 @@ static func hit(s: GameSession, data: Dictionary, a: String, b: String) -> Array
 
 ## An effect on the door with its cause and its end (minutes from now; −1 — until removed).
 static func add_effect(s: GameSession, a: String, b: String, kind: String, minutes: int, cause: String) -> void:
-	var st := _st(s, a, b)
-	var now := TimeRules.abs_minute(s)
-	(st["effects"] as Array).append({"kind": kind, "until": now + minutes if minutes >= 0 else -1, "cause": cause, "at": now})
+	ThingRules.lay(s, _st(s, a, b), kind, minutes, cause)
 
 
 ## A door spell of the hero by its data: Knock opens (and quiets an arcane lock for a while), Arcane Lock seals it
@@ -249,29 +242,8 @@ static func spell(s: GameSession, data: Dictionary, a: String, b: String, spell_
 
 
 static func ignite(s: GameSession, data: Dictionary, a: String, b: String, cause: String) -> Array[String]:
-	add_effect(s, a, b, "burning", int(cfg(data)["burn_minutes"]), cause)
-	return ["Дверь загорается (%s): через %d мин прогорит насквозь" % [cause, int(cfg(data)["burn_minutes"])]]
-
-
-## Time passes: a burning door burns through when its fire ends; spent effects go. Lines for the hero's room.
-static func tick(s: GameSession, data: Dictionary) -> Array[String]:
-	var lines: Array[String] = []
-	var now := TimeRules.abs_minute(s)
-	for k: String in s.doors:
-		var st: Dictionary = s.doors[k]
-		var keep: Array = []
-		for e: Dictionary in st.get("effects", []):
-			if int(e.get("until", -1)) < 0 or int(e["until"]) > now:
-				keep.append(e)
-			elif str(e["kind"]) == "burning" and not bool(st.get("broken", false)):
-				st["broken"] = true
-				st["burnt"] = true
-				st["hp"] = 0
-				var ab := k.split("|")
-				if s.room_id in ab:
-					lines.append("Дверь прогорела насквозь — путь открыт")
-		st["effects"] = keep
-	return lines
+	ThingRules.ignite(s, data, _st(s, a, b), def(data, a, b), cause)
+	return ["Дверь загорается (%s): через %d мин прогорит насквозь" % [cause, int(ThingRules.cfg(data)["burn_minutes"])]]
 
 
 ## A way into a closed or private site of someone else, forced before eyes: who saw it ([] — nobody).

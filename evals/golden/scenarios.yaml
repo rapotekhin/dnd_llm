@@ -4344,3 +4344,39 @@ scenarios:
       effects: {forbidden_kinds: [make, cast, coins]}
     rubric:
       - "Герой сам заклинаний не изобретает: новое приходит только через мир, город стоит на месте"
+
+  - id: thing_burned_by_a_torch
+    title: "Герой поджигает стол: тело вещи считает движок"
+    category: concepts
+    extends: tavern
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p1, name: "Длинный стол", description: "Дубовый стол у очага", state: "", portable: false, text: ""}
+    input: "Подношу факел к длинному столу и держу, пока не займётся."
+    engine:
+      validate:
+        - {kind: prop_state, status: accept, summary: "Длинный стол: поджёг факелом"}
+    expect:
+      effects: {required_kinds_any: [prop_state], forbidden_kinds: [coins, create_npc]}
+    rubric:
+      - "Мастер даёт prop_state со status burning и cause, а не просто state burned"
+
+  - id: make_property_through_a_book
+    title: "Трактат о зачаровании: свойство вещи из частей, книга через мир"
+    category: concepts
+    extends: tavern
+    snapshot:
+      scene:
+        room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
+               description: "Низкий закопчённый зал. На полке у очага лежит старый трактат кузнеца морских жрецов о том, как заставить клинок морозить рану."}
+    input: "Беру трактат с полки: мне как раз нужно такое зачарование для моего меча."
+    engine:
+      validate:
+        - {kind: make, status: accept, summary: "Новое свойство: «Морозная рана» (2 очк., uncommon)"}
+        - {kind: give_item, status: accept, summary: "Трактат"}
+    expect:
+      effects: {required_kinds_any: [make, give_item], forbidden_kinds: [coins, condition]}
+    rubric:
+      - "Мастер собирает make с what property и частями, с book, и отдаёт книгу через give_item new:book:<key>"
+      - "Меч героя сам по себе не меняется: накладывать надо работой"

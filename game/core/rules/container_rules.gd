@@ -147,15 +147,11 @@ static func apply_take(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	var lines: Array[String] = []
 	if p.is_empty():
 		return lines
-	var contents: Dictionary = p["contents"]
 	var id := str(plan["item_id"])
-	contents[id] = int(contents.get(id, 0)) - int(plan["qty"])
-	if int(contents[id]) <= 0:
-		contents.erase(id)
+	var had := Thing.take(p, id, int(plan["qty"]))
 	var key := ItemRules.found(s.character, data, s.items, id, int(plan["qty"]))
+	Thing.lay(s.character, key, had)
 	OwnerRules.mark(s, key, int(plan["qty"]), str(p.get("owner", "")))
-	OwnerRules.restore(s, p, key, id, int(plan["qty"]))
-	FoodRules.taken(s, p, id, key, int(plan["qty"]))
 	CharacterRules.refresh(s.character, data, s.items)
 	if not str(plan.get("owner", "")).is_empty():
 		lines.append_array(TheftRules.react(s, data, str(plan["owner"])))
@@ -186,16 +182,10 @@ static func apply_put(s: GameSession, data: Dictionary, plan: Dictionary) -> voi
 	var p := target(s, data, str(plan["into"]))
 	if p.is_empty():
 		return
-	var inv: Dictionary = s.character["inventory"]
 	var id := str(plan["item_id"])
-	FoodRules.keep(p, id, FoodRules.leave(s, data, id, int(plan["qty"])))
-	inv[id] = int(inv.get(id, 0)) - int(plan["qty"])
-	if int(inv[id]) <= 0:
-		inv.erase(id)
-	if not p.has("contents"):
-		p["contents"] = {}
-	p["contents"][id] = int(p["contents"].get(id, 0)) + int(plan["qty"])
-	OwnerRules.store(s, p, id)
+	FoodRules.sync(s, data)
+	Thing.move(s.character, p, id, int(plan["qty"]))
+	OwnerRules.returned(p, id)
 	CharacterRules.refresh(s.character, data, s.items)
 
 
@@ -218,11 +208,12 @@ static func ways(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Strin
 
 ## The check of a way: {skill, dc, tool} ({} for the key).
 static func lock_check(data: Dictionary, p: Dictionary, how: String) -> Dictionary:
+	var dcs := ThingRules.lock_dcs(data, int(p.get("lock_dc", 10)), ThingRules.body(data, p))
 	match how:
 		"pick":
-			return {"skill": "sleight_of_hand", "dc": int(p.get("lock_dc", 10)), "tool": "thieves_tools"}
+			return {"skill": "sleight_of_hand", "dc": int(dcs["pick"]), "tool": "thieves_tools"}
 		"force":
-			return {"skill": "athletics", "dc": int(p.get("lock_dc", 10)) + int(cfg(data)["force_dc_plus"])}
+			return {"skill": "athletics", "dc": int(dcs["force"])}
 	return {}
 
 
@@ -354,18 +345,16 @@ static func droppable(s: GameSession, data: Dictionary, item_id: String) -> int:
 static func apply_drop(s: GameSession, data: Dictionary, plan: Dictionary) -> void:
 	var c := s.character
 	var item_id := str(plan["item_id"])
-	var contents := {}
+	var bag := {}
 	var qty := int(plan.get("qty", 1))
 	if plan.has("bag"):
-		contents = (bags(c)[plan["bag"]]["contents"] as Dictionary).duplicate()
+		bag = bags(c)[plan["bag"]]
 		bags(c).erase(plan["bag"])
 		qty = 1
-	var batches := FoodRules.leave(s, data, item_id, qty)
-	var inside := contents.keys()
+	FoodRules.sync(s, data)
+	var had := Thing.take(c, item_id, qty)
 	var inv: Dictionary = c["inventory"]
-	inv[item_id] = int(inv.get(item_id, 0)) - qty
-	if int(inv[item_id]) <= 0:
-		inv.erase(item_id)
+	if not inv.has(item_id):
 		(c.get("attuned", []) as Array).erase(item_id)
 	var held := 0  # the hands let go of what is no longer carried
 	for slot: String in CharacterRules.SLOTS:
@@ -374,35 +363,44 @@ static func apply_drop(s: GameSession, data: Dictionary, plan: Dictionary) -> vo
 			if held > int(inv.get(item_id, 0)):
 				c["equipped"][slot] = ""
 	sync_bags(c, data)
-	var list: Array = s.props.get(str(plan["room"]), [])
 	for i in qty:
-		var n := 1
-		while list.any(func(p: Dictionary) -> bool: return str(p["id"]) == "d%d" % n):
-			n += 1
-		var prop := {"id": "d%d" % n, "name": ItemRules.display_name(data["items"], s.items, item_id), "description": "", "item_id": item_id,
-			"owner": "", "text": "", "state": "", "dropped": true, "dropped_at": TimeRules.abs_minute(s)}
-		if not contents.is_empty() or is_carried_kind(data, item_id):
+		var prop := lay_down(s, data, str(plan["room"]), item_id, had[i] if i < had.size() else {})
+		if not (bag.get("contents", {}) as Dictionary).is_empty() or is_carried_kind(data, item_id):
 			prop["container"] = item_id
-			prop["contents"] = contents
-			contents = {}
-			for id: String in inside:
-				OwnerRules.store(s, prop, id)
-		OwnerRules.store(s, prop, item_id, 1)
-		FoodRules.keep(prop, item_id, FoodRules.cut(batches, 1))
-		list.append(prop)
-	s.props[str(plan["room"])] = list
+			prop["contents"] = (bag.get("contents", {}) as Dictionary).duplicate()
+			if bag.has("copies"):
+				prop["copies"] = bag["copies"]
+			bag = {}
 	CharacterRules.refresh(c, data, s.items)
 
 
+## One thing lies on the floor of `room` now, with what sets it apart (`self`, beside what lies in it).
+static func lay_down(s: GameSession, data: Dictionary, room: String, item_id: String, state: Dictionary) -> Dictionary:
+	var list: Array = s.props.get(room, [])
+	var n := 1
+	while list.any(func(p: Dictionary) -> bool: return str(p["id"]) == "d%d" % n):
+		n += 1
+	var prop := {"id": "d%d" % n, "name": ItemRules.display_name(data["items"], s.items, item_id), "description": "", "item_id": item_id,
+		"owner": "", "text": "", "state": "", "dropped": true, "dropped_at": TimeRules.abs_minute(s)}
+	if not state.is_empty():
+		prop["self"] = state
+	list.append(prop)
+	s.props[room] = list
+	return prop
+
+
 ## A bag picked up with what is in it (PropRules.apply_take).
-static func pick_up(s: GameSession, data: Dictionary, item_id: String, contents: Dictionary) -> void:
+static func pick_up(s: GameSession, data: Dictionary, item_id: String, p: Dictionary) -> void:
 	sync_bags(s.character, data)
+	var contents: Dictionary = p.get("contents", {})
 	if contents.is_empty():
 		return
+	var to := s.character  # no room for one more bag (v0.7.22.9): what was in it goes loose
 	for id: String in bags_of(s.character, item_id):
 		if (bags(s.character)[id]["contents"] as Dictionary).is_empty():
-			bags(s.character)[id]["contents"] = contents.duplicate()
-			return
-	var inv: Dictionary = s.character["inventory"]  # no room for one more bag (v0.7.22.9): what was in it goes loose
-	for id: String in contents:
-		inv[id] = int(inv.get(id, 0)) + int(contents[id])
+			to = bags(s.character)[id]
+			break
+	for id: String in contents.keys():
+		var n := int(contents[id])
+		Thing.move(p, to, id, n)
+		Thing.stamp(to, id, n, "owner", str(p.get("owner", ""))) if not str(p.get("owner", "")).is_empty() else null

@@ -88,7 +88,7 @@ func test_arcane_lock_knock_and_fire() -> void:
 	var lines := DoorRules.ignite(s, data, s.room_id, to, "факел")
 	assert_str(" ".join(lines)).contains("загорается")
 	assert_str(DoorRules.blocked(s, data, s.room_id, to)).is_equal("DOOR_BURNING")
-	var burnt := TimeRules.advance(s, data, int(data["rules"]["doors"]["burn_minutes"]) + 1)
+	var burnt := TimeRules.advance(s, data, int(data["rules"]["things"]["burn_minutes"]) + 1)
 	assert_str(" ".join(burnt)).contains("прогорела")
 	assert_str(DoorRules.blocked(s, data, s.room_id, to)).is_empty()
 

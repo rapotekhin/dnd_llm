@@ -187,7 +187,8 @@
 | Действие | Эффект | Движок |
 |---|---|---|
 | Взять вещь комнаты | `take_prop {prop_id}` | переносная; хозяин видит — реагирует ([PropRules.plan_take](../../game/core/rules/prop_rules.gd#L150)) |
-| Изменить вещь комнаты | `prop_state {prop_id, state}` | открыта, закрыта, сломана, сожжена, сдвинута |
+| Изменить вещь комнаты | `prop_state {prop_id, state}` | открыта, закрыта, сломана, сожжена, сдвинута; сломанный контейнер высыпает вещи |
+| Навредить вещи | `prop_state {prop_id, damage, damage_type, status, cause}` | хиты и горючесть считает движок, огонь идёт на соседние; вещь задания цела; при хозяине — реакция как на кражу |
 | Отдать свою вещь | `take_item {item_id, qty}` | есть у героя; проклятую не отдать; вещь шага задания — только адресату (закрывает шаг) |
 | Оставить в комнате | `drop_item {item_id, qty}` | вещь или сумка с содержимым становится вещью комнаты |
 | Набрать воды | `fill {item_id?}` | у героя есть бурдюк, фляга, кувшин или ведро; вода здесь — тег комнаты, вещь с `source` или колодец, ручей, река среди вещей; гнилой источник — вода гнилая (v0.7.34.6). Источник в обстановке — `furnish` с `source: water` |
@@ -561,6 +562,7 @@
 | Новое заклинание | `make {what: spell, parts}` → `course {teach_kind: spell, teach_id: "new:<key>"}`, или `book` / `scroll` и `give_item {item_id: "new:book:<key>" / "new:scroll:<key>"}`, или `reward_item_id` задания; круг считает движок |
 | Способность с зарядами | `make {what: ability, ability, parts: …, uses, recharge}` → `course {teach_kind: ability}` или книга; работает и у воина: Сл по своей характеристике |
 | Вещь и рецепт, которых нет в данных | `recipe {output, …}` — сразу выучен; с `book`, `key` — книга для награды; `course {teach_kind: recipe, recipe}` — у мастера этого ремесла |
+| Свойство вещи | `make {what: property, parts}` → вещь с `properties: ["new:<key>"]`, или `book` и `give_item new:book:<key>`, или `course {teach_kind: recipe, teach_id: "new:<key>"}`; герой накладывает в окне ремесла |
 | Части не покрывают замысел | отказ в истории и `missing_concept`; `make` не подменяет его другим |
 
 - **Движок:** [MakeRules](../../game/core/rules/make_rules.gd), тема `make`.

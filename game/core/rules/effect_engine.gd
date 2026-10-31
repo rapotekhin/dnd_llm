@@ -260,7 +260,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, p
 			var given := _plan_quest_give(s, data, str(e.get("item_id", "")) if e.get("item_id") != null else "")
 			if not given.is_empty():
 				return given
-			var give := _plan_give(s, items, rules, turn_id, e, level)
+			var give := _plan_give(s, items, rules, turn_id, e, level, pending)
 			if give.has("plan"):  # the master's own gift: within the budget until the long rest (v0.7.14.3)
 				var def := ItemRules.def_of(items, s.items, str(give["plan"]["item_id"])) if not give["plan"].has("def") else (give["plan"]["def"] as Dictionary)
 				var value := int(def.get("value_cp", 0)) * int(give["plan"]["qty"])
@@ -483,7 +483,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, p
 			return {"plan": {"only": only}, "summary": "Набрать воды: %s" % ", ".join(VesselRules.to_fill(s.character, data, NeedRules.foul_here(s, data), only)
 				.map(func(v: Dictionary) -> String: return ItemRules.display_name(data["items"], s.items, v["id"])))}
 		"prop_state":
-			return PropRules.plan_state(s, e)
+			return PropRules.plan_state(s, data, e)
 		"advance_time":
 			var mins := int(e.get("minutes", 0))
 			var cap := int(TimeRules.cfg(data)["max_master_minutes"])
@@ -586,6 +586,8 @@ func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 		duration = "long_rest"
 	if not ConditionRules.durations(data).has(duration):
 		return {"reason": "неизвестная длительность %s; есть: %s" % [duration, ", ".join(ConditionRules.durations(data))]}
+	if ThingRules.lies_on_things(data, cond):
+		return {"reason": "это состояние вещи, не героя"}
 	if cond == "invisible":
 		return {"reason": "невидимость героя — только заклинанием (cast) или вещью"}
 	if ConditionRules.INCAPACITATING.has(cond) and not CombatRules.active(s) and not (rules["hero_effects"]["durations"] as Dictionary).has(duration):
@@ -871,14 +873,14 @@ func _plan_quest_take(s: GameSession, data: Dictionary, id: String) -> Dictionar
 	return {}
 
 
-func _plan_give(s: GameSession, items: Dictionary, rules: Dictionary, turn_id: String, e: Dictionary, level: int) -> Dictionary:
+func _plan_give(s: GameSession, items: Dictionary, rules: Dictionary, turn_id: String, e: Dictionary, level: int, pending: Array[Dictionary] = []) -> Dictionary:
 	var qty := int(e.get("qty", 1))
 	var id := str(e.get("item_id", "")) if e.get("item_id") != null else ""
 	var new_def := {}
 	if e.get("item") is Dictionary:
 		if not searched.has(turn_id):
 			return {"reason": "сначала найди похожие предметы через find_items"}
-		var chk := ItemRules.check_generated(items, e["item"], level, _data.get("spells", {}))
+		var chk := ItemRules.check_generated(items, MakeRules.resolved_item(e["item"], pending), level, _data.get("spells", {}))
 		if not bool(chk["ok"]):
 			return {"reason": chk["reason"]}
 		new_def = chk["def"]
@@ -1154,7 +1156,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"unlock":
 			_extra_lines.append_array(ContainerRules.unlock(PropRules.find(s, str(plan["room"]), str(plan["prop"])), str(plan["how"])))
 		"prop_state":
-			PropRules.apply_state(s, plan)
+			_extra_lines.append_array(PropRules.apply_state(s, _data, plan))
 		"flag":
 			if bool(plan["value"]) and not s.flags.has(plan["flag"]):
 				s.flags.append(plan["flag"])

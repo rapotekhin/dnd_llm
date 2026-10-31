@@ -1042,7 +1042,7 @@ func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
 	_exit_list.add_child(acts)
 	var dcs := DoorRules.dcs(s, Catalog.data, s.room_id, to)
 	var d := DoorRules.def(Catalog.data, s.room_id, to)
-	var mat: Dictionary = DoorRules.cfg(Catalog.data)["materials"].get(str(d.get("material", "wood")), {})
+	var mat := ThingRules.material(Catalog.data, d)
 	for w: Dictionary in ways:
 		var how := str(w["how"])
 		var sp := str(w.get("spell", ""))

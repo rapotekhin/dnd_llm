@@ -273,16 +273,14 @@ static func seize(s: GameSession, data: Dictionary) -> Array[String]:
 			taken[id] = int(taken.get(id, 0)) + int(bag["contents"][id])
 	c["bags"] = {}
 	var inv: Dictionary = c["inventory"]
+	var had := {}
 	for id: String in inv.keys():
 		var keep := 1 if ItemRules.held_by_curse(c, data, s.items, id) else 0
 		var n := int(inv[id]) - keep
 		if n <= 0:
 			continue
 		taken[id] = int(taken.get(id, 0)) + n
-		if keep > 0:
-			inv[id] = keep
-		else:
-			inv.erase(id)
+		had[id] = Thing.take(c, id, n)
 	for slot: String in CharacterRules.SLOTS:
 		if not inv.has(str(c.get("equipped", {}).get(slot, ""))):
 			c["equipped"][slot] = ""
@@ -307,7 +305,7 @@ static func seize(s: GameSession, data: Dictionary) -> Array[String]:
 	if not chest.has("contents"):
 		chest["contents"] = {}
 	for id: String in taken:
-		chest["contents"][id] = int(chest["contents"].get(id, 0)) + int(taken[id])
+		Thing.add(chest, id, int(taken[id]), had[id])
 	var count := 0
 	for id: String in taken:
 		count += int(taken[id])

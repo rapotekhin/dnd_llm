@@ -294,6 +294,17 @@ static func talks_here(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 	return out
 
 
+## Whether a taken quest still asks for this thing (v0.7.65: it is not destroyed while it does).
+static func needs_item(s: GameSession, data: Dictionary, item_id: String) -> bool:
+	var all := stepped(data["world"])
+	for id: String in s.quests_active:
+		var steps: Array = all.get(id, {}).get("steps", [])
+		for step: Dictionary in steps.slice(int(s.quests_active[id])):
+			if str(step.get("when", {}).get("item", "")) == item_id:
+				return true
+	return false
+
+
 ## "" when the talk step can be closed now: the NPC is here, the item (if any) is carried.
 static func can_talk(s: GameSession, world: Dictionary, quest_id: String) -> String:
 	for t: Dictionary in talks_here(s, world):

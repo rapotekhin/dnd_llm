@@ -29,8 +29,8 @@ static func def_of(items_data: Dictionary, session_items: Dictionary, id: String
 	else:
 		return {}
 	var base := str(d.get("base", ""))
-	if not base.is_empty() and items_data["catalog"].has(base):
-		var b := def_of(items_data, {}, base)  # a base on a base: a silvered +1 sword (v0.7.12)
+	if not base.is_empty() and (items_data["catalog"].has(base) or session_items.has(base)):
+		var b := def_of(items_data, session_items, base)  # a base on a base: a silvered +1 sword (v0.7.12), a fine imbued one
 		for k: String in ["weapon", "armor", "weight"]:
 			if not d.has(k) and b.has(k):
 				d[k] = b[k]
@@ -41,6 +41,14 @@ static func def_of(items_data: Dictionary, session_items: Dictionary, id: String
 			if not props.has(p):
 				props.append(p)
 		d["properties"] = props
+	var built: Dictionary = items_data.get("built", {})
+	if not built.is_empty():  # a property of parts (v0.7.65) adds the engine's own tokens
+		var all: Array = (d.get("properties", []) as Array).duplicate()
+		for p: Variant in d.get("properties", []):
+			if built.has(p):
+				all.append_array(built[p]["tokens"])
+				d["built"] = (d.get("built", []) as Array) + [str(built[p]["name"])]
+		d["properties"] = all
 	var props: Array = d.get("properties", [])
 	if (props.has("mithral") or props.has("masterwork")) and d.has("armor"):  # no Strength need, no stealth trouble
 		var a: Dictionary = (d["armor"] as Dictionary).duplicate()
@@ -125,10 +133,7 @@ static func identify(c: Dictionary, data: Dictionary, session_items: Dictionary,
 		var att: Array = c.get("attuned", [])
 		if att.has(key):
 			att[att.find(key)] = real
-		var used: Dictionary = c.get("charges_used", {})
-		if used.has(key):
-			used[real] = used[key]
-			used.erase(key)
+		Thing.rename(c, key, real)
 		lines.append("опознано: %s" % display_name(data["items"], session_items, real))
 	if not lines.is_empty():  # «Артефакция» learns from the things it sees through (v0.7.39.1)
 		lines.append_array(DevelopmentRules.add_xp(c, data, "artifice", lines.size() * _artifice_xp(data, "identify")))
@@ -245,50 +250,48 @@ static func _copies(c: Dictionary, id: String) -> int:
 
 
 static func charges_left(c: Dictionary, d: Dictionary, id: String) -> int:
-	return maxi(0, charges_all(c, d, id) - int(c.get("charges_used", {}).get(real_id(id), c.get("charges_used", {}).get(id, 0))))
+	var spent := 0
+	var key := id if not Thing.states(c, id).is_empty() else real_id(id)
+	for st: Dictionary in Thing.states(c, key):
+		spent += int(st.get("used", 0))
+	return maxi(0, charges_all(c, d, id) - spent)
 
 
-## Spends a charge; the last one of a wand may turn it to dust (1 on a d20, DMG). Lines.
+## Spends a charge of the first copy that has one; the last one of a wand may turn it to dust (1 on a d20, DMG). Lines.
 static func spend_charge(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, rng: RandomNumberGenerator) -> Array[String]:
 	var d := def_of(data["items"], session_items, id)
-	if not c.has("charges_used"):
-		c["charges_used"] = {}
-	var used: Dictionary = c["charges_used"]
-	used[id] = int(used.get(id, 0)) + 1
-	var left := charges_left(c, d, id)
-	var lines: Array[String] = ["зарядов: %d из %d" % [left, charges_all(c, d, id)]]
-	var empty := left % charges_max(d) == 0  # one copy of the stack is spent
+	var most := charges_max(d)
+	var i := 0
+	while i < _copies(c, id) - 1 and int(Thing.nth(c, id, i).get("used", 0)) >= most:
+		i += 1
+	var st := Thing.nth(c, id, i)
+	st["used"] = int(st.get("used", 0)) + 1
+	var lines: Array[String] = ["зарядов: %d из %d" % [charges_left(c, d, id), charges_all(c, d, id)]]
+	var empty := int(st["used"]) >= most
 	if empty and bool(d.get("charges", {}).get("crumble", false)) and Roll.d20(rng) == 1:
-		_spent_copy(c, used, id, charges_max(d))
+		Thing.drop_at(c, id, i)
 		lines.append("%s рассыпается в пыль" % d.get("name", id))
 	elif empty and not d.get("charges", {}).has("regain"):
-		_spent_copy(c, used, id, charges_max(d))
+		Thing.drop_at(c, id, i)
 		lines.append("%s закончилась" % d.get("name", id))
 	return lines
 
 
-static func _spent_copy(c: Dictionary, used: Dictionary, id: String, charges: int) -> void:
-	_remove_one(c, id)
-	used[id] = int(used[id]) - charges
-	if int(used[id]) <= 0:
-		used.erase(id)
-
-
-## Dawn (the long rest): charges come back by the item's dice. Lines.
+## Dawn (the long rest): charges come back by the item's dice, copy by copy. Lines.
 static func dawn(c: Dictionary, data: Dictionary, session_items: Dictionary, rng: RandomNumberGenerator) -> Array[String]:
 	var lines: Array[String] = []
-	var used: Dictionary = c.get("charges_used", {})
-	for id: String in used.keys():
+	for id: String in c.get("copies", {}):
 		var d := def_of(data["items"], session_items, id)
 		var regain := str(d.get("charges", {}).get("regain", ""))
-		if regain.is_empty() or int(used[id]) <= 0:
-			continue
-		var rolled := 0
-		for i in _copies(c, id):
-			rolled += CombatRules.roll_dice(rng, regain)
-		var back := mini(int(used[id]), rolled)
-		used[id] = int(used[id]) - back
-		lines.append("%s: +%d %s" % [d.get("name", id), back, "заряд" if back == 1 else "заряда" if back < 5 else "зарядов"])
+		var back := 0
+		for st: Dictionary in Thing.states(c, id):
+			if regain.is_empty() or int(st.get("used", 0)) <= 0:
+				continue
+			var got := mini(int(st["used"]), CombatRules.roll_dice(rng, regain))
+			st["used"] = int(st["used"]) - got
+			back += got
+		if back > 0:
+			lines.append("%s: +%d %s" % [d.get("name", id), back, "заряд" if back == 1 else "заряда" if back < 5 else "зарядов"])
 	return lines
 
 

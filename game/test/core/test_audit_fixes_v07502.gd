@@ -142,7 +142,7 @@ func test_a_thing_back_in_its_owners_chest_is_returned() -> void:
 	OwnerRules.mark(s, "dagger", 1, "npc_merchant")
 	var p := _chest(s, {"owner": "npc_merchant"})
 	ContainerRules.apply_put(s, data, {"room": s.room_id, "into": "p1", "item_id": "dagger", "qty": 1})
-	assert_dict(p.get("marks", {})).is_empty()
+	assert_array(Thing.states(p, "dagger")).is_empty()
 
 
 func test_a_locked_chest_is_not_carried_off() -> void:
@@ -162,28 +162,29 @@ func test_food_keeps_its_age_in_a_chest_and_on_the_floor() -> void:
 	var s := _hero()
 	s.character["inventory"]["raw_meat"] = 2
 	FoodRules.sync(s, data)
-	var got := int(s.character["fresh"]["raw_meat"][0][0])
+	var got := int(Thing.states(s.character, "raw_meat")[0]["got"])
 	s.minute += 60
 	_chest(s)
 	ContainerRules.apply_put(s, data, {"room": s.room_id, "into": "p1", "item_id": "raw_meat", "qty": 1})
 	s.minute += 60
 	ContainerRules.apply_take(s, data, {"room": s.room_id, "from": "p1", "item_id": "raw_meat", "qty": 1, "owner": ""})
 	FoodRules.sync(s, data)
-	assert_array(s.character["fresh"]["raw_meat"]).is_equal([[got, 1], [got, 1]])
+	assert_array(Thing.states(s.character, "raw_meat").map(func(x: Dictionary) -> int: return int(x["got"]))).is_equal([got, got])
 	ContainerRules.apply_drop(s, data, {"room": s.room_id, "item_id": "raw_meat", "qty": 1})
 	s.minute += 60
 	PropRules.apply_take(s, data, {"room": s.room_id, "prop": str(s.props[s.room_id][-1]["id"]), "owner": ""})
 	FoodRules.sync(s, data)
-	assert_int(int(s.character["fresh"]["raw_meat"][0][0])).is_equal(got)
+	assert_int(int(Thing.states(s.character, "raw_meat")[0]["got"])).is_equal(got)
 
 
 func test_water_goes_with_its_vessel() -> void:
 	var s := _hero()
 	s.character["inventory"]["waterskin"] = 2
-	s.character["vessels"] = {"waterskin": [{"pints": 4.0, "foul": false}, {"pints": 4.0, "foul": false}]}
+	s.character["poured"] = true
+	s.character["copies"] = {"waterskin": [{"pints": 4.0, "foul": false}, {"pints": 4.0, "foul": false}]}
 	s.character["inventory"]["waterskin"] = 1
 	CharacterRules.refresh(s.character, data, s.items)
-	assert_array(s.character["vessels"]["waterskin"]).has_size(1)
+	assert_array(Thing.states(s.character, "waterskin")).has_size(1)
 	s.character["inventory"].erase("waterskin")
 	CharacterRules.refresh(s.character, data, s.items)
 	s.character["inventory"]["waterskin"] = 1

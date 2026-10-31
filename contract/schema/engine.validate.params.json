@@ -2177,6 +2177,13 @@
               "radiant_damage",
               "necrotic_damage",
               "poison_damage",
+              "acid_damage",
+              "thunder_damage",
+              "force_damage",
+              "psychic_damage",
+              "resist_thunder",
+              "resist_radiant",
+              "resist_psychic",
               "resist_fire",
               "resist_cold",
               "resist_poison",
@@ -2899,7 +2906,8 @@
             "skill",
             "trait",
             "spell",
-            "ability"
+            "ability",
+            "property"
           ],
           "title": "What",
           "type": "string"
@@ -4217,6 +4225,18 @@
       "additionalProperties": false,
       "description": "A thing to put in the room when it is furnished (0.11.0).",
       "properties": {
+        "body": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body"
+        },
         "container": {
           "anyOf": [
             {
@@ -4343,8 +4363,46 @@
     },
     "PropStateEffect": {
       "additionalProperties": false,
-      "description": "A thing of the room changes (0.11.0): opened, closed, broken, burned, moved.",
+      "description": "A thing of the room changes (0.11.0): opened, closed, broken, burned, moved.\n\n0.99.0: or its body, by the engine: `damage` of `damage_type` off its HP, a `status` of a thing (burning, wet, oiled,\nglowing), with a `cause`.",
       "properties": {
+        "cause": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cause"
+        },
+        "damage": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Damage"
+        },
+        "damage_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Damage Type"
+        },
         "kind": {
           "const": "prop_state",
           "default": "prop_state",
@@ -4356,20 +4414,39 @@
           "type": "string"
         },
         "state": {
-          "enum": [
-            "open",
-            "closed",
-            "broken",
-            "burned",
-            "moved"
+          "anyOf": [
+            {
+              "enum": [
+                "open",
+                "closed",
+                "broken",
+                "burned",
+                "moved"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
           ],
-          "title": "State",
-          "type": "string"
+          "default": null,
+          "title": "State"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
         }
       },
       "required": [
-        "prop_id",
-        "state"
+        "prop_id"
       ],
       "title": "PropStateEffect",
       "type": "object"

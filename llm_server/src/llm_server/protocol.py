@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.98.0"
+PROTOCOL_VERSION = "0.99.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -575,6 +575,7 @@ ItemProperty = Literal[
     "finesse", "light", "heavy", "two_handed", "versatile", "thrown", "reach", "ammunition",
     "silvered", "magic_plus1", "magic_plus2", "magic_plus3",
     "fire_damage", "cold_damage", "lightning_damage", "radiant_damage", "necrotic_damage", "poison_damage",
+    "acid_damage", "thunder_damage", "force_damage", "psychic_damage", "resist_thunder", "resist_radiant", "resist_psychic",
     "resist_fire", "resist_cold", "resist_poison", "ac_plus1", "ac_plus2", "saves_plus1", "stealth_advantage",
     "light_source", "warm", "healing", "cursed",
     # v0.7.12 (0.18.0): every property the engine now resolves
@@ -670,6 +671,7 @@ class PropSpec(_Out):
     lock: Literal["simple", "good", "masterwork"] | None = None  # 0.28.0: locked, and how well
     key: str | None = None  # 0.28.0: the item_id of the key that opens it
     source: Literal["water", "foul_water"] | None = None  # 0.70.0: water can be drawn here (a well, a stream, a river)
+    body: str | None = None  # 0.99.0: what it does on the map: table, bench, cabinet, barrel, chest, pillar, statue, tree, boulder, curtain
 
 
 class FurnishEffect(_Out):
@@ -1075,11 +1077,19 @@ class TakePropEffect(_Out):
 
 
 class PropStateEffect(_Out):
-    """A thing of the room changes (0.11.0): opened, closed, broken, burned, moved."""
+    """A thing of the room changes (0.11.0): opened, closed, broken, burned, moved.
+
+    0.99.0: or its body, by the engine: `damage` of `damage_type` off its HP, a `status` of a thing (burning, wet, oiled,
+    glowing), with a `cause`.
+    """
 
     kind: Literal["prop_state"] = "prop_state"
     prop_id: str
-    state: Literal["open", "closed", "broken", "burned", "moved"]
+    state: Literal["open", "closed", "broken", "burned", "moved"] | None = None
+    damage: int | None = Field(default=None, ge=1, le=100)
+    damage_type: str | None = None
+    status: str | None = None
+    cause: str | None = None
 
 
 class TakeItemEffect(_Out):
@@ -1155,7 +1165,7 @@ class MakeEffect(_Out):
     `missing_concept`."""
 
     kind: Literal["make"] = "make"
-    what: Literal["status", "skill", "trait", "spell", "ability"]
+    what: Literal["status", "skill", "trait", "spell", "ability", "property"]
     key: str = Field(min_length=2, max_length=30)
     name: str = Field(min_length=2, max_length=40)
     text: str = Field(min_length=5, max_length=300)  # what it does, for the player's card
