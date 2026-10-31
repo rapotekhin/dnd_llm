@@ -23,7 +23,7 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 		s.merchants[npc_id] = m
 	if not m.has("sold"):
 		m["sold"] = {}
-	if int(m["day"]) < s.day and not s.dead_npcs.has(npc_id):  # the dead restock nothing (v0.7.22.8)
+	if int(m["day"]) < s.day and not Being.dead(s, npc_id):  # the dead restock nothing (v0.7.22.8)
 		var back := int(demand_cfg(data)["recover_per_day"]) * (s.day - int(m["day"])) if int(m["day"]) > 0 else 9999
 		var sold: Dictionary = m["sold"]
 		for id: String in sold.keys():  # the market forgets what the hero sold (v0.7.17.1)
@@ -43,7 +43,7 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 		m["purse_cp"] = maxi(int(m["purse_cp"]), int(npc.get("purse_cp", 0)))
 		m["day"] = s.day
 		m["pack_ids"] = pack.keys()
-	elif not s.dead_npcs.has(npc_id):
+	elif not Being.dead(s, npc_id):
 		_new_pack_goods(s, data, npc_id, npc, m)
 	FenceRules.restock(s, data, npc_id, m)  # v0.7.33: a fence's goods for those who know it
 	return m
@@ -649,7 +649,7 @@ static func make_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Di
 	var m: Dictionary = data["rules"]["trade"]["stock_make"]
 	var who := str(spec.get("npc_id", ""))
 	var world := WorldView.new(data["world"])
-	if not s.npcs_here(data["world"], s.room_id).has(who) or s.dead_npcs.has(who):
+	if not s.npcs_here(data["world"], s.room_id).has(who) or Being.dead(s, who):
 		return {"reason": "%s не в сцене — товар кладут только торговцу, который здесь" % who}
 	if not world.is_trader(who):
 		return {"reason": "%s не торговец — продаёт только торговец (create_npc с trader)" % who}

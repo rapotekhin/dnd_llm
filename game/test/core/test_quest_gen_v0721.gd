@@ -298,12 +298,6 @@ func test_a_visit_step_closes_on_arriving_and_never_where_the_hero_stands() -> v
 	assert_int(int(s.quests_active[id])).is_equal(1)
 
 
-func test_an_old_made_quest_gets_its_difficulty() -> void:
-	var d := {"save_version": 50, "session": {"generated": {"quests": {"gen_quest_1": {"title": "Старое", "scale": "major", "steps": []}}}}}
-	SaveFormat.migrate(d)
-	assert_str(str(d["session"]["generated"]["quests"]["gen_quest_1"]["difficulty"])).is_equal("hard")
-
-
 func test_a_part_done_stays_done_when_the_hero_moves_on() -> void:
 	var id := _taken(_skeleton("easy"))
 	var r := _act({"quest_id": id, "act": 1, "encounters": [_wolf_at("pushcha-edge", "pack", 1, "giant_rat")],

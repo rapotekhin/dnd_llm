@@ -3,7 +3,7 @@ extends RefCounted
 ## Allies in a fight (roadmap v0.7.22.22): fighters on the hero's side run by the engine's AI (CombatRules, side
 ## "ally"). Three sources, one concept: a follower (v0.7.20.3) joins the hero's fight unless the foes are the law's guard
 ## or the people of the follower's own location; a pack encounter brings its own `allies`; a summoning spell
-## (rules.allies.summons) calls creatures that go with the hero (`s.summons`) until let go, their time runs out or the
+## (rules.allies.summons) calls creatures that go with the hero (the part `summon` of a record in s.beings) until let go, their time runs out or the
 ## concentration ends. A follower at 0 HP falls unconscious and comes to after the fight; a summoned one vanishes.
 
 
@@ -27,8 +27,8 @@ static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 		if f is Dictionary and not str(f.get("npc_id", "")).is_empty():
 			foe_npcs.append(str(f["npc_id"]))
 			foe_homes.append(home_location(world, str(f["npc_id"])))
-	for id: String in s.followers:
-		if s.dead_npcs.has(id) or s.held_as_creature(id):
+	for id: String in Being.followers(s):
+		if Being.dead(s, id) or s.held_as_creature(id):
 			continue  # the dead do not fight, nor one lying knocked out
 		if foe_npcs.has(id) or (foe_homes.has(home_location(world, id)) and not home_location(world, id).is_empty()):
 			continue  # not against the hero's own victim, nor against its own people
@@ -39,12 +39,12 @@ static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 		var mon := str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
 		if data["monsters"].has(mon):
 			var spec := {"monster": mon, "name": str(n.get("name", id)), "npc_id": id, "ally": "follower"}
-			if s.npc_hp.has(id):  # v0.7.50.1: the wounds of the last fight
-				spec["hp"] = int(s.npc_hp[id])
+			if Being.view(s, id).has("hp"):  # v0.7.50.1: the wounds of the last fight
+				spec["hp"] = int(Being.of(s, id)["hp"])
 			out.append(spec)
 	for c: Dictionary in CreatureRules.here(s, s.room_id):
 		if bool(c.get("ally", false)) and not foes.any(func(f: Variant) -> bool: return f is Dictionary and FactionRules.of_foe(data, {}, f) == str(c.get("faction", ""))):
-			var spec := {"monster": str(c["monster"]), "name": str(c["name"]), "ally": "follower", "creature_id": str(c["id"])}  # v0.7.50.1
+			var spec := {"monster": str(c["monster"]), "name": str(c["name"]), "ally": "follower", "id": str(c["id"]), "creature_id": str(c["id"])}  # v0.7.50.1
 			if c.has("hp"):
 				spec["hp"] = int(c["hp"])
 			out.append(spec)
@@ -61,16 +61,21 @@ static func home_location(world: WorldView, npc_id: String) -> String:
 	return ""
 
 
+## The creatures a spell called, still with the hero.
+static func called(s: GameSession) -> Array[Dictionary]:
+	return Being.parts(s, "summon")
+
+
 ## The summoned creatures still with the hero, as fighters' specs.
 static func summon_specs(s: GameSession) -> Array:
 	var out: Array = []
-	for m: Dictionary in s.summons:
-		out.append({"monster": str(m["monster"]), "name": str(m["name"]), "hp": int(m["hp"]), "ally": "summon", "summon_id": str(m["id"]),
+	for m: Dictionary in called(s):
+		out.append({"id": str(m["id"]), "monster": str(m["monster"]), "name": str(m["name"]), "hp": int(m["hp"]), "ally": "summon", "summon_id": str(m["id"]),
 			"helper": bool(m.get("helper", false)), "spell": str(m["spell"])})
 	return out
 
 
-## The spell calls its creatures: they join `s.summons` (and the fight, when there is one). Lines.
+## The spell calls its creatures: they go with the hero (and the fight, when there is one). Lines.
 static func summon(s: GameSession, data: Dictionary, spell_id: String) -> Array[String]:
 	var sp := summon_spec(data, spell_id)
 	var m: Dictionary = data["monsters"].get(str(sp.get("monster", "")), {})
@@ -78,24 +83,23 @@ static func summon(s: GameSession, data: Dictionary, spell_id: String) -> Array[
 		return []
 	var lines: Array[String] = []
 	if bool(sp.get("helper", false)):  # one familiar at a time (5e): the new one replaces the old
-		s.summons = s.summons.filter(func(x: Dictionary) -> bool: return str(x["spell"]) != spell_id)
+		for x: Dictionary in called(s):
+			if str(x["spell"]) == spell_id:
+				Being.forget(s, str(x["id"]))
 	var conc := bool(data["spells"].get(spell_id, {}).get("concentration", false))
 	var until := TimeRules.abs_minute(s) + int(sp["minutes"]) if sp.has("minutes") else -1
 	var count := int(sp.get("count", 1))
 	var made: Array = []
 	for i in count:
-		s.summon_counter += 1
 		var name := str(m["name"]) + (" %d" % (i + 1) if count > 1 else "")
-		var one := {"id": "sm%d" % s.summon_counter, "spell": spell_id, "monster": str(sp["monster"]), "name": name,
-			"until": until, "concentration": conc, "hp": int(m["hp"]), "helper": bool(sp.get("helper", false))}
-		s.summons.append(one)
-		made.append(one)
+		made.append(Being.made(s, "summon", {"spell": spell_id, "monster": str(sp["monster"]), "name": name,
+			"until": until, "concentration": conc, "hp": int(m["hp"]), "helper": bool(sp.get("helper", false))}))
 	lines.append("Призваны: %s — идут с героем%s" % [", ".join(made.map(func(x: Dictionary) -> String: return str(x["name"]))),
 		" до конца концентрации" if conc else " %s" % _left_text(until - TimeRules.abs_minute(s)) if until >= 0 else ", пока их не отпустят"])
 	if CombatRules.active(s):
 		var specs: Array = []
 		for x: Dictionary in made:
-			specs.append({"monster": str(x["monster"]), "name": str(x["name"]), "ally": "summon", "summon_id": str(x["id"]),
+			specs.append({"id": str(x["id"]), "monster": str(x["monster"]), "name": str(x["name"]), "ally": "summon", "summon_id": str(x["id"]),
 				"helper": bool(x["helper"]), "spell": spell_id})
 		CombatRules.add_allies(s, data, specs, true)
 	return lines
@@ -110,21 +114,18 @@ static func expire(s: GameSession, _data: Dictionary = {}) -> Array[String]:
 	var lines: Array[String] = []
 	var now := TimeRules.abs_minute(s)
 	var conc := str(s.character.get("concentration", ""))
-	var kept: Array[Dictionary] = []
-	for m: Dictionary in s.summons:
+	for m: Dictionary in called(s):
 		if (int(m["until"]) >= 0 and now >= int(m["until"])) or (bool(m["concentration"]) and conc != str(m["spell"])):
 			lines.append("%s исчезает — %s" % [m["name"], "время вышло" if not bool(m["concentration"]) or conc == str(m["spell"]) else "концентрация прервана"])
-		else:
-			kept.append(m)
-	s.summons = kept
+			Being.forget(s, str(m["id"]))
 	return lines
 
 
 ## Lets a summoned creature go («Отпустить»). "" or a localization key.
 static func dismiss(s: GameSession, summon_id: String) -> String:
-	for m: Dictionary in s.summons:
+	for m: Dictionary in called(s):
 		if str(m["id"]) == summon_id:
-			s.summons.erase(m)
+			Being.forget(s, summon_id)
 			return ""
 	return "ALLY_NOT_HERE"
 
@@ -133,7 +134,7 @@ static func dismiss(s: GameSession, summon_id: String) -> String:
 static func npc_health(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary:
 	var mon := str(WorldView.new(data["world"]).npc(npc_id).get("monster", CombatRules.cfg(data)["default_npc_monster"]))
 	var full := int(data["monsters"].get(mon, {}).get("hp", 1))
-	return {"hp": mini(full, int(s.npc_hp.get(npc_id, full))), "max": full}
+	return {"hp": mini(full, int(Being.view(s, npc_id).get("hp", full))), "max": full}
 
 
 ## A spell cast at an NPC out of a fight (v0.7.50.1): a heal now, or a boon that it carries into a fight until it ends.
@@ -144,15 +145,15 @@ static func cast_on_npc(s: GameSession, data: Dictionary, spell_id: String, slot
 	if SpellEffects.spec(data, spell_id).is_empty() and not invisible:
 		var h := npc_health(s, data, npc_id)
 		var after := mini(int(h["max"]), int(h["hp"]) + CombatRules.heal_roll(s, data, spell_id, slot))
-		s.npc_hp.erase(npc_id)
+		Being.drop(s, npc_id, "hp")
 		if after < int(h["max"]):
-			s.npc_hp[npc_id] = after
+			Being.of(s, npc_id)["hp"] = after
 		return ["%s: +%d HP" % [who, after - int(h["hp"])]]
 	var rounds := ConditionRules.spell_rounds(data, spell_id)
-	var buffs: Array = s.npc_buffs.get(npc_id, [])
+	var buffs: Array = Being.view(s, npc_id).get("buffs", [])
 	buffs = buffs.filter(func(b: Dictionary) -> bool: return str(b["spell"]) != spell_id)
 	buffs.append({"spell": spell_id, "slot": slot, "ends": ConditionRules.now(s) + rounds if rounds > 0 else -1})
-	s.npc_buffs[npc_id] = buffs
+	Being.of(s, npc_id)["buffs"] = buffs
 	return ["%s: %s" % [who, spell["name"]]]
 
 
@@ -161,22 +162,22 @@ static func buffs_into_fight(s: GameSession, data: Dictionary) -> void:
 	var now := ConditionRules.now(s)
 	for id: String in CombatRules.allies(s, false):
 		var f := CombatRules.fighter(s, id)
-		for b: Dictionary in s.npc_buffs.get(str(f.get("npc_id", "")), []):
+		for b: Dictionary in Being.view(s, str(f.get("npc_id", ""))).get("buffs", []):
 			if int(b["ends"]) < 0 or int(b["ends"]) > now:
 				SpellEffects.on_friend(s, data, str(b["spell"]), int(b["slot"]), f, [] as Array[String])
 
 
 ## The concentration on the spell ended: it leaves the NPCs.
 static func drop_buffs(s: GameSession, spell_id: String) -> void:
-	for id: String in s.npc_buffs.keys():
-		s.npc_buffs[id] = (s.npc_buffs[id] as Array).filter(func(b: Dictionary) -> bool: return str(b["spell"]) != spell_id)
-		if (s.npc_buffs[id] as Array).is_empty():
-			s.npc_buffs.erase(id)
+	for id: String in Being.with(s, "buffs"):
+		Being.of(s, id)["buffs"] = (Being.of(s, id)["buffs"] as Array).filter(func(b: Dictionary) -> bool: return str(b["spell"]) != spell_id)
+		if (Being.of(s, id)["buffs"] as Array).is_empty():
+			Being.drop(s, id, "buffs")
 
 
 ## A long rest heals the wounded NPCs.
 static func rest(s: GameSession) -> void:
-	s.npc_hp.clear()
+	Being.clear(s, "hp")
 
 
 ## After the fight: the summoned keep their wounds (the fallen are gone); the followers who fell come to. Lines.
@@ -201,22 +202,19 @@ static func after_fight(s: GameSession) -> Array[String]:
 			if str(f.get("status")) == "down":
 				lines.append("%s приходит в себя" % f["name"])
 			if not str(f.get("npc_id", "")).is_empty():  # v0.7.50.1: a follower keeps its wounds
-				s.npc_hp[str(f["npc_id"])] = maxi(1, int(f["hp"]))
+				Being.of(s, str(f["npc_id"]))["hp"] = maxi(1, int(f["hp"]))
 				if int(f["hp"]) >= int(f["max_hp"]):
-					s.npc_hp.erase(str(f["npc_id"]))
+					Being.drop(s, str(f["npc_id"]), "hp")
 	if not s.combat.has("arena"):
 		for id: String in CombatRules.enemies(s, false):  # an NPC fought as a foe keeps its wounds too
 			var f := CombatRules.fighter(s, id)
 			if not str(f.get("npc_id", "")).is_empty() and str(f.get("status")) != "dead" and int(f["hp"]) < int(f["max_hp"]):
-				s.npc_hp[str(f["npc_id"])] = maxi(1, int(f["hp"]))
-	var kept: Array[Dictionary] = []
-	for m: Dictionary in s.summons:
-		if not hp.has(str(m["id"])):
-			kept.append(m)
-		elif int(hp[str(m["id"])]) > 0:
-			m["hp"] = int(hp[str(m["id"])])
-			kept.append(m)
-	s.summons = kept
+				Being.of(s, str(f["npc_id"]))["hp"] = maxi(1, int(f["hp"]))
+	for id: String in hp:
+		if int(hp[id]) > 0:
+			Being.of(s, id)["summon"]["hp"] = int(hp[id])
+		else:
+			Being.forget(s, id)
 	return lines
 
 
@@ -224,7 +222,7 @@ static func after_fight(s: GameSession) -> Array[String]:
 static func summon_lines(s: GameSession, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var now := TimeRules.abs_minute(s)
-	for m: Dictionary in s.summons:
+	for m: Dictionary in called(s):
 		var left := "до конца концентрации" if bool(m["concentration"]) else _left_text(int(m["until"]) - now) if int(m["until"]) >= 0 else "пока не отпустят"
 		out.append("%s (%s, %s)" % [m["name"], data["spells"].get(str(m["spell"]), {}).get("name", m["spell"]), left])
 	return out

@@ -93,16 +93,16 @@ func test_a_friend_comes_to_the_place_and_joins() -> void:
 	assert_str(LetterRules.due(s, data)).is_equal(str(l["id"]))
 	var lines := _answer(s, l, "yes")
 	assert_str(" ".join(lines)).contains("придёт")
-	assert_str(str(s.npc_at["npc_innkeeper"])).is_empty()  # on the road
+	assert_str(str(Being.of(s, "npc_innkeeper")["at"])).is_empty()  # on the road
 	assert_bool(s.npcs_here(data["world"], "brod-tavern-hall").has("npc_innkeeper")).is_false()
 	var arrive := int(l["ally"]["arrive"])
 	assert_int(arrive).is_equal(s.day + 1)  # Brod → the outpost: one hop
 	_days(s, 1)
-	assert_str(str(s.npc_at["npc_innkeeper"])).is_equal("outpost-yard")
+	assert_str(str(Being.of(s, "npc_innkeeper")["at"])).is_equal("outpost-yard")
 	s.room_id = "outpost-yard"
 	var joined := LetterRules.on_enter(s, data, "outpost-yard")
 	assert_str(" ".join(joined)).contains("идёт с героем")
-	assert_bool(s.followers.has("npc_innkeeper")).is_true()
+	assert_bool(Being.follows(s, "npc_innkeeper")).is_true()
 
 
 func test_a_mere_acquaintance_only_refuses_help() -> void:
@@ -124,7 +124,7 @@ func test_a_denunciation_with_evidence_puts_the_npc_under_guard() -> void:
 	assert_bool(bool(l["can"])).is_true()
 	assert_str(str(l["verdict"])).contains("свидетель — Мира")
 	_days(s, 1)  # arrest_days later
-	assert_str(str(s.npc_at.get("npc_merchant", ""))).is_equal("brod-lockup")
+	assert_str(str(Being.view(s, "npc_merchant").get("at", ""))).is_equal("brod-lockup")
 	assert_bool(LetterRules.jailed(s, "npc_merchant")).is_true()
 	assert_bool(s.npcs_here(data["world"], "brod-square").has("npc_merchant")).is_false()
 	assert_bool(SocialRules.refuses(s, data, "npc_merchant")).is_true()  # he knows who
@@ -139,7 +139,7 @@ func test_the_evidence_item_goes_with_the_letter() -> void:
 	assert_bool(s.character["inventory"].has("fern_tally")).is_false()
 	_days(s, 2)
 	assert_str(str(l["verdict"])).contains("Засаленная")
-	assert_str(str(s.npc_at.get("npc_merchant", ""))).is_equal("brod-lockup")
+	assert_str(str(Being.view(s, "npc_merchant").get("at", ""))).is_equal("brod-lockup")
 
 
 func test_no_evidence_no_case_and_a_false_one_is_a_crime() -> void:
@@ -147,13 +147,13 @@ func test_no_evidence_no_case_and_a_false_one_is_a_crime() -> void:
 	var l := _letter(s, "npc_captain", "denounce", {"about": "npc_merchant"})  # guilty, but nothing to show
 	_days(s, 2)
 	assert_bool(bool(l["can"])).is_false()
-	assert_bool(s.npc_at.has("npc_merchant")).is_false()
+	assert_bool(Being.view(s, "npc_merchant").has("at")).is_false()
 	assert_bool(s.crimes.is_empty()).is_true()
 	var f := _letter(s, "npc_captain", "denounce", {"about": "npc_smith"})  # an honest smith
 	_days(s, 1)
 	assert_str(str(f["verdict"])).contains("ложный")
 	assert_bool(s.crimes.any(func(c: Dictionary) -> bool: return str(c["kind"]) == "false_report" and bool(c["known"]))).is_true()
-	assert_bool(s.npc_at.has("npc_smith")).is_false()
+	assert_bool(Being.view(s, "npc_smith").has("at")).is_false()
 
 
 func test_a_recommendation_opens_an_office_a_school_and_a_private_place() -> void:

@@ -244,7 +244,7 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 				lines.append("Из чащи выходит хищник: %s" % _foe(data, p, "")["name"])
 	if poaching(s, data):
 		var o := owner(s, data)
-		var npcs := s.npcs_here(data["world"], s.room_id).filter(func(n: String) -> bool: return not s.followers.has(n))
+		var npcs := s.npcs_here(data["world"], s.room_id).filter(func(n: String) -> bool: return not Being.follows(s, n))
 		if not npcs.is_empty() or s.rng.randi_range(1, 100) <= int(c["poach"]["seen_pct"]):
 			out["crime"] = true
 			lines.append("Браконьерство в угодьях %s замечено" % BondRules.npc_name(s, data, o))

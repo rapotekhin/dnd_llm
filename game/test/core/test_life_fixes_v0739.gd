@@ -99,7 +99,7 @@ func test_a_sick_npc_gets_well() -> void:
 	var s := _hero()
 	assert_str(DiseaseRules.npc_disease(s, data, "npc_sick_pilgrim")).is_equal("cackle_fever")
 	DiseaseRules.tick(s, data)
-	var until := int(s.npc_sick["npc_sick_pilgrim"]["until"])
+	var until := int(Being.of(s, "npc_sick_pilgrim")["sick"]["until"])
 	assert_int(until).is_greater(s.clock)
 	s.clock = until
 	DiseaseRules.tick(s, data)

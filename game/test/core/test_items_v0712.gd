@@ -317,12 +317,6 @@ func test_the_master_hands_out_nothing_rarer_than_uncommon() -> void:
 	assert_str(ItemRules.rarity_ok(data, rare, 6)).is_empty()
 
 
-func test_old_saves_keep_the_cloak_working() -> void:
-	var v19 := {"save_version": 19, "session": {"character": {"inventory": {"cloak_of_protection": 1}}}}
-	SaveFormat._v19_to_v20(v19, {})
-	assert_array(v19["session"]["character"]["attuned"]).contains_exactly(["cloak_of_protection"])
-
-
 func test_the_sheet_says_what_worn_goggles_give() -> void:  # the author's finding (v0.7.49.4)
 	var s := _hero("bard_yas")
 	s.character["inventory"]["goggles_of_night"] = 1

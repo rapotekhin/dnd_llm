@@ -1596,11 +1596,7 @@ func finish_combat(take: Array = []) -> void:
 	elif by_law:  # v0.7.22.17: the guard holds the hero, as at an arrest
 		lines.append_array(CrimeRules.held_after_fight(s, Catalog.data))
 	elif outcome == "captured":  # v0.7.22.12: bound in their place, not a won fight
-		var foes: Array = []
-		for fid: String in CombatRules.enemies(s):
-			var f := CombatRules.fighter(s, fid)
-			if str(f.get("npc_id", "")).is_empty():  # wounds and XP kept for a fight with them again (v0.7.22.16)
-				foes.append({"monster": str(f["monster"]), "name": str(f["name"]), "count": 1, "hp": int(f["hp"]), "max_hp": int(f["max_hp"]), "no_xp": bool(f.get("no_xp", false))})
+		var foes: Array = CombatRules.enemies(s).filter(func(fid: String) -> bool: return str(CombatRules.fighter(s, fid).get("npc_id", "")).is_empty())
 		lines.append_array(EncounterRules.capture(s, foes, str(s.combat.get("encounter", "")), str(s.combat.get("room_from", ""))))
 		lines.append_array(EncounterRules.seize(s, Catalog.data))  # v0.7.22.17, #15
 	for id: String in CombatRules.enemies(s, false) if arena.is_empty() else []:
@@ -1610,7 +1606,7 @@ func finish_combat(take: Array = []) -> void:
 		elif not str(f.get("npc_id", "")).is_empty() and bool(f.get("by_hero", false)) and (outcome != "captured" or by_law):  # v0.7.22.16: an assault
 			lines.append_array(CrimeRules.on_assault(s, Catalog.data, str(f["npc_id"]), str(f.get("status")) != "unconscious", s.room_id))
 	if outcome == "player_fled":
-		CreatureRules.after_flight(s, s.room_id)
+		CreatureRules.after_flight(s)
 	if outcome == "player_fled" and not str(s.combat.get("room_from", "")).is_empty():
 		s.room_id = str(s.combat["room_from"])
 	if int(s.character["hp"]) <= 0:
@@ -1620,7 +1616,7 @@ func finish_combat(take: Array = []) -> void:
 	lines.append_array(FeatureRules.end_shape(s, Catalog.data, 0))  # the beast form ends with the fight (v0.7.10)
 	var frenzied := bool(s.combat.get("frenzy", false))
 	var minutes := ceili(int(s.combat.get("round", 1)) / float(ConditionRules.ROUNDS_PER_MINUTE))
-	s.combat = {}
+	CombatRules.close(s)
 	lines.append_array(TimeRules.advance(s, Catalog.data, minutes))  # the rounds of the fight on the clock (v0.7.8)
 	if frenzied:
 		lines.append_array(ConditionRules.add_exhaustion(s, Catalog.data, 1, "неистовство"))
@@ -2102,11 +2098,11 @@ func continue_as_heir(character: Dictionary) -> void:
 	var old := str(s.character.get("name", ""))
 	var lines := FamilyRules.inherit(s, Catalog.data, character)
 	s.character = character
-	s.combat = {}
+	CombatRules.close(s)
 	s.mode = GameSession.MODE_EXPLORATION
 	s.npc_id = ""
 	s.pending_fight = []
-	s.followers = []
+	Being.clear(s, "follows")
 	s.wanted = {}
 	s.arrest = ""
 	s.let_go = {}
@@ -2263,12 +2259,10 @@ func start(s: GameSession) -> void:
 	# v0.7.20: this game's world — the pack's with what the master made in it (a copy; the pack is never touched)
 	var pack: Dictionary = Catalog.bundle(Catalog.active_world).get("world", Catalog.data["world"])
 	Catalog.data["world"] = WorldGen.merged(pack, s.generated)
-	PropertyRules.upgrade_legacy(s, Catalog.data)  # v0.7.39.5: stalls and counters as objects
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 	CalendarRules.sync(s, Catalog.data["world"])  # v0.7.44: the festivals' flags by the date of a save
 	WeatherRules.sync(s, Catalog.data)  # v0.7.46: and the weather's
-	RumorRules.seed(s, Catalog.data)  # v0.7.47: the pack's talk in an older save
 	session = s
 	busy_turn = ""
 	_last_kind = ""
@@ -2475,7 +2469,7 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 			"allies": enc.get("allies", [])}
 		if int(meet["stealth"]) >= 0:
 			src["stealth_total"] = int(meet["stealth"])
-		start_combat(enc["enemies"], src)
+		start_combat(EncounterRules.heads(session, Catalog.data, room_id, enc), src)
 		return
 	var again := ExplorationRules.again_line(session, Catalog.data, room_id) if lines.size() <= 1 else ""
 	if not again.is_empty():  # described today and nothing on the way: the engine's line, no master (v0.7.22.20, #8)
@@ -2494,7 +2488,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	var past := EncounterRules.slip_past(session, from, room_id)  # a quest's «пройти стражу» (v0.7.49.3)
 	if not past.is_empty():
 		lines.append(past)
-	session.lurking.erase(from)  # the unaware foes are left behind (v0.7.22.12)
+	EncounterRules.unlurk(session, from)  # the unaware foes are left behind (v0.7.22.12)
 	if session.sneaking:
 		var seen := _sneak_past_people(room_id)
 		if not seen.is_empty():
@@ -2843,12 +2837,12 @@ func follower_act(npc_id: String, what: String) -> String:
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
-	var here := session.followers.has(npc_id) or str(session.npc_at.get(npc_id, "")) == session.room_id
+	var here := Being.follows(session, npc_id) or str(Being.view(session, npc_id).get("at", "")) == session.room_id
 	if not here:
 		return "ALLY_NOT_HERE"
 	var name := str(world().npc(npc_id).get("name", npc_id))
 	var plan := {"follow_npc": npc_id, "on": what == "lead", "room": session.room_id if what == "stay" else ""}
-	if what == "lead" and session.followers.size() >= int(FollowRules.cfg(Catalog.data)["max"]):
+	if what == "lead" and Being.followers(session).size() >= int(FollowRules.cfg(Catalog.data)["max"]):
 		return "ALLY_TOO_MANY"
 	FollowRules.apply(session, plan)
 	var line: String = {"stay": "%s остаётся здесь и ждёт", "lead": "%s снова идёт с героем", "let_go": "%s уходит к себе"}[what] % name
@@ -2864,7 +2858,7 @@ func dismiss_summon(summon_id: String) -> String:
 	if session == null or is_busy() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
 	var name := ""
-	for m: Dictionary in session.summons:
+	for m: Dictionary in AllyRules.called(session):
 		if str(m["id"]) == summon_id:
 			name = str(m["name"])
 	var why := AllyRules.dismiss(session, summon_id)
@@ -2944,7 +2938,7 @@ func hide_body(npc_id: String) -> String:
 func search_body(npc_id: String) -> String:
 	if session == null or is_busy() or not Backend.is_ready() or session.in_conversation():
 		return "QUEST_BUSY"
-	if str(session.bodies.get(npc_id, "")) != session.room_id or session.searched.has(npc_id):
+	if str(Being.view(session, npc_id).get("body", "")) != session.room_id or Being.searched(session, npc_id):
 		return "CRIME_NO_BODY"
 	var lines := CrimeRules.search_body(session, Catalog.data, npc_id)
 	CharacterRules.refresh(session.character, Catalog.data, session.items)
@@ -3660,7 +3654,7 @@ func _listener_id(params: Dictionary) -> String:
 	var tid := str(params.get("target_id", "")) if params.get("target_id") != null else ""
 	if tid.is_empty() and session.in_conversation():
 		tid = session.npc_id
-	return tid if world().world.get("npcs", {}).has(tid) and not session.dead_npcs.has(tid) else ""
+	return tid if world().world.get("npcs", {}).has(tid) and not Being.dead(session, tid) else ""
 
 
 ## «Выступить» (v0.7.11): a Performance check on a stage of the pack, once a day; coins and, for an entertainer, a free
@@ -3718,7 +3712,7 @@ func _theft(npc_id: String, ok: bool) -> String:
 		lines.append("%s — украдено: %s" % [who, Money.format(cp)])
 		note = "Кража удалась, %s ничего не заметил(а): движок уже выдал %s (зм — золотые, см — серебряные, мм — медные) — опиши добычу ровно так" % [who, Money.format(cp)]
 	else:
-		session.caught_by[npc_id] = session.day
+		Being.of(session, npc_id)["caught"] = session.day
 		lines.append("%s замечает руку в кармане" % who)
 		lines.append_array(TheftRules.react(session, Catalog.data, npc_id))
 		note = "Кража провалилась: " + "; ".join(lines) + " — движок уже всё применил"

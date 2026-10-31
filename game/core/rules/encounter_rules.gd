@@ -7,7 +7,7 @@ extends RefCounted
 ## the hero may attack them by surprise, talk to them (one roll of Persuasion or Intimidation against the parley DC
 ## of the fight, if they think and understand the hero: a truce — they stay as creatures; a threat — they go; a
 ## failure — the fight, without surprise) or slip away; seen, or the sneaking dropped — the fight.
-## Captivity: the foes take the hero alive (s.captive {room, foes, encounter, from}): the exits are shut; the hero
+## Captivity: the foes take the hero alive (s.captive {room, foes: ids, encounter, from}): the exits are shut; the hero
 ## breaks free by Athletics or Sleight of Hand against rules.encounters.escape_dc (a failure — an hour), or talks
 ## the captors round (the parley DC). Free — the captors lurk, unaware, as at a meeting.
 ## v0.7.22.17 (#12, #15): «Сдаться» makes the hero a captive at once; the captors take the hero's things into a
@@ -15,6 +15,8 @@ extends RefCounted
 ## v0.7.49.3: out of the room of the unaware foes by another way than in — the hero slipped past them
 ## (s.encounters_passed): a quest's fight step is done unless it says `defeat`; out by the way in — only turned back.
 ## A dead end is never passed.
+## v0.7.62: an encounter stays a description with a number of heads; the first entry makes them characters of s.beings
+## (`heads`) and the same ones meet the hero after that: the dead stay dead, the wounded wounded till a long rest.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -36,6 +38,7 @@ static func best_passive(data: Dictionary, enemies: Array) -> int:
 
 ## On entering a room with a live encounter: {lurk: bool, line, stealth (−1 — not rolled)}.
 static func meet(s: GameSession, data: Dictionary, room_id: String, from: String, enc: Dictionary) -> Dictionary:
+	heads(s, data, room_id, enc)
 	if FactionRules.peaceful(s, data, enc):  # v0.7.50: friends do not fight
 		return {"lurk": false, "peace": true, "stealth": -1, "line": FactionRules.keep_peace(s, data, room_id, enc)}
 	for e: Dictionary in enc["enemies"]:
@@ -58,6 +61,34 @@ static func meet(s: GameSession, data: Dictionary, room_id: String, from: String
 		"line": "%s крадётся: Скрытность %d%s — героя не замечают: %s" % [s.character.get("name", ""), int(roll["total"]), roll["note"], names]}
 
 
+## The foes of an encounter as characters: made on the first entry, one record per head. A person of the pack among them
+## is its own record.
+static func heads(s: GameSession, data: Dictionary, room_id: String, enc: Dictionary) -> Array:
+	var id := str(enc.get("id", ""))
+	var out: Array = Being.records(s, "encounter").filter(func(b: Dictionary) -> bool: return str(b["encounter"]) == id and not b.has("creature"))
+	var fresh := out.is_empty()
+	var named := {}
+	for e: Dictionary in enc.get("enemies", []):
+		if not str(e.get("npc_id", "")).is_empty():
+			out.append(e)
+			continue
+		if not fresh or not data["monsters"].has(str(e.get("monster", ""))):
+			continue
+		var base := str(e.get("name", data["monsters"][e["monster"]]["name"]))
+		var count := int(e.get("count", 1))
+		var same := int(named.get(base, 0))
+		for i in count:
+			var b: Dictionary = e.duplicate(true)
+			b.erase("count")
+			b.merge({"name": base + (" %d" % (same + i + 1) if count > 1 or same > 0 else ""), "base": base, "encounter": id, "at": room_id}, true)
+			var side := FactionRules.of_foe(data, enc, e)
+			if not side.is_empty():
+				b["faction"] = side
+			out.append(Being.spawn(s, b))
+		named[base] = same + count
+	return out
+
+
 static func _names(enc: Dictionary) -> String:
 	return ", ".join((enc["enemies"] as Array).map(func(e: Dictionary) -> String: return str(e.get("name", e["monster"]))))
 
@@ -76,13 +107,32 @@ static func lurking(s: GameSession, room_id: String) -> Dictionary:
 	return s.lurking.get(room_id, {})
 
 
+## The hero left the room: the captors that lurked there without an encounter are gone.
+static func unlurk(s: GameSession, room_id: String) -> void:
+	for id: String in lurking(s, room_id).get("foes", []):
+		Being.forget(s, id)
+	s.lurking.erase(room_id)
+
+
 ## The encounter the lurking foes of the room are: the room's own, or — the captors of a fight without one (a creature
-## attacked again, an NPC's guard), v0.7.22.16 (#16) — their list as it was. {id, enemies, waves?, help?, parley?}.
+## attacked again, an NPC's guard), v0.7.22.16 (#16). {id, enemies: their records, waves?, help?, parley?}.
 static func lurking_encounter(s: GameSession, data: Dictionary, room_id: String) -> Dictionary:
 	var lk := lurking(s, room_id)
 	if lk.has("foes"):
-		return {"id": "", "enemies": lk["foes"]}
-	return SceneRules.room(s, data["world"], room_id).get("encounter", {})
+		return {"id": "", "enemies": _records(s, lk["foes"])}
+	var enc: Dictionary = SceneRules.room(s, data["world"], room_id).get("encounter", {}).duplicate()
+	if not enc.is_empty():
+		enc["enemies"] = heads(s, data, room_id, enc)
+	return enc
+
+
+static func _records(s: GameSession, ids: Array) -> Array:
+	return ids.map(func(id: String) -> Dictionary: return Being.view(s, id)).filter(func(b: Dictionary) -> bool: return not b.is_empty())
+
+
+## Who holds the hero.
+static func captors(s: GameSession) -> Array:
+	return _records(s, s.captive.get("foes", []))
 
 
 ## The foes of an encounter that think, and whether one of them understands the hero. A threat needs no common tongue
@@ -147,22 +197,27 @@ static func roll(s: GameSession, data: Dictionary, skill: String, dc: int, dis: 
 
 ## The foes of the encounter as creatures of the room (a truce), one per head; `extra` — what each one carries.
 static func as_creatures(s: GameSession, room_id: String, enemies: Array, state: String, extra: Dictionary = {}) -> void:
-	var list: Array = s.creatures.get(room_id, [])
+	var now := TimeRules.abs_minute(s)
 	for e: Dictionary in enemies:
+		if e.has("id"):  # a head of the encounter stays this character
+			var known := {"name": str(e["name"]), "monster": str(e["monster"]), "state": state, "at": room_id, "bound": false, "led": false, "since": now}
+			if e.has("hp"):
+				known.merge({"hp": int(e["hp"]), "max_hp": int(e.get("max_hp", e["hp"]))})
+			if bool(e.get("no_xp", false)):
+				known["xp_given"] = true
+			known.merge(extra, true)
+			Being.put(s, str(e["id"]), "creature", known)
+			continue
 		for i in int(e.get("count", 1)):
-			s.creature_counter += 1
-			var name := str(e.get("name", e["monster"])) + (" %d" % (i + 1) if int(e.get("count", 1)) > 1 else "")
-			var c := {"id": "c%d" % s.creature_counter, "name": name, "monster": str(e["monster"]), "state": state,
-				"bound": false, "led": false, "since": TimeRules.abs_minute(s)}
+			var c := {"name": str(e.get("name", e["monster"])) + (" %d" % (i + 1) if int(e.get("count", 1)) > 1 else ""), "monster": str(e["monster"]), "state": state,
+				"bound": false, "led": false, "since": now}
 			c.merge(extra)
-			if e.has("hp"):  # captors keep the wounds of the fight, and its XP stays given
-				c["hp"] = int(e["hp"])
-			if e.has("max_hp"):
-				c["max_hp"] = int(e["max_hp"])
+			for k: String in ["hp", "max_hp"]:  # captors keep the wounds of the fight, and its XP stays given
+				if e.has(k):
+					c[k] = int(e[k])
 			if bool(e.get("no_xp", false)):
 				c["xp_given"] = true
-			list.append(c)
-	s.creatures[room_id] = list
+			CreatureRules.add(s, room_id, c)
 
 
 ## Talking to the lurking foes before a fight. {lines, fight: bool}: a success — they stay as a truce (Persuasion) or
@@ -202,7 +257,7 @@ static func parley(s: GameSession, data: Dictionary, room_id: String, enc: Dicti
 ## The fight is lost to thinking foes: the hero is their captive here.
 static func capture(s: GameSession, foes: Array, encounter: String, from: String) -> Array[String]:
 	s.captive = {"room": s.room_id, "foes": foes, "encounter": encounter, "from": from}
-	var names := ", ".join(foes.map(func(e: Dictionary) -> String: return str(e.get("name", e["monster"]))))
+	var names := ", ".join(captors(s).map(func(e: Dictionary) -> String: return str(e["name"])))
 	var bound: String = {"female": "связана", "male": "связан"}.get(str(s.character.get("gender", "")), "связан(а)")
 	return ["%s %s — в плену у: %s" % [s.character.get("name", ""), bound, names]]
 
@@ -280,13 +335,13 @@ static func can_escape(s: GameSession, data: Dictionary, how: String) -> String:
 	if not captive(s):
 		return "CAPTIVE_NOT"
 	if how == "talk":
-		return talkable(s, data, s.captive["foes"])
+		return talkable(s, data, captors(s))
 	return ""
 
 
 ## A try to get free (can_escape first). Lines; free — the captors lurk unaware, the hero sneaks.
 static func escape(s: GameSession, data: Dictionary, how: String) -> Array[String]:
-	var foes: Array = s.captive["foes"]
+	var foes := captors(s)
 	var r: Dictionary
 	if how == "talk":
 		r = roll(s, data, "persuasion", parley_dc(data, foes, false))
@@ -308,7 +363,7 @@ static func escape(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 		if not str(s.captive.get("encounter", "")).is_empty():
 			s.lurking[room] = {"encounter": str(s.captive["encounter"]), "from": str(s.captive.get("from", ""))}
 		elif not foes.is_empty():  # a fight without an encounter: the captors stay, unaware (v0.7.22.16, #16)
-			s.lurking[room] = {"foes": foes.duplicate(true), "from": str(s.captive.get("from", ""))}
+			s.lurking[room] = {"foes": (s.captive["foes"] as Array).duplicate(), "from": str(s.captive.get("from", ""))}
 		lines.append("Путы сброшены — враги ещё не заметили; можно ускользнуть или ударить первым")
 	s.captive = {}
 	return lines
@@ -321,8 +376,8 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 	if not lk.is_empty():
 		var enc := lurking_encounter(s, data, room_id)
 		for e: Dictionary in enc.get("enemies", []):
-			out.append("%s ×%d — враждебны, героя не заметили (он крадётся рядом)" % [e.get("name", e["monster"]), int(e.get("count", 1))])
+			out.append("%s — враждебен, героя не заметил (он крадётся рядом)" % e["name"])
 	if captive(s):
-		for e: Dictionary in s.captive["foes"]:
-			out.append("%s — держит героя в плену, герой связан" % e.get("name", e["monster"]))
+		for e: Dictionary in captors(s):
+			out.append("%s — держит героя в плену, герой связан" % e["name"])
 	return out

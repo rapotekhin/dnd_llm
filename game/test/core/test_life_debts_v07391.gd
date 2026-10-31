@@ -156,7 +156,7 @@ func test_a_follower_eats_from_the_heros_things() -> void:
 	s.character["inventory"]["rations"] = 2
 	var lines := TimeRules.advance(s, data, 25 * 60)
 	assert_str("\n".join(lines)).contains("Бруно Хмель поел")
-	assert_int(int(s.follower_fed["npc_innkeeper"]["hungry"])).is_equal(0)
+	assert_int(int(Being.of(s, "npc_innkeeper")["fed"]["hungry"])).is_equal(0)
 
 
 func test_an_unfed_follower_goes_home() -> void:
@@ -169,15 +169,15 @@ func test_an_unfed_follower_goes_home() -> void:
 	assert_int(s.attitude("npc_innkeeper")).is_equal(att - 1)
 	lines = TimeRules.advance(s, data, 24 * 60)
 	assert_str("\n".join(lines)).contains("ушёл домой")
-	assert_bool(s.followers.has("npc_innkeeper")).is_false()
+	assert_bool(Being.follows(s, "npc_innkeeper")).is_false()
 
 
 func test_a_long_rest_feeds_the_followers() -> void:
 	var s := _with_follower()
-	s.follower_fed["npc_innkeeper"] = {"at": TimeRules.abs_minute(s) - 2000, "hungry": 1}
+	Being.of(s, "npc_innkeeper")["fed"] = {"at": TimeRules.abs_minute(s) - 2000, "hungry": 1}
 	FollowRules.rested(s)
-	assert_int(int(s.follower_fed["npc_innkeeper"]["hungry"])).is_equal(0)
-	assert_int(int(s.follower_fed["npc_innkeeper"]["at"])).is_equal(TimeRules.abs_minute(s))
+	assert_int(int(Being.of(s, "npc_innkeeper")["fed"]["hungry"])).is_equal(0)
+	assert_int(int(Being.of(s, "npc_innkeeper")["fed"]["at"])).is_equal(TimeRules.abs_minute(s))
 
 
 func test_the_work_of_an_organization_asks_a_membership() -> void:

@@ -84,7 +84,7 @@ func test_a_mage_of_the_world_is_found_and_teaches_fireball_at_its_price_and_con
 	s.room_id = "brod-smithy"
 	s.character["gold_cp"] = 100000
 	assert_str(StudyRules.enroll_why(s, data, id)).is_equal("STUDY_REQUIREMENTS")
-	s.attitudes[mage] = 1
+	Being.of(s, mage)["attitude"] = 1
 	assert_str(StudyRules.enroll_why(s, data, id)).is_equal("")
 	assert_str(str(TeachRules.find(s, data, "spell", "fireball")[0]["course"])).is_equal(id)
 
@@ -150,7 +150,7 @@ func test_an_act_brings_the_teacher_and_its_course_opens_on_reaching_it() -> voi
 	var q := QuestRules.quest(data["world"], qid)
 	assert_str(str(q["steps"][1].get("flag", ""))).is_equal(qid + "_teach")
 	s.flags.append(qid + "_teach")  # the talk step with the mage is done
-	s.attitudes[mage] = 1
+	Being.of(s, mage)["attitude"] = 1
 	s.room_id = "brod-mill"
 	s.character["gold_cp"] = 100000
 	assert_str(StudyRules.enroll_why(s, data, cid[0])).is_equal("")

@@ -37,7 +37,7 @@ func run() -> void:
 	if next != null and not next.disabled:
 		await press(next)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
-		step("caught: Mira calls the guard", int(s.caught_by.get("npc_serving", 0)) == s.day and s.attitude("npc_serving") < 0,
+		step("caught: Mira calls the guard", int(Being.view(s, "npc_serving").get("caught", 0)) == s.day and s.attitude("npc_serving") < 0,
 			"attitude %d, gold %d" % [s.attitude("npc_serving"), s.character["gold_cp"]])
 		await frames(3)
 		await shot("caught")

@@ -3,7 +3,7 @@ extends SceneTree
 ## Runs the real game (main.tscn, autoloads) with rendering, a scenario drives it like a player and
 ## saves a screenshot per step. Usually started by tools/godot_playtest.py:
 ##   godot --path game --script res://tools/playtest/<name>.gd -- --profile=agent --out=<dir> --backend-url=...
-## Refuses to run without --profile=agent: a scenario wipes the profile's saves.
+## Refuses to run without --profile=agent or agent-<name> (tools/playtest_all.py): a scenario wipes the profile's saves.
 
 const PROFILE := "agent"
 
@@ -14,7 +14,7 @@ var _shot_n: int = 0
 
 
 func _initialize() -> void:
-	if LaunchArgs.value("--profile") != PROFILE:
+	if not LaunchArgs.value("--profile").begins_with(PROFILE):
 		push_error("playtest scenarios need -- --profile=agent so the real saves stay untouched")
 		quit(2)
 		return
@@ -46,7 +46,7 @@ func _main() -> void:
 
 
 func _wipe_saves() -> void:
-	var dir := "user://profiles/%s/saves" % PROFILE
+	var dir := "user://profiles/%s/saves" % LaunchArgs.value("--profile")
 	for f in DirAccess.get_files_at(dir):
 		DirAccess.remove_absolute(dir.path_join(f))
 
@@ -193,6 +193,14 @@ func quick_character() -> bool:
 	if not await tap("RandomButton"):
 		return false
 	return await tap("StartButton")
+
+
+## A still sky for a scenario about something else: a seed's downpour floods the ford and shuts the way.
+func still_sky(s: GameSession) -> void:
+	s.settings["weather"] = false
+	for f: String in s.flags.duplicate():
+		if f.begins_with("weather_"):
+			s.flags.erase(f)
 
 
 func key(keycode: Key) -> void:

@@ -308,7 +308,7 @@ static func _remove(s: GameSession, id: String) -> void:
 static func _people(s: GameSession, data: Dictionary, loc: String) -> Array[String]:
 	var out: Array[String] = []
 	for n: String in data["world"]["npcs"]:
-		if ReputationRules.home_of(data, n) == loc and not s.dead_npcs.has(n):
+		if ReputationRules.home_of(data, n) == loc and not Being.dead(s, n):
 			out.append(n)
 	return out
 

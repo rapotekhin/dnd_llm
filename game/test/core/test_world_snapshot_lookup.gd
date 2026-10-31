@@ -11,7 +11,7 @@ func before_test() -> void:
 
 
 func test_snapshot_scene_and_character() -> void:
-	s.attitudes[TestUtils.INNKEEPER] = 2
+	Being.of(s, TestUtils.INNKEEPER)["attitude"] = 2
 	s.summaries["dialogue:" + TestUtils.INNKEEPER] = "Борик налил эля."
 	s.summaries["dialogue:" + TestUtils.COOK] = "Не в этой комнате."
 	var snap := TurnSnapshot.build(s, data, 4000)

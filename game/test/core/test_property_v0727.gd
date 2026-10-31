@@ -188,13 +188,12 @@ func test_a_dog_fights_beside_the_hero() -> void:
 
 func test_serfs_only_where_slavery_is() -> void:
 	var s := _bought("old_mill")
-	s.creature_counter += 1
-	s.creatures[s.room_id] = [{"id": "c9", "name": "Разбойник", "monster": "bandit", "state": "surrendered", "bound": true, "led": false,
-		"owner": OwnerRules.HERO, "since": 0, "hp": 11, "max_hp": 11}]
-	assert_str(PropertyRules.serf_why(s, data, "old_mill", "c9")).is_equal("PROPERTY_NO_SLAVERY")
+	var cid := str(CreatureRules.add(s, s.room_id, {"name": "Разбойник", "monster": "bandit", "state": "surrendered", "bound": true, "led": false,
+		"owner": OwnerRules.HERO, "since": 0, "hp": 11, "max_hp": 11})["id"])
+	assert_str(PropertyRules.serf_why(s, data, "old_mill", cid)).is_equal("PROPERTY_NO_SLAVERY")
 	s.settings["slavery"] = true
-	assert_str(PropertyRules.serf_why(s, data, "old_mill", "c9")).is_empty()
-	PropertyRules.set_serf(s, data, "old_mill", "c9")
+	assert_str(PropertyRules.serf_why(s, data, "old_mill", cid)).is_empty()
+	PropertyRules.set_serf(s, data, "old_mill", cid)
 	s.character["gold_cp"] = 0
 	data["rules"]["property"]["serfs"]["escape_chance_day"] = 0.0
 	_days(s, 1)

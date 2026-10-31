@@ -47,10 +47,10 @@ func test_a_merchant_starts_from_the_pack() -> void:
 func test_prices_follow_the_value_attitude_and_half_for_selling() -> void:
 	assert_int(TradeRules.buy_price(s, data, SMITH, "longsword")).is_equal(1500)
 	assert_int(TradeRules.sell_price(s, data, SMITH, "longsword")).is_equal(750)  # B13: sold for half
-	s.attitudes[SMITH] = -2
+	Being.of(s, SMITH)["attitude"] = -2
 	assert_int(TradeRules.buy_price(s, data, SMITH, "longsword")).is_equal(1875)
 	assert_int(TradeRules.sell_price(s, data, SMITH, "longsword")).is_equal(600)
-	s.attitudes[SMITH] = 2
+	Being.of(s, SMITH)["attitude"] = 2
 	assert_int(TradeRules.buy_price(s, data, SMITH, "longsword")).is_equal(1350)
 	assert_int(TradeRules.buy_price(s, data, INNKEEPER, "candle")).is_equal(1)  # never free
 	assert_int(TradeRules.sell_price(s, data, INNKEEPER, "candle")).is_equal(0)
@@ -108,11 +108,11 @@ func test_a_new_day_restocks_and_keeps_what_was_sold() -> void:
 
 func test_haggling_by_margin_for_this_visit() -> void:
 	assert_int(TradeRules.haggle_dc(s, data, INNKEEPER)).is_equal(13)
-	s.attitudes[INNKEEPER] = -1
+	Being.of(s, INNKEEPER)["attitude"] = -1
 	assert_int(TradeRules.haggle_dc(s, data, INNKEEPER)).is_equal(15)
 	assert_int(TradeRules.apply_haggle(s, data, INNKEEPER, _win(21, 15))).is_equal(15)
 	assert_str(TradeRules.can_haggle(s, data, INNKEEPER)).is_equal("TRADE_HAGGLE_DONE")
-	s.attitudes[INNKEEPER] = 0
+	Being.of(s, INNKEEPER)["attitude"] = 0
 	assert_int(TradeRules.buy_price(s, data, SMITH, "longsword")).is_equal(1500)  # another merchant
 	assert_int(TradeRules.buy_price(s, data, INNKEEPER, "rations")).is_equal(43)  # 50 × 0.85, up
 	assert_int(TradeRules.sell_price(s, data, INNKEEPER, "longsword")).is_equal(862)  # 750 × 1.15, down

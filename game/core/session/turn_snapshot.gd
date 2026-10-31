@@ -25,7 +25,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"services": (n.get("services", []) as Array).map(func(x: Variant) -> String: return "%s [%s]" % [SocialRules.tr_service(data, str(x)), x]),
 			"deal": SocialRules.deal_text(s, data, id),
 			"secrets": SocialRules.secret_hints(s, data, id), "refuses": SocialRules.refuses(s, data, id), "eager": SocialRules.eager(s, data, id),
-			"follows": s.followers.has(id), "under": SpellEffects.npc_spell_text(s, id), "animals": _animals(data, id),
+			"follows": Being.follows(s, id), "under": SpellEffects.npc_spell_text(s, id), "animals": _animals(data, id),
 			"god": FaithRules.npc_text(s, data, id)})  # v0.7.49
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
@@ -227,15 +227,15 @@ static func _conditions(c: Dictionary, data: Dictionary) -> Array:
 
 ## A follower the hero has not fed (v0.7.39.1): the master sees its hunger.
 static func _wounds(s: GameSession, data: Dictionary, id: String) -> String:
-	if not s.npc_hp.has(id):
+	if not Being.view(s, id).has("hp"):
 		return ""
 	var h := AllyRules.npc_health(s, data, id)
 	return " Ранен: %d из %d хитов." % [int(h["hp"]), int(h["max"])]
 
 
 static func _hungry(s: GameSession, id: String) -> String:
-	var n := int(s.follower_fed.get(id, {}).get("hungry", 0))
-	return " Голоден: %d дн. без еды от героя." % n if n > 0 and s.followers.has(id) else ""
+	var n := int(Being.view(s, id).get("fed", {}).get("hungry", 0))
+	return " Голоден: %d дн. без еды от героя." % n if n > 0 and Being.follows(s, id) else ""
 
 
 ## « Болен: хохочущая лихорадка, заразно.» — a sick NPC (v0.7.23.1); its course ends (v0.7.39): « Уже здоров…».

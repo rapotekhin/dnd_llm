@@ -23,7 +23,7 @@ func run() -> void:
 	s.settings["needs"] = false
 	s.minute = 19 * 60
 	s.room_id = "brod-tavern-hall"
-	s.pockets[NPC] = [{"id": "k1", "name": "Кошель", "item_id": "", "cp": 2000, "qty": 1, "worn": false, "dc": 12}]
+	Being.of(s, NPC)["pockets"] = [{"id": "k1", "name": "Кошель", "item_id": "", "cp": 2000, "qty": 1, "worn": false, "dc": 12}]
 	node("EventBus").state_changed.emit()
 	await frames(3)
 
@@ -76,7 +76,7 @@ func run() -> void:
 		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 		await frames(3)
 		var caught := bool(ContestRules._day(s, NPC).get("caught", false))
-		step("info: the cheat", true, "пойман — %s" % ", ".join(s.npc_memory.get(NPC, [])) if caught else "раунд: %s" % str(ContestRules.state(s)))
+		step("info: the cheat", true, "пойман — %s" % ", ".join(Being.view(s, NPC).get("memory", [])) if caught else "раунд: %s" % str(ContestRules.state(s)))
 		await shot("contest_cheat")
 		if not ContestRules.state(s).is_empty():
 			var give: Button = find(win, "ContestForfeit")
@@ -86,7 +86,7 @@ func run() -> void:
 
 	# The master's own game: knife throwing, a day later and the grudge forgotten.
 	s.day += 1
-	s.attitudes.erase(NPC)
+	Being.drop(s, NPC, "attitude")
 	var fx: EffectEngine = gs.effects
 	var r := fx.validate(s, data, "ct-1", {"kind": "contest", "npc_id": NPC, "new_kind": {"name": "Метание ножей", "check": {"skill": "sleight_of_hand"}, "wins": 3}})
 	if step("the master's own game accepted", bool(r["accepted"]), str(r.get("summary", r.get("reason", "")))):

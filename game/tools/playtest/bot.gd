@@ -47,7 +47,7 @@ func run() -> void:
 		var cb: Dictionary = gs.session.combat
 		step("info: fight", true, "turn %s, round %d, outcome '%s', busy %s, playing %s, retry %s, economy %s, foes %s" % [CombatRules.current(gs.session),
 			cb["round"], cb.get("outcome", ""), gs.busy_turn, gs.combat_playing, gs.can_retry(), cb.get("economy", {}),
-			CombatRules.enemies(gs.session, false).map(func(id: String) -> String: return "%s %s col %d hp %d" % [id, cb["fighters"][id]["status"], cb["fighters"][id]["col"], cb["fighters"][id]["hp"]])])
+			CombatRules.enemies(gs.session, false).map(func(id: String) -> String: return "%s %s col %d hp %d" % [id, CombatRules.fighter(gs.session, id)["status"], CombatRules.fighter(gs.session, id)["col"], CombatRules.fighter(gs.session, id)["hp"]])])
 	await shot("end")
 
 
@@ -258,9 +258,12 @@ func _invariants() -> String:
 		return "hit dice used %d" % c["hit_dice_used"]
 	if w.room(s.room_id).is_empty():
 		return "room %s" % s.room_id
+	var form := Being.check(s)
+	if not form.is_empty():
+		return "record: " + form[0]
 	if CombatRules.active(s):
 		for id: String in s.combat["fighters"]:
-			var f: Dictionary = s.combat["fighters"][id]
+			var f := CombatRules.fighter(s, id)
 			if absi(int(f.get("col", 0))) > CombatRules.edge(data) or int(f.get("hp", 0)) < 0:
 				return "fighter %s at col %d hp %d" % [id, f.get("col", 0), f.get("hp", 0)]
 		if s.mode != GameSession.MODE_COMBAT:

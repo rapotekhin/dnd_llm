@@ -38,7 +38,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var p := {"op": op, "item_id": item, "qty": qty, "cause": cause, "made": made}
 	if not npc.is_empty():
 		var n := WorldView.new(data["world"]).npc(npc)
-		if n.is_empty() or s.dead_npcs.has(npc):
+		if n.is_empty() or Being.dead(s, npc):
 			return {"reason": "человека %s нет в живых или в мире" % npc}
 		p["npc"] = npc
 		if op == "take":

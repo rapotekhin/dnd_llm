@@ -64,7 +64,7 @@ func test_the_room_stands_up_for_the_npc() -> void:
 
 func test_the_law_guard_defends_and_holds() -> void:
 	var s := _hero("brod-gate")
-	s.npc_at["npc_cook"] = "brod-gate"
+	Being.of(s, "npc_cook")["at"] = "brod-gate"
 	if not s.npcs_here(data["world"], s.room_id).has("npc_captain"):
 		return  # not at the gate at this hour
 	var help := CrimeRules.defenders(s, data, [{"monster": "commoner", "npc_id": "npc_cook", "by_hero": true}])

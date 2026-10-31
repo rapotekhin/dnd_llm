@@ -220,9 +220,6 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 		lines.append("+" + Money.format(price))
 	var home := ReputationRules.home_room(data, to)
 	if not home.is_empty() and home != s.room_id:  # it goes with its new owner
-		(s.creatures[s.room_id] as Array).erase(c)
-		var dest: Array = s.creatures.get(home, [])
-		dest.append(c)
-		s.creatures[home] = dest
+		c["at"] = home
 		lines.append("%s уводят к %s" % [c["name"], WorldView.new(data["world"]).npc(to).get("name", to)])
 	return lines

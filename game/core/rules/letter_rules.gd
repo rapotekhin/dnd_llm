@@ -74,9 +74,9 @@ static func ways_of(data: Dictionary, npc_id: String) -> Array[String]:
 
 ## Where an NPC is now: a follower — with the hero; one placed or travelling — there (the road — its home); else home.
 static func npc_loc(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	if s.followers.has(npc_id):
+	if Being.follows(s, npc_id):
 		return _loc(data, s.room_id)
-	var at := str(s.npc_at.get(npc_id, ""))
+	var at := str(Being.view(s, npc_id).get("at", ""))
 	if not at.is_empty() and data["world"]["rooms"].has(at):
 		return _loc(data, at)
 	var home := ReputationRules.home_room(data, npc_id)
@@ -139,13 +139,13 @@ static func recipients(s: GameSession, data: Dictionary) -> Array[String]:
 	for key: String in s.summaries:
 		if key.begins_with("dialogue:"):
 			met.append(key.get_slice(":", 1))
-	for npc: String in s.npc_memory.keys():
+	for npc: String in Being.with(s, "memory"):
 		met.append(npc)
 	for room_id: String in s.visited:
 		met.append_array(w.npcs_in(room_id))
 	met.append_array(FamilyRules.household(s, data).map(func(h: Dictionary) -> String: return str(h.get("npc", ""))))
 	for npc: String in met:
-		if out.has(npc) or w.npc(npc).is_empty() or s.dead_npcs.has(npc) or here.has(npc) or s.followers.has(npc) or npc_loc(s, data, npc).is_empty():
+		if out.has(npc) or w.npc(npc).is_empty() or Being.dead(s, npc) or here.has(npc) or Being.follows(s, npc) or npc_loc(s, data, npc).is_empty():
 			continue
 		out.append(npc)
 	return out
@@ -189,7 +189,7 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 		return "донос пишут страже: %s" % ", ".join(law_people(data).map(func(n: String) -> String: return _name(s, data, n)))
 	if str(p.get("does", "")) == "arrest":
 		var about := str(extra.get("about", ""))
-		if about.is_empty() or about == to or data["world"]["npcs"].get(about, {}).is_empty() or s.dead_npcs.has(about):
+		if about.is_empty() or about == to or data["world"]["npcs"].get(about, {}).is_empty() or Being.dead(s, about):
 			return "на кого донос — выберите человека"
 	if str(p.get("does", "")) == "ally":
 		var room := str(extra.get("room", ""))
@@ -323,7 +323,7 @@ static func verdict(s: GameSession, data: Dictionary, l: Dictionary) -> Dictiona
 		"closeness":
 			return {"can": true, "text": "письмо дошло; близость растёт, если писали не только что"}
 		"ally":
-			if s.dead_npcs.has(to) or jailed(s, to):
+			if Being.dead(s, to) or jailed(s, to):
 				return {"can": false, "text": "%s не может прийти: под стражей" % who}
 			if (family and bool(p.get("family", false))) or bond >= int(p["min_bond"]):
 				var road := maxi(1, (route(data, npc_loc(s, data, to), _loc(data, str(l["room"]))).size() - 1) * int(p["days_per_hop"]))
@@ -369,7 +369,7 @@ static func frame(s: GameSession, data: Dictionary, id: String) -> String:
 	var p := purpose(data, str(l["purpose"]))
 	var n: Dictionary = data["world"]["npcs"].get(to, {})
 	var c := s.character
-	var mem: Array = (s.npc_memory.get(to, []) as Array).slice(-int(cfg(data)["memory_max"])).map(func(m: Variant) -> String:
+	var mem: Array = (Being.view(s, to).get("memory", []) as Array).slice(-int(cfg(data)["memory_max"])).map(func(m: Variant) -> String:
 		return str(m.get("text", m)) if m is Dictionary else str(m))
 	var parts: Array[String] = [
 		"[letter:%s] Ответ на письмо героя. Адресат: %s (%s, %s). Цель: %s. Отправлено в %d-й день, дошло в %d-й, сегодня %d-й." % [id, n.get("name", to),
@@ -440,7 +440,7 @@ static func answered(s: GameSession, data: Dictionary, id: String, text: String)
 			var path := route(data, npc_loc(s, data, str(l["to"])), _loc(data, room))
 			var arrive := s.day + maxi(1, (path.size() - 1) * int(p["days_per_hop"]))
 			l["ally"] = {"npc": str(l["to"]), "room": room, "arrive": arrive, "until": TimeRules.day_start(arrive + int(p["wait_days"]) + 1), "state": "road"}
-			s.npc_at[str(l["to"])] = ""  # on the road: nowhere in the world
+			Being.of(s, str(l["to"]))["at"] = ""  # on the road: nowhere in the world
 			lines.append("%s придёт: «%s», к %d-му дню, и будет ждать до %d-го" % [who, _room_name(data, room), arrive, arrive + int(p["wait_days"])])
 		"recommendation":
 			var def := {"name": "Рекомендация: %s" % who, "item_type": "quest", "weight": 0, "value_cp": 0, "generated": true,
@@ -462,12 +462,12 @@ static func _ally_day(s: GameSession, data: Dictionary, l: Dictionary) -> Array[
 	var lines: Array[String] = []
 	if str(a["state"]) == "road" and s.day >= int(a["arrive"]):
 		a["state"] = "waits"
-		s.npc_at[npc] = str(a["room"])
+		Being.of(s, npc)["at"] = str(a["room"])
 		if s.room_id == str(a["room"]):
 			lines.append_array(_join(s, data, l))
 	elif str(a["state"]) == "waits" and s.clock >= int(a["until"]):
 		a["state"] = "gone"
-		s.npc_at.erase(npc)
+		Being.drop(s, npc, "at")
 		if s.room_id == str(a["room"]):
 			lines.append("%s не дождался(лась) и ушёл(ушла) домой" % _name(s, data, npc))
 	return lines
@@ -477,9 +477,9 @@ static func _join(s: GameSession, data: Dictionary, l: Dictionary) -> Array[Stri
 	var a: Dictionary = l["ally"]
 	var npc := str(a["npc"])
 	a["state"] = "joined"
-	if s.followers.size() >= int(FollowRules.cfg(data)["max"]):
-		s.npc_at.erase(npc)
-		return ["%s пришёл(пришла) на зов, но с героем уже идут %d — и уходит домой" % [_name(s, data, npc), s.followers.size()]]
+	if Being.followers(s).size() >= int(FollowRules.cfg(data)["max"]):
+		Being.drop(s, npc, "at")
+		return ["%s пришёл(пришла) на зов, но с героем уже идут %d — и уходит домой" % [_name(s, data, npc), Being.followers(s).size()]]
 	FollowRules.apply(s, {"follow_npc": npc, "on": true, "room": ""})
 	return ["%s пришёл(пришла) на зов письма и идёт с героем" % _name(s, data, npc)]
 
@@ -500,12 +500,12 @@ static func _arrest(s: GameSession, data: Dictionary, l: Dictionary, here: Strin
 	a["done"] = true
 	var npc := str(a["npc"])
 	var prison := str(CrimeRules.law(data, str(a["loc"])).get("prison", ""))
-	if s.dead_npcs.has(npc) or prison.is_empty():
+	if Being.dead(s, npc) or prison.is_empty():
 		return []
 	FollowRules.apply(s, {"follow_npc": npc, "on": false, "room": prison})
 	a["until"] = TimeRules.day_start(s.day + int(purpose(data, str(l["purpose"]))["jail_days"]) + 1)
 	s.remember(npc, "знает: герой донёс на него страже")
-	s.attitudes[npc] = mini(s.attitude(npc), int(SocialRules.cfg(data)["thresholds"]["refuse_at"]))
+	Being.of(s, npc)["attitude"] = mini(s.attitude(npc), int(SocialRules.cfg(data)["thresholds"]["refuse_at"]))
 	var what := "%s взят(а) под стражу по доносу" % _name(s, data, npc)
 	RumorRules.add(s, data, {"text": what, "weight": int(cfg(data)["arrest_rumor_weight"]), "origin": str(a["loc"]), "source": "letter", "about": npc})
 	return [what] if _loc(data, s.room_id) == str(a["loc"]) or here == str(a["loc"]) else []
@@ -525,7 +525,7 @@ static func _jail_days(s: GameSession, data: Dictionary) -> Array[String]:
 		var a: Dictionary = l.get("arrest", {})
 		if a.has("until") and not bool(a.get("freed", false)) and s.clock >= int(a["until"]):
 			a["freed"] = true
-			s.npc_at.erase(str(a["npc"]))
+			Being.drop(s, str(a["npc"]), "at")
 			if _loc(data, s.room_id) == str(a["loc"]):
 				lines.append("%s отпущен(а) из-под стражи" % _name(s, data, str(a["npc"])))
 	return lines

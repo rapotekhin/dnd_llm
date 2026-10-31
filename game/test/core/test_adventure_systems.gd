@@ -240,7 +240,7 @@ func test_a_quest_step_with_two_conditions_is_rejected() -> void:
 	assert_str("\n".join(WorldPack.validate(b, TestUtils.base()))).contains("drogin_amulet")
 
 
-func test_the_new_state_survives_the_save_and_v10_migrates() -> void:
+func test_the_new_state_survives_the_save() -> void:
 	var s := _session()
 	s.minute = 1234
 	s.quests_active = {"drogin_amulet": 1}
@@ -251,7 +251,3 @@ func test_the_new_state_survives_the_save_and_v10_migrates() -> void:
 	assert_int(int(back.quests_active["drogin_amulet"])).is_equal(1)
 	assert_dict(back.traps).is_equal(s.traps)
 	assert_array(back.caches_taken).contains(["mine-deep:wall"])
-	var v10: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves/save_v10.json"))
-	SaveFormat.migrate(v10, {})
-	assert_int(int(v10["session"]["minute"])).is_equal(480)
-	assert_dict(v10["session"]["quests_active"]).is_empty()

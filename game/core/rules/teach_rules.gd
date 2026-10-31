@@ -85,7 +85,7 @@ static func text(data: Dictionary, n: Dictionary) -> String:
 ## "" when the NPC may teach the thing (a living NPC of the world), else why not — for the master's refusal. For a recipe
 ## `what` is a recipe or a catalog item; `recipe` — the recipe a course brings of its own (its tool counts).
 static func why_not(s: GameSession, data: Dictionary, npc_id: String, kind: String, what: String, recipe: Dictionary = {}) -> String:
-	if s != null and s.dead_npcs.has(npc_id):
+	if s != null and Being.dead(s, npc_id):
 		return "%s мёртв — учить некому" % npc_id
 	var n := BondRules.npc_def(s, data, npc_id)
 	if n.is_empty():
@@ -152,7 +152,7 @@ static func find(s: GameSession, data: Dictionary, kind: String, what: String) -
 			by_course[str(all[cid]["teacher"])] = cid
 	var out: Array[Dictionary] = []
 	for id: String in data["world"]["npcs"]:
-		if s.dead_npcs.has(id) or (not by_course.has(id) and not why_not(s, data, id, kind, what).is_empty()):
+		if Being.dead(s, id) or (not by_course.has(id) and not why_not(s, data, id, kind, what).is_empty()):
 			continue
 		var n: Dictionary = data["world"]["npcs"][id]
 		var room := Where.base_room(s, data, id)

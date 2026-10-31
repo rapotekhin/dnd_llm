@@ -231,7 +231,7 @@ static func keep_peace(s: GameSession, data: Dictionary, room_id: String, enc: D
 	s.encounters_peace.append(id)
 	if not s.encounters_passed.has(id):
 		s.encounters_passed.append(id)
-	EncounterRules.as_creatures(s, room_id, enc["enemies"], "truce")
+	EncounterRules.as_creatures(s, room_id, EncounterRules.heads(s, data, room_id, enc), "truce")
 	var names: Array = []
 	for e: Dictionary in enc["enemies"]:
 		var n := str(def(s, data, of_foe(data, enc, e)).get("name", ""))

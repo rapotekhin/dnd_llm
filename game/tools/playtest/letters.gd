@@ -95,13 +95,13 @@ func run() -> void:
 		", ".join(LetterRules.letters(s).map(func(l: Dictionary) -> String: return "%s:%s" % [l["id"], l["status"]])))
 	var chat := " ".join(s.chat.map(func(e: Dictionary) -> String: return str(e.get("name", "")) + " " + str(e.get("text", "")) + " " + " ".join(e.get("lines", []))))
 	step("Bruno's letter in the chat", chat.contains("Бруно Хмель — письмо") and chat.contains("придёт"), chat.right(400))
-	step("Fern under guard", str(s.npc_at.get("npc_merchant", "")) == "brod-lockup" and LetterRules.jailed(s, "npc_merchant"))
+	step("Fern under guard", str(Being.view(s, "npc_merchant").get("at", "")) == "brod-lockup" and LetterRules.jailed(s, "npc_merchant"))
 	await shot("letter_answers")
 
 	gs.call("_quiet_lines", TimeRules.advance(s, data, 1440))
 	await _go(gs, "brod-square")
 	await _go(gs, "brod-gate")
-	step("Bruno came to the gate and goes with the hero", s.followers.has(BRUNO), _last_effects(s))
+	step("Bruno came to the gate and goes with the hero", Being.follows(s, BRUNO), _last_effects(s))
 	await shot("ally_joined")
 
 

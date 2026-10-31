@@ -685,23 +685,12 @@ static func _fire(s: GameSession, data: Dictionary, id: String, h: Dictionary) -
 
 
 static func _creature(s: GameSession, cid: String) -> Dictionary:
-	if cid.is_empty():
-		return {}
-	for room: String in s.creatures:
-		for cr: Dictionary in s.creatures[room]:
-			if str(cr["id"]) == cid:
-				return cr
-	return {}
+	return Being.view(s, cid).get("creature", {})
 
 
 static func _remove_creature(s: GameSession, cid: String) -> void:
-	for room: String in s.creatures.keys():
-		for cr: Dictionary in s.creatures[room]:
-			if str(cr["id"]) == cid:
-				(s.creatures[room] as Array).erase(cr)
-				if (s.creatures[room] as Array).is_empty():
-					s.creatures.erase(room)
-				return
+	if not _creature(s, cid).is_empty():
+		CreatureRules.remove(s, _creature(s, cid))
 
 
 ## A bound prisoner of the hero, a person, in the place: may be put to work while the world allows slavery.
@@ -958,43 +947,6 @@ static func rent(s: GameSession, data: Dictionary, _npc_id: String, k: String, d
 	return ["%s — снято до дня %d, %s" % [name_of(s, data, id), int(st["rent_day"]), Money.format(cost)]]
 
 
-## Saves before v0.7.39.5: a stall rented at a market room and a house with the counter become objects of their own,
-## their shelves moved with them. Once, on load.
-static func upgrade_legacy(s: GameSession, data: Dictionary) -> void:
-	if not data["rules"].has("property"):
-		return
-	var shop: Dictionary = s.character.get("shop", {})
-	for room: String in (shop.get("stalls", {}) as Dictionary).keys():
-		var loc := WorldView.new(data["world"]).location_id(room)
-		var id := rented(s, data, "stall", loc)
-		if id.is_empty():
-			id = new_object(s, data, "stall", room, "%s (%s)" % [_upper_first(str(kind_cfg(data, "stall").get("name", ""))), WorldView.new(data["world"]).room_short(room)])
-		state(s.character)[id]["rent_day"] = int(shop["stalls"][room])
-		var venues: Dictionary = shop.get("venues", {})
-		if venues.has("stall:" + room):
-			venues[id] = venues["stall:" + room]
-			venues.erase("stall:" + room)
-	shop.erase("stalls")
-	for id: String in state(s.character):  # a staff migrated from one worker: its role and wage by the kind
-		for h: Dictionary in staff(s, id):
-			if str(h.get("role", "")).is_empty() and not places(s, data, id).is_empty():
-				h["role"] = str(places(s, data, id)[0]["role"])
-				h["wage"] = 0 if bool(h.get("serf", false)) else int(places(s, data, id)[0]["wage"])
-	for id: String in state(s.character).keys():
-		if kind_id(s, data, id) == "house" and has_upgrade(s.character, id, "counter"):
-			var made := false
-			for other: String in state(s.character):
-				made = made or (prop(s, data, other).get("generated", false) and kind_id(s, data, other) == "counter" \
-					and (WorldView.new(data["world"]).room(main_room(s, data, other)).get("exits", []) as Array).has(main_room(s, data, id)))
-			if made:
-				continue
-			var counter := new_object(s, data, "counter", main_room(s, data, id), "%s: %s" % [name_of(s, data, id), str(kind_cfg(data, "counter").get("name", ""))])
-			var venues: Dictionary = shop.get("venues", {})
-			if venues.has(id):
-				venues[counter] = venues[id]
-				venues.erase(id)
-
-
 static func _days(n: int) -> String:
 	return "%d %s" % [n, "день" if n % 10 == 1 and n % 100 != 11 else "дня" if n % 10 in [2, 3, 4] and not n % 100 in [12, 13, 14] else "дней"]
 
@@ -1033,34 +985,26 @@ static func buy_animal(s: GameSession, data: Dictionary, npc_id: String, monster
 	var a := animal_cfg(data, monster)
 	var m: Dictionary = data["monsters"][monster]
 	Ledger.add(s, -(int(a["price_cp"]) if price < 0 else price), "property:buy_animal")
-	s.creature_counter += 1
-	var cr := {"id": "c%d" % s.creature_counter, "name": str(m["name"]), "monster": monster, "state": TAME, "bound": false, "led": true,
+	var cr := {"name": str(m["name"]), "monster": monster, "state": TAME, "bound": false, "led": true,
 		"owner": OwnerRules.HERO, "since": TimeRules.abs_minute(s), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "xp_given": true, "fed_day": s.day}
 	var pk := PetRules.kind(data, monster)  # v0.7.43: a dog bought is a pet of the hero
 	if not pk.is_empty() and not bool(a.get("pack", false)) and (bool(pk["fights"]) or bool(pk["scout"]) or not (pk["help"] as Array).is_empty() or float(pk["spoil_mult"]) > 1.0):
 		cr.merge({"pet": true, "close": 1})
-	var list: Array = s.creatures.get(s.room_id, [])
-	list.append(cr)
-	s.creatures[s.room_id] = list
+	CreatureRules.add(s, s.room_id, cr)
 	s.remember(npc_id, "продал герою: %s" % m["name"])
 	return ["Куплено: %s за %s — идёт с вами; корм %s в день" % [m["name"], Money.format(int(a["price_cp"])), Money.format(int(a["feed_cp_day"]))]]
 
 
 static func animals(s: GameSession) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for room: String in s.creatures:
-		for cr: Dictionary in s.creatures[room]:
-			if str(cr.get("state", "")) == TAME and str(cr.get("owner", "")) == OwnerRules.HERO:
-				out.append(cr)
+	for cr: Dictionary in CreatureRules.all(s):
+		if str(cr["state"]) == TAME and str(cr.get("owner", "")) == OwnerRules.HERO:
+			out.append(cr)
 	return out
 
 
 static func room_of(s: GameSession, cid: String) -> String:
-	for room: String in s.creatures:
-		for cr: Dictionary in s.creatures[room]:
-			if str(cr["id"]) == cid:
-				return room
-	return ""
+	return str(_creature(s, cid).get("at", ""))
 
 
 ## Feeding each day: from the till of the own place the beast stands in, else the purse; unfed past starve_days — it
@@ -1114,7 +1058,7 @@ static func fighting(s: GameSession, data: Dictionary) -> Array:
 	var out: Array = []
 	for cr: Dictionary in CreatureRules.here(s, s.room_id):
 		if str(cr.get("state", "")) == TAME and bool(cr.get("led", false)) and bool(animal_cfg(data, str(cr["monster"])).get("fights", false)):
-			out.append({"monster": str(cr["monster"]), "name": str(cr["name"]), "hp": int(cr.get("hp", 1)), "ally": "animal", "creature_id": str(cr["id"])})
+			out.append({"monster": str(cr["monster"]), "name": str(cr["name"]), "hp": int(cr.get("hp", 1)), "ally": "animal", "id": str(cr["id"]), "creature_id": str(cr["id"])})
 	return out
 
 

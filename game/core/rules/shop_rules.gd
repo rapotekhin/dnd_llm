@@ -228,7 +228,7 @@ static func buy_chance(data: Dictionary, ratio: float) -> float:
 static func _rivals(s: GameSession, data: Dictionary, loc: String) -> Dictionary:
 	var out := {}
 	for id: String in CrimeRules.people_of(data, loc):
-		if s.dead_npcs.has(id):
+		if Being.dead(s, id):
 			continue
 		for item: String in TradeRules.pack_stock(WorldView.new(data["world"]).npc(id), data["rules"]):
 			out[item] = true

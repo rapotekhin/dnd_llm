@@ -25,13 +25,13 @@ func test_the_smith_wants_weapons_and_shuns_potions() -> void:
 
 
 func test_the_price_stays_within_a_quarter_and_three_quarters() -> void:
-	s.attitudes["npc_smith"] = 3
+	Being.of(s, "npc_smith")["attitude"] = 3
 	ReputationRules.add(s, data, "brod", 40, "герой")
 	TradeRules.merchant(s, data, "npc_smith")["haggle_pct"] = 20
 	assert_int(TradeRules.sell_price(s, data, "npc_smith", "longsword")).is_equal(1125)  # ¾ of 1500
 	s.reputation.clear()  # a stranger again
 	ReputationRules.refresh(s, data)
-	s.attitudes["npc_merchant"] = -3
+	Being.of(s, "npc_merchant")["attitude"] = -3
 	assert_int(TradeRules.sell_price(s, data, "npc_merchant", "longsword")).is_equal(375)  # ¼ of 1500
 
 

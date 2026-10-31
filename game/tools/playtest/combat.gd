@@ -45,7 +45,7 @@ func run() -> void:
 		s.character["hp"] = int(OS.get_environment("GODOT_COMBAT_HP"))
 		node("EventBus").state_changed.emit()
 	await shot("combat_start")
-	step("info: order", true, str(s.combat["order"].map(func(id: String) -> String: return "%s %d" % [s.combat["fighters"][id]["name"], s.combat["fighters"][id]["init"]])))
+	step("info: order", true, str(s.combat["order"].map(func(id: String) -> String: return "%s %d" % [CombatRules.fighter(s, id)["name"], CombatRules.fighter(s, id)["init"]])))
 	var rounds := 0
 	while CombatRules.active(s) and str(s.combat.get("outcome", "")).is_empty() and rounds < 40:
 		if not await wait_until(func() -> bool: return (CombatRules.player_can_act(s) and not gs.is_busy()) or not str(s.combat.get("outcome", "")).is_empty() or gs.can_retry(), 120.0):

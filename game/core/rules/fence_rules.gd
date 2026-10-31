@@ -20,7 +20,7 @@ static func spec(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary
 
 
 static func is_fence(s: GameSession, data: Dictionary, npc_id: String) -> bool:
-	return not spec(s, data, npc_id).is_empty() and not s.dead_npcs.has(npc_id)
+	return not spec(s, data, npc_id).is_empty() and not Being.dead(s, npc_id)
 
 
 static func known(s: GameSession, data: Dictionary, npc_id: String) -> bool:

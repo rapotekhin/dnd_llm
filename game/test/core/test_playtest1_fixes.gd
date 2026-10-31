@@ -137,7 +137,7 @@ func test_theft_by_words_takes_the_purse_or_the_npc_notices() -> void:
 func test_an_unconscious_foe_loses_its_turn_and_a_hit_wakes_it_with_a_crit() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "wolf", "col": 0}])
-	var w := CombatRules.fighter(s, "e1")
+	var w := CombatRules.fighter(s, TestUtils.foe(s, 1))
 	w["hp"] = 100
 	w["max_hp"] = 100
 	CombatRules._add_condition(w, "unconscious", {"rounds": 10, "spell": "sleep", "wake": true, "save": "", "dc": 10})
@@ -147,7 +147,7 @@ func test_an_unconscious_foe_loses_its_turn_and_a_hit_wakes_it_with_a_crit() -> 
 	assert_str("\n".join(lines)).contains("не может действовать")
 	assert_int(int(s.character["hp"])).is_equal(hp)
 	assert_int(int(w["col"])).is_equal(0)
-	var hit := CombatRules.player_attack(s, data, "e1")
+	var hit := CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
 	if "\n".join(hit).contains("попадание") or "\n".join(hit).contains("КРИТ"):
 		assert_str("\n".join(hit)).contains("КРИТ")
 		assert_bool(CombatRules._has(w, "unconscious")).is_false()
@@ -156,17 +156,17 @@ func test_an_unconscious_foe_loses_its_turn_and_a_hit_wakes_it_with_a_crit() -> 
 func test_sleep_takes_the_weakest_first_from_its_pool() -> void:
 	var s := _session("wizard_yalika")
 	_fight(s, [{"monster": "wolf", "col": 2}, {"monster": "jackal", "col": 2}, {"monster": "jackal", "col": 2}])
-	CombatRules.fighter(s, "e1")["hp"] = 60  # too strong for any pool
+	CombatRules.fighter(s, TestUtils.foe(s, 1))["hp"] = 60  # too strong for any pool
 	var lines: Array[String] = []
-	CombatRules._cast_condition(s, data, "sleep", 1, CombatRules.fighter(s, "e1"), lines)
+	CombatRules._cast_condition(s, data, "sleep", 1, CombatRules.fighter(s, TestUtils.foe(s, 1)), lines)
 	assert_str(lines[0]).contains("пул")
-	assert_bool(CombatRules._has(CombatRules.fighter(s, "e2"), "unconscious") or CombatRules._has(CombatRules.fighter(s, "e3"), "unconscious")).is_true()
-	assert_bool(CombatRules._has(CombatRules.fighter(s, "e1"), "unconscious")).is_false()
+	assert_bool(CombatRules._has(CombatRules.fighter(s, TestUtils.foe(s, 2)), "unconscious") or CombatRules._has(CombatRules.fighter(s, TestUtils.foe(s, 3)), "unconscious")).is_true()
+	assert_bool(CombatRules._has(CombatRules.fighter(s, TestUtils.foe(s, 1)), "unconscious")).is_false()
 	var sk := _session("wizard_yalika")
 	_fight(sk, [{"monster": "skeleton", "col": 2}])
 	var none: Array[String] = []
-	CombatRules._cast_condition(sk, data, "sleep", 1, CombatRules.fighter(sk, "e1"), none)
-	assert_bool(CombatRules._has(CombatRules.fighter(sk, "e1"), "unconscious")).is_false()  # the undead do not sleep
+	CombatRules._cast_condition(sk, data, "sleep", 1, CombatRules.fighter(sk, TestUtils.foe(sk, 1)), none)
+	assert_bool(CombatRules._has(CombatRules.fighter(sk, TestUtils.foe(sk, 1)), "unconscious")).is_false()  # the undead do not sleep
 
 
 func test_hold_person_only_on_humanoids_and_ends_with_concentration() -> void:
@@ -174,27 +174,27 @@ func test_hold_person_only_on_humanoids_and_ends_with_concentration() -> void:
 	s.character["spell_dc"] = 99
 	_fight(s, [{"monster": "bandit", "col": 1}, {"monster": "wolf", "col": 1}])
 	var lines: Array[String] = []
-	CombatRules._cast_condition(s, data, "hold_person", 2, CombatRules.fighter(s, "e1"), lines)
-	assert_bool(CombatRules._has(CombatRules.fighter(s, "e1"), "paralyzed")).is_true()
-	CombatRules._cast_condition(s, data, "hold_person", 2, CombatRules.fighter(s, "e2"), lines)
+	CombatRules._cast_condition(s, data, "hold_person", 2, CombatRules.fighter(s, TestUtils.foe(s, 1)), lines)
+	assert_bool(CombatRules._has(CombatRules.fighter(s, TestUtils.foe(s, 1)), "paralyzed")).is_true()
+	CombatRules._cast_condition(s, data, "hold_person", 2, CombatRules.fighter(s, TestUtils.foe(s, 2)), lines)
 	assert_str(lines[-1]).contains("не действует")
-	assert_array(CombatRules.foe_conditions(data, CombatRules.fighter(s, "e1"))[0].split(" ")).is_not_empty()
-	assert_str(CombatRules.foe_conditions(data, CombatRules.fighter(s, "e1"))[0]).contains("10 р.")
+	assert_array(CombatRules.foe_conditions(data, CombatRules.fighter(s, TestUtils.foe(s, 1)))[0].split(" ")).is_not_empty()
+	assert_str(CombatRules.foe_conditions(data, CombatRules.fighter(s, TestUtils.foe(s, 1)))[0]).contains("10 р.")
 	var ended := CombatRules.end_spell(s, data, "hold_person")
 	assert_str(ended[0]).contains("концентрация")
-	assert_bool(CombatRules._has(CombatRules.fighter(s, "e1"), "paralyzed")).is_false()
+	assert_bool(CombatRules._has(CombatRules.fighter(s, TestUtils.foe(s, 1)), "paralyzed")).is_false()
 
 
 func test_conditions_run_out_at_the_end_of_the_foe_turn() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "col": 3}])
-	var b := CombatRules.fighter(s, "e1")
+	var b := CombatRules.fighter(s, TestUtils.foe(s, 1))
 	CombatRules._add_condition(b, "incapacitated", {"rounds": 1, "spell": "command", "wake": false, "save": "", "dc": 10})
 	CombatRules.end_player_turn(s, data)
 	var lines := CombatRules.next_actor(s, data)
 	assert_str("\n".join(lines)).contains("проходит")
 	assert_bool(CombatRules._has(b, "incapacitated")).is_false()
-	assert_dict(CombatRules.cast_preview(s, data, "hold_person", 2, "e1")).contains_keys(["condition", "chance"])
+	assert_dict(CombatRules.cast_preview(s, data, "hold_person", 2, TestUtils.foe(s, 1))).contains_keys(["condition", "chance"])
 
 
 # --- sneaking among people, NPC lines, the save ---------------------------------------------------------
@@ -225,15 +225,12 @@ func test_an_npc_line_does_not_repeat_the_name() -> void:
 	assert_str(ChatView.without_name("«Садись», — говорит Бруно.", "Бруно Хмель")).is_equal("«Садись», — говорит Бруно.")
 
 
-func test_the_new_state_survives_the_save_and_v12_migrates() -> void:
+func test_the_new_state_survives_the_save() -> void:
 	var s := _session()
 	s.option_costs = [50, 0] as Array[int]
-	s.pickpocketed = {"npc_innkeeper": 2}
+	Being.of(s, "npc_innkeeper")["picked"] = 2
 	s.sneak_noticed = "brod-square"
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
 	assert_array(back.option_costs).is_equal([50, 0])
-	assert_int(int(back.pickpocketed["npc_innkeeper"])).is_equal(2)
+	assert_int(int(Being.of(back, "npc_innkeeper")["picked"])).is_equal(2)
 	assert_str(back.sneak_noticed).is_equal("brod-square")
-	var v12: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves/save_v12.json"))
-	SaveFormat.migrate(v12, {})
-	assert_str(v12["session"]["sneak_noticed"]).is_empty()

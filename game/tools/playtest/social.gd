@@ -62,7 +62,7 @@ func run() -> void:
 	step("the merchant remembers it", " ".join(s.memory_of("npc_merchant")).contains("скидку 20%"), " ".join(s.memory_of("npc_merchant")))
 
 	# v0.7.15.3: a hostile NPC turns the hero away — the talk and trade buttons are off.
-	s.attitudes["npc_merchant"] = -3
+	Being.of(s, "npc_merchant")["attitude"] = -3
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var talk: Button = find(game, "Talk_npc_merchant")

@@ -29,8 +29,9 @@ func _session(preset_id: String = "fighter_aira") -> GameSession:
 func _fight(s: GameSession, foes: Array, source: Dictionary = {}, first: String = CombatRules.PLAYER) -> Array[String]:
 	var lines := CombatRules.start(s, data, foes, source)
 	var order: Array = s.combat["order"]
-	order.erase(first)
-	order.push_front(first)
+	var who := TestUtils.foe(s, 1) if first == "foe" else first
+	order.erase(who)
+	order.push_front(who)
 	s.combat["turn"] = 0
 	CombatRules._begin_turn(s, data, [] as Array[String])
 	s.mode = GameSession.MODE_COMBAT
@@ -54,9 +55,9 @@ func _to_round(s: GameSession, n: int) -> void:
 func test_a_sneaking_player_catches_the_foes_off_guard_and_starts_hidden() -> void:
 	var s := _session()
 	s.character["skills"]["stealth"] = 40
-	var lines := _fight(s, [{"monster": "wolf", "count": 2}], {"sneak": true}, "e1")
+	var lines := _fight(s, [{"monster": "wolf", "count": 2}], {"sneak": true}, "foe")
 	assert_str("\n".join(lines)).contains("застигнуты врасплох")
-	assert_bool(bool(CombatRules.fighter(s, "e1").get("surprised", false))).is_true()
+	assert_bool(bool(CombatRules.fighter(s, TestUtils.foe(s, 1)).get("surprised", false))).is_true()
 	assert_bool(bool(CombatRules.player(s).get("hidden", false))).is_true()
 	var turn := CombatRules.next_actor(s, data)  # the surprised wolf loses its turn
 	assert_str("\n".join(turn)).contains("врасплох")
@@ -69,7 +70,7 @@ func test_a_clumsy_sneak_is_noticed() -> void:
 	s.character["skills"]["stealth"] = -40
 	var lines := _fight(s, [{"monster": "wolf"}], {"sneak": true})
 	assert_str("\n".join(lines)).contains("замечают")
-	assert_bool(bool(CombatRules.fighter(s, "e1").get("surprised", false))).is_false()
+	assert_bool(bool(CombatRules.fighter(s, TestUtils.foe(s, 1)).get("surprised", false))).is_false()
 	assert_bool(bool(CombatRules.player(s).get("hidden", false))).is_false()
 
 
@@ -82,7 +83,7 @@ func test_an_ambush_surprises_an_inattentive_player_who_loses_the_first_turn() -
 	assert_bool(CombatRules.player_can_act(s)).is_false()
 	var turn := CombatRules.next_actor(s, data)
 	assert_str("\n".join(turn)).contains("врасплох")
-	assert_str(CombatRules.current(s)).is_equal("e1")
+	assert_str(CombatRules.current(s)).is_equal(TestUtils.foe(s, 1))
 	_to_round(s, 2)
 	assert_bool(bool(CombatRules.player(s).get("surprised", false))).is_false()
 
@@ -110,7 +111,7 @@ func test_hiding_needs_distance_and_gives_advantage_until_the_attack() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 0}])
 	assert_str(CombatRules.can_hide(s, data)).is_equal("COMBAT_HIDE_SEEN")
-	CombatRules.fighter(s, "e1")["col"] = 2
+	CombatRules.fighter(s, TestUtils.foe(s, 1))["col"] = 2
 	s.character["skills"]["stealth"] = 40
 	assert_str(CombatRules.can_hide(s, data)).is_empty()
 	var lines := CombatRules.player_hide(s, data)
@@ -118,11 +119,11 @@ func test_hiding_needs_distance_and_gives_advantage_until_the_attack() -> void:
 	assert_bool(bool(CombatRules.player(s)["hidden"])).is_true()
 	assert_int(int(CombatRules.economy(s)["action"])).is_equal(0)
 	assert_str(CombatRules.can_hide(s, data)).is_equal("COMBAT_ALREADY_HIDDEN")
-	assert_array(CombatRules.attack_preview(s, data, "e1")["adv"]).contains(["вы спрятаны"])
+	assert_array(CombatRules.attack_preview(s, data, TestUtils.foe(s, 1))["adv"]).contains(["вы спрятаны"])
 	# Foes attack a hidden player with disadvantage.
-	var bow := CombatRules._best_action(data, CombatRules.fighter(s, "e1"), "ranged")
+	var bow := CombatRules._best_action(data, CombatRules.fighter(s, TestUtils.foe(s, 1)), "ranged")
 	var hits: Array[String] = []
-	CombatRules._enemy_attack(s, data, CombatRules.fighter(s, "e1"), bow, hits)
+	CombatRules._enemy_attack(s, data, CombatRules.fighter(s, TestUtils.foe(s, 1)), bow, hits)
 	assert_str(hits[0]).contains("с помехой")
 
 
@@ -135,7 +136,7 @@ func test_the_rogue_hides_as_a_bonus_action_and_an_attack_reveals() -> void:
 	assert_int(int(CombatRules.economy(s)["bonus"])).is_equal(0)
 	assert_int(int(CombatRules.economy(s)["action"])).is_equal(1)
 	s.character["equipped"]["main_hand"] = "shortbow"
-	CombatRules.player_attack(s, data, "e1")
+	CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
 	assert_bool(bool(CombatRules.player(s)["hidden"])).is_false()
 
 
@@ -166,16 +167,16 @@ func test_a_pack_wave_waits_at_the_edge_and_arrives_at_its_round() -> void:
 	assert_int(int(s.combat["round"])).is_equal(2)
 	assert_str("\n".join(lines)).contains("Подкрепление слева")
 	assert_array(s.combat["incoming"]).is_empty()
-	var newcomer := CombatRules.fighter(s, "e2")
+	var newcomer := CombatRules.fighter(s, TestUtils.foe(s, 2))
 	assert_int(int(newcomer["col"])).is_equal(-3)
 	assert_str(str(newcomer["name"])).is_equal("Гоблин 2")
-	assert_array(s.combat["order"]).contains(["e2"])
+	assert_array(s.combat["order"]).contains([TestUtils.foe(s, 2)])
 
 
 func test_a_hurt_intelligent_foe_calls_for_help_once() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "col": 0}], {"help": {"side": "right", "delay": 2, "enemies": [{"monster": "bandit", "count": 2}]}})
-	var b := CombatRules.fighter(s, "e1")
+	var b := CombatRules.fighter(s, TestUtils.foe(s, 1))
 	b["hp"] = 2
 	b["morale"] = true  # no morale roll in this test
 	CombatRules.end_player_turn(s, data)
@@ -218,7 +219,7 @@ func test_parley_needs_intelligent_foes_and_is_a_challenge() -> void:
 	assert_str(CombatRules.parley_apply(b, data, "persuasion", false)[0]).contains("не слушают")
 	assert_str(CombatRules.can_parley(b, data, "persuasion")).is_empty()  # one failure — they still listen
 	assert_str(CombatRules.parley_apply(b, data, "intimidation", true)[0]).contains("колеблются")
-	assert_str(CombatRules.fighter(b, "e1")["status"]).is_equal("active")
+	assert_str(CombatRules.fighter(b, TestUtils.foe(b, 1))["status"]).is_equal("active")
 	assert_str(CombatRules.parley_apply(b, data, "persuasion", false)[0]).contains("больше не станут слушать")
 	assert_str(CombatRules.can_parley(b, data, "persuasion")).is_equal("COMBAT_PARLEY_REFUSED")
 
@@ -232,7 +233,7 @@ func test_the_parley_dc_grows_with_the_threat_and_a_hard_encounter() -> void:
 	_fight(hard, [{"monster": "cult_fanatic", "col": 1}], {"parley": "hard"})
 	assert_int(CombatRules.parley_dc(strong, data)).is_greater(CombatRules.parley_dc(weak, data))
 	assert_int(CombatRules.parley_dc(hard, data)).is_equal(CombatRules.parley_dc(strong, data) + 5)
-	CombatRules.fighter(strong, "e1")["hp"] = 1  # below half: easier
+	CombatRules.fighter(strong, TestUtils.foe(strong, 1))["hp"] = 1  # below half: easier
 	assert_int(CombatRules.parley_dc(strong, data)).is_equal(CombatRules.parley_dc(hard, data) - 5 - 1)
 
 
@@ -241,7 +242,7 @@ func test_the_parley_dc_falls_with_every_foe_out() -> void:
 	_fight(s, [{"monster": "bandit", "count": 3, "col": 1}])
 	var full := CombatRules.parley_dc(s, data)
 	assert_int(full).is_equal(12 + CharacterRules.mod(int(data["monsters"]["bandit"]["abilities"]["wis"])))
-	CombatRules.fighter(s, "e1")["status"] = "dead"
+	CombatRules.fighter(s, TestUtils.foe(s, 1))["status"] = "dead"
 	assert_int(CombatRules.parley_dc(s, data)).is_equal(full - 2)
 
 
@@ -251,11 +252,11 @@ func test_intimidation_makes_foes_surrender_or_flee_and_the_fight_is_won() -> vo
 	CombatRules.parley_apply(s, data, "persuasion", true)
 	CombatRules.parley_apply(s, data, "persuasion", true)
 	var lines := CombatRules.parley_apply(s, data, "intimidation", true)  # the deciding success sets the outcome
-	assert_str(CombatRules.fighter(s, "e1")["status"]).is_equal("surrendered")
-	assert_str(CombatRules.fighter(s, "e2")["status"]).is_equal("surrendered")  # v0.7.50.1: nobody runs off
-	assert_str(CombatRules.fighter(s, "e3")["status"]).is_equal("active")  # the beast fights on
+	assert_str(CombatRules.fighter(s, TestUtils.foe(s, 1))["status"]).is_equal("surrendered")
+	assert_str(CombatRules.fighter(s, TestUtils.foe(s, 2))["status"]).is_equal("surrendered")  # v0.7.50.1: nobody runs off
+	assert_str(CombatRules.fighter(s, TestUtils.foe(s, 3))["status"]).is_equal("active")  # the beast fights on
 	assert_int(lines.size()).is_equal(2)
-	CombatRules.fighter(s, "e3")["status"] = "dead"
+	CombatRules.fighter(s, TestUtils.foe(s, 3))["status"] = "dead"
 	CombatRules.after_player_action(s, data)
 	assert_str(s.combat["outcome"]).is_equal("victory")
 
@@ -265,7 +266,7 @@ func test_persuasion_ends_the_fight_in_a_truce_with_full_xp_and_no_encounter_loo
 	_fight(s, [{"monster": "bandit", "count": 2, "col": 1}])
 	for i in 3:
 		CombatRules.parley_apply(s, data, "persuasion", true)
-	assert_str(CombatRules.health_key(CombatRules.fighter(s, "e1"))).is_equal("HEALTH_TRUCE")
+	assert_str(CombatRules.health_key(CombatRules.fighter(s, TestUtils.foe(s, 1)))).is_equal("HEALTH_TRUCE")
 	CombatRules.after_player_action(s, data)
 	assert_str(s.combat["outcome"]).is_equal("truce")
 	CombatRules.results(s, data, {"coins_cp": 500, "items": {"healing_potion": 1}})
@@ -303,26 +304,26 @@ func test_the_attack_preview_shows_the_chance_and_the_reasons() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 0}])
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"]["main_hand"]))
-	var pv := CombatRules.attack_preview(s, data, "e1")
+	var pv := CombatRules.attack_preview(s, data, TestUtils.foe(s, 1))
 	assert_int(pv["chance"]).is_equal(CombatRules.hit_chance(int(w["to_hit"]), 15, false, false))
 	var r := CombatRules.dice_range(str(w["dice"]))
 	assert_int(pv["max"]).is_equal(r[1] + int(w["bonus"]))
-	CombatRules.fighter(s, "e1")["dodging"] = true
-	assert_array(CombatRules.attack_preview(s, data, "e1")["dis"]).contains(["цель уклоняется"])
+	CombatRules.fighter(s, TestUtils.foe(s, 1))["dodging"] = true
+	assert_array(CombatRules.attack_preview(s, data, TestUtils.foe(s, 1))["dis"]).contains(["цель уклоняется"])
 
 
 func test_the_spell_preview_attack_or_save() -> void:
 	var s := _session("wizard_yalika")
 	_fight(s, [{"monster": "goblin", "col": 2}])
-	var bolt := CombatRules.cast_preview(s, data, "fire_bolt", 0, "e1")
+	var bolt := CombatRules.cast_preview(s, data, "fire_bolt", 0, TestUtils.foe(s, 1))
 	assert_bool(bolt["save"]).is_false()
 	assert_int(bolt["chance"]).is_between(5, 95)
-	var flame := CombatRules.cast_preview(s, data, "sacred_flame", 0, "e1")
+	var flame := CombatRules.cast_preview(s, data, "sacred_flame", 0, TestUtils.foe(s, 1))
 	assert_bool(flame["save"]).is_true()
-	var darts := CombatRules.cast_preview(s, data, "magic_missile", 1, "e1")
+	var darts := CombatRules.cast_preview(s, data, "magic_missile", 1, TestUtils.foe(s, 1))
 	assert_int(darts["chance"]).is_equal(100)
 	assert_int(darts["count"]).is_equal(3)
-	assert_dict(CombatRules.cast_preview(s, data, "cure_wounds", 1, "e1")).is_empty()
+	assert_dict(CombatRules.cast_preview(s, data, "cure_wounds", 1, TestUtils.foe(s, 1))).is_empty()
 
 
 # --- sneaking outside a fight and the save -------------------------------------------------------
@@ -352,16 +353,11 @@ func test_sneaking_and_reinforcements_survive_the_save() -> void:
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
 	assert_bool(back.sneaking).is_true()
 	assert_dict(back.combat).is_equal(s.combat)
-	var v9: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves/save_v9.json"))
-	SaveFormat.migrate(v9, {})
-	assert_bool(v9["session"]["sneaking"]).is_false()
-
-
 func test_scorching_ray_makes_three_attack_rolls() -> void:
 	assert_str(str(data["spells"]["scorching_ray"].get("attack", ""))).is_equal("ranged")  # missing in the SRD JSON
 	var s := _session("wizard_yalika")
 	_fight(s, [{"monster": "ogre", "col": 2}])
-	var pv := CombatRules.cast_preview(s, data, "scorching_ray", 2, "e1")
+	var pv := CombatRules.cast_preview(s, data, "scorching_ray", 2, TestUtils.foe(s, 1))
 	assert_int(pv["count"]).is_equal(3)
 	assert_int(pv["chance"]).is_less(100)
 	assert_int(int(data["spells"]["produce_flame"]["range_ft"])).is_equal(30)
@@ -377,8 +373,8 @@ func test_concentration_on_invisibility_makes_the_hero_invisible_until_an_attack
 	assert_int(ConditionRules.unseen_penalty(s.character, data)).is_equal(5)
 	_fight(s, [{"monster": "bandit", "col": 0}])
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"]["main_hand"]), false)
-	assert_array(CombatRules._attack_mods(s, data, w, CombatRules.fighter(s, "e1"))["adv"]).contains(["вы невидимы"])
-	var lines := CombatRules.player_attack(s, data, "e1")
+	assert_array(CombatRules._attack_mods(s, data, w, CombatRules.fighter(s, TestUtils.foe(s, 1)))["adv"]).contains(["вы невидимы"])
+	var lines := CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
 	assert_str("\n".join(lines)).contains("Невидимость спадает")
 	assert_bool(ConditionRules.invisible(s.character, data)).is_false()
 
@@ -398,11 +394,11 @@ func test_an_invisible_thief_is_felt_not_seen() -> void:
 	s.character["concentration"] = "invisibility"
 	var npc := "npc_serving"
 	var before := s.attitude(npc)
-	s.caught_by[npc] = s.day
+	Being.of(s, npc)["caught"] = s.day
 	var lines := TheftRules.react(s, data, npc)
 	assert_str(lines[0]).contains("вора не видно")
 	assert_int(s.attitude(npc)).is_equal(before)
-	assert_bool(s.caught_by.has(npc)).is_false()
+	assert_bool(Being.view(s, npc).has("caught")).is_false()
 
 
 func test_the_master_sees_the_hero_invisible() -> void:
@@ -417,5 +413,5 @@ func test_a_fallen_foe_next_to_the_hero_gives_no_ranged_disadvantage() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "col": 0}, {"monster": "bandit", "col": 3}])
 	assert_bool(CombatRules._foe_in_column(s, CombatRules.player(s))).is_true()
-	CombatRules.fighter(s, "e1")["status"] = "dead"
+	CombatRules.fighter(s, TestUtils.foe(s, 1))["status"] = "dead"
 	assert_bool(CombatRules._foe_in_column(s, CombatRules.player(s))).is_false()

@@ -24,7 +24,7 @@ func test_a_murder_before_witnesses_is_known_at_once() -> void:
 	var s := _hero("brod-tavern-hall")
 	var lines := CrimeRules.on_death(s, data, "npc_mercenary", true, s.room_id)
 	assert_str(" · ".join(lines)).contains("видели: Бруно Хмель").contains("Вы в розыске")
-	assert_bool(s.dead_npcs.has("npc_mercenary")).is_true()
+	assert_bool(Being.dead(s, "npc_mercenary")).is_true()
 	assert_bool(bool(s.crimes[0]["known"])).is_true()
 	assert_bool(s.wanted.has("brod")).is_true()
 	assert_int(s.attitude("npc_innkeeper")).is_equal(-3)  # a witness: one step more
@@ -39,7 +39,7 @@ func test_self_defence_is_no_crime() -> void:
 	CrimeRules.on_death(s, data, "npc_mercenary", false, s.room_id)
 	assert_array(s.crimes).is_empty()
 	assert_bool(s.wanted.is_empty()).is_true()
-	assert_str(str(s.bodies["npc_mercenary"])).is_equal("brod-tavern-hall")
+	assert_str(str(Being.of(s, "npc_mercenary")["body"])).is_equal("brod-tavern-hall")
 
 
 func test_a_hidden_body_is_found_later_and_the_letter_fails() -> void:
@@ -145,12 +145,3 @@ func test_the_master_cannot_walk_the_held_hero_away() -> void:
 	CrimeRules.check_arrest(s, data)
 	var r := EffectEngine.new().validate(s, data, "t-1", {"kind": "move", "room_id": "pushcha-edge"})
 	assert_str(str(r)).contains("стража держит героя")  # out of Brod — no; within it the guard may lead (v0.7.22.2)
-
-
-func test_old_saves_have_no_crimes() -> void:
-	var v20 := {"save_version": 20, "session": {"day": 2}}
-	SaveFormat._v20_to_v21(v20, {})
-	assert_array(v20["session"]["crimes"]).is_empty()
-	assert_str(str(v20["session"]["arrest"])).is_empty()
-	var s := GameSession.from_dict(v20["session"])
-	assert_bool(s.wanted.is_empty()).is_true()

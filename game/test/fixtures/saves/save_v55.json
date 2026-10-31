@@ -1,18 +1,24 @@
 {
-	"game_version": "0.6.4",
+	"game_version": "0.7.50.1",
 	"meta": {
 		"character": "Айра",
 		"created_at": "2026-10-18T12:00:00",
+		"day": 1,
+		"level": 1,
 		"preview": "Ничего необычного.",
 		"room_id": "brod-tavern-hall",
 		"turns": 2,
 		"world_id": "frontier"
 	},
-	"save_version": 13,
+	"save_version": 55,
 	"saved_at": "2026-10-18T12:00:00",
 	"session": {
-		"attitudes": {},
+		"beings": {},
+		"arrest": "",
+		"arrest_tried": [],
+		"awake_saves": 0,
 		"caches_taken": [],
+		"captive": {},
 		"character": {
 			"abilities": {
 				"cha": 11,
@@ -22,6 +28,7 @@
 				"str": 16,
 				"wis": 13
 			},
+			"ability_floor": {},
 			"ac": 19,
 			"armor_profs": [
 				"light",
@@ -29,18 +36,38 @@
 				"heavy",
 				"shield"
 			],
+			"attuned": [],
 			"background": "soldier",
+			"bags": {
+				"bag1": {
+					"contents": {},
+					"kind": "backpack"
+				},
+				"bag2": {
+					"contents": {},
+					"kind": "pouch"
+				}
+			},
+			"body": {
+				"age": "young",
+				"build": "athletic",
+				"height": "medium"
+			},
+			"charges_used": {},
 			"class": "fighter",
 			"class_name": "Воин",
 			"concentration": "",
-			"condition_ends": {},
+			"concentration_ends": -1,
 			"conditions": [],
+			"development": {},
+			"effects": [],
 			"equipped": {
 				"armor": "chain_mail",
 				"main_hand": "longsword",
 				"off_hand": "",
 				"shield": "shield"
 			},
+			"exhaustion": 0,
 			"expertise": [],
 			"features": [
 				"fighter_fighting_style",
@@ -68,6 +95,9 @@
 				"torch": 10,
 				"waterskin": 1
 			},
+			"item_props": [
+				"versatile"
+			],
 			"languages": [
 				"common",
 				"dwarvish"
@@ -75,6 +105,7 @@
 			"level": 1,
 			"max_hp": 12,
 			"name": "Айра",
+			"next_effect": 1,
 			"passive_perception": 13,
 			"prepared_day": 1,
 			"prof_bonus": 2,
@@ -144,6 +175,7 @@
 			"story": "Айра стояла на стене Серой заставы в ту ночь, когда пришёл огонь Пепельного Князя, и была среди немногих, кто ушёл живым. Десять лет она нанималась охранять караваны за рекой, но слухи об огнях на руинах заставы привели её обратно в Ольховый Брод.",
 			"subclass": "",
 			"subrace": "",
+			"temp_hp": 0,
 			"tools": [
 				"dice_set"
 			],
@@ -165,6 +197,7 @@
 				"text": "осматриваюсь"
 			},
 			{
+				"ability": "",
 				"blocked": false,
 				"bonus": 0,
 				"check_id": "c-1",
@@ -186,52 +219,89 @@
 			}
 		],
 		"check_counter": 1,
+		"ledger": [],
+		"chronicle": [],
 		"combat": {},
 		"created_at": "2026-10-18T12:00:00",
+		"crimes": [],
 		"day": 1,
-		"dead_npcs": [],
+		"described": {},
 		"dialogue_log": [],
+		"doors": {},
 		"effect_counter": 0,
 		"encounters_done": [],
+		"encounters_passed": [],
+		"encounters_peace": [],
+		"factions": {},
+		"fight_on_load": {},
 		"flags": [],
+		"foreign": {},
+		"generated": {},
 		"items": {},
+		"known_monsters": [],
+		"let_go": {},
 		"location_log": [],
 		"locks": {},
+		"lurking": {},
+		"magic_given": 0,
+		"march_day": 1,
+		"march_minutes": 0,
 		"merchants": {},
 		"minute": 480,
 		"mode": "exploration",
+		"notes": [],
 		"npc_id": "",
+		"option_checks": [],
 		"option_costs": [],
 		"options": [
 			"Подойти к стойке"
 		],
-		"pickpocketed": {},
+		"permit_asked": {},
+		"permits": {},
+		"props": {},
 		"quest_parts": {},
 		"quests_active": {},
 		"quests_done": [],
+		"quests_failed": [],
+		"reputation": {},
+		"rested_at": 480,
 		"revealed": {},
+		"reward_spent": 0,
 		"rng_state": "708718527385777908",
 		"room_id": "brod-tavern-hall",
+		"secrets_told": [],
 		"seed": 42,
 		"settings": {
+			"adult": false,
 			"death_mode": "story",
+			"difficulty": "normal",
 			"dm_style": "classic",
 			"lines": [],
+			"needs": true,
+			"slavery": false,
 			"veils": [
 				"пытки",
 				"насилие над детьми"
 			],
 			"violence": "medium",
+			"weather": false,
+			"wishes": [],
 			"world": "frontier"
 		},
+		"shop_closed": {},
 		"short_rests": 0,
 		"sneak_noticed": "",
 		"sneaking": false,
 		"summaries": {},
+		"talk_creature": "",
+		"tracked_quest": "",
 		"traps": {},
+		"trespass_warned": {},
 		"turn_counter": 2,
 		"visited": [],
+		"wanted": {},
 		"world_id": "frontier",
-		"world_version": ""
+		"world_version": "",
+		"being_counter": 0
 	}
 }

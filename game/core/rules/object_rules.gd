@@ -49,11 +49,11 @@ static func staff(s: GameSession, data: Dictionary, sid: String) -> Array[Dictio
 	var site := w.site(sid)
 	var out: Array[Dictionary] = []
 	var owner := str(site.get("owner", ""))
-	if not owner.is_empty() and owner != OwnerRules.HERO and not s.dead_npcs.has(owner):
+	if not owner.is_empty() and owner != OwnerRules.HERO and not Being.dead(s, owner):
 		out.append({"who": owner, "name": str(w.npc(owner).get("name", owner)), "role": str(site.get("owner_role", "хозяин")), "source": "owner"})
 	for h: Variant in site.get("staff", []):
 		var npc := str((h as Dictionary).get("npc", ""))
-		if not npc.is_empty() and not s.dead_npcs.has(npc) and npc != owner:
+		if not npc.is_empty() and not Being.dead(s, npc) and npc != owner:
 			out.append({"who": npc, "name": str(w.npc(npc).get("name", npc)), "role": str((h as Dictionary).get("role", "")), "source": "staff"})
 	var pid := property_of(s, data, sid)
 	if not pid.is_empty():

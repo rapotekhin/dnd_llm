@@ -103,7 +103,7 @@ static func add(s: GameSession, data: Dictionary, r: Dictionary) -> Dictionary:
 	return r
 
 
-## The pack's own rumours (world.json `rumors`) put in on the first day or into an older save; once each.
+## The pack's own rumours (world.json `rumors`) put in on the first day; once each.
 static func seed(s: GameSession, data: Dictionary) -> void:
 	if not on(data):
 		return

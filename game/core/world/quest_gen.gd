@@ -203,7 +203,7 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		if giver.begins_with("new:"):
 			if people.size() != 1 or str((people[0] as Dictionary).get("key", "")) != giver.trim_prefix("new:"):
 				return {"reason": "заказчик %s — один новый человек в new_npcs с этим key" % giver}
-		elif not data["world"]["npcs"].has(giver) or s.dead_npcs.has(giver):
+		elif not data["world"]["npcs"].has(giver) or Being.dead(s, giver):
 			return {"reason": "заказчик заказа на доске — живой человек мира (find_npcs) или новый «new:<key>»"}
 	else:
 		if not s.npcs_here(data["world"], s.room_id).has(giver):
@@ -542,7 +542,7 @@ static func _plan_teach(s: GameSession, data: Dictionary, t: Dictionary, content
 		if x.is_empty():
 			return {"reason": "teaches.npc: нет нового человека %s в new_npcs акта" % ref}
 		def = x[0]["plan"]["npc"]
-	elif BondRules.npc_def(s, data, ref).is_empty() or s.dead_npcs.has(ref):
+	elif BondRules.npc_def(s, data, ref).is_empty() or Being.dead(s, ref):
 		return {"reason": "teaches.npc — «new:<key>» человека акта или живой NPC мира (%s нет)" % ref}
 	var step: Dictionary = {}
 	for st: Dictionary in steps:
@@ -768,7 +768,7 @@ static func _fact(s: GameSession, data: Dictionary, kind: String, target: String
 			if target.begins_with("new:"):
 				if not (content["npc_keys"] as Array).has(target.trim_prefix("new:")):
 					return {"reason": "нет нового человека %s в new_npcs акта" % target}
-			elif not data["world"]["npcs"].has(target) or s.dead_npcs.has(target):
+			elif not data["world"]["npcs"].has(target) or Being.dead(s, target):
 				return {"reason": "нет живого NPC %s (find_npcs)" % target}
 			w = {"talk": target}
 		"visit":

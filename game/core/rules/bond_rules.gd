@@ -88,7 +88,7 @@ static func rival(c: Dictionary, data: Dictionary, npc_id: String) -> bool:
 
 ## Moves the bond by `delta` within the range. Lines: the change and a new step.
 static func add(s: GameSession, data: Dictionary, npc_id: String, delta: int, why: String) -> Array[String]:
-	if delta == 0 or npc_id.is_empty() or s.dead_npcs.has(npc_id):
+	if delta == 0 or npc_id.is_empty() or Being.dead(s, npc_id):
 		return []
 	var c := s.character
 	var before := word(c, data, npc_id)
@@ -116,7 +116,7 @@ static func on_deed(s: GameSession, data: Dictionary, npc_id: String, deed: Stri
 
 ## The hero finished a course of this teacher: a mentor, unless a romance already. Lines.
 static func mentor(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
-	if npc_id.is_empty() or s.dead_npcs.has(npc_id):
+	if npc_id.is_empty() or Being.dead(s, npc_id):
 		return []
 	var e := _rw(s.character, npc_id)
 	if str(e["kind"]) == "friend":
@@ -262,7 +262,7 @@ static func romance_closed(s: GameSession, data: Dictionary, npc_id: String) -> 
 static func partner(s: GameSession) -> String:
 	var all := view(s.character)
 	for id: String in all:
-		if str(all[id].get("kind", "")) == "romance" and not s.dead_npcs.has(id):
+		if str(all[id].get("kind", "")) == "romance" and not Being.dead(s, id):
 			return id
 	return ""
 
@@ -354,7 +354,7 @@ static func _tier(table: Array, p: int, key: String, none: int) -> int:
 
 
 static func _alive(s: GameSession, npc_id: String) -> bool:
-	return not s.dead_npcs.has(npc_id)
+	return not Being.dead(s, npc_id)
 
 
 ## The trader's discount for a friend, percent.
@@ -548,7 +548,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 	var parts: Array[String] = []
 	var all := view(c)
 	for id: String in all:
-		if s.dead_npcs.has(id) or (points(c, id) == 0 and kind(c, id) == "friend"):
+		if Being.dead(s, id) or (points(c, id) == 0 and kind(c, id) == "friend"):
 			continue
 		var w := word(c, data, id)
 		var line := "%s — %s, %s %d" % [npc_name(s, data, id), cfg(data)["kinds"][kind(c, id)]["name"], w if not w.is_empty() else "без ступени", points(c, id)]

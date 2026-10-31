@@ -96,7 +96,7 @@ func test_a_knocked_out_npc_lies_as_a_creature_and_is_finished_off() -> void:
 	assert_str(searched[0]).contains("Обыскан")
 	var lines := CreatureRules.act(s, data, str(c["id"]), "finish")
 	assert_str(" · ".join(lines)).contains("Убийство")
-	assert_bool(s.dead_npcs.has("npc_serving")).is_true()
+	assert_bool(Being.dead(s, "npc_serving")).is_true()
 	assert_bool(s.crimes.any(func(cr: Dictionary) -> bool: return str(cr.get("kind")) == "assault")).is_false()  # the murder instead
 
 
@@ -139,7 +139,7 @@ func test_an_aware_npc_is_not_caught_off_guard() -> void:
 
 func test_captors_without_an_encounter_lurk_after_an_escape() -> void:
 	var s := _hero("pushcha-burrow")
-	EncounterRules.capture(s, [{"monster": "acolyte", "name": "Жрец Пепла", "count": 1, "hp": 5, "no_xp": true}], "", "pushcha-hollow")
+	EncounterRules.capture(s, [Being.spawn(s, {"monster": "acolyte", "name": "Жрец Пепла", "hp": 5, "no_xp": true})["id"]], "", "pushcha-hollow")
 	s.rng.seed = 1
 	var lines: Array[String] = []
 	for i in 30:  # until a roll passes

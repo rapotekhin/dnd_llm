@@ -22,15 +22,11 @@ func _hero(room: String) -> GameSession:
 
 
 func _creature(s: GameSession, monster: String, state: String, bound: bool = false) -> Dictionary:
-	s.creature_counter += 1
-	var c := {"id": "c%d" % s.creature_counter, "name": monster, "monster": monster, "state": state, "bound": bound, "led": false,
+	var c := {"name": monster, "monster": monster, "state": state, "bound": bound, "led": false,
 		"since": TimeRules.abs_minute(s), "hp": 3, "max_hp": 7, "xp_given": true}
 	if bound:
 		c["owner"] = OwnerRules.HERO
-	var list: Array = s.creatures.get(s.room_id, [])
-	list.append(c)
-	s.creatures[s.room_id] = list
-	return c
+	return CreatureRules.add(s, s.room_id, c)
 
 
 func test_a_truce_is_no_captivity() -> void:
@@ -106,7 +102,7 @@ func test_the_captors_seize_the_heros_things() -> void:
 	s.props[s.room_id] = []  # furnished with nothing that holds things
 	var had: Dictionary = (s.character["inventory"] as Dictionary).duplicate()
 	assert_bool(had.is_empty()).is_false()
-	EncounterRules.capture(s, [{"monster": "goblin", "name": "Гоблин", "count": 1}], "", "pushcha-trail")
+	EncounterRules.capture(s, [Being.spawn(s, {"monster": "goblin", "name": "Гоблин"})["id"]], "", "pushcha-trail")
 	var lines := EncounterRules.seize(s, data)
 	assert_str(" ".join(lines)).contains(str(data["rules"]["encounters"]["seized_name"]))
 	assert_dict(s.character["inventory"]).is_empty()
@@ -161,7 +157,7 @@ func test_the_master_sells_a_beast_not_a_thinking_one() -> void:
 
 func test_a_sold_creature_goes_to_its_buyers_home() -> void:
 	var s := _hero("brod-tavern-hall")
-	s.followers.append("npc_merchant")  # the merchant is here, his home is the square
+	Being.follow(s, "npc_merchant")  # the merchant is here, his home is the square
 	var wolf := _creature(s, "wolf", "unconscious", true)
 	wolf["led"] = true
 	var engine := EffectEngine.new()
@@ -198,7 +194,7 @@ func test_a_stolen_thing_stays_its_owners() -> void:
 	assert_str(key).is_equal(id)
 
 
-func test_ownership_survives_the_save_and_old_prisoners_are_the_heros() -> void:
+func test_ownership_survives_the_save() -> void:
 	var s := _hero("brod-square")
 	OwnerRules.mark(s, "dagger", 1, "npc_merchant")
 	s.character["inventory"]["dagger"] = 1
@@ -206,7 +202,3 @@ func test_ownership_survives_the_save_and_old_prisoners_are_the_heros() -> void:
 	var back := GameSession.from_dict(s.to_dict(5))
 	assert_int(OwnerRules.held_of(back, "dagger", "npc_merchant")).is_equal(1)
 	assert_str(back.talk_creature).is_equal("c3")
-	var old := {"save_version": 38, "session": {"creatures": {"r": [{"id": "c1", "bound": true}, {"id": "c2", "bound": false}]}}}
-	SaveFormat.migrate(old)
-	assert_str(str(old["session"]["creatures"]["r"][0].get("owner", ""))).is_equal(OwnerRules.HERO)
-	assert_bool(old["session"]["creatures"]["r"][1].has("owner")).is_false()

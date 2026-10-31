@@ -49,6 +49,3 @@ func test_the_described_days_survive_the_save() -> void:
 	s.described["brod-tavern-hall"] = 3
 	var back := GameSession.from_dict(s.to_dict(5))
 	assert_int(int(back.described["brod-tavern-hall"])).is_equal(3)
-	var old := {"save_version": 39, "session": {}}
-	SaveFormat.migrate(old)
-	assert_dict(old["session"]["described"]).is_empty()

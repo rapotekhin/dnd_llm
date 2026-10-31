@@ -48,8 +48,8 @@ func test_a_discount_needs_goodwill_or_a_won_check() -> void:
 func test_a_discount_has_bounds_and_only_traders_give_it() -> void:
 	var s := _hero("brod-tavern-hall")
 	var fx := EffectEngine.new()
-	s.attitudes["npc_innkeeper"] = 1
-	s.attitudes["npc_veteran"] = 3
+	Being.of(s, "npc_innkeeper")["attitude"] = 1
+	Being.of(s, "npc_veteran")["attitude"] = 3
 	assert_str(str(_apply(s, fx, {"kind": "npc_discount", "npc_id": "npc_innkeeper", "percent": 50, "reason": "друг"})["reason"])).contains("от 5 до 20")
 	assert_str(str(_apply(s, fx, {"kind": "npc_discount", "npc_id": "npc_veteran", "percent": 10, "reason": "друг"})["reason"])).contains("не торгует")
 	assert_bool(bool(_apply(s, fx, {"kind": "npc_discount", "npc_id": "npc_innkeeper", "percent": 15, "reason": "друг"})["accepted"])).is_true()
@@ -58,7 +58,7 @@ func test_a_discount_has_bounds_and_only_traders_give_it() -> void:
 func test_a_favor_is_free_once_a_week_and_leaves_a_debt() -> void:
 	var s := _hero("brod-smithy")
 	var fx := EffectEngine.new()
-	s.attitudes["npc_smith"] = 2
+	Being.of(s, "npc_smith")["attitude"] = 2
 	var weapon := TradeRules.targets(s, data, "silver")[0]
 	var gold := int(s.character["gold_cp"])
 	var r := _apply(s, fx, {"kind": "npc_favor", "npc_id": "npc_smith", "service": "silver", "item_id": weapon, "reason": "по дружбе"})
@@ -88,20 +88,17 @@ func test_a_quest_is_taken_by_words_from_its_giver_only() -> void:
 
 func test_the_snapshot_shows_services_and_deals() -> void:
 	var s := _hero("brod-smithy")
-	s.favors["npc_smith"] = 1
+	Being.of(s, "npc_smith")["favor"] = 1
 	var snap := TurnSnapshot.build(s, data, 2000)
 	var smith: Dictionary = (snap["scene"]["npcs"] as Array)[0]
 	assert_str(str(smith["services"])).contains("[silver]")
 	assert_str(str(smith["deal"])).contains("день 1")
 
 
-func test_old_saves_have_no_deals() -> void:
-	var v24 := {"save_version": 24, "session": {}}
-	SaveFormat._v24_to_v25(v24, {})
-	assert_dict(v24["session"]["discounts"]).is_empty()
+func test_deals_survive_the_save() -> void:
 	var s := _hero("brod-square")
-	s.discounts["npc_merchant"] = {"pct": 10, "until_day": 5}
-	s.favors["npc_smith"] = 2
+	Being.of(s, "npc_merchant")["discount"] = {"pct": 10, "until_day": 5}
+	Being.of(s, "npc_smith")["favor"] = 2
 	var back := GameSession.from_dict(s.to_dict(10))
 	assert_int(SocialRules.discount(back, "npc_merchant")).is_equal(10)
-	assert_int(int(back.favors["npc_smith"])).is_equal(2)
+	assert_int(int(Being.of(back, "npc_smith")["favor"])).is_equal(2)

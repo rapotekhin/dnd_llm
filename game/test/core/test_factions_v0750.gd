@@ -40,7 +40,7 @@ func test_beasts_keep_the_peace_with_a_friend_and_a_quest_passes() -> void:
 	assert_bool(bool(m.get("peace", false))).is_true()
 	assert_array(s.encounters_passed).contains(["t_wolves"])
 	assert_array(s.encounters_peace).contains(["t_wolves"])
-	assert_str(str(s.creatures["pushcha-trail"][0]["state"])).is_equal("truce")
+	assert_str(str(CreatureRules.here(s, "pushcha-trail")[0]["state"])).is_equal("truce")
 
 
 func test_the_dead_do_not_make_friends() -> void:

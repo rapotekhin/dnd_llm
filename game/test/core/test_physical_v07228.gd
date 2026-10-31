@@ -60,7 +60,7 @@ func test_a_dead_traders_wares_stay_and_do_not_restock() -> void:
 	s.room_id = "brod-smithy"
 	var stock: Dictionary = TradeRules.merchant(s, data, "npc_smith")["stock"]
 	stock.erase("longsword")
-	s.dead_npcs.append("npc_smith")
+	Being.die(s, "npc_smith")
 	s.day += 2
 	assert_bool(TradeRules.merchant(s, data, "npc_smith")["stock"].has("longsword")).is_false()
 	PropRules.ensure_wares(s, data, s.room_id)

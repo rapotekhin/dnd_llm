@@ -18,6 +18,7 @@ func run() -> void:
 	if not step("game started", await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)):
 		return
 	var s: GameSession = gs.session
+	still_sky(s)
 	s.encounters_done.append_array(["trail_wolves", "hollow_spiders", "road_watch"])  # the way to the hollow is not the test
 	if not await _walk(gs, ["brod-square", "brod-gate"]):
 		return

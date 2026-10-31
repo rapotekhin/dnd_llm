@@ -66,7 +66,7 @@ static func find_npcs(s: GameSession, data: Dictionary, query: String) -> Array[
 			continue
 		out.append({"npc_id": id, "name": str(n.get("name", id)), "role": str(n.get("role", "")), "room": room,
 			"location": str(world.location(loc).get("name", loc)), "source": "made" if generated(s)["npcs"].has(id) else "pack",
-			"dead": s.dead_npcs.has(id)})
+			"dead": Being.dead(s, id)})
 	return out
 
 

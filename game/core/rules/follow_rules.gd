@@ -13,7 +13,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 ## Whether the NPC stands somewhere other than its pack room and hours: it follows the hero or was left in a room.
 static func placed(s: GameSession, npc_id: String) -> bool:
-	return s.followers.has(npc_id) or s.npc_at.has(npc_id)
+	return Being.follows(s, npc_id) or Being.view(s, npc_id).has("at")
 
 
 ## Checks an `npc_follow`: {plan, summary} or {reason}. `won` — the hero won it over by a check this turn.
@@ -27,28 +27,28 @@ static func plan(s: GameSession, data: Dictionary, npc_id: String, follow: bool,
 			return {"reason": "%s и так на своём месте — с героем не идёт" % name}
 		return {"plan": {"follow_npc": npc_id, "on": false, "room": "" if home else s.room_id},
 			"summary": "%s %s" % [name, "уходит к себе" if home else "остаётся здесь"]}
-	if s.followers.has(npc_id):
+	if Being.follows(s, npc_id):
 		return {"reason": "%s уже идёт с героем" % name}
 	if SocialRules.refuses(s, data, npc_id):
 		return {"reason": "%s враждебен герою и с ним не пойдёт" % name}
 	var need := int(cfg(data)["min_attitude"])
 	if s.attitude(npc_id) < need and not won:
 		return {"reason": "%s не пойдёт с героем: нужно отношение от %+d или успешная проверка (убеждение, обман, запугивание) с его target_id в этом ходе" % [name, need]}
-	if s.followers.size() >= int(cfg(data)["max"]):
-		return {"reason": "с героем уже идут %d — больше никто" % s.followers.size()}
+	if Being.followers(s).size() >= int(cfg(data)["max"]):
+		return {"reason": "с героем уже идут %d — больше никто" % Being.followers(s).size()}
 	return {"plan": {"follow_npc": npc_id, "on": true, "room": ""}, "summary": "%s идёт с героем" % name}
 
 
 static func apply(s: GameSession, plan: Dictionary) -> void:
 	var id := str(plan["follow_npc"])
-	s.followers.erase(id)
-	s.npc_at.erase(id)
-	s.follower_fed.erase(id)
+	Being.unfollow(s, id)
+	Being.drop(s, id, "at")
+	Being.drop(s, id, "fed")
 	if bool(plan["on"]):
-		s.followers.append(id)
-		s.follower_fed[id] = {"at": TimeRules.abs_minute(s), "hungry": 0}  # it comes fed
+		Being.follow(s, id)
+		Being.of(s, id)["fed"] = {"at": TimeRules.abs_minute(s), "hungry": 0}  # it comes fed
 	elif not str(plan["room"]).is_empty():
-		s.npc_at[id] = str(plan["room"])
+		Being.of(s, id)["at"] = str(plan["room"])
 
 
 # --- meals (v0.7.39.1) --------------------------------------------------------------------------------------------
@@ -63,12 +63,12 @@ static func meals(s: GameSession, data: Dictionary) -> Array[String]:
 		return lines
 	var now := TimeRules.abs_minute(s)
 	var world := WorldView.new(data["world"])
-	for id: String in s.followers.duplicate():
-		if not s.follower_fed.has(id):
-			s.follower_fed[id] = {"at": now, "hungry": 0}
-		var rec: Dictionary = s.follower_fed[id]
+	for id: String in Being.followers(s).duplicate():
+		if not Being.view(s, id).has("fed"):
+			Being.of(s, id)["fed"] = {"at": now, "hungry": 0}
+		var rec: Dictionary = Being.of(s, id)["fed"]
 		var name := str(world.npc(id).get("name", JobRules.npc_name(s, data, id)))
-		while now - int(rec["at"]) >= 1440 and s.followers.has(id):
+		while now - int(rec["at"]) >= 1440 and Being.follows(s, id):
 			var food := _portion(s, data)
 			if not food.is_empty():
 				NeedRules._take(s.character, food)
@@ -102,5 +102,5 @@ static func _portion(s: GameSession, data: Dictionary) -> String:
 
 ## A long rest fed and watered the followers with the hero (the author's answer): their day starts again.
 static func rested(s: GameSession) -> void:
-	for id: String in s.followers:
-		s.follower_fed[id] = {"at": TimeRules.abs_minute(s), "hungry": 0}
+	for id: String in Being.followers(s):
+		Being.of(s, id)["fed"] = {"at": TimeRules.abs_minute(s), "hungry": 0}

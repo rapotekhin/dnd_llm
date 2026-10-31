@@ -132,7 +132,7 @@ func _rebuild() -> void:
 	if pct > 0:
 		states.append(tr("TRADE_HAGGLE_ACTIVE").format({"pct": pct}))
 	if int(info["discount_pct"]) > 0:  # a discount by words (v0.7.15.2)
-		states.append(tr("TRADE_DISCOUNT").format({"pct": int(info["discount_pct"]), "day": int(s.discounts[_npc]["until_day"])}))
+		states.append(tr("TRADE_DISCOUNT").format({"pct": int(info["discount_pct"]), "day": int(Being.of(s, _npc)["discount"]["until_day"])}))
 	if not str(info["wants"]).is_empty():  # v0.7.17.1: what the trader buys gladly
 		states.append(tr("TRADE_WANTS").format({"tags": info["wants"]}))
 	if not str(info["shuns"]).is_empty():

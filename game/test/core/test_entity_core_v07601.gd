@@ -88,22 +88,22 @@ func test_the_room_of_what_is_carried() -> void:
 	assert_str(Where.room_of(s, data, Where.hand(EntityRef.HERO, "main_hand"))).is_equal(s.room_id)
 	assert_str(Where.room_of(s, data, Where.room("brod-gate"))).is_equal("brod-gate")
 	assert_str(Where.room_of(s, data, {"road": true})).is_empty()
-	s.npc_at["npc_innkeeper"] = "brod-gate"
+	Being.of(s, "npc_innkeeper")["at"] = "brod-gate"
 	assert_str(Where.room_of(s, data, Where.saddle(EntityRef.npc("npc_innkeeper")))).is_equal("brod-gate")
 
 
 func test_where_an_npc_is_now() -> void:
 	var s := _session()
 	var id := "npc_innkeeper"
-	s.npc_at[id] = ""
+	Being.of(s, id)["at"] = ""
 	assert_bool(bool(Where.of_npc(s, data, id).get("road", false))).is_true()
 	assert_str(Where.base_room(s, data, id)).is_empty()
-	s.npc_at.erase(id)
+	Being.drop(s, id, "at")
 	assert_str(Where.base_room(s, data, id)).is_equal(ReputationRules.home_room(data, id))
-	s.followers.append(id)
+	Being.follow(s, id)
 	assert_str(str(Where.of(s, data, EntityRef.npc(id))["room"])).is_equal(s.room_id)
-	s.followers.erase(id)
-	s.bodies[id] = "brod-gate"
+	Being.unfollow(s, id)
+	Being.of(s, id)["body"] = "brod-gate"
 	assert_str(str(Where.of_npc(s, data, id)["room"])).is_equal("brod-gate")
 
 
@@ -163,7 +163,7 @@ func test_a_death_passes_the_goods_and_the_news() -> void:
 	var id := "npc_innkeeper"
 	var news := JSON.stringify(s.generated.get("rumors", {}))
 	CrimeRules.on_death(s, data, id, false, s.room_id)
-	assert_bool(s.dead_npcs.has(id)).is_true()
+	assert_bool(Being.dead(s, id)).is_true()
 	assert_str(JSON.stringify(s.generated.get("rumors", {}))).is_not_equal(news)
 
 

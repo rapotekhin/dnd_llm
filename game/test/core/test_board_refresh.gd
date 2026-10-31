@@ -45,9 +45,3 @@ func test_taking_an_order_fills_the_board_again_in_d4_days() -> void:
 	assert_str(QuestGen.board_why_not(s, data, "p1")).is_empty()
 	QuestGen.mark_board_read(s, "p1")
 	assert_bool(QuestGen.board_unread(s, s.room_id, "p1")).is_false()
-
-
-func test_an_old_save_keeps_its_read_day() -> void:
-	var d := {"session": {"generated": {"boards_read": {"board:r:p1": 3}}}}
-	SaveFormat._v45_to_v46(d, {})
-	assert_dict(d["session"]["generated"]["boards_read"]["board:r:p1"]).is_equal({"read_day": 3, "fresh_day": 0})

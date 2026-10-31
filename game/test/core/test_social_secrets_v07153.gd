@@ -36,7 +36,7 @@ func test_goodwill_tells_it_by_an_effect_and_opens_the_way() -> void:
 	var fx := EffectEngine.new()
 	var r := fx.validate(s, data, "t-1", {"kind": "reveal_secret", "npc_id": "npc_herbalist", "secret_id": "hollow"})
 	assert_str(str(r["reason"])).contains("не доверяет")
-	s.attitudes["npc_herbalist"] = 2
+	Being.of(s, "npc_herbalist")["attitude"] = 2
 	r = fx.validate(s, data, "t-2", {"kind": "reveal_secret", "npc_id": "npc_herbalist", "secret_id": "hollow"})
 	assert_str(str(r["summary"])).contains("мёртвым дубом")
 	fx.apply(s, "t-2", [r["effect_id"]])
@@ -55,18 +55,15 @@ func test_the_master_sees_only_hints_of_untold_secrets() -> void:
 
 func test_attitude_thresholds() -> void:
 	var s := _hero("brod-tavern-kitchen")
-	s.attitudes["npc_cook"] = -3
+	Being.of(s, "npc_cook")["attitude"] = -3
 	assert_bool(SocialRules.refuses(s, data, "npc_cook")).is_true()
-	s.attitudes["npc_cook"] = 3
+	Being.of(s, "npc_cook")["attitude"] = 3
 	assert_bool(SocialRules.refuses(s, data, "npc_cook")).is_false()
 	var cook: Dictionary = (TurnSnapshot.build(s, data, 2000)["scene"]["npcs"] as Array)[0]
 	assert_bool(bool(cook["eager"])).is_true()
 
 
-func test_old_saves_know_no_secrets() -> void:
-	var v25 := {"save_version": 25, "session": {}}
-	SaveFormat._v25_to_v26(v25, {})
-	assert_array(v25["session"]["secrets_told"]).is_empty()
+func test_told_secrets_survive_the_save() -> void:
 	var s := _hero("brod-tavern-kitchen")
 	SocialRules.reveal_by_check(s, data, "npc_cook", "persuasion", 15)
 	assert_bool(SocialRules.told(GameSession.from_dict(s.to_dict(10)), "npc_cook", "cellar")).is_true()

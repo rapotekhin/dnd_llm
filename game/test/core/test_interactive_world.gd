@@ -125,16 +125,13 @@ func test_stealing_and_getting_caught_by_the_kind_of_npc() -> void:
 	assert_str(str(poor.pending_fight[0]["monster"])).is_equal("guard")  # cannot pay the fine
 
 
-func test_props_and_pockets_survive_the_save_and_v14_migrates() -> void:
+func test_props_and_pockets_survive_the_save() -> void:
 	var s := _session()
 	_furnish(s, EffectEngine.new())
 	TheftRules.pockets(s, data, "npc_serving")
 	s.shop_closed["npc_innkeeper"] = 3
-	s.caught_by["npc_serving"] = 2
+	Being.of(s, "npc_serving")["caught"] = 2
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
 	assert_int((back.props["brod-tavern-hall"] as Array).size()).is_equal(3)
-	assert_int(int(back.pockets["npc_serving"][0]["dc"])).is_equal(int(s.pockets["npc_serving"][0]["dc"]))
+	assert_int(int(Being.of(back, "npc_serving")["pockets"][0]["dc"])).is_equal(int(Being.of(s, "npc_serving")["pockets"][0]["dc"]))
 	assert_int(int(back.shop_closed["npc_innkeeper"])).is_equal(3)
-	var v14: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves/save_v14.json"))
-	SaveFormat.migrate(v14, {})
-	assert_dict(v14["session"]["props"]).is_empty()

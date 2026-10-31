@@ -408,7 +408,7 @@ static func found(s: GameSession, data: Dictionary, name: String, place: String)
 static func members(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var out: Array[String] = []
 	for m: Variant in def(s, data, id).get("members", []):
-		if not s.dead_npcs.has(str(m)):
+		if not Being.dead(s, str(m)):
 			out.append(str(m))
 	return out
 

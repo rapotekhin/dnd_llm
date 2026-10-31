@@ -96,7 +96,7 @@ func test_a_parley_before_the_fight() -> void:
 func test_captivity_and_escape() -> void:
 	var s := _hero()
 	s.room_id = "r1"
-	EncounterRules.capture(s, [{"monster": "bandit", "name": "Разбойник", "count": 1}], "test_bandits", "r0")
+	EncounterRules.capture(s, [Being.spawn(s, {"monster": "bandit", "name": "Разбойник"})["id"]], "test_bandits", "r0")
 	assert_bool(EncounterRules.captive(s)).is_true()
 	assert_str(str(EffectEngine.new().validate(s, data, "t-1", {"kind": "move", "room_id": "brod-square"}).get("reason", ""))).contains("плену")
 	s.character["skills"]["athletics"] = -40

@@ -380,14 +380,3 @@ func test_exhaustion_six_in_a_fight_is_death() -> void:
 
 
 # --- saves ------------------------------------------------------------------------------------------------
-
-
-func test_an_old_save_keeps_its_conditions_as_effects() -> void:
-	var old := {"save_version": 17, "session": {"day": 3, "minute": 600, "character": {"conditions": ["poisoned", "prone"],
-		"condition_ends": {"poisoned": "short_rest", "prone": "long_rest"}}}}
-	SaveFormat.migrate(old)
-	var c: Dictionary = old["session"]["character"]
-	assert_int((c["effects"] as Array).size()).is_equal(2)
-	assert_dict(c["effects"][0]["ends"]).is_equal({"rest": "short"})
-	assert_bool(c.has("condition_ends")).is_false()
-	assert_int(int(old["session"]["rested_at"])).is_equal(2 * 1440 + 600)

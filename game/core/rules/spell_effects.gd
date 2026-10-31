@@ -1134,16 +1134,16 @@ static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc: Di
 
 ## The hero's spells on an NPC (v0.7.22.3, the author's request: Charm Person must end): [{spell, name, until, conc}].
 static func npc_spells(s: GameSession, npc_id: String) -> Array:
-	return s.npc_spells.get(npc_id, [])
+	return Being.view(s, npc_id).get("spells", [])
 
 
 ## A spell that held on the NPC (npc_save ok): it stays for its `minutes`.
 static func charm_npc(s: GameSession, data: Dictionary, spell_id: String, npc_id: String) -> void:
 	var sp := spec(data, spell_id)
-	var list: Array = (s.npc_spells.get(npc_id, []) as Array).filter(func(e: Dictionary) -> bool: return str(e["spell"]) != spell_id)
+	var list: Array = (Being.view(s, npc_id).get("spells", []) as Array).filter(func(e: Dictionary) -> bool: return str(e["spell"]) != spell_id)
 	list.append({"spell": spell_id, "name": str(data["spells"][spell_id]["name"]), "until": TimeRules.abs_minute(s) + int(sp.get("minutes", 60)),
 		"conc": bool(data["spells"][spell_id].get("concentration", false))})
-	s.npc_spells[npc_id] = list
+	Being.of(s, npc_id)["spells"] = list
 
 
 ## The hero's spells on NPCs whose time is up or whose concentration is gone end; the NPC knows it was charmed
@@ -1151,11 +1151,11 @@ static func charm_npc(s: GameSession, data: Dictionary, spell_id: String, npc_id
 static func npc_expire(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var now := TimeRules.abs_minute(s)
-	for npc_id: String in s.npc_spells.keys():
+	for npc_id: String in Being.with(s, "spells"):
 		var keep: Array = []
-		for e: Dictionary in s.npc_spells[npc_id]:
+		for e: Dictionary in Being.of(s, npc_id)["spells"]:
 			var held := not bool(e.get("conc", false)) or str(s.character.get("concentration", "")) == str(e["spell"])
-			if now < int(e["until"]) and held and not s.dead_npcs.has(npc_id):
+			if now < int(e["until"]) and held and not Being.dead(s, npc_id):
 				keep.append(e)
 				continue
 			var who := str(data["world"]["npcs"].get(npc_id, {}).get("name", npc_id))
@@ -1165,9 +1165,9 @@ static func npc_expire(s: GameSession, data: Dictionary) -> Array[String]:
 				s.shift_attitude(npc_id, after, data)
 				s.remember(npc_id, "понял(а), что герой очаровал(а) его/её заклинанием «%s»" % e["name"])
 		if keep.is_empty():
-			s.npc_spells.erase(npc_id)
+			Being.drop(s, npc_id, "spells")
 		else:
-			s.npc_spells[npc_id] = keep
+			Being.of(s, npc_id)["spells"] = keep
 	return lines
 
 

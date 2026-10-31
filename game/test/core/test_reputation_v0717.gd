@@ -37,7 +37,7 @@ func test_prices_and_strangers_follow_the_name() -> void:
 	var item := str((TradeRules.merchant(s, data, "npc_merchant")["stock"] as Dictionary).keys().filter(
 		func(id: String) -> bool: return TradeRules.buy_price(s, data, "npc_merchant", id) > 1000)[0])
 	var before := TradeRules.buy_price(s, data, "npc_merchant", item)
-	s.attitudes["npc_smith"] = 0  # already dealt with: stays as it is
+	Being.of(s, "npc_smith")["attitude"] = 0  # already dealt with: stays as it is
 	ReputationRules.add(s, data, "brod", 30, "герой")
 	assert_int(TradeRules.buy_price(s, data, "npc_merchant", item)).is_less(before)
 	assert_int(s.attitude("npc_herbalist")).is_equal(1)
@@ -64,10 +64,7 @@ func test_the_master_marks_a_deed_once_a_turn_in_a_settlement() -> void:
 	assert_str(str(fx.validate(s, data, "t-2", {"kind": "reputation", "delta": 1, "reason": "помог отшельнику"})["reason"])).contains("не поселение")
 
 
-func test_old_saves_start_as_strangers() -> void:
-	var v26 := {"save_version": 26, "session": {}}
-	SaveFormat._v26_to_v27(v26, {})
-	assert_dict(v26["session"]["reputation"]).is_empty()
+func test_the_reputation_survives_the_save() -> void:
 	var s := _hero("brod-square")
 	ReputationRules.add(s, data, "brod", 16, "?")
 	var back := GameSession.from_dict(s.to_dict(5))

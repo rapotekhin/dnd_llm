@@ -134,12 +134,9 @@ func test_a_choice_step_without_choices_is_rejected() -> void:
 	assert_str("\n".join(WorldPack.validate(c, TestUtils.base()))).contains("closed_exits")
 
 
-func test_quest_parts_survive_the_save_and_v11_migrates() -> void:
+func test_quest_parts_survive_the_save() -> void:
 	var s := _taken()
 	s.encounters_done.append("deep_ghoul")
 	QuestRules.advance(s, data)
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
 	assert_array(back.quest_parts[QID]).is_equal([1])
-	var v11: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves/save_v11.json"))
-	SaveFormat.migrate(v11, {})
-	assert_dict(v11["session"]["quest_parts"]).is_empty()

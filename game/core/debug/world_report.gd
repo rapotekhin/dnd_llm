@@ -30,7 +30,7 @@ static func room(s: GameSession, data: Dictionary, room_id: String) -> String:
 	out.append("NPC:")
 	for id: String in view.npcs_in(room_id):
 		var n := view.npc(id)
-		out.append("  %s [%s] — %s%s, отношение %+d%s" % [n.get("name", id), id, n.get("role", ""), " · МЁРТВ" if s.dead_npcs.has(id) else "",
+		out.append("  %s [%s] — %s%s, отношение %+d%s" % [n.get("name", id), id, n.get("role", ""), " · МЁРТВ" if Being.dead(s, id) else "",
 			s.attitude(id), " · торговец" if bool(n.get("trader", false)) else ""])
 	for h: Variant in r.get("hooks", []):
 		out.append("Зацепка: %s" % (h.get("text", "") if h is Dictionary else str(h)))
@@ -134,8 +134,8 @@ static func npc(s: GameSession, data: Dictionary, query: String) -> String:
 			if (rooms[rid].get("npcs", []) as Array).has(id):
 				where.append(rid)
 		return "%s [%s] — %s\n  где: %s · отношение %+d%s\n  %s\n  пакет: %s\n  кошель/запас в игре: %s · карманы: %s\n  память: %s" % [
-			n.get("name", id), id, n.get("role", ""), ", ".join(where), s.attitude(id), " · МЁРТВ" if s.dead_npcs.has(id) else "",
-			n.get("description", ""), JSON.stringify(n), JSON.stringify(s.merchants.get(id, {})), JSON.stringify(s.pockets.get(id, {})),
+			n.get("name", id), id, n.get("role", ""), ", ".join(where), s.attitude(id), " · МЁРТВ" if Being.dead(s, id) else "",
+			n.get("description", ""), JSON.stringify(n), JSON.stringify(s.merchants.get(id, {})), JSON.stringify(Being.view(s, id).get("pockets", {})),
 			s.summaries.get("dialogue:" + id, "—")]
 	return "нет NPC «%s»" % query
 
@@ -164,4 +164,4 @@ static func rooms(s: GameSession, data: Dictionary) -> String:
 static func state(s: GameSession) -> String:
 	return "день %d, %s · режим %s%s\nфлаги: %s\nпосещено: %s\nвстречи пройдены: %s\nпогибшие NPC: %s\nотношения: %s\nизвестные враги: %s\nобворованы: %s" % [
 		s.day, TimeRules.clock(s), s.mode, " с " + s.npc_id if not s.npc_id.is_empty() else "", ", ".join(s.flags), ", ".join(s.visited),
-		", ".join(s.encounters_done), ", ".join(s.dead_npcs), JSON.stringify(s.attitudes), ", ".join(s.known_monsters), JSON.stringify(s.pickpocketed)]
+		", ".join(s.encounters_done), ", ".join(Being.dead_ids(s)), JSON.stringify(Being.with(s, "attitude")), ", ".join(s.known_monsters), JSON.stringify(Being.with(s, "picked"))]

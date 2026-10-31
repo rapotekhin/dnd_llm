@@ -16,6 +16,7 @@ func run() -> void:
 	if not step("game started", await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)):
 		return
 	var s: GameSession = gs.session
+	still_sky(s)
 	for room: String in ["brod-square", "brod-gate"]:
 		if not await _go(gs, room):
 			return

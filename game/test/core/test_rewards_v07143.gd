@@ -56,9 +56,3 @@ func test_the_master_sees_what_is_left() -> void:
 	var s := _hero()
 	_give(s, "t-1", {"kind": "coins", "delta_cp": 1000, "reason": "находка"})
 	assert_int(int(TurnSnapshot.build(s, data, 2000)["character"]["reward_left_cp"])).is_equal(2000)
-
-
-func test_old_saves_start_with_a_full_budget() -> void:
-	var v21 := {"save_version": 21, "session": {}}
-	SaveFormat._v21_to_v22(v21, {})
-	assert_int(int(v21["session"]["reward_spent"])).is_equal(0)

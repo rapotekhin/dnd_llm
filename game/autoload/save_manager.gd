@@ -117,8 +117,9 @@ func read_slot(slot: String) -> Variant:
 	var problem := SaveFormat.check(data)
 	if not problem.is_empty():
 		return problem
-	SaveFormat.migrate(data, {"world": Catalog.bundle(str(Catalog.base["game"].get("default_world", "")))})
 	var s := GameSession.from_dict(data["session"])
+	for flaw: String in Being.check(s):
+		push_error("save: " + flaw)
 	if not Catalog.activate(s.world_id):
 		return "MSG_WORLD_MISSING"
 	CharacterRules.refresh(s.character, Catalog.data, s.items)

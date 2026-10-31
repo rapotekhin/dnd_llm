@@ -176,9 +176,9 @@ func test_reduce_on_a_foe_weakens_its_blows_until_the_end() -> void:
 
 func test_a_follower_keeps_its_wounds_until_a_long_rest() -> void:
 	var s := _cleric()
-	s.followers.append("npc_ostap")
+	Being.follow(s, "npc_ostap")
 	var full := int(AllyRules.npc_health(s, data, "npc_ostap")["max"])
-	s.npc_hp["npc_ostap"] = 2
+	Being.of(s, "npc_ostap")["hp"] = 2
 	assert_int(int(AllyRules.joining(s, data, [{"monster": "goblin"}])[0]["hp"])).is_equal(2)
 	assert_array(AllyRules.cast_on_npc(s, data, "cure_wounds", 1, "npc_ostap")).has_size(1)
 	assert_int(int(AllyRules.npc_health(s, data, "npc_ostap")["hp"])).is_greater(2)
@@ -188,21 +188,21 @@ func test_a_follower_keeps_its_wounds_until_a_long_rest() -> void:
 
 func test_a_blessing_cast_at_an_npc_goes_into_the_fight_and_ends_with_the_concentration() -> void:
 	var s := _cleric()
-	s.followers.append("npc_ostap")
+	Being.follow(s, "npc_ostap")
 	AllyRules.cast_on_npc(s, data, "bless", 1, "npc_ostap")
 	_fight(s, [{"monster": "goblin", "col": 2}], [])
 	assert_bool(CombatRules.fighter(s, CombatRules.allies(s)[0]).has("plus_die")).is_true()
 	AllyRules.drop_buffs(s, "bless")
-	assert_bool(s.npc_buffs.has("npc_ostap")).is_false()
+	assert_bool(Being.view(s, "npc_ostap").has("buffs")).is_false()
 
 
 func test_a_save_keeps_the_wounds_and_the_spells_of_npcs() -> void:
 	var s := _cleric()
-	s.npc_hp["npc_ostap"] = 3
-	s.npc_buffs["npc_ostap"] = [{"spell": "bless", "slot": 1, "ends": -1}]
+	Being.of(s, "npc_ostap")["hp"] = 3
+	Being.of(s, "npc_ostap")["buffs"] = [{"spell": "bless", "slot": 1, "ends": -1}]
 	var back := GameSession.from_dict(s.to_dict(0))
-	assert_int(int(back.npc_hp["npc_ostap"])).is_equal(3)
-	assert_str(str(back.npc_buffs["npc_ostap"][0]["spell"])).is_equal("bless")
+	assert_int(int(Being.of(back, "npc_ostap")["hp"])).is_equal(3)
+	assert_str(str(Being.of(back, "npc_ostap")["buffs"][0]["spell"])).is_equal("bless")
 
 
 func _goblins(id: String = "t_gob") -> Dictionary:

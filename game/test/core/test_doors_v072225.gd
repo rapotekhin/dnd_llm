@@ -113,7 +113,7 @@ func test_the_master_door_effect_by_checks() -> void:
 	assert_str(str(nowhere["reason"])).contains("нет двери")
 	var alone := eng.validate(s, data, "t1", {"kind": "door", "to_room": "brod-tavern-cellar", "action": "unlock"})
 	assert_bool(bool(alone["accepted"])).is_false()  # the innkeeper is in the hall, not here or in the cellar
-	s.npc_at["npc_innkeeper"] = "brod-tavern-kitchen"
+	Being.of(s, "npc_innkeeper")["at"] = "brod-tavern-kitchen"
 	var ok := eng.validate(s, data, "t1", {"kind": "door", "to_room": "brod-tavern-cellar", "action": "unlock"})
 	assert_bool(bool(ok["accepted"])).is_true()
 
@@ -123,9 +123,3 @@ func test_snapshot_exit_tells_the_master_of_the_door() -> void:
 	var snap := TurnSnapshot.build(s, data, 2000)
 	var ex: Array = snap["scene"]["exits"].filter(func(e: Dictionary) -> bool: return e["room_id"] == "brod-tavern-cellar")
 	assert_str(str(ex[0]["door"])).contains("заперта")
-
-
-func test_the_v42_save_gets_doors() -> void:
-	var v42: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves/save_v42.json"))
-	SaveFormat.migrate(v42)
-	assert_dict(v42["session"]["doors"] as Dictionary).is_empty()

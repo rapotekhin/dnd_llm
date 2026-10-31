@@ -68,17 +68,17 @@ static func add(s: GameSession, data: Dictionary, loc: String, delta: int, why: 
 
 ## The attitude of the people not dealt with yet, by the reputation of their place.
 static func refresh(s: GameSession, data: Dictionary) -> void:
-	s.attitude_base.clear()
+	Being.clear(s, "attitude_base")
 	var table: Dictionary = cfg(data)["stranger_attitude"]
 	for id: String in data["world"]["npcs"]:
 		var loc := home_of(data, id)
 		if is_settlement(data, loc):
 			var a := int(table[str(step(s, data, loc))])
 			if a != 0:
-				s.attitude_base[id] = a
+				Being.of(s, id)["attitude_base"] = a
 		var f := FactionRules.attitude_bonus(s, data, id)  # v0.7.50
 		if f != 0:
-			s.attitude_base[id] = int(s.attitude_base.get(id, 0)) + f
+			Being.of(s, id)["attitude_base"] = int(Being.view(s, id).get("attitude_base", 0)) + f
 
 
 ## The price percent of the trader's place: `side` "buy" (the hero pays) or "sell" (the trader pays).

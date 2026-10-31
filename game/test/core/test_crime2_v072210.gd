@@ -66,7 +66,7 @@ func test_a_hidden_body_is_searched_daily_harder_each_day() -> void:
 	TimeRules.advance(s, data, 1440 * 3)
 	assert_bool(bool(s.crimes[0]["known"])).is_false()
 	assert_int(int(s.crimes[0]["searched_days"])).is_equal(3)
-	assert_bool(s.bodies.has("npc_smith")).is_true()  # a secret body is not buried
+	assert_bool(Being.view(s, "npc_smith").has("body")).is_true()  # a secret body is not buried
 
 
 func test_a_badly_hidden_body_is_found_like_any() -> void:
@@ -82,7 +82,7 @@ func test_a_badly_hidden_body_is_found_like_any() -> void:
 func test_a_known_body_is_buried() -> void:
 	var s := _hero("brod-tavern-hall")
 	CrimeRules.on_death(s, data, "npc_mercenary", false, s.room_id)  # self-defence
-	assert_bool(s.bodies.has("npc_mercenary")).is_true()
+	assert_bool(Being.view(s, "npc_mercenary").has("body")).is_true()
 	var lines := TimeRules.advance(s, data, int(data["rules"]["crime"]["bury_days"]) * 1440)
-	assert_bool(s.bodies.has("npc_mercenary")).is_false()
+	assert_bool(Being.view(s, "npc_mercenary").has("body")).is_false()
 	assert_str(" · ".join(lines)).contains("Похоронили")

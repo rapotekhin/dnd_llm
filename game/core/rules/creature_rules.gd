@@ -1,8 +1,8 @@
 class_name CreatureRules
 extends RefCounted
 ## The creatures a fight leaves in the room (roadmap v0.7.22.11, big test #11, #13): a truce, a surrender or a
-## knock-out no longer wipes the foes away — they stay as creatures of the room (s.creatures {room: [creature]}):
-## {id, name, monster, state: truce | surrendered | unconscious, bound, led, since}. The hero ties up the beaten
+## knock-out no longer wipes the foes away — they stay as creatures of the room: the part `creature` of their record in
+## s.beings (v0.7.62): {id, name, monster, state: truce | surrendered | unconscious, at, bound, led, since}. The hero ties up the beaten
 ## (`bind`), lets them go, leads a bound one along (it moves with the hero), talks to them (a master's turn) or
 ## attacks them again (a fight). Left alone they go: a knocked-out one wakes and slips away, a truce lasts its hours
 ## (rules.creatures).
@@ -21,8 +21,27 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["creatures"]
 
 
+static func all(s: GameSession) -> Array[Dictionary]:
+	return Being.parts(s, "creature")
+
+
 static func here(s: GameSession, room_id: String) -> Array:
-	return s.creatures.get(room_id, [])
+	return all(s).filter(func(c: Dictionary) -> bool: return str(c.get("at", "")) == room_id)
+
+
+## A new creature of a room.
+static func add(s: GameSession, room_id: String, fields: Dictionary) -> Dictionary:
+	var c := fields.duplicate(true)
+	c["at"] = room_id
+	return Being.made(s, "creature", c)
+
+
+## It leaves the rooms: a person of the pack goes back to its life, anyone else is gone.
+static func remove(s: GameSession, c: Dictionary) -> void:
+	var id := str(c["id"])
+	Being.drop(s, id, "creature")
+	if str(c.get("npc_id", "")).is_empty() or Being.view(s, id).is_empty():
+		Being.forget(s, id)
 
 
 static func find(s: GameSession, room_id: String, id: String) -> Dictionary:
@@ -35,40 +54,34 @@ static func find(s: GameSession, room_id: String, id: String) -> Dictionary:
 ## After a fight that did not kill everyone: the foes that made a truce, surrendered or were knocked out stay. Lines.
 static func after_fight(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
 	var lines: Array[String] = []
-	var list: Array = (s.creatures.get(room_id, []) as Array).duplicate()
 	for fid: String in CombatRules.enemies(s, false):
 		var f := CombatRules.fighter(s, fid)
 		var state := str(f.get("status", ""))
 		var npc := str(f.get("npc_id", ""))
 		if not state in ["truce", "surrendered", "unconscious"] or (not npc.is_empty() and state != "unconscious"):
 			continue  # a pack NPC who surrendered or made peace is a person of the scene, not a creature
-		s.creature_counter += 1
-		var c := {"id": "c%d" % s.creature_counter, "name": str(f["name"]), "monster": str(f["monster"]), "state": state,
+		var c := Being.put(s, fid, "creature", {"name": str(f["name"]), "monster": str(f["monster"]), "state": state, "at": room_id,
 			"bound": false, "led": false, "since": TimeRules.abs_minute(s), "hp": int(f.get("hp", 1)), "max_hp": int(f.get("max_hp", 1)),
-			"xp_given": not bool(f.get("no_xp", false)) and str(s.combat.get("outcome", "")) in ["victory", "truce"]}
+			"xp_given": not bool(f.get("no_xp", false)) and str(s.combat.get("outcome", "")) in ["victory", "truce"]})
 		if s.combat.has("parley_won") and state != "unconscious":  # v0.7.50.1: beaten by words — they stay and no longer fight
 			c["kept"] = true
 			c["faction"] = FactionRules.of_foe(data, SceneRules.room(s, data["world"], room_id).get("encounter", {}), f)
 		if not npc.is_empty():
 			c["npc_id"] = npc
-		list.append(c)
 		lines.append("%s — %s" % [f["name"], state_word(state)])
-	if not list.is_empty():
-		s.creatures[room_id] = list
 	return lines
 
 
 ## The hero ran from a creature of the room: it stays where it was, with its new wounds.
-static func after_flight(s: GameSession, room_id: String) -> void:
+static func after_flight(s: GameSession) -> void:
 	for fid: String in CombatRules.enemies(s):
-		var f := CombatRules.fighter(s, fid)
-		if f.has("was_creature"):
-			var c: Dictionary = (f["was_creature"] as Dictionary).duplicate()
+		var b := Being.view(s, fid)
+		if b.has("was"):
+			var f := CombatRules.fighter(s, fid)
+			var c: Dictionary = b["was"]
 			c["hp"] = int(f["hp"])
 			c["max_hp"] = int(f["max_hp"])
-			var list: Array = s.creatures.get(room_id, [])
-			list.append(c)
-			s.creatures[room_id] = list
+			b["creature"] = c
 
 
 static func state_word(state: String) -> String:
@@ -106,7 +119,7 @@ static func joinable(c: Dictionary) -> bool:
 
 ## How many go with the hero by their own will: NPCs and the creatures beaten by words.
 static func companions(s: GameSession) -> int:
-	return s.followers.size() + here(s, s.room_id).filter(func(c: Dictionary) -> bool: return bool(c.get("ally", false))).size()
+	return Being.followers(s).size() + here(s, s.room_id).filter(func(c: Dictionary) -> bool: return bool(c.get("ally", false))).size()
 
 
 ## Helpless: knocked out or bound — finished off without a fight.
@@ -173,12 +186,12 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 			return lines
 		"free":
 			var lines: Array[String] = _taken_from_owner(s, data, c)
-			(s.creatures[s.room_id] as Array).erase(c)
 			lines.push_front("%s отпущен и уходит" % c["name"])
 			lines.append_array(_npc_back(s, data, c))
+			remove(s, c)
 			return lines
 		"hand_over":  # the law takes the prisoner: a bounty by its XP, the settlement thinks better of the hero
-			(s.creatures[s.room_id] as Array).erase(c)
+			remove(s, c)
 			var cp := int(cfg(data)["bounty_cp_per_xp"]) * OwnerRules.xp_of(data, c)
 			Ledger.add(s, cp, "creature:act")
 			var loc := WorldView.new(data["world"]).location_id(s.room_id)
@@ -187,19 +200,20 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 			lines.append_array(ReputationRules.add(s, data, loc, int(cfg(data)["hand_over_reputation"]), "сдал страже пленника: %s" % c["name"]))
 			return lines
 		"attack":
-			(s.creatures[s.room_id] as Array).erase(c)
-			var spec := {"monster": str(c["monster"]), "name": str(c["name"]), "col": 0, "by_hero": true,
+			var spec := {"id": id, "monster": str(c["monster"]), "name": str(c["name"]), "col": 0, "by_hero": true,
 				"no_xp": bool(c.get("xp_given", false))}
 			if c.has("hp"):
 				spec["hp"] = int(c["hp"])
 			if c.has("npc_id"):
 				spec["npc_id"] = str(c["npc_id"])
-			else:
-				spec["was_creature"] = c.duplicate()
+				remove(s, c)
+			else:  # it stays this record: back in the room if the hero runs
+				Being.of(s, id)["was"] = c
+				Being.drop(s, id, "creature")
 			s.pending_fight = [spec]
 			return ["Вы нападаете: %s" % c["name"]]
 		"finish":  # 5e: a blow at the helpless — the killing blow, no fight and no XP (it was given)
-			(s.creatures[s.room_id] as Array).erase(c)
+			remove(s, c)
 			var lines: Array[String] = ["Вы добиваете: %s" % c["name"]]
 			if c.has("npc_id"):
 				lines.append_array(CrimeRules.on_death(s, data, str(c["npc_id"]), true, s.room_id))
@@ -248,7 +262,7 @@ static func _search(s: GameSession, data: Dictionary, npc_id: String, name: Stri
 		elif not str(e.get("item_id", "")).is_empty() and not bool(e.get("worn", false)):
 			OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, str(e["item_id"]), int(e.get("qty", 1))), int(e.get("qty", 1)), npc_id)
 			got.append(str(e["name"]))
-	s.pockets[npc_id] = (TheftRules.pockets(s, data, npc_id) as Array).filter(func(e: Dictionary) -> bool: return bool(e.get("worn", false)))
+	Being.of(s, npc_id)["pockets"] = (TheftRules.pockets(s, data, npc_id) as Array).filter(func(e: Dictionary) -> bool: return bool(e.get("worn", false)))
 	var lines: Array[String] = ["Обыскан(а) %s: %s" % [name, ", ".join(got) if not got.is_empty() else "ничего"]]
 	var world := WorldView.new(data["world"])
 	var seen := s.npcs_here(world.world, s.room_id)
@@ -264,8 +278,8 @@ static func _npc_back(s: GameSession, data: Dictionary, c: Dictionary) -> Array[
 	var npc := str(c.get("npc_id", ""))
 	if npc.is_empty():
 		return []
-	s.npc_at.erase(npc)
-	s.followers.erase(npc)
+	Being.drop(s, npc, "at")
+	Being.unfollow(s, npc)
 	s.shift_attitude(npc, int(cfg(data)["woken_attitude"]), data)
 	s.remember(npc, "герой напал на меня и оставил без сознания")
 	return CrimeRules.assault_known(s, data, npc)
@@ -275,14 +289,9 @@ static func _npc_back(s: GameSession, data: Dictionary, c: Dictionary) -> Array[
 static func follow(s: GameSession, from: String, to: String) -> void:
 	if from == to:
 		return
-	var moving: Array = here(s, from).filter(func(c: Dictionary) -> bool: return bool(c.get("led", false)))
-	if moving.is_empty():
-		return
-	for c: Dictionary in moving:
-		(s.creatures[from] as Array).erase(c)
-	var dest: Array = s.creatures.get(to, [])
-	dest.append_array(moving)
-	s.creatures[to] = dest
+	for c: Dictionary in here(s, from):
+		if bool(c.get("led", false)):
+			c["at"] = to
 
 
 ## Time passes: an unbound knocked-out one wakes and slips away, an unbound surrendered one runs, a truce ends —
@@ -291,20 +300,14 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var now := TimeRules.abs_minute(s)
 	var leave: Dictionary = cfg(data)["leave_minutes"]
-	for room: String in s.creatures.keys():
-		var keep: Array = []
-		for c: Dictionary in s.creatures[room]:
-			var limit := int(leave.get(str(c["state"]), 0))
-			if bool(c.get("bound", false)) or bool(c.get("kept", false)) or limit <= 0 or now - int(c["since"]) < limit:
-				keep.append(c)
-				continue
-			if room == s.room_id:
-				lines.append("%s %s" % [c["name"], "приходит в себя и уходит" if str(c["state"]) == "unconscious" else "уходит"])
-			lines.append_array(_npc_back(s, data, c))
-		if keep.is_empty():
-			s.creatures.erase(room)
-		else:
-			s.creatures[room] = keep
+	for c: Dictionary in all(s):
+		var limit := int(leave.get(str(c["state"]), 0))
+		if bool(c.get("bound", false)) or bool(c.get("kept", false)) or limit <= 0 or now - int(c["since"]) < limit:
+			continue
+		if str(c["at"]) == s.room_id:
+			lines.append("%s %s" % [c["name"], "приходит в себя и уходит" if str(c["state"]) == "unconscious" else "уходит"])
+		lines.append_array(_npc_back(s, data, c))
+		remove(s, c)
 	return lines
 
 

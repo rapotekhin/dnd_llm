@@ -167,10 +167,11 @@ func _rebuild() -> void:
 			_subheading("SIDE_PEOPLE")
 			for id: String in npcs:
 				_npc_row(s, world, id, can_act)
-		if not s.summons.is_empty():  # v0.7.22.22: the creatures a spell called
+		var called := AllyRules.called(s)
+		if not called.is_empty():  # v0.7.22.22: the creatures a spell called
 			_subheading("SIDE_WITH_YOU")
 			var texts := AllyRules.summon_lines(s, Catalog.data)
-			for i in s.summons.size():
+			for i in called.size():
 				var srow := HBoxContainer.new()
 				srow.add_theme_constant_override("separation", 6)
 				_content.add_child(srow)
@@ -180,7 +181,7 @@ func _rebuild() -> void:
 				sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				sl.text = texts[i]
 				srow.add_child(sl)
-				var sid := str(s.summons[i]["id"])
+				var sid := str(called[i]["id"])
 				var db := _small(srow, tr("BTN_SUMMON_DISMISS"), func() -> void:
 					var err := GameState.dismiss_summon(sid)
 					if not err.is_empty():
@@ -451,9 +452,9 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		var ab := _flow(acts, tr("BTN_ANIMALS"), property_requested.emit.bind("animals", id), can_act)
 		ab.name = "Animals_" + id
 	var follow: Array = []  # v0.7.22.22 (#25): a follower by the buttons, as the prisoners
-	if s.followers.has(id):
+	if Being.follows(s, id):
 		follow = [["stay", "BTN_FOLLOWER_STAY"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
-	elif str(s.npc_at.get(id, "")) == s.room_id:
+	elif str(Being.view(s, id).get("at", "")) == s.room_id:
 		follow = [["lead", "BTN_FOLLOWER_LEAD"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
 	for fa: Array in follow:
 		var what: String = fa[0]
@@ -1161,7 +1162,7 @@ func _meeting(s: GameSession, can_act: bool) -> void:
 		var enc := EncounterRules.lurking_encounter(s, data, s.room_id)
 		_subheading("SIDE_WORD" if bool(EncounterRules.lurking(s, s.room_id).get("word", false)) else "SIDE_UNSEEN")  # v0.7.50.1
 		for e: Dictionary in enc.get("enemies", []):
-			_line("%s ×%d" % [e.get("name", e["monster"]), int(e.get("count", 1))], false)
+			_line(str(e["name"]), false)
 		var why := EncounterRules.talkable(s, data, enc.get("enemies", []))
 		specs = [["Encounter_attack", tr("BTN_ENCOUNTER_ATTACK"), "", func() -> String: return GameState.encounter_attack()],
 			["Encounter_persuasion", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_PERSUASION")}), why, func() -> String: return GameState.encounter_parley("persuasion")],
@@ -1171,8 +1172,8 @@ func _meeting(s: GameSession, can_act: bool) -> void:
 			specs.append(["Encounter_calm", tr("BTN_ENCOUNTER_CALM").format({"dc": EncounterRules.calm_dc(data, enc["enemies"])}), "", func() -> String: return GameState.encounter_parley("animal_handling")])
 	elif EncounterRules.captive(s):
 		_subheading("SIDE_CAPTIVE")
-		for e: Dictionary in s.captive.get("foes", []):
-			_line(str(e.get("name", e["monster"])), false)
+		for e: Dictionary in EncounterRules.captors(s):
+			_line(str(e["name"]), false)
 		specs = [["Escape_athletics", tr("BTN_ESCAPE_ATHLETICS").format({"dc": int(EncounterRules.cfg(data)["escape_dc"])}), "", func() -> String: return GameState.escape_captivity("escape_athletics")],
 			["Escape_sleight", tr("BTN_ESCAPE_SLEIGHT").format({"dc": int(EncounterRules.cfg(data)["escape_dc"])}), "", func() -> String: return GameState.escape_captivity("escape_sleight")],
 			["Escape_talk", tr("BTN_ESCAPE_TALK"), EncounterRules.can_escape(s, data, "talk"), func() -> String: return GameState.escape_captivity("talk")]]

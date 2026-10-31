@@ -465,7 +465,7 @@ func _draw_people(s: GameSession, w: WorldView) -> void:
 			who.flat = true
 			who.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			who.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			who.text = "   " + str(w.npc(npc).get("name", npc)) + ("  ✝" if s.dead_npcs.has(npc) else "")
+			who.text = "   " + str(w.npc(npc).get("name", npc)) + ("  ✝" if Being.dead(s, npc) else "")
 			var title := str(w.npc(npc).get("name", npc))
 			var body := "\n".join(lines.map(func(l: String) -> String: return l.strip_edges()))
 			card.hook(who, title, body)
@@ -483,7 +483,7 @@ func _met(s: GameSession, w: WorldView) -> Array[String]:
 	for key: String in s.summaries:
 		if key.begins_with("dialogue:") and not met.has(key.get_slice(":", 1)):
 			met.append(key.get_slice(":", 1))
-	for npc: String in s.npc_memory.keys() + s.followers:
+	for npc: String in Being.with(s, "memory") + Being.followers(s):
 		if not met.has(npc):
 			met.append(npc)
 	for room_id: String in s.visited:
@@ -508,7 +508,7 @@ func _person(s: GameSession, w: WorldView, npc: String) -> Array[String]:
 	var fa := FactionRules.def(s, data, FactionRules.of_npc(s, data, npc))  # v0.7.50
 	if not fa.is_empty():
 		head += " · " + str(fa["name"])
-	if s.dead_npcs.has(npc):
+	if Being.dead(s, npc):
 		head += " · " + tr("JOURNAL_DEAD")
 	var out: Array[String] = [head]
 	var deal := SocialRules.deal_text(s, data, npc)

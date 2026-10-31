@@ -18,8 +18,8 @@ static func _template(data: Dictionary, npc: Dictionary) -> String:
 
 ## The NPC's pockets, filled on the first look: [{id, name, item_id, cp, qty, worn, dc}]; its `carries` always.
 static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
-	if s.pockets.has(npc_id):
-		return s.pockets[npc_id]
+	if Being.view(s, npc_id).has("pockets"):
+		return Being.of(s, npc_id)["pockets"]
 	var npc := WorldView.new(data["world"]).npc(npc_id)
 	var table: Dictionary = cfg(data)["pockets"]
 	var spec: Dictionary = table.get(_template(data, npc), table["_default"])
@@ -45,7 +45,7 @@ static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
 		i += 1
 		e["id"] = "k%d" % i
 		e["dc"] = dc(s, data, npc_id, e)
-	s.pockets[npc_id] = out
+	Being.of(s, npc_id)["pockets"] = out
 	return out
 
 
@@ -75,7 +75,7 @@ static func dc(s: GameSession, data: Dictionary, npc_id: String, e: Dictionary) 
 static func can_steal(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	if not s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(npc_id):
 		return "THEFT_NOBODY"
-	if int(s.caught_by.get(npc_id, 0)) == s.day:
+	if int(Being.view(s, npc_id).get("caught", 0)) == s.day:
 		return "THEFT_CAUGHT"
 	if CombatRules.active(s):
 		return "THEFT_NOBODY"
@@ -91,7 +91,7 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 		if str(e["id"]) != entry_id:
 			continue
 		if not success:
-			s.caught_by[npc_id] = s.day
+			Being.of(s, npc_id)["caught"] = s.day
 			lines.append("%s замечает руку в кармане" % who)
 			lines.append_array(react(s, data, npc_id))
 			lines.append_array(WorldEvent.deed(s, data, "pickpocket"))  # v0.7.49
@@ -105,9 +105,9 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 			OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, id, int(e.get("qty", 1))), int(e.get("qty", 1)), npc_id)
 			lines.append("%s — украдено: %s" % [who, e["name"]])
 			if bool(e.get("worn", false)) and ItemRules.def_of(data["items"], s.items, id).has("weapon"):
-				var gone: Dictionary = s.disarmed.get(npc_id, {})  # big test #3 (v0.7.22.8): not in its hands in a fight
+				var gone: Dictionary = Being.view(s, npc_id).get("disarmed", {})  # big test #3 (v0.7.22.8): not in its hands in a fight
 				gone[id] = s.day
-				s.disarmed[npc_id] = gone
+				Being.of(s, npc_id)["disarmed"] = gone
 		lines.append_array(WorldEvent.deed(s, data, "pickpocket"))  # v0.7.49: unseen, still a theft
 		return lines
 	return lines
@@ -116,7 +116,7 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 ## The weapons stolen from an NPC it has not replaced yet (rules.theft.rearm_days): their catalog names.
 static func lost_weapons(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	var out: Array[String] = []
-	var gone: Dictionary = s.disarmed.get(npc_id, {})
+	var gone: Dictionary = Being.view(s, npc_id).get("disarmed", {})
 	for id: String in gone:
 		if s.day - int(gone[id]) < int(cfg(data).get("rearm_days", 3)):
 			out.append(str(ItemRules.def_of(data["items"], s.items, id).get("name", id)))
@@ -142,7 +142,7 @@ static func take_purse(s: GameSession, data: Dictionary, npc_id: String) -> int:
 	for e: Dictionary in pockets(s, data, npc_id):
 		if int(e.get("cp", 0)) > 0:
 			var cp := int(e["cp"])
-			(s.pockets[npc_id] as Array).erase(e)
+			(Being.of(s, npc_id)["pockets"] as Array).erase(e)
 			Ledger.add(s, cp, "theft:take_purse")
 			return cp
 	return 0
@@ -166,7 +166,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String, memory: Stri
 	var who := str(npc.get("name", npc_id))
 	var lines: Array[String] = []
 	if ConditionRules.invisible(s.character, data):  # v0.7.5: felt, not seen — nobody to blame
-		s.caught_by.erase(npc_id)
+		Being.drop(s, npc_id, "caught")
 		lines.append("%s хватается за кошель и озирается — вора не видно" % who)
 		return lines
 	s.shift_attitude(npc_id, int(cfg(data)["caught_attitude"]), data)

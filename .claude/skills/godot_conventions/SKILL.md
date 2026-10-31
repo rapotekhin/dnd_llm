@@ -33,7 +33,8 @@ description: Use this skill when writing or modifying GDScript (.gd), scenes (.t
 - [ ] `core/` не трогает `Node`, `get_tree()`, autoload-ы и `tr()`: возвращает ключи, UI переводит
 - [ ] Случайность — только через переданный `RandomNumberGenerator` (RNG сессии), никаких `randi()` в `core/`
 - [ ] Состояние `core/` — `to_dict()` / `static func from_dict()`; целые из JSON приводятся `int()`
-- [ ] Формат сейва изменился → `SaveFormat.SAVE_VERSION` + шаг в `MIGRATIONS` + фикстура `test/fixtures/saves/save_v<N>.json`
+- [ ] Новое про персонажа — часть записи `s.beings`, поле объявлено в `Being.PARTS` / `NESTED`; нового хранилища по id в `GameSession` нет
+- [ ] Формат сейва изменился → `SaveFormat.SAVE_VERSION` + новая фикстура `test/fixtures/saves/save_v<N>.json`, старая удаляется; миграций на этапе единых моделей нет (ADR-0012)
 - [ ] Текст игрока — ключ в `text` или `tr("KEY")`, ключ добавлен в `strings.csv`; текст модели и игрока — с `auto_translate_mode = DISABLED`
 - [ ] Экраны не знают друг о друге: переходы через `EventBus.navigate`, вход в игру через `GameEntry`
 - [ ] Подписки экранов на `EventBus` — методами, не лямбдами (экраны пересоздаются, шина живёт всегда)

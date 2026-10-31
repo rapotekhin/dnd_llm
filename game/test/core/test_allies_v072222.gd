@@ -78,7 +78,7 @@ func test_the_fight_goes_on_while_an_ally_stands() -> void:
 
 func test_a_follower_joins_but_not_against_the_law_or_its_own() -> void:
 	var s := _hero("fighter_aira", "brod-square")
-	s.followers.append("npc_mercenary")
+	Being.follow(s, "npc_mercenary")
 	var joins := AllyRules.joining(s, data, [{"monster": "wolf"}])
 	assert_array(joins).has_size(1)
 	assert_str(str(joins[0]["monster"])).is_equal("scout")
@@ -98,38 +98,38 @@ func test_summoned_wolves_join_and_leave_with_the_concentration() -> void:
 	_wolf_and(s, [])
 	s.character["concentration"] = "conjure_animals"
 	AllyRules.summon(s, data, "conjure_animals")
-	assert_int(s.summons.size()).is_equal(4)
+	assert_int(AllyRules.called(s).size()).is_equal(4)
 	assert_int(CombatRules.allies(s).size()).is_equal(4)
 	var lines := CombatRules.end_spell(s, data, "conjure_animals")
 	assert_int(CombatRules.allies(s).size()).is_equal(0)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("концентрация прервана"))).is_true()
 	s.character["concentration"] = ""
 	AllyRules.expire(s)
-	assert_array(s.summons).is_empty()
+	assert_array(AllyRules.called(s)).is_empty()
 
 
 func test_a_summon_out_of_a_fight_goes_with_the_hero_until_its_time() -> void:
 	var s := _hero("wizard_yalika", "brod-square")
 	assert_array(AllyRules.summon(s, data, "animate_dead")).is_not_empty()
-	assert_int(s.summons.size()).is_equal(1)
+	assert_int(AllyRules.called(s).size()).is_equal(1)
 	assert_str(AllyRules.summon_lines(s, data)[0]).contains("Скелет")
 	CombatRules.start(s, data, [{"monster": "wolf"}])
 	assert_int(CombatRules.allies(s).size()).is_equal(1)  # it fights with the hero
 	s.combat["outcome"] = "victory"
 	CombatRules.fighter(s, CombatRules.allies(s)[0])["hp"] = 5
 	AllyRules.after_fight(s)
-	assert_int(int(s.summons[0]["hp"])).is_equal(5)  # its wounds stay
+	assert_int(int(AllyRules.called(s)[0]["hp"])).is_equal(5)  # its wounds stay
 	s.combat = {}
 	TimeRules.advance(s, data, 1441)
-	assert_array(s.summons).is_empty()  # a day passed
+	assert_array(AllyRules.called(s)).is_empty()  # a day passed
 
 
 func test_a_familiar_helps_and_a_new_one_replaces_it() -> void:
 	var s := _hero("wizard_yalika")
 	AllyRules.summon(s, data, "find_familiar")
 	AllyRules.summon(s, data, "find_familiar")
-	assert_int(s.summons.size()).is_equal(1)
-	assert_str(AllyRules.dismiss(s, str(s.summons[0]["id"]))).is_empty()
+	assert_int(AllyRules.called(s).size()).is_equal(1)
+	assert_str(AllyRules.dismiss(s, str(AllyRules.called(s)[0]["id"]))).is_empty()
 	AllyRules.summon(s, data, "find_familiar")
 	_wolf_and(s, [])
 	var owl := CombatRules.allies(s)[0]
@@ -162,8 +162,4 @@ func test_summons_survive_a_save() -> void:
 	var s := _hero("wizard_yalika")
 	AllyRules.summon(s, data, "find_familiar")
 	var back := GameSession.from_dict(s.to_dict(10))
-	assert_int(back.summons.size()).is_equal(1)
-	assert_int(back.summon_counter).is_equal(1)
-	var v40: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves/save_v40.json"))
-	SaveFormat.migrate(v40)
-	assert_array(v40["session"]["summons"] as Array).is_empty()
+	assert_int(AllyRules.called(back).size()).is_equal(1)

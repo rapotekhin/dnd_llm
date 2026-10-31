@@ -70,9 +70,3 @@ func test_memory_keeps_the_newest_once_and_survives_a_save() -> void:
 	assert_array(s.memory_of("npc_merchant", 2)).has_size(2)
 	var back := GameSession.from_dict(s.to_dict(50))
 	assert_array(back.memory_of("npc_merchant")).is_equal(s.memory_of("npc_merchant"))
-
-
-func test_old_saves_start_with_empty_memories() -> void:
-	var v23 := {"save_version": 23, "session": {"day": 2}}
-	SaveFormat._v23_to_v24(v23, {})
-	assert_dict(v23["session"]["npc_memory"]).is_empty()

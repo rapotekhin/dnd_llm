@@ -44,6 +44,11 @@ static func _json(path: String) -> Dictionary:
 	return JSON.parse_string(FileAccess.get_file_as_string(path))
 
 
+## The n-th foe to join the running fight, from 1.
+static func foe(s: GameSession, n: int) -> String:
+	return (s.combat["fighters"] as Array).filter(func(id: String) -> bool: return CombatRules.fighter(s, id).get("side") == "enemy")[n - 1]
+
+
 static func new_session(seed_value: int = 42) -> GameSession:
 	var d := data()
 	var s := GameSession.create(seed_value, "2026-10-18T12:00:00", str(d["world"]["start_room"]), CharacterBuilder.build_preset(d["presets"][0], d))

@@ -38,11 +38,3 @@ func test_the_chronicle_keeps_the_newest() -> void:
 	assert_str(str(s.chronicle[-1]["text"])).is_equal("событие %d" % (GameSession.CHRONICLE_MAX + 9))
 	var back := GameSession.from_dict(s.to_dict(50))
 	assert_int(back.chronicle.size()).is_equal(GameSession.CHRONICLE_MAX)
-
-
-func test_an_old_save_starts_the_chronicle_from_its_chat() -> void:
-	var v22 := {"save_version": 22, "session": {"day": 3, "minute": 600, "room_id": "brod-square",
-		"chat": [{"kind": "effect", "lines": ["+2 зм"]}, {"kind": "dm", "text": "…"}]}}
-	SaveFormat._v22_to_v23(v22, {})
-	assert_array(v22["session"]["chronicle"]).has_size(1)
-	assert_int(int(v22["session"]["chronicle"][0]["day"])).is_equal(3)

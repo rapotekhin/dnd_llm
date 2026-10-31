@@ -85,18 +85,15 @@ func test_inspecting_a_foe_opens_its_kind_for_good() -> void:
 	order.push_front(CombatRules.PLAYER)
 	s.combat["turn"] = 0
 	CombatRules._begin_turn(s, data, [] as Array[String])
-	assert_str(CombatRules.lore_skill(data, CombatRules.fighter(s, "e1"))).is_equal("nature")
-	assert_int(CombatRules.lore_dc(data, CombatRules.fighter(s, "e1"))).is_equal(11)
-	assert_str(CombatRules.monster_card(s, data, CombatRules.fighter(s, "e1"))).is_empty()
+	assert_str(CombatRules.lore_skill(data, CombatRules.fighter(s, TestUtils.foe(s, 1)))).is_equal("nature")
+	assert_int(CombatRules.lore_dc(data, CombatRules.fighter(s, TestUtils.foe(s, 1)))).is_equal(11)
+	assert_str(CombatRules.monster_card(s, data, CombatRules.fighter(s, TestUtils.foe(s, 1)))).is_empty()
 	s.character["skills"]["nature"] = 40
-	var lines := CombatRules.player_inspect(s, data, "e1")
+	var lines := CombatRules.player_inspect(s, data, TestUtils.foe(s, 1))
 	assert_str(lines[0]).contains("теперь ясно")
 	assert_int(int(CombatRules.economy(s)["bonus"])).is_equal(0)
-	assert_str(CombatRules.can_inspect(s, data, "e2")).is_equal("COMBAT_NO_BONUS")
-	var card := CombatRules.monster_card(s, data, CombatRules.fighter(s, "e2"))  # the same kind: known too
+	assert_str(CombatRules.can_inspect(s, data, TestUtils.foe(s, 2))).is_equal("COMBAT_NO_BONUS")
+	var card := CombatRules.monster_card(s, data, CombatRules.fighter(s, TestUtils.foe(s, 2)))  # the same kind: known too
 	assert_str(card).contains("КД 13").contains("Укус")
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
 	assert_array(back.known_monsters).contains(["wolf"])
-	var v13: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://test/fixtures/saves/save_v13.json"))
-	SaveFormat.migrate(v13, {})
-	assert_array(v13["session"]["known_monsters"]).is_empty()

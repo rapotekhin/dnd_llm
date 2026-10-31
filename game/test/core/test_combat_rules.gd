@@ -51,7 +51,7 @@ func test_a_fight_starts_with_initiative_and_the_field() -> void:
 	assert_int(int(CombatRules.player(s)["col"])).is_equal(0)
 	for id: String in CombatRules.enemies(s):
 		assert_int(absi(int(CombatRules.fighter(s, id)["col"]))).is_between(1, 3)
-	assert_str(CombatRules.fighter(s, "e1")["name"]).is_equal("Гоблин 1")
+	assert_str(CombatRules.fighter(s, TestUtils.foe(s, 1))["name"]).is_equal("Гоблин 1")
 
 
 func test_weapon_numbers_of_the_sheet() -> void:
@@ -70,19 +70,19 @@ func test_weapon_numbers_of_the_sheet() -> void:
 func test_reach_range_and_the_attack_economy() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 2}])
-	assert_str(CombatRules.can_attack(s, data, "e1")).is_equal("COMBAT_OUT_OF_REACH")
+	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_OUT_OF_REACH")
 	CombatRules.player_move(s, data, 1)
 	assert_str(CombatRules.can_move(s, data, 1)).is_equal("COMBAT_NO_MOVE")
 	CombatRules.player_simple(s, data, "dash")
 	CombatRules.player_move(s, data, 1)
-	assert_str(CombatRules.can_attack(s, data, "e1")).is_equal("COMBAT_NO_ACTION")  # Dash took the action
+	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_NO_ACTION")  # Dash took the action
 	CombatRules.end_player_turn(s, data)
 	CombatRules.next_actor(s, data)  # the goblin
 	if CombatRules.is_player_turn(s) and int(s.character["hp"]) > 0:
-		assert_str(CombatRules.can_attack(s, data, "e1")).is_empty()
-		var lines := CombatRules.player_attack(s, data, "e1")
+		assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_empty()
+		var lines := CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
 		assert_str(lines[0]).contains("против КД 15")
-		assert_str(CombatRules.can_attack(s, data, "e1")).is_equal("COMBAT_NO_ACTION")
+		assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_NO_ACTION")
 
 
 func test_extra_attack_at_level_five() -> void:
@@ -90,11 +90,11 @@ func test_extra_attack_at_level_five() -> void:
 	s.character["level"] = 5
 	CharacterRules.refresh(s.character, data)
 	_fight(s, [{"monster": "ogre", "col": 0}] if data["monsters"].has("ogre") else [{"monster": "bandit", "col": 0}])
-	CombatRules.player_attack(s, data, "e1")
-	if str(CombatRules.fighter(s, "e1")["status"]) == "active":
-		assert_str(CombatRules.can_attack(s, data, "e1")).is_empty()
-		CombatRules.player_attack(s, data, "e1")
-	assert_str(CombatRules.can_attack(s, data, "e1")).is_not_empty()
+	CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
+	if str(CombatRules.fighter(s, TestUtils.foe(s, 1))["status"]) == "active":
+		assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_empty()
+		CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
+	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_not_empty()
 
 
 func test_leaving_melee_provokes_and_disengage_does_not() -> void:
@@ -121,10 +121,10 @@ func test_the_ai_closes_in_and_shooters_keep_their_range() -> void:
 	_fight(s, [{"monster": "wolf", "col": 2}])
 	CombatRules.end_player_turn(s, data)
 	CombatRules.next_actor(s, data)
-	assert_int(int(CombatRules.fighter(s, "e1")["col"])).is_less(2)
+	assert_int(int(CombatRules.fighter(s, TestUtils.foe(s, 1))["col"])).is_less(2)
 	var t := _session()
 	_fight(t, [{"monster": "goblin", "col": 0}])
-	t.combat["fighters"]["e1"]["monster"] = "goblin"
+	CombatRules.fighter(t, TestUtils.foe(t, 1))["monster"] = "goblin"
 	CombatRules.end_player_turn(t, data)
 	var lines := CombatRules.next_actor(t, data)
 	assert_str(" ".join(lines)).contains("Ятаган")  # in melee the goblin uses its scimitar
@@ -137,7 +137,7 @@ func test_morale_makes_intelligent_foes_surrender_or_flee() -> void:
 		var s := _session()
 		s.rng.seed = seed_value
 		_fight(s, [{"monster": "bandit", "col": 0}])
-		var f := CombatRules.fighter(s, "e1")
+		var f := CombatRules.fighter(s, TestUtils.foe(s, 1))
 		f["hp"] = 1
 		CombatRules.end_player_turn(s, data)
 		var lines := CombatRules.next_actor(s, data)
@@ -179,11 +179,11 @@ func test_engine_spells_attack_save_darts_and_heal() -> void:
 	c["spells"]["prepared"].append_array(["burning_hands", "magic_missile"])
 	c["spells"]["cantrips"].append("fire_bolt")
 	_fight(s, [{"monster": "goblin", "count": 2, "col": 0}])
-	assert_str(CombatRules.can_cast(s, data, "fire_bolt", 0, "e1")).is_empty()
-	var lines := CombatRules.player_cast(s, data, "fire_bolt", 0, "e1")
+	assert_str(CombatRules.can_cast(s, data, "fire_bolt", 0, TestUtils.foe(s, 1))).is_empty()
+	var lines := CombatRules.player_cast(s, data, "fire_bolt", 0, TestUtils.foe(s, 1))
 	assert_str(" ".join(lines)).contains("Огненный снаряд")
 	CombatRules.economy(s)["action"] = 1
-	lines = CombatRules.player_cast(s, data, "burning_hands", 1, "e1")
+	lines = CombatRules.player_cast(s, data, "burning_hands", 1, TestUtils.foe(s, 1))
 	assert_int(lines.filter(func(l: String) -> bool: return l.contains("спасбросок Лов")).size()).override_failure_message(str(lines)).is_greater_equal(1)
 	assert_int(SpellRules.slots_left(c, 1)).is_equal(1)
 	CombatRules.economy(s)["action"] = 1
@@ -201,7 +201,7 @@ func test_engine_spells_attack_save_darts_and_heal() -> void:
 func test_a_won_fight_gives_xp_and_the_gear_of_the_fallen() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 0}])
-	CombatRules.fighter(s, "e1")["status"] = "dead"
+	CombatRules.fighter(s, TestUtils.foe(s, 1))["status"] = "dead"
 	var lines := CombatRules.after_player_action(s, data)
 	assert_str(s.combat["outcome"]).is_equal("victory")
 	CombatRules.results(s, data, {"coins_cp": 150, "items": {"torch": 2}})
@@ -217,7 +217,7 @@ func test_finish_combat_takes_the_chosen_loot_and_remembers_the_fight() -> void:
 	_fight(s, [{"monster": "commoner", "col": 0, "npc_id": TestUtils.INNKEEPER, "name": "Бруно"}])
 	s.combat["encounter"] = "test_enc"
 	s.mode = GameSession.MODE_COMBAT
-	CombatRules.fighter(s, "e1")["status"] = "dead"
+	CombatRules.fighter(s, TestUtils.foe(s, 1))["status"] = "dead"
 	CombatRules.after_player_action(s, data)
 	CombatRules.results(s, data, {"coins_cp": 20})
 	s.combat["narrated"] = true
@@ -236,12 +236,12 @@ func test_effects_in_a_fight_hit_foes_and_the_master_cannot_move_or_pay() -> voi
 	_fight(s, [{"monster": "goblin", "col": 0}])
 	s.mode = GameSession.MODE_COMBAT
 	var fx := EffectEngine.new()
-	var r := fx.validate(s, data, "t-1", {"kind": "damage", "severity": "deadly", "damage_type": "дробящий", "reason": "стол", "target_id": "e1"})
+	var r := fx.validate(s, data, "t-1", {"kind": "damage", "severity": "deadly", "damage_type": "дробящий", "reason": "стол", "target_id": TestUtils.foe(s, 1)})
 	assert_bool(r["accepted"]).is_true()
 	fx.apply(s, "t-1", [r["effect_id"]])
-	assert_int(int(CombatRules.fighter(s, "e1")["hp"])).is_less(7)
-	var c := fx.validate(s, data, "t-2", {"kind": "condition", "condition": "prone", "target_id": "e1"})
-	assert_bool(c["accepted"] or str(CombatRules.fighter(s, "e1")["status"]) != "active").is_true()
+	assert_int(int(CombatRules.fighter(s, TestUtils.foe(s, 1))["hp"])).is_less(7)
+	var c := fx.validate(s, data, "t-2", {"kind": "condition", "condition": "prone", "target_id": TestUtils.foe(s, 1)})
+	assert_bool(c["accepted"] or str(CombatRules.fighter(s, TestUtils.foe(s, 1))["status"]) != "active").is_true()
 	assert_bool(fx.validate(s, data, "t-3", {"kind": "move", "room_id": TestUtils.KITCHEN})["accepted"]).is_false()
 	assert_bool(fx.validate(s, data, "t-3", {"kind": "coins", "delta_cp": 5})["accepted"]).is_false()
 

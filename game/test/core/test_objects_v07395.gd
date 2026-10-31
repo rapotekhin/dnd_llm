@@ -94,25 +94,6 @@ func test_a_market_stall_is_rented_with_its_seller() -> void:
 	assert_str(PropertyRules.worker_why(s, data, vid, "продавец")).is_equal("SHOP_STALL_LAPSED")
 
 
-func test_an_old_save_keeps_its_worker_and_stall() -> void:
-	var save := {"save_version": 49, "session": {"character": {"property": {"old_mill": {"worker": "gen_npc_9", "serf": "", "since": 3}}}}}
-	SaveFormat._v49_to_v50(save, {})
-	var st: Dictionary = save["session"]["character"]["property"]["old_mill"]
-	assert_bool(st.has("worker")).is_false()
-	assert_str(str(st["staff"][0]["npc"])).is_equal("gen_npc_9")
-	var s := _bought("old_mill")
-	PropertyRules.state(s.character)["old_mill"]["staff"] = [{"npc": "gen_npc_9", "role": "", "wage": 0}]
-	s.character["shop"] = {"venues": {"stall:brod-square": {"stock": {"silver_ring": 2}, "prices": {}, "cash": 0, "last_day": 0, "last": {}}},
-		"stalls": {"brod-square": s.day + 3}, "charters": {}, "rep": {}}
-	PropertyRules.upgrade_legacy(s, data)
-	assert_str(str(PropertyRules.staff(s, "old_mill")[0]["role"])).is_equal("подручный мельника")
-	assert_int(int(PropertyRules.staff(s, "old_mill")[0]["wage"])).is_equal(15)
-	var vid := PropertyRules.rented(s, data, "stall", "brod")
-	assert_int(int(PropertyRules.state(s.character)[vid]["rent_day"])).is_equal(s.day + 3)
-	assert_int(int(ShopRules.venue(s.character, vid)["stock"]["silver_ring"])).is_equal(2)
-	assert_bool(s.character["shop"].has("stalls")).is_false()
-
-
 func test_the_pack_object_and_the_heros_job_in_its_staff() -> void:
 	var s := _owner("brod-tavern-hall")
 	var sid := WorldView.new(data["world"]).site_id(ReputationRules.home_room(data, "npc_innkeeper"))

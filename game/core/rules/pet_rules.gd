@@ -145,8 +145,8 @@ static func tame(s: GameSession, data: Dictionary, cid: String, food: String) ->
 		lines.append("%s — теперь ваш питомец: идёт с вами; имя — в окне «Питомец»" % cr["name"])
 		lines.append_array(WorldEvent.standing(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "tame", "приручён зверь"))  # v0.7.50
 	elif nat + b <= d - int(cfg(data)["flee_margin"]) or nat == 1:
-		(s.creatures[s.room_id] as Array).erase(cr)
 		lines.append("%s шарахается и убегает" % cr["name"])
+		CreatureRules.remove(s, cr)
 	else:
 		lines.append("%s не подпускает — завтра можно снова" % cr["name"])
 	return {"lines": lines, "ok": ok}
@@ -290,16 +290,12 @@ static func scout(s: GameSession, data: Dictionary, cid: String, room: String) -
 
 
 static func _wild(s: GameSession, data: Dictionary, room: String, monster: String, cause: String) -> Dictionary:
-	s.creature_counter += 1
 	var m: Dictionary = data["monsters"][monster]
-	var cr := {"id": "c%d" % s.creature_counter, "name": str(m["name"]), "monster": monster, "state": WILD, "bound": false, "led": false,
+	var cr := {"name": str(m["name"]), "monster": monster, "state": WILD, "bound": false, "led": false,
 		"since": TimeRules.abs_minute(s), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "xp_given": false}
 	if not cause.is_empty():
 		cr["cause"] = cause
-	var list: Array = s.creatures.get(room, [])
-	list.append(cr)
-	s.creatures[room] = list
-	return cr
+	return CreatureRules.add(s, room, cr)
 
 
 ## A pack room's `beasts` (wild ones to tame) come once, on the first visit. Lines — none (they are on the panel).

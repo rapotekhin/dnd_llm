@@ -44,11 +44,11 @@ func run() -> void:
 	await wait_until(func() -> bool: return gs.is_busy(), 5.0)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)
-	step("the NPC carries the blessing", s.npc_buffs.has(str(npcs[0])), str(s.npc_buffs))
+	step("the NPC carries the blessing", Being.view(s, str(npcs[0])).has("buffs"), str(Being.with(s, "buffs")))
 	step("the hero too", ConditionRules.effects(s.character).any(func(e: Dictionary) -> bool: return str(e.get("source", {}).get("id", "")) == "bless"))
 
 	s.room_id = "pushcha-hollow"
-	var goblins := [{"monster": "goblin", "name": "Гоблин", "count": 2}]
+	var goblins := [Being.spawn(s, {"monster": "goblin", "name": "Гоблин 1"})["id"], Being.spawn(s, {"monster": "goblin", "name": "Гоблин 2"})["id"]]
 	s.lurking[s.room_id] = {"foes": goblins, "from": "pushcha-trail"}
 	node("EventBus").state_changed.emit()
 	await frames(3)

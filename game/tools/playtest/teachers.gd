@@ -74,7 +74,7 @@ func run() -> void:
 	c["level"] = 5
 	c["slots_max"] = [4, 3, 2]
 	step("still closed without friendship", StudyRules.enroll_why(s, data, cid[0]) == "STUDY_REQUIREMENTS")
-	s.attitudes[mage] = 1
+	Being.of(s, mage)["attitude"] = 1
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var panel: Control = find(screen(), "StudyView")

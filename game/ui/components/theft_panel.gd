@@ -72,6 +72,6 @@ func _rebuild() -> void:
 			var err := GameState.steal(npc_id, entry)
 			if not err.is_empty():
 				EventBus.message.emit(tr(err))
-			elif int(s.caught_by.get(npc_id, 0)) == s.day:
+			elif int(Being.view(s, npc_id).get("caught", 0)) == s.day:
 				visible = false)
 		row.add_child(b)

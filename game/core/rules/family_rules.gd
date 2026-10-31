@@ -33,18 +33,18 @@ static func _name(s: GameSession, data: Dictionary, npc_id: String) -> String:
 ## The living spouse, "" — none.
 static func spouse(s: GameSession) -> String:
 	var id := str(view(s.character).get("spouse", ""))
-	return id if not id.is_empty() and not s.dead_npcs.has(id) else ""
+	return id if not id.is_empty() and not Being.dead(s, id) else ""
 
 
 static func engaged(s: GameSession) -> String:
 	var id := str(view(s.character).get("engaged", ""))
-	return id if not id.is_empty() and not s.dead_npcs.has(id) else ""
+	return id if not id.is_empty() and not Being.dead(s, id) else ""
 
 
 static func children(s: GameSession) -> Array[String]:
 	var out: Array[String] = []
 	for id: Variant in view(s.character).get("children", []):
-		if not s.dead_npcs.has(str(id)):
+		if not Being.dead(s, str(id)):
 			out.append(str(id))
 	return out
 
@@ -271,7 +271,7 @@ static func household(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 		out.append({"npc": id, "kind": str(stage(s, data, id)["id"])})
 	for k: Variant in view(s.character).get("kin", []):
 		var id := str((k as Dictionary)["npc"])
-		if not s.dead_npcs.has(id) and not out.any(func(e: Dictionary) -> bool: return e["npc"] == id):
+		if not Being.dead(s, id) and not out.any(func(e: Dictionary) -> bool: return e["npc"] == id):
 			out.append({"npc": id, "kind": "spouse" if str(k.get("rel", "")) in ["мать", "отец"] else str(stage(s, data, id)["id"])})
 	return out
 

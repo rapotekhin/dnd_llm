@@ -39,7 +39,7 @@ description: Use this skill after making meaningful code changes to the Between 
 | Новый/изменённый класс entity | [tech/data-models.md](docs/tech/data-models.md) |
 | Смена дефолтной LLM-модели | [tech/llm-integration.md](docs/tech/llm-integration.md), [README.md](README.md) |
 | Смена LLM-провайдера | [tech/llm-integration.md](docs/tech/llm-integration.md), `README.md`, возможен новый ADR |
-| Смена формата сейвов | [tech/godot-client.md](docs/tech/godot-client.md) §«Сейвы» (версия и миграция) |
+| Смена формата сейвов | [tech/godot-client.md](docs/tech/godot-client.md) §«Сейвы» (версия) |
 | Удаление легаси | вычистить упоминания во всех файлах + отметить в `production/backlog.md` |
 | Новое архитектурное решение | новый ADR в `docs/tech/adr/NNNN-<тема>.md` |
 | Закрытие пункта роадмапа | `production/roadmap.md` (отметка `[x]`), `production/backlog.md` (перенос в «Закрытые») |

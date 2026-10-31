@@ -24,7 +24,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["crime"]
 
 
-## v0.7.22.16: a crime has a kind (rules.crime.kinds) — `murder` (an old save's crime has none) or `assault`: a pack
+## v0.7.22.16: a crime has a kind (rules.crime.kinds) — `murder` or `assault`: a pack
 ## NPC the hero attacked and left alive. An assault is known at once when someone saw it or the victim stayed awake;
 ## a victim knocked out with nobody by tells when it wakes or is let go. It is not a body: never found by a search,
 ## never buried; a victim finished off after it — its assault becomes the murder.
@@ -150,11 +150,11 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: 
 	var world := WorldView.new(data["world"])
 	var lines := WorldEvent.emit(s, data, "dying", {"npc": npc_id})
 	s.crimes = s.crimes.filter(func(c: Dictionary) -> bool: return not (_assault(c) and str(c["victim"]) == npc_id and not bool(c["known"])))  # finished off: the murder
-	if not s.dead_npcs.has(npc_id):
-		s.dead_npcs.append(npc_id)
-	s.followers.erase(npc_id)
-	s.bodies[npc_id] = room_id
-	s.body_at[npc_id] = TimeRules.abs_minute(s)  # buried some days later (v0.7.22.10)
+	if not Being.dead(s, npc_id):
+		Being.die(s, npc_id)
+	Being.unfollow(s, npc_id)
+	Being.of(s, npc_id)["body"] = room_id
+	Being.of(s, npc_id)["body_at"] = TimeRules.abs_minute(s)  # buried some days later (v0.7.22.10)
 	lines.append_array(WorldEvent.emit(s, data, "death", {"npc": npc_id, "by_hero": by_hero, "room": room_id}))
 	if not by_hero:
 		return lines
@@ -195,7 +195,7 @@ static func people_know(s: GameSession, data: Dictionary, f: Dictionary) -> Arra
 	if att != 0:
 		lines.append("%s знает: %s — отношение хуже" % [WorldView.new(data["world"]).location(loc).get("name", loc), kind["name"]])
 	for id: String in people_of(data, loc):
-		if not s.dead_npcs.has(id) and id != victim:
+		if not Being.dead(s, id) and id != victim:
 			if att != 0:
 				s.shift_attitude(id, att, data)
 			s.remember(id, (str(kind["memory"]).format({"victim": _name(data, victim)})) if kind.has("memory") else
@@ -256,7 +256,7 @@ static func spread(s: GameSession, data: Dictionary) -> Array[String]:
 
 ## "" when the hero can hide this body now: it lies here and its murder is still a secret.
 static func can_hide(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	if str(s.bodies.get(npc_id, "")) != s.room_id:
+	if str(Being.view(s, npc_id).get("body", "")) != s.room_id:
 		return "CRIME_NO_BODY"
 	for crime: Dictionary in s.crimes:
 		if str(crime["victim"]) == npc_id and not bool(crime["known"]):
@@ -282,8 +282,8 @@ static func bury(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var now := TimeRules.abs_minute(s)
 	var world := WorldView.new(data["world"])
-	for npc_id: String in s.bodies.keys():
-		var since := int(s.body_at.get(npc_id, 0))
+	for npc_id: String in Being.with(s, "body"):
+		var since := int(Being.view(s, npc_id).get("body_at", 0))
 		var secret := false
 		for crime: Dictionary in s.crimes:
 			if str(crime["victim"]) == npc_id:
@@ -291,8 +291,8 @@ static func bury(s: GameSession, data: Dictionary) -> Array[String]:
 				since = int(crime.get("known_at", since))
 		if secret or now - since < int(cfg(data)["bury_days"]) * 1440:
 			continue
-		var room := str(s.bodies[npc_id])
-		s.bodies.erase(npc_id)
+		var room := str(Being.of(s, npc_id)["body"])
+		Being.drop(s, npc_id, "body")
 		lines.append("Похоронили: %s — там, где лежало тело (%s), осталось тёмное пятно" % [_name(data, npc_id), world.room(room).get("name", room)])
 	return lines
 
@@ -412,7 +412,7 @@ static func defenders(s: GameSession, data: Dictionary, foes: Array) -> Array:
 	var guards: Array = law(data, world.location_id(s.room_id)).get("guards", [])
 	var out: Array = []
 	for id: String in s.npcs_here(world.world, s.room_id):
-		if foes.any(func(f: Dictionary) -> bool: return str(f.get("npc_id", "")) == id) or s.followers.has(id):
+		if foes.any(func(f: Dictionary) -> bool: return str(f.get("npc_id", "")) == id) or Being.follows(s, id):
 			continue
 		if s.attitude(id) >= int(d["friend_attitude"]):
 			continue
@@ -621,7 +621,7 @@ static func _settle(s: GameSession, data: Dictionary, loc: String) -> Array[Stri
 	s.let_go.erase(loc)
 	s.arrest = ""
 	for id: String in people_of(data, loc):
-		if not s.dead_npcs.has(id):
+		if not Being.dead(s, id):
 			if int(cfg(data)["forgiven"]) != 0:
 				s.shift_attitude(id, int(cfg(data)["forgiven"]), data)
 			s.remember(id, "герой отбыл наказание за преступление — но доверия ему нет")
@@ -645,9 +645,9 @@ static func _rewarn(s: GameSession, crime: Dictionary) -> void:
 ## The bodies in this room: [{npc_id, name}].
 static func bodies_here(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for id: String in s.bodies:
-		if str(s.bodies[id]) == s.room_id:
-			out.append({"npc_id": id, "name": "Тело: " + str(WorldView.new(data["world"]).npc(id).get("name", id)), "searched": s.searched.has(id)})
+	for id: String in Being.with(s, "body"):
+		if str(Being.of(s, id)["body"]) == s.room_id:
+			out.append({"npc_id": id, "name": "Тело: " + str(WorldView.new(data["world"]).npc(id).get("name", id)), "searched": Being.searched(s, id)})
 	return out
 
 
@@ -663,7 +663,7 @@ static func search_body(s: GameSession, data: Dictionary, npc_id: String) -> Arr
 		elif not str(e.get("item_id", "")).is_empty():
 			ItemRules.found(c, data, s.items, str(e["item_id"]), int(e.get("qty", 1)))
 			got.append(str(e["name"]))
-	s.pockets[npc_id] = []
+	Being.of(s, npc_id)["pockets"] = []
 	# What a trader carried of its wares — out of its stock, the rest stays in its shop (v0.7.22.8).
 	var wares: Dictionary = TradeRules.merchant(s, data, npc_id)["stock"] if bool(world.npc(npc_id).get("trader", false)) else {}
 	var stock := wares.keys().filter(func(id: Variant) -> bool: return int(wares[id]) > 0)
@@ -674,7 +674,7 @@ static func search_body(s: GameSession, data: Dictionary, npc_id: String) -> Arr
 		if int(wares[id]) <= 0:
 			wares.erase(id)
 		got.append(ItemRules.display_name(data["items"], s.items, id))
-	s.searched.append(npc_id)
+	Being.search(s, npc_id)
 	var lines: Array[String] = ["Обыскано тело %s: %s" % [world.npc(npc_id).get("name", npc_id), ", ".join(got) if not got.is_empty() else "ничего"]]
 	var seen := s.npcs_here(world.world, s.room_id)
 	if not seen.is_empty() and not ConditionRules.invisible(c, data):

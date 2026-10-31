@@ -51,7 +51,7 @@ static func active(s: GameSession) -> bool:
 
 
 static func fighter(s: GameSession, id: String) -> Dictionary:
-	return s.combat.get("fighters", {}).get(id, {})
+	return s.beings.get(id, {}).get("fight", {})
 
 
 static func player(s: GameSession) -> Dictionary:
@@ -71,8 +71,8 @@ static func enemies(s: GameSession, only_active: bool = true) -> Array[String]:
 ## Ally ids (v0.7.22.22, AllyRules), all or only those still in the fight.
 static func allies(s: GameSession, only_active: bool = true) -> Array[String]:
 	var out: Array[String] = []
-	for id: String in s.combat.get("fighters", {}):
-		var f: Dictionary = s.combat["fighters"][id]
+	for id: String in s.combat.get("fighters", []):
+		var f := fighter(s, id)
 		if f.get("side") == "ally" and (not only_active or str(f.get("status")) == "active"):
 			out.append(id)
 	return out
@@ -160,12 +160,12 @@ static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = fal
 ## enemies}] and help {enemies, side, delay} of a pack encounter.
 static func start(s: GameSession, data: Dictionary, foes: Array, source: Dictionary = {}) -> Array[String]:
 	var c := s.character
-	var fighters := {}
-	fighters[PLAYER] = {"id": PLAYER, "side": "player", "name": str(c.get("name", "")), "col": 0, "status": "active",
+	var fighters: Array = [PLAYER]
+	Being.of(s, PLAYER)["fight"] = {"id": PLAYER, "side": "player", "name": str(c.get("name", "")), "col": 0, "status": "active",
 		"init": 0, "conditions": []}
 	s.combat = {"round": 1, "turn": 0, "fighters": fighters, "order": [], "log": [], "encounter": str(source.get("encounter", "")),
 		"room_from": str(source.get("room_from", "")), "outcome": "", "death_saves": {"ok": 0, "fail": 0}, "loot": [], "xp": 0,
-		"next_id": 0, "incoming": [], "help": (source.get("help", {}) as Dictionary).duplicate(true), "parley_tried": [],
+		"incoming": [], "help": (source.get("help", {}) as Dictionary).duplicate(true), "parley_tried": [],
 		"parley_ok": 0, "parley_fail": 0, "parley_hard": str(source.get("parley", "")) == "hard"}
 	_add_foes(s, data, foes)
 	if source.get("arena") is Dictionary:  # v0.7.45: a bout one to one by the arena's rule
@@ -181,11 +181,11 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 	for id: String in fighters:
 		var dex := _dex_of(s, data, id)
 		var roll := Roll.d20(s.rng) + dex
-		fighters[id]["init"] = roll
+		fighter(s, id)["init"] = roll
 		inits.append([roll, dex, 1 if id == PLAYER else 0, id])
 	inits.sort_custom(func(a: Array, b: Array) -> bool: return a.slice(0, 3) > b.slice(0, 3))
 	s.combat["order"] = inits.map(func(x: Array) -> String: return str(x[3]))
-	var names: Array = (s.combat["order"] as Array).map(func(id: String) -> String: return "%s %d" % [fighters[id]["name"], fighters[id]["init"]])
+	var names: Array = (s.combat["order"] as Array).map(func(id: String) -> String: return "%s %d" % [fighter(s, id)["name"], fighter(s, id)["init"]])
 	var lines: Array[String] = ["Бой! Инициатива: " + ", ".join(names)]
 	lines.append_array(_surprise(s, data, source))
 	lines.append_array(_opening(s, source))
@@ -231,51 +231,72 @@ static func _dex_of(s: GameSession, data: Dictionary, id: String) -> int:
 ## column (reinforcements at the edge). A name that is already in the fight gets the next number. Returns the ids.
 static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: int = 99, side_name: String = "enemy") -> Array[String]:
 	var mons: Dictionary = data["monsters"]
-	var fighters: Dictionary = s.combat["fighters"]
+	var fighters: Array = s.combat["fighters"]
 	var ids: Array[String] = []
 	var side := 1
 	for spec: Dictionary in specs:
 		var m: Dictionary = mons.get(str(spec.get("monster", "")), {})
 		if m.is_empty():
 			continue
-		var count := int(spec.get("count", 1))
-		var base := str(spec.get("name", m["name"]))
-		var same := fighters.values().filter(func(f: Dictionary) -> bool: return str(f.get("base", "")) == base).size()
+		var whose := str(spec.get("id", spec.get("npc_id", "")))  # a character of the game fights as itself (v0.7.62)
+		var count := 1 if not whose.is_empty() else int(spec.get("count", 1))
+		var base := str(spec.get("base", spec.get("name", m["name"])))
+		var same := fighters.filter(func(id: String) -> bool: return str(fighter(s, id).get("base", "")) == base).size()
 		for i in count:
-			var n := int(s.combat.get("next_id", 0)) + 1
-			s.combat["next_id"] = n
 			var ranged := (m["actions"] as Array).all(func(a: Dictionary) -> bool: return str(a.get("kind")) == "ranged")
 			var col := col_at if col_at != 99 else (int(spec["col"]) if spec.has("col") else side * int(cfg(data)["start_cols"]["ranged" if ranged else "melee"]))
 			if side_name == "ally" and col_at == 99 and not spec.has("col"):
 				col = int(player(s)["col"])  # allies start by the hero
 			side = -side
-			var name := base
-			if count > 1 or same > 0:
+			var name := str(spec.get("name", base))
+			if not spec.has("base") and (count > 1 or same > 0):
 				name += " %d" % (same + i + 1)
-			var id := ("a%d" if side_name == "ally" else "e%d") % n
-			fighters[id] = {"id": id, "side": side_name, "monster": str(spec["monster"]), "name": name, "base": base,
+			var id := whose if not whose.is_empty() else str(Being.spawn(s, {"monster": str(spec["monster"]), "name": name, "base": base})["id"])
+			var f := {"id": id, "side": side_name, "monster": str(spec["monster"]), "name": name, "base": base,
 				"desc": str(spec.get("desc", "")), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "ac": int(m["ac"]),
 				"col": clampi(col, -edge(data), edge(data)), "status": "active", "conditions": [], "morale": false,
 				"npc_id": str(spec.get("npc_id", "")), "by_hero": bool(spec.get("by_hero", false))}
+			Being.of(s, id)["fight"] = f
+			fighters.append(id)
 			if spec.has("hp"):  # a creature of the room fought again keeps its wounds (v0.7.22.16, #21)
-				fighters[id]["hp"] = clampi(int(spec["hp"]), 1, int(m["hp"]))
-			elif s.npc_hp.has(str(spec.get("npc_id", ""))):  # the wounds of the last fight
-				fighters[id]["hp"] = clampi(int(s.npc_hp[str(spec["npc_id"])]), 1, int(m["hp"]))
+				f["hp"] = clampi(int(spec["hp"]), 1, int(m["hp"]))
+			elif Being.view(s, id).has("hp"):  # the wounds of the last fight
+				f["hp"] = clampi(int(Being.view(s, id)["hp"]), 1, int(m["hp"]))
 			if bool(spec.get("no_xp", false)):  # its XP was given for the fight that beat it
-				fighters[id]["no_xp"] = true
-			if spec.has("was_creature"):  # back in the room if the hero runs
-				fighters[id]["was_creature"] = spec["was_creature"]
+				f["no_xp"] = true
 			if bool(spec.get("law", false)):  # the law's guard: its captive is held, not bound (v0.7.22.17)
-				fighters[id]["law"] = true
+				f["law"] = true
 			for k: String in ["ally", "summon_id", "spell", "creature_id"]:  # v0.7.22.22: whose ally and from where
 				if spec.has(k):
-					fighters[id][k] = str(spec[k])
+					f[k] = str(spec[k])
 			if bool(spec.get("helper", false)):
-				fighters[id]["helper"] = true
+				f["helper"] = true
 			if not str(spec.get("npc_id", "")).is_empty() and not TheftRules.lost_weapons(s, data, str(spec["npc_id"])).is_empty():
-				fighters[id]["actions"] = TheftRules.armed_actions(s, data, str(spec["npc_id"]), m["actions"])  # big test #3 (v0.7.22.8)
+				f["actions"] = TheftRules.armed_actions(s, data, str(spec["npc_id"]), m["actions"])  # big test #3 (v0.7.22.8)
 			ids.append(id)
 	return ids
+
+
+## The fight is over (v0.7.62): the fighters are their records again. What stays in the world: people, the creatures of
+## the rooms, the summoned, the heads of an encounter still standing and the captors, with their wounds. Those a fight
+## made and did not keep are gone.
+static func close(s: GameSession) -> void:
+	var captors: Array = s.captive.get("foes", [])
+	for id: String in s.combat.get("fighters", []):
+		var b := Being.view(s, id)
+		var f: Dictionary = b.get("fight", {})
+		b.erase("fight")
+		b.erase("was")
+		if b.has("creature") or b.has("summon") or (id != PLAYER and not str(f.get("npc_id", "")).is_empty()):
+			if b.is_empty():
+				Being.forget(s, id)
+		elif str(f.get("status")) == "active" and (b.has("encounter") or captors.has(id)):
+			b["hp"] = int(f["hp"])
+			if bool(f.get("no_xp", false)):
+				b["no_xp"] = true
+		else:
+			Being.forget(s, id)
+	s.combat = {}
 
 
 # --- surprise and stealth (v0.6.2) -------------------------------------------------------------------
@@ -1113,7 +1134,7 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String) -> Arr
 			a["status"] = "gone"
 			lines.append("%s исчезает — концентрация прервана" % a["name"])
 	var on_others := allies(s, false).any(func(id: String) -> bool: return fighter(s, id).has("lethargy")) \
-		or s.npc_buffs.values().any(func(l: Array) -> bool: return l.any(func(x: Dictionary) -> bool: return str(x["spell"]) == spell_id))  # v0.7.50.1
+		or Being.with(s, "buffs").any(func(id: String) -> bool: return (Being.view(s, id)["buffs"] as Array).any(func(x: Dictionary) -> bool: return str(x["spell"]) == spell_id))  # v0.7.50.1
 	AllyRules.drop_buffs(s, spell_id)
 	if spell_id == "haste" and not on_others:  # v0.7.13.3: a wave of lethargy
 		s.character["lethargy"] = true

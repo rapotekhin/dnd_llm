@@ -32,25 +32,25 @@ func _joins(s: GameSession, npc: String) -> bool:
 
 func test_a_dead_follower_leaves() -> void:
 	var s := _hero()
-	s.followers = ["npc_mercenary"]
+	Being.follow(s, "npc_mercenary")
 	assert_bool(_joins(s, "npc_mercenary")).is_true()
 	CrimeRules.on_death(s, data, "npc_mercenary", false, s.room_id)
-	assert_array(s.followers).is_empty()
+	assert_array(Being.followers(s)).is_empty()
 
 
 func test_the_dead_and_the_knocked_out_do_not_fight() -> void:
 	var s := _hero()
-	s.followers = ["npc_mercenary"]
-	s.creatures[s.room_id] = [{"id": "c1", "name": "Кейра", "monster": "guard", "state": "unconscious", "npc_id": "npc_mercenary"}]
+	Being.follow(s, "npc_mercenary")
+	var lying := Being.put(s, "npc_mercenary", "creature", {"name": "Кейра", "monster": "guard", "state": "unconscious", "npc_id": "npc_mercenary", "at": s.room_id})
 	assert_bool(_joins(s, "npc_mercenary")).is_false()
-	s.creatures[s.room_id] = []
-	s.dead_npcs.append("npc_mercenary")
+	CreatureRules.remove(s, lying)
+	Being.die(s, "npc_mercenary")
 	assert_bool(_joins(s, "npc_mercenary")).is_false()
 
 
 func test_a_wounded_npc_fights_with_its_wounds() -> void:
 	var s := _hero()
-	s.npc_hp["npc_mercenary"] = 3
+	Being.of(s, "npc_mercenary")["hp"] = 3
 	CombatRules.start(s, data, [{"monster": "guard", "name": "Кейра", "npc_id": "npc_mercenary", "col": 0}], {})
 	assert_int(int(CombatRules.fighter(s, CombatRules.enemies(s)[0])["hp"])).is_equal(3)
 
@@ -60,13 +60,13 @@ func test_an_npc_foe_keeps_its_wounds_after_the_fight() -> void:
 	CombatRules.start(s, data, [{"monster": "guard", "name": "Кейра", "npc_id": "npc_mercenary", "col": 0}], {})
 	CombatRules.fighter(s, CombatRules.enemies(s)[0])["hp"] = 4
 	AllyRules.after_fight(s)
-	assert_int(int(s.npc_hp["npc_mercenary"])).is_equal(4)
+	assert_int(int(Being.of(s, "npc_mercenary")["hp"])).is_equal(4)
 
 
 func test_captors_let_go_keep_wounds_and_given_xp() -> void:
 	var s := _hero()
 	EncounterRules.as_creatures(s, s.room_id, [{"monster": "goblin", "name": "Гоблин", "count": 1, "hp": 2, "max_hp": 7, "no_xp": true}], "truce")
-	var c: Dictionary = s.creatures[s.room_id][0]
+	var c: Dictionary = CreatureRules.here(s, s.room_id)[0]
 	assert_int(int(c["hp"])).is_equal(2)
 	assert_int(int(c["max_hp"])).is_equal(7)
 	assert_bool(bool(c["xp_given"])).is_true()
@@ -74,14 +74,14 @@ func test_captors_let_go_keep_wounds_and_given_xp() -> void:
 
 func test_a_creature_the_hero_ran_from_stays_with_its_wounds() -> void:
 	var s := _hero()
-	s.creatures[s.room_id] = [{"id": "c1", "name": "Гоблин", "monster": "goblin", "state": "truce", "bound": false, "led": false, "hp": 6, "max_hp": 7}]
-	CreatureRules.act(s, data, "c1", "attack")
-	assert_array(s.creatures[s.room_id]).is_empty()
+	var id := str(CreatureRules.add(s, s.room_id, {"name": "Гоблин", "monster": "goblin", "state": "truce", "bound": false, "led": false, "hp": 6, "max_hp": 7})["id"])
+	CreatureRules.act(s, data, id, "attack")
+	assert_array(CreatureRules.here(s, s.room_id)).is_empty()
 	CombatRules.start(s, data, s.pending_fight, {})
 	CombatRules.fighter(s, CombatRules.enemies(s)[0])["hp"] = 2
-	CreatureRules.after_flight(s, s.room_id)
-	var c: Dictionary = s.creatures[s.room_id][0]
-	assert_str(str(c["id"])).is_equal("c1")
+	CreatureRules.after_flight(s)
+	var c: Dictionary = CreatureRules.here(s, s.room_id)[0]
+	assert_str(str(c["id"])).is_equal(id)
 	assert_int(int(c["hp"])).is_equal(2)
 
 

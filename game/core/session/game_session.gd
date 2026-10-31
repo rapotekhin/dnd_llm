@@ -48,7 +48,9 @@ var npc_id: String = ""
 var character: Dictionary = {}
 ## Items created by the master and accepted by the engine: {item_id: definition}. Kept so saves work alone.
 var items: Dictionary = {}
-var attitudes: Dictionary = {}
+## Every character the game touched, one record each (v0.7.61, Being): {id: record}.
+var beings: Dictionary = {}
+var being_counter: int = 0
 var flags: Array[String] = []
 ## Failed skill checks: "skill|target" → {"result", "advantages"} (ExplorationRules); cleared by a long rest.
 var locks: Dictionary = {}
@@ -75,12 +77,7 @@ var encounters_done: Array[String] = []
 ## «пройти стражу» is done, the foes still there.
 var encounters_passed: Array[String] = []
 var encounters_peace: Array[String] = []  # met as friends (v0.7.50)
-## v0.7.50.1 (AllyRules): an NPC's wounds between fights {npc_id: hp}, full when absent; the spells that lie on it
-## {npc_id: [{spell, slot, ends}]}, `ends` — the game clock, -1 until the concentration ends.
-var npc_hp: Dictionary = {}
-var npc_buffs: Dictionary = {}
 var factions: Dictionary = {}  # the hero's standing: {id: {pts, met_day, rest, why, master_day}} (v0.7.50)
-var dead_npcs: Array[String] = []
 ## The «Красться» toggle of exploration (v0.6.2).
 var sneaking: bool = false
 ## Minutes since midnight (TimeRules, v0.6.3); a new game starts in the morning.
@@ -96,18 +93,13 @@ var quest_parts: Dictionary = {}
 ## Spent traps {"room:secret": "sprung" | "disarmed"} and emptied caches ["room:secret"] (v0.6.3).
 var traps: Dictionary = {}
 var caches_taken: Array[String] = []
-## Pickpocketed NPCs: {npc_id: day} — one theft per NPC a day (v0.6.5).
-var pickpocketed: Dictionary = {}
 ## The room where people noticed the sneaking player: no sneaking there until they leave (v0.6.5).
 var sneak_noticed: String = ""
 ## Kinds of foes the player knows (inspected in a fight, v0.6.6): their numbers show on the cards.
 var known_monsters: Array[String] = []
-## Things of the rooms {room_id: [prop]} (PropRules), NPCs' pockets {npc_id: [entry]} (TheftRules), shops closed
-## for the player {npc_id: day} and thefts caught {npc_id: day} (v0.7.0).
+## Things of the rooms {room_id: [prop]} (PropRules) and shops closed for the player {npc_id: day} (v0.7.0).
 var props: Dictionary = {}
-var pockets: Dictionary = {}
 var shop_closed: Dictionary = {}
-var caught_by: Dictionary = {}
 
 ## Crimes of the hero (CrimeRules, v0.7.14): [{id, victim, room, location, at, witnesses, known, settled}]; wanted
 ## {location_id: abs minute since}; the room where the guard holds the hero ("" — free); bodies {npc_id: room_id}
@@ -119,15 +111,6 @@ var arrest: String = ""
 ## answers already tried in this hold.
 var let_go: Dictionary = {}
 var arrest_tried: Array[String] = []
-## The hero's spells on NPCs (v0.7.22.3, SpellEffects.npc_spells): {npc_id: [{spell, name, until, conc}]}.
-var npc_spells: Dictionary = {}
-## Weapons stolen from NPCs (v0.7.22.8, TheftRules.lost_weapons): {npc_id: {item_id: day}}.
-var disarmed: Dictionary = {}
-## When each body fell (v0.7.22.10, CrimeRules.bury): {npc_id: abs minute}.
-var body_at: Dictionary = {}
-## The creatures fights left in the rooms (v0.7.22.11, CreatureRules): {room_id: [creature]}.
-var creatures: Dictionary = {}
-var creature_counter: int = 0
 ## v0.7.22.12 (EncounterRules): foes that did not notice the hero {room: {encounter, from}}; the hero's captivity
 ## {room, foes, encounter, from} ({} — free).
 var lurking: Dictionary = {}
@@ -146,13 +129,11 @@ var permit_asked: Dictionary = {}
 var doors: Dictionary = {}
 ## The day the master last described each room (v0.7.22.20, ExplorationRules.again_line): {room_id: day}.
 var described: Dictionary = {}
-var bodies: Dictionary = {}
 ## The rolls of the rules since the last chat line of effects (RollParts.note, v0.7.39.5): not saved, the next
 ## effect line takes them for its hover.
 var roll_notes: Array[Dictionary] = []
 ## Lines of the faith (FaithRules.deed) from a roll inside a turn (v0.7.49): not saved, the next chat line takes them.
 var faith_lines: Array[String] = []
-var searched: Array[String] = []
 var quests_failed: Array[String] = []
 ## The chronicle (v0.7.14.4): every line of the engine in the chat with its day, minute and room
 ## [{day, minute, room, text}], the newest CHRONICLE_MAX — the journal's «Хроника» and the master's memory.
@@ -178,30 +159,13 @@ var quests_done: Array[String] = []
 ## What each NPC remembers of the hero (v0.7.15, «Социальный режим 2.0»): npc_id → [{day, text}], the newest
 ## NPC_MEMORY_MAX — facts the engine records (quests, caught thefts, murders) and the master's notes about the NPC.
 const NPC_MEMORY_MAX := 12
-var npc_memory: Dictionary = {}
-## What NPCs granted by words (v0.7.15.2): npc_id → {pct, until_day} — a trader's discount; npc_id → the day of
-## its last free service.
-var discounts: Dictionary = {}
-var favors: Dictionary = {}
-## A sick NPC's disease (v0.7.39, DiseaseRules): npc_id → {id, until} — it passes on the day `until`; id "" — healed.
-## The pack's `sick` NPCs enter it on the first day tick.
-var npc_sick: Dictionary = {}
-## Reputation in settlements (v0.7.17, ReputationRules): location_id → points; the attitude of the people not dealt
-## with yet by it: npc_id → attitude (recomputed when the reputation changes).
+## Reputation in settlements (v0.7.17, ReputationRules): location_id → points.
 var reputation: Dictionary = {}
-var attitude_base: Dictionary = {}
 ## What the master made in this game (v0.7.20, WorldGen): {"npcs": {id: def}, "npc_rooms": {id: room}} — merged into the
 ## game's copy of the pack's world.
 var generated: Dictionary = {}
-## NPCs who go with the hero (v0.7.20.3, FollowRules) and those left in a room other than their own: npc_id → room.
-var followers: Array[String] = []
-var npc_at: Dictionary = {}
-## A follower's last meal (v0.7.39.1, FollowRules.meals): npc_id → {at: the absolute minute, hungry: days unfed}.
-var follower_fed: Dictionary = {}
 ## Creatures a spell called to go with the hero (v0.7.22.22, AllyRules): [{id, spell, monster, name, until, concentration,
 ## hp, helper}]; `until` — the absolute minute they go, −1 until let go.
-var summons: Array[Dictionary] = []
-var summon_counter: int = 0
 ## NPC secrets the hero learned (v0.7.15.3): "npc_id:secret_id".
 var secrets_told: Array[String] = []
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
@@ -359,30 +323,31 @@ func chronicle_tail(world: Dictionary, n: int) -> Array[String]:
 func remember(npc_id: String, text: String) -> void:
 	if npc_id.is_empty() or text.strip_edges().is_empty():
 		return
-	var list: Array = npc_memory.get(npc_id, [])
+	var list: Array = Being.view(self, npc_id).get("memory", [])
 	if list.any(func(m: Dictionary) -> bool: return str(m["text"]) == text):
 		return
 	list.append({"day": day, "text": text})
-	npc_memory[npc_id] = list.slice(maxi(0, list.size() - NPC_MEMORY_MAX))
+	Being.of(self, npc_id)["memory"] = list.slice(maxi(0, list.size() - NPC_MEMORY_MAX))
 
 
 ## What the NPC remembers, «день 2 — …», the newest `n`.
 func memory_of(npc_id: String, n: int = NPC_MEMORY_MAX) -> Array[String]:
 	var out: Array[String] = []
-	for m: Dictionary in npc_memory.get(npc_id, []):
+	for m: Dictionary in Being.view(self, npc_id).get("memory", []):
 		out.append("день %d — %s" % [int(m["day"]), m["text"]])
 	return out.slice(maxi(0, out.size() - n))
 
 
 ## The NPC's attitude; one the hero has not dealt with yet — by the reputation of its place (v0.7.17).
 func attitude(id: String) -> int:
-	return int(attitudes.get(id, attitude_base.get(id, 0)))
+	var b := Being.view(self, id)
+	return int(b.get("attitude", b.get("attitude_base", 0)))
 
 
 ## Moves an NPC's attitude by `delta` within rules.attitude_range (v0.7.7: the range is data, not code).
 func shift_attitude(id: String, delta: int, data: Dictionary) -> void:
 	var r := attitude_bounds(data)
-	attitudes[id] = clampi(attitude(id) + delta, r.x, r.y)
+	Being.of(self, id)["attitude"] = clampi(attitude(id) + delta, r.x, r.y)
 
 
 static func attitude_bounds(data: Dictionary) -> Vector2i:
@@ -496,8 +461,9 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"mode": mode,
 		"npc_id": npc_id,
 		"character": character,
+		"beings": beings,
+		"being_counter": being_counter,
 		"items": items,
-		"attitudes": attitudes,
 		"flags": flags,
 		"summaries": summaries,
 		"locks": locks,
@@ -515,48 +481,27 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"encounters_done": encounters_done,
 		"encounters_passed": encounters_passed,
 		"encounters_peace": encounters_peace,
-		"npc_hp": npc_hp,
-		"npc_buffs": npc_buffs,
 		"factions": factions,
-		"dead_npcs": dead_npcs,
 		"sneaking": sneaking,
 		"minute": minute,
 		"quests_active": quests_active,
 		"quest_parts": quest_parts,
 		"traps": traps,
 		"caches_taken": caches_taken,
-		"pickpocketed": pickpocketed,
 		"sneak_noticed": sneak_noticed,
 		"fight_on_load": fight_on_load,
 		"known_monsters": known_monsters,
 		"props": props,
-		"pockets": pockets,
 		"shop_closed": shop_closed,
-		"caught_by": caught_by,
 		"notes": notes,
-		"npc_memory": npc_memory,
-		"discounts": discounts,
-		"favors": favors,
-		"npc_sick": npc_sick,
 		"secrets_told": secrets_told,
 		"generated": generated,
-		"followers": followers,
-		"follower_fed": follower_fed,
-		"npc_at": npc_at,
-		"summons": summons,
-		"summon_counter": summon_counter,
 		"reputation": reputation,
-		"attitude_base": attitude_base,
 		"crimes": crimes,
 		"wanted": wanted,
 		"arrest": arrest,
 		"let_go": let_go,
 		"arrest_tried": arrest_tried,
-		"npc_spells": npc_spells,
-		"disarmed": disarmed,
-		"body_at": body_at,
-		"creatures": creatures,
-		"creature_counter": creature_counter,
 		"lurking": lurking,
 		"captive": captive,
 		"foreign": foreign,
@@ -566,8 +511,6 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"permit_asked": permit_asked,
 		"doors": doors,
 		"described": described,
-		"bodies": bodies,
-		"searched": searched,
 		"quests_failed": quests_failed,
 		"reward_spent": reward_spent,
 		"magic_given": magic_given,
@@ -605,8 +548,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.npc_id = str(d.get("npc_id", ""))
 	s.character = normalized_character(d.get("character", {}))
 	s.items = d.get("items", {})
-	for id: String in d.get("attitudes", {}):
-		s.attitudes[id] = int(d["attitudes"][id])
+	s.beings = _whole(d.get("beings", {}))
+	s.being_counter = int(d.get("being_counter", 0))
 	for f: Variant in d.get("flags", []):
 		s.flags.append(str(f))
 	s.summaries = d.get("summaries", {})
@@ -630,15 +573,6 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for e: Variant in d.get("encounters_peace", []):
 		s.encounters_peace.append(str(e))
 	s.factions = _whole(d.get("factions", {}))
-	for id: String in d.get("npc_hp", {}):
-		s.npc_hp[id] = int(d["npc_hp"][id])
-	for id: String in d.get("npc_buffs", {}):
-		var buffs: Array = []
-		for b: Dictionary in d["npc_buffs"][id]:
-			buffs.append({"spell": str(b["spell"]), "slot": int(b["slot"]), "ends": int(b["ends"])})
-		s.npc_buffs[id] = buffs
-	for n: Variant in d.get("dead_npcs", []):
-		s.dead_npcs.append(str(n))
 	s.sneaking = bool(d.get("sneaking", false))
 	s.minute = int(d.get("minute", 480))
 	for q: String in d.get("quests_active", {}):
@@ -648,8 +582,6 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.traps = d.get("traps", {})
 	for k: Variant in d.get("caches_taken", []):
 		s.caches_taken.append(str(k))
-	for n: String in d.get("pickpocketed", {}):
-		s.pickpocketed[n] = int(d["pickpocketed"][n])
 	s.sneak_noticed = str(d.get("sneak_noticed", ""))
 	var fight: Variant = d.get("fight_on_load", {})
 	s.fight_on_load = (fight as Dictionary).duplicate(true) if fight is Dictionary else {}
@@ -668,15 +600,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 			for k: String in ["lock_dc", "dropped_at"]:
 				if p.has(k):
 					p[k] = int(p[k])
-	s.pockets = d.get("pockets", {})
-	for n: String in s.pockets:
-		for e: Dictionary in s.pockets[n]:
-			for k: String in ["cp", "qty", "dc"]:
-				e[k] = int(e.get(k, 0))
 	for n: String in d.get("shop_closed", {}):
 		s.shop_closed[n] = int(d["shop_closed"][n])
-	for n: String in d.get("caught_by", {}):
-		s.caught_by[n] = int(d["caught_by"][n])
 	for e: Variant in d.get("crimes", []):
 		if e is Dictionary:
 			var cr := _whole_numbers((e as Dictionary).duplicate(true))  # at, known_at, the sentence's days
@@ -690,15 +615,6 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.let_go[loc] = int(d["let_go"][loc])
 	for how: Variant in d.get("arrest_tried", []):
 		s.arrest_tried.append(str(how))
-	s.npc_spells = (d.get("npc_spells", {}) as Dictionary).duplicate(true)
-	s.creatures = (d.get("creatures", {}) as Dictionary).duplicate(true)
-	for room: String in s.creatures:
-		for c: Variant in s.creatures[room]:
-			c["since"] = int(c.get("since", 0))
-			for k: String in ["hp", "max_hp"]:  # v0.7.22.16
-				if c.has(k):
-					c[k] = int(c[k])
-	s.creature_counter = int(d.get("creature_counter", 0))
 	s.lurking = (d.get("lurking", {}) as Dictionary).duplicate(true)
 	s.captive = (d.get("captive", {}) as Dictionary).duplicate(true)
 	for id: String in d.get("foreign", {}):
@@ -724,25 +640,6 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.permit_asked[n] = int(d["permit_asked"][n])
 	for r: String in d.get("described", {}):
 		s.described[r] = int(d["described"][r])
-	var foe_lists: Array = [s.captive.get("foes", [])]
-	for room: String in s.lurking:  # the captors that lurk after an escape (v0.7.22.16)
-		foe_lists.append((s.lurking[room] as Dictionary).get("foes", []))
-	for list: Variant in foe_lists:
-		for f: Variant in list:
-			for k: String in ["count", "hp"]:
-				if f is Dictionary and f.has(k):
-					f[k] = int(f[k])
-	for npc: String in d.get("body_at", {}):
-		s.body_at[npc] = int(d["body_at"][npc])
-	for npc: String in d.get("disarmed", {}):
-		var gone := {}
-		for id: String in d["disarmed"][npc]:
-			gone[id] = int(d["disarmed"][npc][id])
-		s.disarmed[npc] = gone
-	for n: String in d.get("bodies", {}):
-		s.bodies[n] = str(d["bodies"][n])
-	for n: Variant in d.get("searched", []):
-		s.searched.append(str(n))
 	for q: Variant in d.get("quests_failed", []):
 		s.quests_failed.append(str(q))
 	s.reward_spent = int(d.get("reward_spent", 0))
@@ -754,15 +651,6 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for e: Variant in d.get("notes", []):
 		if e is Dictionary:
 			s.notes.append((e as Dictionary).duplicate())
-	for id: String in d.get("discounts", {}):
-		var dsc: Dictionary = d["discounts"][id]
-		s.discounts[id] = {"pct": int(dsc.get("pct", 0)), "until_day": int(dsc.get("until_day", 0))}
-	for id: String in d.get("favors", {}):
-		s.favors[id] = int(d["favors"][id])
-	for id: String in d.get("npc_sick", {}):
-		var ns: Variant = d["npc_sick"][id]
-		if ns is Dictionary:
-			s.npc_sick[id] = {"id": str(ns.get("id", "")), "until": int(ns.get("until", 0))}
 	for k: Variant in d.get("secrets_told", []):
 		s.secrets_told.append(str(k))
 	if d.get("generated") is Dictionary:
@@ -770,30 +658,8 @@ static func from_dict(d: Dictionary) -> GameSession:
 		for k: String in ["faith", "letters", "rumors", "weather"]:  # counters and days, whole numbers again after JSON
 			if s.generated.get(k) is Dictionary:
 				_whole_numbers(s.generated[k])
-	for n: Variant in d.get("followers", []):
-		s.followers.append(str(n))
-	for id: String in d.get("follower_fed", {}):
-		var ff: Variant = d["follower_fed"][id]
-		if ff is Dictionary:
-			s.follower_fed[id] = {"at": int(ff.get("at", 0)), "hungry": int(ff.get("hungry", 0))}
-	for k: String in d.get("npc_at", {}):
-		s.npc_at[k] = str(d["npc_at"][k])
-	for m: Variant in d.get("summons", []):
-		if m is Dictionary:
-			s.summons.append((m as Dictionary).duplicate(true))
-	s.summon_counter = int(d.get("summon_counter", 0))
 	for k: String in d.get("reputation", {}):
 		s.reputation[k] = int(d["reputation"][k])
-	for k: String in d.get("attitude_base", {}):
-		s.attitude_base[k] = int(d["attitude_base"][k])
-	var mem: Variant = d.get("npc_memory", {})
-	if mem is Dictionary:
-		for id: String in mem:
-			var list: Array = []
-			for m: Variant in mem[id]:
-				if m is Dictionary:
-					list.append({"day": int(m.get("day", 1)), "text": str(m.get("text", ""))})
-			s.npc_memory[id] = list
 	for q: Variant in d.get("quests_done", []):
 		s.quests_done.append(str(q))
 	for id: String in d.get("merchants", {}):
@@ -810,15 +676,9 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
 		return {}
 	var c: Dictionary = (raw as Dictionary).duplicate(true)
-	for k: String in ["round", "turn", "xp", "coins_cp", "next_id", "parley_ok", "parley_fail"]:
+	for k: String in ["round", "turn", "xp", "coins_cp", "parley_ok", "parley_fail"]:
 		if c.has(k):
 			c[k] = int(c[k])
-	for id: String in c.get("fighters", {}):
-		var f: Dictionary = c["fighters"][id]
-		for k: String in ["hp", "max_hp", "ac", "col", "init"]:
-			if f.has(k):
-				f[k] = int(f[k])
-		_whole_numbers(f)  # the riders of v0.7.13 (guided, slowed, oiled…) and the timers
 	for z: Variant in c.get("zones", []):  # the spell zones of v0.7.13.5
 		if z is Dictionary:
 			_whole_numbers(z)
@@ -844,7 +704,7 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 
 ## The NPCs of a room who are alive (killed ones are gone from the world).
 func npcs_alive(ids: Array[String]) -> Array[String]:
-	return ids.filter(func(id: String) -> bool: return not dead_npcs.has(id))
+	return ids.filter(func(id: String) -> bool: return not Being.dead(self, id))
 
 
 ## The living pack NPCs in the room now: the room's variants by the world's flags (SceneRules, v0.7.14.1).
@@ -854,11 +714,7 @@ func npcs_here(world: Dictionary, room_id: String) -> Array[String]:
 
 ## A pack NPC knocked out in a fight lies as a creature of a room (v0.7.22.16): not a person of the scene till it wakes.
 func held_as_creature(npc_id: String) -> bool:
-	for room: String in creatures:
-		for c: Dictionary in creatures[room]:
-			if str(c.get("npc_id", "")) == npc_id:
-				return true
-	return false
+	return Being.view(self, npc_id).has("creature")
 
 
 static func _normalized_merchant(m: Dictionary) -> Dictionary:

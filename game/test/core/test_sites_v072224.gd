@@ -111,15 +111,3 @@ func test_the_map_is_nested_boxes() -> void:
 	for i in locs.size():
 		for j in range(i + 1, locs.size()):
 			assert_bool((b["locations"][locs[i]] as Rect2).intersects(b["locations"][locs[j]])).override_failure_message("%s × %s" % [locs[i], locs[j]]).is_false()
-
-
-func test_an_old_saves_made_rooms_get_sites() -> void:
-	var old := {"save_version": 41, "session": {"generated": {"rooms": {
-		"gen_room_1": {"name": "Курган", "location_id": "gen_loc_1", "exits": ["gen_room_2", "brod-gate"]},
-		"gen_room_2": {"name": "Хижина", "location_id": "gen_loc_1", "exits": ["gen_room_1"]},
-		"gen_room_3": {"name": "Пасека", "location_id": "pushcha", "exits": ["pushcha-trail"]}}}}}
-	SaveFormat.migrate(old)
-	var rooms: Dictionary = old["session"]["generated"]["rooms"]
-	assert_str(str(rooms["gen_room_1"]["site_id"])).is_equal(str(rooms["gen_room_2"]["site_id"]))  # one place — one site
-	assert_str(str(rooms["gen_room_3"]["site_id"])).is_not_equal(str(rooms["gen_room_1"]["site_id"]))
-	assert_int((old["session"]["generated"]["sites"] as Dictionary).size()).is_equal(2)

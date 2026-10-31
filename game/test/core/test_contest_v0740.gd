@@ -18,7 +18,7 @@ func _session() -> GameSession:
 	s.room_id = "brod-tavern-hall"
 	s.minute = 19 * 60
 	s.character["gold_cp"] = 10000
-	s.pockets[NPC] = [
+	Being.of(s, NPC)["pockets"] = [
 		{"id": "k1", "name": "Кошель", "item_id": "", "cp": 3000, "qty": 1, "worn": false, "dc": 12},
 		{"id": "k2", "name": "Кинжал", "item_id": "dagger", "cp": 0, "qty": 1, "worn": false, "dc": 14},
 	]

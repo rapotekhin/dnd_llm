@@ -65,7 +65,7 @@ static func dc(s: GameSession, data: Dictionary, npc_id: String, skill: String, 
 
 ## The trader's discount for the hero now, percent (0 — none or ran out).
 static func discount(s: GameSession, npc_id: String) -> int:
-	var d: Dictionary = s.discounts.get(npc_id, {})
+	var d: Dictionary = Being.view(s, npc_id).get("discount", {})
 	return int(d.get("pct", 0)) if int(d.get("until_day", 0)) >= s.day else 0
 
 
@@ -97,7 +97,7 @@ static func plan_discount(s: GameSession, data: Dictionary, npc_id: String, pct:
 
 static func grant_discount(s: GameSession, data: Dictionary, plan: Dictionary) -> void:
 	var npc_id := str(plan["discount"])
-	s.discounts[npc_id] = {"pct": int(plan["pct"]), "until_day": int(plan["until_day"])}
+	Being.of(s, npc_id)["discount"] = {"pct": int(plan["pct"]), "until_day": int(plan["until_day"])}
 	s.remember(npc_id, "дал%s герою скидку %d%% до дня %d" % [CrimeRules._ending(data, npc_id), int(plan["pct"]), int(plan["until_day"])])
 
 
@@ -115,8 +115,8 @@ static func plan_favor(s: GameSession, data: Dictionary, npc_id: String, service
 		return {"reason": "услуга %s сейчас не нужна: у героя нет того, к чему она применима" % service}
 	if not item.is_empty() and not TradeRules.targets(s, data, service).has(item):
 		return {"reason": "%s — не для услуги %s; подходят: %s" % [item, service, ", ".join(TradeRules.targets(s, data, service))]}
-	if s.favors.has(npc_id) and s.day - int(s.favors[npc_id]) < int(c["cooldown_days"]):
-		return {"reason": "%s уже оказал(а) герою услугу даром в день %d — следующая не раньше дня %d" % [npc.get("name", npc_id), int(s.favors[npc_id]), int(s.favors[npc_id]) + int(c["cooldown_days"])]}
+	if Being.view(s, npc_id).has("favor") and s.day - int(Being.of(s, npc_id)["favor"]) < int(c["cooldown_days"]):
+		return {"reason": "%s уже оказал(а) герою услугу даром в день %d — следующая не раньше дня %d" % [npc.get("name", npc_id), int(Being.of(s, npc_id)["favor"]), int(Being.of(s, npc_id)["favor"]) + int(c["cooldown_days"])]}
 	var why := _willing(s, data, npc_id, int(c["min_attitude"]), won)
 	if not why.is_empty():
 		return {"reason": why}
@@ -148,7 +148,7 @@ static func _outcome(s: GameSession, data: Dictionary, service: String, item: St
 
 static func grant_favor(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
 	var npc_id := str(plan["favor"])
-	s.favors[npc_id] = s.day
+	Being.of(s, npc_id)["favor"] = s.day
 	s.remember(npc_id, "оказал%s герою услугу даром (%s) — герой в долгу" % [CrimeRules._ending(data, npc_id), tr_service(data, str(plan["service"]))])
 	return TradeRules.buy_service(s, data, npc_id, str(plan["service"]), str(plan.get("item_id", "")), true)
 
@@ -162,9 +162,9 @@ static func tr_service(data: Dictionary, id: String) -> String:
 static func deal_text(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	var parts: Array[String] = []
 	if discount(s, npc_id) > 0:
-		parts.append("скидка герою %d%% до дня %d" % [discount(s, npc_id), int(s.discounts[npc_id]["until_day"])])
-	if s.favors.has(npc_id):
-		parts.append("услугу даром оказывал(а) в день %d" % int(s.favors[npc_id]))
+		parts.append("скидка герою %d%% до дня %d" % [discount(s, npc_id), int(Being.of(s, npc_id)["discount"]["until_day"])])
+	if Being.view(s, npc_id).has("favor"):
+		parts.append("услугу даром оказывал(а) в день %d" % int(Being.of(s, npc_id)["favor"]))
 	return "; ".join(parts)
 
 

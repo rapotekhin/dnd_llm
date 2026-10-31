@@ -94,7 +94,7 @@ static func waiting(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
 	for id: String in all:
 		var who := str(all[id].get("teacher", ""))
-		if bool(all[id].get("generated", false)) and not who.is_empty() and not here(s, data, who) and not s.dead_npcs.has(who) 				and not enrolled(c, id) and not done(c, id) and not known_already(s, data, id):
+		if bool(all[id].get("generated", false)) and not who.is_empty() and not here(s, data, who) and not Being.dead(s, who) 				and not enrolled(c, id) and not done(c, id) and not known_already(s, data, id):
 			out.append(id)
 	return out
 
@@ -709,7 +709,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary, teacher_def
 	var m: Dictionary = cfg(data)["make"]
 	var who := str(spec.get("npc_id", ""))
 	var away := teacher_def.is_empty() and not here(s, data, who)
-	if away and (BondRules.npc_def(s, data, who).is_empty() or s.dead_npcs.has(who)):
+	if away and (BondRules.npc_def(s, data, who).is_empty() or Being.dead(s, who)):
 		return {"reason": "%s — нет такого живого NPC в мире: учитель — NPC сцены или найденный find_teachers" % who}
 	var kind := str(spec.get("teach_kind", ""))
 	if not (m["kinds"] as Array).has(kind):

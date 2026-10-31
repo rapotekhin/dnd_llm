@@ -287,7 +287,7 @@ static func _finish(s: GameSession, data: Dictionary, won: bool) -> Array[String
 			"item":
 				for e: Dictionary in TheftRules.pockets(s, data, npc).duplicate():
 					if str(e["id"]) == str(stake["entry"]):
-						(s.pockets[npc] as Array).erase(e)
+						(Being.of(s, npc)["pockets"] as Array).erase(e)
 						ItemRules.found(s.character, data, s.items, str(e["item_id"]), int(e.get("qty", 1)))
 						lines.append("Победа: %s отдаёт %s" % [who, e["name"]])
 			"permit":

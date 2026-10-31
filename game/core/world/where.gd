@@ -42,19 +42,19 @@ static func of(s: GameSession, data: Dictionary, ref: String) -> Dictionary:
 ## Where an NPC is now: a body lies, a follower walks with the hero, a moved one stands where it was left, the rest keep
 ## their hours in the room of their pack.
 static func of_npc(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary:
-	if s.bodies.has(npc_id):
-		return room(str(s.bodies[npc_id]))
-	if s.followers.has(npc_id):
+	if Being.view(s, npc_id).has("body"):
+		return room(str(Being.of(s, npc_id)["body"]))
+	if Being.follows(s, npc_id):
 		return room(s.room_id)
-	if s.npc_at.has(npc_id):
-		return room(str(s.npc_at[npc_id])) if not str(s.npc_at[npc_id]).is_empty() else {"road": true}
+	if Being.view(s, npc_id).has("at"):
+		return room(str(Being.of(s, npc_id)["at"])) if not str(Being.of(s, npc_id)["at"]).is_empty() else {"road": true}
 	var at: Variant = SceneRules.scheduled(s, data["world"], npc_id)
 	return room(str(at) if at != null else ReputationRules.home_room(data, npc_id))
 
 
 ## The room to look for an NPC in, whatever the hour: moved or at home. "" — on the road.
 static func base_room(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	return str(s.npc_at.get(npc_id, ReputationRules.home_room(data, npc_id)))
+	return str(Being.view(s, npc_id).get("at", ReputationRules.home_room(data, npc_id)))
 
 
 ## The room of a position: what carries a thing leads to it; "" — in no room.

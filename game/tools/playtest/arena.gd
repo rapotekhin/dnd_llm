@@ -125,7 +125,7 @@ func run() -> void:
 	await _go(gs, "brod-square")
 	await _go(gs, "brod-tavern-hall")
 	s.minute = 19 * 60
-	s.pockets["npc_innkeeper"] = [{"id": "k1", "name": "Кошель", "item_id": "", "cp": 2000, "qty": 1, "worn": false, "dc": 12}]
+	Being.of(s, "npc_innkeeper")["pockets"] = [{"id": "k1", "name": "Кошель", "item_id": "", "cp": 2000, "qty": 1, "worn": false, "dc": 12}]
 	c["hp"] = int(c["max_hp"])
 	node("EventBus").state_changed.emit()
 	await frames(3)
@@ -151,7 +151,7 @@ func run() -> void:
 		var o := await _fight(gs, s)
 		step("the duel ended without a death", o in ["victory", "arena_lost"], o)
 		await _finish(gs)
-		step("the stake settled", ContestRules.state(s).is_empty() and not s.dead_npcs.has("npc_innkeeper"), Money.format(int(c["gold_cp"])))
+		step("the stake settled", ContestRules.state(s).is_empty() and not Being.dead(s, "npc_innkeeper"), Money.format(int(c["gold_cp"])))
 		await shot("duel_after")
 
 

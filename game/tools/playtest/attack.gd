@@ -83,7 +83,7 @@ func run() -> void:
 		await open_row("CreatureMore_" + str(c2["id"]))
 		await press(find(screen(), "Creature_finish_" + str(c2["id"])))
 		await frames(3)
-		step("finished off — a murder", s.dead_npcs.has(second) and s.crimes.any(func(cr: Dictionary) -> bool: return str(cr.get("kind")) == "murder"), _chat(s))
+		step("finished off — a murder", Being.dead(s, second) and s.crimes.any(func(cr: Dictionary) -> bool: return str(cr.get("kind")) == "murder"), _chat(s))
 		await shot("finished")
 
 

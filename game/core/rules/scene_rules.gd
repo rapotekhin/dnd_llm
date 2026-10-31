@@ -46,14 +46,14 @@ static func npcs(s: GameSession, world: Dictionary, room_id: String) -> Array[St
 	for id: String in all:
 		if (all[id].has("schedule") or FamilyRules.home_at(s, id) != null) and not out.has(id) and not FollowRules.placed(s, id) and str(scheduled(s, world, id)) == room_id:
 			out.append(id)
-	for id: String in s.npc_at:
-		if str(s.npc_at[id]) == room_id and all.has(id) and not out.has(id):
+	for id: String in Being.with(s, "at"):
+		if str(Being.of(s, id)["at"]) == room_id and all.has(id) and not out.has(id):
 			out.append(id)
 	for id: String in CalendarRules.guests(s, world, room_id):  # v0.7.44: a festival's guests
 		if all.has(id) and not out.has(id) and not FollowRules.placed(s, id):
 			out.append(id)
 	if room_id == s.room_id:
-		for id: String in s.followers:
+		for id: String in Being.followers(s):
 			if all.has(id) and not out.has(id):
 				out.append(id)
 	return out
@@ -80,7 +80,7 @@ static func absent(s: GameSession, world: Dictionary, room_id: String) -> Array[
 	for n: Variant in room(s, world, room_id).get("npcs", []):
 		var id := str(n)
 		var at: Variant = scheduled(s, world, id)
-		if at == null or str(at) == room_id or s.dead_npcs.has(id) or FollowRules.placed(s, id):
+		if at == null or str(at) == room_id or Being.dead(s, id) or FollowRules.placed(s, id):
 			continue
 		var back := 0
 		if FamilyRules.home_at(s, id) != null:

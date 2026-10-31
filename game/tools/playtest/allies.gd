@@ -17,7 +17,7 @@ func run() -> void:
 	var s: GameSession = gs.session
 	var data: Dictionary = node("Catalog").data
 	s.room_id = "brod-square"
-	s.followers.append("npc_mercenary")
+	Being.follow(s, "npc_mercenary")
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	await open_row("More_npc_mercenary")  # v0.7.22.23: the acts under the name
@@ -26,22 +26,22 @@ func run() -> void:
 		await shot("follower")
 		await press(stay)
 		await frames(3)
-		step("waits here", not s.followers.has("npc_mercenary") and str(s.npc_at.get("npc_mercenary", "")) == "brod-square")
+		step("waits here", not Being.follows(s, "npc_mercenary") and str(Being.view(s, "npc_mercenary").get("at", "")) == "brod-square")
 		var lead: Button = find(screen(), "Follower_lead_npc_mercenary")
 		if step("«Вести с собой» for one left here", lead != null):
 			await press(lead)
 			await frames(3)
-			step("goes with the hero again", s.followers.has("npc_mercenary"))
+			step("goes with the hero again", Being.follows(s, "npc_mercenary"))
 
 	AllyRules.summon(s, data, "find_familiar")
 	node("EventBus").state_changed.emit()
 	await frames(3)
-	var dismiss: Button = find(screen(), "Dismiss_" + str(s.summons[0]["id"]))
+	var dismiss: Button = find(screen(), "Dismiss_" + str(AllyRules.called(s)[0]["id"]))
 	if step("the owl with the hero, «Отпустить»", dismiss != null):
 		await shot("summon")
 		await press(dismiss)
 		await frames(3)
-		step("let go", s.summons.is_empty())
+		step("let go", AllyRules.called(s).is_empty())
 	AllyRules.summon(s, data, "find_familiar")
 
 	var enc: Dictionary = data["world"]["rooms"]["pushcha-burrow"]["encounter"]

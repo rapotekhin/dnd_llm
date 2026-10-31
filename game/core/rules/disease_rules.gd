@@ -101,8 +101,8 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 
 ## The disease an NPC has now: its own course in the session, else the pack's `sick`. "" — healthy.
 static func npc_disease(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	if s.npc_sick.has(npc_id):
-		return str(s.npc_sick[npc_id].get("id", ""))
+	if Being.view(s, npc_id).has("sick"):
+		return str(Being.of(s, npc_id)["sick"].get("id", ""))
 	return str(data["world"]["npcs"].get(npc_id, {}).get("sick", ""))
 
 
@@ -111,10 +111,10 @@ static func npc_disease(s: GameSession, data: Dictionary, npc_id: String) -> Str
 static func _npc_tick(s: GameSession, data: Dictionary) -> void:
 	for npc_id: String in data["world"]["npcs"]:
 		var id := str(data["world"]["npcs"][npc_id].get("sick", ""))
-		if not id.is_empty() and not s.npc_sick.has(npc_id):
-			s.npc_sick[npc_id] = {"id": id, "until": TimeRules.day_start(s.day + maxi(1, int(def_of(s, data, id).get("days", 1))))}
-	for npc_id: String in s.npc_sick:
-		var ns: Dictionary = s.npc_sick[npc_id]
+		if not id.is_empty() and not Being.view(s, npc_id).has("sick"):
+			Being.of(s, npc_id)["sick"] = {"id": id, "until": TimeRules.day_start(s.day + maxi(1, int(def_of(s, data, id).get("days", 1))))}
+	for npc_id: String in Being.with(s, "sick"):
+		var ns: Dictionary = Being.of(s, npc_id)["sick"]
 		if not str(ns.get("id", "")).is_empty() and s.clock >= int(ns.get("until", 0)):
 			ns["id"] = ""
 
@@ -133,7 +133,7 @@ static func cure_npc(s: GameSession, data: Dictionary, npc_id: String, power: St
 	var who := str(WorldView.new(data["world"]).npc(npc_id).get("name", npc_id))
 	if not npc_curable(s, data, npc_id, power):
 		return ["%s: травы не берут — %s" % [who, def_of(s, data, id).get("name", id)]]
-	s.npc_sick[npc_id] = {"id": "", "until": s.clock}
+	Being.of(s, npc_id)["sick"] = {"id": "", "until": s.clock}
 	return ["%s исцелён: %s" % [who, def_of(s, data, id).get("name", id)]]
 
 

@@ -33,7 +33,7 @@ static func quest(world: Dictionary, quest_id: String) -> Dictionary:
 static func stand_in(s: GameSession, world: Dictionary, npc_id: String) -> String:
 	var id := npc_id
 	for i in 5:
-		if id.is_empty() or not s.dead_npcs.has(id):
+		if id.is_empty() or not Being.dead(s, id):
 			return id
 		id = str(WorldView.new(world).npc(id).get("heir", ""))
 	return ""

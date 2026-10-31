@@ -195,7 +195,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 			var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as npc_follow
 			for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
 				var nid := str(n)
-				if s.followers.has(nid) or with.has(nid) or pending.any(func(p: Dictionary) -> bool: return str(p["plan"].get("follow_npc", "")) == nid):
+				if Being.follows(s, nid) or with.has(nid) or pending.any(func(p: Dictionary) -> bool: return str(p["plan"].get("follow_npc", "")) == nid):
 					continue
 				var f := FollowRules.plan(s, data, nid, true, false, (_won_over.get(turn_id, []) as Array).has(nid))
 				if f.has("reason"):
@@ -770,7 +770,7 @@ func _plan_door(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 	var action := str(e.get("action", "unlock"))
 	var w := WorldView.new(data["world"])
 	var owner := str(w.site_of(to).get("owner", w.site_of(s.room_id).get("owner", "")))
-	var by_owner := not owner.is_empty() and (s.npcs_here(w.world, s.room_id).has(owner) or s.npcs_here(w.world, to).has(owner)) 		and not s.dead_npcs.has(owner)
+	var by_owner := not owner.is_empty() and (s.npcs_here(w.world, s.room_id).has(owner) or s.npcs_here(w.world, to).has(owner)) 		and not Being.dead(s, owner)
 	var dcs := DoorRules.dcs(s, data, s.room_id, to)
 	var passed := func(skill: String, dc: int) -> bool:
 		return (_rolls.get(turn_id, []) as Array).any(func(r: Dictionary) -> bool:
