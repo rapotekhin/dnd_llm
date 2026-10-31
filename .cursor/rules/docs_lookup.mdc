@@ -18,6 +18,6 @@ docs/
 ├── vision/         pitch, pillars (the 5 non-negotiable principles)
 ├── design/         systems/ (exploration, social, trade, combat, character-creation, leveling), ux/
 ├── narrative/      world, npcs, quests, dm-style
-├── tech/           architecture, llm-integration, master-tools (every master tool and effect), master-scenarios (what the master can do), data-models, adr/
+├── tech/           llm-integration, master-tools (every master tool and effect), master-scenarios (what the master can do), data-models, adr/
 └── production/     roadmap, backlog
 ```

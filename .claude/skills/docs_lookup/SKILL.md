@@ -51,7 +51,6 @@ docs/
 │   └── dm-style.md                           — стиль ГМ
 │
 ├── tech/                                     ← How
-│   ├── architecture.md                       — общая схема, слои
 │   ├── llm-integration.md                    — агенты, промпты, модели, экономия токенов
 │   ├── master-tools.md                       — все инструменты мастера, engine.*, 36 эффектов, итог хода, лимиты
 │   ├── master-scenarios.md                   — что мастер умеет: сценарии и пайплайн каждого
@@ -79,7 +78,7 @@ docs/
    | «Как работает exploration / social / trade / combat?» | `design/systems/<тема>.md` |
    | «Какие экраны и как они связаны?» | `design/ux/screens-flow.md` |
    | «Какой сеттинг / лор / тон?» | `narrative/world.md`, `dm-style.md` |
-   | «Как устроена архитектура?» | `tech/architecture.md` |
+   | «Как устроена архитектура?» | `tech/godot-client.md` |
    | «Как ЛЛМ интегрирован?» | `tech/llm-integration.md` |
    | «Какие у мастера инструменты / эффекты? Что проверяет движок у `move`, `give_item`…?» | `tech/master-tools.md` |
    | «Может ли мастер X? Как мастер создаёт место / человека / задание / вещь?» | `tech/master-scenarios.md` |
@@ -105,7 +104,6 @@ docs/
 ## Якоря-подсказки (быстрая навигация)
 
 - **«Главный принцип ЛЛМ ≠ движок»** → [tech/adr/0001](docs/tech/adr/0001-llm-as-gm-not-engine.md) и [vision/pillars.md](docs/vision/pillars.md) §1
-- **Поток фоновых тредов** → [tech/architecture.md](docs/tech/architecture.md) §«Фоновые потоки»
 - **Контракт UI ↔ gameplay-thread** → [design/systems/exploration.md](docs/design/systems/exploration.md), сообщения `scene/actions/narration/transition`
 - **Что делать с галлюцинациями ЛЛМ** → [tech/llm-integration.md](docs/tech/llm-integration.md) §«Известные проблемы»
 - **Открытые вопросы** → [production/backlog.md](docs/production/backlog.md) §«Открытые вопросы»

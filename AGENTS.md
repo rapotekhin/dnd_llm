@@ -4,7 +4,7 @@ Shared instructions for any AI coding agent working in this repository (Claude C
 
 ## Project
 
-**Between the Rolls** — single-player D&D 5e RPG with an LLM Dungeon Master, Russian-first: a Godot client + a Python LLM backend ([ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md), [roadmap](docs/production/roadmap.md)). The pygame prototype reached parity and was removed in v0.5.4 ([parity checklist](docs/production/parity-v031.md); it stays in git history up to v0.5.3).
+**Between the Rolls** — single-player D&D 5e RPG with an LLM Dungeon Master, Russian-first: a Godot client + a Python LLM backend ([ADR-0007](docs/tech/adr/0007-godot-client-python-llm-backend.md), [roadmap](docs/production/roadmap.md)). The pygame prototype reached parity and was removed in v0.5.4 (it stays in git history up to v0.5.3).
 
 | Folder | What | Status |
 |---|---|---|

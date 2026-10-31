@@ -10,4 +10,4 @@
 - По образцу `hive_world_shop`: `autoload/` (EventBus, Catalog, SaveManager, GameState, Backend, Dev), чистый `core/` без нод, seeded RNG, данные в JSON, JSON-сейвы с `SAVE_VERSION` и миграциями, весь текст через `tr()` и `strings.csv`.
 - Мир — пакеты вселенных поверх 5e ([ADR-0010](../docs/tech/adr/0010-game-decisions-worlds-tone-combat-death.md)); ничего про конкретный мир не хардкодится.
 
-Паритет с pygame-прототипом проверен в v0.5.4 ([чеклист](../docs/production/parity-v031.md)); прототип удалён.
+Паритет с pygame-прототипом проверен в v0.5.4; прототип удалён.
