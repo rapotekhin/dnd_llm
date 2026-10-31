@@ -138,7 +138,7 @@ static func gear(s: GameSession, data: Dictionary, k: String) -> Dictionary:
 
 static func _terrain(s: GameSession, data: Dictionary) -> Dictionary:
 	var world := WorldView.new(data["world"])
-	var terr := str(world.location(world.location_id(s.room_id)).get("terrain", ""))
+	var terr := str(world.inherit(s.room_id, "terrain", ""))
 	return cfg(data)["terrain"].get(terr, cfg(data)["terrain"]["_default"])
 
 

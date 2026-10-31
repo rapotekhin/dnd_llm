@@ -195,7 +195,7 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, p
 				if place.is_empty() or str(place["from"]) != s.room_id or str(place["rooms"][0]["key"]) != to.trim_prefix("new:"):
 					return {"reason": "войти можно только в первую комнату места, созданного в этом ходе у этой комнаты (new:<её key>)"}
 				return {"plan": {"room_id": to, "with": []}, "summary": "Переход: %s" % place["rooms"][0]["name"]}
-			if not ExplorationRules.open_exits(s, data["world"], s.room_id).has(to):
+			if not WayRules.open_exits(s, data["world"], s.room_id).has(to):
 				return {"reason": "из этой комнаты нет выхода в %s" % to}
 			# v0.7.22.16: the master's move is checked as the exit button — the overload, a trap the hero found
 			if CharacterRules.overloaded(c, data, s.items):
@@ -203,8 +203,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, p
 			var trap := ExplorationRules.trap_on_exit(s, data["world"], s.room_id, to)
 			if not trap.is_empty() and ExplorationRules.is_found(s, s.room_id, trap):
 				return {"reason": "путь стережёт найденная ловушка — её обезвреживают или обходят (кнопки игрока), просто пройти нельзя"}
-			if not DoorRules.blocked(s, data, s.room_id, to).is_empty():  # v0.7.22.25
-				return {"reason": "%s — пройти нельзя: открыть её — кнопки игрока (ключ, отмычки, сила, заклинание) или эффект door, если её отпирает хозяин" % DoorRules.describe(s, data, s.room_id, to)}
+			if not WayRules.blocked(s, data, s.room_id, to).is_empty():  # v0.7.22.25
+				return {"reason": "%s — пройти нельзя: открыть её — кнопки игрока (ключ, отмычки, сила, заклинание) или эффект door, если её отпирает хозяин" % WayRules.describe(s, data, s.room_id, to)}
 			var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as npc_follow
 			for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
 				var nid := str(n)
@@ -309,6 +309,8 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, p
 				"summary": "Заклинание: " + SpellRules.describe(data, chk["spell_id"], chk["slot"]) + (" — на себя" if on_self else "")}
 		"condition":
 			return _plan_condition(s, data, turn_id, e, pending)
+		"way":  # v0.7.66: a way the story found
+			return WayRules.plan_make(s, data, e)
 		"make":  # v0.7.63: a status, a skill or a trait of parts, priced by the engine
 			return MakeRules.plan(s, data, e, pending)
 		"guise":  # v0.7.63: the look a spell laid, a faction's face
@@ -787,16 +789,16 @@ func _plan_unlock(s: GameSession, data: Dictionary, turn_id: String, e: Dictiona
 
 
 ## The master's door (v0.7.22.25): its owner unlocks or locks it; a passed Sleight of Hand this turn picks it, a passed
-## Athletics breaks it — against DoorRules.dcs.
+## Athletics breaks it — against WayRules.dcs.
 func _plan_door(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary) -> Dictionary:
 	var to := str(e.get("to_room", ""))
-	if not ExplorationRules.open_exits(s, data["world"], s.room_id).has(to) or DoorRules.def(data, s.room_id, to).is_empty():
+	if not WayRules.open_exits(s, data["world"], s.room_id).has(to) or WayRules.def(data, s.room_id, to).is_empty():
 		return {"reason": "между %s и %s нет двери" % [s.room_id, to]}
 	var action := str(e.get("action", "unlock"))
 	var w := WorldView.new(data["world"])
 	var owner := str(w.site_of(to).get("owner", w.site_of(s.room_id).get("owner", "")))
 	var by_owner := not owner.is_empty() and (s.npcs_here(w.world, s.room_id).has(owner) or s.npcs_here(w.world, to).has(owner)) 		and not Being.dead(s, owner)
-	var dcs := DoorRules.dcs(s, data, s.room_id, to)
+	var dcs := WayRules.dcs(s, data, s.room_id, to)
 	var passed := func(skill: String, dc: int) -> bool:
 		return (_rolls.get(turn_id, []) as Array).any(func(r: Dictionary) -> bool:
 			return str(r["skill"]) == skill and bool(r["success"]) and int(r["total"]) >= dc)
@@ -807,7 +809,7 @@ func _plan_door(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 				return {"reason": "запереть дверь может её хозяин, когда он рядом; игрок запирает ключом сам"}
 			how = "owner"
 		"unlock":
-			if DoorRules.blocked(s, data, s.room_id, to).is_empty():
+			if WayRules.blocked(s, data, s.room_id, to).is_empty():
 				return {"reason": "дверь и так открыта"}
 			how = "owner" if by_owner else "pick" if passed.call("sleight_of_hand", int(dcs["pick"])) else ""
 			if how.is_empty():
@@ -1139,18 +1141,20 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			WorldEvent.emit(s, _data, "place_made", {"room": entry})
 			_made["rooms"] = plan["ids"]
 			_made["site"] = plan["site_id"]
+		"way":
+			_extra_lines.append_array(WayRules.apply_make(s, _data, plan))
 		"door":
 			var a := str(plan["from"])
 			var b := str(plan["to"])
 			match str(plan["action"]):
 				"lock":
-					DoorRules.lock(s, a, b)
+					WayRules.lock(s, a, b)
 				"unlock":
-					DoorRules.unlock(s, _data, a, b)
+					WayRules.unlock(s, _data, a, b)
 				"break":
-					DoorRules.break_down(s, a, b)
+					WayRules.break_down(s, a, b)
 			if str(plan["how"]) != "owner":
-				var seen := DoorRules.witnesses(s, _data, a, b)
+				var seen := WayRules.witnesses(s, _data, a, b)
 				if not seen.is_empty():
 					_extra_lines.append_array(CrimeRules.on_trespass(s, _data, SiteRules.unwelcome(s, _data, b), b, seen))
 		"unlock":

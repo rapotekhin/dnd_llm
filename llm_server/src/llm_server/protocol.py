@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.99.0"
+PROTOCOL_VERSION = "0.100.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -718,6 +718,20 @@ class DoorEffect(_Out):
     kind: Literal["door"] = "door"
     to_room: str
     action: Literal["unlock", "lock", "break"] = "unlock"
+
+
+class WayEffect(_Out):
+    """A new way from the hero's room to a room of this location (0.100.0): a crawl, a breach, a secret door the story
+    found. The engine refuses a room the world keeps shut and a road between locations."""
+
+    kind: Literal["way"] = "way"
+    to_room: str
+    way_kind: str  # a row of rules.ways.kinds: crawl, breach, secret, door, ladder…
+    material: str | None = None
+    lock: Literal["simple", "good", "masterwork"] | None = None
+    locked: bool | None = None
+    one_way: bool = False
+    text: str | None = None
 
 
 class NpcLink(_Out):
@@ -1864,7 +1878,7 @@ Effect = Annotated[
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect
-    | OwnerEffect | DoorEffect | QuestActEffect | UpgradeEffect | WorldItemEffect,
+    | OwnerEffect | DoorEffect | WayEffect | QuestActEffect | UpgradeEffect | WorldItemEffect,
     Field(discriminator="kind"),
 ]
 

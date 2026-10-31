@@ -19,10 +19,10 @@ static func cfg(data: Dictionary) -> Dictionary:
 ## "" — the hero may be here; otherwise why not: the owner of this private room is alive and did not ask the hero in.
 static func unwelcome(s: GameSession, data: Dictionary, room_id: String) -> String:
 	var world := WorldView.new(data["world"])
-	var h := DoorRules.hours(s, data, world.site_id(room_id))  # v0.7.22.25: a closed site is nobody's to walk in
+	var h := WayRules.hours(s, data, world.site_id(room_id))  # v0.7.22.25: a closed site is nobody's to walk in
 	if world.is_public(room_id) and (h.is_empty() or bool(h["open"])):
 		return ""
-	var owner := str(world.site_of(room_id).get("owner", ""))
+	var owner := str(world.inherit(room_id, "owner", ""))
 	if owner.is_empty() or owner == OwnerRules.HERO or Being.dead(s, owner) or Being.follows(s, owner):  # v0.7.27: own place
 		return ""
 	if s.attitude(owner) >= int(cfg(data)["welcome_attitude"]) or permitted(s, data, world.site_id(room_id)) or StudyRules.student_room(s, data, room_id) \

@@ -4380,3 +4380,38 @@ scenarios:
     rubric:
       - "Мастер собирает make с what property и частями, с book, и отдаёт книгу через give_item new:book:<key>"
       - "Меч героя сам по себе не меняется: накладывать надо работой"
+
+  - id: way_a_crawl_found
+    title: "Найденный лаз: проход делает движок, эффект way"
+    category: concepts
+    extends: tavern
+    snapshot:
+      scene:
+        room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
+               description: "Низкий закопчённый зал. За бочками в углу в стене пробита щель: из неё тянет холодом кухни, человек пролезет ползком."}
+        exits:
+          - {id: room_market, name: "Рыночная площадь"}
+    input: "Лезу в щель за бочками, посмотрю, куда она ведёт. Там же кухня, room_kitchen, если я правильно понимаю."
+    engine:
+      validate:
+        - {kind: way, status: accept, summary: "Новый проход: лаз в «Кухню»"}
+    expect:
+      effects: {required_kinds_any: [way], forbidden_kinds: [coins, give_item]}
+    rubric:
+      - "Мастер даёт way с way_kind crawl и to_room room_kitchen"
+
+  - id: way_refused_past_the_shut_burrow
+    title: "Проходом не обойти закрытое миром: отказ движка"
+    category: concepts
+    extends: tavern
+    snapshot:
+      scene:
+        closed_exits: ["лаз под корнями мёртвого дуба ещё надо найти"]
+    input: "Уверен, тут есть другой ход в нору, пробиваю стену и лезу туда сразу."
+    engine:
+      validate:
+        - {kind: way, status: reject, reason: "в нору пока не попасть: путь туда открывает мир, не новый проход"}
+    expect:
+      effects: {forbidden_kinds: [move, coins]}
+    rubric:
+      - "После отказа мастер рассказывает, что хода нет, и не выводит героя в нору"

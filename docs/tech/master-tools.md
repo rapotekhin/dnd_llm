@@ -163,6 +163,7 @@
 | [`crime_release`](../../llm_server/src/llm_server/protocol.py#L896) | — | Герой задержан; в этом ходе пройдена проверка Убеждения, Обмана или Запугивания на ступени движка; розыск остаётся | [CrimeRules.plan_release](../../game/core/rules/crime_rules.gd#L383) | `crime` | |
 | [`owner`](../../llm_server/src/llm_server/protocol.py#L971) | `creature_id` или `item_id`, `owner_id`, `price_cp` | Существо: связанный пленник героя в этой комнате, не NPC пакета; новый хозяин — NPC сцены (или пусто — отпущен); с ценой — продажа неразумного (или любого, если рабство включено в мире), не дороже `sale_cp_per_xp` × опыт существа и кошелька торговца; разумного без рабства передают, чтобы свели к страже: цена — награда за поимку, не больше `bounty_cp_per_xp` × опыт (v0.7.49.4); деньги переводит и уводит существо к дому покупателя движок. Вещь: чужая вещь героя, хозяин здесь, `owner_id: "hero"` — хозяин уступает её. Одна смена хозяина за ход | [OwnerRules.plan](../../game/core/rules/owner_rules.gd#L87) | `captives` | [concepts: пленник](../design/concepts.md#пленник) |
 | [`door`](../../llm_server/src/llm_server/protocol.py#L603) | `to_room`, `action` (`unlock`, `lock`, `break`) | Дверь на выходе из комнаты героя; `lock` — только хозяин объекта рядом (здесь или за дверью); `unlock` — хозяин или пройденная в этом ходе Ловкость рук ≥ Сл замка (+10 под «Волшебным замком»); `break` — пройденная Атлетика ≥ Сл силы; взлом на глазах — вторжение | [EffectEngine._plan_door](../../game/core/rules/effect_engine.gd) | `doors` | [concepts: дверь](../design/concepts.md) |
+| [`way`](../../llm_server/src/llm_server/protocol.py) | `to_room`, `way_kind`, `one_way`, `material`, `lock`, `locked`, `text` | [WayRules.plan_make](../../game/core/rules/way_rules.gd): комната этой локации без выхода сюда, вид из `rules.ways.kinds` кроме `plain` и `road`, цель не за закрытым `when`, не больше `make.per_day` в день. Держится в `s.generated.ways` и `edge_exits` | — | |
 
 ### Запреты по режиму
 
@@ -249,6 +250,7 @@
 | Содержимое сундука, шкафа, бочки комнаты | `world_item` (`prop_id`) | `cause`; не сундук героя; ёмкость; ничейное — бюджет наград |
 | Товар торговца | `stock` | вид торговли, `trade.stock_make` |
 | Дверь у выхода | `door` | пакет, часы объекта |
+| Новый проход | `way` | лаз, пролом, тайный ход внутри локации |
 | Хозяин вещи или существа | `owner` | кто в сцене |
 | Улучшение места героя | `upgrade` | место героя; польза из движка, цена по формуле |
 | Вид места, которого нет | `property.new_kind` | `property.kind_make` |

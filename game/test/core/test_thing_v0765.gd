@@ -231,9 +231,9 @@ func test_a_door_keeps_only_its_damage() -> void:
 	var s := _hero()
 	s.room_id = "brod-tavern-kitchen"
 	var to := "brod-tavern-cellar"
-	DoorRules.hurt(s, data, s.room_id, to, 5)
-	assert_int(int(s.doors[DoorRules.key(s.room_id, to)]["dmg"])).is_equal(5)
-	assert_bool(s.doors[DoorRules.key(s.room_id, to)].has("hp")).is_false()
+	WayRules.hurt(s, data, s.room_id, to, 5)
+	assert_int(int(s.ways[WayRules.key(s.room_id, to)]["dmg"])).is_equal(5)
+	assert_bool(s.ways[WayRules.key(s.room_id, to)].has("hp")).is_false()
 
 
 # --- a property of parts ---------------------------------------------------------------------------------------------

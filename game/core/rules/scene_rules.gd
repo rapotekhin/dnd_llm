@@ -33,6 +33,15 @@ static func room(s: GameSession, world: Dictionary, room_id: String) -> Dictiona
 	return out
 
 
+## The tags of the room by its variants, with those of the places above it (v0.7.66).
+static func tags(s: GameSession, world: Dictionary, room_id: String) -> Array[String]:
+	var out := WorldView.new(world).tags(room_id)
+	for t: Variant in room(s, world, room_id).get("tags", []):
+		if not out.has(str(t)):
+			out.append(str(t))
+	return out
+
+
 ## The pack NPCs standing in the room now (alive or not): the room's people (by its variants), minus those whose
 ## `schedule` sends them elsewhere at this hour, plus those it sends here (v0.7.14.2); those who go with the hero stand
 ## where the hero is, those left in a room stand there (v0.7.20.3, FollowRules).

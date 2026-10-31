@@ -279,7 +279,7 @@ static func sunlit(s: GameSession, data: Dictionary) -> bool:
 	if not TimeRules.part(s, data) in ["morning", "day"]:
 		return false
 	var w := WorldView.new(data["world"])
-	return not bool(w.room(s.room_id).get("indoor", false)) and not bool(w.location(w.location_id(s.room_id)).get("indoor", false))
+	return not w.flag(s.room_id, "indoor")
 
 
 ## Why a monster's attack on the hero has advantage / disadvantage from its traits: {"adv": [], "dis": []}.

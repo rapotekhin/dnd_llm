@@ -588,7 +588,7 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 	for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
 		trapped[ft["to"]] = ft["secret"]
 	var shut := CrimeRules.held(s) or EncounterRules.captive(s)
-	for e: String in ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id):
+	for e: String in WayRules.open_exits(s, Catalog.data["world"], s.room_id):
 		var room_name := str(world.room(e).get("name", e))
 		var line := HBoxContainer.new()
 		line.add_theme_constant_override("separation", 6)
@@ -603,17 +603,17 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 			dis.tooltip_text = str(trapped[e]["text"]) + "\n" + tr("TRAP_DISARM_TIP")
 			continue
 		var private := not world.is_public(e)  # v0.7.22.24: the player knows before the step
-		var why := DoorRules.blocked(s, Catalog.data, s.room_id, e)
+		var why := WayRules.blocked(s, Catalog.data, s.room_id, e)
 		var door_key := "door:" + e
 		var go_or_door := GameState.go.bind(e) if why.is_empty() else _toggle.bind(door_key)  # a shut door opens its ways
-		var b := _exit_button(line, "→ " + room_name + (tr("EXIT_PRIVATE") if private else "") + DoorRules.label(s, Catalog.data, s.room_id, e),
+		var b := _exit_button(line, "→ " + room_name + (tr("EXIT_PRIVATE") if private else "") + WayRules.label(s, Catalog.data, s.room_id, e),
 			go_or_door, can_act and not shut)
 		b.name = "Exit_" + e
 		b.tooltip_text = tr("CRIME_HELD") if CrimeRules.held(s) else room_name
 		if not why.is_empty():
 			b.tooltip_text = "%s
 %s" % [room_name, tr(why)]
-		var ways := DoorRules.ways(s, Catalog.data, s.room_id, e)
+		var ways := WayRules.ways(s, Catalog.data, s.room_id, e)
 		if not ways.is_empty() and not shut:
 			_more(line, "Door_" + e, door_key)
 			if _open == door_key:
@@ -623,7 +623,7 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 			b.tooltip_text = "%s
 %s" % [room_name, tr("EXIT_PRIVATE_WELCOME" if SiteRules.unwelcome(s, Catalog.data, e).is_empty() else
 				"EXIT_PRIVATE_TIP").format({"owner": world.npc(owner).get("name", owner)})]
-	for w: Dictionary in ExplorationRules.shut_exits(s, Catalog.data["world"], s.room_id):  # a flooded ford, greyed with why (v0.7.46)
+	for w: Dictionary in WayRules.shut_exits(s, Catalog.data["world"], s.room_id):  # a flooded ford, greyed with why (v0.7.46)
 		var b := _exit_button(_exit_list, "→ %s (%s)" % [world.room(str(w["to"])).get("name", w["to"]), tr("EXIT_SHUT")], func() -> void: pass, false)
 		b.name = "Exit_" + str(w["to"])
 		b.tooltip_text = str(w["text"])
@@ -1040,8 +1040,8 @@ func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
 	acts.add_theme_constant_override("h_separation", 6)
 	acts.add_theme_constant_override("v_separation", 6)
 	_exit_list.add_child(acts)
-	var dcs := DoorRules.dcs(s, Catalog.data, s.room_id, to)
-	var d := DoorRules.def(Catalog.data, s.room_id, to)
+	var dcs := WayRules.dcs(s, Catalog.data, s.room_id, to)
+	var d := WayRules.def(Catalog.data, s.room_id, to)
 	var mat := ThingRules.material(Catalog.data, d)
 	for w: Dictionary in ways:
 		var how := str(w["how"])
@@ -1056,7 +1056,7 @@ func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
 		btn.name = "DoorWay_%s%s" % [how, "_" + sp if not sp.is_empty() else ""]
 		btn.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		btn.tooltip_text = tr("DOOR_WAY_%s_TIP" % how.to_upper()).format({"dc": dcs.get(how, 0), "ac": int(mat.get("ac", 15)),
-			"hp": DoorRules.hp(s, Catalog.data, s.room_id, to), "max": DoorRules.max_hp(Catalog.data, d)})
+			"hp": WayRules.hp(s, Catalog.data, s.room_id, to), "max": WayRules.max_hp(Catalog.data, d)})
 	if ways.any(func(w: Dictionary) -> bool: return str(w["how"]) == "force") and not ways.any(func(w: Dictionary) -> bool: return str(w["how"]) == "pick"):
 		var pb := _flow(acts, tr("DOOR_WAY_PICK"), func() -> void: pass, false)  # v0.7.39.3: seen, grey without the tools
 		pb.name = "DoorWay_pick"

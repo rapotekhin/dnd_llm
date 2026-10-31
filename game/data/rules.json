@@ -3161,15 +3161,39 @@
 		 }
 		}
 	},
-	"doors": {
-		"_doc": "Doors (v0.7.22.25, DoorRules): a way between rooms may have a door — the pack's own (a room's `doors` {to: {material, lock, key, locked}}) or the entrance of a site with hours (`default`). Outside the site's hours it is locked. A key or picked lock (Sleight of Hand against containers.lock_dc of its `lock`) opens it until the site's next opening; force (Athletics, the pick DC + containers.force_dc_plus + the material's force_plus) breaks it; blows of the weapon in hand — an attack against the material's ac, damage off its hp; an arcane lock adds arcane_plus to both and only Knock quiets it for knock_minutes; fire (a spell of the fire damage type or a `torch`) burns a wooden door through in burn_minutes. Each try takes try_minutes. Forcing a way into a closed or private site before eyes is a trespass at once.",
+	"ways": {
+		"_doc": "Ways (v0.7.66, WayRules): any way between two places, the pack's rows in a room's `ways` {to: {kind, ...}}, the master's by the effect `way`. An exit without a row is a `plain` way or, between locations, a `road`. A row may say: `when`, `text` (the side it stands on is shut until the fact is true), `max_size`, `how` (rules below: minutes added, whether beasts go), `minutes` (the step's own, a road of hours), `drop` (feet, a fall down it by 5e), `passes` (what goes through it shut: sight, shot, sound), `latch` (the room from whose side a locked leaf opens by hand), and for a leaf: `material`, `lock`, `key`, `locked`, `solid` (a wall that only breaks), `broke` (the line when it does). A way into a site with `hours` has a door by `default`. `master: false` — not the master's to make. Leaf: Outside the site's hours it is locked. A key or picked lock (Sleight of Hand against containers.lock_dc of its `lock`) opens it until the site's next opening; force (Athletics, the pick DC + containers.force_dc_plus + the material's force_plus) breaks it; blows of the weapon in hand — an attack against the material's ac, damage off its hp; an arcane lock adds arcane_plus to both and only Knock quiets it for knock_minutes; fire (a spell of the fire damage type or a `torch`) burns a wooden door through in burn_minutes. Each try takes try_minutes. Forcing a way into a closed or private site before eyes is a trespass at once.",
 		"default": {"material": "wood", "lock": "simple"},
+		"how": {
+			"walk": {"beasts": true, "minutes": 0},
+			"wade": {"beasts": true, "minutes": 5},
+			"crawl": {"beasts": false, "minutes": 5},
+			"climb": {"beasts": false, "minutes": 2}
+		},
+		"kinds": {
+			"plain": {"name": "", "master": false},
+			"road": {"name": "", "master": false},
+			"door": {"name": "дверь", "leaf": true},
+			"gate": {"name": "ворота", "leaf": true, "material": "iron"},
+			"grate": {"name": "решётка", "leaf": true, "material": "iron", "passes": ["sight", "shot", "sound"]},
+			"hatch": {"name": "люк", "leaf": true, "how": "climb", "max_size": "large"},
+			"crawl": {"name": "лаз", "how": "crawl", "max_size": "medium", "note": "ползком, крупному не пролезть"},
+			"stairs": {"name": "лестница"},
+			"ladder": {"name": "приставная лестница", "how": "climb"},
+			"bridge": {"name": "мост"},
+			"ford": {"name": "брод", "how": "wade"},
+			"portal": {"name": "портал"},
+			"secret": {"name": "тайный ход"},
+			"breach": {"name": "перегородка", "leaf": true, "solid": true, "broke": "Перегородка проломлена — путь открыт", "note": "её можно только сломать"}
+		},
 		"arcane_plus": 10,
 		"knock_minutes": 10,
 		"try_minutes": 1,
-		"torch": "torch"
+		"torch": "torch",
+		"make": {"per_day": 2}
 	},
 	"sites": {
+		"kinds": {"arena": "арена", "school": "училище", "hideout": "укрытие", "temple": "храм", "prison": "тюрьма", "mine": "шахта", "mill": "мельница", "registry": "управа", "market": "рынок"},
 		"_doc": "Sites (v0.7.22.24, SiteRules): a private room (`public` false of the room or its site) of a site with a living owner — entering it unasked before eyes: the owner trespass_attitude and a light crime `trespass` where there is law, once a day a site. Asked in: the owner goes with the hero or likes the hero from welcome_attitude.",
 		"welcome_attitude": 2,
 		"trespass_attitude": -1,

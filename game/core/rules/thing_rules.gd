@@ -198,8 +198,8 @@ static func ruin(s: GameSession, data: Dictionary, room: String, p: Dictionary, 
 static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var t := ConditionRules.now(s)
-	for k: String in s.doors:
-		var st: Dictionary = s.doors[k]
+	for k: String in s.ways:
+		var st: Dictionary = s.ways[k]
 		if _burnt(st, t, data) and not bool(st.get("broken", false)):
 			st["broken"] = true
 			st["burnt"] = true
@@ -230,8 +230,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 
 
 static func _indoor(data: Dictionary, room: String) -> bool:
-	var w := WorldView.new(data["world"])
-	return bool(w.location(w.location_id(room)).get("indoor", false))
+	return WorldView.new(data["world"]).flag(room, "indoor")
 
 
 static func _spread(s: GameSession, data: Dictionary, list: Array, from: Dictionary, cause: String) -> void:

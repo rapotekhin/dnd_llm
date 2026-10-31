@@ -23,79 +23,79 @@ func _hero(room: String, hour: int = 12) -> GameSession:
 
 func test_the_pack_door_is_locked_and_opens_by_picks() -> void:
 	var s := _hero("brod-tavern-kitchen")
-	assert_str(DoorRules.blocked(s, data, "brod-tavern-kitchen", "brod-tavern-cellar")).is_equal("DOOR_LOCKED")
-	assert_str(DoorRules.blocked(s, data, "brod-tavern-hall", "brod-tavern-kitchen")).is_empty()  # no door there
-	assert_str(DoorRules.label(s, data, s.room_id, "brod-tavern-cellar")).contains("заперто")
-	var hows := DoorRules.ways(s, data, s.room_id, "brod-tavern-cellar").map(func(w: Dictionary) -> String: return str(w["how"]))
+	assert_str(WayRules.blocked(s, data, "brod-tavern-kitchen", "brod-tavern-cellar")).is_equal("DOOR_LOCKED")
+	assert_str(WayRules.blocked(s, data, "brod-tavern-hall", "brod-tavern-kitchen")).is_empty()  # no door there
+	assert_str(WayRules.label(s, data, s.room_id, "brod-tavern-cellar")).contains("заперто")
+	var hows := WayRules.ways(s, data, s.room_id, "brod-tavern-cellar").map(func(w: Dictionary) -> String: return str(w["how"]))
 	assert_array(hows).contains(["force", "hit"])
 	assert_array(hows).not_contains(["pick", "wait"])  # no thieves' tools, no hours
-	DoorRules.unlock(s, data, s.room_id, "brod-tavern-cellar")
-	assert_str(DoorRules.blocked(s, data, s.room_id, "brod-tavern-cellar")).is_empty()
-	DoorRules.lock(s, s.room_id, "brod-tavern-cellar")
-	assert_str(DoorRules.blocked(s, data, "brod-tavern-cellar", "brod-tavern-kitchen")).is_equal("DOOR_LOCKED")  # both sides
+	WayRules.unlock(s, data, s.room_id, "brod-tavern-cellar")
+	assert_str(WayRules.blocked(s, data, s.room_id, "brod-tavern-cellar")).is_empty()
+	WayRules.lock(s, s.room_id, "brod-tavern-cellar")
+	assert_str(WayRules.blocked(s, data, "brod-tavern-cellar", "brod-tavern-kitchen")).is_equal("DOOR_LOCKED")  # both sides
 	var back := GameSession.from_dict(s.to_dict(5))
-	assert_bool(bool(back.doors[DoorRules.key("brod-tavern-kitchen", "brod-tavern-cellar")]["locked"])).is_true()
+	assert_bool(bool(back.ways[WayRules.key("brod-tavern-kitchen", "brod-tavern-cellar")]["locked"])).is_true()
 
 
 func test_a_site_with_hours_is_locked_from_outside_at_night() -> void:
 	var s := _hero("brod-square", 22)
-	assert_str(DoorRules.blocked(s, data, "brod-square", "brod-smithy")).is_equal("DOOR_CLOSED_HOURS")
-	assert_str(DoorRules.label(s, data, "brod-square", "brod-smithy")).contains("08:00")
-	assert_str(DoorRules.blocked(s, data, "brod-smithy", "brod-square")).is_empty()  # from inside the latch opens
+	assert_str(WayRules.blocked(s, data, "brod-square", "brod-smithy")).is_equal("DOOR_CLOSED_HOURS")
+	assert_str(WayRules.label(s, data, "brod-square", "brod-smithy")).contains("08:00")
+	assert_str(WayRules.blocked(s, data, "brod-smithy", "brod-square")).is_empty()  # from inside the latch opens
 	assert_str(SiteRules.unwelcome(s, data, "brod-smithy")).is_equal("npc_smith")  # a closed shop is nobody's to walk in
-	var ways := DoorRules.ways(s, data, "brod-square", "brod-smithy")
+	var ways := WayRules.ways(s, data, "brod-square", "brod-smithy")
 	assert_bool(ways.has({"how": "wait"})).is_true()
 	assert_array(WorldMap.route(s, data["world"], "brod-square", "brod-smithy", data)).is_empty()
 	s.minute = 9 * 60
-	assert_str(DoorRules.blocked(s, data, "brod-square", "brod-smithy")).is_empty()
+	assert_str(WayRules.blocked(s, data, "brod-square", "brod-smithy")).is_empty()
 	assert_str(SiteRules.unwelcome(s, data, "brod-smithy")).is_empty()
 
 
 func test_picked_open_until_the_next_opening() -> void:
 	var s := _hero("brod-square", 22)
-	DoorRules.unlock(s, data, "brod-square", "brod-smithy")
-	assert_str(DoorRules.blocked(s, data, "brod-square", "brod-smithy")).is_empty()
-	var until := int(s.doors[DoorRules.key("brod-square", "brod-smithy")]["unlocked_until"])
+	WayRules.unlock(s, data, "brod-square", "brod-smithy")
+	assert_str(WayRules.blocked(s, data, "brod-square", "brod-smithy")).is_empty()
+	var until := int(s.ways[WayRules.key("brod-square", "brod-smithy")]["unlocked_until"])
 	assert_int(until).is_equal(TimeRules.abs_minute(s) + 10 * 60)  # 22:00 → 08:00
 	s.day += 1
 	s.minute = 22 * 60
-	assert_str(DoorRules.blocked(s, data, "brod-square", "brod-smithy")).is_equal("DOOR_CLOSED_HOURS")
+	assert_str(WayRules.blocked(s, data, "brod-square", "brod-smithy")).is_equal("DOOR_CLOSED_HOURS")
 
 
 func test_blows_break_a_door() -> void:
 	var s := _hero("brod-tavern-kitchen")
 	var to := "brod-tavern-cellar"
 	for i in 40:
-		DoorRules.hit(s, data, s.room_id, to)
-		if DoorRules.blocked(s, data, s.room_id, to).is_empty():
+		WayRules.hit(s, data, s.room_id, to)
+		if WayRules.blocked(s, data, s.room_id, to).is_empty():
 			break
-	assert_bool(bool(s.doors[DoorRules.key(s.room_id, to)]["broken"])).is_true()
-	assert_str(DoorRules.label(s, data, s.room_id, to)).contains("выбита")
-	assert_array(DoorRules.ways(s, data, s.room_id, to)).is_empty()
+	assert_bool(bool(s.ways[WayRules.key(s.room_id, to)]["broken"])).is_true()
+	assert_str(WayRules.label(s, data, s.room_id, to)).contains("выбита")
+	assert_array(WayRules.ways(s, data, s.room_id, to)).is_empty()
 
 
 func test_arcane_lock_knock_and_fire() -> void:
 	var s := _hero("brod-tavern-kitchen")
 	var to := "brod-tavern-cellar"
-	DoorRules.unlock(s, data, s.room_id, to)
-	DoorRules.add_effect(s, s.room_id, to, "arcane_lock", -1, "Волшебный замок")
-	assert_str(DoorRules.blocked(s, data, s.room_id, to)).is_equal("DOOR_ARCANE")
-	assert_int(int(DoorRules.dcs(s, data, s.room_id, to)["pick"])).is_equal(10 + int(data["rules"]["doors"]["arcane_plus"]))
-	DoorRules.spell(s, data, s.room_id, to, "knock")
-	assert_str(DoorRules.blocked(s, data, s.room_id, to)).is_empty()
-	TimeRules.advance(s, data, int(data["rules"]["doors"]["knock_minutes"]) + 1)
-	assert_str(DoorRules.blocked(s, data, s.room_id, to)).is_equal("DOOR_ARCANE")  # Knock only quiets it for a while
-	var lines := DoorRules.ignite(s, data, s.room_id, to, "факел")
+	WayRules.unlock(s, data, s.room_id, to)
+	WayRules.add_effect(s, s.room_id, to, "arcane_lock", -1, "Волшебный замок")
+	assert_str(WayRules.blocked(s, data, s.room_id, to)).is_equal("DOOR_ARCANE")
+	assert_int(int(WayRules.dcs(s, data, s.room_id, to)["pick"])).is_equal(10 + int(data["rules"]["ways"]["arcane_plus"]))
+	WayRules.spell(s, data, s.room_id, to, "knock")
+	assert_str(WayRules.blocked(s, data, s.room_id, to)).is_empty()
+	TimeRules.advance(s, data, int(data["rules"]["ways"]["knock_minutes"]) + 1)
+	assert_str(WayRules.blocked(s, data, s.room_id, to)).is_equal("DOOR_ARCANE")  # Knock only quiets it for a while
+	var lines := WayRules.ignite(s, data, s.room_id, to, "факел")
 	assert_str(" ".join(lines)).contains("загорается")
-	assert_str(DoorRules.blocked(s, data, s.room_id, to)).is_equal("DOOR_BURNING")
+	assert_str(WayRules.blocked(s, data, s.room_id, to)).is_equal("DOOR_BURNING")
 	var burnt := TimeRules.advance(s, data, int(data["rules"]["things"]["burn_minutes"]) + 1)
 	assert_str(" ".join(burnt)).contains("прогорела")
-	assert_str(DoorRules.blocked(s, data, s.room_id, to)).is_empty()
+	assert_str(WayRules.blocked(s, data, s.room_id, to)).is_empty()
 
 
 func test_breaking_into_a_closed_site_before_eyes_is_a_trespass() -> void:
 	var s := _hero("brod-square", 22)
-	var seen := DoorRules.witnesses(s, data, "brod-square", "brod-smithy")
+	var seen := WayRules.witnesses(s, data, "brod-square", "brod-smithy")
 	if seen.is_empty():
 		return  # nobody on the square or in the smithy at night by the NPCs' hours
 	var lines := CrimeRules.on_trespass(s, data, SiteRules.unwelcome(s, data, "brod-smithy"), "brod-smithy", seen)

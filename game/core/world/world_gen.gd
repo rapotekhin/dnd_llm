@@ -693,14 +693,7 @@ static func _merge_places(w: Dictionary, gen: Dictionary) -> Dictionary:
 		w["sites"][sid] = (gen["sites"][sid] as Dictionary).duplicate(true)
 	for rid: String in gen.get("rooms", {}):
 		w["rooms"][rid] = (gen["rooms"][rid] as Dictionary).duplicate(true)
-	for from: String in gen.get("edge_exits", {}):
-		if not w["rooms"].has(from):
-			continue
-		var exits: Array = w["rooms"][from].get("exits", [])
-		for to: Variant in gen["edge_exits"][from]:
-			if not exits.has(str(to)):
-				exits.append(str(to))
-		w["rooms"][from]["exits"] = exits
+	lay_ways(w, gen)
 	for rid: String in gen.get("room_secrets", {}):  # v0.7.21: the hiding places of quest things
 		if not w["rooms"].has(rid):
 			continue
@@ -718,3 +711,20 @@ static func _merge_places(w: Dictionary, gen: Dictionary) -> Dictionary:
 				variants.append(v.duplicate(true))
 		w["rooms"][rid]["variants"] = variants
 	return w
+
+
+## The exits and ways made in this game into the world (v0.7.66): the rooms may be the pack's.
+static func lay_ways(w: Dictionary, gen: Dictionary) -> void:
+	for from: String in gen.get("edge_exits", {}):
+		if not w["rooms"].has(from):
+			continue
+		var exits: Array = w["rooms"][from].get("exits", [])
+		for to: Variant in gen["edge_exits"][from]:
+			if not exits.has(str(to)):
+				exits.append(str(to))
+		w["rooms"][from]["exits"] = exits
+	for from: String in gen.get("ways", {}):
+		if w["rooms"].has(from):
+			var own: Dictionary = w["rooms"][from].get("ways", {})
+			own.merge(gen["ways"][from], true)
+			w["rooms"][from]["ways"] = own

@@ -104,13 +104,13 @@ static func blocked(s: GameSession, data: Dictionary, room_id: String, cr: Dicti
 	if not on(data):
 		return ""
 	var room := SceneRules.room(s, data["world"], room_id)
-	var tags: Array = room.get("tags", [])
+	var tags := SceneRules.tags(s, data["world"], room_id)
 	var world := WorldView.new(data["world"])
-	var terr := str(world.location(world.location_id(room_id)).get("terrain", ""))
+	var terr := str(world.inherit(room_id, "terrain", ""))
 	if not bool(PropertyRules.animal_cfg(data, str(cr["monster"])).get("anywhere", false)):
 		if tags.has("no_mounts"):
 			return "сюда животным хода нет"
-		if bool(room.get("indoor", false)) and not tags.has("stable") and not tags.has("mounts"):
+		if bool(room.get("indoor", world.flag(room_id, "indoor"))) and not tags.has("stable") and not tags.has("mounts"):
 			return "под крышу не заведёшь"
 		if (cfg(data)["no_mount_terrains"] as Array).has(terr) and not tags.has("mounts"):
 			return "в такие ходы не пройдёт"
@@ -129,6 +129,8 @@ static func on_move(s: GameSession, data: Dictionary, from: String, to: String) 
 		if not bool(cr.get("led", false)):
 			continue
 		var why := blocked(s, data, to, cr)
+		if why.is_empty():
+			why = WayRules.beast_why(data, from, to, str(cr["monster"]))
 		if not why.is_empty():
 			cr["led"] = false
 			cr["waiting"] = true

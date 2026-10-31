@@ -240,7 +240,7 @@ static func spoil_mult(s: GameSession, data: Dictionary) -> float:
 static func scout_targets(s: GameSession, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var scouted: Array = s.character.get("scouted", [])
-	for e: String in ExplorationRules.open_exits(s, data["world"], s.room_id):
+	for e: String in WayRules.open_exits(s, data["world"], s.room_id):
 		if not s.visited.has(e) and not scouted.has(e) and data["world"]["rooms"].has(e):
 			out.append(e)
 	return out
@@ -330,7 +330,7 @@ static func plan_beast(s: GameSession, data: Dictionary, e: Dictionary) -> Dicti
 	var gen := WorldGen.generated(s)
 	if int(gen.get("beast_day", -1)) == s.day and int(gen.get("beasts_today", 0)) >= int(cfg(data)["make"]["per_day"]):
 		return {"reason": "сегодня зверей для приручения уже хватит — завтра"}
-	if WorldView.new(data["world"]).room(room).get("indoor", false) and SIZES.find(str(data["monsters"][monster].get("size", ""))) > SIZES.find("small"):
+	if WorldView.new(data["world"]).flag(room, "indoor") and SIZES.find(str(data["monsters"][monster].get("size", ""))) > SIZES.find("small"):
 		return {"reason": "крупный зверь под крышей — только снаружи"}
 	return {"plan": {"monster": monster, "room": room, "cause": cause.left(80)}, "summary": "Здесь: %s — можно приручить" % data["monsters"][monster]["name"]}
 

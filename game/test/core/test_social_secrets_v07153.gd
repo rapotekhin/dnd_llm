@@ -40,7 +40,7 @@ func test_goodwill_tells_it_by_an_effect_and_opens_the_way() -> void:
 	r = fx.validate(s, data, "t-2", {"kind": "reveal_secret", "npc_id": "npc_herbalist", "secret_id": "hollow"})
 	assert_str(str(r["summary"])).contains("мёртвым дубом")
 	fx.apply(s, "t-2", [r["effect_id"]])
-	assert_array(ExplorationRules.open_exits(s, data["world"], "pushcha-hollow")).contains(["pushcha-burrow"])
+	assert_array(WayRules.open_exits(s, data["world"], "pushcha-hollow")).contains(["pushcha-burrow"])
 	assert_str(str(fx.validate(s, data, "t-3", {"kind": "reveal_secret", "npc_id": "npc_herbalist", "secret_id": "nope"})["reason"])).contains("нет тайны")
 
 

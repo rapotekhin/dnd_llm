@@ -401,7 +401,7 @@ const LABELS = {
 	hit_die: 'кость хитов', race: 'раса', subraces: 'подрасы', ability_bonuses: 'бонусы характеристик', features: 'умения',
 	location_id: 'локация', exits: 'выходы', npcs: 'NPC', hooks: 'зацепки', secrets: 'тайны', encounter: 'встреча',
 	enemies: 'враги', allies: 'союзники', waves: 'волны', help: 'подмога', loot: 'добыча', open_edges: 'открытые края',
-	closed_exits: 'закрытые выходы', variants: 'варианты по флагам', safe: 'безопасный отдых', tags: 'метки', dark: 'темно',
+	ways: 'проходы', variants: 'варианты по флагам', safe: 'безопасный отдых', tags: 'метки', dark: 'темно',
 	indoor: 'в помещении', role: 'роль', gender: 'пол', personality: 'характер', trader: 'торговец', stock: 'товар',
 	wants: 'охотно покупает', shuns: 'не покупает', purse_cp: 'кошелёк, мм', monster: 'шаблон-монстр', schedule: 'расписание',
 	services: 'услуги', heir: 'наследник', giver: 'заказчик', offer_text: 'текст предложения', offer_items: 'выдаёт вещи',

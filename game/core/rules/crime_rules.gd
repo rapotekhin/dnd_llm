@@ -129,7 +129,7 @@ static func assault_known(s: GameSession, data: Dictionary, npc_id: String) -> A
 
 
 static func law(data: Dictionary, location_id: String) -> Dictionary:
-	return WorldView.new(data["world"]).location(location_id).get("law", {})
+	return WorldView.new(data["world"]).location_inherit(location_id, "law", {})
 
 
 ## The NPCs of the pack whose room is in `location_id`.

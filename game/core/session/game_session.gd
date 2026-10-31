@@ -123,8 +123,8 @@ var trespass_warned: Dictionary = {}
 ## the day the hero last asked each owner in vain {npc_id: day}.
 var permits: Dictionary = {}
 var permit_asked: Dictionary = {}
-## v0.7.22.25 (DoorRules): the doors' state {"a|b": {locked, unlocked_until, broken, hp, effects, arcane_by_hero}}.
-var doors: Dictionary = {}
+## v0.7.66 (WayRules): the state of the ways' leaves {"a|b": {locked, unlocked_until, broken, hp, effects, arcane_by_hero}}.
+var ways: Dictionary = {}
 ## The day the master last described each room (v0.7.22.20, ExplorationRules.again_line): {room_id: day}.
 var described: Dictionary = {}
 ## The rolls of the rules since the last chat line of effects (RollParts.note, v0.7.39.5): not saved, the next
@@ -499,7 +499,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"trespass_warned": trespass_warned,
 		"permits": permits,
 		"permit_asked": permit_asked,
-		"doors": doors,
+		"ways": ways,
 		"described": described,
 		"quests_failed": quests_failed,
 		"reward_spent": reward_spent,
@@ -608,7 +608,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.lurking = (d.get("lurking", {}) as Dictionary).duplicate(true)
 	s.captive = (d.get("captive", {}) as Dictionary).duplicate(true)
 	s.talk_creature = str(d.get("talk_creature", ""))
-	s.doors = _whole(d.get("doors", {}))
+	s.ways = _whole(d.get("ways", {}))
 	for sid: String in d.get("trespass_warned", {}):
 		s.trespass_warned[sid] = int(d["trespass_warned"][sid])
 	for sid: String in d.get("permits", {}):

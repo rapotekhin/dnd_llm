@@ -135,7 +135,7 @@ static func at(s: GameSession, data: Dictionary, loc_id: String) -> String:
 static func sheltered(s: GameSession, data: Dictionary, room_id: String = "") -> bool:
 	var rid := s.room_id if room_id.is_empty() else room_id
 	var w := WorldView.new(data["world"])
-	return bool(SceneRules.room(s, data["world"], rid).get("indoor", false)) or bool(w.location(w.location_id(rid)).get("indoor", false))
+	return bool(SceneRules.room(s, data["world"], rid).get("indoor", w.flag(rid, "indoor")))
 
 
 ## The kind the hero stands in: "" under a roof or where there is no weather.

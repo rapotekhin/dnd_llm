@@ -5944,6 +5944,90 @@
       "title": "VowEffect",
       "type": "object"
     },
+    "WayEffect": {
+      "additionalProperties": false,
+      "description": "A new way from the hero's room to a room of this location (0.100.0): a crawl, a breach, a secret door the story\nfound. The engine refuses a room the world keeps shut and a road between locations.",
+      "properties": {
+        "kind": {
+          "const": "way",
+          "default": "way",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lock": {
+          "anyOf": [
+            {
+              "enum": [
+                "simple",
+                "good",
+                "masterwork"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lock"
+        },
+        "locked": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locked"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Material"
+        },
+        "one_way": {
+          "default": false,
+          "title": "One Way",
+          "type": "boolean"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "to_room": {
+          "title": "To Room",
+          "type": "string"
+        },
+        "way_kind": {
+          "title": "Way Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "to_room",
+        "way_kind"
+      ],
+      "title": "WayEffect",
+      "type": "object"
+    },
     "WeatherEffect": {
       "additionalProperties": false,
       "description": "Magic or a miracle changes the weather of a location for hours (0.90.0): Control Weather, a druid's rite, a\npriestess's prayer answered. The engine keeps the kind (`weather`) over the location for `hours` (within\nrules.weather.magic.max_hours) with its consequences — fog and a downpour blind archers and watchers, snow slows\nthe way, the cold calls for warmth; then the day's weather comes back. Not for the weather of the day itself:\nthat is the engine's, given in the scene.",
@@ -6210,6 +6294,7 @@
           "use_feature": "#/$defs/UseFeatureEffect",
           "use_item": "#/$defs/UseItemEffect",
           "vow": "#/$defs/VowEffect",
+          "way": "#/$defs/WayEffect",
           "weather": "#/$defs/WeatherEffect",
           "wilds": "#/$defs/WildsEffect",
           "world_item": "#/$defs/WorldItemEffect"
@@ -6408,6 +6493,9 @@
         },
         {
           "$ref": "#/$defs/DoorEffect"
+        },
+        {
+          "$ref": "#/$defs/WayEffect"
         },
         {
           "$ref": "#/$defs/QuestActEffect"

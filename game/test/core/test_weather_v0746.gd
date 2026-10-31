@@ -143,12 +143,12 @@ func test_a_downpour_puts_out_the_fire_and_soaks_an_open_camp() -> void:
 func test_a_downpour_floods_the_ford_to_the_glade() -> void:
 	var s := _session("pushcha-trail")
 	_weather(s, "pushcha", "clear")
-	assert_array(ExplorationRules.open_exits(s, data["world"], "pushcha-trail")).contains(["pushcha-glade"])
+	assert_array(WayRules.open_exits(s, data["world"], "pushcha-trail")).contains(["pushcha-glade"])
 	_weather(s, "pushcha", "downpour")
-	assert_array(ExplorationRules.open_exits(s, data["world"], "pushcha-trail")).not_contains(["pushcha-glade"])
+	assert_array(WayRules.open_exits(s, data["world"], "pushcha-trail")).not_contains(["pushcha-glade"])
 	assert_array(SceneRules.room(s, data["world"], "pushcha-trail")["hooks"]).contains(["ручей у брода вздулся от ливня и ревёт — к поляне не перейти"])
 	_weather(s, "pushcha", "rain")
-	assert_array(ExplorationRules.open_exits(s, data["world"], "pushcha-trail")).contains(["pushcha-glade"])
+	assert_array(WayRules.open_exits(s, data["world"], "pushcha-trail")).contains(["pushcha-glade"])
 
 
 func test_snow_and_mud_lengthen_the_way_between_locations() -> void:
@@ -203,7 +203,7 @@ func test_the_masters_weather_holds_for_its_hours() -> void:
 	assert_str(WeatherRules.at(s, data, "pushcha")).is_equal("clear")
 	assert_bool(s.flags.has("weather_clear_pushcha")).is_true()
 	assert_bool(s.flags.has("weather_downpour_pushcha")).is_false()
-	assert_array(ExplorationRules.open_exits(s, data["world"], "pushcha-trail")).contains(["pushcha-glade"])
+	assert_array(WayRules.open_exits(s, data["world"], "pushcha-trail")).contains(["pushcha-glade"])
 	TimeRules.advance(s, data, 4 * 60)
 	assert_bool(WeatherRules._state(s)["magic"].has("pushcha")).is_false()
 

@@ -43,7 +43,7 @@ func test_a_place_grows_from_the_trail() -> void:
 	var r := _place(_thicket())
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	var first := str(s.generated["edge_exits"]["pushcha-trail"][0])
-	assert_array(ExplorationRules.open_exits(s, data["world"], "pushcha-trail")).contains([first])
+	assert_array(WayRules.open_exits(s, data["world"], "pushcha-trail")).contains([first])
 	var room: Dictionary = data["world"]["rooms"][first]
 	assert_str(str(room["location_id"])).is_equal("pushcha")
 	assert_array(room["exits"]).contains(["pushcha-trail"])

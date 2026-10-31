@@ -878,13 +878,7 @@
 		},
 		"brod-tavern-kitchen": {
 			"name": "Кухня таверны",
-			"doors": {
-				"brod-tavern-cellar": {
-					"material": "wood",
-					"lock": "simple",
-					"locked": true
-				}
-			},
+			"ways": {"brod-tavern-cellar": {"kind": "door", "material": "wood", "lock": "simple", "locked": true}},
 			"indoor": true,
 			"location_id": "brod",
 			"description": "Жаркая кухня: котлы над огнём, связки лука и трав, люк в погреб в углу.",
@@ -1372,9 +1366,8 @@
 				"timber",
 				"forage"
 			],
-			"closed_exits": {
-				"pushcha-glade": {
-					"when": {
+			"ways": {
+				"pushcha-glade": {"kind": "ford", "when": {
 						"not_flag": "weather_downpour_pushcha"
 					},
 					"text": "брод через ручей к поляне залило ливнем: вода по грудь, течение валит с ног — ждать, пока спадёт"
@@ -1486,9 +1479,8 @@
 					}
 				}
 			},
-			"closed_exits": {
-				"pushcha-burrow": {
-					"when": {
+			"ways": {
+				"pushcha-burrow": {"kind": "crawl", "when": {
 						"any": [
 							{
 								"secret": "pushcha-hollow:burrow"

@@ -313,7 +313,7 @@ static func station_here(s: GameSession, data: Dictionary, station: String) -> b
 	if station.is_empty():
 		return true
 	var st: Dictionary = stations(data).get(station, {})
-	var tags: Array = SceneRules.room(s, data["world"], s.room_id).get("tags", [])
+	var tags := SceneRules.tags(s, data["world"], s.room_id)
 	if tags.has(station) or (st.get("tags", []) as Array).any(func(t: Variant) -> bool: return tags.has(t)):
 		return true
 	return bool(st.get("wild", false)) and not ReputationRules.is_settlement(data, WorldView.new(data["world"]).location_id(s.room_id))
@@ -652,7 +652,7 @@ static func meat(data: Dictionary, monster: Dictionary) -> int:
 static func gather_here(s: GameSession, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var g: Dictionary = cfg(data)["gather"]
-	for t: Variant in SceneRules.room(s, data["world"], s.room_id).get("tags", []):
+	for t: String in SceneRules.tags(s, data["world"], s.room_id):
 		if g.has(str(t)):
 			out.append(str(t))
 	return out

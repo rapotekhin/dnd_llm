@@ -714,11 +714,17 @@ DOOR_LOCKED,"Дверь заперта: откройте её — ключом, 
 DOOR_CLOSED_HOURS,"Закрыто: объект не работает в этот час — дверь заперта до открытия"
 DOOR_ARCANE,"Дверь запечатана «Волшебным замком»: поможет «Открывание» или большая сила"
 DOOR_BURNING,"Дверь горит — сквозь огонь не пройти"
+DOOR_SOLID,"Сплошная преграда: её можно только сломать"
+DOOR_TOO_SMALL,"Слишком узко: вам здесь не пролезть"
 DOOR_LABEL_HOURS, · заперто до {time}
+DOOR_LABEL_SOLID, · преграда
+DOOR_LABEL_TOO_SMALL, · слишком узко
 DOOR_LABEL_LOCKED, · заперто
 DOOR_LABEL_ARCANE, · магический замок
 DOOR_LABEL_BURNING, · горит
 DOOR_LABEL_BROKEN, · дверь выбита
+DOOR_WAY_LATCH,Отодвинуть засов
+DOOR_WAY_LATCH_TIP,С этой стороны засов открывается рукой
 DOOR_WAY_KEY,Ключ
 DOOR_WAY_KEY_TIP,Отпереть своим ключом
 DOOR_WAY_PICK,Взломать

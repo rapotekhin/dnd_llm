@@ -11,8 +11,8 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 	var loc_id := world.location_id(s.room_id)
 	var loc := world.location(loc_id)
 	var exits: Array[Dictionary] = []
-	for e: String in ExplorationRules.open_exits(s, data["world"], s.room_id):
-		exits.append({"room_id": e, "name": world.room(e).get("name", e), "door": DoorRules.describe(s, data, s.room_id, e)})
+	for e: String in WayRules.open_exits(s, data["world"], s.room_id):
+		exits.append({"room_id": e, "name": world.room(e).get("name", e), "door": WayRules.describe(s, data, s.room_id, e)})
 	var npcs: Array[Dictionary] = []
 	for id: String in s.npcs_here(world.world, s.room_id):
 		var n := world.npc(id)
@@ -44,7 +44,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
 			"props": _props(s, data),
 			"creatures": CreatureRules.snapshot(s, data, s.room_id) + EncounterRules.snapshot(s, data, s.room_id),  # v0.7.22.11, v0.7.22.12
-			"closed_exits": closed_exits(s, data["world"]),
+			"closed_exits": WayRules.closed_texts(s, data["world"], s.room_id),
 			"summons": AllyRules.summon_lines(s, data),  # v0.7.22.22
 			"chronicle": s.chronicle_tail(data["world"], 12),
 			"reputation": ReputationRules.text(s, data, loc_id),
@@ -199,18 +199,6 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		sheet["spell_slots"] = slots
 		sheet["spell_save_dc"] = int(c.get("spell_dc", 0))
 	return sheet
-
-
-## Ways out of this room the pack keeps shut now (v0.7.4): their `text` («лаз под корнями ещё надо найти»), never
-## where they lead — the master describes them as closed instead of inventing what lies behind.
-static func closed_exits(s: GameSession, world: Dictionary) -> Array[String]:
-	var out: Array[String] = []
-	var closed: Dictionary = world["rooms"].get(s.room_id, {}).get("closed_exits", {})
-	var open := ExplorationRules.open_exits(s, world, s.room_id)
-	for to: String in closed:
-		if not open.has(to):
-			out.append(str(closed[to].get("text", "закрытый путь")))
-	return out
 
 
 ## The hero's conditions for the master, invisibility from a held spell included (v0.7.5).
