@@ -20,7 +20,7 @@ func run() -> void:
 	s.encounters_done.append("trail_wolves")  # no wolves for this check
 	var fx: EffectEngine = gs.effects
 	fx.searched_places["t-pt"] = true
-	var r := fx.validate(s, data, "t-pt", {"kind": "create_place", "edge": 0, "rooms": [
+	var r := fx.validate(s, data, "t-pt", {"kind": "create", "what": "place", "edge": 0, "rooms": [
 		{"key": "a", "name": "Бурелом", "description": "Поваленные ели, мох по пояс.", "exits": ["b"]},
 		{"key": "b", "name": "Барсучья нора", "description": "Тёмный лаз под корнями.", "dark": true}]})
 	if not step("the place is accepted on the open edge", bool(r["accepted"]), str(r)):

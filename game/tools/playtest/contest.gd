@@ -88,7 +88,7 @@ func run() -> void:
 	s.day += 1
 	Being.drop(s, NPC, "attitude")
 	var fx: EffectEngine = gs.effects
-	var r := fx.validate(s, data, "ct-1", {"kind": "contest", "npc_id": NPC, "new_kind": {"name": "Метание ножей", "check": {"skill": "sleight_of_hand"}, "wins": 3}})
+	var r := fx.validate(s, data, "ct-1", {"kind": "create", "what": "contest", "npc_id": NPC, "new_kind": {"name": "Метание ножей", "check": {"skill": "sleight_of_hand"}, "wins": 3}})
 	if step("the master's own game accepted", bool(r["accepted"]), str(r.get("summary", r.get("reason", "")))):
 		fx.apply(s, "ct-1", [r["effect_id"]])
 		node("EventBus").turn_finished.emit("ct-1", true)

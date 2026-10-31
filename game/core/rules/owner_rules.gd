@@ -121,7 +121,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	if item.is_empty():
 		return {"reason": "нужен creature_id существа сцены или item_id вещи героя"}
 	if to != HERO:
-		return {"reason": "вещь меняет хозяина эффектом только в пользу героя (owner_id hero); отдать вещь — take_item"}
+		return {"reason": "вещь меняет хозяина эффектом только в пользу героя (owner_id hero); отдать вещь — move_item:hero>world"}
 	var f: Dictionary = foreign(s).get(item, {})
 	var from := ""
 	for owner: String in f:

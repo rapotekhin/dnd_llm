@@ -137,7 +137,7 @@ func test_a_dead_wolf_leaves_meat_and_the_pushcha_gives_mushrooms_or_berries() -
 func test_the_master_makes_a_dish_at_the_fire() -> void:
 	var s := _cook(true)
 	var engine := EffectEngine.new()
-	var r := engine.validate(s, data, "t-1", {"kind": "recipe", "tool": "cooks_utensils", "station": "fire", "hours": 1, "dc_tier": "easy",
+	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "recipe", "tool": "cooks_utensils", "station": "fire", "hours": 1, "dc_tier": "easy",
 		"materials": [{"item_id": "raw_meat", "qty": 1}, {"item_id": "berries", "qty": 1}], "output": {"name": "Мясо в ягодном соусе",
 		"item_type": "consumable", "rarity": "common", "value_cp": 30, "description": "Жареное мясо с кислым ягодным соусом."}})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()

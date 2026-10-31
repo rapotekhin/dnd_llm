@@ -204,12 +204,12 @@ func test_the_master_puts_a_place_on_sale() -> void:
 	var s := _owner("brod-square")
 	s.room_id = "brod-tavern-hall"
 	var engine := EffectEngine.new()
-	var dear := engine.validate(s, data, "t-1", {"kind": "property", "site_id": "brod-mill", "seller_id": "npc_innkeeper", "place_kind": "mill",
+	var dear := engine.validate(s, data, "t-1", {"kind": "create", "what": "property", "site_id": "brod-mill", "seller_id": "npc_innkeeper", "place_kind": "mill",
 		"price_cp": 5000, "income_cp_day": 400})
 	assert_bool(bool(dear["accepted"])).is_false()
-	var theirs := engine.validate(s, data, "t-1", {"kind": "property", "site_id": "brod-smithy", "seller_id": "npc_innkeeper", "place_kind": "workshop", "price_cp": 5000})
+	var theirs := engine.validate(s, data, "t-1", {"kind": "create", "what": "property", "site_id": "brod-smithy", "seller_id": "npc_innkeeper", "place_kind": "workshop", "price_cp": 5000})
 	assert_bool(bool(theirs["accepted"])).is_false()
-	var r := engine.validate(s, data, "t-1", {"kind": "property", "site_id": "brod-tavern", "seller_id": "npc_innkeeper", "place_kind": "tavern",
+	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "property", "site_id": "brod-tavern", "seller_id": "npc_innkeeper", "place_kind": "tavern",
 		"price_cp": 15000, "income_cp_day": 100})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()
 	engine.apply(s, "t-1", [r["effect_id"]])

@@ -9,7 +9,7 @@ extends RefCounted
 ## yield at once, a monster its meat and hide by size (CraftRules), a `fight` one comes out to fight. A failure may
 ## bring a predator of the terrain (`predator_pct`). A ground with an owner (`owner` of the room or its site) is
 ## poaching without its leave: seen by the people here or by chance (`poach.seen_pct`) — the crime `poaching`.
-## The master tags its rooms with `wilds` in create_place and moves a stock by the effect `wilds` with a cause.
+## The master tags its rooms with `wilds` in create:place and moves a stock by the effect `wilds` with a cause.
 
 
 static func cfg(data: Dictionary) -> Dictionary:

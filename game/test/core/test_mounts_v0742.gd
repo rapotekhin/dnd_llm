@@ -198,8 +198,8 @@ func test_the_master_gives_the_dealer_a_camel() -> void:
 func test_the_effect_stock_with_an_animal_goes_through_the_engine() -> void:
 	var s := _session()
 	var fx := EffectEngine.new()
-	var r := fx.validate(s, data, "t1", {"kind": "stock", "npc_id": "npc_drover", "animal": "camel", "reason": "караван из степи"})
+	var r := fx.validate(s, data, "t1", {"kind": "create", "what": "stock", "npc_id": "npc_drover", "animal": "camel", "reason": "караван из степи"})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t1", [r["effect_id"]])
 	assert_array(PropertyRules.animals_of(data, "npc_drover")).contains(["camel"])
-	assert_bool(bool(fx.validate(s, data, "t2", {"kind": "stock", "npc_id": "npc_drover", "animal": "goblin", "reason": "x"})["accepted"])).is_false()
+	assert_bool(bool(fx.validate(s, data, "t2", {"kind": "create", "what": "stock", "npc_id": "npc_drover", "animal": "goblin", "reason": "x"})["accepted"])).is_false()

@@ -32,11 +32,11 @@ func test_a_discount_needs_goodwill_or_a_won_check() -> void:
 	var fx := EffectEngine.new()
 	var stock := (TradeRules.merchant(s, data, "npc_merchant")["stock"] as Dictionary).keys()[0] as String
 	var before := TradeRules.buy_price(s, data, "npc_merchant", stock)
-	var r := _apply(s, fx, {"kind": "npc_discount", "npc_id": "npc_merchant", "percent": 10, "reason": "уговорил"})
+	var r := _apply(s, fx, {"kind": "grant", "what": "discount", "npc_id": "npc_merchant", "percent": 10, "reason": "уговорил"})
 	assert_bool(bool(r["accepted"])).is_false()
 	assert_str(str(r["reason"])).contains("расположен")
 	fx.note_check("t-2", "medium", true, "npc_merchant")
-	r = _apply(s, fx, {"kind": "npc_discount", "npc_id": "npc_merchant", "percent": 10, "reason": "уговорил"}, "t-2")
+	r = _apply(s, fx, {"kind": "grant", "what": "discount", "npc_id": "npc_merchant", "percent": 10, "reason": "уговорил"}, "t-2")
 	assert_bool(bool(r["accepted"])).is_true()
 	assert_int(TradeRules.buy_price(s, data, "npc_merchant", stock)).is_less(before + 1)
 	assert_int(int(TradeRules.info(s, data, "npc_merchant")["discount_pct"])).is_equal(10)
@@ -50,9 +50,9 @@ func test_a_discount_has_bounds_and_only_traders_give_it() -> void:
 	var fx := EffectEngine.new()
 	Being.of(s, "npc_innkeeper")["attitude"] = 1
 	Being.of(s, "npc_veteran")["attitude"] = 3
-	assert_str(str(_apply(s, fx, {"kind": "npc_discount", "npc_id": "npc_innkeeper", "percent": 50, "reason": "друг"})["reason"])).contains("от 5 до 20")
-	assert_str(str(_apply(s, fx, {"kind": "npc_discount", "npc_id": "npc_veteran", "percent": 10, "reason": "друг"})["reason"])).contains("не торгует")
-	assert_bool(bool(_apply(s, fx, {"kind": "npc_discount", "npc_id": "npc_innkeeper", "percent": 15, "reason": "друг"})["accepted"])).is_true()
+	assert_str(str(_apply(s, fx, {"kind": "grant", "what": "discount", "npc_id": "npc_innkeeper", "percent": 50, "reason": "друг"})["reason"])).contains("от 5 до 20")
+	assert_str(str(_apply(s, fx, {"kind": "grant", "what": "discount", "npc_id": "npc_veteran", "percent": 10, "reason": "друг"})["reason"])).contains("не торгует")
+	assert_bool(bool(_apply(s, fx, {"kind": "grant", "what": "discount", "npc_id": "npc_innkeeper", "percent": 15, "reason": "друг"})["accepted"])).is_true()
 
 
 func test_a_favor_is_free_once_a_week_and_leaves_a_debt() -> void:
@@ -61,14 +61,14 @@ func test_a_favor_is_free_once_a_week_and_leaves_a_debt() -> void:
 	Being.of(s, "npc_smith")["attitude"] = 2
 	var weapon := TradeRules.targets(s, data, "silver")[0]
 	var gold := int(s.character["gold_cp"])
-	var r := _apply(s, fx, {"kind": "npc_favor", "npc_id": "npc_smith", "service": "silver", "item_id": weapon, "reason": "по дружбе"})
+	var r := _apply(s, fx, {"kind": "grant", "what": "favor", "npc_id": "npc_smith", "service": "silver", "item_id": weapon, "reason": "по дружбе"})
 	assert_bool(bool(r["accepted"])).is_true()
 	assert_int(int(s.character["gold_cp"])).is_equal(gold)
 	assert_bool((s.character["inventory"] as Dictionary).keys().any(func(id: String) -> bool: return ItemRules.display_name(data["items"], s.items, id).contains("посеребр"))).is_true()
 	assert_str(" ".join(s.memory_of("npc_smith"))).contains("в долгу")
-	var again := _apply(s, fx, {"kind": "npc_favor", "npc_id": "npc_smith", "service": "silver", "reason": "ещё"}, "t-2")
+	var again := _apply(s, fx, {"kind": "grant", "what": "favor", "npc_id": "npc_smith", "service": "silver", "reason": "ещё"}, "t-2")
 	assert_bool(bool(again["accepted"])).is_false()
-	var other := _apply(s, fx, {"kind": "npc_favor", "npc_id": "npc_smith", "service": "identify", "reason": "?"}, "t-3")
+	var other := _apply(s, fx, {"kind": "grant", "what": "favor", "npc_id": "npc_smith", "service": "identify", "reason": "?"}, "t-3")
 	assert_str(str(other["reason"])).contains("нет услуги")
 
 
@@ -77,13 +77,13 @@ func test_a_quest_is_taken_by_words_from_its_giver_only() -> void:
 	var fx := EffectEngine.new()
 	s.mode = GameSession.MODE_SOCIAL
 	s.npc_id = "npc_serving"
-	var r := _apply(s, fx, {"kind": "accept_quest", "quest_id": "letter_to_ilva"})
+	var r := _apply(s, fx, {"kind": "grant", "what": "quest", "quest_id": "letter_to_ilva"})
 	assert_str(str(r["reason"])).contains("не собеседник")
 	s.npc_id = "npc_innkeeper"
-	r = _apply(s, fx, {"kind": "accept_quest", "quest_id": "letter_to_ilva"}, "t-2")
+	r = _apply(s, fx, {"kind": "grant", "what": "quest", "quest_id": "letter_to_ilva"}, "t-2")
 	assert_bool(bool(r["accepted"])).is_true()
 	assert_bool(s.quests_active.has("letter_to_ilva")).is_true()
-	assert_str(str(_apply(s, fx, {"kind": "accept_quest", "quest_id": "drogin_amulet"}, "t-3")["reason"])).contains("здесь не предлагают")
+	assert_str(str(_apply(s, fx, {"kind": "grant", "what": "quest", "quest_id": "drogin_amulet"}, "t-3")["reason"])).contains("здесь не предлагают")
 
 
 func test_the_snapshot_shows_services_and_deals() -> void:

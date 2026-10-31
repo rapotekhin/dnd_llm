@@ -41,7 +41,12 @@ from .protocol import (
     EngineLookupResult,
     EngineValidateParams,
     EngineValidateResult,
-    GiveItemEffect,
+    MoveItemEffect,
+    class_tag,
+    effect_classes,
+    effect_line,
+    item_shape,
+    effect_tag,
     ItemProperty,
     LookupKind,
     SceneNpc,
@@ -153,14 +158,14 @@ class TurnContext:
     accepted: dict[str, str] = field(default_factory=dict)  # effect_id -> summary
     searched_items: bool = False
     item_searches: int = 0  # find_items this turn (v0.7.34.4: past FIND_ITEMS_MAX the master makes the thing)
-    searched_npcs: bool = False  # find_npcs this turn (v0.7.20: before create_npc)
-    searched_places: bool = False  # find_places this turn (v0.7.20.1: before create_place)
-    searched_quests: bool = False  # find_quests this turn (v0.7.21: before create_quest)
+    searched_npcs: bool = False  # find_npcs this turn (v0.7.20: before create:npc)
+    searched_places: bool = False  # find_places this turn (v0.7.20.1: before create:place)
+    searched_quests: bool = False  # find_quests this turn (v0.7.21: before create:quest)
     proposed: set[str] = field(default_factory=set)  # effects accepted this turn (proposing one again is refused)
-    empty_gives: int = 0  # give_item with neither item_id nor item
+    empty_gives: int = 0  # move_item:world>hero with neither item_id nor item
     bad_effects: int = 0  # effects refused for their shape this turn (v0.7.21.2)
     topics: set[str] = field(default_factory=set)  # rule topics the master has: in the prompt or read with `rules` (v0.7.20.4)
-    made_npcs: list[str] = field(default_factory=list)  # create_npc accepted this turn: in the world only after the turn
+    made_npcs: list[str] = field(default_factory=list)  # create:npc accepted this turn: in the world only after the turn
 
     def __post_init__(self) -> None:
         self.topics |= set(prompts.auto_topics(self.params.mode, self.params.snapshot))
@@ -268,17 +273,20 @@ async def request_check(
     return f"Провал: {r.total} против DC {r.dc}{nat}. Опиши неудачу и её последствия."
 
 
+def _gives(effect: Any) -> bool:
+    return isinstance(effect, MoveItemEffect) and effect.source == "world" and effect.target == "hero"
+
+
 async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str:
-    """Предложить движку последствие: move, damage, heal, coins, give_item, take_item, npc_attitude, flag,
-    cast (игрок колдует: spell, slot_level, on_self — на себя), condition (наложить/снять состояние: reason,
-    save {ability, dc_tier}, tag, duration, cause, by, repeat_save, ends_on_damage), use_feature (умение с
-    ограниченными использованиями), use_item (выпить зелье и т. п.), advance_time (прошло время),
-    furnish (обставить комнату при первом входе; в обставленную — только с cause), take_prop (взять вещь комнаты), prop_state (вещь открыта,
-    сломана, сожжена, сдвинута), note (память о событии короткой фразой по-русски), equip (игрок надевает или
-    снимает снаряжение: slot, item_id или пусто; slot=all — раздеться), stock (торговцу сцены — вещь его ремесла, которой
-    нет в товаре); create_npc, create_place, create_quest,
-    door, owner, upgrade (улучшение своего места), world_item (вещь NPC или контейнера по причине в мире) и другие — по своей теме правил (все виды и поля — в схеме effect).
-    Движок проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы он применился."""
+    """Предложить движку последствие: он проверит и зарезервирует его; верни effect_id в effect_ids итога, чтобы оно применилось.
+    Имя `create:npc` значит {"kind": "create", "what": "npc", …}. Вещь двигает один move_item: откуда `source` и куда `target`
+    — hero, world, room, container, npc; имя `move_item:world>hero` значит source world, target hero. world>hero — герой
+    получил, hero>world — у героя больше нет, room>hero — взял вещь комнаты, container>hero и hero>container — из контейнера
+    и в него, hero>room — оставил; world>npc, npc>world, world>container, container>world — вещь чужая, в мире, с `cause`.
+    cast — игрок колдует; use:feature — умение с ограниченными использованиями, use:item — выпить зелье и т. п.; furnish —
+    обставить комнату при первом входе, в обставленную только с cause; prop_state — вещь открыта, сломана, сожжена, сдвинута;
+    note — память о событии короткой фразой по-русски; create:stock — торговцу сцены вещь его ремесла, которой нет в товаре.
+    Эффекты темы — по её правилам, поля там же."""
     t = ctx.deps
     if isinstance(effect, dict):
         try:
@@ -290,8 +298,8 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
                 "Отказ: letter_reply — только в ответе на письмо героя.")
     if (effect.kind == "quest_act") != (t.params.kind == "quest_act"):  # v0.7.39.6: the designer builds acts, only acts
         return ("Отказ: в ходе сценария — только quest_act." if t.params.kind == "quest_act" else
-                "Отказ: акт задания собирает сценарист, когда герой до него дойдёт; новое задание — create_quest.")
-    # DeepSeek sometimes repeats one effect or an empty give_item many times in a row (v0.7.4 goldens): stop it early
+                "Отказ: акт задания собирает сценарист, когда герой до него дойдёт; новое задание — create:quest.")
+    # DeepSeek sometimes repeats one effect or an empty move_item:world>hero many times in a row (v0.7.4 goldens): stop it early
     if t.params.kind in ENTRY_KINDS and effect.kind not in ENTRY_EFFECTS:
         return ("Отклонено движком: игрок только вошёл и ещё ничего не сделал — в этом ходе мир не меняется "
                 f"(можно лишь {', '.join(sorted(ENTRY_EFFECTS))}). Опиши место без подарков, монет и перемен.")
@@ -300,16 +308,16 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         return "Отказ: этот эффект уже принят в этом ходе — не повторяй его; если всё нужное сделано, заверши ход."
     if len(t.accepted) >= t.limits.max_effects:
         return "Отказ: лимит эффектов на этот ход исчерпан."
-    if isinstance(effect, GiveItemEffect):
+    if _gives(effect):
         if (effect.item_id is None) == (effect.item is None):
             # a refusal, not ModelRetry: three of those failed the whole turn (v0.7.4 goldens)
             t.empty_gives += 1
             if t.empty_gives >= 2:
-                return "Отказ: выдавать здесь нечего — give_item не нужен. Если герой пострадал — damage; иначе заверши ход."
-            return "Отказ: give_item — укажи либо item_id существующего предмета, либо item для нового; если давать нечего — не предлагай эффект."
+                return "Отказ: выдавать здесь нечего — move_item:world>hero не нужен. Если герой пострадал — damage; иначе заверши ход."
+            return "Отказ: move_item:world>hero — укажи либо item_id существующего предмета, либо item для нового; если давать нечего — не предлагай эффект."
         if effect.item is not None and not t.searched_items:
             return "Отказ: перед созданием нового предмета найди похожие через find_items."
-    topic = prompts.topic_for(effect.kind)
+    topic = prompts.topic_for(effect_tag(effect.model_dump()))
     if topic and topic not in t.topics and t.params.kind != "quest_act":  # the rules come with the refusal: no extra call (v0.7.34.3)
         t.topics.add(topic)
         return f"Отказ: эффект темы «{topic}» — по её правилам. Вот они:\n{prompts.topic_text(topic)}\nПредложи эффект снова по ним."
@@ -323,7 +331,7 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         return "Отказ: перед созданием места поищи его через find_places."
     raw = await t.session.call_engine("engine.validate", EngineValidateParams(turn_id=t.params.turn_id, effect=effect))
     r = EngineValidateResult.model_validate(raw)
-    made = (t.library.get(effect.item_id) if not r.accepted and isinstance(effect, GiveItemEffect) and effect.item_id
+    made = (t.library.get(effect.item_id) if not r.accepted and _gives(effect) and effect.item_id
             and t.library is not None else None)
     if made is not None:  # a thing of the library, not yet in this game: the engine makes it by its schema
         effect = effect.model_copy(update={"item_id": None, "item": made})
@@ -335,7 +343,7 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     t.proposed.add(key)
     if isinstance(effect, CreateNpcEffect):
         t.made_npcs.append(effect.npc.name)
-    if isinstance(effect, GiveItemEffect) and effect.item is not None and t.library is not None and r.item_id:
+    if _gives(effect) and effect.item is not None and t.library is not None and r.item_id:
         t.library.add(r.item_id, effect.item)
     hint = " Что заклинание сделало в мире — по правилам rules(\"spells\")." if effect.kind == "cast" and "spells" not in t.topics else ""
     return f"Принято: effect_id={r.effect_id}. {r.summary}{hint}"
@@ -348,42 +356,23 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
 _EFFECT = TypeAdapter(Effect)
 
 
-def _shape(ann: Any, depth: int = 0) -> str:
-    """A field's type in a few characters: nested objects with their fields, choices with their values."""
-    import types
-    import typing
-
-    args = [a for a in typing.get_args(ann) if a is not type(None)]
-    origin = typing.get_origin(ann)
-    if origin is typing.Annotated:
-        return _shape(args[0], depth)
-    if origin in (typing.Union, types.UnionType) and len(args) == 1:
-        return _shape(args[0], depth)
-    if origin is typing.Literal:
-        return "|".join(map(str, typing.get_args(ann)))
-    if origin is list and args:
-        return f"[{_shape(args[0], depth)}]"
-    if isinstance(ann, type) and issubclass(ann, BaseModel) and depth < 3:
-        return "{" + ", ".join(f"{n}{'' if f.is_required() else '?'}: {_shape(f.annotation, depth + 1)}"
-                               for n, f in ann.model_fields.items()) + "}"
-    return getattr(ann, "__name__", "…") if depth else ""
-
-
 def _effect_kinds(only: set[str] | None = None) -> str:
-    import typing
-
-    lines = []
-    for cls in typing.get_args(typing.get_args(Effect)[0]):
-        if only is not None and cls.model_fields["kind"].default not in only:
-            continue
-        fields = []
-        for n, f in cls.model_fields.items():
-            if n == "kind":
-                continue
-            shape = _shape(f.annotation, 1)
-            fields.append(f"{n}{'' if f.is_required() else '?'}" + (f": {shape}" if shape and shape not in ("str", "int", "bool") else ""))
-        lines.append(f"{cls.model_fields['kind'].default}({', '.join(fields)})")
-    return "; ".join(lines)
+    """Every effect by name; the fields of a topic's effects come with its rules (v0.7.69: half of the description)."""
+    lines: list[str] = []
+    folded: dict[str, list[str]] = {}
+    for cls in effect_classes():
+        kind, tag = cls.model_fields["kind"].default, class_tag(cls)
+        if only is not None:
+            if kind in only:
+                lines.append(effect_line(cls))
+        elif prompts.topic_for(tag):
+            folded.setdefault(kind, []).append(tag.partition(":")[2])
+        else:
+            lines.append(effect_line(cls))
+    for kind, whats in folded.items():
+        lines.append(f"{kind}(what: {'|'.join(whats)}; поля — в теме rules)" if any(whats) else f"{kind}(поля — в теме rules)")
+    text = "; ".join(lines)
+    return f"{text}. item: {item_shape()}" if "item?: item" in text else text
 
 
 async def propose_effect_loose(ctx: RunContext[TurnContext], effect: str) -> str:
@@ -433,30 +422,30 @@ async def lookup(ctx: RunContext[TurnContext], kind: LookupKind, id: str) -> str
 
 async def find_npcs(ctx: RunContext[TurnContext], query: str) -> str:
     """Найти людей мира (пакет и созданные в этой игре): query — имя, роль или место по-русски. Обязательно перед
-    create_npc: может, такой человек уже есть."""
+    create:npc: может, такой человек уже есть."""
     t = ctx.deps
     t.searched_npcs = True
     raw = await t.session.call_engine("engine.find_npcs", EngineFindNpcsParams(turn_id=t.params.turn_id, query=query))
     found = EngineFindNpcsResult.model_validate(raw).npcs
-    # v0.7.38.1 (the author's trace): a board quest's giver made by create_npc was not found here, the master went
+    # v0.7.38.1 (the author's trace): a board quest's giver made by create:npc was not found here, the master went
     # round in circles until the token limit; such a giver goes in the quest's own new_npcs
     made = (f"\n\nСозданные в этом ходу ({', '.join(t.made_npcs)}) появятся в мире после хода: искать их и давать им "
-            "задание этим ходом нельзя; заказчик-новичок — в new_npcs самого create_quest (giver new:<key>).") if t.made_npcs else ""
+            "задание этим ходом нельзя; заказчик-новичок — в new_npcs самого create:quest (giver new:<key>).") if t.made_npcs else ""
     if not found:
-        return _with_topic(t, "people", "Никого похожего. Если человек нужен по сцене или замыслу игрока — create_npc." + made)
+        return _with_topic(t, "people", "Никого похожего. Если человек нужен по сцене или замыслу игрока — create:npc." + made)
     return _with_topic(t, "people", "\n".join(f"[{n.npc_id}] {n.name} — {n.role}, {n.location}{' (мёртв)' if n.dead else ''}" for n in found) + made)
 
 
 async def find_quests(ctx: RunContext[TurnContext], query: str) -> str:
     """Найти задания мира (пакет и созданные в этой игре): query — суть дела, заказчик или место по-русски. Обязательно
-    перед create_quest: может, такое дело уже есть."""
+    перед create:quest: может, такое дело уже есть."""
     t = ctx.deps
     t.searched_quests = True
     raw = await t.session.call_engine("engine.find_quests", EngineFindQuestsParams(turn_id=t.params.turn_id, query=query))
     r = EngineFindQuestsResult.model_validate(raw)
     head = f"Созданных заданий открыто: {r.open_made} из {r.max_open}."
     if not r.quests:
-        return _with_topic(t, "quests", head + " Похожих нет. Если дело нужно — create_quest.")
+        return _with_topic(t, "quests", head + " Похожих нет. Если дело нужно — create:quest.")
     status = {"offered": "предлагается", "taken": "взято", "done": "сделано", "failed": "провалено"}
     return _with_topic(t, "quests", head + "\n" + "\n".join(
         f"[{q.quest_id}] «{q.title}» — {q.giver}, {status.get(q.status, q.status)}" for q in r.quests))
@@ -473,7 +462,7 @@ async def find_teachers(ctx: RunContext[TurnContext], kind: Literal["skill", "to
         return r.reason
     if not r.teachers:
         return _with_topic(t, "study", f"Никто в мире не учит {what} [{r.what}]. Не отсылай словами к выдуманному учителю и не "
-                           "создавай место или человека просто так: дай задание найти учителя — create_quest (своё дело own: "
+                           "создавай место или человека просто так: дай задание найти учителя — create:quest (своё дело own: "
                            "true или от NPC сцены, кто слышал о таком), учителя приведёт сценарист в акте задания с курсом (teaches).")
     lines = []
     for x in r.teachers:
@@ -488,7 +477,7 @@ async def find_teachers(ctx: RunContext[TurnContext], kind: Literal["skill", "to
 
 async def find_places(ctx: RunContext[TurnContext], query: str) -> str:
     """Найти места мира (комнаты и локации пакета и созданные в этой игре): query — название или локация по-русски.
-    Обязательно перед create_place: может, такое место уже есть. В ответе — и открытые края известного мира, где можно
+    Обязательно перед create:place: может, такое место уже есть. В ответе — и открытые края известного мира, где можно
     дорисовать новое место (не только здесь)."""
     t = ctx.deps
     t.searched_places = True
@@ -496,7 +485,7 @@ async def find_places(ctx: RunContext[TurnContext], query: str) -> str:
     r = EngineFindPlacesResult.model_validate(raw)
     out = ["\n".join(f"[{p.room_id}] {p.name} — {p.location}" for p in r.places) if r.places else "Похожих мест нет."]
     if r.edges:  # 0.48.0: where a new place may grow — this room, its location, the neighbours, where the hero has been
-        out.append("Открытые края, где можно дорисовать место (create_place с room_id и edge; герой туда не переходит):\n" + "\n".join(
+        out.append("Открытые края, где можно дорисовать место (create:place с room_id и edge; герой туда не переходит):\n" + "\n".join(
             f"[{e.room_id}] {e.room} ({e.location}), край {e.edge}: {e.text}; местность {', '.join(e.terrain)}"
             f"{'; можно новую локацию' if e.new_location else ''}" for e in r.edges))
     else:
@@ -513,7 +502,7 @@ async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None 
     t.item_searches += 1
     if t.item_searches > FIND_ITEMS_MAX:
         return ("Отказ: поиск вещей на этот ход исчерпан — больше не ищи. Чего не нашлось, создай сам: переносную — поле "
-                "`item` (у вещи обстановки, в `contents`, в `give_item`), неподвижную — просто вещь обстановки без `item_id`.")
+                "`item` (у вещи обстановки, в `contents`, в `move_item:world>hero`), неподвижную — просто вещь обстановки без `item_id`.")
     raw = await t.session.call_engine("engine.find_items", EngineFindItemsParams(
         turn_id=t.params.turn_id, query=query, base=base, properties=properties or []))
     found = EngineFindItemsResult.model_validate(raw).items
@@ -521,7 +510,7 @@ async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None 
         found += t.library.search(query, base, list(properties or []))
     if not found:
         return ("Ничего похожего — не ищи это снова. Переносную вещь создай сам: поле `item` (у вещи обстановки, в `contents`, "
-                "в `give_item`); неподвижную (мебель, очаг) опиши вещью обстановки без `item_id`.")
+                "в `move_item:world>hero`); неподвижную (мебель, очаг) опиши вещью обстановки без `item_id`.")
     return "\n".join(f"[{i.item_id}] {i.name} — {i.item_type}, {i.rarity}, {i.value_cp} мм, свойства: {', '.join(i.properties) or 'нет'} ({i.source})"
                      for i in found[:8])
 

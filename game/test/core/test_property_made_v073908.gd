@@ -27,7 +27,7 @@ func _days(s: GameSession, n: int) -> Array[String]:
 ## The master puts a place of its own kind on sale at the tavern; the hero buys it and stands in it. Its id.
 func _made(s: GameSession, kind: Dictionary, price: int = 15000) -> String:
 	var engine := EffectEngine.new()
-	var r := engine.validate(s, data, "t-1", {"kind": "property", "site_id": "brod-tavern", "seller_id": "npc_innkeeper",
+	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "property", "site_id": "brod-tavern", "seller_id": "npc_innkeeper",
 		"new_kind": kind, "price_cp": price})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()
 	engine.apply(s, "t-1", [r["effect_id"]])
@@ -114,7 +114,7 @@ func test_a_fishing_pier_brings_its_catch() -> void:
 func test_the_master_kind_is_checked() -> void:
 	var s := _session()
 	var engine := EffectEngine.new()
-	var spec := {"kind": "property", "site_id": "brod-tavern", "seller_id": "npc_innkeeper", "price_cp": 15000}
+	var spec := {"kind": "create", "what": "property", "site_id": "brod-tavern", "seller_id": "npc_innkeeper", "price_cp": 15000}
 	var bad := [
 		{"name": "школа", "income_cp_day": 40, "skill": "history"},  # income without hands
 		{"name": "школа", "income_cp_day": 40, "skill": "магия", "staff": [{"role": "учитель", "wage_cp_day": 20}]},
@@ -139,11 +139,11 @@ func test_a_jewelers_bench_asked_at_home_and_a_ring_made() -> void:
 	c["inventory"]["jewelers_tools"] = 1
 	c["inventory"]["silver_bar"] = 2
 	var engine := EffectEngine.new()
-	var away := engine.validate(s, data, "t-1", {"kind": "upgrade", "name": "Станок ювелира",
+	var away := engine.validate(s, data, "t-1", {"kind": "create", "what": "upgrade", "name": "Станок ювелира",
 		"gives": {"station_new": {"name": "Станок ювелира", "tools": ["jewelers_tools"]}}})
 	assert_bool(bool(away["accepted"])).is_false()  # not at the hero's place
 	s.room_id = PropertyRules.main_room(s, data, "river_house")
-	var r := engine.validate(s, data, "t-1", {"kind": "upgrade", "name": "Станок ювелира", "text": "Кольца и подвески своими руками",
+	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "upgrade", "name": "Станок ювелира", "text": "Кольца и подвески своими руками",
 		"gives": {"station_new": {"name": "Станок ювелира", "tools": ["jewelers_tools"]}}, "indoor": true})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()
 	assert_str(str(r["summary"])).contains("15 зм")
@@ -154,7 +154,7 @@ func test_a_jewelers_bench_asked_at_home_and_a_ring_made() -> void:
 	var other := _session()  # another place does not see it
 	assert_bool(PropertyRules.ups(data)[up]["places"].has("river_house")).is_true()
 	assert_bool(PropertyRules.upgrades_for(other, data, "old_mill").has(up)).is_false()
-	var rec := engine.validate(s, data, "t-2", {"kind": "recipe", "tool": "jewelers_tools", "station": station, "hours": 2, "dc_tier": "easy",
+	var rec := engine.validate(s, data, "t-2", {"kind": "create", "what": "recipe", "tool": "jewelers_tools", "station": station, "hours": 2, "dc_tier": "easy",
 		"materials": [{"item_id": "silver_bar", "qty": 1}], "output_id": "silver_ring"})
 	assert_bool(bool(rec["accepted"])).override_failure_message(str(rec.get("reason", ""))).is_true()
 	engine.apply(s, "t-2", [rec["effect_id"]])
@@ -191,21 +191,21 @@ func test_more_things_in_a_furnished_room_need_a_cause() -> void:
 func test_the_master_gives_and_takes_things_of_the_world() -> void:
 	var s := _session()
 	var engine := EffectEngine.new()
-	var nocause := engine.validate(s, data, "t-1", {"kind": "world_item", "op": "give", "npc_id": "npc_innkeeper", "item_id": "dagger"})
+	var nocause := engine.validate(s, data, "t-1", {"kind": "move_item", "source": "world", "target": "npc", "npc_id": "npc_innkeeper", "item_id": "dagger"})
 	assert_bool(bool(nocause["accepted"])).is_false()
-	var r := engine.validate(s, data, "t-1", {"kind": "world_item", "op": "give", "npc_id": "npc_innkeeper", "item_id": "dagger", "cause": "купил у кузнеца нож для кухни"})
+	var r := engine.validate(s, data, "t-1", {"kind": "move_item", "source": "world", "target": "npc", "npc_id": "npc_innkeeper", "item_id": "dagger", "cause": "купил у кузнеца нож для кухни"})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()
 	engine.apply(s, "t-1", [r["effect_id"]])
 	assert_bool(TheftRules.pockets(s, data, "npc_innkeeper").any(func(k: Dictionary) -> bool: return str(k["item_id"]) == "dagger")).is_true()
-	var take := engine.validate(s, data, "t-2", {"kind": "world_item", "op": "take", "npc_id": "npc_innkeeper", "item_id": "dagger", "cause": "отдал нож поварёнку"})
+	var take := engine.validate(s, data, "t-2", {"kind": "move_item", "source": "npc", "target": "world", "npc_id": "npc_innkeeper", "item_id": "dagger", "cause": "отдал нож поварёнку"})
 	engine.apply(s, "t-2", [take["effect_id"]])
 	assert_bool(TheftRules.pockets(s, data, "npc_innkeeper").any(func(k: Dictionary) -> bool: return str(k["item_id"]) == "dagger")).is_false()
 	s.props[s.room_id] = [{"id": "p1", "name": "Сундук Бруно", "item_id": "", "owner": "npc_innkeeper", "container": "chest", "contents": {"torch": 2}, "state": ""}]
-	var put := engine.validate(s, data, "t-3", {"kind": "world_item", "op": "give", "prop_id": "p1", "item_id": "rope", "cause": "Бруно убрал верёвку на место"})
+	var put := engine.validate(s, data, "t-3", {"kind": "move_item", "source": "world", "target": "container", "prop_id": "p1", "item_id": "rope", "cause": "Бруно убрал верёвку на место"})
 	assert_bool(bool(put["accepted"])).override_failure_message(str(put.get("reason", ""))).is_true()
 	engine.apply(s, "t-3", [put["effect_id"]])
 	var torches := int(s.character["inventory"].get("torch", 0))
-	var out := engine.validate(s, data, "t-4", {"kind": "world_item", "op": "take", "prop_id": "p1", "item_id": "torch", "qty": 2, "cause": "Бруно унёс факелы в погреб"})
+	var out := engine.validate(s, data, "t-4", {"kind": "move_item", "source": "container", "target": "world", "prop_id": "p1", "item_id": "torch", "qty": 2, "cause": "Бруно унёс факелы в погреб"})
 	engine.apply(s, "t-4", [out["effect_id"]])
 	assert_dict(PropRules.find(s, s.room_id, "p1")["contents"]).is_equal({"rope": 1})
 	assert_int(int(s.character["inventory"].get("torch", 0))).is_equal(torches)  # not the hero's

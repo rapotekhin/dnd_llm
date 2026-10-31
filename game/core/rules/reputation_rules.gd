@@ -107,7 +107,7 @@ static func plan(s: GameSession, data: Dictionary, delta: int, why: String, pend
 		return {"reason": "репутация за поступок — от −%d до +%d" % [most, most]}
 	if why.strip_edges().length() < 5:
 		return {"reason": "нужна причина: что сделал герой и кто об этом узнал"}
-	if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "reputation"):
+	if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "shift:reputation"):
 		return {"reason": "репутация меняется не больше раза за ход"}
 	return {"plan": {"reputation": loc, "delta": delta, "why": why.strip_edges().left(120)},
 		"summary": "%s: %s" % [data["world"]["locations"][loc].get("name", loc), "о герое говорят лучше" if delta > 0 else "о герое говорят хуже"]}

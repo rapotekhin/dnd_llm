@@ -188,9 +188,9 @@ def report(path: Path) -> Path:
         if t["error"]:
             anomalies.append(f"- `{tid}` ход не удался: {short(json.dumps(t['error'], ensure_ascii=False), 200)}")
         paid = any(t["ts"] - COIN_WINDOW_MS <= m <= t.get("done_ts", t["ts"]) for m in coin_moves)
-        if text and MONEY.search(text) and not paid and not kinds & {"coins", "give_item", "take_item"} and t["kind"] not in ("deal", "theft", "quest"):
+        if text and MONEY.search(text) and not paid and not kinds & {"coins", "move_item:world>hero", "move_item:hero>world"} and t["kind"] not in ("deal", "theft", "quest"):
             anomalies.append(f"- `{tid}` в тексте деньги, а эффекта монет нет: «{short(text, 160)}»")
-        if text and TAKE.search(text) and not kinds & {"give_item", "take_prop", "coins"} and t["kind"] not in ("deal", "theft", "quest"):
+        if text and TAKE.search(text) and not kinds & {"move_item:world>hero", "move_item:room>hero", "coins"} and t["kind"] not in ("deal", "theft", "quest"):
             anomalies.append(f"- `{tid}` в тексте передача вещи без эффекта: «{short(text, 160)}»")
         if t.get("done_ts") and t["done_ts"] - t["ts"] > 25_000:
             anomalies.append(f"- `{tid}` долгий ход: {(t['done_ts'] - t['ts']) / 1000:.0f} с")

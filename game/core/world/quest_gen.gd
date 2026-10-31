@@ -125,7 +125,7 @@ static func find_quests(s: GameSession, data: Dictionary, query: String) -> Arra
 
 
 ## --- v0.7.39.6: a quest by acts ------------------------------------------------------------------------------------
-## The master writes the skeleton (`create_quest`): the difficulty, the acts with their goals, the villain and the
+## The master writes the skeleton (`create:quest`): the difficulty, the acts with their goals, the villain and the
 ## finale; the engine sets the reward by the difficulty and the hero's level. An act is built when it opens (the first
 ## on taking): the designer's turn (`quest_act`) brings its steps — the pack's facts, parts in any order, knowledge as a
 ## key — its people, places, things and fights, and in the last act the choice; the engine checks each part by the
@@ -181,7 +181,7 @@ static func _str(spec: Dictionary, key: String) -> String:
 	return str(spec.get(key, "")) if spec.get(key) != null else ""
 
 
-## Checks a `create_quest` — the skeleton: {plan, summary} or {reason}. `searched` — find_quests was called this turn.
+## Checks a `create:quest` — the skeleton: {plan, summary} or {reason}. `searched` — find_quests was called this turn.
 static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searched: bool) -> Dictionary:
 	var c := cfg(data)
 	if not searched:
@@ -578,7 +578,7 @@ static func _plan_act_content(s: GameSession, data: Dictionary, spec: Dictionary
 	var lairs: Array = []
 	for p: Variant in places:
 		if not (p is Dictionary):
-			return {"reason": "место — объект схемы create_place"}
+			return {"reason": "место — объект схемы create:place"}
 		var spec_p := (p as Dictionary).duplicate(true)
 		for k: String in ["npcs", "sites", "settlement", "law"]:
 			spec_p.erase(k)  # the act's people go to new_npcs

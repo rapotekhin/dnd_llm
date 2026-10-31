@@ -35,7 +35,7 @@ func run() -> void:
 	s.room_id = "brod-smithy"
 	node("EventBus").state_changed.emit()
 	await frames(3)
-	var r := fx.validate(s, data, "t-st", {"kind": "stock", "npc_id": "npc_smith", "item_id": "greataxe", "qty": 1})
+	var r := fx.validate(s, data, "t-st", {"kind": "create", "what": "stock", "npc_id": "npc_smith", "item_id": "greataxe", "qty": 1})
 	if step("the master puts a greataxe on the smith's shelf", bool(r["accepted"]), str(r.get("reason", r.get("summary", "")))):
 		fx.apply(s, "t-st", [r["effect_id"]])
 		node("EventBus").state_changed.emit()
@@ -47,7 +47,7 @@ func run() -> void:
 
 	c["tools"] = ["smiths_tools"]
 	c["inventory"]["smiths_tools"] = 1
-	var rr := fx.validate(s, data, "t-rc", {"kind": "recipe", "tool": "smiths_tools", "station": "forge", "hours": 4, "dc_tier": "medium",
+	var rr := fx.validate(s, data, "t-rc", {"kind": "create", "what": "recipe", "tool": "smiths_tools", "station": "forge", "hours": 4, "dc_tier": "medium",
 		"materials": [{"item_id": "iron_bar", "qty": 4}, {"item_id": "timber", "qty": 1}], "output_id": "greataxe"})
 	if step("a greataxe recipe is accepted, its hours by the value", bool(rr["accepted"]), str(rr.get("summary", rr.get("reason", "")))):
 		fx.apply(s, "t-rc", [rr["effect_id"]])
@@ -90,7 +90,7 @@ func run() -> void:
 
 
 func _village() -> Dictionary:
-	return {"kind": "create_place", "room_id": "brod-gate", "edge": 0, "new_location": true, "name": "Ракитное",
+	return {"kind": "create", "what": "place", "room_id": "brod-gate", "edge": 0, "new_location": true, "name": "Ракитное",
 		"description": "Деревня за полями, у ракитника.", "terrain": "grassland", "settlement": "village",
 		"rooms": [
 			{"key": "street", "name": "Улица Ракитного", "description": "Пыльная улица меж плетней, колодец с журавлём.", "exits": ["inn", "house"],

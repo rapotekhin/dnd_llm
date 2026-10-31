@@ -22,7 +22,7 @@ func run() -> void:
 	s.minute = 12 * 60  # everyone at work
 	var fx: EffectEngine = gs.effects
 	fx.searched_quests["t-qc"] = true
-	var r := fx.validate(s, data, "t-qc", {"kind": "create_quest", "giver": "npc_innkeeper", "title": "Пепельная стая",
+	var r := fx.validate(s, data, "t-qc", {"kind": "create", "what": "quest", "giver": "npc_innkeeper", "title": "Пепельная стая",
 		"difficulty": "hard", "description": "Гноллы с пепельными метками режут скот у Пущи.",
 		"offer_text": "Кто-то ведёт этих тварей — найди вожака, я в долгу не останусь.",
 		"acts": [{"title": "Следы", "goal": "Расспросить Миру и проверить башню у дороги"},
@@ -120,7 +120,7 @@ func run() -> void:
 	var board := str(PropRules.room_props(s, s.room_id)[0]["id"])
 	QuestGen.mark_board_read(s, board)
 	fx.searched_quests["t-qd"] = true
-	var o := fx.validate(s, data, "t-qd", {"kind": "create_quest", "giver": "npc_smith", "board_prop_id": board,
+	var o := fx.validate(s, data, "t-qd", {"kind": "create", "what": "quest", "giver": "npc_smith", "board_prop_id": board,
 		"title": "Пепельный курган", "difficulty": "deadly", "description": "В кургане за Пущей проснулось что-то древнее.",
 		"acts": [{"title": "Слухи", "goal": "Узнать, что проснулось в кургане"}, {"title": "Дорога", "goal": "Пройти к кургану через топь"},
 			{"title": "Курган", "goal": "Спуститься в курган и покончить с ним"}], "finale": "Запечатать курган или забрать его силу"})

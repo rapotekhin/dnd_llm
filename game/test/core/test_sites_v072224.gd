@@ -71,7 +71,7 @@ func test_the_master_grows_a_site_inside_a_location() -> void:
 	var s := _hero("brod-square")
 	var fx := EffectEngine.new()
 	fx.searched_places["t-1"] = true
-	var spec := {"kind": "create_place", "inside": true, "room_id": "brod-square",
+	var spec := {"kind": "create", "what": "place", "inside": true, "room_id": "brod-square",
 		"site": {"name": "Баня Гриды", "tags": ["bathhouse"], "public": true},
 		"rooms": [{"key": "a", "name": "Предбанник", "description": "Лавки, веники.", "exits": ["b"]},
 			{"key": "b", "name": "Парная", "description": "Жар и пар.", "public": false}]}

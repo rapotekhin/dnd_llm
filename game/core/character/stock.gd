@@ -3,7 +3,7 @@ extends RefCounted
 ## What a character spends and gets back (v0.7.63, from the feature uses of v0.6.0): Second Wind, Rage, Ki and the other
 ## limited uses, spell slots `slot_<circle>`, hit dice `hit_dice`. Who has it, how many and when it comes back are data
 ## (rules.json `resources`); the character keeps only `spent` {id: n}. A feature's use goes through the engine (effect
-## use_feature or the sheet button). A thing's charges join this with the item's instance (v0.7.65).
+## use:feature or the sheet button). A thing's charges join this with the item's instance (v0.7.65).
 
 
 static func table(data: Dictionary) -> Dictionary:

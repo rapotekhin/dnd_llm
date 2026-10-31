@@ -343,7 +343,7 @@ func test_a_course_teaches_a_built_property() -> void:
 	MakeRules.apply(s, data, plan["plan"])
 	var engine := EffectEngine.new()
 	var pending: Array[Dictionary] = [{"kind": "make", "plan": plan["plan"]}]
-	var e := {"kind": "course", "npc_id": "npc_smith", "name": "Морозная ковка", "teach_kind": "recipe", "teach_id": "new:frost", "lessons": 4, "fee_cp": 400}
+	var e := {"kind": "create", "what": "course", "npc_id": "npc_smith", "name": "Морозная ковка", "teach_kind": "recipe", "teach_id": "new:frost", "lessons": 4, "fee_cp": 400}
 	var course := engine._plan(s, data, "t", e, pending)
 	assert_bool(course.has("plan")).override_failure_message(str(course)).is_true()
 	StudyRules.apply_make(s, data, course["plan"])

@@ -19,7 +19,8 @@ func _make(spec: Dictionary, turn := "t-1", search := true) -> Dictionary:
 	if search:
 		fx.searched_quests[turn] = true
 	var e := spec.duplicate(true)
-	e["kind"] = "create_quest"
+	e["kind"] = "create"
+	e["what"] = "quest"
 	var r := fx.validate(s, data, turn, e)
 	if bool(r["accepted"]):
 		fx.apply(s, turn, [r["effect_id"]])

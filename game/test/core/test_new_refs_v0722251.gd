@@ -17,14 +17,14 @@ func before_test() -> void:
 
 
 func _yard() -> Dictionary:
-	return {"kind": "create_place", "inside": true, "room_id": "brod-square",
+	return {"kind": "create", "what": "place", "inside": true, "room_id": "brod-square",
 		"site": {"name": "Двор вдовы Сарры", "tags": ["bakery", "home"], "owner_id": "new"},
 		"rooms": [{"key": "yard", "name": "Двор Сарры", "description": "Печь из речного камня.", "exits": ["house"]},
 			{"key": "house", "name": "Пекарня вдовы Сарры", "indoor": true, "public": false, "exits": ["yard"]}]}
 
 
 func _sarra(room: String) -> Dictionary:
-	return {"kind": "create_npc", "npc": {"name": "Сарра", "role": "пекарша, вдова", "gender": "female", "race": "human",
+	return {"kind": "create", "what": "npc", "npc": {"name": "Сарра", "role": "пекарша, вдова", "gender": "female", "race": "human",
 		"age": "пожилая", "build": "полная, сутулая", "height": "ниже среднего", "room_id": room, "trader": true,
 		"stock": ["rations"], "stock_new": [{"name": "Краюха хлеба", "item_type": "consumable", "rarity": "common", "value_cp": 2}]}}
 
@@ -69,5 +69,5 @@ func test_no_new_person_leaves_the_site_without_an_owner() -> void:
 func test_the_body_by_words_and_unknown_words_left_to_the_engine() -> void:
 	assert_dict(BodyRules.check(data, {"age": "пожилая", "build": "полная, сутулая", "height": "ниже среднего"})).is_equal({"age": "elderly", "build": "plump"})
 	assert_dict(BodyRules.check(data, {"age": "средних лет"})).is_equal({"age": "middle"})
-	var npc := fx.validate(s, data, "t-1", {"kind": "create_npc", "npc": {"name": "Ольма", "role": "прачка", "gender": "female", "age": "древняя"}})
+	var npc := fx.validate(s, data, "t-1", {"kind": "create", "what": "npc", "npc": {"name": "Ольма", "role": "прачка", "gender": "female", "age": "древняя"}})
 	assert_bool(bool(npc["accepted"])).override_failure_message(str(npc)).is_true()

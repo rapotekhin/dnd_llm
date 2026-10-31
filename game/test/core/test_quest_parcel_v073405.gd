@@ -17,7 +17,7 @@ func before_test() -> void:
 
 func _quest(own := false) -> String:
 	fx.searched_quests["t-1"] = true
-	var e := {"kind": "create_quest", "title": "Своё: клин" if own else "Клин для лесорубов", "difficulty": "easy", "description": "Лесорубы ждут клин.",
+	var e := {"kind": "create", "what": "quest", "title": "Своё: клин" if own else "Клин для лесорубов", "difficulty": "easy", "description": "Лесорубы ждут клин.",
 		"acts": [{"title": "Клин", "goal": "Доставить клин лесорубам"}]}
 	if own:
 		e["own"] = true

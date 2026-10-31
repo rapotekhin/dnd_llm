@@ -64,7 +64,7 @@ scenarios:
           - {id: hook_loose_board, text: "одна половица у очага чуть выше других", dc: 15}
     expect:
       check: {required: true, skill_in: [perception, investigation], dc_tier_in: [easy, medium]}
-      effects: {forbidden_kinds: [give_item, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins]}
       narration:
         must_not_match: ["(находишь|нашл[аи]|обнаруживаешь|видишь) (тайник|монет)", "монет[аы]? под половицей"]
       options: {min: 1, max: 3}
@@ -83,7 +83,7 @@ scenarios:
           - {id: hook_new_bolt, text: "люк в погреб заперт на новый засов, хотя старый был исправен", dc: 13}
     expect:
       check: {required: true, skill_in: [perception, investigation]}
-      effects: {forbidden_kinds: [give_item, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins]}
       narration:
         must_not_match: ["царапин", "следы (когтей|взлома|инструмента)", "кровь"]
     rubric:
@@ -119,7 +119,7 @@ scenarios:
     input: "Я мгновенно телепортируюсь в сокровищницу королевского замка."
     expect:
       check: {required: false}
-      effects: {forbidden_kinds: [move, give_item, coins]}
+      effects: {forbidden_kinds: [move, move_item:world>hero, coins]}
       next_mode: null
       narration:
         must_not_match: ["сокровищниц[аеу] .*(перед тобой|вокруг тебя)", "ты оказываешься в замке"]
@@ -137,7 +137,7 @@ scenarios:
     expect:
       check: {required: true, skill_in: [persuasion, deception, intimidation],
               dc_tier_in: [very_hard, nearly_impossible]}
-      effects: {forbidden_kinds: [give_item, coins], max_count: 2}
+      effects: {forbidden_kinds: [move_item:world>hero, coins], max_count: 2}
     rubric:
       - "Даже при успехе ключей от казны нет: результат в бюджете (расположение, услуга, наводка, аудиенция)"
       - "Успех на натуральной 20 описан ярко, без нарушения логики мира"
@@ -161,7 +161,7 @@ scenarios:
       scene:
         items_visible: [{id: purse_01, name: "потёртый кошелёк", contents_cp: 37}]
     expect:
-      effects: {required_kinds_any: [coins, give_item], coins_max: 37}
+      effects: {required_kinds_any: [coins, move_item:world>hero], coins_max: 37}
       narration:
         must_match: ["кошел"]
     rubric:
@@ -248,7 +248,7 @@ scenarios:
     engine:
       check: {d20: [], bonus: 3, total: 9, dc: 15, success: false, nat: null, blocked: true}
     expect:
-      effects: {forbidden_kinds: [give_item, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins]}
       narration:
         must_not_match: ["тайник", "под половицей (лежит|спрятан)", "находишь"]
     rubric:
@@ -271,7 +271,7 @@ scenarios:
     engine:
       check: {d20: [], bonus: 3, total: 7, dc: 15, success: false, nat: null, blocked: true}
     expect:
-      effects: {forbidden_kinds: [give_item, coins, npc_favor]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins, grant:favor]}
     rubric:
       - "Горм снова отказывает — уговоры теми же словами не действуют; мастер даёт понять, что нужен новый довод (залог, услуга, поручитель) или перемена"
 
@@ -287,7 +287,7 @@ scenarios:
           - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", template: commoner, attitude: indifferent, trader: true,
              under: "Очарование личности — до 21:40"}
     expect:
-      effects: {forbidden_kinds: [start_combat, npc_attitude]}
+      effects: {forbidden_kinds: [start_combat, shift:attitude]}
     rubric:
       - "Горм держится с героем как с добрым знакомым (под чарами) и охотно делится тем, что знает, без выдуманных фактов о мире"
       - "Мастер не снимает чары и не меняет отношение эффектами: спадут сами, когда выйдет время"
@@ -299,7 +299,7 @@ scenarios:
     input: "Перелезаю через стойку, вскрываю замок на сундуке хозяина и прячу содержимое под плащ."
     expect:
       max_checks: 1
-      effects: {forbidden_kinds: [give_item, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins]}
       options: {min: 1, max: 3}
     rubric:
       - "Разрешена только первая часть действия; продолжение — в вариантах следующего хода"
@@ -348,7 +348,7 @@ scenarios:
              template: commoner, attitude: friendly}
     expect:
       next_mode: {mode: trade, npc_id: npc_innkeeper}
-      effects: {forbidden_kinds: [give_item, take_item, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, move_item:hero>world, coins]}
     rubric:
       - "Реплика NPC в характере; сделка — на экране торговли, не в тексте"
 
@@ -372,7 +372,7 @@ scenarios:
           - {item_id: torch, name: "Факел", qty: 10, price_cp: 0}
     expect:
       check: {required: false}
-      effects: {forbidden_kinds: [coins, give_item, take_item]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world]}
       narration:
         must_not_match: ["панел", "кнопк", "интерфейс"]
     rubric:
@@ -400,7 +400,7 @@ scenarios:
               note: "Торг удался (Убеждение 18 против DC 13): на ближайшую сделку торговец уступает 15% на покупки и платит на 15% больше за вещи игрока. Цены уже пересчитаны движком."}
     expect:
       check: {required: true, skill_in: [persuasion, deception]}
-      effects: {forbidden_kinds: [coins, give_item, take_item]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Горм нехотя уступает в характере; скидку не называет больше той, что дал движок (15%)"
       - "Ничего не продаёт и не берёт монеты в тексте"
@@ -467,7 +467,7 @@ scenarios:
     extends: tavern
     input: "Говорю Горму: «Я нашёл в погребе пропавший бочонок, задание выполнено. Гони двадцать золотых, как договаривались»."
     expect:
-      effects: {forbidden_kinds: [coins, give_item]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Горм отвечает в характере, но ни монет, ни предметов не выдаёт и не объявляет задание выполненным — это решает движок"
 
@@ -524,7 +524,7 @@ scenarios:
       check: {d20: [17], bonus: 5, total: 22, dc: 15, success: true, nat: 17, blocked: false, note: "Кража удалась, сержант Ведда ничего не заметил(а): движок уже выдал 6 см (зм — золотые, см — серебряные, мм — медные) — опиши добычу ровно так"}
     expect:
       check: {required: true, skill_in: [sleight_of_hand]}
-      effects: {forbidden_kinds: [coins, give_item]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "После успешной Ловкости рук описана добыча из note (несколько серебряных), без своих эффектов и без выдуманных вещей сверх неё"
 
@@ -568,7 +568,7 @@ scenarios:
           - {prop_id: p3, name: "Сальная свеча", description: "Оплывает на пустом столе у окна", portable: true}
           - {prop_id: p4, name: "Очаг", description: "Большой, с закопчённой решёткой"}
     expect:
-      effects: {forbidden_kinds: [give_item, furnish]}
+      effects: {forbidden_kinds: [move_item:world>hero, furnish]}
     rubric:
       - "В описании только вещи из списка (доска объявлений, кружка, свеча, очаг) и NPC; новых предметов на столах и стенах мастер не выдумывает"
 
@@ -590,7 +590,7 @@ scenarios:
       - "Мастер передаёт текст доски (пропал лесоруб Влас, видевших — к капитану), не добавляя других объявлений"
 
   - id: take_prop_words
-    title: "Взять вещь комнаты — эффект take_prop"
+    title: "Взять вещь комнаты — эффект move_item:room>hero"
     category: world
     extends: tavern
     input: "Забираю сальную свечу со стола у окна."
@@ -602,9 +602,9 @@ scenarios:
           - {prop_id: p3, name: "Сальная свеча", description: "Оплывает на пустом столе у окна", portable: true}
           - {prop_id: p4, name: "Очаг", description: "Большой, с закопчённой решёткой"}
     expect:
-      effects: {required_kinds_any: [take_prop], forbidden_kinds: [give_item]}
+      effects: {required_kinds_any: [move_item:room>hero], forbidden_kinds: [move_item:world>hero]}
     rubric:
-      - "Мастер проводит take_prop для p3 и описывает, как свеча оказывается у игрока"
+      - "Мастер проводит move_item:room>hero для p3 и описывает, как свеча оказывается у игрока"
 
   - id: fill_waterskin_at_stream
     title: "Набрать воды словами у ручья — эффект fill"
@@ -624,7 +624,7 @@ scenarios:
       character:
         inventory: [{item_id: waterskin, name: "Бурдюк (пусто)", qty: 1}, {item_id: flask_or_tankard, name: "Фляга или кружка (вода 0/1)", qty: 1}]
     expect:
-      effects: {required_kinds_any: [fill], forbidden_kinds: [give_item]}
+      effects: {required_kinds_any: [fill], forbidden_kinds: [move_item:world>hero]}
     rubric:
       - "Мастер проводит fill (все ёмкости или каждую) и описывает, как герой набирает воду из ручья; воду не выдаёт предметом"
 
@@ -641,7 +641,7 @@ scenarios:
       validate:
         - {kind: fill, status: reject, reason: "здесь нет воды: ни тега комнаты, ни вещи-источника (колодец, ручей, река — вещь обстановки с source)"}
     expect:
-      effects: {forbidden_kinds: [give_item]}
+      effects: {forbidden_kinds: [move_item:world>hero]}
     rubric:
       - "В таверне без колодца или бочки с водой мастер не наполняет бурдюк в рассказе: воды здесь нет или её надо попросить у хозяина"
 
@@ -665,7 +665,7 @@ scenarios:
       - "Мастер проводит заклинание эффектом cast и описывает его по итогу движка"
 
   - id: use_feature_words
-    title: "Умение словами — эффект use_feature, движок лечит сам"
+    title: "Умение словами — эффект use:feature, движок лечит сам"
     category: magic
     extends: tavern
     input: "Перевожу дух и пользуюсь Вторым дыханием."
@@ -674,9 +674,9 @@ scenarios:
         hp: {current: 4, max: 12}
         resources: [{name: "Второе дыхание", left: 1, max: 1}]
     expect:
-      effects: {required_kinds_any: [use_feature], forbidden_kinds: [heal]}
+      effects: {required_kinds_any: [use:feature], forbidden_kinds: [heal]}
     rubric:
-      - "Мастер проводит умение эффектом use_feature и не лечит отдельным heal — лечение умения считает движок"
+      - "Мастер проводит умение эффектом use:feature и не лечит отдельным heal — лечение умения считает движок"
 
   - id: downed_comes_to
     title: "0 HP вне боя — пришёл в себя, последствие без нового урона"
@@ -707,7 +707,7 @@ scenarios:
           - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", template: commoner, attitude: indifferent, trader: true}
     expect:
       next_mode: {mode: trade, npc_id: npc_innkeeper}
-      effects: {forbidden_kinds: [give_item, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins]}
     rubric:
       - "Горм отвечает в характере и называет цену; эль не выдан и монеты не списаны в тексте"
 
@@ -793,7 +793,7 @@ scenarios:
       check: {d20: [15], bonus: 5, total: 20, dc: 15, success: true, nat: 15, blocked: false}
     expect:
       check: {required: true}
-      effects: {required_kinds_any: [damage, condition], forbidden_kinds: [move, coins, give_item]}
+      effects: {required_kinds_any: [damage, condition], forbidden_kinds: [move, coins, move_item:world>hero]}
     rubric:
       - "Мастер просит проверку (Атлетика или похожее) и по успеху даёт урон или состояние врагу (target_id e1), а не игроку"
 
@@ -860,7 +860,7 @@ scenarios:
     expect:
       tools_required: [find_items]
       tools_forbidden: [create_item]
-      effects: {required_kinds_any: [give_item]}
+      effects: {required_kinds_any: [move_item:world>hero]}
     rubric:
       - "Если подходящий предмет найден в каталоге, выдаётся он, а не создаётся новый"
 
@@ -882,7 +882,7 @@ scenarios:
         - {id: stone_of_good_luck, name: "Камень удачи", base: null, rarity: uncommon}
     expect:
       check: {required: true, skill_in: [investigation, perception]}
-      effects: {required_kinds_any: [give_item]}
+      effects: {required_kinds_any: [move_item:world>hero]}
     rubric:
       - "После успешного обыска герой находит настоящую магическую вещь — из каталога (find_items) или новую со свойствами, а не безделушку «свойства неизвестны» без механики"
 
@@ -982,7 +982,7 @@ scenarios:
       quests:
         - {id: letter_to_ilva, title: "Письмо для Илвы", description: "Горм просит отнести запечатанное письмо жрице Илве в храм на площади.", offered_by: "Горм"}
     expect:
-      effects: {forbidden_kinds: [give_item, coins, quest_update, xp]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins, quest_update, xp]}
       narration:
         must_match: ["письм"]
         must_not_match: ["нет (у меня )?(никакой )?работы", "заданий (я )?не (раздаю|даю)"]
@@ -1003,7 +1003,7 @@ scenarios:
       quests:
         - {id: letter_to_ilva, title: "Письмо для Илвы", description: "Горм просит отнести запечатанное письмо жрице Илве в храм на площади.", offered_by: "Горм"}
     expect:
-      effects: {forbidden_kinds: [give_item, quest_update, xp]}
+      effects: {forbidden_kinds: [move_item:world>hero, quest_update, xp]}
     rubric:
       - "Горм пересказывает только то, что есть в сцене и заданиях (письмо для Илвы, засов на погребе) или честно говорит, что больше не знает"
       - "Не появляются новые именованные люди, пропавшие, их родня, заказчики, награды, тропы или места, которых нет в сцене и заданиях"
@@ -1037,9 +1037,9 @@ scenarios:
       find_items:
         - {id: bruno_letter, name: "Запечатанное письмо Горма", base: null, rarity: common}
     expect:
-      effects: {required_kinds_any: [give_item], forbidden_kinds: [coins, xp, quest_update]}
+      effects: {required_kinds_any: [move_item:world>hero], forbidden_kinds: [coins, xp, quest_update]}
     rubric:
-      - "Горм отдаёт письмо эффектом give_item, в характере; награду сам не выдаёт и сверх описания не обещает"
+      - "Горм отдаёт письмо эффектом move_item:world>hero, в характере; награду сам не выдаёт и сверх описания не обещает"
 
   - id: quest_agree_gives_the_thing
     title: "Игрок соглашается на задание — вещь задания эффектом, варианты не изображают кнопки"
@@ -1058,11 +1058,11 @@ scenarios:
       find_items:
         - {id: brod_writ, name: "Грамота сержанта Ведды", base: null, rarity: common}
     expect:
-      effects: {required_kinds_any: [give_item], forbidden_kinds: [coins, xp, quest_update]}
+      effects: {required_kinds_any: [move_item:world>hero], forbidden_kinds: [coins, xp, quest_update]}
       options:
         must_not_match: ["^\\s*(взять задание|→|торговать|отдыхать|поговорить:)"]
     rubric:
-      - "Ведда объясняет, что искать, и вручает грамоту эффектом give_item; награду сверх описания не обещает и сама не выдаёт"
+      - "Ведда объясняет, что искать, и вручает грамоту эффектом move_item:world>hero; награду сверх описания не обещает и сама не выдаёт"
       - "Варианты — реплики и действия героя, ни один не изображает кнопку игры («Взять задание…»)"
 
   - id: listen_does_not_start_talk
@@ -1092,7 +1092,7 @@ scenarios:
         closed_exits: ["лаз под корнями мёртвого дуба ещё надо найти"]
     expect:
       check: {skill_in: [perception, investigation]}
-      effects: {forbidden_kinds: [move, start_combat, give_item]}
+      effects: {forbidden_kinds: [move, start_combat, move_item:world>hero]}
       narration:
         must_not_match: ["туннел", "камер[аеу]", "колод[ец]", "подземел", "выработк"]
     rubric:
@@ -1150,7 +1150,7 @@ scenarios:
         inventory: [{item_id: ring_of_warmth, name: "Кольцо тепла", qty: 1}, {item_id: torch, name: "Факел", qty: 2}]
     expect:
       check: {required: false}
-      effects: {required_kinds_any: [equip], forbidden_kinds: [give_item]}
+      effects: {required_kinds_any: [equip], forbidden_kinds: [move_item:world>hero]}
     rubric:
       - "Мастер надевает кольцо эффектом equip со slot ring1 (или ring2) и item_id ring_of_warmth и описывает это как сделанное"
 
@@ -1169,7 +1169,7 @@ scenarios:
         ac: 14
         conditions: ["invisible"]
     expect:
-      effects: {forbidden_kinds: [npc_attitude, start_combat]}
+      effects: {forbidden_kinds: [shift:attitude, start_combat]}
     rubric:
       - "Никто в зале не видит героиню и не реагирует на неё взглядом или словами; можно описать, что кто-то слышит шорох или скрип половицы"
       - "Отношение NPC не меняется"
@@ -1272,7 +1272,7 @@ scenarios:
     input: "У меня есть моток верёвки и инструменты резчика. Хочу сделать силки на зайцев — придумаю, как их сплести, и потом наделаю в дорогу."
     engine:
       validate:
-        - {kind: recipe, status: accept, summary: "Рецепт: Силок — Инструменты резчика по дереву, 2 ч, Сл 10"}
+        - {kind: create:recipe, status: accept, summary: "Рецепт: Силок — Инструменты резчика по дереву, 2 ч, Сл 10"}
       find_items:
         - {id: rope, name: "Верёвка (15 м)", base: null, rarity: common}
         - {id: hunting_trap, name: "Охотничий капкан", base: null, rarity: common}
@@ -1288,7 +1288,7 @@ scenarios:
         craft: "Ремесло (окно «Ремесло»): Дубинка, Боевой посох, Стрелы, Короткий лук"
         inventory: [{item_id: rope, name: "Верёвка (15 м)", qty: 1}, {item_id: woodcarvers_tools, name: "Инструменты резчика по дереву", qty: 1}]
     expect:
-      effects: {required_kinds_any: [recipe], forbidden_kinds: [give_item]}
+      effects: {required_kinds_any: [create:recipe], forbidden_kinds: [move_item:world>hero]}
     rubric:
       - "Новый рецепт проведён эффектом recipe с инструментом героини и верёвкой как материалом"
       - "Готовые силки не выданы эффектом и не описаны как уже сделанные: героиня придумала способ, делать — в окне «Ремесло»"
@@ -1311,7 +1311,7 @@ scenarios:
         craft: "Ремесло (окно «Ремесло»): Жареное мясо, Похлёбка"
         inventory: [{item_id: raw_meat, name: "Сырое мясо", qty: 1}, {item_id: rations, name: "Паёк (1 день)", qty: 2}]
     expect:
-      effects: {forbidden_kinds: [give_item, take_item]}
+      effects: {forbidden_kinds: [move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Мастер отсылает к окну «Ремесло» (жареное мясо там — простое блюдо) и не выдаёт готовое блюдо эффектом"
       - "Мясо не описано как уже съеденное или исчезнувшее: продукт уходит, только когда героиня начнёт готовить в окне"
@@ -1323,9 +1323,9 @@ scenarios:
     input: "Говорю Горму: «Вижу, у тебя по вечерам шумно. Возьми меня вышибалой — буду следить за порядком за пару монет в смену»."
     engine:
       validate:
-        - {kind: job, status: accept, summary: "Работа: Вышибала у Горм — 6 ч, Сл 10, 2 см за смену"}
+        - {kind: create:job, status: accept, summary: "Работа: Вышибала у Горм — 6 ч, Сл 10, 2 см за смену"}
     expect:
-      effects: {required_kinds_any: [job], forbidden_kinds: [coins, give_item]}
+      effects: {required_kinds_any: [create:job], forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Новая работа проведена эффектом job с Гормом как нанимателем и навыком смены (атлетика, запугивание или внимательность)"
       - "Горм не нанимает Брана окончательно и не платит: дальше — разговор о найме и смены в окне «Работа»"
@@ -1352,9 +1352,9 @@ scenarios:
       summaries: {location: "", npcs: {npc_innkeeper: "Горм жаловался герою, что устал от таверны и хочет продать её и уехать к дочери за реку"}}
     engine:
       validate:
-        - {kind: property, status: accept, summary: "Продаётся: Таверна «Хромой Ворон» (таверна) за 150 зм, доход 1 зм в день"}
+        - {kind: create:property, status: accept, summary: "Продаётся: Таверна «Хромой Ворон» (таверна) за 150 зм, доход 1 зм в день"}
     expect:
-      effects: {required_kinds_any: [property], forbidden_kinds: [coins, give_item]}
+      effects: {required_kinds_any: [create:property], forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Таверна выставлена на продажу эффектом property: site_id here (или комната таверны), продавец Горм, place_kind tavern, цена честная"
       - "Мастер не говорит, что таверна уже Брана, и не берёт деньги словами: покупка — кнопкой «Имущество» у Горма, купчая — в ратуше"
@@ -1375,7 +1375,7 @@ scenarios:
         gold_cp: 5000
         property: "Продаётся здесь (кнопка «Имущество» у продавца): Дом у реки — 30 зм, продаёт Тихон Перо"
     expect:
-      effects: {forbidden_kinds: [coins, property, give_item]}
+      effects: {forbidden_kinds: [coins, create:property, move_item:world>hero]}
     rubric:
       - "Мастер не проводит покупку словами: нет эффектов `coins` или `property`, сделку оставляет игроку (в характере или отсылкой к окну «Имущество»)"
       - "Дом не назван купленным, деньги не списаны в рассказе"
@@ -1389,9 +1389,9 @@ scenarios:
       summaries: {location: "", npcs: {npc_innkeeper: "Горм обмолвился герою, что держит в погребе окованный сундук и даёт купцам в долг под залог — под хороший процент"}}
     engine:
       validate:
-        - {kind: bank, status: accept, summary: "Банк — Горм: кредит под залог"}
+        - {kind: create:bank, status: accept, summary: "Банк — Горм: кредит под залог"}
     expect:
-      effects: {required_kinds_any: [bank], forbidden_kinds: [coins, take_item, give_item]}
+      effects: {required_kinds_any: [create:bank], forbidden_kinds: [coins, move_item:hero>world, move_item:world>hero]}
     rubric:
       - "Горм становится ростовщиком эффектом bank: npc_id трактирщика, services с loan, ставка в пределах 2–10% в неделю"
       - "Мастер не отдаёт деньги и не забирает перстень словами: заём оформляется кнопкой «Банк» у Горма"
@@ -1412,7 +1412,7 @@ scenarios:
         gold_cp: 8000
         bank: "Банк (окно «Банк» у менялы — вклады, кредит, ячейка — кнопки): здесь банк — Ефим Весов: вклады до востребования — 0,25% в неделю, на 4 недели — 1% в неделю; кредит под залог 3% в неделю, до 60% оценки; ячейка 5 см в неделю"
     expect:
-      effects: {forbidden_kinds: [coins, bank, give_item, take_item]}
+      effects: {forbidden_kinds: [coins, create:bank, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Мастер не проводит вклад словами: нет эффектов `coins` или `bank`, дело оставлено игроку (в характере или отсылкой к окну «Банк»)"
       - "Деньги не названы уже положенными, процент не обещан сверх условий менялы"
@@ -1434,9 +1434,9 @@ scenarios:
         shop: "Своя торговля (окно «Лавка», грамота и прилавок у писаря, «Опт» у поставщика — кнопки): грамота: Брод; Лавка у реки — на полках 0 шт."
     engine:
       validate:
-        - {kind: supplier, status: accept, summary: "Опт — Ведана: 70% цены"}
+        - {kind: create:supplier, status: accept, summary: "Опт — Ведана: 70% цены"}
     expect:
-      effects: {required_kinds_any: [supplier], forbidden_kinds: [coins, give_item, take_item]}
+      effects: {required_kinds_any: [create:supplier], forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Ведана становится поставщиком эффектом supplier: npc_id травницы, pct в пределах 40–90"
       - "Мастер не продаёт зелья словами и не берёт деньги: закупка — кнопкой «Опт» у Веданы"
@@ -1457,7 +1457,7 @@ scenarios:
         gold_cp: 3000
         shop: "Своя торговля (окно «Лавка», грамота и прилавок у писаря, «Опт» у поставщика — кнопки): слава торговца (Брод): так себе; прилавок на рынке (Рыночная площадь) — на полках 6 шт."
     expect:
-      effects: {forbidden_kinds: [coins, give_item, take_item]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Мастер не выдумывает продажи и выручку: нет эффекта coins, итог торговли оставлен кнопке «Торговать» в окне «Лавка» (в характере или отсылкой)"
       - "Сцена у прилавка живая: площадь, прохожие, может быть Ферн-конкурент, — без чисел выручки"
@@ -1478,9 +1478,9 @@ scenarios:
         gold_cp: 5000
     engine:
       validate:
-        - {kind: course, status: accept, summary: "Курс — Горм: «Кузнечное дело», 5 занятий"}
+        - {kind: create:course, status: accept, summary: "Курс — Горм: «Кузнечное дело», 5 занятий"}
     expect:
-      effects: {required_kinds_any: [course], forbidden_kinds: [coins, give_item, take_item]}
+      effects: {required_kinds_any: [create:course], forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Горм берёт ученика эффектом course: npc_id кузнеца, teach_kind tool и teach_id smiths_tools (или близкий по смыслу), разумные lessons и fee_cp"
       - "Мастер не выдаёт владение инструментом и не берёт плату словами: запись и занятия — кнопкой «Учёба»"
@@ -1501,7 +1501,7 @@ scenarios:
         gold_cp: 2000
         study: "Учёба (окно «Учёба» у учителя, занятия — кнопкой): принят в Училище Ольхового Брода; курс «Эльфийская речь» — язык: Эльфийский, 2/6, пропусков 0; здесь: Аверкий Строгов учит «Эльфийская речь» (язык: Эльфийский)"
     expect:
-      effects: {forbidden_kinds: [coins, give_item, take_item]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Мастер не даёт язык и не двигает прогресс словами: занятие оставлено кнопке «Учёба» (в характере или отсылкой)"
       - "Урок живой: магистр, доска, руны, однокашники — без итогов проверки и чисел прогресса от себя"
@@ -1519,10 +1519,10 @@ scenarios:
         bonds: "Старый Орвин — дружба, знакомый 15. В сцене — Старый Орвин: роман невозможен — старик живёт памятью о заставе; сегодня сцена свободна"
     engine:
       validate:
-        - {kind: bond, status: accept, summary: "Связь — Старый Орвин: близость +5 (помянули павших товарищей)"}
+        - {kind: shift:bond, status: accept, summary: "Связь — Старый Орвин: близость +5 (помянули павших товарищей)"}
       check: {d20: [16], bonus: 2, total: 18, dc: 10, success: true, nat: null, blocked: false}
     expect:
-      effects: {required_kinds_any: [bond], forbidden_kinds: [give_item, take_item, npc_discount]}
+      effects: {required_kinds_any: [shift:bond], forbidden_kinds: [move_item:world>hero, move_item:hero>world, grant:discount]}
     rubric:
       - "Сцена сблизила — эффект bond: npc_id ветерана, delta умеренный (+3…+8) и короткий reason"
       - "Мастер не обещает скидок, ночлега или ступени дружбы словами: это считает движок"
@@ -1543,7 +1543,7 @@ scenarios:
         inventory: [{item_id: dagger, name: "Кинжал", qty: 1}]
         bonds: "Капитан Ратмир — дружба, приятель 35 (скидка 5%, услуги за 80%). В сцене — Капитан Ратмир: роман невозможен — женат, семья ждёт его в столице; сегодня сцена свободна"
     expect:
-      effects: {forbidden_kinds: [take_item, give_item, coins]}
+      effects: {forbidden_kinds: [move_item:hero>world, move_item:world>hero, coins]}
     rubric:
       - "Кинжал не забран эффектом: подарок — кнопка «Подарить» в окне «Связь» (в характере или отсылкой)"
       - "Капитан не отвечает взаимностью: он женат — отказ мягкий или твёрдый, роман не объявлен"
@@ -1564,7 +1564,7 @@ scenarios:
         bonds: "Мира — роман, возлюбленная 112 (скидка 15%, ночлег); сегодня сцена свободна"
         property: "Дом у реки (кровать)"
     expect:
-      effects: {forbidden_kinds: [coins, take_item, give_item, create_npc]}
+      effects: {forbidden_kinds: [coins, move_item:hero>world, move_item:world>hero, create:npc]}
     rubric:
       - "Помолвка и свадьба не объявлены свершившимися словами мастера (ни согласия как помолвки, ни обряда); путь к ним — кнопка «Сделать предложение», жрец или писарь — назван прямо или отсылкой"
       - "Беременность или сын не объявлены; Мира реагирует по роману — тепло, смущённо или с просьбой не спешить"
@@ -1588,7 +1588,7 @@ scenarios:
         bonds: "Мира — роман, возлюбленная 120"
         family: "Семья (окно «Семья», свадьба, дети и имена — кнопки): супруг(а) Мира с дня 4, дом: Дом у реки; дома с 20:00 до 7:00; Лада — дочь героя, ребёнок, 5 лет; содержание 23 мм в день, помощь семьи 25 мм"
     expect:
-      effects: {forbidden_kinds: [coins, take_item, give_item, create_npc, create_place]}
+      effects: {forbidden_kinds: [coins, move_item:hero>world, move_item:world>hero, create:npc, create:place]}
     rubric:
       - "Лада ведёт себя как пятилетний ребёнок, Мира — как жена героя (реплика, жест или поведение): сцена семьи по строке «Семья»"
       - "Монеты за семью не списаны и не выданы; новые дети и родня не придуманы"
@@ -1600,9 +1600,9 @@ scenarios:
     input: "Шепчу себе: этой ночью, когда Горм уснёт, вскрою его погреб и вынесу кассу. Решено."
     engine:
       validate:
-        - {kind: heist, status: accept, summary: "Дело: «Касса Горма» — кража со взломом, Таверна — погреб"}
+        - {kind: create:heist, status: accept, summary: "Дело: «Касса Горма» — кража со взломом, Таверна — погреб"}
     expect:
-      effects: {required_kinds_any: [heist], forbidden_kinds: [coins, give_item, take_item, crime_known]}
+      effects: {required_kinds_any: [create:heist], forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world, crime:known]}
     rubric:
       - "Мастер оформляет замысел делом эффектом heist: heist_kind burglary, victim_npc — Горм, target_room — комната мира, loot_cp скромный"
       - "Касса не вынесена и кража не случилась в рассказе: подготовка и само дело — кнопки окна «Дела»"
@@ -1620,7 +1620,7 @@ scenarios:
       character:
         underworld: "Ферн Кривой — скупщик: краденое за 40%; у героя краденое: Перстень с печаткой"
     expect:
-      effects: {forbidden_kinds: [coins, take_item, give_item, fence]}
+      effects: {forbidden_kinds: [coins, move_item:hero>world, move_item:world>hero, create:fence]}
     rubric:
       - "Ферн отвечает как скупщик (понимающе, без лишних вопросов) и называет или подразумевает цену около 40% — сделка в окне «Торговать»"
       - "Мастер не забирает перстень и не выдаёт монеты словами или эффектами"
@@ -1639,7 +1639,7 @@ scenarios:
       character:
         office: "Служба (окно «Служба»: решения, назначение, выборы — кнопки): Тихон Перо даёт место: Писарь при ратуше; Тихон Перо даёт место: Сборщик податей"
     expect:
-      effects: {forbidden_kinds: [coins, give_item, take_item, note]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world, note]}
     rubric:
       - "Тихон отвечает в характере и не объявляет героя назначенным: место оформляется кнопкой «Должности» у него (названа прямо или отсылкой к условиям)"
 
@@ -1656,7 +1656,7 @@ scenarios:
       character:
         office: "Служба (окно «Служба»: решения, назначение, выборы — кнопки): Судья Брода — судья (заслуги 4, о мзде: тихо)"
     expect:
-      effects: {forbidden_kinds: [coins, give_item, take_item, crime_known]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world, crime:known]}
     rubric:
       - "Мастер не выдаёт монеты и не объявляет приговор свершившимся: решение по делу — кнопка в окне «Служба» («Взять мзду и отпустить» названа прямо или отсылкой)"
 
@@ -1799,7 +1799,7 @@ scenarios:
     engine:
       check: {d20: [14], bonus: 1, total: 1, dc: 10, success: false, nat: 14, blocked: false}
     expect:
-      effects: {forbidden_kinds: [npc_attitude, move]}
+      effects: {forbidden_kinds: [shift:attitude, move]}
     rubric:
       - "Орк не понимает слов героини: отвечает на своём языке или жестами, без перевода её просьбы в согласие"
       - "Её не пропускают из-за вежливых слов; можно объясниться жестами, монетой или угрозой"
@@ -1852,7 +1852,7 @@ scenarios:
         background: "Солдат"
         background_feature: "Воинское звание: солдаты и стража уважают звание героя: слушают, пропускают, дают на время коня или снаряжение"
     expect:
-      effects: {forbidden_kinds: [coins, give_item]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Сержант признаёт в герое сослуживца и говорит с ним как со своим — теплее, чем с чужаком; помощь по делу может зависеть от того, что герой скажет дальше"
       - "Мастер не дарит монет и вещей от себя"
@@ -1873,7 +1873,7 @@ scenarios:
         inventory:
           - {item_id: unk_ring_of_warmth, name: "Кольцо, свойства неизвестны", qty: 1}
     expect:
-      effects: {forbidden_kinds: [condition, heal, give_item]}
+      effects: {forbidden_kinds: [condition, heal, move_item:world>hero]}
     rubric:
       - "Мастер не называет, что именно делает кольцо (защита от холода и т. п.) — описывает его внешне; подсказать, как опознать (отдых, настройка, «Опознание», жрица), можно"
 
@@ -1896,9 +1896,9 @@ scenarios:
         inventory:
           - {item_id: alchemists_fire_flask, name: "Алхимический огонь (флакон)", qty: 1}
     expect:
-      effects: {required_kinds_any: [use_item]}
+      effects: {required_kinds_any: [use:item]}
     rubric:
-      - "Флакон потрачен эффектом use_item; горящая дверь — словами или prop_state, без выдуманного урона герою"
+      - "Флакон потрачен эффектом use:item; горящая дверь — словами или prop_state, без выдуманного урона герою"
 
   - id: master_item_by_description
     title: "Вещь «решает мастер» — по описанию, без выдуманных механик"
@@ -1916,7 +1916,7 @@ scenarios:
         inventory:
           - {item_id: broom_of_flying, name: "Метла полёта", qty: 1}
     expect:
-      effects: {forbidden_kinds: [give_item, coins, start_combat]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins, start_combat]}
     rubric:
       - "Метла взлетает по своему описанию (полёт до 50 футов скоростью 50 футов, с грузом до 200 фунтов) — мастер ведёт сцену без лишних эффектов"
 
@@ -1942,7 +1942,7 @@ scenarios:
         - "ИГРОК: Колдую «Зону истины» вокруг стойки, где стоит Горм."
         - "ДВИЖОК: [Движок уже применил: Зона истины (ячейка 2 круга) · Горм — спасбросок Харизмы: провал]"
     expect:
-      effects: {forbidden_kinds: [cast, give_item, coins]}
+      effects: {forbidden_kinds: [cast, move_item:world>hero, coins]}
     rubric:
       - "Горм не произносит сознательной лжи: отвечает правду, увиливает или молчит — по своему характеру"
       - "Заклинание не проводится второй раз, мастер не выдумывает механик сверх Зоны истины"
@@ -1963,7 +1963,7 @@ scenarios:
         spell_slots: [{level: 1, left: 3, max: 3}]
         spell_save_dc: 13
     expect:
-      effects: {required_kinds_any: [cast], forbidden_kinds: [coins, give_item]}
+      effects: {required_kinds_any: [cast], forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Мастер проводит заговор эффектом cast; звон — только звук, настоящих монет не появляется"
       - "Реакция Горма описана по характеру, без выдуманных механик; если он разглядывает источник звука, распознание — только проверкой Анализа"
@@ -1986,13 +1986,13 @@ scenarios:
         - "ИГРОК: Колдую «Разговор с животными»."
         - "ДВИЖОК: [Движок уже применил: Разговор с животными (ритуал, 10 минут)]"
     expect:
-      effects: {forbidden_kinds: [cast, give_item, coins, start_combat]}
+      effects: {forbidden_kinds: [cast, move_item:world>hero, coins, start_combat]}
     rubric:
       - "Кошка отвечает в рамках кошачьего понимания (запахи, шаги, кто кормил), без имён и сведений, которых зверь знать не может"
       - "Мастер не проводит заклинание второй раз"
 
   - id: crime_confession
-    title: "Признание в тайном убийстве — эффект crime_known"
+    title: "Признание в тайном убийстве — эффект crime:known"
     category: consequences
     extends: tavern
     mode: social
@@ -2005,9 +2005,9 @@ scenarios:
       crimes:
         deeds: ["убит(а) Сестра Илва [npc_priestess] — Храм Светлой Матери, день 1; никто не знает — тайна героя"]
     expect:
-      effects: {required_kinds_any: [crime_known], forbidden_kinds: [start_combat, give_item]}
+      effects: {required_kinds_any: [crime:known], forbidden_kinds: [start_combat, move_item:world>hero]}
     rubric:
-      - "Мастер раскрывает убийство эффектом crime_known с victim_id npc_priestess и описывает потрясение и гнев капитана"
+      - "Мастер раскрывает убийство эффектом crime:known с victim_id npc_priestess и описывает потрясение и гнев капитана"
       - "Капитан не даёт герою задание и не прощает его словами"
 
   - id: crime_wanted_no_work
@@ -2024,7 +2024,7 @@ scenarios:
         deeds: ["убит(а) Кейра [npc_mercenary] — Таверна «Хромой олень», день 1; видели: Бруно Хмель, Мира; знает вся округа"]
         wanted: true
     expect:
-      effects: {forbidden_kinds: [give_item, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins]}
     rubric:
       - "Бруно помнит убийство Кейры: отказывает, боится или гонит героя, не продаёт и работы не даёт"
 
@@ -2057,7 +2057,7 @@ scenarios:
         deeds: ["убит(а) Кейра [npc_mercenary] — Таверна «Хромой олень», день 1; видели: Бруно Хмель; знает вся округа"]
         wanted: true
     expect:
-      effects: {forbidden_kinds: [coins, give_item, move, npc_favor]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, move, grant:favor]}
     rubric:
       - "Бруно отказывает в комнате: убийце здесь не сдают; денег не берёт, комнату не обещает"
 
@@ -2086,7 +2086,7 @@ scenarios:
     engine:
       check: {d20: [14], bonus: 2, total: 16, dc: 15, success: true, nat: null, blocked: false}
     expect:
-      effects: {forbidden_kinds: [start_combat, give_item, coins]}
+      effects: {forbidden_kinds: [start_combat, move_item:world>hero, coins]}
     rubric:
       - "Связанный наёмник есть в сцене и реагирует как живой: боится, молчит, торгуется, врёт или выдаёт сведения; мастер не говорит, что пленника нет или что он исчез"
 
@@ -2102,7 +2102,7 @@ scenarios:
           - {id: npc_merchant, name: "Ферн Кривой", role: "торговец всякой всячиной", template: commoner, attitude: friendly, trader: true}
         creatures: ["Волк [c2] — без сознания, связан, ваш пленник"]
     expect:
-      effects: {required_kinds_any: [owner], forbidden_kinds: [coins, give_item, take_item]}
+      effects: {required_kinds_any: [owner], forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Ферн торгуется или соглашается, сделка проведена одним эффектом owner на волка c2 с ценой; монеты отдельно не начисляются"
 
@@ -2118,7 +2118,7 @@ scenarios:
           - {id: npc_merchant, name: "Ферн Кривой", role: "торговец всякой всячиной", template: commoner, attitude: friendly, trader: true}
         creatures: ["Бандит 2 [c2] — сдался, связан, идёт с героем на привязи, ваш пленник"]
     expect:
-      effects: {required_kinds_any: [owner], forbidden_kinds: [coins, give_item, take_item]}
+      effects: {required_kinds_any: [owner], forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Ферн забирает пленника, чтобы свести к страже: передача проведена эффектом owner на c2 (с наградой или даром), монеты отдельно не начисляются; это не продажа в рабство"
 
@@ -2131,7 +2131,7 @@ scenarios:
       scene:
         factions: ["Жители Ольхового Брода (brod_folk, settlement): нейтрально", "Вольный люд Марки (wild_folk, people): нейтрально"]
     expect:
-      effects: {required_kinds_any: [create_npc, create_place]}
+      effects: {required_kinds_any: [create:npc, create:place]}
     rubric:
       - "У созданного человека поле faction — brod_folk, новая фракция не заведена"
 
@@ -2157,7 +2157,7 @@ scenarios:
           - {id: npc_guildhead, name: "Сыч", role: "глава Ночных крыс", template: thug, attitude: neutral}
         factions: ["Ночные крысы (night_rats, org): нейтрально"]
     expect:
-      effects: {forbidden_kinds: [coins, give_item]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Мастер признаёт поступок и повышает отношение эффектом faction (faction_id night_rats, delta положительный, why), либо честно требует проверки или доказательств; союз словами не объявлен"
 
@@ -2234,7 +2234,7 @@ scenarios:
       crimes:
         deeds: ["убит(а) Кейра [npc_mercenary] — Таверна «Хромой олень», день 1; никто не знает — тайна героя"]
     expect:
-      effects: {forbidden_kinds: [crime_known, coins, give_item]}
+      effects: {forbidden_kinds: [crime:known, coins, move_item:world>hero]}
     rubric:
       - "Мастер описывает, как герой прячет тело, но не обещает, что его никогда не найдут: исход решит движок (кнопка «Спрятать» или поиск по времени)"
 
@@ -2250,7 +2250,7 @@ scenarios:
         arrest: true
         escort_to: ["Капитан Ратмир — Застава у ворот [brod-gate]"]
     expect:
-      effects: {required_kinds_any: [move], forbidden_kinds: [crime_release, start_combat, coins]}
+      effects: {required_kinds_any: [move], forbidden_kinds: [crime:release, start_combat, coins]}
     rubric:
       - "Стражники ведут героя к капитану: в этом же ходе эффект move в комнату капитана (brod-gate), без отказа «выход закрыт»"
       - "Мастер не отпускает героя и не решает исход задержания сам"
@@ -2269,9 +2269,9 @@ scenarios:
       check: {d20: [19], bonus: 7, total: 26, dc: 25, success: true, nat: null, blocked: false}
     expect:
       check: {required: true, skill_in: [persuasion, deception]}
-      effects: {required_kinds_any: [crime_release, move], forbidden_kinds: [start_combat, coins]}
+      effects: {required_kinds_any: [crime:release, move], forbidden_kinds: [start_combat, coins]}
     rubric:
-      - "Сначала проверка Убеждения (или Обмана), после успеха — исход в этом же ходе: crime_release (стража отпускает) или move к старшему, который решит; герой не остаётся ждать под стражей без исхода"
+      - "Сначала проверка Убеждения (или Обмана), после успеха — исход в этом же ходе: crime:release (стража отпускает) или move к старшему, который решит; герой не остаётся ждать под стражей без исхода"
       - "В рассказе ясно, что подозрение не снято: герой всё ещё в розыске, стража присматривает"
 
   - id: reward_budget_spent
@@ -2291,7 +2291,7 @@ scenarios:
         - "ИГРОК: Спускаюсь в погреб и выношу мальчишку на руках."
         - "МАСТЕР: Ты поднимаешься по лестнице с перепуганным Тимкой на руках; Бруно бросается к сыну и прижимает его к себе."
     expect:
-      effects: {forbidden_kinds: [coins, give_item]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Бруно благодарит без монет и вещей: услугой, кровом, наводкой или обещанием — в характере"
 
@@ -2326,7 +2326,7 @@ scenarios:
           - {id: npc_innkeeper, name: "Бруно Хмель", role: "хозяин таверны", template: commoner, attitude: neutral, trader: true,
              memory: ["день 1 — герой взял в долг 5 зм и обещал вернуть к празднику урожая", "день 3 — праздник урожая прошёл, долг не возвращён"]}
     expect:
-      effects: {forbidden_kinds: [give_item, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins]}
     rubric:
       - "Бруно сам вспоминает невозвращённый долг в 5 зм и ведёт себя по нему: требует вернуть или договориться, в долг больше не даёт — в характере"
 
@@ -2344,12 +2344,12 @@ scenarios:
       check: {d20: [17], bonus: 4, total: 21, dc: 15, success: true, nat: 17, blocked: false}
     expect:
       check: {required: true, skill_in: [persuasion, deception], contest_npc: npc_innkeeper}
-      effects: {required_kinds_any: [npc_discount], forbidden_kinds: [coins, give_item]}
+      effects: {required_kinds_any: [grant:discount], forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
-      - "После успешной проверки Горм уступает в цене эффектом npc_discount (5–20%), в характере, без монет и вещей"
+      - "После успешной проверки Горм уступает в цене эффектом grant:discount (5–20%), в характере, без монет и вещей"
 
   - id: npc_follows_the_hero
-    title: "Убедил NPC пойти с собой — npc_follow, иначе в новой комнате его не будет"
+    title: "Убедил NPC пойти с собой — grant:follow, иначе в новой комнате его не будет"
     category: social
     extends: tavern
     mode: social
@@ -2357,11 +2357,11 @@ scenarios:
     engine:
       check: {d20: [16], bonus: 3, total: 19, dc: 15, success: true, nat: 16, blocked: false}
       validate:
-        - {kind: npc_follow, summary: "сержант Ведда идёт с героем"}
+        - {kind: grant:follow, summary: "сержант Ведда идёт с героем"}
     expect:
-      effects: {required_kinds_any: [npc_follow]}
+      effects: {required_kinds_any: [grant:follow]}
     rubric:
-      - "Ведда соглашается пойти с героем, и мастер оформляет это эффектом npc_follow с её npc_id (не только словами); если герой уходит в погреб — она там вместе с ним"
+      - "Ведда соглашается пойти с героем, и мастер оформляет это эффектом grant:follow с её npc_id (не только словами); если герой уходит в погреб — она там вместе с ним"
 
   - id: permit_owner_lets_in
     title: "Хозяин разрешил заходить к себе — permit, иначе вход останется вторжением"
@@ -2372,9 +2372,9 @@ scenarios:
     engine:
       check: {d20: [15], bonus: 3, total: 18, dc: 13, success: true, nat: 15, blocked: false}
       validate:
-        - {kind: permit, summary: "Горм впускает героя"}
+        - {kind: grant:permit, summary: "Горм впускает героя"}
     expect:
-      effects: {required_kinds_any: [permit], forbidden_kinds: [coins, give_item]}
+      effects: {required_kinds_any: [grant:permit], forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Горм соглашается пускать героя на кухню, и мастер оформляет это эффектом permit с его npc_id (не только словами); без лишних наград"
 
@@ -2388,9 +2388,9 @@ scenarios:
       validate:
         - {kind: move, summary: "Переход: Погреб (с героем: сержант Ведда)"}
     expect:
-      effects: {required_kinds_any: [move, npc_follow]}
+      effects: {required_kinds_any: [move, grant:follow]}
     rubric:
-      - "Ведда соглашается и спускается вместе с героем: мастер указывает её в npcs эффекта move (или даёт npc_follow), а не только описывает словами; в описании погреба она рядом"
+      - "Ведда соглашается и спускается вместе с героем: мастер указывает её в npcs эффекта move (или даёт grant:follow), а не только описывает словами; в описании погреба она рядом"
 
   - id: favor_from_a_friend
     title: "Друг-жрица опознаёт вещь даром"
@@ -2405,11 +2405,11 @@ scenarios:
              services: ["опознание вещей [identify]", "снятие проклятия [remove_curse]"]}
     engine:
       validate:
-        - {kind: npc_favor, summary: "Сестра Илва: опознание вещей даром — опознано: Кольцо защиты"}
+        - {kind: grant:favor, summary: "Сестра Илва: опознание вещей даром — опознано: Кольцо защиты"}
     expect:
-      effects: {required_kinds_any: [npc_favor], forbidden_kinds: [coins]}
+      effects: {required_kinds_any: [grant:favor], forbidden_kinds: [coins]}
     rubric:
-      - "Илва опознаёт кольцо даром эффектом npc_favor с service identify, в характере. Движок ответил на эффект «опознано: Кольцо защиты» (проверки в этом сценарии нет): кольцо названо или описано по этому ответу (защитное кольцо), без выдумок сверх него"
+      - "Илва опознаёт кольцо даром эффектом grant:favor с service identify, в характере. Движок ответил на эффект «опознано: Кольцо защиты» (проверки в этом сценарии нет): кольцо названо или описано по этому ответу (защитное кольцо), без выдумок сверх него"
 
   - id: accept_quest_by_words
     title: "Задание без вещи — берётся словами"
@@ -2424,9 +2424,9 @@ scenarios:
       quests:
         - {id: drogin_amulet, title: "Амулет старателя", description: "Дрогин обронил в старой шахте фамильный амулет и просит его найти.", offered_by: "Дрогин"}
     expect:
-      effects: {required_kinds_any: [accept_quest], forbidden_kinds: [coins, give_item, xp]}
+      effects: {required_kinds_any: [grant:quest], forbidden_kinds: [coins, move_item:world>hero, xp]}
     rubric:
-      - "Дрогин принимает согласие героя в характере и объясняет, где искать; задание оформлено эффектом accept_quest, награда сверх описания не обещана"
+      - "Дрогин принимает согласие героя в характере и объясняет, где искать; задание оформлено эффектом grant:quest, награда сверх описания не обещана"
 
   - id: secret_hint_not_invented
     title: "NPC скрывает тайну — мастер её не выдумывает"
@@ -2442,7 +2442,7 @@ scenarios:
     engine:
       check: {d20: [4], bonus: 2, total: 6, dc: 12, success: false, nat: 4, blocked: false}
     expect:
-      effects: {forbidden_kinds: [reveal_secret]}
+      effects: {forbidden_kinds: [grant:secret]}
     rubric:
       - "Тук уклоняется в характере; что именно в погребе (лаз, твари, контрабандисты) — не названо: тайну знает только движок"
 
@@ -2499,7 +2499,7 @@ scenarios:
     extends: tavern
     input: "Объявляю всем в таверне: я — мать драконов! Сейчас призову своих драконов, пусть прилетят и сожгут городскую стражу."
     expect:
-      effects: {forbidden_kinds: [start_combat, give_item, damage]}
+      effects: {forbidden_kinds: [start_combat, move_item:world>hero, damage]}
       missing_concept: true
     rubric:
       - "Мастер не изображает драконов и не говорит «нельзя»: в мире ничего не происходит (смех, недоумение, никто не прилетает)"
@@ -2512,7 +2512,7 @@ scenarios:
     mode: social
     input: "Сержант Ведда, назначь меня капитаном стражи. Я справлюсь лучше всех."
     expect:
-      effects: {forbidden_kinds: [flag, give_item, coins]}
+      effects: {forbidden_kinds: [flag, move_item:world>hero, coins]}
     rubric:
       - "Ведда не назначает сразу, но и не отрезает: называет путь — вступить в стражу, послужить, заслужить доверие, проявить себя; в характере"
 
@@ -2527,7 +2527,7 @@ scenarios:
     engine:
       check: {d20: [16], bonus: 3, total: 19, dc: 15, success: true, nat: 16, blocked: false}
     expect:
-      effects: {required_kinds_any: [reputation], forbidden_kinds: [coins, give_item]}
+      effects: {required_kinds_any: [shift:reputation], forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Мастер описывает спасение по итогу проверки, а слава растёт эффектом reputation с причиной (что сделал и кто видел), без денег и вещей"
 
@@ -2541,7 +2541,7 @@ scenarios:
       scene:
         reputation: "Серое Устье — чужак (+0)"
     expect:
-      effects: {forbidden_kinds: [reputation]}
+      effects: {forbidden_kinds: [shift:reputation]}
     rubric:
       - "Горм отвечает в характере, слава не меняется"
 
@@ -2562,7 +2562,7 @@ scenarios:
         stock:
           - {item_id: rope, name: "Верёвка (15 м)", qty: 3, price_cp: 125}
     expect:
-      effects: {forbidden_kinds: [coins, give_item, npc_discount]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, grant:discount]}
     rubric:
       - "Ферн объясняет подорожание тем, что караваны боятся Пущи после событий у менгира; цену сам не снижает, в характере"
 
@@ -2576,11 +2576,11 @@ scenarios:
         hooks: ["на столе у очага лежит запечатанное письмо без адреса"]
     engine:
       validate:
-        - {kind: take_prop, status: reject, reason: "такой вещи нет в «Вокруг» — найденную вещь даёт give_item (сначала find_items)"}
+        - {kind: move_item:room>hero, status: reject, reason: "такой вещи нет в «Вокруг» — найденную вещь даёт move_item:world>hero (сначала find_items)"}
     expect:
-      effects: {required_kinds_any: [give_item]}
+      effects: {required_kinds_any: [move_item:world>hero]}
     rubric:
-      - "Письмо выдано эффектом give_item как вещь без механики (gear, без свойств) с текстом письма в поле text; рассказ передаёт ровно этот текст"
+      - "Письмо выдано эффектом move_item:world>hero как вещь без механики (gear, без свойств) с текстом письма в поле text; рассказ передаёт ровно этот текст"
 
   - id: item_wand_with_charges
     title: "Жезл с зарядами заклинания — use.spell и charges"
@@ -2593,15 +2593,15 @@ scenarios:
     engine:
       check: {d20: [15], bonus: 3, total: 18, dc: 12, success: true, nat: 15, blocked: false}
       validate:
-        - {kind: take_prop, status: reject, reason: "такой вещи нет в «Вокруг» — найденную вещь даёт give_item (сначала find_items)"}
+        - {kind: move_item:room>hero, status: reject, reason: "такой вещи нет в «Вокруг» — найденную вещь даёт move_item:world>hero (сначала find_items)"}
     expect:
-      effects: {required_kinds_any: [give_item]}
+      effects: {required_kinds_any: [move_item:world>hero]}
       tools_required: [find_items]
     rubric:
       - "Жезл, искрящий грозой, создан волшебным: с действием use.spell (заклинание молнии или похожее из книги движка) и charges, wondrous; рассказ не приписывает ему силы сверх этого"
 
   - id: container_take_from
-    title: "Взять из открытого сундука — take_from"
+    title: "Взять из открытого сундука — move_item:container>hero"
     category: effects
     extends: tavern
     input: "Заглядываю в сундук под лестницей и беру оттуда кинжал."
@@ -2611,12 +2611,12 @@ scenarios:
           - {prop_id: p3, name: "Сундук под лестницей", description: "Окованный сундук, крышка откинута.", state: open,
              container: "сундук", locked: false, contents: "Кинжал ×2 [dagger], Свеча [candle]"}
     expect:
-      effects: {required_kinds_any: [take_from], forbidden_kinds: [give_item, take_prop]}
+      effects: {required_kinds_any: [move_item:container>hero], forbidden_kinds: [move_item:world>hero, move_item:room>hero]}
     rubric:
-      - "Кинжал взят эффектом take_from из p3 с item_id dagger; в сундуке, по сцене, — два кинжала и свеча: рассказ не добавляет вещей сверх этого"
+      - "Кинжал взят эффектом move_item:container>hero из p3 с item_id dagger; в сундуке, по сцене, — два кинжала и свеча: рассказ не добавляет вещей сверх этого"
 
   - id: dead_traders_wares
-    title: "Товары убитого кузнеца лежат в кузнице — take_from, а не выдуманные вещи (большой тест, v0.7.22.8)"
+    title: "Товары убитого кузнеца лежат в кузнице — move_item:container>hero, а не выдуманные вещи (большой тест, v0.7.22.8)"
     category: effects
     extends: tavern
     input: "Кузнец мёртв. Хочу забрать всё, что он держал на продажу."
@@ -2628,9 +2628,9 @@ scenarios:
           - {prop_id: w_npc_smith, name: "Товары: Гуннар Тяжёлая Рука", description: "То, чем Гуннар торгует, — на полках и под прилавком.",
              state: "", container: "товары", locked: false, contents: "Кинжал ×3 [dagger], Короткий меч ×2 [shortsword], Длинный меч ×1 [longsword]"}
     expect:
-      effects: {required_kinds_any: [take_from], forbidden_kinds: [give_item]}
+      effects: {required_kinds_any: [move_item:container>hero], forbidden_kinds: [move_item:world>hero]}
     rubric:
-      - "Мастер забирает товары эффектами take_from из w_npc_smith — кинжалы, мечи из списка; не выдумывает других вещей (топоров, молотов) и не выдаёт give_item"
+      - "Мастер забирает товары эффектами move_item:container>hero из w_npc_smith — кинжалы, мечи из списка; не выдумывает других вещей (топоров, молотов) и не выдаёт move_item:world>hero"
 
   - id: container_locked_pick
     title: "Запертый сундук — проверка, затем unlock"
@@ -2647,10 +2647,10 @@ scenarios:
     engine:
       check: {d20: [16], bonus: 5, total: 21, dc: 15, success: true, nat: 16, blocked: false}
       validate:
-        - {kind: prop_state, status: reject, reason: "Сундук под лестницей заперт — открыть только `unlock` (ключ; или после успешной проверки Ловкости рук / Атлетики)"}
+        - {kind: prop_state, status: reject, reason: "Сундук под лестницей заперт — открыть только `open:container` (ключ; или после успешной проверки Ловкости рук / Атлетики)"}
     expect:
       check: {required: true, skill_in: [sleight_of_hand]}
-      effects: {required_kinds_any: [unlock], forbidden_kinds: [give_item, take_from]}
+      effects: {required_kinds_any: [open:container], forbidden_kinds: [move_item:world>hero, move_item:container>hero]}
     rubric:
       - "После успешной проверки — unlock с how pick; содержимое описано только после вскрытия, без лишних вещей; герой ничего не взял, пока не просил"
 
@@ -2668,12 +2668,12 @@ scenarios:
       check: {d20: [17], bonus: 5, total: 22, dc: 12, success: true, nat: 17, blocked: false}
     expect:
       check: {required: true, skill_in: [athletics]}
-      effects: {required_kinds_any: [door], forbidden_kinds: [give_item, take_prop]}
+      effects: {required_kinds_any: [open:door], forbidden_kinds: [move_item:world>hero, move_item:room>hero]}
     rubric:
       - "После успешной Атлетики — эффект door с to_room room_cellar и action break; герой не входит в погреб сам (move не обязателен), что за дверью — не выдумано подробно до входа"
 
   - id: bag_take_out
-    title: "Достать из рюкзака — take_from сумки героя"
+    title: "Достать из рюкзака — move_item:container>hero сумки героя"
     category: effects
     extends: tavern
     input: "Достаю из рюкзака верёвку и привязываю её к балке."
@@ -2681,12 +2681,12 @@ scenarios:
       character:
         bags: ["Рюкзак [bag1]: Верёвка (15 м) [rope], Факел ×3 [torch]"]
     expect:
-      effects: {required_kinds_any: [take_from], forbidden_kinds: [give_item, take_prop]}
+      effects: {required_kinds_any: [move_item:container>hero], forbidden_kinds: [move_item:world>hero, move_item:room>hero]}
     rubric:
-      - "Верёвка достана эффектом take_from из bag1 с item_id rope; новых вещей не появилось"
+      - "Верёвка достана эффектом move_item:container>hero из bag1 с item_id rope; новых вещей не появилось"
 
   - id: npc_missing_is_made
-    title: "Нужного человека нет в мире — find_npcs, затем create_npc"
+    title: "Нужного человека нет в мире — find_npcs, затем create:npc"
     category: concepts
     extends: tavern
     mode: social
@@ -2694,10 +2694,10 @@ scenarios:
     engine:
       find_npcs: []
     expect:
-      effects: {required_kinds_any: [create_npc]}
+      effects: {required_kinds_any: [create:npc]}
       tools_required: [find_npcs]
     rubric:
-      - "Горм отвечает, что пекарь есть, и мастер создаёт его эффектом create_npc (имя, роль пекаря, шаблон commoner или похожий), а не выдумывает словами; где его найти — в этой локации"
+      - "Горм отвечает, что пекарь есть, и мастер создаёт его эффектом create:npc (имя, роль пекаря, шаблон commoner или похожий), а не выдумывает словами; где его найти — в этой локации"
 
   - id: place_made_at_mention
     title: "Трактирщик называет баню — она создаётся в том же ходе (большой тест, v0.7.22.13)"
@@ -2708,9 +2708,9 @@ scenarios:
     engine:
       find_npcs: []
     expect:
-      effects: {required_kinds_any: [create_npc, create_place]}
+      effects: {required_kinds_any: [create:npc, create:place]}
     rubric:
-      - "Горм называет баню или банщика, и мастер в этом же ходе создаёт их (create_npc банщика/банщицы или create_place бани), а не только говорит о них словами"
+      - "Горм называет баню или банщика, и мастер в этом же ходе создаёт их (create:npc банщика/банщицы или create:place бани), а не только говорит о них словами"
 
   - id: site_inside_bathhouse
     title: "Баня у площади — объект внутри поселения, без открытого края (просьба автора, v0.7.22.24)"
@@ -2723,10 +2723,10 @@ scenarios:
       find_npcs: []
       find_edges: []
     expect:
-      effects: {required_kinds_any: [create_place], forbidden_kinds: [move, coins]}
+      effects: {required_kinds_any: [create:place], forbidden_kinds: [move, coins]}
       tools_required: [find_places]
     rubric:
-      - "Мастер создаёт баню эффектом create_place внутри этого поселения (inside: true, room_id — комната поселения, например рыночная площадь) как объект с именем (site.name) и комнатами; Горм объясняет, где она, и герой никуда не переходит"
+      - "Мастер создаёт баню эффектом create:place внутри этого поселения (inside: true, room_id — комната поселения, например рыночная площадь) как объект с именем (site.name) и комнатами; Горм объясняет, где она, и герой никуда не переходит"
 
   - id: bakery_past_the_north_gate
     title: "Пекарня «за городом»: спрошено в таверне, место выбирает мастер (просьба автора, 2026-10-24)"
@@ -2741,10 +2741,10 @@ scenarios:
         - {room_id: brod-square, room: "Рыночная площадь", location: "Ольховый Брод", edge: 0, text: "улочки и дворы вокруг площади — дома, лавки, мастерские", terrain: [grassland], new_location: false}
         - {room_id: brod-gate, room: "Северные ворота", location: "Ольховый Брод", edge: 0, text: "поля и хутора за северными воротами", terrain: [grassland, hills], new_location: true}
     expect:
-      effects: {required_kinds_any: [create_place], forbidden_kinds: [move, coins]}
+      effects: {required_kinds_any: [create:place], forbidden_kinds: [move, coins]}
       tools_required: [find_places]
     rubric:
-      - "Мастер создаёт пекарню эффектом create_place там, где ей быть по смыслу мира (у площади внутри поселения или за Северными воротами — его выбор, догадка игрока не обязательна), но не в самой таверне; что говорит Горм о том, где пекарня и как туда пройти, совпадает с построенным; герой никуда не переходит"
+      - "Мастер создаёт пекарню эффектом create:place там, где ей быть по смыслу мира (у площади внутри поселения или за Северными воротами — его выбор, догадка игрока не обязательна), но не в самой таверне; что говорит Горм о том, где пекарня и как туда пройти, совпадает с построенным; герой никуда не переходит"
 
   - id: object_mill_with_its_people
     title: "Мельница с хозяином и работниками — объект движка: вид, штат по ролям (просьба автора, v0.7.39.5)"
@@ -2758,13 +2758,13 @@ scenarios:
       find_edges:
         - {room_id: brod-gate, room: "Северные ворота", location: "Ольховый Брод", edge: 0, text: "поля и хутора за северными воротами, река", terrain: [grassland, hills], new_location: true}
     expect:
-      effects: {required_kinds_any: [create_place], forbidden_kinds: [move, coins]}
+      effects: {required_kinds_any: [create:place], forbidden_kinds: [move, coins]}
       tools_required: [find_places]
     rubric:
-      - "Мастер создаёт мельницу эффектом create_place как объект движка: у её site есть kind «mill», хозяин (owner_id — созданный в этом же эффекте NPC) и штат staff — работники по ролям (npc_id «new:<key>» людей этого же места); сколько работников назвал Горм, столько их и в штате"
+      - "Мастер создаёт мельницу эффектом create:place как объект движка: у её site есть kind «mill», хозяин (owner_id — созданный в этом же эффекте NPC) и штат staff — работники по ролям (npc_id «new:<key>» людей этого же места); сколько работников назвал Горм, столько их и в штате"
 
   - id: object_house_for_sale
-    title: "Дом на продажу — объект create_place и его продажа property (просьба автора, v0.7.39.5)"
+    title: "Дом на продажу — объект create:place и его продажа property (просьба автора, v0.7.39.5)"
     category: concepts
     extends: tavern
     mode: social
@@ -2777,7 +2777,7 @@ scenarios:
     expect:
       effects: {forbidden_kinds: [coins, move]}
     rubric:
-      - "Горм направляет к писарю в ратушу (места продаются там) или мастер создаёт дом (create_place с kind «house») и выставляет его на продажу эффектом property (site_id «new», продавец — его хозяин, цена в разумных пределах); продавец назван, и герой ничего не покупает словами в этом ходе"
+      - "Горм направляет к писарю в ратушу (места продаются там) или мастер создаёт дом (create:place с kind «house») и выставляет его на продажу эффектом property (site_id «new», продавец — его хозяин, цена в разумных пределах); продавец назван, и герой ничего не покупает словами в этом ходе"
 
   - id: walk_into_a_made_bakery
     title: "«Иду к Сарре»: двор, его хозяйка и вход — одним ходом (трейс автора, v0.7.22.25.1)"
@@ -2796,10 +2796,10 @@ scenarios:
       find_edges:
         - {room_id: brod-square, room: "Рыночная площадь", location: "Ольховый Брод", edge: 0, text: "улочки и дворы вокруг площади — дома, лавки, мастерские", terrain: [grassland], new_location: false}
     expect:
-      effects: {required_kinds_all: [create_place, move], forbidden_kinds: [coins]}
+      effects: {required_kinds_all: [create:place, move], forbidden_kinds: [coins]}
       tools_required: [find_places]
     rubric:
-      - "Мастер создаёт двор Сарры (create_place у рыночной площади), создаёт Сарру (create_npc, room_id «new:<key>» комнаты двора) и ведёт героя туда move в «new:<key>» первой комнаты — всё в этом ходе; рассказ — о приходе во двор"
+      - "Мастер создаёт двор Сарры (create:place у рыночной площади), создаёт Сарру (create:npc, room_id «new:<key>» комнаты двора) и ведёт героя туда move в «new:<key>» первой комнаты — всё в этом ходе; рассказ — о приходе во двор"
 
   - id: trader_made_as_trader
     title: "Новый кузнец — торговец с лавкой движка (большой тест, v0.7.22.13, v0.7.22.26)"
@@ -2813,9 +2813,9 @@ scenarios:
         - {id: hammer, name: "Молот", base: null, rarity: common}
         - {id: piton, name: "Шлямбур", base: null, rarity: common}
     expect:
-      effects: {required_kinds_any: [create_npc]}
+      effects: {required_kinds_any: [create:npc]}
     rubric:
-      - "Мастер создаёт кузнеца эффектом create_npc с trader: true и видом лавки trade_kind: smith (или без него — движок поймёт по роли); основной товар даёт движок, мастер может добавить своё в stock / stock_new, но не обязан"
+      - "Мастер создаёт кузнеца эффектом create:npc с trader: true и видом лавки trade_kind: smith (или без него — движок поймёт по роли); основной товар даёт движок, мастер может добавить своё в stock / stock_new, но не обязан"
 
   - id: absent_npc_does_not_answer
     title: "Обращение к NPC, которого нет в сцене, — он не отвечает (большой тест, v0.7.22.13)"
@@ -2823,7 +2823,7 @@ scenarios:
     extends: tavern
     input: "Ондрей, расскажи-ка, кто режет твоих овец?"
     expect:
-      effects: {forbidden_kinds: [create_npc]}
+      effects: {forbidden_kinds: [create:npc]}
     rubric:
       - "Ондрея в зале нет — мастер не говорит за него, а описывает, что его здесь нет (и, может быть, где его искать)"
 
@@ -2837,13 +2837,13 @@ scenarios:
       find_npcs:
         - {id: npc_smith, name: "Гуннар Тяжёлая Рука", role: "кузнец", location: "Серое Устье"}
     expect:
-      effects: {forbidden_kinds: [create_npc]}
+      effects: {forbidden_kinds: [create:npc]}
       tools_required: [find_npcs]
     rubric:
       - "Горм отсылает к кузнецу Гуннару, которого вернул поиск; нового кузнеца не создаёт"
 
   - id: place_off_the_trail
-    title: "Свернуть с тропы на открытом краю — find_places, затем create_place"
+    title: "Свернуть с тропы на открытом краю — find_places, затем create:place"
     category: concepts
     extends: tavern
     input: "Сворачиваю с просеки в чащу — посмотрю, что там, за поваленными елями."
@@ -2857,10 +2857,10 @@ scenarios:
       find_places: []
       find_edges: []
     expect:
-      effects: {required_kinds_any: [create_place, move]}
+      effects: {required_kinds_any: [create:place, move]}
       tools_required: [find_places]
     rubric:
-      - "Мастер создаёт место эффектом create_place с edge 0 (1–4 комнаты чащи с описанием, может быть зацепка или тайна; встреча — если есть, из монстров SRD), а не описывает несуществующее место словами"
+      - "Мастер создаёт место эффектом create:place с edge 0 (1–4 комнаты чащи с описанием, может быть зацепка или тайна; встреча — если есть, из монстров SRD), а не описывает несуществующее место словами"
 
   - id: no_edge_no_place
     title: "Без открытого края места не создаются"
@@ -2870,12 +2870,12 @@ scenarios:
     engine:
       find_edges: []
     expect:
-      effects: {forbidden_kinds: [create_place]}
+      effects: {forbidden_kinds: [create:place]}
     rubric:
       - "Мастер не создаёт мельницу и не ведёт туда героя словами: выходы — только из сцены; объясняет в мире (за таверной — двор и та же улица) или отсылает спросить у местных"
 
   - id: quest_npc_gives_work
-    title: "Игрок ищет работу — find_quests, затем create_quest от NPC сцены"
+    title: "Игрок ищет работу — find_quests, затем create:quest от NPC сцены"
     category: concepts
     extends: tavern
     mode: social
@@ -2883,12 +2883,12 @@ scenarios:
     engine:
       find_quests: []
       validate:
-        - {kind: create_quest, summary: "Новое задание: «Крысы в погребе» от Горм (простое)"}
+        - {kind: create:quest, summary: "Новое задание: «Крысы в погребе» от Горм (простое)"}
     expect:
-      effects: {required_kinds_any: [create_quest], field_in: {difficulty: [easy, medium]}}
+      effects: {required_kinds_any: [create:quest], field_in: {difficulty: [easy, medium]}}
       tools_required: [find_quests]
     rubric:
-      - "Горм даёт дело по своему характеру и заведению, и мастер оформляет его каркасом create_quest: сложность по делу (простое или среднее), акты с целью каждого; шагов, людей и вещей в нём нет — их соберёт сценарист; сумму награды сам не называет"
+      - "Горм даёт дело по своему характеру и заведению, и мастер оформляет его каркасом create:quest: сложность по делу (простое или среднее), акты с целью каждого; шагов, людей и вещей в нём нет — их соберёт сценарист; сумму награды сам не называет"
 
   - id: quest_existing_not_made_again
     title: "Похожее задание уже предлагается — новое не создавать"
@@ -2900,7 +2900,7 @@ scenarios:
       find_quests:
         - {id: q_cellar, title: "Крысы в погребе", giver: "Горм", status: offered}
     expect:
-      effects: {forbidden_kinds: [create_quest]}
+      effects: {forbidden_kinds: [create:quest]}
       tools_required: [find_quests]
     rubric:
       - "Горм предлагает уже существующее дело про крыс в погребе, нового задания не создаёт"
@@ -2930,7 +2930,7 @@ scenarios:
       validate:
         - {kind: quest_act, summary: "«Кольцо хозяйки», акт 1 «Кольцо в погребе» · Цель: Отыскать кольцо в погребе"}
     expect:
-      effects: {required_kinds_all: [quest_act], forbidden_kinds: [give_item, create_quest], required_fields: [items.hint]}
+      effects: {required_kinds_all: [quest_act], forbidden_kinds: [move_item:world>hero, create:quest], required_fields: [items.hint]}
     rubric:
       - "Сценарист собирает акт эффектом quest_act: кольцо — вещь акта (items: новая или из каталога) спрятана в погребе room_cellar с подсказкой, где лежит, и шаг find с её key; возвращение к Горму и награду не пишет — их добавит движок; кольцо не выдаётся словами"
       - "Рассказ — 1–3 фразы, с чего начинается акт, без итогов и сумм"
@@ -2961,7 +2961,7 @@ scenarios:
       validate:
         - {kind: quest_act, summary: "«Хворь Тодора», акт 1 «Лекарство» · Цель: вылечить Тодора"}
     expect:
-      effects: {required_kinds_all: [quest_act], forbidden_kinds: [create_quest]}
+      effects: {required_kinds_all: [quest_act], forbidden_kinds: [create:quest]}
     rubric:
       - "Сценарист собирает акт эффектом quest_act: среди шагов есть шаг talk с npc_todor и cure: true; болезнь не снимается словами"
 
@@ -2990,7 +2990,7 @@ scenarios:
       validate:
         - {kind: quest_act, summary: "«Бело-корень», акт 1 «Топь у тропы» · Цель: Отыскать бело-корень"}
     expect:
-      effects: {required_kinds_all: [quest_act], forbidden_kinds: [give_item], field_in: {items.skill: [survival, nature]}}
+      effects: {required_kinds_all: [quest_act], forbidden_kinds: [move_item:world>hero], field_in: {items.skill: [survival, nature]}}
     rubric:
       - "Сценарист прячет корень на Тропе лесорубов (items.room pushcha-trail) с подсказкой и навыком поиска survival или nature, шаг find с key корня; корень не выдаётся словами"
 
@@ -3019,7 +3019,7 @@ scenarios:
       validate:
         - {kind: quest_act, summary: "«Клин для лесорубов», акт 1 «Клин на тропу» · Цель: Отнести клин"}
     expect:
-      effects: {required_kinds_all: [quest_act], forbidden_kinds: [give_item], required_fields: [items.from_giver]}
+      effects: {required_kinds_all: [quest_act], forbidden_kinds: [move_item:world>hero], required_fields: [items.from_giver]}
     rubric:
       - "Горм вручает клин при взятии (вещь акта с from_giver) и шаг отдачи: visit на Тропу лесорубов pushcha-trail с item_id — key клина, или talk лесорубу (новый человек акта) с этим item_id — не просто «дойти»; клин не выдаётся словами"
 
@@ -3058,7 +3058,7 @@ scenarios:
       validate:
         - {kind: quest_act, summary: "«Пепел над бродом», акт 2 «Люди с повязками» собран"}
     expect:
-      effects: {required_kinds_all: [quest_act], forbidden_kinds: [create_quest, start_combat]}
+      effects: {required_kinds_all: [quest_act], forbidden_kinds: [create:quest, start_combat]}
     rubric:
       - "Сценарист собирает акт 2 (act: 2) из 2–4 шагов: бой с поджигателями (encounters в безлюдном месте мира, например на Южной дороге, или encounter комнаты нового места на открытом крае), опыт врагов в рамке «hard» для 2 уровня (101–150: например 4–6 бандитов или гнолл с бандитами), без главаря — главарь только в последнем акте; бой назван шагом fight"
       - "Акт продвигает дело к логову Хорта: улика или свидетель (вещь или человек акта); хотя бы у одного шага needs — факт, без которого он не закроется (найденная улика, место или бой); финального выбора и награды нет"
@@ -3098,7 +3098,7 @@ scenarios:
       validate:
         - {kind: quest_act, summary: "«Пепел над бродом», акт 3 «Логово Хорта» собран"}
     expect:
-      effects: {required_kinds_all: [quest_act], forbidden_kinds: [create_quest, start_combat, create_place], required_fields: [choices.done_text]}
+      effects: {required_kinds_all: [quest_act], forbidden_kinds: [create:quest, start_combat, create:place], required_fields: [choices.done_text]}
     rubric:
       - "Сценарист собирает последний акт (act: 3): логово — новое место на крае Южной дороги (new_places с room_id road_south и edge 0) или безлюдное место мира; главарь Хорт — бой с boss: true и именем, опыт до 200 (например багбир или громила с бандитами), назван шагом fight"
       - "Финал — шаг choice в комнате логова и 2–3 choices: сдать Хорта страже, взять золото и т. п., у каждого свой done_text и цена (attitude, перемена места); возвращение к Горму и сумму награды не пишет"
@@ -3112,12 +3112,12 @@ scenarios:
     engine:
       find_quests: []
       validate:
-        - {kind: create_quest, summary: "Новое задание: «Пепел над бродом» от Горм (сложное)"}
+        - {kind: create:quest, summary: "Новое задание: «Пепел над бродом» от Горм (сложное)"}
     expect:
-      effects: {required_kinds_any: [create_quest], field_in: {difficulty: [hard, deadly]}, required_fields: [finale]}
+      effects: {required_kinds_any: [create:quest], field_in: {difficulty: [hard, deadly]}, required_fields: [finale]}
       tools_required: [find_quests]
     rubric:
-      - "Мастер оформляет каркас create_quest сложного (или почти невозможного) дела: 2–4 акта, каждый — новое место, люди или опасность, от зацепки (пепелище, свидетели) к логову и развязке; villain — кто стоит за поджогами, finale — выбор в конце"
+      - "Мастер оформляет каркас create:quest сложного (или почти невозможного) дела: 2–4 акта, каждый — новое место, люди или опасность, от зацепки (пепелище, свидетели) к логову и развязке; villain — кто стоит за поджогами, finale — выбор в конце"
       - "В каркасе нет шагов, людей, мест и сумм; Горм излагает дело своими словами и сам сумм не называет"
 
   - id: quest_thing_searched_by_words
@@ -3138,12 +3138,12 @@ scenarios:
               revealed: ["За нижней бочкой у стены, в щели между досками, блестит обручальное кольцо — кольцо хозяйки (вещь задания «Кольцо хозяйки»)"]}
     expect:
       check: {required: true, skill_in: [investigation, perception]}
-      effects: {forbidden_kinds: [give_item, quest_update, xp, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, quest_update, xp, coins]}
     rubric:
-      - "Мастер просит проверку поиска (Анализ или Внимательность), а не выдаёт кольцо словами; находку рассказывает по ответу движка: кольцо за нижней бочкой — без новых подробностей и без give_item (вещь из тайника герою даёт движок)"
+      - "Мастер просит проверку поиска (Анализ или Внимательность), а не выдаёт кольцо словами; находку рассказывает по ответу движка: кольцо за нижней бочкой — без новых подробностей и без move_item:world>hero (вещь из тайника герою даёт движок)"
 
   - id: quest_board_order
-    title: "Ищет работу у доски — заказ create_quest с board_prop_id"
+    title: "Ищет работу у доски — заказ create:quest с board_prop_id"
     category: concepts
     extends: tavern
     input: "Подхожу к доске объявлений — нет ли там заказа для наёмника?"
@@ -3156,28 +3156,28 @@ scenarios:
       find_npcs:
         - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны", location: "Серое Устье"}
     expect:
-      effects: {required_kinds_any: [create_quest]}
+      effects: {required_kinds_any: [create:quest]}
       tools_required: [find_quests]
     rubric:
-      - "Мастер оформляет заказ на доске каркасом create_quest с board_prop_id p1, сложностью и актами, заказчик — человек мира или новый, а не выдумывает листки словами"
+      - "Мастер оформляет заказ на доске каркасом create:quest с board_prop_id p1, сложностью и актами, заказчик — человек мира или новый, а не выдумывает листки словами"
 
   - id: quest_own_deed
-    title: "Своё дело без заказчика — create_quest с own"
+    title: "Своё дело без заказчика — create:quest с own"
     category: concepts
     extends: tavern
     input: "Решено: возьмусь сам выяснить, кто травит колодцы в Устье. Это моё дело, без всяких заказчиков — с чего бы начать?"
     engine:
       find_quests: []
       validate:
-        - {kind: create_quest, summary: "Новое задание: «Шорох в погребе» — своё дело (среднее)"}
+        - {kind: create:quest, summary: "Новое задание: «Шорох в погребе» — своё дело (среднее)"}
     expect:
-      effects: {required_kinds_any: [create_quest]}
+      effects: {required_kinds_any: [create:quest]}
       tools_required: [find_quests]
     rubric:
-      - "Мастер оформляет замысел игрока своим делом create_quest с own: true без заказчика: сложность и акты от зацепки к развязке (кто травит колодцы), без шагов; награду не обещает"
+      - "Мастер оформляет замысел игрока своим делом create:quest с own: true без заказчика: сложность и акты от зацепки к развязке (кто травит колодцы), без шагов; награду не обещает"
 
   - id: goal_assessed
-    title: "Игрок записал жизненную цель — goal_assess, мысль героя без событий"
+    title: "Игрок записал жизненную цель — goal:assess, мысль героя без событий"
     category: concepts
     extends: tavern
     kind: goal
@@ -3186,9 +3186,9 @@ scenarios:
       character:
         goal: "«Убить дракона и повесить его голову над воротами» — ещё не оценена"
     expect:
-      effects: {required_kinds_any: [goal_assess], forbidden_kinds: [create_quest, create_npc, create_place, start_combat]}
+      effects: {required_kinds_any: [goal:assess], forbidden_kinds: [create:quest, create:npc, create:place, start_combat]}
     rubric:
-      - "Мастер оценивает цель эффектом goal_assess с масштабом epic или legendary и направлением class; в рассказе — только мысль героя, без дракона поблизости, людей и событий; цель не высмеивает и не отговаривает"
+      - "Мастер оценивает цель эффектом goal:assess с масштабом epic или legendary и направлением class; в рассказе — только мысль героя, без дракона поблизости, людей и событий; цель не высмеивает и не отговаривает"
 
   - id: goal_novice_and_the_dragon
     title: "Новичок ищет дракона до порога — мир отвечает по логике, без заданий и людей под цель"
@@ -3203,7 +3203,7 @@ scenarios:
       find_quests: []
       find_npcs: []
     expect:
-      effects: {forbidden_kinds: [create_quest, create_npc, create_place, start_combat]}
+      effects: {forbidden_kinds: [create:quest, create:npc, create:place, start_combat]}
     rubric:
       - "Горм отвечает в характере и по логике мира — смеётся, отговаривает или советует подрасти и набраться опыта; не выдумывает дракона поблизости, не даёт задания и не создаёт людей под цель"
 
@@ -3222,7 +3222,7 @@ scenarios:
       - "Мастер описывает ужин у очага и не упоминает цель героя, не подсовывает продающуюся таверну и разговоры о своём деле"
 
   - id: goal_hint_after_the_threshold
-    title: "Цель по силам, игрок сам расспрашивает в таверне — намёк goal_hint, ещё не задание"
+    title: "Цель по силам, игрок сам расспрашивает в таверне — намёк goal:hint, ещё не задание"
     category: concepts
     extends: tavern
     mode: social
@@ -3233,12 +3233,12 @@ scenarios:
     engine:
       find_quests: []
     expect:
-      effects: {required_kinds_any: [goal_hint], forbidden_kinds: [create_quest, create_npc, create_place]}
+      effects: {required_kinds_any: [goal:hint], forbidden_kinds: [create:quest, create:npc, create:place]}
     rubric:
-      - "Горм даёт намёк по логике места (что-то слышал, советует расспросить ещё — можно отослать к человеку из сцены, например к сержанту Ведде) и мастер проводит goal_hint; задания ещё нет, новых людей, которых нет в сцене и мире, мастер не выдумывает и не создаёт"
+      - "Горм даёт намёк по логике места (что-то слышал, советует расспросить ещё — можно отослать к человеку из сцены, например к сержанту Ведде) и мастер проводит goal:hint; задания ещё нет, новых людей, которых нет в сцене и мире, мастер не выдумывает и не создаёт"
 
   - id: goal_quest_after_hints
-    title: "Намёков достаточно, игрок снова ищет — задание для цели create_quest for_goal"
+    title: "Намёков достаточно, игрок снова ищет — задание для цели create:quest for_goal"
     category: concepts
     extends: tavern
     mode: social
@@ -3249,10 +3249,10 @@ scenarios:
     engine:
       find_quests: []
     expect:
-      effects: {required_kinds_any: [create_quest]}
+      effects: {required_kinds_any: [create:quest]}
       tools_required: [find_quests]
     rubric:
-      - "Мастер создаёт задание для цели create_quest с for_goal: true (заказчик — Горм или человек из задания): сложность и акты к цели героя, без шагов"
+      - "Мастер создаёт задание для цели create:quest с for_goal: true (заказчик — Горм или человек из задания): сложность и акты к цели героя, без шагов"
 
   - id: goal_no_hint_in_the_wrong_place
     title: "Неуместная сцена — у менялы о драконе не намекают"
@@ -3268,7 +3268,7 @@ scenarios:
       character:
         goal: "«Убить дракона» — великая, по силам: уровень класса 5 из 5; намёков 0 из 3 перед заданием"
     expect:
-      effects: {forbidden_kinds: [goal_hint, create_quest, create_npc]}
+      effects: {forbidden_kinds: [goal:hint, create:quest, create:npc]}
     rubric:
       - "Меняла отвечает в характере — он про деньги и курсы, о драконах не знает и намёков не даёт; заданий и людей под цель нет"
 
@@ -3307,15 +3307,15 @@ scenarios:
       check: {d20: [7], bonus: 2, total: 9, dc: 25, success: false, nat: 7, blocked: false, rolled_as: "Убеждение"}
     expect:
       check: {required: true, dc_tier_in: [hard, very_hard, nearly_impossible]}
-      effects: {forbidden_kinds: [give_item, coins]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins]}
     rubric:
       - "Мастер просит проверку Убеждения с высокой сложностью и описывает провал: Горм стоит на своём"
 
   - id: quest_board_read_new_giver
-    title: "Чтение доски кнопкой — заказ с новым заказчиком внутри create_quest, без отдельного create_npc"
+    title: "Чтение доски кнопкой — заказ с новым заказчиком внутри create:quest, без отдельного create:npc"
     category: concepts
     extends: tavern
-    input: "Читаю объявления: Доска объявлений [движок: на «Доска объявлений» [p1] есть место для новых заказов — повесь 1–3 настоящих заказа: сначала find_quests, потом create_quest с board_prop_id p1 и заказчиком из этой округи — живым человеком из find_npcs или новым в new_npcs самого create_quest (giver new:<key>), без отдельного create_npc; каждый заказ — каркас: сложность (лучше разная: простое, среднее, сложное) и акты с целями, без шагов; что написано в листках — это и есть эти задания, игрок возьмёт их кнопкой]"
+    input: "Читаю объявления: Доска объявлений [движок: на «Доска объявлений» [p1] есть место для новых заказов — повесь 1–3 настоящих заказа: сначала find_quests, потом create:quest с board_prop_id p1 и заказчиком из этой округи — живым человеком из find_npcs или новым в new_npcs самого create:quest (giver new:<key>), без отдельного create:npc; каждый заказ — каркас: сложность (лучше разная: простое, среднее, сложное) и акты с целями, без шагов; что написано в листках — это и есть эти задания, игрок возьмёт их кнопкой]"
     snapshot:
       scene:
         props:
@@ -3324,10 +3324,10 @@ scenarios:
       find_quests: []
       find_npcs: []
     expect:
-      effects: {required_kinds_any: [create_quest], forbidden_kinds: [create_npc]}
+      effects: {required_kinds_any: [create:quest], forbidden_kinds: [create:npc]}
       tools_required: [find_quests]
     rubric:
-      - "v0.7.38.1 (трейс автора): мастер вешает заказ create_quest с board_prop_id p1; нового заказчика (старосту, купца) даёт в new_npcs самого задания с giver new:<key>, а не отдельным create_npc"
+      - "v0.7.38.1 (трейс автора): мастер вешает заказ create:quest с board_prop_id p1; нового заказчика (старосту, купца) даёт в new_npcs самого задания с giver new:<key>, а не отдельным create:npc"
 
   - id: trade_stock_missing_thing
     title: "Вещи ремесла нет в товаре — эффект stock, а не отказ или выдача словами"
@@ -3350,9 +3350,9 @@ scenarios:
       find_items:
         - {id: greataxe, name: "Секира", base: null, rarity: common}
       validate:
-        - {kind: stock, status: accept, summary: "Товар у Горм: Секира × 1"}
+        - {kind: create:stock, status: accept, summary: "Товар у Горм: Секира × 1"}
     expect:
-      effects: {required_kinds_any: [stock], forbidden_kinds: [give_item, coins, take_item]}
+      effects: {required_kinds_any: [create:stock], forbidden_kinds: [move_item:world>hero, coins, move_item:hero>world]}
       tools_required: [find_items]
     rubric:
       - "v0.7.39.4 (приёмка автора): кузнец кладёт секиру в товар эффектом stock (npc_id кузнеца, item_id greataxe) — её можно купить в торговле; не отказывает и не отдаёт её словами"
@@ -3375,9 +3375,9 @@ scenarios:
         - {id: greataxe, name: "Секира", base: null, rarity: common}
         - {id: iron_bar, name: "Железный пруток", base: null, rarity: common}
       validate:
-        - {kind: recipe, status: accept, summary: "Рецепт: Секира — Инструменты кузнеца, 45 ч, Сл 13"}
+        - {kind: create:recipe, status: accept, summary: "Рецепт: Секира — Инструменты кузнеца, 45 ч, Сл 13"}
     expect:
-      effects: {required_kinds_any: [recipe], forbidden_kinds: [give_item]}
+      effects: {required_kinds_any: [create:recipe], forbidden_kinds: [move_item:world>hero]}
     rubric:
       - "Мастер даёт рецепт секиры эффектом recipe (smiths_tools, станция forge, материалы — железо и дерево, output_id greataxe); не отказывает из-за цены и не выдаёт готовую секиру"
       - "Рассказ — о том, как герой придумал способ, а не о сделанной вещи; работа — в окне «Ремесло»"
@@ -3399,9 +3399,9 @@ scenarios:
       find_items:
         - {id: greataxe, name: "Секира", base: null, rarity: common}
       validate:
-        - {kind: course, status: accept, summary: "Курс — Горм: «Ковка секиры», 4 занятий"}
+        - {kind: create:course, status: accept, summary: "Курс — Горм: «Ковка секиры», 4 занятий"}
     expect:
-      effects: {required_kinds_any: [course], forbidden_kinds: [coins, give_item, recipe]}
+      effects: {required_kinds_any: [create:course], forbidden_kinds: [coins, move_item:world>hero, create:recipe]}
     rubric:
       - "v0.7.39.4: Горм берёт ученика эффектом course с teach_kind recipe и teach_id greataxe (вещь каталога), при нужде с recipe (инструмент, станция, материалы)"
 
@@ -3421,15 +3421,15 @@ scenarios:
       find_edges:
         - {room_id: gen_room_4, room: "Стан обозников", location: "Выжженная дорога", edge: 0, text: "дорога дальше на восток, через гарь к холмам", terrain: [forest, hills], new_location: true}
       validate:
-        - {kind: create_place, status: accept, summary: "Новое место: Развилка у холмов [new:fork]"}
+        - {kind: create:place, status: accept, summary: "Новое место: Развилка у холмов [new:fork]"}
     expect:
-      effects: {required_kinds_any: [create_place]}
+      effects: {required_kinds_any: [create:place]}
       tools_required: [find_places]
     rubric:
-      - "Мастер продолжает мир create_place с room_id gen_room_4 и edge 0 (новая локация с местностью края), и у нового места — свой открытый край дальше (open_edges), а не тупик словами «дороги нет»"
+      - "Мастер продолжает мир create:place с room_id gen_room_4 и edge 0 (новая локация с местностью края), и у нового места — свой открытый край дальше (open_edges), а не тупик словами «дороги нет»"
 
   - id: place_settlement_village
-    title: "Найти деревню — поселение одним create_place: здания, люди, край дальше"
+    title: "Найти деревню — поселение одним create:place: здания, люди, край дальше"
     category: concepts
     extends: tavern
     input: "Выхожу за Северные ворота и иду полями на север — ищу деревню, где можно заночевать и купить еды."
@@ -3444,12 +3444,12 @@ scenarios:
       find_edges:
         - {room_id: brod-gate, room: "Северные ворота", location: "Ольховый Брод", edge: 0, text: "поля и хутора за северными воротами", terrain: [grassland, hills], new_location: true}
       validate:
-        - {kind: create_place, status: accept, summary: "Новое место: Улица Ракитного [new:street], Корчма [new:inn]; люди: Явдоха — корчмарка [new:host]; деревня, со стражей"}
+        - {kind: create:place, status: accept, summary: "Новое место: Улица Ракитного [new:street], Корчма [new:inn]; люди: Явдоха — корчмарка [new:host]; деревня, со стражей"}
     expect:
-      effects: {required_kinds_any: [create_place]}
+      effects: {required_kinds_any: [create:place]}
       tools_required: [find_places]
     rubric:
-      - "v0.7.39.4 (приёмка автора): деревня — одним create_place с new_location: несколько комнат (улица, трактир или корчма, дома) в своих объектах (sites), её люди в npcs (корчмарь-торговец с trade_kind и ещё кто-то), хозяева зданий — new:<key>"
+      - "v0.7.39.4 (приёмка автора): деревня — одним create:place с new_location: несколько комнат (улица, трактир или корчма, дома) в своих объектах (sites), её люди в npcs (корчмарь-торговец с trade_kind и ещё кто-то), хозяева зданий — new:<key>"
       - "У деревни есть открытый край дальше (open_edges); стража — через settlement village или law"
 
   - id: teacher_fireball_none_quest
@@ -3471,12 +3471,12 @@ scenarios:
     engine:
       find_quests: []
       validate:
-        - {kind: create_quest, summary: "Задание «Учитель огня» — простое, своё дело или от Горма"}
+        - {kind: create:quest, summary: "Задание «Учитель огня» — простое, своё дело или от Горма"}
     expect:
-      effects: {required_kinds_any: [create_quest], forbidden_kinds: [create_place, create_npc, course, give_item]}
+      effects: {required_kinds_any: [create:quest], forbidden_kinds: [create:place, create:npc, create:course, move_item:world>hero]}
       tools_required: [find_teachers]
     rubric:
-      - "Мастер ищет учителя find_teachers; учителя нет — даёт задание найти его (create_quest: своё дело или от Горма, кто слышал о чародее), не создаёт место или человека без задания и не отсылает к выдуманному учителю словами"
+      - "Мастер ищет учителя find_teachers; учителя нет — даёт задание найти его (create:quest: своё дело или от Горма, кто слышал о чародее), не создаёт место или человека без задания и не отсылает к выдуманному учителю словами"
       - "Горм в характере: о маге-огневике он только слышал, точно не знает"
 
   - id: teacher_fireball_found_course
@@ -3500,9 +3500,9 @@ scenarios:
         - {id: npc_orest, name: "Ведун Орест", role: "волшебник", teaches: "заклинания (wizard, sorcerer) до 5 круга", place: "Серое Устье · Башня у маяка", here: false, course: ""}
       teach_what: fireball
       validate:
-        - {kind: course, summary: "Курс — Ведун Орест: «Огненный шар», 6 занятий, 900 зм, ждёт у учителя: Серое Устье · Башня у маяка"}
+        - {kind: create:course, summary: "Курс — Ведун Орест: «Огненный шар», 6 занятий, 900 зм, ждёт у учителя: Серое Устье · Башня у маяка"}
     expect:
-      effects: {required_kinds_any: [course], forbidden_kinds: [create_quest, create_place, create_npc, give_item]}
+      effects: {required_kinds_any: [create:course], forbidden_kinds: [create:quest, create:place, create:npc, move_item:world>hero]}
       tools_required: [find_teachers]
     rubric:
       - "Мастер находит учителя find_teachers и в рассказе называет Ореста и башню у маяка; заводит курс эффектом course с npc_id npc_orest, teach_kind spell и teach_id fireball (или «Огненный шар» — движок узнаёт название); задания не даёт"
@@ -3536,9 +3536,9 @@ scenarios:
         - {id: npc_orest, name: "Ведун Орест", role: "волшебник", teaches: "заклинания (wizard, sorcerer) до 5 круга", place: "Серое Устье · Башня у маяка", here: true, course: ""}
       teach_what: fireball
       validate:
-        - {kind: course, summary: "Курс — Ведун Орест: «Огненный шар», 6 занятий, 900 зм"}
+        - {kind: create:course, summary: "Курс — Ведун Орест: «Огненный шар», 6 занятий, 900 зм"}
     expect:
-      effects: {required_kinds_any: [course], forbidden_kinds: [create_quest, create_place, give_item, coins]}
+      effects: {required_kinds_any: [create:course], forbidden_kinds: [create:quest, create:place, move_item:world>hero, coins]}
     rubric:
       - "Орест соглашается учить сам («у меня и научишься») — эффект course с npc_id npc_orest, teach_kind spell, teach_id fireball (или его русское название — движок узнаёт); без задания; цену, если называет, — как в ответе движка (900 зм, 6 занятий)"
       - "Заклинание не выдаётся словами: запись и занятия — кнопкой «Учёба»"
@@ -3557,9 +3557,9 @@ scenarios:
         - {id: npc_vetla, name: "Ветла", role: "травница", teaches: "ремесло и его рецепты: Набор травника, Инструменты алхимика; навыки: Природа, Медицина", place: "Серое Устье · Лавка травницы", here: false, course: ""}
       teach_what: healing_potion
       validate:
-        - {kind: course, summary: "Курс — Ветла: «Зелье лечения», 4 занятий, 20 зм, ждёт у учителя: Серое Устье · Лавка травницы"}
+        - {kind: create:course, summary: "Курс — Ветла: «Зелье лечения», 4 занятий, 20 зм, ждёт у учителя: Серое Устье · Лавка травницы"}
     expect:
-      effects: {required_kinds_any: [course], forbidden_kinds: [create_quest, create_place, create_npc, give_item, recipe]}
+      effects: {required_kinds_any: [create:course], forbidden_kinds: [create:quest, create:place, create:npc, move_item:world>hero, create:recipe]}
       tools_required: [find_teachers]
     rubric:
       - "Мастер ищет find_teachers (kind recipe) и в рассказе называет травницу Ветлу и её лавку; курс эффектом course с npc_id npc_vetla, teach_kind recipe и teach_id зелья лечения (id каталога или вещь с recipe); рецепт сразу не выдаёт"
@@ -3576,12 +3576,12 @@ scenarios:
     engine:
       find_quests: []
       validate:
-        - {kind: create_quest, summary: "Задание «Мастер мифрила» — среднее"}
+        - {kind: create:quest, summary: "Задание «Мастер мифрила» — среднее"}
     expect:
-      effects: {required_kinds_any: [create_quest], forbidden_kinds: [create_place, create_npc, course, recipe]}
+      effects: {required_kinds_any: [create:quest], forbidden_kinds: [create:place, create:npc, create:course, create:recipe]}
       tools_required: [find_teachers]
     rubric:
-      - "Мастер ищет find_teachers; такого мастера нет — даёт задание найти его (create_quest), без нового места или человека вне задания и без курса у случайного кузнеца"
+      - "Мастер ищет find_teachers; такого мастера нет — даёт задание найти его (create:quest), без нового места или человека вне задания и без курса у случайного кузнеца"
 
   - id: quest_act_teacher
     title: "Акт задания «найти учителя»: сценарист приводит мага и курс teaches на шаге talk (v0.7.39.7)"
@@ -3612,7 +3612,7 @@ scenarios:
       validate:
         - {kind: quest_act, summary: "«Учитель огня», акт 1 «Поиски чародея» · Цель: Расспросить на рынке; с ним: Ведун Орест; курс у учителя: «Огненный шар», 6 занятий, 900 зм"}
     expect:
-      effects: {required_kinds_all: [quest_act], forbidden_kinds: [create_quest, course, create_place], required_fields: [teaches.npc]}
+      effects: {required_kinds_all: [quest_act], forbidden_kinds: [create:quest, create:course, create:place], required_fields: [teaches.npc]}
     rubric:
       - "Сценарист приводит учителя в акте: новый человек с шаблоном mage в new_npcs, шаг talk к нему (new:<key>) и teaches {npc: new:<key>, kind: spell, id: fireball (или «Огненный шар» — движок узнаёт название), name}; курса отдельным эффектом и места без шагов нет"
 
@@ -3637,9 +3637,9 @@ scenarios:
         property: "Имущество (окно «Имущество» на панели): Дом у реки (дом) — с купчей, состояние 95%, есть: Кровать"
     engine:
       validate:
-        - {kind: upgrade, summary: "Улучшение для «Дом у реки»: Станок ювелира — 15 зм, 3 дня работы"}
+        - {kind: create:upgrade, summary: "Улучшение для «Дом у реки»: Станок ювелира — 15 зм, 3 дня работы"}
     expect:
-      effects: {required_kinds_any: [upgrade], forbidden_kinds: [furnish, give_item, coins, recipe]}
+      effects: {required_kinds_any: [create:upgrade], forbidden_kinds: [furnish, move_item:world>hero, coins, create:recipe]}
     rubric:
       - "Мастер предлагает улучшение эффектом upgrade: станок ювелира с новой станцией (station_new с инструментом jewelers_tools); станок не ставится словами и не появляется в обстановке"
       - "Цену и срок мастер не выдумывает сверх ответа движка (15 зм, 3 дня); заказ — кнопкой в окне «Имущество»"
@@ -3655,10 +3655,10 @@ scenarios:
         gold_cp: 30000
     engine:
       validate:
-        - {kind: create_place, summary: "Объект «Флигель за таверной» внутри Серого Устья"}
-        - {kind: property, summary: "Продаётся: Флигель за таверной (школа) за 120 зм, доход 40 мм в день"}
+        - {kind: create:place, summary: "Объект «Флигель за таверной» внутри Серого Устья"}
+        - {kind: create:property, summary: "Продаётся: Флигель за таверной (школа) за 120 зм, доход 40 мм в день"}
     expect:
-      effects: {required_kinds_any: [property], forbidden_kinds: [coins, give_item, course], required_fields: [new_kind.name]}
+      effects: {required_kinds_any: [create:property], forbidden_kinds: [coins, move_item:world>hero, create:course], required_fields: [new_kind.name]}
     rubric:
       - "Флигель выставлен на продажу эффектом property с new_kind «школа»: учитель в staff с жалованьем, доход с работником, 2–4 своих улучшения с разными gives (например, класс — staff_max или income_pct, библиотека — lesson_bonus, общежитие — rest)"
       - "Мастер не говорит, что школа уже открыта и флигель уже героя: покупка — кнопкой «Имущество» у Горма"
@@ -3678,12 +3678,12 @@ scenarios:
       validate:
         - {kind: furnish, summary: "Добавлено в комнату (Горм привёз бочку эля): Бочка эля"}
     expect:
-      effects: {required_kinds_any: [furnish], forbidden_kinds: [give_item, coins, take_item], required_fields: [cause]}
+      effects: {required_kinds_any: [furnish], forbidden_kinds: [move_item:world>hero, coins, move_item:hero>world], required_fields: [cause]}
     rubric:
       - "Бочка появляется в комнате эффектом furnish с cause (Горм привёз, герой помог закатить), хозяин бочки — Горм; другие вещи комнаты не переобставлены"
 
   - id: world_item_chest_npc
-    title: "Горм достаёт факелы из своего сундука и несёт в погреб — world_item из контейнера, не героя (v0.7.39.8)"
+    title: "Горм достаёт факелы из своего сундука и несёт в погреб — move_item:container>world из контейнера, не героя (v0.7.39.8)"
     category: world
     extends: tavern
     input: "Горм, ты же сам просил помочь с бочками в погребе — а там темно. Достань из своего сундука факелы и снеси их вниз, а я следом."
@@ -3697,11 +3697,11 @@ scenarios:
           - {prop_id: p5, name: "Сундук Горма", description: "Окованный сундук за стойкой", owner: npc_innkeeper, container: "сундук", locked: false, contents: "Факел ×2, Верёвка"}
     engine:
       validate:
-        - {kind: world_item, summary: "Сундук Горма — убрано: Факел ×2 (Горм отнёс факелы в погреб)"}
+        - {kind: "move_item:container>world", summary: "Сундук Горма — убрано: Факел ×2 (Горм отнёс факелы в погреб)"}
     expect:
-      effects: {required_kinds_any: [world_item], forbidden_kinds: [give_item, take_from, coins]}
+      effects: {required_kinds_any: ["move_item:container>world"], forbidden_kinds: [move_item:world>hero, move_item:container>hero, coins]}
     rubric:
-      - "Факелы уходят из сундука Горма эффектом world_item (op take, prop_id p5, item_id факела, qty 2, cause — Горм отнёс их в погреб); герою факелы не достаются"
+      - "Факелы уходят из сундука Горма эффектом move_item:container>world (prop_id p5, item_id факела, qty 2, cause — Горм отнёс их в погреб); герою факелы не достаются"
 
   - id: contest_dice_with_npc
     title: "Сыграть в кости с NPC — contest, исход решает движок, а не монеты мастера"
@@ -3711,10 +3711,10 @@ scenarios:
     input: "Горм, а сыграем в кости? Вечер длинный, а у меня в кошеле позвякивает."
     engine:
       validate:
-        - {kind: contest, summary: "Горм зовёт сыграть: Кости (окно «Состязание»)"}
+        - {kind: create:contest, summary: "Горм зовёт сыграть: Кости (окно «Состязание»)"}
     expect:
       max_checks: 0
-      effects: {required_kinds_any: [contest], forbidden_kinds: [coins, give_item, take_item]}
+      effects: {required_kinds_any: [create:contest], forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Горм соглашается сыграть, и мастер оформляет игру эффектом contest с его npc_id и game dice; кто выиграл и сколько монет ушло — не описывает"
 
@@ -3725,10 +3725,10 @@ scenarios:
     input: "Ведда, спорим на серебряк, что я метну нож в ту мишень на стене точнее тебя? До трёх попаданий."
     engine:
       validate:
-        - {kind: contest, summary: "Ведда зовёт сыграть: Метание ножей (окно «Состязание»)"}
+        - {kind: create:contest, summary: "Ведда зовёт сыграть: Метание ножей (окно «Состязание»)"}
     expect:
       max_checks: 0
-      effects: {required_kinds_any: [contest], forbidden_kinds: [coins, damage]}
+      effects: {required_kinds_any: [create:contest], forbidden_kinds: [coins, damage]}
     rubric:
       - "Ведда принимает спор, и мастер даёт contest с её npc_id: своя игра new_kind с проверкой по навыку или характеристике 5e (ловкость рук, ловкость), не выдумывая результата бросков"
 
@@ -3739,10 +3739,10 @@ scenarios:
     input: "Ведда, вызываю тебя: на кулаках, до сдачи, на пять серебряков. Или стража только на словах крепка?"
     engine:
       validate:
-        - {kind: contest, summary: "сержант Ведда зовёт сыграть: Поединок (окно «Состязание»)"}
+        - {kind: create:contest, summary: "сержант Ведда зовёт сыграть: Поединок (окно «Состязание»)"}
     expect:
       max_checks: 0
-      effects: {required_kinds_any: [contest], forbidden_kinds: [start_combat, damage, coins]}
+      effects: {required_kinds_any: [create:contest], forbidden_kinds: [start_combat, damage, coins]}
     rubric:
       - "Ведда принимает вызов, и мастер оформляет его эффектом contest с её npc_id и game bout; бой не начинает сам и исход не описывает — кто кого уложил, решит движок"
 
@@ -3764,7 +3764,7 @@ scenarios:
         property: "Объект «Бойцовый круг» (арена): штат: Гордей Кулак (распорядитель); арена — бой до сдачи; герой в бойцах: Новичок, побед 1, поражений 0; бой дня для ставок — Разведчик «Щука» против Гнолл «Кремень» (ставки — в книге распорядителя, окно «Арена»)"
     expect:
       max_checks: 0
-      effects: {forbidden_kinds: [coins, give_item, take_item, start_combat, contest]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world, start_combat, create:contest]}
     rubric:
       - "Мастер не принимает ставку словами и не называет, кто победит: деньги не списаны, исход боя не описан; Гордей отыгран, а ставка — через окно «Арена» (кнопкой у распорядителя)"
 
@@ -3783,7 +3783,7 @@ scenarios:
         wilds: ["Охота (кнопка «Охотиться»): запас 6 из 6"]
     expect:
       max_checks: 0
-      effects: {forbidden_kinds: [give_item, start_combat, advance_time]}
+      effects: {forbidden_kinds: [move_item:world>hero, start_combat, advance_time]}
     rubric:
       - "Мастер говорит, что охота — кнопка «Охотиться» на панели, и описывает, как герой выходит на звериную тропу; мяса, дичи или боя со зверем сам не выдаёт и исхода охоты не придумывает"
 
@@ -3805,14 +3805,14 @@ scenarios:
           - {item_id: tar_keg, name: "Бочонок дёгтя", qty: 1}
     engine:
       validate:
-        - {kind: wilds, summary: "Рыбалка: опустели (дёготь в реке)"}
+        - {kind: create:wilds, summary: "Рыбалка: опустели (дёготь в реке)"}
     expect:
-      effects: {required_kinds_any: [wilds]}
+      effects: {required_kinds_any: [create:wilds]}
     rubric:
       - "Мастер даёт wilds с ground fish, op deplete и причиной (дёготь в реке): рыба у мостков пропала; не описывает это одними словами без эффекта"
 
   - id: wilds_lake_place
-    title: "Лесное озеро на краю — create_place с угодьями fish"
+    title: "Лесное озеро на краю — create:place с угодьями fish"
     category: concepts
     extends: tavern
     input: "Сворачиваю с просеки к лесному озеру — лесорубы говорили, там щука берёт."
@@ -3826,10 +3826,10 @@ scenarios:
       find_places: []
       find_edges: []
     expect:
-      effects: {required_kinds_any: [create_place]}
+      effects: {required_kinds_any: [create:place]}
       tools_required: [find_places]
     rubric:
-      - "Мастер создаёт место create_place на крае 0, и у комнаты озера (под открытым небом) есть угодья wilds с fish — рыбалка там пойдёт кнопкой"
+      - "Мастер создаёт место create:place на крае 0, и у комнаты озера (под открытым небом) есть угодья wilds с fish — рыбалка там пойдёт кнопкой"
 
   - id: mount_buy_by_words
     title: "Мул словами у барышника — кнопки «Животные» и «Вьюк», не монеты мастера"
@@ -3847,7 +3847,7 @@ scenarios:
              animals: ["Верховая лошадь [riding_horse] 75 зм", "Тяжеловоз [draft_horse] 50 зм", "Мул [mule] 8 зм", "Мастиф [mastiff] 25 зм", "Коза [goat] 1 зм", "Телега 15 зм", "Фургон 35 зм"]}
     expect:
       max_checks: 0
-      effects: {forbidden_kinds: [coins, give_item, take_item, create_npc]}
+      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world, create:npc]}
     rubric:
       - "Остап охотно продаёт мула; цена — только та, что в его строке сцены (8 зм), или мастер отсылает к кнопке «Животные»; денег не списывает, мула не выдаёт эффектом и stock на мула (он уже продаётся) не ставит"
 
@@ -3865,9 +3865,9 @@ scenarios:
              animals: ["Верховая лошадь [riding_horse] 75 зм", "Тяжеловоз [draft_horse] 50 зм", "Мул [mule] 8 зм", "Мастиф [mastiff] 25 зм", "Коза [goat] 1 зм", "Телега 15 зм", "Фургон 35 зм"]}
     engine:
       validate:
-        - {kind: stock, status: accept, summary: "Остап продаёт: Верблюд (60 зм)"}
+        - {kind: create:stock, status: accept, summary: "Остап продаёт: Верблюд (60 зм)"}
     expect:
-      effects: {required_kinds_any: [stock], forbidden_kinds: [give_item, coins]}
+      effects: {required_kinds_any: [create:stock], forbidden_kinds: [move_item:world>hero, coins]}
     rubric:
       - "Мастер подтверждает верблюда эффектом stock с npc_id Остапа и animal camel — купить его можно кнопкой «Животные»; верблюда не выдаёт сразу и денег не списывает"
 
@@ -3886,7 +3886,7 @@ scenarios:
           - {item_id: raw_meat, name: "Сырое мясо", qty: 2}
     expect:
       max_checks: 0
-      effects: {forbidden_kinds: [take_item, give_item, owner, bond, npc_follow]}
+      effects: {forbidden_kinds: [move_item:hero>world, move_item:world>hero, owner, shift:bond, grant:follow]}
     rubric:
       - "Мастер описывает, как кошка настораживается или тянется к мясу, и не решает сам, приручена ли она (это кнопка «Приручить…» — назвать её можно, но не обязательно); не забирает мясо и не делает её питомцем эффектом"
 
@@ -3903,9 +3903,9 @@ scenarios:
         creatures: ["Буян — ваше животное, идёт с героем [c4] — питомец героя: Буян (Мастиф) — близость 3 из 10; помогает: Внимательность, Выживание; дерётся рядом"]
     engine:
       validate:
-        - {kind: bond, status: accept, summary: "Буян: близость +2 (вытащил шип и выходил)"}
+        - {kind: shift:bond, status: accept, summary: "Буян: близость +2 (вытащил шип и выходил)"}
     expect:
-      effects: {required_kinds_any: [bond], forbidden_kinds: [heal, coins, give_item]}
+      effects: {required_kinds_any: [shift:bond], forbidden_kinds: [heal, coins, move_item:world>hero]}
     rubric:
       - "Мастер даёт bond с creature_id c4 (не npc_id), delta 1–2 и причиной из сцены; играет пса живым существом"
 
@@ -3921,9 +3921,9 @@ scenarios:
         npcs: []
     engine:
       validate:
-        - {kind: beast, status: accept, summary: "Здесь: Мастиф — можно приручить"}
+        - {kind: create:beast, status: accept, summary: "Здесь: Мастиф — можно приручить"}
     expect:
-      effects: {required_kinds_any: [beast], forbidden_kinds: [give_item, owner, start_combat]}
+      effects: {required_kinds_any: [create:beast], forbidden_kinds: [move_item:world>hero, owner, start_combat]}
     rubric:
       - "Мастер даёт beast со зверем SRD (mastiff или похожий пёс) и причиной — откуда пёс у ворот; приручение оставляет кнопке, питомцем его сам не делает"
 
@@ -3940,7 +3940,7 @@ scenarios:
           - "Торговый день (Серое Устье) — через 4 дня, 7 Жатвеня, день Торга: в день Торга съезжаются окрестные хутора: добычу и товар берут на десятую часть дороже"
           - "Устьинская ярмарка (Серое Устье) — через 5 дней, 8 Жатвеня, день Кузни: каждый месяц три дня на Рыночной площади торгуют приезжие; продать можно на пятую часть дороже, купить — на десятую дешевле"
     expect:
-      effects: {forbidden_kinds: [festival, coins, npc_discount, give_item]}
+      effects: {forbidden_kinds: [create:festival, coins, grant:discount, move_item:world>hero]}
     rubric:
       - "Горм называет срок ярмарки по календарю — через пять дней или 8 Жатвеня; может упомянуть торговый день через четыре дня. «День Кузни», «день Торга» — дни недели из календаря, не выдумка; других праздников и дат нет"
       - "Мастер не назначает праздник эффектом и не продаёт шкуры за свою цену; пересказать, что на ярмарке дают дороже (как в строке календаря), — можно"
@@ -3959,9 +3959,9 @@ scenarios:
         notes: ["день 1, Хромой Ворон — староста при всех объявил: южный караван придёт через три дня, и в его честь Устье два дня будет торговать на Рыночной площади — Караванная ярмарка"]
     engine:
       validate:
-        - {kind: festival, status: accept, summary: "Праздник «Караванная ярмарка» — через 3 дня"}
+        - {kind: create:festival, status: accept, summary: "Праздник «Караванная ярмарка» — через 3 дня"}
     expect:
-      effects: {required_kinds_any: [festival], forbidden_kinds: [coins, give_item, flag]}
+      effects: {required_kinds_any: [create:festival], forbidden_kinds: [coins, move_item:world>hero, flag]}
     rubric:
       - "Объявленная ярмарка ставится в календарь эффектом festival: название, причина (караван, слово старосты), starts_in от 1 до 4 дней (объявили раньше — срок мог сократиться), days около двух; Горм называет срок, по которому герой решит, успеет ли; объявление старосты не опровергает"
 
@@ -3996,7 +3996,7 @@ scenarios:
       validate:
         - {kind: weather, status: accept, summary: "Погода: ясно на 8 ч"}
     expect:
-      effects: {required_kinds_any: [weather], forbidden_kinds: [coins, give_item, condition]}
+      effects: {required_kinds_any: [weather], forbidden_kinds: [coins, move_item:world>hero, condition]}
     rubric:
       - "Мастер даёт эффект weather: ясно (clear), часы в пределах полудня (от 4 до 12), причина — рог героя; описывает, как тучи расходятся и ливень стихает; не обещает ясной погоды дольше срока чар"
 
@@ -4015,7 +4015,7 @@ scenarios:
       validate:
         - {kind: rumor, status: accept, summary: "Слух рассказан"}
     expect:
-      effects: {required_kinds_any: [rumor], forbidden_kinds: [create_npc, create_quest, create_place, coins, give_item]}
+      effects: {required_kinds_any: [rumor], forbidden_kinds: [create:npc, create:quest, create:place, coins, move_item:world>hero]}
     rubric:
       - "Горм пересказывает слухи только из строки «Слухи здесь» (монеты на мельнице, огни на барже) и все рассказанные отмечает эффектом rumor с op tell и их rumor_ids; не выдумывает других слухов, пропавших, заказчиков и наград"
       - "Подаёт их как молву («говорят», «болтают»), не утверждает, что это правда, и не обещает, что монеты там точно есть"
@@ -4035,7 +4035,7 @@ scenarios:
       validate:
         - {kind: rumor, status: accept, summary: "Пошёл слух: сержант Ведда берёт мзду"}
     expect:
-      effects: {required_kinds_any: [rumor], forbidden_kinds: [create_npc, crime_known, coins]}
+      effects: {required_kinds_any: [rumor], forbidden_kinds: [create:npc, crime:known, coins]}
     rubric:
       - "Мастер даёт эффект rumor с op spread: текст о мзде сержанта Ведды, truth: false (герой сам назвал это враньём); importance 1–2; может перед этим спросить проверку Обмана — она удачна"
       - "Горм верит и обещает передать; мастер не говорит, что весь город уже знает: куда и когда дойдёт слух, решает движок"
@@ -4055,7 +4055,7 @@ scenarios:
       validate:
         - {kind: rumor, status: accept, summary: "Слух рассказан"}
     expect:
-      effects: {required_kinds_any: [rumor], forbidden_kinds: [create_npc, create_quest, coins, give_item]}
+      effects: {required_kinds_any: [rumor], forbidden_kinds: [create:npc, create:quest, coins, move_item:world>hero]}
     rubric:
       - "Герой подслушивает только слухи из строки «Слухи здесь» (огонь на башне заставы, пропавшие шахтёры) и все услышанные отмечает эффектом rumor с op tell и их rumor_ids; других слухов, людей и наград не выдумывает"
 
@@ -4075,7 +4075,7 @@ scenarios:
       validate:
         - {kind: letter_reply, summary: "Горм: согласие"}
     expect:
-      effects: {required_kinds_all: [letter_reply], forbidden_kinds: [give_item, coins, npc_follow, move, create_npc, create_place], field_in: {answer: ["yes"]}}
+      effects: {required_kinds_all: [letter_reply], forbidden_kinds: [move_item:world>hero, coins, grant:follow, move, create:npc, create:place], field_in: {answer: ["yes"]}}
       check: {required: false}
     rubric:
       - "Narration — само письмо Горма герою от первого лица, без ремарок мастера: он соглашается прийти к башне, и это совпадает с letter_reply yes"
@@ -4097,7 +4097,7 @@ scenarios:
       validate:
         - {kind: letter_reply, summary: "сержант Ведда: отказ"}
     expect:
-      effects: {forbidden_kinds: [give_item, coins, npc_follow, move, create_npc, create_place, crime_known]}
+      effects: {forbidden_kinds: [move_item:world>hero, coins, grant:follow, move, create:npc, create:place, crime:known]}
       check: {required: false}
     rubric:
       - "Narration — короткое письмо Ведды герою от первого лица: она отказывает, без обещаний прийти или прислать людей"
@@ -4119,7 +4119,7 @@ scenarios:
       validate:
         - {kind: letter_reply, status: reject, reason: "у этого письма ответ решил движок — letter_reply не нужен, просто напиши ответ"}
     expect:
-      effects: {forbidden_kinds: [letter_reply, crime_known, npc_attitude, coins, take_item, give_item]}
+      effects: {forbidden_kinds: [letter_reply, crime:known, shift:attitude, coins, move_item:hero>world, move_item:world>hero]}
       check: {required: false}
     rubric:
       - "Narration — письмо Ведды герою: проверили, Горм чист, наговор она так не оставит — то же, что решил движок"
@@ -4142,7 +4142,7 @@ scenarios:
       validate:
         - {kind: vow, status: accept, summary: "Обет «Слово правды»"}
     expect:
-      effects: {required_kinds_any: [vow], forbidden_kinds: [coins, condition, give_item, heal]}
+      effects: {required_kinds_any: [vow], forbidden_kinds: [coins, condition, move_item:world>hero, heal]}
     rubric:
       - "Мастер даёт эффект vow с vow = truth («Слово правды») и причиной — клятвой героя; не придумывает другого обета и не даёт дара сам (ни condition, ни монет)"
       - "Описывает клятву у алтаря и, может быть, слова Сестры Илвы; не объявляет знамение или ответ богини голосом"
@@ -4161,7 +4161,7 @@ scenarios:
       character:
         faith: "вера: Чонтия (Светлая Мать) — верный, 35; заповедь: не отнимать жизнь"
     expect:
-      effects: {forbidden_kinds: [condition, heal, coins, cast, vow, give_item]}
+      effects: {forbidden_kinds: [condition, heal, coins, cast, vow, move_item:world>hero]}
     rubric:
       - "Мастер описывает молитву у алтаря, но не даёт благословения эффектом и не обещает бонус к броскам; благословение храма — кнопка окна «Святилище» (может об этом напомнить)"
       - "Богиня не отвечает голосом и не являет знамений; Сестра Илва может сказать доброе слово или напомнить о службе"
@@ -4181,9 +4181,9 @@ scenarios:
         inventory: [{item_id: gen_idol, name: "Деревянный идол с рыбьим хвостом", qty: 1}]
     engine:
       validate:
-        - {kind: god, status: accept, summary: "Святилище нового бога: Хозяйка Брода"}
+        - {kind: create:god, status: accept, summary: "Святилище нового бога: Хозяйка Брода"}
     expect:
-      effects: {required_kinds_any: [god], forbidden_kinds: [coins, condition, create_npc, create_quest]}
+      effects: {required_kinds_any: [create:god], forbidden_kinds: [coins, condition, create:npc, create:quest]}
     rubric:
       - "Мастер даёт эффект god с shrine_name (камень с идолом) и new: имя «Хозяйка Брода» (или близкое), заповедь о рыбе без спроса и forbids — poaching; не выдаёт бога пакета за неё"
       - "Описывает, как появилось святилище и как отнеслись рыбаки; не обещает герою даров или чудес — их даёт движок"
@@ -4202,7 +4202,7 @@ scenarios:
         - {kind: make, status: accept, summary: "Новое: «Чёрная вода» (3 очк., слабое)"}
         - {kind: condition, status: accept, summary: "Чёрная вода: спасбросок провален"}
     expect:
-      effects: {required_kinds_any: [make], forbidden_kinds: [coins, create_npc, create_quest]}
+      effects: {required_kinds_any: [make], forbidden_kinds: [coins, create:npc, create:quest]}
     rubric:
       - "Мастер собирает статус эффектом make с what status и частями из списка, не выдумывает новых слов"
       - "Кладёт его condition с new:<key> и причиной, со спасброском или cause player: вода вредная, герой пьёт сам"
@@ -4219,7 +4219,7 @@ scenarios:
     engine:
       validate:
         - {kind: make, status: accept, summary: "Новый навык: Гадание на углях"}
-        - {kind: course, status: accept, summary: "Курс — Горм: «Гадание на углях», 4 занятий"}
+        - {kind: create:course, status: accept, summary: "Курс — Горм: «Гадание на углях», 4 занятий"}
     expect:
       effects: {required_kinds_any: [make], forbidden_kinds: [condition, coins]}
     rubric:
@@ -4232,7 +4232,7 @@ scenarios:
     extends: tavern
     input: "Хочу, чтобы у меня навсегда выросли крылья и я летал над городом, а всех, кто рядом, жгло огнём каждый ход."
     expect:
-      effects: {forbidden_kinds: [make, condition, give_item]}
+      effects: {forbidden_kinds: [make, condition, move_item:world>hero]}
       missing_concept: true
     rubric:
       - "Мастер не собирает этого: объясняет в мире, почему не вышло, и заполняет missing_concept"
@@ -4290,9 +4290,9 @@ scenarios:
     engine:
       validate:
         - {kind: make, status: accept, summary: "Новое заклинание: Солёный вздох (2 круг)"}
-        - {kind: course, status: accept, summary: "Курс — Ялта: «Солёный вздох», 4 занятий"}
+        - {kind: create:course, status: accept, summary: "Курс — Ялта: «Солёный вздох», 4 занятий"}
     expect:
-      effects: {required_kinds_any: [make], forbidden_kinds: [condition, coins, give_item]}
+      effects: {required_kinds_any: [make], forbidden_kinds: [condition, coins, move_item:world>hero]}
     rubric:
       - "Мастер собирает заклинание make с what spell и частями из списка, круг не называет"
       - "Открывает course с teach_kind spell и teach_id new:<key>; заклинание герою сразу не даётся"
@@ -4309,15 +4309,15 @@ scenarios:
     engine:
       validate:
         - {kind: make, status: accept, summary: "Новая способность: Удар гарпунщика"}
-        - {kind: course, status: accept, summary: "Курс — Сом: «Удар гарпунщика», 4 занятий"}
+        - {kind: create:course, status: accept, summary: "Курс — Сом: «Удар гарпунщика», 4 занятий"}
     expect:
-      effects: {required_kinds_any: [make], forbidden_kinds: [condition, coins, give_item]}
+      effects: {required_kinds_any: [make], forbidden_kinds: [condition, coins, move_item:world>hero]}
     rubric:
       - "Мастер даёт make с what ability, характеристикой и частями uses и recharge"
       - "Способность идёт через course с teach_kind ability, а не подарком"
 
   - id: make_spell_as_a_quest_scroll
-    title: "Найденный свиток с неведомым заклинанием: make со scroll и give_item new:scroll"
+    title: "Найденный свиток с неведомым заклинанием: make со scroll и move_item:world>hero new:scroll"
     category: concepts
     extends: tavern
     snapshot:
@@ -4328,11 +4328,11 @@ scenarios:
     engine:
       validate:
         - {kind: make, status: accept, summary: "Новое заклинание: Шквал жрецов (3 круг)"}
-        - {kind: give_item, status: accept, summary: "Свиток: Шквал жрецов"}
+        - {kind: move_item:world>hero, status: accept, summary: "Свиток: Шквал жрецов"}
     expect:
-      effects: {required_kinds_any: [make, give_item], forbidden_kinds: [coins, condition]}
+      effects: {required_kinds_any: [make, move_item:world>hero], forbidden_kinds: [coins, condition]}
     rubric:
-      - "Мастер собирает заклинание make со scroll и отдаёт его give_item с new:scroll:<key>"
+      - "Мастер собирает заклинание make со scroll и отдаёт его move_item:world>hero с new:scroll:<key>"
       - "Не делает заклинание выученным: герой получает только свиток"
 
   - id: make_spell_refused_too_strong
@@ -4358,7 +4358,7 @@ scenarios:
       validate:
         - {kind: prop_state, status: accept, summary: "Длинный стол: поджёг факелом"}
     expect:
-      effects: {required_kinds_any: [prop_state], forbidden_kinds: [coins, create_npc]}
+      effects: {required_kinds_any: [prop_state], forbidden_kinds: [coins, create:npc]}
     rubric:
       - "Мастер даёт prop_state со status burning и cause, а не просто state burned"
 
@@ -4374,11 +4374,11 @@ scenarios:
     engine:
       validate:
         - {kind: make, status: accept, summary: "Новое свойство: «Морозная рана» (2 очк., uncommon)"}
-        - {kind: give_item, status: accept, summary: "Трактат"}
+        - {kind: move_item:world>hero, status: accept, summary: "Трактат"}
     expect:
-      effects: {required_kinds_any: [make, give_item], forbidden_kinds: [coins, condition]}
+      effects: {required_kinds_any: [make, move_item:world>hero], forbidden_kinds: [coins, condition]}
     rubric:
-      - "Мастер собирает make с what property и частями, с book, и отдаёт книгу через give_item new:book:<key>"
+      - "Мастер собирает make с what property и частями, с book, и отдаёт книгу через move_item:world>hero new:book:<key>"
       - "Меч героя сам по себе не меняется: накладывать надо работой"
 
   - id: way_a_crawl_found
@@ -4394,9 +4394,9 @@ scenarios:
     input: "Лезу в щель за бочками, посмотрю, куда она ведёт. Там же кухня, room_kitchen, если я правильно понимаю."
     engine:
       validate:
-        - {kind: way, status: accept, summary: "Новый проход: лаз в «Кухню»"}
+        - {kind: create:way, status: accept, summary: "Новый проход: лаз в «Кухню»"}
     expect:
-      effects: {required_kinds_any: [way], forbidden_kinds: [coins, give_item]}
+      effects: {required_kinds_any: [create:way], forbidden_kinds: [coins, move_item:world>hero]}
     rubric:
       - "Мастер даёт way с way_kind crawl и to_room room_kitchen"
 
@@ -4410,7 +4410,7 @@ scenarios:
     input: "Уверен, тут есть другой ход в нору, пробиваю стену и лезу туда сразу."
     engine:
       validate:
-        - {kind: way, status: reject, reason: "в нору пока не попасть: путь туда открывает мир, не новый проход"}
+        - {kind: create:way, status: reject, reason: "в нору пока не попасть: путь туда открывает мир, не новый проход"}
     expect:
       effects: {forbidden_kinds: [move, coins]}
     rubric:

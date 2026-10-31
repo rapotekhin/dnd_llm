@@ -10,14 +10,16 @@ extends RefCounted
 var reserves: Dictionary = {}
 ## turn_id -> true once the master searched items this turn (required before creating one).
 var searched: Dictionary = {}
-## turn_id -> true once the master searched the world's people this turn (v0.7.20: before create_npc).
+## turn_id -> true once the master searched the world's people this turn (v0.7.20: before create:npc).
 var searched_npcs: Dictionary = {}
-## turn_id -> true once the master searched the world's quests this turn (v0.7.21: before create_quest).
+## turn_id -> true once the master searched the world's quests this turn (v0.7.21: before create:quest).
 var searched_quests: Dictionary = {}
-## turn_id -> true once the master searched the world's places this turn (v0.7.20.1: before create_place).
+## turn_id -> true once the master searched the world's places this turn (v0.7.20.1: before create:place).
 var searched_places: Dictionary = {}
 ## Catalog.data of the last validate: apply() needs the rules of casts, feature uses and items.
 var _data: Dictionary = {}
+## The table of effects, built once (_build_table).
+var _rows: Dictionary = {}
 
 
 ## Lines an applied effect adds after its summary (the owner of a taken thing reacts, v0.7.0).
@@ -109,7 +111,7 @@ func validate(s: GameSession, data: Dictionary, turn_id: String, effect: Diction
 	if res.has("reason"):
 		return _reject(str(res["reason"]))
 	var id := s.next_effect_id()
-	reserves[id] = {"turn_id": turn_id, "kind": str(effect.get("kind", "")), "plan": res["plan"], "summary": res["summary"],
+	reserves[id] = {"turn_id": turn_id, "kind": key(effect), "plan": res["plan"], "summary": res["summary"],
 		"line": str(res.get("line", res["summary"]))}  # the player's line may say less than the master's summary (v0.7.49.4)
 	var out := {"accepted": true, "effect_id": id, "summary": res["summary"]}
 	if res["plan"].has("new_item_id"):
@@ -150,414 +152,565 @@ func _made_ids(e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	return out
 
 
+## The effects, one row each (v0.7.69): the key is `key()`; `rule` checks it in its system (s, data, e), `plan` here
+## (s, data, turn_id, e, pending), both give {plan, summary} or {reason}; `apply` applies it there (s, data, plan) and may give
+## lines, `do` here (s, plan). `one`: the refusal when the turn already has one. `no_fight`, `no_trade`: the engine runs
+## those by its buttons.
+func _table() -> Dictionary:
+	if not _rows.is_empty():
+		return _rows
+	_rows = {
+		"move": {"plan": _plan_move, "do": _do_move, "no_fight": true},
+		"damage": {"plan": _plan_damage, "do": _do_damage},
+		"heal": {"plan": _plan_heal, "do": _do_heal},
+		"coins": {"plan": _plan_coins, "do": _do_coins, "no_fight": true, "no_trade": true},
+		"move_item:world>hero": {"plan": _plan_give_item, "do": _do_give_item, "no_fight": true, "no_trade": true},
+		"move_item:hero>world": {"plan": _plan_take_item, "do": _do_take_item, "no_fight": true, "no_trade": true},
+		"move_item:room>hero": {"rule": PropRules.plan_take, "apply": PropRules.apply_take, "no_fight": true},
+		"move_item:container>hero": {"plan": _plan_take_from, "apply": ContainerRules.apply_take},
+		"move_item:hero>container": {"plan": _plan_put_in, "apply": ContainerRules.apply_put},
+		"move_item:hero>room": {"plan": _plan_drop_item, "apply": ContainerRules.apply_drop},
+		"cast": {"plan": _plan_cast, "do": _do_cast},
+		"use:feature": {"plan": _plan_use_feature, "do": _do_use_feature},
+		"use:item": {"plan": _plan_use_item, "do": _do_use_item},
+		"condition": {"plan": _plan_condition, "do": _do_condition},
+		"disease": {"plan": _plan_disease, "do": _do_disease},
+		"guise": {"plan": _plan_guise, "apply": Guise.apply},
+		"make": {"plan": _plan_make, "apply": MakeRules.apply},
+		"furnish": {"plan": _plan_furnish, "do": _do_furnish, "one": "комната уже обставляется в этом ходе", "no_fight": true},
+		"prop_state": {"rule": PropRules.plan_state, "apply": PropRules.apply_state},
+		"note": {"plan": _plan_note, "do": _do_note},
+		"flag": {"plan": _plan_flag, "do": _do_flag},
+		"equip": {"rule": _plan_equip, "do": _do_equip},
+		"fill": {"plan": _plan_fill, "do": _do_fill},
+		"start_combat": {"plan": _plan_start_combat, "do": _do_start_combat},
+		"advance_time": {"plan": _plan_advance_time, "do": _do_advance_time, "no_fight": true},
+		"rumor": {"plan": _plan_rumor, "apply": RumorRules.apply},
+		"weather": {"rule": WeatherRules.plan, "apply": WeatherRules.apply},
+		"letter_reply": {"plan": _plan_letter_reply, "apply": LetterRules.apply},
+		"vow": {"rule": FaithRules.plan_vow, "apply": FaithRules.apply_vow},
+		"owner": {"plan": _plan_owner, "apply": OwnerRules.apply, "one": "одна смена хозяина за ход"},
+		"quest_act": {"plan": _plan_quest_act, "apply": QuestGen.apply_act, "one": "один акт за ход"},
+		"shift:attitude": {"plan": _plan_npc_attitude, "do": _do_npc_attitude, "no_fight": true},
+		"shift:reputation": {"plan": _plan_reputation, "do": _do_reputation},
+		"shift:bond": {"plan": _plan_bond, "do": _do_bond},
+		"grant:discount": {"plan": _plan_grant, "apply": SocialRules.grant_discount},
+		"grant:favor": {"plan": _plan_grant, "apply": SocialRules.grant_favor},
+		"grant:permit": {"rule": SiteRules.make, "do": _do_permit},
+		"grant:secret": {"plan": _plan_reveal_secret, "do": _do_secret},
+		"grant:follow": {"plan": _plan_npc_follow, "do": _do_follow},
+		"grant:quest": {"plan": _plan_accept_quest, "do": _do_quest},
+		"crime:known": {"plan": _plan_crime_known, "do": _do_crime_known},
+		"crime:release": {"plan": _plan_crime_release, "do": _do_crime_release},
+		"goal:assess": {"plan": _plan_goal_assess, "do": _do_goal_assess},
+		"goal:hint": {"plan": _plan_goal_hint, "do": _do_goal_hint, "one": "один намёк за ход"},
+		"open:container": {"plan": _plan_unlock, "do": _do_unlock},
+		"open:door": {"plan": _plan_door, "do": _do_door},
+		"create:npc": {"plan": _plan_create_npc, "do": _do_create_npc, "one": "один новый человек за ход"},
+		"create:place": {"plan": _plan_create_place, "do": _do_create_place, "one": "одно новое место за ход"},
+		"create:quest": {"plan": _plan_create_quest, "do": _do_create_quest, "one": "одно новое задание за ход"},
+		"create:recipe": {"plan": _plan_recipe, "apply": CraftRules.apply_make},
+		"create:job": {"plan": _plan_job, "apply": JobRules.apply_make},
+		"create:course": {"plan": _plan_course, "apply": StudyRules.apply_make},
+		"create:way": {"rule": WayRules.plan_make, "apply": WayRules.apply_make},
+		"create:supplier": {"rule": ShopRules.make, "apply": ShopRules.apply_make},
+		"create:bank": {"rule": BankRules.make, "do": _do_bank},
+		"create:fence": {"rule": FenceRules.make, "apply": FenceRules.apply_make},
+		"create:heist": {"rule": HeistRules.make, "apply": HeistRules.apply_make},
+		"create:org": {"rule": OrgRules.make, "apply": OrgRules.apply_make},
+		"create:god": {"rule": FaithRules.plan_god, "apply": FaithRules.apply_god},
+		"create:festival": {"rule": CalendarRules.plan_festival, "apply": CalendarRules.apply_festival},
+		"create:beast": {"plan": _plan_beast, "apply": PetRules.apply_beast},
+		"create:property": {"plan": _plan_property, "do": _do_property},
+		"create:upgrade": {"plan": _plan_upgrade, "apply": PropertyRules.apply_asked, "one": "одно новое улучшение за ход"},
+		"create:stock": {"plan": _plan_stock, "do": _do_stock},
+		"create:wilds": {"plan": _plan_wilds, "apply": WildsRules.apply},
+		"create:contest": {"plan": _plan_contest, "apply": ContestRules.apply},
+		"create:faction": {"rule": FactionRules.make, "apply": FactionRules.apply_make},
+		"shift:standing": {"rule": FactionRules.make, "apply": FactionRules.apply_make},
+		"move_item:world>npc": {"rule": WorldItemRules.plan, "apply": WorldItemRules.apply},
+		"move_item:npc>world": {"rule": WorldItemRules.plan, "apply": WorldItemRules.apply},
+		"move_item:world>container": {"rule": WorldItemRules.plan, "apply": WorldItemRules.apply},
+		"move_item:container>world": {"rule": WorldItemRules.plan, "apply": WorldItemRules.apply},
+	}
+	return _rows
+
+
+## The one name of an effect: `create:npc`, `move_item:world>hero`, `coins`.
+static func key(e: Dictionary) -> String:
+	var kind := str(e.get("kind", ""))
+	if kind == "move_item":
+		return "move_item:%s>%s" % [e.get("source", ""), e.get("target", "")]
+	var what: Variant = e.get("what")
+	return "%s:%s" % [kind, what] if what != null and not str(what).is_empty() and kind != "make" else kind
+
+
 func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var e := _made_ids(raw, pending)
 	for k: String in ["condition", "teach_id", "item_id", "reward_item_id"]:
 		if str(e.get(k, "")).begins_with("new:") and (k in ["condition", "teach_id"] or str(e[k]).begins_with("new:book:") or str(e[k]).begins_with("new:scroll:")):
 			return {"reason": "%s: этого ещё не собрали — сначала эффект make с таким key в этом же ходе" % e[k]}
-	var rules: Dictionary = data["rules"]
-	var items: Dictionary = data["items"]
 	var world := WorldView.new(data["world"])
-	var c := s.character
-	var level := int(c.get("level", 1))
+	var id := key(e)
+	var row: Dictionary = _table().get(id, {})
+	if row.is_empty():
+		return {"reason": "движок не знает эффект %s" % id}
 	if s.mode == GameSession.MODE_COMBAT:
-		if str(e.get("kind", "")) in ["move", "coins", "give_item", "take_item", "npc_attitude", "advance_time", "furnish", "take_prop"]:
+		if bool(row.get("no_fight", false)):
 			return {"reason": "в бою это нельзя: исход боя, переходы и добычу ведёт движок; здесь — проверки, урон и состояния врагам (target_id), подкрепление (start_combat)"}
 		var tid := str(e.get("target_id", "")) if e.get("target_id") != null else ""
 		if not tid.is_empty():
 			return _plan_on_foe(s, data, e, tid)
-	elif str(e.get("kind", "")) in ["damage", "condition"] and e.get("target_id") != null and not str(e.get("target_id", "")).is_empty():
+	elif id in ["damage", "condition"] and e.get("target_id") != null and not str(e.get("target_id", "")).is_empty():
 		# v0.7.22.16 (the author's trace): out of a fight a blow at an NPC is a fight, not an effect — the damage went to the hero
 		return {"reason": "вне боя урон и состояния NPC эффектом не проводятся: нападение на NPC сцены — next_mode combat с его npc_id, исход решит бой"}
-	if str(e.get("kind", "")) == "start_combat":
-		if not CombatRules.active(s):  # v0.7.4: a fight starts only with the scene's people or an encounter of the world
-			return {"reason": "вне боя мастер не зовёт врагов: драка начинается, когда игрок нападает на NPC сцены (next_mode combat), или встречей мира"}
-		return _plan_fight(s, data, e)
-	if s.mode == GameSession.MODE_TRADE and str(e.get("kind", "")) in ["coins", "give_item", "take_item"]:
+	if s.mode == GameSession.MODE_TRADE and bool(row.get("no_trade", false)):
 		return {"reason": "в торговле сделки проводит панель сделки: назови цену и предложи игроку положить товар в сделку"}
-	if s.mode == GameSession.MODE_SOCIAL and str(e.get("kind", "")) == "give_item" and world.is_trader(s.npc_id) 			and TradeRules.pack_stock(world.npc(s.npc_id), rules).has(str(e.get("item_id", ""))):
+	if s.mode == GameSession.MODE_SOCIAL and id == "move_item:world>hero" and world.is_trader(s.npc_id) and TradeRules.pack_stock(world.npc(s.npc_id), data["rules"]).has(str(e.get("item_id", ""))):
 		return {"reason": "это товар торговца — покупка идёт через торговлю: назови цену и открой её (next_mode trade); монеты не списывай"}
-	match str(e.get("kind", "")):
-		"move":
-			var to := str(e.get("room_id", ""))
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "move"):
-				return {"reason": "переход уже предложен в этом ходе"}
-			if EncounterRules.captive(s):  # v0.7.22.12: bound by the captors
-				return {"reason": "герой связан и в плену — уйти нельзя, пока не освободится (кнопки игрока)"}
-			if CrimeRules.held(s):  # big test #5 (v0.7.22.2): the guard leads the hero — anywhere in the location
-				if world.location_id(to) != world.location_id(s.room_id) or world.room(to).is_empty():
-					return {"reason": "стража держит героя: увести его можно только в комнату этой же округи (%s) — к капитану, в караулку; сам он не уйдёт" % world.location_id(s.room_id)}
-				return {"plan": {"room_id": to, "with": [], "escort": true}, "summary": "Под стражей: %s" % world.room(to).get("name", to)}
-			if not to.begins_with("new:") and world.room(to).is_empty() and _new_rooms(s, data, pending).has(to):
-				to = "new:" + to
-			if to.begins_with("new:"):  # into the place made in this turn at this room: only its first room
-				var place := _new_place(pending)
-				if place.is_empty() or str(place["from"]) != s.room_id or str(place["rooms"][0]["key"]) != to.trim_prefix("new:"):
-					return {"reason": "войти можно только в первую комнату места, созданного в этом ходе у этой комнаты (new:<её key>)"}
-				return {"plan": {"room_id": to, "with": []}, "summary": "Переход: %s" % place["rooms"][0]["name"]}
-			if not WayRules.open_exits(s, data["world"], s.room_id).has(to):
-				return {"reason": "из этой комнаты нет выхода в %s" % to}
-			# v0.7.22.16: the master's move is checked as the exit button — the overload, a trap the hero found
-			if CharacterRules.overloaded(c, data, s.items):
-				return {"reason": "герой перегружен и не может идти — сначала оставить лишнее (drop_item)"}
-			var trap := ExplorationRules.trap_on_exit(s, data["world"], s.room_id, to)
-			if not trap.is_empty() and ExplorationRules.is_found(s, s.room_id, trap):
-				return {"reason": "путь стережёт найденная ловушка — её обезвреживают или обходят (кнопки игрока), просто пройти нельзя"}
-			if not WayRules.blocked(s, data, s.room_id, to).is_empty():  # v0.7.22.25
-				return {"reason": "%s — пройти нельзя: открыть её — кнопки игрока (ключ, отмычки, сила, заклинание) или эффект door, если её отпирает хозяин" % WayRules.describe(s, data, s.room_id, to)}
-			var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as npc_follow
-			for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
-				var nid := str(n)
-				if Being.follows(s, nid) or with.has(nid) or pending.any(func(p: Dictionary) -> bool: return str(p["plan"].get("follow_npc", "")) == nid):
-					continue
-				var f := FollowRules.plan(s, data, nid, true, false, (_won_over.get(turn_id, []) as Array).has(nid))
-				if f.has("reason"):
-					return {"reason": "%s; без него — move без npcs" % f["reason"]}
-				with.append(nid)
-			var names := ", ".join(with.map(func(n: String) -> String: return str(world.npc(n).get("name", n))))
-			return {"plan": {"room_id": to, "with": with},
-				"summary": "Переход: %s%s" % [world.room(to).get("name", to), (" (с героем: %s)" % names) if not with.is_empty() else ""]}
-		"damage":
-			var dice := _damage_dice(rules, level, str(e.get("severity", "")))
-			if dice.is_empty():
-				return {"reason": "неизвестная тяжесть урона"}
-			var amount := _roll(s.rng, int(dice[0]), int(dice[1]), 0)
-			var dtype := HeroDefense.damage_type(data, str(e.get("damage_type", "")))
-			var adj := HeroDefense.adjust(s, data, dtype, amount)  # v0.7.8: the hero's resistances
-			var note := str(adj["note"])
-			return {"plan": {"amount": int(adj["damage"])}, "summary": "−%d HP (%s%s)" % [int(adj["damage"]),
-				data["misc"]["damage_types"].get(dtype, e.get("damage_type", "урон")), (", " + note) if not note.is_empty() else ""]}
-		"heal":
-			var h: Array = rules["heal_dice"].get(str(e.get("tier", "")), [])
-			if h.is_empty():
-				return {"reason": "неизвестная сила лечения"}
-			if int(c["hp"]) >= int(c["max_hp"]):
-				return {"reason": "персонаж и так здоров"}
-			var amount := _roll(s.rng, int(h[0]), int(h[1]), int(h[2]))
-			return {"plan": {"amount": amount}, "summary": "+%d HP" % amount}
-		"coins":
-			var delta := int(e.get("delta_cp", 0))
-			if delta == 0:
-				return {"reason": "пустое изменение монет"}
-			var gold := int(c["gold_cp"]) + _pending_coins(pending)
-			if delta < 0 and gold + delta < 0:
-				return {"reason": "у персонажа нет %s (есть %s)" % [Money.format(-delta), Money.format(gold)]}
-			if delta > _reward_cap(rules, level):
-				return {"reason": "награда больше бюджета для %d уровня (до %s)" % [level, Money.format(_reward_cap(rules, level))]}
-			if delta > 0 and delta > reward_left(s, data, turn_id, pending):
-				return {"reason": _over_budget(s, data, turn_id, pending)}
-			if str(e.get("settles", "")) == "tax":  # the tax debt paid by words (v0.7.39)
-				var debt := PropertyRules.tax_debt(s)
-				if delta > 0 or debt <= 0:
-					return {"reason": "у героя нет долга по налогу" if debt <= 0 else "уплата налога — монеты с минусом"}
-				if -delta > debt:
-					return {"reason": "долг по налогу всего %s" % Money.format(debt)}
-				if PropertyRules.registry_here(s, data).is_empty() and PropertyRules.here(s, data).is_empty():
-					return {"reason": "налог принимает писарь ратуши или его платят на месте"}
-				return {"plan": {"delta": delta, "reward": 0, "settles": "tax"}, "summary": "налог −" + Money.format(-delta)}
-			return {"plan": {"delta": delta, "reward": maxi(0, delta)}, "summary": ("+" if delta > 0 else "") + Money.format(delta)}
-		"give_item":
-			var given := _plan_quest_give(s, data, str(e.get("item_id", "")) if e.get("item_id") != null else "")
-			if not given.is_empty():
-				return given
-			var give := _plan_give(s, items, rules, turn_id, e, level, pending)
-			if give.has("plan"):  # the master's own gift: within the budget until the long rest (v0.7.14.3)
-				var def := ItemRules.def_of(items, s.items, str(give["plan"]["item_id"])) if not give["plan"].has("def") else (give["plan"]["def"] as Dictionary)
-				var value := int(def.get("value_cp", 0)) * int(give["plan"]["qty"])
-				if not str(def.get("rarity", "common")) in ["common", ""]:  # big test #16 (v0.7.22.2): magic is a find, not coins
-					var why := _magic_why_not(s, data, turn_id, pending)
-					if not why.is_empty():
-						return {"reason": why}
-					give["plan"]["magic"] = true
-					return give
-				if value > reward_left(s, data, turn_id, pending):
-					return {"reason": _over_budget(s, data, turn_id, pending)}
-				give["plan"]["reward"] = value
+	if row.has("one") and pending.any(func(p: Dictionary) -> bool: return p["kind"] == id):
+		return {"reason": str(row["one"])}
+	if row.has("rule"):
+		return (row["rule"] as Callable).call(s, data, e)
+	return (row["plan"] as Callable).call(s, data, turn_id, e, pending)
+
+
+func _plan_move(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var world := WorldView.new(data["world"])
+	var c := s.character
+	var to := str(e.get("room_id", ""))
+	if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "move"):
+		return {"reason": "переход уже предложен в этом ходе"}
+	if EncounterRules.captive(s):  # v0.7.22.12: bound by the captors
+		return {"reason": "герой связан и в плену — уйти нельзя, пока не освободится (кнопки игрока)"}
+	if CrimeRules.held(s):  # big test #5 (v0.7.22.2): the guard leads the hero — anywhere in the location
+		if world.location_id(to) != world.location_id(s.room_id) or world.room(to).is_empty():
+			return {"reason": "стража держит героя: увести его можно только в комнату этой же округи (%s) — к капитану, в караулку; сам он не уйдёт" % world.location_id(s.room_id)}
+		return {"plan": {"room_id": to, "with": [], "escort": true}, "summary": "Под стражей: %s" % world.room(to).get("name", to)}
+	if not to.begins_with("new:") and world.room(to).is_empty() and _new_rooms(s, data, pending).has(to):
+		to = "new:" + to
+	if to.begins_with("new:"):  # into the place made in this turn at this room: only its first room
+		var place := _new_place(pending)
+		if place.is_empty() or str(place["from"]) != s.room_id or str(place["rooms"][0]["key"]) != to.trim_prefix("new:"):
+			return {"reason": "войти можно только в первую комнату места, созданного в этом ходе у этой комнаты (new:<её key>)"}
+		return {"plan": {"room_id": to, "with": []}, "summary": "Переход: %s" % place["rooms"][0]["name"]}
+	if not WayRules.open_exits(s, data["world"], s.room_id).has(to):
+		return {"reason": "из этой комнаты нет выхода в %s" % to}
+	# v0.7.22.16: the master's move is checked as the exit button — the overload, a trap the hero found
+	if CharacterRules.overloaded(c, data, s.items):
+		return {"reason": "герой перегружен и не может идти — сначала оставить лишнее (move_item:hero>room)"}
+	var trap := ExplorationRules.trap_on_exit(s, data["world"], s.room_id, to)
+	if not trap.is_empty() and ExplorationRules.is_found(s, s.room_id, trap):
+		return {"reason": "путь стережёт найденная ловушка — её обезвреживают или обходят (кнопки игрока), просто пройти нельзя"}
+	if not WayRules.blocked(s, data, s.room_id, to).is_empty():  # v0.7.22.25
+		return {"reason": "%s — пройти нельзя: открыть её — кнопки игрока (ключ, отмычки, сила, заклинание) или эффект door, если её отпирает хозяин" % WayRules.describe(s, data, s.room_id, to)}
+	var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as grant:follow
+	for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
+		var nid := str(n)
+		if Being.follows(s, nid) or with.has(nid) or pending.any(func(p: Dictionary) -> bool: return str(p["plan"].get("follow_npc", "")) == nid):
+			continue
+		var f := FollowRules.plan(s, data, nid, true, false, (_won_over.get(turn_id, []) as Array).has(nid))
+		if f.has("reason"):
+			return {"reason": "%s; без него — move без npcs" % f["reason"]}
+		with.append(nid)
+	var names := ", ".join(with.map(func(n: String) -> String: return str(world.npc(n).get("name", n))))
+	return {"plan": {"room_id": to, "with": with},
+		"summary": "Переход: %s%s" % [world.room(to).get("name", to), (" (с героем: %s)" % names) if not with.is_empty() else ""]}
+
+
+func _plan_damage(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var rules: Dictionary = data["rules"]
+	var c := s.character
+	var level := int(c.get("level", 1))
+	var dice := _damage_dice(rules, level, str(e.get("severity", "")))
+	if dice.is_empty():
+		return {"reason": "неизвестная тяжесть урона"}
+	var amount := _roll(s.rng, int(dice[0]), int(dice[1]), 0)
+	var dtype := HeroDefense.damage_type(data, str(e.get("damage_type", "")))
+	var adj := HeroDefense.adjust(s, data, dtype, amount)  # v0.7.8: the hero's resistances
+	var note := str(adj["note"])
+	return {"plan": {"amount": int(adj["damage"])}, "summary": "−%d HP (%s%s)" % [int(adj["damage"]),
+		data["misc"]["damage_types"].get(dtype, e.get("damage_type", "урон")), (", " + note) if not note.is_empty() else ""]}
+
+
+func _plan_heal(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var rules: Dictionary = data["rules"]
+	var c := s.character
+	var h: Array = rules["heal_dice"].get(str(e.get("tier", "")), [])
+	if h.is_empty():
+		return {"reason": "неизвестная сила лечения"}
+	if int(c["hp"]) >= int(c["max_hp"]):
+		return {"reason": "персонаж и так здоров"}
+	var amount := _roll(s.rng, int(h[0]), int(h[1]), int(h[2]))
+	return {"plan": {"amount": amount}, "summary": "+%d HP" % amount}
+
+
+func _plan_coins(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var rules: Dictionary = data["rules"]
+	var c := s.character
+	var level := int(c.get("level", 1))
+	var delta := int(e.get("delta_cp", 0))
+	if delta == 0:
+		return {"reason": "пустое изменение монет"}
+	var gold := int(c["gold_cp"]) + _pending_coins(pending)
+	if delta < 0 and gold + delta < 0:
+		return {"reason": "у персонажа нет %s (есть %s)" % [Money.format(-delta), Money.format(gold)]}
+	if delta > _reward_cap(rules, level):
+		return {"reason": "награда больше бюджета для %d уровня (до %s)" % [level, Money.format(_reward_cap(rules, level))]}
+	if delta > 0 and delta > reward_left(s, data, turn_id, pending):
+		return {"reason": _over_budget(s, data, turn_id, pending)}
+	if str(e.get("settles", "")) == "tax":  # the tax debt paid by words (v0.7.39)
+		var debt := PropertyRules.tax_debt(s)
+		if delta > 0 or debt <= 0:
+			return {"reason": "у героя нет долга по налогу" if debt <= 0 else "уплата налога — монеты с минусом"}
+		if -delta > debt:
+			return {"reason": "долг по налогу всего %s" % Money.format(debt)}
+		if PropertyRules.registry_here(s, data).is_empty() and PropertyRules.here(s, data).is_empty():
+			return {"reason": "налог принимает писарь ратуши или его платят на месте"}
+		return {"plan": {"delta": delta, "reward": 0, "settles": "tax"}, "summary": "налог −" + Money.format(-delta)}
+	return {"plan": {"delta": delta, "reward": maxi(0, delta)}, "summary": ("+" if delta > 0 else "") + Money.format(delta)}
+
+
+func _plan_give_item(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var rules: Dictionary = data["rules"]
+	var items: Dictionary = data["items"]
+	var c := s.character
+	var level := int(c.get("level", 1))
+	var given := _plan_quest_give(s, data, str(e.get("item_id", "")) if e.get("item_id") != null else "")
+	if not given.is_empty():
+		return given
+	var give := _plan_give(s, items, rules, turn_id, e, level, pending)
+	if give.has("plan"):  # the master's own gift: within the budget until the long rest (v0.7.14.3)
+		var def := ItemRules.def_of(items, s.items, str(give["plan"]["item_id"])) if not give["plan"].has("def") else (give["plan"]["def"] as Dictionary)
+		var value := int(def.get("value_cp", 0)) * int(give["plan"]["qty"])
+		if not str(def.get("rarity", "common")) in ["common", ""]:  # big test #16 (v0.7.22.2): magic is a find, not coins
+			var why := _magic_why_not(s, data, turn_id, pending)
+			if not why.is_empty():
+				return {"reason": why}
+			give["plan"]["magic"] = true
 			return give
-		"take_item":
-			var taken := _plan_quest_take(s, data, str(e.get("item_id", "")))
-			if not taken.is_empty():
-				return taken
-			var id := str(e.get("item_id", ""))
-			var qty := int(e.get("qty", 1))
-			var have := int(c["inventory"].get(id, 0)) - _pending_taken(pending, id)
-			if ItemRules.held_by_curse(c, data, s.items, id):
-				return {"reason": "%s проклят: герой не может с ним расстаться" % ItemRules.display_name(items, s.items, id)}
-			if have < qty:
-				return {"reason": "у персонажа нет %s ×%d" % [id, qty]}
-			return {"plan": {"item_id": id, "qty": qty},
-				"summary": "Отдано: %s%s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else ""]}
-		"npc_attitude":
-			var npc_id := str(e.get("npc_id", ""))
-			if not s.npcs_here(world.world, s.room_id).has(npc_id):
-				return {"reason": "NPC %s нет в этой комнате" % npc_id}
-			var delta := clampi(int(e.get("delta", 0)), -2, 2)
-			if delta == 0:
-				return {"reason": "пустое изменение отношения"}
-			return {"plan": {"npc_id": npc_id, "delta": delta},
-				"summary": "%s: отношение %+d" % [world.npc(npc_id).get("name", npc_id), delta]}
-		"cast":
-			var slots := {}
-			for p: Dictionary in pending:
-				if p["kind"] == "cast" and int(p["plan"]["slot"]) > 0:
-					slots[int(p["plan"]["slot"])] = int(slots.get(int(p["plan"]["slot"]), 0)) + 1
-			var chk := SpellRules.check(c, data, str(e.get("spell", "")), int(e.get("slot_level", 0)) if e.get("slot_level") != null else 0, slots)
-			if chk.has("reason"):
-				return {"reason": chk["reason"]}
-			var on_self := bool(e.get("on_self", false))
-			return {"plan": {"spell_id": chk["spell_id"], "slot": chk["slot"], "on_self": on_self},
-				"summary": "Заклинание: " + SpellRules.describe(data, chk["spell_id"], chk["slot"]) + (" — на себя" if on_self else "")}
-		"condition":
-			return _plan_condition(s, data, turn_id, e, pending)
-		"way":  # v0.7.66: a way the story found
-			return WayRules.plan_make(s, data, e)
-		"make":  # v0.7.63: a status, a skill or a trait of parts, priced by the engine
-			return MakeRules.plan(s, data, e, pending)
-		"guise":  # v0.7.63: the look a spell laid, a faction's face
-			return Guise.plan(s, data, e, pending)
-		"disease":
-			return _plan_disease(s, data, e, pending)
-		"recipe":  # v0.7.24: the master's recipe, learned by the hero
-			var made := CraftRules.make(s, data, CraftRules.spec_of(e))
-			if made.has("reason"):
-				return {"reason": made["reason"]}
-			var title := str(e.get("book", "")).strip_edges().left(60) if e.get("book") != null else ""
-			if not title.is_empty():  # v0.7.64: a book of it, for a reward or a find; known while it is carried
-				CraftRules.bound(s, made, title, str(e.get("key", "")))
-			return {"plan": made, "summary": "Рецепт: %s — %s, %d ч, Сл %d" % [CraftRules.recipe_name_of(s, data, made["def"], made.get("item", {})),
-				BackgroundRules.tool_name(data, str(made["def"]["tool"])), int(made["def"]["hours"]), int(made["def"]["dc"])]}
-		"job":  # v0.7.26: a job at an employer of the scene
-			var made := JobRules.make(s, data, e)
-			if made.has("reason"):
-				return {"reason": made["reason"]}
-			return {"plan": made, "summary": "Работа: %s у %s — %d ч, Сл %d, %s за смену" % [made["def"]["name"],
-				JobRules.npc_name(s, data, str(made["def"]["employer"])),
-				int(made["def"]["hours"]), int(made["def"]["dc"]), Money.format(int(made["def"]["pay_cp"]))]}
-		"property":  # v0.7.27: a place of the location on sale by a seller of the scene
-			var made := PropertyRules.make(s, data, e)
-			if made.has("reason"):
-				return {"reason": made["reason"]}
-			return {"plan": made, "summary": "Продаётся: %s (%s) за %s%s" % [made["def"]["name"], (made["made"]["def"] if made.has("made") else PropertyRules.kinds(data)[made["def"]["kind"]])["name"],
-				Money.format(int(made["def"]["price_cp"])), ", доход %s в день" % Money.format(int(made["def"]["income_cp_day"])) if made["def"].has("income_cp_day") else ""]}
-		"upgrade":  # v0.7.39.8: an upgrade asked at the hero's place, priced by the engine
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "upgrade"):
-				return {"reason": "одно новое улучшение за ход"}
-			var up := PropertyRules.plan_asked(s, data, e)
-			if up.has("reason"):
-				return {"reason": up["reason"]}
-			return {"plan": up, "summary": "Улучшение для «%s»: %s — %s, %s работы" % [PropertyRules.name_of(s, data, str(up["place"])), up["def"]["name"],
-				Money.format(int(up["def"]["price_cp"])), PropertyRules._days(int(up["def"]["days"]))]}
-		"world_item":  # v0.7.39.8: the master moves a thing of a person or a room's container, with a cause
-			return WorldItemRules.plan(s, data, e)
-		"course":  # v0.7.30: a scene NPC teaches a course
-			var ce := e.duplicate()
-			if ce.get("recipe") is Dictionary:
-				ce["recipe"] = CraftRules.spec_of(ce["recipe"])
-			var co := StudyRules.make(s, data, ce)
-			if co.has("reason"):
-				return {"reason": co["reason"]}
-			return co
-		"permit":  # v0.7.39.2: the owner lets the hero into its private places by words
-			return SiteRules.make(s, data, e)
-		"contest":  # v0.7.40: an NPC of the scene offers a game; the rounds are rolled in the «Состязание» window
-			if not data["rules"].has("contests"):
-				return {"reason": "состязаний в этих правилах нет"}
-			return ContestRules.plan(s, data, e)
-		"wilds":  # v0.7.41: hunting grounds or fishing waters emptied, filled again or new, for a cause in the world
-			if not data["rules"].has("wilds"):
-				return {"reason": "угодий в этих правилах нет"}
-			return WildsRules.plan(s, data, e)
-		"stock":  # v0.7.39.4: a thing the shelf of a scene trader lacks
-			if e.get("animal") != null and not str(e.get("animal", "")).is_empty():  # v0.7.42: a beast at a dealer
-				if not MountRules.on(data):
-					return {"reason": "ездовых животных в этих правилах нет"}
-				return MountRules.plan_stock(s, data, e)
-			return TradeRules.make_stock(s, data, e)
-		"festival":  # v0.7.44: the master's feast or fair, for a cause
-			return CalendarRules.plan_festival(s, data, e)
-		"weather":  # v0.7.46: magic or a miracle over the weather, for hours
-			return WeatherRules.plan(s, data, e)
-		"rumor":  # v0.7.47: a rumour spread, told by an NPC or refuted
-			return RumorRules.plan(s, data, e, pending)
-		"letter_reply":  # v0.7.48: the person's yes or no to the hero's letter, by the engine's verdict
-			return LetterRules.plan(s, data, e, pending)
-		"vow":  # v0.7.49: the hero swears a vow of the list by words
-			return FaithRules.plan_vow(s, data, e)
-		"god":  # v0.7.49: a shrine here to a god of the pack or a new one
-			return FaithRules.plan_god(s, data, e)
-		"beast":  # v0.7.43: a wild beast to tame in the scene, for a cause
-			if not PetRules.on(data):
-				return {"reason": "питомцев в этих правилах нет"}
-			return PetRules.plan_beast(s, data, e)
-		"bond":  # v0.7.31: a scene moved the bond with an NPC of the scene
-			if e.get("creature_id") != null and not str(e.get("creature_id", "")).is_empty():  # v0.7.43: a scene with a pet
-				return PetRules.plan_bond(s, data, e)
-			var bo := BondRules.make(s, data, e)
-			if bo.has("reason"):
-				return {"reason": bo["reason"]}
-			return bo
-		"faction":  # v0.7.50
-			var fa := FactionRules.make(s, data, e)
-			if fa.has("reason"):
-				return {"reason": fa["reason"]}
-			return fa
-		"fence", "heist", "org":  # v0.7.33: the underworld — a fence, a criminal job, an organization
-			var uk := str(e["kind"])
-			var uw: Dictionary = FenceRules.make(s, data, e) if uk == "fence" else HeistRules.make(s, data, e) if uk == "heist" else OrgRules.make(s, data, e)
-			if uw.has("reason"):
-				return {"reason": uw["reason"]}
-			return uw
-		"supplier":  # v0.7.29: a scene NPC sells wholesale to a charter holder
-			var sup := ShopRules.make(s, data, e)
-			if sup.has("reason"):
-				return {"reason": sup["reason"]}
-			return sup
-		"bank":  # v0.7.28: a scene NPC becomes a lender
-			var lender := BankRules.make(s, data, e)
-			if lender.has("reason"):
-				return {"reason": lender["reason"]}
-			return lender
-		"use_feature":
-			var rid := Stock.resolve(c, data, str(e.get("feature", "")))
-			var amount := int(e.get("amount", 1))
-			var spent := 0
-			for p: Dictionary in pending:
-				if p["kind"] == "use_feature" and p["plan"]["id"] == rid:
-					spent += int(p["plan"]["amount"])
-			var why := Stock.can_use(c, data, rid, amount, spent)
-			if not why.is_empty():
-				return {"reason": why}
-			var heals: bool = not (Stock.table(data)[rid].get("on_use", {}) as Dictionary).is_empty()
-			return {"plan": {"id": rid, "amount": amount}, "summary": "Умение: %s%s" % [Stock.display_name(c, data, rid),
-				" (лечение движок посчитает сам, heal не нужен)" if heals else ""]}
-		"use_item":
-			var iid := str(e.get("item_id", ""))
-			var in_use := pending.filter(func(p: Dictionary) -> bool: return p["kind"] == "use_item" and p["plan"]["item_id"] == iid).size()
-			var why := ItemRules.can_use(c, data, s.items, iid, _pending_taken(pending, iid) + in_use)
-			if not why.is_empty():
-				return {"reason": why}
-			return {"plan": {"item_id": iid}, "summary": "Использовано: %s" % ItemRules.display_name(items, s.items, iid)}
-		"furnish":
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "furnish"):
-				return {"reason": "комната уже обставляется в этом ходе"}
-			return PropRules.plan_furnish(s, data, e)
-		"take_prop":
-			return PropRules.plan_take(s, data, e)
-		"take_from":  # out of a container of the room (v0.7.18.1)
-			return ContainerRules.plan_take(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
-		"put_in":
-			return ContainerRules.plan_put(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
-		"unlock":
-			return _plan_unlock(s, data, turn_id, e)
-		"door":  # a door on the way (v0.7.22.25)
-			return _plan_door(s, data, turn_id, e)
-		"create_place":  # a room or a small place on an open edge of the pack (v0.7.20.1)
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_place"):
-				return {"reason": "одно новое место за ход"}
-			return WorldGen.plan_place(s, data, e, searched_places.has(turn_id))
-		"goal_assess":  # the master assesses the hero's life goal (v0.7.22)
-			return GoalRules.plan_assess(s.character, data, e)
-		"goal_hint":  # past the threshold, on the player's asking (v0.7.22.1)
-			if pending.any(func(p: Dictionary) -> bool: return p["plan"].has("goal_hint")):
-				return {"reason": "один намёк за ход"}
-			return GoalRules.plan_hint(s.character, data)
-		"create_quest":  # a quest of the pack's schema from a giver of the scene (v0.7.21)
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_quest"):
-				return {"reason": "одно новое задание за ход"}
-			return QuestGen.plan_quest(s, data, e, searched_quests.has(turn_id))
-		"quest_act":  # the designer builds the act that opened (v0.7.39.6)
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "quest_act"):
-				return {"reason": "один акт за ход"}
-			return QuestGen.plan_act(s, data, e)
-		"create_npc":  # a person the world lacks, by the pack's schema (v0.7.20)
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "create_npc"):
-				return {"reason": "один новый человек за ход"}
-			return WorldGen.plan_npc(s, data, e.get("npc", {}) if e.get("npc") is Dictionary else {}, searched_npcs.has(turn_id), _new_rooms(s, data, pending))
-		"drop_item":  # the hero leaves a thing (a bag with what is in it) in the room (v0.7.18.2)
-			return ContainerRules.plan_drop(s, data, str(e.get("item_id", "")), int(e.get("qty", 1)))
-		"fill":  # water into the hero's vessels by words (v0.7.34.6)
-			var only := str(e.get("item_id", "")) if e.get("item_id") != null else ""
-			var why := NeedRules.can_fill(s, data, only)
-			if not why.is_empty():
-				return {"reason": {"NEED_NO_SKIN": "у героя нет такой ёмкости (бурдюк, фляга, кувшин, ведро)", "NEED_NO_SOURCE":
-					"здесь нет воды: ни тега комнаты, ни вещи-источника (колодец, ручей, река — вещь обстановки с source)",
-					"NEED_SKIN_FULL": "ёмкости уже полны"}.get(why, why)}
-			return {"plan": {"only": only}, "summary": "Набрать воды: %s" % ", ".join(VesselRules.to_fill(s.character, data, NeedRules.foul_here(s, data), only)
-				.map(func(v: Dictionary) -> String: return ItemRules.display_name(data["items"], s.items, v["id"])))}
-		"prop_state":
-			return PropRules.plan_state(s, data, e)
-		"advance_time":
-			var mins := int(e.get("minutes", 0))
-			var cap := int(TimeRules.cfg(data)["max_master_minutes"])
-			if mins <= 0 or mins > cap:
-				return {"reason": "время — от 1 до %d минут за ход" % cap}
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "advance_time"):
-				return {"reason": "время уже сдвинуто в этом ходе"}
-			return {"plan": {"minutes": mins}, "summary": "Прошло: %s" % _duration(mins)}
-		"flag":
-			var flag := str(e.get("flag", ""))
-			if flag.is_empty():
-				return {"reason": "пустой флаг"}
-			if not QuestRules.known_flags(data["world"]).has(flag):
-				return {"reason": "флаг %s миру не знаком; память о событии — эффект note с короткой фразой по-русски" % flag}
-			return {"plan": {"flag": flag, "value": bool(e.get("value", true))}, "summary": "Отмечено: %s" % flag}
-		"npc_discount", "npc_favor":  # what an NPC grants by words (v0.7.15.2)
-			var npc_id := str(e.get("npc_id", ""))
-			if not s.npcs_here(world.world, s.room_id).has(npc_id):
-				return {"reason": "NPC %s нет в этой комнате" % npc_id}
-			var won := (_won_over.get(turn_id, []) as Array).has(npc_id)
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == e["kind"] and str(p["plan"].get("discount", p["plan"].get("favor", ""))) == npc_id):
-				return {"reason": "это уже есть в этом ходе"}
-			if str(e["kind"]) == "npc_discount":
-				return SocialRules.plan_discount(s, data, npc_id, int(e.get("percent", 0)), won)
-			return SocialRules.plan_favor(s, data, npc_id, str(e.get("service", "")), str(e.get("item_id", "")) if e.get("item_id") != null else "", won)
-		"npc_follow":  # an NPC goes with the hero, or stays (v0.7.20.3)
-			var fid := str(e.get("npc_id", ""))
-			if pending.any(func(p: Dictionary) -> bool: return str(p["plan"].get("follow_npc", "")) == fid):
-				return {"reason": "это уже есть в этом ходе"}
-			return FollowRules.plan(s, data, fid, bool(e.get("follow", true)), bool(e.get("home", false)),
-				(_won_over.get(turn_id, []) as Array).has(fid))
-		"reputation":  # the place learned of a deed of the hero (v0.7.17)
-			return ReputationRules.plan(s, data, int(e.get("delta", 0)), str(e.get("reason", "")), pending)
-		"reveal_secret":  # the NPC tells a secret of its own by goodwill (v0.7.15.3)
-			var who := str(e.get("npc_id", ""))
-			if not s.npcs_here(world.world, s.room_id).has(who):
-				return {"reason": "NPC %s нет в этой комнате" % who}
-			return SocialRules.plan_secret(s, data, who, str(e.get("secret_id", "")))
-		"accept_quest":  # the hero takes a quest the NPC offers by words, like the button (v0.7.15.2)
-			var qid := str(e.get("quest_id", ""))
-			var why := QuestRules.can_accept(s, world.world, qid)
-			if not why.is_empty():
-				return {"reason": {"QUEST_UNKNOWN": "нет задания %s в пакете" % qid, "QUEST_DONE": "задание %s уже взято или сделано" % qid,
-					"QUEST_WRONG_PLACE": "задание %s здесь не предлагают — только его задатель (список в quests)" % qid}.get(why, why)}
-			if not QuestGen.can_take(s, data, qid).is_empty():
-				return {"reason": "у героя уже %d созданных заданий в работе — больше не взять" % QuestGen.open_made(s).size()}
-			var giver := QuestRules.stand_in(s, world.world, str(QuestRules.quest(world.world, qid).get("giver", "")))
-			if s.in_conversation() and s.npc_id != giver:
-				return {"reason": "задание %s даёт не собеседник, а %s" % [qid, world.npc(giver).get("name", giver)]}
-			return {"plan": {"quest_accept": qid}, "summary": "Новое задание: %s" % QuestRules.quest(world.world, qid)["title"]}
-		"crime_known":  # the hero confessed or was exposed (v0.7.14)
-			return CrimeRules.plan_reveal(s, data, str(e.get("victim_id", "")))
-		"crime_release":  # the guard lets the hero go by words after a passed check (v0.7.22.2)
-			return CrimeRules.plan_release(s, data, _won.get(turn_id, []))
-		"owner":  # a prisoner sold or let go, a thing given up by its owner (v0.7.22.17)
-			if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "owner"):
-				return {"reason": "одна смена хозяина за ход"}
-			return OwnerRules.plan(s, data, e)
-		"note":
-			var text := str(e.get("text", "")).strip_edges()
-			if text.length() < 5:
-				return {"reason": "пустая заметка"}
-			var about := str(e.get("npc_id", "")) if e.get("npc_id") != null else ""
-			if not about.is_empty():  # v0.7.15: the NPC of the scene remembers it
-				if not s.npcs_here(world.world, s.room_id).has(about):
-					return {"reason": "NPC %s нет в этой комнате: память — о тех, кто здесь" % about}
-				return {"plan": {"text": text.left(200), "npc_id": about},
-					"summary": "%s запомнит: %s" % [world.npc(about).get("name", about), text.left(200)]}
-			return {"plan": {"text": text.left(200)}, "summary": "Запомнено: %s" % text.left(200)}
-		"equip":
-			return _plan_equip(s, data, e)
-	return {"reason": "движок не знает эффект %s" % e.get("kind", "?")}
+		if value > reward_left(s, data, turn_id, pending):
+			return {"reason": _over_budget(s, data, turn_id, pending)}
+		give["plan"]["reward"] = value
+	return give
+
+
+func _plan_take_item(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var items: Dictionary = data["items"]
+	var c := s.character
+	var taken := _plan_quest_take(s, data, str(e.get("item_id", "")))
+	if not taken.is_empty():
+		return taken
+	var id := str(e.get("item_id", ""))
+	var qty := int(e.get("qty", 1))
+	var have := int(c["inventory"].get(id, 0)) - _pending_taken(pending, id)
+	if ItemRules.held_by_curse(c, data, s.items, id):
+		return {"reason": "%s проклят: герой не может с ним расстаться" % ItemRules.display_name(items, s.items, id)}
+	if have < qty:
+		return {"reason": "у персонажа нет %s ×%d" % [id, qty]}
+	return {"plan": {"item_id": id, "qty": qty},
+		"summary": "Отдано: %s%s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else ""]}
+
+
+func _plan_npc_attitude(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var world := WorldView.new(data["world"])
+	var npc_id := str(e.get("npc_id", ""))
+	if not s.npcs_here(world.world, s.room_id).has(npc_id):
+		return {"reason": "NPC %s нет в этой комнате" % npc_id}
+	var delta := clampi(int(e.get("delta", 0)), -2, 2)
+	if delta == 0:
+		return {"reason": "пустое изменение отношения"}
+	return {"plan": {"npc_id": npc_id, "delta": delta},
+		"summary": "%s: отношение %+d" % [world.npc(npc_id).get("name", npc_id), delta]}
+
+
+func _plan_cast(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var c := s.character
+	var slots := {}
+	for p: Dictionary in pending:
+		if p["kind"] == "cast" and int(p["plan"]["slot"]) > 0:
+			slots[int(p["plan"]["slot"])] = int(slots.get(int(p["plan"]["slot"]), 0)) + 1
+	var chk := SpellRules.check(c, data, str(e.get("spell", "")), int(e.get("slot_level", 0)) if e.get("slot_level") != null else 0, slots)
+	if chk.has("reason"):
+		return {"reason": chk["reason"]}
+	var on_self := bool(e.get("on_self", false))
+	return {"plan": {"spell_id": chk["spell_id"], "slot": chk["slot"], "on_self": on_self},
+		"summary": "Заклинание: " + SpellRules.describe(data, chk["spell_id"], chk["slot"]) + (" — на себя" if on_self else "")}
+
+
+func _plan_make(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return MakeRules.plan(s, data, e, pending)
+
+
+func _plan_guise(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return Guise.plan(s, data, e, pending)
+
+
+func _plan_recipe(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var made := CraftRules.make(s, data, CraftRules.spec_of(e))
+	if made.has("reason"):
+		return {"reason": made["reason"]}
+	var title := str(e.get("book", "")).strip_edges().left(60) if e.get("book") != null else ""
+	if not title.is_empty():  # v0.7.64: a book of it, for a reward or a find; known while it is carried
+		CraftRules.bound(s, made, title, str(e.get("key", "")))
+	return {"plan": made, "summary": "Рецепт: %s — %s, %d ч, Сл %d" % [CraftRules.recipe_name_of(s, data, made["def"], made.get("item", {})),
+		BackgroundRules.tool_name(data, str(made["def"]["tool"])), int(made["def"]["hours"]), int(made["def"]["dc"])]}
+
+
+func _plan_job(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var made := JobRules.make(s, data, e)
+	if made.has("reason"):
+		return {"reason": made["reason"]}
+	return {"plan": made, "summary": "Работа: %s у %s — %d ч, Сл %d, %s за смену" % [made["def"]["name"],
+		JobRules.npc_name(s, data, str(made["def"]["employer"])),
+		int(made["def"]["hours"]), int(made["def"]["dc"]), Money.format(int(made["def"]["pay_cp"]))]}
+
+
+func _plan_property(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var made := PropertyRules.make(s, data, e)
+	if made.has("reason"):
+		return {"reason": made["reason"]}
+	return {"plan": made, "summary": "Продаётся: %s (%s) за %s%s" % [made["def"]["name"], (made["made"]["def"] if made.has("made") else PropertyRules.kinds(data)[made["def"]["kind"]])["name"],
+		Money.format(int(made["def"]["price_cp"])), ", доход %s в день" % Money.format(int(made["def"]["income_cp_day"])) if made["def"].has("income_cp_day") else ""]}
+
+
+func _plan_upgrade(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var up := PropertyRules.plan_asked(s, data, e)
+	if up.has("reason"):
+		return {"reason": up["reason"]}
+	return {"plan": up, "summary": "Улучшение для «%s»: %s — %s, %s работы" % [PropertyRules.name_of(s, data, str(up["place"])), up["def"]["name"],
+		Money.format(int(up["def"]["price_cp"])), PropertyRules._days(int(up["def"]["days"]))]}
+
+
+func _plan_course(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var ce := e.duplicate()
+	if ce.get("recipe") is Dictionary:
+		ce["recipe"] = CraftRules.spec_of(ce["recipe"])
+	var co := StudyRules.make(s, data, ce)
+	if co.has("reason"):
+		return {"reason": co["reason"]}
+	return co
+
+
+func _plan_contest(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	if not data["rules"].has("contests"):
+		return {"reason": "состязаний в этих правилах нет"}
+	return ContestRules.plan(s, data, e)
+
+
+func _plan_wilds(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	if not data["rules"].has("wilds"):
+		return {"reason": "угодий в этих правилах нет"}
+	return WildsRules.plan(s, data, e)
+
+
+func _plan_stock(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	if e.get("animal") != null and not str(e.get("animal", "")).is_empty():  # v0.7.42: a beast at a dealer
+		if not MountRules.on(data):
+			return {"reason": "ездовых животных в этих правилах нет"}
+		return MountRules.plan_stock(s, data, e)
+	return TradeRules.make_stock(s, data, e)
+
+
+func _plan_rumor(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return RumorRules.plan(s, data, e, pending)
+
+
+func _plan_letter_reply(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return LetterRules.plan(s, data, e, pending)
+
+
+func _plan_beast(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	if not PetRules.on(data):
+		return {"reason": "питомцев в этих правилах нет"}
+	return PetRules.plan_beast(s, data, e)
+
+
+func _plan_bond(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	if e.get("creature_id") != null and not str(e.get("creature_id", "")).is_empty():  # v0.7.43: a scene with a pet
+		return PetRules.plan_bond(s, data, e)
+	var bo := BondRules.make(s, data, e)
+	if bo.has("reason"):
+		return {"reason": bo["reason"]}
+	return bo
+
+
+func _plan_use_feature(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var c := s.character
+	var rid := Stock.resolve(c, data, str(e.get("feature", "")))
+	var amount := int(e.get("amount", 1))
+	var spent := 0
+	for p: Dictionary in pending:
+		if p["kind"] == "use:feature" and p["plan"]["id"] == rid:
+			spent += int(p["plan"]["amount"])
+	var why := Stock.can_use(c, data, rid, amount, spent)
+	if not why.is_empty():
+		return {"reason": why}
+	var heals: bool = not (Stock.table(data)[rid].get("on_use", {}) as Dictionary).is_empty()
+	return {"plan": {"id": rid, "amount": amount}, "summary": "Умение: %s%s" % [Stock.display_name(c, data, rid),
+		" (лечение движок посчитает сам, heal не нужен)" if heals else ""]}
+
+
+func _plan_use_item(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var items: Dictionary = data["items"]
+	var c := s.character
+	var iid := str(e.get("item_id", ""))
+	var in_use := pending.filter(func(p: Dictionary) -> bool: return p["kind"] == "use:item" and p["plan"]["item_id"] == iid).size()
+	var why := ItemRules.can_use(c, data, s.items, iid, _pending_taken(pending, iid) + in_use)
+	if not why.is_empty():
+		return {"reason": why}
+	return {"plan": {"item_id": iid}, "summary": "Использовано: %s" % ItemRules.display_name(items, s.items, iid)}
+
+
+func _plan_furnish(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return PropRules.plan_furnish(s, data, e)
+
+
+func _plan_take_from(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return ContainerRules.plan_take(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
+
+
+func _plan_put_in(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return ContainerRules.plan_put(s, data, str(e.get("prop_id", "")), str(e.get("item_id", "")), int(e.get("qty", 1)))
+
+
+func _plan_create_place(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return WorldGen.plan_place(s, data, e, searched_places.has(turn_id))
+
+
+func _plan_goal_assess(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return GoalRules.plan_assess(s.character, data, e)
+
+
+func _plan_goal_hint(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return GoalRules.plan_hint(s.character, data)
+
+
+func _plan_create_quest(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return QuestGen.plan_quest(s, data, e, searched_quests.has(turn_id))
+
+
+func _plan_quest_act(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return QuestGen.plan_act(s, data, e)
+
+
+func _plan_create_npc(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return WorldGen.plan_npc(s, data, e.get("npc", {}) if e.get("npc") is Dictionary else {}, searched_npcs.has(turn_id), _new_rooms(s, data, pending))
+
+
+func _plan_drop_item(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return ContainerRules.plan_drop(s, data, str(e.get("item_id", "")), int(e.get("qty", 1)))
+
+
+func _plan_fill(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var only := str(e.get("item_id", "")) if e.get("item_id") != null else ""
+	var why := NeedRules.can_fill(s, data, only)
+	if not why.is_empty():
+		return {"reason": {"NEED_NO_SKIN": "у героя нет такой ёмкости (бурдюк, фляга, кувшин, ведро)", "NEED_NO_SOURCE":
+			"здесь нет воды: ни тега комнаты, ни вещи-источника (колодец, ручей, река — вещь обстановки с source)",
+			"NEED_SKIN_FULL": "ёмкости уже полны"}.get(why, why)}
+	return {"plan": {"only": only}, "summary": "Набрать воды: %s" % ", ".join(VesselRules.to_fill(s.character, data, NeedRules.foul_here(s, data), only)
+		.map(func(v: Dictionary) -> String: return ItemRules.display_name(data["items"], s.items, v["id"])))}
+
+
+func _plan_advance_time(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var mins := int(e.get("minutes", 0))
+	var cap := int(TimeRules.cfg(data)["max_master_minutes"])
+	if mins <= 0 or mins > cap:
+		return {"reason": "время — от 1 до %d минут за ход" % cap}
+	if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "advance_time"):
+		return {"reason": "время уже сдвинуто в этом ходе"}
+	return {"plan": {"minutes": mins}, "summary": "Прошло: %s" % _duration(mins)}
+
+
+func _plan_flag(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var flag := str(e.get("flag", ""))
+	if flag.is_empty():
+		return {"reason": "пустой флаг"}
+	if not QuestRules.known_flags(data["world"]).has(flag):
+		return {"reason": "флаг %s миру не знаком; память о событии — эффект note с короткой фразой по-русски" % flag}
+	return {"plan": {"flag": flag, "value": bool(e.get("value", true))}, "summary": "Отмечено: %s" % flag}
+
+
+func _plan_npc_follow(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var fid := str(e.get("npc_id", ""))
+	if pending.any(func(p: Dictionary) -> bool: return str(p["plan"].get("follow_npc", "")) == fid):
+		return {"reason": "это уже есть в этом ходе"}
+	return FollowRules.plan(s, data, fid, bool(e.get("follow", true)), bool(e.get("home", false)),
+		(_won_over.get(turn_id, []) as Array).has(fid))
+
+
+func _plan_reputation(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return ReputationRules.plan(s, data, int(e.get("delta", 0)), str(e.get("reason", "")), pending)
+
+
+func _plan_reveal_secret(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var world := WorldView.new(data["world"])
+	var who := str(e.get("npc_id", ""))
+	if not s.npcs_here(world.world, s.room_id).has(who):
+		return {"reason": "NPC %s нет в этой комнате" % who}
+	return SocialRules.plan_secret(s, data, who, str(e.get("secret_id", "")))
+
+
+func _plan_accept_quest(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var world := WorldView.new(data["world"])
+	var qid := str(e.get("quest_id", ""))
+	var why := QuestRules.can_accept(s, world.world, qid)
+	if not why.is_empty():
+		return {"reason": {"QUEST_UNKNOWN": "нет задания %s в пакете" % qid, "QUEST_DONE": "задание %s уже взято или сделано" % qid,
+			"QUEST_WRONG_PLACE": "задание %s здесь не предлагают — только его задатель (список в quests)" % qid}.get(why, why)}
+	if not QuestGen.can_take(s, data, qid).is_empty():
+		return {"reason": "у героя уже %d созданных заданий в работе — больше не взять" % QuestGen.open_made(s).size()}
+	var giver := QuestRules.stand_in(s, world.world, str(QuestRules.quest(world.world, qid).get("giver", "")))
+	if s.in_conversation() and s.npc_id != giver:
+		return {"reason": "задание %s даёт не собеседник, а %s" % [qid, world.npc(giver).get("name", giver)]}
+	return {"plan": {"quest_accept": qid}, "summary": "Новое задание: %s" % QuestRules.quest(world.world, qid)["title"]}
+
+
+func _plan_crime_known(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return CrimeRules.plan_reveal(s, data, str(e.get("victim_id", "")))
+
+
+func _plan_crime_release(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return CrimeRules.plan_release(s, data, _won.get(turn_id, []))
+
+
+func _plan_owner(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return OwnerRules.plan(s, data, e)
+
+
+func _plan_note(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var world := WorldView.new(data["world"])
+	var text := str(e.get("text", "")).strip_edges()
+	if text.length() < 5:
+		return {"reason": "пустая заметка"}
+	var about := str(e.get("npc_id", "")) if e.get("npc_id") != null else ""
+	if not about.is_empty():  # v0.7.15: the NPC of the scene remembers it
+		if not s.npcs_here(world.world, s.room_id).has(about):
+			return {"reason": "NPC %s нет в этой комнате: память — о тех, кто здесь" % about}
+		return {"plan": {"text": text.left(200), "npc_id": about},
+			"summary": "%s запомнит: %s" % [world.npc(about).get("name", about), text.left(200)]}
+	return {"plan": {"text": text.left(200)}, "summary": "Запомнено: %s" % text.left(200)}
+
+
+func _plan_grant(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var world := WorldView.new(data["world"])
+	var npc_id := str(e.get("npc_id", ""))
+	if not s.npcs_here(world.world, s.room_id).has(npc_id):
+		return {"reason": "NPC %s нет в этой комнате" % npc_id}
+	var won := (_won_over.get(turn_id, []) as Array).has(npc_id)
+	if pending.any(func(p: Dictionary) -> bool: return p["kind"] == key(e) and str(p["plan"].get("discount", p["plan"].get("favor", ""))) == npc_id):
+		return {"reason": "это уже есть в этом ходе"}
+	if str(e["what"]) == "discount":
+		return SocialRules.plan_discount(s, data, npc_id, int(e.get("percent", 0)), won)
+	return SocialRules.plan_favor(s, data, npc_id, str(e.get("service", "")), str(e.get("item_id", "")) if e.get("item_id") != null else "", won)
+
+
+func _plan_start_combat(s: GameSession, data: Dictionary, _turn_id: String, e: Dictionary, _pending: Array[Dictionary]) -> Dictionary:
+	if not CombatRules.active(s):  # v0.7.4: a fight starts only with the scene's people or an encounter of the world
+		return {"reason": "вне боя мастер не зовёт врагов: драка начинается, когда игрок нападает на NPC сцены (next_mode combat), или встречей мира"}
+	return _plan_fight(s, data, e)
+
 
 
 ## A condition on the hero by the master (v0.7.8, «Правила 5e: состояния»): with a reason, a save the engine rolls
@@ -635,7 +788,7 @@ func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 
 ## A disease caught by the hero (v0.7.23.1): a known one by id or name, or a new one made within rules.diseases.make;
 ## always with the engine's save (CON by default, tag disease). The summary does not name it: it shows later.
-func _plan_disease(s: GameSession, data: Dictionary, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+func _plan_disease(s: GameSession, data: Dictionary, _turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var rules: Dictionary = data["rules"]
 	var c := s.character
 	var reason := str(e.get("reason", "")).strip_edges()
@@ -772,7 +925,7 @@ func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 
 ## Opening a locked container by words (v0.7.18.1): a key the hero carries, or a check of this turn that beat the lock
 ## (Sleight of Hand with thieves' tools — `pick`, Athletics — `force`, it breaks).
-func _plan_unlock(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary) -> Dictionary:
+func _plan_unlock(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, _pending: Array[Dictionary]) -> Dictionary:
 	var p := PropRules.find(s, s.room_id, str(e.get("prop_id", "")))
 	if p.is_empty() or not bool(p.get("locked", false)):
 		return {"reason": "в комнате нет запертого %s" % e.get("prop_id", "")}
@@ -790,7 +943,7 @@ func _plan_unlock(s: GameSession, data: Dictionary, turn_id: String, e: Dictiona
 
 ## The master's door (v0.7.22.25): its owner unlocks or locks it; a passed Sleight of Hand this turn picks it, a passed
 ## Athletics breaks it — against WayRules.dcs.
-func _plan_door(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary) -> Dictionary:
+func _plan_door(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, _pending: Array[Dictionary]) -> Dictionary:
 	var to := str(e.get("to_room", ""))
 	if not WayRules.open_exits(s, data["world"], s.room_id).has(to) or WayRules.def(data, s.room_id, to).is_empty():
 		return {"reason": "между %s и %s нет двери" % [s.room_id, to]}
@@ -853,8 +1006,8 @@ func _plan_hidden_give(s: GameSession, world: Dictionary, id: String) -> Diction
 			var how := "request_check %s или investigation" % skill if skill != "investigation" else "request_check investigation"
 			var where := str(world["rooms"][rid].get("name", rid))
 			if rid != s.room_id:
-				return {"reason": "эта вещь спрятана в «%s» — её находят там проверкой (%s), а не give_item" % [where, how]}
-			return {"reason": "эта вещь спрятана здесь, в тайнике — её даёт успешная проверка поиска (%s) против его сложности, а не give_item; проверка уже провалена или не та — расскажи, что не нашёл" % how}
+				return {"reason": "эта вещь спрятана в «%s» — её находят там проверкой (%s), а не move_item:world>hero" % [where, how]}
+			return {"reason": "эта вещь спрятана здесь, в тайнике — её даёт успешная проверка поиска (%s) против его сложности, а не move_item:world>hero; проверка уже провалена или не та — расскажи, что не нашёл" % how}
 	return {}
 
 
@@ -907,7 +1060,6 @@ func _plan_give(s: GameSession, items: Dictionary, rules: Dictionary, turn_id: S
 
 
 func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
-	var c := s.character
 	if plan.has("foe"):
 		var f := CombatRules.fighter(s, str(plan["foe"]))
 		if kind == "damage":
@@ -918,254 +1070,391 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		else:
 			ConditionRules.remove(f, str(plan["condition"]))
 		return
-	if plan.has("victim"):  # crime_known (v0.7.14)
-		_extra_lines.append_array(CrimeRules.reveal(s, _data, str(plan["victim"])))
+	var row: Dictionary = _table()[kind]
+	if row.has("do"):
+		(row["do"] as Callable).call(s, plan)
+	else:
+		var said: Variant = (row["apply"] as Callable).call(s, _data, plan)
+		if said is Array:
+			_extra_lines.append_array(said)
+
+
+func _do_move(s: GameSession, plan: Dictionary) -> void:
+	s.room_id = str(_made.get("rooms", {}).get(str(plan["room_id"]).trim_prefix("new:"), plan["room_id"])) if str(plan["room_id"]).begins_with("new:") else str(plan["room_id"])
+	if bool(plan.get("escort", false)):
+		s.arrest = s.room_id  # the hold goes along with the guard
+	for n: Variant in plan.get("with", []):
+		FollowRules.apply(s, {"follow_npc": str(n), "on": true, "room": ""})
+
+
+func _do_damage(s: GameSession, plan: Dictionary) -> void:
+	var c := s.character
+	c["hp"] = maxi(0, int(c["hp"]) - int(plan["amount"]))
+	_extra_lines.append_array(HeroDefense.after_damage(s, _data, int(plan["amount"])))
+	HeroDefense.relentless(s, _data, _extra_lines)
+
+
+func _do_heal(s: GameSession, plan: Dictionary) -> void:
+	var c := s.character
+	c["hp"] = mini(int(c["max_hp"]), int(c["hp"]) + int(plan["amount"]))
+
+
+func _do_coins(s: GameSession, plan: Dictionary) -> void:
+	Ledger.add(s, int(plan["delta"]), "effect_engine:apply_one")
+	if str(plan.get("settles", "")) == "tax":
+		_extra_lines.append_array(PropertyRules.settle_tax(s, _data, -int(plan["delta"])))
+
+
+func _do_give_item(s: GameSession, plan: Dictionary) -> void:
+	if _quest_thing(s, plan):
 		return
-	if kind == "owner":  # owner (v0.7.22.17)
-		_extra_lines.append_array(OwnerRules.apply(s, _data, plan))
+	var c := s.character
+	if plan.has("def"):
+		s.items[plan["item_id"]] = plan["def"]
+	ItemRules.found(c, _data, s.items, str(plan["item_id"]), int(plan["qty"]))
+
+
+func _do_take_item(s: GameSession, plan: Dictionary) -> void:
+	if _quest_thing(s, plan):
 		return
-	if plan.has("crime_release"):  # crime_release (v0.7.22.2)
-		_extra_lines.append_array(CrimeRules.let_go(s, _data, "Стража отпускает героя — но розыск не снят"))
+	var c := s.character
+	var left := int(c["inventory"].get(plan["item_id"], 0)) - int(plan["qty"])
+	if left > 0:
+		c["inventory"][plan["item_id"]] = left
+	else:
+		c["inventory"].erase(plan["item_id"])
+
+
+func _do_npc_attitude(s: GameSession, plan: Dictionary) -> void:
+	s.shift_attitude(str(plan["npc_id"]), int(plan["delta"]), _data)
+
+
+func _do_start_combat(s: GameSession, plan: Dictionary) -> void:
+	if bool(plan.get("reinforce", false)) and CombatRules.active(s):
+		CombatRules.add_incoming(s, _data, plan["foes"], int(s.combat["round"]) + int(CombatRules.cfg(_data)["reinforce_delay"]), str(plan["side"]))
+	else:
+		s.pending_fight = plan["foes"]
+
+
+func _do_cast(s: GameSession, plan: Dictionary) -> void:
+	var c := s.character
+	var cast := SpellRules.cast(c, _data, plan["spell_id"], int(plan["slot"]), s, bool(plan.get("on_self", false)))
+	if bool(plan.get("on_self", false)):
+		_extra_lines.append_array(cast.slice(1))  # what landed on the hero; the master tells the cast itself
+
+
+func _do_condition(s: GameSession, plan: Dictionary) -> void:
+	var c := s.character
+	if bool(plan.get("resisted", false)):
 		return
-	if plan.has("text") and plan.has("npc_id"):  # note about an NPC (v0.7.15)
-		s.remember(str(plan["npc_id"]), str(plan["text"]))
-		return
-	if plan.has("text"):  # note (v0.7.4)
-		s.notes.append(Fact.of(s, str(plan["text"]), s.room_id))
-		return
-	if plan.has("slots"):  # equip (v0.7.4); time and the turn's economy (v0.7.7)
-		var before: Dictionary = (s.character["equipped"] as Dictionary).duplicate()
-		for sl: Variant in plan["slots"]:
-			s.character["equipped"][str(sl)] = str(plan["item_id"])
-		for sl: Variant in plan.get("freed", []):  # a two-handed weapon empties the other hand
-			s.character["equipped"][str(sl)] = ""
-		if CombatRules.active(s):
-			if not str(plan["item_id"]).is_empty():
-				var econ := CombatRules.economy(s)
-				if bool(econ.get("object", false)):
-					econ["action"] = int(econ.get("action", 0)) - 1
-				econ["object"] = true
+	var cond := str(plan["condition"])
+	if not bool(plan["on"]):
+		if cond == "exhaustion":
+			_extra_lines.append_array(ConditionRules.add_exhaustion(s, _data, -1, ""))
 		else:
-			var minutes := CharacterRules.gear_minutes(_data, s.items, before, s.character["equipped"])
-			if minutes > 0:
-				_extra_lines.append("Переодевание: %d мин" % minutes)
-				_extra_lines.append_array(TimeRules.advance(s, _data, minutes))
-		var main := str(s.character["equipped"].get("main_hand", ""))
-		if not main.is_empty() and str(s.character["equipped"].get("off_hand", "")) == main and int(s.character["inventory"].get(main, 0)) < 2:
-			s.character["equipped"]["off_hand"] = ""
-		CharacterRules.refresh(s.character, _data, s.items)
+			ConditionRules.remove(c, cond)
+		CharacterRules.refresh(c, _data, s.items)
 		return
-	if plan.has("reputation"):  # reputation (v0.7.17)
-		_extra_lines.append_array(ReputationRules.add(s, _data, str(plan["reputation"]), int(plan["delta"]), str(plan["why"])))
+	var fx := {"condition": cond, "ends": plan["ends"], "source": plan["source"]}
+	for k: String in ["by", "wake", "save"]:
+		if plan.has(k):
+			fx[k] = plan[k]
+	_extra_lines.append_array(ConditionRules.impose(s, _data, fx))
+	CharacterRules.refresh(c, _data, s.items)
+
+
+func _do_disease(s: GameSession, plan: Dictionary) -> void:
+	var c := s.character
+	if bool(plan.get("resisted", false)):
 		return
-	if plan.has("secret"):  # reveal_secret (v0.7.15.3)
-		for sec: Dictionary in SocialRules.secrets(_data, str(plan["secret_npc"])):
-			if str(sec["id"]) == str(plan["secret"]):
-				SocialRules.tell(s, _data, str(plan["secret_npc"]), sec)
-		_extra_lines.append_array(QuestRules.advance(s, _data))
-		return
-	if plan.has("goal_scale"):  # goal_assess (v0.7.22)
-		GoalRules.apply_assess(c, plan)
-		return
-	if plan.has("goal_hint"):  # goal_hint (v0.7.22.1)
-		GoalRules.apply_hint(c)
-		return
-	if plan.has("follow_npc"):  # npc_follow (v0.7.20.3)
-		FollowRules.apply(s, plan)
-		return
-	if plan.has("discount"):  # npc_discount (v0.7.15.2)
-		SocialRules.grant_discount(s, _data, plan)
-		return
-	if plan.has("favor"):  # npc_favor (v0.7.15.2)
-		_extra_lines.append_array(SocialRules.grant_favor(s, _data, plan))
-		return
-	if plan.has("quest_accept"):  # a quest thing given by words takes the quest (v0.7.2)
-		_extra_lines.append_array(QuestRules.accept(s, _data, str(plan["quest_accept"])).slice(1))
-		return
-	if plan.has("quest_talk"):  # a quest thing handed over by words closes the talk step
-		_extra_lines.append_array(QuestRules.talk(s, _data, str(plan["quest_talk"])).slice(1))
-		return
-	match kind:
-		"move":
-			s.room_id = str(_made.get("rooms", {}).get(str(plan["room_id"]).trim_prefix("new:"), plan["room_id"])) if str(plan["room_id"]).begins_with("new:") else str(plan["room_id"])
-			if bool(plan.get("escort", false)):
-				s.arrest = s.room_id  # the hold goes along with the guard
-			for n: Variant in plan.get("with", []):
-				FollowRules.apply(s, {"follow_npc": str(n), "on": true, "room": ""})
-		"damage":
-			c["hp"] = maxi(0, int(c["hp"]) - int(plan["amount"]))
-			_extra_lines.append_array(HeroDefense.after_damage(s, _data, int(plan["amount"])))
-			HeroDefense.relentless(s, _data, _extra_lines)
-		"heal":
-			c["hp"] = mini(int(c["max_hp"]), int(c["hp"]) + int(plan["amount"]))
-		"coins":
-			Ledger.add(s, int(plan["delta"]), "effect_engine:apply_one")
-			if str(plan.get("settles", "")) == "tax":
-				_extra_lines.append_array(PropertyRules.settle_tax(s, _data, -int(plan["delta"])))
-		"give_item":
-			if plan.has("def"):
-				s.items[plan["item_id"]] = plan["def"]
-			ItemRules.found(c, _data, s.items, str(plan["item_id"]), int(plan["qty"]))
-		"take_item":
-			var left := int(c["inventory"].get(plan["item_id"], 0)) - int(plan["qty"])
-			if left > 0:
-				c["inventory"][plan["item_id"]] = left
-			else:
-				c["inventory"].erase(plan["item_id"])
-		"npc_attitude":
-			s.shift_attitude(str(plan["npc_id"]), int(plan["delta"]), _data)
-		"start_combat":
-			if bool(plan.get("reinforce", false)) and CombatRules.active(s):
-				CombatRules.add_incoming(s, _data, plan["foes"], int(s.combat["round"]) + int(CombatRules.cfg(_data)["reinforce_delay"]), str(plan["side"]))
-			else:
-				s.pending_fight = plan["foes"]
-		"cast":
-			var cast := SpellRules.cast(c, _data, plan["spell_id"], int(plan["slot"]), s, bool(plan.get("on_self", false)))
-			if bool(plan.get("on_self", false)):
-				_extra_lines.append_array(cast.slice(1))  # what landed on the hero; the master tells the cast itself
-		"condition":
-			if bool(plan.get("resisted", false)):
-				return
-			var cond := str(plan["condition"])
-			if not bool(plan["on"]):
-				if cond == "exhaustion":
-					_extra_lines.append_array(ConditionRules.add_exhaustion(s, _data, -1, ""))
-				else:
-					ConditionRules.remove(c, cond)
-				CharacterRules.refresh(c, _data, s.items)
-				return
-			var fx := {"condition": cond, "ends": plan["ends"], "source": plan["source"]}
-			for k: String in ["by", "wake", "save"]:
-				if plan.has(k):
-					fx[k] = plan[k]
-			_extra_lines.append_array(ConditionRules.impose(s, _data, fx))
-			CharacterRules.refresh(c, _data, s.items)
-		"disease":
-			if bool(plan.get("resisted", false)):
-				return
-			if not (plan["made"] as Dictionary).is_empty():
-				var gen := WorldGen.generated(s)
-				var made: Dictionary = gen.get("diseases", {})
-				made[str(plan["disease"])] = plan["made"]
-				gen["diseases"] = made
-			_extra_lines.append_array(DiseaseRules.contract(s, _data, str(plan["disease"])))
-			CharacterRules.refresh(c, _data, s.items)
-		"recipe":
-			_extra_lines.append_array(CraftRules.apply_make(s, _data, plan))
-		"job":
-			_extra_lines.append_array(JobRules.apply_make(s, _data, plan))
-		"property":
-			_extra_lines.append_array(PropertyRules.apply_make(s, _data, plan, str(_made.get("site", "")), str(_made.get("npc", ""))))
-		"upgrade":
-			_extra_lines.append_array(PropertyRules.apply_asked(s, _data, plan))
-		"world_item":
-			_extra_lines.append_array(WorldItemRules.apply(s, _data, plan))
-		"course":
-			_extra_lines.append_array(StudyRules.apply_make(s, _data, plan))
-		"make":
-			_extra_lines.append_array(MakeRules.apply(s, _data, plan))
-		"guise":
-			_extra_lines.append_array(Guise.apply(s, _data, plan))
-		"supplier":
-			_extra_lines.append_array(ShopRules.apply_make(s, _data, plan))
-		"fence":
-			_extra_lines.append_array(FenceRules.apply_make(s, _data, plan))
-		"heist":
-			_extra_lines.append_array(HeistRules.apply_make(s, _data, plan))
-		"org":
-			_extra_lines.append_array(OrgRules.apply_make(s, _data, plan))
-		"faction":
-			_extra_lines.append_array(FactionRules.apply_make(s, _data, plan))
-		"bond":
-			_extra_lines.append_array(PetRules.apply_bond(s, _data, plan) if plan.has("creature_id") else BondRules.apply_make(s, _data, plan))
-		"beast":
-			_extra_lines.append_array(PetRules.apply_beast(s, _data, plan))
-		"festival":
-			_extra_lines.append_array(CalendarRules.apply_festival(s, _data, plan))
-		"weather":
-			_extra_lines.append_array(WeatherRules.apply(s, _data, plan))
-		"rumor":
-			_extra_lines.append_array(RumorRules.apply(s, _data, plan))
-		"letter_reply":
-			_extra_lines.append_array(LetterRules.apply(s, _data, plan))
-		"vow":
-			_extra_lines.append_array(FaithRules.apply_vow(s, _data, plan))
-		"god":
-			_extra_lines.append_array(FaithRules.apply_god(s, _data, plan))
-		"stock":
-			_extra_lines.append_array(MountRules.apply_stock(s, _data, plan) if plan.has("animal") else TradeRules.apply_stock(s, _data, plan))
-		"permit":
-			_extra_lines.append_array(SiteRules.grant(s, _data, str(plan["npc_id"]), str(plan["site_id"])))
-		"contest":
-			_extra_lines.append_array(ContestRules.apply(s, _data, plan))
-		"wilds":
-			_extra_lines.append_array(WildsRules.apply(s, _data, plan))
-		"bank":
-			_extra_lines.append_array(BankRules.apply_make(s, _data, plan, str(_made.get("npc", ""))))
-		"use_feature":
-			Stock.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
-		"use_item":
-			ItemRules.use(c, _data, s.items, plan["item_id"], s.rng, s)
-		"advance_time":  # the patrol looks in on the way, as at «Ждать» (v0.7.22.18)
-			_extra_lines.append_array(CrimeRules.wait(s, _data, int(plan["minutes"]))["lines"])
-		"furnish":
-			PropRules.apply_furnish(s, plan)
-		"take_prop":
-			_extra_lines.append_array(PropRules.apply_take(s, _data, plan))
-		"take_from":
-			_extra_lines.append_array(ContainerRules.apply_take(s, _data, plan))
-		"put_in":
-			ContainerRules.apply_put(s, _data, plan)
-		"drop_item":
-			ContainerRules.apply_drop(s, _data, plan)
-		"fill":
-			_extra_lines.append_array(NeedRules.fill(s, _data, str(plan["only"])))
-			_extra_lines.append_array(TimeRules.advance(s, _data, int(NeedRules.cfg(_data)["water"]["fill_minutes"])))
-		"create_npc":
-			var room := str(plan["room"])
-			if room.begins_with("new:"):
-				room = str(_made.get("rooms", {}).get(room.trim_prefix("new:"), s.room_id))
-			_made["npc"] = WorldGen.apply_npc(s, _data, plan.merged({"room": room}, true))
-			_extra_lines.append("[%s]" % _made["npc"])
-		"create_quest":
-			var qid := QuestGen.apply_quest(s, _data, plan)
-			_extra_lines.append("[%s]" % qid)
-			if bool(plan["quest"].get("own", false)):  # one's own deed is taken at once (v0.7.21.2); its first act comes next
-				s.quests_active[qid] = 0
-				_extra_lines.append("Своё дело: %s · Цель: %s" % [plan["quest"]["title"], plan["quest"]["acts"][0]["goal"]])
-		"quest_act":
-			_extra_lines.append_array(QuestGen.apply_act(s, _data, plan))
-		"create_place":
-			var entry := WorldGen.apply_place(s, _data, plan)
-			_extra_lines.append("выход: [%s]" % entry)
-			WorldEvent.emit(s, _data, "place_made", {"room": entry})
-			_made["rooms"] = plan["ids"]
-			_made["site"] = plan["site_id"]
-		"way":
-			_extra_lines.append_array(WayRules.apply_make(s, _data, plan))
-		"door":
-			var a := str(plan["from"])
-			var b := str(plan["to"])
-			match str(plan["action"]):
-				"lock":
-					WayRules.lock(s, a, b)
-				"unlock":
-					WayRules.unlock(s, _data, a, b)
-				"break":
-					WayRules.break_down(s, a, b)
-			if str(plan["how"]) != "owner":
-				var seen := WayRules.witnesses(s, _data, a, b)
-				if not seen.is_empty():
-					_extra_lines.append_array(CrimeRules.on_trespass(s, _data, SiteRules.unwelcome(s, _data, b), b, seen))
+	if not (plan["made"] as Dictionary).is_empty():
+		var gen := WorldGen.generated(s)
+		var made: Dictionary = gen.get("diseases", {})
+		made[str(plan["disease"])] = plan["made"]
+		gen["diseases"] = made
+	_extra_lines.append_array(DiseaseRules.contract(s, _data, str(plan["disease"])))
+	CharacterRules.refresh(c, _data, s.items)
+
+
+func _do_recipe(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(CraftRules.apply_make(s, _data, plan))
+
+
+func _do_job(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(JobRules.apply_make(s, _data, plan))
+
+
+func _do_property(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(PropertyRules.apply_make(s, _data, plan, str(_made.get("site", "")), str(_made.get("npc", ""))))
+
+
+func _do_upgrade(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(PropertyRules.apply_asked(s, _data, plan))
+
+
+func _do_world_item(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(WorldItemRules.apply(s, _data, plan))
+
+
+func _do_course(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(StudyRules.apply_make(s, _data, plan))
+
+
+func _do_make(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(MakeRules.apply(s, _data, plan))
+
+
+func _do_guise(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(Guise.apply(s, _data, plan))
+
+
+func _do_supplier(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(ShopRules.apply_make(s, _data, plan))
+
+
+func _do_fence(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(FenceRules.apply_make(s, _data, plan))
+
+
+func _do_heist(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(HeistRules.apply_make(s, _data, plan))
+
+
+func _do_org(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(OrgRules.apply_make(s, _data, plan))
+
+
+func _do_faction(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(FactionRules.apply_make(s, _data, plan))
+
+
+func _do_bond(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(PetRules.apply_bond(s, _data, plan) if plan.has("creature_id") else BondRules.apply_make(s, _data, plan))
+
+
+func _do_beast(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(PetRules.apply_beast(s, _data, plan))
+
+
+func _do_festival(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(CalendarRules.apply_festival(s, _data, plan))
+
+
+func _do_weather(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(WeatherRules.apply(s, _data, plan))
+
+
+func _do_rumor(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(RumorRules.apply(s, _data, plan))
+
+
+func _do_letter_reply(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(LetterRules.apply(s, _data, plan))
+
+
+func _do_vow(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(FaithRules.apply_vow(s, _data, plan))
+
+
+func _do_god(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(FaithRules.apply_god(s, _data, plan))
+
+
+func _do_stock(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(MountRules.apply_stock(s, _data, plan) if plan.has("animal") else TradeRules.apply_stock(s, _data, plan))
+
+
+func _do_permit(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(SiteRules.grant(s, _data, str(plan["npc_id"]), str(plan["site_id"])))
+
+
+func _do_contest(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(ContestRules.apply(s, _data, plan))
+
+
+func _do_wilds(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(WildsRules.apply(s, _data, plan))
+
+
+func _do_bank(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(BankRules.apply_make(s, _data, plan, str(_made.get("npc", ""))))
+
+
+func _do_use_feature(s: GameSession, plan: Dictionary) -> void:
+	var c := s.character
+	Stock.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
+
+
+func _do_use_item(s: GameSession, plan: Dictionary) -> void:
+	var c := s.character
+	ItemRules.use(c, _data, s.items, plan["item_id"], s.rng, s)
+
+
+func _do_advance_time(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(CrimeRules.wait(s, _data, int(plan["minutes"]))["lines"])
+
+
+func _do_furnish(s: GameSession, plan: Dictionary) -> void:
+	PropRules.apply_furnish(s, plan)
+
+
+func _do_take_prop(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(PropRules.apply_take(s, _data, plan))
+
+
+func _do_take_from(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(ContainerRules.apply_take(s, _data, plan))
+
+
+func _do_put_in(s: GameSession, plan: Dictionary) -> void:
+	ContainerRules.apply_put(s, _data, plan)
+
+
+func _do_drop_item(s: GameSession, plan: Dictionary) -> void:
+	ContainerRules.apply_drop(s, _data, plan)
+
+
+func _do_fill(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(NeedRules.fill(s, _data, str(plan["only"])))
+	_extra_lines.append_array(TimeRules.advance(s, _data, int(NeedRules.cfg(_data)["water"]["fill_minutes"])))
+
+
+func _do_create_npc(s: GameSession, plan: Dictionary) -> void:
+	var room := str(plan["room"])
+	if room.begins_with("new:"):
+		room = str(_made.get("rooms", {}).get(room.trim_prefix("new:"), s.room_id))
+	_made["npc"] = WorldGen.apply_npc(s, _data, plan.merged({"room": room}, true))
+	_extra_lines.append("[%s]" % _made["npc"])
+
+
+func _do_create_quest(s: GameSession, plan: Dictionary) -> void:
+	var qid := QuestGen.apply_quest(s, _data, plan)
+	_extra_lines.append("[%s]" % qid)
+	if bool(plan["quest"].get("own", false)):  # one's own deed is taken at once (v0.7.21.2); its first act comes next
+		s.quests_active[qid] = 0
+		_extra_lines.append("Своё дело: %s · Цель: %s" % [plan["quest"]["title"], plan["quest"]["acts"][0]["goal"]])
+
+
+func _do_quest_act(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(QuestGen.apply_act(s, _data, plan))
+
+
+func _do_create_place(s: GameSession, plan: Dictionary) -> void:
+	var entry := WorldGen.apply_place(s, _data, plan)
+	_extra_lines.append("выход: [%s]" % entry)
+	WorldEvent.emit(s, _data, "place_made", {"room": entry})
+	_made["rooms"] = plan["ids"]
+	_made["site"] = plan["site_id"]
+
+
+func _do_way(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(WayRules.apply_make(s, _data, plan))
+
+
+func _do_door(s: GameSession, plan: Dictionary) -> void:
+	var a := str(plan["from"])
+	var b := str(plan["to"])
+	match str(plan["action"]):
+		"lock":
+			WayRules.lock(s, a, b)
 		"unlock":
-			_extra_lines.append_array(ContainerRules.unlock(PropRules.find(s, str(plan["room"]), str(plan["prop"])), str(plan["how"])))
-		"prop_state":
-			_extra_lines.append_array(PropRules.apply_state(s, _data, plan))
-		"flag":
-			if bool(plan["value"]) and not s.flags.has(plan["flag"]):
-				s.flags.append(plan["flag"])
-			elif not bool(plan["value"]):
-				s.flags.erase(plan["flag"])
+			WayRules.unlock(s, _data, a, b)
+		"break":
+			WayRules.break_down(s, a, b)
+	if str(plan["how"]) != "owner":
+		var seen := WayRules.witnesses(s, _data, a, b)
+		if not seen.is_empty():
+			_extra_lines.append_array(CrimeRules.on_trespass(s, _data, SiteRules.unwelcome(s, _data, b), b, seen))
+
+
+func _do_unlock(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(ContainerRules.unlock(PropRules.find(s, str(plan["room"]), str(plan["prop"])), str(plan["how"])))
+
+
+func _do_prop_state(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(PropRules.apply_state(s, _data, plan))
+
+
+func _do_flag(s: GameSession, plan: Dictionary) -> void:
+	if bool(plan["value"]) and not s.flags.has(plan["flag"]):
+		s.flags.append(plan["flag"])
+	elif not bool(plan["value"]):
+		s.flags.erase(plan["flag"])
+
+
+func _do_equip(s: GameSession, plan: Dictionary) -> void:
+	var before: Dictionary = (s.character["equipped"] as Dictionary).duplicate()
+	for sl: Variant in plan["slots"]:
+		s.character["equipped"][str(sl)] = str(plan["item_id"])
+	for sl: Variant in plan.get("freed", []):  # a two-handed weapon empties the other hand
+		s.character["equipped"][str(sl)] = ""
+	if CombatRules.active(s):
+		if not str(plan["item_id"]).is_empty():
+			var econ := CombatRules.economy(s)
+			if bool(econ.get("object", false)):
+				econ["action"] = int(econ.get("action", 0)) - 1
+			econ["object"] = true
+	else:
+		var minutes := CharacterRules.gear_minutes(_data, s.items, before, s.character["equipped"])
+		if minutes > 0:
+			_extra_lines.append("Переодевание: %d мин" % minutes)
+			_extra_lines.append_array(TimeRules.advance(s, _data, minutes))
+	var main := str(s.character["equipped"].get("main_hand", ""))
+	if not main.is_empty() and str(s.character["equipped"].get("off_hand", "")) == main and int(s.character["inventory"].get(main, 0)) < 2:
+		s.character["equipped"]["off_hand"] = ""
+	CharacterRules.refresh(s.character, _data, s.items)
+
+
+func _do_follow(s: GameSession, plan: Dictionary) -> void:
+	FollowRules.apply(s, plan)
+
+
+func _do_crime_known(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(CrimeRules.reveal(s, _data, str(plan["victim"])))
+
+
+func _do_crime_release(s: GameSession, _plan_of: Dictionary) -> void:
+	_extra_lines.append_array(CrimeRules.let_go(s, _data, "Стража отпускает героя — но розыск не снят"))
+
+
+func _do_note(s: GameSession, plan: Dictionary) -> void:
+	if plan.has("npc_id"):  # v0.7.15: an NPC remembers it
+		s.remember(str(plan["npc_id"]), str(plan["text"]))
+	else:
+		s.notes.append(Fact.of(s, str(plan["text"]), s.room_id))
+
+
+func _do_reputation(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(ReputationRules.add(s, _data, str(plan["reputation"]), int(plan["delta"]), str(plan["why"])))
+
+
+func _do_secret(s: GameSession, plan: Dictionary) -> void:
+	for sec: Dictionary in SocialRules.secrets(_data, str(plan["secret_npc"])):
+		if str(sec["id"]) == str(plan["secret"]):
+			SocialRules.tell(s, _data, str(plan["secret_npc"]), sec)
+	_extra_lines.append_array(QuestRules.advance(s, _data))
+
+
+func _do_goal_assess(s: GameSession, plan: Dictionary) -> void:
+	GoalRules.apply_assess(s.character, plan)
+
+
+func _do_goal_hint(s: GameSession, _plan_of: Dictionary) -> void:
+	GoalRules.apply_hint(s.character)
+
+
+func _do_quest(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(QuestRules.accept(s, _data, str(plan["quest_accept"])).slice(1))
+
+
+## A quest thing given or handed over by words takes the quest (v0.7.2) or closes its talk step.
+func _quest_thing(s: GameSession, plan: Dictionary) -> bool:
+	if plan.has("quest_accept"):
+		_do_quest(s, plan)
+	elif plan.has("quest_talk"):
+		_extra_lines.append_array(QuestRules.talk(s, _data, str(plan["quest_talk"])).slice(1))
+	return plan.has("quest_accept") or plan.has("quest_talk")
+
 
 
 static func _damage_dice(rules: Dictionary, level: int, severity: String) -> Array:
@@ -1219,7 +1508,7 @@ static func _pending_coins(pending: Array[Dictionary]) -> int:
 static func _pending_taken(pending: Array[Dictionary], id: String) -> int:
 	var sum := 0
 	for p: Dictionary in pending:
-		if p["kind"] == "take_item" and p["plan"]["item_id"] == id:
+		if p["kind"] == "move_item:hero>world" and p["plan"]["item_id"] == id:
 			sum += int(p["plan"]["qty"])
 	return sum
 
@@ -1229,10 +1518,10 @@ static func _duration(mins: int) -> String:
 
 
 
-## The place `create_place` made in this turn (pending), or {}.
+## The place `create:place` made in this turn (pending), or {}.
 static func _new_place(pending: Array[Dictionary]) -> Dictionary:
 	for p: Dictionary in pending:
-		if p["kind"] == "create_place":
+		if p["kind"] == "create:place":
 			return p["plan"]["place"]
 	return {}
 
@@ -1252,7 +1541,7 @@ static func _new_rooms(s: GameSession, data: Dictionary, pending: Array[Dictiona
 ## The made place goes first, then its person, then the rest: «new:<key>» refs need their ids.
 func _ordered(ids: Array) -> Array:
 	var rank := func(id: Variant) -> int:
-		return {"create_place": 0, "create_npc": 1}.get(str(reserves.get(str(id), {}).get("kind", "")), 2)
+		return {"create:place": 0, "create:npc": 1}.get(str(reserves.get(str(id), {}).get("kind", "")), 2)
 	var out: Array = []
 	for r: int in 3:
 		out.append_array(ids.filter(func(id: Variant) -> bool: return rank.call(id) == r))

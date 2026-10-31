@@ -107,7 +107,7 @@ static func resolve(pending: Array[Dictionary], value: String) -> String:
 	var of := value.get_slice(":", 1) if value.begins_with("new:book:") or value.begins_with("new:scroll:") else ""
 	var key := value.trim_prefix("new:%s:" % of) if not of.is_empty() else value.trim_prefix("new:")
 	for p: Dictionary in pending:
-		if p["kind"] in ["make", "recipe"] and str(p["plan"].get("key", "")) == key:
+		if p["kind"] in ["make", "create:recipe"] and str(p["plan"].get("key", "")) == key:
 			if of.is_empty():
 				return str(p["plan"]["id"])
 			return str(p["plan"][of]["id"]) if p["plan"].has(of) else value

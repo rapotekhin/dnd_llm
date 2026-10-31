@@ -158,7 +158,7 @@ func test_a_spell_of_a_book_is_learned_by_reading() -> void:
 	var plan := MakeRules.plan(s, data, e)
 	MakeRules.apply(s, data, plan["plan"])
 	var pending: Array[Dictionary] = [{"kind": "make", "plan": plan["plan"]}]
-	var given := engine._plan(s, data, "t", {"kind": "give_item", "item_id": "new:book:frost", "qty": 1, "reason": "нашёл"}, pending)
+	var given := engine._plan(s, data, "t", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "new:book:frost", "qty": 1, "reason": "нашёл"}, pending)
 	assert_bool(given.has("plan")).override_failure_message(str(given)).is_true()
 	s.character["inventory"][str(plan["plan"]["book"]["id"])] = 1
 	var course := StudyRules.books(s, data)[0]
@@ -212,7 +212,7 @@ func test_a_quest_reward_can_be_its_scroll() -> void:
 	var pending: Array[Dictionary] = [{"kind": "make", "plan": plan}]
 	var engine := EffectEngine.new()
 	assert_str(str(engine._made_ids({"reward_item_id": "new:scroll:frost"}, pending)["reward_item_id"])).is_equal(str(plan["scroll"]["id"]))
-	var missing := engine._plan(s, data, "t", {"kind": "give_item", "item_id": "new:scroll:nope", "qty": 1}, pending)
+	var missing := engine._plan(s, data, "t", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "new:scroll:nope", "qty": 1}, pending)
 	assert_str(str(missing.get("reason", ""))).contains("сначала эффект make")
 
 
@@ -370,7 +370,7 @@ func _smith() -> GameSession:
 
 
 func _recipe() -> Dictionary:
-	return {"kind": "recipe", "key": "bell", "name": "Колокольчик от мавок", "tool": "smiths_tools", "station": "forge", "hours": 1, "dc_tier": "very_easy",
+	return {"kind": "create", "what": "recipe", "key": "bell", "name": "Колокольчик от мавок", "tool": "smiths_tools", "station": "forge", "hours": 1, "dc_tier": "very_easy",
 		"materials": [{"item_id": "iron_bar", "qty": 1}], "output": {"name": "Колокольчик от мавок", "item_type": "gear", "rarity": "common", "value_cp": 60,
 			"weight": 0.5, "description": "Звенит, и мавки сторонятся."}}
 
@@ -407,10 +407,10 @@ func test_a_recipe_of_a_book_is_known_while_carried_and_goes_as_a_reward() -> vo
 	CraftRules.apply_make(s, data, plan["plan"])
 	var id := str(plan["plan"]["id"])
 	assert_bool(CraftRules.known(s, data).has(id)).is_false()
-	var pending: Array[Dictionary] = [{"kind": "recipe", "plan": plan["plan"]}]
+	var pending: Array[Dictionary] = [{"kind": "create:recipe", "plan": plan["plan"]}]
 	var book := MakeRules.resolve(pending, "new:book:bell")
 	assert_str(book).starts_with("gen_book_")
-	var given := engine._plan(s, data, "t", {"kind": "give_item", "item_id": "new:book:bell", "qty": 1, "reason": "награда"}, pending)
+	var given := engine._plan(s, data, "t", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "new:book:bell", "qty": 1, "reason": "награда"}, pending)
 	assert_bool(given.has("plan")).override_failure_message(str(given)).is_true()
 	assert_str(str(engine._made_ids({"reward_item_id": "new:book:bell"}, pending)["reward_item_id"])).is_equal(book)
 	s.character["inventory"][book] = 1
@@ -421,7 +421,7 @@ func test_a_recipe_of_a_book_is_known_while_carried_and_goes_as_a_reward() -> vo
 func test_a_recipe_course_teaches_a_thing_no_data_has() -> void:
 	var s := _smith()
 	var engine := EffectEngine.new()
-	var e := {"kind": "course", "npc_id": "npc_smith", "name": "Колокола", "teach_kind": "recipe", "teach_id": "", "lessons": 4, "fee_cp": 400, "recipe": _recipe()}
+	var e := {"kind": "create", "what": "course", "npc_id": "npc_smith", "name": "Колокола", "teach_kind": "recipe", "teach_id": "", "lessons": 4, "fee_cp": 400, "recipe": _recipe()}
 	var plan := engine._plan(s, data, "t", e, [] as Array[Dictionary])
 	assert_bool(plan.has("plan")).override_failure_message(str(plan)).is_true()
 	StudyRules.apply_make(s, data, plan["plan"])

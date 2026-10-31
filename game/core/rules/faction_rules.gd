@@ -344,8 +344,8 @@ static func card(s: GameSession, data: Dictionary, id: String, known: Array = []
 ## The master's `faction`: a new one (`create`) or the standing for a deed (`faction_id`, `delta`, `why`; once a day
 ## per faction, within rules.factions.master_max). {plan, summary} or {reason}.
 static func make(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
-	if e.get("create") is Dictionary:
-		return _plan_create(s, data, e["create"])
+	if e.get("faction") is Dictionary:
+		return _plan_create(s, data, e["faction"])
 	var id := str(e.get("faction_id", ""))
 	if not has(s, data, id):
 		return {"reason": "нет фракции %s — возьми id из списка или создай её (`create`)" % id}

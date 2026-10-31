@@ -74,7 +74,7 @@ func run() -> void:
 	await _go(gs, GATE)
 	step("the cat goes along", PropertyRules.room_of(s, cid) == GATE)
 	var fx: EffectEngine = gs.effects
-	var r := fx.validate(s, data, "pt-1", {"kind": "beast", "monster": "raven", "cause": "ворон с подбитым крылом сидит на воротах"})
+	var r := fx.validate(s, data, "pt-1", {"kind": "create", "what": "beast", "monster": "raven", "cause": "ворон с подбитым крылом сидит на воротах"})
 	if not step("the master's raven accepted", bool(r["accepted"]), str(r.get("summary", r.get("reason", "")))):
 		return
 	fx.apply(s, "pt-1", [r["effect_id"]])

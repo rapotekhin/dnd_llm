@@ -144,15 +144,15 @@ func test_a_dead_wolf_leaves_a_hide() -> void:
 func test_the_master_makes_a_recipe_the_hero_learns() -> void:
 	var s := _smith()
 	var engine := EffectEngine.new()
-	var bad := engine.validate(s, data, "t-1", {"kind": "recipe", "tool": "weavers_tools", "hours": 2, "dc_tier": "easy",
+	var bad := engine.validate(s, data, "t-1", {"kind": "create", "what": "recipe", "tool": "weavers_tools", "hours": 2, "dc_tier": "easy",
 		"materials": [{"item_id": "rope", "qty": 1}], "output_id": "hunting_trap"})
 	assert_bool(bool(bad["accepted"])).is_false()
 	assert_str(str(bad["reason"])).contains("не владеет")
-	var dear := engine.validate(s, data, "t-1", {"kind": "recipe", "tool": "smiths_tools", "hours": 1, "dc_tier": "easy",
+	var dear := engine.validate(s, data, "t-1", {"kind": "create", "what": "recipe", "tool": "smiths_tools", "hours": 1, "dc_tier": "easy",
 		"materials": [{"item_id": "iron_bar", "qty": 1}], "output_id": "chain_shirt"})
 	assert_str(str(dear.get("summary", ""))).contains("ч")  # v0.7.39.4: a dear thing takes the hours its value asks
 	assert_bool(bool(dear["accepted"])).is_true()
-	var r := engine.validate(s, data, "t-1", {"kind": "recipe", "tool": "smiths_tools", "station": "forge", "hours": 2, "dc_tier": "medium",
+	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "recipe", "tool": "smiths_tools", "station": "forge", "hours": 2, "dc_tier": "medium",
 		"materials": [{"item_id": "iron_bar", "qty": 1}], "output": {"name": "Железный силок", "item_type": "gear", "rarity": "common", "value_cp": 60,
 		"description": "Петля из кованой проволоки на мелкого зверя."}})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()

@@ -62,7 +62,7 @@ func test_hello_gives_models() -> void:
 
 
 func test_turn_applies_the_reserved_effect() -> void:
-	_script({"kind": "give_item", "item_id": "torch", "qty": 1}, func(m: MockBackend, turn: Dictionary, validated: Dictionary) -> void:
+	_script({"kind": "move_item", "source": "world", "target": "hero", "item_id": "torch", "qty": 1}, func(m: MockBackend, turn: Dictionary, validated: Dictionary) -> void:
 		m.reply(turn, {"turn_id": turn["params"]["turn_id"], "narration": "Ты берёшь факел.", "options": ["Зажечь"],
 			"effect_ids": [validated["effect_id"]], "check_ids": [], "usage": {"model": "mock/model"}}))
 	assert_bool(GameState.submit("беру факел со стены")).is_true()

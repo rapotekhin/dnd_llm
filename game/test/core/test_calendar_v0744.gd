@@ -110,13 +110,13 @@ func test_the_panel_and_the_master_see_the_nearest_festivals() -> void:
 func test_the_master_puts_a_feast_of_its_own_on_the_calendar() -> void:
 	var s := _session(2)
 	var fx := EffectEngine.new()
-	var r := fx.validate(s, data, "t1", {"kind": "festival", "name": "Свадьба кузнеца", "cause": "Дрогин женится на дочери мельника",
+	var r := fx.validate(s, data, "t1", {"kind": "create", "what": "festival", "name": "Свадьба кузнеца", "cause": "Дрогин женится на дочери мельника",
 		"starts_in": 2, "days": 1, "buy_pct": 80, "tags": ["food"]})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t1", [r["effect_id"]])
 	assert_str(" ".join(CalendarRules.snapshot(s, data, data["world"]))).contains("Свадьба кузнеца")
-	assert_bool(bool(fx.validate(s, data, "t2", {"kind": "festival", "name": "Ещё пир", "cause": "староста хочет праздника", "starts_in": 1})["accepted"])).is_false()
-	assert_bool(bool(fx.validate(s, data, "t3", {"kind": "festival", "name": "Долгий пир", "cause": "вернулся караван с юга", "days": 9})["accepted"])).is_false()
+	assert_bool(bool(fx.validate(s, data, "t2", {"kind": "create", "what": "festival", "name": "Ещё пир", "cause": "староста хочет праздника", "starts_in": 1})["accepted"])).is_false()
+	assert_bool(bool(fx.validate(s, data, "t3", {"kind": "create", "what": "festival", "name": "Долгий пир", "cause": "вернулся караван с юга", "days": 9})["accepted"])).is_false()
 	s.day = 4
 	CalendarRules.sync(s, data["world"])
 	assert_array(CalendarRules.active(s, data["world"])).contains(["made_1"])

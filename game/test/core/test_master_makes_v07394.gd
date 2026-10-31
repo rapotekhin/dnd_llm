@@ -69,13 +69,13 @@ func test_the_master_puts_a_missing_thing_on_the_shelf() -> void:
 	var s := _smith()
 	assert_int(int(TradeRules.merchant(s, data, "npc_smith")["stock"].get("greataxe", 0))).is_equal(0)
 	var fx := EffectEngine.new()
-	var r := fx.validate(s, data, "t-1", {"kind": "stock", "npc_id": "npc_smith", "item_id": "greataxe", "qty": 1})
+	var r := fx.validate(s, data, "t-1", {"kind": "create", "what": "stock", "npc_id": "npc_smith", "item_id": "greataxe", "qty": 1})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t-1", [r["effect_id"]])
 	assert_int(int(TradeRules.merchant(s, data, "npc_smith")["stock"].get("greataxe", 0))).is_equal(1)
-	var again := fx.validate(s, data, "t-2", {"kind": "stock", "npc_id": "npc_smith", "item_id": "greataxe"})
+	var again := fx.validate(s, data, "t-2", {"kind": "create", "what": "stock", "npc_id": "npc_smith", "item_id": "greataxe"})
 	assert_bool(bool(again["accepted"])).is_false()
-	var far := fx.validate(s, data, "t-3", {"kind": "stock", "npc_id": "npc_herbalist", "item_id": "herbs"})
+	var far := fx.validate(s, data, "t-3", {"kind": "create", "what": "stock", "npc_id": "npc_herbalist", "item_id": "herbs"})
 	assert_bool(bool(far["accepted"])).is_false()
 
 

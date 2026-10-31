@@ -16,7 +16,7 @@ func before_test() -> void:
 
 func _root_act(skill: Variant) -> Dictionary:
 	fx.searched_quests["t-1"] = true
-	var r := fx.validate(s, data, "t-1", {"kind": "create_quest", "giver": "npc_innkeeper", "title": "Корень", "difficulty": "easy",
+	var r := fx.validate(s, data, "t-1", {"kind": "create", "what": "quest", "giver": "npc_innkeeper", "title": "Корень", "difficulty": "easy",
 		"acts": [{"title": "Корень", "goal": "Достать белый корень"}]})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t-1", [r["effect_id"]])
@@ -59,13 +59,13 @@ func test_a_wrong_skill_for_the_thing_is_refused() -> void:
 func test_the_hidden_thing_is_not_given_by_words_until_found() -> void:
 	var qid := _root_quest(null)
 	s.room_id = "brod-tavern-cellar"
-	var r := fx.validate(s, data, "t-2", {"kind": "give_item", "item_id": "lute"})
+	var r := fx.validate(s, data, "t-2", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "lute"})
 	assert_bool(bool(r["accepted"])).is_false()
 	assert_str(str(r["reason"])).contains("request_check perception")
 	s.room_id = "brod-tavern-hall"
-	assert_str(str(fx.validate(s, data, "t-3", {"kind": "give_item", "item_id": "lute"})["reason"])).contains("спрятана в")
+	assert_str(str(fx.validate(s, data, "t-3", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "lute"})["reason"])).contains("спрятана в")
 	Knows.add(s, Knows.SECRET, "brod-tavern-cellar", "q_" + qid)  # found: the hiding place no longer holds it back
-	assert_str(str(fx.validate(s, data, "t-4", {"kind": "give_item", "item_id": "lute"}).get("reason", ""))).not_contains("спрятан")
+	assert_str(str(fx.validate(s, data, "t-4", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "lute"}).get("reason", ""))).not_contains("спрятан")
 
 
 func test_every_tool_of_the_catalog_is_sold_somewhere() -> void:

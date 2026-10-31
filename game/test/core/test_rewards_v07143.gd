@@ -31,7 +31,7 @@ func test_the_master_gives_within_the_budget_until_the_long_rest() -> void:
 	var r := _give(s, "t-2", {"kind": "coins", "delta_cp": 1500, "reason": "ещё"})
 	assert_bool(bool(r["accepted"])).is_false()
 	assert_str(str(r["reason"])).contains("бюджет наград").contains("10 зм")
-	assert_bool(bool(_give(s, "t-3", {"kind": "give_item", "item_id": "healing_potion", "qty": 1, "reason": "дар"})["accepted"])).is_false()
+	assert_bool(bool(_give(s, "t-3", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "healing_potion", "qty": 1, "reason": "дар"})["accepted"])).is_false()
 	assert_bool(bool(_give(s, "t-4", {"kind": "coins", "delta_cp": -500, "reason": "плата"})["accepted"])).is_true()  # paying is no gift
 	ExplorationRules.long_rest(s, data, {"forage": 1})
 	assert_int(s.reward_spent).is_equal(0)

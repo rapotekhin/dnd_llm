@@ -55,13 +55,13 @@ func test_the_engine_counts_quests_and_crimes() -> void:
 func test_the_master_marks_a_deed_once_a_turn_in_a_settlement() -> void:
 	var s := _hero("brod-square")
 	var fx := EffectEngine.new()
-	var r := fx.validate(s, data, "t-1", {"kind": "reputation", "delta": 3, "reason": "вытащил ребёнка из горящего сарая на глазах у всей площади"})
+	var r := fx.validate(s, data, "t-1", {"kind": "shift", "what": "reputation", "delta": 3, "reason": "вытащил ребёнка из горящего сарая на глазах у всей площади"})
 	assert_bool(bool(r["accepted"])).is_true()
-	assert_str(str(fx.validate(s, data, "t-1", {"kind": "reputation", "delta": 1, "reason": "и ещё помог"})["reason"])).contains("раза за ход")
+	assert_str(str(fx.validate(s, data, "t-1", {"kind": "shift", "what": "reputation", "delta": 1, "reason": "и ещё помог"})["reason"])).contains("раза за ход")
 	fx.apply(s, "t-1", [r["effect_id"]])
 	assert_int(ReputationRules.points(s, "brod")).is_equal(3)
 	s.room_id = "pushcha-glade"
-	assert_str(str(fx.validate(s, data, "t-2", {"kind": "reputation", "delta": 1, "reason": "помог отшельнику"})["reason"])).contains("не поселение")
+	assert_str(str(fx.validate(s, data, "t-2", {"kind": "shift", "what": "reputation", "delta": 1, "reason": "помог отшельнику"})["reason"])).contains("не поселение")
 
 
 func test_the_reputation_survives_the_save() -> void:

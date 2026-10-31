@@ -106,15 +106,15 @@ func test_breaking_into_a_closed_site_before_eyes_is_a_trespass() -> void:
 func test_the_master_door_effect_by_checks() -> void:
 	var s := _hero("brod-tavern-kitchen")
 	var eng := EffectEngine.new()
-	var no := eng.validate(s, data, "t1", {"kind": "door", "to_room": "brod-tavern-cellar", "action": "break"})
+	var no := eng.validate(s, data, "t1", {"kind": "open", "what": "door", "to_room": "brod-tavern-cellar", "action": "break"})
 	assert_bool(bool(no["accepted"])).is_false()
 	assert_str(str(no["reason"])).contains("athletics")
-	var nowhere := eng.validate(s, data, "t1", {"kind": "door", "to_room": "brod-tavern-hall", "action": "unlock"})
+	var nowhere := eng.validate(s, data, "t1", {"kind": "open", "what": "door", "to_room": "brod-tavern-hall", "action": "unlock"})
 	assert_str(str(nowhere["reason"])).contains("нет двери")
-	var alone := eng.validate(s, data, "t1", {"kind": "door", "to_room": "brod-tavern-cellar", "action": "unlock"})
+	var alone := eng.validate(s, data, "t1", {"kind": "open", "what": "door", "to_room": "brod-tavern-cellar", "action": "unlock"})
 	assert_bool(bool(alone["accepted"])).is_false()  # the innkeeper is in the hall, not here or in the cellar
 	Being.of(s, "npc_innkeeper")["at"] = "brod-tavern-kitchen"
-	var ok := eng.validate(s, data, "t1", {"kind": "door", "to_room": "brod-tavern-cellar", "action": "unlock"})
+	var ok := eng.validate(s, data, "t1", {"kind": "open", "what": "door", "to_room": "brod-tavern-cellar", "action": "unlock"})
 	assert_bool(bool(ok["accepted"])).is_true()
 
 

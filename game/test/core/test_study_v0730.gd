@@ -138,9 +138,9 @@ func test_a_diploma_opens_the_scribes_job() -> void:
 func test_the_master_makes_a_course() -> void:
 	var s := _hero("brod-smithy")
 	var engine := EffectEngine.new()
-	var xp := engine.validate(s, data, "t-1", {"kind": "course", "npc_id": "npc_smith", "teach_kind": "xp", "name": "Кузнечное дело", "lessons": 4, "fee_cp": 400})
+	var xp := engine.validate(s, data, "t-1", {"kind": "create", "what": "course", "npc_id": "npc_smith", "teach_kind": "xp", "name": "Кузнечное дело", "lessons": 4, "fee_cp": 400})
 	assert_bool(bool(xp["accepted"])).is_false()
-	var r := engine.validate(s, data, "t-1", {"kind": "course", "npc_id": "npc_smith", "teach_kind": "tool", "teach_id": "smiths_tools",
+	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "course", "npc_id": "npc_smith", "teach_kind": "tool", "teach_id": "smiths_tools",
 		"name": "Кузнечное дело", "lessons": 4, "fee_cp": 400, "skill": "athletics"})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()
 	engine.apply(s, "t-1", [r["effect_id"]])

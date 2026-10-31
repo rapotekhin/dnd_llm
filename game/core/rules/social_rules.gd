@@ -77,7 +77,7 @@ static func _willing(s: GameSession, data: Dictionary, npc_id: String, min_attit
 		data["world"]["npcs"].get(npc_id, {}).get("name", npc_id), min_attitude]
 
 
-## The plan of npc_discount: {plan, summary} or {reason}. `won` — a social check against this NPC succeeded this turn.
+## The plan of grant:discount: {plan, summary} or {reason}. `won` — a social check against this NPC succeeded this turn.
 static func plan_discount(s: GameSession, data: Dictionary, npc_id: String, pct: int, won: bool) -> Dictionary:
 	var c: Dictionary = cfg(data)["discount"]
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
@@ -101,7 +101,7 @@ static func grant_discount(s: GameSession, data: Dictionary, plan: Dictionary) -
 	s.remember(npc_id, "дал%s герою скидку %d%% до дня %d" % [CrimeRules._ending(data, npc_id), int(plan["pct"]), int(plan["until_day"])])
 
 
-## The plan of npc_favor: one of the NPC's services for free. {plan, summary} or {reason}.
+## The plan of grant:favor: one of the NPC's services for free. {plan, summary} or {reason}.
 static func plan_favor(s: GameSession, data: Dictionary, npc_id: String, service: String, item: String, won: bool) -> Dictionary:
 	var c: Dictionary = cfg(data)["favor"]
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
@@ -204,7 +204,7 @@ static func reveal_by_check(s: GameSession, data: Dictionary, npc_id: String, sk
 	return out
 
 
-## The plan of reveal_secret (the NPC tells it by goodwill): {plan, summary} or {reason}.
+## The plan of grant:secret (the NPC tells it by goodwill): {plan, summary} or {reason}.
 static func plan_secret(s: GameSession, data: Dictionary, npc_id: String, secret_id: String) -> Dictionary:
 	var name := str(data["world"]["npcs"].get(npc_id, {}).get("name", npc_id))
 	for sec: Dictionary in secrets(data, npc_id):

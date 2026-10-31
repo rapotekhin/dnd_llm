@@ -22,7 +22,7 @@ func run() -> void:
 	s.minute = 12 * 60  # everyone at work
 	var fx: EffectEngine = gs.effects
 	fx.searched_quests["t-pq"] = true
-	var r := fx.validate(s, data, "t-pq", {"kind": "create_quest", "giver": "npc_innkeeper", "title": "Должок служанки",
+	var r := fx.validate(s, data, "t-pq", {"kind": "create", "what": "quest", "giver": "npc_innkeeper", "title": "Должок служанки",
 		"difficulty": "easy", "description": "Бруно просит узнать у Миры, куда делись два бочонка.",
 		"offer_text": "Спроси Миру про бочонки — она что-то темнит.",
 		"acts": [{"title": "Бочонки", "goal": "Выяснить, куда делись два бочонка"}]})
@@ -88,7 +88,7 @@ func run() -> void:
 	step("a board never read says so", bbtn != null and bbtn.text.contains("не осмотрена"), bbtn.text if bbtn else "")
 	QuestGen.mark_board_read(s, board)
 	fx.searched_quests["t-pb2"] = true
-	var o := fx.validate(s, data, "t-pb2", {"kind": "create_quest", "giver": "npc_smith", "board_prop_id": board,
+	var o := fx.validate(s, data, "t-pb2", {"kind": "create", "what": "quest", "giver": "npc_smith", "board_prop_id": board,
 		"title": "Уголь для кузни", "difficulty": "easy", "acts": [{"title": "Угольщик", "goal": "Найти угольщика и привезти уголь"}]})
 	if not step("the board order is accepted", bool(o["accepted"]), str(o)):
 		return
@@ -120,7 +120,7 @@ func run() -> void:
 		await frames(2)
 	# the hero's own deed: taken at once
 	fx.searched_quests["t-po"] = true
-	var d := fx.validate(s, data, "t-po", {"kind": "create_quest", "own": true, "title": "Кто травит колодцы", "difficulty": "medium",
+	var d := fx.validate(s, data, "t-po", {"kind": "create", "what": "quest", "own": true, "title": "Кто травит колодцы", "difficulty": "medium",
 		"acts": [{"title": "Колодцы", "goal": "Осмотреть колодцы и найти, кто их травит"}]})
 	if step("the own deed is accepted", bool(d["accepted"]), str(d)):
 		fx.apply(s, "t-po", [d["effect_id"]])

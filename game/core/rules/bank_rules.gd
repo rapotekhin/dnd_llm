@@ -460,13 +460,13 @@ static func text(s: GameSession, data: Dictionary) -> String:
 	return "Банк (окно «Банк» у менялы — вклады, кредит, ячейка — кнопки): " + "; ".join(parts)
 
 
-## The master's lender (effect `bank`): a scene NPC (or "new" — create_npc of this turn) takes deposits, lends against
+## The master's lender (effect `bank`): a scene NPC (or "new" — create:npc of this turn) takes deposits, lends against
 ## a collateral or keeps a vault, within rules.bank.make. {plan, summary} or {reason}.
 static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
 	var m: Dictionary = cfg(data)["make"]
 	var who := str(spec.get("npc_id", ""))
 	if who != "new" and not _present(s, data, who):
-		return {"reason": "%s не в сцене — банком становится только тот, кто здесь (или «new» — человек create_npc этого хода)" % who}
+		return {"reason": "%s не в сцене — банком становится только тот, кто здесь (или «new» — человек create:npc этого хода)" % who}
 	if who != "new" and is_bank(s, data, who):
 		return {"reason": "%s уже банк — окно «Банк» в его действиях" % npc_name(data, who)}
 	var services: Array = []

@@ -70,7 +70,7 @@ static func find_npcs(s: GameSession, data: Dictionary, query: String) -> Array[
 	return out
 
 
-## Checks a `create_npc`: {plan, summary} or {reason}. `spec` — the schema of a pack NPC (NewNpc of the protocol).
+## Checks a `create:npc`: {plan, summary} or {reason}. `spec` — the schema of a pack NPC (NewNpc of the protocol).
 ## `new_rooms` — {key: location id} of the place made in this turn: `room_id` «new:<key>» puts the person there.
 ## `any_loc` (v0.7.39.6) — a person of a quest's act may live in any known place, not only in the hero's location.
 static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searched: bool, new_rooms: Dictionary = {}, any_loc: bool = false) -> Dictionary:
@@ -293,7 +293,7 @@ static func find_places(s: GameSession, data: Dictionary, query: String) -> Arra
 	return out
 
 
-## Checks a `create_place`: one room or a small place (rules.world_gen.max_rooms) on an open edge of this room, by the
+## Checks a `create:place`: one room or a small place (rules.world_gen.max_rooms) on an open edge of this room, by the
 ## pack's schema of a room. {plan, summary} or {reason}.
 static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searched: bool) -> Dictionary:
 	var c := cfg(data)
@@ -423,7 +423,7 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		return {"reason": "людей места — не больше %d за ход" % int(c["place_npcs_max"])}
 	for n: Variant in specs:
 		if not (n is Dictionary):
-			return {"reason": "человек места — объект схемы create_npc с key"}
+			return {"reason": "человек места — объект схемы create:npc с key"}
 		var nk := str(n.get("key", ""))
 		if nk.is_empty() or npc_keys.has(nk) or keys.has(nk):
 			return {"reason": "у каждого человека места свой key, не как у комнат"}
@@ -481,7 +481,7 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 
 
 ## A site of a spec (NewSite): {name, description, tags, public, owner?} | {reason}. The owner — an NPC of the world,
-## «new» (create_npc of this turn) or «new:<key>» of the place's people.
+## «new» (create:npc of this turn) or «new:<key>» of the place's people.
 static func _site_of(data: Dictionary, st: Dictionary, npc_keys: Array) -> Dictionary:
 	var site := {"name": str(st.get("name", "")).strip_edges().left(60), "description": str(st.get("description", "")).left(400),
 		"tags": (st.get("tags", []) as Array).slice(0, 4).map(func(x: Variant) -> String: return str(x).left(24)),
@@ -492,7 +492,7 @@ static func _site_of(data: Dictionary, st: Dictionary, npc_keys: Array) -> Dicti
 			if not npc_keys.has(owner.trim_prefix("new:")):
 				return {"reason": "хозяин объекта %s — нет такого человека в npcs места" % owner}
 		elif owner != "new" and not data["world"]["npcs"].has(owner):
-			return {"reason": "хозяин объекта %s — не человек мира: id из find_npcs, «new:<key>» человека места или «new» — create_npc этого хода" % owner}
+			return {"reason": "хозяин объекта %s — не человек мира: id из find_npcs, «new:<key>» человека места или «new» — create:npc этого хода" % owner}
 		site["owner"] = owner  # "new" / "new:<key>": linked on apply
 	return _object_of(data, st, npc_keys, site)
 

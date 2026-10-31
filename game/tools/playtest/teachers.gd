@@ -28,7 +28,7 @@ func run() -> void:
 
 	step("nobody of the pack teaches Fireball", TeachRules.find(s, data, "spell", "fireball").is_empty())
 	fx.searched_quests["t-q"] = true
-	var r := fx.validate(s, data, "t-q", {"kind": "create_quest", "own": true, "title": "Учитель огня", "difficulty": "easy",
+	var r := fx.validate(s, data, "t-q", {"kind": "create", "what": "quest", "own": true, "title": "Учитель огня", "difficulty": "easy",
 		"description": "Найти волшебника, что учит «Огненному шару».", "acts": [{"title": "Поиски чародея", "goal": "Найти чародея на мельнице"}]})
 	if not step("the own deed to find the teacher", bool(r["accepted"]), str(r.get("summary", r.get("reason", "")))):
 		return

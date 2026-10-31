@@ -1058,7 +1058,7 @@ func take_prop(prop_id: String) -> String:
 	_log("Игрок: " + text)
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
-	_request("action", text + " [движок уже применил: %s — эффект take_prop не нужен; опиши коротко]" % ", ".join(lines))
+	_request("action", text + " [движок уже применил: %s — эффект move_item:room>hero не нужен; опиши коротко]" % ", ".join(lines))
 	return ""
 
 
@@ -2680,8 +2680,8 @@ func read_board(prop_id: String) -> String:
 	var text := tr("BOARD_READ_SAY").format({"name": p.get("name", prop_id)})
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
-	_request("action", text + (" [движок: на «%s» [%s] есть место для новых заказов — повесь 1–%d настоящих заказа: сначала find_quests, потом create_quest с board_prop_id %s " +
-		"и заказчиком из этой округи — живым человеком из find_npcs или новым в new_npcs самого create_quest (giver new:<key>), без отдельного create_npc; " +
+	_request("action", text + (" [движок: на «%s» [%s] есть место для новых заказов — повесь 1–%d настоящих заказа: сначала find_quests, потом create:quest с board_prop_id %s " +
+		"и заказчиком из этой округи — живым человеком из find_npcs или новым в new_npcs самого create:quest (giver new:<key>), без отдельного create:npc; " +
 		"каждый заказ — каркас: сложность (лучше разная: простое, среднее, сложное) и акты с целями, без шагов; " +
 		"что написано в листках — это и есть эти задания, игрок возьмёт их кнопкой]") % [p.get("name", prop_id), prop_id, room_left, prop_id])
 	return ""

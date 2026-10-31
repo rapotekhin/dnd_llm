@@ -35,7 +35,7 @@ from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER, PINNED
 from .agents import (RETRY_MAX_TOKENS, TurnContext, build_designer_agent, build_turn_agent, is_entry, is_quest_act, settings_for,
                      system_prompt_for, turn_user_prompt)
-from .protocol import TurnRequestParams
+from .protocol import TurnRequestParams, effect_tag
 
 SCENARIOS = REPO_ROOT / "evals" / "golden" / "scenarios.yaml"
 OUT_DIR = REPO_ROOT / "build" / "evals"
@@ -194,7 +194,7 @@ class MockEngine:
                     "note": c.get("note", ""), "revealed": list(c.get("revealed") or []), "rolled_as": c.get("rolled_as", "")}
         if method == "engine.validate":
             rule = self.engine.get("validate", "accept")
-            kind = p["effect"]["kind"]
+            kind = effect_tag(p["effect"])
             summary = kind
             if isinstance(rule, list):
                 for r in rule:
@@ -257,7 +257,7 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
     fails: list[str] = []
     checks = engine.checks()
     effects = engine.effects()
-    kinds = [e["kind"] for e in effects]
+    kinds = [effect_tag(e) for e in effects]
     narration = out.get("narration", "")
 
     c = expect.get("check", {})
@@ -356,7 +356,7 @@ def check_expect(expect: dict[str, Any], out: dict[str, Any], engine: MockEngine
             if re.search(pattern, opt, re.IGNORECASE):
                 fails.append(f"вариант «{opt}» похож на /{pattern}/")
 
-    created = any(x["kind"] == "give_item" and x.get("item") for x in effects)
+    created = any(x["kind"] == "move_item" and x.get("item") for x in effects)
     for t in expect.get("tools_required", []):
         if t not in tools:
             fails.append(f"не вызван {t}")

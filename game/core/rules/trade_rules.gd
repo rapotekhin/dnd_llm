@@ -652,7 +652,7 @@ static func make_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Di
 	if not s.npcs_here(data["world"], s.room_id).has(who) or Being.dead(s, who):
 		return {"reason": "%s не в сцене — товар кладут только торговцу, который здесь" % who}
 	if not world.is_trader(who):
-		return {"reason": "%s не торговец — продаёт только торговец (create_npc с trader)" % who}
+		return {"reason": "%s не торговец — продаёт только торговец (create:npc с trader)" % who}
 	var shelf := merchant(s, data, who)
 	if int(shelf.get("master_day", -1)) == s.day and int(shelf.get("master_today", 0)) >= int(m["per_day"]):
 		return {"reason": "сегодня у %s уже %d новых товаров — завтра" % [world.npc(who).get("name", who), int(m["per_day"])]}

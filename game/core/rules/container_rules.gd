@@ -5,7 +5,7 @@ extends RefCounted
 ## holding — or furniture — a cabinet, a crate) gives the capacity by 5e and whether it locks. A thing of a room
 ## (s.props) with `container` keeps `contents` {item_id: qty}, `owner`, `locked`, `lock_dc` and `key` (an item that
 ## opens it). The master fills it when it furnishes the room (what nobody owns — out of the reward budget at once);
-## the hero takes and puts by the window or by words (`take_from`, `put_in`); taking from someone else's container
+## the hero takes and puts by the window or by words (`move_item:container>hero`, `move_item:hero>container`); taking from someone else's container
 ## before its owner is a theft (TheftRules.react). Locked — a key, thieves' tools (Sleight of Hand) or force
 ## (Athletics, it breaks) against `lock_dc`.
 ## Carried (v0.7.18.2): a container item in the hero's pack is a bag — c["bags"] {bag_id: {kind, contents}}, one per

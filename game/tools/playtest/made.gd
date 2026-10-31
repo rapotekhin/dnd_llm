@@ -43,7 +43,7 @@ func run() -> void:
 	await shot("status")
 
 	var skill := fx.validate(s, data, "m-2", {"kind": "make", "what": "skill", "key": "foam", "name": "Чтение пены", "text": "Угадывать погоду по пиву.", "ability": "wis"})
-	var course := fx.validate(s, data, "m-2", {"kind": "course", "npc_id": "npc_innkeeper", "name": "Чтение пены", "teach_kind": "skill",
+	var course := fx.validate(s, data, "m-2", {"kind": "create", "what": "course", "npc_id": "npc_innkeeper", "name": "Чтение пены", "teach_kind": "skill",
 		"teach_id": "new:foam", "lessons": 4, "fee_cp": 400})
 	if not step("a skill and its course in one turn", bool(skill["accepted"]) and bool(course["accepted"]), str(course.get("summary", course.get("reason", "")))):
 		return
@@ -75,7 +75,7 @@ func run() -> void:
 
 	var made_trait := fx.validate(s, data, "m-3", {"kind": "make", "what": "trait", "key": "stride", "name": "Волчий шаг", "text": "Ноги несут быстрее.",
 		"parts": [{"part": "speed", "amount": 10}], "book": "Записки ходока"})
-	var book := fx.validate(s, data, "m-3", {"kind": "give_item", "item_id": "new:book:stride", "qty": 1, "reason": "наследство ходока"})
+	var book := fx.validate(s, data, "m-3", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "new:book:stride", "qty": 1, "reason": "наследство ходока"})
 	if not step("a trait and its book in one turn", bool(made_trait["accepted"]) and bool(book["accepted"]), str(book.get("summary", book.get("reason", "")))):
 		return
 	var speed := CharacterRules.speed(c, data)

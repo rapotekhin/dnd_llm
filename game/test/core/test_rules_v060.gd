@@ -131,14 +131,14 @@ func test_effects_cast_condition_use_feature_and_item() -> void:
 	assert_bool(fx.validate(s, data, "t-3", {"kind": "condition", "condition": "drunk"})["accepted"]).is_false()
 	s.character["inventory"]["healing_potion"] = 1
 	s.character["hp"] = 1
-	var use := fx.validate(s, data, "t-4", {"kind": "use_item", "item_id": "healing_potion"})
-	assert_bool(fx.validate(s, data, "t-4", {"kind": "use_item", "item_id": "healing_potion"})["accepted"]).is_false()
+	var use := fx.validate(s, data, "t-4", {"kind": "use", "what": "item", "item_id": "healing_potion"})
+	assert_bool(fx.validate(s, data, "t-4", {"kind": "use", "what": "item", "item_id": "healing_potion"})["accepted"]).is_false()
 	fx.apply(s, "t-4", [use["effect_id"]])
 	assert_int(s.character["hp"]).is_greater_equal(5)
 	assert_bool(s.character["inventory"].has("healing_potion")).is_false()
-	assert_bool(fx.validate(s, data, "t-5", {"kind": "use_item", "item_id": "rope"})["accepted"]).is_false()
-	assert_bool(fx.validate(s, data, "t-5", {"kind": "use_feature", "feature": "Ярость"})["accepted"]).is_false()
-	var ar := fx.validate(s, data, "t-6", {"kind": "use_feature", "feature": "arcane_recovery"})
+	assert_bool(fx.validate(s, data, "t-5", {"kind": "use", "what": "item", "item_id": "rope"})["accepted"]).is_false()
+	assert_bool(fx.validate(s, data, "t-5", {"kind": "use", "what": "feature", "feature": "Ярость"})["accepted"]).is_false()
+	var ar := fx.validate(s, data, "t-6", {"kind": "use", "what": "feature", "feature": "arcane_recovery"})
 	assert_bool(ar["accepted"]).is_true()
 
 
@@ -147,10 +147,10 @@ func test_trader_goods_are_bought_only_in_trade() -> void:
 	var fx := EffectEngine.new()
 	s.mode = GameSession.MODE_SOCIAL
 	s.npc_id = TestUtils.INNKEEPER
-	assert_str(str(fx.validate(s, data, "t-1", {"kind": "give_item", "item_id": "ale"}).get("reason", ""))).contains("торговл")
+	assert_str(str(fx.validate(s, data, "t-1", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "ale"}).get("reason", ""))).contains("торговл")
 	assert_bool(fx.validate(s, data, "t-1", {"kind": "coins", "delta_cp": -10})["accepted"]).is_true()  # a tip or a bribe
 	s.npc_id = TestUtils.SERVING
-	assert_bool(fx.validate(s, data, "t-2", {"kind": "give_item", "item_id": "ale"})["accepted"]).is_true()
+	assert_bool(fx.validate(s, data, "t-2", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "ale"})["accepted"]).is_true()
 
 
 func test_zero_hp_outside_combat_is_a_knock_out() -> void:

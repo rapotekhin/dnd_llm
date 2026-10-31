@@ -109,12 +109,12 @@ func test_the_guard_leads_the_hero_to_the_captain() -> void:
 	assert_bool(bool(_do(s, {"kind": "move", "room_id": "pushcha-edge"}, "t-2")["accepted"])).is_false()  # not out of Brod
 	var snap := CrimeRules.snapshot(s, data)
 	assert_bool(snap.has("escort_to")).is_true()
-	r = _do(s, {"kind": "crime_release"}, "t-3")
+	r = _do(s, {"kind": "crime", "what": "release"}, "t-3")
 	assert_str(str(r["reason"])).contains("проверки")
 	fx.note_check("t-4", "hard", true)
-	assert_bool(bool(_do(s, {"kind": "crime_release"}, "t-4")["accepted"])).is_false()  # below the talk tier (very_hard)
+	assert_bool(bool(_do(s, {"kind": "crime", "what": "release"}, "t-4")["accepted"])).is_false()  # below the talk tier (very_hard)
 	fx.note_check("t-5", "very_hard", true)
-	assert_bool(bool(_do(s, {"kind": "crime_release"}, "t-5")["accepted"])).is_true()
+	assert_bool(bool(_do(s, {"kind": "crime", "what": "release"}, "t-5")["accepted"])).is_true()
 	assert_bool(CrimeRules.held(s)).is_false()
 	assert_bool(s.wanted.has("brod")).is_true()
 
@@ -141,15 +141,15 @@ func test_magic_without_mechanics_is_refused() -> void:
 func test_a_magic_find_needs_a_check_and_one_a_rest() -> void:
 	var s := _hero("brod-temple")
 	s.character["level"] = 4
-	var r := _do(s, {"kind": "give_item", "item_id": "goggles_of_night"})
+	var r := _do(s, {"kind": "move_item", "source": "world", "target": "hero", "item_id": "goggles_of_night"})
 	assert_str(str(r["reason"])).contains("пройденной проверкой")
 	fx.note_check("t-2", "medium", true)
-	r = _do(s, {"kind": "give_item", "item_id": "goggles_of_night"}, "t-2")
+	r = _do(s, {"kind": "move_item", "source": "world", "target": "hero", "item_id": "goggles_of_night"}, "t-2")
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()  # big test #16: past the coin budget
 	assert_int(s.reward_spent).is_equal(0)
 	assert_int(s.magic_given).is_equal(1)
 	fx.note_check("t-3", "medium", true)
-	assert_str(str(_do(s, {"kind": "give_item", "item_id": "goggles_of_night"}, "t-3")["reason"])).contains("уже дана")
+	assert_str(str(_do(s, {"kind": "move_item", "source": "world", "target": "hero", "item_id": "goggles_of_night"}, "t-3")["reason"])).contains("уже дана")
 	ExplorationRules.long_rest(s, data)
 	assert_int(s.magic_given).is_equal(0)
 

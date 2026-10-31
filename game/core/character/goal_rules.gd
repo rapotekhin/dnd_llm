@@ -2,13 +2,13 @@ class_name GoalRules
 extends RefCounted
 ## The hero's life goal (roadmap v0.7.22, the author's request — as in The Sims): written by the player, changed or
 ## cleared at any time (`c.goal`); the hero's thoughts, not a fact of the world — NPCs do not know it, and it has no
-## reward of its own. The master assesses it (`goal_assess`: the concepts it is made of, its scale, the direction it
+## reward of its own. The master assesses it (`goal:assess`: the concepts it is made of, its scale, the direction it
 ## needs — the class or a peaceful direction, v0.7.19.1); the engine sets the threshold by `rules.goal.thresholds` —
 ## the level of that direction from which the master may lead to the goal. Until then the world answers the player's
 ## questions in its own way and makes nothing for the goal; the master never brings it up by itself.
 ## Batch 2 (v0.7.22.1): past the threshold, when the player asks or seeks in a fitting place, the master hints
-## (`goal_hint`, counted on the goal); after `rules.goal.hints` of them for its scale it may make the quest for the
-## goal (`create_quest` with `for_goal`) — a simple goal at once, a great one through a chain of hints.
+## (`goal:hint`, counted on the goal); after `rules.goal.hints` of them for its scale it may make the quest for the
+## goal (`create:quest` with `for_goal`) — a simple goal at once, a great one through a chain of hints.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -29,7 +29,7 @@ static func write(c: Dictionary, text: String) -> void:
 		c["goal"] = {"text": t}
 
 
-## Checks a `goal_assess`: {plan, summary} or {reason}.
+## Checks a `goal:assess`: {plan, summary} or {reason}.
 static func plan_assess(c: Dictionary, data: Dictionary, e: Dictionary) -> Dictionary:
 	if goal(c).is_empty():
 		return {"reason": "у героя нет жизненной цели"}

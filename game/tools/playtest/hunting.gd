@@ -67,7 +67,7 @@ func run() -> void:
 
 	# The master empties the river: the button greys with the reason.
 	var fx: EffectEngine = gs.effects
-	var r := fx.validate(s, data, "hw-1", {"kind": "wilds", "ground": "fish", "op": "deplete", "cause": "мельник выше по реке потравил рыбу"})
+	var r := fx.validate(s, data, "hw-1", {"kind": "create", "what": "wilds", "ground": "fish", "op": "deplete", "cause": "мельник выше по реке потравил рыбу"})
 	if step("the master's `wilds` accepted", bool(r["accepted"]), str(r.get("summary", r.get("reason", "")))):
 		fx.apply(s, "hw-1", [r["effect_id"]])
 		node("EventBus").state_changed.emit()

@@ -208,9 +208,9 @@ def test_new_item_needs_a_search_first_and_lands_in_the_library(data_dir):
         return default_engine(method, params)
 
     fn = scripted(
-        ("propose_effect", {"effect": {"kind": "give_item", "item": item}}),
+        ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero", "item": item}}),
         ("find_items", {"query": "кинжал", "properties": ["cold_damage"]}),
-        ("propose_effect", {"effect": {"kind": "give_item", "item": item}}),
+        ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero", "item": item}}),
         ("final", lambda m: {"narration": "Под камнем — кинжал в инее.", "effect_ids": [effect_id(m)]}),
     )
     msg, calls, services = play(data_dir, fn, engine)
@@ -328,11 +328,11 @@ def test_effect_string_with_a_stray_bracket_after_it_is_accepted(data_dir):
     # DeepSeek at times sends the effect as a string with a stray `]` after the object (a place was never made).
     fn = scripted(
         ("rules", {"topic": "social"}),
-        ("propose_effect", {"effect": '{"kind": "npc_follow", "npc_id": "npc_guard"}]'}),
+        ("propose_effect", {"effect": '{"kind": "grant", "what": "follow", "npc_id": "npc_guard"}]'}),
         ("final", lambda m: {"narration": "Ведда идёт с тобой.", "effect_ids": [effect_id(m)]}),
     )
     msg, calls, _ = play(data_dir, fn)
-    assert calls[0]["params"]["effect"] == {"kind": "npc_follow", "npc_id": "npc_guard", "follow": True, "home": False}
+    assert calls[0]["params"]["effect"] == {"kind": "grant", "what": "follow", "npc_id": "npc_guard", "follow": True, "home": False}
     assert msg["result"]["effect_ids"] == ["e-1"]
 
 
@@ -411,10 +411,10 @@ def test_a_turn_out_of_output_tokens_is_tried_again_with_more(data_dir):
 
 
 def test_out_of_tokens_after_an_accepted_effect_goes_on_from_there(data_dir):
-    """v0.7.38.1 (the author's trace): the board quest failed — create_npc was accepted, then the token limit; now the
+    """v0.7.38.1 (the author's trace): the board quest failed — create:npc was accepted, then the token limit; now the
     turn goes on with the effect kept, and find_npcs tells that the new person is in the world only after the turn."""
     seen = []
-    npc = {"kind": "create_npc", "npc": {"name": "Демьян", "role": "староста", "faction": "brod_folk", "description": "Старик с ключами.",
+    npc = {"kind": "create", "what": "npc", "npc": {"name": "Демьян", "role": "староста", "faction": "brod_folk", "description": "Старик с ключами.",
                                          "personality": "Медлителен.", "monster": "commoner", "room_id": "brod-square"}}
 
     async def fn(messages, info):
@@ -516,9 +516,9 @@ def test_a_model_that_rejects_big_schemas_sends_the_effect_as_json_text(data_dir
 def test_a_malformed_effect_is_refused_and_the_turn_goes_on(data_dir):
     # v0.7.21.2: a mistyped effect is a refusal of the tool, not a failed turn
     fn = scripted(
-        ("propose_effect", {"effect": {"kind": "create_quest", "title": "Заказ", "scale": "trifle", "steps": []}}),
-        ("propose_effect", {"effect": {"kind": "create_quest", "title": "Заказ", "scale": "huge"}}),
-        ("propose_effect", {"effect": {"kind": "create_quest"}}),
+        ("propose_effect", {"effect": {"kind": "create", "what": "quest", "title": "Заказ", "scale": "trifle", "steps": []}}),
+        ("propose_effect", {"effect": {"kind": "create", "what": "quest", "title": "Заказ", "scale": "huge"}}),
+        ("propose_effect", {"effect": {"kind": "create", "what": "quest"}}),
         ("final", {"narration": "На доске ничего не разобрать."}),
     )
     msg, calls, _ = play(data_dir, fn)
@@ -527,7 +527,7 @@ def test_a_malformed_effect_is_refused_and_the_turn_goes_on(data_dir):
 
 
 def test_a_search_brings_its_topic_and_a_library_good_goes_to_stock_new(data_dir):
-    # v0.7.22.25.1 (the author's trace): find_npcs answered without the rules, and create_npc was refused «read
+    # v0.7.22.25.1 (the author's trace): find_npcs answered without the rules, and create:npc was refused «read
     # rules first»; a bread of the library was refused as «not of the catalog».
     seen = []
 
@@ -541,7 +541,7 @@ def test_a_search_brings_its_topic_and_a_library_good_goes_to_stock_new(data_dir
 
     fn = scripted(
         ("find_npcs", {"query": "пекарша"}),
-        ("propose_effect", {"effect": {"kind": "create_npc", "npc": {"name": "Сарра", "role": "пекарша", "faction": "brod_folk", "trader": True,
+        ("propose_effect", {"effect": {"kind": "create", "what": "npc", "npc": {"name": "Сарра", "role": "пекарша", "faction": "brod_folk", "trader": True,
                                                                      "stock": ["gen_bread", "rations"]}}}),
         ("final", lambda m: {"narration": "Сарра вытирает руки о передник.", "effect_ids": ["e-3"]}),
     )
@@ -559,7 +559,7 @@ def test_the_entry_turn_takes_only_the_furnishing_and_notes(data_dir):
     # v0.7.34.3, the author's trace t-10: walking into the square brought a gift, a flag and the trader's favour
     seen = {}
     fn = scripted(
-        ("propose_effect", {"effect": {"kind": "give_item", "item_id": "dagger"}}),
+        ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero", "item_id": "dagger"}}),
         ("propose_effect", {"effect": {"kind": "note", "text": "Герой пришёл в таверну"}}),
         ("final", lambda m: {"narration": "Таверна шумит.", "effect_ids": [effect_id(m)]}),
     )
@@ -580,13 +580,13 @@ def test_the_entry_turn_takes_only_the_furnishing_and_notes(data_dir):
 def test_a_topic_refusal_brings_the_topics_rules(data_dir):
     # v0.7.34.3: no extra `rules` call — the refusal carries them and the next proposal goes through
     fn = scripted(
-        ("propose_effect", {"effect": {"kind": "npc_follow", "npc_id": "npc_guard"}}),
-        ("propose_effect", {"effect": {"kind": "npc_follow", "npc_id": "npc_guard"}}),
+        ("propose_effect", {"effect": {"kind": "grant", "what": "follow", "npc_id": "npc_guard"}}),
+        ("propose_effect", {"effect": {"kind": "grant", "what": "follow", "npc_id": "npc_guard"}}),
         ("final", lambda m: {"narration": "Ведда идёт с тобой.", "effect_ids": [effect_id(m)]}),
     )
     msg, calls, _ = play(data_dir, fn, input="зову Ведду с собой")
     refusal = last_tool_text(fn.state["prompts"][1])
-    assert refusal.startswith("Отказ: эффект темы «social»") and "npc_follow" in refusal
+    assert refusal.startswith("Отказ: эффект темы «social»") and "grant:follow" in refusal
     assert len([c for c in calls if c["method"] == "engine.validate"]) == 1
     assert msg["result"]["effect_ids"] == ["e-1"]
 

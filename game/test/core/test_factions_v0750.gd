@@ -95,9 +95,9 @@ func test_beasts_are_calmed_by_animal_handling_only() -> void:
 
 func test_the_master_makes_one_once_and_moves_the_standing_once_a_day() -> void:
 	var s := _session()
-	var made := FactionRules.make(s, data, {"create": {"name": "Дом чародея", "kind": "household"}})
+	var made := FactionRules.make(s, data, {"faction": {"name": "Дом чародея", "kind": "household"}})
 	FactionRules.apply_make(s, data, made["plan"])
-	assert_dict(FactionRules.make(s, data, {"create": {"name": "дом чародея"}})).contains_keys(["reason"])
+	assert_dict(FactionRules.make(s, data, {"faction": {"name": "дом чародея"}})).contains_keys(["reason"])
 	var id: String = made["plan"]["create"]
 	assert_str(FactionRules.ensure(s, data, "Дом чародея", "people", false)).is_equal(id)
 	var p := FactionRules.make(s, data, {"faction_id": id, "delta": 10, "why": "спас"})

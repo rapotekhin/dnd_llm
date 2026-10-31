@@ -397,7 +397,7 @@ static func plan_make(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 	if not world["rooms"].has(to) or to == s.room_id:
 		return {"reason": "нет такой комнаты: %s" % to}
 	if w.location_id(to) != w.location_id(s.room_id):
-		return {"reason": "проход ведёт только внутри этой локации: дороги между локациями — create_place на открытом крае"}
+		return {"reason": "проход ведёт только внутри этой локации: дороги между локациями — create:place на открытом крае"}
 	if w.exits(s.room_id).has(to):
 		return {"reason": "выход в %s уже есть" % to}
 	if not kinds.has(kind) or not bool(kinds[kind].get("master", true)):

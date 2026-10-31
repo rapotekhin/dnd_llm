@@ -3,7 +3,7 @@ extends ModalFrame
 ## A notice board as a window of its own (roadmap v0.7.22.13, big test #30, #31): the orders on it are real quests
 ## of the engine (QuestGen, made by the master on this board) — each with its customer and reward; take one, or all
 ## that fit under the limit of taken quests. A board with nothing on it yet — «Прочитать объявления»: a turn of the
-## master, who puts its orders up (`create_quest` with this `board_prop_id`).
+## master, who puts its orders up (`create:quest` with this `board_prop_id`).
 
 const SCENE := "res://ui/components/board_panel.tscn"
 

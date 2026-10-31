@@ -147,12 +147,12 @@ func test_dear_sales_spoil_the_merchants_name() -> void:
 func test_the_master_makes_a_supplier() -> void:
 	var s := _hero("brod-smithy")
 	var engine := EffectEngine.new()
-	var bad := engine.validate(s, data, "t-1", {"kind": "supplier", "npc_id": "npc_smith", "pct": 50})
+	var bad := engine.validate(s, data, "t-1", {"kind": "create", "what": "supplier", "npc_id": "npc_smith", "pct": 50})
 	assert_bool(bool(bad["accepted"])).is_false()  # the smith is already a supplier in the pack
 	s.room_id = "brod-herbalist"
-	var cheap := engine.validate(s, data, "t-1", {"kind": "supplier", "npc_id": "npc_herbalist", "pct": 10})
+	var cheap := engine.validate(s, data, "t-1", {"kind": "create", "what": "supplier", "npc_id": "npc_herbalist", "pct": 10})
 	assert_bool(bool(cheap["accepted"])).is_false()
-	var r := engine.validate(s, data, "t-1", {"kind": "supplier", "npc_id": "npc_herbalist", "pct": 70})
+	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "supplier", "npc_id": "npc_herbalist", "pct": 70})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()
 	engine.apply(s, "t-1", [r["effect_id"]])
 	assert_bool(ShopRules.is_supplier(s, data, "npc_herbalist")).is_true()

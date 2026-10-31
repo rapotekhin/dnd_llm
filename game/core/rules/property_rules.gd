@@ -1114,7 +1114,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	var site := str(spec.get("site_id", ""))
 	var who := str(spec.get("seller_id", ""))
 	if who != "new" and not _present(s, data, who):
-		return {"reason": "продавец %s не в сцене — продаёт только тот, кто здесь (или «new» — человек create_npc этого хода)" % who}
+		return {"reason": "продавец %s не в сцене — продаёт только тот, кто здесь (или «new» — человек create:npc этого хода)" % who}
 	var p := int(spec.get("price_cp", 0))
 	if p < int(m["price_cp"][0]) or p > int(m["price_cp"][1]):
 		return {"reason": "price_cp — от %s до %s" % [Money.format(int(m["price_cp"][0])), Money.format(int(m["price_cp"][1]))]}
@@ -1144,7 +1144,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	var name := str(spec.get("name", "")).strip_edges().left(60)
 	if site != "new":
 		if w.site(site).is_empty():
-			return {"reason": "объекта %s нет: site_id из сцены или «new» — объект create_place этого хода" % site}
+			return {"reason": "объекта %s нет: site_id из сцены или «new» — объект create:place этого хода" % site}
 		if str(w.site(site).get("location_id", "")) != w.location_id(s.room_id):
 			return {"reason": "продают объект этой локации"}
 		var owner := str(w.site(site).get("owner", ""))

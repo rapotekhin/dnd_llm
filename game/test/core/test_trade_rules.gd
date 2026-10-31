@@ -153,7 +153,7 @@ func test_the_engine_check_of_a_haggle_uses_the_attitude_dc_and_repeats_without_
 
 func test_coin_and_item_effects_are_refused_in_trade_mode() -> void:
 	var fx := EffectEngine.new()
-	for e: Dictionary in [{"kind": "coins", "delta_cp": -4}, {"kind": "give_item", "item_id": "ale"}, {"kind": "take_item", "item_id": "rations"}]:
+	for e: Dictionary in [{"kind": "coins", "delta_cp": -4}, {"kind": "move_item", "source": "world", "target": "hero", "item_id": "ale"}, {"kind": "move_item", "source": "hero", "target": "world", "item_id": "rations"}]:
 		assert_bool(fx.validate(s, data, "t-1", e)["accepted"]).override_failure_message(str(e)).is_false()
 	s.mode = GameSession.MODE_SOCIAL
 	assert_bool(fx.validate(s, data, "t-1", {"kind": "coins", "delta_cp": -4})["accepted"]).is_true()

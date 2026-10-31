@@ -47,11 +47,11 @@ func test_a_refused_ask_waits_a_day() -> void:
 func test_the_master_lets_in_by_words() -> void:
 	var s := _hero("brod-tavern-hall")
 	var fx := EffectEngine.new()
-	var r := fx.validate(s, data, "t-1", {"kind": "permit", "npc_id": "npc_innkeeper"})
+	var r := fx.validate(s, data, "t-1", {"kind": "grant", "what": "permit", "npc_id": "npc_innkeeper"})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t-1", [r["effect_id"]])
 	assert_bool(SiteRules.permitted(s, data, "brod-tavern")).is_true()
-	var no := fx.validate(s, data, "t-2", {"kind": "permit", "npc_id": "npc_smith"})
+	var no := fx.validate(s, data, "t-2", {"kind": "grant", "what": "permit", "npc_id": "npc_smith"})
 	assert_bool(bool(no["accepted"])).is_false()
 
 

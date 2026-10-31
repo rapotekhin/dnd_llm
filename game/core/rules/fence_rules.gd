@@ -102,7 +102,7 @@ static func make(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	if not BondRules.here(s, data, who):
 		return {"reason": "%s не в сцене — скупщиком делают торговца сцены" % who}
 	if not WorldView.new(data["world"]).is_trader(who):
-		return {"reason": "%s не торгует — скупщик только из торговцев (create_npc с trader)" % BondRules.npc_name(s, data, who)}
+		return {"reason": "%s не торгует — скупщик только из торговцев (create:npc с trader)" % BondRules.npc_name(s, data, who)}
 	var r: Array = cfg(data)["make_fence"]["buy_pct"]
 	var pct := int(e.get("buy_pct", 0)) if e.get("buy_pct") != null else 0
 	if is_fence(s, data, who):

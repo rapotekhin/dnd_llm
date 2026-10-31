@@ -120,7 +120,7 @@ func test_a_made_person_teaches_what_the_master_gave_it_but_spells_only_by_its_t
 func test_an_act_brings_the_teacher_and_its_course_opens_on_reaching_it() -> void:
 	_wizard()
 	fx.searched_quests["t-1"] = true
-	var r := fx.validate(s, data, "t-1", {"kind": "create_quest", "giver": "npc_innkeeper", "title": "Кто учит огню", "difficulty": "easy",
+	var r := fx.validate(s, data, "t-1", {"kind": "create", "what": "quest", "giver": "npc_innkeeper", "title": "Кто учит огню", "difficulty": "easy",
 		"description": "Найти волшебника, что учит «Огненному шару».", "offer_text": "Слыхал про одного чародея.",
 		"acts": [{"title": "Поиски", "goal": "Найти чародея"}]})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()

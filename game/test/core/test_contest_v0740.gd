@@ -115,7 +115,7 @@ func test_odds_by_the_template_and_the_chance_of_a_round() -> void:
 func test_the_master_offers_a_game_of_its_own_kind() -> void:
 	var s := _session()
 	var engine := EffectEngine.new()
-	var r := engine.validate(s, data, "t-1", {"kind": "contest", "npc_id": NPC,
+	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "contest", "npc_id": NPC,
 		"new_kind": {"name": "Метание ножей", "check": {"skill": "sleight_of_hand"}, "wins": 9, "lose_condition": "prone"}})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()
 	engine.apply(s, "t-1", [r["effect_id"]])
@@ -125,7 +125,7 @@ func test_the_master_offers_a_game_of_its_own_kind() -> void:
 	assert_str(str(k.get("name", ""))).is_equal("Метание ножей")
 	assert_int(int(k["wins"])).is_equal(int(ContestRules.cfg(data)["make"]["wins"][1]))
 	assert_bool(WorldGen.generated(s).get("contest_kinds", {}).has(str(offer["kind"]))).is_true()
-	var bad := engine.validate(s, data, "t-2", {"kind": "contest", "npc_id": NPC, "new_kind": {"name": "x", "check": {"skill": "flying"}}})
+	var bad := engine.validate(s, data, "t-2", {"kind": "create", "what": "contest", "npc_id": NPC, "new_kind": {"name": "x", "check": {"skill": "flying"}}})
 	assert_bool(bool(bad["accepted"])).is_false()
-	var nobody := engine.validate(s, data, "t-3", {"kind": "contest", "npc_id": "npc_nobody", "game": "dice"})
+	var nobody := engine.validate(s, data, "t-3", {"kind": "create", "what": "contest", "npc_id": "npc_nobody", "game": "dice"})
 	assert_bool(bool(nobody["accepted"])).is_false()

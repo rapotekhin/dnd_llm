@@ -206,6 +206,23 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 111. Протокол 0.101.0 (v0.7.69)
+
+Эффекты: 31 вид вместо 69. Несовместимо со старым сервером, поэтому меняется и протокол, и клиент. `kind` остаётся дискриминатором, новое вложенное поле `what` отличает члена семейства, поля каждого эффекта сохранены; `effect_tag` и `EffectEngine.key` дают эффекту одно имя.
+
+| Было | Стало |
+|---|---|
+| `create_npc`, `create_place`, `create_quest`, `recipe`, `job`, `course`, `way`, `supplier`, `bank`, `fence`, `heist`, `org`, `god`, `festival`, `beast`, `property`, `upgrade`, `stock`, `wilds`, `contest` | `create` + `what`: npc, place, quest, остальные под своими именами |
+| `faction` с `create` | `create` + `what: faction`, поле `faction` |
+| `faction` с `faction_id` | `shift` + `what: standing` |
+| `npc_attitude`, `reputation`, `bond` | `shift` + `what`: attitude, reputation, bond |
+| `npc_discount`, `npc_favor`, `permit`, `reveal_secret`, `npc_follow`, `accept_quest` | `grant` + `what`: discount, favor, permit, secret, follow, quest |
+| `crime_known`, `crime_release` | `crime` + `what`: known, release |
+| `goal_assess`, `goal_hint` | `goal` + `what`: assess, hint |
+| `use_feature`, `use_item` | `use` + `what`: feature, item |
+| `unlock`, `door` | `open` + `what`: container, door |
+| `give_item`, `take_item`, `take_from`, `put_in`, `take_prop`, `drop_item`, `world_item` с `op` | `move_item` + `source` и `target`: world>hero, hero>world, container>hero, hero>container, room>hero, hero>room, world>npc, npc>world, world>container, container>world |
+
 ### 110. Протокол 0.100.0 (v0.7.66)
 
 Новый эффект `way` (`to_room`, `way_kind`, `one_way`, `material`, `lock`, `locked`, `text`): проход из комнаты героя внутри локации. `scene.exits[].door` теперь описывает и створку, и вид прохода («лаз · ползком»).

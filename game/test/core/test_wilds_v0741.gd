@@ -114,20 +114,20 @@ func test_poaching_in_an_owners_grounds_is_a_crime_until_the_owner_permits() -> 
 func test_the_masters_wilds_empties_restores_and_adds_a_ground_for_a_cause() -> void:
 	var s := _session("brod-river-yard", 0)
 	var fx := EffectEngine.new()
-	var r := fx.validate(s, data, "t1", {"kind": "wilds", "ground": "fish", "op": "deplete", "cause": "выше по реке мельник потравил рыбу"})
+	var r := fx.validate(s, data, "t1", {"kind": "create", "what": "wilds", "ground": "fish", "op": "deplete", "cause": "выше по реке мельник потравил рыбу"})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t1", [r["effect_id"]])
 	assert_int(WildsRules.stock(s, data, "fish")).is_equal(0)
-	assert_bool(bool(fx.validate(s, data, "t2", {"kind": "wilds", "ground": "fish", "op": "deplete", "cause": "так"})["accepted"])).is_false()
-	assert_bool(bool(fx.validate(s, data, "t3", {"kind": "wilds", "ground": "game", "op": "deplete", "cause": "охотники всё выбили"})["accepted"])).is_false()
+	assert_bool(bool(fx.validate(s, data, "t2", {"kind": "create", "what": "wilds", "ground": "fish", "op": "deplete", "cause": "так"})["accepted"])).is_false()
+	assert_bool(bool(fx.validate(s, data, "t3", {"kind": "create", "what": "wilds", "ground": "game", "op": "deplete", "cause": "охотники всё выбили"})["accepted"])).is_false()
 	s.room_id = "brod-square"
-	r = fx.validate(s, data, "t4", {"kind": "wilds", "ground": "fish", "op": "add", "cause": "на площади вырыли и зарыбили пруд"})
+	r = fx.validate(s, data, "t4", {"kind": "create", "what": "wilds", "ground": "fish", "op": "add", "cause": "на площади вырыли и зарыбили пруд"})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t4", [r["effect_id"]])
 	assert_array(WildsRules.here(s, data)).contains(["fish"])
 	assert_array(Overlay.of(WorldGen.generated(s), EntityRef.room("brod-square"))["tags"]).contains(["fish"])
 	s.room_id = "brod-tavern-hall"
-	assert_bool(bool(fx.validate(s, data, "t5", {"kind": "wilds", "ground": "game", "op": "add", "cause": "в таверне завелись кролики"})["accepted"])).is_false()
+	assert_bool(bool(fx.validate(s, data, "t5", {"kind": "create", "what": "wilds", "ground": "game", "op": "add", "cause": "в таверне завелись кролики"})["accepted"])).is_false()
 
 
 func test_the_scene_tells_the_master_the_grounds_and_the_stock() -> void:

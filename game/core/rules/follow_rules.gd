@@ -2,7 +2,7 @@ class_name FollowRules
 extends RefCounted
 ## NPCs who go with the hero (roadmap v0.7.20.3): talked into it by words, an NPC follows the hero from room to room
 ## (`s.followers`) and stands wherever the hero is; told to stay, it stays in that room (`s.npc_at`), or goes back
-## home (its pack room and hours). The effect `npc_follow` — the engine allows it to one well disposed to the hero
+## home (its pack room and hours). The effect `grant:follow` — the engine allows it to one well disposed to the hero
 ## (attitude ≥ rules.followers.min_attitude) or won over by a check this turn; at most rules.followers.max at once.
 ## With the needs on a follower eats once a day from the hero's things (v0.7.39.1, `meals`).
 
@@ -16,7 +16,7 @@ static func placed(s: GameSession, npc_id: String) -> bool:
 	return Being.follows(s, npc_id) or Being.view(s, npc_id).has("at")
 
 
-## Checks an `npc_follow`: {plan, summary} or {reason}. `won` — the hero won it over by a check this turn.
+## Checks an `grant:follow`: {plan, summary} or {reason}. `won` — the hero won it over by a check this turn.
 static func plan(s: GameSession, data: Dictionary, npc_id: String, follow: bool, home: bool, won: bool) -> Dictionary:
 	var world := WorldView.new(data["world"])
 	var name := str(world.npc(npc_id).get("name", npc_id))

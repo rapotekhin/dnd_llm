@@ -40,7 +40,7 @@ func test_a_made_potion_is_used_like_a_catalog_one() -> void:
 	var fx := EffectEngine.new()
 	s.character["hp"] = 1
 	fx.mark_searched("t-1")  # the master looked for a like thing first
-	var r := fx.validate(s, data, "t-1", {"kind": "give_item", "item": {"name": "Настой Веданы", "item_type": "consumable", "rarity": "common",
+	var r := fx.validate(s, data, "t-1", {"kind": "move_item", "source": "world", "target": "hero", "item": {"name": "Настой Веданы", "item_type": "consumable", "rarity": "common",
 		"value_cp": 3000, "use": {"heal": "light"}}})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t-1", [r["effect_id"]])

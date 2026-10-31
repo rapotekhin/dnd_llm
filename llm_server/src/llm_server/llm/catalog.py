@@ -10,12 +10,14 @@ import httpx
 from pydantic_ai.models import Model
 from pydantic_ai.models.wrapper import WrapperModel
 
+from .. import __version__
 from ..config import PROVIDERS
 from ..protocol import ModelInfo, ProviderInfo
 from .providers import PICKER
 
 log = logging.getLogger("llm_server.models")
 
+APP_URL = "https://github.com/rapotekhin/dnd_llm"
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 OPENROUTER_CREDITS_URL = "https://openrouter.ai/api/v1/credits"
 
@@ -116,7 +118,12 @@ def openrouter_factory(api_key: str) -> ModelFactory:
 
     # pydantic-ai gives a connection 5 s: a slow link to OpenRouter failed whole turns with «Request timed out» after
     # three such tries (v0.7.14.5) — 20 s to connect, the answer itself as long as it takes.
-    provider = OpenRouterProvider(api_key=api_key, http_client=create_async_httpx2_client(timeout=httpx2.Timeout(DEFAULT_HTTP_TIMEOUT, connect=20)))
+    provider = OpenRouterProvider(
+        api_key=api_key,
+        app_url=APP_URL,  # OpenRouter's logs tell an app by its url and show its title: without them it is «Unknown»
+        app_title=f"Between the Rolls {__version__}",
+        http_client=create_async_httpx2_client(timeout=httpx2.Timeout(DEFAULT_HTTP_TIMEOUT, connect=20)),
+    )
     cache: dict[str, Model] = {}
 
     def make(model_id: str) -> Model:

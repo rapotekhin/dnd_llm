@@ -5,13 +5,19 @@
       "description": "The hero takes by words a quest its giver here offers (0.21.0), like the button «Взять задание».",
       "properties": {
         "kind": {
-          "const": "accept_quest",
-          "default": "accept_quest",
+          "const": "grant",
+          "default": "grant",
           "title": "Kind",
           "type": "string"
         },
         "quest_id": {
           "title": "Quest Id",
+          "type": "string"
+        },
+        "what": {
+          "const": "quest",
+          "default": "quest",
+          "title": "What",
           "type": "string"
         }
       },
@@ -417,7 +423,7 @@
     },
     "BankEffect": {
       "additionalProperties": false,
-      "description": "A lender the world lacks (0.60.0): «Горм, ты ведь ссужаешь под залог?». A scene NPC (or `new` — the person\ncreate_npc made in this turn) takes deposits, lends against a collateral or keeps a vault; rates within\nrules.bank.make. Deposits, loans and the vault are the buttons of the «Банк» window — the engine's acts.",
+      "description": "A lender the world lacks (0.60.0): «Горм, ты ведь ссужаешь под залог?». A scene NPC (or `new` — the person\ncreate:npc made in this turn) takes deposits, lends against a collateral or keeps a vault; rates within\nrules.bank.make. Deposits, loans and the vault are the buttons of the «Банк» window — the engine's acts.",
       "properties": {
         "deposit_rate_pct_week": {
           "anyOf": [
@@ -433,8 +439,8 @@
           "title": "Deposit Rate Pct Week"
         },
         "kind": {
-          "const": "bank",
-          "default": "bank",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -495,6 +501,12 @@
           "minItems": 1,
           "title": "Services",
           "type": "array"
+        },
+        "what": {
+          "const": "bank",
+          "default": "bank",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -515,8 +527,8 @@
           "type": "string"
         },
         "kind": {
-          "const": "beast",
-          "default": "beast",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -535,6 +547,12 @@
           ],
           "default": null,
           "title": "Room Id"
+        },
+        "what": {
+          "const": "beast",
+          "default": "beast",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -592,8 +610,8 @@
           "type": "array"
         },
         "kind": {
-          "const": "bond",
-          "default": "bond",
+          "const": "shift",
+          "default": "shift",
           "title": "Kind",
           "type": "string"
         },
@@ -628,6 +646,12 @@
           ],
           "default": null,
           "title": "Romance"
+        },
+        "what": {
+          "const": "bond",
+          "default": "bond",
+          "title": "What",
+          "type": "string"
         }
       },
       "title": "BondEffect",
@@ -930,7 +954,7 @@
     },
     "ContentSpec": {
       "additionalProperties": false,
-      "description": "A thing inside a container when the room is furnished (0.28.0): an item of the catalog (`item_id`) or a new one\n(`item`, by the same rules as give_item.item).",
+      "description": "A thing inside a container when the room is furnished (0.28.0): an item of the catalog (`item_id`) or a new one\n(`item`, by the same rules as move_item.item).",
       "properties": {
         "item": {
           "anyOf": [
@@ -1027,8 +1051,8 @@
           "title": "Game"
         },
         "kind": {
-          "const": "contest",
-          "default": "contest",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -1045,6 +1069,12 @@
         },
         "npc_id": {
           "title": "Npc Id",
+          "type": "string"
+        },
+        "what": {
+          "const": "contest",
+          "default": "contest",
+          "title": "What",
           "type": "string"
         }
       },
@@ -1075,8 +1105,8 @@
           "type": "integer"
         },
         "kind": {
-          "const": "course",
-          "default": "course",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -1145,6 +1175,12 @@
             "ability"
           ],
           "title": "Teach Kind",
+          "type": "string"
+        },
+        "what": {
+          "const": "course",
+          "default": "course",
+          "title": "What",
           "type": "string"
         }
       },
@@ -1294,13 +1330,19 @@
       "description": "Makes a person the world lacks (0.31.0) — only after find_npcs in the same turn; the engine checks the schema,\nthe limits and the duplicates; the person lives in this game like one of the pack.",
       "properties": {
         "kind": {
-          "const": "create_npc",
-          "default": "create_npc",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
         "npc": {
           "$ref": "#/$defs/NewNpc"
+        },
+        "what": {
+          "const": "npc",
+          "default": "npc",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -1311,7 +1353,7 @@
     },
     "CreatePlaceEffect": {
       "additionalProperties": false,
-      "description": "A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:\n1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —\nthe room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;\nempty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter\nbudget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of\n`room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed. 0.79.0: a settlement in one\nturn — up to 12 rooms, `sites` with keys its rooms name, `npcs` — its people (as create_npc, with `key`, a room\n«new:<room key>»), `law` — a guard keeps the peace, `settlement` — hamlet | village | town: the engine checks what\nsuch a place always has (rules.world_gen.settlements) and gives it its guard.",
+      "description": "A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:\n1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —\nthe room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;\nempty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter\nbudget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of\n`room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed. 0.79.0: a settlement in one\nturn — up to 12 rooms, `sites` with keys its rooms name, `npcs` — its people (as create:npc, with `key`, a room\n«new:<room key>»), `law` — a guard keeps the peace, `settlement` — hamlet | village | town: the engine checks what\nsuch a place always has (rules.world_gen.settlements) and gives it its guard.",
       "properties": {
         "description": {
           "default": "",
@@ -1330,8 +1372,8 @@
           "type": "boolean"
         },
         "kind": {
-          "const": "create_place",
-          "default": "create_place",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -1419,6 +1461,12 @@
           "default": "",
           "title": "Terrain",
           "type": "string"
+        },
+        "what": {
+          "const": "place",
+          "default": "place",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -1495,8 +1543,8 @@
           "type": "string"
         },
         "kind": {
-          "const": "create_quest",
-          "default": "create_quest",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -1526,6 +1574,12 @@
           "default": "",
           "title": "Villain",
           "type": "string"
+        },
+        "what": {
+          "const": "quest",
+          "default": "quest",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -1541,13 +1595,19 @@
       "description": "A hidden murder becomes known (0.19.0): the hero confessed or was exposed in the scene. `victim_id` — the\nnpc_id of a deed «никто не знает». The engine spreads it: attitudes, and the wanted hero where there is law.",
       "properties": {
         "kind": {
-          "const": "crime_known",
-          "default": "crime_known",
+          "const": "crime",
+          "default": "crime",
           "title": "Kind",
           "type": "string"
         },
         "victim_id": {
           "title": "Victim Id",
+          "type": "string"
+        },
+        "what": {
+          "const": "known",
+          "default": "known",
+          "title": "What",
           "type": "string"
         }
       },
@@ -1562,9 +1622,15 @@
       "description": "The guard lets the held hero go by words (0.41.0): only after a Persuasion, Deception or Intimidation check this\nturn that passed at the engine's tier for the crimes. The hero stays wanted; the guard does not come back at once.",
       "properties": {
         "kind": {
-          "const": "crime_release",
-          "default": "crime_release",
+          "const": "crime",
+          "default": "crime",
           "title": "Kind",
+          "type": "string"
+        },
+        "what": {
+          "const": "release",
+          "default": "release",
+          "title": "What",
           "type": "string"
         }
       },
@@ -1749,13 +1815,19 @@
           "type": "string"
         },
         "kind": {
-          "const": "door",
-          "default": "door",
+          "const": "open",
+          "default": "open",
           "title": "Kind",
           "type": "string"
         },
         "to_room": {
           "title": "To Room",
+          "type": "string"
+        },
+        "what": {
+          "const": "door",
+          "default": "door",
+          "title": "What",
           "type": "string"
         }
       },
@@ -1763,34 +1835,6 @@
         "to_room"
       ],
       "title": "DoorEffect",
-      "type": "object"
-    },
-    "DropItemEffect": {
-      "additionalProperties": false,
-      "description": "The hero leaves a thing in the room (0.29.0): an item of the pack, or a bag (`item_id` = its bag id) with what\nis in it; it becomes a thing of the room that can be picked up again.",
-      "properties": {
-        "item_id": {
-          "title": "Item Id",
-          "type": "string"
-        },
-        "kind": {
-          "const": "drop_item",
-          "default": "drop_item",
-          "title": "Kind",
-          "type": "string"
-        },
-        "qty": {
-          "default": 1,
-          "maximum": 99,
-          "minimum": 1,
-          "title": "Qty",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "item_id"
-      ],
-      "title": "DropItemEffect",
       "type": "object"
     },
     "EquipEffect": {
@@ -1843,51 +1887,27 @@
     },
     "FactionEffect": {
       "additionalProperties": false,
-      "description": "A faction made (`create`), or the hero's standing with one moved for a deed its people learned of (0.95.0):\n`faction_id`, `delta` within ±10, `why`; once a day per faction. Gifts, crimes, quests, bonds count by themselves.",
+      "description": "A faction the world lacks (0.95.0).",
       "properties": {
-        "create": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/NewFaction"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "delta": {
-          "default": 0,
-          "maximum": 10,
-          "minimum": -10,
-          "title": "Delta",
-          "type": "integer"
-        },
-        "faction_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Faction Id"
+        "faction": {
+          "$ref": "#/$defs/NewFaction"
         },
         "kind": {
-          "const": "faction",
-          "default": "faction",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
-        "why": {
-          "default": "",
-          "maxLength": 80,
-          "title": "Why",
+        "what": {
+          "const": "faction",
+          "default": "faction",
+          "title": "What",
           "type": "string"
         }
       },
+      "required": [
+        "faction"
+      ],
       "title": "FactionEffect",
       "type": "object"
     },
@@ -1910,13 +1930,19 @@
           "title": "Buy Pct"
         },
         "kind": {
-          "const": "fence",
-          "default": "fence",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
         "npc_id": {
           "title": "Npc Id",
+          "type": "string"
+        },
+        "what": {
+          "const": "fence",
+          "default": "fence",
+          "title": "What",
           "type": "string"
         }
       },
@@ -1958,8 +1984,8 @@
           "type": "integer"
         },
         "kind": {
-          "const": "festival",
-          "default": "festival",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -2009,6 +2035,12 @@
           "maxItems": 4,
           "title": "Tags",
           "type": "array"
+        },
+        "what": {
+          "const": "festival",
+          "default": "festival",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -2354,49 +2386,6 @@
       "title": "GeneratedUse",
       "type": "object"
     },
-    "GiveItemEffect": {
-      "additionalProperties": false,
-      "properties": {
-        "item": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/GeneratedItem"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "item_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Item Id"
-        },
-        "kind": {
-          "const": "give_item",
-          "default": "give_item",
-          "title": "Kind",
-          "type": "string"
-        },
-        "qty": {
-          "default": 1,
-          "maximum": 20,
-          "minimum": 1,
-          "title": "Qty",
-          "type": "integer"
-        }
-      },
-      "title": "GiveItemEffect",
-      "type": "object"
-    },
     "GoalAssessEffect": {
       "additionalProperties": false,
       "description": "The master's assessment of the hero's life goal (0.39.0): its scale, the direction it needs (`class` or a\npeaceful direction id), the engine concepts it is made of; the engine sets the threshold.",
@@ -2414,8 +2403,8 @@
           "type": "string"
         },
         "kind": {
-          "const": "goal_assess",
-          "default": "goal_assess",
+          "const": "goal",
+          "default": "goal",
           "title": "Kind",
           "type": "string"
         },
@@ -2428,6 +2417,12 @@
             "legendary"
           ],
           "title": "Scale",
+          "type": "string"
+        },
+        "what": {
+          "const": "assess",
+          "default": "assess",
+          "title": "What",
           "type": "string"
         }
       },
@@ -2442,9 +2437,15 @@
       "description": "A hint toward the hero's life goal (0.40.0): only past its threshold and only when the player asks or seeks;\nthe engine counts them — the quest for the goal comes after enough.",
       "properties": {
         "kind": {
-          "const": "goal_hint",
-          "default": "goal_hint",
+          "const": "goal",
+          "default": "goal",
           "title": "Kind",
+          "type": "string"
+        },
+        "what": {
+          "const": "hint",
+          "default": "hint",
+          "title": "What",
           "type": "string"
         }
       },
@@ -2474,8 +2475,8 @@
           "title": "God Id"
         },
         "kind": {
-          "const": "god",
-          "default": "god",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -2494,6 +2495,12 @@
           "maxLength": 80,
           "minLength": 3,
           "title": "Shrine Name",
+          "type": "string"
+        },
+        "what": {
+          "const": "god",
+          "default": "god",
+          "title": "What",
           "type": "string"
         }
       },
@@ -2621,8 +2628,8 @@
           "type": "array"
         },
         "kind": {
-          "const": "heist",
-          "default": "heist",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -2682,6 +2689,12 @@
           ],
           "default": null,
           "title": "Victim Npc"
+        },
+        "what": {
+          "const": "heist",
+          "default": "heist",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -2717,8 +2730,8 @@
           "type": "integer"
         },
         "kind": {
-          "const": "job",
-          "default": "job",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -2776,6 +2789,12 @@
           ],
           "default": null,
           "title": "Tool"
+        },
+        "what": {
+          "const": "job",
+          "default": "job",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -2820,7 +2839,7 @@
     },
     "MakeEffect": {
       "additionalProperties": false,
-      "description": "The master builds what neither the data nor 5e has (0.97.0): a status or a passive trait of `parts`, a skill of\nan `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the\nhero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a\ntrait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `give_item`\nitem_id «new:book:<key>». 0.98.0: a spell and an ability with charges of the action's parts (rules.make.act): the\nengine sets the circle, it is not asked. What the parts do not cover is not made: say so in the story, fill\n`missing_concept`.",
+      "description": "The master builds what neither the data nor 5e has (0.97.0): a status or a passive trait of `parts`, a skill of\nan `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the\nhero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a\ntrait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `move_item:world>hero`\nitem_id «new:book:<key>». 0.98.0: a spell and an ability with charges of the action's parts (rules.make.act): the\nengine sets the circle, it is not asked. What the parts do not cover is not made: say so in the story, fill\n`missing_concept`.",
       "properties": {
         "ability": {
           "anyOf": [
@@ -2988,6 +3007,113 @@
         "room_id"
       ],
       "title": "MoveEffect",
+      "type": "object"
+    },
+    "MoveItemEffect": {
+      "additionalProperties": false,
+      "description": "A thing moves from `source` to `target` (0.101.0): the hero, `world` (nowhere in particular: a gift, a thing used\nup), `room` (a portable thing of the hero's room, `prop_id`), `container` (a container of the room, `prop_id`), `npc`\n(a person's pockets, `npc_id`). The pairs: world>hero — the hero gets `item_id` or a new `item`; hero>world — a thing\nof the hero is gone; room>hero — takes a thing of the room, an owner who sees it reacts; container>hero — someone\nelse's before its owner is a theft; hero>container — within its capacity; hero>room — a thing (a bag with what is in\nit) left here; world>npc, npc>world, world>container, container>world — the world's own, with a `cause`, not the\nhero's things.",
+      "properties": {
+        "cause": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cause"
+        },
+        "item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "kind": {
+          "const": "move_item",
+          "default": "move_item",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Npc Id"
+        },
+        "prop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prop Id"
+        },
+        "qty": {
+          "default": 1,
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Qty",
+          "type": "integer"
+        },
+        "source": {
+          "enum": [
+            "hero",
+            "world",
+            "room",
+            "container",
+            "npc"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "hero",
+            "world",
+            "room",
+            "container",
+            "npc"
+          ],
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "title": "MoveItemEffect",
       "type": "object"
     },
     "NewContestKind": {
@@ -3270,7 +3396,7 @@
     },
     "NewNpc": {
       "additionalProperties": false,
-      "description": "A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;\n`monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),\n`race` — an SRD race id, `room_id` — a room of this location (none — here) or «new:<key>» of this turn's create_place\n(0.52.0), `trader` with its shop kind `trade_kind` (0.53.0: the engine's goods of the kind, more each day; none — by\nthe role's words), `stock` of ids from find_items and `stock_new` — the master's extra goods, a bad one skipped.",
+      "description": "A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;\n`monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),\n`race` — an SRD race id, `room_id` — a room of this location (none — here) or «new:<key>» of this turn's create:place\n(0.52.0), `trader` with its shop kind `trade_kind` (0.53.0: the engine's goods of the kind, more each day; none — by\nthe role's words), `stock` of ids from find_items and `stock_new` — the master's extra goods, a bad one skipped.",
       "properties": {
         "age": {
           "anyOf": [
@@ -3663,7 +3789,7 @@
     },
     "NewSite": {
       "additionalProperties": false,
-      "description": "The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of\nits kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an\nNPC of the world or «new» — the person create_npc makes in this turn (0.52.0).",
+      "description": "The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of\nits kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an\nNPC of the world or «new» — the person create:npc makes in this turn (0.52.0).",
       "properties": {
         "description": {
           "default": "",
@@ -3872,8 +3998,8 @@
           "type": "integer"
         },
         "kind": {
-          "const": "npc_attitude",
-          "default": "npc_attitude",
+          "const": "shift",
+          "default": "shift",
           "title": "Kind",
           "type": "string"
         },
@@ -3883,6 +4009,12 @@
         },
         "reason": {
           "title": "Reason",
+          "type": "string"
+        },
+        "what": {
+          "const": "attitude",
+          "default": "attitude",
+          "title": "What",
           "type": "string"
         }
       },
@@ -3899,8 +4031,8 @@
       "description": "A trader of the scene gives the hero a discount by words (0.21.0): `percent` 5–20 off buying for a week. The\nengine grants it only from an NPC who likes the hero (attitude ≥ +1) or was won over by a successful\nPersuasion, Deception or Intimidation against it this turn.",
       "properties": {
         "kind": {
-          "const": "npc_discount",
-          "default": "npc_discount",
+          "const": "grant",
+          "default": "grant",
           "title": "Kind",
           "type": "string"
         },
@@ -3916,6 +4048,12 @@
         },
         "reason": {
           "title": "Reason",
+          "type": "string"
+        },
+        "what": {
+          "const": "discount",
+          "default": "discount",
+          "title": "What",
           "type": "string"
         }
       },
@@ -3944,8 +4082,8 @@
           "title": "Item Id"
         },
         "kind": {
-          "const": "npc_favor",
-          "default": "npc_favor",
+          "const": "grant",
+          "default": "grant",
           "title": "Kind",
           "type": "string"
         },
@@ -3959,6 +4097,12 @@
         },
         "service": {
           "title": "Service",
+          "type": "string"
+        },
+        "what": {
+          "const": "favor",
+          "default": "favor",
+          "title": "What",
           "type": "string"
         }
       },
@@ -3985,13 +4129,19 @@
           "type": "boolean"
         },
         "kind": {
-          "const": "npc_follow",
-          "default": "npc_follow",
+          "const": "grant",
+          "default": "grant",
           "title": "Kind",
           "type": "string"
         },
         "npc_id": {
           "title": "Npc Id",
+          "type": "string"
+        },
+        "what": {
+          "const": "follow",
+          "default": "follow",
+          "title": "What",
           "type": "string"
         }
       },
@@ -4087,8 +4237,8 @@
           "title": "Cut Pct"
         },
         "kind": {
-          "const": "org",
-          "default": "org",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -4108,6 +4258,12 @@
             "guild"
           ],
           "title": "Org Kind",
+          "type": "string"
+        },
+        "what": {
+          "const": "org",
+          "default": "org",
+          "title": "What",
           "type": "string"
         }
       },
@@ -4172,8 +4328,8 @@
       "description": "The owner of the scene lets the hero into its private places by words (0.78.0): «заходи, когда хочешь». The\nengine checks the NPC is here and owns a place closed to the hero; `site_id` — one place, empty — all of them. The\nleave lasts until a quarrel.",
       "properties": {
         "kind": {
-          "const": "permit",
-          "default": "permit",
+          "const": "grant",
+          "default": "grant",
           "title": "Kind",
           "type": "string"
         },
@@ -4192,6 +4348,12 @@
           ],
           "default": null,
           "title": "Site Id"
+        },
+        "what": {
+          "const": "permit",
+          "default": "permit",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -4453,7 +4615,7 @@
     },
     "PropertyEffect": {
       "additionalProperties": false,
-      "description": "A place the player wants to buy and the world lacks on sale (0.59.0): «куплю дом у реки». A site of this location\n(or `new` — the one create_place made in this turn) on sale by a seller of the scene (or `new` — the person\ncreate_npc made); the price and the income within rules.property.make. The hero buys it by the button and gets the\ndeed at the registry — the engine's acts. A place of a kind the engine lacks (a school, a pier) — `new_kind`\n(0.83.0).",
+      "description": "A place the player wants to buy and the world lacks on sale (0.59.0): «куплю дом у реки». A site of this location\n(or `new` — the one create:place made in this turn) on sale by a seller of the scene (or `new` — the person\ncreate:npc made); the price and the income within rules.property.make. The hero buys it by the button and gets the\ndeed at the registry — the engine's acts. A place of a kind the engine lacks (a school, a pier) — `new_kind`\n(0.83.0).",
       "properties": {
         "income_cp_day": {
           "anyOf": [
@@ -4469,8 +4631,8 @@
           "title": "Income Cp Day"
         },
         "kind": {
-          "const": "property",
-          "default": "property",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -4523,6 +4685,12 @@
         "site_id": {
           "title": "Site Id",
           "type": "string"
+        },
+        "what": {
+          "const": "property",
+          "default": "property",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -4531,39 +4699,6 @@
         "price_cp"
       ],
       "title": "PropertyEffect",
-      "type": "object"
-    },
-    "PutInEffect": {
-      "additionalProperties": false,
-      "description": "The hero puts a thing of their own into a container of the room (0.28.0), within its capacity.",
-      "properties": {
-        "item_id": {
-          "title": "Item Id",
-          "type": "string"
-        },
-        "kind": {
-          "const": "put_in",
-          "default": "put_in",
-          "title": "Kind",
-          "type": "string"
-        },
-        "prop_id": {
-          "title": "Prop Id",
-          "type": "string"
-        },
-        "qty": {
-          "default": 1,
-          "maximum": 99,
-          "minimum": 1,
-          "title": "Qty",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "prop_id",
-        "item_id"
-      ],
-      "title": "PutInEffect",
       "type": "object"
     },
     "QuestAct": {
@@ -4693,7 +4828,7 @@
     },
     "QuestActPlace": {
       "additionalProperties": false,
-      "description": "A place an act brings (0.81.0): the fields of create_place without its people (they go to the act's\n`new_npcs`); a room's `encounter` is a fight of the act (a lair), named in a step as «new:<room key>»; a room may\n`boss` — its leader (last act of a hard or deadly quest).",
+      "description": "A place an act brings (0.81.0): the fields of create:place without its people (they go to the act's\n`new_npcs`); a room's `encounter` is a fight of the act (a lair), named in a step as «new:<room key>»; a room may\n`boss` — its leader (last act of a hard or deadly quest).",
       "properties": {
         "description": {
           "default": "",
@@ -4849,7 +4984,7 @@
     },
     "QuestNpc": {
       "additionalProperties": false,
-      "description": "A person a quest brings (0.37.0): the schema of create_npc and a `key` its steps name («new:<key>»);\n`room_id` may be «new:<room key>» of the quest's new place.",
+      "description": "A person a quest brings (0.37.0): the schema of create:npc and a `key` its steps name («new:<key>»);\n`room_id` may be «new:<room key>» of the quest's new place.",
       "properties": {
         "age": {
           "anyOf": [
@@ -5063,8 +5198,8 @@
           "type": "string"
         },
         "kind": {
-          "const": "recipe",
-          "default": "recipe",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -5135,6 +5270,12 @@
         "tool": {
           "title": "Tool",
           "type": "string"
+        },
+        "what": {
+          "const": "recipe",
+          "default": "recipe",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -5177,13 +5318,19 @@
           "type": "integer"
         },
         "kind": {
-          "const": "reputation",
-          "default": "reputation",
+          "const": "shift",
+          "default": "shift",
           "title": "Kind",
           "type": "string"
         },
         "reason": {
           "title": "Reason",
+          "type": "string"
+        },
+        "what": {
+          "const": "reputation",
+          "default": "reputation",
+          "title": "What",
           "type": "string"
         }
       },
@@ -5199,8 +5346,8 @@
       "description": "An NPC of the scene tells a secret of its own by goodwill (0.22.0): `secret_id` from `scene.npcs[].secrets`.\nThe engine checks the attitude it needs; a secret won by a social check comes in the check's `revealed`.",
       "properties": {
         "kind": {
-          "const": "reveal_secret",
-          "default": "reveal_secret",
+          "const": "grant",
+          "default": "grant",
           "title": "Kind",
           "type": "string"
         },
@@ -5210,6 +5357,12 @@
         },
         "secret_id": {
           "title": "Secret Id",
+          "type": "string"
+        },
+        "what": {
+          "const": "secret",
+          "default": "secret",
+          "title": "What",
           "type": "string"
         }
       },
@@ -5388,6 +5541,46 @@
       "title": "StaffPlace",
       "type": "object"
     },
+    "StandingEffect": {
+      "additionalProperties": false,
+      "description": "The hero's standing with a faction moved for a deed its people learned of (0.95.0): `faction_id`, `delta` within\n±10, `why`; once a day per faction. Gifts, crimes, quests, bonds count by themselves.",
+      "properties": {
+        "delta": {
+          "maximum": 10,
+          "minimum": -10,
+          "title": "Delta",
+          "type": "integer"
+        },
+        "faction_id": {
+          "title": "Faction Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "shift",
+          "default": "shift",
+          "title": "Kind",
+          "type": "string"
+        },
+        "what": {
+          "const": "standing",
+          "default": "standing",
+          "title": "What",
+          "type": "string"
+        },
+        "why": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Why",
+          "type": "string"
+        }
+      },
+      "required": [
+        "faction_id",
+        "delta"
+      ],
+      "title": "StandingEffect",
+      "type": "object"
+    },
     "StartCombatEffect": {
       "additionalProperties": false,
       "description": "The master starts a fight (0.7.0): the engine checks the XP budget of the character's level. In a fight it is a\nreinforcement (0.8.0): the newcomers come at the edge of the field (`side`) next round, within the same budget.",
@@ -5473,8 +5666,8 @@
           "title": "Item Id"
         },
         "kind": {
-          "const": "stock",
-          "default": "stock",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -5488,6 +5681,12 @@
           "minimum": 1,
           "title": "Qty",
           "type": "integer"
+        },
+        "what": {
+          "const": "stock",
+          "default": "stock",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -5509,8 +5708,8 @@
           "type": "array"
         },
         "kind": {
-          "const": "supplier",
-          "default": "supplier",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -5531,93 +5730,18 @@
           ],
           "default": null,
           "title": "Pct"
+        },
+        "what": {
+          "const": "supplier",
+          "default": "supplier",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
         "npc_id"
       ],
       "title": "SupplierEffect",
-      "type": "object"
-    },
-    "TakeFromEffect": {
-      "additionalProperties": false,
-      "description": "The hero takes a thing out of a container of the room (0.28.0); someone else's before its owner — a theft.",
-      "properties": {
-        "item_id": {
-          "title": "Item Id",
-          "type": "string"
-        },
-        "kind": {
-          "const": "take_from",
-          "default": "take_from",
-          "title": "Kind",
-          "type": "string"
-        },
-        "prop_id": {
-          "title": "Prop Id",
-          "type": "string"
-        },
-        "qty": {
-          "default": 1,
-          "maximum": 99,
-          "minimum": 1,
-          "title": "Qty",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "prop_id",
-        "item_id"
-      ],
-      "title": "TakeFromEffect",
-      "type": "object"
-    },
-    "TakeItemEffect": {
-      "additionalProperties": false,
-      "properties": {
-        "item_id": {
-          "title": "Item Id",
-          "type": "string"
-        },
-        "kind": {
-          "const": "take_item",
-          "default": "take_item",
-          "title": "Kind",
-          "type": "string"
-        },
-        "qty": {
-          "default": 1,
-          "maximum": 20,
-          "minimum": 1,
-          "title": "Qty",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "item_id"
-      ],
-      "title": "TakeItemEffect",
-      "type": "object"
-    },
-    "TakePropEffect": {
-      "additionalProperties": false,
-      "description": "The player takes a portable thing of the room (0.11.0); an owner who sees it reacts by the engine's rules.",
-      "properties": {
-        "kind": {
-          "const": "take_prop",
-          "default": "take_prop",
-          "title": "Kind",
-          "type": "string"
-        },
-        "prop_id": {
-          "title": "Prop Id",
-          "type": "string"
-        }
-      },
-      "required": [
-        "prop_id"
-      ],
-      "title": "TakePropEffect",
       "type": "object"
     },
     "UnlockEffect": {
@@ -5635,13 +5759,19 @@
           "type": "string"
         },
         "kind": {
-          "const": "unlock",
-          "default": "unlock",
+          "const": "open",
+          "default": "open",
           "title": "Kind",
           "type": "string"
         },
         "prop_id": {
           "title": "Prop Id",
+          "type": "string"
+        },
+        "what": {
+          "const": "container",
+          "default": "container",
+          "title": "What",
           "type": "string"
         }
       },
@@ -5664,8 +5794,8 @@
           "type": "boolean"
         },
         "kind": {
-          "const": "upgrade",
-          "default": "upgrade",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -5692,6 +5822,12 @@
           ],
           "default": null,
           "title": "Text"
+        },
+        "what": {
+          "const": "upgrade",
+          "default": "upgrade",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -5882,9 +6018,15 @@
           "type": "string"
         },
         "kind": {
-          "const": "use_feature",
-          "default": "use_feature",
+          "const": "use",
+          "default": "use",
           "title": "Kind",
+          "type": "string"
+        },
+        "what": {
+          "const": "feature",
+          "default": "feature",
+          "title": "What",
           "type": "string"
         }
       },
@@ -5902,9 +6044,15 @@
           "type": "string"
         },
         "kind": {
-          "const": "use_item",
-          "default": "use_item",
+          "const": "use",
+          "default": "use",
           "title": "Kind",
+          "type": "string"
+        },
+        "what": {
+          "const": "item",
+          "default": "item",
+          "title": "What",
           "type": "string"
         }
       },
@@ -5949,8 +6097,8 @@
       "description": "A new way from the hero's room to a room of this location (0.100.0): a crawl, a breach, a secret door the story\nfound. The engine refuses a room the world keeps shut and a road between locations.",
       "properties": {
         "kind": {
-          "const": "way",
-          "default": "way",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -6018,6 +6166,12 @@
         },
         "way_kind": {
           "title": "Way Kind",
+          "type": "string"
+        },
+        "what": {
+          "const": "way",
+          "default": "way",
+          "title": "What",
           "type": "string"
         }
       },
@@ -6103,8 +6257,8 @@
           "type": "string"
         },
         "kind": {
-          "const": "wilds",
-          "default": "wilds",
+          "const": "create",
+          "default": "create",
           "title": "Kind",
           "type": "string"
         },
@@ -6128,6 +6282,12 @@
           ],
           "default": null,
           "title": "Room Id"
+        },
+        "what": {
+          "const": "wilds",
+          "default": "wilds",
+          "title": "What",
+          "type": "string"
         }
       },
       "required": [
@@ -6137,92 +6297,6 @@
       ],
       "title": "WildsEffect",
       "type": "object"
-    },
-    "WorldItemEffect": {
-      "additionalProperties": false,
-      "description": "The master moves a thing of the world with a cause (0.83.0): a person got or lost a thing, a room's chest\nfilled or emptied — not the hero's own things (those are give_item / take_item and the hero's acts).",
-      "properties": {
-        "cause": {
-          "maxLength": 160,
-          "minLength": 8,
-          "title": "Cause",
-          "type": "string"
-        },
-        "item": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/GeneratedItem"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "item_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Item Id"
-        },
-        "kind": {
-          "const": "world_item",
-          "default": "world_item",
-          "title": "Kind",
-          "type": "string"
-        },
-        "npc_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Npc Id"
-        },
-        "op": {
-          "enum": [
-            "give",
-            "take"
-          ],
-          "title": "Op",
-          "type": "string"
-        },
-        "prop_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Prop Id"
-        },
-        "qty": {
-          "default": 1,
-          "maximum": 20,
-          "minimum": 1,
-          "title": "Qty",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "op",
-        "cause"
-      ],
-      "title": "WorldItemEffect",
-      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -6230,74 +6304,249 @@
     "effect": {
       "discriminator": {
         "mapping": {
-          "accept_quest": "#/$defs/AcceptQuestEffect",
           "advance_time": "#/$defs/AdvanceTimeEffect",
-          "bank": "#/$defs/BankEffect",
-          "beast": "#/$defs/BeastEffect",
-          "bond": "#/$defs/BondEffect",
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
-          "contest": "#/$defs/ContestEffect",
-          "course": "#/$defs/CourseEffect",
-          "create_npc": "#/$defs/CreateNpcEffect",
-          "create_place": "#/$defs/CreatePlaceEffect",
-          "create_quest": "#/$defs/CreateQuestEffect",
-          "crime_known": "#/$defs/CrimeKnownEffect",
-          "crime_release": "#/$defs/CrimeReleaseEffect",
+          "create": {
+            "discriminator": {
+              "mapping": {
+                "bank": "#/$defs/BankEffect",
+                "beast": "#/$defs/BeastEffect",
+                "contest": "#/$defs/ContestEffect",
+                "course": "#/$defs/CourseEffect",
+                "faction": "#/$defs/FactionEffect",
+                "fence": "#/$defs/FenceEffect",
+                "festival": "#/$defs/FestivalEffect",
+                "god": "#/$defs/GodEffect",
+                "heist": "#/$defs/HeistEffect",
+                "job": "#/$defs/JobEffect",
+                "npc": "#/$defs/CreateNpcEffect",
+                "org": "#/$defs/OrgEffect",
+                "place": "#/$defs/CreatePlaceEffect",
+                "property": "#/$defs/PropertyEffect",
+                "quest": "#/$defs/CreateQuestEffect",
+                "recipe": "#/$defs/RecipeEffect",
+                "stock": "#/$defs/StockEffect",
+                "supplier": "#/$defs/SupplierEffect",
+                "upgrade": "#/$defs/UpgradeEffect",
+                "way": "#/$defs/WayEffect",
+                "wilds": "#/$defs/WildsEffect"
+              },
+              "propertyName": "what"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/CreateNpcEffect"
+              },
+              {
+                "$ref": "#/$defs/CreatePlaceEffect"
+              },
+              {
+                "$ref": "#/$defs/CreateQuestEffect"
+              },
+              {
+                "$ref": "#/$defs/RecipeEffect"
+              },
+              {
+                "$ref": "#/$defs/JobEffect"
+              },
+              {
+                "$ref": "#/$defs/CourseEffect"
+              },
+              {
+                "$ref": "#/$defs/WayEffect"
+              },
+              {
+                "$ref": "#/$defs/SupplierEffect"
+              },
+              {
+                "$ref": "#/$defs/BankEffect"
+              },
+              {
+                "$ref": "#/$defs/FenceEffect"
+              },
+              {
+                "$ref": "#/$defs/HeistEffect"
+              },
+              {
+                "$ref": "#/$defs/OrgEffect"
+              },
+              {
+                "$ref": "#/$defs/GodEffect"
+              },
+              {
+                "$ref": "#/$defs/FestivalEffect"
+              },
+              {
+                "$ref": "#/$defs/BeastEffect"
+              },
+              {
+                "$ref": "#/$defs/PropertyEffect"
+              },
+              {
+                "$ref": "#/$defs/UpgradeEffect"
+              },
+              {
+                "$ref": "#/$defs/StockEffect"
+              },
+              {
+                "$ref": "#/$defs/WildsEffect"
+              },
+              {
+                "$ref": "#/$defs/ContestEffect"
+              },
+              {
+                "$ref": "#/$defs/FactionEffect"
+              }
+            ]
+          },
+          "crime": {
+            "discriminator": {
+              "mapping": {
+                "known": "#/$defs/CrimeKnownEffect",
+                "release": "#/$defs/CrimeReleaseEffect"
+              },
+              "propertyName": "what"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/CrimeKnownEffect"
+              },
+              {
+                "$ref": "#/$defs/CrimeReleaseEffect"
+              }
+            ]
+          },
           "damage": "#/$defs/DamageEffect",
           "disease": "#/$defs/DiseaseEffect",
-          "door": "#/$defs/DoorEffect",
-          "drop_item": "#/$defs/DropItemEffect",
           "equip": "#/$defs/EquipEffect",
-          "faction": "#/$defs/FactionEffect",
-          "fence": "#/$defs/FenceEffect",
-          "festival": "#/$defs/FestivalEffect",
           "fill": "#/$defs/FillEffect",
           "flag": "#/$defs/FlagEffect",
           "furnish": "#/$defs/FurnishEffect",
-          "give_item": "#/$defs/GiveItemEffect",
-          "goal_assess": "#/$defs/GoalAssessEffect",
-          "goal_hint": "#/$defs/GoalHintEffect",
-          "god": "#/$defs/GodEffect",
+          "goal": {
+            "discriminator": {
+              "mapping": {
+                "assess": "#/$defs/GoalAssessEffect",
+                "hint": "#/$defs/GoalHintEffect"
+              },
+              "propertyName": "what"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/GoalAssessEffect"
+              },
+              {
+                "$ref": "#/$defs/GoalHintEffect"
+              }
+            ]
+          },
+          "grant": {
+            "discriminator": {
+              "mapping": {
+                "discount": "#/$defs/NpcDiscountEffect",
+                "favor": "#/$defs/NpcFavorEffect",
+                "follow": "#/$defs/NpcFollowEffect",
+                "permit": "#/$defs/PermitEffect",
+                "quest": "#/$defs/AcceptQuestEffect",
+                "secret": "#/$defs/RevealSecretEffect"
+              },
+              "propertyName": "what"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/NpcDiscountEffect"
+              },
+              {
+                "$ref": "#/$defs/NpcFavorEffect"
+              },
+              {
+                "$ref": "#/$defs/PermitEffect"
+              },
+              {
+                "$ref": "#/$defs/RevealSecretEffect"
+              },
+              {
+                "$ref": "#/$defs/NpcFollowEffect"
+              },
+              {
+                "$ref": "#/$defs/AcceptQuestEffect"
+              }
+            ]
+          },
           "guise": "#/$defs/GuiseEffect",
           "heal": "#/$defs/HealEffect",
-          "heist": "#/$defs/HeistEffect",
-          "job": "#/$defs/JobEffect",
           "letter_reply": "#/$defs/LetterReplyEffect",
           "make": "#/$defs/MakeEffect",
           "move": "#/$defs/MoveEffect",
+          "move_item": "#/$defs/MoveItemEffect",
           "note": "#/$defs/NoteEffect",
-          "npc_attitude": "#/$defs/NpcAttitudeEffect",
-          "npc_discount": "#/$defs/NpcDiscountEffect",
-          "npc_favor": "#/$defs/NpcFavorEffect",
-          "npc_follow": "#/$defs/NpcFollowEffect",
-          "org": "#/$defs/OrgEffect",
+          "open": {
+            "discriminator": {
+              "mapping": {
+                "container": "#/$defs/UnlockEffect",
+                "door": "#/$defs/DoorEffect"
+              },
+              "propertyName": "what"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/UnlockEffect"
+              },
+              {
+                "$ref": "#/$defs/DoorEffect"
+              }
+            ]
+          },
           "owner": "#/$defs/OwnerEffect",
-          "permit": "#/$defs/PermitEffect",
           "prop_state": "#/$defs/PropStateEffect",
-          "property": "#/$defs/PropertyEffect",
-          "put_in": "#/$defs/PutInEffect",
           "quest_act": "#/$defs/QuestActEffect",
-          "recipe": "#/$defs/RecipeEffect",
-          "reputation": "#/$defs/ReputationEffect",
-          "reveal_secret": "#/$defs/RevealSecretEffect",
           "rumor": "#/$defs/RumorEffect",
+          "shift": {
+            "discriminator": {
+              "mapping": {
+                "attitude": "#/$defs/NpcAttitudeEffect",
+                "bond": "#/$defs/BondEffect",
+                "reputation": "#/$defs/ReputationEffect",
+                "standing": "#/$defs/StandingEffect"
+              },
+              "propertyName": "what"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/NpcAttitudeEffect"
+              },
+              {
+                "$ref": "#/$defs/ReputationEffect"
+              },
+              {
+                "$ref": "#/$defs/BondEffect"
+              },
+              {
+                "$ref": "#/$defs/StandingEffect"
+              }
+            ]
+          },
           "start_combat": "#/$defs/StartCombatEffect",
-          "stock": "#/$defs/StockEffect",
-          "supplier": "#/$defs/SupplierEffect",
-          "take_from": "#/$defs/TakeFromEffect",
-          "take_item": "#/$defs/TakeItemEffect",
-          "take_prop": "#/$defs/TakePropEffect",
-          "unlock": "#/$defs/UnlockEffect",
-          "upgrade": "#/$defs/UpgradeEffect",
-          "use_feature": "#/$defs/UseFeatureEffect",
-          "use_item": "#/$defs/UseItemEffect",
+          "use": {
+            "discriminator": {
+              "mapping": {
+                "feature": "#/$defs/UseFeatureEffect",
+                "item": "#/$defs/UseItemEffect"
+              },
+              "propertyName": "what"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/UseFeatureEffect"
+              },
+              {
+                "$ref": "#/$defs/UseItemEffect"
+              }
+            ]
+          },
           "vow": "#/$defs/VowEffect",
-          "way": "#/$defs/WayEffect",
-          "weather": "#/$defs/WeatherEffect",
-          "wilds": "#/$defs/WildsEffect",
-          "world_item": "#/$defs/WorldItemEffect"
+          "weather": "#/$defs/WeatherEffect"
         },
         "propertyName": "kind"
       },
@@ -6315,16 +6564,7 @@
           "$ref": "#/$defs/CoinsEffect"
         },
         {
-          "$ref": "#/$defs/GiveItemEffect"
-        },
-        {
-          "$ref": "#/$defs/TakeItemEffect"
-        },
-        {
-          "$ref": "#/$defs/NpcAttitudeEffect"
-        },
-        {
-          "$ref": "#/$defs/FlagEffect"
+          "$ref": "#/$defs/MoveItemEffect"
         },
         {
           "$ref": "#/$defs/CastEffect"
@@ -6333,97 +6573,16 @@
           "$ref": "#/$defs/ConditionEffect"
         },
         {
-          "$ref": "#/$defs/MakeEffect"
+          "$ref": "#/$defs/DiseaseEffect"
         },
         {
           "$ref": "#/$defs/GuiseEffect"
         },
         {
-          "$ref": "#/$defs/DiseaseEffect"
-        },
-        {
-          "$ref": "#/$defs/RecipeEffect"
-        },
-        {
-          "$ref": "#/$defs/JobEffect"
-        },
-        {
-          "$ref": "#/$defs/PropertyEffect"
-        },
-        {
-          "$ref": "#/$defs/BankEffect"
-        },
-        {
-          "$ref": "#/$defs/SupplierEffect"
-        },
-        {
-          "$ref": "#/$defs/CourseEffect"
-        },
-        {
-          "$ref": "#/$defs/BondEffect"
-        },
-        {
-          "$ref": "#/$defs/ContestEffect"
-        },
-        {
-          "$ref": "#/$defs/WildsEffect"
-        },
-        {
-          "$ref": "#/$defs/BeastEffect"
-        },
-        {
-          "$ref": "#/$defs/FestivalEffect"
-        },
-        {
-          "$ref": "#/$defs/WeatherEffect"
-        },
-        {
-          "$ref": "#/$defs/RumorEffect"
-        },
-        {
-          "$ref": "#/$defs/LetterReplyEffect"
-        },
-        {
-          "$ref": "#/$defs/VowEffect"
-        },
-        {
-          "$ref": "#/$defs/GodEffect"
-        },
-        {
-          "$ref": "#/$defs/PermitEffect"
-        },
-        {
-          "$ref": "#/$defs/StockEffect"
-        },
-        {
-          "$ref": "#/$defs/FenceEffect"
-        },
-        {
-          "$ref": "#/$defs/HeistEffect"
-        },
-        {
-          "$ref": "#/$defs/OrgEffect"
-        },
-        {
-          "$ref": "#/$defs/FactionEffect"
-        },
-        {
-          "$ref": "#/$defs/UseFeatureEffect"
-        },
-        {
-          "$ref": "#/$defs/UseItemEffect"
-        },
-        {
-          "$ref": "#/$defs/StartCombatEffect"
-        },
-        {
-          "$ref": "#/$defs/AdvanceTimeEffect"
+          "$ref": "#/$defs/MakeEffect"
         },
         {
           "$ref": "#/$defs/FurnishEffect"
-        },
-        {
-          "$ref": "#/$defs/TakePropEffect"
         },
         {
           "$ref": "#/$defs/PropStateEffect"
@@ -6432,79 +6591,256 @@
           "$ref": "#/$defs/NoteEffect"
         },
         {
+          "$ref": "#/$defs/FlagEffect"
+        },
+        {
           "$ref": "#/$defs/EquipEffect"
-        },
-        {
-          "$ref": "#/$defs/CrimeKnownEffect"
-        },
-        {
-          "$ref": "#/$defs/CrimeReleaseEffect"
-        },
-        {
-          "$ref": "#/$defs/NpcDiscountEffect"
-        },
-        {
-          "$ref": "#/$defs/NpcFavorEffect"
-        },
-        {
-          "$ref": "#/$defs/AcceptQuestEffect"
-        },
-        {
-          "$ref": "#/$defs/RevealSecretEffect"
-        },
-        {
-          "$ref": "#/$defs/ReputationEffect"
-        },
-        {
-          "$ref": "#/$defs/TakeFromEffect"
-        },
-        {
-          "$ref": "#/$defs/PutInEffect"
-        },
-        {
-          "$ref": "#/$defs/UnlockEffect"
-        },
-        {
-          "$ref": "#/$defs/DropItemEffect"
         },
         {
           "$ref": "#/$defs/FillEffect"
         },
         {
-          "$ref": "#/$defs/CreateNpcEffect"
+          "$ref": "#/$defs/StartCombatEffect"
         },
         {
-          "$ref": "#/$defs/CreatePlaceEffect"
+          "$ref": "#/$defs/AdvanceTimeEffect"
         },
         {
-          "$ref": "#/$defs/NpcFollowEffect"
+          "$ref": "#/$defs/RumorEffect"
         },
         {
-          "$ref": "#/$defs/CreateQuestEffect"
+          "$ref": "#/$defs/WeatherEffect"
         },
         {
-          "$ref": "#/$defs/GoalAssessEffect"
+          "$ref": "#/$defs/LetterReplyEffect"
         },
         {
-          "$ref": "#/$defs/GoalHintEffect"
+          "$ref": "#/$defs/VowEffect"
         },
         {
           "$ref": "#/$defs/OwnerEffect"
         },
         {
-          "$ref": "#/$defs/DoorEffect"
-        },
-        {
-          "$ref": "#/$defs/WayEffect"
-        },
-        {
           "$ref": "#/$defs/QuestActEffect"
         },
         {
-          "$ref": "#/$defs/UpgradeEffect"
+          "discriminator": {
+            "mapping": {
+              "bank": "#/$defs/BankEffect",
+              "beast": "#/$defs/BeastEffect",
+              "contest": "#/$defs/ContestEffect",
+              "course": "#/$defs/CourseEffect",
+              "faction": "#/$defs/FactionEffect",
+              "fence": "#/$defs/FenceEffect",
+              "festival": "#/$defs/FestivalEffect",
+              "god": "#/$defs/GodEffect",
+              "heist": "#/$defs/HeistEffect",
+              "job": "#/$defs/JobEffect",
+              "npc": "#/$defs/CreateNpcEffect",
+              "org": "#/$defs/OrgEffect",
+              "place": "#/$defs/CreatePlaceEffect",
+              "property": "#/$defs/PropertyEffect",
+              "quest": "#/$defs/CreateQuestEffect",
+              "recipe": "#/$defs/RecipeEffect",
+              "stock": "#/$defs/StockEffect",
+              "supplier": "#/$defs/SupplierEffect",
+              "upgrade": "#/$defs/UpgradeEffect",
+              "way": "#/$defs/WayEffect",
+              "wilds": "#/$defs/WildsEffect"
+            },
+            "propertyName": "what"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/CreateNpcEffect"
+            },
+            {
+              "$ref": "#/$defs/CreatePlaceEffect"
+            },
+            {
+              "$ref": "#/$defs/CreateQuestEffect"
+            },
+            {
+              "$ref": "#/$defs/RecipeEffect"
+            },
+            {
+              "$ref": "#/$defs/JobEffect"
+            },
+            {
+              "$ref": "#/$defs/CourseEffect"
+            },
+            {
+              "$ref": "#/$defs/WayEffect"
+            },
+            {
+              "$ref": "#/$defs/SupplierEffect"
+            },
+            {
+              "$ref": "#/$defs/BankEffect"
+            },
+            {
+              "$ref": "#/$defs/FenceEffect"
+            },
+            {
+              "$ref": "#/$defs/HeistEffect"
+            },
+            {
+              "$ref": "#/$defs/OrgEffect"
+            },
+            {
+              "$ref": "#/$defs/GodEffect"
+            },
+            {
+              "$ref": "#/$defs/FestivalEffect"
+            },
+            {
+              "$ref": "#/$defs/BeastEffect"
+            },
+            {
+              "$ref": "#/$defs/PropertyEffect"
+            },
+            {
+              "$ref": "#/$defs/UpgradeEffect"
+            },
+            {
+              "$ref": "#/$defs/StockEffect"
+            },
+            {
+              "$ref": "#/$defs/WildsEffect"
+            },
+            {
+              "$ref": "#/$defs/ContestEffect"
+            },
+            {
+              "$ref": "#/$defs/FactionEffect"
+            }
+          ]
         },
         {
-          "$ref": "#/$defs/WorldItemEffect"
+          "discriminator": {
+            "mapping": {
+              "attitude": "#/$defs/NpcAttitudeEffect",
+              "bond": "#/$defs/BondEffect",
+              "reputation": "#/$defs/ReputationEffect",
+              "standing": "#/$defs/StandingEffect"
+            },
+            "propertyName": "what"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/NpcAttitudeEffect"
+            },
+            {
+              "$ref": "#/$defs/ReputationEffect"
+            },
+            {
+              "$ref": "#/$defs/BondEffect"
+            },
+            {
+              "$ref": "#/$defs/StandingEffect"
+            }
+          ]
+        },
+        {
+          "discriminator": {
+            "mapping": {
+              "discount": "#/$defs/NpcDiscountEffect",
+              "favor": "#/$defs/NpcFavorEffect",
+              "follow": "#/$defs/NpcFollowEffect",
+              "permit": "#/$defs/PermitEffect",
+              "quest": "#/$defs/AcceptQuestEffect",
+              "secret": "#/$defs/RevealSecretEffect"
+            },
+            "propertyName": "what"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/NpcDiscountEffect"
+            },
+            {
+              "$ref": "#/$defs/NpcFavorEffect"
+            },
+            {
+              "$ref": "#/$defs/PermitEffect"
+            },
+            {
+              "$ref": "#/$defs/RevealSecretEffect"
+            },
+            {
+              "$ref": "#/$defs/NpcFollowEffect"
+            },
+            {
+              "$ref": "#/$defs/AcceptQuestEffect"
+            }
+          ]
+        },
+        {
+          "discriminator": {
+            "mapping": {
+              "known": "#/$defs/CrimeKnownEffect",
+              "release": "#/$defs/CrimeReleaseEffect"
+            },
+            "propertyName": "what"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/CrimeKnownEffect"
+            },
+            {
+              "$ref": "#/$defs/CrimeReleaseEffect"
+            }
+          ]
+        },
+        {
+          "discriminator": {
+            "mapping": {
+              "assess": "#/$defs/GoalAssessEffect",
+              "hint": "#/$defs/GoalHintEffect"
+            },
+            "propertyName": "what"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/GoalAssessEffect"
+            },
+            {
+              "$ref": "#/$defs/GoalHintEffect"
+            }
+          ]
+        },
+        {
+          "discriminator": {
+            "mapping": {
+              "feature": "#/$defs/UseFeatureEffect",
+              "item": "#/$defs/UseItemEffect"
+            },
+            "propertyName": "what"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/UseFeatureEffect"
+            },
+            {
+              "$ref": "#/$defs/UseItemEffect"
+            }
+          ]
+        },
+        {
+          "discriminator": {
+            "mapping": {
+              "container": "#/$defs/UnlockEffect",
+              "door": "#/$defs/DoorEffect"
+            },
+            "propertyName": "what"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/UnlockEffect"
+            },
+            {
+              "$ref": "#/$defs/DoorEffect"
+            }
+          ]
         }
       ],
       "title": "Effect"

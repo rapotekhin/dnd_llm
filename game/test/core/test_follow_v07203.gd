@@ -23,10 +23,10 @@ func _do(e: Dictionary, turn := "t-1") -> Dictionary:
 
 
 func test_a_won_over_npc_goes_with_the_hero() -> void:
-	var r := _do({"kind": "npc_follow", "npc_id": "npc_merchant"})
+	var r := _do({"kind": "grant", "what": "follow", "npc_id": "npc_merchant"})
 	assert_str(str(r["reason"])).contains("проверка")  # neither a friend nor won over
 	fx.note_check("t-2", "medium", true, "npc_merchant")
-	r = _do({"kind": "npc_follow", "npc_id": "npc_merchant"}, "t-2")
+	r = _do({"kind": "grant", "what": "follow", "npc_id": "npc_merchant"}, "t-2")
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	s.room_id = "brod-gate"
 	assert_array(s.npcs_here(data["world"], "brod-gate")).contains(["npc_merchant"])
@@ -38,21 +38,21 @@ func test_a_won_over_npc_goes_with_the_hero() -> void:
 
 func test_a_follower_stays_where_left_or_goes_home() -> void:
 	Being.of(s, "npc_merchant")["attitude"] = 2  # a friend comes by asking
-	assert_bool(bool(_do({"kind": "npc_follow", "npc_id": "npc_merchant"})["accepted"])).is_true()
+	assert_bool(bool(_do({"kind": "grant", "what": "follow", "npc_id": "npc_merchant"})["accepted"])).is_true()
 	s.room_id = "brod-gate"
-	assert_bool(bool(_do({"kind": "npc_follow", "npc_id": "npc_merchant", "follow": false}, "t-2")["accepted"])).is_true()
+	assert_bool(bool(_do({"kind": "grant", "what": "follow", "npc_id": "npc_merchant", "follow": false}, "t-2")["accepted"])).is_true()
 	s.room_id = "brod-tavern-hall"
 	assert_array(s.npcs_here(data["world"], "brod-gate")).contains(["npc_merchant"])
 	assert_array(s.npcs_here(data["world"], "brod-tavern-hall")).not_contains(["npc_merchant"])
 	s.room_id = "brod-gate"
-	assert_bool(bool(_do({"kind": "npc_follow", "npc_id": "npc_merchant", "follow": false, "home": true}, "t-3")["accepted"])).is_true()
+	assert_bool(bool(_do({"kind": "grant", "what": "follow", "npc_id": "npc_merchant", "follow": false, "home": true}, "t-3")["accepted"])).is_true()
 	assert_array(s.npcs_here(data["world"], "brod-square")).contains(["npc_merchant"])
 	assert_bool(Being.with(s, "at").is_empty() and Being.followers(s).is_empty()).is_true()
 
 
 func test_followers_survive_a_save() -> void:
 	Being.of(s, "npc_merchant")["attitude"] = 3
-	_do({"kind": "npc_follow", "npc_id": "npc_merchant"})
+	_do({"kind": "grant", "what": "follow", "npc_id": "npc_merchant"})
 	var back := GameSession.from_dict(s.to_dict(5))
 	assert_array(Being.followers(back)).contains_exactly(["npc_merchant"])
 	back.room_id = "brod-smithy"

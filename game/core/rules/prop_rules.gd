@@ -4,7 +4,7 @@ extends RefCounted
 ## the room (effect `furnish`: 1–rules.props.max_per_room things), the engine checks them — portable ones are items of
 ## the catalog within the value cap of the character's level, owners are NPCs of the room — and keeps them for good
 ## in s.props {room_id: [{id, name, description, item_id, owner, text, state}]}. The master describes only these;
-## the player acts on them by words: `take_prop` (an owner who sees it reacts — TheftRules.react), `prop_state`.
+## the player acts on them by words: `move_item:room>hero` (an owner who sees it reacts — TheftRules.react), `prop_state`.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -206,7 +206,7 @@ static func apply_furnish(s: GameSession, plan: Dictionary) -> void:
 	s.props[str(plan["room"])] = list
 
 
-## Checks a `take_prop`: a portable thing of this room. The plan says whether its owner is here and sees it.
+## Checks a `move_item:room>hero`: a portable thing of this room. The plan says whether its owner is here and sees it.
 static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	if EncounterRules.captive(s):
 		return {"reason": "герой связан — сначала освободиться"}
@@ -216,7 +216,7 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 	if str(p.get("item_id", "")).is_empty():
 		return {"reason": "%s не унести — это обстановка; опиши попытку словами или `prop_state`" % p["name"]}
 	if not (p.get("contents", {}) as Dictionary).is_empty() and not ContainerRules.is_carried_kind(data, str(p["item_id"])):
-		return {"reason": "в %s что-то лежит — сначала `take_from` содержимое" % p["name"]}
+		return {"reason": "в %s что-то лежит — сначала `move_item:container>hero` содержимое" % p["name"]}
 	if ContainerRules.is_container(p) and not ContainerRules.closed_why(p).is_empty():
 		return {"reason": ContainerRules.closed_why(p)}
 	var owner := str(p.get("owner", ""))

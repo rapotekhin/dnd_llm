@@ -5,7 +5,7 @@ extends RefCounted
 ## dead; a fight the NPC began (a caught theft, an ambush) is self-defence. The crime is a fact of the world in
 ## s.crimes [{id, victim, room, location, at, witnesses, known, settled}]:
 ##   the living NPCs of the room are witnesses — they know at once; without witnesses the body is found after
-##   rules.crime.found_minutes (or the hero confesses — the master's `crime_known`), then the whole location knows.
+##   rules.crime.found_minutes (or the hero confesses — the master's `crime:known`), then the whole location knows.
 ## Known: every NPC of the location −attitude (witnesses one more). In a location with `law` (pack: guards, a guard
 ## monster) the hero is wanted (s.wanted {location: abs minute}): its traders do not trade, its givers give nothing,
 ## a guard NPC in the room or a patrol (after search_minutes, not when sneaking or invisible) holds the hero
@@ -17,7 +17,7 @@ extends RefCounted
 ## — the same after the fight. Until let_go_minutes pass nobody holds the hero there; then a guard NPC in the room
 ## holds again and a patrol finds the hero only by patrol_chance a step. The guard may lead the hero (the master's
 ## `move` while held — to any room of the location, the hold goes along) and let go by words after a check that
-## passed at the talk tier (`crime_release`).
+## passed at the talk tier (`crime:release`).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -297,7 +297,7 @@ static func bury(s: GameSession, data: Dictionary) -> Array[String]:
 	return lines
 
 
-## The master's `crime_known`: the hero confessed or was exposed. {"reason"} or {"plan", "summary"}.
+## The master's `crime:known`: the hero confessed or was exposed. {"reason"} or {"plan", "summary"}.
 static func plan_reveal(s: GameSession, data: Dictionary, victim: String) -> Dictionary:
 	for crime: Dictionary in s.crimes:
 		if str(crime["victim"]) == victim and not bool(crime["known"]):
@@ -552,7 +552,7 @@ static func let_go(s: GameSession, data: Dictionary, line: String) -> Array[Stri
 	return [line]
 
 
-## The master's `crime_release`: the guard lets the hero go by words — only after a check this turn that passed at
+## The master's `crime:release`: the guard lets the hero go by words — only after a check this turn that passed at
 ## the talk tier (`won` — the tiers of the passed checks). {"reason"} or {"plan", "summary"}.
 static func plan_release(s: GameSession, data: Dictionary, won: Array) -> Dictionary:
 	if not held(s):

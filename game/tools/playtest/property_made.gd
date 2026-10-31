@@ -31,7 +31,7 @@ func run() -> void:
 	s.minute = 12 * 60
 	s.room_id = "brod-tavern-hall"
 
-	var r := fx.validate(s, data, "pm-1", {"kind": "property", "site_id": "brod-tavern", "seller_id": "npc_innkeeper", "new_kind": PIER, "price_cp": 12000})
+	var r := fx.validate(s, data, "pm-1", {"kind": "create", "what": "property", "site_id": "brod-tavern", "seller_id": "npc_innkeeper", "new_kind": PIER, "price_cp": 12000})
 	if not step("the master's pier on sale", bool(r["accepted"]), str(r.get("summary", r.get("reason", "")))):
 		return
 	fx.apply(s, "pm-1", [r["effect_id"]])
@@ -88,7 +88,7 @@ func run() -> void:
 	PropertyRules.buy(s, data, "river_house")
 	PropertyRules.state(c)["river_house"]["deed"] = true
 	s.room_id = PropertyRules.main_room(s, data, "river_house")
-	var a := fx.validate(s, data, "pm-2", {"kind": "upgrade", "name": "Станок ювелира", "text": "Кольца и подвески своими руками", "indoor": true,
+	var a := fx.validate(s, data, "pm-2", {"kind": "create", "what": "upgrade", "name": "Станок ювелира", "text": "Кольца и подвески своими руками", "indoor": true,
 		"gives": {"station_new": {"name": "Станок ювелира", "tools": ["jewelers_tools"]}}})
 	if not step("a jeweler's bench asked at home", bool(a["accepted"]), str(a.get("summary", a.get("reason", "")))):
 		return

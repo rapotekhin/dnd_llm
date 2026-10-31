@@ -5,7 +5,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from ..protocol import CharacterSheet, Gender, SceneNpc, Snapshot
+from ..protocol import CharacterSheet, Gender, SceneNpc, Snapshot, class_tag, effect_classes, effect_line
 
 DEFAULT_TONE = "тёмное фэнтези с надеждой: мир суров, но в нём есть место смелости и доброте"
 
@@ -78,6 +78,7 @@ _env = Environment(
     lstrip_blocks=True,
     keep_trailing_newline=False,
 )
+_env.globals["topic_fields"] = lambda key: topic_fields(key)
 def intimacy_rule(world: object) -> str:
     """18+ of the game (0.76.0) and the engine's children and teens of the scene, who are never intimate."""
     if getattr(world, "adult", False):
@@ -112,45 +113,45 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "spells": ("что заклинание сделало в мире: иллюзии, разговор со зверьми и мёртвыми, гадание; заклинание на себя", ()),
     "pay": ("покупка у не-торговца, плата за услугу или сведения, платный вариант (`option_costs`), ночлег", ()),
     "theft": ("кража из карманов: как её отыграть", ()),
-    "items": ("новый предмет (`give_item.item`): жезлы, свитки, зелья, вещи с текстом; магические вещи, неопознанные и проклятые", ()),
-    "places": ("новое место: на открытом краю мира или объект внутри локации — лавка за городом, баня у площади (`create_place`)", ("create_place",)),
-    "crime": ("преступления героя: убитые, розыск, стража, признание (`crime_known`)", ("crime_known", "crime_release")),
+    "items": ("новый предмет (`move_item.item`): жезлы, свитки, зелья, вещи с текстом; магические вещи, неопознанные и проклятые", ()),
+    "places": ("новое место: на открытом краю мира или объект внутри локации — лавка за городом, баня у площади (`create:place`)", ("create:place",)),
+    "crime": ("преступления героя: убитые, розыск, стража, признание (`crime:known`)", ("crime:known", "crime:release")),
     "social": ("что NPC даёт словами: скидка, услуга даром, тайна, идёт с героем, пускает к себе, слава в поселении "
-               "(`npc_discount`, `npc_favor`, `reveal_secret`, `npc_follow`, `permit`, `reputation`)",
-               ("npc_discount", "npc_favor", "reveal_secret", "npc_follow", "permit", "reputation")),
+               "(`grant:discount`, `grant:favor`, `grant:secret`, `grant:follow`, `grant:permit`, `shift:reputation`)",
+               ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "shift:reputation")),
     "goals": ("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", ()),
     "equip": ("надеть, снять, раздеться (`equip`)", ("equip",)),
     "water": ("набрать воды в бурдюк, флягу, кувшин, ведро из колодца, ручья, реки (`fill`)", ("fill",)),
     "invisible": ("невидимый герой", ()),
-    "people": ("новый человек (`create_npc`)", ("create_npc",)),
-    "quests": ("новое задание: NPC просит о помощи, игрок ищет работу (`create_quest`)", ("create_quest",)),
+    "people": ("новый человек (`create:npc`)", ("create:npc",)),
+    "quests": ("новое задание: NPC просит о помощи, игрок ищет работу (`create:quest`)", ("create:quest",)),
     "languages": ("NPC не понимает героя; языки", ()),
     "tools": ("действие инструментом: замок, травы, подделка, грим (`request_check` с `tool`)", ()),
-    "craft": ("ремесло и готовка: герой куёт, шьёт, мастерит, варит зелье, жарит мясо, варит похлёбку; новый рецепт из слов игрока (`recipe`)", ("recipe",)),
-    "property": ("имущество: купить дом, землю, мельницу, лавку; купчая; место, которого нет в продаже (`property`); свои места, работники, животные; свой вид места — школа, причал (`new_kind`); улучшение своего места по просьбе — станок, лодка, библиотека (`upgrade`); конь, мул, вьюк, телега, аренда у барышника; новый зверь у барышника (`stock` с `animal`)", ("property", "upgrade")),
-    "bank": ("деньги в долг и на хранение: вклад, кредит под залог, ячейка; ростовщик, которого нет (`bank`)", ("bank",)),
-    "study": ("учёба: училище, курсы, экзамен, книги; «у кого научиться» — `find_teachers`, курс у учителя (`course`)", ("course",)),
-    "bonds": ("дружба, романтика, соперничество, наставник: близость, подарки, признание; сцена, что сблизила (`bond`)", ("bond",)),
+    "craft": ("ремесло и готовка: герой куёт, шьёт, мастерит, варит зелье, жарит мясо, варит похлёбку; новый рецепт из слов игрока (`create:recipe`)", ("create:recipe",)),
+    "property": ("имущество: купить дом, землю, мельницу, лавку; купчая; место, которого нет в продаже (`create:property`); свои места, работники, животные; свой вид места — школа, причал (`new_kind`); улучшение своего места по просьбе — станок, лодка, библиотека (`create:upgrade`); конь, мул, вьюк, телега, аренда у барышника; новый зверь у барышника (`create:stock` с `animal`)", ("create:property", "create:upgrade")),
+    "bank": ("деньги в долг и на хранение: вклад, кредит под залог, ячейка; ростовщик, которого нет (`create:bank`)", ("create:bank",)),
+    "study": ("учёба: училище, курсы, экзамен, книги; «у кого научиться» — `find_teachers`, курс у учителя (`create:course`)", ("create:course",)),
+    "bonds": ("дружба, романтика, соперничество, наставник: близость, подарки, признание; сцена, что сблизила (`shift:bond`)", ("shift:bond",)),
     "family": ("семья: предложение, свадьба, супруг, дети, содержание дома, наследник", ()),
     "office": ("служба и власть: должность, назначение, выборы, суд, подати, ополчение, староста, храм; взятки", ()),
-    "underworld": ("преступный мир: кража со взломом, грабёж, контрабанда, скупщик краденого, воровское братство, своя банда (`fence`, `heist`, `org`)", ("fence", "heist", "org")),
-    "shop": ("своя торговля: прилавок, лавка, грамота, опт; поставщик, которого нет (`supplier`)", ("supplier",)),
-    "jobs": ("работа за плату: игрок просит работу, которой нет у нанимателя сцены (`job`)", ("job",)),
+    "underworld": ("преступный мир: кража со взломом, грабёж, контрабанда, скупщик краденого, воровское братство, своя банда (`create:fence`, `create:heist`, `create:org`)", ("create:fence", "create:heist", "create:org")),
+    "shop": ("своя торговля: прилавок, лавка, грамота, опт; поставщик, которого нет (`create:supplier`)", ("create:supplier",)),
+    "jobs": ("работа за плату: игрок просит работу, которой нет у нанимателя сцены (`create:job`)", ("create:job",)),
     "background": ("предыстория героя и связь NPC с его прошлым", ()),
-    "wilds": ("охота и рыбалка, угодья, браконьерство; зверь ушёл или вернулся, рыба пропала, новые угодья (`wilds`)", ("wilds",)),
-    "calendar": ("дата и праздники: когда ярмарка, праздник идёт, срок к празднику; свой праздник по причине (`festival`)", ("festival",)),
+    "wilds": ("охота и рыбалка, угодья, браконьерство; зверь ушёл или вернулся, рыба пропала, новые угодья (`create:wilds`)", ("create:wilds",)),
+    "calendar": ("дата и праздники: когда ярмарка, праздник идёт, срок к празднику; свой праздник по причине (`create:festival`)", ("create:festival",)),
     "weather": ("погода: ливень, туман, снег, зной, мороз и что они значат; чары или чудо меняют погоду на часы (`weather`)", ("weather",)),
-    "faith": ("вера: боги, святилища, молитва, обет, заповедь, осквернение; обет по словам героя (`vow`), новое святилище (`god`)", ("vow", "god")),
+    "faith": ("вера: боги, святилища, молитва, обет, заповедь, осквернение; обет по словам героя (`vow`), новое святилище (`create:god`)", ("vow", "create:god")),
     "guise": ("чужой облик: маскировка, кем выглядит герой, за кого его принимают", ("guise",)),
     "make": ("нового нет в данных и в 5e: мастер собирает статус, навык или черту из частей (`make`): проклятие, благословение места, редкое умение наставника", ("make",)),
-    "factions": ("фракции: новая фракция, чьи это люди и стража, отношение за поступок (`faction`)", ("faction",)),
+    "factions": ("фракции: новая фракция, чьи это люди и стража, отношение за поступок (`create:faction`)", ("create:faction", "shift:standing")),
     "rumors": ("слухи: что говорят в округе, пересказ слуха NPC, слух о герое или пущенный героем, ложь и её опровержение (`rumor`)", ("rumor",)),
-    "pets": ("питомец героя и приручение: дикий зверь в сцене, имя, близость (`bond` с creature_id), помощь, разведка; бездомный зверь по причине (`beast`)", ("beast",)),
-    "games": ("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; поединок по вызову; арена и ставки на бои; своя игра (`contest`)", ("contest",)),
-    "world_edits": ("правка готового места: у человека или в сундуке появилась или пропала вещь по причине в мире (`world_item`); новая вещь в обставленной комнате (`furnish` с `cause`)", ("world_item",)),
-    "containers": ("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`take_from`, `put_in`, `unlock`, `drop_item`)",
-                   ("take_from", "put_in", "unlock", "drop_item")),
-    "doors": ("двери у выходов: заперто, часы объекта, взлом, выбить, отпереть или запереть хозяином (`door`)", ("door",)),
+    "pets": ("питомец героя и приручение: дикий зверь в сцене, имя, близость (`shift:bond` с creature_id), помощь, разведка; бездомный зверь по причине (`create:beast`)", ("create:beast",)),
+    "games": ("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; поединок по вызову; арена и ставки на бои; своя игра (`create:contest`)", ("create:contest",)),
+    "world_edits": ("правка готового места: у человека или в сундуке появилась или пропала вещь по причине в мире (`move_item:world>npc`, `move_item:npc>world`, `move_item:world>container`, `move_item:container>world`); новая вещь в обставленной комнате (`furnish` с `cause`)", ("move_item:world>npc", "move_item:npc>world", "move_item:world>container", "move_item:container>world",)),
+    "containers": ("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`move_item:container>hero`, `move_item:hero>container`, `open:container`, `move_item:hero>room`)",
+                   ("move_item:container>hero", "move_item:hero>container", "open:container", "move_item:hero>room")),
+    "doors": ("двери у выходов: заперто, часы объекта, взлом, выбить, отпереть или запереть хозяином (`open:door`)", ("open:door", "create:way")),
     "captives": ("пленные и существа после боя, перемирие, продажа пленника, чужие вещи героя, герой в плену (`owner`)", ("owner",)),
 }
 
@@ -256,8 +257,16 @@ def topic_for(kind: str) -> str:
     return next((k for k, (_, kinds) in TOPICS.items() if kind in kinds), "")
 
 
+def topic_fields(key: str) -> str:
+    """The fields of a topic's effects: they come with its rules, not in every turn's tool description (v0.7.69)."""
+    tags = TOPICS[key][1]
+    lines = [effect_line(cls) for cls in effect_classes() if class_tag(cls) in tags]
+    return "Поля (? — необязательное): " + "; ".join(lines) if lines else ""
+
+
 def topic_text(key: str) -> str:
-    return render(f"topics/{key}.md.j2")
+    fields = topic_fields(key)
+    return render(f"topics/{key}.md.j2") + (f"\n{fields}" if fields else "")
 
 
 def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE, said: str = "") -> str:

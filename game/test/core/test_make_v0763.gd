@@ -232,7 +232,7 @@ func test_a_book_of_this_turn_goes_by_give_item_and_as_a_quest_reward() -> void:
 	var pending: Array[Dictionary] = [{"kind": "make", "plan": make["plan"]}]
 	var book := str(make["plan"]["book"]["id"])
 	assert_str(str(engine._made_ids({"reward_item_id": "new:book:skin"}, pending)["reward_item_id"])).is_equal(book)
-	var given := engine._plan(s, data, "t", {"kind": "give_item", "item_id": "new:book:skin", "qty": 1, "reason": "награда"}, pending)
+	var given := engine._plan(s, data, "t", {"kind": "move_item", "source": "world", "target": "hero", "item_id": "new:book:skin", "qty": 1, "reason": "награда"}, pending)
 	assert_bool(given.has("plan")).override_failure_message(str(given)).is_true()
 
 
@@ -241,5 +241,5 @@ func test_a_new_key_without_its_make_is_refused_with_the_way_out() -> void:
 	var engine := EffectEngine.new()
 	var e := {"kind": "condition", "condition": "new:rot", "reason": "выпил из колодца", "on": true}
 	assert_str(str(engine._plan(s, data, "t", e, [] as Array[Dictionary]).get("reason", ""))).contains("сначала эффект make")
-	var c := {"kind": "course", "npc_id": "npc_innkeeper", "name": "Угли", "teach_kind": "skill", "teach_id": "new:coal", "lessons": 4, "fee_cp": 400}
+	var c := {"kind": "create", "what": "course", "npc_id": "npc_innkeeper", "name": "Угли", "teach_kind": "skill", "teach_id": "new:coal", "lessons": 4, "fee_cp": 400}
 	assert_str(str(engine._plan(s, data, "t", c, [] as Array[Dictionary]).get("reason", ""))).contains("сначала эффект make")

@@ -127,13 +127,13 @@ func test_a_tool_job_checks_the_tool() -> void:
 func test_the_master_makes_a_job_and_the_hero_sees_it() -> void:
 	var s := _worker()
 	var engine := EffectEngine.new()
-	var dear := engine.validate(s, data, "t-1", {"kind": "job", "employer_id": "npc_innkeeper", "name": "Вышибала", "skill": "athletics",
+	var dear := engine.validate(s, data, "t-1", {"kind": "create", "what": "job", "employer_id": "npc_innkeeper", "name": "Вышибала", "skill": "athletics",
 		"hours": 6, "dc_tier": "easy", "pay_cp": 500})
 	assert_bool(bool(dear["accepted"])).is_false()
-	var away := engine.validate(s, data, "t-1", {"kind": "job", "employer_id": "npc_smith", "name": "Молотобоец", "skill": "athletics",
+	var away := engine.validate(s, data, "t-1", {"kind": "create", "what": "job", "employer_id": "npc_smith", "name": "Молотобоец", "skill": "athletics",
 		"hours": 6, "dc_tier": "easy", "pay_cp": 20})
 	assert_bool(bool(away["accepted"])).is_false()
-	var r := engine.validate(s, data, "t-1", {"kind": "job", "employer_id": "npc_innkeeper", "name": "Вышибала", "skill": "athletics",
+	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "job", "employer_id": "npc_innkeeper", "name": "Вышибала", "skill": "athletics",
 		"hours": 6, "dc_tier": "easy", "pay_cp": 20, "ranks": ["вышибала", "старший вышибала", "начальник охраны"]})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()
 	engine.apply(s, "t-1", [r["effect_id"]])

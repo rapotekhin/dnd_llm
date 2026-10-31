@@ -86,7 +86,7 @@ def test_scripted_failure_is_reported():
     item = {"name": "Кинжал ворона", "item_type": "weapon", "rarity": "uncommon", "value_cp": 100, "properties": ["finesse"]}
     fn = scripted(
         ("find_items", {"query": "кинжал"}),
-        ("propose_effect", {"effect": {"kind": "give_item", "item": item}}),
+        ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero", "item": item}}),
         ("final", lambda m: {"narration": "Ты берёшь кинжал.", "effect_ids": [effect_id(m)]}),
     )
     o = asyncio.run(golden.run_one(sc, FunctionModel(fn, model_name="m"), "m", None, {}))

@@ -78,10 +78,10 @@ def test_rule_topics_out_of_the_prompt_unless_the_scene_needs_them():
     s = snap()
     text = prompts.system_prompt("exploration", s, None)
     assert "Снаряжение — эффектом `equip`" not in text and "`equip` — надеть, снять" in text
-    assert "Новое место — только `create_place`" not in text
+    assert "Новое место — только `create:place`" not in text
     s.scene.open_edges = ["[0] чаща по обе стороны просеки (forest)"]
     text = prompts.system_prompt("exploration", s, None, said="сворачиваю в чащу")  # v0.7.34.3: by the player's words
-    assert "Новое место — только `create_place`." in text and "`places` —" not in text
+    assert "Новое место — только `create:place`." in text and "`places` —" not in text
     assert all(prompts.topic_text(k).strip() for k in prompts.TOPICS)
 
 

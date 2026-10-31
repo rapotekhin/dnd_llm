@@ -80,7 +80,7 @@ docs/
    | «Какой сеттинг / лор / тон?» | `narrative/world.md`, `dm-style.md` |
    | «Как устроена архитектура?» | `tech/godot-client.md` |
    | «Как ЛЛМ интегрирован?» | `tech/llm-integration.md` |
-   | «Какие у мастера инструменты / эффекты? Что проверяет движок у `move`, `give_item`…?» | `tech/master-tools.md` |
+   | «Какие у мастера инструменты / эффекты? Что проверяет движок у `move`, `move_item:world>hero`…?» | `tech/master-tools.md` |
    | «Может ли мастер X? Как мастер создаёт место / человека / задание / вещь?» | `tech/master-scenarios.md` |
    | «Почему Pickle / LangChain / Pygame?» | `tech/adr/<NNNN>-*.md` |
    | «Что в планах / что в работе?» | `production/roadmap.md`, `backlog.md` |

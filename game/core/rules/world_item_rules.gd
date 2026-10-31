@@ -1,7 +1,7 @@
 class_name WorldItemRules
 extends RefCounted
 ## The master moves a thing of the world with a cause (v0.7.39.8, the author: «правка созданного места — одна дорога»):
-## effect `world_item` {op: give | take, npc_id | prop_id, item_id or item, qty, cause} — into or out of a person's
+## effect `move_item` world>npc, npc>world, world>container, container>world {npc_id | prop_id, item_id or item, qty, cause} — into or out of a person's
 ## pockets (TheftRules.pockets) or a container of the hero's room (ContainerRules). The hero's own things and bags are
 ## the engine's alone; a thing given that nobody owns (a container without an owner) is the master's gift within the
 ## reward budget; a new thing is checked as any made item (ItemRules.check_generated), its value up to
@@ -9,9 +9,7 @@ extends RefCounted
 
 
 static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
-	var op := str(e.get("op", ""))
-	if not op in ["give", "take"]:
-		return {"reason": "op — give (положить) или take (забрать)"}
+	var op := "give" if str(e.get("source", "")) == "world" else "take"
 	var cause := str(e.get("cause", "")).strip_edges() if e.get("cause") != null else ""
 	if cause.length() < 8:
 		return {"reason": "нужна cause — что в мире так поменяло вещи (купил, отдал, украли, принесли)"}

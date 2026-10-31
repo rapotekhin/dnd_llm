@@ -72,9 +72,9 @@ def test_errors_match_the_contract(client):
     {"kind": "damage", "severity": "deadly", "damage_type": "огонь", "reason": "x"},
     {"kind": "heal", "tier": "minor", "reason": "x"},
     {"kind": "coins", "delta_cp": 5, "reason": "x"},
-    {"kind": "give_item", "item": {"name": "X", "item_type": "weapon", "rarity": "common", "value_cp": 1, "properties": ["light"]}},
-    {"kind": "take_item", "item_id": "torch", "qty": 2},
-    {"kind": "npc_attitude", "npc_id": "n", "delta": -1, "reason": "x"},
+    {"kind": "move_item", "source": "world", "target": "hero", "item": {"name": "X", "item_type": "weapon", "rarity": "common", "value_cp": 1, "properties": ["light"]}},
+    {"kind": "move_item", "source": "hero", "target": "world", "item_id": "torch", "qty": 2},
+    {"kind": "shift", "what": "attitude", "npc_id": "n", "delta": -1, "reason": "x"},
     {"kind": "flag", "flag": "door_open"},
 ])
 def test_every_effect_kind_is_in_the_contract(effect):

@@ -45,23 +45,23 @@ func test_the_master_fills_a_chest_within_the_budget() -> void:
 
 func test_a_lock_needs_its_key_or_a_passed_check() -> void:
 	_furnish([{"name": "Сундук", "container": "chest", "lock": "good", "key": "candle", "contents": [{"item_id": "dagger"}]}])
-	assert_str(str(_do({"kind": "take_from", "prop_id": "p1", "item_id": "dagger"}, "t-2")["reason"])).contains("заперт")
-	assert_str(str(_do({"kind": "unlock", "prop_id": "p1", "how": "force"}, "t-3")["reason"])).contains("сначала проверка")
+	assert_str(str(_do({"kind": "move_item", "source": "container", "target": "hero", "prop_id": "p1", "item_id": "dagger"}, "t-2")["reason"])).contains("заперт")
+	assert_str(str(_do({"kind": "open", "what": "container", "prop_id": "p1", "how": "force"}, "t-3")["reason"])).contains("сначала проверка")
 	fx.note_roll("t-4", "athletics", 18, true)  # good lock 15 + 2 to force
-	assert_bool(bool(_do({"kind": "unlock", "prop_id": "p1", "how": "force"}, "t-4")["accepted"])).is_true()
+	assert_bool(bool(_do({"kind": "open", "what": "container", "prop_id": "p1", "how": "force"}, "t-4")["accepted"])).is_true()
 	assert_str(str(PropRules.find(s, s.room_id, "p1")["state"])).is_equal("broken")
-	assert_bool(bool(_do({"kind": "take_from", "prop_id": "p1", "item_id": "dagger"}, "t-5")["accepted"])).is_true()
+	assert_bool(bool(_do({"kind": "move_item", "source": "container", "target": "hero", "prop_id": "p1", "item_id": "dagger"}, "t-5")["accepted"])).is_true()
 	assert_int(int(s.character["inventory"].get("dagger", 0))).is_greater(0)
 
 
 func test_putting_in_keeps_the_capacity_and_a_full_box_is_not_carried_off() -> void:
 	_furnish([{"name": "Корзина", "container": "basket", "item_id": "basket"}])
 	s.character["inventory"]["chest"] = 2  # 25 lb each, the basket holds 40
-	assert_str(str(_do({"kind": "put_in", "prop_id": "p1", "item_id": "chest", "qty": 2}, "t-2")["reason"])).contains("не влезет")
+	assert_str(str(_do({"kind": "move_item", "source": "hero", "target": "container", "prop_id": "p1", "item_id": "chest", "qty": 2}, "t-2")["reason"])).contains("не влезет")
 	s.character["inventory"]["candle"] = 3
-	assert_bool(bool(_do({"kind": "put_in", "prop_id": "p1", "item_id": "candle", "qty": 2}, "t-3")["accepted"])).is_true()
+	assert_bool(bool(_do({"kind": "move_item", "source": "hero", "target": "container", "prop_id": "p1", "item_id": "candle", "qty": 2}, "t-3")["accepted"])).is_true()
 	assert_int(int(s.character["inventory"]["candle"])).is_equal(1)
-	assert_bool(bool(_do({"kind": "take_prop", "prop_id": "p1"}, "t-4")["accepted"])).is_true()  # a basket goes with what is in it (v0.7.18.2)
+	assert_bool(bool(_do({"kind": "move_item", "source": "room", "target": "hero", "prop_id": "p1"}, "t-4")["accepted"])).is_true()  # a basket goes with what is in it (v0.7.18.2)
 	# The hero has a backpack — the one big bag (v0.7.22.9): the basket is a plain thing, the candles go loose.
 	assert_array(ContainerRules.bags_of(s.character, "basket")).is_empty()
 	assert_int(int(s.character["inventory"]["candle"])).is_equal(3)
@@ -71,6 +71,6 @@ func test_putting_in_keeps_the_capacity_and_a_full_box_is_not_carried_off() -> v
 func test_taking_from_someone_elses_chest_before_them_is_a_theft() -> void:
 	_furnish([{"name": "Сундук Бруно", "container": "chest", "owner": "npc_innkeeper", "contents": [{"item_id": "dagger"}]}])
 	assert_int(s.reward_spent).is_equal(0)  # his own goods, no gift
-	var r := _do({"kind": "take_from", "prop_id": "p1", "item_id": "dagger"}, "t-2")
+	var r := _do({"kind": "move_item", "source": "container", "target": "hero", "prop_id": "p1", "item_id": "dagger"}, "t-2")
 	assert_str(str(r["summary"])).contains("на глазах у хозяина")
 	assert_int(s.attitude("npc_innkeeper")).is_less(0)

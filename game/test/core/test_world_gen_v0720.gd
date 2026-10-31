@@ -17,7 +17,7 @@ func before_test() -> void:
 func _make(npc: Dictionary, turn := "t-1", search := true) -> Dictionary:
 	if search:
 		fx.searched_npcs[turn] = true
-	var r := fx.validate(s, data, turn, {"kind": "create_npc", "npc": npc})
+	var r := fx.validate(s, data, turn, {"kind": "create", "what": "npc", "npc": npc})
 	if bool(r["accepted"]):
 		fx.apply(s, turn, [r["effect_id"]])
 	return r

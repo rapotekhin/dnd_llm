@@ -34,14 +34,14 @@ func test_a_won_check_pays_for_the_secret() -> void:
 func test_goodwill_tells_it_by_an_effect_and_opens_the_way() -> void:
 	var s := _hero("brod-herbalist")
 	var fx := EffectEngine.new()
-	var r := fx.validate(s, data, "t-1", {"kind": "reveal_secret", "npc_id": "npc_herbalist", "secret_id": "hollow"})
+	var r := fx.validate(s, data, "t-1", {"kind": "grant", "what": "secret", "npc_id": "npc_herbalist", "secret_id": "hollow"})
 	assert_str(str(r["reason"])).contains("не доверяет")
 	Being.of(s, "npc_herbalist")["attitude"] = 2
-	r = fx.validate(s, data, "t-2", {"kind": "reveal_secret", "npc_id": "npc_herbalist", "secret_id": "hollow"})
+	r = fx.validate(s, data, "t-2", {"kind": "grant", "what": "secret", "npc_id": "npc_herbalist", "secret_id": "hollow"})
 	assert_str(str(r["summary"])).contains("мёртвым дубом")
 	fx.apply(s, "t-2", [r["effect_id"]])
 	assert_array(WayRules.open_exits(s, data["world"], "pushcha-hollow")).contains(["pushcha-burrow"])
-	assert_str(str(fx.validate(s, data, "t-3", {"kind": "reveal_secret", "npc_id": "npc_herbalist", "secret_id": "nope"})["reason"])).contains("нет тайны")
+	assert_str(str(fx.validate(s, data, "t-3", {"kind": "grant", "what": "secret", "npc_id": "npc_herbalist", "secret_id": "nope"})["reason"])).contains("нет тайны")
 
 
 func test_the_master_sees_only_hints_of_untold_secrets() -> void:

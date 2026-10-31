@@ -15,7 +15,8 @@ func before_test() -> void:
 
 func _assess(e: Dictionary, turn := "t-1") -> Dictionary:
 	var spec := e.duplicate()
-	spec["kind"] = "goal_assess"
+	spec["kind"] = "goal"
+	spec["what"] = "assess"
 	var r := fx.validate(s, data, turn, spec)
 	if bool(r["accepted"]):
 		fx.apply(s, turn, [r["effect_id"]])
@@ -66,16 +67,16 @@ func test_past_the_threshold_hints_come_first_then_the_quest() -> void:
 	s.room_id = "brod-tavern-hall"
 	GoalRules.write(c, "Убить тролля")
 	_assess({"scale": "hard"})  # level 3 of the class, two hints before the quest
-	assert_str(str(_assess_kind({"kind": "goal_hint"}, "t-2")["reason"])).contains("ещё не по силам")
-	var quest := {"kind": "create_quest", "giver": "npc_innkeeper", "title": "След тролля", "difficulty": "hard", "for_goal": true,
+	assert_str(str(_assess_kind({"kind": "goal", "what": "hint"}, "t-2")["reason"])).contains("ещё не по силам")
+	var quest := {"kind": "create", "what": "quest", "giver": "npc_innkeeper", "title": "След тролля", "difficulty": "hard", "for_goal": true,
 		"acts": [{"title": "Слухи", "goal": "Расспросить Миру о тролле"}, {"title": "Логово", "goal": "Найти и одолеть тролля"}]}
 	fx.searched_quests["t-3"] = true
 	assert_str(str(_assess_kind(quest, "t-3")["reason"])).contains("ещё не по силам")
 	c["level"] = 3
 	fx.searched_quests["t-4"] = true
 	assert_str(str(_assess_kind(quest, "t-4")["reason"])).contains("намёков 0 из 2")
-	assert_bool(bool(_assess_kind({"kind": "goal_hint"}, "t-5")["accepted"])).is_true()
-	assert_bool(bool(_assess_kind({"kind": "goal_hint"}, "t-6")["accepted"])).is_true()
+	assert_bool(bool(_assess_kind({"kind": "goal", "what": "hint"}, "t-5")["accepted"])).is_true()
+	assert_bool(bool(_assess_kind({"kind": "goal", "what": "hint"}, "t-6")["accepted"])).is_true()
 	assert_str(GoalRules.text_of(c, data)).contains("намёков 2 из 2")
 	fx.searched_quests["t-7"] = true
 	assert_bool(bool(_assess_kind(quest, "t-7")["accepted"])).is_true()

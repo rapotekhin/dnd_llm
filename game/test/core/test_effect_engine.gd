@@ -84,13 +84,13 @@ func test_heal_only_when_hurt_and_capped() -> void:
 
 
 func test_give_and_take_catalog_items() -> void:
-	var give := _ok({"kind": "give_item", "item_id": "torch", "qty": 3})
-	assert_str(_no({"kind": "give_item", "item_id": "longsword", "qty": 2})).contains("стопку")
-	assert_str(_no({"kind": "give_item", "item_id": "excalibur"})).contains("нет")
+	var give := _ok({"kind": "move_item", "source": "world", "target": "hero", "item_id": "torch", "qty": 3})
+	assert_str(_no({"kind": "move_item", "source": "world", "target": "hero", "item_id": "longsword", "qty": 2})).contains("стопку")
+	assert_str(_no({"kind": "move_item", "source": "world", "target": "hero", "item_id": "excalibur"})).contains("нет")
 	fx.apply(s, "t-1", [give])
 	assert_int(s.character["inventory"]["torch"]).is_equal(13)  # 10 from the explorer's pack + 3
-	var take := _ok({"kind": "take_item", "item_id": "handaxe", "qty": 2}, "t-2")
-	assert_str(_no({"kind": "take_item", "item_id": "handaxe", "qty": 1}, "t-2")).contains("нет")
+	var take := _ok({"kind": "move_item", "source": "hero", "target": "world", "item_id": "handaxe", "qty": 2}, "t-2")
+	assert_str(_no({"kind": "move_item", "source": "hero", "target": "world", "item_id": "handaxe", "qty": 1}, "t-2")).contains("нет")
 	fx.apply(s, "t-2", [take])
 	assert_bool(s.character["inventory"].has("handaxe")).is_false()
 
@@ -98,10 +98,10 @@ func test_give_and_take_catalog_items() -> void:
 func test_new_item_needs_a_search_and_a_level_fitting_rarity() -> void:
 	var item := {"name": "Кинжал инея", "item_type": "weapon", "base": "dagger", "rarity": "common", "value_cp": 2000,
 		"properties": ["finesse", "cold_damage"]}
-	assert_str(_no({"kind": "give_item", "item": item})).contains("find_items")
+	assert_str(_no({"kind": "move_item", "source": "world", "target": "hero", "item": item})).contains("find_items")
 	fx.mark_searched("t-1")
 	fx.note_check("t-1", "medium", true)  # a magic find needs a passed check (v0.7.22.2)
-	var r := fx.validate(s, data, "t-1", {"kind": "give_item", "item": item})
+	var r := fx.validate(s, data, "t-1", {"kind": "move_item", "source": "world", "target": "hero", "item": item})
 	assert_bool(r["accepted"]).is_true()
 	assert_str(r["item_id"]).starts_with("gen_")
 	fx.apply(s, "t-1", [r["effect_id"]])
@@ -111,16 +111,16 @@ func test_new_item_needs_a_search_and_a_level_fitting_rarity() -> void:
 	fx.mark_searched("t-2")
 	var too_strong := item.duplicate()
 	too_strong["properties"] = ["magic_plus3"]
-	assert_str(_no({"kind": "give_item", "item": too_strong}, "t-2")).contains("недоступен")
+	assert_str(_no({"kind": "move_item", "source": "world", "target": "hero", "item": too_strong}, "t-2")).contains("недоступен")
 	var unknown := item.duplicate()
 	unknown["properties"] = ["vorpal"]
-	assert_str(_no({"kind": "give_item", "item": unknown}, "t-2")).contains("неизвестно")
+	assert_str(_no({"kind": "move_item", "source": "world", "target": "hero", "item": unknown}, "t-2")).contains("неизвестно")
 
 
 func test_npc_attitude_only_for_npcs_here_and_clamped() -> void:
-	assert_str(_no({"kind": "npc_attitude", "npc_id": TestUtils.COOK, "delta": 1, "reason": "x"})).contains("нет")
+	assert_str(_no({"kind": "shift", "what": "attitude", "npc_id": TestUtils.COOK, "delta": 1, "reason": "x"})).contains("нет")
 	for t in ["t-1", "t-2"]:
-		fx.apply(s, t, [_ok({"kind": "npc_attitude", "npc_id": TestUtils.INNKEEPER, "delta": 2, "reason": "помог"}, t)])
+		fx.apply(s, t, [_ok({"kind": "shift", "what": "attitude", "npc_id": TestUtils.INNKEEPER, "delta": 2, "reason": "помог"}, t)])
 	assert_int(s.attitude(TestUtils.INNKEEPER)).is_equal(3)
 
 
@@ -169,15 +169,15 @@ func test_a_quest_thing_by_words_takes_and_closes_the_quest() -> void:
 	s.room_id = "brod-tavern-hall"
 	s.mode = GameSession.MODE_SOCIAL
 	s.npc_id = "npc_innkeeper"
-	var given := fx.apply(s, "t-1", [_ok({"kind": "give_item", "item_id": "bruno_letter"})])
+	var given := fx.apply(s, "t-1", [_ok({"kind": "move_item", "source": "world", "target": "hero", "item_id": "bruno_letter"})])
 	assert_bool(s.quests_active.has("letter_to_ilva")).is_true()
 	assert_int(int(s.character["inventory"]["bruno_letter"])).is_equal(1)
 	assert_str(given[0]).contains("Письмо для Илвы")
-	assert_str(_no({"kind": "give_item", "item_id": "bruno_letter"}, "t-2")).contains("уже выдана")
+	assert_str(_no({"kind": "move_item", "source": "world", "target": "hero", "item_id": "bruno_letter"}, "t-2")).contains("уже выдана")
 	s.room_id = "brod-temple"
 	s.npc_id = "npc_priestess"
 	var xp := int(s.character["xp"])
-	var handed := fx.apply(s, "t-3", [_ok({"kind": "take_item", "item_id": "bruno_letter"}, "t-3")])
+	var handed := fx.apply(s, "t-3", [_ok({"kind": "move_item", "source": "hero", "target": "world", "item_id": "bruno_letter"}, "t-3")])
 	assert_bool(s.quests_done.has("letter_to_ilva")).is_true()
 	assert_bool(s.character["inventory"].has("bruno_letter")).is_false()
 	assert_int(int(s.character["xp"])).is_equal(xp)  # v0.7.19: a delivery gives no class experience
@@ -186,9 +186,9 @@ func test_a_quest_thing_by_words_takes_and_closes_the_quest() -> void:
 
 func test_a_quest_thing_elsewhere_is_refused() -> void:
 	s.room_id = "brod-square"
-	assert_str(_no({"kind": "give_item", "item_id": "bruno_letter"})).contains("Взять задание")
+	assert_str(_no({"kind": "move_item", "source": "world", "target": "hero", "item_id": "bruno_letter"})).contains("Взять задание")
 	s.room_id = "brod-tavern-hall"
 	QuestRules.accept(s, data, "letter_to_ilva")
 	s.mode = GameSession.MODE_SOCIAL
 	s.npc_id = "npc_innkeeper"
-	assert_str(_no({"kind": "take_item", "item_id": "bruno_letter"}, "t-2")).contains("Сестра Илва")
+	assert_str(_no({"kind": "move_item", "source": "hero", "target": "world", "item_id": "bruno_letter"}, "t-2")).contains("Сестра Илва")

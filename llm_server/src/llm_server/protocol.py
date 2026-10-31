@@ -4,12 +4,15 @@ Incoming models ignore unknown fields: a newer minor client may send optional fi
 """
 
 from enum import IntEnum
-from typing import Annotated, Literal
+import types
+import typing
+from typing import Annotated, Any, Literal, Union, get_args
 
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
+from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.100.0"
+PROTOCOL_VERSION = "0.101.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -187,7 +190,7 @@ class SceneNpc(_In):
     understands_hero: bool = True  # shares a tongue with the hero (or a spell bridges it) (0.17.0)
     tie: str = ""  # the NPC's tie with the hero's background: «служивый: уважает звание героя-солдата» (0.17.0)
     memory: list[str] = Field(default_factory=list)  # what the NPC remembers of the hero: «день 2 — …» (0.20.0)
-    services: list[str] = Field(default_factory=list)  # «опознание вещей [identify]» — for npc_favor (0.21.0)
+    services: list[str] = Field(default_factory=list)  # «опознание вещей [identify]» — for grant:favor (0.21.0)
     deal: str = ""  # what the NPC granted by words: «скидка герою 10% до дня 9» (0.21.0)
     secrets: list[str] = Field(default_factory=list)  # untold secrets as hints: «[cellar] нервничает из-за погреба — …» (0.22.0)
     refuses: bool = False  # hostile: will not talk or trade (0.22.0)
@@ -364,7 +367,7 @@ class TradeInfo(_In):
     npc_id: str
     purse_cp: int = 0
     haggle_pct: int = 0  # won for the next deal (0.26.0; was: the visit): −pct on buying, +pct on selling
-    discount_pct: int = 0  # granted by words for days (npc_discount, 0.21.0), already in the prices
+    discount_pct: int = 0  # granted by words for days (grant:discount, 0.21.0), already in the prices
     wants: str = ""  # what the trader buys gladly, in words (0.25.0)
     shuns: str = ""  # what it will not buy (0.25.0)
     news: list[str] = Field(default_factory=list)  # what the world's events changed at this trader (0.26.0)
@@ -614,8 +617,8 @@ class GeneratedItem(_Out):
 
 class MoveEffect(_Out):
     kind: Literal["move"] = "move"
-    room_id: str  # 0.52.0: or «new:<key>» — the first room of a place create_place made at this room in this turn
-    npcs: list[str] = Field(default_factory=list)  # NPCs of the scene who go along (0.33.0): as npc_follow, checked by the engine
+    room_id: str  # 0.52.0: or «new:<key>» — the first room of a place create:place made at this room in this turn
+    npcs: list[str] = Field(default_factory=list)  # NPCs of the scene who go along (0.33.0): as grant:follow, checked by the engine
 
 
 class DamageEffect(_Out):
@@ -639,16 +642,29 @@ class CoinsEffect(_Out):
     settles: Literal["tax"] | None = None  # 0.77.0: a payment that pays off a debt of the hero — "tax", the property tax
 
 
-class GiveItemEffect(_Out):
-    kind: Literal["give_item"] = "give_item"
+class MoveItemEffect(_Out):
+    """A thing moves from `source` to `target` (0.101.0): the hero, `world` (nowhere in particular: a gift, a thing used
+    up), `room` (a portable thing of the hero's room, `prop_id`), `container` (a container of the room, `prop_id`), `npc`
+    (a person's pockets, `npc_id`). The pairs: world>hero — the hero gets `item_id` or a new `item`; hero>world — a thing
+    of the hero is gone; room>hero — takes a thing of the room, an owner who sees it reacts; container>hero — someone
+    else's before its owner is a theft; hero>container — within its capacity; hero>room — a thing (a bag with what is in
+    it) left here; world>npc, npc>world, world>container, container>world — the world's own, with a `cause`, not the
+    hero's things."""
+
+    kind: Literal["move_item"] = "move_item"
+    source: Literal["hero", "world", "room", "container", "npc"]
+    target: Literal["hero", "world", "room", "container", "npc"]
     item_id: str | None = None  # an existing catalog/library item
     item: GeneratedItem | None = None  # or a new one (only after engine.find_items in the same turn)
-    qty: int = Field(default=1, ge=1, le=20)
+    prop_id: str | None = None  # the thing of the room, the container
+    npc_id: str | None = None
+    qty: int = Field(default=1, ge=1, le=99)
+    cause: str | None = Field(default=None, max_length=160)  # what in the world did it (world>npc and the like)
 
 
 class ContentSpec(_Out):
     """A thing inside a container when the room is furnished (0.28.0): an item of the catalog (`item_id`) or a new one
-    (`item`, by the same rules as give_item.item)."""
+    (`item`, by the same rules as move_item.item)."""
 
     item_id: str | None = None
     item: GeneratedItem | None = None
@@ -683,29 +699,12 @@ class FurnishEffect(_Out):
     cause: str | None = Field(default=None, max_length=160)  # 0.83.0: more things in a furnished room — what brought them
 
 
-class TakeFromEffect(_Out):
-    """The hero takes a thing out of a container of the room (0.28.0); someone else's before its owner — a theft."""
-
-    kind: Literal["take_from"] = "take_from"
-    prop_id: str
-    item_id: str
-    qty: int = Field(default=1, ge=1, le=99)
-
-
-class PutInEffect(_Out):
-    """The hero puts a thing of their own into a container of the room (0.28.0), within its capacity."""
-
-    kind: Literal["put_in"] = "put_in"
-    prop_id: str
-    item_id: str
-    qty: int = Field(default=1, ge=1, le=99)
-
-
 class UnlockEffect(_Out):
     """A locked container opens (0.28.0): `key` the hero carries, or after a passed check this turn — `pick`
     (Sleight of Hand with thieves' tools) or `force` (Athletics; it breaks)."""
 
-    kind: Literal["unlock"] = "unlock"
+    kind: Literal["open"] = "open"
+    what: Literal["container"] = "container"
     prop_id: str
     how: Literal["key", "pick", "force"] = "key"
 
@@ -715,7 +714,8 @@ class DoorEffect(_Out):
     here or behind it) does it, or `unlock` after a passed Sleight of Hand this turn; `break` — after a passed Athletics
     this turn. The engine knows the DC; breaking in before eyes is a trespass."""
 
-    kind: Literal["door"] = "door"
+    kind: Literal["open"] = "open"
+    what: Literal["door"] = "door"
     to_room: str
     action: Literal["unlock", "lock", "break"] = "unlock"
 
@@ -724,7 +724,8 @@ class WayEffect(_Out):
     """A new way from the hero's room to a room of this location (0.100.0): a crawl, a breach, a secret door the story
     found. The engine refuses a room the world keeps shut and a road between locations."""
 
-    kind: Literal["way"] = "way"
+    kind: Literal["create"] = "create"
+    what: Literal["way"] = "way"
     to_room: str
     way_kind: str  # a row of rules.ways.kinds: crawl, breach, secret, door, ladder…
     material: str | None = None
@@ -751,7 +752,7 @@ class NpcTeaches(_Out):
 class NewNpc(_Out):
     """A person the world lacks (0.31.0), by the schema of a pack NPC: free text only in description and personality;
     `monster` — a template of people of the SRD (commoner, guard, acolyte, noble, scout, thug, priest, veteran…),
-    `race` — an SRD race id, `room_id` — a room of this location (none — here) or «new:<key>» of this turn's create_place
+    `race` — an SRD race id, `room_id` — a room of this location (none — here) or «new:<key>» of this turn's create:place
     (0.52.0), `trader` with its shop kind `trade_kind` (0.53.0: the engine's goods of the kind, more each day; none — by
     the role's words), `stock` of ids from find_items and `stock_new` — the master's extra goods, a bad one skipped."""
 
@@ -847,7 +848,7 @@ class SiteHours(_Out):
 class NewSite(_Out):
     """The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of
     its kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an
-    NPC of the world or «new» — the person create_npc makes in this turn (0.52.0)."""
+    NPC of the world or «new» — the person create:npc makes in this turn (0.52.0)."""
 
     name: str = Field(default="", max_length=60)
     description: str = Field(default="", max_length=400)
@@ -871,11 +872,12 @@ class CreatePlaceEffect(_Out):
     empty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter
     budget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of
     `room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed. 0.79.0: a settlement in one
-    turn — up to 12 rooms, `sites` with keys its rooms name, `npcs` — its people (as create_npc, with `key`, a room
+    turn — up to 12 rooms, `sites` with keys its rooms name, `npcs` — its people (as create:npc, with `key`, a room
     «new:<room key>»), `law` — a guard keeps the peace, `settlement` — hamlet | village | town: the engine checks what
     such a place always has (rules.world_gen.settlements) and gives it its guard."""
 
-    kind: Literal["create_place"] = "create_place"
+    kind: Literal["create"] = "create"
+    what: Literal["place"] = "place"
     edge: int = Field(default=0, ge=0)
     room_id: str | None = None
     rooms: list[NewRoom] = Field(min_length=1, max_length=12)
@@ -895,12 +897,13 @@ class CreateNpcEffect(_Out):
     """Makes a person the world lacks (0.31.0) — only after find_npcs in the same turn; the engine checks the schema,
     the limits and the duplicates; the person lives in this game like one of the pack."""
 
-    kind: Literal["create_npc"] = "create_npc"
+    kind: Literal["create"] = "create"
+    what: Literal["npc"] = "npc"
     npc: NewNpc
 
 
 class QuestNpc(NewNpc):
-    """A person a quest brings (0.37.0): the schema of create_npc and a `key` its steps name («new:<key>»);
+    """A person a quest brings (0.37.0): the schema of create:npc and a `key` its steps name («new:<key>»);
     `room_id` may be «new:<room key>» of the quest's new place."""
 
     key: str
@@ -937,7 +940,8 @@ class CreateQuestEffect(_Out):
     acts; the engine sets the reward by the difficulty and the hero's level, the acts are built by the designer when
     each opens (the first — on taking). Offered at once, it lives like a pack quest."""
 
-    kind: Literal["create_quest"] = "create_quest"
+    kind: Literal["create"] = "create"
+    what: Literal["quest"] = "quest"
     giver: str = ""  # an NPC of the scene; on a board — anyone alive or «new:<key>»; empty for one's own deed (0.38.0)
     board_prop_id: str | None = None  # 0.38.0: an order on a board — a thing of the room that offers it
     for_goal: bool = False  # 0.40.0: the quest for the hero's life goal — past its threshold and after enough hints
@@ -1031,7 +1035,7 @@ class ActChoice(_Out):
 
 
 class QuestActPlace(_Out):
-    """A place an act brings (0.81.0): the fields of create_place without its people (they go to the act's
+    """A place an act brings (0.81.0): the fields of create:place without its people (they go to the act's
     `new_npcs`); a room's `encounter` is a fight of the act (a lair), named in a step as «new:<room key>»; a room may
     `boss` — its leader (last act of a hard or deadly quest)."""
 
@@ -1065,15 +1069,6 @@ class QuestActEffect(_Out):
     teaches: "ActTeach | None" = None  # 0.82.0: the course at the teacher the hero was sent to find
 
 
-class DropItemEffect(_Out):
-    """The hero leaves a thing in the room (0.29.0): an item of the pack, or a bag (`item_id` = its bag id) with what
-    is in it; it becomes a thing of the room that can be picked up again."""
-
-    kind: Literal["drop_item"] = "drop_item"
-    item_id: str
-    qty: int = Field(default=1, ge=1, le=99)
-
-
 class FillEffect(_Out):
     """The hero draws water into the vessels it carries (0.70.0): a waterskin, a flask, a jug, a bucket; `item_id` —
     one kind only, empty — all. The engine checks the water here (the room's tag, a thing with `source`, a well or a
@@ -1081,13 +1076,6 @@ class FillEffect(_Out):
 
     kind: Literal["fill"] = "fill"
     item_id: str | None = None
-
-
-class TakePropEffect(_Out):
-    """The player takes a portable thing of the room (0.11.0); an owner who sees it reacts by the engine's rules."""
-
-    kind: Literal["take_prop"] = "take_prop"
-    prop_id: str
 
 
 class PropStateEffect(_Out):
@@ -1106,14 +1094,9 @@ class PropStateEffect(_Out):
     cause: str | None = None
 
 
-class TakeItemEffect(_Out):
-    kind: Literal["take_item"] = "take_item"
-    item_id: str
-    qty: int = Field(default=1, ge=1, le=20)
-
-
 class NpcAttitudeEffect(_Out):
-    kind: Literal["npc_attitude"] = "npc_attitude"
+    kind: Literal["shift"] = "shift"
+    what: Literal["attitude"] = "attitude"
     npc_id: str
     delta: int = Field(ge=-2, le=2)
     reason: str
@@ -1173,7 +1156,7 @@ class MakeEffect(_Out):
     """The master builds what neither the data nor 5e has (0.97.0): a status or a passive trait of `parts`, a skill of
     an `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the
     hero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a
-    trait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `give_item`
+    trait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `move_item:world>hero`
     item_id «new:book:<key>». 0.98.0: a spell and an ability with charges of the action's parts (rules.make.act): the
     engine sets the circle, it is not asked. What the parts do not cover is not made: say so in the story, fill
     `missing_concept`."""
@@ -1228,7 +1211,8 @@ class RecipeEffect(_Out):
     the work pays what the materials do not (5e: 5 gp a day of 8 hours), so the engine raises `hours` to that; the hero
     then makes it in the «Ремесло» window (time, the check, the quality)."""
 
-    kind: Literal["recipe"] = "recipe"
+    kind: Literal["create"] = "create"
+    what: Literal["recipe"] = "recipe"
     name: str = Field(default="", max_length=60)  # «Силок из верёвки»; empty — the output's name
     tool: str  # smiths_tools, leatherworkers_tools, woodcarvers_tools, carpenters_tools, herbalism_kit, alchemists_supplies, cooks_utensils, tinkers_tools…
     station: Literal["forge", "workbench", "alchemy", "hearth", "fire"] | None = None  # None — anywhere; fire — a hearth or a campfire
@@ -1236,7 +1220,7 @@ class RecipeEffect(_Out):
     dc_tier: Literal["very_easy", "easy", "medium", "hard"]
     materials: list[RecipeMaterial] = Field(min_length=1, max_length=4)
     output_id: str | None = None  # a catalog or library item
-    output: GeneratedItem | None = None  # or a new one (as give_item.item)
+    output: GeneratedItem | None = None  # or a new one (as move_item.item)
     qty: int = Field(default=1, ge=1, le=20)
     book: str | None = Field(default=None, max_length=60)  # 0.98.0: not learned now: a book, «new:book:<key>»
     key: str = Field(default="", max_length=30)  # the link of the book
@@ -1273,7 +1257,8 @@ class CourseEffect(_Out):
     who can (its template), its lessons, price and the attitude from the 3rd circle by the engine; `requires` — more
     conditions."""
 
-    kind: Literal["course"] = "course"
+    kind: Literal["create"] = "create"
+    what: Literal["course"] = "course"
     npc_id: str  # an NPC of the scene or a teacher from find_teachers
     name: str = Field(max_length=60)
     teach_kind: Literal["skill", "tool", "language", "spell", "recipe", "trait", "ability"]
@@ -1312,7 +1297,8 @@ class StockEffect(_Out):
     by the «Торговать» button at the engine's price. 0.86.0: `animal` — an SRD beast id a dealer of the scene now sells
     (a camel, a pony): its price, the way it shortens and its pack the engine derives; bought in the «Животные» window."""
 
-    kind: Literal["stock"] = "stock"
+    kind: Literal["create"] = "create"
+    what: Literal["stock"] = "stock"
     npc_id: str  # a trader of the scene, or for `animal` — any seller of the scene
     item_id: str | None = None
     item: GeneratedItem | None = None
@@ -1325,7 +1311,8 @@ class PermitEffect(_Out):
     engine checks the NPC is here and owns a place closed to the hero; `site_id` — one place, empty — all of them. The
     leave lasts until a quarrel."""
 
-    kind: Literal["permit"] = "permit"
+    kind: Literal["grant"] = "grant"
+    what: Literal["permit"] = "permit"
     npc_id: str  # an NPC of the scene, the owner
     site_id: str | None = None
 
@@ -1356,7 +1343,8 @@ class ContestEffect(_Out):
     outcome are the engine's. `bout` (0.89.0) — a duel by challenge: a fight to surrender with the NPC by the
     arena's way, the stake to the winner."""
 
-    kind: Literal["contest"] = "contest"
+    kind: Literal["create"] = "create"
+    what: Literal["contest"] = "contest"
     npc_id: str
     game: str | None = None  # dice | cards | arm | drinking | song | riddles | bout, or a made kind's id
     new_kind: NewContestKind | None = None
@@ -1367,7 +1355,8 @@ class WildsEffect(_Out):
     beaten out, the fish gone; `restore` — they are back; `add` — a room gets a ground it lacked (not indoors). The
     catch, its check and the stock's regrowth are the engine's."""
 
-    kind: Literal["wilds"] = "wilds"
+    kind: Literal["create"] = "create"
+    what: Literal["wilds"] = "wilds"
     ground: Literal["game", "fish"]
     op: Literal["deplete", "restore", "add"]
     cause: str = Field(min_length=8, max_length=160)
@@ -1380,7 +1369,8 @@ class BeastEffect(_Out):
     rules.pets; it does not attack — the player tames it by the «Приручить» button (the check, the treat and what the
     pet gives are the engine's)."""
 
-    kind: Literal["beast"] = "beast"
+    kind: Literal["create"] = "create"
+    what: Literal["beast"] = "beast"
     monster: str  # an SRD beast id: cat, mastiff, hawk, raven, owl, goat, pony, wolf…
     cause: str = Field(min_length=8, max_length=160)
     room_id: str | None = None  # empty — the hero's room
@@ -1435,7 +1425,8 @@ class GodEffect(_Out):
     forgotten cult, an idol the hero found or set up. The engine keeps the shrine: a service, donations, vows, the
     faith taken there by the buttons. Not for a shrine the scene already has."""
 
-    kind: Literal["god"] = "god"
+    kind: Literal["create"] = "create"
+    what: Literal["god"] = "god"
     shrine_name: str = Field(min_length=3, max_length=80)  # what it looks like: «камень с вырезанным ликом»
     god_id: str | None = None
     new: NewGod | None = None
@@ -1469,7 +1460,8 @@ class FestivalEffect(_Out):
     is on, `tags` limits that to items of those trade tags ("food" — food). One of the master's at a time in a location.
     The pack's festivals are the calendar's, not effects."""
 
-    kind: Literal["festival"] = "festival"
+    kind: Literal["create"] = "create"
+    what: Literal["festival"] = "festival"
     name: str = Field(min_length=3, max_length=40)  # how people call it: «Свадьба кузнеца»
     cause: str = Field(min_length=8, max_length=160)
     location_id: str | None = None  # empty — the hero's location
@@ -1486,7 +1478,8 @@ class BondEffect(_Out):
     «Признаться» button). For an NPC the master made — `romance` {open, genders, why} and `likes` / `dislikes` (taste
     groups of the rules or catalog ids). Gifts and deeds move the bond by the engine."""
 
-    kind: Literal["bond"] = "bond"
+    kind: Literal["shift"] = "shift"
+    what: Literal["bond"] = "bond"
     npc_id: str = ""  # an NPC of the scene
     creature_id: str | None = None  # 0.87.0: or the hero's pet of the scene (its [c..] id): closeness ±2 a day, with reason
     delta: int = Field(default=0, ge=-10, le=10)
@@ -1502,7 +1495,8 @@ class FenceEffect(_Out):
     scene buys stolen goods at `buy_pct` of the value (25–50) and sells thieves' goods to the hero; a fence of the pack
     that decided to trust the hero — `buy_pct` omitted. Selling is the trade window — the engine's act."""
 
-    kind: Literal["fence"] = "fence"
+    kind: Literal["create"] = "create"
+    what: Literal["fence"] = "fence"
     npc_id: str  # a trader of the scene
     buy_pct: int | None = Field(default=None, ge=1, le=100)
 
@@ -1513,7 +1507,8 @@ class HeistEffect(_Out):
     or smuggling (`cargo` — catalog ids carried past `target_room`); the loot and reward within the level's caps. The
     job is the hero's at once; the preparations and the act are the buttons of the «Дела» window — the engine rolls."""
 
-    kind: Literal["heist"] = "heist"
+    kind: Literal["create"] = "create"
+    what: Literal["heist"] = "heist"
     heist_kind: Literal["burglary", "robbery", "smuggling"]
     name: str = Field(max_length=60)
     target_room: str  # a room of the world where the act is
@@ -1542,13 +1537,21 @@ class NewFaction(_Out):
 
 
 class FactionEffect(_Out):
-    """A faction made (`create`), or the hero's standing with one moved for a deed its people learned of (0.95.0):
-    `faction_id`, `delta` within ±10, `why`; once a day per faction. Gifts, crimes, quests, bonds count by themselves."""
+    """A faction the world lacks (0.95.0)."""
 
-    kind: Literal["faction"] = "faction"
-    create: NewFaction | None = None
-    faction_id: str | None = None
-    delta: int = Field(default=0, ge=-10, le=10)
+    kind: Literal["create"] = "create"
+    what: Literal["faction"] = "faction"
+    faction: NewFaction
+
+
+class StandingEffect(_Out):
+    """The hero's standing with a faction moved for a deed its people learned of (0.95.0): `faction_id`, `delta` within
+    ±10, `why`; once a day per faction. Gifts, crimes, quests, bonds count by themselves."""
+
+    kind: Literal["shift"] = "shift"
+    what: Literal["standing"] = "standing"
+    faction_id: str
+    delta: int = Field(ge=-10, le=10)
     why: str = Field(default="", max_length=80)
 
 
@@ -1557,7 +1560,8 @@ class OrgEffect(_Out):
     as its head; the hideout is the scene when it is private. Joining, ranks, the cut and jobs are the buttons of the
     «Братство» window."""
 
-    kind: Literal["org"] = "org"
+    kind: Literal["create"] = "create"
+    what: Literal["org"] = "org"
     npc_id: str  # the head, an NPC of the scene
     name: str = Field(max_length=40)
     org_kind: Literal["criminal", "guild"] = "criminal"
@@ -1569,7 +1573,8 @@ class SupplierEffect(_Out):
     sells lots to a hero with the trade charter at `pct` of the value — its own goods or `goods` (catalog ids). The
     lots are bought by the «Опт» button — the engine's act."""
 
-    kind: Literal["supplier"] = "supplier"
+    kind: Literal["create"] = "create"
+    what: Literal["supplier"] = "supplier"
     npc_id: str  # an NPC of the scene
     goods: list[str] = Field(default_factory=list, max_length=12)
     pct: int | None = Field(default=None, ge=1, le=100)
@@ -1577,10 +1582,11 @@ class SupplierEffect(_Out):
 
 class BankEffect(_Out):
     """A lender the world lacks (0.60.0): «Горм, ты ведь ссужаешь под залог?». A scene NPC (or `new` — the person
-    create_npc made in this turn) takes deposits, lends against a collateral or keeps a vault; rates within
+    create:npc made in this turn) takes deposits, lends against a collateral or keeps a vault; rates within
     rules.bank.make. Deposits, loans and the vault are the buttons of the «Банк» window — the engine's acts."""
 
-    kind: Literal["bank"] = "bank"
+    kind: Literal["create"] = "create"
+    what: Literal["bank"] = "bank"
     npc_id: str  # an NPC of the scene or "new"
     services: list[Literal["deposit", "loan", "vault"]] = Field(min_length=1, max_length=3)
     name: str | None = Field(default=None, max_length=60)
@@ -1646,12 +1652,13 @@ class NewPlaceKind(_Out):
 
 class PropertyEffect(_Out):
     """A place the player wants to buy and the world lacks on sale (0.59.0): «куплю дом у реки». A site of this location
-    (or `new` — the one create_place made in this turn) on sale by a seller of the scene (or `new` — the person
-    create_npc made); the price and the income within rules.property.make. The hero buys it by the button and gets the
+    (or `new` — the one create:place made in this turn) on sale by a seller of the scene (or `new` — the person
+    create:npc made); the price and the income within rules.property.make. The hero buys it by the button and gets the
     deed at the registry — the engine's acts. A place of a kind the engine lacks (a school, a pier) — `new_kind`
     (0.83.0)."""
 
-    kind: Literal["property"] = "property"
+    kind: Literal["create"] = "create"
+    what: Literal["property"] = "property"
     site_id: str  # "here" (the hero's site), a room or site id of this location, or "new"
     seller_id: str  # an NPC of the scene or "new"
     place_kind: str | None = Field(default=None, max_length=24)  # 0.80.0: a kind of rules.property.kinds, checked by the engine
@@ -1665,7 +1672,8 @@ class UpgradeEffect(_Out):
     """An upgrade the player asks for at its own place (0.83.0): «хочу поставить сюда станок ювелира». The engine sets
     its price and days by what it gives; the hero orders it by the button in «Имущество» and waits for the work."""
 
-    kind: Literal["upgrade"] = "upgrade"
+    kind: Literal["create"] = "create"
+    what: Literal["upgrade"] = "upgrade"
     place_id: str = "here"  # the hero's place it stands in, or the id of its place
     name: str = Field(min_length=3, max_length=40)
     text: str | None = Field(default=None, max_length=120)
@@ -1673,26 +1681,13 @@ class UpgradeEffect(_Out):
     gives: UpgradeGives
 
 
-class WorldItemEffect(_Out):
-    """The master moves a thing of the world with a cause (0.83.0): a person got or lost a thing, a room's chest
-    filled or emptied — not the hero's own things (those are give_item / take_item and the hero's acts)."""
-
-    kind: Literal["world_item"] = "world_item"
-    op: Literal["give", "take"]
-    npc_id: str | None = None  # a person of the world (its pockets)
-    prop_id: str | None = None  # or a container of the hero's room
-    item_id: str | None = None
-    item: GeneratedItem | None = None  # give: a new thing (after engine.find_items)
-    qty: int = Field(default=1, ge=1, le=20)
-    cause: str = Field(min_length=8, max_length=160)  # what in the world did it
-
-
 class JobEffect(_Out):
     """A job an NPC of the scene gives at the player's asking (0.58.0): «пойду переводчиком к караванщику». The engine
     checks the employer is here, the hours, the DC tier and the pay by rules.jobs.make; the hero then hires and works
     shifts by the buttons («Работа» at the employer)."""
 
-    kind: Literal["job"] = "job"
+    kind: Literal["create"] = "create"
+    what: Literal["job"] = "job"
     employer_id: str  # an NPC of the scene
     name: str = Field(min_length=1, max_length=60)  # «Переводчик при караване»
     skill: str | None = None  # the check of a shift: persuasion, athletics, perception…
@@ -1705,13 +1700,15 @@ class JobEffect(_Out):
 
 
 class UseFeatureEffect(_Out):
-    kind: Literal["use_feature"] = "use_feature"
+    kind: Literal["use"] = "use"
+    what: Literal["feature"] = "feature"
     feature: str  # a feature with limited uses, by name as in the sheet
     amount: int = Field(default=1, ge=1, le=30)  # points (Ki, Lay on Hands)
 
 
 class UseItemEffect(_Out):
-    kind: Literal["use_item"] = "use_item"
+    kind: Literal["use"] = "use"
+    what: Literal["item"] = "item"
     item_id: str
 
 
@@ -1767,7 +1764,8 @@ class CrimeKnownEffect(_Out):
     """A hidden murder becomes known (0.19.0): the hero confessed or was exposed in the scene. `victim_id` — the
     npc_id of a deed «никто не знает». The engine spreads it: attitudes, and the wanted hero where there is law."""
 
-    kind: Literal["crime_known"] = "crime_known"
+    kind: Literal["crime"] = "crime"
+    what: Literal["known"] = "known"
     victim_id: str
 
 
@@ -1775,7 +1773,8 @@ class CrimeReleaseEffect(_Out):
     """The guard lets the held hero go by words (0.41.0): only after a Persuasion, Deception or Intimidation check this
     turn that passed at the engine's tier for the crimes. The hero stays wanted; the guard does not come back at once."""
 
-    kind: Literal["crime_release"] = "crime_release"
+    kind: Literal["crime"] = "crime"
+    what: Literal["release"] = "release"
 
 
 class NpcDiscountEffect(_Out):
@@ -1783,7 +1782,8 @@ class NpcDiscountEffect(_Out):
     engine grants it only from an NPC who likes the hero (attitude ≥ +1) or was won over by a successful
     Persuasion, Deception or Intimidation against it this turn."""
 
-    kind: Literal["npc_discount"] = "npc_discount"
+    kind: Literal["grant"] = "grant"
+    what: Literal["discount"] = "discount"
     npc_id: str
     percent: int = Field(ge=1, le=100)
     reason: str
@@ -1793,7 +1793,8 @@ class NpcFavorEffect(_Out):
     """An NPC of the scene does one of its services for free (0.21.0): `service` from `scene.npcs[].services`
     (`silver` — `item_id` the weapon). Attitude ≥ +2 or won over this turn; one in a week; the hero owes it."""
 
-    kind: Literal["npc_favor"] = "npc_favor"
+    kind: Literal["grant"] = "grant"
+    what: Literal["favor"] = "favor"
     npc_id: str
     service: str
     item_id: str | None = None
@@ -1804,7 +1805,8 @@ class ReputationEffect(_Out):
     """The settlement learned of a deed of the hero (0.24.0): `delta` −3…+3 points of its reputation, once a turn,
     with the deed and who knows of it in `reason`. Quests, murders, thefts the engine counts itself."""
 
-    kind: Literal["reputation"] = "reputation"
+    kind: Literal["shift"] = "shift"
+    what: Literal["reputation"] = "reputation"
     delta: int = Field(ge=-3, le=3)
     reason: str
 
@@ -1813,7 +1815,8 @@ class RevealSecretEffect(_Out):
     """An NPC of the scene tells a secret of its own by goodwill (0.22.0): `secret_id` from `scene.npcs[].secrets`.
     The engine checks the attitude it needs; a secret won by a social check comes in the check's `revealed`."""
 
-    kind: Literal["reveal_secret"] = "reveal_secret"
+    kind: Literal["grant"] = "grant"
+    what: Literal["secret"] = "secret"
     npc_id: str
     secret_id: str
 
@@ -1822,7 +1825,8 @@ class GoalAssessEffect(_Out):
     """The master's assessment of the hero's life goal (0.39.0): its scale, the direction it needs (`class` or a
     peaceful direction id), the engine concepts it is made of; the engine sets the threshold."""
 
-    kind: Literal["goal_assess"] = "goal_assess"
+    kind: Literal["goal"] = "goal"
+    what: Literal["assess"] = "assess"
     scale: Literal["easy", "medium", "hard", "epic", "legendary"]
     direction: str = "class"
     concepts: list[str] = Field(default_factory=list)
@@ -1832,7 +1836,8 @@ class GoalHintEffect(_Out):
     """A hint toward the hero's life goal (0.40.0): only past its threshold and only when the player asks or seeks;
     the engine counts them — the quest for the goal comes after enough."""
 
-    kind: Literal["goal_hint"] = "goal_hint"
+    kind: Literal["goal"] = "goal"
+    what: Literal["hint"] = "hint"
 
 
 class NpcFollowEffect(_Out):
@@ -1840,7 +1845,8 @@ class NpcFollowEffect(_Out):
     one who follows stays here (`home: true` — goes back to its own place). The engine allows following to one
     disposed to the hero («дружески») or won over by a check this turn; a few at once."""
 
-    kind: Literal["npc_follow"] = "npc_follow"
+    kind: Literal["grant"] = "grant"
+    what: Literal["follow"] = "follow"
     npc_id: str
     follow: bool = True
     home: bool = False
@@ -1862,7 +1868,8 @@ class OwnerEffect(_Out):
 class AcceptQuestEffect(_Out):
     """The hero takes by words a quest its giver here offers (0.21.0), like the button «Взять задание»."""
 
-    kind: Literal["accept_quest"] = "accept_quest"
+    kind: Literal["grant"] = "grant"
+    what: Literal["quest"] = "quest"
     quest_id: str
 
 
@@ -1872,19 +1879,91 @@ class FlagEffect(_Out):
     value: bool = True
 
 
+# 0.101.0: 31 kinds instead of 69. `what` tells the members of a kind apart; each keeps its own fields.
+_CreateEffect = Annotated[
+    CreateNpcEffect | CreatePlaceEffect | CreateQuestEffect | RecipeEffect | JobEffect | CourseEffect | WayEffect | SupplierEffect
+    | BankEffect | FenceEffect | HeistEffect | OrgEffect | GodEffect | FestivalEffect | BeastEffect | PropertyEffect
+    | UpgradeEffect | StockEffect | WildsEffect | ContestEffect | FactionEffect,
+    Field(discriminator="what"),
+]
+_ShiftEffect = Annotated[NpcAttitudeEffect | ReputationEffect | BondEffect | StandingEffect, Field(discriminator="what")]
+_GrantEffect = Annotated[
+    NpcDiscountEffect | NpcFavorEffect | PermitEffect | RevealSecretEffect | NpcFollowEffect | AcceptQuestEffect,
+    Field(discriminator="what"),
+]
+_CrimeEffect = Annotated[CrimeKnownEffect | CrimeReleaseEffect, Field(discriminator="what")]
+_GoalEffect = Annotated[GoalAssessEffect | GoalHintEffect, Field(discriminator="what")]
+_UseEffect = Annotated[UseFeatureEffect | UseItemEffect, Field(discriminator="what")]
+_OpenEffect = Annotated[UnlockEffect | DoorEffect, Field(discriminator="what")]
+
 Effect = Annotated[
-    MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | MakeEffect | GuiseEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | LetterReplyEffect | VowEffect | GodEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | FactionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
-    | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
-    | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
-    | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect
-    | OwnerEffect | DoorEffect | WayEffect | QuestActEffect | UpgradeEffect | WorldItemEffect,
+    Union[
+        MoveEffect, DamageEffect, HealEffect, CoinsEffect, MoveItemEffect, CastEffect, ConditionEffect, DiseaseEffect, GuiseEffect,
+        MakeEffect, FurnishEffect, PropStateEffect, NoteEffect, FlagEffect, EquipEffect, FillEffect, StartCombatEffect,
+        AdvanceTimeEffect, RumorEffect, WeatherEffect, LetterReplyEffect, VowEffect, OwnerEffect, QuestActEffect,
+        _CreateEffect, _ShiftEffect, _GrantEffect, _CrimeEffect, _GoalEffect, _UseEffect, _OpenEffect,
+    ],
     Field(discriminator="kind"),
 ]
 
 
-# --- engine.* (backend -> Godot) ---------------------------------------------
+def effect_tag(e: dict[str, Any]) -> str:
+    """One name for one effect: `create:npc`, `move_item:world>hero`, `coins`. The prompts, the topics and the goldens
+    speak it."""
+    if e["kind"] == "move_item":
+        return f"move_item:{e['source']}>{e['target']}"
+    return f"{e['kind']}:{e['what']}" if e.get("what") and e["kind"] != "make" else str(e["kind"])
 
+
+def effect_classes(ann: Any = Effect) -> list[type]:
+    """Every effect model, the members of a kind one by one."""
+    if isinstance(ann, type):
+        return [ann]
+    return [cls for arg in get_args(ann) if not isinstance(arg, FieldInfo) for cls in effect_classes(arg)]
+
+
+def class_tag(cls: type[BaseModel]) -> str:
+    kind = cls.model_fields["kind"].default
+    what = cls.model_fields["what"].default if "what" in cls.model_fields else None
+    return f"{kind}:{what}" if isinstance(what, str) and kind != "make" else str(kind)
+
+
+def _shape(ann: Any, depth: int = 0) -> str:
+    """A field's type in a few characters: nested objects with their fields, choices with their values."""
+    args = [a for a in typing.get_args(ann) if a is not type(None)]
+    origin = typing.get_origin(ann)
+    if origin is typing.Annotated:
+        return _shape(args[0], depth)
+    if origin in (typing.Union, types.UnionType) and len(args) == 1:
+        return _shape(args[0], depth)
+    if origin is typing.Literal:
+        return "|".join(map(str, typing.get_args(ann)))
+    if origin is list and args:
+        return f"[{_shape(args[0], depth)}]"
+    if ann is GeneratedItem and depth > 0:  # one definition, a long one: item_shape
+        return "item"
+    if isinstance(ann, type) and issubclass(ann, BaseModel) and depth < 3:
+        return "{" + ", ".join(f"{n}{'' if f.is_required() else '?'}: {_shape(f.annotation, depth + 1)}"
+                               for n, f in ann.model_fields.items()) + "}"
+    return getattr(ann, "__name__", "…") if depth else ""
+
+
+def item_shape() -> str:
+    return _shape(GeneratedItem)
+
+
+def effect_line(cls: type[BaseModel]) -> str:
+    """An effect with its fields: `tag(a, b?: {c})`; ? — optional."""
+    fields = []
+    for n, f in cls.model_fields.items():
+        if n in ("kind", "what") and not (n == "what" and class_tag(cls) == "make"):
+            continue
+        shape = _shape(f.annotation, 1)
+        fields.append(f"{n}{'' if f.is_required() else '?'}" + (f": {shape}" if shape and shape not in ("str", "int", "bool") else ""))
+    return f"{class_tag(cls)}({', '.join(fields)})"
+
+
+# --- engine.* (backend -> Godot) ---------------------------------------------
 
 
 class EngineCheckParams(_Out):

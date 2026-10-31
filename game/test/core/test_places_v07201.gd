@@ -17,7 +17,8 @@ func before_test() -> void:
 func _place(spec: Dictionary, turn := "t-1") -> Dictionary:
 	fx.searched_places[turn] = true
 	var e := spec.duplicate(true)
-	e["kind"] = "create_place"
+	e["kind"] = "create"
+	e["what"] = "place"
 	var r := fx.validate(s, data, turn, e)
 	if bool(r["accepted"]):
 		fx.apply(s, turn, [r["effect_id"]])
@@ -87,7 +88,7 @@ func test_a_place_survives_a_save_with_its_people() -> void:
 	var first := str(s.generated["edge_exits"]["pushcha-trail"][0])
 	s.room_id = first
 	fx.searched_npcs["t-2"] = true
-	var r := fx.validate(s, data, "t-2", {"kind": "create_npc", "npc": {"name": "Бортник Ян", "role": "бортник"}})
+	var r := fx.validate(s, data, "t-2", {"kind": "create", "what": "npc", "npc": {"name": "Бортник Ян", "role": "бортник"}})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t-2", [r["effect_id"]])
 	var back := GameSession.from_dict(s.to_dict(5))

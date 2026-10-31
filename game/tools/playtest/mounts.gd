@@ -32,7 +32,7 @@ func run() -> void:
 
 	# The master's `stock` with `animal`: a camel the engine derives.
 	var fx: EffectEngine = gs.effects
-	var r := fx.validate(s, data, "mt-1", {"kind": "stock", "npc_id": "npc_drover", "animal": "camel", "reason": "караван из степи оставил верблюда"})
+	var r := fx.validate(s, data, "mt-1", {"kind": "create", "what": "stock", "npc_id": "npc_drover", "animal": "camel", "reason": "караван из степи оставил верблюда"})
 	if step("the master's camel accepted", bool(r["accepted"]), str(r.get("summary", r.get("reason", "")))):
 		fx.apply(s, "mt-1", [r["effect_id"]])
 

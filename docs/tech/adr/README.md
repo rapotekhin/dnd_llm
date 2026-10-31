@@ -42,4 +42,5 @@ ADR — это короткая запись о **значимом архите�
 - [0011-default-master-model.md](0011-default-master-model.md) — модель мастера по умолчанию Claude Haiku 5.5: сравнение с Qwen 3.8 Omni Flash, Qwen 3.8 27B и Gemini 3.8 Flash на «золотых» сценариях
 - [0012-unified-models.md](0012-unified-models.md) — единые модели: одна запись с частями вместо хранилищ и классов, шаблоны в данных, сейвы этапа не переносим
 - [0014-embedded-master-server.md](0014-embedded-master-server.md) — сервер мастера запускается вместе с игрой: `server.exe` на `127.0.0.1`, ключ игрока, порт и токен на один запуск
+- [0015-faction-budgets-and-world-simulation.md](0015-faction-budgets-and-world-simulation.md) — бюджеты фракций ограничивают создание мира; после долгого отдыха фоновый день мира: агенты фракций, суммаризатор, исходы по функциям движка (M6)
 - [0013-ui-in-scenes.md](0013-ui-in-scenes.md) — интерфейс в сценах Godot: экраны и окна правятся в редакторе, тема `.tres`, базовое окно

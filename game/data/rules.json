@@ -1176,7 +1176,7 @@
 		"purse_cp": 3000
 	},
 	"goal": {
-		"_doc": "The hero's life goal (v0.7.22, GoalRules): the master names its scale and direction (class or a peaceful one); thresholds — the level of that direction from which the master may lead to it; above max_level — out of reach for now. The master never brings the goal up by itself. Batch 2 (v0.7.22.1): past the threshold, when the player asks or seeks, the master gives hints (goal_hint, counted); the quest for the goal (create_quest with for_goal) needs `hints` of them first.",
+		"_doc": "The hero's life goal (v0.7.22, GoalRules): the master names its scale and direction (class or a peaceful one); thresholds — the level of that direction from which the master may lead to it; above max_level — out of reach for now. The master never brings the goal up by itself. Batch 2 (v0.7.22.1): past the threshold, when the player asks or seeks, the master gives hints (goal:hint, counted); the quest for the goal (create:quest with for_goal) needs `hints` of them first.",
 		"thresholds": {"easy": 1, "medium": 2, "hard": 3, "epic": 5, "legendary": 99},
 		"names": {"easy": "простая", "medium": "непростая", "hard": "трудная", "epic": "великая", "legendary": "легендарная"},
 		"hints": {"easy": 0, "medium": 1, "hard": 2, "epic": 3, "legendary": 3},
@@ -1419,7 +1419,7 @@
 		"why_kept": 4
 	},
 	"followers": {
-		"_doc": "NPCs who go with the hero (v0.7.20.3, FollowRules): the effect npc_follow — to one with an attitude of at least min_attitude or won over by a check this turn; at most max at once. v0.7.39.1: with the needs on a follower eats a portion of the hero's food a day; unfed — attitude −1 a day, after hungry_days it goes home; a long rest feeds it.",
+		"_doc": "NPCs who go with the hero (v0.7.20.3, FollowRules): the effect grant:follow — to one with an attitude of at least min_attitude or won over by a check this turn; at most max at once. v0.7.39.1: with the needs on a follower eats a portion of the hero's food a day; unfed — attitude −1 a day, after hungry_days it goes home; a long rest feeds it.",
 		"min_attitude": 2,
 		"max": 3,
 		"hungry_days": 2
@@ -1461,7 +1461,7 @@
 		"dc_min": 5,
 		"dc_max": 30,
 		"discount": {
-			"_doc": "A trader's discount by words (v0.7.15.2, effect npc_discount): min_pct..max_pct off buying, `days` days; only from an NPC with attitude ≥ min_attitude or one won over by a social check this turn.",
+			"_doc": "A trader's discount by words (v0.7.15.2, effect grant:discount): min_pct..max_pct off buying, `days` days; only from an NPC with attitude ≥ min_attitude or one won over by a social check this turn.",
 			"min_pct": 5,
 			"max_pct": 20,
 			"days": 7,
@@ -1479,7 +1479,7 @@
 			"insight"
 		],
 		"favor": {
-			"_doc": "A service of the NPC for free (v0.7.15.2, effect npc_favor): attitude ≥ min_attitude or won over this turn; one per NPC in cooldown_days.",
+			"_doc": "A service of the NPC for free (v0.7.15.2, effect grant:favor): attitude ≥ min_attitude or won over this turn; one per NPC in cooldown_days.",
 			"min_attitude": 2,
 			"cooldown_days": 7
 		}
@@ -1570,7 +1570,7 @@
 		"default_stock_qty": 5,
 		"stock_make": {"_doc": "v0.7.39.4, the master's effect `stock`: a thing the player asks a trader of the scene for and the shelf lacks — a catalog item or a new one, up to qty_max, at most per_day things a day per trader; magic by the hero's level.", "qty_max": 5, "per_day": 3},
 		"kinds": {
-			"_doc": "Kinds of shops (v0.7.22.26): a trader's ready goods by its trade, so the master never makes them. A trader's kind — its `trade_kind` (pack or create_npc), else the first kind with a word of its role. `stock` — what it always has (a pack NPC's own stock goes first), `extras` — per_day more goods from `pool` each day (qty within the range), picked by the game's seed; `wants` — what it buys gladly when the NPC has none of its own; `purse_cp` — the purse of a made trader.",
+			"_doc": "Kinds of shops (v0.7.22.26): a trader's ready goods by its trade, so the master never makes them. A trader's kind — its `trade_kind` (pack or create:npc), else the first kind with a word of its role. `stock` — what it always has (a pack NPC's own stock goes first), `extras` — per_day more goods from `pool` each day (qty within the range), picked by the game's seed; `wants` — what it buys gladly when the NPC has none of its own; `purse_cp` — the purse of a made trader.",
 			"general": {
 				"name": "лавка",
 				"words": [
@@ -3359,13 +3359,13 @@
 		"guard_monster": "guard"
 	},
 	"reward_budget": {
-		"_doc": "The master's rewards between long rests (v0.7.14.3, DMG treasure by level): coins and things the master gives (`coins` up, `give_item` outside quests) together cost at most per_rest_cp of the hero's level until the next long rest; quest rewards, fights, thefts and searches are not counted. A success on a nearly_impossible check this turn lets the master give at most impossible_share of what is left. A magic thing (not common, v0.7.22.2) is not counted by its price: at most magic_per_rest of them until the long rest, each in a turn with a check that passed.",
+		"_doc": "The master's rewards between long rests (v0.7.14.3, DMG treasure by level): coins and things the master gives (`coins` up, `move_item:world>hero` outside quests) together cost at most per_rest_cp of the hero's level until the next long rest; quest rewards, fights, thefts and searches are not counted. A success on a nearly_impossible check this turn lets the master give at most impossible_share of what is left. A magic thing (not common, v0.7.22.2) is not counted by its price: at most magic_per_rest of them until the long rest, each in a turn with a check that passed.",
 		"per_rest_cp": {"1": 3000, "2": 5000, "3": 8000, "4": 12000, "5": 20000},
 		"impossible_share": 0.25,
 		"magic_per_rest": 1
 	},
 	"crime": {
-		"_doc": "Crimes of the hero (v0.7.14, CrimeRules): a pack NPC killed in a fight the hero began. Witnesses (the living NPCs of the room) know at once and like the hero witness_attitude less; a hidden body is found after found_minutes. Known — every NPC of the location attitude; in a location with `law` (pack) the hero is wanted: traders and givers turn away, a guard NPC or a patrol (after search_minutes) holds the hero — wergild fine_cp a crime (×notable_mult for a victim with notable_tags), or stocks_days a crime in the stocks, or a fight with patrol_size guards. Settled — the location forgives `forgiven`. v0.7.22.2 (big test): Persuasion / Deception / Intimidation against talk_tier (a step harder for each crime past the first and a notable victim), each once a hold, or a bribe of bribe_share × the wergild — let go but still wanted; nobody holds the hero there for let_go_minutes (after a resist too), then a guard NPC holds and a patrol comes by patrol_chance a step. While held the master may lead the hero to any room of the location (`move`) and let go after a check passed at the talk tier (`crime_release`). A body gives its pockets and body_wares things of its wares.",
+		"_doc": "Crimes of the hero (v0.7.14, CrimeRules): a pack NPC killed in a fight the hero began. Witnesses (the living NPCs of the room) know at once and like the hero witness_attitude less; a hidden body is found after found_minutes. Known — every NPC of the location attitude; in a location with `law` (pack) the hero is wanted: traders and givers turn away, a guard NPC or a patrol (after search_minutes) holds the hero — wergild fine_cp a crime (×notable_mult for a victim with notable_tags), or stocks_days a crime in the stocks, or a fight with patrol_size guards. Settled — the location forgives `forgiven`. v0.7.22.2 (big test): Persuasion / Deception / Intimidation against talk_tier (a step harder for each crime past the first and a notable victim), each once a hold, or a bribe of bribe_share × the wergild — let go but still wanted; nobody holds the hero there for let_go_minutes (after a resist too), then a guard NPC holds and a patrol comes by patrol_chance a step. While held the master may lead the hero to any room of the location (`move`) and let go after a check passed at the talk tier (`crime:release`). A body gives its pockets and body_wares things of its wares.",
 		"witness_attitude": -1,
 		"attitude": -2,
 		"forgiven": 0,
@@ -3377,7 +3377,7 @@
 		"stocks_days": 2,
 		"patrol_size": 2,
 		"kinds": {
-			"_doc": "Kinds of crimes (v0.7.22.16): severity — how much each adds to the sentence (a sentence by the sum), fine_cp — its wergild (murder — fine_cp above), name — in the lines. v0.7.22.24: known_attitude — the location's attitude when it is known (0 — none; murder — `attitude` above, assault −1), reputation_share — the part of the crime_known points it costs (0 — none), memory — what the people remember ({victim}).",
+			"_doc": "Kinds of crimes (v0.7.22.16): severity — how much each adds to the sentence (a sentence by the sum), fine_cp — its wergild (murder — fine_cp above), name — in the lines. v0.7.22.24: known_attitude — the location's attitude when it is known (0 — none; murder — `attitude` above, assault −1), reputation_share — the part of the crime:known points it costs (0 — none), memory — what the people remember ({victim}).",
 			"murder": {"severity": 1, "name": "убийство"},
 			"assault": {"severity": 0, "fine_cp": 1000, "name": "нападение"},
 			"pickpocket": {"severity": 0, "fine_cp": 500, "name": "карманная кража", "known_attitude": -1, "reputation_share": 1, "memory": "знает: герой шарил по чужим карманам"},
