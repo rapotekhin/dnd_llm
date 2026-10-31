@@ -62,13 +62,13 @@ static func can_forage(s: GameSession, data: Dictionary) -> bool:
 	if not bool(spec(s.character, data).get("forage", false)) or int(s.character.get("foraged_day", 0)) == s.day:
 		return false
 	var w := WorldView.new(data["world"])
-	return not bool(w.location(w.location_id(s.room_id)).get("lit", false))
+	return not w.flag(s.room_id, "lit")
 
 
 ## The minutes of a way for an outlander outside settlements (a quarter less), as they are for the rest.
 static func travel_minutes(s: GameSession, data: Dictionary, minutes: int, to: String) -> int:
 	var w := WorldView.new(data["world"])
-	if bool(spec(s.character, data).get("wayfinder", false)) and not bool(w.location(w.location_id(to)).get("lit", false)):
+	if bool(spec(s.character, data).get("wayfinder", false)) and not w.flag(to, "lit"):
 		return int(ceil(minutes * 0.75))
 	return minutes
 

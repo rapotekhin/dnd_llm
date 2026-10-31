@@ -25,6 +25,61 @@ func location(id: String) -> Dictionary:
 	return world["locations"].get(id, {})
 
 
+# --- the tree of places (v0.7.66): a room, its site and the sites above it, its location and those above it --------
+
+
+const TREE_DEPTH := 8  # a `parent` chain longer than this is a loop the validator refuses
+
+
+## The nodes from a room up: the room first. Any node may say what its children inherit: `indoor`, `dark`, `lit`,
+## `terrain`, `law`, `public`, `owner`, `tags`.
+func chain(room_id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = [room(room_id)]
+	_up(site_id(room_id), world.get("sites", {}), out)
+	_up(location_id(room_id), world["locations"], out)
+	return out
+
+
+func _up(id: String, nodes: Dictionary, out: Array[Dictionary]) -> void:
+	for i in TREE_DEPTH:
+		if id.is_empty() or not nodes.has(id):
+			return
+		out.append(nodes[id])
+		id = str(nodes[id].get("parent", ""))
+
+
+## The nearest value of `key` from a room up.
+func inherit(room_id: String, key: String, fallback: Variant = null) -> Variant:
+	for n: Dictionary in chain(room_id):
+		if n.has(key):
+			return n[key]
+	return fallback
+
+
+func flag(room_id: String, key: String) -> bool:
+	return bool(inherit(room_id, key, false))
+
+
+## The nearest value of `key` from a location up.
+func location_inherit(id: String, key: String, fallback: Variant = null) -> Variant:
+	var out: Array[Dictionary] = []
+	_up(id, world["locations"], out)
+	for n: Dictionary in out:
+		if n.has(key):
+			return n[key]
+	return fallback
+
+
+## The tags of a room with those of the nodes above it.
+func tags(room_id: String) -> Array[String]:
+	var out: Array[String] = []
+	for n: Dictionary in chain(room_id):
+		for t: Variant in n.get("tags", []):
+			if not out.has(str(t)):
+				out.append(str(t))
+	return out
+
+
 # --- sites (v0.7.22.24): location → site → room ------------------------------------------------------------
 
 
@@ -70,12 +125,9 @@ func site_entry(id: String) -> String:
 	return rooms[0] if not rooms.is_empty() else ""
 
 
-## A room anyone may walk into: its own `public`, else its site's (open by default).
+## A room anyone may walk into: the nearest `public` from it up (open by default).
 func is_public(room_id: String) -> bool:
-	var r := room(room_id)
-	if r.has("public"):
-		return bool(r["public"])
-	return bool(site_of(room_id).get("public", true))
+	return bool(inherit(room_id, "public", true))
 
 
 ## The room's own name without the site's: «Таверна «Хромой олень» — общий зал» → «общий зал».

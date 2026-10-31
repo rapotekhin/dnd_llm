@@ -162,7 +162,7 @@ static func drinks(s: GameSession, data: Dictionary) -> float:
 ## Water here: the room's tag `water` or `foul_water`, a thing of the room with `source` (v0.7.34.6, the master's
 ## river), or one named by rules.needs.water_words (a well, a stream).
 static func water_here(s: GameSession, data: Dictionary) -> bool:
-	var tags: Array = SceneRules.room(s, data["world"], s.room_id).get("tags", [])
+	var tags := SceneRules.tags(s, data["world"], s.room_id)
 	if tags.has("water") or tags.has("foul_water"):
 		return true
 	var words: Array = cfg(data).get("water_words", [])
@@ -176,7 +176,7 @@ static func water_here(s: GameSession, data: Dictionary) -> bool:
 ## Water here is foul (the room's tag `foul_water`, v0.7.23.1, or only a source thing of foul water): a drink of it or
 ## of a vessel filled here risks a disease.
 static func foul_here(s: GameSession, data: Dictionary) -> bool:
-	var tags: Array = SceneRules.room(s, data["world"], s.room_id).get("tags", [])
+	var tags := SceneRules.tags(s, data["world"], s.room_id)
 	if tags.has("foul_water"):
 		return true
 	if tags.has("water"):

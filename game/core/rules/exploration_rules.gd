@@ -132,30 +132,6 @@ static func active_reveal(s: GameSession, world: Dictionary, skill: String, tota
 	return out
 
 
-## Exits of a room the player can take now: a room's `closed_exits` {room_id: {when, text}} opens an exit only when
-## its fact is true (QuestRules.met; v0.6.4 — the burrow under the hollow).
-static func open_exits(s: GameSession, world: Dictionary, room_id: String) -> Array[String]:
-	var out: Array[String] = []
-	var closed: Dictionary = world["rooms"].get(room_id, {}).get("closed_exits", {})
-	for e: Variant in world["rooms"].get(room_id, {}).get("exits", []):
-		var lock: Dictionary = closed.get(str(e), {})
-		if lock.is_empty() or QuestRules.met(s, lock["when"]):
-			out.append(str(e))
-	return out
-
-
-## The known ways a state of the world shuts now (a closed exit by `not_flag` — a ford a downpour flooded, v0.7.46):
-## [{to, text}]. The ways a search must find stay unseen.
-static func shut_exits(s: GameSession, world: Dictionary, room_id: String) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	var closed: Dictionary = world["rooms"].get(room_id, {}).get("closed_exits", {})
-	for to: String in closed:
-		var when: Dictionary = closed[to].get("when", {})
-		if when.has("not_flag") and not QuestRules.met(s, when):
-			out.append({"to": to, "text": str(closed[to].get("text", ""))})
-	return out
-
-
 # --- traps and caches (v0.6.3) ---------------------------------------------------------------------
 
 

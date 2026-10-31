@@ -87,6 +87,21 @@ static func xp_for(s: GameSession, data: Dictionary, r: Dictionary) -> int:
 
 
 const TPL := "tpl:"
+const IMBUE := "imbue"
+
+
+## The formula of a built property: known from a book or a lesson, it fits any plain thing it goes on.
+static func imbue_formula(prop: String) -> String:
+	return "%s%s:*:%s" % [TPL, IMBUE, prop]
+
+
+## Whether a built property goes on this catalog thing: a plain one, not magic yet, of its kind.
+static func _takes(data: Dictionary, prop: Dictionary, item_id: String) -> bool:
+	var d: Dictionary = data["items"]["catalog"].get(item_id, {})
+	if d.is_empty() or d.has("rarity") or d.has("base") or bool(d.get("master", false)) or str(d.get("item_type", "")) == "consumable":
+		return false
+	var on := str(prop.get("on", ""))
+	return on.is_empty() or d.has(on)
 
 
 static func _templates(data: Dictionary) -> Dictionary:
@@ -135,14 +150,19 @@ static func _base_recipe(s: GameSession, data: Dictionary, item_id: String) -> D
 ## A template's recipe for `item_id` (and the variant of `from_self`): {} when it does not fit.
 static func template_recipe(s: GameSession, data: Dictionary, tid: String, item_id: String, variant: String = "") -> Dictionary:
 	var t: Dictionary = _templates(data).get(tid, {})
-	if t.is_empty() or not _fits(data, t, item_id):
+	var prop := MakeRules.def_of(data, variant) if bool(t.get("made", false)) else {}
+	if bool(t.get("made", false)) and item_id == "*" and not prop.is_empty():
+		return {"name": "Зачарование: %s" % prop["name"], "template": tid, "tool": str(t.get("tool_default", "")), "formula": true}
+	if t.is_empty() or (bool(t.get("made", false)) and (prop.is_empty() or not _takes(data, prop, item_id))) or (not bool(t.get("made", false)) and not _fits(data, t, item_id)):
 		return {}
 	var catalog: Dictionary = data["items"]["catalog"]
 	var d: Dictionary = catalog[item_id]
 	var base := item_id if bool(t.get("from_self", false)) else str(d.get("base", ""))
 	var br := _base_recipe(s, data, base) if not base.is_empty() else {}
-	var rarity := str(t.get("rarity", d.get("rarity", "common")))
+	var rarity := str(prop.get("rarity", t.get("rarity", d.get("rarity", "common"))))
 	var by: Dictionary = cfg(data)["by_rarity"].get(rarity, {})
+	if bool(t.get("made", false)) and by.is_empty():
+		return {}
 	var c: Dictionary = s.character if s != null else {}
 	var r := {"dir": "artifice", "template": tid, "dc": int(by.get("dc", 12)), "hours": int(by.get("hours", 8)), "output": item_id, "qty": 1}
 	r["tool"] = str(br.get("tool", t.get("tool_default", ""))) if str(t.get("tool", "")) == "$base" else str(t.get("tool", ""))
@@ -164,14 +184,14 @@ static func template_recipe(s: GameSession, data: Dictionary, tid: String, item_
 	if bool(t.get("learn", false)):
 		r["learn"] = true
 	if bool(t.get("from_self", false)):
-		var variants: Dictionary = t.get("variants", {})
+		var variants: Dictionary = t.get("variants", {}) if prop.is_empty() else {variant: prop["name"]}
 		if not variants.has(variant):
 			return {}
 		var base_def := ItemRules.def_of(data["items"], {}, item_id)
 		var props: Array = (base_def.get("properties", []) as Array).duplicate()
 		props.append(variant)
 		var def := {"name": "%s (%s)" % [base_def.get("name", item_id), variants[variant]], "item_type": str(base_def.get("item_type", "weapon")),
-			"base": item_id, "rarity": rarity, "value_cp": int(t.get("value_cp", 0)), "properties": props,
+			"base": item_id, "rarity": rarity, "value_cp": int(t.get("value_cp", data["items"]["rarity_max_value_cp"].get(rarity, 0))), "properties": props,
 			"description": str(base_def.get("description", "")), "generated": true}
 		r["output"] = ItemRules.generated_id(def)
 		r["output_def"] = def
@@ -192,7 +212,12 @@ static func templated(s: GameSession, data: Dictionary) -> Dictionary:
 	formulas.append_array(from_books(s, data))
 	for f: Variant in formulas:
 		var parts := str(f).split(":")
-		if str(f).begins_with(TPL) and parts.size() >= 3:
+		if str(f).begins_with(TPL) and parts.size() > 3 and parts[2] == "*":  # a built property: on what the hero carries
+			for id: String in inv:
+				var r := template_recipe(s, data, parts[1], id, parts[3])
+				if not r.is_empty():
+					out["%s%s:%s:%s" % [TPL, parts[1], id, parts[3]]] = r
+		elif str(f).begins_with(TPL) and parts.size() >= 3:
 			var r := template_recipe(s, data, parts[1], parts[2], parts[3] if parts.size() > 3 else "")
 			if not r.is_empty():
 				out[str(f)] = r
@@ -288,7 +313,7 @@ static func station_here(s: GameSession, data: Dictionary, station: String) -> b
 	if station.is_empty():
 		return true
 	var st: Dictionary = stations(data).get(station, {})
-	var tags: Array = SceneRules.room(s, data["world"], s.room_id).get("tags", [])
+	var tags := SceneRules.tags(s, data["world"], s.room_id)
 	if tags.has(station) or (st.get("tags", []) as Array).any(func(t: Variant) -> bool: return tags.has(t)):
 		return true
 	return bool(st.get("wild", false)) and not ReputationRules.is_settlement(data, WorldView.new(data["world"]).location_id(s.room_id))
@@ -627,7 +652,7 @@ static func meat(data: Dictionary, monster: Dictionary) -> int:
 static func gather_here(s: GameSession, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var g: Dictionary = cfg(data)["gather"]
-	for t: Variant in SceneRules.room(s, data["world"], s.room_id).get("tags", []):
+	for t: String in SceneRules.tags(s, data["world"], s.room_id):
 		if g.has(str(t)):
 			out.append(str(t))
 	return out

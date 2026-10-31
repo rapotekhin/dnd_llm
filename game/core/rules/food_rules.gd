@@ -1,131 +1,58 @@
 class_name FoodRules
 extends RefCounted
-## Food (roadmap v0.7.25): a carried perishable (an item's `spoils_days`) keeps its batches in c["fresh"]
-## {id: [[minute got, qty]]}; a batch past its days turns into rules.needs.spoil_to. A dish's `meal`
-## (rules.consumables) gives water and temporary HP on eating, its `adv_tag` a boon for a while.
+## Food (roadmap v0.7.25): a perishable (an item's `spoils_days`) carries when it was got on its copy (Thing: `got`), in
+## the pack, a bag or a chest alike; past its days it turns into rules.needs.spoil_to. A dish's `meal` (rules.consumables)
+## gives water and temporary HP on eating, its `adv_tag` a boon for a while.
 
 
 static func spoils_days(data: Dictionary, session_items: Dictionary, id: String) -> int:
 	return int(ItemRules.def_of(data["items"], session_items, ItemRules.real_id(id)).get("spoils_days", 0))
 
 
-static func _fresh(c: Dictionary) -> Dictionary:
-	if not (c.get("fresh") is Dictionary):
-		c["fresh"] = {}
-	return c["fresh"]
-
-
-## Brings the batches to the inventory: units beyond the batches were got now, missing ones went oldest first.
+## Copies not dated yet were got now.
 static func sync(s: GameSession, data: Dictionary) -> void:
-	var c := s.character
-	var fresh := _fresh(c)
-	var inv: Dictionary = c.get("inventory", {})
 	var now := TimeRules.abs_minute(s)
-	for id: String in fresh.keys():
-		if not inv.has(id):
-			fresh.erase(id)
-	for id: String in inv:
-		if spoils_days(data, s.items, id) <= 0:
-			continue
-		var batches: Array = fresh.get(id, [])
-		var total := 0
-		for b: Array in batches:
-			total += int(b[1])
-		var have := int(inv[id])
-		if have > total:
-			batches.append([now, have - total])
-		var cut := total - have
-		while cut > 0 and not batches.is_empty():
-			var n := mini(cut, int(batches[0][1]))
-			batches[0][1] = int(batches[0][1]) - n
-			cut -= n
-			if int(batches[0][1]) <= 0:
-				batches.pop_front()
-		fresh[id] = batches
+	for h: Dictionary in Thing.holders(s.character):
+		for id: String in Thing.store(h):
+			if spoils_days(data, s.items, id) > 0:
+				Thing.stamp(h, id, Thing.count(h, id), "got", now)
 
 
-## Up to `qty` units off the oldest of `batches`: their own batches.
-static func cut(batches: Array, qty: int) -> Array:
-	var out: Array = []
-	while qty > 0 and not batches.is_empty():
-		var n := mini(qty, int(batches[0][1]))
-		out.append([int(batches[0][0]), n])
-		batches[0][1] = int(batches[0][1]) - n
-		qty -= n
-		if int(batches[0][1]) <= 0:
-			batches.pop_front()
-	return out
-
-
-## `qty` of a thing are about to leave the hero (call before the inventory changes): their batches, so that the age
-## goes with them.
-static func leave(s: GameSession, data: Dictionary, id: String, qty: int) -> Array:
-	if spoils_days(data, s.items, id) <= 0:
-		return []
-	sync(s, data)
-	return cut(_fresh(s.character).get(id, []), qty)
-
-
-## The batches lie with the container or the dropped thing `p`.
-static func keep(p: Dictionary, id: String, batches: Array) -> void:
-	if batches.is_empty():
-		return
-	if not p.has("fresh"):
-		p["fresh"] = {}
-	var list: Array = p["fresh"].get(id, [])
-	list.append_array(batches)
-	p["fresh"][id] = list
-
-
-## `qty` of `id` came back out of `p` as `key`: their age comes back too.
-static func taken(s: GameSession, p: Dictionary, id: String, key: String, qty: int) -> void:
-	var there: Array = p.get("fresh", {}).get(id, [])
-	if there.is_empty():
-		return
-	var list: Array = _fresh(s.character).get(key, [])
-	list.append_array(cut(there, qty))
-	list.sort_custom(func(a: Array, b: Array) -> bool: return int(a[0]) < int(b[0]))
-	_fresh(s.character)[key] = list
-
-
-## The days a perishable has left before it spoils (its oldest batch); -1 when it does not spoil.
+## The days a perishable has left before it spoils (its oldest copy); -1 when it does not spoil.
 static func days_left(s: GameSession, data: Dictionary, id: String) -> int:
 	var days := spoils_days(data, s.items, id)
 	if days <= 0:
 		return -1
-	var batches: Array = _fresh(s.character).get(id, [])
-	if batches.is_empty():
+	var list := Thing.states(s.character, id).filter(func(x: Dictionary) -> bool: return x.has("got"))
+	if list.is_empty():
 		return days
-	return maxi(0, ceili((int(batches[0][0]) + days * 1440 - TimeRules.abs_minute(s)) / 1440.0))
+	return maxi(0, ceili((int(list[0]["got"]) + days * 1440 - TimeRules.abs_minute(s)) / 1440.0))
 
 
-## Batches past their days spoil (with the needs on). Lines.
+## Copies past their days spoil (with the needs on). Lines.
 static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var to := str(data["rules"].get("needs", {}).get("spoil_to", ""))
 	if not NeedRules.on(s) or to.is_empty():
 		return []
 	sync(s, data)
 	var c := s.character
-	var inv: Dictionary = c["inventory"]
-	var fresh := _fresh(c)
 	var now := TimeRules.abs_minute(s)
 	var names: Array[String] = []
-	for id: String in fresh.keys():
-		var limit := roundi(spoils_days(data, s.items, id) * 1440 * PetRules.spoil_mult(s, data))  # v0.7.43: a cat beside
-		var batches: Array = fresh[id]
-		var gone := 0
-		while not batches.is_empty() and now - int(batches[0][0]) >= limit:
-			gone += int(batches.pop_front()[1])
-		if gone > 0:
-			names.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), gone])
-			var left := int(inv.get(id, 0)) - gone
-			if left > 0:
-				inv[id] = left
-			else:
-				inv.erase(id)
-			inv[to] = int(inv.get(to, 0)) + gone
-		if batches.is_empty():
-			fresh.erase(id)
+	for h: Dictionary in Thing.holders(c):
+		for id: String in h.get("copies", {}).keys():
+			var days := spoils_days(data, s.items, id)
+			if days <= 0:
+				continue
+			var limit := roundi(days * 1440 * PetRules.spoil_mult(s, data))  # v0.7.43: a cat beside
+			var gone := 0
+			for i in range(Thing.states(h, id).size() - 1, -1, -1):
+				var st: Dictionary = Thing.states(h, id)[i]
+				if st.has("got") and now - int(st["got"]) >= limit:
+					Thing.drop_at(h, id, i)
+					gone += 1
+			if gone > 0:
+				names.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), gone])
+				Thing.add(h, to, gone)
 	if names.is_empty():
 		return []
 	CharacterRules.refresh(c, data, s.items)

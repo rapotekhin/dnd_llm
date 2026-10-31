@@ -169,6 +169,7 @@ FAITH_WORDS = re.compile(r"бог[аиу ]|богин|бож|молит|молю
                          r"благослов|искуп|скверн|заповед|идол|капищ|чонти|сильванус|тир[ау ]|вокин|маск[еуи]|келемвор", re.IGNORECASE)  # v0.7.49
 FESTIVAL_WORDS = re.compile(r"праздн|ярмар|дожин|гулянь|торговый день|свадьб|пир[ау ]|поминк|календар|какое число|какой день|месяц",
                             re.IGNORECASE)  # v0.7.44
+WAY_WORDS = re.compile(r"лаз|пролом|подкоп|тайн\w* ход|потайн|щел[ьи]|дыр[аую]|прокопа", re.IGNORECASE)  # v0.7.66
 BOUT_WORDS = re.compile(r"поедин|дуэл|вызыва|вызов|сразимся|сразиться|помахаться|на кулак|до первой крови|до сдачи|арен|бойцов|кровав[аую]+ ям|турнир|ставк",
                         re.IGNORECASE)  # v0.7.45
 WILDS_WORDS = re.compile(r"охот|рыб|удочк|удить|сеть|сети|дич|зверь|звер[яюи]|олен|выслеж|капкан|силк|кабан|заяц|зайц|улов|клюёт|клюет|браконь",
@@ -241,7 +242,7 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("games")
     if scene and scene.wilds and mentions(said, WILDS_WORDS):  # v0.7.41: a hunt or the grounds changed by words
         out.append("wilds")
-    if scene and any(e.door for e in scene.exits):  # v0.7.22.25
+    if scene and (any(e.door for e in scene.exits) or mentions(said, WAY_WORDS)):  # v0.7.22.25, v0.7.66
         out.append("doors")
     if scene and scene.creatures:  # the prisoners, a truce, the hero's captors (v0.7.22.17)
         out.append("captives")

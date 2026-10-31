@@ -173,6 +173,16 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 						e.append("задание %s: шаг — text и when с одним условием (encounter | secret | room | flag | talk | choice | all | any)" % qid)
 					elif (when as Dictionary).has("choice") != (st as Dictionary).has("choices"):
 						e.append("задание %s: when.choice и choices — только вместе" % qid)
+	for kind: String in ["sites", "locations"]:  # the tree of places (v0.7.66) goes up through known nodes, no loop
+		for id: String in w.get(kind, {}):
+			var at := id
+			for i in WorldView.TREE_DEPTH:
+				at = str(w[kind].get(at, {}).get("parent", ""))
+				if at.is_empty():
+					break
+				if not w[kind].has(at) or i == WorldView.TREE_DEPTH - 1:
+					e.append("%s: родитель %s — узел того же уровня, без петли" % [id, at])
+					break
 	var placed := {}
 	for id: String in rooms:
 		var r: Dictionary = rooms[id]
@@ -196,18 +206,18 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			placed[n] = true
 		if not _strings(r.get("hooks", [])):
 			e.append("комната %s: hooks — список строк" % id)
-		var doors: Variant = r.get("doors", {})
-		if not (doors is Dictionary):
-			e.append("комната %s: doors — словарь {выход: дверь}" % id)
+		var ways: Variant = r.get("ways", {})
+		if not (ways is Dictionary):
+			e.append("комната %s: ways — словарь {выход: проход}" % id)
 		else:
-			for to: String in doors:
-				if not (r.get("exits", []) as Array).has(to) or not (doors[to] is Dictionary):
-					e.append("комната %s: дверь в %s — выход комнаты и {material, lock, key, locked}" % [id, to])
-		var closed: Variant = r.get("closed_exits", {})
-		if closed is Dictionary:
-			for to: String in closed:
-				if not (r.get("exits", []) as Array).has(to) or not (closed[to] is Dictionary) or not _when_ok(closed[to].get("when"), false):
-					e.append("комната %s: closed_exits %s — выход комнаты и {when}" % [id, to])
+			for to: String in ways:
+				var way: Variant = ways[to]
+				if not (r.get("exits", []) as Array).has(to) or not (way is Dictionary):
+					e.append("комната %s: ways %s — выход комнаты и {kind, …}" % [id, to])
+				elif not (data["rules"]["ways"]["kinds"] as Dictionary).has(str(way.get("kind", ""))):
+					e.append("комната %s: ways %s — нет вида %s" % [id, to, way.get("kind", "")])
+				elif way.has("when") and not _when_ok(way["when"], false):
+					e.append("комната %s: ways %s — неверное when" % [id, to])
 		var ids := {}
 		for sec: Variant in r.get("secrets", []):
 			if sec is Dictionary and sec.get("trap") is Dictionary and not (r.get("exits", []) as Array).has(str(sec["trap"].get("guards", ""))):

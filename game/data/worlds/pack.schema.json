@@ -248,6 +248,7 @@
 						"properties": {
 							"name": {"$ref": "#/$defs/nonempty"},
 							"location_id": {"type": "string"},
+							"parent": {"type": "string"},
 							"description": {"type": "string"},
 							"tags": {"$ref": "#/$defs/strings"},
 							"owner": {"type": "string"},
@@ -316,29 +317,33 @@
 									"additionalProperties": false
 								}
 							},
-							"doors": {
+							"ways": {
 								"type": "object",
 								"additionalProperties": {
 									"type": "object",
+									"required": ["kind"],
 									"properties": {
-										"material": {"enum": ["wood", "iron"]},
+										"kind": {"$ref": "#/$defs/nonempty"},
+										"when": {"$ref": "#/$defs/when"},
+										"text": {"type": "string"},
+										"max_size": {"enum": ["tiny", "small", "medium", "large", "huge", "gargantuan"]},
+										"how": {"enum": ["walk", "wade", "crawl", "climb"]},
+										"minutes": {"type": "integer", "minimum": 0},
+										"drop": {"type": "integer", "minimum": 0},
+										"passes": {"type": "array", "items": {"enum": ["sight", "shot", "sound"]}},
+										"latch": {"type": "string"},
+										"material": {"type": "string"},
 										"lock": {"enum": ["simple", "good", "masterwork"]},
 										"key": {"type": "string"},
-										"locked": {"type": "boolean"}
+										"locked": {"type": "boolean"},
+										"solid": {"type": "boolean"},
+										"broke": {"type": "string"},
+										"note": {"type": "string"}
 									},
 									"additionalProperties": false
 								}
 							},
-							"closed_exits": {
-								"type": "object",
-								"additionalProperties": {
-									"type": "object",
-									"required": ["when"],
-									"properties": {"when": {"$ref": "#/$defs/when"}, "text": {"type": "string"}},
-									"additionalProperties": false
-								}
-							},
-							"encounter": {
+"encounter": {
 								"type": "object",
 								"required": ["id", "enemies"],
 								"properties": {

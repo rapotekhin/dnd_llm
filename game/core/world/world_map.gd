@@ -31,7 +31,7 @@ static func known(s: GameSession, world: Dictionary) -> Dictionary:
 	for r: String in rooms:
 		if not s.visited.has(r):
 			continue
-		for e: String in ExplorationRules.open_exits(s, world, r):
+		for e: String in WayRules.open_exits(s, world, r):
 			if not world["rooms"].has(e):
 				continue
 			if not rooms.has(e) and not frontier.has(e):
@@ -55,8 +55,8 @@ static func route(s: GameSession, world: Dictionary, from: String, to: String, d
 		var r: String = queue.pop_front()
 		if r == to:
 			break
-		for e: String in ExplorationRules.open_exits(s, world, r):
-			if prev.has(e) or not s.visited.has(e) or blocked(s, world, r, e) or (not data.is_empty() and not DoorRules.blocked(s, data, r, e).is_empty()):
+		for e: String in WayRules.open_exits(s, world, r):
+			if prev.has(e) or not s.visited.has(e) or blocked(s, world, r, e) or (not data.is_empty() and not WayRules.blocked(s, data, r, e).is_empty()):
 				continue
 			prev[e] = r
 			queue.append(e)
@@ -79,11 +79,10 @@ static func blocked(s: GameSession, world: Dictionary, room_id: String, to: Stri
 ## Minutes of a route by the time rules: a step inside a location, a step into another one.
 static func minutes(data: Dictionary, from: String, path: Array[String], mult: float = 1.0) -> int:
 	var w := WorldView.new(data["world"])
-	var cfg: Dictionary = data["rules"]["time"]
 	var total := 0
 	var at := from
 	for r: String in path:
-		total += int(cfg["move_minutes"]) if w.location_id(at) == w.location_id(r) else roundi(int(cfg["travel_minutes"]) * mult)
+		total += WayRules.minutes(data, at, r) if w.location_id(at) == w.location_id(r) else roundi(WayRules.minutes(data, at, r) * mult)
 		at = r
 	return total
 

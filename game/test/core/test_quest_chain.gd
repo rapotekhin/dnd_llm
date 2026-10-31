@@ -30,12 +30,12 @@ func _taken() -> GameSession:
 func test_the_burrow_opens_by_the_found_burrow_or_the_report() -> void:
 	var world: Dictionary = data["world"]
 	var s := _session()
-	assert_array(ExplorationRules.open_exits(s, world, "pushcha-hollow")).not_contains(["pushcha-burrow"])
+	assert_array(WayRules.open_exits(s, world, "pushcha-hollow")).not_contains(["pushcha-burrow"])
 	s.revealed["pushcha-hollow"] = ["burrow"]
-	assert_array(ExplorationRules.open_exits(s, world, "pushcha-hollow")).contains(["pushcha-burrow"])
+	assert_array(WayRules.open_exits(s, world, "pushcha-hollow")).contains(["pushcha-burrow"])
 	var t := _session()
 	t.flags.append("burrow_known")
-	assert_array(ExplorationRules.open_exits(t, world, "pushcha-hollow")).contains(["pushcha-burrow"])
+	assert_array(WayRules.open_exits(t, world, "pushcha-hollow")).contains(["pushcha-burrow"])
 
 
 func test_the_master_cannot_move_through_a_closed_exit() -> void:
@@ -74,7 +74,7 @@ func test_the_report_opens_the_burrow_and_the_finale_closes_the_step() -> void:
 	assert_bool(s.flags.has("burrow_known")).is_true()
 	assert_int(int(s.character["gold_cp"])).is_equal(gold + 3000)
 	assert_int(s.attitude("npc_captain")).is_equal(1)
-	assert_array(ExplorationRules.open_exits(s, world, "pushcha-hollow")).contains(["pushcha-burrow"])
+	assert_array(WayRules.open_exits(s, world, "pushcha-hollow")).contains(["pushcha-burrow"])
 	s.encounters_done.append("burrow_priest")
 	QuestRules.advance(s, data)
 	assert_int(int(s.quests_active[QID])).is_equal(3)
@@ -130,8 +130,8 @@ func test_a_choice_step_without_choices_is_rejected() -> void:
 	(b["world"]["quests"][QID]["steps"][3] as Dictionary).erase("choices")
 	assert_str("\n".join(WorldPack.validate(b, TestUtils.base()))).contains(QID)
 	var c := WorldPack.load_bundle("res://data/worlds/frontier", "builtin")
-	c["world"]["rooms"]["pushcha-hollow"]["closed_exits"]["pushcha-burrow"]["when"] = {"talk": "npc_hermit"}
-	assert_str("\n".join(WorldPack.validate(c, TestUtils.base()))).contains("closed_exits")
+	c["world"]["rooms"]["pushcha-hollow"]["ways"]["pushcha-burrow"]["when"] = {"talk": "npc_hermit"}
+	assert_str("\n".join(WorldPack.validate(c, TestUtils.base()))).contains("ways")
 
 
 func test_quest_parts_survive_the_save() -> void:

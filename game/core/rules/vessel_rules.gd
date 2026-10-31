@@ -1,8 +1,8 @@
 class_name VesselRules
 extends RefCounted
 ## Vessels of water (v0.7.34.6, the author's review: a skin could not be filled by words, a flask held nothing). A thing
-## of rules.needs.water.vessels holds its own pints of water; c["vessels"] {item_id: [{pints, foul}]} — one entry per
-## carried copy, a missing one is empty. The old pool of drinks (needs.skin, v0.7.23) pours into the waterskins.
+## of rules.needs.water.vessels holds its own pints of water on its copy (Thing: {pints, foul}); a plain copy is empty. A
+## new hero's vessels start full.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -16,29 +16,17 @@ static func holds(data: Dictionary, id: String) -> float:
 
 ## The carried vessels, one per copy: [{id, i, pints, cap, foul}].
 static func carried(c: Dictionary, data: Dictionary) -> Array[Dictionary]:
-	var all := _state(c, data)
+	_pour(c, data)
 	var out: Array[Dictionary] = []
 	for id: String in c.get("inventory", {}):
 		var cap := holds(data, id)
 		if cap <= 0.0:
 			continue
-		var list: Array = all.get(id, [])
+		var list := Thing.states(c, id)
 		for i in int(c["inventory"][id]):
 			var v: Dictionary = list[i] if i < list.size() else {}
 			out.append({"id": id, "i": i, "pints": minf(float(v.get("pints", 0.0)), cap), "cap": cap, "foul": bool(v.get("foul", false))})
 	return out
-
-
-## Water goes with its vessel: the state of the vessels no longer carried is gone.
-static func trim(c: Dictionary) -> void:
-	if not (c.get("vessels") is Dictionary):
-		return
-	for id: String in (c["vessels"] as Dictionary).keys():
-		var n := int(c.get("inventory", {}).get(id, 0))
-		if n <= 0:
-			(c["vessels"] as Dictionary).erase(id)
-		elif (c["vessels"][id] as Array).size() > n:
-			(c["vessels"][id] as Array).resize(n)
 
 
 static func pints(c: Dictionary, data: Dictionary) -> float:
@@ -70,14 +58,12 @@ static func to_fill(c: Dictionary, data: Dictionary, foul: bool, only := "") -> 
 
 ## Fills the vessels (only that id, if given) from the water here: what they held takes the source's kind.
 static func fill(c: Dictionary, data: Dictionary, foul: bool, only := "") -> void:
-	var all := _state(c, data)
 	for v: Dictionary in to_fill(c, data, foul, only):
-		_put(all, v, float(v["cap"]), foul)
+		_put(c, v, float(v["cap"]), foul)
 
 
 ## Takes up to `want` pints, the least full first (stacks empty one by one). {pints, foul}.
 static func take(c: Dictionary, data: Dictionary, want: float) -> Dictionary:
-	var all := _state(c, data)
 	var list := carried(c, data).filter(func(v: Dictionary) -> bool: return float(v["pints"]) > 0.0)
 	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["pints"]) < float(b["pints"]))
 	var got := 0.0
@@ -88,7 +74,7 @@ static func take(c: Dictionary, data: Dictionary, want: float) -> Dictionary:
 		var t := minf(want - got, float(v["pints"]))
 		got += t
 		foul = foul or bool(v["foul"])
-		_put(all, v, float(v["pints"]) - t, bool(v["foul"]))
+		_put(c, v, float(v["pints"]) - t, bool(v["foul"]))
 	return {"pints": got, "foul": foul}
 
 
@@ -114,32 +100,27 @@ static func num(x: float) -> String:
 	return str(int(x)) if is_equal_approx(x, roundf(x)) else "%.1f" % x
 
 
-static func _put(all: Dictionary, v: Dictionary, p: float, foul: bool) -> void:
-	var list: Array = all.get(v["id"], [])
-	while list.size() <= int(v["i"]):
-		list.append({"pints": 0.0, "foul": false})
-	list[int(v["i"])] = {"pints": maxf(p, 0.0), "foul": foul and p > 0.0}
-	all[v["id"]] = list
+static func _put(c: Dictionary, v: Dictionary, p: float, foul: bool) -> void:
+	var st := Thing.nth(c, str(v["id"]), int(v["i"]))
+	st["pints"] = maxf(p, 0.0)
+	st["foul"] = foul and p > 0.0
 
 
-## c["vessels"]; the first time — the old pool of drinks poured into the waterskins (full for a new hero).
-static func _state(c: Dictionary, data: Dictionary) -> Dictionary:
-	if c.get("vessels") is Dictionary:
-		return c["vessels"]
-	c["vessels"] = {}
-	var n: Dictionary = c.get("needs", {}) if c.get("needs") is Dictionary else {}
-	var old := float(n["skin"]) * float(cfg(data).get("drink_pints", 2)) if n.has("skin") else INF
-	var foul := bool(n.get("skin_foul", false))
-	n.erase("skin")
-	n.erase("skin_foul")
+## The hero's vessels the first time they are looked at: full.
+static func _pour(c: Dictionary, data: Dictionary) -> void:
+	if bool(c.get("poured", false)):
+		return
+	c["poured"] = true
 	for id: String in c.get("inventory", {}):
 		var cap := holds(data, id)
-		if cap <= 0.0:
-			continue
-		var list: Array = []
-		for i in int(c["inventory"][id]):
-			var p := minf(cap, old)
-			old -= p
-			list.append({"pints": p, "foul": foul and p > 0.0})
-		c["vessels"][id] = list
-	return c["vessels"]
+		for i in int(c["inventory"][id]) if cap > 0.0 else 0:
+			Thing.nth(c, id, i)["pints"] = cap
+
+
+## Every vessel empty.
+static func drain(c: Dictionary) -> void:
+	c["poured"] = true
+	for id: String in c.get("copies", {}).keys():
+		for st: Dictionary in Thing.states(c, id):
+			st.erase("pints")
+			st.erase("foul")

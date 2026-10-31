@@ -31,7 +31,14 @@ static func kind_id(s: GameSession, data: Dictionary, sid: String) -> String:
 
 static func kind_name(s: GameSession, data: Dictionary, sid: String) -> String:
 	var k := kind_id(s, data, sid)
-	return str(PropertyRules.kind_cfg(data, k).get("name", "")) if not k.is_empty() else ""
+	if not k.is_empty():
+		return str(PropertyRules.kind_cfg(data, k).get("name", ""))
+	var names: Dictionary = data["rules"].get("sites", {}).get("kinds", {})  # an arena, a school, a hideout: holdings no one buys
+	for t: Variant in WorldView.new(data["world"]).site(sid).get("tags", []):
+		if names.has(str(t)):
+			return str(names[str(t)])
+	return ""
+
 
 
 ## The hero's property of the object, "" — not the hero's.

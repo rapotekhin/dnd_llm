@@ -84,7 +84,7 @@ static func main_room(s: GameSession, data: Dictionary, id: String) -> String:
 	var w := WorldView.new(data["world"])
 	var list := rooms(s, data, id)
 	for r: String in list:
-		if bool(w.room(r).get("indoor", false)):
+		if w.flag(r, "indoor"):
 			return r
 	var entry := w.site_entry(str(prop(s, data, id).get("site", "")))
 	return entry if not entry.is_empty() else (list[0] if not list.is_empty() else "")
@@ -760,7 +760,7 @@ static func upgrade_why(s: GameSession, data: Dictionary, id: String, up: String
 		return "PROPERTY_NO_UPGRADE"
 	if has_upgrade(s.character, id, up) or not pending(s.character, id, up).is_empty():
 		return "PROPERTY_UPGRADE_HAS"
-	if bool(u.get("indoor", false)) and not bool(WorldView.new(data["world"]).room(main_room(s, data, id)).get("indoor", false)):
+	if bool(u.get("indoor", false)) and not WorldView.new(data["world"]).flag(main_room(s, data, id), "indoor"):
 		return "PROPERTY_NEEDS_ROOF"
 	if int(s.character.get("gold_cp", 0)) < int(u["price_cp"]):
 		return "PROPERTY_NO_MONEY"

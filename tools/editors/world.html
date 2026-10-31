@@ -91,7 +91,7 @@ const app = new EditorApp({
 			filterOrder: ['location_id', 'site_id', 'public', '=встреча', '=тайны', '=открытый край', '=варианты', 'tags', 'indoor', 'dark'],
 			refs: [{ p: 'location_id', to: 'locations' }, { p: 'site_id', to: 'sites' }, { p: 'exits.[]', to: 'rooms' }, { p: 'npcs.[]', to: 'npcs' }, { p: 'closed_exits.{}', to: 'rooms' },
 				{ p: '**.monster', to: 'monsters' }, { p: '**.loot.items.{}', to: 'all_items' }, { p: 'secrets.[].trap.guards', to: 'rooms' },
-				{ p: 'variants.[].npcs.[]', to: 'npcs' }, ...WHEN_REFS('closed_exits.*.')] });
+				{ p: 'variants.[].npcs.[]', to: 'npcs' }, ...WHEN_REFS('ways.*.')] });
 		add({ id: 'npcs', group: 'Мир', title: 'NPC', file: wfile, at: ['npcs'], idHint: 'например npc_smith',
 			sub: (e, nid) => [e.role, e.race, roomOf(nid) ? '📍 ' + roomName(roomOf(nid)) : 'нигде не стоит', e.trader ? 'торговец' : ''].filter(Boolean).join(' · '),
 			computed: { 'комната': (e, nid) => roomOf(nid) || '' },
@@ -310,8 +310,8 @@ function validatePack(app) {
 			for (const x of Object.keys(s.loot?.items || {})) if (!itemOk(x)) push('rooms', rid, `в тайнике ${s.id} нет предмета ${x}`);
 			if (s.trap && !(r.exits || []).includes(s.trap.guards)) push('rooms', rid, `ловушка ${s.id} стережёт не выход комнаты (${s.trap.guards})`);
 		}
-		for (const [to, lock] of Object.entries(r.closed_exits || {})) {
-			if (!(r.exits || []).includes(to)) push('rooms', rid, `closed_exits ${to} — не выход комнаты`);
+		for (const [to, lock] of Object.entries(r.ways || {})) {
+			if (!(r.exits || []).includes(to)) push('rooms', rid, `проход ${to} — не выход комнаты`);
 			checkWhen(lock.when, 'rooms', rid, `выход ${to}`, false);
 		}
 		for (const t of r.tags || []) if (!ROOM_TAGS.includes(t)) push('rooms', rid, `неизвестная метка ${t} (можно: ${ROOM_TAGS.join(', ')})`);

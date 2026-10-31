@@ -99,6 +99,8 @@ static func properties_line(def: Dictionary) -> String:
 		var n := TranslationServer.translate(key)
 		if n != key and not n.is_empty():
 			names.append(n)
+	for n: Variant in def.get("built", []):
+		names.append(str(n))
 	return "" if names.is_empty() else TranslationServer.translate("ITEM_PROPERTIES").format({"list": ", ".join(names)})
 
 

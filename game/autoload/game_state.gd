@@ -1188,7 +1188,7 @@ func container_unlock(prop_id: String, how: String) -> String:
 	return ""
 
 
-## A door on the way to `to` (v0.7.22.25, DoorRules): a key, thieves' tools (Sleight of Hand), force (Athletics),
+## A door on the way to `to` (v0.7.22.25, WayRules): a key, thieves' tools (Sleight of Hand), force (Athletics),
 ## blows of the weapon, a door spell, a torch, waiting for the site's hours. Breaking into someone's closed or
 ## private site before eyes is a trespass at once. The master narrates it. "" or a localization key.
 func door_act(to: String, how: String, spell_id: String = "") -> String:
@@ -1199,16 +1199,19 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 	var data := Catalog.data
 	var from := session.room_id
 	var way := {"how": how, "spell": spell_id} if how == "spell" else {"how": how}
-	if not DoorRules.ways(session, data, from, to).has(way):
+	if not WayRules.ways(session, data, from, to).has(way):
 		return "WAIT_NOT_NOW"
 	var lines: Array[String] = []
-	var minutes := int(DoorRules.cfg(data)["try_minutes"])
+	var minutes := int(WayRules.cfg(data)["try_minutes"])
 	match how:
 		"key":
-			DoorRules.unlock(session, data, from, to)
+			WayRules.unlock(session, data, from, to)
 			lines.append("Дверь отперта ключом")
+		"latch":
+			WayRules.unlock(session, data, from, to)
+			lines.append("Засов отодвинут")
 		"pick", "force":
-			var dc := int(DoorRules.dcs(session, data, from, to)[how])
+			var dc := int(WayRules.dcs(session, data, from, to)[how])
 			var params := {"skill": "sleight_of_hand" if how == "pick" else "athletics", "dc_tier": "medium", "dc": dc, "target_id": to}
 			var bonus := CheckEngine.bonus_for(session.character, params)
 			var parts: Array[Dictionary] = []
@@ -1222,37 +1225,37 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 			if not bool(result["success"]):
 				lines.append("Замок не поддался" if how == "pick" else "Дверь выдержала")
 			elif how == "pick":
-				DoorRules.unlock(session, data, from, to)
+				WayRules.unlock(session, data, from, to)
 				lines.append("Замок вскрыт")
 			else:
-				DoorRules.break_down(session, from, to)
-				lines.append("Дверь выбита")
+				WayRules.break_down(session, from, to)
+				lines.append(WayRules.break_line(data, from, to))
 		"hit":
-			lines = DoorRules.hit(session, data, from, to)
+			lines = WayRules.hit(session, data, from, to)
 		"spell":
 			var r := _spend({"kind": "spell", "id": spell_id})
 			if r.has("reason"):
 				return str(r["reason"])
 			lines.assign(r["lines"])
-			lines.append_array(DoorRules.spell(session, data, from, to, spell_id))
+			lines.append_array(WayRules.spell(session, data, from, to, spell_id))
 		"torch":
-			lines = DoorRules.ignite(session, data, from, to, "факел")
+			lines = WayRules.ignite(session, data, from, to, "факел")
 		"wait":
-			var h := DoorRules.hours(session, data, str(DoorRules.def(data, from, to)["site"]))
+			var h := WayRules.hours(session, data, str(WayRules.def(data, from, to)["site"]))
 			minutes = 0
 			lines.append("Ожидание до %02d:00" % int(h["from"]))
 			lines.append_array(CrimeRules.wait(session, data, int(h["opens"]) - TimeRules.abs_minute(session))["lines"])
 	if minutes > 0:
 		lines.append_array(TimeRules.advance(session, data, minutes))
 	if how in ["pick", "force", "hit", "torch"] or (how == "spell" and str(data["rules"]["spell_effects"].get(spell_id, {}).get("door", "")) != "lock"):
-		var seen := DoorRules.witnesses(session, data, from, to)
+		var seen := WayRules.witnesses(session, data, from, to)
 		if not seen.is_empty():
 			lines.append("Видели: " + ", ".join(seen.map(func(id: String) -> String: return str(world().npc(id).get("name", id)))))  # v0.7.39.2
 			lines.append_array(CrimeRules.on_trespass(session, data, SiteRules.unwelcome(session, data, to), to, seen))
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
 	EventBus.state_changed.emit()
-	var verb: String = {"key": "Отпираю ключом", "pick": "Вскрываю отмычками", "force": "Выбиваю", "hit": "Рублю",
+	var verb: String = {"key": "Отпираю ключом", "latch": "Отодвигаю засов", "pick": "Вскрываю отмычками", "force": "Выбиваю", "hit": "Рублю",
 		"spell": "Колдую на", "torch": "Поджигаю", "wait": "Жду, пока откроют"}[how]
 	_request("wait" if how == "wait" else "action", "%s дверь в «%s» [движок: %s]" % [verb, world().room(to).get("name", to), " · ".join(lines)])
 	return ""
@@ -2414,7 +2417,7 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 
 ## Exit button: the engine moves the player (no model decision), then the master describes the new room.
 func go(room_id: String) -> bool:
-	if session == null or is_busy() or not Backend.is_ready() or not ExplorationRules.open_exits(session, Catalog.data["world"], session.room_id).has(room_id):
+	if session == null or is_busy() or not Backend.is_ready() or not WayRules.open_exits(session, Catalog.data["world"], session.room_id).has(room_id):
 		return false
 	if CrimeRules.held(session):
 		EventBus.message.emit(tr("CRIME_HELD"))
@@ -2425,7 +2428,7 @@ func go(room_id: String) -> bool:
 	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
 		EventBus.message.emit(tr("TOO_HEAVY"))
 		return false
-	var shut := DoorRules.blocked(session, Catalog.data, session.room_id, room_id)
+	var shut := WayRules.blocked(session, Catalog.data, session.room_id, room_id)
 	if not shut.is_empty():
 		EventBus.message.emit(tr(shut))
 		return false
@@ -2494,6 +2497,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 		if not seen.is_empty():
 			lines.append(seen)
 	lines.append_array(MountRules.on_move(session, Catalog.data, from, room_id))  # a beast waits where it cannot go (v0.7.42)
+	lines.append_array(WayRules.on_pass(session, Catalog.data, from, room_id))  # a way down is a fall (v0.7.66)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
 	lines.append_array(SiteRules.on_enter(session, Catalog.data, room_id))  # a private room unasked (v0.7.22.24)
 	CreatureRules.follow(session, from, room_id)  # a bound captive on the rope (v0.7.22.11)

@@ -1485,6 +1485,12 @@
 		}
 	},
 	"conditions": {
+		"burning": "Горит: вещь сгорит, огонь идёт на соседние.",
+		"oiled": "Облито маслом: горит даже то, что не горит само.",
+		"wet": "Мокрое: не загорается.",
+		"glowing": "Светится.",
+		"arcane_lock": "Запечатано чарами.",
+		"knocked": "Замок молчит.",
 		"blinded": "Ослеплён: автоматически проваливает проверки, требующие зрения (Внимательность, Анализ); атаки по нему с преимуществом, его атаки с помехой.",
 		"charmed": "Очарован: не может атаковать очаровавшего; тот совершает с преимуществом социальные проверки против него.",
 		"deafened": "Оглох: ничего не слышит и автоматически проваливает проверки, требующие слуха.",
@@ -2128,6 +2134,60 @@
 		"no_kinds": ["beasts", "undead"]
 	},
 	"make": {
+		"property": {
+			"_doc": "v0.7.65: a property of a thing, built of the tokens the engine already reads. token — the property it adds (%d its amount, %s its value), its price is its row in items.json properties; on — what it goes on (weapon, armor; none — anything). The sum gives the rarity, the rarity asks a level of the hero and sets the artificer's hours, dust and DC.",
+			"parts": {
+			 "plus": {
+			  "token": "magic_plus%d",
+			  "number": [
+			   1,
+			   3
+			  ],
+			  "on": "weapon",
+			  "text": "точность и урон оружия"
+			 },
+			 "element": {
+			  "token": "%s_damage",
+			  "of": "damage",
+			  "on": "weapon",
+			  "text": "урон стихией при ударе"
+			 },
+			 "armor": {
+			  "token": "ac_plus%d",
+			  "number": [
+			   1,
+			   2
+			  ],
+			  "on": "armor",
+			  "text": "КД"
+			 },
+			 "saves": {
+			  "token": "saves_plus1",
+			  "text": "+1 к спасброскам"
+			 },
+			 "checks": {
+			  "token": "checks_plus1",
+			  "text": "+1 к проверкам"
+			 },
+			 "resist": {
+			  "token": "resist_%s",
+			  "of": "damage",
+			  "text": "сопротивление урону"
+			 },
+			 "stealth": {
+			  "token": "stealth_advantage",
+			  "text": "преимущество на Скрытность"
+			 },
+			 "perception": {
+			  "token": "perception_advantage",
+			  "text": "преимущество на Внимательность"
+			 },
+			 "darkvision": {
+			  "token": "darkvision",
+			  "text": "тёмное зрение"
+			 }
+			}
+		},
 		"_doc": "v0.7.63, the language of parts (MakeRules): what the master may build a status or a trait of. A part: cost — points (a number: per `step` of `amount`), values — its `value`, of — what its `value` names (skill, ability, damage), number [min, max] of `amount`, harm — which value hurts (a number hurts below 0). Tiers: the sum of points gives the first tier that holds it: its name, the hero's level, the DC. A trait costs trait_mult times its parts. book — a book a made skill or trait is learned from.",
 		"parts": {
 			"attack": {
@@ -2712,6 +2772,12 @@
 	},
 	"condition_effects": {
 		"_doc": "What a status does (SRD; v0.7.8, v0.7.63), one table for the hero, a fighter and any record. To checks: checks | skills {id} | saves {ability} | senses {sight, hearing}: disadvantage | auto_fail; a sense comes with the master's check. To attacks: attack — its own attack rolls, attacked — rolls against it, attacked_near / attacked_far — by the distance: advantage | disadvantage; attack_why, attacked_why — the words of the hint; crit_near — a hit from next to it is critical. no_move — speed 0; no_threat — it does not spoil a shot next to it; resist_all — half of every damage. Who cannot act — ConditionRules.INCAPACITATING. A status the master built has the same keys in its own `mods`. A status the spells of the engine lay has its own `name` here: it is not one of the 5e conditions the master picks from.",
+		"burning": {"on": ["thing"], "name": "горит"},
+		"oiled": {"on": ["thing"], "name": "облито маслом"},
+		"wet": {"on": ["thing"], "name": "мокрое"},
+		"glowing": {"on": ["thing"], "name": "светится"},
+		"arcane_lock": {"on": ["thing"], "name": "запечатано чарами"},
+		"knocked": {"on": ["thing"], "name": "замок молчит"},
 		"poisoned": {
 			"checks": "disadvantage",
 			"attack": "disadvantage",
@@ -2892,20 +2958,242 @@
 		"seized_container": "chest",
 		"seized_name": "Сундук с вашими вещами"
 	},
-	"doors": {
-		"_doc": "Doors (v0.7.22.25, DoorRules): a way between rooms may have a door — the pack's own (a room's `doors` {to: {material, lock, key, locked}}) or the entrance of a site with hours (`default`). Outside the site's hours it is locked. A key or picked lock (Sleight of Hand against containers.lock_dc of its `lock`) opens it until the site's next opening; force (Athletics, the pick DC + containers.force_dc_plus + the material's force_plus) breaks it; blows of the weapon in hand — an attack against the material's ac, damage off its hp; an arcane lock adds arcane_plus to both and only Knock quiets it for knock_minutes; fire (a spell of the fire damage type or a `torch`) burns a wooden door through in burn_minutes. Each try takes try_minutes. Forcing a way into a closed or private site before eyes is a trespass at once.",
-		"default": {"material": "wood", "lock": "simple"},
+	"things": {
+		"_doc": "v0.7.65, ThingRules: the body of any thing, a door too. AC by the material, HP by size (by weight, `up_to` lb) and frailty (DMG); a door has its own `door_hp`. `immune` — damage types that do nothing to a thing. `by_type` — the material of a catalog item by its type. Fire lasts burn_minutes, catches what stands beside it after spread_minutes, a thing wet for wet_minutes does not burn. master_damage — the most the master's words do to a thing at once; status_minutes — how long a status it lays stays. bodies: what a thing does on the map (v0.8): cells, blocks (path, sight, shots), cover (half, three_quarters, full), made_of.",
 		"materials": {
-			"wood": {"name": "дерево", "hp": 18, "ac": 15, "burns": true, "force_plus": 0},
-			"iron": {"name": "железо", "hp": 60, "ac": 19, "burns": false, "force_plus": 5}
+		 "wood": {
+		  "name": "дерево",
+		  "ac": 15,
+		  "burns": true,
+		  "door_hp": 18,
+		  "force_plus": 0
+		 },
+		 "iron": {
+		  "name": "железо",
+		  "ac": 19,
+		  "door_hp": 60,
+		  "force_plus": 5
+		 },
+		 "steel": {
+		  "name": "сталь",
+		  "ac": 19
+		 },
+		 "stone": {
+		  "name": "камень",
+		  "ac": 17,
+		  "threshold": 5
+		 },
+		 "bone": {
+		  "name": "кость",
+		  "ac": 15
+		 },
+		 "leather": {
+		  "name": "кожа",
+		  "ac": 11,
+		  "burns": true
+		 },
+		 "cloth": {
+		  "name": "ткань",
+		  "ac": 11,
+		  "burns": true,
+		  "fragile": true
+		 },
+		 "paper": {
+		  "name": "бумага",
+		  "ac": 11,
+		  "burns": true,
+		  "fragile": true
+		 },
+		 "glass": {
+		  "name": "стекло",
+		  "ac": 13,
+		  "fragile": true
+		 }
+		},
+		"by_type": {
+		 "weapon": "steel",
+		 "armor": "steel",
+		 "consumable": "glass",
+		 "wondrous": "wood",
+		 "gear": "wood",
+		 "treasure": "steel"
+		},
+		"sizes": [
+		 {
+		  "id": "tiny",
+		  "up_to": 1,
+		  "fragile": 2,
+		  "resilient": 5
+		 },
+		 {
+		  "id": "small",
+		  "up_to": 40,
+		  "fragile": 3,
+		  "resilient": 10
+		 },
+		 {
+		  "id": "medium",
+		  "up_to": 200,
+		  "fragile": 4,
+		  "resilient": 18
+		 },
+		 {
+		  "id": "large",
+		  "up_to": 99999,
+		  "fragile": 5,
+		  "resilient": 27
+		 }
+		],
+		"immune": [
+		 "poison",
+		 "psychic"
+		],
+		"burn_minutes": 10,
+		"spread_minutes": 5,
+		"wet_minutes": 60,
+		"master_damage": 40,
+		"status_minutes": 60,
+		"bodies": {
+		 "table": {
+		  "name": "стол",
+		  "cells": 2,
+		  "blocks": [
+		   "path"
+		  ],
+		  "cover": "half",
+		  "made_of": "wood",
+		  "weight": 60
+		 },
+		 "bench": {
+		  "name": "скамья",
+		  "cells": 2,
+		  "blocks": [],
+		  "cover": "half",
+		  "made_of": "wood",
+		  "weight": 30
+		 },
+		 "cabinet": {
+		  "name": "шкаф",
+		  "cells": 2,
+		  "blocks": [
+		   "path",
+		   "sight",
+		   "shots"
+		  ],
+		  "cover": "full",
+		  "made_of": "wood",
+		  "weight": 120
+		 },
+		 "barrel": {
+		  "name": "бочка",
+		  "cells": 1,
+		  "blocks": [
+		   "path"
+		  ],
+		  "cover": "half",
+		  "made_of": "wood",
+		  "weight": 70
+		 },
+		 "chest": {
+		  "name": "сундук",
+		  "cells": 1,
+		  "blocks": [
+		   "path"
+		  ],
+		  "cover": "half",
+		  "made_of": "wood",
+		  "weight": 25
+		 },
+		 "pillar": {
+		  "name": "колонна",
+		  "cells": 1,
+		  "blocks": [
+		   "path",
+		   "sight",
+		   "shots"
+		  ],
+		  "cover": "three_quarters",
+		  "made_of": "stone",
+		  "weight": 900
+		 },
+		 "statue": {
+		  "name": "статуя",
+		  "cells": 1,
+		  "blocks": [
+		   "path",
+		   "shots"
+		  ],
+		  "cover": "three_quarters",
+		  "made_of": "stone",
+		  "weight": 600
+		 },
+		 "tree": {
+		  "name": "дерево",
+		  "cells": 1,
+		  "blocks": [
+		   "path",
+		   "sight",
+		   "shots"
+		  ],
+		  "cover": "three_quarters",
+		  "made_of": "wood",
+		  "weight": 900
+		 },
+		 "boulder": {
+		  "name": "валун",
+		  "cells": 2,
+		  "blocks": [
+		   "path",
+		   "shots"
+		  ],
+		  "cover": "full",
+		  "made_of": "stone",
+		  "weight": 1500
+		 },
+		 "curtain": {
+		  "name": "занавесь",
+		  "cells": 1,
+		  "blocks": [
+		   "sight"
+		  ],
+		  "made_of": "cloth",
+		  "weight": 5
+		 }
+		}
+	},
+	"ways": {
+		"_doc": "Ways (v0.7.66, WayRules): any way between two places, the pack's rows in a room's `ways` {to: {kind, ...}}, the master's by the effect `way`. An exit without a row is a `plain` way or, between locations, a `road`. A row may say: `when`, `text` (the side it stands on is shut until the fact is true), `max_size`, `how` (rules below: minutes added, whether beasts go), `minutes` (the step's own, a road of hours), `drop` (feet, a fall down it by 5e), `passes` (what goes through it shut: sight, shot, sound), `latch` (the room from whose side a locked leaf opens by hand), and for a leaf: `material`, `lock`, `key`, `locked`, `solid` (a wall that only breaks), `broke` (the line when it does). A way into a site with `hours` has a door by `default`. `master: false` — not the master's to make. Leaf: Outside the site's hours it is locked. A key or picked lock (Sleight of Hand against containers.lock_dc of its `lock`) opens it until the site's next opening; force (Athletics, the pick DC + containers.force_dc_plus + the material's force_plus) breaks it; blows of the weapon in hand — an attack against the material's ac, damage off its hp; an arcane lock adds arcane_plus to both and only Knock quiets it for knock_minutes; fire (a spell of the fire damage type or a `torch`) burns a wooden door through in burn_minutes. Each try takes try_minutes. Forcing a way into a closed or private site before eyes is a trespass at once.",
+		"default": {"material": "wood", "lock": "simple"},
+		"how": {
+			"walk": {"beasts": true, "minutes": 0},
+			"wade": {"beasts": true, "minutes": 5},
+			"crawl": {"beasts": false, "minutes": 5},
+			"climb": {"beasts": false, "minutes": 2}
+		},
+		"kinds": {
+			"plain": {"name": "", "master": false},
+			"road": {"name": "", "master": false},
+			"door": {"name": "дверь", "leaf": true},
+			"gate": {"name": "ворота", "leaf": true, "material": "iron"},
+			"grate": {"name": "решётка", "leaf": true, "material": "iron", "passes": ["sight", "shot", "sound"]},
+			"hatch": {"name": "люк", "leaf": true, "how": "climb", "max_size": "large"},
+			"crawl": {"name": "лаз", "how": "crawl", "max_size": "medium", "note": "ползком, крупному не пролезть"},
+			"stairs": {"name": "лестница"},
+			"ladder": {"name": "приставная лестница", "how": "climb"},
+			"bridge": {"name": "мост"},
+			"ford": {"name": "брод", "how": "wade"},
+			"portal": {"name": "портал"},
+			"secret": {"name": "тайный ход"},
+			"breach": {"name": "перегородка", "leaf": true, "solid": true, "broke": "Перегородка проломлена — путь открыт", "note": "её можно только сломать"}
 		},
 		"arcane_plus": 10,
 		"knock_minutes": 10,
-		"burn_minutes": 10,
 		"try_minutes": 1,
-		"torch": "torch"
+		"torch": "torch",
+		"make": {"per_day": 2}
 	},
 	"sites": {
+		"kinds": {"arena": "арена", "school": "училище", "hideout": "укрытие", "temple": "храм", "prison": "тюрьма", "mine": "шахта", "mill": "мельница", "registry": "управа", "market": "рынок"},
 		"_doc": "Sites (v0.7.22.24, SiteRules): a private room (`public` false of the room or its site) of a site with a living owner — entering it unasked before eyes: the owner trespass_attitude and a light crime `trespass` where there is law, once a day a site. Asked in: the owner goes with the hero or likes the hero from welcome_attitude.",
 		"welcome_attitude": 2,
 		"trespass_attitude": -1,
@@ -3482,6 +3770,7 @@
 		"templates": {
 			"enchant_weapon": {"match": {"item_type": "weapon", "prop": "magic_plus1"}, "from_base": true, "tool": "$base", "tool_default": "smiths_tools", "station": "$base", "station_default": "forge", "materials": {}, "skills": ["artifice:enchant_weapon"]},
 			"enchant_armor": {"match": {"item_type": "armor", "prop": "ac_plus1"}, "from_base": true, "tool": "$base", "tool_default": "smiths_tools", "station": "$base", "station_default": "forge", "materials": {}, "skills": ["artifice:enchant_armor"]},
+			"imbue": {"made": true, "from_self": true, "tool": "$base", "tool_default": "smiths_tools", "station": "$base", "station_default": "forge", "materials": {}, "skills": []},
 			"elemental": {"match": {"item_type": "weapon", "plain": true}, "from_self": true, "variants": {"fire_damage": "огненный", "cold_damage": "ледяной", "lightning_damage": "грозовой"}, "rarity": "uncommon", "value_cp": 50000, "tool": "$base", "tool_default": "smiths_tools", "station": "$base", "station_default": "forge", "materials": {}, "skills": ["artifice:elemental"]},
 			"scroll": {"match": {"scroll": true}, "spell_known": true, "tool": "", "check": "arcana", "station": "", "materials": {"parchment_one_sheet": 1, "ink_1_ounce_bottle": 1}, "skills": ["artifice:scribe"]},
 			"potion": {"match": {"item_type": "consumable", "prefix": "potion_"}, "tool": "alchemists_supplies", "station": "alchemy", "materials": {"herbs": 2, "vial": 1}, "skills": ["artifice:potions"]},
@@ -3584,7 +3873,10 @@
 			"resist_force": "force",
 			"resist_lightning": "lightning",
 			"resist_acid": "acid",
-			"resist_necrotic": "necrotic"
+			"resist_necrotic": "necrotic",
+			"resist_thunder": "thunder",
+			"resist_radiant": "radiant",
+			"resist_psychic": "psychic"
 		},
 		"spell_cures": {
 			"lesser_restoration": {

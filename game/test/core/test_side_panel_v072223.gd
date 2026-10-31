@@ -59,7 +59,7 @@ func test_the_exits_and_looks_are_pinned_under_the_list() -> void:
 	assert_object(footer.find_child("LookButton", true, false)).is_not_null()
 	assert_object(footer.find_child("SneakToggle", true, false)).is_not_null()
 	var exits := footer.find_children("Exit_*", "Button", true, false)
-	assert_int(exits.size()).is_equal(ExplorationRules.open_exits(GameState.session, data["world"], "brod-tavern-hall").size())
+	assert_int(exits.size()).is_equal(WayRules.open_exits(GameState.session, data["world"], "brod-tavern-hall").size())
 	assert_object(panel.find_child("ExitsGrid", true, false)).is_null()
 
 

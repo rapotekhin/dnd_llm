@@ -181,7 +181,7 @@ func _draw_place(info: VBoxContainer, room_id: String, known: Dictionary, marks:
 		rl.name = "MapRumor"
 		rl.add_theme_color_override("font_color", UiTheme.WARN)
 	if room_id == s.room_id:
-		var exits: Array = ExplorationRules.open_exits(s, Catalog.data["world"], s.room_id).map(func(e: String) -> String:
+		var exits: Array = WayRules.open_exits(s, Catalog.data["world"], s.room_id).map(func(e: String) -> String:
 			return w.room_short(e))
 		_text(tr("MAP_HERE_EXITS").format({"list": ", ".join(exits)}), UiTheme.MUTED_LABEL)
 		return

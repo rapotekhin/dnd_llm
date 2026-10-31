@@ -323,19 +323,11 @@ static func vault_move(s: GameSession, data: Dictionary, npc_id: String, dir: St
 		lines.append("%s: %s" % ["Взято из ячейки" if dir == "out" else "Положено в ячейку", Money.format(sum)])
 		return lines
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
-	var contents: Dictionary = v["contents"]
 	if dir == "in":
-		var inv: Dictionary = c["inventory"]
-		inv[item_id] = int(inv.get(item_id, 0)) - 1
-		if int(inv[item_id]) <= 0:
-			inv.erase(item_id)
-		contents[item_id] = int(contents.get(item_id, 0)) + 1
+		Thing.move(c, v, item_id, 1)
 		lines.append("Положено в ячейку: %s" % name)
 	else:
-		contents[item_id] = int(contents[item_id]) - 1
-		if int(contents[item_id]) <= 0:
-			contents.erase(item_id)
-		ItemRules.found(c, data, s.items, item_id, 1)
+		Thing.lay(c, ItemRules.found(c, data, s.items, item_id, 1), Thing.take(v, item_id, 1))
 		lines.append("Взято из ячейки: %s" % name)
 	return lines
 

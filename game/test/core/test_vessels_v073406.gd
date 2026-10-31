@@ -11,7 +11,7 @@ func before_test() -> void:
 	data = TestUtils.data()
 	s = TestUtils.new_session()
 	s.character["inventory"] = {"waterskin": 2, "flask_or_tankard": 1}
-	s.character["vessels"] = {}
+	VesselRules.drain(s.character)
 	NeedRules.state(s, data)
 	fx = EffectEngine.new()
 
@@ -29,14 +29,6 @@ func test_each_vessel_keeps_its_water_and_the_water_weighs() -> void:
 	assert_str(VesselRules.summary(s.character, data, "flask_or_tankard")).is_equal("пусто")
 	assert_float(NeedRules.value(s, data, "water")).is_greater_equal(75.0)
 	assert_float(VesselRules.pints(s.character, data)).is_equal_approx(8.0, 0.01)
-
-
-func test_an_old_pool_of_drinks_pours_into_the_waterskins() -> void:
-	s.character.erase("vessels")
-	s.character["inventory"] = {"waterskin": 2}
-	s.character["needs"]["skin"] = 3  # 3 drinks × 2 pints
-	assert_str(VesselRules.summary(s.character, data, "waterskin")).is_equal("вода 4/4, вода 2/4")
-	assert_bool(s.character["needs"].has("skin")).is_false()
 
 
 func test_the_master_fills_by_words_only_where_there_is_water() -> void:

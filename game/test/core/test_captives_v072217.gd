@@ -196,8 +196,8 @@ func test_a_stolen_thing_stays_its_owners() -> void:
 
 func test_ownership_survives_the_save() -> void:
 	var s := _hero("brod-square")
-	OwnerRules.mark(s, "dagger", 1, "npc_merchant")
 	s.character["inventory"]["dagger"] = 1
+	OwnerRules.mark(s, "dagger", 1, "npc_merchant")
 	s.talk_creature = "c3"
 	var back := GameSession.from_dict(s.to_dict(5))
 	assert_int(OwnerRules.held_of(back, "dagger", "npc_merchant")).is_equal(1)

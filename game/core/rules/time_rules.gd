@@ -82,7 +82,7 @@ static func registry() -> Array[Dictionary]:
 			{"id": "crime", "run": CrimeRules.spread},  # a hidden body is found (v0.7.14)
 			{"id": "rumors", "run": RumorRules.tick},  # rumours reach the neighbours with the fame and the wanted (v0.7.47)
 			{"id": "letters", "run": LetterRules.tick},  # letters delivered or lost, helpers come, the arrested taken (v0.7.48)
-			{"id": "doors", "run": DoorRules.tick, "rules": "doors"},  # a burning door burns through (v0.7.22.25)
+			{"id": "things", "run": ThingRules.tick, "rules": "things"},  # fire takes doors and things, spreads, dies in the rain (v0.7.65)
 		]
 	return _hooks
 
@@ -132,7 +132,7 @@ static func _awake(s: GameSession, data: Dictionary) -> Array[String]:
 static func on_move(s: GameSession, data: Dictionary, from: String, to: String) -> Array[String]:
 	var w := WorldView.new(data["world"])
 	var same := w.location_id(from) == w.location_id(to)
-	var minutes := int(cfg(data)["move_minutes" if same else "travel_minutes"])
+	var minutes := WayRules.minutes(data, from, to)
 	if not same:
 		minutes = BackgroundRules.travel_minutes(s, data, minutes, to)  # an outlander's Wanderer (v0.7.11)
 		minutes = roundi(minutes * minf(PropertyRules.travel_mult(s, data, from), PropertyRules.travel_mult(s, data, to)))  # riding (v0.7.27)
@@ -199,9 +199,9 @@ static func can_see(s: GameSession, data: Dictionary) -> bool:
 ## burrow; v0.7.10), without a way to see.
 static func dark(s: GameSession, data: Dictionary) -> bool:
 	var w := WorldView.new(data["world"])
-	var unlit := bool(w.room(s.room_id).get("dark", false)) or bool(w.location(w.location_id(s.room_id)).get("dark", false))
+	var unlit := w.flag(s.room_id, "dark")
 	if not unlit:
-		if not is_night(s, data) or bool(w.location(w.location_id(s.room_id)).get("lit", false)):
+		if not is_night(s, data) or w.flag(s.room_id, "lit"):
 			return false
 	return not can_see(s, data)
 

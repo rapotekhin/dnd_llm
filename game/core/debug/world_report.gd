@@ -19,14 +19,14 @@ static func room(s: GameSession, data: Dictionary, room_id: String) -> String:
 		" · ночлег %s" % Money.format(int(r["safe"].get("rest_cost_cp", 0))) if r.get("safe") is Dictionary else ""])
 	out.append("  %s" % r.get("description", ""))
 	out.append("  посещена: %s · время: день %d, %s" % ["да" if s.visited.has(room_id) else "нет", s.day, TimeRules.clock(s)])
-	var open := ExplorationRules.open_exits(s, world, room_id)
+	var open := WayRules.open_exits(s, world, room_id)
 	out.append("Выходы:")
 	for to: String in view.exits(room_id):
 		out.append("  → %s [%s]%s" % [view.room(to).get("name", to), to, "" if open.has(to) else " — ЗАКРЫТ"])
-	for to: String in r.get("closed_exits", {}):
+	for to: String in r.get("ways", {}):
 		if not view.exits(room_id).has(to):
 			out.append("  → %s [%s] — %s: %s" % [view.room(to).get("name", to), to, "открыт" if open.has(to) else "ЗАКРЫТ",
-				r["closed_exits"][to].get("text", "")])
+				r["ways"][to].get("text", "")])
 	out.append("NPC:")
 	for id: String in view.npcs_in(room_id):
 		var n := view.npc(id)
