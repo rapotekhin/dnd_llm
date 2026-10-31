@@ -127,11 +127,17 @@ def openrouter_factory(api_key: str) -> ModelFactory:
     return make
 
 
+class KeyRejected(Exception):
+    """OpenRouter said the key is wrong; any other failure says nothing about the key."""
+
+
 async def check_openrouter_key(api_key: str) -> float | None:
-    """Remaining OpenRouter credits in USD, or None if the key is rejected. Never logs the key."""
+    """Remaining OpenRouter credits in USD, None without an answer; KeyRejected on a wrong key. Never logs the key."""
     try:
         async with httpx.AsyncClient(timeout=10) as c:
             resp = await c.get(OPENROUTER_CREDITS_URL, headers={"Authorization": f"Bearer {api_key}"})
+        if resp.status_code in (401, 403):
+            raise KeyRejected
         if resp.status_code != 200:
             return None
         data = resp.json()["data"]

@@ -27,12 +27,12 @@ func _on_state_changed(state: int, detail: String) -> void:
 			_label.text = tr("BACKEND_READY")
 			var info := Backend.client.server_info
 			tooltip_text = tr("BACKEND_TOOLTIP_READY").format({
-				"url": Backend.config.url, "model": info.get("model", "?"), "version": info.get("server_version", "?")})
+				"url": Backend.address(), "model": info.get("model", "?"), "version": info.get("server_version", "?")})
 		BackendClient.State.CONNECTING, BackendClient.State.HANDSHAKE, BackendClient.State.WAITING_RETRY:
 			_dot.color = UiTheme.WARN
 			_label.text = tr("BACKEND_CONNECTING")
-			tooltip_text = "%s\n%s" % [Backend.config.url, detail]
+			tooltip_text = "%s\n%s" % [Backend.address(), detail]
 		_:
 			_dot.color = UiTheme.BAD
 			_label.text = tr("BACKEND_OFFLINE")
-			tooltip_text = "%s\n%s" % [Backend.config.url, detail]
+			tooltip_text = "%s\n%s" % [Backend.address(), detail]

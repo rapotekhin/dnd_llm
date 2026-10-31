@@ -14,6 +14,7 @@ var _resolution: OptionButton
 var _resolutions: Array[Vector2i] = []
 var _url: LineEdit
 var _token: LineEdit
+var _key: LineEdit
 var _ca: LineEdit
 var _check_status: Label
 var _model: OptionButton
@@ -182,9 +183,10 @@ func _apply_display() -> void:
 
 
 func _master_tab() -> void:
-	var cfg := Backend.config
+	var cfg := Backend.stored
 	_url = _field("%Url", cfg.url)
 	_token = _field("%Token", cfg.token)
+	_key = _field("%OpenRouterKey", cfg.openrouter_key)
 	_ca = _field("%CaPath", cfg.ca_cert_path)
 	(UiScenes.need(self, "%CheckButton") as Button).pressed.connect(_save_and_check)
 	_check_status = UiScenes.need(self, "%CheckStatus")
@@ -490,7 +492,7 @@ func _field(path: String, value: String) -> LineEdit:
 func _save_and_check() -> void:
 	_check_status.text = tr("MSG_CHECKING")
 	_check_status.theme_type_variation = UiTheme.MUTED_LABEL
-	Backend.save_config(_url.text.strip_edges(), _token.text.strip_edges(), _ca.text.strip_edges())
+	Backend.save_config(_url.text.strip_edges(), _token.text.strip_edges(), _ca.text.strip_edges(), _key.text.strip_edges())
 
 
 func _on_backend_state(state: int, _detail: String) -> void:

@@ -1,16 +1,25 @@
 extends Node
 ## Connection to the LLM backend (ADR-0007/0009): wraps BackendClient, logs the protocol, answers engine.*
 ## through GameState and diagnoses why the master is unreachable. Connects at start and keeps reconnecting.
+## With no address set it runs the master's server itself (EmbeddedServer, ADR-0014).
 
 const DIAG_SERVER_DOWN := "server_down"
 const DIAG_CERTIFICATE := "certificate"
 const DIAG_TOKEN := "token"
 const DIAG_UNKNOWN := "unknown"
+const DIAG_NO_KEY := "no_key"
+const DIAG_KEY_REJECTED := "key_rejected"
+const DIAG_SERVER_CRASHED := "server_crashed"
+const DIAG_STARTING := "starting"
 
 signal diagnosed(diag: String)
+signal key_needed
 
+## What the player set; `config` is what the client uses (the embedded server's address and one-time token).
+var stored: BackendConfig
 var config: BackendConfig
 var client: BackendClient
+var server := EmbeddedServer.new()
 var protocol_log := ProtocolLog.new()
 ## Last round-trip times by method, ms (F3 overlay).
 var last_ms: Dictionary[String, int] = {}
@@ -24,6 +33,9 @@ func _ready() -> void:
 	_http = HTTPRequest.new()
 	_http.timeout = 5.0
 	add_child(_http)
+	server.started.connect(func() -> void: connect_with(stored))
+	server.restarting.connect(func() -> void: connect_with(stored))
+	server.failed.connect(_on_server_failed)
 	connect_with(BackendConfig.load_from(config_path()))
 
 
@@ -32,12 +44,50 @@ func config_path() -> String:
 
 
 func _process(_delta: float) -> void:
+	server.poll()
 	if client != null:
 		client.poll()
 
 
-## (Re)connects with `cfg`; the old client is stopped first.
+## The game's end stops the child; a crash of the game is the child's own watch.
+func _exit_tree() -> void:
+	server.stop()
+
+
+## (Re)connects with `cfg`; the old client is stopped first. With no address — through the embedded server, which
+## is started here and calls back when it is up.
 func connect_with(cfg: BackendConfig) -> void:
+	stored = cfg
+	var use := cfg.copy()
+	var go := true
+	if not use.url.is_empty():
+		server.stop()
+	elif EmbeddedServer.find_exe().is_empty():
+		use.url = BackendConfig.DEV_URL
+	else:
+		go = _prepare_embedded(use)
+	_open(use, go)
+	if not go:
+		_on_state_changed(state(), "")
+		if diagnosis_now() == DIAG_NO_KEY:
+			key_needed.emit()
+
+
+## True when the server is up and `use` holds its address and token; else it is on its way or cannot run.
+func _prepare_embedded(use: BackendConfig) -> bool:
+	if use.openrouter_key.is_empty() and EmbeddedServer.needs_key():
+		server.stop()
+		return false
+	if not server.serves(use.openrouter_key):
+		server.start(use.openrouter_key, ProjectSettings.globalize_path(SaveManager.path_in_profile("master")))
+	if server.state != EmbeddedServer.State.RUNNING:
+		return false
+	use.url = server.url
+	use.token = server.token
+	return true
+
+
+func _open(cfg: BackendConfig, go: bool) -> void:
 	if client != null:
 		client.state_changed.disconnect(_on_state_changed)
 		client.stop()
@@ -54,22 +104,42 @@ func connect_with(cfg: BackendConfig) -> void:
 	client.peer.register_handler("engine.find_places", GameState.handle_engine_find_places)  # v0.7.20.1
 	client.peer.register_handler("engine.find_teachers", GameState.handle_engine_find_teachers)  # v0.7.39.7
 	client.state_changed.connect(_on_state_changed)
-	client.start()
+	if go:
+		client.start()
 
 
 func reconnect() -> void:
-	connect_with(config)
+	connect_with(stored)
 
 
-## Saves address, token and CA to backend.cfg (outside the repo) and reconnects.
-func save_config(url: String, token: String, ca_cert_path: String) -> void:
+## Saves address, token, CA and the OpenRouter key to backend.cfg (outside the repo) and reconnects.
+func save_config(url: String, token: String, ca_cert_path: String, openrouter_key: String) -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("backend", "url", url)
 	cfg.set_value("backend", "token", token)
 	cfg.set_value("backend", "ca_cert", ca_cert_path)
+	cfg.set_value("backend", "openrouter_key", openrouter_key)
 	cfg.save(config_path())
 	# Re-read so env and command-line overrides keep winning.
 	connect_with(BackendConfig.load_from(config_path()))
+
+
+## The key alone, from the window that asks for it.
+func save_key(openrouter_key: String) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(config_path())
+	cfg.set_value("backend", "openrouter_key", openrouter_key)
+	cfg.save(config_path())
+	connect_with(BackendConfig.load_from(config_path()))
+
+
+## Where the master is, for the player: the address, or the embedded server's name.
+func address() -> String:
+	return tr("BACKEND_EMBEDDED") if stored != null and stored.url.is_empty() else config.url
+
+
+func needs_key() -> bool:
+	return diagnosis_now() in [DIAG_NO_KEY, DIAG_KEY_REJECTED]
 
 
 func is_ready() -> bool:
@@ -77,6 +147,8 @@ func is_ready() -> bool:
 
 
 func state() -> int:
+	if server.state == EmbeddedServer.State.STARTING:
+		return BackendClient.State.CONNECTING
 	return client.state if client != null else BackendClient.State.OFFLINE
 
 
@@ -127,6 +199,25 @@ func _on_state_changed(new_state: BackendClient.State, detail: String) -> void:
 	EventBus.backend_state_changed.emit(new_state, detail)
 
 
+func _on_server_failed() -> void:
+	_on_state_changed(BackendClient.State.FAILED, server.problem)
+	if server.problem == EmbeddedServer.PROBLEM_KEY_REJECTED:
+		key_needed.emit()
+
+
+## What is known about the embedded server without asking anyone; "" — nothing wrong with it.
+func diagnosis_now() -> String:
+	if stored == null or not stored.url.is_empty() or EmbeddedServer.find_exe().is_empty():
+		return ""
+	if server.state == EmbeddedServer.State.STARTING:
+		return DIAG_STARTING
+	if server.problem == EmbeddedServer.PROBLEM_KEY_REJECTED:
+		return DIAG_KEY_REJECTED
+	if server.problem == EmbeddedServer.PROBLEM_CRASHED:
+		return DIAG_SERVER_CRASHED
+	return DIAG_NO_KEY if stored.openrouter_key.is_empty() and EmbeddedServer.needs_key() else ""
+
+
 ## Why the socket does not open (ADR-0009 §9): Godot cannot tell no server / HTTP 401 / TLS apart,
 ## so ask GET /healthz over plain HTTP(S) with the same TLS options. Emits `diagnosed` with one of DIAG_*.
 func request_diagnosis() -> void:
@@ -139,6 +230,9 @@ func request_diagnosis() -> void:
 
 
 func _diagnose() -> String:
+	var known := diagnosis_now()
+	if not known.is_empty():
+		return known
 	if client != null and client.reason == BackendClient.REASON_CONFIG:
 		return DIAG_TOKEN
 	var url := config.url.replace("wss://", "https://").replace("ws://", "http://")

@@ -10,6 +10,8 @@ const LINKS: Array[Dictionary] = [
 	{"id": "discord", "name": "Discord", "url": "https://discord.gg/vmpFtkChY"},
 ]
 
+var _key_box: KeyBox
+
 
 func required() -> Dictionary:
 	var nodes := {
@@ -38,11 +40,20 @@ func _ready() -> void:
 		var b: TextureButton = UiScenes.need(self, "%%Link_%s" % l["id"])
 		b.tooltip_text = str(l["name"])
 		b.pressed.connect(func() -> void: OS.shell_open(str(l["url"])))
+	Backend.key_needed.connect(_ask_key)
+	if Backend.needs_key():
+		_ask_key()
 
 
 func _on_press(path: String, action: Callable) -> void:
 	var b: Button = UiScenes.need(self, path)
 	b.pressed.connect(action)
+
+
+## The master runs on the player's key (ADR-0014).
+func _ask_key() -> void:
+	if not is_instance_valid(_key_box):
+		_key_box = KeyBox.ask(self)
 
 
 func _slot_hint(slot: String) -> String:

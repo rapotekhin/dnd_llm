@@ -2,14 +2,17 @@ class_name BackendConfig
 extends RefCounted
 ## Where the LLM backend lives and how to authenticate (ADR-0007 §4, ADR-0009 §1).
 ## Sources, later wins: user://backend.cfg → env BTR_BACKEND_TOKEN → command line after `--`.
-## The token never goes to logs: use describe() for output.
+## An empty address means the server the game starts itself (ADR-0014), on the player's OpenRouter key.
+## The token and the key never go to logs: use describe() for output.
 
 const DEFAULT_PATH := "user://backend.cfg"
 const TOKEN_ENV := "BTR_BACKEND_TOKEN"
 const LOCAL_HOSTS: Array[String] = ["localhost", "127.0.0.1", "::1"]
+const DEV_URL := "ws://127.0.0.1:8765/ws"  ## a run from the editor without a frozen server: the developer's own
 
-var url: String = "ws://127.0.0.1:8765/ws"
+var url: String = ""
 var token: String = ""
+var openrouter_key: String = ""
 ## Root certificate to trust for wss:// (Caddy `tls internal` in dev). Empty = system CAs.
 var ca_cert_path: String = ""
 var hello_timeout_s: float = 10.0
@@ -22,6 +25,7 @@ static func load_from(path: String = DEFAULT_PATH, args: PackedStringArray = OS.
 		cfg.url = str(file.get_value("backend", "url", cfg.url))
 		cfg.token = str(file.get_value("backend", "token", cfg.token))
 		cfg.ca_cert_path = str(file.get_value("backend", "ca_cert", cfg.ca_cert_path))
+		cfg.openrouter_key = str(file.get_value("backend", "openrouter_key", cfg.openrouter_key))
 	var env_token := OS.get_environment(TOKEN_ENV)
 	if not env_token.is_empty():
 		cfg.token = env_token
@@ -30,6 +34,16 @@ static func load_from(path: String = DEFAULT_PATH, args: PackedStringArray = OS.
 			cfg.url = arg.trim_prefix("--backend-url=")
 		elif arg.begins_with("--backend-ca="):
 			cfg.ca_cert_path = arg.trim_prefix("--backend-ca=")
+	return cfg
+
+
+func copy() -> BackendConfig:
+	var cfg := BackendConfig.new()
+	cfg.url = url
+	cfg.token = token
+	cfg.openrouter_key = openrouter_key
+	cfg.ca_cert_path = ca_cert_path
+	cfg.hello_timeout_s = hello_timeout_s
 	return cfg
 
 

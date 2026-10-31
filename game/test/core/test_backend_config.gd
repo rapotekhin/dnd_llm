@@ -47,7 +47,22 @@ func test_no_token_is_a_config_problem() -> void:
 func test_describe_never_shows_the_token() -> void:
 	var cfg := BackendConfig.new()
 	cfg.token = "super-secret-token"
+	cfg.openrouter_key = "super-secret-key"
 	assert_str(cfg.describe()).not_contains("super-secret-token")
+	assert_str(cfg.describe()).not_contains("super-secret-key")
+
+
+func test_no_address_means_the_embedded_server() -> void:
+	assert_str(BackendConfig.load_from(CFG, PackedStringArray()).url).is_empty()
+	_write_cfg("", "")
+	var f := ConfigFile.new()
+	f.load(CFG)
+	f.set_value("backend", "openrouter_key", "sk-or-test")
+	f.save(CFG)
+	var cfg := BackendConfig.load_from(CFG, PackedStringArray())
+	assert_str(cfg.url).is_empty()
+	assert_str(cfg.openrouter_key).is_equal("sk-or-test")
+	assert_str(cfg.copy().openrouter_key).is_equal("sk-or-test")
 
 
 func test_protocol_compatibility() -> void:

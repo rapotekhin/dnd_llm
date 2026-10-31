@@ -28,6 +28,14 @@ static func diagnosis_key(diag: String) -> String:
 			return "OFFLINE_TOKEN"
 		Backend.DIAG_CERTIFICATE:
 			return "OFFLINE_CERTIFICATE"
+		Backend.DIAG_NO_KEY:
+			return "OFFLINE_NO_KEY"
+		Backend.DIAG_KEY_REJECTED:
+			return "OFFLINE_KEY_REJECTED"
+		Backend.DIAG_SERVER_CRASHED:
+			return "OFFLINE_SERVER_CRASHED"
+		Backend.DIAG_STARTING:
+			return "OFFLINE_STARTING"
 		_:
 			return "OFFLINE_UNKNOWN"
 
@@ -56,12 +64,13 @@ func _retry() -> void:
 
 
 func _on_state(state: int, detail: String) -> void:
-	_status.text = "%s\n%s" % [Backend.config.url, detail]
+	_status.text = "%s\n%s" % [Backend.address(), detail]
 	match state:
 		BackendClient.State.READY:
 			GameEntry.perform(action)
 		BackendClient.State.CONNECTING, BackendClient.State.HANDSHAKE:
-			pass
+			if Backend.server.state == EmbeddedServer.State.STARTING:
+				_reason.text = tr("OFFLINE_STARTING")
 		_:
 			Backend.request_diagnosis()
 

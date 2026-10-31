@@ -2,6 +2,7 @@
 
 import hmac
 import logging
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket
@@ -22,6 +23,7 @@ def create_app(
     summary_handler: SummaryHandler | None = None,
     image_handler: ImageHandler | None = None,
     load_prices: bool = False,
+    on_started: Callable[[], None] | None = None,
 ) -> FastAPI:
     from .images import agent_image, stub_image
     from .turns import agent_summary, agent_turn, stub_summary, stub_turn
@@ -44,6 +46,8 @@ def create_app(
         if load_prices:
             await services.models.load_prices()
             await services.models.load_providers()
+        if on_started is not None:
+            on_started()
         yield
 
     app = FastAPI(title="Between the Rolls LLM backend", version=__version__, docs_url=None, redoc_url=None,

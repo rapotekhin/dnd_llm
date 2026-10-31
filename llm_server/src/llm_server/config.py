@@ -142,6 +142,13 @@ class Settings:
     image_models: tuple[ImageModel, ...] = IMAGE_MODELS  # LLM_SERVER_IMAGES=0 — none, the brush is hidden (v0.7.35)
     image_model: str = DEFAULT_IMAGE_MODEL
     a1111_url: str = ""  # an own AUTOMATIC1111 / Forge, asked for its models at every hello (v0.7.37); "" — none
+    # Started by a game (ADR-0014): the port goes to this file, the server ends with the process `parent_pid`.
+    port_file: Path | None = None
+    parent_pid: int = 0
+
+    @property
+    def embedded(self) -> bool:
+        return self.port_file is not None
 
     @classmethod
     def from_env(cls, load_env_file: bool = True) -> "Settings":
@@ -167,10 +174,11 @@ class Settings:
             models = (model, *models)
         budget_raw = os.environ.get("LLM_SERVER_DAILY_BUDGET_USD", "1.0").strip().lower()
         budget = None if budget_raw in ("", "0", "none", "off") else float(budget_raw)
+        port_file = os.environ.get("LLM_SERVER_PORT_FILE", "")
 
         return cls(
             token=token,
-            host=os.environ.get("LLM_SERVER_HOST", cls.host),
+            host=cls.host if port_file else os.environ.get("LLM_SERVER_HOST", cls.host),  # a game's server: this machine only
             port=int(num("LLM_SERVER_PORT", cls.port)),
             hello_timeout=num("LLM_SERVER_HELLO_TIMEOUT", cls.hello_timeout),
             turn_timeout=num("LLM_SERVER_TURN_TIMEOUT", cls.turn_timeout),
@@ -188,6 +196,8 @@ class Settings:
             image_models=_image_models(),
             a1111_url=_a1111_url(),
             image_model=os.environ.get("LLM_SERVER_IMAGE_MODEL", DEFAULT_IMAGE_MODEL),
+            port_file=Path(port_file) if port_file else None,
+            parent_pid=int(num("LLM_SERVER_PARENT_PID", 0)),
         )
 
     def __repr__(self) -> str:

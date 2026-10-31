@@ -96,6 +96,18 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 10
 
+[node name="OpenRouterKeyLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "OPT_OPENROUTER_KEY"
+theme_type_variation = &"MutedLabel"
+
+[node name="OpenRouterKey" type="LineEdit" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+placeholder_text = "sk-or-…"
+secret = true
+
 [node name="UrlLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
 layout_mode = 2
 text = "OPT_BACKEND_URL"
@@ -105,6 +117,7 @@ theme_type_variation = &"MutedLabel"
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 52)
+placeholder_text = "OPT_BACKEND_URL_EMPTY"
 
 [node name="TokenLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
 layout_mode = 2

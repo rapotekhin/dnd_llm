@@ -21,6 +21,9 @@ llm_server = "llm_server.__main__:main"
 observability = [
     "langfuse>=3.0",
 ]
+freeze = [
+    "pyinstaller>=6.11",
+]
 dev = [
     "pytest>=8.3",
     "httpx2",
