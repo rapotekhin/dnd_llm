@@ -1,41 +1,44 @@
 class_name LevelUpView
-extends Control
-
-const WIDE := 1300.0
-const COMPACT := 620.0
+extends ModalFrame
 ## The level-up screen over the game (roadmap v0.5.4): what the next level brings (HP by the average, new
 ## features) and the picks it needs — subclass, feature options, expertise, ability increase, spells.
 ## Rules and checks are LevelUp's; «Подтвердить» calls GameState.level_up.
 
+const VIEW_SCENE := "res://ui/components/level_up_view.tscn"
+const WIDE := 1300.0
+const COMPACT := 620.0
+
 var picks := {}
 var _box: VBoxContainer
 var confirm: Button
-var frame: ModalFrame
 ## The rules text of the hovered choice (v0.6.6); hidden when the level has nothing to choose (О3).
 var _info: DetailsPanel
 
 
-func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame = ModalFrame.make("", WIDE)
-	add_child(frame)
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.close_requested.connect(func() -> void: visible = false)
-	var mid := HBoxContainer.new()  # the choices on the left, what the picked one does on the right (big test #36)
-	mid.add_theme_constant_override("separation", 16)
-	frame.body.add_child(mid)
-	_box = VBoxContainer.new()
-	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_box.add_theme_constant_override("separation", 8)
-	mid.add_child(_box)
+static func create() -> LevelUpView:
+	var view := UiScenes.open(VIEW_SCENE) as LevelUpView
+	view.setup("", WIDE)
+	view.bind()
+	return view
+
+
+func required() -> Dictionary:
+	var nodes := super()
+	nodes.merge({"%LevelBox": "VBoxContainer", "%LaterButton": "Button", "%LevelUpConfirm": "Button"})
+	return nodes
+
+
+func bind() -> void:
+	close_requested.connect(func() -> void: visible = false)
+	_box = UiScenes.need(self, "%LevelBox")  # the choices on the left, what the picked one does on the right (big test #36)
 	_info = DetailsPanel.new(Vector2(480, 320))
 	_info.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_info.show_text(tr("INFO_HINT"), "")
-	mid.add_child(_info)
-	frame.add_button("BTN_LATER", func() -> void: visible = false)
-	confirm = frame.add_button("BTN_LEVEL_UP_CONFIRM", _on_confirm, true)
-	confirm.name = "LevelUpConfirm"
-	frame.note.name = "LevelUpError"
+	_box.get_parent().add_child(_info)
+	(UiScenes.need(self, "%LaterButton") as Button).pressed.connect(func() -> void: visible = false)
+	confirm = UiScenes.need(self, "%LevelUpConfirm")
+	confirm.pressed.connect(_on_confirm)
+	note.name = "LevelUpError"
 	visibility_changed.connect(func() -> void:
 		if visible:
 			picks = {}
@@ -61,9 +64,9 @@ func _rebuild() -> void:
 	var feats: Dictionary = data["classes"]["features"]
 	var choices := bool(p["subclass"]) or not (p["options"] as Array).is_empty() or int(p["expertise"]) > 0 or bool(p["asi"]) \
 		or int(p["cantrips"]) > 0 or int(p["spells"]) > 0 or int(p["prepared"]) > 0
-	frame.set_width(WIDE if choices else COMPACT)  # a level with nothing to pick is a small window (О3)
+	set_width(WIDE if choices else COMPACT)  # a level with nothing to pick is a small window (О3)
 	_info.visible = choices
-	frame.title.text = tr("LVL_TITLE").format({"level": p["level"], "class": c.get("class_name", "")})
+	title.text = tr("LVL_TITLE").format({"level": p["level"], "class": c.get("class_name", "")})
 	_text(tr("LVL_HP").format({"gain": p["hp_gain"]}), "")
 	var names: Array = (p["features"] as Array).map(func(f: String) -> String: return str(feats.get(f, {}).get("name", f)))
 	if not names.is_empty():
@@ -115,7 +118,7 @@ func _rebuild() -> void:
 			picks.get("prepared", []), func(sel: Array) -> void: picks["prepared"] = sel)
 
 	var errs := LevelUp.errors(c, data, _clean(p))
-	frame.set_note(tr(errs[0]) if not errs.is_empty() else "")
+	set_note(tr(errs[0]) if not errs.is_empty() else "")
 	confirm.disabled = not errs.is_empty() or GameState.is_busy()
 
 
@@ -147,9 +150,9 @@ func _choice(title_key: String, group: String, ids: Array, label: Callable, n: i
 
 
 ## A «pick n of these» list of checkboxes; a full list ignores more ticks (a single pick switches instead).
-func _choice_text(title: String, group: String, ids: Array, label: Callable, n: int, chosen: Array, on_change: Callable) -> void:
+func _choice_text(title_text: String, group: String, ids: Array, label: Callable, n: int, chosen: Array, on_change: Callable) -> void:
 	_box.add_child(HSeparator.new())
-	_text(title, "").add_theme_color_override("font_color", UiTheme.ACCENT)
+	_text(title_text, UiTheme.ACCENT_LABEL)
 	var spells: Dictionary = Catalog.data["spells"]
 	var all_spells := not ids.is_empty() and ids.all(func(x: Variant) -> bool: return spells.has(str(x)))
 	var order := ids.duplicate()
@@ -210,7 +213,7 @@ func _tip(id: String) -> String:
 
 func _asi(c: Dictionary) -> void:
 	_box.add_child(HSeparator.new())
-	_text(tr("LVL_ASI"), "").add_theme_color_override("font_color", UiTheme.ACCENT)
+	_text(tr("LVL_ASI"), UiTheme.ACCENT_LABEL)
 	var asi: Dictionary = picks.get("asi", {})
 	var used := 0
 	for a: String in asi:
@@ -259,4 +262,4 @@ func _on_confirm() -> void:
 	if err.is_empty():
 		visible = false
 	else:
-		frame.set_note(tr(err))
+		set_note(tr(err))

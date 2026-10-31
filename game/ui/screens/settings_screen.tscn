@@ -1,0 +1,392 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/settings_screen.gd" id="1"]
+[ext_resource type="Script" path="res://ui/components/backend_status.gd" id="2"]
+
+[node name="SettingsScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Col" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 320.0
+offset_top = 80.0
+offset_right = -320.0
+offset_bottom = -80.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Col"]
+layout_mode = 2
+text = "TITLE_SETTINGS"
+theme_type_variation = &"HeadingLabel"
+
+[node name="Tabs" type="TabContainer" parent="Col"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="Display" type="VBoxContainer" parent="Col/Tabs"]
+layout_mode = 2
+metadata/_tab_index = 0
+theme_override_constants/separation = 14
+
+[node name="Fullscreen" type="CheckBox" parent="Col/Tabs/Display"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OPT_FULLSCREEN"
+
+[node name="RowResolution" type="HBoxContainer" parent="Col/Tabs/Display"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Caption" type="Label" parent="Col/Tabs/Display/RowResolution"]
+layout_mode = 2
+text = "OPT_RESOLUTION"
+
+[node name="Resolution" type="OptionButton" parent="Col/Tabs/Display/RowResolution"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+
+[node name="RowScale" type="HBoxContainer" parent="Col/Tabs/Display"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Caption" type="Label" parent="Col/Tabs/Display/RowScale"]
+layout_mode = 2
+text = "OPT_UI_SCALE"
+
+[node name="UiScale" type="OptionButton" parent="Col/Tabs/Display/RowScale"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+
+[node name="RowSpeed" type="HBoxContainer" parent="Col/Tabs/Display"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Caption" type="Label" parent="Col/Tabs/Display/RowSpeed"]
+layout_mode = 2
+text = "OPT_COMBAT_SPEED"
+
+[node name="CombatSpeed" type="OptionButton" parent="Col/Tabs/Display/RowSpeed"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+
+[node name="Master" type="ScrollContainer" parent="Col/Tabs"]
+layout_mode = 2
+visible = false
+horizontal_scroll_mode = 0
+metadata/_tab_index = 1
+
+[node name="MasterBox" type="VBoxContainer" parent="Col/Tabs/Master"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="UrlLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "OPT_BACKEND_URL"
+theme_type_variation = &"MutedLabel"
+
+[node name="Url" type="LineEdit" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+
+[node name="TokenLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "OPT_BACKEND_TOKEN"
+theme_type_variation = &"MutedLabel"
+
+[node name="Token" type="LineEdit" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+secret = true
+
+[node name="CaPathLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "OPT_BACKEND_CA"
+theme_type_variation = &"MutedLabel"
+
+[node name="CaPath" type="LineEdit" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+
+[node name="BackendHint" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "HINT_BACKEND"
+theme_type_variation = &"MutedLabel"
+autowrap_mode = 3
+
+[node name="CheckRow" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="CheckButton" type="Button" parent="Col/Tabs/Master/MasterBox/CheckRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+text = "BTN_SAVE_AND_CHECK"
+theme_type_variation = &"AccentButton"
+
+[node name="CheckStatus" type="Label" parent="Col/Tabs/Master/MasterBox/CheckRow"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="BackendStatus" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+script = ExtResource("2")
+
+[node name="SampleStatus" type="Label" parent="Col/Tabs/Master/MasterBox/BackendStatus" groups=["editor_sample"]]
+layout_mode = 2
+text = "BACKEND_READY"
+theme_type_variation = &"MutedLabel"
+
+[node name="ModelLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "OPT_MODEL"
+theme_type_variation = &"MutedLabel"
+
+[node name="ModelOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+
+[node name="ProviderLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "OPT_PROVIDER"
+theme_type_variation = &"MutedLabel"
+autowrap_mode = 3
+
+[node name="SortRow" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+
+[node name="SortLabel" type="Label" parent="Col/Tabs/Master/MasterBox/SortRow"]
+layout_mode = 2
+text = "OPT_PROVIDER_SORT"
+theme_type_variation = &"MutedLabel"
+
+[node name="ProviderSortOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox/SortRow"]
+unique_name_in_owner = true
+layout_mode = 2
+fit_to_longest_item = false
+
+[node name="ProviderOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+clip_text = true
+fit_to_longest_item = false
+
+[node name="BudgetLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "OPT_BUDGET"
+theme_type_variation = &"MutedLabel"
+
+[node name="BudgetRow" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BudgetEdit" type="LineEdit" parent="Col/Tabs/Master/MasterBox/BudgetRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(140, 52)
+placeholder_text = "1.00"
+
+[node name="BudgetOff" type="CheckBox" parent="Col/Tabs/Master/MasterBox/BudgetRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OPT_BUDGET_OFF"
+
+[node name="BudgetSave" type="Button" parent="Col/Tabs/Master/MasterBox/BudgetRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+text = "OPT_BUDGET_SAVE"
+
+[node name="BudgetStatus" type="Label" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+autowrap_mode = 3
+theme_type_variation = &"MutedLabel"
+
+[node name="ImagesLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "OPT_IMAGES"
+theme_type_variation = &"MutedLabel"
+autowrap_mode = 3
+
+[node name="ImagesRow" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ImagesOn" type="CheckBox" parent="Col/Tabs/Master/MasterBox/ImagesRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OPT_IMAGES_ON"
+
+[node name="ImageModelOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox/ImagesRow"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+size_flags_horizontal = 3
+
+[node name="ImageExtra" type="VBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ImagePromptAddLabel" type="Label" parent="Col/Tabs/Master/MasterBox/ImageExtra"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OPT_IMAGE_PROMPT"
+theme_type_variation = &"MutedLabel"
+
+[node name="ImagePromptAdd" type="TextEdit" parent="Col/Tabs/Master/MasterBox/ImageExtra"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 84)
+wrap_mode = 1
+
+[node name="ImageNegativeAddLabel" type="Label" parent="Col/Tabs/Master/MasterBox/ImageExtra"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OPT_IMAGE_NEGATIVE"
+theme_type_variation = &"MutedLabel"
+
+[node name="ImageNegativeAdd" type="TextEdit" parent="Col/Tabs/Master/MasterBox/ImageExtra"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 84)
+wrap_mode = 1
+
+[node name="NegativeRow" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox/ImageExtra"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ImageNegativeOnly" type="CheckBox" parent="Col/Tabs/Master/MasterBox/ImageExtra/NegativeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "OPT_IMAGE_NEGATIVE_ONLY"
+
+[node name="ImagePromptsReset" type="Button" parent="Col/Tabs/Master/MasterBox/ImageExtra/NegativeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OPT_IMAGE_PROMPTS_RESET"
+
+[node name="ReactionsLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+layout_mode = 2
+text = "OPT_REACTIONS"
+theme_type_variation = &"MutedLabel"
+
+[node name="ReactionsOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="GameOptions" type="VBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DmStyleLabel" type="Label" parent="Col/Tabs/Master/MasterBox/GameOptions"]
+layout_mode = 2
+text = "OPT_DM_STYLE"
+theme_type_variation = &"MutedLabel"
+
+[node name="DmStyleOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox/GameOptions"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="DifficultyLabel" type="Label" parent="Col/Tabs/Master/MasterBox/GameOptions"]
+layout_mode = 2
+text = "OPT_DIFFICULTY"
+theme_type_variation = &"MutedLabel"
+
+[node name="DifficultyOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox/GameOptions"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="NeedsOption" type="CheckButton" parent="Col/Tabs/Master/MasterBox/GameOptions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OPT_NEEDS"
+
+[node name="AdultOption" type="CheckButton" parent="Col/Tabs/Master/MasterBox/GameOptions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OPT_ADULT"
+
+[node name="Controls" type="ScrollContainer" parent="Col/Tabs"]
+layout_mode = 2
+visible = false
+horizontal_scroll_mode = 0
+metadata/_tab_index = 2
+
+[node name="ControlsBox" type="VBoxContainer" parent="Col/Tabs/Controls"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ConfirmRisky" type="CheckBox" parent="Col/Tabs/Controls/ControlsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "OPT_CONFIRM_RISKY_TIP"
+text = "OPT_CONFIRM_RISKY"
+
+[node name="KeysLabel" type="Label" parent="Col/Tabs/Controls/ControlsBox"]
+layout_mode = 2
+text = "OPT_KEYS"
+theme_type_variation = &"MutedLabel"
+
+[node name="KeyList" type="VBoxContainer" parent="Col/Tabs/Controls/ControlsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SampleKey" type="HBoxContainer" parent="Col/Tabs/Controls/ControlsBox/KeyList" groups=["editor_sample"]]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Caption" type="Label" parent="Col/Tabs/Controls/ControlsBox/KeyList/SampleKey"]
+layout_mode = 2
+auto_translate_mode = 2
+size_flags_horizontal = 3
+text = "Действие"
+
+[node name="Key" type="Button" parent="Col/Tabs/Controls/ControlsBox/KeyList/SampleKey"]
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(220, 44)
+text = "Клавиша"
+
+[node name="KeysReset" type="Button" parent="Col/Tabs/Controls/ControlsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "BTN_KEYS_RESET"
+
+[node name="BackButton" type="Button" parent="Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(240, 56)
+size_flags_horizontal = 0
+text = "BTN_BACK"

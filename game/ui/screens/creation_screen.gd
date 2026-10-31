@@ -5,6 +5,7 @@ extends Control
 ## screen only edits `choices` and redraws. «Случайный» fills every step (seeded by --seed when given),
 ## «Начать игру» builds the character and starts the game with the new game screen's `settings`.
 
+const SCENE := "res://ui/screens/creation_screen.tscn"
 const STEP_START := "start"
 
 var choices: Dictionary = CharacterBuilder.empty_choices()
@@ -27,96 +28,50 @@ var _info: DetailsPanel
 var heir := false
 
 
-func _init(new_game_settings: Dictionary = {}, heir_choices: Dictionary = {}) -> void:
-	settings = new_game_settings
+static func make(new_game_settings: Dictionary, heir_choices: Dictionary) -> CreationScreen:
+	var screen := UiScenes.open(SCENE) as CreationScreen
+	screen.settings = new_game_settings
 	if not heir_choices.is_empty():
-		heir = true
-		choices.merge(heir_choices, true)
+		screen.heir = true
+		screen.choices.merge(heir_choices, true)
+	return screen
+
+
+func required() -> Dictionary:
+	return {"%StepsBox": "VBoxContainer", "%StepBody": "VBoxContainer", "%DetailsColumn": "VBoxContainer", "%Summary": "VBoxContainer",
+		"%Errors": "Label", "%BackToWorld": "Button", "%RandomButton": "Button", "%StepBack": "Button", "%NextButton": "Button",
+		"%StartButton": "Button"}
 
 
 func _ready() -> void:
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 32)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 16)
-	margin.add_child(col)
-	var title := Label.new()
-	title.text = "CC_TITLE"
-	title.theme_type_variation = UiTheme.HEADING
-	col.add_child(title)
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 24)
-	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(row)
-	_steps_box = VBoxContainer.new()
-	_steps_box.custom_minimum_size = Vector2(300, 0)
-	_steps_box.add_theme_constant_override("separation", 8)
-	row.add_child(_steps_box)
-
-	var body_panel := PanelContainer.new()
-	body_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body_panel.size_flags_stretch_ratio = 2.2
-	row.add_child(body_panel)
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	body_panel.add_child(scroll)
-	_body = VBoxContainer.new()
-	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.add_theme_constant_override("separation", 12)
-	scroll.add_child(_body)
-
-	var side := PanelContainer.new()
-	side.theme_type_variation = UiTheme.SIDE
+	_steps_box = UiScenes.need(self, "%StepsBox")
+	_body = UiScenes.need(self, "%StepBody")
+	_summary = UiScenes.need(self, "%Summary")
+	_errors = UiScenes.need(self, "%Errors")
 	_info = DetailsPanel.new(Vector2(0, 160))
 	_info.show_text(tr("INFO_HINT"), "")
-	var right := _info.column(side, 360)
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(right)
-	var side_scroll := ScrollContainer.new()
-	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	side.add_child(side_scroll)
-	_summary = VBoxContainer.new()
-	_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_summary.add_theme_constant_override("separation", 6)
-	side_scroll.add_child(_summary)
-
-	var bottom := HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 16)
-	col.add_child(bottom)
-	_button(bottom, "BTN_BACK_TO_WORLD", func() -> void: EventBus.navigate.emit("new_game", {}))
-	var rnd := _button(bottom, "CC_RANDOM", _randomize)
-	rnd.name = "RandomButton"
-	_errors = Label.new()
-	_errors.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_errors.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_errors.add_theme_color_override("font_color", UiTheme.WARN)
-	bottom.add_child(_errors)
-	_back = _button(bottom, "BTN_BACK", func() -> void: _move(-1))
-	_next = _button(bottom, "CC_NEXT", func() -> void: _move(1))
-	_next.name = "NextButton"
-	_start = _button(bottom, "CC_START", _finish)
-	_start.name = "StartButton"
-	_start.theme_type_variation = UiTheme.ACCENT_BUTTON
+	_info.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var details: Control = UiScenes.need(self, "%DetailsColumn")
+	details.add_child(_info)
+	details.move_child(_info, 0)
+	_on_press("%BackToWorld", func() -> void: EventBus.navigate.emit("new_game", {}))
+	_on_press("%RandomButton", _randomize)
+	_back = _on_press("%StepBack", func() -> void: _move(-1))
+	_next = _on_press("%NextButton", func() -> void: _move(1))
+	_start = _on_press("%StartButton", _finish)
 	if heir and _steps().size() > 1:  # the heir has no ready-made characters to pick
 		step = _steps()[1]
 	_redraw()
 
 
+func _on_press(path: String, action: Callable) -> Button:
+	var b: Button = UiScenes.need(self, path)
+	b.pressed.connect(action)
+	return b
+
+
 func data() -> Dictionary:
 	return Catalog.data
-
-
-func _button(parent: Control, key: String, action: Callable) -> Button:
-	var b := Button.new()
-	b.text = key
-	b.custom_minimum_size = Vector2(0, 56)
-	b.pressed.connect(action)
-	parent.add_child(b)
-	return b
 
 
 func _randomize() -> void:

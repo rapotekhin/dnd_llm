@@ -3,13 +3,21 @@ extends Control
 ## «Мастер недоступен»: why (server down / token / certificate, ADR-0009 §9), retry, connection settings.
 ## When the backend becomes READY the pending action (new game / load) runs by itself.
 
+const SCENE := "res://ui/screens/offline_screen.tscn"
+
 var action: Dictionary
 var _reason: Label
 var _status: Label
 
 
-func _init(pending: Dictionary) -> void:
-	action = pending
+static func make(pending: Dictionary) -> OfflineScreen:
+	var screen := UiScenes.open(SCENE) as OfflineScreen
+	screen.action = pending
+	return screen
+
+
+func required() -> Dictionary:
+	return {"%Reason": "Label", "%StatusLabel": "Label", "%RetryButton": "Button", "%ConnectionButton": "Button", "%ToMenu": "Button"}
 
 
 static func diagnosis_key(diag: String) -> String:
@@ -25,51 +33,12 @@ static func diagnosis_key(diag: String) -> String:
 
 
 func _ready() -> void:
-	var center := CenterContainer.new()
-	add_child(center)
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.custom_minimum_size = Vector2(900, 0)
-	center.add_child(panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 18)
-	panel.add_child(col)
-
-	var title := Label.new()
-	title.text = "OFFLINE_TITLE"
-	title.theme_type_variation = UiTheme.HEADING
-	col.add_child(title)
-	_reason = Label.new()
-	_reason.name = "Reason"
-	_reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_reason.text = "OFFLINE_CHECKING"
-	col.add_child(_reason)
-	_status = Label.new()
-	_status.theme_type_variation = UiTheme.MUTED_LABEL
-	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(_status)
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
-	col.add_child(row)
-	var retry := Button.new()
-	retry.text = "BTN_RETRY"
-	retry.theme_type_variation = UiTheme.ACCENT_BUTTON
-	retry.custom_minimum_size = Vector2(220, 56)
-	retry.pressed.connect(_retry)
-	row.add_child(retry)
-	var settings := Button.new()
-	settings.text = "BTN_CONNECTION_SETTINGS"
-	settings.custom_minimum_size = Vector2(0, 56)
-	settings.pressed.connect(func() -> void: EventBus.navigate.emit("settings", {"back": "menu", "tab": SettingsScreen.TAB_MASTER}))
-	row.add_child(settings)
-	var menu := Button.new()
-	menu.text = "BTN_TO_MENU"
-	menu.custom_minimum_size = Vector2(0, 56)
-	menu.pressed.connect(func() -> void: EventBus.navigate.emit("menu", {}))
-	row.add_child(menu)
-
+	_reason = UiScenes.need(self, "%Reason")
+	_status = UiScenes.need(self, "%StatusLabel")
+	(UiScenes.need(self, "%RetryButton") as Button).pressed.connect(_retry)
+	(UiScenes.need(self, "%ConnectionButton") as Button).pressed.connect(func() -> void:
+		EventBus.navigate.emit("settings", {"back": "menu", "tab": SettingsScreen.TAB_MASTER}))
+	(UiScenes.need(self, "%ToMenu") as Button).pressed.connect(func() -> void: EventBus.navigate.emit("menu", {}))
 	EventBus.backend_state_changed.connect(_on_state)
 	Backend.diagnosed.connect(_on_diagnosed)
 	_on_state(Backend.state(), "")

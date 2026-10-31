@@ -2,6 +2,7 @@ class_name SettingsScreen
 extends Control
 ## Settings: «Экран» (window) and «Мастер» (backend address, token, certificate, check).
 
+const SCENE := "res://ui/screens/settings_screen.tscn"
 const TAB_DISPLAY := 0
 const TAB_MASTER := 1
 const TAB_CONTROLS := 2  # v0.7.22.27: keys and the irreversible questions
@@ -36,44 +37,39 @@ var _key_buttons: Dictionary = {}  # action → its button
 var _waiting := ""  # the action waiting for a key
 
 
-func _init(back_to: String, tab: int) -> void:
-	back = back_to
-	start_tab = tab
+static func make(back_to: String, tab: int) -> SettingsScreen:
+	var screen := UiScenes.open(SCENE) as SettingsScreen
+	screen.back = back_to
+	screen.start_tab = tab
+	return screen
+
+
+func required() -> Dictionary:
+	var nodes := {
+		"%Tabs": "TabContainer", "%BackButton": "Button", "%Fullscreen": "CheckBox", "%Url": "LineEdit", "%Token": "LineEdit",
+		"%CaPath": "LineEdit", "%CheckButton": "Button", "%CheckStatus": "Label", "%BudgetEdit": "LineEdit",
+		"%BudgetOff": "CheckBox", "%BudgetSave": "Button", "%BudgetStatus": "Label", "%ImagesOn": "CheckBox",
+		"%ImageExtra": "VBoxContainer", "%ImagePromptAdd": "TextEdit", "%ImageNegativeAdd": "TextEdit",
+		"%ImagePromptAddLabel": "Label", "%ImageNegativeAddLabel": "Label", "%ImageNegativeOnly": "CheckBox",
+		"%ImagePromptsReset": "Button", "%GameOptions": "VBoxContainer", "%NeedsOption": "CheckButton",
+		"%AdultOption": "CheckButton", "%ConfirmRisky": "CheckBox", "%KeyList": "VBoxContainer", "%KeysReset": "Button",
+	}
+	for path: String in ["%Resolution", "%UiScale", "%CombatSpeed", "%ModelOption", "%ProviderOption", "%ProviderSortOption",
+			"%ImageModelOption", "%ReactionsOption", "%DmStyleOption", "%DifficultyOption"]:
+		nodes[path] = "OptionButton"
+	return nodes
 
 
 func _ready() -> void:
-	var margin := MarginContainer.new()
-	for side in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 320)
-	for side in ["top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 80)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 16)
-	margin.add_child(col)
-	var title := Label.new()
-	title.text = "TITLE_SETTINGS"
-	title.theme_type_variation = UiTheme.HEADING
-	col.add_child(title)
-
-	var tabs := TabContainer.new()
-	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(tabs)
-	tabs.add_child(_display_tab())
-	tabs.add_child(_master_tab())
-	tabs.add_child(_controls_tab())
+	var tabs: TabContainer = UiScenes.need(self, "%Tabs")
 	tabs.set_tab_title(TAB_DISPLAY, tr("TAB_DISPLAY"))
 	tabs.set_tab_title(TAB_MASTER, tr("TAB_MASTER"))
 	tabs.set_tab_title(TAB_CONTROLS, tr("TAB_CONTROLS"))
 	tabs.current_tab = start_tab
-
-	var back_btn := Button.new()
-	back_btn.text = "BTN_BACK"
-	back_btn.custom_minimum_size = Vector2(240, 56)
-	back_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	back_btn.pressed.connect(_back)
-	col.add_child(back_btn)
+	(UiScenes.need(self, "%BackButton") as Button).pressed.connect(_back)
+	_display_tab()
+	_master_tab()
+	_controls_tab()
 	EventBus.backend_state_changed.connect(_on_backend_state)
 	Backend.diagnosed.connect(_on_diagnosed)
 
@@ -87,28 +83,13 @@ func _unhandled_input(event: InputEvent) -> void:
 # --- controls (v0.7.22.27) ----------------------------------------------------------------------------------------
 
 
-func _controls_tab() -> Control:
-	var scroll := ScrollContainer.new()
-	scroll.name = "Controls"
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var box := VBoxContainer.new()
-	box.name = "ControlsBox"
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 8)
-	scroll.add_child(box)
-	var ask := CheckBox.new()
-	ask.name = "ConfirmRisky"
-	ask.text = "OPT_CONFIRM_RISKY"
-	ask.tooltip_text = "OPT_CONFIRM_RISKY_TIP"
+func _controls_tab() -> void:
+	var ask: CheckBox = UiScenes.need(self, "%ConfirmRisky")
 	ask.button_pressed = SaveManager.confirm_risky
 	ask.toggled.connect(func(on: bool) -> void:
 		SaveManager.confirm_risky = on
 		SaveManager.save_settings())
-	box.add_child(ask)
-	var head := Label.new()
-	head.text = "OPT_KEYS"
-	head.theme_type_variation = UiTheme.MUTED_LABEL
-	box.add_child(head)
+	var list: Control = UiScenes.need(self, "%KeyList")
 	for action: String in Hotkeys.defaults():
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 16)
@@ -125,17 +106,11 @@ func _controls_tab() -> Control:
 			_show_keys())
 		row.add_child(b)
 		_key_buttons[action] = b
-		box.add_child(row)
-	var reset := Button.new()
-	reset.name = "KeysReset"
-	reset.text = "BTN_KEYS_RESET"
-	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	reset.pressed.connect(func() -> void:
+		list.add_child(row)
+	(UiScenes.need(self, "%KeysReset") as Button).pressed.connect(func() -> void:
 		SaveManager.keys = {}
 		_save_keys())
-	box.add_child(reset)
 	_show_keys()
-	return scroll
 
 
 func _show_keys() -> void:
@@ -169,60 +144,36 @@ func _save_keys() -> void:
 	_show_keys()
 
 
-func _display_tab() -> Control:
-	var box := VBoxContainer.new()
-	box.name = "Display"
-	box.add_theme_constant_override("separation", 14)
-	_fullscreen = CheckBox.new()
-	_fullscreen.text = "OPT_FULLSCREEN"
+func _display_tab() -> void:
+	_fullscreen = UiScenes.need(self, "%Fullscreen")
 	_fullscreen.button_pressed = SaveManager.fullscreen
 	_fullscreen.toggled.connect(func(on: bool) -> void:
 		SaveManager.fullscreen = on
 		_apply_display())
-	box.add_child(_fullscreen)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
-	var lbl := Label.new()
-	lbl.text = "OPT_RESOLUTION"
-	row.add_child(lbl)
-	_resolution = OptionButton.new()
 	_resolutions = SaveManager.available_resolutions()
-	for r: Vector2i in _resolutions:
-		_resolution.add_item("%d × %d" % [r.x, r.y])
-	_resolution.selected = maxi(0, _resolutions.find(SaveManager.resolution))
-	_resolution.item_selected.connect(func(i: int) -> void:
-		SaveManager.resolution = _resolutions[i]
-		_apply_display())
-	row.add_child(_resolution)
-	box.add_child(row)
-	_options(box, "UiScale", "OPT_UI_SCALE", SaveManager.UI_SCALES.map(func(v: float) -> String: return "%d%%" % roundi(v * 100)),
+	_resolution = _options("%Resolution", _resolutions.map(func(r: Vector2i) -> String: return "%d × %d" % [r.x, r.y]),
+		_resolutions.find(SaveManager.resolution), func(i: int) -> void:
+			SaveManager.resolution = _resolutions[i]
+			_apply_display())
+	_options("%UiScale", SaveManager.UI_SCALES.map(func(v: float) -> String: return "%d%%" % roundi(v * 100)),
 		SaveManager.UI_SCALES.find(SaveManager.ui_scale), func(i: int) -> void:
 			SaveManager.ui_scale = SaveManager.UI_SCALES[i]
 			_apply_display())
 	var speeds: Array = SaveManager.COMBAT_SPEEDS.keys()
-	_options(box, "CombatSpeed", "OPT_COMBAT_SPEED", speeds.map(func(k: String) -> String: return tr("OPT_COMBAT_SPEED_" + k.to_upper())),
+	_options("%CombatSpeed", speeds.map(func(k: String) -> String: return tr("OPT_COMBAT_SPEED_" + k.to_upper())),
 		speeds.find(SaveManager.combat_speed), func(i: int) -> void:
 			SaveManager.combat_speed = str(speeds[i])
 			GameState.combat_delay = SaveManager.combat_delay()
 			SaveManager.save_settings())
-	return box
 
 
-func _options(box: Control, node_name: String, label_key: String, items: Array, selected: int, on_pick: Callable) -> void:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
-	var lbl := Label.new()
-	lbl.text = label_key
-	row.add_child(lbl)
-	var ob := OptionButton.new()
-	ob.name = node_name
-	ob.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+func _options(path: String, items: Array, selected: int, on_pick: Callable) -> OptionButton:
+	var ob: OptionButton = UiScenes.need(self, path)
 	for t: Variant in items:
 		ob.add_item(str(t))
 	ob.selected = maxi(0, selected)
 	ob.item_selected.connect(on_pick)
-	row.add_child(ob)
-	box.add_child(row)
+	return ob
 
 
 func _apply_display() -> void:
@@ -230,205 +181,81 @@ func _apply_display() -> void:
 	SaveManager.apply_settings()
 
 
-func _master_tab() -> Control:
-	var scroll := ScrollContainer.new()  # big test #1 (v0.7.22.5): the tab grew past the window
-	scroll.name = "Master"
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var box := VBoxContainer.new()
-	box.name = "MasterBox"
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 10)
-	scroll.add_child(box)
+func _master_tab() -> void:
 	var cfg := Backend.config
-	_url = _field(box, "OPT_BACKEND_URL", cfg.url, false)
-	_token = _field(box, "OPT_BACKEND_TOKEN", cfg.token, true)
-	_ca = _field(box, "OPT_BACKEND_CA", cfg.ca_cert_path, false)
-	var hint := Label.new()
-	hint.text = "HINT_BACKEND"
-	hint.theme_type_variation = UiTheme.MUTED_LABEL
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(hint)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
-	var check := Button.new()
-	check.name = "CheckButton"
-	check.text = "BTN_SAVE_AND_CHECK"
-	check.theme_type_variation = UiTheme.ACCENT_BUTTON
-	check.custom_minimum_size = Vector2(0, 56)
-	check.pressed.connect(_save_and_check)
-	row.add_child(check)
-	_check_status = Label.new()
-	_check_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_check_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	row.add_child(_check_status)
-	box.add_child(row)
-	var status := BackendStatus.new()
-	box.add_child(status)
-	var model_label := Label.new()
-	model_label.text = "OPT_MODEL"
-	model_label.theme_type_variation = UiTheme.MUTED_LABEL
-	box.add_child(model_label)
-	_model = OptionButton.new()
-	_model.name = "ModelOption"
-	_model.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_url = _field("%Url", cfg.url)
+	_token = _field("%Token", cfg.token)
+	_ca = _field("%CaPath", cfg.ca_cert_path)
+	(UiScenes.need(self, "%CheckButton") as Button).pressed.connect(_save_and_check)
+	_check_status = UiScenes.need(self, "%CheckStatus")
+	_model = UiScenes.need(self, "%ModelOption")
 	_model.item_selected.connect(_on_model_selected)
-	box.add_child(_model)
-	var provider_label := Label.new()  # v0.7.20.5: the provider pinned by hand
-	provider_label.text = "OPT_PROVIDER"
-	provider_label.theme_type_variation = UiTheme.MUTED_LABEL
-	provider_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(provider_label)
-	var sort_row := HBoxContainer.new()
-	var sort_label := Label.new()
-	sort_label.text = "OPT_PROVIDER_SORT"
-	sort_label.theme_type_variation = UiTheme.MUTED_LABEL
-	sort_row.add_child(sort_label)
-	_provider_sort = OptionButton.new()
-	_provider_sort.name = "ProviderSortOption"
-	_provider_sort.fit_to_longest_item = false
+	_provider_sort = UiScenes.need(self, "%ProviderSortOption")  # v0.7.20.5: the provider pinned by hand
 	for key: String in PROVIDER_SORTS:
 		_provider_sort.add_item("OPT_PROVIDER_SORT_" + key.to_upper())
 	_provider_sort.selected = maxi(0, PROVIDER_SORTS.find(SaveManager.provider_sort))
 	_provider_sort.item_selected.connect(_on_provider_sort_selected)
-	sort_row.add_child(_provider_sort)
-	box.add_child(sort_row)
-	_provider = OptionButton.new()
-	_provider.name = "ProviderOption"
-	_provider.fit_to_longest_item = false  # v0.7.34.1: rows with prices are long, the popup shows them whole
-	_provider.clip_text = true
-	_provider.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_provider = UiScenes.need(self, "%ProviderOption")  # v0.7.34.1: rows with prices are long, the popup shows them whole
 	_provider.item_selected.connect(_on_provider_selected)
-	box.add_child(_provider)
-	_budget_row(box)
-	_images_row(box)
+	_budget_row()
+	_images_row()
 	_fill_models()
-	var rx_label := Label.new()  # v0.7.10: reactions in a fight, as in Baldur's Gate 3
-	rx_label.text = "OPT_REACTIONS"
-	rx_label.theme_type_variation = UiTheme.MUTED_LABEL
-	box.add_child(rx_label)
-	var rx := OptionButton.new()
-	rx.name = "ReactionsOption"
-	var policies: Array[String] = ["ask", "always", "never"]
-	for p: String in policies:
-		rx.add_item(tr("REACTIONS_" + p.to_upper()))
-	rx.selected = maxi(0, policies.find(SaveManager.reactions))
-	rx.item_selected.connect(func(i: int) -> void:
-		SaveManager.reactions = policies[i]
-		SaveManager.save_settings()
-		if GameState.has_session():
-			GameState.session.settings["reactions"] = policies[i])
-	box.add_child(rx)
-	if GameState.has_session():
-		var style_label := Label.new()
-		style_label.text = "OPT_DM_STYLE"
-		style_label.theme_type_variation = UiTheme.MUTED_LABEL
-		box.add_child(style_label)
-		var style := OptionButton.new()
-		style.name = "DmStyleOption"
-		for s: String in WorldPack.DM_STYLES:
-			style.add_item(tr("DM_STYLE_" + s.to_upper()))
-		style.selected = WorldPack.DM_STYLES.find(str(GameState.session.settings.get("dm_style", "classic")))
-		style.item_selected.connect(func(i: int) -> void: GameState.set_dm_style(WorldPack.DM_STYLES[i]))
-		box.add_child(style)
-		var diff_label := Label.new()
-		diff_label.text = "OPT_DIFFICULTY"
-		diff_label.theme_type_variation = UiTheme.MUTED_LABEL
-		box.add_child(diff_label)
-		var diff := OptionButton.new()
-		diff.name = "DifficultyOption"
-		var levels := DifficultyRules.levels(Catalog.data)
-		for d: Variant in levels:
-			diff.add_item(tr("DIFFICULTY_" + str(d).to_upper()))
-		diff.selected = levels.find(DifficultyRules.level(GameState.session, Catalog.data))
-		diff.item_selected.connect(func(i: int) -> void: GameState.set_difficulty(str(levels[i])))
-		box.add_child(diff)
-		var needs := CheckButton.new()  # v0.7.23
-		needs.name = "NeedsOption"
-		needs.text = "OPT_NEEDS"
-		needs.button_pressed = NeedRules.on(GameState.session)
-		needs.toggled.connect(GameState.set_needs)
-		box.add_child(needs)
-		var adult := CheckButton.new()  # v0.7.38.7
-		adult.name = "AdultOption"
-		adult.text = "OPT_ADULT"
-		adult.button_pressed = bool(GameState.session.settings.get("adult", false))
-		adult.toggled.connect(GameState.set_adult)
-		box.add_child(adult)
-	return scroll
+	var policies: Array[String] = ["ask", "always", "never"]  # v0.7.10: reactions in a fight, as in Baldur's Gate 3
+	_options("%ReactionsOption", policies.map(func(p: String) -> String: return tr("REACTIONS_" + p.to_upper())),
+		policies.find(SaveManager.reactions), func(i: int) -> void:
+			SaveManager.reactions = policies[i]
+			SaveManager.save_settings()
+			if GameState.has_session():
+				GameState.session.settings["reactions"] = policies[i])
+	var in_game := GameState.has_session()
+	(UiScenes.need(self, "%GameOptions") as Control).visible = in_game
+	if not in_game:
+		return
+	_options("%DmStyleOption", WorldPack.DM_STYLES.map(func(s: String) -> String: return tr("DM_STYLE_" + s.to_upper())),
+		WorldPack.DM_STYLES.find(str(GameState.session.settings.get("dm_style", "classic"))),
+		func(i: int) -> void: GameState.set_dm_style(WorldPack.DM_STYLES[i]))
+	var levels := DifficultyRules.levels(Catalog.data)
+	_options("%DifficultyOption", levels.map(func(d: Variant) -> String: return tr("DIFFICULTY_" + str(d).to_upper())),
+		levels.find(DifficultyRules.level(GameState.session, Catalog.data)), func(i: int) -> void: GameState.set_difficulty(str(levels[i])))
+	var needs: CheckButton = UiScenes.need(self, "%NeedsOption")  # v0.7.23
+	needs.button_pressed = NeedRules.on(GameState.session)
+	needs.toggled.connect(GameState.set_needs)
+	var adult: CheckButton = UiScenes.need(self, "%AdultOption")  # v0.7.38.7
+	adult.button_pressed = bool(GameState.session.settings.get("adult", false))
+	adult.toggled.connect(GameState.set_adult)
 
 
 ## The brush (v0.7.35): on or off, and the image model with its price per image; the images count in the day's limit.
-func _images_row(box: VBoxContainer) -> void:
-	var label := Label.new()
-	label.text = "OPT_IMAGES"
-	label.theme_type_variation = UiTheme.MUTED_LABEL
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(label)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	box.add_child(row)
-	_images_on = CheckBox.new()
-	_images_on.name = "ImagesOn"
-	_images_on.text = "OPT_IMAGES_ON"
+func _images_row() -> void:
+	_images_on = UiScenes.need(self, "%ImagesOn")
 	_images_on.button_pressed = SaveManager.images_on
 	_images_on.toggled.connect(func(on: bool) -> void:
 		SaveManager.images_on = on
 		SaveManager.save_settings()
 		_image_model.disabled = not on or _image_ids.size() < 2
 		_fill_image_extra())
-	row.add_child(_images_on)
-	_image_model = OptionButton.new()
-	_image_model.name = "ImageModelOption"
-	_image_model.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_image_model.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_image_model = UiScenes.need(self, "%ImageModelOption")
 	_image_model.item_selected.connect(func(i: int) -> void:
 		SaveManager.image_model = _image_ids[i]
 		SaveManager.save_settings()
 		_fill_image_extra())
-	row.add_child(_image_model)
-	_image_extra_box(box)
+	_image_extra_box()
 
 
 ## The player's additions to the picked model's prompt (v0.7.37): before every prompt, and the negative — with the
 ## master's tags or alone; they start from the model's own, «Как у модели» returns to them.
-func _image_extra_box(box: VBoxContainer) -> void:
-	_image_extra = VBoxContainer.new()
-	_image_extra.name = "ImageExtra"
-	box.add_child(_image_extra)
-	_image_prompt = _image_text(tr("OPT_IMAGE_PROMPT"), "ImagePromptAdd")
-	_image_negative = _image_text(tr("OPT_IMAGE_NEGATIVE"), "ImageNegativeAdd")
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	_image_extra.add_child(row)
-	_image_negative_only = CheckBox.new()
-	_image_negative_only.name = "ImageNegativeOnly"
-	_image_negative_only.text = "OPT_IMAGE_NEGATIVE_ONLY"
-	_image_negative_only.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+func _image_extra_box() -> void:
+	_image_extra = UiScenes.need(self, "%ImageExtra")
+	_image_prompt = UiScenes.need(self, "%ImagePromptAdd")
+	_image_prompt.text_changed.connect(_save_image_extra)
+	_image_negative = UiScenes.need(self, "%ImageNegativeAdd")
+	_image_negative.text_changed.connect(_save_image_extra)
+	_image_negative_only = UiScenes.need(self, "%ImageNegativeOnly")
 	_image_negative_only.toggled.connect(func(_on: bool) -> void: _save_image_extra())
-	row.add_child(_image_negative_only)
-	var reset := Button.new()
-	reset.name = "ImagePromptsReset"
-	reset.text = "OPT_IMAGE_PROMPTS_RESET"
-	reset.pressed.connect(func() -> void:
+	(UiScenes.need(self, "%ImagePromptsReset") as Button).pressed.connect(func() -> void:
 		SaveManager.image_prompts.erase(SaveManager.current_image_model())
 		SaveManager.save_settings()
 		_fill_image_extra())
-	row.add_child(reset)
-
-
-func _image_text(caption: String, node_name: String) -> TextEdit:
-	var label := Label.new()
-	label.text = caption
-	label.name = node_name + "Label"
-	label.theme_type_variation = UiTheme.MUTED_LABEL
-	_image_extra.add_child(label)
-	var edit := TextEdit.new()
-	edit.name = node_name
-	edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-	edit.custom_minimum_size = Vector2(0, 84)  # three lines of tags
-	edit.text_changed.connect(_save_image_extra)
-	_image_extra.add_child(edit)
-	return edit
 
 
 func _fill_image_extra() -> void:
@@ -446,8 +273,8 @@ func _fill_image_extra() -> void:
 	_image_negative_only.button_pressed = bool(own.get("only", false))
 	for n: Node in [_image_prompt, _image_negative, _image_negative_only]:
 		n.set_block_signals(false)
-	for n: String in ["ImageNegativeAdd", "ImageNegativeAddLabel", "ImageNegativeOnly"]:
-		(_image_extra.find_child(n, true, false) as Control).visible = neg
+	for n: Control in [_image_negative, UiScenes.need(self, "%ImageNegativeAddLabel"), _image_negative_only]:
+		n.visible = neg
 
 
 func _save_image_extra() -> void:
@@ -482,35 +309,12 @@ func _fill_image_models() -> void:
 
 
 ## The server's daily spending limit (v0.7.3): spent today of the limit, the limit in dollars or «без лимита».
-func _budget_row(box: VBoxContainer) -> void:
-	var label := Label.new()
-	label.text = "OPT_BUDGET"
-	label.theme_type_variation = UiTheme.MUTED_LABEL
-	box.add_child(label)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	box.add_child(row)
-	_budget_edit = LineEdit.new()
-	_budget_edit.name = "BudgetEdit"
-	_budget_edit.placeholder_text = "1.00"
-	_budget_edit.custom_minimum_size = Vector2(140, 52)
-	row.add_child(_budget_edit)
-	_budget_off = CheckBox.new()
-	_budget_off.name = "BudgetOff"
-	_budget_off.text = "OPT_BUDGET_OFF"
+func _budget_row() -> void:
+	_budget_edit = UiScenes.need(self, "%BudgetEdit")
+	_budget_off = UiScenes.need(self, "%BudgetOff")
 	_budget_off.toggled.connect(func(on: bool) -> void: _budget_edit.editable = not on)
-	row.add_child(_budget_off)
-	var save := Button.new()
-	save.name = "BudgetSave"
-	save.text = "OPT_BUDGET_SAVE"
-	save.custom_minimum_size = Vector2(0, 52)
-	save.pressed.connect(_save_budget)
-	row.add_child(save)
-	_budget_status = Label.new()
-	_budget_status.name = "BudgetStatus"
-	_budget_status.theme_type_variation = UiTheme.MUTED_LABEL
-	_budget_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_budget_status)
+	(UiScenes.need(self, "%BudgetSave") as Button).pressed.connect(_save_budget)
+	_budget_status = UiScenes.need(self, "%BudgetStatus")
 	_refresh_budget()
 
 
@@ -677,22 +481,15 @@ func _on_model_selected(i: int) -> void:
 	_fill_providers()
 
 
-func _field(parent: Control, key: String, value: String, secret: bool) -> LineEdit:
-	var lbl := Label.new()
-	lbl.text = key
-	lbl.theme_type_variation = UiTheme.MUTED_LABEL
-	parent.add_child(lbl)
-	var edit := LineEdit.new()
+func _field(path: String, value: String) -> LineEdit:
+	var edit: LineEdit = UiScenes.need(self, path)
 	edit.text = value
-	edit.secret = secret
-	edit.custom_minimum_size = Vector2(0, 52)
-	parent.add_child(edit)
 	return edit
 
 
 func _save_and_check() -> void:
 	_check_status.text = tr("MSG_CHECKING")
-	_check_status.add_theme_color_override("font_color", UiTheme.MUTED)
+	_check_status.theme_type_variation = UiTheme.MUTED_LABEL
 	Backend.save_config(_url.text.strip_edges(), _token.text.strip_edges(), _ca.text.strip_edges())
 
 
@@ -704,7 +501,7 @@ func _on_backend_state(state: int, _detail: String) -> void:
 		return
 	if state == BackendClient.State.READY:
 		_check_status.text = tr("MSG_CHECK_OK")
-		_check_status.add_theme_color_override("font_color", UiTheme.OK)
+		_check_status.theme_type_variation = UiTheme.OK_LABEL
 	elif state in [BackendClient.State.WAITING_RETRY, BackendClient.State.FAILED, BackendClient.State.OFFLINE]:
 		Backend.request_diagnosis()
 
@@ -713,7 +510,7 @@ func _on_diagnosed(diag: String) -> void:
 	if _check_status.text.is_empty() or Backend.is_ready():
 		return
 	_check_status.text = tr(OfflineScreen.diagnosis_key(diag))
-	_check_status.add_theme_color_override("font_color", UiTheme.BAD)
+	_check_status.theme_type_variation = UiTheme.BAD_LABEL
 
 
 func _back() -> void:

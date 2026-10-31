@@ -2,6 +2,7 @@ class_name SlotsScreen
 extends Control
 ## Save / load slot list: 10 manual slots, plus the autosave when loading.
 
+const SCENE := "res://ui/screens/slots_screen.tscn"
 const MODE_LOAD := "load"
 const MODE_SAVE := "save"
 
@@ -10,41 +11,21 @@ var back: String
 var _list: VBoxContainer
 
 
-func _init(screen_mode: String, back_to: String) -> void:
-	mode = screen_mode
-	back = back_to
+static func make(screen_mode: String, back_to: String) -> SlotsScreen:
+	var screen := UiScenes.open(SCENE) as SlotsScreen
+	screen.mode = screen_mode
+	screen.back = back_to
+	return screen
+
+
+func required() -> Dictionary:
+	return {"%Title": "Label", "%SlotList": "VBoxContainer", "%BackButton": "Button"}
 
 
 func _ready() -> void:
-	var margin := MarginContainer.new()
-	for side in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 320)
-	for side in ["top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 80)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 16)
-	margin.add_child(col)
-
-	var title := Label.new()
-	title.text = "TITLE_LOAD" if mode == MODE_LOAD else "TITLE_SAVE"
-	title.theme_type_variation = UiTheme.HEADING
-	col.add_child(title)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	col.add_child(scroll)
-	_list = VBoxContainer.new()
-	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_list.add_theme_constant_override("separation", 10)
-	scroll.add_child(_list)
-	var back_btn := Button.new()
-	back_btn.text = "BTN_BACK"
-	back_btn.custom_minimum_size = Vector2(240, 56)
-	back_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	back_btn.pressed.connect(_back)
-	col.add_child(back_btn)
+	(UiScenes.need(self, "%Title") as Label).text = "TITLE_LOAD" if mode == MODE_LOAD else "TITLE_SAVE"
+	_list = UiScenes.need(self, "%SlotList")
+	(UiScenes.need(self, "%BackButton") as Button).pressed.connect(_back)
 	_fill()
 
 

@@ -3,82 +3,45 @@ extends Control
 ## The hero died in a fight (roadmap v0.6.1): the master's epitaph and the hero's path; load the autosave made
 ## before the fight or go to the menu. «Одна жизнь» (no loading) — M5.
 
+const SCENE := "res://ui/screens/death_screen.tscn"
+
 var epitaph: String
 
 
-func _init(text: String = "") -> void:
-	epitaph = text
+static func make(text: String) -> DeathScreen:
+	var screen := UiScenes.open(SCENE) as DeathScreen
+	screen.epitaph = text
+	return screen
+
+
+func required() -> Dictionary:
+	return {"%Who": "Label", "%Epitaph": "Label", "%PathLabel": "Label", "%LoadBeforeFight": "Button", "%HeirButton": "Button",
+		"%ToMenu": "Button"}
 
 
 func _ready() -> void:
-	var center := CenterContainer.new()
-	add_child(center)
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.SIDE
-	panel.custom_minimum_size = Vector2(1000, 0)
-	center.add_child(panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 18)
-	panel.add_child(col)
-	var title := Label.new()
-	title.text = "DEATH_TITLE"
-	title.theme_type_variation = UiTheme.TITLE
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(title)
 	var s := GameState.session if GameState.has_session() else null
+	var who: Label = UiScenes.need(self, "%Who")
+	var path: Label = UiScenes.need(self, "%PathLabel")
+	who.visible = s != null
+	path.visible = s != null
+	(UiScenes.need(self, "%Epitaph") as Label).text = epitaph
+	var heir_id := ""
 	if s != null:
 		var c := s.character
-		var who := Label.new()
-		who.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		who.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		who.theme_type_variation = UiTheme.HEADING
 		who.text = tr("DEATH_WHO").format({"name": c["name"], "race": c.get("race_name", ""), "class": c.get("class_name", ""), "level": int(c.get("level", 1))})
-		col.add_child(who)
-	var text := Label.new()
-	text.name = "Epitaph"
-	text.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.theme_type_variation = UiTheme.DM_TEXT
-	text.text = epitaph
-	col.add_child(text)
-	if s != null:
-		var path := Label.new()
-		path.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		path.theme_type_variation = UiTheme.MUTED_LABEL
-		path.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		path.text = tr("DEATH_PATH").format({"days": s.day, "quests": s.quests_done.size(), "xp": int(s.character.get("xp", 0))})
-		col.add_child(path)
-	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 16)
-	col.add_child(buttons)
-	var load := Button.new()
-	load.name = "LoadBeforeFight"
-	load.text = "BTN_LOAD_BEFORE_FIGHT"
-	load.theme_type_variation = UiTheme.ACCENT_BUTTON
-	load.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	load.custom_minimum_size = Vector2(0, 64)
-	load.disabled = not SaveManager.has_slot(GameState.COMBAT_SAVE)
-	load.pressed.connect(func() -> void:
+		heir_id = FamilyRules.heir(s, Catalog.data)
+	var load_btn: Button = UiScenes.need(self, "%LoadBeforeFight")
+	load_btn.disabled = not SaveManager.has_slot(GameState.COMBAT_SAVE)
+	load_btn.pressed.connect(func() -> void:
 		var err := GameState.load_from(GameState.COMBAT_SAVE)
 		if not err.is_empty():
 			EventBus.message.emit(tr(err)))
-	buttons.add_child(load)
-	if s != null and not FamilyRules.heir(s, Catalog.data).is_empty():  # v0.7.32: the family goes on
-		var heir := Button.new()
-		heir.name = "HeirButton"
-		heir.text = tr("BTN_PLAY_HEIR").format({"name": BondRules.npc_name(s, Catalog.data, FamilyRules.heir(s, Catalog.data))})
-		heir.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		heir.theme_type_variation = UiTheme.ACCENT_BUTTON
-		heir.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		heir.custom_minimum_size = Vector2(0, 64)
+	var heir: Button = UiScenes.need(self, "%HeirButton")
+	heir.visible = not heir_id.is_empty()  # v0.7.32: the family goes on
+	if heir.visible:
+		heir.text = tr("BTN_PLAY_HEIR").format({"name": BondRules.npc_name(s, Catalog.data, heir_id)})
 		heir.pressed.connect(func() -> void:
 			EventBus.navigate.emit("creation", {"settings": s.settings, "heir": FamilyRules.heir_choices(s, Catalog.data)}))
-		buttons.add_child(heir)
-	var menu := Button.new()
-	menu.name = "ToMenu"
-	menu.text = "BTN_TO_MENU"
-	menu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	menu.custom_minimum_size = Vector2(0, 64)
-	menu.pressed.connect(GameState.close_session)
-	buttons.add_child(menu)
+	(UiScenes.need(self, "%ToMenu") as Button).pressed.connect(GameState.close_session)

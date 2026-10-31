@@ -1,0 +1,87 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/death_screen.gd" id="1"]
+
+[node name="DeathScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+layout_mode = 2
+custom_minimum_size = Vector2(1000, 0)
+theme_type_variation = &"SidePanel"
+
+[node name="Col" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="Center/Panel/Col"]
+layout_mode = 2
+text = "DEATH_TITLE"
+horizontal_alignment = 1
+theme_type_variation = &"TitleLabel"
+
+[node name="Who" type="Label" parent="Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Айра, человек, воин 3 уровня"
+horizontal_alignment = 1
+theme_type_variation = &"HeadingLabel"
+
+[node name="Epitaph" type="Label" parent="Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Здесь эпитафия мастера: как пал герой."
+autowrap_mode = 3
+theme_type_variation = &"DmText"
+
+[node name="PathLabel" type="Label" parent="Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Дней в пути, заданий и опыта"
+horizontal_alignment = 1
+theme_type_variation = &"MutedLabel"
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Col"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LoadBeforeFight" type="Button" parent="Center/Panel/Col/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
+size_flags_horizontal = 3
+text = "BTN_LOAD_BEFORE_FIGHT"
+theme_type_variation = &"AccentButton"
+
+[node name="HeirButton" type="Button" parent="Center/Panel/Col/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 64)
+size_flags_horizontal = 3
+text = "Играть за наследника"
+theme_type_variation = &"AccentButton"
+
+[node name="ToMenu" type="Button" parent="Center/Panel/Col/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
+size_flags_horizontal = 3
+text = "BTN_TO_MENU"

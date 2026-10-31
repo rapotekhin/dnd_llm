@@ -48,17 +48,17 @@ func _go(screen: String, args: Dictionary) -> void:
 		"combat":
 			next = CombatScreen.new()
 		"death":
-			next = DeathScreen.new(str(args.get("epitaph", "")))
+			next = DeathScreen.make(str(args.get("epitaph", "")))
 		"new_game":
-			next = NewGameScreen.new()
+			next = UiScenes.open(NewGameScreen.SCENE)
 		"creation":
-			next = CreationScreen.new(args.get("settings", {}), args.get("heir", {}))
+			next = CreationScreen.make(args.get("settings", {}), args.get("heir", {}))
 		"slots":
-			next = SlotsScreen.new(str(args.get("mode", SlotsScreen.MODE_LOAD)), str(args.get("back", "menu")))
+			next = SlotsScreen.make(str(args.get("mode", SlotsScreen.MODE_LOAD)), str(args.get("back", "menu")))
 		"settings":
-			next = SettingsScreen.new(str(args.get("back", "menu")), int(args.get("tab", 0)))
+			next = SettingsScreen.make(str(args.get("back", "menu")), int(args.get("tab", 0)))
 		"offline":
-			next = OfflineScreen.new(args.get("action", {}))
+			next = OfflineScreen.make(args.get("action", {}))
 		_:
 			push_error("main: unknown screen %s" % screen)
 			return

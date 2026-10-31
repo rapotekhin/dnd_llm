@@ -355,7 +355,7 @@ func _ready() -> void:
 		_sheet.visible = false
 		_prepare.open())
 
-	_level_up = LevelUpView.new()
+	_level_up = LevelUpView.create()
 	_level_up.name = "LevelUpView"
 	_level_up.visible = false
 	add_child(_level_up)
