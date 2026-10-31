@@ -99,7 +99,7 @@ static func has(s: GameSession, data: Dictionary, id: String) -> bool:
 static func meet(s: GameSession, data: Dictionary, id: String) -> void:
 	if not has(s, data, id):
 		return
-	var e: Dictionary = s.factions.get(id, {})
+	var e: Dictionary = s.factions.get(id, {"pts": int(def(s, data, id).get("start", 0))})
 	if not e.has("met_day"):
 		e["met_day"] = s.day
 		s.factions[id] = e
@@ -122,7 +122,7 @@ static func add(s: GameSession, data: Dictionary, id: String, delta: int, why: S
 		if whole != 0:
 			lines.append_array(ReputationRules.add(s, data, str(d.get("location", "")), whole, why, false))
 	else:
-		e["pts"] = clampi(int(e.get("pts", 0)) + delta, -100, 100)
+		e["pts"] = clampi(int(e.get("pts", int(d.get("start", 0)))) + delta, -100, 100)
 	if not e.has("met_day"):
 		e["met_day"] = s.day
 	if not why.is_empty():
@@ -331,6 +331,15 @@ static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	var lines := add(s, data, id, int(plan["delta"]), str(plan["why"]))
 	(s.factions[id] as Dictionary)["master_day"] = s.day
 	return lines
+
+
+## The folk of a settlement the master made: its faction, its standing is the location's reputation.
+static func settle(s: GameSession, data: Dictionary, loc: String, name: String) -> String:
+	var id := "gen_f_" + loc.md5_text().left(8)
+	var plan := {"create": id, "def": {"name": "Жители: %s" % name, "kind": "settlement", "scope": [loc], "location": loc,
+		"hostile": false, "description": ""}}
+	apply_make(s, data, plan)
+	return id
 
 
 ## The faction the master named for a person or foes: a known id or name; a new name is a new local faction there and

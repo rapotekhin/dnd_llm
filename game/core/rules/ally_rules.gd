@@ -28,6 +28,8 @@ static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 			foe_npcs.append(str(f["npc_id"]))
 			foe_homes.append(home_location(world, str(f["npc_id"])))
 	for id: String in s.followers:
+		if s.dead_npcs.has(id) or s.held_as_creature(id):
+			continue  # the dead do not fight, nor one lying knocked out
 		if foe_npcs.has(id) or (foe_homes.has(home_location(world, id)) and not home_location(world, id).is_empty()):
 			continue  # not against the hero's own victim, nor against its own people
 		var own := FactionRules.of_npc(s, data, id)
@@ -202,6 +204,11 @@ static func after_fight(s: GameSession) -> Array[String]:
 				s.npc_hp[str(f["npc_id"])] = maxi(1, int(f["hp"]))
 				if int(f["hp"]) >= int(f["max_hp"]):
 					s.npc_hp.erase(str(f["npc_id"]))
+	if not s.combat.has("arena"):
+		for id: String in CombatRules.enemies(s, false):  # an NPC fought as a foe keeps its wounds too
+			var f := CombatRules.fighter(s, id)
+			if not str(f.get("npc_id", "")).is_empty() and str(f.get("status")) != "dead" and int(f["hp"]) < int(f["max_hp"]):
+				s.npc_hp[str(f["npc_id"])] = maxi(1, int(f["hp"]))
 	var kept: Array[Dictionary] = []
 	for m: Dictionary in s.summons:
 		if not hp.has(str(m["id"])):

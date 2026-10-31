@@ -272,8 +272,12 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: in
 				"npc_id": str(spec.get("npc_id", "")), "by_hero": bool(spec.get("by_hero", false))}
 			if spec.has("hp"):  # a creature of the room fought again keeps its wounds (v0.7.22.16, #21)
 				fighters[id]["hp"] = clampi(int(spec["hp"]), 1, int(m["hp"]))
+			elif s.npc_hp.has(str(spec.get("npc_id", ""))):  # the wounds of the last fight
+				fighters[id]["hp"] = clampi(int(s.npc_hp[str(spec["npc_id"])]), 1, int(m["hp"]))
 			if bool(spec.get("no_xp", false)):  # its XP was given for the fight that beat it
 				fighters[id]["no_xp"] = true
+			if spec.has("was_creature"):  # back in the room if the hero runs
+				fighters[id]["was_creature"] = spec["was_creature"]
 			if bool(spec.get("law", false)):  # the law's guard: its captive is held, not bound (v0.7.22.17)
 				fighters[id]["law"] = true
 			for k: String in ["ally", "summon_id", "spell", "creature_id"]:  # v0.7.22.22: whose ally and from where

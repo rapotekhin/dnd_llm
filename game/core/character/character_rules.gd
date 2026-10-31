@@ -278,6 +278,7 @@ static func class_name_of(c: Dictionary, data: Dictionary) -> String:
 ## Recomputes the derived cache in place. Call after creation, load, equip, level-up.
 static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> void:
 	sanitize_equipped(c)
+	VesselRules.trim(c)
 	if data.has("rules") and data["rules"].has("containers"):
 		ContainerRules.sync_bags(c, data)  # one bag per container item in the pack (v0.7.18.2)
 	_grant_trait_cantrips(c, data)

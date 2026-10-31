@@ -104,6 +104,9 @@ func test_a_village_in_one_create_place() -> void:
 	var world := WorldView.new(data["world"])
 	var loc := world.location_id(first)
 	assert_bool(bool(world.location(loc).get("settlement", false))).is_true()
+	var folk := FactionRules.of_npc(s, data, str(p["plan"]["npc_ids"]["host"]))  # v0.7.50.2: its own folk, not the wild
+	assert_str(str(FactionRules.def(s, data, folk).get("kind", ""))).is_equal("settlement")
+	assert_str(FactionRules.folk_of(s, data, loc)).is_equal(folk)
 	assert_str(str(world.location(loc).get("settlement_kind", ""))).is_equal("village")
 	var ids: Dictionary = p["plan"]["npc_ids"]
 	assert_array(world.location(loc)["law"]["guards"]).contains([ids["guard"]])

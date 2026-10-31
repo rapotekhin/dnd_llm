@@ -378,6 +378,7 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int) -> Dict
 			var t := tax(s, data, id)
 			var from_till := mini(t, int(st["cash"]))
 			st["cash"] = int(st["cash"]) - from_till
+			from_till += ShopRules.from_till(c, id, t - from_till)
 			if from_till < t:
 				st["debt"] = int(st.get("debt", 0)) + t - from_till
 				lines.append("%s: налог %s не уплачен — долг ратуше %s" % [name_of(s, data, id), Money.format(t), Money.format(int(st["debt"]))])

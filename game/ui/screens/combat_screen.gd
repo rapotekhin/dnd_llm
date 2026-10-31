@@ -935,7 +935,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			var fx := ItemRules.consumable(data, id, s.items)
 			var label := "%s ×%d" % [d.get("name", id), int(c["inventory"][id])]
 			if ItemRules.charges_max(d) > 0:
-				label = "%s (%d/%d)" % [d.get("name", id), ItemRules.charges_left(c, d, id), ItemRules.charges_max(d)]
+				label = "%s (%d/%d)" % [d.get("name", id), ItemRules.charges_left(c, d, id), ItemRules.charges_all(c, d, id)]
 			var sp_id := str(fx.get("spell", ""))
 			var sp: Dictionary = data["spells"].get(sp_id, {})
 			var item_btn: Button

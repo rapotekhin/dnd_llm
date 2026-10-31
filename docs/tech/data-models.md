@@ -1,6 +1,6 @@
 # Модели данных
 
-Главные структуры Godot-клиента v0.5.4. Состояние игры — словари и массивы в чистом слое `game/core/` (без нод), в сейв они идут как есть. Подробности по системам — [godot-client.md](godot-client.md), сообщения мастеру — `llm_server/src/llm_server/protocol.py` ([ADR-0009](adr/0009-godot-backend-protocol.md)).
+Главные структуры Godot-клиента: страница описывает основу, поля систем после v0.5.4 смотрите в `game/core/session/game_session.gd`. Модели перестраиваются на этапе [единых моделей](../production/unification-audit.md). Состояние игры — словари и массивы в чистом слое `game/core/` (без нод), в сейв они идут как есть. Подробности по системам — [godot-client.md](godot-client.md), сообщения мастеру — `llm_server/src/llm_server/protocol.py` ([ADR-0009](adr/0009-godot-backend-protocol.md)).
 
 ## Что где
 
@@ -50,7 +50,7 @@
 
 - JSON в `<профиль>/saves/slot_1..10.json` и `autosave.json`, запись атомарная.
 - Формат: `{save_version, game_version, saved_at, meta, session}`; `session` — `GameSession.to_dict()`, `meta` — для списка слотов.
-- `SaveFormat.SAVE_VERSION = 7`, миграции по шагам в `SaveFormat.MIGRATIONS`, фикстура на каждую версию в `game/test/fixtures/saves/`. Сейвы старше v3 и новее игры не грузятся. История версий и порядок смены формата — [godot-client.md → «Сейвы»](godot-client.md#сейвы).
+- `SaveFormat.SAVE_VERSION = 53` (v0.7.50.2), миграции по шагам в `SaveFormat.MIGRATIONS`, фикстура на каждую версию в `game/test/fixtures/saves/`. Сейвы старше v3 и новее игры не грузятся. История версий и порядок смены формата — [godot-client.md → «Сейвы»](godot-client.md#сейвы).
 - Почему JSON, а не pickle прототипа: читается человеком, переживает рефакторинг, безопасен при загрузке чужих файлов ([ADR-0007](adr/0007-godot-client-python-llm-backend.md); старое решение — [ADR-0002](adr/0002-pickle-saves.md)).
 
 ## Протокол

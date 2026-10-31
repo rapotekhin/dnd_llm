@@ -250,7 +250,7 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 			contents[it] = int(c["bags"][id]["contents"][it])
 		bags[id] = {"kind": str(c["bags"][id].get("kind", "")), "contents": contents}
 	c["bags"] = bags
-	for k: String in ["fresh", "study", "bonds", "family", "heists", "orgs", "offices", "towns"]:  # v0.7.25 food batches, v0.7.30 study, v0.7.31 bonds: whole numbers only
+	for k: String in ["fresh", "study", "bonds", "family", "heists", "orgs", "offices", "towns", "faith"]:  # v0.7.25 food batches, v0.7.30 study, v0.7.31 bonds: whole numbers only
 		if c.has(k):
 			c[k] = _whole(c[k])
 	c["conditions"] = c.get("conditions", [])
@@ -616,7 +616,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.encounters_passed.append(str(e))
 	for e: Variant in d.get("encounters_peace", []):
 		s.encounters_peace.append(str(e))
-	s.factions = (d.get("factions", {}) as Dictionary).duplicate(true)
+	s.factions = _whole(d.get("factions", {}))
 	for id: String in d.get("npc_hp", {}):
 		s.npc_hp[id] = int(d["npc_hp"][id])
 	for id: String in d.get("npc_buffs", {}):
@@ -642,7 +642,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.fight_on_load = (fight as Dictionary).duplicate(true) if fight is Dictionary else {}
 	for m: Variant in d.get("known_monsters", []):
 		s.known_monsters.append(str(m))
-	s.props = d.get("props", {})
+	s.props = _whole(d.get("props", {}))  # days and counters, the food batches lying there
 	for room: String in s.props:  # whole numbers back from JSON: contents, the lock, when it was dropped (v0.7.22.8)
 		for p: Variant in s.props[room]:
 			if not (p is Dictionary):
@@ -753,6 +753,9 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.secrets_told.append(str(k))
 	if d.get("generated") is Dictionary:
 		s.generated = (d["generated"] as Dictionary).duplicate(true)
+		for k: String in ["faith", "letters", "rumors", "weather"]:  # counters and days, whole numbers again after JSON
+			if s.generated.get(k) is Dictionary:
+				_whole_numbers(s.generated[k])
 	for n: Variant in d.get("followers", []):
 		s.followers.append(str(n))
 	for id: String in d.get("follower_fed", {}):

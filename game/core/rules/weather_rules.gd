@@ -111,7 +111,9 @@ static func _flags(s: GameSession, data: Dictionary) -> void:
 	var locs: Dictionary = st["by_loc"].duplicate()
 	for id: String in st["magic"]:
 		locs[id] = st["magic"][id]["kind"]
-	for id: String in locs:
+	var order: Array = locs.keys()
+	order.sort()  # a dictionary loaded from a save has its own order, the flags must not
+	for id: String in order:
 		var f := "weather_%s_%s" % [locs[id], id]
 		if not s.flags.has(f):
 			s.flags.append(f)

@@ -58,6 +58,19 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String) -> Ar
 	return lines
 
 
+## The hero ran from a creature of the room: it stays where it was, with its new wounds.
+static func after_flight(s: GameSession, room_id: String) -> void:
+	for fid: String in CombatRules.enemies(s):
+		var f := CombatRules.fighter(s, fid)
+		if f.has("was_creature"):
+			var c: Dictionary = (f["was_creature"] as Dictionary).duplicate()
+			c["hp"] = int(f["hp"])
+			c["max_hp"] = int(f["max_hp"])
+			var list: Array = s.creatures.get(room_id, [])
+			list.append(c)
+			s.creatures[room_id] = list
+
+
 static func state_word(state: String) -> String:
 	return {"truce": "перемирие", "surrendered": "сдался", "unconscious": "без сознания", "tame": "ваше животное", "wild": "дикий, не нападает"}.get(state, state)
 
@@ -181,6 +194,8 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 				spec["hp"] = int(c["hp"])
 			if c.has("npc_id"):
 				spec["npc_id"] = str(c["npc_id"])
+			else:
+				spec["was_creature"] = c.duplicate()
 			s.pending_fight = [spec]
 			return ["Вы нападаете: %s" % c["name"]]
 		"finish":  # 5e: a blow at the helpless — the killing blow, no fight and no XP (it was given)

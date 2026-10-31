@@ -29,6 +29,18 @@ static func carried(c: Dictionary, data: Dictionary) -> Array[Dictionary]:
 	return out
 
 
+## Water goes with its vessel: the state of the vessels no longer carried is gone.
+static func trim(c: Dictionary) -> void:
+	if not (c.get("vessels") is Dictionary):
+		return
+	for id: String in (c["vessels"] as Dictionary).keys():
+		var n := int(c.get("inventory", {}).get(id, 0))
+		if n <= 0:
+			(c["vessels"] as Dictionary).erase(id)
+		elif (c["vessels"][id] as Array).size() > n:
+			(c["vessels"][id] as Array).resize(n)
+
+
 static func pints(c: Dictionary, data: Dictionary) -> float:
 	return carried(c, data).reduce(func(a: float, v: Dictionary) -> float: return a + float(v["pints"]), 0.0)
 

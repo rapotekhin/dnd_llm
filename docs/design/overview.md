@@ -1,6 +1,6 @@
 # Геймплей: общий обзор
 
-Что игрок делает в Godot-версии (v0.5.4) и куда игра идёт. Как это устроено в коде — [godot-client.md](../tech/godot-client.md); план — [roadmap](../production/roadmap.md).
+Что игрок делает в Godot-версии и куда игра идёт. Петля ниже — основа, системы сверх неё описаны в [systems/](systems/); чат-экран заменит карта в M4 ([аудит](../production/unification-audit.md#единый-экран-карты-v080-083)). Как это устроено в коде — [godot-client.md](../tech/godot-client.md); план — [roadmap](../production/roadmap.md).
 
 ## Игровая петля
 

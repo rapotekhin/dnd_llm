@@ -31,6 +31,15 @@ static func venue(c: Dictionary, vid: String) -> Dictionary:
 	return v[vid]
 
 
+## Takes up to `sum` out of a venue's till (the tax of its place). What was taken.
+static func from_till(c: Dictionary, vid: String, sum: int) -> int:
+	var v: Dictionary = _part(c, "venues").get(vid, {})
+	var n := mini(sum, int(v.get("cash", 0)))
+	if n > 0:
+		v["cash"] = int(v["cash"]) - n
+	return n
+
+
 # --- venues ---------------------------------------------------------------------------------------------------------
 
 

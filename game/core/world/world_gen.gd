@@ -662,7 +662,12 @@ static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 	data["world"] = _merge_places(data["world"], gen)
 	# the place's people, then the owners and the guard that name them
 	var npc_ids := {}
+	var folk := ""
+	if bool(place["new_location"]) and bool(gen["locations"][loc].get("settlement", false)):
+		folk = FactionRules.settle(s, data, loc, str(place["location"]["name"]))
 	for n: Dictionary in place.get("npcs", []):
+		if not folk.is_empty() and str(n["plan"]["npc"].get("faction", "")) == str(FactionRules.cfg(data).get("folk", "")):
+			n["plan"]["npc"]["faction"] = folk
 		npc_ids[str(n["key"])] = apply_npc(s, data, {"npc": n["plan"]["npc"], "room": str(ids.get(str(n["room"]), first)), "items": n["plan"].get("items", {})})
 	for key: String in site_ids:
 		var gs: Dictionary = gen["sites"][site_ids[key]]

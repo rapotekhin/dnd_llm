@@ -1,7 +1,7 @@
 # ADR-0002: Pickle для сохранений
 
 **Дата:** 2026-05-03 (зафиксировано задним числом)  
-**Статус:** Accepted, but with planned migration
+**Статус:** Superseded: прототип удалён в v0.5.4, сейвы Godot — JSON с миграциями ([data-models.md](../data-models.md#сейвы))
 
 ## Контекст
 

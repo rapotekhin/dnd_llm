@@ -234,8 +234,18 @@ static func charges_max(d: Dictionary) -> int:
 	return int(d.get("charges", {}).get("max", 0))
 
 
+## All the charges of a stack: `_copies` × the item's; the copies are spent one after another.
+static func charges_all(c: Dictionary, d: Dictionary, id: String) -> int:
+	return charges_max(d) * _copies(c, id)
+
+
+static func _copies(c: Dictionary, id: String) -> int:
+	var inv: Dictionary = c.get("inventory", {})
+	return maxi(1, int(inv.get(id, inv.get(real_id(id), 1))))
+
+
 static func charges_left(c: Dictionary, d: Dictionary, id: String) -> int:
-	return maxi(0, charges_max(d) - int(c.get("charges_used", {}).get(real_id(id), c.get("charges_used", {}).get(id, 0))))
+	return maxi(0, charges_all(c, d, id) - int(c.get("charges_used", {}).get(real_id(id), c.get("charges_used", {}).get(id, 0))))
 
 
 ## Spends a charge; the last one of a wand may turn it to dust (1 on a d20, DMG). Lines.
@@ -246,16 +256,22 @@ static func spend_charge(c: Dictionary, data: Dictionary, session_items: Diction
 	var used: Dictionary = c["charges_used"]
 	used[id] = int(used.get(id, 0)) + 1
 	var left := charges_left(c, d, id)
-	var lines: Array[String] = ["зарядов: %d из %d" % [left, charges_max(d)]]
-	if left == 0 and bool(d.get("charges", {}).get("crumble", false)) and rng.randi_range(1, 20) == 1:
-		_remove_one(c, id)
-		used.erase(id)
+	var lines: Array[String] = ["зарядов: %d из %d" % [left, charges_all(c, d, id)]]
+	var empty := left % charges_max(d) == 0  # one copy of the stack is spent
+	if empty and bool(d.get("charges", {}).get("crumble", false)) and rng.randi_range(1, 20) == 1:
+		_spent_copy(c, used, id, charges_max(d))
 		lines.append("%s рассыпается в пыль" % d.get("name", id))
-	elif left == 0 and not d.get("charges", {}).has("regain"):
-		_remove_one(c, id)
-		used.erase(id)
+	elif empty and not d.get("charges", {}).has("regain"):
+		_spent_copy(c, used, id, charges_max(d))
 		lines.append("%s закончилась" % d.get("name", id))
 	return lines
+
+
+static func _spent_copy(c: Dictionary, used: Dictionary, id: String, charges: int) -> void:
+	_remove_one(c, id)
+	used[id] = int(used[id]) - charges
+	if int(used[id]) <= 0:
+		used.erase(id)
 
 
 ## Dawn (the long rest): charges come back by the item's dice. Lines.
@@ -267,7 +283,10 @@ static func dawn(c: Dictionary, data: Dictionary, session_items: Dictionary, rng
 		var regain := str(d.get("charges", {}).get("regain", ""))
 		if regain.is_empty() or int(used[id]) <= 0:
 			continue
-		var back := mini(int(used[id]), CombatRules.roll_dice(rng, regain))
+		var rolled := 0
+		for i in _copies(c, id):
+			rolled += CombatRules.roll_dice(rng, regain)
+		var back := mini(int(used[id]), rolled)
 		used[id] = int(used[id]) - back
 		lines.append("%s: +%d %s" % [d.get("name", id), back, "заряд" if back == 1 else "заряда" if back < 5 else "зарядов"])
 	return lines

@@ -44,6 +44,50 @@ static func sync(s: GameSession, data: Dictionary) -> void:
 		fresh[id] = batches
 
 
+## Up to `qty` units off the oldest of `batches`: their own batches.
+static func cut(batches: Array, qty: int) -> Array:
+	var out: Array = []
+	while qty > 0 and not batches.is_empty():
+		var n := mini(qty, int(batches[0][1]))
+		out.append([int(batches[0][0]), n])
+		batches[0][1] = int(batches[0][1]) - n
+		qty -= n
+		if int(batches[0][1]) <= 0:
+			batches.pop_front()
+	return out
+
+
+## `qty` of a thing are about to leave the hero (call before the inventory changes): their batches, so that the age
+## goes with them.
+static func leave(s: GameSession, data: Dictionary, id: String, qty: int) -> Array:
+	if spoils_days(data, s.items, id) <= 0:
+		return []
+	sync(s, data)
+	return cut(_fresh(s.character).get(id, []), qty)
+
+
+## The batches lie with the container or the dropped thing `p`.
+static func keep(p: Dictionary, id: String, batches: Array) -> void:
+	if batches.is_empty():
+		return
+	if not p.has("fresh"):
+		p["fresh"] = {}
+	var list: Array = p["fresh"].get(id, [])
+	list.append_array(batches)
+	p["fresh"][id] = list
+
+
+## `qty` of `id` came back out of `p` as `key`: their age comes back too.
+static func taken(s: GameSession, p: Dictionary, id: String, key: String, qty: int) -> void:
+	var there: Array = p.get("fresh", {}).get(id, [])
+	if there.is_empty():
+		return
+	var list: Array = _fresh(s.character).get(key, [])
+	list.append_array(cut(there, qty))
+	list.sort_custom(func(a: Array, b: Array) -> bool: return int(a[0]) < int(b[0]))
+	_fresh(s.character)[key] = list
+
+
 ## The days a perishable has left before it spoils (its oldest batch); -1 when it does not spoil.
 static func days_left(s: GameSession, data: Dictionary, id: String) -> int:
 	var days := spoils_days(data, s.items, id)

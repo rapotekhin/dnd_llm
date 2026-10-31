@@ -27,13 +27,74 @@ static func mark(s: GameSession, item_id: String, qty: int, owner: String) -> vo
 	s.foreign[item_id] = by
 
 
+static func _carried(s: GameSession, id: String) -> int:
+	var n := int(s.character.get("inventory", {}).get(id, 0))
+	for b: Dictionary in ContainerRules.bags(s.character).values():
+		n += int((b.get("contents", {}) as Dictionary).get(id, 0))
+	return n
+
+
+## An unknown thing the hero identified is the same thing: its marks move to its real id.
+static func _identified(s: GameSession) -> void:
+	for id: String in s.foreign.keys():
+		var real := ItemRules.real_id(id)
+		if real != id and _carried(s, id) == 0:
+			var by: Dictionary = s.foreign.get(real, {})
+			for owner: String in s.foreign[id]:
+				by[owner] = int(by.get(owner, 0)) + int(s.foreign[id][owner])
+			s.foreign[real] = by
+			s.foreign.erase(id)
+
+
+## A thing left the hero: the marks past what the hero still carries go with it, onto the container or the dropped
+## thing `p` (at most `limit`, -1 — all). Back in its owner's container the thing is simply returned.
+static func store(s: GameSession, p: Dictionary, item_id: String, limit: int = -1) -> void:
+	_identified(s)
+	var by: Dictionary = s.foreign.get(item_id, {})
+	var extra := -_carried(s, item_id)
+	for owner: String in by:
+		extra += int(by[owner])
+	extra = extra if limit < 0 else mini(extra, limit)
+	for owner: String in by.keys():
+		var n := mini(extra, int(by[owner]))
+		if n <= 0:
+			continue
+		extra -= n
+		by[owner] = int(by[owner]) - n
+		if int(by[owner]) <= 0:
+			by.erase(owner)
+		if owner != str(p.get("owner", "")):
+			if not p.has("marks"):
+				p["marks"] = {}
+			var there: Dictionary = p["marks"].get(item_id, {})
+			there[owner] = int(there.get(owner, 0)) + n
+			p["marks"][item_id] = there
+	if by.is_empty():
+		s.foreign.erase(item_id)
+
+
+## `qty` of `item_id` came back out of `p` as `key`: their marks come back too.
+static func restore(s: GameSession, p: Dictionary, key: String, item_id: String, qty: int) -> void:
+	var there: Dictionary = p.get("marks", {}).get(item_id, {})
+	for owner: String in there.keys():
+		var n := mini(qty, int(there[owner]))
+		if n <= 0:
+			continue
+		qty -= n
+		mark(s, key, n, owner)
+		there[owner] = int(there[owner]) - n
+		if int(there[owner]) <= 0:
+			there.erase(owner)
+	if there.is_empty() and p.has("marks"):
+		(p["marks"] as Dictionary).erase(item_id)
+
+
 ## What the hero carries of someone else's: {item_id: {owner: qty}}, no more than the hero still has of each.
 static func foreign(s: GameSession) -> Dictionary:
+	_identified(s)
 	var out := {}
 	for id: String in s.foreign:
-		var left := int(s.character.get("inventory", {}).get(id, 0))
-		for b: Dictionary in ContainerRules.bags(s.character).values():
-			left += int((b.get("contents", {}) as Dictionary).get(id, 0))
+		var left := _carried(s, id)
 		var by := {}
 		for owner: String in s.foreign[id]:
 			var n := mini(left, int(s.foreign[id][owner]))

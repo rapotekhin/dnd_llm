@@ -89,13 +89,9 @@ func long_rest(supplies: Dictionary = {}) -> String:
 	TimeRules.after_long_rest(session, Catalog.data, began)
 	lines.append_array(CalendarRules.sync(session, Catalog.data["world"]))
 	lines.append_array(WeatherRules.sync(session, Catalog.data))  # the morning's weather (v0.7.46)
-	lines.append_array(RumorRules.tick(session, Catalog.data))  # rumours went on overnight (v0.7.47)
 	NeedRules.woke(session, Catalog.data, began_abs)
 	FollowRules.rested(session)  # their meal counts as the breakfast too
-	lines.append_array(ConditionRules.expire(session, Catalog.data))
-	lines.append_array(NeedRules.tick(session, Catalog.data))
-	lines.append_array(DiseaseRules.tick(session, Catalog.data))
-	lines.append_array(FoodRules.tick(session, Catalog.data))
+	lines.append_array(TimeRules.hooks(session, Catalog.data))  # the night went on for the world too
 	CharacterRules.refresh(session.character, Catalog.data, session.items)
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
@@ -1604,7 +1600,7 @@ func finish_combat(take: Array = []) -> void:
 		for fid: String in CombatRules.enemies(s):
 			var f := CombatRules.fighter(s, fid)
 			if str(f.get("npc_id", "")).is_empty():  # wounds and XP kept for a fight with them again (v0.7.22.16)
-				foes.append({"monster": str(f["monster"]), "name": str(f["name"]), "count": 1, "hp": int(f["hp"]), "no_xp": bool(f.get("no_xp", false))})
+				foes.append({"monster": str(f["monster"]), "name": str(f["name"]), "count": 1, "hp": int(f["hp"]), "max_hp": int(f["max_hp"]), "no_xp": bool(f.get("no_xp", false))})
 		lines.append_array(EncounterRules.capture(s, foes, str(s.combat.get("encounter", "")), str(s.combat.get("room_from", ""))))
 		lines.append_array(EncounterRules.seize(s, Catalog.data))  # v0.7.22.17, #15
 	for id: String in CombatRules.enemies(s, false) if arena.is_empty() else []:
@@ -1613,6 +1609,8 @@ func finish_combat(take: Array = []) -> void:
 			lines.append_array(CrimeRules.on_death(s, Catalog.data, str(f["npc_id"]), bool(f.get("by_hero", false)), s.room_id))
 		elif not str(f.get("npc_id", "")).is_empty() and bool(f.get("by_hero", false)) and (outcome != "captured" or by_law):  # v0.7.22.16: an assault
 			lines.append_array(CrimeRules.on_assault(s, Catalog.data, str(f["npc_id"]), str(f.get("status")) != "unconscious", s.room_id))
+	if outcome == "player_fled":
+		CreatureRules.after_flight(s, s.room_id)
 	if outcome == "player_fled" and not str(s.combat.get("room_from", "")).is_empty():
 		s.room_id = str(s.combat["room_from"])
 	if int(s.character["hp"]) <= 0:
@@ -1706,8 +1704,11 @@ func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
 			var why := CraftRules.gather_why(session, data, arg)
 			if not why.is_empty():
 				return why
-			lines = CraftRules.gather(session, data, arg)
-			lines.append_array(CrimeRules.wait(session, data, int(CraftRules.cfg(data)["gather"][arg]["minutes"]))["lines"])
+			var minutes := int(CraftRules.cfg(data)["gather"][arg]["minutes"])
+			var w := CrimeRules.wait(session, data, minutes)
+			lines = w["lines"]
+			if int(w["minutes"]) >= minutes:  # a patrol breaks it off: nothing gathered
+				lines.append_array(CraftRules.gather(session, data, arg))
 	if lines.is_empty():
 		return ""
 	CharacterRules.refresh(session.character, data, session.items)

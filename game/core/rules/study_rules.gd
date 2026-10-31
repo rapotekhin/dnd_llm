@@ -655,9 +655,10 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		if co.is_empty() or _book_course(s, data, id):
 			continue
 		var st: Dictionary = view(c)["courses"][id]
-		if s.day - int(st["last"]) > gap:
-			st["misses"] = int(st["misses"]) + 1
-			st["last"] = s.day
+		var passed := (s.day - int(st["last"])) / (gap + 1)  # each gap missed is a miss, however many went at once
+		if passed > 0:
+			st["misses"] = int(st["misses"]) + passed
+			st["last"] = int(st["last"]) + passed * (gap + 1)
 			lines.append("Пропуск занятий: «%s» (%d из %d допустимых)" % [name_of(s, data, id), int(st["misses"]), max_misses])
 			if int(st["misses"]) > max_misses:
 				out[id] = "за пропуски"

@@ -168,6 +168,12 @@ static func as_creatures(s: GameSession, room_id: String, enemies: Array, state:
 			var c := {"id": "c%d" % s.creature_counter, "name": name, "monster": str(e["monster"]), "state": state,
 				"bound": false, "led": false, "since": TimeRules.abs_minute(s)}
 			c.merge(extra)
+			if e.has("hp"):  # captors keep the wounds of the fight, and its XP stays given
+				c["hp"] = int(e["hp"])
+			if e.has("max_hp"):
+				c["max_hp"] = int(e["max_hp"])
+			if bool(e.get("no_xp", false)):
+				c["xp_given"] = true
 			list.append(c)
 	s.creatures[room_id] = list
 

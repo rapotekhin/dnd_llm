@@ -178,7 +178,9 @@ func test_the_adult_heir_takes_the_place() -> void:
 	var heir_c := CharacterBuilder.build_preset(data["presets"][1], data)
 	heir_c["gold_cp"] = 100
 	var gold := int(s.character["gold_cp"])
+	WorldGen.generated(s)["orgs"] = {"kin_band": {"name": "Банда", "kind": "criminal", "head": kid, "members": []}}
 	FamilyRules.inherit(s, data, heir_c)
+	assert_str(str(WorldGen.generated(s)["orgs"]["kin_band"]["head"])).is_equal(OwnerRules.HERO)
 	assert_int(int(heir_c["gold_cp"])).is_equal(gold + 100)
 	assert_bool((heir_c["property"] as Dictionary).has("river_house")).is_true()
 	assert_array(heir_c["family"]["kin"]).contains([{"npc": "npc_herbalist", "rel": "мать"}])

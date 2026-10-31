@@ -398,6 +398,10 @@ static func inherit(s: GameSession, data: Dictionary, heir_c: Dictionary) -> Arr
 			kin.append({"npc": id, "rel": "сестра" if str(BondRules.npc_def(s, data, id).get("gender", "")) == "female" else "брат"})
 	heir_c["family"] = {"children": [], "kin": kin, "home": str(f.get("home", "")), "home_room": str(f.get("home_room", "")),
 		"parent": str(old.get("name", "")), "last_day": s.day}
+	for id: String in OrgRules.of_head(s, data, h):  # the organization it led goes on with it as the hero
+		var made: Dictionary = WorldGen.generated(s).get("orgs", {})
+		if made.has(id):
+			made[id]["head"] = OwnerRules.HERO
 	var lines: Array[String] = ["%s, наследник рода %s, принимает дом и добро" % [heir_c["name"], old.get("name", "")]]
 	_leave_world(s, data, h)  # the NPC is gone from the world: now the hero
 	return lines

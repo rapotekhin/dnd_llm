@@ -286,6 +286,8 @@ TRAITS.update({f"draconic_ancestry_{c}": TRAITS["draconic_ancestry"] for c in
 
 # Item properties (items.json `properties`): what the engine reads.
 ITEM_PROPS = {
+    "crude": ("engine", "качество ремесла: −1 к атаке (v0.7.24)"),
+    "masterwork": ("engine", "качество ремесла: +1 к атаке, доспех без помех (v0.7.24)"),
     "finesse": ("engine", "Сила или Ловкость, Скрытая атака"), "light": ("engine", "второе оружие"), "two_handed": ("engine", "без щита"),
     "versatile": ("engine", "двумя руками"), "thrown": ("engine", "метание"),
     "heavy": ("engine", "кражи; маленьким расам — помеха к атакам (v0.7.12)"),

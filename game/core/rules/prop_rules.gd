@@ -210,6 +210,8 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		return {"reason": "%s не унести — это обстановка; опиши попытку словами или `prop_state`" % p["name"]}
 	if not (p.get("contents", {}) as Dictionary).is_empty() and not ContainerRules.is_carried_kind(data, str(p["item_id"])):
 		return {"reason": "в %s что-то лежит — сначала `take_from` содержимое" % p["name"]}
+	if ContainerRules.is_container(p) and not ContainerRules.closed_why(p).is_empty():
+		return {"reason": ContainerRules.closed_why(p)}
 	var owner := str(p.get("owner", ""))
 	var seen := not owner.is_empty() and s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(owner)
 	return {"plan": {"room": s.room_id, "prop": p["id"], "owner": owner if seen else ""},
@@ -269,9 +271,15 @@ static func apply_take(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 		return lines
 	p["state"] = "taken"
 	var item := str(p["item_id"])
-	OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, item), 1, str(p.get("owner", "")))
+	var key := ItemRules.found(s.character, data, s.items, item)
+	OwnerRules.mark(s, key, 1, str(p.get("owner", "")))
+	OwnerRules.restore(s, p, key, item, 1)
+	FoodRules.taken(s, p, item, key, 1)
 	if ContainerRules.is_carried_kind(data, item):  # a bag comes with what is in it (v0.7.18.2)
 		ContainerRules.pick_up(s, data, item, p.get("contents", {}))
+		for id: String in p.get("contents", {}):
+			OwnerRules.mark(s, id, int(p["contents"][id]), str(p.get("owner", "")))
+			OwnerRules.restore(s, p, id, id, int(p["contents"][id]))
 	if not str(plan.get("owner", "")).is_empty():
 		lines.append_array(TheftRules.react(s, data, str(plan["owner"])))
 	return lines

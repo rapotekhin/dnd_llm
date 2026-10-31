@@ -152,6 +152,7 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: 
 	s.crimes = s.crimes.filter(func(c: Dictionary) -> bool: return not (_assault(c) and str(c["victim"]) == npc_id and not bool(c["known"])))  # finished off: the murder
 	if not s.dead_npcs.has(npc_id):
 		s.dead_npcs.append(npc_id)
+	s.followers.erase(npc_id)
 	s.bodies[npc_id] = room_id
 	s.body_at[npc_id] = TimeRules.abs_minute(s)  # buried some days later (v0.7.22.10)
 	lines.append_array(QuestRules.on_death(s, data, npc_id))

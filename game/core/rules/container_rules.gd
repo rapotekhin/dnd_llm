@@ -152,7 +152,10 @@ static func apply_take(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	contents[id] = int(contents.get(id, 0)) - int(plan["qty"])
 	if int(contents[id]) <= 0:
 		contents.erase(id)
-	OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, id, int(plan["qty"])), int(plan["qty"]), str(p.get("owner", "")))
+	var key := ItemRules.found(s.character, data, s.items, id, int(plan["qty"]))
+	OwnerRules.mark(s, key, int(plan["qty"]), str(p.get("owner", "")))
+	OwnerRules.restore(s, p, key, id, int(plan["qty"]))
+	FoodRules.taken(s, p, id, key, int(plan["qty"]))
 	CharacterRules.refresh(s.character, data, s.items)
 	if not str(plan.get("owner", "")).is_empty():
 		lines.append_array(TheftRules.react(s, data, str(plan["owner"])))
@@ -185,12 +188,14 @@ static func apply_put(s: GameSession, data: Dictionary, plan: Dictionary) -> voi
 		return
 	var inv: Dictionary = s.character["inventory"]
 	var id := str(plan["item_id"])
+	FoodRules.keep(p, id, FoodRules.leave(s, data, id, int(plan["qty"])))
 	inv[id] = int(inv.get(id, 0)) - int(plan["qty"])
 	if int(inv[id]) <= 0:
 		inv.erase(id)
 	if not p.has("contents"):
 		p["contents"] = {}
 	p["contents"][id] = int(p["contents"].get(id, 0)) + int(plan["qty"])
+	OwnerRules.store(s, p, id)
 	CharacterRules.refresh(s.character, data, s.items)
 
 
@@ -355,6 +360,8 @@ static func apply_drop(s: GameSession, data: Dictionary, plan: Dictionary) -> vo
 		contents = (bags(c)[plan["bag"]]["contents"] as Dictionary).duplicate()
 		bags(c).erase(plan["bag"])
 		qty = 1
+	var batches := FoodRules.leave(s, data, item_id, qty)
+	var inside := contents.keys()
 	var inv: Dictionary = c["inventory"]
 	inv[item_id] = int(inv.get(item_id, 0)) - qty
 	if int(inv[item_id]) <= 0:
@@ -378,6 +385,10 @@ static func apply_drop(s: GameSession, data: Dictionary, plan: Dictionary) -> vo
 			prop["container"] = item_id
 			prop["contents"] = contents
 			contents = {}
+			for id: String in inside:
+				OwnerRules.store(s, prop, id)
+		OwnerRules.store(s, prop, item_id, 1)
+		FoodRules.keep(prop, item_id, FoodRules.cut(batches, 1))
 		list.append(prop)
 	s.props[str(plan["room"])] = list
 	CharacterRules.refresh(c, data, s.items)
