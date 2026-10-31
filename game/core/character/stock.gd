@@ -1,9 +1,9 @@
-class_name FeatureUses
+class_name Stock
 extends RefCounted
-## Limited uses of class features (roadmap v0.6.0): Second Wind, Action Surge, Rage, Bardic Inspiration,
-## Channel Divinity, Wild Shape, Ki, Lay on Hands, Divine Sense, Sorcery Points, Arcane Recovery. Who has them,
-## how many and when they come back are data (rules.json `resources`); the character keeps only
-## `resources_used` {resource id: spent}. A use goes through the engine (effect use_feature or the sheet button).
+## What a character spends and gets back (v0.7.63, from the feature uses of v0.6.0): Second Wind, Rage, Ki and the other
+## limited uses, spell slots `slot_<circle>`, hit dice `hit_dice`. Who has it, how many and when it comes back are data
+## (rules.json `resources`); the character keeps only `spent` {id: n}. A feature's use goes through the engine (effect
+## use_feature or the sheet button). A thing's charges join this with the item's instance (v0.7.65).
 
 
 static func table(data: Dictionary) -> Dictionary:
@@ -20,11 +20,40 @@ static func owned(c: Dictionary, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var all := table(data)
 	for id: String in all:
-		for f: Variant in all[id]["features"]:
+		for f: Variant in all[id].get("features", []):
 			if CharacterRules.has_feature(c, str(f)):
 				out.append(id)
 				break
 	return out
+
+
+## How much of `id` is spent.
+static func spent(c: Dictionary, id: String) -> int:
+	return int(c.get("spent", {}).get(id, 0))
+
+
+## Spends `n` of `id`; what `use` adds to it is the feature's.
+static func spend(c: Dictionary, id: String, n: int = 1) -> void:
+	var used: Dictionary = c.get("spent", {})
+	used[id] = int(used.get(id, 0)) + n
+	c["spent"] = used
+
+
+## Gives back `n` of `id`.
+static func give(c: Dictionary, id: String, n: int = 1) -> void:
+	var used: Dictionary = c.get("spent", {})
+	var rest := int(used.get(id, 0)) - n
+	if rest > 0:
+		used[id] = rest
+	else:
+		used.erase(id)
+	c["spent"] = used
+
+
+## Every spell slot back.
+static func fill_slots(c: Dictionary) -> void:
+	for n in range(1, 6):
+		give(c, "slot_%d" % n, spent(c, "slot_%d" % n))
 
 
 static func max_uses(c: Dictionary, data: Dictionary, id: String) -> int:
@@ -39,11 +68,13 @@ static func max_uses(c: Dictionary, data: Dictionary, id: String) -> int:
 		return maxi(int(spec.get("min", 0)), m)
 	if spec.has("per_level"):
 		return int(spec["per_level"]) * int(c.get("level", 1))
+	if spec.has("slots"):
+		return int(c.get("slots_max", [0, 0, 0, 0, 0])[int(spec["slots"]) - 1])
 	return 0
 
 
 static func left(c: Dictionary, data: Dictionary, id: String) -> int:
-	return maxi(0, max_uses(c, data, id) - int(c.get("resources_used", {}).get(id, 0)))
+	return maxi(0, max_uses(c, data, id) - spent(c, id))
 
 
 ## A resource id by its id, one of its feature ids, or the Russian name of the feature; "" if none.
@@ -54,7 +85,7 @@ static func resolve(c: Dictionary, data: Dictionary, name: String) -> String:
 	for id: String in owned(c, data):
 		if id == key:
 			return id
-		for f: Variant in all[id]["features"]:
+		for f: Variant in all[id].get("features", []):
 			if str(f) == key or str(feats.get(str(f), {}).get("name", "")).to_lower() == key:
 				return id
 	return ""
@@ -83,16 +114,15 @@ static func can_use(c: Dictionary, data: Dictionary, id: String, amount: int, pe
 
 static func recharge(c: Dictionary, data: Dictionary, id: String) -> String:
 	var spec: Dictionary = table(data).get(id, {})
-	if spec.has("short_with") and CharacterRules.has_feature(c, str(spec["short_with"])):
+	var quick: Variant = spec.get("short_with", [])
+	if (quick if quick is Array else [quick]).any(func(f: Variant) -> bool: return CharacterRules.has_feature(c, str(f))):
 		return "short"
 	return str(spec.get("recharge", "long"))
 
 
 ## Spends `amount` uses (can_use first) and does what the data says (heals). Returns the chat lines.
 static func use(c: Dictionary, data: Dictionary, id: String, amount: int, rng: RandomNumberGenerator) -> Array[String]:
-	var used: Dictionary = c.get("resources_used", {})
-	used[id] = int(used.get(id, 0)) + amount
-	c["resources_used"] = used
+	spend(c, id, amount)
 	var lines: Array[String] = ["%s%s (осталось %d)" % [display_name(c, data, id), " ×%d" % amount if amount > 1 else "", left(c, data, id)]]
 	var on_use: Dictionary = table(data)[id].get("on_use", {})
 	var heal := 0
@@ -121,25 +151,22 @@ static func use(c: Dictionary, data: Dictionary, id: String, amount: int, rng: R
 		lines.append("к%d добавится к следующему проваленному броску" % die)
 	if str(on_use.get("recover_slots", "")) == "half_level":  # Arcane / Natural Recovery: the highest slots first
 		var budget := ceili(int(c.get("level", 1)) / 2.0)
-		var slots: Array = (c.get("slots_used", [0, 0, 0, 0, 0]) as Array).duplicate()
 		var back: Array[String] = []
 		for lv in range(mini(5, budget), 0, -1):
-			while int(slots[lv - 1]) > 0 and budget >= lv:
-				slots[lv - 1] = int(slots[lv - 1]) - 1
+			while spent(c, "slot_%d" % lv) > 0 and budget >= lv:
+				give(c, "slot_%d" % lv)
 				budget -= lv
 				back.append(str(lv))
-		c["slots_used"] = slots
 		lines.append(("ячейки назад: круг " + ", ".join(back)) if not back.is_empty() else "потраченных ячеек нет")
 	return lines
 
 
-## Gives back the uses of a rest: "short" restores short-rest resources, "long" restores all.
+## Gives back what a rest returns: "short" — what comes back on a short rest, "long" — everything.
 static func recharge_all(c: Dictionary, data: Dictionary, rest: String) -> void:
-	var used: Dictionary = c.get("resources_used", {})
-	for id: String in used.keys():
+	for id: String in c.get("spent", {}).keys():
 		if rest == "long" or recharge(c, data, id) == "short":
-			used.erase(id)
-	c["resources_used"] = used
+			var half := str(table(data).get(id, {}).get("back", "")) == "half_level"
+			give(c, id, maxi(1, int(c.get("level", 1)) / 2) if half else spent(c, id))
 
 
 ## For the snapshot and the sheet: [{id, name, left, max, recharge}].

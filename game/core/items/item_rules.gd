@@ -524,7 +524,7 @@ static func can_use(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 		return "%s не работает без настройки" % d.get("name", id)
 	if charges_max(d) > 0 and charges_left(c, d, id) <= 0:
 		return "у %s не осталось зарядов — они вернутся на рассвете" % d.get("name", id)
-	if fx.has("recover_slot") and not (c.get("slots_used", []) as Array).any(func(n: Variant) -> bool: return int(n) > 0):
+	if fx.has("recover_slot") and not range(1, 6).any(func(n: int) -> bool: return Stock.spent(c, "slot_%d" % n) > 0):
 		return "все ячейки заклинаний и так целы"
 	return ""
 
@@ -543,13 +543,11 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		lines.append_array(_spell_use(c, data, session_items, fx, rng, s))
 		return lines
 	if fx.has("recover_slot"):
-		var used: Array = (c.get("slots_used", [0, 0, 0, 0, 0]) as Array).duplicate()
-		for lv in range(mini(int(fx["recover_slot"]), used.size()), 0, -1):
-			if int(used[lv - 1]) > 0:
-				used[lv - 1] = int(used[lv - 1]) - 1
+		for lv in range(mini(int(fx["recover_slot"]), 5), 0, -1):
+			if Stock.spent(c, "slot_%d" % lv) > 0:
+				Stock.give(c, "slot_%d" % lv)
 				lines.append("ячейка %d круга восстановлена" % lv)
 				break
-		c["slots_used"] = used
 		return lines
 	if s != null and fx.has("poison"):  # a Potion of Poison drunk for a healing one
 		var p: Dictionary = fx["poison"]

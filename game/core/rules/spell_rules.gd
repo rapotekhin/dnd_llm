@@ -43,7 +43,7 @@ static func lowest_slot(c: Dictionary, data: Dictionary, spell_id: String, pendi
 static func slots_left(c: Dictionary, circle: int) -> int:
 	if circle < 1 or circle > 5:
 		return 0
-	return int(c.get("slots_max", [0, 0, 0, 0, 0])[circle - 1]) - int(c.get("slots_used", [0, 0, 0, 0, 0])[circle - 1])
+	return int(c.get("slots_max", [0, 0, 0, 0, 0])[circle - 1]) - Stock.spent(c, "slot_%d" % circle)
 
 
 ## {"spell_id", "slot"} when the cast can go (slot 0 = a cantrip), or {"reason"} for the master.
@@ -77,9 +77,7 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 	var s: Dictionary = data["spells"][spell_id]
 	var line := "Заклинание: %s" % s["name"]
 	if slot > 0:
-		var used: Array = (c.get("slots_used", [0, 0, 0, 0, 0]) as Array).duplicate()
-		used[slot - 1] = int(used[slot - 1]) + 1
-		c["slots_used"] = used
+		Stock.spend(c, "slot_%d" % slot)
 		line += " (ячейка %d круга, осталось %d)" % [slot, slots_left(c, slot)]
 	var lines: Array[String] = [line]
 	if not (data["rules"].get("invisibility", {}).get("spells", {}) as Dictionary).has(spell_id):

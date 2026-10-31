@@ -49,7 +49,7 @@ static func reduce_foe(s: GameSession, data: Dictionary, spell_id: String, f: Di
 	var ok := CombatRules._monster_save(s, data, f, "con", int(s.character.get("spell_dc", 10)), ["magic"])
 	lines.append("%s: %s — спасбросок Тел %s" % [data["spells"][spell_id]["name"], f["name"], "успех" if ok else "провал, уменьшается"])
 	if not ok:
-		f["reduced"] = spell_id
+		ConditionRules.add_effect(f, {"source": {"kind": "spell", "id": spell_id, "name": str(data["spells"][spell_id]["name"])}, "reduced": true})
 
 
 ## The spell lands on an ally (v0.7.50.1): a heal, or a boon of the fighter that goes with the concentration.
@@ -57,10 +57,8 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
 	if (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell_id):
-		CombatRules._add_condition(f, "invisible", {"rounds": 100, "spell": spell_id})
-		var seen: Dictionary = f.get("boons", {})
-		seen[spell_id] = {"ac": 0, "cond": "invisible", "ends_on_attack": bool(data["rules"]["invisibility"]["spells"][spell_id].get("ends_on_attack", true))}
-		f["boons"] = seen
+		CombatRules._add_condition(s, f, "invisible", {"rounds": 100, "spell": spell_id})
+		ConditionRules.effects_of(f, "invisible")[0]["ends_on_attack"] = bool(data["rules"]["invisibility"]["spells"][spell_id].get("ends_on_attack", true))
 		lines.append("%s: %s" % [f["name"], spell["name"]])
 		return
 	if sp.is_empty():
@@ -69,7 +67,8 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 		f["status"] = "active"
 		lines.append("%s: +%d HP" % [f["name"], int(f["hp"]) - before])
 		return
-	var boon := {"ac": 0}
+	_end_spell_on(f, spell_id)
+	var boon := {"source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}}
 	for k: String in ["foe_types_dis", "sanctuary", "ability_adv", "save_adv", "flying", "enlarged", "haste"]:
 		if sp.has(k):
 			boon[k] = sp[k]
@@ -83,25 +82,24 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 		speed = MonsterRules.move_speed(data["monsters"][f["monster"]])
 	if speed > 0:
 		boon["speed"] = speed
-		f["speed_fx"] = int(f.get("speed_fx", 0)) + speed
 	var kept: Array = (sp.get("resist", []) as Array).duplicate()
 	if sp.has("resist_auto"):
 		kept.append(_likely_type(s, data, sp["resist_auto"]))
 	if not kept.is_empty():
 		boon["resist"] = kept
-		f["resist_fx"] = (f.get("resist_fx", []) as Array) + kept
 	for cond: Variant in sp.get("remove", []):
 		CombatRules._remove_condition(f, str(cond))
 	if sp.has("die"):
-		f["plus_die"] = {"die": str(sp["die"]), "on": sp.get("on", []), "spell": spell_id, "name": str(spell["name"]), "once": bool(sp.get("once", false))}
+		boon["die"] = str(sp["die"])
+		boon["on"] = sp.get("on", [])
+		boon["once"] = bool(sp.get("once", false))
 	if sp.has("ac_plus"):
 		boon["ac"] = int(sp["ac_plus"])
 	elif sp.has("ac_min"):
-		boon["ac"] = maxi(0, int(sp["ac_min"]) - int(f["ac"]))
+		boon["ac"] = maxi(0, int(sp["ac_min"]) - CombatRules.ac_of(f))
 	elif sp.has("ac_base"):
 		var m: Dictionary = data["monsters"][f["monster"]]
-		boon["ac"] = maxi(0, int(sp["ac_base"]) + CharacterRules.mod(int(m["abilities"].get("dex", 10))) - int(f["ac"]))
-	f["ac"] = int(f["ac"]) + int(boon["ac"])
+		boon["ac"] = maxi(0, int(sp["ac_base"]) + CharacterRules.mod(int(m["abilities"].get("dex", 10))) - CombatRules.ac_of(f))
 	if sp.has("max_hp_plus"):
 		var n := int(sp["max_hp_plus"]) + int(sp.get("per_slot", 0)) * maxi(0, slot - maxi(1, int(spell["level"])))
 		f["max_hp"] = int(f["max_hp"]) + n
@@ -109,29 +107,15 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 	if sp.has("temp_hp"):
 		var c := s.character
 		f["temp_hp"] = CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "cha")))) if str(sp["temp_hp"]) == "MOD" else int(sp["temp_hp"])
-	var boons: Dictionary = f.get("boons", {})
-	boons[spell_id] = boon
-	f["boons"] = boons
+	ConditionRules.add_effect(f, boon)
 	lines.append("%s: %s" % [f["name"], spell["name"]])
 
 
-## The bonus die of a blessed ally for its attack or save: the number to add (0 — none) and the note.
-static func friend_die(s: GameSession, f: Dictionary, kind: String) -> Dictionary:
-	if not f.has("plus_die") or not (f["plus_die"].get("on", []) as Array).has(kind):
-		return {"plus": 0, "note": ""}
-	var n := CombatRules.roll_dice(s.rng, str(f["plus_die"]["die"]))
-	var note := " +%d (%s)" % [n, f["plus_die"]["name"]]
-	if bool(f["plus_die"].get("once", false)):
-		f.erase("plus_die")
-	return {"plus": n, "note": note}
-
-
-## What the spells on a fighter give, by a key of its boons: the first value (`fallback` — none).
+## What the spells on a fighter give, by a key of its statuses: the first value (`fallback` — none).
 static func boon(f: Dictionary, key: String, fallback: Variant = null) -> Variant:
-	var boons: Dictionary = f.get("boons", {})
-	for id: String in boons:
-		if boons[id].has(key):
-			return boons[id][key]
+	for e: Dictionary in f.get("effects", []):
+		if e.has(key):
+			return e[key]
 	return fallback
 
 
@@ -155,13 +139,9 @@ static func ally_sanctuary(s: GameSession, data: Dictionary, attacker: Dictionar
 
 ## The fighter strikes: what ends on its own attack (Sanctuary, Invisibility).
 static func end_on_attack(f: Dictionary) -> void:
-	var boons: Dictionary = f.get("boons", {})
-	for id: String in boons.keys():
-		if boons[id].has("sanctuary"):
-			boons.erase(id)
-		elif bool(boons[id].get("ends_on_attack", false)):
-			CombatRules._remove_condition(f, "invisible")
-			boons.erase(id)
+	for e: Dictionary in ConditionRules.effects(f).duplicate():
+		if e.has("sanctuary") or bool(e.get("ends_on_attack", false)):
+			ConditionRules.remove_effect(f, int(e["uid"]))
 
 
 ## The spell lands on the hero: the effect for its duration (the concentration's end comes with it). Lines.
@@ -198,6 +178,8 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 			e[k] = sp[k]
 	var lines: Array[String] = []
 	var slot_up := maxi(0, slot - maxi(1, int(spell["level"])))
+	if sp.has("guise"):  # Disguise Self (v0.7.63): the master names the look; the spell's DC is what a viewer must beat
+		e["guise"] = {"name": "", "faction": "", "dc": int(c.get("spell_dc", 10)), "seen": {}}
 	if sp.has("resist_auto"):  # Protection from Energy: the type the foes deal most (v0.7.13.2)
 		var dtype := _likely_type(s, data, sp["resist_auto"])
 		e["resist"] = [dtype]
@@ -376,7 +358,9 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 	if bool(sp.get("haste", false)):
 		parts.append("КД +2, скорость вдвое, ещё одно действие; потом ход вялости")
 	if bool(sp.get("flying", false)):
-		parts.append("полёт: враги без дальних атак не достают")
+		parts.append("полёт: враги без дальних атак не достают, пока герой не ударит вблизи")
+	if sp.has("guise"):
+		parts.append("чужой облик: скажите мастеру, кем выглядите")
 	if bool(sp.get("blink", false)):
 		parts.append("в конце хода к20 11+ — герой исчезает до своего хода")
 	if sp.has("speed_plus"):
@@ -418,26 +402,26 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 
 ## The bonus dice of the hero's effects for a roll of `kind` (attack, save, check): {"bonus", "note"}; the `once` ones
 ## are spent (and their concentration ends).
-static func hero_die(s: GameSession, data: Dictionary, kind: String) -> Dictionary:
-	var c := s.character
+static func die(s: GameSession, h: Dictionary, kind: String) -> Dictionary:
 	var total := 0
 	var notes: Array[String] = []
 	var parts: Array[Dictionary] = []  # for the roll's breakdown (v0.7.39.5)
-	for e: Dictionary in ConditionRules.effects(c).duplicate():
+	for e: Dictionary in ConditionRules.effects(h).duplicate():
 		if not e.has("die") or not (e.get("on", []) as Array).has(kind):
 			continue
 		var same := str(e.get("same_as", ""))  # v0.7.49: the temple's blessing is Bless — not twice
-		if not same.is_empty() and ConditionRules.effects(c).any(func(o: Dictionary) -> bool: return str(o.get("source", {}).get("id", "")) == same):
+		if not same.is_empty() and ConditionRules.effects(h).any(func(o: Dictionary) -> bool: return str(o.get("source", {}).get("id", "")) == same):
 			continue
-		var n := CombatRules.roll_dice(s.rng, str(e["die"]))
+		var n := CombatRules.roll_dice(s.rng, str(e["die"])) * (-1 if bool(e.get("minus", false)) else 1)
+		var name := str(e.get("source", {}).get("name", ""))
 		total += n
-		notes.append("+%d (%s)" % [n, e.get("source", {}).get("name", "")])
-		parts.append(RollParts.part("%s (%s)" % [e.get("source", {}).get("name", ""), str(e["die"]).replace("d", "к")], n))
+		notes.append("%s%d (%s)" % ["−" if n < 0 else "+", absi(n), name])
+		parts.append(RollParts.part("%s (%s)" % [name, str(e["die"]).replace("d", "к")], n))
 		if bool(e.get("once", false)):
-			ConditionRules.remove_effect(c, int(e.get("uid", 0)))
-			if str(c.get("concentration", "")) == str(e.get("source", {}).get("id", "")):
-				c["concentration"] = ""
-				c["concentration_ends"] = -1
+			ConditionRules.remove_effect(h, int(e.get("uid", 0)))
+			if str(h.get("concentration", "")) == str(e.get("source", {}).get("id", "")):
+				h["concentration"] = ""
+				h["concentration_ends"] = -1
 	return {"bonus": total, "note": " ".join(notes), "parts": parts}
 
 
@@ -488,49 +472,32 @@ static func curse_foes(s: GameSession, data: Dictionary, spell_id: String, slot:
 	lines.append("%s: %s — спасбросок %s против Сл %d %s" % [spell["name"], target["name"], CombatRules.ab_name(str(sp.get("save", "cha"))), dc,
 		"успех" if ok else "провал, %s" % text(data, sp)])
 	if not ok:
-		target["minus_die"] = {"die": str(sp["die"]), "spell": spell_id, "name": str(spell["name"])}
+		ConditionRules.add_effect(target, {"source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}, "die": str(sp["die"]), "on": ["attack", "save"], "minus": true})
 
 
-## The minus die of a cursed foe for its attack or save: the number to take away (0 — none) and the note.
-static func foe_die(s: GameSession, f: Dictionary) -> Dictionary:
-	if not f.has("minus_die"):
-		return {"minus": 0, "note": ""}
-	var n := CombatRules.roll_dice(s.rng, str(f["minus_die"]["die"]))
-	return {"minus": n, "note": " −%d (%s)" % [n, f["minus_die"]["name"]]}
-
-
-## The concentration on a foe spell ends: its dice go. Lines.
-static func end_on_foes(s: GameSession, spell_id: String) -> Array[String]:
+## The concentration ends: what the spell left on every fighter goes. Lines.
+static func end_on_fighters(s: GameSession, data: Dictionary, spell_id: String) -> Array[String]:
 	var lines: Array[String] = []
-	for id: String in CombatRules.enemies(s, false):
+	for id: String in CombatRules.enemies(s, false) + CombatRules.allies(s, false):
 		var f := CombatRules.fighter(s, id)
-		if f.has("minus_die") and str(f["minus_die"].get("spell", "")) == spell_id:
-			lines.append("%s: %s проходит" % [f["name"], data_name(f)])
-			f.erase("minus_die")
-		if str(f.get("reduced", "")) == spell_id:
-			f.erase("reduced")
-	for id: String in CombatRules.allies(s, false):  # v0.7.50.1: what it gave the allies
-		var f := CombatRules.fighter(s, id)
-		var boons: Dictionary = f.get("boons", {})
-		if not boons.has(spell_id):
-			continue
-		var gone: Dictionary = boons[spell_id]
-		f["ac"] = int(f["ac"]) - int(gone.get("ac", 0))
-		f["speed_fx"] = int(f.get("speed_fx", 0)) - int(gone.get("speed", 0))
-		for t: Variant in gone.get("resist", []):
-			(f["resist_fx"] as Array).erase(t)
-		if gone.has("cond"):
-			CombatRules._remove_condition(f, str(gone["cond"]))
-		if gone.has("haste"):
-			f["lethargy"] = true
-		boons.erase(spell_id)
-		if str(f.get("plus_die", {}).get("spell", "")) == spell_id:
-			f.erase("plus_die")
+		for e: Dictionary in _end_spell_on(f, spell_id):
+			if not str(e.get("condition", "")).is_empty():
+				lines.append("%s: %s проходит — концентрация прервана" % [f["name"], CombatRules.cond_name(data, str(e["condition"]))])
+			elif bool(e.get("minus", false)):
+				lines.append("%s: %s проходит" % [f["name"], e["source"]["name"]])
 	return lines
 
 
-static func data_name(f: Dictionary) -> String:
-	return str(f.get("minus_die", {}).get("name", "заклинание"))
+## What this spell left on the fighter goes; the statuses that went.
+static func _end_spell_on(f: Dictionary, spell_id: String) -> Array[Dictionary]:
+	var gone: Array[Dictionary] = []
+	for e: Dictionary in ConditionRules.effects(f).duplicate():
+		if str(e.get("source", {}).get("id", "")) == spell_id:
+			ConditionRules.remove_effect(f, int(e["uid"]))
+			gone.append(e)
+			if e.has("haste"):
+				f["lethargy"] = true
+	return gone
 
 
 # --- on the weapon (v0.7.13.4) -------------------------------------------------------------------------
@@ -797,7 +764,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 			lines.append("%s: %s — %d (огонь)" % [name, t["name"], dmg])
 			CombatRules._hurt_enemy(s, data, t, dmg, lines, str(sus["type"]))
 			if str(t.get("status")) == "active" and not CombatRules._monster_save(s, data, t, "con", int(c.get("spell_dc", 10)), ["magic"]):
-				t["mocked"] = true  # the burning metal: disadvantage on its next attack
+				CombatRules._hold(t, "mocked")  # the burning metal: disadvantage on its next attack
 				lines.append("%s едва держит раскалённое — атака с помехой" % t["name"])
 		"strike":
 			for fid: String in CombatRules.enemies(s):
@@ -848,7 +815,7 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 		lines.append("%s: %s — спасбросок %s успех" % [z["name"], f["name"], CombatRules.ab_name(str(z["save"]))])
 		return lines
 	if z.has("cond") and not CombatRules._has(f, str(z["cond"])):
-		CombatRules._add_condition(f, str(z["cond"]), {})
+		CombatRules._add_condition(s, f, str(z["cond"]), {})
 		lines.append("%s: %s — %s" % [z["name"], f["name"], CombatRules.cond_name(data, str(z["cond"]))])
 	if bool(z.get("retch", false)):
 		f["retching"] = true
@@ -927,46 +894,17 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 			f["status"] = "truce"
 			lines.append("%s опускает оружие — %s" % [f["name"], name])
 			continue
-		f[flag] = {"spell": spell_id, "name": name, "repeat": str(cu.get("repeat", "")), "dc": dc}
+		var e := {"condition": flag, "source": {"kind": "spell", "id": spell_id, "name": name}}
+		if not str(cu.get("repeat", "")).is_empty():
+			e["save"] = {"ability": str(cu["repeat"]), "dc": dc, "repeat": true}
 		if flag == "slowed_spell":
-			f["ac"] = int(f["ac"]) - 2
+			e["ac"] = -2
+		ConditionRules.add_effect(f, e)
 		lines.append("%s: %s" % [f["name"], FLAG_TEXT.get(flag, name)])
 
 
 const FLAG_TEXT := {"outlined": "светится — атаки по нему с преимуществом", "enfeebled": "ослаблен — оружием вполсилы",
 	"cursed_dis": "проклят — бьёт героя с помехой", "slowed_spell": "замедлен: КД −2, вдвое медленнее, одна атака, без реакций"}
-const FLAGS := ["outlined", "enfeebled", "cursed_dis", "slowed_spell"]
-
-
-static func _drop_flag(f: Dictionary, flag: String) -> void:
-	if flag == "slowed_spell" and f.has(flag):
-		f["ac"] = int(f["ac"]) + 2
-	f.erase(flag)
-
-
-## The end of a foe's turn: a repeat save may shake a curse off. Lines.
-static func curse_saves(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
-	var lines: Array[String] = []
-	for flag: String in FLAGS:
-		if not f.has(flag) or str(f[flag].get("repeat", "")).is_empty() or str(f.get("status")) != "active":
-			continue
-		if CombatRules._monster_save(s, data, f, str(f[flag]["repeat"]), int(f[flag]["dc"]), ["magic"]):
-			lines.append("%s стряхивает «%s»" % [f["name"], f[flag]["name"]])
-			_drop_flag(f, flag)
-	return lines
-
-
-## The concentration ends: the curses of the spell go. Lines.
-static func end_curses(s: GameSession, spell_id: String) -> Array[String]:
-	var lines: Array[String] = []
-	for id: String in CombatRules.enemies(s, false):
-		var f := CombatRules.fighter(s, id)
-		for flag: String in FLAGS:
-			if f.has(flag) and str(f[flag].get("spell", "")) == spell_id:
-				lines.append("%s: «%s» проходит" % [f["name"], f[flag]["name"]])
-				_drop_flag(f, flag)
-	return lines
-
 
 ## A foe and the zones: `when` — start (of its turn), enter (a column it moves into; once a turn a zone), end. Lines.
 static func zone_tick(s: GameSession, data: Dictionary, f: Dictionary, when: String) -> Array[String]:
@@ -1132,50 +1070,47 @@ static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc: Di
 		"устоял" if saved else "поддался"]}
 
 
-## The hero's spells on an NPC (v0.7.22.3, the author's request: Charm Person must end): [{spell, name, until, conc}].
+## The hero's charms on an NPC (v0.7.22.3, the author's request: Charm Person must end).
 static func npc_spells(s: GameSession, npc_id: String) -> Array:
-	return Being.view(s, npc_id).get("spells", [])
+	return (Being.view(s, npc_id).get("effects", []) as Array).filter(func(e: Dictionary) -> bool: return e.has("charm"))
 
 
 ## A spell that held on the NPC (npc_save ok): it stays for its `minutes`.
 static func charm_npc(s: GameSession, data: Dictionary, spell_id: String, npc_id: String) -> void:
-	var sp := spec(data, spell_id)
-	var list: Array = (Being.view(s, npc_id).get("spells", []) as Array).filter(func(e: Dictionary) -> bool: return str(e["spell"]) != spell_id)
-	list.append({"spell": spell_id, "name": str(data["spells"][spell_id]["name"]), "until": TimeRules.abs_minute(s) + int(sp.get("minutes", 60)),
-		"conc": bool(data["spells"][spell_id].get("concentration", false))})
-	Being.of(s, npc_id)["spells"] = list
+	var b := Being.of(s, npc_id)
+	_end_spell_on(b, spell_id)
+	ConditionRules.add_effect(b, {"source": {"kind": "spell", "id": spell_id, "name": str(data["spells"][spell_id]["name"])}, "charm": true,
+		"conc": bool(data["spells"][spell_id].get("concentration", false)),
+		"ends": {"at": ConditionRules.now(s) + int(spec(data, spell_id).get("minutes", 60)) * ConditionRules.ROUNDS_PER_MINUTE}})
 
 
-## The hero's spells on NPCs whose time is up or whose concentration is gone end; the NPC knows it was charmed
-## (`aftermath` attitude). Called as time passes. Lines.
+## The hero's charms on NPCs whose time is up or whose concentration is gone end; the NPC knows it was charmed
+## (`aftermath` attitude). Runs before the statuses' own time out: called as time passes. Lines.
 static func npc_expire(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
-	var now := TimeRules.abs_minute(s)
-	for npc_id: String in Being.with(s, "spells"):
-		var keep: Array = []
-		for e: Dictionary in Being.of(s, npc_id)["spells"]:
-			var held := not bool(e.get("conc", false)) or str(s.character.get("concentration", "")) == str(e["spell"])
-			if now < int(e["until"]) and held and not Being.dead(s, npc_id):
-				keep.append(e)
+	var now := ConditionRules.now(s)
+	for npc_id: String in Being.with(s, "effects"):
+		for e: Dictionary in npc_spells(s, npc_id):
+			var spell_id := str(e["source"]["id"])
+			var held := not bool(e.get("conc", false)) or str(s.character.get("concentration", "")) == spell_id
+			if now < int(e["ends"]["at"]) and held and not Being.dead(s, npc_id):
 				continue
+			ConditionRules.remove_effect(Being.of(s, npc_id), int(e["uid"]))
 			var who := str(data["world"]["npcs"].get(npc_id, {}).get("name", npc_id))
-			var after := int(spec(data, str(e["spell"])).get("aftermath", 0))
-			lines.append("«%s» спадает с %s%s" % [e["name"], who, " — понимает, что был(а) очарован(а)" if after != 0 else ""])
+			var after := int(spec(data, spell_id).get("aftermath", 0))
+			lines.append("«%s» спадает с %s%s" % [e["source"]["name"], who, " — понимает, что был(а) очарован(а)" if after != 0 else ""])
 			if after != 0:
 				s.shift_attitude(npc_id, after, data)
-				s.remember(npc_id, "понял(а), что герой очаровал(а) его/её заклинанием «%s»" % e["name"])
-		if keep.is_empty():
-			Being.drop(s, npc_id, "spells")
-		else:
-			Being.of(s, npc_id)["spells"] = keep
+				s.remember(npc_id, "понял(а), что герой очаровал(а) его/её заклинанием «%s»" % e["source"]["name"])
+		ConditionRules.tidy(Being.of(s, npc_id))
 	return lines
 
 
 ## For the snapshot: «Очарование личности — до 10:35».
 static func npc_spell_text(s: GameSession, npc_id: String) -> String:
 	return ", ".join(npc_spells(s, npc_id).map(func(e: Dictionary) -> String:
-		var m := int(e["until"]) % 1440
-		return "%s — до %02d:%02d" % [e["name"], m / 60, m % 60]))
+		var m := (int(e["ends"]["at"]) / ConditionRules.ROUNDS_PER_MINUTE) % 1440
+		return "%s — до %02d:%02d" % [e["source"]["name"], m / 60, m % 60]))
 
 
 # --- the world (v0.7.13.8) -----------------------------------------------------------------------------

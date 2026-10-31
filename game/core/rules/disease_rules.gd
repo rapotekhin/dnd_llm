@@ -185,7 +185,7 @@ static func cure(s: GameSession, data: Dictionary, power: String) -> Array[Strin
 	return lines
 
 
-## Magic without the session (Lay on Hands from FeatureUses): every disease goes. Whether there was one.
+## Magic without the session (Lay on Hands from Stock): every disease goes. Whether there was one.
 static func cure_all(c: Dictionary) -> bool:
 	var had := not active(c).is_empty() or not incubating(c).is_empty()
 	for id: String in active(c):

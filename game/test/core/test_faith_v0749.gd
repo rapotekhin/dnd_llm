@@ -73,13 +73,13 @@ func test_service_donation_and_the_blessing_until_the_long_rest() -> void:
 	var e: Dictionary = ConditionRules.effects(s.character).filter(func(x: Dictionary) -> bool: return str(x["source"]["id"]) == FaithRules.BLESS_ID)[0]
 	assert_str(str(e["die"])).is_equal("1d4")
 	assert_str(str(e["ends"]["rest"])).is_equal("long")
-	var d := SpellEffects.hero_die(s, data, "save")
+	var d := SpellEffects.die(s, s.character, "save")
 	assert_int(int(d["bonus"])).is_between(1, 4)
 	assert_str(str(d["parts"][0]["label"])).contains("Благословение храма")
 	SpellEffects.apply_self(s, data, "bless")  # the spell on top: one d4, not two
 	var dice := 0
 	for i in 20:
-		dice = maxi(dice, int(SpellEffects.hero_die(s, data, "attack")["bonus"]))
+		dice = maxi(dice, int(SpellEffects.die(s, s.character, "attack")["bonus"]))
 	assert_int(dice).is_less_equal(4)
 	ConditionRules.clear_on_rest(s.character, "long")
 	assert_bool(ConditionRules.effects(s.character).any(func(x: Dictionary) -> bool: return str(x["source"]["id"]) == FaithRules.BLESS_ID)).is_false()

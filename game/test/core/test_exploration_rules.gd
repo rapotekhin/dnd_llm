@@ -89,12 +89,12 @@ func test_long_rest_only_in_safe_rooms_and_for_the_price() -> void:
 func test_long_rest_restores_and_clears_locks() -> void:
 	ExplorationRules.enter_room(s, world, "brod-tavern-upstairs")
 	s.character["hp"] = 3
-	s.character["slots_used"] = [1, 0, 0, 0, 0]
+	Stock.spend(s.character, "slot_1", 1)
 	ExplorationRules.lock(s, {"skill": "perception", "dc_tier": "hard"}, s.room_id, _fail_result())
 	var gold := int(s.character["gold_cp"])
 	var lines := ExplorationRules.long_rest(s, data)
 	assert_int(s.character["hp"]).is_equal(int(s.character["max_hp"]))
-	assert_array(s.character["slots_used"]).is_equal([0, 0, 0, 0, 0])
+	assert_int(s.character.get("spent", {}).size()).is_equal(0)
 	assert_dict(s.locks).is_empty()
 	assert_int(s.character["gold_cp"]).is_equal(gold - 50)
 	assert_int(s.day).is_equal(2)

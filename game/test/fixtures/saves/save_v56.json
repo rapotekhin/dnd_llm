@@ -10,7 +10,7 @@
 		"turns": 2,
 		"world_id": "frontier"
 	},
-	"save_version": 55,
+	"save_version": 56,
 	"saved_at": "2026-10-18T12:00:00",
 	"session": {
 		"beings": {},
@@ -76,7 +76,6 @@
 			],
 			"gender": "female",
 			"gold_cp": 1000,
-			"hit_dice_used": 0,
 			"hp": 12,
 			"inventory": {
 				"backpack": 1,
@@ -111,7 +110,7 @@
 			"prof_bonus": 2,
 			"race": "human",
 			"race_name": "Человек",
-			"resources_used": {},
+			"spent": {},
 			"save_profs": [
 				"str",
 				"con"
@@ -151,13 +150,6 @@
 				"survival": 3
 			},
 			"slots_max": [
-				0,
-				0,
-				0,
-				0,
-				0
-			],
-			"slots_used": [
 				0,
 				0,
 				0,

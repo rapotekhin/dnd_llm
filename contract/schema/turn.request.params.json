@@ -150,6 +150,11 @@
           "title": "Gold Cp",
           "type": "integer"
         },
+        "guise": {
+          "default": "",
+          "title": "Guise",
+          "type": "string"
+        },
         "hp": {
           "title": "Hp",
           "type": "integer"
@@ -177,6 +182,11 @@
           "default": 1,
           "title": "Level",
           "type": "integer"
+        },
+        "made": {
+          "default": "",
+          "title": "Made",
+          "type": "string"
         },
         "max_hp": {
           "title": "Max Hp",

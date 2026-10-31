@@ -141,7 +141,20 @@ func _reject(reason: String) -> Dictionary:
 	return {"accepted": false, "reason": reason}
 
 
-func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+## `new:<key>` of this turn's `make` stands for its id wherever a thing is named (v0.7.63).
+func _made_ids(e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var out := e.duplicate()
+	for k: String in ["condition", "teach_id", "item_id", "reward_item_id"]:
+		if out.get(k) is String:
+			out[k] = MakeRules.resolve(pending, out[k])
+	return out
+
+
+func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	var e := _made_ids(raw, pending)
+	for k: String in ["condition", "teach_id", "item_id", "reward_item_id"]:
+		if str(e.get(k, "")).begins_with("new:") and (k in ["condition", "teach_id"] or str(e[k]).begins_with("new:book:")):
+			return {"reason": "%s: этого ещё не собрали — сначала эффект make с таким key в этом же ходе" % e[k]}
 	var rules: Dictionary = data["rules"]
 	var items: Dictionary = data["items"]
 	var world := WorldView.new(data["world"])
@@ -296,6 +309,10 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				"summary": "Заклинание: " + SpellRules.describe(data, chk["spell_id"], chk["slot"]) + (" — на себя" if on_self else "")}
 		"condition":
 			return _plan_condition(s, data, turn_id, e, pending)
+		"make":  # v0.7.63: a status, a skill or a trait of parts, priced by the engine
+			return MakeRules.plan(s, data, e)
+		"guise":  # v0.7.63: the look a spell laid, a faction's face
+			return Guise.plan(s, data, e, pending)
 		"disease":
 			return _plan_disease(s, data, e, pending)
 		"recipe":  # v0.7.24: the master's recipe, learned by the hero
@@ -396,17 +413,17 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pen
 				return {"reason": lender["reason"]}
 			return lender
 		"use_feature":
-			var rid := FeatureUses.resolve(c, data, str(e.get("feature", "")))
+			var rid := Stock.resolve(c, data, str(e.get("feature", "")))
 			var amount := int(e.get("amount", 1))
 			var spent := 0
 			for p: Dictionary in pending:
 				if p["kind"] == "use_feature" and p["plan"]["id"] == rid:
 					spent += int(p["plan"]["amount"])
-			var why := FeatureUses.can_use(c, data, rid, amount, spent)
+			var why := Stock.can_use(c, data, rid, amount, spent)
 			if not why.is_empty():
 				return {"reason": why}
-			var heals: bool = not (FeatureUses.table(data)[rid].get("on_use", {}) as Dictionary).is_empty()
-			return {"plan": {"id": rid, "amount": amount}, "summary": "Умение: %s%s" % [FeatureUses.display_name(c, data, rid),
+			var heals: bool = not (Stock.table(data)[rid].get("on_use", {}) as Dictionary).is_empty()
+			return {"plan": {"id": rid, "amount": amount}, "summary": "Умение: %s%s" % [Stock.display_name(c, data, rid),
 				" (лечение движок посчитает сам, heal не нужен)" if heals else ""]}
 		"use_item":
 			var iid := str(e.get("item_id", ""))
@@ -547,12 +564,15 @@ func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 	var rules: Dictionary = data["rules"]
 	var c := s.character
 	var cond := str(e.get("condition", ""))
+	var made := MakeRules.def_of(data, cond)
 	if e.get("target_id") != null and not str(e.get("target_id", "")).is_empty():
 		return {"reason": "вне боя target_id не нужен: состояние ложится на героя; что случилось с NPC — опиши словами"}
 	if not ConditionRules.known(data, cond):
 		return {"reason": "неизвестное состояние %s; есть: %s" % [cond, ", ".join((rules["conditions"] as Dictionary).keys())]}
 	var title := ConditionRules.name_of(data, cond)
 	if not bool(e.get("on", true)):
+		if MakeRules.is_trait(data, cond):
+			return {"reason": "черта остаётся с героем: её не снять словами"}
 		if cond == "exhaustion" and ConditionRules.exhaustion(c) <= 0 or cond != "exhaustion" and not ConditionRules.has(c, cond):
 			return {"reason": "у персонажа нет состояния %s" % cond}
 		return {"plan": {"condition": cond, "on": false}, "summary": "Снято: %s" % title}
@@ -576,9 +596,9 @@ func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 		return {"reason": "неизвестный тег %s; есть: %s" % [tag, ", ".join(rules["hero_effects"]["save_tags"])]}
 	var by_player := str(e.get("cause", "")) == "player"
 	if sv == null or not (sv is Dictionary):
-		if not by_player:
+		if not by_player and (made.is_empty() or bool(made.get("harm", false))):
 			return {"reason": "состояние на героя — со спасброском (save {ability, dc_tier} и tag); без него — только если герой сам навлёк его своими словами в этом ходе (cause: player)"}
-		if not player_turns.has(turn_id):
+		if by_player and not player_turns.has(turn_id):
 			return {"reason": "cause: player — только в ход, где игрок сам что-то сделал; здесь нужен спасбросок"}
 	var source := {"kind": "master", "name": reason}
 	var plan := {"condition": cond, "on": true, "ends": ConditionRules.ends_for(s, data, duration), "duration": duration, "source": source}
@@ -596,7 +616,7 @@ func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 		var tier := str((sv as Dictionary).get("dc_tier", ""))
 		if not (rules["saves"] as Array).has(ab) or not (rules["dc_tiers"] as Dictionary).has(tier):
 			return {"reason": "спасбросок: ability одна из %s, dc_tier один из %s" % [", ".join(rules["saves"]), ", ".join((rules["dc_tiers"] as Dictionary).keys())]}
-		var dc := int(rules["dc_tiers"][tier])
+		var dc := maxi(int(rules["dc_tiers"][tier]), int(made.get("dc", 0)))  # the parts' price: no easier than it does
 		var r := HeroDefense.save(s, data, ab, dc, tag)
 		if bool(r["ok"]):
 			return {"plan": {"condition": cond, "on": true, "resisted": true}, "summary": "%s: устоял — спасбросок %s" % [title, r["text"]]}
@@ -889,7 +909,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		elif bool(plan.get("on", true)):
 			CombatRules._hold(f, str(plan["condition"]))
 		else:
-			(f["conditions"] as Array).erase(str(plan["condition"]))
+			ConditionRules.remove(f, str(plan["condition"]))
 		return
 	if plan.has("victim"):  # crime_known (v0.7.14)
 		_extra_lines.append_array(CrimeRules.reveal(s, _data, str(plan["victim"])))
@@ -1037,6 +1057,10 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 			_extra_lines.append_array(WorldItemRules.apply(s, _data, plan))
 		"course":
 			_extra_lines.append_array(StudyRules.apply_make(s, _data, plan))
+		"make":
+			_extra_lines.append_array(MakeRules.apply(s, _data, plan))
+		"guise":
+			_extra_lines.append_array(Guise.apply(s, _data, plan))
 		"supplier":
 			_extra_lines.append_array(ShopRules.apply_make(s, _data, plan))
 		"fence":
@@ -1074,7 +1098,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"bank":
 			_extra_lines.append_array(BankRules.apply_make(s, _data, plan, str(_made.get("npc", ""))))
 		"use_feature":
-			FeatureUses.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
+			Stock.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
 		"use_item":
 			ItemRules.use(c, _data, s.items, plan["item_id"], s.rng, s)
 		"advance_time":  # the patrol looks in on the way, as at «Ждать» (v0.7.22.18)

@@ -249,7 +249,7 @@ static func camp(s: GameSession, data: Dictionary) -> Array[String]:
 			if not bool(r["ok"]):
 				var c := s.character
 				c["hp"] = maxi(1, mini(int(c["hp"]), int(c["max_hp"]) / 2))
-				c["hit_dice_used"] = mini(int(c.get("level", 1)), int(c.get("hit_dice_used", 0)) + maxi(1, int(c.get("level", 1)) / 2))
+				Stock.spend(c, "hit_dice", mini(ExplorationRules.hit_dice_left(c), maxi(1, int(c.get("level", 1)) / 2)))
 				lines.append("сон урывками в сырости: HP %d/%d, кости хитов не вернулись" % [c["hp"], c["max_hp"]])
 	lines.append_array(_exposure(s, data, k, camp_fire(s, data), "ночь"))
 	return lines

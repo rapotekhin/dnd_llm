@@ -118,13 +118,13 @@ func _pick(_data: Dictionary, ids: Array, ok: Callable) -> String:
 
 func _used(c: Dictionary) -> int:
 	var n := 0
-	for x: Variant in c.get("slots_used", []):
+	for x: Variant in range(1, 6).map(func(n: int) -> int: return Stock.spent(c, "slot_%d" % n)):
 		n += int(x)
 	return n
 
 
 func _rest(c: Dictionary) -> void:
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 
 
 ## The engine lines in the chat since `from`.

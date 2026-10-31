@@ -141,6 +141,8 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "calendar": ("дата и праздники: когда ярмарка, праздник идёт, срок к празднику; свой праздник по причине (`festival`)", ("festival",)),
     "weather": ("погода: ливень, туман, снег, зной, мороз и что они значат; чары или чудо меняют погоду на часы (`weather`)", ("weather",)),
     "faith": ("вера: боги, святилища, молитва, обет, заповедь, осквернение; обет по словам героя (`vow`), новое святилище (`god`)", ("vow", "god")),
+    "guise": ("чужой облик: маскировка, кем выглядит герой, за кого его принимают", ("guise",)),
+    "make": ("нового нет в данных и в 5e: мастер собирает статус, навык или черту из частей (`make`): проклятие, благословение места, редкое умение наставника", ("make",)),
     "factions": ("фракции: новая фракция, чьи это люди и стража, отношение за поступок (`faction`)", ("faction",)),
     "rumors": ("слухи: что говорят в округе, пересказ слуха NPC, слух о герое или пущенный героем, ложь и её опровержение (`rumor`)", ("rumor",)),
     "pets": ("питомец героя и приручение: дикий зверь в сцене, имя, близость (`bond` с creature_id), помощь, разведка; бездомный зверь по причине (`beast`)", ("beast",)),
@@ -171,6 +173,10 @@ BOUT_WORDS = re.compile(r"поедин|дуэл|вызыва|вызов|сраз
                         re.IGNORECASE)  # v0.7.45
 WILDS_WORDS = re.compile(r"охот|рыб|удочк|удить|сеть|сети|дич|зверь|звер[яюи]|олен|выслеж|капкан|силк|кабан|заяц|зайц|улов|клюёт|клюет|браконь",
                          re.IGNORECASE)  # v0.7.41
+
+
+MAKE_WORDS = re.compile(r"проклят|проклин|порч|сглаз|морок|благослов|заговор[её]н|зачарован|научи|обучи|выучи|наставник",
+                        re.IGNORECASE)  # v0.7.63: what the data has not, built of parts
 
 
 # Containers and new places come whole only when the player's words touch them (v0.7.34.3): a chest stood in 23 of 31
@@ -205,8 +211,10 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("places")
     if snap.crimes:
         out.append("crime")
-    if character and any("невидим" in c for c in character.conditions):
+    if character and "invisible" in character.conditions:  # the engine sends the condition's id (v0.7.63)
         out.append("invisible")
+    if character and character.guise:  # v0.7.63: a look to name or to play
+        out.append("guise")
     if scene and any(not n.understands_hero for n in scene.npcs):
         out.append("languages")
     if scene and any(n.tie for n in scene.npcs):
@@ -223,6 +231,8 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("weather")
     if scene and mentions(said, RUMOR_WORDS):  # v0.7.47: what they say, a rumour told or spread
         out.append("rumors")
+    if scene and mentions(said, MAKE_WORDS):  # v0.7.63: a curse, a blessing, a rare skill by words
+        out.append("make")
     if scene and mentions(said, FAITH_WORDS):  # v0.7.49: a prayer, a vow, a shrine by words
         out.append("faith")
     if scene and any("приручить" in c or "питомец героя" in c for c in scene.creatures):  # v0.7.43: a beast to tame or a pet here

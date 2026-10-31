@@ -459,8 +459,8 @@
 		"misses_max": 2,
 		"readmit_days": 14,
 		"exam": {"retry_days": 3, "stipend_margin": 5},
-		"kinds": {"skill": "навык", "tool": "инструмент", "language": "язык", "spell": "заклинание", "recipe": "рецепт", "xp": "опыт", "dev": "мирное развитие"},
-		"make": {"kinds": ["skill", "tool", "language", "spell", "recipe"], "lessons": [2, 10], "dc_tiers": ["easy", "medium", "hard"], "fee_cp_lesson": [0, 500]},
+		"kinds": {"skill": "навык", "tool": "инструмент", "language": "язык", "spell": "заклинание", "recipe": "рецепт", "trait": "черта", "xp": "опыт", "dev": "мирное развитие"},
+		"make": {"kinds": ["skill", "tool", "language", "spell", "recipe", "trait"], "lessons": [2, 10], "dc_tiers": ["easy", "medium", "hard"], "fee_cp_lesson": [0, 500]},
 		"teachers": {
 			"_doc": "Teachers (v0.7.39.7, TeachRules): who in the world may teach what. An NPC teaches by its own `teaches` {spells: {classes, max}, tools, skills, languages ([] or \"own\" — the ones it speaks), recipe_max_cp} merged with its SRD template (`templates`: the spell lists it teaches; the circle — the template's slots) and its trade kind (`trades`). Spells are taught only by such a teacher, up to its circle; a spell course costs `spell_fee_cp_lesson` × circle a lesson and lasts at least `spell_lessons_per_circle` × circle lessons; from circle `attitude_from_circle` the teacher asks attitude `attitude_min`. A recipe — by a teacher of its tool, its output worth at most `recipe_max_cp`. `find_max` — how many teachers the master's search answers, the nearest first.",
 			"templates": {"mage": ["wizard", "sorcerer"], "archmage": ["wizard", "sorcerer"], "priest": ["cleric"], "acolyte": ["cleric"], "cult_fanatic": ["cleric"], "druid": ["druid"]},
@@ -2123,8 +2123,149 @@
 			"8": 3900
 		}
 	},
+	"guise": {
+		"_doc": "A look that is not one's own (v0.7.63, Guise): a status with the part `guise`. The master names the look by the effect `guise`; with a faction its people take the hero for one of their own and its `foes` for an enemy, each viewer tested once by Investigation against the look's DC. no_kinds — factions no such look can pass for.",
+		"no_kinds": ["beasts", "undead"]
+	},
+	"make": {
+		"_doc": "v0.7.63, the language of parts (MakeRules): what the master may build a status or a trait of. A part: cost — points (a number: per `step` of `amount`), values — its `value`, of — what its `value` names (skill, ability, damage), number [min, max] of `amount`, harm — which value hurts (a number hurts below 0). Tiers: the sum of points gives the first tier that holds it: its name, the hero's level, the DC. A trait costs trait_mult times its parts. book — a book a made skill or trait is learned from.",
+		"parts": {
+			"attack": {
+				"cost": 3,
+				"values": [
+					"advantage",
+					"disadvantage"
+				],
+				"harm": "disadvantage",
+				"text": "свои броски атаки"
+			},
+			"attacked": {
+				"cost": 3,
+				"values": [
+					"advantage",
+					"disadvantage"
+				],
+				"harm": "advantage",
+				"text": "броски атаки по нему"
+			},
+			"checks": {
+				"cost": 2,
+				"values": [
+					"disadvantage"
+				],
+				"harm": true,
+				"text": "все проверки"
+			},
+			"skill_dis": {
+				"cost": 1,
+				"of": "skill",
+				"harm": true,
+				"text": "помеха на проверки навыка"
+			},
+			"save_dis": {
+				"cost": 1,
+				"of": "ability",
+				"harm": true,
+				"text": "помеха на спасбросок"
+			},
+			"save_adv": {
+				"cost": 2,
+				"of": "ability",
+				"harm": false,
+				"text": "преимущество на спасбросок"
+			},
+			"skill_bonus": {
+				"cost": 1,
+				"of": "skill",
+				"number": [
+					-5,
+					5
+				],
+				"text": "число к навыку"
+			},
+			"ac": {
+				"cost": 2,
+				"number": [
+					-3,
+					3
+				],
+				"text": "КД"
+			},
+			"speed": {
+				"cost": 1,
+				"number": [
+					-20,
+					20
+				],
+				"step": 10,
+				"text": "скорость, футы"
+			},
+			"resist": {
+				"cost": 3,
+				"of": "damage",
+				"harm": false,
+				"text": "сопротивление урону"
+			},
+			"no_move": {
+				"cost": 4,
+				"harm": true,
+				"text": "скорость 0"
+			},
+			"die": {
+				"cost": 2,
+				"values": [
+					"attack",
+					"save",
+					"check"
+				],
+				"number": [
+					-1,
+					1
+				],
+				"text": "к4 к броску, -1 — вычитается"
+			},
+			"guise": {
+				"cost": 2,
+				"harm": false,
+				"text": "облик: value — как выглядит; стражу и свидетелей проверяет движок"
+			}
+		},
+		"tiers": [
+			{
+				"points": 3,
+				"name": "слабое",
+				"level": 1,
+				"dc": "easy"
+			},
+			{
+				"points": 6,
+				"name": "среднее",
+				"level": 3,
+				"dc": "medium"
+			},
+			{
+				"points": 10,
+				"name": "сильное",
+				"level": 5,
+				"dc": "hard"
+			},
+			{
+				"points": 15,
+				"name": "могучее",
+				"level": 9,
+				"dc": "very_hard"
+			}
+		],
+		"trait_mult": 2,
+		"book": {
+			"value_cp": 2500,
+			"lessons": 4,
+			"skill": "history",
+			"dc": "medium"
+		}
+	},
 	"resources": {
-		"_doc": "Feature uses (v0.6.0): who has them (features), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent). combat_cost: what a use costs in a fight (action by default, bonus, free).",
+		"_doc": "Feature uses (v0.6.0): who has them (features), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent). combat_cost: what a use costs in a fight (action by default, bonus, free). v0.7.63: this is the one stock of what a character spends and gets back; without `features` a row is everybody's and is no feature: spell slots (max.slots — a circle of slots_max; short_with may be a list) and hit dice (back half_level — a long rest returns half the level, at least 1). Spent is `spent` {id: n} on the character.",
 		"second_wind": {
 			"features": [
 				"second_wind"
@@ -2274,14 +2415,68 @@
 				"recover_slots": "half_level"
 			},
 			"combat_cost": "never"
+		},
+		"slot_1": {
+			"max": {
+				"slots": 1
+			},
+			"recharge": "long",
+			"short_with": [
+				"pact_magic"
+			],
+			"combat_cost": "never"
+		},
+		"slot_2": {
+			"max": {
+				"slots": 2
+			},
+			"recharge": "long",
+			"short_with": [
+				"pact_magic"
+			],
+			"combat_cost": "never"
+		},
+		"slot_3": {
+			"max": {
+				"slots": 3
+			},
+			"recharge": "long",
+			"short_with": [
+				"pact_magic"
+			],
+			"combat_cost": "never"
+		},
+		"slot_4": {
+			"max": {
+				"slots": 4
+			},
+			"recharge": "long",
+			"short_with": [
+				"pact_magic"
+			],
+			"combat_cost": "never"
+		},
+		"slot_5": {
+			"max": {
+				"slots": 5
+			},
+			"recharge": "long",
+			"short_with": [
+				"pact_magic"
+			],
+			"combat_cost": "never"
+		},
+		"hit_dice": {
+			"max": {
+				"per_level": 1
+			},
+			"recharge": "long",
+			"back": "half_level",
+			"combat_cost": "never"
 		}
 	},
 	"rest": {
-		"short_rests_per_day": 2,
-		"short_rest_slot_features": [
-			"pact_magic"
-		],
-		"_doc": "short_rest_slot_features: who gets spell slots back on a short rest (warlock's Pact Magic)."
+		"short_rests_per_day": 2
 	},
 	"consumables": {
 		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions]. Thrown in a fight (v0.7.12, the «Предметы» tab, PHB): `throw` — a ranged attack (improvised: no proficiency; range ft) and on a hit `damage` [dice, type] (only to `types` when given), `burning` dice at the start of the foe's turn until a DEX save DC 10 puts it out, `oiled` — the next fire damage to the foe +N, `condition` with an escape (a STR save each turn, `escape_dc`) on foes up to `max_size`. A catalog item may carry its own `use` (potions, the ointment, scrolls, wands).",
@@ -2321,12 +2516,16 @@
 		"herbal_remedy": {"cure": ["disease"], "power": "herbs"}
 	},
 	"condition_effects": {
-		"_doc": "What a condition does to engine checks (SRD; v0.7.8): checks | skills {id} | saves {ability} | senses {sight, hearing}: disadvantage | auto_fail. A sense comes with the master's check (a check that needs sight or hearing). Incapacitated and stunned heroes still make checks: the master decides whether they can try.",
+		"_doc": "What a status does (SRD; v0.7.8, v0.7.63), one table for the hero, a fighter and any record. To checks: checks | skills {id} | saves {ability} | senses {sight, hearing}: disadvantage | auto_fail; a sense comes with the master's check. To attacks: attack — its own attack rolls, attacked — rolls against it, attacked_near / attacked_far — by the distance: advantage | disadvantage; attack_why, attacked_why — the words of the hint; crit_near — a hit from next to it is critical. no_move — speed 0; no_threat — it does not spoil a shot next to it; resist_all — half of every damage. Who cannot act — ConditionRules.INCAPACITATING. A status the master built has the same keys in its own `mods`. A status the spells of the engine lay has its own `name` here: it is not one of the 5e conditions the master picks from.",
 		"poisoned": {
-			"checks": "disadvantage"
+			"checks": "disadvantage",
+			"attack": "disadvantage",
+			"attack_why": "вы отравлены"
 		},
 		"frightened": {
-			"checks": "disadvantage"
+			"checks": "disadvantage",
+			"attack": "disadvantage",
+			"attack_why": "вы испуганы"
 		},
 		"blinded": {
 			"skills": {
@@ -2335,7 +2534,11 @@
 			},
 			"senses": {
 				"sight": "auto_fail"
-			}
+			},
+			"attack": "disadvantage",
+			"attack_why": "вы ослеплены",
+			"attacked": "advantage",
+			"attacked_why": "цель ослеплена"
 		},
 		"deafened": {
 			"senses": {
@@ -2345,34 +2548,105 @@
 		"restrained": {
 			"saves": {
 				"dex": "disadvantage"
-			}
+			},
+			"attack": "disadvantage",
+			"attack_why": "вы опутаны",
+			"no_move": true,
+			"attacked": "advantage",
+			"attacked_why": "цель беспомощна",
+			"no_threat": true
 		},
 		"paralyzed": {
 			"checks": "auto_fail",
 			"saves": {
 				"str": "auto_fail",
 				"dex": "auto_fail"
-			}
+			},
+			"crit_near": true,
+			"no_move": true,
+			"attacked": "advantage",
+			"attacked_why": "цель беспомощна",
+			"no_threat": true
 		},
 		"stunned": {
 			"saves": {
 				"str": "auto_fail",
 				"dex": "auto_fail"
-			}
+			},
+			"attacked": "advantage",
+			"attacked_why": "цель беспомощна",
+			"no_threat": true
 		},
 		"petrified": {
 			"checks": "auto_fail",
 			"saves": {
 				"str": "auto_fail",
 				"dex": "auto_fail"
-			}
+			},
+			"no_move": true,
+			"resist_all": true,
+			"attacked": "advantage",
+			"attacked_why": "цель беспомощна",
+			"no_threat": true
 		},
 		"unconscious": {
 			"checks": "auto_fail",
 			"saves": {
 				"str": "auto_fail",
 				"dex": "auto_fail"
-			}
+			},
+			"crit_near": true,
+			"attacked": "advantage",
+			"attacked_why": "цель беспомощна",
+			"no_threat": true
+		},
+		"prone": {
+			"attack": "disadvantage",
+			"attack_why": "вы лежите",
+			"attacked_near": "advantage",
+			"attacked_far": "disadvantage",
+			"near_why": "цель лежит",
+			"far_why": "цель лежит, а вы далеко",
+			"no_threat": true
+		},
+		"grappled": {
+			"no_move": true
+		},
+		"exhaustion_3": {
+			"attack": "disadvantage",
+			"attack_why": "истощение"
+		},
+		"outlined": {
+			"name": "Светится",
+			"attacked": "advantage",
+			"attacked_why": "Огонь фей"
+		},
+		"enfeebled": {
+			"name": "Ослаблен"
+		},
+		"cursed_dis": {
+			"name": "Проклят"
+		},
+		"slowed_spell": {
+			"name": "Замедлен"
+		},
+		"guided": {
+			"name": "Подсвечен",
+			"attacked": "advantage",
+			"attacked_why": "Направляющий снаряд"
+		},
+		"mocked": {
+			"name": "Сбит с толку",
+			"attack": "disadvantage",
+			"attack_why": "насмешка"
+		},
+		"chilled": {
+			"name": "Скован могильным холодом"
+		},
+		"helped": {
+			"name": "Отвлечён",
+			"attacked": "advantage",
+			"attacked_why": "отвлекает союзник"
 		}
 	},
 	"feature_spells": {
@@ -3425,7 +3699,7 @@
 		}
 	},
 	"spell_effects": {
-		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves. Defenses (v0.7.13.2): ac_base (unarmored: base + DEX), ac_plus, ac_min; attackers_dis; images (Mirror Image: d20 6/8/11+ hits an image, AC 10 + DEX); sanctuary (a WIS save or no attack; ends when the hero attacks a foe); temp_dice (+temp_per_slot); max_hp_plus (+per_slot) with as much healing; resist / resist_auto (the most common damage type of the foes, fire by default), adv_tag, remove; foe_types_dis — those types attack with disadvantage; save_adv [abilities], death_adv, max_heal (healing rolls its maximum). Movement and form (v0.7.13.3): speed_x2 and haste (one more action: one weapon attack, Dash, Disengage, Dodge; a turn of lethargy when it ends), flying (foes without a ranged attack cannot reach the hero), blink (d20 11+ at the end of the hero's turn — gone until their next turn), speed_plus, bonus_dash, teleport (a column away from the nearest foe, no opportunity attacks), enlarged, darkvision, see_invisible, skill_bonus, ability_adv (best — the hero's highest ability). On the weapon (v0.7.13.4): shillelagh [bases] — the spellcasting ability, d8, magic; weapon_plus (plus_at_slot); weapon_extra [dice, type] on every hit; next_hit — the next hit's dice by the slot (next_dice); mark — +dice on hits at the marked foe (foe_target: cast at a foe; moved by a bonus action when it falls); blade — a melee spell attack with blade_dice by the slot. Sustained (v0.7.13.5): `sustained` — attack (a spell attack again each turn by `cost`; drain — half back as hit points), heat (the same foe takes the dice, CON save or disadvantage on its attacks), strike (a save in the target's column), zone (a column of the field: a save or damage when a foe starts its turn there, enters it or ends its turn there; `follow` — the hero's column; `move` — columns the button moves it; `ram` — the sphere strikes where it moves; `slow` — a foe in it moves half); `dice` — when the spell has no damage by slot (spike growth: 2d4 per 5 ft ≈ 6d4 per 30-ft column). Control (v0.7.13.6): zones — `now` (at once on who stands there), `cond` (a failed save lays it: Grease — prone), obscure (Fog Cloud, Darkness: attacks into or out of the column have disadvantage, inside both — even), silence (no spells with a verbal component inside), retch (Stinking Cloud: the turn is lost), block_ranged (Wind Wall: ranged weapon attacks through the column miss); push (Gust of Wind: a STR save or a column away, `reach` columns); `curse` — a flag on foes by a save (or a spell attack): outlined (Faerie Fire: advantage at it, no invisibility), enfeebled (half damage of its weapons), cursed_dis (its attacks at the hero with disadvantage), slowed_spell (AC −2, half the way, no reactions, one attack); `repeat` — a save at the end of its turn ends it. Reactions (v0.7.13.7, the window «Использовать?»): `reaction` hit (Shield: +5 AC until the hero's turn, the hit may miss), damage (Hellish Rebuke: the attacker takes the dice, DEX half), spell (Counterspell: a foe's spell of circle 3 or less fails, higher — a check DC 10 + circle); dispel (Dispel Magic: the target foe's spells on the hero end; calmed — Calm Emotions: the foe lowers its weapon); npc_save (out of a fight: the NPC's save by its monster template, `types` it works on; the master narrates the outcome; v0.7.22.3 — a spell that holds stays on the NPC for `minutes` (a concentration one — while the hero holds it): advantage on the hero's social checks against it; when it ends the NPC knows — `aftermath` attitude); lift_curse; make — items made (Goodberry, Create Food and Water). The world (v0.7.13.8): light — a light source while it lasts (darkness goes); reveal — trap (Find Traps: the room's traps are found) or magic (Detect Magic: caches with magic things are found, unknown things in the pack show their aura); knock — the room's closed things open, loudly.",
+		"_doc": "Spells that change numbers (v0.7.13, SpellEffects): on the hero — die (a bonus die to the rolls of `on`: attack, save, check; `once` — one roll), next_attack_adv, immune [conditions], temp_hp each turn (MOD — the spellcasting modifier); on foes (`foe`) — a save of up to `targets` foes (+1 per slot above), a failed one keeps the minus die on its attacks and saves. Defenses (v0.7.13.2): ac_base (unarmored: base + DEX), ac_plus, ac_min; attackers_dis; images (Mirror Image: d20 6/8/11+ hits an image, AC 10 + DEX); sanctuary (a WIS save or no attack; ends when the hero attacks a foe); temp_dice (+temp_per_slot); max_hp_plus (+per_slot) with as much healing; resist / resist_auto (the most common damage type of the foes, fire by default), adv_tag, remove; foe_types_dis — those types attack with disadvantage; save_adv [abilities], death_adv, max_heal (healing rolls its maximum). Movement and form (v0.7.13.3): speed_x2 and haste (one more action: one weapon attack, Dash, Disengage, Dodge; a turn of lethargy when it ends), flying (foes without a ranged attack cannot reach the hero until the hero strikes in melee; fly_speed — the hero's speed; fall — the dice when it ends in a fight, and prone), blink (d20 11+ at the end of the hero's turn — gone until their next turn), speed_plus, bonus_dash, teleport (a column away from the nearest foe, no opportunity attacks), enlarged, darkvision, see_invisible, skill_bonus, ability_adv (best — the hero's highest ability). On the weapon (v0.7.13.4): shillelagh [bases] — the spellcasting ability, d8, magic; weapon_plus (plus_at_slot); weapon_extra [dice, type] on every hit; next_hit — the next hit's dice by the slot (next_dice); mark — +dice on hits at the marked foe (foe_target: cast at a foe; moved by a bonus action when it falls); blade — a melee spell attack with blade_dice by the slot. Sustained (v0.7.13.5): `sustained` — attack (a spell attack again each turn by `cost`; drain — half back as hit points), heat (the same foe takes the dice, CON save or disadvantage on its attacks), strike (a save in the target's column), zone (a column of the field: a save or damage when a foe starts its turn there, enters it or ends its turn there; `follow` — the hero's column; `move` — columns the button moves it; `ram` — the sphere strikes where it moves; `slow` — a foe in it moves half); `dice` — when the spell has no damage by slot (spike growth: 2d4 per 5 ft ≈ 6d4 per 30-ft column). Control (v0.7.13.6): zones — `now` (at once on who stands there), `cond` (a failed save lays it: Grease — prone), obscure (Fog Cloud, Darkness: attacks into or out of the column have disadvantage, inside both — even), silence (no spells with a verbal component inside), retch (Stinking Cloud: the turn is lost), block_ranged (Wind Wall: ranged weapon attacks through the column miss); push (Gust of Wind: a STR save or a column away, `reach` columns); `curse` — a flag on foes by a save (or a spell attack): outlined (Faerie Fire: advantage at it, no invisibility), enfeebled (half damage of its weapons), cursed_dis (its attacks at the hero with disadvantage), slowed_spell (AC −2, half the way, no reactions, one attack); `repeat` — a save at the end of its turn ends it. Reactions (v0.7.13.7, the window «Использовать?»): `reaction` hit (Shield: +5 AC until the hero's turn, the hit may miss), damage (Hellish Rebuke: the attacker takes the dice, DEX half), spell (Counterspell: a foe's spell of circle 3 or less fails, higher — a check DC 10 + circle); dispel (Dispel Magic: the target foe's spells on the hero end; calmed — Calm Emotions: the foe lowers its weapon); npc_save (out of a fight: the NPC's save by its monster template, `types` it works on; the master narrates the outcome; v0.7.22.3 — a spell that holds stays on the NPC for `minutes` (a concentration one — while the hero holds it): advantage on the hero's social checks against it; when it ends the NPC knows — `aftermath` attitude); lift_curse; make — items made (Goodberry, Create Food and Water). The world (v0.7.13.8): light — a light source while it lasts (darkness goes); reveal — trap (Find Traps: the room's traps are found) or magic (Detect Magic: caches with magic things are found, unknown things in the pack show their aura); knock — the room's closed things open, loudly.",
 		"bless": {"die": "1d4", "on": ["attack", "save"]},
 		"guidance": {"die": "1d4", "on": ["check"], "once": true},
 		"resistance": {"die": "1d4", "on": ["save"], "once": true},
@@ -3445,7 +3719,8 @@
 		"protection_from_evil_and_good": {"foe_types_dis": ["aberration", "celestial", "elemental", "fey", "fiend", "undead"]},
 		"beacon_of_hope": {"save_adv": ["wis"], "death_adv": true, "max_heal": true},
 		"haste": {"ac_plus": 2, "save_adv": ["dex"], "speed_x2": true, "haste": true},
-		"fly": {"flying": true},
+		"disguise_self": {"guise": true},
+		"fly": {"flying": true, "fly_speed": 60, "fall": "3d6"},
 		"blink": {"blink": true},
 		"longstrider": {"speed_plus": 10},
 		"expeditious_retreat": {"bonus_dash": true},

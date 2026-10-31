@@ -140,7 +140,7 @@ func test_an_unconscious_foe_loses_its_turn_and_a_hit_wakes_it_with_a_crit() -> 
 	var w := CombatRules.fighter(s, TestUtils.foe(s, 1))
 	w["hp"] = 100
 	w["max_hp"] = 100
-	CombatRules._add_condition(w, "unconscious", {"rounds": 10, "spell": "sleep", "wake": true, "save": "", "dc": 10})
+	CombatRules._add_condition(s, w, "unconscious", {"rounds": 10, "spell": "sleep", "wake": true, "save": "", "dc": 10})
 	var hp := int(s.character["hp"])
 	CombatRules.end_player_turn(s, data)
 	var lines := CombatRules.next_actor(s, data)
@@ -178,8 +178,8 @@ func test_hold_person_only_on_humanoids_and_ends_with_concentration() -> void:
 	assert_bool(CombatRules._has(CombatRules.fighter(s, TestUtils.foe(s, 1)), "paralyzed")).is_true()
 	CombatRules._cast_condition(s, data, "hold_person", 2, CombatRules.fighter(s, TestUtils.foe(s, 2)), lines)
 	assert_str(lines[-1]).contains("не действует")
-	assert_array(CombatRules.foe_conditions(data, CombatRules.fighter(s, TestUtils.foe(s, 1)))[0].split(" ")).is_not_empty()
-	assert_str(CombatRules.foe_conditions(data, CombatRules.fighter(s, TestUtils.foe(s, 1)))[0]).contains("10 р.")
+	assert_array(CombatRules.foe_conditions(s, data, CombatRules.fighter(s, TestUtils.foe(s, 1)))[0].split(" ")).is_not_empty()
+	assert_str(CombatRules.foe_conditions(s, data, CombatRules.fighter(s, TestUtils.foe(s, 1)))[0]).contains("10 р.")
 	var ended := CombatRules.end_spell(s, data, "hold_person")
 	assert_str(ended[0]).contains("концентрация")
 	assert_bool(CombatRules._has(CombatRules.fighter(s, TestUtils.foe(s, 1)), "paralyzed")).is_false()
@@ -189,7 +189,7 @@ func test_conditions_run_out_at_the_end_of_the_foe_turn() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "col": 3}])
 	var b := CombatRules.fighter(s, TestUtils.foe(s, 1))
-	CombatRules._add_condition(b, "incapacitated", {"rounds": 1, "spell": "command", "wake": false, "save": "", "dc": 10})
+	CombatRules._add_condition(s, b, "incapacitated", {"rounds": 1, "spell": "command", "wake": false, "save": "", "dc": 10})
 	CombatRules.end_player_turn(s, data)
 	var lines := CombatRules.next_actor(s, data)
 	assert_str("\n".join(lines)).contains("проходит")

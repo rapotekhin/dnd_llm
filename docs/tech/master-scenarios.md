@@ -306,7 +306,7 @@
 | Зелье, свиток, жезл | `use_item {item_id}` |
 | Надеть, снять, раздеться | `rules("equip")` → `equip {slot, item_id?}`; переодевание тратит минуты |
 
-- **Движок:** [SpellRules.check](../../game/core/rules/spell_rules.gd#L51), [FeatureUses.can_use](../../game/core/character/feature_uses.gd#L73), [ItemRules.can_use](../../game/core/items/item_rules.gd#L473), [_plan_equip](../../game/core/rules/effect_engine.gd#L524).
+- **Движок:** [SpellRules.check](../../game/core/rules/spell_rules.gd#L51), [Stock.use](../../game/core/character/stock.gd#L73), [ItemRules.can_use](../../game/core/items/item_rules.gd#L473), [_plan_equip](../../game/core/rules/effect_engine.gd#L524).
 - **Golden:** `cast_spell_words`, `use_feature_words`, `spell_zone_of_truth`, `spell_minor_illusion`, `spell_speak_with_animals`, `strip_by_words`, `put_on_a_ring_by_words`, `throw_flask_out_of_combat`.
 
 ---
@@ -548,3 +548,23 @@
 
 - **Больной в сцене** → последний шаг акта: `talk` с ним и `cure: true`; лекарство — `item_id`. Болезнь снимает движок при закрытии шага.
 - **Golden:** `quest_act_cure_sick_npc`.
+
+---
+
+## Новое из частей (v0.7.63)
+
+| Как | Пайплайн |
+|---|---|
+| Проклятие или благословение, которого нет в 5e | `make {what: status, key, name, text, parts}` → `condition {condition: "new:<key>", reason, save}` в том же ходе; вредному нужен `save` или `cause: player` |
+| Редкое умение у наставника | `make {what: skill, ability}` или `{what: trait, parts}` → `course {teach_kind, teach_id: "new:<key>"}`; герой учится кнопками «Учёбы» |
+| Книга с умением | `make {…, book}` → `give_item {item_id: "new:book:<key>"}` или `reward_item_id` в задании |
+| Части не покрывают замысел | отказ в истории и `missing_concept`; `make` не подменяет его другим |
+
+- **Движок:** [MakeRules](../../game/core/rules/make_rules.gd), тема `make`.
+- **Golden:** `make_status_a_curse_of_the_well`, `make_skill_through_a_teacher`, `make_refused_what_parts_do_not_cover`.
+
+## Маскировка под человека фракции (v0.7.63)
+
+- **Заклинание лежит** (кнопка листа, прикреплённое к словам или `cast`) → игрок говорит, кем выглядит → `guise {look, faction?}`, в строке героя появляется облик, в строках NPC — кем каждый его считает.
+- **Движок:** свои не нападают, пускают в приватные места и в логово, в смешанном бою встают на сторону героя; их враги нападают и не разговаривают. Проверка одна на смотрящего, по Сл заклинания.
+- **Golden:** `guise_a_look_named_with_its_faction`, `guise_refused_without_a_spell`.

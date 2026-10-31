@@ -931,7 +931,7 @@ def monster_action(a: dict[str, Any], override: dict[str, Any] | None = None) ->
     act: dict[str, Any] = {"name_en": a["name"], "damage": dmg}
     if "attack_bonus" in a:
         act["to_hit"] = a["attack_bonus"]
-        rng = re.search(r"range (\d+)/(\d+) ft", desc)
+        rng = re.search(r"range (\d+)(?: ft\.)?/(\d+) ft", desc)
         reach = re.search(r"reach (\d+) ft", desc)
         if rng and not desc.startswith("Melee"):
             act["kind"], act["range"] = "ranged", [int(rng.group(1)), int(rng.group(2))]

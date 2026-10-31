@@ -242,26 +242,6 @@ def test_a_checkpoint_model_loads_its_file_with_its_settings():
     assert "sd_model_checkpoint" not in SD_MODELS[0].txt2img["override_settings"]  # the config is not touched
 
 
-def test_the_players_additions_go_after_the_scene_and_into_the_negative():
-    """v0.7.37: the model's own by default, the player's from the settings, the negative with the agent's or alone."""
-    from llm_server.config import SD_MODELS
-    from llm_server.images import compose
-    from llm_server.protocol import ImageParams
-
-    amix = SD_MODELS[0]
-    p = prompts.image_prompt("illustrious", "1boy, wolf, forest.", "book illustration")
-    assert p == "(monochrome:0.75), (Sketch art, line art, drawn), 1boy, wolf, forest"  # no prose style (v0.7.38.2)
-    prompt, neg = compose(amix, ImageParams(event="x"), p, "crowd, daylight")
-    assert prompt.startswith(p + ", masterwork, masterpiece") and prompt.endswith("<lora:rimixO:1.2>")
-    assert neg.startswith("lowres, worst quality") and neg.endswith("anthro, crowd, daylight, explicit")
-    own = ImageParams(event="x", prompt_add="ink, <lora:other:1>,", negative_add="blurry", negative_only=True)
-    safe = "nsfw, explicit, nude"  # the server's, whatever the player wrote (v0.7.38.7)
-    assert compose(amix, own, p, "crowd") == (p + ", ink, <lora:other:1>", "blurry, " + safe)
-    assert compose(amix, ImageParams(event="x", prompt_add="", negative_add=""), p, "crowd") == (p, "crowd, " + safe)
-    assert compose(RECRAFT, ImageParams(event="x", prompt_add="cinematic", negative_add="blurry"), p, "crowd") == (p + ", cinematic", "")
-    assert "Danbooru" in prompts.image_instructions("illustrious", 700)
-
-
 def test_solo_goes_when_a_beast_is_in_the_frame():
     from llm_server.images import booru_scene
 

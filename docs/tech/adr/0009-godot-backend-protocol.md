@@ -206,6 +206,10 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 107. Протокол 0.97.0 (v0.7.63)
+
+Сборка из частей: эффект `make` (`what` status | skill | trait, `key`, `name`, `text`, `parts` [{`part`, `value`, `amount`}], `ability`, `book`); `new:<key>` и `new:book:<key>` того же хода в `condition`, `teach_id`, `item_id`, `reward_item_id`; `ConditionEffect.condition` принимает собранный статус; `CourseEffect.teach_kind` и `ActTeach.kind` — ещё `trait`. Чужой облик: эффект `guise` (`look`, `faction`); `NewFaction.foes`. Лист героя: `character.made`, `character.guise`.
+
 ### 106. Протокол 0.96.0 (v0.7.50.1)
 
 `ActStep.cure`: шаг `talk` с больным NPC при закрытии снимает болезнь.

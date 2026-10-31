@@ -412,6 +412,6 @@ func test_the_master_sees_the_hero_invisible() -> void:
 func test_a_fallen_foe_next_to_the_hero_gives_no_ranged_disadvantage() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "col": 0}, {"monster": "bandit", "col": 3}])
-	assert_bool(CombatRules._foe_in_column(s, CombatRules.player(s))).is_true()
+	assert_bool(CombatRules._foe_in_column(s, data, CombatRules.player(s))).is_true()
 	CombatRules.fighter(s, TestUtils.foe(s, 1))["status"] = "dead"
-	assert_bool(CombatRules._foe_in_column(s, CombatRules.player(s))).is_false()
+	assert_bool(CombatRules._foe_in_column(s, data, CombatRules.player(s))).is_false()

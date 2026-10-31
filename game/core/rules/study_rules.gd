@@ -194,6 +194,8 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 	match str(t.get("kind", "")):
 		"skill":
 			out.append({"text": "ещё не владеете навыком", "ok": not (c.get("skill_profs", []) as Array).has(what) and not CharacterRules.has_feature(c, "skill_prof_" + what)})
+		"trait":
+			out.append({"text": "этой черты ещё нет", "ok": not ConditionRules.has(c, what)})
 		"tool":
 			out.append({"text": "ещё не владеете инструментом", "ok": not CraftRules.proficient(c, what)})
 		"language":
@@ -221,6 +223,8 @@ static func known_already(s: GameSession, data: Dictionary, id: String) -> bool:
 	match str(t.get("kind", "")):
 		"skill":
 			return (c.get("skill_profs", []) as Array).has(what) or CharacterRules.has_feature(c, "skill_prof_" + what)
+		"trait":
+			return ConditionRules.has(c, what)
 		"tool":
 			return CraftRules.proficient(c, what)
 		"language":
@@ -498,6 +502,8 @@ static func grant(s: GameSession, data: Dictionary, id: String) -> Array[String]
 	var t: Dictionary = course(s, data, id).get("teaches", {})
 	var what := str(t.get("id", ""))
 	match str(t.get("kind", "")):
+		"trait":
+			MakeRules.grant_trait(s, data, what)
 		"skill":
 			var profs: Array = c.get("skill_profs", [])
 			if not profs.has(what):
@@ -731,6 +737,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary, teacher_def
 		"tool": ok = CraftRules.cfg(data)["tools"].has(what)
 		"language": ok = data["misc"]["languages"].has(what)
 		"spell": ok = data["spells"].has(what)
+		"trait": ok = MakeRules.is_trait(data, what)
 		"recipe": ok = not recipe.is_empty() or not CraftRules.recipe(s, data, what).is_empty()
 	if not ok:
 		return {"reason": _unknown_why(data, kind, what)}

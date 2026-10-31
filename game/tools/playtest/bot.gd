@@ -143,7 +143,7 @@ func _act() -> String:
 			var spell: Variant = _pick(SpellRules.ready(c))
 			return "cast" if spell != null and gs.cast(spell).is_empty() else "",
 		func() -> String:
-			var res: Variant = _pick(FeatureUses.owned(c, data))
+			var res: Variant = _pick(Stock.owned(c, data))
 			return "feature" if res != null and gs.use_feature(res).is_empty() else "",
 		func() -> String:
 			for id: String in c["inventory"]:
@@ -249,13 +249,11 @@ func _invariants() -> String:
 		if int(c["inventory"][id]) <= 0:
 			return "inventory %s ×%d" % [id, c["inventory"][id]]
 	for i in 5:
-		if int(c["slots_used"][i]) < 0 or int(c["slots_used"][i]) > int(c["slots_max"][i]):
-			return "slots %s of %s" % [c["slots_used"], c["slots_max"]]
-	for id: String in c.get("resources_used", {}):
-		if int(c["resources_used"][id]) > FeatureUses.max_uses(c, data, id):
-			return "feature %s used %d" % [id, c["resources_used"][id]]
-	if int(c.get("hit_dice_used", 0)) > int(c["level"]) or int(c.get("hit_dice_used", 0)) < 0:
-		return "hit dice used %d" % c["hit_dice_used"]
+		if Stock.spent(c, "slot_%d" % (i + 1)) > int(c["slots_max"][i]):
+			return "slots %s of %s" % [c["spent"], c["slots_max"]]
+	for id: String in c.get("spent", {}):
+		if int(c["spent"][id]) > Stock.max_uses(c, data, id):
+			return "%s spent %d" % [id, c["spent"][id]]
 	if w.room(s.room_id).is_empty():
 		return "room %s" % s.room_id
 	var form := Being.check(s)

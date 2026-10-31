@@ -331,7 +331,8 @@
             "tool",
             "language",
             "spell",
-            "recipe"
+            "recipe",
+            "trait"
           ],
           "title": "Kind",
           "type": "string"
@@ -772,25 +773,32 @@
           "title": "Cause"
         },
         "condition": {
-          "enum": [
-            "blinded",
-            "charmed",
-            "deafened",
-            "exhaustion",
-            "frightened",
-            "grappled",
-            "incapacitated",
-            "invisible",
-            "paralyzed",
-            "petrified",
-            "poisoned",
-            "prone",
-            "restrained",
-            "stunned",
-            "unconscious"
+          "anyOf": [
+            {
+              "enum": [
+                "blinded",
+                "charmed",
+                "deafened",
+                "exhaustion",
+                "frightened",
+                "grappled",
+                "incapacitated",
+                "invisible",
+                "paralyzed",
+                "petrified",
+                "poisoned",
+                "prone",
+                "restrained",
+                "stunned",
+                "unconscious"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
           ],
-          "title": "Condition",
-          "type": "string"
+          "title": "Condition"
         },
         "duration": {
           "default": "long_rest",
@@ -1131,7 +1139,8 @@
             "tool",
             "language",
             "spell",
-            "recipe"
+            "recipe",
+            "trait"
           ],
           "title": "Teach Kind",
           "type": "string"
@@ -2486,6 +2495,41 @@
       "title": "GodEffect",
       "type": "object"
     },
+    "GuiseEffect": {
+      "additionalProperties": false,
+      "description": "The hero's look named (0.97.0): only when a spell (Disguise Self) or a status with the part `guise` lies on the\nhero, in this turn too. `look` — who the hero looks like; `faction` — whose person that is: its people take the hero\nfor their own and its foes for an enemy, each viewer tested once by the engine.",
+      "properties": {
+        "faction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Faction"
+        },
+        "kind": {
+          "const": "guise",
+          "default": "guise",
+          "title": "Kind",
+          "type": "string"
+        },
+        "look": {
+          "maxLength": 60,
+          "minLength": 2,
+          "title": "Look",
+          "type": "string"
+        }
+      },
+      "required": [
+        "look"
+      ],
+      "title": "GuiseEffect",
+      "type": "object"
+    },
     "HealEffect": {
       "additionalProperties": false,
       "properties": {
@@ -2765,6 +2809,135 @@
       "title": "LetterReplyEffect",
       "type": "object"
     },
+    "MakeEffect": {
+      "additionalProperties": false,
+      "description": "The master builds what neither the data nor 5e has (0.97.0): a status or a passive trait of `parts`, a skill of\nan `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the\nhero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a\ntrait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `give_item`\nitem_id «new:book:<key>». What the parts do not cover is not made: say so in the story, fill `missing_concept`.",
+      "properties": {
+        "ability": {
+          "anyOf": [
+            {
+              "enum": [
+                "str",
+                "dex",
+                "con",
+                "int",
+                "wis",
+                "cha"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ability"
+        },
+        "book": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Book"
+        },
+        "key": {
+          "maxLength": 30,
+          "minLength": 2,
+          "title": "Key",
+          "type": "string"
+        },
+        "kind": {
+          "const": "make",
+          "default": "make",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 40,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "parts": {
+          "items": {
+            "$ref": "#/$defs/MakePart"
+          },
+          "maxItems": 6,
+          "title": "Parts",
+          "type": "array"
+        },
+        "text": {
+          "maxLength": 300,
+          "minLength": 5,
+          "title": "Text",
+          "type": "string"
+        },
+        "what": {
+          "enum": [
+            "status",
+            "skill",
+            "trait"
+          ],
+          "title": "What",
+          "type": "string"
+        }
+      },
+      "required": [
+        "what",
+        "key",
+        "name",
+        "text"
+      ],
+      "title": "MakeEffect",
+      "type": "object"
+    },
+    "MakePart": {
+      "additionalProperties": false,
+      "description": "A part of what the master builds (0.97.0): `part` of rules.make.parts, its `value` and `amount`.",
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "maximum": 20,
+              "minimum": -20,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "part": {
+          "title": "Part",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "part"
+      ],
+      "title": "MakePart",
+      "type": "object"
+    },
     "MoveEffect": {
       "additionalProperties": false,
       "properties": {
@@ -2962,6 +3135,14 @@
           "maxLength": 240,
           "title": "Description",
           "type": "string"
+        },
+        "foes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Foes",
+          "type": "array"
         },
         "hostile": {
           "default": true,
@@ -5882,10 +6063,12 @@
           "goal_assess": "#/$defs/GoalAssessEffect",
           "goal_hint": "#/$defs/GoalHintEffect",
           "god": "#/$defs/GodEffect",
+          "guise": "#/$defs/GuiseEffect",
           "heal": "#/$defs/HealEffect",
           "heist": "#/$defs/HeistEffect",
           "job": "#/$defs/JobEffect",
           "letter_reply": "#/$defs/LetterReplyEffect",
+          "make": "#/$defs/MakeEffect",
           "move": "#/$defs/MoveEffect",
           "note": "#/$defs/NoteEffect",
           "npc_attitude": "#/$defs/NpcAttitudeEffect",
@@ -5950,6 +6133,12 @@
         },
         {
           "$ref": "#/$defs/ConditionEffect"
+        },
+        {
+          "$ref": "#/$defs/MakeEffect"
+        },
+        {
+          "$ref": "#/$defs/GuiseEffect"
         },
         {
           "$ref": "#/$defs/DiseaseEffect"

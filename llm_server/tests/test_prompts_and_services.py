@@ -506,3 +506,35 @@ def test_rumors_of_the_place_in_the_prompt_and_the_router():
     params.input = "Что нового слышно?"
     params.snapshot.scene.rumors = ["[mill_coins] на старой мельнице кто-то прячет монеты (заметный; герой уже слышал)"]
     assert router.by_kind(params) == ""  # nothing new to tell: the router decides
+
+
+def test_an_invisible_hero_brings_the_rules_by_the_engines_condition_id():
+    # v0.7.63: the engine sends `invisible`, the topic looked for a Russian word and never came
+    s = snap()
+    assert "invisible" not in prompts.auto_topics("social", s)
+    s.character.conditions = ["invisible"]
+    assert "invisible" in prompts.auto_topics("social", s)
+    assert "Невидимый герой" in prompts.system_prompt("exploration", s, None)
+
+
+def test_a_look_reaches_the_master_with_its_rules():
+    # v0.7.63: Disguise Self — the look named by `guise`, its people and their foes
+    s = snap()
+    assert "guise" not in prompts.auto_topics("exploration", s)
+    s.character.guise = "Чужой облик (Маскировка): сектант, Сл разоблачения 13; выдаёт себя за своего у «Культ Пепла» (ash_cult); для них враг: Брод"
+    assert "guise" in prompts.auto_topics("exploration", s)
+    text = prompts.system_prompt("exploration", s, None)
+    assert "сектант, Сл разоблачения 13" in text and "для них враг: Брод" in text and "эффект `guise`" in text
+
+
+def test_a_made_status_and_a_look_pass_the_protocol():
+    from pydantic import TypeAdapter
+
+    from llm_server.protocol import Effect, MakeEffect, GuiseEffect, ConditionEffect
+
+    adapter = TypeAdapter(Effect)
+    assert isinstance(adapter.validate_python({"kind": "guise", "look": "сектант", "faction": "ash_cult"}), GuiseEffect)
+    made = {"kind": "make", "what": "status", "key": "rot", "name": "Чёрная вода", "text": "Слабость рук.", "parts": [{"part": "ac", "amount": -1}]}
+    assert isinstance(adapter.validate_python(made), MakeEffect)
+    assert adapter.validate_python({"kind": "condition", "condition": "new:rot"}).condition == "new:rot"
+    assert isinstance(adapter.validate_python({"kind": "condition", "condition": "poisoned"}), ConditionEffect)

@@ -76,7 +76,7 @@ func _learn(s: GameSession, spell_id: String) -> void:
 	always.append(spell_id)
 	sp["always"] = always
 	c["slots_max"] = [4, 3, 3, 0, 0]
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 
 
 # --- the table ----------------------------------------------------------------------------------------
@@ -154,14 +154,14 @@ func test_guiding_bolt_gives_advantage_to_the_next_attack() -> void:
 	for i in 5:
 		s.combat["economy"]["action"] = 1
 		CombatRules.player_cast(s, data, "guiding_bolt", 1, str(f["id"]))
-		if f.has("guided"):
+		if CombatRules._has(f, "guided"):
 			break
-	assert_bool(f.has("guided")).is_true()
+	assert_bool(CombatRules._has(f, "guided")).is_true()
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "")
 	assert_array(CombatRules._attack_mods(s, data, w, f)["adv"]).contains(["Направляющий снаряд"])
 	var lines: Array[String] = []
 	CombatRules._attack(s, data, "x", "y", 5, true, false, f, "1d4", 0, "bludgeoning", lines)
-	assert_bool(f.has("guided")).is_false()
+	assert_bool(CombatRules._has(f, "guided")).is_false()
 
 
 func test_vicious_mockery_hampers_the_next_attack() -> void:
@@ -169,11 +169,11 @@ func test_vicious_mockery_hampers_the_next_attack() -> void:
 	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
 	var lines: Array[String] = []
 	CombatRules._spell_rider(s, data, "vicious_mockery", 0, f, true, lines)
-	assert_bool(bool(f.get("mocked", false))).is_true()
+	assert_bool(CombatRules._has(f, "mocked")).is_true()
 	f["col"] = 0
 	var turn: Array[String] = []
 	CombatRules._enemy_turn(s, data, f, turn)
-	assert_bool(f.has("mocked")).is_false()
+	assert_bool(CombatRules._has(f, "mocked")).is_false()
 	assert_bool(turn.any(func(l: String) -> bool: return l.contains("(с помехой)"))).override_failure_message(" · ".join(turn)).is_true()
 
 
@@ -276,9 +276,9 @@ func test_guidance_is_one_roll() -> void:
 	var s := _hero("cleric_branko")
 	_learn(s, "guidance")
 	SpellRules.cast(s.character, data, "guidance", 0, s, true)
-	var first := SpellEffects.hero_die(s, data, "check")
+	var first := SpellEffects.die(s, s.character, "check")
 	assert_int(int(first["bonus"])).is_between(1, 4)
-	assert_int(int(SpellEffects.hero_die(s, data, "check")["bonus"])).is_equal(0)
+	assert_int(int(SpellEffects.die(s, s.character, "check")["bonus"])).is_equal(0)
 	assert_str(str(s.character["concentration"])).is_empty()
 
 
@@ -289,9 +289,9 @@ func test_bane_takes_a_d4_from_foes() -> void:
 	s.character["spell_dc"] = 30  # they fail
 	var lines := CombatRules.player_cast(s, data, "bane", 1, str(foes[0]["id"]))
 	lines.append_array(CombatRules.volley_shot(s, data, str(foes[1]["id"])))  # picked one by one (v0.7.50.1)
-	assert_bool(foes.all(func(f: Dictionary) -> bool: return f.has("minus_die"))).override_failure_message(" · ".join(lines)).is_true()
+	assert_bool(foes.all(func(f: Dictionary) -> bool: return (SpellEffects.boon(f, "die") != null))).override_failure_message(" · ".join(lines)).is_true()
 	var out := ConditionRules.end_concentration(s, data, "проверка")
-	assert_bool(foes.any(func(f: Dictionary) -> bool: return f.has("minus_die"))).is_false()
+	assert_bool(foes.any(func(f: Dictionary) -> bool: return (SpellEffects.boon(f, "die") != null))).is_false()
 	assert_int(out.size()).is_greater(1)
 
 
@@ -496,7 +496,7 @@ func test_longstrider_darkvision_pass_without_trace() -> void:
 func test_see_invisibility_removes_the_disadvantage() -> void:
 	var s := _hero("wizard_yalika", 3)
 	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
-	CombatRules._add_condition(f, "invisible", {"rounds": 10})
+	CombatRules._add_condition(s, f, "invisible", {"rounds": 10})
 	assert_array(CombatRules.hero_attack_dis(s, data, f)).contains(["цель невидима"])
 	_cast_self(s, "see_invisibility")
 	assert_array(CombatRules.hero_attack_dis(s, data, f)).not_contains(["цель невидима"])
@@ -722,21 +722,21 @@ func test_faerie_fire_slow_ray_and_curse() -> void:
 	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
 	s.character["spell_dc"] = 40
 	_cast_at(s, "faerie_fire", 1, str(foes[0]["id"]))
-	assert_bool(foes.all(func(f: Dictionary) -> bool: return f.has("outlined"))).is_true()
+	assert_bool(foes.all(func(f: Dictionary) -> bool: return CombatRules._has(f, "outlined"))).is_true()
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "")
 	assert_array(CombatRules._attack_mods(s, data, w, foes[0])["adv"]).contains(["Огонь фей"])
 	ConditionRules.end_concentration(s, data, "проверка")
-	assert_bool(foes.any(func(f: Dictionary) -> bool: return f.has("outlined"))).is_false()
+	assert_bool(foes.any(func(f: Dictionary) -> bool: return CombatRules._has(f, "outlined"))).is_false()
 	var z := _hero("wizard_yalika", 5)
 	var o := _fight(z, [{"monster": "ogre", "col": 1}])[0]
 	z.character["spell_dc"] = 40
-	var ac := int(o["ac"])
+	var ac := CombatRules.ac_of(o)
 	_cast_at(z, "slow", 3, str(o["id"]))
-	assert_int(int(o["ac"])).is_equal(ac - 2)
+	assert_int(CombatRules.ac_of(o)).is_equal(ac - 2)
 	ConditionRules.end_concentration(z, data, "проверка")
-	assert_int(int(o["ac"])).is_equal(ac)
+	assert_int(CombatRules.ac_of(o)).is_equal(ac)
 	_cast_at(z, "bestow_curse", 3, str(o["id"]))
-	assert_bool(o.has("cursed_dis")).is_true()
+	assert_bool(CombatRules._has(o, "cursed_dis")).is_true()
 
 
 func test_hypnotic_pattern_is_a_condition_spell() -> void:

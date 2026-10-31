@@ -345,7 +345,7 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 		lines.append("Взято: %s%s" % [ItemRules.display_name(data["items"], s.items, item), " ×%d" % int(items[item]) if int(items[item]) > 1 else ""])
 	var seen := str(o["id"]) == "done" and s.rng.randf() < float(cfg(data)["trace_chance"])
 	var mask := str(k.get("mask_step", ""))
-	var unmasked := not mask.is_empty() and not step_ok(c, id, mask)
+	var unmasked := not mask.is_empty() and not step_ok(c, id, mask) and Guise.face(c).is_empty()
 	if seen or unmasked:
 		var eyes := _eyes(s, data, id)  # v0.7.39.2: only those who are there see the hero
 		if not eyes.is_empty():

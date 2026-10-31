@@ -1060,8 +1060,11 @@
 					}
 				],
 				"to_hit": 3,
-				"kind": "melee",
-				"reach": 5,
+				"kind": "ranged",
+				"range": [
+					80,
+					320
+				],
 				"name": "Лёгкий арбалет"
 			}
 		],

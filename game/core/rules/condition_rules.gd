@@ -1,11 +1,14 @@
 class_name ConditionRules
 extends RefCounted
 ## Conditions and effects on the hero (roadmap v0.6.0, rebuilt in v0.7.8 «Правила 5e: состояния»).
+## - A status is one record on anyone who holds `effects`: the hero, a fighter, a character's record (v0.7.63). What it
+##   does is one table, rules.condition_effects, read by `row`, `mods`, `does`, `attack` and `check_mods`.
 ## - An effect (`c.effects`) is a condition or a boon with its source {kind, id, name}, its end — `{"at": round}` of
 ##   the game clock (now()), `{"rest": "short" | "long"}` or `{}` (until removed) — and optionally a save the hero
 ##   repeats at the end of each own turn in a fight (`save` {ability, dc, tag, repeat}), the one who caused it
 ##   (`by`: an npc or a fighter id — the source of fear, the grappler, the charmer), waking on damage (`wake`), the DC
 ##   of breaking free (`escape_dc`), advantage on saves of a tag (`adv_tag`) and resistances (`resist`).
+## - A status the master built (MakeRules) is installed in the game's rules and lays its numbers beside its row.
 ## - `c.conditions` is the list of condition ids of the effects, kept in sync: the sheet, the snapshot and the checks
 ##   read it. Exhaustion is a level `c.exhaustion` (0–6, rules.conditions.exhaustion).
 ## - The hero's concentration (`c.concentration` — a spell id) ends at `c.concentration_ends` (a round, −1 — never),
@@ -28,7 +31,8 @@ static func has(c: Dictionary, id: String) -> bool:
 
 
 static func name_of(data: Dictionary, id: String) -> String:
-	return str(data["rules"]["conditions"].get(id, id)).get_slice(":", 0)
+	var own: Dictionary = data["rules"].get("condition_effects", {}).get(id, {})
+	return str(own["name"]) if own.has("name") else str(data["rules"]["conditions"].get(id, id)).get_slice(":", 0)
 
 
 # --- the clock ------------------------------------------------------------------------------------
@@ -90,6 +94,8 @@ static func rounds_left(s: GameSession, e: Dictionary) -> int:
 
 ## «54 мин», «3 р.», «до долгого отдыха» — what the chips and the master see.
 static func left_text(s: GameSession, e: Dictionary) -> String:
+	if str(e.get("source", {}).get("kind", "")) == "trait":
+		return "черта"
 	var ends: Dictionary = e.get("ends", {})
 	if ends.has("at"):
 		var r := rounds_left(s, e)
@@ -189,7 +195,7 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary) -> Array[Str
 	var lines: Array[String] = []
 	if cond == "exhaustion":
 		return add_exhaustion(s, data, 1, str(e.get("source", {}).get("name", "")))
-	add_effect(c, e)
+	add_effect(c, e.merged(MakeRules.fx(s, cond)))
 	if cond == "unconscious" and not has(c, "prone"):
 		add_effect(c, {"condition": "prone", "ends": {}, "source": e.get("source", {})})
 	if INCAPACITATING.has(cond) and not str(c.get("concentration", "")).is_empty():
@@ -199,6 +205,71 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary) -> Array[Str
 
 static func incapacitated(c: Dictionary) -> bool:
 	return INCAPACITATING.any(func(x: String) -> bool: return has(c, x))
+
+
+# --- what a status does -----------------------------------------------------------------------------
+
+
+## The row of a status on `h`: the table's, or its own parts when the master built it.
+static func row(h: Dictionary, data: Dictionary, id: String) -> Dictionary:
+	var table: Dictionary = data["rules"].get("condition_effects", {})
+	if table.has(id):
+		return table[id]
+	for e: Dictionary in h.get("effects", []):
+		if str(e.get("condition", "")) == id:
+			return e.get("mods", {})
+	return {}
+
+
+## The rows of all the statuses of `h`.
+static func mods(h: Dictionary, data: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for id: Variant in h.get("conditions", []):
+		out.append(row(h, data, str(id)))
+	if exhaustion(h) >= 3:
+		out.append(data["rules"]["condition_effects"]["exhaustion_3"])
+	return out
+
+
+## Some status of `h` has the flag `key`.
+static func does(h: Dictionary, data: Dictionary, key: String) -> bool:
+	return mods(h, data).any(func(m: Dictionary) -> bool: return bool(m.get(key, false)))
+
+
+## The sum of a number over the statuses of `h`: `ac`, `speed`.
+static func sum(h: Dictionary, key: String) -> int:
+	var total := 0
+	for e: Dictionary in h.get("effects", []):
+		total += int(e.get(key, 0)) + int(e.get(key + "_plus", 0))  # `_plus` — a boon as the hero's rules read it
+	return total
+
+
+## Some status of `h` halves damage of this type.
+static func resisted(h: Dictionary, dtype: String) -> bool:
+	return (h.get("effects", []) as Array).any(func(e: Dictionary) -> bool: return (e.get("resist", []) as Array).has(dtype))
+
+
+## What statuses do to one attack: {adv, dis — the words, crit}. `atk`, `tgt` — who strikes and who is struck, `near` —
+## from next to it. Pass {} for a side when only the other one is asked about. What is not a status (hiding, the dark,
+## range) stays with the attack.
+static func attack(data: Dictionary, atk: Dictionary, tgt: Dictionary, near: bool) -> Dictionary:
+	var adv: Array[String] = []
+	var dis: Array[String] = []
+	var crit := false
+	var mark := func(mode: String, why: String) -> void:
+		var list: Array[String] = adv if mode == "advantage" else dis
+		if mode != "" and not list.has(why):
+			list.append(why)
+	for m: Dictionary in mods(atk, data):
+		mark.call(str(m.get("attack", "")), str(m.get("attack_why", "")))
+	for m: Dictionary in mods(tgt, data):
+		mark.call(str(m.get("attacked", "")), str(m.get("attacked_why", "")))
+		if near:
+			mark.call(str(m.get("attacked_near", "")), str(m.get("near_why", "")))
+		else:
+			mark.call(str(m.get("attacked_far", "")), str(m.get("far_why", "")))
+		crit = crit or (near and bool(m.get("crit_near", false)))
+	return {"adv": adv, "dis": dis, "crit": crit}
 
 
 ## The fighter or NPC id that caused the hero's condition (`by`), "" when nobody.
@@ -225,12 +296,10 @@ static func clear_on_rest(c: Dictionary, rest: String) -> Array[String]:
 	return out
 
 
-## Effects whose time is up go, and so does a concentration past its end. Returns the lines.
-static func expire(s: GameSession, data: Dictionary) -> Array[String]:
-	var c := s.character
-	var t := now(s)
+## What of `h` has run out by `t` leaves it; the names of what went.
+static func _run_out(h: Dictionary, data: Dictionary, t: int) -> Array[String]:
 	var gone: Array[String] = []
-	var list := effects(c)
+	var list := effects(h)
 	for e: Dictionary in list.duplicate():
 		if e.get("ends", {}).has("at") and int(e["ends"]["at"]) <= t:
 			list.erase(e)
@@ -238,11 +307,42 @@ static func expire(s: GameSession, data: Dictionary) -> Array[String]:
 			var what := name_of(data, id).to_lower() if not id.is_empty() else str(e.get("source", {}).get("name", ""))
 			if not what.is_empty() and not gone.has(what):
 				gone.append(what)
-	_sync(c)
+	_sync(h)
+	return gone
+
+
+## The statuses that leave a record whole: when the last one goes, its keys go too.
+static func tidy(b: Dictionary) -> void:
+	if (b.get("effects", []) as Array).is_empty():
+		for k: String in ["effects", "conditions", "next_effect"]:
+			b.erase(k)
+
+
+## «Заражён — 2 ч, Очарование личности — до долгого отдыха»: what is on a character for the master and its card.
+static func on_record(s: GameSession, data: Dictionary, b: Dictionary) -> String:
+	var out: Array[String] = []
+	for e: Dictionary in b.get("effects", []):
+		var id := str(e.get("condition", ""))
+		out.append("%s — %s" % [name_of(data, id) if not id.is_empty() else str(e.get("source", {}).get("name", "")), left_text(s, e)])
+	return ", ".join(out)
+
+
+## Effects whose time is up go, on the hero and on every record, and so does a concentration past its end. The lines.
+static func expire(s: GameSession, data: Dictionary) -> Array[String]:
+	var c := s.character
+	var t := now(s)
+	for id: String in Being.with(s, "effects"):
+		var b := Being.of(s, id)
+		_run_out(b, data, t)
+		tidy(b)
+	var faced := not str(Guise.of(c).get("faction", "")).is_empty()
+	var gone := _run_out(c, data, t)
 	var lines: Array[String] = []
 	if not gone.is_empty():
 		lines.append("прошло: " + ", ".join(gone))
 		CharacterRules.refresh(c, data, s.items)  # Mage Armor, Aid and the like leave the numbers (v0.7.13.2)
+		if faced and Guise.of(c).is_empty():
+			ReputationRules.refresh(s, data)  # the look is gone, and what it won from the people
 	var ends := int(c.get("concentration_ends", -1))
 	if not str(c.get("concentration", "")).is_empty() and ends >= 0 and ends <= t:
 		lines.append_array(end_concentration(s, data, "время вышло"))
@@ -352,9 +452,8 @@ static func check_mods(c: Dictionary, data: Dictionary, params: Dictionary) -> D
 	var save := str(params.get("save", "")) if params.get("save") != null else ""
 	var sense := str(params.get("sense", "")) if params.get("sense") != null else ""
 	var ability := str(params.get("ability", ""))  # v0.7.36: an ability check is a check
-	var table: Dictionary = data["rules"].get("condition_effects", {})
 	for id: Variant in c.get("conditions", []):
-		var fx: Dictionary = table.get(str(id), {})
+		var fx := row(c, data, str(id))
 		var modes: Array[String] = []
 		if not skill.is_empty():
 			modes.append(str(fx.get("skills", {}).get(skill, fx.get("checks", ""))))

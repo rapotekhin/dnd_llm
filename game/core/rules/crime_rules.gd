@@ -362,6 +362,8 @@ static func check_arrest(s: GameSession, data: Dictionary) -> Array[String]:
 		patrol = s.rng.randf() < float(cfg(data)["patrol_chance"])
 	if guards.is_empty() and not patrol:
 		return []
+	if Guise.fools(s, data, s.character, str(guards[0]) if not guards.is_empty() else "patrol:" + loc):
+		return []  # v0.7.63: the wanted one is somebody else to this guard
 	s.arrest = s.room_id
 	s.arrest_tried = []
 	var who := str(world.npc(guards[0]).get("name", "")) if not guards.is_empty() else str(l.get("patrol", "Патруль стражи"))

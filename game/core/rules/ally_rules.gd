@@ -150,29 +150,31 @@ static func cast_on_npc(s: GameSession, data: Dictionary, spell_id: String, slot
 			Being.of(s, npc_id)["hp"] = after
 		return ["%s: +%d HP" % [who, after - int(h["hp"])]]
 	var rounds := ConditionRules.spell_rounds(data, spell_id)
-	var buffs: Array = Being.view(s, npc_id).get("buffs", [])
-	buffs = buffs.filter(func(b: Dictionary) -> bool: return str(b["spell"]) != spell_id)
-	buffs.append({"spell": spell_id, "slot": slot, "ends": ConditionRules.now(s) + rounds if rounds > 0 else -1})
-	Being.of(s, npc_id)["buffs"] = buffs
+	var b := Being.of(s, npc_id)
+	SpellEffects._end_spell_on(b, spell_id)
+	ConditionRules.add_effect(b, {"source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}, "cast": slot, "keeps": true,
+		"ends": {"at": ConditionRules.now(s) + rounds} if rounds > 0 else {}})
 	return ["%s: %s" % [who, spell["name"]]]
 
 
-## The spells on the followers go into the fight with them.
+## The spells cast on the followers out of a fight work as in a fight: what a spell gives is counted on the fighter.
 static func buffs_into_fight(s: GameSession, data: Dictionary) -> void:
-	var now := ConditionRules.now(s)
 	for id: String in CombatRules.allies(s, false):
 		var f := CombatRules.fighter(s, id)
-		for b: Dictionary in Being.view(s, str(f.get("npc_id", ""))).get("buffs", []):
-			if int(b["ends"]) < 0 or int(b["ends"]) > now:
-				SpellEffects.on_friend(s, data, str(b["spell"]), int(b["slot"]), f, [] as Array[String])
+		for e: Dictionary in ConditionRules.effects(f).duplicate():
+			if e.has("cast"):
+				ConditionRules.remove_effect(f, int(e["uid"]))
+				SpellEffects.on_friend(s, data, str(e["source"]["id"]), int(e["cast"]), f, [] as Array[String])
+				for laid: Dictionary in ConditionRules.effects(f):  # still the spell cast before: it outlives this fight
+					if str(laid.get("source", {}).get("id", "")) == str(e["source"]["id"]):
+						laid.merge({"cast": e["cast"], "keeps": true, "ends": e["ends"]}, true)
 
 
 ## The concentration on the spell ended: it leaves the NPCs.
 static func drop_buffs(s: GameSession, spell_id: String) -> void:
-	for id: String in Being.with(s, "buffs"):
-		Being.of(s, id)["buffs"] = (Being.of(s, id)["buffs"] as Array).filter(func(b: Dictionary) -> bool: return str(b["spell"]) != spell_id)
-		if (Being.of(s, id)["buffs"] as Array).is_empty():
-			Being.drop(s, id, "buffs")
+	for id: String in Being.with(s, "effects"):
+		SpellEffects._end_spell_on(Being.of(s, id), spell_id)
+		ConditionRules.tidy(Being.of(s, id))
 
 
 ## A long rest heals the wounded NPCs.

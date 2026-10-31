@@ -95,11 +95,12 @@ func test_misty_visions_gives_silent_image_at_will() -> void:
 	CharacterRules.refresh(c, data, s.items)
 	assert_bool(SpellRules.is_free(c, "silent_image")).is_true()
 	assert_bool(SpellRules.ready(c).has("silent_image")).is_true()
-	c["slots_used"] = (c["slots_max"] as Array).duplicate()  # no slots at all
+	for n in range(1, 6):  # no slots at all
+		Stock.spend(c, "slot_%d" % n, int(c["slots_max"][n - 1]))
 	var chk := SpellRules.check(c, data, "silent_image", 0)
 	assert_int(int(chk.get("slot", -1))).override_failure_message(str(chk)).is_equal(0)
 	SpellRules.cast(c, data, "silent_image", 0, s)
-	assert_array(c["slots_used"]).is_equal(c["slots_max"])
+	assert_int(SpellRules.slots_left(c, 1)).is_equal(0)
 	(c["features"] as Array).erase("eldritch_invocation_misty_visions")
 	CharacterRules.refresh(c, data, s.items)
 	assert_bool(SpellRules.is_free(c, "silent_image")).is_false()

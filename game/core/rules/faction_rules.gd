@@ -86,6 +86,54 @@ static func enemy(s: GameSession, data: Dictionary, id: String) -> bool:
 	return not id.is_empty() and has(s, data, id) and str(step(s, data, id)["id"]) == "enemy"
 
 
+## The factions' foes, both ways.
+static func foes_of(s: GameSession, data: Dictionary, id: String) -> Array[String]:
+	var table := all(s, data)
+	var out: Array[String] = []
+	for f: Variant in table.get(id, {}).get("foes", []):
+		out.append(str(f))
+	for other: String in table:
+		if (table[other].get("foes", []) as Array).has(id) and not out.has(other):
+			out.append(other)
+	return out
+
+
+## What the hero's look (v0.7.63) makes the hero to the people of `id`: "own", "foe" or "".
+static func _by_look(s: GameSession, data: Dictionary, id: String) -> String:
+	var f := str(Guise.of(s.character).get("faction", ""))
+	if f.is_empty() or id.is_empty():
+		return ""
+	return "own" if id == f else "foe" if foes_of(s, data, f).has(id) else ""
+
+
+## What the `viewer` of faction `id` takes the hero for: "own", "foe", "" when the look means nothing to it or it
+## saw through it. A first look rolls.
+static func seen_as(s: GameSession, data: Dictionary, id: String, viewer: String, mon: String = "") -> String:
+	var r := _by_look(s, data, id)
+	return r if not r.is_empty() and Guise.fools(s, data, s.character, viewer, mon) else ""
+
+
+## The people here look at the hero; the attitude follows what they took the hero for.
+static func look_around(s: GameSession, data: Dictionary, room_id: String) -> void:
+	if str(Guise.of(s.character).get("faction", "")).is_empty():
+		return
+	var fresh := false
+	for npc: String in s.npcs_here(data["world"], room_id):
+		fresh = fresh or not (Guise.of(s.character).get("seen", {}) as Dictionary).has(npc)
+		seen_as(s, data, of_npc(s, data, npc), npc)
+	if fresh:
+		ReputationRules.refresh(s, data)
+
+
+## The heads of a fight who take the hero for their own stand on the hero's side, unless all of them do: that is a
+## fight the hero picked with them.
+static func own_heads(s: GameSession, data: Dictionary, foes: Array, encounter: String) -> Array:
+	if encounter.is_empty():
+		return []
+	var own := foes.filter(func(f: Dictionary) -> bool: return seen_as(s, data, str(f.get("faction", "")), "enc:" + encounter, str(f.get("monster", ""))) == "own")
+	return own if own.size() < foes.size() else []
+
+
 static func has(s: GameSession, data: Dictionary, id: String) -> bool:
 	return all(s, data).has(id)
 
@@ -218,6 +266,11 @@ static func peaceful(s: GameSession, data: Dictionary, enc: Dictionary) -> bool:
 		var id := of_foe(data, enc, e)
 		if not has(s, data, id):
 			return false
+		var look := seen_as(s, data, id, "enc:" + str(enc.get("id", "")), str(e.get("monster", "")))  # v0.7.63: taken for one of them, or of their foes
+		if look == "foe":
+			return false
+		if look == "own":
+			continue
 		var bad := bool(def(s, data, id).get("hostile", true)) or str(step(s, data, id)["id"]) in ["enemy", "unfriendly"]
 		if bad and not friendly(s, data, id):
 			return false
@@ -244,12 +297,22 @@ static func keep_peace(s: GameSession, data: Dictionary, room_id: String, enc: D
 ## Whether the owner's private places are open to the hero: its faction is friendly and of a kind that opens them.
 static func welcome(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 	var id := of_npc(s, data, npc_id)
-	return friendly(s, data, id) and not (cfg(data)["no_private"] as Array).has(str(def(s, data, id).get("kind", "")))
+	var look := seen_as(s, data, id, npc_id)
+	return (friendly(s, data, id) or look == "own") and look != "foe" and not (cfg(data)["no_private"] as Array).has(str(def(s, data, id).get("kind", "")))
+
+
+## The people of `id` will not talk: the hero is their enemy, in truth or by the look.
+static func shuns(s: GameSession, data: Dictionary, npc_id: String) -> bool:
+	var id := of_npc(s, data, npc_id)
+	return enemy(s, data, id) or seen_as(s, data, id, npc_id) == "foe"
 
 
 ## The attitude a member of the NPC's faction starts with (ReputationRules.refresh); a settlement's is its reputation.
 static func attitude_bonus(s: GameSession, data: Dictionary, npc_id: String) -> int:
 	var id := of_npc(s, data, npc_id)
+	if Guise.kept(s.character, npc_id) and not _by_look(s, data, id).is_empty():  # v0.7.63: no roll here, every NPC of the world goes through
+		var steps: Array = cfg(data)["steps"]
+		return int(steps[-1 if _by_look(s, data, id) == "own" else 0].get("attitude", 0))
 	if id.is_empty() or str(def(s, data, id).get("kind", "")) == "settlement":
 		return 0
 	return int(step(s, data, id).get("attitude", 0))
@@ -311,6 +374,7 @@ static func _plan_create(s: GameSession, data: Dictionary, c: Dictionary) -> Dic
 	var scope := str(c.get("scope", "here"))
 	var world := WorldView.new(data["world"])
 	var d := {"name": name, "kind": kind, "description": str(c.get("description", "")).left(240), "hostile": bool(c.get("hostile", true)), "generated": true,
+		"foes": (c.get("foes", []) as Array).filter(func(f: Variant) -> bool: return has(s, data, str(f))),
 		"scope": "global" if scope == "global" else [world.location_id(s.room_id)]}
 	return {"plan": {"create": "gen_f_" + name.to_lower().md5_text().left(8), "def": d}, "summary": "Фракция: %s" % name}
 

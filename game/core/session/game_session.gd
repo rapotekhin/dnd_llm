@@ -203,18 +203,17 @@ static func _whole(v: Variant) -> Variant:
 
 static func normalized_character(t: Dictionary) -> Dictionary:
 	var c := t.duplicate(true)
-	for k: String in ["level", "xp", "hp", "max_hp", "ac", "gold_cp", "hit_dice_used", "prof_bonus", "speed",
+	for k: String in ["level", "xp", "hp", "max_hp", "ac", "gold_cp", "prof_bonus", "speed",
 			"passive_perception", "spell_dc", "spell_attack"]:
 		if c.has(k):
 			c[k] = int(c[k])
-	for k: String in ["abilities", "skills", "saves", "inventory", "resources_used"]:
+	for k: String in ["abilities", "skills", "saves", "inventory", "spent"]:
 		var m := {}
 		for id: String in c.get(k, {}):
 			m[id] = int(c[k][id])
 		c[k] = m
-	for k: String in ["slots_used", "slots_max"]:
-		if c.get(k) is Array:
-			c[k] = (c[k] as Array).map(func(v: Variant) -> int: return int(v))
+	if c.get("slots_max") is Array:
+		c["slots_max"] = (c["slots_max"] as Array).map(func(v: Variant) -> int: return int(v))
 	var dev := {}
 	for dir: String in c.get("development", {}):
 		dev[dir] = {"xp": int(c["development"][dir].get("xp", 0)), "skills": (c["development"][dir].get("skills", []) as Array).map(func(x: Variant) -> String: return str(x))}
@@ -241,8 +240,6 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 	c["effects"] = effects
 	c["next_effect"] = int(c.get("next_effect", 1))
 	c["temp_hp"] = int(c.get("temp_hp", 0))  # v0.7.10
-	if c.get("wild_shape") is Dictionary:
-		c["wild_shape"] = _whole_numbers(c["wild_shape"])
 	c["exhaustion"] = int(c.get("exhaustion", 0))
 	if c.get("needs") is Dictionary and not (c["needs"] as Dictionary).is_empty():  # v0.7.23: the levels stay fractions
 		var n: Dictionary = c["needs"]
@@ -655,7 +652,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.secrets_told.append(str(k))
 	if d.get("generated") is Dictionary:
 		s.generated = (d["generated"] as Dictionary).duplicate(true)
-		for k: String in ["faith", "letters", "rumors", "weather"]:  # counters and days, whole numbers again after JSON
+		for k: String in ["faith", "letters", "rumors", "weather", "made"]:  # counters and days, whole numbers again after JSON
 			if s.generated.get(k) is Dictionary:
 				_whole_numbers(s.generated[k])
 	for k: String in d.get("reputation", {}):

@@ -19,7 +19,7 @@ func run() -> void:
 	sp["always"] = ["bless", "fireball"]
 	s.character["level"] = 5
 	s.character["slots_max"] = [4, 3, 2, 0, 0]
-	s.character["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(s.character)
 	s.character["hp"] = 200
 	s.character["max_hp"] = 200
 	s.room_id = "pushcha-hollow"
@@ -43,7 +43,7 @@ func run() -> void:
 	await press(pick)
 	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 	await frames(3)
-	step("the first ally is blessed, two left", CombatRules.fighter(s, ids[0]).has("plus_die") and int(CombatRules.volley(s).get("left", 0)) == 2)
+	step("the first ally is blessed, two left", (SpellEffects.boon(CombatRules.fighter(s, ids[0]), "die") != null) and int(CombatRules.volley(s).get("left", 0)) == 2)
 	var used: Button = find(screen(), "Pick_" + ids[0])
 	step("the same one cannot be picked again", used != null and used.disabled)
 	await shot("pick_next")
@@ -53,7 +53,7 @@ func run() -> void:
 	await press(find(screen(), "Pick_" + CombatRules.PLAYER))
 	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 	await frames(3)
-	step("all three blessed, no more picks", CombatRules.volley(s).is_empty() and CombatRules.fighter(s, ids[1]).has("plus_die")
+	step("all three blessed, no more picks", CombatRules.volley(s).is_empty() and (SpellEffects.boon(CombatRules.fighter(s, ids[1]), "die") != null)
 		and ConditionRules.effects(s.character).any(func(e: Dictionary) -> bool: return str(e.get("source", {}).get("id", "")) == "bless"))
 	await shot("blessed")
 	await press(find(screen(), "EndTurnButton"))
@@ -65,7 +65,7 @@ func run() -> void:
 	var friend := CombatRules.fighter(s, ids[1])
 	friend["col"] = CombatRules.fighter(s, foe)["col"]
 	var hp_before := int(friend["hp"])
-	var was := int(s.character["slots_used"][2])
+	var was := Stock.spent(s.character, "slot_3")
 	if not step("«Огненный шар» ready on the Spells tab", await wait_until(func() -> bool:
 			var b: Button = find(screen(), "Cast_fireball")
 			return b != null and not b.disabled, 30.0)):
@@ -76,5 +76,5 @@ func run() -> void:
 	await frames(3)
 	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 	await frames(3)
-	step("the ally is burnt by the hero's Fireball", int(friend["hp"]) < hp_before and int(s.character["slots_used"][2]) == was + 1)
+	step("the ally is burnt by the hero's Fireball", int(friend["hp"]) < hp_before and Stock.spent(s.character, "slot_3") == was + 1)
 	await shot("fireball_after")

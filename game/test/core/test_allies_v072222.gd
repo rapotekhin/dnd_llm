@@ -137,7 +137,7 @@ func test_a_familiar_helps_and_a_new_one_replaces_it() -> void:
 	var lines := CombatRules.next_actor(s, data)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("отвлекает"))).is_true()
 	var wolf := CombatRules.fighter(s, CombatRules.enemies(s)[0])
-	assert_bool(bool(wolf.get("helped", false))).is_true()
+	assert_bool(CombatRules._has(wolf, "helped")).is_true()
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"].get("main_hand", "")))
 	assert_array(CombatRules._attack_mods(s, data, w, wolf)["adv"] as Array).contains(["отвлекает союзник"])
 

@@ -74,7 +74,7 @@ func run() -> void:
 	cs = screen()
 	_tab(cs, "COMBAT_TAB_SPELLS")
 	await frames(2)
-	c["slots_used"] = [0, 0, 0, 0, 0]  # the level-1 cleric spent both slots on Bless and Bane
+	Stock.fill_slots(c)  # the level-1 cleric spent both slots on Bless and Bane
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	cs = screen()
@@ -107,7 +107,7 @@ func run() -> void:
 	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing and not gs.is_busy(), 60.0)
 	gs.finish_combat([])
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 	ConditionRules.end_concentration(s, data, "новый бой")
 	c["hp"] = int(c["max_hp"])
 	c["temp_hp"] = 500
@@ -117,7 +117,7 @@ func run() -> void:
 	if not step("a fight with a wolf", await _my_turn(gs, s)):
 		return
 	c["slots_max"] = [4, 3, 3, 0, 0]  # a level-1 cleric lent third-circle slots for the test
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	cs = screen()
@@ -169,7 +169,7 @@ func run() -> void:
 	await press(find(screen(), "EndTurnButton"))
 	await _my_turn(gs, s)
 	c["slots_max"] = [4, 3, 3, 0, 0]
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	cs = screen()
@@ -207,7 +207,7 @@ func run() -> void:
 	step("the wolf burns in the beam", _seen.any(func(l: String) -> bool: return l.contains("Лунный луч: Волк")), _tail(4))
 	# v0.7.13.6: Grease under the wolf (no concentration: Moonbeam stays) — the label and a save.
 	c["slots_max"] = [4, 3, 3, 0, 0]
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	cs = screen()
@@ -224,7 +224,7 @@ func run() -> void:
 	await shot("grease")
 	# v0.7.13.7: the reaction window lists Shield next to the hit (the window itself is the features playtest's).
 	_learn(c, ["shield"])
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 	var rx := FeatureRules.reactions(s, data, wolf, data["monsters"]["wolf"]["actions"][0], false, 5)
 	step("Shield among the reactions", rx.any(func(r: Dictionary) -> bool: return str(r["id"]) == "spell_shield"), str(rx))
 
@@ -242,7 +242,7 @@ func run() -> void:
 	s.room_id = "mine-gallery"
 	_learn(c, ["find_traps", "light"])
 	c["slots_max"] = [4, 3, 3, 0, 0]
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 	var err: String = gs.cast("find_traps", 2)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	step("Find Traps finds the deadfall", err.is_empty() and s.chat.any(func(e: Dictionary) -> bool:
@@ -260,7 +260,7 @@ func _learn(c: Dictionary, ids: Array) -> void:
 			always.append(id)
 	sp["always"] = always
 	c["slots_max"] = [4, 3, 2, 0, 0]
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 
 
 func _tab(cs: Control, key: String) -> void:

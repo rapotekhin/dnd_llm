@@ -602,7 +602,7 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			al.mouse_filter = Control.MOUSE_FILTER_STOP
-			al.text = "%s\nHP %d/%d · КД %d%s" % [a["name"], int(a["hp"]), int(a["max_hp"]), int(a["ac"]),
+			al.text = "%s\nHP %d/%d · КД %d%s" % [a["name"], int(a["hp"]), int(a["max_hp"]), CombatRules.ac_of(a),
 				("\n" + tr("COMBAT_ALLY_DOWN")) if str(a["status"]) == "down" else ""]
 			al.add_theme_color_override("font_color", UiTheme.OK if str(a["status"]) == "active" else UiTheme.MUTED)
 			var ally_name := str(a["name"])
@@ -622,7 +622,7 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			card.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			card.custom_minimum_size = Vector2(0, 104)
-			var conds: Array = CombatRules.foe_conditions(data, f)
+			var conds: Array = CombatRules.foe_conditions(GameState.session, data, f)
 			if bool(f.get("surprised", false)):
 				conds.append(tr("COMBAT_FOE_SURPRISED"))
 			card.text = "%s\n%s" % [f["name"], tr(CombatRules.health_key(f))]
@@ -648,7 +648,7 @@ func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
 			var foe_name := str(f["name"])
 			card.mouse_entered.connect(func() -> void: _details.show_text(foe_name, about))
 			if not lore.is_empty():
-				card.text += "\nHP %d/%d · КД %d" % [int(f["hp"]), int(f["max_hp"]), int(f["ac"])]
+				card.text += "\nHP %d/%d · КД %d" % [int(f["hp"]), int(f["max_hp"]), CombatRules.ac_of(f)]
 			var why := "COMBAT_NO_ACTION"
 			if _pending.is_valid() and str(f.get("status")) == "active":
 				why = str(_pending_check.call(id))
@@ -733,9 +733,9 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 		bars.add_child(tb)
 	_line(_portrait, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}) \
 		+ ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""))
-	if c.has("wild_shape"):  # v0.7.10
-		_line(_portrait, tr("COMBAT_WILD_SHAPE_LINE").format({"beast": data["monsters"].get(str(c["wild_shape"]["monster"]), {}).get("name", ""),
-			"hp": int(c["wild_shape"]["hp"]), "max": int(c["wild_shape"]["max_hp"])})).add_theme_color_override("font_color", UiTheme.ACCENT)
+	if Guise.has_body(c):  # v0.7.10
+		_line(_portrait, tr("COMBAT_WILD_SHAPE_LINE").format({"beast": data["monsters"].get(str(Guise.body(c)["monster"]), {}).get("name", ""),
+			"hp": int(Guise.body(c)["hp"]), "max": int(Guise.body(c)["max_hp"])})).add_theme_color_override("font_color", UiTheme.ACCENT)
 	if bool(s.combat.get("reckless", false)):
 		_line(_portrait, tr("COMBAT_RECKLESS")).add_theme_color_override("font_color", UiTheme.BAD)
 	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
@@ -838,11 +838,11 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			func(t: String) -> String: return CombatRules.can_attack(s, data, t, true),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true))
 	# Spells.
-	if not SpellRules.ready(c).is_empty() and not c.has("wild_shape"):
+	if not SpellRules.ready(c).is_empty() and not Guise.has_body(c):
 		var sp := _tab_box("COMBAT_TAB_SPELLS")
 		for mm: Dictionary in FeatureRules.metamagic(c, data):  # v0.7.10: metamagic toggles of the next spell
 			var mid := str(mm["id"])
-			var mb := _button(sp, "Meta_" + mid, "✦ %s (%d)" % [mm["name"], int(mm["cost"])], mine and FeatureUses.left(c, data, "sorcery_points") >= int(mm["cost"]))
+			var mb := _button(sp, "Meta_" + mid, "✦ %s (%d)" % [mm["name"], int(mm["cost"])], mine and Stock.left(c, data, "sorcery_points") >= int(mm["cost"]))
 			mb.toggle_mode = true
 			mb.button_pressed = str(s.combat.get("metamagic", "")) == mid
 			mb.tooltip_text = tr("META_TIP_" + mid.to_upper())
@@ -899,8 +899,8 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 				sub.tooltip_text = str(sa["tip"])
 				sub.pressed.connect(func() -> void: _do(GameState.combat_feature(said)))
 	# Features: limited uses with an action of their own, then the feature actions (v0.7.10).
-	var res := FeatureUses.lines(c, data).filter(func(r: Dictionary) -> bool:
-		return str(FeatureUses.table(data).get(str(r["id"]), {}).get("combat_cost", "action")) != "never")
+	var res := Stock.lines(c, data).filter(func(r: Dictionary) -> bool:
+		return str(Stock.table(data).get(str(r["id"]), {}).get("combat_cost", "action")) != "never")
 	var feats := FeatureRules.actions(s, data).filter(func(a: Dictionary) -> bool: return not str(a["id"]).begins_with("spell_"))
 	if not res.is_empty() or not feats.is_empty():
 		var fb := _tab_box("COMBAT_TAB_FEATURES")

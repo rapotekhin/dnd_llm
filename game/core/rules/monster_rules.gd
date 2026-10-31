@@ -436,7 +436,7 @@ static func parry(s: GameSession, data: Dictionary, t: Dictionary, total: int, l
 			continue
 		if not (monster(data, t).get("actions", []) as Array).any(func(a: Dictionary) -> bool: return str(a.get("kind")) == "melee"):
 			continue
-		if total < int(t["ac"]) + int(r["ac"]):
+		if total < CombatRules.ac_of(t) + int(r["ac"]):
 			t["reacted"] = true
 			lines.append("%s парирует (+%d КД)" % [t["name"], int(r["ac"])])
 			return true
@@ -613,7 +613,7 @@ static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary
 		var p := CombatRules.player(s)
 		var dis := (bool(p.get("dodging", false)) and not ConditionRules.incapacitated(c)) or ConditionRules.invisible(c, data) \
 			or (str(sp["attack"]) == "ranged" and CombatRules.cols_between(f, p) == 0)
-		var adv := ["paralyzed", "stunned", "unconscious", "restrained", "petrified", "blinded"].any(func(x: String) -> bool: return ConditionRules.has(c, x))
+		var adv := not (ConditionRules.attack(data, {}, c, CombatRules.cols_between(f, p) == 0)["adv"] as Array).is_empty()
 		var rolls := Roll.dice(s.rng, adv, dis)
 		var nat := Roll.kept(rolls, adv, dis)
 		var to_hit := int(sc.get("attack", 0))

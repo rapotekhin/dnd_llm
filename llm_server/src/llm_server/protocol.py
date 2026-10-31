@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Field, model_validator
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.96.0"
+PROTOCOL_VERSION = "0.97.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -318,6 +318,8 @@ class CharacterSheet(_In):
     underworld: str = ""  # 0.65.0: known fences and stolen goods, the hero's criminal jobs, organizations and ranks
     office: str = ""  # 0.66.0: the hero's offices (rank, merit, whispers about bribes, a town's treasury and mood), offices on offer
     faith: str = ""  # 0.93.0: the hero's god and favor, the vows with their gifts, what is broken
+    made: str = ""  # 0.97.0: what the master built in this game, with ids to use again
+    guise: str = ""  # 0.97.0: the hero's look that is not their own, whose it passes for
 
 
 class HistoryLine(_In):
@@ -1122,7 +1124,7 @@ class ConditionEffect(_Out):
     without a save only when the hero brought it on with their own words this turn — cause "player")."""
 
     kind: Literal["condition"] = "condition"
-    condition: ConditionId
+    condition: ConditionId | str  # 0.97.0: also a made status: «new:<key>» of `make` or its gen_st_… id
     on: bool = True  # False lifts it (exhaustion — one level)
     reason: str = ""  # what caused it, in Russian
     save: ConditionSave | None = None
@@ -1133,6 +1135,41 @@ class ConditionEffect(_Out):
     by: str | None = None  # the NPC who caused it (the source of fear, the charmer, the grappler)
     ends_on_damage: bool = False  # a sleep that ends when the hero is hurt
     target_id: str | None = None  # an enemy id in a fight (0.7.0)
+
+
+class MakePart(_Out):
+    """A part of what the master builds (0.97.0): `part` of rules.make.parts, its `value` and `amount`."""
+
+    part: str
+    value: str | None = None
+    amount: int | None = Field(default=None, ge=-20, le=20)
+
+
+class MakeEffect(_Out):
+    """The master builds what neither the data nor 5e has (0.97.0): a status or a passive trait of `parts`, a skill of
+    an `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the
+    hero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a
+    trait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `give_item`
+    item_id «new:book:<key>». What the parts do not cover is not made: say so in the story, fill `missing_concept`."""
+
+    kind: Literal["make"] = "make"
+    what: Literal["status", "skill", "trait"]
+    key: str = Field(min_length=2, max_length=30)
+    name: str = Field(min_length=2, max_length=40)
+    text: str = Field(min_length=5, max_length=300)  # what it does, for the player's card
+    parts: list[MakePart] = Field(default_factory=list, max_length=6)
+    ability: SaveAbility | None = None  # a skill's ability
+    book: str | None = Field(default=None, max_length=60)  # a skill's or a trait's book: its title
+
+
+class GuiseEffect(_Out):
+    """The hero's look named (0.97.0): only when a spell (Disguise Self) or a status with the part `guise` lies on the
+    hero, in this turn too. `look` — who the hero looks like; `faction` — whose person that is: its people take the hero
+    for their own and its foes for an enemy, each viewer tested once by the engine."""
+
+    kind: Literal["guise"] = "guise"
+    look: str = Field(min_length=2, max_length=60)
+    faction: str | None = None
 
 
 class DiseaseEffect(_Out):
@@ -1210,7 +1247,7 @@ class CourseEffect(_Out):
     kind: Literal["course"] = "course"
     npc_id: str  # an NPC of the scene or a teacher from find_teachers
     name: str = Field(max_length=60)
-    teach_kind: Literal["skill", "tool", "language", "spell", "recipe"]
+    teach_kind: Literal["skill", "tool", "language", "spell", "recipe", "trait"]
     teach_id: str
     lessons: int = Field(default=4, ge=1, le=20)
     fee_cp: int = Field(default=0, ge=0)
@@ -1226,7 +1263,7 @@ class ActTeach(_Out):
     the hero reaches the teacher."""
 
     npc: str
-    kind: Literal["skill", "tool", "language", "spell", "recipe"]
+    kind: Literal["skill", "tool", "language", "spell", "recipe", "trait"]
     id: str
     name: str = Field(max_length=60)
     lessons: int = Field(default=4, ge=1, le=20)
@@ -1472,6 +1509,7 @@ class NewFaction(_Out):
     scope: Literal["here", "global"] = "here"
     description: str = Field(default="", max_length=240)
     hostile: bool = True
+    foes: list[str] = Field(default_factory=list, max_length=6)  # 0.97.0: faction ids at odds with it
 
 
 class FactionEffect(_Out):
@@ -1807,7 +1845,7 @@ class FlagEffect(_Out):
 
 Effect = Annotated[
     MoveEffect | DamageEffect | HealEffect | CoinsEffect | GiveItemEffect | TakeItemEffect | NpcAttitudeEffect | FlagEffect
-    | CastEffect | ConditionEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | LetterReplyEffect | VowEffect | GodEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | FactionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
+    | CastEffect | ConditionEffect | MakeEffect | GuiseEffect | DiseaseEffect | RecipeEffect | JobEffect | PropertyEffect | BankEffect | SupplierEffect | CourseEffect | BondEffect | ContestEffect | WildsEffect | BeastEffect | FestivalEffect | WeatherEffect | RumorEffect | LetterReplyEffect | VowEffect | GodEffect | PermitEffect | StockEffect | FenceEffect | HeistEffect | OrgEffect | FactionEffect | UseFeatureEffect | UseItemEffect | StartCombatEffect | AdvanceTimeEffect
     | FurnishEffect | TakePropEffect | PropStateEffect | NoteEffect | EquipEffect | CrimeKnownEffect | CrimeReleaseEffect
     | NpcDiscountEffect | NpcFavorEffect | AcceptQuestEffect | RevealSecretEffect | ReputationEffect
     | TakeFromEffect | PutInEffect | UnlockEffect | DropItemEffect | FillEffect | CreateNpcEffect | CreatePlaceEffect | NpcFollowEffect | CreateQuestEffect | GoalAssessEffect | GoalHintEffect

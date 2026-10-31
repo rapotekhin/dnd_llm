@@ -102,7 +102,7 @@ func run() -> void:
 	var beast := str(FeatureRules.beasts(ds.character, data)[0])
 	await press(find(cs, "Ask_" + beast))
 	await frames(4)
-	step("the druid is a beast now", ds.character.has("wild_shape") and int(ds.character["ac"]) == int(data["monsters"][beast]["ac"]), _tail(2))
+	step("the druid is a beast now", Guise.has_body(ds.character) and int(ds.character["ac"]) == int(data["monsters"][beast]["ac"]), _tail(2))
 	await shot("wild_shape")
 
 

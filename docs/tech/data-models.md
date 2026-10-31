@@ -38,7 +38,7 @@
 Словарь в `session.character`, раскладка — в шапке `core/character/character_rules.gd`:
 
 - **выборы** — имя, пол, раса и подраса, класс и подкласс, предыстория, `level`, `xp`, характеристики, владения (навыки, компетентность, спасброски, языки, инструменты, доспехи, оружие), черты, умения, заклинания (`cantrips`, `known`, `prepared`), экипировка (`armor`, `shield`, `main_hand`, `off_hand`), инвентарь, `gold_cp`;
-- **состояние** — `hp`, `conditions`, `slots_used`, `hit_dice_used`;
+- **состояние** — `hp`, `conditions`, `effects`, `spent` (потрачено ресурсов, `Stock`);
 - **кэш производных** — `max_hp`, `ac`, `prof_bonus`, `skills`, `saves`, `speed`, `passive_perception`, `slots_max`, `spell_dc`, `spell_attack` и названия.
 
 Кэш пересчитывает `CharacterRules.refresh()` после любой смены выборов (старт, загрузка, экипировка, эффекты, уровень), поэтому `CheckEngine`, `EffectEngine` и снимок читают готовые числа. Создание — `CharacterBuilder` (шаги и проверка шага), рост — `LevelUp` (уровни 1–5). Монеты везде в медяках.
@@ -51,7 +51,7 @@
 
 - JSON в `<профиль>/saves/slot_1..10.json` и `autosave.json`, запись атомарная.
 - Формат: `{save_version, game_version, saved_at, meta, session}`; `session` — `GameSession.to_dict()`, `meta` — для списка слотов.
-- `SaveFormat.SAVE_VERSION = 55` (v0.7.62). На этапе единых моделей грузится только сейв этой версии, миграций нет ([ADR-0012](adr/0012-unified-models.md)), фикстура одна: `game/test/fixtures/saves/save_v55.json`. Сейв новее игры тоже не грузится.
+- `SaveFormat.SAVE_VERSION = 56` (v0.7.63). На этапе единых моделей грузится только сейв этой версии, миграций нет ([ADR-0012](adr/0012-unified-models.md)), фикстура одна: `game/test/fixtures/saves/save_v55.json`. Сейв новее игры тоже не грузится.
 - Почему JSON, а не pickle прототипа: читается человеком, переживает рефакторинг, безопасен при загрузке чужих файлов ([ADR-0007](adr/0007-godot-client-python-llm-backend.md); старое решение — [ADR-0002](adr/0002-pickle-saves.md)).
 
 ## Протокол

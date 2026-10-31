@@ -503,7 +503,7 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 		if not reward_item.is_empty():
 			if own:
 				return {"reason": "у своего дела нет заказчика — награды-вещи нет"}
-			var item: Dictionary = data["items"]["catalog"].get(reward_item, {})
+			var item: Dictionary = ItemRules.def_of(data["items"], s.items, reward_item)  # a made book too (v0.7.63)
 			if item.is_empty():
 				return {"reason": "награда-вещь — id каталога (find_items)"}
 			if int(item.get("value_cp", 0)) > cp:

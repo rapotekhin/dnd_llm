@@ -117,9 +117,9 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var c := s.character
 	if int(c["hp"]) * 2 < int(c["max_hp"]):
-		if FeatureUses.can_use(c, data, "second_wind", 1).is_empty() and int(CombatRules.economy(s).get("bonus", 0)) > 0:
+		if Stock.can_use(c, data, "second_wind", 1).is_empty() and int(CombatRules.economy(s).get("bonus", 0)) > 0:
 			CombatRules.economy(s)["bonus"] = 0
-			lines.append_array(FeatureUses.use(c, data, "second_wind", 1, s.rng))
+			lines.append_array(Stock.use(c, data, "second_wind", 1, s.rng))
 		elif int(c["inventory"].get("healing_potion", 0)) > 0 and int(CombatRules.economy(s).get("action", 0)) > 0:
 			CombatRules.economy(s)["action"] = 0
 			lines.append_array(ItemRules.use(c, data, s.items, "healing_potion", s.rng))

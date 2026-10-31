@@ -18,7 +18,7 @@ func run() -> void:
 	var sp: Dictionary = s.character["spells"]
 	sp["always"] = ["bless"]
 	s.character["slots_max"] = [4, 3, 0, 0, 0]
-	s.character["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(s.character)
 	s.character["cha"] = 40
 	CharacterRules.refresh(s.character, node("Catalog").data, s.items)
 	var npcs := s.npcs_here(gs.world().world, s.room_id)
@@ -44,7 +44,7 @@ func run() -> void:
 	await wait_until(func() -> bool: return gs.is_busy(), 5.0)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)
-	step("the NPC carries the blessing", Being.view(s, str(npcs[0])).has("buffs"), str(Being.with(s, "buffs")))
+	step("the NPC carries the blessing", Being.view(s, str(npcs[0])).has("effects"), str(Being.with(s, "effects")))
 	step("the hero too", ConditionRules.effects(s.character).any(func(e: Dictionary) -> bool: return str(e.get("source", {}).get("id", "")) == "bless"))
 
 	s.room_id = "pushcha-hollow"

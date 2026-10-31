@@ -24,7 +24,7 @@ func run() -> void:
 
 func _pinned(gs: Node, s: GameSession, kind: String, id: String, target: String, words: String, slot_spell: bool) -> void:
 	var game := screen()
-	var used_before := int((s.character["slots_used"] as Array)[0])
+	var used_before := Stock.spent(s.character, "slot_1")
 	gs.attach(kind, id, 1 if slot_spell else 0, target)
 	await frames(2)
 	step("pinned: " + id, find(game, "AttachName") != null)
@@ -44,7 +44,7 @@ func _pinned(gs: Node, s: GameSession, kind: String, id: String, target: String,
 		if str(s.chat[i]["kind"]) == GameSession.KIND_EFFECT and " ".join(s.chat[i].get("lines", [])).contains("Заклинание:"):
 			again += 1
 	step("no cast of its own after the words", again == 0, "turns %d → %d (a talk the words began may add one)" % [turns, s.turn_counter])
-	var used := int((s.character["slots_used"] as Array)[0])
+	var used := Stock.spent(s.character, "slot_1")
 	step("slot spent exactly once" if slot_spell else "a cantrip spends no slot", used - used_before == (1 if slot_spell else 0), "slots used %d → %d" % [used_before, used])
 	step("info: the master", true, _after(s, at))
 

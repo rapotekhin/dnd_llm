@@ -107,7 +107,7 @@ func test_lay_on_hands_spends_five_points_on_a_disease() -> void:
 	var s := _session()
 	DiseaseRules.contract(s, data, "rot_fever")
 	_later(s, 25)
-	var lines := FeatureUses.use(s.character, data, "lay_on_hands", 5, s.rng)
+	var lines := Stock.use(s.character, data, "lay_on_hands", 5, s.rng)
 	assert_str(" ".join(lines)).contains("болезнь исцелена")
 	assert_bool(DiseaseRules.sick(s.character, "rot_fever")).is_false()
 

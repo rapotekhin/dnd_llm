@@ -89,7 +89,7 @@ func test_charm_person_ends_and_the_npc_knows() -> void:
 	assert_array(SpellEffects.npc_spells(s, "npc_innkeeper")).is_empty()
 	assert_int(s.attitude("npc_innkeeper")).is_equal(att - 1)
 	var back := GameSession.from_dict(s.to_dict(5))
-	assert_bool(Being.with(back, "spells").is_empty()).is_true()
+	assert_bool(SpellEffects.npc_spells(back, "npc_innkeeper").is_empty()).is_true()
 
 
 func test_a_concentration_charm_ends_with_the_concentration() -> void:

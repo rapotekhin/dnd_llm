@@ -191,7 +191,7 @@ static func spell_text(data: Dictionary, id: String, slot: int = 0) -> String:
 	return "\n".join(lines)
 
 
-## A class feature or a race trait by id, or a resource of FeatureUses (its first feature).
+## A class feature or a race trait by id, or a resource of Stock (its first feature).
 static func feature_text(data: Dictionary, id: String) -> String:
 	for pool: Dictionary in [data["classes"]["features"], data["races"]["traits"]]:
 		if pool.has(id):

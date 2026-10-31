@@ -4187,3 +4187,94 @@ scenarios:
     rubric:
       - "Мастер даёт эффект god с shrine_name (камень с идолом) и new: имя «Хозяйка Брода» (или близкое), заповедь о рыбе без спроса и forbids — poaching; не выдаёт бога пакета за неё"
       - "Описывает, как появилось святилище и как отнеслись рыбаки; не обещает герою даров или чудес — их даёт движок"
+
+  - id: make_status_a_curse_of_the_well
+    title: "Проклятие колодца, которого нет в 5e: статус из частей и condition со спасброском"
+    category: concepts
+    extends: tavern
+    snapshot:
+      scene:
+        room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
+               description: "Низкий закопчённый зал. Посреди него старый чёрный колодец: рыбаки обходят его стороной, вода проклята и отнимает у пьющего ловкость рук."}
+    input: "Зачерпываю из чёрного колодца и пью, хоть рыбаки и говорят, что вода проклята."
+    engine:
+      validate:
+        - {kind: make, status: accept, summary: "Новое: «Чёрная вода» (3 очк., слабое)"}
+        - {kind: condition, status: accept, summary: "Чёрная вода: спасбросок провален"}
+    expect:
+      effects: {required_kinds_any: [make], forbidden_kinds: [coins, create_npc, create_quest]}
+    rubric:
+      - "Мастер собирает статус эффектом make с what status и частями из списка, не выдумывает новых слов"
+      - "Кладёт его condition с new:<key> и причиной, со спасброском или cause player: вода вредная, герой пьёт сам"
+
+  - id: make_skill_through_a_teacher
+    title: "Редкое умение наставника: новый навык идёт через course, а не подарком"
+    category: concepts
+    extends: tavern
+    snapshot:
+      scene:
+        room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
+               description: "Низкий закопчённый зал, у очага пара рыбаков. Хозяин Горм славится редким умением гадать на углях очага: по их узору он называет, кто войдёт в дверь завтра."}
+    input: "Горм, научи меня гадать на углях. Я заплачу."
+    engine:
+      validate:
+        - {kind: make, status: accept, summary: "Новый навык: Гадание на углях"}
+        - {kind: course, status: accept, summary: "Курс — Горм: «Гадание на углях», 4 занятий"}
+    expect:
+      effects: {required_kinds_any: [make], forbidden_kinds: [condition, coins]}
+    rubric:
+      - "Мастер делает навык make с what skill и ability и открывает course с teach_kind skill и teach_id new:<key>"
+      - "Не даёт навык сразу: герой учится в окне «Учёба»"
+
+  - id: make_refused_what_parts_do_not_cover
+    title: "Полёт и урон каждый ход частями не собрать: отказ в истории и missing_concept"
+    category: concepts
+    extends: tavern
+    input: "Хочу, чтобы у меня навсегда выросли крылья и я летал над городом, а всех, кто рядом, жгло огнём каждый ход."
+    expect:
+      effects: {forbidden_kinds: [make, condition, give_item]}
+      missing_concept: true
+    rubric:
+      - "Мастер не собирает этого: объясняет в мире, почему не вышло, и заполняет missing_concept"
+
+  - id: guise_a_look_named_with_its_faction
+    title: "На герое «Маскировка»: мастер называет облик и фракцию эффектом guise"
+    category: concepts
+    extends: tavern
+    snapshot:
+      character:
+        guise: "Маскировка лежит на герое, облик не назван: узнай у игрока, кем он выглядит, и дай эффект guise"
+      scene:
+        factions: ["Культ Пепла (ash_cult, cult): неприязнь", "Рыбаки Устья (fisher_folk, people): нейтрально"]
+    input: "Пока действует маскировка, я выгляжу как сектант Культа Пепла: закопчённый плащ, знак пламени в круге на груди."
+    engine:
+      validate:
+        - {kind: guise, status: accept, summary: "Облик: сектант Культа Пепла"}
+    expect:
+      effects: {required_kinds_any: [guise], forbidden_kinds: [make, condition, coins]}
+    rubric:
+      - "Мастер даёт guise с look и faction ash_cult"
+
+  - id: guise_refused_without_a_spell
+    title: "Без заклинания облик словами не сменить: только рассказ"
+    category: concepts
+    extends: tavern
+    input: "Накидываю капюшон и говорю всем, что отныне выгляжу как сержант Ведда."
+    expect:
+      effects: {forbidden_kinds: [guise, make]}
+    rubric:
+      - "Облик не меняется: капюшон остаётся капюшоном, люди видят того же героя"
+
+  - id: invisible_topic_in_a_conversation
+    title: "Невидимый герой заговорил: NPC слышит голос и не видит лица"
+    category: concepts
+    extends: tavern
+    mode: social
+    snapshot:
+      character: {conditions: [invisible]}
+    input: "Шепчу Горму на ухо: налей мне эля и никому не говори."
+    expect:
+      effects: {forbidden_kinds: [condition]}
+    rubric:
+      - "Горм не видит героя: слышит голос из пустоты, озирается, не смотрит ему в лицо и не описывает его внешность"
+

@@ -127,12 +127,12 @@ func test_a_foe_strikes_once_a_round_and_only_when_it_can() -> void:
 	assert_bool(CombatRules.can_react(s, data, f)).is_false()
 	f["reacted"] = false
 	for cond: String in ["incapacitated", "charmed", "blinded", "paralyzed"]:
-		(f["conditions"] as Array).append(cond)
+		CombatRules._hold(f, cond)
 		assert_bool(CombatRules.can_react(s, data, f)).override_failure_message(cond).is_false()
-		(f["conditions"] as Array).erase(cond)
-	(f["conditions"] as Array).append("prone")
+		ConditionRules.remove(f, cond)
+	CombatRules._hold(f, "prone")
 	assert_bool(CombatRules.can_react(s, data, f)).is_true()  # a prone foe still strikes
-	(f["conditions"] as Array).erase("prone")
+	ConditionRules.remove(f, "prone")
 	s.character["concentration"] = "invisibility"
 	assert_bool(CombatRules.can_react(s, data, f)).is_false()  # it does not see the hero
 
@@ -150,18 +150,18 @@ func test_grapple_holds_until_the_hero_walks_off_and_shove_knocks_down() -> void
 	_fight(s, [{"monster": "goblin", "col": 0}])
 	var id: String = CombatRules.enemies(s)[0]
 	var f := CombatRules.fighter(s, id)
-	(f["conditions"] as Array).append("incapacitated")  # it does not resist: the contest is won
+	CombatRules._hold(f, "incapacitated")  # it does not resist: the contest is won
 	assert_str(CombatRules.can_grapple(s, data, id)).is_empty()
 	CombatRules.grapple(s, data, id, false)
 	assert_array(f["conditions"]).contains(["grappled"])
-	(f["conditions"] as Array).erase("incapacitated")
+	ConditionRules.remove(f, "incapacitated")
 	f["reacted"] = true
 	CombatRules.player_move(s, data, 1)
 	assert_array(f["conditions"]).not_contains(["grappled"])
 	var t := _session()
 	_fight(t, [{"monster": "goblin", "col": 0}])
 	var g := CombatRules.fighter(t, CombatRules.enemies(t)[0])
-	(g["conditions"] as Array).append("stunned")
+	CombatRules._hold(g, "stunned")
 	CombatRules.grapple(t, data, str(g["id"]), true)
 	assert_array(g["conditions"]).contains(["prone"])
 
@@ -193,7 +193,7 @@ func test_attitude_stays_in_the_rules_range() -> void:
 func test_a_pinned_spell_that_starts_the_fight_lands_first_on_the_caught_npc() -> void:
 	var s := _session("wizard_yalika")
 	GameState.session = s
-	(s.character["slots_used"] as Array)[0] = 1  # the slot spent with the words
+	Stock.spend(s.character, "slot_1")  # the slot spent with the words
 	var foes := [{"monster": "acolyte", "name": "Сестра Илва", "npc_id": "npc_priestess", "col": 0}]
 	var lines := CombatRules.start(s, data, foes, {"opening": {"npc_id": "npc_priestess"}})
 	s.mode = GameSession.MODE_COMBAT
@@ -206,7 +206,7 @@ func test_a_pinned_spell_that_starts_the_fight_lands_first_on_the_caught_npc() -
 	var strike := GameState._opening_strike({"spell": "magic_missile", "slot": 1, "npc_id": "npc_priestess"})
 	assert_str(" ".join(strike)).contains("Волшебная стрела")
 	assert_int(int(f["hp"])).is_less(hp)
-	assert_int(int((s.character["slots_used"] as Array)[0])).is_equal(1)  # spent once, not twice
+	assert_int(Stock.spent(s.character, "slot_1")).is_equal(1)  # spent once, not twice
 
 
 func test_features_and_any_item_can_be_pinned() -> void:

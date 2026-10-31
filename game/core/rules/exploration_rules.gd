@@ -37,7 +37,7 @@ static func state_key(s: GameSession, data: Dictionary, params: Dictionary, list
 	if str(params.get("skill", "")) == "perception":
 		parts.append("dark" if TimeRules.dark(s, data) else "light")
 	if not listener.is_empty():
-		parts.append("%s:%d:%s" % [listener, s.attitude(listener), ",".join(SpellEffects.npc_spells(s, listener).map(func(e: Dictionary) -> String: return str(e["spell"])))])
+		parts.append("%s:%d:%s" % [listener, s.attitude(listener), ",".join(SpellEffects.npc_spells(s, listener).map(func(e: Dictionary) -> String: return str(e["source"]["id"])))])
 	return "|".join(parts)
 
 
@@ -409,13 +409,10 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	FollowRules.rested(s)  # the followers eat and drink with the hero (v0.7.39.1)
 	c["hp"] = int(c.get("max_hp", c.get("hp", 1)))
 	lines.append("HP %d/%d" % [c["hp"], c["max_hp"]])
-	c["slots_used"] = [0, 0, 0, 0, 0]
-	var level := int(c.get("level", 1))
-	c["hit_dice_used"] = maxi(0, int(c.get("hit_dice_used", 0)) - maxi(1, level / 2))
 	if not s.locks.is_empty():
 		lines.append("можно снова пробовать проваленное")
 	s.locks.clear()
-	FeatureUses.recharge_all(c, data, "long")
+	Stock.recharge_all(c, data, "long")
 	lines.append_array(_rest_ends(c, data, "long"))
 	lines.append_array(ItemRules.dawn(c, data, s.items, s.rng))  # charges come back at dawn (v0.7.12)
 	if not camp_supplies.is_empty():
@@ -429,7 +426,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 
 ## Hit dice the character can spend now.
 static func hit_dice_left(c: Dictionary) -> int:
-	return maxi(0, int(c.get("level", 1)) - int(c.get("hit_dice_used", 0)))
+	return maxi(0, int(c.get("level", 1)) - Stock.spent(c, "hit_dice"))
 
 
 ## "" when a short rest is possible now, otherwise a localization key.
@@ -457,7 +454,7 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 			healed *= 2
 		var before := int(c["hp"])
 		c["hp"] = mini(int(c["max_hp"]), before + healed)
-		c["hit_dice_used"] = int(c.get("hit_dice_used", 0)) + n
+		Stock.spend(c, "hit_dice", n)
 		lines.append("кости хитов: %d (к%d) — +%d HP" % [n, die, int(c["hp"]) - before])
 		for f: Variant in c.get("features", []):  # Song of Rest (v0.7.10)
 			if str(f).begins_with("song_of_rest"):
@@ -466,11 +463,10 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 				c["hp"] = mini(int(c["max_hp"]), was + song)
 				lines.append("Песнь отдыха: +%d HP" % (int(c["hp"]) - was))
 				break
-	FeatureUses.recharge_all(c, data, "short")
-	for f: Variant in data["rules"]["rest"]["short_rest_slot_features"]:
-		if CharacterRules.has_feature(c, str(f)):
-			c["slots_used"] = [0, 0, 0, 0, 0]
-			lines.append("ячейки договора восстановлены")
+	var pact := Stock.recharge(c, data, "slot_1") == "short"
+	Stock.recharge_all(c, data, "short")
+	if pact:
+		lines.append("ячейки договора восстановлены")
 	lines.append_array(_rest_ends(c, data, "short"))
 	lines.append_array(ItemRules.identify(c, data, s.items))  # an hour with the things names them (v0.7.12)
 	s.short_rests += 1

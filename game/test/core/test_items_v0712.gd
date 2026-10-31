@@ -220,13 +220,13 @@ func test_pearl_of_power_recovers_a_slot() -> void:
 	var s := _hero("wizard_yalika")
 	var c := s.character
 	c["inventory"]["pearl_of_power"] = 1
-	c["slots_used"] = [1, 0, 0, 0, 0]
+	Stock.spend(c, "slot_1", 1)
 	assert_str(ItemRules.can_use(c, data, s.items, "pearl_of_power")).contains("настройки")
 	assert_str(ItemRules.can_attune(c, data, s.items, "pearl_of_power")).is_empty()
 	ItemRules.attune(c, data, s.items, "pearl_of_power")
 	assert_str(ItemRules.can_use(c, data, s.items, "pearl_of_power")).is_empty()
 	ItemRules.use(c, data, s.items, "pearl_of_power", s.rng, s)
-	assert_int(int(c["slots_used"][0])).is_equal(0)
+	assert_int(Stock.spent(c, "slot_1")).is_equal(0)
 	assert_bool(ItemRules.can_attune(_hero("fighter_aira").character, data, {}, "pearl_of_power") == "EQUIP_NOT_OWNED").is_true()
 
 

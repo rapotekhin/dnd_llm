@@ -3591,6 +3591,7 @@
 	    "description": "Мертвецы Марки. С ними не договориться."
 	  },
 	  "brod_folk": {
+	    "foes": ["ash_cult", "mine_kobolds"],
 	    "name": "Жители Ольхового Брода",
 	    "kind": "settlement",
 	    "scope": [
@@ -3601,6 +3602,7 @@
 	    "description": "Горожане, ремесленники и ополчение Брода."
 	  },
 	  "wild_folk": {
+	    "foes": ["ash_cult"],
 	    "name": "Вольный люд Марки",
 	    "kind": "people",
 	    "scope": "global",

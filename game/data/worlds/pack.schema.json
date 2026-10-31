@@ -133,6 +133,7 @@
 							"scope": {"type": ["string", "array"]},
 							"location": {"type": "string"},
 							"hostile": {"type": "boolean"},
+							"foes": {"type": "array", "items": {"type": "string"}},
 							"friendable": {"type": "boolean"},
 							"start": {"type": "integer"},
 							"description": {"type": "string"}

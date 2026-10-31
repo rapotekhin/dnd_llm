@@ -7,7 +7,7 @@ extends RefCounted
 ##   choices — name, gender, race, subrace, class, subclass, background, level, abilities {str..cha, final},
 ##     skill_profs, expertise, save_profs, languages, tools, armor_profs, weapon_profs, traits, features,
 ##     spells {cantrips, known, prepared}, equipped {armor, shield, main_hand, off_hand}, inventory, gold_cp;
-##   state — hp, conditions, slots_used [5], hit_dice_used;
+##   state — hp, conditions, spent — the stock (Stock);
 ##   derived cache (refresh) — race_name, class_name, prof_bonus, max_hp, ac, skills {id: bonus}, saves {id: bonus},
 ##     speed, passive_perception, slots_max [5], spell_ability, spell_dc, spell_attack.
 ## The cache keeps CheckEngine, EffectEngine and the snapshot simple; refresh() after any change of choices.
@@ -104,8 +104,8 @@ static func item_def(c: Dictionary, data: Dictionary, session_items: Dictionary,
 ## Armor Class: worn armor (base + DEX within its cap) or an unarmored formula (Barbarian 10+DEX+CON,
 ## Monk 10+DEX+WIS without a shield, Draconic Resilience 13+DEX), +2 for a shield, +1 for the Defense style in armor.
 static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> int:
-	if c.has("wild_shape"):  # the beast's AC (v0.7.10)
-		return int(data["monsters"].get(str(c["wild_shape"]["monster"]), {}).get("ac", 10))
+	if Guise.has_body(c):  # the beast's AC (v0.7.10)
+		return int(data["monsters"].get(str(Guise.body(c)["monster"]), {}).get("ac", 10))
 	var dex := mod(ability(c, "dex"))
 	var armor: Dictionary = item_def(c, data, session_items, "armor").get("armor", {})
 	var shield: Dictionary = item_def(c, data, session_items, "shield").get("armor", {})
@@ -240,8 +240,8 @@ static func extra_attacks(c: Dictionary, data: Dictionary) -> int:
 
 
 static func speed(c: Dictionary, data: Dictionary) -> int:
-	if c.has("wild_shape"):
-		return int(data["monsters"].get(str(c["wild_shape"]["monster"]), {}).get("speed", 30))
+	if Guise.has_body(c):
+		return int(data["monsters"].get(str(Guise.body(c)["monster"]), {}).get("speed", 30))
 	var race: Dictionary = data["races"]["races"].get(str(c.get("race", "")), {})
 	var bonus := 0
 	var spec: Dictionary = level_row(c, data).get("class_specific", {})
@@ -252,13 +252,15 @@ static func speed(c: Dictionary, data: Dictionary) -> int:
 		feet = maxi(feet, 30 + bonus)
 	for e: Dictionary in SpellEffects.hero_effects(c, "speed_plus"):  # Longstrider (v0.7.13.3)
 		feet += int(e["speed_plus"])
+	for e: Dictionary in SpellEffects.hero_effects(c, "fly_speed"):  # Fly: 60 feet in the air (v0.7.63)
+		feet = maxi(feet, int(e["fly_speed"]))
 	if SpellEffects.has(c, "speed_x2"):  # Haste
 		feet *= 2
 	if has_feature(c, "fast_movement") and str(item_def(c, data, {}, "armor").get("armor", {}).get("category", "")) != "heavy":
 		feet += 10  # the barbarian's Fast Movement
 	# v0.7.8: grappled and restrained — 0; exhaustion 5 — 0, 2 — half (5e).
 	var exhaustion := int(c.get("exhaustion", 0))
-	if exhaustion >= 5 or (c.get("conditions", []) as Array).any(func(x: Variant) -> bool: return str(x) in ["grappled", "restrained", "paralyzed", "petrified"]):
+	if exhaustion >= 5 or ConditionRules.does(c, data, "no_move"):
 		return 0
 	return feet / 2 if exhaustion >= 2 else feet
 

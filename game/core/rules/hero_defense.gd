@@ -75,7 +75,7 @@ static func _worn(c: Dictionary, data: Dictionary, session_items: Dictionary) ->
 static func adjust(s: GameSession, data: Dictionary, dtype: String, dmg: int) -> Dictionary:
 	if dmg <= 0:
 		return {"damage": maxi(0, dmg), "note": ""}
-	if ConditionRules.has(s.character, "petrified"):
+	if ConditionRules.does(s.character, data, "resist_all"):
 		return {"damage": dmg / 2, "note": "сопротивление: окаменение"}
 	var res := resistances(s, data)
 	if not dtype.is_empty() and res.has(dtype):
@@ -140,7 +140,7 @@ static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag
 	var dis := not (mods["disadvantage"] as Array).is_empty() or dis_extra  # heavy armour in the heat (v0.7.46)
 	var rolls := Roll.hero_dice(s, adv, dis)  # Lucky (v0.7.10)
 	var nat := Roll.kept(rolls, adv, dis)
-	var die := SpellEffects.hero_die(s, data, "save")  # Bless, Resistance (v0.7.13.1)
+	var die := SpellEffects.die(s, c, "save")  # Bless, Resistance (v0.7.13.1)
 	var total := nat + bonus + int(die["bonus"]) + DifficultyRules.bonus(s, data)  # the game's difficulty (v0.7.20.4)
 	var parts := RollParts.cached(c, data, "save", ability, s.items)
 	parts.append_array(die["parts"])

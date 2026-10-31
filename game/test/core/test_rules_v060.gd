@@ -31,22 +31,22 @@ func _session(preset_id: String) -> GameSession:
 func test_fighter_feature_uses_and_their_rests() -> void:
 	var s := _session("fighter_aira")
 	var c := s.character
-	assert_array(FeatureUses.owned(c, data)).contains(["second_wind"])
+	assert_array(Stock.owned(c, data)).contains(["second_wind"])
 	c["hp"] = 2
-	var lines := FeatureUses.use(c, data, "second_wind", 1, s.rng)
+	var lines := Stock.use(c, data, "second_wind", 1, s.rng)
 	assert_int(c["hp"]).is_greater(2)
 	assert_str(" ".join(lines)).contains("осталось 0")
-	assert_str(FeatureUses.can_use(c, data, "second_wind", 1)).contains("короткого")
-	assert_str(FeatureUses.resolve(c, data, "Второе дыхание")).is_equal("second_wind")
+	assert_str(Stock.can_use(c, data, "second_wind", 1)).contains("короткого")
+	assert_str(Stock.resolve(c, data, "Второе дыхание")).is_equal("second_wind")
 	ExplorationRules.short_rest(s, data, 0, s.rng)
-	assert_int(FeatureUses.left(c, data, "second_wind")).is_equal(1)
+	assert_int(Stock.left(c, data, "second_wind")).is_equal(1)
 
 
 func test_bard_inspiration_by_charisma_until_a_long_rest() -> void:
 	var c := _preset("bard_yas")
 	var n := maxi(1, CharacterRules.mod(int(c["abilities"]["cha"])))
-	assert_int(FeatureUses.max_uses(c, data, "bardic_inspiration")).is_equal(n)
-	assert_str(FeatureUses.recharge(c, data, "bardic_inspiration")).is_equal("long")
+	assert_int(Stock.max_uses(c, data, "bardic_inspiration")).is_equal(n)
+	assert_str(Stock.recharge(c, data, "bardic_inspiration")).is_equal("long")
 
 
 func test_casting_spends_the_lowest_slot_and_keeps_concentration() -> void:
@@ -63,7 +63,7 @@ func test_casting_spends_the_lowest_slot_and_keeps_concentration() -> void:
 	var unknown := "fireball"
 	assert_str(str(SpellRules.check(c, data, unknown, 0).get("reason", ""))).contains("не подготовлено")
 	c["spells"]["prepared"].append("detect_magic")  # a concentration spell
-	c["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(c)
 	SpellRules.cast(c, data, "detect_magic", 1)
 	assert_str(c["concentration"]).is_equal("detect_magic")
 
@@ -96,10 +96,10 @@ func test_short_rest_spends_hit_dice_twice_a_day() -> void:
 	c["hp"] = 1
 	assert_str(ExplorationRules.can_short_rest(s, data)).is_empty()
 	ExplorationRules.short_rest(s, data, 5, s.rng)
-	assert_int(c["hit_dice_used"]).is_equal(1)  # level 1 has one die
+	assert_int(Stock.spent(c, "hit_dice")).is_equal(1)  # level 1 has one die
 	assert_int(c["hp"]).is_greater_equal(1)
 	ExplorationRules.short_rest(s, data, 1, s.rng)
-	assert_int(c["hit_dice_used"]).is_equal(1)
+	assert_int(Stock.spent(c, "hit_dice")).is_equal(1)
 	assert_str(ExplorationRules.can_short_rest(s, data)).is_equal("REST_SHORT_LIMIT")
 	s.room_id = "brod-temple"
 	ExplorationRules.long_rest(s, data)
@@ -108,9 +108,9 @@ func test_short_rest_spends_hit_dice_twice_a_day() -> void:
 
 func test_warlock_slots_come_back_on_a_short_rest() -> void:
 	var s := _session("warlock_fiber")
-	s.character["slots_used"] = [1, 0, 0, 0, 0]
+	Stock.spend(s.character, "slot_1", 1)
 	ExplorationRules.short_rest(s, data, 0, s.rng)
-	assert_array(s.character["slots_used"]).is_equal([0, 0, 0, 0, 0])
+	assert_int(s.character.get("spent", {}).size()).is_equal(0)
 
 
 func test_effects_cast_condition_use_feature_and_item() -> void:
@@ -179,11 +179,11 @@ func test_a_cleric_prepares_spells_once_after_a_long_rest() -> void:
 
 func test_new_fields_survive_a_save() -> void:
 	var s := _session("fighter_aira")
-	FeatureUses.use(s.character, data, "second_wind", 1, s.rng)
+	Stock.use(s.character, data, "second_wind", 1, s.rng)
 	ConditionRules.add(s.character, "poisoned", "short_rest")
 	s.short_rests = 1
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
-	assert_dict(back.character["resources_used"]).is_equal({"second_wind": 1})
+	assert_dict(back.character["spent"]).is_equal({"second_wind": 1})
 	assert_array(back.character["conditions"]).is_equal(["poisoned"])
 	assert_dict(back.character["effects"][0]["ends"]).is_equal({"rest": "short"})
 	assert_int(back.short_rests).is_equal(1)

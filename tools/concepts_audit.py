@@ -28,7 +28,7 @@ OUT = ROOT / "docs" / "production" / "concepts-audit.md"
 # The 5e rules (pillar 2): classes, spells, conditions, monsters, combat — code by the SRD, not world content.
 RULES_5E = {"combat_rules.gd", "feature_rules.gd", "spell_effects.gd", "spell_rules.gd", "character_rules.gd",
             "character_builder.gd", "level_up.gd", "condition_rules.gd", "monster_rules.gd", "hero_defense.gd",
-            "language_rules.gd", "background_rules.gd", "feature_uses.gd"}
+            "language_rules.gd", "background_rules.gd", "stock.gd"}
 
 VERDICT = {"concept": "понятие движка", "data": "**в данные**", "gap": "**пробел до инструмента**", "5e": "правило 5e",
            "engine": "служебное", "done": "сделано"}

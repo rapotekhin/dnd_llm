@@ -127,7 +127,7 @@ func run() -> void:
 	var before: Dictionary = s.chat[at - 1] if at > 0 else {}
 	step("the cast goes right before the words, no turn of its own", str(before.get("kind", "")) == GameSession.KIND_EFFECT
 		and " ".join(before.get("lines", [])).contains("Второе дыхание"), str(before))
-	step("Second Wind spent", FeatureUses.left(s.character, node("Catalog").data, "second_wind") == 0)
+	step("Second Wind spent", Stock.left(s.character, node("Catalog").data, "second_wind") == 0)
 	step("info: turns", true, "%d → %d (the stub may add a «downed» turn)" % [turns, s.turn_counter])
 	step("the chip is gone", gs.attached.is_empty() and find(game, "AttachName") == null)
 	await shot("after_attached")

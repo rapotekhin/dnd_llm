@@ -288,7 +288,7 @@ func _abilities_tab(c: Dictionary) -> void:
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 	box.add_child(HSeparator.new())
 	_text(box, tr("SHEET_HIT_DICE").format({"left": ExplorationRules.hit_dice_left(c), "max": int(c.get("level", 1))}), UiTheme.MUTED_LABEL)
-	var res := FeatureUses.lines(c, d)
+	var res := Stock.lines(c, d)
 	if not res.is_empty():
 		_text(box, tr("SHEET_RESOURCES"), UiTheme.MUTED_LABEL)
 		for r: Dictionary in res:
@@ -311,7 +311,7 @@ func _abilities_tab(c: Dictionary) -> void:
 	for i in 5:
 		var m := int(c["slots_max"][i])
 		if m > 0:
-			slots.append(tr("SHEET_SLOT").format({"level": i + 1, "left": m - int(c["slots_used"][i]), "max": m}))
+			slots.append(tr("SHEET_SLOT").format({"level": i + 1, "left": SpellRules.slots_left(c, i + 1), "max": m}))
 	if not slots.is_empty():
 		_text(box, " · ".join(slots), UiTheme.MUTED_LABEL)
 	if not str(c.get("concentration", "")).is_empty():

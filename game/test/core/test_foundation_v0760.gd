@@ -78,7 +78,7 @@ func test_the_breakdown_and_the_total() -> void:
 func test_inspiration_helps_a_failed_check_and_is_spent() -> void:
 	var s := _session()
 	s.character["skills"]["persuasion"] = -40
-	FeatureUses.use(s.character, data, "bardic_inspiration", 1, s.rng)
+	Stock.use(s.character, data, "bardic_inspiration", 1, s.rng)
 	var used := false
 	for i in 30:
 		var r := Roll.hero(s, data, {"what": "Просьба", "skill": "persuasion", "dc": 10})

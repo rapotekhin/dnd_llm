@@ -5,6 +5,7 @@ extends RefCounted
 
 
 static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dictionary:
+	FactionRules.look_around(s, data, s.room_id)  # v0.7.63
 	var world := WorldView.new(data["world"])
 	var room := SceneRules.room(s, data["world"], s.room_id)  # the variants by the world's flags (v0.7.14.1)
 	var loc_id := world.location_id(s.room_id)
@@ -17,7 +18,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		var n := world.npc(id)
 		npcs.append({"npc_id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 			"body": BodyRules.npc_text(data, id, n),
-			"gender": n.get("gender", "other"), "description": str(n.get("description", "")) + _sick(s, data, id, n) + _hungry(s, id) + _wounds(s, data, id),
+			"gender": n.get("gender", "other"), "description": str(n.get("description", "")) + _sick(s, data, id, n) + _hungry(s, id) + _wounds(s, data, id) + Guise.seen_by(s, id) + _statuses(s, data, id),
 			"personality": n.get("personality", ""), "attitude": s.attitude(id), "trader": bool(n.get("trader", false)),
 			"speaks": ", ".join(LanguageRules.npc(data, n).map(func(l: String) -> String: return LanguageRules.name_of(data, l).to_lower())),
 			"understands_hero": LanguageRules.npc_understands(s.character, data, n), "tie": BackgroundRules.tie_text(s.character, data, n),
@@ -167,13 +168,15 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"family": FamilyRules.text(s, data),  # v0.7.32
 		"underworld": _underworld(s, data),  # v0.7.33
 		"office": OfficeRules.text(s, data),  # v0.7.34
+		"made": MakeRules.text(s, data),  # v0.7.63
+		"guise": Guise.text(s, data),  # v0.7.63
 		"faith": FaithRules.text(s, data),  # v0.7.49
 		"tools": (c.get("tools", []) as Array).map(func(t: Variant) -> String:
 			return "%s [%s]%s" % [BackgroundRules.tool_name(data, str(t)), t, "" if int(c.get("inventory", {}).get(str(t), 0)) > 0 else " (нет с собой)"]),
 		"abilities": c.get("abilities", {}),
 		"skill_proficiencies": c.get("skill_profs", []), "speed": int(c.get("speed", 30)), "equipped": equipped,
 		"backstory": str(c.get("story", "")),
-		"resources": FeatureUses.lines(c, data).map(func(r: Dictionary) -> Dictionary:
+		"resources": Stock.lines(c, data).map(func(r: Dictionary) -> Dictionary:
 			return {"name": r["name"], "left": r["left"], "max": r["max"]}),
 		"concentration": str(data["spells"].get(str(c.get("concentration", "")), {}).get("name", "")),
 		"effects": ConditionRules.shown(s, data).map(func(e: Dictionary) -> String:
@@ -187,11 +190,10 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 			if not prepared.has(n):
 				prepared.append(n)
 		var slots: Array[Dictionary] = []
-		var used: Array = c.get("slots_used", [])
 		var maxes: Array = c.get("slots_max", [])
 		for i in maxes.size():
 			if int(maxes[i]) > 0:
-				slots.append({"level": i + 1, "left": int(maxes[i]) - int(used[i] if i < used.size() else 0), "max": int(maxes[i])})
+				slots.append({"level": i + 1, "left": SpellRules.slots_left(c, i + 1), "max": int(maxes[i])})
 		sheet["cantrips"] = CharacterRules.spell_names(c, data, "cantrips")
 		sheet["spells"] = prepared
 		sheet["spell_slots"] = slots
@@ -251,6 +253,12 @@ static func _animals(data: Dictionary, id: String) -> Array:
 		for v: String in MountRules.vehicles_of(data, id):
 			out.append("%s %s" % [MountRules.vehicle(data, v)["name"], Money.format(int(MountRules.vehicle(data, v)["price_cp"]))])
 	return out
+## « На нём: …» — the statuses of a person other than the hero's charms, which have their own line (v0.7.63).
+static func _statuses(s: GameSession, data: Dictionary, id: String) -> String:
+	var rest := (Being.view(s, id).get("effects", []) as Array).filter(func(e: Dictionary) -> bool: return not e.has("charm"))
+	return " На нём: %s." % ConditionRules.on_record(s, data, {"effects": rest}) if not rest.is_empty() else ""
+
+
 static func _sick(s: GameSession, data: Dictionary, id: String, n: Dictionary) -> String:
 	var d := DiseaseRules.def_of(s, data, DiseaseRules.npc_disease(s, data, id))
 	if d.is_empty():

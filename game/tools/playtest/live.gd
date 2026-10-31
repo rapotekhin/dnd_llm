@@ -62,7 +62,7 @@ func run() -> void:
 		await shot("kitchen_search")
 
 	await _say(gs, "Перевожу дух и пользуюсь Вторым дыханием")
-	step("info: feature uses", true, str(gs.session.character.get("resources_used", {})))
+	step("info: feature uses", true, str(gs.session.character.get("spent", {})))
 	await shot("feature")
 
 	step("no failed turns", not gs.session.chat.any(func(e: Dictionary) -> bool: return e["kind"] == GameSession.KIND_SYSTEM),

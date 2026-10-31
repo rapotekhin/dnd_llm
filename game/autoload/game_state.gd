@@ -195,7 +195,7 @@ func cast(spell_id: String, slot: int = 0) -> String:
 	return _use_alone({"kind": "spell", "id": spell_id, "slot": slot})
 
 
-## «Использовать» a feature with limited uses on the sheet (FeatureUses). "" or a reason.
+## «Использовать» a feature with limited uses on the sheet (Stock). "" or a reason.
 func use_feature(resource_id: String) -> String:
 	return _use_alone({"kind": "feature", "id": resource_id})
 
@@ -275,12 +275,12 @@ func _spend(what: Dictionary) -> Dictionary:
 				facts += " Движок бросил спасбросок цели: %s. %s" % [npc_try["line"], "Заклинание действует — отыграй это по его описанию." if bool(npc_try["ok"]) \
 					else "Заклинание не подействовало — цель может заметить попытку."]
 		"feature":
-			var why := FeatureUses.can_use(c, Catalog.data, id, 1)
+			var why := Stock.can_use(c, Catalog.data, id, 1)
 			if not why.is_empty():
 				return {"reason": why}
-			lines = FeatureUses.use(c, Catalog.data, id, 1, session.rng)
+			lines = Stock.use(c, Catalog.data, id, 1, session.rng)
 			facts = "Игрок использует умение «%s». Движок уже учёл использование: %s. Опиши, как это выглядит." % \
-				[FeatureUses.display_name(c, Catalog.data, id), ", ".join(lines)]
+				[Stock.display_name(c, Catalog.data, id), ", ".join(lines)]
 		"item":
 			var why := ItemRules.can_use(c, Catalog.data, session.items, id)
 			if not why.is_empty():
@@ -382,7 +382,7 @@ func attach_choices() -> Array[Dictionary]:
 				slots.append(circle)
 		out.append({"kind": "spell", "id": str(sid), "name": str(data["spells"][str(sid)]["name"]), "slots": slots, "off": lv > 0 and slots.is_empty()})
 	var with_uses: Array[String] = []
-	for r: Dictionary in FeatureUses.lines(c, data):
+	for r: Dictionary in Stock.lines(c, data):
 		out.append({"kind": "feature", "id": str(r["id"]), "name": "%s (%d/%d)" % [r["name"], int(r["left"]), int(r["max"])], "slots": [], "off": int(r["left"]) <= 0})
 		for f: Variant in data["rules"]["resources"].get(str(r["id"]), {}).get("features", []):
 			with_uses.append(str(f))
@@ -662,8 +662,7 @@ func _opening_strike(opening: Dictionary) -> Array[String]:
 	if target.is_empty():
 		return lines
 	if slot > 0:
-		var used: Array = session.character["slots_used"]
-		used[slot - 1] = maxi(0, int(used[slot - 1]) - 1)
+		Stock.give(session.character, "slot_%d" % slot)
 	var why := CombatRules.can_cast(session, data, spell, slot, target)
 	if not why.is_empty():
 		lines.append("%s не удаётся: %s — ячейка не потрачена" % [data["spells"][spell]["name"], tr(why)])
@@ -792,9 +791,9 @@ func combat_move(dir: int) -> String:
 func combat_use_feature(resource_id: String) -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
-	var spec: Dictionary = FeatureUses.table(Catalog.data).get(resource_id, {})
+	var spec: Dictionary = Stock.table(Catalog.data).get(resource_id, {})
 	var cost := str(spec.get("combat_cost", "action"))
-	var why := FeatureUses.can_use(session.character, Catalog.data, resource_id, 1)
+	var why := Stock.can_use(session.character, Catalog.data, resource_id, 1)
 	if cost == "never":
 		why = "COMBAT_FEATURE_TAB"
 	if resource_id == "rage" and str(CharacterRules.item_def(session.character, Catalog.data, session.items, "armor").get("armor", {}).get("category", "")) == "heavy":
@@ -809,7 +808,7 @@ func combat_use_feature(resource_id: String) -> String:
 			e["action"] = int(e["action"]) + 1
 		if resource_id == "rage":
 			session.combat["raging"] = true
-		return FeatureUses.use(session.character, Catalog.data, resource_id, 1, session.rng))
+		return Stock.use(session.character, Catalog.data, resource_id, 1, session.rng))
 
 
 ## «Встать» (v0.7.8): the whole move of the turn.
@@ -2259,6 +2258,7 @@ func start(s: GameSession) -> void:
 	# v0.7.20: this game's world — the pack's with what the master made in it (a copy; the pack is never touched)
 	var pack: Dictionary = Catalog.bundle(Catalog.active_world).get("world", Catalog.data["world"])
 	Catalog.data["world"] = WorldGen.merged(pack, s.generated)
+	MakeRules.install(Catalog.data, s.generated)  # v0.7.63: and the rules with its own statuses and skills
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
 	CalendarRules.sync(s, Catalog.data["world"])  # v0.7.44: the festivals' flags by the date of a save
@@ -3596,7 +3596,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 			params["target_id"] = listener_id  # a talk's check is locked on its NPC, not on the room (v0.7.22.3)
 		var charm := SpellEffects.npc_spells(session, listener_id)
 		if not charm.is_empty() and str(params.get("advantage_reason", "")).is_empty():
-			params["advantage_reason"] = "очарован: " + str(charm[0]["name"])  # Charm Person and the like (v0.7.22.3)
+			params["advantage_reason"] = "очарован: " + str(charm[0]["source"]["name"])  # Charm Person and the like (v0.7.22.3)
 	var state := ExplorationRules.state_key(session, Catalog.data, params, listener_id)
 	var lock := ExplorationRules.locked(session, params, room, state)
 	if not lock.is_empty():
@@ -3605,7 +3605,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		result["check_id"] = session.next_check_id()
 		result["blocked"] = true
 	else:
-		var spell_die := SpellEffects.hero_die(session, Catalog.data, "check")  # Guidance (v0.7.13.1)
+		var spell_die := SpellEffects.die(session, session.character, "check")  # Guidance (v0.7.13.1)
 		if not str(spell_die["note"]).is_empty():
 			_add(GameSession.effect_entry(["Проверка: " + str(spell_die["note"])]))
 		var bonus := CheckEngine.bonus_for(session.character, params, Catalog.data) + _terrain_bonus(params) + int(tool_fx["bonus"]) + int(spell_die["bonus"])

@@ -246,6 +246,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     rooms, npcs = world["rooms"], world["npcs"]
     factions = set(world.get("factions", {})) | set(world.get("orgs", {}))  # v0.7.50: an org is a faction
     errors += [f"NPC {k}: нет фракции {n.get('faction')}" for k, n in npcs.items() if n.get("faction") not in factions]
+    errors += [f"фракция {k}: нет врага {x}" for k, d in world.get("factions", {}).items() for x in d.get("foes", []) if x not in factions]  # v0.7.63
     game_rules = json.loads((ROOT / "game" / "data" / "rules.json").read_text(encoding="utf-8"))
     services = {**game_rules["item_rules"]["services"], **world.get("services", {})}
     craft = game_rules["craft"]

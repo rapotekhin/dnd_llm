@@ -76,10 +76,10 @@ func test_monk_martial_arts_and_ki() -> void:
 	var f := _fight(s, "ogre")
 	assert_str(FeatureRules.can_act(s, data, "flurry", str(f["id"]))).is_equal("COMBAT_ATTACK_FIRST")
 	CombatRules.player_attack(s, data, str(f["id"]))
-	var ki := FeatureUses.left(c, data, "ki")
+	var ki := Stock.left(c, data, "ki")
 	assert_str(FeatureRules.can_act(s, data, "flurry", str(f["id"]))).is_empty()
 	var lines := FeatureRules.act(s, data, "flurry", str(f["id"]))
-	assert_int(FeatureUses.left(c, data, "ki")).is_equal(ki - 1)
+	assert_int(Stock.left(c, data, "ki")).is_equal(ki - 1)
 	assert_str(", ".join(lines)).contains("шквал")
 	assert_str(FeatureRules.can_act(s, data, "patient_defense")).is_equal("COMBAT_NO_BONUS")
 
@@ -172,7 +172,7 @@ func test_turn_undead_and_preserve_life() -> void:
 	assert_str(", ".join(lines)).contains("Зомби")
 	s.character["hp"] = 1
 	CombatRules._begin_turn(s, data, [] as Array[String])
-	s.character["resources_used"] = {}
+	s.character["spent"] = {}
 	FeatureRules.act(s, data, "preserve_life")
 	assert_int(int(s.character["hp"])).is_equal(mini(1 + 10, int(s.character["max_hp"]) / 2))
 
@@ -190,7 +190,7 @@ func test_wild_shape_takes_the_beasts_body_and_gives_it_back() -> void:
 	var hp := int(s.character["hp"])
 	var lines: Array[String] = []
 	CombatRules._hurt_player(s, data, int(m["hp"]) + 3, false, lines)
-	assert_bool(s.character.has("wild_shape")).is_false()
+	assert_bool(Guise.has_body(s.character)).is_false()
 	assert_int(int(s.character["hp"])).is_equal(hp - 3)
 
 
@@ -200,13 +200,13 @@ func test_wild_shape_takes_the_beasts_body_and_gives_it_back() -> void:
 func test_font_of_magic_and_quickened_spell() -> void:
 	var s := _hero("sorcerer_zlata", 3)
 	var c := s.character
-	c["slots_used"] = [1, 0, 0, 0, 0]
+	Stock.spend(c, "slot_1", 1)
 	var opts := FeatureRules.font_options(c, data).map(func(o: Dictionary) -> String: return o["id"])
 	assert_array(opts).contains(["slot_1"])
 	FeatureRules.font_convert(s, data, "slot_1")
-	assert_int(int(c["slots_used"][0])).is_equal(0)
+	assert_int(Stock.spent(c, "slot_1")).is_equal(0)
 	(c["features"] as Array).append("metamagic_quickened_spell")
-	c["resources_used"] = {}  # the points spent on the slot come back for the test
+	c["spent"] = {}  # the points spent on the slot come back for the test
 	var f := _fight(s, "goblin", 1)
 	s.combat["metamagic"] = "quickened_spell"
 	CombatRules.economy(s)["action"] = 0
@@ -216,14 +216,16 @@ func test_font_of_magic_and_quickened_spell() -> void:
 func test_arcane_recovery_brings_slots_back() -> void:
 	var s := _hero("wizard_yalika", 3)
 	var c := s.character
-	c["slots_used"] = [2, 1, 0, 0, 0]
-	FeatureUses.use(c, data, "arcane_recovery", 1, s.rng)
-	assert_array(c["slots_used"]).is_equal([2, 0, 0, 0, 0])  # level 3: circles worth 2 back, the highest first (one 2nd)
+	Stock.spend(c, "slot_1", 2); Stock.spend(c, "slot_2", 1)
+	Stock.use(c, data, "arcane_recovery", 1, s.rng)
+	assert_dict(c["spent"]).contains_keys(["slot_1"])  # level 3: circles worth 2 back, the highest first (one 2nd)
+	assert_int(Stock.spent(c, "slot_1")).is_equal(2)
+	assert_int(Stock.spent(c, "slot_2")).is_equal(0)
 
 
 func test_inspiration_is_added_to_a_failed_save() -> void:
 	var s := _hero("bard_yas")
-	FeatureUses.use(s.character, data, "bardic_inspiration", 1, s.rng)
+	Stock.use(s.character, data, "bardic_inspiration", 1, s.rng)
 	assert_int(FeatureRules.inspiration_die(s.character)).is_equal(6)
 	s.character["saves"]["wis"] = -30
 	HeroDefense.save(s, data, "wis", 40)
@@ -232,7 +234,7 @@ func test_inspiration_is_added_to_a_failed_save() -> void:
 
 func test_inspiration_on_an_engine_roll_with_its_part() -> void:  # a parley before a fight, an escape (v0.7.49.4)
 	var s := _hero("bard_yas")
-	FeatureUses.use(s.character, data, "bardic_inspiration", 1, s.rng)
+	Stock.use(s.character, data, "bardic_inspiration", 1, s.rng)
 	s.character["skills"]["persuasion"] = -40  # fails whatever the die
 	s.rng.seed = 7
 	EncounterRules.roll(s, data, "persuasion", 15)

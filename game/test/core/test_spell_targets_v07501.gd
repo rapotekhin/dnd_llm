@@ -19,7 +19,7 @@ func _cleric() -> GameSession:
 	var sp: Dictionary = s.character["spells"]
 	sp["always"] = ["bless", "bane", "cure_wounds", "shield_of_faith", "hold_person", "mass_healing_word"]
 	s.character["slots_max"] = [4, 3, 3, 0, 0]
-	s.character["slots_used"] = [0, 0, 0, 0, 0]
+	Stock.fill_slots(s.character)
 	return s
 
 
@@ -47,8 +47,8 @@ func test_bless_is_picked_one_by_one_and_each_once() -> void:
 	var ally: Array[String] = CombatRules.allies(s)
 	assert_str(CombatRules.can_cast(s, data, "bless", 1, ally[0])).is_empty()
 	CombatRules.player_cast(s, data, "bless", 1, ally[0])
-	assert_bool(CombatRules.fighter(s, ally[0]).has("plus_die")).is_true()
-	assert_int(int(SpellEffects.hero_die(s, data, "attack")["bonus"])).is_equal(0)  # not on the hero yet
+	assert_bool((SpellEffects.boon(CombatRules.fighter(s, ally[0]), "die") != null)).is_true()
+	assert_int(int(SpellEffects.die(s, s.character, "attack")["bonus"])).is_equal(0)  # not on the hero yet
 	assert_int(int(CombatRules.volley(s)["left"])).is_equal(2)
 	assert_str(CombatRules.can_volley(s, data, ally[0])).is_equal("COMBAT_PICKED")
 	assert_str(CombatRules.can_volley(s, data, CombatRules.enemies(s)[0])).is_equal("COMBAT_BAD_TARGET")
@@ -57,7 +57,7 @@ func test_bless_is_picked_one_by_one_and_each_once() -> void:
 	assert_dict(CombatRules.volley(s)).is_empty()
 	assert_bool(ConditionRules.effects(s.character).any(func(e: Dictionary) -> bool: return str(e.get("source", {}).get("id", "")) == "bless")).is_true()
 	ConditionRules.end_concentration(s, data, "проверка")
-	assert_bool(CombatRules.fighter(s, ally[1]).has("plus_die")).is_false()
+	assert_bool((SpellEffects.boon(CombatRules.fighter(s, ally[1]), "die") != null)).is_false()
 
 
 func test_a_higher_slot_blesses_one_more() -> void:
@@ -86,13 +86,13 @@ func test_an_ally_is_healed_even_fallen_and_buffed_with_ac_until_the_end() -> vo
 	CombatRules.player_cast(s, data, "cure_wounds", 1, str(a["id"]))
 	assert_int(int(a["hp"])).is_greater(0)
 	assert_str(str(a["status"])).is_equal("active")
-	var ac := int(a["ac"])
+	var ac := CombatRules.ac_of(a)
 	s.combat["economy"]["action"] = 1
 	s.combat["economy"]["bonus"] = 1
 	CombatRules.player_cast(s, data, "shield_of_faith", 1, str(a["id"]))
-	assert_int(int(a["ac"])).is_equal(ac + 2)
+	assert_int(CombatRules.ac_of(a)).is_equal(ac + 2)
 	ConditionRules.end_concentration(s, data, "проверка")
-	assert_int(int(a["ac"])).is_equal(ac)
+	assert_int(CombatRules.ac_of(a)).is_equal(ac)
 
 
 func test_bane_takes_the_chosen_foes_not_the_nearest() -> void:
@@ -101,13 +101,13 @@ func test_bane_takes_the_chosen_foes_not_the_nearest() -> void:
 	s.character["spell_dc"] = 30
 	var foes: Array[String] = CombatRules.enemies(s)
 	CombatRules.player_cast(s, data, "bane", 1, foes[2])
-	assert_bool(CombatRules.fighter(s, foes[2]).has("minus_die")).is_true()
-	assert_bool(CombatRules.fighter(s, foes[0]).has("minus_die")).is_false()
+	assert_bool((SpellEffects.boon(CombatRules.fighter(s, foes[2]), "die") != null)).is_true()
+	assert_bool((SpellEffects.boon(CombatRules.fighter(s, foes[0]), "die") != null)).is_false()
 	CombatRules.volley_shot(s, data, foes[0])
-	assert_bool(CombatRules.fighter(s, foes[0]).has("minus_die")).is_true()
-	assert_bool(CombatRules.fighter(s, foes[1]).has("minus_die")).is_false()
+	assert_bool((SpellEffects.boon(CombatRules.fighter(s, foes[0]), "die") != null)).is_true()
+	assert_bool((SpellEffects.boon(CombatRules.fighter(s, foes[1]), "die") != null)).is_false()
 	CombatRules.end_player_turn(s, data)  # the third is not picked for the hero
-	assert_bool(CombatRules.fighter(s, foes[1]).has("minus_die")).is_false()
+	assert_bool((SpellEffects.boon(CombatRules.fighter(s, foes[1]), "die") != null)).is_false()
 
 
 func _prep(s: GameSession, ids: Array) -> void:
@@ -122,16 +122,16 @@ func test_every_spell_on_an_ally_gives_what_it_says() -> void:
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	var a := CombatRules.fighter(s, CombatRules.allies(s)[0])
 	SpellEffects.on_friend(s, data, "haste", 3, a, [] as Array[String])
-	assert_int(int(a["speed_fx"])).is_greater(0)
+	assert_int(ConditionRules.sum(a, "speed")).is_greater(0)
 	SpellEffects.on_friend(s, data, "fly", 3, a, [] as Array[String])
 	assert_bool(SpellEffects.boon(a, "flying") != null).is_true()
 	SpellEffects.on_friend(s, data, "magic_weapon", 2, a, [] as Array[String])
 	assert_int(int(SpellEffects.boon(a, "weapon_plus", 0))).is_equal(1)
 	SpellEffects.on_friend(s, data, "protection_from_energy", 3, a, [] as Array[String])
-	assert_int((a["resist_fx"] as Array).size()).is_equal(1)
-	assert_int(CombatRules._resist(data, a, str(a["resist_fx"][0]), 10)).is_equal(5)
+	assert_int((SpellEffects.boon(a, "resist", []) as Array).size()).is_equal(1)
+	assert_int(CombatRules._resist(data, a, str(SpellEffects.boon(a, "resist", [])[0]), 10)).is_equal(5)
 	s.character["concentration"] = "haste"
-	SpellEffects.end_on_foes(s, "haste")
+	SpellEffects.end_on_fighters(s, data, "haste")
 	assert_bool(a.has("lethargy")).is_true()
 
 
@@ -169,9 +169,9 @@ func test_reduce_on_a_foe_weakens_its_blows_until_the_end() -> void:
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	assert_str(CombatRules.can_cast(s, data, "enlarge_reduce", 2, str(foe["id"]))).is_empty()
 	CombatRules.player_cast(s, data, "enlarge_reduce", 2, str(foe["id"]))
-	assert_bool(foe.has("reduced")).is_true()
+	assert_bool((SpellEffects.boon(foe, "reduced") != null)).is_true()
 	ConditionRules.end_concentration(s, data, "проверка")
-	assert_bool(foe.has("reduced")).is_false()
+	assert_bool((SpellEffects.boon(foe, "reduced") != null)).is_false()
 
 
 func test_a_follower_keeps_its_wounds_until_a_long_rest() -> void:
@@ -191,18 +191,18 @@ func test_a_blessing_cast_at_an_npc_goes_into_the_fight_and_ends_with_the_concen
 	Being.follow(s, "npc_ostap")
 	AllyRules.cast_on_npc(s, data, "bless", 1, "npc_ostap")
 	_fight(s, [{"monster": "goblin", "col": 2}], [])
-	assert_bool(CombatRules.fighter(s, CombatRules.allies(s)[0]).has("plus_die")).is_true()
+	assert_bool(SpellEffects.boon(CombatRules.fighter(s, CombatRules.allies(s)[0]), "die") != null).is_true()
 	AllyRules.drop_buffs(s, "bless")
-	assert_bool(Being.view(s, "npc_ostap").has("buffs")).is_false()
+	assert_bool(Being.view(s, "npc_ostap").has("effects")).is_false()
 
 
 func test_a_save_keeps_the_wounds_and_the_spells_of_npcs() -> void:
 	var s := _cleric()
 	Being.of(s, "npc_ostap")["hp"] = 3
-	Being.of(s, "npc_ostap")["buffs"] = [{"spell": "bless", "slot": 1, "ends": -1}]
+	AllyRules.cast_on_npc(s, data, "bless", 1, "npc_ostap")
 	var back := GameSession.from_dict(s.to_dict(0))
 	assert_int(int(Being.of(back, "npc_ostap")["hp"])).is_equal(3)
-	assert_str(str(Being.of(back, "npc_ostap")["buffs"][0]["spell"])).is_equal("bless")
+	assert_str(str(Being.of(back, "npc_ostap")["effects"][0]["source"]["id"])).is_equal("bless")
 
 
 func _goblins(id: String = "t_gob") -> Dictionary:
