@@ -3208,7 +3208,7 @@ static func parley_apply(s: GameSession, data: Dictionary, skill: String, succes
 			if str(_monster(data, f).get("type", "")) == "beast":
 				f["status"] = "truce"
 				lines.append("%s отступает и успокаивается" % f["name"])
-		lines.append_array(FactionRules.on_source(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "calm", "звери успокоены"))
+		lines.append_array(WorldEvent.standing(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "calm", "звери успокоены"))
 		return lines
 	s.combat["parley_won"] = skill  # v0.7.50.1: they stay, the faction respects the hero (FactionRules.after_fight)
 	for id: String in enemies(s):

@@ -53,7 +53,18 @@ def saves(user_dir: Path = USER_DIR) -> dict[str, Path]:
 
 def load_save(path: Path) -> tuple[str, dict]:
     session = json.loads(path.read_text(encoding="utf-8")).get("session", {})
-    return str(session.get("world_id", "")), session.get("generated") or {}
+    return str(session.get("world_id", "")), overlaid(session.get("generated") or {})
+
+
+def overlaid(gen: dict) -> dict:
+    """The made people and rooms with what the game changed in them (v0.7.60.1). A site's overlay is the hero's
+    ownership of it: that stays in the save."""
+    for ref, changed in gen.get("overlay", {}).items():
+        kind, _, rid = ref.partition(":")
+        table = {"npc": "npcs", "room": "rooms"}.get(kind, "")
+        if rid in gen.get(table, {}):
+            gen[table][rid].update(changed)
+    return gen
 
 
 def save_items(path: Path) -> dict:

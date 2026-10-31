@@ -155,7 +155,7 @@ static func find(s: GameSession, data: Dictionary, kind: String, what: String) -
 		if s.dead_npcs.has(id) or (not by_course.has(id) and not why_not(s, data, id, kind, what).is_empty()):
 			continue
 		var n: Dictionary = data["world"]["npcs"][id]
-		var room := str(s.npc_at.get(id, ReputationRules.home_room(data, id)))
+		var room := Where.base_room(s, data, id)
 		var at := w.location_id(room)
 		out.append({"id": id, "name": str(n.get("name", id)), "role": str(n.get("role", "")), "teaches": text(data, n),
 			"room": room, "place": w.place_path(room) if not room.is_empty() else "", "here": scene.has(id),

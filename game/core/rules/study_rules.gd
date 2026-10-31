@@ -102,7 +102,7 @@ static func waiting(s: GameSession, data: Dictionary) -> Array[String]:
 ## Where a course's teacher is, in words: «Ольховый Брод · Мельница» ("" — unknown).
 static func where(s: GameSession, data: Dictionary, id: String) -> String:
 	var who := str(course(s, data, id).get("teacher", ""))
-	var room := str(s.npc_at.get(who, ReputationRules.home_room(data, who)))
+	var room := Where.base_room(s, data, who)
 	return WorldView.new(data["world"]).place_path(room) if not room.is_empty() else ""
 
 
@@ -771,7 +771,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary, teacher_def
 		"dc": int(data["rules"]["dc_tiers"][tier]), "fee_cp": f, "generated": true}
 	if not (req["requires"] as Dictionary).is_empty():
 		def["requires"] = req["requires"]
-	var where := (", ждёт у учителя: " + WorldView.new(data["world"]).place_path(str(s.npc_at.get(who, ReputationRules.home_room(data, who))))) if away else ""
+	var where := (", ждёт у учителя: " + WorldView.new(data["world"]).place_path(Where.base_room(s, data, who))) if away else ""
 	return {"plan": {"id": id, "def": def, "recipe": recipe}, "summary": "Курс — %s: «%s», %d занятий, %s%s" % [npc_name(s, data, who), name, n,
 		Money.format(f) if f > 0 else "бесплатно", where]}
 

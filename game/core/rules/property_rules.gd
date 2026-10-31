@@ -194,23 +194,11 @@ static func slavery(s: GameSession, data: Dictionary) -> bool:
 # --- the world's patches ------------------------------------------------------------------------------------------
 
 
-static func _patch(s: GameSession, data: Dictionary, what: String, id: String, key: String, value: Variant) -> void:
-	var gen := WorldGen.generated(s)
-	var bucket := "site_patch" if what == "sites" else "room_patch"
-	if not gen.has(bucket):
-		gen[bucket] = {}
-	var p: Dictionary = gen[bucket].get(id, {})
-	p[key] = value
-	gen[bucket][id] = p
-	if data["world"].get(what, {}).has(id):
-		data["world"][what][id][key] = value
-
-
 static func _add_tag(s: GameSession, data: Dictionary, room_id: String, tag: String) -> void:
 	var tags: Array = (WorldView.new(data["world"]).room(room_id).get("tags", []) as Array).duplicate()
 	if not tags.has(tag):
 		tags.append(tag)
-	_patch(s, data, "rooms", room_id, "tags", tags)
+	Overlay.put(s, data, EntityRef.room(room_id), "tags", tags)
 
 
 # --- buying and the deed --------------------------------------------------------------------------------------------
@@ -236,7 +224,7 @@ static func buy(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var p := prop(s, data, id)
 	Ledger.add(s, -price(s, data, id), "property:buy")
 	state(c)[id] = _fresh(s, float(p.get("condition", 100)))
-	_patch(s, data, "sites", str(p["site"]), "owner", OwnerRules.HERO)
+	Overlay.put(s, data, EntityRef.site(str(p["site"])), "owner", OwnerRules.HERO)
 	ObjectRules.note(s, str(p["site"]), "куплен героем у %s" % npc_name(data, seller(s, data, id)))
 	var who := seller(s, data, id)
 	s.remember(who, "продал герою %s" % name_of(s, data, id))
@@ -288,7 +276,7 @@ static func _lose(s: GameSession, data: Dictionary, id: String, why: String) -> 
 	state(s.character).erase(id)
 	Ledger.forgive(s, "tax:" + id)
 	ObjectRules.note(s, str(prop(s, data, id).get("site", "")), "отобран у героя: %s" % why)
-	_patch(s, data, "sites", str(prop(s, data, id).get("site", "")), "owner", seller(s, data, id))
+	Overlay.put(s, data, EntityRef.site(str(prop(s, data, id).get("site", ""))), "owner", seller(s, data, id))
 	return ["%s больше не ваше: %s%s" % [name_of(s, data, id), why, "" if int(st.get("cash", 0)) <= 0 else "; выручка в кассе пропала"]]
 
 
@@ -807,9 +795,9 @@ static func _apply_upgrade(s: GameSession, data: Dictionary, id: String, up: Str
 	if g.has("station"):
 		_add_tag(s, data, room, str(g["station"]))
 	if bool(g.get("rest", false)):
-		_patch(s, data, "rooms", room, "safe", {"rest_cost_cp": 0})
+		Overlay.put(s, data, EntityRef.room(room), "safe", {"rest_cost_cp": 0})
 	if bool(g.get("private", false)):
-		_patch(s, data, "sites", str(prop(s, data, id)["site"]), "public", false)
+		Overlay.put(s, data, EntityRef.site(str(prop(s, data, id)["site"])), "public", false)
 	if g.has("object"):  # v0.7.39.5: a counter — a trading object of its own beside the house
 		(state(s.character)[id]["upgrades"] as Array).append(up)
 		var made := new_object(s, data, str(g["object"]), room, "%s: %s" % [name_of(s, data, id), str(kind_cfg(data, str(g["object"])).get("name", ""))])

@@ -1109,7 +1109,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		"create_place":
 			var entry := WorldGen.apply_place(s, _data, plan)
 			_extra_lines.append("выход: [%s]" % entry)
-			RumorRules.on_place(s, _data, entry)  # v0.7.47: the neighbours talk of it
+			WorldEvent.emit(s, _data, "place_made", {"room": entry})
 			_made["rooms"] = plan["ids"]
 			_made["site"] = plan["site_id"]
 		"door":

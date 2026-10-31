@@ -125,7 +125,7 @@ func test_the_masters_wilds_empties_restores_and_adds_a_ground_for_a_cause() -> 
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
 	fx.apply(s, "t4", [r["effect_id"]])
 	assert_array(WildsRules.here(s, data)).contains(["fish"])
-	assert_array(WorldGen.generated(s)["room_patch"]["brod-square"]["tags"]).contains(["fish"])
+	assert_array(Overlay.of(WorldGen.generated(s), EntityRef.room("brod-square"))["tags"]).contains(["fish"])
 	s.room_id = "brod-tavern-hall"
 	assert_bool(bool(fx.validate(s, data, "t5", {"kind": "wilds", "ground": "game", "op": "add", "cause": "в таверне завелись кролики"})["accepted"])).is_false()
 

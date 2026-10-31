@@ -47,7 +47,7 @@ static func on_assault(s: GameSession, data: Dictionary, npc_id: String, aware: 
 	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": "assault", "victim": npc_id, "room": room_id,
 		"location": world.location_id(room_id), "at": TimeRules.abs_minute(s), "witnesses": witnesses, "known": false, "settled": false}
 	s.crimes.append(crime)
-	var faith := FaithRules.deed(s, data, "assault", room_id)  # v0.7.49
+	var faith := WorldEvent.deed(s, data, "assault", room_id)  # v0.7.49
 	var who := _name(data, npc_id)
 	if witnesses.is_empty() and not aware:
 		return ["Нападение: %s — никто не видел, %s без сознания" % [who, who]] + faith
@@ -69,7 +69,7 @@ static func on_trespass(s: GameSession, data: Dictionary, owner: String, room_id
 	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": "trespass", "victim": owner, "room": room_id, "site": world.site_id(room_id),
 		"location": loc, "at": TimeRules.abs_minute(s), "witnesses": witnesses.filter(func(id: String) -> bool: return id != owner), "known": false, "settled": false}
 	s.crimes.append(crime)
-	return _known(s, data, crime) + FaithRules.deed(s, data, "trespass", room_id)
+	return _known(s, data, crime) + WorldEvent.deed(s, data, "trespass", room_id)
 
 
 ## A loan whose collateral is gone ran past its grace (v0.7.28, BankRules): the crime `debt` against the creditor in
@@ -80,7 +80,7 @@ static func on_debt(s: GameSession, data: Dictionary, creditor: String, loc: Str
 	s.crimes.append(crime)
 	var out: Array[String] = [str(crime["id"])]
 	out.append_array(_known(s, data, crime))
-	out.append_array(FaithRules.deed(s, data, str(crime["kind"])))
+	out.append_array(WorldEvent.deed(s, data, str(crime["kind"])))
 	return out
 
 
@@ -90,7 +90,7 @@ static func on_false_report(s: GameSession, data: Dictionary, victim: String, lo
 	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": "false_report", "victim": victim, "room": "", "location": loc,
 		"at": TimeRules.abs_minute(s), "witnesses": [], "known": false, "settled": false}
 	s.crimes.append(crime)
-	return _known(s, data, crime) + FaithRules.deed(s, data, "false_report")
+	return _known(s, data, crime) + WorldEvent.deed(s, data, "false_report")
 
 
 ## A criminal job seen or traced (v0.7.33, HeistRules): its crime of `kind` known at once in `loc` (where the law
@@ -99,7 +99,7 @@ static func on_job(s: GameSession, data: Dictionary, kind: String, victim: Strin
 	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": kind, "victim": victim, "room": room_id, "location": loc,
 		"at": TimeRules.abs_minute(s), "witnesses": [], "known": false, "settled": false}
 	s.crimes.append(crime)
-	return _known(s, data, crime) + FaithRules.deed(s, data, kind, room_id)
+	return _known(s, data, crime) + WorldEvent.deed(s, data, kind, room_id)
 
 
 ## One crime closed outside the law's hold (v0.7.28: the debt paid at the bank); the location's wanted goes when no
@@ -148,16 +148,15 @@ static func people_of(data: Dictionary, location_id: String) -> Array[String]:
 ## is a murder. Lines.
 static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: bool, room_id: String) -> Array[String]:
 	var world := WorldView.new(data["world"])
-	var lines: Array[String] = TradeRules.on_death(s, data, npc_id)  # v0.7.17.2: the goods to the heir
+	var lines := WorldEvent.emit(s, data, "dying", {"npc": npc_id})
 	s.crimes = s.crimes.filter(func(c: Dictionary) -> bool: return not (_assault(c) and str(c["victim"]) == npc_id and not bool(c["known"])))  # finished off: the murder
 	if not s.dead_npcs.has(npc_id):
 		s.dead_npcs.append(npc_id)
 	s.followers.erase(npc_id)
 	s.bodies[npc_id] = room_id
 	s.body_at[npc_id] = TimeRules.abs_minute(s)  # buried some days later (v0.7.22.10)
-	lines.append_array(QuestRules.on_death(s, data, npc_id))
+	lines.append_array(WorldEvent.emit(s, data, "death", {"npc": npc_id, "by_hero": by_hero, "room": room_id}))
 	if not by_hero:
-		RumorRules.on_death(s, data, npc_id, room_id)  # v0.7.47
 		return lines
 	var witnesses := s.npcs_here(world.world, room_id).filter(func(id: String) -> bool: return id != npc_id)
 	if ConditionRules.invisible(s.character, data):
@@ -168,30 +167,33 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: 
 	var who := str(world.npc(npc_id).get("name", npc_id))
 	if witnesses.is_empty():
 		lines.append("Убийство: %s — свидетелей нет" % who)
-		return lines + FaithRules.deed(s, data, "murder", room_id)  # v0.7.49
+		return lines + WorldEvent.deed(s, data, "murder", room_id)  # v0.7.49
 	lines.append("Убийство: %s — видели: %s" % [who, ", ".join(witnesses.map(func(id: String) -> String: return str(world.npc(id).get("name", id))))])
 	for w: String in witnesses:
 		s.shift_attitude(w, int(cfg(data)["witness_attitude"]), data)
 	lines.append_array(_known(s, data, crime))
-	lines.append_array(FaithRules.deed(s, data, "murder", room_id))
+	lines.append_array(WorldEvent.deed(s, data, "murder", room_id))
 	return lines
 
 
 ## The crime becomes known in its location: attitudes, and the hero is wanted where there is law. Lines.
 static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array[String]:
-	FactionRules.on_crime(s, data, str(crime["victim"]), str(crime["kind"]))  # v0.7.50
 	crime["known"] = true
 	crime["known_at"] = TimeRules.abs_minute(s)
+	return WorldEvent.emit(s, data, "crime_known", {"crime": str(crime.get("kind", "murder")), "victim": str(crime["victim"]), "record": crime})
+
+
+## The people of the location learn of it. Lines.
+static func people_know(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
+	var crime: Dictionary = f["record"]
 	var loc := str(crime["location"])
-	var world := WorldView.new(data["world"])
-	var what := str(kind_of(data, crime)["name"])
 	var victim := str(crime["victim"])
 	var kind := kind_of(data, crime)
 	var lines: Array[String] = []
 	# v0.7.22.24: a kind may set its own echo — the location's attitude, the memory, a share of the reputation
 	var att := int(kind.get("known_attitude", -1 if _assault(crime) else int(cfg(data)["attitude"])))
 	if att != 0:
-		lines.append("%s знает: %s — отношение хуже" % [world.location(loc).get("name", loc), what])
+		lines.append("%s знает: %s — отношение хуже" % [WorldView.new(data["world"]).location(loc).get("name", loc), kind["name"]])
 	for id: String in people_of(data, loc):
 		if not s.dead_npcs.has(id) and id != victim:
 			if att != 0:
@@ -199,18 +201,31 @@ static func _known(s: GameSession, data: Dictionary, crime: Dictionary) -> Array
 			s.remember(id, (str(kind["memory"]).format({"victim": _name(data, victim)})) if kind.has("memory") else
 				("знает: герой напал на %s" % _name(data, victim)) if _assault(crime) else
 				("знает: %s убит%s героем" % [_name(data, victim), _ending(data, victim)]))
-	if _assault(crime):
-		lines.append_array(BondRules.on_deed(s, data, victim, "assault", "нападение"))  # v0.7.31
+	return lines
+
+
+## The settlement's opinion and the news to the neighbours. Lines.
+static func fame_known(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
+	var crime: Dictionary = f["record"]
+	var kind := kind_of(data, crime)
 	var share := int(kind.get("reputation_share", 2 if _assault(crime) else 1))
 	var delta := int(ReputationRules.cfg(data)["points"]["crime_known"]) / share if share > 0 else 0
+	var lines: Array[String] = []
 	if share > 0:
-		lines.append_array(ReputationRules.add(s, data, loc, delta, what, false))  # v0.7.17
+		lines.append_array(ReputationRules.add(s, data, str(crime["location"]), delta, str(kind["name"]), false))  # v0.7.17
 	RumorRules.on_crime(s, data, crime, delta)  # v0.7.47: the news, the blame and the wanted go on to the neighbours
-	if not law(data, loc).is_empty():
-		if not s.wanted.has(loc):
-			s.wanted[loc] = TimeRules.abs_minute(s)
-		lines.append("Вы в розыске: %s" % law(data, loc).get("name", "стража"))
-		lines.append_array(check_arrest(s, data))
+	return lines
+
+
+## Where there is law the hero is wanted. Lines.
+static func wanted_known(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
+	var loc := str(f["record"]["location"])
+	if law(data, loc).is_empty():
+		return []
+	if not s.wanted.has(loc):
+		s.wanted[loc] = TimeRules.abs_minute(s)
+	var lines: Array[String] = ["Вы в розыске: %s" % law(data, loc).get("name", "стража")]
+	lines.append_array(check_arrest(s, data))
 	return lines
 
 
@@ -665,7 +680,7 @@ static func search_body(s: GameSession, data: Dictionary, npc_id: String) -> Arr
 	if not seen.is_empty() and not ConditionRules.invisible(c, data):
 		s.shift_attitude(seen[0], int(data["rules"]["theft"]["caught_attitude"]), data)
 		lines.append("%s видит, как вы обираете мёртвого: отношение хуже" % world.npc(seen[0]).get("name", seen[0]))
-	lines.append_array(FaithRules.deed(s, data, "rob_dead"))  # v0.7.49
+	lines.append_array(WorldEvent.deed(s, data, "rob_dead"))  # v0.7.49
 	return lines
 
 

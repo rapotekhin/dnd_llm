@@ -143,7 +143,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 ## Where the fence trades, in words (v0.7.39.3): its room's name.
 static func where(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	var w := WorldView.new(data["world"])
-	var room := str(s.npc_at.get(npc_id, BondRules.npc_def(s, data, npc_id).get("room_id", "")))
+	var room := Where.base_room(s, data, npc_id)
 	return str(w.room(room).get("name", room)).to_lower() if not room.is_empty() else "в городе"
 
 

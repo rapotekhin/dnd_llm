@@ -480,7 +480,7 @@ func _preview_text(pv: Dictionary) -> String:
 
 
 ## The queue as portraits (Б4, П3): the current one larger and first, then the order; the colour of the frame is the
-## side (foes red). No sprites yet — the first letter.
+## side (foes red). No sprites yet — the token of its look.
 func _draw_queue(s: GameSession) -> void:
 	_clear(_queue)
 	var cur := CombatRules.current(s)
@@ -508,7 +508,7 @@ func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	var nm := str(f["name"])
 	var tail := nm.get_slice(" ", nm.get_slice_count(" ") - 1)
-	l.text = nm.left(1).to_upper() + (tail if tail.is_valid_int() else "")  # «В1», «В2» for the numbered ones
+	l.text = Look.token(f, nm) + (tail if tail.is_valid_int() else "")  # «В1», «В2» for the numbered ones
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", 32 if now else 22)

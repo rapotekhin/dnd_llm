@@ -1649,7 +1649,7 @@ func _hero_roll(params: Dictionary, bonus: int, parts: Array[Dictionary] = []) -
 		RollParts.difficulty(session, Catalog.data, all)
 		result["parts"] = RollParts.fit(all, bonus + extra)
 		if params.get("skill") != null and not str(params.get("skill", "")).is_empty():  # v0.7.49: a lie breaks a vow
-			session.faith_lines.append_array(FaithRules.deed(session, Catalog.data, "check:" + str(params["skill"])))
+			session.faith_lines.append_array(WorldEvent.deed(session, Catalog.data, "check:" + str(params["skill"])))
 	return result
 
 

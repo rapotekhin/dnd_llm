@@ -68,6 +68,15 @@ def test_a_person_enters_the_pack_in_their_room(tmp_path):
     assert promote_world.promote(["autosave:gen_npc_1"], user, worlds)[0].startswith("✗")  # already in the pack
 
 
+def test_a_person_comes_with_what_the_game_changed_in_them(tmp_path):
+    gen = {"npcs": {"gen_npc_1": {"name": "Ждан"}}, "rooms": {"gen_room_1": {"tags": []}}, "sites": {"gen_room_1": {}},
+           "overlay": {"npc:gen_npc_1": {"animals": ["mule"]}, "room:gen_room_1": {"tags": ["fish"]},
+                       "site:gen_room_1": {"owner": "hero"}, "npc:npc_innkeeper": {"animals": ["camel"]}}}
+    made = promote_world.overlaid(gen)
+    assert made["npcs"]["gen_npc_1"]["animals"] == ["mule"] and made["rooms"]["gen_room_1"]["tags"] == ["fish"]
+    assert made["sites"]["gen_room_1"] == {} and "npc_innkeeper" not in made["npcs"]
+
+
 def test_a_person_of_a_made_place_waits_for_the_place(tmp_path):
     user, worlds = _setup(tmp_path)
     assert "перенесите место" in promote_world.promote(["autosave:gen_npc_2"], user, worlds)[0]

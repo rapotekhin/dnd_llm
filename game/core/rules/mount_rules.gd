@@ -363,12 +363,7 @@ static func apply_stock(s: GameSession, data: Dictionary, plan: Dictionary) -> A
 	var who := str(plan["npc_id"])
 	var list: Array = (WorldView.new(data["world"]).npc(who).get("animals", []) as Array).duplicate()
 	list.append(monster)
-	if not gen.has("npc_patch"):
-		gen["npc_patch"] = {}
-	var patch: Dictionary = gen["npc_patch"].get(who, {})
-	patch["animals"] = list
-	gen["npc_patch"][who] = patch
-	data["world"]["npcs"][who]["animals"] = list.duplicate()
+	Overlay.put(s, data, EntityRef.npc(who), "animals", list)
 	if int(gen.get("animal_day", -1)) != s.day:
 		gen["animal_day"] = s.day
 		gen["animal_today"] = 0

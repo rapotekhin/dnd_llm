@@ -188,7 +188,7 @@ static func parley(s: GameSession, data: Dictionary, room_id: String, enc: Dicti
 	elif calm:  # v0.7.50: the friendship of beasts grows from here
 		as_creatures(s, room_id, enc["enemies"], "truce")
 		lines.append("Звери успокоились и не трогают вас")
-		lines.append_array(FactionRules.on_source(s, data, FactionRules.of_foe(data, enc, enc["enemies"][0]), "calm", "звери успокоены"))
+		lines.append_array(WorldEvent.standing(s, data, FactionRules.of_foe(data, enc, enc["enemies"][0]), "calm", "звери успокоены"))
 	else:
 		as_creatures(s, room_id, enc["enemies"], "truce", stay)
 		lines.append("Удалось договориться — перемирие")

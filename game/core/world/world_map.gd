@@ -167,7 +167,7 @@ static func boxes(world: Dictionary) -> Dictionary:
 	var room_order := {}  # site → [room]
 	for r: String in _walk(world, start):
 		var loc := w.location_id(r)
-		var sid := w.site_id(r) if not w.site_id(r).is_empty() else "room:" + r
+		var sid := w.site_id(r) if not w.site_id(r).is_empty() else EntityRef.room(r)
 		if not loc_order.has(loc):
 			loc_order.append(loc)
 			site_order[loc] = []
@@ -218,7 +218,7 @@ static func boxes(world: Dictionary) -> Dictionary:
 		out_locs[loc] = Rect2(origin, loc_size[loc])
 		for sid: String in site_order[loc]:
 			var sr := Rect2(origin + (site_at[sid] as Vector2), site_size[sid])
-			if not sid.begins_with("room:"):
+			if EntityRef.kind_of(sid) != EntityRef.ROOM:
 				out_sites[sid] = sr
 			var rooms: Array = room_order[sid]
 			var cols := ceili(sqrt(rooms.size()))

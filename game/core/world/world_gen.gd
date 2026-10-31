@@ -21,12 +21,6 @@ static func cfg(data: Dictionary) -> Dictionary:
 ## The pack's world with what this game made, a deep copy (the pack itself is never touched).
 static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
 	var w := _merge_places(pack_world.duplicate(true), gen)  # places first: made people may live in made rooms
-	for sid: String in gen.get("site_patch", {}):  # v0.7.27: what the hero owns and changed
-		if w.get("sites", {}).has(sid):
-			w["sites"][sid].merge(gen["site_patch"][sid], true)
-	for rid: String in gen.get("room_patch", {}):
-		if w["rooms"].has(rid):
-			w["rooms"][rid].merge(gen["room_patch"][rid], true)
 	for id: String in gen.get("quests", {}):  # v0.7.21: quests the master made
 		if not w.has("quests"):
 			w["quests"] = {}
@@ -44,9 +38,7 @@ static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
 			if not list.has(id):
 				list.append(id)
 			w["rooms"][room]["npcs"] = list
-	for id: String in gen.get("npc_patch", {}):  # v0.7.42: a dealer's new beasts
-		if w["npcs"].has(id):
-			w["npcs"][id].merge(gen["npc_patch"][id], true)
+	Overlay.apply(w, gen)  # what the hero owns and changed, a dealer's new beasts
 	return w
 
 

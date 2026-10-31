@@ -97,7 +97,7 @@ static func hero(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	var total := nat + bonus
 	RollParts.note(s, str(spec.get("what", "")), rolls, nat, parts, bonus, dc)
 	if not skill.is_empty():
-		s.faith_lines.append_array(FaithRules.deed(s, data, "check:" + skill))  # a lie breaks a vow (v0.7.49)
+		s.faith_lines.append_array(WorldEvent.deed(s, data, "check:" + skill))  # a lie breaks a vow (v0.7.49)
 	var crit := int(spec.get("crit", CRIT_MARGIN))
 	return {"rolls": rolls, "nat": nat, "bonus": bonus, "total": total, "dc": dc, "ok": ok, "parts": parts,
 		"margin": -crit if failed else margin(nat, total, dc, crit)}

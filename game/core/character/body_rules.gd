@@ -81,7 +81,7 @@ static func text(data: Dictionary, b: Dictionary, gender: String) -> String:
 
 ## An NPC's body: its pack (or made) fields `age`, `build`, `height` over what the engine picks by its id.
 static func npc(data: Dictionary, npc_id: String, n: Dictionary) -> Dictionary:
-	return make(data, str(n.get("gender", "other")), n, "npc:" + npc_id)
+	return make(data, str(n.get("gender", "other")), n, EntityRef.npc(npc_id))
 
 
 ## A child or a teen by the age's `minor` (v0.7.38.7): no intimacy with them, whatever the 18+ setting says.

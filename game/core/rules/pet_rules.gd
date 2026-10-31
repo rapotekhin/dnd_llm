@@ -143,7 +143,7 @@ static func tame(s: GameSession, data: Dictionary, cid: String, food: String) ->
 		cr.merge({"state": PropertyRules.TAME, "owner": OwnerRules.HERO, "led": true, "pet": true, "close": 1 + (1 if given else 0),
 			"fed_day": s.day, "since": TimeRules.abs_minute(s), "xp_given": true}, true)
 		lines.append("%s — теперь ваш питомец: идёт с вами; имя — в окне «Питомец»" % cr["name"])
-		lines.append_array(FactionRules.on_source(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "tame", "приручён зверь"))  # v0.7.50
+		lines.append_array(WorldEvent.standing(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "tame", "приручён зверь"))  # v0.7.50
 	elif nat + b <= d - int(cfg(data)["flee_margin"]) or nat == 1:
 		(s.creatures[s.room_id] as Array).erase(cr)
 		lines.append("%s шарахается и убегает" % cr["name"])

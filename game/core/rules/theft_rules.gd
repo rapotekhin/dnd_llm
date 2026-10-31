@@ -94,7 +94,7 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 			s.caught_by[npc_id] = s.day
 			lines.append("%s замечает руку в кармане" % who)
 			lines.append_array(react(s, data, npc_id))
-			lines.append_array(FaithRules.deed(s, data, "pickpocket"))  # v0.7.49
+			lines.append_array(WorldEvent.deed(s, data, "pickpocket"))  # v0.7.49
 			return lines
 		list.erase(e)
 		if int(e.get("cp", 0)) > 0:
@@ -108,7 +108,7 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 				var gone: Dictionary = s.disarmed.get(npc_id, {})  # big test #3 (v0.7.22.8): not in its hands in a fight
 				gone[id] = s.day
 				s.disarmed[npc_id] = gone
-		lines.append_array(FaithRules.deed(s, data, "pickpocket"))  # v0.7.49: unseen, still a theft
+		lines.append_array(WorldEvent.deed(s, data, "pickpocket"))  # v0.7.49: unseen, still a theft
 		return lines
 	return lines
 
@@ -172,9 +172,8 @@ static func react(s: GameSession, data: Dictionary, npc_id: String, memory: Stri
 	s.shift_attitude(npc_id, int(cfg(data)["caught_attitude"]), data)
 	s.remember(npc_id, memory % CrimeRules._ending(data, npc_id))
 	lines.append("%s: отношение хуже" % who)
-	lines.append_array(ReputationRules.add(s, data, world.location_id(s.room_id), int(ReputationRules.cfg(data)["points"].get(rep_key, 0)), why))  # v0.7.17
-	lines.append_array(BondRules.on_deed(s, data, npc_id, deed, why))  # v0.7.31
-	lines.append_array(FactionRules.on_crime(s, data, npc_id, "theft"))  # v0.7.50
+	lines.append_array(WorldEvent.emit(s, data, "caught", {"npc": npc_id, "victim": npc_id, "crime": "theft", "location": world.location_id(s.room_id),
+		"points": rep_key, "why": why, "bond_deed": deed, "bond_why": why}))
 	match reaction_kind(data, npc_id):
 		"fight":
 			s.pending_fight = [{"monster": _template(data, npc), "name": who, "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0}]

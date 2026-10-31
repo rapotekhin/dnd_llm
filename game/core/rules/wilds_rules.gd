@@ -234,7 +234,7 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 			lines.append("Добыто: %s" % ", ".join(got_parts))
 		CharacterRules.refresh(s.character, data, s.items)
 		if k == "hunt" and FactionRules.friendly(s, data, str(FactionRules.cfg(data)["by_type"]["beast"])):  # v0.7.50: a friend of the beasts hunts them
-			lines.append_array(FactionRules.on_source(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "hunt", "охота"))
+			lines.append_array(WorldEvent.standing(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "hunt", "охота"))
 	else:
 		lines.append("%s: ни следа удачи" % d["name"])
 		if nat == 1 or s.rng.randi_range(1, 100) <= int(d.get("predator_pct", 0)):
