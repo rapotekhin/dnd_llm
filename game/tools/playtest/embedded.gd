@@ -44,8 +44,14 @@ func run() -> void:
 	if not box.is_empty():
 		box[0].queue_free()
 		await frames(2)
-	backend.save_key("sk-or-not-a-real-key")
-	step("a wrong key: refused", await wait_until(func() -> bool: return backend.server.problem == EmbeddedServer.PROBLEM_KEY_REJECTED, 60.0))
+	var refused := false
+	for attempt in 3:  # no answer from OpenRouter says nothing about a key, and the server then runs on: a new key, a new check
+		backend.save_key("sk-or-not-a-real-key-%d" % attempt)
+		await wait_until(func() -> bool: return backend.server.state != EmbeddedServer.State.STARTING, 60.0)
+		refused = backend.server.problem == EmbeddedServer.PROBLEM_KEY_REJECTED
+		if refused:
+			break
+	step("a wrong key: refused", refused)
 	await frames(5)
 	box = find_all(root, "KeyBox")
 	step("a wrong key: the window says so", box.size() == 1 and find(box[0], "KeyText").text == "KEY_REJECTED")
