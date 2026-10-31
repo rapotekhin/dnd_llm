@@ -46,7 +46,7 @@ static func picks_count(data: Dictionary, spell_id: String, slot: int) -> int:
 
 ## Reduce on a foe (v0.7.50.1): a CON save or its blows weaken by 1d4 until the concentration ends.
 static func reduce_foe(s: GameSession, data: Dictionary, spell_id: String, f: Dictionary, lines: Array[String]) -> void:
-	var ok := CombatRules._monster_save(s, data, f, "con", int(s.character.get("spell_dc", 10)), ["magic"])
+	var ok := CombatRules._monster_save(s, data, f, "con", CombatRules.spell_dc(s), ["magic"])
 	lines.append("%s: %s — спасбросок Тел %s" % [data["spells"][spell_id]["name"], f["name"], "успех" if ok else "провал, уменьшается"])
 	if not ok:
 		ConditionRules.add_effect(f, {"source": {"kind": "spell", "id": spell_id, "name": str(data["spells"][spell_id]["name"])}, "reduced": true})
@@ -68,6 +68,10 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 		lines.append("%s: +%d HP" % [f["name"], int(f["hp"]) - before])
 		return
 	_end_spell_on(f, spell_id)
+	if sp.has("self_status"):
+		CombatRules._add_condition(s, f, str(sp["self_status"]), {"rounds": ConditionRules.spell_rounds(data, spell_id), "spell": spell_id})
+		lines.append("%s: %s" % [f["name"], spell["name"]])
+		return
 	var boon := {"source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}}
 	for k: String in ["foe_types_dis", "sanctuary", "ability_adv", "save_adv", "flying", "enlarged", "haste"]:
 		if sp.has(k):
@@ -131,7 +135,7 @@ static func warded(data: Dictionary, attacker: Dictionary, t: Dictionary) -> boo
 
 ## Sanctuary on an ally: the attacker saves or gives up the blow.
 static func ally_sanctuary(s: GameSession, data: Dictionary, attacker: Dictionary, t: Dictionary, lines: Array[String]) -> bool:
-	if boon(t, "sanctuary") == null or CombatRules._monster_save(s, data, attacker, "wis", int(s.character.get("spell_dc", 10)), ["magic"]):
+	if boon(t, "sanctuary") == null or CombatRules._monster_save(s, data, attacker, "wis", CombatRules.spell_dc(s), ["magic"]):
 		return false
 	lines.append("%s не решается ударить %s — Святилище" % [attacker["name"], t["name"]])
 	return true
@@ -178,8 +182,11 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 			e[k] = sp[k]
 	var lines: Array[String] = []
 	var slot_up := maxi(0, slot - maxi(1, int(spell["level"])))
+	if sp.has("self_status"):  # a spell the master built: its status with what it lays
+		e["condition"] = str(sp["self_status"])
+		e.merge(MakeRules.fx(s, str(sp["self_status"])))
 	if sp.has("guise"):  # Disguise Self (v0.7.63): the master names the look; the spell's DC is what a viewer must beat
-		e["guise"] = {"name": "", "faction": "", "dc": int(c.get("spell_dc", 10)), "seen": {}}
+		e["guise"] = {"name": "", "faction": "", "dc": CombatRules.spell_dc(s), "seen": {}}
 	if sp.has("resist_auto"):  # Protection from Energy: the type the foes deal most (v0.7.13.2)
 		var dtype := _likely_type(s, data, sp["resist_auto"])
 		e["resist"] = [dtype]
@@ -282,7 +289,7 @@ static func against_attack(s: GameSession, data: Dictionary, f: Dictionary, tota
 static func sanctuary_holds(s: GameSession, data: Dictionary, f: Dictionary) -> String:
 	if hero_effects(s.character, "sanctuary").is_empty():
 		return ""
-	var dc := maxi(int(s.character.get("spell_dc", 10)), 10)
+	var dc := maxi(CombatRules.spell_dc(s), 10)
 	if CombatRules._monster_save(s, data, f, "wis", dc, ["magic"]):
 		return ""
 	return "%s не решается ударить — Святилище" % f["name"]
@@ -467,7 +474,7 @@ static func turn_start(s: GameSession, data: Dictionary) -> Array[String]:
 static func curse_foes(s: GameSession, data: Dictionary, spell_id: String, slot: int, target: Dictionary, lines: Array[String]) -> void:
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
-	var dc := int(s.character.get("spell_dc", 10))
+	var dc := CombatRules.spell_dc(s)
 	var ok := CombatRules._monster_save(s, data, target, str(sp.get("save", "cha")), dc, ["magic"])
 	lines.append("%s: %s — спасбросок %s против Сл %d %s" % [spell["name"], target["name"], CombatRules.ab_name(str(sp.get("save", "cha"))), dc,
 		"успех" if ok else "провал, %s" % text(data, sp)])
@@ -635,7 +642,7 @@ static func start_sustained(s: GameSession, data: Dictionary, spell_id: String, 
 			s.combat["zones"] = []
 		var col := int(CombatRules.player(s)["col"]) if bool(sus.get("follow", false)) or t.is_empty() else int(t["col"])
 		var zone := {"spell": spell_id, "name": str(spell["name"]), "col": col, "follow": bool(sus.get("follow", false)),
-			"dice": dice, "type": str(sus.get("type", "")), "save": str(sus.get("save", "")), "on": sus.get("on", []), "dc": int(c.get("spell_dc", 10)),
+			"dice": dice, "type": str(sus.get("type", "")), "save": str(sus.get("save", "")), "on": sus.get("on", []), "dc": CombatRules.spell_dc(s),
 			"slow": bool(sus.get("slow", false))}
 		for k: String in ["cond", "obscure", "silence", "retch", "block_ranged", "spares_friends"]:
 			if sus.has(k):
@@ -737,7 +744,7 @@ static func act(s: GameSession, data: Dictionary, id: String, target_id: String)
 			var f := CombatRules.fighter(s, fid)
 			if int(f["col"]) == int(t["col"]):
 				lines.append_array(_save_hit(s, data, str(e["source"]["name"]), str(sus["type"]), str(sus.get("save", "dex")), str(e["dice"]),
-					int(s.character.get("spell_dc", 10)), f, true))
+					CombatRules.spell_dc(s), f, true))
 		return lines
 	return _hit(s, data, spell_id, e, t)
 
@@ -751,7 +758,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 	match str(sus["kind"]):
 		"attack":
 			var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "wis"))))
-			var res := CombatRules._attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), false,
+			var res := CombatRules._attack(s, data, str(c["name"]), name, CombatRules.spell_attack(s), false,
 				not CombatRules.hero_attack_dis(s, data, t).is_empty(), t, str(e["dice"]).replace("+MOD", ""), ab if str(e["dice"]).contains("MOD") else 0,
 				str(sus["type"]), lines)
 			if bool(res["hit"]) and bool(sus.get("drain", false)):
@@ -763,14 +770,14 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 			var dmg := CombatRules._resist(data, t, str(sus["type"]), CombatRules.roll_dice(s.rng, str(e["dice"])))
 			lines.append("%s: %s — %d (огонь)" % [name, t["name"], dmg])
 			CombatRules._hurt_enemy(s, data, t, dmg, lines, str(sus["type"]))
-			if str(t.get("status")) == "active" and not CombatRules._monster_save(s, data, t, "con", int(c.get("spell_dc", 10)), ["magic"]):
+			if str(t.get("status")) == "active" and not CombatRules._monster_save(s, data, t, "con", CombatRules.spell_dc(s), ["magic"]):
 				CombatRules._hold(t, "mocked")  # the burning metal: disadvantage on its next attack
 				lines.append("%s едва держит раскалённое — атака с помехой" % t["name"])
 		"strike":
 			for fid: String in CombatRules.enemies(s):
 				var f := CombatRules.fighter(s, fid)
 				if int(f["col"]) == int(t["col"]):
-					lines.append_array(_save_hit(s, data, name, str(sus["type"]), str(sus.get("save", "dex")), str(e["dice"]), int(c.get("spell_dc", 10)), f, true))
+					lines.append_array(_save_hit(s, data, name, str(sus["type"]), str(sus.get("save", "dex")), str(e["dice"]), CombatRules.spell_dc(s), f, true))
 		"push":  # Gust of Wind: the line toward the target, a STR save or a column away
 			var me := int(CombatRules.player(s)["col"])
 			var dir := signi(int(t["col"]) - me)
@@ -779,7 +786,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 				var along := (int(f["col"]) - me) * dir if dir != 0 else (0 if int(f["col"]) == me else -1)
 				if along < 0 or along > int(sus.get("reach", 2)):
 					continue
-				if CombatRules._monster_save(s, data, f, str(sus.get("save", "str")), int(c.get("spell_dc", 10)), ["magic"]):
+				if CombatRules._monster_save(s, data, f, str(sus.get("save", "str")), CombatRules.spell_dc(s), ["magic"]):
 					lines.append("%s: %s устоял" % [name, f["name"]])
 				else:
 					var away := dir if dir != 0 else (1 if int(f["col"]) >= 0 else -1)
@@ -869,7 +876,7 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 	var cu := curse(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
 	var name := str(spell["name"])
-	var dc := int(c.get("spell_dc", 10))
+	var dc := CombatRules.spell_dc(s)
 	var foes: Array[Dictionary] = [target]
 	if bool(cu.get("area", false)) and picks(data, spell_id).is_empty():
 		foes = []
@@ -880,7 +887,7 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 	for f: Dictionary in foes:
 		var landed := false
 		if bool(cu.get("attack", false)):
-			var res := CombatRules._attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), false,
+			var res := CombatRules._attack(s, data, str(c["name"]), name, CombatRules.spell_attack(s), false,
 				not CombatRules.hero_attack_dis(s, data, f).is_empty(), f, "0", 0, "force", lines)
 			landed = bool(res["hit"])
 		else:
@@ -960,8 +967,9 @@ static func hit_reactions(s: GameSession, data: Dictionary, ctx: Dictionary) -> 
 	if reaction_slot(c, data, "shield") > 0:
 		var miss := int(ctx.get("total", 0)) < int(ctx.get("ac", 10)) + 5 and not bool(ctx.get("nat20", false))
 		out.append({"id": "spell_shield", "label": "Щит: КД +5 до вашего хода%s" % (" — удар мимо" if miss else " (удар всё равно попадёт)")})
-	if reaction_slot(c, data, "hellish_rebuke") > 0 and int(ctx.get("dmg", 0)) > 0:
-		out.append({"id": "spell_hellish_rebuke", "label": "Адское возмездие: огонь по обидчику"})
+	for id: String in SpellRules.ready(c):
+		if str(spec(data, id).get("reaction", "")) == "damage" and reaction_slot(c, data, id) > 0 and int(ctx.get("dmg", 0)) > 0:
+			out.append({"id": "spell_" + id, "label": str(spec(data, id).get("label", data["spells"][id]["name"]))})
 	return out
 
 
@@ -980,15 +988,17 @@ static func apply_hit_reaction(s: GameSession, data: Dictionary, f: Dictionary, 
 			var still := int(ctx["total"]) >= int(ctx["ac"]) or bool(ctx.get("nat20", false))
 			ctx["hit"] = still
 			lines.append("%s: Щит — КД %d, %s" % [c.get("name", ""), int(c["ac"]), "удар всё же попадает" if still else "удар отскакивает"])
-		"hellish_rebuke":
+		_:
 			ctx["rebuke"] = slot
+			ctx["rebuke_spell"] = spell_id
 
 
 ## Hellish Rebuke after the damage: the attacker takes fire, a DEX save for half. Lines.
-static func rebuke(s: GameSession, data: Dictionary, f: Dictionary, slot: int, lines: Array[String]) -> void:
-	var sp: Dictionary = data["spells"]["hellish_rebuke"]
-	var dice := str(sp["damage_at_slot"].get(str(maxi(1, slot)), "2d10"))
-	lines.append_array(_save_hit(s, data, str(sp["name"]), "fire", "dex", dice, int(s.character.get("spell_dc", 10)), f, true))
+static func rebuke(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String, slot: int, lines: Array[String]) -> void:
+	var sp: Dictionary = data["spells"][spell_id]
+	var dice := CombatRules._spell_dice(sp, slot, int(s.character.get("level", 1)))
+	lines.append_array(_save_hit(s, data, str(sp["name"]), str(sp["damage_type"]), str(sp["save"]["ability"]), dice, CombatRules.spell_dc(s), f,
+		str(sp["save"].get("success", "half")) == "half"))
 
 
 ## The start of the hero's turn: Shield's AC goes.
@@ -1062,7 +1072,7 @@ static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc: Di
 	var ab := str(spell.get("save", {}).get("ability", "wis"))
 	var bonus := int(tmpl.get("saves", {}).get(ab, CharacterRules.mod(int(tmpl.get("abilities", {}).get(ab, 10)))))
 	var roll := Roll.d20(s.rng)
-	var dc := int(s.character.get("spell_dc", 10))
+	var dc := CombatRules.spell_dc(s)
 	var saved := roll + bonus >= dc
 	var save_parts: Array[Dictionary] = [RollParts.part("спасбросок %s (%s)" % [CombatRules.ab_name(ab), name], bonus)]
 	RollParts.note(s, "%s: %s" % [spell["name"], name], [roll], roll, save_parts, bonus, dc)

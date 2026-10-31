@@ -1061,14 +1061,14 @@ static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, 
 		targets = area_targets(s, data, sp, target)
 	else:
 		targets.append(target)
-	var dc_on_hero := int(c.get("spell_dc", 10))
+	var dc_on_hero := spell_dc(s)
 	if targets.any(func(t: Dictionary) -> bool: return str(t["id"]) == PLAYER):  # friendly fire (v0.7.50.1)
 		targets = targets.filter(func(t: Dictionary) -> bool: return str(t["id"]) != PLAYER)
 		if not spec.has("pool") or int(c.get("hp", 0)) <= 10:
 			MonsterRules._cast_condition_on_hero(s, data, player(s), spell_id, slot, spec, dc_on_hero, lines)
 	var conds: Array = spec["conditions"]
 	var timer := {"rounds": int(spec.get("rounds", 10)) * (2 if str(s.combat.get("meta_now", "")) == "extended_spell" else 1), "spell": spell_id, "wake": bool(spec.get("ends_on_damage", false)),
-		"save": str(sp["save"]["ability"]) if bool(spec.get("repeat_save", false)) and sp.has("save") else "", "dc": int(c.get("spell_dc", 10))}
+		"save": str(sp["save"]["ability"]) if bool(spec.get("repeat_save", false)) and sp.has("save") else "", "dc": spell_dc(s)}
 	if spec.has("pool"):  # Sleep, Color Spray: the weakest first while the pool lasts
 		var extra := maxi(0, slot - maxi(1, int(sp["level"])))
 		var pool := roll_dice(s.rng, str(spec["pool"]))
@@ -1103,8 +1103,8 @@ static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, 
 			tags.append("fear")
 		if conds.has("paralyzed"):
 			tags.append("paralysis")
-		var ok := _monster_save(s, data, t, ab, int(c.get("spell_dc", 10)), tags, str(s.combat.get("meta_now", "")) == "heightened_spell")
-		lines.append("%s: %s — спасбросок %s против Сл %d %s" % [name, t["name"], ab_name(ab), int(c.get("spell_dc", 10)),
+		var ok := _monster_save(s, data, t, ab, spell_dc(s), tags, str(s.combat.get("meta_now", "")) == "heightened_spell")
+		lines.append("%s: %s — спасбросок %s против Сл %d %s" % [name, t["name"], ab_name(ab), spell_dc(s),
 			"успех" if ok else "провал — " + ", ".join(conds.map(func(x: String) -> String: return cond_name(data, x)))])
 		if not ok:
 			for cond: String in conds:
@@ -1353,31 +1353,10 @@ static func item_spell(s: GameSession, data: Dictionary, item_id: String, target
 		lines.append_array(ItemRules.identify(c, data, s.items))
 		return lines
 	var nums := ItemRules.scroll_numbers(data, level)
-	var keep := {}
-	for k: String in ["spell_dc", "spell_attack", "spell_ability", "spells", "slots_max", "spent"]:
-		keep[k] = c[k].duplicate() if c.get(k) is Dictionary or c.get(k) is Array else c.get(k)
-	c["spell_dc"] = int(fx.get("dc", nums[0]))
-	c["spell_attack"] = int(fx.get("attack", nums[1]))
-	if str(c.get("spell_ability", "")).is_empty():
-		c["spell_ability"] = "int"
-	var spells: Dictionary = (c.get("spells", {}) as Dictionary).duplicate(true)
-	var always: Array = spells.get("always", [])
-	always.append(sp_id)
-	spells["always"] = always
-	c["spells"] = spells
-	if level > 0:
-		var mx: Array = (c.get("slots_max", [0, 0, 0, 0, 0]) as Array).duplicate()
-		mx[level - 1] = int(mx[level - 1]) + 1
-		c["slots_max"] = mx
-	var cast := _player_cast(s, data, sp_id, level, target_id)
-	if not cast.is_empty() and str(cast[0]).begins_with("Заклинание"):
-		cast[0] = "Заклинание: %s" % data["spells"][sp_id]["name"]
-	lines.append_array(cast)
-	for k: String in keep:
-		if keep[k] == null:
-			c.erase(k)
-		else:
-			c[k] = keep[k]
+	var by := {"dc": int(fx.get("dc", nums[0])), "attack": int(fx.get("attack", nums[1]))}
+	var ab := str(c.get("spell_ability", ""))
+	by["ability"] = "int" if ab.is_empty() else ab
+	lines.append_array(_player_cast(s, data, sp_id, level, target_id, by))
 	player(s)["hidden"] = false
 	return lines
 
@@ -1390,9 +1369,8 @@ static func player_cast(s: GameSession, data: Dictionary, spell_id: String, slot
 	return lines
 
 
-static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> Array[String]:
+static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String, by: Dictionary = {}) -> Array[String]:
 	var c := s.character
-	var sp: Dictionary = data["spells"][spell_id]
 	var e := economy(s)
 	var cost := spell_cost(data, spell_id)
 	var meta := FeatureRules.pay_metamagic(s, data)
@@ -1400,64 +1378,45 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 		cost = "bonus"
 	e[cost] = int(e[cost]) - 1
 	s.combat["meta_now"] = meta
-	var chk := SpellRules.check(c, data, spell_id, slot)
+	var numbers := by if not by.is_empty() else ActionRules.numbers(s, data, spell_id)
+	if not numbers.is_empty():
+		s.combat["by"] = numbers
+	var chk := {"spell_id": spell_id, "slot": slot} if not by.is_empty() else SpellRules.check(c, data, spell_id, slot)
 	var held := str(c.get("concentration", ""))
-	var lines: Array[String] = SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]), s, target_id in ["", PLAYER])
+	var lines: Array[String] = SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]), s, target_id in ["", PLAYER], not by.is_empty())
 	slot = int(chk["slot"])
 	if held != str(c.get("concentration", "")):
 		lines.append_array(end_spell(s, data, held))
-	if not SpellEffects.picks(data, spell_id).is_empty():  # v0.7.50.1: the first target; the others picked as darts
-		_start_picks(s, data, spell_id, slot, target_id)
-		if SpellEffects.picks_side(data, spell_id) == "any" and str(fighter(s, target_id).get("side")) == "enemy":
-			SpellEffects.reduce_foe(s, data, spell_id, fighter(s, target_id), lines)
-			return lines
-		if SpellEffects.picks_side(data, spell_id) != "foe":
-			if not target_id in ["", PLAYER]:
-				if (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell_id):
-					c["invisible_others"] = true  # the concentration holds an ally's, not the hero's
-				SpellEffects.on_friend(s, data, spell_id, slot, fighter(s, target_id), lines)
-				return lines
-			target_id = ""
-	if not AllyRules.summon_spec(data, spell_id).is_empty():  # v0.7.22.22: the summoned fight on the hero's side
-		lines.append_array(AllyRules.summon(s, data, spell_id))
-		return lines
-	if cfg(data)["condition_spells"].has(spell_id) and not target_id.is_empty():
-		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
-		return lines
-	if bool(SpellEffects.spec(data, spell_id).get("dispel", false)):  # Dispel Magic (v0.7.13.7)
-		lines.append_array(SpellEffects.dispel(s, data, target_id))
-		return lines
-	if not SpellEffects.curse(data, spell_id).is_empty() and not target_id.is_empty():  # v0.7.13.6: Faerie Fire, Slow…
-		SpellEffects.cast_curse(s, data, spell_id, slot, fighter(s, target_id), lines)
-		return lines
-	if not SpellEffects.sustained(data, spell_id).is_empty():  # v0.7.13.5: zones and strikes each turn
-		SpellEffects.start_sustained(s, data, spell_id, slot, target_id, lines)
-		return lines
-	if bool(SpellEffects.spec(data, spell_id).get("foe_target", false)):  # Hunter's Mark (v0.7.13.4)
-		lines.append_array(SpellEffects.apply_self(s, data, spell_id, slot))
-		if not target_id.is_empty():
-			SpellEffects.mark(c, target_id)
-			lines.append("%s отмечен" % fighter(s, target_id)["name"])
-		return lines
-	if int(SpellEffects.spec(data, spell_id).get("teleport", 0)) > 0:  # Misty Step (v0.7.13.3)
-		lines.append_array(_teleport(s, data, int(SpellEffects.spec(data, spell_id)["teleport"])))
-		return lines
-	if SpellEffects.foe_spell(data, spell_id) and not target_id.is_empty():  # Bane (v0.7.13.1)
-		SpellEffects.curse_foes(s, data, spell_id, slot, fighter(s, target_id), lines)
-		return lines
+	ActionRules.run(s, data, spell_id, slot, target_id, lines)
+	s.combat.erase("by")
+	return lines
+
+
+## The DC and the attack of the spell now: the item's or the built ability's while it lands, the hero's otherwise.
+static func spell_dc(s: GameSession) -> int:
+	return int(s.combat.get("by", {}).get("dc", s.character.get("spell_dc", 10)))
+
+
+static func spell_attack(s: GameSession) -> int:
+	return int(s.combat.get("by", {}).get("attack", s.character.get("spell_attack", 0)))
+
+
+## The ability of the spell now.
+static func spell_ability(s: GameSession) -> String:
+	return str(s.combat.get("by", {}).get("ability", s.character.get("spell_ability", "int")))
+
+
+## A spell of damage at a foe: an attack, a save, an area, a volley.
+static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String, lines: Array[String]) -> void:
+	var c := s.character
+	var sp: Dictionary = data["spells"][spell_id]
 	var level := int(c.get("level", 1))
-	var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "int"))))
-	if sp.has("heal_at_slot"):
-		_heal_hero(s, data, spell_id, slot, lines)
-		return lines
-	if not is_engine_spell(data, spell_id) or target_id.is_empty():
-		return lines
 	lines.append_array(SpellEffects.break_sanctuary(c))  # a spell at a foe ends Sanctuary (v0.7.13.2)
 	var dice := _spell_dice(sp, slot, level)
 	var t := fighter(s, target_id)
 	if not sp.has("area") and _missed_unseen(s, t):
 		lines.append("%s: в пустоту — %s уже не там" % [sp["name"], t["name"]])
-		return lines
+		return
 	var targets: Array[Dictionary] = [t]
 	if sp.has("area"):
 		targets = area_targets(s, data, sp, t)
@@ -1487,7 +1446,7 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 					continue
 				var hero := str(tg["id"]) == PLAYER  # friendly fire (v0.7.50.1)
 				var save_ab := str(sp["save"]["ability"])
-				var dc := int(c.get("spell_dc", 10))
+				var dc := spell_dc(s)
 				var ok := bool(HeroDefense.save(s, data, save_ab, dc, "magic")["ok"]) if hero else _monster_save(s, data, tg, save_ab, dc, ["magic"], str(s.combat.get("meta_now", "")) == "heightened_spell")
 				var dmg := dmg_full / 2 if ok and str(sp["save"]["success"]) == "half" else (0 if ok else dmg_full)
 				dmg = int(HeroDefense.adjust(s, data, dtype, dmg)["damage"]) if hero else _resist(data, tg, dtype, dmg)
@@ -1497,8 +1456,7 @@ static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slo
 				if dmg > 0:
 					_hurt_any(s, data, tg, dmg, lines)
 				if not hero:
-					_spell_rider(s, data, spell_id, slot, tg, not ok, lines)
-	return lines
+					ActionRules.riders(s, data, spell_id, slot, tg, not ok, lines)
 
 
 ## One dart or ray of a spell (an auto hit or a spell attack) at `t`. Lines.
@@ -1521,20 +1479,19 @@ static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int,
 	var dis := not (mods["dis"] as Array).is_empty()
 	var adv := not (mods["adv"] as Array).is_empty()
 	var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
-	var sres := _attack(s, data, str(c["name"]), name, int(c.get("spell_attack", 0)), adv, dis, t,
+	var sres := _attack(s, data, str(c["name"]), name, spell_attack(s), adv, dis, t,
 		_empowered(s, dice), agonizing, dtype, lines)
-	_spell_rider(s, data, spell_id, slot, t, bool(sres["hit"]), lines)
+	ActionRules.riders(s, data, spell_id, slot, t, bool(sres["hit"]), lines)
 	var repel := bool(sres["hit"]) and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_repelling_blast")
 	if repel and str(t.get("status")) == "active" and SIZES.find(str(_monster(data, t).get("size", "medium"))) <= 3:
-		var away := 1 if int(t["col"]) >= int(player(s)["col"]) else -1
-		t["col"] = clampi(int(t["col"]) + away, -edge(data), edge(data))
+		push_away(s, data, t, 1)
 		lines.append("Отталкивающий заряд: %s отброшен на 30 фт" % t["name"])
 
 
 ## What a healing spell gives at this slot.
 static func heal_roll(s: GameSession, data: Dictionary, spell_id: String, slot: int) -> int:
 	var c := s.character
-	var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "int"))))
+	var ab := CharacterRules.mod(CharacterRules.ability(c, spell_ability(s)))
 	var heal_expr := str(data["spells"][spell_id]["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
 	var heal := max_dice(heal_expr, ab) if SpellEffects.max_heal(c) else roll_dice(s.rng, heal_expr, false, ab)
 	if FeatureRules.has(c, "disciple_of_life") and slot > 0:
@@ -1592,7 +1549,7 @@ static func _pick_shot(s: GameSession, data: Dictionary, v: Dictionary, target_i
 		var sp: Dictionary = data["spells"][spell_id]
 		var t := fighter(s, target_id)
 		var dtype := str(sp.get("damage_type", ""))
-		var ok := _monster_save(s, data, t, str(sp["save"]["ability"]), int(s.character.get("spell_dc", 10)), ["magic"])
+		var ok := _monster_save(s, data, t, str(sp["save"]["ability"]), spell_dc(s), ["magic"])
 		var dmg := 0 if ok else _resist(data, t, dtype, roll_dice(s.rng, _empowered(s, _spell_dice(sp, slot, int(s.character.get("level", 1))))))
 		lines.append("%s: %s — спасбросок %s %s, %d (%s)" % [sp["name"], t["name"], ab_name(str(sp["save"]["ability"])), "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 		if dmg > 0:
@@ -1732,44 +1689,20 @@ static func _caught_friend(s: GameSession, data: Dictionary, t: Dictionary) -> v
 		s.remember(npc, "герой задел меня своим заклинанием в бою")
 
 
-## The riders of the engine's spells by 5e (v0.7.13): what lasts after the hit or the failed save.
-static func _spell_rider(s: GameSession, data: Dictionary, spell_id: String, slot: int, t: Dictionary, landed: bool, lines: Array[String]) -> void:
-	if str(t.get("status")) != "active":
+## Acid Arrow's rider (v0.7.13): the second turn's acid on a hit, the splash on a miss.
+static func _acid_rider(s: GameSession, data: Dictionary, slot: int, t: Dictionary, landed: bool, lines: Array[String]) -> void:
+	if landed:
+		t["acid"] = "%dd4" % (2 + maxi(0, slot - 2))
 		return
-	match spell_id:
-		"guiding_bolt":
-			if landed:
-				_add_condition(s, t, "guided", {"rounds": 2})  # the next attack roll against it has advantage, until the end of the hero's next turn
-				lines.append("%s светится — следующая атака по нему с преимуществом" % t["name"])
-		"vicious_mockery":
-			if landed:
-				_hold(t, "mocked")
-				lines.append("%s сбит с толку — его следующая атака с помехой" % t["name"])
-		"ray_of_frost":
-			if landed:
-				t["slowed"] = 10
-				lines.append("%s скован холодом: скорость −10 фт" % t["name"])
-		"chill_touch":
-			if landed:
-				t["no_heal"] = true
-				if str(_monster(data, t).get("type", "")) == "undead":
-					_hold(t, "chilled")
-					lines.append("%s: нежить бьёт героя с помехой" % t["name"])
-		"shocking_grasp":
-			if landed:
-				t["reacted"] = true
-				lines.append("%s не может ответить реакцией" % t["name"])
-		"acid_arrow":
-			var more := "%dd4" % (2 + maxi(0, slot - 2))
-			if landed:
-				t["acid"] = more
-			else:
-				var half := _resist(data, t, "acid", roll_dice(s.rng, "%dd4" % (4 + maxi(0, slot - 2))) / 2)
-				lines.append("Кислотная стрела: брызги — %d (кислота)" % half)
-				_hurt_enemy(s, data, t, half, lines, "acid")
-		"thunderwave":
-			if landed and SIZES.find(str(_monster(data, t).get("size", "medium"))) <= 3:
-				lines.append("%s отброшен на 10 фт" % t["name"])  # within the 30-ft column of the field
+	var half := _resist(data, t, "acid", roll_dice(s.rng, "%dd4" % (4 + maxi(0, slot - 2))) / 2)
+	lines.append("Кислотная стрела: брызги — %d (кислота)" % half)
+	_hurt_enemy(s, data, t, half, lines, "acid")
+
+
+## A fighter thrown `cols` columns away from the hero, within the field.
+static func push_away(s: GameSession, data: Dictionary, t: Dictionary, cols: int) -> void:
+	var away := 1 if int(t["col"]) >= int(player(s)["col"]) else -1
+	t["col"] = clampi(int(t["col"]) + away * cols, -edge(data), edge(data))
 
 
 ## A foe in metal armor (Shocking Grasp): its armor line names mail, plate, scale, a breastplate or splint.
@@ -2725,7 +2658,7 @@ static func _land_hit(s: GameSession, data: Dictionary, f: Dictionary, a: Dictio
 					_enemy_attack(s, data, f, b, lines)
 					break
 	if int(ctx.get("rebuke", 0)) > 0 and str(f.get("status")) == "active":  # Hellish Rebuke (v0.7.13.7)
-		SpellEffects.rebuke(s, data, f, int(ctx["rebuke"]), lines)
+		SpellEffects.rebuke(s, data, f, str(ctx.get("rebuke_spell", "hellish_rebuke")), int(ctx["rebuke"]), lines)
 	if bool(ctx.get("counter", false)) and str(f.get("status")) == "active" and int(s.character.get("hp", 0)) > 0:
 		var w := weapon_profile(s.character, data, s.items, str(s.character.get("equipped", {}).get("main_hand", "")))
 		lines.append("%s: Убийца великанов — удар в ответ" % s.character.get("name", ""))
@@ -3321,7 +3254,7 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 		var sab := str(sp["save"]["ability"])
 		var tm := _monster(data, t)
 		var sbonus := int(tm["saves"].get(sab, CharacterRules.mod(int(tm["abilities"].get(sab, 10)))))
-		return {"save": true, "condition": conds, "chance": 100 - hit_chance(sbonus, int(s.character.get("spell_dc", 10)), false, false),
+		return {"save": true, "condition": conds, "chance": 100 - hit_chance(sbonus, spell_dc(s), false, false),
 			"adv": [], "dis": [], "immune": not _can_be(data, t, cspec)}
 	var c := s.character
 	var level := int(c.get("level", 1))
@@ -3348,7 +3281,7 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 			dis.append("цель уклоняется")
 		out["adv"] = adv
 		out["dis"] = dis
-		out["chance"] = hit_chance(int(c.get("spell_attack", 0)), ac_of(t), not adv.is_empty(), not dis.is_empty())
+		out["chance"] = hit_chance(spell_attack(s), ac_of(t), not adv.is_empty(), not dis.is_empty())
 	elif sp.has("save"):
 		var ab := str(sp["save"]["ability"])
 		var m := _monster(data, t)
@@ -3359,7 +3292,7 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 		if not (by_status["auto_fail"] as Array).is_empty():
 			out["chance"] = 100
 		else:
-			out["chance"] = 100 - hit_chance(bonus, int(c.get("spell_dc", 10)), false, not (by_status["disadvantage"] as Array).is_empty())
+			out["chance"] = 100 - hit_chance(bonus, spell_dc(s), false, not (by_status["disadvantage"] as Array).is_empty())
 	return out
 
 

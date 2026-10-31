@@ -300,38 +300,29 @@ static func actions(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 		add.call("flame_blade", "%s: удар (%s)" % [blade["name"], str(blade["dice"]).replace("d", "к")], "action", true, "Рукопашная атака заклинанием огненным клинком")
 	if SpellEffects.mark_free(s):
 		add.call("move_mark", "Перенести метку охотника", "bonus", true, "Отмеченный враг пал — метка переходит на другого")
-	if has(c, "reckless_attack"):
-		add.call("reckless", "Безрассудная атака", "free", false, "Атаки Силой вплотную с преимуществом до конца хода, но и по вам — до вашего следующего хода")
-	if has(c, "martial_arts"):
-		add.call("martial_strike", "Удар бонусом (боевые искусства)", "bonus", true, "После действия «Атака»: безоружный удар бонусным действием")
-	if has(c, "flurry_of_blows"):
-		add.call("flurry", "Шквал ударов (1 ки)", "bonus", true, "После действия «Атака»: два безоружных удара")
-		if has(c, "open_hand_technique"):
-			for how: String in OPEN_HAND:
-				add.call("flurry_" + how, "Шквал: " + {"topple": "сбить с ног", "push": "оттолкнуть", "stagger": "без реакций"}[how], "bonus", true,
-					"Шквал ударов, и каждый удар — техника открытой ладони")
-	if has(c, "patient_defense"):
-		add.call("patient_defense", "Терпеливая оборона (1 ки)", "bonus", false, "Уклонение бонусным действием")
-	if has(c, "step_of_the_wind"):
-		add.call("step_disengage", "Шаг ветра: отход (1 ки)", "bonus", false, "Отход бонусным действием")
-		add.call("step_dash", "Шаг ветра: рывок (1 ки)", "bonus", false, "Рывок бонусным действием")
-	if has(c, "stunning_strike"):
-		add.call("stunning", "Оглушающий удар (1 ки)", "action", true, "Атака; при попадании — спасбросок Тел, иначе цель ошеломлена до конца вашего следующего хода")
-	if has(c, "channel_divinity_turn_undead"):
-		add.call("turn_undead", "Изгнание нежити", "action", false, "Нежить в 30 фт: спасбросок Мдр, иначе бежит; слабую — уничтожает")
-	if has(c, "channel_divinity_preserve_life"):
-		add.call("preserve_life", "Сохранение жизни", "action", false, "Лечит до половины максимума хитов (5 × уровень)")
-	if has(c, "channel_divinity_sacred_weapon"):
-		add.call("sacred_weapon", "Священное оружие", "action", false, "+Хар к атакам оружием на минуту")
-	if has(c, "channel_divinity_turn_the_unholy"):
-		add.call("turn_unholy", "Изгнание нечестивых", "action", false, "Исчадия и нежить в 30 фт: спасбросок Мдр, иначе бегут")
-	if Stock.owned(c, data).has("wild_shape"):
-		add.call("wild_shape", "Дикий облик", "action", false, "Облик зверя: его хиты, КД и атаки")
-	if Stock.owned(c, data).has("sorcery_points"):
-		add.call("font", "Источник магии", "bonus", false, "Ячейка ↔ очки чародейства")
-	if CharacterRules.has_trait(c, "breath_weapon"):
-		add.call("breath", "Оружие дыхания", "action", true, breath_text(c, data))
+	var table := rows(data)
+	for id: String in table:
+		if id.begins_with("_"):
+			continue
+		var a: Dictionary = table[id]
+		if _holds(c, data, a):
+			add.call(id, str(a["name"]), str(a["cost"]), bool(a.get("target", false)), breath_text(c, data) if id == "breath" else str(a.get("tip", "")))
 	return out
+
+
+## The rows of rules.feature_actions.
+static func rows(data: Dictionary) -> Dictionary:
+	return data["rules"]["feature_actions"]
+
+
+## The hero has what the row asks: all its features, its resource, its trait.
+static func _holds(c: Dictionary, data: Dictionary, a: Dictionary) -> bool:
+	for f: Variant in a.get("features", []):
+		if not has(c, str(f)):
+			return false
+	if a.has("stock") and not Stock.owned(c, data).has(str(a["stock"])):
+		return false
+	return not a.has("trait") or CharacterRules.has_trait(c, str(a["trait"]))
 
 
 ## "" when the feature action can be taken now, otherwise a localization key.
@@ -351,20 +342,14 @@ static func can_act(s: GameSession, data: Dictionary, id: String, target_id: Str
 		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
 	if id.begins_with("spell_"):
 		return SpellEffects.can_act(s, data, id, target_id)
-	var ki := {"flurry": 1, "patient_defense": 1, "step_disengage": 1, "step_dash": 1, "stunning": 0}
-	for how: String in OPEN_HAND:
-		ki["flurry_" + how] = 1
-	if ki.has(id) and Stock.left(c, data, "ki") < int(ki[id]):
-		return "COMBAT_NO_KI"
-	if id in ["martial_strike", "flurry"] or id.begins_with("flurry_"):
-		if not bool(e.get("attacked", false)):
-			return "COMBAT_ATTACK_FIRST"
-	if id == "reckless" and (bool(e.get("attacked", false)) or bool(s.combat.get("reckless", false))):
+	var row: Dictionary = rows(data).get(id, {})
+	var pay: Dictionary = row.get("pay", {})
+	if not pay.is_empty() and Stock.left(c, data, str(pay["id"])) < int(pay["n"]):
+		return "COMBAT_NO_KI" if str(pay["id"]) == "ki" else "COMBAT_NO_CHARGE"
+	if bool(row.get("after_attack", false)) and not bool(e.get("attacked", false)):
+		return "COMBAT_ATTACK_FIRST"
+	if bool(row.get("before_attack", false)) and (bool(e.get("attacked", false)) or bool(s.combat.get(id, false))):
 		return "COMBAT_RECKLESS_LATE"
-	if id in ["turn_undead", "preserve_life", "sacred_weapon", "turn_unholy"] and Stock.left(c, data, "channel_divinity") <= 0:
-		return "COMBAT_NO_CHARGE"
-	if id == "wild_shape" and Stock.left(c, data, "wild_shape") <= 0:
-		return "COMBAT_NO_CHARGE"
 	if id == "breath" and bool(c.get("breath_used", false)):
 		return "COMBAT_NO_CHARGE"
 	if bool(spec["target"]):
@@ -382,48 +367,60 @@ static func act(s: GameSession, data: Dictionary, id: String, target_id: String 
 	var c := s.character
 	var e := CombatRules.economy(s)
 	var lines: Array[String] = []
-	var spend := func(cost: String) -> void:
-		if cost != "free":
-			e[cost] = int(e[cost]) - 1
 	if id.begins_with("spell_"):
 		return SpellEffects.act(s, data, id, target_id)
-	match id:
-		"flame_blade":
-			spend.call("action")
-			lines.append_array(CombatRules.strike(s, data, target_id, SpellEffects.blade_profile(c), {}))
-		"move_mark":
-			spend.call("bonus")
-			SpellEffects.mark(c, target_id)
-			lines.append("Метка охотника переходит на %s" % CombatRules.fighter(s, target_id).get("name", ""))
-		"reckless":
-			s.combat["reckless"] = true
-			lines.append("%s атакует безрассудно: с преимуществом, но и открывшись" % c.get("name", ""))
-		"martial_strike":
-			spend.call("bonus")
-			lines.append_array(CombatRules.strike(s, data, target_id, CombatRules.unarmed_profile(c, data), {}))
-		"flurry", "flurry_topple", "flurry_push", "flurry_stagger":
-			spend.call("bonus")
-			Stock.use(c, data, "ki", 1, s.rng)
-			var how := id.trim_prefix("flurry_") if id != "flurry" else ""
-			lines.append("%s: шквал ударов" % c.get("name", ""))
-			for i in 2:
+	var row: Dictionary = rows(data).get(id, {})
+	var cost := str(row.get("cost", {"flame_blade": "action"}.get(id, "bonus")))
+	if cost != "free" and bool(row.get("spend", true)):
+		e[cost] = int(e[cost]) - 1
+	var pay: Dictionary = row.get("pay", {})
+	if not pay.is_empty() and not bool(pay.get("check_only", false)):
+		Stock.use(c, data, str(pay["id"]), int(pay["n"]), s.rng)
+	_hook(s, data, str(row.get("hook", id)) if row.is_empty() or row.has("hook") else "", target_id, lines)
+	for fx: Dictionary in row.get("effects", []):
+		_do(s, data, fx, target_id, lines)
+	return lines
+
+
+## One effect of a feature's action.
+static func _do(s: GameSession, data: Dictionary, fx: Dictionary, target_id: String, lines: Array[String]) -> void:
+	var c := s.character
+	match str(fx["kind"]):
+		"strike":
+			for i in int(fx.get("times", 1)):
 				var t := CombatRules.fighter(s, target_id)
 				if t.is_empty() or str(t.get("status")) != "active":
 					break
-				lines.append_array(CombatRules.strike(s, data, target_id, CombatRules.unarmed_profile(c, data), {"open_hand": how}))
-		"patient_defense":
-			spend.call("bonus")
-			Stock.use(c, data, "ki", 1, s.rng)
-			CombatRules.player(s)["dodging"] = true
-			lines.append("%s: терпеливая оборона — уклоняется" % c.get("name", ""))
-		"step_disengage", "step_dash":
-			spend.call("bonus")
-			Stock.use(c, data, "ki", 1, s.rng)
-			if id == "step_disengage":
-				CombatRules.player(s)["disengaged"] = true
-			else:
-				e["move"] = int(e.get("move", 0)) + CombatRules._move_cols(int(c.get("speed", 30)), data)
-			lines.append("%s: шаг ветра — %s" % [c.get("name", ""), "отход" if id == "step_disengage" else "рывок"])
+				lines.append_array(CombatRules.strike(s, data, target_id, CombatRules.unarmed_profile(c, data), fx.get("opts", {})))
+		"stance":
+			CombatRules.player(s)[str(fx["key"])] = true
+		"dash":
+			var e := CombatRules.economy(s)
+			e["move"] = int(e.get("move", 0)) + CombatRules._move_cols(int(c.get("speed", 30)), data)
+		"for":
+			s.combat[str(fx["key"])] = fx["value"]
+		"line":
+			lines.append(str(fx["text"]) % c.get("name", ""))
+		"turn":
+			lines.append_array(_turn(s, data, fx["types"], bool(fx["destroy"])))
+		"heal_half":
+			var heal := mini(5 * level(c), maxi(0, int(c["max_hp"]) / 2 - int(c["hp"])))
+			c["hp"] = int(c["hp"]) + heal
+			lines.append("Сохранение жизни: +%d HP" % heal)
+		"hook":
+			_hook(s, data, str(fx["id"]), target_id, lines)
+
+
+## What stays code: a button of a spell, a prompt, a blow with its own road.
+static func _hook(s: GameSession, data: Dictionary, id: String, target_id: String, lines: Array[String]) -> void:
+	var c := s.character
+	var e := CombatRules.economy(s)
+	match id:
+		"flame_blade":
+			lines.append_array(CombatRules.strike(s, data, target_id, SpellEffects.blade_profile(c), {}))
+		"move_mark":
+			SpellEffects.mark(c, target_id)
+			lines.append("Метка охотника переходит на %s" % CombatRules.fighter(s, target_id).get("name", ""))
 		"stunning":
 			var wid := str(c.get("equipped", {}).get("main_hand", ""))
 			var w := CombatRules.weapon_profile(c, data, s.items, wid)
@@ -436,21 +433,7 @@ static func act(s: GameSession, data: Dictionary, id: String, target_id: String 
 				e["attacks"] = CharacterRules.extra_attacks(c, data)
 			e["attacked"] = true
 			lines.append_array(CombatRules.strike(s, data, target_id, w, {"stunning": true}))
-		"turn_undead", "turn_unholy":
-			spend.call("action")
-			Stock.use(c, data, "channel_divinity", 1, s.rng)
-			lines.append_array(_turn(s, data, ["undead"] if id == "turn_undead" else ["undead", "fiend"], id == "turn_undead"))
-		"preserve_life":
-			spend.call("action")
-			Stock.use(c, data, "channel_divinity", 1, s.rng)
-			var cap := int(c["max_hp"]) / 2
-			var heal := mini(5 * level(c), maxi(0, cap - int(c["hp"])))
-			c["hp"] = int(c["hp"]) + heal
-			lines.append("Сохранение жизни: +%d HP" % heal)
-		"sacred_weapon":
-			spend.call("action")
-			Stock.use(c, data, "channel_divinity", 1, s.rng)
-			s.combat["sacred_weapon"] = 10
+		"sacred_line":
 			lines.append("Священное оружие: +%d к атакам оружием на минуту" % maxi(1, ab_mod(c, "cha")))
 		"wild_shape":
 			var options: Array[Dictionary] = []
@@ -460,16 +443,13 @@ static func act(s: GameSession, data: Dictionary, id: String, target_id: String 
 			options.append({"id": "none", "label": "Не превращаться"})
 			s.combat["prompt"] = {"kind": "wild_shape", "options": options, "text": "Дикий облик: в кого превратиться?"}
 		"revert":
-			spend.call("bonus")
 			lines.append_array(end_shape(s, data, 0))
 		"font":
 			var options := font_options(c, data)
 			options.append({"id": "none", "label": "Ничего"})
 			s.combat["prompt"] = {"kind": "font", "options": options, "text": "Источник магии: очков %d" % Stock.left(c, data, "sorcery_points")}
 		"breath":
-			spend.call("action")
 			lines.append_array(_breath(s, data, target_id))
-	return lines
 
 
 ## Turn Undead / Turn the Unholy: every foe of those types within 30 ft saves WIS against the spell DC or flees for a

@@ -98,7 +98,7 @@ static func why_not_def(s: GameSession, data: Dictionary, n: Dictionary, kind: S
 	var o := of_npc(data, n)
 	var who := str(n.get("name", "?"))
 	var can := text(data, n)
-	if what.begins_with(MakeRules.PREFIX) and kind in ["skill", "trait"]:
+	if what.begins_with(MakeRules.PREFIX) and kind in ["skill", "trait", "spell", "ability"]:
 		return ""  # a made thing has no SRD teacher: whom the master names, knows it
 	var also := (" — учит: " + can) if not can.is_empty() else " — ничему не учит (дай ему teaches при создании или выбери другого учителя)"
 	match kind:

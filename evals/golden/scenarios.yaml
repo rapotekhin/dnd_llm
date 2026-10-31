@@ -4278,3 +4278,69 @@ scenarios:
     rubric:
       - "Горм не видит героя: слышит голос из пустоты, озирается, не смотрит ему в лицо и не описывает его внешность"
 
+  - id: make_spell_through_a_teacher
+    title: "Заклинание, которого нет в 5e: части, круг от движка, к герою через course"
+    category: concepts
+    extends: tavern
+    snapshot:
+      scene:
+        room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
+               description: "Низкий закопчённый зал. У очага сидит старая ведьма Ялта: она одна на побережье знает «Солёный вздох», выдох, от которого враг задыхается морской водой и валится с ног."}
+    input: "Ялта, научи меня «Солёному вздоху». Заплачу, сколько скажешь."
+    engine:
+      validate:
+        - {kind: make, status: accept, summary: "Новое заклинание: Солёный вздох (2 круг)"}
+        - {kind: course, status: accept, summary: "Курс — Ялта: «Солёный вздох», 4 занятий"}
+    expect:
+      effects: {required_kinds_any: [make], forbidden_kinds: [condition, coins, give_item]}
+    rubric:
+      - "Мастер собирает заклинание make с what spell и частями из списка, круг не называет"
+      - "Открывает course с teach_kind spell и teach_id new:<key>; заклинание герою сразу не даётся"
+
+  - id: make_ability_with_charges_for_a_fighter
+    title: "Приём с зарядами у наставника: способность по частям, не заклинание"
+    category: concepts
+    extends: tavern
+    snapshot:
+      scene:
+        room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
+               description: "Низкий закопчённый зал. Старый китобой Сом показывает рыбакам «Удар гарпунщика»: раз за вахту он бьёт так, что человека отбрасывает к стене."}
+    input: "Сом, покажи мне этот удар гарпунщика. Хочу уметь так же."
+    engine:
+      validate:
+        - {kind: make, status: accept, summary: "Новая способность: Удар гарпунщика"}
+        - {kind: course, status: accept, summary: "Курс — Сом: «Удар гарпунщика», 4 занятий"}
+    expect:
+      effects: {required_kinds_any: [make], forbidden_kinds: [condition, coins, give_item]}
+    rubric:
+      - "Мастер даёт make с what ability, характеристикой и частями uses и recharge"
+      - "Способность идёт через course с teach_kind ability, а не подарком"
+
+  - id: make_spell_as_a_quest_scroll
+    title: "Найденный свиток с неведомым заклинанием: make со scroll и give_item new:scroll"
+    category: concepts
+    extends: tavern
+    snapshot:
+      scene:
+        room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
+               description: "Низкий закопчённый зал. Под половицей у очага лежит тубус с единственным свитком: на нём записано заклинание морских жрецов, которое зовёт шквал и бьёт холодом всех вокруг."}
+    input: "Поддеваю половицу и достаю тубус. Что в нём?"
+    engine:
+      validate:
+        - {kind: make, status: accept, summary: "Новое заклинание: Шквал жрецов (3 круг)"}
+        - {kind: give_item, status: accept, summary: "Свиток: Шквал жрецов"}
+    expect:
+      effects: {required_kinds_any: [make, give_item], forbidden_kinds: [coins, condition]}
+    rubric:
+      - "Мастер собирает заклинание make со scroll и отдаёт его give_item с new:scroll:<key>"
+      - "Не делает заклинание выученным: герой получает только свиток"
+
+  - id: make_spell_refused_too_strong
+    title: "Заклинание сверх предела: движок отказал, мастер говорит об этом в истории"
+    category: concepts
+    extends: tavern
+    input: "Я придумал собственное заклинание: щёлкаю пальцами, и весь город исчезает. Записываю его в книгу и сразу применяю."
+    expect:
+      effects: {forbidden_kinds: [make, cast, coins]}
+    rubric:
+      - "Герой сам заклинаний не изобретает: новое приходит только через мир, город стоит на месте"

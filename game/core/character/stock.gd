@@ -20,6 +20,9 @@ static func owned(c: Dictionary, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var all := table(data)
 	for id: String in all:
+		if all[id].has("spell") and SpellRules.ready(c).has(str(all[id]["spell"])):  # an ability of parts: v0.7.64
+			out.append(id)
+			continue
 		for f: Variant in all[id].get("features", []):
 			if CharacterRules.has_feature(c, str(f)):
 				out.append(id)
@@ -93,6 +96,8 @@ static func resolve(c: Dictionary, data: Dictionary, name: String) -> String:
 
 ## The display name: the name of the character's feature that grants it.
 static func display_name(c: Dictionary, data: Dictionary, id: String) -> String:
+	if table(data).get(id, {}).has("name"):
+		return str(table(data)[id]["name"])
 	var feats: Dictionary = data["classes"]["features"]
 	for f: Variant in table(data).get(id, {}).get("features", []):
 		if CharacterRules.has_feature(c, str(f)):
