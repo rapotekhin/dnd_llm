@@ -343,12 +343,11 @@ static func shift(s: GameSession, data: Dictionary, vid: String, minutes: int) -
 		lines.append("Торговля прервана")
 	else:
 		var skill := str(sc["skill"])
-		var ro := Roll.hero(s, data, {"what": name_of(s, data, vid), "skill": skill, "dc": shift_dc(data)})
-		var nat := int(ro["nat"])
-		var b := int(ro["bonus"])
-		var o := JobRules.outcome_for(data, int(ro["margin"]))
+		var a := Activity.attempt(s, data, {"what": name_of(s, data, vid), "label": CraftRules.tr_skill(data, skill), "skill": skill, "dc": shift_dc(data),
+			"ladder": JobRules.cfg(data)["outcomes"]})
+		var o: Dictionary = a["step"]
 		base = roundi(base * (float(o.get("pay", 1.0)) + float(o.get("tips", 0.0)) * 2.0))
-		lines.append("%s: %s %d + %d = %d против Сл %d — %s" % [name_of(s, data, vid), CraftRules.tr_skill(data, skill), nat, b, nat + b, shift_dc(data), o["name"]])
+		lines.append(str(a["line"]))
 	var r := sell_round(s, data, vid, base)
 	var loc := loc_of(s, data, vid)
 	var t := _after_tax(s, data, loc, int(r["revenue"]))

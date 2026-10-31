@@ -76,7 +76,7 @@ func _project(s: GameSession, data: Dictionary) -> void:
 	_heading(tr("CRAFT_IN_HAND"))
 	var r := CraftRules.recipe(s, data, str(p["recipe"]))
 	_label(_box, "%s — %d%%, %s" % [CraftRules.recipe_name(s, data, str(p["recipe"])), CraftRules.progress(s.character),
-		tr("CRAFT_LEFT").format({"time": TimeRules.span(int(p["total"]) - int(p["done"]))})])
+		tr("CRAFT_LEFT").format({"time": TimeRules.span(Progress.left(p))})])
 	var bar := ProgressBar.new()
 	bar.name = "CraftProgress"
 	bar.max_value = 100.0

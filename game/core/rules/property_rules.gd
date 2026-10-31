@@ -312,15 +312,10 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int) -> Dict
 	var c := s.character
 	var cf := cfg(data)
 	var lines: Array[String] = []
-	var keep: Array = []
-	for pd: Dictionary in st.get("pending", []):
-		if int(pd["ready"]) <= day:
-			lines.append_array(_apply_upgrade(s, data, id, str(pd["up"])))
-		else:
-			keep.append(pd)
-	st["pending"] = keep
+	for pd: Dictionary in Progress.take_due(st.get("pending", []), day):
+		lines.append_array(_apply_upgrade(s, data, id, str(pd["up"])))
 	var b: Dictionary = st.get("building", {})
-	if not b.is_empty() and int(b["ready"]) <= day:
+	if Progress.due(b, day):
 		lines.append_array(_finish_build(s, data, id, str(b["id"])))
 	for h: Dictionary in staff(s, id).duplicate():
 		if bool(h.get("serf", false)) and s.rng.randf() < float(cf["serfs"]["escape_chance_day"]):
@@ -503,15 +498,12 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 		Ledger.add(s, part, "property:shift")
 		return ["Работа прервана: %s" % Money.format(part)]
 	var skill := str(kind(s, data, id).get("skill", "athletics"))
-	var r := Roll.hero(s, data, {"what": name_of(s, data, id), "skill": skill, "dc": shift_dc(data)})
-	var nat := int(r["nat"])
-	var b := int(r["bonus"])
-	var total := int(r["total"])
-	var o := JobRules.outcome_for(data, int(r["margin"]))
+	var a := Activity.attempt(s, data, {"what": name_of(s, data, id), "label": CraftRules.tr_skill(data, skill), "skill": skill, "dc": shift_dc(data),
+		"ladder": JobRules.cfg(data)["outcomes"]})
+	var o: Dictionary = a["step"]
 	var got := roundi(day * (float(o.get("pay", 1.0)) + float(o.get("tips", 0.0))))
 	Ledger.add(s, got, "property:shift")
-	return ["%s: %s %d + %d = %d против Сл %d — %s" % [name_of(s, data, id), CraftRules.tr_skill(data, skill), nat, b, total, shift_dc(data), o["name"]],
-		"Выручка: %s" % Money.format(got)]
+	return [str(a["line"]), "Выручка: %s" % Money.format(got)]
 
 
 static func repair_cost(s: GameSession, data: Dictionary, id: String, points: float) -> int:
@@ -773,7 +765,7 @@ static func upgrade(s: GameSession, data: Dictionary, id: String, up: String) ->
 	var days := int(u.get("days", 0))
 	if days <= 0:
 		return _apply_upgrade(s, data, id, up)
-	(state(s.character)[id]["pending"] as Array).append({"up": up, "ready": s.day + days})
+	(state(s.character)[id]["pending"] as Array).append(Progress.by_day(s.day + days).merged({"up": up}))
 	return ["%s: заказано «%s» за %s — готово через %s" % [name_of(s, data, id), u["name"], Money.format(int(u["price_cp"])), _days(days)]]
 
 
@@ -816,7 +808,7 @@ static func build_why(s: GameSession, data: Dictionary, id: String, b: String) -
 static func build(s: GameSession, data: Dictionary, id: String, b: String) -> Array[String]:
 	var bc: Dictionary = cfg(data)["build"][b]
 	Ledger.add(s, -int(bc["price_cp"]), "property:build")
-	state(s.character)[id]["building"] = {"id": b, "ready": s.day + int(bc["days"])}
+	state(s.character)[id]["building"] = Progress.by_day(s.day + int(bc["days"])).merged({"id": b})
 	return ["%s: заложено «%s» за %s — плотники управятся за %s" % [name_of(s, data, id), bc["name"], Money.format(int(bc["price_cp"])), _days(int(bc["days"]))]]
 
 

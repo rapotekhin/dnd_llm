@@ -112,34 +112,15 @@ static func served(c: Dictionary, data: Dictionary, loc: String) -> int:
 	return n
 
 
-## What the office asks: [{text, ok}].
+## What the office asks: [{text, ok}]. A recommendation of the chief or a person of standing stands for the standing
+## (rules.letters.recommend.waives, v0.7.48).
 static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[Dictionary]:
 	var d := def(data, id)
-	var c := s.character
-	var req: Dictionary = d.get("requires", {})
-	var loc := str(d.get("location", ""))
-	var out: Array[Dictionary] = []
-	# v0.7.48: a recommendation of the chief or a person of standing stands for the standing (rules.letters.recommend.waives)
 	var rec := LetterRules.recommender(s, data, [str(d.get("chief", ""))], true)
-	var waives: Array = LetterRules.cfg(data).get("recommend", {}).get("waives", [])
-	if req.has("reputation"):
-		var ok := ReputationRules.step(s, data, loc) >= int(req["reputation"])
-		var by_letter := not ok and not rec.is_empty() and waives.has("reputation")
-		out.append({"text": "слава в поселении не ниже «%s»%s" % [ReputationRules.word(data, int(req["reputation"])), (" — рекомендация: " + rec) if by_letter else ""],
-			"ok": ok or by_letter})
-	if req.has("diploma"):
-		out.append({"text": "грамота выпускника: " + StudyRules.name_of(s, data, str(req["diploma"])), "ok": StudyRules.has_diploma(c, str(req["diploma"]))})
-	if req.has("skill"):
-		out.append({"text": "владение навыком: " + CraftRules.tr_skill(data, str(req["skill"])), "ok": JobRules._skilled(c, str(req["skill"]))})
-	if req.has("served"):
-		out.append({"text": "заслуги на службе здесь: %d из %d" % [served(c, data, loc), int(req["served"])], "ok": served(c, data, loc) >= int(req["served"])})
-	if req.has("bond"):
-		var b: Dictionary = req["bond"]
-		var ok := BondRules.points(c, str(b["npc"])) >= int(b["at"])
-		var by_letter := not ok and not rec.is_empty() and waives.has("bond")
-		out.append({"text": "близость с %s от %d%s" % [BondRules.npc_name(s, data, str(b["npc"])), int(b["at"]), (" — рекомендация: " + rec) if by_letter else ""],
-			"ok": ok or by_letter})
-	return out
+	var waive := {}
+	for k: Variant in LetterRules.cfg(data).get("recommend", {}).get("waives", []):
+		waive[str(k)] = rec
+	return Require.rows(s, data, d.get("requires", {}), {"location": str(d.get("location", "")), "waive": waive})
 
 
 static func _away(s: GameSession, data: Dictionary, id: String) -> bool:

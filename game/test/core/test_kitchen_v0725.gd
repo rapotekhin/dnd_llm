@@ -45,7 +45,7 @@ func test_a_roast_in_half_an_hour_without_the_tool() -> void:
 	var s := _cook()
 	s.character["inventory"]["raw_meat"] = 1
 	CraftRules.start(s, data, "roast_meat")
-	assert_int(int(CraftRules.project(s.character)["total"])).is_equal(30)
+	assert_int(int(CraftRules.project(s.character)["need"])).is_equal(30)
 	assert_int(CraftRules.shift_minutes(s, data, 1)).is_equal(30)
 	CraftRules.worked(s, data, 30)
 	assert_int(int(s.character["inventory"].get("roast_meat", 0))).is_between(1, 2)  # a good roast — more

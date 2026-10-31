@@ -113,7 +113,7 @@ func _course(s: GameSession, data: Dictionary, id: String, _at_teacher: bool) ->
 	elif known:
 		bits.append(tr("STUDY_KNOWN"))
 	elif not st.is_empty():
-		bits.append(tr("STUDY_PROGRESS").format({"done": int(st["progress"]), "need": StudyRules.lessons_needed(s, data, id)}))
+		bits.append(tr("STUDY_PROGRESS").format({"done": int(st["done"]), "need": StudyRules.lessons_needed(s, data, id)}))
 		if str(co.get("book", "")).is_empty():
 			bits.append(tr("STUDY_MISSES").format({"n": int(st.get("misses", 0))}))
 	else:

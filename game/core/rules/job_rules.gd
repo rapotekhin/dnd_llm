@@ -105,34 +105,9 @@ static func _skilled(c: Dictionary, skill: String) -> bool:
 ## What the job asks: [{text, ok}].
 static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[Dictionary]:
 	var j := job(s, data, id)
-	var c := s.character
-	var req: Dictionary = j.get("requires", {})
-	var out: Array[Dictionary] = []
-	var n := WorldView.new(data["world"]).npc(str(j.get("employer", "")))
-	if not n.is_empty() and not LanguageRules.npc_understands(c, data, n):
-		out.append({"text": "общий язык с нанимателем", "ok": false})
-	if bool(req.get("tool", false)):
-		var tool := str(j.get("tool", ""))
-		out.append({"text": "владение: " + BackgroundRules.tool_name(data, tool), "ok": CraftRules.proficient(c, tool)})
-	if bool(req.get("skill", false)):
-		var skill := str(j.get("skill", ""))
-		out.append({"text": "владение навыком: " + CraftRules.tr_skill(data, skill), "ok": _skilled(c, skill)})
-	if req.has("language"):
-		var lang := str(req["language"])
-		out.append({"text": "язык: " + LanguageRules.name_of(data, lang), "ok": LanguageRules.hero(c).has(lang)})
-	if req.has("diploma"):  # v0.7.30
-		out.append({"text": "грамота выпускника: " + StudyRules.name_of(s, data, str(req["diploma"])), "ok": StudyRules.has_diploma(c, str(req["diploma"]))})
-	if req.has("org"):  # v0.7.39.1
-		var org := str(req["org"].get("id", ""))
-		var need := int(req["org"].get("rank", 0))
-		var rank_word := str(OrgRules.ranks(s, data, org)[clampi(need, 0, OrgRules.ranks(s, data, org).size() - 1)]["name"])
-		out.append({"text": "член «%s»%s" % [OrgRules.org_name(s, data, org), (", ступень от «%s»" % rank_word) if need > 0 else ""],
-			"ok": OrgRules.member(c, org) and OrgRules.rank(s, data, org) >= need})
-	if req.has("reputation"):
-		var loc := ReputationRules.home_of(data, str(j.get("employer", "")))
-		out.append({"text": "слава в поселении не ниже «%s»" % ReputationRules.word(data, int(req["reputation"])),
-			"ok": not ReputationRules.is_settlement(data, loc) or ReputationRules.step(s, data, loc) >= int(req["reputation"])})
-	return out
+	var employer := str(j.get("employer", ""))
+	return Require.rows(s, data, j.get("requires", {}), {"npc": employer, "npc_word": "нанимателем", "tool": str(j.get("tool", "")),
+		"skill": str(j.get("skill", "")), "location": ReputationRules.home_of(data, employer)})
 
 
 static func employer_here(s: GameSession, data: Dictionary, id: String) -> bool:
@@ -247,10 +222,6 @@ static func shift_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	return Roll.chance(int(ch["bonus"]), dc(s, data, id), bool(ch["adv"]))
 
 
-static func outcome_for(data: Dictionary, margin: int) -> Dictionary:
-	return Scale.step(cfg(data)["outcomes"], margin, "from", cfg(data)["outcomes"][0])
-
-
 ## A shift worked for `minutes` (the time already passed). A shift broken off pays its share without a check.
 ## {lines, event, fight} — `event` for the master or "", `fight` — the foes of a shift that ends in a fight.
 static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) -> Dictionary:
@@ -266,16 +237,14 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 		return {"lines": lines, "event": "", "fight": []}
 	var ch := _check(s, data, id)
 	var d := dc(s, data, id)
-	var r := Roll.hero(s, data, {"what": str(j.get("name", id)), "skill": str(j.get("skill", "craft")), "parts": ch["parts"], "bonus": ch["bonus"],
-		"dc": d, "adv": ch["adv"]})
-	var nat := int(r["nat"])
-	var total := int(r["total"])
-	var o := outcome_for(data, int(r["margin"]))
+	var a := Activity.attempt(s, data, {"what": str(j.get("name", id)), "label": ch["label"], "skill": str(j.get("skill", "craft")), "parts": ch["parts"], "bonus": ch["bonus"],
+		"dc": d, "adv": ch["adv"], "ladder": cfg(data)["outcomes"]})
+	var o: Dictionary = a["step"]
 	var got := roundi(pay(s, data, id) * float(o.get("pay", 1.0)))
 	var tips := roundi(pay(s, data, id) * float(o.get("tips", 0.0)) * float(DevelopmentRules.effect(c, data, "work", "tips_mult", 1.0)))
 	Ledger.add(s, got + tips, "job:shift")
 	st["shifts"] = int(st.get("shifts", 0)) + 1
-	lines.append("%s: %s %d + %d = %d против Сл %d — %s" % [j.get("name", id), ch["label"], nat, total - nat, total, d, o["name"]])
+	lines.append(str(a["line"]))
 	lines.append("Плата: %s%s" % [Money.format(got), (", чаевые %s" % Money.format(tips)) if tips > 0 else ""])
 	var employer := str(j.get("employer", ""))
 	if int(o.get("attitude", 0)) < 0 and not bool(DevelopmentRules.effect(c, data, "work", "no_attitude_loss", false)):
