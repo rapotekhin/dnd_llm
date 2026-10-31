@@ -40,6 +40,25 @@ func has_session() -> bool:
 	return session != null
 
 
+## No turn is going: the game can take a new deed.
+func _idle() -> bool:
+	return session != null and not is_busy()
+
+
+func _out_of_fight() -> bool:
+	return _idle() and session.mode != GameSession.MODE_COMBAT
+
+
+## Out of a fight and of a conversation.
+func _at_leisure() -> bool:
+	return _out_of_fight() and not session.in_conversation()
+
+
+## A deed the master tells of needs the server.
+func _master_ready() -> bool:
+	return _idle() and Backend.is_ready()
+
+
 func is_busy() -> bool:
 	return not busy_turn.is_empty() or combat_playing
 
@@ -77,7 +96,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 ## Baldur's Gate» — a camp anywhere safe for `supplies` {item_id: qty} of food from the pack. The engine restores the
 ## character, clears the check locks and all exhaustion, then the master describes the morning (kind=rest).
 func long_rest(supplies: Dictionary = {}) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "REST_BUSY"
 	var why := ExplorationRules.can_rest(session, Catalog.data["world"], Catalog.data) if supplies.is_empty() \
 		else ExplorationRules.camp_error(session, Catalog.data, supplies)
@@ -92,10 +111,8 @@ func long_rest(supplies: Dictionary = {}) -> String:
 	NeedRules.woke(session, Catalog.data, began_abs)
 	FollowRules.rested(session)  # their meal counts as the breakfast too
 	lines.append_array(TimeRules.hooks(session, Catalog.data))  # the night went on for the world too
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_refresh()
+	_effect_lines(lines)
 	_request("rest", "")
 	return ""
 
@@ -109,7 +126,7 @@ func deal(cart: Dictionary) -> Dictionary:
 	if not str(q["error"]).is_empty():
 		return q
 	var lines := TradeRules.execute(session, Catalog.data, session.npc_id, cart)
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_refresh()
 	_add(GameSession.effect_entry(lines))
 	_log("Сделка: " + ", ".join(lines))
 	EventBus.state_changed.emit()
@@ -158,15 +175,13 @@ func set_trade(on: bool) -> bool:
 ## Quest button (XpRules): the engine completes a pack quest in its room — reward and experience — then the
 ## master narrates it (kind=quest, the quest's done_text and the reward as input). "" or a localization key.
 func complete_quest(quest_id: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "QUEST_BUSY"
 	var why := XpRules.can_complete(session, Catalog.data["world"], quest_id)
 	if not why.is_empty():
 		return why
 	var lines := XpRules.complete(session, Catalog.data, quest_id)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	var q: Dictionary = XpRules.quests(Catalog.data["world"])[quest_id]
 	var reward := lines.slice(1).filter(func(l: String) -> bool: return not l.begins_with("можно"))
 	_request("quest", "%s Награда: %s." % [q["done_text"], ", ".join(reward)])
@@ -176,16 +191,13 @@ func complete_quest(quest_id: String) -> String:
 ## Level-up screen (LevelUp): applies the next level with the player's picks. Not while the master thinks:
 ## the snapshot of the turn in flight would no longer match. "" or a localization key.
 func level_up(picks: Dictionary) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "LVL_ERR_BUSY"
 	var errs := LevelUp.errors(session.character, Catalog.data, picks)
 	if not errs.is_empty():
 		return errs[0]
 	var lines := LevelUp.apply(session.character, Catalog.data, picks, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	_quiet_lines(lines)
 	return ""
 
 
@@ -206,7 +218,7 @@ func use_item(item_id: String) -> String:
 
 
 func _use_alone(what: Dictionary) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return tr("ABILITY_BUSY")
 	var spent := _spend(what)
 	if spent.has("reason"):
@@ -308,9 +320,7 @@ func _spend(what: Dictionary) -> Dictionary:
 
 
 func _ability(lines: Array[String], facts: String) -> void:
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	_request("ability", facts)
 
 
@@ -409,7 +419,7 @@ static func _quiet_feature(id: String) -> bool:
 
 ## Attunement (v0.7.12): an hour with the thing out of a fight, no master turn; the line goes to the history. "" or a key.
 func attune(item_id: String) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "EQUIP_BUSY"
 	if CombatRules.active(session) or session.in_conversation():
 		return "ATTUNE_NOT_NOW"
@@ -426,20 +436,20 @@ func attune(item_id: String) -> String:
 
 
 func unattune(item_id: String) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "EQUIP_BUSY"
 	var why := ItemRules.can_unattune(session.character, Catalog.data, session.items, item_id)
 	if not why.is_empty():
 		return why
 	ItemRules.unattune(session.character, item_id)
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_refresh()
 	_quiet_lines(["Настройка снята: " + ItemRules.display_name(Catalog.data["items"], session.items, item_id)])
 	return ""
 
 
 ## «Собрать стрелы» after a fight (v0.7.12): half the spent ammunition, a minute, here only. "" or a key.
 func collect_ammo() -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "EQUIP_BUSY"
 	var left: Dictionary = session.character.get("ammo_left", {})
 	if left.is_empty() or str(left.get("room", "")) != session.room_id or CombatRules.active(session):
@@ -472,7 +482,7 @@ func buy_service(id: String) -> String:
 
 ## «Слухи» at an NPC (v0.7.47): what it knows and the hero has not heard, without the master. "" or a localization key.
 func rumor_ask(npc_id: String) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "EQUIP_BUSY"
 	var why := RumorRules.ask_why(session, Catalog.data, npc_id)
 	if not why.is_empty():
@@ -483,7 +493,7 @@ func rumor_ask(npc_id: String) -> String:
 
 ## «Письмо» at a person with a post (v0.7.48): the letter goes, the master answers on its reply day. "" or why not.
 func send_letter(poster: String, to: String, purpose: String, text: String, way: String, extra: Dictionary = {}) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "EQUIP_BUSY"
 	var why := LetterRules.send_why(session, Catalog.data, poster, to, purpose, text, way, extra)
 	if not why.is_empty():
@@ -496,51 +506,23 @@ func send_letter(poster: String, to: String, purpose: String, text: String, way:
 ## The shrine's acts (v0.7.49): service, donate, bless, vow (`arg` — its id), atone, convert. The engine's own, no
 ## master's turn; the time passes by rules.faith. "" or a localization key.
 func faith_act(what: String, arg: String = "") -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+	if not _out_of_fight():
 		return "EQUIP_BUSY"
 	var data := Catalog.data
 	var cfg := FaithRules.cfg(data)
-	var why := ""
-	match what:
-		"service":
-			why = FaithRules.service_why(session, data)
-		"donate":
-			why = FaithRules.donate_why(session, data)
-		"bless":
-			why = FaithRules.bless_why(session, data)
-		"vow":
-			why = FaithRules.vow_why(session, data, arg)
-		"atone":
-			why = FaithRules.atone_why(session, data)
-		"convert":
-			why = FaithRules.convert_why(session, data)
-		_:
-			return "FAITH_NO_SHRINE"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	var minutes := 0
-	match what:
-		"service":
-			lines = FaithRules.service(session, data)
-			minutes = int(cfg["service"]["minutes"])
-		"donate":
-			lines = FaithRules.donate(session, data)
-		"bless":
-			lines = FaithRules.bless(session, data)
-		"vow":
-			lines = FaithRules.take_vow(session, data, arg)
-		"atone":
-			lines = FaithRules.atone(session, data)
-			minutes = int(cfg["atone"]["minutes"])
-		"convert":
-			lines = FaithRules.convert(session, data)
-			minutes = int(cfg["convert"]["minutes"])
-	if minutes > 0:
-		lines.append_array(TimeRules.advance(session, data, minutes))
-	CharacterRules.refresh(session.character, data, session.items)
-	_quiet_lines(lines)
-	return ""
+	var a := [session, data]
+	var timed := func(do: Callable, key: String) -> Array:
+		var lines: Array = do.call()
+		lines.append_array(TimeRules.advance(session, data, int(cfg[key]["minutes"])))
+		return lines
+	return _act(what, {
+		"service": [FaithRules.service_why.bindv(a), timed.bind(FaithRules.service.bindv(a), "service")],
+		"donate": _row(FaithRules.donate_why, FaithRules.donate, a),
+		"bless": _row(FaithRules.bless_why, FaithRules.bless, a),
+		"vow": _row(FaithRules.vow_why, FaithRules.take_vow, a + [arg]),
+		"atone": [FaithRules.atone_why.bindv(a), timed.bind(FaithRules.atone.bindv(a), "atone")],
+		"convert": [FaithRules.convert_why.bindv(a), timed.bind(FaithRules.convert.bindv(a), "convert")],
+	}, "FAITH_NO_SHRINE")
 
 
 ## The board read (v0.7.47): its notices go to the journal, a notice with a place onto the map.
@@ -563,8 +545,7 @@ func concentration_conflict(spell_id: String) -> String:
 
 ## Lines of a deterministic action without a master turn: the chat, the log, the history the master reads next.
 func _quiet_lines(lines: Array[String]) -> void:
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
+	_told(lines)
 	_forget_gone_creature()
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
@@ -572,17 +553,15 @@ func _quiet_lines(lines: Array[String]) -> void:
 
 ## «Короткий отдых» (ExplorationRules): an hour, `dice` hit dice; no master turn — the line goes to the history.
 func short_rest(dice: int) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "REST_BUSY"
 	var why := ExplorationRules.can_short_rest(session, Catalog.data)
 	if not why.is_empty():
 		return why
 	var lines := ExplorationRules.short_rest(session, Catalog.data, dice, session.rng)
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_refresh()
 	lines.append_array(TimeRules.advance(session, Catalog.data, int(TimeRules.cfg(Catalog.data)["short_rest_minutes"])))
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	if _exhaustion_death():
 		return ""
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
@@ -616,7 +595,7 @@ func _sleep_through() -> Array[String]:
 
 ## The prepared spells of the day (SpellRules): once after each long rest. "" or a localization key.
 func prepare_spells(ids: Array) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "PREP_BUSY"
 	var why := SpellRules.prepare_error(session.character, Catalog.data, session.day, ids)
 	if not why.is_empty():
@@ -720,7 +699,7 @@ func _combat_do(why: String, act: Callable) -> String:
 	if not why.is_empty():
 		return why
 	var lines: Array[String] = act.call()
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_refresh()
 	_combat_log(lines)
 	_combat_log(CombatRules.after_player_action(session, Catalog.data))
 	EventBus.state_changed.emit()
@@ -895,7 +874,7 @@ func combat_answer(choice: String) -> String:
 	if session == null or not CombatRules.active(session) or not session.combat.has("prompt"):
 		return "COMBAT_NONE"
 	var lines := FeatureRules.answer_prompt(session, Catalog.data, choice)
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_refresh()
 	_combat_log(lines)
 	_combat_log(CombatRules.after_player_action(session, Catalog.data))
 	EventBus.state_changed.emit()
@@ -909,7 +888,7 @@ func combat_react(choice: String) -> String:
 	if session == null or not CombatRules.active(session) or not session.combat.has("pending"):
 		return "COMBAT_NONE"
 	var lines := CombatRules.answer_reaction(session, Catalog.data, choice)
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_refresh()
 	_combat_log(lines)
 	EventBus.state_changed.emit()
 	_combat_continue()
@@ -918,7 +897,7 @@ func combat_react(choice: String) -> String:
 
 ## Font of Magic outside a fight (the sheet): a slot for points or points for a slot. Stays out of the master's turns.
 func font_convert(id: String) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "ABILITY_BUSY"
 	var lines := FeatureRules.font_convert(session, Catalog.data, id)
 	_add(GameSession.effect_entry(lines))
@@ -990,7 +969,7 @@ func _parley_check(params: Dictionary) -> Dictionary:
 ## rolls for the room (with the lock of a repeat), the master narrates the result and asks for no new check.
 ## "" or a localization key.
 func search_room(skill: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session) or not ExplorationRules.SEARCH_SKILLS.has(skill):
 		return "WAIT_NOT_NOW"
@@ -1017,7 +996,7 @@ func search_room(skill: String) -> String:
 ## «Забрать всё» (the author, v0.7.8): the engine takes every portable thing of the room nobody owns, as long as the
 ## hero can carry it (PropRules.take_all); since v0.7.22.20 (#6) without a master's turn. "" or a localization key.
 func take_all() -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
@@ -1029,7 +1008,7 @@ func take_all() -> String:
 	var lines: Array[String] = ["Взято: " + ", ".join(names)]
 	if not left.is_empty():
 		lines.append("не унести: " + ", ".join(left))
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_refresh()
 	_quiet_lines(lines)  # nobody's things: the engine's move, no master (v0.7.22.20, #6)
 	return ""
 
@@ -1037,7 +1016,7 @@ func take_all() -> String:
 ## «Взять» in the place window (v0.7.22.7): one thing of the room by the engine; the master narrates only an owner who
 ## saw it (v0.7.22.20, #6). "" or a localization key.
 func take_prop(prop_id: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
@@ -1047,7 +1026,7 @@ func take_prop(prop_id: String) -> String:
 		return ""
 	var lines: Array[String] = [str(r["summary"])]
 	lines.append_array(PropRules.apply_take(session, Catalog.data, r["plan"]))
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
+	_refresh()
 	if str(r["plan"].get("owner", "")).is_empty():  # nobody saw a theft: the engine's move, no master (v0.7.22.20, #6)
 		_quiet_lines(lines)
 		return ""
@@ -1077,9 +1056,7 @@ func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> S
 	else:
 		ContainerRules.apply_put(session, Catalog.data, r["plan"])
 	if take and not str(r["plan"].get("owner", "")).is_empty():  # caught: the master narrates the owner
-		_add(GameSession.effect_entry(lines))
-		_log("События: " + ", ".join(lines))
-		EventBus.state_changed.emit()
+		_effect_lines(lines)
 		_request("action", "Беру из чужого %s [движок: %s]" % [PropRules.find(session, session.room_id, prop_id).get("name", ""), " · ".join(lines)])
 		return ""
 	_quiet_lines(lines)
@@ -1105,9 +1082,7 @@ func container_take_all(prop_id: String) -> String:
 	if lines.is_empty():
 		return ""
 	if not owner.is_empty():  # caught: the master narrates the owner
-		_add(GameSession.effect_entry(lines))
-		_log("События: " + ", ".join(lines))
-		EventBus.state_changed.emit()
+		_effect_lines(lines)
 		_request("action", "Беру всё из чужого %s [движок: %s]" % [PropRules.find(session, session.room_id, prop_id).get("name", ""), " · ".join(lines)])
 		return ""
 	_quiet_lines(lines)
@@ -1116,7 +1091,7 @@ func container_take_all(prop_id: String) -> String:
 
 ## Picks a skill of a peaceful direction for a level reached (v0.7.19.1), no master turn. "" or a localization key.
 func pick_development(dir: String, skill: String) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "WAIT_BUSY"
 	var why := DevelopmentRules.pick(session.character, Catalog.data, dir, skill)
 	if why.is_empty():
@@ -1127,7 +1102,7 @@ func pick_development(dir: String, skill: String) -> String:
 
 ## Writes the hero's life goal (v0.7.22; "" clears it); a new goal goes to the master for its assessment. "" or a key.
 func set_goal(text: String) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "WAIT_BUSY"
 	var before := str(GoalRules.goal(session.character).get("text", ""))
 	GoalRules.write(session.character, text)
@@ -1142,7 +1117,7 @@ func set_goal(text: String) -> String:
 ## Leaves a thing of the pack — a bag with what is in it — in the room (v0.7.18.2), no master turn; from the sheet
 ## too, in a talk or a fight (big test #10, v0.7.22.2: an overloaded hero could not leave). "" or a key.
 func drop_item(what: String, qty: int = 1) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "WAIT_NOT_NOW"
 	var r := ContainerRules.plan_drop(session, Catalog.data, what, qty)
 	if r.has("reason"):
@@ -1156,7 +1131,7 @@ func drop_item(what: String, qty: int = 1) -> String:
 ## A locked container (v0.7.18.1): the key, thieves' tools (Sleight of Hand) or force (Athletics) against its lock;
 ## the master narrates the attempt. "" or a localization key.
 func container_unlock(prop_id: String, how: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
@@ -1181,9 +1156,7 @@ func container_unlock(prop_id: String, how: String) -> String:
 			lines.append("%s не поддался" % p["name"])
 	if lines.is_empty():
 		lines = ContainerRules.unlock(p, how)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	_request("action", "%s %s [движок: %s]" % [{"key": "Открываю ключом", "pick": "Вскрываю отмычками", "force": "Выбиваю"}[how], p["name"], " · ".join(lines)])
 	return ""
 
@@ -1192,7 +1165,7 @@ func container_unlock(prop_id: String, how: String) -> String:
 ## blows of the weapon, a door spell, a torch, waiting for the site's hours. Breaking into someone's closed or
 ## private site before eyes is a trespass at once. The master narrates it. "" or a localization key.
 func door_act(to: String, how: String, spell_id: String = "") -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
@@ -1252,9 +1225,7 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 		if not seen.is_empty():
 			lines.append("Видели: " + ", ".join(seen.map(func(id: String) -> String: return str(world().npc(id).get("name", id)))))  # v0.7.39.2
 			lines.append_array(CrimeRules.on_trespass(session, data, SiteRules.unwelcome(session, data, to), to, seen))
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	var verb: String = {"key": "Отпираю ключом", "latch": "Отодвигаю засов", "pick": "Вскрываю отмычками", "force": "Выбиваю", "hit": "Рублю",
 		"spell": "Колдую на", "torch": "Поджигаю", "wait": "Жду, пока откроют"}[how]
 	_request("wait" if how == "wait" else "action", "%s дверь в «%s» [движок: %s]" % [verb, world().room(to).get("name", to), " · ".join(lines)])
@@ -1264,7 +1235,7 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 ## The theft window (v0.7.0): a Sleight of Hand against the entry's DC; success — it is taken; failure — the NPC
 ## reacts by its kind. The master narrates it (kind=theft); a fight it causes starts after. "" or a localization key.
 func steal(npc_id: String, entry_id: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	var why := TheftRules.can_steal(session, Catalog.data, npc_id)
 	if not why.is_empty():
@@ -1283,9 +1254,7 @@ func steal(npc_id: String, entry_id: String) -> String:
 	var result := _hero_roll(params, CheckEngine.bonus_for(session.character, params))
 	_add(GameSession.check_entry(params, result))
 	var lines := TheftRules.steal(session, Catalog.data, npc_id, entry_id, bool(result["success"]))
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	_request("theft", "карманы %s — %s (%s): %s" % [world().npc(npc_id).get("name", npc_id), entry["name"],
 		"успех" if bool(result["success"]) else "провал", "; ".join(lines)])
 	return ""
@@ -1294,15 +1263,14 @@ func steal(npc_id: String, entry_id: String) -> String:
 ## A contest (v0.7.40): sits down to play `kind` with `npc_id` for the stake `stake_i` (`cp` — the coins of a coins
 ## stake). "" or the reason.
 func contest_start(npc_id: String, kind: String, stake_i: int, cp: int) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return tr("WAIT_BUSY")
 	var r := ContestRules.start(session, Catalog.data, npc_id, kind, stake_i, cp)
 	if r.has("reason"):
 		return str(r["reason"])
 	var lines: Array[String] = []
 	lines.assign(r["lines"])
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
+	_told(lines)
 	if ContestRules.is_bout(Catalog.data, kind):  # v0.7.45: a duel is a fight to surrender, not rounds of dice
 		var d := ContestRules.duel(session, Catalog.data)
 		var dl: Array[String] = []
@@ -1319,7 +1287,7 @@ func contest_start(npc_id: String, kind: String, stake_i: int, cp: int) -> Strin
 
 ## Enlists the hero as a fighter of the arena `sid`. "" or the reason.
 func arena_enlist(sid: String) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return tr("WAIT_BUSY")
 	var why := ArenaRules.enlist_why(session, Catalog.data, sid)
 	if not why.is_empty():
@@ -1330,7 +1298,7 @@ func arena_enlist(sid: String) -> String:
 
 ## The bout of the day (`bet_cp` on oneself) or the tournament's next one: the fight starts. "" or the reason.
 func arena_bout(sid: String, bet_cp: int, tourney: bool = false) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return tr("WAIT_BUSY")
 	var r := ArenaRules.tourney_bout(session, Catalog.data, sid) if tourney else ArenaRules.bout(session, Catalog.data, sid, bet_cp)
 	if r.has("reason"):
@@ -1344,7 +1312,7 @@ func arena_bout(sid: String, bet_cp: int, tourney: bool = false) -> String:
 
 ## Insight on the fighters of the day: the check card, the true estimate on success. "" or the reason.
 func arena_insight(sid: String) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return tr("WAIT_BUSY")
 	var why := ArenaRules.insight_why(session, Catalog.data, sid)
 	if not why.is_empty():
@@ -1360,7 +1328,7 @@ func arena_insight(sid: String) -> String:
 
 ## A bet on a fighter of the day's card: the engine plays the bout out, the master tells it. "" or the reason.
 func arena_bet(sid: String, side: String, cp: int) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return tr("WAIT_BUSY")
 	var r := ArenaRules.bet(session, Catalog.data, sid, side, cp)
 	if r.has("reason"):
@@ -1373,16 +1341,58 @@ func arena_bet(sid: String, side: String, cp: int) -> String:
 
 
 func _effect_lines(lines: Array[String]) -> void:
+	_told(lines)
+	EventBus.state_changed.emit()
+
+
+## What the engine did goes to the chat and the log.
+func _told(lines: Array[String]) -> void:
 	_add(GameSession.effect_entry(lines))
 	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+
+
+## An act of a window's button (v0.7.70): `rows` {what: [why, do]}, `why` gives "" or a key, `do` the lines of the deed.
+## "" or the key of the refusal.
+func _act(what: String, rows: Dictionary, no: String = "PROPERTY_NOT_NOW") -> String:
+	if not rows.has(what):
+		return no
+	var why: String = (rows[what][0] as Callable).call()
+	if not why.is_empty():
+		return why
+	var lines: Array[String] = []
+	lines.assign((rows[what][1] as Callable).call())
+	_refresh()
+	if lines.is_empty():
+		EventBus.state_changed.emit()
+		return ""
+	_quiet_lines(lines)
+	return ""
+
+
+## A row of _act whose two rules take the same arguments.
+func _row(why: Callable, do: Callable, args: Array) -> Array:
+	return [why.bindv(args), do.bindv(args)]
+
+
+## Work that takes `minutes`: the patrol may break it (CrimeRules.wait). `work` gets the minutes that passed and gives
+## lines; with `whole` it runs only when they all passed.
+func _waited(minutes: int, work: Callable, whole := false) -> Array:
+	var w := CrimeRules.wait(session, Catalog.data, minutes)
+	var lines: Array = w["lines"]
+	if not whole or int(w["minutes"]) >= minutes:
+		lines.append_array(work.call(int(w["minutes"])))
+	return lines
+
+
+func _refresh() -> void:
+	_refresh()
 
 
 ## One round of the contest going: the NPC rolls by its template, the hero by the kind's check (or its cheat skill
 ## against the NPC's watch); the card shows the hero's roll against the NPC's total. The end asks the master to tell
 ## it. "" or the reason.
 func contest_round(cheat: bool) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return tr("WAIT_BUSY")
 	var st := ContestRules.state(session)
 	if st.is_empty():
@@ -1418,9 +1428,7 @@ func contest_round(cheat: bool) -> String:
 	result["success"] = total > int(foe["total"])
 	_add(GameSession.check_entry(params, result))
 	var lines := ContestRules.round(session, Catalog.data, total, int(foe["total"]), cheat)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	if ContestRules.state(session).is_empty():
 		_request("contest", "%s с %s: %s" % [k.get("name", ""), world().npc(npc).get("name", npc), "; ".join(lines)])
 	return ""
@@ -1428,14 +1436,12 @@ func contest_round(cheat: bool) -> String:
 
 ## Gives the contest going up: the NPC takes the stake. "" or the reason.
 func contest_forfeit() -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return tr("WAIT_BUSY")
 	var lines := ContestRules.forfeit(session, Catalog.data)
 	if lines.is_empty():
 		return "игры нет"
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	return ""
 
 
@@ -1625,8 +1631,7 @@ func finish_combat(take: Array = []) -> void:
 	s.mode = GameSession.MODE_EXPLORATION
 	lines.append_array(CrimeRules.check_arrest(s, Catalog.data))  # a murder before the guard's eyes (v0.7.14)
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
+	_told(lines)
 	_set_options([])
 	_quest_progress()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
@@ -1654,7 +1659,7 @@ func _hero_roll(params: Dictionary, bonus: int, parts: Array[Dictionary] = []) -
 ## Eat, drink, fill the waterskins (v0.7.23): the engine's own acts, no master's turn; they take a few minutes.
 ## "" or a localization key.
 func need_act(act: String) -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+	if not _out_of_fight():
 		return "NEED_BUSY"
 	var data := Catalog.data
 	var why := NeedRules.can_eat(session, data) if act == "eat" else NeedRules.can_drink(session, data) if act == "drink" else NeedRules.can_fill(session, data)
@@ -1664,16 +1669,14 @@ func need_act(act: String) -> String:
 	var cfg := NeedRules.cfg(data)
 	var minutes := int(cfg["food"]["eat_minutes"]) if act == "eat" else int(cfg["water"]["drink_minutes" if act == "drink" else "fill_minutes"])
 	lines.append_array(TimeRules.advance(session, data, minutes))
-	CharacterRules.refresh(session.character, data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_refresh()
+	_effect_lines(lines)
 	return ""
 
 
 ## Crafting (v0.7.24): the acts go without the master, the time passes by the engine. "" or a localization key.
 func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "CRAFT_NOT_NOW"
 	var data := Catalog.data
 	var lines: Array[String] = []
@@ -1709,17 +1712,15 @@ func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
 				lines.append_array(CraftRules.gather(session, data, arg))
 	if lines.is_empty():
 		return ""
-	CharacterRules.refresh(session.character, data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_refresh()
+	_effect_lines(lines)
 	return ""
 
 
 ## Hunting or fishing (v0.7.41): `hours` at the room's ground of `kind` (WildsRules) — the time passes first (the
 ## patrol may cut it), then the check and the catch; a big beast or a predator starts a fight.
 func wilds_act(kind: String, hours: int) -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "CRAFT_NOT_NOW"
 	var data := Catalog.data
 	var why := WildsRules.why_not(session, data, kind)
@@ -1734,9 +1735,8 @@ func wilds_act(kind: String, hours: int) -> String:
 		var r := WildsRules.go(session, data, kind, spent)
 		lines.append_array(r["lines"])
 		fight = r["fight"]
-	CharacterRules.refresh(session.character, data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
+	_refresh()
+	_told(lines)
 	if not fight.is_empty():
 		session.pending_fight = fight
 		_start_pending_fight()
@@ -1747,44 +1747,29 @@ func wilds_act(kind: String, hours: int) -> String:
 ## Pets (v0.7.43): tame (id — a creature of the room, arg — a thing of its taste or ""), feed (arg — the thing),
 ## scout (arg — a room behind an exit), rename (arg — the name). The engine decides; "" or a localization key.
 func pet_act(what: String, id: String, arg: String = "") -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "PET_NOT_NOW"
 	var data := Catalog.data
 	var s := session
-	var why := ""
-	match what:
-		"tame": why = PetRules.tame_why(s, data, id)
-		"feed": why = PetRules.feed_why(s, data, id, arg)
-		"scout": why = PetRules.scout_why(s, data, id, arg)
-		"rename": why = PetRules.pet_why(s, id) if not arg.strip_edges().is_empty() else "PET_BAD_NAME"
-		_: why = "PET_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	match what:
-		"tame":
-			var w := CrimeRules.wait(s, data, int(PetRules.cfg(data)["tame_minutes"]))
-			lines.append_array(w["lines"])
-			if not PetRules.tame_why(s, data, id).is_empty() and PetRules.tame_why(s, data, id) != "PET_TRIED_TODAY":
-				lines.append("Пока вы подбирались, зверь ушёл")
-			else:
-				lines.append_array(PetRules.tame(s, data, id, arg)["lines"])
-		"feed": lines = PetRules.feed(s, data, id, arg)
-		"scout":
-			lines.append_array(TimeRules.advance(s, data, int(PetRules.cfg(data)["scout"]["minutes"])))
+	var a := [s, data, id, arg]
+	return _act(what, {
+		"tame": [PetRules.tame_why.bind(s, data, id), func() -> Array:
+			return _waited(int(PetRules.cfg(data)["tame_minutes"]), func(_m: int) -> Array:
+				if not PetRules.tame_why(s, data, id).is_empty() and PetRules.tame_why(s, data, id) != "PET_TRIED_TODAY":
+					return ["Пока вы подбирались, зверь ушёл"]
+				return PetRules.tame(s, data, id, arg)["lines"])],
+		"feed": _row(PetRules.feed_why, PetRules.feed, a),
+		"scout": [PetRules.scout_why.bindv(a), func() -> Array:
+			var lines: Array = TimeRules.advance(s, data, int(PetRules.cfg(data)["scout"]["minutes"]))
 			lines.append_array(PetRules.scout(s, data, id, arg))
-		"rename": lines = PetRules.rename(s, id, arg)
-	CharacterRules.refresh(s.character, data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	return ""
+			return lines],
+		"rename": [func() -> String: return PetRules.pet_why(s, id) if not arg.strip_edges().is_empty() else "PET_BAD_NAME", PetRules.rename.bind(s, id, arg)],
+	}, "PET_NOT_NOW")
 
 
 ## Work (v0.7.26): hire, a shift, quit — the engine decides; a shift's event goes to the master as a short turn.
 func job_act(what: String, id: String) -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "JOB_NOT_NOW"
 	var data := Catalog.data
 	var lines: Array[String] = []
@@ -1812,10 +1797,8 @@ func job_act(what: String, id: String) -> String:
 			lines = JobRules.quit(session, data, id)
 	if lines.is_empty():
 		return ""
-	CharacterRules.refresh(session.character, data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_refresh()
+	_effect_lines(lines)
 	if not fight.is_empty():  # bandits at the convoy (v0.7.39.1)
 		session.pending_fight = fight
 		_start_pending_fight()
@@ -1828,266 +1811,146 @@ func job_act(what: String, id: String) -> String:
 ## Property (v0.7.27): buy, deed, collect, shift, worker, serf, upgrade, build, repair, animal, release — the
 ## engine's acts by the buttons of the property window. "" or a localization key.
 func property_act(what: String, id: String, arg: String = "") -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "PROPERTY_NOT_NOW"
 	var data := Catalog.data
 	var s := session
-	var why := ""
-	match what:
-		"buy": why = PropertyRules.buy_why(s, data, id)
-		"deed": why = PropertyRules.deed_why(s, data, id)
-		"collect": why = PropertyRules.collect_why(s, data, id)
-		"tax": why = PropertyRules.pay_tax_why(s, data, id)
-		"shift": why = PropertyRules.shift_why(s, data, id)
-		"hire": why = PropertyRules.worker_why(s, data, id, arg)  # arg — the role (v0.7.39.5)
-		"fire": why = PropertyRules.fire_why(s, data, id, arg)  # arg — the person
-		"serf": why = PropertyRules.serf_why(s, data, id, arg)
-		"upgrade": why = PropertyRules.upgrade_why(s, data, id, arg)
-		"build": why = PropertyRules.build_why(s, data, id, arg)
-		"repair": why = PropertyRules.repair_why(s, data, id)
-		"animal": why = PropertyRules.animal_why(s, data, id, arg)
-		"rent": why = MountRules.rent_why(s, data, id, arg.get_slice(":", 0), int(arg.get_slice(":", 1)))  # v0.7.42: arg «monster:days»
-		"sell_animal": why = MountRules.sell_why(s, data, id, arg)
-		"vehicle": why = MountRules.vehicle_why(s, data, id, arg)
-		"release": why = "" if not CreatureRules.find(s, s.room_id, id).is_empty() else "CREATURE_NONE"
-		_: why = "PROPERTY_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	match what:
-		"buy": lines = PropertyRules.buy(s, data, id)
-		"deed": lines = PropertyRules.deed(s, data, id)
-		"collect": lines = PropertyRules.collect(s, data, id)
-		"tax": lines = PropertyRules.pay_tax(s, data, id)
-		"shift", "repair":
-			var hours := PropertyRules.shift_hours(s, data, id) if what == "shift" else PropertyRules.repair_hours(s, data, id)
-			var w := CrimeRules.wait(s, data, hours * 60)  # the patrol may break the work
-			lines = w["lines"]
-			if PropertyRules.owned(s.character, id):
-				lines.append_array(PropertyRules.shift(s, data, id, int(w["minutes"])) if what == "shift" else PropertyRules.repair(s, data, id, int(w["minutes"])))
-		"hire": lines = PropertyRules.hire_worker(s, data, id, arg)
-		"fire": lines = PropertyRules.fire(s, data, id, arg)
-		"serf": lines = PropertyRules.set_serf(s, data, id, arg)
-		"upgrade": lines = PropertyRules.upgrade(s, data, id, arg)
-		"build": lines = PropertyRules.build(s, data, id, arg)
-		"animal": lines = PropertyRules.buy_animal(s, data, id, arg)
-		"rent": lines = MountRules.rent(s, data, id, arg.get_slice(":", 0), int(arg.get_slice(":", 1)))
-		"sell_animal": lines = MountRules.sell(s, data, id, arg)
-		"vehicle": lines = MountRules.buy_vehicle(s, data, id, arg)
-		"release":
+	var a := [s, data, id]
+	var b := a + [arg]  # arg — the role of a worker (v0.7.39.5), the person fired, the serf, the upgrade, the thing built
+	var rent := a + [arg.get_slice(":", 0), int(arg.get_slice(":", 1))]  # v0.7.42: arg «monster:days»
+	return _act(what, {
+		"buy": _row(PropertyRules.buy_why, PropertyRules.buy, a),
+		"deed": _row(PropertyRules.deed_why, PropertyRules.deed, a),
+		"collect": _row(PropertyRules.collect_why, PropertyRules.collect, a),
+		"tax": _row(PropertyRules.pay_tax_why, PropertyRules.pay_tax, a),
+		"shift": [PropertyRules.shift_why.bindv(a), func() -> Array:
+			return _waited(PropertyRules.shift_hours(s, data, id) * 60, func(m: int) -> Array:  # the patrol may break the work
+				return PropertyRules.shift(s, data, id, m) if PropertyRules.owned(s.character, id) else [])],
+		"repair": [PropertyRules.repair_why.bindv(a), func() -> Array:
+			return _waited(PropertyRules.repair_hours(s, data, id) * 60, func(m: int) -> Array:
+				return PropertyRules.repair(s, data, id, m) if PropertyRules.owned(s.character, id) else [])],
+		"hire": _row(PropertyRules.worker_why, PropertyRules.hire_worker, b),
+		"fire": _row(PropertyRules.fire_why, PropertyRules.fire, b),
+		"serf": _row(PropertyRules.serf_why, PropertyRules.set_serf, b),
+		"upgrade": _row(PropertyRules.upgrade_why, PropertyRules.upgrade, b),
+		"build": _row(PropertyRules.build_why, PropertyRules.build, b),
+		"animal": _row(PropertyRules.animal_why, PropertyRules.buy_animal, b),
+		"rent": _row(MountRules.rent_why, MountRules.rent, rent),
+		"sell_animal": _row(MountRules.sell_why, MountRules.sell, b),
+		"vehicle": _row(MountRules.vehicle_why, MountRules.buy_vehicle, b),
+		"release": [func() -> String: return "" if not CreatureRules.find(s, s.room_id, id).is_empty() else "CREATURE_NONE", func() -> Array:
 			var cr := CreatureRules.find(s, s.room_id, id)
 			MountRules._unload(s, data, cr)  # v0.7.42: the pack comes off first
 			PropertyRules._remove_creature(s, id)
-			lines = ["%s отпущен на волю" % cr.get("name", id)]
-	if lines.is_empty():
-		return ""
-	CharacterRules.refresh(s.character, data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	return ""
+			return ["%s отпущен на волю" % cr.get("name", id)]],
+	})
 
 
 ## Own trade (v0.7.29): put / take (vid, arg — the item, amount — qty), price (arg — the item, amount ±1), collect,
 ## shift, hire (arg — the role), fire (arg — the person) (vid); charter, rent (npc, arg — the kind, amount — days);
 ## wholesale (npc, arg — the item). "" or a localization key.
 func shop_act(what: String, id: String, arg: String = "", amount: int = 0) -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "PROPERTY_NOT_NOW"
 	var data := Catalog.data
 	var s := session
-	var why := ""
-	match what:
-		"put": why = ShopRules.put_why(s, data, id, arg)
-		"take": why = ShopRules.take_why(s, data, id, arg)
-		"price": why = ShopRules.price_step_why(s, data, id, arg, amount)
-		"collect": why = ShopRules.collect_why(s, data, id)
-		"shift": why = ShopRules.shift_why(s, data, id)
-		"charter": why = ShopRules.charter_why(s, data, id)
-		"rent": why = PropertyRules.rent_why(s, data, id, arg if not arg.is_empty() else "stall", amount)
-		"wholesale": why = ShopRules.wholesale_why(s, data, id, arg)
-		"hire": why = PropertyRules.worker_why(s, data, id, arg)
-		"fire": why = PropertyRules.fire_why(s, data, id, arg)
-		_: why = "PROPERTY_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	match what:
-		"put": lines = ShopRules.put(s, data, id, arg, maxi(1, amount))
-		"take": lines = ShopRules.take(s, data, id, arg)
-		"price":
+	var a := [s, data, id]
+	var b := a + [arg]
+	var rent := a + [arg if not arg.is_empty() else "stall", amount]
+	return _act(what, {
+		"put": [ShopRules.put_why.bindv(b), ShopRules.put.bindv(b + [maxi(1, amount)])],
+		"take": _row(ShopRules.take_why, ShopRules.take, b),
+		"price": [ShopRules.price_step_why.bindv(b + [amount]), func() -> Array:
 			ShopRules.price_step(s, data, id, arg, amount)
-			EventBus.state_changed.emit()
-			return ""
-		"collect": lines = ShopRules.collect(s, data, id)
-		"shift":
-			var w := CrimeRules.wait(s, data, ShopRules.shift_hours(data) * 60)  # the patrol may break the trade
-			lines = w["lines"]
-			lines.append_array(ShopRules.shift(s, data, id, int(w["minutes"])))
-		"charter": lines = ShopRules.charter(s, data, id)
-		"rent": lines = PropertyRules.rent(s, data, id, arg if not arg.is_empty() else "stall", amount)
-		"wholesale": lines = ShopRules.wholesale(s, data, id, arg)
-		"hire": lines = PropertyRules.hire_worker(s, data, id, arg)
-		"fire": lines = PropertyRules.fire(s, data, id, arg)
-	CharacterRules.refresh(s.character, data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	return ""
+			return []],
+		"collect": _row(ShopRules.collect_why, ShopRules.collect, a),
+		"shift": [ShopRules.shift_why.bindv(a), func() -> Array:
+			return _waited(ShopRules.shift_hours(data) * 60, func(m: int) -> Array: return ShopRules.shift(s, data, id, m))],  # the patrol may break the trade
+		"charter": _row(ShopRules.charter_why, ShopRules.charter, a),
+		"rent": _row(PropertyRules.rent_why, PropertyRules.rent, rent),
+		"wholesale": _row(ShopRules.wholesale_why, ShopRules.wholesale, b),
+		"hire": _row(PropertyRules.worker_why, PropertyRules.hire_worker, b),
+		"fire": _row(PropertyRules.fire_why, PropertyRules.fire, b),
+	})
 
 
 ## Study (v0.7.30): exam (id — a school), enroll, lesson, drop (id — a course). "" or a localization key.
 ## Family (v0.7.32): propose (id — the partner), wedding (id — the officiant), child, rename (id — the child, arg — the
 ## name). "" or a localization key.
 func family_act(what: String, id: String = "", arg: String = "") -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+	if not _out_of_fight():
 		return "PROPERTY_NOT_NOW"
-	var data := Catalog.data
 	var s := session
-	var why := ""
-	match what:
-		"propose": why = FamilyRules.propose_why(s, data, id)
-		"wedding": why = FamilyRules.wedding_why(s, data, id)
-		"child": why = FamilyRules.child_why(s, data)
-		"rename": why = "" if FamilyRules.children(s).has(id) and not arg.strip_edges().is_empty() else "FAMILY_BAD_NAME"
-		_: why = "PROPERTY_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	match what:
-		"propose": lines = FamilyRules.propose(s, data, id)
-		"wedding": lines = FamilyRules.wedding(s, data, id)
-		"child": lines = FamilyRules.try_child(s, data)
-		"rename": lines = FamilyRules.rename(s, data, id, arg)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	return ""
+	var a := [s, Catalog.data, id]
+	return _act(what, {
+		"propose": _row(FamilyRules.propose_why, FamilyRules.propose, a),
+		"wedding": _row(FamilyRules.wedding_why, FamilyRules.wedding, a),
+		"child": _row(FamilyRules.child_why, FamilyRules.try_child, [s, Catalog.data]),
+		"rename": [func() -> String: return "" if FamilyRules.children(s).has(id) and not arg.strip_edges().is_empty() else "FAMILY_BAD_NAME", FamilyRules.rename.bindv(a + [arg])],
+	})
 
 
 ## Criminal jobs (v0.7.33): take (a job of the world), step (arg — the preparation), act, give_up. "" or a key.
 func heist_act(what: String, id: String, arg: String = "") -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "PROPERTY_NOT_NOW"
 	var data := Catalog.data
 	var s := session
-	var why := ""
-	match what:
-		"step": why = HeistRules.step_why(s, data, id, arg)
-		"act": why = HeistRules.act_why(s, data, id)
-		"give_up": why = "" if HeistRules.status(s.character, id) == "active" else "HEIST_NOT_ACTIVE"
-		_: why = "PROPERTY_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	var fight: Array = []
-	match what:
-		"step":
-			var need := HeistRules.step_minutes(s, data, id, arg)
-			var w := CrimeRules.wait(s, data, need)  # the patrol may break it off
-			lines = w["lines"]
-			if int(w["minutes"]) >= need:
-				lines.append_array(HeistRules.step(s, data, id, arg))
-		"act":
-			var need := HeistRules.act_minutes(s, data, id)
-			var w := CrimeRules.wait(s, data, need)
-			lines = w["lines"]
-			if int(w["minutes"]) >= need:
+	var a := [s, data, id]
+	var err := _act(what, {
+		"step": [HeistRules.step_why.bindv(a + [arg]), func() -> Array:
+			return _waited(HeistRules.step_minutes(s, data, id, arg), func(_m: int) -> Array: return HeistRules.step(s, data, id, arg), true)],  # the patrol may break it off
+		"act": [HeistRules.act_why.bindv(a), func() -> Array:
+			return _waited(HeistRules.act_minutes(s, data, id), func(_m: int) -> Array:
 				var r := HeistRules.act(s, data, id)
-				lines.append_array(r["lines"])
-				fight = r["fight"]
-		"give_up": lines = HeistRules.give_up(s, data, id)
-	CharacterRules.refresh(s.character, data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	if not fight.is_empty():
-		s.pending_fight = fight
+				s.pending_fight = r["fight"]
+				return r["lines"], true)],
+		"give_up": [func() -> String: return "" if HeistRules.status(s.character, id) == "active" else "HEIST_NOT_ACTIVE", HeistRules.give_up.bindv(a)],
+	})
+	if err.is_empty() and what == "act" and not s.pending_fight.is_empty():
 		_start_pending_fight()
-	return ""
+	return err
 
 
 ## Organizations (v0.7.33): join, leave, pay, take (arg — a job), found (arg — the name, id — the place), recruit
 ## (id — the NPC). "" or a localization key.
 func org_act(what: String, id: String, arg: String = "") -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+	if not _out_of_fight():
 		return "PROPERTY_NOT_NOW"
 	var data := Catalog.data
 	var s := session
-	var why := ""
-	match what:
-		"join": why = OrgRules.join_why(s, data, id)
-		"leave": why = "" if OrgRules.member(s.character, id) or OrgRules.candidate(s.character, id) else "ORG_NONE"
-		"pay": why = OrgRules.pay_why(s, data, id)
-		"take": why = OrgRules.take_why(s, data, id, arg)
-		"found": why = OrgRules.found_why(s, data, arg, id)
-		"recruit": why = OrgRules.recruit_why(s, data, id)
-		"entry": why = OrgRules.entry_why(s, data, id)
-		_: why = "PROPERTY_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	match what:
-		"join": lines = OrgRules.join(s, data, id)
-		"leave": lines = OrgRules.leave(s, data, id)
-		"pay": lines = OrgRules.pay(s, data, id)
-		"take": lines = HeistRules.take(s, data, arg)
-		"found": lines = OrgRules.found(s, data, arg, id)
-		"recruit": lines = OrgRules.recruit(s, data, id)
-		"entry": lines = OrgRules.pay_entry(s, data, id)
-	CharacterRules.refresh(s.character, data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	return ""
+	var a := [s, data, id]
+	return _act(what, {
+		"join": _row(OrgRules.join_why, OrgRules.join, a),
+		"leave": [func() -> String: return "" if OrgRules.member(s.character, id) or OrgRules.candidate(s.character, id) else "ORG_NONE", OrgRules.leave.bindv(a)],
+		"pay": _row(OrgRules.pay_why, OrgRules.pay, a),
+		"take": [OrgRules.take_why.bindv(a + [arg]), HeistRules.take.bind(s, data, arg)],
+		"found": _row(OrgRules.found_why, OrgRules.found, [s, data, arg, id]),
+		"recruit": _row(OrgRules.recruit_why, OrgRules.recruit, a),
+		"entry": _row(OrgRules.entry_why, OrgRules.pay_entry, a),
+	})
 
 
 ## The hero's offices (v0.7.34): appoint / elect / buy / leave (id — the office), decide (arg — "<case>:<option>"), tax
 ## (arg — the level), build (arg — the project). A decision takes the case's time (the patrol may break it off).
 func office_act(what: String, id: String, arg: String = "") -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "PROPERTY_NOT_NOW"
 	var data := Catalog.data
 	var s := session
 	var idx := int(arg.get_slice(":", 0)) if what == "decide" else -1
 	var opt := arg.get_slice(":", 1) if what == "decide" else ""
-	var why := ""
-	match what:
-		"appoint": why = OfficeRules.appoint_why(s, data, id)
-		"elect": why = OfficeRules.elect_why(s, data, id)
-		"buy": why = OfficeRules.buy_why(s, data, id)
-		"leave": why = "" if OfficeRules.holds(s.character, id) else "OFFICE_NOT_HELD"
-		"decide": why = OfficeRules.decide_why(s, data, id, idx, opt)
-		"tax": why = OfficeRules.tax_why(s, data, id, arg)
-		"build": why = OfficeRules.build_why(s, data, id, arg)
-		_: why = "PROPERTY_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	match what:
-		"appoint": lines = OfficeRules.appoint(s, data, id)
-		"elect": lines = OfficeRules.elect(s, data, id)
-		"buy": lines = OfficeRules.buy(s, data, id)
-		"leave": lines = OfficeRules.leave(s, data, id)
-		"decide":
-			var need := int(OfficeRules.cfg(data)["case_minutes"])
-			var w := CrimeRules.wait(s, data, need)
-			lines = w["lines"]
-			if int(w["minutes"]) >= need:
-				lines.append_array(OfficeRules.decide(s, data, id, idx, opt))
-		"tax": lines = OfficeRules.set_tax(s, data, id, arg)
-		"build": lines = OfficeRules.build(s, data, id, arg)
-	CharacterRules.refresh(s.character, data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	return ""
+	var a := [s, data, id]
+	return _act(what, {
+		"appoint": _row(OfficeRules.appoint_why, OfficeRules.appoint, a),
+		"elect": _row(OfficeRules.elect_why, OfficeRules.elect, a),
+		"buy": _row(OfficeRules.buy_why, OfficeRules.buy, a),
+		"leave": [func() -> String: return "" if OfficeRules.holds(s.character, id) else "OFFICE_NOT_HELD", OfficeRules.leave.bindv(a)],
+		"decide": [OfficeRules.decide_why.bindv(a + [idx, opt]), func() -> Array:
+			return _waited(int(OfficeRules.cfg(data)["case_minutes"]), func(_m: int) -> Array: return OfficeRules.decide(s, data, id, idx, opt), true)],
+		"tax": _row(OfficeRules.tax_why, OfficeRules.set_tax, a + [arg]),
+		"build": _row(OfficeRules.build_why, OfficeRules.build, a + [arg]),
+	})
 
 
 ## The hero died and an adult child goes on (v0.7.32): the heir's character takes the dead hero's place in the same
@@ -2120,7 +1983,7 @@ func continue_as_heir(character: Dictionary) -> void:
 
 ## «Попросить впустить» (v0.7.39.2): Persuasion against the owner of a private site. Allowed in a talk too. "" or a key.
 func permit_ask(npc_id: String) -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+	if not _out_of_fight():
 		return "PROPERTY_NOT_NOW"
 	if not session.npcs_here(world().world, session.room_id).has(npc_id):
 		return "PROPERTY_NOT_NOW"
@@ -2128,106 +1991,56 @@ func permit_ask(npc_id: String) -> String:
 	if not why.is_empty():
 		return why
 	var lines := SiteRules.ask(session, Catalog.data, npc_id)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	_quiet_lines(lines)
 	return ""
 
 
 ## Bonds (v0.7.31): gift (item — the thing), confess, break, hide. Allowed in a talk too. "" or a localization key.
 func bond_act(what: String, npc_id: String, item: String = "") -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+	if not _out_of_fight():
 		return "PROPERTY_NOT_NOW"
-	var data := Catalog.data
-	var s := session
-	var why := ""
-	match what:
-		"gift": why = BondRules.gift_why(s, data, npc_id, item)
-		"confess": why = BondRules.confess_why(s, data, npc_id)
-		"break": why = BondRules.break_why(s, data, npc_id)
-		"hide": why = BondRules.hide_why(s, data, npc_id)
-		_: why = "PROPERTY_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	match what:
-		"gift": lines = BondRules.gift(s, data, npc_id, item)
-		"confess": lines = BondRules.confess(s, data, npc_id)
-		"break": lines = BondRules.break_off(s, data, npc_id)
-		"hide": lines = BondRules.hide(s, data, npc_id)
-	CharacterRules.refresh(s.character, data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	return ""
+	var a := [session, Catalog.data, npc_id]
+	return _act(what, {
+		"gift": _row(BondRules.gift_why, BondRules.gift, a + [item]),
+		"confess": _row(BondRules.confess_why, BondRules.confess, a),
+		"break": _row(BondRules.break_why, BondRules.break_off, a),
+		"hide": _row(BondRules.hide_why, BondRules.hide, a),
+	})
 
 
 func study_act(what: String, id: String) -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "PROPERTY_NOT_NOW"
 	var data := Catalog.data
 	var s := session
-	var why := ""
-	match what:
-		"exam": why = StudyRules.exam_why(s, data, id)
-		"enroll": why = StudyRules.enroll_why(s, data, id)
-		"lesson": why = StudyRules.lesson_why(s, data, id)
-		"drop": why = "" if StudyRules.enrolled(s.character, id) else "STUDY_NOT_ENROLLED"
-		_: why = "PROPERTY_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	match what:
-		"exam": lines = StudyRules.exam(s, data, id)
-		"enroll": lines = StudyRules.enroll(s, data, id)
-		"lesson":
-			var w := CrimeRules.wait(s, data, StudyRules.lesson_hours(data) * 60)  # the patrol may break the lesson
-			lines = w["lines"]
-			lines.append_array(StudyRules.lesson(s, data, id, int(w["minutes"])))
-		"drop": lines = StudyRules.drop(s, data, id)
-	CharacterRules.refresh(s.character, data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	return ""
+	var a := [s, data, id]
+	return _act(what, {
+		"exam": _row(StudyRules.exam_why, StudyRules.exam, a),
+		"enroll": _row(StudyRules.enroll_why, StudyRules.enroll, a),
+		"lesson": [StudyRules.lesson_why.bindv(a), func() -> Array:
+			return _waited(StudyRules.lesson_hours(data) * 60, func(m: int) -> Array: return StudyRules.lesson(s, data, id, m))],  # the patrol may break the lesson
+		"drop": [func() -> String: return "" if StudyRules.enrolled(s.character, id) else "STUDY_NOT_ENROLLED", StudyRules.drop.bindv(a)],
+	})
 
 
 ## The bank (v0.7.28): deposit (arg — the term, amount), withdraw (arg — the contract), loan (arg — «kind:id» of the
 ## collateral, days), repay, put / take (arg — an item; none — coins by amount). "" or a localization key.
 func bank_act(what: String, npc_id: String, arg: String = "", amount: int = 0, days: int = 0) -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+	if not _at_leisure():
 		return "PROPERTY_NOT_NOW"
 	var data := Catalog.data
 	var s := session
 	var col := arg.split(":", true, 1)
-	var why := ""
-	match what:
-		"deposit": why = BankRules.deposit_why(s, data, npc_id, arg, amount)
-		"withdraw": why = BankRules.withdraw_why(s, data, arg)
-		"loan": why = BankRules.loan_why(s, data, npc_id, col[0], col[1] if col.size() > 1 else "", days)
-		"repay": why = BankRules.repay_why(s, data, arg)
-		"put": why = BankRules.vault_why(s, data, npc_id, "in", arg, amount)
-		"take": why = BankRules.vault_why(s, data, npc_id, "out", arg, amount)
-		_: why = "PROPERTY_NOT_NOW"
-	if not why.is_empty():
-		return why
-	var lines: Array[String] = []
-	match what:
-		"deposit": lines = BankRules.deposit(s, data, npc_id, arg, amount)
-		"withdraw": lines = BankRules.withdraw(s, data, arg)
-		"loan": lines = BankRules.loan(s, data, npc_id, col[0], col[1], days)
-		"repay": lines = BankRules.repay(s, data, arg)
-		"put": lines = BankRules.vault_move(s, data, npc_id, "in", arg, amount)
-		"take": lines = BankRules.vault_move(s, data, npc_id, "out", arg, amount)
-	CharacterRules.refresh(s.character, data, s.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
-	return ""
+	var a := [s, data, npc_id]
+	var loan := a + [col[0], col[1] if col.size() > 1 else "", days]
+	return _act(what, {
+		"deposit": _row(BankRules.deposit_why, BankRules.deposit, a + [arg, amount]),
+		"withdraw": _row(BankRules.withdraw_why, BankRules.withdraw, [s, data, arg]),
+		"loan": _row(BankRules.loan_why, BankRules.loan, loan),
+		"repay": _row(BankRules.repay_why, BankRules.repay, [s, data, arg]),
+		"put": _row(BankRules.vault_why, BankRules.vault_move, a + ["in", arg, amount]),
+		"take": _row(BankRules.vault_why, BankRules.vault_move, a + ["out", arg, amount]),
+	})
 
 
 ## 18+ of this game (v0.7.38.7): the master's intimate scenes and the images; never with a child or a teen.
@@ -2331,7 +2144,7 @@ func option_preview(index: int) -> Dictionary:
 ## «Ждать» (v0.6.5): an hour or until a part of the day; not in a conversation or a fight. The master tells how the
 ## time passed (kind=wait). "" or a localization key.
 func wait(target: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
@@ -2340,9 +2153,7 @@ func wait(target: String) -> String:
 		return "WAIT_NOT_NOW"
 	var lines: Array[String] = ["Ожидание до %s" % TimeRules.clock_after(session, mins)]
 	lines.append_array(CrimeRules.wait(session, Catalog.data, mins)["lines"])  # the patrol looks in on the way (v0.7.22.18)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	_request("wait", "; ".join(lines))
 	return ""
 
@@ -2579,8 +2390,7 @@ func _travel_line(names: Array[String], minute0: int, lines: Array[String]) -> v
 		return
 	var all: Array[String] = ["Путь: %s · %s" % [" → ".join(names), TimeRules.span(session.day * 1440 + session.minute - minute0)]]
 	all.append_array(lines)
-	_add(GameSession.effect_entry(all))
-	_log("События: " + ", ".join(all))
+	_told(all)
 
 
 ## A trap brought the character to 0 HP outside combat: they come to on the spot (no death), the master tells the
@@ -2589,9 +2399,7 @@ func _trap_downed(lines: Array[String]) -> bool:
 	if int(session.character["hp"]) > 0:
 		return false
 	lines.append_array(ExplorationRules.knock_out(session))
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	_request("downed", "")
 	return true
 
@@ -2623,9 +2431,7 @@ func trap_action(to: String, disarm: bool) -> String:
 		if disarm:
 			ExplorationRules.disarm_trap(session, from, trap)
 			lines.append("Ловушка обезврежена: %s" % trap["text"])
-			_add(GameSession.effect_entry(lines))
-			_log("События: " + ", ".join(lines))
-			EventBus.state_changed.emit()
+			_effect_lines(lines)
 			_request("trap", "\n".join(lines))
 			return ""
 		lines.append("Ловушка обойдена — она по-прежнему на месте")
@@ -2635,9 +2441,7 @@ func trap_action(to: String, disarm: bool) -> String:
 	if _trap_downed(lines):
 		return ""
 	if disarm:
-		_add(GameSession.effect_entry(lines))
-		_log("События: " + ", ".join(lines))
-		EventBus.state_changed.emit()
+		_effect_lines(lines)
 		_request("trap", "\n".join(lines))
 		return ""
 	_move_to(to, lines)
@@ -2646,7 +2450,7 @@ func trap_action(to: String, disarm: bool) -> String:
 
 ## The giver's button: take a quest with steps (QuestRules); the master plays the giver (kind=quest). "" or a key.
 func accept_quest(quest_id: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "QUEST_BUSY"
 	var why := QuestRules.can_accept(session, Catalog.data["world"], quest_id)
 	if why.is_empty():
@@ -2655,10 +2459,8 @@ func accept_quest(quest_id: String) -> String:
 		return why
 	var q := QuestRules.quest(Catalog.data["world"], quest_id)
 	var lines := QuestRules.accept(session, Catalog.data, quest_id)
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_refresh()
+	_effect_lines(lines)
 	_request("quest", "%s даёт игроку задание «%s». %s %s" % [world().npc(str(q["giver"])).get("name", ""), q["title"],
 		str(q.get("offer_text", q.get("description", ""))), " ".join(lines.slice(1))])
 	return ""
@@ -2666,7 +2468,7 @@ func accept_quest(quest_id: String) -> String:
 
 ## «Прочитать объявления» (v0.7.22.13): an empty board — the master puts its orders up as real quests. "" or a key.
 func read_board(prop_id: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "QUEST_BUSY"
 	var why := QuestGen.board_why_not(session, Catalog.data, prop_id)
 	if not why.is_empty():
@@ -2689,7 +2491,7 @@ func read_board(prop_id: String) -> String:
 
 ## «Взять все» on a board (v0.7.22.13): every order that fits under the limit of taken quests, one master's turn. "" or a key.
 func take_board_all(orders: Array) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "QUEST_BUSY"
 	var lines: Array[String] = []
 	var titles: Array[String] = []
@@ -2700,27 +2502,23 @@ func take_board_all(orders: Array) -> String:
 		titles.append(str(QuestRules.quest(Catalog.data["world"], str(qid))["title"]))
 	if titles.is_empty():
 		return "QUEST_TOO_MANY"
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_refresh()
+	_effect_lines(lines)
 	_request("quest", "Игрок срывает с доски листки заказов: %s. %s" % [", ".join(titles), " ".join(lines)])
 	return ""
 
 
 ## A talk step of a quest: the button at the NPC closes it (the item is handed over); the master narrates. "" or a key.
 func quest_talk(quest_id: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "QUEST_BUSY"
 	var why := QuestRules.can_talk(session, Catalog.data["world"], quest_id)
 	if not why.is_empty():
 		return why
 	var step := QuestRules.current(session, Catalog.data["world"], quest_id)
 	var lines := QuestRules.talk(session, Catalog.data, quest_id)
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_refresh()
+	_effect_lines(lines)
 	_request("quest", "%s Итог: %s." % [str(step.get("done_text", step["text"])), ", ".join(lines)])
 	return ""
 
@@ -2728,24 +2526,22 @@ func quest_talk(quest_id: String) -> String:
 ## A choice step of a quest (v0.6.4): the button in its room makes the choice — its rewards and world flag — and the
 ## master narrates it with the choice's done_text. "" or a localization key.
 func quest_choose(quest_id: String, choice_id: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "QUEST_BUSY"
 	var why := QuestRules.can_choose(session, Catalog.data["world"], quest_id, choice_id)
 	if not why.is_empty():
 		return why
 	var c := QuestRules.choice(session, Catalog.data["world"], quest_id, choice_id)
 	var lines := QuestRules.choose(session, Catalog.data, quest_id, choice_id)
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_refresh()
+	_effect_lines(lines)
 	_request("quest", "%s Итог: %s." % [str(c.get("done_text", c["action"])), ", ".join(lines)])
 	return ""
 
 
 ## The arrest buttons (v0.7.14, CrimeRules): pay the wergild, sit in the stocks, or resist — then a fight. "" or a key.
 func crime_answer(how: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "QUEST_BUSY"
 	var why := CrimeRules.can_answer(session, Catalog.data, how)
 	if not why.is_empty():
@@ -2759,9 +2555,7 @@ func crime_answer(how: String) -> String:
 		lines = CrimeRules.talked(session, Catalog.data, how, bool(result["success"]))
 	else:
 		lines = CrimeRules.answer(session, Catalog.data, how)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+	_effect_lines(lines)
 	if not session.pending_fight.is_empty():  # resisted, or a threat that failed
 		_start_pending_fight()
 		return ""
@@ -2772,7 +2566,7 @@ func crime_answer(how: String) -> String:
 
 ## The foes lurking unaware (v0.7.22.12): attack them by surprise (or, `surprise` false, they saw the hero). "" or a key.
 func encounter_attack(surprise: bool = true) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "WAIT_BUSY"
 	var lk := EncounterRules.lurking(session, session.room_id)
 	if lk.is_empty():
@@ -2791,7 +2585,7 @@ func encounter_attack(surprise: bool = true) -> String:
 
 ## Talking to the lurking foes before a fight (v0.7.22.12): one roll; a truce, they go, or the fight. "" or a key.
 func encounter_parley(skill: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	var lk := EncounterRules.lurking(session, session.room_id)
 	if lk.is_empty():
@@ -2818,7 +2612,7 @@ func encounter_parley(skill: String) -> String:
 
 ## A way out of captivity (v0.7.22.12): break free, slip the ropes, or talk the captors round. "" or a key.
 func escape_captivity(how: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	var why := EncounterRules.can_escape(session, Catalog.data, how)
 	if not why.is_empty():
@@ -2826,10 +2620,7 @@ func escape_captivity(how: String) -> String:
 	var text := tr("CAPTIVE_SAY_" + how.to_upper())
 	_add(GameSession.player_entry(text))
 	var lines := EncounterRules.escape(session, Catalog.data, how)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	_quiet_lines(lines)
 	_request("action", text + " [движок уже решил: %s — опиши это, эффекты не нужны]" % ", ".join(lines))
 	return ""
 
@@ -2837,7 +2628,7 @@ func escape_captivity(how: String) -> String:
 ## A follower by the buttons, without the master (v0.7.22.22, #25): `what` stay (waits here), lead (one left here
 ## goes again), let_go (goes home). "" or a key.
 func follower_act(npc_id: String, what: String) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
@@ -2876,7 +2667,7 @@ func dismiss_summon(summon_id: String) -> String:
 
 ## The creatures a fight left (v0.7.22.11): bind, free, lead, talk (a master's turn), attack (a fight). "" or a key.
 func creature_act(id: String, what: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
@@ -2891,8 +2682,7 @@ func creature_act(id: String, what: String) -> String:
 	if not why.is_empty():
 		return why
 	var lines := CreatureRules.act(session, Catalog.data, id, what)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
+	_told(lines)
 	_forget_gone_creature()
 	EventBus.state_changed.emit()
 	if what == "attack":
@@ -2913,7 +2703,7 @@ func _forget_gone_creature() -> void:
 ## «Спрятать тело» (v0.7.22.10, big test #9): the engine rolls (rules.crime.hide) — its total is how hard the body is
 ## to find; the master narrates. "" or a key.
 func hide_body(npc_id: String) -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
@@ -2945,11 +2735,8 @@ func search_body(npc_id: String) -> String:
 	if str(Being.view(session, npc_id).get("body", "")) != session.room_id or Being.searched(session, npc_id):
 		return "CRIME_NO_BODY"
 	var lines := CrimeRules.search_body(session, Catalog.data, npc_id)
-	CharacterRules.refresh(session.character, Catalog.data, session.items)
-	_add(GameSession.effect_entry(lines))
-	_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	_refresh()
+	_quiet_lines(lines)
 	return ""
 
 
@@ -2957,8 +2744,7 @@ func search_body(npc_id: String) -> String:
 func _quest_progress() -> void:
 	var lines := QuestRules.advance(session, Catalog.data)
 	if not lines.is_empty():
-		_add(GameSession.effect_entry(lines))
-		_log("События: " + ", ".join(lines))
+		_told(lines)
 
 
 ## A hostile thing pinned to the words with an NPC of the scene as its target (v0.7.22.16): a weapon, or a spell that
@@ -3047,7 +2833,7 @@ func cancel_turn() -> void:
 ## Puts an owned item into an equipment slot (CharacterRules.SLOTS). "" on success, else a localization key.
 ## Not while the master thinks: the snapshot of the turn in flight would no longer match.
 func equip(item_id: String, slot: String, both: bool = false) -> String:
-	if session == null or is_busy():
+	if not _idle():
 		return "EQUIP_BUSY"
 	var c := session.character
 	var freed := CharacterRules.hands_freed(c, Catalog.data, session.items, item_id, slot, both)
@@ -3072,7 +2858,7 @@ func equip(item_id: String, slot: String, both: bool = false) -> String:
 
 
 func unequip(slot: String) -> void:
-	if session == null or is_busy():
+	if not _idle():
 		return
 	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot)) and session.mode == GameSession.MODE_COMBAT:
 		EventBus.message.emit(tr("EQUIP_IN_COMBAT"))
@@ -3103,9 +2889,7 @@ func _gear_changed(before: Dictionary) -> void:
 					lines.append("Надето: " + ItemRules.display_name(Catalog.data["items"], session.items, now))
 		lines.append("Переодевание: %d мин" % minutes)
 		lines.append_array(TimeRules.advance(session, Catalog.data, minutes))
-		_add(GameSession.effect_entry(lines))
-		_log("События: " + ", ".join(lines))
-	EventBus.state_changed.emit()
+		_effect_lines(lines)
 
 
 func save_to(slot: String) -> bool:
@@ -3291,8 +3075,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 	var lines := effects.apply(s, turn_id, result.get("effect_ids", []))
 	CharacterRules.refresh(s.character, Catalog.data, s.items)  # an item given away is unequipped
 	if not lines.is_empty():
-		_add(GameSession.effect_entry(lines))
-		_log("События: " + ", ".join(lines))
+		_told(lines)
 	var options: Array[String] = []
 	for o: Variant in result.get("options", []):
 		options.append(str(o))
@@ -3318,15 +3101,13 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 	if ConditionRules.incapacitated(s.character) and int(s.character["hp"]) > 0:
 		var slept := _sleep_through()
 		if not slept.is_empty():
-			_add(GameSession.effect_entry(slept))
-			_log("События: " + ", ".join(slept))
+			_told(slept)
 	if ConditionRules.dead(s.character) and turn_kind != "death":
 		_request.call_deferred("death", "Герой умирает от истощения (шестая степень).\n" + _hero_path())
 		return ""
 	if int(s.character["hp"]) <= 0:
 		var out := ExplorationRules.knock_out(s)
-		_add(GameSession.effect_entry(out))
-		_log("События: " + ", ".join(out))
+		_told(out)
 		_end_conversation()
 		return "downed"
 
@@ -3401,8 +3182,7 @@ func _letter_answered(s: GameSession, turn_id: String, result: Dictionary, text:
 	_add(GameSession.npc_entry(to, tr("LETTER_FROM").format({"name": world().npc(to).get("name", to)}), text, turn_id))
 	_log("Письмо от %s: %s" % [world().npc(to).get("name", to), text])
 	if not lines.is_empty():
-		_add(GameSession.effect_entry(lines))
-		_log("События: " + ", ".join(lines))
+		_told(lines)
 	return ""
 
 
@@ -3642,8 +3422,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		var found := ExplorationRules.take_caches(session, Catalog.data, room)
 		found.append_array(QuestRules.advance(session, Catalog.data))
 		if not found.is_empty():
-			_add(GameSession.effect_entry(found))
-			_log("События: " + ", ".join(found))
+			_told(found)
 	return result
 
 
@@ -3664,7 +3443,7 @@ func _listener_id(params: Dictionary) -> String:
 ## «Выступить» (v0.7.11): a Performance check on a stage of the pack, once a day; coins and, for an entertainer, a free
 ## room tonight; the master narrates the show. "" or a localization key.
 func perform() -> String:
-	if session == null or is_busy() or not Backend.is_ready():
+	if not _master_ready():
 		return "WAIT_BUSY"
 	var why := BackgroundRules.can_perform(session, Catalog.data)
 	if not why.is_empty():
@@ -3721,8 +3500,7 @@ func _theft(npc_id: String, ok: bool) -> String:
 		lines.append_array(TheftRules.react(session, Catalog.data, npc_id))
 		note = "Кража провалилась: " + "; ".join(lines) + " — движок уже всё применил"
 	if not lines.is_empty():
-		_add(GameSession.effect_entry(lines))
-		_log("События: " + ", ".join(lines))
+		_told(lines)
 	return note
 
 

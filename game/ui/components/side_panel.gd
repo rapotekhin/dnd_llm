@@ -182,10 +182,7 @@ func _rebuild() -> void:
 				sl.text = texts[i]
 				srow.add_child(sl)
 				var sid := str(called[i]["id"])
-				var db := _small(srow, tr("BTN_SUMMON_DISMISS"), func() -> void:
-					var err := GameState.dismiss_summon(sid)
-					if not err.is_empty():
-						EventBus.message.emit(tr(err)), can_act)
+				var db := _small(srow, tr("BTN_SUMMON_DISMISS"), _try.bind(GameState.dismiss_summon.bind(sid)), can_act)
 				db.name = "Dismiss_" + sid
 		for away: String in SceneRules.absent(s, Catalog.data["world"], s.room_id):  # v0.7.14.2: their hours
 			_line(away, true)
@@ -194,10 +191,7 @@ func _rebuild() -> void:
 				_line(str(body["name"]), true)
 				continue
 			var bid := str(body["npc_id"])
-			var bb := _button(tr("BTN_SEARCH_BODY").format({"name": body["name"]}), func() -> void:
-				var err := GameState.search_body(bid)
-				if not err.is_empty():
-					EventBus.message.emit(tr(err)), can_act)
+			var bb := _button(tr("BTN_SEARCH_BODY").format({"name": body["name"]}), _try.bind(GameState.search_body.bind(bid)), can_act)
 			bb.name = "Body_" + bid
 		var here := CreatureRules.here(s, s.room_id)  # v0.7.22.11: the foes a fight left here
 		var beasts := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) == PropertyRules.TAME)
@@ -217,20 +211,14 @@ func _rebuild() -> void:
 			_creature_row(s, cr, can_act)
 		for qid: String in XpRules.quests_here(s, Catalog.data["world"]):
 			var q: Dictionary = XpRules.quests(Catalog.data["world"])[qid]
-			var qb := _button(tr("BTN_QUEST").format({"action": q["action"]}), func() -> void:
-				var err := GameState.complete_quest(qid)
-				if not err.is_empty():
-					EventBus.message.emit(tr(err)), can_act)
+			var qb := _button(tr("BTN_QUEST").format({"action": q["action"]}), _try.bind(GameState.complete_quest.bind(qid)), can_act)
 			qb.name = "Quest_" + qid
 			qb.tooltip_text = str(q["title"])
 		_quest_buttons(s, can_act, "")
 		for ch: Dictionary in QuestRules.choices_here(s, Catalog.data["world"]):
 			var qid2 := str(ch["quest_id"])
 			var cid := str(ch["choice_id"])
-			var cb := _button(tr("BTN_QUEST").format({"action": ch["action"]}), func() -> void:
-				var err := GameState.quest_choose(qid2, cid)
-				if not err.is_empty():
-					EventBus.message.emit(tr(err)), can_act)
+			var cb := _button(tr("BTN_QUEST").format({"action": ch["action"]}), _try.bind(GameState.quest_choose.bind(qid2, cid)), can_act)
 			cb.name = "QuestChoice_%s_%s" % [qid2, cid]
 			cb.theme_type_variation = UiTheme.ACCENT_BUTTON
 		# «Взаимодействие с местом» (v0.7.22.7, big test #17): every thing of the room in its own window — take one,
@@ -335,122 +323,60 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 	var refuses := SocialRules.refuses(s, Catalog.data, id)  # v0.7.15.3
 	var a := s.attitude(id)
 	var att := tr("ATTITUDE_0" if a == 0 else ("ATTITUDE_P%d" % a if a > 0 else "ATTITUDE_M%d" % -a))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	_content.add_child(row)
-	var b := _row_button(row, str(n.get("name", id)), GameState.talk_to.bind(id, false), can_act and not refuses)
-	b.name = "Talk_" + id
-	b.tooltip_text = tr("TALK_REFUSED") if refuses else tr("SIDE_TALK_TIP").format({"name": n.get("name", id), "role": n.get("role", ""), "attitude": att})
-	if a <= -2:
-		b.add_theme_color_override("font_color", UiTheme.BAD)
-	elif a >= 2:
-		b.add_theme_color_override("font_color", UiTheme.OK)
-	_on_right(b, key)
-	if bool(n.get("trader", false)):
-		var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id, Catalog.data) or refuses
-		var tb := _small(row, tr("BTN_TRADE_SHORT"), GameState.talk_to.bind(id, true), can_act and not closed)
-		tb.name = "Trade_" + id
-		tb.size_flags_horizontal = Control.SIZE_SHRINK_END
-		tb.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else "TALK_REFUSED" if refuses else
-			"SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED") if closed else tr("BTN_TRADE_WITH").format({"name": n.get("name", id)})
-	_more(row, "More_" + id, key)
-	if _open != key:
+	if not _being_row(key, "More_" + id, _npc_head.bind(s, n, id, a, att, refuses, can_act)):
 		return
 	var bw := BondRules.word(s.character, Catalog.data, id)  # v0.7.31
 	var role := _line("%s · %s%s" % [n.get("role", ""), att, (" · " + bw) if not bw.is_empty() else ""], true)
 	role.name = "Role_" + id
 	var acts := _acts("Acts_" + id)
-	var pk := _flow(acts, tr("BTN_POCKETS_SHORT"), pockets_requested.emit.bind(id), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty())
-	pk.name = "Pockets_" + id
-	pk.tooltip_text = tr("BTN_POCKETS").format({"name": n.get("name", id)})
+	_flow(acts, tr("BTN_POCKETS_SHORT"), pockets_requested.emit.bind(id), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty(), "Pockets_" + id, tr("BTN_POCKETS").format({"name": n.get("name", id)}))
 	if not JobRules.of(s, Catalog.data, id).is_empty():  # v0.7.26
-		var jb := _flow(acts, tr("BTN_JOB"), job_requested.emit.bind(id), can_act)
-		jb.name = "Jobs_" + id
-		jb.tooltip_text = tr("BTN_JOB_TIP").format({"name": n.get("name", id)})
+		_flow(acts, tr("BTN_JOB"), job_requested.emit.bind(id), can_act, "Jobs_" + id, tr("BTN_JOB_TIP").format({"name": n.get("name", id)}))
 	var undeeded := PropertyRules.is_registry(Catalog.data, id) and PropertyRules.state(s.character).values().any(func(p: Dictionary) -> bool: return not bool(p.get("deed", false)))
 	if not PropertyRules.of_seller(s, Catalog.data, id).is_empty() or undeeded:  # v0.7.27
-		var sb := _flow(acts, tr("BTN_PROPERTY"), property_requested.emit.bind("seller", id), can_act)
-		sb.name = "PropertySale_" + id
-		sb.tooltip_text = tr("BTN_PROPERTY_SALE_TIP").format({"name": n.get("name", id)})
+		_flow(acts, tr("BTN_PROPERTY"), property_requested.emit.bind("seller", id), can_act, "PropertySale_" + id, tr("BTN_PROPERTY_SALE_TIP").format({"name": n.get("name", id)}))
 	if PropertyRules.is_registry(Catalog.data, id) and Catalog.data["rules"].has("shop"):  # v0.7.29: the charter and the stalls
-		var tb := _flow(acts, tr("BTN_SHOP_REGISTRY"), shop_requested.emit.bind("registry", id), can_act)
-		tb.name = "ShopRegistry_" + id
-		tb.tooltip_text = tr("BTN_SHOP_REGISTRY_TIP")
+		_flow(acts, tr("BTN_SHOP_REGISTRY"), shop_requested.emit.bind("registry", id), can_act, "ShopRegistry_" + id, tr("BTN_SHOP_REGISTRY_TIP"))
 	if ShopRules.is_supplier(s, Catalog.data, id):
-		var wb := _flow(acts, tr("BTN_WHOLESALE"), shop_requested.emit.bind("supplier", id), can_act)
-		wb.name = "Wholesale_" + id
-		wb.tooltip_text = tr("BTN_WHOLESALE_TIP").format({"name": n.get("name", id)})
+		_flow(acts, tr("BTN_WHOLESALE"), shop_requested.emit.bind("supplier", id), can_act, "Wholesale_" + id, tr("BTN_WHOLESALE_TIP").format({"name": n.get("name", id)}))
 	if StudyRules.is_teacher(s, Catalog.data, id):  # v0.7.30
-		var lb := _flow(acts, tr("BTN_STUDY"), study_requested.emit.bind(id), can_act)
-		lb.name = "Study_" + id
-		lb.tooltip_text = tr("BTN_STUDY_TIP").format({"name": n.get("name", id)})
+		_flow(acts, tr("BTN_STUDY"), study_requested.emit.bind(id), can_act, "Study_" + id, tr("BTN_STUDY_TIP").format({"name": n.get("name", id)}))
 	if not SiteRules.closed_to_hero(s, Catalog.data, id).is_empty():  # v0.7.39.2: the owner's leave
 		var pw := SiteRules.ask_why(s, Catalog.data, id)
-		var pb := _flow(acts, tr("BTN_PERMIT"), func() -> void:
-			var err := GameState.permit_ask(id)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act and pw.is_empty())
+		var pb := _flow(acts, tr("BTN_PERMIT"), _try.bind(GameState.permit_ask.bind(id)), can_act and pw.is_empty())
 		pb.name = "Permit_" + id
 		pb.tooltip_text = tr(pw) if not pw.is_empty() else tr("BTN_PERMIT_TIP").format({"dc": SiteRules.ask_dc(s, Catalog.data, id),
 			"chance": SiteRules.ask_chance(s, Catalog.data, id)})
 	if not FamilyRules.engaged(s).is_empty() and not FamilyRules.officiant(s, Catalog.data, id).is_empty():  # v0.7.32
 		var why := FamilyRules.wedding_why(s, Catalog.data, id)
-		var wd := _flow(acts, tr("BTN_WEDDING"), func() -> void:
-			var err := GameState.family_act("wedding", id)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act and why.is_empty())
-		wd.name = "Wedding_" + id
-		wd.tooltip_text = tr(why) if not why.is_empty() else tr("BTN_WEDDING_TIP").format({"money": Money.format(FamilyRules.fee(Catalog.data, FamilyRules.officiant(s, Catalog.data, id)))})
+		_flow(acts, tr("BTN_WEDDING"), _try.bind(GameState.family_act.bind("wedding", id)), can_act and why.is_empty(), "Wedding_" + id, tr(why) if not why.is_empty() else tr("BTN_WEDDING_TIP").format({"money": Money.format(FamilyRules.fee(Catalog.data, FamilyRules.officiant(s, Catalog.data, id)))}))
 	if Catalog.data["rules"].has("office") and not OfficeRules.of_chief(Catalog.data, id).is_empty():  # v0.7.34
-		var fb := _flow(acts, tr("BTN_OFFICES"), office_requested.emit.bind(id), can_act)
-		fb.name = "Office_" + id
-		fb.tooltip_text = tr("BTN_OFFICES_TIP")
+		_flow(acts, tr("BTN_OFFICES"), office_requested.emit.bind(id), can_act, "Office_" + id, tr("BTN_OFFICES_TIP"))
 	if Catalog.data["rules"].has("underworld"):  # v0.7.33
 		for org: String in OrgRules.of_head(s, Catalog.data, id):
-			var ob := _flow(acts, str(OrgRules.word(s, Catalog.data, org)["nom"]).capitalize(), org_requested.emit.bind(org), can_act)
-			ob.name = "Org_" + id
-			ob.tooltip_text = tr("BTN_ORG_HEAD_TIP").format({"org": OrgRules.org_name(s, Catalog.data, org)})
+			_flow(acts, str(OrgRules.word(s, Catalog.data, org)["nom"]).capitalize(), org_requested.emit.bind(org), can_act, "Org_" + id, tr("BTN_ORG_HEAD_TIP").format({"org": OrgRules.org_name(s, Catalog.data, org)}))
 		var rw := OrgRules.recruit_why(s, Catalog.data, id)
 		if not OrgRules.own(s, Catalog.data).is_empty() and not rw in ["ORG_NOT_FOR_HIM", "ORG_MEMBER"]:
-			var rb := _flow(acts, tr("BTN_RECRUIT"), func() -> void:
-				var err := GameState.org_act("recruit", id)
-				if not err.is_empty():
-					EventBus.message.emit(tr(err)), can_act and rw.is_empty())
-			rb.name = "Recruit_" + id
-			rb.tooltip_text = tr(rw).format({"at": int(OrgRules.cfg(Catalog.data)["recruit_bond"])}) if not rw.is_empty() else tr("BTN_RECRUIT_TIP")
+			_flow(acts, tr("BTN_RECRUIT"), _try.bind(GameState.org_act.bind("recruit", id)), can_act and rw.is_empty(), "Recruit_" + id, tr(rw).format({"at": int(OrgRules.cfg(Catalog.data)["recruit_bond"])}) if not rw.is_empty() else tr("BTN_RECRUIT_TIP"))
 	if Catalog.data["rules"].has("contests"):  # v0.7.40
 		var playing := str(ContestRules.state(s).get("npc", "")) == id
 		var cw := "" if playing else ContestRules.why_not(s, Catalog.data, id)
-		var cb := _flow(acts, tr("BTN_CONTEST"), contest_requested.emit.bind(id), can_act and cw.is_empty())
-		cb.name = "Contest_" + id
-		cb.tooltip_text = cw if not cw.is_empty() else tr("BTN_CONTEST_TIP").format({"name": n.get("name", id)})
+		_flow(acts, tr("BTN_CONTEST"), contest_requested.emit.bind(id), can_act and cw.is_empty(), "Contest_" + id, cw if not cw.is_empty() else tr("BTN_CONTEST_TIP").format({"name": n.get("name", id)}))
 	if RumorRules.on(Catalog.data):  # v0.7.47: what they say around here
 		var rw := RumorRules.ask_why(s, Catalog.data, id)
-		var rb := _flow(acts, tr("BTN_RUMORS"), func() -> void:
-			var err := GameState.rumor_ask(id)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act and rw.is_empty())
-		rb.name = "Rumors_" + id
-		rb.tooltip_text = tr(rw) if not rw.is_empty() else tr("BTN_RUMORS_TIP").format({"name": n.get("name", id)})
+		_flow(acts, tr("BTN_RUMORS"), _try.bind(GameState.rumor_ask.bind(id)), can_act and rw.is_empty(), "Rumors_" + id, tr(rw) if not rw.is_empty() else tr("BTN_RUMORS_TIP").format({"name": n.get("name", id)}))
 	if not LetterRules.ways_of(Catalog.data, id).is_empty():  # v0.7.48: a person with a post sends letters
-		var lb := _flow(acts, tr("BTN_LETTER"), letter_requested.emit.bind(id), can_act)
-		lb.name = "Letter_" + id
-		lb.tooltip_text = tr("BTN_LETTER_TIP").format({"name": n.get("name", id)})
+		_flow(acts, tr("BTN_LETTER"), letter_requested.emit.bind(id), can_act, "Letter_" + id, tr("BTN_LETTER_TIP").format({"name": n.get("name", id)}))
 	var arena_site := ArenaRules.of_manager(Catalog.data, id)  # v0.7.45
 	if not arena_site.is_empty():
-		var ar := _flow(acts, tr("BTN_ARENA"), arena_requested.emit.bind(arena_site), can_act)
-		ar.name = "Arena_" + id
-		ar.tooltip_text = tr("BTN_ARENA_TIP").format({"name": ArenaRules.site_name(Catalog.data, arena_site)})
+		_flow(acts, tr("BTN_ARENA"), arena_requested.emit.bind(arena_site), can_act, "Arena_" + id, tr("BTN_ARENA_TIP").format({"name": ArenaRules.site_name(Catalog.data, arena_site)}))
 	var bo := _flow(acts, tr("BTN_BOND"), bond_requested.emit.bind(id), can_act)  # v0.7.31
 	bo.name = "Bond_" + id
 	bo.tooltip_text = tr("BTN_BOND_TIP").format({"name": n.get("name", id)})
 	if BankRules.is_bank(s, Catalog.data, id):  # v0.7.28
-		var bb := _flow(acts, tr("BTN_BANK"), bank_requested.emit.bind(id), can_act)
-		bb.name = "Bank_" + id
-		bb.tooltip_text = tr("BTN_BANK_TIP").format({"name": n.get("name", id)})
+		_flow(acts, tr("BTN_BANK"), bank_requested.emit.bind(id), can_act, "Bank_" + id, tr("BTN_BANK_TIP").format({"name": n.get("name", id)}))
 	if not PropertyRules.animals_of(Catalog.data, id).is_empty():
-		var ab := _flow(acts, tr("BTN_ANIMALS"), property_requested.emit.bind("animals", id), can_act)
-		ab.name = "Animals_" + id
+		_flow(acts, tr("BTN_ANIMALS"), property_requested.emit.bind("animals", id), can_act, "Animals_" + id)
 	var follow: Array = []  # v0.7.22.22 (#25): a follower by the buttons, as the prisoners
 	if Being.follows(s, id):
 		follow = [["stay", "BTN_FOLLOWER_STAY"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
@@ -458,46 +384,39 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 		follow = [["lead", "BTN_FOLLOWER_LEAD"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
 	for fa: Array in follow:
 		var what: String = fa[0]
-		var fb := _flow(acts, tr(fa[1]), func() -> void:
-			var err := GameState.follower_act(id, what)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act)
-		fb.name = "Follower_%s_%s" % [what, id]
+		var fb := _flow(acts, tr(fa[1]), _try.bind(GameState.follower_act.bind(id, what)), can_act, "Follower_%s_%s" % [what, id])
 		if tr(fa[1] + "_TIP") != fa[1] + "_TIP":
 			fb.tooltip_text = tr(fa[1] + "_TIP")
 	var who := str(n.get("name", id))
 	var at := _flow(acts, tr("BTN_ATTACK_SHORT"), func() -> void:
-		ConfirmBox.ask(self, tr("CONFIRM_ATTACK_TITLE").format({"name": who}), tr("CONFIRM_ATTACK") + _law_line(s), tr("BTN_ATTACK_SHORT"), func() -> void:
-			var err := GameState.attack_npc(id)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err))), can_act)
+		ConfirmBox.ask(self, tr("CONFIRM_ATTACK_TITLE").format({"name": who}), tr("CONFIRM_ATTACK") + _law_line(s), tr("BTN_ATTACK_SHORT"), _try.bind(GameState.attack_npc.bind(id))), can_act)
 	at.name = "Attack_" + id  # the fight at once, without the master: last and red, apart from the peaceful acts
 	at.tooltip_text = tr("BTN_ATTACK_NPC").format({"name": n.get("name", id)})
 	at.add_theme_color_override("font_color", UiTheme.BAD)
 
 
+func _npc_head(row: HBoxContainer, s: GameSession, n: Dictionary, id: String, a: int, att: String, refuses: bool, can_act: bool) -> Control:
+	var b := _row_button(row, str(n.get("name", id)), GameState.talk_to.bind(id, false), can_act and not refuses)
+	b.name = "Talk_" + id
+	b.tooltip_text = tr("TALK_REFUSED") if refuses else tr("SIDE_TALK_TIP").format({"name": n.get("name", id), "role": n.get("role", ""), "attitude": att})
+	if a <= -2:
+		b.add_theme_color_override("font_color", UiTheme.BAD)
+	elif a >= 2:
+		b.add_theme_color_override("font_color", UiTheme.OK)
+	if bool(n.get("trader", false)):
+		var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id, Catalog.data) or refuses
+		var tb := _small(row, tr("BTN_TRADE_SHORT"), GameState.talk_to.bind(id, true), can_act and not closed)
+		tb.name = "Trade_" + id
+		tb.size_flags_horizontal = Control.SIZE_SHRINK_END
+		tb.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else "TALK_REFUSED" if refuses else
+			"SHOP_CLOSED_FOR_YOU" if TheftRules.shop_closed_for(s, id) else "SHOP_CLOSED") if closed else tr("BTN_TRADE_WITH").format({"name": n.get("name", id)})
+	return b
+
+
 ## A creature a fight left (v0.7.22.11) in one row: its state, «▾» (or the right button) opens its acts.
 func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	var cid := str(cr["id"])
-	var key := "cr:" + cid
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	_content.add_child(row)
-	var l := Label.new()
-	l.name = "CreatureLine_" + cid
-	l.text = CreatureRules.text(cr, Catalog.data)
-	if bool(cr.get("pet", false)) and int(cr.get("hungry", 0)) > 0:
-		l.text += " · " + tr("PET_HUNGRY_SHORT")  # v0.7.43
-	if str(cr["state"]) == PropertyRules.TAME and MountRules.on(Catalog.data) and not MountRules.load_text(s, Catalog.data, cr).is_empty():
-		l.text += " (%s)" % MountRules.load_text(s, Catalog.data, cr)  # v0.7.42: its pack, its cart
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.mouse_filter = Control.MOUSE_FILTER_STOP
-	row.add_child(l)
-	_on_right(l, key)
-	_more(row, "CreatureMore_" + cid, key)
-	if _open != key:
+	if not _being_row("cr:" + cid, "CreatureMore_" + cid, _creature_head.bind(s, cr)):
 		return
 	if str(cr["state"]) == PropertyRules.TAME:  # v0.7.27: an own beast goes along or stays, or is let go
 		_animal_acts(s, cr, can_act)
@@ -541,6 +460,23 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 			cb.add_theme_color_override("font_color", UiTheme.BAD)
 
 
+func _creature_head(row: HBoxContainer, s: GameSession, cr: Dictionary) -> Control:
+	var cid := str(cr["id"])
+	var l := Label.new()
+	l.name = "CreatureLine_" + cid
+	l.text = CreatureRules.text(cr, Catalog.data)
+	if bool(cr.get("pet", false)) and int(cr.get("hungry", 0)) > 0:
+		l.text += " · " + tr("PET_HUNGRY_SHORT")  # v0.7.43
+	if str(cr["state"]) == PropertyRules.TAME and MountRules.on(Catalog.data) and not MountRules.load_text(s, Catalog.data, cr).is_empty():
+		l.text += " (%s)" % MountRules.load_text(s, Catalog.data, cr)  # v0.7.42: its pack, its cart
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.add_child(l)
+	return l
+
+
 ## The pinned part under the list (v0.7.22.23, the UI audit С1): sneaking, «Осмотреться» and «Обыскать» side by side,
 ## the exits one to a row in the small font — never under the scroll.
 func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
@@ -567,10 +503,7 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 	_footer.add_child(looks)
 	for spec: Array in [["LookButton", "BTN_LOOK", "perception"], ["SearchButton", "BTN_SEARCH", "investigation"]]:
 		var skill: String = spec[2]
-		var lb := _row_button(looks, tr(spec[1]), func() -> void:
-			var err := GameState.search_room(skill)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act)
+		var lb := _row_button(looks, tr(spec[1]), _try.bind(GameState.search_room.bind(skill)), can_act)
 		lb.name = spec[0]
 		lb.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lb.tooltip_text = tr(spec[1] + "_TIP")
@@ -711,10 +644,7 @@ func _craft_row(s: GameSession, can_act: bool) -> void:
 	for tag: String in spots:
 		var g: Dictionary = CraftRules.cfg(data)["gather"][tag]
 		var why := CraftRules.gather_why(s, data, tag)
-		var gb := _row_button(acts, str(g["name"]), func() -> void:
-			var err := GameState.craft_act("gather", tag)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act and why.is_empty())
+		var gb := _row_button(acts, str(g["name"]), _try.bind(GameState.craft_act.bind("gather", tag)), can_act and why.is_empty())
 		gb.name = "Gather_" + tag
 		gb.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		gb.clip_text = false
@@ -751,10 +681,7 @@ func _work_row(s: GameSession, can_act: bool) -> void:
 	_content.add_child(acts)
 	for id: String in ids:
 		var j := JobRules.job(s, data, id)
-		var b := _row_button(acts, tr("BTN_WORK_SHIFT").format({"name": JobRules.rank_name(s, data, id, JobRules.rank(s.character, id))}), func() -> void:
-			var err := GameState.job_act("shift", id)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act and JobRules.shift_why(s, data, id).is_empty())
+		var b := _row_button(acts, tr("BTN_WORK_SHIFT").format({"name": JobRules.rank_name(s, data, id, JobRules.rank(s.character, id))}), _try.bind(GameState.job_act.bind("shift", id)), can_act and JobRules.shift_why(s, data, id).is_empty())
 		b.name = "WorkShift_" + id
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.clip_text = false
@@ -775,22 +702,13 @@ func _animal_acts(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 		for spec: Array in [[MountRules.PACK, "BTN_MOUNT_PACK"], [MountRules.CART, "BTN_MOUNT_CART"]]:
 			if MountRules.container(s, Catalog.data, str(spec[0]) + cid).is_empty():
 				continue
-			var pb := _flow(acts, tr(spec[1]), container_requested.emit.bind(str(spec[0]) + cid), can_act)
-			pb.name = "Mount_%s%s" % [str(spec[0]).trim_suffix(":"), cid]
+			_flow(acts, tr(spec[1]), container_requested.emit.bind(str(spec[0]) + cid), can_act, "Mount_%s%s" % [str(spec[0]).trim_suffix(":"), cid])
 	if bool(cr.get("pet", false)):  # v0.7.43: its name, feeding, scouting
-		var petb := _flow(acts, tr("BTN_PET_OPEN"), pet_requested.emit.bind(cid), can_act)
-		petb.name = "Pet_" + cid
-	var lb := _flow(acts, tr("BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_ANIMAL_LEAD"), func() -> void:
-		var err := GameState.creature_act(cid, "lead")
-		if not err.is_empty():
-			EventBus.message.emit(tr(err)), can_act)
-	lb.name = "Creature_lead_" + cid
+		_flow(acts, tr("BTN_PET_OPEN"), pet_requested.emit.bind(cid), can_act, "Pet_" + cid)
+	_flow(acts, tr("BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_ANIMAL_LEAD"), _try.bind(GameState.creature_act.bind(cid, "lead")), can_act, "Creature_lead_" + cid)
 	var name := str(cr.get("name", cid))
 	var rb := _flow(acts, tr("BTN_ANIMAL_RELEASE"), func() -> void:
-		ConfirmBox.ask(self, tr("CONFIRM_ANIMAL_RELEASE_TITLE").format({"name": name}), tr("CONFIRM_ANIMAL_RELEASE"), tr("BTN_ANIMAL_RELEASE"), func() -> void:
-			var err := GameState.property_act("release", cid)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err))), can_act)
+		ConfirmBox.ask(self, tr("CONFIRM_ANIMAL_RELEASE_TITLE").format({"name": name}), tr("CONFIRM_ANIMAL_RELEASE"), tr("BTN_ANIMAL_RELEASE"), _try.bind(GameState.property_act.bind("release", cid))), can_act)
 	rb.name = "Creature_release_" + cid
 	rb.add_theme_color_override("font_color", UiTheme.BAD)
 
@@ -849,10 +767,7 @@ func _underworld_row(s: GameSession, can_act: bool) -> void:
 	acts.name = "UnderworldActs"
 	_content.add_child(acts)
 	if not entry.is_empty():
-		var eb := _row_button(acts, tr("BTN_ORG_ENTRY").format({"money": Money.format(int(OrgRules.def(s, Catalog.data, entry)["entry_cp"]))}), func() -> void:
-			var err := GameState.org_act("entry", entry)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act and ew.is_empty())
+		var eb := _row_button(acts, tr("BTN_ORG_ENTRY").format({"money": Money.format(int(OrgRules.def(s, Catalog.data, entry)["entry_cp"]))}), _try.bind(GameState.org_act.bind("entry", entry)), can_act and ew.is_empty())
 		eb.name = "OrgEntry_" + entry
 		eb.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		eb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
@@ -986,14 +901,35 @@ func _acts(node_name: String) -> HFlowContainer:
 	return acts
 
 
-func _flow(parent: Container, text: String, action: Callable, enabled: bool) -> Button:
+func _flow(parent: Container, text: String, action: Callable, enabled: bool, node_name := "", tip := "") -> Button:
 	var b := Button.new()
 	b.text = text
+	if not node_name.is_empty():
+		b.name = node_name
+	b.tooltip_text = tip
 	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	b.disabled = not enabled
 	b.pressed.connect(func() -> void: action.call())
 	parent.add_child(b)
 	return b
+
+
+## A button's act: its refusal goes to the message line.
+func _try(act: Callable) -> void:
+	var err: String = act.call()
+	if not err.is_empty():
+		EventBus.message.emit(tr(err))
+
+
+## One row of a person or a creature (v0.7.70): `head` fills it and gives what the right button opens, then «▾». True
+## when its acts are open.
+func _being_row(key: String, more_name: String, head: Callable) -> bool:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_content.add_child(row)
+	_on_right(head.call(row), key)
+	_more(row, more_name, key)
+	return _open == key
 
 
 ## «▾» / «▴»: opens or closes the row's acts.
@@ -1049,10 +985,7 @@ func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
 		var text := tr("DOOR_WAY_" + how.to_upper())
 		if how == "spell":
 			text = text.format({"spell": str(Catalog.data["spells"].get(sp, {}).get("name", sp))})
-		var btn := _flow(acts, text, func() -> void:
-			var err := GameState.door_act(to, how, sp)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act)
+		var btn := _flow(acts, text, _try.bind(GameState.door_act.bind(to, how, sp)), can_act)
 		btn.name = "DoorWay_%s%s" % [how, "_" + sp if not sp.is_empty() else ""]
 		btn.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		btn.tooltip_text = tr("DOOR_WAY_%s_TIP" % how.to_upper()).format({"dc": dcs.get(how, 0), "ac": int(mat.get("ac", 15)),
@@ -1245,10 +1178,7 @@ func _quest_buttons(s: GameSession, can_act: bool, only_npc: String) -> void:
 			continue
 		var tid := str(t["quest_id"])
 		var why := QuestRules.can_talk(s, world, tid)
-		var tb := _button(tr("BTN_QUEST").format({"action": t["action"]}), func() -> void:
-			var err := GameState.quest_talk(tid)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)), can_act and why.is_empty())
+		var tb := _button(tr("BTN_QUEST").format({"action": t["action"]}), _try.bind(GameState.quest_talk.bind(tid)), can_act and why.is_empty())
 		tb.name = "QuestStep_" + tid
 		tb.tooltip_text = tr(why) if not why.is_empty() else str(QuestRules.quest(world, tid)["title"])
 
