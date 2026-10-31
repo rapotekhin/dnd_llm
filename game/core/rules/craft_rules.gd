@@ -378,7 +378,7 @@ static func start(s: GameSession, data: Dictionary, id: String) -> Array[String]
 	var total := work_minutes(s.character, data, r)
 	if r.has("output_def"):  # a new thing of a template (an elemental blade): known to the session from the start
 		s.items[str(r["output"])] = r["output_def"]
-	s.character["craft"] = {"recipe": id, "done": 0, "total": total}
+	s.character["craft"] = Progress.of_work(total).merged({"recipe": id})
 	return ["Начата работа: %s (%s); ушло: %s" % [recipe_name(s, data, id), TimeRules.span(total), ", ".join(spent)]]
 
 
@@ -406,7 +406,7 @@ static func shift_minutes(s: GameSession, data: Dictionary, hours: int) -> int:
 	var p := project(s.character)
 	if p.is_empty():
 		return 0
-	var mins := mini(hours * 60, int(p["total"]) - int(p["done"]))
+	var mins := mini(hours * 60, Progress.left(p))
 	var r := recipe(s, data, str(p["recipe"]))
 	var rent_now := rent(s, data, str(r.get("station", "")))
 	if not rent_now.is_empty():
@@ -425,17 +425,15 @@ static func worked(s: GameSession, data: Dictionary, minutes: int) -> Array[Stri
 		var cp := int(ceil(minutes / 60.0)) * int(rent_now["cp"])
 		Ledger.add(s, -cp, "craft:worked")
 		lines.append("Плата за %s: −%s" % [station_name(data, str(r["station"])).to_lower(), Money.format(cp)])
-	p["done"] = int(p["done"]) + minutes
-	if int(p["done"]) >= int(p["total"]):
+	if Progress.add(p, minutes):
 		lines.append_array(finish(s, data))
 	else:
-		lines.append("Работа: %s — %d%%, осталось %s" % [recipe_name(s, data, str(p["recipe"])), progress(s.character), TimeRules.span(int(p["total"]) - int(p["done"]))])
+		lines.append("Работа: %s — %d%%, осталось %s" % [recipe_name(s, data, str(p["recipe"])), progress(s.character), TimeRules.span(Progress.left(p))])
 	return lines
 
 
 static func progress(c: Dictionary) -> int:
-	var p := project(c)
-	return 0 if p.is_empty() else int(100.0 * int(p["done"]) / maxf(1.0, float(p["total"])))
+	return Progress.percent(project(c))
 
 
 ## The bonus of the craft check with `tool`: its ability, the proficiency (when proficient), the game's difficulty.
@@ -481,7 +479,7 @@ static func tier_by_id(data: Dictionary, id: String) -> Dictionary:
 
 ## The tier of a margin (the total minus the DC): the last one whose `from` is reached.
 static func tier_for(data: Dictionary, margin: int) -> Dictionary:
-	return Scale.step(cfg(data)["quality"], margin, "from", cfg(data)["quality"][0])
+	return Activity.step(cfg(data)["quality"], margin)
 
 
 ## The check at the end of the work and the thing it makes. Lines.
@@ -491,11 +489,9 @@ static func finish(s: GameSession, data: Dictionary) -> Array[String]:
 	var id := str(p["recipe"])
 	var r := recipe(s, data, id)
 	var dc := int(r.get("dc", 10))
-	var ro := Roll.hero(s, data, {"what": check_label(data, r), "skill": "craft", "parts": recipe_parts(s, data, r), "dc": dc,
-		"adv": bool(_fx(c, data, r, "quality_adv", false)), "crit": 10})
-	var nat := int(ro["nat"])
-	var total := int(ro["total"])
-	var tier := tier_for(data, int(ro["margin"]))
+	var a := Activity.attempt(s, data, {"what": check_label(data, r), "skill": "craft", "parts": recipe_parts(s, data, r), "dc": dc,
+		"adv": bool(_fx(c, data, r, "quality_adv", false)), "crit": 10, "ladder": cfg(data)["quality"]})
+	var tier: Dictionary = a["step"]
 	c.erase("craft")
 	if r.has("output_def") and not s.items.has(str(r["output"])):
 		s.items[str(r["output"])] = r["output_def"]
@@ -504,7 +500,7 @@ static func finish(s: GameSession, data: Dictionary) -> Array[String]:
 	inv[str(made["id"])] = int(inv.get(str(made["id"]), 0)) + int(made["qty"])
 	CharacterRules.refresh(c, data, s.items)
 	var made_as := str(tier["name"]) if not str(tier["name"]).is_empty() else "обычная работа"
-	var line := "%s: %d + %d = %d против Сл %d — %s" % [check_label(data, r), nat, total - nat, total, dc, made_as]
+	var line := Activity.line(check_label(data, r), "", a["roll"], made_as)
 	var what := ItemRules.display_name(data["items"], s.items, str(made["id"]))
 	var lines: Array[String] = [line, "Готово: %s%s" % [what, " ×%d" % int(made["qty"]) if int(made["qty"]) > 1 else ""]]
 	lines.append_array(DevelopmentRules.add_xp(c, data, dir_of(r), xp_for(s, data, r)))

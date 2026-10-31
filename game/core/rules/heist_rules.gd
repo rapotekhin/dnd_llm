@@ -292,20 +292,16 @@ static func act_minutes(s: GameSession, data: Dictionary, id: String) -> int:
 	return int(kind(data, str(def(s, data, id)["kind"])).get("act_minutes", 30))
 
 
-static func outcome_for(data: Dictionary, margin: int) -> Dictionary:
-	return Scale.step(cfg(data)["outcomes"], margin, "from", cfg(data)["outcomes"][0])
-
-
 ## The act (act_why first; its time already passed): {lines, fight: [foes]}.
 static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	var d := def(s, data, id)
 	var k := kind(data, str(d["kind"]))
 	var c := s.character
 	var ch := act_check(s, data, id)
-	var r := Roll.hero(s, data, {"what": str(d["name"]), "skill": ch.get("skill", ""), "parts": ch["parts"], "bonus": ch["bonus"], "dc": dc(s, data, id)})
-	var total := int(r["total"])
-	var o := outcome_for(data, int(r["margin"]))
-	var lines: Array[String] = ["«%s»: %s %d против Сл %d — %s" % [d["name"], ch["label"], total, dc(s, data, id), o["name"]]]
+	var a := Activity.attempt(s, data, {"what": "«%s»" % d["name"], "label": ch["label"], "skill": ch.get("skill", ""), "parts": ch["parts"], "bonus": ch["bonus"],
+		"dc": dc(s, data, id), "ladder": cfg(data)["outcomes"]})
+	var o: Dictionary = a["step"]
+	var lines: Array[String] = [str(a["line"])]
 	var fight: Array = []
 	if str(o["id"]) == "fail":
 		_rw(c)[id]["status"] = "failed"

@@ -595,6 +595,8 @@ static func notable(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 	for sc: Dictionary in w.get("schools", {}).values():
 		if str(sc.get("head", "")) == npc_id:
 			return true
+	if not Group.headed_by(s, data, npc_id).is_empty():
+		return true
 	for si: Dictionary in w.get("sites", {}).values():
 		if str(si.get("owner", "")) == npc_id:
 			return true

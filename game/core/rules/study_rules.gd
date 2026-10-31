@@ -169,26 +169,8 @@ static func _knows_spell(c: Dictionary, id: String) -> bool:
 static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[Dictionary]:
 	var co := course(s, data, id)
 	var c := s.character
-	var out: Array[Dictionary] = []
-	var req: Dictionary = co.get("requires", {})
-	if req.has("level"):
-		out.append({"text": "уровень %d" % int(req["level"]), "ok": int(c.get("level", 1)) >= int(req["level"])})
-	if req.has("classes"):
-		out.append({"text": "класс: " + ", ".join(req["classes"]), "ok": (req["classes"] as Array).has(str(c.get("class", "")))})
 	var teacher := str(co.get("teacher", ""))
-	if req.has("attitude"):  # v0.7.39.7: the teacher's attitude, a quest done, a fact of the world
-		var a := int(req["attitude"])
-		var word := TranslationServer.translate("ATTITUDE_0" if a == 0 else ("ATTITUDE_P%d" % a if a > 0 else "ATTITUDE_M%d" % -a))
-		out.append({"text": "отношение учителя не хуже: %s" % word, "ok": s.attitude(teacher) >= a})
-	if req.has("quest"):
-		var qid := str(req["quest"])
-		out.append({"text": "сделано задание «%s»" % data["world"].get("quests", {}).get(qid, {}).get("title", qid), "ok": s.quests_done.has(qid)})
-	if req.has("flag"):
-		var ft := str(req.get("flag_text", ""))
-		out.append({"text": ft if not ft.is_empty() else "условие учителя", "ok": s.flags.has(str(req["flag"]))})
-	var n := WorldView.new(data["world"]).npc(teacher)
-	if not n.is_empty() and not LanguageRules.npc_understands(c, data, n):
-		out.append({"text": "общий язык с учителем", "ok": false})
+	var out := Require.rows(s, data, co.get("requires", {}), {"npc": teacher, "npc_word": "учителем", "npc_of": "учителя"})
 	var t: Dictionary = co.get("teaches", {})
 	var what := str(t.get("id", ""))
 	match str(t.get("kind", "")):
@@ -378,7 +360,7 @@ static func enroll(s: GameSession, data: Dictionary, id: String) -> Array[String
 	var lines: Array[String] = ["Записаны на курс «%s» (%s) — %s, занятий %d%s" % [name_of(s, data, id), npc_name(s, data, str(course(s, data, id)["teacher"])),
 		teaches_text(s, data, id), lessons_needed(s, data, id), (", плата " + Money.format(f)) if f > 0 else ""]]
 	lines.append_array(_dorm_open(s, data, str(course(s, data, id).get("school", ""))))
-	state(c)["courses"][id] = {"progress": 0, "last": s.day, "misses": 0, "lesson_day": -1}
+	state(c)["courses"][id] = _new_course(s, data, id)
 	return lines
 
 
@@ -459,10 +441,13 @@ static func lesson_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	return Roll.chance(int(ch["bonus"]), int(course(s, data, id).get("dc", 10)), bool(ch["adv"]))
 
 
-static func outcome_for(s: GameSession, data: Dictionary, margin: int) -> Dictionary:
-	var steps: Array = (cfg(data)["outcomes"] as Array).map(func(o: Dictionary) -> Dictionary:
+static func ladder(s: GameSession, data: Dictionary) -> Array:
+	return (cfg(data)["outcomes"] as Array).map(func(o: Dictionary) -> Dictionary:
 		return o if str(o["id"]) != "great" else o.merged({"from": DevelopmentRules.effect(s.character, data, "study", "great_from", float(o["from"]))}, true))
-	return Scale.step(steps, margin, "from", steps[0])
+
+
+static func _new_course(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+	return Progress.of_work(lessons_needed(s, data, id)).merged({"last": s.day, "misses": 0, "lesson_day": -1})
 
 
 ## A lesson of `minutes` (the time already passed); a lesson broken off counts nothing. Lines.
@@ -471,7 +456,7 @@ static func lesson(s: GameSession, data: Dictionary, id: String, minutes: int) -
 	var co := course(s, data, id)
 	var courses_st: Dictionary = state(c)["courses"]
 	if not courses_st.has(id):
-		courses_st[id] = {"progress": 0, "last": s.day, "misses": 0, "lesson_day": -1}
+		courses_st[id] = _new_course(s, data, id)
 	var st: Dictionary = courses_st[id]
 	if minutes < lesson_hours(data) * 60:
 		return ["Занятие прервано — не засчитано"]
@@ -479,18 +464,15 @@ static func lesson(s: GameSession, data: Dictionary, id: String, minutes: int) -
 	st["last"] = s.day
 	var ch := _check(s, data, id)
 	var dc := int(co.get("dc", 10))
-	var r := Roll.hero(s, data, {"what": name_of(s, data, id), "skill": str(co.get("skill", "history")), "parts": ch["parts"], "bonus": ch["bonus"],
-		"dc": dc, "adv": ch["adv"]})
-	var nat := int(r["nat"])
-	var total := int(r["total"])
-	var o := outcome_for(s, data, int(r["margin"]))
-	st["progress"] = int(st["progress"]) + int(o.get("progress", 0))
+	var a := Activity.attempt(s, data, {"what": name_of(s, data, id), "label": ch["label"], "skill": str(co.get("skill", "history")), "parts": ch["parts"], "bonus": ch["bonus"],
+		"dc": dc, "adv": ch["adv"], "ladder": ladder(s, data)})
+	var o: Dictionary = a["step"]
 	var need := lessons_needed(s, data, id)
-	var lines: Array[String] = ["%s: %s %d %s %d = %d против Сл %d — %s (%d/%d)" % [name_of(s, data, id), ch["label"], nat, "−" if total < nat else "+", absi(total - nat), total, dc,
-		o["name"], mini(int(st["progress"]), need), need]]
+	var finished := Progress.add(st, int(o.get("progress", 0)), need)
+	var lines: Array[String] = ["%s (%d/%d)" % [a["line"], mini(int(st["done"]), need), need]]
 	var dev: Dictionary = DevelopmentRules.direction(data, "study").get("sources", {})
 	lines.append_array(DevelopmentRules.add_xp(c, data, "study", int(dev.get(str(o["id"]), 0))))
-	if int(st["progress"]) >= need:
+	if finished:
 		lines.append_array(graduate(s, data, id))
 	return lines
 
@@ -687,7 +669,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 			parts.append("принят в %s%s" % [school(data, sid).get("name", sid), " (стипендия)" if bool(school_state(c)[sid].get("stipend", false)) else ""])
 		for id: String in view(c)["courses"]:
 			var st: Dictionary = view(c)["courses"][id]
-			parts.append("курс «%s» — %s, %d/%d, пропусков %d" % [name_of(s, data, id), teaches_text(s, data, id), int(st["progress"]),
+			parts.append("курс «%s» — %s, %d/%d, пропусков %d" % [name_of(s, data, id), teaches_text(s, data, id), int(st["done"]),
 				lessons_needed(s, data, id), int(st.get("misses", 0))])
 		for id: Variant in view(c)["done"]:
 			parts.append("окончен «%s»" % name_of(s, data, str(id)))
