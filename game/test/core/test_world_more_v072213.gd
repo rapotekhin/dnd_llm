@@ -16,9 +16,9 @@ func test_the_menhir_ending_needs_knowing() -> void:
 	s.room_id = "pushcha-glade"
 	assert_array(QuestRules.choices_here(s, world)).is_empty()  # killed the priest, never looked at the stone
 	assert_str(QuestRules.step_text(s, world, "ash_over_the_march")).contains("сначала поймите")
-	s.revealed["pushcha-glade"] = ["runes"]
+	Knows.add(s, Knows.SECRET, "pushcha-glade", "runes")
 	assert_int(QuestRules.choices_here(s, world).size()).is_equal(2)
-	s.revealed.erase("pushcha-glade")
+	s.knows.erase(Knows.SECRET)
 	s.flags.append("menhir_understood")  # the hermit told it
 	assert_int(QuestRules.choices_here(s, world).size()).is_equal(2)
 	assert_bool(QuestRules.known_flags(world).has("menhir_understood")).is_true()  # the master may set it

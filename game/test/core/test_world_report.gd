@@ -13,7 +13,7 @@ func before_test() -> void:
 func test_the_room_shows_exits_npcs_secrets_and_their_state() -> void:
 	var text := WorldReport.room(s, data, TestUtils.START_ROOM)
 	assert_str(text).contains("Выходы:").contains("NPC:").contains("Бруно Хмель").contains("Секрет portrait [скрыт")
-	s.revealed[TestUtils.START_ROOM] = ["portrait"]
+	Knows.add(s, Knows.SECRET, TestUtils.START_ROOM, "portrait")
 	assert_str(WorldReport.room(s, data, TestUtils.START_ROOM)).contains("Секрет portrait [найден")
 	assert_str(WorldReport.room(s, data, "no-such-room")).contains("нет комнаты")
 	assert_str(WorldReport.room(s, data, "brod-temple")).contains("ночлег")

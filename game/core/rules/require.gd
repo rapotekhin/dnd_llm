@@ -21,10 +21,10 @@ static func rows(s: GameSession, data: Dictionary, req: Dictionary, ctx: Diction
 		out.append({"text": "отношение %s не хуже: %s" % [str(ctx.get("npc_of", "")), word], "ok": s.attitude(str(ctx.get("npc", ""))) >= a})
 	if req.has("quest"):
 		var qid := str(req["quest"])
-		out.append({"text": "сделано задание «%s»" % data["world"].get("quests", {}).get(qid, {}).get("title", qid), "ok": s.quests_done.has(qid)})
-	if req.has("flag"):
-		var ft := str(req.get("flag_text", ""))
-		out.append({"text": ft if not ft.is_empty() else "условие учителя", "ok": s.flags.has(str(req["flag"]))})
+		out.append({"text": "сделано задание «%s»" % data["world"].get("quests", {}).get(qid, {}).get("title", qid), "ok": Cond.met(s, {"quest_done": qid})})
+	if req.has("when"):
+		var wt := str(req.get("when_text", ""))
+		out.append({"text": wt if not wt.is_empty() else "условие учителя", "ok": Cond.met(s, req["when"])})
 	if bool(req.get("tool", false)):
 		var tool := str(ctx.get("tool", ""))
 		out.append({"text": "владение: " + BackgroundRules.tool_name(data, tool), "ok": CraftRules.proficient(c, tool)})

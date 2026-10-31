@@ -25,7 +25,7 @@ func run() -> void:
 	s.settings["weather"] = false
 	s.minute = 11 * 60
 	BondRules.add(s, data, BRUNO, 60, "")
-	s.secrets_told.append("npc_serving:fern_casks")  # Mira told what she saw at the mill
+	Knows.add(s, Knows.TOLD, "npc_serving", "fern_casks")  # Mira told what she saw at the mill
 	for r: String in ["brod-tavern-hall", "brod-gate"]:
 		if not s.visited.has(r):
 			s.visited.append(r)

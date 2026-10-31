@@ -157,9 +157,8 @@ static func taste_name(s: GameSession, data: Dictionary, taste: String) -> Strin
 
 
 ## The tastes the hero has learned from gifts: {likes: [..], dislikes: [..]}.
-static func known(c: Dictionary, npc_id: String) -> Dictionary:
-	var k: Dictionary = entry(c, npc_id).get("known", {})
-	return {"likes": k.get("likes", []), "dislikes": k.get("dislikes", [])}
+static func known(s: GameSession, npc_id: String) -> Dictionary:
+	return {"likes": Knows.under(s, Knows.LIKES, npc_id), "dislikes": Knows.under(s, Knows.DISLIKES, npc_id)}
 
 
 ## The things the hero may give: owned, not worn, not held by a curse.
@@ -225,14 +224,9 @@ static func gift(s: GameSession, data: Dictionary, npc_id: String, item_id: Stri
 	b["gift_day"] = s.day
 	var lines: Array[String] = ["Подарок — %s: «%s»" % [who, name]]
 	if not str(t["taste"]).is_empty():
-		var key := "likes" if t["taste"] == "liked" else "dislikes"
-		var k: Dictionary = b.get("known", {})
-		var list: Array = k.get(key, [])
-		if not list.has(t["by"]):
-			list.append(t["by"])
-		k[key] = list
-		b["known"] = k
-		lines.append("%s: %s — %s" % [who, taste_name(s, data, str(t["by"])), "по душе" if key == "likes" else "не по душе"])
+		var key := Knows.LIKES if t["taste"] == "liked" else Knows.DISLIKES
+		Knows.add(s, key, npc_id, str(t["by"]))
+		lines.append("%s: %s — %s" % [who, taste_name(s, data, str(t["by"])), "по душе" if key == Knows.LIKES else "не по душе"])
 	if t["taste"] == "liked":
 		s.shift_attitude(npc_id, int(cfg(data)["gift"]["attitude_liked"]), data)
 	s.remember(npc_id, "герой подарил «%s»%s" % [name, " — по душе" if t["taste"] == "liked" else " — не по душе" if t["taste"] == "disliked" else ""])

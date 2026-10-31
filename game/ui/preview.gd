@@ -111,7 +111,7 @@ static func _combat(won: bool) -> GameSession:
 	s.chat.clear()
 	s.options.clear()
 	s.append(GameSession.dm_entry("Из папоротника выходит серый волк, за ним на пне мелькает гоблин, а с ели на паутине спускается паук размером с собаку.", "t-3"))
-	s.known_monsters.append("giant_spider")
+	Knows.add(s, Knows.MONSTER, "giant_spider")
 	CombatRules.start(s, data, [{"monster": "wolf", "col": 0, "name": "Серый волк"}, {"monster": "goblin", "col": 2},
 		{"monster": "giant_spider", "col": -2}], {})
 	var order: Array = s.combat["order"]

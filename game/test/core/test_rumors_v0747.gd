@@ -127,20 +127,20 @@ func test_the_innkeeper_sells_a_rumour_a_tip_first() -> void:
 	var lines := TradeRules.buy_service(s, data, "npc_innkeeper", "rumor")
 	assert_int(int(s.character["gold_cp"])).is_equal(gold - 20)
 	assert_str(" ".join(lines)).contains("отмечено на карте")
-	assert_int(RumorRules._state(s)["heard"].size()).is_equal(1)
+	assert_int(Knows.all(s, Knows.RUMOR).size()).is_equal(1)
 
 
 func test_a_true_tip_marks_the_map_and_finds_the_secret() -> void:
 	var s := _session()
 	var lines := RumorRules.hear(s, data, ["mill_coins"], "Бруно")
 	assert_str(lines[0]).contains("отмечено на карте")
-	assert_bool((s.character["scouted"] as Array).has("brod-mill")).is_true()
+	assert_bool(Knows.has(s, Knows.SCOUTED, "brod-mill")).is_true()
 	assert_bool(WorldMap.known(s, data["world"])["rooms"].has("brod-mill")).is_true()
 	assert_bool(RumorRules.marks(s, data).has("brod-mill")).is_true()
 	assert_str(RumorRules.groups(s, data)[0]["title"]).is_equal("Наводки")
 	var found := RumorRules.on_enter(s, data, "brod-mill")
 	assert_str(" ".join(found)).contains("Слух подтвердился")
-	assert_bool((s.revealed.get("brod-mill", []) as Array).has("sacks")).is_true()
+	assert_bool(Knows.has(s, Knows.SECRET, "brod-mill", "sacks")).is_true()
 	assert_bool(RumorRules.marks(s, data).is_empty()).is_true()
 	assert_array(RumorRules.on_enter(s, data, "brod-mill")).is_empty()  # checked once
 

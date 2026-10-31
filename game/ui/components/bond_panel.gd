@@ -89,7 +89,7 @@ func _rebuild() -> void:
 	var perks := BondRules.perks_text(s, data, _npc)
 	var pl := _label(_box, tr("BOND_GIVES").format({"list": ", ".join(perks)}) if not perks.is_empty() else tr("BOND_GIVES_NOTHING"), UiTheme.MUTED_LABEL)
 	pl.name = "BondPerks"
-	var k := BondRules.known(c, _npc)
+	var k := BondRules.known(s, _npc)
 	var tastes: Array[String] = []
 	if not (k["likes"] as Array).is_empty():
 		tastes.append(tr("BOND_LIKES").format({"list": ", ".join((k["likes"] as Array).map(func(t: Variant) -> String: return BondRules.taste_name(s, data, str(t))))}))
@@ -149,7 +149,7 @@ func _gifts(s: GameSession, data: Dictionary) -> void:
 	if list.is_empty():
 		_label(_box, tr("BOND_GIFT_NONE"), UiTheme.MUTED_LABEL).name = "GiftNote"
 		return
-	var k := BondRules.known(s.character, _npc)
+	var k := BondRules.known(s, _npc)
 	for id: String in list:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)

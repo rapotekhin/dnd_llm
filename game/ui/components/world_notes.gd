@@ -3,7 +3,7 @@ extends ModalFrame
 ## Map and journal over the game screen (roadmap v0.5.2). Map (v0.7.6): the scheme of visited places and the «?»
 ## behind their exits (MapCanvas), the picked place, its quests and the fast travel there. Journal: quests,
 ## location and conversation summaries, found secrets.
-## Read-only; built from the session (visited, summaries, revealed) on every open.
+## Read-only; built from the session (visited, summaries, what the hero knows) on every open.
 
 const MAP := "map"
 const JOURNAL := "journal"
@@ -378,14 +378,14 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 				out.append({"title": str(w.location(loc).get("name", loc)), "lines": by_loc[loc]})
 			if not s.notes.is_empty():  # the master's memory of events (v0.7.4)
 				out.append({"title": tr("JOURNAL_NOTES"), "lines": s.notes.map(func(n: Dictionary) -> String:
-					return "День %d, %s, %s — %s" % [int(n["day"]), n.get("clock", ""), w.room(str(n["room"])).get("name", n["room"]), n["text"]])})
+					return "День %d, %s, %s — %s" % [Fact.day(n), Fact.clock(n), w.room(str(n["room"])).get("name", n["room"]), n["text"]])})
 		"chronicle":  # v0.7.14.4: the facts of the engine by day, the newest day first and open
 			var by_day := {}
 			for e: Dictionary in s.chronicle:
-				var d := int(e["day"])
+				var d := Fact.day(e)
 				if not by_day.has(d):
 					by_day[d] = []
-				(by_day[d] as Array).append("%02d:%02d · %s — %s" % [int(e["minute"]) / 60, int(e["minute"]) % 60, w.room(str(e["room"])).get("name", e["room"]), e["text"]])
+				(by_day[d] as Array).append("%s · %s — %s" % [Fact.clock(e), w.room(str(e["room"])).get("name", e["room"]), e["text"]])
 			var days := by_day.keys()
 			days.sort()
 			days.reverse()

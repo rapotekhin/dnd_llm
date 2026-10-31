@@ -21,9 +21,9 @@ WORLDS = DATA / "worlds"
 SCHEMA = json.loads((WORLDS / "pack.schema.json").read_text(encoding="utf-8"))
 
 
-def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bool) -> list[str]:
-    """A quest or exit condition: one fact (encounter, secret, room, flag), a button (talk with an item, choice —
-    only on a quest step), or all / any of facts."""
+def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bool, quests: dict | None = None) -> list[str]:
+    """A condition of the one language (Cond): one fact (encounter, secret, room, flag, quest), a button (talk with an
+    item, choice — only on a quest step), or all / any of facts."""
     errors: list[str] = []
     keys = set(w) - {"item", "qty"}  # v0.7.44: qty of the item handed over
     if len(keys) != 1:
@@ -46,8 +46,11 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
         errors.append(f"{where}: нет NPC {w['talk']}")
     if "item" in w and (not ({"talk", "arrive"} & set(w)) or w["item"] not in items or not top):
         errors.append(f"{where}: item — предмет каталога и только вместе с talk или arrive шага задания")
+    for k in ("quest", "quest_done"):
+        if k in w and quests is not None and w[k] not in quests:
+            errors.append(f"{where}: нет задания {w[k]}")
     for sub_w in w.get("all", []) + w.get("any", []):
-        errors += check_when(sub_w, where, rooms, npcs, items, top=False)
+        errors += check_when(sub_w, where, rooms, npcs, items, top=False, quests=quests)
     return errors
 
 
@@ -437,11 +440,11 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         if room.get("wilds_owner") and room["wilds_owner"] not in npcs:  # v0.7.41: whose grounds these are
             errors.append(f"комната {rid}: wilds_owner {room['wilds_owner']} — нет такого NPC")
         for v in room.get("variants", []):  # v0.7.14.1: the room by the world's flags; v0.7.39.6: or while a quest is taken
-            keys = {"vid", "if_flag", "if_not_flag", "if_quest", "description", "npcs", "hooks", "encounter", "safe"}
-            if not ("if_flag" in v or "if_not_flag" in v or "if_quest" in v) or set(v) - keys:
-                errors.append(f"комната {rid}: вариант — if_flag, if_not_flag или if_quest и только {', '.join(sorted(keys))}")
-            if "if_quest" in v and v["if_quest"] not in world.get("quests", {}):
-                errors.append(f"комната {rid}: вариант ждёт неизвестного задания {v['if_quest']}")
+            keys = {"vid", "when", "description", "npcs", "hooks", "encounter", "safe"}
+            if not isinstance(v.get("when"), dict) or set(v) - keys:
+                errors.append(f"комната {rid}: вариант — when и только {', '.join(sorted(keys))}")
+            else:
+                errors += check_when(v["when"], f"комната {rid}, вариант", rooms, npcs, items, top=False, quests=world.get("quests", {}))
             errors += [f"комната {rid}: в варианте нет NPC {n}" for n in v.get("npcs", []) if n not in npcs]
             errors += [f"комната {rid}: в варианте нет монстра {f.get('monster')}" for f in v.get("encounter", {}).get("enemies", [])
                        if f.get("monster") not in ids["monsters"]]
@@ -466,8 +469,10 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
             errors.append(f"NPC {nid}: sick — болезнь из {', '.join(sorted(diseases))}")
         for i, tv in enumerate(npc.get("trade_variants", [])):  # v0.7.17.2: the trader and the world's flags
             where = f"NPC {nid}, trade_variants[{i}]"
-            if not (set(tv) <= {"if_flag", "if_not_flag", "price_pct", "stock", "remove", "news"}) or not ({"if_flag", "if_not_flag"} & set(tv)):
-                errors.append(f"{where}: ключи if_flag / if_not_flag, price_pct, stock, remove, news")
+            if not (set(tv) <= {"when", "price_pct", "stock", "remove", "news"}) or not isinstance(tv.get("when"), dict):
+                errors.append(f"{where}: ключи when, price_pct, stock, remove, news")
+            else:
+                errors += check_when(tv["when"], where, rooms, npcs, items, top=False, quests=world.get("quests", {}))
             errors += [f"{where}: нет предмета {x}" for x in list(tv.get("stock", {})) + list(tv.get("remove", [])) if x not in items]
         tastes = set(game_rules["bonds"]["tastes"])  # v0.7.31: a taste group or a catalog item
         for key in ("likes", "dislikes"):

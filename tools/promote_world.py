@@ -321,7 +321,8 @@ def _encounter_room(gen: dict, enc: str) -> str:
 
 def _mine(qid: str, v: dict) -> bool:
     """A room variant the quest made (v0.7.39.6): its fight while taken, or a change by its choice's flag."""
-    return v.get("if_quest") == qid or str(v.get("if_flag", "")).startswith(qid + "_")
+    when = v.get("when", {})
+    return when.get("quest") == qid or str(when.get("flag", "")).startswith(qid + "_")
 
 
 def _renamed(s: str, qid: str, new_id: str) -> str:
@@ -344,10 +345,10 @@ def _quest_into(world: dict, gen: dict, q: dict, qid: str, new_id: str, ids: dic
                 continue
             v = json.loads(json.dumps(v))
             v["vid"] = _renamed(str(v.get("vid", "")), qid, new_id)
-            if "if_quest" in v:
-                v["if_quest"] = new_id
-            if "if_flag" in v:
-                v["if_flag"] = _renamed(str(v["if_flag"]), qid, new_id)
+            if "quest" in v["when"]:
+                v["when"]["quest"] = new_id
+            if "flag" in v["when"]:
+                v["when"]["flag"] = _renamed(str(v["when"]["flag"]), qid, new_id)
             if v.get("encounter"):
                 old = str(v["encounter"]["id"])
                 v["encounter"]["id"] = encounters[old] = _renamed(old, qid, new_id)

@@ -13,7 +13,7 @@ func before_test() -> void:
 func _hero(room: String) -> GameSession:
 	var s := TestUtils.new_session()
 	s.character.erase("orgs")
-	s.character.erase("fences_known")
+	s.knows.erase(Knows.FENCE)
 	s.room_id = room
 	s.minute = 12 * 60
 	return s

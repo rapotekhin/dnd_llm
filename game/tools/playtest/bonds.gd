@@ -37,7 +37,7 @@ func run() -> void:
 	await shot("bruno")
 	await press(find(win, "Gift_ale"))
 	await frames(4)
-	step("the ale given by taste", BondRules.points(c, "npc_innkeeper") == 10 and (BondRules.known(c, "npc_innkeeper")["likes"] as Array).has("drink"), _last_effects(s))
+	step("the ale given by taste", BondRules.points(c, "npc_innkeeper") == 10 and (BondRules.known(s, "npc_innkeeper")["likes"] as Array).has("drink"), _last_effects(s))
 	await shot("gift")
 	win.visible = false
 

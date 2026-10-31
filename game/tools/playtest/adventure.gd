@@ -60,7 +60,7 @@ func run() -> void:
 	node("EventBus").state_changed.emit()
 
 	s.encounters_done.append("gallery_kobolds")  # not a combat test
-	s.revealed["mine-gallery"] = ["deadfall"]  # as if the rogue's passive Perception noticed it
+	Knows.add(s, Knows.SECRET, "mine-gallery", "deadfall")  # as if the rogue's passive Perception noticed it
 	if not await _go(gs, "mine-gallery"):
 		return
 	var disarm: Button = find(screen(), "Disarm_mine-deep")
@@ -76,7 +76,7 @@ func run() -> void:
 		step("the trap is spent", s.traps.has("mine-gallery:deadfall"))
 		await shot("trap_done")
 
-	s.revealed["mine-flooded"] = ["amulet"]  # as if a search found it; the cache gives the item on entering
+	Knows.add(s, Knows.SECRET, "mine-flooded", "amulet")  # as if a search found it; the cache gives the item on entering
 	if not await _go(gs, "mine-flooded"):
 		return
 	step("the cache gave the amulet", int(s.character["inventory"].get("amulet", 0)) == 1)

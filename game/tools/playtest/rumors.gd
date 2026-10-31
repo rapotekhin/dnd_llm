@@ -80,7 +80,7 @@ func run() -> void:
 	await _go(gs, "brod-mill")
 	var fx := " ".join(s.chat.filter(func(e: Dictionary) -> bool: return e["kind"] == GameSession.KIND_EFFECT).slice(-3).map(
 		func(e: Dictionary) -> String: return " · ".join(e.get("lines", []))))
-	step("the tip came true at the mill", fx.contains("Слух подтвердился") and (s.revealed.get("brod-mill", []) as Array).has("sacks"), fx.right(300))
+	step("the tip came true at the mill", fx.contains("Слух подтвердился") and Knows.has(s, Knows.SECRET, "brod-mill", "sacks"), fx.right(300))
 	await shot("tip_true")
 
 	# a murder in the Pushcha: Brod knows nothing until the rumour comes

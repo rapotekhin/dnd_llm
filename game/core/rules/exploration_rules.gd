@@ -93,12 +93,7 @@ static func secrets(world: Dictionary, room_id: String) -> Array:
 
 
 static func _reveal(s: GameSession, room_id: String, secret: Dictionary) -> bool:
-	var ids: Array = s.revealed.get(room_id, [])
-	if ids.has(secret["id"]):
-		return false
-	ids.append(str(secret["id"]))
-	s.revealed[room_id] = ids
-	return true
+	return Knows.add(s, Knows.SECRET, room_id, str(secret["id"]))
 
 
 ## Sneaking (v0.6.2) costs 5 of passive Perception (PHB, a stealthy pace).
@@ -140,7 +135,7 @@ static func secret_key(room_id: String, sec: Dictionary) -> String:
 
 
 static func is_found(s: GameSession, room_id: String, sec: Dictionary) -> bool:
-	return (s.revealed.get(room_id, []) as Array).has(str(sec["id"]))
+	return Knows.has(s, Knows.SECRET, room_id, str(sec["id"]))
 
 
 ## The live trap of `room_id` that guards the exit to `to`, or {}.
@@ -228,9 +223,9 @@ static func take_caches(s: GameSession, data: Dictionary, room_id: String) -> Ar
 ## What the player already noticed or found in a room (for the snapshot and the journal).
 static func found_texts(s: GameSession, world: Dictionary, room_id: String) -> Array[String]:
 	var out: Array[String] = []
-	var ids: Array = s.revealed.get(room_id, [])
+	var ids := Knows.under(s, Knows.SECRET, room_id)
 	for sec: Dictionary in secrets(world, room_id):
-		if ids.has(sec["id"]):
+		if ids.has(str(sec["id"])):
 			out.append(str(sec["text"]))
 	return out
 

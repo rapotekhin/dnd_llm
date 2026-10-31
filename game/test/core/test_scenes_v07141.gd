@@ -47,7 +47,7 @@ func test_the_taken_power_empties_the_glade_and_sets_wolves_on_the_trail() -> vo
 
 func test_a_bad_variant_is_refused_by_the_validator() -> void:
 	var w: Dictionary = data["world"].duplicate(true)
-	w["rooms"]["pushcha-glade"]["variants"] = [{"description": "без условия"}, {"if_flag": "x", "npcs": ["npc_nobody"]}]
+	w["rooms"]["pushcha-glade"]["variants"] = [{"description": "без условия"}, {"when": {"flag": "x"}, "npcs": ["npc_nobody"]}]
 	var errors := WorldPack._validate_world(w, data)
 	assert_bool(errors.any(func(e: String) -> bool: return e.contains("вариант"))).is_true()
 	assert_bool(errors.any(func(e: String) -> bool: return e.contains("npc_nobody"))).is_true()

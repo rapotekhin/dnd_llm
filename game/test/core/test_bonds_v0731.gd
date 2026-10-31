@@ -53,14 +53,14 @@ func test_a_gift_by_taste_once_a_day() -> void:
 	var lines := BondRules.gift(s, data, "npc_innkeeper", "ale")
 	assert_int(BondRules.points(c, "npc_innkeeper")).is_equal(10)
 	assert_int(int(c["inventory"]["ale"])).is_equal(1)
-	assert_array(BondRules.known(c, "npc_innkeeper")["likes"]).contains(["drink"])
+	assert_array(BondRules.known(s, "npc_innkeeper")["likes"]).contains(["drink"])
 	assert_bool(TheftRules.pockets(s, data, "npc_innkeeper").any(func(e: Dictionary) -> bool: return str(e["item_id"]) == "ale")).is_true()
 	assert_str(" ".join(lines)).contains("по душе")
 	assert_str(BondRules.gift_why(s, data, "npc_innkeeper", "ale")).is_equal("BOND_GIFT_TODAY")
 	s.day += 1
 	BondRules.gift(s, data, "npc_innkeeper", "dagger")
 	assert_int(BondRules.points(c, "npc_innkeeper")).is_equal(2)
-	assert_array(BondRules.known(c, "npc_innkeeper")["dislikes"]).contains(["weapons"])
+	assert_array(BondRules.known(s, "npc_innkeeper")["dislikes"]).contains(["weapons"])
 
 
 func test_a_neutral_gift_counts_by_value() -> void:

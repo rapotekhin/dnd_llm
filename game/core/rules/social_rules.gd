@@ -188,7 +188,7 @@ static func secrets(data: Dictionary, npc_id: String) -> Array:
 
 
 static func told(s: GameSession, npc_id: String, secret_id: String) -> bool:
-	return s.secrets_told.has("%s:%s" % [npc_id, secret_id])
+	return Knows.has(s, Knows.TOLD, npc_id, secret_id)
 
 
 static func _skills(data: Dictionary, sec: Dictionary) -> Array:
@@ -221,17 +221,13 @@ static func plan_secret(s: GameSession, data: Dictionary, npc_id: String, secret
 
 ## The NPC tells the secret: the flag, the room secret it reveals, the NPC's memory. Its text.
 static func tell(s: GameSession, data: Dictionary, npc_id: String, sec: Dictionary) -> String:
-	s.secrets_told.append("%s:%s" % [npc_id, sec["id"]])
+	Knows.add(s, Knows.TOLD, npc_id, str(sec["id"]))
 	var flag := str(sec.get("flag", ""))
 	if not flag.is_empty() and not s.flags.has(flag):
 		s.flags.append(flag)
 	var reveals := str(sec.get("reveals", ""))
 	if reveals.contains(":"):
-		var room := reveals.get_slice(":", 0)
-		var ids: Array = s.revealed.get(room, [])
-		if not ids.has(reveals.get_slice(":", 1)):
-			ids.append(reveals.get_slice(":", 1))
-			s.revealed[room] = ids
+		Knows.add(s, Knows.SECRET, reveals)
 	s.remember(npc_id, "рассказал%s герою тайну: %s" % [CrimeRules._ending(data, npc_id), sec["text"]])
 	return str(sec["text"])
 

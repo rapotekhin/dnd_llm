@@ -26,7 +26,7 @@ func test_a_won_check_pays_for_the_secret() -> void:
 	assert_array(SocialRules.reveal_by_check(s, data, "npc_cook", "deception", 20)).is_empty()  # not a skill of it
 	var told := SocialRules.reveal_by_check(s, data, "npc_cook", "intimidation", 12)
 	assert_str(" ".join(told)).contains("лаз контрабандистов")
-	assert_array(s.revealed.get("brod-tavern-cellar", [])).contains(["tunnel"])
+	assert_array(Knows.under(s, Knows.SECRET, "brod-tavern-cellar")).contains(["tunnel"])
 	assert_str(" ".join(s.memory_of("npc_cook"))).contains("рассказал герою тайну")
 	assert_array(SocialRules.reveal_by_check(s, data, "npc_cook", "persuasion", 20)).is_empty()  # once
 

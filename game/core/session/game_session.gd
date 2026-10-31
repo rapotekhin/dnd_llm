@@ -54,8 +54,8 @@ var being_counter: int = 0
 var flags: Array[String] = []
 ## Failed skill checks: "skill|target" → {"result", "advantages"} (ExplorationRules); cleared by a long rest.
 var locks: Dictionary = {}
-## room_id → ids of secrets noticed or found there.
-var revealed: Dictionary = {}
+## What the hero knows, {kind: [key]} (Knows, v0.7.68).
+var knows: Dictionary = {}
 ## Rooms the player has been to, in order (the map).
 var visited: Array[String] = []
 ## Days since the start; a long rest starts the next one.
@@ -95,8 +95,6 @@ var traps: Dictionary = {}
 var caches_taken: Array[String] = []
 ## The room where people noticed the sneaking player: no sneaking there until they leave (v0.6.5).
 var sneak_noticed: String = ""
-## Kinds of foes the player knows (inspected in a fight, v0.6.6): their numbers show on the cards.
-var known_monsters: Array[String] = []
 ## Things of the rooms {room_id: [prop]} (PropRules) and shops closed for the player {npc_id: day} (v0.7.0).
 var props: Dictionary = {}
 var shop_closed: Dictionary = {}
@@ -164,8 +162,6 @@ var reputation: Dictionary = {}
 var generated: Dictionary = {}
 ## Creatures a spell called to go with the hero (v0.7.22.22, AllyRules): [{id, spell, monster, name, until, concentration,
 ## hp, helper}]; `until` — the absolute minute they go, −1 until let go.
-## NPC secrets the hero learned (v0.7.15.3): "npc_id:secret_id".
-var secrets_told: Array[String] = []
 ## "location:<id>" and "dialogue:<npc_id>" → text from summary.request.
 var summaries: Dictionary = {}
 ## Lines of the current conversation, the events for its summary.
@@ -292,7 +288,7 @@ func next_effect_id() -> String:
 func append(entry: Dictionary) -> Dictionary:
 	chat.append(entry)
 	if str(entry.get("kind", "")) == KIND_EFFECT and not (entry.get("lines", []) as Array).is_empty():  # v0.7.14.4
-		chronicle.append({"day": day, "minute": minute, "room": room_id, "text": " · ".join(entry["lines"])})
+		chronicle.append(Fact.of(self, " · ".join(entry["lines"]), room_id))
 		if chronicle.size() > CHRONICLE_MAX:
 			chronicle = chronicle.slice(chronicle.size() - CHRONICLE_MAX)
 	return entry
@@ -305,8 +301,7 @@ func chronicle_tail(world: Dictionary, n: int) -> Array[String]:
 		var t := str(e["text"])
 		if t.begins_with("Переход:") and not t.contains(" · ") or t.begins_with("Путь:") and not t.contains(" · "):
 			continue
-		out.append("день %d, %02d:%02d, %s — %s" % [int(e["day"]), int(e["minute"]) / 60, int(e["minute"]) % 60,
-			world["rooms"].get(str(e["room"]), {}).get("name", e["room"]), t])
+		out.append("день %d, %s, %s — %s" % [Fact.day(e), Fact.clock(e), world["rooms"].get(str(e["room"]), {}).get("name", e["room"]), t])
 	return out.slice(maxi(0, out.size() - n))
 
 
@@ -317,7 +312,7 @@ func remember(npc_id: String, text: String) -> void:
 	var list: Array = Being.view(self, npc_id).get("memory", [])
 	if list.any(func(m: Dictionary) -> bool: return str(m["text"]) == text):
 		return
-	list.append({"day": day, "text": text})
+	list.append(Fact.of(self, text, room_id))
 	Being.of(self, npc_id)["memory"] = list.slice(maxi(0, list.size() - NPC_MEMORY_MAX))
 
 
@@ -325,7 +320,7 @@ func remember(npc_id: String, text: String) -> void:
 func memory_of(npc_id: String, n: int = NPC_MEMORY_MAX) -> Array[String]:
 	var out: Array[String] = []
 	for m: Dictionary in Being.view(self, npc_id).get("memory", []):
-		out.append("день %d — %s" % [int(m["day"]), m["text"]])
+		out.append("день %d — %s" % [Fact.day(m), m["text"]])
 	return out.slice(maxi(0, out.size() - n))
 
 
@@ -458,7 +453,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"flags": flags,
 		"summaries": summaries,
 		"locks": locks,
-		"revealed": revealed,
+		"knows": knows,
 		"visited": visited,
 		"day": day,
 		"merchants": merchants,
@@ -481,11 +476,9 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"caches_taken": caches_taken,
 		"sneak_noticed": sneak_noticed,
 		"fight_on_load": fight_on_load,
-		"known_monsters": known_monsters,
 		"props": props,
 		"shop_closed": shop_closed,
 		"notes": notes,
-		"secrets_told": secrets_told,
 		"generated": generated,
 		"reputation": reputation,
 		"crimes": crimes,
@@ -546,7 +539,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.locks = d.get("locks", {})
 	for key: String in s.locks:
 		_normalized(s.locks[key]["result"])
-	s.revealed = d.get("revealed", {})
+	s.knows = d.get("knows", {})
 	for v: Variant in d.get("visited", []):
 		s.visited.append(str(v))
 	s.day = int(d.get("day", 1))
@@ -575,8 +568,6 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.sneak_noticed = str(d.get("sneak_noticed", ""))
 	var fight: Variant = d.get("fight_on_load", {})
 	s.fight_on_load = (fight as Dictionary).duplicate(true) if fight is Dictionary else {}
-	for m: Variant in d.get("known_monsters", []):
-		s.known_monsters.append(str(m))
 	s.props = _whole(d.get("props", {}))  # days and counters, the food batches lying there
 	for room: String in s.props:  # whole numbers back from JSON: contents, the lock, when it was dropped (v0.7.22.8)
 		for p: Variant in s.props[room]:
@@ -624,12 +615,10 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.ledger.assign(_whole(d.get("ledger", [])))
 	for e: Variant in d.get("chronicle", []):
 		if e is Dictionary:
-			s.chronicle.append({"day": int(e.get("day", 1)), "minute": int(e.get("minute", 0)), "room": str(e.get("room", "")), "text": str(e.get("text", ""))})
+			s.chronicle.append((e as Dictionary).duplicate())
 	for e: Variant in d.get("notes", []):
 		if e is Dictionary:
 			s.notes.append((e as Dictionary).duplicate())
-	for k: Variant in d.get("secrets_told", []):
-		s.secrets_told.append(str(k))
 	if d.get("generated") is Dictionary:
 		s.generated = (d["generated"] as Dictionary).duplicate(true)
 		for k: String in ["faith", "letters", "rumors", "weather", "made"]:  # counters and days, whole numbers again after JSON

@@ -847,7 +847,7 @@ func _plan_quest_give(s: GameSession, data: Dictionary, id: String) -> Dictionar
 func _plan_hidden_give(s: GameSession, world: Dictionary, id: String) -> Dictionary:
 	for rid: String in world["rooms"]:
 		for sec: Dictionary in ExplorationRules.secrets(world, rid):
-			if not (sec.get("loot", {}).get("items", {}) as Dictionary).has(id) or (s.revealed.get(rid, []) as Array).has(sec["id"]):
+			if not (sec.get("loot", {}).get("items", {}) as Dictionary).has(id) or Knows.has(s, Knows.SECRET, rid, str(sec["id"])):
 				continue
 			var skill := str(sec.get("skill", "perception"))
 			var how := "request_check %s или investigation" % skill if skill != "investigation" else "request_check investigation"
@@ -931,7 +931,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		s.remember(str(plan["npc_id"]), str(plan["text"]))
 		return
 	if plan.has("text"):  # note (v0.7.4)
-		s.notes.append({"day": s.day, "clock": TimeRules.clock(s), "room": s.room_id, "text": str(plan["text"])})
+		s.notes.append(Fact.of(s, str(plan["text"]), s.room_id))
 		return
 	if plan.has("slots"):  # equip (v0.7.4); time and the turn's economy (v0.7.7)
 		var before: Dictionary = (s.character["equipped"] as Dictionary).duplicate()

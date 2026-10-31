@@ -10,7 +10,7 @@ extends RefCounted
 ## the board's notices, the master's `rumor` effect. A rumour may point at a room (and a secret in it) — a tip: heard,
 ## it puts the room on the map and in the journal; walked into, the tip is checked: true — the secret is found, false —
 ## the lie is out. A true rumour fades after life_days[weight]; a lie lives until it is refuted. The state lives in
-## `generated.rumors` {list {id: rumour}, heard [ids], checked {id: bool}, asked {npc: day}, seq}.
+## `generated.rumors` {list {id: rumour}, checked {id: bool}, asked {npc: day}, seq}, the heard ones in Knows.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -24,7 +24,7 @@ static func on(data: Dictionary) -> bool:
 static func _state(s: GameSession) -> Dictionary:
 	var gen := WorldGen.generated(s)
 	if not gen.has("rumors"):
-		gen["rumors"] = {"list": {}, "heard": [], "checked": {}, "asked": {}, "seq": 0}
+		gen["rumors"] = {"list": {}, "checked": {}, "asked": {}, "seq": 0}
 	return gen["rumors"]
 
 
@@ -33,7 +33,7 @@ static func get_rumor(s: GameSession, id: String) -> Dictionary:
 
 
 static func heard(s: GameSession, id: String) -> bool:
-	return (_state(s)["heard"] as Array).has(id)
+	return Knows.has(s, Knows.RUMOR, id)
 
 
 static func _loc(data: Dictionary, room_id: String) -> String:
@@ -167,14 +167,11 @@ static func hear(s: GameSession, data: Dictionary, ids: Array, who: String = "")
 		var r := get_rumor(s, str(id))
 		if r.is_empty() or heard(s, str(id)):
 			continue
-		st["heard"].append(str(id))
+		Knows.add(s, Knows.RUMOR, str(id))
 		var room := str(r.get("target_room", ""))
 		var marked: bool = not room.is_empty() and data["world"]["rooms"].has(room) and not st["checked"].has(str(id))
 		if marked and not s.visited.has(room):
-			var scouted: Array = s.character.get("scouted", [])
-			if not scouted.has(room):
-				scouted.append(room)
-			s.character["scouted"] = scouted
+			Knows.add(s, Knows.SCOUTED, room)
 		lines.append("%s%s: %s%s" % ["Объявление" if bool(r.get("notice", false)) else "Слух", (" (%s)" % who) if not who.is_empty() else "",
 			r["text"], " — отмечено на карте" if marked else ""])
 	return lines
@@ -305,7 +302,7 @@ static func on_enter(s: GameSession, data: Dictionary, room_id: String) -> Array
 	if not on(data):
 		return lines
 	var st := _state(s)
-	for id: Variant in st["heard"]:
+	for id: String in Knows.all(s, Knows.RUMOR):
 		var r := get_rumor(s, str(id))
 		if r.is_empty() or str(r.get("target_room", "")) != room_id or st["checked"].has(str(id)):
 			continue
@@ -329,7 +326,7 @@ static func marks(s: GameSession, data: Dictionary) -> Dictionary:
 	if not on(data):
 		return out
 	var st := _state(s)
-	for id: Variant in st["heard"]:
+	for id: String in Knows.all(s, Knows.RUMOR):
 		var r := get_rumor(s, str(id))
 		var room := str(r.get("target_room", ""))
 		if r.is_empty() or room.is_empty() or st["checked"].has(str(id)) or not alive(s, r):
@@ -351,7 +348,7 @@ static func groups(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	var plain: Array[String] = []
 	var done: Array[String] = []
 	var st := _state(s)
-	for id: Variant in st["heard"]:
+	for id: String in Knows.all(s, Knows.RUMOR):
 		var r := get_rumor(s, str(id))
 		if r.is_empty():
 			continue
@@ -391,7 +388,8 @@ static func snapshot(s: GameSession, data: Dictionary) -> Array[String]:
 	var list := known_by(s, data, s.npc_id) if s.in_conversation() and not s.npc_id.is_empty() else \
 		known_at(s, data, _loc(data, s.room_id)).filter(func(r: Dictionary) -> bool: return int(r["weight"]) >= int(cfg(data)["plain_min_weight"]))
 	var names: Dictionary = cfg(data)["weight_names"]
-	for r: Dictionary in list.slice(0, int(cfg(data)["snapshot_max"])):
+	for rumour: Dictionary in list.slice(0, int(cfg(data)["snapshot_max"])):
+		var r := Fact.told(rumour)
 		var tags: Array[String] = [str(names[str(int(r["weight"]))])]
 		if bool(r.get("notice", false)):
 			tags.append("объявление")
@@ -455,7 +453,7 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 		"spread":
 			var r := add(s, data, {"text": str(p["words"]), "weight": int(p["weight"]), "origin": str(p["origin"]), "truth": bool(p["truth"]),
 				"notice": bool(p["notice"]), "fame": int(p["fame"]), "target_room": str(p["target_room"]), "source": "master"})
-			_state(s)["heard"].append(str(r["id"]))  # the hero was there when it began
+			Knows.add(s, Knows.RUMOR, str(r["id"]))  # the hero was there when it began
 			var lines: Array[String] = ["Пошёл слух: %s" % r["text"]]
 			if int(p["fame"]) != 0:
 				lines.append_array(ReputationRules.add(s, data, str(p["origin"]), int(p["fame"]), "слух", false))

@@ -693,7 +693,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 ## A course the master makes: checked against rules.study.make. The teacher is an NPC of the scene or (v0.7.39.7) a
 ## living teacher of the world the master points to — the course waits for the hero there; a spell, and anything at a
 ## teacher away, only by TeachRules (its template, trade, `teaches`). A spell course's lessons, fee and the teacher's
-## attitude are the engine's; `requires` {attitude, quest, flag, flag_text} — the master's conditions. {plan, summary}
+## attitude are the engine's; `requires` {attitude, quest, flag, flag_text} — the master's conditions, kept as a `when` row. {plan, summary}
 ## or {reason}. `teacher_def` — the definition of a person a quest's act is about to bring (a check before it is made).
 static func make(s: GameSession, data: Dictionary, spec: Dictionary, teacher_def: Dictionary = {}) -> Dictionary:
 	var m: Dictionary = cfg(data)["make"]
@@ -790,8 +790,8 @@ static func _make_requires(s: GameSession, data: Dictionary, spec: Variant, circ
 			return {"reason": "requires.quest — id задания мира (%s нет)" % q}
 		out["quest"] = q
 	if not str(r.get("flag", "") if r.get("flag") != null else "").is_empty():
-		out["flag"] = str(r["flag"])
-		out["flag_text"] = str(r.get("flag_text", "") if r.get("flag_text") != null else "").strip_edges().left(80)
+		out["when"] = {"flag": str(r["flag"])}
+		out["when_text"] = str(r.get("flag_text", "") if r.get("flag_text") != null else "").strip_edges().left(80)
 	return {"requires": out}
 
 

@@ -10,7 +10,7 @@
 		"turns": 2,
 		"world_id": "frontier"
 	},
-	"save_version": 59,
+	"save_version": 60,
 	"saved_at": "2026-10-18T12:00:00",
 	"session": {
 		"beings": {},
@@ -228,7 +228,6 @@
 		"flags": [],
 		"generated": {},
 		"items": {},
-		"known_monsters": [],
 		"let_go": {},
 		"location_log": [],
 		"locks": {},
@@ -255,11 +254,10 @@
 		"quests_failed": [],
 		"reputation": {},
 		"rested_at": 480,
-		"revealed": {},
+		"knows": {},
 		"reward_spent": 0,
 		"rng_state": "708718527385777908",
 		"room_id": "brod-tavern-hall",
-		"secrets_told": [],
 		"seed": 42,
 		"settings": {
 			"adult": false,

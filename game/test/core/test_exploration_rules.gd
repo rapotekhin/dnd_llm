@@ -59,7 +59,7 @@ func test_passive_perception_notices_on_entering() -> void:
 
 func test_investigation_finds_what_perception_would_notice() -> void:
 	ExplorationRules.enter_room(s, world, "brod-tavern-kitchen")  # the new bolt: DC 13, perception; passive 13 notices it
-	s.revealed.clear()
+	s.knows.erase(Knows.SECRET)
 	assert_array(ExplorationRules.active_reveal(s, world, "investigation", 13)).has_size(1)
 
 
@@ -111,6 +111,6 @@ func test_locks_and_secrets_survive_a_save() -> void:
 	ExplorationRules.lock(s, {"skill": "perception", "dc_tier": "hard"}, s.room_id, _fail_result())
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
 	assert_dict(back.locks).is_equal(s.locks)
-	assert_dict(back.revealed).is_equal(s.revealed)
+	assert_dict(back.knows).is_equal(s.knows)
 	assert_array(back.visited).is_equal(s.visited)
 	assert_int(int(back.locks.values()[0]["result"]["total"])).is_equal(4)

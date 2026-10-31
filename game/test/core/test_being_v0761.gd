@@ -65,7 +65,7 @@ func test_a_record_comes_back_from_a_save_unchanged() -> void:
 	b["hp"] = 3
 	b["attitude"] = -2
 	b["pockets"] = [{"id": "p1", "cp": 12, "qty": 1, "dc": 10}]
-	b["memory"] = [{"day": 2, "text": "помнит"}]
+	b["memory"] = [Fact.of(s, "помнит")]
 	b["sick"] = {"id": "flu", "until": 2880}
 	b["disarmed"] = {"dagger": 2}
 	b["fed"] = {"at": 500, "hungry": 0}

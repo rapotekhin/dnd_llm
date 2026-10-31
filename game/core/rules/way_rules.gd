@@ -52,12 +52,12 @@ static func def(data: Dictionary, a: String, b: String) -> Dictionary:
 
 
 ## The exits of a room the player can take now: the side's own row with `when` opens the way only when its fact is true
-## (QuestRules.met; the burrow under the hollow).
+## (Cond; the burrow under the hollow).
 static func open_exits(s: GameSession, world: Dictionary, room_id: String) -> Array[String]:
 	var out: Array[String] = []
 	var own: Dictionary = world["rooms"].get(room_id, {}).get("ways", {})
 	for e: Variant in world["rooms"].get(room_id, {}).get("exits", []):
-		if not own.get(str(e), {}).has("when") or QuestRules.met(s, own[str(e)]["when"]):
+		if Cond.holds(s, own.get(str(e), {})):
 			out.append(str(e))
 	return out
 
@@ -69,7 +69,7 @@ static func shut_exits(s: GameSession, world: Dictionary, room_id: String) -> Ar
 	var own: Dictionary = world["rooms"].get(room_id, {}).get("ways", {})
 	for to: String in own:
 		var when: Dictionary = own[to].get("when", {})
-		if when.has("not_flag") and not QuestRules.met(s, when):
+		if when.has("not_flag") and not Cond.met(s, when):
 			out.append({"to": to, "text": str(own[to].get("text", ""))})
 	return out
 

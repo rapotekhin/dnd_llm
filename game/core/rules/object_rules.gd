@@ -8,7 +8,7 @@ extends RefCounted
 ## `upgrades` and the hero's bought ones), hours, access (SiteRules) and a chronicle of its facts. The state of the
 ## hero's objects stays in c["property"] (PropertyRules), their shelves in c["shop"] (ShopRules).
 ##
-## s.generated["site_facts"] = {site_id: ["день N: …"]}.
+## s.generated["site_facts"] = {site_id: [Fact]}.
 
 const FACTS_KEEP := 10
 
@@ -100,14 +100,14 @@ static func note(s: GameSession, sid: String, fact: String) -> void:
 	if not gen.has("site_facts"):
 		gen["site_facts"] = {}
 	var list: Array = gen["site_facts"].get(sid, [])
-	list.append("день %d: %s" % [s.day, fact])
+	list.append(Fact.of(s, fact))
 	while list.size() > FACTS_KEEP:
 		list.pop_front()
 	gen["site_facts"][sid] = list
 
 
 static func facts(s: GameSession, sid: String) -> Array:
-	return WorldGen.generated(s).get("site_facts", {}).get(sid, [])
+	return WorldGen.generated(s).get("site_facts", {}).get(sid, []).map(func(f: Dictionary) -> String: return "день %d: %s" % [Fact.day(f), f["text"]])
 
 
 ## What the place window shows: {name, kind, owner, staff, upgrades, hours, public, facts, mine}.

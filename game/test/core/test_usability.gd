@@ -96,4 +96,4 @@ func test_inspecting_a_foe_opens_its_kind_for_good() -> void:
 	var card := CombatRules.monster_card(s, data, CombatRules.fighter(s, TestUtils.foe(s, 2)))  # the same kind: known too
 	assert_str(card).contains("КД 13").contains("Укус")
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
-	assert_array(back.known_monsters).contains(["wolf"])
+	assert_bool(Knows.has(back, Knows.MONSTER, "wolf")).is_true()

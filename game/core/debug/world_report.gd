@@ -34,7 +34,7 @@ static func room(s: GameSession, data: Dictionary, room_id: String) -> String:
 			s.attitude(id), " · торговец" if bool(n.get("trader", false)) else ""])
 	for h: Variant in r.get("hooks", []):
 		out.append("Зацепка: %s" % (h.get("text", "") if h is Dictionary else str(h)))
-	var found: Array = s.revealed.get(room_id, [])
+	var found := Knows.under(s, Knows.SECRET, room_id)
 	for sec: Dictionary in r.get("secrets", []):
 		var key := ExplorationRules.secret_key(room_id, sec)
 		var tags: PackedStringArray = ["найден" if found.has(str(sec["id"])) else "скрыт", "%s Сл %d" % [sec.get("skill", "perception"), int(sec.get("dc", 0))]]
@@ -164,4 +164,4 @@ static func rooms(s: GameSession, data: Dictionary) -> String:
 static func state(s: GameSession) -> String:
 	return "день %d, %s · режим %s%s\nфлаги: %s\nпосещено: %s\nвстречи пройдены: %s\nпогибшие NPC: %s\nотношения: %s\nизвестные враги: %s\nобворованы: %s" % [
 		s.day, TimeRules.clock(s), s.mode, " с " + s.npc_id if not s.npc_id.is_empty() else "", ", ".join(s.flags), ", ".join(s.visited),
-		", ".join(s.encounters_done), ", ".join(Being.dead_ids(s)), JSON.stringify(Being.with(s, "attitude")), ", ".join(s.known_monsters), JSON.stringify(Being.with(s, "picked"))]
+		", ".join(s.encounters_done), ", ".join(Being.dead_ids(s)), JSON.stringify(Being.with(s, "attitude")), ", ".join(Knows.all(s, Knows.MONSTER)), JSON.stringify(Being.with(s, "picked"))]

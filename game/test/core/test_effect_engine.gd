@@ -138,7 +138,7 @@ func test_a_made_up_flag_is_refused_and_a_note_is_kept() -> void:
 	var lines := fx.apply(s, "t-1", [_ok({"kind": "note", "text": "Айра поклялась служить человеку в капюшоне"})])
 	assert_str(lines[0]).is_equal("Запомнено: Айра поклялась служить человеку в капюшоне")
 	assert_str(str(s.notes[0]["text"])).contains("поклялась")
-	assert_int(int(s.notes[0]["day"])).is_equal(s.day)
+	assert_int(Fact.day(s.notes[0])).is_equal(s.day)
 
 
 func test_gear_by_words_strips_and_dresses() -> void:

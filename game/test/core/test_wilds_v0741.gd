@@ -150,7 +150,7 @@ func test_an_order_of_three_hides_waits_for_all_three() -> void:
 	var when := {"talk": "npc_innkeeper", "item": "raw_hide", "qty": 3}
 	s.character["inventory"]["raw_hide"] = 2
 	var lines: Array[String] = []
-	assert_bool(QuestRules.met(s, {"item": "raw_hide", "qty": 3, "room": "brod-tavern-hall"})).is_false()
+	assert_bool(Cond.met(s, {"item": "raw_hide", "qty": 3, "room": "brod-tavern-hall"})).is_false()
 	s.character["inventory"]["raw_hide"] = 3
 	QuestRules._hand_over(s, data, str(when["item"]), lines, "Отдано", int(when["qty"]))
 	assert_int(_count(s, "raw_hide")).is_equal(0)

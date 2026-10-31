@@ -25,7 +25,7 @@ static func known(s: GameSession, world: Dictionary) -> Dictionary:
 	var frontier: Array[String] = []
 	var edges: Array = []
 	var seen := {}
-	for r: Variant in s.character.get("scouted", []):  # v0.7.43: a pet flew over it — known, its exits not yet
+	for r: String in Knows.all(s, Knows.SCOUTED):  # v0.7.43: a pet flew over it — known, its exits not yet
 		if world["rooms"].has(str(r)) and not rooms.has(str(r)):
 			rooms.append(str(r))
 	for r: String in rooms:

@@ -46,7 +46,7 @@ func test_a_found_trap_blocks_the_route_until_it_is_gone() -> void:
 	var s := _session(["mine-entrance", "mine-gallery", "mine-deep"])
 	assert_array(WorldMap.route(s, data["world"], "mine-entrance", "mine-deep")).contains_exactly(["mine-gallery", "mine-deep"])
 	var trap := ExplorationRules.trap_on_exit(s, data["world"], "mine-gallery", "mine-deep")
-	s.revealed["mine-gallery"] = [str(trap["id"])]
+	Knows.add(s, Knows.SECRET, "mine-gallery", str(trap["id"]))
 	assert_bool(WorldMap.blocked(s, data["world"], "mine-gallery", "mine-deep")).is_true()
 	assert_array(WorldMap.route(s, data["world"], "mine-entrance", "mine-deep")).is_empty()
 	ExplorationRules.disarm_trap(s, "mine-gallery", trap)

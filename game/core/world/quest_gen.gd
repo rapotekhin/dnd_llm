@@ -792,7 +792,7 @@ static func _fact(s: GameSession, data: Dictionary, kind: String, target: String
 				var sid := target.get_slice(":", 1)
 				if not (world.room(room).get("secrets", []) as Array).any(func(x: Dictionary) -> bool: return str(x.get("id", "")) == sid):
 					return {"reason": "нет тайны %s — «комната:id тайны» мира или key спрятанной вещи акта" % target}
-				if (s.revealed.get(room, []) as Array).has(sid):
+				if Knows.has(s, Knows.SECRET, room, sid):
 					return {"reason": "тайна %s уже найдена" % target}
 				w = {"secret": target}
 		"fight":
@@ -1006,7 +1006,7 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 			gen["rooms"][room]["encounter"] = enc
 			data["world"]["rooms"][room]["encounter"] = enc.duplicate(true)
 		else:  # a known room: a variant of it while the quest is taken (SceneRules)
-			add_variant(gen, data, room, {"vid": enc["id"], "if_quest": qid, "encounter": enc})
+			add_variant(gen, data, room, {"vid": enc["id"], "when": {"quest": qid}, "encounter": enc})
 	var steps: Array = (plan["steps"] as Array).duplicate(true)
 	for st: Dictionary in steps:
 		st["act"] = int(plan["act"])
@@ -1021,7 +1021,7 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 				ch["attitude"] = att
 			for x: Dictionary in ch.get("changes", []):
 				var room := str(refs.get(str(x["room"]), x["room"]))
-				add_variant(gen, data, room, {"vid": ch["flag"], "if_flag": ch["flag"], "description": x["description"]})
+				add_variant(gen, data, room, {"vid": ch["flag"], "when": {"flag": ch["flag"]}, "description": x["description"]})
 			ch.erase("changes")
 			ch.erase("value_cp")
 		var w: Dictionary = st["when"]

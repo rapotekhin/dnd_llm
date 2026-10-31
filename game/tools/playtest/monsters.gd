@@ -26,7 +26,7 @@ func run() -> void:
 	var c := s.character
 
 	# A giant spider: the web, the card, breaking free.
-	s.known_monsters.append("giant_spider")
+	Knows.add(s, Knows.MONSTER, "giant_spider")
 	gs.start_combat([{"monster": "giant_spider", "col": 2}])
 	if not step("a fight with a spider", await _my_turn(gs, s)):
 		return

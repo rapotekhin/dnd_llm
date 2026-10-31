@@ -31,7 +31,7 @@ func test_the_burrow_opens_by_the_found_burrow_or_the_report() -> void:
 	var world: Dictionary = data["world"]
 	var s := _session()
 	assert_array(WayRules.open_exits(s, world, "pushcha-hollow")).not_contains(["pushcha-burrow"])
-	s.revealed["pushcha-hollow"] = ["burrow"]
+	Knows.add(s, Knows.SECRET, "pushcha-hollow", "burrow")
 	assert_array(WayRules.open_exits(s, world, "pushcha-hollow")).contains(["pushcha-burrow"])
 	var t := _session()
 	t.flags.append("burrow_known")
@@ -82,7 +82,7 @@ func test_the_report_opens_the_burrow_and_the_finale_closes_the_step() -> void:
 	assert_array(QuestRules.choices_here(s, world)).is_empty()
 	s.room_id = "pushcha-glade"
 	assert_array(QuestRules.choices_here(s, world)).is_empty()  # the stone not understood yet (v0.7.22.13)
-	s.revealed["pushcha-glade"] = ["runes"]
+	Knows.add(s, Knows.SECRET, "pushcha-glade", "runes")
 	assert_array(QuestRules.choices_here(s, world)).has_size(2)
 
 
@@ -94,7 +94,7 @@ func _at_the_menhir() -> GameSession:
 	s.encounters_done.append("burrow_priest")
 	QuestRules.advance(s, data)
 	s.room_id = "pushcha-glade"
-	s.revealed["pushcha-glade"] = ["runes"]  # the stone understood (v0.7.22.13)
+	Knows.add(s, Knows.SECRET, "pushcha-glade", "runes")  # the stone understood (v0.7.22.13)
 	return s
 
 

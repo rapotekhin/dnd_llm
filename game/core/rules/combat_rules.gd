@@ -3311,7 +3311,7 @@ static func lore_dc(data: Dictionary, f: Dictionary) -> int:
 
 
 static func known(s: GameSession, f: Dictionary) -> bool:
-	return s.known_monsters.has(str(f.get("monster", ""))) or str(f.get("side")) == "ally"  # one's own side is known
+	return Knows.has(s, Knows.MONSTER, str(f.get("monster", ""))) or str(f.get("side")) == "ally"  # one's own side is known
 
 
 ## "" when the player can inspect `target_id` now: a bonus action on an active foe of an unknown kind.
@@ -3340,7 +3340,7 @@ static func player_inspect(s: GameSession, data: Dictionary, target_id: String) 
 	var total := int(r["total"])
 	var ok := bool(r["ok"])
 	if ok:
-		s.known_monsters.append(str(t["monster"]))
+		Knows.add(s, Knows.MONSTER, str(t["monster"]))
 	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], t["name"], TranslationServer.translate("SKILL_" + skill.to_upper()),
 		total, dc, "теперь ясно, на что способны такие враги" if ok else "ничего толкового"]]
 

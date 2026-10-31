@@ -188,9 +188,9 @@ ACTS_GEN = {
     "edge_exits": {"pushcha-edge": ["gen_room_1"]},
     "edges_used": ["pushcha-edge:0"],
     "room_variants": {
-        "outpost-tower": [{"vid": "gen_quest_1_watch", "if_quest": "gen_quest_1", "encounter": {"id": "gen_quest_1_watch", "quest": "gen_quest_1",
+        "outpost-tower": [{"vid": "gen_quest_1_watch", "when": {"quest": "gen_quest_1"}, "encounter": {"id": "gen_quest_1_watch", "quest": "gen_quest_1",
                            "enemies": [{"monster": "wolf", "count": 1, "name": "Волк", "desc": "", "col": 3}], "loot": {"coins_cp": 0, "items": {}}}}],
-        "gen_room_1": [{"vid": "gen_quest_1_spare", "if_flag": "gen_quest_1_spare", "description": "Пустая нора, кости и тишина."}]},
+        "gen_room_1": [{"vid": "gen_quest_1_spare", "when": {"flag": "gen_quest_1_spare"}, "description": "Пустая нора, кости и тишина."}]},
     "quests": {"gen_quest_1": {
         "title": "Пепельная стая", "description": "Гноллы режут скот.", "giver": "npc_innkeeper", "offer_text": "Найди вожака.", "generated": True,
         "difficulty": "hard", "acts": [{"title": "Следы", "goal": "Проверить башню"}, {"title": "Логово", "goal": "Решить судьбу вожака"}],
@@ -218,8 +218,8 @@ def test_a_quest_by_acts_comes_with_its_variants_lair_and_choice(tmp_path):
     assert q["steps"][2]["when"] == {"choice": den} and q["steps"][2]["choices"][0]["flag"] == "quest_ash_pack_spare"
     assert "xp_paid" not in q and q["built"] == 2
     tower = w["rooms"]["outpost-tower"]["variants"]
-    assert {"vid": "quest_ash_pack_watch", "if_quest": "quest_ash_pack"}.items() <= next(v for v in tower if v["vid"] == "quest_ash_pack_watch").items()
-    assert any(v.get("if_flag") == "quest_ash_pack_spare" for v in w["rooms"][den]["variants"])
+    assert {"vid": "quest_ash_pack_watch", "when": {"quest": "quest_ash_pack"}}.items() <= next(v for v in tower if v["vid"] == "quest_ash_pack_watch").items()
+    assert any(v.get("when") == {"flag": "quest_ash_pack_spare"} for v in w["rooms"][den]["variants"])
 
 
 def test_a_quest_by_acts_waits_for_its_last_act(tmp_path):

@@ -3,7 +3,7 @@ extends RefCounted
 ## Fences (roadmap v0.7.33, the author: a fence of the pack and the master's). A trader with `fence` {buy_pct} (pack NPC
 ## or the master's effect in generated.fences) buys stolen things — the hero's foreign ones (OwnerRules) — at buy_pct
 ## of the value and sells rules.underworld.fence.stock, but only to those who know it: a background tied to its tags
-## (a criminal's contact), a member of the organization it fences for, or the hero it was revealed to (c.fences_known).
+## (a criminal's contact), a member of the organization it fences for, or the hero it was revealed to (Knows).
 ## An honest trader of the owner's location knows a stolen thing and does not buy it.
 
 
@@ -26,7 +26,7 @@ static func is_fence(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 static func known(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 	if not is_fence(s, data, npc_id):
 		return false
-	if (s.character.get("fences_known", []) as Array).has(npc_id):
+	if Knows.has(s, Knows.FENCE, npc_id):
 		return true
 	var tie := str(BackgroundRules.spec(s.character, data).get("ties", ""))
 	if not tie.is_empty() and (BondRules.npc_def(s, data, npc_id).get("tags", []) as Array).has(tie):
@@ -90,10 +90,7 @@ static func restock(s: GameSession, data: Dictionary, npc_id: String, m: Diction
 
 
 static func reveal(s: GameSession, npc_id: String) -> void:
-	var list: Array = s.character.get("fences_known", [])
-	if not list.has(npc_id):
-		list.append(npc_id)
-	s.character["fences_known"] = list
+	Knows.add(s, Knows.FENCE, npc_id)
 
 
 # --- the master's `fence` -----------------------------------------------------------------------------------------

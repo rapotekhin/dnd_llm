@@ -118,7 +118,7 @@ func test_a_mere_acquaintance_only_refuses_help() -> void:
 
 func test_a_denunciation_with_evidence_puts_the_npc_under_guard() -> void:
 	var s := _session()
-	s.secrets_told.append("npc_serving:fern_casks")  # Mira told what she saw
+	Knows.add(s, Knows.TOLD, "npc_serving", "fern_casks")  # Mira told what she saw
 	var l := _letter(s, "npc_captain", "denounce", {"about": "npc_merchant"})
 	_days(s, 1)
 	assert_bool(bool(l["can"])).is_true()

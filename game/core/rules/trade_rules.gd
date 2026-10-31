@@ -222,12 +222,12 @@ static func sell_quote(s: GameSession, data: Dictionary, npc_id: String, item_id
 # --- the trader and the world (v0.7.17.2) ----------------------------------------------------------------------
 
 
-## What the world's flags change at this trader (pack NPC `trade_variants` [{if_flag | if_not_flag, price_pct, stock,
+## What the world's flags change at this trader (pack NPC `trade_variants` [{when (Cond), price_pct, stock,
 ## remove, news}], like the rooms' variants v0.7.14.1): {price_pct, stock {id: qty}, remove [ids], news [lines]}.
 static func variant(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary:
 	var out := {"price_pct": 100, "stock": {}, "remove": [], "news": []}
 	for v: Dictionary in data["world"]["npcs"].get(npc_id, {}).get("trade_variants", []):
-		if v.has("if_flag") and not s.flags.has(str(v["if_flag"])) or v.has("if_not_flag") and s.flags.has(str(v["if_not_flag"])):
+		if not Cond.holds(s, v):
 			continue
 		out["price_pct"] = int(round(int(out["price_pct"]) * int(v.get("price_pct", 100)) / 100.0))
 		for id: String in v.get("stock", {}):

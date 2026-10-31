@@ -146,7 +146,7 @@ func test_an_act_brings_the_teacher_and_its_course_opens_on_reaching_it() -> voi
 	var cid := StudyRules.of_teacher(s, data, mage)
 	assert_int(cid.size()).is_equal(1)
 	var co := StudyRules.course(s, data, cid[0])
-	assert_str(str(co["requires"]["flag"])).is_equal(qid + "_teach")
+	assert_str(str(co["requires"]["when"]["flag"])).is_equal(qid + "_teach")
 	var q := QuestRules.quest(data["world"], qid)
 	assert_str(str(q["steps"][1].get("flag", ""))).is_equal(qid + "_teach")
 	s.flags.append(qid + "_teach")  # the talk step with the mage is done

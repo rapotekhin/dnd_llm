@@ -43,9 +43,9 @@ func test_a_thing_hidden_for_survival_is_found_by_survival_and_investigation() -
 	var qid := _root_quest("survival")
 	s.room_id = "brod-tavern-cellar"
 	var found := func(skill: String) -> bool:
-		s.revealed.clear()
+		s.knows.erase(Knows.SECRET)
 		ExplorationRules.active_reveal(s, data["world"], skill, 30)
-		return (s.revealed.get("brod-tavern-cellar", []) as Array).has("q_" + qid)
+		return Knows.has(s, Knows.SECRET, "brod-tavern-cellar", "q_" + qid)
 	assert_bool(found.call("perception")).is_false()
 	assert_bool(found.call("survival")).is_true()
 	assert_bool(found.call("investigation")).is_true()
@@ -64,7 +64,7 @@ func test_the_hidden_thing_is_not_given_by_words_until_found() -> void:
 	assert_str(str(r["reason"])).contains("request_check perception")
 	s.room_id = "brod-tavern-hall"
 	assert_str(str(fx.validate(s, data, "t-3", {"kind": "give_item", "item_id": "lute"})["reason"])).contains("спрятана в")
-	s.revealed["brod-tavern-cellar"] = ["q_" + qid]  # found: the hiding place no longer holds it back
+	Knows.add(s, Knows.SECRET, "brod-tavern-cellar", "q_" + qid)  # found: the hiding place no longer holds it back
 	assert_str(str(fx.validate(s, data, "t-4", {"kind": "give_item", "item_id": "lute"}).get("reason", ""))).not_contains("спрятан")
 
 

@@ -229,8 +229,8 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			else:
 				ids[sec["id"]] = true
 		for v: Variant in r.get("variants", []):  # v0.7.14.1: the room by the world's flags
-			if not (v is Dictionary) or not (v.has("if_flag") or v.has("if_not_flag")) 					or (v as Dictionary).keys().any(func(k: Variant) -> bool: return not (SceneRules.KEYS + ["if_flag", "if_not_flag"]).has(str(k))):
-				e.append("комната %s: вариант — {if_flag | if_not_flag, %s}" % [id, ", ".join(SceneRules.KEYS)])
+			if not (v is Dictionary) or not _when_ok(v.get("when"), false) or (v as Dictionary).keys().any(func(k: Variant) -> bool: return not (SceneRules.KEYS + ["when", "vid"]).has(str(k))):
+				e.append("комната %s: вариант — {when, %s}" % [id, ", ".join(SceneRules.KEYS)])
 				continue
 			for n: Variant in v.get("npcs", []):
 				if not w["npcs"].has(str(n)):
@@ -392,5 +392,5 @@ static func _when_ok(when: Variant, top: bool) -> bool:
 		return top
 	if k in ["all", "any"]:
 		return when[k] is Array and not (when[k] as Array).is_empty() and (when[k] as Array).all(func(w: Variant) -> bool: return _when_ok(w, false))
-	return k in ["encounter", "secret", "room", "arrive", "flag", "not_flag"]
+	return k in ["encounter", "secret", "room", "arrive", "flag", "not_flag", "quest", "quest_done"]
 

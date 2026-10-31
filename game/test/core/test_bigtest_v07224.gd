@@ -83,7 +83,7 @@ func test_a_dropped_weapon_is_picked_up_next_turn() -> void:
 func test_the_foe_card_shows_its_slots() -> void:
 	var s := _hero("fighter_aira")
 	var f := _fight(s, [{"monster": "cult_fanatic", "col": 0}])[0]
-	s.known_monsters.append("cult_fanatic")
+	Knows.add(s, Knows.MONSTER, "cult_fanatic")
 	f["slots"] = {"1": 1, "2": 3}
 	assert_str(CombatRules.monster_card(s, data, f)).contains("Ячейки: 1 круг 1/4")
 

@@ -136,30 +136,6 @@ static func tracked(s: GameSession, world: Dictionary) -> String:
 	return ""
 
 
-## A fact of the engine (a talk step is closed only by its button).
-static func met(s: GameSession, when: Dictionary) -> bool:
-	if when.has("item") and not when.has("talk") and int(s.character.get("inventory", {}).get(str(when["item"]), 0)) < int(when.get("qty", 1)):
-		return false  # a thing left at a place (v0.7.34.5): the hero has to bring it
-	if when.has("encounter"):
-		return s.encounters_done.has(str(when["encounter"])) or (not bool(when.get("defeat", false)) and s.encounters_passed.has(str(when["encounter"])))
-	if when.has("secret"):
-		var key := str(when["secret"])
-		return (s.revealed.get(key.get_slice(":", 0), []) as Array).has(key.get_slice(":", 1))
-	if when.has("room"):
-		return s.visited.has(str(when["room"]))
-	if when.has("arrive"):  # the master's quests (v0.7.34.4): the hero is there now, whatever was before
-		return s.room_id == str(when["arrive"])
-	if when.has("flag"):
-		return s.flags.has(str(when["flag"]))
-	if when.has("not_flag"):  # v0.7.46: a ford open while it is not flooded
-		return not s.flags.has(str(when["not_flag"]))
-	if when.has("all"):
-		return (when["all"] as Array).all(func(w: Dictionary) -> bool: return met(s, w))
-	if when.has("any"):
-		return (when["any"] as Array).any(func(w: Dictionary) -> bool: return met(s, w))
-	return false
-
-
 ## A button step (talk or choice): never closed by facts.
 static func _by_button(when: Dictionary) -> bool:
 	return when.has("talk") or when.has("choice")
@@ -178,7 +154,7 @@ static func advance(s: GameSession, data: Dictionary) -> Array[String]:
 				break
 			lines.append_array(_announce_parts(s, data["world"], id, step))
 			var all_done: bool = step["when"].has("all") and (s.quest_parts.get(id, []) as Array).size() >= (step["when"]["all"] as Array).size()
-			if not (met(s, step["when"]) or all_done) or (step.has("needs") and not met(s, step["needs"])):  # a part done stays done: a place left behind (v0.7.39.6)
+			if not (Cond.met(s, step["when"]) or all_done) or (step.has("needs") and not Cond.met(s, step["needs"])):  # a part done stays done: a place left behind (v0.7.39.6)
 				break
 			if step["when"].has("item"):
 				_hand_over(s, data, str(step["when"]["item"]), lines, "Оставлено", int(step["when"].get("qty", 1)))
@@ -194,7 +170,7 @@ static func _announce_parts(s: GameSession, world: Dictionary, quest_id: String,
 		return lines
 	var done: Array = s.quest_parts.get(quest_id, [])
 	for i in (when["all"] as Array).size():
-		if not done.has(i) and met(s, when["all"][i]):
+		if not done.has(i) and Cond.met(s, when["all"][i]):
 			done.append(i)
 			lines.append("«%s»: %s — сделано" % [quest(world, quest_id)["title"], step["parts"][i]])
 	s.quest_parts[quest_id] = done
@@ -227,7 +203,7 @@ static func step_text(s: GameSession, world: Dictionary, quest_id: String) -> St
 			return "%s — мастер готовит продолжение" % q["acts"][int(q.get("built", 0))]["goal"]
 		return ""
 	var text := str(step["text"])
-	if step.has("needs") and not met(s, step["needs"]) and not str(step.get("needs_text", "")).is_empty():
+	if step.has("needs") and not Cond.met(s, step["needs"]) and not str(step.get("needs_text", "")).is_empty():
 		text += " — " + str(step["needs_text"])  # v0.7.22.13
 	if step.has("parts"):
 		var done: Array = s.quest_parts.get(quest_id, [])
@@ -245,7 +221,7 @@ static func choices_here(s: GameSession, world: Dictionary) -> Array[Dictionary]
 		return out
 	for id: String in s.quests_active:
 		var step := current(s, world, id)
-		if step.has("needs") and not met(s, step["needs"]):
+		if step.has("needs") and not Cond.met(s, step["needs"]):
 			continue  # the hero does not know yet what is decided (v0.7.22.13, big test #27)
 		if str(step.get("when", {}).get("choice", "")) == s.room_id:
 			for c: Dictionary in step.get("choices", []):
@@ -286,7 +262,7 @@ static func talks_here(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 		var step := current(s, world, id)
 		var when: Dictionary = step.get("when", {})
 		var to := stand_in(s, world, str(when.get("talk", "")))
-		if step.has("needs") and not met(s, step["needs"]):
+		if step.has("needs") and not Cond.met(s, step["needs"]):
 			continue  # the hero does not know enough yet (v0.7.39.6)
 		if when.has("talk") and here.has(to):
 			out.append({"quest_id": id, "action": str(step.get("action", step["text"])), "npc_id": to,
@@ -427,7 +403,7 @@ static func known_flags(world: Dictionary) -> Array[String]:
 static func _collect_flags(v: Variant, out: Array[String]) -> void:
 	if v is Dictionary:
 		for k: Variant in v:
-			if str(k) in ["flag", "if_flag", "if_not_flag"] and v[k] is String and not out.has(str(v[k])):
+			if str(k) in ["flag", "not_flag"] and v[k] is String and not out.has(str(v[k])):
 				out.append(str(v[k]))
 			else:
 				_collect_flags(v[k], out)

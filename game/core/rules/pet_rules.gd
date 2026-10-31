@@ -239,9 +239,8 @@ static func spoil_mult(s: GameSession, data: Dictionary) -> float:
 ## The rooms behind the exits of the hero's room not yet walked or scouted.
 static func scout_targets(s: GameSession, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
-	var scouted: Array = s.character.get("scouted", [])
 	for e: String in WayRules.open_exits(s, data["world"], s.room_id):
-		if not s.visited.has(e) and not scouted.has(e) and data["world"]["rooms"].has(e):
+		if not s.visited.has(e) and not Knows.has(s, Knows.SCOUTED, e) and data["world"]["rooms"].has(e):
 			out.append(e)
 	return out
 
@@ -260,16 +259,14 @@ static func scout_why(s: GameSession, data: Dictionary, cid: String, room: Strin
 	return ""
 
 
-## The flier over `room`: the room known on the map (c.scouted), who is there and the danger. Lines.
+## The flier over `room`: the room known on the map (Knows), who is there and the danger. Lines.
 static func scout(s: GameSession, data: Dictionary, cid: String, room: String) -> Array[String]:
 	var cr := _here(s, cid)
 	if int(cr.get("scout_day", -1)) != s.day:
 		cr["scout_day"] = s.day
 		cr["scouts"] = 0
 	cr["scouts"] = int(cr["scouts"]) + 1
-	var scouted: Array = s.character.get("scouted", [])
-	scouted.append(room)
-	s.character["scouted"] = scouted
+	Knows.add(s, Knows.SCOUTED, room)
 	var world := WorldView.new(data["world"])
 	var seen: Array[String] = []
 	var enc: Dictionary = world.room(room).get("encounter", {})

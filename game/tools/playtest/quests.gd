@@ -56,10 +56,7 @@ func run() -> void:
 				s.encounters_done.append(str(f["encounter"]))
 				fought = true
 			if f.has("secret"):
-				var room := str(f["secret"]).get_slice(":", 0)
-				var found: Array = s.revealed.get(room, [])
-				found.append(str(f["secret"]).get_slice(":", 1))
-				s.revealed[room] = found
+				Knows.add(s, Knows.SECRET, str(f["secret"]))
 				fought = true
 		if fought:
 			QuestRules.advance(s, data)

@@ -91,7 +91,7 @@ func test_a_quest_is_taken_at_the_giver_and_closed_by_facts_and_a_button() -> vo
 	assert_str(lines[0]).contains("Амулет пропавшего")
 	assert_int(int(s.quests_active["drogin_amulet"])).is_equal(0)
 	assert_array(QuestRules.advance(s, data)).is_empty()  # not found yet
-	s.revealed["mine-flooded"] = ["amulet"]
+	Knows.add(s, Knows.SECRET, "mine-flooded", "amulet")
 	var xp := int(s.character["xp"])
 	var step := QuestRules.advance(s, data)
 	assert_str("\n".join(step)).contains("сделано")
@@ -113,7 +113,7 @@ func test_a_quest_is_taken_at_the_giver_and_closed_by_facts_and_a_button() -> vo
 func test_steps_done_before_taking_close_at_once_and_the_snapshot_shows_the_step() -> void:
 	var s := _session()
 	s.room_id = "mine-entrance"
-	s.revealed["mine-flooded"] = ["amulet"]
+	Knows.add(s, Knows.SECRET, "mine-flooded", "amulet")
 	QuestRules.accept(s, data, "drogin_amulet")
 	assert_int(int(s.quests_active["drogin_amulet"])).is_equal(1)
 	var snap := TurnSnapshot.build(s, data, 4000)
@@ -143,7 +143,7 @@ func test_a_trap_guards_its_exit_and_springs_once() -> void:
 func test_found_traps_are_offered_and_disarming_needs_tools() -> void:
 	var s := _session()
 	var world: Dictionary = data["world"]
-	s.revealed["mine-gallery"] = ["deadfall"]
+	Knows.add(s, Knows.SECRET, "mine-gallery", "deadfall")
 	assert_array(ExplorationRules.found_traps(s, world, "mine-gallery")).has_size(1)
 	s.character["inventory"].erase("thieves_tools")
 	assert_str(ExplorationRules.disarm_bonus(s.character)["disadvantage_reason"]).contains("инструментов")
@@ -159,7 +159,7 @@ func test_found_traps_are_offered_and_disarming_needs_tools() -> void:
 func test_a_found_cache_gives_its_loot_once() -> void:
 	var s := _session()
 	assert_array(ExplorationRules.take_caches(s, data, "mine-deep")).is_empty()
-	s.revealed["mine-deep"] = ["wall"]
+	Knows.add(s, Knows.SECRET, "mine-deep", "wall")
 	var lines := ExplorationRules.take_caches(s, data, "mine-deep")
 	assert_str(lines[0]).contains("Плащ, свойства неизвестны")  # magic comes unidentified (v0.7.12)
 	assert_int(int(s.character["inventory"]["unk_cloak_of_protection"])).is_equal(1)

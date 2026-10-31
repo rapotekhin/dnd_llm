@@ -316,8 +316,9 @@ function validatePack(app) {
 		}
 		for (const t of r.tags || []) if (!ROOM_TAGS.includes(t)) push('rooms', rid, `неизвестная метка ${t} (можно: ${ROOM_TAGS.join(', ')})`);
 		for (const v of r.variants || []) {
-			const allowed = ['if_flag', 'if_not_flag', 'description', 'npcs', 'hooks', 'encounter', 'safe'];
-			if (!('if_flag' in v || 'if_not_flag' in v) || Object.keys(v).some((k) => !allowed.includes(k))) push('rooms', rid, `вариант — if_flag или if_not_flag и только ${allowed.join(', ')}`);
+			const allowed = ['vid', 'when', 'description', 'npcs', 'hooks', 'encounter', 'safe'];
+			checkWhen(v.when, 'rooms', rid, 'вариант', false);
+			if (!v.when || Object.keys(v).some((k) => !allowed.includes(k))) push('rooms', rid, `вариант — when и только ${allowed.join(', ')}`);
 			for (const n of v.npcs || []) if (!npcs[n]) push('rooms', rid, `в варианте нет NPC ${n}`);
 			if (srdLoaded) for (const f of v.encounter?.enemies || []) if (!has('monsters', f.monster)) push('rooms', rid, `в варианте нет монстра ${f.monster}`);
 		}
@@ -341,8 +342,8 @@ function validatePack(app) {
 		if ((n.services || []).length && !n.trader) push('npcs', nid, 'услуги только у торговца (trader)');
 		if (n.monster && srdLoaded && !has('monsters', n.monster)) push('npcs', nid, `нет монстра-шаблона ${n.monster}`);
 		(n.trade_variants || []).forEach((tv, i) => {
-			const ok = ['if_flag', 'if_not_flag', 'price_pct', 'stock', 'remove', 'news'];
-			if (Object.keys(tv).some((k) => !ok.includes(k)) || !('if_flag' in tv || 'if_not_flag' in tv)) push('npcs', nid, `trade_variants[${i}]: ключи ${ok.join(', ')}`);
+			const ok = ['when', 'price_pct', 'stock', 'remove', 'news'];
+			if (Object.keys(tv).some((k) => !ok.includes(k)) || !tv.when) push('npcs', nid, `trade_variants[${i}]: ключи ${ok.join(', ')}`);
 			for (const x of [...Object.keys(tv.stock || {}), ...(tv.remove || [])]) if (!itemOk(x)) push('npcs', nid, `trade_variants[${i}]: нет предмета ${x}`);
 		});
 		for (const k of ['wants', 'shuns']) if (k in n && !(Array.isArray(n[k]) && n[k].every((x) => typeof x === 'string'))) push('npcs', nid, `${k} — список тегов`);
