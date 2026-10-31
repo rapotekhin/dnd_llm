@@ -4425,3 +4425,95 @@ scenarios:
       effects: {forbidden_kinds: [move, coins]}
     rubric:
       - "После отказа мастер рассказывает, что хода нет, и не выводит героя в нору"
+
+  - id: invent_spell_alone_low_circle
+    title: "Волшебник 5 уровня выводит слабое заклинание сам: make с learn, без задания"
+    category: concepts
+    extends: tavern
+    snapshot:
+      character:
+        name: "Ялика"
+        gender: female
+        class: wizard
+        level: 5
+        hp: {current: 28, max: 28}
+        ac: 12
+        spells: ["Волшебная стрела", "Щит", "Огненный снаряд"]
+    input: "Сажусь с книгой заклинаний и придумываю своё простенькое заклинание первого круга: брызги огня вокруг меня, чтобы отогнать крыс."
+    engine:
+      validate:
+        - {kind: make, status: accept, summary: "Новое: «Огненные брызги» (1 круг), герой вывел его сам"}
+    expect:
+      effects: {required_kinds_any: [make], forbidden_kinds: [create:quest, create:course, condition, coins]}
+    rubric:
+      - "Мастер собирает make с what spell, частями и learn: true в этом же ходе; проверка Магии допустима"
+      - "Задания, учителя и условий мастер не ставит: опытному волшебнику это по силам"
+
+  - id: invent_spell_too_strong_goes_through_the_world
+    title: "Заклинание не по силам: движок отказал, мастер говорит об этом в истории"
+    category: concepts
+    extends: tavern
+    snapshot:
+      character:
+        name: "Ялика"
+        gender: female
+        class: wizard
+        level: 1
+        hp: {current: 8, max: 8}
+        ac: 12
+        spells: ["Волшебная стрела"]
+    input: "Придумываю своё заклинание: брызги огня вокруг меня. Вывожу его прямо здесь, за столом."
+    engine:
+      validate:
+        - {kind: make, status: reject, reason: "герой сам не выведет заклинание 1 круга: его высший круг 1, а сам он выводит не выше 0. Дальше — учитель, книга, свиток или задание"}
+    expect:
+      effects: {forbidden_kinds: [coins, move_item:world>hero]}
+    rubric:
+      - "Заклинание герою не досталось: мастер в истории говорит, что самому пока не вывести, и не пишет, будто оно выучено"
+
+  - id: invent_recipe_new_saber_for_a_smith
+    title: "Опытный кузнец придумал саблю, которой нет в каталоге: рецепт сразу"
+    category: concepts
+    extends: tavern
+    input: "Я опытный оружейник. Хочу выковать саблю: узкий изогнутый клинок. Обдумываю, как её сделать."
+    snapshot:
+      scene:
+        room: {id: room_smithy, name: "Кузница", description: "Горн, наковальня, никого — кузнец пустил героя поработать."}
+        npcs: []
+      character:
+        tools: ["Инструменты кузнеца [smiths_tools]"]
+        craft: "Ремесло (окно «Ремесло»): Кинжал, Копьё, Длинный меч, Боевой топор; навык «Ковка оружия»"
+        inventory: [{item_id: iron_bar, name: "Железный пруток", qty: 4}, {item_id: smiths_tools, name: "Инструменты кузнеца", qty: 1}]
+    engine:
+      find_items:
+        - {id: iron_bar, name: "Железный пруток", base: null, rarity: common}
+      validate:
+        - {kind: create:recipe, status: accept, summary: "Рецепт: Сабля — Инструменты кузнеца, 40 ч, Сл 13"}
+    expect:
+      effects: {required_kinds_any: [create:recipe], forbidden_kinds: [create:quest, create:course, move_item:world>hero]}
+    rubric:
+      - "Мастер даёт рецепт эффектом recipe с новой вещью в output в этом же ходе; проверка допустима, задание и учитель — нет"
+
+  - id: invent_recipe_halberd_for_a_smith
+    title: "Опытный кузнец хочет алебарду из каталога: рецепт сразу, по output_id"
+    category: concepts
+    extends: tavern
+    input: "Хочу сковать алебарду. Руку на оружии я набил, нужен только способ."
+    snapshot:
+      scene:
+        room: {id: room_smithy, name: "Кузница", description: "Горн, наковальня, никого — кузнец пустил героя поработать."}
+        npcs: []
+      character:
+        tools: ["Инструменты кузнеца [smiths_tools]"]
+        craft: "Ремесло (окно «Ремесло»): Кинжал, Копьё, Длинный меч, Боевой топор; навык «Ковка оружия»"
+        inventory: [{item_id: iron_bar, name: "Железный пруток", qty: 4}, {item_id: timber, name: "Полено", qty: 1}, {item_id: smiths_tools, name: "Инструменты кузнеца", qty: 1}]
+    engine:
+      find_items:
+        - {id: halberd, name: "Алебарда", base: null, rarity: common}
+        - {id: iron_bar, name: "Железный пруток", base: null, rarity: common}
+      validate:
+        - {kind: create:recipe, status: accept, summary: "Рецепт: Алебарда — Инструменты кузнеца, 30 ч, Сл 13"}
+    expect:
+      effects: {required_kinds_any: [create:recipe], forbidden_kinds: [create:quest, create:course, move_item:world>hero]}
+    rubric:
+      - "Мастер даёт рецепт эффектом recipe с output_id halberd в этом же ходе; проверка допустима, задание и учитель — нет"

@@ -178,10 +178,11 @@ WILDS_WORDS = re.compile(r"охот|рыб|удочк|удить|сеть|сет
 
 
 MAKE_WORDS = re.compile(r"проклят|проклин|порч|сглаз|морок|благослов|заговор[её]н|зачарован|научи|обучи|выучи|наставник|"
-                        r"свит[оке]|трактат|манускрипт|фолиант|гримуар|неведом|хочу уметь|перенять",
+                        r"свит[оке]|трактат|манускрипт|фолиант|гримуар|неведом|хочу уметь|перенять|придума|сочин|изобрет|вывед|выводу|разработа",
                         re.IGNORECASE)  # v0.7.63: what the data has not, built of parts
 BANK_WORDS = re.compile(r"ссуд|заём|заем|займ|в долг|залог|ростовщ|кредит|вклад|одолж", re.IGNORECASE)  # v0.7.70.1
 UNDERWORLD_WORDS = re.compile(r"взлом|обчист|ограб|обнес|контрабанд|скупщик|краден|вынести|вынесу|кассу", re.IGNORECASE)  # v0.7.70.1
+CRAFT_WORDS = re.compile(r"выков|скую|скова|кую |смастер|сработаю|выточ|сошью|рецепт", re.IGNORECASE)  # v0.7.70.2
 JOB_WORDS = re.compile(r"работ|наймусь|нанять|найми|вышибал|устроиться", re.IGNORECASE)  # v0.7.70.1
 
 
@@ -249,6 +250,8 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
         out.append("bank")
     if scene and mentions(said, UNDERWORLD_WORDS):
         out.append("underworld")
+    if scene and mentions(said, CRAFT_WORDS):
+        out.append("craft")
     if scene and mentions(said, JOB_WORDS):
         out.append("jobs")
     if names_a_faction(said, scene):

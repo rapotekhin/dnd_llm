@@ -146,7 +146,7 @@ static func teaches_text(s: GameSession, data: Dictionary, id: String) -> String
 
 
 ## The hero's highest spell circle by its slots, -1 for a non-caster.
-static func _max_circle(c: Dictionary) -> int:
+static func max_circle(c: Dictionary) -> int:
 	if str(c.get("spell_ability", "")).is_empty():
 		return -1
 	var top := 0
@@ -155,6 +155,16 @@ static func _max_circle(c: Dictionary) -> int:
 		if int(slots[i]) > 0:
 			top = i + 1
 	return top
+
+
+## The hero knows a spell or an ability for good: a course, a book, or worked out alone (MakeRules).
+static func learn_spell(c: Dictionary, id: String) -> void:
+	var sp: Dictionary = c.get("spells", {})
+	var always: Array = sp.get("always", [])
+	if not always.has(id):
+		always.append(id)
+	sp["always"] = always
+	c["spells"] = sp
 
 
 static func _knows_spell(c: Dictionary, id: String) -> bool:
@@ -185,8 +195,8 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 		"spell":
 			var sp: Dictionary = data["spells"].get(what, {})
 			var lv := int(sp.get("level", 9))
-			out.append({"text": "заклинатель класса из списка заклинания", "ok": _max_circle(c) >= 0 and (bool(sp.get("generated", false)) or (sp.get("classes", []) as Array).has(str(c.get("class", ""))))})
-			out.append({"text": "круг %d доступен" % lv, "ok": lv <= maxi(0, _max_circle(c))})
+			out.append({"text": "заклинатель класса из списка заклинания", "ok": max_circle(c) >= 0 and (bool(sp.get("generated", false)) or (sp.get("classes", []) as Array).has(str(c.get("class", ""))))})
+			out.append({"text": "круг %d доступен" % lv, "ok": lv <= maxi(0, max_circle(c))})
 			out.append({"text": "заклинание ещё не известно", "ok": not _knows_spell(c, what)})
 		"ability":
 			out.append({"text": "этой способности ещё нет", "ok": not _knows_spell(c, what)})
@@ -504,12 +514,7 @@ static func grant(s: GameSession, data: Dictionary, id: String) -> Array[String]
 				langs.append(what)
 			c["languages"] = langs
 		"spell", "ability":
-			var sp: Dictionary = c.get("spells", {})
-			var always: Array = sp.get("always", [])
-			if not always.has(what):
-				always.append(what)
-			sp["always"] = always
-			c["spells"] = sp
+			learn_spell(c, what)
 		"recipe":
 			CraftRules.learn(s, data, what)
 		"dev":  # the experience of a peaceful direction (v0.7.39.1: «Основы артефакции»)

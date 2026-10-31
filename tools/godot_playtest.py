@@ -40,7 +40,8 @@ def run_embedded(godot: str, real: bool, out_dir: Path) -> subprocess.CompletedP
             from dotenv import dotenv_values  # not through this process's environment: the game gets the key from its file
 
             key = os.environ.get("OPENROUTER_API_KEY") or dotenv_values(ROOT / ".env").get("OPENROUTER_API_KEY", "")
-            (profile / "backend.cfg").write_text(f'[backend]\n\nopenrouter_key="{key}"\n', encoding="utf-8")
+            # the address of the days before the embedded server, as the author's own file has it: it must not stop the server
+            (profile / "backend.cfg").write_text(f'[backend]\n\nurl="ws://127.0.0.1:8765/ws"\nopenrouter_key="{key}"\n', encoding="utf-8")
         else:
             env["LLM_SERVER_TURN_HANDLER"] = "stub"
         args = [godot, "--path", str(ROOT / "game"), "--script", "res://tools/playtest/embedded.gd", "--", "--profile=agent",

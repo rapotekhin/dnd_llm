@@ -567,6 +567,7 @@
 | Проклятие или благословение, которого нет в 5e | `make {what: status, key, name, text, parts}` → `condition {condition: "new:<key>", reason, save}` в том же ходе; вредному нужен `save` или `cause: player` |
 | Редкое умение у наставника | `make {what: skill, ability}` или `{what: trait, parts}` → `course {teach_kind, teach_id: "new:<key>"}`; герой учится кнопками «Учёбы» |
 | Книга с умением | `make {…, book}` → `move_item:world>hero {item_id: "new:book:<key>"}` или `reward_item_id` в задании |
+| Новое заклинание, слабое для героя | `make {what: spell, parts, learn: true}`: знает сразу, без задания и учителя, по желанию с проверкой Магии; движок пускает круг на 2 ниже высшего (v0.7.70.2) |
 | Новое заклинание | `make {what: spell, parts}` → `course {teach_kind: spell, teach_id: "new:<key>"}`, или `book` / `scroll` и `move_item:world>hero {item_id: "new:book:<key>" / "new:scroll:<key>"}`, или `reward_item_id` задания; круг считает движок |
 | Способность с зарядами | `make {what: ability, ability, parts: …, uses, recharge}` → `course {teach_kind: ability}` или книга; работает и у воина: Сл по своей характеристике |
 | Вещь и рецепт, которых нет в данных | `recipe {output, …}` — сразу выучен; с `book`, `key` — книга для награды; `course {teach_kind: recipe, recipe}` — у мастера этого ремесла |

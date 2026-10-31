@@ -28,6 +28,13 @@ func test_file_then_env_then_args() -> void:
 	assert_str(cfg.ca_cert_path).is_equal("C:/ca.crt")
 
 
+func test_the_developers_old_address_in_the_file_is_no_address() -> void:
+	_write_cfg(BackendConfig.DEV_URL, "from-file")
+	assert_str(BackendConfig.load_from(CFG, PackedStringArray()).url).is_empty()
+	var args := PackedStringArray(["--backend-url=" + BackendConfig.DEV_URL])
+	assert_str(BackendConfig.load_from(CFG, args).url).is_equal(BackendConfig.DEV_URL)
+
+
 func test_plain_ws_only_for_localhost() -> void:
 	var cfg := BackendConfig.new()
 	cfg.token = "t"

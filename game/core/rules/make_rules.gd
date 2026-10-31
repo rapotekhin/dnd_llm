@@ -301,8 +301,13 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary, pending: Array
 			return built
 		def.merge(built)
 		summary = "Новое: «%s» (%d очк., %s)" % [name, int(def["points"]), def["tier"]]
+	if e.get("learn") == true:
+		var why := _not_alone(s, data, what, def)
+		if not why.is_empty():
+			return {"reason": why}
+		summary += ", герой вывел его сам"
 	_put(data, id, def)  # a condition or a course of this same turn reads it; a game that drops it never lays it
-	var made := {"key": key, "id": id, "def": def}
+	var made := {"key": key, "id": id, "def": def, "learn": e.get("learn") == true}
 	if not title.is_empty():
 		made["book"] = _book(data, id, def, title)
 		s.items[str(made["book"]["id"])] = made["book"]["item"]  # the library of the game: `give_item` of this turn finds it
@@ -314,6 +319,20 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary, pending: Array
 		s.items[str(made["scroll"]["id"])] = made["scroll"]["item"]
 		summary += ", свиток «%s»" % scroll
 	return {"plan": made, "summary": summary}
+
+
+## "" or why the hero cannot work this out alone, by rules.make.self_taught.
+static func _not_alone(s: GameSession, data: Dictionary, what: String, def: Dictionary) -> String:
+	var rule: Dictionary = cfg(data).get("self_taught", {}).get(what, {})
+	if rule.is_empty():
+		return "сам герой выводит только заклинание; остальное приходит через учителя, книгу или мир"
+	var top := StudyRules.max_circle(s.character)
+	if top < 1:
+		return "герой не заклинатель: заклинание ему не вывести"
+	var limit := top - int(rule["below_top"])
+	if int(def["circle"]) > limit:
+		return "герой сам не выведет заклинание %d круга: его высший круг %d, а сам он выводит не выше %d. Дальше — учитель, книга, свиток или задание" % [int(def["circle"]), top, maxi(limit, 0)]
+	return ""
 
 
 static func _built(s: GameSession, data: Dictionary, what: String, name: String, parts: Variant) -> Dictionary:
@@ -543,6 +562,10 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 			var all: Dictionary = gen.get("courses", {})
 			all[str(book["course"])] = (book["def"] as Dictionary).duplicate(true)
 			gen["courses"] = all
+	if bool(p.get("learn", false)):
+		StudyRules.learn_spell(s.character, id)
+		CharacterRules.refresh(s.character, data, s.items)
+		return ["Герой сам вывел заклинание: «%s»" % str(def["name"])]
 	CharacterRules.refresh(s.character, data, s.items)
 	return []
 

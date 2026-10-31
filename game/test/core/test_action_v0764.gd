@@ -430,3 +430,91 @@ func test_a_recipe_course_teaches_a_thing_no_data_has() -> void:
 	var id := str(StudyRules.course(s, data, course)["teaches"]["id"])
 	assert_bool(CraftRules.known(s, data).has(id)).is_true()
 	_finish(s, id)
+
+
+func _first_circle() -> Dictionary:
+	var e := {"kind": "make", "what": "spell", "key": "spark", "name": "Искра Ялики", "text": "Огонь лижет врагов вокруг.", "learn": true,
+		"parts": [{"part": "target", "value": "area"}, {"part": "roll", "value": "dex"}, {"part": "half"}, {"part": "damage", "value": "fire", "amount": 3}]}
+	return e
+
+
+func _second_circle() -> Dictionary:
+	var e := _first_circle()
+	e["name"] = "Пламя Ялики"
+	(e["parts"] as Array)[3]["amount"] = 5
+	return e
+
+
+func test_a_wizard_of_five_works_out_a_first_circle_spell_alone_at_once() -> void:
+	var s := _hero()
+	s.character["slots_max"] = [4, 3, 2, 0, 0]
+	var plan := _made(s, _first_circle())
+	assert_int(int(plan["def"]["circle"])).is_equal(1)
+	assert_bool(s.character["spells"]["always"].has(str(plan["id"]))).is_true()
+	assert_str(MakeRules.apply(s, data, plan)[0]).contains("Искра Ялики")
+
+
+func test_past_two_circles_under_the_highest_a_spell_goes_through_the_world() -> void:
+	var s := _hero()
+	s.character["slots_max"] = [4, 3, 2, 0, 0]
+	var p := MakeRules.plan(s, data, _second_circle())
+	assert_str(str(p.get("reason", ""))).contains("сам не выведет")
+	var taught := _second_circle()
+	taught.erase("learn")
+	assert_bool(MakeRules.plan(s, data, taught).has("plan")).is_true()
+
+
+func test_a_young_caster_and_a_fighter_do_not_work_a_spell_out_alone() -> void:
+	var young := _hero()
+	young.character["slots_max"] = [2, 0, 0, 0, 0]
+	assert_str(str(MakeRules.plan(young, data, _first_circle()).get("reason", ""))).contains("сам не выведет")
+	assert_str(str(MakeRules.plan(_fighter(), data, _first_circle()).get("reason", ""))).contains("не заклинатель")
+
+
+func test_only_a_spell_is_worked_out_alone() -> void:
+	var e := _first_circle()
+	e["what"] = "ability"
+	e["ability"] = "str"
+	(e["parts"] as Array).append({"part": "uses", "amount": 1})
+	(e["parts"] as Array).append({"part": "recharge", "value": "long"})
+	assert_str(str(MakeRules.plan(_hero(), data, e).get("reason", ""))).contains("только заклинание")
+
+
+func _forge(out: Dictionary) -> Dictionary:
+	return {"kind": "create", "what": "recipe", "tool": "smiths_tools", "station": "forge", "hours": 8, "dc_tier": "medium",
+		"materials": [{"item_id": "iron_bar", "qty": 2}], "qty": 1}.merged(out)
+
+
+func test_an_experienced_smith_gets_a_recipe_of_a_new_saber_at_once() -> void:
+	var s := _smith()
+	DevelopmentRules.state(s.character, "craft")["xp"] = 1200
+	(DevelopmentRules.state(s.character, "craft")["skills"] as Array).append("craft:weaponsmith")
+	var plan := EffectEngine.new()._plan(s, data, "t", _forge({"output": {"name": "Сабля", "item_type": "weapon", "base": "scimitar", "rarity": "common", "value_cp": 2500,
+		"weight": 3.0, "description": "Лёгкий изогнутый клинок."}}), [] as Array[Dictionary])
+	assert_bool(plan.has("plan")).override_failure_message(str(plan)).is_true()
+	CraftRules.apply_make(s, data, plan["plan"])
+	var id := str(plan["plan"]["id"])
+	assert_bool(CraftRules.known(s, data).has(id)).is_true()
+	assert_array(CraftRules.skills_missing(s.character, data, CraftRules.recipe(s, data, id))).is_empty()
+
+
+func test_an_experienced_smith_gets_a_recipe_of_a_halberd_of_the_catalog_at_once() -> void:
+	var s := _smith()
+	(DevelopmentRules.state(s.character, "craft")["skills"] as Array).append("craft:weaponsmith")
+	var plan := EffectEngine.new()._plan(s, data, "t", _forge({"output_id": "halberd"}), [] as Array[Dictionary])
+	assert_bool(plan.has("plan")).override_failure_message(str(plan)).is_true()
+	assert_array(plan["plan"]["def"]["skills"]).contains(["craft:weaponsmith"])
+
+
+func test_a_smith_without_the_skill_knows_the_recipe_but_cannot_forge_it_yet() -> void:
+	var s := _smith()
+	var plan := EffectEngine.new()._plan(s, data, "t", _forge({"output_id": "halberd"}), [] as Array[Dictionary])
+	CraftRules.apply_make(s, data, plan["plan"])
+	assert_str(CraftRules.why_not(s, data, str(plan["plan"]["id"]))).is_equal("CRAFT_NO_SKILL")
+
+
+func test_who_has_no_tool_gets_no_recipe() -> void:
+	var s := _smith()
+	s.character["tools"] = []
+	var plan := EffectEngine.new()._plan(s, data, "t", _forge({"output_id": "halberd"}), [] as Array[Dictionary])
+	assert_str(str(plan.get("reason", ""))).contains("не владеет")

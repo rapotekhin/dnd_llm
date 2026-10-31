@@ -2512,6 +2512,10 @@
 			]
 		},
 		"trait_mult": 2,
+		"self_taught": {
+			"_doc": "What a hero works out alone, no teacher and no quest (v0.7.70.2, make with learn): a spell of a circle at least below_top under the hero's highest.",
+			"spell": {"below_top": 2}
+		},
 		"book": {
 			"value_cp": 2500,
 			"lessons": 4,

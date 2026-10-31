@@ -23,6 +23,8 @@ static func load_from(path: String = DEFAULT_PATH, args: PackedStringArray = OS.
 	var file := ConfigFile.new()
 	if file.load(path) == OK:
 		cfg.url = str(file.get_value("backend", "url", cfg.url))
+		if cfg.url == DEV_URL:  # left by the days before the embedded server: an address of the developer's own is never saved
+			cfg.url = ""
 		cfg.token = str(file.get_value("backend", "token", cfg.token))
 		cfg.ca_cert_path = str(file.get_value("backend", "ca_cert", cfg.ca_cert_path))
 		cfg.openrouter_key = str(file.get_value("backend", "openrouter_key", cfg.openrouter_key))
