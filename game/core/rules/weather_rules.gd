@@ -244,7 +244,7 @@ static func camp(s: GameSession, data: Dictionary) -> Array[String]:
 		if not tent.is_empty():
 			lines.append("%s: костёр погас, но в палатке сухо" % kind_name(data, k).capitalize())
 		else:
-			var r := HeroDefense.save(s, data, "con", int(cp.get("soak_dc", 10)))
+			var r := Sheet.save(s, data, Sheet.HERO, "con", int(cp.get("soak_dc", 10)))
 			lines.append("%s залил костёр, лагерь промок: %s" % [kind_name(data, k).capitalize(), r["text"]])
 			if not bool(r["ok"]):
 				var c := s.character
@@ -273,7 +273,7 @@ static func _exposure(s: GameSession, data: Dictionary, k: String, fire: bool, w
 	if not g.is_empty():
 		return ["%s: %s не страшен — %s" % [kind_name(data, k).capitalize(), ex["name"], g]]
 	var dis := bool(ex.get("heavy_armor_dis", false)) and _heavy(s, data)
-	var r := HeroDefense.save(s, data, "con", int(ex["dc"]), "", dis)
+	var r := Sheet.save(s, data, Sheet.HERO, "con", int(ex["dc"]), "", dis)
 	var lines: Array[String] = ["%s, %s без защиты: %s%s" % [kind_name(data, k).capitalize(), when, r["text"], " (тяжёлые доспехи)" if dis else ""]]
 	if not bool(r["ok"]):
 		lines.append_array(ConditionRules.add_exhaustion(s, data, 1, str(ex["name"])))

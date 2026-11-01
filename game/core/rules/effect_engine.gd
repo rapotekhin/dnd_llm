@@ -329,7 +329,7 @@ func _plan_damage(s: GameSession, data: Dictionary, turn_id: String, e: Dictiona
 		return {"reason": "неизвестная тяжесть урона"}
 	var amount := _roll(s.rng, int(dice[0]), int(dice[1]), 0)
 	var dtype := HeroDefense.damage_type(data, str(e.get("damage_type", "")))
-	var adj := HeroDefense.adjust(s, data, dtype, amount)  # v0.7.8: the hero's resistances
+	var adj := Sheet.damage(s, data, Sheet.HERO, dtype, amount)  # v0.7.8: the hero's resistances
 	var note := str(adj["note"])
 	return {"plan": {"amount": int(adj["damage"])}, "summary": "−%d HP (%s%s)" % [int(adj["damage"]),
 		data["misc"]["damage_types"].get(dtype, e.get("damage_type", "урон")), (", " + note) if not note.is_empty() else ""]}
@@ -779,7 +779,7 @@ func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 		if not (rules["saves"] as Array).has(ab) or not (rules["dc_tiers"] as Dictionary).has(tier):
 			return {"reason": "спасбросок: ability одна из %s, dc_tier один из %s" % [", ".join(rules["saves"]), ", ".join((rules["dc_tiers"] as Dictionary).keys())]}
 		var dc := maxi(int(rules["dc_tiers"][tier]), int(made.get("dc", 0)))  # the parts' price: no easier than it does
-		var r := HeroDefense.save(s, data, ab, dc, tag)
+		var r := Sheet.save(s, data, Sheet.HERO, ab, dc, tag)
 		if bool(r["ok"]):
 			return {"plan": {"condition": cond, "on": true, "resisted": true}, "summary": "%s: устоял — спасбросок %s" % [title, r["text"]]}
 		if bool(e.get("repeat_save", false)):
@@ -821,7 +821,7 @@ func _plan_disease(s: GameSession, data: Dictionary, _turn_id: String, e: Dictio
 	if not immune.is_empty():
 		return {"plan": {"resisted": true}, "summary": "Зараза не берёт — %s" % immune}
 	var dc := int(rules["dc_tiers"][str(sv["dc_tier"])])
-	var r := HeroDefense.save(s, data, str(sv["ability"]), dc, "disease")
+	var r := Sheet.save(s, data, Sheet.HERO, str(sv["ability"]), dc, "disease")
 	if bool(r["ok"]):
 		return {"plan": {"resisted": true}, "summary": "Зараза (%s): устоял — спасбросок %s" % [reason, r["text"]]}
 	return {"plan": {"disease": id, "made": made}, "summary": "Зараза (%s): провал — спасбросок %s" % [reason, r["text"]]}

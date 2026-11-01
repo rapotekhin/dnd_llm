@@ -12,17 +12,13 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["theft"]
 
 
-static func _template(data: Dictionary, npc: Dictionary) -> String:
-	return str(npc.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
-
-
 ## The NPC's pockets, filled on the first look: [{id, name, item_id, cp, qty, worn, dc}]; its `carries` always.
 static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
 	if Being.view(s, npc_id).has("pockets"):
 		return Being.of(s, npc_id)["pockets"]
 	var npc := WorldView.new(data["world"]).npc(npc_id)
 	var table: Dictionary = cfg(data)["pockets"]
-	var spec: Dictionary = table.get(_template(data, npc), table["_default"])
+	var spec: Dictionary = table.get(Sheet.template_id(data, npc), table["_default"])
 	var out: Array = []
 	var cp := CombatRules.roll_dice(s.rng, str(spec["coins_dice"])) * int(spec["unit_cp"])
 	if cp > 0:
@@ -37,7 +33,7 @@ static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
 		var id := str(picked.pop_at(s.rng.randi_range(0, picked.size() - 1)))
 		if data["items"]["catalog"].has(id):
 			out.append({"name": ItemRules.display_name(data["items"], s.items, id), "item_id": id, "cp": 0, "qty": 1, "worn": false})
-	for id: Variant in data["monsters"].get(_template(data, npc), {}).get("equipment", []):
+	for id: Variant in data["monsters"].get(Sheet.template_id(data, npc), {}).get("equipment", []):
 		if data["items"]["catalog"].has(str(id)) and not data["items"]["catalog"][str(id)].has("armor"):  # no armor off a back
 			out.append({"name": ItemRules.display_name(data["items"], s.items, str(id)), "item_id": str(id), "cp": 0, "qty": 1, "worn": true})
 	var i := 0
@@ -49,15 +45,14 @@ static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
 	return out
 
 
-static func passive(data: Dictionary, npc_id: String) -> int:
-	var npc := WorldView.new(data["world"]).npc(npc_id)
-	return int(data["monsters"].get(_template(data, npc), {}).get("passive_perception", 10))
+static func passive(s: GameSession, data: Dictionary, npc_id: String) -> int:
+	return Sheet.passive(s, data, WorldView.new(data["world"]).npc(npc_id))
 
 
 ## DC of one entry: the NPC's passive Perception (at least 10) + coins / item / heavy / valuable / worn modifiers.
 static func dc(s: GameSession, data: Dictionary, npc_id: String, e: Dictionary) -> int:
 	var mods: Dictionary = cfg(data)["dc"]
-	var d := maxi(10, passive(data, npc_id))
+	var d := maxi(10, passive(s, data, npc_id))
 	if str(e.get("item_id", "")).is_empty():
 		return d + int(mods["coins"])
 	var def := ItemRules.def_of(data["items"], s.items, str(e["item_id"]))
@@ -167,7 +162,7 @@ static func reaction_kind(data: Dictionary, npc_id: String) -> String:
 	var r: Dictionary = cfg(data)["reactions"]
 	if bool(npc.get("trader", false)):
 		return "close_shop"
-	return str(r.get(_template(data, npc), r["_default"]))
+	return str(r.get(Sheet.template_id(data, npc), r["_default"]))
 
 
 ## `memory` (with %s for the NPC's gender ending), `rep_key`, `deed` and `why` name the caught act — a theft by default,
@@ -189,7 +184,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String, memory: Stri
 		"points": rep_key, "why": why, "bond_deed": deed, "bond_why": why}))
 	match reaction_kind(data, npc_id):
 		"fight":
-			s.pending_fight = [{"monster": _template(data, npc), "name": who, "desc": str(npc.get("description", "")), "npc_id": npc_id}]
+			s.pending_fight = [{"monster": Sheet.template_id(data, npc), "name": who, "desc": str(npc.get("description", "")), "npc_id": npc_id}]
 			lines.append("%s хватается за оружие" % who)
 		"close_shop":
 			s.shop_closed[npc_id] = s.day

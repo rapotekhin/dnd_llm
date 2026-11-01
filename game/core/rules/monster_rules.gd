@@ -17,16 +17,8 @@ const KEEN := ["keen_smell", "keen_hearing", "keen_sight", "keen_hearing_and_sme
 const CHARGES := ["charge", "pounce", "trampling_charge"]
 
 
-static func monster(data: Dictionary, f: Dictionary) -> Dictionary:
-	if f.has("actions"):  # a fighter that lost its weapon (v0.7.22.8)
-		var m: Dictionary = (data["monsters"].get(str(f.get("monster", "")), {}) as Dictionary).duplicate()
-		m["actions"] = f["actions"]
-		return m
-	return data["monsters"].get(str(f.get("monster", "")), {})
-
-
 static func trait_of(data: Dictionary, f: Dictionary, id: String) -> Dictionary:
-	for t: Dictionary in monster(data, f).get("traits", []):
+	for t: Dictionary in Sheet.template(data, f).get("traits", []):
 		if str(t["id"]) == id:
 			return t
 	return {}
@@ -66,7 +58,7 @@ static func start_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 	for key: String in spent.keys():
 		if s.rng.randi_range(1, 6) >= int(spent[key]):
 			spent.erase(key)
-			for a: Dictionary in monster(data, f).get("actions", []):
+			for a: Dictionary in Sheet.template(data, f).get("actions", []):
 				if str(a["name_en"]) == key:
 					lines.append("%s: «%s» снова готово" % [f["name"], a["name"]])
 	f["moved"] = 0
@@ -79,7 +71,7 @@ static func start_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 static func pick(s: GameSession, data: Dictionary, f: Dictionary, kind: String) -> Dictionary:
 	var best := {}
 	var control := {}
-	for a: Dictionary in monster(data, f).get("actions", []):
+	for a: Dictionary in Sheet.template(data, f).get("actions", []):
 		var ok := str(a.get("kind")) == kind or (kind == "ranged" and a.has("range"))
 		if not ok or not available(f, a):
 			continue
@@ -101,7 +93,7 @@ static func pick(s: GameSession, data: Dictionary, f: Dictionary, kind: String) 
 ## A save action worth using now (a breath, a gaze, a song): ready, the hero within its area, and — for a pure
 ## condition — not under it already. {} when none.
 static func save_action(s: GameSession, data: Dictionary, f: Dictionary, squares: int) -> Dictionary:
-	for a: Dictionary in monster(data, f).get("actions", []):
+	for a: Dictionary in Sheet.template(data, f).get("actions", []):
 		if str(a.get("kind")) != "save" or not available(f, a):
 			continue
 		var fx: Dictionary = a.get("effect", {})
@@ -167,7 +159,7 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, a: Dic
 		failed = not bool(save_result["ok"])
 		margin = int(save_result["dc"]) - int(save_result["total"])
 	elif fx.has("save"):
-		var r := HeroDefense.save(s, data, str(fx["save"]["ability"]), int(fx["save"]["dc"]), tag)
+		var r := Sheet.save(s, data, Sheet.HERO, str(fx["save"]["ability"]), int(fx["save"]["dc"]), tag)
 		failed = not bool(r["ok"])
 		margin = int(fx["save"]["dc"]) - int(r["total"])
 		lines.append("%s: спасбросок %s" % [c.get("name", ""), r["text"]])
@@ -176,7 +168,7 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, a: Dic
 		var dmg := CombatRules.roll_dice(s.rng, str(fx["damage"]["dice"]))
 		if not failed:
 			dmg = dmg / 2 if bool(fx["damage"].get("half", false)) else 0
-		var adj := HeroDefense.adjust(s, data, str(fx["damage"]["type"]), dmg)
+		var adj := Sheet.damage(s, data, Sheet.HERO, str(fx["damage"]["type"]), dmg)
 		dmg = int(adj["damage"])
 		if dmg > 0:
 			lines.append("%s: ещё %d (%s)%s" % [a["name"], dmg, data["misc"]["damage_types"].get(str(fx["damage"]["type"]), fx["damage"]["type"]),
@@ -349,7 +341,7 @@ static func _ally_by_hero(s: GameSession, f: Dictionary) -> bool:
 static func charge_prone(s: GameSession, data: Dictionary, f: Dictionary, spec: Dictionary, lines: Array[String]) -> bool:
 	if spec.is_empty() or int(s.character.get("hp", 0)) <= 0 or ConditionRules.has(s.character, "prone"):
 		return false
-	var r := HeroDefense.save(s, data, str(spec["save"]["ability"]), int(spec["save"]["dc"]))
+	var r := Sheet.save(s, data, Sheet.HERO, str(spec["save"]["ability"]), int(spec["save"]["dc"]))
 	lines.append("%s (%s): спасбросок %s" % [f["name"], spec["name"], r["text"]])
 	if bool(r["ok"]):
 		return false
@@ -371,7 +363,7 @@ static func survives(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, 
 	var uf := trait_of(data, t, "undead_fortitude")
 	if not uf.is_empty() and dtype != "radiant" and not crit:
 		var dc := 5 + dmg
-		if CombatRules._monster_save(s, data, t, "con", dc):
+		if Sheet.saved(s, data, t, "con", dc):
 			lines.append("%s: %s (Тел против Сл %d) — встаёт с 1 HP" % [t["name"], uf["name"], dc])
 			return true
 	return false
@@ -418,9 +410,7 @@ static func end_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Arr
 		return
 	if FightGrid.touching(f, CombatRules.player(s)):
 		return
-	var m := monster(data, f)
-	var stealth := Roll.d20(s.rng) + int(m.get("skills", {}).get("stealth", CharacterRules.mod(int(m["abilities"].get("dex", 10)))))
-	if stealth >= int(s.character.get("passive_perception", 10)):
+	if Roll.d20(s.rng) + Sheet.skill(s, data, f, "stealth") >= Sheet.passive(s, data, Sheet.HERO):
 		f["hidden"] = true
 		lines.append("%s прячется (%s)" % [f["name"], trait_of(data, f, "nimble_escape")["name"]])
 
@@ -430,10 +420,10 @@ static func end_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Arr
 
 ## Parry (a reaction): +AC against one melee hit it sees, wielding a melee weapon. True when the hit is turned.
 static func parry(s: GameSession, data: Dictionary, t: Dictionary, total: int, lines: Array[String]) -> bool:
-	for r: Dictionary in monster(data, t).get("reactions", []):
+	for r: Dictionary in Sheet.template(data, t).get("reactions", []):
 		if not r.has("ac") or bool(t.get("reacted", false)) or CombatRules.incapacitated(t) or ConditionRules.invisible(s.character, data):
 			continue
-		if not (monster(data, t).get("actions", []) as Array).any(func(a: Dictionary) -> bool: return str(a.get("kind")) == "melee"):
+		if not (Sheet.template(data, t).get("actions", []) as Array).any(func(a: Dictionary) -> bool: return str(a.get("kind")) == "melee"):
 			continue
 		if total < CombatRules.ac_of(t) + int(r["ac"]):
 			t["reacted"] = true
@@ -447,7 +437,7 @@ static func parry(s: GameSession, data: Dictionary, t: Dictionary, total: int, l
 
 ## The spells the monster can cast now with what it would spend: [{id, slot (0 — cantrip or innate)}].
 static func castable(data: Dictionary, f: Dictionary) -> Array[Dictionary]:
-	var sc: Dictionary = monster(data, f).get("spellcasting", {})
+	var sc: Dictionary = Sheet.template(data, f).get("spellcasting", {})
 	var out: Array[Dictionary] = []
 	if sc.is_empty():
 		return out
@@ -559,7 +549,7 @@ static func _wounded_ally(s: GameSession, data: Dictionary, f: Dictionary, spell
 
 
 static func _caster_level(data: Dictionary, f: Dictionary) -> int:
-	return maxi(1, int(monster(data, f).get("spellcasting", {}).get("level", 1)))
+	return maxi(1, int(Sheet.template(data, f).get("spellcasting", {}).get("level", 1)))
 
 
 static func _avg(expr: String) -> float:
@@ -571,7 +561,7 @@ static func _avg(expr: String) -> float:
 static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary, lines: Array[String], asked: bool = false) -> void:
 	var id := str(o["id"])
 	var sp: Dictionary = data["spells"][id]
-	var sc: Dictionary = monster(data, f)["spellcasting"]
+	var sc: Dictionary = Sheet.template(data, f)["spellcasting"]
 	var slot := int(o["slot"])
 	if not asked:  # Counterspell (v0.7.13.7): the window, or the policy decides
 		var label := SpellEffects.counter_option(s, data, f, id)
@@ -597,7 +587,7 @@ static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary
 	var name := str(sp["name"])
 	CombatRules.fx(s, str(f["id"]) if sp.has("heal_at_slot") else CombatRules.PLAYER, "spell")  # v0.7.22.14
 	var dc := int(sc.get("dc", 10))
-	var ab_mod := CharacterRules.mod(int(monster(data, f)["abilities"].get(str(sc.get("ability", "wis")), 10)))
+	var ab_mod := CharacterRules.mod(int(Sheet.template(data, f)["abilities"].get(str(sc.get("ability", "wis")), 10)))
 	f["hidden"] = false
 	f["last_spell"] = id
 	if sp.has("heal_at_slot"):
@@ -622,7 +612,7 @@ static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary
 		var total := 0
 		for i in n:
 			total += CombatRules.roll_dice(s.rng, dice)
-		var adj := HeroDefense.adjust(s, data, dtype, total)
+		var adj := Sheet.damage(s, data, Sheet.HERO, dtype, total)
 		lines.append("%s колдует «%s»: %d (%s)" % [f["name"], name, int(adj["damage"]), dtext])
 		CombatRules._hurt_player(s, data, int(adj["damage"]), false, lines)
 		return
@@ -640,16 +630,16 @@ static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary
 			lines.append(line + " — промах")
 			return
 		var dmg := CombatRules.roll_dice(s.rng, dice, nat == 20)
-		var adj := HeroDefense.adjust(s, data, dtype, dmg)
+		var adj := Sheet.damage(s, data, Sheet.HERO, dtype, dmg)
 		lines.append(line + " — попадание, %d (%s)%s" % [int(adj["damage"]), dtext, (", " + str(adj["note"])) if not str(adj["note"]).is_empty() else ""])
 		CombatRules._hurt_player(s, data, int(adj["damage"]), nat == 20, lines)
 		return
 	if sp.has("save"):
-		var r := HeroDefense.save(s, data, str(sp["save"]["ability"]), dc, "magic")
+		var r := Sheet.save(s, data, Sheet.HERO, str(sp["save"]["ability"]), dc, "magic")
 		var dmg := CombatRules.roll_dice(s.rng, dice)
 		if bool(r["ok"]):
 			dmg = dmg / 2 if str(sp["save"].get("success", "none")) == "half" else 0
-		var adj := HeroDefense.adjust(s, data, dtype, dmg)
+		var adj := Sheet.damage(s, data, Sheet.HERO, dtype, dmg)
 		lines.append("%s колдует «%s»: спасбросок %s, %d (%s)" % [f["name"], name, r["text"], int(adj["damage"]), dtext])
 		CombatRules._hurt_player(s, data, int(adj["damage"]), false, lines)
 
@@ -687,7 +677,7 @@ static func _cast_condition_on_hero(s: GameSession, data: Dictionary, f: Diction
 			return
 		lines.append("%s колдует «%s»%s: пул %d хитов" % [f["name"], name, said, pool])
 	elif sp.has("save"):
-		var r := HeroDefense.save(s, data, str(sp["save"]["ability"]), dc, tag)
+		var r := Sheet.save(s, data, Sheet.HERO, str(sp["save"]["ability"]), dc, tag)
 		lines.append("%s колдует «%s»%s: спасбросок %s" % [f["name"], name, said, r["text"]])
 		if bool(r["ok"]):
 			return
@@ -733,7 +723,7 @@ static func concentration_check(s: GameSession, data: Dictionary, f: Dictionary,
 	var spell := str(f.get("concentration", ""))
 	if spell.is_empty() or dmg <= 0:
 		return
-	if int(f["hp"]) > 0 and CombatRules._monster_save(s, data, f, "con", maxi(10, dmg / 2)):
+	if int(f["hp"]) > 0 and Sheet.saved(s, data, f, "con", maxi(10, dmg / 2)):
 		return
 	lines.append("%s теряет концентрацию на «%s»" % [f["name"], data["spells"].get(spell, {}).get("name", spell)])
 	release(s, data, f, lines)
@@ -777,12 +767,12 @@ static func effect_text(data: Dictionary, a: Dictionary) -> String:
 
 ## Darkvision of a monster (v0.7.10): it fights in the dark of a dungeon without trouble.
 static func sees_in_dark(data: Dictionary, f: Dictionary) -> bool:
-	return int(monster(data, f).get("darkvision", 0)) > 0
+	return int(Sheet.template(data, f).get("darkvision", 0)) > 0
 
 
 ## The monster flies (a fly speed in the SRD): it reaches a flying hero (v0.7.13.3).
 static func flies(data: Dictionary, f: Dictionary) -> bool:
-	return int(monster(data, f).get("fly", 0)) > 0
+	return int(Sheet.template(data, f).get("fly", 0)) > 0
 
 
 ## The way a monster covers in a turn on the field: the walk or, if faster, the fly (a Flying Sword: 0 ft, fly 50 ft).

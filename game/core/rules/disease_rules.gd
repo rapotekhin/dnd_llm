@@ -65,7 +65,7 @@ static func expose(s: GameSession, data: Dictionary, id: String, dc: int, why: S
 	var immune := HeroDefense.immune(c, data, "", "disease")
 	if not immune.is_empty():
 		return ["%s: зараза не берёт — %s" % [why, immune]]
-	var r := HeroDefense.save(s, data, str(cfg(data).get("save", "con")), dc, "disease")
+	var r := Sheet.save(s, data, Sheet.HERO, str(cfg(data).get("save", "con")), dc, "disease")
 	if bool(r["ok"]):
 		return ["%s: спасбросок %s" % [why, r["text"]]]
 	var lines: Array[String] = ["%s: спасбросок %s" % [why, r["text"]]]

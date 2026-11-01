@@ -56,7 +56,7 @@ func test_every_rule_roll_is_labelled_and_reaches_the_chat_line() -> void:
 	s.settings["difficulty"] = "easy"
 	var before := RollParts.unlabeled
 	EncounterRules.roll(s, data, "persuasion", 12)
-	HeroDefense.save(s, data, "con", 12)
+	Sheet.save(s, data, Sheet.HERO, "con", 12)
 	CombatRules.stealth_roll(s, data)
 	BondRules.confess(s, data, "npc_innkeeper")
 	SiteRules.ask(s, data, "npc_innkeeper")
@@ -81,7 +81,7 @@ func test_a_fight_keeps_its_rolls_to_its_log() -> void:
 	var s := _rich()
 	s.combat = {"active": true}
 	if CombatRules.active(s):
-		HeroDefense.save(s, data, "dex", 10)
+		Sheet.save(s, data, Sheet.HERO, "dex", 10)
 		assert_bool(s.roll_notes.is_empty()).is_true()
 
 

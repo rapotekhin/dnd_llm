@@ -128,48 +128,6 @@ static func immune(c: Dictionary, data: Dictionary, cond: String, tag: String) -
 	return ""
 
 
-## A saving throw of the hero by the engine: the sheet's bonus, conditions (auto-fail of STR / DEX when paralysed,
-## disadvantage of DEX when restrained), exhaustion 3+, advantages of the tag. Natural 20 / 1 succeed / fail.
-## {"ok", "total", "text"} — «Тел 14 против Сл 13, с преимуществом (Стойкость дварфа) — успех».
-static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag: String = "", dis_extra := false) -> Dictionary:
-	var c := s.character
-	var mods := ConditionRules.check_mods(c, data, {"save": ability})
-	var bonus := int(c.get("saves", {}).get(ability, 0))
-	var adv_why := save_advantages(c, data, ability, tag, CombatRules.active(s) and bool(s.combat.get("raging", false)))
-	var adv := not adv_why.is_empty()
-	var dis := not (mods["disadvantage"] as Array).is_empty() or dis_extra  # heavy armour in the heat (v0.7.46)
-	var rolls := Roll.hero_dice(s, adv, dis)  # Lucky (v0.7.10)
-	var nat := Roll.kept(rolls, adv, dis)
-	var die := SpellEffects.die(s, c, "save")  # Bless, Resistance (v0.7.13.1)
-	var cover := int(CombatRules.player(s).get("cover", 0)) if ability == "dex" and CombatRules.active(s) else 0  # v0.8.4
-	var total := nat + bonus + cover + int(die["bonus"]) + DifficultyRules.bonus(s, data)  # the game's difficulty (v0.7.20.4)
-	var parts := RollParts.cached(c, data, "save", ability, s.items)
-	parts.append_array(die["parts"])
-	RollParts.difficulty(s, data, parts)
-	var ok := Roll.succeeds(nat, total, dc)
-	var note := (" " + str(die["note"])) if not str(die["note"]).is_empty() else ""
-	if DifficultyRules.bonus(s, data) != 0:
-		note += ", " + DifficultyRules.note(s, data)
-	if not ok and nat != 1 and (mods["auto_fail"] as Array).is_empty():
-		var insp := Roll.inspire(s)  # Bardic Inspiration on a failed save
-		if int(insp["value"]) > 0:
-			total += int(insp["value"])
-			ok = total >= dc
-			note += ", вдохновение +%d" % int(insp["value"])
-			RollParts.add(parts, str(insp["label"]), int(insp["value"]))
-	if not (mods["auto_fail"] as Array).is_empty():
-		ok = false
-		note += ", автопровал: " + ", ".join((mods["auto_fail"] as Array).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower()))
-	elif adv and not dis:
-		note += ", с преимуществом (%s)" % ", ".join(adv_why)
-	elif dis and not adv:
-		note += ", с помехой (%s)" % ", ".join((mods["disadvantage"] as Array).map(func(x: Variant) -> String:
-			return "истощение" if str(x) == "exhaustion" else ConditionRules.name_of(data, str(x)).to_lower()))
-	RollParts.note(s, "Спасбросок: " + CombatRules.ab_name(ability), rolls, nat, parts, total - nat, dc)
-	return {"ok": ok, "total": total, "nat": nat,
-		"text": "%s %d против Сл %d%s — %s" % [CombatRules.ab_name(ability), total, dc, note, "успех" if ok else "провал"]}
-
-
 ## After damage the hero still has: a concentration save (DC 10 or half the damage) and waking from an effect that
 ## ends on damage (sleep). Lines.
 static func after_damage(s: GameSession, data: Dictionary, dmg: int) -> Array[String]:
@@ -183,7 +141,7 @@ static func after_damage(s: GameSession, data: Dictionary, dmg: int) -> Array[St
 			lines.append("%s: %s проходит от удара" % [c.get("name", ""), ConditionRules.name_of(data, str(e.get("condition", ""))).to_lower()])
 	var spell := str(c.get("concentration", ""))
 	if not spell.is_empty() and int(c.get("hp", 0)) > 0:
-		var r := save(s, data, "con", maxi(10, dmg / 2), "")
+		var r := Sheet.save(s, data, Sheet.HERO, "con", maxi(10, dmg / 2), "")
 		if bool(r["ok"]):
 			lines.append("концентрация удержана (%s)" % r["text"])
 		else:

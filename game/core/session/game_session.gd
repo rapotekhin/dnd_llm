@@ -44,12 +44,17 @@ var room_id: String = ""
 var mode: String = MODE_EXPLORATION
 ## The conversation partner in social / trade.
 var npc_id: String = ""
-## The character in the CharacterRules layout: choices, state (hp, conditions, slots) and the derived cache.
-var character: Dictionary = {}
+## The hero in the CharacterRules layout: choices, state (hp, conditions, slots) and the derived cache. It is the part
+## `sheet` of the record `p`: the hero is a record like anybody (v0.8.4.6, ADR-0016).
+var character: Dictionary:
+	get:
+		return beings[Being.HERO]["sheet"]
+	set(value):
+		beings[Being.HERO]["sheet"] = value
 ## Items created by the master and accepted by the engine: {item_id: definition}. Kept so saves work alone.
 var items: Dictionary = {}
 ## Every character the game touched, one record each (v0.7.61, Being): {id: record}.
-var beings: Dictionary = {}
+var beings: Dictionary = {Being.HERO: {"sheet": {}}}
 var being_counter: int = 0
 var flags: Array[String] = []
 ## Failed skill checks: "skill|target" → {"result", "advantages"} (ExplorationRules); cleared by a long rest.
@@ -447,7 +452,6 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"room_id": room_id,
 		"mode": mode,
 		"npc_id": npc_id,
-		"character": character,
 		"beings": beings,
 		"being_counter": being_counter,
 		"items": items,
@@ -532,9 +536,14 @@ static func from_dict(saved: Dictionary) -> GameSession:
 	s.room_id = str(d.get("room_id", ""))
 	s.mode = str(d.get("mode", MODE_EXPLORATION))
 	s.npc_id = str(d.get("npc_id", ""))
-	s.character = normalized_character(d.get("character", {}))
 	s.items = d.get("items", {})
-	s.beings = whole(d.get("beings", {}))
+	var records: Dictionary = (d.get("beings", {}) as Dictionary).duplicate()
+	var hero: Dictionary = (records.get(Being.HERO, {}) as Dictionary).duplicate()
+	var sheet: Dictionary = hero.get("sheet", {})
+	hero.erase("sheet")  # its needs are fractions: not for `whole`
+	records[Being.HERO] = hero
+	s.beings = whole(records)
+	s.character = normalized_character(sheet)
 	s.being_counter = int(d.get("being_counter", 0))
 	for f: Variant in d.get("flags", []):
 		s.flags.append(str(f))

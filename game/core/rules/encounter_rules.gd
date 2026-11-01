@@ -27,16 +27,11 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["encounters"]
 
 
-static func _monster(data: Dictionary, e: Dictionary) -> Dictionary:
-	return data["monsters"].get(str(e.get("monster", "")), {})
-
-
 ## The best passive Perception among the foes of an encounter.
-static func best_passive(data: Dictionary, enemies: Array) -> int:
+static func best_passive(s: GameSession, data: Dictionary, enemies: Array) -> int:
 	var best := 0
 	for e: Dictionary in enemies:
-		var m := _monster(data, e)
-		best = maxi(best, int(m.get("passive_perception", 10 + CharacterRules.mod(int(m.get("abilities", {}).get("wis", 10))))))
+		best = maxi(best, Sheet.passive(s, data, e))
 	return best
 
 
@@ -58,10 +53,10 @@ static func meet(s: GameSession, data: Dictionary, room_id: String, from: String
 
 ## An ambush hides: the heads whose Stealth beats the hero's passive Perception, the rest the hero sees from the start.
 static func _hide(s: GameSession, data: Dictionary, foes: Array) -> Array:
-	var passive := int(s.character.get("passive_perception", 10)) - TimeRules.passive_penalty(s, data)
+	var passive := Sheet.passive(s, data, Sheet.HERO)
 	var out: Array = []
 	for e: Dictionary in foes:
-		if Roll.d20(s.rng) + CombatRules.monster_stealth(data, e) >= passive:
+		if Roll.d20(s.rng) + Sheet.skill(s, data, e, "stealth") >= passive:
 			out.append(foe_id(e))
 	return out
 
@@ -106,7 +101,7 @@ static func watch(s: GameSession, data: Dictionary, map: Dictionary) -> Dictiona
 			var roll := CombatRules.stealth_roll(s, data)
 			lk["stealth"] = int(roll["total"])
 			out["lines"].append("%s крадётся: Скрытность %d%s" % [s.character.get("name", ""), int(roll["total"]), roll["note"]])
-		if int(lk["stealth"]) < best_passive(data, [t["record"]]) - WeatherRules.unseen(s, data):
+		if int(lk["stealth"]) < best_passive(s, data, [t["record"]]) - WeatherRules.unseen(s, data):
 			out.merge({"fight": true, "source": {"sneak": true, "stealth_total": int(lk["stealth"])}}, true)
 			return out
 	return out
@@ -206,7 +201,7 @@ static func talkable(s: GameSession, data: Dictionary, enemies: Array, skill: St
 	if skill == "animal_handling":  # v0.7.50: beasts are calmed, not talked to
 		return "" if all_beasts(data, enemies) else "COMBAT_NO_PARLEY"
 	var thinking := enemies.filter(func(e: Dictionary) -> bool:
-		return int(_monster(data, e).get("abilities", {}).get("int", 1)) >= int(CombatRules.cfg(data)["intelligent_int"]))
+		return int(Sheet.template(data, e).get("abilities", {}).get("int", 1)) >= int(CombatRules.cfg(data)["intelligent_int"]))
 	if thinking.is_empty():
 		return "COMBAT_NO_PARLEY"
 	if skill != "intimidation" and mute(s, data, enemies):
@@ -216,7 +211,7 @@ static func talkable(s: GameSession, data: Dictionary, enemies: Array, skill: St
 
 ## Every foe is a beast: «Успокоить» by Animal Handling.
 static func all_beasts(data: Dictionary, enemies: Array) -> bool:
-	return not enemies.is_empty() and enemies.all(func(e: Dictionary) -> bool: return str(_monster(data, e).get("type", "")) == "beast")
+	return not enemies.is_empty() and enemies.all(func(e: Dictionary) -> bool: return str(Sheet.template(data, e).get("type", "")) == "beast")
 
 
 ## The DC of calming beasts (rules.factions.calm): base + the strongest's WIS modifier + per_cr × the highest CR.
@@ -225,7 +220,7 @@ static func calm_dc(data: Dictionary, enemies: Array) -> int:
 	var wis := -5
 	var cr := 0.0
 	for e: Dictionary in enemies:
-		var m := _monster(data, e)
+		var m := Sheet.template(data, e)
 		wis = maxi(wis, CharacterRules.mod(int(m.get("abilities", {}).get("wis", 10))))
 		cr = maxf(cr, float(m.get("cr", 0)))
 	return int(c["base_dc"]) + wis + int(c["per_cr"]) * int(ceil(cr))
@@ -234,7 +229,7 @@ static func calm_dc(data: Dictionary, enemies: Array) -> int:
 ## Nobody of the thinking foes understands the hero.
 static func mute(s: GameSession, data: Dictionary, enemies: Array) -> bool:
 	return not enemies.any(func(e: Dictionary) -> bool:
-		return int(_monster(data, e).get("abilities", {}).get("int", 1)) >= int(CombatRules.cfg(data)["intelligent_int"]) 			and LanguageRules.foe_understands(s.character, data, e))
+		return int(Sheet.template(data, e).get("abilities", {}).get("int", 1)) >= int(CombatRules.cfg(data)["intelligent_int"]) 			and LanguageRules.foe_understands(s.character, data, e))
 
 
 ## The parley DC of the fight for foes not fighting yet (CombatRules.parley_dc without the wounds).
@@ -243,7 +238,7 @@ static func parley_dc(data: Dictionary, enemies: Array, hard: bool) -> int:
 	var wis := -5
 	var cr := 0.0
 	for e: Dictionary in enemies:
-		var m := _monster(data, e)
+		var m := Sheet.template(data, e)
 		if int(m.get("abilities", {}).get("int", 1)) >= int(CombatRules.cfg(data)["intelligent_int"]):
 			wis = maxi(wis, int(m.get("saves", {}).get("wis", CharacterRules.mod(int(m.get("abilities", {}).get("wis", 10))))))
 			cr = maxf(cr, float(m.get("cr", 0)))

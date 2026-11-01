@@ -228,7 +228,7 @@ func test_inspiration_is_added_to_a_failed_save() -> void:
 	Stock.use(s.character, data, "bardic_inspiration", 1, s.rng)
 	assert_int(FeatureRules.inspiration_die(s.character)).is_equal(6)
 	s.character["saves"]["wis"] = -30
-	HeroDefense.save(s, data, "wis", 40)
+	Sheet.save(s, data, Sheet.HERO, "wis", 40)
 	assert_int(FeatureRules.inspiration_die(s.character)).is_equal(0)  # spent on the failure
 
 

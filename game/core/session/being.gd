@@ -22,8 +22,11 @@ extends RefCounted
 ## writes it back; was — a creature attacked, back in the room if the hero runs. The hero's fighter has the id `p`.
 ## The form of a record is declared: PARTS and NESTED, read by `check` (TYPE_NIL — a field of several shapes).
 
+## The hero: the record of this id, its part `sheet` is what `s.character` reads (v0.8.4.6, ADR-0016).
+const HERO := "p"
+
 const PARTS := {
-	"id": TYPE_STRING, "n": TYPE_INT, "monster": TYPE_STRING, "name": TYPE_STRING, "base": TYPE_STRING, "desc": TYPE_STRING,
+	"id": TYPE_STRING, "n": TYPE_INT, "monster": TYPE_STRING, "name": TYPE_STRING, "base": TYPE_STRING, "desc": TYPE_STRING, "sheet": TYPE_DICTIONARY,
 	"faction": TYPE_STRING, "encounter": TYPE_STRING, "no_xp": TYPE_BOOL,
 	"attitude": TYPE_INT, "attitude_base": TYPE_INT, "memory": TYPE_ARRAY, "pockets": TYPE_ARRAY, "picked": TYPE_INT, "caught": TYPE_INT,
 	"hp": TYPE_INT, "effects": TYPE_ARRAY, "conditions": TYPE_ARRAY, "next_effect": TYPE_INT, "sick": TYPE_DICTIONARY, "dead": TYPE_BOOL, "body": TYPE_STRING,

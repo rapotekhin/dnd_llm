@@ -16,7 +16,7 @@ func test_nothing_happened_nothing_is_kept() -> void:
 	var s := _session()
 	assert_dict(Being.view(s, "npc_innkeeper")).is_empty()
 	assert_bool(Being.dead(s, "npc_innkeeper")).is_false()
-	assert_dict(s.beings).is_empty()
+	assert_array(s.beings.keys()).is_equal([Being.HERO])
 
 
 func test_a_part_comes_and_goes() -> void:

@@ -55,7 +55,7 @@ func test_a_summoned_one_has_one_record() -> void:
 	var m := Being.made(s, "summon", {"spell": "find_familiar", "monster": "owl", "name": "Сова", "until": -1, "concentration": false, "hp": 1, "helper": true})
 	assert_array(AllyRules.called(s)).has_size(1)
 	assert_str(AllyRules.dismiss(s, str(m["id"]))).is_empty()
-	assert_dict(s.beings).is_empty()
+	assert_array(s.beings.keys()).is_equal([Being.HERO])
 
 
 func test_a_fighter_is_the_record_with_its_id() -> void:
@@ -73,7 +73,7 @@ func test_an_npc_fights_under_its_own_id() -> void:
 	TestUtils.fight(s, data, [{"monster": "commoner", "name": "Бруно", "npc_id": "npc_innkeeper"}], {})
 	assert_array(CombatRules.enemies(s)).contains_exactly(["npc_innkeeper"])
 	CombatRules.close(s)
-	assert_dict(s.beings).is_empty()
+	assert_array(s.beings.keys()).is_equal([Being.HERO])
 
 
 func test_the_beaten_foe_stays_the_same_character() -> void:
@@ -94,7 +94,7 @@ func test_a_fight_leaves_no_one_it_did_not_keep() -> void:
 	for id: String in CombatRules.enemies(s):
 		CombatRules.fighter(s, id)["status"] = "dead"
 	CombatRules.close(s)
-	assert_dict(s.beings).is_empty()
+	assert_array(s.beings.keys()).is_equal([Being.HERO])
 	assert_dict(s.combat).is_empty()
 
 

@@ -23,9 +23,9 @@ func test_levels_and_their_bonus() -> void:
 
 func test_a_save_of_the_hero_gets_the_bonus() -> void:
 	s.settings["difficulty"] = "trivial"
-	var easy := HeroDefense.save(s, data, "wis", 30)
+	var easy := Sheet.save(s, data, Sheet.HERO, "wis", 30)
 	s.settings["difficulty"] = "hard"
-	var hard := HeroDefense.save(s, data, "wis", 30)
+	var hard := Sheet.save(s, data, Sheet.HERO, "wis", 30)
 	assert_int(int(easy["total"]) - int(easy["nat"]) - (int(hard["total"]) - int(hard["nat"]))).is_equal(25)
 	assert_str(str(easy["text"])).contains("Элементарная")
 

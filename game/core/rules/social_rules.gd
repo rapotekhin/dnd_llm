@@ -17,26 +17,20 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["social"]
 
 
-static func _mod(score: int) -> int:
-	return floori((score - 10) / 2.0)
-
-
 ## The NPC's bonus against `skill` and its name: {bonus, why}, or {} when the skill is not a social one.
 static func resistance(data: Dictionary, npc: Dictionary, skill: String) -> Dictionary:
 	var against := str(cfg(data)["contests"].get(skill, ""))
 	if against.is_empty():
 		return {}
-	var m: Dictionary = data["monsters"].get(str(npc.get("monster", CombatRules.cfg(data)["default_npc_monster"])), {})
-	var ab: Dictionary = m.get("abilities", {})
-	var sk: Dictionary = m.get("skills", {})
+	var sheet := Sheet.of(null, data, npc)
 	match against:
 		"insight":
-			return {"bonus": int(sk.get("insight", _mod(int(ab.get("wis", 10))))), "why": "Проницательность"}
+			return {"bonus": int(sheet["skills"]["insight"]), "why": "Проницательность"}
 		"deception":
-			return {"bonus": int(sk.get("deception", _mod(int(ab.get("cha", 10))))), "why": "Обман"}
+			return {"bonus": int(sheet["skills"]["deception"]), "why": "Обман"}
 		"wis_save":
-			return {"bonus": int(m.get("saves", {}).get("wis", _mod(int(ab.get("wis", 10))))), "why": "спасбросок Мудрости"}
-	return {"bonus": _mod(int(ab.get("wis", 10))), "why": "Мудрость"}
+			return {"bonus": int(sheet["saves"]["wis"]), "why": "спасбросок Мудрости"}
+	return {"bonus": CharacterRules.mod(int(sheet["abilities"].get("wis", 10))), "why": "Мудрость"}
 
 
 ## The engine's DC for a social check against `npc_id`: {dc, reason}, or {} when the engine's tier stays.

@@ -46,7 +46,7 @@ static func range_of(s: GameSession, data: Dictionary, sees_dark: int, wide: boo
 
 ## Darkvision of a person or a foe in squares.
 static func dark_of(data: Dictionary, f: Dictionary) -> int:
-	return int(MonsterRules.monster(data, f).get("darkvision", 0)) / 5
+	return int(Sheet.template(data, f).get("darkvision", 0)) / 5
 
 
 static func _npc_dark(data: Dictionary, id: String) -> int:

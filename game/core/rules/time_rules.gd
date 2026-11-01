@@ -121,7 +121,7 @@ static func _awake(s: GameSession, data: Dictionary) -> Array[String]:
 	while s.awake_saves < days:
 		var dc := int(ex["awake_dc"]) + int(ex["awake_dc_step"]) * s.awake_saves
 		s.awake_saves += 1
-		var r := HeroDefense.save(s, data, "con", dc)
+		var r := Sheet.save(s, data, Sheet.HERO, "con", dc)
 		lines.append("Без сна %d ч: %s" % [s.awake_saves * int(ex["awake_hours"]), r["text"]])
 		if not bool(r["ok"]):
 			lines.append_array(ConditionRules.add_exhaustion(s, data, 1, "без сна"))
@@ -161,7 +161,7 @@ static func march(s: GameSession, data: Dictionary, minutes: int) -> Array[Strin
 	s.march_minutes += maxi(0, minutes)
 	var lines: Array[String] = []
 	for hour in range(maxi(0, (before - limit) / 60) + 1, maxi(0, (s.march_minutes - limit) / 60) + 1):
-		var r := HeroDefense.save(s, data, "con", int(ex["march_dc"]) + hour)
+		var r := Sheet.save(s, data, Sheet.HERO, "con", int(ex["march_dc"]) + hour)
 		lines.append("Марш %d ч за день: %s" % [int(ex["march_hours"]) + hour, r["text"]])
 		if not bool(r["ok"]):
 			lines.append_array(ConditionRules.add_exhaustion(s, data, 1, "марш"))

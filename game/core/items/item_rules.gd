@@ -555,10 +555,10 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 	if s != null and fx.has("poison"):  # a Potion of Poison drunk for a healing one
 		var p: Dictionary = fx["poison"]
 		var dmg := CombatRules.roll_dice(rng, str(p["dice"]))
-		var r := HeroDefense.save(s, data, str(p["save"]), int(p["dc"]), "poison")
+		var r := Sheet.save(s, data, Sheet.HERO, str(p["save"]), int(p["dc"]), "poison")
 		if bool(r["ok"]):
 			dmg /= 2
-		var adj := HeroDefense.adjust(s, data, "poison", dmg)
+		var adj := Sheet.damage(s, data, Sheet.HERO, "poison", dmg)
 		c["hp"] = maxi(0, int(c["hp"]) - int(adj["damage"]))
 		lines.append("яд! −%d HP, спасбросок %s" % [int(adj["damage"]), r["text"]])
 		if not bool(r["ok"]):

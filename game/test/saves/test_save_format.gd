@@ -42,4 +42,4 @@ func test_current_fixture_matches_the_current_layout() -> void:
 	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(FIXTURES + "save_v%d.json" % SaveFormat.SAVE_VERSION))
 	var fresh := SaveFormat.build(TestUtils.session_with_chat(), "0.5.0", "2026-10-18T12:00:00", 500)
 	assert_array(data["session"].keys()).contains_exactly_in_any_order(fresh["session"].keys())
-	assert_array(data["session"]["character"].keys()).contains_exactly_in_any_order(fresh["session"]["character"].keys())
+	assert_array(data["session"]["beings"]["p"]["sheet"].keys()).contains_exactly_in_any_order(fresh["session"]["beings"]["p"]["sheet"].keys())

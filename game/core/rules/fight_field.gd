@@ -629,7 +629,7 @@ static func force_way(s: GameSession, data: Dictionary, f: Dictionary, lines: Ar
 		if FightGrid.dist_to(f, at) > 1 or not FightGrid.shut(s, g, at):
 			continue
 		var dc := _door_dc(s, data, at, d)
-		var total := Roll.d20(s.rng) + CharacterRules.mod(int(CombatRules._monster(data, f)["abilities"].get("str", 10)))
+		var total := Roll.d20(s.rng) + CharacterRules.mod(int(Sheet.template(data, f)["abilities"].get("str", 10)))
 		if total >= dc:
 			_break_door(s, data, at, d)
 			lines.append("%s выбивает дверь" % f["name"])

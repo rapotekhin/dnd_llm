@@ -29,10 +29,6 @@ static func kind(data: Dictionary, id: String) -> Dictionary:
 	return kinds(data).get(id, {})
 
 
-static func _mod(score: int) -> int:
-	return floori((score - 10) / 2.0)
-
-
 ## The check of a kind as the hero's roll params: {skill | ability | save, dc_tier, tool}.
 static func hero_params(data: Dictionary, k: Dictionary, cheat: bool = false) -> Dictionary:
 	var p := {"dc_tier": "medium"}
@@ -49,20 +45,19 @@ static func hero_params(data: Dictionary, k: Dictionary, cheat: bool = false) ->
 ## one (`tools`): {bonus, why}.
 static func npc_bonus(data: Dictionary, npc_id: String, check: Dictionary, tool: String = "") -> Dictionary:
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
-	var m: Dictionary = data["monsters"].get(str(npc.get("monster", CombatRules.cfg(data)["default_npc_monster"])), {})
-	var ab: Dictionary = m.get("abilities", {})
+	var m := Sheet.template(data, npc)
+	var sheet := Sheet.of(null, data, npc)
 	var bonus := 0
 	var why := ""
 	if check.has("skill"):
-		var skill := str(check["skill"])
-		bonus = int(m.get("skills", {}).get(skill, _mod(int(ab.get(str(data["rules"]["skills"].get(skill, "wis")), 10)))))
-		why = skill
+		why = str(check["skill"])
+		bonus = int(sheet["skills"].get(why, 0))
 	elif check.has("save"):
-		bonus = int(m.get("saves", {}).get(str(check["save"]), _mod(int(ab.get(str(check["save"]), 10)))))
 		why = str(check["save"])
+		bonus = int(sheet["saves"].get(why, 0))
 	else:
-		bonus = _mod(int(ab.get(str(check.get("ability", "wis")), 10)))
 		why = str(check.get("ability", "wis"))
+		bonus = CharacterRules.mod(int(sheet["abilities"].get(why, 10)))
 	if not tool.is_empty() and (npc.get("tools", []) as Array).has(tool):
 		bonus += 2 + int(maxf(float(m.get("cr", 0)), 1.0) - 1.0) / 4
 	return {"bonus": bonus, "why": why}

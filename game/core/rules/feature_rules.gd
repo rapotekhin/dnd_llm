@@ -129,7 +129,7 @@ static func after_hit(s: GameSession, data: Dictionary, w: Dictionary, t: Dictio
 	if bool(opts.get("stunning", false)) and Stock.left(c, data, "ki") > 0:
 		Stock.use(c, data, "ki", 1, s.rng)
 		var dc := ki_dc(c, data)
-		var ok := CombatRules._monster_save(s, data, t, "con", dc)
+		var ok := Sheet.saved(s, data, t, "con", dc)
 		lines.append("Оглушающий удар: %s — спасбросок Тел против Сл %d — %s" % [t["name"], dc, "устоял" if ok else "ошеломлён"])
 		if not ok and not CombatRules.immune_to(data, t, "stunned"):
 			CombatRules._add_condition(s, t, "stunned", {"rounds": 1})
@@ -163,7 +163,7 @@ static func smite_slots(c: Dictionary) -> Array[int]:
 
 static func smite_dice(data: Dictionary, t: Dictionary, slot: int, crit: bool) -> String:
 	var n := mini(5, 1 + slot)
-	if str(CombatRules._monster(data, t).get("type", "")) in ["undead", "fiend"]:
+	if str(Sheet.template(data, t).get("type", "")) in ["undead", "fiend"]:
 		n += 1
 	return "%dd8" % (n * (2 if crit else 1))
 
@@ -171,7 +171,7 @@ static func smite_dice(data: Dictionary, t: Dictionary, slot: int, crit: bool) -
 static func _smite(s: GameSession, data: Dictionary, t: Dictionary, slot: int, crit: bool) -> Array[String]:
 	var c := s.character
 	Stock.spend(c, "slot_%d" % slot)
-	var dmg := CombatRules._resist(data, t, "radiant", CombatRules.roll_dice(s.rng, smite_dice(data, t, slot, crit)))
+	var dmg := Sheet.taken(s, data, t, "radiant", CombatRules.roll_dice(s.rng, smite_dice(data, t, slot, crit)))
 	var lines: Array[String] = ["Божественная кара (ячейка %d круга): %d (излучение) по %s" % [slot, dmg, t["name"]]]
 	CombatRules._hurt_enemy(s, data, t, dmg, lines, "radiant", crit)
 	return lines
@@ -181,12 +181,12 @@ static func _open_hand(s: GameSession, data: Dictionary, t: Dictionary, how: Str
 	var dc := ki_dc(s.character, data)
 	match how:
 		"topple":
-			var ok := CombatRules._monster_save(s, data, t, "dex", dc)
+			var ok := Sheet.saved(s, data, t, "dex", dc)
 			if not ok and not CombatRules.immune_to(data, t, "prone"):
 				CombatRules._hold(t, "prone")
 			lines.append("Открытая ладонь: %s — Лов против Сл %d — %s" % [t["name"], dc, "устоял" if ok else "сбит с ног"])
 		"push":
-			var ok := CombatRules._monster_save(s, data, t, "str", dc)
+			var ok := Sheet.saved(s, data, t, "str", dc)
 			if not ok:
 				CombatRules.push_away(s, data, t, 15)
 			lines.append("Открытая ладонь: %s — Сил против Сл %d — %s" % [t["name"], dc, "устоял" if ok else "отброшен на 15 фт"])
@@ -235,7 +235,7 @@ static func reactions(s: GameSession, data: Dictionary, f: Dictionary, a: Dictio
 		out.append({"id": "cutting_words", "label": "Язвительные слова: −1к%d к броску атаки" % bardic_die(c, data)})
 	out.append_array(SpellEffects.hit_reactions(s, data, {"total": int(hit.get("total", total_of(a, f))), "ac": int(hit.get("ac", c.get("ac", 10))),
 		"nat20": bool(hit.get("nat20", false)), "dmg": dmg}))  # v0.7.13.7
-	if has(c, "hunters_prey_giant_killer") and CombatRules.SIZES.find(str(CombatRules._monster(data, f).get("size", "medium"))) >= 3 \
+	if has(c, "hunters_prey_giant_killer") and CombatRules.SIZES.find(str(Sheet.template(data, f).get("size", "medium"))) >= 3 \
 			and FightGrid.touching(f, CombatRules.player(s)):
 		out.append({"id": "giant_killer", "label": "Убийца великанов: удар в ответ"})
 	return out
@@ -461,11 +461,11 @@ static func _turn(s: GameSession, data: Dictionary, types: Array, destroy: bool)
 	var any := false
 	for id: String in CombatRules.enemies(s):
 		var f := CombatRules.fighter(s, id)
-		var m := CombatRules._monster(data, f)
+		var m := Sheet.template(data, f)
 		if not types.has(str(m.get("type", ""))) or FightGrid.feet(data, f, CombatRules.player(s)) > 30:
 			continue
 		any = true
-		if CombatRules._monster_save(s, data, f, "wis", dc, ["magic"]):
+		if Sheet.saved(s, data, f, "wis", dc, "magic"):
 			lines.append("%s выдерживает (Мдр против Сл %d)" % [f["name"], dc])
 			continue
 		if destroy_cr > 0.0 and float(m.get("cr", 9)) <= destroy_cr:
@@ -669,8 +669,8 @@ static func _breath(s: GameSession, data: Dictionary, target_id: String) -> Arra
 		var f := CombatRules.fighter(s, id)
 		if not FightGrid.in_cells(f, cells):
 			continue
-		var ok := CombatRules._monster_save(s, data, f, ab, dc)
-		var dmg := CombatRules._resist(data, f, dtype, full / 2 if ok else full)
+		var ok := Sheet.saved(s, data, f, ab, dc)
+		var dmg := Sheet.taken(s, data, f, dtype, full / 2 if ok else full)
 		lines.append("%s: %s против Сл %d — %s, %d" % [f["name"], CombatRules.ab_name(ab), dc, "успех" if ok else "провал", dmg])
 		CombatRules._hurt_enemy(s, data, f, dmg, lines, dtype)
 	return lines

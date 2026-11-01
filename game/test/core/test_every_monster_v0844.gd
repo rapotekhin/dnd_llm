@@ -41,23 +41,24 @@ func test_every_monster_comes_with_its_numbers() -> void:
 func test_every_resistance_immunity_and_vulnerability_works() -> void:
 	for id: String in data["monsters"]:
 		var m: Dictionary = data["monsters"][id]
+		var s := TestUtils.new_session()
 		var f := {"monster": id, "conditions": []}
 		var all_lists: Array = m["resistances"] + m["immunities"] + m["vulnerabilities"]
 		for text: Variant in m["resistances"]:
 			for t: String in _types(str(text)):
 				if not (m["immunities"] as Array).any(func(x: Variant) -> bool: return str(x).contains(t) and not str(x).contains("nonmagical")):
-					assert_int(CombatRules._resist(data, f, t, 10, false)).override_failure_message("%s: %s" % [id, t]).is_equal(5)
+					assert_int(Sheet.taken(s, data, f, t, 10, false)).override_failure_message("%s: %s" % [id, t]).is_equal(5)
 		for text: Variant in m["immunities"]:
 			for t: String in _types(str(text)):
-				assert_int(CombatRules._resist(data, f, t, 10, false)).override_failure_message("%s: %s" % [id, t]).is_equal(0)
+				assert_int(Sheet.taken(s, data, f, t, 10, false)).override_failure_message("%s: %s" % [id, t]).is_equal(0)
 		for text: Variant in m["vulnerabilities"]:
 			for t: String in _types(str(text)):
-				assert_int(CombatRules._resist(data, f, t, 10, false)).override_failure_message("%s: %s" % [id, t]).is_equal(20)
+				assert_int(Sheet.taken(s, data, f, t, 10, false)).override_failure_message("%s: %s" % [id, t]).is_equal(20)
 		for t: String in data["misc"]["damage_types"]:
 			if not all_lists.any(func(x: Variant) -> bool: return str(x).contains(t)):
-				assert_int(CombatRules._resist(data, f, t, 10, false)).override_failure_message("%s: %s" % [id, t]).is_equal(10)
+				assert_int(Sheet.taken(s, data, f, t, 10, false)).override_failure_message("%s: %s" % [id, t]).is_equal(10)
 			if PHYSICAL.has(t) and all_lists.all(func(x: Variant) -> bool: return not str(x).contains(t) or str(x).contains("nonmagical")):
-				assert_int(CombatRules._resist(data, f, t, 10, true)).override_failure_message("%s: %s magic" % [id, t]).is_equal(10)
+				assert_int(Sheet.taken(s, data, f, t, 10, true)).override_failure_message("%s: %s magic" % [id, t]).is_equal(10)
 
 
 func test_every_condition_immunity_works() -> void:

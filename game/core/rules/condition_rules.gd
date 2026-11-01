@@ -357,7 +357,7 @@ static func end_of_turn(s: GameSession, data: Dictionary) -> Array[String]:
 		var sv: Dictionary = e.get("save", {})
 		if not bool(sv.get("repeat", false)) or str(sv.get("ability", "")).is_empty():
 			continue
-		var r := HeroDefense.save(s, data, str(sv["ability"]), int(sv.get("dc", 10)), str(sv.get("tag", "")))
+		var r := Sheet.save(s, data, Sheet.HERO, str(sv["ability"]), int(sv.get("dc", 10)), str(sv.get("tag", "")))
 		var what := name_of(data, str(e.get("condition", ""))).to_lower()
 		if bool(r["ok"]):
 			remove_effect(c, int(e["uid"]))

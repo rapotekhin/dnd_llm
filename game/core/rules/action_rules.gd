@@ -5,7 +5,7 @@ extends RefCounted
 ## The way comes from the tables of the rules, so a built spell reads like an SRD one: its own row in `spells`, and
 ## `combat.condition_spells`, `combat.riders`, `spell_effects`, `combat.spell_targets` for what it lays.
 ## The special spells of 5e keep their hooks; this is one road to them. A monster's spell at the hero is still
-## MonsterRules._cast: it rolls against the hero, and no monster has a built spell yet.
+## MonsterRules._cast: a hole, ADR-0016 closes it next.
 
 
 ## The way of a spell at a target: the first that fits. "" — the spell does nothing in a fight by itself.
@@ -83,7 +83,7 @@ static func riders(s: GameSession, data: Dictionary, id: String, slot: int, t: D
 		if str(r.get("hook", "")) == "acid":
 			CombatRules._acid_rider(s, data, slot, t, landed, lines)
 			continue
-		var m: Dictionary = CombatRules._monster(data, t)
+		var m: Dictionary = Sheet.template(data, t)
 		if not landed or (r.has("if_type") and str(m.get("type", "")) != str(r["if_type"])):
 			continue
 		if r.has("max_size") and CombatRules.SIZES.find(str(m.get("size", "medium"))) > int(r["max_size"]):

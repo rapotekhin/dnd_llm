@@ -124,7 +124,7 @@ static func on_square(sec: Dictionary) -> bool:
 ## and is not emptied yet is taken. Lines.
 static func notice(s: GameSession, data: Dictionary, map: Dictionary, cell: Vector2i) -> Array[String]:
 	var lines: Array[String] = []
-	var passive := int(s.character.get("passive_perception", 10)) - TimeRules.passive_penalty(s, data)
+	var passive := Sheet.passive(s, data, Sheet.HERO)
 	var reach := int(SightRules.cfg(data)["notice"])
 	for sec: Dictionary in secrets(data["world"], s.room_id):
 		if not on_square(sec) or str(sec.get("skill", "perception")) != "perception" or passive < int(sec["dc"]) or is_found(s, s.room_id, sec) or s.traps.has(secret_key(s.room_id, sec)):
@@ -147,7 +147,7 @@ static func trap_at(s: GameSession, data: Dictionary, map: Dictionary, cell: Vec
 
 ## The last look before a trap on the way out, for a move that was no walk: passive Perception finds it. Its text or "".
 static func approach(s: GameSession, data: Dictionary, room_id: String, sec: Dictionary) -> String:
-	var passive := int(s.character.get("passive_perception", 10)) - TimeRules.passive_penalty(s, data)
+	var passive := Sheet.passive(s, data, Sheet.HERO)
 	if str(sec.get("skill", "perception")) == "perception" and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
 		return str(sec["text"])
 	return ""
@@ -210,11 +210,11 @@ static func spring_trap(s: GameSession, data: Dictionary, room_id: String, sec: 
 	var lines: Array[String] = ["Ловушка! " + str(t.get("sprung_text", sec["text"]))]
 	var dmg := CombatRules.roll_dice(s.rng, str(t.get("damage", "1d6")))
 	if t.has("save"):
-		var r := HeroDefense.save(s, data, str(t["save"]["ability"]), int(t["save"]["dc"]), str(t["save"].get("tag", "")))
+		var r := Sheet.save(s, data, Sheet.HERO, str(t["save"]["ability"]), int(t["save"]["dc"]), str(t["save"].get("tag", "")))
 		if bool(r["ok"]):
 			dmg /= 2
 		lines.append("Спасбросок " + str(r["text"]) + (", урон вдвое меньше" if bool(r["ok"]) else ""))
-	var adj := HeroDefense.adjust(s, data, str(t.get("damage_type", "")), dmg)
+	var adj := Sheet.damage(s, data, Sheet.HERO, str(t.get("damage_type", "")), dmg)
 	dmg = int(adj["damage"])
 	c["hp"] = maxi(0, int(c["hp"]) - dmg)
 	lines.append("−%d HP (%s%s)" % [dmg, data["misc"]["damage_types"].get(str(t.get("damage_type", "")), t.get("damage_type", "")),

@@ -46,7 +46,7 @@ static func picks_count(data: Dictionary, spell_id: String, slot: int) -> int:
 
 ## Reduce on a foe (v0.7.50.1): a CON save or its blows weaken by 1d4 until the concentration ends.
 static func reduce_foe(s: GameSession, data: Dictionary, spell_id: String, f: Dictionary, lines: Array[String]) -> void:
-	var ok := CombatRules._monster_save(s, data, f, "con", CombatRules.spell_dc(s), ["magic"])
+	var ok := Sheet.saved(s, data, f, "con", CombatRules.spell_dc(s), "magic")
 	lines.append("%s: %s — спасбросок Тел %s" % [data["spells"][spell_id]["name"], f["name"], "успех" if ok else "провал, уменьшается"])
 	if not ok:
 		ConditionRules.add_effect(f, {"source": {"kind": "spell", "id": spell_id, "name": str(data["spells"][spell_id]["name"])}, "reduced": true})
@@ -135,7 +135,7 @@ static func warded(data: Dictionary, attacker: Dictionary, t: Dictionary) -> boo
 
 ## Sanctuary on an ally: the attacker saves or gives up the blow.
 static func ally_sanctuary(s: GameSession, data: Dictionary, attacker: Dictionary, t: Dictionary, lines: Array[String]) -> bool:
-	if boon(t, "sanctuary") == null or CombatRules._monster_save(s, data, attacker, "wis", CombatRules.spell_dc(s), ["magic"]):
+	if boon(t, "sanctuary") == null or Sheet.saved(s, data, attacker, "wis", CombatRules.spell_dc(s), "magic"):
 		return false
 	lines.append("%s не решается ударить %s — Святилище" % [attacker["name"], t["name"]])
 	return true
@@ -229,7 +229,7 @@ static func _likely_type(s: GameSession, data: Dictionary, types: Array) -> Stri
 	var count := {}
 	if CombatRules.active(s):
 		for id: String in CombatRules.enemies(s):
-			for a: Dictionary in CombatRules._monster(data, CombatRules.fighter(s, id)).get("actions", []):
+			for a: Dictionary in Sheet.template(data, CombatRules.fighter(s, id)).get("actions", []):
 				for d: Variant in a.get("damage", []):
 					var t := str((d as Dictionary).get("type", ""))
 					if types.has(t):
@@ -290,7 +290,7 @@ static func sanctuary_holds(s: GameSession, data: Dictionary, f: Dictionary) -> 
 	if hero_effects(s.character, "sanctuary").is_empty():
 		return ""
 	var dc := maxi(CombatRules.spell_dc(s), 10)
-	if CombatRules._monster_save(s, data, f, "wis", dc, ["magic"]):
+	if Sheet.saved(s, data, f, "wis", dc, "magic"):
 		return ""
 	return "%s не решается ударить — Святилище" % f["name"]
 
@@ -310,7 +310,7 @@ static func attack_dis(s: GameSession, data: Dictionary, f: Dictionary) -> Array
 	var out: Array[String] = []
 	for e: Dictionary in hero_effects(c, "attackers_dis"):
 		out.append(str(e.get("source", {}).get("name", "")))
-	var t := str(CombatRules._monster(data, f).get("type", ""))
+	var t := str(Sheet.template(data, f).get("type", ""))
 	for e: Dictionary in hero_effects(c, "foe_types_dis"):
 		if (e["foe_types_dis"] as Array).has(t):
 			out.append(str(e.get("source", {}).get("name", "")))
@@ -475,7 +475,7 @@ static func curse_foes(s: GameSession, data: Dictionary, spell_id: String, slot:
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
 	var dc := CombatRules.spell_dc(s)
-	var ok := CombatRules._monster_save(s, data, target, str(sp.get("save", "cha")), dc, ["magic"])
+	var ok := Sheet.saved(s, data, target, str(sp.get("save", "cha")), dc, "magic")
 	lines.append("%s: %s — спасбросок %s против Сл %d %s" % [spell["name"], target["name"], CombatRules.ab_name(str(sp.get("save", "cha"))), dc,
 		"успех" if ok else "провал, %s" % text(data, sp)])
 	if not ok:
@@ -786,10 +786,10 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 				c["hp"] = mini(int(c["max_hp"]), was + back)
 				lines.append("%s: +%d HP" % [name, int(c["hp"]) - was])
 		"heat":
-			var dmg := CombatRules._resist(data, t, str(sus["type"]), CombatRules.roll_dice(s.rng, str(e["dice"])))
+			var dmg := Sheet.taken(s, data, t, str(sus["type"]), CombatRules.roll_dice(s.rng, str(e["dice"])))
 			lines.append("%s: %s — %d (огонь)" % [name, t["name"], dmg])
 			CombatRules._hurt_enemy(s, data, t, dmg, lines, str(sus["type"]))
-			if str(t.get("status")) == "active" and not CombatRules._monster_save(s, data, t, "con", CombatRules.spell_dc(s), ["magic"]):
+			if str(t.get("status")) == "active" and not Sheet.saved(s, data, t, "con", CombatRules.spell_dc(s), "magic"):
 				CombatRules._hold(t, "mocked")  # the burning metal: disadvantage on its next attack
 				lines.append("%s едва держит раскалённое — атака с помехой" % t["name"])
 		"strike":
@@ -804,7 +804,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 				var f := CombatRules.fighter(s, fid)
 				if not FightGrid.in_cells(f, cells):
 					continue
-				if CombatRules._monster_save(s, data, f, str(sus.get("save", "str")), CombatRules.spell_dc(s), ["magic"]):
+				if Sheet.saved(s, data, f, str(sus.get("save", "str")), CombatRules.spell_dc(s), "magic"):
 					lines.append("%s: %s устоял" % [name, f["name"]])
 				else:
 					FightField.thrust(s, data, f, FightGrid.cell(t) - me, 3, lines)
@@ -815,8 +815,8 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 ## A save of anyone on the field: the hero's goes by its sheet.
 static func _save_of(s: GameSession, data: Dictionary, f: Dictionary, ab: String, dc: int) -> bool:
 	if str(f.get("id")) == CombatRules.PLAYER:
-		return bool(HeroDefense.save(s, data, ab, dc, "magic")["ok"])
-	return CombatRules._monster_save(s, data, f, ab, dc, ["magic"])
+		return bool(Sheet.save(s, data, Sheet.HERO, ab, dc, "magic")["ok"])
+	return Sheet.saved(s, data, f, ab, dc, "magic")
 
 
 static func _save_hit(s: GameSession, data: Dictionary, name: String, dtype: String, save: String, dice: String, dc: int, f: Dictionary, half: bool) -> Array[String]:
@@ -828,7 +828,7 @@ static func _save_hit(s: GameSession, data: Dictionary, name: String, dtype: Str
 	var ok := not save.is_empty() and _save_of(s, data, f, save, dc)
 	if ok:
 		dmg = dmg / 2 if half else 0
-	dmg = int(HeroDefense.adjust(s, data, dtype, dmg)["damage"]) if hero else CombatRules._resist(data, f, dtype, dmg)
+	dmg = int(Sheet.damage(s, data, Sheet.HERO, dtype, dmg)["damage"]) if hero else Sheet.taken(s, data, f, dtype, dmg)
 	lines.append("%s: %s — %s%d (%s)" % [name, f["name"], ("спасбросок %s %s, " % [CombatRules.ab_name(save), "успех" if ok else "провал"]) if not save.is_empty() else "",
 		dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 	if dmg > 0:
@@ -917,7 +917,7 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 				not CombatRules.hero_attack_dis(s, data, f).is_empty(), f, "0", 0, "force", lines)
 			landed = bool(res["hit"])
 		else:
-			var ok := CombatRules._monster_save(s, data, f, str(cu["save"]), dc, ["magic"])
+			var ok := Sheet.saved(s, data, f, str(cu["save"]), dc, "magic")
 			lines.append("%s: %s — спасбросок %s %s" % [name, f["name"], CombatRules.ab_name(str(cu["save"])), "успех" if ok else "провал"])
 			landed = not ok
 		if not landed:

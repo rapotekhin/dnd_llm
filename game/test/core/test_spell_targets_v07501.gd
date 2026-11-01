@@ -129,7 +129,7 @@ func test_every_spell_on_an_ally_gives_what_it_says() -> void:
 	assert_int(int(SpellEffects.boon(a, "weapon_plus", 0))).is_equal(1)
 	SpellEffects.on_friend(s, data, "protection_from_energy", 3, a, [] as Array[String])
 	assert_int((SpellEffects.boon(a, "resist", []) as Array).size()).is_equal(1)
-	assert_int(CombatRules._resist(data, a, str(SpellEffects.boon(a, "resist", [])[0]), 10)).is_equal(5)
+	assert_int(Sheet.taken(s, data, a, str(SpellEffects.boon(a, "resist", [])[0]), 10)).is_equal(5)
 	s.character["concentration"] = "haste"
 	SpellEffects.end_on_fighters(s, data, "haste")
 	assert_bool(a.has("lethargy")).is_true()

@@ -21,7 +21,7 @@ func test_a_stolen_weapon_leaves_the_hands() -> void:
 	assert_array(TheftRules.lost_weapons(s, data, "npc_smith")).contains(["mace"])
 	TestUtils.fight(s, data, [{"monster": "thug", "npc_id": "npc_smith", "name": "Гуннар"}], {})
 	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
-	var names: Array = MonsterRules.monster(data, f)["actions"].map(func(a: Dictionary) -> String: return str(a["name"]))
+	var names: Array = Sheet.template(data, f)["actions"].map(func(a: Dictionary) -> String: return str(a["name"]))
 	assert_bool(names.has("Булава")).is_false()
 	assert_bool(names.has("Безоружный удар") or names.has("Тяжёлый арбалет")).is_true()
 	s.day += int(data["rules"]["theft"]["rearm_days"])

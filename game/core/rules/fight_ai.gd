@@ -14,7 +14,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 static func role_name(data: Dictionary, f: Dictionary) -> String:
 	var c := cfg(data)
-	var m := CombatRules._monster(data, f)
+	var m := Sheet.template(data, f)
 	var own := str(c["monsters"].get(str(f.get("monster", "")), ""))
 	if not own.is_empty():
 		return own
@@ -37,13 +37,11 @@ static func role(data: Dictionary, f: Dictionary) -> Dictionary:
 static func steps(s: GameSession, data: Dictionary, f: Dictionary) -> int:
 	if ConditionRules.does(f, data, "no_move"):
 		return 0
-	var m := CombatRules._monster(data, f)
-	var n := FightGrid.steps_of(data, MonsterRules.move_speed(m) - int(f.get("slowed", 0)) + ConditionRules.sum(f, "speed"))
-	return n / 2 if CombatRules._has(f, "slowed_spell") else n
+	return FightGrid.steps_of(data, Sheet.speed(s, data, f))
 
 
 static func _opts(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
-	var m := CombatRules._monster(data, f)
+	var m := Sheet.template(data, f)
 	var out := {"flying": MonsterRules.flies(data, f), "latch": CombatRules._intelligent(data, f), "swims": int(m.get("swim", 0)) > 0}
 	if CombatRules._has(f, "frightened"):
 		out["fear"] = FightGrid.cell(CombatRules.player(s))
@@ -76,7 +74,7 @@ static func _avg(a: Dictionary) -> float:
 
 ## How many blows of this kind its Multiattack gives.
 static func _blows(data: Dictionary, f: Dictionary, a: Dictionary) -> int:
-	var m := CombatRules._monster(data, f)
+	var m := Sheet.template(data, f)
 	var n := 0
 	for x: Dictionary in m.get("multiattack", []):
 		for b: Dictionary in m["actions"]:
@@ -162,7 +160,7 @@ static func _worth(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionar
 	var hero := str(t.get("id")) == CombatRules.PLAYER
 	var hp := float(s.character.get("hp", 1)) if hero else float(t.get("hp", 1))
 	var most := maxf(1.0, float(s.character.get("max_hp", 1)) if hero else float(t.get("max_hp", 1)))
-	var ac := int(s.character.get("ac", 10)) if hero else CombatRules.ac_of(t)
+	var ac := Sheet.ac(s, t)
 	var power := float(o["power"])
 	var v := power
 	if str(o["kind"]) in ["melee", "ranged"]:

@@ -264,7 +264,7 @@ func test_bless_adds_a_d4_to_attacks_and_saves() -> void:
 	var c := s.character
 	SpellRules.cast(c, data, "bless", 1, s, true)
 	assert_str(str(c["concentration"])).is_equal("bless")
-	var r := HeroDefense.save(s, data, "dex", 30)
+	var r := Sheet.save(s, data, Sheet.HERO, "dex", 30)
 	assert_str(str(r["text"])).contains("Благословение")
 	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
 	var lines: Array[String] = []

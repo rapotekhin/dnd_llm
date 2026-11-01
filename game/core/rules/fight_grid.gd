@@ -315,7 +315,7 @@ static func senses(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionar
 		if CharacterRules.has_feature(s.character, "eldritch_invocation_devils_sight"):
 			out["devils_sight"] = int(SightRules.cfg(data)["devils_sight"])
 		return out
-	var m := MonsterRules.monster(data, f)
+	var m := Sheet.template(data, f)
 	for sense: String in ["blindsight", "truesight"]:
 		if int(m.get(sense, 0)) > 0:
 			out[sense] = squares_of(data, int(m[sense]))

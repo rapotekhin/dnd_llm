@@ -128,7 +128,7 @@ static func on_pass(s: GameSession, data: Dictionary, a: String, b: String) -> A
 		return []
 	var c := s.character
 	var dmg := CombatRules.roll_dice(s.rng, "%dd6" % mini(feet / 10, 20))
-	var adj := HeroDefense.adjust(s, data, "bludgeoning", dmg)
+	var adj := Sheet.damage(s, data, Sheet.HERO, "bludgeoning", dmg)
 	dmg = int(adj["damage"])
 	c["hp"] = maxi(0, int(c["hp"]) - dmg)
 	var lines: Array[String] = ["Падение с %d футов: −%d HP" % [feet, dmg]]

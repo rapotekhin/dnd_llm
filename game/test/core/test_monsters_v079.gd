@@ -181,7 +181,7 @@ func test_a_breath_in_reach_comes_first() -> void:
 func test_traits_of_monsters() -> void:
 	var s := _session()
 	var wolf := _fight(s, "wolf", 2)
-	assert_int(CombatRules.monster_passive(data, wolf)).is_equal(int(data["monsters"]["wolf"]["passive_perception"]) + 5)
+	assert_int(Sheet.passive(s, data, wolf)).is_equal(int(data["monsters"]["wolf"]["passive_perception"]) + 5)
 	assert_bool(MonsterRules.save_advantage(data, {"monster": "bearded_devil"}, "wis", ["magic"])).is_true()
 	assert_bool(MonsterRules.save_advantage(data, {"monster": "cultist"}, "wis", ["charm", "magic"])).is_true()
 	assert_bool(MonsterRules.save_advantage(data, {"monster": "wolf"}, "wis", ["magic"])).is_false()
@@ -241,9 +241,10 @@ func test_a_captain_parries_a_close_hit() -> void:
 
 
 func test_magic_weapons_pierce_resistance_to_nonmagical_attacks() -> void:
+	var s := TestUtils.new_session()
 	var t := {"monster": "wight"}
-	assert_int(CombatRules._resist(data, t, "slashing", 10, false)).is_equal(5)
-	assert_int(CombatRules._resist(data, t, "slashing", 10, true)).is_equal(10)
+	assert_int(Sheet.taken(s, data, t, "slashing", 10, false)).is_equal(5)
+	assert_int(Sheet.taken(s, data, t, "slashing", 10, true)).is_equal(10)
 
 
 func test_immune_foes_cannot_be_shoved_down() -> void:

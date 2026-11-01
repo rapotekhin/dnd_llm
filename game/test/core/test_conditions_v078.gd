@@ -250,10 +250,10 @@ func test_no_camp_where_a_fight_still_waits() -> void:
 
 func test_race_resistances_and_save_advantages() -> void:
 	var dwarf := _session("cleric_branko")
-	assert_int(int(HeroDefense.adjust(dwarf, data, "poison", 10)["damage"])).is_equal(5)
+	assert_int(int(Sheet.damage(dwarf, data, Sheet.HERO, "poison", 10)["damage"])).is_equal(5)
 	assert_array(HeroDefense.save_advantages(dwarf.character, data, "con", "poison")).is_not_empty()
 	var tiefling := _session("rogue_damir")
-	assert_str(str(HeroDefense.adjust(tiefling, data, "fire", 10)["note"])).contains("сопротивление")
+	assert_str(str(Sheet.damage(tiefling, data, Sheet.HERO, "fire", 10)["note"])).contains("сопротивление")
 	var gnome := _session("warlock_fiber")
 	assert_array(HeroDefense.save_advantages(gnome.character, data, "wis", "magic")).is_not_empty()
 	assert_array(HeroDefense.save_advantages(gnome.character, data, "dex", "magic")).is_empty()
@@ -262,15 +262,15 @@ func test_race_resistances_and_save_advantages() -> void:
 	var dragonborn := _session("paladin_gordey")
 	assert_dict(HeroDefense.resistances(dragonborn, data)).is_not_empty()
 	var human := _session()
-	assert_int(int(HeroDefense.adjust(human, data, "fire", 10)["damage"])).is_equal(10)
+	assert_int(int(Sheet.damage(human, data, Sheet.HERO, "fire", 10)["damage"])).is_equal(10)
 
 
 func test_rage_resists_weapons_in_a_fight() -> void:
 	var s := _session("barbarian_urga")
 	_fight(s, [{"monster": "goblin", "col": 0}])
 	s.combat["raging"] = true
-	assert_int(int(HeroDefense.adjust(s, data, "slashing", 8)["damage"])).is_equal(4)
-	assert_int(int(HeroDefense.adjust(s, data, "fire", 8)["damage"])).is_equal(8)
+	assert_int(int(Sheet.damage(s, data, Sheet.HERO, "slashing", 8)["damage"])).is_equal(4)
+	assert_int(int(Sheet.damage(s, data, Sheet.HERO, "fire", 8)["damage"])).is_equal(8)
 
 
 func test_relentless_endurance_once_a_long_rest() -> void:
