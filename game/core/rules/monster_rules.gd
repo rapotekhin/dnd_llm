@@ -496,8 +496,9 @@ static func cast_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Ar
 		return false  # Silence (v0.7.13.6): no spell from inside
 	var d := FightGrid.dist(f, CombatRules.player(s))
 	var sees := FightGrid.sees(s, data, f, CombatRules.player(s))
+	var open := FightGrid.cover(s, data, f, CombatRules.player(s)) < FightGrid.FULL_COVER
 	var in_range := func(id: String) -> bool:
-		return sees and d <= _spell_reach(data, id)
+		return (sees or (open and not bool(data["spells"][id].get("needs_sight", false)))) and d <= _spell_reach(data, id)
 	var cfg: Dictionary = CombatRules.cfg(data)
 	for o: Dictionary in options:  # v0.7.22.19 (#14): the most wounded of its side within the spell's reach, not only itself
 		if data["spells"][o["id"]].has("heal_at_slot"):

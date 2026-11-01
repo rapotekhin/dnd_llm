@@ -218,6 +218,7 @@ func _rebuild() -> void:
 	_festival_line(s, world)
 	if NeedRules.on(s):
 		_needs(s, can_act)
+	_content.add_child(WeaponSets.new())
 	var chips := EffectChips.new()  # what is on the hero, under the hero (v0.8.1)
 	_content.add_child(chips)
 	chips.refresh()

@@ -159,6 +159,10 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 			continue
 		if caster and not SpellRules.ready(c).is_empty():
 			return lines  # a caster waits for the foe to come, it does not walk into its teeth
+		if CombatRules.can_attack_stowed(s, data, near).is_empty():
+			lines.append_array(CombatRules.swap(s, data))
+			lines.append_array(CombatRules.player_attack(s, data, near))
+			continue
 		var to := CombatRules.closest_stop(s, data, near)
 		if to != FightGrid.NONE and best > 1:
 			lines.append_array(CombatRules.player_walk(s, data, to))

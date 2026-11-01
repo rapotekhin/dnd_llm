@@ -672,8 +672,8 @@ func test_fog_and_darkness_blind_the_column() -> void:
 	_cast_at(s, "fog_cloud", 1, str(f["id"]))
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "")
 	assert_bool((CombatRules._attack_mods(s, data, w, f)["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_true()
-	FightGrid.put(CombatRules.player(s), FightGrid.cell(f) + Vector2i(1, 0))  # both inside: they cancel
-	assert_bool((CombatRules._attack_mods(s, data, w, f)["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_false()
+	FightGrid.put(CombatRules.player(s), FightGrid.cell(f) + Vector2i(1, 0))  # both inside: disadvantage and advantage (v0.8.4.1)
+	assert_bool((CombatRules._attack_mods(s, data, w, f)["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_true()
 
 
 func test_silence_stops_spells_inside() -> void:

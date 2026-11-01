@@ -100,8 +100,33 @@ static func cover_of(s: GameSession, data: Dictionary, a: Dictionary, t: Diction
 	return FightGrid.cover(s, data, a, t)
 
 
+## No aim at `t`: full cover. What is not seen can still be struck, by 5e with disadvantage (sight_mods).
 static func _no_line(s: GameSession, data: Dictionary, a: Dictionary, t: Dictionary) -> bool:
 	return FightGrid.cover(s, data, a, t) >= FightGrid.FULL_COVER
+
+
+## A spell that asks for «a creature you can see» at one the hero does not see: blind, a Fog Cloud, invisible. A bolt goes by guess.
+static func _blind_aim(s: GameSession, data: Dictionary, spell_id: String, t: Dictionary) -> bool:
+	var sp: Dictionary = data["spells"][spell_id]
+	if sp.has("area") and _hidden_from_hero(s, t):
+		return true  # an area goes on a square, not after its name
+	return bool(sp.get("needs_sight", false)) and (not FightGrid.veiled(s, data, player(s), t).is_empty() or _hidden_from_hero(s, t))
+
+
+## Blows by sight, 5e: not seeing `t` is a disadvantage, not being seen by it an advantage, and in a Fog Cloud both cancel out.
+## A blinded `t` gives its advantage by its condition. {"adv", "dis"} — reasons or "".
+static func sight_mods(s: GameSession, data: Dictionary, a: Dictionary, t: Dictionary) -> Dictionary:
+	return {"adv": ("" if FightGrid.blind(s, t) else FightGrid.veiled(s, data, t, a)).to_lower(), "dis": FightGrid.veiled(s, data, a, t).to_lower()}
+
+
+## The hero is out of `t`'s sight: its attack rolls have advantage.
+static func unseen_by(s: GameSession, data: Dictionary, t: Dictionary) -> bool:
+	return not str(sight_mods(s, data, player(s), t)["adv"]).is_empty()
+
+
+## A shot at the hero's side from the dark: `t` has no light and stands beyond `f`'s darkvision (v0.8.4.1).
+static func shot_in_dark(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary) -> bool:
+	return not SightRules.in_dark(s, data).is_empty() and FightGrid.dist(f, t) > WatchRules.dark_of(data, f)
 
 
 ## How far the hero's spell goes: touch — the next square.
@@ -384,14 +409,15 @@ static func stealth_roll(s: GameSession, data: Dictionary) -> Dictionary:
 		dis = true
 		why.append("состояние")
 	var boots := CharacterRules.carried_with(c, data, s.items, "stealth_advantage")
-	var adv := not boots.is_empty()
+	var shade := SightRules.in_dark(s, data)  # the author's rule for the dark, v0.8.4.1; a Fog Cloud gives only the Hide itself
+	var adv := not boots.is_empty() or not shade.is_empty()
 	var rolls := Roll.hero_dice(s, adv, dis)
 	var nat := Roll.kept(rolls, adv, dis)
 	var note := ""
 	if dis and not adv:
 		note = " (с помехой: %s)" % ", ".join(why)
 	elif adv and not dis:
-		note = " (с преимуществом: %s)" % boots
+		note = " (с преимуществом: %s)" % (boots if not boots.is_empty() else shade)
 	RollParts.note(s, TranslationServer.translate("SKILL_STEALTH"), rolls, nat, RollParts.cached(c, data, "skill", "stealth", s.items), int(c.get("skills", {}).get("stealth", 0)))
 	return {"total": nat + int(c.get("skills", {}).get("stealth", 0)), "nat": nat, "note": note}
 
@@ -603,7 +629,7 @@ static func can_attack(s: GameSession, data: Dictionary, target_id: String, offh
 	if not str(w.get("ammo", "")).is_empty() and int(c.get("inventory", {}).get(str(w["ammo"]), 0)) <= 0:
 		return "COMBAT_NO_AMMO"  # v0.7.12: arrows and bolts are spent
 	var seen := _as_seen(t)
-	if _no_line(s, data, player(s), seen):
+	if FightGrid.cover(s, data, player(s), seen) >= FightGrid.FULL_COVER:
 		return "COMBAT_NO_LINE"
 	if bool(w["melee"]) and _in_blade(s, data, w, seen):
 		return ""
@@ -612,6 +638,38 @@ static func can_attack(s: GameSession, data: Dictionary, target_id: String, offh
 	if FightGrid.shown_dist(player(s), t) * int(FightGrid.cfg(data)["ft"]) > int(w["range"][1]):
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
+
+
+## "" when the other set may come to hand now: no price, but the hero's own turn in a fight.
+static func can_swap(s: GameSession, data: Dictionary) -> String:
+	if active(s) and not player_can_act(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if Guise.has_body(s.character):
+		return "COMBAT_WILD_SHAPE"
+	return CharacterRules.swap_why(s.character, data, s.items)
+
+
+## The other set in the hands, for nothing. Lines of a fight.
+static func swap(s: GameSession, data: Dictionary) -> Array[String]:
+	CharacterRules.swap_hands(s.character)
+	CharacterRules.refresh(s.character, data, s.items)
+	if not active(s):
+		return []
+	var id := str(s.character["equipped"].get("main_hand", ""))
+	return ["%s берёт в руки: %s" % [s.character.get("name", ""), ItemRules.display_name(data["items"], s.items, id) if not id.is_empty() else "щит"]]
+
+
+## What `fn` says with the other set in the hands: the buttons ask of a weapon put away.
+static func as_stowed(s: GameSession, fn: Callable) -> Variant:
+	CharacterRules.swap_hands(s.character)
+	var out: Variant = fn.call()
+	CharacterRules.swap_hands(s.character)
+	return out
+
+
+static func can_attack_stowed(s: GameSession, data: Dictionary, target_id: String) -> String:
+	var why := can_swap(s, data)
+	return why if not why.is_empty() else str(as_stowed(s, func() -> String: return can_attack(s, data, target_id)))
 
 
 ## An unseen foe where the hero last saw it: the hero swings there.
@@ -787,10 +845,8 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		adv.append("вы невидимы")
 	if SpellEffects.has_next_attack_adv(c):
 		adv.append("Верный удар")
-	var fog_t := SpellEffects.obscured(s, data, t)  # Fog Cloud, Darkness (v0.7.13.6)
-	var fog_me := SpellEffects.obscured(s, data, player(s))
-	if fog_t != fog_me:
-		dis.append((fog_t if not fog_t.is_empty() else fog_me).to_lower())
+	if unseen_by(s, data, t):
+		adv.append("вас не видно")
 	if bool(t.get("dodging", false)):
 		dis.append("цель уклоняется")
 	if bool(t.get("hidden", false)):
@@ -803,6 +859,8 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		pass  # both sides are blind: it evens out (5e)
 	elif TimeRules.dark(s, data):
 		dis.append("темнота")
+	elif TimeRules.unlit(s, data) and not bool(w["melee"]) and d > SightRules.reach(s, data):
+		dis.append("темнота")  # a shot past the hero's light or darkvision
 	if d > 1 and not (w["range"] as Array).is_empty() and d * int(FightGrid.cfg(data)["ft"]) > int(w["range"][0]):
 		dis.append("дальше обычной дальности")
 	if not bool(w["melee"]) and _foe_beside(s, data, player(s)):
@@ -820,6 +878,10 @@ static func hero_attack_dis(s: GameSession, data: Dictionary, t: Dictionary) -> 
 	dis.assign(ConditionRules.attack(data, c, {}, true)["dis"])
 	if _has(t, "invisible") and not SpellEffects.has(c, "see_invisible") and not _has(t, "outlined"):  # See Invisibility, Faerie Fire
 		dis.append("цель невидима")
+	if t.has("x") and not ConditionRules.has(c, "blinded"):  # a Fog Cloud or Darkness: the target is not seen (v0.8.4.1)
+		var blind := str(sight_mods(s, data, player(s), t)["dis"])
+		if not blind.is_empty():
+			dis.append(blind)
 	var wx := WeatherRules.obscure_why(s, data)
 	if not wx.is_empty() and t.has("x") and FightGrid.dist(player(s), t) > 1:  # a ranged attack in fog or a downpour (v0.7.46)
 		dis.append(wx)
@@ -1267,11 +1329,17 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 		return "COMBAT_BAD_TARGET"
 	if charmed_by(s, t) and (sp.has("attack") or sp.has("save") or is_engine_spell(data, spell_id)):
 		return "COMBAT_CHARMED"
-	if _no_line(s, data, player(s), t):
-		return "COMBAT_NO_LINE"
+	var touch := _spell_squares(s, data, spell_id) <= 1 and FightGrid.dist(player(s), t) <= 1 and FightGrid.cover(s, data, player(s), t) < FightGrid.FULL_COVER
+	if (_no_line(s, data, player(s), t) or _blind_aim(s, data, spell_id, t)) and not touch:
+		return "COMBAT_NO_LINE"  # an area on a square reaches it all the same (_can_aim)
 	if FightGrid.shown_dist(player(s), t) > _spell_squares(s, data, spell_id):
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
+
+
+## An invisible foe the hero has no means to see.
+static func _hidden_from_hero(s: GameSession, t: Dictionary) -> bool:
+	return _has(t, "invisible") and not SpellEffects.has(s.character, "see_invisible") and not _has(t, "outlined")
 
 
 ## "" when the area of a spell can be laid on a square: in range and in sight of the hero.
@@ -1311,7 +1379,9 @@ static func _can_friend(s: GameSession, data: Dictionary, spell_id: String, targ
 	var fallen_ok := str(t.get("status")) == "down" and SpellEffects.spec(data, spell_id).is_empty()
 	if t.is_empty() or str(t.get("side")) != "ally" or not (str(t.get("status")) == "active" or fallen_ok):
 		return "COMBAT_BAD_TARGET"
-	return "COMBAT_OUT_OF_RANGE" if FightGrid.dist(player(s), t) > _spell_squares(s, data, spell_id) else ""
+	if FightGrid.dist(player(s), t) > _spell_squares(s, data, spell_id):
+		return "COMBAT_OUT_OF_RANGE"
+	return "COMBAT_NO_LINE" if (_no_line(s, data, player(s), t) or _blind_aim(s, data, spell_id, t)) and FightGrid.dist(player(s), t) > 1 else ""
 
 
 ## A spell's range for the hero: Eldritch Spear (300 ft for Eldritch Blast), Distant Spell (double).
@@ -1435,7 +1505,7 @@ static func can_item_spell(s: GameSession, data: Dictionary, item_id: String, ta
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
 		return "COMBAT_BAD_TARGET"
-	if _no_line(s, data, player(s), t):
+	if _no_line(s, data, player(s), t) or _blind_aim(s, data, sp_id, t):
 		return "COMBAT_NO_LINE"
 	if FightGrid.shown_dist(player(s), t) > maxi(1, FightGrid.squares_of(data, int(sp.get("range_ft", 0)))):
 		return "COMBAT_OUT_OF_RANGE"
@@ -1693,7 +1763,7 @@ static func can_volley(s: GameSession, data: Dictionary, target_id: String) -> S
 	if bool(SpellEffects.picks(data, str(v["spell"])).get("near", false)) and v.has("picks") and not FightGrid.touching(t, fighter(s, str(v["picks"][0]))):
 		return "COMBAT_OUT_OF_RANGE"
 	var sp: Dictionary = data["spells"][str(v["spell"])]
-	if _no_line(s, data, player(s), t):
+	if _no_line(s, data, player(s), t) or _blind_aim(s, data, str(v["spell"]), t):
 		return "COMBAT_NO_LINE"
 	if FightGrid.dist(player(s), t) > maxi(1, FightGrid.squares_of(data, int(sp.get("range_ft", 0)))):
 		return "COMBAT_OUT_OF_RANGE"
@@ -2396,8 +2466,8 @@ static func _release_grapples(s: GameSession, lines: Array[String]) -> void:
 ## incapacitated, paralysed, stunned, asleep), is not charmed by the hero and sees the hero (not blinded, the hero
 ## not invisible). A prone or restrained foe still can.
 static func can_react(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
-	return not bool(f.get("reacted", false)) and not incapacitated(f) and not _has(f, "charmed") and not _has(f, "blinded") \
-		and not ConditionRules.invisible(s.character, data)
+	return not bool(f.get("reacted", false)) and not incapacitated(f) and not _has(f, "charmed") \
+		and FightGrid.veiled(s, data, f, player(s)).is_empty() and not ConditionRules.invisible(s.character, data)
 
 
 ## The rest of the turn is skipped: next fighter (the UI plays the others one by one via next_actor()).
@@ -2832,7 +2902,8 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	var by_status := ConditionRules.attack(data, f, c, not ranged_use)
 	var tm := MonsterRules.attack_mods(s, data, f, a)
 	f["hidden"] = false  # an attack gives a hidden foe away
-	var adv := (int(c.get("hp", 1)) <= 0 and not ranged_use) or not (by_status["adv"] as Array).is_empty() or (_has_trait(data, f, "pack_tactics") and _ally_near_player(s, f)) \
+	var eyes := sight_mods(s, data, f, p)
+	var adv := (int(c.get("hp", 1)) <= 0 and not ranged_use) or not (by_status["adv"] as Array).is_empty() or not str(eyes["adv"]).is_empty() or (_has_trait(data, f, "pack_tactics") and _ally_near_player(s, f)) \
 		or (_has(f, "invisible") and not SpellEffects.has(c, "see_invisible")) or not (tm["adv"] as Array).is_empty() or bool(s.combat.get("reckless", false)) \
 		or (TimeRules.dark(s, data) and MonsterRules.sees_in_dark(data, f))
 	var dis := bool(p.get("dodging", false)) and int(c["hp"]) > 0 and not ConditionRules.incapacitated(c) \
@@ -2840,8 +2911,8 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		or (str(a.get("kind")) == "ranged" and d <= 1) or bool(p.get("hidden", false)) \
 		or (ConditionRules.invisible(c, data) and not _has(f, "invisible")) or not (by_status["dis"] as Array).is_empty() or not (tm["dis"] as Array).is_empty() \
 		or _has(f, "chilled") or not SpellEffects.attack_dis(s, data, f).is_empty() \
-		or _has(f, "cursed_dis") or SpellEffects.obscured(s, data, f) != SpellEffects.obscured(s, data, p) \
-		or (ranged_use and not WeatherRules.obscure_why(s, data).is_empty())
+		or _has(f, "cursed_dis") or not str(eyes["dis"]).is_empty() \
+		or (ranged_use and (not WeatherRules.obscure_why(s, data).is_empty() or shot_in_dark(s, data, f, p)))
 	ConditionRules.remove(f, "mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
 	if bool(p.get("blinked", false)):  # Blink (v0.7.13.3)
 		lines.append("%s бьёт в пустоту — героя нет на этом плане" % f["name"])
@@ -3144,11 +3215,13 @@ static func _creature_attack(s: GameSession, data: Dictionary, f: Dictionary, a:
 	if SpellEffects.ally_sanctuary(s, data, f, t, lines):
 		return
 	var by_status := ConditionRules.attack(data, f, t, not ranged_use)
-	var adv := not (by_status["adv"] as Array).is_empty() or _has(f, "invisible") or bool(t.get("helped", false))
+	var eyes := sight_mods(s, data, f, t)
+	var adv := not (by_status["adv"] as Array).is_empty() or _has(f, "invisible") or bool(t.get("helped", false)) or not str(eyes["adv"]).is_empty()
 	t.erase("helped")
 	SpellEffects.end_on_attack(f)
 	var dis := SpellEffects.warded(data, f, t) or (ranged_use and a.has("range") and d * int(FightGrid.cfg(data)["ft"]) > int(a["range"][0])) or (str(a.get("kind")) == "ranged" and d <= 1) \
-		or not (by_status["dis"] as Array).is_empty() or bool(t.get("dodging", false)) or (ranged_use and not WeatherRules.obscure_why(s, data).is_empty())
+		or not (by_status["dis"] as Array).is_empty() or bool(t.get("dodging", false)) or not str(eyes["dis"]).is_empty() \
+		or (ranged_use and (not WeatherRules.obscure_why(s, data).is_empty() or shot_in_dark(s, data, f, t)))
 	var rolls := Roll.dice(s.rng, adv, dis)
 	var nat := Roll.kept(rolls, adv, dis)
 	var blessed := SpellEffects.die(s, f, "attack")  # Bless on an ally (v0.7.50.1)

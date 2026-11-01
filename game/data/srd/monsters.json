@@ -13,6 +13,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 10,
@@ -111,6 +113,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 11,
@@ -195,6 +199,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 11,
@@ -272,6 +278,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 14,
@@ -347,6 +355,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 14,
@@ -552,6 +562,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 8,
@@ -613,6 +625,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 6,
@@ -675,6 +689,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 12,
@@ -726,6 +742,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 12,
@@ -813,6 +831,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 14,
@@ -870,6 +890,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 4,
 			"dex": 11,
@@ -927,6 +949,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 16,
@@ -1021,6 +1045,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 12,
@@ -1091,6 +1117,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 8,
@@ -1163,6 +1191,8 @@
 		"fly": 30,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 15,
@@ -1225,6 +1255,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 15,
@@ -1345,6 +1377,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 12,
@@ -1405,6 +1439,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -1484,6 +1520,8 @@
 		"fly": 60,
 		"swim": 30,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -1578,6 +1616,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 17,
@@ -1638,6 +1678,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 14,
@@ -1702,6 +1744,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 10,
@@ -1790,6 +1834,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 11,
@@ -1867,6 +1913,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -1951,6 +1999,8 @@
 		"fly": 60,
 		"swim": 30,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 10,
@@ -2041,6 +2091,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 10,
@@ -2122,6 +2174,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -2215,6 +2269,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 8,
@@ -2266,6 +2322,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 15,
@@ -2326,6 +2384,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 14,
@@ -2435,6 +2495,8 @@
 		"fly": 40,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 12,
@@ -2502,6 +2564,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 10,
@@ -2555,6 +2619,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -2624,6 +2690,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 12,
@@ -2708,6 +2776,8 @@
 		"fly": 0,
 		"swim": 20,
 		"darkvision": 0,
+		"blindsight": 30,
+		"truesight": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 11,
@@ -2767,6 +2837,8 @@
 		"fly": 0,
 		"swim": 20,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -2831,6 +2903,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 14,
@@ -2954,6 +3028,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 12,
@@ -3017,6 +3093,8 @@
 		"fly": 30,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 12,
@@ -3082,6 +3160,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -3155,6 +3235,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -3283,6 +3365,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 16,
@@ -3334,6 +3418,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 15,
@@ -3406,6 +3492,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 18,
@@ -3489,6 +3577,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 10,
@@ -3540,6 +3630,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 11,
@@ -3637,6 +3729,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 14,
@@ -3760,6 +3854,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 12,
@@ -3872,6 +3968,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 12,
@@ -4005,6 +4103,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 11,
@@ -4091,6 +4191,8 @@
 		"fly": 30,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 5,
 			"dex": 14,
@@ -4210,6 +4312,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 15,
@@ -4269,6 +4373,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 10,
@@ -4354,6 +4460,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 15,
@@ -4477,6 +4585,8 @@
 		"fly": 60,
 		"swim": 30,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 4,
 			"dex": 18,
@@ -4538,6 +4648,8 @@
 		"fly": 50,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 15,
@@ -4620,6 +4732,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 11,
@@ -4707,6 +4821,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 3,
@@ -4793,6 +4909,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 17,
@@ -4897,6 +5015,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 15,
@@ -4982,6 +5102,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 10,
@@ -5061,6 +5183,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 16,
@@ -5123,6 +5247,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 10,
@@ -5200,6 +5326,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 30,
+		"truesight": 0,
 		"abilities": {
 			"str": 5,
 			"dex": 14,
@@ -5264,6 +5392,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 14,
@@ -5335,6 +5465,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 0,
+		"blindsight": 30,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 15,
@@ -5398,6 +5530,8 @@
 		"fly": 80,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 17,
@@ -5479,6 +5613,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 16,
@@ -5566,6 +5702,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 30,
+		"truesight": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 10,
@@ -5623,6 +5761,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 13,
@@ -5693,6 +5833,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 11,
@@ -5767,6 +5909,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 14,
@@ -5826,6 +5970,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 12,
@@ -5877,6 +6023,8 @@
 		"fly": 0,
 		"swim": 60,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 13,
@@ -5952,6 +6100,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 15,
@@ -6017,6 +6167,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 18,
@@ -6081,6 +6233,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 7,
 			"dex": 15,
@@ -6151,6 +6305,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 7,
 			"dex": 15,
@@ -6213,6 +6369,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -6301,6 +6459,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 15,
@@ -6375,6 +6535,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 16,
@@ -6473,6 +6635,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -6544,6 +6708,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -6630,6 +6796,8 @@
 		"fly": 50,
 		"swim": 50,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 14,
@@ -6694,6 +6862,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 16,
@@ -6754,6 +6924,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 16,
@@ -6837,6 +7009,8 @@
 		"fly": 0,
 		"swim": 10,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 8,
@@ -6950,6 +7124,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 12,
@@ -7045,6 +7221,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 10,
@@ -7119,6 +7297,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 14,
@@ -7199,6 +7379,8 @@
 		"fly": 60,
 		"swim": 30,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 14,
@@ -7289,6 +7471,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 6,
@@ -7373,6 +7557,8 @@
 		"fly": 60,
 		"swim": 30,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 12,
@@ -7469,6 +7655,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 12,
@@ -7563,6 +7751,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 14,
@@ -7644,6 +7834,8 @@
 		"fly": 80,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 15,
@@ -7725,6 +7917,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 30,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 12,
@@ -7802,6 +7996,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 12,
@@ -7863,6 +8059,8 @@
 		"fly": 40,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 13,
@@ -7961,6 +8159,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 5,
 			"dex": 16,
@@ -8020,6 +8220,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 12,
@@ -8113,6 +8315,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 13,
@@ -8194,6 +8398,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 12,
@@ -8278,6 +8484,8 @@
 		"fly": 40,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 4,
 			"dex": 15,
@@ -8350,6 +8558,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 13,
@@ -8414,6 +8624,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 13,
@@ -8473,6 +8685,8 @@
 		"fly": 30,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 7,
 			"dex": 13,
@@ -8608,6 +8822,8 @@
 		"fly": 40,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 17,
@@ -8699,6 +8915,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 15,
@@ -8763,6 +8981,8 @@
 		"fly": 0,
 		"swim": 60,
 		"darkvision": 0,
+		"blindsight": 120,
+		"truesight": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 10,
@@ -8832,6 +9052,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 11,
@@ -8922,6 +9144,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 7,
 			"dex": 15,
@@ -9003,6 +9227,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 5,
@@ -9074,6 +9300,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 15,
@@ -9170,6 +9398,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 11,
@@ -9221,6 +9451,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -9337,6 +9569,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 9,
 			"dex": 14,
@@ -9486,6 +9720,8 @@
 		"fly": 30,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 12,
@@ -9619,6 +9855,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 7,
 			"dex": 15,
@@ -9700,6 +9938,8 @@
 		"fly": 50,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 16,
@@ -9795,6 +10035,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 14,
@@ -9861,6 +10103,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 13,
@@ -9926,6 +10170,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 10,
@@ -10022,6 +10268,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 12,
@@ -10117,6 +10365,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 11,
@@ -10208,6 +10458,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 11,
@@ -10304,6 +10556,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 10,
@@ -10366,6 +10620,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 8,
@@ -10467,6 +10723,8 @@
 		"fly": 90,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 15,
@@ -10535,6 +10793,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 12,
@@ -10599,6 +10859,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 6,
@@ -10682,6 +10944,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 4,
 			"dex": 15,
@@ -10756,6 +11020,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 6,
@@ -10821,6 +11087,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 8,
@@ -10893,6 +11161,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 12,
@@ -10973,6 +11243,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -11038,6 +11310,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 20,
 			"dex": 12,
@@ -11119,6 +11393,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 15,
@@ -11205,6 +11481,8 @@
 		"fly": 90,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 15,
@@ -11262,6 +11540,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 15,
@@ -11344,6 +11624,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 15,
@@ -11404,6 +11686,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 16,
@@ -11466,6 +11750,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 20,
 			"dex": 10,
@@ -11547,6 +11833,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 10,
@@ -11598,6 +11886,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 10,
@@ -11728,6 +12018,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 15,
@@ -11821,6 +12113,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 5,
 			"dex": 17,
@@ -11929,6 +12223,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 16,
@@ -11991,6 +12287,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 11,
@@ -12048,6 +12346,8 @@
 		"fly": 50,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 14,
@@ -12107,6 +12407,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 0,
+		"blindsight": 30,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 13,
@@ -12171,6 +12473,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 21,
 			"dex": 8,
@@ -12240,6 +12544,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 10,
@@ -12291,6 +12597,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 14,
@@ -12375,6 +12683,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 12,
@@ -12437,6 +12747,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 14,
@@ -12523,6 +12835,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 11,
@@ -12633,6 +12947,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 16,
@@ -12727,6 +13043,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 11,
@@ -12789,6 +13107,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 11,
 			"dex": 14,
@@ -12876,6 +13196,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 13,
@@ -12946,6 +13268,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 14,
@@ -13036,6 +13360,8 @@
 		"fly": 60,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 19,
 			"dex": 10,
@@ -13120,6 +13446,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 14,
@@ -13197,6 +13525,8 @@
 		"fly": 50,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 1,
 			"dex": 14,
@@ -13286,6 +13616,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 2,
 			"dex": 14,
@@ -13366,6 +13698,8 @@
 		"fly": 40,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 18,
@@ -13450,6 +13784,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 15,
@@ -13548,6 +13884,8 @@
 		"fly": 30,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 5,
 			"dex": 11,
@@ -13672,6 +14010,8 @@
 		"fly": 40,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 4,
 			"dex": 16,
@@ -13723,6 +14063,8 @@
 		"fly": 30,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 60,
+		"truesight": 0,
 		"abilities": {
 			"str": 5,
 			"dex": 15,
@@ -13803,6 +14145,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -13873,6 +14217,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -13944,6 +14290,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -14014,6 +14362,8 @@
 		"fly": 0,
 		"swim": 30,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 8,
 			"dex": 18,
@@ -14095,6 +14445,8 @@
 		"fly": 0,
 		"swim": 40,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 16,
@@ -14175,6 +14527,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 30,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 9,
 			"dex": 11,
@@ -14250,6 +14604,8 @@
 		"fly": 50,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 6,
 			"dex": 14,
@@ -14320,6 +14676,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -14404,6 +14762,8 @@
 		"fly": 30,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 13,
@@ -14474,6 +14834,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 11,
@@ -14557,6 +14919,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 17,
 			"dex": 15,
@@ -14643,6 +15007,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 11,
@@ -14707,6 +15073,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 13,
@@ -14803,6 +15171,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 30,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 1,
@@ -14869,6 +15239,8 @@
 		"fly": 50,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 7,
 			"dex": 10,
@@ -14933,6 +15305,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 12,
@@ -14991,6 +15365,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 12,
@@ -15056,6 +15432,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 3,
 			"dex": 16,
@@ -15116,6 +15494,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 15,
@@ -15206,6 +15586,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 15,
@@ -15310,6 +15692,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 10,
 			"dex": 15,
@@ -15378,6 +15762,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -15455,6 +15841,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -15544,6 +15932,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 13,
@@ -15611,6 +16001,8 @@
 		"fly": 60,
 		"swim": 30,
 		"darkvision": 60,
+		"blindsight": 10,
+		"truesight": 0,
 		"abilities": {
 			"str": 14,
 			"dex": 10,
@@ -15699,6 +16091,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 15,
 			"dex": 14,
@@ -15812,6 +16206,8 @@
 		"fly": 50,
 		"swim": 0,
 		"darkvision": 120,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 1,
 			"dex": 28,
@@ -15913,6 +16309,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 18,
 			"dex": 13,
@@ -16015,6 +16413,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 12,
 			"dex": 15,
@@ -16087,6 +16487,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 16,
 			"dex": 13,
@@ -16153,6 +16555,8 @@
 		"fly": 0,
 		"swim": 0,
 		"darkvision": 60,
+		"blindsight": 0,
+		"truesight": 0,
 		"abilities": {
 			"str": 13,
 			"dex": 6,

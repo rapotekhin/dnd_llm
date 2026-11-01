@@ -126,10 +126,10 @@ static func identify(c: Dictionary, data: Dictionary, session_items: Dictionary,
 		var real := real_id(key)
 		inv[real] = int(inv.get(real, 0)) + int(inv[key])
 		inv.erase(key)
-		var eq: Dictionary = c.get("equipped", {})
-		for slot: String in eq:
-			if str(eq[slot]) == key:
-				eq[slot] = real
+		for eq: Dictionary in [c.get("equipped", {}), CharacterRules.stowed(c)]:
+			for slot: String in eq:
+				if str(eq[slot]) == key:
+					eq[slot] = real
 		var att: Array = c.get("attuned", [])
 		if att.has(key):
 			att[att.find(key)] = real
@@ -210,7 +210,7 @@ static func can_unattune(c: Dictionary, data: Dictionary, session_items: Diction
 static func held_by_curse(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> bool:
 	if id.is_empty() or not cursed(def_of(data["items"], session_items, id)):
 		return false
-	return attuned(c).has(id) or (c.get("equipped", {}) as Dictionary).values().has(id)
+	return attuned(c).has(id) or CharacterRules.held_copies(c, id) > 0
 
 
 ## Remove Curse (the spell or the priestess): the cursed things come off and lose the attunement; they stay cursed.
@@ -220,10 +220,10 @@ static func lift_curse(c: Dictionary, data: Dictionary, session_items: Dictionar
 		if not held_by_curse(c, data, session_items, thing):
 			continue
 		unattune(c, thing)
-		var eq: Dictionary = c.get("equipped", {})
-		for slot: String in eq:
-			if str(eq[slot]) == thing:
-				eq[slot] = ""
+		for eq: Dictionary in [c.get("equipped", {}), CharacterRules.stowed(c)]:
+			for slot: String in eq:
+				if str(eq[slot]) == thing:
+					eq[slot] = ""
 		lines.append("проклятие отпустило: %s (сама вещь проклята по-прежнему)" % display_name(data["items"], session_items, thing))
 	return lines
 

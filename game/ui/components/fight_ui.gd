@@ -424,7 +424,7 @@ func _scene(s: GameSession, data: Dictionary, map: Dictionary, now: Dictionary, 
 	return out
 
 
-## The bodies on the map: those the hero sees, an invisible one where it was last seen.
+## The bodies on the map: those the hero sees, dim those it only hears, an invisible one where it was last seen.
 func _bodies(s: GameSession, now: Dictionary, open: bool) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var cur := CombatRules.current(s)
@@ -435,7 +435,8 @@ func _bodies(s: GameSession, now: Dictionary, open: bool) -> Array[Dictionary]:
 			continue
 		var at := FightGrid.shown(f)
 		var hero := id == CombatRules.PLAYER
-		if not open and not hero and not now.has(at):
+		var heard := not hero and status == "active" and FightGrid.heard(s, Catalog.data, f)
+		if not open and not hero and not now.has(at) and not heard:
 			continue
 		var side := str(f.get("side", "enemy"))
 		var nm := str(f.get("name", s.character.get("name", "?")))
@@ -444,7 +445,7 @@ func _bodies(s: GameSession, now: Dictionary, open: bool) -> Array[Dictionary]:
 			"colour": UiTheme.ACCENT_BRIGHT if hero else UiTheme.OK if side == "ally" else UiTheme.BAD,
 			"span": int(f.get("span", 1)), "x": at.x, "y": at.y, "hp": int(s.character["hp"]) if hero else int(f.get("hp", 0)),
 			"most": int(s.character["max_hp"]) if hero else int(f.get("max_hp", 1)), "out": status != "active" or (hero and int(s.character["hp"]) <= 0),
-			"now": id == cur, "dim": bool(f.get("hidden", false))})
+			"now": id == cur, "dim": bool(f.get("hidden", false)) or heard})
 	return out
 
 
@@ -943,6 +944,7 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 			"hp": int(Guise.body(c)["hp"]), "max": int(Guise.body(c)["max_hp"])})).add_theme_color_override("font_color", UiTheme.ACCENT)
 	if bool(s.combat.get("reckless", false)):
 		_line(_portrait, tr("COMBAT_RECKLESS")).add_theme_color_override("font_color", UiTheme.BAD)
+	_portrait.add_child(WeaponSets.new())
 	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
 	chips.compact = true  # small, the description in the panel (Б3)
 	_portrait.add_child(chips)
@@ -1016,6 +1018,14 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
 	if not main_id.is_empty():
 		_details.hook(main_b, str(main["name"]), DetailsPanel.item_text(c, data, s.items, main_id))
+	var spare_id := str(CharacterRules.stowed(c).get("main_hand", ""))
+	if not spare_id.is_empty():  # the weapon put away: one click, the set changes for nothing (v0.8.4.1, as in BG3)
+		var spare: Dictionary = CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.weapon_profile(c, data, s.items, spare_id))
+		var spare_b := _action(w, "Attack_stowed", tr("COMBAT_ATTACK").format({"name": spare["name"], "hit": "%+d" % int(spare["to_hit"]), "dmg": _dmg_text(spare)}), me,
+			func(t: String) -> String: return GameState.combat_attack_stowed(t),
+			func(t: String) -> String: return CombatRules.can_attack_stowed(s, data, t),
+			func(t: String) -> Dictionary: return CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.attack_preview(s, data, t, false)))
+		_details.hook(spare_b, str(spare["name"]), DetailsPanel.item_text(c, data, s.items, spare_id))
 	if not main_id.is_empty():  # fists with a weapon in hand (v0.7.22.11, big test #45)
 		var fist := CombatRules.weapon_profile(c, data, s.items, "")
 		_action(w, "Attack_unarmed", tr("COMBAT_ATTACK").format({"name": fist["name"], "hit": "%+d" % int(fist["to_hit"]), "dmg": _dmg_text(fist)}), me,

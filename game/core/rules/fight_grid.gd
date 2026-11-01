@@ -303,7 +303,55 @@ static func _facing(a: Dictionary, b: Dictionary) -> Array[Vector2i]:
 
 static func sees(s: GameSession, data: Dictionary, a: Dictionary, b: Dictionary) -> bool:
 	var ends := _facing(a, b)
-	return clear(grid(s, data), ends[0], ends[1])
+	return clear(grid(s, data), ends[0], ends[1]) and veiled(s, data, a, b).is_empty()
+
+
+## What `f` senses without its eyes, in squares: "blindsight", "truesight", "devils_sight" (v0.8.4.1).
+static func senses(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
+	var out := {}
+	if str(f.get("id")) == "p":
+		if CharacterRules.has_feature(s.character, "eldritch_invocation_devils_sight"):
+			out["devils_sight"] = int(SightRules.cfg(data)["devils_sight"])
+		return out
+	var m := MonsterRules.monster(data, f)
+	for sense: String in ["blindsight", "truesight"]:
+		if int(m.get(sense, 0)) > 0:
+			out[sense] = squares_of(data, int(m[sense]))
+	if MonsterRules.has_trait(data, f, "devils_sight"):
+		out["devils_sight"] = int(SightRules.cfg(data)["devils_sight"])
+	return out
+
+
+static func blind(s: GameSession, f: Dictionary) -> bool:
+	return ConditionRules.has(s.character, "blinded") if str(f.get("id")) == "p" else CombatRules._has(f, "blinded")
+
+
+## `a` senses through this zone from `far` squares: Devil's Sight and truesight through Darkness, blindsight through any (`rules.sight.pierce`).
+static func pierces(s: GameSession, data: Dictionary, a: Dictionary, z: Dictionary, far: int) -> bool:
+	var sense := senses(s, data, a)
+	return (SightRules.cfg(data)["pierce"].get(str(z.get("veil", "fog")), []) as Array).any(func(k: Variant) -> bool: return int(sense.get(str(k), -1)) >= far)
+
+
+## Why `a` does not see `b` whatever the walls: blind, or a veil on the line, from inside it too. "" — sees.
+static func veiled(s: GameSession, data: Dictionary, a: Dictionary, b: Dictionary) -> String:
+	var far := dist(a, b)
+	if blind(s, a):
+		if int(senses(s, data, a).get("blindsight", -1)) < far:
+			return "ослеплён"
+	for z: Dictionary in SpellEffects.zones(s):
+		if not bool(z.get("obscure", false)) or pierces(s, data, a, z, far):
+			continue
+		var cells := zone_cells(s, data, z)
+		var ends := _facing(a, b)
+		if cells.has(ends[0]) or line_of(ends[0], ends[1]).any(func(c: Vector2i) -> bool: return cells.has(c)):
+			return str(z["name"])
+	return ""
+
+
+## One the hero does not see but hears: unless it hides, its place is known (5e), a foe behind a wall is not.
+static func heard(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
+	var ends := _facing(CombatRules.player(s), f)
+	return not bool(f.get("hidden", false)) and not veiled(s, data, CombatRules.player(s), f).is_empty() and clear(grid(s, data), ends[0], ends[1])
 
 
 ## Reaches with a blade: beside it, not across a corner of two walls.

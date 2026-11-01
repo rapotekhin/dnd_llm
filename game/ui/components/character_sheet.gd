@@ -15,7 +15,7 @@ var _conc_armed := ""  # a concentration spell pressed once while another is hel
 var _tabs: TabContainer
 var _picked_item := ""  # the item shown in the details panel of the gear tab (v0.7.7 fixes)
 const DOLL_LEFT: Array[String] = ["head", "eyes", "neck", "cloak", "armor", "hands"]
-const DOLL_RIGHT: Array[String] = ["main_hand", "off_hand", "shield", "ring1", "ring2", "feet"]
+const DOLL_RIGHT: Array[String] = ["main_hand", "off_hand", "shield", "stowed", "ring1", "ring2", "feet"]
 
 var _details: DetailsPanel  # v0.7.22.21 (#2–#5): the one description panel of the sheet, over the chat
 
@@ -428,7 +428,10 @@ func _gear_tab(c: Dictionary) -> void:
 	for side: String in ["%DollLeft", "%DollRight"]:  # the worn slots around a figure (v0.7.22.32, П8)
 		var col := _page(side)
 		for slot: String in DOLL_LEFT if side == "%DollLeft" else DOLL_RIGHT:
-			_slot_card(col, details, c, slot, busy)
+			if slot == "stowed":
+				_stowed_cards(col, details, c, busy)
+			else:
+				_slot_card(col, details, c, slot, busy)
 	(UiScenes.need(self, "%GearCoins") as Label).text = tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))})
 	var weight: Label = UiScenes.need(self, "%CarriedWeight")
 	weight.text = tr("SHEET_WEIGHT").format({"n": int(ceilf(CharacterRules.carried_weight(c, Catalog.data, s.items))), "max": CharacterRules.capacity(c, Catalog.data)})
@@ -502,7 +505,7 @@ func _gear_tab(c: Dictionary) -> void:
 		if slot == "main_hand" and (def.get("properties", []) as Array).has("light"):
 			targets.append("off_hand")
 		for t: String in targets:
-			if str(c["equipped"].get(t, "")) == id:
+			if str(c["equipped"].get(t, "")) == id or str(CharacterRules.stowed(c).get(t, "")) == id:
 				continue
 			var why := CharacterRules.can_equip(c, Catalog.data, s.items, id, t)
 			var b := Button.new()
@@ -521,6 +524,46 @@ func _gear_tab(c: Dictionary) -> void:
 	var shown := _picked_item if (c.get("inventory", {}) as Dictionary).has(_picked_item) else ""
 	if not shown.is_empty():
 		details.show_text(ItemRules.display_name(items, s.items, shown), DetailsPanel.item_text(c, Catalog.data, s.items, shown))
+
+
+## The other weapon set under the hands (v0.8.4.1, as in BG3): its row, what is in it and the swap.
+func _stowed_cards(parent: Control, details: DetailsPanel, c: Dictionary, busy: bool) -> void:
+	var s := GameState.session
+	var kind := "melee" if CharacterRules.active_kind(c, Catalog.data, s.items) == "ranged" else "ranged"
+	var head := _text(parent, tr("SLOT_STOWED").format({"set": tr("SET_" + kind.to_upper())}), UiTheme.MUTED_LABEL)
+	head.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL - 2)
+	for slot: String in CharacterRules.HANDS:
+		var id := str(CharacterRules.stowed(c).get(slot, ""))
+		if id.is_empty() and slot != "main_hand":
+			continue
+		var card := PanelContainer.new()
+		card.name = "StowedCard_" + slot
+		card.theme_type_variation = UiTheme.CARD
+		parent.add_child(card)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		card.add_child(row)
+		if id.is_empty():
+			_text(row, "—", UiTheme.MUTED_LABEL)
+			continue
+		_item_button(row, details, c, id, ItemRules.display_name(Catalog.data["items"], s.items, id), "Stowed_" + slot)
+		var b := Button.new()
+		b.text = "BTN_UNEQUIP"
+		b.name = "UnequipStowed_" + slot
+		b.disabled = busy
+		b.pressed.connect(GameState.unequip_stowed.bind(slot))
+		row.add_child(b)
+	var why := CombatRules.can_swap(s, Catalog.data)
+	var swap := Button.new()
+	swap.name = "SwapWeapons"
+	swap.text = "SWAP_WEAPONS"
+	swap.tooltip_text = Hotkeys.tip(tr("SWAP_WEAPONS"), "swap_weapons", SaveManager.keys) if why.is_empty() else tr(why)
+	swap.disabled = not why.is_empty()
+	swap.pressed.connect(func() -> void:
+		var err := GameState.swap_weapons()
+		if not err.is_empty():
+			EventBus.message.emit(tr(err)))
+	parent.add_child(swap)
 
 
 ## A worn slot of the doll: its name, the thing in it (or «—») and «Снять».

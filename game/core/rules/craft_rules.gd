@@ -598,9 +598,8 @@ static func magic_dust(s: GameSession, data: Dictionary, item_id: String) -> int
 ## The hero's things that can be broken down (not worn or in hand, not raw material, not a bag).
 static func salvageable(s: GameSession, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
-	var worn: Array = (s.character.get("equipped", {}) as Dictionary).values()
 	for id: String in s.character.get("inventory", {}):
-		if worn.has(id) or salvage_yield(s, data, id).is_empty() or ItemRules.held_by_curse(s.character, data, s.items, id):
+		if CharacterRules.held_copies(s.character, id) > 0 or salvage_yield(s, data, id).is_empty() or ItemRules.held_by_curse(s.character, data, s.items, id):
 			continue
 		var d := ItemRules.def_of(data["items"], s.items, id)
 		if bool(d.get("material", false)) or str(d.get("item_type", "")) == "consumable" or ContainerRules.is_carried_kind(data, id):

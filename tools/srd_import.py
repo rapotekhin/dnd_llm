@@ -643,6 +643,7 @@ class Builder:
                 "classes": [sid(c["index"]) for c in s.get("classes", [])],
                 "subclasses": [sid(c["index"]) for c in s.get("subclasses", [])],
                 "desc": ru.get("desc", ""),
+                **({"needs_sight": True} if "you can see" in text else {}),  # a target it must see, unlike a bolt by guess
                 **spell_combat(s),
             }
         return out
@@ -695,6 +696,7 @@ class Builder:
                 "cr": m["challenge_rating"], "xp": m["xp"], "ac": m["armor_class"][0]["value"], "hp": m["hit_points"],
                 "hit_dice": m["hit_dice"], "speed": ft(speed.get("walk", "30 ft.")), "fly": ft(speed.get("fly", "0 ft.")),
                 "swim": ft(speed.get("swim", "0 ft.")), "darkvision": ft(m.get("senses", {}).get("darkvision", "0 ft.")),
+                "blindsight": ft(m.get("senses", {}).get("blindsight", "0 ft.")), "truesight": ft(m.get("senses", {}).get("truesight", "0 ft.")),
                 "abilities": abilities, "prof": m.get("proficiency_bonus", 2), "saves": saves, "skills": skills,
                 "passive_perception": m.get("senses", {}).get("passive_perception", 10),
                 "resistances": m.get("damage_resistances", []), "immunities": m.get("damage_immunities", []),

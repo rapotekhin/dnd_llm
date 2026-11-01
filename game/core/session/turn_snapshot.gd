@@ -146,6 +146,10 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		var id := str(c.get("equipped", {}).get(slot, ""))
 		if not id.is_empty():
 			equipped.append("%s: %s [%s]" % [slot, ItemRules.display_name(items, s.items, id), id])
+	for slot: String in CharacterRules.stowed(c):
+		var id := str(CharacterRules.stowed(c)[slot])
+		if not id.is_empty():  # v0.8.4.1: the other weapon set
+			equipped.append("запасной набор, %s: %s [%s]" % [slot, ItemRules.display_name(items, s.items, id), id])
 	var sub: Dictionary = data["classes"]["subclasses"].get(str(c.get("subclass", "")), {})
 	var class_text := str(c.get("class_name", ""))
 	if not sub.is_empty():

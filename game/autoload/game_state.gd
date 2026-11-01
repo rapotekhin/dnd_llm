@@ -2921,6 +2921,8 @@ func equip(item_id: String, slot: String, both: bool = false) -> String:
 	if not _idle():
 		return "EQUIP_BUSY"
 	var c := session.character
+	if CharacterRules.HANDS.has(slot) and CharacterRules.goes_stowed(c, Catalog.data, session.items, item_id):
+		return _equip_stowed(item_id, slot)
 	var freed := CharacterRules.hands_freed(c, Catalog.data, session.items, item_id, slot, both)
 	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot) or freed.has("shield")) and session.mode == GameSession.MODE_COMBAT:
 		return "EQUIP_IN_COMBAT"
@@ -2940,6 +2942,48 @@ func equip(item_id: String, slot: String, both: bool = false) -> String:
 			c["equipped"][pair[1]] = ""
 	_gear_changed(before)
 	return ""
+
+
+## A thing of the row put away goes there without touching the hands (as in BG3).
+func _equip_stowed(item_id: String, slot: String) -> String:
+	var c := session.character
+	if slot == "shield" and session.mode == GameSession.MODE_COMBAT:
+		return "EQUIP_IN_COMBAT"
+	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot)
+	if not why.is_empty():
+		return why
+	CharacterRules.put_stowed(c, Catalog.data, session.items, item_id, slot)
+	_refresh()
+	return ""
+
+
+## The other weapon set into the hands: nothing to pay, in a fight and out of it (v0.8.4.1, as in BG3).
+func swap_weapons() -> String:
+	if session == null:
+		return "EQUIP_BUSY"
+	if not _idle() and not CombatRules.active(session):
+		return "EQUIP_BUSY"
+	return _act("swap", {"swap": [func() -> String: return CombatRules.can_swap(session, Catalog.data),
+		func() -> Array[String]: return CombatRules.swap(session, Catalog.data)]})
+
+
+## The sets change places and the blow lands: the attack with the weapon put away, one click as in BG3.
+func combat_attack_stowed(target_id: String) -> String:
+	return _combat_do(CombatRules.can_attack_stowed(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]:
+			var lines := CombatRules.swap(session, Catalog.data)
+			lines.append_array(CombatRules.player_attack(session, Catalog.data, target_id))
+			return lines)
+
+
+func unequip_stowed(slot: String) -> void:
+	if not _idle():
+		return
+	if slot == "shield" and session.mode == GameSession.MODE_COMBAT:
+		EventBus.message.emit(tr("EQUIP_IN_COMBAT"))
+		return
+	CharacterRules.stowed(session.character)[slot] = ""
+	_refresh()
 
 
 func unequip(slot: String) -> void:
@@ -3442,6 +3486,8 @@ func _engine_check(params: Dictionary) -> Dictionary:
 	var boots := CharacterRules.carried_with(session.character, Catalog.data, session.items, "stealth_advantage")
 	if str(params.get("skill", "")) == "stealth" and not boots.is_empty() and str(params.get("advantage_reason", "")).is_empty():
 		params["advantage_reason"] = boots
+	if str(params.get("skill", "")) == "stealth" and not SightRules.in_dark(session, Catalog.data).is_empty() and str(params.get("advantage_reason", "")).is_empty():
+		params["advantage_reason"] = SightRules.in_dark(session, Catalog.data)  # v0.8.4.1
 	# v0.7.12: items and potions that give advantage on a skill.
 	var by_item := {"perception": "perception_advantage", "investigation": "investigation_advantage"}
 	if by_item.has(skill_id) and str(params.get("advantage_reason", "")).is_empty():

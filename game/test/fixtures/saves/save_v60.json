@@ -66,6 +66,7 @@
 				"off_hand": "",
 				"shield": "shield"
 			},
+			"stowed": {},
 			"exhaustion": 0,
 			"expertise": [],
 			"features": [

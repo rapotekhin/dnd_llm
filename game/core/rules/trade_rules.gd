@@ -307,10 +307,7 @@ static func sellable(s: GameSession, item_id: String, data: Dictionary = {}) -> 
 	var c := s.character
 	if not data.is_empty() and ItemRules.held_by_curse(c, data, s.items, item_id):
 		return 0  # a cursed thing does not leave the hero (v0.7.12)
-	var worn := 0
-	for slot: String in CharacterRules.SLOTS:
-		if str(c.get("equipped", {}).get(slot, "")) == item_id:
-			worn += 1
+	var worn := CharacterRules.held_copies(c, item_id)
 	return maxi(0, int(c.get("inventory", {}).get(item_id, 0)) - worn - ContainerRules.full_bags(c, item_id))  # a full bag — empty it first (v0.7.18.2)
 
 

@@ -403,6 +403,8 @@ ITEM_ATTUNED,Настроено — работает
 ITEM_CHARGES,Заряды: {left} из {max} (восстанавливаются на рассвете)
 ITEM_CMP_AC,КД {now} → {then}
 ITEM_CMP_WEAPON,"Атака {hit}, урон {dmg} (сейчас {hit_now}, {dmg_now})"
+SWAP_EMPTY,Во втором наборе пусто: положите туда оружие на листе персонажа
+SWAP_WEAPONS,Сменить оружие
 ITEM_CURSED,Проклятая вещь не снимается — помочь может только «Снятие проклятия»
 ITEM_CURSED_LINE,Проклято: надетое или настроенное не снять без «Снятия проклятия»
 ITEM_DEX, + Лов
@@ -908,10 +910,13 @@ COMBAT_NO_VOLLEY,Зарядов больше нет
 SLOT_CIRCLE,{n} круг (осталось {left})
 SLOT_EMPTY,пусто
 SLOT_HINT,Ходов: {turns} · {date}
+SET_MELEE,Ближний бой
+SET_RANGED,Дальний бой
 SLOT_MAIN_HAND,Основная рука
 SLOT_N,Слот {n}
 SLOT_OFF_HAND,Вторая рука
 SLOT_SHIELD,Щит
+SLOT_STOWED,Запасной набор: {set}
 SLOT_TURNS,ходов: {n}
 SNEAK_BUSY,Сейчас нельзя
 SNEAK_NOTICED,"Здесь вас уже заметили — красться не выйдет, пока не уйдёте"
@@ -1085,6 +1090,7 @@ KEY_ACT_INVENTORY,Инвентарь
 KEY_ACT_SPELLS,Умения и заклинания
 KEY_ACT_MAP_LABELS,Подписи на карте
 KEY_ACT_MAP,Карта
+KEY_ACT_SWAP_WEAPONS,Сменить оружие
 KEY_ACT_JOURNAL,Журнал
 KEY_ACT_OPTION_1,Вариант мастера 1
 KEY_ACT_OPTION_2,Вариант мастера 2

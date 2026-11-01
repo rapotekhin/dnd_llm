@@ -41,8 +41,15 @@ static func lit(s: GameSession, data: Dictionary) -> bool:
 	return TimeRules.unlit(s, data) and dark_sight(s, data) == 0 and light(s, data) > 0
 
 
+## Why the hero stands in the dark: no light of the place and none shown. "" — lit. A darkvision does not light anyone.
+static func in_dark(s: GameSession, data: Dictionary) -> String:
+	return "темнота" if TimeRules.unlit(s, data) and not lit(s, data) else ""
+
+
 ## How many squares the hero sees here now.
 static func reach(s: GameSession, data: Dictionary) -> int:
+	if ConditionRules.has(s.character, "blinded"):
+		return int(cfg(data)["blind"])
 	if not TimeRules.unlit(s, data):
 		return int(cfg(data)["obscured" if WeatherRules.passive(s, data) > 0 else "day"])
 	return maxi(maxi(dark_sight(s, data), light(s, data)), int(cfg(data)["blind"]))
@@ -120,6 +127,34 @@ static func _clear(map: Dictionary, lib: Dictionary, a: Vector2i, b: Vector2i) -
 	return true
 
 
-## What the hero sees from `cell` now.
+## What the hero sees from `cell` now. A Fog Cloud or Darkness of a fight closes the view like a wall, and from inside it
+## nothing is seen past the next square.
 static func look(s: GameSession, data: Dictionary, map: Dictionary, cell: Vector2i) -> Dictionary:
-	return view(map, data["layouts"], cell, reach(s, data), true)
+	var veil := _veils(s, data)
+	if veil.is_empty():
+		return view(map, data["layouts"], cell, reach(s, data), true)
+	var shut := map.duplicate()
+	var rows: Array[String] = []
+	rows.assign((map["rows"] as Array).duplicate())
+	for at: Vector2i in veil:
+		if at.x >= 0 and at.y >= 0 and at.y < rows.size() and at.x < rows[at.y].length():
+			rows[at.y][at.x] = LayoutGen.BLANK
+	shut["rows"] = rows
+	var far := int(cfg(data)["blind"]) if veil.has(cell) else reach(s, data)
+	var out := view(shut, data["layouts"], cell, far, true)
+	for at: Vector2i in veil:
+		if WalkRules.distance(at, cell) > int(cfg(data)["blind"]):
+			out.erase(at)
+	return out
+
+
+## The squares under a veil the hero does not see through.
+static func _veils(s: GameSession, data: Dictionary) -> Dictionary:
+	var out := {}
+	if not CombatRules.active(s):
+		return out
+	for z: Dictionary in SpellEffects.zones(s):
+		if bool(z.get("obscure", false)) and not FightGrid.pierces(s, data, CombatRules.player(s), z, 1):
+			for at: Vector2i in FightGrid.zone_cells(s, data, z):
+				out[at] = true
+	return out

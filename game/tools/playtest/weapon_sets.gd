@@ -1,0 +1,98 @@
+extends "res://tools/playtest/playtest_base.gd"
+## Two weapon sets and sight in a fight (python tools/godot_playtest.py --scenario weapon_sets), v0.8.4.1: a bow goes to its
+## row, the sets change by the button and the key for nothing, in a fight a shot with the bow put away is one click, a Fog
+## Cloud closes the view but a foe in it is heard and shot, a blind hero shoots with disadvantage.
+
+
+func run() -> void:
+	var gs := node("GameState")
+	var data: Dictionary = node("Catalog").data
+	if not step("master connected", await wait_until(func() -> bool: return node("Backend").is_ready(), 30.0)):
+		return
+	await tap("NewGameButton")
+	await tap("NextButton")
+	await tap("Preset_fighter_aira")
+	await press(find(screen(), "StartButton"))
+	if not step("game started", await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)):
+		return
+	var s: GameSession = gs.session
+	var c := s.character
+	var sword := str(c["equipped"]["main_hand"])
+	c["inventory"]["longbow"] = 1
+	c["inventory"]["arrows"] = 20
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	step("nothing in the other set yet", (find(screen(), "WeaponSetStowed") as Button).disabled)
+	step("a bow goes to its row", gs.equip("longbow", "main_hand").is_empty() and str(c["equipped"]["main_hand"]) == sword and str(CharacterRules.stowed(c)["main_hand"]) == "longbow")
+	await frames(3)
+	await shot("sets_on_the_panel")
+	var ac := int(c["ac"])
+	await press(find(screen(), "WeaponSetStowed"))
+	await frames(3)
+	step("the button brings the bow to hand", str(c["equipped"]["main_hand"]) == "longbow", str(c["equipped"]["main_hand"]))
+	step("the shield went with the set", int(c["ac"]) < ac or str(CharacterRules.stowed(c).get("shield", "")).is_empty(), "AC %d" % int(c["ac"]))
+	await key(KEY_ESCAPE)  # the input holds the keys until Esc
+	await key(KEY_F)
+	await frames(3)
+	step("the key brings the sword back", str(c["equipped"]["main_hand"]) == sword, str(c["equipped"]["main_hand"]))
+	await key(KEY_I)
+	await frames(4)
+	await shot("sheet")
+	step("the other set on the doll", find(screen(), "StowedCard_main_hand") != null and find(screen(), "SwapWeapons") != null)
+	await press(find(screen(), "SwapWeapons"))
+	await frames(3)
+	step("the sheet's button swaps", str(c["equipped"]["main_hand"]) == "longbow")
+	await press(find(screen(), "SwapWeapons"))
+	await frames(3)
+	await key(KEY_I)
+	await frames(3)
+	gs.start_combat([{"monster": "goblin", "name": "Гоблин", "x": 1, "y": 1}], {})
+	if not step("the fight", await wait_until(func() -> bool: return screen_is("fight"), 10.0)):
+		return
+	await wait_until(func() -> bool: return CombatRules.is_player_turn(s) and not gs.is_busy(), 60.0)
+	await frames(3)
+	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
+	var hero := FightGrid.cell(CombatRules.player(s))
+	var at := Vector2i.ZERO
+	for cell: Vector2i in SightRules.look(s, data, FightGrid.map(s, data), hero):
+		if WalkRules.distance(cell, hero) in range(3, 7) and FightGrid.walkable(FightGrid.grid(s, data), cell) and FightGrid.clear(FightGrid.grid(s, data), hero, cell) and not FightGrid.bodies(s).has(cell):
+			at = cell
+			break
+	FightGrid.put(foe, at)
+	FightGrid.changed(s)
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	var e := CombatRules.economy(s)
+	var money: Dictionary = e.duplicate()
+	await key(KEY_F)
+	await frames(3)
+	step("the key works in a fight", str(c["equipped"]["main_hand"]) == "longbow", str(c["equipped"]["main_hand"]))
+	await press(find(screen(), "WeaponSetStowed"))
+	await frames(3)
+	step("two swaps cost nothing", CombatRules.economy(s).hash() == money.hash(), str(CombatRules.economy(s)))
+	await shot("fight_sets")
+	var shoot: Button = find(screen(), "Attack_stowed")
+	if step("the bow's attack among the sword's", shoot != null and not shoot.disabled, shoot.text if shoot != null else ""):
+		await press(shoot)
+		await frames(2)
+		await click_cell(at)
+		await frames(4)
+		step("a click took up the bow and shot", str(c["equipped"]["main_hand"]) == "longbow" and int(CombatRules.economy(s).get("action", 1)) == 0, str(c["equipped"]["main_hand"]))
+	await shot("shot")
+	var z := {"spell": "fog_cloud", "name": str(data["spells"]["fog_cloud"]["name"]), "shape": data["spells"]["fog_cloud"]["area"], "follow": false, "on": [],
+		"obscure": true, "veil": "fog", "dice": "", "type": "", "save": "", "dc": 0, "slow": false}
+	SpellEffects._lay(s, data, z, at)
+	s.combat["zones"] = [z]
+	e["action"] = 1
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	step("a shot into the fog goes, neither side sees", CombatRules.can_attack(s, data, str(foe["id"])).is_empty() and CombatRules.unseen_by(s, data, foe))
+	step("the fog hides the square, the foe is heard", not SightRules.look(s, data, FightGrid.map(s, data), hero).has(at) and FightGrid.heard(s, data, foe))
+	step("a spell of sight does not reach it", bool(data["spells"]["magic_missile"]["needs_sight"]) and CombatRules._blind_aim(s, data, "magic_missile", foe))
+	await shot("fog")
+	s.combat["zones"] = []
+	ConditionRules.add_effect(c, {"condition": "blinded", "ends": {}})
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	step("a blind hero shoots with disadvantage", CombatRules.can_attack(s, data, str(foe["id"])).is_empty() and not CombatRules.hero_attack_dis(s, data, foe).is_empty())
+	await shot("blind")

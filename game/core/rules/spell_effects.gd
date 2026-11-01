@@ -623,6 +623,22 @@ static func _lay(s: GameSession, data: Dictionary, z: Dictionary, at: Vector2i) 
 	z["cells"] = FightGrid.pack_cells(FightGrid.area(s, data, z["shape"], FightGrid.cell(CombatRules.player(s)), at, from_hero))
 
 
+## Darkness over the light of a spell of `circle` or lower ends that spell: the light of the hero's spell reaches the zone.
+static func _douse(s: GameSession, data: Dictionary, zone: Dictionary, circle: int) -> Array[String]:
+	var lines: Array[String] = []
+	var c := s.character
+	var far := int(SightRules.cfg(data)["lights"]["light"])
+	var at := FightGrid.cell(CombatRules.player(s))
+	if not FightGrid.zone_cells(s, data, zone).any(func(z: Vector2i) -> bool: return WalkRules.distance(z, at) <= far):
+		return lines
+	for e: Dictionary in ConditionRules.effects(c).duplicate():
+		var id := str(e.get("source", {}).get("id", ""))
+		if str(e.get("source", {}).get("kind", "")) == "spell" and bool(spec(data, id).get("light", false)) and int(data["spells"].get(id, {}).get("level", 9)) <= circle:
+			ConditionRules.remove_effect(c, int(e["uid"]))
+			lines.append("%s гаснет" % e["source"].get("name", ""))
+	return lines
+
+
 ## The spell comes into the fight: a zone, or the first strike and the button for the next ones. Lines.
 static func start_sustained(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String, lines: Array[String]) -> void:
 	var c := s.character
@@ -643,10 +659,12 @@ static func start_sustained(s: GameSession, data: Dictionary, spell_id: String, 
 		if not s.combat.has("zones"):
 			s.combat["zones"] = []
 		var at := FightGrid.cell(CombatRules.player(s)) if bool(sus.get("follow", false)) or t.is_empty() else CombatRules._aim_square(s, t)
-		var zone := {"spell": spell_id, "name": str(spell["name"]), "shape": sus.get("shape", spell.get("area", {"type": "sphere", "size": 5})), "follow": bool(sus.get("follow", false)),
+		var shape: Dictionary = (sus.get("shape", spell.get("area", {"type": "sphere", "size": 5})) as Dictionary).duplicate()
+		shape["size"] = int(shape.get("size", 5)) + int(sus.get("grow", 0)) * maxi(0, slot - int(spell["level"]))  # Fog Cloud: 20 ft a slot
+		var zone := {"spell": spell_id, "name": str(spell["name"]), "shape": shape, "follow": bool(sus.get("follow", false)),
 			"dice": dice, "type": str(sus.get("type", "")), "save": str(sus.get("save", "")), "on": sus.get("on", []), "dc": CombatRules.spell_dc(s),
 			"slow": bool(sus.get("slow", false))}
-		for k: String in ["cond", "obscure", "silence", "retch", "block_ranged", "spares_friends"]:
+		for k: String in ["cond", "obscure", "veil", "silence", "retch", "block_ranged", "spares_friends"]:
 			if sus.has(k):
 				zone[k] = sus[k]
 		if not bool(spell.get("concentration", false)) and rounds > 0:  # Grease: a minute on the field
@@ -654,6 +672,8 @@ static func start_sustained(s: GameSession, data: Dictionary, spell_id: String, 
 		_lay(s, data, zone, at)
 		(s.combat["zones"] as Array).append(GameSession.whole(zone))
 		lines.append("%s: %s" % [spell["name"], "вокруг героя" if bool(sus.get("follow", false)) else "встаёт на поле"])
+		if sus.has("douses"):
+			lines.append_array(_douse(s, data, zone, int(sus["douses"])))
 		if (zone["on"] as Array).has("now"):
 			for fid: String in CombatRules.enemies(s):
 				if FightGrid.in_cells(CombatRules.fighter(s, fid), FightGrid.zone_cells(s, data, zone)):
@@ -757,7 +777,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 	match str(sus["kind"]):
 		"attack":
 			var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "wis"))))
-			var res := CombatRules._attack(s, data, str(c["name"]), name, CombatRules.spell_attack(s), false,
+			var res := CombatRules._attack(s, data, str(c["name"]), name, CombatRules.spell_attack(s), CombatRules.unseen_by(s, data, t),
 				not CombatRules.hero_attack_dis(s, data, t).is_empty(), t, str(e["dice"]).replace("+MOD", ""), ab if str(e["dice"]).contains("MOD") else 0,
 				str(sus["type"]), lines)
 			if bool(res["hit"]) and bool(sus.get("drain", false)):
@@ -893,7 +913,7 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 	for f: Dictionary in foes:
 		var landed := false
 		if bool(cu.get("attack", false)):
-			var res := CombatRules._attack(s, data, str(c["name"]), name, CombatRules.spell_attack(s), false,
+			var res := CombatRules._attack(s, data, str(c["name"]), name, CombatRules.spell_attack(s), CombatRules.unseen_by(s, data, f),
 				not CombatRules.hero_attack_dis(s, data, f).is_empty(), f, "0", 0, "force", lines)
 			landed = bool(res["hit"])
 		else:

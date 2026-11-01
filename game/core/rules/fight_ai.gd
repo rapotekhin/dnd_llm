@@ -145,7 +145,7 @@ static func plan(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 						continue
 					budget -= 1
 					cover = FightGrid.cover(s, data, ghost, t)
-					if cover >= FightGrid.FULL_COVER:
+					if cover >= FightGrid.FULL_COVER or (str(o["kind"]) == "cast" and not FightGrid.veiled(s, data, ghost, t).is_empty()):
 						continue
 			var v := place + _worth(s, data, f, o, t, d, cover, w)
 			if v > top:

@@ -60,6 +60,7 @@ var _attach_chip: HBoxContainer
 var _attach_choices: Array[Dictionary] = []
 var _check_choices: Array[Dictionary] = []
 var _typed := true  # the last turn came from the input: its focus comes back after the turn (v0.7.22.27)
+var _was_fight := false  # a fight has just begun: the input lets go of the keys (v0.8.4.1)
 var _goal := Vector2i.ZERO  # where the hero walks, past doors too
 var _exit_to := ""  # the room beyond the way out at the end of the walk
 var _beyond := ""  # the room behind the door the walk stops at
@@ -323,6 +324,11 @@ func _option_key(event: InputEvent) -> int:
 
 ## A key of the game screen; false — not one.
 func _hotkey(event: InputEvent, nothing_open: bool) -> bool:
+	if event.is_action_pressed("swap_weapons"):
+		var err := GameState.swap_weapons()
+		if not err.is_empty():
+			EventBus.message.emit(tr(err))
+		return true
 	for tab: Array in [["character_sheet", 0], ["spells", 1], ["inventory", 2]]:
 		if event.is_action_pressed(tab[0]):
 			if _sheet.visible and _sheet.current_tab() == int(tab[1]):
@@ -591,6 +597,9 @@ func _refresh() -> void:
 	input.editable = _fight.mine() if _fight.active() else online and not busy
 	send_button.disabled = not input.editable
 	_fight.refresh()
+	if _fight.active() and not _was_fight and input.has_focus():
+		input.release_focus()  # the fight's keys are not letters of the chat; typing still lands in the input
+	_was_fight = _fight.active()
 	var s0 := GameState.session if GameState.has_session() else null
 	brush.visible = SaveManager.images_on and not Backend.image_models().is_empty()
 	brush.disabled = not online or GameState.drawing or s0 == null or ImageFrame.event_index(s0) < 0
