@@ -8,7 +8,7 @@ extends Control
 const SCENE := "res://ui/screens/game_screen.tscn"
 
 var chat: ChatView
-var input: LineEdit
+var input: ChatInput
 var send_button: Button
 var brush: BrushButton  # v0.7.35: the last event drawn
 var _image: ImageCard
@@ -25,6 +25,7 @@ var _level_up: LevelUpView
 var _short_rest: SmallDialog
 var _long_rest: SmallDialog
 var _wilds: SmallDialog  # v0.7.41
+var _wait: SmallDialog  # v0.8.4.2
 var _track: Button  # the followed quest's step over the chat (v0.7.22.32)
 var _theft: TheftPanel
 var _container: ContainerPanel
@@ -81,7 +82,7 @@ func required() -> Dictionary:
 	return {"%Side": "PanelContainer", "%Strip": "HBoxContainer", "%Field": "Control", "%Dim": "ColorRect", "%TalkCard": "CenterContainer",
 		"%PartnerCard": "VBoxContainer", "%PartnerToken": "PanelContainer", "%PartnerMark": "Label", "%PartnerName": "Label", "%PartnerLine": "Label",
 		"%Bar": "PanelContainer", "%OfflineBanner": "Label", "%QuestTrack": "Button", "%Chat": "ScrollContainer", "%Thinking": "Label", "%Cancel": "Button",
-		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "LineEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HBoxContainer", "%ThingMenu": "PanelContainer", "%ThingActs": "VBoxContainer",
+		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "TextEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HBoxContainer", "%ThingMenu": "PanelContainer", "%ThingActs": "VBoxContainer",
 		"%FightUi": "Control", "%FightSide": "PanelContainer", "%Portrait": "VBoxContainer", "%FoeList": "VBoxContainer", "%Queue": "HBoxContainer", "%Hint": "Label",
 		"%FightBar": "PanelContainer", "%Economy": "VBoxContainer", "%Tabs": "TabContainer", "%EndTurnButton": "Button", "%FightLogBox": "VBoxContainer"}
 
@@ -144,6 +145,9 @@ func _ready() -> void:
 	var side: SidePanel = UiScenes.need(self, "%Side")
 	_side = side
 	side.approach_requested.connect(_approach)
+	side.walk_out_requested.connect(_leave_to)
+	side.touch_requested.connect(_touch)
+	side.wait_requested.connect(func() -> void: _wait.open())
 	side.menu_requested.connect(func() -> void: _pause.open())
 	side.sheet_requested.connect(func() -> void: _sheet.open())
 	side.map_requested.connect(func() -> void: _map.open())
@@ -192,7 +196,9 @@ func _ready() -> void:
 	_long_rest.name = "LongRestView"
 	_wilds = SmallDialog.create(SmallDialog.WILDS)
 	_wilds.name = "WildsView"
-	for v: SmallDialog in [_short_rest, _prepare, _long_rest, _wilds]:
+	_wait = SmallDialog.create(SmallDialog.WAIT)
+	_wait.name = "WaitView"
+	for v: SmallDialog in [_short_rest, _prepare, _long_rest, _wilds, _wait]:
 		_mount(v)
 	_theft = _window(TheftPanel.SCENE, "TheftView")
 	_container = _window(ContainerPanel.SCENE, "ContainerView")  # v0.7.18.1
@@ -265,10 +271,10 @@ func _mount(w: Control) -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _heists, _org, _office, _image]
+	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _wait, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _heists, _org, _office, _image]
 
 
-# _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
+# _input, not _unhandled_input: the focused chat input would swallow Esc.
 # v0.7.22.27 (as in BG3): the keys work outside the input; Esc leaves the input, Enter or a letter comes back to it.
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_action("map_labels"):
@@ -299,7 +305,7 @@ func _input(event: InputEvent) -> void:
 		_hotkey(event, true)
 	elif input.has_focus() and input.text.is_empty() and open.is_empty() and _fight.active() and (event.is_action_pressed("next_target") or event.is_action_pressed("end_turn")):
 		_fight.key(event)  # an empty input does not hold the fight's keys
-	elif input.has_focus() or _pause.visible or get_viewport().gui_get_focus_owner() is LineEdit:
+	elif input.has_focus() or _pause.visible or get_viewport().gui_get_focus_owner() is LineEdit or get_viewport().gui_get_focus_owner() is TextEdit:
 		return
 	elif _fight.active() and open.is_empty() and _fight.key(event):
 		pass
@@ -446,6 +452,10 @@ func _on_cell(cell: Vector2i) -> void:
 	if not ref.is_empty() and not ref.begins_with("far:"):
 		_touch(ref)
 		return
+	var door := WalkRules.way_at(_field.map, s.room_id, cell)
+	if not door.is_empty() and not (WayRules.blocked(s, Catalog.data, s.room_id, door).is_empty() and WayRules.ways(s, Catalog.data, s.room_id, door).is_empty()):
+		_touch("door:" + door)
+		return
 	var plan := WalkRules.plan(_field.map, Catalog.data["layouts"], _field.hero_cell(), cell)
 	if plan.is_empty():
 		return
@@ -460,19 +470,22 @@ func _on_cell(cell: Vector2i) -> void:
 ## A click on someone or something: a person's menu opens from where it can be spoken to, a thing is used from beside it.
 func _touch(ref: String) -> void:
 	var thing := ref.begins_with("prop:") or ref.begins_with("body:")
-	if thing:
+	_menu.visible = false
+	if ref.begins_with("door:") or ref.begins_with("trap:"):
+		_approach(ref, "touch", _show_menu.bind(ref))
+	elif thing:
 		_approach(ref, "touch", _side.use_thing.bind(ref))
 	elif ref.begins_with("foe:"):  # a foe at hand is struck; they who wait for words stay at the panel
 		if not bool(EncounterRules.lurking(GameState.session, GameState.session.room_id).get("word", false)):
 			_approach(ref, "touch", GameState.encounter_attack)
-	elif not ref.begins_with("trap:"):
+	else:
 		_approach(ref, "touch" if ref.begins_with("station:") else "talk", _show_menu.bind(ref))
 
 
 ## The hero walks into reach of `ref`, then the act. No way there or a talk going on — the act from where the hero stands.
 func _approach(ref: String, reach: String, act: Callable) -> void:
 	var s := GameState.session
-	var to := _field.cell_of(ref)
+	var to := _cell_of(ref)
 	var steps: Array[Vector2i] = []
 	if to.x >= 0 and not s.in_conversation():
 		steps = WalkRules.near(_field.map, Catalog.data["layouts"], _field.hero_cell(), to, int(MapSpots.cfg(Catalog.data)["reach"][reach]), s.room_id)
@@ -485,6 +498,44 @@ func _approach(ref: String, reach: String, act: Callable) -> void:
 	_after = act
 	_goal = steps[-1]
 	_walk(steps)
+
+
+## The square of a ref: a door by the room behind it, the rest as the field has it.
+func _cell_of(ref: String) -> Vector2i:
+	if ref.begins_with("door:"):
+		return WalkRules.way_cell(_field.map, GameState.session.room_id, ref.trim_prefix("door:"))
+	return _field.cell_of(ref)
+
+
+## What stands on the way to `to` as a thing to deal with: a found trap, a shut door. "" — the way is free.
+func _way_ref(to: String) -> String:
+	var s := GameState.session
+	var trap := ExplorationRules.trap_on_exit(s, Catalog.data["world"], s.room_id, to)
+	if not trap.is_empty() and ExplorationRules.is_found(s, s.room_id, trap):
+		return "trap:" + str(trap["id"])
+	return "door:" + to if not WayRules.blocked(s, Catalog.data, s.room_id, to).is_empty() else ""
+
+
+## The exit button (v0.8.4.2): the hero walks there by himself; a shut way is walked up to and opens its menu.
+func _leave_to(to: String) -> void:
+	var shut := _way_ref(to)
+	if not shut.is_empty():
+		_touch(shut)
+		return
+	_menu.visible = false
+	var cell := WalkRules.way_cell(_field.map, GameState.session.room_id, to)
+	var past := WalkRules.beyond(_field.map, Catalog.data["layouts"], cell, to)
+	var target := past if past.x >= 0 else cell
+	var plan := WalkRules.plan(_field.map, Catalog.data["layouts"], _field.hero_cell(), target) if target.x >= 0 else {}
+	if plan.is_empty():
+		GameState.go(to)
+		return
+	_field.stop()
+	_after = Callable()
+	_goal = target
+	_exit_to = str(plan["exit"])
+	_at_door = false
+	_walk(plan["path"])
 
 
 func _show_menu(ref: String) -> void:
@@ -500,7 +551,7 @@ func _show_menu(ref: String) -> void:
 	_menu.visible = true
 	await get_tree().process_frame  # a flow knows its height only after a layout
 	_menu.reset_size()
-	var at := _field.global_position + _field.cell_point(_field.cell_of(ref)) + Vector2(28, -20)
+	var at := _field.global_position + _field.cell_point(_cell_of(ref)) + Vector2(28, -20)
 	_menu.global_position = at.clamp(Vector2(8, 8), get_viewport_rect().size - _menu.size - Vector2(8, 8))
 
 
@@ -512,6 +563,8 @@ func _walk(steps: Array[Vector2i]) -> void:
 	var leg := WalkRules.leg(_field.map, steps, GameState.session.room_id)
 	var way: Array[Vector2i] = leg["steps"]
 	_beyond = str(leg["room"])
+	if not _beyond.is_empty() and not way.is_empty() and WalkRules.room_of(_field.map, way[-1]).is_empty() and not _way_ref(_beyond).is_empty():
+		way.pop_back()  # a shut door is not a place to stand on
 	_round_ends = _rounds
 	var most := WatchRules.round_steps(GameState.session)
 	if _rounds and way.size() > most:  # sneaking past those who watch: one round's squares to a click
@@ -536,6 +589,7 @@ func _on_stepped(cell: Vector2i) -> void:
 
 
 func _on_arrived() -> void:
+	_side.refresh()
 	if _round_ends:
 		_round_ends = false
 		GameState.sneak_round()
@@ -556,6 +610,11 @@ func _on_arrived() -> void:
 	_beyond = ""
 	if through:
 		_exit_to = ""
+	var shut := _way_ref(to)
+	if not shut.is_empty():
+		_exit_to = ""
+		_show_menu(shut)
+		return
 	var map_id := str(_field.map["id"])
 	if not GameState.go(to) or through or not is_inside_tree():
 		return
@@ -636,6 +695,7 @@ func _refresh() -> void:
 	else:
 		input.placeholder_text = tr("PLACEHOLDER_COMBAT" if _fight.active() else "PLACEHOLDER_ACTION")
 	_refresh_attach(s, busy, online)
+	input.fit()
 	for c in _options.get_children():
 		_options.remove_child(c)
 		c.queue_free()

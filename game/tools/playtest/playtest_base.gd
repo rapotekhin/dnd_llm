@@ -176,6 +176,13 @@ func press(button: BaseButton) -> void:
 	await frames(2)
 
 
+## The hero walks up to a person of the map as after a click, the menu that opens is shut again (v0.8.4.2).
+func go_to(ref: String) -> void:
+	screen().call("_touch", ref)
+	await frames(3)
+	(find(screen(), "ThingMenu") as Control).visible = false
+
+
 ## Opens the acts of a row of the side panel (v0.7.22.23): «More_<npc>» or «CreatureMore_<creature>».
 func open_row(node_name: String) -> void:
 	var b := find(screen(), node_name) as BaseButton

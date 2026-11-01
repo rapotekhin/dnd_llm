@@ -3193,6 +3193,8 @@
 	"ways": {
 		"_doc": "Ways (v0.7.66, WayRules): any way between two places, the pack's rows in a room's `ways` {to: {kind, ...}}, the master's by the effect `way`. An exit without a row is a `plain` way or, between locations, a `road`. A row may say: `when`, `text` (the side it stands on is shut until the fact is true), `max_size`, `how` (rules below: minutes added, whether beasts go), `minutes` (the step's own, a road of hours), `drop` (feet, a fall down it by 5e), `passes` (what goes through it shut: sight, shot, sound), `latch` (the room from whose side a locked leaf opens by hand), and for a leaf: `material`, `lock`, `key`, `locked`, `solid` (a wall that only breaks), `broke` (the line when it does). A way into a site with `hours` has a door by `default`. `master: false` — not the master's to make. Leaf: Outside the site's hours it is locked. A key or picked lock (Sleight of Hand against containers.lock_dc of its `lock`) opens it until the site's next opening; force (Athletics, the pick DC + containers.force_dc_plus + the material's force_plus) breaks it; blows of the weapon in hand — an attack against the material's ac, damage off its hp; an arcane lock adds arcane_plus to both and only Knock quiets it for knock_minutes; fire (a spell of the fire damage type or a `torch`) burns a wooden door through in burn_minutes. Each try takes try_minutes. Forcing a way into a closed or private site before eyes is a trespass at once.",
 		"default": {"material": "wood", "lock": "simple"},
+		"_private": "The way into a private room of someone else (public false, an owner) has a door shut to the hero (v0.8.4.2): the owner's leave opens it for good, a picked lock or Knock for private_open_minutes.",
+		"private_open_minutes": 1440,
 		"how": {
 			"walk": {"beasts": true, "minutes": 0},
 			"wade": {"beasts": true, "minutes": 5},
@@ -3455,6 +3457,7 @@
 		"travel_minutes": 60,
 		"short_rest_minutes": 60,
 		"wake_minute": 420,
+		"wait_max_minutes": 1440,
 		"night_shops_closed": true,
 		"max_master_minutes": 720,
 		"search_minutes": 10,

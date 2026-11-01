@@ -11,9 +11,11 @@ const SHORT_REST := "short_rest"
 const PREPARE := "prepare"
 const LONG_REST := "long_rest"
 const WILDS := "wilds"
+const WAIT := "wait"
 const SCENES := {
 	SHORT_REST: "res://ui/components/small_dialog_short_rest.tscn", PREPARE: "res://ui/components/small_dialog_prepare.tscn",
 	LONG_REST: "res://ui/components/small_dialog_long_rest.tscn", WILDS: "res://ui/components/small_dialog_wilds.tscn",
+	WAIT: "res://ui/components/small_dialog_wait.tscn",
 }
 
 @export var kind := ""
@@ -26,6 +28,8 @@ var dice: int = 0
 ## The ground of a hunt or a fishing (rules.wilds.kinds) and its hours.
 var ground: String = ""
 var hours: int = 2
+## The minutes the player wrote for a wait.
+var minutes: int = 30
 var confirm: Button
 var _box: VBoxContainer
 var _details: DetailsPanel
@@ -97,6 +101,8 @@ func _rebuild() -> void:
 		_short_rest(s, c, data)
 	elif kind == WILDS:
 		_wilds(s, data)
+	elif kind == WAIT:
+		_wait(s, data)
 	elif kind == LONG_REST:
 		_long_rest(s, data)
 	else:
@@ -177,6 +183,32 @@ func _wilds(s: GameSession, data: Dictionary) -> void:
 	var why := WildsRules.why_not(s, data, ground)
 	set_note(why)
 	confirm.disabled = not why.is_empty() or GameState.is_busy()
+
+
+## «Ждать» (v0.8.4.2): the player writes the minutes, the clock of the end follows. Enter in the field confirms.
+func _wait(s: GameSession, data: Dictionary) -> void:
+	title.text = tr("WAIT_CUSTOM_TITLE")
+	var most := int(TimeRules.cfg(data)["wait_max_minutes"])
+	_text(tr("WAIT_MINUTES").format({"max": most}), UiTheme.MUTED_LABEL)
+	var spin := SpinBox.new()
+	spin.name = "WaitMinutes"
+	spin.min_value = 1
+	spin.max_value = most
+	spin.value = minutes
+	spin.update_on_text_changed = true
+	_box.add_child(spin)
+	var until := _text("")
+	until.name = "WaitUntil"
+	var show_until := func(v: float) -> void:
+		minutes = int(v)
+		until.text = tr("WAIT_UNTIL").format({"clock": TimeRules.clock_after(s, minutes)})
+	show_until.call(spin.value)
+	spin.value_changed.connect(show_until)
+	var edit := spin.get_line_edit()
+	edit.text_submitted.connect(func(_t: String) -> void: _on_confirm())
+	edit.select_all.call_deferred()
+	edit.grab_focus.call_deferred()
+	confirm.disabled = GameState.is_busy()
 
 
 func _step_button(node_name: String, text: String, off: bool, change: Callable) -> Button:
@@ -313,5 +345,7 @@ func _on_confirm() -> void:
 		_done(GameState.short_rest(dice))
 	elif kind == WILDS:
 		_done(GameState.wilds_act(ground, hours))
+	elif kind == WAIT:
+		_done(GameState.wait_for(minutes))
 	else:
 		_done(GameState.prepare_spells(picks))

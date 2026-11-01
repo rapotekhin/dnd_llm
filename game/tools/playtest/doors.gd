@@ -1,6 +1,6 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Doors (python tools/godot_playtest.py --scenario doors), v0.7.22.25: the smithy at night says «заперто до 08:00»,
-## its ways open under the exit, «Ждать открытия» waits till morning; the cellar door in the tavern's kitchen is
+## its ways open in the menu of the door, «Ждать открытия» waits till morning; the cellar door in the tavern's kitchen is
 ## locked — «Выбить» until it breaks, then the way is open.
 
 
@@ -24,7 +24,7 @@ func run() -> void:
 	await press(smithy)
 	await frames(4)
 	var wait_btn: Button = find(screen(), "DoorWay_wait")
-	step("the door's ways open under the exit", wait_btn != null and find(screen(), "DoorWay_force") != null)
+	step("the door's ways open in its menu", wait_btn != null and find(screen(), "DoorWay_force") != null)
 	await shot("smithy_night")
 	if wait_btn != null:
 		await press(wait_btn)
@@ -39,16 +39,19 @@ func run() -> void:
 	await frames(3)
 	var cellar: Button = find(screen(), "Exit_brod-tavern-cellar")
 	step("the cellar door is locked", cellar != null and cellar.text.contains("заперто"), cellar.text if cellar else "")
-	await press(find(screen(), "Door_brod-tavern-cellar"))
-	await frames(4)
-	await shot("cellar_ways")
 	for i in 8:
+		await press(find(screen(), "Exit_brod-tavern-cellar"))
+		await frames(4)
+		if i == 0:
+			await shot("cellar_ways")
 		var force: Button = find(screen(), "DoorWay_force")
-		if force == null:
+		if force == null or not (find(screen(), "ThingMenu") as Control).visible:
 			break
 		await press(force)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		await frames(3)
+		if find(screen(), "Exit_brod-tavern-cellar").text.contains("выбита"):
+			break
 	cellar = find(screen(), "Exit_brod-tavern-cellar")
 	step("forced — the door is broken", cellar != null and cellar.text.contains("выбита"), cellar.text if cellar else "")
 	await shot("cellar_broken")

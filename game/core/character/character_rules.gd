@@ -450,6 +450,19 @@ static func wear_slot(def: Dictionary, data: Dictionary) -> String:
 	return ""
 
 
+## The worn slots a thing fits: its own, the second ring, the off hand of a light weapon.
+static func slots_of(def: Dictionary, data: Dictionary) -> Array[String]:
+	var slot := slot_for(def, data)
+	var out: Array[String] = []
+	if not slot.is_empty():
+		out.append(slot)
+	if slot == "ring1":
+		out.append("ring2")
+	if slot == "main_hand" and (def.get("properties", []) as Array).has("light"):
+		out.append("off_hand")
+	return out
+
+
 ## "" when the character can equip `id` into `slot`, otherwise a reason (localization key).
 static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, slot: String) -> String:
 	if int(c.get("inventory", {}).get(id, 0)) <= 0:

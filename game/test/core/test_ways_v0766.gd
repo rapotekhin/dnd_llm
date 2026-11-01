@@ -87,7 +87,7 @@ func test_what_goes_through_a_shut_leaf() -> void:
 	assert_bool(WayRules.passes(s, data, "brod-tavern-hall", "brod-tavern-kitchen", "sight")).is_false()
 	WayRules.break_down(s, "brod-tavern-hall", "brod-tavern-kitchen")
 	assert_bool(WayRules.passes(s, data, "brod-tavern-hall", "brod-tavern-kitchen", "sight")).is_true()
-	assert_bool(WayRules.passes(s, data, "brod-tavern-kitchen", "brod-tavern-upstairs", "sound")).is_true()  # nothing shuts it
+	assert_bool(WayRules.passes(s, data, "brod-tavern-hall", "brod-tavern-upstairs", "sound")).is_true()  # nothing shuts it
 
 
 func test_a_latch_opens_from_one_side_only() -> void:

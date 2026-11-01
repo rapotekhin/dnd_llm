@@ -72,7 +72,7 @@ func world() -> WorldView:
 ## defaults) and a built character ({} = the world's first ready-made character).
 func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: int = -1) -> void:
 	if game_seed < 0:
-		game_seed = int(LaunchArgs.value("--seed", str(randi())))
+		game_seed = GameSession.seed_of(settings.get("seed", LaunchArgs.value("--seed", str(randi()))))
 	if settings.has("world"):
 		Catalog.activate(str(settings["world"]))
 	if settings.is_empty():
@@ -84,6 +84,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	s.world_version = str(Catalog.data["pack"].get("version", ""))
 	s.settings = settings.duplicate(true)
 	s.settings["world"] = Catalog.active_world
+	s.settings.erase("seed")  # the game's own, not a setting for the master
 	BackgroundRules.apply_ties(s, Catalog.data)  # the people of the hero's past (v0.7.11)
 	PetRules.seed(s, Catalog.data, s.room_id)  # the start room's wild beasts (v0.7.43)
 	start(s)
@@ -1203,6 +1204,9 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 	var way := {"how": how, "spell": spell_id} if how == "spell" else {"how": how}
 	if not WayRules.ways(session, data, from, to).has(way):
 		return "WAIT_NOT_NOW"
+	if how == "ask":  # a knock: the owner answers as to «Попросить впустить»
+		_quiet_lines(SiteRules.ask(session, data, SiteRules.unwelcome(session, data, to)))
+		return ""
 	var lines: Array[String] = []
 	var minutes := int(WayRules.cfg(data)["try_minutes"])
 	match how:
@@ -2185,11 +2189,16 @@ func option_preview(index: int) -> Dictionary:
 ## «Ждать» (v0.6.5): an hour or until a part of the day; not in a conversation or a fight. The master tells how the
 ## time passed (kind=wait). "" or a localization key.
 func wait(target: String) -> String:
+	return wait_for(TimeRules.minutes_until(session, Catalog.data, target)) if session != null else "WAIT_BUSY"
+
+
+## «Ждать» a number of minutes the player wrote (v0.8.4.2), up to `time.wait_max_minutes`.
+func wait_for(minutes: int) -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
-	var mins := TimeRules.minutes_until(session, Catalog.data, target)
+	var mins := mini(minutes, int(TimeRules.cfg(Catalog.data)["wait_max_minutes"]))
 	if mins <= 0:
 		return "WAIT_NOT_NOW"
 	var lines: Array[String] = ["Ожидание до %s" % TimeRules.clock_after(session, mins)]
@@ -2306,6 +2315,7 @@ func go(room_id: String) -> bool:
 ## starts the fight, otherwise the master describes the room. `lines` — what happened on the way (a trap).
 func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> void:
 	var from := session.room_id
+	_set_options([])  # what was offered here stays here
 	_step(room_id, lines)
 	if announce:  # the master's move already showed «Переход» among its effects (v0.7.22.16)
 		lines.push_front("Переход: %s" % world().room(room_id).get("name", room_id))
@@ -2495,11 +2505,12 @@ func _trap_downed(lines: Array[String]) -> bool:
 ## A found trap on the exit to `to`: «Обезвредить» (Sleight of Hand with thieves' tools) — success spends it,
 ## the player stays; «Обойти» (Acrobatics) — success passes on. Both against disarm_dc; a failure springs the trap.
 ## "" or a localization key.
-func trap_action(to: String, disarm: bool) -> String:
+func trap_action(to: String, disarm: bool, trap_id: String = "") -> String:
 	if session == null or is_busy() or not Backend.is_ready() or session.in_conversation():
 		return "TRAP_BUSY"
 	var from := session.room_id
-	var trap := ExplorationRules.trap_on_exit(session, Catalog.data["world"], from, to)
+	var trap := ExplorationRules.trap_on_exit(session, Catalog.data["world"], from, to) if trap_id.is_empty() \
+		else ExplorationRules.found_trap(session, Catalog.data["world"], from, trap_id)
 	if trap.is_empty() or not ExplorationRules.is_found(session, from, trap):
 		return "TRAP_NONE"
 	var t: Dictionary = trap["trap"]

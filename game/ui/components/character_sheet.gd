@@ -496,15 +496,7 @@ func _gear_tab(c: Dictionary) -> void:
 				_action(row, "Attune_" + id, "BTN_ATTUNE", not busy and at_why.is_empty(), GameState.attune.bind(id))
 				if not at_why.is_empty():
 					(row.get_child(row.get_child_count() - 1) as Button).tooltip_text = tr(at_why)
-		var slot := CharacterRules.slot_for(def, Catalog.data)
-		var targets: Array[String] = []
-		if not slot.is_empty():
-			targets.append(slot)
-		if slot == "ring1":
-			targets.append("ring2")
-		if slot == "main_hand" and (def.get("properties", []) as Array).has("light"):
-			targets.append("off_hand")
-		for t: String in targets:
+		for t: String in CharacterRules.slots_of(def, Catalog.data):
 			if str(c["equipped"].get(t, "")) == id or str(CharacterRules.stowed(c).get(t, "")) == id:
 				continue
 			var why := CharacterRules.can_equip(c, Catalog.data, s.items, id, t)
@@ -566,7 +558,51 @@ func _stowed_cards(parent: Control, details: DetailsPanel, c: Dictionary, busy: 
 	parent.add_child(swap)
 
 
-## A worn slot of the doll: its name, the thing in it (or «—») and «Снять».
+## A click on a slot's card: the list of what can be worn there (v0.8.4.2). What may not be worn now is grey with why.
+func _slot_pick(card: PanelContainer, slot: String, busy: bool) -> void:
+	var pop := PopupMenu.new()
+	pop.name = "SlotList_" + slot
+	card.add_child(pop)
+	var s := GameState.session
+	var ids: Array[String] = []
+	for id: String in s.character.get("inventory", {}):
+		if CharacterRules.slots_of(ItemRules.def_of(Catalog.data["items"], s.items, id), Catalog.data).has(slot) and str(s.character["equipped"].get(slot, "")) != id:
+			ids.append(id)
+	for i in ids.size():
+		var why := CharacterRules.can_equip(s.character, Catalog.data, s.items, ids[i], slot)
+		pop.add_item(ItemRules.display_name(Catalog.data["items"], s.items, ids[i]), i)
+		pop.set_item_disabled(i, busy or not why.is_empty())
+		pop.set_item_tooltip(i, tr(why) if not why.is_empty() else "")
+	if ids.is_empty():
+		pop.add_item(tr("SLOT_PICK_NONE"), -1)
+		pop.set_item_disabled(0, true)
+	pop.id_pressed.connect(func(i: int) -> void:
+		var err := GameState.equip(ids[i], slot)
+		if not err.is_empty():
+			EventBus.message.emit(tr(err)))
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	card.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			_open_slot(card))
+
+
+func _open_slot(card: PanelContainer) -> void:
+	var pop: PopupMenu = card.get_node("SlotList_" + card.name.trim_prefix("SlotCard_"))
+	pop.position = Vector2i(card.get_screen_position() + Vector2(0, card.size.y))
+	pop.popup()
+
+
+func _slot_arrow(row: HBoxContainer, card: PanelContainer) -> void:
+	var b := Button.new()
+	b.name = "SlotPick_" + card.name.trim_prefix("SlotCard_")
+	b.text = "▾"
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	b.tooltip_text = tr("SLOT_PICK_TIP")
+	b.pressed.connect(_open_slot.bind(card))
+	row.add_child(b)
+
+
+## A worn slot of the doll: its name, the thing in it (or «—»), «▾» with what fits and «Снять».
 func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: String, busy: bool) -> void:
 	var card := PanelContainer.new()
 	card.name = "SlotCard_" + slot
@@ -582,10 +618,13 @@ func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: Str
 	col.add_child(row)
 	var id := str(c["equipped"].get(slot, ""))
 	var grip := CharacterRules.two_hand_grip(c, Catalog.data, GameState.session.items)
+	_slot_pick(card, slot, busy)
 	if id.is_empty():
 		var main := str(c["equipped"].get("main_hand", ""))
 		var held := slot == "off_hand" and grip
-		_text(row, tr("SLOT_HELD_BY").format({"name": ItemRules.display_name(Catalog.data["items"], GameState.session.items, main)}) if held else "—", UiTheme.MUTED_LABEL)
+		var none := _text(row, tr("SLOT_HELD_BY").format({"name": ItemRules.display_name(Catalog.data["items"], GameState.session.items, main)}) if held else "—", UiTheme.MUTED_LABEL)
+		none.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_slot_arrow(row, card)
 		return
 	if slot == "main_hand" and grip:
 		head.text += " · " + tr("SLOT_GRIP_BOTH")
@@ -608,6 +647,7 @@ func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: Str
 			if not err.is_empty():
 				EventBus.message.emit(tr(err)))
 		row.add_child(both)
+	_slot_arrow(row, card)
 
 
 ## «Выбросить»: the thing (a bag — with what is in it) goes down in the room; the sheet stays open.

@@ -24,6 +24,8 @@ func run() -> void:
 		if not await _go(gs, room):
 			return
 	step("time passed on the way", s.minute > start_minute, "%s → %s (%s)" % [start_minute, s.minute, TimeRules.part_name(s, node("Catalog").data)])
+	step("a quest is taken at talking distance", find(screen(), "QuestTake_drogin_amulet") != null)
+	await go_to("npc:npc_prospector")
 	var take: Button = find(screen(), "QuestTake_drogin_amulet")
 	if not step("Drogin offers the quest", take != null and not take.disabled):
 		await shot("no_offer")
@@ -63,10 +65,12 @@ func run() -> void:
 	Knows.add(s, Knows.SECRET, "mine-gallery", "deadfall")  # as if the rogue's passive Perception noticed it
 	if not await _go(gs, "mine-gallery"):
 		return
-	var disarm: Button = find(screen(), "Disarm_mine-deep")
-	var around: Button = find(screen(), "Exit_mine-deep")
-	step("the found trap: disarm and go-around buttons", disarm != null and around != null and around.text.contains("в обход"),
-		around.text if around != null else "")
+	await press(find(screen(), "Exit_mine-deep"))
+	await frames(4)
+	var disarm: Button = find(screen(), "TrapDisarm_deadfall")
+	var around: Button = find(screen(), "TrapBypass_deadfall")
+	var way: Button = find(screen(), "Exit_mine-deep")
+	step("the found trap: its exit walks up, disarm and go-around in its menu", disarm != null and around != null and way.text.contains("ловушка"), way.text)
 	await shot("trap_found")
 	if disarm != null and not disarm.disabled:
 		s.character["inventory"]["thieves_tools"] = 1

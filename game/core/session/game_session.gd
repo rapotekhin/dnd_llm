@@ -172,6 +172,14 @@ var dialogue_log: Array[String] = []
 var location_log: Array[String] = []
 
 
+## The number of a seed the player wrote: a whole number stays itself, any other text goes by its hash.
+static func seed_of(text: Variant) -> int:
+	var raw := str(text).strip_edges()
+	if raw.is_valid_int() and raw.to_int() >= 0:
+		return raw.to_int()
+	return absi(raw.hash())
+
+
 static func create(new_seed: int, now: String, start_room: String, new_character: Dictionary) -> GameSession:
 	var s := GameSession.new()
 	s.game_seed = new_seed

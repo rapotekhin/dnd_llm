@@ -10,6 +10,8 @@ extends RefCounted
 ## (Athletics — it breaks), blows of a weapon (its AC and HP), Knock, the latch from its own side; Arcane Lock locks it
 ## harder; fire burns a wooden one through. A `solid` leaf (a rotten partition, a blocked passage) has no lock: it only
 ## breaks. Forcing, hacking or burning a way into a closed or private site before eyes is a trespass at once.
+## v0.8.4.2: the way into a private room of someone else from a public room or from another site is a door shut to the
+## hero (`private`, DOOR_PRIVATE): the owner's leave opens it, so does a picked lock or a broken leaf.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -36,13 +38,17 @@ static func row(data: Dictionary, a: String, b: String) -> Dictionary:
 		if w.site_id(a) != w.site_id(b) and w.site(sid).has("hours"):
 			out["site"] = sid
 			break
+	for side: Array in [[b, a], [a, b]]:
+		if not w.is_public(side[0]) and (w.is_public(side[1]) or w.site_id(a) != w.site_id(b)) and not str(w.inherit(side[0], "owner", "")).is_empty():
+			out["private"] = side[0]
+			break
 	return out
 
 
 ## The leaf of the way: {} — nothing that shuts it. The way into a site with hours has a door whatever its kind.
 static func def(data: Dictionary, a: String, b: String) -> Dictionary:
 	var r := row(data, a, b)
-	if not bool(r.get("leaf", false)) and not r.has("site"):
+	if not bool(r.get("leaf", false)) and not r.has("site") and not r.has("private"):
 		return {}
 	if not bool(r.get("leaf", false)):
 		r.merge(cfg(data)["kinds"]["door"])
@@ -166,7 +172,8 @@ static func has_effect(s: GameSession, a: String, b: String, kind: String) -> bo
 
 
 ## "" — the hero passes from `a` to `b`; else why not (a localization key): DOOR_BURNING, DOOR_ARCANE, DOOR_LOCKED,
-## DOOR_CLOSED_HOURS (only from outside the site), DOOR_SOLID (a wall), DOOR_TOO_SMALL.
+## DOOR_CLOSED_HOURS (only from outside the site), DOOR_PRIVATE (into a stranger's private room), DOOR_SOLID (a wall),
+## DOOR_TOO_SMALL.
 static func blocked(s: GameSession, data: Dictionary, a: String, b: String) -> String:
 	if not fits(row(data, a, b), CombatRules.hero_size(s, data)):
 		return "DOOR_TOO_SMALL"
@@ -191,6 +198,8 @@ static func blocked(s: GameSession, data: Dictionary, a: String, b: String) -> S
 	var w := WorldView.new(data["world"])
 	if not h.is_empty() and not bool(h["open"]) and w.site_id(a) != str(d["site"]):  # from inside the latch opens
 		return "DOOR_CLOSED_HOURS"
+	if str(d.get("private", "")) == b and not SiteRules.unwelcome(s, data, b).is_empty():
+		return "DOOR_PRIVATE"
 	return ""
 
 
@@ -226,6 +235,8 @@ static func describe(s: GameSession, data: Dictionary, a: String, b: String) -> 
 			bits.append("заперта до %02d:00 — часы объекта" % int(hours(s, data, str(d["site"]))["from"]))
 		"DOOR_LOCKED":
 			bits.append("заперта")
+		"DOOR_PRIVATE":
+			bits.append("заперта для посторонних: впустить может хозяин")
 		"DOOR_ARCANE":
 			bits.append("запечатана «Волшебным замком»")
 		"DOOR_BURNING":
@@ -251,7 +262,7 @@ static func dcs(s: GameSession, data: Dictionary, a: String, b: String) -> Dicti
 
 ## The ways the hero has with this door now: [{how, spell?, item?}] — key, pick, force, hit (a weapon in hand), the
 ## hero's spells by their data (`door` of rules.spell_effects, fire by the spell's damage type), a torch, waiting,
-## the latch from its own side. A solid leaf only breaks.
+## the latch from its own side, a knock at a private door. A solid leaf only breaks.
 static func ways(s: GameSession, data: Dictionary, a: String, b: String) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var d := def(data, a, b)
@@ -261,8 +272,10 @@ static func ways(s: GameSession, data: Dictionary, a: String, b: String) -> Arra
 	var why := blocked(s, data, a, b)
 	var inv: Dictionary = c.get("inventory", {})
 	var solid := why == "DOOR_SOLID"
-	var locks := why in ["DOOR_LOCKED", "DOOR_CLOSED_HOURS", "DOOR_ARCANE"]
+	var locks := why in ["DOOR_LOCKED", "DOOR_CLOSED_HOURS", "DOOR_ARCANE", "DOOR_PRIVATE"]
 	var shut := locks or solid
+	if why == "DOOR_PRIVATE" and _knock_heard(s, data, a, b):
+		out.append({"how": "ask"})
 	if why == "DOOR_LOCKED" and str(d.get("latch", "")) == a:
 		out.append({"how": "latch"})
 	if locks and not str(d.get("key", "")).is_empty() and int(inv.get(str(d["key"]), 0)) > 0 and why != "DOOR_ARCANE":
@@ -289,12 +302,23 @@ static func ways(s: GameSession, data: Dictionary, a: String, b: String) -> Arra
 	return out
 
 
-## The door opens by a key or a picked lock: unlocked until its site's next closing (or for good, a lock of its own).
+## The owner is by the door and may still be asked to let the hero in.
+static func _knock_heard(s: GameSession, data: Dictionary, a: String, b: String) -> bool:
+	var owner := SiteRules.unwelcome(s, data, b)
+	var w := WorldView.new(data["world"])
+	var near: Array[String] = w.site_rooms(w.site_id(b))
+	near.append(a)
+	return SiteRules.ask_why(s, data, owner).is_empty() and near.any(func(r: String) -> bool: return s.npcs_here(w.world, r).has(owner))
+
+
+## The door opens by a key or a picked lock: unlocked until its site's next closing, a private one for
+## `private_open_minutes` (the owner shuts it again), or for good, a lock of its own.
 static func unlock(s: GameSession, data: Dictionary, a: String, b: String) -> void:
 	var st := _st(s, a, b)
 	st["locked"] = false
-	var h := hours(s, data, str(def(data, a, b).get("site", "")))
-	st["unlocked_until"] = int(h["opens"]) if not h.is_empty() else -1
+	var d := def(data, a, b)
+	var h := hours(s, data, str(d.get("site", "")))
+	st["unlocked_until"] = int(h["opens"]) if not h.is_empty() else TimeRules.abs_minute(s) + int(cfg(data)["private_open_minutes"]) if d.has("private") else -1
 
 
 ## The owner or the hero locks it again.

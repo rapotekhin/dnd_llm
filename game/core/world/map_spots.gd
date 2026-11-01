@@ -275,6 +275,16 @@ static func cell_of(s: GameSession, data: Dictionary, map: Dictionary, name: Str
 	return _mark_cell(map, s.room_id, name)
 
 
+## Is `name` within `reach` of the hero, in a line of sight? One who has no square here stands in reach.
+static func in_reach(s: GameSession, data: Dictionary, name: String, reach: String) -> bool:
+	var map := LayoutRules.map_of(s, data, s.room_id)
+	var at := cell_of(s, data, map, name)
+	if at.x < 0:
+		return true
+	var hero := WalkRules.settle(s, data, map)
+	return WalkRules.distance(hero, at) <= int(cfg(data)["reach"][reach]) and SightRules.line(map, data["layouts"], hero, at)
+
+
 ## What the master may name as a place of the room: «очаг [hearth]».
 static func words(s: GameSession, data: Dictionary) -> Array[String]:
 	var map := LayoutRules.map_of(s, data, s.room_id)

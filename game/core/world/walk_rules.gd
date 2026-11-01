@@ -119,6 +119,40 @@ static func plan(map: Dictionary, lib: Dictionary, from: Vector2i, cell: Vector2
 	return {"path": steps, "exit": to}
 
 
+## The square of the way from `room` to `to`: a door or a way out; (-1, -1) — none on this map.
+static func way_cell(map: Dictionary, room: String, to: String) -> Vector2i:
+	var ids: Array = map["ids"]
+	var pair := [ids.find(room), ids.find(to)]
+	for d: Dictionary in map["doors"]:
+		if pair.has(int(d["a"])) and pair.has(int(d["b"])) and pair[0] != pair[1]:
+			return Vector2i(int(d["x"]), int(d["y"]))
+	for e: Dictionary in map["exits"]:
+		if str(e["room"]) == room and str(e["to"]) == to:
+			return Vector2i(int(e["x"]), int(e["y"]))
+	return Vector2i(-1, -1)
+
+
+## The room a door or a way out of `room` on `cell` leads to, "" — nothing of the kind.
+static func way_at(map: Dictionary, room: String, cell: Vector2i) -> String:
+	var ids: Array = map["ids"]
+	var here := ids.find(room)
+	for d: Dictionary in map["doors"]:
+		if Vector2i(int(d["x"]), int(d["y"])) == cell and here in [int(d["a"]), int(d["b"])]:
+			return str(ids[int(d["b"]) if int(d["a"]) == here else int(d["a"])])
+	for e: Dictionary in map["exits"]:
+		if str(e["room"]) == room and Vector2i(int(e["x"]), int(e["y"])) == cell:
+			return str(e["to"])
+	return ""
+
+
+## The first free square of `to` past the door on `cell`, (-1, -1) — none.
+static func beyond(map: Dictionary, lib: Dictionary, cell: Vector2i, to: String) -> Vector2i:
+	for step: Vector2i in DIRS.slice(0, 4):
+		if room_of(map, cell + step) == to and passable(map, lib, cell + step):
+			return cell + step
+	return Vector2i(-1, -1)
+
+
 ## The steps up to the first square of another room: {"steps", "room"}; `room` is "" when the path stays in `here`.
 static func leg(map: Dictionary, steps: Array[Vector2i], here: String) -> Dictionary:
 	var out: Array[Vector2i] = []

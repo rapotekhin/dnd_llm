@@ -31,7 +31,7 @@ func run() -> void:
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var game := screen()
-	var input: LineEdit = game.get("input")
+	var input: TextEdit = game.get("input")
 	input.grab_focus()
 	await frames(2)
 	await _key(KEY_ESCAPE)

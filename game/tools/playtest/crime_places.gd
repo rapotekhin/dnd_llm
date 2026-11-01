@@ -70,6 +70,8 @@ func run() -> void:
 	s.room_id = "brod-mill"
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	step("the den's door is shut to a stranger", WayRules.blocked(s, node("Catalog").data, "brod-mill", "brod-den") == "DOOR_PRIVATE")
+	WayRules.unlock(s, node("Catalog").data, "brod-mill", "brod-den")  # as if its lock was picked
 	await press(find(screen(), "Exit_brod-den"))
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)

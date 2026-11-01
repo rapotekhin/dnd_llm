@@ -194,6 +194,14 @@ static func found_traps(s: GameSession, world: Dictionary, room_id: String) -> A
 	return out
 
 
+## The found live trap `id` of this room: its secret, {} — none.
+static func found_trap(s: GameSession, world: Dictionary, room_id: String, id: String) -> Dictionary:
+	for ft: Dictionary in found_traps(s, world, room_id):
+		if str(ft["secret"]["id"]) == id:
+			return ft["secret"]
+	return {}
+
+
 ## The trap goes off: a save (half damage on success), damage to the character. The trap is spent. Lines.
 static func spring_trap(s: GameSession, data: Dictionary, room_id: String, sec: Dictionary) -> Array[String]:
 	var t: Dictionary = sec["trap"]

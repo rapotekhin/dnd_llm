@@ -8,6 +8,9 @@ extends PanelContainer
 
 signal menu_requested
 signal approach_requested(ref: String, reach: String, act: Callable)  ## v0.8.2: the hero walks up, then the act
+signal walk_out_requested(to: String)  ## v0.8.4.2: the exit button walks there
+signal touch_requested(ref: String)  ## v0.8.4.2: the hero walks up to a thing of the map, its menu opens
+signal wait_requested
 signal sheet_requested
 signal map_requested
 signal journal_requested
@@ -127,8 +130,54 @@ func menu(box: Container, ref: String) -> bool:
 				ok = true
 	elif ref.begins_with("station:"):
 		ok = _mark_acts(box, ref)
+	elif ref.begins_with("door:"):
+		ok = _door_menu(box, s, ref.trim_prefix("door:"), can_act)
+	elif ref.begins_with("trap:"):
+		ok = _trap_menu(box, s, ref.trim_prefix("trap:"), can_act)
 	_content = column
 	return ok
+
+
+## The ways with a door on the map (v0.8.4.2): where it leads and why it is shut, «Пройти» when it lets through.
+func _door_menu(box: Container, s: GameSession, to: String, can_act: bool) -> bool:
+	if not WayRules.open_exits(s, Catalog.data["world"], s.room_id).has(to):
+		return false
+	var why := WayRules.blocked(s, Catalog.data, s.room_id, to)
+	_line(str(GameState.world().room(to).get("name", to)), false)
+	if not why.is_empty():
+		_line(tr(why), true)
+	else:
+		_flow(_acts("DoorPass"), tr("BTN_PASS"), _leave.bind(to), can_act, "DoorPass_" + to)
+	_door_acts(box, to, WayRules.ways(s, Catalog.data, s.room_id, to), can_act)
+	return true
+
+
+## A found trap on the map (v0.8.4.2): disarm it, or go round when it guards a way.
+func _trap_menu(box: Container, s: GameSession, id: String, can_act: bool) -> bool:
+	var sec := ExplorationRules.found_trap(s, Catalog.data["world"], s.room_id, id)
+	if sec.is_empty():
+		return false
+	var to := str(sec["trap"].get("guards", ""))
+	_line(str(sec["text"]), false)
+	var acts := _acts("TrapActs")
+	_flow(acts, tr("BTN_TRAP_DISARM"), _trap.bind(to, true, id), can_act, "TrapDisarm_" + id, tr("TRAP_DISARM_TIP"))
+	if not to.is_empty():
+		var room_name := str(GameState.world().room(to).get("name", to))
+		_flow(acts, tr("BTN_TRAP_BYPASS").format({"room": room_name}), _trap.bind(to, false, id), can_act, "TrapBypass_" + id, tr("TRAP_BYPASS_TIP"))
+	return box.get_child_count() > 0
+
+
+## The hero walks to the way out (v0.8.4.2); a screen-less panel goes at once.
+func _leave(to: String) -> void:
+	if walk_out_requested.get_connections().is_empty():
+		GameState.go(to)
+	else:
+		walk_out_requested.emit(to)
+
+
+## The hero's quest offers refresh as the hero walks: a giver is in reach or not.
+func refresh() -> void:
+	_rebuild()
 
 
 ## True when a mark offers something now.
@@ -379,7 +428,11 @@ func _rebuild() -> void:
 		for i in targets.size():
 			var mins := TimeRules.minutes_until(s, Catalog.data, targets[i])
 			wait.get_popup().add_item(tr("WAIT_" + targets[i].to_upper()).format({"clock": TimeRules.clock_after(s, mins)}), i)
+		wait.get_popup().add_item(tr("WAIT_CUSTOM"), targets.size())
 		wait.get_popup().id_pressed.connect(func(id: int) -> void:
+			if id >= targets.size():
+				wait_requested.emit()
+				return
 			var err := GameState.wait(targets[id])
 			if not err.is_empty():
 				EventBus.message.emit(tr(err)))
@@ -648,31 +701,20 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		var line := HBoxContainer.new()
 		line.add_theme_constant_override("separation", 6)
 		_exit_list.add_child(line)
-		if trapped.has(e):
-			var to := e
-			var by := _exit_button(line, tr("BTN_TRAP_BYPASS").format({"room": room_name}), func() -> void: _trap(to, false), can_act)
+		if trapped.has(e):  # the trap's acts are on the map: its button walks up to it
+			var by := _exit_button(line, "→ " + room_name + tr("EXIT_TRAPPED"), touch_requested.emit.bind("trap:" + str(trapped[e]["id"])), can_act and not shut)
 			by.name = "Exit_" + e
-			by.tooltip_text = str(trapped[e]["text"]) + "\n" + tr("TRAP_BYPASS_TIP")
-			var dis := _exit_button(line, tr("BTN_TRAP_DISARM"), func() -> void: _trap(to, true), can_act)
-			dis.name = "Disarm_" + e
-			dis.tooltip_text = str(trapped[e]["text"]) + "\n" + tr("TRAP_DISARM_TIP")
+			by.tooltip_text = str(trapped[e]["text"])
 			continue
 		var private := not world.is_public(e)  # v0.7.22.24: the player knows before the step
 		var why := WayRules.blocked(s, Catalog.data, s.room_id, e)
-		var door_key := "door:" + e
-		var go_or_door := GameState.go.bind(e) if why.is_empty() else _toggle.bind(door_key)  # a shut door opens its ways
 		var b := _exit_button(line, "→ " + room_name + (tr("EXIT_PRIVATE") if private else "") + WayRules.label(s, Catalog.data, s.room_id, e),
-			go_or_door, can_act and not shut)
+			_leave.bind(e), can_act and not shut)
 		b.name = "Exit_" + e
 		b.tooltip_text = tr("CRIME_HELD") if CrimeRules.held(s) else room_name
 		if not why.is_empty():
 			b.tooltip_text = "%s
 %s" % [room_name, tr(why)]
-		var ways := WayRules.ways(s, Catalog.data, s.room_id, e)
-		if not ways.is_empty() and not shut:
-			_more(line, "Door_" + e, door_key)
-			if _open == door_key:
-				_door_acts(e, ways, can_act)
 		var owner := str(world.site_of(e).get("owner", ""))
 		if private and not CrimeRules.held(s) and not owner.is_empty():
 			b.tooltip_text = "%s
@@ -1077,14 +1119,14 @@ func _show_open() -> void:
 			_scroll.ensure_control_visible(n as Control)
 
 
-## The ways with a door (v0.7.22.25) under its exit: a key, thieves' tools, force, blows, a spell, a torch, waiting.
-func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
+## The ways with a door (v0.7.22.25) in its menu: a key, thieves' tools, force, blows, a spell, a torch, waiting, a knock.
+func _door_acts(parent: Container, to: String, ways: Array[Dictionary], can_act: bool) -> void:
 	var s := GameState.session
 	var acts := HFlowContainer.new()
 	acts.name = "DoorActs_" + to
 	acts.add_theme_constant_override("h_separation", 6)
 	acts.add_theme_constant_override("v_separation", 6)
-	_bar.page(ActionBar.EXITS).add_child(acts)
+	parent.add_child(acts)
 	var dcs := WayRules.dcs(s, Catalog.data, s.room_id, to)
 	var d := WayRules.def(Catalog.data, s.room_id, to)
 	var mat := ThingRules.material(Catalog.data, d)
@@ -1097,7 +1139,8 @@ func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
 		var btn := _flow(acts, text, _try.bind(GameState.door_act.bind(to, how, sp)), can_act)
 		btn.name = "DoorWay_%s%s" % [how, "_" + sp if not sp.is_empty() else ""]
 		btn.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
-		btn.tooltip_text = tr("DOOR_WAY_%s_TIP" % how.to_upper()).format({"dc": dcs.get(how, 0), "ac": int(mat.get("ac", 15)),
+		var ask_dc := SiteRules.ask_dc(s, Catalog.data, SiteRules.unwelcome(s, Catalog.data, to)) if how == "ask" else 0
+		btn.tooltip_text = tr("DOOR_WAY_%s_TIP" % how.to_upper()).format({"dc": dcs.get(how, ask_dc), "ac": int(mat.get("ac", 15)),
 			"hp": WayRules.hp(s, Catalog.data, s.room_id, to), "max": WayRules.max_hp(Catalog.data, d)})
 	if ways.any(func(w: Dictionary) -> bool: return str(w["how"]) == "force") and not ways.any(func(w: Dictionary) -> bool: return str(w["how"]) == "pick"):
 		var pb := _flow(acts, tr("DOOR_WAY_PICK"), func() -> void: pass, false)  # v0.7.39.3: seen, grey without the tools
@@ -1112,8 +1155,8 @@ func _no_picks(s: GameSession) -> String:
 	return tr("PICK_NO_TOOLS") + ("" if hint.is_empty() else ": " + hint)
 
 
-func _trap(to: String, disarm: bool) -> void:
-	var err := GameState.trap_action(to, disarm)
+func _trap(to: String, disarm: bool, id: String) -> void:
+	var err := GameState.trap_action(to, disarm, id)
 	if not err.is_empty():
 		EventBus.message.emit(tr(err))
 
@@ -1269,6 +1312,8 @@ func _quest_buttons(s: GameSession, can_act: bool, only_npc: String) -> void:
 		var q := QuestRules.quest(world, qid)
 		if not only_npc.is_empty() and str(q.get("giver", "")) != only_npc:
 			continue
+		var giver := str(q.get("giver", ""))  # v0.8.4.2: taken at talking distance, in sight of the giver
+		var near := not only_npc.is_empty() or giver.is_empty() or MapSpots.in_reach(s, Catalog.data, giver, "talk")
 		var take := func() -> void:
 			var err := GameState.accept_quest(qid)
 			if not err.is_empty():
@@ -1277,11 +1322,11 @@ func _quest_buttons(s: GameSession, can_act: bool, only_npc: String) -> void:
 			if QuestGen.warns(Catalog.data, q):  # the near-impossible asks first (v0.7.39.6)
 				ConfirmBox.ask(self, tr("CONFIRM_QUEST_DEADLY_TITLE").format({"title": q["title"]}), tr("CONFIRM_QUEST_DEADLY"), tr("BTN_QUEST_TAKE_DEADLY"), take)
 			else:
-				take.call(), can_act)
+				take.call(), can_act and near)
 		ab.name = "QuestTake_" + qid
 		var line := QuestGen.difficulty_line(Catalog.data, q)
 		ab.tooltip_text = str(q.get("description", "")) + ("
-" + line if not line.is_empty() else "")
+" + line if not line.is_empty() else "") + ("" if near else "\n" + tr("QUEST_TAKE_FAR"))
 		ab.theme_type_variation = UiTheme.ACCENT_BUTTON
 	for t: Dictionary in QuestRules.talks_here(s, world):
 		if not only_npc.is_empty() and str(t["npc_id"]) != only_npc:

@@ -32,6 +32,7 @@ func run() -> void:
 	var qid := str(s.generated["quests"].keys()[0])
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	await go_to("npc:npc_innkeeper")
 	var take: Button = find(game, "QuestTake_" + qid)
 	if not step("Bruno offers it: the take button", take != null and not take.disabled):
 		return

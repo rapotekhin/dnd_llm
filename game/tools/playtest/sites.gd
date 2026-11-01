@@ -24,6 +24,7 @@ func run() -> void:
 	step("the place path names the site", path != null and path.text.contains("Таверна «Хромой олень» › общий зал"), path.text if path else "")
 	var kitchen: Button = find(screen(), "Exit_brod-tavern-kitchen")
 	if step("the way to the kitchen says it is private", kitchen != null and not kitchen.disabled and kitchen.text.contains("частная"), kitchen.text if kitchen else ""):
+		WayRules.unlock(s, node("Catalog").data, "brod-tavern-hall", "brod-tavern-kitchen")  # as if its lock was picked
 		await press(kitchen)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		await frames(3)

@@ -96,6 +96,9 @@ func _hook(node: Node) -> void:
 	elif node is LineEdit:
 		var l := node as LineEdit
 		l.text_submitted.connect(func(t: String) -> void: _write({"ev": "input", "node": str(l.name), "text": t, "screen": _screen_of(l)}))
+	elif node is ChatInput:
+		var c := node as ChatInput
+		c.text_submitted.connect(func(t: String) -> void: _write({"ev": "input", "node": str(c.name), "text": t, "screen": _screen_of(c)}))
 
 
 ## The screen or overlay a control belongs to: the nearest ancestor with a class_name (GameScreen, TheftPanel…).

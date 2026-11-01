@@ -17,7 +17,7 @@ func required() -> Dictionary:
 	var nodes := {
 		"%Worlds": "VBoxContainer", "%Form": "VBoxContainer", "%PackName": "Label", "%PackTone": "Label",
 		"%DmStyleChoices": "HFlowContainer", "%DmStyleHint": "Label", "%DifficultyChoices": "HFlowContainer",
-		"%DifficultyHint": "Label", "%ViolenceChoices": "HFlowContainer", "%ToMenu": "Button", "%NextButton": "Button",
+		"%DifficultyHint": "Label", "%ViolenceChoices": "HFlowContainer", "%ToMenu": "Button", "%NextButton": "Button", "%SeedEdit": "LineEdit",
 	}
 	for path: String in TOGGLES:
 		nodes[path] = "CheckButton"
@@ -36,6 +36,7 @@ func _ready() -> void:
 		(UiScenes.need(self, path) as CheckButton).toggled.connect(func(on: bool) -> void: settings[key] = on)
 	for path: String in LISTS:
 		_list_field(path, LISTS[path])
+	(UiScenes.need(self, "%SeedEdit") as LineEdit).text_changed.connect(func(t: String) -> void: settings["seed"] = t)
 	var playable := Catalog.playable()
 	if not playable.is_empty():
 		_pick_world(str(Catalog.active_world if not Catalog.bundle(Catalog.active_world).is_empty() else playable[0]["id"]))
@@ -46,6 +47,7 @@ func _ready() -> void:
 
 func _pick_world(id: String) -> void:
 	settings = WorldPack.default_settings(Catalog.bundle(id)["pack"])
+	settings["seed"] = (UiScenes.need(self, "%SeedEdit") as LineEdit).text
 	_redraw()
 
 

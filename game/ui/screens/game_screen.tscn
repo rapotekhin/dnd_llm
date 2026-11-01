@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://ui/screens/game_screen.gd" id="1"]
 [ext_resource type="Script" path="res://ui/components/side_panel.gd" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://ui/components/backend_status.gd" id="6"]
 [ext_resource type="Script" path="res://ui/components/brush_button.gd" id="7"]
 [ext_resource type="Script" path="res://ui/components/fight_ui.gd" id="8"]
+[ext_resource type="Script" path="res://ui/components/chat_input.gd" id="9"]
 
 [node name="GameScreen" type="Control"]
 layout_mode = 3
@@ -260,28 +261,33 @@ theme_override_constants/separation = 8
 unique_name_in_owner = true
 custom_minimum_size = Vector2(54, 54)
 layout_mode = 2
+size_flags_vertical = 8
 tooltip_text = "BTN_ATTACH"
 theme_override_font_sizes/font_size = 26
 text = "✦"
 flat = false
 
-[node name="Input" type="LineEdit" parent="Margin/Row/Right/Col/InputRow"]
+[node name="Input" type="TextEdit" parent="Margin/Row/Right/Col/InputRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 8
 placeholder_text = "PLACEHOLDER_ACTION"
+script = ExtResource("9")
 
 [node name="SendButton" type="Button" parent="Margin/Row/Right/Col/InputRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 54)
 layout_mode = 2
+size_flags_vertical = 8
 theme_type_variation = &"AccentButton"
 text = "BTN_SEND"
 
 [node name="BrushButton" type="Button" parent="Margin/Row/Right/Col/InputRow"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 8
 script = ExtResource("7")
 
 [node name="AttachChip" type="HBoxContainer" parent="Margin/Row/Right/Col"]

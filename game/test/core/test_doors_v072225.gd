@@ -24,7 +24,7 @@ func _hero(room: String, hour: int = 12) -> GameSession:
 func test_the_pack_door_is_locked_and_opens_by_picks() -> void:
 	var s := _hero("brod-tavern-kitchen")
 	assert_str(WayRules.blocked(s, data, "brod-tavern-kitchen", "brod-tavern-cellar")).is_equal("DOOR_LOCKED")
-	assert_str(WayRules.blocked(s, data, "brod-tavern-hall", "brod-tavern-kitchen")).is_empty()  # no door there
+	assert_str(WayRules.blocked(s, data, "brod-tavern-hall", "brod-tavern-kitchen")).is_equal("DOOR_PRIVATE")  # v0.8.4.2
 	assert_str(WayRules.label(s, data, s.room_id, "brod-tavern-cellar")).contains("заперто")
 	var hows := WayRules.ways(s, data, s.room_id, "brod-tavern-cellar").map(func(w: Dictionary) -> String: return str(w["how"]))
 	assert_array(hows).contains(["force", "hit"])
@@ -110,7 +110,7 @@ func test_the_master_door_effect_by_checks() -> void:
 	assert_bool(bool(no["accepted"])).is_false()
 	assert_str(str(no["reason"])).contains("athletics")
 	var nowhere := eng.validate(s, data, "t1", {"kind": "open", "what": "door", "to_room": "brod-tavern-hall", "action": "unlock"})
-	assert_str(str(nowhere["reason"])).contains("нет двери")
+	assert_str(str(nowhere["reason"])).contains("открыта")  # v0.8.4.2: the door of a private room, free from inside
 	var alone := eng.validate(s, data, "t1", {"kind": "open", "what": "door", "to_room": "brod-tavern-cellar", "action": "unlock"})
 	assert_bool(bool(alone["accepted"])).is_false()  # the innkeeper is in the hall, not here or in the cellar
 	Being.of(s, "npc_innkeeper")["at"] = "brod-tavern-kitchen"

@@ -208,6 +208,7 @@ func _quest_level_up(gs: Node, game: Control) -> void:
 			return
 		await press(back)
 		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+	await go_to("npc:npc_innkeeper")
 	var take: Button = find(game, "QuestTake_letter_to_ilva")
 	if not step("Bruno gives the letter", take != null and not take.disabled):
 		return

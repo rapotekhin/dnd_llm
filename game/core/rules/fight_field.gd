@@ -4,7 +4,7 @@ extends RefCounted
 ## spreads, who hears the fight, the ways out and those who run after the hero. The spaces come from FightGrid; a hazard and
 ## a fire are zones of `s.combat.zones`, the same record as a spell's.
 
-const SHUT_FAST: Array[String] = ["DOOR_LOCKED", "DOOR_CLOSED_HOURS", "DOOR_ARCANE", "DOOR_SOLID"]
+const SHUT_FAST: Array[String] = ["DOOR_LOCKED", "DOOR_CLOSED_HOURS", "DOOR_ARCANE", "DOOR_PRIVATE", "DOOR_SOLID"]
 
 
 static func cfg(data: Dictionary) -> Dictionary:

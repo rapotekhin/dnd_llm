@@ -111,7 +111,8 @@ BTN_TO_MENU,В меню
 BTN_TO_TALK,К разговору
 BTN_TO_TRADE,Торговать
 BTN_TRADE_WITH,Торговать: {name}
-BTN_TRAP_BYPASS,→ {room}: в обход
+BTN_PASS,Пройти
+BTN_TRAP_BYPASS,Обойти: {room}
 BTN_TRAP_DISARM,Обезвредить ловушку
 BTN_TRAVEL,"Идти сюда · шагов {steps}, {min} мин"
 BTN_UNATTUNE,Снять настройку
@@ -748,6 +749,7 @@ EXIT_PRIVATE, · частная
 EXIT_PRIVATE_TIP,"Частная комната (хозяин — {owner}): войти без спроса — сначала предупреждение, потом вторжение"
 EXIT_PRIVATE_WELCOME,"Частная комната, но {owner} вас пустит"
 DOOR_LOCKED,"Дверь заперта: откройте её — ключом, отмычками, силой или заклинанием"
+DOOR_PRIVATE,"Дверь заперта для посторонних: попросите хозяина впустить или вскройте её"
 DOOR_CLOSED_HOURS,"Закрыто: объект не работает в этот час — дверь заперта до открытия"
 DOOR_ARCANE,"Дверь запечатана «Волшебным замком»: поможет «Открывание» или большая сила"
 DOOR_BURNING,"Дверь горит — сквозь огонь не пройти"
@@ -757,9 +759,12 @@ DOOR_LABEL_HOURS, · заперто до {time}
 DOOR_LABEL_SOLID, · преграда
 DOOR_LABEL_TOO_SMALL, · слишком узко
 DOOR_LABEL_LOCKED, · заперто
+DOOR_LABEL_PRIVATE, · заперто
 DOOR_LABEL_ARCANE, · магический замок
 DOOR_LABEL_BURNING, · горит
 DOOR_LABEL_BROKEN, · дверь выбита
+DOOR_WAY_ASK,Постучать
+DOOR_WAY_ASK_TIP,"Попросить хозяина впустить: Убеждение, СЛ {dc}. Откажет — снова можно завтра"
 DOOR_WAY_LATCH,Отодвинуть засов
 DOOR_WAY_LATCH_TIP,С этой стороны засов открывается рукой
 DOOR_WAY_KEY,Ключ
@@ -1857,3 +1862,14 @@ UI_SAMPLE_TITLE,Заголовок окна
 UI_SAMPLE_TEXT,"Здесь содержимое окна: его строки игра ставит сама."
 UI_SAMPLE_NOTE,Подсказка или ошибка над кнопками
 UI_SAMPLE_BUTTON,Кнопка
+EXIT_TRAPPED, · ловушка
+NG_SEED,Зерно генерации — число или любой текст:
+NG_SEED_HINT,Одно и то же зерно даёт один и тот же мир и те же броски
+SLOT_PICK_TIP,Что надеть сюда
+SLOT_PICK_NONE,Нечего надеть
+WAIT_CUSTOM,Сколько минут…
+WAIT_CUSTOM_TITLE,Ждать
+WAIT_MINUTES,Минут ожидания (до {max}):
+WAIT_UNTIL,Ожидание до {clock}
+QUEST_TAKE_FAR,"Подойдите к тому, кто даёт задание"
+WAIT_CONFIRM,Ждать

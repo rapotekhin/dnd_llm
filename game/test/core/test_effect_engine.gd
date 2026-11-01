@@ -54,6 +54,7 @@ func test_effect_limit_per_turn() -> void:
 
 func test_move_only_to_an_exit_and_once() -> void:
 	assert_str(_no({"kind": "move", "room_id": TestUtils.FAR_ROOM})).contains("нет выхода")
+	s.permits["brod-tavern"] = "npc_innkeeper"  # the kitchen's door is shut to a stranger
 	var id := _ok({"kind": "move", "room_id": TestUtils.KITCHEN})
 	assert_str(_no({"kind": "move", "room_id": "brod-square"})).contains("уже")
 	fx.apply(s, "t-1", [id])
