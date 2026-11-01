@@ -48,6 +48,8 @@ func _act(err: String) -> void:
 	set_note(err)
 	if not err.is_empty():
 		EventBus.message.emit(err)
+	elif CombatRules.active(GameState.session):  # the ring is on the map now
+		visible = false
 
 
 func _button(parent: Control, name: String, text: String, why: String, run: Callable) -> Button:
@@ -108,10 +110,10 @@ func _rebuild() -> void:
 func _bout(s: GameSession, data: Dictionary, gold: int) -> void:
 	var opp := ArenaRules.opponent(s, data, _site)
 	var m: Dictionary = data["monsters"][str(opp["monster"])]
-	var o := ArenaRules.hero_odds(s, data, _site, str(opp["monster"]))
+	var o := ArenaRules.hero_odds(s, data, _site, str(opp["monster"]), int(opp["hp"]))
 	var prize := int(int(ArenaRules.ranks(data)[int(opp["rank"])]["prize_cp"]) * int(ArenaRules.rule_cfg(data, _site).get("prize_pct", 100)) / 100)
 	_head(tr("ARENA_BOUT_HEAD"))
-	_label(_box, tr("ARENA_OPPONENT").format({"name": str(opp["name"]), "hp": int(m["hp"]), "ac": int(m["ac"]), "prize": Money.format(prize)})).name = "ArenaOpponent"
+	_label(_box, tr("ARENA_OPPONENT").format({"name": str(opp["name"]), "hp": int(opp["hp"]), "ac": int(m["ac"]), "prize": Money.format(prize)})).name = "ArenaOpponent"
 	var est := tr("ARENA_ODDS").format({"house": roundi(float(o["house"]) * 100), "mult": "%.2f" % float(o["mult"])})
 	if ArenaRules.knows(s, _site):
 		est += " " + tr("ARENA_ODDS_TRUE").format({"p": roundi(float(o["p"]) * 100)})

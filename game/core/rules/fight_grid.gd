@@ -255,6 +255,8 @@ static func bodies(s: GameSession, except: String = "") -> Dictionary:
 			continue
 		for at: Vector2i in body(f):
 			out[at] = str(f.get("side"))
+	for c: Dictionary in s.combat.get("crowd", []):  # those who watch a bout (v0.8.4.5)
+		out[Vector2i(int(c["x"]), int(c["y"]))] = "crowd"
 	return out
 
 

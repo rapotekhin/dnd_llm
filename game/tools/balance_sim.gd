@@ -101,16 +101,17 @@ func _arena(data: Dictionary, level: int, fights: int, only: String) -> void:
 			var wins := 0
 			var n := 0
 			var est := 0.0
-			for m: Variant in ranks[ri]["foes"]:
-				for i in fights:
-					var s := TestUtils.new_session(2000 + i)
-					_hero(s, data, p, level)
-					est += float(ArenaRules.hero_odds(s, data, "", str(m))["p"])
-					CombatRules.start(s, data, [{"monster": str(m), "name": str(m)}], {"arena": {"kind": "rank", "rule": "yield", "site": "sim"}})
-					_play(s, data)
-					n += 1
-					if str(s.combat["outcome"]) == "victory":
-						wins += 1
+			for i in fights * (ranks[ri]["foes"] as Array).size():  # the opponent the arena makes for this hero (v0.8.4.5)
+				var s := TestUtils.new_session(2000 + i)
+				s.day = 1 + i
+				_hero(s, data, p, level)
+				var opp := ArenaRules.opponent(s, data, "sim", ri)
+				est += float(ArenaRules.hero_odds(s, data, "", str(opp["monster"]), int(opp["hp"]))["p"])
+				CombatRules.start(s, data, [{"monster": str(opp["monster"]), "name": str(opp["monster"]), "max_hp": int(opp["hp"])}], {"arena": {"kind": "rank", "rule": "yield", "site": "sim"}})
+				_play(s, data)
+				n += 1
+				if str(s.combat["outcome"]) == "victory":
+					wins += 1
 			all_w += wins
 			all_n += n
 			print("%-12s %-16s L%d  wins %3d%%  estimate %3d%%" % [ranks[ri]["name"], p["id"], level, wins * 100 / n, roundi(est * 100 / n)])

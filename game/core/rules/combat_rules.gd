@@ -210,14 +210,18 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 		"faction": str(source.get("faction", ""))}
 	if source.has("field"):
 		s.combat["field"] = (source["field"] as Dictionary).duplicate()
-	FightGrid.put(player(s), _hero_square(s, data))
-	var own := FactionRules.own_heads(s, data, foes, str(source.get("encounter", "")))  # v0.7.63: the hero's look, a side of their own
-	foes = foes.filter(func(f: Dictionary) -> bool: return not own.has(f))
-	_add_foes(s, data, foes)
 	if source.get("arena") is Dictionary:  # v0.7.45: a bout one to one by the arena's rule
 		s.combat["arena"] = (source["arena"] as Dictionary).duplicate(true)
 		s.combat["nonlethal"] = ArenaRules.yield_bout(s)
-	else:
+	var ring := ArenaRules.ring(s, data)  # v0.8.4.5: its sides and its crowd
+	s.combat["crowd"] = ring.get("crowd", [])
+	FightGrid.put(player(s), FightGrid.free_near(s, data, ring["hero"]) if ring.has("hero") else _hero_square(s, data))
+	var own := FactionRules.own_heads(s, data, foes, str(source.get("encounter", "")))  # v0.7.63: the hero's look, a side of their own
+	foes = foes.filter(func(f: Dictionary) -> bool: return not own.has(f))
+	_add_foes(s, data, _on_square(foes, ring.get("foe", FightGrid.NONE)))
+	if ArenaRules.watching(s):
+		_add_foes(s, data, _on_square(source.get("allies", []), ring.get("ally", FightGrid.NONE)), FightGrid.NONE, "ally")
+	elif not s.combat.has("arena"):
 		_add_foes(s, data, own + AllyRules.joining(s, data, foes) + (source.get("allies", []) as Array) + AllyRules.summon_specs(s), FightGrid.NONE, "ally")
 		AllyRules.buffs_into_fight(s, data)
 	for w: Dictionary in source.get("waves", []):
@@ -232,12 +236,24 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 		inits.append([roll, dex, 1 if id == PLAYER else 0, id])
 	inits.sort_custom(func(a: Array, b: Array) -> bool: return a.slice(0, 3) > b.slice(0, 3))
 	s.combat["order"] = inits.map(func(x: Array) -> String: return str(x[3]))
+	if ArenaRules.watching(s):
+		(s.combat["order"] as Array).erase(PLAYER)
 	var names: Array = (s.combat["order"] as Array).map(func(id: String) -> String: return "%s %d" % [fighter(s, id)["name"], fighter(s, id)["init"]])
 	var lines: Array[String] = ["Бой! Инициатива: " + ", ".join(names)]
 	lines.append_array(_surprise(s, data, source))
 	lines.append_array(_opening(s, source))
 	_begin_turn(s, data, lines)
 	return lines
+
+
+static func _on_square(specs: Array, at: Vector2i) -> Array:
+	if at == FightGrid.NONE:
+		return specs
+	return specs.map(func(spec: Dictionary) -> Dictionary:
+		var out := spec.duplicate()
+		out["x"] = at.x
+		out["y"] = at.y
+		return out)
 
 
 ## The fight began with the hero's own attack on an NPC (v0.7.7, as in BG3): the hero acts first and that NPC is
@@ -334,6 +350,9 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector
 				f["hp"] = clampi(int(spec["hp"]), 1, int(m["hp"]))
 			elif Being.view(s, id).has("hp"):  # the wounds of the last fight
 				f["hp"] = clampi(int(Being.view(s, id)["hp"]), 1, int(m["hp"]))
+			if spec.has("max_hp"):  # a fighter of the arena, made even with the other side (v0.8.4.5)
+				f["max_hp"] = int(spec["max_hp"])
+				f["hp"] = f["max_hp"]
 			if bool(spec.get("no_xp", false)):  # its XP was given for the fight that beat it
 				f["no_xp"] = true
 			if bool(spec.get("law", false)):  # the law's guard: its captive is held, not bound (v0.7.22.17)
@@ -2601,7 +2620,8 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 				if _has(f, "prone"):
 					_remove_condition(f, "prone")
 					lines.append("%s поднимается на ноги" % f["name"])
-				_ally_turn(s, data, f, lines)
+				if not _gives_up(s, data, f, lines):
+					_ally_turn(s, data, f, lines)
 			f.erase("surprised")
 			_tick_conditions(s, data, f, lines)
 		_check_end(s, data, lines)
@@ -2702,6 +2722,14 @@ static func _best_action(data: Dictionary, f: Dictionary, kind: String) -> Dicti
 	return best
 
 
+static func _gives_up(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> bool:
+	if not ArenaRules.yield_bout(s) or int(f["hp"]) * 100 > int(f["max_hp"]) * int(ArenaRules.cfg(data)["yield_hp_pct"]):
+		return false
+	f["status"] = "surrendered"
+	lines.append("%s поднимает руку — сдаётся" % f["name"])
+	return true
+
+
 static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	f["dodging"] = false
 	var p := player(s)
@@ -2727,9 +2755,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 			f.erase("burning")
 			lines.append("%s сбивает пламя" % f["name"])
 	if s.combat.has("arena"):  # v0.7.45: no flight from the ring; a bout to surrender ends when a side gives up
-		if ArenaRules.yield_bout(s) and int(f["hp"]) * 100 <= int(f["max_hp"]) * int(ArenaRules.cfg(data)["yield_hp_pct"]):
-			f["status"] = "surrendered"
-			lines.append("%s поднимает руку — сдаётся" % f["name"])
+		if _gives_up(s, data, f, lines):
 			return
 		f["morale"] = true
 	# Morale: once, at half HP or less.
@@ -3281,6 +3307,9 @@ static func _hurt_ally(s: GameSession, t: Dictionary, dmg: int, lines: Array[Str
 
 static func _check_end(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
 	if not str(s.combat.get("outcome", "")).is_empty():
+		return
+	if ArenaRules.watching(s):
+		ArenaRules.watch_end(s, data, lines)
 		return
 	if enemies(s).is_empty() and not FightField.chased(s):
 		if FightField.left_foes(s):  # those who ran after the hero are beaten, the others stay where they were

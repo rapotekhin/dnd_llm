@@ -1361,7 +1361,7 @@ func arena_insight(sid: String) -> String:
 	return ""
 
 
-## A bet on a fighter of the day's card: the engine plays the bout out, the master tells it. "" or the reason.
+## A bet on a fighter of the day's card: the bout starts, the hero watches it. "" or the reason.
 func arena_bet(sid: String, side: String, cp: int) -> String:
 	if not _master_ready():
 		return tr("WAIT_BUSY")
@@ -1370,8 +1370,8 @@ func arena_bet(sid: String, side: String, cp: int) -> String:
 		return str(r["reason"])
 	var lines: Array[String] = []
 	lines.assign(r["lines"])
-	_effect_lines(lines)
-	_request("contest", "ставка на арене «%s»: %s" % [ArenaRules.site_name(Catalog.data, sid), "; ".join(lines)])
+	_add(GameSession.effect_entry(lines))
+	start_combat(r["foes"], r["source"])
 	return ""
 
 
@@ -1542,9 +1542,10 @@ func _combat_continue() -> void:
 			break
 		if bool(s.combat.get("round_ended", false)):
 			s.combat.erase("round_ended")
-			combat_playing = false
-			_narrate_round()
-			return
+			if not ArenaRules.watching(s):  # a watched bout is told once, at its end
+				combat_playing = false
+				_narrate_round()
+				return
 		if not str(s.combat.get("outcome", "")).is_empty():
 			combat_playing = false
 			_combat_outcome()
@@ -1630,10 +1631,11 @@ func finish_combat() -> void:
 			s.encounters_done.append(str(id))
 	var arena: Dictionary = s.combat.get("arena", {})
 	if not arena.is_empty():  # v0.7.45: a bout — the prize, the bet, the rank; nobody stays beaten in the room, no crime
-		lines.append_array(ArenaRules.after_bout(s, Catalog.data, arena, outcome == "victory"))
+		lines.append_array(ArenaRules.after_bout(s, Catalog.data, arena, outcome == "victory" or bool(arena.get("won", false))))
 	elif outcome in ["victory", "truce"]:
 		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id, _treasure()))  # the beaten stay in the room (v0.7.22.11)
-	lines.append_array(AllyRules.after_fight(s))  # v0.7.22.22: the fallen followers come to, the summoned keep their wounds
+	if not ArenaRules.watching(s):
+		lines.append_array(AllyRules.after_fight(s))  # v0.7.22.22: the fallen followers come to, the summoned keep their wounds
 	var by_law := outcome == "captured" and CombatRules.law_captors(s)
 	if not arena.is_empty():
 		pass

@@ -1762,6 +1762,9 @@ BTN_ARENA,Арена
 BTN_ARENA_TIP,"{name}: запись в бойцы, бой дня, ставки"
 COMBAT_NONLETHAL_ARENA,Бой до сдачи: удары только оглушают
 COMBAT_OUTCOME_ARENA_LOST,Бой проигран
+COMBAT_OUTCOME_WATCHED,Бой окончен
+COMBAT_TAB_WATCH,Зритель
+COMBAT_WATCHING,"Вы смотрите бой от ограды. Ваша ставка — на {name}, он показан союзником."
 COMBAT_NO_SURRENDER_PIT,В кровавой яме не сдаются
 COMBAT_ARENA_RING,Из круга не уйти — бой идёт до конца
 CONTEST_BOUT,"Поединок до сдачи: шанс по оценке движка — около {p}%"

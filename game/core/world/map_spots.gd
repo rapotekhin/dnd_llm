@@ -114,6 +114,14 @@ static func others(s: GameSession, data: Dictionary, map: Dictionary) -> Array[D
 	return out
 
 
+## Those who came to watch a bout: on the fight's record, gone with it (v0.8.4.5).
+static func crowd(s: GameSession) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for c: Dictionary in s.combat.get("crowd", []):
+		out.append(_token("crowd:" + str(c["id"]), "npc", str(c["id"]), str(c["name"]), Vector2i(int(c["x"]), int(c["y"]))))
+	return out
+
+
 ## The square a fighter of a fight starts on: its person's, its creature's, the lair of its encounter. (-1, -1) — no such.
 static func of_fighter(s: GameSession, data: Dictionary, spec: Dictionary) -> Vector2i:
 	var map := FightGrid.map(s, data)

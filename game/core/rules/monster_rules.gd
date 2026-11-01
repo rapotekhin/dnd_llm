@@ -481,8 +481,9 @@ static func cast_reach(s: GameSession, data: Dictionary, f: Dictionary) -> int:
 	if SpellEffects.silenced(s, data, f):
 		return 0
 	var most := 0
-	for o: Dictionary in castable(data, f):
-		if not data["spells"][o["id"]].has("heal_at_slot"):
+	var cfg: Dictionary = CombatRules.cfg(data)
+	for o: Dictionary in castable(data, f):  # only what cast_turn can really cast: a foe has no road yet to Blur or Fog Cloud, the hero's spells of the same base
+		if not data["spells"][o["id"]].has("heal_at_slot") and ((cfg["engine_spells"] as Array).has(str(o["id"])) or (cfg["condition_spells"] as Dictionary).has(str(o["id"]))):
 			most = maxi(most, _spell_reach(data, str(o["id"])))
 	return most
 

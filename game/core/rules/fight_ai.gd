@@ -54,7 +54,7 @@ static func _opts(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary
 static func _targets(s: GameSession, f: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if str(f.get("side")) == "enemy":
-		if int(s.character.get("hp", 0)) > 0:
+		if int(s.character.get("hp", 0)) > 0 and not ArenaRules.watching(s):
 			out.append(CombatRules.player(s))
 		for id: String in CombatRules.allies(s):
 			out.append(CombatRules.fighter(s, id))
@@ -280,8 +280,12 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[St
 	match str(o["kind"]):
 		"save":
 			CombatRules._enemy_attack(s, data, f, o["act"], lines)
-		"cast":
-			pass  # nothing worth casting after all: the action is lost to the walk
+		"cast":  # nothing worth casting after all: its weapon, if it gets there
+			var blow := MonsterRules.pick(s, data, f, "melee" if CombatRules.blade_reaches(s, data, f, t, CombatRules.reach_of(data, f)) else "ranged")
+			if blow.is_empty():
+				lines.append("%s выжидает" % f["name"])
+			else:
+				_strike(s, data, f, blow, t, hero, lines)
 		"melee":
 			if moved > 0:
 				lines.append("%s сближается вплотную" % f["name"] if hero else "%s сближается с %s" % [f["name"], t["name"]])

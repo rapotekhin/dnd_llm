@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## The arena and tournaments (v0.7.45): enlisting at the manager, a bout to surrender — the hero's blows only knock
 ## out, the hero at 0 HP loses, not dies, gives up, cannot leave the ring; the prize, the bet on oneself, the rank and
-## the fame after a win; a bet on the day's bout of two fighters played out by the engine; the estimate and Insight;
+## the fame after a win; a bet on the day's bout of two fighters; the estimate and Insight;
 ## the blood pit; a duel by the contest's way; the festival's tournament.
 
 const RING := "brod-arena-ring"
@@ -113,16 +113,32 @@ func test_a_win_pays_the_prize_and_the_bet_and_lifts_the_rank() -> void:
 	assert_int(int(ArenaRules.rec(s, ARENA)["losses"])).is_equal(1)
 
 
-func test_a_bet_on_the_bout_of_the_day_is_played_out_and_paid() -> void:
+func test_a_bet_on_the_bout_of_the_day_is_a_fight_to_watch() -> void:
 	var s := _session()
 	var c := ArenaRules.card(s, data, ARENA)
 	assert_str(str(ArenaRules.card(s, data, ARENA)["a"]["name"])).is_equal(str(c["a"]["name"]))  # the same all day
 	var gold := int(s.character["gold_cp"])
 	var r := ArenaRules.bet(s, data, ARENA, "a", 1000)
 	assert_bool(r.has("reason")).override_failure_message(str(r)).is_false()
-	var won := str(r["winner"]) == "a"
-	assert_int(int(s.character["gold_cp"])).is_equal(gold - 1000 + (roundi(1000 * float(c["mult_a"])) if won else 0))
+	assert_int(int(s.character["gold_cp"])).is_equal(gold - 1000)
 	assert_str(" ".join(r["lines"])).contains(str(c["a"]["name"]))
+	CombatRules.start(s, data, r["foes"], r["source"])
+	assert_bool(ArenaRules.watching(s)).is_true()
+	assert_bool((s.combat["order"] as Array).has(CombatRules.PLAYER)).is_false()
+	assert_int(CombatRules.allies(s).size()).is_equal(1)
+	assert_str(str(CombatRules.fighter(s, CombatRules.allies(s)[0])["name"])).is_equal(str(c["a"]["name"]))
+	assert_int(CombatRules.enemies(s).size()).is_equal(1)
+	var hp := int(s.character["hp"])
+	for i in 400:
+		if not str(s.combat["outcome"]).is_empty():
+			break
+		CombatRules.next_actor(s, data)
+	assert_str(str(s.combat["outcome"])).is_equal("watched")
+	assert_int(int(s.character["hp"])).is_equal(hp)  # nobody touches the one at the fence
+	var won := bool(s.combat["arena"]["won"])
+	ArenaRules.after_bout(s, data, s.combat["arena"], won)
+	assert_int(int(s.character["gold_cp"])).is_equal(gold - 1000 + (roundi(1000 * float(c["mult_a"])) if won else 0))
+	CombatRules.close(s)
 	assert_str(ArenaRules.card_why(s, data, ARENA)).contains("уже")
 	assert_str(ArenaRules.bet_why(s, data, 10)).contains("от")
 
@@ -133,11 +149,6 @@ func test_the_estimate_follows_strength_and_insight_shows_it() -> void:
 	var strong := ArenaRules.hero_odds(s, data, ARENA, "knight")
 	assert_float(float(weak["p"])).is_greater(float(strong["p"]))
 	assert_float(float(strong["mult"])).is_greater_equal(1.05)
-	var wins := 0
-	for i in 200:
-		if str(ArenaRules.simulate(data, s.rng, "ogre", "bandit", "yield")["winner"]) == "a":
-			wins += 1
-	assert_int(wins).is_greater(180)
 	assert_bool(ArenaRules.knows(s, ARENA)).is_false()
 	ArenaRules.set_insight(s, data, ARENA, true)
 	assert_bool(ArenaRules.knows(s, ARENA)).is_true()
@@ -193,3 +204,65 @@ func test_the_harvest_tournament_is_a_ladder_for_one_day() -> void:
 	var s2 := _session(RING, 11)
 	ArenaRules.after_bout(s2, data, ArenaRules.tourney_bout(s2, data, ARENA)["source"]["arena"], false)
 	assert_str(ArenaRules.tourney_why(s2, data, ARENA)).contains("выбыли")
+
+
+func test_both_sides_are_made_about_equal() -> void:
+	var band := float(ArenaRules.cfg(data)["even"]["band"])
+	var off := 0
+	for day in range(1, 31):
+		var s := _session(RING, day)
+		var c := ArenaRules.card(s, data, ARENA)
+		if absf(float(c["p"]) - 0.5) > band + 0.02:
+			off += 1
+		for i in ArenaRules.ranks(data).size():
+			var opp := ArenaRules.opponent(s, data, ARENA, i)
+			assert_bool(data["monsters"].has(str(opp["monster"]))).is_true()
+			assert_int(int(opp["hp"])).is_greater(0)
+	assert_int(off).is_less_equal(3)
+
+
+func test_a_tuned_opponent_fights_with_its_hp() -> void:
+	var s := _session()
+	var opp := ArenaRules.opponent(s, data, ARENA, 0)
+	CombatRules.start(s, data, [{"monster": str(opp["monster"]), "name": "Соперник", "max_hp": 40}], {"arena": {"kind": "rank", "rule": "yield", "site": ARENA}})
+	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
+	assert_int(int(f["hp"])).is_equal(40)
+	assert_int(int(f["max_hp"])).is_equal(40)
+
+
+func test_a_bout_stands_on_the_ring_with_a_crowd_that_goes_with_it() -> void:
+	var s := _session()
+	_bout(s)
+	var map := FightGrid.map(s, data)
+	var crowd: Array = s.combat["crowd"]
+	assert_int(crowd.size()).is_greater(3)
+	var hero := FightGrid.cell(CombatRules.player(s))
+	var foe := FightGrid.cell(CombatRules.fighter(s, CombatRules.enemies(s)[0]))
+	assert_int(WalkRules.distance(hero, foe)).is_equal(2 * int(ArenaRules.cfg(data)["ring"]["apart"]))
+	for c: Dictionary in crowd:
+		var at := Vector2i(int(c["x"]), int(c["y"]))
+		assert_bool(FightGrid.walkable(FightGrid.grid(s, data), at)).is_true()
+		assert_bool(FightGrid.bodies(s).has(at)).is_true()  # nobody walks through them
+		assert_bool(s.npcs_here(data["world"], s.room_id).has(str(c["id"]))).is_false()
+	var before := s.npcs_here(data["world"], "brod-tavern-hall")
+	assert_int(int(map["w"])).is_greater(0)
+	assert_int(MapSpots.crowd(s).size()).is_equal(crowd.size())
+	CombatRules.close(s)
+	assert_int(MapSpots.crowd(s).size()).is_equal(0)
+	assert_array(s.npcs_here(data["world"], "brod-tavern-hall")).is_equal(before)
+
+
+
+func test_the_cards_play_about_even() -> void:
+	var a_wins := 0
+	for day in range(1, 101):
+		var s := _session(RING, day)
+		var r := ArenaRules.bet(s, data, ARENA, "a", 100)
+		CombatRules.start(s, data, r["foes"], r["source"])
+		for i in 400:
+			if not str(s.combat["outcome"]).is_empty():
+				break
+			CombatRules.next_actor(s, data)
+		if bool(s.combat["arena"]["won"]):
+			a_wins += 1
+	assert_int(a_wins).is_between(30, 70)

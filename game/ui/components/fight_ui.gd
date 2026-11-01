@@ -447,6 +447,7 @@ func _scene(s: GameSession, data: Dictionary, map: Dictionary, now: Dictionary, 
 		var cell := Vector2i(int(t["x"]), int(t["y"]))
 		if not fighting.has(str(t["ref"])) and (now.has(cell) or str(t["kind"]) in ["station", "prop"]):
 			out.append(t)
+	out.append_array(MapSpots.crowd(s))
 	return out
 
 
@@ -1043,6 +1044,14 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 	_acts.clear()
 	var e := CombatRules.economy(s)
 	_clear(_economy)
+	if ArenaRules.watching(s):  # v0.8.4.5: from the fence nothing is in the hero's hands
+		_clear(_tabs)
+		var note := Label.new()
+		note.name = "WatchNote"
+		note.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		note.text = tr("COMBAT_WATCHING").format({"name": str(s.combat["arena"]["pick"])})
+		_tab_box("COMBAT_TAB_WATCH").add_child(note)
+		return
 	for spec: Array in [["EcoAction", "● " + tr("COMBAT_ACTION"), int(e.get("action", 0)) + int(e.get("attacks", 0))],
 			["EcoBonus", "▲ " + tr("COMBAT_BONUS"), int(e.get("bonus", 0))],
 			["EcoMove", tr("COMBAT_MOVE").format({"n": int(e.get("move", 0))}), int(e.get("move", 0))]]:

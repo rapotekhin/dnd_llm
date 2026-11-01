@@ -77,11 +77,19 @@ func run() -> void:
 	await frames(2)
 	var g := int(c["gold_cp"])
 	await press(find(win, "ArenaBet_a"))
-	await frames(3)
-	step("the bet played out", int(c["gold_cp"]) != g, "%s → %s" % [Money.format(g), Money.format(int(c["gold_cp"]))])
-	step("the master told it", await wait_until(func() -> bool: return not gs.is_busy(), 60.0))
+	step("the bet opens the bout", await wait_until(func() -> bool: return screen_is("fight") and CombatRules.active(s), 30.0))
+	step("the hero has no turn in it", not (s.combat["order"] as Array).has(CombatRules.PLAYER), str(s.combat["order"]))
+	step("the picked one is an ally", CombatRules.allies(s).size() == 1 and CombatRules.enemies(s).size() == 1)
+	step("the crowd round the ring", (s.combat.get("crowd", []) as Array).size() > 3, str((s.combat.get("crowd", []) as Array).size()))
+	await frames(4)
 	await shot("arena_bet")
-	win.visible = false
+	step("the bout ran to its end", await wait_until(func() -> bool: return str(s.combat.get("outcome", "")) == "watched" and not gs.is_busy(), 60.0), str(s.combat.get("outcome", "")))
+	await _finish(gs)
+	step("the bet paid or lost", int(c["gold_cp"]) != g, "%s → %s" % [Money.format(g), Money.format(int(c["gold_cp"]))])
+	await shot("arena_bet_end")
+	win = await _open_arena(MASTER)
+	if win != null:
+		win.visible = false
 
 	await _go(gs, "brod-pit")
 	win = await _open_arena("npc_pit_master")

@@ -6,10 +6,11 @@ extends RefCounted
 ## dies), «death» — the blood pit (`rules.arena.rules`: the prize and the fame of a rule). The hero enlists for
 ## `fee_cp`, fights one bout a day against the opponent of its rank (`ranks`: SRD templates, a prize, the wins that
 ## lift the rank); a bout is a fight of CombatRules with `source.arena`, its end — after_bout: the prize, the bet on
-## oneself, the rank, the fame of the settlement (ReputationRules). Bets on others: the day's card of two fighters, the
-## engine plays the bout out itself (simulate — the same attacks, to-hit and dice as the combat AI). The odds come from
-## the engine's estimate by HP and damage a round (what XP stands for), the house's shown one is off by up to
-## `bet.noise_pct`; an Insight check against `insight.dc` shows the true estimate. A festival with `tournament`
+## oneself, the rank, the fame of the settlement (ReputationRules). Bets on others: the day's card of two fighters, a
+## fight the hero watches from the fence (`watch`), the fighter picked on its side. The odds come from the engine's
+## estimate by HP and damage a round (what XP stands for), the house's shown one is off by up to `bet.noise_pct`; an
+## Insight check against `insight.dc` shows the true estimate. Both sides of a bout are made about equal by the HP of a
+## fighter (`even`, v0.8.4.5). A bout stands on the arena's map, the settlement's people round it (`ring`). A festival with `tournament`
 ## {site, bouts, prize_cp, prize_item} makes a ladder for one day: bouts of rising ranks, a loss — out.
 ## A duel by challenge (the contest kind with `bout`, v0.7.40) is a bout of the same kind with the NPC itself.
 ##
@@ -115,10 +116,47 @@ static func fighter_name(data: Dictionary, monster: String, nick: String) -> Str
 static func opponent(s: GameSession, data: Dictionary, sid: String, at_rank: int = -1) -> Dictionary:
 	var i := rank(s, sid) if at_rank < 0 else at_rank
 	i = clampi(i, 0, ranks(data).size() - 1)
-	var foes: Array = ranks(data)[i]["foes"]
 	var r := _rng(s, sid, "foe%d" % i)
-	var m := str(foes[r.randi_range(0, foes.size() - 1)])
-	return {"monster": m, "name": fighter_name(data, m, _nick(data, r)), "rank": i}
+	var want := _even(data, r)
+	var ac := int(s.character.get("ac", 10))
+	var best := {}
+	for id: Variant in _shuffled(ranks(data)[i]["foes"], r):
+		var m: Dictionary = data["monsters"][str(id)]
+		var ra := float(s.character["max_hp"]) * hero_dpr(s, data, int(m["ac"]))
+		var dpr := monster_dpr(data, str(id), ac)
+		var hp := _tuned(data, int(m["hp"]), dpr, ra * sqrt((1.0 - want) / want))
+		var off := absf(chance(ra, hp * dpr) - want)
+		if best.is_empty() or off < float(best["off"]) - 0.01:
+			best = {"monster": str(id), "hp": hp, "off": off}
+	return {"monster": str(best["monster"]), "hp": int(best["hp"]), "name": fighter_name(data, str(best["monster"]), _nick(data, r)), "rank": i}
+
+
+static func _shuffled(list: Array, r: RandomNumberGenerator) -> Array:
+	var out := list.duplicate()
+	for i in range(out.size() - 1, 0, -1):
+		var j := r.randi_range(0, i)
+		var t: Variant = out[i]
+		out[i] = out[j]
+		out[j] = t
+	return out
+
+
+## The chance a bout is made for: about even.
+static func _even(data: Dictionary, r: RandomNumberGenerator) -> float:
+	var band := float(cfg(data)["even"]["band"])
+	return 0.5 + r.randf_range(-band, band)
+
+
+## The HP that bring a fighter of `dpr` to the rating `want`, within the limits around its template's `hp`.
+static func _tuned(data: Dictionary, hp: int, dpr: float, want: float) -> int:
+	var e: Dictionary = cfg(data)["even"]
+	if dpr <= 0.0:
+		return hp
+	return clampi(roundi(want / dpr), ceili(hp * float(e["hp_min"])), ceili(hp * float(e["hp_max"])))
+
+
+static func _spec(f: Dictionary) -> Dictionary:
+	return {"monster": str(f["monster"]), "name": str(f["name"]), "max_hp": int(f["hp"])}
 
 
 # --- the engine's estimate ----------------------------------------------------------------------------------------
@@ -183,16 +221,12 @@ static func chance(ra: float, rb: float) -> float:
 	return clampf(ra * ra / (ra * ra + rb * rb), 0.03, 0.97)
 
 
-static func rating_monster(data: Dictionary, monster: String, foe_ac: int) -> float:
-	return float(data["monsters"][monster]["hp"]) * monster_dpr(data, monster, foe_ac)
-
-
-## The engine's estimate of the hero against a template: {p, house, mult} — the true chance, the house's shown one
-## (off by the day's noise) and the payout of a bet on the hero.
-static func hero_odds(s: GameSession, data: Dictionary, sid: String, monster: String) -> Dictionary:
+## The engine's estimate of the hero against a template, of `hp` when it is tuned: {p, house, mult} — the true chance,
+## the house's shown one (off by the day's noise) and the payout of a bet on the hero.
+static func hero_odds(s: GameSession, data: Dictionary, sid: String, monster: String, hp: int = 0) -> Dictionary:
 	var m: Dictionary = data["monsters"][monster]
 	var ra := float(s.character["hp"]) * hero_dpr(s, data, int(m["ac"]))
-	var rb := rating_monster(data, monster, int(s.character.get("ac", 10)))
+	var rb := float(hp if hp > 0 else int(m["hp"])) * monster_dpr(data, monster, int(s.character.get("ac", 10)))
 	return _odds(s, data, sid, "hero" + monster, chance(ra, rb))
 
 
@@ -263,12 +297,12 @@ static func bout(s: GameSession, data: Dictionary, sid: String, bet_cp: int = 0)
 	if bet_cp > 0 and not bw.is_empty():
 		return {"reason": bw}
 	var opp := opponent(s, data, sid)
-	var o := hero_odds(s, data, sid, str(opp["monster"]))
+	var o := hero_odds(s, data, sid, str(opp["monster"]), int(opp["hp"]))
 	Ledger.add(s, -bet_cp, "arena:bout")
 	_rec_new(s, sid)["day"] = s.day
 	var src := {"site": sid, "kind": "rank", "rule": rule(data, sid), "rank": int(opp["rank"]), "bet": bet_cp, "mult": float(o["mult"]),
 		"foe": str(opp["name"])}
-	return {"foes": [{"monster": str(opp["monster"]), "name": str(opp["name"])}], "source": {"arena": src, "room_from": s.room_id},
+	return {"foes": [_spec(opp)], "source": {"arena": src, "room_from": s.room_id},
 		"lines": [_opening(data, sid, str(opp["name"]), bet_cp, float(o["mult"]))]}
 
 
@@ -308,6 +342,8 @@ static func after_bout(s: GameSession, data: Dictionary, a: Dictionary, won: boo
 			return ContestRules.settle(s, data, won)
 		"tourney":
 			return _tourney_after(s, data, a, won)
+		"bet":
+			return _bet_after(s, a, won)
 	var sid := str(a["site"])
 	var r := _rec_new(s, sid)
 	var rc := rule_cfg(data, sid)
@@ -351,17 +387,22 @@ static func card(s: GameSession, data: Dictionary, sid: String) -> Dictionary:
 	var r := _rng(s, sid, "card")
 	var list: Array = cfg(data)["card_ranks"]
 	var i := clampi(int(list[r.randi_range(0, list.size() - 1)]), 0, ranks(data).size() - 1)
-	var foes: Array = ranks(data)[i]["foes"]
-	var ma := str(foes[r.randi_range(0, foes.size() - 1)])
-	var mb := str(foes[r.randi_range(0, foes.size() - 1)])
+	var foes: Array = _shuffled(ranks(data)[i]["foes"], r)
+	var ma := str(foes[0])
+	var mb := str(foes[1 if foes.size() > 1 else 0])
 	var na := _nick(data, r)
 	var nb := _nick(data, r)
 	while nb == na:
 		nb = _nick(data, r)
-	var ra := rating_monster(data, ma, int(data["monsters"][mb]["ac"]))
-	var rb := rating_monster(data, mb, int(data["monsters"][ma]["ac"]))
-	var o := _odds(s, data, sid, "card", chance(ra, rb))
-	return {"a": {"monster": ma, "name": fighter_name(data, ma, na)}, "b": {"monster": mb, "name": fighter_name(data, mb, nb)}, "rank": i,
+	var fa: Dictionary = data["monsters"][ma]
+	var fb: Dictionary = data["monsters"][mb]
+	var da := monster_dpr(data, ma, int(fb["ac"]))
+	var db := monster_dpr(data, mb, int(fa["ac"]))
+	var want := _even(data, r)
+	var hb := _tuned(data, int(fb["hp"]), db, int(fa["hp"]) * da * sqrt((1.0 - want) / want))
+	var ha := _tuned(data, int(fa["hp"]), da, hb * db * sqrt(want / (1.0 - want)))
+	var o := _odds(s, data, sid, "card", chance(ha * da, hb * db))
+	return {"a": {"monster": ma, "name": fighter_name(data, ma, na), "hp": ha}, "b": {"monster": mb, "name": fighter_name(data, mb, nb), "hp": hb}, "rank": i,
 		"p": float(o["p"]), "house": float(o["house"]), "mult_a": mult(data, float(o["house"])), "mult_b": mult(data, 1.0 - float(o["house"]))}
 
 
@@ -405,7 +446,7 @@ static func set_insight(s: GameSession, data: Dictionary, sid: String, ok: bool)
 		roundi(float(c["house"]) * 100)]]
 
 
-## A bet on a side ("a" / "b") of the day's card: the engine plays the bout out at once. {lines} or {reason}.
+## A bet on a side ("a" / "b") of the day's card: the bout is a fight the hero watches. {foes, source, lines} or {reason}.
 static func bet(s: GameSession, data: Dictionary, sid: String, side: String, cp: int) -> Dictionary:
 	var why := card_why(s, data, sid)
 	if why.is_empty():
@@ -417,52 +458,93 @@ static func bet(s: GameSession, data: Dictionary, sid: String, side: String, cp:
 	var bets: Dictionary = s.character.get("arena_bets", {})
 	bets[sid] = s.day
 	s.character["arena_bets"] = bets
-	var sim := simulate(data, s.rng, str(c["a"]["monster"]), str(c["b"]["monster"]), rule(data, sid))
-	var lines: Array[String] = ["Ставка %s на %s" % [Money.format(cp), c[side]["name"]]]
-	var names := {"a": str(c["a"]["name"]), "b": str(c["b"]["name"])}
-	for l: String in sim["lines"]:
-		lines.append(l.replace("{a}", names["a"]).replace("{b}", names["b"]))
-	if str(sim["winner"]) == side:
-		var pay := roundi(cp * float(c["mult_" + side]))
-		Ledger.add(s, pay, "arena:bet")
-		lines.append("Ставка сыграла: +%s" % Money.format(pay))
-	else:
-		lines.append("Ставка проиграна: −%s" % Money.format(cp))
-	ObjectRules.note(s, sid, "бой %s против %s — победил %s" % [names["a"], names["b"], names[str(sim["winner"])]])
-	return {"lines": lines, "winner": str(sim["winner"])}
+	var other := "b" if side == "a" else "a"
+	var src := {"site": sid, "kind": "bet", "rule": rule(data, sid), "watch": true, "bet": cp, "mult": float(c["mult_" + side]),
+		"pick": str(c[side]["name"]), "foe": str(c[other]["name"])}
+	return {"foes": [_spec(c[other])], "source": {"arena": src, "room_from": s.room_id, "allies": [_spec(c[side])]},
+		"lines": ["Ставка %s на %s; бой с %s" % [Money.format(cp), c[side]["name"], c[other]["name"]]]}
 
 
-## A bout of two templates played out by the engine: initiative by DEX, each turn the full melee attack of the
-## combat AI against the other's AC, crits double the dice; «yield» — a side at `yield_hp_pct` gives up.
-## {winner: "a" | "b", rounds, lines} with {a} / {b} for the names.
-static func simulate(data: Dictionary, rng: RandomNumberGenerator, ma: String, mb: String, rule_id: String) -> Dictionary:
-	var ms := {"a": data["monsters"][ma], "b": data["monsters"][mb]}
-	var hp := {"a": int(ms["a"]["hp"]), "b": int(ms["b"]["hp"])}
-	var max_rounds := int(cfg(data)["sim_rounds"])
-	var yield_pct := int(cfg(data)["yield_hp_pct"])
-	var ia := Roll.d20(rng) + CharacterRules.mod(int(ms["a"]["abilities"].get("dex", 10)))
-	var ib := Roll.d20(rng) + CharacterRules.mod(int(ms["b"]["abilities"].get("dex", 10)))
-	var order := ["a", "b"] if ia >= ib else ["b", "a"]
-	var dealt := {"a": 0, "b": 0}
-	for rnd in range(1, max_rounds + 1):
-		for who: String in order:
-			var foe := "b" if who == "a" else "a"
-			for a: Dictionary in attacks(data, ma if who == "a" else mb):
-				var nat := Roll.d20(rng)
-				if nat == 1 or (nat != 20 and nat + int(a.get("to_hit", 0)) < int(ms[foe]["ac"])):
-					continue
-				var dmg := 0
-				for d: Dictionary in a["damage"]:
-					dmg += CombatRules.roll_dice(rng, str(d["dice"]), nat == 20)
-				hp[foe] = maxi(0, int(hp[foe]) - dmg)
-				dealt[who] = int(dealt[who]) + dmg
-				if int(hp[foe]) == 0:
-					var end := "{%s} падает" % foe + (" замертво" if rule_id == "death" else " без чувств")
-					return {"winner": who, "rounds": rnd, "lines": ["Бой {a} против {b}: %d раунд(ов) — %s" % [rnd, end]]}
-			if rule_id == "yield" and int(hp[foe]) * 100 <= int(ms[foe]["hp"]) * yield_pct:
-				return {"winner": who, "rounds": rnd, "lines": ["Бой {a} против {b}: %d раунд(ов) — {%s} сдаётся" % [rnd, foe]]}
-	var w := "a" if float(hp["a"]) / int(ms["a"]["hp"]) >= float(hp["b"]) / int(ms["b"]["hp"]) else "b"
-	return {"winner": w, "rounds": max_rounds, "lines": ["Бой {a} против {b}: время вышло — по очкам за {%s}" % w]}
+## The hero watches this bout, it has no turn in it.
+static func watching(s: GameSession) -> bool:
+	return bool(s.combat.get("arena", {}).get("watch", false))
+
+
+## A watched bout is over when a side is out of it, or by points when time runs out. The picked fighter is the ally.
+static func watch_end(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
+	var mine := CombatRules.allies(s)
+	var other := CombatRules.enemies(s)
+	var late := int(s.combat["round"]) > int(cfg(data)["sim_rounds"])
+	if not late and not mine.is_empty() and not other.is_empty():
+		return
+	var won := other.is_empty()
+	if late and not mine.is_empty() and not other.is_empty():
+		won = _share(s, mine[0]) >= _share(s, other[0])
+	var a: Dictionary = s.combat["arena"]
+	a["won"] = won
+	s.combat["outcome"] = "watched"
+	lines.append("Победил: %s" % str(a["pick"] if won else a["foe"]))
+
+
+static func _share(s: GameSession, id: String) -> float:
+	var f := CombatRules.fighter(s, id)
+	return float(f["hp"]) / maxf(1.0, float(f["max_hp"]))
+
+
+static func _bet_after(s: GameSession, a: Dictionary, won: bool) -> Array[String]:
+	ObjectRules.note(s, str(a["site"]), "бой %s против %s — победил %s" % [a["pick"], a["foe"], a["pick"] if won else a["foe"]])
+	if not won:
+		return ["Ставка проиграна: −%s" % Money.format(int(a["bet"]))]
+	var pay := roundi(int(a["bet"]) * float(a["mult"]))
+	Ledger.add(s, pay, "arena:bet")
+	return ["Ставка сыграла: +%s" % Money.format(pay)]
+
+
+# --- the ring -----------------------------------------------------------------------------------------------------
+
+
+## The squares of a bout on its arena's map: {hero, foe, ally, crowd}; {} — a bout away from any arena (a duel).
+static func ring(s: GameSession, data: Dictionary) -> Dictionary:
+	var sid := str(s.combat.get("arena", {}).get("site", ""))
+	if sid.is_empty() or arena(data, sid).is_empty():
+		return {}
+	var map := FightGrid.map(s, data)
+	var mid := Vector2i(int(map["w"]) / 2, int(map["h"]) / 2)
+	for m: Dictionary in map.get("marks", []):
+		if str(m["name"]) == "ring":
+			mid = Vector2i(int(m["x"]), int(m["y"]))
+	var r: Dictionary = cfg(data)["ring"]
+	var apart := Vector2i(int(r["apart"]), 0)
+	var fence := mid + Vector2i(0, -int(r["side"]))
+	return {"foe": mid + apart, "ally": mid - apart, "hero": fence if watching(s) else mid - apart, "crowd": _crowd(s, data, sid, mid, fence)}
+
+
+## The people of the settlement round the ring: they stand on the fight's record, their own places stay as they are.
+static func _crowd(s: GameSession, data: Dictionary, sid: String, mid: Vector2i, fence: Vector2i) -> Array:
+	var world := WorldView.new(data["world"])
+	var loc := world.location_id(s.room_id)
+	var followers := Being.followers(s)
+	var who: Array = []
+	for room: String in data["world"]["rooms"]:
+		if room == s.room_id or world.location_id(room) != loc:
+			continue
+		for id: String in s.npcs_here(data["world"], room):
+			if not followers.has(id):
+				who.append(id)
+	who.sort()
+	var r := _rng(s, sid, "crowd")
+	var c: Dictionary = cfg(data)["ring"]
+	var count := mini(who.size(), int(c["crowd"]))
+	var far := float(c["side"])
+	var g := FightGrid.grid(s, data)
+	var out: Array = []
+	var picked := _shuffled(who, r)
+	for i in count:
+		var angle := TAU * (i + 0.5) / maxi(1, count)
+		var at := mid + Vector2i(roundi(cos(angle) * far), roundi(sin(angle) * far))
+		if FightGrid.walkable(g, at) and WalkRules.distance(at, fence) > 1:
+			out.append({"id": str(picked[i]), "name": str(world.npc(str(picked[i])).get("name", picked[i])), "x": at.x, "y": at.y})
+	return out
 
 
 # --- the festival's tournament ------------------------------------------------------------------------------------
@@ -517,7 +599,7 @@ static func tourney_bout(s: GameSession, data: Dictionary, sid: String) -> Dicti
 	var opp := opponent(s, data, sid, mini(n + int(t.get("from_rank", 0)), ranks(data).size() - 1))
 	var src := {"site": sid, "kind": "tourney", "rule": rule(data, sid), "rank": int(opp["rank"]), "foe": str(opp["name"]), "round": n + 1,
 		"bouts": int(t.get("bouts", 3))}
-	return {"foes": [{"monster": str(opp["monster"]), "name": str(opp["name"])}], "source": {"arena": src, "room_from": s.room_id},
+	return {"foes": [_spec(opp)], "source": {"arena": src, "room_from": s.room_id},
 		"lines": ["%s — бой %d из %d: %s" % [t["name"], n + 1, int(t.get("bouts", 3)), opp["name"]]]}
 
 

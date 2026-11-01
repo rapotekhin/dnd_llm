@@ -4858,7 +4858,7 @@
 		"poach": {"crime": "poaching", "seen_pct": 30}
 	},
 	"arena": {
-		"_doc": "The arena (v0.7.45, ArenaRules): a site with `arena` {rule} of the kind `arena`, its manager — the staff of `manager_role` (or the owner). `rules` — what a rule means: `yield` (to surrender: the hero's blows only knock out, the hero at 0 HP loses, a fighter gives up at `yield_hp_pct`), `death` (the blood pit: no surrender, the downed is finished; the prize and the fame by `prize_pct`, `fame_pct`). Enlisting costs `fee_cp`; one bout a day; `ranks` — the ladder: SRD templates of the opponents, the prize, the wins that lift the rank. Bets: `bet` (`min_cp` … `max_cp_level` × level; the payout (1 − `house_pct`) / the house's chance, at most `max_mult`; the house's chance is the engine's estimate off by up to `noise_pct`), `insight` — the check that shows the true estimate; `card_ranks` — the ranks of the day's NPC bout; `sim_rounds` — its rounds at most. `fame` — points of the settlement's reputation: a win, a new rank, a tournament won. `nicknames` — of the fighters.",
+		"_doc": "The arena (v0.7.45, ArenaRules): a site with `arena` {rule} of the kind `arena`, its manager — the staff of `manager_role` (or the owner). `rules` — what a rule means: `yield` (to surrender: the hero's blows only knock out, the hero at 0 HP loses, a fighter gives up at `yield_hp_pct`), `death` (the blood pit: no surrender, the downed is finished; the prize and the fame by `prize_pct`, `fame_pct`). Enlisting costs `fee_cp`; one bout a day; `ranks` — the ladder: SRD templates of the opponents, the prize, the wins that lift the rank. Bets: a bet is watched as a fight, the fighter picked on the hero's side; `bet` (`min_cp` … `max_cp_level` × level; the payout (1 − `house_pct`) / the house's chance, at most `max_mult`; the house's chance is the engine's estimate off by up to `noise_pct`), `insight` — the check that shows the true estimate; `card_ranks` — the ranks of the day's NPC bout; `sim_rounds` — its rounds at most, then the fight goes by points. `even` (v0.8.4.5): both sides are made about equal by the engine's estimate, a chance of 0.5 ± `band`, by the HP of a fighter within `hp_min`…`hp_max` of its template. `ring`: on the arena's map the sides stand `apart` squares from the middle, one who watches `side` squares from it, `crowd` people of the settlement stand round at that distance for the fight and no longer. `fame` — points of the settlement's reputation: a win, a new rank, a tournament won. `nicknames` — of the fighters.",
 		"manager_role": "распорядитель",
 		"fee_cp": 200,
 		"yield_hp_pct": 25,
@@ -4876,6 +4876,8 @@
 		"insight": {"skill": "insight", "dc": 13},
 		"card_ranks": [0, 1, 2],
 		"sim_rounds": 30,
+		"even": {"band": 0.08, "hp_min": 0.6, "hp_max": 2.0},
+		"ring": {"apart": 3, "side": 6, "crowd": 12},
 		"fame": {"win": 1, "rank_up": 3, "champion": 8},
 		"nicknames": ["Медведь", "Щука", "Рыжий", "Кремень", "Волчок", "Тихоня", "Молот", "Ворон", "Кабан", "Шрам", "Лис", "Дубина"]
 	},
