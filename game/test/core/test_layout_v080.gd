@@ -199,6 +199,70 @@ func _rng_asks(n: int, game_seed: int) -> Array[Dictionary]:
 	return asks
 
 
+## The squares of roads joined with the middle: one road may start at a door, the middle may stand aside of a landmark.
+func _on_roads(map: Dictionary) -> Dictionary:
+	var rows: Array[String] = map["rows"]
+	var from := Vector2i(int(map["w"]) / 2, int(map["h"]) / 2)
+	var seen := {from: true}
+	var queue: Array[Vector2i] = [from]
+	while not queue.is_empty():
+		var at: Vector2i = queue.pop_back()
+		for side: String in LayoutGen.SIDES:
+			var n: Vector2i = at + LayoutGen.STEP[side]
+			if n.x >= 0 and n.y >= 0 and n.x < int(map["w"]) and n.y < int(map["h"]) and not seen.has(n) and rows[n.y][n.x] in [LayoutGen.ROAD, LayoutGen.PATH]:
+				seen[n] = true
+				queue.append(n)
+	return seen
+
+
+func test_every_way_of_an_open_map_lies_on_the_roads() -> void:
+	for game_seed: int in [1, 2, 3, 7, 42]:
+		var s := _session(game_seed)
+		for id: String in data["world"]["rooms"]:
+			var map := LayoutRules.map_of(s, data, id)
+			if not map.has("open"):
+				continue
+			var road := _on_roads(map)
+			for e: Dictionary in map["exits"]:
+				var end := Vector2i(int(e["x"]), int(e["y"])) if str(e["kind"]) == "edge" else Vector2i(int(e["ax"]), int(e["ay"]))
+				assert_bool(road.has(end)).override_failure_message("%s → %s, seed %d\n%s" % [id, e["to"], game_seed, "\n".join(map["rows"])]).is_true()
+
+
+func test_roads_fork_and_a_town_is_paved_and_a_forest_is_a_path() -> void:
+	var exits: Array = []
+	for to: String in ["a", "b", "c", "d", "e", "f"]:
+		exits.append({"to": to, "side": "n" if to < "d" else "e", "kind": "edge"})
+	var town := LayoutGen.open_map(layouts, {"id": "r", "kind": "square", "tags": [], "exits": exits}, 3)
+	var wild := LayoutGen.open_map(layouts, {"id": "r", "kind": "wild", "tags": [], "exits": exits}, 3)
+	assert_str("".join(town["rows"])).contains(LayoutGen.ROAD)
+	assert_str("".join(wild["rows"])).contains(LayoutGen.PATH)
+	assert_str("".join(wild["rows"])).not_contains(LayoutGen.ROAD)
+	var side := int(town["w"]) + int(town["h"])
+	var cells := "".join(town["rows"]).count(LayoutGen.ROAD)
+	assert_int(cells).override_failure_message("a star of six would be about %d" % (side * 3)).is_less(side * 2)
+
+
+func test_a_new_way_adds_a_branch_of_road_and_leaves_the_old_ones() -> void:
+	var exits: Array = [{"to": "a", "side": "n", "kind": "edge"}, {"to": "b", "side": "w", "kind": "edge"}]
+	var ask := {"id": "r", "kind": "wild", "tags": [], "exits": exits}
+	var before := LayoutGen.open_map(layouts, ask, 21)
+	var more := ask.duplicate(true)
+	(more["exits"] as Array).append({"to": "c", "side": "e", "kind": "edge"})
+	more["kept"] = before["picks"]
+	var after := LayoutGen.open_map(layouts, more, 21)
+	assert_array(after["picks"]["roads"]).is_equal((before["picks"]["roads"] as Array) + ["c"])
+	for y: int in int(before["h"]):
+		for x: int in int(before["w"]):
+			if before["rows"][y][x] == LayoutGen.PATH:
+				assert_str(after["rows"][y][x]).is_equal(LayoutGen.PATH)
+
+
+func test_a_road_changes_no_walking() -> void:
+	assert_bool(LayoutGen.solid(layouts, LayoutGen.PATH)).is_false()
+	assert_bool(LayoutGen.solid(layouts, LayoutGen.ROAD)).is_false()
+	assert_int(int(layouts["cells"][LayoutGen.PATH].get("cost", 1))).is_equal(1)
+
+
 func _crowded() -> Dictionary:
 	var game := data.duplicate()
 	game["world"] = data["world"].duplicate(true)

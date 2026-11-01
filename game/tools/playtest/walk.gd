@@ -102,11 +102,13 @@ func run() -> void:
 
 	await _people(s, gs, lib)
 
-	gs.travel("brod-gate")
-	await wait_until(func() -> bool: return s.room_id == "brod-gate" and not gs.is_busy(), 60.0)
+	var why: String = gs.travel("brod-square")  # a known place: the way goes only through those
+	step("fast travel starts", why.is_empty(), why)
+	await wait_until(func() -> bool: return s.room_id == "brod-square" and not gs.is_busy(), 20.0)
+	step("fast travel arrives", s.room_id == "brod-square", s.room_id)
 	await frames(5)
 	step("fast travel puts the hero on a free square", WalkRules.room_of(field.map, field.hero_cell()) == s.room_id and WalkRules.passable(field.map, lib, field.hero_cell()))
-	await shot("gate")
+	await shot("travelled")
 
 
 ## v0.8.2: a click on a person walks up into speaking reach and opens the menu; a trade needs the hero right beside.

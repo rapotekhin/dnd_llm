@@ -15,6 +15,7 @@ const FLOOR := "."
 const SOCKET := "D"
 const DOOR := "+"
 const ROAD := "="
+const PATH := ","
 const BLANK := " "
 const SIDES: Array[String] = ["n", "e", "s", "w"]
 const STEP: Dictionary = {"n": Vector2i(0, -1), "e": Vector2i(1, 0), "s": Vector2i(0, 1), "w": Vector2i(-1, 0)}
@@ -651,11 +652,6 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 		for x: int in range(center.x - clear, center.x + clear + 1):
 			taken[Vector2i(x, y)] = true
 	_exits_open(out, grid, ask, cfg, kept, taken, boxes)
-	for e: Dictionary in out["exits"]:
-		var road := RandomNumberGenerator.new()  # its own: a way added later leaves the old roads as they are
-		road.seed = seed_value + hash(str(e["to"]))
-		var end := Vector2i(int(e["x"]), int(e["y"])) if str(e["kind"]) == "edge" else Vector2i(int(e["ax"]), int(e["ay"]))
-		_road(grid, end, center, tags, road)
 	_clear(grid, center, clear)
 	var picks := {}
 	if not landmark.is_empty():
@@ -676,6 +672,8 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 	out["marks"].append({"name": ENTRY, "x": center.x, "y": center.y, "room": 0})
 	picks["spots"] = _wanted_marks(out, ask, 0, rng, kept)
 	picks["ways"] = _ways_of(out, str(ask["id"]))
+	var paved := ROAD if tags.has("road") or tags.has("market") or bool(kind.get("paved", false)) else PATH
+	picks["roads"] = _roads(out, lib, center, paved, kept, seed_value)
 	out["picks"] = picks
 	return out
 
@@ -933,30 +931,112 @@ static func _wall_box(grid: Array[PackedStringArray], x: int, y: int, bw: int, b
 			boxes[Vector2i(x + bx, y + by)] = true
 
 
-## A road from a way to the middle: two straight legs; a forest path is floor, a town's road is paved.
-static func _road(grid: Array[PackedStringArray], from: Vector2i, to: Vector2i, tags: Array, rng: RandomNumberGenerator) -> void:
-	var paved := ROAD if tags.has("road") or tags.has("market") else FLOOR
-	var bend := Vector2i(from.x, to.y) if rng.randf() < 0.5 else Vector2i(to.x, from.y)
-	for leg: Array in [[from, bend], [bend, to]]:
-		var a: Vector2i = leg[0]
-		var b: Vector2i = leg[1]
-		var at := a
-		var step := Vector2i(signi(b.x - a.x), signi(b.y - a.y))
-		while true:
-			_pave(grid, at, paved)
-			if at == b:
-				break
-			at += step
+## The roads: a tree over the middle and every way out, by the heuristic of Takahashi and Matsuyama for a Steiner tree.
+## The nearest way joins what is laid by the cheapest path from the whole net, so roads fork and merge rather than all run
+## to the middle. A road is only a look, walking does not change. Out: the order of the branches: a save's order first,
+## so a new way adds a branch and the old ones stay.
+static func _roads(out: Dictionary, lib: Dictionary, center: Vector2i, paved: String, kept: Dictionary, seed_value: int) -> Array:
+	var w := int(out["w"])
+	var weights := _road_weights(out, lib, seed_value)
+	var net: Array[int] = [center.y * w + center.x]
+	var ends := {}
+	for e: Dictionary in out["exits"]:
+		ends[str(e["to"])] = int(e["y"]) * w + int(e["x"]) if str(e["kind"]) == "edge" else int(e["ay"]) * w + int(e["ax"])
+	var order: Array = []
+	var known: Array = (kept.get("roads", []) as Array).filter(func(to: Variant) -> bool: return ends.has(str(to)))
+	while not ends.is_empty():
+		var found := _cheapest(w, int(out["h"]), weights, net)
+		var dist: PackedInt32Array = found["dist"]
+		var to := str(known.pop_front()) if not known.is_empty() else _nearest(ends, dist)
+		var at := int(ends[to])
+		ends.erase(to)
+		order.append(to)
+		var prev: PackedInt32Array = found["prev"]
+		if dist[at] < 0:
+			continue
+		while dist[at] > 0:
+			net.append(at)
+			_pave(out, at % w, at / w, paved)
+			at = prev[at]
+	if not order.is_empty():
+		_pave(out, center.x, center.y, paved)
+	return order
 
 
-static func _pave(grid: Array[PackedStringArray], at: Vector2i, paved: String) -> void:
-	if at.y < 0 or at.y >= grid.size() or at.x < 0 or at.x >= grid[0].size():
-		return
-	var c := grid[at.y][at.x]
-	if c != DOOR and c != "~":
-		if c == WALL:
-			return
-		grid[at.y][at.x] = paved
+static func _pave(out: Dictionary, x: int, y: int, paved: String) -> void:
+	if str(out["rows"][y][x]) != DOOR:
+		_set_cell(out, x, y, paved)
+
+
+## The way out the net reaches most cheaply; ties go by name, so the same map comes out every time.
+static func _nearest(ends: Dictionary, dist: PackedInt32Array) -> String:
+	var best := ""
+	for to: String in ends:
+		var d := dist[int(ends[to])]
+		var was := dist[int(ends[best])] if not best.is_empty() else -1
+		if best.is_empty() or (d >= 0 and (was < 0 or d < was or (d == was and to < best))):
+			best = to
+	return best
+
+
+## What a square costs a road, -1 where none goes; a soft noise makes the roads bend.
+static func _road_weights(out: Dictionary, lib: Dictionary, seed_value: int) -> PackedInt32Array:
+	var cfg: Dictionary = lib["open"]
+	var costs: Dictionary = cfg["road_cost"]
+	var cell := int(cfg["noise_cell"])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value + 2
+	var w := int(out["w"])
+	var h := int(out["h"])
+	var coarse := _coarse(w, h, cell, rng)
+	var weights := PackedInt32Array()
+	weights.resize(w * h)
+	for y: int in h:
+		for x: int in w:
+			var c: String = out["rows"][y][x]
+			weights[y * w + x] = int(costs[c]) + int(_noise(coarse, cell, x, y) * int(cfg["road_wander"])) if costs.has(c) else -1
+	return weights
+
+
+## Dijkstra from a whole net on a bucket queue: the costs are small whole numbers. {"dist", "prev"} by a square's index.
+static func _cheapest(w: int, h: int, weights: PackedInt32Array, net: Array[int]) -> Dictionary:
+	var dist := PackedInt32Array()
+	dist.resize(w * h)
+	dist.fill(-1)
+	var prev := PackedInt32Array()
+	prev.resize(w * h)
+	prev.fill(-1)
+	var top := 1
+	for c: int in weights:
+		top = maxi(top, c + 1)
+	var buckets: Array[PackedInt32Array] = []
+	buckets.resize(top)
+	for i: int in net:
+		dist[i] = 0
+		buckets[0].append(i)
+	var left := net.size()
+	var d := 0
+	while left > 0:
+		var list := buckets[d % top]
+		buckets[d % top] = PackedInt32Array()
+		left -= list.size()
+		for i: int in list:
+			if dist[i] != d:
+				continue
+			var x := i % w
+			var y := i / w
+			for side: String in SIDES:
+				var n: Vector2i = Vector2i(x, y) + STEP[side]
+				if n.x < 0 or n.y < 0 or n.x >= w or n.y >= h:
+					continue
+				var j := n.y * w + n.x
+				if weights[j] >= 0 and (dist[j] < 0 or d + weights[j] < dist[j]):
+					dist[j] = d + weights[j]
+					prev[j] = i
+					buckets[dist[j] % top].append(j)
+					left += 1
+		d += 1
+	return {"dist": dist, "prev": prev}
 
 
 static func _clear(grid: Array[PackedStringArray], center: Vector2i, r: int) -> void:

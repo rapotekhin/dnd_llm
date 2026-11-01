@@ -1,9 +1,10 @@
 {
-	"_doc": "Layouts of places (v0.8.0, LayoutGen, LayoutRules): a square is 5 ft. `cells` — what a character of a chunk means; `kinds` — a place's kind by the tag of its site: its shape (building, tunnels, open), family, rooms with roles and their limit, the size and scatter of an open map; `chunks` — parts of maps: `rows` of `cells`, D — a door socket on the edge, letters of `marks` — named floor squares, a blank — leave the map as it is (landmarks). Rotations and mirrors make new variants of a chunk. The chain of picking a chunk: kind and role, family and role, the room's tags, a generic chunk of the size.",
+	"_doc": "Layouts of places (v0.8.0, LayoutGen, LayoutRules): a square is 5 ft. `cells` — what a character of a chunk means; `open.road_cost` — what a square costs a road, a character that is not there stops it; `kinds` — a place's kind by the tag of its site: its shape (building, tunnels, open), family, rooms with roles and their limit, the size and scatter of an open map; `chunks` — parts of maps: `rows` of `cells`, D — a door socket on the edge, letters of `marks` — named floor squares, a blank — leave the map as it is (landmarks). Rotations and mirrors make new variants of a chunk. The chain of picking a chunk: kind and role, family and role, the room's tags, a generic chunk of the size.",
 	"cells": {
 		"#": {"name": "wall", "solid": true, "opaque": true},
 		".": {"name": "floor"},
 		"=": {"name": "road"},
+		",": {"name": "path"},
 		"+": {"name": "door", "opaque": true},
 		"%": {"name": "difficult", "cost": 2},
 		"^": {"name": "hazard", "hazard": true},
@@ -22,6 +23,8 @@
 		"box_small": [5, 4],
 		"ways": 9,
 		"ways_outer": 2,
+		"road_cost": {"=": 1, ",": 1, ".": 4, "%": 6, "T": 12, "B": 12, "~": 24},
+		"road_wander": 4,
 		"clear": 2,
 		"pond": 0.09,
 		"noise_cell": 6
@@ -46,9 +49,9 @@
 		"cave": {"shape": "tunnels", "family": "", "limit": 12, "rooms": {"hall": {"required": true}}},
 		"mine": {"shape": "tunnels", "family": "cave", "limit": 12, "rooms": {"hall": {"required": true}}},
 		"wild": {"shape": "open", "scatter": [{"cell": "T", "share": 0.26}, {"cell": "%", "share": 0.1}], "landmarks": ["wild"]},
-		"square": {"shape": "open", "size": [32, 32], "scatter": [{"cell": "B", "share": 0.03}], "landmarks": ["town"]},
-		"market": {"shape": "open", "family": "square", "size": [32, 32], "scatter": [{"cell": "B", "share": 0.04}], "landmarks": ["market"]},
-		"gate": {"shape": "open", "size": [32, 32], "scatter": [{"cell": "B", "share": 0.02}], "landmarks": ["gate"]},
+		"square": {"shape": "open", "paved": true, "size": [32, 32], "scatter": [{"cell": "B", "share": 0.03}], "landmarks": ["town"]},
+		"market": {"shape": "open", "paved": true, "family": "square", "size": [32, 32], "scatter": [{"cell": "B", "share": 0.04}], "landmarks": ["market"]},
+		"gate": {"shape": "open", "paved": true, "size": [32, 32], "scatter": [{"cell": "B", "share": 0.02}], "landmarks": ["gate"]},
 		"arena": {"shape": "open", "size": [24, 24], "scatter": [], "landmarks": ["ring"]},
 		"ruin": {"shape": "open", "size": [28, 28], "scatter": [{"cell": "B", "share": 0.08}, {"cell": "%", "share": 0.1}], "landmarks": ["ruin"]},
 		"land": {"shape": "open", "size": [24, 24], "scatter": [{"cell": "%", "share": 0.06}], "landmarks": []}
