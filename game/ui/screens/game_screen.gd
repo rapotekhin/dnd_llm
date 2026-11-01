@@ -1,17 +1,19 @@
 class_name GameScreen
 extends Control
-## The game: chat on the left (narration, NPC lines, checks, effects, options, input), side panel on the right.
-## In social / trade mode a bar above the chat shows the partner card (name, role, race, attitude — no portraits),
-## switches a trader between talk and the deal panel, and ends the conversation. In trade mode the deal panel
-## stands next to the chat.
+## The one screen (v0.8.1): the hero and those here on the left, the map in its frame in the middle with the acts under it,
+## the chat on the right. A conversation dims the map and puts the partner's big token on it; the deal panel opens over
+## everything. The fight keeps its own screen until v0.8.4.
 ## Input is locked while the master thinks or the connection is down; Esc opens the pause menu.
+
+const SCENE := "res://ui/screens/game_screen.tscn"
 
 var chat: ChatView
 var input: LineEdit
 var send_button: Button
 var brush: BrushButton  # v0.7.35: the last event drawn
 var _image: ImageCard
-var _options: HFlowContainer
+var _options: VBoxContainer
+var _field: MapField
 var _thinking: Label
 var _cancel: Button
 var _offline_banner: Label
@@ -23,7 +25,6 @@ var _level_up: LevelUpView
 var _short_rest: SmallDialog
 var _long_rest: SmallDialog
 var _wilds: SmallDialog  # v0.7.41
-var _chips: EffectChips
 var _track: Button  # the followed quest's step over the chat (v0.7.22.32)
 var _theft: TheftPanel
 var _container: ContainerPanel
@@ -46,7 +47,9 @@ var _heists: HeistPanel
 var _org: OrgPanel
 var _office: OfficePanel
 var _prepare: SmallDialog
-var _mode_bar: HBoxContainer
+var _dim: ColorRect
+var _talk_card: Control
+var _partner_mark: Label
 var _mode_label: Label
 var _partner_line: Label
 var trade_toggle: Button
@@ -57,131 +60,69 @@ var _attach_chip: HBoxContainer
 var _attach_choices: Array[Dictionary] = []
 var _check_choices: Array[Dictionary] = []
 var _typed := true  # the last turn came from the input: its focus comes back after the turn (v0.7.22.27)
+var _goal := Vector2i.ZERO  # where the hero walks, past doors too
+var _exit_to := ""  # the room beyond the way out at the end of the walk
+var _beyond := ""  # the room behind the door the walk stops at
+var _at_door := false  # the door waits for the end of the master's turn
+
+
+func required() -> Dictionary:
+	return {"%Side": "PanelContainer", "%Strip": "HBoxContainer", "%Field": "Control", "%Dim": "ColorRect", "%TalkCard": "CenterContainer",
+		"%PartnerCard": "VBoxContainer", "%PartnerToken": "PanelContainer", "%PartnerMark": "Label", "%PartnerName": "Label", "%PartnerLine": "Label",
+		"%Bar": "PanelContainer", "%OfflineBanner": "Label", "%QuestTrack": "Button", "%Chat": "ScrollContainer", "%Thinking": "Label", "%Cancel": "Button",
+		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "LineEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HBoxContainer"}
 
 
 func _ready() -> void:
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 32)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 32)
-	margin.add_child(row)
-
-	var left := VBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.size_flags_stretch_ratio = 3.0
-	left.add_theme_constant_override("separation", 14)
-	row.add_child(left)
-	_offline_banner = Label.new()
-	_offline_banner.text = "BANNER_NO_MASTER"
-	_offline_banner.add_theme_color_override("font_color", UiTheme.WARN)
-	_offline_banner.visible = false
-	left.add_child(_offline_banner)
-	_mode_bar = HBoxContainer.new()
-	_mode_bar.add_theme_constant_override("separation", 16)
-	left.add_child(_mode_bar)
-	var card := VBoxContainer.new()
-	card.name = "PartnerCard"
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_theme_constant_override("separation", 2)
-	_mode_bar.add_child(card)
-	_mode_label = Label.new()
-	_mode_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_mode_label.theme_type_variation = UiTheme.HEADING
-	card.add_child(_mode_label)
-	_partner_line = Label.new()
-	_partner_line.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_partner_line.theme_type_variation = UiTheme.MUTED_LABEL
-	card.add_child(_partner_line)
+	_field = UiScenes.need(self, "%Field")
+	_field.cell_clicked.connect(_on_cell)
+	_field.stepped.connect(_on_stepped)
+	_field.arrived.connect(_on_arrived)
+	_dim = UiScenes.need(self, "%Dim")
+	_talk_card = UiScenes.need(self, "%TalkCard")
+	_partner_mark = UiScenes.need(self, "%PartnerMark")
+	_partner_mark.add_theme_font_size_override("font_size", 84)
+	(UiScenes.need(self, "%PartnerToken") as PanelContainer).add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_RAISED, UiTheme.ACCENT, 3, 0, 95))
+	_mode_label = UiScenes.need(self, "%PartnerName")
+	_partner_line = UiScenes.need(self, "%PartnerLine")
+	var bar: ActionBar = UiScenes.need(self, "%Bar")
 	trade_toggle = Button.new()
 	trade_toggle.name = "TradeToggle"
+	trade_toggle.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	trade_toggle.pressed.connect(func() -> void: GameState.set_trade(GameState.session.mode != GameSession.MODE_TRADE))
-	_mode_bar.add_child(trade_toggle)
+	bar.talk.add_child(trade_toggle)
+	bar.talk.move_child(trade_toggle, 0)
 	leave_button = Button.new()
 	leave_button.name = "LeaveButton"
+	leave_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	leave_button.text = "BTN_LEAVE_CONVERSATION"
 	leave_button.pressed.connect(GameState.leave_conversation)
-	_mode_bar.add_child(leave_button)
-	_track = Button.new()
-	_track.name = "QuestTrack"
-	_track.flat = true
-	_track.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_track.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_track.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	bar.talk.add_child(leave_button)
+	_offline_banner = UiScenes.need(self, "%OfflineBanner")
+	_offline_banner.add_theme_color_override("font_color", UiTheme.WARN)
+	_track = UiScenes.need(self, "%QuestTrack")
 	_track.add_theme_color_override("font_color", UiTheme.ACCENT)
-	_track.tooltip_text = "QUEST_TRACK_TIP"
 	_track.pressed.connect(func() -> void:
 		var qid := QuestRules.tracked(GameState.session, Catalog.data["world"])
 		var rooms := WorldMap.step_rooms(GameState.session, Catalog.data["world"], qid)
 		_map.open_at(rooms[0] if not rooms.is_empty() else ""))
-	left.add_child(_track)
-	var body := HBoxContainer.new()
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 20)
-	left.add_child(body)
-	chat = ChatView.new()
-	chat.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_child(chat)
-
-	var status_row := HBoxContainer.new()
-	status_row.add_theme_constant_override("separation", 16)
-	left.add_child(status_row)
-	_thinking = Label.new()
-	_thinking.text = "MSG_MASTER_THINKING"
-	_thinking.theme_type_variation = UiTheme.MUTED_LABEL
-	status_row.add_child(_thinking)
-	_cancel = Button.new()
-	_cancel.text = "BTN_CANCEL_TURN"
+	chat = UiScenes.need(self, "%Chat")
+	_thinking = UiScenes.need(self, "%Thinking")
+	_cancel = UiScenes.need(self, "%Cancel")
 	_cancel.pressed.connect(GameState.cancel_turn)
-	status_row.add_child(_cancel)
-
-	_options = HFlowContainer.new()
-	_options.add_theme_constant_override("h_separation", 12)
-	_options.add_theme_constant_override("v_separation", 12)
-	left.add_child(_options)
-
-	_chips = EffectChips.new()  # what is on the hero, over the input (v0.7.8)
-	left.add_child(_chips)
-	var input_row := HBoxContainer.new()
-	input_row.add_theme_constant_override("separation", 12)
-	left.add_child(input_row)
+	_options = UiScenes.need(self, "%Options")
 	# The pin button sits in the input row like «attach a file» in a messenger (v0.7.7 fixes, the author).
-	_attach_menu = MenuButton.new()
-	_attach_menu.name = "AttachButton"
-	_attach_menu.text = "✦"
-	_attach_menu.flat = false
-	_attach_menu.tooltip_text = "BTN_ATTACH"
-	_attach_menu.custom_minimum_size = Vector2(60, 60)
-	_attach_menu.add_theme_font_size_override("font_size", 28)
+	_attach_menu = UiScenes.need(self, "%AttachButton")
 	_attach_menu.about_to_popup.connect(_fill_attach_menu)
-	input_row.add_child(_attach_menu)
-	input = LineEdit.new()
-	input.name = "Input"
-	input.placeholder_text = "PLACEHOLDER_ACTION"
-	input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	input.custom_minimum_size = Vector2(0, 60)
+	input = UiScenes.need(self, "%Input")
 	input.text_submitted.connect(func(_t: String) -> void: _send())
-	input_row.add_child(input)
-	send_button = Button.new()
-	send_button.text = "BTN_SEND"
-	send_button.theme_type_variation = UiTheme.ACCENT_BUTTON
-	send_button.custom_minimum_size = Vector2(180, 60)
+	send_button = UiScenes.need(self, "%SendButton")
 	send_button.pressed.connect(_send)
-	input_row.add_child(send_button)
-	brush = BrushButton.new()
+	brush = UiScenes.need(self, "%BrushButton")
 	brush.pressed.connect(GameState.draw_image)
-	input_row.add_child(brush)
-	# What is pinned: a chip under the input, out of the chat.
-	_attach_chip = HBoxContainer.new()
-	_attach_chip.name = "AttachChip"
-	_attach_chip.add_theme_constant_override("separation", 8)
-	left.add_child(_attach_chip)
+	_attach_chip = UiScenes.need(self, "%AttachChip")
 
-	var side := SidePanel.new()
-	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	side.size_flags_stretch_ratio = 1.0
+	var side: SidePanel = UiScenes.need(self, "%Side")
 	side.menu_requested.connect(func() -> void: _pause.open())
 	side.sheet_requested.connect(func() -> void: _sheet.open())
 	side.map_requested.connect(func() -> void: _map.open())
@@ -213,21 +154,14 @@ func _ready() -> void:
 	side.heist_requested.connect(func() -> void: _heists.open())  # v0.7.33
 	side.org_requested.connect(func(org: String) -> void: _org.open(org))
 	side.office_requested.connect(func(chief: String) -> void: _office.open(chief))  # v0.7.34
-	row.add_child(side)
 
-	_sheet = UiScenes.open(CharacterSheet.SCENE) as CharacterSheet
-	_sheet.name = "CharacterSheet"
-	_sheet.visible = false
-	add_child(_sheet)
-	_sheet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_sheet = _window(CharacterSheet.SCENE, "CharacterSheet")
 	_map = WorldNotes.create(WorldNotes.MAP)
 	_map.name = "MapView"
 	_journal = WorldNotes.create(WorldNotes.JOURNAL)
 	_journal.name = "JournalView"
 	for v: WorldNotes in [_map, _journal]:
-		v.visible = false
-		add_child(v)
-		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_mount(v)
 
 	_short_rest = SmallDialog.create(SmallDialog.SHORT_REST)
 	_short_rest.name = "ShortRestView"
@@ -238,118 +172,32 @@ func _ready() -> void:
 	_wilds = SmallDialog.create(SmallDialog.WILDS)
 	_wilds.name = "WildsView"
 	for v: SmallDialog in [_short_rest, _prepare, _long_rest, _wilds]:
-		v.visible = false
-		add_child(v)
-		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_theft = UiScenes.open(TheftPanel.SCENE) as TheftPanel
-	_theft.name = "TheftView"
-	_theft.visible = false
-	add_child(_theft)
-	_theft.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_container = UiScenes.open(ContainerPanel.SCENE) as ContainerPanel  # v0.7.18.1
-	_container.name = "ContainerView"
-	_container.visible = false
-	add_child(_container)
-	_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	trade_panel = UiScenes.open(TradePanel.SCENE) as TradePanel  # a screen of its own over everything (v0.7.22.10, the author: «как в BG3»)
-	trade_panel.name = "TradePanel"
-	trade_panel.visible = false
-	add_child(trade_panel)
-	trade_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_place = UiScenes.open(PlacePanel.SCENE) as PlacePanel  # v0.7.22.7: the things of the room
-	_place.name = "PlaceView"
-	_place.visible = false
-	add_child(_place)
-	_place.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_mount(v)
+	_theft = _window(TheftPanel.SCENE, "TheftView")
+	_container = _window(ContainerPanel.SCENE, "ContainerView")  # v0.7.18.1
+	trade_panel = _window(TradePanel.SCENE, "TradePanel")  # a screen of its own over everything (v0.7.22.10, the author: «как в BG3»)
+	_place = _window(PlacePanel.SCENE, "PlaceView")  # v0.7.22.7: the things of the room
 	_place.container_requested.connect(func(prop: String) -> void:
 		_place.visible = false
 		_container.open(prop))
 	move_child(_container, -1)  # the container opens over the place window
-	_board = UiScenes.open(BoardPanel.SCENE) as BoardPanel  # v0.7.22.13: a notice board's orders
-	_board.name = "BoardView"
-	_board.visible = false
-	add_child(_board)
-	_board.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_craft = UiScenes.open(CraftPanel.SCENE) as CraftPanel  # v0.7.24
-	_craft.name = "CraftView"
-	_craft.visible = false
-	add_child(_craft)
-	_craft.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_jobs = UiScenes.open(JobPanel.SCENE) as JobPanel  # v0.7.26
-	_jobs.name = "JobView"
-	_jobs.visible = false
-	add_child(_jobs)
-	_jobs.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_property = UiScenes.open(PropertyPanel.SCENE) as PropertyPanel  # v0.7.27
-	_property.name = "PropertyView"
-	_property.visible = false
-	add_child(_property)
-	_property.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_bank = UiScenes.open(BankPanel.SCENE) as BankPanel  # v0.7.28
-	_bank.name = "BankView"
-	_bank.visible = false
-	add_child(_bank)
-	_bank.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_shop = UiScenes.open(ShopPanel.SCENE) as ShopPanel  # v0.7.29
-	_shop.name = "ShopView"
-	_shop.visible = false
-	add_child(_shop)
-	_shop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_study = UiScenes.open(StudyPanel.SCENE) as StudyPanel  # v0.7.30
-	_study.name = "StudyView"
-	_study.visible = false
-	add_child(_study)
-	_study.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_bond = UiScenes.open(BondPanel.SCENE) as BondPanel  # v0.7.31
-	_bond.name = "BondView"
-	_bond.visible = false
-	add_child(_bond)
-	_bond.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_contest = UiScenes.open(ContestPanel.SCENE) as ContestPanel  # v0.7.40
-	_contest.name = "ContestView"
-	_contest.visible = false
-	add_child(_contest)
-	_contest.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_arena = UiScenes.open(ArenaPanel.SCENE) as ArenaPanel  # v0.7.45
-	_arena.name = "ArenaView"
-	_arena.visible = false
-	add_child(_arena)
-	_arena.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_letter = UiScenes.open(LetterPanel.SCENE) as LetterPanel  # v0.7.48
-	_letter.name = "LetterView"
-	_letter.visible = false
-	add_child(_letter)
-	_letter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_faith = UiScenes.open(FaithPanel.SCENE) as FaithPanel  # v0.7.49
-	_faith.name = "FaithView"
-	_faith.visible = false
-	add_child(_faith)
-	_faith.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_pet = UiScenes.open(PetPanel.SCENE) as PetPanel  # v0.7.43
-	_pet.name = "PetView"
-	_pet.visible = false
-	add_child(_pet)
-	_pet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_family = UiScenes.open(FamilyPanel.SCENE) as FamilyPanel  # v0.7.32
-	_family.name = "FamilyView"
-	_family.visible = false
-	add_child(_family)
-	_family.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_heists = UiScenes.open(HeistPanel.SCENE) as HeistPanel  # v0.7.33
-	_heists.name = "HeistView"
-	_heists.visible = false
-	add_child(_heists)
-	_heists.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_org = UiScenes.open(OrgPanel.SCENE) as OrgPanel
-	_org.name = "OrgView"
-	_org.visible = false
-	add_child(_org)
-	_org.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_office = UiScenes.open(OfficePanel.SCENE) as OfficePanel  # v0.7.34
-	_office.name = "OfficeView"
-	_office.visible = false
-	add_child(_office)
-	_office.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_board = _window(BoardPanel.SCENE, "BoardView")  # v0.7.22.13: a notice board's orders
+	_craft = _window(CraftPanel.SCENE, "CraftView")  # v0.7.24
+	_jobs = _window(JobPanel.SCENE, "JobView")  # v0.7.26
+	_property = _window(PropertyPanel.SCENE, "PropertyView")  # v0.7.27
+	_bank = _window(BankPanel.SCENE, "BankView")  # v0.7.28
+	_shop = _window(ShopPanel.SCENE, "ShopView")  # v0.7.29
+	_study = _window(StudyPanel.SCENE, "StudyView")  # v0.7.30
+	_bond = _window(BondPanel.SCENE, "BondView")  # v0.7.31
+	_contest = _window(ContestPanel.SCENE, "ContestView")  # v0.7.40
+	_arena = _window(ArenaPanel.SCENE, "ArenaView")  # v0.7.45
+	_letter = _window(LetterPanel.SCENE, "LetterView")  # v0.7.48
+	_faith = _window(FaithPanel.SCENE, "FaithView")  # v0.7.49
+	_pet = _window(PetPanel.SCENE, "PetView")  # v0.7.43
+	_family = _window(FamilyPanel.SCENE, "FamilyView")  # v0.7.32
+	_heists = _window(HeistPanel.SCENE, "HeistView")  # v0.7.33
+	_org = _window(OrgPanel.SCENE, "OrgView")
+	_office = _window(OfficePanel.SCENE, "OfficeView")  # v0.7.34
 	_sheet.bag_requested.connect(func(bag: String) -> void: _container.open(bag))  # v0.7.18.2
 	_sheet.prepare_requested.connect(func() -> void:
 		_sheet.visible = false
@@ -357,15 +205,9 @@ func _ready() -> void:
 
 	_level_up = LevelUpView.create()
 	_level_up.name = "LevelUpView"
-	_level_up.visible = false
-	add_child(_level_up)
-	_level_up.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_mount(_level_up)
 
-	_image = UiScenes.open(ImageCard.SCENE) as ImageCard
-	_image.name = "ImageView"
-	_image.visible = false
-	add_child(_image)
-	_image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_image = _window(ImageCard.SCENE, "ImageView")
 	chat.image_requested.connect(_open_image)
 	EventBus.image_drawn.connect(func(entry: Dictionary) -> void: _open_image(ImageFrame.image_of(entry)))
 	EventBus.image_busy.connect(func(b: bool) -> void:
@@ -373,9 +215,7 @@ func _ready() -> void:
 		_refresh())
 
 	_pause = UiScenes.open(PauseMenu.SCENE) as PauseMenu
-	_pause.visible = false
-	add_child(_pause)
-	_pause.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_mount(_pause)
 
 	EventBus.turn_started.connect(_on_turn_started)
 	EventBus.turn_finished.connect(_on_turn_finished)
@@ -388,6 +228,19 @@ func _ready() -> void:
 		o.visibility_changed.connect(func() -> void:  # an open window takes the keys from the input
 			if o.visible:
 				input.release_focus())
+
+
+func _window(scene: String, node_name: String) -> Control:
+	var w := UiScenes.open(scene) as Control
+	w.name = node_name
+	_mount(w)
+	return w
+
+
+func _mount(w: Control) -> void:
+	w.visible = false
+	add_child(w)
+	w.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
 func _overlays() -> Array[Control]:
@@ -474,6 +327,9 @@ func _on_turn_started(_turn_id: String) -> void:
 
 func _on_turn_finished(_turn_id: String, _ok: bool) -> void:
 	_refresh()
+	if _at_door:
+		_at_door = false
+		_on_arrived()
 	var offer: Dictionary = GameState.session.character.get("contest_offer", {}) if GameState.has_session() else {}
 	if not offer.is_empty():  # v0.7.40: the master's NPC offered a game
 		GameState.session.character.erase("contest_offer")
@@ -481,6 +337,78 @@ func _on_turn_finished(_turn_id: String, _ok: bool) -> void:
 		return
 	if Backend.is_ready() and _typed and not _pause.visible and _overlays().all(func(o: Control) -> bool: return not o.visible):
 		input.grab_focus()
+
+
+# --- the field and walking (v0.8.1) ---------------------------------------------------------------------------
+
+
+func _refresh_field(s: GameSession) -> void:
+	if s == null or CombatRules.active(s):
+		return
+	var view := WalkRules.view(s, Catalog.data)
+	var at := WalkRules.settle(s, Catalog.data, view)
+	var names := {}
+	for e: Dictionary in view["exits"]:
+		names[e["to"]] = GameState.world().room(str(e["to"])).get("name", e["to"])
+	_field.names = names
+	_field.clicks = not s.in_conversation()
+	_field.show_map(view, Catalog.data["layouts"])
+	var walkers: Array[Dictionary] = []
+	for id: String in Being.followers(s):
+		var who := str(GameState.world().npc(id).get("name", id))
+		walkers.append({"mark": who.left(1), "name": who.get_slice(" ", 0)})
+	for cr: Dictionary in CreatureRules.here(s, s.room_id):  # the hero's animals walk along
+		if str(cr["state"]) == PropertyRules.TAME:
+			walkers.append({"mark": str(cr["name"]).left(1), "name": str(cr["name"]).get_slice(" ", 0)})
+	_field.place_hero(at, str(s.character.get("name", "?")).left(1), walkers)
+
+
+## A click on the map: the hero walks there by himself; a door is crossed by GameState.go, as the buttons do.
+func _on_cell(cell: Vector2i) -> void:
+	var s := GameState.session if GameState.has_session() else null
+	if s == null or s.in_conversation():
+		return
+	var plan := WalkRules.plan(_field.map, Catalog.data["layouts"], _field.hero_cell(), cell)
+	if plan.is_empty():
+		return
+	_field.stop()
+	_goal = cell
+	_exit_to = str(plan["exit"])
+	_at_door = false
+	_walk(plan["path"])
+
+
+func _walk(steps: Array[Vector2i]) -> void:
+	var leg := WalkRules.leg(_field.map, steps, GameState.session.room_id)
+	_beyond = str(leg["room"])
+	_field.walk(leg["steps"])
+
+
+func _on_stepped(cell: Vector2i) -> void:
+	WalkRules.stand(GameState.session, _field.map, GameState.session.room_id, cell)
+
+
+func _on_arrived() -> void:
+	var to := _beyond if not _beyond.is_empty() else _exit_to
+	if to.is_empty() or not GameState.has_session():
+		return
+	if GameState.is_busy():  # ходить можно, а дверь ждёт конца хода мастера
+		_at_door = true
+		return
+	var through := _beyond.is_empty()
+	_beyond = ""
+	if through:
+		_exit_to = ""
+	var map_id := str(_field.map["id"])
+	if not GameState.go(to) or through or not is_inside_tree():
+		return
+	var s := GameState.session
+	if s.in_conversation() or CombatRules.active(s) or s.room_id != to or str(LayoutRules.map_id(s, Catalog.data, to)) != map_id:
+		return
+	var plan := WalkRules.plan(_field.map, Catalog.data["layouts"], _field.hero_cell(), _goal)  # on behind the door
+	if not plan.is_empty():
+		_exit_to = str(plan["exit"])
+		_walk(plan["path"])
 
 
 func _on_options_changed(_options_list: Array[String]) -> void:
@@ -515,18 +443,20 @@ func _refresh() -> void:
 	brush.disabled = not online or GameState.drawing or s0 == null or ImageFrame.event_index(s0) < 0
 	brush.tooltip_text = "BTN_DRAW_EVENT_BUSY" if GameState.drawing else "BTN_DRAW_EVENT"
 	var s := GameState.session if GameState.has_session() else null
-	_chips.refresh()
 	var qid := QuestRules.tracked(s, Catalog.data["world"]) if s != null else ""
 	_track.visible = not qid.is_empty()
 	if _track.visible:
 		_track.text = tr("QUEST_TRACK").format({"title": QuestRules.quest(Catalog.data["world"], qid).get("title", qid),
 			"step": QuestRules.step_text(s, Catalog.data["world"], qid)})
-	_mode_bar.visible = s != null and s.in_conversation()
+	_talk_card.visible = s != null and s.in_conversation()
+	_dim.visible = _talk_card.visible
 	trade_panel.visible = s != null and s.mode == GameSession.MODE_TRADE
-	if _mode_bar.visible:
+	_refresh_field(s)
+	if _talk_card.visible:
 		var npc := GameState.world().npc(s.npc_id)
 		var npc_name := str(npc.get("name", s.npc_id))
 		_mode_label.text = npc_name
+		_partner_mark.text = npc_name.left(1)
 		var bounds := GameSession.attitude_bounds(Catalog.data)
 		var att := clampi(s.attitude(s.npc_id), bounds.x, bounds.y)
 		_partner_line.text = tr("PARTNER_LINE").format({"role": npc.get("role", ""), "race": npc.get("race", ""),
@@ -577,7 +507,9 @@ func _option_button(text: String, action: Callable, translate: bool) -> Button:
 	b.text = text
 	if not translate:
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.custom_minimum_size = Vector2(0, 52)
+	b.custom_minimum_size = Vector2(0, 44)
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	b.pressed.connect(action)
 	_options.add_child(b)
 	return b

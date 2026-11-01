@@ -77,6 +77,8 @@ func _act() -> String:
 	if not s.in_conversation() and rng.randf() < 0.08:
 		var _err: String = gs.set_sneaking(not s.sneaking)
 		return "sneak_on" if s.sneaking else "sneak_off"
+	if not s.in_conversation() and rng.randf() < 0.15:
+		return await _walk()
 	if s.mode == GameSession.MODE_TRADE:
 		match rng.randi_range(0, 3):
 			0:
@@ -192,6 +194,16 @@ func _act() -> String:
 
 
 ## A fight: finish when it is over (take all loot), else on the player's turn attack, cast or step closer.
+## A click on a random square of the map, as the player's.
+func _walk() -> String:
+	var field: Control = find(screen(), "Field")
+	if field == null or field.map.is_empty():
+		return "walk_none"
+	field.cell_clicked.emit(Vector2i(rng.randi_range(0, int(field.map["w"]) - 1), rng.randi_range(0, int(field.map["h"]) - 1)))
+	await wait_until(func() -> bool: return not is_instance_valid(field) or (not field.walking() and not gs.is_busy()), 10.0)
+	return "walk"
+
+
 func _combat_step(s: GameSession) -> String:
 	if not str(s.combat.get("outcome", "")).is_empty():
 		if str(s.combat["outcome"]) == "dead":

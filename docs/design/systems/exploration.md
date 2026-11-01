@@ -56,5 +56,5 @@
 - `game/core/rules/check_engine.gd`, `effect_engine.gd`, `exploration_rules.gd` — проверки, эффекты, повторы, скрытое, отдых
 - `game/core/session/turn_snapshot.gd` — что видит мастер
 - `game/autoload/game_state.gd` — цикл хода, кнопки
-- `game/ui/screens/game_screen.gd`, `game/ui/components/side_panel.gd`, `world_notes.gd` — экран, панель, карта и журнал
+- `game/ui/screens/game_screen.gd`, `game/ui/components/side_panel.gd`, `map_field.gd`, `action_bar.gd`, `world_notes.gd` — экран, колонка героя, поле, полоса действий, карта мира и журнал
 - `llm_server/src/llm_server/prompts/exploration.md.j2`, `_rules.md.j2` — промпт мастера

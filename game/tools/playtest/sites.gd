@@ -72,11 +72,11 @@ func run() -> void:
 	s.room_id = "brod-square"
 	node("EventBus").state_changed.emit()
 	await frames(6)
+	(find(screen(), "ActionTabs") as TabBar).current_tab = 1
+	await frames(4)
 	var ex: ScrollContainer = find(screen(), "ExitsScroll")
-	var side: Control = find(screen(), "SideFooter").get_parent().get_parent() if find(screen(), "SideFooter") != null else null
 	var sheet_b: Button = find(screen(), "SheetButton")
-	step("16 exits scroll in a third of the panel", ex != null and side != null and ex.size.y <= side.size.y / 3.0 + 1.0 and ex.get_v_scroll_bar().visible,
-		"%s of %s" % [ex.size if ex else Vector2.ZERO, side.size if side else Vector2.ZERO])
+	step("16 exits scroll inside the bar", ex != null and ex.is_visible_in_tree() and ex.get_v_scroll_bar().visible, str(ex.size) if ex else "")
 	step("the sheet button stays on screen", sheet_b != null and sheet_b.get_global_rect().end.y <= sheet_b.get_viewport_rect().size.y)
 	await shot("many_exits")
 	room["exits"] = exits_before

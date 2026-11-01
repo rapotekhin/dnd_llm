@@ -66,7 +66,7 @@
 
 - `game/autoload/game_state.gd` — `talk_to`, `leave_conversation`, сводки разговора
 - `game/core/session/turn_snapshot.gd` — NPC сцены и сводки в снимке
-- `game/ui/screens/game_screen.gd` — карточка собеседника
+- `game/ui/screens/game_screen.gd` — жетон собеседника на карте (`%TalkCard`, v0.8.1)
 - `game/core/rules/bond_rules.gd`, `game/ui/components/bond_panel.gd` — связи и окно «Связь»
 - `game/core/rules/office_rules.gd`, `game/ui/components/office_panel.gd` — служба, окно «Служба»
 - `game/core/rules/heist_rules.gd`, `fence_rules.gd`, `org_rules.gd`, `game/ui/components/heist_panel.gd`, `org_panel.gd` — преступный мир, окна «Дела» и «Братство»

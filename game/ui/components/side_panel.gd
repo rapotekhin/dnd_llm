@@ -1,7 +1,8 @@
 class_name SidePanel
 extends PanelContainer
-## Right panel of the game screen: the character (HP, AC, coins, inventory), where the player is,
-## and the deterministic buttons the engine builds itself (ADR-0009 §4): exits and the NPCs of the room.
+## The left column of the game screen: the hero, those who are here and the deterministic buttons the engine builds itself
+## (ADR-0009 §4). v0.8.1: where the hero is and the hour go to the strip over the field, the acts of the place, the ways
+## out and the deeds to the bar under it.
 ## v0.7.22.23 (the UI audit С1, И2–И4, П4): a person or a creature is one row — the name talks, «▾» or the right
 ## button opens the rest of its acts under it; the exits, «Осмотреться» and «Обыскать» stay pinned under the list.
 
@@ -35,53 +36,46 @@ signal letter_requested(npc_id: String)  # v0.7.48
 signal faith_requested  # v0.7.49
 signal arena_requested(site_id: String)  # v0.7.45
 
-var _content: VBoxContainer
+var _content: Container
 var _scroll: ScrollContainer
-var _footer: VBoxContainer
-var _exit_list: VBoxContainer  # the exits scroll under the pinned look buttons: many ways must not push the panel up
-const EXIT_ROWS := 4  # the exits' fixed height in rows (v0.7.39)
+var _bar: ActionBar
+var _strip: HBoxContainer  # over the field: the place, the hour, the weather
+var _exit_list: HFlowContainer
 var _open := ""  # the row whose acts are open ("npc:<id>", "cr:<id>"), closed when the hero leaves the room
 var _open_room := ""
 
 
 func _ready() -> void:
 	theme_type_variation = UiTheme.SIDE
+	if owner != null:
+		_bar = owner.get_node_or_null("%Bar")
+		_strip = owner.get_node_or_null("%Strip")
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 12)
 	add_child(col)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	col.add_child(scroll)
-	_scroll = scroll
+	_scroll = ScrollContainer.new()
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(_scroll)
 	_content = VBoxContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.add_theme_constant_override("separation", 10)
-	scroll.add_child(_content)
-	_footer = VBoxContainer.new()
-	_footer.name = "SideFooter"
-	_footer.add_theme_constant_override("separation", 6)
-	col.add_child(_footer)
-	col.add_child(BackendStatus.new())
-	var tools := HBoxContainer.new()
-	tools.add_theme_constant_override("separation", 8)
-	col.add_child(tools)
+	_scroll.add_child(_content)
+	if _bar == null:  # the panel alone
+		_bar = ActionBar.new()
+		col.add_child(_bar)
+	if _strip == null:
+		_strip = HBoxContainer.new()
+		col.add_child(_strip)
 	for spec: Array in [["SheetButton", "BTN_CHARACTER_SHEET", sheet_requested, "character_sheet"], ["MapButton", "BTN_MAP", map_requested, "map"],
-			["JournalButton", "BTN_JOURNAL", journal_requested, "journal"]]:
+			["JournalButton", "BTN_JOURNAL", journal_requested, "journal"], ["GameMenuButton", "BTN_MENU", menu_requested, "pause_menu"]]:
 		var b := Button.new()
 		b.name = spec[0]
 		b.text = spec[1]
+		b.flat = true
 		b.tooltip_text = Hotkeys.tip(tr(spec[1]), spec[3], SaveManager.keys)  # v0.7.22.27
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 56)
 		b.pressed.connect((spec[2] as Signal).emit)
-		tools.add_child(b)
-	var menu := Button.new()
-	menu.text = "BTN_MENU"
-	menu.tooltip_text = Hotkeys.tip(tr("BTN_MENU"), "pause_menu", SaveManager.keys)
-	menu.custom_minimum_size = Vector2(0, 56)
-	menu.pressed.connect(menu_requested.emit)
-	col.add_child(menu)
+		_bar.windows.add_child(b)
 	EventBus.state_changed.connect(_rebuild)
 	EventBus.turn_started.connect(_on_turn)
 	EventBus.turn_finished.connect(_on_turn_finished)
@@ -103,10 +97,11 @@ func _on_backend(_s: int, _d: String) -> void:
 
 func _rebuild() -> void:
 	# Detach before freeing: a queued node keeps its name, and the rebuilt button would get renamed.
-	for box: Container in [_content, _footer]:
+	for box: Container in [_content, _strip]:
 		for c in box.get_children():
 			box.remove_child(c)
 			c.queue_free()
+	_bar.clear()
 	if not GameState.has_session():
 		return
 	var s := GameState.session
@@ -116,7 +111,6 @@ func _rebuild() -> void:
 	if not _open.is_empty():
 		_show_open.call_deferred()
 	var c := s.character
-	var items: Dictionary = Catalog.data["items"]
 	var world := GameState.world()
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 
@@ -126,14 +120,18 @@ func _rebuild() -> void:
 	hp.name = "HeroHp"
 	if int(c["hp"]) * 2 <= int(c["max_hp"]):
 		hp.add_theme_color_override("font_color", UiTheme.BAD)
+	_hp_bar(c)
 	var next_xp := LevelUp.xp_for(Catalog.data, int(c.get("level", 1)) + 1)
 	var xp := tr("SIDE_HERO_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}) if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data) else ""
-	_line(" · ".join([Money.format(int(c["gold_cp"])), xp, tr("SIDE_HERO_TIME").format({"day": CalendarRules.text(world.world, s.day), "part": TimeRules.part_name(s, Catalog.data),
-		"clock": TimeRules.clock(s)})].filter(func(x: String) -> bool: return not x.is_empty())), true).name = "HeroTime"
-	_weather_line(s)
+	_line(" · ".join([Money.format(int(c["gold_cp"])), xp].filter(func(x: String) -> bool: return not x.is_empty())), true).name = "HeroMoney"
 	_festival_line(s, world)
 	if NeedRules.on(s):
 		_needs(s, can_act)
+	var chips := EffectChips.new()  # what is on the hero, under the hero (v0.8.1)
+	_content.add_child(chips)
+	chips.refresh()
+	var column := _content
+	_content = _bar.page(ActionBar.DEEDS)
 	_craft_row(s, can_act)
 	_work_row(s, can_act)
 	_study_row(s, can_act)
@@ -142,6 +140,7 @@ func _rebuild() -> void:
 	_office_row(s, can_act)
 	_faith_row(s, can_act)
 	_property_row(s)
+	_content = column
 	if LevelUp.can_level_up(c, Catalog.data):
 		var lv := _button(tr("BTN_LEVEL_UP"), level_up_requested.emit, not GameState.is_busy())
 		lv.name = "LevelUpButton"
@@ -154,9 +153,7 @@ func _rebuild() -> void:
 		db.theme_type_variation = UiTheme.ACCENT_BUTTON
 	if TimeRules.dark(s, Catalog.data):
 		_line(tr("SIDE_DARK"), true).add_theme_color_override("font_color", UiTheme.WARN)
-	var room := world.room(s.room_id)
-	_subheading("SIDE_PLACE")
-	_line(world.place_path(s.room_id), false).name = "PlacePath"  # v0.7.22.24: location › site › room
+	_strip_lines(s, world)
 	if not s.in_conversation() and CrimeRules.held(s):
 		_arrest(s, can_act)
 	if not s.in_conversation():
@@ -224,6 +221,7 @@ func _rebuild() -> void:
 		# «Взаимодействие с местом» (v0.7.22.7, big test #17): every thing of the room in its own window — take one,
 		# open, look closer, «Забрать всё».
 		PropRules.ensure_wares(s, Catalog.data, s.room_id)  # the trader's wares (v0.7.22.8)
+		_content = _bar.page(ActionBar.PLACE)
 		var n_things := PropRules.room_props(s, s.room_id).size() + CrimeRules.bodies_here(s, Catalog.data).size()
 		var pb := Button.new()
 		pb.name = "PlaceButton"
@@ -299,20 +297,49 @@ func _rebuild() -> void:
 		var why := ExplorationRules.can_short_rest(s, Catalog.data)
 		short.disabled = GameState.is_busy() or not why.is_empty()
 		short.tooltip_text = tr(why) if not why.is_empty() else ""
+		_content = column
 	else:
+		_content = _bar.talk_acts
 		_quest_buttons(s, can_act, s.npc_id)  # take the quest from, or hand the thing to, the one you talk to (v0.7.2)
+		_npc_acts(s, world.npc(s.npc_id), s.npc_id, can_act)
+		_content = column
+	_bar.set_talk(s.in_conversation())
+	_bar.tidy()
 
-	# Only what is worn and wielded; the full inventory is on the character sheet.
-	_subheading("SIDE_INVENTORY")
-	var inv: Dictionary = c.get("inventory", {})
-	var shown := 0
-	for slot: String in CharacterRules.SLOTS:
-		var id := str(c.get("equipped", {}).get(slot, ""))
-		if not id.is_empty():
-			_line("◆ " + ItemRules.display_name(items, s.items, id), true)
-			shown += 1
-	if inv.size() > shown:
-		_line(tr("SIDE_MORE_ITEMS").format({"n": inv.size() - shown}), true)
+
+## The hero's life as a bar under the line of numbers.
+func _hp_bar(c: Dictionary) -> void:
+	var bar := ProgressBar.new()
+	bar.name = "HeroBar"
+	bar.max_value = float(c["max_hp"])
+	bar.value = float(c["hp"])
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 10)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var share := float(c["hp"]) / maxf(1.0, float(c["max_hp"]))
+	var fill := UiTheme.OK if share > 0.5 else UiTheme.WARN if share > 0.25 else UiTheme.BAD
+	bar.add_theme_stylebox_override("fill", UiTheme.box(fill, fill, 0, 0, 2))
+	bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 2))
+	_content.add_child(bar)
+
+
+## The strip over the field: the place path, the date and hour, the weather; one line, the long path cut by «…».
+func _strip_lines(s: GameSession, world: WorldView) -> void:
+	var column := _content
+	_content = _strip
+	var path := _line(world.place_path(s.room_id), false)  # v0.7.22.24: location › site › room
+	path.name = "PlacePath"
+	path.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	path.clip_text = true
+	path.mouse_filter = Control.MOUSE_FILTER_STOP
+	path.tooltip_text = path.text
+	_line(tr("SIDE_HERO_TIME").format({"day": CalendarRules.text(world.world, s.day), "part": TimeRules.part_name(s, Catalog.data),
+		"clock": TimeRules.clock(s)}), true).name = "HeroTime"
+	_weather_line(s)
+	for l: Node in _strip.get_children():
+		(l as Label).autowrap_mode = TextServer.AUTOWRAP_OFF
+	path.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_content = column
 
 
 ## A person of the scene in one row (v0.7.22.23): the full name talks, «Торговать» for a trader, «▾» (or the right
@@ -328,6 +355,11 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 	var bw := BondRules.word(s.character, Catalog.data, id)  # v0.7.31
 	var role := _line("%s · %s%s" % [n.get("role", ""), att, (" · " + bw) if not bw.is_empty() else ""], true)
 	role.name = "Role_" + id
+	_npc_acts(s, n, id, can_act)
+
+
+## What can be done with a person, under its row or on the bar while talking to it.
+func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void:
 	var acts := _acts("Acts_" + id)
 	_flow(acts, tr("BTN_POCKETS_SHORT"), pockets_requested.emit.bind(id), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty(), "Pockets_" + id, tr("BTN_POCKETS").format({"name": n.get("name", id)}))
 	if not JobRules.of(s, Catalog.data, id).is_empty():  # v0.7.26
@@ -480,11 +512,7 @@ func _creature_head(row: HBoxContainer, s: GameSession, cr: Dictionary) -> Contr
 ## The pinned part under the list (v0.7.22.23, the UI audit С1): sneaking, «Осмотреться» and «Обыскать» side by side,
 ## the exits one to a row in the small font — never under the scroll.
 func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
-	var head := Label.new()
-	head.text = "SIDE_EXITS"
-	head.theme_type_variation = UiTheme.MUTED_LABEL
-	head.add_theme_color_override("font_color", UiTheme.ACCENT)
-	_footer.add_child(head)
+	var place := _bar.page(ActionBar.PLACE)
 	var sneak := CheckButton.new()
 	sneak.name = "SneakToggle"
 	sneak.text = "BTN_SNEAK"
@@ -497,26 +525,17 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		var err := GameState.set_sneaking(on)
 		if not err.is_empty():
 			EventBus.message.emit(tr(err)))
-	_footer.add_child(sneak)
-	var looks := HBoxContainer.new()
-	looks.add_theme_constant_override("separation", 6)
-	_footer.add_child(looks)
+	place.add_child(sneak)
 	for spec: Array in [["LookButton", "BTN_LOOK", "perception"], ["SearchButton", "BTN_SEARCH", "investigation"]]:
 		var skill: String = spec[2]
-		var lb := _row_button(looks, tr(spec[1]), _try.bind(GameState.search_room.bind(skill)), can_act)
+		var lb := _row_button(place, tr(spec[1]), _try.bind(GameState.search_room.bind(skill)), can_act)
 		lb.name = spec[0]
 		lb.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lb.tooltip_text = tr(spec[1] + "_TIP")
-	var exits_scroll := ScrollContainer.new()
-	exits_scroll.name = "ExitsScroll"
-	exits_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_footer.add_child(exits_scroll)
-	_exit_list = VBoxContainer.new()
-	_exit_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_exit_list.add_theme_constant_override("separation", 6)
-	exits_scroll.add_child(_exit_list)
-	_exit_list.minimum_size_changed.connect(_fit_exits.bind(exits_scroll))
-	_fit_exits.call_deferred(exits_scroll)
+	_exit_list = HFlowContainer.new()
+	_exit_list.add_theme_constant_override("h_separation", 6)
+	_exit_list.add_theme_constant_override("v_separation", 6)
+	_bar.page(ActionBar.EXITS).add_child(_exit_list)
 	var trapped := {}
 	for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):
 		trapped[ft["to"]] = ft["secret"]
@@ -608,11 +627,8 @@ func _needs(s: GameSession, can_act: bool) -> void:
 		specs.append(["FillWater", "BTN_FILL_WATER", "fill"])
 	if specs.is_empty():
 		return
-	var acts := HBoxContainer.new()
-	acts.add_theme_constant_override("separation", 6)
-	_content.add_child(acts)
 	for spec: Array in specs:
-		var b := _row_button(acts, tr(spec[1]), _need.bind(spec[2]), can_act)
+		var b := _row_button(_bar.page(ActionBar.PLACE), tr(spec[1]), _need.bind(spec[2]), can_act)
 		b.name = spec[0]
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
@@ -856,17 +872,6 @@ func _need(act: String) -> void:
 
 ## The exits have a fixed height of EXIT_ROWS rows whatever their number (v0.7.39: the panel grew with a room of many
 ## ways); the rest scroll by the wheel.
-func _fit_exits(scroll: ScrollContainer) -> void:
-	if not is_instance_valid(scroll) or not is_instance_valid(_exit_list):
-		return
-	var row := 0.0
-	for line: Node in _exit_list.get_children():
-		row = maxf(row, (line as Control).get_combined_minimum_size().y)
-	if row <= 0.0:
-		row = 28.0
-	scroll.custom_minimum_size.y = row * EXIT_ROWS + float(_exit_list.get_theme_constant("separation")) * (EXIT_ROWS - 1)
-
-
 ## A button that fills its place and cuts a long text with «…» (the whole one is in the tooltip).
 func _row_button(parent: Container, text: String, action: Callable, enabled: bool) -> Button:
 	var b := Button.new()
@@ -975,7 +980,7 @@ func _door_acts(to: String, ways: Array[Dictionary], can_act: bool) -> void:
 	acts.name = "DoorActs_" + to
 	acts.add_theme_constant_override("h_separation", 6)
 	acts.add_theme_constant_override("v_separation", 6)
-	_exit_list.add_child(acts)
+	_bar.page(ActionBar.EXITS).add_child(acts)
 	var dcs := WayRules.dcs(s, Catalog.data, s.room_id, to)
 	var d := WayRules.def(Catalog.data, s.room_id, to)
 	var mat := ThingRules.material(Catalog.data, d)

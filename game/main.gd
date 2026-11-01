@@ -44,7 +44,7 @@ func _go(screen: String, args: Dictionary) -> void:
 		"menu":
 			next = UiScenes.open(MainMenu.SCENE)
 		"game":
-			next = CombatScreen.new() if GameState.has_session() and CombatRules.active(GameState.session) else GameScreen.new()
+			next = CombatScreen.new() if GameState.has_session() and CombatRules.active(GameState.session) else UiScenes.open(GameScreen.SCENE)
 		"combat":
 			next = CombatScreen.new()
 		"death":

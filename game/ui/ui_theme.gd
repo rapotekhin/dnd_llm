@@ -15,7 +15,7 @@ const ACCENT_BRIGHT := Color("#e6c47e")
 const OK := Color("#8fb36f")
 const BAD := Color("#c8705f")
 const TILES := {  ## squares of a map, plain until the sprites (v0.8.0)
-	"#": Color("#4a3d2f"), ".": Color("#2b231c"), "=": Color("#3d3226"), "+": Color("#8a6a3c"), "%": Color("#33301c"), "^": Color("#6a2f22"),
+	"#": Color("#5e4d3a"), ".": Color("#3b3027"), "=": Color("#4f4132"), "+": Color("#8a6a3c"), "%": Color("#33301c"), "^": Color("#6a2f22"),
 	"~": Color("#2c4a5c"), "o": Color("#0d0b09"), "T": Color("#27402a"), "B": Color("#5a4c3c"),
 }
 const WARN := Color("#d1a14a")
