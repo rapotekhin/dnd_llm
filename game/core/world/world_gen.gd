@@ -272,7 +272,10 @@ static func reach_edges(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 		return (a == s.room_id and b != s.room_id) or (a != s.room_id and b != s.room_id and locs.find(world.location_id(a)) < locs.find(world.location_id(b))))
 	var out: Array[Dictionary] = []
 	for rid: String in rooms:
-		for e: Dictionary in open_edges(s, data, rid):
+		var edges := open_edges(s, data, rid)
+		if edges.is_empty() or not LayoutRules.no_way(s, data, rid, true).is_empty():
+			continue
+		for e: Dictionary in edges:
 			out.append({"room_id": rid, "room": str(world.room(rid).get("name", rid)), "location": str(world.location(world.location_id(rid)).get("name", "")),
 				"edge": int(e["index"]), "text": str(e.get("text", "")), "terrain": e.get("terrain", []), "new_location": bool(e.get("new_location", false))})
 	return out
@@ -453,6 +456,12 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		else LayoutRules.too_many(data, main.get("tags", []), defs.size())
 	if not full.is_empty():
 		return {"reason": full}
+	var lib := LayoutRules.lib(data)
+	var first_site: Dictionary = (spec.get("sites", []) as Array).filter(func(st: Variant) -> bool: return st is Dictionary and str(st.get("key", "")) == str(defs[0]["site"])).front() if not str(defs[0]["site"]).is_empty() and spec.get("sites") is Array and not (spec["sites"] as Array).is_empty() else main
+	var outer := LayoutGen.shape_of(lib, LayoutGen.kind_of(lib, first_site.get("tags", [])), bool(defs[0]["indoor"])) == LayoutRules.OPEN
+	var no_way := LayoutRules.no_way(s, data, at, outer)
+	if not no_way.is_empty():
+		return {"reason": no_way}
 	for st: Variant in spec.get("sites", []) if spec.get("sites") is Array else []:
 		if not (st is Dictionary) or str(st.get("key", "")).is_empty() or sites.has(str(st["key"])):
 			return {"reason": "у каждого объекта из sites свой key — его называют комнаты в site"}

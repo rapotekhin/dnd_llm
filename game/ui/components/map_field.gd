@@ -23,6 +23,9 @@ var lib: Dictionary = {}
 var names: Dictionary = {}  ## the name of a way out by the room it leads to
 var hero_mark := ""  ## the hero's letter; empty — no hero on this map (the author's preview)
 var clicks := true  ## false while a conversation holds the field
+var things: Array[Dictionary] = []  ## those who stand on the map and what lies on it: MapSpots.of (v0.8.2)
+var labels := false  ## every name is written while the key is held
+var instant := false  ## a walk ends at once: the playtests' game time does not come from frames
 
 var _tile := BASE_TILE
 var _corner := Vector2.ZERO  ## where the map's corner is on the field
@@ -65,8 +68,7 @@ func place_hero(cell: Vector2i, mark: String, walkers: Array[Dictionary]) -> voi
 		_seat(walkers)
 	else:
 		for i: int in walkers.size():
-			_tokens[i]["mark"] = walkers[i]["mark"]
-			_tokens[i]["name"] = walkers[i]["name"]
+			_tokens[i].merge({"ref": walkers[i]["ref"], "mark": walkers[i]["mark"], "name": walkers[i]["name"]}, true)
 	_aim()
 	queue_redraw()
 
@@ -76,7 +78,7 @@ func _seat(walkers: Array[Dictionary]) -> void:
 	var spots := WalkRules.around(map, lib, Vector2i(_pos), walkers.size()) if not map.is_empty() else ([] as Array[Vector2i])
 	for i: int in walkers.size():
 		var at := Vector2(spots[i]) if i < spots.size() else _pos
-		_tokens.append({"mark": walkers[i]["mark"], "name": walkers[i]["name"], "pos": at})
+		_tokens.append({"ref": walkers[i]["ref"], "mark": walkers[i]["mark"], "name": walkers[i]["name"], "pos": at})
 
 
 func walking() -> bool:
@@ -84,6 +86,13 @@ func walking() -> bool:
 
 
 func walk(steps: Array[Vector2i]) -> void:
+	if instant and not steps.is_empty():
+		_pos = Vector2(steps[-1])
+		_aim()
+		queue_redraw()
+		stepped.emit(steps[-1])
+		arrived.emit()
+		return
 	_path = steps.duplicate()
 	_follow = true
 	set_process(not _path.is_empty())
@@ -177,6 +186,33 @@ func hero_cell() -> Vector2i:
 	return Vector2i(_pos.round())
 
 
+## The point of a square's middle, on the field.
+func cell_point(cell: Vector2i) -> Vector2:
+	return _corner + (Vector2(cell) + Vector2(0.5, 0.5)) * _tile
+
+
+## Who or what is on a square: its ref, "" — nothing.
+func ref_at(cell: Vector2i) -> String:
+	for tok: Dictionary in _tokens:
+		if Vector2i((tok["pos"] as Vector2).round()) == cell:
+			return str(tok["ref"])
+	for th: Dictionary in things:
+		if Vector2i(int(th["x"]), int(th["y"])) == cell:
+			return str(th["ref"])
+	return ""
+
+
+## The square of a ref, (-1, -1) — not on the map.
+func cell_of(ref: String) -> Vector2i:
+	for tok: Dictionary in _tokens:
+		if str(tok["ref"]) == ref:
+			return Vector2i((tok["pos"] as Vector2).round())
+	for th: Dictionary in things:
+		if str(th["ref"]) == ref:
+			return Vector2i(int(th["x"]), int(th["y"]))
+	return Vector2i(-1, -1)
+
+
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var b := event as InputEventMouseButton
@@ -241,10 +277,33 @@ func _draw() -> void:
 	_draw_path(t)
 	for e: Dictionary in map["exits"]:
 		_exit_label(e, t)
+	for th: Dictionary in things:
+		_thing(th)
 	for tok: Dictionary in _tokens:
 		_token(tok["pos"], str(tok["mark"]), str(tok["name"]), UiTheme.OK, 0.34)
 	if not hero_mark.is_empty():
 		_token(_pos, hero_mark, "", UiTheme.ACCENT_BRIGHT, 0.4)
+
+
+## A person is a round token, a beast a smaller one, a thing a square. The name shows under the cursor or while the key is held.
+func _thing(th: Dictionary) -> void:
+	var cell := Vector2i(int(th["x"]), int(th["y"]))
+	var name_on := labels or cell == _hover
+	var label := str(th["name"]) if name_on else ""
+	match str(th["kind"]):
+		"npc":
+			var a := int(th["attitude"])
+			_token(Vector2(cell), str(th["mark"]), label, UiTheme.BAD if a <= -2 else UiTheme.OK if a >= 2 else UiTheme.TEXT, 0.38)
+		"creature":
+			_token(Vector2(cell), str(th["mark"]), label, UiTheme.WARN, 0.32)
+		_:
+			var mid := cell_point(cell)
+			var half := _tile * 0.24
+			var colour := UiTheme.ACCENT if str(th["kind"]) == "prop" else UiTheme.BAD if str(th["kind"]) == "body" else UiTheme.MUTED
+			draw_rect(Rect2(mid - Vector2(half, half), Vector2(half, half) * 2.0), Color(UiTheme.PANEL, 0.9))
+			draw_rect(Rect2(mid - Vector2(half, half), Vector2(half, half) * 2.0), colour, false, maxf(1.5, _tile * 0.06))
+			if not label.is_empty():
+				_name(mid + Vector2(0.0, half + 16.0), label)
 
 
 func _draw_path(t: float) -> void:
@@ -281,6 +340,11 @@ func _token(pos: Vector2, mark: String, label: String, colour: Color, part: floa
 	var w := font.get_string_size(mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
 	draw_string(font, mid + Vector2(-w / 2.0, r * 0.38), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, colour)
 	if not label.is_empty():
-		var lw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x
-		draw_string_outline(font, mid + Vector2(-lw / 2.0, r + 16.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2, 3, UiTheme.BG)
-		draw_string(font, mid + Vector2(-lw / 2.0, r + 16.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2, UiTheme.TEXT)
+		_name(mid + Vector2(0.0, r + 16.0), label)
+
+
+func _name(at: Vector2, text: String) -> void:
+	var font := get_theme_default_font()
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x
+	draw_string_outline(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2, 3, UiTheme.BG)
+	draw_string(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2, UiTheme.TEXT)

@@ -64,13 +64,19 @@ var _goal := Vector2i.ZERO  # where the hero walks, past doors too
 var _exit_to := ""  # the room beyond the way out at the end of the walk
 var _beyond := ""  # the room behind the door the walk stops at
 var _at_door := false  # the door waits for the end of the master's turn
+var _after := Callable()  # the act at the end of the walk (v0.8.2)
+var _menu: PanelContainer
+var _menu_box: VBoxContainer
+var _menu_ref := ""
+var _side: SidePanel
+var _field_room := ""  # the room the field showed last: a move inside it is walked, not jumped
 
 
 func required() -> Dictionary:
 	return {"%Side": "PanelContainer", "%Strip": "HBoxContainer", "%Field": "Control", "%Dim": "ColorRect", "%TalkCard": "CenterContainer",
 		"%PartnerCard": "VBoxContainer", "%PartnerToken": "PanelContainer", "%PartnerMark": "Label", "%PartnerName": "Label", "%PartnerLine": "Label",
 		"%Bar": "PanelContainer", "%OfflineBanner": "Label", "%QuestTrack": "Button", "%Chat": "ScrollContainer", "%Thinking": "Label", "%Cancel": "Button",
-		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "LineEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HBoxContainer"}
+		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "LineEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HBoxContainer", "%ThingMenu": "PanelContainer", "%ThingActs": "VBoxContainer"}
 
 
 func _ready() -> void:
@@ -122,7 +128,11 @@ func _ready() -> void:
 	brush.pressed.connect(GameState.draw_image)
 	_attach_chip = UiScenes.need(self, "%AttachChip")
 
+	_menu = UiScenes.need(self, "%ThingMenu")
+	_menu_box = UiScenes.need(self, "%ThingActs")
 	var side: SidePanel = UiScenes.need(self, "%Side")
+	_side = side
+	side.approach_requested.connect(_approach)
 	side.menu_requested.connect(func() -> void: _pause.open())
 	side.sheet_requested.connect(func() -> void: _sheet.open())
 	side.map_requested.connect(func() -> void: _map.open())
@@ -244,12 +254,15 @@ func _mount(w: Control) -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _heists, _org, _office, _image]
+	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _heists, _org, _office, _image]
 
 
 # _input, not _unhandled_input: the focused chat LineEdit would swallow Esc.
 # v0.7.22.27 (as in BG3): the keys work outside the input; Esc leaves the input, Enter or a letter comes back to it.
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.is_action("map_labels"):
+		_field.labels = event.is_pressed()
+		_field.queue_redraw()
 	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo():
 		return
 	var open := _overlays().filter(func(o: Control) -> bool: return o.visible)
@@ -356,11 +369,23 @@ func _refresh_field(s: GameSession) -> void:
 	var walkers: Array[Dictionary] = []
 	for id: String in Being.followers(s):
 		var who := str(GameState.world().npc(id).get("name", id))
-		walkers.append({"mark": who.left(1), "name": who.get_slice(" ", 0)})
+		walkers.append({"ref": "npc:" + id, "mark": who.left(1), "name": who.get_slice(" ", 0)})
 	for cr: Dictionary in CreatureRules.here(s, s.room_id):  # the hero's animals walk along
-		if str(cr["state"]) == PropertyRules.TAME:
-			walkers.append({"mark": str(cr["name"]).left(1), "name": str(cr["name"]).get_slice(" ", 0)})
+		if str(cr["state"]) == PropertyRules.TAME or bool(cr.get("led", false)) or bool(cr.get("ally", false)):
+			walkers.append({"ref": "cr:" + str(cr["id"]), "mark": str(cr["name"]).left(1), "name": str(cr["name"]).get_slice(" ", 0)})
+	_field.things = MapSpots.of(s, Catalog.data, view).filter(func(t: Dictionary) -> bool:
+		return str(t["kind"]) != "station" or _side.mark_has_acts(str(t["id"])))
+	if s.room_id == _field_room and at != _field.hero_cell() and not _field.walking():  # the master's words move the hero
+		var steps := WalkRules.path(view, Catalog.data["layouts"], _field.hero_cell(), at)
+		if not steps.is_empty():
+			_beyond = ""
+			_exit_to = ""
+			_field.instant = GameState.instant_walk
+			_field.walk(steps)
+	_field_room = s.room_id
 	_field.place_hero(at, str(s.character.get("name", "?")).left(1), walkers)
+	if _menu.visible:
+		_show_menu(_menu_ref)
 
 
 ## A click on the map: the hero walks there by himself; a door is crossed by GameState.go, as the buttons do.
@@ -368,19 +393,74 @@ func _on_cell(cell: Vector2i) -> void:
 	var s := GameState.session if GameState.has_session() else null
 	if s == null or s.in_conversation():
 		return
+	_menu.visible = false
+	var ref := _field.ref_at(cell)
+	if not ref.is_empty():
+		_touch(ref)
+		return
 	var plan := WalkRules.plan(_field.map, Catalog.data["layouts"], _field.hero_cell(), cell)
 	if plan.is_empty():
 		return
 	_field.stop()
+	_after = Callable()
 	_goal = cell
 	_exit_to = str(plan["exit"])
 	_at_door = false
 	_walk(plan["path"])
 
 
+## A click on someone or something: a person's menu opens from where it can be spoken to, a thing is used from beside it.
+func _touch(ref: String) -> void:
+	var thing := ref.begins_with("prop:") or ref.begins_with("body:")
+	if thing:
+		_approach(ref, "touch", _side.use_thing.bind(ref))
+	else:
+		_approach(ref, "touch" if ref.begins_with("station:") else "talk", _show_menu.bind(ref))
+
+
+## The hero walks into reach of `ref`, then the act. No way there or a talk going on — the act from where the hero stands.
+func _approach(ref: String, reach: String, act: Callable) -> void:
+	var s := GameState.session
+	var to := _field.cell_of(ref)
+	var steps: Array[Vector2i] = []
+	if to.x >= 0 and not s.in_conversation():
+		steps = WalkRules.near(_field.map, Catalog.data["layouts"], _field.hero_cell(), to, int(MapSpots.cfg(Catalog.data)["reach"][reach]), s.room_id)
+	if steps.is_empty():
+		act.call()
+		return
+	_field.stop()
+	_exit_to = ""
+	_at_door = false
+	_after = act
+	_goal = steps[-1]
+	_walk(steps)
+
+
+func _show_menu(ref: String) -> void:
+	_menu_ref = ref
+	for c: Node in _menu_box.get_children():
+		_menu_box.remove_child(c)
+		c.queue_free()
+	if not _side.menu(_menu_box, ref):
+		_menu.visible = false
+		return
+	for b: Node in _menu_box.find_children("*", "BaseButton", true, false):
+		(b as BaseButton).pressed.connect(_close_menu)
+	_menu.visible = true
+	await get_tree().process_frame  # a flow knows its height only after a layout
+	_menu.reset_size()
+	var at := _field.global_position + _field.cell_point(_field.cell_of(ref)) + Vector2(28, -20)
+	_menu.global_position = at.clamp(Vector2(8, 8), get_viewport_rect().size - _menu.size - Vector2(8, 8))
+
+
+func _close_menu() -> void:
+	_menu.visible = false
+
+
 func _walk(steps: Array[Vector2i]) -> void:
 	var leg := WalkRules.leg(_field.map, steps, GameState.session.room_id)
 	_beyond = str(leg["room"])
+	_field.instant = GameState.instant_walk
 	_field.walk(leg["steps"])
 
 
@@ -390,6 +470,11 @@ func _on_stepped(cell: Vector2i) -> void:
 
 func _on_arrived() -> void:
 	var to := _beyond if not _beyond.is_empty() else _exit_to
+	if to.is_empty() and _after.is_valid():
+		var act := _after
+		_after = Callable()
+		act.call()
+		return
 	if to.is_empty() or not GameState.has_session():
 		return
 	if GameState.is_busy():  # ходить можно, а дверь ждёт конца хода мастера

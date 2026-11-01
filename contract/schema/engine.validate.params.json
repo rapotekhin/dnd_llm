@@ -421,6 +421,32 @@
       "title": "AdvanceTimeEffect",
       "type": "object"
     },
+    "ApproachEffect": {
+      "additionalProperties": false,
+      "description": "Someone walks up to someone or something inside the room (0.104.0). The engine finds the way; the master names no\nsquares. Leaving the room is `move`.",
+      "properties": {
+        "kind": {
+          "const": "approach",
+          "default": "approach",
+          "title": "Kind",
+          "type": "string"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        },
+        "who": {
+          "default": "hero",
+          "title": "Who",
+          "type": "string"
+        }
+      },
+      "required": [
+        "to"
+      ],
+      "title": "ApproachEffect",
+      "type": "object"
+    },
     "BankEffect": {
       "additionalProperties": false,
       "description": "A lender the world lacks (0.60.0): «Горм, ты ведь ссужаешь под залог?». A scene NPC (or `new` — the person\ncreate:npc made in this turn) takes deposits, lends against a collateral or keeps a vault; rates within\nrules.bank.make. Deposits, loans and the vault are the buttons of the «Банк» window — the engine's acts.",
@@ -4516,6 +4542,18 @@
           "title": "Name",
           "type": "string"
         },
+        "near": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Near"
+        },
         "owner": {
           "anyOf": [
             {
@@ -6339,6 +6377,7 @@
       "discriminator": {
         "mapping": {
           "advance_time": "#/$defs/AdvanceTimeEffect",
+          "approach": "#/$defs/ApproachEffect",
           "cast": "#/$defs/CastEffect",
           "coins": "#/$defs/CoinsEffect",
           "condition": "#/$defs/ConditionEffect",
@@ -6587,6 +6626,9 @@
       "oneOf": [
         {
           "$ref": "#/$defs/MoveEffect"
+        },
+        {
+          "$ref": "#/$defs/ApproachEffect"
         },
         {
           "$ref": "#/$defs/DamageEffect"

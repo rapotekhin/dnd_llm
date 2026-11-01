@@ -31,6 +31,7 @@
 		"option_1": ["1", "game"],
 		"option_2": ["2", "game"],
 		"option_3": ["3", "game"],
+		"map_labels": ["Alt", "game"],
 		"quick_save": ["F5", "game"],
 		"quick_load": ["F9", "game"],
 		"end_turn": ["Space", "combat"],

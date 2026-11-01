@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.103.0"
+PROTOCOL_VERSION = "0.104.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -199,6 +199,7 @@ class SceneNpc(_In):
     under: str = ""  # 0.42.0: the hero's spells on it and until when — «Очарование личности — до 10:35»
     animals: list[str] = Field(default_factory=list)  # 0.86.0: a dealer's beasts and vehicles — «Мул [mule] 8 зм»
     god: str = ""  # 0.93.0: whom it serves — «вера: Чонтия (Светлая Мать), одной веры с героем»
+    near: str = ""  # 0.104.0: how far from the hero, in words: «рядом», «в нескольких шагах», «в другом конце»
 
 
 class SceneProp(_In):
@@ -215,6 +216,7 @@ class SceneProp(_In):
     locked: bool = False  # 0.28.0: locked — a key, thieves' tools or force (effect unlock)
     contents: str = ""  # 0.28.0: «Кинжал ×2 [dagger], Свеча [candle]» — what lies inside
     source: str = ""  # 0.70.0: water | foul_water — water is drawn here
+    near: str = ""  # 0.104.0: how far from the hero, in words
 
 
 class Scene(_In):
@@ -249,6 +251,8 @@ class Scene(_In):
     site_description: str = ""
     site_owner: str = ""  # its owner's name, if any
     private: bool = False  # the room is not for anyone to walk into (a kitchen, a bedroom)
+    spots: list[str] = Field(default_factory=list)  # 0.104.0: places of the room to name in `approach` and `near`: «очаг [hearth]»
+    hero_near: str = ""  # 0.104.0: the place the hero stands by: «стойка»
 
 
 class InventoryLine(_In):
@@ -621,6 +625,15 @@ class MoveEffect(_Out):
     npcs: list[str] = Field(default_factory=list)  # NPCs of the scene who go along (0.33.0): as grant:follow, checked by the engine
 
 
+class ApproachEffect(_Out):
+    """Someone walks up to someone or something inside the room (0.104.0). The engine finds the way; the master names no
+    squares. Leaving the room is `move`."""
+
+    kind: Literal["approach"] = "approach"
+    who: str = "hero"  # "hero" or an npc_id of the scene
+    to: str  # an npc_id or prop_id of the scene, a place of scene.spots, or "hero"
+
+
 class DamageEffect(_Out):
     kind: Literal["damage"] = "damage"
     severity: DamageSeverity
@@ -709,6 +722,7 @@ class PropSpec(_Out):
     key: str | None = None  # 0.28.0: the item_id of the key that opens it
     source: Literal["water", "foul_water"] | None = None  # 0.70.0: water can be drawn here (a well, a stream, a river)
     body: str | None = None  # 0.99.0: what it does on the map: table, bench, cabinet, barrel, chest, pillar, statue, tree, boulder, curtain
+    near: str | None = None  # 0.104.0: where on the map: a place of scene.spots or an npc_id of the scene; no squares
 
 
 class FurnishEffect(_Out):
@@ -1927,7 +1941,7 @@ _OpenEffect = Annotated[UnlockEffect | DoorEffect, Field(discriminator="what")]
 
 Effect = Annotated[
     Union[
-        MoveEffect, DamageEffect, HealEffect, CoinsEffect, MoveItemEffect, CastEffect, ConditionEffect, DiseaseEffect, GuiseEffect,
+        MoveEffect, ApproachEffect, DamageEffect, HealEffect, CoinsEffect, MoveItemEffect, CastEffect, ConditionEffect, DiseaseEffect, GuiseEffect,
         MakeEffect, FurnishEffect, PropStateEffect, NoteEffect, FlagEffect, EquipEffect, FillEffect, StartCombatEffect,
         AdvanceTimeEffect, RumorEffect, WeatherEffect, LetterReplyEffect, VowEffect, OwnerEffect, QuestActEffect,
         _CreateEffect, _ShiftEffect, _GrantEffect, _CrimeEffect, _GoalEffect, _UseEffect, _OpenEffect,

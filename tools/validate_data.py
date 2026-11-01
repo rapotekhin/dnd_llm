@@ -417,6 +417,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         elif site["location_id"] != room["location_id"]:
             errors.append(f"комната {rid}: объект {room['site_id']} в другой локации")
         errors += [f"комната {rid}: выход в несуществующую {x}" for x in room["exits"] if x not in rooms]
+        if not room.get("indoor") and len(room["exits"]) > layouts["open"]["ways"]:  # v0.8.2
+            errors.append(f"комната {rid}: под открытым небом не больше {layouts['open']['ways']} выходов")
         errors += [f"комната {rid}: зверь {b} — не монстр SRD" for b in room.get("beasts", []) if b not in ids["monsters"]]  # v0.7.43: wild ones to tame
         enc = room.get("encounter")
         if enc:

@@ -19,10 +19,14 @@
 		"size": [40, 40],
 		"spread": 4,
 		"box": [9, 7],
+		"box_small": [5, 4],
+		"ways": 9,
+		"ways_outer": 2,
 		"clear": 2,
 		"pond": 0.09,
 		"noise_cell": 6
 	},
+	"sound": {"tries": 12, "retry_from": 10, "way": 100, "left": 100, "stairs": 10, "side": 1, "min_reach": 0.2},
 	"kinds": {
 		"tavern": {"shape": "building", "family": "house", "limit": 6, "rooms": {"hall": {"required": true}, "kitchen": {}, "cellar": {}, "upstairs": {}}},
 		"inn": {"family": "tavern"},

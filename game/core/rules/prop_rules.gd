@@ -156,6 +156,8 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			"item_id": item, "owner": owner, "text": str(spec.get("text", "")).left(800), "state": ""}
 		if str(spec.get("source", "")) in ["water", "foul_water"]:  # water is drawn here (v0.7.34.6)
 			prop["source"] = str(spec["source"])
+		if spec.get("near") != null and not str(spec["near"]).is_empty():  # where on the map: a mark or a person (v0.8.2)
+			prop["near"] = str(spec["near"])
 		var shape := str(spec.get("body", "")) if spec.get("body") != null else ""
 		if not shape.is_empty():  # v0.7.65: what it does on the map
 			if not (ThingRules.cfg(data)["bodies"] as Dictionary).has(shape):

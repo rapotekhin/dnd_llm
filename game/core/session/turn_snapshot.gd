@@ -28,6 +28,12 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"secrets": SocialRules.secret_hints(s, data, id), "refuses": SocialRules.refuses(s, data, id), "eager": SocialRules.eager(s, data, id),
 			"follows": Being.follows(s, id), "under": SpellEffects.npc_spell_text(s, id), "animals": _animals(data, id),
 			"god": FaithRules.npc_text(s, data, id)})  # v0.7.49
+	var near := MapSpots.near_words(s, data)  # v0.8.2: no squares for the master, words
+	for n: Dictionary in npcs:
+		n["near"] = str(near.get(n["npc_id"], ""))
+	var props := _props(s, data)
+	for p: Dictionary in props:
+		p["near"] = str(near.get(p["prop_id"], ""))
 	var summaries := {}
 	if s.summaries.has("location:" + loc_id):
 		summaries["location"] = s.summaries["location:" + loc_id]
@@ -42,7 +48,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"site_owner": "герой (его имущество)" if str(world.site_of(s.room_id).get("owner", "")) == OwnerRules.HERO else str(world.npc(str(world.site_of(s.room_id).get("owner", ""))).get("name", "")), "private": not world.is_public(s.room_id),  # v0.7.22.24
 			"exits": exits, "npcs": npcs, "hooks": hooks(s, data, room), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
-			"props": _props(s, data),
+			"props": props, "spots": MapSpots.words(s, data), "hero_near": str(near.get("hero", "")),
 			"creatures": CreatureRules.snapshot(s, data, s.room_id) + EncounterRules.snapshot(s, data, s.room_id),  # v0.7.22.11, v0.7.22.12
 			"closed_exits": WayRules.closed_texts(s, data["world"], s.room_id),
 			"summons": AllyRules.summon_lines(s, data),  # v0.7.22.22

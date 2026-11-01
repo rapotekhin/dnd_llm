@@ -7,6 +7,7 @@ extends PanelContainer
 ## button opens the rest of its acts under it; the exits, «Осмотреться» and «Обыскать» stay pinned under the list.
 
 signal menu_requested
+signal approach_requested(ref: String, reach: String, act: Callable)  ## v0.8.2: the hero walks up, then the act
 signal sheet_requested
 signal map_requested
 signal journal_requested
@@ -36,6 +37,10 @@ signal letter_requested(npc_id: String)  # v0.7.48
 signal faith_requested  # v0.7.49
 signal arena_requested(site_id: String)  # v0.7.45
 
+## What a mark of the map offers: the buttons of the bar it stands for, by the start of their names (v0.8.2).
+const MARK_ACTS := {"forge": ["CraftButton"], "anvil": ["CraftButton"], "bench": ["CraftButton"], "hearth": ["CraftButton"], "altar": ["FaithButton"],
+	"stage": ["PerformButton"], "vein": ["Gather_"], "water": ["FillWater", "DrinkButton"], "bed": ["OwnBedButton", "RestButton"], "camp": ["RestButton"]}
+
 var _content: Container
 var _scroll: ScrollContainer
 var _bar: ActionBar
@@ -43,6 +48,7 @@ var _strip: HBoxContainer  # over the field: the place, the hour, the weather
 var _exit_list: HFlowContainer
 var _open := ""  # the row whose acts are open ("npc:<id>", "cr:<id>"), closed when the hero leaves the room
 var _open_room := ""
+var _near_ref := ""  # the person whose acts are being built: its buttons walk up first
 
 
 func _ready() -> void:
@@ -81,6 +87,91 @@ func _ready() -> void:
 	EventBus.turn_finished.connect(_on_turn_finished)
 	EventBus.backend_state_changed.connect(_on_backend)
 	_rebuild()
+
+
+## The act behind a button of a person or a thing: the hero walks up first (v0.8.2). Without the screen — at once.
+func _near(ref: String, reach: String, act: Callable) -> Callable:
+	return func() -> void:
+		if approach_requested.get_connections().is_empty():
+			act.call()
+		else:
+			approach_requested.emit(ref, reach, act)
+
+
+## The menu of a person or a creature on the map: its row with all the acts. False — nothing to show.
+func menu(box: Container, ref: String) -> bool:
+	var s := GameState.session if GameState.has_session() else null
+	if s == null:
+		return false
+	var can_act := not GameState.is_busy() and Backend.is_ready()
+	var column := _content
+	_content = box
+	var id := ref.get_slice(":", 1)
+	var ok := false
+	if ref.begins_with("npc:") and s.npcs_here(Catalog.data["world"], s.room_id).has(id):
+		var n := GameState.world().npc(id)
+		var a := s.attitude(id)
+		var att := tr("ATTITUDE_0" if a == 0 else ("ATTITUDE_P%d" % a if a > 0 else "ATTITUDE_M%d" % -a))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		box.add_child(row)
+		_npc_head(row, s, n, id, a, att, SocialRules.refuses(s, Catalog.data, id), can_act)
+		_line("%s · %s" % [n.get("role", ""), att], true)
+		_npc_acts(s, n, id, can_act)
+		ok = true
+	elif ref.begins_with("cr:"):
+		for cr: Dictionary in CreatureRules.here(s, s.room_id):
+			if str(cr["id"]) == id:
+				_line(CreatureRules.text(cr, Catalog.data), false)
+				_creature_acts(s, cr, can_act)
+				ok = true
+	elif ref.begins_with("station:"):
+		ok = _mark_acts(box, ref)
+	_content = column
+	return ok
+
+
+## True when a mark offers something now.
+func mark_has_acts(mark: String) -> bool:
+	return not _mark_buttons(mark).is_empty()
+
+
+func _mark_buttons(mark: String) -> Array[BaseButton]:
+	var out: Array[BaseButton] = []
+	for start: String in MARK_ACTS.get(mark, []):
+		for b: Node in _bar.find_children(start + "*", "BaseButton", true, false):
+			if not b.is_queued_for_deletion():
+				out.append(b as BaseButton)
+	return out
+
+
+## A button of the bar stands in the menu by the mark: the same act after the walk.
+func _mark_acts(box: Container, ref: String) -> bool:
+	var buttons := _mark_buttons(ref.get_slice(":", 1))
+	for b: BaseButton in buttons:
+		var copy := Button.new()
+		copy.text = (b as Button).text
+		copy.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		copy.disabled = b.disabled
+		copy.tooltip_text = b.tooltip_text
+		copy.pressed.connect(_near(ref, "touch", b.pressed.emit))
+		box.add_child(copy)
+	return not buttons.is_empty()
+
+
+## A thing of the map: its own window, a body or a plain thing — the place's.
+func use_thing(ref: String) -> void:
+	var s := GameState.session
+	var id := ref.get_slice(":", 1)
+	if ref.begins_with("prop:"):
+		var p := PropRules.find(s, s.room_id, id)
+		if QuestGen.is_board(Catalog.data, p):
+			board_requested.emit(id)
+			return
+		if not str(p.get("container", "")).is_empty():
+			container_requested.emit(id)
+			return
+	place_requested.emit()
 
 
 func _on_turn(_id: String) -> void:
@@ -361,7 +452,8 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 ## What can be done with a person, under its row or on the bar while talking to it.
 func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void:
 	var acts := _acts("Acts_" + id)
-	_flow(acts, tr("BTN_POCKETS_SHORT"), pockets_requested.emit.bind(id), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty(), "Pockets_" + id, tr("BTN_POCKETS").format({"name": n.get("name", id)}))
+	_near_ref = "npc:" + id
+	_flow(acts, tr("BTN_POCKETS_SHORT"), _near("npc:" + id, "touch", pockets_requested.emit.bind(id)), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty(), "Pockets_" + id, tr("BTN_POCKETS").format({"name": n.get("name", id)}))
 	if not JobRules.of(s, Catalog.data, id).is_empty():  # v0.7.26
 		_flow(acts, tr("BTN_JOB"), job_requested.emit.bind(id), can_act, "Jobs_" + id, tr("BTN_JOB_TIP").format({"name": n.get("name", id)}))
 	var undeeded := PropertyRules.is_registry(Catalog.data, id) and PropertyRules.state(s.character).values().any(func(p: Dictionary) -> bool: return not bool(p.get("deed", false)))
@@ -425,10 +517,11 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 	at.name = "Attack_" + id  # the fight at once, without the master: last and red, apart from the peaceful acts
 	at.tooltip_text = tr("BTN_ATTACK_NPC").format({"name": n.get("name", id)})
 	at.add_theme_color_override("font_color", UiTheme.BAD)
+	_near_ref = ""
 
 
 func _npc_head(row: HBoxContainer, s: GameSession, n: Dictionary, id: String, a: int, att: String, refuses: bool, can_act: bool) -> Control:
-	var b := _row_button(row, str(n.get("name", id)), GameState.talk_to.bind(id, false), can_act and not refuses)
+	var b := _row_button(row, str(n.get("name", id)), _near("npc:" + id, "talk", GameState.talk_to.bind(id, false)), can_act and not refuses)
 	b.name = "Talk_" + id
 	b.tooltip_text = tr("TALK_REFUSED") if refuses else tr("SIDE_TALK_TIP").format({"name": n.get("name", id), "role": n.get("role", ""), "attitude": att})
 	if a <= -2:
@@ -437,7 +530,7 @@ func _npc_head(row: HBoxContainer, s: GameSession, n: Dictionary, id: String, a:
 		b.add_theme_color_override("font_color", UiTheme.OK)
 	if bool(n.get("trader", false)):
 		var closed := TimeRules.shops_closed(s, Catalog.data) or TheftRules.shop_closed_for(s, id, Catalog.data) or refuses
-		var tb := _small(row, tr("BTN_TRADE_SHORT"), GameState.talk_to.bind(id, true), can_act and not closed)
+		var tb := _small(row, tr("BTN_TRADE_SHORT"), _near("npc:" + id, "touch", GameState.talk_to.bind(id, true)), can_act and not closed)
 		tb.name = "Trade_" + id
 		tb.size_flags_horizontal = Control.SIZE_SHRINK_END
 		tb.tooltip_text = tr("SHOP_CLOSED_WANTED" if CrimeRules.shunned_by(s, Catalog.data, id) else "TALK_REFUSED" if refuses else
@@ -450,6 +543,11 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	var cid := str(cr["id"])
 	if not _being_row("cr:" + cid, "CreatureMore_" + cid, _creature_head.bind(s, cr)):
 		return
+	_creature_acts(s, cr, can_act)
+
+
+func _creature_acts(s: GameSession, cr: Dictionary, can_act: bool) -> void:
+	var cid := str(cr["id"])
 	if str(cr["state"]) == PropertyRules.TAME:  # v0.7.27: an own beast goes along or stays, or is let go
 		_animal_acts(s, cr, can_act)
 		return
@@ -480,11 +578,11 @@ func _creature_row(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 			if not err.is_empty():
 				EventBus.message.emit(tr(err))
 		var cr_name := str(cr.get("name", cid))
-		var cb := _flow(acts, tr(sp[1]), func() -> void:
+		var cb := _flow(acts, tr(sp[1]), _near("cr:" + cid, "touch", func() -> void:
 			if what == "finish":  # v0.7.22.27: a kill is not undone
 				ConfirmBox.ask(self, tr("CONFIRM_FINISH_TITLE").format({"name": cr_name}), tr("CONFIRM_FINISH") + _law_line(s), tr(sp[1]), run)
 			else:
-				run.call(), can_act)
+				run.call()), can_act)
 		cb.name = "Creature_%s_%s" % [what, cid]
 		if what == "hand_over":
 			cb.tooltip_text = tr("CREATURE_HAND_OVER_TIP")
@@ -914,7 +1012,8 @@ func _flow(parent: Container, text: String, action: Callable, enabled: bool, nod
 	b.tooltip_text = tip
 	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	b.disabled = not enabled
-	b.pressed.connect(func() -> void: action.call())
+	var act := _near(_near_ref, "talk", action) if not _near_ref.is_empty() else action
+	b.pressed.connect(func() -> void: act.call())
 	parent.add_child(b)
 	return b
 

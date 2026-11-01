@@ -918,8 +918,12 @@ static func rent_why(s: GameSession, data: Dictionary, npc_id: String, k: String
 	var rent: Dictionary = kind_cfg(data, k).get("rent", {})
 	if rent.is_empty():
 		return "SHOP_NO_SERVICE"
-	if rent_room(data, k, WorldView.new(data["world"]).location_id(s.room_id)).is_empty():
+	var loc := WorldView.new(data["world"]).location_id(s.room_id)
+	var market := rent_room(data, k, loc)
+	if market.is_empty():
 		return "SHOP_NO_MARKET"
+	if rented(s, data, k, loc).is_empty() and not LayoutRules.no_way(s, data, market, false).is_empty():
+		return "SHOP_NO_SPOT"
 	if not (rent["days"] as Array).any(func(d: Variant) -> bool: return int(d) == days):
 		return "SHOP_NO_SERVICE"
 	return "SHOP_NO_MONEY" if int(s.character.get("gold_cp", 0)) < days * int(rent["cp_day"]) else ""

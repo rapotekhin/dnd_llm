@@ -776,6 +776,11 @@
           "title": "Furnish",
           "type": "boolean"
         },
+        "hero_near": {
+          "default": "",
+          "title": "Hero Near",
+          "type": "string"
+        },
         "hooks": {
           "items": {
             "type": "string"
@@ -875,6 +880,13 @@
           "title": "Sneaking",
           "type": "boolean"
         },
+        "spots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Spots",
+          "type": "array"
+        },
         "summons": {
           "items": {
             "type": "string"
@@ -973,6 +985,11 @@
           "title": "Name",
           "type": "string"
         },
+        "near": {
+          "default": "",
+          "title": "Near",
+          "type": "string"
+        },
         "npc_id": {
           "title": "Npc Id",
           "type": "string"
@@ -1069,6 +1086,11 @@
         },
         "name": {
           "title": "Name",
+          "type": "string"
+        },
+        "near": {
+          "default": "",
+          "title": "Near",
           "type": "string"
         },
         "owner": {

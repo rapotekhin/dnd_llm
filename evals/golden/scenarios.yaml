@@ -4535,3 +4535,49 @@ scenarios:
     rubric:
       - "Мастер создаёт комнату эффектом create:place с inside: true и extend: true в комнате таверны, координат не пишет"
 
+  - id: approach_a_person_in_the_room
+    title: "Шаг к человеку в комнате: approach, а не переход"
+    category: world
+    extends: tavern
+    input: "Подхожу к стойке, к Горму, чтобы получше его рассмотреть."
+    snapshot:
+      scene:
+        spots: ["очаг [hearth]", "стойка [counter]"]
+    engine:
+      validate:
+        - {kind: approach, status: accept, summary: "Герой: к Горму"}
+    expect:
+      effects: {required_kinds_any: [approach], forbidden_kinds: [move]}
+    rubric:
+      - "Мастер проводит эффект approach к npc_innkeeper или к месту counter и описывает подход, не называя клеток и не выводя героя из зала."
+
+  - id: approach_a_place_in_the_room
+    title: "Сесть у очага: approach к месту комнаты"
+    category: world
+    extends: tavern
+    input: "Иду к очагу, сажусь на лавку погреться."
+    snapshot:
+      scene:
+        spots: ["очаг [hearth]", "стойка [counter]"]
+    engine:
+      validate:
+        - {kind: approach, status: accept, summary: "Герой: к очагу"}
+    expect:
+      effects: {required_kinds_any: [approach], forbidden_kinds: [move]}
+    rubric:
+      - "Мастер проводит approach с to: hearth и описывает, как герой устраивается у очага."
+
+  - id: furnish_a_thing_by_a_place
+    title: "Обстановка: важная вещь у места комнаты"
+    category: world
+    extends: tavern
+    kind: enter
+    input: null
+    snapshot:
+      scene:
+        furnish: true
+        spots: ["очаг [hearth]", "стойка [counter]"]
+    expect:
+      effects: {required_kinds_any: [furnish]}
+    rubric:
+      - "Мастер предлагает furnish, и хотя бы у одной важной вещи стоит near с местом из списка (hearth или counter) или id человека; координат клеток нет."

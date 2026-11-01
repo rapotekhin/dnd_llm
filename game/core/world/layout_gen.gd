@@ -6,7 +6,9 @@ extends RefCounted
 ##
 ## A layout: {"w", "h", "rows": Array[String], "rooms": PackedInt32Array (w * h, an index of "ids", -1 outside),
 ## "ids": Array[String], "marks": [{"name", "x", "y", "room"}], "doors": [{"x", "y", "a", "b"}],
-## "exits": [{"to", "room", "x", "y", "side", "kind", "ax", "ay"}], "picks": {...}}.
+## "exits": [{"to", "room", "x", "y", "side", "kind", "ax", "ay"}], "picks": {...}, "origin": where its rows begin on the
+## grid, "faults"}. A map is built, checked (`faults`) and built again on the next seed while something is wrong: the best
+## of the tries stands and `picks` keep it. What a save keeps is on the grid: a room laid later does not move the others.
 
 const WALL := "#"
 const FLOOR := "."
@@ -20,6 +22,7 @@ const OPPOSITE: Dictionary = {"n": "s", "e": "w", "s": "n", "w": "e"}
 const ROTATIONS := 4
 const FILL := "B"  ## what fills a pocket of an open map nobody can reach, unless the kind scatters something
 const ENTRY := "entry"
+const TRY_STEP := 1000  ## how far apart the seeds of two tries are: an open map takes two of its own
 
 
 # --- chunks --------------------------------------------------------------------------------------------------------
@@ -123,6 +126,72 @@ static func _step(out: Array[Dictionary], list: Array, rng: RandomNumberGenerato
 ## "exits" [{"to", "side", "kind"}] out of the map, "chunk" {"id", "rot", "flip"} or "rows" of the author's. The first
 ## is the root. A room that finds no socket goes into "left": LayoutRules gives it a map of its own.
 static func stitched(lib: Dictionary, asks: Array[Dictionary], seed_value: int, picks: Dictionary) -> Dictionary:
+	var all_kept := asks.all(func(a: Dictionary) -> bool: return picks.has(str(a["id"])))
+	return _best(lib, asks, picks, 1 if all_kept else int(lib["sound"]["tries"]), func(t: int) -> Dictionary:
+		return _stitch(lib, asks, seed_value + t * TRY_STEP, picks))
+
+
+## Builds until a map is sound or the tries are over; the best one stands, a save keeps which try it was.
+static func _best(lib: Dictionary, asks: Array[Dictionary], kept: Dictionary, tries: int, build: Callable) -> Dictionary:
+	var first := int(kept.get("try", 0))
+	var best := {}
+	var fewest := -1
+	for t: int in range(first, first + tries):
+		var out: Dictionary = build.call(t)
+		var n := faults(lib, out, asks)
+		if fewest < 0 or n < fewest:
+			fewest = n
+			best = out
+			best["picks"]["try"] = t
+		if n < int(lib["sound"]["retry_from"]):
+			break
+	best["faults"] = fewest
+	return best
+
+
+## What is wrong with a map, weighed by `sound` of layouts.json; 0 is a sound map.
+static func faults(lib: Dictionary, out: Dictionary, asks: Array[Dictionary]) -> int:
+	var sound: Dictionary = lib["sound"]
+	var n := (out["left"] as Array).size() * int(sound["left"])
+	var reach := reached(out, lib, _start(out))
+	if out.has("open") and reach.size() < float(sound["min_reach"]) * int(out["w"]) * int(out["h"]):
+		n += int(sound["way"])
+	var stairs := {}
+	for a: Dictionary in asks:
+		for e: Dictionary in a.get("exits", []):
+			if str(e.get("kind", "")) == "stairs":
+				stairs[str(e["to"])] = true
+	for e: Dictionary in out["exits"]:
+		if not reach.has(Vector2i(int(e["ax"]), int(e["ay"]))):
+			n += int(sound["way"])
+		elif str(e["kind"]) == "stairs" and not stairs.has(str(e["to"])):
+			n += int(sound["stairs"])
+	for a: Dictionary in asks:
+		for e: Dictionary in a.get("exits", []):
+			for got: Dictionary in out["exits"]:
+				if str(got["to"]) == str(e["to"]) and str(got["side"]) != str(e.get("side", got["side"])):
+					n += int(sound["side"])
+	return n
+
+
+static func _start(out: Dictionary) -> Vector2i:
+	for m: Dictionary in out["marks"]:
+		if str(m["name"]) == ENTRY:
+			return Vector2i(int(m["x"]), int(m["y"]))
+	return Vector2i(int(out["w"]) / 2, int(out["h"]) / 2)
+
+
+## A square of a map as a save keeps it, and back.
+static func on_grid(map: Dictionary, cell: Vector2i) -> Vector2i:
+	return cell + map.get("origin", Vector2i.ZERO)
+
+
+static func off_grid(map: Dictionary, cell: Vector2i) -> Vector2i:
+	return cell - map.get("origin", Vector2i.ZERO)
+
+
+## One try: the rooms a save keeps first, in the order they were laid, then the new ones by the links from the root.
+static func _stitch(lib: Dictionary, asks: Array[Dictionary], seed_value: int, picks: Dictionary) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var grid: Dictionary[Vector2i, String] = {}
@@ -136,30 +205,30 @@ static func stitched(lib: Dictionary, asks: Array[Dictionary], seed_value: int, 
 	var asked: Dictionary = {}
 	for a: Dictionary in asks:
 		asked[str(a["id"])] = a
+	for id: String in _kept_order(picks, asked):
+		var at := _replace(lib, asked[id], picks[id], grid, free, ids)
+		if not at.is_empty():
+			_put(id, at, ids, kept, grid, owner, marks, free, doors)
+	var reserved := _reserved(picks, free)
 	var queue: Array[String] = [str(asks[0]["id"])]
 	var seen: Dictionary = {queue[0]: true}
 	while not queue.is_empty():
 		var id: String = queue.pop_front()
 		var ask: Dictionary = asked[id]
-		var at := {}
-		if picks.has(id):
-			at = _replace(lib, ask, picks[id], grid, free, ids)
-		if at.is_empty():
-			at = _place(lib, ask, grid, free, ids, rng)
-		if at.is_empty():
-			left.append(id)
-			continue
-		var index := ids.size()
-		ids.append(id)
-		kept[id] = {"chunk": at["chunk"], "rot": at["rot"], "flip": at["flip"], "x": at["x"], "y": at["y"]}
-		_stamp(at, index, grid, owner, marks, free, doors)
+		if not ids.has(id):
+			var at := _place(lib, ask, grid, free, ids, rng, reserved)
+			if at.is_empty():
+				left.append(id)
+				continue
+			_put(id, at, ids, kept, grid, owner, marks, free, doors)
 		for link: Variant in ask.get("links", []):
 			if asked.has(str(link)) and not seen.has(str(link)):
 				seen[str(link)] = true
 				queue.append(str(link))
 	for a: Dictionary in asks:  # a room no link reaches is laid on as well: the pack's graph may be one-way
-		if not seen.has(str(a["id"])):
+		if not seen.has(str(a["id"])) and not ids.has(str(a["id"])):
 			left.append(str(a["id"]))
+	rng.seed = seed_value  # what follows comes out the same whether the rooms were laid anew or from a save's picks
 	var out := _rasterized(grid, owner)
 	out["ids"] = ids
 	out["left"] = left
@@ -169,14 +238,92 @@ static func stitched(lib: Dictionary, asks: Array[Dictionary], seed_value: int, 
 	out["exits"] = []
 	var rests: Array[Dictionary] = _shifted(free, out["origin"])
 	for a: Dictionary in asks:
-		var index := ids.find(str(a["id"]))
+		var id := str(a["id"])
+		var index := ids.find(id)
 		if index >= 0:
+			var pick: Dictionary = picks.get(id, {})
+			if int(pick.get("x", 0)) != int(kept[id]["x"]) or int(pick.get("y", 0)) != int(kept[id]["y"]):
+				pick = {}
 			var ways: Array = (a.get("exits", []) as Array).duplicate()
 			ways.append_array(_unjoined(a, index, ids, doors))
-			_exits_of(out, a, index, ways, rests, rng)
-			_wanted_marks(out, a, index, rng)
+			_exits_of(out, a, index, ways, rests, rng, pick)
+			kept[id]["spots"] = _wanted_marks(out, a, index, rng, pick)
+			kept[id]["ways"] = _ways_of(out, id)
 	_close_sockets(out)
 	return out
+
+
+static func _kept_order(picks: Dictionary, asked: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for id: Variant in picks:
+		if asked.has(str(id)):
+			out.append(str(id))
+	out.sort_custom(func(a: String, b: String) -> bool: return int(picks[a].get("i", 0)) < int(picks[b].get("i", 0)))
+	return out
+
+
+static func _put(id: String, at: Dictionary, ids: Array[String], kept: Dictionary, grid: Dictionary, owner: Dictionary, marks: Array[Dictionary], free: Array[Dictionary], doors: Array[Dictionary]) -> void:
+	var index := ids.size()
+	ids.append(id)
+	kept[id] = {"chunk": at["chunk"], "rot": at["rot"], "flip": at["flip"], "x": at["x"], "y": at["y"], "i": index}
+	_stamp(at, index, grid, owner, marks, free, doors)
+
+
+## The ways of kept rooms stay: a new room takes neither their sockets nor the squares behind them.
+static func _reserved(picks: Dictionary, free: Array[Dictionary]) -> Dictionary:
+	var out := {}
+	for pick: Variant in picks.values():
+		if not pick is Dictionary:
+			continue
+		var ways: Dictionary = (pick as Dictionary).get("ways", {})
+		for e: Dictionary in ways.values():
+			if str(e["kind"]) != "stairs":
+				var cell := Vector2i(int(e["x"]), int(e["y"]))
+				out[cell] = true
+				out[cell + STEP[str(e["side"])]] = true
+	for i: int in range(free.size() - 1, -1, -1):
+		if out.has(Vector2i(int(free[i]["x"]), int(free[i]["y"]))):
+			free.remove_at(i)
+	return out
+
+
+## The ways of a room on the grid, as a save keeps them.
+static func _ways_of(out: Dictionary, id: String) -> Dictionary:
+	var ways := {}
+	var origin: Vector2i = out.get("origin", Vector2i.ZERO)
+	for e: Dictionary in out["exits"]:
+		if str(e["room"]) == id:
+			var kept := e.duplicate()
+			for k: String in ["x", "ax"]:
+				kept[k] = int(e[k]) + origin.x
+			for k: String in ["y", "ay"]:
+				kept[k] = int(e[k]) + origin.y
+			ways[str(e["to"])] = kept
+	return ways
+
+
+## A kept way of a stitched room back on its square; false when the square is no longer free for it.
+static func _way_back(out: Dictionary, was: Dictionary, rests: Array[Dictionary]) -> bool:
+	var e := was.duplicate()
+	var origin: Vector2i = out.get("origin", Vector2i.ZERO)
+	for k: String in ["x", "ax"]:
+		e[k] = int(was[k]) - origin.x
+	for k: String in ["y", "ay"]:
+		e[k] = int(was[k]) - origin.y
+	var x := int(e["x"])
+	var y := int(e["y"])
+	if not _inside(out, x, y):
+		return false
+	if str(e["kind"]) != "stairs":
+		if str(out["rows"][y][x]) != SOCKET:
+			return false
+		_set_cell(out, x, y, DOOR)
+		for i: int in rests.size():
+			if int(rests[i]["x"]) == x and int(rests[i]["y"]) == y:
+				rests.remove_at(i)
+				break
+	out["exits"].append(e)
+	return true
 
 
 ## The links a door does not serve (a ring of rooms, a room left out): ways of their own.
@@ -192,17 +339,29 @@ static func _unjoined(ask: Dictionary, index: int, ids: Array[String], doors: Ar
 	return out
 
 
-## Marks a chunk does not have stand on free squares by a wall.
-static func _wanted_marks(out: Dictionary, ask: Dictionary, index: int, rng: RandomNumberGenerator) -> void:
+## Marks a chunk does not have stand on free squares by a wall; a kept one stays where it stood. Out: all of them on the grid.
+static func _wanted_marks(out: Dictionary, ask: Dictionary, index: int, rng: RandomNumberGenerator, pick: Dictionary) -> Dictionary:
 	var names: Array = (ask.get("marks", []) as Array).duplicate()
 	names.append(ENTRY)
+	var spots: Dictionary = (pick.get("spots", {}) as Dictionary).duplicate()
+	var origin: Vector2i = out.get("origin", Vector2i.ZERO)
+	var fresh: Array[String] = []
 	for name: Variant in names:
 		var has := false
 		for m: Dictionary in out["marks"]:
 			has = has or (str(m["name"]) == str(name) and int(m["room"]) == index)
-		if not has:
-			var spot := _by_wall(out, index, rng)
-			out["marks"].append({"name": str(name), "x": spot["x"], "y": spot["y"], "room": index})
+		if has:
+			continue
+		if spots.has(str(name)):
+			var at: Array = spots[str(name)]
+			out["marks"].append({"name": str(name), "x": int(at[0]) - origin.x, "y": int(at[1]) - origin.y, "room": index})
+		else:
+			fresh.append(str(name))
+	for name: String in fresh:
+		var spot := _by_wall(out, index, rng)
+		out["marks"].append({"name": name, "x": spot["x"], "y": spot["y"], "room": index})
+		spots[name] = [int(spot["x"]) + origin.x, int(spot["y"]) + origin.y]
+	return spots
 
 
 ## A room back where a save keeps it, its door on the socket it shares with a linked room.
@@ -230,7 +389,7 @@ static func _source(lib: Dictionary, ask: Dictionary, id: String) -> Dictionary:
 	return chunk(lib, id)
 
 
-static func _place(lib: Dictionary, ask: Dictionary, grid: Dictionary, free: Array[Dictionary], ids: Array[String], rng: RandomNumberGenerator) -> Dictionary:
+static func _place(lib: Dictionary, ask: Dictionary, grid: Dictionary, free: Array[Dictionary], ids: Array[String], rng: RandomNumberGenerator, reserved: Dictionary) -> Dictionary:
 	var pool: Array[Dictionary] = []
 	if ask.has("rows"):
 		pool.append(_source(lib, ask, ""))
@@ -245,7 +404,7 @@ static func _place(lib: Dictionary, ask: Dictionary, grid: Dictionary, free: Arr
 			continue
 		for turn: Vector2i in _turns(rng, src, fixed):
 			var rows := turned(src["rows"], turn.x, turn.y == 1)
-			var pos := _position(rows, ask, grid, free, ids, rng)
+			var pos := _position(rows, ask, grid, free, ids, rng, reserved)
 			if pos.is_empty():
 				continue
 			pos.merge({"chunk": src["id"], "rot": turn.x, "flip": turn.y == 1, "rows": rows, "marks": src.get("marks", {})})
@@ -273,7 +432,7 @@ static func _shuffle(list: Array, rng: RandomNumberGenerator) -> void:
 
 
 ## The spot of turned rows: a free socket of a linked room matched with an opposite socket of these rows.
-static func _position(rows: Array[String], ask: Dictionary, grid: Dictionary, free: Array[Dictionary], ids: Array[String], rng: RandomNumberGenerator) -> Dictionary:
+static func _position(rows: Array[String], ask: Dictionary, grid: Dictionary, free: Array[Dictionary], ids: Array[String], rng: RandomNumberGenerator, reserved: Dictionary) -> Dictionary:
 	if ids.is_empty():
 		return {"x": 0, "y": 0, "join": {}}
 	var own := sockets(rows)
@@ -285,17 +444,19 @@ static func _position(rows: Array[String], ask: Dictionary, grid: Dictionary, fr
 			if str(mine["side"]) != str(OPPOSITE[str(other["side"])]):
 				continue
 			var pos := Vector2i(int(other["x"]) - int(mine["x"]), int(other["y"]) - int(mine["y"]))
-			if _fits(rows, pos, grid):
+			if _fits(rows, pos, grid, reserved):
 				return {"x": pos.x, "y": pos.y, "join": other}
 	return {}
 
 
-## Rows may lie on what is there only wall on wall: rooms share their walls.
-static func _fits(rows: Array[String], pos: Vector2i, grid: Dictionary) -> bool:
+## Rows may lie on what is there only wall on wall: rooms share their walls. `reserved` squares stay as they are.
+static func _fits(rows: Array[String], pos: Vector2i, grid: Dictionary, reserved: Dictionary = {}) -> bool:
 	for y: int in rows.size():
 		for x: int in rows[y].length():
 			var at := pos + Vector2i(x, y)
-			if rows[y][x] != BLANK and grid.has(at) and not (_walled(rows[y][x]) and _walled(str(grid[at]))):
+			if rows[y][x] == BLANK:
+				continue
+			if reserved.has(at) or (grid.has(at) and not (_walled(rows[y][x]) and _walled(str(grid[at])))):
 				return false
 	return true
 
@@ -370,8 +531,13 @@ static func _shifted(list: Array[Dictionary], origin: Vector2i) -> Array[Diction
 
 
 ## The ways out of a room: a free socket on the side of the world's scheme, else any, else a square by a wall.
-static func _exits_of(out: Dictionary, ask: Dictionary, index: int, ways: Array, rests: Array[Dictionary], rng: RandomNumberGenerator) -> void:
+static func _exits_of(out: Dictionary, ask: Dictionary, index: int, ways: Array, rests: Array[Dictionary], rng: RandomNumberGenerator, pick: Dictionary) -> void:
+	var fresh: Array[Dictionary] = []
 	for e: Dictionary in ways:
+		var was: Dictionary = pick.get("ways", {}).get(str(e["to"]), {})
+		if was.is_empty() or not _way_back(out, was, rests):
+			fresh.append(e)
+	for e: Dictionary in fresh:
 		var side := str(e.get("side", "n"))
 		var spot := {} if str(e.get("kind", "door")) == "stairs" else _socket_for(out, rests, index, side)
 		if spot.is_empty():
@@ -437,9 +603,16 @@ static func _close_sockets(out: Dictionary) -> void:
 # --- open maps: a street, a forest -----------------------------------------------------------------------------------
 
 
-## `ask`: "id", "kind", "tags", "exits" [{"to", "side", "kind": "edge" | "door"}], "landmark" of a save, "marks" the room
-## asks for. A building on the street is a box with a door; a way on is the edge of the map, on its side.
+## `ask`: "id", "kind", "tags", "exits" [{"to", "side", "kind": "edge" | "door"}], "kept" — the picks of a save, "marks" the
+## room asks for. A building on the street is a box with a door; a way on is the edge of the map, on its side.
 static func open_map(lib: Dictionary, ask: Dictionary, seed_value: int) -> Dictionary:
+	var kept: Dictionary = ask.get("kept", {})
+	var asks: Array[Dictionary] = [ask]
+	return _best(lib, asks, kept, 1 if kept.has("ways") else int(lib["sound"]["tries"]), func(t: int) -> Dictionary:
+		return _open(lib, ask, kept, seed_value + t * TRY_STEP))
+
+
+static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var kinds: Dictionary = lib["kinds"]
@@ -468,15 +641,26 @@ static func open_map(lib: Dictionary, ask: Dictionary, seed_value: int) -> Dicti
 			_pond(grid, float(cfg["pond"]), rng)
 	var center := Vector2i(w / 2, h / 2)
 	var out := {"w": w, "h": h, "ids": [str(ask["id"])], "marks": [] as Array[Dictionary], "doors": [] as Array[Dictionary], "exits": [] as Array[Dictionary],
-		"left": [] as Array[String], "picks": {}}
-	var landmark := {} if not own.is_empty() else _landmark(lib, kind, ask, w, h, rng)
-	var ends: Array[Vector2i] = _exits_open(out, grid, ask, cfg)
-	for end: Vector2i in ends:
-		_road(grid, end, center, tags, rng)
-	_clear(grid, center, int(cfg["clear"]))
+		"left": [] as Array[String], "origin": Vector2i.ZERO, "open": true}
+	var landmark := {} if not own.is_empty() else _landmark(lib, kind, kept.get("landmark", {}), w, h, rng)
+	rng.seed = seed_value + 1  # a kept landmark draws nothing: what follows comes out the same after a save
+	var taken := {}  # the squares nothing may wall up: the middle, ways out and what lies before them
+	var boxes := {}  # the walls of the buildings: unlike a ruin's, no way is dug through them
+	var clear := int(cfg["clear"])
+	for y: int in range(center.y - clear, center.y + clear + 1):
+		for x: int in range(center.x - clear, center.x + clear + 1):
+			taken[Vector2i(x, y)] = true
+	_exits_open(out, grid, ask, cfg, kept, taken, boxes)
+	for e: Dictionary in out["exits"]:
+		var road := RandomNumberGenerator.new()  # its own: a way added later leaves the old roads as they are
+		road.seed = seed_value + hash(str(e["to"]))
+		var end := Vector2i(int(e["x"]), int(e["y"])) if str(e["kind"]) == "edge" else Vector2i(int(e["ax"]), int(e["ay"]))
+		_road(grid, end, center, tags, road)
+	_clear(grid, center, clear)
+	var picks := {}
 	if not landmark.is_empty():
-		_lay(out, grid, landmark)
-		out["picks"] = {"landmark": {"chunk": landmark["chunk"], "rot": landmark["rot"], "flip": landmark["flip"], "x": landmark["x"], "y": landmark["y"]}}
+		_lay(out, grid, landmark, taken)
+		picks["landmark"] = {"chunk": landmark["chunk"], "rot": landmark["rot"], "flip": landmark["flip"], "x": landmark["x"], "y": landmark["y"]}
 	grid[center.y][center.x] = FLOOR
 	var rows: Array[String] = []
 	for line: PackedStringArray in grid:
@@ -488,9 +672,11 @@ static func open_map(lib: Dictionary, ask: Dictionary, seed_value: int) -> Dicti
 	out["rooms"] = rooms
 	var scattered: Array = kind.get("scatter", [])
 	var fill := str(scattered[0]["cell"]) if not scattered.is_empty() and solid(lib, str(scattered[0]["cell"])) else FILL
-	_cut_off(out, lib, center, fill)
+	_cut_off(out, lib, center, fill, boxes)
 	out["marks"].append({"name": ENTRY, "x": center.x, "y": center.y, "room": 0})
-	_wanted_marks(out, ask, 0, rng)
+	picks["spots"] = _wanted_marks(out, ask, 0, rng, kept)
+	picks["ways"] = _ways_of(out, str(ask["id"]))
+	out["picks"] = picks
 	return out
 
 
@@ -536,8 +722,8 @@ static func _pond(grid: Array[PackedStringArray], share: float, rng: RandomNumbe
 				grid[y][x] = "~"
 
 
-static func _landmark(lib: Dictionary, kind: Dictionary, ask: Dictionary, w: int, h: int, rng: RandomNumberGenerator) -> Dictionary:
-	var kept: Dictionary = ask.get("landmark", {})
+static func _landmark(lib: Dictionary, kind: Dictionary, kept_one: Dictionary, w: int, h: int, rng: RandomNumberGenerator) -> Dictionary:
+	var kept := kept_one
 	var src := chunk(lib, str(kept.get("chunk", "")))
 	if src.is_empty():
 		var pool: Array = (lib["chunks"] as Array).filter(func(c: Dictionary) -> bool:
@@ -555,7 +741,7 @@ static func _landmark(lib: Dictionary, kind: Dictionary, ask: Dictionary, w: int
 	return {"chunk": src["id"], "rot": int(kept.get("rot", 0)), "flip": bool(kept.get("flip", false)), "x": x, "y": y, "rows": rows, "marks": src.get("marks", {})}
 
 
-static func _lay(out: Dictionary, grid: Array[PackedStringArray], at: Dictionary) -> void:
+static func _lay(out: Dictionary, grid: Array[PackedStringArray], at: Dictionary, taken: Dictionary) -> void:
 	var rows: Array[String] = at["rows"]
 	var legend: Dictionary = at["marks"]
 	for y: int in rows.size():
@@ -563,7 +749,7 @@ static func _lay(out: Dictionary, grid: Array[PackedStringArray], at: Dictionary
 			var c: String = rows[y][x]
 			var gx := int(at["x"]) + x
 			var gy := int(at["y"]) + y
-			if c == BLANK or gy < 0 or gy >= grid.size() or gx < 0 or gx >= grid[0].size() or grid[gy][gx] == DOOR or grid[gy][gx] == WALL:
+			if c == BLANK or gy < 0 or gy >= grid.size() or gx < 0 or gx >= grid[0].size() or grid[gy][gx] == DOOR or grid[gy][gx] == WALL or taken.has(Vector2i(gx, gy)):
 				continue
 			if legend.has(c):
 				out["marks"].append({"name": str(legend[c]), "x": gx, "y": gy, "room": 0})
@@ -571,24 +757,60 @@ static func _lay(out: Dictionary, grid: Array[PackedStringArray], at: Dictionary
 			grid[gy][gx] = c
 
 
-## The ways out: a box with a door on the way to a building, the edge of the map otherwise; the point each road leads to.
-static func _exits_open(out: Dictionary, grid: Array[PackedStringArray], ask: Dictionary, cfg: Dictionary) -> Array[Vector2i]:
-	var by_side := _spread(ask.get("exits", []), int(cfg["spread"]))
-	var ends: Array[Vector2i] = []
+## The ways out: a box with a door on the way to a building, the edge of the map otherwise. A kept way stands where it
+## stood; of the new ones the edges come first, so that a box keeps off what lies before them.
+static func _exits_open(out: Dictionary, grid: Array[PackedStringArray], ask: Dictionary, cfg: Dictionary, kept: Dictionary, taken: Dictionary, boxes: Dictionary) -> void:
+	var fresh: Array = []
+	for e: Dictionary in ask.get("exits", []):
+		var was: Dictionary = kept.get("ways", {}).get(str(e["to"]), {})
+		if was.is_empty():
+			fresh.append(e)
+		else:
+			_way_again(out, grid, was, taken, boxes)
+	var by_side := _spread(fresh, int(cfg["spread"]))
 	var w: int = grid[0].size()
 	var h: int = grid.size()
-	var box: Array = cfg["box"]
-	for side: String in by_side:
-		var list: Array = by_side[side]
-		for i: int in list.size():
-			var t := (i + 1.0) / (list.size() + 1.0)
-			var e: Dictionary = list[i]
-			var along := int(round(t * (w if side in ["n", "s"] else h)))
-			if str(e.get("kind", "edge")) == "door":
-				ends.append(_box(out, grid, e, side, along, box))
-			else:
-				ends.append(_edge(out, e, side, along, w, h))
-	return ends
+	for doors: bool in [false, true]:
+		for side: String in by_side:
+			var list: Array = by_side[side]
+			for i: int in list.size():
+				var e: Dictionary = list[i]
+				if (str(e.get("kind", "edge")) == "door") != doors:
+					continue
+				var along := int(round((i + 1.0) / (list.size() + 1.0) * (w if side in ["n", "s"] else h)))
+				if not doors or not _box(out, grid, e, side, along, cfg, taken, boxes):
+					_edge(out, grid, e, side, along, taken)
+	var order := {}
+	for e: Dictionary in ask.get("exits", []):
+		order[str(e["to"])] = order.size()
+	(out["exits"] as Array[Dictionary]).sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(order[str(a["to"])]) < int(order[str(b["to"])]))
+
+
+static func _way_again(out: Dictionary, grid: Array[PackedStringArray], was: Dictionary, taken: Dictionary, boxes: Dictionary) -> void:
+	var e := was.duplicate()
+	var at := Vector2i(int(e["x"]), int(e["y"]))
+	if e.has("box"):
+		var b: Array = e["box"]
+		_wall_box(grid, int(b[0]), int(b[1]), int(b[2]), int(b[3]), boxes)
+		grid[at.y][at.x] = DOOR
+	out["exits"].append(e)
+	taken[at] = true
+	taken[Vector2i(int(e["ax"]), int(e["ay"]))] = true
+
+
+## The spots for a way: along its side from the wanted one outwards, then the same on the next sides, clockwise.
+static func _around(side: String, along: int, w: int, h: int) -> Array[Array]:
+	var out: Array[Array] = []
+	var start := SIDES.find(side)
+	for turn: int in SIDES.size():
+		var s: String = SIDES[(start + turn) % SIDES.size()]
+		var span := w if s in ["n", "s"] else h
+		var from := along if turn == 0 else span / 2
+		for d: int in span:
+			for a: int in ([from] if d == 0 else [from + d, from - d]):
+				if a >= 1 and a <= span - 2:
+					out.append([s, a])
+	return out
 
 
 ## The ways by sides of the world's scheme; a side past `spread` passes the rest on to the next one, clockwise.
@@ -606,18 +828,55 @@ static func _spread(ways: Array, spread: int) -> Dictionary:
 	return out
 
 
-static func _edge(out: Dictionary, e: Dictionary, side: String, along: int, w: int, h: int) -> Vector2i:
-	var at := Vector2i(clampi(along, 1, w - 2), 0 if side == "n" else h - 1) if side in ["n", "s"] else Vector2i(0 if side == "w" else w - 1, clampi(along, 1, h - 2))
-	var inward: Vector2i = STEP[OPPOSITE[side]]
-	out["exits"].append({"to": e["to"], "room": str(out["ids"][0]), "x": at.x, "y": at.y, "ax": at.x + inward.x, "ay": at.y + inward.y, "side": side, "kind": "edge"})
-	return at
-
-
-static func _box(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary, side: String, along: int, box: Array) -> Vector2i:
+static func _edge(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary, side: String, along: int, taken: Dictionary) -> void:
 	var w: int = grid[0].size()
 	var h: int = grid.size()
-	var bw := int(box[0]) if side in ["n", "s"] else int(box[1])
-	var bh := int(box[1]) if side in ["n", "s"] else int(box[0])
+	var spots := _around(side, along, w, h)
+	var pick: Array = spots[0]
+	for spot: Array in spots:
+		var at := _edge_cell(str(spot[0]), int(spot[1]), w, h)
+		var before: Vector2i = at + STEP[OPPOSITE[str(spot[0])]]
+		if not taken.has(at) and not taken.has(before) and grid[before.y][before.x] != WALL and grid[before.y][before.x] != DOOR:
+			pick = spot
+			break
+	var s := str(pick[0])
+	var at := _edge_cell(s, int(pick[1]), w, h)
+	var before: Vector2i = at + STEP[OPPOSITE[s]]
+	taken[at] = true
+	taken[before] = true
+	out["exits"].append({"to": e["to"], "room": str(out["ids"][0]), "x": at.x, "y": at.y, "ax": before.x, "ay": before.y, "side": s, "kind": "edge"})
+
+
+static func _edge_cell(side: String, along: int, w: int, h: int) -> Vector2i:
+	if side in ["n", "s"]:
+		return Vector2i(along, 0 if side == "n" else h - 1)
+	return Vector2i(0 if side == "w" else w - 1, along)
+
+
+## A box on a free spot: walls may meet, a door and what lies before it stay free. False: no spot, not even for a small one.
+static func _box(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary, side: String, along: int, cfg: Dictionary, taken: Dictionary, boxes: Dictionary) -> bool:
+	var w: int = grid[0].size()
+	var h: int = grid.size()
+	for size: Array in [cfg["box"], cfg["box_small"]]:
+		for spot: Array in _around(side, along, w, h):
+			var at := _box_at(str(spot[0]), int(spot[1]), size, w, h)
+			if not _box_free(grid, at, taken):
+				continue
+			var door: Vector2i = at["door"]
+			var front: Vector2i = at["front"]
+			_wall_box(grid, at["x"], at["y"], at["w"], at["h"], boxes)
+			grid[door.y][door.x] = DOOR
+			taken[door] = true
+			taken[front] = true
+			out["exits"].append({"to": e["to"], "room": str(out["ids"][0]), "x": door.x, "y": door.y, "ax": front.x, "ay": front.y, "side": spot[0], "kind": "door",
+				"box": [at["x"], at["y"], at["w"], at["h"]]})
+			return true
+	return false
+
+
+static func _box_at(side: String, along: int, size: Array, w: int, h: int) -> Dictionary:
+	var bw := int(size[0]) if side in ["n", "s"] else int(size[1])
+	var bh := int(size[1]) if side in ["n", "s"] else int(size[0])
 	var margin := 1
 	var x: int
 	var y: int
@@ -636,11 +895,6 @@ static func _box(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary,
 			y = along - bh / 2
 	x = clampi(x, 1, w - bw - 1)
 	y = clampi(y, 1, h - bh - 1)
-	for by: int in bh:
-		for bx: int in bw:
-			if grid[y + by][x + bx] != DOOR:
-				grid[y + by][x + bx] = WALL
-	var inward: Vector2i = STEP[OPPOSITE[side]]
 	var door: Vector2i
 	match side:
 		"n":
@@ -651,10 +905,32 @@ static func _box(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary,
 			door = Vector2i(x + bw - 1, y + bh / 2)
 		_:
 			door = Vector2i(x, y + bh / 2)
-	grid[door.y][door.x] = DOOR
-	var front := door + inward
-	out["exits"].append({"to": e["to"], "room": str(out["ids"][0]), "x": door.x, "y": door.y, "ax": front.x, "ay": front.y, "side": side, "kind": "door"})
-	return front
+	return {"x": x, "y": y, "w": bw, "h": bh, "door": door, "front": door + STEP[OPPOSITE[side]]}
+
+
+static func _box_free(grid: Array[PackedStringArray], at: Dictionary, taken: Dictionary) -> bool:
+	var x: int = at["x"]
+	var y: int = at["y"]
+	var bw: int = at["w"]
+	var bh: int = at["h"]
+	if x < 1 or y < 1 or x + bw >= grid[0].size() or y + bh >= grid.size():
+		return false
+	for by: int in bh:
+		for bx: int in bw:
+			if taken.has(Vector2i(x + bx, y + by)):
+				return false
+	for cell: Vector2i in [at["door"], at["front"]]:
+		if taken.has(cell) or grid[cell.y][cell.x] == WALL or grid[cell.y][cell.x] == DOOR:
+			return false
+	return true
+
+
+static func _wall_box(grid: Array[PackedStringArray], x: int, y: int, bw: int, bh: int, boxes: Dictionary) -> void:
+	for by: int in bh:
+		for bx: int in bw:
+			if grid[y + by][x + bx] != DOOR:
+				grid[y + by][x + bx] = WALL
+			boxes[Vector2i(x + bx, y + by)] = true
 
 
 ## A road from a way to the middle: two straight legs; a forest path is floor, a town's road is paved.
@@ -691,11 +967,11 @@ static func _clear(grid: Array[PackedStringArray], center: Vector2i, r: int) -> 
 
 
 ## Every walkable square reaches the middle: a road cut by a box is led round it, what stays apart is filled.
-static func _cut_off(out: Dictionary, lib: Dictionary, center: Vector2i, fill: String) -> void:
+static func _cut_off(out: Dictionary, lib: Dictionary, center: Vector2i, fill: String, boxes: Dictionary) -> void:
 	for e: Dictionary in out["exits"]:
 		var reach := reached(out, lib, center)
 		if not reach.has(Vector2i(int(e["ax"]), int(e["ay"]))):
-			_dig(out, lib, Vector2i(int(e["ax"]), int(e["ay"])), reach)
+			_dig(out, Vector2i(int(e["ax"]), int(e["ay"])), reach, boxes)
 	var reach := reached(out, lib, center)
 	var rows: Array[String] = out["rows"]
 	for y: int in int(out["h"]):
@@ -705,8 +981,8 @@ static func _cut_off(out: Dictionary, lib: Dictionary, center: Vector2i, fill: S
 				_set_cell(out, x, y, fill)
 
 
-## The shortest way from `from` to what is reached, through anything but walls and doors.
-static func _dig(out: Dictionary, lib: Dictionary, from: Vector2i, reach: Dictionary) -> void:
+## The shortest way from `from` to what is reached, through anything but a building: a ruin's wall gets a breach.
+static func _dig(out: Dictionary, from: Vector2i, reach: Dictionary, boxes: Dictionary) -> void:
 	var prev: Dictionary = {from: from}
 	var queue: Array[Vector2i] = [from]
 	var rows: Array[String] = out["rows"]
@@ -715,12 +991,12 @@ static func _dig(out: Dictionary, lib: Dictionary, from: Vector2i, reach: Dictio
 		if reach.has(at):
 			while prev[at] != at:
 				at = prev[at]
-				if rows[at.y][at.x] != WALL and rows[at.y][at.x] != DOOR:
+				if rows[at.y][at.x] != DOOR:
 					_set_cell(out, at.x, at.y, FLOOR)
 			return
 		for side: String in SIDES:
 			var n: Vector2i = at + STEP[side]
-			if _inside(out, n.x, n.y) and not prev.has(n) and rows[n.y][n.x] != WALL and rows[n.y][n.x] != DOOR:
+			if _inside(out, n.x, n.y) and not prev.has(n) and rows[n.y][n.x] != DOOR and not boxes.has(n):
 				prev[n] = at
 				queue.append(n)
 

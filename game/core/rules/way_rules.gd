@@ -400,6 +400,11 @@ static func plan_make(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		return {"reason": "проход ведёт только внутри этой локации: дороги между локациями — create:place на открытом крае"}
 	if w.exits(s.room_id).has(to):
 		return {"reason": "выход в %s уже есть" % to}
+	var full := LayoutRules.no_way(s, data, s.room_id, LayoutRules.is_open(s, data, to))
+	if full.is_empty() and not bool(e.get("one_way", false)):
+		full = LayoutRules.no_way(s, data, to, LayoutRules.is_open(s, data, s.room_id))
+	if not full.is_empty():
+		return {"reason": full}
 	if not kinds.has(kind) or not bool(kinds[kind].get("master", true)):
 		return {"reason": "way_kind — один из: %s" % ", ".join(kinds.keys().filter(func(k: String) -> bool: return bool(kinds[k].get("master", true))))}
 	for r: String in world["rooms"]:  # what the pack hides stays hidden

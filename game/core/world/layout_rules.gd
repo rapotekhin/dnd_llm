@@ -160,12 +160,13 @@ static func _build(s: GameSession, data: Dictionary, id: String, on_map: Array[S
 	var map: Dictionary
 	if on_map.size() == 1 and shape_of(WorldView.new(world(s, data)), data, on_map[0]) == OPEN:
 		var a := asks[0].duplicate()
-		if kept.has("landmark"):
-			a["landmark"] = kept["landmark"]
+		a["kept"] = kept
 		map = LayoutGen.open_map(lib(data), a, seed_of(s, id))
 	else:
 		map = LayoutGen.stitched(lib(data), asks, seed_of(s, id), kept)
 	map["id"] = id
+	if int(map["faults"]) >= int(lib(data)["sound"]["retry_from"]):
+		push_warning("LayoutRules: %s stays faulty after the tries: %d" % [id, int(map["faults"])])
 	if not s.layouts.has("picks"):
 		s.layouts["picks"] = {}
 	s.layouts["picks"][id] = map["picks"]
@@ -189,21 +190,21 @@ static func _touched(s: GameSession, id: String, map: Dictionary) -> Dictionary:
 	for cell: String in diff:
 		var c: Dictionary = diff[cell]
 		if c.has("cell"):
-			var x := cell.get_slice(",", 0).to_int()
-			var y := cell.get_slice(",", 1).to_int()
-			rows[y] = rows[y].substr(0, x) + str(c["cell"]) + rows[y].substr(x + 1)
+			var at := LayoutGen.off_grid(map, Vector2i(cell.get_slice(",", 0).to_int(), cell.get_slice(",", 1).to_int()))
+			rows[at.y] = rows[at.y].substr(0, at.x) + str(c["cell"]) + rows[at.y].substr(at.x + 1)
 	out["rows"] = rows
 	out["touched"] = diff
 	return out
 
 
-## Something on a square changed: a door broken, a thing pushed, ash. Kept until the next long rest.
+## Something on a square changed: a door broken, a thing pushed, ash. Kept until the next long rest, on the grid.
 static func touch(s: GameSession, id: String, x: int, y: int, what: Dictionary) -> void:
 	if not s.layouts.has("touched"):
 		s.layouts["touched"] = {}
 	if not s.layouts["touched"].has(id):
 		s.layouts["touched"][id] = {}
-	s.layouts["touched"][id]["%d,%d" % [x, y]] = what
+	var cell := LayoutGen.on_grid(s.layout_cache.get(id, {}).get("map", {}), Vector2i(x, y))
+	s.layouts["touched"][id]["%d,%d" % [cell.x, cell.y]] = what
 
 
 ## Time passes: the map here is remembered, a long rest brings maps back to what was generated.
@@ -214,6 +215,28 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	if not s.room_id.is_empty():
 		map_of(s, data, s.room_id)
 	return []
+
+
+## "" or why an open place takes no new way: `open.ways` of layouts.json, and `ways_outer` of them are for other open
+## places alone: one joins a new street, the other leaves the two of them a way on. A full square grows by a street of
+## its own, and the master builds there.
+static func no_way(s: GameSession, data: Dictionary, room_id: String, outer: bool) -> String:
+	var v := WorldView.new(world(s, data))
+	if v.room(room_id).is_empty() or shape_of(v, data, room_id) != OPEN:
+		return ""
+	var cap := int(lib(data)["open"]["ways"])
+	var ways := _exits(v, room_id).filter(func(to: String) -> bool: return not v.room(to).is_empty())
+	if ways.size() >= cap:
+		return "отсюда уже %d выходов, больше не встанет: новое ставь от другого места" % cap
+	var keep := int(lib(data)["open"]["ways_outer"])
+	var inner := ways.filter(func(to: String) -> bool: return shape_of(v, data, to) != OPEN).size()
+	if not outer and inner >= cap - keep:
+		return "последние %d выхода отсюда — только на другие открытые места: сделай первой комнатой улицу или слободу под открытым небом со своим объектом, а здание поставь на ней, в том же create_place" % keep
+	return ""
+
+
+static func is_open(s: GameSession, data: Dictionary, room_id: String) -> bool:
+	return shape_of(WorldView.new(world(s, data)), data, room_id) == OPEN
 
 
 static func _limit(data: Dictionary, kind: String) -> int:

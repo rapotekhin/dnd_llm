@@ -20,7 +20,7 @@ def _rows() -> set[str]:
 
 def test_the_kinds_are_few_and_each_effect_has_its_own_name():
     classes = effect_classes()
-    assert len({cls.model_fields["kind"].default for cls in classes}) == 31
+    assert len({cls.model_fields["kind"].default for cls in classes}) == 32
     tags = [class_tag(cls) for cls in classes]
     assert len(tags) == len(set(tags))
 

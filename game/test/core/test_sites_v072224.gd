@@ -87,9 +87,10 @@ func test_the_master_grows_a_site_inside_a_location() -> void:
 	assert_array(w.exits("brod-square")).contains([w.site_entry(sid)])
 	assert_bool(w.is_public(rooms[1])).is_false()
 	assert_array(WorldGen.open_edges(s, d, "brod-square")).is_equal(WorldGen.open_edges(_hero("brod-square"), TestUtils.data(), "brod-square"))  # no edge spent
-	for i in 8:  # the world is endless: no limit of sites in a location (v0.7.22.26.2)
+	for i in 8:  # the world is endless: no limit of sites in a location (v0.7.22.26.2), it grows from place to place (v0.8.2)
 		fx.searched_places["t-%d" % (i + 2)] = true
 		var more := spec.duplicate(true)
+		more["room_id"] = (s.generated["rooms"] as Dictionary).keys()[-2]
 		more["site"]["name"] = "Дом %d" % i
 		more["rooms"] = [{"key": "a", "name": "Сени %d" % i, "description": "Тесно."}, {"key": "b", "name": "Горница %d" % i, "description": "Тепло.", "exits": ["a"]}]
 		more["rooms"][0]["exits"] = ["b"]

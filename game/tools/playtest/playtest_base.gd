@@ -36,6 +36,7 @@ func run() -> void:
 func _main() -> void:
 	await frames(5)
 	node("SaveManager").confirm_risky = false  # the questions «Точно?» have their own scenario (v0.7.22.27)
+	node("GameState").instant_walk = true  # walking has its own scenario (v0.8.2)
 	await run()
 	_report.append("RESULT %s" % ("FAIL" if _failed else "OK"))
 	var f := FileAccess.open(out_dir.path_join("report.txt"), FileAccess.WRITE)

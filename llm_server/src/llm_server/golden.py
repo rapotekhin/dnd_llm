@@ -121,6 +121,8 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "npcs": npcs, "hooks": [h["text"] if isinstance(h, dict) else str(h) for h in scene.get("hooks", [])],
                 "time_of_day": scene.get("time", ""),
                 "props": scene.get("props", []),  # already in the protocol shape (SceneProp, 0.11.0)
+                "spots": scene.get("spots", []),  # places of the room (0.104.0)
+                "hero_near": scene.get("hero_near", ""),
                 "creatures": scene.get("creatures", []),  # the foes a fight left (0.45.0)
                 "sneaking": bool(scene.get("sneaking", False)),
                 "furnish": bool(scene.get("furnish", False)),

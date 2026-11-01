@@ -53,19 +53,37 @@ static func passable(map: Dictionary, lib: Dictionary, cell: Vector2i) -> bool:
 	return not LayoutGen.solid(lib, (map["rows"] as Array[String])[cell.y][cell.x])
 
 
+## Squares between two cells, a diagonal counts as one.
+static func distance(a: Vector2i, b: Vector2i) -> int:
+	return maxi(absi(a.x - b.x), absi(a.y - b.y))
+
+
 ## The shortest way by squares in eight directions, a corner is not cut: a diagonal needs both squares beside it free.
 ## Empty when there is none. `from` is not in it.
 static func path(map: Dictionary, lib: Dictionary, from: Vector2i, to: Vector2i) -> Array[Vector2i]:
-	var out: Array[Vector2i] = []
 	if from == to or not passable(map, lib, to):
-		return out
+		return []
+	return _search(map, lib, from, func(cell: Vector2i) -> bool: return cell == to, "")
+
+
+## The way up to `reach` squares of `target` inside the room. Empty when the hero is in reach already or there is no way.
+static func near(map: Dictionary, lib: Dictionary, from: Vector2i, target: Vector2i, reach: int, room: String) -> Array[Vector2i]:
+	if distance(from, target) <= reach:
+		return []
+	return _search(map, lib, from, func(cell: Vector2i) -> bool: return distance(cell, target) <= reach, room)
+
+
+## Breadth first until `done`; `room` keeps the way inside a room and on what belongs to none (a door).
+static func _search(map: Dictionary, lib: Dictionary, from: Vector2i, done: Callable, room: String) -> Array[Vector2i]:
 	var came: Dictionary = {from: from}
 	var queue: Array[Vector2i] = [from]
 	var head := 0
+	var end := Vector2i(-1, -1)
 	while head < queue.size():
 		var at: Vector2i = queue[head]
 		head += 1
-		if at == to:
+		if at != from and done.call(at):
+			end = at
 			break
 		for d: Vector2i in DIRS:
 			var next := at + d
@@ -73,11 +91,14 @@ static func path(map: Dictionary, lib: Dictionary, from: Vector2i, to: Vector2i)
 				continue
 			if d.x != 0 and d.y != 0 and not (passable(map, lib, at + Vector2i(d.x, 0)) and passable(map, lib, at + Vector2i(0, d.y))):
 				continue
+			if not room.is_empty() and not room_of(map, next) in [room, ""]:
+				continue
 			came[next] = at
 			queue.append(next)
-	if not came.has(to):
+	var out: Array[Vector2i] = []
+	if end.x < 0:
 		return out
-	var back := to
+	var back := end
 	while back != from:
 		out.push_front(back)
 		back = came[back]
@@ -110,14 +131,15 @@ static func leg(map: Dictionary, steps: Array[Vector2i], here: String) -> Dictio
 
 
 static func stand(s: GameSession, map: Dictionary, room: String, cell: Vector2i) -> void:
-	s.layouts["at"] = {"map": str(map["id"]), "room": room, "x": cell.x, "y": cell.y}
+	var kept := LayoutGen.on_grid(map, cell)
+	s.layouts["at"] = {"map": str(map["id"]), "room": room, "x": kept.x, "y": kept.y}
 
 
 ## Where the hero stands on the map of the room now. A move that was no walk (a button, the road, the master) puts the
 ## hero by the door or way that leads back, else at the room's entry.
 static func settle(s: GameSession, data: Dictionary, map: Dictionary) -> Vector2i:
 	var at: Dictionary = s.layouts.get("at", {})
-	var cell := Vector2i(int(at.get("x", 0)), int(at.get("y", 0)))
+	var cell := LayoutGen.off_grid(map, Vector2i(int(at.get("x", 0)), int(at.get("y", 0))))
 	var came := str(at.get("room", ""))
 	if str(at.get("map", "")) == str(map["id"]) and (came == s.room_id or room_of(map, cell) == s.room_id) and passable(map, data["layouts"], cell):
 		if came != s.room_id:

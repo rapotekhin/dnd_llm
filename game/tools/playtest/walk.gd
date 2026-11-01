@@ -8,6 +8,7 @@ var field: Control
 
 func run() -> void:
 	var gs := node("GameState")
+	gs.instant_walk = false
 	if not step("master connected", await wait_until(func() -> bool: return node("Backend").is_ready(), 30.0)):
 		return
 	await tap("NewGameButton")
@@ -38,7 +39,8 @@ func run() -> void:
 	await wait_until(func() -> bool: return not field.walking(), 20.0)
 	step("a click walks the hero there", field.hero_cell() == far, "%s of %s" % [field.hero_cell(), far])
 	step("no turn and no time", s.chat.size() == chat_size and TimeRules.clock(s) == clock and not gs.is_busy())
-	step("the spot is kept", int(s.layouts["at"]["x"]) == far.x and int(s.layouts["at"]["y"]) == far.y)
+	var kept := LayoutGen.on_grid(field.map, far)
+	step("the spot is kept", int(s.layouts["at"]["x"]) == kept.x and int(s.layouts["at"]["y"]) == kept.y)
 	await _click(Vector2i(0, 0))
 	step("a wall is no way", not field.walking())
 
@@ -98,11 +100,59 @@ func run() -> void:
 		await frames(3)
 		step("the map is back", not (find(screen(), "Dim") as Control).is_visible_in_tree() and field.clicks)
 
+	await _people(s, gs, lib)
+
 	gs.travel("brod-gate")
 	await wait_until(func() -> bool: return s.room_id == "brod-gate" and not gs.is_busy(), 60.0)
 	await frames(5)
 	step("fast travel puts the hero on a free square", WalkRules.room_of(field.map, field.hero_cell()) == s.room_id and WalkRules.passable(field.map, lib, field.hero_cell()))
 	await shot("gate")
+
+
+## v0.8.2: a click on a person walks up into speaking reach and opens the menu; a trade needs the hero right beside.
+func _people(s: GameSession, gs: Node, lib: Dictionary) -> void:
+	var trader := {}
+	for th: Dictionary in field.things:
+		if str(th["kind"]) == "npc" and find(screen(), "Trade_" + str(th["id"])) != null:
+			trader = th
+	if not step("the trader stands on the map", not trader.is_empty(), str(field.things.size())):
+		return
+	var at := Vector2i(int(trader["x"]), int(trader["y"]))
+	await _click(_far_from(at, s.room_id, lib))
+	await wait_until(func() -> bool: return not field.walking(), 20.0)
+	field.labels = true
+	field.queue_redraw()
+	await frames(1)
+	await shot("people")
+	field.labels = false
+	await _click(at)
+	await wait_until(func() -> bool: return not field.walking(), 20.0)
+	await frames(2)
+	var menu: Control = find(screen(), "ThingMenu")
+	step("a click on a person opens the menu", menu.visible)
+	var reach := int(node("Catalog").data["rules"]["map"]["reach"]["talk"])
+	step("the hero stopped in speaking reach", WalkRules.distance(field.hero_cell(), at) == reach, str(WalkRules.distance(field.hero_cell(), at)))
+	await shot("menu")
+	var trade: Button = find(menu, "Trade_" + str(trader["id"]))
+	await press(trade)
+	await wait_until(func() -> bool: return not field.walking() and s.mode == GameSession.MODE_TRADE and not gs.is_busy(), 30.0)
+	await frames(2)
+	step("trade: the hero walks right up", WalkRules.distance(field.hero_cell(), at) <= 1 and s.mode == GameSession.MODE_TRADE, str(WalkRules.distance(field.hero_cell(), at)))
+	step("the menu closed", not menu.visible)
+	gs.leave_conversation()
+	await wait_until(func() -> bool: return not s.in_conversation() and not gs.is_busy(), 30.0)
+	await frames(2)
+
+
+func _far_from(cell: Vector2i, room: String, lib: Dictionary) -> Vector2i:
+	var best: Vector2i = field.hero_cell()
+	for y: int in int(field.map["h"]):
+		for x: int in int(field.map["w"]):
+			var at := Vector2i(x, y)
+			if WalkRules.room_of(field.map, at) == room and WalkRules.passable(field.map, lib, at) and field.ref_at(at).is_empty() \
+					and WalkRules.distance(at, cell) > WalkRules.distance(best, cell):
+				best = at
+	return best
 
 
 ## The farthest square of a room from the hero.

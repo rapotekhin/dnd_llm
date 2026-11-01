@@ -185,6 +185,167 @@ func test_what_was_touched_stays_until_a_long_rest() -> void:
 	assert_array(LayoutRules.map_of(s, data, "brod-tavern-hall")["rows"]).is_equal(before_rows)
 
 
+func _rng_asks(n: int, game_seed: int) -> Array[Dictionary]:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = game_seed
+	var asks: Array[Dictionary] = []
+	for i: int in n:
+		asks.append({"id": "r%d" % i, "kind": "tavern", "role": "", "tags": ["hearth"], "size": "medium", "links": [], "marks": ["hearth"],
+			"exits": [{"to": "out%d" % i, "side": LayoutGen.SIDES[rng.randi_range(0, 3)], "kind": "door"}]})
+	for i: int in range(1, n):
+		var p := rng.randi_range(maxi(0, i - 2), i - 1)
+		asks[i]["links"].append("r%d" % p)
+		asks[p]["links"].append("r%d" % i)
+	return asks
+
+
+func _crowded() -> Dictionary:
+	var game := data.duplicate()
+	game["world"] = data["world"].duplicate(true)
+	var exits: Array = game["world"]["rooms"]["brod-square"]["exits"]
+	exits.erase("brod-gate")
+	exits.erase("brod-river-yard")
+	exits.append("brod-mill")
+	return game
+
+
+func test_no_open_place_of_the_pack_is_past_its_ways() -> void:
+	var s := _session()
+	var v := WorldView.new(data["world"])
+	for id: String in data["world"]["rooms"]:
+		if LayoutRules.is_open(s, data, id):
+			var inner := v.exits(id).filter(func(to: String) -> bool: return not LayoutRules.is_open(s, data, to)).size()
+			assert_int(v.exits(id).size()).override_failure_message(id).is_less_equal(int(layouts["open"]["ways"]))
+			assert_int(inner).override_failure_message(id).is_less_equal(int(layouts["open"]["ways"]) - int(layouts["open"]["ways_outer"]))
+
+
+func test_the_last_ways_of_an_open_place_wait_for_other_open_places() -> void:
+	var s := _session()
+	assert_int((data["world"]["rooms"]["brod-square"]["exits"] as Array).size()).is_equal(8)
+	assert_str(LayoutRules.no_way(s, data, "brod-square", false)).is_empty()
+	var game := _crowded()
+	assert_str(LayoutRules.no_way(s, game, "brod-square", false)).contains("последние 2 выхода")
+	assert_str(LayoutRules.no_way(s, game, "brod-square", true)).is_empty()
+	(game["world"]["rooms"]["brod-square"]["exits"] as Array).append("brod-gate")
+	assert_str(LayoutRules.no_way(s, game, "brod-square", false)).contains("последние 2 выхода")
+	assert_str(LayoutRules.no_way(s, game, "brod-square", true)).is_empty()
+	(game["world"]["rooms"]["brod-square"]["exits"] as Array).append("brod-river-yard")
+	assert_str(LayoutRules.no_way(s, game, "brod-square", true)).contains("больше не встанет")
+	assert_str(LayoutRules.no_way(s, game, "brod-tavern-hall", false)).is_empty()
+
+
+func _bakery() -> Dictionary:
+	return {"room_id": "brod-square", "edge": 0, "site": {"name": "Пекарня", "tags": ["shop"]},
+		"rooms": [{"key": "bakery", "name": "Пекарня", "description": "Жарко и пахнет хлебом.", "indoor": true}]}
+
+
+func test_a_building_on_a_full_square_stands_on_a_new_street() -> void:
+	var game := _crowded()
+	var s := _session()
+	s.room_id = "brod-square"
+	assert_str(str(WorldGen.plan_place(s, game, _bakery(), true).get("reason", ""))).contains("последние 2 выхода")
+	var spec := {"room_id": "brod-square", "edge": 0, "sites": [{"key": "lane", "name": "Хлебный переулок", "tags": ["square"]}, {"key": "bake", "name": "Пекарня", "tags": ["shop"]}],
+		"rooms": [{"key": "lane", "name": "Хлебный переулок", "description": "Узкая улочка.", "site": "lane", "exits": ["bakery"]},
+			{"key": "bakery", "name": "Пекарня", "description": "Жарко и пахнет хлебом.", "indoor": true, "site": "bake", "exits": ["lane"]}]}
+	var p := WorldGen.plan_place(s, game, spec, true)
+	assert_bool(p.has("plan")).override_failure_message(str(p)).is_true()
+	var lane := WorldGen.apply_place(s, game, p["plan"])
+	assert_bool(LayoutRules.is_open(s, game, lane)).is_true()
+	var map := LayoutRules.map_of(s, game, lane)
+	_sound(map, "the new street")
+	assert_int((map["exits"] as Array).size()).is_equal(2)
+	assert_array(WorldView.new(LayoutRules.world(s, game)).exits("brod-square")).contains([lane])
+
+
+func test_a_full_square_offers_no_edge_and_takes_no_way() -> void:
+	var game := _crowded()
+	(game["world"]["rooms"]["brod-square"]["exits"] as Array).append_array(["brod-gate", "brod-river-yard"])
+	var s := _session()
+	s.room_id = "brod-square"
+	var edges := WorldGen.reach_edges(s, game).filter(func(e: Dictionary) -> bool: return str(e["room_id"]) == "brod-square")
+	assert_array(edges).is_empty()
+	var made := WayRules.plan_make(s, game, {"to_room": "brod-plot", "way_kind": "door"})
+	assert_str(str(made.get("reason", ""))).contains("больше не встанет")
+
+
+func test_a_ruin_keeps_its_ways_on_many_seeds() -> void:
+	for game_seed: int in range(1, 41):
+		_sound(LayoutRules.map_of(_session(game_seed * 7919), data, "outpost-yard"), "the yard, seed %d" % game_seed)
+
+
+func test_every_way_of_a_crowded_open_map_is_reached() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	for kind: String in ["ruin", "square", "wild", "land", "arena"]:
+		for sd: int in 40:
+			var exits: Array = []
+			for j: int in rng.randi_range(2, 10):
+				exits.append({"to": "x%d" % j, "side": LayoutGen.SIDES[rng.randi_range(0, 3)], "kind": "door" if rng.randf() < 0.6 else "edge"})
+			var map := LayoutGen.open_map(layouts, {"id": "r", "kind": kind, "tags": ["road"] if sd % 2 == 0 else [], "exits": exits}, sd * 31)
+			_sound(map, "%s %d" % [kind, sd])
+			assert_int((map["exits"] as Array).size()).is_equal(exits.size())
+
+
+func test_a_map_with_a_way_nobody_reaches_is_built_again() -> void:
+	var one := layouts.duplicate(true)
+	one["sound"]["tries"] = 1
+	var ask := {"id": "r", "kind": "ruin", "tags": [], "exits": [{"to": "a", "side": "e", "kind": "door"}]}
+	var map := LayoutGen.open_map(layouts, ask, 77)
+	assert_int(int(map["faults"])).is_less(int(layouts["sound"]["retry_from"]))
+	assert_int(int(map["picks"]["try"])).is_greater_equal(0)
+	var again := ask.duplicate()
+	again["kept"] = map["picks"]
+	assert_array(LayoutGen.open_map(one, again, 77)["rows"]).is_equal(map["rows"])
+
+
+func test_a_room_added_later_moves_nothing_of_the_old_rooms() -> void:
+	for sd: int in 60:
+		var asks := _rng_asks(5, sd)
+		var before := LayoutGen.stitched(layouts, asks, sd, {})
+		var more: Array[Dictionary] = asks.duplicate(true)
+		more.append({"id": "new", "kind": "tavern", "role": "", "tags": [], "size": "medium", "links": ["r0"], "exits": []})
+		more[0]["links"].append("new")
+		var after := LayoutGen.stitched(layouts, more, sd, before["picks"])
+		var was := {}
+		for m: Dictionary in before["marks"]:
+			was[[str(m["name"]), before["ids"][int(m["room"])], LayoutGen.on_grid(before, Vector2i(int(m["x"]), int(m["y"])))]] = true
+		for m: Dictionary in after["marks"]:
+			var id := str(after["ids"][int(m["room"])])
+			if id != "new":
+				assert_bool(was.has([str(m["name"]), id, LayoutGen.on_grid(after, Vector2i(int(m["x"]), int(m["y"])))])).override_failure_message("mark %s of %s, seed %d" % [m["name"], id, sd]).is_true()
+		var ways := {}
+		for e: Dictionary in before["exits"]:
+			ways[[str(e["to"]), LayoutGen.on_grid(before, Vector2i(int(e["x"]), int(e["y"])))]] = true
+		for e: Dictionary in after["exits"]:
+			if str(e["room"]) != "new":
+				assert_bool(ways.has([str(e["to"]), LayoutGen.on_grid(after, Vector2i(int(e["x"]), int(e["y"])))])).override_failure_message("way %s, seed %d" % [e["to"], sd]).is_true()
+
+
+func test_a_way_added_to_a_street_moves_nothing_of_the_old_ways() -> void:
+	var exits: Array = [{"to": "a", "side": "n", "kind": "door"}, {"to": "b", "side": "n", "kind": "door"}, {"to": "c", "side": "e", "kind": "edge"}]
+	var ask := {"id": "r", "kind": "square", "tags": ["road"], "exits": exits}
+	var before := LayoutGen.open_map(layouts, ask, 9)
+	var more := ask.duplicate(true)
+	(more["exits"] as Array).append({"to": "d", "side": "n", "kind": "door"})
+	more["kept"] = before["picks"]
+	var after := LayoutGen.open_map(layouts, more, 9)
+	for e: Dictionary in before["exits"]:
+		assert_bool((after["exits"] as Array).has(e)).override_failure_message(str(e)).is_true()
+	assert_int((after["exits"] as Array).size()).is_equal(4)
+	_sound(after, "a street with one more way")
+
+
+func test_the_hero_and_what_was_touched_keep_their_place_when_the_rows_begin_elsewhere() -> void:
+	var s := _session()
+	var map := LayoutRules.map_of(s, data, "brod-tavern-hall")
+	var cell := LayoutGen.off_grid(map, Vector2i(map["origin"]) + Vector2i(3, 3))
+	WalkRules.stand(s, map, "brod-tavern-hall", cell)
+	var moved := map.duplicate()
+	moved["origin"] = Vector2i(map["origin"]) + Vector2i(-2, -1)
+	assert_object(LayoutGen.off_grid(moved, LayoutGen.on_grid(map, cell))).is_equal(cell + Vector2i(2, 1))
+	assert_int(int(s.layouts["at"]["x"])).is_equal(LayoutGen.on_grid(map, cell).x)
+
+
 func test_a_new_room_stands_in_the_building_and_the_old_ones_stay() -> void:
 	var s := _session()
 	var first: Dictionary = LayoutRules.map_of(s, data, "brod-tavern-hall")
@@ -308,6 +469,18 @@ func test_a_saved_map_comes_back_the_same() -> void:
 	s.layouts["rested"] = 480
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(5))))
 	assert_str(JSON.stringify(back.layouts)).is_equal(JSON.stringify(s.layouts))
+
+
+func test_every_map_comes_back_the_same_after_a_load() -> void:
+	var s := _session()
+	var before_load := {}
+	for room: String in data["world"]["rooms"]:
+		var map := LayoutRules.map_of(s, data, room)
+		before_load[room] = JSON.stringify([map["rows"], map["marks"], map["exits"], map["doors"]])
+	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(5))))
+	for room: String in data["world"]["rooms"]:
+		var map := LayoutRules.map_of(back, data, room)
+		assert_str(JSON.stringify([map["rows"], map["marks"], map["exits"], map["doors"]])).override_failure_message(room).is_equal(before_load[room])
 
 
 func test_a_save_comes_back_with_whole_numbers_all_the_way_down() -> void:

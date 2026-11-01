@@ -180,6 +180,7 @@ func _table() -> Dictionary:
 		"furnish": {"plan": _plan_furnish, "do": _do_furnish, "one": "комната уже обставляется в этом ходе", "no_fight": true},
 		"prop_state": {"rule": PropRules.plan_state, "apply": PropRules.apply_state},
 		"note": {"plan": _plan_note, "do": _do_note},
+		"approach": {"rule": MapSpots.plan, "apply": MapSpots.apply, "no_fight": true},
 		"flag": {"plan": _plan_flag, "do": _do_flag},
 		"equip": {"rule": _plan_equip, "do": _do_equip},
 		"fill": {"plan": _plan_fill, "do": _do_fill},

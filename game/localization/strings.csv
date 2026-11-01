@@ -1058,6 +1058,7 @@ KEY_ACT_PAUSE_MENU,Меню
 KEY_ACT_CHARACTER_SHEET,Персонаж
 KEY_ACT_INVENTORY,Инвентарь
 KEY_ACT_SPELLS,Умения и заклинания
+KEY_ACT_MAP_LABELS,Подписи на карте
 KEY_ACT_MAP,Карта
 KEY_ACT_JOURNAL,Журнал
 KEY_ACT_OPTION_1,Вариант мастера 1
@@ -1363,6 +1364,7 @@ SHOP_STALL_LAPSED,Срок аренды прилавка вышел
 SHOP_EMPTY,Прилавок пуст
 SHOP_DONE_TODAY,Сегодня вы уже торговали
 SHOP_NO_SERVICE,Здесь так не делают
+SHOP_NO_SPOT,На этой площади не осталось места
 SHOP_HAS_CHARTER_ERR,Грамота уже есть
 SHOP_NO_MONEY,Не хватает денег
 PROPERTY_SHOP_SHIFT,Здесь торгуют — смена в окне «Лавка»

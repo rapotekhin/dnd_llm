@@ -14,6 +14,7 @@ var effects := EffectEngine.new()
 var combat_playing: bool = false
 ## Seconds between enemy lines; 0 in tests (LaunchArgs --combat-delay).
 var combat_delay: float = 0.6
+var instant_walk := false  # a walk on the map ends at once: the playtests
 const COMBAT_SAVE := "autosave_combat"
 
 var _last_kind: String = ""
