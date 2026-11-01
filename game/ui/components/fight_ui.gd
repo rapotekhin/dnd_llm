@@ -3,8 +3,10 @@ extends Control
 ## The fight on the one screen (v0.8.4): the place's own map is the field. The queue over it, the hero and those in the fight
 ## on the left, the acts on tabs under it, the log on the right; the windows of a choice and the results stand over all.
 ## An act that needs a target lights it: a click on a body or a line of the list does it, an area follows the mouse and a
-## click lays it on the square. A click on a free square walks, on a foe strikes or walks up and strikes. The screen only
-## shows and sends: every rule is in `core/`, FightGrid and CombatRules.
+## click lays it on the square. A click on a free square walks, on a foe opens its acts. The screen only shows and sends:
+## every rule is in `core/`, FightGrid and CombatRules.
+
+signal foe_touched(ref: String)
 
 var _screen: Control
 var _field: MapField
@@ -34,6 +36,8 @@ var _pending_check: Callable
 ## Callable(target_id) -> Dictionary: the hint of the pending action (CombatRules.attack_preview / cast_preview).
 var _pending_preview: Callable
 var _pending_aim := ""  # the spell whose target is a square: its area follows the mouse
+var _pending_feet := 0  # how far the picked act gets, 0 — no rim on the map
+var _acts: Array[Dictionary] = []  # the acts with a target of this redraw: the tabs below and a foe's menu
 var _shoving := ""  # the foe a won shove pushes: the next click picks the side
 var _jumping := false  # the next click picks where the hero jumps
 var _tab := 0
@@ -146,6 +150,7 @@ func _enter() -> void:
 	_pending = Callable()
 	_field.stop()
 	_field.close_up()
+	_field.reach = {}
 
 
 func _add_log(text: String, master: bool) -> void:
@@ -321,6 +326,8 @@ func refresh() -> void:
 	if on and not _on:
 		_enter()
 	elif not on:
+		if _on:
+			_field.release()
 		_on = false
 	for p: Control in _parts:
 		p.visible = on
@@ -333,6 +340,7 @@ func refresh() -> void:
 		_field.zones = []
 		_field.blast = {}
 		_field.way = []
+		_field.reach = {}
 		return
 	var s := GameState.session
 	var data := Catalog.data
@@ -343,6 +351,7 @@ func refresh() -> void:
 		_pending_preview = func(_t: String) -> Dictionary: return {}
 		_pending_name = "Volley"
 		_pending_aim = ""
+		_pending_feet = int(data["spells"].get(str(CombatRules.volley(s)["spell"]), {}).get("range_ft", 0))
 	end_turn.disabled = not me
 	_draw_queue(s)
 	_draw_list(s, data, me)
@@ -382,11 +391,27 @@ func _draw_map(s: GameSession, data: Dictionary, me: bool) -> void:
 	_field.play(FightField.take_moves(s))
 	_field.routes = CombatRules.hero_routes(s, data) if me and not _pending.is_valid() and _shoving.is_empty() and not _jumping else {}
 	_field.lit = _shove_squares(s, data) if not _shoving.is_empty() else CombatRules.jump_squares(s, data) if _jumping else {}
+	_field.reach = _in_range(s, data) if _pending.is_valid() and _pending_feet > 0 else {}
 	_field.over = _over(s)
 	_field.zones = SpellEffects.zone_view(s, data)
 	_field.blast = {}
 	_field.way = []
 	_field.queue_redraw()
+
+
+## The squares the picked act gets to from the hero, a clear line to them (v0.8.4.3).
+func _in_range(s: GameSession, data: Dictionary) -> Dictionary:
+	var g := FightGrid.grid(s, data)
+	var me := CombatRules.player(s)
+	var from := FightGrid.cell(me)
+	var far := FightGrid.squares_of(data, _pending_feet)
+	var out := {}
+	for y: int in range(maxi(0, from.y - far), mini(int(g["map"]["h"]), from.y + far + 1)):
+		for x: int in range(maxi(0, from.x - far), mini(int(g["map"]["w"]), from.x + far + 1)):
+			var at := Vector2i(x, y)
+			if FightGrid.dist_to(me, at) <= far and FightGrid.clear(g, from, at):
+				out[at] = true
+	return out
 
 
 ## What the fight changed on the map, by colour: {square: Color}.
@@ -457,7 +482,7 @@ func _id_at(cell: Vector2i) -> String:
 	return ""
 
 
-## A click on the field: the picked act goes at the square or the body, else the hero walks or strikes.
+## A click on the field: the picked act goes at the square or the body, a foe opens its acts, else the hero walks.
 func on_cell(cell: Vector2i) -> void:
 	if not mine():
 		return
@@ -483,7 +508,7 @@ func on_cell(cell: Vector2i) -> void:
 		_press(target)
 		return
 	if not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
-		_strike(s, data, id)
+		foe_touched.emit("fight:" + id)
 		return
 	var way := _way_out_at(s, data, cell)
 	if way != FightGrid.NONE:
@@ -509,30 +534,44 @@ func _way_out_at(s: GameSession, data: Dictionary, cell: Vector2i) -> Vector2i:
 	return FightGrid.NONE
 
 
-## A foe clicked with nothing picked: the main weapon; out of reach of a blade the hero walks up first.
-func _strike(s: GameSession, data: Dictionary, id: String) -> void:
-	var why := CombatRules.can_attack(s, data, id)
-	if why == "COMBAT_OUT_OF_REACH":
-		var to := _beside(s, data, id)
-		if to == FightGrid.NONE:
-			EventBus.message.emit(tr(why))
-			return
-		_do(GameState.combat_walk(to))
-		if not mine() or not CombatRules.can_attack(s, data, id).is_empty():
-			return
-	_do(GameState.combat_attack(id, false))
+## The square a foe is shown on, for the menu by it.
+func cell_of(ref: String) -> Vector2i:
+	return FightGrid.shown(CombatRules.fighter(GameState.session, ref.trim_prefix("fight:")))
 
 
-## The cheapest square of the hero's walk from where a blade reaches the foe.
-func _beside(s: GameSession, data: Dictionary, id: String) -> Vector2i:
-	var f := CombatRules.fighter(s, id)
-	var best := FightGrid.NONE
-	var cost := 1 << 20
-	for at: Vector2i in FightGrid.stops(s, CombatRules.player(s), _field.routes):
-		if FightGrid.dist_to(f, at) <= 1 and int(_field.routes[at][0]) < cost:
-			cost = int(_field.routes[at][0])
-			best = at
-	return best
+## The acts at a foe clicked on the map (v0.8.4.3, the author): the tabs' own, nothing done by itself. What cannot reach
+## it now stays grey with why; what is not for a foe at all is not shown.
+func menu(box: VBoxContainer, ref: String) -> bool:
+	var id := ref.trim_prefix("fight:")
+	var f := CombatRules.fighter(GameState.session, id)
+	if not mine() or str(f.get("status")) != "active":
+		return false
+	var title := Label.new()
+	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	title.theme_type_variation = UiTheme.HEADING
+	title.text = str(f.get("name", ""))
+	box.add_child(title)
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 6)
+	flow.add_theme_constant_override("v_separation", 6)
+	box.add_child(flow)
+	for row: Dictionary in _acts:
+		var target := FightGrid.aim_id(cell_of(ref)) if not str(row["aims"]).is_empty() else id
+		var why := str((row["check"] as Callable).call(target))
+		if not bool(row["on"]) or why == "COMBAT_BAD_TARGET":
+			continue
+		var b := Button.new()
+		b.name = "FoeAct_" + str(row["name"])
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.text = str(row["text"])
+		b.disabled = not why.is_empty()
+		b.tooltip_text = tr(why) if not why.is_empty() else _preview_text((row["preview"] as Callable).call(target))
+		var act: Callable = row["act"]
+		b.pressed.connect(func() -> void:
+			_pending = act
+			_press(target))
+		flow.add_child(b)
+	return true
 
 
 ## The mouse over a square: the path and its cost, the area of the picked spell, what a blow would do.
@@ -552,7 +591,7 @@ func on_hover(cell: Vector2i) -> void:
 		var why := str(_pending_check.call(id))
 		text = "%s: %s" % [_name_of(s, id), tr(why) if not why.is_empty() else _preview_text(_pending_preview.call(id)).replace("\n", " · ")]
 	elif not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
-		text = "%s: %s" % [_name_of(s, id), _foe_hint(s, data, id)]
+		text = _name_of(s, id)
 	elif _field.routes.has(cell):
 		_field.way = FightGrid.route(_field.routes, cell)
 		text = tr("COMBAT_WALK_COST").format({"ft": int(_field.routes[cell][0]) * int(FightGrid.cfg(data)["ft"])})
@@ -885,7 +924,7 @@ func _foe_row(s: GameSession, data: Dictionary, id: String, f: Dictionary, me: b
 		if not hint.is_empty():
 			card.tooltip_text = hint + ("\n\n" + card.tooltip_text if not card.tooltip_text.is_empty() else "")
 			var title := str(f["name"])
-			card.mouse_entered.connect(func() -> void: _hint.text = "%s: %s" % [title, hint.replace("\n", " · ")])
+			card.mouse_entered.connect(func() -> void: _hint.text = title)
 			card.mouse_exited.connect(func() -> void: _hint.text = _base_hint(me))
 	card.pressed.connect(_press.bind(id))
 	_foes.add_child(card)
@@ -988,6 +1027,7 @@ func _line(parent: Control, text: String) -> Label:
 
 
 func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
+	_acts.clear()
 	var e := CombatRules.economy(s)
 	_clear(_economy)
 	for spec: Array in [["EcoAction", "● " + tr("COMBAT_ACTION"), int(e.get("action", 0)) + int(e.get("attacks", 0))],
@@ -1008,14 +1048,15 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		var vname := str(data["spells"][str(vol["spell"])]["name"])
 		var vb := _action(w, "Volley", tr("COMBAT_VOLLEY").format({"spell": vname, "n": int(vol["left"])}), me,
 			func(t: String) -> String: return GameState.combat_volley(t),
-			func(t: String) -> String: return CombatRules.can_volley(s, data, t), func(_t: String) -> Dictionary: return {})
+			func(t: String) -> String: return CombatRules.can_volley(s, data, t), func(_t: String) -> Dictionary: return {}, "",
+			int(data["spells"][str(vol["spell"])].get("range_ft", 0)))
 		vb.theme_type_variation = UiTheme.ACCENT_BUTTON
 	var main := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
 	var main_id := str(c.get("equipped", {}).get("main_hand", ""))
 	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), me,
 		func(t: String) -> String: return GameState.combat_attack(t, false),
 		func(t: String) -> String: return CombatRules.can_attack(s, data, t, false),
-		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
+		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", _far(main))
 	if not main_id.is_empty():
 		_details.hook(main_b, str(main["name"]), DetailsPanel.item_text(c, data, s.items, main_id))
 	var spare_id := str(CharacterRules.stowed(c).get("main_hand", ""))
@@ -1024,7 +1065,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		var spare_b := _action(w, "Attack_stowed", tr("COMBAT_ATTACK").format({"name": spare["name"], "hit": "%+d" % int(spare["to_hit"]), "dmg": _dmg_text(spare)}), me,
 			func(t: String) -> String: return GameState.combat_attack_stowed(t),
 			func(t: String) -> String: return CombatRules.can_attack_stowed(s, data, t),
-			func(t: String) -> Dictionary: return CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.attack_preview(s, data, t, false)))
+			func(t: String) -> Dictionary: return CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.attack_preview(s, data, t, false)), "", _far(spare))
 		_details.hook(spare_b, str(spare["name"]), DetailsPanel.item_text(c, data, s.items, spare_id))
 	if not main_id.is_empty():  # fists with a weapon in hand (v0.7.22.11, big test #45)
 		var fist := CombatRules.weapon_profile(c, data, s.items, "")
@@ -1048,7 +1089,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		_action(w, "Attack_off", tr("COMBAT_ATTACK_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), me,
 			func(t: String) -> String: return GameState.combat_attack(t, true),
 			func(t: String) -> String: return CombatRules.can_attack(s, data, t, true),
-			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true))
+			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true), "", _far(ow))
 	# Spells.
 	if not SpellRules.ready(c).is_empty() and not Guise.has_body(c):
 		var sp := _tab_box("COMBAT_TAB_SPELLS")
@@ -1099,7 +1140,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 					func(t: String) -> String: return _conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, t)),
 					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t),
 					func(t: String) -> Dictionary: return {} if FightGrid.is_aim(t) else CombatRules.cast_preview(s, data, id, slot, t),
-					id if spell.has("area") or jump else "")
+					id if spell.has("area") or jump else "", int(spell.get("range_ft", 0)))
 				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
 		for sa: Dictionary in SpellEffects.actions(s, data):  # v0.7.13.5: the spells that go on each turn
 			var said := str(sa["id"])
@@ -1157,10 +1198,11 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			if fx.has("throw"):  # v0.7.12: flasks and the net at a foe
 				var spills: bool = fx["throw"].has("oiled") or fx["throw"].has("burning")  # v0.8.4: a flask goes on a square too
 				item_btn = _action(ib, "Item_" + id, label, me, func(t: String) -> String: return GameState.combat_throw(id, t),
-					func(t: String) -> String: return CombatRules.can_throw(s, data, id, t), func(_t: String) -> Dictionary: return {}, id if spills else "")
+					func(t: String) -> String: return CombatRules.can_throw(s, data, id, t), func(_t: String) -> Dictionary: return {}, id if spills else "",
+					60 if bool(fx["throw"].get("improvised", false)) else int(fx["throw"].get("range", 15)))
 			elif not sp_id.is_empty() and CombatRules.is_engine_spell(data, sp_id) and not sp.has("heal_at_slot") 					and (int(sp.get("range_ft", 0)) > 0 or sp.has("area")):
 				item_btn = _action(ib, "Item_" + id, label, me, func(t: String) -> String: return GameState.combat_item_spell(id, t),
-					func(t: String) -> String: return CombatRules.can_item_spell(s, data, id, t), func(_t: String) -> Dictionary: return {})
+					func(t: String) -> String: return CombatRules.can_item_spell(s, data, id, t), func(_t: String) -> Dictionary: return {}, "", int(sp.get("range_ft", 0)))
 			elif not sp_id.is_empty():
 				item_btn = _button(ib, "Item_" + id, label, me)
 				item_btn.pressed.connect(func() -> void: _do(GameState.combat_item_spell(id, "")))
@@ -1299,8 +1341,9 @@ func _grapple(t: String, shove: bool) -> String:
 
 
 ## A button that needs a target: pressing it lights the bodies that can be hit. `aims` — the spell whose target is a square.
-func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "") -> Button:
+func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "", feet := 0) -> Button:
 	var b := _button(parent, node_name, text, enabled)
+	_acts.append({"name": node_name, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims})
 	b.toggle_mode = true
 	b.button_pressed = _pending.is_valid() and _pending_name == node_name
 	b.pressed.connect(func() -> void:
@@ -1312,8 +1355,14 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 			_pending_preview = preview
 			_pending_name = node_name
 			_pending_aim = aims
+			_pending_feet = feet
 		refresh())
 	return b
+
+
+## How far a weapon shoots or is thrown, feet; 0 — a blade.
+func _far(w: Dictionary) -> int:
+	return int(w["range"][1]) if not (w.get("range", []) as Array).is_empty() else 0
 
 
 var _pending_name := ""

@@ -28,6 +28,7 @@ var hero_mark := ""  ## the hero's letter; empty — no hero on this map (the au
 var clicks := true  ## false while a conversation holds the field
 var things: Array[Dictionary] = []  ## those who stand on the map and what lies on it: MapSpots.of (v0.8.2)
 var labels := false  ## every name is written while the key is held
+var reach: Dictionary = {}  ## the squares the picked shot or spell gets to: tinted, with a rim
 var instant := false  ## a walk ends at once: the playtests' game time does not come from frames
 var dim := false  ## what is out of view is dimmed (the author's preview has none)
 var now: Dictionary = {}  ## the squares seen right now: SightRules (v0.8.3)
@@ -43,6 +44,8 @@ var zones: Array[Dictionary] = []  ## SpellEffects.zone_view
 var _tile := BASE_TILE
 var _corner := Vector2.ZERO  ## where the map's corner is on the field
 var _follow := true
+var _own_view := false  ## the player zoomed or dragged: no resize takes that back, until another map
+var _in_fight := false  ## a fight's close view: only the player moves it then
 var _pos := Vector2.ZERO  ## the hero, in squares
 var _path: Array[Vector2i] = []
 var _trail: Array[Vector2] = []
@@ -67,7 +70,11 @@ func show_map(m: Dictionary, world_lib: Dictionary) -> void:
 	map = m
 	lib = world_lib
 	if not same:
-		_fit()
+		_own_view = false
+		if _in_fight:
+			close_up()
+		else:
+			_fit()
 	queue_redraw()
 
 
@@ -79,7 +86,7 @@ func place_hero(cell: Vector2i, mark: String, walkers: Array[Dictionary]) -> voi
 	if Vector2(cell) != _pos or _tokens.size() != walkers.size():
 		_pos = Vector2(cell)
 		_trail.clear()
-		_follow = true
+		_follow = _may_follow()
 		_seat(walkers)
 	else:
 		for i: int in walkers.size():
@@ -111,7 +118,7 @@ func walk(steps: Array[Vector2i]) -> void:
 		queue_redraw()
 		arrived.emit()
 		return
-	_follow = true
+	_follow = _may_follow()
 	set_process(not _path.is_empty())
 	if _path.is_empty():
 		arrived.emit()
@@ -171,8 +178,20 @@ func _process(delta: float) -> void:
 
 
 func _on_resized() -> void:
-	if not map.is_empty():
+	if map.is_empty():
+		return
+	if _own_view:
+		_aim()
+		_hold()
+	elif _in_fight:
+		_aim()
+	else:
 		_fit()
+
+
+## In a fight the view the player set stays, wherever the hero goes (v0.8.4.3, the author).
+func _may_follow() -> bool:
+	return not (_in_fight and _own_view)
 
 
 ## The tile the whole map fits at, never bigger than the base one; then the view goes to the hero.
@@ -187,10 +206,21 @@ func _fit() -> void:
 
 ## Close on the hero: a fight is read by squares, not by the whole map.
 func close_up() -> void:
+	_in_fight = true
+	if _own_view:
+		return
 	_tile = BASE_TILE
 	_follow = true
 	_aim()
 	queue_redraw()
+
+
+## The fight is over: the whole map again, unless the player has set a view of its own.
+func release() -> void:
+	_in_fight = false
+	if not _own_view and not map.is_empty():
+		_fit()
+		queue_redraw()
 
 
 func _map_size() -> Vector2:
@@ -223,6 +253,7 @@ func zoom(steps: float, around_point: Vector2) -> void:
 	_tile = clampf(_tile * pow(ZOOM_STEP, steps), MIN_TILE, MAX_TILE)
 	_corner = around_point - at * _tile
 	_follow = false
+	_own_view = true
 	_hold()
 	queue_redraw()
 
@@ -287,6 +318,7 @@ func _gui_input(event: InputEvent) -> void:
 		if _pressed and (_dragged or m.position.distance_to(_press_at) >= DRAG_FROM):
 			_dragged = true
 			_follow = false
+			_own_view = true
 			_corner += m.relative
 			_hold()
 			queue_redraw()
@@ -365,6 +397,9 @@ func _draw_fight_squares(t: float) -> void:
 			_tint(at, tint, t)
 	for at: Variant in routes:
 		_tint(at, Color(UiTheme.ACCENT, 0.16), t)
+	for at: Variant in reach:
+		_tint(at, Color(UiTheme.ACCENT_BRIGHT, 0.08), t)
+		_rim(at, t)
 	for at: Variant in lit:
 		_tint(at, Color(UiTheme.ACCENT_BRIGHT, 0.45), t)
 	for at: Variant in blast:
@@ -373,6 +408,16 @@ func _draw_fight_squares(t: float) -> void:
 	for cell: Vector2i in way:
 		draw_line(_corner + (from + Vector2(0.5, 0.5)) * t, _corner + (Vector2(cell) + Vector2(0.5, 0.5)) * t, UiTheme.ACCENT_BRIGHT, maxf(2.0, t * 0.08))
 		from = Vector2(cell)
+
+
+## The edge of `reach` on the sides of `at` that look out of it.
+func _rim(at: Vector2i, t: float) -> void:
+	var box := Rect2(_corner + Vector2(at) * t, Vector2(t, t))
+	var ends := [[Vector2i.UP, box.position, box.position + Vector2(t, 0)], [Vector2i.RIGHT, box.position + Vector2(t, 0), box.end],
+		[Vector2i.DOWN, box.end, box.position + Vector2(0, t)], [Vector2i.LEFT, box.position + Vector2(0, t), box.position]]
+	for side: Array in ends:
+		if not reach.has(at + (side[0] as Vector2i)):
+			draw_line(side[1], side[2], Color(UiTheme.ACCENT_BRIGHT, 0.6), 1.5)
 
 
 func _tint(at: Vector2i, tint: Color, t: float) -> void:

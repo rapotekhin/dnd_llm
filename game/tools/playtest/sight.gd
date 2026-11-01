@@ -60,6 +60,7 @@ func run() -> void:
 	var round_was := int(s.layouts.get("round", 0))
 	var far := WalkRules.near(field.map, data["layouts"], field.hero_cell(), lair, 1, s.room_id)
 	var was: Vector2i = field.hero_cell()
+	s.lurking[s.room_id]["stealth"] = 99  # the wolves look this way: a good roll keeps the walk going
 	if far.size() > WatchRules.round_steps(s):
 		await _click(far[-1])
 		await wait_until(func() -> bool: return not field.walking(), 20.0)

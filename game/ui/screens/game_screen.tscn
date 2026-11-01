@@ -155,6 +155,8 @@ unique_name_in_owner = true
 auto_translate_mode = 2
 visible = false
 layout_mode = 2
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="FightBar" type="PanelContainer" parent="Margin/Row/Centre"]
 unique_name_in_owner = true

@@ -1,8 +1,9 @@
 class_name WatchRules
 extends RefCounted
 ## Who sees the hero on the map (v0.8.3). A hero who does not hide is seen by anyone with a line of sight in range; one who
-## sneaks or is invisible only in a watcher's cone, and then Stealth decides. A watcher looks one of eight ways by the seed
-## and turns with the rounds of a sneaking walk, so a save holds nothing but the round. The numbers are `rules.sight`.
+## sneaks or is invisible only in a watcher's cone, and then Stealth decides. A watcher looks towards the middle of the map,
+## off by the seed, and turns with the rounds of a sneaking walk, so a save holds nothing but the round. The numbers are
+## `rules.sight`.
 
 const FACES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1), Vector2i(-1, 1), Vector2i(-1, 0), Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1)]
 
@@ -15,19 +16,22 @@ static func _cell(t: Dictionary) -> Vector2i:
 	return Vector2i(int(t["x"]), int(t["y"]))
 
 
-## Where a watcher looks now: an index of FACES.
-static func face(s: GameSession, data: Dictionary, id: String) -> int:
+## Where a watcher on `at` looks now: an index of FACES. Towards the middle of the map, so nobody stares at the edge.
+static func face(s: GameSession, data: Dictionary, map: Dictionary, id: String, at: Vector2i) -> int:
 	var h := absi(("%d|%s" % [s.game_seed, id]).hash())
 	var turns: Array = SightRules.cfg(data)["turns"]
-	return posmod(h % FACES.size() + int(turns[(h >> 8) % turns.size()]) * int(s.layouts.get("round", 0)), FACES.size())
+	var spread := int(SightRules.cfg(data)["face_spread"])
+	var middle := Vector2(int(map["w"]), int(map["h"])) / 2.0 - Vector2(at)
+	var base := roundi(middle.angle() / (TAU / FACES.size())) + h % (spread * 2 + 1) - spread
+	return posmod(base + int(turns[(h >> 8) % turns.size()]) * int(s.layouts.get("round", 0)), FACES.size())
 
 
 ## In the watcher's cone. Beside it nobody slips: the watcher hears that close.
-static func in_cone(s: GameSession, data: Dictionary, id: String, at: Vector2i, cell: Vector2i) -> bool:
+static func in_cone(s: GameSession, data: Dictionary, map: Dictionary, id: String, at: Vector2i, cell: Vector2i) -> bool:
 	if WalkRules.distance(at, cell) <= 1:
 		return true
 	var half := deg_to_rad(float(SightRules.cfg(data)["cone"]) / 2.0)
-	return absf(Vector2(FACES[face(s, data, id)]).angle_to(Vector2(cell - at))) <= half
+	return absf(Vector2(FACES[face(s, data, map, id, at)]).angle_to(Vector2(cell - at))) <= half
 
 
 ## The squares a watcher takes in. `sees_dark` — its darkvision in squares. `wide` — the whole room in the light: a deed in
@@ -54,7 +58,7 @@ static func _npc_dark(data: Dictionary, id: String) -> int:
 static func sees(s: GameSession, data: Dictionary, map: Dictionary, id: String, at: Vector2i, cell: Vector2i, reach: int) -> bool:
 	if WalkRules.distance(at, cell) > reach:
 		return false
-	if sneaky(s, data) and not in_cone(s, data, id, at, cell):
+	if sneaky(s, data) and not in_cone(s, data, map, id, at, cell):
 		return false
 	return SightRules.line(map, data["layouts"], at, cell)
 
@@ -91,7 +95,7 @@ static func cones(s: GameSession, data: Dictionary, map: Dictionary, seen: Dicti
 		var at := _cell(t)
 		var far := range_of(s, data, _npc_dark(data, id) if str(t["kind"]) == "npc" else dark_of(data, t["record"]))
 		for cell: Vector2i in SightRules.view(map, data["layouts"], at, far):
-			if in_cone(s, data, id, at, cell):
+			if in_cone(s, data, map, id, at, cell):
 				out[cell] = true
 	return out
 

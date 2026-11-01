@@ -66,7 +66,7 @@ func _stand(s: GameSession, cell: Vector2i) -> void:
 func _in_cone(s: GameSession, id: String, want: bool) -> Callable:
 	return func(map: Dictionary, at: Vector2i, cell: Vector2i) -> bool:
 		var d := WalkRules.distance(at, cell)
-		return d >= 2 and d <= 6 and SightRules.line(map, data["layouts"], at, cell) and WatchRules.in_cone(s, data, id, at, cell) == want
+		return d >= 2 and d <= 6 and SightRules.line(map, data["layouts"], at, cell) and WatchRules.in_cone(s, data, map, id, at, cell) == want
 
 
 # --- the line and the view ------------------------------------------------------------------------------------
@@ -237,11 +237,19 @@ func test_watchers_turn_with_the_rounds() -> void:
 	var turned := false
 	for i: int in 20:
 		var id := "foe%d" % i
-		var was := WatchRules.face(s, data, id)
+		var was := WatchRules.face(s, data, _map(s), id, Vector2i(3, 3))
 		s.layouts["round"] = 1
-		turned = turned or WatchRules.face(s, data, id) != was
+		turned = turned or WatchRules.face(s, data, _map(s), id, Vector2i(3, 3)) != was
 		s.layouts["round"] = 0
 	assert_bool(turned).is_true()
+
+
+func test_a_watcher_at_the_edge_looks_inward() -> void:
+	var s := _session(TRAIL)
+	var map := {"w": 20, "h": 20}
+	for i: int in 20:  # by the left edge: east, a step off at most
+		assert_bool(WatchRules.face(s, data, map, "foe%d" % i, Vector2i(0, 10)) in [7, 0, 1]).is_true()
+		assert_bool(WatchRules.face(s, data, map, "foe%d" % i, Vector2i(19, 10)) in [3, 4, 5]).is_true()
 
 
 func test_cones_show_only_while_hiding_and_a_walk_goes_by_rounds() -> void:

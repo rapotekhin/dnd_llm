@@ -2963,7 +2963,7 @@
 		"seized_name": "Сундук с вашими вещами"
 	},
 	"sight": {
-		"_doc": "v0.8.3, SightRules, WatchRules: what is seen on a map, in squares of 5 ft. day — how far the hero sees in the light; obscured — in fog or a downpour; blind — without light or darkvision; darkvision, devils_sight — by the SRD, 60 and 120 ft; lights — a light by its item, torch 20 + 20 ft, lamp 15 + 30, hooded lantern 30 + 30, `light` for the Light spell and any other source; watch — from how far a foe notices one who does not hide; cone — degrees of a watcher's view; turns — how a watcher turns each round of a sneaking walk, by the seed; notice — from how far passive Perception finds a trap or a cache; spring — from how far an ambush strikes; lair — foes stand this far from the ways in, if the room has room.",
+		"_doc": "v0.8.3, SightRules, WatchRules: what is seen on a map, in squares of 5 ft. day — how far the hero sees in the light; obscured — in fog or a downpour; blind — without light or darkvision; darkvision, devils_sight — by the SRD, 60 and 120 ft; lights — a light by its item, torch 20 + 20 ft, lamp 15 + 30, hooded lantern 30 + 30, `light` for the Light spell and any other source; watch — from how far a foe notices one who does not hide; cone — degrees of a watcher's view; face_spread — how many of the eight ways a watcher looks off the middle of the map, by the seed; turns — how a watcher turns each round of a sneaking walk, by the seed; notice — from how far passive Perception finds a trap or a cache; spring — from how far an ambush strikes; lair — foes stand this far from the ways in, if the room has room.",
 		"day": 30,
 		"obscured": 8,
 		"blind": 1,
@@ -2973,6 +2973,7 @@
 		"lights": {"light": 8, "torch": 8, "lamp": 9, "lantern": 12, "lantern_of_revealing": 12, "lantern_bullseye": 12, "candle_tallow": 2, "candle": 2},
 		"watch": 12,
 		"cone": 120,
+		"face_spread": 1,
 		"turns": [0, 1, -1, 2],
 		"notice": 3,
 		"spring": 5,

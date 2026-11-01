@@ -117,7 +117,7 @@ func _player_turn(gs: Node, s: GameSession) -> void:
 			card.mouse_entered.emit()
 			await frames(2)
 			var hint: Label = find(game, "Hint")
-			step("hit hint on hover", hint != null and (hint.text.contains("%") or hint.text.contains("Не достать") or hint.text.contains("Цели не видно")), hint.text if hint != null else "")
+			step("the name on hover, the chance in the card's tip", hint != null and hint.text == str(CombatRules.fighter(s, CombatRules.enemies(s)[0])["name"]) and (card.tooltip_text.contains("%") or card.tooltip_text.contains("Не достать") or card.tooltip_text.contains("Цели не видно")), card.tooltip_text)
 			await shot("combat_hint")
 	if road and not _parleyed:
 		_parleyed = true
