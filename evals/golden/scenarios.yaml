@@ -4517,3 +4517,21 @@ scenarios:
       effects: {required_kinds_any: [create:recipe], forbidden_kinds: [create:quest, create:course, move_item:world>hero]}
     rubric:
       - "Мастер даёт рецепт эффектом recipe с output_id halberd в этом же ходе; проверка допустима, задание и учитель — нет"
+
+  - id: place_room_joined_to_a_building
+    title: "Новая комната в самой таверне: место в том же здании, а не новый объект"
+    category: world
+    extends: tavern
+    input: "Иду искать баню при таверне, хочу смыть дорожную пыль, не выходя на улицу."
+    engine:
+      find_places: []
+      find_npcs: []
+      find_edges: []
+      validate:
+        - {kind: create:place, status: accept, summary: "Новое место: Баня при таверне [new:bath]"}
+    expect:
+      effects: {required_kinds_any: [create:place], forbidden_kinds: [coins]}
+      tools_required: [find_places]
+    rubric:
+      - "Мастер создаёт комнату эффектом create:place с inside: true и extend: true в комнате таверны, координат не пишет"
+

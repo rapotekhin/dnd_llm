@@ -12,6 +12,7 @@ const SCREENS := {
 	"game": "игра: таверна, чат, варианты, состояния над вводом",
 	"sheet": "лист персонажа",
 	"map": "карта",
+	"layout": "планировки мест: все карты мира",
 	"journal": "журнал",
 	"trade": "торговля с трактирщиком",
 	"pockets": "окно карманов",
@@ -54,6 +55,11 @@ static func open(main: Node, which: String = "") -> void:
 			EventBus.navigate.emit("slots", {"mode": SlotsScreen.MODE_LOAD, "back": "menu"})
 		"combat", "combat_results":
 			_start(_combat(name == "combat_results"))
+		"layout":
+			var s := _session("fighter_aira")
+			_start(s)
+			await main.get_tree().process_frame
+			main.add_child(LayoutView.opened(s, LaunchArgs.value("--room", "brod-tavern-hall")))
 		_:
 			var s := _session("cleric_branko" if name == "prepare" else "fighter_aira")
 			if name == "trade":

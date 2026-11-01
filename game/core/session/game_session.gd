@@ -56,6 +56,8 @@ var flags: Array[String] = []
 var locks: Dictionary = {}
 ## What the hero knows, {kind: [key]} (Knows, v0.7.68).
 var knows: Dictionary = {}
+var layouts: Dictionary = {}  ## what maps keep: chosen chunks and what was touched (LayoutRules, v0.8.0)
+var layout_cache: Dictionary = {}  ## built maps of this run, not saved
 ## Rooms the player has been to, in order (the map).
 var visited: Array[String] = []
 ## Days since the start; a long rest starts the next one.
@@ -180,17 +182,17 @@ static func create(new_seed: int, now: String, start_room: String, new_character
 	return s
 
 
-## JSON brings numbers back as floats: the counters, scores and quantities of a character become ints again.
-## JSON gives back every number as a float: the whole ones become ints again, deep.
-static func _whole(v: Variant) -> Variant:
+## JSON gives back every number as a float: the whole ones become ints again, all the way down. A save goes through it
+## once in from_dict, so no field needs its own cast; a value that must stay a fraction is read with float().
+static func whole(v: Variant) -> Variant:
 	if v is float and float(v) == floorf(v):
 		return int(v)
 	if v is Array:
-		return (v as Array).map(func(x: Variant) -> Variant: return _whole(x))
+		return (v as Array).map(whole)
 	if v is Dictionary:
 		var out := {}
 		for k: Variant in v:
-			out[k] = _whole(v[k])
+			out[k] = whole(v[k])
 		return out
 	return v
 
@@ -219,11 +221,11 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 			contents[it] = int(c["bags"][id]["contents"][it])
 		bags[id] = {"kind": str(c["bags"][id].get("kind", "")), "contents": contents}
 		if c["bags"][id].has("copies"):
-			bags[id]["copies"] = _whole(c["bags"][id]["copies"])
+			bags[id]["copies"] = whole(c["bags"][id]["copies"])
 	c["bags"] = bags
 	for k: String in ["copies", "study", "bonds", "family", "heists", "orgs", "offices", "towns", "faith", "debts"]:  # v0.7.25 food batches, v0.7.30 study, v0.7.31 bonds: whole numbers only
 		if c.has(k):
-			c[k] = _whole(c[k])
+			c[k] = whole(c[k])
 	c["conditions"] = c.get("conditions", [])
 	var body := {}  # v0.7.22.5: age, build, height — ids of rules.body
 	for k: String in c.get("body", {}):
@@ -232,7 +234,7 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 	var effects: Array = []
 	for e: Variant in c.get("effects", []):
 		if e is Dictionary:
-			effects.append(_whole_numbers((e as Dictionary).duplicate(true)))
+			effects.append(whole((e as Dictionary).duplicate(true)))
 	c["effects"] = effects
 	c["next_effect"] = int(c.get("next_effect", 1))
 	c["temp_hp"] = int(c.get("temp_hp", 0))  # v0.7.10
@@ -241,7 +243,7 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		var n: Dictionary = c["needs"]
 		for k: String in ["food", "water"]:
 			n[k] = {"level": float(n[k].get("level", 100.0)), "at": int(n[k].get("at", 0))}
-		n["done"] = _whole_numbers(n.get("done", {}))
+		n["done"] = whole(n.get("done", {}))
 	if c.has("diseases"):  # v0.7.23.1: diseases still incubating
 		var sick: Array = []
 		for d: Variant in c["diseases"]:
@@ -249,25 +251,14 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 				sick.append({"id": str(d.get("id", "")), "onset": int(d.get("onset", 0))})
 		c["diseases"] = sick
 	if c.get("disease_met") is Dictionary:
-		c["disease_met"] = _whole_numbers(c["disease_met"])
+		c["disease_met"] = whole(c["disease_met"])
 	c["concentration"] = str(c.get("concentration", ""))
 	c["concentration_ends"] = int(c.get("concentration_ends", -1))
 	c["prepared_day"] = int(c.get("prepared_day", 1))
 	c["attuned"] = (c.get("attuned", []) as Array).map(func(v: Variant) -> String: return str(v))  # v0.7.12
 	if c.get("ammo_left") is Dictionary:
-		c["ammo_left"] = _whole_numbers(c["ammo_left"])
+		c["ammo_left"] = whole(c["ammo_left"])
 	return c
-
-
-## JSON brings every number back as a float: whole ones become ints again, all the way down (effects, the beast form).
-static func _whole_numbers(d: Dictionary) -> Dictionary:
-	for k: Variant in d.keys():
-		var v: Variant = d[k]
-		if v is float and is_equal_approx(v, roundf(v)):
-			d[k] = int(v)
-		elif v is Dictionary:
-			d[k] = _whole_numbers(v)
-	return d
 
 
 func next_turn_id() -> String:
@@ -454,6 +445,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"summaries": summaries,
 		"locks": locks,
 		"knows": knows,
+		"layouts": layouts,
 		"visited": visited,
 		"day": day,
 		"merchants": merchants,
@@ -504,7 +496,8 @@ func to_dict(kept_chat: int) -> Dictionary:
 	}
 
 
-static func from_dict(d: Dictionary) -> GameSession:
+static func from_dict(saved: Dictionary) -> GameSession:
+	var d: Dictionary = whole(saved)
 	var s := GameSession.new()
 	s.game_seed = int(d.get("seed", 0))
 	s.rng.seed = s.game_seed
@@ -531,7 +524,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.npc_id = str(d.get("npc_id", ""))
 	s.character = normalized_character(d.get("character", {}))
 	s.items = d.get("items", {})
-	s.beings = _whole(d.get("beings", {}))
+	s.beings = whole(d.get("beings", {}))
 	s.being_counter = int(d.get("being_counter", 0))
 	for f: Variant in d.get("flags", []):
 		s.flags.append(str(f))
@@ -540,6 +533,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	for key: String in s.locks:
 		_normalized(s.locks[key]["result"])
 	s.knows = d.get("knows", {})
+	s.layouts = d.get("layouts", {})
 	for v: Variant in d.get("visited", []):
 		s.visited.append(str(v))
 	s.day = int(d.get("day", 1))
@@ -555,7 +549,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.encounters_passed.append(str(e))
 	for e: Variant in d.get("encounters_peace", []):
 		s.encounters_peace.append(str(e))
-	s.factions = _whole(d.get("factions", {}))
+	s.factions = whole(d.get("factions", {}))
 	s.sneaking = bool(d.get("sneaking", false))
 	s.minute = int(d.get("minute", 480))
 	for q: String in d.get("quests_active", {}):
@@ -568,7 +562,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.sneak_noticed = str(d.get("sneak_noticed", ""))
 	var fight: Variant = d.get("fight_on_load", {})
 	s.fight_on_load = (fight as Dictionary).duplicate(true) if fight is Dictionary else {}
-	s.props = _whole(d.get("props", {}))  # days and counters, the food batches lying there
+	s.props = whole(d.get("props", {}))  # days and counters, the food batches lying there
 	for room: String in s.props:  # whole numbers back from JSON: contents, the lock, when it was dropped (v0.7.22.8)
 		for p: Variant in s.props[room]:
 			if not (p is Dictionary):
@@ -585,8 +579,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.shop_closed[n] = int(d["shop_closed"][n])
 	for e: Variant in d.get("crimes", []):
 		if e is Dictionary:
-			var cr := _whole_numbers((e as Dictionary).duplicate(true))  # at, known_at, the sentence's days
-			cr["at"] = int(cr.get("at", 0))
+			var cr: Dictionary = (e as Dictionary).duplicate(true)
 			cr["witnesses"] = (cr.get("witnesses", []) as Array).map(func(x: Variant) -> String: return str(x))
 			s.crimes.append(cr)
 	for loc: String in d.get("wanted", {}):
@@ -599,7 +592,7 @@ static func from_dict(d: Dictionary) -> GameSession:
 	s.lurking = (d.get("lurking", {}) as Dictionary).duplicate(true)
 	s.captive = (d.get("captive", {}) as Dictionary).duplicate(true)
 	s.talk_creature = str(d.get("talk_creature", ""))
-	s.ways = _whole(d.get("ways", {}))
+	s.ways = whole(d.get("ways", {}))
 	for sid: String in d.get("trespass_warned", {}):
 		s.trespass_warned[sid] = int(d["trespass_warned"][sid])
 	for sid: String in d.get("permits", {}):
@@ -612,16 +605,13 @@ static func from_dict(d: Dictionary) -> GameSession:
 		s.quests_failed.append(str(q))
 	s.reward_spent = int(d.get("reward_spent", 0))
 	s.magic_given = int(d.get("magic_given", 0))
-	s.ledger.assign(_whole(d.get("ledger", [])))
-	s.chronicle.assign(_whole(d.get("chronicle", [])))  # a Fact's `at`: a whole number again after JSON
-	s.notes.assign(_whole(d.get("notes", [])))
+	s.ledger.assign(whole(d.get("ledger", [])))
+	s.chronicle.assign(whole(d.get("chronicle", [])))  # a Fact's `at`: a whole number again after JSON
+	s.notes.assign(whole(d.get("notes", [])))
 	if d.get("generated") is Dictionary:
 		s.generated = (d["generated"] as Dictionary).duplicate(true)
 		if s.generated.has("site_facts"):
-			s.generated["site_facts"] = _whole(s.generated["site_facts"])
-		for k: String in ["faith", "letters", "rumors", "weather", "made"]:  # counters and days, whole numbers again after JSON
-			if s.generated.get(k) is Dictionary:
-				_whole_numbers(s.generated[k])
+			s.generated["site_facts"] = whole(s.generated["site_facts"])
 	for k: String in d.get("reputation", {}):
 		s.reputation[k] = int(d["reputation"][k])
 	for q: Variant in d.get("quests_done", []):
@@ -643,9 +633,6 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 	for k: String in ["round", "turn", "xp", "coins_cp", "parley_ok", "parley_fail"]:
 		if c.has(k):
 			c[k] = int(c[k])
-	for z: Variant in c.get("zones", []):  # the spell zones of v0.7.13.5
-		if z is Dictionary:
-			_whole_numbers(z)
 	for k: String in ["ok", "fail"]:
 		if c.get("death_saves", {}).has(k):
 			c["death_saves"][k] = int(c["death_saves"][k])
@@ -705,8 +692,6 @@ static func _normalized(e: Dictionary) -> Dictionary:
 		e["rolls"] = (e["rolls"] as Array).map(func(r: Variant) -> Variant: return _normalized(r) if r is Dictionary else r)
 	if str(e.get("kind", KIND_CHECK)) != KIND_CHECK:
 		return e
-	if e.get("parts") is Array:  # the roll's breakdown (v0.7.39.5)
-		e["parts"] = (e["parts"] as Array).map(func(p: Variant) -> Variant: return _whole_numbers(p) if p is Dictionary else p)
 	for k: String in ["bonus", "total", "dc", "nat", "haggle_pct"]:
 		if e.has(k):
 			e[k] = int(e[k])

@@ -309,6 +309,8 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 			return {"reason": "объект внутри локации строят у комнаты, куда герой может дойти: его локация, соседние, где он бывал"}
 		if bool(spec.get("new_location", false)):
 			return {"reason": "объект внутри локации — не новая локация"}
+	elif spec.get("extend") == true:
+		return {"reason": "extend — вместе с inside: комнаты встают в объект комнаты room_id"}
 	elif not reach.has(at):
 		var known := reach_edges(s, data).map(func(e: Dictionary) -> String: return "%s [%s] край %d" % [e["room"], e["room_id"], int(e["edge"])])
 		return {"reason": ("у %s нет открытых краёв в досягаемости" % world.room(at).get("name", at)) +
@@ -397,7 +399,7 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 			"public": bool(r.get("public", true)) if r.get("public") != null else true,
 			"hooks": (r.get("hooks", []) as Array).slice(0, 4).map(func(h: Variant) -> String: return str(h).left(160)),
 			"exits": (r.get("exits", []) as Array).map(func(x: Variant) -> String: return str(x)), "secrets": secrets, "encounter": enc,
-			"wilds": grounds, "wilds_owner": wowner})
+			"wilds": grounds, "wilds_owner": wowner, "layout": _layout_words(r)})
 	# every room is reachable from the entry (the first one)
 	var seen: Array = [keys[0]]
 	var frontier: Array = [keys[0]]
@@ -446,6 +448,11 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 	var main := _site_of(data, site_spec, npc_keys)
 	if main.has("reason"):
 		return main
+	var extend_site := world.site_id(at) if spec.get("extend") == true else ""
+	var full := LayoutRules.no_room(s, data, extend_site, LayoutRules.kind_of(world, data, at), defs.size()) if not extend_site.is_empty() \
+		else LayoutRules.too_many(data, main.get("tags", []), defs.size())
+	if not full.is_empty():
+		return {"reason": full}
 	for st: Variant in spec.get("sites", []) if spec.get("sites") is Array else []:
 		if not (st is Dictionary) or str(st.get("key", "")).is_empty() or sites.has(str(st["key"])):
 			return {"reason": "у каждого объекта из sites свой key — его называют комнаты в site"}
@@ -466,7 +473,7 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 	if law and not new_loc:
 		return {"reason": "law — у новой локации: в этой уже свой закон или его нет по пакету"}
 	var place := {"from": at, "edge": idx, "rooms": defs, "new_location": new_loc, "location": {}, "site": main, "sites": sites, "inside": inside,
-		"npcs": people, "law": law, "settlement": kind}
+		"npcs": people, "law": law, "settlement": kind, "extend_site": extend_site}
 	if new_loc:
 		place["location"] = {"name": str(spec.get("name", "")).strip_edges().left(60), "description": str(spec.get("description", "")).left(400), "terrain": terrain}
 		if str(place["location"]["name"]).length() < 2:
@@ -478,6 +485,17 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		extra += "; %s%s" % [c["settlements"][kind]["name"], ", со стражей" if law else ""]
 	return {"plan": {"place": place}, "summary": "Новое место: %s%s%s" % [", ".join(defs.map(func(d: Dictionary) -> String: return "%s [new:%s]" % [d["name"], d["key"]])),
 		"" if at == s.room_id else " — у %s" % world.room(at).get("name", at), extra]}
+
+
+## What a room says of its place on a map, only the words it set.
+static func _layout_words(r: Dictionary) -> Dictionary:
+	var out := {}
+	for key: String in ["role", "size"]:
+		if not str(r.get(key, "")).is_empty() and r.get(key) != null:
+			out[key] = str(r[key])
+	if r.get("floor") != null and int(r.get("floor", 0)) != 0:
+		out["floor"] = int(r["floor"])
+	return out
 
 
 ## A site of a spec (NewSite): {name, description, tags, public, owner?} | {reason}. The owner — an NPC of the world,
@@ -609,6 +627,8 @@ static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 			room["encounter"]["id"] = id + "_enc"
 		if not (d.get("open_edges", []) as Array).is_empty():
 			room["open_edges"] = (d["open_edges"] as Array).duplicate(true)
+		if not (d.get("layout", {}) as Dictionary).is_empty():
+			room["layout"] = d["layout"]
 		if not (d.get("wilds", []) as Array).is_empty():
 			room["tags"] = (d["wilds"] as Array).duplicate()
 			if not str(d.get("wilds_owner", "")).is_empty():
@@ -623,6 +643,11 @@ static func apply_place(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 	for key: Variant in [""] + keyed.keys():
 		var members: Array = (place["rooms"] as Array).filter(func(d: Dictionary) -> bool: return str(d.get("site", "")) == str(key))
 		if members.is_empty():
+			continue
+		if str(key).is_empty() and not str(place.get("extend_site", "")).is_empty():  # rooms joined to a building (v0.8.0)
+			for d: Dictionary in members:
+				gen["rooms"][ids[d["key"]]]["site_id"] = str(place["extend_site"])
+			sid = str(place["extend_site"])
 			continue
 		var sn := 1
 		while data["world"].get("sites", {}).has("gen_site_%d" % sn) or gen["sites"].has("gen_site_%d" % sn):

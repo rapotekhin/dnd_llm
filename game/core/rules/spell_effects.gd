@@ -206,7 +206,7 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 		e["ability_adv"] = best
 	if sp.has("max_hp_plus"):  # Aid: the maximum and the hit points up
 		e["max_hp"] = int(sp["max_hp_plus"]) + int(sp.get("per_slot", 0)) * slot_up
-	ConditionRules.add_effect(c, GameSession._whole_numbers(e))  # the table's numbers come as floats from JSON
+	ConditionRules.add_effect(c, GameSession.whole(e))  # the table's numbers come as floats from JSON
 	lines.append_array(lines_before)
 	lines.append("%s: %s" % [spell["name"], text(data, e)])
 	if sp.has("remove"):
@@ -649,14 +649,14 @@ static func start_sustained(s: GameSession, data: Dictionary, spell_id: String, 
 				zone[k] = sus[k]
 		if not bool(spell.get("concentration", false)) and rounds > 0:  # Grease: a minute on the field
 			zone["until_round"] = int(s.combat.get("round", 1)) + rounds
-		(s.combat["zones"] as Array).append(GameSession._whole_numbers(zone))
+		(s.combat["zones"] as Array).append(GameSession.whole(zone))
 		lines.append("%s: %s" % [spell["name"], "вокруг героя" if bool(sus.get("follow", false)) else "встаёт на поле"])
 		if (zone["on"] as Array).has("now"):
 			for fid: String in CombatRules.enemies(s):
 				if int(CombatRules.fighter(s, fid)["col"]) == col:
 					lines.append_array(_zone_hit(s, data, zone, CombatRules.fighter(s, fid)))
 	if sus.has("cost"):
-		ConditionRules.add_effect(c, GameSession._whole_numbers(e))
+		ConditionRules.add_effect(c, GameSession.whole(e))
 	if bool(sus.get("now", false)) and not t.is_empty():
 		lines.append_array(_hit(s, data, spell_id, e, t))
 

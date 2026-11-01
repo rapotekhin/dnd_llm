@@ -1,0 +1,389 @@
+{
+	"_doc": "Layouts of places (v0.8.0, LayoutGen, LayoutRules): a square is 5 ft. `cells` — what a character of a chunk means; `kinds` — a place's kind by the tag of its site: its shape (building, tunnels, open), family, rooms with roles and their limit, the size and scatter of an open map; `chunks` — parts of maps: `rows` of `cells`, D — a door socket on the edge, letters of `marks` — named floor squares, a blank — leave the map as it is (landmarks). Rotations and mirrors make new variants of a chunk. The chain of picking a chunk: kind and role, family and role, the room's tags, a generic chunk of the size.",
+	"cells": {
+		"#": {"name": "wall", "solid": true, "opaque": true},
+		".": {"name": "floor"},
+		"=": {"name": "road"},
+		"+": {"name": "door", "opaque": true},
+		"%": {"name": "difficult", "cost": 2},
+		"^": {"name": "hazard", "hazard": true},
+		"~": {"name": "water", "cost": 2},
+		"o": {"name": "pit", "solid": true},
+		"T": {"name": "tree", "solid": true, "opaque": true},
+		"B": {"name": "block", "solid": true},
+		"D": {"name": "socket", "solid": true, "opaque": true}
+	},
+	"sizes": ["small", "medium", "large"],
+	"mark_tags": {"hearth": "hearth", "forge": "forge", "workbench": "bench", "alchemy": "bench", "temple": "altar", "stage": "stage", "market": "stall", "water": "water", "ore": "vein"},
+	"open": {
+		"size": [40, 40],
+		"spread": 4,
+		"box": [9, 7],
+		"clear": 2,
+		"pond": 0.09,
+		"noise_cell": 6
+	},
+	"kinds": {
+		"tavern": {"shape": "building", "family": "house", "limit": 6, "rooms": {"hall": {"required": true}, "kitchen": {}, "cellar": {}, "upstairs": {}}},
+		"inn": {"family": "tavern"},
+		"smithy": {"shape": "building", "family": "workshop", "limit": 3, "rooms": {"hall": {"required": true}, "store": {}}},
+		"shop": {"shape": "building", "family": "workshop", "limit": 3, "rooms": {"hall": {"required": true}, "store": {}}},
+		"workshop": {"shape": "building", "family": "house", "limit": 4},
+		"mill": {"shape": "building", "family": "workshop", "limit": 3},
+		"temple": {"shape": "building", "family": "hall", "limit": 5, "rooms": {"hall": {"required": true}, "cell": {}}},
+		"registry": {"shape": "building", "family": "hall", "limit": 5, "rooms": {"hall": {"required": true}, "office": {}}},
+		"school": {"shape": "building", "family": "hall", "limit": 6, "rooms": {"hall": {"required": true}, "dorm": {}}},
+		"hall": {"shape": "building", "family": "house", "limit": 6},
+		"house": {"shape": "building", "family": "", "limit": 5, "rooms": {"hall": {"required": true}, "bedroom": {}, "kitchen": {}, "cellar": {}, "upstairs": {}}},
+		"home": {"family": "house"},
+		"bathhouse": {"family": "house"},
+		"prison": {"shape": "building", "family": "house", "limit": 4, "rooms": {"hall": {"required": true}, "cell": {}}},
+		"hideout": {"shape": "building", "family": "house", "limit": 4},
+		"cave": {"shape": "tunnels", "family": "", "limit": 12, "rooms": {"hall": {"required": true}}},
+		"mine": {"shape": "tunnels", "family": "cave", "limit": 12, "rooms": {"hall": {"required": true}}},
+		"wild": {"shape": "open", "scatter": [{"cell": "T", "share": 0.26}, {"cell": "%", "share": 0.1}], "landmarks": ["wild"]},
+		"square": {"shape": "open", "size": [32, 32], "scatter": [{"cell": "B", "share": 0.03}], "landmarks": ["town"]},
+		"market": {"shape": "open", "family": "square", "size": [32, 32], "scatter": [{"cell": "B", "share": 0.04}], "landmarks": ["market"]},
+		"gate": {"shape": "open", "size": [32, 32], "scatter": [{"cell": "B", "share": 0.02}], "landmarks": ["gate"]},
+		"arena": {"shape": "open", "size": [24, 24], "scatter": [], "landmarks": ["ring"]},
+		"ruin": {"shape": "open", "size": [28, 28], "scatter": [{"cell": "B", "share": 0.08}, {"cell": "%", "share": 0.1}], "landmarks": ["ruin"]},
+		"land": {"shape": "open", "size": [24, 24], "scatter": [{"cell": "%", "share": 0.06}], "landmarks": []}
+	},
+	"chunks": [
+		{"id": "tavern_hall", "kinds": ["tavern"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "H": "hearth", "S": "stage", "E": "entry"},
+			"rows": [
+				"#####D#####D###",
+				"#.............#",
+				"#.CCCCCC....H.#",
+				"#.............#",
+				"#..BB....BB...#",
+				"D..BB....BB...D",
+				"#.............#",
+				"#..BB....BB...#",
+				"#..BB....BB.S.#",
+				"#.............#",
+				"#......E......#",
+				"###D#####D#####"
+			]},
+		{"id": "tavern_hall_long", "kinds": ["tavern"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "H": "hearth", "E": "entry"},
+			"rows": [
+				"###D#######D###",
+				"#H............#",
+				"#.............#",
+				"D.BBB.BBB.BBB.D",
+				"#.............#",
+				"#.CCCCCCCCC...#",
+				"#.............#",
+				"#......E......#",
+				"####D#####D####"
+			]},
+		{"id": "kitchen", "kinds": ["tavern", "house"], "roles": ["kitchen"], "size": "medium", "marks": {"H": "hearth", "E": "entry"},
+			"rows": [
+				"###D#####",
+				"#H......#",
+				"#.BBB...#",
+				"D.......D",
+				"#.....B.#",
+				"#.E...B.#",
+				"####D####"
+			]},
+		{"id": "cellar", "kinds": ["tavern", "house", "cave"], "roles": ["cellar"], "size": "cellar", "marks": {"E": "entry"},
+			"rows": [
+				"####D####",
+				"#BB...BB#",
+				"#.......#",
+				"D..B.B..D",
+				"#.......#",
+				"#BB.E.BB#",
+				"####D####"
+			]},
+		{"id": "guest_rooms", "kinds": ["tavern"], "roles": ["upstairs"], "size": "large", "marks": {"E": "entry", "R": "bed"},
+			"rows": [
+				"#####D#####",
+				"#R..#.#..R#",
+				"#...#.#...#",
+				"#.........#",
+				"#.........#",
+				"D....E....D",
+				"#.........#",
+				"#...#.#...#",
+				"#R..#.#..R#",
+				"#####D#####"
+			]},
+		{"id": "shop_room", "kinds": ["shop"], "roles": ["hall"], "size": "medium", "marks": {"C": "counter", "E": "entry"},
+			"rows": [
+				"####D####",
+				"#BB...BB#",
+				"#.CCCCC.#",
+				"D.......D",
+				"#.......#",
+				"#BB.E.BB#",
+				"####D####"
+			]},
+		{"id": "smithy", "kinds": ["smithy"], "roles": ["hall"], "size": "large", "marks": {"F": "forge", "A": "anvil", "E": "entry", "W": "bench"},
+			"rows": [
+				"#####D#####",
+				"#FF.....W.#",
+				"#FF.......#",
+				"D....A....D",
+				"#.........#",
+				"#BB.....BB#",
+				"#....E....#",
+				"#####D#####"
+			]},
+		{"id": "store", "kinds": ["shop", "smithy", "mill"], "roles": ["store"], "size": "small", "marks": {"E": "entry"},
+			"rows": [
+				"###D###",
+				"#BB.BB#",
+				"D.....D",
+				"#B.E.B#",
+				"###D###"
+			]},
+		{"id": "mill_room", "kinds": ["mill"], "size": "medium", "marks": {"M": "millstone", "E": "entry"},
+			"rows": [
+				"####D####",
+				"#.......#",
+				"#..MMM..#",
+				"D..MMM..D",
+				"#.......#",
+				"#BB.E.BB#",
+				"####D####"
+			]},
+		{"id": "temple_nave", "kinds": ["temple"], "roles": ["hall"], "size": "large", "marks": {"A": "altar", "E": "entry"},
+			"rows": [
+				"#####D#####",
+				"#....A....#",
+				"#.........#",
+				"D.B.....B.D",
+				"#.........#",
+				"#.B.....B.#",
+				"#.........#",
+				"#.B.....B.#",
+				"#....E....#",
+				"#####D#####"
+			]},
+		{"id": "town_hall", "kinds": ["registry"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "E": "entry"},
+			"rows": [
+				"###D#####D###",
+				"#...........#",
+				"#.CCCCCCCCC.#",
+				"D...........D",
+				"#.B.......B.#",
+				"#.....E.....#",
+				"###D#####D###"
+			]},
+		{"id": "school_hall", "kinds": ["school"], "roles": ["hall"], "size": "large", "marks": {"T": "desk", "E": "entry"},
+			"rows": [
+				"#####D#####",
+				"#....T....#",
+				"#.........#",
+				"D.BB...BB.D",
+				"#.........#",
+				"#.BB...BB.#",
+				"#....E....#",
+				"#####D#####"
+			]},
+		{"id": "office", "kinds": ["registry", "school", "temple"], "roles": ["office", "cell", "store"], "size": "small", "marks": {"T": "desk", "E": "entry"},
+			"rows": [
+				"###D###",
+				"#T....#",
+				"D.....D",
+				"#BB.E.#",
+				"###D###"
+			]},
+		{"id": "dorm", "kinds": ["school"], "roles": ["dorm"], "size": "medium", "marks": {"R": "bed", "E": "entry"},
+			"rows": [
+				"####D####",
+				"#R.R.R.R#",
+				"#.......#",
+				"D.......D",
+				"#.......#",
+				"#R.R.E.R#",
+				"####D####"
+			]},
+		{"id": "lockup", "kinds": ["prison"], "size": "medium", "marks": {"C": "cell", "T": "desk", "E": "entry"},
+			"rows": [
+				"####D####",
+				"#C.#.#.C#",
+				"#..#.#..#",
+				"#.......#",
+				"D.......D",
+				"#T..E...#",
+				"####D####"
+			]},
+		{"id": "home_room", "kinds": ["house"], "roles": ["hall", "bedroom"], "size": "medium", "marks": {"H": "hearth", "R": "bed", "E": "entry"},
+			"rows": [
+				"####D####",
+				"#R....H.#",
+				"#.......#",
+				"D..BB...D",
+				"#.......#",
+				"#...E...#",
+				"####D####"
+			]},
+		{"id": "room_small", "generic": true, "size": "small", "marks": {"E": "entry"},
+			"rows": [
+				"###D###",
+				"#.....#",
+				"D..E..D",
+				"#.....#",
+				"###D###"
+			]},
+		{"id": "room_small_tall", "generic": true, "size": "small", "marks": {"E": "entry"},
+			"rows": [
+				"##D##",
+				"#...#",
+				"#...#",
+				"D.E.D",
+				"#...#",
+				"#...#",
+				"##D##"
+			]},
+		{"id": "room_medium", "generic": true, "size": "medium", "marks": {"E": "entry"},
+			"rows": [
+				"####D####",
+				"#.......#",
+				"#.......#",
+				"D...E...D",
+				"#.......#",
+				"#.......#",
+				"####D####"
+			]},
+		{"id": "room_medium_pillars", "generic": true, "size": "medium", "marks": {"E": "entry"},
+			"rows": [
+				"####D####",
+				"#.......#",
+				"#.B...B.#",
+				"D...E...D",
+				"#.B...B.#",
+				"#.......#",
+				"####D####"
+			]},
+		{"id": "room_large", "generic": true, "size": "large", "marks": {"E": "entry"},
+			"rows": [
+				"###D#####D###",
+				"#...........#",
+				"#...........#",
+				"#...........#",
+				"D.....E.....D",
+				"#...........#",
+				"#...........#",
+				"#...........#",
+				"###D#####D###"
+			]},
+		{"id": "corridor", "generic": true, "size": "corridor", "marks": {"E": "entry"},
+			"rows": [
+				"###D####D###",
+				"D.....E....D",
+				"###D####D###"
+			]},
+		{"id": "cellar_plain", "generic": true, "size": "cellar", "marks": {"E": "entry"},
+			"rows": [
+				"###D###",
+				"#B...B#",
+				"D..E..D",
+				"#B...B#",
+				"###D###"
+			]},
+		{"id": "cave_small", "generic": true, "kinds": ["cave"], "roles": ["hall"], "size": "cave", "marks": {"E": "entry"},
+			"rows": [
+				"###D#####",
+				"##....###",
+				"#...%..##",
+				"D...E...D",
+				"##.....##",
+				"###..####",
+				"####D####"
+			]},
+		{"id": "cave_large", "kinds": ["cave"], "roles": ["hall"], "size": "large", "marks": {"E": "entry"},
+			"rows": [
+				"#####D#####",
+				"###.....###",
+				"##...%...##",
+				"#.........#",
+				"D....E....D",
+				"#..B......#",
+				"##......###",
+				"###....####",
+				"#####D#####"
+			]},
+		{"id": "gallery", "kinds": ["mine"], "size": "corridor", "marks": {"E": "entry", "O": "vein"},
+			"rows": [
+				"#####D######D#####",
+				"#O....%..........#",
+				"D.......E........D",
+				"#..........%....O#",
+				"#####D######D#####"
+			]},
+		{"id": "mine_turn", "kinds": ["mine"], "size": "medium", "marks": {"E": "entry"},
+			"rows": [
+				"###D###",
+				"###.###",
+				"#.....#",
+				"D..E..D",
+				"#.....#",
+				"###.###",
+				"###D###"
+			]},
+		{"id": "flooded", "tags": ["foul_water", "water"], "size": "medium", "marks": {"E": "entry", "W": "water"},
+			"rows": [
+				"####D####",
+				"#~~~~~~~#",
+				"#~~W~~~~#",
+				"D.......D",
+				"#.......#",
+				"#...E...#",
+				"####D####"
+			]},
+		{"id": "camp", "landmarks": ["wild"], "marks": {"H": "camp"},
+			"rows": [
+				"  ...  ",
+				" ..... ",
+				"...H...",
+				" ..... ",
+				"  ...  "
+			]},
+		{"id": "stones", "landmarks": ["wild", "ruin"], "marks": {"A": "stone"},
+			"rows": [
+				"..B.B..",
+				".......",
+				"B..A..B",
+				".......",
+				"..B.B.."
+			]},
+		{"id": "ruined_walls", "landmarks": ["ruin"], "marks": {"A": "stone"},
+			"rows": [
+				"###.####",
+				"#......#",
+				"#..A...#",
+				".......#",
+				"#......#",
+				"####.###"
+			]},
+		{"id": "well", "landmarks": ["town", "market", "gate"], "marks": {"W": "water"},
+			"rows": [
+				".....",
+				".BWB.",
+				".....",
+				"....."
+			]},
+		{"id": "stalls", "landmarks": ["market"], "marks": {"C": "stall"},
+			"rows": [
+				"BBB.BBB.BBB",
+				".C...C...C.",
+				"...........",
+				".C...C...C.",
+				"BBB.BBB.BBB"
+			]},
+		{"id": "fighting_ring", "landmarks": ["ring"], "marks": {"R": "ring"},
+			"rows": [
+				"BBB.....BBB",
+				"B.........B",
+				"...........",
+				".....R.....",
+				"...........",
+				"B.........B",
+				"BBB.....BBB"
+			]}
+	]
+}

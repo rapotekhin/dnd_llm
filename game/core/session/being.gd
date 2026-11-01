@@ -74,7 +74,7 @@ static func view(s: GameSession, id: String) -> Dictionary:
 ## A new character without a template of the pack: its id stays for life.
 static func spawn(s: GameSession, fields: Dictionary = {}) -> Dictionary:
 	s.being_counter += 1
-	var b: Dictionary = GameSession._whole(fields)  # a pack's numbers come from JSON as floats
+	var b: Dictionary = GameSession.whole(fields)  # a pack's numbers come from JSON as floats
 	b["id"] = "c%d" % s.being_counter
 	b["n"] = s.being_counter
 	s.beings[b["id"]] = b
@@ -84,7 +84,7 @@ static func spawn(s: GameSession, fields: Dictionary = {}) -> Dictionary:
 ## Puts a part on a record; `parts` gives them in the order they came.
 static func put(s: GameSession, id: String, key: String, fields: Dictionary) -> Dictionary:
 	s.being_counter += 1
-	var p: Dictionary = GameSession._whole(fields)
+	var p: Dictionary = GameSession.whole(fields)
 	p["id"] = id
 	p["n"] = s.being_counter
 	of(s, id)[key] = p

@@ -1353,7 +1353,7 @@
     },
     "CreatePlaceEffect": {
       "additionalProperties": false,
-      "description": "A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:\n1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —\nthe room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;\nempty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter\nbudget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of\n`room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed. 0.79.0: a settlement in one\nturn — up to 12 rooms, `sites` with keys its rooms name, `npcs` — its people (as create:npc, with `key`, a room\n«new:<room key>»), `law` — a guard keeps the peace, `settlement` — hamlet | village | town: the engine checks what\nsuch a place always has (rules.world_gen.settlements) and gives it its guard.",
+      "description": "A room or a small place (0.32.0) on an open edge (`edge` — its index), only after find_places in the same turn:\n1–4 rooms; `new_location` with `name`, `description`, `terrain` — where the edge allows it. `room_id` (0.48.0) —\nthe room of the edge from find_places: this room, its location, the neighbouring ones or where the hero has been;\nempty — this room. The hero does not go there by it. The engine checks the schema, the links, the encounter\nbudget and the limits. 0.50.0: the rooms are one site (`site`); `inside` — a new site within the location of\n`room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed. 0.79.0: a settlement in one\nturn — up to 12 rooms, `sites` with keys its rooms name, `npcs` — its people (as create:npc, with `key`, a room\n«new:<room key>»), `law` — a guard keeps the peace, `settlement` — hamlet | village | town: the engine checks what\nsuch a place always has (rules.world_gen.settlements) and gives it its guard. 0.103.0: `extend` with `inside` — the\nrooms join the site of `room_id` and its map, within the limit of rooms of its kind.",
       "properties": {
         "description": {
           "default": "",
@@ -1365,6 +1365,11 @@
           "minimum": 0,
           "title": "Edge",
           "type": "integer"
+        },
+        "extend": {
+          "default": false,
+          "title": "Extend",
+          "type": "boolean"
         },
         "inside": {
           "default": false,
@@ -3678,6 +3683,13 @@
           "title": "Exits",
           "type": "array"
         },
+        "floor": {
+          "default": 0,
+          "maximum": 3,
+          "minimum": -3,
+          "title": "Floor",
+          "type": "integer"
+        },
         "hooks": {
           "items": {
             "type": "string"
@@ -3716,6 +3728,12 @@
           "title": "Public",
           "type": "boolean"
         },
+        "role": {
+          "default": "",
+          "maxLength": 20,
+          "title": "Role",
+          "type": "string"
+        },
         "secrets": {
           "items": {
             "$ref": "#/$defs/NewSecret"
@@ -3727,6 +3745,17 @@
         "site": {
           "default": "",
           "title": "Site",
+          "type": "string"
+        },
+        "size": {
+          "default": "",
+          "enum": [
+            "",
+            "small",
+            "medium",
+            "large"
+          ],
+          "title": "Size",
           "type": "string"
         },
         "wilds": {

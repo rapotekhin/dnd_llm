@@ -271,6 +271,7 @@
 							"name": {"$ref": "#/$defs/nonempty"},
 							"location_id": {"type": "string"},
 							"site_id": {"type": "string"},
+							"layout": {"type": "object", "properties": {"role": {"type": "string"}, "size": {"type": "string"}, "floor": {"type": "integer"}, "shape": {"enum": ["building", "tunnels", "open"]}, "chunk": {"type": "object"}, "rows": {"type": "array", "items": {"type": "string"}}, "marks": {"type": "object"}}, "additionalProperties": false},
 							"public": {"type": "boolean"},
 							"description": {"type": "string"},
 							"exits": {"$ref": "#/$defs/strings"},

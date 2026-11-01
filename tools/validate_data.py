@@ -403,9 +403,14 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
                 errors.append(f"объект {sid}: штат {h['npc']} — не NPC пакета")
         if "arena" in site and not (site.get("owner") or site.get("staff")):  # v0.7.45: the arena's manager
             errors.append(f"объект {sid}: у арены нужен распорядитель (staff) или хозяин")
+    layouts = json.loads((Path(__file__).resolve().parents[1] / "game" / "data" / "layouts.json").read_text(encoding="utf-8"))
+    chunk_ids = {c["id"] for c in layouts["chunks"]}  # v0.8.0
     for rid, room in rooms.items():
         if room["location_id"] not in world["locations"]:
             errors.append(f"комната {rid}: нет локации {room['location_id']}")
+        chunk = room.get("layout", {}).get("chunk", {}).get("id")
+        if chunk and chunk not in chunk_ids:
+            errors.append(f"комната {rid}: нет чанка {chunk}")
         site = sites.get(room.get("site_id", ""))
         if site is None:
             errors.append(f"комната {rid}: нет объекта {room.get('site_id')}")

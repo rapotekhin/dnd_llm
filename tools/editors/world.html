@@ -53,6 +53,7 @@ const app = new EditorApp({
 		const pf = await app.readFile(`${dir}pack.json`);
 		const wfile = `${dir}${pf.data.world || 'world.json'}`, cfile = `${dir}${pf.data.characters || 'characters.json'}`;
 		await app.readFile(wfile);
+		await app.readFile(`${D}layouts.json`, { optional: true });
 		await app.readFile(cfile, { optional: true });
 		for (const p of [SCHEMA, `${D}items.json`, `${D}rules.json`, ...['monsters', 'races', 'classes', 'backgrounds', 'misc', 'spells'].map((n) => `${D}srd/${n}.json`)]) {
 			await app.readFile(p, { optional: true });
@@ -190,14 +191,52 @@ const app = new EditorApp({
 		if (c.id !== 'rooms' || !e?.exits) return [];
 		const rooms = c.container();
 		const oneWay = e.exits.filter((x) => rooms[x] && !(rooms[x].exits || []).includes(id));
-		return oneWay.length ? [h('div', { class: 'linkrow' }, h('span', { class: 'muted' }, 'Выход в одну сторону (обратного нет):'),
+		const links = oneWay.length ? [h('div', { class: 'linkrow' }, h('span', { class: 'muted' }, 'Выход в одну сторону (обратного нет):'),
 			...oneWay.map((x) => h('a', { class: 'chip', href: `#rooms/${encodeURIComponent(x)}` }, rooms[x].name)))] : [];
+		return [...links, ...layoutPanel(app, c, e)];
 	},
 
 	validate(app) { return validatePack(app); },
 	onValidate(app) { problemsButton(app); },
 	afterSave() { return 'Проверьте пакет: uv run --project llm_server python tools/validate_data.py'; },
 });
+
+// The room's map (v0.8.0): a chunk pinned with its turn, or the room drawn by hand. The same turn as LayoutGen.turned.
+function turnedRows(rows, rot, flip) {
+	let out = rows.map((r) => (flip ? [...r].reverse().join('') : r));
+	for (let i = 0; i < ((rot % 4) + 4) % 4; i++) {
+		const w = out[0].length;
+		out = Array.from({ length: w }, (_, x) => out.map((r) => r[x]).reverse().join(''));
+	}
+	return out;
+}
+
+function layoutPanel(app, c, e) {
+	const lib = app.files.get(`${D}layouts.json`)?.data;
+	if (!lib) return [];
+	const pin = e.layout?.chunk || {};
+	const set = (next) => {
+		const merged = { ...(e.layout || {}), ...next };
+		for (const k of Object.keys(merged)) if (merged[k] === undefined) delete merged[k];
+		if (Object.keys(merged).length) e.layout = merged; else delete e.layout;
+		app.changed(c, true);
+	};
+	const pinned = (id, rot, flip) => set({ chunk: id ? { id, rot, flip } : undefined });
+	const rooms = lib.chunks.filter((x) => !x.landmarks);
+	const chunk = lib.chunks.find((x) => x.id === pin.id);
+	const rows = e.layout?.rows || (chunk ? turnedRows(chunk.rows, pin.rot || 0, !!pin.flip) : null);
+	const drawn = h('textarea', { rows: 8, cols: 30, title: 'Комната от руки: строки чанка, как в game/data/layouts.json' }, (e.layout?.rows || []).join('\n'));
+	return [h('div', { class: 'linkrow' }, h('span', { class: 'muted' }, 'Планировка:'),
+		h('select', { title: 'Закрепить чанк; без него комнату выберет генератор', onchange: (ev) => pinned(ev.target.value, pin.rot || 0, !!pin.flip) },
+			h('option', { value: '' }, 'генератор'), ...rooms.map((x) => h('option', { value: x.id, selected: x.id === pin.id }, x.id))),
+		chunk ? h('button', { onclick: () => pinned(pin.id, ((pin.rot || 0) + 1) % 4, !!pin.flip) }, 'Повернуть') : null,
+		chunk ? h('button', { onclick: () => pinned(pin.id, pin.rot || 0, !pin.flip) }, 'Отразить') : null),
+	rows ? h('pre', {}, rows.join('\n')) : null,
+	h('div', { class: 'linkrow' }, drawn, h('button', { onclick: () => {
+		const lines = drawn.value.split('\n').map((x) => x.trimEnd()).filter(Boolean);
+		set({ rows: lines.length ? lines : undefined });
+	} }, 'Применить рисунок'))].filter(Boolean);
+}
 
 function packPicker(app, packs, id) {
 	const sel = h('select', { title: 'Пакет мира', onchange: async (e) => {

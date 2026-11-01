@@ -255,6 +255,7 @@
 		"reputation": {},
 		"rested_at": 480,
 		"knows": {},
+		"layouts": {},
 		"reward_spent": 0,
 		"rng_state": "708718527385777908",
 		"room_id": "brod-tavern-hall",

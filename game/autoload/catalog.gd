@@ -13,6 +13,7 @@ const FILES: Dictionary[String, String] = {
 	"monsters": "res://data/srd/monsters.json",
 	"backgrounds": "res://data/srd/backgrounds.json",
 	"misc": "res://data/srd/misc.json",
+	"layouts": "res://data/layouts.json",
 }
 
 var base: Dictionary = {}

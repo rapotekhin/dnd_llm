@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.102.0"
+PROTOCOL_VERSION = "0.103.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -850,6 +850,10 @@ class NewRoom(_Out):
     open_edges: list[NewEdge] = Field(default_factory=list, max_length=2)
     wilds: list[Literal["game", "fish"]] = Field(default_factory=list, max_length=2)  # 0.85.0: hunting / fishing here
     wilds_owner: str = ""  # 0.85.0: an NPC of the world whose grounds these are — hunting without its leave is poaching
+    # 0.103.0: words for the map, never coordinates: an unknown role goes down the engine's chain to a generic room
+    role: str = Field(default="", max_length=20)  # hall, kitchen, cellar, upstairs, bedroom, store, office, cell, dorm
+    size: Literal["", "small", "medium", "large"] = ""
+    floor: int = Field(default=0, ge=-3, le=3)  # another floor is its own map, stairs lead there
 
 
 class SiteStaff(_Out):
@@ -895,7 +899,8 @@ class CreatePlaceEffect(_Out):
     `room_id` (a bathhouse an NPC spoke of), entered from that room, no open edge needed. 0.79.0: a settlement in one
     turn — up to 12 rooms, `sites` with keys its rooms name, `npcs` — its people (as create:npc, with `key`, a room
     «new:<room key>»), `law` — a guard keeps the peace, `settlement` — hamlet | village | town: the engine checks what
-    such a place always has (rules.world_gen.settlements) and gives it its guard."""
+    such a place always has (rules.world_gen.settlements) and gives it its guard. 0.103.0: `extend` with `inside` — the
+    rooms join the site of `room_id` and its map, within the limit of rooms of its kind."""
 
     kind: Literal["create"] = "create"
     what: Literal["place"] = "place"
@@ -907,6 +912,7 @@ class CreatePlaceEffect(_Out):
     description: str = ""
     terrain: str = ""
     inside: bool = False
+    extend: bool = False
     site: NewSite | None = None
     sites: list[NewSite] = Field(default_factory=list, max_length=8)
     npcs: list["QuestNpc"] = Field(default_factory=list, max_length=8)

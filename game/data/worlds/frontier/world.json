@@ -835,6 +835,7 @@
 	},
 	"rooms": {
 		"brod-tavern-hall": {
+			"layout": {"role": "hall", "size": "large"},
 			"name": "Таверна «Хромой олень» — общий зал",
 			"indoor": true,
 			"location_id": "brod",
@@ -877,6 +878,7 @@
 			]
 		},
 		"brod-tavern-kitchen": {
+			"layout": {"role": "kitchen"},
 			"name": "Кухня таверны",
 			"ways": {"brod-tavern-cellar": {"kind": "door", "material": "wood", "lock": "simple", "locked": true}},
 			"indoor": true,
@@ -906,6 +908,7 @@
 			]
 		},
 		"brod-tavern-cellar": {
+			"layout": {"role": "cellar", "floor": -1},
 			"name": "Погреб таверны",
 			"indoor": true,
 			"location_id": "brod",
@@ -936,6 +939,7 @@
 			"public": false
 		},
 		"brod-tavern-upstairs": {
+			"layout": {"role": "upstairs", "floor": 1},
 			"name": "Комнаты наверху",
 			"indoor": true,
 			"location_id": "brod",
@@ -1632,6 +1636,7 @@
 			]
 		},
 		"outpost-tower": {
+			"layout": {"shape": "building", "size": "small"},
 			"name": "Обрушенная башня",
 			"location_id": "outpost",
 			"description": "Половина башни стоит, вторая лежит грудой камня. Наверх ведёт уцелевшая лестница.",
@@ -1652,6 +1657,7 @@
 			"site_id": "outpost-fort"
 		},
 		"outpost-crypt": {
+			"layout": {"shape": "building", "size": "cellar"},
 			"name": "Склеп под часовней",
 			"indoor": true,
 			"location_id": "outpost",
@@ -1810,6 +1816,7 @@
 			]
 		},
 		"mine-flooded": {
+			"layout": {"size": "medium"},
 			"name": "Затопленный штрек",
 			"location_id": "mine",
 			"description": "Боковой ход, залитый чёрной водой по пояс. Над водой тянется верёвка.",
@@ -1993,6 +2000,7 @@
 			}
 		},
 		"brod-river-yard": {
+			"layout": {"shape": "open"},
 			"name": "Двор у реки",
 			"location_id": "brod",
 			"description": "Заросший двор с покосившимся забором; мостки спускаются к воде, у сарая гниёт лодка.",
@@ -2098,6 +2106,7 @@
 			]
 		},
 		"brod-exchange": {
+			"layout": {"role": "office"},
 			"name": "Меняльная палата",
 			"indoor": true,
 			"location_id": "brod",
@@ -2151,6 +2160,7 @@
 			"site_id": "brod-school"
 		},
 		"brod-school-dorm": {
+			"layout": {"role": "dorm"},
 			"name": "Каморки учеников",
 			"indoor": true,
 			"location_id": "brod",
@@ -2177,6 +2187,7 @@
 			]
 		},
 		"brod-den": {
+			"layout": {"role": "hall", "size": "cellar", "floor": -1},
 			"name": "Логово под мельницей",
 			"indoor": true,
 			"location_id": "brod",
