@@ -25,24 +25,12 @@ func _bandits() -> Dictionary:
 	return {"id": "test_bandits", "enemies": [{"monster": "bandit", "count": 2, "name": "Разбойник"}]}
 
 
-func test_not_sneaking_they_see_the_hero() -> void:
+func test_a_meeting_is_kept_by_the_room_until_someone_sees_someone() -> void:
 	var s := _hero()
 	s.sneaking = false
-	var m := EncounterRules.meet(s, data, "r1", "r0", _wolves())
-	assert_bool(bool(m["lurk"])).is_false()
-	assert_int(int(m["stealth"])).is_equal(-1)
-
-
-func test_sneaking_unseen_no_fight() -> void:
-	var s := _hero()
-	s.sneaking = true
-	s.character["skills"]["stealth"] = 40  # nobody notices this one
-	var m := EncounterRules.meet(s, data, "r1", "r0", _wolves())
-	assert_bool(bool(m["lurk"])).is_true()
+	assert_bool(bool(EncounterRules.meet(s, data, "r1", "r0", _wolves())["fight"])).is_false()
 	assert_dict(EncounterRules.lurking(s, "r1")).is_not_empty()
-	s.character["skills"]["stealth"] = -40
-	s.lurking.clear()
-	assert_bool(bool(EncounterRules.meet(s, data, "r1", "r0", _wolves())["lurk"])).is_false()
+	assert_bool(EncounterRules.sighted(s, "r1")).is_false()
 
 
 func test_slipping_past_unseen_passes_the_encounter_back_the_way_in_does_not() -> void:
@@ -61,13 +49,14 @@ func test_slipping_past_unseen_passes_the_encounter_back_the_way_in_does_not() -
 	assert_str(EncounterRules.slip_past(s, "r5", "r2")).is_empty()  # no foes lurk there
 
 
-func test_an_ambush_strikes_anyway() -> void:
+func test_an_ambush_hides_even_from_one_who_sneaks() -> void:
 	var s := _hero()
 	s.sneaking = true
 	s.character["skills"]["stealth"] = 40
 	var enc := _wolves()
 	enc["ambush"] = true
-	assert_bool(bool(EncounterRules.meet(s, data, "r1", "r0", enc)["lurk"])).is_false()
+	EncounterRules.meet(s, data, "r1", "r0", enc)
+	assert_bool(EncounterRules.lurking(s, "r1").has("hidden")).is_true()
 
 
 func test_wolves_cannot_be_talked_to_bandits_can() -> void:

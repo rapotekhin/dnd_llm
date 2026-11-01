@@ -186,6 +186,22 @@ func tick(node_name: String) -> bool:
 
 ## Menu → «Новая игра» (default world and settings) → creation → «Случайный персонаж» (seeded by --seed)
 ## → «Начать игру».
+## The hero walks up to the room's foes square by square, as clicks do, until they notice or the hero sees them (v0.8.3).
+func walk_to_foes() -> void:
+	var gs := node("GameState")
+	var s: GameSession = gs.session
+	var data: Dictionary = node("Catalog").data
+	var map := WalkRules.view(s, data)
+	var foes := MapSpots.foes(s, data, map)
+	if foes.is_empty():
+		return
+	var at := Vector2i(int(foes[0]["x"]), int(foes[0]["y"]))
+	for cell: Vector2i in WalkRules.near(map, data["layouts"], WalkRules.settle(s, data, map), at, 1, s.room_id):
+		WalkRules.stand(s, map, s.room_id, cell)
+		if gs.walked(map) and (s.sneaking or s.mode == GameSession.MODE_COMBAT):
+			return
+
+
 func quick_character() -> bool:
 	if not await tap("NewGameButton") or not screen_is("NewGameScreen"):
 		return false

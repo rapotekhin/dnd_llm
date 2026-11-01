@@ -17,6 +17,10 @@ extends RefCounted
 ## A dead end is never passed.
 ## v0.7.62: an encounter stays a description with a number of heads; the first entry makes them characters of s.beings
 ## (`heads`) and the same ones meet the hero after that: the dead stay dead, the wounded wounded till a long rest.
+## v0.8.3: foes stand on the map (MapSpots.foes) from the entry on and the meeting goes by who sees whom (`watch`): a hero
+## who does not hide is noticed in their range, one who sneaks in their cone, by one Stealth roll for the room; foes who
+## see a hero that does not see them have the drop on the hero; an ambush hides by a roll of each head and strikes close
+## (`spring`). Until then the record of the room in s.lurking only says they do not know: `sighted` — the hero sees them.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -36,9 +40,9 @@ static func best_passive(data: Dictionary, enemies: Array) -> int:
 	return best
 
 
-## On entering a room with a live encounter: {lurk: bool, line, stealth (−1 — not rolled)}.
+## On entering a room with a live encounter: {lurk, peace?, line} with a word of the faction; else what `watch` says.
 static func meet(s: GameSession, data: Dictionary, room_id: String, from: String, enc: Dictionary) -> Dictionary:
-	heads(s, data, room_id, enc)
+	var made := heads(s, data, room_id, enc)
 	if FactionRules.peaceful(s, data, enc):  # v0.7.50: friends do not fight
 		return {"lurk": false, "peace": true, "stealth": -1, "line": FactionRules.keep_peace(s, data, room_id, enc)}
 	for e: Dictionary in enc["enemies"]:
@@ -46,19 +50,80 @@ static func meet(s: GameSession, data: Dictionary, room_id: String, from: String
 	if FactionRules.word_out(s, data, room_id, enc):  # v0.7.50.1: they heard of the hero: strike first, or talk
 		s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from, "word": true}
 		return {"lurk": true, "stealth": -1, "line": "Они уже слышали о вас и ждут, что вы скажете: %s" % _names(enc)}
+	s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from, "seen": false}
 	if bool(enc.get("ambush", false)):
-		return {"lurk": false, "line": "", "stealth": -1}
-	var unseen := ConditionRules.invisible(s.character, data)
-	if not s.sneaking and not unseen:
-		return {"lurk": false, "line": "", "stealth": -1}
-	var roll := CombatRules.stealth_roll(s, data)
-	var need := best_passive(data, enc["enemies"]) - WeatherRules.unseen(s, data)
-	var names := _names(enc)
-	if int(roll["total"]) < need:
-		return {"lurk": false, "line": "", "stealth": int(roll["total"])}
-	s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from}
-	return {"lurk": true, "stealth": int(roll["total"]),
-		"line": "%s крадётся: Скрытность %d%s — героя не замечают: %s" % [s.character.get("name", ""), int(roll["total"]), roll["note"], names]}
+		s.lurking[room_id]["hidden"] = _hide(s, data, made)
+	return watch(s, data, WalkRules.view(s, data))
+
+
+## An ambush hides: the heads whose Stealth beats the hero's passive Perception, the rest the hero sees from the start.
+static func _hide(s: GameSession, data: Dictionary, foes: Array) -> Array:
+	var passive := int(s.character.get("passive_perception", 10)) - TimeRules.passive_penalty(s, data)
+	var out: Array = []
+	for e: Dictionary in foes:
+		if Roll.d20(s.rng) + CombatRules.monster_stealth(data, e) >= passive:
+			out.append(foe_id(e))
+	return out
+
+
+static func foe_id(e: Dictionary) -> String:
+	return str(e.get("id", e.get("npc_id", e.get("name", ""))))
+
+
+## Who sees whom on `map` now. {fight, source?, new_sight?, lines}: `fight` — the foes noticed the hero, `source` the start
+## of that fight; `new_sight` — the hero just saw them. One Stealth roll serves the whole room.
+static func watch(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary:
+	var out := {"fight": false, "lines": [] as Array[String]}
+	var room := s.room_id
+	var lk := lurking(s, room)
+	if lk.is_empty() or not lk.has("encounter") or bool(lk.get("word", false)):
+		return out
+	var hero := WalkRules.settle(s, data, map)
+	var mine := SightRules.view(map, data["layouts"], hero, SightRules.reach(s, data))
+	var foes := MapSpots.foes(s, data, map)
+	var shown := foes.filter(func(t: Dictionary) -> bool: return mine.has(Vector2i(int(t["x"]), int(t["y"]))) and not (lk.get("hidden", []) as Array).has(str(t["id"])))
+	if not shown.is_empty() and not bool(lk.get("seen", false)):
+		lk["seen"] = true
+		out["new_sight"] = true
+		out["lines"].append("Вы видите: %s" % ", ".join(shown.map(func(t: Dictionary) -> String: return str(t["name"]))))
+	var enc := lurking_encounter(s, data, room)
+	if bool(enc.get("ambush", false)):
+		var close := foes.any(func(t: Dictionary) -> bool:
+			var at := Vector2i(int(t["x"]), int(t["y"]))
+			return WalkRules.distance(at, hero) <= int(SightRules.cfg(data)["spring"]) and SightRules.line(map, data["layouts"], at, hero))
+		if close:
+			out.merge({"fight": true, "source": {"ambush": true, "hidden": shown.is_empty()}}, true)
+		return out
+	var quiet := WatchRules.sneaky(s, data)
+	for t: Dictionary in foes:
+		var at := Vector2i(int(t["x"]), int(t["y"]))
+		if not WatchRules.sees(s, data, map, str(t["id"]), at, hero, WatchRules.range_of(s, data, WatchRules.dark_of(data, t["record"]))):
+			continue
+		if not quiet:
+			out.merge({"fight": true, "source": {"ambush": true} if shown.is_empty() else {}}, true)
+			return out
+		if not lk.has("stealth"):
+			var roll := CombatRules.stealth_roll(s, data)
+			lk["stealth"] = int(roll["total"])
+			out["lines"].append("%s крадётся: Скрытность %d%s" % [s.character.get("name", ""), int(roll["total"]), roll["note"]])
+		if int(lk["stealth"]) < best_passive(data, [t["record"]]) - WeatherRules.unseen(s, data):
+			out.merge({"fight": true, "source": {"sneak": true, "stealth_total": int(lk["stealth"])}}, true)
+			return out
+	return out
+
+
+## What a fight of the encounter starts from, over `extra`.
+static func source(enc: Dictionary, from: String, extra: Dictionary = {}) -> Dictionary:
+	var out := {"encounter": str(enc.get("id", "")), "room_from": from, "waves": enc.get("waves", []), "help": enc.get("help", {}),
+		"parley": str(enc.get("parley", "")), "allies": enc.get("allies", [])}
+	out.merge(extra, true)
+	return out
+
+
+## The hero sees the foes of the room who do not know of it (or who wait for words, or the captors just left).
+static func sighted(s: GameSession, room_id: String) -> bool:
+	var lk := lurking(s, room_id)
+	return not lk.is_empty() and bool(lk.get("seen", true))
 
 
 ## The foes of an encounter as characters: made on the first entry, one record per head. A person of the pack among them
@@ -359,7 +424,7 @@ static func escape(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 	else:
 		s.sneaking = true
 		if not str(s.captive.get("encounter", "")).is_empty():
-			s.lurking[room] = {"encounter": str(s.captive["encounter"]), "from": str(s.captive.get("from", ""))}
+			s.lurking[room] = {"encounter": str(s.captive["encounter"]), "from": str(s.captive.get("from", "")), "stealth": 99}
 		elif not foes.is_empty():  # a fight without an encounter: the captors stay, unaware (v0.7.22.16, #16)
 			s.lurking[room] = {"foes": (s.captive["foes"] as Array).duplicate(), "from": str(s.captive.get("from", ""))}
 		lines.append("Путы сброшены — враги ещё не заметили; можно ускользнуть или ударить первым")
@@ -371,10 +436,10 @@ static func escape(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
 	var out: Array[String] = []
 	var lk := lurking(s, room_id)
-	if not lk.is_empty():
+	if sighted(s, room_id):
 		var enc := lurking_encounter(s, data, room_id)
 		for e: Dictionary in enc.get("enemies", []):
-			out.append("%s — враждебен, героя не заметил (он крадётся рядом)" % e["name"])
+			out.append("%s — враждебен, героя не заметил" % e["name"])
 	if captive(s):
 		for e: Dictionary in captors(s):
 			out.append("%s — держит героя в плену, герой связан" % e["name"])

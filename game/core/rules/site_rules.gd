@@ -31,14 +31,14 @@ static func unwelcome(s: GameSession, data: Dictionary, room_id: String) -> Stri
 	return owner
 
 
-## On entering `room_id` (GameState._step, after sneaking): who sees a trespass and what follows. Lines.
+## On entering `room_id` (GameState._step, the hero stands there): who sees a trespass and what follows. Lines.
 static func on_enter(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
 	var owner := unwelcome(s, data, room_id)
 	if owner.is_empty() or s.sneaking or ConditionRules.invisible(s.character, data):
 		return []  # welcome, or nobody saw the hero come in
 	var world := WorldView.new(data["world"])
 	var site_id := world.site_id(room_id)
-	var seen := s.npcs_here(world.world, room_id)
+	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, room_id))
 	for r: String in world.site_rooms(site_id):  # the owner anywhere in the site hears the door
 		if r != room_id and s.npcs_here(world.world, r).has(owner):
 			seen.append(owner)

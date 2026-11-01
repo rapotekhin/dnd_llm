@@ -35,6 +35,8 @@ func run() -> void:
 			return
 		await press(exit)
 		await wait_until(func() -> bool: return not gs.is_busy() or screen_is("CombatScreen"), 60.0)
+	if not screen_is("CombatScreen"):
+		walk_to_foes()  # they stand on the map, a fight begins when they see the hero
 	if not step("the wolves attack: combat screen", await wait_until(func() -> bool: return screen_is("CombatScreen"), 10.0)):
 		await shot("no_combat")
 		return

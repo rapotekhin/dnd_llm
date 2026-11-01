@@ -356,7 +356,7 @@ static func monster_passive(data: Dictionary, f: Dictionary) -> int:
 	return int(m.get("passive_perception", 10 + CharacterRules.mod(int(m["abilities"].get("wis", 10))))) + MonsterRules.passive_bonus(data, f)
 
 
-static func _monster_stealth(data: Dictionary, f: Dictionary) -> int:
+static func monster_stealth(data: Dictionary, f: Dictionary) -> int:
 	var m := _monster(data, f)
 	return int(m.get("skills", {}).get("stealth", CharacterRules.mod(int(m["abilities"].get("dex", 10)))))
 
@@ -394,10 +394,11 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 			lines.append("Враги не знают, где %s" % who)
 	elif bool(source.get("ambush", false)):
 		var passive := int(s.character.get("passive_perception", 10))
-		var all_hidden := true
-		for id: String in foes:
-			if Roll.d20(s.rng) + _monster_stealth(data, fighter(s, id)) < passive:
-				all_hidden = false
+		var all_hidden: bool = source.get("hidden", true)
+		if not source.has("hidden"):
+			for id: String in foes:
+				if Roll.d20(s.rng) + monster_stealth(data, fighter(s, id)) < passive:
+					all_hidden = false
 		if all_hidden:
 			player(s)["surprised"] = true
 			s.combat["hero_surprised"] = true

@@ -28,6 +28,8 @@ func run() -> void:
 	await frames(3)
 
 	await _go(gs, TRAIL)
+	walk_to_foes()
+	await frames(3)
 	var calm: Button = find(screen(), "Encounter_calm")
 	if not step("«Успокоить» at the unaware wolf", calm != null and not calm.disabled):
 		await shot("no_calm")

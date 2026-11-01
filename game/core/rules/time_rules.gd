@@ -184,27 +184,21 @@ static func shops_closed(s: GameSession, data: Dictionary) -> bool:
 	return is_night(s, data) and bool(cfg(data).get("night_shops_closed", true))
 
 
-## Darkvision (or Devil's Sight, v0.7.10) or a light source in the pack (an item with the light_source property).
+## Darkvision (or Devil's Sight, v0.7.10), the Light spell or a light source in the pack: SightRules.
 static func can_see(s: GameSession, data: Dictionary) -> bool:
-	var c := s.character
-	if CharacterRules.has_trait(c, "darkvision") or CharacterRules.has_feature(c, "eldritch_invocation_devils_sight") or CharacterRules.item_prop(c, "darkvision") \
-			or SpellEffects.has(c, "darkvision") or SpellEffects.has(c, "light"):  # Light and the like (v0.7.13.8)
-		return true
-	for id: String in c.get("inventory", {}):
-		if (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source"):
-			return true
-	return false
+	return SightRules.dark_sight(s, data) > 0 or SightRules.light(s, data) > 0
 
 
-## Night outside a lit location, or a dark room of the pack (`dark` at a room or its location — a mine, a crypt, a
-## burrow; v0.7.10), without a way to see.
-static func dark(s: GameSession, data: Dictionary) -> bool:
+## No light of its own here: night outside a lit location, or a dark room of the pack (`dark` at a room or its location —
+## a mine, a crypt, a burrow; v0.7.10).
+static func unlit(s: GameSession, data: Dictionary) -> bool:
 	var w := WorldView.new(data["world"])
-	var unlit := w.flag(s.room_id, "dark")
-	if not unlit:
-		if not is_night(s, data) or w.flag(s.room_id, "lit"):
-			return false
-	return not can_see(s, data)
+	return w.flag(s.room_id, "dark") or (is_night(s, data) and not w.flag(s.room_id, "lit"))
+
+
+## An unlit place without a way to see.
+static func dark(s: GameSession, data: Dictionary) -> bool:
+	return unlit(s, data) and not can_see(s, data)
 
 
 ## Passive Perception lost now: sneaking (−5) and darkness (disadvantage = −5).

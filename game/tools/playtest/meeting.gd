@@ -29,6 +29,8 @@ func run() -> void:
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)
 	step("no fight from the doorway", s.mode != GameSession.MODE_COMBAT and not EncounterRules.lurking(s, "pushcha-trail").is_empty(), _chat(s))
+	walk_to_foes()
+	await frames(3)
 	var attack: Button = find(screen(), "Encounter_attack")
 	step("the attack-by-surprise button", attack != null and not attack.disabled)
 	step("the wolves cannot be talked to", find(screen(), "Encounter_persuasion") != null and find(screen(), "Encounter_persuasion").disabled)

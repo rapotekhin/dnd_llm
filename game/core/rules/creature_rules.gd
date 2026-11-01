@@ -232,7 +232,7 @@ static func _executed(s: GameSession, data: Dictionary, c: Dictionary) -> Array[
 	if ConditionRules.invisible(s.character, data):
 		return []
 	var world := WorldView.new(data["world"])
-	var seen := s.npcs_here(world.world, s.room_id)
+	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, s.room_id))
 	for npc: String in seen:
 		s.shift_attitude(npc, int(cfg(data)["execute_attitude"]), data)
 		s.remember(npc, "герой убил связанного пленника: %s" % c["name"])
@@ -247,7 +247,7 @@ static func _taken_from_owner(s: GameSession, data: Dictionary, c: Dictionary) -
 		return []
 	var owner := str(c["owner"])
 	c["owner"] = OwnerRules.HERO
-	if s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(owner) and not ConditionRules.invisible(s.character, data):
+	if WatchRules.sees_hero(s, data, owner) and not ConditionRules.invisible(s.character, data):
 		return TheftRules.react(s, data, owner)
 	return []
 
@@ -265,7 +265,7 @@ static func _search(s: GameSession, data: Dictionary, npc_id: String, name: Stri
 	Being.of(s, npc_id)["pockets"] = (TheftRules.pockets(s, data, npc_id) as Array).filter(func(e: Dictionary) -> bool: return bool(e.get("worn", false)))
 	var lines: Array[String] = ["Обыскан(а) %s: %s" % [name, ", ".join(got) if not got.is_empty() else "ничего"]]
 	var world := WorldView.new(data["world"])
-	var seen := s.npcs_here(world.world, s.room_id)
+	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, s.room_id))
 	if not seen.is_empty() and not ConditionRules.invisible(s.character, data):
 		s.shift_attitude(seen[0], int(data["rules"]["theft"]["caught_attitude"]), data)
 		lines.append("%s видит, как вы обираете беспомощного: отношение хуже" % world.npc(seen[0]).get("name", seen[0]))

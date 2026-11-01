@@ -171,7 +171,7 @@ static func apply(s: GameSession, data: Dictionary, q: Dictionary) -> Array[Stri
 	if int(q["damage"]) > 0 and bool(hurt(data, p, d, int(q["damage"]), str(q["type"]))["broke"]):
 		lines.append_array(ruin(s, data, str(q["room"]), p, "broken"))
 	var owner := str(p.get("owner", ""))
-	if not owner.is_empty() and s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(owner):
+	if WatchRules.sees_hero(s, data, owner):
 		lines.append_array(TheftRules.react(s, data, owner))
 	return lines
 

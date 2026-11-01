@@ -1446,8 +1446,8 @@ func contest_forfeit() -> String:
 	return ""
 
 
-## The «Красться» toggle of exploration (v0.6.2): entering a room with an encounter the engine rolls Stealth for
-## surprise; passive Perception for hidden things is 5 lower while sneaking (PHB).
+## The «Красться» toggle of exploration (v0.6.2): foes notice the hero only in their cones and by a Stealth roll (v0.8.3);
+## passive Perception for hidden things is 5 lower while sneaking (PHB).
 ## Among people (v0.6.5, playtest-1) it is a Stealth roll against the best passive Perception of the NPCs here: a
 ## failure — they noticed, no sneaking in this room until the player leaves it. "" or a localization key.
 func set_sneaking(on: bool) -> String:
@@ -1455,9 +1455,7 @@ func set_sneaking(on: bool) -> String:
 		return "SNEAK_BUSY"
 	if not on:
 		session.sneaking = false
-		if not EncounterRules.lurking(session, session.room_id).is_empty() and not is_busy():
-			encounter_attack(false)  # v0.7.22.12: out of hiding — they see the hero
-			return ""
+		walked(WalkRules.view(session, Catalog.data))  # out of hiding: they may see the hero now
 		EventBus.state_changed.emit()
 		return ""
 	if session.sneak_noticed == session.room_id:
@@ -1475,6 +1473,11 @@ func set_sneaking(on: bool) -> String:
 ## A Stealth roll against the NPCs of `room_id` (none — no roll, ""). A failure marks the room noticed. The line.
 func _sneak_past_people(room_id: String) -> String:
 	var npcs := session.npcs_here(world().world, room_id)
+	if room_id == session.room_id:  # hidden from those who see the hero; the next room is met from its door
+		var was := session.sneaking
+		session.sneaking = false
+		npcs.assign(WatchRules.eyes(session, Catalog.data, npcs))
+		session.sneaking = was
 	if npcs.is_empty():
 		return ""
 	var best := 0
@@ -2249,7 +2252,11 @@ func go(room_id: String) -> bool:
 	var lines: Array[String] = []
 	var trap := ExplorationRules.trap_on_exit(session, Catalog.data["world"], from, room_id)
 	if not trap.is_empty():
+		var seen := ExplorationRules.approach(session, Catalog.data, from, trap)
+		if not seen.is_empty():
+			_effect_lines(["Замечено: " + seen] as Array[String])
 		if ExplorationRules.is_found(session, from, trap):
+			EventBus.message.emit(tr("TRAP_ON_WAY"))
 			return false  # a found trap: disarm it or go around it (trap_action)
 		lines = ExplorationRules.spring_trap(session, Catalog.data, from, trap)
 		if _trap_downed(lines):
@@ -2273,19 +2280,19 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 		return
 	if _live_encounter(room_id):
 		var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id)["encounter"]
-		var meet := EncounterRules.meet(session, Catalog.data, room_id, from, enc)  # not a fight from the doorway (v0.7.22.12)
-		if bool(meet.get("peace", false)) or bool(meet["lurk"]):
+		var meet := EncounterRules.meet(session, Catalog.data, room_id, from, enc)  # who sees whom (v0.7.22.12, v0.8.3)
+		if meet.has("line"):
 			_add(GameSession.effect_entry([str(meet["line"])]))
 			EventBus.state_changed.emit()
 			_request("enter", "\n".join(lines.slice(1) + [str(meet["line"])]))
 			return
-		var src := {"encounter": str(enc["id"]), "room_from": from, "sneak": session.sneaking,
-			"ambush": bool(enc.get("ambush", false)), "waves": enc.get("waves", []), "help": enc.get("help", {}), "parley": str(enc.get("parley", "")),
-			"allies": enc.get("allies", [])}
-		if int(meet["stealth"]) >= 0:
-			src["stealth_total"] = int(meet["stealth"])
-		start_combat(EncounterRules.heads(session, Catalog.data, room_id, enc), src)
-		return
+		if not (meet["lines"] as Array).is_empty():
+			_add(GameSession.effect_entry(meet["lines"]))
+			lines.append_array(meet["lines"])
+		if bool(meet["fight"]):
+			session.lurking.erase(room_id)
+			start_combat(EncounterRules.heads(session, Catalog.data, room_id, enc), EncounterRules.source(enc, from, meet["source"]))
+			return
 	var again := ExplorationRules.again_line(session, Catalog.data, room_id) if lines.size() <= 1 else ""
 	if not again.is_empty():  # described today and nothing on the way: the engine's line, no master (v0.7.22.20, #8)
 		_quiet_lines([again] as Array[String])
@@ -2311,13 +2318,13 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	lines.append_array(MountRules.on_move(session, Catalog.data, from, room_id))  # a beast waits where it cannot go (v0.7.42)
 	lines.append_array(WayRules.on_pass(session, Catalog.data, from, room_id))  # a way down is a fall (v0.7.66)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
-	lines.append_array(SiteRules.on_enter(session, Catalog.data, room_id))  # a private room unasked (v0.7.22.24)
 	CreatureRules.follow(session, from, room_id)  # a bound captive on the rope (v0.7.22.11)
 	PetRules.seed(session, Catalog.data, room_id)  # the pack's wild beasts to tame (v0.7.43)
 	var gone := PropRules.abandon(session, Catalog.data, room_id)  # big test #28 (v0.7.22.8)
 	if not gone.is_empty():
 		lines.append("Того, что вы здесь оставили, уже нет: " + ", ".join(gone))
 	var found := ExplorationRules.enter_room(session, Catalog.data["world"], room_id, TimeRules.passive_penalty(session, Catalog.data))
+	lines.append_array(SiteRules.on_enter(session, Catalog.data, room_id))  # a private room unasked (v0.7.22.24)
 	lines.append_array(RumorRules.on_enter(session, Catalog.data, room_id))  # a heard tip checked (v0.7.47)
 	lines.append_array(LetterRules.on_enter(session, Catalog.data, room_id))  # a helper called by letter waits here (v0.7.48)
 	lines.append_array(DiseaseRules.contagion(session, Catalog.data))  # a sick NPC here (v0.7.23.1)
@@ -2325,6 +2332,47 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	lines.append_array(QuestRules.advance(session, Catalog.data))
 	lines.append_array(CrimeRules.check_arrest(session, Catalog.data))  # the wanted hero meets the guard (v0.7.14)
 	return found
+
+
+## The hero stands on a new square of `map` (a click's walk, a round of sneaking): what passive Perception finds, a trap
+## underfoot, who sees whom. While the master's turn runs a danger waits for its end. True — the walk stops here.
+func walked(map: Dictionary) -> bool:
+	if session == null or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return true
+	var s := session
+	var data: Dictionary = Catalog.data
+	var cell := WalkRules.settle(s, data, map)
+	var said := ExplorationRules.notice(s, data, map, cell)
+	var trap := ExplorationRules.trap_at(s, data, map, cell)
+	var eyes := EncounterRules.watch(s, data, map)
+	said.append_array(eyes["lines"])
+	if not said.is_empty():
+		_effect_lines(said)
+	var fight := bool(eyes["fight"])
+	if trap.is_empty() and not fight:
+		return eyes.has("new_sight")
+	if is_busy() or not Backend.is_ready():
+		return true
+	if not trap.is_empty():
+		var lines := ExplorationRules.spring_trap(s, data, s.room_id, trap)
+		if not _trap_downed(lines):
+			_effect_lines(lines)
+			_request("trap", "\n".join(lines))
+		return true
+	var lk := EncounterRules.lurking(s, s.room_id)
+	var enc := EncounterRules.lurking_encounter(s, data, s.room_id)
+	s.lurking.erase(s.room_id)
+	start_combat(enc["enemies"], EncounterRules.source(enc, str(lk.get("from", "")), eyes["source"]))
+	return true
+
+
+## A round of a sneaking walk is over: those who watch turn.
+func sneak_round() -> void:
+	if session == null or session.mode == GameSession.MODE_COMBAT:
+		return
+	WatchRules.next_round(session)
+	walked(WalkRules.view(session, Catalog.data))
+	EventBus.state_changed.emit()
 
 
 func _live_encounter(room_id: String) -> bool:
@@ -2356,6 +2404,8 @@ func travel(to: String) -> String:
 	for to_room: String in path:
 		var from := session.room_id
 		var trap := ExplorationRules.trap_on_exit(session, Catalog.data["world"], from, to_room)
+		if not trap.is_empty():
+			ExplorationRules.approach(session, Catalog.data, from, trap)
 		if not trap.is_empty() and ExplorationRules.is_found(session, from, trap):
 			lines.append("Дальше путь стережёт найденная ловушка — переход остановлен")
 			break
@@ -2574,13 +2624,12 @@ func encounter_attack(surprise: bool = true) -> String:
 		return "ENCOUNTER_NONE"
 	var enc := EncounterRules.lurking_encounter(session, Catalog.data, session.room_id)
 	session.lurking.erase(session.room_id)
-	var src := {"encounter": str(enc.get("id", "")), "room_from": str(lk.get("from", "")), "sneak": surprise, "waves": enc.get("waves", []),
-		"help": enc.get("help", {}), "parley": str(enc.get("parley", "")),
-			"allies": enc.get("allies", [])}
-	if surprise:
+	var hid := WatchRules.sneaky(session, Catalog.data) or bool(lk.get("word", false)) or lk.has("foes")  # a charge across the field warns them
+	var src := {"sneak": surprise and hid}
+	if surprise and hid:
 		src["stealth_total"] = 99  # nobody saw the hero: all caught off guard
 		src["from_hiding"] = true
-	start_combat(enc["enemies"], src)
+	start_combat(enc["enemies"], EncounterRules.source(enc, str(lk.get("from", "")), src))
 	return ""
 
 
@@ -2602,9 +2651,7 @@ func encounter_parley(skill: String) -> String:
 	_add(GameSession.effect_entry(r["lines"]))
 	_log("События: " + ", ".join(r["lines"]))
 	if bool(r["fight"]):
-		start_combat(enc["enemies"], {"encounter": str(enc.get("id", "")), "room_from": from, "waves": enc.get("waves", []),
-			"help": enc.get("help", {}), "parley": str(enc.get("parley", "")),
-			"allies": enc.get("allies", [])})
+		start_combat(enc["enemies"], EncounterRules.source(enc, from))
 		return ""
 	EventBus.state_changed.emit()
 	_request("action", text + " [движок уже решил: %s — опиши это, эффекты не нужны]" % ", ".join(r["lines"]))

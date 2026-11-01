@@ -371,7 +371,8 @@ static func witnesses(s: GameSession, data: Dictionary, a: String, b: String) ->
 	var into := b if s.room_id == a else a
 	if SiteRules.unwelcome(s, data, into).is_empty() or ConditionRules.invisible(s.character, data):
 		return []
-	var seen: Array[String] = s.npcs_here(w.world, s.room_id)
+	var seen: Array[String] = []
+	seen.assign(WatchRules.eyes(s, data, s.npcs_here(w.world, s.room_id)))
 	seen.append_array(s.npcs_here(w.world, into))
 	return seen
 

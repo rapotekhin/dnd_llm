@@ -26,6 +26,10 @@ var clicks := true  ## false while a conversation holds the field
 var things: Array[Dictionary] = []  ## those who stand on the map and what lies on it: MapSpots.of (v0.8.2)
 var labels := false  ## every name is written while the key is held
 var instant := false  ## a walk ends at once: the playtests' game time does not come from frames
+var fog := false  ## only what the hero knows is drawn (the author's preview has none)
+var now: Dictionary = {}  ## the squares seen right now: SightRules (v0.8.3)
+var known: Dictionary = {}  ## the squares seen once
+var cones: Dictionary = {}  ## the squares under watch while sneaking
 
 var _tile := BASE_TILE
 var _corner := Vector2.ZERO  ## where the map's corner is on the field
@@ -86,14 +90,16 @@ func walking() -> bool:
 
 
 func walk(steps: Array[Vector2i]) -> void:
-	if instant and not steps.is_empty():
-		_pos = Vector2(steps[-1])
+	_path = steps.duplicate()
+	if instant and not _path.is_empty():
+		while not _path.is_empty():
+			var cell: Vector2i = _path.pop_front()
+			_pos = Vector2(cell)
+			stepped.emit(cell)
 		_aim()
 		queue_redraw()
-		stepped.emit(steps[-1])
 		arrived.emit()
 		return
-	_path = steps.duplicate()
 	_follow = true
 	set_process(not _path.is_empty())
 	if _path.is_empty():
@@ -259,12 +265,17 @@ func _draw() -> void:
 	for y: int in range(first.y, last.y):
 		for x: int in range(first.x, last.x):
 			var c: String = rows[y][x]
-			if c == LayoutGen.BLANK:
+			var cell := Vector2i(x, y)
+			if c == LayoutGen.BLANK or (fog and not known.has(cell)):
 				continue
 			var at := _corner + Vector2(x, y) * t
 			var fill: Color = UiTheme.TILES.get(c, UiTheme.TILES["."])
 			if (x + y) % 2 == 1 and c != LayoutGen.WALL:
 				fill = fill.darkened(0.05)
+			if fog and not now.has(cell):
+				fill = fill.darkened(0.6)
+			elif cones.has(cell):
+				fill = fill.lerp(UiTheme.BAD, 0.32)
 			draw_rect(Rect2(at, Vector2(t, t)), fill)
 			if c == LayoutGen.WALL and y > 0 and rows[y - 1][x] != LayoutGen.WALL:
 				draw_rect(Rect2(at, Vector2(t, maxf(2.0, t * 0.14))), UiTheme.TILES["#"].lightened(0.25))
@@ -296,6 +307,15 @@ func _thing(th: Dictionary) -> void:
 			_token(Vector2(cell), str(th["mark"]), label, UiTheme.BAD if a <= -2 else UiTheme.OK if a >= 2 else UiTheme.TEXT, 0.38)
 		"creature":
 			_token(Vector2(cell), str(th["mark"]), label, UiTheme.WARN, 0.32)
+		"foe":
+			_token(Vector2(cell), str(th["mark"]), label, UiTheme.BAD, 0.36)
+		"trap":
+			var mid := cell_point(cell)
+			var half := _tile * 0.28
+			draw_line(mid - Vector2(half, half), mid + Vector2(half, half), UiTheme.BAD, maxf(2.0, _tile * 0.08))
+			draw_line(mid + Vector2(-half, half), mid + Vector2(half, -half), UiTheme.BAD, maxf(2.0, _tile * 0.08))
+			if not label.is_empty():
+				_name(mid + Vector2(0.0, half + 16.0), label)
 		_:
 			var mid := cell_point(cell)
 			var half := _tile * 0.24
@@ -309,6 +329,8 @@ func _thing(th: Dictionary) -> void:
 func _draw_path(t: float) -> void:
 	var at := _pos
 	for cell: Vector2i in _path:
+		if fog and not known.has(cell):  # the way through the fog gives nothing away
+			break
 		var dot := (at + Vector2(cell)) / 2.0
 		draw_circle(_corner + (dot + Vector2(0.5, 0.5)) * t, maxf(1.5, t * 0.05), UiTheme.ACCENT_BRIGHT)
 		draw_circle(_corner + (Vector2(cell) + Vector2(0.5, 0.5)) * t, maxf(1.5, t * 0.05), UiTheme.ACCENT_BRIGHT)

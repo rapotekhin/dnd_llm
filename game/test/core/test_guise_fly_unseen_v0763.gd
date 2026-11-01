@@ -328,4 +328,4 @@ func test_a_foe_room_is_passed_unseen() -> void:
 	_unseen(s)
 	s.character["skills"]["stealth"] = 40
 	var m := EncounterRules.meet(s, data, s.room_id, "", {"id": "e", "enemies": [{"monster": "wolf", "count": 1}], "faction": "ash_cult"})
-	assert_bool(bool(m["lurk"])).is_true()
+	assert_bool(bool(m["fight"])).is_false()

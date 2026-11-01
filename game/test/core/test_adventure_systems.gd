@@ -170,10 +170,10 @@ func test_passive_perception_loses_the_darkness_penalty() -> void:
 	var world: Dictionary = data["world"]
 	var s := _session()
 	s.character["passive_perception"] = 13
-	assert_array(ExplorationRules.enter_room(s, world, "mine-gallery", 5)).is_empty()
+	assert_array(ExplorationRules.enter_room(s, world, "pushcha-edge", 5)).is_empty()
 	var t := _session()
 	t.character["passive_perception"] = 13
-	assert_array(ExplorationRules.enter_room(t, world, "mine-gallery", 0)).is_not_empty()
+	assert_array(ExplorationRules.enter_room(t, world, "pushcha-edge", 0)).is_not_empty()
 
 
 # --- magic items ----------------------------------------------------------------------------------

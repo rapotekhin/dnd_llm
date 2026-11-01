@@ -624,6 +624,10 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		if not err.is_empty():
 			EventBus.message.emit(tr(err)))
 	place.add_child(sneak)
+	if s.sneaking and EncounterRules.sighted(s, s.room_id):  # the hero stands a round out, those who watch turn (v0.8.3)
+		var wait := _row_button(place, tr("BTN_SNEAK_WAIT"), GameState.sneak_round, can_act)
+		wait.name = "SneakWait"
+		wait.tooltip_text = tr("BTN_SNEAK_WAIT_TIP")
 	for spec: Array in [["LookButton", "BTN_LOOK", "perception"], ["SearchButton", "BTN_SEARCH", "investigation"]]:
 		var skill: String = spec[2]
 		var lb := _row_button(place, tr(spec[1]), _try.bind(GameState.search_room.bind(skill)), can_act)
@@ -1195,13 +1199,14 @@ func _small(row: HBoxContainer, text: String, action: Callable, enabled: bool) -
 func _meeting(s: GameSession, can_act: bool) -> void:
 	var data := Catalog.data
 	var specs: Array = []
-	if not EncounterRules.lurking(s, s.room_id).is_empty():
+	if EncounterRules.sighted(s, s.room_id):
 		var enc := EncounterRules.lurking_encounter(s, data, s.room_id)
 		_subheading("SIDE_WORD" if bool(EncounterRules.lurking(s, s.room_id).get("word", false)) else "SIDE_UNSEEN")  # v0.7.50.1
 		for e: Dictionary in enc.get("enemies", []):
 			_line(str(e["name"]), false)
 		var why := EncounterRules.talkable(s, data, enc.get("enemies", []))
-		specs = [["Encounter_attack", tr("BTN_ENCOUNTER_ATTACK"), "", func() -> String: return GameState.encounter_attack()],
+		var hid := WatchRules.sneaky(s, data) or not EncounterRules.lurking(s, s.room_id).has("encounter") or bool(EncounterRules.lurking(s, s.room_id).get("word", false))
+		specs = [["Encounter_attack", tr("BTN_ENCOUNTER_ATTACK" if hid else "BTN_ENCOUNTER_CHARGE"), "", func() -> String: return GameState.encounter_attack()],
 			["Encounter_persuasion", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_PERSUASION")}), why, func() -> String: return GameState.encounter_parley("persuasion")],
 			["Encounter_intimidation", tr("BTN_ENCOUNTER_TALK").format({"skill": tr("SKILL_INTIMIDATION")}),
 				EncounterRules.talkable(s, data, enc.get("enemies", []), "intimidation"), func() -> String: return GameState.encounter_parley("intimidation")]]

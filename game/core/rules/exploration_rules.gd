@@ -110,9 +110,47 @@ static func enter_room(s: GameSession, world: Dictionary, room_id: String, penal
 	var out: Array[String] = []
 	var passive := int(s.character.get("passive_perception", 10)) - (penalty if penalty >= 0 else (SNEAK_PASSIVE_PENALTY if s.sneaking else 0))
 	for sec: Dictionary in secrets(world, room_id):
-		if str(sec.get("skill", "perception")) == "perception" and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
+		if not on_square(sec) and str(sec.get("skill", "perception")) == "perception" and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
 			out.append(str(sec["text"]))
 	return out
+
+
+## A trap and a cache lie on a square (v0.8.3): passive Perception finds them on the way there, not at the door.
+static func on_square(sec: Dictionary) -> bool:
+	return sec.get("trap") is Dictionary or sec.has("loot")
+
+
+## The hero stands on `cell`: passive Perception against the traps and caches within `sight.notice` in view, what was found
+## and is not emptied yet is taken. Lines.
+static func notice(s: GameSession, data: Dictionary, map: Dictionary, cell: Vector2i) -> Array[String]:
+	var lines: Array[String] = []
+	var passive := int(s.character.get("passive_perception", 10)) - TimeRules.passive_penalty(s, data)
+	var reach := int(SightRules.cfg(data)["notice"])
+	for sec: Dictionary in secrets(data["world"], s.room_id):
+		if not on_square(sec) or str(sec.get("skill", "perception")) != "perception" or passive < int(sec["dc"]) or is_found(s, s.room_id, sec) or s.traps.has(secret_key(s.room_id, sec)):
+			continue
+		var at := MapSpots.secret_cell(s, data, map, s.room_id, sec)
+		if at.x >= 0 and WalkRules.distance(at, cell) <= reach and SightRules.line(map, data["layouts"], cell, at) and _reveal(s, s.room_id, sec):
+			lines.append("Замечено: " + str(sec["text"]))
+	lines.append_array(take_caches(s, data, s.room_id))
+	return lines
+
+
+## The live trap under the hero's feet that the hero does not know of, or {}.
+static func trap_at(s: GameSession, data: Dictionary, map: Dictionary, cell: Vector2i) -> Dictionary:
+	for sec: Dictionary in secrets(data["world"], s.room_id):
+		if sec.get("trap") is Dictionary and not is_found(s, s.room_id, sec) and not s.traps.has(secret_key(s.room_id, sec)) \
+				and MapSpots.secret_cell(s, data, map, s.room_id, sec) == cell:
+			return sec
+	return {}
+
+
+## The last look before a trap on the way out, for a move that was no walk: passive Perception finds it. Its text or "".
+static func approach(s: GameSession, data: Dictionary, room_id: String, sec: Dictionary) -> String:
+	var passive := int(s.character.get("passive_perception", 10)) - TimeRules.passive_penalty(s, data)
+	if str(sec.get("skill", "perception")) == "perception" and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
+		return str(sec["text"])
+	return ""
 
 
 ## A successful search check finds the room's secrets with DC ≤ total: Perception finds what can be noticed,

@@ -37,13 +37,19 @@ static func _assault(crime: Dictionary) -> bool:
 	return str(crime.get("kind", "murder")) == "assault"
 
 
+## Those who really saw the hero do it (v0.8.3): people of the room with a line of sight, none for an invisible hero.
+static func _eyes(s: GameSession, data: Dictionary, victim: String, room_id: String) -> Array:
+	if ConditionRules.invisible(s.character, data):
+		return []
+	var here := s.npcs_here(data["world"], room_id).filter(func(id: String) -> bool: return id != victim)
+	return WatchRules.eyes(s, data, here) if room_id == s.room_id else here
+
+
 ## A fight the hero began ended with a pack NPC alive (knocked out, surrendered, at peace, fled): an assault.
 ## `aware` — the victim saw who did it and is awake. Lines.
 static func on_assault(s: GameSession, data: Dictionary, npc_id: String, aware: bool, room_id: String) -> Array[String]:
 	var world := WorldView.new(data["world"])
-	var witnesses := s.npcs_here(world.world, room_id).filter(func(id: String) -> bool: return id != npc_id)
-	if ConditionRules.invisible(s.character, data):
-		witnesses = []
+	var witnesses := _eyes(s, data, npc_id, room_id)
 	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": "assault", "victim": npc_id, "room": room_id,
 		"location": world.location_id(room_id), "at": TimeRules.abs_minute(s), "witnesses": witnesses, "known": false, "settled": false}
 	s.crimes.append(crime)
@@ -158,9 +164,7 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String, by_hero: 
 	lines.append_array(WorldEvent.emit(s, data, "death", {"npc": npc_id, "by_hero": by_hero, "room": room_id}))
 	if not by_hero:
 		return lines
-	var witnesses := s.npcs_here(world.world, room_id).filter(func(id: String) -> bool: return id != npc_id)
-	if ConditionRules.invisible(s.character, data):
-		witnesses = []  # an unseen killer: they saw a death, not who did it
+	var witnesses := _eyes(s, data, npc_id, room_id)  # an unseen killer: they saw a death, not who did it
 	var crime := {"id": "cr%d" % (s.crimes.size() + 1), "kind": "murder", "victim": npc_id, "room": room_id, "location": world.location_id(room_id),
 		"at": TimeRules.abs_minute(s), "witnesses": witnesses, "known": false, "settled": false}
 	s.crimes.append(crime)
@@ -678,8 +682,8 @@ static func search_body(s: GameSession, data: Dictionary, npc_id: String) -> Arr
 		got.append(ItemRules.display_name(data["items"], s.items, id))
 	Being.search(s, npc_id)
 	var lines: Array[String] = ["Обыскано тело %s: %s" % [world.npc(npc_id).get("name", npc_id), ", ".join(got) if not got.is_empty() else "ничего"]]
-	var seen := s.npcs_here(world.world, s.room_id)
-	if not seen.is_empty() and not ConditionRules.invisible(c, data):
+	var seen := _eyes(s, data, npc_id, s.room_id)
+	if not seen.is_empty():
 		s.shift_attitude(seen[0], int(data["rules"]["theft"]["caught_attitude"]), data)
 		lines.append("%s видит, как вы обираете мёртвого: отношение хуже" % world.npc(seen[0]).get("name", seen[0]))
 	lines.append_array(WorldEvent.deed(s, data, "rob_dead"))  # v0.7.49

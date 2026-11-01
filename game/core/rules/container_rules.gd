@@ -136,7 +136,7 @@ static func plan_take(s: GameSession, data: Dictionary, prop_id: String, item_id
 	if have < qty or qty <= 0:
 		return {"reason": "в %s нет %s ×%d; там: %s" % [p["name"], item_id, qty, contents_text(data, s.items, p.get("contents", {}))]}
 	var owner := str(p.get("owner", ""))
-	var seen := not owner.is_empty() and s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(owner)
+	var seen := WatchRules.sees_hero(s, data, owner)
 	return {"plan": {"room": s.room_id, "from": prop_id, "item_id": item_id, "qty": qty, "owner": owner if seen else ""},
 		"summary": "Взято из %s: %s%s%s" % [p["name"], ItemRules.display_name(data["items"], s.items, item_id), " ×%d" % qty if qty > 1 else "",
 			" — на глазах у хозяина" if seen else ""]}

@@ -222,7 +222,7 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 	if ContainerRules.is_container(p) and not ContainerRules.closed_why(p).is_empty():
 		return {"reason": ContainerRules.closed_why(p)}
 	var owner := str(p.get("owner", ""))
-	var seen := not owner.is_empty() and s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(owner)
+	var seen := WatchRules.sees_hero(s, data, owner)
 	return {"plan": {"room": s.room_id, "prop": p["id"], "owner": owner if seen else ""},
 		"summary": "Взято: %s%s" % [p["name"], (" — на глазах у хозяина" if seen else "")]}
 

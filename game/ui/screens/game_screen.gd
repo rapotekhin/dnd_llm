@@ -64,6 +64,9 @@ var _goal := Vector2i.ZERO  # where the hero walks, past doors too
 var _exit_to := ""  # the room beyond the way out at the end of the walk
 var _beyond := ""  # the room behind the door the walk stops at
 var _at_door := false  # the door waits for the end of the master's turn
+var _things: Array[Dictionary] = []  # who and what stands on this map, seen or not
+var _rounds := false  # a sneaking walk past those who watch goes by rounds (v0.8.3)
+var _round_ends := false  # this walk is a round
 var _after := Callable()  # the act at the end of the walk (v0.8.2)
 var _menu: PanelContainer
 var _menu_box: VBoxContainer
@@ -340,6 +343,8 @@ func _on_turn_started(_turn_id: String) -> void:
 
 func _on_turn_finished(_turn_id: String, _ok: bool) -> void:
 	_refresh()
+	if GameState.has_session() and not _field.walking() and not _field.map.is_empty():
+		GameState.walked(_field.map)  # a danger met on the way waited for the master
 	if _at_door:
 		_at_door = false
 		_on_arrived()
@@ -373,8 +378,13 @@ func _refresh_field(s: GameSession) -> void:
 	for cr: Dictionary in CreatureRules.here(s, s.room_id):  # the hero's animals walk along
 		if str(cr["state"]) == PropertyRules.TAME or bool(cr.get("led", false)) or bool(cr.get("ally", false)):
 			walkers.append({"ref": "cr:" + str(cr["id"]), "mark": str(cr["name"]).left(1), "name": str(cr["name"]).get_slice(" ", 0)})
-	_field.things = MapSpots.of(s, Catalog.data, view).filter(func(t: Dictionary) -> bool:
+	_things = MapSpots.of(s, Catalog.data, view).filter(func(t: Dictionary) -> bool:
 		return str(t["kind"]) != "station" or _side.mark_has_acts(str(t["id"])))
+	_things.append_array(MapSpots.foes(s, Catalog.data, view))
+	_things.append_array(MapSpots.traps(s, Catalog.data, view))
+	_things.append_array(MapSpots.others(s, Catalog.data, view))
+	_field.fog = true
+	_field.known = SightRules.known(s, view)
 	if s.room_id == _field_room and at != _field.hero_cell() and not _field.walking():  # the master's words move the hero
 		var steps := WalkRules.path(view, Catalog.data["layouts"], _field.hero_cell(), at)
 		if not steps.is_empty():
@@ -384,8 +394,25 @@ func _refresh_field(s: GameSession) -> void:
 			_field.walk(steps)
 	_field_room = s.room_id
 	_field.place_hero(at, str(s.character.get("name", "?")).left(1), walkers)
+	_look(s, at if not _field.walking() else _field.hero_cell())
 	if _menu.visible:
 		_show_menu(_menu_ref)
+
+
+## What the hero sees from `cell`: the fog, those who stand in view, what is known of the rest (v0.8.3). A foe or a person
+## shows only in view, a thing stays where it was seen.
+func _look(s: GameSession, cell: Vector2i) -> void:
+	var now := SightRules.look(s, Catalog.data, _field.map, cell)
+	_field.now = now
+	_field.known.merge(now)
+	_field.cones = WatchRules.cones(s, Catalog.data, _field.map, now)
+	_field.things = _things.filter(func(t: Dictionary) -> bool:
+		var at := Vector2i(int(t["x"]), int(t["y"]))
+		if str(t["kind"]) == "foe" and (EncounterRules.lurking(s, s.room_id).get("hidden", []) as Array).has(str(t["id"])):
+			return false
+		return now.has(at) or (str(t["kind"]) in ["station", "prop", "trap"] and _field.known.has(at)))
+	_rounds = WatchRules.by_rounds(s, Catalog.data, _field.map, now)
+	_field.queue_redraw()
 
 
 ## A click on the map: the hero walks there by himself; a door is crossed by GameState.go, as the buttons do.
@@ -394,8 +421,11 @@ func _on_cell(cell: Vector2i) -> void:
 	if s == null or s.in_conversation():
 		return
 	_menu.visible = false
+	if _rounds and cell == _field.hero_cell():  # the hero stands the round out
+		GameState.sneak_round()
+		return
 	var ref := _field.ref_at(cell)
-	if not ref.is_empty():
+	if not ref.is_empty() and not ref.begins_with("far:"):
 		_touch(ref)
 		return
 	var plan := WalkRules.plan(_field.map, Catalog.data["layouts"], _field.hero_cell(), cell)
@@ -414,7 +444,10 @@ func _touch(ref: String) -> void:
 	var thing := ref.begins_with("prop:") or ref.begins_with("body:")
 	if thing:
 		_approach(ref, "touch", _side.use_thing.bind(ref))
-	else:
+	elif ref.begins_with("foe:"):  # a foe at hand is struck; they who wait for words stay at the panel
+		if not bool(EncounterRules.lurking(GameState.session, GameState.session.room_id).get("word", false)):
+			_approach(ref, "touch", GameState.encounter_attack)
+	elif not ref.begins_with("trap:"):
 		_approach(ref, "touch" if ref.begins_with("station:") else "talk", _show_menu.bind(ref))
 
 
@@ -459,16 +492,37 @@ func _close_menu() -> void:
 
 func _walk(steps: Array[Vector2i]) -> void:
 	var leg := WalkRules.leg(_field.map, steps, GameState.session.room_id)
+	var way: Array[Vector2i] = leg["steps"]
 	_beyond = str(leg["room"])
+	_round_ends = _rounds
+	var most := WatchRules.round_steps(GameState.session)
+	if _rounds and way.size() > most:  # sneaking past those who watch: one round's squares to a click
+		way = way.slice(0, most)
+		_beyond = ""
+		_exit_to = ""
+		_after = Callable()
 	_field.instant = GameState.instant_walk
-	_field.walk(leg["steps"])
+	_field.walk(way)
 
 
 func _on_stepped(cell: Vector2i) -> void:
-	WalkRules.stand(GameState.session, _field.map, GameState.session.room_id, cell)
+	var s := GameState.session
+	WalkRules.stand(s, _field.map, s.room_id, cell)
+	_look(s, cell)
+	if GameState.walked(_field.map):
+		_field.stop()
+		_after = Callable()
+		_exit_to = ""
+		_beyond = ""
+		_at_door = false
 
 
 func _on_arrived() -> void:
+	if _round_ends:
+		_round_ends = false
+		GameState.sneak_round()
+		if CombatRules.active(GameState.session):
+			return
 	var to := _beyond if not _beyond.is_empty() else _exit_to
 	if to.is_empty() and _after.is_valid():
 		var act := _after
@@ -490,6 +544,7 @@ func _on_arrived() -> void:
 	var s := GameState.session
 	if s.in_conversation() or CombatRules.active(s) or s.room_id != to or str(LayoutRules.map_id(s, Catalog.data, to)) != map_id:
 		return
+	_refresh_field(s)
 	var plan := WalkRules.plan(_field.map, Catalog.data["layouts"], _field.hero_cell(), _goal)  # on behind the door
 	if not plan.is_empty():
 		_exit_to = str(plan["exit"])

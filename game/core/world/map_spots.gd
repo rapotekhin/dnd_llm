@@ -4,6 +4,7 @@ extends RefCounted
 ## square of its own for this part of the day; a thing lies where the master said («у очага») or on a square of its own.
 ## Nothing here is kept except a move by the master's words: the rest follows from the seed, so a save holds no squares
 ## of people. People do not block the way. The master never sees squares: `words` and `near_word` speak for them.
+## v0.8.3: foes before a fight stand away from the ways in (`foes`), a trap and a cache lie on a square (`secret_cell`).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -37,7 +38,7 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 	for id: String in _sorted(s.npcs_here(data["world"], s.room_id)):
 		if followers.has(id):
 			continue
-		var at := _npc_cell(s, data, map, cells, taken, id, part)
+		var at := _npc_cell(s, data, map, s.room_id, cells, taken, id, part)
 		taken[at] = true
 		var n := world.npc(id)
 		var t := _token("npc:" + id, "npc", id, str(n.get("name", id)), at)
@@ -76,18 +77,112 @@ static func _shown(data: Dictionary, p: Dictionary) -> bool:
 		or not str(p.get("text", "")).is_empty() or QuestGen.is_board(data, p)
 
 
-static func _npc_cell(s: GameSession, data: Dictionary, map: Dictionary, cells: Array[Vector2i], taken: Dictionary, id: String, part: String) -> Vector2i:
+static func _npc_cell(s: GameSession, data: Dictionary, map: Dictionary, room: String, cells: Array[Vector2i], taken: Dictionary, id: String, part: String) -> Vector2i:
 	var moved: Dictionary = (s.layouts.get("moved", {}) as Dictionary).get(id, {})
-	if str(moved.get("room", "")) == s.room_id and str(moved.get("part", "")) == part:
+	if str(moved.get("room", "")) == room and str(moved.get("part", "")) == part:
 		var at := LayoutGen.off_grid(map, Vector2i(int(moved["x"]), int(moved["y"])))
 		if cells.has(at):
 			return at
 	if WorldView.new(data["world"]).is_trader(id):
 		for wanted: String in cfg(data)["trader_marks"]:
-			var at := _mark_cell(map, s.room_id, wanted)
+			var at := _mark_cell(map, room, wanted)
 			if at.x >= 0:
 				return _closest(cells, taken, at)
 	return _seeded(cells, taken, "%d|%s|%s" % [s.game_seed, id, part])
+
+
+## People of the other rooms of this map the hero knows: seen through a door, walked up to on the map, spoken to there.
+static func others(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var world := WorldView.new(data["world"])
+	var part := TimeRules.part_name(s, data)
+	var followers := Being.followers(s)
+	for room: String in map["ids"]:
+		if room == s.room_id or not s.visited.has(room):
+			continue
+		var cells := _cells(map, data["layouts"], room)
+		var taken := {}
+		for id: String in _sorted(s.npcs_here(data["world"], room)):
+			if followers.has(id) or cells.is_empty():
+				continue
+			var at := _npc_cell(s, data, map, room, cells, taken, id, part)
+			taken[at] = true
+			var t := _token("far:" + id, "npc", id, str(world.npc(id).get("name", id)), at)
+			t["attitude"] = s.attitude(id)
+			out.append(t)
+	return out
+
+
+## The foes of the room before a fight, each with its "record". They stand together, away from the ways in; the seed
+## keeps their squares.
+static func foes(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if EncounterRules.lurking(s, s.room_id).is_empty():
+		return out
+	var cells := _cells(map, data["layouts"], s.room_id)
+	if cells.is_empty():
+		return out
+	var enc := EncounterRules.lurking_encounter(s, data, s.room_id)
+	var taken := {}
+	var lair := _lair(s, data, map, cells, str(enc.get("id", "")))
+	for e: Dictionary in enc.get("enemies", []):
+		if Being.dead(s, EncounterRules.foe_id(e)):
+			continue
+		var at := _closest(cells, taken, lair)
+		taken[at] = true
+		var t := _token("foe:" + EncounterRules.foe_id(e), "foe", EncounterRules.foe_id(e), str(e.get("name", e.get("monster", ""))), at)
+		t["record"] = e
+		out.append(t)
+	return out
+
+
+static func _lair(s: GameSession, data: Dictionary, map: Dictionary, cells: Array[Vector2i], key: String) -> Vector2i:
+	var ways := _ways_in(map, s.room_id)
+	var far := int(SightRules.cfg(data)["lair"])
+	var fit: Array[Vector2i] = cells.filter(func(cell: Vector2i) -> bool:
+		return ways.all(func(way: Vector2i) -> bool: return WalkRules.distance(way, cell) >= far))
+	return _seeded(fit if not fit.is_empty() else cells, {}, "%d|%s" % [s.game_seed, key])
+
+
+static func _ways_in(map: Dictionary, room: String) -> Array[Vector2i]:
+	var ways: Array[Vector2i] = []
+	var index := (map["ids"] as Array).find(room)
+	for e: Dictionary in map["exits"]:
+		if str(e["room"]) == room:
+			ways.append(Vector2i(int(e["ax"]), int(e["ay"])))
+	for d: Dictionary in map["doors"]:
+		if index in [int(d["a"]), int(d["b"])]:
+			ways.append(Vector2i(int(d["x"]), int(d["y"])))
+	return ways
+
+
+## The square of a trap or a cache: a trap lies before the way it guards, a thing where the pack says (`near`, a mark) or
+## where the seed puts it. (-1, -1) — the room has no free square.
+static func secret_cell(s: GameSession, data: Dictionary, map: Dictionary, room: String, sec: Dictionary) -> Vector2i:
+	var cells := _cells(map, data["layouts"], room)
+	if cells.is_empty():
+		return Vector2i(-1, -1)
+	var to := str((sec.get("trap", {}) as Dictionary).get("guards", ""))
+	for e: Dictionary in map["exits"]:
+		if str(e["room"]) == room and str(e["to"]) == to:
+			return Vector2i(int(e["ax"]), int(e["ay"]))
+	var ids: Array = map["ids"]
+	for d: Dictionary in map["doors"]:
+		if not to.is_empty() and ids[int(d["a"])] in [room, to] and ids[int(d["b"])] in [room, to]:
+			return _closest(cells, {}, Vector2i(int(d["x"]), int(d["y"])))
+	var near := _mark_cell(map, room, str(sec.get("near", "")))
+	return near if cells.has(near) else _seeded(cells, {}, "%d|%s|%s" % [s.game_seed, room, str(sec["id"])])
+
+
+## The traps the hero found, on their squares.
+static func traps(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for ft: Dictionary in ExplorationRules.found_traps(s, data["world"], s.room_id):
+		var sec: Dictionary = ft["secret"]
+		var at := secret_cell(s, data, map, s.room_id, sec)
+		if at.x >= 0:
+			out.append(_token("trap:" + str(sec["id"]), "trap", str(sec["id"]), str(sec["text"]), at))
+	return out
 
 
 static func _prop_cell(s: GameSession, data: Dictionary, map: Dictionary, cells: Array[Vector2i], taken: Dictionary, placed: Array[Dictionary], p: Dictionary) -> Vector2i:

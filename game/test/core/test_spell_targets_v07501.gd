@@ -233,7 +233,7 @@ func test_the_rest_of_the_faction_here_meets_the_hero_as_if_crept_upon() -> void
 	var m := EncounterRules.meet(s, data, "pushcha-hollow", "pushcha-trail", _goblins("t_next"))
 	assert_bool(bool(m["lurk"])).is_true()
 	assert_bool(bool(EncounterRules.lurking(s, "pushcha-hollow")["word"])).is_true()
-	assert_bool(bool(EncounterRules.meet(s, data, "brod-square", "pushcha-trail", _goblins("t_far"))["lurk"])).is_false()
+	assert_bool(EncounterRules.meet(s, data, "brod-square", "pushcha-trail", _goblins("t_far")).has("lurk")).is_false()
 
 
 func test_one_beaten_by_words_comes_along_and_fights_beside() -> void:
