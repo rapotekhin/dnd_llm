@@ -120,29 +120,23 @@ func test_a_light_shows_the_hero_in_the_dark() -> void:
 	assert_int(WatchRules.range_of(s, data, 0)).is_equal(int(SightRules.cfg(data)["watch"]))
 
 
-# --- the fog --------------------------------------------------------------------------------------------------
+# --- the hero's view ---------------------------------------------------------------------------------------------
 
 
-func test_what_was_seen_stays_known() -> void:
+func test_a_tree_closes_a_watchers_view_not_the_heros() -> void:
+	var map := {"id": "t", "w": 7, "h": 1, "rows": ["...T..."] as Array[String]}
+	var lib: Dictionary = data["layouts"]
+	assert_bool(SightRules.view(map, lib, Vector2i(0, 0), 10).has(Vector2i(6, 0))).is_false()
+	assert_bool(SightRules.view(map, lib, Vector2i(0, 0), 10, true).has(Vector2i(6, 0))).is_true()
+
+
+func test_the_hero_looks_all_round_up_to_the_walls() -> void:
 	var s := _session()
 	var map := _plain()
-	SightRules.look(s, data, map, Vector2i(1, 2))
-	var known := SightRules.known(s, map)
-	assert_bool(known.has(Vector2i(2, 2))).is_true()
-	assert_bool(known.has(Vector2i(5, 2))).is_false()
-	assert_str(JSON.stringify(s.layouts["seen"])).contains("rows")
-
-
-func test_a_map_that_grew_keeps_what_was_seen() -> void:
-	var s := _session()
-	var map := _plain()
-	map["origin"] = Vector2i(2, 1)
-	SightRules.remember(s, map, {Vector2i(1, 1): true})
-	var grown := _plain()
-	grown["w"] = 9
-	grown["h"] = 6
-	grown["origin"] = Vector2i.ZERO
-	assert_bool(SightRules.known(s, grown).has(Vector2i(3, 2))).is_true()
+	var seen := SightRules.look(s, data, map, Vector2i(1, 2))
+	assert_bool(seen.has(Vector2i(2, 1)) and seen.has(Vector2i(2, 3))).is_true()
+	assert_bool(seen.has(Vector2i(5, 2))).is_false()  # a wall still closes it
+	assert_bool(s.layouts.has("seen")).is_false()  # the map is open: nothing to keep
 
 
 # --- foes on the map ------------------------------------------------------------------------------------------

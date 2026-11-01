@@ -171,7 +171,7 @@ static func _give(s: GameSession, data: Dictionary, got: Dictionary, item: Strin
 
 ## The foe of a fight out of the hunt.
 static func _foe(data: Dictionary, monster: String, desc: String) -> Dictionary:
-	return {"monster": monster, "name": str(data["monsters"].get(monster, {}).get("name", monster)), "desc": desc, "col": 2}
+	return {"monster": monster, "name": str(data["monsters"].get(monster, {}).get("name", monster)), "desc": desc}
 
 
 ## A hunt or a fishing of `hours` (the caller passes the time): the Survival check rolled here, the catch by its margin

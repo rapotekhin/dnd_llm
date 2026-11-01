@@ -27,7 +27,7 @@ func run() -> void:
 
 	# A giant spider: the web, the card, breaking free.
 	Knows.add(s, Knows.MONSTER, "giant_spider")
-	gs.start_combat([{"monster": "giant_spider", "col": 2}])
+	gs.start_combat([{"monster": "giant_spider"}])
 	if not step("a fight with a spider", await _my_turn(gs, s)):
 		return
 	var spider := CombatRules.fighter(s, CombatRules.enemies(s)[0])
@@ -65,7 +65,7 @@ func run() -> void:
 	c["hp"] = int(c["max_hp"])
 	for cond: String in c["conditions"].duplicate():
 		ConditionRules.remove(c, cond)
-	gs.start_combat([{"monster": "ghoul", "col": 0}])
+	gs.start_combat([{"monster": "ghoul", "beside": true}])
 	if not step("a fight with a ghoul", await _my_turn(gs, s)):
 		return
 	var ghoul := CombatRules.fighter(s, CombatRules.enemies(s)[0])
@@ -96,7 +96,7 @@ func _my_turn(gs: Node, s: GameSession) -> bool:
 
 
 func _ready_for_me(gs: Node, s: GameSession) -> bool:
-	return screen_is("CombatScreen") and not gs.is_busy() and not gs.combat_playing \
+	return screen_is("fight") and not gs.is_busy() and not gs.combat_playing \
 		and (CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty())
 
 

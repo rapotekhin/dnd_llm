@@ -71,11 +71,11 @@ func test_an_execution_before_people_is_remembered() -> void:
 
 func test_surrender_ends_the_fight_at_once() -> void:
 	var s := _hero("pushcha-hollow")
-	CombatRules.start(s, data, [{"monster": "wolf", "col": 0}], {})
+	TestUtils.fight(s, data, [{"monster": "wolf", "col": 0}], {})
 	s.combat["turn"] = s.combat["order"].find(CombatRules.PLAYER)
 	assert_str(CombatRules.can_surrender(s, data)).is_equal("COMBAT_NO_SURRENDER")  # beasts take nobody alive
 	var t := _hero("pushcha-hollow")
-	CombatRules.start(t, data, [{"monster": "goblin", "col": 0}], {})
+	TestUtils.fight(t, data, [{"monster": "goblin", "col": 0}], {})
 	t.combat["turn"] = t.combat["order"].find(CombatRules.PLAYER)
 	assert_str(CombatRules.can_surrender(t, data)).is_empty()
 	CombatRules.surrender(t)
@@ -88,7 +88,7 @@ func test_given_up_to_the_guard_the_hero_is_held() -> void:
 	s.wanted["brod"] = 0
 	s.arrest = s.room_id
 	CrimeRules.answer(s, data, "resist")
-	CombatRules.start(s, data, s.pending_fight, {})
+	TestUtils.fight(s, data, s.pending_fight, {})
 	s.pending_fight = []
 	assert_bool(CombatRules.law_captors(s)).is_true()
 	CrimeRules.held_after_fight(s, data)

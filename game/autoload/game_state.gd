@@ -625,7 +625,6 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 	session.npc_id = ""
 	session.combat["start_lines"] = lines  # shown after the master's description (playtest-1: the order)
 	EventBus.state_changed.emit()
-	EventBus.navigate.emit("combat", {})
 	_request("combat_start", "\n".join(lines))
 
 
@@ -730,6 +729,12 @@ func combat_grapple(target_id: String, shove: bool) -> String:
 		func() -> Array[String]: return CombatRules.grapple(session, Catalog.data, target_id, shove))
 
 
+## The shove with a side picked: the foe goes to that square, 5 ft away (v0.8.4).
+func combat_shove_to(target_id: String, to: Vector2i) -> String:
+	return _combat_do(CombatRules.can_grapple(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.grapple(session, Catalog.data, target_id, true, to))
+
+
 ## A spell in a fight: engine spells resolve at once; others spend the slot and go to the master (it costs the action).
 func combat_cast(spell_id: String, slot: int, target_id: String) -> String:
 	if session == null or not CombatRules.active(session):
@@ -761,9 +766,32 @@ func combat_simple(what: String) -> String:
 	return why
 
 
-func combat_move(dir: int) -> String:
-	return _combat_do(CombatRules.can_move(session, Catalog.data, dir) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.player_move(session, Catalog.data, dir))
+## The hero leaves by the way out it stands at; those near run after it (FightField.leave).
+func combat_flee() -> String:
+	return _combat_do(CombatRules.can_flee(session, Catalog.data) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.player_flee(session, Catalog.data))
+
+
+## An act with a door or a thing beside the hero: FightField.acts.
+func combat_field(how: String) -> String:
+	return _combat_do(CombatRules.can_field(session, Catalog.data, how) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.field_act(session, Catalog.data, how))
+
+
+func combat_help(target_id: String) -> String:
+	return _combat_do(CombatRules.can_help(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.help(session, Catalog.data, target_id))
+
+
+func combat_jump(to: Vector2i) -> String:
+	return _combat_do(CombatRules.can_jump(session, Catalog.data, to) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.player_jump(session, Catalog.data, to))
+
+
+## The hero walks to a square of the field; what is on the way is CombatRules.player_walk.
+func combat_walk(to: Vector2i) -> String:
+	return _combat_do(CombatRules.can_walk(session, Catalog.data, to) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.player_walk(session, Catalog.data, to))
 
 
 ## A feature in a fight costs what rules.resources say (combat_cost): Rage and Second Wind — a bonus action,
@@ -793,8 +821,8 @@ func combat_use_feature(resource_id: String) -> String:
 
 ## «Встать» (v0.7.8): the whole move of the turn.
 func combat_stand() -> String:
-	return _combat_do(CombatRules.can_stand(session) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.stand(session))
+	return _combat_do(CombatRules.can_stand(session, Catalog.data) if session != null and CombatRules.active(session) else "COMBAT_NONE",
+		func() -> Array[String]: return CombatRules.stand(session, Catalog.data))
 
 
 ## «Вырваться» (v0.7.8): an action, Athletics or Acrobatics against the hold.
@@ -1596,6 +1624,8 @@ func finish_combat(take: Array = []) -> void:
 		lines.append_array(FactionRules.after_fight(s, Catalog.data))  # v0.7.50
 		if not str(s.combat.get("encounter", "")).is_empty():
 			s.encounters_done.append(str(s.combat["encounter"]))
+		for id: Variant in s.combat.get("joined", []):  # those who came on the noise (v0.8.4)
+			s.encounters_done.append(str(id))
 	var arena: Dictionary = s.combat.get("arena", {})
 	if not arena.is_empty():  # v0.7.45: a bout — the prize, the bet, the rank; nobody stays beaten in the room, no crime
 		lines.append_array(ArenaRules.after_bout(s, Catalog.data, arena, outcome == "victory"))
@@ -1619,8 +1649,13 @@ func finish_combat(take: Array = []) -> void:
 			lines.append_array(CrimeRules.on_assault(s, Catalog.data, str(f["npc_id"]), str(f.get("status")) != "unconscious", s.room_id))
 	if outcome == "player_fled":
 		CreatureRules.after_flight(s)
-	if outcome == "player_fled" and not str(s.combat.get("room_from", "")).is_empty():
+	var flee_to := str(s.combat.get("flee_to", ""))
+	var walked_in := "" if str(s.combat.get("room_start", s.room_id)) == s.room_id else s.room_id  # v0.8.4: a fight crosses doors
+	if outcome == "player_fled" and flee_to.is_empty() and walked_in.is_empty() and not str(s.combat.get("room_from", "")).is_empty():
 		s.room_id = str(s.combat["room_from"])
+	if not walked_in.is_empty():
+		s.room_id = str(s.combat["room_start"])
+		_step(walked_in, lines)
 	if int(s.character["hp"]) <= 0:
 		s.character["hp"] = 1
 	for cond: String in ["unconscious", "prone", "grappled"]:  # the fight is over: up, and nobody holds the hero
@@ -1641,6 +1676,8 @@ func finish_combat(take: Array = []) -> void:
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
 	EventBus.state_changed.emit()
 	EventBus.navigate.emit("game", {})
+	if not flee_to.is_empty():  # through the way out: a room like any other
+		_move_to(flee_to, [])
 
 
 ## Changes the master style of the running game (settings screen); kept in the save.
@@ -2820,7 +2857,7 @@ func attack_npc(npc_id: String, opening: Dictionary = {}) -> String:
 	_end_conversation()
 	var npc := world().npc(npc_id)
 	session.pending_fight = [{"monster": str(npc.get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])),
-		"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0, "by_hero": true}]
+		"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "by_hero": true}]
 	_opening = opening.duplicate()
 	_opening["npc_id"] = npc_id
 	_opening["unaware"] = CombatRules.npc_unaware(session, Catalog.data, npc_id)
@@ -3203,7 +3240,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 	if mode == GameSession.MODE_COMBAT and s.npcs_here(world().world, s.room_id).has(npc_id):
 		var npc := world().npc(npc_id)
 		s.pending_fight = [{"monster": str(npc.get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])),
-			"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0, "by_hero": true}]
+			"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "by_hero": true}]
 		return "combat"
 	if mode in [GameSession.MODE_SOCIAL, GameSession.MODE_TRADE] and not s.in_conversation() and turn_kind != "action":
 		return ""  # a conversation starts only from the player's own words (v0.7.2: the master opened one on «resume»)

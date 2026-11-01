@@ -2386,8 +2386,8 @@
 				},
 				"push": {
 					"number": [
-						1,
-						2
+						5,
+						30
 					],
 					"cost": 1
 				},
@@ -3466,8 +3466,6 @@
 	},
 	"combat": {
 		"_doc": "Combat (v0.6.1, ADR-0010 §7): 7 columns of 30 ft on a line (−3…3), the player starts at 0; a move is one column (speed ≥ 60 — two), Dash one more. Spells the engine resolves itself — engine_spells (the rest go to the master as improvisation); multi: several darts or rays. Morale: a WIS save at half HP or when the leader falls; intelligent foes (INT ≥ intelligent_int) surrender, the rest flee. XP budget per character level for the master's fights (DMG, hard); in a fight the master's reinforcement keeps the foes in play within it and comes after reinforce_delay rounds; a foe's call for help (pack encounter help) — after help_delay.",
-		"edge": 3,
-		"col_ft": 30,
 		"friendly_fire": {"_doc": "An area does not pick sides (v0.7.50.1): allies in it are caught, the hero too unless the area starts at the hero; a follower thinks worse of the hero by `attitude`. on false — only foes.", "on": true, "attitude": -1},
 		"potion_cost": "bonus",
 		"offhand_needs_attack": false,
@@ -3559,15 +3557,40 @@
 			"4": 375,
 			"5": 750
 		},
-		"start_cols": {
-			"melee": 2,
-			"ranged": 3
+		"grid": {
+			"_doc": "The field of a fight (v0.8.4, FightGrid): a square of `ft`; `spans` — the squares of a body by its SRD size; `start` — how far foes with no square of their own stand from the hero; `cover` — the bonus to AC and Dexterity saves; `charge` — the squares of a run before a charge; `pit` — a fall; `pursuit` — how near a way out a foe must stand to follow the hero through it, `pursuit_rounds` — when it comes; `doors` — a bar on a door; `blocks` — the map's cell that is a thing in a fight, its body and HP, how much a point of Strength shifts; `fire` — a burning square, the SRD's oil; `hazard` — the map's cell that hurts; `noise` — who hears the fight: squares, minus `wall` for each wall on the way, `beyond` left to carry through a way out.",
+			"ft": 5,
+			"spans": {"tiny": 1, "small": 1, "medium": 1, "large": 2, "huge": 3, "gargantuan": 4},
+			"start": {"melee": 6, "ranged": 10, "arrival": 12},
+			"cover": {"half": 2, "three_quarters": 5},
+			"charge": 4,
+			"pit": {"dice": "1d6"},
+			"pursuit": 6,
+			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "dice": "5", "type": "fire", "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "noise": {"reach": 30, "wall": 6, "beyond": 8}
+		},
+		"ai": {
+			"_doc": "The search of a creature's turn (v0.8.4, FightAI): `budget` — lines of sight traced in a turn, `flow` — how far walking distances are counted, `flee_lost` — squares out of sight after which one who runs is gone, `keep_most` — how far `keep` still pays. `roles` — the weights: `focus` — on the wounded, `finish` — a kill, `adjacent` — a foe beside it, `keep` — a square of distance, `hazard` — a square that burns, `leave` — a blow in the back, `step` — a square walked, `pack` — a friend at the target, `control` and `cast` — what a save action and a spell are worth. A role comes from `monsters` by id, a caster's and a shooter's by their record, then `by_trait`, `by_type`.",
+			"budget": 120,
+			"flow": 80,
+			"flee_lost": 12,
+			"keep_most": 8,
+			"roles": {
+				"brute": {"focus": 0.3, "finish": 2, "adjacent": 0, "keep": 0, "hazard": 3, "leave": 1, "step": 0.02, "pack": 0, "control": 3, "cast": 6},
+				"skirmisher": {"focus": 0.6, "finish": 3, "adjacent": 0.5, "keep": 0.05, "hazard": 4, "leave": 0.5, "step": 0.02, "pack": 1, "control": 3, "cast": 6},
+				"archer": {"focus": 0.5, "finish": 3, "adjacent": 3, "keep": 0.2, "hazard": 4, "leave": 2, "step": 0.02, "pack": 0, "control": 3, "cast": 6},
+				"caster": {"focus": 0.5, "finish": 3, "adjacent": 3, "keep": 0.3, "hazard": 5, "leave": 2, "step": 0.02, "pack": 0, "control": 4, "cast": 9},
+				"beast": {"focus": 0.2, "finish": 1, "adjacent": 0, "keep": 0, "hazard": 1, "leave": 0, "step": 0.02, "pack": 0, "control": 2, "cast": 6},
+				"pack": {"focus": 0.4, "finish": 2, "adjacent": 0, "keep": 0, "hazard": 2, "leave": 0, "step": 0.02, "pack": 2, "control": 2, "cast": 6}
+			},
+			"by_trait": {"pack_tactics": "pack", "nimble_escape": "skirmisher", "flyby": "skirmisher"},
+			"by_type": {"beast": "beast"},
+			"monsters": {}
 		},
 		"default_npc_monster": "commoner",
 		"_attack_npc": "v0.7.22.16 (the author's fixes check #32): the hero attacks an NPC of the scene by the button «Напасть» or by a hostile spell or a weapon pinned to the words with the NPC as its target — the engine starts the fight, the hero acts first; an NPC whose attitude is at least unaware_attitude (and who is not hostile) does not expect it — caught off guard.",
 		"unaware_attitude": -1,
 		"riders": {
-			"_doc": "What a spell lays on a hit or a failed save (v0.7.64, ActionRules.riders): status + rounds, hold (a mark for the next roll), set (values on the fighter), push (columns), line (%s — the target); if_type — a creature type, max_size — an index of the sizes, hook — what stays code. A spell the master built writes its row here.",
+			"_doc": "What a spell lays on a hit or a failed save (v0.7.64, ActionRules.riders): status + rounds, hold (a mark for the next roll), set (values on the fighter), push (feet), line (%s — the target); if_type — a creature type, max_size — an index of the sizes, hook — what stays code. A spell the master built writes its row here.",
 			"guiding_bolt": [{"status": "guided", "rounds": 2, "line": "%s светится — следующая атака по нему с преимуществом"}],
 			"vicious_mockery": [{"hold": "mocked", "line": "%s сбит с толку — его следующая атака с помехой"}],
 			"ray_of_frost": [{"set": {"slowed": 10}, "line": "%s скован холодом: скорость −10 фт"}],
@@ -3621,7 +3644,7 @@
 				"words": [
 					{"word": "Пади!", "conditions": ["prone", "incapacitated"], "not_if": "prone"},
 					{"word": "Брось!", "conditions": ["incapacitated"], "drop": true},
-					{"word": "Беги!", "conditions": ["incapacitated"], "flee": 1},
+					{"word": "Беги!", "conditions": ["incapacitated"], "flee": 30},
 					{"word": "Замри!", "conditions": ["incapacitated"]}
 				]
 			},
@@ -4586,7 +4609,7 @@
 		"blink": {"blink": true},
 		"longstrider": {"speed_plus": 10},
 		"expeditious_retreat": {"bonus_dash": true},
-		"misty_step": {"teleport": 1},
+		"misty_step": {"teleport": 30},
 		"enlarge_reduce": {"enlarged": true},
 		"darkvision": {"darkvision": true},
 		"see_invisibility": {"see_invisible": true},
@@ -4602,17 +4625,17 @@
 		"vampiric_touch": {"sustained": {"kind": "attack", "cost": "action", "now": true, "type": "necrotic", "drain": true, "label": "касание"}},
 		"heat_metal": {"sustained": {"kind": "heat", "cost": "bonus", "now": true, "type": "fire", "label": "жар"}},
 		"call_lightning": {"sustained": {"kind": "strike", "cost": "action", "now": true, "type": "lightning", "save": "dex", "label": "молния"}},
-		"moonbeam": {"sustained": {"kind": "zone", "cost": "action", "type": "radiant", "save": "con", "on": ["start", "enter"], "move": 2, "label": "сдвинуть луч"}},
-		"flaming_sphere": {"sustained": {"kind": "zone", "cost": "bonus", "type": "fire", "save": "dex", "on": ["end"], "move": 1, "ram": true, "label": "таран сферой"}},
-		"spirit_guardians": {"sustained": {"kind": "zone", "follow": true, "dice": {"3": "3d8", "4": "4d8", "5": "5d8"}, "type": "radiant", "save": "wis", "on": ["start"], "slow": true, "spares_friends": true}},
+		"moonbeam": {"sustained": {"kind": "zone", "cost": "action", "type": "radiant", "save": "con", "on": ["start", "enter"], "move": 60, "label": "сдвинуть луч"}},
+		"flaming_sphere": {"sustained": {"kind": "zone", "cost": "bonus", "type": "fire", "save": "dex", "on": ["end"], "move": 30, "ram": true, "shape": {"type": "sphere", "size": 5}, "label": "таран сферой"}},
+		"spirit_guardians": {"sustained": {"kind": "zone", "follow": true, "shape": {"type": "sphere", "size": 15}, "dice": {"3": "3d8", "4": "4d8", "5": "5d8"}, "type": "radiant", "save": "wis", "on": ["start"], "slow": true, "spares_friends": true}},
 		"spike_growth": {"sustained": {"kind": "zone", "dice": {"2": "6d4"}, "type": "piercing", "on": ["enter"], "slow": true}},
 		"grease": {"sustained": {"kind": "zone", "on": ["now", "enter", "end"], "save": "dex", "cond": "prone", "slow": true}},
 		"fog_cloud": {"sustained": {"kind": "zone", "obscure": true, "on": []}},
 		"darkness": {"sustained": {"kind": "zone", "obscure": true, "on": []}},
 		"silence": {"sustained": {"kind": "zone", "silence": true, "on": []}},
 		"stinking_cloud": {"sustained": {"kind": "zone", "on": ["start", "enter"], "save": "con", "retch": true}},
-		"wind_wall": {"sustained": {"kind": "zone", "on": ["now"], "save": "str", "dice": {"3": "3d8"}, "type": "bludgeoning", "block_ranged": true}},
-		"gust_of_wind": {"sustained": {"kind": "push", "cost": "bonus", "now": true, "save": "str", "reach": 2, "label": "порыв"}},
+		"wind_wall": {"sustained": {"kind": "zone", "shape": {"type": "wall", "size": 50}, "on": ["now"], "save": "str", "dice": {"3": "3d8"}, "type": "bludgeoning", "block_ranged": true}},
+		"gust_of_wind": {"sustained": {"kind": "push", "cost": "bonus", "now": true, "save": "str", "reach": 60, "label": "порыв"}},
 		"faerie_fire": {"curse": {"flag": "outlined", "save": "dex", "area": true}},
 		"ray_of_enfeeblement": {"curse": {"flag": "enfeebled", "attack": true, "repeat": "con"}},
 		"bestow_curse": {"curse": {"flag": "cursed_dis", "save": "wis"}},

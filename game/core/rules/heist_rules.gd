@@ -308,7 +308,7 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 		match str(k.get("fail", "caught")):
 			"fight":
 				lines.append("%s поднимает крик — охрана хватается за оружие" % victim_name(s, data, id).capitalize())
-				fight.append({"monster": str(cfg(data)["fight_monster"]), "name": "Охранник", "col": 0})
+				fight.append({"monster": str(cfg(data)["fight_monster"]), "name": "Охранник"})
 				lines.append_array(_crime(s, data, id))
 			"seized":
 				var cargo: Dictionary = d.get("cargo", {})

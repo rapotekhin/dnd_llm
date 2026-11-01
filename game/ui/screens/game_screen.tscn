@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://ui/screens/game_screen.gd" id="1"]
 [ext_resource type="Script" path="res://ui/components/side_panel.gd" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://ui/components/chat_view.gd" id="5"]
 [ext_resource type="Script" path="res://ui/components/backend_status.gd" id="6"]
 [ext_resource type="Script" path="res://ui/components/brush_button.gd" id="7"]
+[ext_resource type="Script" path="res://ui/components/fight_ui.gd" id="8"]
 
 [node name="GameScreen" type="Control"]
 layout_mode = 3
@@ -39,6 +40,32 @@ custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 script = ExtResource("2")
 
+[node name="FightSide" type="PanelContainer" parent="Margin/Row"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+theme_type_variation = &"SidePanel"
+
+[node name="Col" type="VBoxContainer" parent="Margin/Row/FightSide"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Portrait" type="VBoxContainer" parent="Margin/Row/FightSide/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="FoeScroll" type="ScrollContainer" parent="Margin/Row/FightSide/Col"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="FoeList" type="VBoxContainer" parent="Margin/Row/FightSide/Col/FoeScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
 [node name="Centre" type="VBoxContainer" parent="Margin/Row"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -52,6 +79,12 @@ theme_type_variation = &"CardPanel"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 18
+
+[node name="Queue" type="HBoxContainer" parent="Margin/Row/Centre/StripPanel"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 8
 
 [node name="FieldBox" type="PanelContainer" parent="Margin/Row/Centre"]
 layout_mode = 2
@@ -116,6 +149,46 @@ unique_name_in_owner = true
 layout_mode = 2
 script = ExtResource("4")
 
+[node name="Hint" type="Label" parent="Margin/Row/Centre"]
+unique_name_in_owner = true
+auto_translate_mode = 2
+visible = false
+layout_mode = 2
+
+[node name="FightBar" type="PanelContainer" parent="Margin/Row/Centre"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 250)
+layout_mode = 2
+theme_type_variation = &"SidePanel"
+
+[node name="Row" type="HBoxContainer" parent="Margin/Row/Centre/FightBar"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Tabs" type="TabContainer" parent="Margin/Row/Centre/FightBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Turn" type="VBoxContainer" parent="Margin/Row/Centre/FightBar/Row"]
+custom_minimum_size = Vector2(190, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Economy" type="VBoxContainer" parent="Margin/Row/Centre/FightBar/Row/Turn"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="EndTurnButton" type="Button" parent="Margin/Row/Centre/FightBar/Row/Turn"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(190, 80)
+layout_mode = 2
+theme_type_variation = &"AccentButton"
+text = "BTN_END_TURN"
+
 [node name="Right" type="PanelContainer" parent="Margin/Row"]
 custom_minimum_size = Vector2(570, 0)
 layout_mode = 2
@@ -146,6 +219,13 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("5")
+
+[node name="FightLogBox" type="VBoxContainer" parent="Margin/Row/Right/Col"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
 
 [node name="Status" type="HBoxContainer" parent="Margin/Row/Right/Col"]
 layout_mode = 2
@@ -208,6 +288,18 @@ script = ExtResource("7")
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
+
+[node name="FightUi" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("8")
 
 [node name="ThingMenu" type="PanelContainer" parent="."]
 unique_name_in_owner = true

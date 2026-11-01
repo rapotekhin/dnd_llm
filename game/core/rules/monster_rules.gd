@@ -100,13 +100,12 @@ static func pick(s: GameSession, data: Dictionary, f: Dictionary, kind: String) 
 
 ## A save action worth using now (a breath, a gaze, a song): ready, the hero within its area, and — for a pure
 ## condition — not under it already. {} when none.
-static func save_action(s: GameSession, data: Dictionary, f: Dictionary, dist_cols: int) -> Dictionary:
+static func save_action(s: GameSession, data: Dictionary, f: Dictionary, squares: int) -> Dictionary:
 	for a: Dictionary in monster(data, f).get("actions", []):
 		if str(a.get("kind")) != "save" or not available(f, a):
 			continue
 		var fx: Dictionary = a.get("effect", {})
-		var reach := CombatRules.range_cols(data, int(fx.get("area", {}).get("ft", 5)))
-		if dist_cols > reach:
+		if squares > FightGrid.squares_of(data, int(fx.get("area", {}).get("ft", 5))):
 			continue
 		var cond := str(fx.get("condition", ""))
 		if (a.get("damage", []) as Array).is_empty() and (cond.is_empty() or ConditionRules.has(s.character, cond)):
@@ -307,7 +306,7 @@ static func extra_on_hit(s: GameSession, data: Dictionary, f: Dictionary, a: Dic
 	var once: Array = f.get("once", [])
 	for id: String in CHARGES:
 		var t := trait_of(data, f, id)
-		if t.is_empty() or str(a.get("kind")) != "melee" or int(f.get("moved", 0)) <= 0 or once.has("charge"):
+		if t.is_empty() or str(a.get("kind")) != "melee" or int(f.get("moved", 0)) < int(FightGrid.cfg(data)["charge"]) or once.has("charge"):
 			continue
 		var fx: Dictionary = t.get("effect", {})
 		once.append("charge")
@@ -340,7 +339,7 @@ static func _ally_by_hero(s: GameSession, f: Dictionary) -> bool:
 	var p := CombatRules.player(s)
 	for id: String in CombatRules.enemies(s):
 		var o := CombatRules.fighter(s, id)
-		if id != str(f["id"]) and int(o["col"]) == int(p["col"]) and not CombatRules.incapacitated(o):
+		if id != str(f["id"]) and FightGrid.touching(o, p) and not CombatRules.incapacitated(o):
 			return true
 	return false
 
@@ -381,7 +380,7 @@ static func survives(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, 
 ## Death Burst (mephits, magmin): the hero next to it saves or takes it. Lines.
 static func death_burst(s: GameSession, data: Dictionary, t: Dictionary, lines: Array[String]) -> void:
 	var db := trait_of(data, t, "death_burst")
-	if db.is_empty() or CombatRules.cols_between(t, CombatRules.player(s)) > 0 or int(s.character.get("hp", 0)) <= 0:
+	if db.is_empty() or not FightGrid.touching(t, CombatRules.player(s)) or int(s.character.get("hp", 0)) <= 0:
 		return
 	lines.append("%s: %s" % [t["name"], db["name"]])
 	var fx: Dictionary = db.get("effect", {})
@@ -417,7 +416,7 @@ static func sleep_immune(data: Dictionary, f: Dictionary) -> bool:
 static func end_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	if not has_trait(data, f, "nimble_escape") or bool(f.get("hidden", false)) or str(f.get("status")) != "active":
 		return
-	if CombatRules.cols_between(f, CombatRules.player(s)) == 0:
+	if FightGrid.touching(f, CombatRules.player(s)):
 		return
 	var m := monster(data, f)
 	var stealth := Roll.d20(s.rng) + int(m.get("skills", {}).get("stealth", CharacterRules.mod(int(m["abilities"].get("dex", 10)))))
@@ -473,16 +472,32 @@ static func castable(data: Dictionary, f: Dictionary) -> Array[Dictionary]:
 	return out
 
 
+static func _spell_reach(data: Dictionary, id: String) -> int:
+	return maxi(1, FightGrid.squares_of(data, int(data["spells"][id].get("range_ft", 0))))
+
+
+## How far its longest spell reaches, 0 when it casts nothing now: what FightAI walks by.
+static func cast_reach(s: GameSession, data: Dictionary, f: Dictionary) -> int:
+	if SpellEffects.silenced(s, data, f):
+		return 0
+	var most := 0
+	for o: Dictionary in castable(data, f):
+		if not data["spells"][o["id"]].has("heal_at_slot"):
+			most = maxi(most, _spell_reach(data, str(o["id"])))
+	return most
+
+
 ## A caster's turn (decision of v0.7.9: the spells the engine resolves for the hero, with slots): heal itself when hurt,
 ## lay a condition the hero has not got, the strongest damage spell in range, or a damaging cantrip when it is better
 ## than the weapon. True when it cast (the turn's action is spent).
 static func cast_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> bool:
 	var options := castable(data, f)
-	if options.is_empty() or int(s.character.get("hp", 0)) <= 0 or SpellEffects.silenced(s, int(f["col"])):
+	if options.is_empty() or int(s.character.get("hp", 0)) <= 0 or SpellEffects.silenced(s, data, f):
 		return false  # Silence (v0.7.13.6): no spell from inside
-	var d := CombatRules.cols_between(f, CombatRules.player(s))
+	var d := FightGrid.dist(f, CombatRules.player(s))
+	var sees := FightGrid.sees(s, data, f, CombatRules.player(s))
 	var in_range := func(id: String) -> bool:
-		return d <= CombatRules.range_cols(data, int(data["spells"][id].get("range_ft", 0))) or int(data["spells"][id].get("range_ft", 0)) == 0 and d == 0
+		return sees and d <= _spell_reach(data, id)
 	var cfg: Dictionary = CombatRules.cfg(data)
 	for o: Dictionary in options:  # v0.7.22.19 (#14): the most wounded of its side within the spell's reach, not only itself
 		if data["spells"][o["id"]].has("heal_at_slot"):
@@ -517,7 +532,7 @@ static func cast_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Ar
 			best_avg = avg
 	if best.is_empty():
 		return false
-	var weapon := CombatRules._best_action(data, f, "melee" if d == 0 else "ranged")
+	var weapon := CombatRules._best_action(data, f, "melee" if d <= 1 else "ranged")
 	var weapon_avg := 0.0
 	for dd: Dictionary in weapon.get("damage", []):
 		weapon_avg += _avg(str(dd["dice"]))
@@ -529,13 +544,13 @@ static func cast_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Ar
 
 ## Who of the caster's side needs healing most: at half HP or less, the lowest share, within the spell's reach. "" — none.
 static func _wounded_ally(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String) -> String:
-	var reach := CombatRules.range_cols(data, int(data["spells"][spell_id].get("range_ft", 0)))
+	var reach := _spell_reach(data, spell_id)
 	var best := ""
 	var share := 0.5
 	for id: String in CombatRules.enemies(s):
 		var a := CombatRules.fighter(s, id)
 		var part := float(a["hp"]) / maxf(1.0, float(a["max_hp"]))
-		if CombatRules.cols_between(a, f) <= reach and (part < share or (part == share and best.is_empty())):
+		if FightGrid.dist(a, f) <= reach and (part < share or (part == share and best.is_empty())):
 			best = id
 			share = part
 	return best
@@ -612,8 +627,8 @@ static func _cast(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary
 	if sp.has("attack"):
 		var p := CombatRules.player(s)
 		var dis := (bool(p.get("dodging", false)) and not ConditionRules.incapacitated(c)) or ConditionRules.invisible(c, data) \
-			or (str(sp["attack"]) == "ranged" and CombatRules.cols_between(f, p) == 0)
-		var adv := not (ConditionRules.attack(data, {}, c, CombatRules.cols_between(f, p) == 0)["adv"] as Array).is_empty()
+			or (str(sp["attack"]) == "ranged" and FightGrid.touching(f, p))
+		var adv := not (ConditionRules.attack(data, {}, c, FightGrid.touching(f, p))["adv"] as Array).is_empty()
 		var rolls := Roll.dice(s.rng, adv, dis)
 		var nat := Roll.kept(rolls, adv, dis)
 		var to_hit := int(sc.get("attack", 0))
@@ -694,9 +709,7 @@ static func _cast_condition_on_hero(s: GameSession, data: Dictionary, f: Diction
 		lines.append("%s роняет %s" % [c.get("name", ""), ItemRules.display_name(data["items"], s.items, held)])
 	if int(word.get("flee", 0)) > 0:
 		var p := CombatRules.player(s)
-		var away := signi(int(p["col"]) - int(f["col"]))
-		var edge := int(CombatRules.cfg(data)["edge"])
-		p["col"] = clampi(int(p["col"]) + (away if away != 0 else 1) * int(word["flee"]), -edge, edge)
+		FightField.thrust(s, data, p, FightGrid.cell(p) - FightGrid.cell(f), FightGrid.squares_of(data, int(word["flee"])), lines)
 		lines.append("%s бежит прочь" % c.get("name", ""))
 	CharacterRules.refresh(c, data, s.items)
 	lines.append("%s: %s" % [c.get("name", ""), ", ".join(conds.map(func(x: String) -> String: return ConditionRules.name_of(data, x).to_lower()))])

@@ -27,7 +27,7 @@ func _session(preset_id: String = "fighter_aira") -> GameSession:
 
 
 func _fight(s: GameSession, foes: Array) -> String:
-	CombatRules.start(s, data, foes, {})
+	TestUtils.fight(s, data, foes, {})
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)
@@ -291,15 +291,15 @@ func test_relentless_endurance_once_a_long_rest() -> void:
 # --- the fight --------------------------------------------------------------------------------------------
 
 
-func test_prone_hero_stands_with_the_whole_move() -> void:
+func test_prone_hero_stands_with_half_the_speed() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	ConditionRules.add_effect(s.character, {"condition": "prone", "ends": {}})
-	assert_str(CombatRules.can_move(s, data, 1)).is_equal("COMBAT_PRONE")
-	assert_str(CombatRules.can_stand(s)).is_empty()
-	CombatRules.stand(s)
+	assert_str(CombatRules.can_move(s)).is_equal("COMBAT_PRONE")
+	assert_str(CombatRules.can_stand(s, data)).is_empty()
+	CombatRules.stand(s, data)
 	assert_bool(ConditionRules.has(s.character, "prone")).is_false()
-	assert_str(CombatRules.can_move(s, data, 1)).is_equal("COMBAT_NO_MOVE")
+	assert_int(int(s.combat["economy"]["move"])).is_equal(FightGrid.steps_of(data, int(s.character["speed"])) - FightGrid.steps_of(data, int(s.character["speed"])) / 2)
 
 
 func test_a_grappled_hero_breaks_free_with_an_action() -> void:
@@ -307,7 +307,7 @@ func test_a_grappled_hero_breaks_free_with_an_action() -> void:
 	var gob := _fight(s, [{"monster": "goblin", "col": 0}])
 	ConditionRules.add_effect(s.character, {"condition": "grappled", "ends": {}, "by": gob})
 	CharacterRules.refresh(s.character, data, s.items)
-	assert_str(CombatRules.can_move(s, data, 1)).is_equal("COMBAT_NO_SPEED")
+	assert_str(CombatRules.can_move(s)).is_equal("COMBAT_NO_SPEED")
 	assert_str(CombatRules.can_escape(s)).is_empty()
 	s.character["skills"]["athletics"] = 40
 	var lines := CombatRules.escape(s, data)
@@ -320,8 +320,9 @@ func test_fear_keeps_the_hero_from_its_source_and_charm_from_the_charmer() -> vo
 	var s := _session()
 	var gob := _fight(s, [{"monster": "goblin", "col": 2}])
 	ConditionRules.add_effect(s.character, {"condition": "frightened", "ends": {}, "by": gob})
-	assert_str(CombatRules.can_move(s, data, 1)).is_equal("COMBAT_FRIGHTENED")
-	assert_str(CombatRules.can_move(s, data, -1)).is_empty()
+	var at := FightGrid.cell(CombatRules.player(s))
+	assert_str(CombatRules.can_walk(s, data, at + Vector2i(1, 0))).is_equal("COMBAT_FRIGHTENED")
+	assert_str(CombatRules.can_walk(s, data, at - Vector2i(1, 0))).is_empty()
 	ConditionRules.add_effect(s.character, {"condition": "charmed", "ends": {}, "by": gob})
 	assert_str(CombatRules.can_attack(s, data, gob)).is_equal("COMBAT_CHARMED")
 
@@ -364,8 +365,10 @@ func test_an_invisible_foe_that_moved_is_missed() -> void:
 	var gob := _fight(s, [{"monster": "goblin", "col": 0}])
 	var f := CombatRules.fighter(s, gob)
 	CombatRules._hold(f, "invisible")
-	f["col"] = 2  # it slipped away unseen
-	assert_int(CombatRules.shown_col(f)).is_equal(0)
+	var was := FightGrid.cell(f)
+	FightGrid.keep_seen(f)
+	TestUtils.to_col(f, 2)  # it slipped away unseen
+	assert_bool(FightGrid.shown(f) == was).is_true()
 	assert_str(CombatRules.can_attack(s, data, gob)).is_empty()  # the hero swings where it was
 	var lines := CombatRules.player_attack(s, data, gob)
 	assert_str(", ".join(lines)).contains("в пустоту")

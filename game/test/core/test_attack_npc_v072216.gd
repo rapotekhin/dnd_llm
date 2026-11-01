@@ -22,7 +22,7 @@ func _hero(room: String = "brod-tavern-upstairs") -> GameSession:
 
 
 func _fight(s: GameSession, foes: Array) -> Array[Dictionary]:
-	CombatRules.start(s, data, foes, {})
+	TestUtils.fight(s, data, foes, {})
 	s.mode = GameSession.MODE_COMBAT
 	var out: Array[Dictionary] = []
 	for id: String in CombatRules.enemies(s):
@@ -131,7 +131,7 @@ func test_hostile_spells_and_the_unaware() -> void:
 
 func test_an_aware_npc_is_not_caught_off_guard() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "commoner", "npc_id": "npc_serving", "col": 0}], {"opening": {"npc_id": "npc_serving", "unaware": false}})
+	TestUtils.fight(s, data, [{"monster": "commoner", "npc_id": "npc_serving", "col": 0}], {"opening": {"npc_id": "npc_serving", "unaware": false}})
 	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	assert_bool(bool(f.get("surprised", false))).is_false()
 	assert_str(str(s.combat["order"][0])).is_equal(CombatRules.PLAYER)

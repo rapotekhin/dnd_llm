@@ -31,7 +31,7 @@ func _bout(s: GameSession, sid: String = ARENA, bet: int = 0) -> Dictionary:
 		ArenaRules.enlist(s, data, sid)
 	var r := ArenaRules.bout(s, data, sid, bet)
 	assert_bool(r.has("reason")).override_failure_message(str(r)).is_false()
-	CombatRules.start(s, data, r["foes"], r["source"])
+	TestUtils.fight(s, data, r["foes"], r["source"])
 	return r
 
 
@@ -71,8 +71,7 @@ func test_the_hero_gives_up_but_cannot_leave_the_ring() -> void:
 	_bout(s)
 	while not CombatRules.is_player_turn(s):
 		CombatRules.next_actor(s, data)
-	CombatRules.player(s)["col"] = -CombatRules.edge(data)
-	assert_str(CombatRules.can_move(s, data, -1)).is_equal("COMBAT_ARENA_RING")
+	assert_str(CombatRules.can_flee(s, data)).is_equal("COMBAT_ARENA_RING")
 	assert_str(CombatRules.can_surrender(s, data)).is_empty()
 	CombatRules.surrender(s)
 	assert_str(str(s.combat["outcome"])).is_equal("arena_lost")
@@ -167,7 +166,7 @@ func test_a_duel_is_a_bout_with_the_stake() -> void:
 	var st := ContestRules.start(s, data, "npc_innkeeper", "bout", 0, 200)
 	assert_bool(st.has("reason")).override_failure_message(str(st)).is_false()
 	var d := ContestRules.duel(s, data)
-	CombatRules.start(s, data, d["foes"], d["source"])
+	TestUtils.fight(s, data, d["foes"], d["source"])
 	assert_bool(ArenaRules.yield_bout(s)).is_true()
 	var gold := int(s.character["gold_cp"])
 	var cp := int(ContestRules.state(s)["cp"])  # no more than the NPC's purse

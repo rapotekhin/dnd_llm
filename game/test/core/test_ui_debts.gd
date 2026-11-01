@@ -25,7 +25,7 @@ func _session(preset_id: String = "fighter_aira") -> GameSession:
 
 
 func _fight(s: GameSession, foes: Array) -> void:
-	CombatRules.start(s, data, foes, {})
+	TestUtils.fight(s, data, foes, {})
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)
@@ -140,7 +140,7 @@ func test_a_foe_strikes_once_a_round_and_only_when_it_can() -> void:
 func test_leaving_spends_the_reaction() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 0}])
-	var lines := CombatRules.player_move(s, data, 1)
+	var lines := TestUtils.walk(s, data, 1)
 	assert_str(" ".join(lines)).contains("вдогонку")
 	assert_bool(bool(CombatRules.fighter(s, CombatRules.enemies(s)[0]).get("reacted", false))).is_true()
 
@@ -156,7 +156,7 @@ func test_grapple_holds_until_the_hero_walks_off_and_shove_knocks_down() -> void
 	assert_array(f["conditions"]).contains(["grappled"])
 	ConditionRules.remove(f, "incapacitated")
 	f["reacted"] = true
-	CombatRules.player_move(s, data, 1)
+	TestUtils.walk(s, data, 1)
 	assert_array(f["conditions"]).not_contains(["grappled"])
 	var t := _session()
 	_fight(t, [{"monster": "goblin", "col": 0}])
@@ -195,7 +195,7 @@ func test_a_pinned_spell_that_starts_the_fight_lands_first_on_the_caught_npc() -
 	GameState.session = s
 	Stock.spend(s.character, "slot_1")  # the slot spent with the words
 	var foes := [{"monster": "acolyte", "name": "Сестра Илва", "npc_id": "npc_priestess", "col": 0}]
-	var lines := CombatRules.start(s, data, foes, {"opening": {"npc_id": "npc_priestess"}})
+	var lines := TestUtils.fight(s, data, foes, {"opening": {"npc_id": "npc_priestess"}})
 	s.mode = GameSession.MODE_COMBAT
 	assert_str(CombatRules.current(s)).is_equal(CombatRules.PLAYER)
 	var id := CombatRules.fighter_of_npc(s, "npc_priestess")

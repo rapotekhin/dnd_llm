@@ -10,7 +10,7 @@
 		"^": {"name": "hazard", "hazard": true},
 		"~": {"name": "water", "cost": 2},
 		"o": {"name": "pit", "solid": true},
-		"T": {"name": "tree", "solid": true, "opaque": true},
+		"T": {"name": "tree", "solid": true, "opaque": true, "thin": true, "burns": true},
 		"B": {"name": "block", "solid": true},
 		"D": {"name": "socket", "solid": true, "opaque": true}
 	},
@@ -48,7 +48,7 @@
 		"hideout": {"shape": "building", "family": "house", "limit": 4},
 		"cave": {"shape": "tunnels", "family": "", "limit": 12, "rooms": {"hall": {"required": true}}},
 		"mine": {"shape": "tunnels", "family": "cave", "limit": 12, "rooms": {"hall": {"required": true}}},
-		"wild": {"shape": "open", "scatter": [{"cell": "T", "share": 0.26}, {"cell": "%", "share": 0.1}], "landmarks": ["wild"]},
+		"wild": {"shape": "open", "scatter": [{"cell": "T", "share": 0.09}, {"cell": "%", "share": 0.1}], "landmarks": ["wild"]},
 		"square": {"shape": "open", "paved": true, "size": [32, 32], "scatter": [{"cell": "B", "share": 0.03}], "landmarks": ["town"]},
 		"market": {"shape": "open", "paved": true, "family": "square", "size": [32, 32], "scatter": [{"cell": "B", "share": 0.04}], "landmarks": ["market"]},
 		"gate": {"shape": "open", "paved": true, "size": [32, 32], "scatter": [{"cell": "B", "share": 0.02}], "landmarks": ["gate"]},

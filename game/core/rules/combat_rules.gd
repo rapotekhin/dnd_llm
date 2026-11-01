@@ -1,29 +1,29 @@
 class_name CombatRules
 extends RefCounted
 ## Combat (roadmap v0.6.1, ADR-0010 §7): the engine runs the fight, the master narrates each round.
-## - The field is 7 columns of 30 ft on a line (−edge … edge); the player starts at 0. Melee — the same column;
-##   weapon and spell ranges are counted in columns (beyond the normal range — disadvantage); shooting with a foe
-##   in your column — disadvantage; leaving a column with a foe in it without Disengage — an attack of
-##   opportunity; an area spell covers one column.
-## - Initiative order; on the player's turn: action + bonus action + one move (Dash — one more); attacks
-##   (Extra Attack, off-hand with a light weapon), engine spells (attack roll or save, damage, healing), Dodge,
-##   Disengage, Dash, features and items through Stock / ItemRules.
-## - Enemies are SRD monsters run by a simple engine AI: melee closes in, shooters keep the range, morale at half
-##   HP — intelligent foes surrender, the rest flee off the field.
+## - v0.8.4: the field is the map of the place on squares of 5 ft (FightGrid). Everyone stands where the fight found
+##   them and takes the squares of its size. Melee — side by side, a reach of 10 ft — two squares; ranges in feet by
+##   the lines between squares (beyond the normal range — disadvantage); shooting with a foe beside you — disadvantage;
+##   leaving a foe's reach without Disengage — an attack of opportunity; an area covers the squares of its SRD shape.
+## - Initiative order; on the player's turn: action + bonus action + speed in squares, split as the player likes (Dash —
+##   as much again); attacks (Extra Attack, off-hand with a light weapon), engine spells (attack roll or save, damage,
+##   healing), Dodge, Disengage, Dash, features and items through Stock / ItemRules.
+## - Enemies are SRD monsters whose turn is found by a search over squares and acts (FightAI), morale at half HP —
+##   intelligent foes surrender, the rest flee off the map.
 ## - 0 HP of the player in combat: death saves by 5e. The end: victory, the player fled, captured (stable among
 ##   intelligent foes), dead, truce (persuasion). XP by CR of everyone defeated, loot — their gear and the
 ##   encounter's loot.
 ## - v0.6.2: surprise (the player sneaks in — Stealth against each foe's passive Perception; a pack ambush — the
 ##   foes' Stealth against the player's), Hide in combat (not with a foe in your column; hidden — advantage, foes
 ##   attack with disadvantage; an attack or a spell reveals), reinforcements (pack waves, a foe calls for help,
-##   the master's start_combat — all come at the edge column at the start of a round), parley (Intimidation —
+##   the master's start_combat — all come by a way into the place at the start of a round), parley (Intimidation —
 ##   intelligent foes surrender or flee, Persuasion — truce; one try per skill), the hit hint before the click.
 ## - v0.7.8: the hero's conditions by 5e — prone (attacks with disadvantage, close foes with advantage, far ones with
 ##   disadvantage, «Встать» takes the move), grappled and restrained (speed 0, «Вырваться» — an action), blinded,
 ##   frightened (no step towards the source), charmed (no attack on the charmer), paralysed / stunned / unconscious /
 ##   petrified (the turn is skipped, foes hit with advantage, close hits on the paralysed and the unconscious are
 ##   critical), exhaustion; repeat saves at the end of the hero's turn; resistances and the concentration save on
-##   damage (HeroDefense); invisible foes are where they were last seen until they strike (`seen_col`).
+##   damage (HeroDefense); invisible foes are where they were last seen until they strike (`seen_x`, `seen_y`).
 ## - v0.7.9: monsters by 5e (MonsterRules) — the effects of their attacks on the hero, recharge, control before damage,
 ##   traits, casters, Parry; magic weapons pierce resistance to nonmagical attacks; foes immune to a condition do not
 ##   get it; beasts do not finish a downed hero either — left for dead, the hero comes to after the fight.
@@ -39,10 +39,6 @@ const PLAYER := "p"
 
 static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["combat"]
-
-
-static func edge(data: Dictionary) -> int:
-	return int(cfg(data)["edge"])
 
 
 static func active(s: GameSession) -> bool:
@@ -86,12 +82,31 @@ static func is_player_turn(s: GameSession) -> bool:
 	return active(s) and current(s) == PLAYER and str(s.combat.get("outcome", "")).is_empty()
 
 
-static func cols_between(a: Dictionary, b: Dictionary) -> int:
-	return absi(int(a.get("col", 0)) - int(b.get("col", 0)))
+## In the air and out of a blade's reach: Fly on the hero, a flying creature that did not come down to strike.
+static func airborne(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
+	if str(f.get("id", "")) == PLAYER:
+		return aloft(s)
+	return MonsterRules.flies(data, f) and not bool(f.get("swooped", false)) and not incapacitated(f) \
+		and not ["prone", "grappled", "restrained"].any(func(x: String) -> bool: return _has(f, x))
 
 
-static func range_cols(data: Dictionary, feet: int) -> int:
-	return int(ceil(feet / float(cfg(data)["col_ft"]))) if feet > 0 else 0
+## `a` reaches `t` with a blade of `reach` squares: beside it, not over a corner, a flyer only by another flyer.
+static func blade_reaches(s: GameSession, data: Dictionary, a: Dictionary, t: Dictionary, reach: int = 1) -> bool:
+	return FightGrid.can_touch(s, data, a, t, reach) and (not airborne(s, data, t) or airborne(s, data, a))
+
+
+## The cover of `t` from `a`, for an attack or a Dexterity save; 0 beside it.
+static func cover_of(s: GameSession, data: Dictionary, a: Dictionary, t: Dictionary) -> int:
+	return FightGrid.cover(s, data, a, t)
+
+
+static func _no_line(s: GameSession, data: Dictionary, a: Dictionary, t: Dictionary) -> bool:
+	return FightGrid.cover(s, data, a, t) >= FightGrid.FULL_COVER
+
+
+## How far the hero's spell goes: touch — the next square.
+static func _spell_squares(s: GameSession, data: Dictionary, spell_id: String) -> int:
+	return maxi(1, FightGrid.squares_of(data, spell_range(s, data, spell_id)))
 
 
 ## A word for an enemy's health (the player never sees numbers): a localization key.
@@ -160,12 +175,17 @@ static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = fal
 static func start(s: GameSession, data: Dictionary, foes: Array, source: Dictionary = {}) -> Array[String]:
 	var c := s.character
 	var fighters: Array = [PLAYER]
-	Being.of(s, PLAYER)["fight"] = {"id": PLAYER, "side": "player", "name": str(c.get("name", "")), "col": 0, "status": "active",
-		"init": 0, "conditions": []}
+	Being.of(s, PLAYER)["fight"] = {"id": PLAYER, "side": "player", "name": str(c.get("name", "")), "status": "active",
+		"init": 0, "conditions": [], "span": FightGrid.span_of(data, hero_size(s, data))}
 	s.combat = {"round": 1, "turn": 0, "fighters": fighters, "order": [], "log": [], "encounter": str(source.get("encounter", "")),
 		"room_from": str(source.get("room_from", "")), "outcome": "", "death_saves": {"ok": 0, "fail": 0}, "loot": [], "xp": 0,
 		"incoming": [], "help": (source.get("help", {}) as Dictionary).duplicate(true), "parley_tried": [],
-		"parley_ok": 0, "parley_fail": 0, "parley_hard": str(source.get("parley", "")) == "hard"}
+		"parley_ok": 0, "parley_fail": 0, "parley_hard": str(source.get("parley", "")) == "hard",
+		"map": str(s.room_id), "room_start": str(s.room_id), "rev": 0, "zones": [], "doors": {}, "blocks": {}, "fires": {},
+		"faction": str(source.get("faction", ""))}
+	if source.has("field"):
+		s.combat["field"] = (source["field"] as Dictionary).duplicate()
+	FightGrid.put(player(s), _hero_square(s, data))
 	var own := FactionRules.own_heads(s, data, foes, str(source.get("encounter", "")))  # v0.7.63: the hero's look, a side of their own
 	foes = foes.filter(func(f: Dictionary) -> bool: return not own.has(f))
 	_add_foes(s, data, foes)
@@ -173,10 +193,11 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 		s.combat["arena"] = (source["arena"] as Dictionary).duplicate(true)
 		s.combat["nonlethal"] = ArenaRules.yield_bout(s)
 	else:
-		_add_foes(s, data, own + AllyRules.joining(s, data, foes) + (source.get("allies", []) as Array) + AllyRules.summon_specs(s), 99, "ally")
+		_add_foes(s, data, own + AllyRules.joining(s, data, foes) + (source.get("allies", []) as Array) + AllyRules.summon_specs(s), FightGrid.NONE, "ally")
 		AllyRules.buffs_into_fight(s, data)
 	for w: Dictionary in source.get("waves", []):
 		add_incoming(s, data, w.get("enemies", []), int(w.get("round", 2)), str(w.get("side", "right")))
+	FightField.lay(s, data)
 	# Initiative: d20 + DEX; ties — the higher DEX, then the player.
 	var inits := []
 	for id: String in fighters:
@@ -228,13 +249,39 @@ static func _dex_of(s: GameSession, data: Dictionary, id: String) -> int:
 	return CharacterRules.mod(int(_monster(data, fighter(s, id))["abilities"]["dex"]))
 
 
-## Adds fighters for `specs` [{monster, count?, name?, desc?, col?, npc_id?}]; `col_at` puts them all in one
-## column (reinforcements at the edge). A name that is already in the fight gets the next number. Returns the ids.
-static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: int = 99, side_name: String = "enemy") -> Array[String]:
+## Where the hero stands: the walk's square, or the middle of an open field.
+static func _hero_square(s: GameSession, data: Dictionary) -> Vector2i:
+	if s.combat.has("field"):
+		return Vector2i(int(s.combat["field"]["w"]) / 2, int(s.combat["field"]["h"]) / 2)
+	return FightGrid.free_near(s, data, WalkRules.settle(s, data, FightGrid.map(s, data)))
+
+
+## Where a fighter of `spec` appears: its own square, its person's square on the map, by the hero for an ally, else at
+## the starting distance on a free square around the hero.
+static func _square_of(s: GameSession, data: Dictionary, spec: Dictionary, f: Dictionary, ranged: bool, turn: int, ally: bool) -> Vector2i:
+	var span := int(f["span"])
+	if spec.has("x"):
+		return FightGrid.free_near(s, data, Vector2i(int(spec["x"]), int(spec["y"])), span)
+	var hero := FightGrid.cell(player(s))
+	if ally:
+		return FightGrid.free_near(s, data, hero, span)
+	var spot := MapSpots.of_fighter(s, data, spec)
+	if spot != FightGrid.NONE:
+		return FightGrid.free_near(s, data, spot, span)
+	if bool(spec.get("beside", false)):
+		return FightGrid.free_near(s, data, hero, span)
+	var far := int(FightGrid.cfg(data)["start"]["ranged" if ranged else "melee"])
+	var d: Vector2i = FightGrid.CIRCLE[turn % FightGrid.CIRCLE.size()]
+	return FightGrid.walked_off(s, data, hero, d, far, span, "" if s.combat.has("field") else str(s.room_id))
+
+
+## Adds fighters for `specs` [{monster, count?, name?, desc?, x?, y?, npc_id?}]; `at` puts them all by one square
+## (reinforcements by a way in). A name that is already in the fight gets the next number. Returns the ids.
+static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector2i = FightGrid.NONE, side_name: String = "enemy") -> Array[String]:
 	var mons: Dictionary = data["monsters"]
 	var fighters: Array = s.combat["fighters"]
 	var ids: Array[String] = []
-	var side := 1
+	var turn := 0
 	for spec: Dictionary in specs:
 		var m: Dictionary = mons.get(str(spec.get("monster", "")), {})
 		if m.is_empty():
@@ -245,18 +292,16 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, col_at: in
 		var same := fighters.filter(func(id: String) -> bool: return str(fighter(s, id).get("base", "")) == base).size()
 		for i in count:
 			var ranged := (m["actions"] as Array).all(func(a: Dictionary) -> bool: return str(a.get("kind")) == "ranged")
-			var col := col_at if col_at != 99 else (int(spec["col"]) if spec.has("col") else side * int(cfg(data)["start_cols"]["ranged" if ranged else "melee"]))
-			if side_name == "ally" and col_at == 99 and not spec.has("col"):
-				col = int(player(s)["col"])  # allies start by the hero
-			side = -side
 			var name := str(spec.get("name", base))
 			if not spec.has("base") and (count > 1 or same > 0):
 				name += " %d" % (same + i + 1)
 			var id := whose if not whose.is_empty() else str(Being.spawn(s, {"monster": str(spec["monster"]), "name": name, "base": base})["id"])
 			var f := {"id": id, "side": side_name, "monster": str(spec["monster"]), "name": name, "base": base,
 				"desc": str(spec.get("desc", "")), "hp": int(m["hp"]), "max_hp": int(m["hp"]), "ac": int(m["ac"]),
-				"col": clampi(col, -edge(data), edge(data)), "status": "active", "conditions": [], "morale": false,
+				"span": FightGrid.span_of(data, str(m.get("size", "medium"))), "status": "active", "conditions": [], "morale": false,
 				"npc_id": str(spec.get("npc_id", "")), "by_hero": bool(spec.get("by_hero", false))}
+			FightGrid.put(f, FightGrid.free_near(s, data, at, int(f["span"])) if at != FightGrid.NONE else _square_of(s, data, spec, f, ranged, turn, side_name == "ally"))
+			turn += 1
 			Being.of(s, id)["fight"] = f
 			fighters.append(id)
 			_take_statuses(s, id, f)
@@ -428,7 +473,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	f["reacted"] = false  # the reaction comes back at the start of one's own turn (5e)
 	if id == PLAYER:
 		f.erase("swooped")
-		s.combat["economy"] = {"action": 1, "bonus": 1, "move": _move_cols(int(s.character.get("speed", 30)), data), "attacks": 0,
+		s.combat["economy"] = {"action": 1, "bonus": 1, "move": FightGrid.steps_of(data, int(s.character.get("speed", 30))), "attacks": 0,
 			"attacked": false, "sneak": false, "haste": 1 if SpellEffects.has(s.character, "haste") else 0}
 		if bool(f.get("blinked", false)):  # Blink: back from the Ethereal Plane (v0.7.13.3)
 			f["blinked"] = false
@@ -446,6 +491,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 				CharacterRules.refresh(s.character, data, s.items)
 				lines.append("%s поднимает %s" % [s.character["name"], ItemRules.display_name(data["items"], s.items, dropped)])
 		lines.append_array(SpellEffects.turn_start(s, data))  # Heroism (v0.7.13.1)
+		lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # v0.8.4: what the hero stands in
 		lines.append_array(SpellEffects.zones_expire(s))  # Grease (v0.7.13.6)
 		SpellEffects.end_until_turn(s, data)  # Shield (v0.7.13.7)
 		for eid: String in enemies(s):  # v0.7.13: riders that last until the start of the hero's next turn
@@ -453,12 +499,6 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			for k: String in ["slowed", "no_heal"]:
 				o.erase(k)
 			ConditionRules.remove(o, "chilled")
-
-
-static func _move_cols(speed: int, data: Dictionary) -> int:
-	if speed <= 0:
-		return 0  # grappled, restrained, exhaustion 5 (v0.7.8)
-	return maxi(1, speed / (int(cfg(data)["col_ft"]) * 2) + 1) if speed >= 60 else 1
 
 
 # --- the player's actions ---------------------------------------------------------------------------
@@ -562,14 +602,28 @@ static func can_attack(s: GameSession, data: Dictionary, target_id: String, offh
 	var w := weapon_profile(c, data, s.items, wid, offhand)
 	if not str(w.get("ammo", "")).is_empty() and int(c.get("inventory", {}).get(str(w["ammo"]), 0)) <= 0:
 		return "COMBAT_NO_AMMO"  # v0.7.12: arrows and bolts are spent
-	var d := absi(shown_col(t) - int(player(s)["col"]))
-	if d == 0:
+	var seen := _as_seen(t)
+	if _no_line(s, data, player(s), seen):
+		return "COMBAT_NO_LINE"
+	if bool(w["melee"]) and _in_blade(s, data, w, seen):
 		return ""
 	if (w["range"] as Array).is_empty():
 		return "COMBAT_OUT_OF_REACH"
-	if d * int(cfg(data)["col_ft"]) > int(w["range"][1]):
+	if FightGrid.shown_dist(player(s), t) * int(FightGrid.cfg(data)["ft"]) > int(w["range"][1]):
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
+
+
+## An unseen foe where the hero last saw it: the hero swings there.
+static func _as_seen(t: Dictionary) -> Dictionary:
+	var out := t.duplicate()
+	FightGrid.put(out, FightGrid.shown(t))
+	return out
+
+
+## The blade in hand reaches `t`: the next square, two with a reach weapon; a thrown weapon beyond that is a throw.
+static func _in_blade(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary) -> bool:
+	return blade_reaches(s, data, player(s), t, 2 if bool(w.get("reach", false)) else 1)
 
 
 ## Frenzy (v0.7.8): a raging berserker may go into a frenzy — free; ends with the fight and a level of
@@ -587,7 +641,7 @@ static func frenzy(s: GameSession) -> Array[String]:
 	return ["%s впадает в неистовство: удар бонусным действием каждый ход, после боя — истощение" % s.character.get("name", "")]
 
 
-## The frenzied hero's melee attack as a bonus action: the main weapon at a foe in the hero's column.
+## The frenzied hero's melee attack as a bonus action: the main weapon at a foe beside the hero.
 static func can_frenzy_attack(s: GameSession, data: Dictionary, target_id: String) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
@@ -598,7 +652,7 @@ static func can_frenzy_attack(s: GameSession, data: Dictionary, target_id: Strin
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active":
 		return "COMBAT_BAD_TARGET"
-	if absi(shown_col(t) - int(player(s)["col"])) != 0:
+	if not blade_reaches(s, data, player(s), t):
 		return "COMBAT_OUT_OF_REACH"
 	return ""
 
@@ -623,7 +677,7 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 	var w := weapon_profile(c, data, s.items, wid, offhand)
 	if bool(w.get("melee", false)) and SpellEffects.has(s.character, "flying"):
 		player(s)["swooped"] = true  # Fly (v0.7.63): down at arm's length, in reach until the next turn
-	s.combat["melee_strike"] = bool(w.get("melee", false)) and cols_between(player(s), fighter(s, target_id)) == 0  # nonlethal needs a melee blow (5e)
+	s.combat["melee_strike"] = bool(w.get("melee", false)) and _in_blade(s, data, w, fighter(s, target_id))  # nonlethal needs a melee blow (5e)
 	var lines := strike(s, data, target_id, w, {})
 	s.combat.erase("melee_strike")
 	spend_ammo(s, str(w.get("ammo", "")))
@@ -667,7 +721,7 @@ static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dicti
 	var lines: Array[String] = broke
 	var bonus_dmg := _rage_bonus(s, data, w, t)
 	var sneak := _sneak_dice(s, data, w, adv, dis, t)
-	var auto_crit := bool(ConditionRules.attack(data, {}, t, cols_between(player(s), t) == 0)["crit"])
+	var auto_crit := bool(ConditionRules.attack(data, {}, t, FightGrid.touching(player(s), t))["crit"])
 	var res := _attack(s, data, str(c.get("name", "")), w["name"], int(w["to_hit"]), adv, dis, t, str(w["dice"]), int(w["bonus"]) + bonus_dmg, str(w["type"]), lines, sneak, auto_crit, w)
 	lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))  # the attack is made unseen, then it ends
 	ConditionRules.remove(t, "helped")
@@ -685,7 +739,7 @@ static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dicti
 	if not bool(opts.get("no_horde", false)) and FeatureRules.has(c, "hunters_prey_horde_breaker") and not bool(e.get("horde", false)):
 		for id: String in enemies(s):
 			var o := fighter(s, id)
-			if id != target_id and int(o["col"]) == int(t["col"]) and absi(int(o["col"]) - int(player(s)["col"])) <= (0 if bool(w["melee"]) else 99):
+			if id != target_id and FightGrid.touching(o, t) and (not bool(w["melee"]) or _in_blade(s, data, w, o)):
 				e["horde"] = true
 				lines.append("Разрушитель орд: удар по %s" % o["name"])
 				lines.append_array(strike(s, data, id, w, {"no_horde": true}))
@@ -721,10 +775,10 @@ static func _item_extras(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 ## Why a weapon attack at `t` has advantage or disadvantage now: {"adv": [reasons], "dis": [reasons]}.
 static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary) -> Dictionary:
 	var c := s.character
-	var d := cols_between(player(s), t)
+	var d := FightGrid.dist(player(s), t)
 	var adv: Array[String] = []
 	var dis: Array[String] = []
-	var by_status := ConditionRules.attack(data, {}, t, d == 0)
+	var by_status := ConditionRules.attack(data, {}, t, d <= 1)
 	adv.append_array(by_status["adv"])
 	dis.append_array(by_status["dis"])
 	if bool(player(s).get("hidden", false)):
@@ -733,8 +787,8 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		adv.append("вы невидимы")
 	if SpellEffects.has_next_attack_adv(c):
 		adv.append("Верный удар")
-	var fog_t := SpellEffects.obscured(s, int(t["col"]))  # Fog Cloud, Darkness (v0.7.13.6)
-	var fog_me := SpellEffects.obscured(s, int(player(s)["col"]))
+	var fog_t := SpellEffects.obscured(s, data, t)  # Fog Cloud, Darkness (v0.7.13.6)
+	var fog_me := SpellEffects.obscured(s, data, player(s))
 	if fog_t != fog_me:
 		dis.append((fog_t if not fog_t.is_empty() else fog_me).to_lower())
 	if bool(t.get("dodging", false)):
@@ -749,9 +803,9 @@ static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dic
 		pass  # both sides are blind: it evens out (5e)
 	elif TimeRules.dark(s, data):
 		dis.append("темнота")
-	if d > 0 and not (w["range"] as Array).is_empty() and d * int(cfg(data)["col_ft"]) > int(w["range"][0]):
+	if d > 1 and not (w["range"] as Array).is_empty() and d * int(FightGrid.cfg(data)["ft"]) > int(w["range"][0]):
 		dis.append("дальше обычной дальности")
-	if not bool(w["melee"]) and _foe_in_column(s, data, player(s)):
+	if not bool(w["melee"]) and _foe_beside(s, data, player(s)):
 		dis.append("враг вплотную")
 	if bool(w.get("heavy", false)) and (ItemRules.cfg(data)["small_races"] as Array).has(hero_size(s, data)):
 		dis.append("тяжёлое оружие не по росту")  # v0.7.12, PHB
@@ -767,19 +821,14 @@ static func hero_attack_dis(s: GameSession, data: Dictionary, t: Dictionary) -> 
 	if _has(t, "invisible") and not SpellEffects.has(c, "see_invisible") and not _has(t, "outlined"):  # See Invisibility, Faerie Fire
 		dis.append("цель невидима")
 	var wx := WeatherRules.obscure_why(s, data)
-	if not wx.is_empty() and t.has("col") and cols_between(player(s), t) > 0:  # a ranged attack in fog or a downpour (v0.7.46)
+	if not wx.is_empty() and t.has("x") and FightGrid.dist(player(s), t) > 1:  # a ranged attack in fog or a downpour (v0.7.46)
 		dis.append(wx)
 	return dis
 
 
-## A foe can be targeted where the hero last saw it: an invisible one stays at `seen_col` until it strikes (v0.7.8).
-static func shown_col(f: Dictionary) -> int:
-	return int(f.get("seen_col", f["col"])) if _has(f, "invisible") else int(f["col"])
-
-
-## The hero aims where an invisible foe was, and it is not there any more.
+## The hero aims where an invisible foe was (FightGrid.shown), and it is not there any more.
 static func _missed_unseen(s: GameSession, t: Dictionary) -> bool:
-	return _has(t, "invisible") and int(t.get("seen_col", t["col"])) != int(t["col"])
+	return _has(t, "invisible") and FightGrid.shown(t) != FightGrid.cell(t)
 
 
 ## The hero is charmed by this foe (the master's charm with `by`, or a monster's in v0.7.9): no attack on it (5e).
@@ -791,7 +840,7 @@ static func charmed_by(s: GameSession, t: Dictionary) -> bool:
 
 
 static func _rage_bonus(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary) -> int:
-	if cols_between(player(s), t) == 0 and bool(w["melee"]) and bool(s.combat.get("raging", false)):
+	if bool(w["melee"]) and FightGrid.dist(player(s), t) <= (2 if bool(w.get("reach", false)) else 1) and bool(s.combat.get("raging", false)):
 		return int(CharacterRules.level_row(s.character, data).get("class_specific", {}).get("rage_damage_bonus", 2))
 	return 0
 
@@ -801,23 +850,33 @@ static func _rage_bonus(s: GameSession, data: Dictionary, w: Dictionary, t: Dict
 static func _sneak_dice(s: GameSession, data: Dictionary, w: Dictionary, adv: bool, dis: bool, t: Dictionary = {}) -> String:
 	var c := s.character
 	var finesse_or_ranged: bool = not bool(w["melee"]) or (ItemRules.def_of(data["items"], s.items, str(w.get("id", ""))).get("properties", []) as Array).has("finesse")
-	if CharacterRules.has_feature(c, "sneak_attack") and not bool(economy(s).get("sneak", false)) and not dis and finesse_or_ranged 			and (adv or (not t.is_empty() and allies(s).any(func(id: String) -> bool: return cols_between(fighter(s, id), t) == 0))):
+	if CharacterRules.has_feature(c, "sneak_attack") and not bool(economy(s).get("sneak", false)) and not dis and finesse_or_ranged 			and (adv or (not t.is_empty() and allies(s).any(func(id: String) -> bool: return FightGrid.touching(fighter(s, id), t)))):
 		var sa: Dictionary = CharacterRules.level_row(c, data).get("class_specific", {}).get("sneak_attack", {})
 		return "%dd%d" % [int(sa.get("dice_count", 1)), int(sa.get("dice_value", 6))]
 	return ""
 
 
-static func _foe_in_column(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
+## A foe stands beside `f`: 5 ft, what makes a shot worse and a hiding place useless.
+static func _foe_beside(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 	var side := str(f.get("side"))
 	for id: String in s.combat["order"]:
 		var o := fighter(s, id)
-		if str(o.get("side")) != side and str(o.get("status")) == "active" and int(o["col"]) == int(f["col"]) and not ConditionRules.does(o, data, "no_threat"):
+		if str(o.get("side")) != side and str(o.get("status")) == "active" and FightGrid.touching(o, f) and not ConditionRules.does(o, data, "no_threat"):
 			return true
 	return false
 
 
-## One attack roll against an enemy and its damage; adds the line. {"hit", "damage"}.
+## One attack roll against an enemy, through what covers it from the hero.
 static func _attack(s: GameSession, data: Dictionary, who: String, what: String, to_hit: int, adv: bool, dis: bool, t: Dictionary,
+		dice: String, bonus: int, dtype: String, lines: Array[String], extra_dice: String = "", auto_crit: bool = false, w: Dictionary = {}) -> Dictionary:
+	t["cover"] = cover_of(s, data, player(s), t)
+	var out := _roll_attack(s, data, who, what, to_hit, adv, dis, t, dice, bonus, dtype, lines, extra_dice, auto_crit, w)
+	t.erase("cover")
+	return out
+
+
+## The roll and its damage; adds the line. {"hit", "damage"}.
+static func _roll_attack(s: GameSession, data: Dictionary, who: String, what: String, to_hit: int, adv: bool, dis: bool, t: Dictionary,
 		dice: String, bonus: int, dtype: String, lines: Array[String], extra_dice: String = "", auto_crit: bool = false, w: Dictionary = {}) -> Dictionary:
 	if SpellEffects.take_next_attack_adv(s.character):  # True Strike (v0.7.13.1)
 		adv = true
@@ -874,7 +933,7 @@ static func _attack(s: GameSession, data: Dictionary, who: String, what: String,
 
 
 ## The hover text of a line of the fight's log (v0.7.49.4): kept with the fight under the line's start, found by
-## CombatScreen for a log line that begins with it.
+## the fight's log for a line that begins with it.
 static func line_tip(s: GameSession, line: String, tip: String) -> void:
 	var tips: Dictionary = s.combat.get("tips", {})
 	tips[line] = tip
@@ -995,7 +1054,7 @@ static func is_engine_spell(data: Dictionary, spell_id: String) -> bool:
 
 ## The AC of a fighter now: its own, and what its statuses give or take.
 static func ac_of(f: Dictionary) -> int:
-	return int(f["ac"]) + ConditionRules.sum(f, "ac")
+	return int(f["ac"]) + ConditionRules.sum(f, "ac") + int(f.get("cover", 0))
 
 
 static func _has(f: Dictionary, cond: String) -> bool:
@@ -1032,7 +1091,7 @@ static func _yet_to_act(s: GameSession, f: Dictionary) -> bool:
 static func _add_condition(s: GameSession, f: Dictionary, cond: String, timer: Dictionary) -> void:
 	ConditionRules.remove(f, cond)
 	if cond == "invisible":
-		f["seen_col"] = int(f["col"])
+		FightGrid.keep_seen(f)
 	var e := {"condition": cond, "source": {"kind": "spell" if timer.has("spell") else "engine", "id": str(timer.get("spell", "")), "name": ""}}
 	if timer.has("rounds"):
 		e["ends"] = {"at": ConditionRules.now(s) + int(timer["rounds"]) - (1 if _yet_to_act(s, f) else 0)}
@@ -1194,8 +1253,10 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 		return "COMBAT_SPELL_TOO_LONG"  # v0.7.13: minutes to cast — not in a fight (Prayer of Healing)
 	if SpellEffects.spec(data, spell_id).has("reaction"):
 		return "COMBAT_REACTION_SPELL"  # Shield, Counterspell: cast in the window of a foe's turn (v0.7.13.7)
-	if (sp.get("components", []) as Array).has("V") and SpellEffects.silenced(s, int(player(s)["col"])):
+	if (sp.get("components", []) as Array).has("V") and SpellEffects.silenced(s, data, player(s)):
 		return "COMBAT_SILENCED"  # v0.7.13.6
+	if FightGrid.is_aim(target_id):  # a square, for what covers an area
+		return _can_aim(s, data, spell_id, FightGrid.aim_of(target_id))
 	if not target_id.is_empty() and (SpellEffects.picks_side(data, spell_id) == "friend"
 			or (SpellEffects.picks_side(data, spell_id) == "any" and str(fighter(s, target_id).get("side")) != "enemy")):
 		return _can_friend(s, data, spell_id, target_id)
@@ -1206,9 +1267,40 @@ static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: i
 		return "COMBAT_BAD_TARGET"
 	if charmed_by(s, t) and (sp.has("attack") or sp.has("save") or is_engine_spell(data, spell_id)):
 		return "COMBAT_CHARMED"
-	if absi(shown_col(t) - int(player(s)["col"])) > range_cols(data, spell_range(s, data, spell_id)):
+	if _no_line(s, data, player(s), t):
+		return "COMBAT_NO_LINE"
+	if FightGrid.shown_dist(player(s), t) > _spell_squares(s, data, spell_id):
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
+
+
+## "" when the area of a spell can be laid on a square: in range and in sight of the hero.
+static func _can_aim(s: GameSession, data: Dictionary, spell_id: String, at: Vector2i) -> String:
+	var jump := int(SpellEffects.spec(data, spell_id).get("teleport", 0))
+	if jump > 0:  # Misty Step: a free square the hero sees
+		var g := FightGrid.grid(s, data)
+		if FightGrid.dist_to(player(s), at) > FightGrid.squares_of(data, jump):
+			return "COMBAT_OUT_OF_RANGE"
+		if FightGrid.bodies(s).has(at) or not FightGrid.walkable(g, at):
+			return "COMBAT_BAD_TARGET"
+		return "" if FightGrid.clear(g, FightGrid.cell(player(s)), at) else "COMBAT_NO_LINE"
+	if area_of(data, spell_id).is_empty() or data["spells"].get(spell_id, {}).has("attack"):
+		return "COMBAT_BAD_TARGET"
+	if from_self(data, spell_id):
+		return ""
+	if FightGrid.dist_to(player(s), at) > _spell_squares(s, data, spell_id):
+		return "COMBAT_OUT_OF_RANGE"
+	return "" if FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(player(s)), at) else "COMBAT_NO_LINE"
+
+
+## The shape of a spell {type, size}, {} when it has none.
+static func area_of(data: Dictionary, spell_id: String) -> Dictionary:
+	return data["spells"].get(spell_id, {}).get("area", {})
+
+
+## The area starts at the caster: a cone, a line, a cube of range Self.
+static func from_self(data: Dictionary, spell_id: String) -> bool:
+	return int(data["spells"].get(spell_id, {}).get("range_ft", 0)) <= 0
 
 
 ## "" when a spell of the hero's side may land on `target_id`: the hero, or an ally in range; a fallen one only for a heal.
@@ -1219,7 +1311,7 @@ static func _can_friend(s: GameSession, data: Dictionary, spell_id: String, targ
 	var fallen_ok := str(t.get("status")) == "down" and SpellEffects.spec(data, spell_id).is_empty()
 	if t.is_empty() or str(t.get("side")) != "ally" or not (str(t.get("status")) == "active" or fallen_ok):
 		return "COMBAT_BAD_TARGET"
-	return "COMBAT_OUT_OF_RANGE" if cols_between(player(s), t) > range_cols(data, spell_range(s, data, spell_id)) else ""
+	return "COMBAT_OUT_OF_RANGE" if FightGrid.dist(player(s), t) > _spell_squares(s, data, spell_id) else ""
 
 
 ## A spell's range for the hero: Eldritch Spear (300 ft for Eldritch Blast), Distant Spell (double).
@@ -1244,11 +1336,20 @@ static func can_throw(s: GameSession, data: Dictionary, item_id: String, target_
 		return "COMBAT_ITEM_CANT"
 	if int(economy(s).get("action", 0)) <= 0 and int(economy(s).get("attacks", 0)) <= 0:
 		return "COMBAT_NO_ACTION"
+	var far := 60 if bool(fx.get("improvised", false)) else int(fx.get("range", 15))
+	if FightGrid.is_aim(target_id):  # a flask on a square
+		if not fx.has("oiled") and not fx.has("burning"):
+			return "COMBAT_BAD_TARGET"
+		var at := FightGrid.aim_of(target_id)
+		if FightGrid.dist_to(player(s), at) * int(FightGrid.cfg(data)["ft"]) > far:
+			return "COMBAT_OUT_OF_RANGE"
+		return "" if FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(player(s)), at) else "COMBAT_NO_LINE"
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
 		return "COMBAT_BAD_TARGET"
-	var far := 60 if bool(fx.get("improvised", false)) else int(fx.get("range", 15))
-	if absi(shown_col(t) - int(player(s)["col"])) * int(cfg(data)["col_ft"]) > far:
+	if _no_line(s, data, player(s), t):
+		return "COMBAT_NO_LINE"
+	if FightGrid.shown_dist(player(s), t) * int(FightGrid.cfg(data)["ft"]) > far:
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
 
@@ -1267,6 +1368,10 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 	var fx: Dictionary = ItemRules.consumable(data, item_id, s.items)["throw"]
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
 	ItemRules._remove_one(c, item_id)
+	if FightGrid.is_aim(target_id):
+		var splashed: Array[String] = []
+		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed)
+		return splashed
 	var t := fighter(s, target_id)
 	var dex := CharacterRules.mod(CharacterRules.ability(c, "dex"))
 	var proficient := bool(fx.get("weapon", false)) and ((c.get("weapon_profs", []) as Array).has("martial") or (c.get("weapon_profs", []) as Array).has(item_id))
@@ -1297,6 +1402,8 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 			var dmg := _resist(data, t, dtype, roll_dice(s.rng, str(fx["damage"][0]), nat == 20))
 			lines.append("%s: %d (%s)" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 			_hurt_enemy(s, data, t, dmg, lines, dtype)
+	if fx.has("burning"):
+		FightField.kindle(s, data, FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
 	if fx.has("burning") and str(t.get("status")) == "active":
 		t["burning"] = str(fx["burning"])
 		lines.append("%s горит" % t["name"])
@@ -1328,7 +1435,9 @@ static func can_item_spell(s: GameSession, data: Dictionary, item_id: String, ta
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
 		return "COMBAT_BAD_TARGET"
-	if absi(shown_col(t) - int(player(s)["col"])) > range_cols(data, int(sp.get("range_ft", 0))):
+	if _no_line(s, data, player(s), t):
+		return "COMBAT_NO_LINE"
+	if FightGrid.shown_dist(player(s), t) > maxi(1, FightGrid.squares_of(data, int(sp.get("range_ft", 0)))):
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
 
@@ -1414,7 +1523,9 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 	var level := int(c.get("level", 1))
 	lines.append_array(SpellEffects.break_sanctuary(c))  # a spell at a foe ends Sanctuary (v0.7.13.2)
 	var dice := _spell_dice(sp, slot, level)
-	var t := fighter(s, target_id)
+	var t := aimed(s, target_id)
+	if str(sp.get("damage_type", "")) == "fire" and not t.is_empty():
+		FightField.kindle(s, data, area_cells(s, data, sp, t) if sp.has("area") else FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
 	if not sp.has("area") and _missed_unseen(s, t):
 		lines.append("%s: в пустоту — %s уже не там" % [sp["name"], t["name"]])
 		return
@@ -1448,7 +1559,10 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 				var hero := str(tg["id"]) == PLAYER  # friendly fire (v0.7.50.1)
 				var save_ab := str(sp["save"]["ability"])
 				var dc := spell_dc(s)
+				if save_ab == "dex" and sp.has("area"):
+					(player(s) if hero else tg)["cover"] = mini(int(FightGrid.cfg(data)["cover"]["three_quarters"]), FightGrid.cover_at(s, data, _area_origin(s, data, sp, t), FightGrid.cell(tg)))
 				var ok := bool(HeroDefense.save(s, data, save_ab, dc, "magic")["ok"]) if hero else _monster_save(s, data, tg, save_ab, dc, ["magic"], str(s.combat.get("meta_now", "")) == "heightened_spell")
+				(player(s) if hero else tg).erase("cover")
 				var dmg := dmg_full / 2 if ok and str(sp["save"]["success"]) == "half" else (0 if ok else dmg_full)
 				dmg = int(HeroDefense.adjust(s, data, dtype, dmg)["damage"]) if hero else _resist(data, tg, dtype, dmg)
 				lines.append("%s: %s — спасбросок %s против Сл %d %s, %d (%s)" % [name, str(c.get("name", "")) if hero else tg["name"], ab_name(save_ab),
@@ -1485,8 +1599,8 @@ static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int,
 	ActionRules.riders(s, data, spell_id, slot, t, bool(sres["hit"]), lines)
 	var repel := bool(sres["hit"]) and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_repelling_blast")
 	if repel and str(t.get("status")) == "active" and SIZES.find(str(_monster(data, t).get("size", "medium"))) <= 3:
-		push_away(s, data, t, 1)
-		lines.append("Отталкивающий заряд: %s отброшен на 30 фт" % t["name"])
+		push_away(s, data, t, 10)
+		lines.append("Отталкивающий заряд: %s отброшен на 10 фт" % t["name"])
 
 
 ## What a healing spell gives at this slot.
@@ -1576,10 +1690,12 @@ static func can_volley(s: GameSession, data: Dictionary, target_id: String) -> S
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
 		return "COMBAT_BAD_TARGET"
-	if bool(SpellEffects.picks(data, str(v["spell"])).get("near", false)) and v.has("picks") and int(t["col"]) != int(fighter(s, str(v["picks"][0]))["col"]):
+	if bool(SpellEffects.picks(data, str(v["spell"])).get("near", false)) and v.has("picks") and not FightGrid.touching(t, fighter(s, str(v["picks"][0]))):
 		return "COMBAT_OUT_OF_RANGE"
 	var sp: Dictionary = data["spells"][str(v["spell"])]
-	if cols_between(player(s), t) > range_cols(data, int(sp.get("range_ft", 0))):
+	if _no_line(s, data, player(s), t):
+		return "COMBAT_NO_LINE"
+	if FightGrid.dist(player(s), t) > maxi(1, FightGrid.squares_of(data, int(sp.get("range_ft", 0)))):
 		return "COMBAT_OUT_OF_RANGE"
 	return ""
 
@@ -1623,33 +1739,50 @@ static func volley_flush(s: GameSession, data: Dictionary) -> Array[String]:
 	return lines
 
 
-## Who an area spell covers (v0.7.13): a cone, a cube or a sphere — one column (the hero's for those from self, the
-## target's otherwise); a line (Lightning Bolt, 100 ft) — every column from the hero towards the target within it.
-## v0.7.50.1 (friendly fire, rules.combat.friendly_fire): an area does not pick sides — allies in it are caught, and the
-## hero too, unless the area starts at the hero (a cone, a line, a cube from self).
+## What a target id means: a fighter, or the square of "@x,y" as {x, y, aim}.
+static func aimed(s: GameSession, target_id: String) -> Dictionary:
+	if not FightGrid.is_aim(target_id):
+		return fighter(s, target_id)
+	var at := FightGrid.aim_of(target_id)
+	return {"x": at.x, "y": at.y, "aim": true, "id": target_id, "status": "active", "name": ""}
+
+
+## The squares of a spell's area laid at a target or a square.
+static func area_cells(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary) -> Array[Vector2i]:
+	var from_hero := int(sp.get("range_ft", 0)) == 0
+	return FightGrid.area(s, data, sp.get("area", {}), FightGrid.cell(player(s)), _aim_square(s, t), from_hero)
+
+
+## The square of the body of `t` that the hero aims at.
+static func _aim_square(s: GameSession, t: Dictionary) -> Vector2i:
+	return FightGrid.cell(t) if bool(t.get("aim", false)) else FightGrid._facing(player(s), t)[1]
+
+
+## The point an area spreads from: its cover goes by it.
+static func _area_origin(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary) -> Vector2i:
+	return FightGrid.cell(player(s)) if int(sp.get("range_ft", 0)) == 0 else _aim_square(s, t)
+
+
+## Who an area spell covers (v0.8.4): those standing on its squares. v0.7.50.1 (friendly fire, rules.combat.friendly_fire):
+## an area does not pick sides — allies in it are caught, and the hero too, unless the area starts at the hero.
 static func area_targets(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	var me := int(player(s)["col"])
-	var area: Dictionary = sp.get("area", {})
 	var field: Array[String] = enemies(s)
 	if bool(cfg(data)["friendly_fire"]["on"]):
 		field.append_array(allies(s))
-		if str(area.get("type", "")) != "line" and int(sp.get("range_ft", 0)) != 0:
+		if int(sp.get("range_ft", 0)) != 0:
 			field.append(PLAYER)
-	if str(area.get("type", "")) == "line":
-		var dir := signi(int(t["col"]) - me)
-		var reach := int(area.get("size", 30)) / int(cfg(data)["col_ft"])
-		for id: String in field:
-			var col := int(fighter(s, id)["col"])
-			var along := (col - me) * dir if dir != 0 else (0 if col == me else -1)
-			if along >= 0 and along <= reach and (dir != 0 or col == me):
-				out.append(fighter(s, id))
-		return out
-	var col := me if int(sp.get("range_ft", 0)) == 0 else int(t["col"])
+	var cells := area_cells(s, data, sp, t)
 	for id: String in field:
-		if int(fighter(s, id)["col"]) == col:
+		if FightGrid.in_cells(fighter(s, id), cells):
 			out.append(fighter(s, id))
 	return out
+
+
+## The squares of a monster's breath or burst: `effect.area` {ft, type}, a cone unless it says otherwise.
+static func monster_area(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, aim: Vector2i) -> Array[Vector2i]:
+	var area: Dictionary = a.get("effect", {}).get("area", {})
+	return FightGrid.area(s, data, {"type": str(area.get("type", "cone")), "size": int(area.get("ft", 5))}, FightGrid.cell(f), aim, true)
 
 
 ## A monster's breath or burst also catches the hero's allies within its area (friendly fire, v0.7.50.1).
@@ -1658,9 +1791,10 @@ static func _area_on_allies(s: GameSession, data: Dictionary, f: Dictionary, a: 
 	if area.is_empty() or (a["damage"] as Array).is_empty() or not bool(cfg(data)["friendly_fire"]["on"]):
 		return
 	var sv: Dictionary = a["save"]
+	var cells := monster_area(s, data, f, a, FightGrid.cell(player(s)))
 	for id: String in allies(s):
 		var t := fighter(s, id)
-		if cols_between(f, t) > range_cols(data, int(area.get("ft", 5))):
+		if not FightGrid.in_cells(t, cells):
 			continue
 		var ok := _monster_save(s, data, t, str(sv["ability"]), int(sv["dc"]), [])
 		var dmg := 0
@@ -1700,10 +1834,9 @@ static func _acid_rider(s: GameSession, data: Dictionary, slot: int, t: Dictiona
 	_hurt_enemy(s, data, t, half, lines, "acid")
 
 
-## A fighter thrown `cols` columns away from the hero, within the field.
-static func push_away(s: GameSession, data: Dictionary, t: Dictionary, cols: int) -> void:
-	var away := 1 if int(t["col"]) >= int(player(s)["col"]) else -1
-	t["col"] = clampi(int(t["col"]) + away * cols, -edge(data), edge(data))
+## A fighter thrown `feet` straight away from the hero, until a wall or a body stops it.
+static func push_away(s: GameSession, data: Dictionary, t: Dictionary, feet: int) -> void:
+	FightField.thrust(s, data, t, (FightGrid.cell(t) - FightGrid.cell(player(s))).sign(), FightGrid.squares_of(data, feet), [])
 
 
 ## A foe in metal armor (Shocking Grasp): its armor line names mail, plate, scale, a breastplate or splint.
@@ -1737,7 +1870,7 @@ static func _spell_dice(sp: Dictionary, slot: int, level: int) -> String:
 ## A monster's save; `tags` — what it is against (magic, charm, fear…) for the advantages of its traits (v0.7.9).
 static func _monster_save(s: GameSession, data: Dictionary, t: Dictionary, ab: String, dc: int, tags: Array = [], disadv: bool = false) -> bool:
 	var m: Dictionary = data["monsters"][t["monster"]]
-	var bonus := int(m["saves"].get(ab, CharacterRules.mod(int(m["abilities"].get(ab, 10)))))
+	var bonus := int(m["saves"].get(ab, CharacterRules.mod(int(m["abilities"].get(ab, 10))))) + (int(t.get("cover", 0)) if ab == "dex" else 0)
 	var adv := MonsterRules.save_advantage(data, t, ab, tags) or SpellEffects.boon_save_adv(t, ab)  # v0.7.50.1
 	var by_status := ConditionRules.check_mods(t, data, {"save": ab})
 	disadv = disadv or not (by_status["disadvantage"] as Array).is_empty()  # also Heightened Spell (v0.7.10)
@@ -1772,17 +1905,17 @@ static func player_simple(s: GameSession, data: Dictionary, what: String) -> Str
 		"disengage":
 			p["disengaged"] = true
 		"dash":
-			e["move"] = int(e["move"]) + _move_cols(int(s.character.get("speed", 30)), data)
+			e["move"] = int(e["move"]) + FightGrid.steps_of(data, int(s.character.get("speed", 30)))
 	return ""
 
 
-## Hide (v0.6.2): an action (a bonus action with Cunning Action); not with a foe in the player's column.
+## Hide (v0.6.2): an action (a bonus action with Cunning Action); not with a foe beside the hero.
 static func can_hide(s: GameSession, data: Dictionary) -> String:
 	if not player_can_act(s):
 		return "COMBAT_NOT_YOUR_TURN"
 	if bool(player(s).get("hidden", false)):
 		return "COMBAT_ALREADY_HIDDEN"
-	if _foe_in_column(s, data, player(s)) and not _hides_behind(s, data):
+	if _foe_beside(s, data, player(s)) and not _hides_behind(s, data):
 		return "COMBAT_HIDE_SEEN"
 	var cost := _hide_cost(s)
 	if int(economy(s).get(cost, 0)) <= 0:
@@ -1796,7 +1929,7 @@ static func _hides_behind(s: GameSession, data: Dictionary) -> bool:
 		return false
 	for id: String in enemies(s):
 		var f := fighter(s, id)
-		if int(f["col"]) == int(player(s)["col"]) and SIZES.find(str(_monster(data, f).get("size", "medium"))) > SIZES.find(hero_size(s, data)):
+		if FightGrid.touching(f, player(s)) and SIZES.find(str(_monster(data, f).get("size", "medium"))) > SIZES.find(hero_size(s, data)):
 			return true
 	return false
 
@@ -1821,8 +1954,8 @@ static func player_hide(s: GameSession, data: Dictionary) -> Array[String]:
 		"враги теряют из виду" if ok else "враги всё видят"]]
 
 
-## "" when the player can step one column in `dir` (−1 / +1) — off the edge means fleeing the fight.
-static func can_move(s: GameSession, data: Dictionary, dir: int) -> String:
+## "" when the player can walk at all now: speed, on the feet, squares left.
+static func can_move(s: GameSession) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
 	var c := s.character
@@ -1832,13 +1965,31 @@ static func can_move(s: GameSession, data: Dictionary, dir: int) -> String:
 		return "COMBAT_PRONE"
 	if int(economy(s).get("move", 0)) <= 0:
 		return "COMBAT_NO_MOVE"
-	if absi(dir) != 1:
-		return "COMBAT_BAD_MOVE"
-	if s.combat.has("arena") and absi(int(player(s)["col"]) + dir) > edge(data):
-		return "COMBAT_ARENA_RING"
+	return ""
+
+
+## Where the hero can walk this turn: FightGrid.reach, what the squares left of the turn allow. {} when the hero cannot.
+static func hero_routes(s: GameSession, data: Dictionary) -> Dictionary:
+	if not can_move(s).is_empty():
+		return {}
+	var opts := {"flying": SpellEffects.has(s.character, "flying")}
 	var src := fear_source(s)
-	if not src.is_empty() and absi(int(player(s)["col"]) + dir - int(src["col"])) < absi(int(player(s)["col"]) - int(src["col"])):
-		return "COMBAT_FRIGHTENED"
+	if not src.is_empty():
+		opts["fear"] = FightGrid.cell(src)
+	return FightGrid.reach(s, data, player(s), int(economy(s)["move"]), opts)
+
+
+## "" when the hero can walk to the square; COMBAT_FRIGHTENED when only the fear stands in the way.
+static func can_walk(s: GameSession, data: Dictionary, to: Vector2i) -> String:
+	var why := can_move(s)
+	if not why.is_empty():
+		return why
+	var routes := hero_routes(s, data)
+	if to == FightGrid.cell(player(s)) or not FightGrid.stops(s, player(s), routes).has(to):
+		var src := fear_source(s)
+		if not src.is_empty() and WalkRules.distance(to, FightGrid.cell(src)) < WalkRules.distance(FightGrid.cell(player(s)), FightGrid.cell(src)):
+			return "COMBAT_FRIGHTENED"
+		return "COMBAT_BAD_MOVE"
 	return ""
 
 
@@ -1855,21 +2006,46 @@ static func fear_source(s: GameSession) -> Dictionary:
 	return f if not f.is_empty() and str(f.get("status")) == "active" else {}
 
 
-## «Встать» (v0.7.8, decision of the author): standing up takes the whole move of the turn. "" or a key.
-static func can_stand(s: GameSession) -> String:
+## «Встать»: half the speed (5e). "" or a key.
+static func can_stand(s: GameSession, data: Dictionary) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
 	if not ConditionRules.has(s.character, "prone"):
 		return "COMBAT_NOT_PRONE"
-	if int(s.character.get("speed", 30)) <= 0 or int(economy(s).get("move", 0)) <= 0:
+	if int(s.character.get("speed", 30)) <= 0 or int(economy(s).get("move", 0)) < _stand_cost(s, data):
 		return "COMBAT_NO_MOVE"
 	return ""
 
 
-static func stand(s: GameSession) -> Array[String]:
-	economy(s)["move"] = 0
+static func _stand_cost(s: GameSession, data: Dictionary) -> int:
+	return maxi(1, FightGrid.steps_of(data, int(s.character.get("speed", 30))) / 2)
+
+
+static func stand(s: GameSession, data: Dictionary) -> Array[String]:
+	var e := economy(s)
+	e["move"] = maxi(0, int(e["move"]) - _stand_cost(s, data))
 	ConditionRules.remove(s.character, "prone")
 	return ["%s поднимается на ноги" % s.character.get("name", "")]
+
+
+## Where a shove can send the foe: the free squares beside it, on the far side from the hero and to the hero's sides. A pit
+## or a fire counts as free: that is why one shoves.
+static func shove_squares(s: GameSession, data: Dictionary, target_id: String) -> Array[Vector2i]:
+	var t := fighter(s, target_id)
+	var out: Array[Vector2i] = []
+	var g := FightGrid.grid(s, data)
+	var taken := FightGrid.bodies(s, target_id)
+	for d: Vector2i in FightGrid.CIRCLE:
+		var to := FightGrid.cell(t) + d
+		if FightGrid.dist_to(player(s), to) < FightGrid.dist(player(s), t):
+			continue  # never towards the hero
+		var free := true
+		for c: Vector2i in FightGrid.body_at(to, int(t.get("span", 1))):
+			if FightGrid.flags_at(g, c) & FightGrid.SOLID != 0 and FightGrid.flags_at(g, c) & FightGrid.PIT == 0 or taken.has(c) or FightGrid.shut(s, g, c):
+				free = false
+		if free:
+			out.append(to)
+	return out
 
 
 ## «Вырваться» (v0.7.8): grappled, or restrained by something with a DC to break (a net, a web) — an action.
@@ -1917,7 +2093,7 @@ static func escape(s: GameSession, data: Dictionary) -> Array[String]:
 	if ok:
 		ConditionRules.remove_effect(c, int(hold["uid"]))
 		CharacterRules.refresh(c, data, s.items)
-		e["move"] = _move_cols(int(c.get("speed", 30)), data)
+		e["move"] = FightGrid.steps_of(data, int(c.get("speed", 30)))
 	return ["%s вырывается: %s %d против %s — %s" % [c.get("name", ""), "Атлетика" if skill == "athletics" else "Акробатика", mine, against,
 		("больше не " + what) if ok else "не выходит"]]
 
@@ -1927,32 +2103,199 @@ static func aloft(s: GameSession) -> bool:
 	return SpellEffects.has(s.character, "flying") and not bool(player(s).get("swooped", false))
 
 
-## Steps the player (can_move first): attacks of opportunity from foes left behind, fleeing off the edge. Lines.
-static func player_move(s: GameSession, data: Dictionary, dir: int) -> Array[String]:
+## The reach of a foe's blade in squares: its longest melee action.
+static func reach_of(data: Dictionary, f: Dictionary) -> int:
+	var feet := 5
+	for a: Dictionary in f.get("actions", _monster(data, f).get("actions", [])):
+		if str(a.get("kind")) == "melee":
+			feet = maxi(feet, int(a.get("reach", 5)))
+	return FightGrid.squares_of(data, feet)
+
+
+## Walks the hero to a square, step by step (can_walk first): a foe whose reach the hero leaves strikes, a step ends on what
+## happens under the feet, what is left of the way stays unwalked when the hero falls or a window waits. Lines.
+static func player_walk(s: GameSession, data: Dictionary, to: Vector2i) -> Array[String]:
 	var e := economy(s)
-	e["move"] = int(e["move"]) - 1
+	var p := player(s)
+	var routes := hero_routes(s, data)
+	var lines: Array[String] = []
+	var paid := 0
+	var walked: Array = []
+	for at: Vector2i in FightGrid.route(routes, to):
+		_leaving(s, data, at, lines)
+		if str(s.combat.get("outcome", "")) == "dead" or int(s.character["hp"]) <= 0:
+			break
+		var cost := int(routes[at][0])
+		e["move"] = int(e["move"]) - (cost - paid)
+		paid = cost
+		FightField.opens_on_way(s, data, p, at, lines)
+		FightGrid.put(p, at)
+		walked.append(FightGrid.tag(at))
+		var stop := FightField.stepped(s, data, p, lines)
+		if stop or bool(s.combat.get("halt", false)) or int(s.character["hp"]) <= 0:
+			break
+	if not walked.is_empty():
+		e["walked"] = int(e.get("walked", 0)) + walked.size()
+		FightField.note_walk(s, PLAYER, walked)
+		_release_grapples(s, lines)
+		FightField.hero_stands(s, data)
+	return lines
+
+
+## An act with a door or a thing beside the hero: FightField.acts. "" or a key.
+static func can_field(s: GameSession, data: Dictionary, how: String) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if int(economy(s).get("action", 0)) <= 0 and int(economy(s).get("haste", 0)) <= 0:
+		return "COMBAT_NO_ACTION"
+	return FightField.why_not(s, data, how)
+
+
+static func field_act(s: GameSession, data: Dictionary, how: String) -> Array[String]:
+	_pay_action(s)
+	var lines: Array[String] = []
+	FightField.act(s, data, how, lines)
+	return lines
+
+
+static func _pay_action(s: GameSession) -> void:
+	var e := economy(s)
+	if int(e.get("action", 0)) > 0:
+		e["action"] = int(e["action"]) - 1
+	else:
+		e["haste"] = int(e["haste"]) - 1
+
+
+## Help: a foe beside the hero is hemmed in, the ally's next blow at it has advantage. "" or a key.
+static func can_help(s: GameSession, data: Dictionary, target_id: String) -> String:
+	if not is_player_turn(s):
+		return "COMBAT_NOT_YOUR_TURN"
+	if int(economy(s).get("action", 0)) <= 0 and int(economy(s).get("haste", 0)) <= 0:
+		return "COMBAT_NO_ACTION"
+	if allies(s).is_empty():
+		return "COMBAT_NO_ALLY"
+	var t := fighter(s, target_id)
+	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
+		return "COMBAT_BAD_TARGET"
+	return "" if blade_reaches(s, data, player(s), t) else "COMBAT_OUT_OF_REACH"
+
+
+static func help(s: GameSession, data: Dictionary, target_id: String) -> Array[String]:
+	_pay_action(s)
+	var t := fighter(s, target_id)
+	t["helped"] = true
+	return ["%s отвлекает: %s, союзник ударит с преимуществом" % [s.character["name"], t["name"]]]
+
+
+## How far the hero jumps by the SRD: its Strength in feet after a run of 10 feet, half from a stand; no further than the
+## move left. In squares.
+static func jump_reach(s: GameSession, data: Dictionary) -> int:
+	if not can_move(s).is_empty():
+		return 0
+	var ft := CharacterRules.ability(s.character, "str")
+	if int(economy(s).get("walked", 0)) < 2:
+		ft /= 2
+	return mini(int(ft / int(FightGrid.cfg(data)["ft"])), int(economy(s).get("move", 0)))
+
+
+## The squares of a jump: over a pit, water, the ground that hurts, not through a wall or a body. {square: true}.
+static func jump_squares(s: GameSession, data: Dictionary) -> Dictionary:
+	var out := {}
+	var n := jump_reach(s, data)
+	var g := FightGrid.grid(s, data)
+	var from := FightGrid.cell(player(s))
+	var bodies := FightGrid.bodies(s, PLAYER)
+	for y: int in range(-n, n + 1):
+		for x: int in range(-n, n + 1):
+			var to := from + Vector2i(x, y)
+			if maxi(absi(x), absi(y)) < 2 or bodies.has(to) or not FightGrid.walkable(g, to) or FightGrid.shut(s, g, to):
+				continue
+			if FightGrid.line_of(from, to).all(func(at: Vector2i) -> bool: return FightGrid.flags_at(g, at) & FightGrid.SOLID == 0 and not bodies.has(at) and not FightGrid.shut(s, g, at)):
+				out[to] = true
+	return out
+
+
+static func can_jump(s: GameSession, data: Dictionary, to: Vector2i) -> String:
+	var why := can_move(s)
+	if not why.is_empty():
+		return why
+	return "" if jump_squares(s, data).has(to) else "COMBAT_BAD_MOVE"
+
+
+static func player_jump(s: GameSession, data: Dictionary, to: Vector2i) -> Array[String]:
+	var e := economy(s)
 	var p := player(s)
 	var lines: Array[String] = []
-	if not bool(p.get("disengaged", false)):
-		for id: String in enemies(s):
-			var f := fighter(s, id)
-			if int(f["col"]) == int(p["col"]) and can_react(s, data, f) and (not aloft(s) or MonsterRules.flies(data, f)):
-				var act := _best_action(data, f, "melee")
-				if not act.is_empty():
-					f["reacted"] = true
-					lines.append("%s бьёт вдогонку" % f["name"])
-					_enemy_attack(s, data, f, act, lines)
-	if str(s.combat.get("outcome", "")) == "dead" or int(s.character["hp"]) <= 0:
+	_leaving(s, data, to, lines)
+	if int(s.character["hp"]) <= 0:
 		return lines
-	var to := int(p["col"]) + dir
-	if absi(to) > edge(data):
-		s.combat["outcome"] = "player_fled"
-		lines.append("%s выходит из боя" % s.character["name"])
-		return lines
-	p["col"] = to
-	lines.append("%s: шаг на %d фт %s" % [s.character["name"], int(cfg(data)["col_ft"]), "вправо" if dir > 0 else "влево"])
+	e["move"] = int(e["move"]) - FightGrid.dist_to(p, to)
+	e["walked"] = int(e.get("walked", 0)) + FightGrid.dist_to(p, to)
+	FightGrid.put(p, to)
+	lines.append("%s прыгает" % s.character["name"])
+	FightField.note_walk(s, PLAYER, [FightGrid.tag(to)])
+	FightField.stepped(s, data, p, lines)
 	_release_grapples(s, lines)
+	FightField.hero_stands(s, data)
 	return lines
+
+
+## «Уйти»: the hero on the square before a way out leaves the place. "" or a key.
+static func can_flee(s: GameSession, data: Dictionary) -> String:
+	var why := can_move(s)
+	if not why.is_empty():
+		return why
+	if s.combat.has("arena"):
+		return "COMBAT_ARENA_RING"
+	return FightField.way_out_shut(s, data, FightGrid.cell(player(s)))
+
+
+## The foes beside the hero strike as it goes; it goes unless it fell or a reaction waits. Lines.
+static func player_flee(s: GameSession, data: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var e := economy(s)
+	e["move"] = maxi(0, int(e["move"]) - 1)
+	_leaving(s, data, FightGrid.NONE, lines)
+	if str(s.combat.get("outcome", "")) == "dead" or int(s.character["hp"]) <= 0 or bool(s.combat.get("halt", false)):
+		return lines
+	FightField.leave(s, data, lines)
+	return lines
+
+
+## The square of the hero's walk nearest to a foe, NONE when no step brings the hero closer.
+static func closest_stop(s: GameSession, data: Dictionary, target_id: String) -> Vector2i:
+	var t := fighter(s, target_id)
+	var routes := hero_routes(s, data)
+	var best := FightGrid.NONE
+	var near := FightGrid.dist(player(s), t)
+	var cost := 1 << 20
+	for at: Vector2i in FightGrid.stops(s, player(s), routes):
+		var d := FightGrid.dist_to(t, at)
+		if d < near or d == near and best != FightGrid.NONE and int(routes[at][0]) < cost:
+			near = d
+			cost = int(routes[at][0])
+			best = at
+	return best
+
+
+## The hero is about to step to `next`: every foe whose reach that leaves has its attack of opportunity.
+static func _leaving(s: GameSession, data: Dictionary, next: Vector2i, lines: Array[String]) -> void:
+	var p := player(s)
+	if bool(p.get("disengaged", false)):
+		return
+	var after := p.duplicate()
+	FightGrid.put(after, next)
+	for id: String in enemies(s):
+		var f := fighter(s, id)
+		var r := reach_of(data, f)
+		if blade_reaches(s, data, f, p, r) and FightGrid.dist(f, after) > r and can_react(s, data, f):
+			var act := _best_action(data, f, "melee")
+			if not act.is_empty():
+				f["reacted"] = true
+				lines.append("%s бьёт вдогонку" % f["name"])
+				_enemy_attack(s, data, f, act, lines)
+				if bool(s.combat.get("halt", false)) or int(s.character["hp"]) <= 0:
+					return
 
 
 # --- grapple and shove (v0.7.7) ---------------------------------------------------------------------------
@@ -1961,7 +2304,7 @@ const SIZES: Array[String] = ["tiny", "small", "medium", "large", "huge", "garga
 
 
 ## "" when the hero can grapple or shove `target_id` now (instead of one attack of the Attack action, 5e), else a
-## localization key: the hero's turn, an attack left, the foe right next to the hero and at most one size larger.
+## localization key: the hero's turn, an attack left, the foe beside the hero and at most one size larger.
 static func can_grapple(s: GameSession, data: Dictionary, target_id: String) -> String:
 	if not is_player_turn(s):
 		return "COMBAT_NOT_YOUR_TURN"
@@ -1971,7 +2314,7 @@ static func can_grapple(s: GameSession, data: Dictionary, target_id: String) -> 
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
 		return "COMBAT_BAD_TARGET"
-	if cols_between(player(s), t) != 0:
+	if not blade_reaches(s, data, player(s), t):
 		return "COMBAT_OUT_OF_REACH"
 	if SIZES.find(str(_monster(data, t).get("size", "medium"))) > SIZES.find(hero_size(s, data)) + 1:
 		return "COMBAT_TOO_BIG"
@@ -1988,9 +2331,9 @@ static func hero_size(s: GameSession, data: Dictionary) -> String:
 
 
 ## Grapple (`shove` false: the foe is «схвачен», its speed 0, until the hero walks off) or shove (the foe falls
-## «лежит ничком»): the hero's Athletics against the foe's better of Athletics and Acrobatics (can_grapple first).
-## Takes one attack of the Attack action. Returns the lines.
-static func grapple(s: GameSession, data: Dictionary, target_id: String, shove: bool) -> Array[String]:
+## «лежит ничком», or with `to` is pushed 5 ft to that square, a dangerous one too): the hero's Athletics against the
+## foe's better of Athletics and Acrobatics (can_grapple first). Takes one attack of the Attack action. Returns the lines.
+static func grapple(s: GameSession, data: Dictionary, target_id: String, shove: bool, to: Vector2i = FightGrid.NONE) -> Array[String]:
 	var c := s.character
 	var e := economy(s)
 	if int(e.get("attacks", 0)) > 0:
@@ -2016,10 +2359,12 @@ static func grapple(s: GameSession, data: Dictionary, target_id: String, shove: 
 	var won := not (mods["auto_fail"] as Array).size() > 0 and mine >= theirs
 	var what := "толкает, чтобы сбить с ног" if shove else "пытается схватить"
 	lines.append("%s %s %s: Атлетика %d против %d — %s" % [c.get("name", ""), what, t["name"], mine, theirs, "успех" if won else "не выходит"])
-	if won and immune_to(data, t, "prone" if shove else "grappled"):
+	if won and to == FightGrid.NONE and immune_to(data, t, "prone" if shove else "grappled"):
 		lines.append("%s: на него это не действует" % t["name"])
 	elif won:
-		if shove:
+		if shove and to != FightGrid.NONE:
+			FightField.thrust(s, data, t, to - FightGrid.cell(t), 1, lines)
+		elif shove:
 			_hold(t, "prone")
 			lines.append("%s падает" % t["name"])
 		else:
@@ -2034,7 +2379,7 @@ static func _hold(f: Dictionary, cond: String) -> void:
 	if not _has(f, cond):
 		ConditionRules.add_effect(f, {"condition": cond, "source": {"kind": "engine", "name": ""}})
 	if cond == "invisible":
-		f["seen_col"] = int(f["col"])
+		FightGrid.keep_seen(f)
 
 
 ## The hero walked off: the foes the hero held are free (Lines).
@@ -2083,6 +2428,7 @@ static func _advance(s: GameSession, data: Dictionary, lines: Array[String]) -> 
 		s.combat.erase("raging_rounds")
 		for id: String in order:
 			fighter(s, id).erase("surprised")  # surprise lasts the first round only
+			fighter(s, id).erase("helped")
 		s.combat["turn"] = 0
 		_arrivals(s, data, lines)
 	s.combat["turn"] = t
@@ -2092,7 +2438,7 @@ static func _advance(s: GameSession, data: Dictionary, lines: Array[String]) -> 
 # --- reinforcements (v0.6.2) ---------------------------------------------------------------------
 
 
-## Enemies who join later: grey at the edge column on `side` until they arrive at the start of round `at`.
+## Enemies who join later: they come by a way in on `side` at the start of round `at`.
 static func add_incoming(s: GameSession, data: Dictionary, foes: Array, at: int, side: String) -> void:
 	var names: Array = []
 	var specs: Array = []
@@ -2105,7 +2451,7 @@ static func add_incoming(s: GameSession, data: Dictionary, foes: Array, at: int,
 		specs.append((spec as Dictionary).duplicate(true))
 	if specs.is_empty():
 		return
-	(s.combat["incoming"] as Array).append({"at": at, "col": edge(data) * (-1 if side == "left" else 1), "foes": specs, "names": names})
+	(s.combat["incoming"] as Array).append({"at": at, "side": side, "foes": specs, "names": names})
 
 
 ## XP of the enemies still fighting and on the way (the master's reinforcements stay within the level's budget).
@@ -2114,21 +2460,24 @@ static func xp_in_play(s: GameSession, data: Dictionary) -> int:
 	for id: String in enemies(s):
 		xp += int(_monster(data, fighter(s, id))["xp"])
 	for w: Dictionary in s.combat.get("incoming", []):
+		if bool(w.get("ally", false)):
+			continue
 		for spec: Dictionary in w["foes"]:
 			xp += int(data["monsters"][spec["monster"]]["xp"]) * int(spec.get("count", 1))
 	return xp
 
 
 static func _arrivals(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
+	FightField.round_starts(s, data, lines)
 	var left: Array = []
 	for w: Dictionary in s.combat.get("incoming", []):
 		if int(w["at"]) > int(s.combat["round"]):
 			left.append(w)
 			continue
-		var ids := _add_foes(s, data, w["foes"], int(w["col"]))
+		var ids := _add_foes(s, data, w["foes"], Vector2i(int(w["x"]), int(w["y"])) if w.has("x") else FightGrid.way_in(s, data, str(w["side"])), "ally" if bool(w.get("ally", false)) else "enemy")
 		for id: String in ids:
 			_insert_initiative(s, data, id)
-		lines.append("Подкрепление %s: %s" % ["слева" if int(w["col"]) < 0 else "справа",
+		lines.append("Подкрепление %s: %s" % ["слева" if str(w["side"]) == "left" else "справа",
 			", ".join(ids.map(func(id: String) -> String: return str(fighter(s, id)["name"])))])
 	s.combat["incoming"] = left
 
@@ -2284,6 +2633,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	f["dodging"] = false
 	var p := player(s)
 	var m := _monster(data, f)
+	f.erase("swooped")
 	MonsterRules.start_turn(s, data, f, lines)
 	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # Moonbeam, Spirit Guardians (v0.7.13.5)
 	if str(f["status"]) != "active":
@@ -2314,36 +2664,15 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 		f["morale"] = true
 		var wis := int(m["saves"].get("wis", CharacterRules.mod(int(m["abilities"].get("wis", 10)))))
 		if Roll.d20(s.rng) + wis < int(cfg(data)["morale_dc"]):
-			if _intelligent(data, f) and int(f["col"]) == int(p["col"]):
+			if _intelligent(data, f) and FightGrid.touching(f, p):
 				f["status"] = "surrendered"
 				lines.append("%s бросает оружие и сдаётся" % f["name"])
 				return
 			f["fleeing"] = true
 			lines.append("%s дрогнул и пытается бежать" % f["name"])
-	var steps := _move_cols(MonsterRules.move_speed(m) - int(f.get("slowed", 0)), data)  # flying counts (v0.7.49.3)
-	if (SpellEffects.slowed(s, f) or _has(f, "slowed_spell")) and steps > 0:  # a slowing zone or Slow: half the way
-		steps = maxi(1, steps / 2) if MonsterRules.move_speed(m) >= 60 else 0 if s.rng.randi_range(0, 1) == 0 else 1
-	if ConditionRules.does(f, data, "no_move"):
-		steps = 0
 	if bool(f.get("fleeing", false)):
 		MonsterRules.release(s, data, f, lines)
-		var dir := 1 if int(f["col"]) >= int(p["col"]) else -1
-		for i in steps:
-			if int(f["col"]) == int(p["col"]) and int(s.character["hp"]) > 0 and not MonsterRules.has_trait(data, f, "flyby") \
-					and not ConditionRules.incapacitated(s.character):
-				var wid := str(s.character.get("equipped", {}).get("main_hand", ""))
-				var w := weapon_profile(s.character, data, s.items, wid)
-				if bool(w["melee"]):
-					lines.append("%s бьёт вдогонку" % s.character["name"])
-					_attack(s, data, str(s.character["name"]), w["name"], int(w["to_hit"]), false, false, f, str(w["dice"]), int(w["bonus"]), str(w["type"]), lines)
-					if str(f["status"]) != "active":
-						return
-			var to := int(f["col"]) + dir
-			if absi(to) > edge(data):
-				f["status"] = "fled"
-				lines.append("%s сбежал" % f["name"])
-				return
-			f["col"] = to
+		FightAI.flee(s, data, f, lines)
 		return
 	var help: Dictionary = s.combat.get("help", {})
 	if not help.is_empty() and not bool(s.combat.get("help_called", false)) and _intelligent(data, f) and int(s.character["hp"]) > 0 \
@@ -2353,101 +2682,52 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 			str(help.get("side", "right")))
 		lines.append("%s зовёт на помощь!" % f["name"])
 		return
-	var aim := _foe_target(s, f)
-	if aim != PLAYER and not aim.is_empty():  # v0.7.22.22: an ally of the hero is nearer (or the hero is down)
-		if int(s.character["hp"]) > 0 and MonsterRules.cast_turn(s, data, f, lines):
-			return
-		_creature_turn(s, data, f, fighter(s, aim), lines)
-		return
-	var down := int(s.character["hp"]) <= 0
-	if down:  # v0.7.9: beasts do not finish the downed hero either — they lose interest
-		lines.append(("%s не добивает упавшего" if _intelligent(data, f) else "%s теряет интерес к упавшему") % f["name"])
-		return
-	var d := cols_between(f, p)
-	if MonsterRules.cast_turn(s, data, f, lines):
-		return
-	var special := MonsterRules.save_action(s, data, f, d)
-	if not special.is_empty():
-		_enemy_attack(s, data, f, special, lines)
-		return
-	var melee := MonsterRules.pick(s, data, f, "melee")
-	var ranged := MonsterRules.pick(s, data, f, "ranged")
-	if aloft(s) and not MonsterRules.flies(data, f):  # Fly (v0.7.13.3): only what reaches the air
-		if not ranged.is_empty() and d * int(cfg(data)["col_ft"]) <= int(ranged["range"][1]):
-			_enemy_attack_full(s, data, f, ranged, lines)
-		elif not ranged.is_empty():
-			var to_hero := 1 if int(p["col"]) > int(f["col"]) else -1
-			f["col"] = int(f["col"]) + to_hero
-			lines.append("%s подходит на выстрел" % f["name"])
-		else:
-			lines.append("%s не достаёт летящего героя" % f["name"])
-		return
-	if d == 0 and not melee.is_empty():
-		_enemy_attack_full(s, data, f, melee, lines)
-		return
-	if not ranged.is_empty() and d > 0 and d * int(cfg(data)["col_ft"]) <= int(ranged["range"][1]):
-		_enemy_attack_full(s, data, f, ranged, lines)
-		return
-	if d == 0 and melee.is_empty() and not ranged.is_empty():
-		var away := 1 if int(f["col"]) >= 0 else -1
-		if absi(int(f["col"]) + away) > edge(data):
-			away = -away
-		f["col"] = int(f["col"]) + away
-		lines.append("%s отходит на расстояние выстрела" % f["name"])
-		_enemy_attack_full(s, data, f, ranged, lines)
-		return
-	# Close in: a move, then attack if in reach or in range, else Dash (one more move). A frightened foe keeps away.
-	if _has(f, "frightened"):
-		steps = 0
-	elif steps > 0 and MonsterRules.has_trait(data, f, "aggressive"):
-		steps += 1  # Aggressive: a bonus move towards the hero
-	var dir := 1 if int(p["col"]) > int(f["col"]) else -1
-	var moved := 0
-	while moved < steps and cols_between(f, p) > 0:
-		f["col"] = int(f["col"]) + dir
-		moved += 1
-		lines.append_array(SpellEffects.zone_tick(s, data, f, "enter"))  # v0.7.13.5
-		if str(f["status"]) != "active":
-			return
-	f["moved"] = moved
-	_find_hidden(s, f, lines)
-	if cols_between(f, p) == 0 and not melee.is_empty():
-		lines.append("%s сближается вплотную" % f["name"])
-		if moved > 0:
-			_reach_strike(s, data, f, lines)
-			if str(f["status"]) != "active":
-				return
-		_enemy_attack_full(s, data, f, melee, lines)
-		return
-	if not ranged.is_empty() and cols_between(f, p) * int(cfg(data)["col_ft"]) <= int(ranged["range"][1]):
-		_enemy_attack_full(s, data, f, ranged, lines)
-		return
-	while moved < steps * 2 and cols_between(f, p) > 0 and steps > 0:
-		f["col"] = int(f["col"]) + dir
-		moved += 1
-		lines.append_array(SpellEffects.zone_tick(s, data, f, "enter"))
-		if str(f["status"]) != "active":
-			return
-	_find_hidden(s, f, lines)
-	lines.append("%s бежит ближе" % f["name"] if cols_between(f, p) > 0 else "%s сближается вплотную" % f["name"])
+	FightAI.act(s, data, f, lines)
 
 
-## Misty Step: `cols` columns away from the nearest foe, no opportunity attacks (v0.7.13.3). Lines.
-static func _teleport(s: GameSession, data: Dictionary, cols: int) -> Array[String]:
+## Misty Step: the free square in sight within `feet`, farthest from the foes, no opportunity attacks (v0.7.13.3). Lines.
+static func _teleport(s: GameSession, data: Dictionary, feet: int, to := FightGrid.NONE) -> Array[String]:
 	var p := player(s)
-	var nearest := 99
-	var dir := 1
-	for id: String in enemies(s):
-		var f := fighter(s, id)
-		var dd := absi(int(f["col"]) - int(p["col"]))
-		if dd < nearest:
-			nearest = dd
-			dir = -1 if int(f["col"]) >= int(p["col"]) else 1
-	var to := clampi(int(p["col"]) + dir * cols, -edge(data), edge(data))
-	if to == int(p["col"]):
-		to = clampi(int(p["col"]) - dir * cols, -edge(data), edge(data))
-	p["col"] = to
-	return ["%s переносится серебристым туманом на %d фт" % [s.character["name"], cols * int(cfg(data)["col_ft"])]]
+	var from := FightGrid.cell(p)
+	var g := FightGrid.grid(s, data)
+	var n := FightGrid.squares_of(data, feet)
+	var occupied := FightGrid.bodies(s)
+	var best := from if to == FightGrid.NONE else to
+	var score := -1
+	for y: int in range(from.y - n, from.y + n + 1) if to == FightGrid.NONE else []:
+		for x: int in range(from.x - n, from.x + n + 1):
+			var at := Vector2i(x, y)
+			if occupied.has(at) or not FightGrid.walkable(g, at) or not FightGrid.clear(g, from, at):
+				continue
+			var near := 1 << 20
+			for id: String in enemies(s):
+				near = mini(near, FightGrid.dist_to(fighter(s, id), at))
+			if near > score:
+				score = near
+				best = at
+	FightGrid.put(p, best)
+	FightField.note_walk(s, PLAYER, [FightGrid.tag(best)])
+	FightField.hero_stands(s, data)
+	return ["%s переносится серебристым туманом на %d фт" % [s.character["name"], WalkRules.distance(from, best) * int(FightGrid.cfg(data)["ft"])]]
+
+
+## A foe steps from the hero's reach: the hero's reaction, the blade in hand, unless told never to.
+static func foe_leaving(s: GameSession, data: Dictionary, f: Dictionary, next: Vector2i, lines: Array[String]) -> void:
+	var c := s.character
+	if str(f.get("side")) != "enemy" or bool(player(s).get("reacted", false)) or int(c.get("hp", 0)) <= 0 or ConditionRules.incapacitated(c):
+		return
+	if MonsterRules.has_trait(data, f, "flyby") or FeatureRules.policy(s) == "never":
+		return
+	var w := weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
+	if not bool(w["melee"]):
+		return
+	var reach := 2 if bool(w.get("reach", false)) else 1
+	var after := f.duplicate()
+	FightGrid.put(after, next)
+	if blade_reaches(s, data, player(s), f, reach) and FightGrid.dist(player(s), after) > reach:
+		player(s)["reacted"] = true
+		lines.append("%s бьёт вдогонку" % c["name"])
+		_attack(s, data, str(c["name"]), w["name"], int(w["to_hit"]), false, false, f, str(w["dice"]), int(w["bonus"]), str(w["type"]), lines, "", false, w)
 
 
 ## A reach weapon meets a foe on its way in (v0.7.12): the hero's reaction, one attack before the foe strikes.
@@ -2464,12 +2744,17 @@ static func _reach_strike(s: GameSession, data: Dictionary, f: Dictionary, lines
 	_attack(s, data, str(c["name"]), w["name"], int(w["to_hit"]), false, false, f, str(w["dice"]), int(w["bonus"]), str(w["type"]), lines, "", false, w)
 
 
-## A foe that comes into the hidden player's column finds them.
+## A foe that comes beside the hidden player finds them.
 static func _find_hidden(s: GameSession, f: Dictionary, lines: Array[String]) -> void:
 	var p := player(s)
-	if bool(p.get("hidden", false)) and cols_between(f, p) == 0:
+	if bool(p.get("hidden", false)) and FightGrid.touching(f, p):
 		p["hidden"] = false
 		lines.append("%s находит, где прячется %s" % [f["name"], s.character["name"]])
+
+
+## A melee weapon used beyond its reach: a throw.
+static func _thrown_now(data: Dictionary, f: Dictionary, t: Dictionary, a: Dictionary) -> bool:
+	return str(a.get("kind")) == "melee" and FightGrid.dist(f, t) > maxi(1, FightGrid.squares_of(data, int(a.get("reach", 5))))
 
 
 ## The full attack of a monster: Multiattack when it has one for this kind of action.
@@ -2480,7 +2765,7 @@ static func _enemy_attack_full(s: GameSession, data: Dictionary, f: Dictionary, 
 	for a: Dictionary in m["actions"]:
 		by_en[str(a["name_en"])] = a
 	var plan: Array[Dictionary] = []
-	if str(act.get("kind")) == "melee" and cols_between(f, player(s)) > 0:
+	if _thrown_now(data, f, player(s), act):
 		seq = []  # a throw of a melee weapon is one attack: Multiattack counts melee strikes (v0.7.22.19, #13)
 	for x: Dictionary in seq:
 		var a: Dictionary = by_en.get(str(x["action"]), {})
@@ -2536,14 +2821,14 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 			MonsterRules.apply_effect(s, data, f, a, dmg, lines, {"ok": false, "dc": int(sv["dc"]), "total": int(r["total"])})
 		_area_on_allies(s, data, f, a, lines)
 		return
-	var d := cols_between(f, p)
-	var ranged_use := d > 0
+	var d := FightGrid.dist(f, p)
+	var ranged_use := _thrown_now(data, f, p, a) or (str(a.get("kind")) != "melee" and d > 1)
 	if ranged_use and str(a.get("kind")) == "melee" and a.has("range"):  # thrown: out of the hand for the fight (v0.7.22.19)
 		var gone: Array = f.get("thrown", [])
 		gone.append(str(a.get("name_en", "")))
 		f["thrown"] = gone
 	if _has(f, "invisible"):
-		f["seen_col"] = int(f["col"])  # a strike gives an invisible foe away
+		FightGrid.keep_seen(f)  # a strike gives an invisible foe away
 	var by_status := ConditionRules.attack(data, f, c, not ranged_use)
 	var tm := MonsterRules.attack_mods(s, data, f, a)
 	f["hidden"] = false  # an attack gives a hidden foe away
@@ -2551,17 +2836,17 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		or (_has(f, "invisible") and not SpellEffects.has(c, "see_invisible")) or not (tm["adv"] as Array).is_empty() or bool(s.combat.get("reckless", false)) \
 		or (TimeRules.dark(s, data) and MonsterRules.sees_in_dark(data, f))
 	var dis := bool(p.get("dodging", false)) and int(c["hp"]) > 0 and not ConditionRules.incapacitated(c) \
-		or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) \
-		or (str(a.get("kind")) == "ranged" and d == 0) or bool(p.get("hidden", false)) \
+		or (ranged_use and a.has("range") and d * int(FightGrid.cfg(data)["ft"]) > int(a["range"][0])) \
+		or (str(a.get("kind")) == "ranged" and d <= 1) or bool(p.get("hidden", false)) \
 		or (ConditionRules.invisible(c, data) and not _has(f, "invisible")) or not (by_status["dis"] as Array).is_empty() or not (tm["dis"] as Array).is_empty() \
 		or _has(f, "chilled") or not SpellEffects.attack_dis(s, data, f).is_empty() \
-		or _has(f, "cursed_dis") or SpellEffects.obscured(s, int(f["col"])) != SpellEffects.obscured(s, int(p["col"])) \
+		or _has(f, "cursed_dis") or SpellEffects.obscured(s, data, f) != SpellEffects.obscured(s, data, p) \
 		or (ranged_use and not WeatherRules.obscure_why(s, data).is_empty())
 	ConditionRules.remove(f, "mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
 	if bool(p.get("blinked", false)):  # Blink (v0.7.13.3)
 		lines.append("%s бьёт в пустоту — героя нет на этом плане" % f["name"])
 		return
-	if ranged_use and a.has("range") and not SpellEffects.wall_between(s, int(f["col"]), int(p["col"])).is_empty():
+	if ranged_use and a.has("range") and not SpellEffects.wall_between(s, data, f, p).is_empty():
 		lines.append("%s — %s: снаряд сносит Стена ветра" % [f["name"], a["name"]])  # v0.7.13.6
 		return
 	var held := SpellEffects.sanctuary_holds(s, data, f)  # Sanctuary (v0.7.13.2)
@@ -2572,7 +2857,8 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 	var nat := Roll.kept(rolls, adv, dis)
 	var bane := SpellEffects.die(s, f, "attack")  # Bane (v0.7.13.1)
 	var total := nat + int(a.get("to_hit", 0)) + int(bane["bonus"])
-	var ac := int(c.get("ac", 10))
+	var cover := cover_of(s, data, f, p) if ranged_use else 0
+	var ac := int(c.get("ac", 10)) + cover
 	var hit := nat == 20 or (nat != 1 and total >= ac)
 	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
 	var line := "%s — %s: %d + %d%s = %d против КД %d%s" % [f["name"], a["name"], nat, int(a.get("to_hit", 0)), " " + str(bane["note"]) if not str(bane["note"]).is_empty() else "", total, ac, mark]
@@ -2585,7 +2871,7 @@ static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Di
 		lines.append(line + " — " + str(guard["stop"]))
 		return
 	if Guise.has_body(c):
-		ac = int(c.get("ac", 10))  # the beast's AC is the sheet's while in the form
+		ac = int(c.get("ac", 10)) + cover  # the beast's AC is the sheet's while in the form
 	var crit := nat == 20 or bool(by_status["crit"]) or (not ranged_use and int(c["hp"]) <= 0)
 	if crit and CharacterRules.item_prop(c, "no_crit"):
 		crit = false  # adamantine armor: a critical hit is a normal one (v0.7.12)
@@ -2719,7 +3005,7 @@ static func _has_trait(data: Dictionary, f: Dictionary, trait_id: String) -> boo
 
 static func _ally_near_player(s: GameSession, f: Dictionary) -> bool:
 	for id: String in enemies(s):
-		if id != str(f["id"]) and int(fighter(s, id)["col"]) == int(player(s)["col"]):
+		if id != str(f["id"]) and FightGrid.touching(fighter(s, id), player(s)):
 			return true
 	return false
 
@@ -2771,31 +3057,13 @@ static func _hurt_player(s: GameSession, data: Dictionary, dmg: int, crit: bool,
 
 ## Adds allies to the fight; `mid_fight` — summoned on a turn: each takes its initiative at once. Ids.
 static func add_allies(s: GameSession, data: Dictionary, specs: Array, mid_fight: bool = false) -> Array[String]:
-	var ids := _add_foes(s, data, specs, 99, "ally")
+	var ids := _add_foes(s, data, specs, FightGrid.NONE, "ally")
 	if mid_fight:
 		for id: String in ids:
 			_insert_initiative(s, data, id)
 			if (s.combat["order"] as Array).find(id) <= int(s.combat["turn"]):
 				s.combat["turn"] = int(s.combat["turn"]) + 1  # it came in before the one acting now: the turn stays
 	return ids
-
-
-## Whom a foe goes for: the nearest of the hero (standing) and the hero's allies, a tie — the hero; a hidden or
-## invisible hero only when no ally is there. "" — nobody to strike.
-static func _foe_target(s: GameSession, f: Dictionary) -> String:
-	var best := ""
-	var dist := 999
-	if int(s.character.get("hp", 0)) > 0:
-		best = PLAYER
-		dist = cols_between(f, player(s))
-		if bool(player(s).get("hidden", false)) or ConditionRules.has(s.character, "invisible"):
-			dist += 99
-	for id: String in allies(s):
-		var d := cols_between(f, fighter(s, id))
-		if d < dist:
-			best = id
-			dist = d
-	return best
 
 
 ## An ally's turn: a helper (a familiar) distracts the foe nearest the hero — the hero's next attack at it has
@@ -2808,30 +3076,23 @@ static func _ally_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # friendly fire (v0.7.50.1): a zone burns allies too
 	if str(f.get("status")) != "active":
 		return
-	var p := player(s)
-	var target := {}
-	var dist := 9999
-	for id: String in enemies(s):
-		var e := fighter(s, id)
-		if bool(e.get("hidden", false)) or _has(e, "invisible"):
-			continue
-		var d := cols_between(f, e) * 100 + cols_between(e, p)  # the nearest to the ally, then to the hero
-		if bool(f.get("helper", false)):
-			d = cols_between(e, p)
-		if d < dist:
-			dist = d
-			target = e
-	if target.is_empty():
-		lines.append("%s не видит врага" % f["name"])
-		return
 	if bool(f.get("helper", false)):
-		f["col"] = int(target["col"])
-		_hold(target, "helped")
-		lines.append("%s кружит у %s и отвлекает — следующая атака героя по нему с преимуществом" % [f["name"], target["name"]])
+		var target := {}
+		var dist := 9999
+		for id: String in enemies(s):
+			var e := fighter(s, id)
+			if not bool(e.get("hidden", false)) and not _has(e, "invisible") and FightGrid.dist(e, player(s)) < dist:
+				dist = FightGrid.dist(e, player(s))
+				target = e
+		if target.is_empty():
+			lines.append("%s не видит врага" % f["name"])
+		elif FightAI.go_to(s, data, f, target, lines):
+			_hold(target, "helped")
+			lines.append("%s кружит у %s и отвлекает — следующая атака героя по нему с преимуществом" % [f["name"], target["name"]])
 		return
-	_creature_turn(s, data, f, target, lines)
-	if SpellEffects.boon(f, "haste") != null and str(target.get("status")) == "active":  # Haste's action (v0.7.50.1)
-		_creature_turn(s, data, f, target, lines)
+	FightAI.act(s, data, f, lines)
+	if SpellEffects.boon(f, "haste") != null and str(f.get("status")) == "active":  # Haste's action (v0.7.50.1)
+		FightAI.act(s, data, f, lines)
 
 
 ## A plain attack of a creature of the kind (the best to-hit with damage; a thrown weapon not thrown yet). {} when none.
@@ -2848,57 +3109,13 @@ static func _pick_plain(data: Dictionary, f: Dictionary, kind: String) -> Dictio
 	return best
 
 
-static func _reaches(data: Dictionary, f: Dictionary, t: Dictionary, ranged: Dictionary) -> bool:
-	var d := cols_between(f, t)
-	return not ranged.is_empty() and d > 0 and d * int(cfg(data)["col_ft"]) <= int(ranged["range"][1])
-
-
-## One creature fights another (an ally and a foe, either way): a shooter shoots when it reaches, the rest close in —
-## a move, then the full attack; out of reach after the move — Dash.
-static func _creature_turn(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, lines: Array[String]) -> void:
-	var m := _monster(data, f)
-	var steps := _move_cols(MonsterRules.move_speed(m) - int(f.get("slowed", 0)) + ConditionRules.sum(f, "speed"), data)
-	if ConditionRules.does(f, data, "no_move") or _has(f, "frightened"):
-		steps = 0
-	var melee := _pick_plain(data, f, "melee")
-	var ranged := _pick_plain(data, f, "ranged")
-	if SpellEffects.boon(t, "flying") != null and not MonsterRules.flies(data, f):  # Fly on an ally (v0.7.50.1)
-		melee = {}
-		if ranged.is_empty():
-			lines.append("%s не достаёт летящего %s" % [f["name"], t["name"]])
-			return
-	if cols_between(f, t) == 0 and not melee.is_empty():
-		_creature_full(s, data, f, melee, t, lines)
-		return
-	if _reaches(data, f, t, ranged) and (melee.is_empty() or cols_between(f, t) > steps):
-		_creature_full(s, data, f, ranged, t, lines)
-		return
-	var dir := 1 if int(t["col"]) > int(f["col"]) else -1
-	var moved := 0
-	while moved < steps and cols_between(f, t) > 0:
-		f["col"] = int(f["col"]) + dir
-		moved += 1
-	if cols_between(f, t) == 0 and not melee.is_empty():
-		lines.append("%s сближается с %s" % [f["name"], t["name"]])
-		_creature_full(s, data, f, melee, t, lines)
-		return
-	if _reaches(data, f, t, ranged):
-		_creature_full(s, data, f, ranged, t, lines)
-		return
-	while moved < steps * 2 and cols_between(f, t) > 0:
-		f["col"] = int(f["col"]) + dir
-		moved += 1
-	if moved > 0:
-		lines.append("%s бежит к %s" % [f["name"], t["name"]])
-
-
 ## The full attack of a creature at another (Multiattack of the same kind).
 static func _creature_full(s: GameSession, data: Dictionary, f: Dictionary, act: Dictionary, t: Dictionary, lines: Array[String]) -> void:
 	var m := _monster(data, f)
 	var by_en := {}
 	for a: Dictionary in m["actions"]:
 		by_en[str(a["name_en"])] = a
-	var kind := "melee" if str(act.get("kind")) == "melee" and cols_between(f, t) == 0 else "ranged"
+	var kind := "ranged" if str(act.get("kind")) != "melee" or _thrown_now(data, f, t, act) else "melee"
 	var plan: Array[Dictionary] = []
 	for x: Dictionary in m.get("multiattack", []):
 		var a: Dictionary = by_en.get(str(x["action"]), {})
@@ -2910,13 +3127,15 @@ static func _creature_full(s: GameSession, data: Dictionary, f: Dictionary, act:
 	for a: Dictionary in plan:
 		if str(t.get("status")) != "active":
 			return
+		t["cover"] = cover_of(s, data, f, t)
 		_creature_attack(s, data, f, a, t, lines)
+		t.erase("cover")
 
 
 ## One attack roll of a creature against another creature of the field, and its damage.
 static func _creature_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, t: Dictionary, lines: Array[String]) -> void:
-	var d := cols_between(f, t)
-	var ranged_use := d > 0
+	var d := FightGrid.dist(f, t)
+	var ranged_use := _thrown_now(data, f, t, a) or (str(a.get("kind")) != "melee" and d > 1)
 	if ranged_use and str(a.get("kind")) == "melee" and a.has("range"):  # a thrown weapon is out of the hand
 		var gone: Array = f.get("thrown", [])
 		gone.append(str(a.get("name_en", "")))
@@ -2925,9 +3144,10 @@ static func _creature_attack(s: GameSession, data: Dictionary, f: Dictionary, a:
 	if SpellEffects.ally_sanctuary(s, data, f, t, lines):
 		return
 	var by_status := ConditionRules.attack(data, f, t, not ranged_use)
-	var adv := not (by_status["adv"] as Array).is_empty() or _has(f, "invisible")
+	var adv := not (by_status["adv"] as Array).is_empty() or _has(f, "invisible") or bool(t.get("helped", false))
+	t.erase("helped")
 	SpellEffects.end_on_attack(f)
-	var dis := SpellEffects.warded(data, f, t) or (ranged_use and a.has("range") and d * int(cfg(data)["col_ft"]) > int(a["range"][0])) or (str(a.get("kind")) == "ranged" and d == 0) \
+	var dis := SpellEffects.warded(data, f, t) or (ranged_use and a.has("range") and d * int(FightGrid.cfg(data)["ft"]) > int(a["range"][0])) or (str(a.get("kind")) == "ranged" and d <= 1) \
 		or not (by_status["dis"] as Array).is_empty() or bool(t.get("dodging", false)) or (ranged_use and not WeatherRules.obscure_why(s, data).is_empty())
 	var rolls := Roll.dice(s.rng, adv, dis)
 	var nat := Roll.kept(rolls, adv, dis)
@@ -2986,7 +3206,11 @@ static func _hurt_ally(s: GameSession, t: Dictionary, dmg: int, lines: Array[Str
 static func _check_end(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
 	if not str(s.combat.get("outcome", "")).is_empty():
 		return
-	if enemies(s).is_empty():
+	if enemies(s).is_empty() and not FightField.chased(s):
+		if FightField.left_foes(s):  # those who ran after the hero are beaten, the others stay where they were
+			s.combat["outcome"] = "player_fled"
+			lines.append("%s уходит от погони" % s.character["name"])
+			return
 		var truce := enemies(s, false).any(func(id: String) -> bool: return str(fighter(s, id).get("status")) == "truce")
 		s.combat["outcome"] = "truce" if truce else "victory"
 		lines.append("Перемирие" if truce else "Победа!")
@@ -3076,19 +3300,19 @@ static func snapshot(s: GameSession, data: Dictionary) -> Dictionary:
 	var p := player(s)
 	for id: String in enemies(s, false):
 		var f := fighter(s, id)
-		foes.append({"id": id, "name": f["name"], "monster": _monster(data, f)["name"], "distance_ft": cols_between(f, p) * int(cfg(data)["col_ft"]),
-			"side": "left" if int(f["col"]) < int(p["col"]) else "right" if int(f["col"]) > int(p["col"]) else "same",
+		foes.append({"id": id, "name": f["name"], "monster": _monster(data, f)["name"], "distance_ft": FightGrid.feet(data, f, p),
+			"side": "left" if int(f["x"]) < int(p["x"]) else "right" if int(f["x"]) > int(p["x"]) else "same",
 			"status": f["status"], "health": health_key(f).trim_prefix("HEALTH_").to_lower(), "description": f.get("desc", ""),
 			"surprised": bool(f.get("surprised", false)), "conditions": foe_conditions(s, data, f),
 			"speaks": LanguageRules.foe_speech(data, f), "understands_hero": LanguageRules.foe_understands(s.character, data, f)})
 	var incoming: Array[Dictionary] = []
 	for w: Dictionary in s.combat.get("incoming", []):
-		incoming.append({"names": w["names"], "side": "left" if int(w["col"]) < 0 else "right",
+		incoming.append({"names": w["names"], "side": str(w["side"]),
 			"in_rounds": maxi(0, int(w["at"]) - int(s.combat.get("round", 1)))})
 	var friends: Array[Dictionary] = []
 	for id: String in allies(s, false):  # v0.7.22.22
 		var a := fighter(s, id)
-		friends.append({"id": id, "name": a["name"], "monster": _monster(data, a)["name"], "distance_ft": cols_between(a, p) * int(cfg(data)["col_ft"]),
+		friends.append({"id": id, "name": a["name"], "monster": _monster(data, a)["name"], "distance_ft": FightGrid.feet(data, a, p),
 			"status": a["status"], "health": health_key(a).trim_prefix("HEALTH_").to_lower() if str(a["status"]) == "active" else str(a["status"]),
 			"source": str(a.get("ally", "pack")), "npc_id": str(a.get("npc_id", ""))})
 	return {"round": int(s.combat.get("round", 1)), "enemies": foes, "allies": friends, "outcome": str(s.combat.get("outcome", "")),
@@ -3276,13 +3500,13 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 		if bool(player(s).get("hidden", false)):
 			adv.append("вы спрятаны")
 		var dis: Array[String] = []
-		if str(sp["attack"]) == "ranged" and _foe_in_column(s, data, player(s)):
+		if str(sp["attack"]) == "ranged" and _foe_beside(s, data, player(s)):
 			dis.append("враг вплотную")
 		if bool(t.get("dodging", false)):
 			dis.append("цель уклоняется")
 		out["adv"] = adv
 		out["dis"] = dis
-		out["chance"] = hit_chance(spell_attack(s), ac_of(t), not adv.is_empty(), not dis.is_empty())
+		out["chance"] = hit_chance(spell_attack(s), ac_of(t) + cover_of(s, data, player(s), t), not adv.is_empty(), not dis.is_empty())
 	elif sp.has("save"):
 		var ab := str(sp["save"]["ability"])
 		var m := _monster(data, t)

@@ -14,7 +14,7 @@ func _hero() -> GameSession:
 
 
 func _fight(s: GameSession, foes: Array) -> Array[Dictionary]:
-	CombatRules.start(s, data, foes, {})
+	TestUtils.fight(s, data, foes, {})
 	var out: Array[Dictionary] = []
 	for id: String in CombatRules.enemies(s):
 		out.append(CombatRules.fighter(s, id))

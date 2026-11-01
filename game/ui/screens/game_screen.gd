@@ -2,7 +2,7 @@ class_name GameScreen
 extends Control
 ## The one screen (v0.8.1): the hero and those here on the left, the map in its frame in the middle with the acts under it,
 ## the chat on the right. A conversation dims the map and puts the partner's big token on it; the deal panel opens over
-## everything. The fight keeps its own screen until v0.8.4.
+## everything. A fight goes on this same field: FightUi takes the panels (v0.8.4).
 ## Input is locked while the master thinks or the connection is down; Esc opens the pause menu.
 
 const SCENE := "res://ui/screens/game_screen.tscn"
@@ -73,13 +73,16 @@ var _menu_box: VBoxContainer
 var _menu_ref := ""
 var _side: SidePanel
 var _field_room := ""  # the room the field showed last: a move inside it is walked, not jumped
+var _fight: FightUi
 
 
 func required() -> Dictionary:
 	return {"%Side": "PanelContainer", "%Strip": "HBoxContainer", "%Field": "Control", "%Dim": "ColorRect", "%TalkCard": "CenterContainer",
 		"%PartnerCard": "VBoxContainer", "%PartnerToken": "PanelContainer", "%PartnerMark": "Label", "%PartnerName": "Label", "%PartnerLine": "Label",
 		"%Bar": "PanelContainer", "%OfflineBanner": "Label", "%QuestTrack": "Button", "%Chat": "ScrollContainer", "%Thinking": "Label", "%Cancel": "Button",
-		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "LineEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HBoxContainer", "%ThingMenu": "PanelContainer", "%ThingActs": "VBoxContainer"}
+		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "LineEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HBoxContainer", "%ThingMenu": "PanelContainer", "%ThingActs": "VBoxContainer",
+		"%FightUi": "Control", "%FightSide": "PanelContainer", "%Portrait": "VBoxContainer", "%FoeList": "VBoxContainer", "%Queue": "HBoxContainer", "%Hint": "Label",
+		"%FightBar": "PanelContainer", "%Economy": "VBoxContainer", "%Tabs": "TabContainer", "%EndTurnButton": "Button", "%FightLogBox": "VBoxContainer"}
 
 
 func _ready() -> void:
@@ -87,6 +90,10 @@ func _ready() -> void:
 	_field.cell_clicked.connect(_on_cell)
 	_field.stepped.connect(_on_stepped)
 	_field.arrived.connect(_on_arrived)
+	_fight = UiScenes.need(self, "%FightUi")
+	_fight.setup(self)
+	_field.cell_hovered.connect(_fight.on_hover)
+	_field.cell_right.connect(_fight.on_right)
 	_dim = UiScenes.need(self, "%Dim")
 	_talk_card = UiScenes.need(self, "%TalkCard")
 	_partner_mark = UiScenes.need(self, "%PartnerMark")
@@ -285,12 +292,16 @@ func _input(event: InputEvent) -> void:
 		elif not open.is_empty():
 			for o: Control in open:
 				o.visible = false
-		else:
+		elif not _fight.cancel():
 			_pause.toggle()
-	elif input.has_focus() and input.text.is_empty() and open.is_empty() and _option_key(event) >= 0:  # 1–3 over an empty input
+	elif input.has_focus() and input.text.is_empty() and open.is_empty() and not _fight.active() and _option_key(event) >= 0:  # 1–3 over an empty input
 		_hotkey(event, true)
+	elif input.has_focus() and input.text.is_empty() and open.is_empty() and _fight.active() and (event.is_action_pressed("next_target") or event.is_action_pressed("end_turn")):
+		_fight.key(event)  # an empty input does not hold the fight's keys
 	elif input.has_focus() or _pause.visible or get_viewport().gui_get_focus_owner() is LineEdit:
 		return
+	elif _fight.active() and open.is_empty() and _fight.key(event):
+		pass
 	elif _hotkey(event, open.is_empty()):
 		pass
 	elif (event as InputEventKey).keycode in [KEY_ENTER, KEY_KP_ENTER] and open.is_empty():
@@ -353,7 +364,7 @@ func _on_turn_finished(_turn_id: String, _ok: bool) -> void:
 		GameState.session.character.erase("contest_offer")
 		_contest.open(str(offer["npc"]), str(offer["kind"]))
 		return
-	if Backend.is_ready() and _typed and not _pause.visible and _overlays().all(func(o: Control) -> bool: return not o.visible):
+	if Backend.is_ready() and _typed and not _fight.active() and not _pause.visible and _overlays().all(func(o: Control) -> bool: return not o.visible):
 		input.grab_focus()
 
 
@@ -383,8 +394,7 @@ func _refresh_field(s: GameSession) -> void:
 	_things.append_array(MapSpots.foes(s, Catalog.data, view))
 	_things.append_array(MapSpots.traps(s, Catalog.data, view))
 	_things.append_array(MapSpots.others(s, Catalog.data, view))
-	_field.fog = true
-	_field.known = SightRules.known(s, view)
+	_field.dim = true
 	if s.room_id == _field_room and at != _field.hero_cell() and not _field.walking():  # the master's words move the hero
 		var steps := WalkRules.path(view, Catalog.data["layouts"], _field.hero_cell(), at)
 		if not steps.is_empty():
@@ -399,18 +409,17 @@ func _refresh_field(s: GameSession) -> void:
 		_show_menu(_menu_ref)
 
 
-## What the hero sees from `cell`: the fog, those who stand in view, what is known of the rest (v0.8.3). A foe or a person
-## shows only in view, a thing stays where it was seen.
+## What the hero sees from `cell`: the rest of the map is dimmed (v0.8.3). A foe or a person shows only in view, a thing
+## stays on the map.
 func _look(s: GameSession, cell: Vector2i) -> void:
 	var now := SightRules.look(s, Catalog.data, _field.map, cell)
 	_field.now = now
-	_field.known.merge(now)
 	_field.cones = WatchRules.cones(s, Catalog.data, _field.map, now)
 	_field.things = _things.filter(func(t: Dictionary) -> bool:
 		var at := Vector2i(int(t["x"]), int(t["y"]))
 		if str(t["kind"]) == "foe" and (EncounterRules.lurking(s, s.room_id).get("hidden", []) as Array).has(str(t["id"])):
 			return false
-		return now.has(at) or (str(t["kind"]) in ["station", "prop", "trap"] and _field.known.has(at)))
+		return now.has(at) or str(t["kind"]) in ["station", "prop", "trap"])
 	_rounds = WatchRules.by_rounds(s, Catalog.data, _field.map, now)
 	_field.queue_redraw()
 
@@ -421,6 +430,9 @@ func _on_cell(cell: Vector2i) -> void:
 	if s == null or s.in_conversation():
 		return
 	_menu.visible = false
+	if _fight.active():
+		_fight.on_cell(cell)
+		return
 	if _rounds and cell == _field.hero_cell():  # the hero stands the round out
 		GameState.sneak_round()
 		return
@@ -576,8 +588,9 @@ func _refresh() -> void:
 	_thinking.visible = busy
 	_cancel.visible = busy and online
 	_offline_banner.visible = not online
-	input.editable = online and not busy
-	send_button.disabled = not online or busy
+	input.editable = _fight.mine() if _fight.active() else online and not busy
+	send_button.disabled = not input.editable
+	_fight.refresh()
 	var s0 := GameState.session if GameState.has_session() else null
 	brush.visible = SaveManager.images_on and not Backend.image_models().is_empty()
 	brush.disabled = not online or GameState.drawing or s0 == null or ImageFrame.event_index(s0) < 0
@@ -612,7 +625,7 @@ func _refresh() -> void:
 		leave_button.disabled = busy or not online
 		input.placeholder_text = tr("PLACEHOLDER_SAY").format({"name": npc_name.get_slice(" ", 0)})
 	else:
-		input.placeholder_text = tr("PLACEHOLDER_ACTION")
+		input.placeholder_text = tr("PLACEHOLDER_COMBAT" if _fight.active() else "PLACEHOLDER_ACTION")
 	_refresh_attach(s, busy, online)
 	for c in _options.get_children():
 		_options.remove_child(c)
@@ -621,7 +634,7 @@ func _refresh() -> void:
 		return
 	if GameState.can_retry():
 		_option_button("BTN_RETRY_TURN", GameState.retry, true).disabled = not online
-	for i in GameState.session.options.size():
+	for i in GameState.session.options.size() if not _fight.active() else 0:
 		var o := GameState.session.options[i]
 		var cost := GameState.session.option_costs[i] if i < GameState.session.option_costs.size() else 0
 		var pv := GameState.option_preview(i)

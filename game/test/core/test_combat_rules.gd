@@ -27,7 +27,7 @@ func _session(preset_id: String = "fighter_aira") -> GameSession:
 
 ## A fight where the player acts first: the order is rewritten so tests do not depend on the initiative roll.
 func _fight(s: GameSession, foes: Array) -> void:
-	CombatRules.start(s, data, foes)
+	TestUtils.fight(s, data, foes)
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)
@@ -45,12 +45,12 @@ func test_monsters_come_from_the_srd_with_russian_names() -> void:
 
 func test_a_fight_starts_with_initiative_and_the_field() -> void:
 	var s := _session()
-	var lines := CombatRules.start(s, data, [{"monster": "goblin", "count": 2}, {"monster": "wolf"}])
+	var lines := TestUtils.fight(s, data, [{"monster": "goblin", "count": 2}, {"monster": "wolf"}])
 	assert_str(lines[0]).contains("Инициатива")
 	assert_array(s.combat["order"]).has_size(4)
-	assert_int(int(CombatRules.player(s)["col"])).is_equal(0)
+	assert_int(FightGrid.cell(CombatRules.player(s)).x).is_equal(40)
 	for id: String in CombatRules.enemies(s):
-		assert_int(absi(int(CombatRules.fighter(s, id)["col"]))).is_between(1, 3)
+		assert_bool(FightGrid.dist(CombatRules.fighter(s, id), CombatRules.player(s)) > 0).is_true()
 	assert_str(CombatRules.fighter(s, TestUtils.foe(s, 1))["name"]).is_equal("Гоблин 1")
 
 
@@ -71,14 +71,15 @@ func test_reach_range_and_the_attack_economy() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_OUT_OF_REACH")
-	CombatRules.player_move(s, data, 1)
-	assert_str(CombatRules.can_move(s, data, 1)).is_equal("COMBAT_NO_MOVE")
+	TestUtils.walk(s, data, 1)
+	assert_str(CombatRules.can_move(s)).is_equal("COMBAT_NO_MOVE")
 	CombatRules.player_simple(s, data, "dash")
-	CombatRules.player_move(s, data, 1)
+	CombatRules.player_walk(s, data, FightGrid.cell(CombatRules.fighter(s, TestUtils.foe(s, 1))) - Vector2i(1, 0))
 	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_NO_ACTION")  # Dash took the action
 	CombatRules.end_player_turn(s, data)
 	CombatRules.next_actor(s, data)  # the goblin
 	if CombatRules.is_player_turn(s) and int(s.character["hp"]) > 0:
+		TestUtils.beside(s, CombatRules.fighter(s, TestUtils.foe(s, 1)))
 		assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_empty()
 		var lines := CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
 		assert_str(lines[0]).contains("против КД 15")
@@ -100,19 +101,23 @@ func test_extra_attack_at_level_five() -> void:
 func test_leaving_melee_provokes_and_disengage_does_not() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 0}])
-	var lines := CombatRules.player_move(s, data, 1)
+	var lines := TestUtils.walk(s, data, 1)
 	assert_str(" ".join(lines)).contains("вдогонку")
 	var t := _session()
 	_fight(t, [{"monster": "goblin", "col": 0}])
 	CombatRules.player_simple(t, data, "disengage")
-	assert_str(" ".join(CombatRules.player_move(t, data, 1))).not_contains("вдогонку")
+	assert_str(" ".join(TestUtils.walk(t, data, 1))).not_contains("вдогонку")
 
 
-func test_stepping_off_the_edge_leaves_the_fight() -> void:
+func test_the_rim_of_the_field_is_a_way_out() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": -3}])
-	CombatRules.player(s)["col"] = 3
-	CombatRules.player_move(s, data, 1)
+	while not CombatRules.is_player_turn(s):
+		CombatRules.next_actor(s, data)
+	assert_str(CombatRules.can_flee(s, data)).is_equal("COMBAT_NOT_AT_EXIT")
+	FightGrid.put(CombatRules.player(s), Vector2i(0, 30))
+	assert_str(CombatRules.can_flee(s, data)).is_empty()
+	CombatRules.player_flee(s, data)
 	assert_str(s.combat["outcome"]).is_equal("player_fled")
 
 
@@ -121,13 +126,10 @@ func test_the_ai_closes_in_and_shooters_keep_their_range() -> void:
 	_fight(s, [{"monster": "wolf", "col": 2}])
 	CombatRules.end_player_turn(s, data)
 	CombatRules.next_actor(s, data)
-	assert_int(int(CombatRules.fighter(s, TestUtils.foe(s, 1))["col"])).is_less(2)
+	assert_int(FightGrid.dist(CombatRules.fighter(s, TestUtils.foe(s, 1)), CombatRules.player(s))).is_less(12)
 	var t := _session()
-	_fight(t, [{"monster": "goblin", "col": 0}])
-	CombatRules.fighter(t, TestUtils.foe(t, 1))["monster"] = "goblin"
-	CombatRules.end_player_turn(t, data)
-	var lines := CombatRules.next_actor(t, data)
-	assert_str(" ".join(lines)).contains("Ятаган")  # in melee the goblin uses its scimitar
+	_fight(t, [{"monster": "bandit", "col": 0}])
+	assert_str(str(FightAI.plan(t, data, CombatRules.fighter(t, TestUtils.foe(t, 1)))["option"]["kind"])).is_equal("melee")  # beside the hero a blade, not the crossbow
 
 
 func test_morale_makes_intelligent_foes_surrender_or_flee() -> void:
@@ -183,7 +185,7 @@ func test_engine_spells_attack_save_darts_and_heal() -> void:
 	var lines := CombatRules.player_cast(s, data, "fire_bolt", 0, TestUtils.foe(s, 1))
 	assert_str(" ".join(lines)).contains("Огненный снаряд")
 	CombatRules.economy(s)["action"] = 1
-	lines = CombatRules.player_cast(s, data, "burning_hands", 1, TestUtils.foe(s, 1))
+	lines = CombatRules.player_cast(s, data, "burning_hands", 1, CombatRules.enemies(s)[0])
 	assert_int(lines.filter(func(l: String) -> bool: return l.contains("спасбросок Лов")).size()).override_failure_message(str(lines)).is_greater_equal(1)
 	assert_int(SpellRules.slots_left(c, 1)).is_equal(1)
 	CombatRules.economy(s)["action"] = 1
@@ -266,3 +268,15 @@ func test_the_snapshot_and_the_save_keep_the_fight() -> void:
 	assert_str(snap["combat"]["enemies"][0]["health"]).is_equal("full")
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
 	assert_dict(back.combat).is_equal(s.combat)
+
+
+func test_a_foe_with_no_place_never_stands_off_the_map() -> void:
+	var s := _session()
+	s.combat = {"map": s.room_id, "rev": 0, "fighters": [], "zones": [], "doors": {}, "blocks": {}}
+	var map := FightGrid.map(s, data)
+	var hero := WalkRules.settle(s, data, map)
+	for d: Vector2i in FightGrid.CIRCLE:
+		var at := FightGrid.walked_off(s, data, hero, d, 6, 1, str(s.room_id))
+		assert_bool(FightGrid.walkable(FightGrid.grid(s, data), at)).is_true()
+		assert_bool(FightGrid.flow(s, data, hero).has(at)).is_true()
+	assert_bool(FightGrid.walkable(FightGrid.grid(s, data), FightGrid.free_near(s, data, Vector2i(500, -3)))).is_true()

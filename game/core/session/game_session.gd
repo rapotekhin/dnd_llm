@@ -630,9 +630,12 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
 		return {}
 	var c: Dictionary = (raw as Dictionary).duplicate(true)
-	for k: String in ["round", "turn", "xp", "coins_cp", "parley_ok", "parley_fail"]:
+	for k: String in ["round", "turn", "xp", "coins_cp", "parley_ok", "parley_fail", "rev"]:
 		if c.has(k):
 			c[k] = int(c[k])
+	for ch: Dictionary in c.get("chasers", []):
+		for k: String in ["at", "x", "y"]:
+			ch[k] = int(ch[k])
 	for k: String in ["ok", "fail"]:
 		if c.get("death_saves", {}).has(k):
 			c["death_saves"][k] = int(c["death_saves"][k])
@@ -643,7 +646,6 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 		l["qty"] = int(l["qty"])
 	for w: Dictionary in c.get("incoming", []):
 		w["at"] = int(w["at"])
-		w["col"] = int(w["col"])
 		for spec: Dictionary in w.get("foes", []):
 			if spec.has("count"):
 				spec["count"] = int(spec["count"])

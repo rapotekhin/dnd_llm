@@ -2,10 +2,12 @@ class_name MapField
 extends Control
 ## The field of the one screen (v0.8.1): a map of squares, plain tiles from code, tokens that walk. The wheel zooms around
 ## the cursor, a drag moves the view; a small room fits whole, a big one follows the hero until the view is dragged away.
-## The field knows nothing of rooms and rules: it says which square was clicked and which were reached. It is written to
-## take the fight of v0.8.4 as well.
+## The field knows nothing of rooms and rules: it says which square was clicked and which were reached. In a fight it also
+## shows the bodies, where the hero can walk, the zones and the area under the mouse (v0.8.4); FightUi fills them.
 
 signal cell_clicked(cell: Vector2i)
+signal cell_hovered(cell: Vector2i)
+signal cell_right(cell: Vector2i)  ## the right button without a drag
 signal stepped(cell: Vector2i)  ## the hero reached a square of the path
 signal arrived  ## the hero reached the end of the path
 
@@ -17,6 +19,7 @@ const DRAG_FROM := 6.0  ## pixels: less is a click
 const ZOOM_STEP := 1.15
 const LABEL_FROM := 20.0  ## a tile under this has no names on it
 const FONT_SIZE := 15
+const FIGHT_SPEED := 14.0  ## squares a second
 
 var map: Dictionary = {}
 var lib: Dictionary = {}
@@ -26,10 +29,16 @@ var clicks := true  ## false while a conversation holds the field
 var things: Array[Dictionary] = []  ## those who stand on the map and what lies on it: MapSpots.of (v0.8.2)
 var labels := false  ## every name is written while the key is held
 var instant := false  ## a walk ends at once: the playtests' game time does not come from frames
-var fog := false  ## only what the hero knows is drawn (the author's preview has none)
+var dim := false  ## what is out of view is dimmed (the author's preview has none)
 var now: Dictionary = {}  ## the squares seen right now: SightRules (v0.8.3)
-var known: Dictionary = {}  ## the squares seen once
 var cones: Dictionary = {}  ## the squares under watch while sneaking
+var fighters: Array[Dictionary] = []  ## the bodies of a fight: {"id", "mark", "name", "colour", "span", "x", "y", "hp", "most", "out", "now", "dim"}
+var routes: Dictionary = {}  ## where the hero can walk this turn: FightGrid.reach
+var way: Array[Vector2i] = []  ## the path under the mouse
+var blast: Dictionary = {}  ## the squares of the area under the mouse
+var lit: Dictionary = {}  ## the squares of a choice (a shove's side, a jump)
+var over: Dictionary = {}  ## what a fight changed on the map: {square: Color}
+var zones: Array[Dictionary] = []  ## SpellEffects.zone_view
 
 var _tile := BASE_TILE
 var _corner := Vector2.ZERO  ## where the map's corner is on the field
@@ -42,6 +51,8 @@ var _hover := Vector2i(-1, -1)
 var _pressed := false
 var _dragged := false
 var _press_at := Vector2.ZERO
+var _moves: Dictionary = {}  ## a body's squares still to walk, by id
+var _body_at: Dictionary = {}  ## where a body is drawn now, by id
 
 
 func _ready() -> void:
@@ -108,12 +119,40 @@ func walk(steps: Array[Vector2i]) -> void:
 
 func stop() -> void:
 	_path.clear()
-	set_process(false)
+	set_process(not _moves.is_empty())
+
+
+## The bodies walk the squares of what happened (FightField.take_moves), one by one on their own.
+func play(moves: Array) -> void:
+	if instant:
+		_moves.clear()
+		return
+	for m: Dictionary in moves:
+		var left: Array = _moves.get(str(m["who"]), [])
+		for tag: Variant in m["path"]:
+			left.append(Vector2(FightGrid.y_x(str(tag))))
+		_moves[str(m["who"])] = left
+	set_process(not _moves.is_empty() or not _path.is_empty())
+
+
+func _walk_bodies(delta: float) -> void:
+	for id: String in _moves.keys():
+		var left: Array = _moves[id]
+		var pos: Vector2 = _body_at.get(id, left[0])
+		pos = pos.move_toward(left[0], FIGHT_SPEED * delta)
+		_body_at[id] = pos
+		if pos == left[0]:
+			left.pop_front()
+		if left.is_empty():
+			_moves.erase(id)
+	queue_redraw()
 
 
 func _process(delta: float) -> void:
+	if not _moves.is_empty():
+		_walk_bodies(delta)
 	if _path.is_empty():
-		set_process(false)
+		set_process(not _moves.is_empty())
 		return
 	var next := Vector2(_path[0])
 	_pos = _pos.move_toward(next, SPEED * delta)
@@ -127,7 +166,7 @@ func _process(delta: float) -> void:
 		var reached: Vector2i = _path.pop_front()
 		stepped.emit(reached)
 		if _path.is_empty():
-			set_process(false)
+			set_process(not _moves.is_empty())
 			arrived.emit()
 
 
@@ -144,6 +183,14 @@ func _fit() -> void:
 	_tile = clampf(whole, MIN_TILE, BASE_TILE)
 	_follow = true
 	_aim()
+
+
+## Close on the hero: a fight is read by squares, not by the whole map.
+func close_up() -> void:
+	_tile = BASE_TILE
+	_follow = true
+	_aim()
+	queue_redraw()
 
 
 func _map_size() -> Vector2:
@@ -199,6 +246,9 @@ func cell_point(cell: Vector2i) -> Vector2:
 
 ## Who or what is on a square: its ref, "" — nothing.
 func ref_at(cell: Vector2i) -> String:
+	for f: Dictionary in fighters:
+		if FightGrid.body_at(Vector2i(int(f["x"]), int(f["y"])), int(f["span"])).has(cell):
+			return str(f["ref"])
 	for tok: Dictionary in _tokens:
 		if Vector2i((tok["pos"] as Vector2).round()) == cell:
 			return str(tok["ref"])
@@ -210,6 +260,9 @@ func ref_at(cell: Vector2i) -> String:
 
 ## The square of a ref, (-1, -1) — not on the map.
 func cell_of(ref: String) -> Vector2i:
+	for f: Dictionary in fighters:
+		if str(f["ref"]) == ref:
+			return Vector2i(int(f["x"]), int(f["y"]))
 	for tok: Dictionary in _tokens:
 		if str(tok["ref"]) == ref:
 			return Vector2i((tok["pos"] as Vector2).round())
@@ -240,6 +293,7 @@ func _gui_input(event: InputEvent) -> void:
 		var cell := cell_at(m.position)
 		if cell != _hover:
 			_hover = cell
+			cell_hovered.emit(cell)
 			queue_redraw()
 
 
@@ -252,6 +306,8 @@ func _press(b: InputEventMouseButton) -> void:
 	_pressed = false
 	if not _dragged and b.button_index == MOUSE_BUTTON_LEFT and clicks and not map.is_empty():
 		cell_clicked.emit(cell_at(b.position))
+	elif not _dragged and b.button_index == MOUSE_BUTTON_RIGHT and not map.is_empty():
+		cell_right.emit(cell_at(b.position))
 
 
 func _draw() -> void:
@@ -266,14 +322,14 @@ func _draw() -> void:
 		for x: int in range(first.x, last.x):
 			var c: String = rows[y][x]
 			var cell := Vector2i(x, y)
-			if c == LayoutGen.BLANK or (fog and not known.has(cell)):
+			if c == LayoutGen.BLANK:
 				continue
 			var at := _corner + Vector2(x, y) * t
 			var fill: Color = UiTheme.TILES.get(c, UiTheme.TILES["."])
 			if (x + y) % 2 == 1 and c != LayoutGen.WALL:
 				fill = fill.darkened(0.05)
-			if fog and not now.has(cell):
-				fill = fill.darkened(0.6)
+			if dim and not now.has(cell):
+				fill = fill.darkened(0.45)
 			elif cones.has(cell):
 				fill = fill.lerp(UiTheme.BAD, 0.32)
 			draw_rect(Rect2(at, Vector2(t, t)), fill)
@@ -281,6 +337,7 @@ func _draw() -> void:
 				draw_rect(Rect2(at, Vector2(t, maxf(2.0, t * 0.14))), UiTheme.TILES["#"].lightened(0.25))
 			elif t >= LABEL_FROM:
 				draw_rect(Rect2(at, Vector2(t, t)), Color(0, 0, 0, 0.14), false, 1.0)
+	_draw_fight_squares(t)
 	if clicks and _hover.x >= 0 and _hover.y >= 0 and _hover.x < int(map["w"]) and _hover.y < int(map["h"]):
 		draw_rect(Rect2(_corner + Vector2(_hover) * t, Vector2(t, t)), UiTheme.ACCENT_BRIGHT, false, 1.5)
 	for e: Dictionary in map["exits"]:
@@ -294,6 +351,67 @@ func _draw() -> void:
 		_token(tok["pos"], str(tok["mark"]), str(tok["name"]), UiTheme.OK, 0.34)
 	if not hero_mark.is_empty():
 		_token(_pos, hero_mark, "", UiTheme.ACCENT_BRIGHT, 0.4)
+	for f: Dictionary in fighters:
+		_fighter(f)
+
+
+## The zones under the bodies, where the hero can walk, the area and the path under the mouse.
+func _draw_fight_squares(t: float) -> void:
+	for at: Variant in over:
+		_tint(at, over[at], t)
+	for z: Dictionary in zones:
+		var tint := Color(UiTheme.BAD if bool(z["hurts"]) else UiTheme.WARN, 0.26)
+		for at: Vector2i in z["cells"]:
+			_tint(at, tint, t)
+	for at: Variant in routes:
+		_tint(at, Color(UiTheme.ACCENT, 0.16), t)
+	for at: Variant in lit:
+		_tint(at, Color(UiTheme.ACCENT_BRIGHT, 0.45), t)
+	for at: Variant in blast:
+		_tint(at, Color(UiTheme.BAD, 0.42), t)
+	var from := Vector2(way[0]) if not way.is_empty() else Vector2.ZERO
+	for cell: Vector2i in way:
+		draw_line(_corner + (from + Vector2(0.5, 0.5)) * t, _corner + (Vector2(cell) + Vector2(0.5, 0.5)) * t, UiTheme.ACCENT_BRIGHT, maxf(2.0, t * 0.08))
+		from = Vector2(cell)
+
+
+func _tint(at: Vector2i, tint: Color, t: float) -> void:
+	draw_rect(Rect2(_corner + Vector2(at) * t, Vector2(t, t)), tint)
+
+
+## A body of a fight: round, as wide as its squares, with its HP bar; the one whose turn it is has a double ring.
+func _fighter(f: Dictionary) -> void:
+	var id := str(f["id"])
+	var cell := Vector2(int(f["x"]), int(f["y"]))
+	var pos: Vector2 = _body_at.get(id, cell) if _moves.has(id) else cell
+	_body_at[id] = pos
+	var span := int(f["span"])
+	var t := _tile
+	var mid := _corner + (pos + Vector2(span, span) / 2.0) * t
+	var r := t * span * 0.42
+	var colour: Color = UiTheme.MUTED if bool(f["out"]) else f["colour"]
+	if bool(f["dim"]):
+		colour = Color(colour, 0.5)
+	if bool(f["now"]):
+		draw_arc(mid, r + maxf(3.0, t * 0.1), 0.0, TAU, 40, UiTheme.ACCENT_BRIGHT, maxf(1.5, t * 0.05), true)
+	draw_circle(mid, r, UiTheme.PANEL)
+	draw_arc(mid, r, 0.0, TAU, 40, colour, maxf(1.5, t * 0.08), true)
+	if bool(f["out"]):
+		draw_line(mid - Vector2(r, r) * 0.7, mid + Vector2(r, r) * 0.7, UiTheme.MUTED, maxf(1.5, t * 0.06))
+	elif int(f["most"]) > 0:
+		var w := r * 1.8
+		var share := clampf(float(f["hp"]) / float(f["most"]), 0.0, 1.0)
+		var bar := Rect2(mid + Vector2(-w / 2.0, r + 2.0), Vector2(w, maxf(3.0, t * 0.1)))
+		draw_rect(bar, UiTheme.BG)
+		draw_rect(Rect2(bar.position, Vector2(w * share, bar.size.y)), UiTheme.OK if share > 0.5 else UiTheme.WARN if share > 0.25 else UiTheme.BAD)
+	if t >= LABEL_FROM:
+		var font := get_theme_default_font()
+		var mark := str(f["mark"])
+		var size_px := int(r * 0.9 if mark.length() > 1 else r)
+		var w2 := font.get_string_size(mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
+		draw_string(font, mid + Vector2(-w2 / 2.0, r * 0.38), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, colour)
+		if labels or Vector2i(cell) == _hover:
+			_name(mid + Vector2(0.0, r + 22.0), str(f["name"]))
 
 
 ## A person is a round token, a beast a smaller one, a thing a square. The name shows under the cursor or while the key is held.
@@ -329,8 +447,6 @@ func _thing(th: Dictionary) -> void:
 func _draw_path(t: float) -> void:
 	var at := _pos
 	for cell: Vector2i in _path:
-		if fog and not known.has(cell):  # the way through the fog gives nothing away
-			break
 		var dot := (at + Vector2(cell)) / 2.0
 		draw_circle(_corner + (dot + Vector2(0.5, 0.5)) * t, maxf(1.5, t * 0.05), UiTheme.ACCENT_BRIGHT)
 		draw_circle(_corner + (Vector2(cell) + Vector2(0.5, 0.5)) * t, maxf(1.5, t * 0.05), UiTheme.ACCENT_BRIGHT)

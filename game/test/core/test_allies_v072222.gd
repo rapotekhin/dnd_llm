@@ -21,7 +21,7 @@ func _hero(preset: String = "fighter_aira", room: String = "pushcha-hollow") -> 
 
 
 func _wolf_and(s: GameSession, allies: Array) -> void:
-	CombatRules.start(s, data, [{"monster": "wolf", "col": 2}], {"allies": allies})
+	TestUtils.fight(s, data, [{"monster": "wolf", "col": 2}], {"allies": allies})
 
 
 func _run_until(s: GameSession, id: String) -> Array[String]:
@@ -42,7 +42,7 @@ func test_a_pack_ally_stands_by_the_hero_and_fights() -> void:
 	var aid := CombatRules.allies(s)[0]
 	var a := CombatRules.fighter(s, aid)
 	assert_str(str(a["side"])).is_equal("ally")
-	assert_int(int(a["col"])).is_equal(int(CombatRules.player(s)["col"]))
+	assert_int(FightGrid.dist(a, CombatRules.player(s))).is_equal(1)
 	assert_array(s.combat["order"] as Array).contains([aid])
 	_run_until(s, aid)
 	var lines := CombatRules.next_actor(s, data)
@@ -55,11 +55,13 @@ func test_a_foe_goes_for_the_nearest_ally() -> void:
 	_wolf_and(s, [{"monster": "guard", "name": "Влада", "col": 2}])
 	var wolf := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var ally := CombatRules.allies(s)[0]
-	assert_str(CombatRules._foe_target(s, wolf)).is_equal(ally)  # the ally stands in the wolf's column
-	CombatRules.fighter(s, ally)["col"] = int(CombatRules.player(s)["col"])
-	assert_str(CombatRules._foe_target(s, wolf)).is_equal(CombatRules.PLAYER)  # a tie — the hero
+	assert_str(str(FightAI.plan(s, data, wolf)["option"]["t"]["id"])).is_equal(ally)  # the ally stands beside the wolf, the hero far
+	FightGrid.put(CombatRules.fighter(s, ally), FightGrid.cell(CombatRules.player(s)) + Vector2i(0, 12))
+	TestUtils.beside(s, wolf)
+	assert_str(str(FightAI.plan(s, data, wolf)["option"]["t"]["id"])).is_equal(CombatRules.PLAYER)
 	s.character["hp"] = 0
-	assert_str(CombatRules._foe_target(s, wolf)).is_equal(ally)  # the hero is down: the ally
+	FightGrid.put(CombatRules.fighter(s, ally), FightGrid.cell(CombatRules.player(s)) + Vector2i(0, 5))
+	assert_str(str(FightAI.plan(s, data, wolf)["option"]["t"]["id"])).is_equal(ally)  # the hero is down: the ally
 
 
 func test_the_fight_goes_on_while_an_ally_stands() -> void:
@@ -85,7 +87,7 @@ func test_a_follower_joins_but_not_against_the_law_or_its_own() -> void:
 	assert_array(AllyRules.joining(s, data, [{"monster": "guard", "law": true}])).is_empty()
 	assert_array(AllyRules.joining(s, data, [{"monster": "thug", "npc_id": "npc_smith"}])).is_empty()  # a neighbour from Brod
 	assert_array(AllyRules.joining(s, data, [{"monster": "druid", "npc_id": "npc_hermit"}])).has_size(1)  # a stranger
-	CombatRules.start(s, data, [{"monster": "wolf"}])
+	TestUtils.fight(s, data, [{"monster": "wolf"}])
 	var f := CombatRules.fighter(s, CombatRules.allies(s)[0])
 	assert_str(str(f.get("npc_id", ""))).is_equal("npc_mercenary")
 	f["status"] = "down"
@@ -113,7 +115,7 @@ func test_a_summon_out_of_a_fight_goes_with_the_hero_until_its_time() -> void:
 	assert_array(AllyRules.summon(s, data, "animate_dead")).is_not_empty()
 	assert_int(AllyRules.called(s).size()).is_equal(1)
 	assert_str(AllyRules.summon_lines(s, data)[0]).contains("Скелет")
-	CombatRules.start(s, data, [{"monster": "wolf"}])
+	TestUtils.fight(s, data, [{"monster": "wolf"}])
 	assert_int(CombatRules.allies(s).size()).is_equal(1)  # it fights with the hero
 	s.combat["outcome"] = "victory"
 	CombatRules.fighter(s, CombatRules.allies(s)[0])["hp"] = 5
@@ -148,7 +150,7 @@ func test_sneak_attack_beside_an_ally() -> void:
 	var wolf := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"].get("main_hand", "")))
 	assert_str(CombatRules._sneak_dice(s, data, w, false, false, wolf)).is_not_empty()
-	CombatRules.fighter(s, CombatRules.allies(s)[0])["col"] = -2
+	TestUtils.to_col(CombatRules.fighter(s, CombatRules.allies(s)[0]), -2)
 	assert_str(CombatRules._sneak_dice(s, data, w, false, false, wolf)).is_empty()
 
 

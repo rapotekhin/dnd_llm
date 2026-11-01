@@ -161,7 +161,7 @@ func test_in_a_mixed_fight_its_people_stand_on_the_heros_side() -> void:
 	var s := _hero()
 	_disguised(s)
 	var foes := [{"monster": "bandit", "faction": CULT, "name": "Культист"}, {"monster": "bandit", "faction": FOLK, "name": "Ополченец"}]
-	CombatRules.start(s, data, foes, {"encounter": "enc_mixed"})
+	TestUtils.fight(s, data, foes, {"encounter": "enc_mixed"})
 	assert_array(CombatRules.enemies(s).map(func(id: String) -> String: return str(CombatRules.fighter(s, id)["name"]))).contains_exactly(["Ополченец"])
 	assert_array(CombatRules.allies(s).map(func(id: String) -> String: return str(CombatRules.fighter(s, id)["name"]))).contains(["Культист"])
 
@@ -169,7 +169,7 @@ func test_in_a_mixed_fight_its_people_stand_on_the_heros_side() -> void:
 func test_a_fight_the_hero_picked_with_them_is_a_fight() -> void:
 	var s := _hero()
 	_disguised(s)
-	CombatRules.start(s, data, [{"monster": "bandit", "faction": CULT, "name": "Культист"}], {"encounter": "enc_own"})
+	TestUtils.fight(s, data, [{"monster": "bandit", "faction": CULT, "name": "Культист"}], {"encounter": "enc_own"})
 	assert_int(CombatRules.enemies(s).size()).is_equal(1)
 
 
@@ -177,11 +177,11 @@ func test_a_fight_the_hero_picked_with_them_is_a_fight() -> void:
 
 
 func _in_the_air(s: GameSession, monster: String) -> Dictionary:
-	CombatRules.start(s, data, [{"monster": monster, "col": 0}], {})
+	TestUtils.fight(s, data, [{"monster": monster, "col": 0}], {})
 	SpellEffects.apply_self(s, data, "fly", 3)
 	CharacterRules.refresh(s.character, data, s.items)
 	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
-	f["col"] = int(CombatRules.player(s)["col"])
+	TestUtils.beside(s, f)
 	return f
 
 
@@ -228,7 +228,7 @@ func test_no_blow_in_passing_from_the_ground() -> void:
 	var s := _hero()
 	var f := _in_the_air(s, "wolf")
 	f["status"] = "active"
-	var lines := CombatRules.player_move(s, data, 1)
+	var lines := TestUtils.walk(s, data, 1)
 	assert_str("\n".join(lines)).not_contains("бьёт вдогонку")
 
 
@@ -270,7 +270,7 @@ func test_the_master_gets_the_condition_by_its_id_even_from_a_held_spell() -> vo
 
 func test_in_a_fight_the_hero_strikes_with_advantage_and_is_struck_with_disadvantage() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "wolf", "col": 0}], {})
+	TestUtils.fight(s, data, [{"monster": "wolf", "col": 0}], {})
 	_unseen(s)
 	var t := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	assert_array(CombatRules._attack_mods(s, data, CombatRules.unarmed_profile(s.character, data), t)["adv"]).is_not_empty()

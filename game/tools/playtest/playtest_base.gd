@@ -70,8 +70,28 @@ func is_a(n: Object, cls: String) -> bool:
 	return n != null and n.get_script() != null and (n.get_script() as Script).get_global_name() == cls
 
 
+## A fight is a state of the one screen (v0.8.4): "fight" is the screen with a fight on it, its class is the screen without one.
 func screen_is(cls: String) -> bool:
-	return is_a(screen(), cls)
+	var gs: Node = node("GameState")
+	var fight: bool = gs.has_session() and CombatRules.active(gs.session)
+	if cls == "fight":
+		return fight and is_a(screen(), "GameScreen")
+	return is_a(screen(), cls) and not (fight and cls == "GameScreen")
+
+
+## A click on a square of the map, as the player's.
+func click_cell(cell: Vector2i) -> void:
+	(find(screen(), "Field") as Control).call("emit_signal", "cell_clicked", cell)
+	await frames(3)
+
+
+## The hero walks towards a foe by a click on the map, as far as the turn lets it. False — it stands where it was.
+func walk_up(s: GameSession, data: Dictionary, id: String) -> bool:
+	var to := CombatRules.closest_stop(s, data, id)
+	if to == FightGrid.NONE:
+		return false
+	await click_cell(to)
+	return true
 
 
 func find_all(from: Node, cls: String) -> Array[Node]:

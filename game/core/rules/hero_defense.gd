@@ -141,7 +141,8 @@ static func save(s: GameSession, data: Dictionary, ability: String, dc: int, tag
 	var rolls := Roll.hero_dice(s, adv, dis)  # Lucky (v0.7.10)
 	var nat := Roll.kept(rolls, adv, dis)
 	var die := SpellEffects.die(s, c, "save")  # Bless, Resistance (v0.7.13.1)
-	var total := nat + bonus + int(die["bonus"]) + DifficultyRules.bonus(s, data)  # the game's difficulty (v0.7.20.4)
+	var cover := int(CombatRules.player(s).get("cover", 0)) if ability == "dex" and CombatRules.active(s) else 0  # v0.8.4
+	var total := nat + bonus + cover + int(die["bonus"]) + DifficultyRules.bonus(s, data)  # the game's difficulty (v0.7.20.4)
 	var parts := RollParts.cached(c, data, "save", ability, s.items)
 	parts.append_array(die["parts"])
 	RollParts.difficulty(s, data, parts)

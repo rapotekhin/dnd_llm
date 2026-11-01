@@ -37,7 +37,7 @@ func run() -> void:
 	await shot("unseen")
 	if attack != null:
 		await press(attack)
-		await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)
+		await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)
 		await frames(3)
 		var caught := CombatRules.enemies(s).all(func(id: String) -> bool: return bool(CombatRules.fighter(s, id).get("surprised", false)))
 		step("the fight — the wolves caught off guard", CombatRules.active(s) and caught, str(s.combat.get("start_lines", [])))

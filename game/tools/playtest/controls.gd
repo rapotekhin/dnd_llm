@@ -113,7 +113,7 @@ func run() -> void:
 	await frames(3)
 	await open_row("More_" + first)
 	await press(find(screen(), "Attack_" + first))
-	if not step("the fight", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)):
+	if not step("the fight", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)):
 		return
 	await frames(3)
 	await _key(KEY_TAB)

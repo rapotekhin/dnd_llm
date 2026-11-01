@@ -46,7 +46,7 @@ static func run(s: GameSession, data: Dictionary, id: String, slot: int, target_
 				SpellEffects.on_friend(s, data, id, slot, CombatRules.fighter(s, target_id), lines)
 				return
 			target_id = ""
-	var t := CombatRules.fighter(s, target_id) if not target_id.is_empty() else {}
+	var t := CombatRules.aimed(s, target_id) if not target_id.is_empty() else {}
 	match way(data, id, not target_id.is_empty()):
 		"summon":  # v0.7.22.22: the summoned fight on the hero's side
 			lines.append_array(AllyRules.summon(s, data, id))
@@ -64,7 +64,8 @@ static func run(s: GameSession, data: Dictionary, id: String, slot: int, target_
 				SpellEffects.mark(s.character, target_id)
 				lines.append("%s отмечен" % t["name"])
 		"teleport":  # Misty Step (v0.7.13.3)
-			lines.append_array(CombatRules._teleport(s, data, int(SpellEffects.spec(data, id)["teleport"])))
+			var to := FightGrid.aim_of(target_id) if FightGrid.is_aim(target_id) else FightGrid.NONE
+			lines.append_array(CombatRules._teleport(s, data, int(SpellEffects.spec(data, id)["teleport"]), to))
 		"bane":  # Bane (v0.7.13.1)
 			SpellEffects.curse_foes(s, data, id, slot, t, lines)
 		"heal":

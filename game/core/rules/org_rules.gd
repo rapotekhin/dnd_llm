@@ -221,7 +221,7 @@ static func on_trespass(s: GameSession, data: Dictionary, id: String, site_id: S
 	var foes: Array = []
 	for g: Dictionary in d.get("guards", []):
 		for i in int(g.get("count", 1)):
-			var foe := {"monster": str(g["monster"]), "col": 0}
+			var foe := {"monster": str(g["monster"])}
 			if g.has("name"):
 				foe["name"] = str(g["name"])
 			foes.append(foe)

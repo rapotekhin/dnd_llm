@@ -22,9 +22,9 @@ func run() -> void:
 	s.character["temp_hp"] = 200
 
 	# The attack the master would start (next_mode combat on a scene NPC): by the hero.
-	s.pending_fight = [{"monster": "scout", "name": "Кейра", "npc_id": "npc_mercenary", "col": 0, "by_hero": true}]
+	s.pending_fight = [{"monster": "scout", "name": "Кейра", "npc_id": "npc_mercenary", "beside": true, "by_hero": true}]
 	gs._start_pending_fight()
-	if not step("a fight with Keira", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy() and not gs.combat_playing, 90.0)):
+	if not step("a fight with Keira", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy() and not gs.combat_playing, 90.0)):
 		return
 	var helpers: Array = CombatRules.enemies(s).filter(func(id: String) -> bool: return str(CombatRules.fighter(s, id).get("npc_id", "")) == "npc_veteran")
 	step("the veteran comes to her help (v0.7.22.18)", not helpers.is_empty(), str(CombatRules.enemies(s).map(func(id: String) -> String: return str(CombatRules.fighter(s, id)["name"]))))

@@ -69,13 +69,13 @@ func test_under_a_roof_the_weather_does_not_touch_the_hero() -> void:
 func test_fog_gives_disadvantage_to_ranged_attacks_not_to_melee() -> void:
 	var s := _session("pushcha-glade")
 	_weather(s, "pushcha", "fog")
-	CombatRules.start(s, data, [{"monster": "wolf", "name": "Волк", "desc": "", "col": 4}], {})
+	TestUtils.fight(s, data, [{"monster": "wolf", "name": "Волк", "desc": "", "col": 4}], {})
 	var wolf: Dictionary = CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	assert_array(CombatRules.hero_attack_dis(s, data, wolf)).contains(["туман"])
-	wolf["col"] = int(CombatRules.player(s)["col"])
+	TestUtils.beside(s, wolf)
 	assert_array(CombatRules.hero_attack_dis(s, data, wolf)).not_contains(["туман"])
 	_weather(s, "pushcha", "clear")
-	wolf["col"] = 4
+	TestUtils.to_col(wolf, 4)
 	assert_array(CombatRules.hero_attack_dis(s, data, wolf)).not_contains(["туман"])
 
 

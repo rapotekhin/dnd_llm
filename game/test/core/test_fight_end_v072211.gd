@@ -20,7 +20,7 @@ func _hero() -> GameSession:
 
 
 func _fight(s: GameSession, foes: Array) -> Array[Dictionary]:
-	CombatRules.start(s, data, foes, {})
+	TestUtils.fight(s, data, foes, {})
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)
@@ -36,7 +36,7 @@ func _fight(s: GameSession, foes: Array) -> Array[Dictionary]:
 func test_fists_with_a_sword_in_hand() -> void:
 	var s := _hero()
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
-	f["col"] = int(CombatRules.player(s)["col"])
+	TestUtils.beside(s, f)
 	assert_str(CombatRules.can_attack(s, data, str(f["id"]), false, true)).is_empty()
 	var lines := CombatRules.player_attack(s, data, str(f["id"]), false, false, true)
 	assert_str(" · ".join(lines)).contains("Безоружный удар")
@@ -45,7 +45,7 @@ func test_fists_with_a_sword_in_hand() -> void:
 func test_a_nonlethal_blow_knocks_out() -> void:
 	var s := _hero()
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
-	f["col"] = int(CombatRules.player(s)["col"])
+	TestUtils.beside(s, f)
 	s.combat["nonlethal"] = true
 	s.combat["melee_strike"] = true
 	var lines: Array[String] = []

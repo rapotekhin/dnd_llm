@@ -79,7 +79,7 @@ static func watch(s: GameSession, data: Dictionary, map: Dictionary) -> Dictiona
 	if lk.is_empty() or not lk.has("encounter") or bool(lk.get("word", false)):
 		return out
 	var hero := WalkRules.settle(s, data, map)
-	var mine := SightRules.view(map, data["layouts"], hero, SightRules.reach(s, data))
+	var mine := SightRules.look(s, data, map, hero)
 	var foes := MapSpots.foes(s, data, map)
 	var shown := foes.filter(func(t: Dictionary) -> bool: return mine.has(Vector2i(int(t["x"]), int(t["y"]))) and not (lk.get("hidden", []) as Array).has(str(t["id"])))
 	if not shown.is_empty() and not bool(lk.get("seen", false)):
@@ -115,7 +115,7 @@ static func watch(s: GameSession, data: Dictionary, map: Dictionary) -> Dictiona
 ## What a fight of the encounter starts from, over `extra`.
 static func source(enc: Dictionary, from: String, extra: Dictionary = {}) -> Dictionary:
 	var out := {"encounter": str(enc.get("id", "")), "room_from": from, "waves": enc.get("waves", []), "help": enc.get("help", {}),
-		"parley": str(enc.get("parley", "")), "allies": enc.get("allies", [])}
+		"parley": str(enc.get("parley", "")), "allies": enc.get("allies", []), "faction": str(enc.get("faction", ""))}
 	out.merge(extra, true)
 	return out
 

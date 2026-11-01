@@ -113,6 +113,23 @@ static func others(s: GameSession, data: Dictionary, map: Dictionary) -> Array[D
 	return out
 
 
+## The square a fighter of a fight starts on: its person's, its creature's, the lair of its encounter. (-1, -1) — no such.
+static func of_fighter(s: GameSession, data: Dictionary, spec: Dictionary) -> Vector2i:
+	var map := FightGrid.map(s, data)
+	var npc := str(spec.get("npc_id", ""))
+	var creature := str(spec.get("creature_id", ""))
+	if not npc.is_empty() or not creature.is_empty():
+		var ref := "npc:" + npc if not npc.is_empty() else "cr:" + creature
+		for t: Dictionary in of(s, data, map):
+			if str(t["ref"]) == ref:
+				return Vector2i(int(t["x"]), int(t["y"]))
+	var key := str(s.combat.get("encounter", ""))
+	var cells := _cells(map, data["layouts"], s.room_id)
+	if key.is_empty() or cells.is_empty():
+		return Vector2i(-1, -1)
+	return _lair(s, data, map, cells, key)
+
+
 ## The foes of the room before a fight, each with its "record". They stand together, away from the ways in; the seed
 ## keeps their squares.
 static func foes(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dictionary]:

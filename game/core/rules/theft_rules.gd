@@ -176,7 +176,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String, memory: Stri
 		"points": rep_key, "why": why, "bond_deed": deed, "bond_why": why}))
 	match reaction_kind(data, npc_id):
 		"fight":
-			s.pending_fight = [{"monster": _template(data, npc), "name": who, "desc": str(npc.get("description", "")), "npc_id": npc_id, "col": 0}]
+			s.pending_fight = [{"monster": _template(data, npc), "name": who, "desc": str(npc.get("description", "")), "npc_id": npc_id}]
 			lines.append("%s хватается за оружие" % who)
 		"close_shop":
 			s.shop_closed[npc_id] = s.day
@@ -189,7 +189,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String, memory: Stri
 			else:
 				var law := CrimeRules.law(data, world.location_id(s.room_id))  # v0.7.16: the guard of the place's law
 				s.pending_fight = [{"monster": str(law.get("guard_monster", cfg(data)["guard_monster"])), "name": str(law.get("guard_name", "Стражник")),
-					"desc": str(law.get("guard_desc", "")), "col": 1}]
+					"desc": str(law.get("guard_desc", ""))}]
 				lines.append("%s зовёт стражу — платить нечем, стражник идёт с дубинкой" % who)
 	return lines
 

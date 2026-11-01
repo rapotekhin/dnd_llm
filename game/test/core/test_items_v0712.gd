@@ -21,7 +21,7 @@ func _hero(preset_id: String) -> GameSession:
 
 
 func _fight(s: GameSession, monster: String, col: int = 0) -> Dictionary:
-	CombatRules.start(s, data, [{"monster": monster, "col": col}], {})
+	TestUtils.fight(s, data, [{"monster": monster, "col": col}], {})
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)

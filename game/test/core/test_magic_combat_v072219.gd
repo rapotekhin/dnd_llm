@@ -48,9 +48,8 @@ func test_the_shield_hint_uses_the_hits_own_roll() -> void:
 
 func test_a_thrown_dagger_is_thrown_once() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "cult_fanatic", "name": "Жрец Пепла", "col": 2}], {})
+	TestUtils.fight(s, data, [{"monster": "cult_fanatic", "name": "Жрец Пепла", "col": 2}], {})
 	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
-	f["col"] = int(CombatRules.player(s)["col"]) + 2
 	s.character["hp"] = 999
 	s.character["max_hp"] = 999
 	var dagger := MonsterRules.pick(s, data, f, "ranged")
@@ -64,11 +63,11 @@ func test_a_thrown_dagger_is_thrown_once() -> void:
 
 func test_a_caster_heals_its_side_and_varies() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "acolyte", "name": "Служка", "col": 3}, {"monster": "goblin", "name": "Гоблин", "col": 3}], {})
+	TestUtils.fight(s, data, [{"monster": "acolyte", "name": "Служка", "col": 3}, {"monster": "goblin", "name": "Гоблин", "col": 3}], {})
 	var ids := CombatRules.enemies(s)
 	var priest := CombatRules.fighter(s, ids[0])
 	var gob := CombatRules.fighter(s, ids[1])
-	gob["col"] = int(priest["col"])
+	TestUtils.same_col(gob, priest)
 	gob["hp"] = 1
 	var lines: Array[String] = []
 	assert_bool(MonsterRules.cast_turn(s, data, priest, lines)).is_true()
@@ -76,9 +75,9 @@ func test_a_caster_heals_its_side_and_varies() -> void:
 	assert_str(" ".join(lines)).contains("на Гоблин")
 
 	var t := _hero()
-	CombatRules.start(t, data, [{"monster": "cult_fanatic", "name": "Жрец Пепла", "col": 0}], {})
+	TestUtils.fight(t, data, [{"monster": "cult_fanatic", "name": "Жрец Пепла", "col": 0}], {})
 	var fan := CombatRules.fighter(t, CombatRules.enemies(t)[0])
-	fan["col"] = int(CombatRules.player(t)["col"])
+	TestUtils.beside(t, fan)
 	fan["last_spell"] = "command"
 	var more: Array[String] = []
 	MonsterRules.cast_turn(t, data, fan, more)

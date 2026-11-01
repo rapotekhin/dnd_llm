@@ -55,7 +55,7 @@ func _hero(preset_id: String, level: int = 1) -> GameSession:
 
 
 func _fight(s: GameSession, foes: Array) -> Array[Dictionary]:
-	CombatRules.start(s, data, foes, {})
+	TestUtils.fight(s, data, foes, {})
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)
@@ -170,7 +170,7 @@ func test_vicious_mockery_hampers_the_next_attack() -> void:
 	var lines: Array[String] = []
 	ActionRules.riders(s, data, "vicious_mockery", 0, f, true, lines)
 	assert_bool(CombatRules._has(f, "mocked")).is_true()
-	f["col"] = 0
+	TestUtils.to_col(f, 0)
 	var turn: Array[String] = []
 	CombatRules._enemy_turn(s, data, f, turn)
 	assert_bool(CombatRules._has(f, "mocked")).is_false()
@@ -214,10 +214,10 @@ func test_acid_arrow_burns_later_and_splashes_on_a_miss() -> void:
 func test_lightning_bolt_is_a_line() -> void:
 	var s := _hero("wizard_yalika")
 	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 3}, {"monster": "goblin", "col": -1}])
-	var near: Dictionary = foes.filter(func(f: Dictionary) -> bool: return int(f["col"]) == 1)[0]
+	var near: Dictionary = foes.filter(func(f: Dictionary) -> bool: return TestUtils.col_of(f) == 1)[0]
 	var hit := CombatRules.area_targets(s, data, data["spells"]["lightning_bolt"], near)
 	assert_int(hit.size()).is_equal(2)  # 1 and 3 (90 ft) on the line; the one behind is not
-	assert_bool(hit.all(func(f: Dictionary) -> bool: return int(f["col"]) > 0)).is_true()
+	assert_bool(hit.all(func(f: Dictionary) -> bool: return TestUtils.col_of(f) > 0)).is_true()
 
 
 func test_acid_splash_takes_a_second_neighbour() -> void:
@@ -474,7 +474,7 @@ func test_misty_step_moves_away_without_leaving_an_effect() -> void:
 	_learn(s, "misty_step")
 	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
 	var lines := CombatRules.player_cast(s, data, "misty_step", 2, "")
-	assert_int(int(CombatRules.player(s)["col"])).is_not_equal(int(f["col"]))
+	assert_int(FightGrid.dist(CombatRules.player(s), f)).is_greater(1)
 	assert_array(SpellEffects.hero_effects(s.character, "teleport")).is_empty()
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("туманом"))).is_true()
 
@@ -598,14 +598,14 @@ func test_moonbeam_burns_who_starts_in_it_and_moves() -> void:
 	var s := _hero("druid_olha", 3)
 	var foes := _fight(s, [{"monster": "ogre", "col": 2}, {"monster": "goblin", "col": 3}])
 	_cast_at(s, "moonbeam", 2, str(foes[0]["id"]))
-	assert_array(SpellEffects.zone_names(s, 2)).contains(["Лунный луч"])
+	assert_array(TestUtils.zones_on(s, foes[0])).contains(["Лунный луч"])
 	var hp := int(foes[0]["hp"])
 	var lines := SpellEffects.zone_tick(s, data, foes[0], "start")
 	assert_int(int(foes[0]["hp"])).override_failure_message(" · ".join(lines)).is_less_equal(hp)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("спасбросок Тел"))).is_true()
 	s.combat["economy"]["action"] = 1
 	FeatureRules.act(s, data, "spell_moonbeam", str(foes[1]["id"]))
-	assert_array(SpellEffects.zone_names(s, 3)).contains(["Лунный луч"])
+	assert_array(TestUtils.zones_on(s, foes[1])).contains(["Лунный луч"])
 	ConditionRules.end_concentration(s, data, "проверка")
 	assert_array(SpellEffects.zones(s)).is_empty()
 
@@ -614,20 +614,17 @@ func test_spirit_guardians_follow_and_slow() -> void:
 	var s := _hero("cleric_branko", 5)
 	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
 	_cast_at(s, "spirit_guardians", 3, "")
-	assert_array(SpellEffects.zone_names(s, 0)).contains(["Духовные стражи"])
-	assert_bool(SpellEffects.slowed(s, f)).is_true()
-	CombatRules.player(s)["col"] = 1
-	assert_array(SpellEffects.zone_names(s, 1)).contains(["Духовные стражи"])
-	assert_bool(SpellEffects.slowed(s, f)).is_false()
+	assert_array(TestUtils.zones_on(s, f)).contains(["Духовные стражи"])
+	assert_bool(TestUtils.slowed(s, f)).is_true()
+	FightGrid.put(CombatRules.player(s), FightGrid.cell(CombatRules.player(s)) + Vector2i(6, 0))
+	assert_array(TestUtils.zones_on(s, CombatRules.player(s))).contains(["Духовные стражи"])
+	assert_bool(TestUtils.slowed(s, f)).is_false()
 
 
 func test_spike_growth_hurts_who_walks_in() -> void:
 	var s := _hero("druid_olha", 3)
 	var f := _fight(s, [{"monster": "ogre", "col": 2}])[0]
 	_cast_at(s, "spike_growth", 2, str(f["id"]))
-	f["col"] = 1
-	var zone: Dictionary = SpellEffects.zones(s)[0]
-	zone["col"] = 1
 	var hp := int(f["hp"])
 	var lines := SpellEffects.zone_tick(s, data, f, "enter")
 	assert_int(int(f["hp"])).override_failure_message(" · ".join(lines)).is_less(hp)
@@ -664,9 +661,9 @@ func test_grease_lays_them_down() -> void:
 	var s := _hero("wizard_yalika", 3)
 	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
 	s.character["spell_dc"] = 40
-	var lines := _cast_at(s, "grease", 1, str(foes[0]["id"]))
+	var lines := _cast_at(s, "grease", 1, str(foes[1]["id"]))
 	assert_bool(foes.all(func(f: Dictionary) -> bool: return CombatRules._has(f, "prone"))).override_failure_message(" · ".join(lines)).is_true()
-	assert_bool(SpellEffects.slowed(s, foes[0])).is_true()
+	assert_bool(TestUtils.slowed(s, foes[0])).is_true()
 
 
 func test_fog_and_darkness_blind_the_column() -> void:
@@ -675,7 +672,7 @@ func test_fog_and_darkness_blind_the_column() -> void:
 	_cast_at(s, "fog_cloud", 1, str(f["id"]))
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "")
 	assert_bool((CombatRules._attack_mods(s, data, w, f)["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_true()
-	CombatRules.player(s)["col"] = 1  # both inside: they cancel
+	FightGrid.put(CombatRules.player(s), FightGrid.cell(f) + Vector2i(1, 0))  # both inside: they cancel
 	assert_bool((CombatRules._attack_mods(s, data, w, f)["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_false()
 
 
@@ -686,7 +683,7 @@ func test_silence_stops_spells_inside() -> void:
 	_learn(s, "guiding_bolt")
 	s.combat["economy"]["action"] = 1
 	assert_str(CombatRules.can_cast(s, data, "guiding_bolt", 1, str(f["id"]))).is_equal("COMBAT_SILENCED")
-	assert_bool(SpellEffects.silenced(s, int(f["col"]))).is_true()
+	assert_bool(SpellEffects.silenced(s, data, f)).is_true()
 
 
 func test_stinking_cloud_takes_the_turn() -> void:
@@ -704,9 +701,8 @@ func test_stinking_cloud_takes_the_turn() -> void:
 func test_wind_wall_stops_arrows_and_gust_pushes() -> void:
 	var s := _hero("druid_olha", 5)
 	var foes := _fight(s, [{"monster": "goblin", "col": 3}])
-	var wall := _cast_at(s, "wind_wall", 3, str(foes[0]["id"]))
-	(SpellEffects.zones(s)[0] as Dictionary)["col"] = 1
-	assert_str(SpellEffects.wall_between(s, 3, 0)).is_not_empty()
+	var wall := _cast_at(s, "wind_wall", 3, FightGrid.aim_id(FightGrid.cell(CombatRules.player(s)) + Vector2i(6, 0)))
+	assert_str(SpellEffects.wall_between(s, data, foes[0], CombatRules.player(s))).is_not_empty()
 	var lines: Array[String] = []
 	CombatRules._enemy_turn(s, data, foes[0], lines)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("Стена ветра"))).override_failure_message(" · ".join(lines) + " | " + " · ".join(wall)).is_true()
@@ -714,7 +710,7 @@ func test_wind_wall_stops_arrows_and_gust_pushes() -> void:
 	var gf := _fight(g, [{"monster": "goblin", "col": 1}])[0]
 	g.character["spell_dc"] = 40
 	_cast_at(g, "gust_of_wind", 2, str(gf["id"]))
-	assert_int(int(gf["col"])).is_equal(2)
+	assert_int(FightGrid.dist(gf, CombatRules.player(g))).is_equal(9)  # 15 ft from 30
 
 
 func test_faerie_fire_slow_ray_and_curse() -> void:

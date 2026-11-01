@@ -79,7 +79,7 @@ func run() -> void:
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)
 	await press(find(screen(), "Exit_brod-den"))
-	var fought := await wait_until(func() -> bool: return screen_is("CombatScreen") or s.mode == GameSession.MODE_COMBAT, 60.0)
+	var fought := await wait_until(func() -> bool: return screen_is("fight") or s.mode == GameSession.MODE_COMBAT, 60.0)
 	step("the Rats' guards fall on the hero, the town's guard not", fought and s.crimes.is_empty() and s.wanted.is_empty(), _chat(s))
 	await frames(6)
 	await shot("den_fight")

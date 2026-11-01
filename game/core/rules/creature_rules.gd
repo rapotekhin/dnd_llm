@@ -200,7 +200,7 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 			lines.append_array(ReputationRules.add(s, data, loc, int(cfg(data)["hand_over_reputation"]), "сдал страже пленника: %s" % c["name"]))
 			return lines
 		"attack":
-			var spec := {"id": id, "monster": str(c["monster"]), "name": str(c["name"]), "col": 0, "by_hero": true,
+			var spec := {"id": id, "monster": str(c["monster"]), "name": str(c["name"]), "by_hero": true,
 				"no_xp": bool(c.get("xp_given", false))}
 			if c.has("hp"):
 				spec["hp"] = int(c["hp"])

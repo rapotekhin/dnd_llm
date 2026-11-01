@@ -271,7 +271,6 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 	if not f.is_empty() and s.rng.randf() < float(f.get("chance", 0.0)):
 		for i in (f.get("foes", []) as Array).size():
 			var foe: Dictionary = (f["foes"][i] as Dictionary).duplicate()
-			foe["col"] = int(foe.get("col", 0))
 			fight.append(foe)
 		lines.append(str(f.get("line", "На смене — нападение!")))
 	var event := ""

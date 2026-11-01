@@ -34,10 +34,10 @@ func run() -> void:
 			await shot("no_exit_" + room)
 			return
 		await press(exit)
-		await wait_until(func() -> bool: return not gs.is_busy() or screen_is("CombatScreen"), 60.0)
-	if not screen_is("CombatScreen"):
+		await wait_until(func() -> bool: return not gs.is_busy() or screen_is("fight"), 60.0)
+	if not screen_is("fight"):
 		walk_to_foes()  # they stand on the map, a fight begins when they see the hero
-	if not step("the wolves attack: combat screen", await wait_until(func() -> bool: return screen_is("CombatScreen"), 10.0)):
+	if not step("the wolves attack: combat screen", await wait_until(func() -> bool: return screen_is("fight"), 10.0)):
 		await shot("no_combat")
 		return
 	await wait_until(func() -> bool: return not gs.is_busy(), 120.0)
@@ -63,7 +63,7 @@ func run() -> void:
 			await shot("combat_mid")
 		if not (s.combat.get("incoming", []) as Array).is_empty() and not _incoming_shot:
 			_incoming_shot = true
-			step("reinforcements shown grey at the edge", find(screen(), "Incoming_%d" % int(s.combat["incoming"][0]["col"])) != null, str(s.combat["incoming"][0]["names"]))
+			step("reinforcements shown grey at the edge", find(screen(), "Incoming") != null, str(s.combat["incoming"][0]["names"]))
 			await shot("combat_incoming")
 	await wait_until(func() -> bool: return not gs.is_busy(), 120.0)
 	var outcome := str(s.combat.get("outcome", "")) if CombatRules.active(s) else "?"
@@ -78,7 +78,7 @@ func run() -> void:
 		if step("load before the fight", load_btn != null and not load_btn.disabled):
 			await press(load_btn)
 			var again: GameSession = gs.session
-			var fighting := func() -> bool: return screen_is("CombatScreen") and CombatRules.active(gs.session) and str(gs.session.combat.get("outcome", "")).is_empty()
+			var fighting := func() -> bool: return screen_is("fight") and CombatRules.active(gs.session) and str(gs.session.combat.get("outcome", "")).is_empty()
 			step("the same fight starts again", await wait_until(fighting, 60.0), "room %s, encounters done %s" % [again.room_id, again.encounters_done])
 			await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 			await shot("fight_again")
@@ -117,7 +117,7 @@ func _player_turn(gs: Node, s: GameSession) -> void:
 			card.mouse_entered.emit()
 			await frames(2)
 			var hint: Label = find(game, "Hint")
-			step("hit hint on hover", hint != null and (hint.text.contains("%") or hint.text.contains("Не достать")), hint.text if hint != null else "")
+			step("hit hint on hover", hint != null and (hint.text.contains("%") or hint.text.contains("Не достать") or hint.text.contains("Цели не видно")), hint.text if hint != null else "")
 			await shot("combat_hint")
 	if road and not _parleyed:
 		_parleyed = true
@@ -128,28 +128,23 @@ func _player_turn(gs: Node, s: GameSession) -> void:
 				step("info: parley", true, " | ".join((s.combat.get("log", []) as Array).slice(-3)))
 				if not str(s.combat.get("outcome", "")).is_empty() or not CombatRules.player_can_act(s):
 					return
-	var pcol := int(CombatRules.player(s)["col"])
 	var near := ""
-	var best := 99
+	var best := 1 << 20
 	for id: String in CombatRules.enemies(s):
-		var d := absi(int(CombatRules.fighter(s, id)["col"]) - pcol)
+		var d := FightGrid.dist(CombatRules.fighter(s, id), CombatRules.player(s))
 		if d < best:
 			best = d
 			near = id
 	if near.is_empty():
 		return
-	if best > 0:
-		var dir := 1 if int(CombatRules.fighter(s, near)["col"]) > pcol else -1
-		var mv: Button = find(game, "MoveRight" if dir > 0 else "MoveLeft")
-		if mv != null and not mv.disabled:
-			await press(mv)
-		if absi(int(CombatRules.fighter(s, near)["col"]) - int(CombatRules.player(s)["col"])) > 0:
+	if best > 1:
+		var data: Dictionary = node("Catalog").data
+		await walk_up(s, data, near)
+		if FightGrid.dist(CombatRules.fighter(s, near), CombatRules.player(s)) > 1:
 			var dash: Button = find(game, "Do_dash")
 			if dash != null and not dash.disabled:
 				await press(dash)
-				var mv2: Button = find(screen(), "MoveRight" if dir > 0 else "MoveLeft")
-				if mv2 != null and not mv2.disabled:
-					await press(mv2)
+				await walk_up(s, data, near)
 	for i in 3:
 		if not CombatRules.active(s) or not str(s.combat.get("outcome", "")).is_empty():
 			return

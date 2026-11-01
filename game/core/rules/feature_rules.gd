@@ -188,9 +188,8 @@ static func _open_hand(s: GameSession, data: Dictionary, t: Dictionary, how: Str
 		"push":
 			var ok := CombatRules._monster_save(s, data, t, "str", dc)
 			if not ok:
-				var away := 1 if int(t["col"]) >= int(CombatRules.player(s)["col"]) else -1
-				t["col"] = clampi(int(t["col"]) + away, -CombatRules.edge(data), CombatRules.edge(data))
-			lines.append("Открытая ладонь: %s — Сил против Сл %d — %s" % [t["name"], dc, "устоял" if ok else "отброшен на 30 фт"])
+				CombatRules.push_away(s, data, t, 15)
+			lines.append("Открытая ладонь: %s — Сил против Сл %d — %s" % [t["name"], dc, "устоял" if ok else "отброшен на 15 фт"])
 		"stagger":
 			t["reacted"] = true
 			lines.append("Открытая ладонь: %s до конца хода без реакций" % t["name"])
@@ -237,7 +236,7 @@ static func reactions(s: GameSession, data: Dictionary, f: Dictionary, a: Dictio
 	out.append_array(SpellEffects.hit_reactions(s, data, {"total": int(hit.get("total", total_of(a, f))), "ac": int(hit.get("ac", c.get("ac", 10))),
 		"nat20": bool(hit.get("nat20", false)), "dmg": dmg}))  # v0.7.13.7
 	if has(c, "hunters_prey_giant_killer") and CombatRules.SIZES.find(str(CombatRules._monster(data, f).get("size", "medium"))) >= 3 \
-			and CombatRules.cols_between(f, CombatRules.player(s)) == 0:
+			and FightGrid.touching(f, CombatRules.player(s)):
 		out.append({"id": "giant_killer", "label": "Убийца великанов: удар в ответ"})
 	return out
 
@@ -356,8 +355,8 @@ static func can_act(s: GameSession, data: Dictionary, id: String, target_id: Str
 		var t := CombatRules.fighter(s, target_id)
 		if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
 			return "COMBAT_BAD_TARGET"
-		var reach := 0 if id != "breath" else (1 if breath_shape(c, data) == "line" else 0)
-		if absi(CombatRules.shown_col(t) - int(CombatRules.player(s)["col"])) > reach:
+		var reach := 1 if id != "breath" else FightGrid.squares_of(data, int(_breath_area(c, data)["size"]))
+		if FightGrid.shown_dist(CombatRules.player(s), t) > reach:
 			return "COMBAT_OUT_OF_REACH"
 	return ""
 
@@ -396,7 +395,7 @@ static func _do(s: GameSession, data: Dictionary, fx: Dictionary, target_id: Str
 			CombatRules.player(s)[str(fx["key"])] = true
 		"dash":
 			var e := CombatRules.economy(s)
-			e["move"] = int(e.get("move", 0)) + CombatRules._move_cols(int(c.get("speed", 30)), data)
+			e["move"] = int(e.get("move", 0)) + FightGrid.steps_of(data, int(c.get("speed", 30)))
 		"for":
 			s.combat[str(fx["key"])] = fx["value"]
 		"line":
@@ -424,7 +423,7 @@ static func _hook(s: GameSession, data: Dictionary, id: String, target_id: Strin
 		"stunning":
 			var wid := str(c.get("equipped", {}).get("main_hand", ""))
 			var w := CombatRules.weapon_profile(c, data, s.items, wid)
-			if CombatRules.cols_between(CombatRules.player(s), CombatRules.fighter(s, target_id)) > 0 or not bool(w["melee"]):
+			if not FightGrid.touching(CombatRules.player(s), CombatRules.fighter(s, target_id)) or not bool(w["melee"]):
 				w = CombatRules.unarmed_profile(c, data)
 			if int(e.get("attacks", 0)) > 0:
 				e["attacks"] = int(e["attacks"]) - 1
@@ -463,7 +462,7 @@ static func _turn(s: GameSession, data: Dictionary, types: Array, destroy: bool)
 	for id: String in CombatRules.enemies(s):
 		var f := CombatRules.fighter(s, id)
 		var m := CombatRules._monster(data, f)
-		if not types.has(str(m.get("type", ""))) or CombatRules.cols_between(f, CombatRules.player(s)) > 1:
+		if not types.has(str(m.get("type", ""))) or FightGrid.feet(data, f, CombatRules.player(s)) > 30:
 			continue
 		any = true
 		if CombatRules._monster_save(s, data, f, "wis", dc, ["magic"]):
@@ -649,7 +648,12 @@ static func breath_text(c: Dictionary, data: Dictionary) -> String:
 		"Тел" if breath_type(c, data) in ["cold", "poison"] else "Лов", 8 + ab_mod(c, "con") + CharacterRules.prof_bonus(c, data)]
 
 
-## The dragonborn's breath on the column of `target_id` (a line reaches one column away, a cone — the hero's own). Lines.
+## The shape of the dragonborn's breath by 5e.
+static func _breath_area(c: Dictionary, data: Dictionary) -> Dictionary:
+	return {"type": "line", "size": 30} if breath_shape(c, data) == "line" else {"type": "cone", "size": 15}
+
+
+## The dragonborn's breath towards `target_id`: its shape from the hero, on who stands there. Lines.
 static func _breath(s: GameSession, data: Dictionary, target_id: String) -> Array[String]:
 	var c := s.character
 	c["breath_used"] = true
@@ -657,12 +661,13 @@ static func _breath(s: GameSession, data: Dictionary, target_id: String) -> Arra
 	var ab := "con" if dtype in ["cold", "poison"] else "dex"
 	var dc := 8 + ab_mod(c, "con") + CharacterRules.prof_bonus(c, data)
 	var dice := "%dd6" % (2 if level(c) < 6 else 3)
-	var col := int(CombatRules.fighter(s, target_id)["col"])
+	var me := CombatRules.player(s)
+	var cells := FightGrid.area(s, data, _breath_area(c, data), FightGrid.cell(me), FightGrid.cell(CombatRules.aimed(s, target_id)), true)
 	var full := CombatRules.roll_dice(s.rng, dice)
 	var lines: Array[String] = ["%s выдыхает %s" % [c.get("name", ""), data["misc"]["damage_types"].get(dtype, dtype)]]
 	for id: String in CombatRules.enemies(s):
 		var f := CombatRules.fighter(s, id)
-		if int(f["col"]) != col:
+		if not FightGrid.in_cells(f, cells):
 			continue
 		var ok := CombatRules._monster_save(s, data, f, ab, dc)
 		var dmg := CombatRules._resist(data, f, dtype, full / 2 if ok else full)

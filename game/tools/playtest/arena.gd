@@ -46,7 +46,7 @@ func run() -> void:
 	await shot("arena_bout")
 	var gold_before := int(c["gold_cp"])
 	await press(find(win, "ArenaFight"))
-	if not step("the bout starts", await wait_until(func() -> bool: return screen_is("CombatScreen") and CombatRules.active(s), 30.0)):
+	if not step("the bout starts", await wait_until(func() -> bool: return screen_is("fight") and CombatRules.active(s), 30.0)):
 		return
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)
@@ -146,7 +146,7 @@ func run() -> void:
 	step("the duel's estimate", co != null and co.text.contains("Поединок"), co.text if co != null else "")
 	await shot("duel_setup")
 	await press(find(cw, "ContestPlay"))
-	if step("the duel is a fight", await wait_until(func() -> bool: return screen_is("CombatScreen") and CombatRules.active(s), 30.0)):
+	if step("the duel is a fight", await wait_until(func() -> bool: return screen_is("fight") and CombatRules.active(s), 30.0)):
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		var o := await _fight(gs, s)
 		step("the duel ended without a death", o in ["victory", "arena_lost"], o)
@@ -192,14 +192,8 @@ func _fight(gs: Node, s: GameSession) -> String:
 		if foes.is_empty():
 			break
 		var near := foes[0]
-		var dir := 1 if int(CombatRules.fighter(s, near)["col"]) > int(CombatRules.player(s)["col"]) else -1
-		for i in 2:
-			if CombatRules.cols_between(CombatRules.player(s), CombatRules.fighter(s, near)) == 0:
-				break
-			var mv: Button = find(screen(), "MoveRight" if dir > 0 else "MoveLeft")
-			if mv == null or mv.disabled:
-				break
-			await press(mv)
+		if FightGrid.dist(CombatRules.player(s), CombatRules.fighter(s, near)) > 1:
+			await walk_up(s, data, near)
 		for i in 2:
 			if not str(s.combat.get("outcome", "")).is_empty() or not CombatRules.can_attack(s, data, near).is_empty():
 				break

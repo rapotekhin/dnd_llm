@@ -51,7 +51,7 @@ func run() -> void:
 	s.character["max_hp"] = 200
 	gs.start_combat(enc["enemies"], {"encounter": "burrow_priest", "room_from": "pushcha-glade", "allies": [{"monster": "scout", "name": "Ждан из ополчения"}, {"monster": "guard", "name": "Влада из ополчения"}], "parley": "hard"})
 	if not step("the burrow fight", await wait_until(func() -> bool:
-			return screen_is("CombatScreen") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
+			return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
 		return
 	await frames(3)
 	var ids := CombatRules.allies(s, false)

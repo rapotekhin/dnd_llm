@@ -63,7 +63,7 @@ func run() -> void:
 	await wait_until(func() -> bool: return not gs.is_busy() or s.mode == GameSession.MODE_COMBAT, 60.0)
 	if s.mode != GameSession.MODE_COMBAT:
 		walk_to_foes()  # stopped at the way in, the wolves stand further on
-	var fought := await wait_until(func() -> bool: return screen_is("CombatScreen") or s.mode == GameSession.MODE_COMBAT, 60.0)
+	var fought := await wait_until(func() -> bool: return screen_is("fight") or s.mode == GameSession.MODE_COMBAT, 60.0)
 	step("stopped on the trail: the fight", fought and s.room_id == "pushcha-trail", "%s, mode %s" % [s.room_id, s.mode])
 	await shot("stopped_by_wolves")
 

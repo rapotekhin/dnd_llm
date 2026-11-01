@@ -21,6 +21,7 @@ func _init() -> void:
 		quit()
 		return
 	var enc := {}
+	var room := ""
 	if enc_id.begins_with("foes:"):
 		var foes: Array = []
 		for part: String in enc_id.trim_prefix("foes:").split("+"):
@@ -30,6 +31,7 @@ func _init() -> void:
 		var e: Dictionary = data["world"]["rooms"][rid].get("encounter", {})
 		if str(e.get("id", "")) == enc_id:
 			enc = e
+			room = rid
 	if enc.is_empty():
 		print("no encounter ", enc_id)
 		quit(1)
@@ -43,6 +45,8 @@ func _init() -> void:
 		var hp_left := 0
 		for i in fights:
 			var s := TestUtils.new_session(1000 + i)
+			if not room.is_empty():
+				s.room_id = room  # the fight on the grid is on the map of its own place
 			_hero(s, data, p, level)
 			CombatRules.start(s, data, enc["enemies"], {"waves": enc.get("waves", []), "help": enc.get("help", {}), "ambush": enc.get("ambush", false),
 				"allies": [] if OS.get_environment("BALANCE_NO_ALLIES") == "1" else enc.get("allies", [])})
@@ -124,8 +128,8 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 			CombatRules.economy(s)["action"] = 0
 			lines.append_array(ItemRules.use(c, data, s.items, "healing_potion", s.rng))
 			return lines
-	if CombatRules.can_stand(s).is_empty():  # v0.7.9: get up, break out of a web or a coil
-		lines.append_array(CombatRules.stand(s))
+	if CombatRules.can_stand(s, data).is_empty():  # v0.7.9: get up, break out of a web or a coil
+		lines.append_array(CombatRules.stand(s, data))
 	if ConditionRules.has(c, "restrained") and CombatRules.can_escape(s).is_empty():
 		lines.append_array(CombatRules.escape(s, data))
 		return lines
@@ -133,7 +137,7 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 		var near := ""
 		var best := 99
 		for id: String in CombatRules.enemies(s):
-			var d := CombatRules.cols_between(CombatRules.player(s), CombatRules.fighter(s, id))
+			var d := FightGrid.dist(CombatRules.player(s), CombatRules.fighter(s, id))
 			if d < best:
 				best = d
 				near = id
@@ -153,11 +157,11 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 		if not cast.is_empty():
 			lines.append_array(CombatRules.player_cast(s, data, cast, 0, near))
 			continue
-		var dir := 1 if int(CombatRules.fighter(s, near)["col"]) > int(CombatRules.player(s)["col"]) else -1
 		if caster and not SpellRules.ready(c).is_empty():
 			return lines  # a caster waits for the foe to come, it does not walk into its teeth
-		if CombatRules.can_move(s, data, dir).is_empty() and best > 0:
-			lines.append_array(CombatRules.player_move(s, data, dir))
+		var to := CombatRules.closest_stop(s, data, near)
+		if to != FightGrid.NONE and best > 1:
+			lines.append_array(CombatRules.player_walk(s, data, to))
 			continue
 		return lines
 	return lines

@@ -26,7 +26,8 @@
 					"count": {"type": "integer", "minimum": 1, "maximum": 8},
 					"name": {"type": "string"},
 					"desc": {"type": "string"},
-					"col": {"type": "integer", "minimum": -3, "maximum": 3}
+					"x": {"type": "integer"},
+					"y": {"type": "integer"}
 				},
 				"additionalProperties": false
 			}

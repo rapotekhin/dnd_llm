@@ -51,13 +51,13 @@ func test_the_dead_and_the_knocked_out_do_not_fight() -> void:
 func test_a_wounded_npc_fights_with_its_wounds() -> void:
 	var s := _hero()
 	Being.of(s, "npc_mercenary")["hp"] = 3
-	CombatRules.start(s, data, [{"monster": "guard", "name": "Кейра", "npc_id": "npc_mercenary", "col": 0}], {})
+	TestUtils.fight(s, data, [{"monster": "guard", "name": "Кейра", "npc_id": "npc_mercenary", "col": 0}], {})
 	assert_int(int(CombatRules.fighter(s, CombatRules.enemies(s)[0])["hp"])).is_equal(3)
 
 
 func test_an_npc_foe_keeps_its_wounds_after_the_fight() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "guard", "name": "Кейра", "npc_id": "npc_mercenary", "col": 0}], {})
+	TestUtils.fight(s, data, [{"monster": "guard", "name": "Кейра", "npc_id": "npc_mercenary", "col": 0}], {})
 	CombatRules.fighter(s, CombatRules.enemies(s)[0])["hp"] = 4
 	AllyRules.after_fight(s)
 	assert_int(int(Being.of(s, "npc_mercenary")["hp"])).is_equal(4)
@@ -77,7 +77,7 @@ func test_a_creature_the_hero_ran_from_stays_with_its_wounds() -> void:
 	var id := str(CreatureRules.add(s, s.room_id, {"name": "Гоблин", "monster": "goblin", "state": "truce", "bound": false, "led": false, "hp": 6, "max_hp": 7})["id"])
 	CreatureRules.act(s, data, id, "attack")
 	assert_array(CreatureRules.here(s, s.room_id)).is_empty()
-	CombatRules.start(s, data, s.pending_fight, {})
+	TestUtils.fight(s, data, s.pending_fight, {})
 	CombatRules.fighter(s, CombatRules.enemies(s)[0])["hp"] = 2
 	CreatureRules.after_flight(s)
 	var c: Dictionary = CreatureRules.here(s, s.room_id)[0]

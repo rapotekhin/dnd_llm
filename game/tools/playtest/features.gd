@@ -28,7 +28,7 @@ func run() -> void:
 	s.settings["reactions"] = "ask"
 
 	# The paladin's hit: Divine Smite is asked.
-	gs.start_combat([{"monster": "ogre", "col": 0}])
+	gs.start_combat([{"monster": "ogre", "beside": true}])
 	if not step("a fight with an ogre", await _my_turn(gs, s)):
 		return
 	var ogre := CombatRules.fighter(s, CombatRules.enemies(s)[0])
@@ -61,7 +61,7 @@ func run() -> void:
 	cs = screen()
 	var breath: Button = find(cs, "Feat_breath")
 	step("the breath is a button of the features tab", breath != null, breath.tooltip_text if breath != null else "")
-	cs.call("set_filter", "COMBAT_TAB_FEATURES")
+	find(cs, "FightUi").call("set_filter", "COMBAT_TAB_FEATURES")
 	await frames(2)
 	await shot("features_tab")
 
@@ -91,7 +91,7 @@ func run() -> void:
 	gs.start(ds)
 	ds.settings["reactions"] = "ask"
 	await frames(5)
-	gs.start_combat([{"monster": "goblin", "col": 2}])
+	gs.start_combat([{"monster": "goblin"}])
 	if not step("a druid's fight", await _my_turn(gs, ds)):
 		return
 	gs.combat_feature("wild_shape")
@@ -119,7 +119,7 @@ func _my_turn(gs: Node, s: GameSession) -> bool:
 
 
 func _ready_for_me(gs: Node, s: GameSession) -> bool:
-	return screen_is("CombatScreen") and not gs.is_busy() and not gs.combat_playing \
+	return screen_is("fight") and not gs.is_busy() and not gs.combat_playing \
 		and (CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty())
 
 

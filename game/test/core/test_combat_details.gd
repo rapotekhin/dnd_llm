@@ -27,7 +27,7 @@ func _session(preset_id: String = "fighter_aira") -> GameSession:
 
 ## A fight where `first` acts first (the player by default): tests do not depend on the initiative roll.
 func _fight(s: GameSession, foes: Array, source: Dictionary = {}, first: String = CombatRules.PLAYER) -> Array[String]:
-	var lines := CombatRules.start(s, data, foes, source)
+	var lines := TestUtils.fight(s, data, foes, source)
 	var order: Array = s.combat["order"]
 	var who := TestUtils.foe(s, 1) if first == "foe" else first
 	order.erase(who)
@@ -111,7 +111,7 @@ func test_hiding_needs_distance_and_gives_advantage_until_the_attack() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 0}])
 	assert_str(CombatRules.can_hide(s, data)).is_equal("COMBAT_HIDE_SEEN")
-	CombatRules.fighter(s, TestUtils.foe(s, 1))["col"] = 2
+	TestUtils.to_col(CombatRules.fighter(s, TestUtils.foe(s, 1)), 2)
 	s.character["skills"]["stealth"] = 40
 	assert_str(CombatRules.can_hide(s, data)).is_empty()
 	var lines := CombatRules.player_hide(s, data)
@@ -168,7 +168,7 @@ func test_a_pack_wave_waits_at_the_edge_and_arrives_at_its_round() -> void:
 	assert_str("\n".join(lines)).contains("Подкрепление слева")
 	assert_array(s.combat["incoming"]).is_empty()
 	var newcomer := CombatRules.fighter(s, TestUtils.foe(s, 2))
-	assert_int(int(newcomer["col"])).is_equal(-3)
+	assert_int(int(newcomer["x"])).is_less(int(CombatRules.player(s)["x"]))
 	assert_str(str(newcomer["name"])).is_equal("Гоблин 2")
 	assert_array(s.combat["order"]).contains([TestUtils.foe(s, 2)])
 
@@ -184,7 +184,7 @@ func test_a_hurt_intelligent_foe_calls_for_help_once() -> void:
 	assert_str("\n".join(lines)).contains("зовёт на помощь")
 	assert_array(s.combat["incoming"]).has_size(1)
 	assert_int(int(s.combat["incoming"][0]["at"])).is_equal(3)
-	assert_int(int(s.combat["incoming"][0]["col"])).is_equal(3)
+	assert_str(str(s.combat["incoming"][0]["side"])).is_equal("right")
 	_to_round(s, 2)
 	CombatRules.end_player_turn(s, data)
 	assert_str("\n".join(CombatRules.next_actor(s, data))).not_contains("зовёт на помощь")
@@ -198,7 +198,7 @@ func test_the_master_reinforces_within_the_budget() -> void:
 	assert_bool(ok["accepted"]).is_true()
 	fx.apply(s, "t-1", [ok["effect_id"]])
 	assert_array(s.combat["incoming"]).has_size(1)
-	assert_int(int(s.combat["incoming"][0]["col"])).is_equal(-3)
+	assert_str(str(s.combat["incoming"][0]["side"])).is_equal("left")
 	assert_int(int(s.combat["incoming"][0]["at"])).is_equal(2)
 	var heavy := fx.validate(s, data, "t-2", {"kind": "start_combat", "enemies": [{"monster": "wolf", "count": 2}]})
 	assert_str(str(heavy.get("reason", ""))).contains("не по силам")
@@ -412,6 +412,6 @@ func test_the_master_sees_the_hero_invisible() -> void:
 func test_a_fallen_foe_next_to_the_hero_gives_no_ranged_disadvantage() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "col": 0}, {"monster": "bandit", "col": 3}])
-	assert_bool(CombatRules._foe_in_column(s, data, CombatRules.player(s))).is_true()
+	assert_bool(CombatRules._foe_beside(s, data, CombatRules.player(s))).is_true()
 	CombatRules.fighter(s, TestUtils.foe(s, 1))["status"] = "dead"
-	assert_bool(CombatRules._foe_in_column(s, data, CombatRules.player(s))).is_false()
+	assert_bool(CombatRules._foe_beside(s, data, CombatRules.player(s))).is_false()

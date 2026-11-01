@@ -62,7 +62,7 @@ func test_a_fighter_is_the_record_with_its_id() -> void:
 	var s := _hero()
 	var id := str(CreatureRules.add(s, s.room_id, {"name": "Гоблин", "monster": "goblin", "state": "truce", "bound": false, "led": false, "since": 0, "hp": 3, "max_hp": 7})["id"])
 	CreatureRules.act(s, data, id, "attack")
-	CombatRules.start(s, data, s.pending_fight, {})
+	TestUtils.fight(s, data, s.pending_fight, {})
 	assert_array(CombatRules.enemies(s)).contains_exactly([id])
 	assert_dict(CombatRules.fighter(s, id)).is_same(Being.view(s, id)["fight"])
 	assert_int(int(CombatRules.fighter(s, id)["hp"])).is_equal(3)
@@ -70,7 +70,7 @@ func test_a_fighter_is_the_record_with_its_id() -> void:
 
 func test_an_npc_fights_under_its_own_id() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "commoner", "name": "Бруно", "npc_id": "npc_innkeeper"}], {})
+	TestUtils.fight(s, data, [{"monster": "commoner", "name": "Бруно", "npc_id": "npc_innkeeper"}], {})
 	assert_array(CombatRules.enemies(s)).contains_exactly(["npc_innkeeper"])
 	CombatRules.close(s)
 	assert_dict(s.beings).is_empty()
@@ -78,7 +78,7 @@ func test_an_npc_fights_under_its_own_id() -> void:
 
 func test_the_beaten_foe_stays_the_same_character() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "goblin", "name": "Гоблин"}], {})
+	TestUtils.fight(s, data, [{"monster": "goblin", "name": "Гоблин"}], {})
 	var id := TestUtils.foe(s, 1)
 	CombatRules.fighter(s, id)["status"] = "surrendered"
 	s.combat["outcome"] = "victory"
@@ -90,7 +90,7 @@ func test_the_beaten_foe_stays_the_same_character() -> void:
 
 func test_a_fight_leaves_no_one_it_did_not_keep() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "goblin", "name": "Гоблин", "count": 2}], {})
+	TestUtils.fight(s, data, [{"monster": "goblin", "name": "Гоблин", "count": 2}], {})
 	for id: String in CombatRules.enemies(s):
 		CombatRules.fighter(s, id)["status"] = "dead"
 	CombatRules.close(s)
@@ -109,7 +109,7 @@ func test_an_encounter_makes_its_heads_once() -> void:
 func test_foes_left_behind_keep_their_dead_and_wounds() -> void:
 	var s := _hero()
 	var heads := EncounterRules.heads(s, data, s.room_id, _wolves())
-	CombatRules.start(s, data, heads, {"encounter": "t_wolves"})
+	TestUtils.fight(s, data, heads, {"encounter": "t_wolves"})
 	var ids := CombatRules.enemies(s, false)
 	CombatRules.fighter(s, ids[0])["status"] = "dead"
 	CombatRules.fighter(s, ids[1])["hp"] = 2
@@ -117,7 +117,7 @@ func test_foes_left_behind_keep_their_dead_and_wounds() -> void:
 	var left := EncounterRules.heads(s, data, s.room_id, _wolves())
 	assert_int(left.size()).is_equal(2)
 	assert_int(int(Being.view(s, ids[1])["hp"])).is_equal(2)
-	CombatRules.start(s, data, left, {"encounter": "t_wolves"})
+	TestUtils.fight(s, data, left, {"encounter": "t_wolves"})
 	assert_int(int(CombatRules.fighter(s, ids[1])["hp"])).is_equal(2)
 	AllyRules.rest(s)
 	assert_bool(Being.view(s, ids[1]).has("hp")).is_false()
@@ -125,7 +125,7 @@ func test_foes_left_behind_keep_their_dead_and_wounds() -> void:
 
 func test_captors_are_the_foes_of_the_fight() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "bandit", "name": "Разбойник"}], {})
+	TestUtils.fight(s, data, [{"monster": "bandit", "name": "Разбойник"}], {})
 	var id := TestUtils.foe(s, 1)
 	CombatRules.fighter(s, id)["hp"] = 4
 	EncounterRules.capture(s, [id], "", "pushcha-edge")
@@ -136,7 +136,7 @@ func test_captors_are_the_foes_of_the_fight() -> void:
 
 func test_a_fight_comes_back_from_a_save() -> void:
 	var s := _hero()
-	CombatRules.start(s, data, [{"monster": "goblin", "name": "Гоблин"}], {})
+	TestUtils.fight(s, data, [{"monster": "goblin", "name": "Гоблин"}], {})
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(10))))
 	assert_array(CombatRules.enemies(back)).contains_exactly(CombatRules.enemies(s))
 	assert_int(typeof(CombatRules.fighter(back, TestUtils.foe(back, 1))["hp"])).is_equal(TYPE_INT)

@@ -23,10 +23,10 @@ func run() -> void:
 	s.character["hp"] = 200
 	s.character["max_hp"] = 200
 	s.room_id = "pushcha-hollow"
-	gs.start_combat([{"monster": "goblin", "col": 2}, {"monster": "goblin", "col": 2}], {"encounter": "t_targets", "room_from": "pushcha-trail",
-		"allies": [{"monster": "guard", "name": "Влада", "col": 0}, {"monster": "scout", "name": "Ждан", "col": 0}]})
+	gs.start_combat([{"monster": "goblin"}, {"monster": "goblin"}], {"encounter": "t_targets", "room_from": "pushcha-trail",
+		"allies": [{"monster": "guard", "name": "Влада", "beside": true}, {"monster": "scout", "name": "Ждан", "beside": true}]})
 	if not step("the fight", await wait_until(func() -> bool:
-			return screen_is("CombatScreen") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
+			return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
 		return
 	await frames(3)
 	var ids := CombatRules.allies(s)
@@ -58,12 +58,12 @@ func run() -> void:
 	await shot("blessed")
 	await press(find(screen(), "EndTurnButton"))
 	if not step("the hero's next turn", await wait_until(func() -> bool:
-			return screen_is("CombatScreen") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
+			return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
 		return
 	await frames(3)
 	var foe: String = CombatRules.enemies(s)[0]
 	var friend := CombatRules.fighter(s, ids[1])
-	friend["col"] = CombatRules.fighter(s, foe)["col"]
+	FightGrid.put(friend, FightGrid.free_near(s, node("Catalog").data, FightGrid.cell(CombatRules.fighter(s, foe)), 1))
 	var hp_before := int(friend["hp"])
 	var was := Stock.spent(s.character, "slot_3")
 	if not step("«Огненный шар» ready on the Spells tab", await wait_until(func() -> bool:

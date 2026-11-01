@@ -79,7 +79,7 @@ func _hero(gs: Node, data: Dictionary, preset_id: String) -> void:
 
 	# The fight: the first spell the engine lets the hero cast at the goblin or on itself.
 	c["temp_hp"] = 300
-	gs.start_combat([{"monster": "goblin", "col": 2}])
+	gs.start_combat([{"monster": "goblin"}])
 	if not step(preset_id + ": a fight", await _my_turn(gs, s)):
 		return
 	var foe := str(CombatRules.enemies(s)[0])
@@ -137,5 +137,5 @@ func _effects(s: GameSession, from: int) -> String:
 
 
 func _my_turn(gs: Node, s: GameSession) -> bool:
-	return await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy() and not gs.combat_playing \
+	return await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy() and not gs.combat_playing \
 		and (CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty()), 120.0)

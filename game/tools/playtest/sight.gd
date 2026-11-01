@@ -28,7 +28,7 @@ func run() -> void:
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	field = find(screen(), "Field")
-	step("the fog: not all of the map is seen", field.fog and not field.now.is_empty() and field.now.size() < int(field.map["w"]) * int(field.map["h"]), "%d squares" % field.now.size())
+	step("the view: the map is open and dimmed by it", field.dim and not field.now.is_empty(), "%d squares" % field.now.size())
 	await shot("day")
 
 	s.sneaking = true
@@ -76,7 +76,7 @@ func run() -> void:
 	var attack: Button = find(screen(), "Encounter_attack")
 	if step("the attack from hiding", attack != null and not attack.disabled):
 		await press(attack)
-		await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)
+		await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)
 		await frames(3)
 		step("the wolves caught off guard", CombatRules.active(s) and CombatRules.enemies(s).all(func(id: String) -> bool: return bool(CombatRules.fighter(s, id).get("surprised", false))))
 		s.combat = {}

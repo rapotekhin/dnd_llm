@@ -67,3 +67,88 @@ static func session_with_chat() -> GameSession:
 	s.append(GameSession.dm_entry("Ничего необычного.", s.next_turn_id()))
 	s.options = ["Подойти к стойке"]
 	return s
+
+
+## A fight on an open field, with the old way of saying where a foe stands: `col` 0 — beside the hero, n — n × 6 squares
+## (30 ft) to the side. The tests of the rules do not care for the map (v0.8.4).
+static func fight(s: GameSession, d: Dictionary, foes: Array, source: Dictionary = {}) -> Array[String]:
+	var src := source.duplicate()
+	if not src.has("field"):
+		src["field"] = {"w": 80, "h": 60}
+	var room := {"near": 0}
+	if src.has("allies"):  # without a col an ally stands by the hero, as the engine puts it
+		var placed: Array = (src["allies"] as Array).filter(func(a: Dictionary) -> bool: return a.has("col"))
+		var free: Array = (src["allies"] as Array).filter(func(a: Dictionary) -> bool: return not a.has("col"))
+		src["allies"] = _spots(d, placed, room) + free
+	return CombatRules.start(s, d, _spots(d, foes, room), src)
+
+
+## The specs with squares in place of old columns: each body of a count on a square of its own.
+static func _spots(d: Dictionary, foes: Array, room: Dictionary) -> Array:
+	var specs: Array = []
+	var hero := Vector2i(40, 30)
+	for spec: Dictionary in foes:
+		var one := spec.duplicate(true)
+		var col := int(one.get("col", 1))
+		var n := int(one.get("count", 1))
+		one.erase("col")
+		one.erase("count")
+		for i: int in n:
+			var two := one.duplicate(true)
+			if n > 1 and not one.has("name"):  # as the engine numbers a count
+				two["base"] = str(d["monsters"].get(str(one["monster"]), {}).get("name", ""))
+				two["name"] = "%s %d" % [two["base"], i + 1]
+			if col == 0:
+				var at: Vector2i = hero + FightGrid.CIRCLE[int(room["near"]) % 8]
+				room["near"] = int(room["near"]) + 1
+				two["x"] = at.x
+				two["y"] = at.y
+			else:
+				two["x"] = hero.x + col * 6
+				two["y"] = hero.y + int(room.get(col, 0))
+				room[col] = int(room.get(col, 0)) + 1
+			specs.append(two)
+	return specs
+
+
+## The hero walks one old column (30 ft) to a side.
+static func walk(s: GameSession, d: Dictionary, dir: int) -> Array[String]:
+	return CombatRules.player_walk(s, d, FightGrid.cell(CombatRules.player(s)) + Vector2i(6 * dir, 0))
+
+
+static func beside(s: GameSession, f: Dictionary) -> void:
+	FightGrid.put(f, FightGrid.free_near(s, data(), FightGrid.cell(CombatRules.player(s)) + Vector2i(1, 0), int(f.get("span", 1))))
+	if FightGrid.dist(f, CombatRules.player(s)) > 1:
+		FightGrid.put(f, FightGrid.cell(CombatRules.player(s)) + Vector2i(0, -1))
+
+
+static func same_col(f: Dictionary, o: Dictionary) -> void:
+	FightGrid.put(f, FightGrid.cell(o) + Vector2i(0, 1))
+
+
+static func to_col(f: Dictionary, col: int) -> void:
+	FightGrid.put(f, Vector2i(40 + col * 6, int(f.get("y", 30))))
+
+
+## The old column of a fighter: 0 — the hero's start.
+static func col_of(f: Dictionary) -> int:
+	return roundi((int(f.get("x", 40)) - 40) / 6.0)
+
+
+## The names of the zones over a fighter.
+static func zones_on(s: GameSession, f: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for z: Dictionary in SpellEffects.zone_view(s, data()):
+		if FightGrid.in_cells(f, z["cells"]):
+			out.append(str(z["name"]))
+	return out
+
+
+## The zones slow a fighter down where it stands.
+static func slowed(s: GameSession, f: Dictionary) -> bool:
+	return FightGrid.slow_cells(s, data(), str(f.get("side", "enemy"))).has(FightGrid.cell(f))
+
+
+## Old columns between two fighters: 0 — within reach.
+static func cols(a: Dictionary, b: Dictionary) -> int:
+	return 0 if FightGrid.dist(a, b) <= 1 else ceili(FightGrid.dist(a, b) / 6.0)

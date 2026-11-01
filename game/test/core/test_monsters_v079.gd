@@ -20,7 +20,7 @@ func _session(preset_id: String = "fighter_aira") -> GameSession:
 
 
 func _fight(s: GameSession, monster: String, col: int = 0) -> Dictionary:
-	CombatRules.start(s, data, [{"monster": monster, "col": col}], {})
+	TestUtils.fight(s, data, [{"monster": monster, "col": col}], {})
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)
@@ -175,7 +175,7 @@ func test_a_breath_in_reach_comes_first() -> void:
 	var s := _session()
 	var f := _fight(s, "dust_mephit")
 	assert_str(str(MonsterRules.save_action(s, data, f, 0).get("name_en", ""))).is_equal("Blinding Breath")
-	assert_dict(MonsterRules.save_action(s, data, f, 2)).is_empty()  # 15 ft does not reach 60
+	assert_dict(MonsterRules.save_action(s, data, f, 12)).is_empty()  # 15 ft does not reach 60
 
 
 func test_traits_of_monsters() -> void:
@@ -198,7 +198,7 @@ func test_traits_of_monsters() -> void:
 func test_a_charge_hits_harder_after_a_run() -> void:
 	var s := _session()
 	var f := _fight(s, "boar")
-	f["moved"] = 1
+	f["moved"] = 4
 	f["once"] = []
 	var out := MonsterRules.extra_on_hit(s, data, f, _action("boar", "Tusk"), false, false, false)
 	assert_int(int(out["damage"])).is_greater(0)

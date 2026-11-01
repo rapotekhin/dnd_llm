@@ -26,7 +26,7 @@ func run() -> void:
 	c["temp_hp"] = 500  # the hero lasts the whole scenario
 
 	# v0.7.13.1: Bless, then Bane over it.
-	gs.start_combat([{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
+	gs.start_combat([{"monster": "goblin"}, {"monster": "goblin"}])
 	if not step("a fight with goblins", await _my_turn(gs, s)):
 		return
 	var cs := screen()
@@ -50,7 +50,7 @@ func run() -> void:
 	await frames(2)
 	var bane: Button = find(cs, "Cast_bane")
 	var near := CombatRules.enemies(s).map(func(id: String) -> Dictionary: return CombatRules.fighter(s, id))
-	near.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return CombatRules.cols_between(a, CombatRules.player(s)) < CombatRules.cols_between(b, CombatRules.player(s)))
+	near.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return FightGrid.dist(a, CombatRules.player(s)) < FightGrid.dist(b, CombatRules.player(s)))
 	var goblin: Dictionary = near[0]
 	goblin["hidden"] = false
 	if step("Bane on the tab", bane != null):
@@ -113,7 +113,7 @@ func run() -> void:
 	c["temp_hp"] = 500
 	ConditionRules.remove(c, "unconscious")
 	ConditionRules.remove(c, "prone")
-	gs.start_combat([{"monster": "wolf", "col": 0}])
+	gs.start_combat([{"monster": "wolf", "beside": true}])
 	if not step("a fight with a wolf", await _my_turn(gs, s)):
 		return
 	c["slots_max"] = [4, 3, 3, 0, 0]  # a level-1 cleric lent third-circle slots for the test
@@ -185,7 +185,7 @@ func run() -> void:
 		if yes2 != null:
 			await press(yes2)
 			await frames(4)
-	step("the beam on the field", not SpellEffects.zone_names(s, int(wolf["col"])).is_empty(), _tail(3))
+	step("the beam on the field", not _zones_on(s, wolf).is_empty(), _tail(3))
 	c["slots_max"] = [4, 3, 3, 0, 0]  # the cast refreshed the sheet (a level-1 cleric again)
 	node("EventBus").state_changed.emit()
 	await frames(3)
@@ -219,8 +219,8 @@ func run() -> void:
 		await frames(2)
 		await press(find(cs, "Foe_" + str(wolf["id"])))
 		await frames(4)
-	step("Grease on the field, Moonbeam kept", SpellEffects.zone_names(s, int(wolf["col"])).size() >= 2 and str(c.get("concentration", "")) == "moonbeam",
-		", ".join(SpellEffects.zone_names(s, int(wolf["col"]))) + " | " + _tail(3))
+	step("Grease on the field, Moonbeam kept", _zones_on(s, wolf).size() >= 2 and str(c.get("concentration", "")) == "moonbeam",
+		", ".join(_zones_on(s, wolf)) + " | " + _tail(3))
 	await shot("grease")
 	# v0.7.13.7: the reaction window lists Shield next to the hit (the window itself is the features playtest's).
 	_learn(c, ["shield"])
@@ -264,13 +264,22 @@ func _learn(c: Dictionary, ids: Array) -> void:
 
 
 func _tab(cs: Control, key: String) -> void:
-	cs.call("set_filter", key)
+	find(cs, "FightUi").call("set_filter", key)
 
 
 func _my_turn(gs: Node, s: GameSession) -> bool:
-	return await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy() and not gs.combat_playing \
+	return await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy() and not gs.combat_playing \
 		and (CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty()), 120.0)
 
 
 func _tail(n: int) -> String:
 	return " · ".join(_seen.slice(maxi(0, _seen.size() - n)))
+
+
+## The zones over a body.
+func _zones_on(s: GameSession, f: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for z: Dictionary in SpellEffects.zone_view(s, node("Catalog").data):
+		if FightGrid.in_cells(f, z["cells"]):
+			out.append(str(z["name"]))
+	return out

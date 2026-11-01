@@ -407,7 +407,7 @@ const LABELS = {
 	services: 'услуги', heir: 'наследник', giver: 'заказчик', offer_text: 'текст предложения', offer_items: 'выдаёт вещи',
 	steps: 'шаги', when: 'условие', action: 'кнопка', done_text: 'итог (для мастера)', reward_cp: 'награда, мм', major: 'опасное',
 	settlement: 'поселение', law: 'закон', terrain: 'местность', lit: 'освещено', summary: 'кратко', story: 'история', choices: 'выбор',
-	count: 'число', col: 'колонка', id: 'id', text: 'текст', dc: 'СЛ', skill: 'навык', trap: 'ловушка', round: 'раунд', side: 'сторона',
+	count: 'число', x: 'x', y: 'y', id: 'id', text: 'текст', dc: 'СЛ', skill: 'навык', trap: 'ловушка', round: 'раунд', side: 'сторона',
 };
 
 /* ---------------- the app ---------------- */

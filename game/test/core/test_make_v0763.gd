@@ -80,7 +80,7 @@ func test_a_made_status_works_on_a_foe() -> void:
 	var s := _hero()
 	var id := str(_made(s, {"kind": "make", "what": "status", "key": "k", "name": "Морок", "text": "Промахивается.",
 		"parts": [{"part": "attack", "value": "disadvantage"}, {"part": "speed", "amount": -10}]})["id"])
-	CombatRules.start(s, data, [{"monster": "goblin"}], {})
+	TestUtils.fight(s, data, [{"monster": "goblin"}], {})
 	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	CombatRules._add_condition(s, f, id, {"rounds": 3})
 	assert_array(ConditionRules.attack(data, f, {}, true)["dis"]).contains(["Морок"])

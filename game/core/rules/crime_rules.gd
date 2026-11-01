@@ -427,7 +427,7 @@ static func defenders(s: GameSession, data: Dictionary, foes: Array) -> Array:
 		if not guards.has(id) and not tags.any(func(t: Variant) -> bool: return (d["tags"] as Array).has(t)):
 			continue
 		out.append({"monster": str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"])), "name": str(n.get("name", id)),
-			"desc": str(n.get("description", "")), "npc_id": id, "col": 1, "by_hero": true, "law": guards.has(id)})
+			"desc": str(n.get("description", "")), "npc_id": id, "by_hero": true, "law": guards.has(id)})
 	return out
 
 
@@ -607,12 +607,12 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 			lines.append_array(_settle(s, data, loc))
 		"resist":
 			var foes: Array = [{"monster": str(l.get("guard_monster", "guard")), "count": int(cfg(data)["patrol_size"]),
-				"name": str(l.get("guard_name", "Стражник")), "col": 1, "by_hero": true, "law": true}]
+				"name": str(l.get("guard_name", "Стражник")), "by_hero": true, "law": true}]
 			for id: String in s.npcs_here(world.world, s.room_id):
 				if (l.get("guards", []) as Array).has(id):
 					var n := world.npc(id)
 					foes.append({"monster": str(n.get("monster", "guard")), "name": str(n.get("name", id)), "desc": str(n.get("description", "")),
-						"npc_id": id, "col": 1, "by_hero": true, "law": true})
+						"npc_id": id, "by_hero": true, "law": true})
 			s.pending_fight = foes
 			lines.append_array(let_go(s, data, "Вы сопротивляетесь страже"))  # fought free — no new patrol at once (big test #6)
 	return lines

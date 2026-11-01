@@ -702,7 +702,7 @@ static func _plan_encounter(data: Dictionary, e: Dictionary, tier: String, level
 		xp += int(data["monsters"][mid]["xp"]) * cnt
 		var named := not _str(f, "name").strip_edges().is_empty()
 		enemies.append({"monster": mid, "count": cnt, "name": _str(f, "name").strip_edges().left(60) if named else str(data["monsters"][mid]["name"]),
-			"desc": _str(f, "desc").left(200), "col": 3, "named": named})
+			"desc": _str(f, "desc").left(200), "named": named})
 	if enemies.is_empty() or enemies.size() > 4:
 		return {"reason": "бой %s: враги — 1–4 вида (enemies: [{monster, count}])" % key}
 	var boss := bool(e.get("boss", false))

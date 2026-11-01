@@ -21,7 +21,7 @@ func run() -> void:
 	s.encounters_done.append("yard_dead")
 	gs.start_combat([{"monster": "bandit", "name": "Разбойник", "count": 2}], {"room_from": "outpost-road"})
 	if not step("the fight with the bandits", await wait_until(func() -> bool:
-			return screen_is("CombatScreen") and not gs.is_busy() and CombatRules.is_player_turn(s), 90.0)):
+			return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 90.0)):
 		return
 	await frames(3)
 	var give_up: Button = find(screen(), "Do_surrender")

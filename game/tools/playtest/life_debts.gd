@@ -99,7 +99,7 @@ func run() -> void:
 	await shot("convoy_hired")
 	data["world"]["jobs"]["caravan_guard"]["fight"]["chance"] = 1.0
 	await press(find(jv, "JobShift_caravan_guard"))
-	var fought := await wait_until(func() -> bool: return screen_is("CombatScreen") or s.mode == GameSession.MODE_COMBAT, 60.0)
+	var fought := await wait_until(func() -> bool: return screen_is("fight") or s.mode == GameSession.MODE_COMBAT, 60.0)
 	step("bandits fall on the convoy", fought, _last_effects(s))
 	await frames(6)
 	await shot("convoy_fight")

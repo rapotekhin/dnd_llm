@@ -30,7 +30,7 @@ func run() -> void:
 		return
 	await shot("people")
 	await press(attack)
-	if not step("the fight at once", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)):
+	if not step("the fight at once", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)):
 		return
 	await frames(3)
 	step("the hero's friends stay out", CombatRules.enemies(s).size() == 1, str(CombatRules.enemies(s).map(func(id: String) -> String: return str(CombatRules.fighter(s, id)["name"]))))
@@ -72,7 +72,7 @@ func run() -> void:
 	await frames(3)
 	gs.attach("spell", "fire_bolt", 0, second)
 	gs.submit("Огненный снаряд в него!")
-	if not step("the pinned spell started the fight", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)):
+	if not step("the pinned spell started the fight", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)):
 		return
 	await frames(3)
 	step("the spell went first", _chat(s).contains("Огненный снаряд по"), _chat(s))
@@ -90,7 +90,7 @@ func run() -> void:
 ## Knocks the foe out by a melee blow of the engine and ends the fight by the «Продолжить» button.
 func _knock_out(gs: Node, s: GameSession, data: Dictionary, fid: String) -> void:
 	var f := CombatRules.fighter(s, fid)
-	f["col"] = int(CombatRules.player(s)["col"])
+	FightGrid.put(f, FightGrid.free_near(s, data, FightGrid.cell(CombatRules.player(s)), int(f.get("span", 1))))
 	s.combat["nonlethal"] = true
 	s.combat["melee_strike"] = true
 	var lines: Array[String] = []

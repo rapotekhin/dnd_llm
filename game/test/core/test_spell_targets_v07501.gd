@@ -24,7 +24,7 @@ func _cleric() -> GameSession:
 
 
 func _fight(s: GameSession, foes: Array, allies: Array = [{"monster": "guard", "name": "Влада", "col": 0}, {"monster": "scout", "name": "Ждан", "col": 0}]) -> void:
-	CombatRules.start(s, data, foes, {"allies": allies})
+	TestUtils.fight(s, data, foes, {"allies": allies})
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)
@@ -152,7 +152,7 @@ func test_acid_takes_only_a_near_second_target() -> void:
 	var near: Array[String] = []
 	var far := ""
 	for id: String in CombatRules.enemies(s):
-		if int(CombatRules.fighter(s, id)["col"]) == 1:
+		if TestUtils.col_of(CombatRules.fighter(s, id)) == 1:
 			near.append(id)
 		else:
 			far = id

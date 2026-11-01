@@ -47,7 +47,7 @@ func run() -> void:
 		var cb: Dictionary = gs.session.combat
 		step("info: fight", true, "turn %s, round %d, outcome '%s', busy %s, playing %s, retry %s, economy %s, foes %s" % [CombatRules.current(gs.session),
 			cb["round"], cb.get("outcome", ""), gs.busy_turn, gs.combat_playing, gs.can_retry(), cb.get("economy", {}),
-			CombatRules.enemies(gs.session, false).map(func(id: String) -> String: return "%s %s col %d hp %d" % [id, CombatRules.fighter(gs.session, id)["status"], CombatRules.fighter(gs.session, id)["col"], CombatRules.fighter(gs.session, id)["hp"]])])
+			CombatRules.enemies(gs.session, false).map(func(id: String) -> String: return "%s %s at %s hp %d" % [id, CombatRules.fighter(gs.session, id)["status"], FightGrid.tag(FightGrid.cell(CombatRules.fighter(gs.session, id))), CombatRules.fighter(gs.session, id)["hp"]])])
 	await shot("end")
 
 
@@ -231,10 +231,11 @@ func _combat_step(s: GameSession) -> String:
 	if spell != null and foe != null and CombatRules.can_cast(s, data, spell, 0, foe).is_empty() and rng.randf() < 0.5:
 		gs.combat_cast(spell, 0, foe)
 		return "combat_cast"
-	if foe != null and int(CombatRules.economy(s).get("move", 0)) > 0 and int(CombatRules.fighter(s, foe)["col"]) != int(CombatRules.player(s)["col"]):
-		var dir := 1 if int(CombatRules.fighter(s, foe)["col"]) > int(CombatRules.player(s)["col"]) else -1
-		gs.combat_move(dir)
-		return "combat_move"
+	if foe != null and CombatRules.can_move(s).is_empty():
+		var to := CombatRules.closest_stop(s, data, foe)
+		if to != FightGrid.NONE:
+			gs.combat_walk(to)
+			return "combat_walk"
 	gs.combat_end_turn()
 	return "combat_end_turn"
 
@@ -274,8 +275,9 @@ func _invariants() -> String:
 	if CombatRules.active(s):
 		for id: String in s.combat["fighters"]:
 			var f := CombatRules.fighter(s, id)
-			if absi(int(f.get("col", 0))) > CombatRules.edge(data) or int(f.get("hp", 0)) < 0:
-				return "fighter %s at col %d hp %d" % [id, f.get("col", 0), f.get("hp", 0)]
+			var at := FightGrid.cell(f)
+			if at.x < 0 or at.y < 0 or int(f.get("hp", 0)) < 0:
+				return "fighter %s at %s hp %d" % [id, FightGrid.tag(at), f.get("hp", 0)]
 		if s.mode != GameSession.MODE_COMBAT:
 			return "a fight without combat mode"
 	if s.in_conversation() and not s.npcs_here(w.world, s.room_id).has(s.npc_id):

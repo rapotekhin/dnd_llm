@@ -79,7 +79,7 @@ func test_the_journal_groups_by_tab_and_location() -> void:
 
 func test_inspecting_a_foe_opens_its_kind_for_good() -> void:
 	var s := _session()
-	CombatRules.start(s, data, [{"monster": "wolf", "col": 1}, {"monster": "wolf", "col": 2}])
+	TestUtils.fight(s, data, [{"monster": "wolf", "col": 1}, {"monster": "wolf", "col": 2}])
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)

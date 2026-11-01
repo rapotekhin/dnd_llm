@@ -14,8 +14,8 @@ func run() -> void:
 	await press(find(screen(), "StartButton"))
 	if not step("game started", await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)):
 		return
-	gs.start_combat([{"monster": "wolf", "count": 2, "name": "Волк", "col": 1}], {})
-	if not step("the combat screen", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)):
+	gs.start_combat([{"monster": "wolf", "count": 2, "name": "Волк"}], {})
+	if not step("the combat screen", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)):
 		return
 	await frames(5)
 	var s: GameSession = gs.session

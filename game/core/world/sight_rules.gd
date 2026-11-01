@@ -1,8 +1,8 @@
 class_name SightRules
 extends RefCounted
 ## What is seen on a map (v0.8.3). A square is seen when nothing opaque stands in the way and it is in reach: in the light
-## that is `sight.day` squares, in the dark as far as the hero's light or darkvision goes, by the SRD. What was seen once
-## stays known in the save as rows of the map's grid, the rest is fog. The numbers are `rules.sight`.
+## that is `sight.day` squares, in the dark as far as the hero's light or darkvision goes, by the SRD. The map itself is
+## open from the start (v0.8.4): the view says who stands in it and what is dimmed. The numbers are `rules.sight`.
 
 const OCTANTS: Array[Array] = [[1, 0, 0, 1], [0, 1, 1, 0], [0, 1, -1, 0], [-1, 0, 0, 1], [-1, 0, 0, -1], [0, -1, -1, 0], [0, -1, 1, 0], [1, 0, 0, -1]]
 
@@ -49,14 +49,15 @@ static func reach(s: GameSession, data: Dictionary) -> int:
 
 
 ## The squares seen from `from` within `radius`, walls that close the view among them: shadow casting by eight octants.
-static func view(map: Dictionary, lib: Dictionary, from: Vector2i, radius: int) -> Dictionary:
+## `round` — the hero's view: a `thin` cell (a tree) does not close it, a watcher's it does.
+static func view(map: Dictionary, lib: Dictionary, from: Vector2i, radius: int, round: bool = false) -> Dictionary:
 	var out: Dictionary = {from: true}
 	for o: Array in OCTANTS:
-		_cast(map, lib, from, radius, 1, 1.0, 0.0, o, out)
+		_cast(map, lib, from, radius, 1, 1.0, 0.0, o, out, round)
 	return out
 
 
-static func _cast(map: Dictionary, lib: Dictionary, from: Vector2i, radius: int, row: int, top: float, bottom: float, o: Array, out: Dictionary) -> void:
+static func _cast(map: Dictionary, lib: Dictionary, from: Vector2i, radius: int, row: int, top: float, bottom: float, o: Array, out: Dictionary, round: bool) -> void:
 	if top < bottom:
 		return
 	var rows: Array[String] = map["rows"]
@@ -82,7 +83,7 @@ static func _cast(map: Dictionary, lib: Dictionary, from: Vector2i, radius: int,
 			var inside := x >= 0 and y >= 0 and x < w and y < h
 			if inside and dx * dx + dy * dy <= far:
 				out[Vector2i(x, y)] = true
-			var wall := not inside or opaque(lib, rows[y][x])
+			var wall := not inside or (opaque(lib, rows[y][x]) and not (round and bool(lib["cells"].get(rows[y][x], {}).get("thin", false))))
 			if blocked:
 				if wall:
 					next = right
@@ -91,7 +92,7 @@ static func _cast(map: Dictionary, lib: Dictionary, from: Vector2i, radius: int,
 				start = next
 			elif wall and j < radius:
 				blocked = true
-				_cast(map, lib, from, radius, j + 1, start, left, o, out)
+				_cast(map, lib, from, radius, j + 1, start, left, o, out, round)
 				next = right
 
 
@@ -119,58 +120,6 @@ static func _clear(map: Dictionary, lib: Dictionary, a: Vector2i, b: Vector2i) -
 	return true
 
 
-## What the hero sees from `cell` now; it stays known.
+## What the hero sees from `cell` now.
 static func look(s: GameSession, data: Dictionary, map: Dictionary, cell: Vector2i) -> Dictionary:
-	var cells := view(map, data["layouts"], cell, reach(s, data))
-	remember(s, map, cells)
-	return cells
-
-
-static func remember(s: GameSession, map: Dictionary, cells: Dictionary) -> void:
-	var all: Dictionary = s.layouts.get_or_add("seen", {})
-	var id := str(map["id"])
-	var mem := _fit(all.get(id, {}), LayoutGen.on_grid(map, Vector2i.ZERO), int(map["w"]), int(map["h"]))
-	all[id] = mem
-	var rows: Array = mem["rows"]
-	for cell: Vector2i in cells:
-		var row: String = rows[cell.y]
-		if row[cell.x] != "1":
-			row[cell.x] = "1"
-			rows[cell.y] = row
-
-
-## The rows of a map's memory at its corner on the grid now: a map that grew keeps what was seen.
-static func _fit(mem: Dictionary, corner: Vector2i, w: int, h: int) -> Dictionary:
-	var old: Array = mem.get("rows", [])
-	if int(mem.get("x", corner.x)) == corner.x and int(mem.get("y", corner.y)) == corner.y and old.size() == h and (old.is_empty() or str(old[0]).length() == w):
-		if not old.is_empty():
-			return mem
-	var rows: Array = []
-	for y: int in h:
-		rows.append("0".repeat(w))
-	var shift := Vector2i(int(mem.get("x", corner.x)), int(mem.get("y", corner.y))) - corner
-	for y: int in old.size():
-		var was: String = old[y]
-		for x: int in was.length():
-			var at := Vector2i(x, y) + shift
-			if was[x] == "1" and at.x >= 0 and at.y >= 0 and at.x < w and at.y < h:
-				var row: String = rows[at.y]
-				row[at.x] = "1"
-				rows[at.y] = row
-	return {"x": corner.x, "y": corner.y, "rows": rows}
-
-
-## The squares of this map the hero has seen.
-static func known(s: GameSession, map: Dictionary) -> Dictionary:
-	var mem: Dictionary = (s.layouts.get("seen", {}) as Dictionary).get(str(map["id"]), {})
-	var out := {}
-	if mem.is_empty():
-		return out
-	mem = _fit(mem, LayoutGen.on_grid(map, Vector2i.ZERO), int(map["w"]), int(map["h"]))
-	var rows: Array = mem["rows"]
-	for y: int in rows.size():
-		var row: String = rows[y]
-		for x: int in row.length():
-			if row[x] == "1":
-				out[Vector2i(x, y)] = true
-	return out
+	return view(map, data["layouts"], cell, reach(s, data), true)

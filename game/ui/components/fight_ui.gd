@@ -1,16 +1,18 @@
-class_name CombatScreen
+class_name FightUi
 extends Control
-## The fight (roadmap v0.6.1, ADR-0010 §7): the initiative order on top, the field of 7 columns of 30 ft, the
-## player's panel below like in BG3 (portrait block, action / bonus / move, tabs of actions, «Конец хода»), the
-## log and free input on the right. An action that needs a target lights the cards that can be hit; a click on a
-## card does it, hovering it shows the chance to hit and the damage (v0.6.2). Reinforcements wait grey at the edge
-## column with the rounds left. The results (XP, loot to take) or the death screen come when the fight ends.
+## The fight on the one screen (v0.8.4): the place's own map is the field. The queue over it, the hero and those in the fight
+## on the left, the acts on tabs under it, the log on the right; the windows of a choice and the results stand over all.
+## An act that needs a target lights it: a click on a body or a line of the list does it, an area follows the mouse and a
+## click lays it on the square. A click on a free square walks, on a foe strikes or walks up and strikes. The screen only
+## shows and sends: every rule is in `core/`, FightGrid and CombatRules.
 
+var _screen: Control
+var _field: MapField
 var _details: DetailsPanel  # v0.7.7 fixes: what a spell, feature, item or foe is (hover or press)
 var _queue: HBoxContainer
-var _field: HBoxContainer
+var _foes: VBoxContainer
 var _portrait: VBoxContainer
-var _economy: HBoxContainer
+var _economy: VBoxContainer
 var _tabs: TabContainer
 var _fx_layer: Control  # floating numbers over the field
 var _block: VBoxContainer  # the round's engine lines (Б6)
@@ -18,10 +20,6 @@ var _block_round := -1
 var _hint: Label
 var _log_box: VBoxContainer
 var _log_scroll: ScrollContainer
-var _thinking: Label
-var _retry: Button
-var input: LineEdit
-var send_button: Button
 var end_turn: Button
 var _results: ModalFrame
 var _results_box: VBoxContainer
@@ -35,128 +33,19 @@ var _pending: Callable
 var _pending_check: Callable
 ## Callable(target_id) -> Dictionary: the hint of the pending action (CombatRules.attack_preview / cast_preview).
 var _pending_preview: Callable
+var _pending_aim := ""  # the spell whose target is a square: its area follows the mouse
+var _shoving := ""  # the foe a won shove pushes: the next click picks the side
+var _jumping := false  # the next click picks where the hero jumps
 var _tab := 0
+var _on := false
+var _parts: Array[Control] = []  # shown only in a fight
+var _peace: Array[Control] = []  # hidden in a fight
 const TEMP_HP := Color("#6f9fc8")
 var _cast_circle := 0  # v0.7.22.19 (#19): the slot circle the player picked; 0 — the lowest that fits
 
 
 func _ready() -> void:
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 24)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 20)
-	margin.add_child(row)
-
-	var left := VBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.size_flags_stretch_ratio = 2.6
-	left.add_theme_constant_override("separation", 12)
-	row.add_child(left)
-	_queue = HBoxContainer.new()
-	_queue.name = "Queue"
-	_queue.add_theme_constant_override("separation", 8)
-	left.add_child(_queue)
-	_field = HBoxContainer.new()
-	_field.name = "Field"
-	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_field.add_theme_constant_override("separation", 6)
-	left.add_child(_field)
-	_hint = Label.new()
-	_hint.name = "Hint"
-	_hint.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_hint.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
-	left.add_child(_hint)
-
-	var bottom := PanelContainer.new()
-	bottom.theme_type_variation = UiTheme.SIDE
-	bottom.custom_minimum_size = Vector2(0, 340)  # the hotbar's rows over the field's empty height (Б1)
-	left.add_child(bottom)
-	var brow := HBoxContainer.new()
-	brow.add_theme_constant_override("separation", 18)
-	bottom.add_child(brow)
-	_portrait = VBoxContainer.new()
-	_portrait.name = "Portrait"
-	_portrait.custom_minimum_size = Vector2(300, 0)
-	brow.add_child(_portrait)
-	var mid := VBoxContainer.new()
-	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	brow.add_child(mid)
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 24)
-	mid.add_child(top)
-	_economy = HBoxContainer.new()
-	_economy.name = "Economy"
-	_economy.add_theme_constant_override("separation", 14)
-	top.add_child(_economy)
-	_tabs = TabContainer.new()  # the author kept the tabs over a hotbar (v0.7.22.31.1)
-	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tabs.tab_changed.connect(func(t: int) -> void: _tab = t)
-	mid.add_child(_tabs)
-	var right_btns := VBoxContainer.new()
-	right_btns.custom_minimum_size = Vector2(200, 0)
-	right_btns.add_theme_constant_override("separation", 10)
-	brow.add_child(right_btns)
-	end_turn = Button.new()
-	end_turn.name = "EndTurnButton"
-	end_turn.text = "BTN_END_TURN"
-	end_turn.theme_type_variation = UiTheme.ACCENT_BUTTON
-	end_turn.custom_minimum_size = Vector2(0, 80)
-	end_turn.pressed.connect(func() -> void: _do(GameState.combat_end_turn()))
-	right_btns.add_child(end_turn)
-	for spec: Array in [["MoveLeft", "BTN_STEP_LEFT", -1], ["MoveRight", "BTN_STEP_RIGHT", 1]]:
-		var b := Button.new()
-		b.name = spec[0]
-		b.text = spec[1]
-		b.custom_minimum_size = Vector2(0, 56)
-		var dir: int = spec[2]
-		b.pressed.connect(func() -> void: _do(GameState.combat_move(dir)))
-		right_btns.add_child(b)
-
-	var right := PanelContainer.new()
-	right.theme_type_variation = UiTheme.SIDE
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.size_flags_stretch_ratio = 1.0
-	row.add_child(right)
-	var rcol := VBoxContainer.new()
-	rcol.add_theme_constant_override("separation", 10)
-	right.add_child(rcol)
-	# The right side: a third — the static details, two thirds — the chat (the author, v0.7.22.13).
-	_details = DetailsPanel.new(Vector2(0, 120))
-	_details.name = "CombatDetails"
-	_details.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_details.size_flags_stretch_ratio = 1.0
-	rcol.add_child(_details)
-	_log_scroll = ScrollContainer.new()
-	_log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_log_scroll.size_flags_stretch_ratio = 2.0
-	_log_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	rcol.add_child(_log_scroll)
-	_log_box = VBoxContainer.new()
-	_log_box.name = "CombatLog"
-	_log_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_log_box.add_theme_constant_override("separation", 6)
-	_log_scroll.add_child(_log_box)
-	_thinking = Label.new()
-	_thinking.text = "MSG_MASTER_THINKING"
-	_thinking.theme_type_variation = UiTheme.MUTED_LABEL
-	rcol.add_child(_thinking)
-	_retry = Button.new()
-	_retry.text = "BTN_RETRY_TURN"
-	_retry.pressed.connect(GameState.retry)
-	rcol.add_child(_retry)
-	input = LineEdit.new()
-	input.name = "CombatInput"
-	input.placeholder_text = "PLACEHOLDER_COMBAT"
-	input.text_submitted.connect(func(_t: String) -> void: _send())
-	rcol.add_child(input)
-	send_button = Button.new()
-	send_button.text = "BTN_SEND"
-	send_button.pressed.connect(_send)
-	rcol.add_child(send_button)
-
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fx_layer = Control.new()
 	_fx_layer.name = "FxLayer"
 	_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -180,26 +69,83 @@ func _ready() -> void:
 	_ask_box.add_theme_constant_override("separation", 10)
 	_ask.add_child(_ask_box)
 
-	if GameState.has_session() and CombatRules.active(GameState.session):
-		for i in range(maxi(0, GameState.session.chat.size() - 4), GameState.session.chat.size()):
-			var e := GameState.session.chat[i]
-			if str(e["kind"]) == GameSession.KIND_DM:
-				_add_log(str(e["text"]), true)
-		for l: Variant in GameState.session.combat.get("log", []):
-			_add_log(str(l), false)
-	EventBus.combat_lines.connect(func(lines: Array[String]) -> void:
+
+## The nodes of the one screen this fight uses (its scene holds them hidden).
+func setup(screen: Control) -> void:
+	_screen = screen
+	_field = UiScenes.need(screen, "%Field")
+	_queue = UiScenes.need(screen, "%Queue")
+	_foes = UiScenes.need(screen, "%FoeList")
+	_portrait = UiScenes.need(screen, "%Portrait")
+	_economy = UiScenes.need(screen, "%Economy")
+	_tabs = UiScenes.need(screen, "%Tabs")
+	_tabs.tab_changed.connect(func(t: int) -> void: _tab = t)
+	_hint = UiScenes.need(screen, "%Hint")
+	_hint.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
+	end_turn = UiScenes.need(screen, "%EndTurnButton")
+	end_turn.pressed.connect(func() -> void: _do(GameState.combat_end_turn()))
+	_parts.assign([UiScenes.need(screen, "%FightSide"), UiScenes.need(screen, "%FightBar"), _queue, _hint, UiScenes.need(screen, "%FightLogBox")])
+	_peace.assign([UiScenes.need(screen, "%Side"), UiScenes.need(screen, "%Bar"), UiScenes.need(screen, "%Strip"), UiScenes.need(screen, "%Chat")])
+	var box: VBoxContainer = UiScenes.need(screen, "%FightLogBox")
+	# The right side: a third — the static details, two thirds — the log (the author, v0.7.22.13).
+	_details = DetailsPanel.new(Vector2(0, 120))
+	_details.name = "CombatDetails"
+	_details.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_details.size_flags_stretch_ratio = 1.0
+	box.add_child(_details)
+	_log_scroll = ScrollContainer.new()
+	_log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_log_scroll.size_flags_stretch_ratio = 2.0
+	_log_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(_log_scroll)
+	_log_box = VBoxContainer.new()
+	_log_box.name = "CombatLog"
+	_log_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_log_box.add_theme_constant_override("separation", 6)
+	_log_scroll.add_child(_log_box)
+	EventBus.combat_lines.connect(_on_lines)
+	EventBus.chat_appended.connect(_on_chat)
+
+
+func active() -> bool:
+	return GameState.has_session() and CombatRules.active(GameState.session)
+
+
+func mine() -> bool:
+	return active() and CombatRules.player_can_act(GameState.session) and not GameState.is_busy() and Backend.is_ready()
+
+
+func _on_lines(lines: Array[String]) -> void:
+	if _on:
 		for l: String in lines:
-			_add_log(l, false))
-	EventBus.chat_appended.connect(func(e: Dictionary) -> void:
+			_add_log(l, false)
+
+
+func _on_chat(e: Dictionary) -> void:
+	if not _on:
+		return
+	if str(e["kind"]) == GameSession.KIND_DM:
+		_add_log(str(e["text"]), true)
+	elif str(e["kind"]) == GameSession.KIND_SYSTEM:
+		_add_log(tr(str(e["key"])), false)
+
+
+## The fight came to this screen, or the screen came to a fight on a load: the log from what was.
+func _enter() -> void:
+	_on = true
+	_clear(_log_box)
+	_block = null
+	_last_fx = {}
+	var s := GameState.session
+	for i in range(maxi(0, s.chat.size() - 4), s.chat.size()):
+		var e := s.chat[i]
 		if str(e["kind"]) == GameSession.KIND_DM:
 			_add_log(str(e["text"]), true)
-		elif str(e["kind"]) == GameSession.KIND_SYSTEM:
-			_add_log(tr(str(e["key"])), false))
-	EventBus.state_changed.connect(_refresh)
-	EventBus.turn_started.connect(func(_id: String) -> void: _refresh())
-	EventBus.turn_finished.connect(func(_id: String, _ok: bool) -> void: _refresh())
-	EventBus.backend_state_changed.connect(func(_s: int, _d: String) -> void: _refresh())
-	_refresh()
+	for l: Variant in s.combat.get("log", []):
+		_add_log(str(l), false)
+	_pending = Callable()
+	_field.stop()
+	_field.close_up()
 
 
 func _add_log(text: String, master: bool) -> void:
@@ -282,33 +228,37 @@ static func _roll_color(text: String) -> Color:
 
 
 ## v0.7.22.27 (as in BG3), outside the input: Space ends the turn, 1–0 press the buttons of the open tab, Tab picks
-## the next foe that can be hit (Enter strikes it); Esc leaves the input.
-func _input(event: InputEvent) -> void:
-	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo() or get_window().get_node_or_null("ConfirmBox") != null:
-		return
-	if event.is_action_pressed("pause_menu") and input.has_focus():
-		input.release_focus()
-	elif input.has_focus():
-		return
-	elif event.is_action_pressed("end_turn"):
+## the next foe that can be hit (Enter strikes it). True — the key was the fight's.
+func key(event: InputEvent) -> bool:
+	if event.is_action_pressed("end_turn"):
 		if not end_turn.disabled:
 			end_turn.pressed.emit()
-	elif event.is_action_pressed("next_target"):
+		return true
+	if event.is_action_pressed("next_target"):
 		_next_target()
-	else:
-		var buttons := _tab_buttons()
-		var hit := false
-		for i in buttons.size():
-			if event.is_action_pressed("action_%d" % (i + 1)):
-				hit = true
-				if not buttons[i].disabled:
-					if buttons[i] is CheckButton:
-						buttons[i].button_pressed = not buttons[i].button_pressed
-					else:
-						buttons[i].pressed.emit()
-		if not hit:
-			return
-	get_viewport().set_input_as_handled()
+		return true
+	var buttons := _tab_buttons()
+	var hit := false
+	for i in buttons.size():
+		if event.is_action_pressed("action_%d" % (i + 1)):
+			hit = true
+			if not buttons[i].disabled:
+				if buttons[i] is CheckButton:
+					buttons[i].button_pressed = not buttons[i].button_pressed
+				else:
+					buttons[i].pressed.emit()
+	return hit
+
+
+## Esc lets a picked act go. True — there was one.
+func cancel() -> bool:
+	if not _pending.is_valid() and _shoving.is_empty() and not _jumping:
+		return false
+	_pending = Callable()
+	_shoving = ""
+	_jumping = false
+	refresh()
+	return true
 
 
 ## The buttons of a tab (the open one by default) in their order: the keys 1–0.
@@ -341,7 +291,7 @@ func set_filter(key: String) -> void:
 ## The focus to the next foe card that can be pressed now.
 func _next_target() -> void:
 	var cards: Array[Button] = []
-	for n: Node in _field.find_children("Foe_*", "Button", true, false):
+	for n: Node in _foes.find_children("Foe_*", "Button", true, false):
 		cards.append(n as Button)  # a disabled card still takes focus: Tab reads a foe before the attack is picked
 	if cards.is_empty():
 		return
@@ -350,17 +300,13 @@ func _next_target() -> void:
 	card.mouse_entered.emit()  # its description into the panel
 
 
-func _send() -> void:
-	if GameState.submit(input.text):
-		input.clear()
-		_pending = Callable()
-
-
 func _do(err: String) -> void:
 	_pending = Callable()
+	_shoving = ""
+	_jumping = false
 	if not err.is_empty():
 		EventBus.message.emit(tr(err))
-	_refresh()
+	refresh()
 
 
 static func _clear(n: Node) -> void:
@@ -369,37 +315,296 @@ static func _clear(n: Node) -> void:
 		ch.queue_free()
 
 
-func _refresh() -> void:
-	if not GameState.has_session() or not CombatRules.active(GameState.session):
+## The screen's redraw: the parts of a fight in or out, then all of it.
+func refresh() -> void:
+	var on := active()
+	if on and not _on:
+		_enter()
+	elif not on:
+		_on = false
+	for p: Control in _parts:
+		p.visible = on
+	for p: Control in _peace:
+		p.visible = not on
+	visible = on
+	if not on:
+		_field.fighters = []
+		_field.routes = {}
+		_field.zones = []
+		_field.blast = {}
+		_field.way = []
 		return
 	var s := GameState.session
 	var data := Catalog.data
-	var mine := CombatRules.player_can_act(s) and not GameState.is_busy() and Backend.is_ready()
-	if mine and not _pending.is_valid() and not CombatRules.volley(s).is_empty():  # v0.7.22.4: the next dart is armed at once
+	var me := mine()
+	if me and not _pending.is_valid() and not CombatRules.volley(s).is_empty():  # v0.7.22.4: the next dart is armed at once
 		_pending = func(t: String) -> String: return GameState.combat_volley(t)
 		_pending_check = func(t: String) -> String: return CombatRules.can_volley(s, data, t)
 		_pending_preview = func(_t: String) -> Dictionary: return {}
 		_pending_name = "Volley"
-	_thinking.visible = not GameState.busy_turn.is_empty()
-	_retry.visible = GameState.can_retry()
-	input.editable = mine
-	send_button.disabled = not mine
-	end_turn.disabled = not mine
-	for b: String in ["MoveLeft", "MoveRight"]:
-		var mb := find_child(b, true, false) as Button
-		var why := CombatRules.can_move(s, data, -1 if b == "MoveLeft" else 1)  # prone, held, afraid (v0.7.8)
-		mb.disabled = not mine or not why.is_empty()
-		mb.tooltip_text = tr(why) if not why.is_empty() and why != "COMBAT_NOT_YOUR_TURN" else ""
+		_pending_aim = ""
+	end_turn.disabled = not me
 	_draw_queue(s)
-	_draw_field(s, data, mine)
+	_draw_list(s, data, me)
+	_draw_map(s, data, me)
 	_play_fx(s)
 	_draw_portrait(s, data)
-	_draw_actions(s, data, mine)
+	_draw_actions(s, data, me)
 	_number_actions()
 	end_turn.tooltip_text = Hotkeys.tip("", "end_turn", SaveManager.keys)
-	_hint.text = _base_hint(mine)
+	_hint.text = _base_hint(me)
 	_draw_results(s, data)
 	_draw_ask(s)
+
+
+# --- the map ---------------------------------------------------------------------------------------------------
+
+
+func _draw_map(s: GameSession, data: Dictionary, me: bool) -> void:
+	var map := FightGrid.map(s, data)
+	var open := s.combat.has("field")
+	var names := {}
+	for e: Dictionary in map.get("exits", []):
+		names[e["to"]] = GameState.world().room(str(e["to"])).get("name", e["to"])
+	_field.names = names
+	_field.clicks = true
+	_field.show_map(map, data["layouts"])
+	var at := FightGrid.cell(CombatRules.player(s))
+	_field.dim = not open
+	var now := {}
+	if not open:
+		now = SightRules.look(s, data, map, at)
+		_field.now = now
+		_field.cones = {}
+	_field.place_hero(at, "", [] as Array[Dictionary])
+	_field.fighters = _bodies(s, now, open)
+	_field.things = _scene(s, data, map, now, open)
+	_field.play(FightField.take_moves(s))
+	_field.routes = CombatRules.hero_routes(s, data) if me and not _pending.is_valid() and _shoving.is_empty() and not _jumping else {}
+	_field.lit = _shove_squares(s, data) if not _shoving.is_empty() else CombatRules.jump_squares(s, data) if _jumping else {}
+	_field.over = _over(s)
+	_field.zones = SpellEffects.zone_view(s, data)
+	_field.blast = {}
+	_field.way = []
+	_field.queue_redraw()
+
+
+## What the fight changed on the map, by colour: {square: Color}.
+func _over(s: GameSession) -> Dictionary:
+	var out := {}
+	for key: String in s.combat.get("cleared", {}):
+		out[FightGrid.y_x(key)] = UiTheme.TILES["."]
+	for key: String in s.combat.get("oil", {}):
+		out[FightGrid.y_x(key)] = UiTheme.TILES["o"]
+	for key: String in s.combat.get("blocks", {}):
+		out[FightGrid.y_x(key)] = UiTheme.TILES["B"]
+	for key: String in s.combat.get("doors", {}):
+		var d: Dictionary = s.combat["doors"][key]
+		var open := bool(d.get("open", false)) or bool(d.get("gone", false))
+		out[FightGrid.y_x(key)] = UiTheme.TILES["."] if bool(d.get("gone", false)) else UiTheme.TILES["."].lerp(UiTheme.TILES["+"], 0.4) if open else UiTheme.TILES["+"].darkened(0.4)
+	return out
+
+
+## What stands on the map beside the fight: things, and those who take no part.
+func _scene(s: GameSession, data: Dictionary, map: Dictionary, now: Dictionary, open: bool) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if open:
+		return out
+	var fighting := {}
+	for id: Variant in s.combat.get("scared", []):
+		fighting["npc:" + str(id)] = true
+	for id: String in s.combat.get("fighters", []):
+		var npc := str(CombatRules.fighter(s, id).get("npc_id", ""))
+		if not npc.is_empty():
+			fighting["npc:" + npc] = true
+	for t: Dictionary in MapSpots.of(s, data, map):
+		var cell := Vector2i(int(t["x"]), int(t["y"]))
+		if not fighting.has(str(t["ref"])) and (now.has(cell) or str(t["kind"]) in ["station", "prop"]):
+			out.append(t)
+	return out
+
+
+## The bodies on the map: those the hero sees, an invisible one where it was last seen.
+func _bodies(s: GameSession, now: Dictionary, open: bool) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var cur := CombatRules.current(s)
+	for id: String in s.combat.get("fighters", []):
+		var f := CombatRules.fighter(s, id)
+		var status := str(f.get("status", "active"))
+		if status in ["gone", "fled", "away", "left"]:
+			continue
+		var at := FightGrid.shown(f)
+		var hero := id == CombatRules.PLAYER
+		if not open and not hero and not now.has(at):
+			continue
+		var side := str(f.get("side", "enemy"))
+		var nm := str(f.get("name", s.character.get("name", "?")))
+		var tail := nm.get_slice(" ", nm.get_slice_count(" ") - 1)
+		out.append({"id": id, "ref": "fight:" + id, "mark": nm.left(1) if hero else Look.token(f, nm) + (tail if tail.is_valid_int() else ""), "name": nm,
+			"colour": UiTheme.ACCENT_BRIGHT if hero else UiTheme.OK if side == "ally" else UiTheme.BAD,
+			"span": int(f.get("span", 1)), "x": at.x, "y": at.y, "hp": int(s.character["hp"]) if hero else int(f.get("hp", 0)),
+			"most": int(s.character["max_hp"]) if hero else int(f.get("max_hp", 1)), "out": status != "active" or (hero and int(s.character["hp"]) <= 0),
+			"now": id == cur, "dim": bool(f.get("hidden", false))})
+	return out
+
+
+## The fighter on a square, "" — nobody. Those who lie are in the list: a foe down is no target.
+func _id_at(cell: Vector2i) -> String:
+	for f: Dictionary in _field.fighters:
+		if FightGrid.body_at(Vector2i(int(f["x"]), int(f["y"])), int(f["span"])).has(cell):
+			return str(f["id"])
+	return ""
+
+
+## A click on the field: the picked act goes at the square or the body, else the hero walks or strikes.
+func on_cell(cell: Vector2i) -> void:
+	if not mine():
+		return
+	var s := GameState.session
+	var data := Catalog.data
+	var id := _id_at(cell)
+	if not _shoving.is_empty():
+		if _field.lit.has(cell):
+			_do(GameState.combat_shove_to(_shoving, cell))
+		return
+	if _jumping:
+		if _field.lit.has(cell):
+			_do(GameState.combat_jump(cell))
+		return
+	if _pending.is_valid():
+		var target := FightGrid.aim_id(cell) if not _pending_aim.is_empty() else id
+		if target.is_empty():
+			return
+		var why := str(_pending_check.call(target))
+		if not why.is_empty():
+			EventBus.message.emit(tr(why))
+			return
+		_press(target)
+		return
+	if not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
+		_strike(s, data, id)
+		return
+	var way := _way_out_at(s, data, cell)
+	if way != FightGrid.NONE:
+		if way == FightGrid.cell(CombatRules.player(s)):
+			_do(GameState.combat_flee())
+		else:
+			_do(GameState.combat_walk(way))
+		return
+	if _field.routes.has(cell):
+		_do(GameState.combat_walk(cell))
+
+
+## The right button lets the picked act go.
+func on_right(_cell: Vector2i) -> void:
+	cancel()
+
+
+## The square before the way out shown at `cell`, FightGrid.NONE — no way out there.
+func _way_out_at(s: GameSession, data: Dictionary, cell: Vector2i) -> Vector2i:
+	for e: Dictionary in FightGrid.map(s, data).get("exits", []):
+		if Vector2i(int(e["x"]), int(e["y"])) == cell:
+			return Vector2i(int(e["ax"]), int(e["ay"]))
+	return FightGrid.NONE
+
+
+## A foe clicked with nothing picked: the main weapon; out of reach of a blade the hero walks up first.
+func _strike(s: GameSession, data: Dictionary, id: String) -> void:
+	var why := CombatRules.can_attack(s, data, id)
+	if why == "COMBAT_OUT_OF_REACH":
+		var to := _beside(s, data, id)
+		if to == FightGrid.NONE:
+			EventBus.message.emit(tr(why))
+			return
+		_do(GameState.combat_walk(to))
+		if not mine() or not CombatRules.can_attack(s, data, id).is_empty():
+			return
+	_do(GameState.combat_attack(id, false))
+
+
+## The cheapest square of the hero's walk from where a blade reaches the foe.
+func _beside(s: GameSession, data: Dictionary, id: String) -> Vector2i:
+	var f := CombatRules.fighter(s, id)
+	var best := FightGrid.NONE
+	var cost := 1 << 20
+	for at: Vector2i in FightGrid.stops(s, CombatRules.player(s), _field.routes):
+		if FightGrid.dist_to(f, at) <= 1 and int(_field.routes[at][0]) < cost:
+			cost = int(_field.routes[at][0])
+			best = at
+	return best
+
+
+## The mouse over a square: the path and its cost, the area of the picked spell, what a blow would do.
+func on_hover(cell: Vector2i) -> void:
+	if not active():
+		return
+	var s := GameState.session
+	var data := Catalog.data
+	var me := mine()
+	var id := _id_at(cell)
+	var text := _base_hint(me)
+	_field.blast = {}
+	_field.way = []
+	if not _pending_aim.is_empty() and _pending.is_valid():
+		text = _aim_hint(s, data, cell, id, text)
+	elif _pending.is_valid() and not id.is_empty():
+		var why := str(_pending_check.call(id))
+		text = "%s: %s" % [_name_of(s, id), tr(why) if not why.is_empty() else _preview_text(_pending_preview.call(id)).replace("\n", " · ")]
+	elif not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
+		text = "%s: %s" % [_name_of(s, id), _foe_hint(s, data, id)]
+	elif _field.routes.has(cell):
+		_field.way = FightGrid.route(_field.routes, cell)
+		text = tr("COMBAT_WALK_COST").format({"ft": int(_field.routes[cell][0]) * int(FightGrid.cfg(data)["ft"])})
+	elif _way_out_at(s, data, cell) != FightGrid.NONE:
+		text = tr("COMBAT_WAY_OUT")
+	_hint.text = text
+	_field.queue_redraw()
+
+
+func _name_of(s: GameSession, id: String) -> String:
+	return str(CombatRules.fighter(s, id).get("name", s.character.get("name", "")))
+
+
+func _foe_hint(s: GameSession, data: Dictionary, id: String) -> String:
+	var reach := CombatRules.can_attack(s, data, id)
+	if reach in ["COMBAT_OUT_OF_REACH", "COMBAT_OUT_OF_RANGE", "COMBAT_NO_LINE"]:
+		return tr(reach)
+	return _preview_text(CombatRules.attack_preview(s, data, id)).replace("\n", " · ")
+
+
+## The area of the picked spell under the mouse: its squares lit, who is caught in them.
+func _aim_hint(s: GameSession, data: Dictionary, cell: Vector2i, id: String, text: String) -> String:
+	var aim := FightGrid.aim_id(cell)
+	var why := str(_pending_check.call(aim))
+	if not why.is_empty():
+		return tr(why)
+	var sp: Dictionary = data["spells"].get(_pending_aim, {})
+	if not sp.has("area"):
+		return text
+	var caught: Array[String] = []
+	var cells := CombatRules.area_cells(s, data, sp, CombatRules.aimed(s, aim))
+	for at: Vector2i in cells:
+		_field.blast[at] = true
+	for f: Dictionary in _field.fighters:
+		if not bool(f["out"]) and FightGrid.in_cells(CombatRules.fighter(s, str(f["id"])), cells):
+			caught.append(str(f["name"]))
+	var pv := _preview_text(_pending_preview.call(id)).replace("\n", " · ") if not id.is_empty() else ""
+	return tr("COMBAT_AREA_CAUGHT").format({"names": ", ".join(caught) if not caught.is_empty() else "—"}) + ("  " + pv if not pv.is_empty() else "")
+
+
+## The picked act goes at `target`.
+func _press(target: String) -> void:
+	var act := _pending
+	_pending = Callable()
+	_do(str(act.call(target)))
+
+
+## The squares a foe beside the hero can be shoved to: straight away from the hero and to its sides.
+func _shove_squares(s: GameSession, data: Dictionary) -> Dictionary:
+	var out := {}
+	for at: Vector2i in CombatRules.shove_squares(s, data, _shoving):
+		out[at] = true
+	return out
 
 
 ## The animations of what just happened (v0.7.22.14, CombatFx): the engine's events (a dodge, a crit, a spell) and
@@ -439,20 +644,46 @@ func _play_fx(s: GameSession) -> void:
 	if not deltas.is_empty():
 		_numbers(deltas)
 	for who: String in kinds:
-		var node := _field.find_child("Foe_" + who, true, false) as Control
+		var node := _foes.find_child("Foe_" + who, true, false) as Control
 		for k: Variant in kinds[who]:
 			CombatFx.play(node, str(k))
 
 
-## After the redraw is laid out: «−6» over the chip that lost HP, «+4» over the one healed (П9).
+## After the redraw is laid out: «−6» over the body that lost HP, «+4» over the one healed (П9).
 func _numbers(deltas: Dictionary) -> void:
 	await get_tree().process_frame
 	for id: String in deltas:
-		CombatFx.number(_fx_layer, _field.find_child("Foe_" + id, true, false) as Control, int(deltas[id]))
+		var pin := _pin(id)
+		CombatFx.number(_fx_layer, pin, int(deltas[id]))
+		get_tree().create_timer(1.5).timeout.connect(pin.queue_free)
 
 
-func _base_hint(mine: bool) -> String:
-	return tr("COMBAT_PICK_TARGET") if _pending.is_valid() else (tr("COMBAT_YOUR_TURN") if mine else tr("COMBAT_WAIT"))
+## An empty box on the body of the fighter: the number flies from it. A body off the view — from the line of the list.
+func _pin(id: String) -> Control:
+	var pin := Control.new()
+	pin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fx_layer.add_child(pin)
+	var at := FightGrid.NONE
+	for f: Dictionary in _field.fighters:
+		if str(f["id"]) == id:
+			at = Vector2i(int(f["x"]), int(f["y"]))
+	var card := _foes.find_child("Foe_" + id, true, false) as Control
+	pin.size = Vector2(_field.tile(), _field.tile())
+	if at != FightGrid.NONE:
+		pin.global_position = _field.global_position + _field.cell_point(at) - pin.size / 2.0
+	elif card != null:
+		pin.global_position = card.global_position
+	return pin
+
+
+func _base_hint(me: bool) -> String:
+	if not _shoving.is_empty():
+		return tr("COMBAT_PICK_SIDE")
+	if _jumping:
+		return tr("COMBAT_PICK_JUMP")
+	if me and not _pending.is_valid() and CombatRules.can_move(GameState.session) == "COMBAT_PRONE":
+		return tr("COMBAT_PRONE")
+	return tr("COMBAT_PICK_TARGET") if _pending.is_valid() else (tr("COMBAT_YOUR_TURN") if me else tr("COMBAT_WAIT"))
 
 
 ## The hint text: «Попадание 65% · урон 4–11» (or the chance the foe fails its save), why advantage / disadvantage.
@@ -490,7 +721,7 @@ func _draw_queue(s: GameSession) -> void:
 	for k in order.size():
 		var id := str(order[(at + k) % order.size()])
 		var f := CombatRules.fighter(s, id)
-		if str(f.get("status", "active")) == "gone":
+		if str(f.get("status", "active")) in ["gone", "left", "away"]:
 			continue
 		_face(id, f, id == cur, str(f.get("status", "active")) != "active")
 
@@ -554,154 +785,128 @@ func _chip(parent: Control, text: String, now: bool, dim: bool) -> void:
 	parent.add_child(p)
 
 
-func _draw_field(s: GameSession, data: Dictionary, mine: bool) -> void:
-	_clear(_field)
-	var edge := CombatRules.edge(data)
-	var pcol := int(CombatRules.player(s)["col"])
-	for col in range(-edge, edge + 1):
-		var panel := PanelContainer.new()
-		panel.name = "Col_%d" % col
-		panel.theme_type_variation = UiTheme.SIDE if col == pcol else UiTheme.CARD
-		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_field.add_child(panel)
-		var box := VBoxContainer.new()
-		box.add_theme_constant_override("separation", 8)
-		panel.add_child(box)
-		var head := Label.new()
-		head.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		head.theme_type_variation = UiTheme.MUTED_LABEL
-		var d := absi(col - pcol) * int(CombatRules.cfg(data)["col_ft"])
-		head.text = tr("COMBAT_MELEE") if d == 0 else tr("COMBAT_FT").format({"ft": d})
-		var zone_names := SpellEffects.zone_names(s, col)  # v0.7.13.5: Moonbeam, Spirit Guardians…
-		if not zone_names.is_empty():
-			head.text += "\n" + ", ".join(zone_names)
-		box.add_child(head)
-		if col == pcol:
-			var chip := PanelContainer.new()  # the hero's chip: the animations play on it (v0.7.22.14)
-			chip.name = "Foe_" + CombatRules.PLAYER
-			box.add_child(chip)
-			var me := Label.new()
-			me.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			me.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			me.text = "(%s)" % s.character["name"]
-			me.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
-			chip.add_child(me)
-			if bool(CombatRules.player(s).get("hidden", false)):
-				CombatFx.look(chip, "hidden")
-			_friend_pick(s, data, box, CombatRules.PLAYER, mine)
-		for id: String in CombatRules.allies(s, false):  # v0.7.22.22: the hero's side, not a target of the buttons
-			var a := CombatRules.fighter(s, id)
-			if int(a["col"]) != col or str(a["status"]) == "gone":
-				continue
-			var ally := PanelContainer.new()
-			ally.name = "Foe_" + id
-			box.add_child(ally)
-			var al := Label.new()
-			al.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			al.mouse_filter = Control.MOUSE_FILTER_STOP
-			al.text = "%s\nHP %d/%d · КД %d%s" % [a["name"], int(a["hp"]), int(a["max_hp"]), CombatRules.ac_of(a),
-				("\n" + tr("COMBAT_ALLY_DOWN")) if str(a["status"]) == "down" else ""]
-			al.add_theme_color_override("font_color", UiTheme.OK if str(a["status"]) == "active" else UiTheme.MUTED)
-			var ally_name := str(a["name"])
-			var ally_about := tr("COMBAT_ALLY_ABOUT").format({"monster": CombatRules.monster_card(s, data, a)}) + \
-				("\n\n" + str(a["desc"]) if not str(a.get("desc", "")).is_empty() else "")
-			al.mouse_entered.connect(func() -> void: _details.show_text(ally_name, ally_about))
-			ally.add_child(al)
-			_friend_pick(s, data, box, id, mine)
-		for id: String in s.combat.get("order", []):
-			var f := CombatRules.fighter(s, id)
-			if str(f.get("side")) != "enemy" or CombatRules.shown_col(f) != col:
-				continue
-			var card := Button.new()
-			card.name = "Foe_" + id
-			if bool(f.get("hidden", false)) and str(f.get("status")) == "active":
-				CombatFx.look(card, "hidden")
-			card.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			card.custom_minimum_size = Vector2(0, 104)
-			var conds: Array = CombatRules.foe_conditions(GameState.session, data, f)
-			if bool(f.get("surprised", false)):
-				conds.append(tr("COMBAT_FOE_SURPRISED"))
-			card.text = "%s\n%s" % [f["name"], tr(CombatRules.health_key(f))]
-			if str(f.get("status")) == "active":
-				var fbar := _hp_bar(int(f["hp"]), int(f["max_hp"]), 8.0)
-				fbar.name = "FoeHp"
-				card.add_child(fbar)
-				fbar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-				fbar.offset_left = 10
-				fbar.offset_right = -10
-				fbar.offset_top = -16
-				fbar.offset_bottom = -8
-			card.tooltip_text = ""  # what the foe is — in the details panel only (big test #35, v0.7.22.5)
-			var lore := CombatRules.monster_card(s, data, f)
-			var about := lore if not lore.is_empty() else tr("COMBAT_FOE_UNKNOWN")
-			var fa := FactionRules.def(s, data, FactionRules.of_foe(data, SceneRules.room(s, data["world"], s.room_id).get("encounter", {}), f))  # v0.7.50
-			if not fa.is_empty():
-				about += "
+## The list of those in the fight: the hero, the allies, the foes with what is known of them. The animations play on its lines.
+func _draw_list(s: GameSession, data: Dictionary, me: bool) -> void:
+	_clear(_foes)
+	var chip := PanelContainer.new()
+	chip.name = "Foe_" + CombatRules.PLAYER
+	_foes.add_child(chip)
+	var hero := Label.new()
+	hero.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	hero.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero.text = "(%s)" % s.character["name"]
+	hero.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
+	chip.add_child(hero)
+	if bool(CombatRules.player(s).get("hidden", false)):
+		CombatFx.look(chip, "hidden")
+	_friend_pick(s, data, _foes, CombatRules.PLAYER, me)
+	for id: String in CombatRules.allies(s, false):  # v0.7.22.22: the hero's side, not a target of the buttons
+		if str(CombatRules.fighter(s, id)["status"]) in ["gone", "left", "away"]:
+			continue
+		_ally_row(s, data, id, me)
+	for id: String in s.combat.get("order", []):
+		var f := CombatRules.fighter(s, id)
+		if str(f.get("side")) == "enemy" and not str(f.get("status")) in ["left", "away"]:
+			_foe_row(s, data, id, f, me)
+	for w: Dictionary in s.combat.get("incoming", []):
+		var ghost := Label.new()
+		ghost.name = "Incoming"
+		ghost.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		ghost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ghost.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		ghost.add_theme_color_override("font_color", UiTheme.MUTED)
+		ghost.text = tr("COMBAT_INCOMING").format({"names": "\n".join(w["names"]), "n": maxi(1, int(w["at"]) - int(s.combat.get("round", 1)))})
+		_foes.add_child(ghost)
 
-" + tr("COMBAT_FOE_FACTION").format({"name": fa["name"]})
-			if not str(f.get("desc", "")).is_empty():
-				about += "\n\n" + str(f["desc"])
-			var foe_name := str(f["name"])
-			card.mouse_entered.connect(func() -> void: _details.show_text(foe_name, about))
-			if not lore.is_empty():
-				card.text += "\nHP %d/%d · КД %d" % [int(f["hp"]), int(f["max_hp"]), CombatRules.ac_of(f)]
-			var why := "COMBAT_NO_ACTION"
-			if _pending.is_valid() and str(f.get("status")) == "active":
-				why = str(_pending_check.call(id))
-			card.disabled = not (mine and _pending.is_valid() and why.is_empty())
-			if _pending.is_valid() and not why.is_empty() and str(f.get("status")) == "active":
-				card.tooltip_text = tr(why)
-			elif str(f.get("status")) == "active":
-				var hint := ""
-				if _pending_preview.is_valid() and _pending.is_valid():
-					hint = _preview_text(_pending_preview.call(id))
-				else:  # no action picked: the main weapon, or why it cannot reach
-					var reach := CombatRules.can_attack(s, data, id)
-					hint = tr(reach) if reach in ["COMBAT_OUT_OF_REACH", "COMBAT_OUT_OF_RANGE"] else _preview_text(CombatRules.attack_preview(s, data, id))
-				if not hint.is_empty():
-					card.tooltip_text = hint + ("\n\n" + card.tooltip_text if not card.tooltip_text.is_empty() else "")
-					var title := str(f["name"])
-					card.mouse_entered.connect(func() -> void: _hint.text = "%s: %s" % [title, hint.replace("\n", " · ")])
-					card.mouse_exited.connect(func() -> void: _hint.text = _base_hint(mine))
-			card.pressed.connect(func() -> void:
-				var act := _pending
-				_pending = Callable()
-				_do(str(act.call(id))))
-			box.add_child(card)
-			if card.has_node("FoeHp"):  # the text ends above the bar (the theme's boxes are known only in the tree)
-				for st: String in ["normal", "hover", "pressed", "disabled", "focus", "hover_pressed"]:
-					var sb := card.get_theme_stylebox(st).duplicate() as StyleBox
-					sb.content_margin_bottom = maxf(sb.content_margin_bottom, 0.0) + 18.0
-					card.add_theme_stylebox_override(st, sb)
-			if not conds.is_empty():  # the foe's conditions as small chips (Б1)
-				var cflow := HFlowContainer.new()
-				cflow.name = "FoeConds_" + id
-				cflow.add_theme_constant_override("h_separation", 4)
-				cflow.add_theme_constant_override("v_separation", 4)
-				for cn: Variant in conds:
-					var cl := Label.new()
-					cl.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-					cl.text = str(cn)
-					cl.add_theme_font_size_override("font_size", 15)
-					cl.add_theme_color_override("font_color", UiTheme.WARN)
-					cl.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.PANEL_RAISED, UiTheme.BORDER, 1, 3, 4))
-					cflow.add_child(cl)
-				box.add_child(cflow)
-		for w: Dictionary in s.combat.get("incoming", []):
-			if int(w["col"]) != col:
-				continue
-			var ghost := Label.new()
-			ghost.name = "Incoming_%d" % col
-			ghost.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			ghost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			ghost.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			ghost.add_theme_color_override("font_color", UiTheme.MUTED)
-			ghost.text = tr("COMBAT_INCOMING").format({"names": "\n".join(w["names"]), "n": maxi(1, int(w["at"]) - int(s.combat.get("round", 1)))})
-			box.add_child(ghost)
+
+func _ally_row(s: GameSession, data: Dictionary, id: String, me: bool) -> void:
+	var a := CombatRules.fighter(s, id)
+	var ally := PanelContainer.new()
+	ally.name = "Foe_" + id
+	_foes.add_child(ally)
+	var al := Label.new()
+	al.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	al.mouse_filter = Control.MOUSE_FILTER_STOP
+	al.text = "%s\nHP %d/%d · КД %d%s" % [a["name"], int(a["hp"]), int(a["max_hp"]), CombatRules.ac_of(a),
+		("\n" + tr("COMBAT_ALLY_DOWN")) if str(a["status"]) == "down" else ""]
+	al.add_theme_color_override("font_color", UiTheme.OK if str(a["status"]) == "active" else UiTheme.MUTED)
+	var ally_name := str(a["name"])
+	var ally_about := tr("COMBAT_ALLY_ABOUT").format({"monster": CombatRules.monster_card(s, data, a)}) + \
+		("\n\n" + str(a["desc"]) if not str(a.get("desc", "")).is_empty() else "")
+	al.mouse_entered.connect(func() -> void: _details.show_text(ally_name, ally_about))
+	ally.add_child(al)
+	_friend_pick(s, data, _foes, id, me)
+
+
+func _foe_row(s: GameSession, data: Dictionary, id: String, f: Dictionary, me: bool) -> void:
+	var card := Button.new()
+	card.name = "Foe_" + id
+	if bool(f.get("hidden", false)) and str(f.get("status")) == "active":
+		CombatFx.look(card, "hidden")
+	card.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card.custom_minimum_size = Vector2(0, 76)
+	var conds: Array = CombatRules.foe_conditions(GameState.session, data, f)
+	if bool(f.get("surprised", false)):
+		conds.append(tr("COMBAT_FOE_SURPRISED"))
+	card.text = "%s\n%s" % [f["name"], tr(CombatRules.health_key(f))]
+	if str(f.get("status")) == "active":
+		var fbar := _hp_bar(int(f["hp"]), int(f["max_hp"]), 8.0)
+		fbar.name = "FoeHp"
+		card.add_child(fbar)
+		fbar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		fbar.offset_left = 10
+		fbar.offset_right = -10
+		fbar.offset_top = -16
+		fbar.offset_bottom = -8
+	card.tooltip_text = ""  # what the foe is — in the details panel only (big test #35, v0.7.22.5)
+	var lore := CombatRules.monster_card(s, data, f)
+	var about := lore if not lore.is_empty() else tr("COMBAT_FOE_UNKNOWN")
+	var fa := FactionRules.def(s, data, FactionRules.of_foe(data, SceneRules.room(s, data["world"], s.room_id).get("encounter", {}), f))  # v0.7.50
+	if not fa.is_empty():
+		about += "\n\n" + tr("COMBAT_FOE_FACTION").format({"name": fa["name"]})
+	if not str(f.get("desc", "")).is_empty():
+		about += "\n\n" + str(f["desc"])
+	var foe_name := str(f["name"])
+	card.mouse_entered.connect(func() -> void: _details.show_text(foe_name, about))
+	if not lore.is_empty():
+		card.text += "\nHP %d/%d · КД %d" % [int(f["hp"]), int(f["max_hp"]), CombatRules.ac_of(f)]
+	var why := "COMBAT_NO_ACTION"
+	if _pending.is_valid() and str(f.get("status")) == "active":
+		why = str(_pending_check.call(id))
+	card.disabled = not (me and _pending.is_valid() and why.is_empty())
+	if _pending.is_valid() and not why.is_empty() and str(f.get("status")) == "active":
+		card.tooltip_text = tr(why)
+	elif str(f.get("status")) == "active":
+		var hint := _preview_text(_pending_preview.call(id)) if _pending_preview.is_valid() and _pending.is_valid() else _foe_hint(s, data, id)
+		if not hint.is_empty():
+			card.tooltip_text = hint + ("\n\n" + card.tooltip_text if not card.tooltip_text.is_empty() else "")
+			var title := str(f["name"])
+			card.mouse_entered.connect(func() -> void: _hint.text = "%s: %s" % [title, hint.replace("\n", " · ")])
+			card.mouse_exited.connect(func() -> void: _hint.text = _base_hint(me))
+	card.pressed.connect(_press.bind(id))
+	_foes.add_child(card)
+	if card.has_node("FoeHp"):  # the text ends above the bar (the theme's boxes are known only in the tree)
+		for st: String in ["normal", "hover", "pressed", "disabled", "focus", "hover_pressed"]:
+			var sb := card.get_theme_stylebox(st).duplicate() as StyleBox
+			sb.content_margin_bottom = maxf(sb.content_margin_bottom, 0.0) + 18.0
+			card.add_theme_stylebox_override(st, sb)
+	if not conds.is_empty():  # the foe's conditions as small chips (Б1)
+		var cflow := HFlowContainer.new()
+		cflow.name = "FoeConds_" + id
+		cflow.add_theme_constant_override("h_separation", 4)
+		cflow.add_theme_constant_override("v_separation", 4)
+		for cn: Variant in conds:
+			var cl := Label.new()
+			cl.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			cl.text = str(cn)
+			cl.add_theme_font_size_override("font_size", 15)
+			cl.add_theme_color_override("font_color", UiTheme.WARN)
+			cl.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.PANEL_RAISED, UiTheme.BORDER, 1, 3, 4))
+			cflow.add_child(cl)
+		_foes.add_child(cflow)
 
 
 func _draw_portrait(s: GameSession, data: Dictionary) -> void:
@@ -758,20 +963,17 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 
 
 ## The button that picks the hero or an ally for an armed spell of the hero's side (v0.7.50.1).
-func _friend_pick(s: GameSession, data: Dictionary, box: Control, id: String, mine: bool) -> void:
+func _friend_pick(s: GameSession, data: Dictionary, box: Control, id: String, me: bool) -> void:
 	var vol := CombatRules.volley(s)
 	var spell := str(vol.get("spell", "")) if _pending_name == "Volley" else _pending_name.trim_prefix("Cast_")
 	if not _pending.is_valid() or not SpellEffects.picks_side(data, spell) in ["friend", "any"]:
 		return
 	box.add_theme_constant_override("separation", 2)  # a column of three friends and their buttons still fits
 	var why := str(_pending_check.call(id))
-	var b := _button(box, "Pick_" + id, tr("COMBAT_PICK_FRIEND"), mine and why.is_empty())
+	var b := _button(box, "Pick_" + id, tr("COMBAT_PICK_FRIEND"), me and why.is_empty())
 	if not why.is_empty():
 		b.tooltip_text = tr(why)
-	b.pressed.connect(func() -> void:
-		var act := _pending
-		_pending = Callable()
-		_do(str(act.call(id))))
+	b.pressed.connect(_press.bind(id))
 
 
 func _line(parent: Control, text: String) -> Label:
@@ -783,7 +985,7 @@ func _line(parent: Control, text: String) -> Label:
 	return l
 
 
-func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
+func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 	var e := CombatRules.economy(s)
 	_clear(_economy)
 	for spec: Array in [["EcoAction", "● " + tr("COMBAT_ACTION"), int(e.get("action", 0)) + int(e.get("attacks", 0))],
@@ -802,13 +1004,13 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	var vol := CombatRules.volley(s)
 	if not vol.is_empty():  # v0.7.22.4: the next dart or ray — pick its target (armed at once)
 		var vname := str(data["spells"][str(vol["spell"])]["name"])
-		var vb := _action(w, "Volley", tr("COMBAT_VOLLEY").format({"spell": vname, "n": int(vol["left"])}), mine,
+		var vb := _action(w, "Volley", tr("COMBAT_VOLLEY").format({"spell": vname, "n": int(vol["left"])}), me,
 			func(t: String) -> String: return GameState.combat_volley(t),
 			func(t: String) -> String: return CombatRules.can_volley(s, data, t), func(_t: String) -> Dictionary: return {})
 		vb.theme_type_variation = UiTheme.ACCENT_BUTTON
 	var main := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
 	var main_id := str(c.get("equipped", {}).get("main_hand", ""))
-	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), mine,
+	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), me,
 		func(t: String) -> String: return GameState.combat_attack(t, false),
 		func(t: String) -> String: return CombatRules.can_attack(s, data, t, false),
 		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
@@ -816,7 +1018,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		_details.hook(main_b, str(main["name"]), DetailsPanel.item_text(c, data, s.items, main_id))
 	if not main_id.is_empty():  # fists with a weapon in hand (v0.7.22.11, big test #45)
 		var fist := CombatRules.weapon_profile(c, data, s.items, "")
-		_action(w, "Attack_unarmed", tr("COMBAT_ATTACK").format({"name": fist["name"], "hit": "%+d" % int(fist["to_hit"]), "dmg": _dmg_text(fist)}), mine,
+		_action(w, "Attack_unarmed", tr("COMBAT_ATTACK").format({"name": fist["name"], "hit": "%+d" % int(fist["to_hit"]), "dmg": _dmg_text(fist)}), me,
 			func(t: String) -> String: return GameState.combat_attack(t, false, true),
 			func(t: String) -> String: return CombatRules.can_attack(s, data, t, false, true),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false, true))
@@ -833,7 +1035,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 	var off := str(c.get("equipped", {}).get("off_hand", ""))
 	if not off.is_empty():
 		var ow := CombatRules.weapon_profile(c, data, s.items, off, true)
-		_action(w, "Attack_off", tr("COMBAT_ATTACK_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), mine,
+		_action(w, "Attack_off", tr("COMBAT_ATTACK_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), me,
 			func(t: String) -> String: return GameState.combat_attack(t, true),
 			func(t: String) -> String: return CombatRules.can_attack(s, data, t, true),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true))
@@ -842,7 +1044,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 		var sp := _tab_box("COMBAT_TAB_SPELLS")
 		for mm: Dictionary in FeatureRules.metamagic(c, data):  # v0.7.10: metamagic toggles of the next spell
 			var mid := str(mm["id"])
-			var mb := _button(sp, "Meta_" + mid, "✦ %s (%d)" % [mm["name"], int(mm["cost"])], mine and Stock.left(c, data, "sorcery_points") >= int(mm["cost"]))
+			var mb := _button(sp, "Meta_" + mid, "✦ %s (%d)" % [mm["name"], int(mm["cost"])], me and Stock.left(c, data, "sorcery_points") >= int(mm["cost"]))
 			mb.toggle_mode = true
 			mb.button_pressed = str(s.combat.get("metamagic", "")) == mid
 			mb.tooltip_text = tr("META_TIP_" + mid.to_upper())
@@ -861,7 +1063,7 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			cp.select(maxi(0, cp.get_item_index(_cast_circle)))
 			cp.item_selected.connect(func(i: int) -> void:
 				_cast_circle = cp.get_item_id(i)
-				_refresh())
+				refresh())
 			sp.add_child(cp)
 		for id: String in SpellRules.ready(c):
 			var spell: Dictionary = data["spells"].get(id, {})
@@ -876,26 +1078,29 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			var side := SpellEffects.picks_side(data, id)  # v0.7.50.1: a choice of friends, or of either side
 			var friends := side == "any" or (side == "friend" and not CombatRules.allies(s, false).is_empty())
 			var alone := side == "friend" and not friends
-			if alone or not friends and spell.has("heal_at_slot") or not friends and SpellEffects.self_spell(data, id) or int(spell.get("range_ft", 0)) == 0 and not spell.has("area") 					or not AllyRules.summon_spec(data, id).is_empty():
-				var b := _button(sp, "Cast_" + id, label, mine)
+			var jump := SpellEffects.spec(data, id).has("teleport")  # Misty Step: a square, not a body
+			if not jump and (alone or not friends and spell.has("heal_at_slot") or not friends and SpellEffects.self_spell(data, id) \
+					or int(spell.get("range_ft", 0)) == 0 and not spell.has("area") or not AllyRules.summon_spec(data, id).is_empty()):
+				var b := _button(sp, "Cast_" + id, label, me)
 				_details.hook(b, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
 				b.pressed.connect(func() -> void: _do(_conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, ""))))
 			else:
-				var ab := _action(sp, "Cast_" + id, label, mine,
+				var ab := _action(sp, "Cast_" + id, label, me,
 					func(t: String) -> String: return _conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, t)),
 					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t),
-					func(t: String) -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t))
+					func(t: String) -> Dictionary: return {} if FightGrid.is_aim(t) else CombatRules.cast_preview(s, data, id, slot, t),
+					id if spell.has("area") or jump else "")
 				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
 		for sa: Dictionary in SpellEffects.actions(s, data):  # v0.7.13.5: the spells that go on each turn
 			var said := str(sa["id"])
 			var slabel := "%s%s" % [sa["name"], tr("COMBAT_BONUS_SHORT") if str(sa["cost"]) == "bonus" else ""]
 			if bool(sa["target"]):
-				var stb := _action(sp, "Feat_" + said, slabel, mine, func(t: String) -> String: return GameState.combat_feature(said, t),
+				var stb := _action(sp, "Feat_" + said, slabel, me, func(t: String) -> String: return GameState.combat_feature(said, t),
 					func(t: String) -> String: return FeatureRules.can_act(s, data, said, t), func(_t: String) -> Dictionary: return {})
 				stb.tooltip_text = str(sa["tip"])
 			else:
 				var swhy := FeatureRules.can_act(s, data, said)
-				var sub := _button(sp, "Feat_" + said, slabel, mine and swhy.is_empty())
+				var sub := _button(sp, "Feat_" + said, slabel, me and swhy.is_empty())
 				sub.tooltip_text = str(sa["tip"])
 				sub.pressed.connect(func() -> void: _do(GameState.combat_feature(said)))
 	# Features: limited uses with an action of their own, then the feature actions (v0.7.10).
@@ -908,18 +1113,18 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			var fid := str(fa["id"])
 			var label := "%s%s" % [fa["name"], tr("COMBAT_BONUS_SHORT") if str(fa["cost"]) == "bonus" else ""]
 			if bool(fa["target"]):
-				var tb := _action(fb, "Feat_" + fid, label, mine, func(t: String) -> String: return GameState.combat_feature(fid, t),
+				var tb := _action(fb, "Feat_" + fid, label, me, func(t: String) -> String: return GameState.combat_feature(fid, t),
 					func(t: String) -> String: return FeatureRules.can_act(s, data, fid, t), func(_t: String) -> Dictionary: return {})
 				tb.tooltip_text = str(fa["tip"])
 				_details.hook(tb, str(fa["name"]), str(fa["tip"]))
 			else:
 				var why := FeatureRules.can_act(s, data, fid)
-				var ub := _button(fb, "Feat_" + fid, label, mine and why.is_empty())
+				var ub := _button(fb, "Feat_" + fid, label, me and why.is_empty())
 				ub.tooltip_text = str(fa["tip"]) + (("\n" + tr(why)) if not why.is_empty() and why != "COMBAT_NOT_YOUR_TURN" else "")
 				_details.hook(ub, str(fa["name"]), str(fa["tip"]))
 				ub.pressed.connect(func() -> void: _do(GameState.combat_feature(fid)))
 		for r: Dictionary in res:
-			var b := _button(fb, "Feature_" + str(r["id"]), "%s (%d/%d)" % [r["name"], r["left"], r["max"]], mine and int(r["left"]) > 0)
+			var b := _button(fb, "Feature_" + str(r["id"]), "%s (%d/%d)" % [r["name"], r["left"], r["max"]], me and int(r["left"]) > 0)
 			var rid := str(r["id"])
 			_details.hook(b, str(r["name"]), DetailsPanel.feature_text(data, rid))
 			b.pressed.connect(func() -> void: _do(GameState.combat_use_feature(rid)))
@@ -940,71 +1145,94 @@ func _draw_actions(s: GameSession, data: Dictionary, mine: bool) -> void:
 			var sp: Dictionary = data["spells"].get(sp_id, {})
 			var item_btn: Button
 			if fx.has("throw"):  # v0.7.12: flasks and the net at a foe
-				item_btn = _action(ib, "Item_" + id, label, mine, func(t: String) -> String: return GameState.combat_throw(id, t),
-					func(t: String) -> String: return CombatRules.can_throw(s, data, id, t), func(_t: String) -> Dictionary: return {})
+				var spills: bool = fx["throw"].has("oiled") or fx["throw"].has("burning")  # v0.8.4: a flask goes on a square too
+				item_btn = _action(ib, "Item_" + id, label, me, func(t: String) -> String: return GameState.combat_throw(id, t),
+					func(t: String) -> String: return CombatRules.can_throw(s, data, id, t), func(_t: String) -> Dictionary: return {}, id if spills else "")
 			elif not sp_id.is_empty() and CombatRules.is_engine_spell(data, sp_id) and not sp.has("heal_at_slot") 					and (int(sp.get("range_ft", 0)) > 0 or sp.has("area")):
-				item_btn = _action(ib, "Item_" + id, label, mine, func(t: String) -> String: return GameState.combat_item_spell(id, t),
+				item_btn = _action(ib, "Item_" + id, label, me, func(t: String) -> String: return GameState.combat_item_spell(id, t),
 					func(t: String) -> String: return CombatRules.can_item_spell(s, data, id, t), func(_t: String) -> Dictionary: return {})
 			elif not sp_id.is_empty():
-				item_btn = _button(ib, "Item_" + id, label, mine)
+				item_btn = _button(ib, "Item_" + id, label, me)
 				item_btn.pressed.connect(func() -> void: _do(GameState.combat_item_spell(id, "")))
 			else:
 				if ItemRules.is_potion(data, s.items, id) and str(CombatRules.cfg(data).get("potion_cost", "action")) == "bonus":
 					label += tr("COMBAT_BONUS_SHORT")  # v0.7.22.3: a potion — a bonus action
-				item_btn = _button(ib, "Item_" + id, label, mine)
+				item_btn = _button(ib, "Item_" + id, label, me)
 				item_btn.pressed.connect(func() -> void: _do(GameState.combat_use_item(id)))
 			_details.hook(item_btn, str(d.get("name", id)), DetailsPanel.item_text(c, data, s.items, id))
 	# Common.
 	var g := _tab_box("COMBAT_TAB_COMMON")
 	for what: String in ["dash", "dodge", "disengage"]:
-		var b := _button(g, "Do_" + what, tr("COMBAT_DO_" + what.to_upper()), mine)
+		var b := _button(g, "Do_" + what, tr("COMBAT_DO_" + what.to_upper()), me)
 		b.pressed.connect(func() -> void: _do(GameState.combat_simple(what)))
-	var ib := _action(g, "Do_inspect", tr("COMBAT_DO_INSPECT"), mine,
+	var leave_why := CombatRules.can_flee(s, data)
+	var lb := _button(g, "Do_flee", tr("COMBAT_DO_FLEE"), me and leave_why.is_empty())
+	lb.tooltip_text = tr(leave_why) if not leave_why.is_empty() and leave_why != "COMBAT_NOT_YOUR_TURN" else tr("COMBAT_FLEE_TIP")
+	lb.pressed.connect(func() -> void: _do(GameState.combat_flee()))
+	var jump := _button(g, "Do_jump", tr("COMBAT_DO_JUMP"), me and not CombatRules.jump_squares(s, data).is_empty())
+	jump.tooltip_text = tr("COMBAT_JUMP_TIP")
+	jump.toggle_mode = true
+	jump.button_pressed = _jumping
+	jump.pressed.connect(func() -> void:
+		_jumping = not _jumping
+		_pending = Callable()
+		refresh())
+	var hp := _action(g, "Do_help", tr("COMBAT_DO_HELP"), me and not CombatRules.allies(s).is_empty(),
+		func(t: String) -> String: return GameState.combat_help(t),
+		func(t: String) -> String: return CombatRules.can_help(s, data, t), func(_t: String) -> Dictionary: return {})
+	hp.tooltip_text = tr("COMBAT_HELP_TIP")
+	for how: String in FightField.acts(s, data):
+		var fa := _button(g, "Act_" + how, tr("COMBAT_ACT_" + how.to_upper()), me and CombatRules.can_field(s, data, how).is_empty())
+		var fw := CombatRules.can_field(s, data, how)
+		if not fw.is_empty() and fw != "COMBAT_NOT_YOUR_TURN":
+			fa.tooltip_text = tr(fw)
+		fa.pressed.connect(func() -> void: _do(GameState.combat_field(how)))
+	var ib := _action(g, "Do_inspect", tr("COMBAT_DO_INSPECT"), me,
 		func(t: String) -> String: return GameState.combat_inspect(t),
 		func(t: String) -> String: return CombatRules.can_inspect(s, data, t),
 		func(_t: String) -> Dictionary: return {})
 	ib.tooltip_text = tr("COMBAT_INSPECT_TIP")
 	for shove: bool in [false, true]:
-		var gb := _action(g, "Do_shove" if shove else "Do_grapple", tr("COMBAT_DO_SHOVE" if shove else "COMBAT_DO_GRAPPLE"), mine,
-			func(t: String) -> String: return GameState.combat_grapple(t, shove),
+		var gb := _action(g, "Do_shove" if shove else "Do_grapple", tr("COMBAT_DO_SHOVE" if shove else "COMBAT_DO_GRAPPLE"), me,
+			func(t: String) -> String: return _grapple(t, shove),
 			func(t: String) -> String: return CombatRules.can_grapple(s, data, t),
 			func(_t: String) -> Dictionary: return {})
 		gb.tooltip_text = tr("COMBAT_SHOVE_TIP" if shove else "COMBAT_GRAPPLE_TIP")
 	if ConditionRules.has(c, "prone"):
-		var sw := CombatRules.can_stand(s)
-		var sb := _button(g, "Do_stand", tr("COMBAT_DO_STAND"), mine and sw.is_empty())
+		var sw := CombatRules.can_stand(s, data)
+		var sb := _button(g, "Do_stand", tr("COMBAT_DO_STAND"), me and sw.is_empty())
 		sb.tooltip_text = tr(sw) if not sw.is_empty() else tr("COMBAT_STAND_TIP")
 		sb.pressed.connect(func() -> void: _do(GameState.combat_stand()))
 	if ConditionRules.has(c, "grappled") or ConditionRules.has(c, "restrained"):
 		var ew := CombatRules.can_escape(s)
-		var eb := _button(g, "Do_escape", tr("COMBAT_DO_ESCAPE"), mine and ew.is_empty())
+		var eb := _button(g, "Do_escape", tr("COMBAT_DO_ESCAPE"), me and ew.is_empty())
 		eb.tooltip_text = tr(ew) if not ew.is_empty() else tr("COMBAT_ESCAPE_TIP")
 		eb.pressed.connect(func() -> void: _do(GameState.combat_escape()))
 	if CharacterRules.has_feature(c, "frenzy") and bool(s.combat.get("raging", false)):
 		if not bool(s.combat.get("frenzy", false)):
 			var fw := CombatRules.can_frenzy(s)
-			var frb := _button(g, "Do_frenzy", tr("COMBAT_DO_FRENZY"), mine and fw.is_empty())
+			var frb := _button(g, "Do_frenzy", tr("COMBAT_DO_FRENZY"), me and fw.is_empty())
 			frb.tooltip_text = tr("COMBAT_FRENZY_TIP")
 			frb.pressed.connect(func() -> void: _do(GameState.combat_frenzy()))
 		else:
-			_action(w, "Attack_frenzy", tr("COMBAT_ATTACK_FRENZY").format({"name": main["name"], "dmg": _dmg_text(main)}), mine,
+			_action(w, "Attack_frenzy", tr("COMBAT_ATTACK_FRENZY").format({"name": main["name"], "dmg": _dmg_text(main)}), me,
 				func(t: String) -> String: return GameState.combat_frenzy_attack(t),
 				func(t: String) -> String: return CombatRules.can_frenzy_attack(s, data, t),
 				func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
 	var hide_why := CombatRules.can_hide(s, data)
-	var hb := _button(g, "Do_hide", tr("COMBAT_DO_HIDE"), mine and hide_why.is_empty())
+	var hb := _button(g, "Do_hide", tr("COMBAT_DO_HIDE"), me and hide_why.is_empty())
 	hb.tooltip_text = tr(hide_why) if not hide_why.is_empty() else tr("COMBAT_HIDE_TIP")
 	hb.pressed.connect(func() -> void: _do(GameState.combat_hide()))
 	for skill: String in CombatRules.cfg(data)["parley"]["skills"]:
 		var why := CombatRules.can_parley(s, data, skill)
 		if why.is_empty() and int(e.get("action", 0)) <= 0:
 			why = "COMBAT_NO_ACTION"
-		var pb := _button(g, "Parley_" + skill, tr("COMBAT_PARLEY").format({"skill": tr("SKILL_" + skill.to_upper())}), mine and why.is_empty())
+		var pb := _button(g, "Parley_" + skill, tr("COMBAT_PARLEY").format({"skill": tr("SKILL_" + skill.to_upper())}), me and why.is_empty())
 		pb.tooltip_text = tr(why) if not why.is_empty() else "%s\n%s" % [tr("COMBAT_PARLEY_TIP_" + skill.to_upper()),
 			tr("COMBAT_PARLEY_PROGRESS").format({"progress": CombatRules.parley_progress(s, data)})]
 		pb.pressed.connect(func() -> void: _do(GameState.combat_parley(skill)))
 	var sw := CombatRules.can_surrender(s, data)  # v0.7.22.17, #12
-	var surr := _button(g, "Do_surrender", tr("COMBAT_DO_SURRENDER"), mine and sw.is_empty())
+	var surr := _button(g, "Do_surrender", tr("COMBAT_DO_SURRENDER"), me and sw.is_empty())
 	surr.tooltip_text = tr(sw) if not sw.is_empty() and sw != "COMBAT_NOT_YOUR_TURN" else tr("COMBAT_SURRENDER_TIP")
 	surr.pressed.connect(func() -> void:  # v0.7.22.27: the fight ends in captivity
 		ConfirmBox.ask(self, tr("CONFIRM_SURRENDER_TITLE"), tr("CONFIRM_SURRENDER"), tr("COMBAT_DO_SURRENDER"), func() -> void: _do(GameState.combat_surrender())))
@@ -1052,8 +1280,16 @@ func _disabled(parent: Control, text: String) -> void:
 	_button(parent, "", text, false)
 
 
-## A button that needs a target: pressing it lights the cards that can be hit.
-func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable) -> Button:
+## A shove asks the side after the foe: the squares it can go to light up. A grapple goes at once.
+func _grapple(t: String, shove: bool) -> String:
+	if not shove:
+		return GameState.combat_grapple(t, false)
+	_shoving = t
+	return ""
+
+
+## A button that needs a target: pressing it lights the bodies that can be hit. `aims` — the spell whose target is a square.
+func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "") -> Button:
 	var b := _button(parent, node_name, text, enabled)
 	b.toggle_mode = true
 	b.button_pressed = _pending.is_valid() and _pending_name == node_name
@@ -1065,7 +1301,8 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 			_pending_check = check
 			_pending_preview = preview
 			_pending_name = node_name
-		_refresh())
+			_pending_aim = aims
+		refresh())
 	return b
 
 
@@ -1240,3 +1477,4 @@ func _loot_that_fits(s: GameSession, data: Dictionary, loot: Array) -> Dictionar
 		if weight + w <= cap:
 			weight += w
 	return out
+

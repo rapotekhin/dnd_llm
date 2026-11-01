@@ -80,8 +80,8 @@ func run() -> void:
 			npc["languages"] = old_langs
 
 	# A gnoll understands no words: the parley by Persuasion is closed, Intimidation stays.
-	gs.start_combat([{"monster": "gnoll", "col": 2}])
-	if not step("a fight with a gnoll", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)):
+	gs.start_combat([{"monster": "gnoll"}])
+	if not step("a fight with a gnoll", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)):
 		return
 	await wait_until(func() -> bool: return CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty(), 60.0)
 	await frames(3)

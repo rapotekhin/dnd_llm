@@ -73,13 +73,13 @@ func test_comprehend_languages_bridges_the_tongue() -> void:
 
 func test_parley_by_words_needs_a_tongue() -> void:
 	var s := _hero("fighter_aira")
-	CombatRules.start(s, data, [{"monster": "gnoll", "col": 2}], {})
+	TestUtils.fight(s, data, [{"monster": "gnoll", "col": 2}], {})
 	s.mode = GameSession.MODE_COMBAT
 	assert_bool(CombatRules.parley_understood(s, data)).is_false()
 	assert_str(CombatRules.can_parley(s, data, "persuasion")).is_equal("COMBAT_NO_LANGUAGE")
 	assert_str(CombatRules.can_parley(s, data, "intimidation")).is_empty()
 	var g := _hero("fighter_aira")
-	CombatRules.start(g, data, [{"monster": "goblin", "col": 2}], {})
+	TestUtils.fight(g, data, [{"monster": "goblin", "col": 2}], {})
 	assert_bool(CombatRules.parley_understood(g, data)).is_true()
 
 

@@ -135,8 +135,8 @@ func run() -> void:
 	# The fight: what an attack and a foe are.
 	if int(s.character["hp"]) <= 0:
 		s.character["hp"] = 1
-	gs.start_combat([{"monster": "wolf", "col": 1}])
-	if not step("a fight", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)):
+	gs.start_combat([{"monster": "wolf"}])
+	if not step("a fight", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)):
 		return
 	await frames(5)
 	var cs := screen()

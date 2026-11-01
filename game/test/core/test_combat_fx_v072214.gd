@@ -10,7 +10,7 @@ func before_test() -> void:
 
 
 func _fight(s: GameSession) -> Dictionary:
-	CombatRules.start(s, data, [{"monster": "goblin", "col": 0}], {})
+	TestUtils.fight(s, data, [{"monster": "goblin", "col": 0}], {})
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)

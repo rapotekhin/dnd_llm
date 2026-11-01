@@ -88,8 +88,8 @@ func run() -> void:
 
 	# The fight: the Items tab.
 	c["inventory"]["arrows"] = 20
-	gs.start_combat([{"monster": "ogre", "col": 1}])
-	if not step("a fight with an ogre", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)):
+	gs.start_combat([{"monster": "ogre"}])
+	if not step("a fight with an ogre", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)):
 		return
 	await wait_until(func() -> bool: return CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty(), 60.0)
 	var ogre := CombatRules.fighter(s, CombatRules.enemies(s)[0])
@@ -133,7 +133,7 @@ func _gear_tab(sheet: Control) -> void:
 
 
 func _items_tab(cs: Control) -> void:
-	cs.call("set_filter", "COMBAT_TAB_ITEMS")
+	find(cs, "FightUi").call("set_filter", "COMBAT_TAB_ITEMS")
 
 
 func _tail(n: int) -> String:

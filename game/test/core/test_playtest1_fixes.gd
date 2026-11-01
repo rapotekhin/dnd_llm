@@ -25,7 +25,7 @@ func _session(preset_id: String = "fighter_aira") -> GameSession:
 
 
 func _fight(s: GameSession, foes: Array) -> void:
-	CombatRules.start(s, data, foes)
+	TestUtils.fight(s, data, foes)
 	var order: Array = s.combat["order"]
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)
@@ -146,7 +146,7 @@ func test_an_unconscious_foe_loses_its_turn_and_a_hit_wakes_it_with_a_crit() -> 
 	var lines := CombatRules.next_actor(s, data)
 	assert_str("\n".join(lines)).contains("не может действовать")
 	assert_int(int(s.character["hp"])).is_equal(hp)
-	assert_int(int(w["col"])).is_equal(0)
+	assert_int(FightGrid.dist(w, CombatRules.player(s))).is_equal(1)
 	var hit := CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
 	if "\n".join(hit).contains("попадание") or "\n".join(hit).contains("КРИТ"):
 		assert_str("\n".join(hit)).contains("КРИТ")

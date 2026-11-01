@@ -105,8 +105,6 @@ BTN_SNEAK_WAIT,Переждать
 BTN_SNEAK_WAIT_TIP,"Вы стоите на месте, враги поворачиваются. Конусы их взгляда видны красным"
 BTN_SNEAK_TIP,"Враги замечают вас только в конусе взгляда и по проверке Скрытности, одной на комнату. Рядом с ними вы идёте по ходам: конусы видны красным, после хода враги поворачиваются. Пассивная Внимательность ниже на 5"
 BTN_STEAL,Стащить
-BTN_STEP_LEFT,← Шаг
-BTN_STEP_RIGHT,Шаг →
 BTN_TAKE_ALL,Забрать всё
 TALK_REFUSED,Враждебен к вам — не станет говорить
 BTN_TO_MENU,В меню
@@ -202,7 +200,30 @@ COMBAT_ATTACK,"Атака: {name} ({hit}, {dmg})"
 COMBAT_ATTACK_FIRST,Сначала действие «Атака»
 COMBAT_ATTACK_FRENZY,Удар в неистовстве: {name} ({dmg}) ▲
 COMBAT_ATTACK_OFF,Второй рукой: {name} ({dmg}) [бонус]
-COMBAT_BAD_MOVE,Можно шагнуть только на соседнюю колонку
+COMBAT_BAD_MOVE,Туда не дойти за этот ход
+COMBAT_NO_LINE,Цели не видно
+COMBAT_NOT_AT_EXIT,Уйти можно только у выхода с этого места
+COMBAT_WALK_COST,Дойти: {ft} фт
+COMBAT_WAY_OUT,Выход: дойдите до него и выходите. Кто рядом — побежит следом
+COMBAT_DO_FLEE,Уйти
+COMBAT_DO_JUMP,Прыжок
+COMBAT_JUMP_TIP,"Перепрыгнуть яму, воду или опасную клетку. Длина по Силе, с разбега вдвое дальше, тратит движение"
+COMBAT_PICK_JUMP,Куда прыгнуть? Клетки подсвечены
+COMBAT_DO_HELP,Помочь
+COMBAT_HELP_TIP,"Отвлечь врага рядом с вами: союзник ударит его с преимуществом. Тратит действие"
+COMBAT_NO_ALLY,Рядом нет союзника
+COMBAT_ACT_DOOR_CLOSE,Закрыть дверь
+COMBAT_ACT_DOOR_BAR,Подпереть дверь
+COMBAT_ACT_DOOR_UNBAR,Убрать подпорку
+COMBAT_ACT_DOOR_LOCK,Запереть ключом
+COMBAT_ACT_DOOR_FORCE,Выломать дверь
+COMBAT_ACT_BLOCK_PUSH,Толкнуть вещь
+COMBAT_ACT_BLOCK_SMASH,Разбить вещь
+COMBAT_TOO_HEAVY,Слишком тяжело
+COMBAT_BLOCK_STUCK,Вещи некуда сдвинуться
+COMBAT_FLEE_TIP,"Покинуть место боя через выход, у которого вы стоите. Кто рядом, ударит вдогонку, а кто близко к выходу, побежит следом"
+COMBAT_AREA_CAUGHT,Попадут: {names}
+COMBAT_PICK_SIDE,Толчок: выберите клетку
 COMBAT_BAD_TARGET,Эта цель уже вне боя
 COMBAT_BONUS,Бонус
 COMBAT_BONUS_SHORT, [бонус]

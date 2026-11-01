@@ -130,8 +130,8 @@ func run() -> void:
 		step("exhaustion is gone", ConditionRules.exhaustion(c) == 0)
 
 	# The fight: prone, frightened, grappled.
-	gs.start_combat([{"monster": "wolf", "col": 2}])
-	if not step("a fight", await wait_until(func() -> bool: return screen_is("CombatScreen") and not gs.is_busy(), 60.0)):
+	gs.start_combat([{"monster": "wolf"}])
+	if not step("a fight", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)):
 		return
 	await wait_until(func() -> bool: return CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty(), 60.0)
 	if not CombatRules.player_can_act(s):
@@ -144,15 +144,15 @@ func run() -> void:
 	node("EventBus").state_changed.emit()
 	await frames(4)
 	var cs := screen()
-	var right: Button = find(cs, "MoveRight" if int(CombatRules.fighter(s, wolf)["col"]) > 0 else "MoveLeft")
-	step("prone: no step until standing", right != null and right.disabled and right.tooltip_text.contains("встаньте"), right.tooltip_text if right != null else "")
+	var hint: Label = find(cs, "Hint")
+	step("prone: no step until standing", CombatRules.hero_routes(s, data).is_empty() and hint.text.contains("встаньте"), hint.text)
 	step("the hero card shows the chips", _text_of(cs).contains("Лежит ничком") and _text_of(cs).contains("Испуган"), "")
 	await shot("prone_frightened")
 	var stand: Button = find(cs, "Do_stand")
 	if step("the stand button", stand != null and not stand.disabled):
 		await press(stand)
 		await frames(3)
-	step("standing up took the move", not ConditionRules.has(c, "prone") and int(CombatRules.economy(s).get("move", 0)) == 0)
+	step("standing up took half the move", not ConditionRules.has(c, "prone") and int(CombatRules.economy(s).get("move", 0)) == FightGrid.steps_of(data, int(c["speed"])) - FightGrid.steps_of(data, int(c["speed"])) / 2)
 	ConditionRules.remove(c, "frightened")
 	ConditionRules.add_effect(c, {"condition": "grappled", "ends": {}, "by": wolf, "source": {"kind": "monster", "name": "волчья хватка"}})
 	CharacterRules.refresh(c, data, s.items)
