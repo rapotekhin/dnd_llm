@@ -102,7 +102,8 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
     if "qwen/" in model.model_name or "nvidia/nemotron" in model.model_name:
         # v0.7.20.2: Nemotron thinks the whole max_tokens away before answering — the same switch
         settings["openrouter_reasoning"] = {"enabled": False}
-    elif effort := os.environ.get("LLM_SERVER_REASONING_EFFORT", "").strip().lower():
+    elif effort := os.environ.get("LLM_SERVER_REASONING_EFFORT", "low" if model.model_name.startswith("deepseek/") else "").strip().lower():
+        # low on DeepSeek: the goldens passed as before at half the wait and 37% less cost
         settings["openrouter_reasoning"] = {"effort": effort}
     if model.model_name.startswith(NO_TEMPERATURE):
         # Their endpoints reject `temperature`: with require_parameters no provider is left (HTTP 404, v0.7.7).
