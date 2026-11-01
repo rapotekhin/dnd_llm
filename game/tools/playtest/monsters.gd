@@ -58,7 +58,7 @@ func run() -> void:
 	await _my_turn(gs, s)
 	step("info: the spider's turn", true, _log_tail(s, 6))
 	await shot("spider_turn")
-	gs.finish_combat([])
+	gs.finish_combat()
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 120.0)
 
 	# A ghoul: paralysis — the hero's turn passes by itself.

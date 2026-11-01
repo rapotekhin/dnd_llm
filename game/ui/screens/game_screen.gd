@@ -94,7 +94,6 @@ func _ready() -> void:
 	_field.arrived.connect(_on_arrived)
 	_fight = UiScenes.need(self, "%FightUi")
 	_fight.setup(self)
-	_fight.foe_touched.connect(_show_menu)
 	_field.cell_hovered.connect(_fight.on_hover)
 	_field.cell_right.connect(_fight.on_right)
 	_dim = UiScenes.need(self, "%Dim")
@@ -470,9 +469,9 @@ func _on_cell(cell: Vector2i) -> void:
 
 ## A click on someone or something: a person's menu opens from where it can be spoken to, a thing is used from beside it.
 func _touch(ref: String) -> void:
-	var thing := ref.begins_with("prop:") or ref.begins_with("body:")
+	var thing := ref.begins_with("prop:")
 	_menu.visible = false
-	if ref.begins_with("door:") or ref.begins_with("trap:"):
+	if ref.begins_with("door:") or ref.begins_with("trap:") or ref.begins_with("body:"):
 		_approach(ref, "touch", _show_menu.bind(ref))
 	elif thing:
 		_approach(ref, "touch", _side.use_thing.bind(ref))
@@ -505,8 +504,6 @@ func _approach(ref: String, reach: String, act: Callable) -> void:
 func _cell_of(ref: String) -> Vector2i:
 	if ref.begins_with("door:"):
 		return WalkRules.way_cell(_field.map, GameState.session.room_id, ref.trim_prefix("door:"))
-	if ref.begins_with("fight:"):
-		return _fight.cell_of(ref)
 	return _field.cell_of(ref)
 
 
@@ -546,7 +543,7 @@ func _show_menu(ref: String) -> void:
 	for c: Node in _menu_box.get_children():
 		_menu_box.remove_child(c)
 		c.queue_free()
-	if not (_fight.menu(_menu_box, ref) if ref.begins_with("fight:") else _side.menu(_menu_box, ref)):
+	if not _side.menu(_menu_box, ref):
 		_menu.visible = false
 		return
 	for b: Node in _menu_box.find_children("*", "BaseButton", true, false):

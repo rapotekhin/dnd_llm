@@ -62,7 +62,7 @@ func test_the_beaten_stay_and_can_be_bound_and_led() -> void:
 	foes[1]["status"] = "unconscious"
 	foes[2]["status"] = "dead"
 	var lines := CreatureRules.after_fight(s, data, s.room_id)
-	assert_int(CreatureRules.here(s, s.room_id).size()).is_equal(2)
+	assert_int(CreatureRules.here(s, s.room_id).size()).is_equal(3)  # the dead one lies with them (v0.8.4.4)
 	assert_str(" · ".join(lines)).contains("сдался")
 	var id := str(CreatureRules.here(s, s.room_id)[0]["id"])
 	assert_str(CreatureRules.can(s, id, "lead")).is_equal("CREATURE_NOT_BOUND")
@@ -70,9 +70,9 @@ func test_the_beaten_stay_and_can_be_bound_and_led() -> void:
 	CreatureRules.act(s, data, id, "lead")
 	CreatureRules.follow(s, s.room_id, "brod-square")
 	assert_int(CreatureRules.here(s, "brod-square").size()).is_equal(1)
-	assert_int(CreatureRules.here(s, "brod-tavern-hall").size()).is_equal(1)
+	assert_int(CreatureRules.here(s, "brod-tavern-hall").size()).is_equal(2)
 	TimeRules.advance(s, data, 200)  # the knocked-out one wakes and slips away; the bound one stays
-	assert_int(CreatureRules.here(s, "brod-tavern-hall").size()).is_equal(0)
+	assert_int(CreatureRules.here(s, "brod-tavern-hall").size()).is_equal(1)
 	assert_int(CreatureRules.here(s, "brod-square").size()).is_equal(1)
 	var back := GameSession.from_dict(s.to_dict(5))
 	assert_int(CreatureRules.here(back, "brod-square").size()).is_equal(1)

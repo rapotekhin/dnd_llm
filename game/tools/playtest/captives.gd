@@ -31,7 +31,7 @@ func run() -> void:
 	await press(give_up)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	step("given up — captured at once", str(s.combat.get("outcome", "")) == "captured", str(s.combat.get("log", [])))
-	gs.finish_combat([])
+	gs.finish_combat()
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
 	await frames(3)
 	var chest := {}

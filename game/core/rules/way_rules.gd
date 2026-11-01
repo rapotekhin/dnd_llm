@@ -389,11 +389,25 @@ static func ignite(s: GameSession, data: Dictionary, a: String, b: String, cause
 	return ["Дверь загорается (%s): через %d мин прогорит насквозь" % [cause, int(ThingRules.cfg(data)["burn_minutes"])]]
 
 
-## A way into a closed or private site of someone else, forced before eyes: who saw it ([] — nobody).
+## Whose door it is: who does not want the hero on either side, else the owner of either side (a door broken from inside
+## or in open hours is damage all the same, v0.8.4.4). "" — nobody's.
+static func victim(s: GameSession, data: Dictionary, a: String, b: String) -> String:
+	var w := WorldView.new(data["world"])
+	for room: String in [b if s.room_id == a else a, s.room_id]:
+		if not SiteRules.unwelcome(s, data, room).is_empty():
+			return SiteRules.unwelcome(s, data, room)
+	for room: String in [a, b]:
+		var owner := str(w.inherit(room, "owner", ""))
+		if not owner.is_empty() and owner != OwnerRules.HERO and not Being.dead(s, owner):
+			return owner
+	return ""
+
+
+## A door of someone else forced before eyes: who saw it ([] — nobody).
 static func witnesses(s: GameSession, data: Dictionary, a: String, b: String) -> Array[String]:
 	var w := WorldView.new(data["world"])
 	var into := b if s.room_id == a else a
-	if SiteRules.unwelcome(s, data, into).is_empty() or ConditionRules.invisible(s.character, data):
+	if victim(s, data, a, b).is_empty() or ConditionRules.invisible(s.character, data):
 		return []
 	var seen: Array[String] = []
 	seen.assign(WatchRules.eyes(s, data, s.npcs_here(w.world, s.room_id)))

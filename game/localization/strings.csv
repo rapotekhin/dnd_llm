@@ -229,7 +229,6 @@ COMBAT_BAD_TARGET,Эта цель уже вне боя
 COMBAT_BONUS,Бонус
 COMBAT_BONUS_SHORT, [бонус]
 COMBAT_CHARMED,Вы очарованы им и не можете напасть
-COMBAT_COINS,Монеты: {coins}
 COMBAT_DEATH_SAVES,"Спасброски от смерти: успехов {ok}, провалов {fail}"
 COMBAT_DID_DASH,{name} — рывок
 COMBAT_DID_DISENGAGE,{name} отходит осторожно
@@ -264,7 +263,6 @@ COMBAT_INCOMING,"{names}
 через {n} р."
 COMBAT_INSPECT_TIP,"Бонусное действие: проверка знаний по виду врага (Природа, Религия, Магия, Проницательность). Успех открывает хиты, КД, атаки и сопротивления таких врагов насовсем"
 COMBAT_ITEM_CANT,Этим сейчас не воспользоваться
-COMBAT_LOOT,Добыча
 COMBAT_MELEE,вплотную
 COMBAT_MOVE,➜ Движение: {n}
 COMBAT_NONE,Боя нет
@@ -655,7 +653,7 @@ PLACEHOLDER_ACTION,Что вы делаете?
 PLACEHOLDER_ATTACHED,Что вы делаете при этом? Можно отправить и без слов
 PLACEHOLDER_COMBAT,Импровизация (стоит действия): что вы делаете?
 PLACEHOLDER_SAY,Что вы говорите или делаете? ({name} слушает)
-PREP_ALREADY_TODAY,Заклинания на сегодня уже подготовлены — после долгого отдыха
+PREP_ALREADY_TODAY,Список уже подготовлен. Сменить его можно после долгого отдыха
 PREP_BUSY,Сейчас нельзя: мастер думает
 PREP_ERR_COUNT,"Нужно ровно столько заклинаний, сколько можно подготовить"
 PREP_ERR_PICKS,Выберите заклинания из списка
@@ -1118,11 +1116,9 @@ OPTION_CHECK_TIP,"{skill} {bonus} против Сл {dc} — шанс {chance}%"
 SHORT_REST_FULL,"Здоровье полное: отдых вернёт только умения"
 SHORT_REST_EXPECT,≈ +{hp} HP
 PREP_COUNT,Выбрано {picked} из {n}
-COMBAT_LOOT_ROW,"{name} ×{qty} · {weight} фнт"
-COMBAT_LOOT_WEIGHT,"Будет {weight} / {cap} фнт"
-BTN_LOOT_TAKE,Взять
-BTN_LOOT_TAKEN,✓ Беру
-BTN_LOOT_FITS,"Взять всё, что унесу"
+COMBAT_ON_BODIES,"Вещи остались у врагов: подойдите и обыщите их"
+LONG_REST_PREP,Заклинания на завтра
+LONG_REST_PREP_SHORT,"Выбраны не все: останется прежний список, сменить его можно будет на листе героя"
 COMBAT_ROLLS,"{fold} Броски раунда ({n})"
 CC_SUMMARY_EMPTY,"Здесь появится ваш герой: выберите готового или начните своего"
 TRADE_QTY_TIP,"Shift — по десять, Ctrl — всё сразу"

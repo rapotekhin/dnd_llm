@@ -78,7 +78,7 @@ func test_a_creature_keeps_its_wounds_and_gives_no_xp_twice() -> void:
 	assert_int(int(again["hp"])).is_equal(2)
 	again["status"] = "dead"
 	s.combat["outcome"] = "victory"
-	CombatRules.results(s, data, {})
+	CombatRules.results(s, data)
 	assert_int(int(s.combat["xp"])).is_equal(0)
 
 

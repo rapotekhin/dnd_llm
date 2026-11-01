@@ -200,20 +200,18 @@ func test_engine_spells_attack_save_darts_and_heal() -> void:
 	assert_int(cl.character["hp"]).is_greater(1)
 
 
-func test_a_won_fight_gives_xp_and_the_gear_of_the_fallen() -> void:
+func test_a_won_fight_gives_xp_alone() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 0}])
 	CombatRules.fighter(s, TestUtils.foe(s, 1))["status"] = "dead"
 	var lines := CombatRules.after_player_action(s, data)
 	assert_str(s.combat["outcome"]).is_equal("victory")
-	CombatRules.results(s, data, {"coins_cp": 150, "items": {"torch": 2}})
+	CombatRules.results(s, data)
 	assert_int(s.combat["xp"]).is_equal(50)
-	var ids: Array = s.combat["loot"].map(func(l: Dictionary) -> String: return l["item_id"])
-	assert_array(ids).contains(["scimitar", "torch"])
-	assert_int(s.combat["coins_cp"]).is_equal(150)
+	assert_bool(s.combat.has("loot")).is_false()
 
 
-func test_finish_combat_takes_the_chosen_loot_and_remembers_the_fight() -> void:
+func test_finish_combat_remembers_the_fight_and_gives_no_things() -> void:
 	var s := _session()
 	GameState.start(s)
 	_fight(s, [{"monster": "commoner", "col": 0, "npc_id": TestUtils.INNKEEPER, "name": "Бруно"}])
@@ -221,14 +219,14 @@ func test_finish_combat_takes_the_chosen_loot_and_remembers_the_fight() -> void:
 	s.mode = GameSession.MODE_COMBAT
 	CombatRules.fighter(s, TestUtils.foe(s, 1))["status"] = "dead"
 	CombatRules.after_player_action(s, data)
-	CombatRules.results(s, data, {"coins_cp": 20})
+	CombatRules.results(s, data)
 	s.combat["narrated"] = true
 	var gold := int(s.character["gold_cp"])
-	GameState.finish_combat(["club"])
+	GameState.finish_combat()
 	assert_bool(CombatRules.active(s)).is_false()
 	assert_str(s.mode).is_equal(GameSession.MODE_EXPLORATION)
-	assert_int(s.character["gold_cp"]).is_equal(gold + 20)
-	assert_int(int(s.character["inventory"].get("club", 0))).is_greater_equal(1)
+	assert_int(s.character["gold_cp"]).is_equal(gold)
+	assert_array((TheftRules.pockets(s, data, TestUtils.INNKEEPER) as Array).map(func(e: Dictionary) -> String: return str(e["item_id"]))).contains(["club"])
 	assert_array(s.encounters_done).contains(["test_enc"])
 	assert_bool(s.npcs_here(GameState.world().world, s.room_id).has(TestUtils.INNKEEPER)).is_false()
 

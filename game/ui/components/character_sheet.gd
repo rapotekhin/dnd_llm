@@ -317,7 +317,7 @@ func _abilities_tab(c: Dictionary) -> void:
 	if not str(c.get("concentration", "")).is_empty():
 		_text(box, tr("SHEET_CONCENTRATION").format({"spell": d["spells"].get(str(c["concentration"]), {}).get("name", "")}))
 	if SpellRules.prepares(c, d):
-		var why := SpellRules.can_prepare(c, d, GameState.session.day)
+		var why := SpellRules.can_prepare(c, d)
 		var prep := Button.new()
 		prep.name = "PrepareButton"
 		prep.text = "BTN_PREPARE"

@@ -176,19 +176,18 @@ static func describe(data: Dictionary, spell_id: String, slot: int) -> String:
 		"; усилено: " + grown.get_slice(": ", 1) if not grown.is_empty() else ""]
 
 
-## Prepared casters (cleric, druid, paladin, wizard) change their prepared spells after a long rest (once a day).
+## Prepared casters (cleric, druid, paladin, wizard) change their prepared spells after a long rest: once, in the rest's
+## own window or later on the sheet (`may_prepare`, v0.8.4.4; a day number refused a bed taken after midnight).
 static func prepares(c: Dictionary, data: Dictionary) -> bool:
 	var sc: Dictionary = CharacterRules.class_def(c, data).get("spellcasting", {})
 	return bool(sc.get("prepared", false)) and int(c.get("level", 1)) >= int(sc.get("from_level", 1))
 
 
-## "" when the character may change the prepared list today, otherwise a localization key.
-static func can_prepare(c: Dictionary, data: Dictionary, day: int) -> String:
+## "" when the character may change the prepared list now, otherwise a localization key.
+static func can_prepare(c: Dictionary, data: Dictionary) -> String:
 	if not prepares(c, data):
 		return "PREP_NOT_PREPARER"
-	if int(c.get("prepared_day", 1)) >= day:
-		return "PREP_ALREADY_TODAY"
-	return ""
+	return "" if bool(c.get("may_prepare", false)) else "PREP_ALREADY_TODAY"
 
 
 ## How many spells to prepare and from what: the class list up to the highest slot circle, or the spellbook.
@@ -212,10 +211,13 @@ static func prepare_pool(c: Dictionary, data: Dictionary) -> Dictionary:
 
 
 ## "" or a localization key for a new prepared list.
-static func prepare_error(c: Dictionary, data: Dictionary, day: int, ids: Array) -> String:
-	var why := can_prepare(c, data, day)
-	if not why.is_empty():
-		return why
+static func prepare_error(c: Dictionary, data: Dictionary, ids: Array) -> String:
+	var why := can_prepare(c, data)
+	return why if not why.is_empty() else picks_error(c, data, ids)
+
+
+## "" or a localization key for the picks alone.
+static func picks_error(c: Dictionary, data: Dictionary, ids: Array) -> String:
 	var p := prepare_pool(c, data)
 	var seen := {}
 	for id: Variant in ids:
@@ -225,6 +227,19 @@ static func prepare_error(c: Dictionary, data: Dictionary, day: int, ids: Array)
 	return "" if ids.size() == mini(int(p["count"]), (p["pool"] as Array).size()) else "PREP_ERR_COUNT"
 
 
-static func prepare(c: Dictionary, ids: Array, day: int) -> void:
+static func prepare(c: Dictionary, ids: Array) -> void:
 	c["spells"]["prepared"] = ids.duplicate()
-	c["prepared_day"] = day
+	c["may_prepare"] = false
+
+
+## The list picked in the long rest's window, taken when the rest ends. An unfinished or unchanged pick leaves the old list
+## and the right to change it on the sheet.
+static func rested(c: Dictionary, data: Dictionary, ids: Array) -> Array[String]:
+	var old: Array = (c.get("spells", {}).get("prepared", []) as Array).duplicate()
+	var new := ids.duplicate()
+	old.sort()
+	new.sort()
+	if ids.is_empty() or old == new or not prepare_error(c, data, ids).is_empty():
+		return []
+	prepare(c, ids)
+	return ["Подготовлены заклинания: %d" % ids.size()]

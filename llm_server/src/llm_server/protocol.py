@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.104.0"
+PROTOCOL_VERSION = "0.105.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1360,6 +1360,17 @@ class PermitEffect(_Out):
     site_id: str | None = None
 
 
+class CureEffect(_Out):
+    """A healer of the scene cures a sick NPC by its art (0.105.0): `npc_id` — one with a cure among its services,
+    `patient_id` — the sick NPC, here or in this settlement. The engine checks the art takes this disease; a fee goes by
+    its own effect. The hero's own illness is a service or `grant:favor`."""
+
+    kind: Literal["grant"] = "grant"
+    what: Literal["cure"] = "cure"
+    npc_id: str  # the healer, an NPC of the scene
+    patient_id: str
+
+
 class ContestCheck(_Out):
     """One check of a game: exactly one of `skill` (a 5e skill id), `ability` or `save` (str … cha)."""
 
@@ -1931,7 +1942,7 @@ _CreateEffect = Annotated[
 ]
 _ShiftEffect = Annotated[NpcAttitudeEffect | ReputationEffect | BondEffect | StandingEffect, Field(discriminator="what")]
 _GrantEffect = Annotated[
-    NpcDiscountEffect | NpcFavorEffect | PermitEffect | RevealSecretEffect | NpcFollowEffect | AcceptQuestEffect,
+    NpcDiscountEffect | NpcFavorEffect | PermitEffect | CureEffect | RevealSecretEffect | NpcFollowEffect | AcceptQuestEffect,
     Field(discriminator="what"),
 ]
 _CrimeEffect = Annotated[CrimeKnownEffect | CrimeReleaseEffect, Field(discriminator="what")]

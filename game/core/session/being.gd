@@ -39,6 +39,7 @@ const NESTED := {
 		"searched": TYPE_BOOL, "cause": TYPE_STRING, "pet": TYPE_BOOL, "close": TYPE_INT, "named": TYPE_BOOL, "fed_day": TYPE_INT,
 		"hand_day": TYPE_INT, "bond_day": TYPE_INT, "tame_day": TYPE_INT, "hungry": TYPE_INT, "scout_day": TYPE_INT, "scouts": TYPE_INT,
 		"pack": TYPE_DICTIONARY, "cart": TYPE_DICTIONARY, "waiting": TYPE_BOOL, "rent_day": TYPE_INT, "rent_from": TYPE_STRING,
+		"contents": TYPE_DICTIONARY, "coins_cp": TYPE_INT, "x": TYPE_INT, "y": TYPE_INT, "until": TYPE_INT, "spell": TYPE_STRING, "carries_lb": TYPE_INT,
 	},
 	"summon": {
 		"id": TYPE_STRING, "n": TYPE_INT, "spell": TYPE_STRING, "monster": TYPE_STRING, "name": TYPE_STRING, "until": TYPE_INT,
@@ -48,7 +49,7 @@ const NESTED := {
 		"id": TYPE_STRING, "n": TYPE_INT, "side": TYPE_STRING, "name": TYPE_STRING, "base": TYPE_STRING, "desc": TYPE_STRING, "x": TYPE_INT, "y": TYPE_INT, "span": TYPE_INT,
 		"status": TYPE_STRING, "init": TYPE_INT, "monster": TYPE_STRING, "hp": TYPE_INT, "max_hp": TYPE_INT, "ac": TYPE_INT,
 		"npc_id": TYPE_STRING, "by_hero": TYPE_BOOL, "morale": TYPE_BOOL, "no_xp": TYPE_BOOL, "law": TYPE_BOOL, "helper": TYPE_BOOL,
-		"ally": TYPE_STRING, "summon_id": TYPE_STRING, "spell": TYPE_STRING, "creature_id": TYPE_STRING, "actions": TYPE_ARRAY,
+		"ally": TYPE_STRING, "summon_id": TYPE_STRING, "spell": TYPE_STRING, "creature_id": TYPE_STRING, "actions": TYPE_ARRAY, "gear": TYPE_DICTIONARY,
 		"effects": TYPE_ARRAY, "conditions": TYPE_ARRAY, "next_effect": TYPE_INT, "surprised": TYPE_BOOL, "dodging": TYPE_BOOL, "hidden": TYPE_BOOL,
 		"reckless": TYPE_BOOL, "disengaged": TYPE_BOOL, "swooped": TYPE_BOOL, "no_heal": TYPE_BOOL, "blinked": TYPE_BOOL, "retching": TYPE_BOOL, "reacted": TYPE_BOOL,
 		"lethargy": TYPE_BOOL, "fleeing": TYPE_BOOL, "grappled_by_player": TYPE_BOOL, "relentless_used": TYPE_BOOL, "slowed": TYPE_INT,

@@ -45,14 +45,21 @@ func run() -> void:
 
 	var money := CombatRules.economy(s).duplicate()
 	await click_cell(at)
-	var menu: Control = find(screen(), "ThingMenu")
-	step("a click opens its acts", menu.visible)
+	var menu: PopupMenu = find(screen(), "FoeMenu")
+	step("a click opens its acts", menu != null and menu.visible)
 	step("and does nothing by itself", FightGrid.cell(CombatRules.player(s)) == hero and CombatRules.economy(s).hash() == money.hash())
-	var blow: Button = find(menu, "FoeAct_Attack_main")
-	step("the blade out of reach is grey with why", blow != null and blow.disabled and not blow.tooltip_text.is_empty(), blow.tooltip_text if blow else "")
-	step("a heal is not offered at a foe", find(menu, "FoeAct_Cast_cure_wounds") == null)
+	var tabs: Array = _texts(menu)
+	step("lists by the tabs, not one long window", tabs.has(tr("COMBAT_TAB_WEAPONS")) and tabs.has(tr("COMBAT_TAB_SPELLS")) and tabs.has(tr("COMBAT_TAB_COMMON")), str(tabs))
+	var weapons: PopupMenu = find(menu, "FoeList_" + tr("COMBAT_TAB_WEAPONS"))
+	var blow := _line(weapons, "Булава")
+	step("the blade out of reach is grey with why", blow >= 0 and weapons.is_item_disabled(blow) and not weapons.get_item_tooltip(blow).is_empty(), weapons.get_item_tooltip(blow) if blow >= 0 else "")
+	var magic: PopupMenu = find(menu, "FoeList_" + tr("COMBAT_TAB_SPELLS"))
+	var circles: Array = _texts(magic)
+	step("the spells inside by circles", circles.has(tr("DETAILS_CANTRIP")) and circles.has(tr("DETAILS_CIRCLE").format({"n": 1})), str(circles))
+	var first: PopupMenu = find(magic, "FoeList_" + tr("DETAILS_CIRCLE").format({"n": 1}))
+	step("a heal is not offered at a foe", _line(first, str(data["spells"]["cure_wounds"]["name"])) < 0, str(_texts(first)))
 	await shot("foe_menu")
-	menu.visible = false
+	menu.hide()
 
 	var cast: Button = find(screen(), "Cast_sacred_flame")
 	if step("a spell at a range on the tab", cast != null):
@@ -66,11 +73,29 @@ func run() -> void:
 		await frames(3)
 		step("gone with the pick", (field.get("reach") as Dictionary).is_empty())
 	await click_cell(at)
-	var flame: Button = find(menu, "FoeAct_Cast_sacred_flame")
-	if step("the flame in the foe's menu", flame != null and not flame.disabled, flame.tooltip_text if flame else ""):
-		await press(flame)
+	menu = find(screen(), "FoeMenu")
+	var tricks: PopupMenu = find(find(menu, "FoeList_" + tr("COMBAT_TAB_SPELLS")), "FoeList_" + tr("DETAILS_CANTRIP"))
+	var flame := _line(tricks, str(data["spells"]["sacred_flame"]["name"]))
+	if step("the flame in the foe's menu", flame >= 0 and not tricks.is_item_disabled(flame), tricks.get_item_tooltip(flame) if flame >= 0 else ""):
+		tricks.id_pressed.emit(tricks.get_item_id(flame))
+		menu.hide()
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		await frames(4)
 		step("the spell went", int(CombatRules.economy(s).get("action", 1)) == 0)
 		step("the map stays where the player left it", field.call("tile") == view[0] and field.call("corner") == view[1], "%s → %s" % [view, field.call("corner")])
 	await shot("after_spell")
+
+
+func _texts(list: PopupMenu) -> Array:
+	var out: Array = []
+	for i: int in list.item_count:
+		out.append(list.get_item_text(i))
+	return out
+
+
+## The line of `list` that holds `text`, -1 — none.
+func _line(list: PopupMenu, text: String) -> int:
+	for i: int in list.item_count:
+		if list.get_item_text(i).contains(text):
+			return i
+	return -1

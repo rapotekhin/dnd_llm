@@ -277,7 +277,7 @@ static func scout(s: GameSession, data: Dictionary, cid: String, room: String) -
 	var people: Array = s.npcs_here(data["world"], room).map(func(n: String) -> String: return str(world.npc(n).get("name", n)))
 	if not people.is_empty():
 		seen.append("люди: " + ", ".join(people))
-	var beasts: Array = CreatureRules.here(s, room).map(func(c: Variant) -> String: return str((c as Dictionary)["name"]))
+	var beasts: Array = CreatureRules.here(s, room).filter(func(c: Dictionary) -> bool: return str(c["state"]) != CreatureRules.DEAD).map(func(c: Variant) -> String: return str((c as Dictionary)["name"]))
 	if not beasts.is_empty():
 		seen.append("звери: " + ", ".join(beasts))
 	return ["%s облетает «%s» и возвращается: %s" % [cr["name"], world.room(room).get("name", room), "; ".join(seen) if not seen.is_empty() else "тихо, никого"]]

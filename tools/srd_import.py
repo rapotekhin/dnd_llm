@@ -87,6 +87,8 @@ ITEM_ALIASES = {
     "arrow": "arrows", "rations-1-day": "rations", "rope-hempen-50-feet": "rope", "lantern-hooded": "lantern",
     "antitoxin-vial": "antitoxin", "holy-water-flask": "holy_water",
 }
+# Blows of the statblocks under names of their own: the catalog's thing behind each.
+ACTION_ITEMS = {"Poisoned Dart": "dart", "Spiked Bone Club": "club", "Heavy Club": "club", "Spiked Shield": "shield", "Harpoon": "spear"}
 # Hand-made catalog items that are not SRD equipment (kept from the v0.4.x catalog).
 EXTRA_ITEMS = ["healing_potion", "ale", "bread", "silver_ring", "goodberry", "herbal_remedy",
                "iron_ore", "iron_bar", "arcane_dust", "raw_hide", "leather", "timber", "herbs", "herbalist_notes", "elvish_primer", "field_medic_manual",
@@ -650,7 +652,6 @@ class Builder:
 
     def monsters(self) -> dict[str, dict[str, Any]]:
         """Monsters of CR ≤ MAX_MONSTER_CR in the engine's shape (v0.6.1): numbers, attacks, saves, traits."""
-        items = {sid(e["index"]) for e in all_of("equipment")}
         out = {}
         for m in all_of("monsters"):
             if m["challenge_rating"] > MAX_MONSTER_CR and m["index"] not in NPC_TEMPLATES:
@@ -686,10 +687,12 @@ class Builder:
                     trait["effect"] = fx
                 traits.append(trait)
             gear = [sid(x["index"]) for ac in m.get("armor_class", []) for x in ac.get("armor", [])]
-            for a in actions:
-                guess = sid(a["name_en"].lower().replace(" ", "-"))
-                if guess in items and guess not in gear:
-                    gear.append(guess)
+            for a in actions:  # what it fights with, it carries, and the action says which thing that is
+                item = action_item(a["name_en"], self.weapons)
+                if item:
+                    a["item"] = item
+                    if item not in gear:
+                        gear.append(item)
             speed = m.get("speed", {})
             out[sid(m["index"])] = {
                 "name": ru["name"], "name_en": m["name"], "size": m["size"].lower(), "type": m["type"],
@@ -914,6 +917,18 @@ def monster_spells(m: dict[str, Any]) -> dict[str, Any]:
                 "slots": {str(k): int(v) for k, v in sc.get("slots", {}).items()}, "spells": spells,
                 "innate": "Innate" in t["name"]}
     return {}
+
+
+def action_item(name: str, weapons: set[str]) -> str:
+    """The catalog's id of the weapon behind a blow: «Light Crossbow» is crossbow-light in the SRD's equipment; "" — none."""
+    base = re.sub(r"\s*\(.*\)", "", name)
+    if base in ACTION_ITEMS:
+        return ACTION_ITEMS[base]
+    words = base.lower().split()
+    for index in ("-".join(words), "-".join(reversed(words))):
+        if index in weapons:
+            return sid(index)
+    return ""
 
 
 def monster_action(a: dict[str, Any], override: dict[str, Any] | None = None) -> dict[str, Any] | None:

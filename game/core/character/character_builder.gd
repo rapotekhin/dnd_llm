@@ -399,7 +399,7 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 		"subclass": str(ch.get("subclass", "")), "background": str(ch["background"]), "level": 1, "xp": 0,
 		"abilities": final_abilities(ch, data), "save_profs": (k["saves"] as Array).duplicate(),
 		"conditions": [], "spent": {},
-		"effects": [], "next_effect": 1, "exhaustion": 0, "concentration": "", "concentration_ends": -1, "prepared_day": 1,
+		"effects": [], "next_effect": 1, "exhaustion": 0, "concentration": "", "concentration_ends": -1, "may_prepare": false,
 		"story": str(ch.get("story", "")).strip_edges(),
 	}
 	# Age, build, height (v0.7.22.5): what the player chose (v0.7.22.15), the rest the engine picks.

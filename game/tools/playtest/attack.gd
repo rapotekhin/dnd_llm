@@ -98,7 +98,7 @@ func _knock_out(gs: Node, s: GameSession, data: Dictionary, fid: String) -> void
 	s.combat.erase("melee_strike")
 	CombatRules.after_player_action(s, data)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
-	gs.finish_combat([])
+	gs.finish_combat()
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
 	await frames(3)
 

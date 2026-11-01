@@ -106,7 +106,7 @@
 			"name": "Айра",
 			"next_effect": 1,
 			"passive_perception": 13,
-			"prepared_day": 1,
+			"may_prepare": false,
 			"prof_bonus": 2,
 			"race": "human",
 			"race_name": "Человек",

@@ -81,6 +81,8 @@ static func summon(s: GameSession, data: Dictionary, spell_id: String) -> Array[
 	var m: Dictionary = data["monsters"].get(str(sp.get("monster", "")), {})
 	if m.is_empty():
 		return []
+	if bool(sp.get("carrier", false)):
+		return _carrier(s, data, spell_id, sp, m)
 	var lines: Array[String] = []
 	if bool(sp.get("helper", false)):  # one familiar at a time (5e): the new one replaces the old
 		for x: Dictionary in called(s):
@@ -110,15 +112,41 @@ static func _left_text(minutes: int) -> String:
 
 
 ## Summoned creatures whose time ran out or whose concentration ended go. Lines.
-static func expire(s: GameSession, _data: Dictionary = {}) -> Array[String]:
+static func expire(s: GameSession, data: Dictionary = {}) -> Array[String]:
 	var lines: Array[String] = []
 	var now := TimeRules.abs_minute(s)
 	var conc := str(s.character.get("concentration", ""))
+	for cr: Dictionary in CreatureRules.all(s):
+		if cr.has("until") and now >= int(cr["until"]) and not data.is_empty():
+			lines.append("%s исчезает — время вышло" % cr["name"])
+			_end_carrier(s, data, cr)
 	for m: Dictionary in called(s):
 		if (int(m["until"]) >= 0 and now >= int(m["until"])) or (bool(m["concentration"]) and conc != str(m["spell"])):
 			lines.append("%s исчезает — %s" % [m["name"], "время вышло" if not bool(m["concentration"]) or conc == str(m["spell"]) else "концентрация прервана"])
 			Being.forget(s, str(m["id"]))
 	return lines
+
+
+## A spell's carrier (v0.8.4.4, the author: no different from a horse): a creature of the hero, it walks with him and takes
+## a pack (MountRules) until its time is out. A new casting replaces the old. Lines.
+static func _carrier(s: GameSession, data: Dictionary, spell_id: String, sp: Dictionary, m: Dictionary) -> Array[String]:
+	for cr: Dictionary in CreatureRules.all(s):
+		if str(cr.get("spell", "")) == spell_id:
+			_end_carrier(s, data, cr)
+	var now := TimeRules.abs_minute(s)
+	var name := str(data["spells"][spell_id]["name"])
+	var c := {"name": name, "monster": str(sp["monster"]), "state": PropertyRules.TAME, "bound": false, "led": true, "owner": OwnerRules.HERO,
+		"since": now, "hp": int(m["hp"]), "max_hp": int(m["hp"]), "xp_given": true, "fed_day": s.day, "spell": spell_id, "until": now + int(sp["minutes"])}
+	if sp.has("carries_lb"):
+		c["carries_lb"] = int(sp["carries_lb"])
+	CreatureRules.add(s, s.room_id, c)
+	return ["%s рядом с героем: идёт за ним и везёт вещи %s" % [name, _left_text(int(sp["minutes"]))]]
+
+
+## Its load falls to the hero.
+static func _end_carrier(s: GameSession, data: Dictionary, cr: Dictionary) -> void:
+	MountRules._unload(s, data, cr)
+	PropertyRules._remove_creature(s, str(cr["id"]))
 
 
 ## Lets a summoned creature go («Отпустить»). "" or a localization key.

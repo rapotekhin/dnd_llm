@@ -112,6 +112,9 @@ static func target(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	var mount := MountRules.container(s, data, id)
 	if not mount.is_empty():
 		return mount
+	var body := CreatureRules.box(s, data, id)
+	if not body.is_empty():
+		return body
 	var bag: Dictionary = bags(s.character).get(id, {})
 	if not bag.is_empty():
 		bag["name"] = bag_name(data, s.character, id)

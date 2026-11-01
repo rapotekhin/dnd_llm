@@ -137,6 +137,40 @@ static func cure_npc(s: GameSession, data: Dictionary, npc_id: String, power: St
 	return ["%s исцелён: %s" % [who, def_of(s, data, id).get("name", id)]]
 
 
+## What a healer's services can cure: "magic", "herbs", "" — nothing. The op of rules.services, not a list of healers.
+static func art(data: Dictionary, npc_id: String) -> String:
+	var out := ""
+	for id: Variant in data["world"]["npcs"].get(npc_id, {}).get("services", []):
+		var d := TradeRules.service_def(data, str(id))
+		if str(d.get("op", "")) == "cure_disease":
+			out = "magic" if str(d.get("power", "herbs")) == "magic" else out if not out.is_empty() else "herbs"
+	return out
+
+
+## The master's `grant:cure` (protocol 0.105.0): a healer of the scene cures a sick NPC of this settlement by its art.
+## {plan, summary} or {reason}.
+static func plan_cure(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
+	var world := WorldView.new(data["world"])
+	var who := str(e.get("npc_id", ""))
+	var patient := str(e.get("patient_id", ""))
+	if not s.npcs_here(world.world, s.room_id).has(who):
+		return {"reason": "%s не в сцене: лечит тот, кто здесь" % who}
+	var power := art(data, who)
+	if power.is_empty():
+		return {"reason": "%s не лечит болезни: среди услуг нет лечения" % BondRules.npc_name(s, data, who)}
+	if npc_disease(s, data, patient).is_empty():
+		return {"reason": "%s не болен" % BondRules.npc_name(s, data, patient)}
+	if not s.npcs_here(world.world, s.room_id).has(patient) and AllyRules.home_location(world, patient) != world.location_id(s.room_id):
+		return {"reason": "%s далеко: лечат того, кто здесь или в этом поселении" % BondRules.npc_name(s, data, patient)}
+	if not npc_curable(s, data, patient, power):
+		return {"reason": "травы эту болезнь не берут, нужна магия"}
+	return {"plan": {"npc_id": who, "patient_id": patient, "power": power}, "summary": "%s лечит: %s" % [BondRules.npc_name(s, data, who), BondRules.npc_name(s, data, patient)]}
+
+
+static func apply_cure(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
+	return cure_npc(s, data, str(plan["patient_id"]), str(plan["power"]))
+
+
 static func _show(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var c := s.character
 	var d := def_of(s, data, id)

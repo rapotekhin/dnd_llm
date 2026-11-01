@@ -105,7 +105,7 @@ func run() -> void:
 		g["status"] = "dead"
 	await press(find(screen(), "EndTurnButton"))
 	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing and not gs.is_busy(), 60.0)
-	gs.finish_combat([])
+	gs.finish_combat()
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
 	Stock.fill_slots(c)
 	ConditionRules.end_concentration(s, data, "новый бой")
@@ -236,7 +236,7 @@ func run() -> void:
 		g["status"] = "dead"
 	await press(find(screen(), "EndTurnButton"))
 	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing and not gs.is_busy(), 60.0)
-	gs.finish_combat([])
+	gs.finish_combat()
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
 	ConditionRules.end_concentration(s, data, "конец боя")
 	s.room_id = "mine-gallery"

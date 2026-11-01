@@ -135,7 +135,7 @@ static func _combat(won: bool) -> GameSession:
 			CombatRules.fighter(s, id)["status"] = "dead"
 		s.combat["outcome"] = "victory"
 		s.combat["narrated"] = true
-		CombatRules.results(s, data, {"coins_cp": 1200, "items": {"healing_potion": 1}})
+		CombatRules.results(s, data)
 	return s
 
 

@@ -36,7 +36,7 @@ func run() -> void:
 	if CombatRules.player_can_act(s):
 		await press(find(screen(), "EndTurnButton"))
 	await wait_until(func() -> bool: return not str(s.combat.get("outcome", "")).is_empty() and not gs.combat_playing and not gs.is_busy(), 60.0)
-	gs.finish_combat([])
+	gs.finish_combat()
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
 	await frames(3)
 	step("a murder before witnesses", _chat(s).contains("Убийство: Кейра — видели"), _chat(s))

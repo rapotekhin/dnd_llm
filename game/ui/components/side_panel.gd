@@ -128,6 +128,8 @@ func menu(box: Container, ref: String) -> bool:
 				_line(CreatureRules.text(cr, Catalog.data), false)
 				_creature_acts(s, cr, can_act)
 				ok = true
+	elif ref.begins_with("body:"):
+		ok = _body_menu(box, s, id, can_act)
 	elif ref.begins_with("station:"):
 		ok = _mark_acts(box, ref)
 	elif ref.begins_with("door:"):
@@ -136,6 +138,20 @@ func menu(box: Container, ref: String) -> bool:
 		ok = _trap_menu(box, s, ref.trim_prefix("trap:"), can_act)
 	_content = column
 	return ok
+
+
+## The body of a person on the map (v0.8.4.4): what can be done with it.
+func _body_menu(box: Container, s: GameSession, id: String, can_act: bool) -> bool:
+	for body: Dictionary in CrimeRules.bodies_here(s, Catalog.data):
+		if str(body["npc_id"]) == id:
+			_line(str(body["name"]), false)
+			var acts := _acts("BodyActs")
+			if not bool(body["searched"]):
+				_flow(acts, tr("BTN_CREATURE_SEARCH"), _try.bind(GameState.search_body.bind(id)), can_act, "BodySearch_" + id)
+			if CrimeRules.can_hide(s, Catalog.data, id).is_empty():
+				_flow(acts, tr("BTN_HIDE_BODY"), _try.bind(GameState.hide_body.bind(id)), can_act, "BodyHide_" + id).tooltip_text = tr("BTN_HIDE_BODY_TIP")
+			return acts.get_child_count() > 0 or bool(body["searched"])
+	return false
 
 
 ## The ways with a door on the map (v0.8.4.2): where it leads and why it is shut, «Пройти» when it lets through.
@@ -605,22 +621,26 @@ func _creature_acts(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	if str(cr["state"]) == PropertyRules.TAME:  # v0.7.27: an own beast goes along or stays, or is let go
 		_animal_acts(s, cr, can_act)
 		return
-	var specs: Array = [["talk", "BTN_CREATURE_TALK"]] if not str(cr["state"]) in ["unconscious", PetRules.WILD] else []  # v0.7.22.16: one knocked out does not talk
+	var dead := str(cr["state"]) == CreatureRules.DEAD  # v0.8.4.4: a body is searched and hidden, nothing else
+	var specs: Array = [["talk", "BTN_CREATURE_TALK"]] if not str(cr["state"]) in ["unconscious", PetRules.WILD, CreatureRules.DEAD] else []  # v0.7.22.16: one knocked out does not talk
 	if PetRules.tameable(Catalog.data, str(cr["monster"])) and str(cr.get("npc_id", "")).is_empty() and str(cr["state"]) in [PetRules.WILD, "truce", "surrendered"]:
 		specs.push_front(["tame", "BTN_PET_TAME_OPEN"])  # v0.7.43: the taming window
-	if not bool(cr.get("bound", false)) and not str(cr["state"]) in ["truce", PetRules.WILD]:
+	if not bool(cr.get("bound", false)) and not str(cr["state"]) in ["truce", PetRules.WILD, CreatureRules.DEAD]:
 		specs.append(["bind", "BTN_CREATURE_BIND"])
 	if bool(cr.get("bound", false)):
 		specs.append(["lead", "BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_CREATURE_LEAD"])
 	if CreatureRules.joinable(cr):  # v0.7.50.1: beaten by words — may come along
 		specs.append(["join", "BTN_CREATURE_STAY" if bool(cr.get("ally", false)) else "BTN_CREATURE_JOIN"])
-	if not str(cr.get("npc_id", "")).is_empty() and not bool(cr.get("searched", false)):
-		specs.append(["search", "BTN_CREATURE_SEARCH"])  # v0.7.22.16: a knocked-out person's pockets
+	if CreatureRules.lootable(cr) or not str(cr.get("npc_id", "")).is_empty() and not bool(cr.get("searched", false)):
+		specs.append(["search", "BTN_CREATURE_SEARCH"])  # v0.7.22.16: a knocked-out person's pockets; v0.8.4.4: a foe's things
 	if CreatureRules.can(s, cid, "hand_over", Catalog.data).is_empty():
 		specs.append(["hand_over", "BTN_CREATURE_HAND_OVER"])  # v0.7.22.17: the law takes the prisoner
-	if str(cr["state"]) != PetRules.WILD:
+	if dead and not bool(cr.get("kept", false)):
+		specs.append(["hide", "BTN_HIDE_BODY"])
+	if str(cr["state"]) != PetRules.WILD and not dead:
 		specs.append(["free", "BTN_CREATURE_FREE"])
-	specs.append(["finish", "BTN_CREATURE_FINISH"] if CreatureRules.helpless(cr) else ["attack", "BTN_CREATURE_ATTACK"])
+	if not dead:
+		specs.append(["finish", "BTN_CREATURE_FINISH"] if CreatureRules.helpless(cr) else ["attack", "BTN_CREATURE_ATTACK"])
 	var acts := _acts("CreatureActs_" + cid)
 	for sp: Array in specs:
 		var what: String = sp[0]
@@ -631,6 +651,8 @@ func _creature_acts(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 			var err := GameState.creature_act(cid, what)
 			if not err.is_empty():
 				EventBus.message.emit(tr(err))
+			elif what == "search" and CreatureRules.lootable(cr):
+				container_requested.emit(CreatureRules.BOX + cid)
 		var cr_name := str(cr.get("name", cid))
 		var cb := _flow(acts, tr(sp[1]), _near("cr:" + cid, "touch", func() -> void:
 			if what == "finish":  # v0.7.22.27: a kill is not undone

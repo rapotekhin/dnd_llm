@@ -27,6 +27,8 @@ static func on(data: Dictionary) -> bool:
 
 ## The pack's capacity in lb of a beast (0 — it carries none).
 static func capacity(data: Dictionary, cr: Dictionary) -> float:
+	if cr.has("carries_lb"):  # a spell's own load (v0.8.4.4)
+		return float(cr["carries_lb"])
 	var a := PropertyRules.animal_cfg(data, str(cr.get("monster", "")))
 	if not bool(a.get("pack", false)):
 		return 0.0
@@ -107,7 +109,7 @@ static func blocked(s: GameSession, data: Dictionary, room_id: String, cr: Dicti
 	var tags := SceneRules.tags(s, data["world"], room_id)
 	var world := WorldView.new(data["world"])
 	var terr := str(world.inherit(room_id, "terrain", ""))
-	if not bool(PropertyRules.animal_cfg(data, str(cr["monster"])).get("anywhere", false)):
+	if not cr.has("until") and not bool(PropertyRules.animal_cfg(data, str(cr["monster"])).get("anywhere", false)):  # a spell's carrier goes where the hero goes
 		if tags.has("no_mounts"):
 			return "сюда животным хода нет"
 		if bool(room.get("indoor", world.flag(room_id, "indoor"))) and not tags.has("stable") and not tags.has("mounts"):
@@ -238,7 +240,7 @@ static func sellable(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 	if PropertyRules.animals_of(data, npc_id).is_empty():
 		return out
 	for cr: Dictionary in beasts(s, s.room_id):
-		if not cr.has("rent_day") and not bool(cr.get("pet", false)) and int(PropertyRules.animal_cfg(data, str(cr["monster"])).get("price_cp", 0)) > 0:
+		if not cr.has("rent_day") and not cr.has("until") and not bool(cr.get("pet", false)) and int(PropertyRules.animal_cfg(data, str(cr["monster"])).get("price_cp", 0)) > 0:
 			out.append(cr)
 	return out
 

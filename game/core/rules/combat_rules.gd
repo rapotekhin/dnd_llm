@@ -203,7 +203,7 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 	Being.of(s, PLAYER)["fight"] = {"id": PLAYER, "side": "player", "name": str(c.get("name", "")), "status": "active",
 		"init": 0, "conditions": [], "span": FightGrid.span_of(data, hero_size(s, data))}
 	s.combat = {"round": 1, "turn": 0, "fighters": fighters, "order": [], "log": [], "encounter": str(source.get("encounter", "")),
-		"room_from": str(source.get("room_from", "")), "outcome": "", "death_saves": {"ok": 0, "fail": 0}, "loot": [], "xp": 0,
+		"room_from": str(source.get("room_from", "")), "outcome": "", "death_saves": {"ok": 0, "fail": 0}, "xp": 0,
 		"incoming": [], "help": (source.get("help", {}) as Dictionary).duplicate(true), "parley_tried": [],
 		"parley_ok": 0, "parley_fail": 0, "parley_hard": str(source.get("parley", "")) == "hard",
 		"map": str(s.room_id), "room_start": str(s.room_id), "rev": 0, "zones": [], "doors": {}, "blocks": {}, "fires": {},
@@ -345,6 +345,9 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector
 				f["helper"] = true
 			if not str(spec.get("npc_id", "")).is_empty() and not TheftRules.lost_weapons(s, data, str(spec["npc_id"])).is_empty():
 				f["actions"] = TheftRules.armed_actions(s, data, str(spec["npc_id"]), m["actions"])  # big test #3 (v0.7.22.8)
+			if spec.get("gear") is Dictionary:  # searched before: it fights with what was left on it (v0.8.4.4)
+				f["gear"] = (spec["gear"] as Dictionary).duplicate()
+				f["actions"] = TheftRules.gear_actions(m, f["gear"])
 			ids.append(id)
 	return ids
 
@@ -3335,36 +3338,37 @@ static func after_player_action(s: GameSession, data: Dictionary) -> Array[Strin
 
 
 ## XP of a won fight (a truce too — DMG: XP for overcoming the encounter): everyone defeated, fled, surrendered or
-## at peace; loot — gear of the defeated and surrendered; the encounter's loot and coins — only for a victory.
-## Fills s.combat.xp / loot [{item_id, qty}] / coins_cp.
-static func results(s: GameSession, data: Dictionary, encounter_loot: Dictionary) -> void:
-	var won := str(s.combat["outcome"]) in ["victory", "truce"]
-	var victory := str(s.combat["outcome"]) == "victory"
+## at peace. Things are not given here (v0.8.4.4, the author): they stay on the foes (`spoils`, CreatureRules.after_fight).
+static func results(s: GameSession, data: Dictionary) -> void:
 	var xp := 0
-	var loot := {}
 	for id: String in enemies(s, false):
 		var f := fighter(s, id)
-		var m := _monster(data, f)
 		if str(f["status"]) != "active" and not bool(f.get("no_xp", false)):
-			xp += int(m["xp"])
-		if str(f["status"]) == "dead" and CraftRules.hides(data, m) > 0:  # v0.7.24: the hide of a beast
-			loot["raw_hide"] = int(loot.get("raw_hide", 0)) + CraftRules.hides(data, m)
-		if str(f["status"]) == "dead" and CraftRules.meat(data, m) > 0:  # v0.7.25: meat for the fire
-			loot["raw_meat"] = int(loot.get("raw_meat", 0)) + CraftRules.meat(data, m)
-		if str(f["status"]) in ["dead", "surrendered", "unconscious"]:
-			for item: Variant in m.get("equipment", []):
-				if data["items"]["catalog"].has(str(item)):
-					loot[str(item)] = int(loot.get(str(item), 0)) + 1
-	if victory:
-		for item: String in encounter_loot.get("items", {}):
-			loot[item] = int(loot.get(item, 0)) + int(encounter_loot["items"][item])
-	s.combat["xp"] = xp if won else 0
-	s.combat["coins_cp"] = int(encounter_loot.get("coins_cp", 0)) if victory else 0
-	var list: Array = []
-	if won:
-		for item: String in loot:
-			list.append({"item_id": item, "qty": int(loot[item])})
-	s.combat["loot"] = list
+			xp += int(_monster(data, f)["xp"])
+	s.combat["xp"] = xp if str(s.combat["outcome"]) in ["victory", "truce"] else 0
+
+
+## What a beaten foe has on it, {item: qty}: its gear; of a dead one also the hide and the meat.
+static func spoils(data: Dictionary, f: Dictionary) -> Dictionary:
+	var out := {}
+	var m := _monster(data, f)
+	var state := str(f["status"])
+	if state == "dead" and CraftRules.hides(data, m) > 0:  # v0.7.24: the hide of a beast
+		out["raw_hide"] = CraftRules.hides(data, m)
+	if state == "dead" and CraftRules.meat(data, m) > 0:  # v0.7.25: meat for the fire
+		out["raw_meat"] = CraftRules.meat(data, m)
+	if not state in ["dead", "surrendered", "unconscious"]:
+		return out
+	if f.get("gear") is Dictionary:  # what was left on it the last time
+		out.merge(f["gear"])
+		return out
+	var ammo: Dictionary = ItemRules.cfg(data)["ammo"]
+	for item: Variant in m.get("equipment", []):
+		if data["items"]["catalog"].has(str(item)):
+			out[str(item)] = int(out.get(str(item), 0)) + 1
+			if ammo.has(str(item)):  # what it shot with
+				out[str(ammo[str(item)])] = int(out.get(str(ammo[str(item)]), 0)) + int(data["rules"]["creatures"]["foe_ammo"])
+	return out
 
 
 ## The snapshot block for the master: the field, health words, the log of the round, the outcome.

@@ -261,7 +261,7 @@ func test_intimidation_makes_foes_surrender_or_flee_and_the_fight_is_won() -> vo
 	assert_str(s.combat["outcome"]).is_equal("victory")
 
 
-func test_persuasion_ends_the_fight_in_a_truce_with_full_xp_and_no_encounter_loot() -> void:
+func test_persuasion_ends_the_fight_in_a_truce_with_full_xp() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "count": 2, "col": 1}])
 	for i in 3:
@@ -269,10 +269,8 @@ func test_persuasion_ends_the_fight_in_a_truce_with_full_xp_and_no_encounter_loo
 	assert_str(CombatRules.health_key(CombatRules.fighter(s, TestUtils.foe(s, 1)))).is_equal("HEALTH_TRUCE")
 	CombatRules.after_player_action(s, data)
 	assert_str(s.combat["outcome"]).is_equal("truce")
-	CombatRules.results(s, data, {"coins_cp": 500, "items": {"healing_potion": 1}})
+	CombatRules.results(s, data)
 	assert_int(int(s.combat["xp"])).is_equal(2 * int(data["monsters"]["bandit"]["xp"]))
-	assert_int(int(s.combat["coins_cp"])).is_equal(0)
-	assert_array(s.combat["loot"]).is_empty()
 
 
 func test_the_masters_intimidation_check_in_a_fight_is_a_parley() -> void:

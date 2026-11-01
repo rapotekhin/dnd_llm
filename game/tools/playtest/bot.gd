@@ -153,7 +153,7 @@ func _act() -> String:
 					return "use_item"
 			return "",
 		func() -> String:
-			if not SpellRules.can_prepare(c, data, s.day).is_empty():
+			if not SpellRules.can_prepare(c, data).is_empty():
 				return ""
 			var p := SpellRules.prepare_pool(c, data)
 			var ids: Array = (p["pool"] as Array).duplicate()
@@ -193,7 +193,7 @@ func _act() -> String:
 	return "wait"
 
 
-## A fight: finish when it is over (take all loot), else on the player's turn attack, cast or step closer.
+## A fight: finish when it is over, else on the player's turn attack, cast or step closer.
 ## A click on a random square of the map, as the player's.
 func _walk() -> String:
 	var field: Control = find(screen(), "Field")
@@ -210,7 +210,7 @@ func _combat_step(s: GameSession) -> String:
 			gs.load_from(gs.COMBAT_SAVE)
 			return "died_and_loaded"
 		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
-		gs.finish_combat((s.combat.get("loot", []) as Array).map(func(l: Dictionary) -> String: return l["item_id"]))
+		gs.finish_combat()
 		return "combat_end"
 	if not CombatRules.player_can_act(s) or gs.is_busy():
 		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)

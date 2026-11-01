@@ -399,6 +399,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	var c := s.character
 	var cost := int(rest_place(data["world"], s.room_id, s, data).get("cost_cp", 0)) if supplies.is_empty() else 0
 	var lines: Array[String] = ["Долгий отдых" if supplies.is_empty() else "Долгий отдых в лагере"]
+	c["may_prepare"] = SpellRules.prepares(c, data)
 	AllyRules.rest(s)
 	if cost > 0:
 		Ledger.add(s, -cost, "exploration:long_rest")

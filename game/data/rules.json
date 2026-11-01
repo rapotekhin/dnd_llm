@@ -1427,11 +1427,14 @@
 	"allies": {
 		"_doc": "Allies in a fight (v0.7.22.22, AllyRules): fighters on the hero's side under the engine's AI — followers who join (not against the law's guard or the people of their own location), a pack encounter's `allies`, summoned creatures. summons — a spell → {monster, count, minutes (absent — until let go), helper (does not attack: the Help action, the hero's next attack at that foe with advantage)}; a concentration spell's creatures go when it ends. Followers at 0 HP fall unconscious and come to after the fight; a summoned one at 0 HP vanishes.",
 		"followers_join": true,
+		"_v08_4_4": "A row of `summons` with `carrier`: no fighter, a creature of the hero like a horse (MountRules) that goes with him until its time is out; `carries_lb` — its own load, without it the beast's pack.",
 		"summons": {
 			"find_familiar": {"monster": "owl", "count": 1, "helper": true},
 			"find_steed": {"monster": "warhorse", "count": 1},
 			"conjure_animals": {"monster": "wolf", "count": 4, "minutes": 60},
-			"animate_dead": {"monster": "skeleton", "count": 1, "minutes": 1440}
+			"animate_dead": {"monster": "skeleton", "count": 1, "minutes": 1440},
+			"floating_disk": {"carrier": true, "monster": "riding_horse", "carries_lb": 500, "minutes": 60},
+			"phantom_steed": {"carrier": true, "monster": "riding_horse", "minutes": 60}
 		}
 	},
 	"reputation": {
@@ -3233,7 +3236,11 @@
 	},
 	"creatures": {
 		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay); a bound one stays and can be led.",
-		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120},
+		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120, "dead": 4320},
+		"_v08_4_4": "A fight gives only XP (v0.8.4.4): a dead foe lies where it fell for leave_minutes.dead, what it had is looked through like a chest of body_capacity_lb.",
+		"body_capacity_lb": 2000,
+		"foe_ammo": 6,
+		"heap_name": "Брошенные вещи",
 		"_v07_22_16": "A creature keeps hp and xp_given (fought again — its wounds, no XP twice); the helpless (unconscious or bound) is finished off without a fight. A pack NPC knocked out lies as a creature with its npc_id; waking or let go it goes home with woken_attitude and the assault is known (crime kind `assault`).",
 		"woken_attitude": -3,
 		"_v07_22_17": "The prisoner's branch (v0.7.22.17, docs/design/concepts.md «Пленник»): a bound one is the hero's (owner `hero`, OwnerRules). Handed to the law's guard — bounty_cp_per_xp × its XP and hand_over_reputation in the settlement; executed (finished off bound) before NPCs — execute_attitude for each who sees; sold (the master's `owner` with price_cp) — at most sale_cp_per_xp × its XP and the buyer's purse; a thinking one is not sold while slavery is off (v0.7.27 makes it a setting of the world); v0.7.49.4 — it is handed over to an NPC of the scene for the law's bounty at most (bounty_cp_per_xp × its XP): the NPC takes it to the guard.",

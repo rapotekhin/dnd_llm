@@ -6,8 +6,6 @@ extends Control
 ## click lays it on the square. A click on a free square walks, on a foe opens its acts. The screen only shows and sends:
 ## every rule is in `core/`, FightGrid and CombatRules.
 
-signal foe_touched(ref: String)
-
 var _screen: Control
 var _field: MapField
 var _details: DetailsPanel  # v0.7.7 fixes: what a spell, feature, item or foe is (hover or press)
@@ -25,7 +23,6 @@ var _log_scroll: ScrollContainer
 var end_turn: Button
 var _results: ModalFrame
 var _results_box: VBoxContainer
-var _loot_take := {}  # item_id → taken, over the redraws of the results (v0.7.22.29, Б5)
 ## «Использовать?» — a choice of a feature or a reaction, as in Baldur's Gate 3 (v0.7.10).
 var _ask: PanelContainer
 var _conc_ask: Dictionary = {}  # v0.7.13.1: the «Прервать …?» question
@@ -38,6 +35,10 @@ var _pending_preview: Callable
 var _pending_aim := ""  # the spell whose target is a square: its area follows the mouse
 var _pending_feet := 0  # how far the picked act gets, 0 — no rim on the map
 var _acts: Array[Dictionary] = []  # the acts with a target of this redraw: the tabs below and a foe's menu
+var _act_tab := ""  # the tab being drawn, and the list inside it for a foe's menu
+var _act_sub := ""
+var _pop: PopupMenu  # a foe's menu
+var _pop_acts: Array[Dictionary] = []  # what its lines do
 var _shoving := ""  # the foe a won shove pushes: the next click picks the side
 var _jumping := false  # the next click picks where the hero jumps
 var _tab := 0
@@ -508,7 +509,7 @@ func on_cell(cell: Vector2i) -> void:
 		_press(target)
 		return
 	if not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
-		foe_touched.emit("fight:" + id)
+		_foe_menu(id)
 		return
 	var way := _way_out_at(s, data, cell)
 	if way != FightGrid.NONE:
@@ -534,44 +535,56 @@ func _way_out_at(s: GameSession, data: Dictionary, cell: Vector2i) -> Vector2i:
 	return FightGrid.NONE
 
 
-## The square a foe is shown on, for the menu by it.
-func cell_of(ref: String) -> Vector2i:
-	return FightGrid.shown(CombatRules.fighter(GameState.session, ref.trim_prefix("fight:")))
-
-
-## The acts at a foe clicked on the map (v0.8.4.3, the author): the tabs' own, nothing done by itself. What cannot reach
-## it now stays grey with why; what is not for a foe at all is not shown.
-func menu(box: VBoxContainer, ref: String) -> bool:
-	var id := ref.trim_prefix("fight:")
+## The acts at a foe clicked on the map (v0.8.4.3, the author): the tabs' own, as a context menu with lists inside: a tab,
+## then a spell's circle. Nothing is done by the click itself. What cannot reach it now is grey with why; what is not for a
+## foe at all is not shown.
+func _foe_menu(id: String) -> void:
+	if _pop != null:
+		remove_child(_pop)
+		_pop.queue_free()
 	var f := CombatRules.fighter(GameState.session, id)
-	if not mine() or str(f.get("status")) != "active":
-		return false
-	var title := Label.new()
-	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	title.theme_type_variation = UiTheme.HEADING
-	title.text = str(f.get("name", ""))
-	box.add_child(title)
-	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 6)
-	flow.add_theme_constant_override("v_separation", 6)
-	box.add_child(flow)
+	var aim := FightGrid.aim_id(FightGrid.shown(f))
+	_pop = PopupMenu.new()
+	_pop.name = "FoeMenu"
+	_pop.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	add_child(_pop)
+	_pop.add_separator(str(f.get("name", "")))
+	_pop_acts = []
+	var lists := {}
 	for row: Dictionary in _acts:
-		var target := FightGrid.aim_id(cell_of(ref)) if not str(row["aims"]).is_empty() else id
+		var target := aim if not str(row["aims"]).is_empty() else id
 		var why := str((row["check"] as Callable).call(target))
 		if not bool(row["on"]) or why == "COMBAT_BAD_TARGET":
 			continue
-		var b := Button.new()
-		b.name = "FoeAct_" + str(row["name"])
-		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		b.text = str(row["text"])
-		b.disabled = not why.is_empty()
-		b.tooltip_text = tr(why) if not why.is_empty() else _preview_text((row["preview"] as Callable).call(target))
-		var act: Callable = row["act"]
-		b.pressed.connect(func() -> void:
-			_pending = act
-			_press(target))
-		flow.add_child(b)
-	return true
+		var list := _pop_list(_pop_list(_pop, lists, tr(str(row["tab"]))), lists, str(row["sub"]))
+		list.add_item(str(row["text"]), _pop_acts.size())
+		var at := list.item_count - 1
+		list.set_item_disabled(at, not why.is_empty())
+		list.set_item_tooltip(at, tr(why) if not why.is_empty() else _preview_text((row["preview"] as Callable).call(target)))
+		_pop_acts.append({"act": row["act"], "target": target})
+	var cell := FightGrid.shown(f)
+	_pop.popup(Rect2i(Vector2i(_field.get_screen_position() + _field.cell_point(cell) + Vector2(_field.tile() / 2.0, 0)), Vector2i.ZERO))
+
+
+## The list `title` inside `parent`, made at first need; no title — `parent` itself.
+func _pop_list(parent: PopupMenu, lists: Dictionary, title: String) -> PopupMenu:
+	if title.is_empty():
+		return parent
+	var key := str(parent.get_instance_id()) + title
+	if not lists.has(key):
+		var list := PopupMenu.new()
+		list.name = "FoeList_" + title
+		list.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		list.id_pressed.connect(_foe_pick)
+		parent.add_child(list)
+		parent.add_submenu_node_item(title, list)
+		lists[key] = list
+	return lists[key]
+
+
+func _foe_pick(i: int) -> void:
+	_pending = _pop_acts[i]["act"]
+	_press(str(_pop_acts[i]["target"]))
 
 
 ## The mouse over a square: the path and its cost, the area of the picked spell, what a blow would do.
@@ -1136,12 +1149,14 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 				_details.hook(b, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
 				b.pressed.connect(func() -> void: _do(_conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, ""))))
 			else:
+				_act_sub = tr("DETAILS_CANTRIP") if lv == 0 else tr("DETAILS_CIRCLE").format({"n": lv})
 				var ab := _action(sp, "Cast_" + id, label, me,
 					func(t: String) -> String: return _conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, t)),
 					func(t: String) -> String: return CombatRules.can_cast(s, data, id, slot, t),
 					func(t: String) -> Dictionary: return {} if FightGrid.is_aim(t) else CombatRules.cast_preview(s, data, id, slot, t),
 					id if spell.has("area") or jump else "", int(spell.get("range_ft", 0)))
 				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
+		_act_sub = ""
 		for sa: Dictionary in SpellEffects.actions(s, data):  # v0.7.13.5: the spells that go on each turn
 			var said := str(sa["id"])
 			var slabel := "%s%s" % [sa["name"], tr("COMBAT_BONUS_SHORT") if str(sa["cost"]) == "bonus" else ""]
@@ -1304,6 +1319,8 @@ func _dmg_text(w: Dictionary) -> String:
 
 
 func _tab_box(title: String) -> HFlowContainer:
+	_act_tab = title
+	_act_sub = ""
 	var scroll := ScrollContainer.new()
 	scroll.name = tr(title)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -1343,7 +1360,7 @@ func _grapple(t: String, shove: bool) -> String:
 ## A button that needs a target: pressing it lights the bodies that can be hit. `aims` — the spell whose target is a square.
 func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "", feet := 0) -> Button:
 	var b := _button(parent, node_name, text, enabled)
-	_acts.append({"name": node_name, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims})
+	_acts.append({"tab": _act_tab, "sub": _act_sub, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims})
 	b.toggle_mode = true
 	b.button_pressed = _pending.is_valid() and _pending_name == node_name
 	b.pressed.connect(func() -> void:
@@ -1461,7 +1478,6 @@ func _draw_results(s: GameSession, data: Dictionary) -> void:
 	var show := not outcome.is_empty() and outcome != "dead" and bool(s.combat.get("narrated", false)) and not GameState.is_busy()
 	_results.visible = show
 	if not show:
-		_loot_take = {}
 		return
 	_clear(_results_box)
 	for b in _results.footer.get_children():
@@ -1470,70 +1486,7 @@ func _draw_results(s: GameSession, data: Dictionary) -> void:
 	_results.title.text = tr("COMBAT_OUTCOME_" + outcome.to_upper())
 	if int(s.combat.get("xp", 0)) > 0:
 		_line(_results_box, tr("COMBAT_XP").format({"xp": int(s.combat["xp"])}))
-	if int(s.combat.get("coins_cp", 0)) > 0:
-		_line(_results_box, tr("COMBAT_COINS").format({"coins": Money.format(int(s.combat["coins_cp"]))}))
-	var loot: Array = s.combat.get("loot", [])
-	if not loot.is_empty():
-		if _loot_take.is_empty():
-			_loot_take = _loot_that_fits(s, data, loot)
-		_line(_results_box, tr("COMBAT_LOOT")).add_theme_color_override("font_color", UiTheme.ACCENT)
-		var weight := CharacterRules.carried_weight(s.character, data, s.items)
-		for l: Dictionary in loot:
-			var id := str(l["item_id"])
-			var w := _loot_weight(s, data, l)
-			if bool(_loot_take.get(id, false)):
-				weight += w
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 12)
-			_results_box.add_child(row)
-			var name_l := _line(row, tr("COMBAT_LOOT_ROW").format({"name": ItemRules.display_name(data["items"], s.items, id), "qty": int(l["qty"]),
-				"weight": _lb(w)}))
-			name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var b := Button.new()
-			b.name = "Loot_" + id
-			b.toggle_mode = true
-			b.button_pressed = bool(_loot_take.get(id, false))
-			b.text = "BTN_LOOT_TAKEN" if b.button_pressed else "BTN_LOOT_TAKE"
-			b.custom_minimum_size = Vector2(150, 44)
-			b.toggled.connect(func(on: bool) -> void:
-				_loot_take[id] = on
-				_draw_results.call_deferred(GameState.session, Catalog.data))  # not under the pressed button
-			row.add_child(b)
-		var cap := CharacterRules.capacity(s.character, data)
-		var total := _line(_results_box, tr("COMBAT_LOOT_WEIGHT").format({"weight": _lb(weight), "cap": cap}))
-		total.name = "LootWeight"
-		total.add_theme_color_override("font_color", UiTheme.BAD if weight > cap else UiTheme.MUTED)
-		var all := _results.add_button("BTN_LOOT_FITS", func() -> void:
-			_loot_take = _loot_that_fits(GameState.session, Catalog.data, GameState.session.combat.get("loot", []))
-			_draw_results.call_deferred(GameState.session, Catalog.data))  # not under the pressed button
-		all.name = "LootFits"
-	var go := _results.add_button("BTN_CONTINUE", func() -> void:
-		var take: Array = []
-		for l: Dictionary in GameState.session.combat.get("loot", []):
-			if bool(_loot_take.get(str(l["item_id"]), false)):
-				take.append(str(l["item_id"]))
-		_loot_take = {}
-		GameState.finish_combat(take), true)
+	if outcome == "victory":
+		_line(_results_box, tr("COMBAT_ON_BODIES"))
+	var go := _results.add_button("BTN_CONTINUE", func() -> void: GameState.finish_combat(), true)
 	go.name = "FinishCombat"
-
-
-func _lb(w: float) -> String:
-	return str(roundi(w)) if is_equal_approx(w, roundf(w)) else String.num(w, 1)
-
-
-func _loot_weight(s: GameSession, data: Dictionary, l: Dictionary) -> float:
-	return float(ItemRules.def_of(data["items"], s.items, str(l["item_id"])).get("weight", 0)) * int(l.get("qty", 1))
-
-
-## «Взять всё, что унесу» (П12): the loot in its order as long as the hero can carry it.
-func _loot_that_fits(s: GameSession, data: Dictionary, loot: Array) -> Dictionary:
-	var out := {}
-	var weight := CharacterRules.carried_weight(s.character, data, s.items)
-	var cap := float(CharacterRules.capacity(s.character, data))
-	for l: Dictionary in loot:
-		var w := _loot_weight(s, data, l)
-		out[str(l["item_id"])] = weight + w <= cap
-		if weight + w <= cap:
-			weight += w
-	return out
-

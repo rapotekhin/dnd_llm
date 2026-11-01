@@ -117,8 +117,8 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
     "places": ("новое место: на открытом краю мира или объект внутри локации — лавка за городом, баня у площади (`create:place`)", ("create:place",)),
     "crime": ("преступления героя: убитые, розыск, стража, признание (`crime:known`)", ("crime:known", "crime:release")),
     "social": ("что NPC даёт словами: скидка, услуга даром, тайна, идёт с героем, пускает к себе, слава в поселении "
-               "(`grant:discount`, `grant:favor`, `grant:secret`, `grant:follow`, `grant:permit`, `shift:reputation`)",
-               ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "shift:reputation")),
+               "(`grant:discount`, `grant:favor`, `grant:secret`, `grant:follow`, `grant:permit`, `grant:cure`, `shift:reputation`)",
+               ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "grant:cure", "shift:reputation")),
     "goals": ("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", ()),
     "equip": ("надеть, снять, раздеться (`equip`)", ("equip",)),
     "water": ("набрать воды в бурдюк, флягу, кувшин, ведро из колодца, ручья, реки (`fill`)", ("fill",)),

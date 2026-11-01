@@ -166,15 +166,28 @@ func test_zero_hp_outside_combat_is_a_knock_out() -> void:
 
 func test_a_cleric_prepares_spells_once_after_a_long_rest() -> void:
 	var c := _preset("cleric_branko")
-	assert_str(SpellRules.can_prepare(c, data, 1)).is_equal("PREP_ALREADY_TODAY")
+	assert_str(SpellRules.can_prepare(c, data)).is_equal("PREP_ALREADY_TODAY")
 	var p := SpellRules.prepare_pool(c, data)
 	var pick: Array = (p["pool"] as Array).slice(0, int(p["count"]))
-	assert_str(SpellRules.prepare_error(c, data, 2, pick)).is_empty()
-	assert_str(SpellRules.prepare_error(c, data, 2, pick.slice(1))).is_equal("PREP_ERR_COUNT")
-	SpellRules.prepare(c, pick, 2)
+	c["may_prepare"] = true
+	assert_str(SpellRules.prepare_error(c, data, pick)).is_empty()
+	assert_str(SpellRules.prepare_error(c, data, pick.slice(1))).is_equal("PREP_ERR_COUNT")
+	SpellRules.prepare(c, pick)
 	assert_array(c["spells"]["prepared"]).is_equal(pick)
-	assert_str(SpellRules.can_prepare(c, data, 2)).is_equal("PREP_ALREADY_TODAY")
-	assert_str(SpellRules.can_prepare(_preset("fighter_aira"), data, 2)).is_equal("PREP_NOT_PREPARER")
+	assert_str(SpellRules.can_prepare(c, data)).is_equal("PREP_ALREADY_TODAY")
+	assert_str(SpellRules.can_prepare(_preset("fighter_aira"), data)).is_equal("PREP_NOT_PREPARER")
+
+
+func test_the_spells_of_tomorrow_go_with_the_long_rest() -> void:
+	var c := _preset("cleric_branko")
+	var p := SpellRules.prepare_pool(c, data)
+	var pick: Array = (p["pool"] as Array).slice(-int(p["count"]))
+	c["may_prepare"] = true
+	assert_array(SpellRules.rested(c, data, pick.slice(1))).is_empty()  # not all picked: the old list, the right stays
+	assert_str(SpellRules.can_prepare(c, data)).is_empty()
+	assert_array(SpellRules.rested(c, data, pick)).has_size(1)
+	assert_array(c["spells"]["prepared"]).is_equal(pick)
+	assert_str(SpellRules.can_prepare(c, data)).is_equal("PREP_ALREADY_TODAY")
 
 
 func test_new_fields_survive_a_save() -> void:

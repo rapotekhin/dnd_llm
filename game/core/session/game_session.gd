@@ -262,7 +262,7 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		c["disease_met"] = whole(c["disease_met"])
 	c["concentration"] = str(c.get("concentration", ""))
 	c["concentration_ends"] = int(c.get("concentration_ends", -1))
-	c["prepared_day"] = int(c.get("prepared_day", 1))
+	c["may_prepare"] = bool(c.get("may_prepare", false))
 	c["attuned"] = (c.get("attuned", []) as Array).map(func(v: Variant) -> String: return str(v))  # v0.7.12
 	if c.get("ammo_left") is Dictionary:
 		c["ammo_left"] = whole(c["ammo_left"])
@@ -640,7 +640,7 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
 		return {}
 	var c: Dictionary = (raw as Dictionary).duplicate(true)
-	for k: String in ["round", "turn", "xp", "coins_cp", "parley_ok", "parley_fail", "rev"]:
+	for k: String in ["round", "turn", "xp", "parley_ok", "parley_fail", "rev"]:
 		if c.has(k):
 			c[k] = int(c[k])
 	for ch: Dictionary in c.get("chasers", []):
@@ -652,8 +652,6 @@ static func _normalized_combat(raw: Variant) -> Dictionary:
 	for k: String in ["action", "bonus", "move", "attacks", "haste"]:
 		if c.get("economy", {}).has(k):
 			c["economy"][k] = int(c["economy"][k])
-	for l: Dictionary in c.get("loot", []):
-		l["qty"] = int(l["qty"])
 	for w: Dictionary in c.get("incoming", []):
 		w["at"] = int(w["at"])
 		for spec: Dictionary in w.get("foes", []):

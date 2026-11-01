@@ -97,7 +97,8 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 ## Long rest (ADR-0010 §6): in a safe room outside a conversation with the price paid, or — v0.7.8, the author: «as in
 ## Baldur's Gate» — a camp anywhere safe for `supplies` {item_id: qty} of food from the pack. The engine restores the
 ## character, clears the check locks and all exhaustion, then the master describes the morning (kind=rest).
-func long_rest(supplies: Dictionary = {}) -> String:
+## `prepared` — the spells of tomorrow picked in the same window (v0.8.4.4).
+func long_rest(supplies: Dictionary = {}, prepared: Array = []) -> String:
 	if not _master_ready():
 		return "REST_BUSY"
 	var why := ExplorationRules.can_rest(session, Catalog.data["world"], Catalog.data) if supplies.is_empty() \
@@ -107,6 +108,7 @@ func long_rest(supplies: Dictionary = {}) -> String:
 	var began := session.minute
 	var began_abs := TimeRules.abs_minute(session)
 	var lines := ExplorationRules.long_rest(session, Catalog.data, supplies)
+	lines.append_array(SpellRules.rested(session.character, Catalog.data, prepared))
 	TimeRules.after_long_rest(session, Catalog.data, began)
 	lines.append_array(CalendarRules.sync(session, Catalog.data["world"]))
 	lines.append_array(WeatherRules.sync(session, Catalog.data))  # the morning's weather (v0.7.46)
@@ -595,14 +597,14 @@ func _sleep_through() -> Array[String]:
 	return lines
 
 
-## The prepared spells of the day (SpellRules): once after each long rest. "" or a localization key.
+## The prepared spells (SpellRules): once after each long rest. "" or a localization key.
 func prepare_spells(ids: Array) -> String:
 	if not _idle():
 		return "PREP_BUSY"
-	var why := SpellRules.prepare_error(session.character, Catalog.data, session.day, ids)
+	var why := SpellRules.prepare_error(session.character, Catalog.data, ids)
 	if not why.is_empty():
 		return why
-	SpellRules.prepare(session.character, ids, session.day)
+	SpellRules.prepare(session.character, ids)
 	_add(GameSession.effect_entry(["Подготовлены заклинания: %d" % ids.size()]))
 	EventBus.state_changed.emit()
 	return ""
@@ -1257,7 +1259,7 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 		var seen := WayRules.witnesses(session, data, from, to)
 		if not seen.is_empty():
 			lines.append("Видели: " + ", ".join(seen.map(func(id: String) -> String: return str(world().npc(id).get("name", id)))))  # v0.7.39.2
-			lines.append_array(CrimeRules.on_trespass(session, data, SiteRules.unwelcome(session, data, to), to, seen))
+			lines.append_array(CrimeRules.on_trespass(session, data, WayRules.victim(session, data, from, to), to, seen))
 	_effect_lines(lines)
 	var verb: String = {"key": "Отпираю ключом", "latch": "Отодвигаю засов", "pick": "Вскрываю отмычками", "force": "Выбиваю", "hit": "Рублю",
 		"spell": "Колдую на", "torch": "Поджигаю", "wait": "Жду, пока откроют"}[how]
@@ -1573,15 +1575,7 @@ func _combat_outcome() -> void:
 	s.combat["narrated"] = true
 	var outcome := str(s.combat["outcome"])
 	if outcome in ["victory", "truce"]:
-		var enc_loot := {}
-		var enc_id := str(s.combat.get("encounter", ""))
-		for rid: String in Catalog.data["world"]["rooms"]:
-			var enc: Dictionary = SceneRules.room(s, Catalog.data["world"], rid).get("encounter", {})
-			if str(enc.get("id", "")) == enc_id and not enc_id.is_empty():
-				enc_loot = enc.get("loot", {})
-		CombatRules.results(s, Catalog.data, enc_loot)
-		if s.combat.has("arena"):  # v0.7.45: the opponent's gear stays its own
-			s.combat["loot"] = []
+		CombatRules.results(s, Catalog.data)
 		var xp_lines := XpRules.award(s.character, Catalog.data, int(s.combat["xp"]), "бой")
 		_combat_log(xp_lines)
 	var log: Array = s.combat.get("log", [])
@@ -1598,8 +1592,20 @@ func _hero_path() -> String:
 		c.get("class_name", ""), int(c.get("level", 1)), session.day, session.quests_done.size()]
 
 
-## The player leaves the results: the chosen loot is taken, the world remembers the fight, back to the game.
-func finish_combat(take: Array = []) -> void:
+## The treasure of the encounter just won: it lies on the foes (CreatureRules.after_fight).
+func _treasure() -> Dictionary:
+	var id := str(session.combat.get("encounter", ""))
+	if id.is_empty() or str(session.combat.get("outcome", "")) != "victory":
+		return {}
+	for rid: String in Catalog.data["world"]["rooms"]:
+		var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], rid).get("encounter", {})
+		if str(enc.get("id", "")) == id:
+			return enc.get("loot", {})
+	return {}
+
+
+## The player leaves the results: the world remembers the fight, back to the game.
+func finish_combat() -> void:
 	if session == null or not CombatRules.active(session) or is_busy():
 		return
 	var s := session
@@ -1608,14 +1614,6 @@ func finish_combat(take: Array = []) -> void:
 		return
 	var lines: Array[String] = [tr("COMBAT_OUTCOME_" + outcome.to_upper())]
 	if outcome in ["victory", "truce"]:
-		var cp := int(s.combat.get("coins_cp", 0))
-		if cp > 0:
-			Ledger.add(session, cp, "game_state:finish_combat")
-			lines.append("+" + Money.format(cp))
-		for l: Dictionary in s.combat.get("loot", []):
-			if take.has(str(l["item_id"])):
-				var key := ItemRules.found(s.character, Catalog.data, s.items, str(l["item_id"]), int(l["qty"]))
-				lines.append("Взято: %s%s" % [ItemRules.display_name(Catalog.data["items"], s.items, key), " ×%d" % int(l["qty"]) if int(l["qty"]) > 1 else ""])
 		var back := {}  # v0.7.12: half the spent arrows can be picked up here
 		for ammo: String in s.combat.get("ammo_spent", {}):
 			var n := int(floor(int(s.combat["ammo_spent"][ammo]) * float(ItemRules.cfg(Catalog.data)["recover"])))
@@ -1634,7 +1632,7 @@ func finish_combat(take: Array = []) -> void:
 	if not arena.is_empty():  # v0.7.45: a bout — the prize, the bet, the rank; nobody stays beaten in the room, no crime
 		lines.append_array(ArenaRules.after_bout(s, Catalog.data, arena, outcome == "victory"))
 	elif outcome in ["victory", "truce"]:
-		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id))  # the beaten stay in the room (v0.7.22.11)
+		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id, _treasure()))  # the beaten stay in the room (v0.7.22.11)
 	lines.append_array(AllyRules.after_fight(s))  # v0.7.22.22: the fallen followers come to, the summoned keep their wounds
 	var by_law := outcome == "captured" and CombatRules.law_captors(s)
 	if not arena.is_empty():
@@ -1653,6 +1651,8 @@ func finish_combat(take: Array = []) -> void:
 			lines.append_array(CrimeRules.on_assault(s, Catalog.data, str(f["npc_id"]), str(f.get("status")) != "unconscious", s.room_id))
 	if outcome == "player_fled":
 		CreatureRules.after_flight(s)
+	if outcome in ["player_fled", "captured"] and arena.is_empty():  # v0.8.4.4: the dead stay dead, with their things
+		CreatureRules.after_fight(s, Catalog.data, str(s.combat.get("room_start", s.room_id)), {}, true)
 	var flee_to := str(s.combat.get("flee_to", ""))
 	var walked_in := "" if str(s.combat.get("room_start", s.room_id)) == s.room_id else s.room_id  # v0.8.4: a fight crosses doors
 	if outcome == "player_fled" and flee_to.is_empty() and walked_in.is_empty() and not str(s.combat.get("room_from", "")).is_empty():

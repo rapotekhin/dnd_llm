@@ -198,6 +198,7 @@ func _table() -> Dictionary:
 		"grant:discount": {"plan": _plan_grant, "apply": SocialRules.grant_discount},
 		"grant:favor": {"plan": _plan_grant, "apply": SocialRules.grant_favor},
 		"grant:permit": {"rule": SiteRules.make, "do": _do_permit},
+		"grant:cure": {"rule": DiseaseRules.plan_cure, "apply": DiseaseRules.apply_cure},
 		"grant:secret": {"plan": _plan_reveal_secret, "do": _do_secret},
 		"grant:follow": {"plan": _plan_npc_follow, "do": _do_follow},
 		"grant:quest": {"plan": _plan_accept_quest, "do": _do_quest},
@@ -1386,7 +1387,7 @@ func _do_door(s: GameSession, plan: Dictionary) -> void:
 	if str(plan["how"]) != "owner":
 		var seen := WayRules.witnesses(s, _data, a, b)
 		if not seen.is_empty():
-			_extra_lines.append_array(CrimeRules.on_trespass(s, _data, SiteRules.unwelcome(s, _data, b), b, seen))
+			_extra_lines.append_array(CrimeRules.on_trespass(s, _data, WayRules.victim(s, _data, a, b), b, seen))
 
 
 func _do_unlock(s: GameSession, plan: Dictionary) -> void:

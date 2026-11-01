@@ -48,9 +48,10 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 		var id := str(c["id"])
 		if str(c["state"]) == PropertyRules.TAME or bool(c.get("led", false)) or bool(c.get("ally", false)):
 			continue
-		var at := _seeded(cells, taken, "%d|%s" % [s.game_seed, id])
+		var fell := Vector2i(int(c.get("x", -1)), int(c.get("y", -1)))
+		var at := fell if cells.has(fell) and not taken.has(fell) else _seeded(cells, taken, "%d|%s" % [s.game_seed, id])
 		taken[at] = true
-		out.append(_token("cr:" + id, "creature", id, str(c["name"]), at))
+		out.append(_token("cr:" + id, "body" if str(c["state"]) == CreatureRules.DEAD else "creature", id, str(c["name"]), at))
 	for b: Dictionary in CrimeRules.bodies_here(s, data):
 		var id := str(b["npc_id"])
 		var at := _seeded(cells, taken, "%d|%s" % [s.game_seed, id])

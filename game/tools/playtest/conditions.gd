@@ -170,7 +170,7 @@ func run() -> void:
 	if OS.get_environment("BTR_PLAYTEST_REAL") != "1":
 		return
 	# The real master: a suspicious vial — a condition with a save or the hero's own cause, a duration.
-	gs.finish_combat([])
+	gs.finish_combat()
 	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 120.0)
 	c["inventory"]["poison_basic_vial"] = 1  # a real thing in the pack: the master invents no vials
 	var before := s.chat.size()

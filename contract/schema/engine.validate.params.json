@@ -1668,6 +1668,38 @@
       "title": "CrimeReleaseEffect",
       "type": "object"
     },
+    "CureEffect": {
+      "additionalProperties": false,
+      "description": "A healer of the scene cures a sick NPC by its art (0.105.0): `npc_id` — one with a cure among its services,\n`patient_id` — the sick NPC, here or in this settlement. The engine checks the art takes this disease; a fee goes by\nits own effect. The hero's own illness is a service or `grant:favor`.",
+      "properties": {
+        "kind": {
+          "const": "grant",
+          "default": "grant",
+          "title": "Kind",
+          "type": "string"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "patient_id": {
+          "title": "Patient Id",
+          "type": "string"
+        },
+        "what": {
+          "const": "cure",
+          "default": "cure",
+          "title": "What",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "patient_id"
+      ],
+      "title": "CureEffect",
+      "type": "object"
+    },
     "DamageEffect": {
       "additionalProperties": false,
       "properties": {
@@ -6517,6 +6549,7 @@
           "grant": {
             "discriminator": {
               "mapping": {
+                "cure": "#/$defs/CureEffect",
                 "discount": "#/$defs/NpcDiscountEffect",
                 "favor": "#/$defs/NpcFavorEffect",
                 "follow": "#/$defs/NpcFollowEffect",
@@ -6535,6 +6568,9 @@
               },
               {
                 "$ref": "#/$defs/PermitEffect"
+              },
+              {
+                "$ref": "#/$defs/CureEffect"
               },
               {
                 "$ref": "#/$defs/RevealSecretEffect"
@@ -6820,6 +6856,7 @@
         {
           "discriminator": {
             "mapping": {
+              "cure": "#/$defs/CureEffect",
               "discount": "#/$defs/NpcDiscountEffect",
               "favor": "#/$defs/NpcFavorEffect",
               "follow": "#/$defs/NpcFollowEffect",
@@ -6838,6 +6875,9 @@
             },
             {
               "$ref": "#/$defs/PermitEffect"
+            },
+            {
+              "$ref": "#/$defs/CureEffect"
             },
             {
               "$ref": "#/$defs/RevealSecretEffect"

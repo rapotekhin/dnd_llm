@@ -119,16 +119,29 @@ static func lost_weapons(s: GameSession, data: Dictionary, npc_id: String) -> Ar
 	var gone: Dictionary = Being.view(s, npc_id).get("disarmed", {})
 	for id: String in gone:
 		if s.day - int(gone[id]) < int(cfg(data).get("rearm_days", 3)):
-			out.append(str(ItemRules.def_of(data["items"], s.items, id).get("name", id)))
+			out.append(id)
 	return out
 
 
 ## The NPC's statblock actions without the stolen weapons; with no weapon left — its fists.
 static func armed_actions(s: GameSession, data: Dictionary, npc_id: String, actions: Array) -> Array:
-	var lost := lost_weapons(s, data, npc_id)
+	return without(actions, lost_weapons(s, data, npc_id))
+
+
+## A foe already searched (v0.8.4.4): the template's weapons that are no longer in its `gear` are out of its statblock.
+static func gear_actions(m: Dictionary, gear: Dictionary) -> Array:
+	var lost: Array[String] = []
+	for a: Dictionary in m["actions"]:
+		if a.has("item") and not gear.has(str(a["item"])):
+			lost.append(str(a["item"]))
+	return without(m["actions"], lost)
+
+
+## An action says which thing it is struck with (`item`, tools/srd_import.py).
+static func without(actions: Array, lost: Array[String]) -> Array:
 	if lost.is_empty():
 		return actions
-	var kept := actions.filter(func(a: Dictionary) -> bool: return not lost.has(str(a.get("name", ""))))
+	var kept := actions.filter(func(a: Dictionary) -> bool: return not lost.has(str(a.get("item", ""))))
 	if not kept.any(func(a: Dictionary) -> bool: return str(a.get("kind", "")) == "melee"):
 		var best := 0
 		for a: Dictionary in actions:

@@ -46,7 +46,8 @@
 				"to_hit": 2,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Дубинка"
+				"name": "Дубинка",
+				"item": "club"
 			}
 		],
 		"multiattack": [],
@@ -398,7 +399,8 @@
 					20,
 					60
 				],
-				"name": "Кинжал"
+				"name": "Кинжал",
+				"item": "dagger"
 			}
 		],
 		"multiattack": [],
@@ -783,7 +785,8 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Боевой молот"
+				"name": "Боевой молот",
+				"item": "warhammer"
 			}
 		],
 		"multiattack": [],
@@ -986,7 +989,8 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Ятаган"
+				"name": "Ятаган",
+				"item": "scimitar"
 			},
 			{
 				"name_en": "Dagger",
@@ -1003,7 +1007,8 @@
 					20,
 					60
 				],
-				"name": "Кинжал"
+				"name": "Кинжал",
+				"item": "dagger"
 			}
 		],
 		"multiattack": [
@@ -1075,7 +1080,8 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Ятаган"
+				"name": "Ятаган",
+				"item": "scimitar"
 			},
 			{
 				"name_en": "Light Crossbow",
@@ -1091,14 +1097,16 @@
 					80,
 					320
 				],
-				"name": "Лёгкий арбалет"
+				"name": "Лёгкий арбалет",
+				"item": "crossbow_light"
 			}
 		],
 		"multiattack": [],
 		"traits": [],
 		"equipment": [
 			"leather_armor",
-			"scimitar"
+			"scimitar",
+			"crossbow_light"
 		],
 		"languages": "any one language (usually Common)",
 		"reactions": []
@@ -1320,7 +1328,8 @@
 				"kind": "melee",
 				"reach": 10,
 				"master_effect": "адская рана (урон в начале каждого хода, лечится Медициной) — мастер",
-				"name": "Глефа"
+				"name": "Глефа",
+				"item": "glaive"
 			}
 		],
 		"multiattack": [
@@ -1407,7 +1416,8 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Секира"
+				"name": "Секира",
+				"item": "greataxe"
 			}
 		],
 		"multiattack": [],
@@ -2207,7 +2217,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Моргенштерн"
+				"name": "Моргенштерн",
+				"item": "morningstar"
 			},
 			{
 				"name_en": "Javelin",
@@ -2224,7 +2235,8 @@
 					30,
 					120
 				],
-				"name": "Метательное копьё"
+				"name": "Метательное копьё",
+				"item": "javelin"
 			}
 		],
 		"multiattack": [],
@@ -2418,7 +2430,8 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 10,
-				"name": "Пика"
+				"name": "Пика",
+				"item": "pike"
 			},
 			{
 				"name_en": "Hooves",
@@ -2447,7 +2460,8 @@
 					150,
 					600
 				],
-				"name": "Длинный лук"
+				"name": "Длинный лук",
+				"item": "longbow"
 			}
 		],
 		"multiattack": [
@@ -2594,7 +2608,8 @@
 				"to_hit": 2,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Дубинка"
+				"name": "Дубинка",
+				"item": "club"
 			}
 		],
 		"multiattack": [],
@@ -2941,7 +2956,8 @@
 					20,
 					60
 				],
-				"name": "Кинжал"
+				"name": "Кинжал",
+				"item": "dagger"
 			}
 		],
 		"multiattack": [
@@ -3061,7 +3077,8 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Ятаган"
+				"name": "Ятаган",
+				"item": "scimitar"
 			}
 		],
 		"multiattack": [],
@@ -3269,7 +3286,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Боевой кирка"
+				"name": "Боевой кирка",
+				"item": "war_pick"
 			},
 			{
 				"name_en": "Poisoned Dart",
@@ -3294,7 +3312,8 @@
 					"duration": "minute",
 					"repeat": true
 				},
-				"name": "Отравленный дротик"
+				"name": "Отравленный дротик",
+				"item": "dart"
 			}
 		],
 		"multiattack": [],
@@ -3317,7 +3336,8 @@
 		],
 		"equipment": [
 			"chain_shirt",
-			"war_pick"
+			"war_pick",
+			"dart"
 		],
 		"languages": "Gnomish, Terran, Undercommon",
 		"reactions": [],
@@ -3762,7 +3782,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Короткий меч"
+				"name": "Короткий меч",
+				"item": "shortsword"
 			},
 			{
 				"name_en": "Hand Crossbow",
@@ -3788,7 +3809,8 @@
 					"fail_by_5": "unconscious",
 					"wake": true
 				},
-				"name": "Ручной арбалет"
+				"name": "Ручной арбалет",
+				"item": "crossbow_hand"
 			}
 		],
 		"multiattack": [],
@@ -3811,7 +3833,8 @@
 		],
 		"equipment": [
 			"chain_shirt",
-			"shortsword"
+			"shortsword",
+			"crossbow_hand"
 		],
 		"languages": "Elvish, Undercommon",
 		"reactions": [],
@@ -3888,7 +3911,8 @@
 				"to_hit": 2,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Боевой посох"
+				"name": "Боевой посох",
+				"item": "quarterstaff"
 			}
 		],
 		"multiattack": [],
@@ -4001,7 +4025,8 @@
 				"to_hit": 2,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Дубинка"
+				"name": "Дубинка",
+				"item": "club"
 			},
 			{
 				"name_en": "Fey Charm",
@@ -4135,7 +4160,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Боевой кирка"
+				"name": "Боевой кирка",
+				"item": "war_pick"
 			},
 			{
 				"name_en": "Javelin",
@@ -4152,7 +4178,8 @@
 					30,
 					120
 				],
-				"name": "Метательное копьё"
+				"name": "Метательное копьё",
+				"item": "javelin"
 			}
 		],
 		"multiattack": [],
@@ -4691,7 +4718,8 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Длинный меч"
+				"name": "Длинный меч",
+				"item": "longsword"
 			}
 		],
 		"multiattack": [],
@@ -7171,7 +7199,8 @@
 					20,
 					60
 				],
-				"name": "Копьё"
+				"name": "Копьё",
+				"item": "spear"
 			},
 			{
 				"name_en": "Longbow",
@@ -7187,7 +7216,8 @@
 					150,
 					600
 				],
-				"name": "Длинный лук"
+				"name": "Длинный лук",
+				"item": "longbow"
 			}
 		],
 		"multiattack": [],
@@ -7329,7 +7359,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Ятаган"
+				"name": "Ятаган",
+				"item": "scimitar"
 			},
 			{
 				"name_en": "Shortbow",
@@ -7345,7 +7376,8 @@
 					80,
 					320
 				],
-				"name": "Короткий лук"
+				"name": "Короткий лук",
+				"item": "shortbow"
 			}
 		],
 		"multiattack": [],
@@ -7957,7 +7989,8 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Шипастая костяная дубина"
+				"name": "Шипастая костяная дубина",
+				"item": "club"
 			}
 		],
 		"multiattack": [],
@@ -7978,7 +8011,9 @@
 				"desc": "Гримлок имеет преимущество на проверки Ловкости (Скрытность) для укрытия в каменистой местности."
 			}
 		],
-		"equipment": [],
+		"equipment": [
+			"club"
+		],
 		"languages": "Undercommon",
 		"reactions": []
 	},
@@ -8032,7 +8067,8 @@
 					20,
 					60
 				],
-				"name": "Копьё"
+				"name": "Копьё",
+				"item": "spear"
 			}
 		],
 		"multiattack": [],
@@ -8102,7 +8138,8 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Дубинка"
+				"name": "Дубинка",
+				"item": "club"
 			},
 			{
 				"name_en": "Luring Song",
@@ -8428,7 +8465,8 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Длинный меч"
+				"name": "Длинный меч",
+				"item": "longsword"
 			},
 			{
 				"name_en": "Longbow",
@@ -8444,7 +8482,8 @@
 					150,
 					600
 				],
-				"name": "Длинный лук"
+				"name": "Длинный лук",
+				"item": "longbow"
 			}
 		],
 		"multiattack": [],
@@ -9085,7 +9124,8 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Двуручный меч"
+				"name": "Двуручный меч",
+				"item": "greatsword"
 			},
 			{
 				"name_en": "Heavy Crossbow",
@@ -9101,7 +9141,8 @@
 					100,
 					400
 				],
-				"name": "Тяжёлый арбалет"
+				"name": "Тяжёлый арбалет",
+				"item": "crossbow_heavy"
 			}
 		],
 		"multiattack": [
@@ -9119,7 +9160,8 @@
 		],
 		"equipment": [
 			"plate_armor",
-			"greatsword"
+			"greatsword",
+			"crossbow_heavy"
 		],
 		"languages": "any one language (usually Common)",
 		"reactions": [
@@ -9174,7 +9216,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Кинжал"
+				"name": "Кинжал",
+				"item": "dagger"
 			},
 			{
 				"name_en": "Sling",
@@ -9190,7 +9233,8 @@
 					30,
 					120
 				],
-				"name": "Праща"
+				"name": "Праща",
+				"item": "sling"
 			}
 		],
 		"multiattack": [],
@@ -9498,7 +9542,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Тяжёлая дубина"
+				"name": "Тяжёлая дубина",
+				"item": "club"
 			},
 			{
 				"name_en": "Javelin",
@@ -9515,7 +9560,8 @@
 					30,
 					120
 				],
-				"name": "Метательное копьё"
+				"name": "Метательное копьё",
+				"item": "javelin"
 			},
 			{
 				"name_en": "Spiked Shield",
@@ -9528,7 +9574,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Шипастый щит"
+				"name": "Шипастый щит",
+				"item": "shield"
 			}
 		],
 		"multiattack": [
@@ -9550,6 +9597,7 @@
 		],
 		"equipment": [
 			"shield",
+			"club",
 			"javelin"
 		],
 		"languages": "Draconic",
@@ -9609,7 +9657,8 @@
 					20,
 					60
 				],
-				"name": "Кинжал"
+				"name": "Кинжал",
+				"item": "dagger"
 			}
 		],
 		"multiattack": [],
@@ -10139,7 +10188,8 @@
 					20,
 					60
 				],
-				"name": "Копьё"
+				"name": "Копьё",
+				"item": "spear"
 			}
 		],
 		"multiattack": [],
@@ -10230,7 +10280,8 @@
 					20,
 					60
 				],
-				"name": "Гарпун"
+				"name": "Гарпун",
+				"item": "spear"
 			}
 		],
 		"multiattack": [
@@ -10250,7 +10301,9 @@
 				"desc": "Ведьма может дышать воздухом и водой."
 			}
 		],
-		"equipment": [],
+		"equipment": [
+			"spear"
+		],
 		"languages": "Abyssal, Aquan",
 		"reactions": []
 	},
@@ -10402,7 +10455,8 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Секира"
+				"name": "Секира",
+				"item": "greataxe"
 			},
 			{
 				"name_en": "Gore",
@@ -10490,7 +10544,8 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Секира"
+				"name": "Секира",
+				"item": "greataxe"
 			},
 			{
 				"name_en": "Gore",
@@ -10827,7 +10882,8 @@
 				"to_hit": 3,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Рапира"
+				"name": "Рапира",
+				"item": "rapier"
 			}
 		],
 		"multiattack": [],
@@ -11056,7 +11112,8 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Моргенштерн"
+				"name": "Моргенштерн",
+				"item": "morningstar"
 			}
 		],
 		"multiattack": [],
@@ -11117,7 +11174,8 @@
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Двуручная дубина"
+				"name": "Двуручная дубина",
+				"item": "greatclub"
 			},
 			{
 				"name_en": "Javelin",
@@ -11134,7 +11192,8 @@
 					30,
 					120
 				],
-				"name": "Метательное копьё"
+				"name": "Метательное копьё",
+				"item": "javelin"
 			}
 		],
 		"multiattack": [],
@@ -11193,7 +11252,8 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Секира"
+				"name": "Секира",
+				"item": "greataxe"
 			},
 			{
 				"name_en": "Javelin",
@@ -11210,7 +11270,8 @@
 					30,
 					120
 				],
-				"name": "Метательное копьё"
+				"name": "Метательное копьё",
+				"item": "javelin"
 			}
 		],
 		"multiattack": [],
@@ -11920,7 +11981,8 @@
 				"to_hit": 2,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Булава"
+				"name": "Булава",
+				"item": "mace"
 			}
 		],
 		"multiattack": [],
@@ -12897,7 +12959,8 @@
 					20,
 					60
 				],
-				"name": "Копьё"
+				"name": "Копьё",
+				"item": "spear"
 			}
 		],
 		"multiattack": [
@@ -12994,7 +13057,8 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Короткий меч"
+				"name": "Короткий меч",
+				"item": "shortsword"
 			},
 			{
 				"name_en": "Shortbow",
@@ -13010,7 +13074,8 @@
 					80,
 					320
 				],
-				"name": "Короткий лук"
+				"name": "Короткий лук",
+				"item": "shortbow"
 			}
 		],
 		"multiattack": [],
@@ -13142,7 +13207,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Короткий меч"
+				"name": "Короткий меч",
+				"item": "shortsword"
 			},
 			{
 				"name_en": "Longbow",
@@ -13158,7 +13224,8 @@
 					150,
 					600
 				],
-				"name": "Длинный лук"
+				"name": "Длинный лук",
+				"item": "longbow"
 			}
 		],
 		"multiattack": [
@@ -13483,7 +13550,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Короткий меч"
+				"name": "Короткий меч",
+				"item": "shortsword"
 			},
 			{
 				"name_en": "Shortbow",
@@ -13499,7 +13567,8 @@
 					80,
 					320
 				],
-				"name": "Короткий лук"
+				"name": "Короткий лук",
+				"item": "shortbow"
 			}
 		],
 		"multiattack": [],
@@ -13731,7 +13800,8 @@
 				"to_hit": 2,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Длинный меч"
+				"name": "Длинный меч",
+				"item": "longsword"
 			},
 			{
 				"name_en": "Shortbow",
@@ -13757,7 +13827,8 @@
 					"fail_by_5": "unconscious",
 					"wake": true
 				},
-				"name": "Короткий лук"
+				"name": "Короткий лук",
+				"item": "shortbow"
 			}
 		],
 		"multiattack": [],
@@ -13821,7 +13892,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Короткий меч"
+				"name": "Короткий меч",
+				"item": "shortsword"
 			},
 			{
 				"name_en": "Hand Crossbow",
@@ -13837,7 +13909,8 @@
 					30,
 					120
 				],
-				"name": "Ручной арбалет"
+				"name": "Ручной арбалет",
+				"item": "crossbow_hand"
 			}
 		],
 		"multiattack": [
@@ -13865,7 +13938,8 @@
 			}
 		],
 		"equipment": [
-			"shortsword"
+			"shortsword",
+			"crossbow_hand"
 		],
 		"languages": "any two languages",
 		"reactions": []
@@ -14866,7 +14940,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Булава"
+				"name": "Булава",
+				"item": "mace"
 			},
 			{
 				"name_en": "Heavy Crossbow",
@@ -14882,7 +14957,8 @@
 					100,
 					400
 				],
-				"name": "Тяжёлый арбалет"
+				"name": "Тяжёлый арбалет",
+				"item": "crossbow_heavy"
 			}
 		],
 		"multiattack": [
@@ -14900,7 +14976,8 @@
 		],
 		"equipment": [
 			"leather_armor",
-			"mace"
+			"mace",
+			"crossbow_heavy"
 		],
 		"languages": "any one language (usually Common)",
 		"reactions": []
@@ -15041,7 +15118,8 @@
 					20,
 					60
 				],
-				"name": "Копьё"
+				"name": "Копьё",
+				"item": "spear"
 			}
 		],
 		"multiattack": [],
@@ -15106,7 +15184,8 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Длинный меч"
+				"name": "Длинный меч",
+				"item": "longsword"
 			},
 			{
 				"name_en": "Shortsword",
@@ -15119,7 +15198,8 @@
 				"to_hit": 5,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Короткий меч"
+				"name": "Короткий меч",
+				"item": "shortsword"
 			},
 			{
 				"name_en": "Heavy Crossbow",
@@ -15135,7 +15215,8 @@
 					100,
 					400
 				],
-				"name": "Тяжёлый арбалет"
+				"name": "Тяжёлый арбалет",
+				"item": "crossbow_heavy"
 			}
 		],
 		"multiattack": [
@@ -15152,7 +15233,8 @@
 		"equipment": [
 			"splint_armor",
 			"longsword",
-			"shortsword"
+			"shortsword",
+			"crossbow_heavy"
 		],
 		"languages": "any one language (usually Common)",
 		"reactions": []
@@ -15529,7 +15611,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Короткий меч"
+				"name": "Короткий меч",
+				"item": "shortsword"
 			},
 			{
 				"name_en": "Hand Crossbow",
@@ -15545,7 +15628,8 @@
 					30,
 					120
 				],
-				"name": "Ручной арбалет"
+				"name": "Ручной арбалет",
+				"item": "crossbow_hand"
 			}
 		],
 		"multiattack": [
@@ -15567,7 +15651,8 @@
 			}
 		],
 		"equipment": [
-			"shortsword"
+			"shortsword",
+			"crossbow_hand"
 		],
 		"languages": "Common",
 		"reactions": []
@@ -15635,7 +15720,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Короткий меч"
+				"name": "Короткий меч",
+				"item": "shortsword"
 			},
 			{
 				"name_en": "Hand Crossbow",
@@ -15651,7 +15737,8 @@
 					30,
 					120
 				],
-				"name": "Ручной арбалет"
+				"name": "Ручной арбалет",
+				"item": "crossbow_hand"
 			}
 		],
 		"multiattack": [
@@ -15673,7 +15760,8 @@
 			}
 		],
 		"equipment": [
-			"shortsword"
+			"shortsword",
+			"crossbow_hand"
 		],
 		"languages": "Common",
 		"reactions": []
@@ -15800,7 +15888,8 @@
 					20,
 					60
 				],
-				"name": "Копьё"
+				"name": "Копьё",
+				"item": "spear"
 			}
 		],
 		"multiattack": [
@@ -16152,7 +16241,8 @@
 				"to_hit": 4,
 				"kind": "melee",
 				"reach": 5,
-				"name": "Длинный меч"
+				"name": "Длинный меч",
+				"item": "longsword"
 			},
 			{
 				"name_en": "Longbow",
@@ -16168,7 +16258,8 @@
 					150,
 					600
 				],
-				"name": "Длинный лук"
+				"name": "Длинный лук",
+				"item": "longbow"
 			}
 		],
 		"multiattack": [

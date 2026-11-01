@@ -63,7 +63,7 @@ func _ready() -> void:
 	visibility_changed.connect(func() -> void:
 		if visible and GameState.has_session():
 			var c := GameState.session.character
-			picks = (c.get("spells", {}).get("prepared", []) as Array).duplicate() if kind == PREPARE else []
+			picks = (c.get("spells", {}).get("prepared", []) as Array).duplicate() if kind in [PREPARE, LONG_REST] else []
 			if kind == LONG_REST:
 				supplies = ExplorationRules.camp_default(c, Catalog.data)
 			if kind == SHORT_REST:
@@ -226,10 +226,18 @@ func _step_button(node_name: String, text: String, off: bool, change: Callable) 
 
 ## The spells of the day (О2): «Выбрано 2 из 4», the pool by circle, the spell's text on the right.
 func _prepare(s: GameSession, c: Dictionary, data: Dictionary) -> void:
+	var n := _prep_list(c, data)
+	title.text = tr("PREP_TITLE").format({"n": n})
+	var err := SpellRules.prepare_error(c, data, picks)
+	set_note(tr(err) if not err.is_empty() and picks.size() == n else "")
+	confirm.disabled = not err.is_empty() or GameState.is_busy()
+
+
+## The pool by circle with the counter, in this window or the long rest's. The number to pick.
+func _prep_list(c: Dictionary, data: Dictionary) -> int:
 	var p := SpellRules.prepare_pool(c, data)
 	var n := mini(int(p["count"]), (p["pool"] as Array).size())
 	picks = picks.filter(func(id: Variant) -> bool: return (p["pool"] as Array).has(id))
-	title.text = tr("PREP_TITLE").format({"n": n})
 	var count := _text(tr("PREP_COUNT").format({"picked": picks.size(), "n": n}), UiTheme.HEADING)
 	count.name = "PrepCount"
 	count.add_theme_color_override("font_color", UiTheme.OK if picks.size() == n else UiTheme.ACCENT_BRIGHT)
@@ -249,9 +257,7 @@ func _prepare(s: GameSession, c: Dictionary, data: Dictionary) -> void:
 		_box.add_child(flow)
 		for id: String in by_level[lv]:
 			flow.add_child(_prep_box(id, n, data))
-	var err := SpellRules.prepare_error(c, data, s.day, picks)
-	set_note(tr(err) if not err.is_empty() and picks.size() == n else "")
-	confirm.disabled = not err.is_empty() or GameState.is_busy()
+	return n
 
 
 func _prep_box(id: String, n: int, data: Dictionary) -> CheckBox:
@@ -262,7 +268,10 @@ func _prep_box(id: String, n: int, data: Dictionary) -> CheckBox:
 	cb.text = str(sp.get("name", id))
 	cb.button_pressed = picks.has(id)
 	cb.disabled = not picks.has(id) and picks.size() >= n
-	_details.hook(cb, str(sp.get("name", id)), DetailsPanel.spell_text(data, id))
+	if _details != null:
+		_details.hook(cb, str(sp.get("name", id)), DetailsPanel.spell_text(data, id))
+	else:
+		cb.tooltip_text = DetailsPanel.spell_text(data, id)
 	cb.toggled.connect(func(on: bool) -> void:
 		if on and not picks.has(id) and picks.size() < n:
 			picks.append(id)
@@ -277,6 +286,10 @@ func _long_rest(s: GameSession, data: Dictionary) -> void:
 	var c := s.character
 	title.text = tr("LONG_REST_TITLE")
 	_text(tr("LONG_REST_GIVES").format({"clock": "%02d:00" % (int(TimeRules.cfg(data)["wake_minute"]) / 60)}), UiTheme.MUTED_LABEL)
+	if SpellRules.prepares(c, data):  # v0.8.4.4, the author: the list changes with the rest, first in its window
+		_text(tr("LONG_REST_PREP"), UiTheme.HEADING)
+		if picks.size() < _prep_list(c, data):
+			_text(tr("LONG_REST_PREP_SHORT"), UiTheme.MUTED_LABEL)
 	var place := ExplorationRules.rest_place(data["world"], s.room_id, s, data)
 	if not place.is_empty():
 		var cost := int(place["cost_cp"])
@@ -291,7 +304,7 @@ func _long_rest(s: GameSession, data: Dictionary) -> void:
 		var why := ExplorationRules.can_rest(s, data["world"], data)
 		inn.disabled = GameState.is_busy() or not why.is_empty()
 		inn.tooltip_text = tr(why) if not why.is_empty() else ""
-		inn.pressed.connect(func() -> void: _done(GameState.long_rest()))
+		inn.pressed.connect(func() -> void: _done(GameState.long_rest({}, picks)))
 		_box.add_child(inn)
 	_text(tr("LONG_REST_CAMP").format({"need": ExplorationRules.camp_need(data)}), UiTheme.HEADING)
 	if BackgroundRules.can_forage(s, data):  # an outlander finds food (v0.7.11)
@@ -301,7 +314,7 @@ func _long_rest(s: GameSession, data: Dictionary) -> void:
 		forage.text = tr("LONG_REST_FORAGE")
 		forage.custom_minimum_size = Vector2(0, 48)
 		forage.disabled = GameState.is_busy() or not ExplorationRules.can_camp(s, data).is_empty()
-		forage.pressed.connect(func() -> void: _done(GameState.long_rest({"forage": 1})))
+		forage.pressed.connect(func() -> void: _done(GameState.long_rest({"forage": 1}, picks)))
 		_box.add_child(forage)
 	var have := ExplorationRules.camp_food(c, data)
 	var food: Dictionary = data["rules"]["hero_effects"]["camp"]["food"]
@@ -340,7 +353,7 @@ func _done(err: String) -> void:
 
 func _on_confirm() -> void:
 	if kind == LONG_REST:
-		_done(GameState.long_rest(supplies))
+		_done(GameState.long_rest(supplies, picks))
 	elif kind == SHORT_REST:
 		_done(GameState.short_rest(dice))
 	elif kind == WILDS:
