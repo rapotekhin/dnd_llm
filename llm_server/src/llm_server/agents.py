@@ -97,7 +97,8 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
     wish); LLM_SERVER_PROVIDER_SORT = price (default) | throughput | latency | off. With price, v0.7.14.4: only the
     `LLM_SERVER_PROVIDER_TOP` cheapest providers (llm.providers.PICKER, refreshed before a turn), and those slower than
     `LLM_SERVER_MIN_TPS` tokens/s go last — the cheapest fast one of them serves. v0.7.34.1: the cheapest by the real
-    cost of our turn (cache, the providers' bills), no provider pinned first."""
+    cost of our turn (cache, the providers' bills), no provider pinned first. 2026-11-01: they go as `order`, tried in
+    our order; with `sort` OpenRouter ranked them by its own price and ours was lost."""
     settings: dict = dict(base)
     if "qwen/" in model.model_name or "nvidia/nemotron" in model.model_name:
         # v0.7.20.2: Nemotron thinks the whole max_tokens away before answering — the same switch
@@ -117,7 +118,7 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
         settings["openrouter_provider"] = {"sort": sort, "require_parameters": True}
         picked = PICKER.providers(model.model_name)
         if sort == "price" and picked:
-            settings["openrouter_provider"].update({"only": picked, "allow_fallbacks": True})
+            settings["openrouter_provider"] = {"order": picked, "only": picked, "allow_fallbacks": True, "require_parameters": True}
             if min_tps() > 0:
                 settings["openrouter_provider"]["preferred_min_throughput"] = {"p50": min_tps()}
     return settings  # type: ignore[return-value]

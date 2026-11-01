@@ -6,6 +6,7 @@ Takes input / output tokens per turn from the backend traces (`llm_server/var/tr
 same ranking, corrected by our bills) and checks each request's bill in the traces against the list price.
 
     python tools/provider_cost.py                                  # DeepSeek, the traces of the last 7 days
+    python tools/provider_cost.py --game                           # the same on the game's own server: the author's real play
     python tools/provider_cost.py --source golden                  # the newest golden report of the model
     python tools/provider_cost.py --since 2026-10-20 --cache 0.5   # own cached share instead of the estimate
     python tools/provider_cost.py --seed-bills                     # the traces' bills and speeds into the server's provider_bills.json
@@ -32,6 +33,7 @@ from llm_server.llm.providers import BILLS_DAYS, ProviderPicker, request_cost, t
 DEFAULT_MODEL = "deepseek/deepseek-v4.1-flash-1017"
 TRACES = ROOT / "llm_server" / "var" / "traces"
 BILLS = ROOT / "llm_server" / "var" / "provider_bills.json"
+GAME = Path(os.environ.get("APPDATA", "")) / "Godot" / "app_userdata" / "Between the Rolls" / "master"  # the frozen server's data
 API = "https://openrouter.ai/api/v1/models/{model}/endpoints"
 
 
@@ -43,6 +45,8 @@ class Turn:
     provider: str  # provider name, "" when unknown
     at: float = 0.0  # unix time; 0 when unknown
     seconds: float = 0.0
+    route: str = ""  # short, full or summary, with the turn's kind
+    cached: int = -1  # -1: the line does not say (traces before 2026-11-01)
 
 
 @dataclass
@@ -94,8 +98,9 @@ def load_traces(model: str, since: dt.date) -> tuple[list[Turn], list[Request]]:
         u = d.get("usage") or {}
         if d.get("model") != model or not u.get("input_tokens"):
             continue
+        way = "summary" if d.get("what") == "summary" else (d.get("route") or "full").split(":")[0]
         turns.append(Turn(u["input_tokens"], u.get("output_tokens", 0), u.get("cost_usd", 0.0), d.get("provider") or "",
-                          float(d.get("ts") or 0) / 1000, float(d.get("seconds") or 0)))
+                          float(d.get("ts") or 0) / 1000, float(d.get("seconds") or 0), f"{way}: {d.get('kind')}", d.get("cached_tokens", -1)))
         for m in d.get("messages") or []:
             det, mu = m.get("provider_details") or {}, m.get("usage") or {}
             if m.get("kind") != "response" or not det.get("cost") or not mu.get("input_tokens"):
@@ -165,6 +170,20 @@ def estimate_cache_share(turns: list[Turn], endpoints: list[Endpoint], provider:
     return min(1.0, max(0.0, num / den)) if den > 0 else None
 
 
+def by_route(turns: list[Turn]) -> list[str]:
+    """Tokens of each prompt we send: the route of a turn with its kind."""
+    groups: dict[str, list[Turn]] = {}
+    for t in turns:
+        groups.setdefault(t.route, []).append(t)
+    out = ["", "## Our prompts: tokens per turn", "", "| Route: kind | Turns | Input | Output | Cached | Billed $ |", "|---|---|---|---|---|---|"]
+    for name, ts in sorted(groups.items(), key=lambda kv: -sum(t.input_tokens for t in kv[1])):
+        known = [t for t in ts if t.cached >= 0]
+        cached = f"{sum(t.cached for t in known) / max(1, sum(t.input_tokens for t in known)):.0%}" if known else "—"
+        out.append(f"| {name} | {len(ts)} | {statistics.mean(t.input_tokens for t in ts):,.0f} | {statistics.mean(t.output_tokens for t in ts):,.0f} "
+                   f"| {cached} | {sum(t.billed for t in ts):.4f} |")
+    return out
+
+
 def bill_check(requests: list[Request], endpoints: list[Endpoint]) -> list[str]:
     """Each request's bill against today's list price with its real cached tokens."""
     groups: dict[str, list[Request]] = {}
@@ -213,6 +232,7 @@ def seed_bills(model: str, requests: list[Request], turns: list[Turn], raw: list
 
 
 def main() -> None:
+    global TRACES, BILLS
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--source", choices=("traces", "golden"), default="traces")
@@ -220,9 +240,12 @@ def main() -> None:
     ap.add_argument("--since", type=dt.date.fromisoformat, default=dt.date.today() - dt.timedelta(days=7))
     ap.add_argument("--cache", type=float, help="cached share of the input, 0..1 (default: estimated from the bill)")
     ap.add_argument("--all", action="store_true", help="also endpoints without tool calls")
+    ap.add_argument("--game", action="store_true", help="the traces and bills of the game's own server, not of llm_server/var")
     ap.add_argument("--seed-bills", action="store_true", help=f"add the traces' bills of the last {BILLS_DAYS:g} days to the server's file")
     ap.add_argument("--md", help="also write the table as Markdown here")
     a = ap.parse_args()
+    if a.game:
+        TRACES, BILLS = GAME / "traces", GAME / "provider_bills.json"
 
     raw = fetch_endpoints(a.model)
     endpoints = parse(raw)
@@ -243,6 +266,7 @@ def main() -> None:
     picker._rank(a.model)
     picked = picker.providers(a.model)[:top()]
     factors = picker.factors()
+    call = picker.call(a.model)
 
     used = statistics.mode([t.provider for t in turns if t.provider and t.billed] or [""])
     share = a.cache if a.cache is not None else estimate_cache_share(turns, endpoints, used)
@@ -266,8 +290,8 @@ def main() -> None:
         f"median input {statistics.median(t.input_tokens for t in turns):,.0f}",
         f"- Cached share of the input: {share:.0%} ({share_note})",
         f"- Billed on average: ${statistics.mean(billed) * 1000:.3f} per 1000 turns" if billed else "- Billed: unknown",
-        f"- The server's picks now (◀; cache share {os.environ.get('LLM_SERVER_CACHE_SHARE', '0.7')}, "
-        f"{os.path.relpath(BILLS, ROOT)}): {', '.join(f'`{t}`' for t in picked) or 'none'}",
+        f"- The server's picks now (◀; its mean request {call.input_tokens:,.0f} in, {call.cached_share:.0%} cached, "
+        f"{call.output_tokens:,.0f} out; {BILLS}): {', '.join(f'`{t}`' for t in picked) or 'none'}",
         "- Prices are OpenRouter's list prices per 1M tokens; `discount` is shown as OpenRouter gives it, not applied; "
         "«Bills» — billed ÷ list price of the server's last days, the ranking of the server multiplies by it",
         "",
@@ -283,6 +307,7 @@ def main() -> None:
             f"| {i} | {e.name}{' ◀' if e.tag in picked else ''} | `{e.tag}` | {c * 1000:.3f} | {c / cheapest if cheapest else 0:.1f} | {f} | "
             f"{e.prompt * 1e6:.4f} | {e.completion * 1e6:.4f} | {cr} | {e.discount:g} | {up} | {e.quantization} | "
             f"{'yes' if e.structured else 'no'} |")
+    lines += by_route(turns)
     lines += bill_check(requests, endpoints)
     text = "\n".join(lines)
     print(text)

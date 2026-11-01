@@ -258,7 +258,7 @@ def _endpoint(tag: str, prompt: float, completion: float, uptime: float = 100, t
 
 
 def test_the_cache_price_counts_in_the_ranking(monkeypatch):
-    # v0.7.34.1: most of our input is cached — a dear input with a cheap cache beats a cheap input without one
+    # v0.7.34.1: much of our input is cached — a dear input with a cheap cache beats a cheap input without one
     from llm_server.llm.providers import cheapest
 
     monkeypatch.setenv("LLM_SERVER_CACHE_SHARE", "0.7")
@@ -266,6 +266,33 @@ def test_the_cache_price_counts_in_the_ranking(monkeypatch):
     assert cheapest(endpoints, 2) == ["cached", "no-cache"]
     monkeypatch.setenv("LLM_SERVER_CACHE_SHARE", "0")
     assert cheapest(endpoints, 2) == ["no-cache", "cached"]
+
+
+def test_a_provider_is_priced_on_our_real_requests(tmp_path):
+    # 2026-11-01, the author's game: a cheap input with a dear output won on a request that was not ours, and a cheap
+    # cache counts only as far as it hits
+    from llm_server.llm.providers import OUR_CALL, ProviderPicker
+
+    endpoints = [_endpoint("dear-out", 0.035, 0.5, cache=0.005, name="DearOut"), _endpoint("morph", 0.05, 0.192, cache=0.008, name="Morph"),
+                 _endpoint("deep", 0.078, 0.235, cache=0.0024, name="Deep")]
+    picker = ProviderPicker()
+    picker.bind(tmp_path / "bills.json")
+    picker._endpoints["m"] = endpoints
+    picker._rank("m")
+    assert picker.call("m") == OUR_CALL and picker.providers("m") == ["morph", "dear-out", "deep"]
+    for _ in range(9):
+        picker.observe_bill("m", "Morph", 2_000, 0, 1_500, 0.0004)
+    assert picker.call("m") == OUR_CALL  # nine requests say little
+    picker.observe_bill("m", "Morph", 2_000, 0, 1_500, 0.0004)
+    assert picker.call("m").input_tokens == 2_000 and picker.call("m").output_tokens == 1_500 and picker.shares("m") == {"Morph": 0}
+    again = ProviderPicker()
+    again.bind(tmp_path / "bills.json")
+    assert again.call("m").output_tokens == 1_500  # the numbers survive a restart
+    for _ in range(10):
+        picker.observe_bill("m", "Deep", 100_000, 99_000, 100, 0.0005)
+    assert picker.shares("m")["Deep"] == 0.99 and picker.call("m").cached_share > 0.9
+    picker._rank("m")
+    assert picker.providers("m")[0] == "deep"
 
 
 def test_a_provider_billing_over_its_list_price_falls_back(tmp_path):
@@ -320,7 +347,8 @@ def test_the_picked_providers_go_into_the_request(monkeypatch):
     model = OpenRouterModel(model_id, provider=OpenRouterProvider(api_key="test"))
     monkeypatch.setitem(PICKER._ranked, model_id, [("a", "A"), ("b", "B"), ("c", "C"), ("d", "D")])
     monkeypatch.setenv("LLM_SERVER_MIN_TPS", "40")
-    assert settings_for(model)["openrouter_provider"] == {"sort": "price", "require_parameters": True, "only": ["a", "b", "c"],
+    # 2026-11-01: `order`, not `sort`: with `sort` OpenRouter took its own cheapest of the three and never ours
+    assert settings_for(model)["openrouter_provider"] == {"order": ["a", "b", "c"], "only": ["a", "b", "c"], "require_parameters": True,
                                                         "allow_fallbacks": True, "preferred_min_throughput": {"p50": 40.0}}
     monkeypatch.setenv("LLM_SERVER_PROVIDER_SORT", "throughput")
     assert settings_for(model)["openrouter_provider"] == {"sort": "throughput", "require_parameters": True}
@@ -382,11 +410,14 @@ def test_a_provider_observed_slow_leaves_the_three():
 
     picker = ProviderPicker()
     picker._ranked["m"] = [("open-inference/fp4", "OpenInference"), ("decart/fp4", "Decart"), ("relace", "Relace"), ("x", "X")]
-    picker.observe("OpenInference", 600, 45.0)  # 13 tok/s
+    picker.observe("OpenInference", 600, 45.0)  # 13 tok/s: one slow answer may be a cold start
+    assert picker.providers("m") == ["open-inference/fp4", "decart/fp4", "relace"]
+    picker.observe("OpenInference", 600, 45.0)
     assert picker.providers("m") == ["decart/fp4", "relace"]
     picker.observe("Decart", 50, 30.0)  # too short to judge
     picker.observe("Relace", 600, 10.0)
     assert picker.providers("m") == ["decart/fp4", "relace"]
+    picker.observe("Decart", 600, 60.0)
     picker.observe("Decart", 600, 60.0)
     picker.observe("Relace", 600, 60.0)
     picker.observe("Relace", 600, 60.0)  # the median of 60, 10, 10 tok/s

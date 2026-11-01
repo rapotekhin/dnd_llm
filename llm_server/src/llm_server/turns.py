@@ -287,6 +287,7 @@ async def _short_turn(model: Model, params: TurnRequestParams, user_prompt: str,
     trace["short_system"] = system
     sr = await router.build_short_agent(model, system).run(user_prompt)
     usage = usage + sr.usage
+    trace["provider"] = _served_by(sr)
     if not router.short_ok(params, sr.output):
         return None, usage, "full: the short master asked"
     trace["system"] = system  # the prompt that answered
@@ -309,7 +310,8 @@ def _finish(session: Session, params: TurnRequestParams, model: str, out: TurnOu
     if services.trace:
         services.trace.write({**trace, "messages": services.trace.messages(result) if result is not None else [],
                               "output": out.model_dump(mode="json"), "checks": ctx.check_ids, "accepted": ctx.accepted,
-                              "usage": usage.model_dump(mode="json"), "provider": _served_by(result) if result is not None else "",
+                              "usage": usage.model_dump(mode="json"), "cached_tokens": run_usage.cache_read_tokens,
+                              "provider": _served_by(result) if result is not None else trace.get("provider", ""),
                               "seconds": round(time.monotonic() - started, 2)})
     log.info("turn %s mode=%s model=%s tokens=%d/%d cost=$%.5f checks=%d effects=%d/%d %.1fs",
              params.turn_id, params.mode, model, usage.input_tokens, usage.output_tokens, usage.cost_usd,
@@ -364,5 +366,6 @@ async def _agent_summary(session: Session, params: SummaryParams) -> SummaryResu
     usage = _usage(session, model, result.usage, billed)
     if services.trace:
         services.trace.write({"what": "summary", "kind": params.kind, "subject": params.subject_id, "model": model, "prompt": prompt,
-                              "summary": result.output.summary, "usage": usage.model_dump(mode="json")})
+                              "summary": result.output.summary, "usage": usage.model_dump(mode="json"),
+                              "cached_tokens": result.usage.cache_read_tokens, "provider": _served_by(result)})
     return SummaryResult(summary=result.output.summary.strip(), usage=usage)

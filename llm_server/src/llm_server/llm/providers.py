@@ -9,7 +9,12 @@ stays (or none: plain price sorting).
 
 v0.7.34.1: the price of a turn counts the cached share of the input at the cache price and is corrected by what the
 provider really billed us (OpenInference charged 4.8× its list price, so the list alone sent us to the dearest one);
-the bills are kept in `<data_dir>/provider_bills.json`. No provider is pinned first any more."""
+the bills are kept in `<data_dir>/provider_bills.json`. No provider is pinned first any more.
+
+2026-11-01, the author's game: our order did not reach OpenRouter. `only` is a set there and `sort: price` is its own
+ranking, so OpenInference served 126 requests of 174 while Morph stood first here and is 10-19% cheaper on the same game.
+The request now carries `order`, and a provider is priced on our mean request, the cached share it really gave us
+included (`Call`, kept with the bills); one provider serving in a row also keeps its cache warm."""
 
 import json
 import logging
@@ -19,14 +24,29 @@ import time
 from collections import deque
 from contextvars import ContextVar
 from pathlib import Path
+from typing import NamedTuple
 
 import httpx
 
 log = logging.getLogger("llm_server.providers")
 
 ENDPOINTS_URL = "https://openrouter.ai/api/v1/models/{model}/endpoints"
-TURN_INPUT_TOKENS = 20_000  # a typical turn of the master (traces of 2026-10: 21k in, 0.6–1k out; tools/provider_cost.py)
-TURN_OUTPUT_TOKENS = 1_000
+
+
+class Call(NamedTuple):
+    """One request of ours, the means: a request's cost is linear in them, so the mean one prices the whole game."""
+
+    input_tokens: float
+    cached_share: float
+    output_tokens: float
+
+
+# The author's game of 2026-10-31…11-01, 304 requests: full turns 13k in / 550 out at 47% cached, short ones 3.5k / 220,
+# summaries 2.5k / 570 with no cache seen in their bills.
+OUR_CALL = Call(8_900, 0.4, 430)
+TURN_CALLS = 1.5  # requests of a turn: the settings list prices a turn, the ranking a request
+CALLS_KEPT = 500  # requests of a model the mean is taken from
+MIN_CALLS = 10  # fewer say little: `OUR_CALL` and the common cached share stand
 BILLS_KEPT = 30  # requests per provider the bill factor is taken from
 MIN_BILLS = 3  # fewer say little: the list price stands
 BILLS_DAYS = 7.0  # prices change (OpenInference's did within days): an old bill is forgotten and the provider tried again
@@ -34,6 +54,7 @@ NEEDS = ("tools", "tool_choice")
 MIN_UPTIME = 90.0
 SPEED_WINDOW = 1800.0  # seconds an observed speed counts
 MIN_SAMPLE_TOKENS = 150  # shorter answers say little about the speed
+SLOW_SAMPLES = 2  # one slow answer may be a cold start, and leaving the first provider loses its cache
 
 
 def top() -> int:
@@ -48,9 +69,10 @@ def min_turn_tps() -> float:
     return float(os.environ.get("LLM_SERVER_MIN_TURN_TPS", "20") or 0)
 
 
-def cache_share() -> float:
-    """The cached share of a turn's input (traces of 2026-10: 69% at Relace)."""
-    return min(1.0, max(0.0, float(os.environ.get("LLM_SERVER_CACHE_SHARE", "0.7") or 0)))
+def cache_share() -> float | None:
+    """A fixed cached share of the input in place of the measured one; None — measure."""
+    raw = os.environ.get("LLM_SERVER_CACHE_SHARE", "").strip()
+    return min(1.0, max(0.0, float(raw))) if raw else None
 
 
 def _prices(e: dict) -> tuple[float, float, float | None]:
@@ -66,25 +88,33 @@ def request_cost(prices: tuple[float, float, float | None], input_tokens: float,
     return (input_tokens - cached) * prompt + cached * (cache_read or 0.0) + output_tokens * completion
 
 
+def call_cost(prices: tuple[float, float, float | None], call: Call, share: float | None = None) -> float:
+    """The list price of our mean request; `share` — the provider's own cached share."""
+    forced = cache_share()
+    share = forced if forced is not None else call.cached_share if share is None else share
+    return request_cost(prices, call.input_tokens, call.input_tokens * share, call.output_tokens)
+
+
 def cheapest(endpoints: list[dict], n: int, factors: dict[str, float] | None = None) -> list[str]:
-    """Tags of the `n` cheapest endpoints for a typical turn that support tools and are up."""
+    """Tags of the `n` cheapest endpoints for our request that support tools and are up."""
     return [tag for tag, _ in ranked(endpoints, factors)[:n]]
 
 
-def ranked(endpoints: list[dict], factors: dict[str, float] | None = None) -> list[tuple[str, str]]:
-    """(tag, provider name) of the endpoints that support tools and are up, cheapest for a typical turn first;
-    `factors` — billed ÷ list price by provider name."""
+def ranked(endpoints: list[dict], factors: dict[str, float] | None = None, call: Call = OUR_CALL,
+           shares: dict[str, float] | None = None) -> list[tuple[str, str]]:
+    """(tag, provider name) of the endpoints that support tools and are up, cheapest for `call` first;
+    `factors` — billed ÷ list price by provider name, `shares` — the cached share each provider gave us."""
     ok = []
     for e in endpoints:
         params = e.get("supported_parameters") or []
         uptime = e.get("uptime_last_30m")
         if not all(p in params for p in NEEDS) or (uptime is not None and float(uptime) < MIN_UPTIME):
             continue
+        tag, name = str(e.get("tag") or ""), str(e.get("provider_name") or "")
         try:
-            cost = request_cost(_prices(e), TURN_INPUT_TOKENS, TURN_INPUT_TOKENS * cache_share(), TURN_OUTPUT_TOKENS)
+            cost = call_cost(_prices(e), call, (shares or {}).get(name))
         except (TypeError, ValueError):
             continue
-        tag, name = str(e.get("tag") or ""), str(e.get("provider_name") or "")
         if tag:
             ok.append((cost * (factors or {}).get(name, 1.0), tag, name))
     ok.sort()
@@ -105,6 +135,7 @@ class ProviderPicker:
         self._at: dict[str, float] = {}
         self._speed: dict[str, deque[tuple[float, float]]] = {}  # provider name → (unix time, tok/s)
         self._bills: dict[str, deque[tuple[float, float, float]]] = {}  # provider name → (unix time, billed, list price)
+        self._calls: dict[str, deque[tuple[float, str, int, int, int]]] = {}  # model → (unix time, provider, input, cached, output)
         self._bills_path: Path | None = None
 
     def bind(self, path: Path) -> None:
@@ -115,8 +146,9 @@ class ProviderPicker:
             bills, speed = (data.get("bills", {}), data.get("speed", {})) if "bills" in data else (data, {})
             self._bills = {n: deque((tuple(x) for x in v if len(x) == 3), maxlen=BILLS_KEPT) for n, v in bills.items()}  # type: ignore[misc]
             self._speed = {n: deque((tuple(x) for x in v if len(x) == 2), maxlen=BILLS_KEPT) for n, v in speed.items()}  # type: ignore[misc]
+            self._calls = {m: deque((tuple(x) for x in v if len(x) == 5), maxlen=CALLS_KEPT) for m, v in data.get("calls", {}).items()}  # type: ignore[misc]
         except (OSError, ValueError, TypeError, AttributeError):
-            self._bills, self._speed = {}, {}
+            self._bills, self._speed, self._calls = {}, {}, {}
 
     def _save(self) -> None:
         if self._bills_path is None:
@@ -124,7 +156,8 @@ class ProviderPicker:
         try:
             self._bills_path.parent.mkdir(parents=True, exist_ok=True)
             self._bills_path.write_text(json.dumps({"bills": {n: list(v) for n, v in self._bills.items()},
-                                                    "speed": {n: list(v) for n, v in self._speed.items()}}), encoding="utf-8")
+                                                    "speed": {n: list(v) for n, v in self._speed.items()},
+                                                    "calls": {m: list(v) for m, v in self._calls.items()}}), encoding="utf-8")
         except OSError as exc:
             log.warning("cannot keep provider bills: %s", exc)
 
@@ -137,6 +170,30 @@ class ProviderPicker:
             listed = sum(x for _, x in recent)
             if len(recent) >= MIN_BILLS and listed > 0:
                 out[name] = min(10.0, max(0.5, sum(b for b, _ in recent) / listed))
+        return out
+
+    def _recent_calls(self, model: str, provider: str = "") -> list[tuple[float, str, int, int, int]]:
+        since = time.time() - BILLS_DAYS * 86400
+        return [c for c in self._calls.get(model, ()) if c[0] >= since and (not provider or c[1] == provider)]
+
+    @staticmethod
+    def _share(calls: list[tuple[float, str, int, int, int]]) -> float:
+        return sum(c[3] for c in calls) / max(1, sum(c[2] for c in calls))
+
+    def call(self, model: str) -> Call:
+        """Our mean request to the model lately: the prompts change, the numbers follow them."""
+        calls = self._recent_calls(model)
+        if len(calls) < MIN_CALLS:
+            return OUR_CALL
+        return Call(sum(c[2] for c in calls) / len(calls), self._share(calls), sum(c[4] for c in calls) / len(calls))
+
+    def shares(self, model: str) -> dict[str, float]:
+        """The cached share each provider really gave us: a cheap cache is worth nothing where it misses."""
+        out = {}
+        for name in {c[1] for c in self._recent_calls(model)}:
+            calls = self._recent_calls(model, name)
+            if len(calls) >= MIN_CALLS:
+                out[name] = self._share(calls)
         return out
 
     def observe_bill(self, model: str, provider: str, input_tokens: int, cached: int, output_tokens: int, billed: float,
@@ -152,7 +209,9 @@ class ProviderPicker:
         if listed <= 0:
             return
         before = self.factors().get(provider)
-        self._bills.setdefault(provider, deque(maxlen=BILLS_KEPT)).append((time.time() if at is None else at, billed, listed))
+        when = time.time() if at is None else at
+        self._bills.setdefault(provider, deque(maxlen=BILLS_KEPT)).append((when, billed, listed))
+        self._calls.setdefault(model, deque(maxlen=CALLS_KEPT)).append((when, provider, input_tokens, cached, output_tokens))
         after = self.factors().get(provider)
         if after is not None and (before is None or abs(after - before) > 0.2):
             log.info("provider %s bills %.1f× its list price", provider, after)
@@ -160,7 +219,7 @@ class ProviderPicker:
         self._save()
 
     def _rank(self, model: str) -> None:
-        order = ranked(self._endpoints.get(model, []), self.factors())
+        order = ranked(self._endpoints.get(model, []), self.factors(), self.call(model), self.shares(model))
         if order:
             if _distinct(order)[:top()] != _distinct(self._ranked.get(model, []))[:top()]:
                 log.info("providers of %s: %s (min %s tok/s)", model, ", ".join(tag for tag, _ in _distinct(order)[:top()]), min_tps())
@@ -189,7 +248,7 @@ class ProviderPicker:
 
     def slow(self, provider: str) -> bool:
         recent = self._speeds(provider, SPEED_WINDOW)
-        return bool(recent) and min_turn_tps() > 0 and statistics.median(recent) < min_turn_tps()
+        return len(recent) >= SLOW_SAMPLES and min_turn_tps() > 0 and statistics.median(recent) < min_turn_tps()
 
     def speed(self, provider: str) -> float:
         """The median tok/s of our requests to the provider in the last days; 0 — not measured."""
@@ -199,12 +258,13 @@ class ProviderPicker:
     def infos(self, model: str) -> list[dict]:
         """Every endpoint of the model the master can use, cheapest for our turn first: what the settings list shows."""
         factors, picked = self.factors(), set(self.providers(model))
+        call, shares = self.call(model), self.shares(model)
         out = []
         for tag, name in self._ranked.get(model, []):
             e = next((x for x in self._endpoints.get(model, []) if x.get("tag") == tag), {})
             prompt, completion, cache_read = _prices(e)
             factor = factors.get(name, 1.0)
-            turn = request_cost((prompt, completion, cache_read), TURN_INPUT_TOKENS, TURN_INPUT_TOKENS * cache_share(), TURN_OUTPUT_TOKENS)
+            turn = call_cost((prompt, completion, cache_read), call, shares.get(name)) * TURN_CALLS
             uptime = e.get("uptime_last_1d")
             out.append({"tag": tag, "name": name, "input_usd_per_mtok": prompt * 1e6, "output_usd_per_mtok": completion * 1e6,
                         "cache_usd_per_mtok": None if cache_read is None else cache_read * 1e6,
