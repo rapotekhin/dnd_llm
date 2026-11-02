@@ -48,12 +48,6 @@ static func held_of(s: GameSession, item_id: String, owner: String) -> int:
 	return int(foreign(s).get(item_id, {}).get(owner, 0))
 
 
-## What the hero no longer carries leaves no marks (after a deal, a drop, a seizure).
-static func tidy(s: GameSession) -> void:
-	for h: Dictionary in Thing.holders(s.character):
-		Thing.trim(h)
-
-
 # --- creatures ---------------------------------------------------------------------------------------------------
 
 

@@ -32,18 +32,6 @@ func open(npc_id: String, kind: String = "") -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
 func _act(err: String) -> void:
 	set_note(err)
 	if not err.is_empty():
@@ -72,10 +60,10 @@ func _rebuild() -> void:
 
 
 func _setup(s: GameSession, data: Dictionary) -> void:
-	_label(_box, tr("CONTEST_HINT"), UiTheme.MUTED_LABEL)
+	UiParts.label(_box, tr("CONTEST_HINT"), UiTheme.MUTED_LABEL)
 	var why := ContestRules.why_not(s, data, _npc)
 	if not why.is_empty():
-		_label(_box, why).name = "ContestWhy"
+		UiParts.label(_box, why).name = "ContestWhy"
 		return
 	var kinds := ContestRules.kinds(data)
 	if not kinds.has(_kind):
@@ -95,7 +83,7 @@ func _setup(s: GameSession, data: Dictionary) -> void:
 	if ContestRules.is_bout(data, _kind):  # v0.7.45: a duel — the engine's estimate of the fight
 		var mon := str(data["world"]["npcs"].get(_npc, {}).get("monster", CombatRules.cfg(data)["default_npc_monster"]))
 		var ho := ArenaRules.hero_odds(s, data, "", mon)
-		_label(_box, tr("CONTEST_BOUT").format({"p": roundi(float(ho["p"]) * 100)})).name = "ContestOdds"
+		UiParts.label(_box, tr("CONTEST_BOUT").format({"p": roundi(float(ho["p"]) * 100)})).name = "ContestOdds"
 	else:
 		_odds(s, data, k)
 	_stakes(s, data)
@@ -103,14 +91,14 @@ func _setup(s: GameSession, data: Dictionary) -> void:
 
 func _odds(s: GameSession, data: Dictionary, k: Dictionary) -> void:
 	var o := ContestRules.odds(s, data, _npc, _kind)
-	var odds := _label(_box, tr("CONTEST_ODDS").format({"hero": "%+d" % int(o["hero"]), "npc": "%+d" % int(o["npc"]),
+	var odds := UiParts.label(_box, tr("CONTEST_ODDS").format({"hero": "%+d" % int(o["hero"]), "npc": "%+d" % int(o["npc"]),
 		"p": int(o["chance"]), "wins": int(k.get("wins", 1))}))
 	odds.name = "ContestOdds"
 	if not str(k.get("cheat", "")).is_empty():
 		var co := ContestRules.odds(s, data, _npc, _kind, true)
-		_label(_box, tr("CONTEST_CHEAT_ODDS").format({"skill": tr("SKILL_" + str(k["cheat"]).to_upper()), "p": int(co["chance"])}), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("CONTEST_CHEAT_ODDS").format({"skill": tr("SKILL_" + str(k["cheat"]).to_upper()), "p": int(co["chance"])}), UiTheme.MUTED_LABEL)
 	if not str(k.get("lose", {}).get("condition", "")).is_empty():
-		_label(_box, tr("CONTEST_LOSE").format({"what": ConditionRules.name_of(data, str(k["lose"]["condition"]))}), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("CONTEST_LOSE").format({"what": ConditionRules.name_of(data, str(k["lose"]["condition"]))}), UiTheme.MUTED_LABEL)
 
 
 func _stakes(s: GameSession, data: Dictionary) -> void:
@@ -130,7 +118,7 @@ func _stakes(s: GameSession, data: Dictionary) -> void:
 	if str(stake["kind"]) == "coins":
 		var row := HBoxContainer.new()
 		_box.add_child(row)
-		_label(row, tr("CONTEST_COINS"))
+		UiParts.label(row, tr("CONTEST_COINS"))
 		var spin := SpinBox.new()
 		spin.name = "ContestCoins"
 		spin.min_value = float(ContestRules.cfg(data)["stake"]["min_cp"]) / 100.0
@@ -141,7 +129,7 @@ func _stakes(s: GameSession, data: Dictionary) -> void:
 		spin.value = _cp / 100.0
 		spin.value_changed.connect(func(v: float) -> void: _cp = roundi(v * 100))
 		row.add_child(spin)
-	_label(_box, tr("CONTEST_GOLD").format({"money": Money.format(gold)}), UiTheme.MUTED_LABEL)
+	UiParts.label(_box, tr("CONTEST_GOLD").format({"money": Money.format(gold)}), UiTheme.MUTED_LABEL)
 	var play := add_button(tr("BTN_CONTEST_PLAY"), func() -> void:
 		_act(GameState.contest_start(_npc, _kind, _stake, _cp)), true)
 	play.name = "ContestPlay"
@@ -151,13 +139,13 @@ func _stakes(s: GameSession, data: Dictionary) -> void:
 func _game(s: GameSession, data: Dictionary, st: Dictionary) -> void:
 	var k := ContestRules.kind(data, str(st["kind"]))
 	var stake: Dictionary = st["stake"]
-	_label(_box, "%s · %s" % [k.get("name", ""), Money.format(int(st["cp"])) if str(stake["kind"]) == "coins" else "%s / %s" % [stake["name"], Money.format(int(st["cp"]))]])
-	var score := _label(_box, tr("CONTEST_SCORE").format({"hero": int(st["hero"]), "npc": int(st["npc_wins"]), "wins": int(k.get("wins", 1)),
+	UiParts.label(_box, "%s · %s" % [k.get("name", ""), Money.format(int(st["cp"])) if str(stake["kind"]) == "coins" else "%s / %s" % [stake["name"], Money.format(int(st["cp"]))]])
+	var score := UiParts.label(_box, tr("CONTEST_SCORE").format({"hero": int(st["hero"]), "npc": int(st["npc_wins"]), "wins": int(k.get("wins", 1)),
 		"name": WorldView.name_of(data, str(st["npc"]))}))
 	score.name = "ContestScore"
 	score.add_theme_color_override("font_color", UiTheme.ACCENT)
 	var o := ContestRules.odds(s, data, str(st["npc"]), str(st["kind"]))
-	_label(_box, tr("CONTEST_ROUND_ODDS").format({"hero": "%+d" % int(o["hero"]), "npc": "%+d" % int(o["npc"]), "p": int(o["chance"])}), UiTheme.MUTED_LABEL)
+	UiParts.label(_box, tr("CONTEST_ROUND_ODDS").format({"hero": "%+d" % int(o["hero"]), "npc": "%+d" % int(o["npc"]), "p": int(o["chance"])}), UiTheme.MUTED_LABEL)
 	var busy := GameState.is_busy() or not Backend.is_ready()
 	var give := add_button(tr("BTN_CONTEST_FORFEIT"), func() -> void: _act(GameState.contest_forfeit()))
 	give.name = "ContestForfeit"

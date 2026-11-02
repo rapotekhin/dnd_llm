@@ -46,10 +46,6 @@ static func _loc(data: Dictionary, room_id: String) -> String:
 	return WorldView.new(data["world"]).location_id(room_id)
 
 
-static func _loc_name(data: Dictionary, loc: String) -> String:
-	return str(data["world"]["locations"].get(loc, {}).get("name", loc))
-
-
 static func _room_name(data: Dictionary, room: String) -> String:
 	return str(data["world"]["rooms"].get(room, {}).get("name", room))
 
@@ -369,7 +365,7 @@ static func frame(s: GameSession, data: Dictionary, id: String) -> String:
 		return str(m.get("text", m)) if m is Dictionary else str(m))
 	var parts: Array[String] = [
 		"[letter:%s] Ответ на письмо героя. Адресат: %s (%s, %s). Цель: %s. Отправлено в %d-й день, дошло в %d-й, сегодня %d-й." % [id, n.get("name", to),
-			n.get("role", ""), _loc_name(data, npc_loc(s, data, to)), p["name"], int(l["sent_day"]), int(l["deliver_day"]), s.day],
+			n.get("role", ""), WorldView.location_name(data, npc_loc(s, data, to)), p["name"], int(l["sent_day"]), int(l["deliver_day"]), s.day],
 		"Письмо героя: «%s»" % l["text"],
 		"Отношение к герою: %+d; связь: %s (%d)." % [s.attitude(to), BondRules.word(c, data, to) if not BondRules.word(c, data, to).is_empty() else "нет", BondRules.points(c, to)],
 	]

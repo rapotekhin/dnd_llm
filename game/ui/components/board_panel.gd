@@ -28,18 +28,6 @@ func open(prop: String) -> void:
 	_rebuild()
 
 
-func _label(text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	_box.add_child(l)
-	return l
-
-
 func _button(parent: Control, node_name: String, text: String, enabled: bool, action: Callable) -> Button:
 	var b := Button.new()
 	b.name = node_name
@@ -57,9 +45,7 @@ func _button(parent: Control, node_name: String, text: String, enabled: bool, ac
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	for c in _box.get_children():
-		_box.remove_child(c)
-		c.queue_free()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	var world := GameState.world()
@@ -70,26 +56,26 @@ func _rebuild() -> void:
 	var can_act := Backend.is_ready() and not GameState.is_busy() and not s.in_conversation()
 	title.text = str(p["name"])
 	if not str(p.get("text", "")).is_empty():
-		_label(str(p["text"]), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, str(p["text"]), UiTheme.MUTED_LABEL)
 	_notices(s, data, world.world)
 	var orders := QuestGen.offered_by(s, "board:%s:%s" % [s.room_id, prop_id])
 	var read_why := QuestGen.board_why_not(s, data, prop_id)
 	if QuestGen.board_unread(s, s.room_id, prop_id) or orders.is_empty():
-		_label(tr("BOARD_UNREAD_HINT" if QuestGen.board_unread(s, s.room_id, prop_id) else "BOARD_EMPTY"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("BOARD_UNREAD_HINT" if QuestGen.board_unread(s, s.room_id, prop_id) else "BOARD_EMPTY"), UiTheme.MUTED_LABEL)
 		var rb := _button(_box, "BoardRead", tr("BTN_BOARD_READ"), can_act and read_why.is_empty(), func() -> String: return GameState.read_board(prop_id))
 		rb.tooltip_text = tr(read_why) if not read_why.is_empty() else ""
 	if orders.is_empty():
 		return
 	var room_left := int(QuestGen.cfg(data)["max_open"]) - QuestGen.open_made(s).size()
-	_label(tr("BOARD_LIMIT").format({"n": maxi(0, room_left)}), UiTheme.MUTED_LABEL)
+	UiParts.label(_box, tr("BOARD_LIMIT").format({"n": maxi(0, room_left)}), UiTheme.MUTED_LABEL)
 	for qid: String in orders:
 		var q := QuestRules.quest(world.world, qid)
 		_box.add_child(HSeparator.new())
-		_label(str(q["title"]))
-		_label(str(q.get("description", "")), UiTheme.MUTED_LABEL)
-		_label(tr("BOARD_ORDER_LINE").format({"who": world.npc(str(q.get("giver", ""))).get("name", "—"), "reward": Money.format(QuestGen.reward_cp(q))}), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, str(q["title"]))
+		UiParts.label(_box, str(q.get("description", "")), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("BOARD_ORDER_LINE").format({"who": world.npc(str(q.get("giver", ""))).get("name", "—"), "reward": Money.format(QuestGen.reward_cp(q))}), UiTheme.MUTED_LABEL)
 		if not QuestGen.difficulty_line(data, q).is_empty():
-			_label(QuestGen.difficulty_line(data, q), UiTheme.MUTED_LABEL)
+			UiParts.label(_box, QuestGen.difficulty_line(data, q), UiTheme.MUTED_LABEL)
 		var why := QuestGen.can_take(s, data, qid)
 		var tb := _button(_box, "BoardTake_" + qid, tr("BTN_BOARD_TAKE"), can_act and why.is_empty(), func() -> String: return _take(qid, q))
 		tb.tooltip_text = tr(why) if not why.is_empty() else ""
@@ -107,10 +93,10 @@ func _notices(s: GameSession, data: Dictionary, world: Dictionary) -> void:
 			lines.append("★ " + CalendarRules.line(world, e, true))
 	if lines.is_empty():
 		return
-	var head := _label(tr("BOARD_NOTICES"))
+	var head := UiParts.label(_box, tr("BOARD_NOTICES"))
 	head.name = "BoardNotices"
 	for l: String in lines:
-		_label(l, UiTheme.MUTED_LABEL)
+		UiParts.label(_box, l, UiTheme.MUTED_LABEL)
 	_box.add_child(HSeparator.new())
 
 

@@ -76,11 +76,11 @@ func test_work_in_shifts_keeps_the_progress_and_pays_the_rent() -> void:
 
 
 func test_quality_by_the_margin() -> void:
-	assert_str(str(CraftRules.tier_for(data, -7)["id"])).is_equal("poor")
-	assert_str(str(CraftRules.tier_for(data, -2)["id"])).is_equal("normal")
-	assert_str(str(CraftRules.tier_for(data, 0)["id"])).is_equal("normal")
-	assert_str(str(CraftRules.tier_for(data, 6)["id"])).is_equal("good")
-	assert_str(str(CraftRules.tier_for(data, 12)["id"])).is_equal("excellent")
+	assert_str(str(Activity.step(CraftRules.cfg(data)["quality"], -7)["id"])).is_equal("poor")
+	assert_str(str(Activity.step(CraftRules.cfg(data)["quality"], -2)["id"])).is_equal("normal")
+	assert_str(str(Activity.step(CraftRules.cfg(data)["quality"], 0)["id"])).is_equal("normal")
+	assert_str(str(Activity.step(CraftRules.cfg(data)["quality"], 6)["id"])).is_equal("good")
+	assert_str(str(Activity.step(CraftRules.cfg(data)["quality"], 12)["id"])).is_equal("excellent")
 
 
 func test_an_excellent_sword_hits_better_a_crude_one_worse() -> void:

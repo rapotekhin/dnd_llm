@@ -336,7 +336,7 @@ static func _smash_block(s: GameSession, data: Dictionary, f: Dictionary, lines:
 	var at := block_near(s, f)
 	var b: Dictionary = s.combat["blocks"][FightGrid.tag(at)]
 	var w := Attack.blade(s, data, f)
-	var ac := int(ThingRules.material(data, {"material": b["made_of"]}).get("ac", 15))
+	var ac := ThingRules.ac(data, {"material": b["made_of"]})
 	var r := Roll.check(s, data, f, {"what": "Удар по вещи", "parts": WayRules._hit_parts(w), "bonus": w["to_hit"], "dc": ac})
 	if not bool(r["ok"]):
 		lines.append("%s: удар по вещи — %d против КД %d, без толку" % [w["name"], int(r["total"]), ac])

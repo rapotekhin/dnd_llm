@@ -24,35 +24,22 @@ func open(npc: String) -> void:
 	_rebuild()
 
 
-func _label(text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	return l
-
-
 func _rebuild() -> void:
 	if not visible or not GameState.has_session() or npc_id.is_empty():
 		return
-	for c in _box.get_children():
-		_box.remove_child(c)
-		c.queue_free()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	var who := str(GameState.world().npc(npc_id).get("name", npc_id))
 	title.text = tr("THEFT_TITLE").format({"name": who})
-	_box.add_child(_label(tr("THEFT_HINT"), UiTheme.MUTED_LABEL))
+	_box.add_child(UiParts.label(null, tr("THEFT_HINT"), UiTheme.MUTED_LABEL))
 	var why := TheftRules.can_steal(s, data, npc_id)
 	if not why.is_empty():
-		_box.add_child(_label(tr(why)))
+		_box.add_child(UiParts.label(null, tr(why)))
 		return
 	var list: Array = TheftRules.pockets(s, data, npc_id)
 	if list.is_empty():
-		_box.add_child(_label(tr("THEFT_EMPTY"), UiTheme.MUTED_LABEL))
+		_box.add_child(UiParts.label(null, tr("THEFT_EMPTY"), UiTheme.MUTED_LABEL))
 		return
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 	for e: Dictionary in list:
@@ -61,7 +48,7 @@ func _rebuild() -> void:
 		_box.add_child(row)
 		var name := str(e["name"]) + ((" (%s)" % Money.format(int(e["cp"]))) if int(e.get("cp", 0)) > 0 else "")
 		var chance := TheftRules.chance(s, data, npc_id, e)
-		row.add_child(_label(tr("THEFT_ROW").format({"name": name, "dc": int(e["dc"]), "p": chance})))
+		row.add_child(UiParts.label(null, tr("THEFT_ROW").format({"name": name, "dc": int(e["dc"]), "p": chance})))
 		var b := Button.new()
 		b.name = "Steal_" + str(e["id"])
 		b.text = "BTN_STEAL"

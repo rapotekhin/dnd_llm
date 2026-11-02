@@ -55,33 +55,12 @@ static func has_trait(c: Dictionary, id: String) -> bool:
 	return (c.get("traits", []) as Array).has(id)
 
 
-static func skill_bonus(c: Dictionary, data: Dictionary, skill: String) -> int:
-	var ab := str(data["rules"]["skills"].get(skill, "int"))
-	var bonus := mod(ability(c, ab))
-	var pb := prof_bonus(c, data)
-	if (c.get("expertise", []) as Array).has(skill):
-		bonus += pb * 2
-	elif (c.get("skill_profs", []) as Array).has(skill) or has_feature(c, "skill_prof_" + skill) \
-			or (skill in ["deception", "persuasion"] and has_feature(c, "eldritch_invocation_beguiling_influence")):  # v0.7.10
-		bonus += pb
-	elif has_feature(c, "jack_of_all_trades"):
-		bonus += pb / 2
-	return bonus
-
-
 ## A bare ability check (5e: «Сила» to force a door): the modifier, half proficiency with Jack of All Trades, the
 ## Stone of Good Luck — the sum of its parts (RollParts).
 static func ability_check_bonus(c: Dictionary, data: Dictionary, ab: String) -> int:
 	if data.is_empty():
 		return mod(ability(c, ab))
 	return RollParts.sum(RollParts.sheet(c, data, "ability", ab))
-
-
-static func save_bonus(c: Dictionary, data: Dictionary, save: String) -> int:
-	var bonus := mod(ability(c, save))
-	if (c.get("save_profs", []) as Array).has(save):
-		bonus += prof_bonus(c, data)
-	return bonus
 
 
 ## Hit points by the fixed-average rule: full die at level 1, then `hp_step` per level.

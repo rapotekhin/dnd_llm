@@ -74,6 +74,11 @@ static func school_frame(b: Button, school_id: String) -> void:
 	b.add_theme_stylebox_override("hover", box(PANEL_RAISED.lightened(0.08), c, 2, 10, 4))
 
 
+## The colour of what is left of HP: green over a half, yellow over a quarter, red below.
+static func hp_color(share: float) -> Color:
+	return OK if share > 0.5 else WARN if share > 0.25 else BAD
+
+
 static func box(bg: Color, border: Color, border_width: int, margin: int, radius: int = 0) -> StyleBoxFlat:
 	var b := StyleBoxFlat.new()
 	b.bg_color = bg

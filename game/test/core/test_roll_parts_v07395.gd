@@ -48,7 +48,7 @@ func test_the_parts_name_their_sources() -> void:
 	assert_array(_labels(RollParts.sheet(c, data, "skill", "stealth", s.items))).contains(["Бесследное передвижение"])
 	assert_array(_labels(RollParts.sheet(c, data, "skill", "arcana", s.items))).contains(["мастер на все руки (½ владения)"])
 	assert_array(_labels(RollParts.sheet(c, data, "save", "con", s.items))).contains(["Плащ защиты", "Камень удачи"])
-	assert_int(int(c["saves"]["con"])).is_equal(CharacterRules.save_bonus(c, data, "con") + 2)  # the stone and the cloak (DMG)
+	assert_int(int(c["saves"]["con"])).is_equal(CharacterRules.mod(CharacterRules.ability(c, "con")) + (CharacterRules.prof_bonus(c, data) if (c.get("save_profs", []) as Array).has("con") else 0) + 2)  # the stone and the cloak (DMG)
 
 
 func test_every_rule_roll_is_labelled_and_reaches_the_chat_line() -> void:

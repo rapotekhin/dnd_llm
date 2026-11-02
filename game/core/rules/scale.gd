@@ -13,6 +13,11 @@ static func step(steps: Array, value: float, key: String = "at", fallback: Dicti
 	return out
 
 
+## The name of the last step reached: a word of a scale («спокоен», «ропщет»).
+static func name_at(steps: Array, value: float, key: String = "at") -> String:
+	return str(step(steps, value, key).get("name", ""))
+
+
 ## The index of the last step reached (0 — none yet): ranks and levels, a table of numbers or of steps.
 static func index(steps: Array, value: float, key: String = "at") -> int:
 	var out := 0

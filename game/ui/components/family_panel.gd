@@ -23,22 +23,6 @@ func open() -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
-func _heading(text: String) -> void:
-	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
-
-
 func _act(parent: Control, node_name: String, text: String, why: String, what: String, id: String = "", arg: Callable = Callable()) -> Button:
 	var b := Button.new()
 	b.name = node_name
@@ -63,20 +47,20 @@ func _rebuild() -> void:
 	var data := Catalog.data
 	var f := FamilyRules.view(s.character)
 	if not FamilyRules.engaged(s).is_empty():
-		_label(_box, tr("FAMILY_ENGAGED_TO").format({"name": WorldView.name_of(data, FamilyRules.engaged(s))})).name = "FamilyEngaged"
-		_label(_box, tr("FAMILY_WEDDING_HINT"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("FAMILY_ENGAGED_TO").format({"name": WorldView.name_of(data, FamilyRules.engaged(s))})).name = "FamilyEngaged"
+		UiParts.label(_box, tr("FAMILY_WEDDING_HINT"), UiTheme.MUTED_LABEL)
 	var sp := FamilyRules.spouse(s)
 	if not sp.is_empty():
-		_heading(tr("FAMILY_SPOUSE_F" if str(BondRules.npc_def(s, data, sp).get("gender", "")) == "female" else "FAMILY_SPOUSE"))
-		_label(_box, tr("FAMILY_SPOUSE_LINE").format({"name": WorldView.name_of(data, sp), "day": int(f.get("married_day", 0)),
+		UiParts.heading(_box, tr("FAMILY_SPOUSE_F" if str(BondRules.npc_def(s, data, sp).get("gender", "")) == "female" else "FAMILY_SPOUSE"))
+		UiParts.label(_box, tr("FAMILY_SPOUSE_LINE").format({"name": WorldView.name_of(data, sp), "day": int(f.get("married_day", 0)),
 			"home": PropertyRules.name_of(s, data, str(f.get("home", ""))) if not str(f.get("home", "")).is_empty() else "—"})).name = "FamilySpouse"
 		var h: Array = f.get("hours", [20, 7])
-		_label(_box, tr("FAMILY_HOME_HOURS").format({"from": int(h[0]), "to": int(h[1])}), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("FAMILY_HOME_HOURS").format({"from": int(h[0]), "to": int(h[1])}), UiTheme.MUTED_LABEL)
 	for k: Variant in f.get("kin", []):
-		_label(_box, "%s — %s" % [WorldView.name_of(data, str(k["npc"])), k["rel"]])
+		UiParts.label(_box, "%s — %s" % [WorldView.name_of(data, str(k["npc"])), k["rel"]])
 	if f.has("pregnant"):
 		var p: Dictionary = f["pregnant"]
-		_label(_box, tr("FAMILY_EXPECTING_LINE").format({"days": maxi(0, int(p["due"]) - s.day)})).name = "FamilyExpecting"
+		UiParts.label(_box, tr("FAMILY_EXPECTING_LINE").format({"days": maxi(0, int(p["due"]) - s.day)})).name = "FamilyExpecting"
 	if not sp.is_empty() and not f.has("pregnant"):
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_END
@@ -87,13 +71,13 @@ func _rebuild() -> void:
 	var kids := FamilyRules.children(s)
 	if not kids.is_empty():
 		_box.add_child(HSeparator.new())
-		_heading(tr("FAMILY_CHILDREN"))
+		UiParts.heading(_box, tr("FAMILY_CHILDREN"))
 	for id: String in kids:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
 		_box.add_child(row)
 		var heir := " · " + tr("FAMILY_HEIR") if FamilyRules.heir(s, data) == id else ""
-		_label(row, "%s — %s, %s%s" % [WorldView.name_of(data, id), BondRules.npc_def(s, data, id).get("role", ""),
+		UiParts.label(row, "%s — %s, %s%s" % [WorldView.name_of(data, id), BondRules.npc_def(s, data, id).get("role", ""),
 			tr("FAMILY_YEARS").format({"n": FamilyRules.years(s, data, id)}), heir]).name = "Child_" + id
 		var edit := LineEdit.new()
 		edit.name = "ChildName_" + id
@@ -104,7 +88,7 @@ func _rebuild() -> void:
 	var home := FamilyRules.household(s, data)
 	if not home.is_empty():
 		_box.add_child(HSeparator.new())
-		var l := _label(_box, tr("FAMILY_ECONOMY").format({"upkeep": Money.format(FamilyRules.upkeep(s, data)), "help": Money.format(FamilyRules.help(s, data))}), UiTheme.MUTED_LABEL)
+		var l := UiParts.label(_box, tr("FAMILY_ECONOMY").format({"upkeep": Money.format(FamilyRules.upkeep(s, data)), "help": Money.format(FamilyRules.help(s, data))}), UiTheme.MUTED_LABEL)
 		l.name = "FamilyEconomy"
 	if int(f.get("hungry", 0)) > 0:
-		_label(_box, tr("FAMILY_HUNGRY").format({"n": int(f["hungry"])})).theme_type_variation = UiTheme.BAD_LABEL
+		UiParts.label(_box, tr("FAMILY_HUNGRY").format({"n": int(f["hungry"])})).theme_type_variation = UiTheme.BAD_LABEL

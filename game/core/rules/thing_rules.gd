@@ -27,7 +27,12 @@ static func material(data: Dictionary, d: Dictionary) -> Dictionary:
 
 
 static func ac(data: Dictionary, d: Dictionary) -> int:
-	return int(material(data, d).get("ac", 15))
+	return ac_of(material(data, d))
+
+
+## The AC of a material's row (a door, a barrel, a thing): 15 when it says none.
+static func ac_of(mat: Dictionary) -> int:
+	return int(mat.get("ac", 15))
 
 
 ## The row of its size by its weight.

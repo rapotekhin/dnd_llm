@@ -33,24 +33,12 @@ func open(npc_id: String) -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
 ## A labelled pick: ids with their texts, the current one selected; a change rebuilds the window.
 func _pick(node_name: String, caption: String, ids: Array[String], texts: Array[String], current: String, on_pick: Callable) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	_box.add_child(row)
-	var l := _label(row, caption)
+	var l := UiParts.label(row, caption)
 	l.size_flags_horizontal = Control.SIZE_FILL
 	l.custom_minimum_size = Vector2(150, 0)
 	var ob := OptionButton.new()
@@ -92,7 +80,7 @@ func _rebuild() -> void:
 	var w := WorldView.new(data["world"])
 	var people := LetterRules.recipients(s, data)
 	if people.is_empty():
-		_label(_box, tr("LETTER_NOBODY"), UiTheme.MUTED_LABEL).name = "LetterNobody"
+		UiParts.label(_box, tr("LETTER_NOBODY"), UiTheme.MUTED_LABEL).name = "LetterNobody"
 		return
 	var ways := LetterRules.ways_of(data, poster)
 	if not people.has(_to):
@@ -107,15 +95,15 @@ func _rebuild() -> void:
 	var p := LetterRules.purpose(data, _purpose)
 	_pick("LetterPurpose", tr("LETTER_PURPOSE"), purposes, _strs(purposes.map(func(id: String) -> String: return str(LetterRules.purpose(data, id)["name"]))),
 		_purpose, func(id: String) -> void: _purpose = id)
-	_label(_box, str(p.get("hint", "")), UiTheme.MUTED_LABEL).name = "LetterHint"
+	UiParts.label(_box, str(p.get("hint", "")), UiTheme.MUTED_LABEL).name = "LetterHint"
 	var to_list := people.filter(func(id: String) -> bool: return not bool(p.get("law", false)) or LetterRules.law_people(data).has(id))
 	if to_list.is_empty():
-		_label(_box, tr("LETTER_NO_LAW"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("LETTER_NO_LAW"), UiTheme.MUTED_LABEL)
 		return
 	if not to_list.has(_to):
 		_to = to_list[0]
 	_pick("LetterTo", tr("LETTER_TO"), to_list, _strs(to_list.map(func(id: String) -> String:
-		return "%s — %s" % [w.npc_name(id), LetterRules._loc_name(data, LetterRules.npc_loc(s, data, id))])), _to,
+		return "%s — %s" % [w.npc_name(id), WorldView.location_name(data, LetterRules.npc_loc(s, data, id))])), _to,
 		func(id: String) -> void: _to = id)
 	match str(p.get("does", "")):
 		"ally":
@@ -137,7 +125,7 @@ func _rebuild() -> void:
 			_pick("LetterAbout", tr("LETTER_ABOUT"), about, _strs(about.map(func(id: String) -> String: return str(w.npc_name(id)))), _about,
 				func(id: String) -> void: _about = id)
 			var proof := LetterRules.evidence(s, data, _about, LetterRules._evidence_item(s, data, _about))
-			_label(_box, tr("LETTER_EVIDENCE").format({"what": proof}) if not proof.is_empty() else tr("LETTER_NO_EVIDENCE"), UiTheme.MUTED_LABEL).name = "LetterEvidence"
+			UiParts.label(_box, tr("LETTER_EVIDENCE").format({"what": proof}) if not proof.is_empty() else tr("LETTER_NO_EVIDENCE"), UiTheme.MUTED_LABEL).name = "LetterEvidence"
 	var edit := TextEdit.new()
 	edit.name = "LetterText"
 	edit.placeholder_text = tr("LETTER_TEXT_HINT")

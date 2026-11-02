@@ -34,9 +34,15 @@ static func plan(s: GameSession, data: Dictionary, npc_id: String, follow: bool,
 	var need := int(cfg(data)["min_attitude"])
 	if s.attitude(npc_id) < need and not won:
 		return {"reason": "%s не пойдёт с героем: нужно отношение от %+d или успешная проверка (убеждение, обман, запугивание) с его target_id в этом ходе" % [name, need]}
-	if Being.followers(s).size() >= int(cfg(data)["max"]):
-		return {"reason": "с героем уже идут %d — больше никто" % Being.followers(s).size()}
+	if not room_why(s, data).is_empty():
+		return {"reason": "с героем уже идут %d человек — больше никто" % Being.followers(s).size()}
 	return {"plan": {"follow_npc": npc_id, "on": true, "room": ""}, "summary": "%s идёт с героем" % name}
+
+
+## "" when one more person may go with the hero (the author, v0.8.4.19): only the people who follow count — summoned
+## creatures, creatures on the hero's side and those left waiting somewhere go without a limit.
+static func room_why(s: GameSession, data: Dictionary) -> String:
+	return "ALLY_TOO_MANY" if Being.followers(s).size() >= int(cfg(data)["max"]) else ""
 
 
 static func apply(s: GameSession, plan: Dictionary) -> void:

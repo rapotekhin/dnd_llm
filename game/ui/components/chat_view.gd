@@ -22,10 +22,6 @@ func _ready() -> void:
 	_scroll_to_end.call_deferred()
 
 
-func entry_count() -> int:
-	return _list.get_child_count()
-
-
 func _on_appended(entry: Dictionary) -> void:
 	_add(entry)
 	_scroll_to_end.call_deferred()

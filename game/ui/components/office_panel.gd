@@ -27,22 +27,6 @@ func open(chief: String = "") -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
-func _heading(text: String) -> void:
-	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
-
-
 func _act(parent: Control, node_name: String, text: String, why: String, what: String, id: String, arg: String = "") -> Button:
 	var b := Button.new()
 	b.name = node_name
@@ -90,25 +74,25 @@ func _rebuild() -> void:
 			_sep()
 			_offer(s, data, id)
 	if _box.get_child_count() == 0:
-		_label(_box, tr("OFFICE_NONE"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("OFFICE_NONE"), UiTheme.MUTED_LABEL)
 
 
 func _held(s: GameSession, data: Dictionary, id: String) -> void:
 	var c := s.character
 	var d := OfficeRules.def(data, id)
-	_heading("%s — %s" % [OfficeRules.name_of(data, id), OfficeRules.rank_name(c, data, id)])
+	UiParts.heading(_box, "%s — %s" % [OfficeRules.name_of(data, id), OfficeRules.rank_name(c, data, id)])
 	var nx := OfficeRules.next_at(c, data, id)
-	_label(_box, tr("OFFICE_STATUS").format({"merit": OfficeRules.merit(c, id), "next": tr("OFFICE_NEXT").format({"at": nx}) if nx > 0 else "",
+	UiParts.label(_box, tr("OFFICE_STATUS").format({"merit": OfficeRules.merit(c, id), "next": tr("OFFICE_NEXT").format({"at": nx}) if nx > 0 else "",
 		"pay": Money.format(OfficeRules.pay(c, data, id)), "talk": OfficeRules.suspicion_word(c, data, id)})).name = "OfficeStatus_" + id
 	if bool(d.get("town", false)):
 		_town(s, data, id)
 	if s.room_id != str(d.get("room", "")):
-		_label(_box, tr("OFFICE_GO_THERE").format({"place": WorldView.new(data["world"]).place_path(str(d["room"]))}), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("OFFICE_GO_THERE").format({"place": WorldView.new(data["world"]).place_path(str(d["room"]))}), UiTheme.MUTED_LABEL)
 	else:
 		var list := OfficeRules.today(s, data, id)
 		for i in list.size():
 			var case: Dictionary = list[i]
-			_label(_box, ("✓ " if bool(case["done"]) else "· ") + str(case["title"]), UiTheme.MUTED_LABEL if bool(case["done"]) else "").name = "Case_%s_%d" % [id, i]
+			UiParts.label(_box, ("✓ " if bool(case["done"]) else "· ") + str(case["title"]), UiTheme.MUTED_LABEL if bool(case["done"]) else "").name = "Case_%s_%d" % [id, i]
 			if bool(case["done"]):
 				continue
 			var row := HFlowContainer.new()
@@ -137,10 +121,10 @@ func _held(s: GameSession, data: Dictionary, id: String) -> void:
 func _town(s: GameSession, data: Dictionary, id: String) -> void:
 	var t := OfficeRules.town(s, data, str(OfficeRules.def(data, id)["location"]))
 	var tc: Dictionary = OfficeRules.cfg(data)["town"]
-	_label(_box, tr("OFFICE_TOWN").format({"treasury": Money.format(int(t["treasury"])), "mood": OfficeRules._word(OfficeRules.cfg(data)["discontent_words"], int(t["discontent"])),
+	UiParts.label(_box, tr("OFFICE_TOWN").format({"treasury": Money.format(int(t["treasury"])), "mood": Scale.name_at(OfficeRules.cfg(data)["discontent_words"], int(t["discontent"])),
 		"n": int(t["discontent"])})).name = "OfficeTown_" + id
 	var row := _row()
-	_label(row, tr("OFFICE_TAX"))
+	UiParts.label(row, tr("OFFICE_TAX"))
 	for lvl: String in tc["taxes"]:
 		var tax: Dictionary = tc["taxes"][lvl]
 		var b := _act(row, "Tax_%s_%s" % [id, lvl], str(tax["name"]), OfficeRules.tax_why(s, data, id, lvl), "tax", id, lvl)
@@ -153,21 +137,21 @@ func _town(s: GameSession, data: Dictionary, id: String) -> void:
 		if builds.has(pid):
 			var b := OfficeRules.build_rec(t, pid)
 			state = tr("OFFICE_BUILT_ON").format({"day": int(b["ready"])}) if not Progress.due(b, s.day) else tr("OFFICE_BUILT_DONE")
-		_label(prow, "%s — %s, %d дн.%s" % [p["name"], Money.format(int(p["cost_cp"])), int(p["days"]), " · " + state if not state.is_empty() else ""])
+		UiParts.label(prow, "%s — %s, %d дн.%s" % [p["name"], Money.format(int(p["cost_cp"])), int(p["days"]), " · " + state if not state.is_empty() else ""])
 		if not builds.has(pid):
 			_act(prow, "Build_%s_%s" % [id, pid], tr("BTN_OFFICE_BUILD"), OfficeRules.build_why(s, data, id, pid), "build", id, pid)
 
 
 func _offer(s: GameSession, data: Dictionary, id: String) -> void:
 	var d := OfficeRules.def(data, id)
-	_heading(OfficeRules.name_of(data, id))
+	UiParts.heading(_box, OfficeRules.name_of(data, id))
 	if not str(d.get("text", "")).is_empty():
-		_label(_box, str(d["text"]), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, str(d["text"]), UiTheme.MUTED_LABEL)
 	var ranks: Array = d.get("ranks", [])
 	if not ranks.is_empty():
-		_label(_box, tr("OFFICE_OFFER_PAY").format({"rank": ranks[0]["name"], "pay": Money.format(int(ranks[0].get("pay_cp", 0)))}))
+		UiParts.label(_box, tr("OFFICE_OFFER_PAY").format({"rank": ranks[0]["name"], "pay": Money.format(int(ranks[0].get("pay_cp", 0)))}))
 	for r: Dictionary in OfficeRules.requirements(s, data, id):
-		_label(_box, ("✓ " if bool(r["ok"]) else "✗ ") + str(r["text"]), "" if bool(r["ok"]) else UiTheme.MUTED_LABEL)
+		UiParts.label(_box, ("✓ " if bool(r["ok"]) else "✗ ") + str(r["text"]), "" if bool(r["ok"]) else UiTheme.MUTED_LABEL)
 	var row := _row(BoxContainer.ALIGNMENT_END)
 	var ways: Array = d.get("ways", [])
 	if ways.has("buy"):

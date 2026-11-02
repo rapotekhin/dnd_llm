@@ -113,14 +113,6 @@ static func minutes(data: Dictionary, a: String, b: String) -> int:
 	return base + int(cfg(data)["how"].get(str(r.get("how", "walk")), {}).get("minutes", 0))
 
 
-## Does sight, a shot or a sound go through the way now? An open way lets all through, a shut leaf what it `passes`.
-static func passes(s: GameSession, data: Dictionary, a: String, b: String, what: String) -> bool:
-	var d := def(data, a, b)
-	if d.is_empty() or bool(s.ways.get(key(a, b), {}).get("broken", false)):
-		return true
-	return (d.get("passes", []) as Array).has(what)
-
-
 ## The step `a` → `b` is made: a way with `drop` is a fall by 5e, 1d6 for 10 feet up to 20d6, unless the hero flies. Lines.
 static func on_pass(s: GameSession, data: Dictionary, a: String, b: String) -> Array[String]:
 	var feet := int(row(data, a, b).get("drop", 0))
@@ -360,9 +352,9 @@ static func hit(s: GameSession, data: Dictionary, a: String, b: String) -> Array
 	var c := s.character
 	var mat := ThingRules.material(data, def(data, a, b))
 	var w := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
-	var r := Roll.hero(s, data, {"what": "Удар по двери", "parts": _hit_parts(w), "bonus": w["to_hit"], "dc": int(mat.get("ac", 15))})
+	var r := Roll.hero(s, data, {"what": "Удар по двери", "parts": _hit_parts(w), "bonus": w["to_hit"], "dc": ThingRules.ac_of(mat)})
 	if not bool(r["ok"]):
-		return ["%s: удар по двери — %d против КД %d, без толку" % [w["name"], int(r["total"]), int(mat.get("ac", 15))]]
+		return ["%s: удар по двери — %d против КД %d, без толку" % [w["name"], int(r["total"]), ThingRules.ac_of(mat)]]
 	var dmg := maxi(1, CombatRules.roll_dice(s.rng, str(w["dice"]), int(r["nat"]) == 20) + int(w["bonus"]))
 	if hurt(s, data, a, b, dmg):
 		return ["%s: %d урона — %s" % [w["name"], dmg, break_line(data, a, b).to_lower()]]

@@ -124,7 +124,7 @@ func test_a_cat_beside_keeps_meat_longer() -> void:
 	FoodRules.tick(s, data)
 	assert_int(int(s.character["inventory"].get("raw_meat", 0))).is_equal(1)
 	cat["led"] = false
-	PropertyRules._remove_creature(s, str(cat["id"]))
+	PropertyRules.remove_creature(s, str(cat["id"]))
 	FoodRules.tick(s, data)
 	assert_int(int(s.character["inventory"].get("raw_meat", 0))).is_equal(0)
 

@@ -28,20 +28,8 @@ func open(site_id: String) -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
 func _head(text: String) -> void:
-	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
+	UiParts.label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
 
 
 func _act(err: String) -> void:
@@ -50,19 +38,6 @@ func _act(err: String) -> void:
 		EventBus.message.emit(err)
 	elif CombatRules.active(GameState.session):  # the ring is on the map now
 		visible = false
-
-
-func _button(parent: Control, name: String, text: String, why: String, run: Callable) -> Button:
-	var b := Button.new()
-	b.name = name
-	b.text = text
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.disabled = not why.is_empty() or GameState.is_busy() or not Backend.is_ready()
-	if not why.is_empty():
-		b.tooltip_text = why
-	b.pressed.connect(run)
-	parent.add_child(b)
-	return b
 
 
 func _spin(parent: Control, name: String, value: int, max_cp: int, on_change: Callable) -> SpinBox:
@@ -89,22 +64,22 @@ func _rebuild() -> void:
 	var data := Catalog.data
 	title.text = ArenaRules.site_name(data, _site)
 	var rc := ArenaRules.rule_cfg(data, _site)
-	var rule := _label(_box, tr("ARENA_RULE").format({"rule": str(rc["name"]), "text": str(rc["text"])}))
+	var rule := UiParts.label(_box, tr("ARENA_RULE").format({"rule": str(rc["name"]), "text": str(rc["text"])}))
 	rule.name = "ArenaRule"
 	if ArenaRules.rule(data, _site) == "death":
 		rule.add_theme_color_override("font_color", UiTheme.BAD)
 	var gold := Ledger.balance(s)
 	if not ArenaRules.enlisted(s, _site):
-		_label(_box, tr("ARENA_ENLIST_HINT").format({"fee": Money.format(int(ArenaRules.cfg(data)["fee_cp"]))}), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("ARENA_ENLIST_HINT").format({"fee": Money.format(int(ArenaRules.cfg(data)["fee_cp"]))}), UiTheme.MUTED_LABEL)
 		_button(_box, "ArenaEnlist", tr("BTN_ARENA_ENLIST"), ArenaRules.enlist_why(s, data, _site), func() -> void: _act(GameState.arena_enlist(_site)))
 	else:
 		var r := ArenaRules.rec(s, _site)
-		_label(_box, tr("ARENA_RANK").format({"rank": ArenaRules.rank_name(data, int(r["rank"])), "wins": int(r.get("wins", 0)),
+		UiParts.label(_box, tr("ARENA_RANK").format({"rank": ArenaRules.rank_name(data, int(r["rank"])), "wins": int(r.get("wins", 0)),
 			"losses": int(r.get("losses", 0))})).name = "ArenaRank"
 		_bout(s, data, gold)
 	_tourney(s, data)
 	_card(s, data, gold)
-	_label(_box, tr("CONTEST_GOLD").format({"money": Money.format(gold)}), UiTheme.MUTED_LABEL)
+	UiParts.label(_box, tr("CONTEST_GOLD").format({"money": Money.format(gold)}), UiTheme.MUTED_LABEL)
 
 
 func _bout(s: GameSession, data: Dictionary, gold: int) -> void:
@@ -113,16 +88,16 @@ func _bout(s: GameSession, data: Dictionary, gold: int) -> void:
 	var o := ArenaRules.hero_odds(s, data, _site, str(opp["monster"]), int(opp["hp"]))
 	var prize := int(int(ArenaRules.ranks(data)[int(opp["rank"])]["prize_cp"]) * int(ArenaRules.rule_cfg(data, _site).get("prize_pct", 100)) / 100)
 	_head(tr("ARENA_BOUT_HEAD"))
-	_label(_box, tr("ARENA_OPPONENT").format({"name": str(opp["name"]), "hp": int(opp["hp"]), "ac": int(m["ac"]), "prize": Money.format(prize)})).name = "ArenaOpponent"
+	UiParts.label(_box, tr("ARENA_OPPONENT").format({"name": str(opp["name"]), "hp": int(opp["hp"]), "ac": int(m["ac"]), "prize": Money.format(prize)})).name = "ArenaOpponent"
 	var est := tr("ARENA_ODDS").format({"house": roundi(float(o["house"]) * 100), "mult": "%.2f" % float(o["mult"])})
 	if ArenaRules.knows(s, _site):
 		est += " " + tr("ARENA_ODDS_TRUE").format({"p": roundi(float(o["p"]) * 100)})
-	_label(_box, est, UiTheme.MUTED_LABEL).name = "ArenaOdds"
+	UiParts.label(_box, est, UiTheme.MUTED_LABEL).name = "ArenaOdds"
 	var why := ArenaRules.bout_why(s, data, _site)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_box.add_child(row)
-	_label(row, tr("ARENA_BET_SELF"))
+	UiParts.label(row, tr("ARENA_BET_SELF"))
 	_spin(row, "ArenaBetSelf", _bet_self, mini(gold, ArenaRules.max_bet(s, data)), func(cp: int) -> void: _bet_self = cp)
 	var deadly := ArenaRules.rule(data, _site) == "death"
 	_button(row, "ArenaFight", tr("BTN_ARENA_FIGHT"), why, func() -> void:
@@ -139,7 +114,7 @@ func _tourney(s: GameSession, data: Dictionary) -> void:
 		return
 	var st := ArenaRules.tourney_state(s, _site)
 	_head(tr("ARENA_TOURNEY_HEAD").format({"name": str(t["name"])}))
-	_label(_box, tr("ARENA_TOURNEY").format({"bouts": int(t.get("bouts", 3)), "round": int(st.get("round", 0)), "prize": Money.format(int(t.get("prize_cp", 0))),
+	UiParts.label(_box, tr("ARENA_TOURNEY").format({"bouts": int(t.get("bouts", 3)), "round": int(st.get("round", 0)), "prize": Money.format(int(t.get("prize_cp", 0))),
 		"item": ItemRules.display_name(data["items"], s.items, str(t.get("prize_item", ""))) if not str(t.get("prize_item", "")).is_empty() else "—"})).name = "ArenaTourney"
 	_button(_box, "ArenaTourneyFight", tr("BTN_ARENA_TOURNEY"), ArenaRules.tourney_why(s, data, _site),
 		func() -> void: _act(GameState.arena_bout(_site, 0, true)))
@@ -152,7 +127,7 @@ func _card(s: GameSession, data: Dictionary, gold: int) -> void:
 		"ma": "%.2f" % float(c["mult_a"]), "mb": "%.2f" % float(c["mult_b"])})
 	if ArenaRules.knows(s, _site):
 		line += " " + tr("ARENA_ODDS_TRUE").format({"p": roundi(float(c["p"]) * 100)})
-	_label(_box, line).name = "ArenaCard"
+	UiParts.label(_box, line).name = "ArenaCard"
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_box.add_child(row)
@@ -163,3 +138,10 @@ func _card(s: GameSession, data: Dictionary, gold: int) -> void:
 	for side: String in ["a", "b"]:
 		_button(row, "ArenaBet_" + side, tr("BTN_ARENA_BET").format({"name": str(c[side]["name"]).get_slice("«", 1).trim_suffix("»")}), why,
 			func() -> void: _act(GameState.arena_bet(_site, side, _bet_card)))
+
+
+## A button of the arena: its bouts are told by the master, so it waits for the server too.
+func _button(parent: Control, node_name: String, text: String, why: String, run: Callable) -> Button:
+	var b := UiParts.act_button(parent, node_name, text, why, run)
+	b.disabled = b.disabled or not Backend.is_ready()
+	return b

@@ -25,17 +25,6 @@ func open() -> void:
 	_rebuild()
 
 
-func _label(text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	return l
-
-
 func _button(row: Control, node_name: String, text: String, enabled: bool, action: Callable) -> Button:
 	var b := Button.new()
 	b.name = node_name
@@ -64,7 +53,7 @@ func _object(s: GameSession, data: Dictionary) -> void:
 	var head := str(i["name"]) + ((" (%s)" % i["kind"]) if not str(i["kind"]).is_empty() else "")
 	if not str(i["owner"]).is_empty():
 		head += " · " + tr("PLACE_OWNER").format({"name": i["owner"]})
-	var h := _label(head)  # under the window's title: the object, not a second title
+	var h := UiParts.label(null, head)  # under the window's title: the object, not a second title
 	h.add_theme_color_override("font_color", UiTheme.ACCENT)
 	card.add_child(h)
 	var bits: Array[String] = []
@@ -78,18 +67,16 @@ func _object(s: GameSession, data: Dictionary) -> void:
 	if not bool(i["public"]):
 		bits.append(tr("OBJECT_PRIVATE"))
 	for b: String in bits:
-		card.add_child(_label(b, UiTheme.MUTED_LABEL))
+		card.add_child(UiParts.label(null, b, UiTheme.MUTED_LABEL))
 	var f: Array = i["facts"]
 	if not f.is_empty():
-		card.add_child(_label(tr("OBJECT_FACTS").format({"list": "; ".join(f.slice(maxi(0, f.size() - 3)))}), UiTheme.MUTED_LABEL))
+		card.add_child(UiParts.label(null, tr("OBJECT_FACTS").format({"list": "; ".join(f.slice(maxi(0, f.size() - 3)))}), UiTheme.MUTED_LABEL))
 
 
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	for c in _box.get_children():
-		_box.remove_child(c)
-		c.queue_free()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	PropRules.ensure_wares(s, data, s.room_id)  # the trader's wares (v0.7.22.8)
@@ -105,7 +92,7 @@ func _rebuild() -> void:
 	var props := PropRules.room_props(s, s.room_id)
 	var bodies := CrimeRules.bodies_here(s, data)
 	if props.is_empty() and bodies.is_empty():
-		_box.add_child(_label(tr("PLACE_EMPTY"), UiTheme.MUTED_LABEL))
+		_box.add_child(UiParts.label(null, tr("PLACE_EMPTY"), UiTheme.MUTED_LABEL))
 	for p: Dictionary in props:
 		_box.add_child(HSeparator.new())
 		var pid := str(p["id"])
@@ -121,9 +108,9 @@ func _rebuild() -> void:
 			head += " · " + tr("PLACE_OWNER").format({"name": GameState.world().npc(owner).get("name", owner)})
 		if not str(p.get("state", "")).is_empty():
 			head += " · " + tr("PROP_STATE_" + str(p["state"]).to_upper())
-		info.add_child(_label(head))
+		info.add_child(UiParts.label(null, head))
 		if not str(p.get("description", "")).is_empty():
-			info.add_child(_label(str(p["description"]), UiTheme.MUTED_LABEL))
+			info.add_child(UiParts.label(null, str(p["description"]), UiTheme.MUTED_LABEL))
 		if ContainerRules.is_container(p):
 			_button(row, "Container_" + pid, tr("BTN_OPEN_SHORT"), not GameState.is_busy(), func() -> String:
 				container_requested.emit(pid)
@@ -138,7 +125,7 @@ func _rebuild() -> void:
 		_box.add_child(HSeparator.new())
 		var row := HBoxContainer.new()
 		_box.add_child(row)
-		row.add_child(_label(str(corpse["name"]) + (" · " + tr("PLACE_SEARCHED") if bool(corpse["searched"]) else "")))
+		row.add_child(UiParts.label(null, str(corpse["name"]) + (" · " + tr("PLACE_SEARCHED") if bool(corpse["searched"]) else "")))
 		var bid := str(corpse["npc_id"])
 		if not bool(corpse["searched"]):
 			_button(row, "PlaceBody_" + bid, tr("BTN_SEARCH_SHORT"), can_act, GameState.search_body.bind(bid))

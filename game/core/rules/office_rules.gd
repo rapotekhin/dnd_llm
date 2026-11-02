@@ -74,12 +74,8 @@ static func pay(c: Dictionary, data: Dictionary, id: String) -> int:
 	return int(list[rank(c, data, id)].get("pay_cp", 0)) if not list.is_empty() else 0
 
 
-static func _word(list: Array, v: int) -> String:
-	return str(Scale.step(list, v).get("name", ""))
-
-
 static func suspicion_word(c: Dictionary, data: Dictionary, id: String) -> String:
-	return _word(cfg(data)["suspicion_words"], int(view(c).get(id, {}).get("suspicion", 0)))
+	return Scale.name_at(cfg(data)["suspicion_words"], int(view(c).get(id, {}).get("suspicion", 0)))
 
 
 ## The offices whose chief is this NPC.
@@ -574,7 +570,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 		var p := "%s — %s (заслуги %d, о мзде: %s)" % [name_of(data, id), rank_name(c, data, id), merit(c, id), suspicion_word(c, data, id)]
 		if bool(def(data, id).get("town", false)):
 			var t := town(s, data, str(def(data, id)["location"]))
-			p += ", казна %s, народ %s, подать %s" % [Money.format(int(t["treasury"])), _word(cfg(data)["discontent_words"], int(t["discontent"])),
+			p += ", казна %s, народ %s, подать %s" % [Money.format(int(t["treasury"])), Scale.name_at(cfg(data)["discontent_words"], int(t["discontent"])),
 				cfg(data)["town"]["taxes"][str(t["tax"])]["name"]]
 		parts.append(p)
 	for npc: String in s.npcs_here(data["world"], s.room_id):

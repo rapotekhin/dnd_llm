@@ -539,11 +539,12 @@ func concentration_conflict(spell_id: String) -> String:
 
 
 ## Lines of a deterministic action without a master turn: the chat, the log, the history the master reads next.
-func _quiet_lines(lines: Array[String]) -> void:
+func _quiet_lines(lines: Array[String], save := true) -> void:
 	_told(lines)
 	_forget_gone_creature()
 	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	if save:
+		SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 
 
 ## «Короткий отдых» (ExplorationRules): an hour, `dice` hit dice; no master turn — the line goes to the history.
@@ -1527,42 +1528,19 @@ func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
 	if not _at_leisure():
 		return "CRAFT_NOT_NOW"
 	var data := Catalog.data
-	var lines: Array[String] = []
-	match what:
-		"start":
-			var why := CraftRules.why_not(session, data, arg)
-			if not why.is_empty():
-				return why
-			lines = CraftRules.start(session, data, arg)
-		"work":
-			var why := CraftRules.can_work(session, data)
-			if not why.is_empty():
-				return why
-			var mins := CraftRules.shift_minutes(session, data, hours)
-			var w := CrimeRules.wait(session, data, mins)  # the patrol may break the work (v0.7.22.18)
-			lines = w["lines"]
-			lines.append_array(CraftRules.worked(session, data, int(w["minutes"])))
-		"abandon":
-			lines = CraftRules.abandon(session, data)
-		"salvage":
-			if not CraftRules.salvageable(session, data).has(arg):
-				return "CRAFT_NO_SALVAGE"
-			lines = CraftRules.salvage(session, data, arg)
-			lines.append_array(TimeRules.advance(session, data, int(CraftRules.cfg(data)["salvage"]["minutes"])))
-		"gather":
-			var why := CraftRules.gather_why(session, data, arg)
-			if not why.is_empty():
-				return why
-			var minutes := int(CraftRules.cfg(data)["gather"][arg]["minutes"])
-			var w := CrimeRules.wait(session, data, minutes)
-			lines = w["lines"]
-			if int(w["minutes"]) >= minutes:  # a patrol breaks it off: nothing gathered
-				lines.append_array(CraftRules.gather(session, data, arg))
-	if lines.is_empty():
-		return ""
-	_refresh()
-	_effect_lines(lines)
-	return ""
+	var s := session
+	return _act(what, {
+		"start": _row(CraftRules.why_not, CraftRules.start, [s, data, arg]),
+		"work": [CraftRules.can_work.bind(s, data), func() -> Array:  # the patrol may break the work (v0.7.22.18)
+			return _waited(CraftRules.shift_minutes(s, data, hours), func(m: int) -> Array: return CraftRules.worked(s, data, m))],
+		"abandon": [func() -> String: return "", CraftRules.abandon.bind(s, data)],
+		"salvage": [func() -> String: return "" if CraftRules.salvageable(s, data).has(arg) else "CRAFT_NO_SALVAGE", func() -> Array:
+			var lines: Array = CraftRules.salvage(s, data, arg)
+			lines.append_array(TimeRules.advance(s, data, int(CraftRules.cfg(data)["salvage"]["minutes"])))
+			return lines],
+		"gather": [CraftRules.gather_why.bind(s, data, arg), func() -> Array:  # a patrol breaks it off: nothing gathered
+			return _waited(int(CraftRules.cfg(data)["gather"][arg]["minutes"]), func(_m: int) -> Array: return CraftRules.gather(s, data, arg), true)],
+	}, "CRAFT_NOT_NOW")
 
 
 ## Hunting or fishing (v0.7.41): `hours` at the room's ground of `kind` (WildsRules) — the time passes first (the
@@ -1620,39 +1598,26 @@ func job_act(what: String, id: String) -> String:
 	if not _at_leisure():
 		return "JOB_NOT_NOW"
 	var data := Catalog.data
-	var lines: Array[String] = []
-	var event := ""
-	var fight: Array = []
-	match what:
-		"hire":
-			var why := JobRules.hire_why(session, data, id)
-			if not why.is_empty():
-				return why
-			lines = JobRules.hire(session, data, id)
-		"shift":
-			var why := JobRules.shift_why(session, data, id)
-			if not why.is_empty():
-				return why
-			var w := CrimeRules.wait(session, data, JobRules.hours(session, data, id) * 60)  # the patrol may break the shift
-			lines = w["lines"]
-			var r := JobRules.shift(session, data, id, int(w["minutes"]))
-			lines.append_array(r["lines"])
-			event = str(r["event"])
-			fight = r["fight"]
-		"quit":
-			if not JobRules.hired(session.character, id):
-				return "JOB_NOT_HIRED"
-			lines = JobRules.quit(session, data, id)
-	if lines.is_empty():
-		return ""
-	_refresh()
-	_effect_lines(lines)
-	if not fight.is_empty():  # bandits at the convoy (v0.7.39.1)
-		session.pending_fight = fight
+	var s := session
+	var out := {"lines": [], "event": "", "fight": []}  # what a shift brings beside its lines
+	var why := _act(what, {
+		"hire": _row(JobRules.hire_why, JobRules.hire, [s, data, id]),
+		"shift": [JobRules.shift_why.bind(s, data, id), func() -> Array:  # the patrol may break the shift
+			out["lines"] = _waited(JobRules.hours(s, data, id) * 60, func(m: int) -> Array:
+				var r := JobRules.shift(s, data, id, m)
+				out["event"] = str(r["event"])
+				out["fight"] = r["fight"]
+				return r["lines"])
+			return out["lines"]],
+		"quit": [func() -> String: return "" if JobRules.hired(s.character, id) else "JOB_NOT_HIRED", JobRules.quit.bind(s, data, id)],
+	}, "JOB_NOT_NOW")
+	if not why.is_empty():
+		return why
+	if not (out["fight"] as Array).is_empty():  # bandits at the convoy (v0.7.39.1)
+		session.pending_fight = out["fight"]
 		_start_pending_fight()
-		return ""
-	if not event.is_empty() and Backend.is_ready():
-		_request("shift", "%s. Событие смены: %s" % ["; ".join(lines), event])
+	elif not str(out["event"]).is_empty() and Backend.is_ready():
+		_request("shift", "%s. Событие смены: %s" % ["; ".join(PackedStringArray(out["lines"])), out["event"]])
 	return ""
 
 
@@ -1688,8 +1653,8 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 		"vehicle": _row(MountRules.vehicle_why, MountRules.buy_vehicle, b),
 		"release": [func() -> String: return "" if not CreatureRules.find(s, s.room_id, id).is_empty() else "CREATURE_NONE", func() -> Array:
 			var cr := CreatureRules.find(s, s.room_id, id)
-			MountRules._unload(s, data, cr)  # v0.7.42: the pack comes off first
-			PropertyRules._remove_creature(s, id)
+			MountRules.unload(s, data, cr)  # v0.7.42: the pack comes off first
+			PropertyRules.remove_creature(s, id)
 			return ["%s отпущен на волю" % cr.get("name", id)]],
 	})
 
@@ -2502,14 +2467,11 @@ func follower_act(npc_id: String, what: String) -> String:
 		return "ALLY_NOT_HERE"
 	var name := str(world().npc(npc_id).get("name", npc_id))
 	var plan := {"follow_npc": npc_id, "on": what == "lead", "room": session.room_id if what == "stay" else ""}
-	if what == "lead" and Being.followers(session).size() >= int(FollowRules.cfg(Catalog.data)["max"]):
-		return "ALLY_TOO_MANY"
+	if what == "lead" and not FollowRules.room_why(session, Catalog.data).is_empty():
+		return FollowRules.room_why(session, Catalog.data)
 	FollowRules.apply(session, plan)
 	var line: String = {"stay": "%s остаётся здесь и ждёт", "lead": "%s снова идёт с героем", "let_go": "%s уходит к себе"}[what] % name
-	_add(GameSession.effect_entry([line]))
-	_log("События: " + line)
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	_quiet_lines([line])
 	return ""
 
 
@@ -2524,9 +2486,7 @@ func dismiss_summon(summon_id: String) -> String:
 	var why := AllyRules.dismiss(session, summon_id)
 	if not why.is_empty():
 		return why
-	_add(GameSession.effect_entry(["%s отпущен(а) и исчезает" % name]))
-	EventBus.state_changed.emit()
-	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	_quiet_lines(["%s отпущен(а) и исчезает" % name])
 	return ""
 
 
@@ -2546,14 +2506,9 @@ func creature_act(id: String, what: String) -> String:
 	var why := CreatureRules.can(session, id, what, Catalog.data)
 	if not why.is_empty():
 		return why
-	var lines := CreatureRules.act(session, Catalog.data, id, what)
-	_told(lines)
-	_forget_gone_creature()
-	EventBus.state_changed.emit()
+	_quiet_lines(CreatureRules.act(session, Catalog.data, id, what), what != "attack")
 	if what == "attack":
 		_start_pending_fight()
-		return ""
-	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 	return ""
 
 

@@ -25,38 +25,6 @@ func open(npc_id: String) -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
-func _heading(text: String) -> void:
-	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
-
-
-func _button(parent: Control, node_name: String, text: String, why: String, what: String, item: String = "") -> Button:
-	var b := Button.new()
-	b.name = node_name
-	b.text = text
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.disabled = not why.is_empty() or GameState.is_busy()
-	b.tooltip_text = tr(why) if not why.is_empty() else ""
-	b.size_flags_horizontal = Control.SIZE_SHRINK_END
-	b.pressed.connect(func() -> void:
-		var err := GameState.bond_act(what, _npc, item)
-		if not err.is_empty():
-			EventBus.message.emit(tr(err)))
-	parent.add_child(b)
-	return b
-
-
 func _rebuild() -> void:
 	if not visible or not GameState.has_session() or _npc.is_empty():
 		return
@@ -70,7 +38,7 @@ func _rebuild() -> void:
 	var p := BondRules.points(c, _npc)
 	var w := BondRules.word(c, data, _npc)
 	var nx := BondRules.next_at(c, data, _npc)
-	var head := _label(_box, "%s · %s · %s" % [str(cfg["kinds"][BondRules.kind(c, _npc)]["name"]).capitalize(),
+	var head := UiParts.label(_box, "%s · %s · %s" % [str(cfg["kinds"][BondRules.kind(c, _npc)]["name"]).capitalize(),
 		w if not w.is_empty() else tr("BOND_NO_STEP"), tr("BOND_POINTS").format({"n": p}) + (" / %d" % nx if nx > 0 else "")])
 	head.name = "BondStep"
 	if BondRules.rival(c, data, _npc):
@@ -87,7 +55,7 @@ func _rebuild() -> void:
 	bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 2))
 	_box.add_child(bar)
 	var perks := BondRules.perks_text(s, data, _npc)
-	var pl := _label(_box, tr("BOND_GIVES").format({"list": ", ".join(perks)}) if not perks.is_empty() else tr("BOND_GIVES_NOTHING"), UiTheme.MUTED_LABEL)
+	var pl := UiParts.label(_box, tr("BOND_GIVES").format({"list": ", ".join(perks)}) if not perks.is_empty() else tr("BOND_GIVES_NOTHING"), UiTheme.MUTED_LABEL)
 	pl.name = "BondPerks"
 	var k := BondRules.known(s, _npc)
 	var tastes: Array[String] = []
@@ -95,7 +63,7 @@ func _rebuild() -> void:
 		tastes.append(tr("BOND_LIKES").format({"list": ", ".join((k["likes"] as Array).map(func(t: Variant) -> String: return BondRules.taste_name(s, data, str(t))))}))
 	if not (k["dislikes"] as Array).is_empty():
 		tastes.append(tr("BOND_DISLIKES").format({"list": ", ".join((k["dislikes"] as Array).map(func(t: Variant) -> String: return BondRules.taste_name(s, data, str(t))))}))
-	_label(_box, " · ".join(tastes) if not tastes.is_empty() else tr("BOND_TASTES_UNKNOWN"), UiTheme.MUTED_LABEL).name = "BondTastes"
+	UiParts.label(_box, " · ".join(tastes) if not tastes.is_empty() else tr("BOND_TASTES_UNKNOWN"), UiTheme.MUTED_LABEL).name = "BondTastes"
 	_romance(s, data)
 	_gifts(s, data)
 
@@ -115,7 +83,7 @@ func _romance(s: GameSession, data: Dictionary) -> void:
 	else:
 		text = tr("BOND_CONFESS_HINT").format({"at": int(BondRules.cfg(data)["confess"]["at"]), "dc": BondRules.confess_dc(s, data, _npc),
 			"chance": BondRules.confess_chance(s, data, _npc)})
-	_label(_box, text, UiTheme.MUTED_LABEL).name = "BondRomance"
+	UiParts.label(_box, text, UiTheme.MUTED_LABEL).name = "BondRomance"
 	_box.add_child(row)
 	if BondRules.kind(c, _npc) == "romance" and FamilyRules.spouse(s) != _npc and FamilyRules.engaged(s) != _npc:  # v0.7.32
 		var pr := Button.new()
@@ -140,14 +108,14 @@ func _romance(s: GameSession, data: Dictionary) -> void:
 
 func _gifts(s: GameSession, data: Dictionary) -> void:
 	_box.add_child(HSeparator.new())
-	_heading(tr("BOND_GIFT_HEADING"))
+	UiParts.heading(_box, tr("BOND_GIFT_HEADING"))
 	var why := BondRules.gift_why(s, data, _npc)
 	if why == "BOND_GIFT_TODAY" or why == "BOND_NOT_HERE" or why == "BOND_REFUSES":
-		_label(_box, tr(why), UiTheme.MUTED_LABEL).name = "GiftNote"
+		UiParts.label(_box, tr(why), UiTheme.MUTED_LABEL).name = "GiftNote"
 		return
 	var list := BondRules.gifts(s, data)
 	if list.is_empty():
-		_label(_box, tr("BOND_GIFT_NONE"), UiTheme.MUTED_LABEL).name = "GiftNote"
+		UiParts.label(_box, tr("BOND_GIFT_NONE"), UiTheme.MUTED_LABEL).name = "GiftNote"
 		return
 	var k := BondRules.known(s, _npc)
 	for id: String in list:
@@ -162,9 +130,15 @@ func _gifts(s: GameSession, data: Dictionary) -> void:
 			taste = " — " + tr("BOND_TASTE_LIKED")
 		elif t["taste"] == "disliked" and (k["dislikes"] as Array).has(t["by"]):
 			taste = " — " + tr("BOND_TASTE_DISLIKED")
-		var l := _label(row, "%s%s%s" % [name, " ×%d" % qty if qty > 1 else "", taste])
+		var l := UiParts.label(row, "%s%s%s" % [name, " ×%d" % qty if qty > 1 else "", taste])
 		if taste.ends_with(tr("BOND_TASTE_LIKED")):
 			l.add_theme_color_override("font_color", UiTheme.OK)
 		elif not taste.is_empty():
 			l.add_theme_color_override("font_color", UiTheme.WARN)
 		_button(row, "Gift_" + id, tr("BTN_BOND_GIFT"), why, "gift", id)
+
+
+func _button(parent: Control, node_name: String, text: String, why: String, what: String, item: String = "") -> Button:
+	var b := UiParts.act_button(parent, node_name, text, why, func() -> String: return GameState.bond_act(what, _npc, item))
+	b.size_flags_horizontal = Control.SIZE_SHRINK_END
+	return b

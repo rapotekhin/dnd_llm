@@ -79,17 +79,6 @@ func test_a_road_of_its_own_hours_counts_on_the_map() -> void:
 	assert_int(WorldMap.minutes(TestUtils.new_session(), data, "brod-square", path)).is_equal(90)
 
 
-func test_what_goes_through_a_shut_leaf() -> void:
-	var s := _hero("brod-square")
-	_way("brod-square", "brod-tavern-hall", {"kind": "grate"})
-	_way("brod-tavern-hall", "brod-tavern-kitchen", {"kind": "door"})
-	assert_bool(WayRules.passes(s, data, "brod-square", "brod-tavern-hall", "shot")).is_true()
-	assert_bool(WayRules.passes(s, data, "brod-tavern-hall", "brod-tavern-kitchen", "sight")).is_false()
-	WayRules.break_down(s, "brod-tavern-hall", "brod-tavern-kitchen")
-	assert_bool(WayRules.passes(s, data, "brod-tavern-hall", "brod-tavern-kitchen", "sight")).is_true()
-	assert_bool(WayRules.passes(s, data, "brod-tavern-hall", "brod-tavern-upstairs", "sound")).is_true()  # nothing shuts it
-
-
 func test_a_latch_opens_from_one_side_only() -> void:
 	_way("brod-tavern-hall", "brod-tavern-kitchen", {"kind": "hatch", "locked": true, "latch": "brod-tavern-hall"})
 	var s := _hero("brod-tavern-hall")

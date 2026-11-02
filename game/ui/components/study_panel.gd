@@ -25,22 +25,6 @@ func open(npc_id: String) -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
-func _heading(text: String) -> void:
-	_label(_box, text).theme_type_variation = UiTheme.ACCENT_LABEL
-
-
 func _buttons(node_name: String) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.name = node_name
@@ -71,7 +55,7 @@ func _rebuild() -> void:
 	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
-	_label(_box, tr("BANK_PURSE").format({"money": Money.format(Ledger.balance(s))}), UiTheme.MUTED_LABEL)
+	UiParts.label(_box, tr("BANK_PURSE").format({"money": Money.format(Ledger.balance(s))}), UiTheme.MUTED_LABEL)
 	if _npc.is_empty():
 		_mine(s, data)
 	else:
@@ -82,20 +66,20 @@ func _teacher(s: GameSession, data: Dictionary) -> void:
 	title.text = tr("STUDY_TITLE_AT").format({"name": WorldView.name_of(data, _npc)})
 	for sid: String in StudyRules.headed_by(data, _npc):
 		var sc := StudyRules.school(data, sid)
-		_heading(str(sc["name"]))
+		UiParts.heading(_box, str(sc["name"]))
 		var st: Dictionary = StudyRules.school_state(s.character).get(sid, {})
 		if not st.is_empty():
-			_label(_box, tr("STUDY_ADMITTED_STIPEND") if bool(st.get("stipend", false)) else tr("STUDY_ADMITTED"), UiTheme.MUTED_LABEL)
+			UiParts.label(_box, tr("STUDY_ADMITTED_STIPEND") if bool(st.get("stipend", false)) else tr("STUDY_ADMITTED"), UiTheme.MUTED_LABEL)
 			continue
 		var ex: Dictionary = sc.get("exam", {})
-		_label(_box, tr("STUDY_EXAM_HINT").format({"skill": CraftRules.tr_skill(data, str(ex.get("skill", ""))), "dc": int(ex.get("dc", 0)),
+		UiParts.label(_box, tr("STUDY_EXAM_HINT").format({"skill": CraftRules.tr_skill(data, str(ex.get("skill", ""))), "dc": int(ex.get("dc", 0)),
 			"chance": StudyRules.exam_chance(s, data, sid)}), UiTheme.MUTED_LABEL)
 		_button(_buttons("ExamRow_" + sid), "ExamTake_" + sid, tr("BTN_STUDY_EXAM"), StudyRules.exam_why(s, data, sid), "exam", sid)
 		_box.add_child(HSeparator.new())
 	var list := StudyRules.offered_by(s, data, _npc)
 	if list.is_empty():
 		return
-	_heading(tr("STUDY_COURSES"))
+	UiParts.heading(_box, tr("STUDY_COURSES"))
 	for id: String in list:
 		_course(s, data, id, true)
 
@@ -103,7 +87,7 @@ func _teacher(s: GameSession, data: Dictionary) -> void:
 func _course(s: GameSession, data: Dictionary, id: String, _at_teacher: bool) -> void:
 	var co := StudyRules.course(s, data, id)
 	var c := s.character
-	var head := _label(_box, "%s — %s" % [StudyRules.name_of(s, data, id), StudyRules.teaches_text(s, data, id)])
+	var head := UiParts.label(_box, "%s — %s" % [StudyRules.name_of(s, data, id), StudyRules.teaches_text(s, data, id)])
 	head.name = "Course_" + id
 	var bits: Array[String] = []
 	var st: Dictionary = StudyRules.view(c)["courses"].get(id, {})
@@ -128,12 +112,12 @@ func _course(s: GameSession, data: Dictionary, id: String, _at_teacher: bool) ->
 			bits.append(tr("STUDY_WHERE").format({"place": at}))
 	if not StudyRules.done(c, id) and not known:
 		bits.append(tr("STUDY_LESSON_HINT").format({"hours": StudyRules.lesson_hours(data), "chance": StudyRules.lesson_chance(s, data, id)}))
-	_label(_box, " · ".join(bits), UiTheme.MUTED_LABEL)
+	UiParts.label(_box, " · ".join(bits), UiTheme.MUTED_LABEL)
 	if StudyRules.done(c, id) or known:
 		return
 	var bad := StudyRules.requirements(s, data, id).filter(func(r: Dictionary) -> bool: return not bool(r["ok"]))
 	if not bad.is_empty() and st.is_empty():
-		var l := _label(_box, tr("STUDY_NEEDS").format({"list": ", ".join(bad.map(func(r: Dictionary) -> String: return str(r["text"])))}), UiTheme.MUTED_LABEL)
+		var l := UiParts.label(_box, tr("STUDY_NEEDS").format({"list": ", ".join(bad.map(func(r: Dictionary) -> String: return str(r["text"])))}), UiTheme.MUTED_LABEL)
 		l.add_theme_color_override("font_color", UiTheme.WARN)
 	var row := _buttons("CourseActs_" + id)
 	var book := not str(co.get("book", "")).is_empty()
@@ -151,27 +135,27 @@ func _mine(s: GameSession, data: Dictionary) -> void:
 	var c := s.character
 	var any := false
 	if not (StudyRules.view(c)["courses"] as Dictionary).is_empty():
-		_heading(tr("STUDY_MY_COURSES"))
+		UiParts.heading(_box, tr("STUDY_MY_COURSES"))
 		for id: String in StudyRules.view(c)["courses"]:
 			if str(StudyRules.course(s, data, id).get("book", "")).is_empty():
 				_course(s, data, id, false)
 				any = true
 	var books := StudyRules.books(s, data).filter(func(id: String) -> bool: return not StudyRules.done(c, id) and not StudyRules.known_already(s, data, id))
 	if not books.is_empty():
-		_heading(tr("STUDY_BOOKS"))
+		UiParts.heading(_box, tr("STUDY_BOOKS"))
 		for id: String in books:
 			_course(s, data, id, false)
 			any = true
 	var waiting := StudyRules.waiting(s, data)
 	if not waiting.is_empty():  # v0.7.39.7: courses the master pointed to, at teachers elsewhere
-		_heading(tr("STUDY_WAITING"))
+		UiParts.heading(_box, tr("STUDY_WAITING"))
 		for id: String in waiting:
 			_course(s, data, id, false)
 			any = true
 	var done: Array = StudyRules.view(c)["done"]
 	if not done.is_empty():
-		_heading(tr("STUDY_DONE_LIST"))
-		_label(_box, ", ".join(done.map(func(id: Variant) -> String: return StudyRules.name_of(s, data, str(id)))), UiTheme.MUTED_LABEL)
+		UiParts.heading(_box, tr("STUDY_DONE_LIST"))
+		UiParts.label(_box, ", ".join(done.map(func(id: Variant) -> String: return StudyRules.name_of(s, data, str(id)))), UiTheme.MUTED_LABEL)
 		any = true
 	if not any:
-		_label(_box, tr("STUDY_NOTHING"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("STUDY_NOTHING"), UiTheme.MUTED_LABEL)

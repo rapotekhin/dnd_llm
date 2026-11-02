@@ -110,7 +110,7 @@ func test_a_stolen_thing_stays_stolen_through_a_chest() -> void:
 	OwnerRules.mark(s, "dagger", 1, "npc_merchant")
 	_chest(s)
 	ContainerRules.apply_put(s, data, {"room": s.room_id, "into": "p1", "item_id": "dagger", "qty": 1})
-	OwnerRules.tidy(s)
+	CharacterRules.refresh(s.character, data, s.items)
 	assert_dict(OwnerRules.foreign(s)).is_empty()
 	ContainerRules.apply_take(s, data, {"room": s.room_id, "from": "p1", "item_id": "dagger", "qty": 1, "owner": ""})
 	assert_int(OwnerRules.held_of(s, "dagger", "npc_merchant")).is_equal(1)
@@ -130,7 +130,7 @@ func test_a_stolen_thing_stays_stolen_on_the_floor() -> void:
 	s.character["inventory"]["dagger"] = 1
 	OwnerRules.mark(s, "dagger", 1, "npc_merchant")
 	ContainerRules.apply_drop(s, data, {"room": s.room_id, "item_id": "dagger", "qty": 1})
-	OwnerRules.tidy(s)
+	CharacterRules.refresh(s.character, data, s.items)
 	var id := str(s.props[s.room_id][-1]["id"])
 	PropRules.apply_take(s, data, {"room": s.room_id, "prop": id, "owner": ""})
 	assert_int(OwnerRules.held_of(s, "dagger", "npc_merchant")).is_equal(1)

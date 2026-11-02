@@ -480,11 +480,6 @@ static func tier_by_id(data: Dictionary, id: String) -> Dictionary:
 	return {}
 
 
-## The tier of a margin (the total minus the DC): the last one whose `from` is reached.
-static func tier_for(data: Dictionary, margin: int) -> Dictionary:
-	return Activity.step(cfg(data)["quality"], margin)
-
-
 ## The check at the end of the work and the thing it makes. Lines.
 static func finish(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character

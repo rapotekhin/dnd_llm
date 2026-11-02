@@ -104,15 +104,6 @@ func site_rooms(id: String) -> Array[String]:
 	return out
 
 
-## The sites of a location in the pack's order.
-func sites_in(location: String) -> Array[String]:
-	var out: Array[String] = []
-	for sid: String in world.get("sites", {}):
-		if str(world["sites"][sid].get("location_id", "")) == location:
-			out.append(sid)
-	return out
-
-
 ## Where one comes into a site: its `entry`, else its first room with a way out of it, else its first room.
 func site_entry(id: String) -> String:
 	var rooms := site_rooms(id)
@@ -170,6 +161,11 @@ func npc(id: String) -> Dictionary:
 ## The one name of an NPC, a pack's or a made one (v0.8.4.16); its id when the world does not know it.
 func npc_name(id: String) -> String:
 	return str(npc(id).get("name", id))
+
+
+## The name of a location by its id (the id when there is none).
+static func location_name(data: Dictionary, id: String) -> String:
+	return str(data["world"]["locations"].get(id, {}).get("name", id))
 
 
 static func name_of(data: Dictionary, id: String) -> String:

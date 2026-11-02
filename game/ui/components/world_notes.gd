@@ -411,7 +411,7 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 			var months: Array[String] = []
 			for m: Dictionary in CalendarRules.cal(w.world)["months"]:
 				months.append("%s — %s, %d %s" % [m["name"], CalendarRules.cal(w.world).get("seasons", {}).get(str(m.get("season", "")), ""),
-					int(m["days"]), CalendarRules._plural(int(m["days"]))])
+					int(m["days"]), CalendarRules.days_noun(int(m["days"]))])
 			out.append({"title": tr("JOURNAL_MONTHS"), "lines": months, "folded": true})
 	return out
 

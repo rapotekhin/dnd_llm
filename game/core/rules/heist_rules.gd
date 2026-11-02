@@ -131,14 +131,6 @@ static func path(s: GameSession, data: Dictionary, id: String) -> Array[Dictiona
 # --- taking -------------------------------------------------------------------------------------------------------
 
 
-static func take_why(s: GameSession, data: Dictionary, id: String) -> String:
-	if def(s, data, id).is_empty():
-		return "HEIST_NONE"
-	if not status(s.character, id).is_empty():
-		return "HEIST_TAKEN"
-	return ""
-
-
 ## The job is the hero's; a smuggler gets the cargo. Lines.
 static func take(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var d := def(s, data, id)

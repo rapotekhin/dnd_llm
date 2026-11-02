@@ -18,14 +18,16 @@ func test_a_stolen_weapon_leaves_the_hands() -> void:
 			mace = e
 	assert_dict(mace).is_not_empty()
 	TheftRules.steal(s, data, "npc_smith", str(mace["id"]), true)
-	assert_array(TheftRules.lost_weapons(s, data, "npc_smith")).contains(["mace"])
+	assert_bool(Being.view(s, "npc_smith").get("disarmed", {}).has("mace")).is_true()
 	TestUtils.fight(s, data, [{"monster": "thug", "npc_id": "npc_smith", "name": "Гуннар"}], {})
 	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var names: Array = Sheet.template(data, f)["actions"].map(func(a: Dictionary) -> String: return str(a["name"]))
 	assert_bool(names.has("Булава")).is_false()
 	assert_bool(names.has("Безоружный удар") or names.has("Тяжёлый арбалет")).is_true()
+	CombatRules.close(s)  # in a fight its things are the fighter's; the record buys a new one after
 	s.day += int(data["rules"]["theft"]["rearm_days"])
-	assert_array(TheftRules.lost_weapons(s, data, "npc_smith")).is_empty()  # a new one bought
+	assert_int(int(Gear.of(s, data, "npc_smith")["inventory"].get("mace", 0))).is_greater(0)  # a new one bought
+	assert_bool(Being.view(s, "npc_smith").get("disarmed", {}).has("mace")).is_false()
 
 
 func test_the_wares_lie_in_the_shop() -> void:

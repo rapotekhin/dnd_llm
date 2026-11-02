@@ -112,16 +112,6 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 	return lines
 
 
-## The weapons stolen from an NPC it has not replaced yet (rules.theft.rearm_days): their catalog names.
-static func lost_weapons(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
-	var out: Array[String] = []
-	var gone: Dictionary = Being.view(s, npc_id).get("disarmed", {})
-	for id: String in gone:
-		if s.day - int(gone[id]) < int(cfg(data).get("rearm_days", 3)):
-			out.append(id)
-	return out
-
-
 ## An action says which thing it is struck with (`item`, tools/srd_import.py).
 static func without(actions: Array, lost: Array[String]) -> Array:
 	if lost.is_empty():

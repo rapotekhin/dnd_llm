@@ -139,8 +139,8 @@ static func _carrier(s: GameSession, data: Dictionary, spell_id: String, sp: Dic
 
 ## Its load falls to the hero.
 static func _end_carrier(s: GameSession, data: Dictionary, cr: Dictionary) -> void:
-	MountRules._unload(s, data, cr)
-	PropertyRules._remove_creature(s, str(cr["id"]))
+	MountRules.unload(s, data, cr)
+	PropertyRules.remove_creature(s, str(cr["id"]))
 
 
 ## Lets a summoned creature go («Отпустить»). "" or a localization key.
@@ -216,7 +216,7 @@ static func after_fight(s: GameSession) -> Array[String]:
 				lines.append("%s приходит в себя" % f["name"])
 			elif not cr.is_empty():
 				lines.append("%s погиб в бою" % cr["name"])
-				PropertyRules._remove_creature(s, str(f["creature_id"]))
+				PropertyRules.remove_creature(s, str(f["creature_id"]))
 		else:
 			if str(f.get("status")) == "down":
 				lines.append("%s приходит в себя" % f["name"])

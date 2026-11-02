@@ -40,10 +40,6 @@ static func _loc(data: Dictionary, room_id: String) -> String:
 	return WorldView.new(data["world"]).location_id(room_id)
 
 
-static func _loc_name(data: Dictionary, loc: String) -> String:
-	return str(data["world"]["locations"].get(loc, {}).get("name", loc))
-
-
 ## The locations a step of the map away from each other: a room's exit into a room of another location.
 static func roads(data: Dictionary) -> Dictionary:
 	var out := {}
@@ -229,7 +225,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 			r["landed"].append(loc)
 			var got := _land(s, data, r, loc)
 			if loc == here and not got.is_empty():
-				lines.append("%s: дошёл слух — %s" % [_loc_name(data, loc), r["text"]])
+				lines.append("%s: дошёл слух — %s" % [WorldView.location_name(data, loc), r["text"]])
 				lines.append_array(got)
 	return lines
 
@@ -352,7 +348,7 @@ static func groups(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 		var r := get_rumor(s, str(id))
 		if r.is_empty():
 			continue
-		var at := " (день %d, %s)" % [int(r["day"]), _loc_name(data, str(r["origin"]))] if int(r["day"]) > 0 else ""
+		var at := " (день %d, %s)" % [int(r["day"]), WorldView.location_name(data, str(r["origin"]))] if int(r["day"]) > 0 else ""
 		if st["checked"].has(str(id)):
 			done.append("%s %s" % ["✓" if bool(st["checked"][str(id)]) else "✗", r["text"]])
 		elif not alive(s, r):

@@ -243,16 +243,7 @@ static func mute(s: GameSession, data: Dictionary, enemies: Array) -> bool:
 
 ## The parley DC of the fight for foes not fighting yet (CombatRules.parley_dc without the wounds).
 static func parley_dc(data: Dictionary, enemies: Array, hard: bool) -> int:
-	var p: Dictionary = CombatRules.cfg(data)["parley"]
-	var wis := -5
-	var cr := 0.0
-	for e: Dictionary in enemies:
-		var m := Sheet.template(data, e)
-		if int(m.get("abilities", {}).get("int", 1)) >= int(CombatRules.cfg(data)["intelligent_int"]):
-			wis = maxi(wis, int(m.get("saves", {}).get("wis", CharacterRules.mod(int(m.get("abilities", {}).get("wis", 10))))))
-			cr = maxf(cr, float(m.get("cr", 0)))
-	var dc := int(p["base_dc"]) + wis + int(p.get("per_cr", 0)) * int(floor(cr)) + (int(p.get("hard", 0)) if hard else 0)
-	return maxi(int(p["min_dc"]), dc)
+	return CombatRules.parley_dc_of(data, enemies, 0, hard)
 
 
 ## A roll of the hero's skill against `dc` (the game's difficulty counts). {total, ok, line}.

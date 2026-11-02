@@ -25,18 +25,6 @@ func open() -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
 ## A button of an act: disabled with the reason in its tooltip.
 func _act(parent: Control, node_name: String, text: String, what: String, why: String, arg: String = "", tip: String = "") -> Button:
 	var b := Button.new()
@@ -62,13 +50,13 @@ func _rebuild() -> void:
 	var c := s.character
 	var sh := FaithRules.shrine(s, data, s.room_id)
 	if sh.is_empty():
-		_label(_box, tr("FAITH_NO_SHRINE"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("FAITH_NO_SHRINE"), UiTheme.MUTED_LABEL)
 		return
 	var gid := str(sh["god"])
 	var g := FaithRules.god(s, data, gid)
 	var cfg := FaithRules.cfg(data)
-	_label(_box, "%s — %s" % [str(sh.get("name", "")).capitalize(), FaithRules.god_name(s, data, gid, true)]).name = "FaithShrine"
-	_label(_box, tr("FAITH_GOD_TEXT").format({"text": g.get("text", ""), "domains": ", ".join(g.get("domains", [])), "law": g.get("commandment", "")}), UiTheme.MUTED_LABEL)
+	UiParts.label(_box, "%s — %s" % [str(sh.get("name", "")).capitalize(), FaithRules.god_name(s, data, gid, true)]).name = "FaithShrine"
+	UiParts.label(_box, tr("FAITH_GOD_TEXT").format({"text": g.get("text", ""), "domains": ", ".join(g.get("domains", [])), "law": g.get("commandment", "")}), UiTheme.MUTED_LABEL)
 	var mine := FaithRules.hero_god(c)
 	var st := FaithRules.step_of(c, data, gid)
 	var standing := tr("FAITH_STANDING").format({"step": st.get("name", ""), "favor": FaithRules.favor(c, gid)})
@@ -76,10 +64,10 @@ func _rebuild() -> void:
 		standing = tr("FAITH_NO_GOD") + " " + standing
 	elif mine != gid:
 		standing = tr("FAITH_OTHER_GOD").format({"god": FaithRules.god_name(s, data, mine)}) + " " + standing
-	_label(_box, standing).name = "FaithStanding"
+	UiParts.label(_box, standing).name = "FaithStanding"
 	var fest := FaithRules.festival(s, data, gid)
 	if not fest.is_empty():
-		_label(_box, tr("FAITH_FESTIVAL").format({"name": fest}), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("FAITH_FESTIVAL").format({"name": fest}), UiTheme.MUTED_LABEL)
 
 	var acts := HFlowContainer.new()
 	acts.name = "FaithActs"
@@ -110,19 +98,19 @@ func _rebuild() -> void:
 			if bool(x.get("shelter", false)):
 				gives.append(tr("FAITH_GIVES_SHELTER"))
 			steps.append("%d — %s: %s" % [int(x["at"]), x["name"], ", ".join(gives)])
-	_label(_box, tr("FAITH_STEPS").format({"steps": "; ".join(steps)}), UiTheme.MUTED_LABEL)
+	UiParts.label(_box, tr("FAITH_STEPS").format({"steps": "; ".join(steps)}), UiTheme.MUTED_LABEL)
 
-	_label(_box, tr("FAITH_VOWS").format({"n": int(cfg["vows_max"])}))
+	UiParts.label(_box, tr("FAITH_VOWS").format({"n": int(cfg["vows_max"])}))
 	for id: String in cfg["vows"]:
 		var v: Dictionary = cfg["vows"][id]
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
 		_box.add_child(row)
-		_label(row, "%s — %s" % [v["name"], v.get("text", "")])
+		UiParts.label(row, "%s — %s" % [v["name"], v.get("text", "")])
 		var have: Array = FaithRules.vows(c).filter(func(x: Dictionary) -> bool: return str(x["id"]) == id)
 		if not have.is_empty():
 			var state := tr("FAITH_VOW_BROKEN") if int((have[0] as Dictionary).get("broken", -1)) >= 0 else tr("FAITH_VOW_KEPT")
-			var l := _label(row, state, UiTheme.MUTED_LABEL)
+			var l := UiParts.label(row, state, UiTheme.MUTED_LABEL)
 			l.size_flags_horizontal = Control.SIZE_FILL
 			l.autowrap_mode = TextServer.AUTOWRAP_OFF
 			l.custom_minimum_size = Vector2(120, 0)

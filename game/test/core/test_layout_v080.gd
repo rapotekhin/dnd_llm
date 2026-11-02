@@ -171,20 +171,6 @@ func test_a_map_differs_by_the_games_seed() -> void:
 	assert_bool(a == b).is_false()
 
 
-func test_what_was_touched_stays_until_a_long_rest() -> void:
-	var s := _session()
-	var id := LayoutRules.map_id(s, data, "brod-tavern-hall")
-	var before_rows: Array = LayoutRules.map_of(s, data, "brod-tavern-hall")["rows"]
-	LayoutRules.tick(s, data)
-	LayoutRules.touch(s, id, 1, 1, {"cell": "^", "why": "пепелище"})
-	assert_str(str(LayoutRules.map_of(s, data, "brod-tavern-hall")["rows"][1][1])).is_equal("^")
-	LayoutRules.tick(s, data)
-	assert_str(str(LayoutRules.map_of(s, data, "brod-tavern-hall")["rows"][1][1])).is_equal("^")
-	s.rested_at += 1000
-	LayoutRules.tick(s, data)
-	assert_array(LayoutRules.map_of(s, data, "brod-tavern-hall")["rows"]).is_equal(before_rows)
-
-
 func _rng_asks(n: int, game_seed: int) -> Array[Dictionary]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = game_seed
@@ -318,7 +304,7 @@ func test_a_building_on_a_full_square_stands_on_a_new_street() -> void:
 	var map := LayoutRules.map_of(s, game, lane)
 	_sound(map, "the new street")
 	assert_int((map["exits"] as Array).size()).is_equal(2)
-	assert_array(WorldView.new(LayoutRules.world(s, game)).exits("brod-square")).contains([lane])
+	assert_array(WorldView.new(game["world"]).exits("brod-square")).contains([lane])
 
 
 func test_a_full_square_offers_no_edge_and_takes_no_way() -> void:
@@ -508,7 +494,7 @@ func test_the_master_joins_a_room_to_a_building_by_words() -> void:
 	var p := WorldGen.plan_place(s, game, _spec({"extend": true}), true)
 	assert_bool(p.has("plan")).override_failure_message(str(p)).is_true()
 	var first := WorldGen.apply_place(s, game, p["plan"])
-	var room: Dictionary = WorldView.new(LayoutRules.world(s, game)).room(first)
+	var room: Dictionary = WorldView.new(game["world"]).room(first)
 	assert_str(str(room["site_id"])).is_equal("brod-tavern")
 	assert_str(str(room["layout"]["size"])).is_equal("small")
 	var map := LayoutRules.map_of(s, game, first)
@@ -529,7 +515,6 @@ func test_a_full_building_refuses_the_masters_room_with_a_reason() -> void:
 func test_a_saved_map_comes_back_the_same() -> void:
 	var s := _session()
 	LayoutRules.map_of(s, data, "brod-tavern-hall")
-	LayoutRules.touch(s, "brod-tavern-hall", 3, 4, {"door": "broken", "hp": 2})
 	s.layouts["rested"] = 480
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(5))))
 	assert_str(JSON.stringify(back.layouts)).is_equal(JSON.stringify(s.layouts))

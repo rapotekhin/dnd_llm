@@ -171,10 +171,10 @@ static func sync(s: GameSession, world: Dictionary) -> Array[String]:
 
 ## «ещё 2 дня» / «последний день».
 static func days_word(left: int) -> String:
-	return "последний день" if left <= 1 else "ещё %d %s" % [left, _plural(left)]
+	return "последний день" if left <= 1 else "ещё %d %s" % [left, days_noun(left)]
 
 
-static func _plural(n: int) -> String:
+static func days_noun(n: int) -> String:
 	var m := n % 100
 	if m >= 11 and m <= 14:
 		return "дней"
@@ -213,7 +213,7 @@ static func upcoming(s: GameSession, data: Dictionary, world: Dictionary, near: 
 
 ## A line of a festival for the panel, the journal and the master: «Ярмарка (Ольховый Брод) — через 5 дней, 8 Жатвеня».
 static func line(world: Dictionary, e: Dictionary, with_text: bool = false) -> String:
-	var when := ("идёт, " + days_word(int(e["left"]))) if bool(e["on"]) else "через %d %s, %s" % [int(e["in"]), _plural(int(e["in"])), text(world, int(e["day"]))]
+	var when := ("идёт, " + days_word(int(e["left"]))) if bool(e["on"]) else "через %d %s, %s" % [int(e["in"]), days_noun(int(e["in"])), text(world, int(e["day"]))]
 	return "%s (%s) — %s%s" % [e["name"], e["where"], when, (": " + str(e["text"])) if with_text and not str(e["text"]).is_empty() else ""]
 
 
@@ -314,7 +314,7 @@ static func plan_festival(s: GameSession, data: Dictionary, e: Dictionary) -> Di
 		if str(f["location"]) == loc and int(f["start_day"]) + int(f["days"]) > s.day:
 			return {"reason": "в %s уже назначен праздник мастера «%s» — один за раз" % [world["locations"][loc].get("name", loc), f["name"]]}
 	var f := {"name": name.left(40), "location": loc, "start_day": start, "days": days, "trade": trade, "cause": cause.left(120)}  # not `text`: a plan with text is a note
-	return {"plan": f, "summary": "Праздник «%s» — %s" % [f["name"], "сегодня" if ahead == 0 else "через %d %s" % [ahead, _plural(ahead)]]}
+	return {"plan": f, "summary": "Праздник «%s» — %s" % [f["name"], "сегодня" if ahead == 0 else "через %d %s" % [ahead, days_noun(ahead)]]}
 
 
 static func apply_festival(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
@@ -325,6 +325,6 @@ static func apply_festival(s: GameSession, data: Dictionary, plan: Dictionary) -
 	made[id] = plan.duplicate(true)
 	made[id]["text"] = made[id]["cause"]
 	var world: Dictionary = data["world"]
-	var lines: Array[String] = ["Праздник «%s»: %s, %d %s" % [plan["name"], "сегодня" if int(plan["start_day"]) == s.day else text(world, int(plan["start_day"])), int(plan["days"]), _plural(int(plan["days"]))]]
+	var lines: Array[String] = ["Праздник «%s»: %s, %d %s" % [plan["name"], "сегодня" if int(plan["start_day"]) == s.day else text(world, int(plan["start_day"])), int(plan["days"]), days_noun(int(plan["days"]))]]
 	lines.append_array(sync(s, world))
 	return lines

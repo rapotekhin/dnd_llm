@@ -23,18 +23,6 @@ func open() -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
 func _act(parent: Control, node_name: String, text: String, why: String, what: String, id: String, arg: String = "") -> Button:
 	var b := Button.new()
 	b.name = node_name
@@ -59,27 +47,27 @@ func _rebuild() -> void:
 	var data := Catalog.data
 	var list := HeistRules.followed(s, data)  # v0.7.39.3: done jobs stay while the loot is unsold or the cut owed
 	if list.is_empty():
-		_label(_box, tr("HEIST_NONE_ACTIVE"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("HEIST_NONE_ACTIVE"), UiTheme.MUTED_LABEL)
 		return
 	for id: String in list:
 		var d := HeistRules.def(s, data, id)
 		var k := HeistRules.kind(data, str(d["kind"]))
 		if _box.get_child_count() > 0:
 			_box.add_child(HSeparator.new())
-		_label(_box, "«%s» — %s" % [d["name"], k["name"]]).theme_type_variation = UiTheme.ACCENT_LABEL
+		UiParts.label(_box, "«%s» — %s" % [d["name"], k["name"]]).theme_type_variation = UiTheme.ACCENT_LABEL
 		if not HeistRules.victim_name(s, data, id).is_empty():
-			_label(_box, tr("HEIST_VICTIM").format({"name": HeistRules.victim_name(s, data, id)}), UiTheme.MUTED_LABEL)
+			UiParts.label(_box, tr("HEIST_VICTIM").format({"name": HeistRules.victim_name(s, data, id)}), UiTheme.MUTED_LABEL)
 		var n := 0
 		for p: Dictionary in HeistRules.path(s, data, id):  # v0.7.39.3: the job as numbered steps
 			n += 1
 			var st := str(p["state"])
 			var mark: String = {"done": "✓", "now": "→", "failed": "✗"}.get(st, "%d." % n)
-			var t := _label(_box, "%s %s" % [mark, p["title"]], "" if st in ["now", "todo"] else UiTheme.MUTED_LABEL)
+			var t := UiParts.label(_box, "%s %s" % [mark, p["title"]], "" if st in ["now", "todo"] else UiTheme.MUTED_LABEL)
 			t.name = "HeistStep_%s_%d" % [id, n]
 			if st == "now":
 				t.add_theme_color_override("font_color", UiTheme.ACCENT)
 			if not str(p["text"]).is_empty():
-				_label(_box, str(p["text"]), UiTheme.MUTED_LABEL)
+				UiParts.label(_box, str(p["text"]), UiTheme.MUTED_LABEL)
 		if HeistRules.status(s.character, id) != "active":
 			continue
 		for st: Dictionary in HeistRules.steps(s, data, id):

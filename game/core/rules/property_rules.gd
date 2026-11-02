@@ -315,7 +315,7 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int) -> Dict
 	for h: Dictionary in staff(s, id).duplicate():
 		if bool(h.get("serf", false)) and s.rng.randf() < float(cf["serfs"]["escape_chance_day"]):
 			lines.append("%s сбежал из %s" % [hand_name(s, data, h), name_of(s, data, id)])
-			_remove_creature(s, str(h["cid"]))
+			remove_creature(s, str(h["cid"]))
 			(st["staff"] as Array).erase(h)
 	if lapsed(s, id, day):  # a rented object past its term: the hands go, nothing works
 		for h: Dictionary in staff(s, id).duplicate():
@@ -665,7 +665,7 @@ static func _creature(s: GameSession, cid: String) -> Dictionary:
 	return Being.view(s, cid).get("creature", {})
 
 
-static func _remove_creature(s: GameSession, cid: String) -> void:
+static func remove_creature(s: GameSession, cid: String) -> void:
 	if not _creature(s, cid).is_empty():
 		CreatureRules.remove(s, _creature(s, cid))
 
@@ -1019,7 +1019,7 @@ static func _animals(s: GameSession, data: Dictionary) -> Array[String]:
 				st["stock"] = stock
 		if int(cr.get("hungry", 0)) >= PetRules.starve_days(data, cr):  # v0.7.43: a close pet bears longer
 			lines.append("%s убежал — его не кормили" % cr["name"])
-			_remove_creature(s, str(cr["id"]))
+			remove_creature(s, str(cr["id"]))
 	return lines
 
 

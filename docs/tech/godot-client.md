@@ -190,6 +190,12 @@ game/
 - **Теги и крыша комнаты** — `SceneRules.tags`, `SceneRules.indoor`: вариант, сама комната, места выше.
 - **Монеты героя** — `Ledger.balance`, доля — `Price.share`.
 
+Интерфейс (v0.8.4.19):
+
+- **Кнопка окна** — строка `[why, do]` в `GameState._act`. Работа со временем идёт через `_waited` (прерывает патруль), строки без хода мастера — через `_quiet_lines`.
+- **Части окна** — `UiParts.label(parent, text, variation)`, `heading`, `act_button(parent, name, text, why, action)`, `hp_bar`. Цвет полосы — `UiTheme.hp_color`, очистка тела — `ModalFrame.clear_body()`.
+- **Лимит спутников** — `FollowRules.room_why`, порог переговоров — `CombatRules.parley_dc_of`.
+
 ## Фундамент правил (v0.7.60)
 
 Пять записей, через которые идут все системы ([ADR-0012](adr/0012-unified-models.md)). Копий рядом не заводим: страж в `test_foundation_v0760.gd` не пускает `randi_range(1, 20)` и прямую запись `gold_cp` мимо них.

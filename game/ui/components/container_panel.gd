@@ -25,17 +25,6 @@ func open(prop: String) -> void:
 	_rebuild()
 
 
-func _label(text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	return l
-
-
 func _row_button(row: HBoxContainer, node_name: String, text: String, enabled: bool, action: Callable) -> Button:
 	var b := Button.new()
 	b.name = node_name
@@ -53,9 +42,7 @@ func _row_button(row: HBoxContainer, node_name: String, text: String, enabled: b
 func _rebuild() -> void:
 	if not visible or not GameState.has_session() or prop_id.is_empty():
 		return
-	for c in _box.get_children():
-		_box.remove_child(c)
-		c.queue_free()
+	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	var p := ContainerRules.target(s, data, prop_id)  # a thing of the room or a bag of the hero (v0.7.18.2)
@@ -71,7 +58,7 @@ func _rebuild() -> void:
 	var meta := tr("CONTAINER_LOAD").format({"w": _num(ContainerRules.weight(data, s.items, contents)), "cap": _num(cap)})
 	if not owner.is_empty():
 		meta += " · " + tr("CONTAINER_OWNER").format({"name": GameState.world().npc(owner).get("name", owner)})
-	_box.add_child(_label(meta, UiTheme.MUTED_LABEL))
+	_box.add_child(UiParts.label(null, meta, UiTheme.MUTED_LABEL))
 	if is_bag:  # leave it here with what is in it
 		var drop_row := HBoxContainer.new()
 		_box.add_child(drop_row)
@@ -79,7 +66,7 @@ func _rebuild() -> void:
 			visible = false
 			return GameState.drop_item(prop_id))
 	if bool(p.get("locked", false)):
-		_box.add_child(_label(tr("CONTAINER_LOCKED")))
+		_box.add_child(UiParts.label(null, tr("CONTAINER_LOCKED")))
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		_box.add_child(row)
@@ -96,22 +83,22 @@ func _rebuild() -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	_box.add_child(head)
-	head.add_child(_label(tr("CONTAINER_INSIDE"), UiTheme.MUTED_LABEL))
+	head.add_child(UiParts.label(null, tr("CONTAINER_INSIDE"), UiTheme.MUTED_LABEL))
 	if contents.is_empty():
-		_box.add_child(_label(tr("CONTAINER_EMPTY"), UiTheme.MUTED_LABEL))
+		_box.add_child(UiParts.label(null, tr("CONTAINER_EMPTY"), UiTheme.MUTED_LABEL))
 	else:  # v0.7.49.4: everything at once
 		_row_button(head, "TakeAll", tr("BTN_TAKE_ALL_CONTAINER"), can_act, func() -> String: return GameState.container_take_all(prop_id))
 	for id: String in contents:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		_box.add_child(row)
-		row.add_child(_label("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), int(contents[id])]))
+		row.add_child(UiParts.label(null, "%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), int(contents[id])]))
 		var iid := id
 		_row_button(row, "TakeOut_" + id, tr("BTN_TAKE_OUT"), can_act, func() -> String: return GameState.container_move(prop_id, iid, 1, true))
 		if int(contents[id]) > 1:  # the whole stack (v0.7.49.4)
 			var n := int(contents[id])
 			_row_button(row, "TakeStack_" + id, tr("BTN_TAKE_STACK"), can_act, func() -> String: return GameState.container_move(prop_id, iid, n, true))
-	_box.add_child(_label(tr("CONTAINER_YOURS"), UiTheme.MUTED_LABEL))
+	_box.add_child(UiParts.label(null, tr("CONTAINER_YOURS"), UiTheme.MUTED_LABEL))
 	for id: String in s.character.get("inventory", {}):
 		var free := TradeRules.sellable(s, id, data)
 		if is_bag and id == str(p["kind"]):
@@ -121,7 +108,7 @@ func _rebuild() -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		_box.add_child(row)
-		row.add_child(_label("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), free]))
+		row.add_child(UiParts.label(null, "%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), free]))
 		var iid := id
 		_row_button(row, "PutIn_" + id, tr("BTN_PUT_IN"), can_act, func() -> String: return GameState.container_move(prop_id, iid, 1, false))
 

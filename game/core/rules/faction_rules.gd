@@ -328,9 +328,9 @@ static func met(s: GameSession, data: Dictionary, known: Array = []) -> Array[Di
 static func card(s: GameSession, data: Dictionary, id: String, known: Array = []) -> Dictionary:
 	var d := def(s, data, id)
 	var people: Array[String] = []
-	for npc: String in data["world"]["npcs"]:
-		if str(data["world"]["npcs"][npc].get("faction", "")) == id and known.has(npc):
-			people.append(WorldView.name_of(data, npc))
+	for npc: Variant in Group.view(s, data, id).get("members", []):  # the living, by their faction and the org's list
+		if known.has(npc):
+			people.append(WorldView.name_of(data, str(npc)))
 	var st := step(s, data, id)
 	return {"id": id, "name": str(d.get("name", id)), "kind": str(d.get("kind", "")), "step": str(st["name"]), "step_id": str(st["id"]), "pts": points(s, data, id),
 		"description": str(d.get("description", "")), "why": s.factions.get(id, {}).get("why", []), "members": people}

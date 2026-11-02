@@ -25,18 +25,6 @@ func open(id: String) -> void:
 	_rebuild()
 
 
-func _label(parent: Control, text: String, variation: String = "") -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	parent.add_child(l)
-	return l
-
-
 func _row() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
@@ -68,18 +56,18 @@ func _rebuild() -> void:
 	var data := Catalog.data
 	var cr := CreatureRules.find(s, s.room_id, cid)
 	if cr.is_empty():
-		_label(_box, tr("PET_GONE"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("PET_GONE"), UiTheme.MUTED_LABEL)
 		return
 	var items: Dictionary = data["items"]
 	if not bool(cr.get("pet", false)):
 		title.text = tr("PET_TAME_TITLE").format({"name": cr["name"]})
 		var k := PetRules.kind(data, str(cr["monster"]))
-		_label(_box, tr("PET_WILL_GIVE").format({"what": k.get("text", "")}))
+		UiParts.label(_box, tr("PET_WILL_GIVE").format({"what": k.get("text", "")}))
 		var skill := str(PetRules.cfg(data)["skill"])
 		var b := int(Roll.odds(s, data, Sheet.HERO, {"skill": skill, "dc": PetRules.dc(data, cr)})["bonus"])
-		_label(_box, tr("PET_TAME_CHECK").format({"skill": CraftRules.tr_skill(data, skill), "bonus": "%+d" % b, "dc": PetRules.dc(data, cr)}), UiTheme.MUTED_LABEL).name = "PetTameCheck"
+		UiParts.label(_box, tr("PET_TAME_CHECK").format({"skill": CraftRules.tr_skill(data, skill), "bonus": "%+d" % b, "dc": PetRules.dc(data, cr)}), UiTheme.MUTED_LABEL).name = "PetTameCheck"
 		var eats: Array = k.get("eats", [])
-		_label(_box, tr("PET_EATS").format({"what": ", ".join(eats.map(func(t: Variant) -> String: return str(PetRules.cfg(data)["tastes"].get(str(t), {}).get("name", t))))}), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("PET_EATS").format({"what": ", ".join(eats.map(func(t: Variant) -> String: return str(PetRules.cfg(data)["tastes"].get(str(t), {}).get("name", t))))}), UiTheme.MUTED_LABEL)
 		var why := PetRules.tame_why(s, data, cid)
 		var row := _row()
 		row.alignment = BoxContainer.ALIGNMENT_END
@@ -89,7 +77,7 @@ func _rebuild() -> void:
 			_act(row, "PetTame_" + food, tr("BTN_PET_TAME_WITH").format({"food": ItemRules.display_name(items, s.items, food)}), why, "tame", func() -> String: return f)
 		return
 	title.text = tr("PET_TITLE")
-	_label(_box, PetRules.text(data, cr)).name = "PetInfo"
+	UiParts.label(_box, PetRules.text(data, cr)).name = "PetInfo"
 	var name_row := _row()
 	var edit := LineEdit.new()
 	edit.name = "PetName"
@@ -100,7 +88,7 @@ func _rebuild() -> void:
 	_act(name_row, "PetRename", tr("BTN_PET_RENAME"), "", "rename", func() -> String: return edit.text)
 	var foods := PetRules.foods(s, data, str(cr["monster"]))
 	if foods.is_empty():
-		_label(_box, tr("PET_NO_FOOD"), UiTheme.MUTED_LABEL).name = "PetNoFood"
+		UiParts.label(_box, tr("PET_NO_FOOD"), UiTheme.MUTED_LABEL).name = "PetNoFood"
 	else:
 		var row := _row()
 		row.alignment = BoxContainer.ALIGNMENT_END
@@ -110,12 +98,12 @@ func _rebuild() -> void:
 				PetRules.feed_why(s, data, cid, food), "feed", func() -> String: return f)
 	if bool(PetRules.kind(data, str(cr["monster"])).get("scout", false)):
 		_box.add_child(HSeparator.new())
-		_label(_box, tr("PET_SCOUT_HINT"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("PET_SCOUT_HINT"), UiTheme.MUTED_LABEL)
 		var targets := PetRules.scout_targets(s, data)
 		if targets.is_empty():
-			_label(_box, tr("PET_SCOUT_NONE"), UiTheme.MUTED_LABEL).name = "PetScoutNone"
+			UiParts.label(_box, tr("PET_SCOUT_NONE"), UiTheme.MUTED_LABEL).name = "PetScoutNone"
 		for room: String in targets:
 			var row := _row()
-			_label(row, str(WorldView.new(data["world"]).room(room).get("name", room)))
+			UiParts.label(row, str(WorldView.new(data["world"]).room(room).get("name", room)))
 			var r := room
 			_act(row, "PetScout_" + room, tr("BTN_PET_SCOUT"), PetRules.scout_why(s, data, cid, room), "scout", func() -> String: return r)

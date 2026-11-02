@@ -470,17 +470,8 @@ func _rebuild() -> void:
 
 ## The hero's life as a bar under the line of numbers.
 func _hp_bar(c: Dictionary) -> void:
-	var bar := ProgressBar.new()
+	var bar := UiParts.hp_bar(int(c["hp"]), int(c["max_hp"]), 10.0, 2)
 	bar.name = "HeroBar"
-	bar.max_value = float(c["max_hp"])
-	bar.value = float(c["hp"])
-	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(0, 10)
-	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var share := float(c["hp"]) / maxf(1.0, float(c["max_hp"]))
-	var fill := UiTheme.OK if share > 0.5 else UiTheme.WARN if share > 0.25 else UiTheme.BAD
-	bar.add_theme_stylebox_override("fill", UiTheme.box(fill, fill, 0, 0, 2))
-	bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 2))
 	_content.add_child(bar)
 
 
@@ -1162,7 +1153,7 @@ func _door_acts(parent: Container, to: String, ways: Array[Dictionary], can_act:
 		btn.name = "DoorWay_%s%s" % [how, "_" + sp if not sp.is_empty() else ""]
 		btn.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		var ask_dc := SiteRules.ask_dc(s, Catalog.data, SiteRules.unwelcome(s, Catalog.data, to)) if how == "ask" else 0
-		btn.tooltip_text = tr("DOOR_WAY_%s_TIP" % how.to_upper()).format({"dc": dcs.get(how, ask_dc), "ac": int(mat.get("ac", 15)),
+		btn.tooltip_text = tr("DOOR_WAY_%s_TIP" % how.to_upper()).format({"dc": dcs.get(how, ask_dc), "ac": ThingRules.ac_of(mat),
 			"hp": WayRules.hp(s, Catalog.data, s.room_id, to), "max": WayRules.max_hp(Catalog.data, d)})
 	if ways.any(func(w: Dictionary) -> bool: return str(w["how"]) == "force") and not ways.any(func(w: Dictionary) -> bool: return str(w["how"]) == "pick"):
 		var pb := _flow(acts, tr("DOOR_WAY_PICK"), func() -> void: pass, false)  # v0.7.39.3: seen, grey without the tools
@@ -1217,7 +1208,7 @@ func _festival_line(s: GameSession, world: WorldView) -> void:
 		return
 	var e: Dictionary = near[0]
 	var when := tr("SIDE_FESTIVAL_ON").format({"left": CalendarRules.days_word(int(e["left"]))}) if bool(e["on"]) \
-		else tr("SIDE_FESTIVAL_IN").format({"in": int(e["in"]), "days": CalendarRules._plural(int(e["in"]))})
+		else tr("SIDE_FESTIVAL_IN").format({"in": int(e["in"]), "days": CalendarRules.days_noun(int(e["in"]))})
 	var l := _line("★ %s — %s" % [e["name"], when], not bool(e["on"]))
 	l.name = "FestivalLine"
 	if bool(e["on"]):

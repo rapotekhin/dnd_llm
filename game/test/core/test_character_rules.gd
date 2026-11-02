@@ -60,9 +60,9 @@ func test_proficiency_bonus_grows_at_level_5() -> void:
 func test_expertise_and_jack_of_all_trades() -> void:
 	var c := TestUtils.character()
 	c["expertise"] = ["perception"]
-	assert_int(CharacterRules.skill_bonus(c, data, "perception")).is_equal(1 + 4)
+	assert_int(RollParts.sum(RollParts.sheet(c, data, "skill", "perception"))).is_equal(1 + 4)
 	c["features"].append("jack_of_all_trades")
-	assert_int(CharacterRules.skill_bonus(c, data, "arcana")).is_equal(-1 + 1)
+	assert_int(RollParts.sum(RollParts.sheet(c, data, "skill", "arcana"))).is_equal(-1 + 1)
 
 
 func test_unarmored_ac_formulas() -> void:

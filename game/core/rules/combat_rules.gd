@@ -2197,21 +2197,26 @@ static func snapshot(s: GameSession, data: Dictionary) -> Dictionary:
 ## DC of a parley (v0.7.5): base + the best WIS save and per_cr × the highest CR among intelligent foes, + hard for a
 ## pack encounter marked so (finales, fanatics); easier for every foe out of the fight and every one below half HP.
 static func parley_dc(s: GameSession, data: Dictionary) -> int:
+	var foes: Array = enemies(s).map(func(id: String) -> Dictionary: return fighter(s, id))
+	return parley_dc_of(data, foes, enemies(s, false).size() - enemies(s).size(), bool(s.combat.get("parley_hard", false)))
+
+
+## The parley DC against `foes` — fighters or an encounter's foes before the fight (v0.8.4.19: one formula): the wisest
+## thinking foe and the strongest, easier by `out` beaten and the bloodied, harder for a hard parley.
+static func parley_dc_of(data: Dictionary, foes: Array, out: int, hard: bool) -> int:
 	var p: Dictionary = cfg(data)["parley"]
 	var wis := -5
 	var cr := 0.0
 	var bloodied := 0
-	for id: String in enemies(s):
-		var f := fighter(s, id)
-		if int(f.get("hp", 1)) * 2 < int(f.get("max_hp", 1)):
+	for f: Dictionary in foes:
+		if f.has("max_hp") and int(f.get("hp", 1)) * 2 < int(f["max_hp"]):
 			bloodied += 1
 		if _intelligent(data, f):
 			var m := Sheet.template(data, f)
-			wis = maxi(wis, int(m["saves"].get("wis", CharacterRules.mod(int(m["abilities"].get("wis", 10))))))
+			wis = maxi(wis, int(m.get("saves", {}).get("wis", CharacterRules.mod(int(m.get("abilities", {}).get("wis", 10))))))
 			cr = maxf(cr, float(m.get("cr", 0)))
-	var out := enemies(s, false).size() - enemies(s).size()
 	var dc := int(p["base_dc"]) + wis + int(p.get("per_cr", 0)) * int(floor(cr)) + int(p["per_defeated"]) * out + int(p.get("per_bloodied", 0)) * bloodied
-	if bool(s.combat.get("parley_hard", false)):
+	if hard:
 		dc += int(p.get("hard", 0))
 	return maxi(int(p["min_dc"]), dc)
 

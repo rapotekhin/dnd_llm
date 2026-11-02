@@ -448,7 +448,7 @@ func _fighter(f: Dictionary) -> void:
 		var share := clampf(float(f["hp"]) / float(f["most"]), 0.0, 1.0)
 		var bar := Rect2(mid + Vector2(-w / 2.0, r + 2.0), Vector2(w, maxf(3.0, t * 0.1)))
 		draw_rect(bar, UiTheme.BG)
-		draw_rect(Rect2(bar.position, Vector2(w * share, bar.size.y)), UiTheme.OK if share > 0.5 else UiTheme.WARN if share > 0.25 else UiTheme.BAD)
+		draw_rect(Rect2(bar.position, Vector2(w * share, bar.size.y)), UiTheme.hp_color(share))
 	if t >= LABEL_FROM:
 		var font := get_theme_default_font()
 		var mark := str(f["mark"])

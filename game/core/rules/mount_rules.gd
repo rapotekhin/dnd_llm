@@ -166,9 +166,9 @@ static func day(s: GameSession, data: Dictionary) -> Array[String]:
 		var room := PropertyRules.room_of(s, str(cr["id"]))
 		if cr.has("rent_day") and s.day > int(cr["rent_day"]):
 			if bool(cr.get("led", false)) and room == s.room_id:
-				_unload(s, data, cr)
+				unload(s, data, cr)
 			lines.append("%s — срок аренды вышел, животное ушло к хозяину (%s)" % [cr["name"], WorldView.name_of(data, str(cr.get("rent_from", "")))])
-			PropertyRules._remove_creature(s, str(cr["id"]))
+			PropertyRules.remove_creature(s, str(cr["id"]))
 			continue
 		if unattended(s, data, cr) and s.rng.randi_range(1, 100) <= int(cfg(data)["steal_pct_day"]):
 			var where := WorldView.new(data["world"]).room_short(room)
@@ -177,7 +177,7 @@ static func day(s: GameSession, data: Dictionary) -> Array[String]:
 				"load": ContainerRules.contents_text(data, s.items, _all_load(cr))})
 			s.character["stolen_animals"] = stolen
 			lines.append("%s больше нет — увели, пока не было присмотра (%s)" % [cr["name"], where])
-			PropertyRules._remove_creature(s, str(cr["id"]))
+			PropertyRules.remove_creature(s, str(cr["id"]))
 	return lines
 
 
@@ -190,7 +190,7 @@ static func _all_load(cr: Dictionary) -> Dictionary:
 
 
 ## The loads of a beast into the hero's hands (it is going away while he stands by).
-static func _unload(s: GameSession, data: Dictionary, cr: Dictionary) -> void:
+static func unload(s: GameSession, data: Dictionary, cr: Dictionary) -> void:
 	var load := _all_load(cr)
 	for id: String in load:
 		ItemRules.found(s.character, data, s.items, id, int(load[id]))
@@ -267,7 +267,7 @@ static func sell(s: GameSession, data: Dictionary, npc_id: String, cid: String) 
 	var cr := _beast(s, cid)
 	var price := sell_price(data, cr)
 	Ledger.add(s, price, "mount:sell")
-	PropertyRules._remove_creature(s, cid)
+	PropertyRules.remove_creature(s, cid)
 	s.remember(npc_id, "купил у героя: %s" % cr["name"])
 	return ["Продано %s: %s за %s" % [WorldView.name_of(data, npc_id), cr["name"], Money.format(price)]]
 

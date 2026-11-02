@@ -793,21 +793,6 @@ func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
 		_queue.add_child(name_l)
 
 
-## An HP bar: green, yellow, red by the share left (Б2).
-static func _hp_bar(value: int, most: int, height: float = 14.0) -> ProgressBar:
-	var bar := ProgressBar.new()
-	bar.max_value = maxi(1, most)
-	bar.value = clampi(value, 0, most)
-	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(0, height)
-	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var share := float(value) / maxf(1.0, most)
-	var col := UiTheme.OK if share > 0.5 else UiTheme.WARN if share > 0.25 else UiTheme.BAD
-	bar.add_theme_stylebox_override("fill", UiTheme.box(col, col, 0, 0, 3))
-	bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 3))
-	return bar
-
-
 func _chip(parent: Control, text: String, now: bool, dim: bool) -> void:
 	var p := PanelContainer.new()
 	p.theme_type_variation = UiTheme.CARD
@@ -890,7 +875,7 @@ func _foe_row(s: GameSession, data: Dictionary, id: String, f: Dictionary, me: b
 		conds.append(tr("COMBAT_FOE_SURPRISED"))
 	card.text = "%s\n%s" % [f["name"], tr(CombatRules.health_key(f))]
 	if str(f.get("status")) == "active":
-		var fbar := _hp_bar(int(f["hp"]), int(f["max_hp"]), 8.0)
+		var fbar := UiParts.hp_bar(int(f["hp"]), int(f["max_hp"]), 8.0)
 		fbar.name = "FoeHp"
 		card.add_child(fbar)
 		fbar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -958,7 +943,7 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 	bars.name = "HeroHp"
 	bars.add_theme_constant_override("separation", 2)
 	_portrait.add_child(bars)
-	var bar := _hp_bar(int(c["hp"]), int(c["max_hp"]))
+	var bar := UiParts.hp_bar(int(c["hp"]), int(c["max_hp"]))
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.size_flags_stretch_ratio = maxf(1.0, int(c["max_hp"]))
 	bars.add_child(bar)

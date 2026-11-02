@@ -203,11 +203,6 @@ static func joinable(c: Dictionary) -> bool:
 	return bool(c.get("kept", false)) and not bool(c.get("bound", false))
 
 
-## How many go with the hero by their own will: NPCs and the creatures beaten by words.
-static func companions(s: GameSession) -> int:
-	return Being.followers(s).size() + here(s, s.room_id).filter(func(c: Dictionary) -> bool: return bool(c.get("ally", false))).size()
-
-
 ## Helpless: knocked out or bound — finished off without a fight.
 static func helpless(c: Dictionary) -> bool:
 	return str(c.get("state", "")) == "unconscious" or bool(c.get("bound", false))
@@ -240,8 +235,6 @@ static func can(s: GameSession, id: String, what: String, data: Dictionary = {})
 		"join":
 			if not joinable(c):
 				return "CREATURE_CANNOT_JOIN"
-			if not bool(c.get("ally", false)) and not data.is_empty() and companions(s) >= int(FollowRules.cfg(data)["max"]):
-				return "CREATURE_TOO_MANY"
 		"hand_over":
 			if not bool(c.get("bound", false)) or foreign(c) or not str(c.get("npc_id", "")).is_empty():
 				return "CREATURE_NOT_YOUR_PRISONER"
