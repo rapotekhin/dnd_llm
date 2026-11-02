@@ -35,7 +35,6 @@ var now: Dictionary = {}  ## the squares seen right now: SightRules (v0.8.3)
 var cones: Dictionary = {}  ## the squares under watch while sneaking
 var fighters: Array[Dictionary] = []  ## the bodies of a fight: {"id", "mark", "name", "colour", "span", "x", "y", "hp", "most", "out", "now", "dim", "gear", "states"}
 var anim_lib: Dictionary = {}  ## data/anims.json: the art of a weapon, a shield and a state over a token (v0.8.4.23)
-var _art := {}  ## loaded textures by path
 var routes: Dictionary = {}  ## where the hero can walk this turn: FightGrid.reach
 var way: Array[Vector2i] = []  ## the path under the mouse
 var blast: Dictionary = {}  ## the squares of the area under the mouse
@@ -482,51 +481,13 @@ func _gear(f: Dictionary, mid: Vector2, r: float) -> void:
 	var g: Dictionary = f.get("gear", {})
 	if g.is_empty() or bool(f["out"]):
 		return
-	var rows: Dictionary = anim_lib.get("sprites", {})
-	var pal: Dictionary = anim_lib.get("palette", {})
-	var w := maxf(2.0, _tile * 0.07)
 	if bool(g.get("shield", false)):
 		var box := Rect2(mid + Vector2(-r * 1.25, -r * 0.6), Vector2(r * 0.32, r * 1.2))
-		if not _texture(str(rows.get("shield", {}).get("texture", "")), box):
-			draw_rect(box, Color(str(pal.get("shield", "#9a7448"))))
+		if not _texture(str(anim_lib.get("sprites", {}).get("shield", {}).get("texture", "")), box):
+			draw_rect(box, Color(str(anim_lib.get("palette", {}).get("shield", "#9a7448"))))
 			draw_rect(box, Color(0, 0, 0, 0.6), false, 1.0)
-	var sprite := str(g.get("sprite", ""))
-	if sprite.is_empty():
-		return
-	var row: Dictionary = rows.get(sprite, {})
-	var length := float(row.get("len", 0.4)) * _tile
-	var base := mid + Vector2(r * 0.85, r * 0.45)
-	var tip := base + Vector2(0.45, -1.0).normalized() * length
-	if _texture(str(row.get("texture", "")), Rect2(base - Vector2(0, length), Vector2(length * 0.4, length))):
-		return
-	var steel := Color(str(pal.get("steel", "#cfd6de")))
-	var wood := Color(str(pal.get("wood", "#8a6a42")))
-	match str(row.get("head", "")):
-		"bow":
-			draw_arc(base + (tip - base) / 2.0, length / 2.0, -PI * 0.15, PI * 0.85, 12, wood, w, true)
-		"cross":
-			draw_line(base, tip, wood, w)
-			var across := (tip - base).normalized().orthogonal() * length * 0.3
-			draw_line(tip - across, tip + across, wood, w)
-		"axe":
-			draw_line(base, tip, wood, w)
-			draw_rect(Rect2(tip - Vector2(0, length * 0.1), Vector2(length * 0.25, length * 0.25)), steel)
-		"knob":
-			draw_line(base, tip, wood, w)
-			draw_circle(tip, length * 0.14, steel)
-		"tip":
-			draw_line(base, tip, wood, w)
-			draw_line(tip, tip + (tip - base).normalized() * length * 0.18, steel, w * 1.6)
-		"curl":
-			draw_line(base, base + (tip - base) * 0.3, wood, w)
-			draw_arc(tip, length * 0.3, 0.0, PI * 1.5, 12, wood, w * 0.6, true)
-		"pouch":
-			draw_line(base, tip, wood, w * 0.5)
-			draw_circle(tip, length * 0.15, wood)
-		_:
-			draw_line(base, tip, steel, w)
-			var guard := (tip - base).normalized().orthogonal() * length * 0.18
-			draw_line(base + (tip - base) * 0.2 - guard, base + (tip - base) * 0.2 + guard, wood, w)
+	if not str(g.get("sprite", "")).is_empty():
+		AnimArt.weapon(self, anim_lib, str(g["sprite"]), mid + Vector2(r * 0.85, r * 0.45), Vector2(0.45, -1.0).angle(), _tile)
 
 
 ## The lasting states over a token: a row's texture, else a stub (the dim of one hidden is the token's own colour).
@@ -555,13 +516,10 @@ func _states(states: Array, mid: Vector2, r: float) -> void:
 
 ## Draws an author's texture into `box`; false when the row has none (the stub is drawn).
 func _texture(path: String, box: Rect2) -> bool:
-	if path.is_empty():
+	var tex := AnimArt.texture(path)
+	if tex == null:
 		return false
-	if not _art.has(path):
-		_art[path] = load(path) if ResourceLoader.exists(path) else null
-	if _art[path] == null:
-		return false
-	draw_texture_rect(_art[path], box, false)
+	draw_texture_rect(tex, box, false)
 	return true
 
 

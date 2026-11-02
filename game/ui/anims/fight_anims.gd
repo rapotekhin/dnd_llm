@@ -13,7 +13,6 @@ var lib: Dictionary = {}  ## data/anims.json
 var speed := 1.0  ## × of the phases' time; 0 — nothing is played
 var _queue: Array = []
 var _busy := false
-var _art := {}  ## texture by sprite or projectile id, loaded once
 var _scenes := {}
 var _frames := {}
 
@@ -21,12 +20,6 @@ var _frames := {}
 func setup(map_field: MapField, anims: Dictionary) -> void:
 	field = map_field
 	lib = anims
-	_art.clear()
-	for group: String in ["sprites", "projectiles"]:
-		for id: String in lib.get(group, {}):
-			var path := str(lib[group][id].get("texture", ""))
-			if not path.is_empty() and ResourceLoader.exists(path):
-				_art[id] = load(path)
 
 
 func play(events: Array) -> void:
@@ -113,7 +106,7 @@ func context(e: Dictionary, kind: String) -> Dictionary:
 		"tile": t, "colour": Color(str(palette.get(key, palette.get("magic", "#b8a6ff")))), "n": maxi(1, int(e.get("darts", 1))),
 		"result": str(e.get("result", "")) if kind != "sigil" else ("debuff" if str(e.get("dtype")) == "debuff" else "buff"),
 		"sprite": str(e.get("sprite", "")), "proj": str(e.get("proj", "")), "speed": speed, "frames": _frames_of(row),
-		"art": _art, "sprites": lib.get("sprites", {}), "projectiles": lib.get("projectiles", {}), "palette": palette, "scene": str(row.get("scene", ""))}
+		"sprites": lib.get("sprites", {}), "projectiles": lib.get("projectiles", {}), "palette": palette, "scene": str(row.get("scene", ""))}
 
 
 ## The middle of a square on the map, INF when the event has none.

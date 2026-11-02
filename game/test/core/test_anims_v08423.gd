@@ -159,6 +159,29 @@ func test_a_spell_shows_its_delivery_and_its_attack_lands_on_it() -> void:
 	assert_bool((cone[0].get("cells", []) as Array).is_empty()).is_false()
 
 
+## A foe casts on the player's road (ADR-0016): the act of the buttons and the AI leaves the same events as the hero's cast.
+func test_a_foe_casts_by_the_same_events_as_the_hero() -> void:
+	var s := TestUtils.new_session()
+	var m := _fight(s, "mage")
+	s.character["hp"] = 500
+	AnimRules.take(s)
+	var can := {}
+	for o: Dictionary in MonsterRules.castable(data, m):  # what its AI is offered
+		can[str(o["id"])] = o
+	Acts.one("cast").go(s, data, m, CombatRules.PLAYER, {"spell": "fire_bolt"}.merged(can["fire_bolt"]))
+	var bolt: Array = AnimRules.take(s).filter(func(e: Dictionary) -> bool: return str(e["act"]) == "cast")
+	assert_int(bolt.size()).is_equal(1)
+	assert_str(str(bolt[0]["by"])).is_equal(str(m["id"]))
+	assert_str(str(bolt[0]["to"])).is_equal(CombatRules.PLAYER)
+	assert_str(str(bolt[0]["anim"])).is_equal("bolt")
+	assert_bool(str(bolt[0]["result"]) in ["hit", "crit", "miss"]).is_true()
+	Acts.one("cast").go(s, data, m, CombatRules.PLAYER, {"spell": "magic_missile"}.merged(can["magic_missile"]))
+	var darts: Array = AnimRules.take(s).filter(func(e: Dictionary) -> bool: return str(e["act"]) == "cast")
+	assert_bool(darts.is_empty()).is_false()
+	assert_str(str(darts[0]["anim"])).is_equal(AnimRules.of_spell(data, "magic_missile"))
+	assert_str(str(darts[0]["by"])).is_equal(str(m["id"]))
+
+
 func test_an_act_of_the_field_by_its_row() -> void:
 	var s := TestUtils.new_session()
 	var g := _fight(s)

@@ -247,28 +247,15 @@ func _cells() -> Array[Vector2]:
 	return out
 
 
-## The weapon in the hand: its art if the row has one, else a stick of its length with a head.
+## The weapon in the hand: the token's own picture of it (AnimArt), turned as the strike goes.
 func _weapon(at: Vector2, angle: float, t: float) -> void:
-	var sprite := str(ctx.get("sprite", ""))
-	var art: Dictionary = ctx.get("art", {})
-	if art.has(sprite):
-		var tex: Texture2D = art[sprite]
-		draw_set_transform(at, angle + PI * 0.5, Vector2.ONE * t / maxf(1.0, float(tex.get_height())))
-		draw_texture(tex, -tex.get_size() / 2.0)
-		draw_set_transform(Vector2.ZERO)
-		return
-	var row: Dictionary = ctx.get("sprites", {}).get(sprite, {"len": 0.25})
-	var tip := at + Vector2.RIGHT.rotated(angle) * t * float(row.get("len", 0.25)) * 1.2
-	draw_line(at, tip, _art_colour("steel"), maxf(2.0, t * 0.07))
-	if sprite.is_empty():
-		draw_circle(tip, t * 0.11, Color(0.95, 0.8, 0.65))  # a fist
+	AnimArt.weapon(self, ctx, str(ctx.get("sprite", "")), at, angle, t)
 
 
 func _projectile(at: Vector2, dir: Vector2, t: float) -> void:
 	var proj := str(ctx.get("proj", ""))
-	var art: Dictionary = ctx.get("art", {})
-	if art.has(proj):
-		var tex: Texture2D = art[proj]
+	var tex := AnimArt.texture(str(ctx.get("projectiles", {}).get(proj, {}).get("texture", "")))
+	if tex != null:
 		draw_set_transform(at, dir.angle(), Vector2.ONE * t * 0.5 / maxf(1.0, float(tex.get_width())))
 		draw_texture(tex, -tex.get_size() / 2.0)
 		draw_set_transform(Vector2.ZERO)
