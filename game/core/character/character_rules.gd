@@ -84,17 +84,24 @@ static func save_bonus(c: Dictionary, data: Dictionary, save: String) -> int:
 	return bonus
 
 
-## Hit points by the fixed-average rule: full die at level 1, then die/2 + 1 per level; CON every level;
-## +1 per level from Dwarven Toughness or Draconic Resilience. At least 1 per level.
+## Hit points by the fixed-average rule: full die at level 1, then `hp_step` per level.
 static func max_hp(c: Dictionary, data: Dictionary) -> int:
 	var die := int(class_def(c, data).get("hit_die", 8))
-	var level := int(c.get("level", 1))
 	var con := mod(ability(c, "con"))
-	var per_level := 1 if has_trait(c, "dwarven_toughness") or has_feature(c, "draconic_resilience") else 0
-	var hp := maxi(1, die + con + per_level)
-	for i in range(1, level):
-		hp += maxi(1, die / 2 + 1 + con + per_level)
+	var hp := maxi(1, die + con + _hp_extra(c))
+	for i in range(1, int(c.get("level", 1))):
+		hp += hp_step(c, die, con)
 	return hp
+
+
+## What a level past the first adds (v0.8.4.15: one rule for the sheet, the level-up and a person who grew): die / 2 + 1
+## and CON, +1 from Dwarven Toughness or Draconic Resilience; at least 1.
+static func hp_step(c: Dictionary, die: int, con: int) -> int:
+	return maxi(1, die / 2 + 1 + con + _hp_extra(c))
+
+
+static func _hp_extra(c: Dictionary) -> int:
+	return 1 if has_trait(c, "dwarven_toughness") or has_feature(c, "draconic_resilience") else 0
 
 
 static func item_def(c: Dictionary, data: Dictionary, session_items: Dictionary, slot: String) -> Dictionary:
@@ -120,11 +127,7 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 	var shield: Dictionary = item_def(c, data, session_items, "shield").get("armor", {})
 	var ac := 10 + dex
 	if not armor.is_empty():
-		ac = armored(armor, dex)
-		for f: Variant in c.get("features", []):
-			if str(f).ends_with("fighting_style_defense"):
-				ac += 1
-				break
+		ac = armored(armor, dex) + (1 if style(c, "defense") else 0)
 	elif has_feature(c, "barbarian_unarmored_defense"):
 		ac = 10 + dex + mod(ability(c, "con"))
 	elif has_feature(c, "monk_unarmored_defense") and shield.is_empty():
@@ -133,13 +136,24 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 		ac = 13 + dex  # Armor of Shadows: mage armor at will (v0.7.10)
 	if not shield.is_empty():
 		ac += int(shield.get("base", 2))
-	# Magic (v0.6.3): +N armor and shields, carried wondrous items (Cloak of Protection).
-	ac += ItemRules.plus(item_def(c, data, session_items, "armor"), ["ac_plus", "magic_plus"])
-	ac += ItemRules.plus(item_def(c, data, session_items, "shield"), ["ac_plus", "magic_plus"])
-	ac += mini(0, CraftRules.quality_mod(item_def(c, data, session_items, "armor"))) + mini(0, CraftRules.quality_mod(item_def(c, data, session_items, "shield")))
+	return SpellEffects.armor_class(c, ac + gear_ac(c, data, session_items), armor.is_empty(), dex)  # Mage Armor, Shield of Faith, Barkskin (v0.7.13.2)
+
+
+## What its things add to the AC, anybody's (v0.8.4.15, Gear.ac too): +N armour and shields (v0.6.3), poor workmanship,
+## carried wondrous items (Cloak of Protection).
+static func gear_ac(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> int:
+	var ac := 0
+	for slot: String in ["armor", "shield"]:
+		var d := item_def(c, data, session_items, slot)
+		ac += ItemRules.plus(d, ["ac_plus", "magic_plus"]) + mini(0, CraftRules.quality_mod(d))
 	for d: Dictionary in carried(c, data, session_items):
 		ac += ItemRules.plus(d, ["ac_plus"])
-	return SpellEffects.armor_class(c, ac, armor.is_empty(), dex)  # Mage Armor, Shield of Faith, Barkskin (v0.7.13.2)
+	return ac
+
+
+## A fighting style of a class: `style` "defense", "archery", "dueling"…
+static func style(c: Dictionary, id: String) -> bool:
+	return (c.get("features", []) as Array).any(func(f: Variant) -> bool: return str(f).ends_with("fighting_style_" + id))
 
 
 ## Wondrous items that work now (v0.6.3): carried — those that need it, only when attuned (v0.7.12); a worn kind (a
@@ -160,11 +174,9 @@ static func carried(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	return out
 
 
-## What the things that work now give the hero, for the sheet (v0.7.49.4): «Очки ночного видения: тёмное зрение 60 фт»
-## — each thing with the properties rules.item_props names.
-static func item_boons(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[String]:
-	var names: Dictionary = data["rules"]["item_props"]["names"]
-	var out: Array[String] = []
+## The things that work now (v0.8.4.15: one list for the boons, the properties and the resistances): the wondrous
+## ones carried or worn (`carried`) and the gear in the other slots, attuned when they need it.
+static func working(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[Dictionary]:
 	var defs := carried(c, data, session_items)
 	for slot: String in SLOTS:
 		var id := str(c.get("equipped", {}).get(slot, ""))
@@ -172,26 +184,25 @@ static func item_boons(c: Dictionary, data: Dictionary, session_items: Dictionar
 			var d := ItemRules.def_of(data["items"], session_items, id)
 			if ItemRules.active(c, d, id):
 				defs.append(d)
-	for d: Dictionary in defs:
+	return defs
+
+
+## What the things that work now give, for the sheet (v0.7.49.4): «Очки ночного видения: тёмное зрение 60 фт» — each
+## thing with the properties rules.item_props names.
+static func item_boons(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[String]:
+	var names: Dictionary = data["rules"]["item_props"]["names"]
+	var out: Array[String] = []
+	for d: Dictionary in working(c, data, session_items):
 		var what: Array = (d.get("properties", []) as Array).filter(func(p: Variant) -> bool: return names.has(str(p))).map(func(p: Variant) -> String: return str(names[str(p)]))
 		if not what.is_empty():
 			out.append("%s: %s" % [d.get("name", ""), ", ".join(what)])
 	return out
 
 
-## Properties of the things that work now: carried wondrous items and the equipped gear (v0.7.12).
+## Properties of the things that work now (v0.7.12): the hero's sheet caches them in `item_props`, anybody's are Sheet.props.
 static func active_props(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array:
 	var out: Array = []
-	var defs := carried(c, data, session_items)
-	for slot: String in SLOTS:
-		if WEAR_SLOTS.has(slot):
-			continue  # already in carried()
-		var id := str(c.get("equipped", {}).get(slot, ""))
-		if not id.is_empty():
-			var d := ItemRules.def_of(data["items"], session_items, id)
-			if ItemRules.active(c, d, id):
-				defs.append(d)
-	for d: Dictionary in defs:
+	for d: Dictionary in working(c, data, session_items):
 		for p: Variant in d.get("properties", []):
 			if not out.has(str(p)):
 				out.append(str(p))

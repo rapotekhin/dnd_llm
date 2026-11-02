@@ -22,8 +22,7 @@ static func dark_sight(s: GameSession, data: Dictionary, who: Dictionary = Sheet
 		return int(cfg(data)["devils_sight"])
 	var own := int(Sheet.template(data, who).get("darkvision", 0)) / int(FightGrid.cfg(data)["ft"])
 	var h := Sheet.holder(s, who)
-	var props := CharacterRules.item_prop(h, "darkvision") if Sheet.is_hero(who) else CharacterRules.active_props(_things(s, data, who), data, s.items).has("darkvision")
-	if Sheet.has_trait(s, data, who, "darkvision") or props or _spell(h, "darkvision"):
+	if Sheet.has_trait(s, data, who, "darkvision") or Sheet.prop(s, data, who, "darkvision") or _spell(h, "darkvision"):
 		return maxi(own, int(cfg(data)["darkvision"]))
 	return own
 
@@ -32,23 +31,10 @@ static func dark_sight(s: GameSession, data: Dictionary, who: Dictionary = Sheet
 static func light(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
 	var lights: Dictionary = cfg(data)["lights"]
 	var best := int(lights["light"]) if _spell(Sheet.holder(s, who), "light") else 0
-	for id: String in _things(s, data, who).get("inventory", {}):
+	for id: String in Sheet.things(s, data, who).get("inventory", {}):
 		if (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source"):
 			best = maxi(best, int(lights.get(id, lights["light"])))
 	return best
-
-
-## What it has on it in the hero's form: the hero's sheet, a fighter's own things, a record's, else its template's gear.
-## Nothing is filled: a look does not roll a person's pockets.
-static func _things(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
-	if Sheet.is_hero(who):
-		return s.character
-	if who.has("inventory"):
-		return who
-	var id := str(who.get("npc_id", who.get("id", "")))
-	if Being.view(s, id).has("inventory"):
-		return Being.view(s, id)
-	return Gear.start(data, Sheet.template_id(data, who))
 
 
 static func _spell(h: Dictionary, key: String) -> bool:

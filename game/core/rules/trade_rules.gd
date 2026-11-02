@@ -630,7 +630,7 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 			for slot: String in eq:
 				if str(eq[slot]) == weapon and slot_of.is_empty():
 					slot_of = slot
-			ItemRules._remove_one(c, weapon)
+			ItemRules.remove(c, weapon)
 			if not slot_of.is_empty():
 				eq[slot_of] = new_id
 			lines.append("%s: %s" % [sv.get("done", "готово"), def["name"]])

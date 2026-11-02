@@ -12,11 +12,17 @@ static func is_hero(who: Dictionary) -> bool:
 	return str(who.get("id")) == Being.HERO
 
 
-## The id of its SRD template; "" for the hero.
+## The id of its SRD template; "" for the hero. A fighter's or a look's own, a creature's of its part, a person's of the
+## pack, else the default person.
 static func template_id(data: Dictionary, who: Dictionary) -> String:
 	if is_hero(who):
 		return ""
-	return str(Guise.body(who).get("monster", who.get("monster", CombatRules.cfg(data)["default_npc_monster"])))
+	var m := str(Guise.body(who).get("monster", who.get("monster", "")))
+	if m.is_empty():
+		m = str((who.get("creature", {}) as Dictionary).get("monster", ""))
+	if m.is_empty():
+		m = str(data["world"].get("npcs", {}).get(str(who.get("npc_id", who.get("id", ""))), {}).get("monster", ""))
+	return m if not m.is_empty() else str(CombatRules.cfg(data)["default_npc_monster"])
 
 
 ## Its SRD template, {} for the hero; a fighter that lost its weapon has only the actions left to it (v0.7.22.8).
@@ -61,9 +67,72 @@ static func who(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	return out
 
 
+## `who` of an id for writing (v0.8.4.15): the hero, its fighter in a fight, else its record knowing its id.
+static func own(s: GameSession, id: String) -> Dictionary:
+	if id == Being.HERO:
+		return HERO
+	var h := Rest.holder(s, id)
+	h["id"] = id
+	return h
+
+
+## Its hit point maximum now: the hero's sheet, a fighter's own (halved when exhaustion 4 came on it), a record's or its
+## creature's, else its template's — a record's halved at exhaustion 4 (v0.8.4.15).
+static func max_hp(s: GameSession, data: Dictionary, who: Dictionary) -> int:
+	if is_hero(who):
+		return int(s.character.get("max_hp", 1))
+	var h := holder(s, who)
+	if h.has("status"):
+		return int(h.get("max_hp", 1))
+	var top := int(h.get("max_hp", (h.get("creature", {}) as Dictionary).get("max_hp", template(data, who).get("hp", 1))))
+	return maxi(1, top / 2) if ConditionRules.exhaustion(h) >= 4 else top
+
+
 ## The one it is: the hero's sheet, or the fighter or record itself. Statuses live on this.
 static func holder(s: GameSession, who: Dictionary) -> Dictionary:
 	return s.character if is_hero(who) else who
+
+
+## What it has on it in the hero's form (v0.8.4.15): the hero's sheet, a fighter's own things, a record's, else its
+## template's gear. Nothing is filled: a look does not roll a person's pockets.
+static func things(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
+	if is_hero(who):
+		return s.character
+	if who.has("inventory"):
+		return who
+	var id := str(who.get("npc_id", who.get("id", "")))
+	if Being.view(s, id).has("inventory"):
+		return Being.view(s, id)
+	return Gear.start(data, template_id(data, who))
+
+
+## The things that work on it now: worn, held, carried, attuned when they need it (CharacterRules.working).
+static func working(s: GameSession, data: Dictionary, who: Dictionary) -> Array[Dictionary]:
+	return CharacterRules.working(things(s, data, who), data, s.items)
+
+
+## The properties its things give now: the hero's sheet keeps them, anybody else's are read off what it has.
+static func props(s: GameSession, data: Dictionary, who: Dictionary) -> Array:
+	if is_hero(who):
+		return s.character.get("item_props", [])
+	return CharacterRules.active_props(things(s, data, who), data, s.items)
+
+
+## A thing on it gives `prop` now (adamantine against a critical hit, Gloves of Missile Snaring, Periapt of Health).
+static func prop(s: GameSession, data: Dictionary, who: Dictionary, p: String) -> bool:
+	return props(s, data, who).has(p)
+
+
+## A score of an ability: the hero's with what its things raise it to, another's by its template.
+static func ability(s: GameSession, data: Dictionary, who: Dictionary, id: String) -> int:
+	if is_hero(who):
+		return CharacterRules.ability(s.character, id)
+	return int(of(s, data, who)["abilities"].get(id, 10))
+
+
+## Its proficiency bonus.
+static func prof(s: GameSession, data: Dictionary, who: Dictionary) -> int:
+	return int(of(s, data, who).get("prof_bonus", 2))
 
 
 static func skill(s: GameSession, data: Dictionary, who: Dictionary, id: String) -> int:
@@ -105,14 +174,23 @@ static func size(s: GameSession, data: Dictionary, who: Dictionary) -> String:
 	return CombatRules.hero_size(s, data) if is_hero(who) else str(template(data, who).get("size", "medium"))
 
 
-## Its way in a turn in feet now, by the fastest of `Move`; a Slow halves it.
+## Its way in a turn in feet now, by the fastest of `Move`; a Slow halves it. Anybody's as the hero's sheet counts it
+## (v0.8.4.15): Longstrider, Haste, grappled or restrained — 0, exhaustion 2 — half, 5 — 0.
 static func speed(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 	var ft := int(s.character.get("speed", 30))
+	var me := holder(s, who)
 	if is_hero(who):
 		ft -= int(CombatRules.player(s).get("slowed", 0)) if CombatRules.active(s) else 0
 	else:
-		ft = Move.feet(s, data, who) - int(who.get("slowed", 0)) + ConditionRules.sum(who, "speed")
-	return ft / 2 if ConditionRules.has(holder(s, who), "slowed_spell") else ft
+		ft = Move.feet(s, data, who) + ConditionRules.sum(who, "speed")
+		if SpellEffects.has(me, "speed_x2"):
+			ft *= 2
+		var tired := ConditionRules.exhaustion(me)
+		if tired >= 5 or ConditionRules.does(me, data, "no_move"):
+			return 0
+		ft = ft / 2 if tired >= 2 else ft
+		ft -= int(who.get("slowed", 0))
+	return ft / 2 if ConditionRules.has(me, "slowed_spell") else ft
 
 
 ## A saving throw of anyone: its bonus, the statuses, the advantages of its race, traits and spells against `tag` (the

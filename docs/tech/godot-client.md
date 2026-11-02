@@ -156,6 +156,14 @@ game/
 - **Карточка `engine.check`:** `CheckEngine.spec` переводит параметры мастера в спецификацию (уровень Сл, Сл по шаблону собеседника), `card` бросает, `preview` показывает шанс варианта.
 - **Состязание двух** — `CombatRules.contest`.
 
+Вещи и числа любого персонажа (v0.8.4.15) тоже читаются в одном месте.
+
+- **Что работает сейчас:** один список `CharacterRules.working`, с настройкой. `Sheet.things`, `Sheet.working`, `Sheet.props` и `Sheet.prop` отвечают для любого: у героя свойства лежат в кэше листа, у остальных их считают по тому, что у них есть.
+- **КД и удар по вещам:** `CharacterRules.gear_ac` — общий для героя и `Gear.ac`. Удар новым оружием NPC — это `CombatRules.weapon_profile` его листа.
+- **Убрать вещь** — `ItemRules.remove` у любого держателя.
+- **Числа:** `Sheet.max_hp`, `Sheet.speed` с истощением, `Sheet.ability`, `Sheet.prof`; `Sheet.own` — запись для изменений. Хиты за уровень — `CharacterRules.hp_step`.
+- **Реакции:** `SpellEffects.guard` и `SpellEffects.countered` — для героя и NPC.
+
 ## Фундамент правил (v0.7.60)
 
 Пять записей, через которые идут все системы ([ADR-0012](adr/0012-unified-models.md)). Копий рядом не заводим: страж в `test_foundation_v0760.gd` не пускает `randi_range(1, 20)` и прямую запись `gold_cp` мимо них.

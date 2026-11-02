@@ -33,20 +33,12 @@ static func role(data: Dictionary, f: Dictionary) -> Dictionary:
 	return cfg(data)["roles"][role_name(data, f)]
 
 
-## Who it fights: the foes of its side still in the fight. The hero lying at 0 HP is nobody's target (v0.7.9).
+## Who it fights: the foes of its side still in the fight, a hidden or invisible one too, worth half (`_worth`) — one rule
+## for both sides (v0.8.4.15). The hero lying at 0 HP is nobody's target (v0.7.9).
 static func _targets(s: GameSession, f: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	if str(f.get("side")) == "enemy":
-		if int(s.character.get("hp", 0)) > 0 and not ArenaRules.watching(s):
-			out.append(CombatRules.player(s))
-		for id: String in CombatRules.allies(s):
-			if not bool(CombatRules.fighter(s, id).get("hidden", false)):
-				out.append(CombatRules.fighter(s, id))
-		return out
-	for id: String in CombatRules.enemies(s):
-		var e := CombatRules.fighter(s, id)
-		if not bool(e.get("hidden", false)) and not CombatRules._has(e, "invisible"):
-			out.append(e)
+	for id: String in CombatRules.foes_of(s, f):
+		out.append(CombatRules.fighter(s, id))
 	return out
 
 
@@ -133,9 +125,9 @@ static func plan(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 static func _worth(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary, t: Dictionary, d: int, cover: int, w: Dictionary) -> float:
 	if bool(o.get("kindly", false)):
 		return float(o["power"])
-	var hero := str(t.get("id")) == CombatRules.PLAYER
-	var hp := float(s.character.get("hp", 1)) if hero else float(t.get("hp", 1))
-	var most := maxf(1.0, float(s.character.get("max_hp", 1)) if hero else float(t.get("max_hp", 1)))
+	var it := Sheet.holder(s, t)
+	var hp := float(it.get("hp", 1))
+	var most := maxf(1.0, float(it.get("max_hp", 1)))
 	var ac := Sheet.ac(s, t)
 	var power := float(o["power"])
 	var v := power
@@ -147,18 +139,11 @@ static func _worth(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionar
 	v *= 1.0 + float(w["focus"]) * (1.0 - hp / most)
 	if power >= hp:
 		v += float(w["finish"])
-	if hero and (bool(t.get("hidden", false)) or ConditionRules.has(s.character, "invisible")):
+	if bool(t.get("hidden", false)) or ConditionRules.has(it, "invisible"):
 		v *= 0.5
-	if float(w["pack"]) > 0.0 and _friend_beside(s, f, t):
+	if float(w["pack"]) > 0.0 and CombatRules.friend_beside(s, f, t):
 		v += float(w["pack"])
 	return v
-
-
-static func _friend_beside(s: GameSession, f: Dictionary, t: Dictionary) -> bool:
-	for id: String in CombatRules.friends_of(s, f):
-		if id != str(f.get("id")) and FightGrid.touching(CombatRules.fighter(s, id), t):
-			return true
-	return false
 
 
 ## What a square is worth by itself: the danger on it, who stands beside it, the way there, the blow in the back.
@@ -276,8 +261,7 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[St
 	var moved := _walk(s, data, f, path, lines)
 	if str(f.get("status")) != "active":
 		return
-	if foe:
-		CombatRules._find_hidden(s, f, lines)
+	CombatRules._find_hidden(s, f, lines)
 	if o.is_empty():
 		if foe and CombatRules.airborne(s, data, CombatRules.player(s)) and not Move.air(s, data, f):
 			lines.append("%s не достаёт летящего героя" % f["name"])

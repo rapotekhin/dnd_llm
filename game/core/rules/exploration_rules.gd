@@ -411,11 +411,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 		var n := int(supplies[id])
 		if n <= 0:
 			continue
-		var left := int(c["inventory"].get(id, 0)) - n
-		if left > 0:
-			c["inventory"][id] = left
-		else:
-			(c["inventory"] as Dictionary).erase(id)
+		ItemRules.remove(c, id, n)
 		eaten.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), n])
 	if not eaten.is_empty():
 		lines.append("съедено: " + ", ".join(eaten))

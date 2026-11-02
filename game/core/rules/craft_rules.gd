@@ -373,7 +373,7 @@ static func start(s: GameSession, data: Dictionary, id: String) -> Array[String]
 	for m: String in r.get("materials", {}):
 		var n := int(r["materials"][m])
 		for i in n:
-			ItemRules._remove_one(s.character, m)
+			ItemRules.remove(s.character, m)
 		spent.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, m), n])
 	var total := work_minutes(s.character, data, r)
 	if r.has("output_def"):  # a new thing of a template (an elemental blade): known to the session from the start
@@ -618,7 +618,7 @@ static func salvage(s: GameSession, data: Dictionary, item_id: String) -> Array[
 	var got := salvage_yield(s, data, item_id)
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
 	var magic := magic_dust(s, data, item_id) > 0
-	ItemRules._remove_one(s.character, item_id)
+	ItemRules.remove(s.character, item_id)
 	var inv: Dictionary = s.character["inventory"]
 	var parts: Array[String] = []
 	for m: String in got:

@@ -52,7 +52,7 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	s.combat["by"] = ActionRules.scope(s, data, f, spell)
 	match str(row["reaction"]):
 		"hit":
-			ConditionRules.add_effect(f, GameSession.whole(SpellEffects._effect(s, data, spell, slot, f)))
+			SpellEffects.guard(s, data, f, spell)
 			lines.append("%s: %s" % [f["name"], sp["name"]])
 		"damage":
 			SpellEffects.rebuke(s, data, CombatRules.fighter(s, to), spell, slot, lines, s.combat["by"])
@@ -64,15 +64,6 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	return lines
 
 
-## A spell no higher than the slot fails; a higher one by a check of the spellcasting ability against 10 + its circle.
+## The counter of anybody: SpellEffects.countered.
 func _stops(s: GameSession, data: Dictionary, f: Dictionary, spell: String, slot: int, ctx: Dictionary, lines: Array[String]) -> bool:
-	var name := str(data["spells"][str(ctx["spell"])]["name"])
-	var what := str(data["spells"][spell]["name"])
-	var circle := int(ctx["circle"])
-	if circle <= slot:
-		lines.append("%s: %s — «%s» срывается" % [f["name"], what, name])
-		return true
-	var r := Roll.check(s, data, f, {"what": what, "ability": CombatRules.spell_ability(s), "dc": 10 + circle})
-	var ok := bool(r["ok"])
-	lines.append("%s: %s — проверка %d против Сл %d — %s" % [f["name"], what, int(r["total"]), 10 + circle, "«%s» срывается" % name if ok else "не вышло"])
-	return ok
+	return SpellEffects.countered(s, data, f, spell, CombatRules.spell_ability(s), slot, str(ctx["spell"]), int(ctx["circle"]), lines)

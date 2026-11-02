@@ -51,24 +51,13 @@ static func resistances(s: GameSession, data: Dictionary, who: Dictionary = Shee
 		for x: Variant in cfg(data)["rage_resist"]:
 			out[str(x)] = "Ярость"
 	var by_item: Dictionary = cfg(data)["item_resist"]
-	if Sheet.is_hero(who):
-		for d: Dictionary in _worn(c, data, s.items):
-			for p: Variant in d.get("properties", []):
-				if by_item.has(str(p)):
-					out[str(by_item[str(p)])] = str(d.get("name", ""))
+	for d: Dictionary in Sheet.working(s, data, who):  # its things, attuned when they need it (v0.8.4.15)
+		for p: Variant in d.get("properties", []):
+			if by_item.has(str(p)):
+				out[str(by_item[str(p)])] = str(d.get("name", ""))
 	for e: Dictionary in ConditionRules.effects(c):
 		for x: Variant in e.get("resist", []):
 			out[str(x)] = str(e.get("source", {}).get("name", ""))
-	return out
-
-
-## Carried wondrous items and the equipped gear: where resist_* properties work.
-static func _worn(c: Dictionary, data: Dictionary, session_items: Dictionary) -> Array[Dictionary]:
-	var out := CharacterRules.carried(c, data, session_items)
-	for slot: String in ["armor", "shield", "main_hand", "off_hand"]:  # worn things are in carried() (v0.7.22.9)
-		var id := str(c.get("equipped", {}).get(slot, ""))
-		if not id.is_empty():
-			out.append(ItemRules.def_of(data["items"], session_items, id))
 	return out
 
 
@@ -100,15 +89,16 @@ static func save_advantages(c: Dictionary, data: Dictionary, ability: String, ta
 	return out
 
 
-## The race trait that makes the hero immune to `cond` laid with `tag` (an elf and magical sleep; a paladin's Divine
-## Health and disease, v0.7.10), "" when none.
-static func immune(c: Dictionary, data: Dictionary, cond: String, tag: String) -> String:
+## What makes `who` immune to `cond` laid with `tag`: a spell, a race trait (an elf and magical sleep), a paladin's Divine
+## Health and a Periapt of Health against disease (v0.7.10, v0.7.12); "" when none. Anybody's (v0.8.4.15).
+static func immune(s: GameSession, data: Dictionary, who: Dictionary, cond: String, tag: String) -> String:
+	var c := Sheet.holder(s, who)
 	var by_spell := SpellEffects.immune(c, cond)  # Heroism (v0.7.13.1)
 	if not by_spell.is_empty():
 		return by_spell
 	if tag.split(",").has("disease") and CharacterRules.has_feature(c, "divine_health"):
 		return str(data["classes"]["features"].get("divine_health", {}).get("name", ""))
-	if tag.split(",").has("disease") and CharacterRules.item_prop(c, "immune_disease"):
+	if tag.split(",").has("disease") and Sheet.prop(s, data, who, "immune_disease"):
 		return "Амулет здоровья"  # Periapt of Health (v0.7.12)
 	var table: Dictionary = cfg(data)["trait_immune"]
 	for t: String in table:

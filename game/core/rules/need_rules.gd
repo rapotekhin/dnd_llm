@@ -137,7 +137,7 @@ static func eat(s: GameSession, data: Dictionary) -> Array[String]:
 	for id: Variant in ids:
 		while v < 75.0 and int(c["inventory"].get(id, 0)) > 0:
 			v += float(have[id]) * float(cfg(data)["food"]["points"])
-			_take(c, str(id))
+			ItemRules.remove(c, str(id))
 			eaten.append(ItemRules.display_name(data["items"], s.items, str(id)))
 	set_value(s, data, "food", v)
 	var lines: Array[String] = ["Поел: " + ", ".join(eaten), "Еда %d/100" % roundi(value(s, data, "food"))]
@@ -281,9 +281,3 @@ static func meal(s: GameSession, data: Dictionary) -> Array[String]:
 	return ["Сыт и напоен"]
 
 
-static func _take(c: Dictionary, id: String) -> void:
-	var left := int(c["inventory"].get(id, 0)) - 1
-	if left > 0:
-		c["inventory"][id] = left
-	else:
-		(c["inventory"] as Dictionary).erase(id)

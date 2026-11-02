@@ -446,10 +446,6 @@ static func pay_spell(f: Dictionary, spell: String, how: Dictionary) -> void:
 		f["used"] = used
 
 
-static func _spell_reach(data: Dictionary, id: String) -> int:
-	return maxi(1, FightGrid.squares_of(data, int(data["spells"][id].get("range_ft", 0))))
-
-
 static func _caster_level(data: Dictionary, f: Dictionary) -> int:
 	return maxi(1, int(Sheet.template(data, f).get("spellcasting", {}).get("level", 1)))
 

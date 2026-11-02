@@ -17,17 +17,6 @@ static func holder(s: GameSession, id: String) -> Dictionary:
 	return b["fight"] if b.has("fight") else b
 
 
-## Who `id` is for the sheet (Sheet): the hero, or its record knowing its template (a person's from the pack).
-static func who(s: GameSession, data: Dictionary, id: String) -> Dictionary:
-	if id == Being.HERO:
-		return Sheet.HERO
-	var h := holder(s, id)
-	if not h.has("monster"):
-		var m := str(data["world"]["npcs"].get(id, {}).get("monster", ""))
-		h["monster"] = m if not m.is_empty() else str(CombatRules.cfg(data)["default_npc_monster"])
-	return h
-
-
 ## A long rest of `id`. Lines: what went (conditions, exhaustion).
 static func long(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var h := holder(s, id)
@@ -44,24 +33,27 @@ static func long(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 
 
 ## A short rest of anybody but the hero (its own has the window of dice): up to `dice` hit dice of its template, what
-## a short rest recharges. Lines.
+## a short rest recharges. A creature's wounds are on its own part (v0.8.4.15). Lines.
 static func short(s: GameSession, data: Dictionary, id: String, dice: int) -> Array[String]:
 	var h := holder(s, id)
+	var me := Sheet.who(s, data, id)
 	var lines: Array[String] = []
-	var wounds := int(h.get("hp", -1))
-	var top := _max_hp(data, who(s, data, id))
+	var cr: Dictionary = h.get("creature", {})
+	var body := cr if cr.has("max_hp") else h
+	var top := Sheet.max_hp(s, data, me)
+	var wounds := int(body.get("hp", top if body == cr else -1))
 	if wounds >= 0 and wounds < top:
-		var hd := _hit_dice(data, who(s, data, id))
+		var hd := _hit_dice(data, me)
 		var n := clampi(dice, 0, int(hd["count"]) - Stock.spent(h, "hit_dice"))
-		var con := Sheet.ability_mod(s, data, who(s, data, id), "con")
+		var con := Sheet.ability_mod(s, data, me, "con")
 		var healed := 0
 		for i in n:
 			healed += maxi(0, s.rng.randi_range(1, int(hd["die"])) + con)
 		if n > 0:
-			h["hp"] = mini(top, wounds + healed)
+			body["hp"] = mini(top, wounds + healed)
 			Stock.spend(h, "hit_dice", n)
-			lines.append("%s: кости хитов %d — +%d HP" % [name_of(s, data, id), n, int(h["hp"]) - wounds])
-			if int(h["hp"]) >= top:
+			lines.append("%s: кости хитов %d — +%d HP" % [name_of(s, data, id), n, int(body["hp"]) - wounds])
+			if int(body["hp"]) >= top and body == h:
 				h.erase("hp")
 	Stock.recharge_all(h, data, "short")
 	lines.append_array(ends(h, data, "short"))
@@ -73,10 +65,6 @@ static func _hit_dice(data: Dictionary, who: Dictionary) -> Dictionary:
 	var m := Sheet.template(data, who)
 	var parts := str(m.get("hit_dice", "1d8")).split("d")
 	return {"count": maxi(1, int(parts[0])), "die": maxi(4, int(parts[1]) if parts.size() > 1 else 8)}
-
-
-static func _max_hp(data: Dictionary, who: Dictionary) -> int:
-	return int(who.get("max_hp", Sheet.template(data, who).get("hp", 1)))
 
 
 ## Conditions and concentration a rest ends; a long rest also takes all exhaustion away (decision of the author,

@@ -448,6 +448,9 @@ static func add_exhaustion(s: GameSession, data: Dictionary, n: int, why: String
 	var name := "" if hero else Rest.name_of(s, data, who) + ": "
 	if hero:
 		CharacterRules.refresh(c, data, s.items)  # speed and max HP depend on it
+	elif c.has("status") and (before >= 4) != (after >= 4):  # a fighter's maximum, as the hero's (v0.8.4.15)
+		c["max_hp"] = maxi(1, int(c["max_hp"]) / 2) if after >= 4 else int(c["max_hp"]) * 2
+		c["hp"] = mini(int(c["hp"]), int(c["max_hp"]))
 	if after < before:
 		return [name + "истощение %d → %d" % [before, after]]
 	if after >= 6:

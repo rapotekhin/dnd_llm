@@ -300,7 +300,7 @@ func test_heroism_keeps_fear_away_and_gives_temp_hp() -> void:
 	_learn(s, "heroism")
 	SpellRules.cast(s.character, data, "heroism", 1, s, true)
 	assert_int(int(s.character["temp_hp"])).is_greater(0)
-	assert_str(HeroDefense.immune(s.character, data, "frightened", "fear")).is_equal("Героизм")
+	assert_str(HeroDefense.immune(s, data, Sheet.HERO, "frightened", "fear")).is_equal("Героизм")
 
 
 func test_true_strike_gives_advantage_once() -> void:

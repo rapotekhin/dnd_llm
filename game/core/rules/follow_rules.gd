@@ -75,7 +75,7 @@ static func meals(s: GameSession, data: Dictionary) -> Array[String]:
 				bag = s.character
 				food = _portion(s, data, bag)
 			if not food.is_empty():
-				NeedRules._take(bag, food)
+				ItemRules.remove(bag, food)
 				rec["at"] = now
 				rec["hungry"] = 0
 				lines.append("%s поел: %s" % [name, ItemRules.display_name(data["items"], s.items, food)])

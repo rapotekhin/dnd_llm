@@ -42,5 +42,5 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 		if not CombatRules.short_of(f, str(a["cost"]), 1).is_empty():
 			continue
 		for t: Dictionary in targets:
-			out.append({"act": id, "to": str(t["id"]), "how": {"spell": spell}, "t": t, "kind": "sustain", "far": MonsterRules._spell_reach(data, spell), "power": power})
+			out.append({"act": id, "to": str(t["id"]), "how": {"spell": spell}, "t": t, "kind": "sustain", "far": CombatRules._spell_squares(s, data, spell, f), "power": power})
 	return out

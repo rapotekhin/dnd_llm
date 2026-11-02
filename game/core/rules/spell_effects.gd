@@ -71,18 +71,13 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 	if NOT_ON_A_BODY.any(func(k: String) -> bool: return sp.has(k)):
 		return
 	_end_spell_on(f, spell_id, str(CombatRules.caster(s)["id"]))
-	var boon := _effect(s, data, spell_id, slot, f)
-	var speed := int(sp.get("speed_plus", 0))
-	if bool(sp.get("speed_x2", false)):
-		speed = Move.feet_of(data, Sheet.template(data, f))
-	if speed > 0:
-		boon["speed"] = speed
+	var boon := _effect(s, data, spell_id, slot, f)  # its speed and AC are read live: Sheet.speed, CombatRules.ac_of (v0.8.4.15)
 	for cond: Variant in sp.get("remove", []):
 		CombatRules._remove_condition(f, str(cond))
-	if sp.has("ac_min"):
-		boon["ac"] = maxi(0, int(sp["ac_min"]) - CombatRules.ac_of(f))
-	elif sp.has("ac_base"):
-		boon["ac"] = maxi(0, int(sp["ac_base"]) + Sheet.ability_mod(s, data, f, "dex") - CombatRules.ac_of(f))
+	if sp.has("ac_base"):  # Mage Armor: on one without armour, its base and DEX
+		boon.erase("ac_base")
+		if str(f.get("equipped", {}).get("armor", "")).is_empty():
+			boon["ac_min"] = int(sp["ac_base"]) + Sheet.ability_mod(s, data, f, "dex")
 	if boon.has("max_hp"):
 		f["max_hp"] = int(f["max_hp"]) + int(boon["max_hp"])
 		f["hp"] = int(f["hp"]) + int(boon["max_hp"])
@@ -972,13 +967,29 @@ static func reaction_slot(c: Dictionary, data: Dictionary, spell_id: String) -> 
 static func hit_reactions(s: GameSession, data: Dictionary, ctx: Dictionary) -> Array[Dictionary]:
 	var c := s.character
 	var out: Array[Dictionary] = []
-	if reaction_slot(c, data, "shield") > 0:
-		var miss := int(ctx.get("total", 0)) < int(ctx.get("ac", 10)) + 5 and not bool(ctx.get("nat20", false))
-		out.append({"id": "spell_shield", "label": "Щит: КД +5 до вашего хода%s" % (" — удар мимо" if miss else " (удар всё равно попадёт)")})
-	for id: String in SpellRules.ready(c):
-		if str(spec(data, id).get("reaction", "")) == "damage" and reaction_slot(c, data, id) > 0 and int(ctx.get("dmg", 0)) > 0:
-			out.append({"id": "spell_" + id, "label": str(spec(data, id).get("label", data["spells"][id]["name"]))})
+	for when: String in ["hit", "damage"]:  # what turns the blow first, what answers it after
+		for id: String in SpellRules.ready(c):
+			var row := spec(data, id)
+			if str(row.get("reaction", "")) != when or reaction_slot(c, data, id) <= 0:
+				continue
+			if when == "hit":  # Shield: its AC by the row of rules.spell_effects, as a foe's (v0.8.4.15)
+				var plus := int(row.get("ac_plus", 0))
+				var miss := int(ctx.get("total", 0)) < int(ctx.get("ac", 10)) + plus and not bool(ctx.get("nat20", false))
+				out.append({"id": "spell_" + id, "label": "%s: КД +%d до вашего хода%s" % [data["spells"][id]["name"], plus, " — удар мимо" if miss else " (удар всё равно попадёт)"]})
+			elif int(ctx.get("dmg", 0)) > 0:
+				out.append({"id": "spell_" + id, "label": str(row.get("label", data["spells"][id]["name"]))})
 	return out
+
+
+## A spell against a hit on `who` (Shield): its AC until its turn by the row of rules.spell_effects. The AC it adds.
+static func guard(s: GameSession, data: Dictionary, who: Dictionary, spell_id: String) -> int:
+	var plus := int(spec(data, spell_id).get("ac_plus", 0))
+	var c := Sheet.holder(s, who)
+	ConditionRules.add_effect(c, {"condition": "", "ac_plus": plus, "until_turn": true, "ends": {},
+		"source": {"kind": "spell", "id": spell_id, "name": str(data["spells"][spell_id]["name"])}})
+	if Sheet.is_hero(who):
+		CharacterRules.refresh(c, data, s.items)
+	return plus
 
 
 ## Uses a reaction spell on a hit (the slot spent). Lines.
@@ -987,18 +998,14 @@ static func apply_hit_reaction(s: GameSession, data: Dictionary, f: Dictionary, 
 	var spell_id := id.trim_prefix("spell_")
 	var slot := reaction_slot(c, data, spell_id)
 	SpellRules.cast(c, data, spell_id, slot, null, false)
-	match spell_id:
-		"shield":
-			ConditionRules.add_effect(c, {"condition": "", "ac_plus": 5, "until_turn": true, "ends": {},
-				"source": {"kind": "spell", "id": "shield", "name": str(data["spells"]["shield"]["name"])}})
-			CharacterRules.refresh(c, data, s.items)
-			ctx["ac"] = int(ctx["ac"]) + 5
-			var still := int(ctx["total"]) >= int(ctx["ac"]) or bool(ctx.get("nat20", false))
-			ctx["hit"] = still
-			lines.append("%s: Щит — КД %d, %s" % [c.get("name", ""), int(c["ac"]), "удар всё же попадает" if still else "удар отскакивает"])
-		_:
-			ctx["rebuke"] = slot
-			ctx["rebuke_spell"] = spell_id
+	if str(spec(data, spell_id).get("reaction", "")) == "hit":
+		ctx["ac"] = int(ctx["ac"]) + guard(s, data, Sheet.HERO, spell_id)
+		var still := int(ctx["total"]) >= int(ctx["ac"]) or bool(ctx.get("nat20", false))
+		ctx["hit"] = still
+		lines.append("%s: %s — КД %d, %s" % [c.get("name", ""), data["spells"][spell_id]["name"], int(c["ac"]), "удар всё же попадает" if still else "удар отскакивает"])
+	else:
+		ctx["rebuke"] = slot
+		ctx["rebuke_spell"] = spell_id
 
 
 ## Hellish Rebuke after the damage: the attacker takes fire, a DEX save for half; `by`: one who is not the hero, with its numbers. Lines.
@@ -1027,7 +1034,7 @@ static func counter_option(s: GameSession, data: Dictionary, f: Dictionary, spel
 	var c := s.character
 	if bool(CombatRules.player(s).get("reacted", false)) or ConditionRules.incapacitated(c) or int(c.get("hp", 0)) <= 0:
 		return ""
-	if reaction_slot(c, data, "counterspell") <= 0 or FightGrid.feet(data, f, CombatRules.player(s)) > 60:
+	if reaction_slot(c, data, "counterspell") <= 0 or FightGrid.feet(data, f, CombatRules.player(s)) > CombatRules.spell_range(s, data, "counterspell"):
 		return ""
 	return "Контрзаклинание: сорвать «%s»" % data["spells"][spell_id]["name"]
 
@@ -1039,15 +1046,21 @@ static func counter(s: GameSession, data: Dictionary, f: Dictionary, spell_id: S
 	var slot := reaction_slot(c, data, "counterspell")
 	SpellRules.cast(c, data, "counterspell", slot, null, false)
 	CombatRules.player(s)["reacted"] = true
+	return countered(s, data, Sheet.HERO, "counterspell", str(c.get("spell_ability", "int")), slot, spell_id, circle, lines)
+
+
+## A counter of anybody (v0.8.4.15): a spell no higher than the slot fails; a higher one by a check of the spellcasting
+## ability against 10 + its circle. True when `spell_id` is stopped.
+static func countered(s: GameSession, data: Dictionary, who: Dictionary, counter: String, ability: String, slot: int, spell_id: String, circle: int, lines: Array[String]) -> bool:
+	var me := str(Sheet.holder(s, who).get("name", ""))
+	var what := str(data["spells"][counter]["name"])
 	var name := str(data["spells"][spell_id]["name"])
 	if circle <= slot:
-		lines.append("%s: Контрзаклинание — «%s» срывается" % [c.get("name", ""), name])
+		lines.append("%s: %s — «%s» срывается" % [me, what, name])
 		return true
-	var ab := str(c.get("spell_ability", "int"))
-	var r := Roll.hero(s, data, {"what": "Контрзаклинание", "ability": ab, "dc": 10 + circle,
-		"parts": [RollParts.part(RollParts.ability_name(ab), CharacterRules.mod(CharacterRules.ability(c, ab)))]})
+	var r := Roll.check(s, data, who, {"what": what, "ability": ability, "dc": 10 + circle})
 	var ok := bool(r["ok"])
-	lines.append("%s: Контрзаклинание — проверка %d против Сл %d — %s" % [c.get("name", ""), int(r["total"]), 10 + circle, "«%s» срывается" % name if ok else "не вышло"])
+	lines.append("%s: %s — проверка %d против Сл %d — %s" % [me, what, int(r["total"]), 10 + circle, "«%s» срывается" % name if ok else "не вышло"])
 	return ok
 
 

@@ -98,9 +98,7 @@ static func plan(c: Dictionary, data: Dictionary, picks: Dictionary = {}) -> Dic
 
 	var abilities := abilities_after(c, picks)
 	var con_gain := CharacterRules.mod(int(abilities.get("con", 10))) - CharacterRules.mod(int(c["abilities"].get("con", 10)))
-	var die := int(k.get("hit_die", 8))
-	var per_level := 1 if CharacterRules.has_trait(c, "dwarven_toughness") or CharacterRules.has_feature(c, "draconic_resilience") else 0
-	out["hp_gain"] = maxi(1, die / 2 + 1 + CharacterRules.mod(int(abilities.get("con", 10))) + per_level) + con_gain * old
+	out["hp_gain"] = CharacterRules.hp_step(c, int(k.get("hit_die", 8)), CharacterRules.mod(int(abilities.get("con", 10)))) + con_gain * old
 
 	var sc: Dictionary = k.get("spellcasting", {})
 	if not sc.is_empty() and level >= int(sc.get("from_level", 1)):

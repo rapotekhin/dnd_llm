@@ -144,7 +144,7 @@ static func numbers(s: GameSession, data: Dictionary, id: String, f: Dictionary 
 	if ab.is_empty():
 		return {}
 	var m := Sheet.ability_mod(s, data, f, ab)
-	var prof := CharacterRules.prof_bonus(s.character, data) if Sheet.is_hero(f) else int(Sheet.of(s, data, f)["prof_bonus"])
+	var prof := Sheet.prof(s, data, f)
 	return {"dc": 8 + prof + m, "attack": prof + m, "ability": ab}
 
 

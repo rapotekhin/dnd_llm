@@ -770,7 +770,7 @@ func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 	if bool(e.get("ends_on_damage", false)):
 		plan["wake"] = true
 	var dur_text := ConditionRules.left_text(s, {"ends": plan["ends"]})
-	var immune := HeroDefense.immune(c, data, cond, tag)
+	var immune := HeroDefense.immune(s, data, Sheet.HERO, cond, tag)
 	if not immune.is_empty():
 		return {"plan": {"condition": cond, "on": true, "resisted": true}, "summary": "%s: не действует — %s" % [title, immune]}
 	if sv is Dictionary:
@@ -817,7 +817,7 @@ func _plan_disease(s: GameSession, data: Dictionary, _turn_id: String, e: Dictio
 		id = "gen_disease_%d" % (DiseaseRules.all(s, data).size() + 1)
 	if DiseaseRules.sick(c, id):
 		return {"reason": "герой уже болен этим — опиши без нового заражения"}
-	var immune := HeroDefense.immune(c, data, "", "disease")
+	var immune := HeroDefense.immune(s, data, Sheet.HERO, "", "disease")
 	if not immune.is_empty():
 		return {"plan": {"resisted": true}, "summary": "Зараза не берёт — %s" % immune}
 	var dc := int(rules["dc_tiers"][str(sv["dc_tier"])])
@@ -1137,12 +1137,7 @@ func _do_give_item(s: GameSession, plan: Dictionary) -> void:
 func _do_take_item(s: GameSession, plan: Dictionary) -> void:
 	if _quest_thing(s, plan):
 		return
-	var c := s.character
-	var left := int(c["inventory"].get(plan["item_id"], 0)) - int(plan["qty"])
-	if left > 0:
-		c["inventory"][plan["item_id"]] = left
-	else:
-		c["inventory"].erase(plan["item_id"])
+	ItemRules.remove(s.character, str(plan["item_id"]), int(plan["qty"]))
 
 
 func _do_npc_attitude(s: GameSession, plan: Dictionary) -> void:

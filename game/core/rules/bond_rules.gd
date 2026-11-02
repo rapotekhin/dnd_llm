@@ -208,7 +208,7 @@ static func gift(s: GameSession, data: Dictionary, npc_id: String, item_id: Stri
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
 	var pts := gift_points(s, data, npc_id, item_id)
 	var t := taste_of(s, data, npc_id, item_id)
-	ItemRules._remove_one(c, item_id)
+	ItemRules.remove(c, item_id)
 	var remedy: Dictionary = data["rules"].get("consumables", {}).get(item_id, {})
 	if (remedy.get("cure", []) as Array).has("disease") and not DiseaseRules.npc_disease(s, data, npc_id).is_empty():
 		_rw(c, npc_id)["gift_day"] = s.day  # a sick NPC takes the remedy at once (v0.7.39)

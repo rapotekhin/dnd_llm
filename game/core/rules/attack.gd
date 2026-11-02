@@ -24,7 +24,7 @@ static func of_action(data: Dictionary, f: Dictionary, a: Dictionary) -> Diction
 		pieces.append({"dice": str(d["dice"]), "type": str(d.get("type", ""))})
 	return {"name": str(a.get("name", "")), "to_hit": int(a.get("to_hit", 0)) + plus, "pieces": pieces, "bonus": plus, "melee": str(a.get("kind")) == "melee",
 		"reach": maxi(1, FightGrid.squares_of(data, int(a.get("reach", 5)))), "range": a.get("range", []), "weapon": true, "act": a,
-		"ammo": str(ItemRules.cfg(data)["ammo"].get(str(a.get("item", "")), ""))}
+		"ammo": str(ItemRules.cfg(data)["ammo"].get(str(a.get("item", "")), "")), "magical": bool(a.get("magical", false)), "silvered": bool(a.get("silvered", false))}
 
 
 ## A spell's attack roll; `dtype` "" — a roll with no damage of its own.
@@ -255,7 +255,7 @@ static func _horde(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 static func _stopped(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, b: Dictionary) -> String:
 	var who := str(Sheet.holder(s, f).get("name", ""))
 	var it := str(Sheet.holder(s, t).get("name", ""))
-	if Sheet.is_hero(f) and CombatRules._missed_unseen(s, t):
+	if CombatRules._missed_unseen(s, t):
 		return "%s — %s: удар в пустоту, %s уже не там" % [who, b["name"], it]
 	if bool(t.get("blinked", false)):  # Blink (v0.7.13.3)
 		return "%s бьёт в пустоту — %s нет на этом плане" % [who, it]
@@ -309,7 +309,7 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 		lines.append(line + " — " + guard)
 		return none
 	var crit := nat >= crit_min or bool(m["crit"])
-	if crit and CharacterRules.item_prop(it, "no_crit"):
+	if crit and Sheet.prop(s, data, t, "no_crit"):
 		crit = false  # adamantine armor: a critical hit is a normal one (v0.7.12)
 		line += " (адамантин: не крит)"
 	if not crit and Acts.react(s, data, t, "hit", {"foe": str(f["id"]), "total": total, "melee": bool(b.get("melee", false)) and not shot(f, t, b)}, lines):  # Parry, Shield

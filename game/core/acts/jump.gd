@@ -32,7 +32,7 @@ func _reach(s: GameSession, data: Dictionary, f: Dictionary) -> int:
 	if not Move.why(s, data, f).is_empty():
 		return 0
 	var e := CombatRules.points(s, data, f)
-	var ft := CharacterRules.ability(s.character, "str") if Sheet.is_hero(f) else int(Sheet.of(s, data, f)["abilities"].get("str", 10))
+	var ft := Sheet.ability(s, data, f, "str")
 	if int(e.get("walked", 0)) < 2:
 		ft /= 2
 	return mini(int(ft / int(FightGrid.cfg(data)["ft"])), int(e.get("move", 0)))

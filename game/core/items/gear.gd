@@ -117,21 +117,9 @@ static func give(s: GameSession, data: Dictionary, id: String, item: String, qty
 		c["equipped"] = worn_now
 
 
-## Takes up to `qty` of a thing (all of it when < 0); what it wore of it is off. How many.
+## Takes up to `qty` of a thing (all of it when < 0): ItemRules.remove. How many.
 static func take(s: GameSession, data: Dictionary, id: String, item: String, qty: int = -1) -> int:
-	var c := of(s, data, id)
-	var inv: Dictionary = c["inventory"]
-	var have := int(inv.get(item, 0))
-	var n := have if qty < 0 else mini(qty, have)
-	if have - n > 0:
-		inv[item] = have - n
-	else:
-		inv.erase(item)
-		var worn_now: Dictionary = c.get("equipped", {})
-		for slot: String in worn_now.keys():
-			if str(worn_now[slot]) == item:
-				worn_now.erase(slot)
-	return n
+	return ItemRules.remove(of(s, data, id), item, qty)
 
 
 ## Empties its pockets: {cp, items}; `keep_worn` — what it wears and its template's weapons stay on it.
@@ -197,7 +185,7 @@ static func follow(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 		f["actions"] = acts
 	else:
 		f.erase("actions")
-	f["ac"] = ac(data, tid, f)
+	f["ac"] = ac(s, data, tid, f)
 
 
 static func actions(s: GameSession, data: Dictionary, tid: String, c: Dictionary) -> Array:
@@ -217,50 +205,60 @@ static func actions(s: GameSession, data: Dictionary, tid: String, c: Dictionary
 	for item: String in inv:
 		var w: Dictionary = ItemRules.def_of(data["items"], s.items, item).get("weapon", {})
 		if not w.is_empty() and not held.has(item) and (not ammo.has(item) or inv.has(str(ammo[item]))):
-			out = out + [_blow(s, data, m, item)]
+			out = out + [_blow(s, data, c, m, item)]
 	return out
 
 
-## A blow with a weapon its template does not know: the weapon's dice, its ability and the template's proficiency.
-static func _blow(s: GameSession, data: Dictionary, m: Dictionary, item: String) -> Dictionary:
-	var def := ItemRules.def_of(data["items"], s.items, item)
-	var w: Dictionary = def["weapon"]
-	var ab: Dictionary = m.get("abilities", {})
-	var ranged := str(w.get("range", "melee")) == "ranged"
-	var str_mod := CharacterRules.mod(int(ab.get("str", 10)))
-	var dex_mod := CharacterRules.mod(int(ab.get("dex", 10)))
-	var mod := dex_mod if ranged else maxi(str_mod, dex_mod) if (def.get("properties", []) as Array).has("finesse") else str_mod
-	var dice := str(w.get("damage", "1"))
-	if mod != 0:
-		dice += "%+d" % mod
-	var out := {"name": str(def.get("name", item)), "name_en": item, "item": item, "kind": "ranged" if ranged else "melee",
-		"to_hit": mod + int(m.get("prof", 2)), "damage": [{"dice": dice, "type": str(w.get("damage_type", "bludgeoning"))}]}
-	if ranged:
-		out["range"] = w.get("reach_ft", [80, 320])
-	elif (def.get("properties", []) as Array).has("reach"):
+## A blow with a weapon its template does not know, as the hero's hands would have it (v0.8.4.15): CombatRules.weapon_profile
+## of its sheet — its abilities and proficiency, a +N, the workmanship, a versatile grip, a fighting style, Shillelagh —
+## and the weapon's magic and silver against a resistance.
+static func _blow(s: GameSession, data: Dictionary, c: Dictionary, m: Dictionary, item: String) -> Dictionary:
+	var me := c.duplicate()
+	me["abilities"] = Sheet.of(s, data, c)["abilities"]
+	me["prof_bonus"] = int(m.get("prof", 2))
+	me["weapon_profs"] = ["simple", "martial"]  # 5e: a creature is proficient with what it wields
+	me["item_props"] = Sheet.props(s, data, c)
+	var eq: Dictionary = (c.get("equipped", {}) as Dictionary).duplicate()
+	eq["main_hand"] = item
+	me["equipped"] = eq
+	var w := CombatRules.weapon_profile(me, data, s.items, item)
+	var dice := str(w["dice"]) + ("%+d" % int(w["bonus"]) if int(w["bonus"]) != 0 else "")
+	var out := {"name": str(w["name"]), "name_en": item, "item": item, "kind": "melee" if bool(w["melee"]) else "ranged", "to_hit": int(w["to_hit"]),
+		"damage": [{"dice": dice, "type": str(w["type"])}], "magical": bool(w["magical"]), "silvered": bool(w["silvered"])}
+	if not bool(w["melee"]):
+		out["range"] = w["range"] if not (w["range"] as Array).is_empty() else [80, 320]
+	elif bool(w["reach"]):
 		out["reach"] = 10
 	return out
 
 
-## Its AC by what it wears: the template's as it came; armour off — 10 + DEX under what was natural; other armour — its own.
-static func ac(data: Dictionary, tid: String, c: Dictionary) -> int:
+## Its AC by what it wears: the template's as it came; armour off — 10 + DEX under what was natural; other armour — its
+## own with the Defense style; what its things add (CharacterRules.gear_ac: a +N, the workmanship, a Cloak of Protection).
+static func ac(s: GameSession, data: Dictionary, tid: String, c: Dictionary) -> int:
 	var m: Dictionary = data["monsters"][tid]
 	var was: Dictionary = start(data, tid)["equipped"]
 	var now: Dictionary = c.get("equipped", {})
-	if str(was.get("armor", "")) == str(now.get("armor", "")) and str(was.get("shield", "")) == str(now.get("shield", "")):
-		return int(m["ac"])
-	var cat: Dictionary = data["items"]["catalog"]
+	var extra := CharacterRules.gear_ac(c, data, s.items)
+	if _on(was, "armor") == _on(now, "armor") and _on(was, "shield") == _on(now, "shield"):
+		return int(m["ac"]) + extra
 	var dex := CharacterRules.mod(int(m.get("abilities", {}).get("dex", 10)))
-	var base := int(m["ac"]) - _shield(cat, was)
-	if was.has("armor"):
+	var base := int(m["ac"]) - _shield(s, data, was)
+	if not _on(was, "armor").is_empty():
 		base = 10 + dex
-	if now.has("armor"):
-		base = maxi(base, CharacterRules.armored(cat.get(str(now["armor"]), {}).get("armor", {}), dex))
-	return base + _shield(cat, now)
+	if not _on(now, "armor").is_empty():
+		var armor: Dictionary = ItemRules.def_of(data["items"], s.items, _on(now, "armor")).get("armor", {})
+		base = maxi(base, CharacterRules.armored(armor, dex) + (1 if CharacterRules.style(c, "defense") else 0))
+	return base + _shield(s, data, now) + extra
 
 
-static func _shield(cat: Dictionary, worn_now: Dictionary) -> int:
-	return int(cat.get(str(worn_now.get("shield", "")), {}).get("armor", {}).get("base", 2)) if worn_now.has("shield") else 0
+static func _on(worn_now: Dictionary, slot: String) -> String:
+	return str(worn_now.get(slot, ""))
+
+
+static func _shield(s: GameSession, data: Dictionary, worn_now: Dictionary) -> int:
+	if _on(worn_now, "shield").is_empty():
+		return 0
+	return int(ItemRules.def_of(data["items"], s.items, _on(worn_now, "shield")).get("armor", {}).get("base", 2))
 
 
 ## The fight is over for it: what it has goes back to its record.

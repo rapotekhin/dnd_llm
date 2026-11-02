@@ -62,10 +62,10 @@ static func expose(s: GameSession, data: Dictionary, id: String, dc: int, why: S
 	var c := Rest.holder(s, who)
 	if def_of(s, data, id).is_empty() or sick(c, id):
 		return []
-	var immune := HeroDefense.immune(c, data, "", "disease")
+	var immune := HeroDefense.immune(s, data, Sheet.who(s, data, who), "", "disease")
 	if not immune.is_empty():
 		return ["%s: зараза не берёт — %s" % [why, immune]]
-	var r := Sheet.save(s, data, Rest.who(s, data, who), str(cfg(data).get("save", "con")), dc, "disease")
+	var r := Sheet.save(s, data, Sheet.who(s, data, who), str(cfg(data).get("save", "con")), dc, "disease")
 	if bool(r["ok"]):
 		return ["%s: спасбросок %s" % [why, r["text"]]]
 	var lines: Array[String] = ["%s: спасбросок %s" % [why, r["text"]]]
@@ -77,7 +77,7 @@ static func expose(s: GameSession, data: Dictionary, id: String, dc: int, why: S
 static func contract(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
 	var c := Rest.holder(s, who)
 	var d := def_of(s, data, id)
-	if d.is_empty() or sick(c, id) or not HeroDefense.immune(c, data, "", "disease").is_empty():
+	if d.is_empty() or sick(c, id) or not HeroDefense.immune(s, data, Sheet.who(s, data, who), "", "disease").is_empty():
 		return []
 	incubating(c).append({"id": id, "onset": TimeRules.abs_minute(s) + int(d.get("incubation_hours", 0)) * 60})
 	return tick(s, data)
@@ -191,7 +191,7 @@ static func _show(s: GameSession, data: Dictionary, id: String, who: String = Be
 	ConditionRules.add_effect(c, main)
 	var lines: Array[String] = ["Проявилась болезнь: %s (%d дн.)" % [d.get("name", id), int(d.get("days", 1))]]
 	for cond: Variant in d.get("conditions", []):
-		lines.append_array(ConditionRules.impose(s, data, {"condition": str(cond), "tag": "disease", "source": source, "ends": ends}, Rest.who(s, data, who)))
+		lines.append_array(ConditionRules.impose(s, data, {"condition": str(cond), "tag": "disease", "source": source, "ends": ends}, Sheet.own(s, who)))
 	if not hero:
 		return lines
 	if NeedRules.on(s) and data["rules"].has("needs"):

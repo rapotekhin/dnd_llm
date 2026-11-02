@@ -194,7 +194,7 @@ static func acts(s: GameSession, data: Dictionary, f: Dictionary) -> Array[Strin
 				out.append("door_unbar")
 		else:
 			out.append("door_bar")
-			if Sheet.is_hero(f) and _has_key(s, data, d):
+			if _has_key(s, data, f, d):
 				out.append("door_lock")
 	if block_near(s, f) != FightGrid.NONE:
 		out.append("block_push")
@@ -212,10 +212,11 @@ static func door_near(s: GameSession, data: Dictionary, f: Dictionary) -> Dictio
 	return {}
 
 
-static func _has_key(s: GameSession, data: Dictionary, d: Dictionary) -> bool:
+## `f` carries the door's key: anybody may lock it behind itself (v0.8.4.15).
+static func _has_key(s: GameSession, data: Dictionary, f: Dictionary, d: Dictionary) -> bool:
 	var ends := _ends(FightGrid.map(s, data), d)
 	var id := str(WayRules.def(data, ends[0], ends[1]).get("key", ""))
-	return not id.is_empty() and int(s.character.get("inventory", {}).get(id, 0)) > 0
+	return not id.is_empty() and int(Sheet.things(s, data, f).get("inventory", {}).get(id, 0)) > 0
 
 
 ## "" — the act can be done now; a key otherwise.
@@ -225,7 +226,7 @@ static func why_not(s: GameSession, data: Dictionary, f: Dictionary, how: String
 	if how == "block_push":
 		var at := block_near(s, f)
 		var b: Dictionary = s.combat["blocks"][FightGrid.tag(at)]
-		var strength := CharacterRules.ability(s.character, "str") if Sheet.is_hero(f) else int(Sheet.of(s, data, f)["abilities"].get("str", 10))
+		var strength := Sheet.ability(s, data, f, "str")
 		if int(b["weight"]) > strength * int(cfg(data)["blocks"]["per_str"]):
 			return "COMBAT_TOO_HEAVY"
 		if not _block_can_go(s, data, at + (at - FightGrid.cell(f)).sign()):

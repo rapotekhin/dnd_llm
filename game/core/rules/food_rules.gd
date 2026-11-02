@@ -59,35 +59,36 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	return ["Испортилось: " + ", ".join(names)]
 
 
-## A dish eaten (already taken from the pack): its water, temporary HP and boon. Lines.
-static func meal(s: GameSession, data: Dictionary, id: String) -> Array[String]:
+## A dish eaten by `who` (already taken from its things): its temporary HP and boon, the hero's water (v0.8.4.15: the one
+## who ate it gets them). Lines.
+static func meal(s: GameSession, data: Dictionary, id: String, who: Dictionary = Sheet.HERO) -> Array[String]:
 	var fx := ItemRules.consumable(data, id, s.items)
 	if not fx.has("meal"):
 		return []
 	var m: Dictionary = fx["meal"]
-	var c := s.character
+	var c := Sheet.holder(s, who)
 	var lines: Array[String] = []
-	if int(m.get("water", 0)) > 0 and NeedRules.on(s):
+	if int(m.get("water", 0)) > 0 and NeedRules.on(s) and Sheet.is_hero(who):
 		NeedRules.set_value(s, data, "water", NeedRules.value(s, data, "water") + float(m["water"]))
 	if int(m.get("temp_hp", 0)) > int(c.get("temp_hp", 0)):
 		c["temp_hp"] = int(m["temp_hp"])
 		lines.append("временные хиты: %d" % int(m["temp_hp"]))
 	if fx.has("adv_tag"):
 		var d := ItemRules.def_of(data["items"], s.items, ItemRules.real_id(id))
-		lines.append_array(ConditionRules.cure(s, data, fx, {"kind": "item", "id": ItemRules.real_id(id), "name": str(d.get("name", id))}))
+		lines.append_array(ConditionRules.cure(s, data, fx, {"kind": "item", "id": ItemRules.real_id(id), "name": str(d.get("name", id))}, who))
 	return lines
 
 
-## A dish eaten from the pack by «Использовать»: its food points, then the meal. Lines.
-static func eat_one(s: GameSession, data: Dictionary, id: String) -> Array[String]:
+## A dish eaten by «Использовать»: the hero's food points, then the meal of whoever ate it. Lines.
+static func eat_one(s: GameSession, data: Dictionary, id: String, who: Dictionary = Sheet.HERO) -> Array[String]:
 	var lines: Array[String] = []
 	var food: Dictionary = data["rules"]["hero_effects"]["camp"]["food"]
-	if NeedRules.on(s) and food.has(id):
+	if NeedRules.on(s) and food.has(id) and Sheet.is_hero(who):
 		var v := NeedRules.value(s, data, "food") + float(food[id]) * float(NeedRules.cfg(data)["food"]["points"])
 		NeedRules.set_value(s, data, "food", v)
 		lines.append("Еда %d/100" % roundi(NeedRules.value(s, data, "food")))
-	lines.append_array(meal(s, data, id))
+	lines.append_array(meal(s, data, id, who))
 	var foul: Dictionary = data["rules"].get("diseases", {}).get("foul_food", {})
 	if foul.has(id):
-		lines.append_array(DiseaseRules.expose(s, data, str(foul[id]["disease"]), int(foul[id]["dc"]), "Дурная еда"))
+		lines.append_array(DiseaseRules.expose(s, data, str(foul[id]["disease"]), int(foul[id]["dc"]), "Дурная еда", str(who.get("id", Being.HERO))))
 	return lines

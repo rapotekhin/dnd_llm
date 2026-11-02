@@ -76,6 +76,6 @@ static func apply(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 		return
 	FeatureRules.give_class(data, f, {"class": str(r["class"]), "level": lv, "subclass": str(r.get("subclass", "")), "npc_id": id})
 	var die := int(CharacterRules.class_def(f, data).get("hit_die", 8))
-	var more := (lv - was) * maxi(1, die / 2 + 1 + Sheet.ability_mod(s, data, f, "con"))
+	var more := (lv - was) * CharacterRules.hp_step(f, die, Sheet.ability_mod(s, data, f, "con"))  # Dwarven Toughness too
 	f["max_hp"] = int(f["max_hp"]) + more
 	f["hp"] = int(f["hp"]) + more

@@ -288,9 +288,7 @@ static func fighter_of_npc(s: GameSession, npc_id: String) -> String:
 
 
 static func _dex_of(s: GameSession, data: Dictionary, id: String) -> int:
-	if id == PLAYER:
-		return CharacterRules.mod(CharacterRules.ability(s.character, "dex"))
-	return CharacterRules.mod(int(Sheet.template(data, fighter(s, id))["abilities"]["dex"]))
+	return Sheet.ability_mod(s, data, fighter(s, id), "dex")
 
 
 ## Where the hero stands: the walk's square, or the middle of an open field.
@@ -367,6 +365,9 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector
 					f[k] = str(spec[k])
 			if bool(spec.get("helper", false)):
 				f["helper"] = true
+			if ConditionRules.exhaustion(f) >= 4:  # exhaustion 4 halves anybody's maximum (v0.8.4.15)
+				f["max_hp"] = maxi(1, int(f["max_hp"]) / 2)
+				f["hp"] = mini(int(f["hp"]), int(f["max_hp"]))
 			Gear.arm(s, data, f, spec)  # what it has: its blows and its AC (v0.8.4.10)
 			ids.append(id)
 	return ids
@@ -687,10 +688,7 @@ static func unarmed_profile(c: Dictionary, data: Dictionary) -> Dictionary:
 
 
 static func _has_style(c: Dictionary, style: String) -> bool:
-	for f: Variant in c.get("features", []):
-		if str(f).ends_with("fighting_style_" + style):
-			return true
-	return false
+	return CharacterRules.style(c, style)
 
 
 ## What `fn` says with the other set in the hands: the buttons ask of a weapon put away.
@@ -709,7 +707,7 @@ static func _as_seen(t: Dictionary) -> Dictionary:
 
 
 
-## The hero aims where an invisible foe was (FightGrid.shown), and it is not there any more.
+## Anybody aims where an invisible foe was (FightGrid.shown), and it is not there any more.
 static func _missed_unseen(s: GameSession, t: Dictionary) -> bool:
 	return _has(t, "invisible") and FightGrid.shown(t) != FightGrid.cell(t)
 
@@ -807,7 +805,11 @@ static func is_engine_spell(data: Dictionary, spell_id: String) -> bool:
 
 ## The AC of a fighter now: its own, and what its statuses give or take.
 static func ac_of(f: Dictionary) -> int:
-	return int(Guise.body(f).get("ac", f["ac"])) + ConditionRules.sum(f, "ac") + int(f.get("cover", 0))
+	var ac := int(Guise.body(f).get("ac", f["ac"])) + ConditionRules.sum(f, "ac")
+	for e: Dictionary in f.get("effects", []):
+		if e.has("ac_min"):  # Barkskin, Mage Armor: the better of theirs and its own, read live (v0.8.4.15)
+			ac = maxi(ac, int(e["ac_min"]))
+	return ac + int(f.get("cover", 0))
 
 
 static func _has(f: Dictionary, cond: String) -> bool:
@@ -957,7 +959,7 @@ static func _resists(s: GameSession, data: Dictionary, t: Dictionary, spec: Dict
 	if not Sheet.is_hero(t):
 		return "" if _can_be(data, t, spec) else "-"
 	for cond: String in conds:
-		var why := HeroDefense.immune(s.character, data, cond, tag)
+		var why := HeroDefense.immune(s, data, Sheet.HERO, cond, tag)
 		if not why.is_empty():
 			return why
 	return "" if int(s.character["abilities"].get("int", 10)) >= int(spec.get("min_int", 0)) else "-"
@@ -1089,7 +1091,7 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 	points(s, data, f)["attacked"] = true
 	var fx: Dictionary = ItemRules.consumable(data, item_id, s.items)["throw"]
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
-	ItemRules._remove_one(c, item_id)
+	ItemRules.remove(c, item_id)
 	if FightGrid.is_aim(target_id):
 		var splashed: Array[String] = []
 		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed)
@@ -1986,12 +1988,13 @@ static func _reach_strike(s: GameSession, data: Dictionary, f: Dictionary, lines
 	Attack.swing(s, data, player(s), f, Attack.of_weapon(w), lines)
 
 
-## A foe that comes beside the hidden player finds them.
+## A fighter that comes beside a hidden foe finds it, whoever either is (v0.8.4.15).
 static func _find_hidden(s: GameSession, f: Dictionary, lines: Array[String]) -> void:
-	var p := player(s)
-	if bool(p.get("hidden", false)) and FightGrid.touching(f, p):
-		p["hidden"] = false
-		lines.append("%s находит, где прячется %s" % [f["name"], s.character["name"]])
+	for id: String in foes_of(s, f):
+		var o := fighter(s, id)
+		if bool(o.get("hidden", false)) and FightGrid.touching(f, o):
+			o["hidden"] = false
+			lines.append("%s находит, где прячется %s" % [f["name"], Sheet.holder(s, o).get("name", "")])
 
 
 ## The player answered the reaction prompt: `choice` — a reaction id or "none". The foe's turn goes on. Lines.

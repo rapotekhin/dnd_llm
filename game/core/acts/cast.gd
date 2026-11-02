@@ -175,7 +175,7 @@ func _self(f: Dictionary, how: Dictionary, power: float) -> Dictionary:
 ## One of its side within reach that does not have it yet.
 func _boons(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary, power: float, has_it: Callable) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	var reach := MonsterRules._spell_reach(data, str(how["spell"]))
+	var reach := CombatRules._spell_squares(s, data, str(how["spell"]), f)
 	for one: String in CombatRules.friends_of(s, f):
 		var t := CombatRules.fighter(s, one)
 		if not has_it.call(Sheet.holder(s, t)):
@@ -186,7 +186,7 @@ func _boons(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary, po
 ## The wounded of its side within the spell's reach, the worst off worth the most.
 func _heals(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary, w: Dictionary, scale: float) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	var reach := MonsterRules._spell_reach(data, str(how["spell"]))
+	var reach := CombatRules._spell_squares(s, data, str(how["spell"]), f)
 	for one: String in CombatRules.friends_of(s, f):
 		var t := CombatRules.fighter(s, one)
 		var it := Sheet.holder(s, t)
@@ -202,7 +202,7 @@ func _at(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary, targe
 	var spell := str(how["spell"])
 	var sp: Dictionary = data["spells"][spell]
 	var area := sp.has("area") and not sp.has("attack")
-	var reach := MonsterRules._spell_reach(data, spell)
+	var reach := CombatRules._spell_squares(s, data, spell, f)
 	if area and CombatRules.from_self(data, spell):
 		reach = maxi(1, FightGrid.squares_of(data, int(sp["area"].get("size", 5))))
 	for t: Dictionary in targets:

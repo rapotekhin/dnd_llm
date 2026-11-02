@@ -299,18 +299,24 @@ static func dawn(c: Dictionary, data: Dictionary, session_items: Dictionary, rng
 static func consume(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, rng: RandomNumberGenerator) -> Array[String]:
 	if charges_max(def_of(data["items"], session_items, id)) > 0:
 		return spend_charge(c, data, session_items, id, rng)
-	_remove_one(c, id)
+	remove(c, id)
 	return []
 
 
-static func _remove_one(c: Dictionary, id: String) -> void:
-	var inv: Dictionary = c["inventory"]
-	var left := int(inv.get(id, 0)) - 1
-	if left > 0:
-		inv[id] = left
+## Takes `qty` of a thing (all of it when < 0) from anybody's things: the hero's sheet or a bag, a fighter, a record (v0.8.4.15:
+## the one road of «убрать N вещей»). When none is left it is off its slots and its weapon set and out of the attunement;
+## the copies that set it apart go with it. How many.
+static func remove(c: Dictionary, id: String, qty: int = 1) -> int:
+	var inv: Dictionary = c.get("inventory", {})
+	var have := int(inv.get(id, 0))
+	var n := have if qty < 0 else mini(qty, have)
+	if have - n > 0:
+		inv[id] = have - n
 	else:
 		inv.erase(id)
-		(c.get("attuned", []) as Array).erase(id)
+		CharacterRules.sanitize_equipped(c)
+	Thing.trim(c)
+	return n
 
 
 # --- what a found thing may be (v0.7.12) -----------------------------------------------------------
@@ -544,7 +550,7 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		lines[0] = "Брошено: %s" % d.get("name", id)
 		return lines
 	if fx.has("spell"):
-		lines.append_array(_spell_use(c, data, session_items, fx, rng, s))
+		lines.append_array(_spell_use(c, data, session_items, fx, rng, s, who))
 		return lines
 	if fx.has("recover_slot"):
 		for lv in range(mini(int(fx["recover_slot"]), 5), 0, -1):
@@ -566,8 +572,8 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 				"source": {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}}, who))
 		Harm.take(s, data, who, int(adj["damage"]), lines, "poison")
 		return lines
-	if s != null and fx.has("meal"):  # a dish (v0.7.25)
-		lines.append_array(FoodRules.eat_one(s, data, id))
+	if s != null and fx.has("meal"):  # a dish (v0.7.25), of whoever eats it (v0.8.4.15)
+		lines.append_array(FoodRules.eat_one(s, data, id, who))
 		return lines
 	if s != null and fx.has("invisible_minutes"):
 		var minutes := CombatRules.roll_dice(rng, str(fx["invisible_minutes"]))
@@ -596,12 +602,13 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 ## A scroll read or a wand used out of a fight: a scroll of the hero's own class within their power needs no check,
 ## otherwise Arcana DC 10 + the circle (BG3: anyone may try); healing lands on the hero, Identify names every unknown
 ## thing, the rest is the master's to narrate. Lines.
-static func _spell_use(c: Dictionary, data: Dictionary, session_items: Dictionary, fx: Dictionary, rng: RandomNumberGenerator, s: GameSession) -> Array[String]:
+static func _spell_use(c: Dictionary, data: Dictionary, session_items: Dictionary, fx: Dictionary, rng: RandomNumberGenerator, s: GameSession,
+		who: Dictionary = Sheet.HERO) -> Array[String]:
 	var sp_id := str(fx["spell"])
 	var sp: Dictionary = data["spells"].get(sp_id, {})
 	var lines: Array[String] = []
 	if bool(fx.get("scroll", false)):
-		var read := read_scroll(s, data, sp_id, int(fx.get("level", 1)))
+		var read := read_scroll(s, data, sp_id, int(fx.get("level", 1)), who)  # its reader's Arcana, not the hero's
 		lines.append(str(read["line"]))
 		if not bool(read["ok"]):
 			return lines

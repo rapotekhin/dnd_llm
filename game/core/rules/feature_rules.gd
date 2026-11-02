@@ -306,7 +306,7 @@ static func reactions(s: GameSession, data: Dictionary, t: Dictionary, f: Dictio
 		out.append({"id": "uncanny_dodge", "label": "Невероятное уклонение: урон вдвое меньше"})
 	if has(c, "deflect_missiles") and shot:
 		out.append({"id": "deflect_missiles", "label": "Отражение снарядов: урон −1к10 + %d" % (ab_mod(c, "dex") + level(c))})
-	if CharacterRules.item_prop(c, "missile_snaring") and not has(c, "deflect_missiles") and shot:
+	if Sheet.prop(s, data, t, "missile_snaring") and not has(c, "deflect_missiles") and shot:
 		out.append({"id": "missile_snaring", "label": "Перчатки ловли снарядов: урон −1к10 + %d" % ab_mod(c, "dex")})  # v0.7.12
 	if has(c, "cutting_words") and Stock.left(c, data, "bardic_inspiration") > 0 and see:
 		out.append({"id": "cutting_words", "label": "Язвительные слова: −1к%d к броску атаки" % bardic_die(c, data)})

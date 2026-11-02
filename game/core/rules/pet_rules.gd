@@ -128,7 +128,7 @@ static func tame(s: GameSession, data: Dictionary, cid: String, food: String) ->
 	var skill := str(cfg(data)["skill"])
 	var given := not food.is_empty() and foods(s, data, str(cr["monster"])).has(food)
 	if given:
-		ItemRules._remove_one(s.character, food)
+		ItemRules.remove(s.character, food)
 	var d := dc(data, cr)
 	var r := Roll.hero(s, data, {"what": "Приручение", "skill": skill, "dc": d, "adv_why": "угощение" if given else ""})
 	var nat := int(r["nat"])
@@ -184,7 +184,7 @@ static func feed_why(s: GameSession, data: Dictionary, cid: String, food: String
 ## Fed by hand once a day: the day's meal and closer by close.feed.
 static func feed(s: GameSession, data: Dictionary, cid: String, food: String) -> Array[String]:
 	var cr := _here(s, cid)
-	ItemRules._remove_one(s.character, food)
+	ItemRules.remove(s.character, food)
 	cr["hand_day"] = s.day
 	cr["fed_day"] = s.day
 	cr["hungry"] = 0
@@ -201,7 +201,7 @@ static func eat(s: GameSession, data: Dictionary, cr: Dictionary) -> bool:
 	var f := foods(s, data, str(cr["monster"]))
 	if f.is_empty():
 		return false
-	ItemRules._remove_one(s.character, f[0])
+	ItemRules.remove(s.character, f[0])
 	return true
 
 
