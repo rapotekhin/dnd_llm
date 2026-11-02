@@ -152,16 +152,16 @@ func test_death_saves_and_massive_damage() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "wolf", "col": 0}])
 	var lines: Array[String] = []
-	CombatRules._hurt_player(s, data, int(s.character["hp"]), false, lines)
+	Harm.take(s, data, Sheet.HERO, int(s.character["hp"]), lines, "", false)
 	assert_int(s.character["hp"]).is_equal(0)
 	assert_bool(ConditionRules.has(s.character, "unconscious")).is_true()
-	CombatRules._hurt_player(s, data, 5, true, lines)
+	Harm.take(s, data, Sheet.HERO, 5, lines, "", true)
 	assert_int(int(s.combat["death_saves"]["fail"])).is_equal(2)
-	CombatRules._hurt_player(s, data, 1, false, lines)
+	Harm.take(s, data, Sheet.HERO, 1, lines, "", false)
 	assert_str(s.combat["outcome"]).is_equal("dead")
 	var t := _session()
 	_fight(t, [{"monster": "wolf", "col": 0}])
-	CombatRules._hurt_player(t, data, int(t.character["hp"]) + int(t.character["max_hp"]), false, lines)
+	Harm.take(t, data, Sheet.HERO, int(t.character["hp"]) + int(t.character["max_hp"]), lines, "", false)
 	assert_str(t.combat["outcome"]).is_equal("dead")
 
 
@@ -169,7 +169,7 @@ func test_intelligent_foes_take_a_stable_hero_alive() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "col": 0}])
 	var lines: Array[String] = []
-	CombatRules._hurt_player(s, data, int(s.character["hp"]), false, lines)
+	Harm.take(s, data, Sheet.HERO, int(s.character["hp"]), lines, "", false)
 	s.combat["death_saves"] = {"ok": 3, "fail": 0, "stable": true}
 	CombatRules._check_end(s, data, lines)
 	assert_str(s.combat["outcome"]).is_equal("captured")

@@ -57,11 +57,11 @@ func test_a_bout_to_surrender_knocks_out_and_nobody_dies() -> void:
 	assert_array(CombatRules.allies(s)).is_empty()
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var lines: Array[String] = []
-	CombatRules.hurt(s, data, foe, 999, lines)  # not a melee blow: still only knocked out
+	Harm.take(s, data, foe, 999, lines)  # not a melee blow: still only knocked out
 	assert_str(str(foe["status"])).is_equal("unconscious")
 	var s2 := _session()
 	_bout(s2)
-	CombatRules._hurt_player(s2, data, 9999, true, lines)
+	Harm.take(s2, data, Sheet.HERO, 9999, lines, "", true)
 	assert_str(str(s2.combat["outcome"])).is_equal("arena_lost")
 	assert_int(int(s2.character["hp"])).is_equal(0)
 
@@ -165,7 +165,7 @@ func test_the_blood_pit_is_to_the_death() -> void:
 	assert_str(Acts.one("surrender").can(s, data, CombatRules.player(s))).is_equal("COMBAT_NO_SURRENDER_PIT")
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var lines: Array[String] = []
-	CombatRules.hurt(s, data, foe, 999, lines)
+	Harm.take(s, data, foe, 999, lines)
 	assert_str(str(foe["status"])).is_equal("dead")
 	var prize := ArenaRules.after_bout(s, data, s.combat["arena"], true)
 	assert_str(" ".join(prize)).contains(Money.format(int(ArenaRules.ranks(data)[0]["prize_cp"]) * 2))

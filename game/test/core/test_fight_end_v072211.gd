@@ -49,7 +49,7 @@ func test_a_nonlethal_blow_knocks_out() -> void:
 	s.combat["nonlethal"] = true
 	s.combat["melee_strike"] = true
 	var lines: Array[String] = []
-	CombatRules.hurt(s, data, f, 999, lines)
+	Harm.take(s, data, f, 999, lines)
 	assert_str(str(f["status"])).is_equal("unconscious")
 	s.combat.erase("melee_strike")
 	assert_bool(CombatRules.enemies(s).is_empty()).is_true()

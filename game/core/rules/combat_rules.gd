@@ -511,10 +511,14 @@ static func player_can_act(s: GameSession) -> bool:
 	return is_player_turn(s) and not player_skips(s)
 
 
-## Resets the economy of whoever's turn it is; the player at 0 HP rolls a death save instead.
+## The start of anybody's turn, one road (v0.8.4.13): its points and reaction come back, what lasted until now goes, what
+## it stands in or burns with strikes, a spell's after-effects and recharges. What it then does is its own: the player's
+## buttons, the AI.
 static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
 	var id := current(s)
 	var f := fighter(s, id)
+	var me := Sheet.holder(s, f)
+	var name := str(me.get("name", ""))
 	f["dodging"] = false
 	f["disengaged"] = false
 	f["reacted"] = false  # the reaction comes back at the start of one's own turn (5e)
@@ -530,31 +534,34 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			for k: String in ["slowed", "no_heal", "set_by"]:
 				other.erase(k)
 			ConditionRules.remove(h, "chilled")
+	if str(f.get("status")) != "active":
+		return
+	MonsterRules.start_turn(s, data, f, lines)  # recharges, once-a-turn extras, Reckless Attack lasts until now
 	lines.append_array(SpellEffects.turn_start(s, data, f))  # Heroism (v0.7.13.1)
 	SpellEffects.end_until_turn(s, data, f)  # Shield (v0.7.13.7)
 	_fire(s, data, f, lines)
-	if id == PLAYER:
-		if bool(f.get("blinked", false)):  # Blink: back from the Ethereal Plane (v0.7.13.3)
-			f["blinked"] = false
-			lines.append("%s возвращается из эфира" % s.character["name"])
-		if bool(s.character.get("lethargy", false)):  # Haste is over: a turn of lethargy
-			s.character.erase("lethargy")
-			f["points"].merge({"action": 0, "bonus": 0, "move": 0, "haste": 0}, true)
-			lines.append("%s вялый после Ускорения — ход без действий и движения" % s.character["name"])
-		f.erase("reckless")  # Reckless Attack lasts until the hero's next turn
-		var dropped := str(s.character.get("dropped", ""))
-		if not dropped.is_empty() and not ConditionRules.incapacitated(s.character):  # Command «Брось!» (v0.7.22.4)
-			s.character.erase("dropped")
-			if str(s.character["equipped"].get("main_hand", "")).is_empty() and int(s.character["inventory"].get(dropped, 0)) > 0:
-				s.character["equipped"]["main_hand"] = dropped
-				CharacterRules.refresh(s.character, data, s.items)
-				lines.append("%s поднимает %s" % [s.character["name"], ItemRules.display_name(data["items"], s.items, dropped)])
-		lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # v0.8.4: what the hero stands in
-		lines.append_array(SpellEffects.zones_expire(s))  # Grease (v0.7.13.6)
-		if bool(f.get("retching", false)):  # Stinking Cloud (v0.7.13.6)
-			f.erase("retching")
-			f["points"].merge({"action": 0, "haste": 0}, true)
-			lines.append("%s давится и теряет действие" % s.character["name"])
+	if bool(f.get("blinked", false)):  # Blink: back from the Ethereal Plane (v0.7.13.3)
+		f["blinked"] = false
+		lines.append("%s возвращается из эфира" % name)
+	if bool(me.get("lethargy", false)):  # Haste is over: a turn of lethargy
+		me.erase("lethargy")
+		f["points"].merge({"action": 0, "bonus": 0, "move": 0, "haste": 0}, true)
+		lines.append("%s вялый после Ускорения — ход без действий и движения" % name)
+	var dropped := str(me.get("dropped", ""))
+	if not dropped.is_empty() and not ConditionRules.incapacitated(me):  # Command «Брось!» (v0.7.22.4): picked up for nothing
+		me.erase("dropped")
+		var hands: Dictionary = me.get("equipped", {})
+		if str(hands.get("main_hand", "")).is_empty() and int(me.get("inventory", {}).get(dropped, 0)) > 0:
+			hands["main_hand"] = dropped
+			CharacterRules.refresh(me, data, s.items)
+			lines.append("%s поднимает %s" % [name, ItemRules.display_name(data["items"], s.items, dropped)])
+	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # Moonbeam, Spirit Guardians (v0.7.13.5)
+	if ConditionRules.has(me, "slowed_spell"):
+		f["reacted"] = true  # Slow: no reactions
+	if bool(f.get("retching", false)):  # Stinking Cloud (v0.7.13.6)
+		f.erase("retching")
+		f["points"].merge({"action": 0, "haste": 0}, true)
+		lines.append("%s давится и теряет действие" % name)
 
 
 # --- the player's actions ---------------------------------------------------------------------------
@@ -780,8 +787,6 @@ static func _roll_gwf(rng: RandomNumberGenerator, expr: String, crit: bool) -> i
 	return total
 
 
-## Damage to an enemy: 0 HP — down (dead), unless a trait keeps it up (v0.7.9); half HP — a morale check on its next
-## turn; a hit breaks its concentration on a failed save; a dead one bursts and lets go of the hero.
 ## A moment of the fight for the screen to show (v0.7.22.14, CombatFx): what HP and states do not tell — a miss
 ## dodged, a critical hit. {who: fighter id or PLAYER, kind}; the screen takes them and clears the list.
 static func fx(s: GameSession, who: String, kind: String) -> void:
@@ -794,57 +799,6 @@ static func take_fx(s: GameSession) -> Array:
 	var list: Array = s.combat.get("fx", [])
 	s.combat.erase("fx")
 	return list
-
-
-static func hurt(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, lines: Array[String], dtype: String = "", crit: bool = false, by_hero: bool = true) -> void:
-	if Sheet.is_hero(t):
-		_hurt_player(s, data, dmg, crit, lines)
-		return
-	if dtype == "fire" and t.has("oiled") and dmg > 0:  # oil on the foe catches (v0.7.12)
-		var more := Sheet.taken(s, data, t, "fire", int(t["oiled"]))
-		t.erase("oiled")
-		dmg += more
-		lines.append("%s: масло вспыхивает, ещё %d" % [t["name"], more])
-	var soaked := mini(dmg, int(t.get("temp_hp", 0)))  # Heroism (v0.7.50.1)
-	if soaked > 0:
-		t["temp_hp"] = int(t["temp_hp"]) - soaked
-		dmg -= soaked
-	if dmg > 0:
-		t["rage_kept"] = true
-	if Guise.has_body(t):  # a beast form takes it first
-		dmg = FeatureRules.hurt_shape(s, data, dmg, lines, t)
-		if dmg <= 0:
-			return
-	if dmg >= int(t["hp"]) and int(t["hp"]) > 0 and MonsterRules.survives(s, data, t, dmg, dtype, crit, lines):
-		t["hp"] = 1
-		return
-	t["hp"] = maxi(0, int(t["hp"]) - dmg)
-	MonsterRules.concentration_check(s, data, t, dmg, lines)
-	for e: Dictionary in ConditionRules.effects(t).duplicate():
-		if bool(e.get("wake", false)) and int(t["hp"]) > 0:
-			var cond := str(e.get("condition", ""))
-			ConditionRules.remove(t, cond)
-			lines.append("%s приходит в себя от удара" % t["name"] if cond == "unconscious" else "%s: %s проходит от удара" % [t["name"], cond_name(data, cond)])
-	if int(t["hp"]) == 0 and t.has("called_by") and str(t.get("side")) == "enemy":
-		t["status"] = "gone"
-		lines.append("%s развеивается" % t["name"])
-		MonsterRules.release(s, data, t, lines)
-		return
-	if int(t["hp"]) == 0 and str(t.get("side")) == "ally":
-		t["status"] = "gone" if str(t.get("ally", "")) == "summon" else "down"
-		lines.append(("%s развеивается" if str(t.get("ally", "")) == "summon" else "%s падает без сознания") % t["name"])
-		MonsterRules.release(s, data, t, lines)
-		return
-	if int(t["hp"]) == 0 and by_hero and (ArenaRules.yield_bout(s) or bool(s.combat.get("nonlethal", false)) and bool(s.combat.get("melee_strike", false))):
-		t["status"] = "unconscious"  # v0.7.45: in a bout to surrender any blow only knocks out  # 5e: a melee blow at 0 HP may knock out instead of killing (v0.7.22.11, big test #44)
-		lines.append("%s оглушён и падает без сознания" % t["name"])
-		return
-	if int(t["hp"]) == 0:
-		t["status"] = "dead"
-		lines.append("%s повержен" % t["name"])
-		FeatureRules.on_kill(s, data, lines)
-		MonsterRules.release(s, data, t, lines)
-		MonsterRules.death_burst(s, data, t, lines)
 
 
 ## Engine spells (rules.combat.engine_spells): "" when castable at that target now, otherwise a reason.
@@ -910,7 +864,7 @@ static func _add_condition(s: GameSession, data: Dictionary, f: Dictionary, cond
 	ConditionRules.remove(me, cond)
 	var e := {"condition": cond, "by": str(timer.get("by", caster(s)["id"])), "source": {"kind": "spell" if timer.has("spell") else "engine", "id": str(timer.get("spell", "")), "name": str(timer.get("name", ""))}}
 	if timer.has("rounds") and cond != "prone":
-		e["ends"] = {"at": ConditionRules.now(s) + int(timer["rounds"]) - (1 if _yet_to_act(s, f) and not hero else 0)}
+		e["ends"] = {"at": ConditionRules.now(s) + int(timer["rounds"]) - (1 if _yet_to_act(s, f) else 0)}
 	elif hero and cond != "prone":
 		e["ends"] = {"rest": "short"}
 	if not str(timer.get("save", "")).is_empty():
@@ -1039,21 +993,6 @@ static func _can_be(data: Dictionary, t: Dictionary, spec: Dictionary) -> bool:
 	return int(m["abilities"].get("int", 10)) >= int(spec.get("min_int", 0))
 
 
-## The end of a foe's turn: rounds run down, a repeat save may shake a condition off. Lines.
-static func _tick_conditions(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	var now := ConditionRules.now(s)
-	for e: Dictionary in ConditionRules.effects(f).duplicate():
-		var cond := str(e.get("condition", ""))
-		var sv: Dictionary = e.get("save", {})
-		var tags := "magic" if str(e.get("source", {}).get("kind", "")) == "spell" else ""
-		if bool(sv.get("repeat", false)) and Sheet.saved(s, data, f, str(sv["ability"]), int(sv["dc"]), tags):
-			ConditionRules.remove_effect(f, int(e["uid"]))
-			lines.append("%s стряхивает: %s" % [f["name"], cond_name(data, cond)])
-		elif e.get("ends", {}).has("at") and int(e["ends"]["at"]) <= now:
-			ConditionRules.remove_effect(f, int(e["uid"]))
-			lines.append("%s: %s проходит" % [f["name"], cond_name(data, cond) if not cond.is_empty() else str(e.get("source", {}).get("name", ""))])
-
-
 ## A concentration ended: what the spell of `by` left on anyone goes, its zones and its creatures.
 static func end_spell(s: GameSession, data: Dictionary, spell_id: String, by: String = PLAYER) -> Array[String]:
 	var lines: Array[String] = []
@@ -1084,7 +1023,7 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String, by: St
 ## Anyone comes down from a height a spell held it at.
 static func _fall(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String, dice: String, lines: Array[String]) -> void:
 	lines.append("%s падает с высоты" % f["name"])
-	hurt(s, data, f, roll_dice(s.rng, dice), lines)
+	Harm.take(s, data, f, roll_dice(s.rng, dice), lines)
 	lines.append_array(ConditionRules.impose(s, data, {"condition": "prone", "ends": {"rest": "short"}, "source": {"kind": "spell", "id": spell_id, "name": "падение"}}, f))
 
 
@@ -1185,7 +1124,7 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 			var dtype := str(fx["damage"][1])
 			var dmg := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, str(fx["damage"][0])))
 			lines.append("%s: %d (%s)" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype)])
-			hurt(s, data, t, dmg, lines, dtype)
+			Harm.take(s, data, t, dmg, lines, dtype)
 	if fx.has("burning"):
 		FightField.kindle(s, data, FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
 	if fx.has("burning") and Attack.up(s, t):
@@ -1281,7 +1220,7 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 				if by_hero:
 					_caught_friend(s, data, tg)
 				if dmg > 0:
-					hurt(s, data, tg, dmg, lines, dtype, false, by_hero)
+					Harm.take(s, data, tg, dmg, lines, dtype, false, by_hero)
 				ActionRules.riders(s, data, spell_id, slot, tg, not ok, lines)
 
 
@@ -1296,7 +1235,7 @@ static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int,
 	if bool(cfg(data)["multi"].get(spell_id, {}).get("auto_hit", false)):
 		var dmg := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, _empowered(s, dice)))
 		lines.append("%s: %d (%s) по %s" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype), t["name"]])
-		hurt(s, data, t, dmg, lines, dtype, false, by_hero)
+		Harm.take(s, data, t, dmg, lines, dtype, false, by_hero)
 		return
 	# v0.7.13: a spell attack has the advantages and disadvantages of any attack (prone, hidden, guided, dark…)
 	var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
@@ -1386,7 +1325,7 @@ static func _pick_shot(s: GameSession, data: Dictionary, v: Dictionary, target_i
 		var dmg := 0 if ok else Sheet.taken(s, data, t, dtype, roll_dice(s.rng, _empowered(s, _spell_dice(sp, slot, caster_level(s)))))
 		lines.append("%s: %s — спасбросок %s %s, %d (%s)" % [sp["name"], t["name"], ab_name(str(sp["save"]["ability"])), "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 		if dmg > 0:
-			hurt(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(caster(s)))
+			Harm.take(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(caster(s)))
 
 
 ## The darts or rays left of the spell just cast (v0.7.22.4): {spell, slot, left, last} or {}; with `picks` (v0.7.50.1)
@@ -1519,7 +1458,7 @@ static func _acid_rider(s: GameSession, data: Dictionary, slot: int, t: Dictiona
 		return
 	var half := Sheet.taken(s, data, t, "acid", roll_dice(s.rng, "%dd4" % (4 + maxi(0, slot - 2))) / 2)
 	lines.append("Кислотная стрела: брызги — %d (кислота)" % half)
-	hurt(s, data, t, half, lines, "acid", false, Sheet.is_hero(caster(s)))
+	Harm.take(s, data, t, half, lines, "acid", false, Sheet.is_hero(caster(s)))
 
 
 ## A fighter thrown `feet` straight away from the caster, until a wall or a body stops it.
@@ -1744,23 +1683,37 @@ static func can_react(s: GameSession, data: Dictionary, r: Dictionary, t: Dictio
 
 
 ## The rest of the turn is skipped: next fighter (the UI plays the others one by one via next_actor()).
-## Returns the lines of a new round's start (reinforcements arriving).
+## Returns the lines of the turn's end and a new round's start (reinforcements arriving).
 static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
-	var lines: Array[String] = volley_flush(s, data)  # darts left fly at the last target (v0.7.22.4)
-	lines.append_array(ConditionRules.end_of_turn(s, data))
-	if SpellEffects.has(s.character, "blink"):  # Blink (v0.7.13.3)
-		var r := Roll.d20(s.rng)
-		if r >= 11:
-			player(s)["blinked"] = true
-			lines.append("Мерцание: %d — %s исчезает в эфире до своего хода" % [r, s.character["name"]])
-		else:
-			lines.append("Мерцание: %d — остаётся здесь" % r)
-	FeatureRules.end_turn(s, player(s), lines)
-	ConditionRules.remove(s.character, "mocked")
-	_burn(s, data, player(s), lines)
-	s.combat.erase("prompt")
-	_advance(s, data, lines)
+	var lines: Array[String] = []
+	_finish(s, data, player(s), lines)
 	return lines
+
+
+## The end of anybody's turn, one road (v0.8.4.13): darts left fly, the AI's free acts, what burns it and what it stands in
+## strike, Blink, a rage with nothing done goes, repeat saves and what ran out; then the next one's turn. Lines into `lines`.
+static func _finish(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	var me := Sheet.holder(s, f)
+	if str(f.get("status")) == "active":
+		lines.append_array(volley_flush(s, data))  # darts left fly at the last target (v0.7.22.4)
+		if not Sheet.is_hero(f) and Attack.up(s, f):
+			FightAI.last(s, data, f, lines)
+		ConditionRules.remove(me, "mocked")
+		_burn(s, data, f, lines)
+		lines.append_array(SpellEffects.zone_tick(s, data, f, "end"))  # Flaming Sphere (v0.7.13.5)
+		if SpellEffects.has(me, "blink") and Attack.up(s, f):  # Blink (v0.7.13.3)
+			var r := Roll.d20(s.rng)
+			if r >= 11:
+				f["blinked"] = true
+				lines.append("Мерцание: %d — %s исчезает в эфире до своего хода" % [r, me.get("name", "")])
+			else:
+				lines.append("Мерцание: %d — остаётся здесь" % r)
+		FeatureRules.end_turn(s, f, lines)
+		lines.append_array(ConditionRules.end_of_turn(s, data, f))
+	s.combat.erase("prompt")
+	_check_end(s, data, lines)
+	if str(s.combat["outcome"]).is_empty():
+		_advance(s, data, lines)
 
 
 static func _advance(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
@@ -1774,6 +1727,7 @@ static func _advance(s: GameSession, data: Dictionary, lines: Array[String]) -> 
 		for id: String in order:
 			fighter(s, id).erase("surprised")  # surprise lasts the first round only
 		s.combat["turn"] = 0
+		lines.append_array(SpellEffects.zones_expire(s))  # Grease (v0.7.13.6)
 		_arrivals(s, data, lines)
 	s.combat["turn"] = t
 	_begin_turn(s, data, lines)
@@ -1844,39 +1798,22 @@ static func _insert_initiative(s: GameSession, data: Dictionary, id: String) -> 
 static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var id := current(s)
+	var f := fighter(s, id)
 	if id == PLAYER:
 		if int(s.character["hp"]) <= 0:
 			_death_save(s, data, lines)
-		elif bool(player(s).get("surprised", false)):
-			player(s).erase("surprised")
+		elif bool(f.get("surprised", false)):
+			f.erase("surprised")
 			lines.append("%s застигнут врасплох и не успевает ничего сделать" % s.character["name"])
 		elif ConditionRules.incapacitated(s.character):
 			lines.append("%s не может действовать: %s" % [s.character["name"], ", ".join((s.character["conditions"] as Array).filter(
 				func(x: Variant) -> bool: return ConditionRules.INCAPACITATING.has(str(x))).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower()))])
-			lines.append_array(ConditionRules.end_of_turn(s, data))
 			if _held_for_good(s):
 				s.combat["outcome"] = "arena_lost" if s.combat.has("arena") else "captured" if enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))) else "dead"
 				lines.append("%s не может больше сражаться" % s.character["name"])
 		else:
 			return lines
-		_check_end(s, data, lines)
-		if str(s.combat["outcome"]).is_empty():
-			_advance(s, data, lines)
-		return lines
-	var f := fighter(s, id)
-	if str(f.get("side")) == "ally":
-		if str(f.get("status")) == "active":
-			if incapacitated(f):
-				lines.append("%s не может действовать: %s" % [f["name"], ", ".join(foe_conditions(s, data, f))])
-			elif not bool(f.get("surprised", false)):
-				if not _gives_up(s, data, f, lines):
-					_ally_turn(s, data, f, lines)
-					FightAI.last(s, data, f, lines)
-			f.erase("surprised")
-			_tick_conditions(s, data, f, lines)
-		_check_end(s, data, lines)
-		if str(s.combat["outcome"]).is_empty():
-			_advance(s, data, lines)
+		_finish(s, data, f, lines)
 		return lines
 	if str(f.get("status")) == "active":
 		if bool(f.get("surprised", false)):
@@ -1887,15 +1824,14 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 			MonsterRules.release(s, data, f, lines)
 		elif _has(f, "charmed"):
 			lines.append("%s очарован и не нападает" % f["name"])
+		elif str(f.get("side")) == "ally":
+			if not _gives_up(s, data, f, lines):
+				_ally_turn(s, data, f, lines)
 		else:
 			_enemy_turn(s, data, f, lines)
 			if bool(s.combat.get("halt", false)):
 				return lines  # answer_reaction finishes this turn
-			FightAI.last(s, data, f, lines)
-		_tick_conditions(s, data, f, lines)
-	_check_end(s, data, lines)
-	if str(s.combat["outcome"]).is_empty():
-		_advance(s, data, lines)
+	_finish(s, data, f, lines)
 	return lines
 
 
@@ -1905,22 +1841,7 @@ static func _burn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[
 		var acid := Sheet.taken(s, data, f, "acid", roll_dice(s.rng, str(f["acid"])))
 		f.erase("acid")
 		lines.append("%s: кислота жжёт — %d" % [f["name"], acid])
-		hurt(s, data, f, acid, lines, "acid")
-
-
-## The rest of a foe's turn after its attacks (also after a reaction prompt). Lines.
-static func _end_actor(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	ConditionRules.remove(f, "mocked")
-	_burn(s, data, f, lines)
-	if str(f.get("status")) == "active":
-		lines.append_array(SpellEffects.zone_tick(s, data, f, "end"))  # Flaming Sphere (v0.7.13.5)
-	if str(f.get("status")) == "active":
-		FightAI.last(s, data, f, lines)
-		FeatureRules.end_turn(s, f, lines)
-		_tick_conditions(s, data, f, lines)
-	_check_end(s, data, lines)
-	if str(s.combat["outcome"]).is_empty():
-		_advance(s, data, lines)
+		Harm.take(s, data, f, acid, lines, "acid")
 
 
 static func _death_save(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
@@ -1980,27 +1901,16 @@ static func _fire(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[
 		return
 	var burn := Sheet.taken(s, data, f, "fire", roll_dice(s.rng, str(f["burning"])))
 	lines.append("%s горит: %d (огонь)" % [f["name"], burn])
-	hurt(s, data, f, burn, lines, "fire")
+	Harm.take(s, data, f, burn, lines, "fire")
 	if Attack.up(s, f) and Sheet.saved(s, data, f, "dex", 10):
 		f.erase("burning")
 		lines.append("%s сбивает пламя" % f["name"])
 
 
+## A foe's own turn, its start already made (_begin_turn): morale, a call for help, flight, else the AI.
 static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	f["dodging"] = false
 	var p := player(s)
 	var m := Sheet.template(data, f)
-	f.erase("swooped")
-	MonsterRules.start_turn(s, data, f, lines)
-	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # Moonbeam, Spirit Guardians (v0.7.13.5)
-	if str(f["status"]) != "active":
-		return
-	if _has(f, "slowed_spell"):
-		f["reacted"] = true  # Slow: no reactions
-	if bool(f.get("retching", false)):  # Stinking Cloud (v0.7.13.6)
-		f.erase("retching")
-		lines.append("%s давится и пропускает ход" % f["name"])
-		return
 	if not Attack.up(s, f):
 		return
 	if s.combat.has("arena"):  # v0.7.45: no flight from the ring; a bout to surrender ends when a side gives up
@@ -2093,7 +2003,7 @@ static func answer_reaction(s: GameSession, data: Dictionary, choice: String) ->
 	if str(ctx.get("kind", "")) == "counter":  # a foe's spell waits for Counterspell (v0.7.13.7)
 		if choice == "none" or not SpellEffects.counter(s, data, f, str(ctx["how"]["spell"]), int(ctx["circle"]), lines):
 			lines.append_array(Acts.one("cast").run(s, data, f, str(ctx["to"]), (ctx["how"] as Dictionary).merged({"asked": true}, true)))
-		_end_actor(s, data, f, lines)
+		_finish(s, data, f, lines)
 		return lines
 	if choice != "none":
 		FeatureRules.apply_reaction(s, data, player(s), f, choice, ctx, lines)
@@ -2110,7 +2020,7 @@ static func answer_reaction(s: GameSession, data: Dictionary, choice: String) ->
 		if bool(s.combat.get("halt", false)):
 			s.combat["resume_plan"] = plan
 			return lines
-	_end_actor(s, data, f, lines)
+	_finish(s, data, f, lines)
 	return lines
 
 
@@ -2123,48 +2033,6 @@ static func _held_for_good(s: GameSession) -> bool:
 			if not e.get("ends", {}).has("at"):
 				return true
 	return false
-
-
-## Damage to the player: 0 HP — unconscious and death saves; hits at 0 HP — failed saves; massive damage — death.
-static func _hurt_player(s: GameSession, data: Dictionary, dmg: int, crit: bool, lines: Array[String]) -> void:
-	var c := s.character
-	if dmg <= 0:
-		return
-	player(s)["rage_kept"] = true
-	dmg = HeroDefense.absorb(c, dmg, lines)  # temporary HP (v0.7.10)
-	dmg = FeatureRules.hurt_shape(s, data, dmg, lines)  # a beast form takes it first
-	if dmg <= 0:
-		return
-	if ArenaRules.yield_bout(s) and int(c["hp"]) - dmg <= 0:  # v0.7.45: the manager stops the bout
-		c["hp"] = 0
-		s.combat["outcome"] = "arena_lost"
-		lines.append("%s падает — распорядитель останавливает бой" % c["name"])
-		return
-	var ds: Dictionary = s.combat["death_saves"]
-	if int(c["hp"]) <= 0:
-		ds["fail"] = int(ds["fail"]) + (2 if crit else 1)
-		ds["stable"] = false
-		lines.append("%s: провал спасброска от смерти (%d из 3)" % [c["name"], mini(3, int(ds["fail"]))])
-		if int(ds["fail"]) >= 3:
-			s.combat["outcome"] = "dead"
-		return
-	var left := int(c["hp"]) - dmg
-	if left > 0:
-		c["hp"] = left
-		lines.append_array(HeroDefense.after_damage(s, data, dmg))
-		return
-	c["hp"] = 0
-	if -left >= int(c["max_hp"]):
-		s.combat["outcome"] = "dead"
-		lines.append("%s погибает на месте" % c["name"])
-		return
-	if HeroDefense.relentless(s, data, lines):
-		lines.append_array(HeroDefense.after_damage(s, data, dmg))
-		return
-	lines.append_array(ConditionRules.impose(s, data, {"condition": "unconscious", "ends": {"rest": "long"}, "source": {"kind": "engine", "name": "0 HP"}}))
-	s.combat["death_saves"] = {"ok": 0, "fail": 0}
-	player(s).erase("raging")
-	lines.append("%s падает без сознания" % c["name"])
 
 
 # --- allies (v0.7.22.22, AllyRules) --------------------------------------------------------------
@@ -2201,12 +2069,7 @@ static func summon_for(s: GameSession, data: Dictionary, f: Dictionary, spell_id
 ## An ally's turn: a helper (a familiar) distracts the foe nearest the hero — the hero's next attack at it has
 ## advantage (the Help action); the rest go for the nearest foe in sight.
 static func _ally_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	if f.has("lethargy"):  # Haste ended on it (v0.7.50.1)
-		f.erase("lethargy")
-		lines.append("%s едва двигается — Ускорение кончилось" % f["name"])
-		return
-	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # friendly fire (v0.7.50.1): a zone burns allies too
-	if str(f.get("status")) != "active":
+	if not Attack.up(s, f):
 		return
 	if bool(f.get("helper", false)):
 		var target := {}

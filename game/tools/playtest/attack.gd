@@ -94,7 +94,7 @@ func _knock_out(gs: Node, s: GameSession, data: Dictionary, fid: String) -> void
 	s.combat["nonlethal"] = true
 	s.combat["melee_strike"] = true
 	var lines: Array[String] = []
-	CombatRules.hurt(s, data, f, 999, lines)
+	Harm.take(s, data, f, 999, lines)
 	s.combat.erase("melee_strike")
 	CombatRules.after_player_action(s, data)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)

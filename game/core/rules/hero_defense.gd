@@ -3,8 +3,8 @@ extends RefCounted
 ## Damage to the hero and the hero's saves by 5e (roadmap v0.7.8): resistances, vulnerabilities and immunities like
 ## a foe's — from race traits (dwarf, tiefling, dragonborn by ancestry), Rage, items (resist_*), effects (a cure's
 ## boon), petrification; advantage on saves of a tag from race traits (dwarf — poison, elf — charm, halfling — fear,
-## gnome — magic against INT / WIS / CHA) and effects (antitoxin); immunity of an elf to magical sleep; a
-## concentration save after damage; Relentless Endurance of a half-orc. Tables — rules.hero_effects.
+## gnome — magic against INT / WIS / CHA) and effects (antitoxin); immunity of an elf to magical sleep. What a blow does
+## next is `Harm` (v0.8.4.13). Tables — rules.hero_effects.
 
 const TAG_NAMES := {"poison": "яд", "charm": "очарование", "fear": "страх", "magic": "магия", "sleep": "сон", "disease": "болезнь"}
 
@@ -72,18 +72,6 @@ static func _worn(c: Dictionary, data: Dictionary, session_items: Dictionary) ->
 	return out
 
 
-## Damage of one type to the hero after resistances: {"damage", "note"} («сопротивление: Ярость» or "").
-static func adjust(s: GameSession, data: Dictionary, dtype: String, dmg: int) -> Dictionary:
-	if dmg <= 0:
-		return {"damage": maxi(0, dmg), "note": ""}
-	if ConditionRules.does(s.character, data, "resist_all"):
-		return {"damage": dmg / 2, "note": "сопротивление: окаменение"}
-	var res := resistances(s, data)
-	if not dtype.is_empty() and res.has(dtype):
-		return {"damage": dmg / 2, "note": "сопротивление: %s" % res[dtype]}
-	return {"damage": dmg, "note": ""}
-
-
 ## Why the hero has advantage on a save of `ability` against `tag` now (race traits, effects; v0.7.10: Danger Sense
 ## on DEX saves, Rage on STR).
 static func save_advantages(c: Dictionary, data: Dictionary, ability: String, tag: String, raging: bool = false) -> Array[String]:
@@ -129,45 +117,3 @@ static func immune(c: Dictionary, data: Dictionary, cond: String, tag: String) -
 	return ""
 
 
-## After damage the hero still has: a concentration save (DC 10 or half the damage) and waking from an effect that
-## ends on damage (sleep). Lines.
-static func after_damage(s: GameSession, data: Dictionary, dmg: int) -> Array[String]:
-	var c := s.character
-	var lines: Array[String] = []
-	if dmg <= 0:
-		return lines
-	for e: Dictionary in ConditionRules.effects(c).duplicate():
-		if bool(e.get("wake", false)) and int(c.get("hp", 0)) > 0:
-			ConditionRules.remove_effect(c, int(e["uid"]))
-			lines.append("%s: %s проходит от удара" % [c.get("name", ""), ConditionRules.name_of(data, str(e.get("condition", ""))).to_lower()])
-	var spell := str(c.get("concentration", ""))
-	if not spell.is_empty() and int(c.get("hp", 0)) > 0:
-		var r := Sheet.save(s, data, Sheet.HERO, "con", maxi(10, dmg / 2), "")
-		if bool(r["ok"]):
-			lines.append("концентрация удержана (%s)" % r["text"])
-		else:
-			lines.append_array(ConditionRules.end_concentration(s, data, r["text"]))
-	return lines
-
-
-## Relentless Endurance (half-orc, once per long rest): the hero dropped to 0 HP without being killed outright stays
-## at 1 HP. True when it worked; the line goes to `lines`.
-static func relentless(s: GameSession, data: Dictionary, lines: Array[String]) -> bool:
-	var c := s.character
-	if not CharacterRules.has_trait(c, "relentless_endurance") or bool(c.get("relentless_used", false)) or int(c.get("hp", 0)) > 0:
-		return false
-	c["hp"] = 1
-	c["relentless_used"] = true
-	lines.append("%s: %s — остаётся на ногах с 1 HP" % [c.get("name", ""), data["races"]["traits"].get("relentless_endurance", {}).get("name", "")])
-	return true
-
-
-## Temporary hit points take damage first (Dark One's Blessing and the like, v0.7.10). Returns what is left.
-static func absorb(c: Dictionary, dmg: int, lines: Array[String]) -> int:
-	var thp := int(c.get("temp_hp", 0))
-	if thp <= 0 or dmg <= 0:
-		return dmg
-	var taken := mini(thp, dmg)
-	c["temp_hp"] = thp - taken
-	lines.append("временные хиты: −%d" % taken)
-	return dmg - taken

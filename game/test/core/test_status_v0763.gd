@@ -84,7 +84,7 @@ func test_a_curses_repeat_save_is_the_status_own() -> void:
 	ConditionRules.add_effect(foe, {"condition": "enfeebled", "save": {"ability": "con", "dc": 1, "repeat": true}, "source": {"kind": "spell", "id": "ray", "name": "Луч"}})
 	var lines: Array[String] = []
 	for i in 8:  # a natural 1 fails even against DC 1
-		CombatRules._tick_conditions(s, data, foe, lines)
+		lines.append_array(ConditionRules.end_of_turn(s, data, foe))
 	assert_bool(CombatRules._has(foe, "enfeebled")).is_false()
 
 

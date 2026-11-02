@@ -35,7 +35,7 @@ static func has_trait(data: Dictionary, f: Dictionary, id: String) -> bool:
 static func available(f: Dictionary, a: Dictionary) -> bool:
 	var key := str(a.get("name_en", ""))
 	if a.has("recharge"):
-		return not (f.get("spent", {}) as Dictionary).has(key)
+		return not (f.get("recharging", {}) as Dictionary).has(key)
 	if a.has("per_day"):
 		return int(f.get("used", {}).get(key, 0)) < int(a["per_day"])
 	return true
@@ -44,9 +44,9 @@ static func available(f: Dictionary, a: Dictionary) -> bool:
 static func spend(f: Dictionary, a: Dictionary) -> void:
 	var key := str(a.get("name_en", ""))
 	if a.has("recharge"):
-		var spent: Dictionary = f.get("spent", {})
+		var spent: Dictionary = f.get("recharging", {})  # not `spent`: that is Stock's, the charges of its features
 		spent[key] = int(a["recharge"])
-		f["spent"] = spent
+		f["recharging"] = spent
 	if a.has("per_day"):
 		var used: Dictionary = f.get("used", {})
 		used[key] = int(used.get(key, 0)) + 1
@@ -55,7 +55,7 @@ static func spend(f: Dictionary, a: Dictionary) -> void:
 
 ## The start of a monster's turn: recharge rolls, a reckless one goes all in, the turn's flags reset. Lines.
 static func start_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	var spent: Dictionary = f.get("spent", {})
+	var spent: Dictionary = f.get("recharging", {})
 	for key: String in spent.keys():
 		if s.rng.randi_range(1, 6) >= int(spent[key]):
 			spent.erase(key)
@@ -178,7 +178,7 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 			if hero and bool(fx.get("zero_hp_paralyzed", false)) and int(me["hp"]) - dmg <= 0 and -(int(me["hp"]) - dmg) < int(me["max_hp"]):
 				_poisoned_stable(s, data, f, a, lines)
 				return
-			CombatRules.hurt(s, data, t, dmg, lines, str(fx["damage"]["type"]), false, Sheet.is_hero(f))
+			Harm.take(s, data, t, dmg, lines, str(fx["damage"]["type"]), false, Sheet.is_hero(f))
 	if not failed and fx.has("save"):
 		return
 	if not failed and not save_result.is_empty():
@@ -261,14 +261,15 @@ static func _poisoned_stable(s: GameSession, data: Dictionary, f: Dictionary, a:
 	lines.append("%s падает: яд сковал тело — без сознания, но жив (отравлен и парализован на час)" % c.get("name", ""))
 
 
-## The holds of a grappler end when it dies, is incapacitated or moves off (5e), and with `conc` what it keeps by concentration. Lines.
-static func release(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String], conc: bool = true) -> void:
+## The holds of a grappler end when it dies, is incapacitated or moves off (5e), and with `conc` what it keeps by
+## concentration; `holds` false — only the concentration (a blow broke it). Lines.
+static func release(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String], conc: bool = true, holds: bool = true) -> void:
 	var all: Array[Dictionary] = [s.character]
 	for id: String in s.combat.get("fighters", []):
 		all.append(CombatRules.fighter(s, id))
 	for me: Dictionary in all:
 		for e: Dictionary in ConditionRules.effects(me).duplicate():
-			if str(e.get("by", "")) == str(f["id"]) and (bool(e.get("hold", false)) or conc and bool(e.get("conc", false))):
+			if str(e.get("by", "")) == str(f["id"]) and (holds and bool(e.get("hold", false)) or conc and bool(e.get("conc", false))):
 				ConditionRules.remove_effect(me, int(e["uid"]))
 				lines.append("%s больше не %s" % [me.get("name", ""), ConditionRules.name_of(data, str(e.get("condition", ""))).to_lower()])
 	if conc and f.has("concentration"):
@@ -362,26 +363,6 @@ static func charge_prone(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 
 
 # --- traits of the monster's own body --------------------------------------------------------------------
-
-
-## Relentless (boar) and Undead Fortitude (zombie): a blow that would drop it leaves it at 1 HP. True when so.
-static func survives(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, dtype: String, crit: bool, lines: Array[String]) -> bool:
-	if CharacterRules.has_trait(t, "relentless_endurance") and not bool(t.get("relentless_used", false)):
-		t["relentless_used"] = true
-		lines.append("%s остаётся на ногах с 1 HP" % t["name"])
-		return true
-	var r := trait_of(data, t, "relentless")
-	if not r.is_empty() and not bool(t.get("relentless_used", false)) and dmg <= int(r.get("effect", {}).get("relentless", 0)):
-		t["relentless_used"] = true
-		lines.append("%s: %s — остаётся на ногах с 1 HP" % [t["name"], r["name"]])
-		return true
-	var uf := trait_of(data, t, "undead_fortitude")
-	if not uf.is_empty() and dtype != "radiant" and not crit:
-		var dc := 5 + dmg
-		if Sheet.saved(s, data, t, "con", dc):
-			lines.append("%s: %s (Тел против Сл %d) — встаёт с 1 HP" % [t["name"], uf["name"], dc])
-			return true
-	return false
 
 
 ## Death Burst (mephits, magmin): everyone next to it saves or takes it. Lines.
@@ -482,17 +463,6 @@ static func _command_word(s: GameSession, spec: Dictionary, t: Dictionary = Shee
 			return false
 		return not bool(w.get("drop", false)) or not str(c.get("equipped", {}).get("main_hand", "")).is_empty())
 	return fits[s.rng.randi_range(0, fits.size() - 1)] if not fits.is_empty() else {}
-
-
-## Damage breaks a monster's concentration on a failed CON save (DC 10 or half the damage). Lines.
-static func concentration_check(s: GameSession, data: Dictionary, f: Dictionary, dmg: int, lines: Array[String]) -> void:
-	var spell := str(f.get("concentration", ""))
-	if spell.is_empty() or dmg <= 0:
-		return
-	if int(f["hp"]) > 0 and Sheet.saved(s, data, f, "con", maxi(10, dmg / 2)):
-		return
-	lines.append("%s теряет концентрацию на «%s»" % [f["name"], data["spells"].get(spell, {}).get("name", spell)])
-	release(s, data, f, lines)
 
 
 ## A short line of what an action does besides its damage, for the card of an inspected foe: «сбивает с ног (Сил Сл 11)»,

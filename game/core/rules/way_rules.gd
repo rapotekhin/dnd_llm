@@ -126,14 +126,9 @@ static func on_pass(s: GameSession, data: Dictionary, a: String, b: String) -> A
 	var feet := int(row(data, a, b).get("drop", 0))
 	if feet < 10 or Move.air(s, data, Sheet.HERO):
 		return []
-	var c := s.character
-	var dmg := CombatRules.roll_dice(s.rng, "%dd6" % mini(feet / 10, 20))
-	var adj := Sheet.damage(s, data, Sheet.HERO, "bludgeoning", dmg)
-	dmg = int(adj["damage"])
-	c["hp"] = maxi(0, int(c["hp"]) - dmg)
+	var dmg := Sheet.taken(s, data, Sheet.HERO, "bludgeoning", CombatRules.roll_dice(s.rng, "%dd6" % mini(feet / 10, 20)))
 	var lines: Array[String] = ["Падение с %d футов: −%d HP" % [feet, dmg]]
-	lines.append_array(HeroDefense.after_damage(s, data, dmg))
-	HeroDefense.relentless(s, data, lines)
+	Harm.take(s, data, Sheet.HERO, dmg, lines, "bludgeoning")
 	return lines
 
 

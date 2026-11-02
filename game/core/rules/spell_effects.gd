@@ -782,7 +782,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 		"heat":
 			var dmg := Sheet.taken(s, data, t, str(sus["type"]), CombatRules.roll_dice(s.rng, str(e["dice"])))
 			lines.append("%s: %s — %d (огонь)" % [name, t["name"], dmg])
-			CombatRules.hurt(s, data, t, dmg, lines, str(sus["type"]), false, by_hero)
+			Harm.take(s, data, t, dmg, lines, str(sus["type"]), false, by_hero)
 			if str(t.get("status")) == "active" and not Sheet.saved(s, data, t, "con", CombatRules.spell_dc(s), "magic"):
 				CombatRules._hold(Sheet.holder(s, t), "mocked")  # the burning metal: disadvantage on its next attack
 				lines.append("%s едва держит раскалённое — атака с помехой" % t["name"])
@@ -818,7 +818,7 @@ static func _save_hit(s: GameSession, data: Dictionary, name: String, dtype: Str
 	lines.append("%s: %s — %s%d (%s)" % [name, f["name"], ("спасбросок %s %s, " % [CombatRules.ab_name(save), "успех" if ok else "провал"]) if not save.is_empty() else "",
 		dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 	if dmg > 0:
-		CombatRules.hurt(s, data, f, dmg, lines, dtype, false, by_hero)
+		Harm.take(s, data, f, dmg, lines, dtype, false, by_hero)
 	return lines
 
 
@@ -836,8 +836,7 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 		lines.append_array(CombatRules._add_condition(s, data, f, str(z["cond"]), {"name": str(z["name"]), "by": str(z.get("by", CombatRules.PLAYER))}))
 		lines.append("%s: %s — %s" % [z["name"], f["name"], CombatRules.cond_name(data, str(z["cond"]))])
 	if bool(z.get("retch", false)):
-		f["retching"] = true
-		lines.append("%s: %s давится и теряет ход" % [z["name"], f["name"]])
+		f["retching"] = true  # its next start of a turn takes the action and says so (CombatRules._begin_turn)
 	return lines
 
 

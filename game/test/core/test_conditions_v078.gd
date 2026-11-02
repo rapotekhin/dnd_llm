@@ -88,7 +88,9 @@ func test_damage_calls_for_a_concentration_save() -> void:
 	var c := s.character
 	c["concentration"] = "invisibility"
 	c["saves"]["con"] = -20  # cannot make it
-	var lines := HeroDefense.after_damage(s, data, 30)
+	c["hp"] = 200
+	var lines: Array[String] = []
+	Harm.take(s, data, Sheet.HERO, 30, lines)
 	assert_str(str(c["concentration"])).is_empty()
 	assert_str(", ".join(lines)).contains("прервана")
 
@@ -276,16 +278,16 @@ func test_rage_resists_weapons_in_a_fight() -> void:
 func test_relentless_endurance_once_a_long_rest() -> void:
 	var s := _session("barbarian_urga")
 	var c := s.character
-	c["hp"] = 0
+	c["hp"] = 3
 	var lines: Array[String] = []
-	assert_bool(HeroDefense.relentless(s, data, lines)).is_true()
+	Harm.take(s, data, Sheet.HERO, 5, lines)
 	assert_int(int(c["hp"])).is_equal(1)
-	c["hp"] = 0
-	assert_bool(HeroDefense.relentless(s, data, lines)).is_false()
+	Harm.take(s, data, Sheet.HERO, 5, lines)
+	assert_int(int(c["hp"])).is_equal(0)
 	s.room_id = "brod-temple"
 	ExplorationRules.long_rest(s, data)
-	c["hp"] = 0
-	assert_bool(HeroDefense.relentless(s, data, lines)).is_true()
+	c["hp"] = 3
+	assert_bool(Harm.survives(s, data, Sheet.HERO, 5, "", false, lines)).is_true()
 
 
 # --- the fight --------------------------------------------------------------------------------------------

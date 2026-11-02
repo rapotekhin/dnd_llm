@@ -564,11 +564,7 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		if not bool(r["ok"]):
 			lines.append_array(ConditionRules.impose(s, data, {"condition": "poisoned", "ends": ConditionRules.ends_for(s, data, "hour"),
 				"source": {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}}, who))
-		if Sheet.is_hero(who):  # the hero's road to 0 HP and its death saves
-			c["hp"] = maxi(0, int(c["hp"]) - int(adj["damage"]))
-			lines.append_array(HeroDefense.after_damage(s, data, int(adj["damage"])))
-		else:
-			CombatRules.hurt(s, data, who, int(adj["damage"]), lines, "poison")
+		Harm.take(s, data, who, int(adj["damage"]), lines, "poison")
 		return lines
 	if s != null and fx.has("meal"):  # a dish (v0.7.25)
 		lines.append_array(FoodRules.eat_one(s, data, id))

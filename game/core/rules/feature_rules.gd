@@ -248,7 +248,7 @@ static func _smite(s: GameSession, data: Dictionary, t: Dictionary, slot: int, c
 	Stock.spend(Sheet.holder(s, who), "slot_%d" % slot)
 	var dmg := Sheet.taken(s, data, t, "radiant", CombatRules.roll_dice(s.rng, smite_dice(data, t, slot, crit)))
 	var lines: Array[String] = ["Божественная кара (ячейка %d круга): %d (излучение) по %s" % [slot, dmg, Sheet.holder(s, t).get("name", "")]]
-	CombatRules.hurt(s, data, t, dmg, lines, "radiant", crit, Sheet.is_hero(who))
+	Harm.take(s, data, t, dmg, lines, "radiant", crit, Sheet.is_hero(who))
 	return lines
 
 
@@ -805,7 +805,7 @@ static func _breath(s: GameSession, data: Dictionary, f: Dictionary, target_id: 
 		var ok := Sheet.saved(s, data, t, ab, dc)
 		var dmg := Sheet.taken(s, data, t, dtype, full / 2 if ok else full)
 		lines.append("%s: %s против Сл %d — %s, %d" % [Sheet.holder(s, t).get("name", ""), CombatRules.ab_name(ab), dc, "успех" if ok else "провал", dmg])
-		CombatRules.hurt(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(f))
+		Harm.take(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(f))
 	return lines
 
 

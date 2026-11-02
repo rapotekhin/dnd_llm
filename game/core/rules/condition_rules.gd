@@ -354,29 +354,37 @@ static func expire(s: GameSession, data: Dictionary) -> Array[String]:
 	return lines
 
 
-## The end of the hero's own turn in a fight: repeat saves shake conditions off, then time runs out. Lines.
-static func end_of_turn(s: GameSession, data: Dictionary) -> Array[String]:
-	var c := s.character
+## The end of anybody's own turn in a fight (one road, v0.8.4.13): repeat saves shake conditions off against what laid
+## them (a spell's — magic), a last one makes it worse (a cockatrice's stone, v0.7.9), then what ran out goes. Lines.
+static func end_of_turn(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> Array[String]:
+	var c := Sheet.holder(s, who)
+	var name := str(c.get("name", ""))
 	var lines: Array[String] = []
 	for e: Dictionary in effects(c).duplicate():
 		var sv: Dictionary = e.get("save", {})
 		if not bool(sv.get("repeat", false)) or str(sv.get("ability", "")).is_empty():
 			continue
-		var r := Sheet.save(s, data, Sheet.HERO, str(sv["ability"]), int(sv.get("dc", 10)), str(sv.get("tag", "")))
+		var tag := str(sv.get("tag", "magic" if str(e.get("source", {}).get("kind", "")) == "spell" else ""))
+		var r := Sheet.save(s, data, who, str(sv["ability"]), int(sv.get("dc", 10)), tag)
 		var what := name_of(data, str(e.get("condition", ""))).to_lower()
 		if bool(r["ok"]):
 			remove_effect(c, int(e["uid"]))
-			lines.append("%s стряхивает: %s (%s)" % [c.get("name", ""), what, r["text"]])
-		elif bool(sv.get("once", false)):  # one more save, then it gets worse (a cockatrice's stone, v0.7.9)
+			lines.append("%s стряхивает: %s (%s)" % [name, what, r["text"]])
+		elif bool(sv.get("once", false)):
 			remove_effect(c, int(e["uid"]))
 			var next: Dictionary = e.get("escalate", {})
 			if not next.is_empty():
 				lines.append_array(impose(s, data, {"condition": str(next["condition"]), "ends": ends_for(s, data, str(next.get("duration", ""))),
-					"source": e.get("source", {}), "by": str(e.get("by", ""))}))
-				lines.append("%s: %s (%s)" % [c.get("name", ""), name_of(data, str(next["condition"])).to_lower(), r["text"]])
+					"source": e.get("source", {}), "by": str(e.get("by", ""))}, who))
+				lines.append("%s: %s (%s)" % [name, name_of(data, str(next["condition"])).to_lower(), r["text"]])
 		else:
-			lines.append("%s: %s держится (%s)" % [c.get("name", ""), what, r["text"]])
-	lines.append_array(expire(s, data))
+			lines.append("%s: %s держится (%s)" % [name, what, r["text"]])
+	if Sheet.is_hero(who):
+		lines.append_array(expire(s, data))
+		return lines
+	var gone := _run_out(c, data, now(s))
+	if not gone.is_empty():
+		lines.append("%s: %s проходит" % [name, ", ".join(gone)])
 	return lines
 
 
@@ -399,6 +407,19 @@ static func end_concentration(s: GameSession, data: Dictionary, why: String) -> 
 	CharacterRules.refresh(c, data, s.items)  # an AC or a maximum of hit points from the spell goes (v0.7.13.2)
 	var lines: Array[String] = ["концентрация на «%s» прервана: %s" % [data["spells"].get(spell, {}).get("name", spell), why]]
 	lines.append_array(CombatRules.end_spell(s, data, spell))
+	return lines
+
+
+## Anybody's concentration breaks (a blow, 0 HP): what its spell keeps goes; its holds stay. Lines.
+static func lose_concentration(s: GameSession, data: Dictionary, who: Dictionary, why: String) -> Array[String]:
+	if Sheet.is_hero(who):
+		return end_concentration(s, data, why)
+	var spell := str(who.get("concentration", ""))
+	var lines: Array[String] = []
+	if spell.is_empty():
+		return lines
+	lines.append("%s теряет концентрацию на «%s»" % [who.get("name", ""), data["spells"].get(spell, {}).get("name", spell)])
+	MonsterRules.release(s, data, who, lines, true, false)
 	return lines
 
 

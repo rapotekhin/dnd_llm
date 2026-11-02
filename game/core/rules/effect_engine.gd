@@ -1087,7 +1087,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		var f := CombatRules.fighter(s, str(plan["foe"]))
 		if kind == "damage":
 			var tmp: Array[String] = []
-			CombatRules.hurt(s, _data, f, int(plan["amount"]), tmp)
+			Harm.take(s, _data, f, int(plan["amount"]), tmp)
 		elif bool(plan.get("on", true)):
 			CombatRules._hold(f, str(plan["condition"]))
 		else:
@@ -1111,10 +1111,7 @@ func _do_move(s: GameSession, plan: Dictionary) -> void:
 
 
 func _do_damage(s: GameSession, plan: Dictionary) -> void:
-	var c := s.character
-	c["hp"] = maxi(0, int(c["hp"]) - int(plan["amount"]))
-	_extra_lines.append_array(HeroDefense.after_damage(s, _data, int(plan["amount"])))
-	HeroDefense.relentless(s, _data, _extra_lines)
+	Harm.take(s, _data, Sheet.HERO, int(plan["amount"]), _extra_lines)
 
 
 func _do_heal(s: GameSession, plan: Dictionary) -> void:

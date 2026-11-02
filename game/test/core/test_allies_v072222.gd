@@ -72,7 +72,7 @@ func test_the_fight_goes_on_while_an_ally_stands() -> void:
 	assert_array(CombatRules.after_player_action(s, data)).is_empty()
 	assert_str(str(s.combat["outcome"])).is_empty()
 	var lines: Array[String] = []
-	CombatRules.hurt(s, data, CombatRules.fighter(s, CombatRules.allies(s)[0]), 99, lines)
+	Harm.take(s, data, CombatRules.fighter(s, CombatRules.allies(s)[0]), 99, lines)
 	assert_str(lines[0]).contains("падает без сознания")
 	CombatRules.after_player_action(s, data)
 	assert_str(str(s.combat["outcome"])).is_equal("left")  # beasts: nobody left standing on the hero's side

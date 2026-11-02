@@ -211,7 +211,7 @@ func test_a_druid_foe_turns_into_a_beast_and_back() -> void:
 	assert_int(CombatRules.ac_of(f)).is_equal(int(Guise.body(f)["ac"]))
 	assert_int(int(CombatRules.points(s, data, f)["action"])).is_equal(0)
 	var body := int(Guise.body(f)["hp"])
-	CombatRules.hurt(s, data, f, body + 3, lines, "slashing", false, true)
+	Harm.take(s, data, f, body + 3, lines, "slashing", false, true)
 	assert_bool(Guise.has_body(f)).is_false()
 	assert_str(str(Sheet.template(data, f)["type"])).is_equal("humanoid")
 	assert_int(int(f["hp"])).is_equal(hp - 3)
@@ -241,9 +241,9 @@ func test_a_race_trait_of_a_person_works_in_a_fight() -> void:
 	assert_bool(Sheet._advantages(s, data, f, "dex", "fear").is_empty()).is_false()
 	f["traits"] = ["relentless_endurance"]
 	var lines: Array[String] = []
-	CombatRules.hurt(s, data, f, 500, lines, "slashing", false, true)
+	Harm.take(s, data, f, 500, lines, "slashing", false, true)
 	assert_int(int(f["hp"])).is_equal(1)
-	CombatRules.hurt(s, data, f, 500, lines, "slashing", false, true)
+	Harm.take(s, data, f, 500, lines, "slashing", false, true)
 	assert_str(str(f["status"])).is_not_equal("active")
 
 

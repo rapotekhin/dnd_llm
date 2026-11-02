@@ -203,7 +203,7 @@ func test_acid_arrow_burns_later_and_splashes_on_a_miss() -> void:
 	ActionRules.riders(s, data, "acid_arrow", 2, f, true, lines)
 	assert_str(str(f["acid"])).is_equal("2d4")
 	var hp := int(f["hp"])
-	CombatRules._end_actor(s, data, f, lines)
+	CombatRules._finish(s, data, f, lines)
 	assert_int(int(f["hp"])).is_less(hp)
 	hp = int(f["hp"])
 	ActionRules.riders(s, data, "acid_arrow", 2, f, false, lines)
@@ -686,7 +686,7 @@ func test_silence_stops_spells_inside() -> void:
 	assert_bool(SpellEffects.silenced(s, data, f)).is_true()
 
 
-func test_stinking_cloud_takes_the_turn() -> void:
+func test_stinking_cloud_takes_the_action() -> void:
 	var s := _hero("wizard_yalika", 5)
 	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
 	s.character["spell_dc"] = 40
@@ -694,7 +694,7 @@ func test_stinking_cloud_takes_the_turn() -> void:
 	var hp := int(s.character["hp"])
 	var lines: Array[String] = []
 	TestUtils.enemy_turn(s, data, f, lines)
-	assert_bool(lines.any(func(l: String) -> bool: return l.contains("пропускает ход"))).override_failure_message(" · ".join(lines)).is_true()
+	assert_bool(lines.any(func(l: String) -> bool: return l.contains("теряет действие"))).override_failure_message(" · ".join(lines)).is_true()
 	assert_int(int(s.character["hp"])).is_equal(hp)
 
 

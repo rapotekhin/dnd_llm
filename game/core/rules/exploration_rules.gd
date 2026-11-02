@@ -205,7 +205,6 @@ static func found_trap(s: GameSession, world: Dictionary, room_id: String, id: S
 ## The trap goes off: a save (half damage on success), damage to the character. The trap is spent. Lines.
 static func spring_trap(s: GameSession, data: Dictionary, room_id: String, sec: Dictionary) -> Array[String]:
 	var t: Dictionary = sec["trap"]
-	var c := s.character
 	s.traps[secret_key(room_id, sec)] = "sprung"
 	var lines: Array[String] = ["Ловушка! " + str(t.get("sprung_text", sec["text"]))]
 	var dmg := CombatRules.roll_dice(s.rng, str(t.get("damage", "1d6")))
@@ -216,11 +215,9 @@ static func spring_trap(s: GameSession, data: Dictionary, room_id: String, sec: 
 		lines.append("Спасбросок " + str(r["text"]) + (", урон вдвое меньше" if bool(r["ok"]) else ""))
 	var adj := Sheet.damage(s, data, Sheet.HERO, str(t.get("damage_type", "")), dmg)
 	dmg = int(adj["damage"])
-	c["hp"] = maxi(0, int(c["hp"]) - dmg)
 	lines.append("−%d HP (%s%s)" % [dmg, data["misc"]["damage_types"].get(str(t.get("damage_type", "")), t.get("damage_type", "")),
 		(", " + str(adj["note"])) if not str(adj["note"]).is_empty() else ""])
-	lines.append_array(HeroDefense.after_damage(s, data, dmg))
-	HeroDefense.relentless(s, data, lines)
+	Harm.take(s, data, Sheet.HERO, dmg, lines, str(t.get("damage_type", "")))
 	return lines
 
 

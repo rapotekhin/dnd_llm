@@ -189,7 +189,7 @@ func test_wild_shape_takes_the_beasts_body_and_gives_it_back() -> void:
 	assert_int(int(s.character["ac"])).is_equal(int(m["ac"]))
 	var hp := int(s.character["hp"])
 	var lines: Array[String] = []
-	CombatRules._hurt_player(s, data, int(m["hp"]) + 3, false, lines)
+	Harm.take(s, data, Sheet.HERO, int(m["hp"]) + 3, lines, "", false)
 	assert_bool(Guise.has_body(s.character)).is_false()
 	assert_int(int(s.character["hp"])).is_equal(hp - 3)
 
@@ -254,11 +254,11 @@ func test_dark_ones_blessing_and_temporary_hp() -> void:
 	var s := _hero("warlock_fiber")
 	var f := _fight(s, "goblin")
 	var lines: Array[String] = []
-	CombatRules.hurt(s, data, f, 999, lines)
+	Harm.take(s, data, f, 999, lines)
 	assert_int(int(s.character.get("temp_hp", 0))).is_greater(0)
 	var thp := int(s.character["temp_hp"])
 	var hp := int(s.character["hp"])
-	CombatRules._hurt_player(s, data, thp + 1, false, lines)
+	Harm.take(s, data, Sheet.HERO, thp + 1, lines, "", false)
 	assert_int(int(s.character["hp"])).is_equal(hp - 1)
 
 

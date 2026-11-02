@@ -200,7 +200,7 @@ static func _saves(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 		lines.append("%s — %s по %s: спасбросок %s" % [f["name"], a["name"], name, r["text"]])
 	else:
 		lines.append("%s — %s по %s: спасбросок %s, %d урона%s" % [f["name"], a["name"], name, r["text"], dmg, (" (%s)" % ", ".join(notes)) if not notes.is_empty() else ""])
-		CombatRules.hurt(s, data, t, dmg, lines, "", false, Sheet.is_hero(f))
+		Harm.take(s, data, t, dmg, lines, "", false, Sheet.is_hero(f))
 	if not ok and a.has("effect"):
 		MonsterRules.apply_effect(s, data, f, t, a, dmg, lines, {"ok": false, "dc": int(sv["dc"]), "total": int(r["total"])})
 
@@ -403,7 +403,7 @@ static func land(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 		lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, ", ".join(ctx["types"]), (", " + ", ".join(notes)) if not notes.is_empty() else ""])
 		if crit:
 			CombatRules.fx(s, str(t["id"]), "crit")
-		CombatRules.hurt(s, data, t, dmg, lines, str(pieces[0]["type"]), crit, Sheet.is_hero(f))
+		Harm.take(s, data, t, dmg, lines, str(pieces[0]["type"]), crit, Sheet.is_hero(f))
 	if str(s.combat.get("outcome", "")) == "dead":
 		return
 	if bool(ctx["hit"]):
@@ -441,7 +441,7 @@ static func _by_class(s: GameSession, data: Dictionary, f: Dictionary, t: Dictio
 		var type := str(pieces[0]["type"])
 		var more := Sheet.taken(s, data, t, type, CombatRules.roll_dice(s.rng, str(x["dice"])), bool(b.get("magical", false)), bool(b.get("silvered", false)))
 		lines.append("%s: ещё %d" % [", ".join(x["notes"]), more])
-		CombatRules.hurt(s, data, t, more, lines, type, false, Sheet.is_hero(f))
+		Harm.take(s, data, t, more, lines, type, false, Sheet.is_hero(f))
 	FeatureRules.after_hit(s, data, f, b, t, crit, b.get("opts", {}), lines)
 
 
@@ -454,7 +454,7 @@ static func _extras(s: GameSession, data: Dictionary, f: Dictionary, t: Dictiona
 	var by_hero := Sheet.is_hero(f)
 	var it := Sheet.holder(s, t)
 	var more := func(add: int, dtype: String) -> void:
-		CombatRules.hurt(s, data, t, add, lines, dtype, false, by_hero)
+		Harm.take(s, data, t, add, lines, dtype, false, by_hero)
 	for x: Dictionary in SpellEffects.hit_extras(me, t, type):
 		if not up(s, t):
 			break

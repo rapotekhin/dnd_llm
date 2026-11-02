@@ -107,7 +107,7 @@ func test_a_constrictor_holds_until_it_dies() -> void:
 	assert_array(s.character["conditions"]).contains(["grappled", "restrained"])
 	assert_int(int(s.character["speed"])).is_equal(0)
 	var lines: Array[String] = []
-	CombatRules.hurt(s, data, f, 999, lines)
+	Harm.take(s, data, f, 999, lines)
 	assert_array(s.character["conditions"]).not_contains(["grappled", "restrained"])
 
 
@@ -186,8 +186,8 @@ func test_traits_of_monsters() -> void:
 	assert_bool(MonsterRules.save_advantage(data, {"monster": "cultist"}, "wis", ["charm", "magic"])).is_true()
 	assert_bool(MonsterRules.save_advantage(data, {"monster": "wolf"}, "wis", ["magic"])).is_false()
 	var boar := {"id": "e9", "monster": "boar", "name": "Кабан", "hp": 5, "max_hp": 11}
-	assert_bool(MonsterRules.survives(s, data, boar, 6, "slashing", false, [] as Array[String])).is_true()
-	assert_bool(MonsterRules.survives(s, data, boar, 6, "slashing", false, [] as Array[String])).is_false()  # once
+	assert_bool(Harm.survives(s, data, boar, 6, "slashing", false, [] as Array[String])).is_true()
+	assert_bool(Harm.survives(s, data, boar, 6, "slashing", false, [] as Array[String])).is_false()  # once
 	s.minute = 12 * 60
 	s.room_id = "pushcha-edge"
 	assert_array(MonsterRules.attack_mods(s, data, {"monster": "kobold"}, Sheet.HERO, true)["dis"]).contains(["солнце"])
