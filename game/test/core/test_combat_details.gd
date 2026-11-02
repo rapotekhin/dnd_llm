@@ -110,15 +110,15 @@ func test_heavy_armor_gives_disadvantage_on_stealth() -> void:
 func test_hiding_needs_distance_and_gives_advantage_until_the_attack() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 0}])
-	assert_str(CombatRules.can_hide(s, data)).is_equal("COMBAT_HIDE_SEEN")
+	assert_str(Acts.one("hide").can(s, data, CombatRules.player(s))).is_equal("COMBAT_HIDE_SEEN")
 	TestUtils.to_col(CombatRules.fighter(s, TestUtils.foe(s, 1)), 2)
 	s.character["skills"]["stealth"] = 40
-	assert_str(CombatRules.can_hide(s, data)).is_empty()
-	var lines := CombatRules.player_hide(s, data)
+	assert_str(Acts.one("hide").can(s, data, CombatRules.player(s))).is_empty()
+	var lines := Acts.one("hide").go(s, data, CombatRules.player(s))
 	assert_str(lines[0]).contains("теряют из виду")
 	assert_bool(bool(CombatRules.player(s)["hidden"])).is_true()
 	assert_int(int(CombatRules.economy(s)["action"])).is_equal(0)
-	assert_str(CombatRules.can_hide(s, data)).is_equal("COMBAT_ALREADY_HIDDEN")
+	assert_str(Acts.one("hide").can(s, data, CombatRules.player(s))).is_equal("COMBAT_ALREADY_HIDDEN")
 	assert_array(CombatRules.attack_preview(s, data, TestUtils.foe(s, 1))["adv"]).contains(["вы спрятаны"])
 	# Foes attack a hidden player with disadvantage.
 	var bow := CombatRules._best_action(data, CombatRules.fighter(s, TestUtils.foe(s, 1)), "ranged")
@@ -132,7 +132,7 @@ func test_the_rogue_hides_as_a_bonus_action_and_an_attack_reveals() -> void:
 	(s.character["features"] as Array).append("cunning_action")  # level 2
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	s.character["skills"]["stealth"] = 40
-	CombatRules.player_hide(s, data)
+	Acts.one("hide").go(s, data, CombatRules.player(s))
 	assert_int(int(CombatRules.economy(s)["bonus"])).is_equal(0)
 	assert_int(int(CombatRules.economy(s)["action"])).is_equal(1)
 	s.character["equipped"]["main_hand"] = "shortbow"

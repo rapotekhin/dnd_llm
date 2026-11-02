@@ -46,7 +46,7 @@ func run() -> void:
 	if CombatRules.active(gs.session):
 		var cb: Dictionary = gs.session.combat
 		step("info: fight", true, "turn %s, round %d, outcome '%s', busy %s, playing %s, retry %s, economy %s, foes %s" % [CombatRules.current(gs.session),
-			cb["round"], cb.get("outcome", ""), gs.busy_turn, gs.combat_playing, gs.can_retry(), cb.get("economy", {}),
+			cb["round"], cb.get("outcome", ""), gs.busy_turn, gs.combat_playing, gs.can_retry(), CombatRules.economy(gs.session),
 			CombatRules.enemies(gs.session, false).map(func(id: String) -> String: return "%s %s at %s hp %d" % [id, CombatRules.fighter(gs.session, id)["status"], FightGrid.tag(FightGrid.cell(CombatRules.fighter(gs.session, id))), CombatRules.fighter(gs.session, id)["hp"]])])
 	await shot("end")
 
@@ -219,8 +219,8 @@ func _combat_step(s: GameSession) -> String:
 	if rng.randf() < 0.15 and CombatRules.can_parley(s, data, skill).is_empty() and int(CombatRules.economy(s).get("action", 0)) > 0:
 		gs.combat_parley(skill)
 		return "combat_parley"
-	if rng.randf() < 0.2 and CombatRules.can_hide(s, data).is_empty():
-		gs.combat_hide()
+	if rng.randf() < 0.2 and Acts.one("hide").can(s, data, CombatRules.player(s)).is_empty():
+		gs.combat_act("hide")
 		return "combat_hide"
 	for id: String in CombatRules.enemies(s):
 		if CombatRules.can_attack(s, data, id).is_empty():
@@ -231,10 +231,10 @@ func _combat_step(s: GameSession) -> String:
 	if spell != null and foe != null and CombatRules.can_cast(s, data, spell, 0, foe).is_empty() and rng.randf() < 0.5:
 		gs.combat_cast(spell, 0, foe)
 		return "combat_cast"
-	if foe != null and CombatRules.can_move(s).is_empty():
+	if foe != null and Move.why(s, data, CombatRules.player(s)).is_empty():
 		var to := CombatRules.closest_stop(s, data, foe)
 		if to != FightGrid.NONE:
-			gs.combat_walk(to)
+			gs.combat_act("walk", FightGrid.aim_id(to))
 			return "combat_walk"
 	gs.combat_end_turn()
 	return "combat_end_turn"

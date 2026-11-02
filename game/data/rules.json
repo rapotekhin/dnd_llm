@@ -3569,6 +3569,20 @@
 			"4": 375,
 			"5": 750
 		},
+		"moves": {
+			"_doc": "Ways of moving (v0.8.4.7, Move): one row is a new way for the hero, a person and a foe at once. `speed` — the key of the SRD template, `default` — without the key, `status` — the key of an effect giving feet (Fly), `word` — on a creature's card, `passes` — flags of the grid it crosses, `flat` — every square costs one, `on` — it goes only on squares with these flags and they cost one there, `air` — out of a blade's reach.",
+			"walk": {"speed": "speed", "default": 30},
+			"fly": {"speed": "fly", "status": "fly_speed", "word": "полёт", "passes": ["pit"], "flat": true, "air": true},
+			"swim": {"speed": "swim", "status": "swim_speed", "word": "плавание", "on": ["wet"]},
+			"climb": {"speed": "climb", "status": "climb_speed", "word": "лазание", "on": ["low"]},
+			"burrow": {"speed": "burrow", "status": "burrow_speed", "word": "копание", "on": ["low"]}
+		},
+		"act_bonus": {
+			"_doc": "Who does an act as a bonus action (v0.8.4.7, Act): `has` — a feature or a trait, `status` — a spell's effect, `last` — only with the action spent.",
+			"dash": [{"has": "cunning_action", "last": true}, {"status": "bonus_dash", "last": true}, {"has": "aggressive"}],
+			"disengage": [{"has": "cunning_action"}, {"has": "nimble_escape"}],
+			"hide": [{"has": "cunning_action"}, {"has": "nimble_escape"}]
+		},
 		"grid": {
 			"_doc": "The field of a fight (v0.8.4, FightGrid): a square of `ft`; `spans` — the squares of a body by its SRD size; `start` — how far foes with no square of their own stand from the hero; `cover` — the bonus to AC and Dexterity saves; `charge` — the squares of a run before a charge; `pit` — a fall; `pursuit` — how near a way out a foe must stand to follow the hero through it, `pursuit_rounds` — when it comes; `doors` — a bar on a door; `blocks` — the map's cell that is a thing in a fight, its body and HP, how much a point of Strength shifts; `fire` — a burning square, the SRD's oil; `hazard` — the map's cell that hurts; `noise` — who hears the fight: squares, minus `wall` for each wall on the way, `beyond` left to carry through a way out.",
 			"ft": 5,
@@ -3586,6 +3600,7 @@
 			"flow": 80,
 			"flee_lost": 12,
 			"keep_most": 8,
+			"acts": {"dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100},
 			"roles": {
 				"brute": {"focus": 0.3, "finish": 2, "adjacent": 0, "keep": 0, "hazard": 3, "leave": 1, "step": 0.02, "pack": 0, "control": 3, "cast": 6},
 				"skirmisher": {"focus": 0.6, "finish": 3, "adjacent": 0.5, "keep": 0.05, "hazard": 4, "leave": 0.5, "step": 0.02, "pack": 1, "control": 3, "cast": 6},

@@ -33,8 +33,8 @@ func _fight(s: GameSession, foes: Array) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for id: String in CombatRules.enemies(s):
 		out.append(CombatRules.fighter(s, id))
-	s.combat["economy"]["action"] = 1
-	s.combat["economy"]["bonus"] = 1
+	CombatRules.economy(s)["action"] = 1
+	CombatRules.economy(s)["bonus"] = 1
 	return out
 
 
@@ -229,7 +229,7 @@ func test_the_cast_itself_lays_a_veil() -> void:
 	var f := _fight(s, [{"monster": "goblin", "col": 2}])[0]
 	_learn(s, "fog_cloud")
 	CombatRules.player_cast(s, data, "fog_cloud", 1, FightGrid.aim_id(FightGrid.cell(f)))
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	assert_str(str(FightGrid.veiled(s, data, CombatRules.player(s), f))).is_not_empty()
 	assert_str(str(SpellEffects.zones(s)[0]["veil"])).is_equal("fog")
 
@@ -285,9 +285,9 @@ func test_a_foe_shoots_through_a_veil_too() -> void:
 func test_no_blow_of_opportunity_from_inside_a_veil() -> void:
 	var s := _hero("fighter_aira")
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
-	assert_bool(CombatRules.can_react(s, data, f)).is_true()
+	assert_bool(CombatRules.can_react(s, data, f, CombatRules.player(s))).is_true()
 	_zone(s, "fog_cloud", FightGrid.cell(f))
-	assert_bool(CombatRules.can_react(s, data, f)).is_false()
+	assert_bool(CombatRules.can_react(s, data, f, CombatRules.player(s))).is_false()
 
 
 func test_the_map_hides_what_is_under_a_veil() -> void:
@@ -365,7 +365,7 @@ func test_a_blind_foe_shoots_but_does_not_catch_the_hero() -> void:
 	(f["conditions"] as Array).append("blinded")
 	assert_str(FightGrid.veiled(s, data, f, CombatRules.player(s))).is_not_empty()
 	assert_str(str(FightAI.plan(s, data, f)["option"].get("kind", ""))).is_equal("ranged")
-	assert_bool(CombatRules.can_react(s, data, f)).is_false()
+	assert_bool(CombatRules.can_react(s, data, f, CombatRules.player(s))).is_false()
 
 
 func test_blindsight_works_in_spite_of_blindness() -> void:
@@ -496,7 +496,7 @@ func _caster(room: String) -> GameSession:
 	order.push_front(CombatRules.PLAYER)
 	s.combat["turn"] = 0
 	_learn(s, "fireball")
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	return s
 
 
@@ -544,7 +544,7 @@ func test_an_area_reaches_an_invisible_foe() -> void:
 	var s := _hero("wizard_yalika", 5)
 	var f := _fight(s, [{"monster": "ogre", "col": 2}])[0]
 	_learn(s, "fireball")
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	(f["conditions"] as Array).append("invisible")
 	var id := str(f["id"])
 	var at := FightGrid.cell(f)
@@ -569,7 +569,7 @@ func test_an_area_reaches_a_foe_under_a_veil() -> void:
 	var s := _hero("wizard_yalika", 5)
 	var f := _fight(s, [{"monster": "ogre", "col": 2}])[0]
 	_learn(s, "fireball")
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	_zone(s, "darkness", FightGrid.cell(f))
 	var aim := FightGrid.aim_id(FightGrid.cell(f))
 	assert_str(CombatRules.can_cast(s, data, "fireball", 3, aim)).is_empty()
@@ -582,7 +582,7 @@ func test_a_blind_caster_can_lay_an_area_on_a_square() -> void:
 	var s := _hero("wizard_yalika", 5)
 	var f := _fight(s, [{"monster": "ogre", "col": 2}])[0]
 	_learn(s, "fireball")
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	ConditionRules.add_effect(s.character, {"condition": "blinded", "ends": {}})
 	assert_str(CombatRules.can_cast(s, data, "fireball", 3, FightGrid.aim_id(FightGrid.cell(f)))).is_empty()
 

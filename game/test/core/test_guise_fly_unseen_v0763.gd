@@ -195,8 +195,8 @@ func test_fly_gives_sixty_feet() -> void:
 func test_a_ground_foe_does_not_reach_the_air_and_a_flier_does() -> void:
 	var s := _hero()
 	var f := _in_the_air(s, "wolf")
-	assert_bool(CombatRules.aloft(s)).is_true()
-	assert_bool(MonsterRules.flies(data, f)).is_false()
+	assert_bool(CombatRules.airborne(s, data, CombatRules.player(s))).is_true()
+	assert_bool(Move.air(s, data, f)).is_false()
 	var lines: Array[String] = []
 	var hp := int(s.character["hp"])
 	CombatRules._enemy_turn(s, data, f, lines)
@@ -208,12 +208,12 @@ func test_a_melee_blow_brings_the_hero_in_reach_until_the_next_turn() -> void:
 	var s := _hero()
 	var f := _in_the_air(s, "wolf")
 	CombatRules.player_attack(s, data, str(f["id"]))
-	assert_bool(CombatRules.aloft(s)).override_failure_message("in reach after a melee blow").is_false()
+	assert_bool(CombatRules.airborne(s, data, CombatRules.player(s))).override_failure_message("in reach after a melee blow").is_false()
 	s.combat["order"] = [CombatRules.PLAYER, str(f["id"])]
 	s.combat["turn"] = 0
 	var lines: Array[String] = []
 	CombatRules._begin_turn(s, data, lines)
-	assert_bool(CombatRules.aloft(s)).override_failure_message("in the air again on the hero's turn").is_true()
+	assert_bool(CombatRules.airborne(s, data, CombatRules.player(s))).override_failure_message("in the air again on the hero's turn").is_true()
 
 
 func test_an_archer_shoots_the_flier() -> void:
@@ -242,7 +242,7 @@ func test_losing_the_concentration_in_the_air_is_a_fall() -> void:
 	assert_str("\n".join(lines)).contains("падает")
 	assert_int(int(s.character["hp"])).is_less(200)
 	assert_bool(ConditionRules.has(s.character, "prone")).is_true()
-	assert_bool(CombatRules.aloft(s)).is_false()
+	assert_bool(CombatRules.airborne(s, data, CombatRules.player(s))).is_false()
 
 
 func test_fly_ends_on_the_ground_out_of_a_fight_without_a_fall() -> void:

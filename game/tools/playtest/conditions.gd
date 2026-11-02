@@ -145,7 +145,7 @@ func run() -> void:
 	await frames(4)
 	var cs := screen()
 	var hint: Label = find(cs, "Hint")
-	step("prone: no step until standing", CombatRules.hero_routes(s, data).is_empty() and hint.text.contains("встаньте"), hint.text)
+	step("prone: no step until standing", Move.routes(s, data, CombatRules.player(s)).is_empty() and hint.text.contains("встаньте"), hint.text)
 	step("the hero card shows the chips", _text_of(cs).contains("Лежит ничком") and _text_of(cs).contains("Испуган"), "")
 	await shot("prone_frightened")
 	var stand: Button = find(cs, "Do_stand")

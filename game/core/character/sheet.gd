@@ -73,11 +73,22 @@ static func ac(s: GameSession, who: Dictionary) -> int:
 	return CombatRules.ac_of(who)
 
 
-## Its walk in feet now; a Slow halves it.
+## A feature of a class, a trait of a race or of a template: what it has whoever it is.
+static func has_trait(s: GameSession, data: Dictionary, who: Dictionary, id: String) -> bool:
+	if is_hero(who):
+		return CharacterRules.has_feature(s.character, id) or CharacterRules.has_trait(s.character, id)
+	return MonsterRules.has_trait(data, who, id)
+
+
+static func size(s: GameSession, data: Dictionary, who: Dictionary) -> String:
+	return CombatRules.hero_size(s, data) if is_hero(who) else str(template(data, who).get("size", "medium"))
+
+
+## Its way in a turn in feet now, by the fastest of `Move`; a Slow halves it.
 static func speed(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 	if is_hero(who):
 		return int(s.character.get("speed", 30))
-	var ft := MonsterRules.move_speed(template(data, who)) - int(who.get("slowed", 0)) + ConditionRules.sum(who, "speed")
+	var ft := Move.feet(s, data, who) - int(who.get("slowed", 0)) + ConditionRules.sum(who, "speed")
 	return ft / 2 if CombatRules._has(who, "slowed_spell") else ft
 
 

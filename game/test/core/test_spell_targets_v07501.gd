@@ -87,8 +87,8 @@ func test_an_ally_is_healed_even_fallen_and_buffed_with_ac_until_the_end() -> vo
 	assert_int(int(a["hp"])).is_greater(0)
 	assert_str(str(a["status"])).is_equal("active")
 	var ac := CombatRules.ac_of(a)
-	s.combat["economy"]["action"] = 1
-	s.combat["economy"]["bonus"] = 1
+	CombatRules.economy(s)["action"] = 1
+	CombatRules.economy(s)["bonus"] = 1
 	CombatRules.player_cast(s, data, "shield_of_faith", 1, str(a["id"]))
 	assert_int(CombatRules.ac_of(a)).is_equal(ac + 2)
 	ConditionRules.end_concentration(s, data, "проверка")

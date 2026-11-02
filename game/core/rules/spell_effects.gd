@@ -76,6 +76,9 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 	for k: String in ["foe_types_dis", "sanctuary", "ability_adv", "save_adv", "flying", "enlarged", "haste"]:
 		if sp.has(k):
 			boon[k] = sp[k]
+	for row: Dictionary in Move.table(data).values():
+		if sp.has(str(row.get("status", ""))):
+			boon[row["status"]] = sp[row["status"]]
 	if sp.has("weapon_plus"):
 		boon["weapon_plus"] = int(sp["weapon_plus"])
 		for k: String in sp.get("plus_at_slot", {}):
@@ -83,7 +86,7 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 				boon["weapon_plus"] = int(sp["plus_at_slot"][k])
 	var speed := int(sp.get("speed_plus", 0))
 	if bool(sp.get("speed_x2", false)):
-		speed = MonsterRules.move_speed(data["monsters"][f["monster"]])
+		speed = Move.feet_of(data, data["monsters"][f["monster"]])
 	if speed > 0:
 		boon["speed"] = speed
 	var kept: Array = (sp.get("resist", []) as Array).duplicate()

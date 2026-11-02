@@ -129,8 +129,8 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 			CombatRules.economy(s)["action"] = 0
 			lines.append_array(ItemRules.use(c, data, s.items, "healing_potion", s.rng))
 			return lines
-	if CombatRules.can_stand(s, data).is_empty():  # v0.7.9: get up, break out of a web or a coil
-		lines.append_array(CombatRules.stand(s, data))
+	if Acts.one("stand").can(s, data, CombatRules.player(s)).is_empty():  # v0.7.9: get up, break out of a web or a coil
+		lines.append_array(Acts.one("stand").go(s, data, CombatRules.player(s)))
 	if ConditionRules.has(c, "restrained") and CombatRules.can_escape(s).is_empty():
 		lines.append_array(CombatRules.escape(s, data))
 		return lines
@@ -166,7 +166,7 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 			continue
 		var to := CombatRules.closest_stop(s, data, near)
 		if to != FightGrid.NONE and best > 1:
-			lines.append_array(CombatRules.player_walk(s, data, to))
+			lines.append_array(Acts.one("walk").go(s, data, CombatRules.player(s), FightGrid.aim_id(to)))
 			continue
 		return lines
 	return lines

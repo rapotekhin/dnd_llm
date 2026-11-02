@@ -54,7 +54,7 @@ func test_a_door_is_closed_and_barred_and_stops_the_walker() -> void:
 	CombatRules.economy(s)["action"] = 1
 	CombatRules.field_act(s, data, "door_bar")
 	assert_bool(FightGrid.fast(s, FightGrid.grid(s, data), door)).is_true()
-	assert_bool(CombatRules.hero_routes(s, data).has(door)).is_false()
+	assert_bool(Move.routes(s, data, CombatRules.player(s)).has(door)).is_false()
 	assert_array(FightField.acts(s, data)).contains(["door_force", "door_unbar"])
 
 

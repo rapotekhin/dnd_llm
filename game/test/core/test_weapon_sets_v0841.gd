@@ -36,7 +36,7 @@ func _fight(s: GameSession, foes: Array) -> Dictionary:
 	order.erase(CombatRules.PLAYER)
 	order.push_front(CombatRules.PLAYER)
 	s.combat["turn"] = 0
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	return CombatRules.fighter(s, CombatRules.enemies(s)[0])
 
 

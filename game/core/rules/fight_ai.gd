@@ -33,21 +33,6 @@ static func role(data: Dictionary, f: Dictionary) -> Dictionary:
 	return cfg(data)["roles"][role_name(data, f)]
 
 
-## The squares of its walk this turn.
-static func steps(s: GameSession, data: Dictionary, f: Dictionary) -> int:
-	if ConditionRules.does(f, data, "no_move"):
-		return 0
-	return FightGrid.steps_of(data, Sheet.speed(s, data, f))
-
-
-static func _opts(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
-	var m := Sheet.template(data, f)
-	var out := {"flying": MonsterRules.flies(data, f), "latch": CombatRules._intelligent(data, f), "swims": int(m.get("swim", 0)) > 0}
-	if CombatRules._has(f, "frightened"):
-		out["fear"] = FightGrid.cell(CombatRules.player(s))
-	return out
-
-
 ## Who it fights: the foes of its side still in the fight. The hero lying at 0 HP is nobody's target (v0.7.9).
 static func _targets(s: GameSession, f: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
@@ -55,7 +40,8 @@ static func _targets(s: GameSession, f: Dictionary) -> Array[Dictionary]:
 		if int(s.character.get("hp", 0)) > 0 and not ArenaRules.watching(s):
 			out.append(CombatRules.player(s))
 		for id: String in CombatRules.allies(s):
-			out.append(CombatRules.fighter(s, id))
+			if not bool(CombatRules.fighter(s, id).get("hidden", false)):
+				out.append(CombatRules.fighter(s, id))
 		return out
 	for id: String in CombatRules.enemies(s):
 		var e := CombatRules.fighter(s, id)
@@ -106,16 +92,16 @@ static func _options(s: GameSession, data: Dictionary, f: Dictionary, targets: A
 	return out
 
 
-## The turn it would take: {path, option} or {} when there is nobody to fight. An empty `option` — it only walks closer.
+## The turn it would take: {path, option} or {} when there is nobody to fight. An empty `option` — nothing to do from any square
+## of its walk this turn.
 static func plan(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 	var targets := _targets(s, f)
 	if targets.is_empty():
 		return {}
 	var w := role(data, f)
-	var n := steps(s, data, f)
-	var opts := _opts(s, data, f)
-	var walk := n * 2 if MonsterRules.has_trait(data, f, "aggressive") else n  # Aggressive: a bonus move towards the foe
-	var routes := FightGrid.reach(s, data, f, walk, opts)
+	var routes := Move.routes(s, data, f)
+	if routes.is_empty():
+		routes = {FightGrid.cell(f): [0, FightGrid.cell(f)]}
 	var cells := FightGrid.stops(s, f, routes)
 	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return int(routes[a][0]) < int(routes[b][0]))
 	var options := _options(s, data, f, targets)
@@ -150,9 +136,7 @@ static func plan(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 				top = v
 				best = o
 				at_best = cell
-	if not best.is_empty():
-		return {"path": FightGrid.route(routes, at_best), "option": best}
-	return {"path": _closer(s, data, f, targets, n * 2, opts), "option": {}}
+	return {"path": FightGrid.route(routes, at_best), "option": best}
 
 
 ## What an act is worth from there: the chance times the damage, more on the wounded, the kill counted.
@@ -197,24 +181,18 @@ static func _place(s: GameSession, data: Dictionary, f: Dictionary, ghost: Dicti
 			v -= float(w["adjacent"])
 	v += float(w["keep"]) * mini(nearest, int(cfg(data)["keep_most"]))
 	var p := CombatRules.player(s)
-	if not bool(p.get("reacted", false)) and FightGrid.touching(f, p) and not FightGrid.touching(ghost, p) and not MonsterRules.has_trait(data, f, "flyby"):
+	if not bool(p.get("reacted", false)) and not bool(f.get("disengaged", false)) and FightGrid.touching(f, p) and not FightGrid.touching(ghost, p) \
+			and not MonsterRules.has_trait(data, f, "flyby"):
 		v -= float(w["leave"])
 	return v
 
 
-## The way nearest to someone to fight, when nothing can be done this turn: it dashes.
-static func _closer(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dictionary], budget: int, opts: Dictionary) -> Array[Vector2i]:
-	if budget <= 0:
+## The way nearest to someone to fight within `budget` squares.
+static func _closer(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dictionary], budget: int) -> Array[Vector2i]:
+	var routes := Move.routes(s, data, f, budget)
+	if budget <= 0 or routes.is_empty():
 		return []
-	var routes := FightGrid.reach(s, data, f, budget, opts)
-	var field := {}
-	var least := 1 << 30
-	for t: Dictionary in targets:
-		var flow := FightGrid.flow(s, data, FightGrid.cell(t), bool(opts.get("flying", false)))
-		var here := int(flow.get(FightGrid.cell(f), FAR))
-		if here < least:
-			least = here
-			field = flow
+	var field := _way_to(s, data, f, targets)
 	var best := FightGrid.cell(f)
 	var score := int(field.get(best, FAR)) * 4
 	for at: Vector2i in FightGrid.stops(s, f, routes):
@@ -225,30 +203,59 @@ static func _closer(s: GameSession, data: Dictionary, f: Dictionary, targets: Ar
 	return FightGrid.route(routes, best)
 
 
+## The walking distances to the nearest of the targets.
+static func _way_to(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dictionary]) -> Dictionary:
+	var passes := int(Move.opts(s, data, f)["passes"])
+	var field := {}
+	var least := 1 << 30
+	for t: Dictionary in targets:
+		var flow := FightGrid.flow(s, data, FightGrid.cell(t), passes)
+		var here := int(flow.get(FightGrid.cell(f), FAR))
+		if here < least:
+			least = here
+			field = flow
+	return field
+
+
+## Nobody to fight within its walk and reach, and more squares would bring it closer: what a Dash is for.
+static func far_off(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
+	var targets := _targets(s, f)
+	if targets.is_empty():
+		return false
+	var left := int(CombatRules.points(s, data, f).get("move", 0))
+	var near := int(_way_to(s, data, f, targets).get(FightGrid.cell(f), FAR))
+	if near >= FAR or near <= left + CombatRules.reach_of(data, f):
+		return false
+	return not _closer(s, data, f, targets, left + Move.steps(s, data, f)).is_empty()
+
+
 # --- the turn played ------------------------------------------------------------------------------------------
 
 
-## Walks it along the path: a blow when it leaves the hero's reach, a door opened, what is under its feet. Squares walked.
-static func walk(s: GameSession, data: Dictionary, f: Dictionary, path: Array[Vector2i], lines: Array[String]) -> int:
-	var moved := 0
-	var trail: Array = []
-	for at: Vector2i in path:
-		CombatRules.foe_leaving(s, data, f, at, lines)
-		if str(f.get("status")) != "active":
-			break
-		FightField.opens_on_way(s, data, f, at, lines)
-		FightGrid.put(f, at)
-		trail.append(FightGrid.tag(at))
-		moved += 1
-		if FightField.stepped(s, data, f, lines):
-			break
-	FightField.note_walk(s, str(f["id"]), trail)
-	return moved
+static func _walk(s: GameSession, data: Dictionary, f: Dictionary, path: Array[Vector2i], lines: Array[String]) -> int:
+	return 0 if path.is_empty() else Move.go(s, data, f, path[-1], lines)
+
+
+## What it does for nothing but points before it walks and strikes.
+static func first(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	_free(s, data, f, "first", lines)
+
+
+## What it does for nothing but points when all is done.
+static func last(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	_free(s, data, f, "last", lines)
+
+
+static func _free(s: GameSession, data: Dictionary, f: Dictionary, when: String, lines: Array[String]) -> void:
+	for a: Act in Acts.wanted(s, data, f, false, when):
+		if a.can(s, data, f).is_empty():
+			lines.append_array(a.go(s, data, f))
 
 
 ## The whole turn of a foe or of an ally of the hero.
 static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	var foe := str(f.get("side")) == "enemy"
+	first(s, data, f, lines)
 	var p := plan(s, data, f)
 	if p.is_empty():
 		if foe:
@@ -256,15 +263,20 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[St
 		else:
 			lines.append("%s не видит врага" % f["name"])
 		return
-	var moved := walk(s, data, f, p["path"], lines)
-	f["moved"] = moved
+	var o: Dictionary = p["option"]
+	var path: Array[Vector2i] = p["path"]
+	if o.is_empty():  # nothing within its walk: what its action is best for, and closer
+		var acts := Acts.wanted(s, data, f, true)
+		if not acts.is_empty():
+			lines.append_array(acts[0].go(s, data, f))
+		path = _closer(s, data, f, _targets(s, f), int(CombatRules.points(s, data, f)["move"]))
+	var moved := _walk(s, data, f, path, lines)
 	if str(f.get("status")) != "active":
 		return
 	if foe:
 		CombatRules._find_hidden(s, f, lines)
-	var o: Dictionary = p["option"]
 	if o.is_empty():
-		if foe and CombatRules.aloft(s) and not MonsterRules.flies(data, f):
+		if foe and CombatRules.airborne(s, data, CombatRules.player(s)) and not Move.air(s, data, f):
 			lines.append("%s не достаёт летящего героя" % f["name"])
 		elif moved > 0:
 			lines.append("%s бежит ближе" % f["name"])
@@ -301,15 +313,16 @@ static func _strike(s: GameSession, data: Dictionary, f: Dictionary, a: Dictiona
 		CombatRules._enemy_attack_full(s, data, f, a, lines)
 	else:
 		CombatRules._creature_full(s, data, f, a, t, lines)
-	if str(a.get("kind")) == "melee" and FightGrid.dist(f, t) <= CombatRules.reach_of(data, f) and MonsterRules.flies(data, f):
+	if str(a.get("kind")) == "melee" and FightGrid.dist(f, t) <= CombatRules.reach_of(data, f) and Move.air(s, data, f):
 		f["swooped"] = true  # came down to strike: in reach until its own next turn
 
 
 ## One who runs: to the nearest way out, away from the hero when there is none. Off the map or out of sight — gone.
 static func flee(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	var opts := _opts(s, data, f)
-	opts.erase("fear")
-	var routes := FightGrid.reach(s, data, f, steps(s, data, f) * 2, opts)
+	first(s, data, f, lines)
+	if Acts.one("dash").can(s, data, f).is_empty():
+		lines.append_array(Acts.one("dash").go(s, data, f))
+	var routes := Move.routes(s, data, f)
 	var cells := FightGrid.stops(s, f, routes)
 	var ways := FightField.ways_out(s, data)
 	var hero := FightGrid.cell(CombatRules.player(s))
@@ -322,7 +335,7 @@ static func flee(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[S
 		if v > score:
 			score = v
 			best = at
-	walk(s, data, f, FightGrid.route(routes, best), lines)
+	_walk(s, data, f, FightGrid.route(routes, best), lines)
 	if str(f.get("status")) != "active":
 		return
 	var lost := FightGrid.dist_to(f, hero) >= int(cfg(data)["flee_lost"]) and not FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(f), hero)
@@ -333,8 +346,9 @@ static func flee(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[S
 
 ## Walks up to `t` and no more: a helper's turn. True when it stands beside.
 static func go_to(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, lines: Array[String]) -> bool:
+	first(s, data, f, lines)
 	if not FightGrid.touching(f, t):
-		var routes := FightGrid.reach(s, data, f, steps(s, data, f), _opts(s, data, f))
+		var routes := Move.routes(s, data, f)
 		var best := FightGrid.cell(f)
 		var least := FightGrid.dist(f, t)
 		var ghost := f.duplicate()
@@ -344,5 +358,5 @@ static func go_to(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 			if d < least:
 				least = d
 				best = at
-		walk(s, data, f, FightGrid.route(routes, best), lines)
+		_walk(s, data, f, FightGrid.route(routes, best), lines)
 	return str(f.get("status")) == "active" and FightGrid.touching(f, t)

@@ -56,7 +56,7 @@ const NESTED := {
 		"effects": TYPE_ARRAY, "conditions": TYPE_ARRAY, "next_effect": TYPE_INT, "surprised": TYPE_BOOL, "dodging": TYPE_BOOL, "hidden": TYPE_BOOL,
 		"reckless": TYPE_BOOL, "disengaged": TYPE_BOOL, "swooped": TYPE_BOOL, "no_heal": TYPE_BOOL, "blinked": TYPE_BOOL, "retching": TYPE_BOOL, "reacted": TYPE_BOOL,
 		"lethargy": TYPE_BOOL, "fleeing": TYPE_BOOL, "grappled_by_player": TYPE_BOOL, "relentless_used": TYPE_BOOL, "slowed": TYPE_INT,
-		"oiled": TYPE_INT, "seen_x": TYPE_INT, "seen_y": TYPE_INT, "cover": TYPE_INT, "moved": TYPE_INT, "last_total": TYPE_INT, "temp_hp": TYPE_INT, "acid": TYPE_STRING,
+		"oiled": TYPE_INT, "seen_x": TYPE_INT, "seen_y": TYPE_INT, "cover": TYPE_INT, "points": TYPE_DICTIONARY, "last_total": TYPE_INT, "temp_hp": TYPE_INT, "acid": TYPE_STRING,
 		"burning": TYPE_STRING, "target": TYPE_STRING, "last_spell": TYPE_STRING, "zoned": TYPE_ARRAY, "used": TYPE_NIL, "once": TYPE_NIL,
 		"recharge": TYPE_NIL, "spent": TYPE_NIL,
 	},

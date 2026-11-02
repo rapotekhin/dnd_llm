@@ -26,6 +26,8 @@ var active_world: String = ""
 
 func _ready() -> void:
 	base = load_all()
+	if Acts.all().is_empty():  # an exported game lists its scripts by itself: the build's smoke run looks for this line
+		push_error("Failed to load the acts of core/acts/")
 	rescan()
 	activate(str(base["game"].get("default_world", "")))
 

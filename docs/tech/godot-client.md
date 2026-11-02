@@ -125,6 +125,8 @@ game/
 
 Герой — запись `p` (`Being.HERO`), его лист — часть `sheet`, `s.character` читает её как свойство (v0.8.4.6). Числа любого персонажа даёт `Sheet` ([ADR-0016](adr/0016-one-road-for-every-character.md)): `who` — боец, запись, NPC пакета или `Sheet.HERO`; `template`, `of`, `skill`, `save`, `saved`, `passive`, `ac`, `speed`, `damage`, `taken`. Форма записи объявлена: `Being.PARTS` и `Being.NESTED`, `Being.check` проверяет ключи и типы при загрузке сейва, в боте и в тестах. Новое поле сначала объявляют там. Часть `fight` пока свободна, её поля разойдутся по статусам в v0.7.63.
 
+Действие боя — файл `core/acts/<id>.gd`, потомок `Act` (v0.8.4.7, [ADR-0016](adr/0016-one-road-for-every-character.md)): `title`, `tip`, `tab`, `aim`, `cost`, `amount`, `shown`, `why`, `run`, `worth`, `when`. Папку читает `Acts`, реестра нет; кнопки вкладки и `FightAI` берут действия оттуда, игрок идёт через `GameState.combat_act`. `can` проверяет ход, правило действия и очки, `go` платит и делает. Боец у действия любой. Очки хода лежат в `f["points"]` у каждого бойца (`CombatRules.points`, `pay`, `short_of`; `economy(s)` — очки героя). Кто делает действие бонусным — `rules.combat.act_bonus`, вес для ИИ — `rules.combat.ai.acts`. Движение — `Move`: строка `rules.combat.moves` (скорость шаблона, ключ статуса, `passes`, `flat`, `on`, `air`), ход любого бойца — `Move.go`, удар вдогонку — `CombatRules.leaving`.
+
 ## Фундамент правил (v0.7.60)
 
 Пять записей, через которые идут все системы ([ADR-0012](adr/0012-unified-models.md)). Копий рядом не заводим: страж в `test_foundation_v0760.gd` не пускает `randi_range(1, 20)` и прямую запись `gold_cp` мимо них.

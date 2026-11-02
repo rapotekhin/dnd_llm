@@ -72,9 +72,9 @@ func test_reach_range_and_the_attack_economy() -> void:
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_OUT_OF_REACH")
 	TestUtils.walk(s, data, 1)
-	assert_str(CombatRules.can_move(s)).is_equal("COMBAT_NO_MOVE")
-	CombatRules.player_simple(s, data, "dash")
-	CombatRules.player_walk(s, data, FightGrid.cell(CombatRules.fighter(s, TestUtils.foe(s, 1))) - Vector2i(1, 0))
+	assert_str(Move.why(s, data, CombatRules.player(s))).is_equal("COMBAT_NO_MOVE")
+	Acts.one("dash").go(s, data, CombatRules.player(s))
+	Acts.one("walk").go(s, data, CombatRules.player(s), FightGrid.aim_id(FightGrid.cell(CombatRules.fighter(s, TestUtils.foe(s, 1))) - Vector2i(1, 0)))
 	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_NO_ACTION")  # Dash took the action
 	CombatRules.end_player_turn(s, data)
 	CombatRules.next_actor(s, data)  # the goblin
@@ -105,7 +105,7 @@ func test_leaving_melee_provokes_and_disengage_does_not() -> void:
 	assert_str(" ".join(lines)).contains("вдогонку")
 	var t := _session()
 	_fight(t, [{"monster": "goblin", "col": 0}])
-	CombatRules.player_simple(t, data, "disengage")
+	Acts.one("disengage").go(t, data, CombatRules.player(t))
 	assert_str(" ".join(TestUtils.walk(t, data, 1))).not_contains("вдогонку")
 
 

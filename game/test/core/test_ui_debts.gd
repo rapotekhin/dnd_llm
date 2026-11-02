@@ -122,19 +122,19 @@ func test_a_foe_strikes_once_a_round_and_only_when_it_can() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 0}])
 	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
-	assert_bool(CombatRules.can_react(s, data, f)).is_true()
+	assert_bool(CombatRules.can_react(s, data, f, CombatRules.player(s))).is_true()
 	f["reacted"] = true
-	assert_bool(CombatRules.can_react(s, data, f)).is_false()
+	assert_bool(CombatRules.can_react(s, data, f, CombatRules.player(s))).is_false()
 	f["reacted"] = false
 	for cond: String in ["incapacitated", "charmed", "blinded", "paralyzed"]:
 		CombatRules._hold(f, cond)
-		assert_bool(CombatRules.can_react(s, data, f)).override_failure_message(cond).is_false()
+		assert_bool(CombatRules.can_react(s, data, f, CombatRules.player(s))).override_failure_message(cond).is_false()
 		ConditionRules.remove(f, cond)
 	CombatRules._hold(f, "prone")
-	assert_bool(CombatRules.can_react(s, data, f)).is_true()  # a prone foe still strikes
+	assert_bool(CombatRules.can_react(s, data, f, CombatRules.player(s))).is_true()  # a prone foe still strikes
 	ConditionRules.remove(f, "prone")
 	s.character["concentration"] = "invisibility"
-	assert_bool(CombatRules.can_react(s, data, f)).is_false()  # it does not see the hero
+	assert_bool(CombatRules.can_react(s, data, f, CombatRules.player(s))).is_false()  # it does not see the hero
 
 
 func test_leaving_spends_the_reaction() -> void:

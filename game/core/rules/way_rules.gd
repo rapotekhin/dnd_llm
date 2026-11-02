@@ -124,7 +124,7 @@ static func passes(s: GameSession, data: Dictionary, a: String, b: String, what:
 ## The step `a` → `b` is made: a way with `drop` is a fall by 5e, 1d6 for 10 feet up to 20d6, unless the hero flies. Lines.
 static func on_pass(s: GameSession, data: Dictionary, a: String, b: String) -> Array[String]:
 	var feet := int(row(data, a, b).get("drop", 0))
-	if feet < 10 or SpellEffects.has(s.character, "flying"):
+	if feet < 10 or Move.air(s, data, Sheet.HERO):
 		return []
 	var c := s.character
 	var dmg := CombatRules.roll_dice(s.rng, "%dd6" % mini(feet / 10, 20))

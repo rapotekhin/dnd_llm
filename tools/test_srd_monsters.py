@@ -54,7 +54,7 @@ def test_numbers(id_: str) -> None:
         m["size"].lower(), m["type"], m["challenge_rating"], m["xp"], m["hit_points"], m["hit_dice"], m["proficiency_bonus"])
     assert b["ac"] == m["armor_class"][0]["value"]
     speed = m.get("speed", {})
-    assert (b["speed"], b["fly"], b["swim"]) == (imp.ft(speed.get("walk", "30 ft.")), imp.ft(speed.get("fly", "0 ft.")), imp.ft(speed.get("swim", "0 ft.")))
+    assert (b["speed"], b["fly"], b["swim"], b["climb"], b["burrow"]) == tuple(imp.ft(speed.get(k, "0 ft.")) for k in ["walk", "fly", "swim", "climb", "burrow"])
     senses = m.get("senses", {})
     assert (b["darkvision"], b["blindsight"], b["passive_perception"]) == (imp.ft(senses.get("darkvision", "0 ft.")), imp.ft(senses.get("blindsight", "0 ft.")), senses.get("passive_perception", 10))
 

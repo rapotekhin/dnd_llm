@@ -757,16 +757,13 @@ func combat_cast(spell_id: String, slot: int, target_id: String) -> String:
 	return _combat_do(why, func() -> Array[String]: return CombatRules.player_cast(session, Catalog.data, spell_id, slot, target_id))
 
 
-func combat_simple(what: String) -> String:
+## An act of `Acts` by the hero: the same the AI picks from.
+func combat_act(id: String, to: String = "") -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
-	if not _combat_ready():
-		return "COMBAT_NOT_YOUR_TURN"
-	var why := CombatRules.player_simple(session, Catalog.data, what)
-	if why.is_empty():
-		_combat_log([tr("COMBAT_DID_" + what.to_upper()).format({"name": session.character["name"]})])
-		EventBus.state_changed.emit()
-	return why
+	var hero := CombatRules.player(session)
+	var act := Acts.one(id)
+	return _combat_do(act.can(session, Catalog.data, hero, to), func() -> Array[String]: return act.go(session, Catalog.data, hero, to))
 
 
 ## The hero leaves by the way out it stands at; those near run after it (FightField.leave).
@@ -789,12 +786,6 @@ func combat_help(target_id: String) -> String:
 func combat_jump(to: Vector2i) -> String:
 	return _combat_do(CombatRules.can_jump(session, Catalog.data, to) if session != null and CombatRules.active(session) else "COMBAT_NONE",
 		func() -> Array[String]: return CombatRules.player_jump(session, Catalog.data, to))
-
-
-## The hero walks to a square of the field; what is on the way is CombatRules.player_walk.
-func combat_walk(to: Vector2i) -> String:
-	return _combat_do(CombatRules.can_walk(session, Catalog.data, to) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.player_walk(session, Catalog.data, to))
 
 
 ## A feature in a fight costs what rules.resources say (combat_cost): Rage and Second Wind — a bonus action,
@@ -820,12 +811,6 @@ func combat_use_feature(resource_id: String) -> String:
 		if resource_id == "rage":
 			session.combat["raging"] = true
 		return Stock.use(session.character, Catalog.data, resource_id, 1, session.rng))
-
-
-## «Встать» (v0.7.8): the whole move of the turn.
-func combat_stand() -> String:
-	return _combat_do(CombatRules.can_stand(session, Catalog.data) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.stand(session, Catalog.data))
 
 
 ## «Вырваться» (v0.7.8): an action, Athletics or Acrobatics against the hold.
@@ -952,12 +937,6 @@ func combat_metamagic(id: String) -> void:
 func combat_inspect(target_id: String) -> String:
 	return _combat_do(CombatRules.can_inspect(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
 		func() -> Array[String]: return CombatRules.player_inspect(session, Catalog.data, target_id))
-
-
-## Hide in a fight (v0.6.2): an action (a bonus action with Cunning Action), Stealth against the foes' Perception.
-func combat_hide() -> String:
-	return _combat_do(CombatRules.can_hide(session, Catalog.data) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.player_hide(session, Catalog.data))
 
 
 ## Parley in a fight (v0.6.2): the action, an engine check of Intimidation or Persuasion against the parley DC; the

@@ -37,7 +37,7 @@ func run() -> void:
 
 ## A square the walk reaches, a step or two away.
 func _stop(s: GameSession, data: Dictionary) -> Vector2i:
-	var routes := CombatRules.hero_routes(s, data)
+	var routes := Move.routes(s, data, CombatRules.player(s))
 	for at: Vector2i in FightGrid.stops(s, CombatRules.player(s), routes):
 		if int(routes[at][0]) >= 1:
 			return at
@@ -78,7 +78,7 @@ func _door(s: GameSession, data: Dictionary) -> void:
 	var bar: Button = find(screen(), "Act_door_bar")
 	if step("«Подпереть дверь»", bar != null and not bar.disabled):
 		await press(bar)
-		step("no way through it", FightGrid.fast(s, FightGrid.grid(s, data), door) and not CombatRules.hero_routes(s, data).has(door))
+		step("no way through it", FightGrid.fast(s, FightGrid.grid(s, data), door) and not Move.routes(s, data, CombatRules.player(s)).has(door))
 	await _fresh(s)
 	var unbar: Button = find(screen(), "Act_door_unbar")
 	if step("«Убрать подпорку»", unbar != null and not unbar.disabled):

@@ -61,7 +61,6 @@ static func start_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 			for a: Dictionary in Sheet.template(data, f).get("actions", []):
 				if str(a["name_en"]) == key:
 					lines.append("%s: «%s» снова готово" % [f["name"], a["name"]])
-	f["moved"] = 0
 	f["once"] = []  # once-per-turn extras used (martial advantage, sneak attack)
 	f["reckless"] = has_trait(data, f, "reckless")
 
@@ -298,7 +297,7 @@ static func extra_on_hit(s: GameSession, data: Dictionary, f: Dictionary, a: Dic
 	var once: Array = f.get("once", [])
 	for id: String in CHARGES:
 		var t := trait_of(data, f, id)
-		if t.is_empty() or str(a.get("kind")) != "melee" or int(f.get("moved", 0)) < int(FightGrid.cfg(data)["charge"]) or once.has("charge"):
+		if t.is_empty() or str(a.get("kind")) != "melee" or int(f.get("points", {}).get("walked", 0)) < int(FightGrid.cfg(data)["charge"]) or once.has("charge"):
 			continue
 		var fx: Dictionary = t.get("effect", {})
 		once.append("charge")
@@ -401,18 +400,6 @@ static func save_advantage(data: Dictionary, f: Dictionary, ability: String, tag
 ## Immune to a magical sleep (fey ancestry).
 static func sleep_immune(data: Dictionary, f: Dictionary) -> bool:
 	return has_trait(data, f, "fey_ancestry")
-
-
-## Nimble Escape (goblin): out of the hero's reach, it hides as a bonus action — Stealth against the hero's passive
-## Perception. Lines.
-static func end_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	if not has_trait(data, f, "nimble_escape") or bool(f.get("hidden", false)) or str(f.get("status")) != "active":
-		return
-	if FightGrid.touching(f, CombatRules.player(s)):
-		return
-	if Roll.d20(s.rng) + Sheet.skill(s, data, f, "stealth") >= Sheet.passive(s, data, Sheet.HERO):
-		f["hidden"] = true
-		lines.append("%s прячется (%s)" % [f["name"], trait_of(data, f, "nimble_escape")["name"]])
 
 
 # --- Parry ---------------------------------------------------------------------------------------------
@@ -770,17 +757,3 @@ static func sees_in_dark(data: Dictionary, f: Dictionary) -> bool:
 	return int(Sheet.template(data, f).get("darkvision", 0)) > 0
 
 
-## The monster flies (a fly speed in the SRD): it reaches a flying hero (v0.7.13.3).
-static func flies(data: Dictionary, f: Dictionary) -> bool:
-	return int(Sheet.template(data, f).get("fly", 0)) > 0
-
-
-## The way a monster covers in a turn on the field: the walk or, if faster, the fly (a Flying Sword: 0 ft, fly 50 ft).
-static func move_speed(m: Dictionary) -> int:
-	return maxi(int(m.get("speed", 30)), int(m.get("fly", 0)))
-
-
-## «0 фт, полёт 50 фт» for a card.
-static func speed_text(m: Dictionary) -> String:
-	var fly := int(m.get("fly", 0))
-	return "%d фт" % int(m.get("speed", 30)) + (", полёт %d фт" % fly if fly > 0 else "")

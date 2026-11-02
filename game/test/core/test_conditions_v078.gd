@@ -295,11 +295,11 @@ func test_prone_hero_stands_with_half_the_speed() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	ConditionRules.add_effect(s.character, {"condition": "prone", "ends": {}})
-	assert_str(CombatRules.can_move(s)).is_equal("COMBAT_PRONE")
-	assert_str(CombatRules.can_stand(s, data)).is_empty()
-	CombatRules.stand(s, data)
+	assert_str(Move.why(s, data, CombatRules.player(s))).is_equal("COMBAT_PRONE")
+	assert_str(Acts.one("stand").can(s, data, CombatRules.player(s))).is_empty()
+	Acts.one("stand").go(s, data, CombatRules.player(s))
 	assert_bool(ConditionRules.has(s.character, "prone")).is_false()
-	assert_int(int(s.combat["economy"]["move"])).is_equal(FightGrid.steps_of(data, int(s.character["speed"])) - FightGrid.steps_of(data, int(s.character["speed"])) / 2)
+	assert_int(int(CombatRules.economy(s)["move"])).is_equal(FightGrid.steps_of(data, int(s.character["speed"])) - FightGrid.steps_of(data, int(s.character["speed"])) / 2)
 
 
 func test_a_grappled_hero_breaks_free_with_an_action() -> void:
@@ -307,7 +307,7 @@ func test_a_grappled_hero_breaks_free_with_an_action() -> void:
 	var gob := _fight(s, [{"monster": "goblin", "col": 0}])
 	ConditionRules.add_effect(s.character, {"condition": "grappled", "ends": {}, "by": gob})
 	CharacterRules.refresh(s.character, data, s.items)
-	assert_str(CombatRules.can_move(s)).is_equal("COMBAT_NO_SPEED")
+	assert_str(Move.why(s, data, CombatRules.player(s))).is_equal("COMBAT_NO_SPEED")
 	assert_str(CombatRules.can_escape(s)).is_empty()
 	s.character["skills"]["athletics"] = 40
 	var lines := CombatRules.escape(s, data)
@@ -321,8 +321,8 @@ func test_fear_keeps_the_hero_from_its_source_and_charm_from_the_charmer() -> vo
 	var gob := _fight(s, [{"monster": "goblin", "col": 2}])
 	ConditionRules.add_effect(s.character, {"condition": "frightened", "ends": {}, "by": gob})
 	var at := FightGrid.cell(CombatRules.player(s))
-	assert_str(CombatRules.can_walk(s, data, at + Vector2i(1, 0))).is_equal("COMBAT_FRIGHTENED")
-	assert_str(CombatRules.can_walk(s, data, at - Vector2i(1, 0))).is_empty()
+	assert_str(Acts.one("walk").can(s, data, CombatRules.player(s), FightGrid.aim_id(at + Vector2i(1, 0)))).is_equal("COMBAT_FRIGHTENED")
+	assert_str(Acts.one("walk").can(s, data, CombatRules.player(s), FightGrid.aim_id(at - Vector2i(1, 0)))).is_empty()
 	ConditionRules.add_effect(s.character, {"condition": "charmed", "ends": {}, "by": gob})
 	assert_str(CombatRules.can_attack(s, data, gob)).is_equal("COMBAT_CHARMED")
 

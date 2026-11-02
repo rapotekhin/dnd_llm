@@ -390,7 +390,7 @@ func _draw_map(s: GameSession, data: Dictionary, me: bool) -> void:
 	_field.fighters = _bodies(s, now, open)
 	_field.things = _scene(s, data, map, now, open)
 	_field.play(FightField.take_moves(s))
-	_field.routes = CombatRules.hero_routes(s, data) if me and not _pending.is_valid() and _shoving.is_empty() and not _jumping else {}
+	_field.routes = Move.routes(s, data, CombatRules.player(s)) if me and not _pending.is_valid() and _shoving.is_empty() and not _jumping else {}
 	_field.lit = _shove_squares(s, data) if not _shoving.is_empty() else CombatRules.jump_squares(s, data) if _jumping else {}
 	_field.reach = _in_range(s, data) if _pending.is_valid() and _pending_feet > 0 else {}
 	_field.over = _over(s)
@@ -517,10 +517,10 @@ func on_cell(cell: Vector2i) -> void:
 		if way == FightGrid.cell(CombatRules.player(s)):
 			_do(GameState.combat_flee())
 		else:
-			_do(GameState.combat_walk(way))
+			_do(GameState.combat_act("walk", FightGrid.aim_id(way)))
 		return
 	if _field.routes.has(cell):
-		_do(GameState.combat_walk(cell))
+		_do(GameState.combat_act("walk", FightGrid.aim_id(cell)))
 
 
 ## The right button lets the picked act go.
@@ -735,7 +735,7 @@ func _base_hint(me: bool) -> String:
 		return tr("COMBAT_PICK_SIDE")
 	if _jumping:
 		return tr("COMBAT_PICK_JUMP")
-	if me and not _pending.is_valid() and CombatRules.can_move(GameState.session) == "COMBAT_PRONE":
+	if me and not _pending.is_valid() and Move.why(GameState.session, Catalog.data, CombatRules.player(GameState.session)) == "COMBAT_PRONE":
 		return tr("COMBAT_PRONE")
 	return tr("COMBAT_PICK_TARGET") if _pending.is_valid() else (tr("COMBAT_YOUR_TURN") if me else tr("COMBAT_WAIT"))
 
@@ -1238,9 +1238,13 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			_details.hook(item_btn, str(d.get("name", id)), DetailsPanel.item_text(c, data, s.items, id))
 	# Common.
 	var g := _tab_box("COMBAT_TAB_COMMON")
-	for what: String in ["dash", "dodge", "disengage"]:
-		var b := _button(g, "Do_" + what, tr("COMBAT_DO_" + what.to_upper()), me)
-		b.pressed.connect(func() -> void: _do(GameState.combat_simple(what)))
+	var hero := CombatRules.player(s)
+	for act: Act in Acts.on_tab(s, data, hero, "common"):
+		var act_why := act.can(s, data, hero)
+		var act_b := _button(g, "Do_" + act.id, act.title() + (tr("COMBAT_BONUS_SHORT") if act.cost(s, data, hero) == "bonus" else ""), me and act_why.is_empty())
+		act_b.tooltip_text = tr(act_why) if not act_why.is_empty() and act_why != "COMBAT_NOT_YOUR_TURN" else act.tip()
+		var act_id := act.id
+		act_b.pressed.connect(func() -> void: _do(GameState.combat_act(act_id)))
 	var leave_why := CombatRules.can_flee(s, data)
 	var lb := _button(g, "Do_flee", tr("COMBAT_DO_FLEE"), me and leave_why.is_empty())
 	lb.tooltip_text = tr(leave_why) if not leave_why.is_empty() and leave_why != "COMBAT_NOT_YOUR_TURN" else tr("COMBAT_FLEE_TIP")
@@ -1274,11 +1278,6 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			func(t: String) -> String: return CombatRules.can_grapple(s, data, t),
 			func(_t: String) -> Dictionary: return {})
 		gb.tooltip_text = tr("COMBAT_SHOVE_TIP" if shove else "COMBAT_GRAPPLE_TIP")
-	if ConditionRules.has(c, "prone"):
-		var sw := CombatRules.can_stand(s, data)
-		var sb := _button(g, "Do_stand", tr("COMBAT_DO_STAND"), me and sw.is_empty())
-		sb.tooltip_text = tr(sw) if not sw.is_empty() else tr("COMBAT_STAND_TIP")
-		sb.pressed.connect(func() -> void: _do(GameState.combat_stand()))
 	if ConditionRules.has(c, "grappled") or ConditionRules.has(c, "restrained"):
 		var ew := CombatRules.can_escape(s)
 		var eb := _button(g, "Do_escape", tr("COMBAT_DO_ESCAPE"), me and ew.is_empty())
@@ -1295,10 +1294,6 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 				func(t: String) -> String: return GameState.combat_frenzy_attack(t),
 				func(t: String) -> String: return CombatRules.can_frenzy_attack(s, data, t),
 				func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
-	var hide_why := CombatRules.can_hide(s, data)
-	var hb := _button(g, "Do_hide", tr("COMBAT_DO_HIDE"), me and hide_why.is_empty())
-	hb.tooltip_text = tr(hide_why) if not hide_why.is_empty() else tr("COMBAT_HIDE_TIP")
-	hb.pressed.connect(func() -> void: _do(GameState.combat_hide()))
 	for skill: String in CombatRules.cfg(data)["parley"]["skills"]:
 		var why := CombatRules.can_parley(s, data, skill)
 		if why.is_empty() and int(e.get("action", 0)) <= 0:

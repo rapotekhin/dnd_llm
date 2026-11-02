@@ -230,19 +230,11 @@ COMBAT_BONUS,Бонус
 COMBAT_BONUS_SHORT, [бонус]
 COMBAT_CHARMED,Вы очарованы им и не можете напасть
 COMBAT_DEATH_SAVES,"Спасброски от смерти: успехов {ok}, провалов {fail}"
-COMBAT_DID_DASH,{name} — рывок
-COMBAT_DID_DISENGAGE,{name} отходит осторожно
-COMBAT_DID_DODGE,{name} уходит в оборону
-COMBAT_DO_DASH,Рывок
-COMBAT_DO_DISENGAGE,Отход
-COMBAT_DO_DODGE,Уклонение
 COMBAT_DO_ESCAPE,Вырваться
 COMBAT_DO_FRENZY,Неистовство
 COMBAT_DO_GRAPPLE,Схватить
-COMBAT_DO_HIDE,Спрятаться
 COMBAT_DO_INSPECT,Осмотреть [бонус]
 COMBAT_DO_SHOVE,Сбить с ног
-COMBAT_DO_STAND,Встать
 COMBAT_ESCAPE_TIP,Действие: Атлетика или Акробатика против хватки или пут
 COMBAT_DO_SURRENDER,Сдаться
 COMBAT_SLOT_LOWEST,Ячейка: наименьшая подходящая
@@ -258,7 +250,6 @@ COMBAT_FT,{ft} фт
 COMBAT_GRAPPLE_TIP,"Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом. Схваченный не может отойти, пока вы его держите (до вашего шага прочь)"
 COMBAT_HIDDEN,Спрятан — враги не видят
 COMBAT_HIDE_SEEN,Враг вплотную — спрятаться не выйдет
-COMBAT_HIDE_TIP,"Скрытность против Внимательности врагов. Спрятанный атакует с преимуществом, по нему бьют с помехой; атака или заклинание выдают"
 COMBAT_INCOMING,"{names}
 через {n} р."
 COMBAT_INSPECT_TIP,"Бонусное действие: проверка знаний по виду врага (Природа, Религия, Магия, Проницательность). Успех открывает хиты, КД, атаки и сопротивления таких врагов насовсем"
@@ -312,7 +303,6 @@ COMBAT_ROUND,Раунд {n}
 COMBAT_SHOVE_TIP,"Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом. Сбитый лежит: по нему вплотную — с преимуществом, издалека — с помехой; встаёт он в свой ход"
 COMBAT_SILENCED,В Тишине не произнести заклинание
 COMBAT_SPELL_TOO_LONG,Это заклинание творят минутами — не в бою
-COMBAT_STAND_TIP,Подняться на ноги — на это уходит всё перемещение хода
 COMBAT_SURPRISED,Застигнут врасплох
 COMBAT_TAB_COMMON,Общие
 COMBAT_TAB_FEATURES,Умения

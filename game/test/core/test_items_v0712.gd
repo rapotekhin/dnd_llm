@@ -63,7 +63,7 @@ func test_arrows_are_spent_and_half_come_back() -> void:
 	CombatRules.player_attack(s, data, str(f["id"]))
 	assert_int(int(c["inventory"].get("arrows", 0))).is_equal(arrows - 1)
 	c["inventory"].erase("arrows")
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_equal("COMBAT_NO_AMMO")
 	assert_int(int(s.combat["ammo_spent"]["arrows"])).is_equal(1)
 
@@ -94,7 +94,7 @@ func test_a_flaming_sword_adds_fire() -> void:
 	f["ac"] = 1
 	var lines: Array[String] = []
 	for i in 6:
-		s.combat["economy"]["action"] = 1
+		CombatRules.economy(s)["action"] = 1
 		lines.append_array(CombatRules.player_attack(s, data, str(f["id"])))
 		if lines.any(func(l: String) -> bool: return l.contains("(огонь)")):
 			break
@@ -137,7 +137,7 @@ func test_alchemists_fire_burns_until_put_out() -> void:
 	f["ac"] = 1
 	var lines: Array[String] = []
 	for i in 3:
-		s.combat["economy"]["action"] = 1
+		CombatRules.economy(s)["action"] = 1
 		assert_str(CombatRules.can_throw(s, data, "alchemists_fire_flask", str(f["id"]))).is_empty()
 		lines.append_array(CombatRules.throw_item(s, data, "alchemists_fire_flask", str(f["id"])))
 		if f.has("burning"):
@@ -157,7 +157,7 @@ func test_holy_water_hurts_only_undead_and_fiends() -> void:
 	f["ac"] = 1
 	var lines: Array[String] = []
 	for i in 4:
-		s.combat["economy"]["action"] = 1
+		CombatRules.economy(s)["action"] = 1
 		lines.append_array(CombatRules.throw_item(s, data, "holy_water", str(f["id"])))
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("не действует"))).is_true()
 
@@ -168,7 +168,7 @@ func test_a_net_holds_a_foe() -> void:
 	var f := _fight(s, "goblin", 0)
 	f["ac"] = 1
 	for i in 3:
-		s.combat["economy"]["action"] = 1
+		CombatRules.economy(s)["action"] = 1
 		CombatRules.throw_item(s, data, "net", str(f["id"]))
 		if CombatRules._has(f, "restrained"):
 			break

@@ -14,6 +14,7 @@ const PIT := 8  ## no floor: a walker falls, a flyer passes
 const WET := 16  ## water: a slow step, a flyer passes
 const DOOR := 32
 const FULL_COVER := 99
+const FLAG_NAMES := {"solid": SOLID, "pit": PIT, "wet": WET, "low": LOW}
 const CORNERS: Array[Vector2] = [Vector2(0.1, 0.1), Vector2(0.9, 0.1), Vector2(0.1, 0.9), Vector2(0.9, 0.9)]
 const CIRCLE: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1)]
 
@@ -424,27 +425,38 @@ static func _trace(g: Dictionary, occupied: Dictionary, a: Vector2, b: Vector2, 
 # --- walking ---------------------------------------------------------------------------------------------------
 
 
-static func _body_free(g: Dictionary, at: Vector2i, span: int, flying: bool) -> bool:
+## The flags of a list of names: a row of `rules.combat.moves` says what it crosses by name.
+static func mask(names: Array) -> int:
+	var out := 0
+	for n: String in names:
+		out |= int(FLAG_NAMES[n])
+	return out
+
+
+static func _body_free(g: Dictionary, at: Vector2i, span: int, passes: int) -> bool:
 	for c: Vector2i in body_at(at, span):
 		var bits := flags_at(g, c)
-		if bits & SOLID != 0 or (bits & PIT != 0 and not flying):
+		if bits & SOLID != 0 or (bits & PIT != 0 and passes & PIT == 0):
 			return false
 	return true
 
 
 ## The squares a fighter can walk to with `budget` squares: {square: [cost, from]}, its own square at cost 0. A friend is
 ## passed through, a foe is not; a square to stop on holds no one. A diagonal does not cut a corner. A wide body fits a
-## passage one size narrower by squeezing (5e): each such square costs one more. `opts`: flying, fear (a square not to come
-## nearer to), latch (false — a beast at a shut door), speedy — no difficult ground.
+## passage one size narrower by squeezing (5e): each such square costs one more. `opts` is Move.opts: passes (flags it crosses),
+## flat (every square costs one), on (flags whose squares cost one), only (flags it cannot leave), fear (a square not to come
+## nearer to), latch (false — a beast at a shut door).
 static func reach(s: GameSession, data: Dictionary, f: Dictionary, budget: int, opts: Dictionary = {}) -> Dictionary:
 	var g := grid(s, data)
 	var from := cell(f)
 	var span := int(f.get("span", 1))
-	var flying := bool(opts.get("flying", false))
+	var passes := int(opts.get("passes", 0))
+	var flat := bool(opts.get("flat", false))
+	var flat_on := int(opts.get("on", 0))
+	var only := int(opts.get("only", 0))
 	var mine := side_of(str(f.get("side", "enemy")))
 	var occupied := bodies(s, str(f.get("id", "")))
 	var slow := slow_cells(s, data, str(f.get("side", "enemy")))
-	var swims := bool(opts.get("swims", false))
 	var fear: Vector2i = opts.get("fear", NONE)
 	var latch := bool(opts.get("latch", true))
 	var cost: PackedByteArray = g["cost"]
@@ -463,10 +475,13 @@ static func reach(s: GameSession, data: Dictionary, f: Dictionary, budget: int, 
 			for d: Vector2i in WalkRules.DIRS:
 				var next := at + d
 				var extra := 0
-				if not _body_free(g, next, span, flying):
-					if span < 2 or not _body_free(g, next, span - 1, flying):
+				if not _body_free(g, next, span, passes):
+					if span < 2 or not _body_free(g, next, span - 1, passes):
 						continue
 					extra = 1
+				var bits := flags_at(g, next)
+				if only != 0 and bits & only == 0:
+					continue
 				if d.x != 0 and d.y != 0 and (flags_at(g, at + Vector2i(d.x, 0)) & SOLID != 0 or flags_at(g, at + Vector2i(0, d.y)) & SOLID != 0):
 					continue
 				if not latch and shut(s, g, next) or fast(s, g, next):
@@ -481,8 +496,8 @@ static func reach(s: GameSession, data: Dictionary, f: Dictionary, budget: int, 
 					continue
 				if fear.x >= 0 and WalkRules.distance(next, fear) < WalkRules.distance(at, fear):
 					continue
-				var step := extra + (1 if flying or (swims and flags_at(g, next) & WET != 0) else int(cost[next.y * w + next.x]))
-				if not flying and slow.has(next):
+				var step := extra + (1 if flat or bits & flat_on != 0 else int(cost[next.y * w + next.x]))
+				if not flat and slow.has(next):
 					step += 1
 				var total := at_cost + step
 				if total > budget or (out.has(next) and int(out[next][0]) <= total):
@@ -525,12 +540,12 @@ static func route(routes: Dictionary, to: Vector2i) -> Array[Vector2i]:
 
 ## Walking distance to `to` from every square, walls and doors counted, others' bodies not: how far a square really is for
 ## one who wants to get there. Kept for the round: the foes of a turn ask for the same hero.
-static func flow(s: GameSession, data: Dictionary, to: Vector2i, flying: bool = false) -> Dictionary:
+static func flow(s: GameSession, data: Dictionary, to: Vector2i, passes: int = 0) -> Dictionary:
 	var key := "%d|%d|%s" % [s.get_instance_id(), int(s.combat.get("rev", 0)), str(s.combat.get("map", ""))]
 	if key != _flow_key:
 		_flow_key = key
 		_flows = {}
-	var ask := "%s|%s" % [tag(to), "air" if flying else "ground"]
+	var ask := "%s|%d" % [tag(to), passes]
 	if _flows.has(ask):
 		return _flows[ask]
 	var g := grid(s, data)
@@ -549,7 +564,7 @@ static func flow(s: GameSession, data: Dictionary, to: Vector2i, flying: bool = 
 			if out.has(next):
 				continue
 			var bits := flags_at(g, next)
-			if bits & SOLID != 0 or (bits & PIT != 0 and not flying):
+			if bits & SOLID != 0 or (bits & PIT != 0 and passes & PIT == 0):
 				continue
 			out[next] = n
 			queue.append(next)
@@ -569,7 +584,7 @@ static func free_near(s: GameSession, data: Dictionary, spot: Vector2i, span: in
 	while head < queue.size():
 		var c: Vector2i = queue[head]
 		head += 1
-		if _body_free(g, c, span, false) and (room.is_empty() or WalkRules.room_of(m, c) in [room, ""]):
+		if _body_free(g, c, span, 0) and (room.is_empty() or WalkRules.room_of(m, c) in [room, ""]):
 			var ok := true
 			for b: Vector2i in body_at(c, span):
 				if occupied.has(b):
@@ -614,7 +629,7 @@ static func walked_off(s: GameSession, data: Dictionary, at: Vector2i, d: Vector
 	var best := NONE
 	var rank := 1 << 40
 	for c: Vector2i in ways:
-		if not _body_free(g, c, span, false) or body_at(c, span).any(func(b: Vector2i) -> bool: return occupied.has(b)):
+		if not _body_free(g, c, span, 0) or body_at(c, span).any(func(b: Vector2i) -> bool: return occupied.has(b)):
 			continue
 		var other := not room.is_empty() and not WalkRules.room_of(m, c) in [room, ""]
 		var r := (1 << 30 if other else 0) + absi(int(ways[c]) - far) * 1024 + WalkRules.distance(c, aim)

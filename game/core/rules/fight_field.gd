@@ -551,7 +551,7 @@ static func _chasers(s: GameSession, data: Dictionary, at: Vector2i) -> Array[St
 	var near := int(cfg(data)["pursuit"])
 	for id: String in CombatRules.enemies(s) + CombatRules.allies(s):
 		var f := CombatRules.fighter(s, id)
-		if FightGrid.dist_to(f, at) <= near and FightAI.steps(s, data, f) > 0:
+		if FightGrid.dist_to(f, at) <= near and Move.steps(s, data, f) > 0:
 			out.append(id)
 	return out
 

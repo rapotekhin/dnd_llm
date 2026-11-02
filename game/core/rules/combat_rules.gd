@@ -82,12 +82,11 @@ static func is_player_turn(s: GameSession) -> bool:
 	return active(s) and current(s) == PLAYER and str(s.combat.get("outcome", "")).is_empty()
 
 
-## In the air and out of a blade's reach: Fly on the hero, a flying creature that did not come down to strike.
+## In the air and out of a blade's reach: one that flies and did not come down to strike.
 static func airborne(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
-	if str(f.get("id", "")) == PLAYER:
-		return aloft(s)
-	return MonsterRules.flies(data, f) and not bool(f.get("swooped", false)) and not incapacitated(f) \
-		and not ["prone", "grappled", "restrained"].any(func(x: String) -> bool: return _has(f, x))
+	var me := Sheet.holder(s, f)
+	return Move.air(s, data, f) and not bool(f.get("swooped", false)) and not incapacitated(me) \
+		and not ["prone", "grappled", "restrained"].any(func(x: String) -> bool: return ConditionRules.has(me, x))
 
 
 ## `a` reaches `t` with a blade of `reach` squares: beside it, not over a corner, a flyer only by another flyer.
@@ -417,10 +416,10 @@ static func close(s: GameSession) -> void:
 # --- surprise and stealth (v0.6.2) -------------------------------------------------------------------
 
 
-## The player's Stealth roll: d20 + skill, disadvantage from armor (stealth_disadvantage) and conditions.
-## {total, nat, note}.
-static func stealth_roll(s: GameSession, data: Dictionary) -> Dictionary:
-	var c := s.character
+## A Stealth roll of anybody: d20 + skill, disadvantage from armor (stealth_disadvantage) and conditions. {total, nat, note}.
+static func stealth_roll(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> Dictionary:
+	var hero := Sheet.is_hero(who)
+	var c := Sheet.holder(s, who)
 	var armor := ItemRules.def_of(data["items"], s.items, str(c.get("equipped", {}).get("armor", "")))
 	var dis := bool(armor.get("armor", {}).get("stealth_disadvantage", false))
 	var why: Array[String] = []
@@ -430,18 +429,20 @@ static func stealth_roll(s: GameSession, data: Dictionary) -> Dictionary:
 	if not (mods["disadvantage"] as Array).is_empty():
 		dis = true
 		why.append("состояние")
-	var boots := CharacterRules.carried_with(c, data, s.items, "stealth_advantage")
-	var shade := SightRules.in_dark(s, data)  # the author's rule for the dark, v0.8.4.1; a Fog Cloud gives only the Hide itself
+	var boots := CharacterRules.carried_with(c, data, s.items, "stealth_advantage") if hero else ""
+	var shade := SightRules.in_dark(s, data) if hero else ""  # the author's rule for the dark, v0.8.4.1; a Fog Cloud gives only the Hide itself
 	var adv := not boots.is_empty() or not shade.is_empty()
-	var rolls := Roll.hero_dice(s, adv, dis)
+	var rolls := Roll.hero_dice(s, adv, dis) if hero else Roll.dice(s.rng, adv, dis)
 	var nat := Roll.kept(rolls, adv, dis)
 	var note := ""
 	if dis and not adv:
 		note = " (с помехой: %s)" % ", ".join(why)
 	elif adv and not dis:
 		note = " (с преимуществом: %s)" % (boots if not boots.is_empty() else shade)
-	RollParts.note(s, TranslationServer.translate("SKILL_STEALTH"), rolls, nat, RollParts.cached(c, data, "skill", "stealth", s.items), int(c.get("skills", {}).get("stealth", 0)))
-	return {"total": nat + int(c.get("skills", {}).get("stealth", 0)), "nat": nat, "note": note}
+	var bonus := Sheet.skill(s, data, who, "stealth")
+	if hero:
+		RollParts.note(s, TranslationServer.translate("SKILL_STEALTH"), rolls, nat, RollParts.cached(c, data, "skill", "stealth", s.items), bonus)
+	return {"total": nat + bonus, "nat": nat, "note": note}
 
 
 ## Surprise at the start (5e): a sneaking player rolls Stealth once — every foe whose passive Perception it meets is
@@ -509,16 +510,15 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	f["dodging"] = false
 	f["disengaged"] = false
 	f["reacted"] = false  # the reaction comes back at the start of one's own turn (5e)
+	f.erase("swooped")
+	f["points"] = fresh_points(s, data, f)
 	if id == PLAYER:
-		f.erase("swooped")
-		s.combat["economy"] = {"action": 1, "bonus": 1, "move": FightGrid.steps_of(data, int(s.character.get("speed", 30))), "attacks": 0,
-			"attacked": false, "sneak": false, "haste": 1 if SpellEffects.has(s.character, "haste") else 0}
 		if bool(f.get("blinked", false)):  # Blink: back from the Ethereal Plane (v0.7.13.3)
 			f["blinked"] = false
 			lines.append("%s возвращается из эфира" % s.character["name"])
 		if bool(s.character.get("lethargy", false)):  # Haste is over: a turn of lethargy
 			s.character.erase("lethargy")
-			s.combat["economy"] = {"action": 0, "bonus": 0, "move": 0, "attacks": 0, "attacked": false, "sneak": false, "haste": 0}
+			f["points"].merge({"action": 0, "bonus": 0, "move": 0, "haste": 0}, true)
 			lines.append("%s вялый после Ускорения — ход без действий и движения" % s.character["name"])
 		s.combat.erase("reckless")  # Reckless Attack lasts until the hero's next turn
 		var dropped := str(s.character.get("dropped", ""))
@@ -543,7 +543,50 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 
 
 static func economy(s: GameSession) -> Dictionary:
-	return s.combat.get("economy", {})
+	return player(s).get("points", {})
+
+
+## What a turn gives any fighter: an action, a bonus action, its squares.
+static func fresh_points(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
+	return {"action": 1, "bonus": 1, "move": Move.steps(s, data, f), "attacks": 0, "attacked": false, "sneak": false,
+		"haste": 1 if SpellEffects.has(Sheet.holder(s, f), "haste") else 0}
+
+
+## The points of `f` this turn.
+static func points(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
+	if not f.has("points"):
+		f["points"] = fresh_points(s, data, f)
+	return f["points"]
+
+
+## It is its turn and it can do something: awake, on the field, not caught by surprise.
+static func can_act(s: GameSession, f: Dictionary) -> bool:
+	if not active(s) or current(s) != str(f.get("id")) or not str(s.combat.get("outcome", "")).is_empty() or bool(f.get("surprised", false)):
+		return false
+	var me := Sheet.holder(s, f)
+	return int(me.get("hp", 0)) > 0 and not ConditionRules.incapacitated(me) and (Sheet.is_hero(f) or str(f.get("status")) == "active")
+
+
+## A key when `f` has not got the points, else "".
+static func short_of(f: Dictionary, cost: String, n: int) -> String:
+	var e: Dictionary = f.get("points", {})
+	match cost:
+		"action":
+			return "COMBAT_NO_ACTION" if int(e.get("action", 0)) < n and int(e.get("haste", 0)) < n else ""
+		"bonus":
+			return "COMBAT_NO_BONUS" if int(e.get("bonus", 0)) < n else ""
+		"move":
+			return "COMBAT_NO_MOVE" if int(e.get("move", 0)) < n else ""
+	return ""
+
+
+## Takes the points; the action goes before Haste's.
+static func pay(f: Dictionary, cost: String, n: int = 1) -> void:
+	var e: Dictionary = f["points"]
+	if cost == "action" and int(e.get("action", 0)) < n:
+		cost = "haste"
+	if e.has(cost):
+		e[cost] = maxi(0, int(e[cost]) - n)
 
 
 ## The weapon attack of the character: {name, to_hit, dice, bonus, type, melee, range [normal, long] ft or [], light}.
@@ -745,7 +788,7 @@ static func player_attack(s: GameSession, data: Dictionary, target_id: String, o
 	e["attacked"] = true
 	var wid := "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
 	var w := weapon_profile(c, data, s.items, wid, offhand)
-	if bool(w.get("melee", false)) and SpellEffects.has(s.character, "flying"):
+	if bool(w.get("melee", false)) and Move.air(s, data, player(s)):
 		player(s)["swooped"] = true  # Fly (v0.7.63): down at arm's length, in reach until the next turn
 	s.combat["melee_strike"] = bool(w.get("melee", false)) and _in_blade(s, data, w, fighter(s, target_id))  # nonlethal needs a melee blow (5e)
 	var lines := strike(s, data, target_id, w, {})
@@ -932,10 +975,9 @@ static func _sneak_dice(s: GameSession, data: Dictionary, w: Dictionary, adv: bo
 
 ## A foe stands beside `f`: 5 ft, what makes a shot worse and a hiding place useless.
 static func _foe_beside(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
-	var side := str(f.get("side"))
-	for id: String in s.combat["order"]:
+	for id: String in foes_of(s, f):
 		var o := fighter(s, id)
-		if str(o.get("side")) != side and str(o.get("status")) == "active" and FightGrid.touching(o, f) and not ConditionRules.does(o, data, "no_threat"):
+		if FightGrid.touching(o, f) and not ConditionRules.does(Sheet.holder(s, o), data, "no_threat"):
 			return true
 	return false
 
@@ -1924,151 +1966,18 @@ static func _spell_dice(sp: Dictionary, slot: int, level: int) -> String:
 	return best
 
 
-## Dodge / Disengage / Dash (an action; Disengage is a bonus action with Cunning Action or Nimble Escape).
-static func player_simple(s: GameSession, data: Dictionary, what: String) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	var e := economy(s)
-	var cost := "action"
-	if what == "disengage" and CharacterRules.has_feature(s.character, "cunning_action") and int(e.get("bonus", 0)) > 0:
-		cost = "bonus"
-	if what == "dash" and CharacterRules.has_feature(s.character, "cunning_action") and int(e.get("bonus", 0)) > 0 and int(e.get("action", 0)) <= 0:
-		cost = "bonus"
-	if what == "dash" and SpellEffects.has(s.character, "bonus_dash") and int(e.get("bonus", 0)) > 0 and int(e.get("action", 0)) <= 0:
-		cost = "bonus"  # Expeditious Retreat (v0.7.13.3)
-	if cost == "action" and int(e.get("action", 0)) <= 0 and int(e.get("haste", 0)) > 0:
-		cost = "haste"  # Haste's action
-	if int(e.get(cost, 0)) <= 0:
-		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
-	e[cost] = int(e[cost]) - 1
-	var p := player(s)
-	match what:
-		"dodge":
-			p["dodging"] = true
-		"disengage":
-			p["disengaged"] = true
-		"dash":
-			e["move"] = int(e["move"]) + FightGrid.steps_of(data, int(s.character.get("speed", 30)))
-	return ""
-
-
-## Hide (v0.6.2): an action (a bonus action with Cunning Action); not with a foe beside the hero.
-static func can_hide(s: GameSession, data: Dictionary) -> String:
-	if not player_can_act(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if bool(player(s).get("hidden", false)):
-		return "COMBAT_ALREADY_HIDDEN"
-	if _foe_beside(s, data, player(s)) and not _hides_behind(s, data):
-		return "COMBAT_HIDE_SEEN"
-	var cost := _hide_cost(s)
-	if int(economy(s).get(cost, 0)) <= 0:
-		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
-	return ""
-
-
-## Naturally Stealthy (lightfoot halfling): hides behind a foe at least one size larger.
-static func _hides_behind(s: GameSession, data: Dictionary) -> bool:
-	if not CharacterRules.has_trait(s.character, "naturally_stealthy"):
-		return false
-	for id: String in enemies(s):
-		var f := fighter(s, id)
-		if FightGrid.touching(f, player(s)) and SIZES.find(str(Sheet.template(data, f).get("size", "medium"))) > SIZES.find(hero_size(s, data)):
-			return true
-	return false
-
-
-static func _hide_cost(s: GameSession) -> String:
-	return "bonus" if CharacterRules.has_feature(s.character, "cunning_action") and int(economy(s).get("bonus", 0)) > 0 else "action"
-
-
-## Stealth against the best passive Perception of the foes still fighting (can_hide first). Lines.
-static func player_hide(s: GameSession, data: Dictionary) -> Array[String]:
-	var e := economy(s)
-	var cost := _hide_cost(s)
-	e[cost] = int(e[cost]) - 1
-	var roll := stealth_roll(s, data)
-	var best := 0
-	for id: String in enemies(s):
-		best = maxi(best, Sheet.passive(s, data, fighter(s, id)) - WeatherRules.unseen(s, data))
-	var ok := int(roll["total"]) >= best
-	if ok:
-		player(s)["hidden"] = true
-	return ["%s прячется: Скрытность %d%s против Внимательности %d — %s" % [s.character["name"], int(roll["total"]), roll["note"], best,
-		"враги теряют из виду" if ok else "враги всё видят"]]
-
-
-## "" when the player can walk at all now: speed, on the feet, squares left.
-static func can_move(s: GameSession) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	var c := s.character
-	if int(c.get("speed", 30)) <= 0:
-		return "COMBAT_NO_SPEED"
-	if ConditionRules.has(c, "prone"):
-		return "COMBAT_PRONE"
-	if int(economy(s).get("move", 0)) <= 0:
-		return "COMBAT_NO_MOVE"
-	return ""
-
-
-## Where the hero can walk this turn: FightGrid.reach, what the squares left of the turn allow. {} when the hero cannot.
-static func hero_routes(s: GameSession, data: Dictionary) -> Dictionary:
-	if not can_move(s).is_empty():
+## The one `f` is frightened of, when it is on the field ({} otherwise); a foe's fear with no cause is of the hero.
+static func fear_source(s: GameSession, f: Dictionary) -> Dictionary:
+	var me := Sheet.holder(s, f)
+	if not ConditionRules.has(me, "frightened"):
 		return {}
-	var opts := {"flying": SpellEffects.has(s.character, "flying")}
-	var src := fear_source(s)
-	if not src.is_empty():
-		opts["fear"] = FightGrid.cell(src)
-	return FightGrid.reach(s, data, player(s), int(economy(s)["move"]), opts)
-
-
-## "" when the hero can walk to the square; COMBAT_FRIGHTENED when only the fear stands in the way.
-static func can_walk(s: GameSession, data: Dictionary, to: Vector2i) -> String:
-	var why := can_move(s)
-	if not why.is_empty():
-		return why
-	var routes := hero_routes(s, data)
-	if to == FightGrid.cell(player(s)) or not FightGrid.stops(s, player(s), routes).has(to):
-		var src := fear_source(s)
-		if not src.is_empty() and WalkRules.distance(to, FightGrid.cell(src)) < WalkRules.distance(FightGrid.cell(player(s)), FightGrid.cell(src)):
-			return "COMBAT_FRIGHTENED"
-		return "COMBAT_BAD_MOVE"
-	return ""
-
-
-## The foe the hero is frightened of, when it is on the field ({} otherwise).
-static func fear_source(s: GameSession) -> Dictionary:
-	if not ConditionRules.has(s.character, "frightened"):
-		return {}
-	var by := ConditionRules.caused_by(s.character, "frightened")
-	if by.is_empty():
-		return {}
-	var f := fighter(s, by)
-	if f.is_empty():
-		f = fighter(s, fighter_of_npc(s, by))
-	return f if not f.is_empty() and str(f.get("status")) == "active" else {}
-
-
-## «Встать»: half the speed (5e). "" or a key.
-static func can_stand(s: GameSession, data: Dictionary) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if not ConditionRules.has(s.character, "prone"):
-		return "COMBAT_NOT_PRONE"
-	if int(s.character.get("speed", 30)) <= 0 or int(economy(s).get("move", 0)) < _stand_cost(s, data):
-		return "COMBAT_NO_MOVE"
-	return ""
-
-
-static func _stand_cost(s: GameSession, data: Dictionary) -> int:
-	return maxi(1, FightGrid.steps_of(data, int(s.character.get("speed", 30))) / 2)
-
-
-static func stand(s: GameSession, data: Dictionary) -> Array[String]:
-	var e := economy(s)
-	e["move"] = maxi(0, int(e["move"]) - _stand_cost(s, data))
-	ConditionRules.remove(s.character, "prone")
-	return ["%s поднимается на ноги" % s.character.get("name", "")]
+	var by := ConditionRules.caused_by(me, "frightened")
+	var o := fighter(s, by)
+	if o.is_empty() and not by.is_empty():
+		o = fighter(s, fighter_of_npc(s, by))
+	if not o.is_empty() and (Sheet.is_hero(o) or str(o.get("status")) == "active"):
+		return o
+	return {} if Sheet.is_hero(f) else player(s)
 
 
 ## Where a shove can send the foe: the free squares beside it, on the far side from the hero and to the hero's sides. A pit
@@ -2141,11 +2050,6 @@ static func escape(s: GameSession, data: Dictionary) -> Array[String]:
 		("больше не " + what) if ok else "не выходит"]]
 
 
-## The hero is in the air out of a blade's reach: Fly, and no melee strike since the hero's own turn began.
-static func aloft(s: GameSession) -> bool:
-	return SpellEffects.has(s.character, "flying") and not bool(player(s).get("swooped", false))
-
-
 ## The reach of a foe's blade in squares: its longest melee action.
 static func reach_of(data: Dictionary, f: Dictionary) -> int:
 	var feet := 5
@@ -2153,36 +2057,6 @@ static func reach_of(data: Dictionary, f: Dictionary) -> int:
 		if str(a.get("kind")) == "melee":
 			feet = maxi(feet, int(a.get("reach", 5)))
 	return FightGrid.squares_of(data, feet)
-
-
-## Walks the hero to a square, step by step (can_walk first): a foe whose reach the hero leaves strikes, a step ends on what
-## happens under the feet, what is left of the way stays unwalked when the hero falls or a window waits. Lines.
-static func player_walk(s: GameSession, data: Dictionary, to: Vector2i) -> Array[String]:
-	var e := economy(s)
-	var p := player(s)
-	var routes := hero_routes(s, data)
-	var lines: Array[String] = []
-	var paid := 0
-	var walked: Array = []
-	for at: Vector2i in FightGrid.route(routes, to):
-		_leaving(s, data, at, lines)
-		if str(s.combat.get("outcome", "")) == "dead" or int(s.character["hp"]) <= 0:
-			break
-		var cost := int(routes[at][0])
-		e["move"] = int(e["move"]) - (cost - paid)
-		paid = cost
-		FightField.opens_on_way(s, data, p, at, lines)
-		FightGrid.put(p, at)
-		walked.append(FightGrid.tag(at))
-		var stop := FightField.stepped(s, data, p, lines)
-		if stop or bool(s.combat.get("halt", false)) or int(s.character["hp"]) <= 0:
-			break
-	if not walked.is_empty():
-		e["walked"] = int(e.get("walked", 0)) + walked.size()
-		FightField.note_walk(s, PLAYER, walked)
-		_release_grapples(s, lines)
-		FightField.hero_stands(s, data)
-	return lines
 
 
 ## An act with a door or a thing beside the hero: FightField.acts. "" or a key.
@@ -2195,18 +2069,10 @@ static func can_field(s: GameSession, data: Dictionary, how: String) -> String:
 
 
 static func field_act(s: GameSession, data: Dictionary, how: String) -> Array[String]:
-	_pay_action(s)
+	pay(player(s), "action")
 	var lines: Array[String] = []
 	FightField.act(s, data, how, lines)
 	return lines
-
-
-static func _pay_action(s: GameSession) -> void:
-	var e := economy(s)
-	if int(e.get("action", 0)) > 0:
-		e["action"] = int(e["action"]) - 1
-	else:
-		e["haste"] = int(e["haste"]) - 1
 
 
 ## Help: a foe beside the hero is hemmed in, the ally's next blow at it has advantage. "" or a key.
@@ -2224,7 +2090,7 @@ static func can_help(s: GameSession, data: Dictionary, target_id: String) -> Str
 
 
 static func help(s: GameSession, data: Dictionary, target_id: String) -> Array[String]:
-	_pay_action(s)
+	pay(player(s), "action")
 	var t := fighter(s, target_id)
 	t["helped"] = true
 	return ["%s отвлекает: %s, союзник ударит с преимуществом" % [s.character["name"], t["name"]]]
@@ -2233,7 +2099,7 @@ static func help(s: GameSession, data: Dictionary, target_id: String) -> Array[S
 ## How far the hero jumps by the SRD: its Strength in feet after a run of 10 feet, half from a stand; no further than the
 ## move left. In squares.
 static func jump_reach(s: GameSession, data: Dictionary) -> int:
-	if not can_move(s).is_empty():
+	if not Move.why(s, data, player(s)).is_empty():
 		return 0
 	var ft := CharacterRules.ability(s.character, "str")
 	if int(economy(s).get("walked", 0)) < 2:
@@ -2259,7 +2125,7 @@ static func jump_squares(s: GameSession, data: Dictionary) -> Dictionary:
 
 
 static func can_jump(s: GameSession, data: Dictionary, to: Vector2i) -> String:
-	var why := can_move(s)
+	var why := Move.why(s, data, player(s))
 	if not why.is_empty():
 		return why
 	return "" if jump_squares(s, data).has(to) else "COMBAT_BAD_MOVE"
@@ -2269,7 +2135,7 @@ static func player_jump(s: GameSession, data: Dictionary, to: Vector2i) -> Array
 	var e := economy(s)
 	var p := player(s)
 	var lines: Array[String] = []
-	_leaving(s, data, to, lines)
+	leaving(s, data, player(s), to, lines)
 	if int(s.character["hp"]) <= 0:
 		return lines
 	e["move"] = int(e["move"]) - FightGrid.dist_to(p, to)
@@ -2285,7 +2151,7 @@ static func player_jump(s: GameSession, data: Dictionary, to: Vector2i) -> Array
 
 ## «Уйти»: the hero on the square before a way out leaves the place. "" or a key.
 static func can_flee(s: GameSession, data: Dictionary) -> String:
-	var why := can_move(s)
+	var why := Move.why(s, data, player(s))
 	if not why.is_empty():
 		return why
 	if s.combat.has("arena"):
@@ -2298,7 +2164,7 @@ static func player_flee(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var e := economy(s)
 	e["move"] = maxi(0, int(e["move"]) - 1)
-	_leaving(s, data, FightGrid.NONE, lines)
+	leaving(s, data, player(s), FightGrid.NONE, lines)
 	if str(s.combat.get("outcome", "")) == "dead" or int(s.character["hp"]) <= 0 or bool(s.combat.get("halt", false)):
 		return lines
 	FightField.leave(s, data, lines)
@@ -2308,7 +2174,7 @@ static func player_flee(s: GameSession, data: Dictionary) -> Array[String]:
 ## The square of the hero's walk nearest to a foe, NONE when no step brings the hero closer.
 static func closest_stop(s: GameSession, data: Dictionary, target_id: String) -> Vector2i:
 	var t := fighter(s, target_id)
-	var routes := hero_routes(s, data)
+	var routes := Move.routes(s, data, player(s))
 	var best := FightGrid.NONE
 	var near := FightGrid.dist(player(s), t)
 	var cost := 1 << 20
@@ -2321,24 +2187,58 @@ static func closest_stop(s: GameSession, data: Dictionary, target_id: String) ->
 	return best
 
 
-## The hero is about to step to `next`: every foe whose reach that leaves has its attack of opportunity.
-static func _leaving(s: GameSession, data: Dictionary, next: Vector2i, lines: Array[String]) -> void:
-	var p := player(s)
-	if bool(p.get("disengaged", false)):
+## The foes of `f`: the hero and its allies for a foe, the foes for them.
+static func foes_of(s: GameSession, f: Dictionary) -> Array[String]:
+	if str(f.get("side")) != "enemy":
+		return enemies(s)
+	var out := allies(s)
+	if int(s.character.get("hp", 0)) > 0 and not ArenaRules.watching(s):
+		out.push_front(PLAYER)
+	return out
+
+
+## Its walk ends here: it fell, the hero is dead, a window waits.
+static func stopped(s: GameSession, f: Dictionary) -> bool:
+	if str(s.combat.get("outcome", "")) == "dead" or bool(s.combat.get("halt", false)):
+		return true
+	return int(s.character.get("hp", 0)) <= 0 if Sheet.is_hero(f) else str(f.get("status")) != "active"
+
+
+## The reach of what it holds to strike with, in squares; 0 with nothing for arm's length.
+static func blade_reach(s: GameSession, data: Dictionary, f: Dictionary) -> int:
+	if Sheet.is_hero(f):
+		var c := s.character
+		var w := weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
+		return 0 if not bool(w["melee"]) else 2 if bool(w.get("reach", false)) else 1
+	return reach_of(data, f) if not _best_action(data, f, "melee").is_empty() else 0
+
+
+## `f` is about to step to `next`: every foe whose reach that leaves has its attack of opportunity.
+static func leaving(s: GameSession, data: Dictionary, f: Dictionary, next: Vector2i, lines: Array[String]) -> void:
+	if bool(f.get("disengaged", false)) or Sheet.has_trait(s, data, f, "flyby"):
 		return
-	var after := p.duplicate()
+	var after := f.duplicate()
 	FightGrid.put(after, next)
-	for id: String in enemies(s):
-		var f := fighter(s, id)
-		var r := reach_of(data, f)
-		if blade_reaches(s, data, f, p, r) and FightGrid.dist(f, after) > r and can_react(s, data, f):
-			var act := _best_action(data, f, "melee")
-			if not act.is_empty():
-				f["reacted"] = true
-				lines.append("%s бьёт вдогонку" % f["name"])
-				_enemy_attack(s, data, f, act, lines)
-				if bool(s.combat.get("halt", false)) or int(s.character["hp"]) <= 0:
-					return
+	for id: String in foes_of(s, f):
+		var o := fighter(s, id)
+		var r := blade_reach(s, data, o)
+		if r > 0 and blade_reaches(s, data, o, f, r) and FightGrid.dist(o, after) > r and can_react(s, data, o, f):
+			o["reacted"] = true
+			lines.append("%s бьёт вдогонку" % Sheet.holder(s, o)["name"])
+			_opportunity(s, data, o, f, lines)
+			if stopped(s, f):
+				return
+
+
+static func _opportunity(s: GameSession, data: Dictionary, o: Dictionary, t: Dictionary, lines: Array[String]) -> void:
+	if Sheet.is_hero(o):
+		var c := s.character
+		var w := weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
+		_attack(s, data, str(c["name"]), w["name"], int(w["to_hit"]), false, false, t, str(w["dice"]), int(w["bonus"]), str(w["type"]), lines, "", false, w)
+	elif Sheet.is_hero(t):
+		_enemy_attack(s, data, o, _best_action(data, o, "melee"), lines)
+	else:
+		_creature_attack(s, data, o, _best_action(data, o, "melee"), t, lines)
 
 
 # --- grapple and shove (v0.7.7) ---------------------------------------------------------------------------
@@ -2435,12 +2335,16 @@ static func _release_grapples(s: GameSession, lines: Array[String]) -> void:
 			lines.append("%s больше не схвачен" % f["name"])
 
 
-## A foe can strike the leaving hero (5e, v0.7.7): its reaction is unspent this round, it can act (not
-## incapacitated, paralysed, stunned, asleep), is not charmed by the hero and sees the hero (not blinded, the hero
-## not invisible). A prone or restrained foe still can.
-static func can_react(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
-	return not bool(f.get("reacted", false)) and not incapacitated(f) and not _has(f, "charmed") \
-		and FightGrid.veiled(s, data, f, player(s)).is_empty() and not ConditionRules.invisible(s.character, data)
+## `r` can strike one who leaves it (5e, v0.7.7): its reaction is unspent this round, it can act (not incapacitated, paralysed,
+## stunned, asleep), is not charmed and sees `t` (not blinded, `t` not invisible). A prone or restrained one still can. The hero
+## may have told itself never to.
+static func can_react(s: GameSession, data: Dictionary, r: Dictionary, t: Dictionary) -> bool:
+	var me := Sheet.holder(s, r)
+	if bool(r.get("reacted", false)) or ConditionRules.incapacitated(me) or ConditionRules.has(me, "charmed"):
+		return false
+	if Sheet.is_hero(r) and (int(me.get("hp", 0)) <= 0 or FeatureRules.policy(s) == "never"):
+		return false
+	return FightGrid.veiled(s, data, r, t).is_empty() and not ConditionRules.invisible(Sheet.holder(s, t), data)
 
 
 ## The rest of the turn is skipped: next fighter (the UI plays the others one by one via next_actor()).
@@ -2568,11 +2472,9 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 			if incapacitated(f):
 				lines.append("%s не может действовать: %s" % [f["name"], ", ".join(foe_conditions(s, data, f))])
 			elif not bool(f.get("surprised", false)):
-				if _has(f, "prone"):
-					_remove_condition(f, "prone")
-					lines.append("%s поднимается на ноги" % f["name"])
 				if not _gives_up(s, data, f, lines):
 					_ally_turn(s, data, f, lines)
+					FightAI.last(s, data, f, lines)
 			f.erase("surprised")
 			_tick_conditions(s, data, f, lines)
 		_check_end(s, data, lines)
@@ -2589,13 +2491,10 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 		elif _has(f, "charmed"):
 			lines.append("%s очарован и не нападает" % f["name"])
 		else:
-			if _has(f, "prone"):
-				_remove_condition(f, "prone")
-				lines.append("%s поднимается на ноги" % f["name"])
 			_enemy_turn(s, data, f, lines)
 			if bool(s.combat.get("halt", false)):
 				return lines  # answer_reaction finishes this turn
-			MonsterRules.end_turn(s, data, f, lines)
+			FightAI.last(s, data, f, lines)
 		_tick_conditions(s, data, f, lines)
 	_check_end(s, data, lines)
 	if str(s.combat["outcome"]).is_empty():
@@ -2614,7 +2513,7 @@ static func _end_actor(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 	if str(f.get("status")) == "active":
 		lines.append_array(SpellEffects.zone_tick(s, data, f, "end"))  # Flaming Sphere (v0.7.13.5)
 	if str(f.get("status")) == "active":
-		MonsterRules.end_turn(s, data, f, lines)
+		FightAI.last(s, data, f, lines)
 		_tick_conditions(s, data, f, lines)
 	_check_end(s, data, lines)
 	if str(s.combat["outcome"]).is_empty():
@@ -2751,25 +2650,6 @@ static func _teleport(s: GameSession, data: Dictionary, feet: int, to := FightGr
 	FightField.note_walk(s, PLAYER, [FightGrid.tag(best)])
 	FightField.hero_stands(s, data)
 	return ["%s переносится серебристым туманом на %d фт" % [s.character["name"], WalkRules.distance(from, best) * int(FightGrid.cfg(data)["ft"])]]
-
-
-## A foe steps from the hero's reach: the hero's reaction, the blade in hand, unless told never to.
-static func foe_leaving(s: GameSession, data: Dictionary, f: Dictionary, next: Vector2i, lines: Array[String]) -> void:
-	var c := s.character
-	if str(f.get("side")) != "enemy" or bool(player(s).get("reacted", false)) or int(c.get("hp", 0)) <= 0 or ConditionRules.incapacitated(c):
-		return
-	if MonsterRules.has_trait(data, f, "flyby") or FeatureRules.policy(s) == "never":
-		return
-	var w := weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
-	if not bool(w["melee"]):
-		return
-	var reach := 2 if bool(w.get("reach", false)) else 1
-	var after := f.duplicate()
-	FightGrid.put(after, next)
-	if blade_reaches(s, data, player(s), f, reach) and FightGrid.dist(player(s), after) > reach:
-		player(s)["reacted"] = true
-		lines.append("%s бьёт вдогонку" % c["name"])
-		_attack(s, data, str(c["name"]), w["name"], int(w["to_hit"]), false, false, f, str(w["dice"]), int(w["bonus"]), str(w["type"]), lines, "", false, w)
 
 
 ## A reach weapon meets a foe on its way in (v0.7.12): the hero's reaction, one attack before the foe strikes.
@@ -3625,7 +3505,7 @@ static func monster_card(s: GameSession, data: Dictionary, f: Dictionary) -> Str
 		return ""
 	var m := Sheet.template(data, f)
 	var dtypes: Dictionary = data["misc"]["damage_types"]
-	var lines: Array[String] = ["%s · HP %d/%d · КД %d · скорость %s" % [m["name"], int(f["hp"]), int(f["max_hp"]), int(m["ac"]), MonsterRules.speed_text(m)]]
+	var lines: Array[String] = ["%s · HP %d/%d · КД %d · скорость %s" % [m["name"], int(f["hp"]), int(f["max_hp"]), int(m["ac"]), Move.text(data, m)]]
 	for a: Dictionary in m["actions"]:
 		var dmg: Array[String] = []
 		for d: Dictionary in a.get("damage", []):

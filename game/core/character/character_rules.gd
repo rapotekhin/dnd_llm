@@ -242,7 +242,7 @@ static func extra_attacks(c: Dictionary, data: Dictionary) -> int:
 
 static func speed(c: Dictionary, data: Dictionary) -> int:
 	if Guise.has_body(c):
-		return int(data["monsters"].get(str(Guise.body(c)["monster"]), {}).get("speed", 30))
+		return Move.feet_of(data, data["monsters"].get(str(Guise.body(c)["monster"]), {}))
 	var race: Dictionary = data["races"]["races"].get(str(c.get("race", "")), {})
 	var bonus := 0
 	var spec: Dictionary = level_row(c, data).get("class_specific", {})
@@ -253,8 +253,7 @@ static func speed(c: Dictionary, data: Dictionary) -> int:
 		feet = maxi(feet, 30 + bonus)
 	for e: Dictionary in SpellEffects.hero_effects(c, "speed_plus"):  # Longstrider (v0.7.13.3)
 		feet += int(e["speed_plus"])
-	for e: Dictionary in SpellEffects.hero_effects(c, "fly_speed"):  # Fly: 60 feet in the air (v0.7.63)
-		feet = maxi(feet, int(e["fly_speed"]))
+	feet = maxi(feet, Move.status_feet(data, c))  # Fly: 60 feet in the air (v0.7.63)
 	if SpellEffects.has(c, "speed_x2"):  # Haste
 		feet *= 2
 	if has_feature(c, "fast_movement") and str(item_def(c, data, {}, "armor").get("armor", {}).get("category", "")) != "heavy":

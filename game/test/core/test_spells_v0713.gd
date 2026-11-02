@@ -152,7 +152,7 @@ func test_guiding_bolt_gives_advantage_to_the_next_attack() -> void:
 	f["hp"] = 500
 	f["max_hp"] = 500
 	for i in 5:
-		s.combat["economy"]["action"] = 1
+		CombatRules.economy(s)["action"] = 1
 		CombatRules.player_cast(s, data, "guiding_bolt", 1, str(f["id"]))
 		if CombatRules._has(f, "guided"):
 			break
@@ -388,7 +388,7 @@ func test_sanctuary_holds_and_breaks() -> void:
 	_cast_self(s, "sanctuary")
 	s.character["spell_dc"] = 40
 	assert_str(SpellEffects.sanctuary_holds(s, data, f)).contains("Святилище")
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	CombatRules.player_attack(s, data, str(f["id"]))
 	assert_array(SpellEffects.hero_effects(s.character, "sanctuary")).is_empty()
 
@@ -548,7 +548,7 @@ func test_branding_smite_once_and_hunters_mark_on_the_target() -> void:
 	assert_int(SpellEffects.hit_extras(r.character, g[1], "piercing").size()).is_equal(0)
 	g[0]["status"] = "dead"
 	assert_bool(SpellEffects.mark_free(r)).is_true()
-	r.combat["economy"]["bonus"] = 1
+	CombatRules.economy(r)["bonus"] = 1
 	FeatureRules.act(r, data, "move_mark", str(g[1]["id"]))
 	assert_int(SpellEffects.hit_extras(r.character, g[1], "piercing").size()).is_equal(1)
 
@@ -563,7 +563,7 @@ func test_flame_blade_attacks_with_the_spell() -> void:
 	var hp := int(f["hp"])
 	f["ac"] = 1
 	for i in 4:
-		s.combat["economy"]["action"] = 1
+		CombatRules.economy(s)["action"] = 1
 		FeatureRules.act(s, data, "flame_blade", str(f["id"]))
 		if int(f["hp"]) < hp:
 			break
@@ -575,8 +575,8 @@ func test_flame_blade_attacks_with_the_spell() -> void:
 
 func _cast_at(s: GameSession, id: String, slot: int, target: String) -> Array[String]:
 	_learn(s, id)
-	s.combat["economy"]["action"] = 1
-	s.combat["economy"]["bonus"] = 1
+	CombatRules.economy(s)["action"] = 1
+	CombatRules.economy(s)["bonus"] = 1
 	return CombatRules.player_cast(s, data, id, slot, target)
 
 
@@ -587,10 +587,10 @@ func test_spiritual_weapon_strikes_now_and_each_turn() -> void:
 	var lines := _cast_at(s, "spiritual_weapon", 2, str(f["id"]))
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("Духовное оружие") and l.contains("КД"))).override_failure_message(" · ".join(lines)).is_true()
 	assert_bool(FeatureRules.actions(s, data).any(func(a: Dictionary) -> bool: return str(a["id"]) == "spell_spiritual_weapon")).is_true()
-	s.combat["economy"]["bonus"] = 1
+	CombatRules.economy(s)["bonus"] = 1
 	assert_str(FeatureRules.can_act(s, data, "spell_spiritual_weapon", str(f["id"]))).is_empty()
 	var again := FeatureRules.act(s, data, "spell_spiritual_weapon", str(f["id"]))
-	assert_int(int(s.combat["economy"]["bonus"])).is_equal(0)
+	assert_int(int(CombatRules.economy(s)["bonus"])).is_equal(0)
 	assert_bool(again.any(func(l: String) -> bool: return l.contains("КД"))).is_true()
 
 
@@ -603,7 +603,7 @@ func test_moonbeam_burns_who_starts_in_it_and_moves() -> void:
 	var lines := SpellEffects.zone_tick(s, data, foes[0], "start")
 	assert_int(int(foes[0]["hp"])).override_failure_message(" · ".join(lines)).is_less_equal(hp)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("спасбросок Тел"))).is_true()
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	FeatureRules.act(s, data, "spell_moonbeam", str(foes[1]["id"]))
 	assert_array(TestUtils.zones_on(s, foes[1])).contains(["Лунный луч"])
 	ConditionRules.end_concentration(s, data, "проверка")
@@ -681,7 +681,7 @@ func test_silence_stops_spells_inside() -> void:
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
 	_cast_at(s, "silence", 2, str(f["id"]))
 	_learn(s, "guiding_bolt")
-	s.combat["economy"]["action"] = 1
+	CombatRules.economy(s)["action"] = 1
 	assert_str(CombatRules.can_cast(s, data, "guiding_bolt", 1, str(f["id"]))).is_equal("COMBAT_SILENCED")
 	assert_bool(SpellEffects.silenced(s, data, f)).is_true()
 

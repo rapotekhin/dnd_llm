@@ -697,8 +697,8 @@ class Builder:
             out[sid(m["index"])] = {
                 "name": ru["name"], "name_en": m["name"], "size": m["size"].lower(), "type": m["type"],
                 "cr": m["challenge_rating"], "xp": m["xp"], "ac": m["armor_class"][0]["value"], "hp": m["hit_points"],
-                "hit_dice": m["hit_dice"], "speed": ft(speed.get("walk", "30 ft.")), "fly": ft(speed.get("fly", "0 ft.")),
-                "swim": ft(speed.get("swim", "0 ft.")), "darkvision": ft(m.get("senses", {}).get("darkvision", "0 ft.")),
+                "hit_dice": m["hit_dice"], "speed": ft(speed.get("walk", "0 ft.")), "fly": ft(speed.get("fly", "0 ft.")),
+                "swim": ft(speed.get("swim", "0 ft.")), "climb": ft(speed.get("climb", "0 ft.")), "burrow": ft(speed.get("burrow", "0 ft.")), "darkvision": ft(m.get("senses", {}).get("darkvision", "0 ft.")),
                 "blindsight": ft(m.get("senses", {}).get("blindsight", "0 ft.")), "truesight": ft(m.get("senses", {}).get("truesight", "0 ft.")),
                 "abilities": abilities, "prof": m.get("proficiency_bonus", 2), "saves": saves, "skills": skills,
                 "passive_perception": m.get("senses", {}).get("passive_perception", 10),

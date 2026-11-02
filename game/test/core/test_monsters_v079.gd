@@ -70,9 +70,9 @@ func test_the_import_keeps_the_effects() -> void:
 
 func test_a_flying_sword_moves_by_its_fly() -> void:  # SRD: speed 0 ft, fly 50 ft (hover) — v0.7.49.3
 	var sword: Dictionary = data["monsters"]["flying_sword"]
-	assert_int(MonsterRules.move_speed(sword)).is_equal(50)
-	assert_str(MonsterRules.speed_text(sword)).is_equal("0 фт, полёт 50 фт")
-	assert_int(MonsterRules.move_speed(data["monsters"]["wolf"])).is_equal(40)
+	assert_int(Move.feet_of(data, sword)).is_equal(50)
+	assert_str(Move.text(data, sword)).is_equal("0 фт, полёт 50 фт")
+	assert_int(Move.feet_of(data, data["monsters"]["wolf"])).is_equal(40)
 
 
 func test_a_wolf_bite_knocks_the_hero_down() -> void:
@@ -198,12 +198,12 @@ func test_traits_of_monsters() -> void:
 func test_a_charge_hits_harder_after_a_run() -> void:
 	var s := _session()
 	var f := _fight(s, "boar")
-	f["moved"] = 4
+	f["points"] = {"walked": 4}
 	f["once"] = []
 	var out := MonsterRules.extra_on_hit(s, data, f, _action("boar", "Tusk"), false, false, false)
 	assert_int(int(out["damage"])).is_greater(0)
 	assert_dict(out["prone"]).contains_keys(["save"])
-	f["moved"] = 0
+	f["points"] = {"walked": 0}
 	f["once"] = []
 	assert_int(int(MonsterRules.extra_on_hit(s, data, f, _action("boar", "Tusk"), false, false, false)["damage"])).is_equal(0)
 

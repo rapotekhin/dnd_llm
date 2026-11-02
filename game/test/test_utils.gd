@@ -113,7 +113,7 @@ static func _spots(d: Dictionary, foes: Array, room: Dictionary) -> Array:
 
 ## The hero walks one old column (30 ft) to a side.
 static func walk(s: GameSession, d: Dictionary, dir: int) -> Array[String]:
-	return CombatRules.player_walk(s, d, FightGrid.cell(CombatRules.player(s)) + Vector2i(6 * dir, 0))
+	return Acts.one("walk").go(s, d, CombatRules.player(s), FightGrid.aim_id(FightGrid.cell(CombatRules.player(s)) + Vector2i(6 * dir, 0)))
 
 
 static func beside(s: GameSession, f: Dictionary) -> void:
