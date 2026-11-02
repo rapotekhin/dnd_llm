@@ -24,6 +24,7 @@
 | **Хочешь добавить контент (мир, NPC, задания)** | [tech/godot-client.md → «Пакеты миров»](tech/godot-client.md#пакеты-миров), пакет `game/data/worlds/frontier/` |
 | **Планируешь, что делать дальше** | [production/roadmap.md](production/roadmap.md), [production/backlog.md](production/backlog.md) |
 | **Разворачиваешь сервер мастера** | [tech/deploy.md](tech/deploy.md) |
+| **Думаешь о своей модели вместо OpenRouter** | [tech/local-model.md](tech/local-model.md) — копилка: кандидаты, наши числа, данные для дообучения |
 | **Видишь странное архитектурное решение** | [tech/adr/](tech/adr/) |
 
 Ключевые решения: [ADR-0007](tech/adr/0007-godot-client-python-llm-backend.md) (Godot + Python-бэкенд), [ADR-0008](tech/adr/0008-engine-decides-llm-narrates.md) (движок решает, ЛЛМ рассказывает), [ADR-0009](tech/adr/0009-godot-backend-protocol.md) (протокол), [ADR-0010](tech/adr/0010-game-decisions-worlds-tone-combat-death.md) (миры, тон, бой, смерть), [ADR-0011](tech/adr/0011-default-master-model.md) (модель мастера).
