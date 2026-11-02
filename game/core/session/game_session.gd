@@ -13,6 +13,9 @@ const KIND_CHECK := "check"
 const KIND_EFFECT := "effect"
 ## Engine/system notice; `key` is a localization key, `args` its format arguments.
 const KIND_SYSTEM := "system"
+## A fight's round kept in the chat after it (v0.8.4.21.1): `round`, `lines` of the engine, `tips` {line: breakdown}.
+## Not the master's history: it has the round's lines in its own turn.
+const KIND_ROLLS := "rolls"
 
 const MODE_EXPLORATION := "exploration"
 const MODE_SOCIAL := "social"
@@ -373,6 +376,10 @@ static func npc_entry(id: String, npc_name: String, text: String, turn_id: Strin
 
 static func effect_entry(lines: Array[String]) -> Dictionary:
 	return {"kind": KIND_EFFECT, "lines": lines}
+
+
+static func rolls_entry(rnd: int, lines: Array, tips: Dictionary) -> Dictionary:
+	return {"kind": KIND_ROLLS, "round": rnd, "lines": lines.duplicate(), "tips": tips}
 
 
 static func system_entry(key: String, args: Dictionary = {}) -> Dictionary:

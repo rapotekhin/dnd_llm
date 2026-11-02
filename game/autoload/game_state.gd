@@ -1369,7 +1369,20 @@ func _combat_continue() -> void:
 func _narrate_round() -> void:
 	var log: Array = session.combat.get("log", [])
 	session.combat["log"] = []
+	_keep_rolls(log)
 	_request("combat_round", "\n".join(log))
+
+
+## The round's rolls stay in the chat after the fight, before the master's words of it, with their breakdowns (v0.8.4.21.1).
+func _keep_rolls(log: Array) -> void:
+	if log.is_empty():
+		return
+	var tips := {}
+	for l: Variant in log:
+		var tip := CombatRules.tip_for(session, str(l))
+		if not tip.is_empty():
+			tips[str(l)] = tip
+	_add(GameSession.rolls_entry(int(session.combat.get("round", 1)), log, tips))
 
 
 ## The fight is over: the final narration (death — the epitaph), then the results wait for finish_combat().
@@ -1386,6 +1399,7 @@ func _combat_outcome() -> void:
 		_combat_log(xp_lines)
 	var log: Array = s.combat.get("log", [])
 	s.combat["log"] = []
+	_keep_rolls(log)
 	if outcome == "dead":
 		_request("death", "\n".join(log) + "\n" + _hero_path())
 	else:

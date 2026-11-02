@@ -51,6 +51,14 @@ func _add(e: Dictionary) -> void:
 			_list.add_child(CheckCard.new(e))
 		GameSession.KIND_SYSTEM:
 			_list.add_child(_text(tr(str(e.get("key", ""))).format(e.get("args", {})), UiTheme.SYSTEM_TEXT))
+		GameSession.KIND_ROLLS:  # a fight's round, folded as in the fight (v0.8.4.21.1)
+			var block := UiParts.rolls_block(true)
+			block.set_meta("rolls", true)
+			var tips: Dictionary = e.get("tips", {})
+			for l: Variant in e.get("lines", []):
+				UiParts.roll_line(block.get_node("Lines"), str(l), str(tips.get(str(l), "")))
+			UiParts.fold_rolls(block, true)
+			_list.add_child(block)
 
 
 ## «Картинка» under an event that has one; the entry rides on the line, so a new image finds its place.

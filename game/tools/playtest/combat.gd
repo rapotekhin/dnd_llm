@@ -89,6 +89,14 @@ func run() -> void:
 		await press(finish)
 		step("back in the game", await wait_until(func() -> bool: return screen_is("GameScreen"), 10.0) and s.mode == GameSession.MODE_EXPLORATION,
 			"xp %d, encounters %s, room %s" % [xp, s.encounters_done, s.room_id])
+		# v0.8.4.21.1: the fight's rolls stay in the chat, folded by rounds
+		var kept := s.chat.filter(func(e: Dictionary) -> bool: return str(e["kind"]) == GameSession.KIND_ROLLS)
+		var chat: Node = screen().get("chat")
+		var folds := chat.find_children("*", "VBoxContainer", true, false).filter(func(n: Node) -> bool: return n.has_meta("rolls")) if chat != null else []
+		step("the rolls stay in the chat after the fight", not kept.is_empty() and folds.size() == kept.size(), "%d rounds in the chat, %d folds" % [kept.size(), folds.size()])
+		if not folds.is_empty():
+			await press(folds.back().get_node("Head"))
+			step("a fold opens with its lines", (folds.back().get_node("Lines") as Control).visible and folds.back().get_node("Lines").get_child_count() > 0)
 		await shot("after_combat")
 	_dump(s)
 

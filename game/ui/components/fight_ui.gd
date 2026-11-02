@@ -154,25 +154,11 @@ func _enter() -> void:
 
 
 func _add_log(text: String, master: bool) -> void:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.theme_type_variation = UiTheme.DM_TEXT if master else UiTheme.MUTED_LABEL
-	if not master and GameState.has_session():  # the roll's breakdown on hover (v0.7.49.4)
-		var tip := CombatRules.tip_for(GameState.session, text)
-		if not tip.is_empty():
-			l.tooltip_text = tip
-			l.mouse_filter = Control.MOUSE_FILTER_STOP
 	if master:
-		_log_box.add_child(l)
+		UiParts.label(_log_box, text, UiTheme.DM_TEXT)
 	else:
-		var hit := _roll_color(text)
-		if hit != Color.TRANSPARENT:
-			l.add_theme_color_override("font_color", hit)
-		_round_block().get_node("Lines").add_child(l)
-		_count_block()
+		UiParts.roll_line(_round_block().get_node("Lines"), text, CombatRules.tip_for(GameState.session, text) if GameState.has_session() else "")
+		UiParts.fold_rolls(_block, false)
 	while _log_box.get_child_count() > 120:
 		var old := _log_box.get_child(0)
 		_log_box.remove_child(old)
@@ -189,47 +175,12 @@ func _round_block() -> VBoxContainer:
 	if _block != null and is_instance_valid(_block) and last == _block and rnd == _block_round:
 		return _block
 	if _block != null and is_instance_valid(_block):
-		_fold(_block, true)
-	_block = VBoxContainer.new()
+		UiParts.fold_rolls(_block, true)
+	_block = UiParts.rolls_block(false)
 	_block.name = "Rolls_%d" % rnd
 	_block_round = rnd
-	var head := Button.new()
-	head.name = "Head"
-	head.flat = true
-	head.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	head.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	head.add_theme_color_override("font_color", UiTheme.MUTED)
-	_block.add_child(head)
-	var lines := VBoxContainer.new()
-	lines.name = "Lines"
-	lines.add_theme_constant_override("separation", 4)
-	_block.add_child(lines)
-	var block := _block
-	head.pressed.connect(func() -> void: _fold(block, lines.visible))
 	_log_box.add_child(_block)
 	return _block
-
-
-func _fold(block: VBoxContainer, folded: bool) -> void:
-	block.get_node("Lines").visible = not folded
-	block.set_meta("folded", folded)
-	_count_block(block)
-
-
-func _count_block(block: VBoxContainer = null) -> void:
-	if block == null:
-		block = _block
-	var n := block.get_node("Lines").get_child_count()
-	(block.get_node("Head") as Button).text = tr("COMBAT_ROLLS").format({"n": n, "fold": "▸" if bool(block.get_meta("folded", false)) else "▾"})
-
-
-## A hit is red (the damage), a miss is grey; other lines keep the muted colour.
-static func _roll_color(text: String) -> Color:
-	if text.contains("— промах") or text.contains("— провал"):
-		return UiTheme.MUTED.darkened(0.25)
-	if text.contains("— попадание") or text.contains("критическ"):
-		return UiTheme.BAD
-	return Color.TRANSPARENT
 
 
 ## v0.7.22.27 (as in BG3), outside the input: Space ends the turn, 1–0 press the buttons of the open tab, Tab picks
